@@ -1,23 +1,25 @@
-import React, { useEffect, useRef, useState } from 'react';
-import io from 'socket.io-client';
+import React, { useState, useRef, useEffect } from 'react';
 import Peer from 'simple-peer';
 
 const DashboardModel = () => {
-  const [localStream, setLocalStream] = useState(null);
+  const [cameraActive, setCameraActive] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
-  const [socket, setSocket] = useState(null);
-  const [peer, setPeer] = useState(null);
-  const [isAvailable, setIsAvailable] = useState(false);
+  const [error, setError] = useState('');
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
+  const socketRef = useRef(null);
+  const localStream = useRef(null);
+  const peerRef = useRef(null);
 
+  // Muestra video local cuando cámara está activa
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
+    if (localVideoRef.current && localStream.current) {
+      localVideoRef.current.srcObject = localStream.current;
     }
-  }, [localStream]);
+  }, [cameraActive]);
 
+  // Muestra video remoto cuando hay conexión
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
@@ -27,104 +29,117 @@ const DashboardModel = () => {
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      setLocalStream(stream);
-    } catch (error) {
-      console.error('Error accediendo a la cámara:', error);
+      localStream.current = stream;
+      setCameraActive(true);
+
+      // Iniciar WebSocket después de activar cámara
+      startWebSocketAndWait();
+    } catch (err) {
+      console.error('Error al acceder a la cámara:', err);
+      setError('No se pudo acceder a la cámara.');
     }
   };
 
   const startWebSocketAndWait = () => {
-    if (!localStream) {
-      alert('Primero debes encender la cámara');
-      return;
-    }
+    const socket = new WebSocket('wss://test.sharemechat.com/match');
+    socketRef.current = socket;
 
-    const socketInstance = io('wss://test.sharemechat.com/match'); // <-- cambia esto por tu backend real
-    setSocket(socketInstance);
+    socket.onopen = () => {
+      console.log('Modelo conectado al WebSocket');
+      // El modelo no envía ningún mensaje, solo queda disponible para que lo emparejen
+    };
 
-    socketInstance.on('connect', () => {
-      console.log('Conectado al WebSocket como modelo');
-      socketInstance.emit('model-available'); // Marca este socket como "modelo disponible"
-      setIsAvailable(true);
-    });
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
 
-    socketInstance.on('matched', ({ peerId }) => {
-      console.log('¡Emparejado con cliente!', peerId);
+      if (data.type === 'match') {
+        console.log('Modelo emparejado con cliente. PeerID:', data.peerId);
 
-      const newPeer = new Peer({
-        initiator: false,
-        trickle: false,
-        stream: localStream,
-      });
+        const peer = new Peer({
+          initiator: false,
+          trickle: true,
+          stream: localStream.current,
+        });
 
-      newPeer.on('signal', data => {
-        socketInstance.emit('signal', { to: peerId, signal: data });
-      });
+        peerRef.current = peer;
 
-      newPeer.on('stream', stream => {
-        console.log('Stream recibido del cliente');
-        setRemoteStream(stream);
-      });
+        peer.on('signal', (signal) => {
+          console.log('Modelo enviando signal:', signal);
+          socket.send(JSON.stringify({ type: 'signal', signal }));
+        });
 
-      socketInstance.on('signal', ({ signal }) => {
-        newPeer.signal(signal);
-      });
+        peer.on('stream', (stream) => {
+          console.log('Modelo recibió stream remoto');
+          setRemoteStream(stream);
+        });
 
-      setPeer(newPeer);
-    });
-
-    socketInstance.on('peer-disconnected', () => {
-      console.log('Cliente se desconectó');
-      setRemoteStream(null);
-      if (peer) {
-        peer.destroy();
-        setPeer(null);
+        peer.on('error', (err) => {
+          console.error('Error en peer (modelo):', err);
+        });
       }
-    });
+
+      if (data.type === 'signal' && peerRef.current) {
+        console.log('Modelo recibió signal del cliente');
+        peerRef.current.signal(data.signal);
+      }
+    };
+
+    socket.onerror = (err) => {
+      console.error('WebSocket error en modelo:', err);
+      setError('Error de conexión con el servidor.');
+    };
+
+    socket.onclose = () => {
+      console.log('WebSocket cerrado (modelo)');
+    };
   };
 
   const stopAll = () => {
-    if (localStream) {
-      localStream.getTracks().forEach(track => track.stop());
-      setLocalStream(null);
+    // Cierra cámara local
+    if (localStream.current) {
+      localStream.current.getTracks().forEach((track) => track.stop());
+      localStream.current = null;
     }
 
-    if (peer) {
-      peer.destroy();
-      setPeer(null);
+    // Cierra peer
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
     }
 
-    if (socket) {
-      socket.disconnect();
-      setSocket(null);
-      setIsAvailable(false);
+    // Cierra WebSocket
+    if (socketRef.current) {
+      socketRef.current.close();
+      socketRef.current = null;
     }
 
+    setCameraActive(false);
     setRemoteStream(null);
+    setError('');
   };
 
   return (
-    <div>
-      <h2>Panel Modelo</h2>
+    <div style={{ padding: '20px' }}>
+      <h2>Dashboard Modelo</h2>
 
-      <div>
-        <button onClick={startCamera} disabled={!!localStream}>
-          Encender cámara
-        </button>
-        <button onClick={startWebSocketAndWait} disabled={!localStream || isAvailable}>
-          Disponible para emparejamiento
-        </button>
-        <button onClick={stopAll}>Detener</button>
-      </div>
+      {!cameraActive && (
+        <button onClick={startCamera}>Activar Cámara</button>
+      )}
+
+      {cameraActive && (
+        <button onClick={stopAll}>Apagar Cámara y Desconectar</button>
+      )}
+
+      {error && <p style={{ color: 'red' }}>{error}</p>}
 
       <div style={{ display: 'flex', marginTop: '20px' }}>
-        <div style={{ width: '30%', marginRight: '20px' }}>
-          <h4>Tu cámara</h4>
-          <video ref={localVideoRef} autoPlay muted style={{ width: '100%' }} />
+        <div style={{ flex: 1, marginRight: '10px' }}>
+          <h4>Tu cámara (Modelo)</h4>
+          <video ref={localVideoRef} autoPlay muted playsInline style={{ width: '100%', height: 'auto', border: '1px solid gray' }} />
         </div>
-        <div style={{ width: '70%' }}>
-          <h4>Cliente</h4>
-          <video ref={remoteVideoRef} autoPlay style={{ width: '100%' }} />
+        <div style={{ flex: 1 }}>
+          <h4>Webcam remota (Cliente)</h4>
+          <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: 'auto', border: '1px solid gray' }} />
         </div>
       </div>
     </div>

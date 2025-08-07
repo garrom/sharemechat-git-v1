@@ -2,7 +2,6 @@ package com.sharemechat.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -11,7 +10,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.web.filter.CorsFilter;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 
 import java.util.Arrays;
 
@@ -22,18 +21,20 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configuración explícita de CORS
-                .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF para API REST
+                .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Configuración de CORS
+                .csrf(csrf -> csrf.disable()) // Deshabilitar CSRF
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Sin estado
                 .authorizeHttpRequests(auth -> auth
-
-                        .requestMatchers("/match/**").permitAll() // Permitir WebSockets
-                        .anyRequest().authenticated()// Otros endpoints requieren autenticación
+                        .anyRequest().permitAll() // Permitir todas las solicitudes sin autenticación
                 );
 
         return http.build();
     }
 
+    @Bean
+    public WebSecurityCustomizer webSecurityCustomizer() {
+        return (web) -> web.ignoring().requestMatchers("/match/**"); // Ignorar completamente /match
+    }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -46,10 +47,5 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
-    }
-
-    @Bean
-    public CorsFilter corsFilter() {
-        return new CorsFilter(corsConfigurationSource());
     }
 }

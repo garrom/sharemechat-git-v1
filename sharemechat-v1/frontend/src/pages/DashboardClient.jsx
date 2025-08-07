@@ -59,7 +59,7 @@ const DashboardClient = () => {
 
         const peer = new Peer({
           initiator: true,
-          trickle: false,
+          trickle: true,
           stream: localStream.current,
           config: {
             iceServers: [
