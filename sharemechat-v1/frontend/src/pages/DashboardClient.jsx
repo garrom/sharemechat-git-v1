@@ -29,7 +29,11 @@ const DashboardClient = () => {
 
   const handleActivateCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      //const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480 },
+        audio: true
+      });
       localStream.current = stream;
       setCameraActive(true);
     } catch (err) {
@@ -50,15 +54,14 @@ const DashboardClient = () => {
 
     socketRef.current.onopen = () => {
       console.log('WebSocket abierto, enviando start-match');
+      socketRef.current.send(JSON.stringify({ type: 'set-role', role: 'client' }));
       socketRef.current.send(JSON.stringify({ type: 'start-match' }));
     };
 
     socketRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
-
       if (data.type === 'match') {
         console.log('Emparejado con modelo', data.peerId);
-
         const peer = new Peer({
           initiator: true,
           trickle: true,
@@ -91,17 +94,18 @@ const DashboardClient = () => {
 
         peerRef.current = peer;
         setSearching(false);
-      } else if (data.type === 'signal') {
-        if (peerRef.current) {
-          peerRef.current.signal(data.signal);
-        }
-      } else if (data.type === 'chat'){
-          setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
-      } else if (data.type === 'no-model-available'){
-          setError('No hay modelos disponibles.');
-          setSearching(false);
-        }
-
+      } else if (data.type === 'signal' && peerRef.current) {
+        peerRef.current.signal(data.signal);
+      } else if (data.type === 'chat') {
+        setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+      } else if (data.type === 'no-model-available') {
+        setError('No hay modelos disponibles.');
+        setSearching(false);
+      } else if (data.type === 'peer-disconnected') {
+        setRemoteStream(null);
+        setMessages([]);
+        setError('El modelo se ha desconectado.');
+      }
     };
 
     socketRef.current.onerror = (e) => {
@@ -114,6 +118,17 @@ const DashboardClient = () => {
       console.log('WebSocket cerrado');
       setSearching(false);
     };
+  };
+
+  const handleNext = () => {
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
+    }
+    setRemoteStream(null);
+    setMessages([]);
+    socketRef.current.send(JSON.stringify({ type: 'next' }));
+    setSearching(true);
   };
 
   const sendChatMessage = () => {
@@ -156,6 +171,7 @@ const DashboardClient = () => {
         {cameraActive && !searching && <button onClick={handleStartMatch}>Buscar Modelo</button>}
         {cameraActive && searching && <p>Buscando modelo...</p>}
         {cameraActive && <button onClick={stopAll}>Detener</button>}
+        {remoteStream && <button onClick={handleNext}>Next</button>}
       </div>
 
       {error && <p style={{ color: 'red' }}>{error}</p>}

@@ -30,12 +30,14 @@ const DashboardModel = () => {
 
   const startCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      //const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480 },  //Esto reduce la resolucion, solo para TESTING
+        audio: true
+      });
       localStream.current = stream;
       setCameraActive(true);
-
-      // Iniciar WebSocket después de activar cámara
-      startWebSocketAndWait();
+      startWebSocketAndWait();// Iniciar WebSocket después de activar cámara
     } catch (err) {
       console.error('Error al acceder a la cámara:', err);
       setError('No se pudo acceder a la cámara.');
@@ -48,15 +50,14 @@ const DashboardModel = () => {
 
     socket.onopen = () => {
       console.log('Modelo conectado al WebSocket');
-      // El modelo no envía ningún mensaje, solo queda disponible para que lo emparejen
+      socket.send(JSON.stringify({ type: 'set-role', role: 'model' }));
+
     };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-
       if (data.type === 'match') {
         console.log('Modelo emparejado con cliente. PeerID:', data.peerId);
-
         const peer = new Peer({
           initiator: false,
           trickle: true,
@@ -75,15 +76,20 @@ const DashboardModel = () => {
         });
 
         peer.on('error', (err) => {
-          console.error('Error en peer (modelo):', err);
+          setError('Error en la conexión WebRTC: ' + err.message);
         });
 
       } else if (data.type === 'signal' && peerRef.current) {
-          console.log('Modelo recibió signal del cliente');
-          peerRef.current.signal(data.signal);
-      } else if (data.type === 'chat'){
-          setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
-        }
+        peerRef.current.signal(data.signal);
+      } else if (data.type === 'chat') {
+        setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+      } else if (data.type === 'no-client-available') {
+        setError('No hay clientes disponibles.');
+      } else if (data.type === 'peer-disconnected') {
+        setRemoteStream(null);
+        setMessages([]);
+        setError('El cliente se ha desconectado.');
+      }
     };
 
     socket.onerror = (err) => {
@@ -94,6 +100,18 @@ const DashboardModel = () => {
     socket.onclose = () => {
       console.log('WebSocket cerrado (modelo)');
     };
+
+    socket.onclose = () => {};
+  };
+
+  const handleNext = () => {
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
+    }
+    setRemoteStream(null);
+    setMessages([]);
+    socketRef.current.send(JSON.stringify({ type: 'next' }));
   };
 
   const sendChatMessage = () => {
@@ -133,14 +151,9 @@ const DashboardModel = () => {
     <div style={{ padding: '20px' }}>
       <h2>Dashboard Modelo</h2>
 
-      {!cameraActive && (
-        <button onClick={startCamera}>Activar Cámara</button>
-      )}
-
-      {cameraActive && (
-        <button onClick={stopAll}>Apagar Cámara y Desconectar</button>
-      )}
-
+      {!cameraActive && (<button onClick={startCamera}>Activar Cámara</button>)}
+      {cameraActive && (<button onClick={stopAll}>Apagar Cámara y Desconectar</button>)}
+      {remoteStream && <button onClick={handleNext}>Next</button>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
       <div style={{ display: 'flex', marginTop: '20px' }}>
