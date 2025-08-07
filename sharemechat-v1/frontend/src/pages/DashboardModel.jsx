@@ -5,6 +5,8 @@ const DashboardModel = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
   const [error, setError] = useState('');
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -60,7 +62,6 @@ const DashboardModel = () => {
           trickle: true,
           stream: localStream.current,
         });
-
         peerRef.current = peer;
 
         peer.on('signal', (signal) => {
@@ -76,12 +77,13 @@ const DashboardModel = () => {
         peer.on('error', (err) => {
           console.error('Error en peer (modelo):', err);
         });
-      }
 
-      if (data.type === 'signal' && peerRef.current) {
-        console.log('Modelo recibió signal del cliente');
-        peerRef.current.signal(data.signal);
-      }
+      } else if (data.type === 'signal' && peerRef.current) {
+          console.log('Modelo recibió signal del cliente');
+          peerRef.current.signal(data.signal);
+      } else if (data.type === 'chat'){
+          setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+        }
     };
 
     socket.onerror = (err) => {
@@ -92,6 +94,14 @@ const DashboardModel = () => {
     socket.onclose = () => {
       console.log('WebSocket cerrado (modelo)');
     };
+  };
+
+  const sendChatMessage = () => {
+    if (chatInput.trim() === '') return;
+    const message = { type: 'chat', message: chatInput };
+    socketRef.current.send(JSON.stringify(message));
+    setMessages(prev => [...prev, { from: 'me', text: chatInput }]);
+    setChatInput('');
   };
 
   const stopAll = () => {
@@ -116,6 +126,7 @@ const DashboardModel = () => {
     setCameraActive(false);
     setRemoteStream(null);
     setError('');
+    setMessages([]);
   };
 
   return (
@@ -141,6 +152,27 @@ const DashboardModel = () => {
           <h4>Webcam remota (Cliente)</h4>
           <video ref={remoteVideoRef} autoPlay playsInline style={{ width: '100%', height: 'auto', border: '1px solid gray' }} />
         </div>
+
+        <div style={{ marginTop: '20px' }}>
+          <h4>Chat</h4>
+          <div style={{ height: '200px', overflowY: 'scroll', border: '1px solid gray', padding: '10px' }}>
+            {messages.map((msg, index) => (
+              <div key={index} style={{ textAlign: msg.from === 'me' ? 'right' : 'left' }}>
+                <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong> {msg.text}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', marginTop: '10px' }}>
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              style={{ flex: 1, marginRight: '10px' }}
+            />
+            <button onClick={sendChatMessage}>Enviar</button>
+          </div>
+        </div>
+
       </div>
     </div>
   );

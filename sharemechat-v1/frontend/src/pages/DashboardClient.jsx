@@ -6,6 +6,8 @@ const DashboardClient = () => {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [remoteStream, setRemoteStream] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -93,10 +95,13 @@ const DashboardClient = () => {
         if (peerRef.current) {
           peerRef.current.signal(data.signal);
         }
-      } else if (data.type === 'no-model-available') {
-        setError('No hay modelos disponibles.');
-        setSearching(false);
-      }
+      } else if (data.type === 'chat'){
+          setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+      } else if (data.type === 'no-model-available'){
+          setError('No hay modelos disponibles.');
+          setSearching(false);
+        }
+
     };
 
     socketRef.current.onerror = (e) => {
@@ -109,6 +114,14 @@ const DashboardClient = () => {
       console.log('WebSocket cerrado');
       setSearching(false);
     };
+  };
+
+  const sendChatMessage = () => {
+    if (chatInput.trim() === '') return;
+    const message = { type: 'chat', message: chatInput };
+    socketRef.current.send(JSON.stringify(message));
+    setMessages(prev => [...prev, { from: 'me', text: chatInput }]);
+    setChatInput('');
   };
 
   const stopAll = () => {
@@ -131,6 +144,7 @@ const DashboardClient = () => {
     setSearching(false);
     setRemoteStream(null);
     setError('');
+    setMessages([]);
   };
 
   return (
@@ -155,6 +169,27 @@ const DashboardClient = () => {
           <h4>Modelo</h4>
           <video ref={remoteVideoRef} autoPlay style={{ width: '100%' }} />
         </div>
+
+        <div style={{ marginTop: '20px' }}>
+          <h4>Chat</h4>
+          <div style={{ height: '200px', overflowY: 'scroll', border: '1px solid gray', padding: '10px' }}>
+            {messages.map((msg, index) => (
+              <div key={index} style={{ textAlign: msg.from === 'me' ? 'right' : 'left' }}>
+                <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
+              </div>
+            ))}
+          </div>
+          <div style={{ display: 'flex', marginTop: '10px' }}>
+            <input
+              type="text"
+              value={chatInput}
+              onChange={(e) => setChatInput(e.target.value)}
+              style={{ flex: 1, marginRight: '10px' }}
+            />
+            <button onClick={sendChatMessage}>Enviar</button>
+          </div>
+        </div>
+
       </div>
     </div>
   );
