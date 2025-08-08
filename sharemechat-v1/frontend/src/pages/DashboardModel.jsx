@@ -23,18 +23,17 @@ const DashboardModel = () => {
 
   // Muestra video remoto cuando hay conexión
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
+      if (remoteVideoRef.current && remoteStream) {
+          remoteVideoRef.current.srcObject = remoteStream;
+      } else if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = null;
+      }
   }, [remoteStream]);
 
   const startCamera = async () => {
     try {
-      //const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 },  //Esto reduce la resolucion, solo para TESTING
-        audio: true
-      });
+      //const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); //PRODUCCION
+      const stream = await navigator.mediaDevices.getUserMedia({video: { width: 640, height: 480 },audio: true}); //DESARROLLO reducir ancho banda
       localStream.current = stream;
       setCameraActive(true);
       startWebSocketAndWait();// Iniciar WebSocket después de activar cámara
@@ -80,15 +79,23 @@ const DashboardModel = () => {
         });
 
       } else if (data.type === 'signal' && peerRef.current) {
-        peerRef.current.signal(data.signal);
+          peerRef.current.signal(data.signal);
       } else if (data.type === 'chat') {
-        setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+          setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
       } else if (data.type === 'no-client-available') {
-        setError('No hay clientes disponibles.');
+          setError('No hay clientes disponibles.');
       } else if (data.type === 'peer-disconnected') {
-        setRemoteStream(null);
-        setMessages([]);
-        setError('El cliente se ha desconectado.');
+          console.log('Recibido peer-disconnected');
+          if(peerRef.current){
+              peerRef.current.destroy();
+              peerRef.current = null;
+              console.log('Peer destruido');
+          }if(remoteStream){
+              remoteStream.getTracks().forEach(track => track.stop());
+          }
+          setRemoteStream(null);
+          setMessages([]);
+          setError('El cliente se ha desconectado.');
       }
     };
 

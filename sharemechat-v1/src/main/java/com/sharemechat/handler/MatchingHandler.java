@@ -126,9 +126,15 @@ public class MatchingHandler extends TextWebSocketHandler {
         WebSocketSession peer = pairs.remove(session.getId());
         if (peer != null) {
             pairs.remove(peer.getId());
+            System.out.println("Peer encontrado para sessionId=" + session.getId() + ", peerId=" + peer.getId());
             if (peer.isOpen()) {
                 peer.sendMessage(new TextMessage("{\"type\":\"peer-disconnected\"}"));
+                System.out.println("Enviado 'peer-disconnected' a peerId=" + peer.getId());
+            }else{
+                System.out.println("Peer no está abierto: peerId=" + peer.getId());
             }
+        }else{
+            System.out.println("No se encontró peer para sessionId=" + session.getId());
         }
         String role = roles.get(session.getId());
         if ("client".equals(role)) {

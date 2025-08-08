@@ -27,13 +27,12 @@ const DashboardClient = () => {
     }
   }, [remoteStream]);
 
+
+
   const handleActivateCamera = async () => {
     try {
-      //const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 },
-        audio: true
-      });
+      //const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); //PRODUCCION
+      const stream = await navigator.mediaDevices.getUserMedia({video: { width: 640, height: 480 },audio: true}); //DESARROLLO reduce ancho banda
       localStream.current = stream;
       setCameraActive(true);
     } catch (err) {
@@ -95,16 +94,20 @@ const DashboardClient = () => {
         peerRef.current = peer;
         setSearching(false);
       } else if (data.type === 'signal' && peerRef.current) {
-        peerRef.current.signal(data.signal);
+          peerRef.current.signal(data.signal);
       } else if (data.type === 'chat') {
-        setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+          setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
       } else if (data.type === 'no-model-available') {
-        setError('No hay modelos disponibles.');
-        setSearching(false);
+          setError('No hay modelos disponibles.');
+          setSearching(false);
       } else if (data.type === 'peer-disconnected') {
-        setRemoteStream(null);
-        setMessages([]);
-        setError('El modelo se ha desconectado.');
+          if(peerRef.current){
+             peerRef.current.destroy();
+             peerRef.current = null;
+              }
+          setRemoteStream(null);
+          setMessages([]);
+          setError('El modelo se ha desconectado.');
       }
     };
 
@@ -121,14 +124,16 @@ const DashboardClient = () => {
   };
 
   const handleNext = () => {
-    if (peerRef.current) {
-      peerRef.current.destroy();
-      peerRef.current = null;
-    }
-    setRemoteStream(null);
-    setMessages([]);
-    socketRef.current.send(JSON.stringify({ type: 'next' }));
-    setSearching(true);
+      socketRef.current.send(JSON.stringify({ type: 'next' }));
+      setSearching(true);
+      setTimeout(() => {
+          if (peerRef.current) {
+              peerRef.current.destroy();
+              peerRef.current = null;
+          }
+          setRemoteStream(null);
+          setMessages([]);
+      }, 1000); // Retraso de 1 segundo
   };
 
   const sendChatMessage = () => {
