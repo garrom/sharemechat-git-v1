@@ -1,5 +1,21 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Peer from 'simple-peer';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faSignOutAlt, faUser, faHeart, faEnvelope, faUserPlus, faBell } from '@fortawesome/free-solid-svg-icons';
+import {
+  StyledContainer,
+  StyledNavbar,
+  StyledNavButton,
+  StyledIconWrapper,
+  StyledMainContent,
+  StyledLeftColumn,
+  StyledCenter,
+  StyledRightColumn,
+  StyledActionButton,
+  StyledLocalVideo,
+  StyledRemoteVideo,
+  StyledChatContainer,
+}  from '../styles/ClientStyles';
 
 const DashboardClient = () => {
   const [cameraActive, setCameraActive] = useState(false);
@@ -8,6 +24,8 @@ const DashboardClient = () => {
   const [remoteStream, setRemoteStream] = useState(null);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
+  const [activeTab, setActiveTab] = useState('models');
+
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -93,6 +111,7 @@ const DashboardClient = () => {
 
         peerRef.current = peer;
         setSearching(false);
+
       } else if (data.type === 'signal' && peerRef.current) {
           peerRef.current.signal(data.signal);
       } else if (data.type === 'chat') {
@@ -129,16 +148,22 @@ const DashboardClient = () => {
   };
 
   const handleNext = () => {
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ type: 'next' }));
-      setSearching(true);
-      setTimeout(() => {
-          if (peerRef.current) {
-              peerRef.current.destroy();
-              peerRef.current = null;
-          }
-          setRemoteStream(null);
-          setMessages([]);
-      }, 1000); // Retraso de 1 segundo
+    } else {
+      setError('Error: No hay conexión con el servidor.');
+      return;
+    }
+    if (peerRef.current) {
+      peerRef.current.destroy();
+      peerRef.current = null;
+    }
+    if (remoteStream) {
+      remoteStream.getTracks().forEach((track) => track.stop());
+    }
+    setRemoteStream(null);
+    setMessages([]);
+    setError('Buscando nuevo modelo...');
   };
 
   const sendChatMessage = () => {
@@ -173,51 +198,134 @@ const DashboardClient = () => {
   };
 
   return (
-    <div>
-      <h2>Panel Cliente</h2>
-
-      <div>
-        {!cameraActive && <button onClick={handleActivateCamera}>Activar cámara</button>}
-        {cameraActive && !searching && <button onClick={handleStartMatch}>Buscar Modelo</button>}
-        {cameraActive && searching && <p>Buscando modelo...</p>}
-        {cameraActive && <button onClick={stopAll}>Detener</button>}
-        {remoteStream && <button onClick={handleNext}>Next</button>}
-      </div>
-
-      {error && <p style={{ color: 'red' }}>{error}</p>}
-
-      <div style={{ display: 'flex', marginTop: '20px' }}>
-        <div style={{ width: '30%', marginRight: '20px' }}>
-          <h4>Tu cámara</h4>
-          <video ref={localVideoRef} autoPlay muted style={{ width: '100%' }} />
+    <StyledContainer>
+      <StyledNavbar>
+        <span>Mi Logo</span>
+        <div>
+          <span className="me-3">Hola, Cliente</span>
+          <StyledNavButton>
+            <FontAwesomeIcon icon={faSignOutAlt} />
+            <StyledIconWrapper>Salir</StyledIconWrapper>
+          </StyledNavButton>
+          <StyledNavButton>
+            <FontAwesomeIcon icon={faUser} />
+            <StyledIconWrapper>Perfil</StyledIconWrapper>
+          </StyledNavButton>
         </div>
-        <div style={{ width: '70%' }}>
-          <h4>Modelo</h4>
-          <video ref={remoteVideoRef} autoPlay style={{ width: '100%' }} />
-        </div>
+      </StyledNavbar>
 
-        <div style={{ marginTop: '20px' }}>
-          <h4>Chat</h4>
-          <div style={{ height: '200px', overflowY: 'scroll', border: '1px solid gray', padding: '10px' }}>
-            {messages.map((msg, index) => (
-              <div key={index} style={{ textAlign: msg.from === 'me' ? 'right' : 'left' }}>
-                <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
+      <StyledMainContent>
+        <StyledLeftColumn>
+          <div className="d-flex justify-content-around mb-3">
+            <button
+              title="Listar Favoritos"
+              onClick={() => setActiveTab('models')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <FontAwesomeIcon icon={faHeart} size="lg" />
+            </button>
+            <button
+              title="Mensajes"
+              onClick={() => setActiveTab('messages')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <FontAwesomeIcon icon={faEnvelope} size="lg" />
+            </button>
+            <button
+              title="Añadir a Favoritos"
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <FontAwesomeIcon icon={faUserPlus} size="lg" />
+            </button>
+            <button
+              title="Notificaciones"
+              onClick={() => setActiveTab('notifications')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <FontAwesomeIcon icon={faBell} size="lg" />
+            </button>
+          </div>
+          <ul className="list-group">
+            {activeTab === 'models' && <li className="list-group-item">Aquí iría la lista de modelos favoritos</li>}
+            {activeTab === 'messages' && <li className="list-group-item">Aquí irían los mensajes</li>}
+            {activeTab === 'notifications' && <li className="list-group-item">Aquí irían las notificaciones</li>}
+          </ul>
+        </StyledLeftColumn>
+
+        <StyledCenter>
+          {!cameraActive && (
+            <StyledActionButton onClick={handleActivateCamera}>Activar Cámara</StyledActionButton>
+          )}
+
+          {cameraActive && (
+            <>
+              <div style={{ marginBottom: '10px' }}>
+                {!searching && <StyledActionButton onClick={handleStartMatch}>Buscar Modelo</StyledActionButton>}
+                {searching && <p>Buscando modelo...</p>}
+                <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}>
+                  Stop
+                </StyledActionButton>
+                {remoteStream && !searching && (
+                  <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
+                )}
               </div>
-            ))}
-          </div>
-          <div style={{ display: 'flex', marginTop: '10px' }}>
-            <input
-              type="text"
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              style={{ flex: 1, marginRight: '10px' }}
-            />
-            <button onClick={sendChatMessage}>Enviar</button>
-          </div>
-        </div>
+              <StyledLocalVideo>
+                <h5 style={{ color: 'white' }}>Tu Cámara</h5>
+                <video
+                  ref={localVideoRef}
+                  style={{ width: '100%', border: '1px solid black' }}
+                  muted
+                  autoPlay
+                />
+              </StyledLocalVideo>
+              {remoteStream && (
+                <StyledRemoteVideo>
+                  <h5 style={{ position: 'absolute', top: '10px', left: '10px', color: 'white', zIndex: 2 }}>
+                    Modelo
+                  </h5>
+                  <video
+                    ref={remoteVideoRef}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
+                    autoPlay
+                  />
+                  <StyledChatContainer>
+                    <div
+                      style={{
+                        maxHeight: '150px',
+                        overflowY: 'auto',
+                        marginBottom: '10px',
+                      }}
+                    >
+                      {messages.map((msg, index) => (
+                        <div
+                          key={index}
+                          style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
+                        >
+                          <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
+                        </div>
+                      ))}
+                    </div>
+                    <div style={{ display: 'flex' }}>
+                      <input
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        style={{ flex: 1, marginRight: '10px', background: 'rgba(255, 255, 255, 0.9)', border: 'none', borderRadius: '5px', padding: '5px' }}
+                      />
+                      <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
+                    </div>
+                  </StyledChatContainer>
+                </StyledRemoteVideo>
+              )}
+            </>
+          )}
 
-      </div>
-    </div>
+          {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
+        </StyledCenter>
+
+        <StyledRightColumn />
+      </StyledMainContent>
+    </StyledContainer>
   );
 };
 
