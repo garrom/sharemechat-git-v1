@@ -22,12 +22,12 @@ const DashboardClient = () => {
   }, [cameraActive]);
 
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    }
+      if (remoteVideoRef.current && remoteStream) {
+          remoteVideoRef.current.srcObject = remoteStream;
+      } else if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = null;
+      }
   }, [remoteStream]);
-
-
 
   const handleActivateCamera = async () => {
     try {
@@ -101,10 +101,15 @@ const DashboardClient = () => {
           setError('No hay modelos disponibles.');
           setSearching(false);
       } else if (data.type === 'peer-disconnected') {
+          console.log('Recibido peer-disconnected');
           if(peerRef.current){
              peerRef.current.destroy();
              peerRef.current = null;
-              }
+             console.log('Peer destruido');
+          }
+          if (remoteStream) {
+              remoteStream.getTracks().forEach(track => track.stop());
+          }
           setRemoteStream(null);
           setMessages([]);
           setError('El modelo se ha desconectado.');

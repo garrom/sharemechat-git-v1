@@ -112,13 +112,18 @@ const DashboardModel = () => {
   };
 
   const handleNext = () => {
-    if (peerRef.current) {
-      peerRef.current.destroy();
-      peerRef.current = null;
-    }
-    setRemoteStream(null);
-    setMessages([]);
-    socketRef.current.send(JSON.stringify({ type: 'next' }));
+      socketRef.current.send(JSON.stringify({ type: 'next' }));
+
+      if (peerRef.current) {
+          peerRef.current.destroy();
+          peerRef.current = null;
+      }
+      if (remoteStream) {
+          remoteStream.getTracks().forEach(track => track.stop());
+      }
+      setRemoteStream(null);
+      setMessages([]);
+      setError('Buscando nuevo cliente...');
   };
 
   const sendChatMessage = () => {
