@@ -49,7 +49,7 @@ const DashboardClient = () => {
 
   const handleActivateCamera = async () => {
     try {
-      //const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true }); //PRODUCCION
+
       const stream = await navigator.mediaDevices.getUserMedia({video: { width: 640, height: 480 },audio: true}); //DESARROLLO reduce ancho banda
       localStream.current = stream;
       setCameraActive(true);
