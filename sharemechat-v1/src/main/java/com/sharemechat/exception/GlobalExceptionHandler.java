@@ -1,0 +1,80 @@
+package com.sharemechat.exception;
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.*;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.stream.Collectors;
+
+@ControllerAdvice
+public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    // 400 – Email en uso
+    @ExceptionHandler(EmailAlreadyInUseException.class)
+    public ResponseEntity<ApiError> handleEmailInUse(EmailAlreadyInUseException ex, HttpServletRequest req) {
+        log.warn("Email en uso: {}", ex.getMessage());
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    // 400 – Edad mínima modelo
+    @ExceptionHandler(UnderageModelException.class)
+    public ResponseEntity<ApiError> handleUnderage(UnderageModelException ex, HttpServletRequest req) {
+        log.warn("Restricción de edad: {}", ex.getMessage());
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    // 400 – Validaciones @Valid
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiError> handleValidation(MethodArgumentNotValidException ex, HttpServletRequest req) {
+        String details = ex.getBindingResult().getFieldErrors().stream()
+                .map(fe -> fe.getField() + ": " + (fe.getDefaultMessage() != null ? fe.getDefaultMessage() : "inválido"))
+                .collect(Collectors.joining("; "));
+        log.warn("Validación inválida: {}", details);
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Bad Request", details, req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    // 401 – No autenticado
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiError> handleAuth(AuthenticationException ex, HttpServletRequest req) {
+        log.warn("No autenticado: {}", ex.getMessage());
+        ApiError body = new ApiError(HttpStatus.UNAUTHORIZED.value(), "Unauthorized", "No autenticado", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
+    }
+
+    // 403 – Sin permisos
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex, HttpServletRequest req) {
+        log.warn("Acceso denegado: {}", ex.getMessage());
+        ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Forbidden", "Acceso denegado", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    // 400 – IllegalArgument en lógica de negocio conocida
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiError> handleIllegalArgument(IllegalArgumentException ex, HttpServletRequest req) {
+        log.warn("Argumento inválido: {}", ex.getMessage());
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    // 500 – Cualquier otro error no controlado
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleOther(Exception ex, HttpServletRequest req) {
+        // Logueamos el stack una sola vez a nivel ERROR (útil para investigar)
+        log.error("Error no controlado en {}: {}", req.getRequestURI(), ex.getMessage(), ex);
+        ApiError body = new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error",
+                "Ha ocurrido un error interno. Inténtalo de nuevo.", req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+}

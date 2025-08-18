@@ -8,6 +8,8 @@ import Login from './pages/Login';
 import DashboardUserClient from './pages/DashboardUserClient';
 import DashboardUserModel from './pages/DashboardUserModel';
 import DashboardAdmin from './pages/DashboardAdmin';
+import PerfilClient from './pages/PerfilClient';
+import PerfilModel from './pages/PerfilModel';
 
 function App() {
   return (
@@ -21,6 +23,8 @@ function App() {
         <Route path="/dashboard-user-client" component={DashboardUserClient} />
         <Route path="/dashboard-user-model" component={DashboardUserModel} />
         <Route path="/dashboard-admin" component={DashboardAdmin} />
+        <Route path="/perfil-client" component={PerfilClient} />
+        <Route path="/perfil-model" component={PerfilModel} />
       </Switch>
     </Router>
   );

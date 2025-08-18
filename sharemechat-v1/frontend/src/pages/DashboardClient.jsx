@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt, faUser, faHeart, faEnvelope, faUserPlus, faBell } from '@fortawesome/free-solid-svg-icons';
@@ -26,7 +27,7 @@ const DashboardClient = () => {
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('models');
 
-
+  const history = useHistory();
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const socketRef = useRef(null);
@@ -59,6 +60,11 @@ const DashboardClient = () => {
     }
   };
 
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    history.push('/');
+  };
+
   const handleStartMatch = () => {
     if (!cameraActive || !localStream.current) {
       setError('Primero activa la cámara.');
@@ -67,10 +73,20 @@ const DashboardClient = () => {
     setSearching(true);
     setError('');
 
-    socketRef.current = new WebSocket('wss://test.sharemechat.com/match');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
+      setSearching(false);
+      return;
+    }
+
+    const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(token)}`;
+    console.log('WS(Client) ->', wsUrl);
+
+    socketRef.current = new WebSocket(wsUrl);
 
     socketRef.current.onopen = () => {
-      console.log('WebSocket abierto, enviando start-match');
+      console.log('WebSocket abierto (client), enviando start-match');
       socketRef.current.send(JSON.stringify({ type: 'set-role', role: 'client' }));
       socketRef.current.send(JSON.stringify({ type: 'start-match' }));
     };
@@ -96,7 +112,9 @@ const DashboardClient = () => {
         });
 
         peer.on('signal', (signal) => {
-          socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
+          }
         });
 
         peer.on('stream', (stream) => {
@@ -113,39 +131,43 @@ const DashboardClient = () => {
         setSearching(false);
 
       } else if (data.type === 'signal' && peerRef.current) {
-          peerRef.current.signal(data.signal);
+        peerRef.current.signal(data.signal);
+
       } else if (data.type === 'chat') {
-          setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+        setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+
       } else if (data.type === 'no-model-available') {
-          setError('No hay modelos disponibles.');
-          setSearching(false);
+        setError('No hay modelos disponibles.');
+        setSearching(false);
+
       } else if (data.type === 'peer-disconnected') {
-          console.log('Recibido peer-disconnected');
-          if(peerRef.current){
-             peerRef.current.destroy();
-             peerRef.current = null;
-             console.log('Peer destruido');
-          }
-          if (remoteStream) {
-              remoteStream.getTracks().forEach(track => track.stop());
-          }
-          setRemoteStream(null);
-          setMessages([]);
-          setError('El modelo se ha desconectado.');
+        console.log('Recibido peer-disconnected');
+        if (peerRef.current) {
+          peerRef.current.destroy();
+          peerRef.current = null;
+          console.log('Peer destruido');
+        }
+        if (remoteStream) {
+          remoteStream.getTracks().forEach(track => track.stop());
+        }
+        setRemoteStream(null);
+        setMessages([]);
+        setError('El modelo se ha desconectado.');
       }
     };
 
     socketRef.current.onerror = (e) => {
+      console.error('WebSocket error (client):', e);
       setError('Error WebSocket');
       setSearching(false);
-      console.error(e);
     };
 
-    socketRef.current.onclose = () => {
-      console.log('WebSocket cerrado');
+    socketRef.current.onclose = (e) => {
+      console.log('WebSocket cerrado (client):', e.code, e.reason);
       setSearching(false);
     };
   };
+
 
   const handleNext = () => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -173,6 +195,10 @@ const DashboardClient = () => {
     setMessages(prev => [...prev, { from: 'me', text: chatInput }]);
     setChatInput('');
   };
+
+   const handleProfile = () => {
+      history.push('/perfil-client');
+   };
 
   const stopAll = () => {
     if (localStream.current) {
@@ -203,11 +229,11 @@ const DashboardClient = () => {
         <span>Mi Logo</span>
         <div>
           <span className="me-3">Hola, Cliente</span>
-          <StyledNavButton>
+          <StyledNavButton type="button" onClick={handleLogout}>
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
           </StyledNavButton>
-          <StyledNavButton>
+          <StyledNavButton type="button" onClick={handleProfile}>
             <FontAwesomeIcon icon={faUser} />
             <StyledIconWrapper>Perfil</StyledIconWrapper>
           </StyledNavButton>

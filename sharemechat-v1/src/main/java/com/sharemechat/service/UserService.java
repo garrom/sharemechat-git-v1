@@ -6,6 +6,7 @@ import com.sharemechat.entity.LoginResponse;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailAlreadyInUseException;
 import com.sharemechat.exception.InvalidCredentialsException;
+import com.sharemechat.exception.UnderageModelException;
 import com.sharemechat.exception.UserNotFoundException;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
@@ -58,7 +59,7 @@ public class UserService {
         LocalDate today = LocalDate.now();
         Period age = Period.between(registerDTO.getDateOfBirth(), today);
         if (age.getYears() < 18) {
-            throw new IllegalArgumentException("Debes ser mayor de 18 años para registrarte como modelo");
+            throw new UnderageModelException("Debes ser mayor de 18 años para registrarte como modelo");
         }
         User user = new User();
         user.setEmail(registerDTO.getEmail());

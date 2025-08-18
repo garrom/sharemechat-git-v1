@@ -1,41 +1,91 @@
 package com.sharemechat.handler;
 
+import com.sharemechat.entity.User;
+import com.sharemechat.repository.UserRepository;
+import com.sharemechat.security.JwtUtil;
+import com.sharemechat.service.ModelStatusService;
+import com.sharemechat.service.StreamService;
 import org.json.JSONObject;
+import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
+@Component
 public class MatchingHandler extends TextWebSocketHandler {
 
     private final Queue<WebSocketSession> waitingModels = new ConcurrentLinkedQueue<>();
     private final Queue<WebSocketSession> waitingClients = new ConcurrentLinkedQueue<>();
     private final Map<String, WebSocketSession> pairs = new HashMap<>();
     private final Map<String, String> roles = new HashMap<>();
+    private final Map<String, Long> sessionUserIds = new HashMap<>();
+
+    private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
+    private final StreamService streamService;
+    private final ModelStatusService modelStatusService;
+
+    public MatchingHandler(JwtUtil jwtUtil,
+                           UserRepository userRepository,
+                           StreamService streamService,
+                           ModelStatusService modelStatusService) {
+        this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
+        this.streamService = streamService;
+        this.modelStatusService = modelStatusService;
+    }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         System.out.println("Nueva conexión establecida: sessionId=" + session.getId());
-        //No añadir a ninguna cola hasta que se defina el rol
+        System.out.println("WS URI recibida: " + session.getUri()); // <-- debería mostrar ?token=
+        // 1) Resolver userId desde token (?token=... o Authorization: Bearer ...)
+        Long userId = resolveUserId(session);
+        if (userId == null) {
+            System.out.println("Sin token válido, cerrando sesión: " + session.getId());
+            session.close(CloseStatus.BAD_DATA);
+            return;
+        }
+        sessionUserIds.put(session.getId(), userId);
+        // No añadimos a colas hasta que nos digan el rol (set-role)
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-
         System.out.println("Conexión cerrada: sessionId=" + session.getId() + ", status=" + status);
         String role = roles.remove(session.getId());
+        Long userId = sessionUserIds.remove(session.getId());
+
         if ("model".equals(role)) {
             waitingModels.remove(session);
             System.out.println("Modelo eliminado de waitingModels: sessionId=" + session.getId());
+            if (userId != null) {
+                // El modelo pasa a OFFLINE al cerrarse WS
+                modelStatusService.setOffline(userId);
+            }
         } else if ("client".equals(role)) {
             waitingClients.remove(session);
             System.out.println("Cliente eliminado de waitingClients: sessionId=" + session.getId());
         }
+
         WebSocketSession peer = pairs.remove(session.getId());
         if (peer != null) {
-            System.out.println("Peer encontrado para sessionId=" + session.getId() + ", peerId=" + peer.getId());
             pairs.remove(peer.getId());
             System.out.println("Par eliminado del mapa: peerId=" + peer.getId());
+
+            // 2) Finalizar sesión de streaming si existía par activo
+            Long myId = userId;
+            Long peerId = sessionUserIds.get(peer.getId());
+            String myRole = role;
+            String peerRole = roles.get(peer.getId());
+
+            endStreamIfPairKnown(myId, myRole, peerId, peerRole);
+
             if (peer.isOpen()) {
                 try {
                     peer.sendMessage(new TextMessage("{\"type\":\"peer-disconnected\"}"));
@@ -63,13 +113,20 @@ public class MatchingHandler extends TextWebSocketHandler {
             if ("set-role".equals(type)) {
                 String role = json.getString("role");
                 roles.put(session.getId(), role);
+                Long userId = sessionUserIds.get(session.getId());
+
                 if ("model".equals(role)) {
                     waitingModels.add(session);
                     System.out.println("Modelo añadido a waitingModels: sessionId=" + session.getId());
+                    if (userId != null) {
+                        // Al declararse como modelo y estar a la espera, está AVAILABLE
+                        modelStatusService.setAvailable(userId);
+                    }
                 } else if ("client".equals(role)) {
                     waitingClients.add(session);
                     System.out.println("Cliente añadido a waitingClients: sessionId=" + session.getId());
                 }
+
             } else if ("start-match".equals(type)) {
                 String role = roles.get(session.getId());
                 if ("client".equals(role)) {
@@ -101,6 +158,23 @@ public class MatchingHandler extends TextWebSocketHandler {
         if (model != null && model.isOpen()) {
             pairs.put(client.getId(), model);
             pairs.put(model.getId(), client);
+
+            // === INICIO STREAM EN MATCH ===
+            Long clientId = sessionUserIds.get(client.getId());
+            Long modelId = sessionUserIds.get(model.getId());
+            if (clientId != null && modelId != null) {
+                try {
+                    // El servicio verifica roles reales contra DB y setea BUSY
+                    streamService.startSession(clientId, modelId, false);
+                } catch (Exception ex) {
+                    System.out.println("startSession falló: " + ex.getMessage());
+                    // si falla el inicio, devolvemos el modelo a la cola y avisamos al cliente
+                    safeRequeue(model, "model");
+                    client.sendMessage(new TextMessage("{\"type\":\"no-model-available\"}"));
+                    return;
+                }
+            }
+
             sendMatchMessage(client, model.getId());
             sendMatchMessage(model, client.getId());
         } else {
@@ -115,6 +189,22 @@ public class MatchingHandler extends TextWebSocketHandler {
         if (client != null && client.isOpen()) {
             pairs.put(model.getId(), client);
             pairs.put(client.getId(), model);
+
+            // === INICIO STREAM EN MATCH ===
+            Long clientId = sessionUserIds.get(client.getId());
+            Long modelId = sessionUserIds.get(model.getId());
+            if (clientId != null && modelId != null) {
+                try {
+                    streamService.startSession(clientId, modelId, false);
+                } catch (Exception ex) {
+                    System.out.println("startSession falló: " + ex.getMessage());
+                    // si falla el inicio, devolvemos el cliente a la cola y avisamos al modelo
+                    safeRequeue(client, "client");
+                    model.sendMessage(new TextMessage("{\"type\":\"no-client-available\"}"));
+                    return;
+                }
+            }
+
             sendMatchMessage(model, client.getId());
             sendMatchMessage(client, model.getId());
         } else {
@@ -122,20 +212,31 @@ public class MatchingHandler extends TextWebSocketHandler {
             waitingModels.add(model); // Volver a la cola si no hay cliente
         }
     }
+
     private void handleNext(WebSocketSession session) throws Exception {
         WebSocketSession peer = pairs.remove(session.getId());
         if (peer != null) {
             pairs.remove(peer.getId());
             System.out.println("Peer encontrado para sessionId=" + session.getId() + ", peerId=" + peer.getId());
+
+            // === FIN STREAM POR NEXT ===
+            Long myId = sessionUserIds.get(session.getId());
+            Long peerId = sessionUserIds.get(peer.getId());
+            String myRole = roles.get(session.getId());
+            String peerRole = roles.get(peer.getId());
+            endStreamIfPairKnown(myId, myRole, peerId, peerRole);
+
             if (peer.isOpen()) {
                 peer.sendMessage(new TextMessage("{\"type\":\"peer-disconnected\"}"));
                 System.out.println("Enviado 'peer-disconnected' a peerId=" + peer.getId());
-            }else{
+            } else {
                 System.out.println("Peer no está abierto: peerId=" + peer.getId());
             }
-        }else{
+        } else {
             System.out.println("No se encontró peer para sessionId=" + session.getId());
         }
+
+        // Volver a emparejar al que pulsó 'next'
         String role = roles.get(session.getId());
         if ("client".equals(role)) {
             matchClient(session);
@@ -144,13 +245,104 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    private void endStreamIfPairKnown(Long idA, String roleA, Long idB, String roleB) {
+        if (idA == null || idB == null || roleA == null || roleB == null) return;
+
+        Long clientId;
+        Long modelId;
+
+        if ("client".equals(roleA) && "model".equals(roleB)) {
+            clientId = idA;
+            modelId = idB;
+        } else if ("model".equals(roleA) && "client".equals(roleB)) {
+            clientId = idB;
+            modelId = idA;
+        } else {
+            // roles inconsistentes, no finalizamos
+            return;
+        }
+
+        try {
+            streamService.endSession(clientId, modelId);
+        } catch (Exception ex) {
+            System.out.println("endSession falló: " + ex.getMessage());
+        }
+    }
+
     private void sendMatchMessage(WebSocketSession session, String peerId) {
         try {
-            // Enviar mensaje de emparejamiento
-            System.out.println("Enviando mensaje de emparejamiento a sessionId=" + session.getId() + ": {\"type\":\"match\",\"peerId\":\"" + peerId + "\"}");
-            session.sendMessage(new TextMessage("{\"type\":\"match\",\"peerId\":\"" + peerId + "\"}"));
+            String msg = "{\"type\":\"match\",\"peerId\":\"" + peerId + "\"}";
+            System.out.println("Enviando mensaje de emparejamiento a sessionId=" + session.getId() + ": " + msg);
+            session.sendMessage(new TextMessage(msg));
         } catch (Exception e) {
             System.out.println("Error enviando mensaje de emparejamiento a sessionId=" + session.getId() + ": " + e.getMessage());
         }
+    }
+
+    private void safeRequeue(WebSocketSession session, String role) {
+        if (session != null && session.isOpen()) {
+            if ("model".equals(role)) {
+                waitingModels.add(session);
+            } else if ("client".equals(role)) {
+                waitingClients.add(session);
+            }
+        }
+    }
+
+    // === Utilidades para extraer token y userId ===
+
+    private Long resolveUserId(WebSocketSession session) {
+        String token = extractToken(session);
+        if (token == null) return null;
+        try {
+            if (!jwtUtil.isTokenValid(token)) return null;
+            return jwtUtil.extractUserId(token);
+        } catch (Exception ex) {
+            System.out.println("Token inválido: " + ex.getMessage());
+            return null;
+        }
+    }
+
+    private String extractToken(WebSocketSession session) {
+        // 1) Query param ?token=...
+        try {
+            URI uri = session.getUri();
+            if (uri != null && uri.getQuery() != null) {
+                Map<String, String> qs = parseQuery(uri.getQuery());
+                if (qs.containsKey("token")) {
+                    return qs.get("token");
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // 2) Header Authorization: Bearer ...
+        try {
+            List<String> auths = session.getHandshakeHeaders().get("Authorization");
+            if (auths != null && !auths.isEmpty()) {
+                String h = auths.get(0);
+                if (h != null && h.startsWith("Bearer ")) {
+                    return h.substring(7);
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return null;
+    }
+
+    private Map<String, String> parseQuery(String query) {
+        Map<String, String> map = new HashMap<>();
+        String[] parts = query.split("&");
+        for (String p : parts) {
+            int i = p.indexOf('=');
+            if (i > 0) {
+                String k = URLDecoder.decode(p.substring(0, i), StandardCharsets.UTF_8);
+                String v = URLDecoder.decode(p.substring(i + 1), StandardCharsets.UTF_8);
+                map.put(k, v);
+            } else {
+                String k = URLDecoder.decode(p, StandardCharsets.UTF_8);
+                map.put(k, "");
+            }
+        }
+        return map;
     }
 }

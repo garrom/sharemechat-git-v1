@@ -35,6 +35,8 @@ public class StreamRecord {
 
     public StreamRecord() {}
 
+    // getters and setters
+
     public Long getId() { return id; }
 
     public User getClient() { return client; }
