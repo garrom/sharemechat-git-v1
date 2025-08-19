@@ -104,11 +104,42 @@ public class MatchingHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
-        System.out.println("Mensaje recibido de sessionId=" + session.getId() + ": " + payload);
+        // Deja comentado el log crudo para evitar volcar SDP/candidates gigantes
+        // System.out.println("Mensaje recibido de sessionId=" + session.getId() + ": " + payload);
 
         try {
             JSONObject json = new JSONObject(payload);
             String type = json.getString("type");
+
+            // ===== LOGS SANITIZADOS (no imprimen SDP/candidates) =====
+            if ("signal".equals(type)) {
+                JSONObject sig = json.optJSONObject("signal");
+                String sigType = sig != null ? sig.optString("type", "") : "";
+                if ("offer".equalsIgnoreCase(sigType) || "answer".equalsIgnoreCase(sigType)) {
+                    String sdp = sig.optString("sdp", "");
+                    System.out.println("Señalización " + sigType + " recibida (SDP len=" + sdp.length() + ") sessionId=" + session.getId());
+                } else if ("candidate".equalsIgnoreCase(sigType)) {
+                    JSONObject cand = sig.optJSONObject("candidate");
+                    String c = cand != null ? cand.optString("candidate", "") : "";
+                    Integer mLine = cand != null ? cand.optInt("sdpMLineIndex", -1) : -1;
+                    System.out.println("ICE candidate recibido (len=" + c.length() + ", mLine=" + mLine + ") sessionId=" + session.getId());
+                } else {
+                    System.out.println("Señalización recibida (tipo=" + sigType + ") sessionId=" + session.getId());
+                }
+            } else if ("chat".equals(type)) {
+                String txt = json.optString("message", "");
+                System.out.println("Chat recibido (" + txt.length() + " chars) sessionId=" + session.getId());
+            } else if ("set-role".equals(type) || "start-match".equals(type) || "next".equals(type)) {
+                System.out.println("Mensaje tipo='" + type + "' sessionId=" + session.getId());
+            } else if (!"ping".equals(type)) {
+                System.out.println("Mensaje recibido (tipo desconocido) sessionId=" + session.getId());
+            }
+            // ===== FIN LOGS SANITIZADOS =====
+
+            if ("ping".equals(type)) {
+                // keepalive desde el cliente; no hacer nada
+                return;
+            }
 
             if ("set-role".equals(type)) {
                 String role = json.getString("role");
@@ -116,13 +147,16 @@ public class MatchingHandler extends TextWebSocketHandler {
                 Long userId = sessionUserIds.get(session.getId());
 
                 if ("model".equals(role)) {
+                    // Evitar duplicados en la cola
+                    waitingModels.remove(session);
                     waitingModels.add(session);
                     System.out.println("Modelo añadido a waitingModels: sessionId=" + session.getId());
                     if (userId != null) {
-                        // Al declararse como modelo y estar a la espera, está AVAILABLE
                         modelStatusService.setAvailable(userId);
                     }
                 } else if ("client".equals(role)) {
+                    // Evitar duplicados en la cola
+                    waitingClients.remove(session);
                     waitingClients.add(session);
                     System.out.println("Cliente añadido a waitingClients: sessionId=" + session.getId());
                 }
@@ -134,13 +168,16 @@ public class MatchingHandler extends TextWebSocketHandler {
                 } else if ("model".equals(role)) {
                     matchModel(session);
                 }
+
             } else if ("next".equals(type)) {
                 handleNext(session);
+
             } else if ("chat".equals(type)) {
                 WebSocketSession peer = pairs.get(session.getId());
                 if (peer != null && peer.isOpen()) {
                     peer.sendMessage(new TextMessage(payload));
                 }
+
             } else if (pairs.containsKey(session.getId())) {
                 WebSocketSession peer = pairs.get(session.getId());
                 if (peer != null && peer.isOpen()) {
@@ -151,6 +188,8 @@ public class MatchingHandler extends TextWebSocketHandler {
             System.out.println("Error parseando JSON: " + e.getMessage());
         }
     }
+
+
 
     private void matchClient(WebSocketSession client) throws Exception {
         waitingClients.remove(client);

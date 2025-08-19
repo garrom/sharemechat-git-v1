@@ -32,6 +32,8 @@ const DashboardModel = () => {
   const socketRef = useRef(null);
   const localStream = useRef(null);
   const peerRef = useRef(null);
+  const pingIntervalRef = useRef(null);
+
 
   // Muestra video local cuando cámara está activa
   useEffect(() => {
@@ -85,7 +87,14 @@ const DashboardModel = () => {
 
     socket.onopen = () => {
       console.log('Modelo conectado al WebSocket');
-      // El servidor validará el token y te dejará dentro
+      // --- Keepalive cada 30s ---
+      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = setInterval(() => {
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 30000);
+
       socket.send(JSON.stringify({ type: 'set-role', role: 'model' }));
     };
 
@@ -101,6 +110,8 @@ const DashboardModel = () => {
         peerRef.current = peer;
 
         peer.on('signal', (signal) => {
+          // Ignorar candidatos vacíos
+          if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
           if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
           }
@@ -143,7 +154,13 @@ const DashboardModel = () => {
     };
 
     socket.onclose = () => {
+
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
       console.log('WebSocket cerrado (modelo)');
+
     };
   };
 
@@ -180,6 +197,12 @@ const DashboardModel = () => {
    };
 
   const stopAll = () => {
+
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+
     // Cierra cámara local
     if (localStream.current) {
       localStream.current.getTracks().forEach((track) => track.stop());

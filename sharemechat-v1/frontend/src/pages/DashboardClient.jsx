@@ -33,6 +33,8 @@ const DashboardClient = () => {
   const socketRef = useRef(null);
   const localStream = useRef(null);
   const peerRef = useRef(null);
+  const pingIntervalRef = useRef(null);
+
 
   useEffect(() => {
     if (localVideoRef.current && localStream.current) {
@@ -87,6 +89,14 @@ const DashboardClient = () => {
 
     socketRef.current.onopen = () => {
       console.log('WebSocket abierto (client), enviando start-match');
+      // --- Keepalive cada 30s ---
+      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = setInterval(() => {
+        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ type: 'ping' }));
+        }
+      }, 30000);
+
       socketRef.current.send(JSON.stringify({ type: 'set-role', role: 'client' }));
       socketRef.current.send(JSON.stringify({ type: 'start-match' }));
     };
@@ -112,10 +122,13 @@ const DashboardClient = () => {
         });
 
         peer.on('signal', (signal) => {
+          // Ignorar candidatos vacíos
+          if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
           if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
           }
         });
+
 
         peer.on('stream', (stream) => {
           setRemoteStream(stream);
@@ -163,6 +176,10 @@ const DashboardClient = () => {
     };
 
     socketRef.current.onclose = (e) => {
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
       console.log('WebSocket cerrado (client):', e.code, e.reason);
       setSearching(false);
     };
@@ -201,6 +218,11 @@ const DashboardClient = () => {
    };
 
   const stopAll = () => {
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => track.stop());
       localStream.current = null;
