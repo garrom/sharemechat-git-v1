@@ -46,6 +46,12 @@ public class User {
     @Column(name = "is_premium", nullable = false)
     private Boolean isPremium = false;
 
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
     @Column(name = "unsubscribe", nullable = false)
     private Boolean unsubscribe = false;
 
@@ -67,6 +73,11 @@ public class User {
     }
 
     // Getters y Setters
+
+    public LocalDate getStartDate() {return startDate;}
+    public void setStartDate(LocalDate startDate) {this.startDate = startDate;}
+    public LocalDate getEndDate() {return endDate;}
+    public void setEndDate(LocalDate endDate) {this.endDate = endDate;}
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
     public String getNickname() { return nickname; }

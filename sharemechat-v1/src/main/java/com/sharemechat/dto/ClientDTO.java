@@ -6,8 +6,6 @@ import java.time.LocalDate;
 public class ClientDTO {
 
     private Long userId;
-    private LocalDate startDate;
-    private LocalDate endDate;
     private Boolean isActive;
     private BigDecimal streamingHours;
     private BigDecimal saldoActual;
@@ -22,22 +20,6 @@ public class ClientDTO {
 
     public void setUserId(Long userId) {
         this.userId = userId;
-    }
-
-    public LocalDate getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDate startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDate getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDate endDate) {
-        this.endDate = endDate;
     }
 
     public Boolean getActive() {

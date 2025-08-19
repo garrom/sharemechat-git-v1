@@ -100,12 +100,10 @@ public class TransactionService {
         bal.setDescription(request.getDescription());
         balanceRepository.save(bal);
 
-        // 6) Upsert en clients (hereda id con @MapsId)
+        // 6) Upsert en clients (hereda id con @MapsId) — sin start/end date aquí
         Client client = existingClientOpt.orElseGet(() -> {
             Client c = new Client();
             c.setUser(user);
-            c.setStartDate(LocalDate.now());
-            c.setActive(true);
             c.setSaldoActual(BigDecimal.ZERO);
             c.setTotalPagos(BigDecimal.ZERO);
             return c;
@@ -114,11 +112,15 @@ public class TransactionService {
         client.setTotalPagos(client.getTotalPagos().add(request.getAmount()));
         clientRepository.save(client);
 
-        // 7) Promover a CLIENT (unidireccional) + premium
+        // 7) Promover a CLIENT (unidireccional) + premium y fijar startDate en User si no lo tenía
         user.setRole(Constants.Roles.CLIENT);
         user.setIsPremium(true);
+        if (user.getStartDate() == null) {
+            user.setStartDate(LocalDate.now());
+        }
         userRepository.save(user);
     }
+
 
 
     /**

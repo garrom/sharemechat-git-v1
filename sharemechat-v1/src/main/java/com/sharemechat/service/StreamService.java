@@ -1,16 +1,19 @@
 package com.sharemechat.service;
 
-import com.sharemechat.entity.StreamRecord;
-import com.sharemechat.entity.User;
-import com.sharemechat.repository.StreamRecordRepository;
-import com.sharemechat.repository.UserRepository;
+import com.sharemechat.constants.Constants;
+import com.sharemechat.entity.*;
+import com.sharemechat.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -24,15 +27,42 @@ public class StreamService {
     private final UserRepository userRepository;
     private final ModelStatusService modelStatusService;
 
+    private final TransactionRepository transactionRepository;
+    private final BalanceRepository balanceRepository;
+    private final ClientRepository clientRepository;
+    private final ModelRepository modelRepository;
+
+    private final PlatformTransactionRepository platformTransactionRepository;
+    private final PlatformBalanceRepository platformBalanceRepository;
+
     // locks por sesión para evitar dobles cierres concurrentes
     private final ConcurrentHashMap<Long, ReentrantLock> sessionLocks = new ConcurrentHashMap<>();
 
+    // Lee desde application.properties
+    @org.springframework.beans.factory.annotation.Value("${billing.rate-per-minute}")
+    private BigDecimal ratePerMinute;
+
+    @org.springframework.beans.factory.annotation.Value("${billing.model-share}")
+    private BigDecimal modelShare;
+
     public StreamService(StreamRecordRepository streamRecordRepository,
                          UserRepository userRepository,
-                         ModelStatusService modelStatusService) {
+                         ModelStatusService modelStatusService,
+                         BalanceRepository balanceRepository,
+                         TransactionRepository transactionRepository,
+                         ClientRepository clientRepository,
+                         ModelRepository modelRepository,
+                         PlatformTransactionRepository platformTransactionRepository,
+                         PlatformBalanceRepository platformBalanceRepository) {
         this.streamRecordRepository = streamRecordRepository;
         this.userRepository = userRepository;
         this.modelStatusService = modelStatusService;
+        this.balanceRepository = balanceRepository;
+        this.transactionRepository = transactionRepository;
+        this.clientRepository = clientRepository;
+        this.modelRepository = modelRepository;
+        this.platformTransactionRepository = platformTransactionRepository;
+        this.platformBalanceRepository = platformBalanceRepository;
     }
 
     /**
@@ -58,10 +88,10 @@ public class StreamService {
         User model = userRepository.findById(modelId)
                 .orElseThrow(() -> new EntityNotFoundException("Modelo no encontrado: " + modelId));
 
-        if (!"CLIENT".equals(client.getRole())) {
+        if (!Constants.Roles.CLIENT.equals(client.getRole())) {
             throw new IllegalArgumentException("El usuario " + clientId + " no tiene rol CLIENT");
         }
-        if (!"MODEL".equals(model.getRole())) {
+        if (!Constants.Roles.MODEL.equals(model.getRole())) {
             throw new IllegalArgumentException("El usuario " + modelId + " no tiene rol MODEL");
         }
 
@@ -75,7 +105,7 @@ public class StreamService {
         StreamRecord saved = streamRecordRepository.save(sr);
         log.info("startSession: creada sesión id={} (client={}, model={})", saved.getId(), clientId, modelId);
 
-        // Estado y lookup rápido en Redis
+        // Estado y lookup rápido (Redis)
         modelStatusService.setBusy(modelId);
         modelStatusService.setActiveSession(clientId, modelId, saved.getId());
 
@@ -83,19 +113,23 @@ public class StreamService {
     }
 
     /**
-     * Finaliza la sesión activa para el par client-model (si existe).
-     * Idempotente. Marca end_time=now y limpia claves auxiliares.
+     * Finaliza la sesión activa para el par client-model (si existe), y liquida cobros/pagos.
+     * Idempotente. Marca end_time=now y limpia claves auxiliares. Facturación atómica.
      */
     @Transactional
     public void endSession(Long clientId, Long modelId) {
-        // Primero intenta lookup en Redis para evitar una query
-        Long sessionId = modelStatusService.getActiveSession(clientId, modelId).orElse(null);
 
-        StreamRecord session;
-        if (sessionId != null) {
-            session = streamRecordRepository.findById(sessionId)
-                    .orElse(null);
-        } else {
+        final BigDecimal RATE_PER_MINUTE = ratePerMinute;
+        final BigDecimal MODEL_SHARE     = modelShare;
+
+        // 1) Buscar la sesión activa (primero por Redis, luego por DB)
+        Long sessionIdHint = modelStatusService.getActiveSession(clientId, modelId).orElse(null);
+
+        StreamRecord session = null;
+        if (sessionIdHint != null) {
+            session = streamRecordRepository.findById(sessionIdHint).orElse(null);
+        }
+        if (session == null) {
             session = streamRecordRepository
                     .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId)
                     .orElse(null);
@@ -106,7 +140,7 @@ public class StreamService {
             return; // idempotente
         }
 
-        // Lock por sesión
+        // 2) Lock por sesión para evitar dobles cierres concurrentes
         ReentrantLock lock = sessionLocks.computeIfAbsent(session.getId(), k -> new ReentrantLock());
         if (!lock.tryLock()) {
             log.info("endSession: sesión {} ya está siendo cerrada por otro hilo", session.getId());
@@ -119,14 +153,164 @@ public class StreamService {
                 return; // idempotente
             }
 
-            session.setEndTime(LocalDateTime.now());
+            // 3) Marcar fin
+            LocalDateTime endTime = LocalDateTime.now();
+            session.setEndTime(endTime);
             streamRecordRepository.save(session);
             log.info("endSession: cerrada sesión id={} (client={}, model={})", session.getId(), clientId, modelId);
 
-            // Limpieza en Redis
-            modelStatusService.clearActiveSession(clientId, modelId);
+            // 4) Cálculo de duración
+            long seconds = java.time.Duration.between(session.getStartTime(), endTime).getSeconds();
+            if (seconds < 0) seconds = 0;
+            long minutes = (seconds + 59) / 60; // redondeo hacia arriba
+            BigDecimal hoursAsBigDecimal = BigDecimal.valueOf(seconds)
+                    .divide(BigDecimal.valueOf(3600), 2, java.math.RoundingMode.HALF_UP);
 
-            // Política simple: si la modelo no está OFFLINE, restaurar a AVAILABLE (quedará OFFLINE si no hay heartbeats)
+            // 5) Cargar entidades base
+            User clientUser = userRepository.findById(clientId)
+                    .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Cliente no encontrado: " + clientId));
+            User modelUser = userRepository.findById(modelId)
+                    .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Modelo no encontrado: " + modelId));
+
+            // Client (tabla mutable)
+            Client clientEntity = clientRepository.findById(clientId)
+                    .orElseThrow(() -> new IllegalStateException("Cliente (tabla clients) no encontrado para userId=" + clientId));
+
+            BigDecimal currentSaldo = clientEntity.getSaldoActual() != null ? clientEntity.getSaldoActual() : BigDecimal.ZERO;
+            BigDecimal lastClientBalance = balanceRepository
+                    .findTopByUserIdOrderByTimestampDesc(clientId)
+                    .map(Balance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+
+            // 6) Verificación de consistencia cliente
+            if (lastClientBalance.compareTo(currentSaldo) != 0) {
+                throw new IllegalStateException(
+                        "Inconsistencia: último balance del cliente (" + lastClientBalance + ") != clients.saldo_actual (" + currentSaldo + ")"
+                );
+            }
+
+            // 7) Calcular coste y comprobar saldo
+            BigDecimal cost = RATE_PER_MINUTE.multiply(BigDecimal.valueOf(minutes));
+            if (cost.compareTo(BigDecimal.ZERO) > 0 && currentSaldo.compareTo(cost) < 0) {
+                // Saldo insuficiente: cap minutes
+                BigDecimal maxMinutes = currentSaldo.divide(RATE_PER_MINUTE, 0, java.math.RoundingMode.FLOOR);
+                minutes = maxMinutes.longValue();
+                cost = RATE_PER_MINUTE.multiply(BigDecimal.valueOf(minutes));
+                hoursAsBigDecimal = BigDecimal.valueOf(minutes)
+                        .divide(BigDecimal.valueOf(60), 2, java.math.RoundingMode.HALF_UP);
+            }
+
+            // Si después del cap no hay minutos, no hay cargos ni abonos; dejamos todo limpio
+            if (minutes <= 0 || cost.compareTo(BigDecimal.ZERO) <= 0) {
+                // Limpieza de Redis y estado de la modelo
+                modelStatusService.clearActiveSession(clientId, modelId);
+                String status = modelStatusService.getStatus(modelId);
+                if (status == null || "OFFLINE".equals(status)) {
+                    // nada
+                } else {
+                    modelStatusService.setAvailable(modelId);
+                }
+                log.info("endSession: sin cargos (0 min). Finalizado únicamente el registro de stream.");
+                return;
+            }
+
+            // 8) Calcular reparto
+            BigDecimal modelEarning     = cost.multiply(MODEL_SHARE).setScale(2, java.math.RoundingMode.HALF_UP);
+            BigDecimal platformEarning  = cost.subtract(modelEarning).setScale(2, java.math.RoundingMode.HALF_UP);
+
+            // 9) ===== CLIENTE: transactions + balances + clients =====
+            // Transaction (monto NEGATIVO para gasto)
+            Transaction txClient = new Transaction();
+            txClient.setUser(clientUser);
+            txClient.setAmount(cost.negate()); // gasto
+            txClient.setOperationType("STREAM_CHARGE");
+            txClient.setStreamRecord(session); // si tu entidad lo mapea como ManyToOne
+            txClient.setDescription("Cargo por streaming de " + minutes + " minutos");
+            Transaction savedTxClient = transactionRepository.save(txClient);
+
+            // Balance (amount negativo y nuevo balance)
+            BigDecimal newClientBalance = lastClientBalance.subtract(cost);
+            Balance balClient = new Balance();
+            balClient.setUserId(clientId);
+            balClient.setTransactionId(savedTxClient.getId());
+            balClient.setOperationType("STREAM_CHARGE");
+            balClient.setAmount(cost.negate()); // negativo
+            balClient.setBalance(newClientBalance);
+            balClient.setDescription("Cargo por streaming de " + minutes + " minutos");
+            balanceRepository.save(balClient);
+
+            // Clients (mutable): saldo_actual y horas
+            clientEntity.setSaldoActual(newClientBalance);
+            BigDecimal clientHours = clientEntity.getStreamingHours() != null ? clientEntity.getStreamingHours() : BigDecimal.ZERO;
+            clientEntity.setStreamingHours(clientHours.add(hoursAsBigDecimal));
+            clientRepository.save(clientEntity);
+
+            // 10) ===== MODELO: transactions + balances + models =====
+            // Transaction (monto POSITIVO para ingreso)
+            Transaction txModel = new Transaction();
+            txModel.setUser(modelUser);
+            txModel.setAmount(modelEarning); // ingreso
+            txModel.setOperationType("STREAM_EARNING");
+            txModel.setStreamRecord(session);
+            txModel.setDescription("Ganancia por streaming de " + minutes + " minutos");
+            Transaction savedTxModel = transactionRepository.save(txModel);
+
+            // Balance de la modelo (running balance) — recomendado para conciliación
+            BigDecimal lastModelBalance = balanceRepository
+                    .findTopByUserIdOrderByTimestampDesc(modelId)
+                    .map(Balance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+            BigDecimal newModelBalance = lastModelBalance.add(modelEarning);
+
+            Balance balModel = new Balance();
+            balModel.setUserId(modelId);
+            balModel.setTransactionId(savedTxModel.getId());
+            balModel.setOperationType("STREAM_EARNING");
+            balModel.setAmount(modelEarning); // positivo
+            balModel.setBalance(newModelBalance);
+            balModel.setDescription("Ganancia por streaming de " + minutes + " minutos");
+            balanceRepository.save(balModel);
+
+            // Models (mutable): saldo_actual, total_ingresos, horas
+            // Como @Id de Model es user_id, puedes buscar por findById(modelId)
+            Model modelEntity = modelRepository.findById(modelId).orElseGet(() -> {
+                Model m = new Model();
+                m.setUser(modelUser);       // @MapsId
+                m.setUserId(modelId);       // por claridad
+                // defaults ya están en la entidad (0)
+                return m;
+            });
+            BigDecimal mSaldo = modelEntity.getSaldoActual() != null ? modelEntity.getSaldoActual() : BigDecimal.ZERO;
+            BigDecimal mTotal = modelEntity.getTotalIngresos() != null ? modelEntity.getTotalIngresos() : BigDecimal.ZERO;
+            BigDecimal mHours = modelEntity.getStreamingHours() != null ? modelEntity.getStreamingHours() : BigDecimal.ZERO;
+
+            modelEntity.setSaldoActual(mSaldo.add(modelEarning));
+            modelEntity.setTotalIngresos(mTotal.add(modelEarning));
+            modelEntity.setStreamingHours(mHours.add(hoursAsBigDecimal));
+            modelRepository.save(modelEntity);
+
+            // 11) ===== PLATAFORMA: libro propio =====
+            PlatformTransaction ptx = new PlatformTransaction();
+            ptx.setAmount(platformEarning); // ingreso plataforma
+            ptx.setOperationType("STREAM_MARGIN");
+            ptx.setStreamRecord(session);
+            ptx.setDescription("Margen plataforma por streaming de " + minutes + " minutos");
+            PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
+
+            BigDecimal lastPlatformBalance = platformBalanceRepository
+                    .findTopByOrderByTimestampDesc()
+                    .map(PlatformBalance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+
+            PlatformBalance pbal = new PlatformBalance();
+            pbal.setTransactionId(savedPtx.getId());
+            pbal.setAmount(platformEarning);
+            pbal.setBalance(lastPlatformBalance.add(platformEarning));
+            pbal.setDescription("Margen plataforma por streaming de " + minutes + " minutos");
+            platformBalanceRepository.save(pbal);
+
+            // 12) Limpieza en Redis + estado AVAILABLE
+            modelStatusService.clearActiveSession(clientId, modelId);
             String status = modelStatusService.getStatus(modelId);
             if (status == null || "OFFLINE".equals(status)) {
                 // nada
@@ -140,8 +324,22 @@ public class StreamService {
         }
     }
 
+
+    private void postEndStatusCleanup(Long clientId, Long modelId) {
+        // Limpieza en Redis
+        modelStatusService.clearActiveSession(clientId, modelId);
+
+        // Política simple: si la modelo no está OFFLINE, restaurar a AVAILABLE
+        String status = modelStatusService.getStatus(modelId);
+        if (status == null || "OFFLINE".equals(status)) {
+            // nada
+        } else {
+            modelStatusService.setAvailable(modelId);
+        }
+    }
+
     /**
-     * Cierre por id (útil si ya conoces el sessionId).
+     * Cierre por id (útil si ya conoces el sessionId). No se está usando de momento
      */
     @Transactional
     public void endSessionById(Long sessionId) {

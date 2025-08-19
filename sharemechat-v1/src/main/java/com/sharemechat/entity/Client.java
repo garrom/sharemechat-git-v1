@@ -13,12 +13,6 @@ public class Client {
     @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "start_date")
-    private LocalDate startDate;
-
-    @Column(name = "end_date")
-    private LocalDate endDate;
-
     @Column(name = "is_active")
     private Boolean isActive;
 
@@ -51,21 +45,6 @@ public class Client {
         this.userId = userId;
     }
 
-    public LocalDate getStartDate() {
-        return startDate;
-    }
-
-    public void setStartDate(LocalDate startDate) {
-        this.startDate = startDate;
-    }
-
-    public LocalDate getEndDate() {
-        return endDate;
-    }
-
-    public void setEndDate(LocalDate endDate) {
-        this.endDate = endDate;
-    }
 
     public Boolean getActive() {
         return isActive;

@@ -19,4 +19,9 @@ public class Constants {
         public static final String APPROVED = "APPROVED";
         public static final String REJECTED = "REJECTED";
     }
+
+    public static class OperationTypes {
+        public static final String STREAM_CHARGE = "STREAM_CHARGE";   // cargo al cliente
+        public static final String STREAM_EARNING = "STREAM_EARNING"; // ingreso a la modelo
+    }
 }

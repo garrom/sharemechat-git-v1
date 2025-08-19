@@ -10,6 +10,7 @@ import com.sharemechat.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Service
@@ -65,6 +66,9 @@ public class AdminService {
                 // Promoción a MODEL si aún no lo es (unidireccional; no se revierte)
                 if (!Constants.Roles.MODEL.equals(user.getRole())) {
                     user.setRole(Constants.Roles.MODEL);
+                    if (user.getStartDate() == null) {
+                        user.setStartDate(LocalDate.now());
+                    }
                 }
 
                 // Asegurar registro en tabla models (idempotente)

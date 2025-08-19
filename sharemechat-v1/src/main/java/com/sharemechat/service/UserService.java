@@ -148,6 +148,8 @@ public class UserService {
         dto.setIsPremium(user.getIsPremium());
         dto.setUnsubscribe(user.getUnsubscribe());
         dto.setCreatedAt(user.getCreatedAt());
+        dto.setStartDate(user.getStartDate());
+        dto.setEndDate(user.getEndDate());
         return dto;
     }
 }
