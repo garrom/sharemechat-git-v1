@@ -10,7 +10,7 @@ export const StyledContainer = styled.div`
 
 // Navbar
 export const StyledNavbar = styled.nav`
-  background-color: #343a40;
+  background-color: #355C7D;
   color: white;
   padding: 15px 20px;
   display: flex;

@@ -21,4 +21,6 @@ public class WebSocketConfig implements WebSocketConfigurer {
         registry.addHandler(matchingHandler, "/match")
                 .setAllowedOrigins("https://test.sharemechat.com", "http://localhost:3000");
     }
+
+
 }

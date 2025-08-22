@@ -138,6 +138,7 @@ public class MatchingHandler extends TextWebSocketHandler {
 
             if ("ping".equals(type)) {
                 // keepalive desde el cliente; no hacer nada
+                checkCutoffAndMaybeEnd(session);
                 return;
             }
 
@@ -188,8 +189,6 @@ public class MatchingHandler extends TextWebSocketHandler {
             System.out.println("Error parseando JSON: " + e.getMessage());
         }
     }
-
-
 
     private void matchClient(WebSocketSession client) throws Exception {
         waitingClients.remove(client);
@@ -329,7 +328,6 @@ public class MatchingHandler extends TextWebSocketHandler {
     }
 
     // === Utilidades para extraer token y userId ===
-
     private Long resolveUserId(WebSocketSession session) {
         String token = extractToken(session);
         if (token == null) return null;
@@ -384,4 +382,65 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
         return map;
     }
+
+    // Manejo saldo negativo. Envía de forma segura (evita NPE y sockets cerrados)
+    private void safeSend(WebSocketSession s, String json) {
+        if (s != null && s.isOpen()) {
+            try { s.sendMessage(new TextMessage(json)); }
+            catch (Exception ignore) {}
+        }
+    }
+
+    /**
+     * Comprueba el umbral de saldo del cliente en la sesión activa y,
+     * si es inferior al cutoff, cierra la sesión (vía StreamService) y notifica a ambos peers.
+     * Devuelve true si se cerró por saldo bajo.
+     */
+    private boolean checkCutoffAndMaybeEnd(WebSocketSession session) {
+        // Localiza al peer
+        WebSocketSession peer = pairs.get(session.getId());
+        if (peer == null) return false;
+
+        // Roles de cada lado
+        String myRole   = roles.get(session.getId());
+        String peerRole = roles.get(peer.getId());
+        if (myRole == null || peerRole == null) return false;
+
+        Long myUserId   = sessionUserIds.get(session.getId());
+        Long peerUserId = sessionUserIds.get(peer.getId());
+        if (myUserId == null || peerUserId == null) return false;
+
+        // Determina quién es cliente y quién modelo
+        Long clientId;
+        Long modelId;
+        if ("client".equals(myRole) && "model".equals(peerRole)) {
+            clientId = myUserId;  modelId = peerUserId;
+        } else if ("model".equals(myRole) && "client".equals(peerRole)) {
+            clientId = peerUserId; modelId = myUserId;
+        } else {
+            return false; // combinación inválida
+        }
+
+        // Llama al servicio: si devuelve true, se cerró por saldo bajo
+        boolean closed = false;
+        try {
+            closed = streamService.endIfBelowThreshold(clientId, modelId);
+        } catch (Exception ex) {
+            System.out.println("endIfBelowThreshold error: " + ex.getMessage());
+            return false;
+        }
+
+        if (closed) {
+            // Notifica y limpia pares
+            safeSend(session, "{\"type\":\"peer-disconnected\",\"reason\":\"low-balance\"}");
+            safeSend(peer,    "{\"type\":\"peer-disconnected\",\"reason\":\"low-balance\"}");
+
+            // Saca el par del mapa (el StreamService ya cerró y limpió estado/redis)
+            pairs.remove(session.getId());
+            pairs.remove(peer.getId());
+        }
+        return closed;
+    }
+
+
 }
