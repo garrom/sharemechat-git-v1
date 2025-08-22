@@ -26,6 +26,12 @@ const DashboardClient = () => {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('models');
+  const [user, setUser] = useState(null);
+  const [clientBalance, setClientBalance] = useState(null);
+  const [saldo, setSaldo] = useState(null);
+  const [loadingSaldo, setLoadingSaldo] = useState(false);
+  const [saldoError, setSaldoError] = useState('');
+
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -34,7 +40,28 @@ const DashboardClient = () => {
   const localStream = useRef(null);
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
+  const token = localStorage.getItem('token');
+  const fmtEUR = (v) =>
+    new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
+      .format(Number(v || 0));
 
+
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const res = await fetch('/api/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+        }
+      } catch (e) {
+        console.error("Error cargando usuario:", e);
+      }
+    };
+    if (token) loadUser();
+  }, [token]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream.current) {
@@ -49,6 +76,35 @@ const DashboardClient = () => {
           remoteVideoRef.current.srcObject = null;
       }
   }, [remoteStream]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const loadSaldo = async () => {
+      setLoadingSaldo(true);
+      setSaldoError('');
+      try {
+        const res = await fetch('/api/clients/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || `Error ${res.status}`);
+        }
+        const data = await res.json();
+        setSaldo(data.saldoActual);
+      } catch (e) {
+        setSaldoError(e.message);
+        setSaldo(null);
+      } finally {
+        setLoadingSaldo(false);
+      }
+    };
+
+    loadSaldo();
+  }, []);
+
 
   const handleActivateCamera = async () => {
     try {
@@ -245,12 +301,91 @@ const DashboardClient = () => {
     setMessages([]);
   };
 
+  const handleAddBalance = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
+      return;
+    }
+
+    // Ventana simple para introducir el importe
+    let input = window.prompt('Cantidad a añadir (€):', '10');
+    if (input === null) return; // usuario canceló
+
+    // Permite coma o punto
+    input = String(input).replace(',', '.').trim();
+    const amount = Number(input);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert('Introduce un importe válido mayor que 0.');
+      return;
+    }
+
+    try {
+      setLoadingSaldo(true);
+
+      // Llamada al endpoint de recarga (INGRESO)
+      const res = await fetch('/api/transactions/add-balance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount,
+          operationType: 'INGRESO',
+          description: 'Recarga de saldo',
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Error ${res.status}`);
+      }
+
+      alert('Saldo añadido correctamente.');
+
+      // Refrescar saldo en navbar
+      const res2 = await fetch('/api/clients/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res2.ok) {
+        const txt = await res2.text();
+        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
+      }
+
+      const data = await res2.json();
+      setSaldo(data.saldoActual);
+      setSaldoError('');
+
+    } catch (e) {
+      console.error(e);
+      alert(e.message || 'Error al añadir saldo.');
+      setSaldoError(e.message || 'Error al cargar saldo');
+    } finally {
+      setLoadingSaldo(false);
+    }
+  };
+
+
+  const displayName = user?.nickname || user?.name || user?.email || "Cliente";
+
   return (
     <StyledContainer>
       <StyledNavbar>
         <span>Mi Logo</span>
         <div>
-          <span className="me-3">Hola, Cliente</span>
+          <span className="me-3">Hola, {displayName}</span>
+          {/* Ver saldo */}
+          <span className="me-3">
+            {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
+          </span>
+          {/* Añadir saldo */}
+          <StyledNavButton type="button" onClick={handleAddBalance} style={{ marginRight: '8px' }}>
+            + Saldo
+          </StyledNavButton>
+          {/* Salir y perfil*/}
           <StyledNavButton type="button" onClick={handleLogout}>
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>

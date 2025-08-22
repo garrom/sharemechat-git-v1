@@ -25,6 +25,11 @@ const DashboardModel = () => {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('models');
+  const [user, setUser] = useState(null);
+  const [saldoModel, setSaldoModel] = useState(null);
+  const [loadingSaldoModel, setLoadingSaldoModel] = useState(false);
+  const [saldoModelError, setSaldoModelError] = useState('');
+
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -33,7 +38,24 @@ const DashboardModel = () => {
   const localStream = useRef(null);
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
+  const token = localStorage.getItem('token');
 
+  useEffect(() => {
+    const loadUser = async () => {
+      try {
+        const res = await fetch('/api/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setUser(data);
+        }
+      } catch (e) {
+        console.error("Error cargando usuario:", e);
+      }
+    };
+    if (token) loadUser();
+  }, [token]);
 
   // Muestra video local cuando cámara está activa
   useEffect(() => {
@@ -50,6 +72,35 @@ const DashboardModel = () => {
           remoteVideoRef.current.srcObject = null;
       }
   }, [remoteStream]);
+
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+
+    const fetchSaldoModel = async () => {
+      try {
+        setLoadingSaldoModel(true);
+        const res = await fetch('/api/models/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || `Error ${res.status}`);
+        }
+        const data = await res.json();
+        setSaldoModel(data.saldoActual);
+        setSaldoModelError('');
+      } catch (e) {
+        console.error(e);
+        setSaldoModelError(e.message || 'Error al cargar saldo de modelo');
+      } finally {
+        setLoadingSaldoModel(false);
+      }
+    };
+
+    fetchSaldoModel();
+  }, []);
+
 
   const startCamera = async () => {
     try {
@@ -164,7 +215,6 @@ const DashboardModel = () => {
     };
   };
 
-
   const handleNext = () => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ type: 'next' }));
@@ -227,12 +277,88 @@ const DashboardModel = () => {
     setMessages([]);
   };
 
+  const handleRequestPayout = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
+      return;
+    }
+
+    let input = window.prompt('Cantidad a retirar (€):', '10');
+    if (input === null) return; // cancelado
+
+    input = String(input).replace(',', '.').trim();
+    const amount = Number(input);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert('Introduce un importe válido mayor que 0.');
+      return;
+    }
+
+    try {
+      setLoadingSaldoModel(true);
+
+      const res = await fetch('/api/transactions/payout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          amount,
+          description: 'Solicitud de retiro',
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Error ${res.status}`);
+      }
+
+      alert('Solicitud de retiro registrada correctamente.');
+
+      // Refrescar saldo tras el retiro
+      const res2 = await fetch('/api/models/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res2.ok) {
+        const txt = await res2.text();
+        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
+      }
+      const data = await res2.json();
+      setSaldoModel(data.saldoActual);
+      setSaldoModelError('');
+
+    } catch (e) {
+      console.error(e);
+      alert(e.message || 'Error al solicitar retiro.');
+      setSaldoModelError(e.message || 'Error al cargar saldo de modelo');
+    } finally {
+      setLoadingSaldoModel(false);
+    }
+  };
+
+
+  const displayName = user?.nickname || user?.name || user?.email || "Modelo";
+
   return (
     <StyledContainer>
       <StyledNavbar>
         <span>Mi Logo</span>
         <div>
-          <span className="me-3">Hola, Modelo</span>
+          <span className="me-3">Hola, {displayName}</span>
+
+            {/* Ver saldo */}
+            <span className="me-3">
+              {loadingSaldoModel ? 'Saldo: ...' :
+                (saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -')}
+            </span>
+           {/* Botón retiro */}
+           <StyledNavButton type="button" onClick={handleRequestPayout}>
+             Solicitar retiro
+           </StyledNavButton>
+
+          {/* Salir y perfil*/}
           <StyledNavButton type="button" onClick={handleLogout}>
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>

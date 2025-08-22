@@ -13,44 +13,23 @@ public class ClientDTO {
 
     // Getters y Setters
 
+    public Long getUserId() {return userId;}
 
-    public Long getUserId() {
-        return userId;
-    }
+    public void setUserId(Long userId) {this.userId = userId;}
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
+    public Boolean getActive() {return isActive;}
 
-    public Boolean getActive() {
-        return isActive;
-    }
+    public void setActive(Boolean active) {isActive = active;}
 
-    public void setActive(Boolean active) {
-        isActive = active;
-    }
+    public BigDecimal getStreamingHours() {return streamingHours;}
 
-    public BigDecimal getStreamingHours() {
-        return streamingHours;
-    }
+    public void setStreamingHours(BigDecimal streamingHours) {this.streamingHours = streamingHours;}
 
-    public void setStreamingHours(BigDecimal streamingHours) {
-        this.streamingHours = streamingHours;
-    }
+    public BigDecimal getSaldoActual() {return saldoActual;}
 
-    public BigDecimal getSaldoActual() {
-        return saldoActual;
-    }
+    public void setSaldoActual(BigDecimal saldoActual) {this.saldoActual = saldoActual;}
 
-    public void setSaldoActual(BigDecimal saldoActual) {
-        this.saldoActual = saldoActual;
-    }
+    public BigDecimal getTotalPagos() {return totalPagos;}
 
-    public BigDecimal getTotalPagos() {
-        return totalPagos;
-    }
-
-    public void setTotalPagos(BigDecimal totalPagos) {
-        this.totalPagos = totalPagos;
-    }
+    public void setTotalPagos(BigDecimal totalPagos) {this.totalPagos = totalPagos;}
 }

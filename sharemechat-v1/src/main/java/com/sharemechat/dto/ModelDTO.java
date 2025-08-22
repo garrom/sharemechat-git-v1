@@ -16,67 +16,27 @@ public class ModelDTO {
     // Getters y Setters
 
 
-    public Long getUserId() {
-        return userId;
-    }
+    public Long getUserId() {return userId;}
+    public void setUserId(Long userId) {this.userId = userId;}
 
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
+    public Integer getProfileVisits() {return profileVisits;}
+    public void setProfileVisits(Integer profileVisits) {this.profileVisits = profileVisits;}
 
-    public Integer getProfileVisits() {
-        return profileVisits;
-    }
+    public String getReferralCode() {return referralCode;}
+    public void setReferralCode(String referralCode) {this.referralCode = referralCode;}
 
-    public void setProfileVisits(Integer profileVisits) {
-        this.profileVisits = profileVisits;
-    }
+    public BigDecimal getReferralEarnings() {return referralEarnings;}
+    public void setReferralEarnings(BigDecimal referralEarnings) {this.referralEarnings = referralEarnings;}
 
-    public String getReferralCode() {
-        return referralCode;
-    }
+    public BigDecimal getStreamingHours() {return streamingHours;}
+    public void setStreamingHours(BigDecimal streamingHours) {this.streamingHours = streamingHours;}
 
-    public void setReferralCode(String referralCode) {
-        this.referralCode = referralCode;
-    }
+    public BigDecimal getObjetivoGanancias() {return objetivoGanancias;}
+    public void setObjetivoGanancias(BigDecimal objetivoGanancias) {this.objetivoGanancias = objetivoGanancias;}
 
-    public BigDecimal getReferralEarnings() {
-        return referralEarnings;
-    }
+    public BigDecimal getSaldoActual() {return saldoActual;}
+    public void setSaldoActual(BigDecimal saldoActual) {this.saldoActual = saldoActual;}
 
-    public void setReferralEarnings(BigDecimal referralEarnings) {
-        this.referralEarnings = referralEarnings;
-    }
-
-    public BigDecimal getStreamingHours() {
-        return streamingHours;
-    }
-
-    public void setStreamingHours(BigDecimal streamingHours) {
-        this.streamingHours = streamingHours;
-    }
-
-    public BigDecimal getObjetivoGanancias() {
-        return objetivoGanancias;
-    }
-
-    public void setObjetivoGanancias(BigDecimal objetivoGanancias) {
-        this.objetivoGanancias = objetivoGanancias;
-    }
-
-    public BigDecimal getSaldoActual() {
-        return saldoActual;
-    }
-
-    public void setSaldoActual(BigDecimal saldoActual) {
-        this.saldoActual = saldoActual;
-    }
-
-    public BigDecimal getTotalIngresos() {
-        return totalIngresos;
-    }
-
-    public void setTotalIngresos(BigDecimal totalIngresos) {
-        this.totalIngresos = totalIngresos;
-    }
+    public BigDecimal getTotalIngresos() {return totalIngresos;}
+    public void setTotalIngresos(BigDecimal totalIngresos) {this.totalIngresos = totalIngresos;}
 }

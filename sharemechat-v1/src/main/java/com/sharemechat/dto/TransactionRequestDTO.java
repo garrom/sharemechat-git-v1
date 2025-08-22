@@ -11,8 +11,6 @@ public class TransactionRequestDTO {
     @DecimalMin(value = "0.01", message = "El monto debe ser mayor a 0")
     private BigDecimal amount;
 
-    // Ej: "INGRESO" (primer pago). Más adelante podremos usar "GASTO" para consumos.
-    @NotNull
     private String operationType;
 
     private String description;

@@ -1,26 +1,41 @@
 package com.sharemechat.service;
 
+import com.sharemechat.dto.ModelDTO;
 import com.sharemechat.entity.Model;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModelRepository;
-import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
+
+@Service
 public class ModelService {
 
     private final ModelRepository modelRepository;
 
-    @Autowired
     public ModelService(ModelRepository modelRepository) {
         this.modelRepository = modelRepository;
     }
 
-    @Transactional
-    public Model createModel(User user) {
-        Model model = new Model();
-        model.setUser(user);
-       // LA LOGICA ESTÁ SIN COMPLETAR
+    public ModelDTO getModelDTO(User user) {
+        Model model = modelRepository.findByUser(user).orElse(null);
+        if (model == null) {
+            ModelDTO dto = new ModelDTO();
+            dto.setUserId(user.getId());
+            dto.setStreamingHours(BigDecimal.ZERO);
+            dto.setSaldoActual(BigDecimal.ZERO);
+            dto.setTotalIngresos(BigDecimal.ZERO);
+            return dto;
+        }
+        return mapToDTO(model);
+    }
 
-        return modelRepository.save(model);
+    public ModelDTO mapToDTO(Model m) {
+        ModelDTO dto = new ModelDTO();
+        dto.setUserId(m.getUserId());
+        dto.setStreamingHours(m.getStreamingHours() != null ? m.getStreamingHours() : BigDecimal.ZERO);
+        dto.setSaldoActual(m.getSaldoActual() != null ? m.getSaldoActual() : BigDecimal.ZERO);
+        dto.setTotalIngresos(m.getTotalIngresos() != null ? m.getTotalIngresos() : BigDecimal.ZERO);
+        return dto;
     }
 }

@@ -86,7 +86,7 @@ const PerfilClient = () => {
         name: form.name || null,
         surname: form.surname || null,
         nickname: form.nickname || null,
-        profilePicture: form.profilePic || null, // tu DTO usa profilePicture para mapear a profile_pic
+        profilePicture: form.profilePic || null,
       };
 
       const res = await fetch(`/api/users/${userId}`, {

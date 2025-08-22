@@ -2,14 +2,8 @@ package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.TransactionRequestDTO;
-import com.sharemechat.entity.Balance;
-import com.sharemechat.entity.Client;
-import com.sharemechat.entity.Transaction;
-import com.sharemechat.entity.User;
-import com.sharemechat.repository.BalanceRepository;
-import com.sharemechat.repository.ClientRepository;
-import com.sharemechat.repository.TransactionRepository;
-import com.sharemechat.repository.UserRepository;
+import com.sharemechat.entity.*;
+import com.sharemechat.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,15 +17,18 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
     private final BalanceRepository balanceRepository;
     private final ClientRepository clientRepository;
+    private final ModelRepository modelRepository;
     private final UserRepository userRepository;
 
     public TransactionService(TransactionRepository transactionRepository,
                               BalanceRepository balanceRepository,
                               ClientRepository clientRepository,
+                              ModelRepository modelRepository,
                               UserRepository userRepository) {
         this.transactionRepository = transactionRepository;
         this.balanceRepository = balanceRepository;
         this.clientRepository = clientRepository;
+        this.modelRepository = modelRepository;
         this.userRepository = userRepository;
     }
 
@@ -121,8 +118,6 @@ public class TransactionService {
         userRepository.save(user);
     }
 
-
-
     /**
      * Recargas y gastos posteriores (CLIENT ya existente).
      * - Usa último balance como referencia (no recalcula histórico).
@@ -199,4 +194,75 @@ public class TransactionService {
         }
         clientRepository.save(client);
     }
+
+    /**
+     * Retirada de fondos por parte de un MODELO.
+     * Registra:
+     *  - transactions: operation_type = "PAYOUT", amount NEGATIVO (sale dinero del modelo)
+     *  - balances: amount NEGATIVO y balance recalculado (prev - amountAbs)
+     *  - models: update saldo_actual (prev - amountAbs)
+     */
+    @Transactional
+    public void requestPayout(Long userId, TransactionRequestDTO request) {
+        // 1) Validaciones básicas
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El monto debe ser mayor a cero");
+        }
+
+        // 2) Cargar usuario y validar rol
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + userId));
+
+        if (!Constants.Roles.MODEL.equals(user.getRole())) {
+            throw new IllegalArgumentException("El usuario debe tener rol MODEL para solicitar un retiro");
+        }
+
+        // 3) Buscar entidad Model (MapsId con User)
+        Model model = modelRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalStateException("No existe registro de modelo para el usuario: " + userId));
+
+        // 4) Consistencia con balances: último balance = saldo_actual del modelo
+        BigDecimal amountAbs = request.getAmount();
+        Balance lastBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(userId).orElse(null);
+        BigDecimal previousBalance = (lastBalance != null) ? lastBalance.getBalance() : BigDecimal.ZERO;
+
+        BigDecimal currentSaldo = (model.getSaldoActual() != null) ? model.getSaldoActual() : BigDecimal.ZERO;
+        if (previousBalance.compareTo(currentSaldo) != 0) {
+            throw new IllegalStateException("Inconsistencia detectada: el último balance (" + previousBalance +
+                    ") no coincide con el saldo actual del modelo (" + currentSaldo + ")");
+        }
+
+        // 5) Verificar fondos suficientes
+        if (currentSaldo.compareTo(amountAbs) < 0) {
+            throw new IllegalArgumentException("Saldo insuficiente para completar el retiro");
+        }
+
+        // 6) Registrar transacción (amount NEGATIVO para salidas)
+        BigDecimal signedAmount = amountAbs.negate();
+
+        Transaction tx = new Transaction();
+        tx.setUser(user);                      // ManyToOne User
+        tx.setAmount(signedAmount);            // NEGATIVO
+        tx.setOperationType("PAYOUT");         // etiqueta de operación
+        tx.setDescription(request.getDescription());
+        // streamRecord y gift son null en esta operación
+        Transaction savedTx = transactionRepository.save(tx);
+
+        // 7) Guardar balance (nuevo balance = previousBalance + signedAmount)
+        BigDecimal newBalance = previousBalance.add(signedAmount);
+
+        Balance b = new Balance();
+        b.setUserId(userId);
+        b.setTransactionId(savedTx.getId());
+        b.setOperationType("PAYOUT");
+        b.setAmount(signedAmount);             // NEGATIVO
+        b.setBalance(newBalance);
+        b.setDescription(request.getDescription());
+        balanceRepository.save(b);
+
+        // 8) Actualizar Model.saldo_actual
+        model.setSaldoActual(newBalance);
+        modelRepository.save(model);
+    }
+
 }

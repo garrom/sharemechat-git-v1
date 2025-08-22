@@ -21,7 +21,7 @@ public class TransactionController {
         this.userService = userService;
     }
 
-    // Primer pago: USER -> CLIENT (incluye premium, clients, tx, balance)
+    // Primer pago cliente siendo USER -> CLIENT (incluye premium, clients, tx, balance)
     @PostMapping("/first")
     public ResponseEntity<String> processTransaction(@RequestBody @Valid TransactionRequestDTO request,
                                                      Authentication authentication) {
@@ -30,12 +30,20 @@ public class TransactionController {
         return ResponseEntity.ok("Transacción procesada. Usuario promovido a CLIENT y saldo actualizado.");
     }
 
-    // Recargas o gastos posteriores (CLIENT)
+    // Recargar monedero del Cliente
     @PostMapping("/add-balance")
     public ResponseEntity<String> addBalance(@RequestBody @Valid TransactionRequestDTO request,
                                              Authentication authentication) {
         User user = userService.findByEmail(authentication.getName());
         transactionService.addBalance(user.getId(), request);
         return ResponseEntity.ok("Saldo actualizado correctamente.");
+    }
+    // Retirar dinero modelo
+    @PostMapping("/payout")
+    public ResponseEntity<String> requestPayout(@RequestBody @Valid TransactionRequestDTO request,
+                                                Authentication authentication) {
+        User user = userService.findByEmail(authentication.getName());
+        transactionService.requestPayout(user.getId(), request);
+        return ResponseEntity.ok("Solicitud de retiro registrada correctamente.");
     }
 }

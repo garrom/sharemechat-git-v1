@@ -103,33 +103,56 @@ public class UserService {
     public UserDTO updateUser(Long id, @Valid UserUpdateDTO userUpdateDTO) {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con ID: " + id));
-        if (userUpdateDTO.getNickname() != null) {
-            if (userRepository.existsByNicknameAndIdNot(userUpdateDTO.getNickname(), id)) {
+
+        // Normalizar: strings en blanco -> null
+        String nickname = normalize(userUpdateDTO.getNickname());
+        String name = normalize(userUpdateDTO.getName());
+        String surname = normalize(userUpdateDTO.getSurname());
+        String profilePicture = normalize(userUpdateDTO.getProfilePicture());
+        String biography = normalize(userUpdateDTO.getBiography());
+        String interests = normalize(userUpdateDTO.getInterests());
+
+        // Nickname: validar unicidad solo si llega y cambia
+        if (nickname != null) {
+            if (userRepository.existsByNicknameAndIdNot(nickname, id)) {
                 throw new EmailAlreadyInUseException("El nickname ya está en uso");
             }
-            user.setNickname(userUpdateDTO.getNickname());
+            user.setNickname(nickname);
         }
-        if (userUpdateDTO.getName() != null) {
-            user.setName(userUpdateDTO.getName());
+
+        if (name != null) {
+            user.setName(name);
         }
-        if (userUpdateDTO.getSurname() != null) {
-            user.setSurname(userUpdateDTO.getSurname());
+
+        if (surname != null) {
+            user.setSurname(surname);
         }
-        if (userUpdateDTO.getProfilePicture() != null) {
-            user.setProfilePic(userUpdateDTO.getProfilePicture());
+
+        if (profilePicture != null) {
+            user.setProfilePic(profilePicture);
         }
+
         if (userUpdateDTO.getDateOfBirth() != null) {
             user.setDateOfBirth(userUpdateDTO.getDateOfBirth());
         }
-        if (userUpdateDTO.getBiography() != null) {
-            user.setBiography(userUpdateDTO.getBiography());
+
+        if (biography != null) {
+            user.setBiography(biography);
         }
-        if (userUpdateDTO.getInterests() != null) {
-            user.setInterests(userUpdateDTO.getInterests());
+
+        if (interests != null) {
+            user.setInterests(interests);
         }
+
         User updatedUser = userRepository.save(user);
         return mapToDTO(updatedUser);
     }
+
+    /** Devuelve null si el texto es null o está en blanco; en otro caso devuelve trim(). */
+    private String normalize(String text) {
+        return (text == null || text.trim().isEmpty()) ? null : text.trim();
+    }
+
 
     public UserDTO mapToDTO(User user) {
         UserDTO dto = new UserDTO();
