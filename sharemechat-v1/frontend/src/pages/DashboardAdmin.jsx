@@ -38,7 +38,6 @@ const DashboardAdmin = () => {
     setLoading(true);
     setError('');
     try {
-      // Mantengo tu endpoint EXACTO (sin params). Filtro y limito en cliente.
       const response = await fetch('/api/admin/models', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -61,7 +60,7 @@ const DashboardAdmin = () => {
       if (!response.ok) throw new Error('Error al actualizar verificación');
       const message = await response.text();
       alert(message || 'Estado actualizado');
-      fetchUsers(); // refrescamos la lista
+      fetchUsers(); // refresco
     } catch (err) {
       setError(err.message || 'Error actualizando estado');
     }
@@ -79,7 +78,10 @@ const DashboardAdmin = () => {
   }, [users, statusFilter]);
 
   // Limitar Nº de resultados mostrados
-  const displayedUsers = useMemo(() => filteredUsers.slice(0, Number(pageSize)), [filteredUsers, pageSize]);
+  const displayedUsers = useMemo(
+    () => filteredUsers.slice(0, Number(pageSize)),
+    [filteredUsers, pageSize]
+  );
 
   return (
     <StyledContainer>
@@ -123,7 +125,6 @@ const DashboardAdmin = () => {
         </StyledButton>
       </div>
 
-      {/* Contenido por pestaña */}
       {activeTab === 'models' && (
         <>
           <h3>Gestión de Modelos</h3>
@@ -179,54 +180,53 @@ const DashboardAdmin = () => {
                   <th>Acciones</th>
                 </tr>
               </thead>
-             <tbody>
-               {users.map((user) => {
-                 const v = user.verificationStatus || 'PENDING';
-                 return (
-                   <tr key={user.id}>
-                     <td>{user.email}</td>
-                     <td>{user.role}</td>
-                     <td>{user.userType}</td>
-                     <td>{v}</td>
-                     <td>
-                       {v === 'PENDING' && (
-                         <>
-                           <StyledButton
-                             style={{ backgroundColor: '#28a745', marginRight: '10px' }}
-                             onClick={() => handleReview(user.id, 'APPROVE')}
-                           >
-                             Aprobar
-                           </StyledButton>
-                           <StyledButton
-                             style={{ backgroundColor: '#dc3545' }}
-                             onClick={() => handleReview(user.id, 'REJECT')}
-                           >
-                             Rechazar
-                           </StyledButton>
-                         </>
-                       )}
+              <tbody>
+                {/* 🔧 Usar displayedUsers en vez de users */}
+                {displayedUsers.map((user) => {
+                  const v = user.verificationStatus || 'PENDING';
+                  return (
+                    <tr key={user.id}>
+                      <td>{user.email}</td>
+                      <td>{user.role}</td>
+                      <td>{user.userType}</td>
+                      <td>{v}</td>
+                      <td>
+                        {v === 'PENDING' && (
+                          <>
+                            <StyledButton
+                              style={{ backgroundColor: '#28a745', marginRight: '10px' }}
+                              onClick={() => handleReview(user.id, 'APPROVE')}
+                            >
+                              Aprobar
+                            </StyledButton>
+                            <StyledButton
+                              style={{ backgroundColor: '#dc3545' }}
+                              onClick={() => handleReview(user.id, 'REJECT')}
+                            >
+                              Rechazar
+                            </StyledButton>
+                          </>
+                        )}
 
-                       {v === 'APPROVED' && (
-                         <StyledButton
-                           style={{ backgroundColor: '#dc3545' }}
-                           onClick={() => handleReview(user.id, 'REJECT')}
-                         >
-                           Rechazar
-                         </StyledButton>
-                       )}
+                        {v === 'APPROVED' && (
+                          <StyledButton
+                            style={{ backgroundColor: '#dc3545' }}
+                            onClick={() => handleReview(user.id, 'REJECT')}
+                          >
+                            Rechazar
+                          </StyledButton>
+                        )}
 
-                       {/* 🔒 Ya no mostramos "Poner en Pendiente" para REJECTED */}
-                       {v === 'REJECTED' && (
-                         <span style={{ color: '#dc3545', fontWeight: 'bold' }}>
-                           Rechazada permanentemente
-                         </span>
-                       )}
-                     </td>
-                   </tr>
-                 );
-               })}
-             </tbody>
-
+                        {v === 'REJECTED' && (
+                          <span style={{ color: '#dc3545', fontWeight: 'bold' }}>
+                            Rechazada permanentemente
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </StyledTable>
           </div>
         </>
