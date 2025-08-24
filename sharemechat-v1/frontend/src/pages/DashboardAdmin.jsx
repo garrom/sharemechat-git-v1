@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
   StyledContainer,
@@ -9,7 +9,6 @@ import {
   StyledSelect,
 } from '../styles/DashboardAdminStyles';
 import Roles from '../constants/Roles';
-import UserTypes from '../constants/UserTypes';
 
 const DashboardAdmin = () => {
   const [userData] = useState({ name: 'Administrador' });
@@ -19,7 +18,16 @@ const DashboardAdmin = () => {
   const [activeTab, setActiveTab] = useState('models'); // models | users | finance | db
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [waitingModelsCount, setWaitingModelsCount] = useState(null);
+  const [waitingClientsCount, setWaitingClientsCount] = useState(null);
+  const [statsUpdatedAt, setStatsUpdatedAt] = useState(null);
+  const [statsError, setStatsError] = useState('');
+  const [modelsStreamingCount, setModelsStreamingCount] = useState(null);
+  const [clientsStreamingCount, setClientsStreamingCount] = useState(null);
 
+
+  const wsAdminRef = useRef(null);
+  const pingAdminRef = useRef(null);
   const history = useHistory();
   const token = localStorage.getItem('token');
 
@@ -33,6 +41,58 @@ const DashboardAdmin = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, history, activeTab]);
+
+  useEffect(() => {
+    if (activeTab !== 'stats') {
+      // limpiar si salgo de la pestaña
+      if (pingAdminRef.current) { clearInterval(pingAdminRef.current); pingAdminRef.current = null; }
+      if (wsAdminRef.current) { try { wsAdminRef.current.close(); } catch {} wsAdminRef.current = null; }
+      return;
+    }
+    if (!token) return;
+
+    setStatsError('');
+    try {
+      const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(token)}`;
+      const ws = new WebSocket(wsUrl);
+      wsAdminRef.current = ws;
+
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ type: 'stats' }));
+        // refresco periódico: ping + stats
+        pingAdminRef.current = setInterval(() => {
+          if (wsAdminRef.current?.readyState === WebSocket.OPEN) {
+            wsAdminRef.current.send(JSON.stringify({ type: 'ping' }));
+            wsAdminRef.current.send(JSON.stringify({ type: 'stats' }));
+          }
+        }, 10000); // cada 10s
+      };
+
+      ws.onmessage = (evt) => {
+        const data = JSON.parse(evt.data);
+        if (data.type === 'queue-stats') {
+          setWaitingModelsCount(data.waitingModels);
+          setWaitingClientsCount(data.waitingClients);
+          setModelsStreamingCount(data.modelsStreaming ?? data.activePairs ?? null);
+          setClientsStreamingCount(data.clientsStreaming ?? data.activePairs ?? null);
+          setStatsUpdatedAt(new Date());
+        }
+      };
+
+      ws.onerror = () => setStatsError('Error de conexión con estadísticas.');
+      ws.onclose  = () => {
+        if (pingAdminRef.current) { clearInterval(pingAdminRef.current); pingAdminRef.current = null; }
+      };
+    } catch (e) {
+      setStatsError(e.message || 'No se pudo abrir estadísticas.');
+    }
+
+    return () => {
+      if (pingAdminRef.current) { clearInterval(pingAdminRef.current); pingAdminRef.current = null; }
+      if (wsAdminRef.current) { try { wsAdminRef.current.close(); } catch {} wsAdminRef.current = null; }
+    };
+  }, [activeTab, token]);
+
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -106,10 +166,10 @@ const DashboardAdmin = () => {
           Gestión Modelos
         </StyledButton>
         <StyledButton
-          onClick={() => setActiveTab('users')}
-          style={{ backgroundColor: activeTab === 'users' ? '#007bff' : '#6c757d' }}
+          onClick={() => setActiveTab('stats')}
+          style={{ backgroundColor: activeTab === 'stats' ? '#007bff' : '#6c757d' }}
         >
-          Gestión Usuarios
+          Estadisticas
         </StyledButton>
         <StyledButton
           onClick={() => setActiveTab('finance')}
@@ -124,6 +184,8 @@ const DashboardAdmin = () => {
           Gestión BBDD
         </StyledButton>
       </div>
+
+       {/* PESTAÑA GESTION MODELOS */}
 
       {activeTab === 'models' && (
         <>
@@ -232,12 +294,68 @@ const DashboardAdmin = () => {
         </>
       )}
 
-      {activeTab === 'users' && (
-        <div style={{ marginTop: 24 }}>
-          <h3>Gestión de Usuarios</h3>
-          <p>Próximamente.</p>
-        </div>
-      )}
+        {/* PESTAÑA ESTADISTICA */}
+
+        {activeTab === 'stats' && (
+          <div style={{ marginTop: 24 }}>
+            <h3>Estadísticas</h3>
+            {statsError && <StyledError>{statsError}</StyledError>}
+
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                gap: 12,
+                marginTop: 12,
+              }}
+            >
+              {/* Card: Modelos en cola */}
+              <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
+                <div style={{ fontSize: 12, color: '#6c757d' }}>Modelos en cola</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {waitingModelsCount ?? '—'}
+                </div>
+                <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>
+                  {statsUpdatedAt ? `Actualizado: ${statsUpdatedAt.toLocaleTimeString()}` : 'Actualizando…'}
+                </div>
+              </div>
+
+              {/* Modelos en streaming */}
+              <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
+                <div style={{ fontSize: 12, color: '#6c757d' }}>Modelos en streaming</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {modelsStreamingCount ?? '—'}
+                </div>
+                <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>
+                  {statsUpdatedAt ? `Actualizado: ${statsUpdatedAt.toLocaleTimeString()}` : 'Actualizando…'}
+                </div>
+              </div>
+
+              {/* Clientes en streaming */}
+              <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
+                <div style={{ fontSize: 12, color: '#6c757d' }}>Clientes en streaming</div>
+                <div style={{ fontSize: 28, fontWeight: 700 }}>
+                  {clientsStreamingCount ?? '—'}
+                </div>
+                <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>
+                  {statsUpdatedAt ? `Actualizado: ${statsUpdatedAt.toLocaleTimeString()}` : 'Actualizando…'}
+                </div>
+              </div>
+
+              {/* Cards vacías para futuras KPIs */}
+              <div style={{ border: '1px solid #f4f4f4', borderRadius: 10, padding: 16, background: '#fafafa', color: '#bbb' }}>
+                <div style={{ fontSize: 12 }}>KPI futura</div>
+                <div style={{ fontSize: 20, marginTop: 8 }}>—</div>
+              </div>
+
+              <div style={{ border: '1px solid #f4f4f4', borderRadius: 10, padding: 16, background: '#fafafa', color: '#bbb' }}>
+                <div style={{ fontSize: 12 }}>KPI futura</div>
+                <div style={{ fontSize: 20, marginTop: 8 }}>—</div>
+              </div>
+            </div>
+          </div>
+        )}
+
 
       {activeTab === 'finance' && (
         <div style={{ marginTop: 24 }}>

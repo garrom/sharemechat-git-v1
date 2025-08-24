@@ -27,7 +27,6 @@ const DashboardClient = () => {
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('models');
   const [user, setUser] = useState(null);
-  const [clientBalance, setClientBalance] = useState(null);
   const [saldo, setSaldo] = useState(null);
   const [loadingSaldo, setLoadingSaldo] = useState(false);
   const [saldoError, setSaldoError] = useState('');

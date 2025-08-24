@@ -28,12 +28,8 @@ const DashboardModel = () => {
   const [user, setUser] = useState(null);
   const [saldoModel, setSaldoModel] = useState(null);
   const [loadingSaldoModel, setLoadingSaldoModel] = useState(false);
-  const [saldoModelError, setSaldoModelError] = useState('');
   const [status, setStatus] = useState('');
-  const [waitingModels, setWaitingModels] = useState(null);
-  const [waitingClients, setWaitingClients] = useState(null);
   const [queuePosition, setQueuePosition] = useState(null);
-
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -55,7 +51,7 @@ const DashboardModel = () => {
           setUser(data);
         }
       } catch (e) {
-        console.error("Error cargando usuario:", e);
+        console.error('Error cargando usuario:', e);
       }
     };
     if (token) loadUser();
@@ -70,22 +66,23 @@ const DashboardModel = () => {
 
   // Muestra video remoto cuando hay conexión
   useEffect(() => {
-      if (remoteVideoRef.current && remoteStream) {
-          remoteVideoRef.current.srcObject = remoteStream;
-      } else if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = null;
-      }
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    } else if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
   }, [remoteStream]);
 
+  // Cargar saldo de la modelo
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    const tk = localStorage.getItem('token');
+    if (!tk) return;
 
     const fetchSaldoModel = async () => {
       try {
         setLoadingSaldoModel(true);
         const res = await fetch('/api/models/me', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: { Authorization: `Bearer ${tk}` },
         });
         if (!res.ok) {
           const txt = await res.text();
@@ -93,10 +90,10 @@ const DashboardModel = () => {
         }
         const data = await res.json();
         setSaldoModel(data.saldoActual);
-        setSaldoModelError('');
+        setError('');
       } catch (e) {
         console.error(e);
-        setSaldoModelError(e.message || 'Error al cargar saldo de modelo');
+        setError(e.message || 'Error al cargar saldo de modelo');
       } finally {
         setLoadingSaldoModel(false);
       }
@@ -105,24 +102,22 @@ const DashboardModel = () => {
     fetchSaldoModel();
   }, []);
 
-
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 }, // DESARROLLO reducir ancho de banda
-        audio: true
+        audio: true,
       });
       localStream.current = stream;
       setCameraActive(true);
 
-      const token = localStorage.getItem('token');
-      if (!token) {
+      const tk = localStorage.getItem('token');
+      if (!tk) {
         setError('Sesión expirada. Inicia sesión de nuevo.');
         return;
       }
 
-      startWebSocketAndWait(token);
-
+      startWebSocketAndWait(tk);
     } catch (err) {
       console.error('Error al acceder a la cámara:', err);
       setError('No se pudo acceder a la cámara.');
@@ -134,8 +129,8 @@ const DashboardModel = () => {
     history.push('/');
   };
 
-  const startWebSocketAndWait = (token) => {
-    const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(token)}`;
+  const startWebSocketAndWait = (tk) => {
+    const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(tk)}`;
     const socket = new WebSocket(wsUrl);
     socketRef.current = socket;
 
@@ -147,6 +142,7 @@ const DashboardModel = () => {
       pingIntervalRef.current = setInterval(() => {
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
           socketRef.current.send(JSON.stringify({ type: 'ping' }));
+          socketRef.current.send(JSON.stringify({ type: 'stats' }));
         }
       }, 30000);
 
@@ -189,16 +185,13 @@ const DashboardModel = () => {
         peer.on('error', (err) => {
           setError('Error en la conexión WebRTC: ' + err.message);
         });
-
       } else if (data.type === 'signal' && peerRef.current) {
         // Progreso en la señalización → limpiar "buscando/esperando"
         setError('');
         setStatus('');
         peerRef.current.signal(data.signal);
-
       } else if (data.type === 'chat') {
         setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
-
       } else if (data.type === 'no-client-available') {
         // Estado neutro: seguir esperando sin marcar error
         setStatus('Esperando cliente...');
@@ -206,13 +199,11 @@ const DashboardModel = () => {
         if (socketRef.current?.readyState === WebSocket.OPEN) {
           socketRef.current.send(JSON.stringify({ type: 'stats' }));
         }
-
       } else if (data.type === 'queue-stats') {
-        // Actualiza métricas de la cola
-        setWaitingModels(data.waitingModels);
-        setWaitingClients(data.waitingClients);
-        setQueuePosition(data.position); // 0 = primera en cola
-
+        // Actualiza solo posición de la modelo (0 = primera en cola)
+        if (typeof data.position === 'number') {
+          setQueuePosition(data.position);
+        }
       } else if (data.type === 'peer-disconnected') {
         console.log('Recibido peer-disconnected');
         if (peerRef.current) {
@@ -221,7 +212,7 @@ const DashboardModel = () => {
           console.log('Peer destruido');
         }
         if (remoteStream) {
-          remoteStream.getTracks().forEach(track => track.stop());
+          remoteStream.getTracks().forEach((track) => track.stop());
         }
         setRemoteStream(null);
         setMessages([]);
@@ -234,6 +225,19 @@ const DashboardModel = () => {
           socketRef.current.send(JSON.stringify({ type: 'stats' }));
         }
       }
+    };
+
+    socket.onerror = (err) => {
+      console.error('WebSocket error en modelo:', err);
+      setError('Error de conexión con el servidor.');
+    };
+
+    socket.onclose = () => {
+      if (pingIntervalRef.current) {
+        clearInterval(pingIntervalRef.current);
+        pingIntervalRef.current = null;
+      }
+      console.log('WebSocket cerrado (modelo)');
     };
   };
 
@@ -255,24 +259,23 @@ const DashboardModel = () => {
     setMessages([]);
     setStatus('Buscando nuevo cliente...');
     if (socketRef.current?.readyState === WebSocket.OPEN) {
-       socketRef.current.send(JSON.stringify({ type: 'stats' }));
-     }
+      socketRef.current.send(JSON.stringify({ type: 'stats' }));
+    }
   };
 
   const sendChatMessage = () => {
     if (chatInput.trim() === '') return;
     const message = { type: 'chat', message: chatInput };
     socketRef.current.send(JSON.stringify(message));
-    setMessages(prev => [...prev, { from: 'me', text: chatInput }]);
+    setMessages((prev) => [...prev, { from: 'me', text: chatInput }]);
     setChatInput('');
   };
 
   const handleProfile = () => {
-      history.push('/perfil-model');
-   };
+    history.push('/perfil-model');
+  };
 
   const stopAll = () => {
-
     if (pingIntervalRef.current) {
       clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = null;
@@ -299,12 +302,14 @@ const DashboardModel = () => {
     setCameraActive(false);
     setRemoteStream(null);
     setError('');
+    setStatus('');
+    setQueuePosition(null);
     setMessages([]);
   };
 
   const handleRequestPayout = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    const tk = localStorage.getItem('token');
+    if (!tk) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
       return;
     }
@@ -327,7 +332,7 @@ const DashboardModel = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tk}`,
         },
         body: JSON.stringify({
           amount,
@@ -344,7 +349,7 @@ const DashboardModel = () => {
 
       // Refrescar saldo tras el retiro
       const res2 = await fetch('/api/models/me', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${tk}` },
       });
       if (!res2.ok) {
         const txt = await res2.text();
@@ -352,70 +357,58 @@ const DashboardModel = () => {
       }
       const data = await res2.json();
       setSaldoModel(data.saldoActual);
-      setSaldoModelError('');
-
+      setError('');
     } catch (e) {
       console.error(e);
       alert(e.message || 'Error al solicitar retiro.');
-      setSaldoModelError(e.message || 'Error al cargar saldo de modelo');
+      setError(e.message || 'Error al cargar saldo de modelo');
     } finally {
       setLoadingSaldoModel(false);
     }
   };
 
-
-  const displayName = user?.nickname || user?.name || user?.email || "Modelo";
+  const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
   return (
     <StyledContainer>
-        <StyledNavbar>
-          <span>Mi Logo</span>
-          <div>
-            <span className="me-3">Hola, {displayName}</span>
+      <StyledNavbar>
+        <span>Mi Logo</span>
+        <div>
+          <span className="me-3">Hola, {displayName}</span>
 
-            {/* Ver saldo */}
-            <span className="me-3">
-              {loadingSaldoModel ? 'Saldo: ...' :
-                (saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -')}
+          {/* Saldo */}
+          <span className="me-3">
+            {loadingSaldoModel
+              ? 'Saldo: ...'
+              : saldoModel !== null
+              ? `Saldo: €${Number(saldoModel).toFixed(2)}`
+              : 'Saldo: -'}
+          </span>
+
+          {/* Solo la posición en la cola (modelo) */}
+          {queuePosition !== null && queuePosition >= 0 && (
+            <span className="me-3" style={{ color: '#6c757d' }}>
+              Tu posición: {queuePosition + 1}
             </span>
+          )}
 
-            {/* Estado */}
-            {status && (
-              <span className="me-3" style={{ color: '#6c757d' }}>
-                {status}
-              </span>
-            )}
+          {/* Botón retiro */}
+          <StyledNavButton type="button" onClick={handleRequestPayout}>
+            Solicitar retiro
+          </StyledNavButton>
 
-            {/* Cola */}
-            {waitingModels !== null && waitingClients !== null && (
-              <span className="me-3" style={{ color: '#6c757d' }}>
-                Modelos en cola: {waitingModels} · Clientes en cola: {waitingClients}
-              </span>
-            )}
+          {/* Salir y perfil */}
+          <StyledNavButton type="button" onClick={handleLogout}>
+            <FontAwesomeIcon icon={faSignOutAlt} />
+            <StyledIconWrapper>Salir</StyledIconWrapper>
+          </StyledNavButton>
+          <StyledNavButton type="button" onClick={handleProfile}>
+            <FontAwesomeIcon icon={faUser} />
+            <StyledIconWrapper>Perfil</StyledIconWrapper>
+          </StyledNavButton>
+        </div>
+      </StyledNavbar>
 
-            {/* Posición */}
-            {queuePosition !== null && queuePosition >= 0 && (
-              <span className="me-3" style={{ color: '#6c757d' }}>
-                Tu posición: {queuePosition + 1}
-              </span>
-            )}
-
-            {/* Botón retiro */}
-            <StyledNavButton type="button" onClick={handleRequestPayout}>
-              Solicitar retiro
-            </StyledNavButton>
-
-            {/* Salir y perfil*/}
-            <StyledNavButton type="button" onClick={handleLogout}>
-              <FontAwesomeIcon icon={faSignOutAlt} />
-              <StyledIconWrapper>Salir</StyledIconWrapper>
-            </StyledNavButton>
-            <StyledNavButton type="button" onClick={handleProfile}>
-              <FontAwesomeIcon icon={faUser} />
-              <StyledIconWrapper>Perfil</StyledIconWrapper>
-            </StyledNavButton>
-          </div>
-        </StyledNavbar>
       <StyledMainContent>
         <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
@@ -448,13 +441,22 @@ const DashboardModel = () => {
             </button>
           </div>
           <ul className="list-group">
-            {activeTab === 'models' && <li className="list-group-item">Aquí iría la lista de clientes favoritos</li>}
-            {activeTab === 'messages' && <li className="list-group-item">Aquí irían los mensajes</li>}
-            {activeTab === 'notifications' && <li className="list-group-item">Aquí irían las notificaciones</li>}
+            {activeTab === 'models' && (
+              <li className="list-group-item">Aquí iría la lista de clientes favoritos</li>
+            )}
+            {activeTab === 'messages' && (
+              <li className="list-group-item">Aquí irían los mensajes</li>
+            )}
+            {activeTab === 'notifications' && (
+              <li className="list-group-item">Aquí irían las notificaciones</li>
+            )}
           </ul>
         </StyledLeftColumn>
 
         <StyledCenter>
+          {/* Estado neutro (no error) */}
+          {status && <p style={{ color: '#6c757d', marginTop: '10px' }}>{status}</p>}
+
           {!cameraActive && (
             <StyledActionButton onClick={startCamera}>Activar Cámara</StyledActionButton>
           )}
@@ -469,6 +471,7 @@ const DashboardModel = () => {
                   <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
                 )}
               </div>
+
               <StyledLocalVideo>
                 <h5 style={{ color: 'white' }}>Tu Cámara</h5>
                 <video
@@ -478,9 +481,18 @@ const DashboardModel = () => {
                   autoPlay
                 />
               </StyledLocalVideo>
+
               {remoteStream && (
                 <StyledRemoteVideo>
-                  <h5 style={{ position: 'absolute', top: '10px', left: '10px', color: 'white', zIndex: 2 }}>
+                  <h5
+                    style={{
+                      position: 'absolute',
+                      top: '10px',
+                      left: '10px',
+                      color: 'white',
+                      zIndex: 2,
+                    }}
+                  >
                     Cliente
                   </h5>
                   <video
@@ -510,7 +522,14 @@ const DashboardModel = () => {
                         type="text"
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        style={{ flex: 1, marginRight: '10px', background: 'rgba(255, 255, 255, 0.9)', border: 'none', borderRadius: '5px', padding: '5px' }}
+                        style={{
+                          flex: 1,
+                          marginRight: '10px',
+                          background: 'rgba(255, 255, 255, 0.9)',
+                          border: 'none',
+                          borderRadius: '5px',
+                          padding: '5px',
+                        }}
                       />
                       <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
                     </div>

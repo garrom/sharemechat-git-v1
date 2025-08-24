@@ -40,6 +40,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         this.modelStatusService = modelStatusService;
     }
 
+    //EL METODO SE EJECUTA CUANDO SE ABRE UNA NUEVA CONEXION WEBSOCKET Y RESUELVE EL USERID A PARTIR DEL TOKEN
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         System.out.println("Nueva conexión establecida: sessionId=" + session.getId());
@@ -55,6 +56,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         // No añadimos a colas hasta que nos digan el rol (set-role)
     }
 
+    //EL METODO SE EJECUTA CUANDO SE CIERRA UNA CONEXION WEBSOCKET Y ELIMINA AL USUARIO DE COLAS Y PARES, FINALIZANDO STREAM SI ES NECESARIO
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         System.out.println("Conexión cerrada: sessionId=" + session.getId() + ", status=" + status);
@@ -101,6 +103,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    //EL METODO PROCESA LOS MENSAJES RECIBIDOS POR WEBSOCKET SEGUN SU TIPO COMO SIGNAL CHAT SET-ROLE START-MATCH NEXT O STATS
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
@@ -191,6 +194,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    //EL METODO REALIZA UN EMPAREJAMIENTO ENTRE UN CLIENTE Y UN MODELO DISPONIBLE Y ARRANCA LA SESION DE STREAM
     private void matchClient(WebSocketSession client) throws Exception {
         waitingClients.remove(client);
         WebSocketSession model = waitingModels.poll();
@@ -228,6 +232,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    //EL METODO REALIZA UN EMPAREJAMIENTO ENTRE UN MODELO Y UN CLIENTE DISPONIBLE Y ARRANCA LA SESION DE STREAM
     private void matchModel(WebSocketSession model) throws Exception {
         waitingModels.remove(model);
         WebSocketSession client = waitingClients.poll();
@@ -266,6 +271,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    //EL METODO GESTIONA EL CAMBIO DE PAREJA CUANDO UN USUARIO PULSA NEXT FINALIZANDO LA SESION ACTUAL Y BUSCANDO UN NUEVO EMPAREJAMIENTO
     private void handleNext(WebSocketSession session) throws Exception {
         WebSocketSession peer = pairs.remove(session.getId());
         if (peer != null) {
@@ -298,6 +304,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    //EL METODO GESTIONA EL CAMBIO DE PAREJA CUANDO UN USUARIO PULSA NEXT FINALIZANDO LA SESION ACTUAL Y BUSCANDO UN NUEVO EMPAREJAMIENTO
     private void endStreamIfPairKnown(Long idA, String roleA, Long idB, String roleB) {
         if (idA == null || idB == null || roleA == null || roleB == null) return;
 
@@ -322,6 +329,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    //EL METODO ENVIA AL USUARIO UN MENSAJE INDICANDO QUE SE HA PRODUCIDO UN EMPAREJAMIENTO CON SU PEER
     private void sendMatchMessage(WebSocketSession session, String peerId) {
         try {
             String msg = "{\"type\":\"match\",\"peerId\":\"" + peerId + "\"}";
@@ -332,6 +340,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    //EL METODO VUELVE A COLOCAR DE FORMA SEGURA UN USUARIO EN LA COLA SEGUN SU ROL SI EL SOCKET SIGUE ABIERTO
     private void safeRequeue(WebSocketSession session, String role) {
         if (session != null && session.isOpen()) {
             if ("model".equals(role)) {
@@ -342,7 +351,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
-    // === Utilidades para extraer token y userId ===
+    //EL METODO OBTIENE EL USERID A PARTIR DEL TOKEN INCLUIDO EN LA CONEXION WEBSOCKET
     private Long resolveUserId(WebSocketSession session) {
         String token = extractToken(session);
         if (token == null) return null;
@@ -355,6 +364,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    //EL METODO EXTRA EL TOKEN JWT DESDE LOS PARAMETROS DE LA URL O DESDE EL HEADER AUTHORIZATION
     private String extractToken(WebSocketSession session) {
         // 1) Query param ?token=...
         try {
@@ -381,6 +391,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         return null;
     }
 
+    //EL METODO PARSEA UNA QUERYSTRING Y DEVUELVE UN MAPA CON SUS CLAVES Y VALORES
     private Map<String, String> parseQuery(String query) {
         Map<String, String> map = new HashMap<>();
         String[] parts = query.split("&");
@@ -398,7 +409,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         return map;
     }
 
-    // Manejo saldo negativo. Envía de forma segura (evita NPE y sockets cerrados)
+    //EL METODO ENVIA UN MENSAJE JSON DE FORMA SEGURA A UN SOCKET VERIFICANDO QUE SIGA ABIERTO
     private void safeSend(WebSocketSession s, String json) {
         if (s != null && s.isOpen()) {
             try { s.sendMessage(new TextMessage(json)); }
@@ -406,11 +417,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
-    /**
-     * Comprueba el umbral de saldo del cliente en la sesión activa y,
-     * si es inferior al cutoff, cierra la sesión (vía StreamService) y notifica a ambos peers.
-     * Devuelve true si se cerró por saldo bajo.
-     */
+    //EL METODO VERIFICA SI EL CLIENTE TIENE SALDO POR DEBAJO DEL UMBRAL Y FINALIZA LA SESION SI ES NECESARIO
     private boolean checkCutoffAndMaybeEnd(WebSocketSession session) {
         // Localiza al peer
         WebSocketSession peer = pairs.get(session.getId());
@@ -457,11 +464,13 @@ public class MatchingHandler extends TextWebSocketHandler {
         return closed;
     }
 
+    //EL METODO DETERMINA SI UNA EXCEPCION ESTA RELACIONADA CON SALDO INSUFICIENTE
     private boolean isLowBalance(Exception ex) {
         String m = ex != null ? ex.getMessage() : null;
         return m != null && m.contains("Saldo insuficiente");
     }
 
+    //EL METODO CALCULA LA POSICION DE UN USUARIO EN LA COLA DEVOLVIENDO SU INDICE O -1 SI NO ESTA
     private int positionInQueue(Queue<WebSocketSession> q, WebSocketSession s) {
         int i = 0;
         for (WebSocketSession x : q) {
@@ -471,27 +480,54 @@ public class MatchingHandler extends TextWebSocketHandler {
         return -1; // no está en la cola (por ejemplo, ya emparejada)
     }
 
+    //EL METODO ENVIA AL USUARIO ESTADISTICAS DE COLA COMO NUMERO DE MODELOS CLIENTES POSICION Y SESIONES ACTIVAS
     private void sendQueueStats(WebSocketSession s) {
         try {
-            int waitingModelsCount = waitingModels.size();
+            int waitingModelsCount  = waitingModels.size();
             int waitingClientsCount = waitingClients.size();
+
             String role = roles.get(s.getId());
             int myPosition = -1;
             if ("model".equals(role)) {
-                myPosition = positionInQueue(waitingModels, s);
+                myPosition = positionInQueue(waitingModels, s); // 0 = primera
             }
+
+            int activePairs = computeActivePairs();
+            int modelsStreaming  = activePairs; // 1:1 ⇒ mismos pares
+            int clientsStreaming = activePairs;
+
             String json = String.format(
-                    "{\"type\":\"queue-stats\",\"waitingModels\":%d,\"waitingClients\":%d,\"position\":%d}",
-                    waitingModelsCount, waitingClientsCount, myPosition
+                    "{\"type\":\"queue-stats\",\"waitingModels\":%d,\"waitingClients\":%d," +
+                            "\"position\":%d,\"modelsStreaming\":%d,\"clientsStreaming\":%d,\"activePairs\":%d}",
+                    waitingModelsCount, waitingClientsCount, myPosition,
+                    modelsStreaming, clientsStreaming, activePairs
             );
-            System.out.println("queue-stats -> sessionId=" + s.getId()
-                    + " models=" + waitingModelsCount
-                    + " clients=" + waitingClientsCount
-                    + " position=" + myPosition);
             safeSend(s, json);
         } catch (Exception ignore) {}
     }
 
+    //EL METODO CALCULA EL NUMERO DE PARES ACTIVOS CLIENTE MODELO EVITANDO CONTAR DUPLICADOS
+    private int computeActivePairs() {
+        // Contar pares únicos model↔client evitando doble conteo (pairs tiene ida y vuelta)
+        Set<String> used = new HashSet<>();
+        int count = 0;
+        for (Map.Entry<String, WebSocketSession> e : pairs.entrySet()) {
+            String a = e.getKey();
+            WebSocketSession peer = e.getValue();
+            if (peer == null) continue;
+            String b = peer.getId();
+            if (used.contains(a) || used.contains(b)) continue;
+
+            String ra = roles.get(a);
+            String rb = roles.get(b);
+            if (("model".equals(ra) && "client".equals(rb)) || ("client".equals(ra) && "model".equals(rb))) {
+                count++;
+                used.add(a);
+                used.add(b);
+            }
+        }
+        return count;
+    }
 
 
 }
