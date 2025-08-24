@@ -125,7 +125,6 @@ const DashboardModel = () => {
     }
   };
 
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     history.push('/');
@@ -138,6 +137,7 @@ const DashboardModel = () => {
 
     socket.onopen = () => {
       console.log('Modelo conectado al WebSocket');
+      setError('');
       // --- Keepalive cada 30s ---
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = setInterval(() => {
@@ -152,6 +152,7 @@ const DashboardModel = () => {
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'match') {
+        setError('');
         console.log('Modelo emparejado con cliente. PeerID:', data.peerId);
         const peer = new Peer({
           initiator: false,
@@ -170,6 +171,7 @@ const DashboardModel = () => {
 
         peer.on('stream', (stream) => {
           console.log('Modelo recibió stream remoto');
+          setError('');
           setRemoteStream(stream);
         });
 
@@ -178,6 +180,7 @@ const DashboardModel = () => {
         });
 
       } else if (data.type === 'signal' && peerRef.current) {
+        setError('');
         peerRef.current.signal(data.signal);
       } else if (data.type === 'chat') {
         setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
@@ -231,7 +234,7 @@ const DashboardModel = () => {
     }
     setRemoteStream(null);
     setMessages([]);
-    setError('Buscando nuevo cliente...');
+    //setError('Buscando nuevo cliente...');
   };
 
   const sendChatMessage = () => {

@@ -160,6 +160,7 @@ const DashboardClient = () => {
     socketRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === 'match') {
+        setError('');
         console.log('Emparejado con modelo', data.peerId);
         const peer = new Peer({
           initiator: true,
