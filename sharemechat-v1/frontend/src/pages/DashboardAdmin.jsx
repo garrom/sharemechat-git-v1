@@ -24,12 +24,27 @@ const DashboardAdmin = () => {
   const [statsError, setStatsError] = useState('');
   const [modelsStreamingCount, setModelsStreamingCount] = useState(null);
   const [clientsStreamingCount, setClientsStreamingCount] = useState(null);
-
+  const [topModels, setTopModels] = useState([]);
+  const [topClients, setTopClients] = useState([]);
+  const [financeSummary, setFinanceSummary] = useState(null);
+  const [financeLoading, setFinanceLoading] = useState(false);
+  const [financeError, setFinanceError] = useState('');
+  const [dbTable, setDbTable] = useState('');
+  const [dbLimit, setDbLimit] = useState(10);
+  const [dbRows, setDbRows] = useState([]);
+  const [dbLoading, setDbLoading] = useState(false);
+  const [dbError, setDbError] = useState('');
 
   const wsAdminRef = useRef(null);
   const pingAdminRef = useRef(null);
   const history = useHistory();
   const token = localStorage.getItem('token');
+  const DB_TABLES = [
+    'users','clients','models','transactions','balances',
+    'platform_transactions','platform_balances','stream_records'
+  ]; // ajusta a tus tablas reales
+  const LIMIT_OPTIONS = [10,20,30,40,50,100];
+
 
   useEffect(() => {
     if (!token) {
@@ -59,13 +74,12 @@ const DashboardAdmin = () => {
 
       ws.onopen = () => {
         ws.send(JSON.stringify({ type: 'stats' }));
-        // refresco periódico: ping + stats
+        // refresco periódico: cada stats
         pingAdminRef.current = setInterval(() => {
           if (wsAdminRef.current?.readyState === WebSocket.OPEN) {
-            wsAdminRef.current.send(JSON.stringify({ type: 'ping' }));
             wsAdminRef.current.send(JSON.stringify({ type: 'stats' }));
           }
-        }, 10000); // cada 10s
+        }, 60000); // cada 60s
       };
 
       ws.onmessage = (evt) => {
@@ -92,6 +106,52 @@ const DashboardAdmin = () => {
       if (wsAdminRef.current) { try { wsAdminRef.current.close(); } catch {} wsAdminRef.current = null; }
     };
   }, [activeTab, token]);
+
+
+  useEffect(() => {
+    if (activeTab !== 'finance') return;
+    (async () => {
+      setFinanceLoading(true);
+      setFinanceError('');
+      try {
+        const [mRes, cRes, sRes] = await Promise.all([
+          fetch('/api/admin/finance/top-models?limit=10', { headers: { Authorization: `Bearer ${token}` }}),
+          fetch('/api/admin/finance/top-clients?limit=10', { headers: { Authorization: `Bearer ${token}` }}),
+          fetch('/api/admin/finance/summary', { headers: { Authorization: `Bearer ${token}` }}),
+        ]);
+        if (!mRes.ok || !cRes.ok || !sRes.ok) throw new Error('Error al cargar análisis financieros');
+        const [m, c, s] = await Promise.all([mRes.json(), cRes.json(), sRes.json()]);
+        setTopModels(Array.isArray(m) ? m : []);
+        setTopClients(Array.isArray(c) ? c : []);
+        setFinanceSummary(s || null);
+      } catch (e) {
+        setFinanceError(e.message || 'Error al cargar análisis financieros');
+      } finally {
+        setFinanceLoading(false);
+      }
+    })();
+  }, [activeTab, token]);
+
+
+  useEffect(() => {
+    if (activeTab !== 'db' || !dbTable) return; // <- no lances la query hasta elegir tabla
+    (async () => {
+      setDbLoading(true); setDbError('');
+      try {
+        const res = await fetch(`/api/admin/db/view?table=${encodeURIComponent(dbTable)}&limit=${dbLimit}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error(await res.text() || 'Error al consultar BBDD');
+        const data = await res.json();
+        setDbRows(Array.isArray(data) ? data : []);
+      } catch (e) {
+        setDbError(e.message || 'Error al consultar BBDD');
+        setDbRows([]);
+      } finally {
+        setDbLoading(false);
+      }
+    })();
+  }, [activeTab, dbTable, dbLimit, token]);
 
 
   const fetchUsers = async () => {
@@ -175,17 +235,17 @@ const DashboardAdmin = () => {
           onClick={() => setActiveTab('finance')}
           style={{ backgroundColor: activeTab === 'finance' ? '#007bff' : '#6c757d' }}
         >
-          Gestión Financiera
+          Analisis Financiero
         </StyledButton>
         <StyledButton
           onClick={() => setActiveTab('db')}
           style={{ backgroundColor: activeTab === 'db' ? '#007bff' : '#6c757d' }}
         >
-          Gestión BBDD
+          Vista BBDD
         </StyledButton>
       </div>
 
-       {/* PESTAÑA GESTION MODELOS */}
+      {/* PESTAÑA GESTION MODELOS */}
 
       {activeTab === 'models' && (
         <>
@@ -304,7 +364,7 @@ const DashboardAdmin = () => {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
                 gap: 12,
                 marginTop: 12,
               }}
@@ -356,20 +416,216 @@ const DashboardAdmin = () => {
           </div>
         )}
 
+       {/* PESTAÑA ANALISIS FINANCIERO */}
 
-      {activeTab === 'finance' && (
-        <div style={{ marginTop: 24 }}>
-          <h3>Gestión Financiera</h3>
-          <p>Próximamente.</p>
-        </div>
-      )}
+       {activeTab === 'finance' && (
+         <div style={{ marginTop: 24 }}>
+           <h3>Análisis financieros</h3>
+           {financeError && <StyledError>{financeError}</StyledError>}
 
-      {activeTab === 'db' && (
-        <div style={{ marginTop: 24 }}>
-          <h3>Gestión BBDD</h3>
-          <p>Próximamente.</p>
-        </div>
-      )}
+           <div
+             style={{
+               display: 'grid',
+               gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+               gap: 12,
+               marginTop: 12,
+             }}
+           >
+             {/* Ganancias brutas (facturación total) */}
+             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
+               <div style={{ fontSize: 12, color: '#6c757d' }}>Ganancias brutas (facturación total)</div>
+               <div style={{ fontSize: 28, fontWeight: 700 }}>
+                 {financeLoading ? '…' : (financeSummary?.grossBillingEUR ?? '—')}
+               </div>
+               <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>
+                 Sin descontar participación de modelos.
+               </div>
+             </div>
+
+             {/* Ganancias netas (margen plataforma) */}
+             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
+               <div style={{ fontSize: 12, color: '#6c757d' }}>Ganancias netas (plataforma)</div>
+               <div style={{ fontSize: 28, fontWeight: 700 }}>
+                 {financeLoading ? '…' : (financeSummary?.netProfitEUR ?? '—')}
+               </div>
+               <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>
+                 Descontado lo que se lleva la modelo.
+               </div>
+             </div>
+
+             {/* % Beneficio sobre facturación */}
+             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
+               <div style={{ fontSize: 12, color: '#6c757d' }}>% beneficio / facturación</div>
+               <div style={{ fontSize: 28, fontWeight: 700 }}>
+                 {financeLoading ? '…' : (financeSummary?.profitPercent ?? '—')}
+               </div>
+               <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>
+                 (neto / bruto) × 100
+               </div>
+             </div>
+
+             {/* Top 10 modelos por ingresos */}
+             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
+               <div style={{ fontSize: 12, color: '#6c757d' }}>Top 10 modelos por ingresos</div>
+               <ol style={{ marginTop: 8, paddingLeft: 18 }}>
+                 {(financeLoading ? [] : topModels).map((it, i) => (
+                   <li key={i} style={{ marginBottom: 6 }}>
+                     {it.nickname || it.name || it.email || `Modelo #${it.modelId}`} — <strong>{it.totalEarningsEUR}</strong>
+                   </li>
+                 ))}
+                 {!financeLoading && topModels.length === 0 && <div>Sin datos.</div>}
+               </ol>
+             </div>
+
+             {/* Top 10 clientes por total_pagos */}
+             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
+               <div style={{ fontSize: 12, color: '#6c757d' }}>Top 10 clientes por pagos</div>
+               <ol style={{ marginTop: 8, paddingLeft: 18 }}>
+                 {(financeLoading ? [] : topClients).map((it, i) => (
+                   <li key={i} style={{ marginBottom: 6 }}>
+                     {it.nickname || it.name || it.email || `Cliente #${it.clientId}`} — <strong>{it.totalPagosEUR}</strong>
+                   </li>
+                 ))}
+                 {!financeLoading && topClients.length === 0 && <div>Sin datos.</div>}
+               </ol>
+             </div>
+
+            {/* Nota (separación por tipo) */}
+            <div style={{ border: '1px dashed #eee', borderRadius: 10, padding: 16, background: '#fafafa' }}>
+              <div style={{ fontSize: 12, color: '#6c757d' }}>Nota</div>
+              <div style={{ fontSize: 14, marginTop: 8 }}>
+                Pendiente: Separar ganacia Sreaming y Regalos, Mostrar num usuarios modelo y cliente y num clientes y modelos
+              </div>
+            </div>
+
+             {/* Espacios para futuras métricas */}
+             {Array.from({ length: 6 }).map((_, i) => (
+               <div key={i} style={{ border: '1px solid #f4f4f4', borderRadius: 10, padding: 16, background: '#fafafa', color: '#bbb' }}>
+                 <div style={{ fontSize: 12 }}>KPI futura</div>
+                 <div style={{ fontSize: 20, marginTop: 8 }}>—</div>
+               </div>
+             ))}
+           </div>
+         </div>
+       )}
+
+
+         {/* PESTAÑA VISTA BBDD */}
+
+        {activeTab === 'db' && (
+          <div style={{ marginTop: 24 }}>
+            <h3>Vista BBDD</h3>
+
+            {/* Layout: fila filtros + fila tabla con scroll */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateRows: 'auto 1fr',
+                height: '75vh',        // reserva altura estable, ajusta si quieres
+                minHeight: 480,
+                overflow: 'visible',   // clave: que la fila de filtros no se recorte
+              }}
+            >
+              {/* Filtros (no sticky, no fixed) */}
+              <div
+                id="dbFilters"
+                style={{
+                  display: 'flex',
+                  gap: 12,
+                  alignItems: 'flex-end',
+                  padding: '8px 0',
+                  borderBottom: '1px solid #eee',
+                  background: '#fff',
+                  overflow: 'visible', // que el <select> pueda abrirse sin clipping
+                  zIndex: 1,
+                }}
+              >
+                <div style={{ minWidth: 220 }}>
+                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Tabla</label>
+                  <StyledSelect value={dbTable} onChange={(e) => setDbTable(e.target.value)}>
+                    <option value="" disabled>Selecciona una tabla…</option>
+                    {DB_TABLES.map(t => <option key={t} value={t}>{t}</option>)}
+                  </StyledSelect>
+                </div>
+
+                <div style={{ minWidth: 120 }}>
+                  <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Últimos</label>
+                  <StyledSelect
+                    value={dbLimit}
+                    onChange={(e) => setDbLimit(Number(e.target.value))}
+                    disabled={!dbTable}
+                  >
+                    {LIMIT_OPTIONS.map(n => <option key={n} value={n}>{n}</option>)}
+                  </StyledSelect>
+                </div>
+
+                {/* Estados rápidos */}
+                <div style={{ marginLeft: 'auto', fontSize: 12, color: '#6c757d' }}>
+                  {dbTable === '' ? 'Elige una tabla para ver datos.' : dbLoading ? 'Cargando…' : ''}
+                </div>
+              </div>
+
+              {/* Tabla con su propio scroll */}
+              <div
+                style={{
+                  overflow: 'auto',       // SOLO scrollea aquí
+                  border: '1px solid #eee',
+                  borderRadius: 6,
+                  marginTop: 8,
+                  position: 'relative',
+                  background: '#fff',
+                }}
+              >
+                <StyledTable>
+                  <thead>
+                    <tr>
+                      {dbRows.length > 0
+                        ? Object.keys(dbRows[0]).map(k => <th key={k}>{k}</th>)
+                        : <th style={{ textAlign: 'left' }}>Sin datos</th>}
+                    </tr>
+                  </thead>
+                    <tbody>
+                      {dbRows.map((row, idx) => (
+                        <tr key={idx}>
+                          {Object.keys(dbRows[0] || {}).map(k => (
+                            <td key={k}>
+                              {row[k] === null || row[k] === undefined ? '—' : String(row[k])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                </StyledTable>
+
+                {dbError && (
+                  <div style={{ padding: 12 }}>
+                    <StyledError>{dbError}</StyledError>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Botón flotante de rescate para subir a filtros (por si el usuario pierde la vista) */}
+            <button
+              type="button"
+              onClick={() => document.getElementById('dbFilters')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              style={{
+                position: 'fixed',
+                right: 16,
+                bottom: 16,
+                zIndex: 9999,
+                padding: '10px 14px',
+                border: '1px solid #ddd',
+                borderRadius: 8,
+                background: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              Filtros
+            </button>
+          </div>
+        )}
+
     </StyledContainer>
   );
 };

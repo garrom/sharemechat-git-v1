@@ -5,13 +5,22 @@ import com.sharemechat.dto.UserDTO;
 import com.sharemechat.entity.Model;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.UserNotFoundException;
+import com.sharemechat.repository.AdminRepository;
 import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.UserRepository;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AdminService {
@@ -19,11 +28,29 @@ public class AdminService {
     private final UserRepository userRepository;
     private final UserService userService;
     private final ModelRepository modelRepository;
+    private final AdminRepository adminRepository;
+    private final NamedParameterJdbcTemplate jdbc;
+    private static final Map<String, String> TABLE_ORDER = new HashMap<>();
+    static {
+        // tabla -> columna por la que ordenar DESC (ajusta a tus esquemas)
+        TABLE_ORDER.put("users", "id");
+        TABLE_ORDER.put("clients", "user_id");
+        TABLE_ORDER.put("models", "user_id");
+        TABLE_ORDER.put("transactions", "id");
+        TABLE_ORDER.put("balances", "id");
+        TABLE_ORDER.put("platform_transactions", "id");
+        TABLE_ORDER.put("platform_balances", "id");
+        TABLE_ORDER.put("stream_records", "id");
+    }
 
-    public AdminService(UserRepository userRepository, UserService userService, ModelRepository modelRepository) {
+    public AdminService(UserRepository userRepository, UserService userService,
+                        ModelRepository modelRepository, AdminRepository adminRepository,
+                        NamedParameterJdbcTemplate jdbc) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.modelRepository = modelRepository;
+        this.adminRepository = adminRepository;
+        this.jdbc = jdbc;
     }
 
     /**
@@ -111,6 +138,107 @@ public class AdminService {
                 + " | Rol previo: " + previousRole
                 + " | Rol actual: " + user.getRole()
                 + " | Model row: " + (modelRepository.existsById(user.getId()) ? "OK" : "NO");
+    }
+
+    private String fmtEUR(BigDecimal v) {
+        if (v == null) v = BigDecimal.ZERO;
+        return "€" + v.setScale(2, java.math.RoundingMode.HALF_UP);
+    }
+
+    /**
+     * ESTE METODO REALIZA el ranking de las modelos con mayores ingresos
+     * según transacciones tipo STREAM_EARNING, limitado al nº solicitado.
+     * Devuelve lista con email/nickname y cantidad formateada en euros.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> financeTopModels(int limit) {
+        return adminRepository.topModelsByEarnings(PageRequest.of(0, Math.min(Math.max(limit,1),50)))
+                .stream().map(r -> {
+                    Map<String,Object> m = new HashMap<>();
+                    m.put("modelId", ((Number) r[0]).longValue());
+                    m.put("email", (String) r[1]);
+                    m.put("name", (String) r[2]);
+                    m.put("nickname", (String) r[3]);
+                    m.put("totalEarningsEUR", fmtEUR((BigDecimal) r[4]));
+                    return m;
+                }).toList();
+    }
+
+    /**
+     * ESTE METODO REALIZA el ranking de clientes según la columna totalPagos
+     * de la tabla clients. Devuelve top N con email/nickname y totalPagos formateado en euros.
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String, Object>> financeTopClients(int limit) {
+        return adminRepository.topClientsByTotalPagos(PageRequest.of(0, Math.min(Math.max(limit,1),50)))
+                .stream().map(r -> {
+                    Map<String,Object> m = new HashMap<>();
+                    m.put("clientId", ((Number) r[0]).longValue());
+                    m.put("email", (String) r[1]);
+                    m.put("name", (String) r[2]);
+                    m.put("nickname", (String) r[3]);
+                    m.put("totalPagosEUR", fmtEUR((BigDecimal) r[4]));
+                    return m;
+                }).toList();
+    }
+
+
+    /**
+     * ESTE METODO REALIZA un resumen global de facturación:
+     * - grossBillingEUR: facturación total (STREAM_CHARGE en valor absoluto)
+     * - netProfitEUR: margen neto de la plataforma (STREAM_MARGIN)
+     * - profitPercent: % beneficio neto respecto a facturación bruta
+     * Devuelve todo formateado en euros/porcentaje.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, String> financeSummary() {
+        BigDecimal gross = adminRepository.sumGrossBilling();
+        BigDecimal net   = adminRepository.sumNetProfit();
+
+        if (gross == null) gross = BigDecimal.ZERO;
+        if (net == null)   net   = BigDecimal.ZERO;
+
+        BigDecimal grossAbs = gross.abs();
+
+        String profitPercentStr;
+        if (grossAbs.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal pct = net.divide(grossAbs, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100))
+                    .setScale(2, RoundingMode.HALF_UP);
+            profitPercentStr = pct.toPlainString() + "%";
+        } else {
+            profitPercentStr = "0.00%";
+        }
+
+        Map<String, String> s = new HashMap<>();
+        s.put("grossBillingEUR", fmtEUR(grossAbs));
+        s.put("netProfitEUR",    fmtEUR(net));
+        s.put("profitPercent",   profitPercentStr);
+        return s;
+    }
+
+    /**
+     * ESTE METODO permite seleccionar tabla de bbdd y despues
+     * visualizarlo en el frontal
+     */
+    @Transactional(readOnly = true)
+    public List<Map<String,Object>> viewTable(String table, int limit) {
+        if (table == null || !TABLE_ORDER.containsKey(table)) {
+            throw new IllegalArgumentException("Tabla no permitida");
+        }
+        int lim = Math.min(Math.max(limit, 1), 100);
+        String orderCol = TABLE_ORDER.get(table);
+        String sql = "SELECT * FROM " + table + " ORDER BY " + orderCol + " DESC LIMIT :lim";
+        return jdbc.query(sql, new MapSqlParameterSource("lim", lim),
+                (rs, rowNum) -> {
+                    var md = rs.getMetaData();
+                    Map<String,Object> row = new LinkedHashMap<>(); // <-- en vez de HashMap
+                    for (int i = 1; i <= md.getColumnCount(); i++) {
+                        row.put(md.getColumnLabel(i), rs.getObject(i));
+                    }
+                    return row;
+                });
+
     }
 
 

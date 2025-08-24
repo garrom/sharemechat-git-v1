@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -30,4 +31,35 @@ public class AdminController {
         logger.info("POST /api/admin/review/{} action={}", userId, action);
         return ResponseEntity.ok(adminService.reviewModel(userId, action));
     }
+
+    // GET /api/admin/finance/top-models?limit=10
+    @GetMapping("/finance/top-models")
+    public ResponseEntity<List<Map<String,Object>>> topModels(@RequestParam(defaultValue = "10") int limit) {
+        logger.info("GET /api/admin/finance/top-models limit={}", limit);
+        return ResponseEntity.ok(adminService.financeTopModels(limit));
+    }
+
+    // GET /api/admin/finance/top-clients?limit=10
+    @GetMapping("/finance/top-clients")
+    public ResponseEntity<List<Map<String,Object>>> topClients(@RequestParam(defaultValue = "10") int limit) {
+        logger.info("GET /api/admin/finance/top-clients limit={}", limit);
+        return ResponseEntity.ok(adminService.financeTopClients(limit));
+    }
+
+    // GET /api/admin/finance/summary
+    @GetMapping("/finance/summary")
+    public ResponseEntity<Map<String,String>> summary() {
+        logger.info("GET /api/admin/finance/summary");
+        return ResponseEntity.ok(adminService.financeSummary());
+    }
+
+    // GET /api/admin/db/view?table=users&limit=10
+    @GetMapping("/db/view")
+    public ResponseEntity<List<Map<String,Object>>> dbView(
+            @RequestParam String table,
+            @RequestParam(defaultValue = "10") int limit) {
+        return ResponseEntity.ok(adminService.viewTable(table, limit));
+    }
+
+
 }
