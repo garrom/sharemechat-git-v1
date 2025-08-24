@@ -1,17 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
-
-const Navbar = ({ onBack }) => (
-  <div style={{
-    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-    padding: '12px 16px', borderBottom: '1px solid #eee'
-  }}>
-    <div style={{ fontWeight: 600 }}>Mi Logo</div>
-    <button onClick={onBack} style={{ padding: '8px 12px', cursor: 'pointer' }}>
-      Volver
-    </button>
-  </div>
-);
+import {
+  StyledContainer,
+  StyledNavbar,
+  StyledNavButton,
+} from '../styles/ModelStyles';
 
 const PerfilModel = () => {
   const history = useHistory();
@@ -21,8 +14,8 @@ const PerfilModel = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
-
   const [userId, setUserId] = useState(null);
+
   const [form, setForm] = useState({
     email: '',
     name: '',
@@ -43,14 +36,7 @@ const PerfilModel = () => {
         const res = await fetch('/api/users/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) {
-          let msg = 'No se pudo cargar el perfil';
-          try {
-            const j = await res.json();
-            if (j?.message) msg = j.message;
-          } catch {}
-          throw new Error(msg);
-        }
+        if (!res.ok) throw new Error((await res.text()) || 'No se pudo cargar el perfil');
         const data = await res.json();
         setUserId(data.id);
         setForm({
@@ -97,15 +83,8 @@ const PerfilModel = () => {
       });
 
       if (!res.ok) {
-        let msg = 'No se pudo guardar';
-        try {
-          const j = await res.json();
-          if (j?.message) msg = j.message;
-        } catch (e) {
-          const t = await res.text();
-          if (t) msg = t;
-        }
-        throw new Error(msg);
+        const t = await res.text();
+        throw new Error(t || 'No se pudo guardar');
       }
       setMsg('Datos guardados correctamente.');
     } catch (e) {
@@ -116,8 +95,21 @@ const PerfilModel = () => {
   };
 
   return (
-    <div>
-      <Navbar onBack={() => history.goBack()} />
+    <StyledContainer>
+      {/* Navbar minimalista (misma estructura que DashboardClient) */}
+      <StyledNavbar>
+        <span>Mi Logo</span>
+        <div>
+          <StyledNavButton type="button" onClick={() => history.push('/change-password')}>
+            Cambiar contraseña
+          </StyledNavButton>
+          <StyledNavButton type="button" onClick={() => history.goBack()} style={{ marginLeft: 8 }}>
+            Volver
+          </StyledNavButton>
+        </div>
+      </StyledNavbar>
+
+      {/* Contenido de perfil */}
       <div style={{ maxWidth: 640, margin: '24px auto', padding: '0 16px' }}>
         <h2>Perfil (Modelo)</h2>
         {loading && <p>Cargando…</p>}
@@ -196,7 +188,7 @@ const PerfilModel = () => {
           </form>
         )}
       </div>
-    </div>
+    </StyledContainer>
   );
 };
 

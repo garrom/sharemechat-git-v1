@@ -116,10 +116,13 @@ const Login = () => {
         </StyledButton>
 
         <StyledLinkButton onClick={() => !loading && history.push('/register-client')}>
-          ¿No tienes cuenta? Regístrate como Cliente
+          Regístrate como Cliente
         </StyledLinkButton>
         <StyledLinkButton onClick={() => !loading && history.push('/register-model')}>
           Regístrate como Modelo
+        </StyledLinkButton>
+        <StyledLinkButton onClick={() => !loading && history.push('/forgot-password')}>
+          ¿Olvidaste tu contraseña?
         </StyledLinkButton>
       </StyledForm>
     </StyledContainer>

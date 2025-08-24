@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.Period;
 import java.util.Optional;
 
@@ -28,6 +29,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+
 
     @Autowired
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
@@ -111,7 +113,6 @@ public class UserService {
         String profilePicture = normalize(userUpdateDTO.getProfilePicture());
         String biography = normalize(userUpdateDTO.getBiography());
         String interests = normalize(userUpdateDTO.getInterests());
-
         // Nickname: validar unicidad solo si llega y cambia
         if (nickname != null) {
             if (userRepository.existsByNicknameAndIdNot(nickname, id)) {
@@ -119,33 +120,54 @@ public class UserService {
             }
             user.setNickname(nickname);
         }
-
         if (name != null) {
             user.setName(name);
         }
-
         if (surname != null) {
             user.setSurname(surname);
         }
-
         if (profilePicture != null) {
             user.setProfilePic(profilePicture);
         }
-
         if (userUpdateDTO.getDateOfBirth() != null) {
             user.setDateOfBirth(userUpdateDTO.getDateOfBirth());
         }
-
         if (biography != null) {
             user.setBiography(biography);
         }
-
         if (interests != null) {
             user.setInterests(interests);
         }
-
         User updatedUser = userRepository.save(user);
         return mapToDTO(updatedUser);
+    }
+
+    @Transactional
+    public void updatePassword(Long userId, String newPlainPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con ID: " + userId));
+
+        if (newPlainPassword == null || newPlainPassword.length() < 8) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres");
+        }
+
+        user.setPassword(passwordEncoder.encode(newPlainPassword));
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    @Transactional
+    public void changePassword(Long userId, String currentRaw, String newRaw) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        if (!passwordEncoder.matches(currentRaw, user.getPassword())) {
+            throw new IllegalArgumentException("La contraseña actual no es correcta");
+        }
+
+        // Puedes añadir checks de robustez de newRaw si quieres extra validación
+        user.setPassword(passwordEncoder.encode(newRaw));
+        userRepository.save(user);
     }
 
     /** Devuelve null si el texto es null o está en blanco; en otro caso devuelve trim(). */
@@ -175,4 +197,6 @@ public class UserService {
         dto.setEndDate(user.getEndDate());
         return dto;
     }
+
+
 }

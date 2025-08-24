@@ -75,4 +75,17 @@ public class UserController {
         UserDTO userDTO = userService.mapToDTO(user);
         return ResponseEntity.ok(userDTO);
     }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<String> changePassword(@RequestBody @Valid ChangePasswordRequest req,
+                                                 Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).body("No autenticado");
+        }
+        // Recupera el usuario por email y usa su ID
+        User u = userService.findByEmail(auth.getName());
+        userService.changePassword(u.getId(), req.getCurrentPassword(), req.getNewPassword());
+        return ResponseEntity.ok("Contraseña actualizada correctamente");
+    }
+
 }

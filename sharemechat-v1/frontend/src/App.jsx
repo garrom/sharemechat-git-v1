@@ -10,6 +10,9 @@ import DashboardUserModel from './pages/DashboardUserModel';
 import DashboardAdmin from './pages/DashboardAdmin';
 import PerfilClient from './pages/PerfilClient';
 import PerfilModel from './pages/PerfilModel';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import ChangePasswordPage from './pages/ChangePasswordPage';
 
 function App() {
   return (
@@ -25,6 +28,9 @@ function App() {
         <Route path="/dashboard-admin" component={DashboardAdmin} />
         <Route path="/perfil-client" component={PerfilClient} />
         <Route path="/perfil-model" component={PerfilModel} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
+        <Route path="/change-password" component={ChangePasswordPage} />
       </Switch>
     </Router>
   );

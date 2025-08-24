@@ -15,8 +15,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
-
 import java.util.Arrays;
 
 @Configuration
@@ -48,7 +46,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/transactions/first").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/api/transactions/add-balance").hasRole("CLIENT")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/match/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
+                        .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userDetailsService), UsernamePasswordAuthenticationFilter.class)
@@ -56,11 +56,6 @@ public class SecurityConfig {
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));
 
         return http.build();
-    }
-
-    @Bean
-    public WebSecurityCustomizer webSecurityCustomizer() {
-        return (web) -> web.ignoring().requestMatchers("/match/**"); // Ignorar completamente /match
     }
 
     @Bean

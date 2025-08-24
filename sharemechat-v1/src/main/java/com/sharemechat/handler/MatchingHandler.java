@@ -208,7 +208,13 @@ public class MatchingHandler extends TextWebSocketHandler {
                     System.out.println("startSession falló: " + ex.getMessage());
                     // si falla el inicio, devolvemos el modelo a la cola y avisamos al cliente
                     safeRequeue(model, "model");
-                    client.sendMessage(new TextMessage("{\"type\":\"no-model-available\"}"));
+                    // Si es saldo insuficiente -> avisamos correctamente al cliente
+                    if (isLowBalance(ex)) {
+                        safeSend(client, "{\"type\":\"no-balance\"}");
+                    } else {
+                        safeSend(client, "{\"type\":\"no-model-available\"}");
+                    }
+
                     return;
                 }
             }
@@ -236,9 +242,17 @@ public class MatchingHandler extends TextWebSocketHandler {
                     streamService.startSession(clientId, modelId, false);
                 } catch (Exception ex) {
                     System.out.println("startSession falló: " + ex.getMessage());
-                    // si falla el inicio, devolvemos el cliente a la cola y avisamos al modelo
-                    safeRequeue(client, "client");
-                    model.sendMessage(new TextMessage("{\"type\":\"no-client-available\"}"));
+
+                    if (isLowBalance(ex)) {
+                        // Cliente sin saldo: infórmale y no lo re-encoles hasta que recargue
+                        safeSend(client, "{\"type\":\"no-balance\"}");
+                        // El modelo sí vuelve a la cola (está disponible)
+                        safeRequeue(model, "model");
+                    } else {
+                        // Caso original: no hay cliente válido; re-encola cliente y notifica a modelo
+                        safeRequeue(client, "client");
+                        safeSend(model, "{\"type\":\"no-client-available\"}");
+                    }
                     return;
                 }
             }
@@ -440,6 +454,11 @@ public class MatchingHandler extends TextWebSocketHandler {
             pairs.remove(peer.getId());
         }
         return closed;
+    }
+
+    private boolean isLowBalance(Exception ex) {
+        String m = ex != null ? ex.getMessage() : null;
+        return m != null && m.contains("Saldo insuficiente");
     }
 
 

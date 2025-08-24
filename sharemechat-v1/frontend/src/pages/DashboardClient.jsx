@@ -209,7 +209,11 @@ const DashboardClient = () => {
         setError('No hay modelos disponibles.');
         setSearching(false);
 
-      } else if (data.type === 'peer-disconnected') {
+      } else if (data.type === 'no-balance') {
+            setError('No tienes saldo suficiente para iniciar una sesión.');
+            setSearching(false);
+
+      }else if (data.type === 'peer-disconnected') {
         console.log('Recibido peer-disconnected');
         if (peerRef.current) {
           peerRef.current.destroy();

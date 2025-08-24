@@ -71,6 +71,10 @@ public class StreamService {
      * Inicia una sesión de streaming en el instante del match.
      * Crea StreamRecord(start_time=now, end_time=NULL) y marca a la modelo como BUSY.
      * Idempotente respecto al par (si ya hubiera una activa, devuelve esa).
+     *
+     * IMPORTANTE:
+     *  - Si el cliente no tiene saldo suficiente, lanza IllegalStateException cuyo mensaje contiene
+     *    la cadena "Saldo insuficiente", para que el MatchingHandler envíe "no-balance".
      */
     @Transactional
     public StreamRecord startSession(Long clientId, Long modelId, boolean isPremium) {
@@ -85,6 +89,7 @@ public class StreamService {
             return sr;
         }
 
+        // Cargar usuarios y validar roles
         User client = userRepository.findById(clientId)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado: " + clientId));
         User model = userRepository.findById(modelId)
@@ -97,6 +102,33 @@ public class StreamService {
             throw new IllegalArgumentException("El usuario " + modelId + " no tiene rol MODEL");
         }
 
+        // Validar saldo 1 - Leer el registro mutable del cliente
+        Client clientEntity = clientRepository.findById(clientId)
+                .orElseThrow(() -> new IllegalStateException("Cliente (tabla clients) no encontrado para userId=" + clientId));
+
+        BigDecimal currentSaldo = clientEntity.getSaldoActual() != null ? clientEntity.getSaldoActual() : BigDecimal.ZERO;
+
+        // Validar saldo 2 - Verificar consistencia con el último balance inmutable
+        BigDecimal lastClientBalance = balanceRepository
+                .findTopByUserIdOrderByTimestampDesc(clientId)
+                .map(Balance::getBalance)
+                .orElse(BigDecimal.ZERO);
+
+        if (lastClientBalance.compareTo(currentSaldo) != 0) {
+            throw new IllegalStateException(
+                    "Inconsistencia: último balance del cliente (" + lastClientBalance + ") != clients.saldo_actual (" + currentSaldo + ")"
+            );
+        }
+
+        // Validar saldo 3 - Bloquear inicio si saldo < tarifa por minuto (evita saldo=0)
+        if (currentSaldo.compareTo(ratePerMinute) < 0) {
+            // *** Mantener esta cadena "Saldo insuficiente" para que MatchingHandler pueda distinguir el motivo. ***
+            log.warn("startSession: saldo insuficiente para iniciar. clientId={}, saldo={}, requeridoPorMin={}",
+                    clientId, currentSaldo, ratePerMinute);
+            throw new IllegalStateException("Saldo insuficiente para iniciar el streaming.");
+        }
+
+        // Crear StreamRecord
         StreamRecord sr = new StreamRecord();
         sr.setClient(client);
         sr.setModel(model);
@@ -113,6 +145,7 @@ public class StreamService {
 
         return saved;
     }
+
 
     /**
      * Corte preventivo: si saldo_actual - coste_acumulado < cutoff, cerrar ya la sesión.
