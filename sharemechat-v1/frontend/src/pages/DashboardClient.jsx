@@ -31,7 +31,7 @@ const DashboardClient = () => {
   const [saldo, setSaldo] = useState(null);
   const [loadingSaldo, setLoadingSaldo] = useState(false);
   const [saldoError, setSaldoError] = useState('');
-
+  const [status, setStatus] = useState('');
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -186,7 +186,6 @@ const DashboardClient = () => {
           }
         });
 
-
         peer.on('stream', (stream) => {
           setRemoteStream(stream);
         });
@@ -201,18 +200,18 @@ const DashboardClient = () => {
         setSearching(false);
 
       } else if (data.type === 'signal' && peerRef.current) {
-        peerRef.current.signal(data.signal);
+          peerRef.current.signal(data.signal);
 
       } else if (data.type === 'chat') {
-        setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+          setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
 
       } else if (data.type === 'no-model-available') {
-        setError('No hay modelos disponibles.');
-        setSearching(false);
+          setStatus('Buscando modelo...');
+          setSearching(true);
 
       } else if (data.type === 'no-balance') {
-            setError('No tienes saldo suficiente para iniciar una sesión.');
-            setSearching(false);
+          setStatus('No tienes saldo suficiente para iniciar una sesión.');
+          setSearching(false);
 
       }else if (data.type === 'peer-disconnected') {
         console.log('Recibido peer-disconnected');
@@ -245,7 +244,6 @@ const DashboardClient = () => {
       setSearching(false);
     };
   };
-
 
   const handleNext = () => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {

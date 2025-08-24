@@ -178,7 +178,8 @@ public class MatchingHandler extends TextWebSocketHandler {
                 if (peer != null && peer.isOpen()) {
                     peer.sendMessage(new TextMessage(payload));
                 }
-
+            } else if ("stats".equals(type)) {
+                sendQueueStats(session);
             } else if (pairs.containsKey(session.getId())) {
                 WebSocketSession peer = pairs.get(session.getId());
                 if (peer != null && peer.isOpen()) {
@@ -460,6 +461,37 @@ public class MatchingHandler extends TextWebSocketHandler {
         String m = ex != null ? ex.getMessage() : null;
         return m != null && m.contains("Saldo insuficiente");
     }
+
+    private int positionInQueue(Queue<WebSocketSession> q, WebSocketSession s) {
+        int i = 0;
+        for (WebSocketSession x : q) {
+            if (x == s) return i; // 0 = primera en la cola
+            i++;
+        }
+        return -1; // no está en la cola (por ejemplo, ya emparejada)
+    }
+
+    private void sendQueueStats(WebSocketSession s) {
+        try {
+            int waitingModelsCount = waitingModels.size();
+            int waitingClientsCount = waitingClients.size();
+            String role = roles.get(s.getId());
+            int myPosition = -1;
+            if ("model".equals(role)) {
+                myPosition = positionInQueue(waitingModels, s);
+            }
+            String json = String.format(
+                    "{\"type\":\"queue-stats\",\"waitingModels\":%d,\"waitingClients\":%d,\"position\":%d}",
+                    waitingModelsCount, waitingClientsCount, myPosition
+            );
+            System.out.println("queue-stats -> sessionId=" + s.getId()
+                    + " models=" + waitingModelsCount
+                    + " clients=" + waitingClientsCount
+                    + " position=" + myPosition);
+            safeSend(s, json);
+        } catch (Exception ignore) {}
+    }
+
 
 
 }

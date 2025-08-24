@@ -29,6 +29,10 @@ const DashboardModel = () => {
   const [saldoModel, setSaldoModel] = useState(null);
   const [loadingSaldoModel, setLoadingSaldoModel] = useState(false);
   const [saldoModelError, setSaldoModelError] = useState('');
+  const [status, setStatus] = useState('');
+  const [waitingModels, setWaitingModels] = useState(null);
+  const [waitingClients, setWaitingClients] = useState(null);
+  const [queuePosition, setQueuePosition] = useState(null);
 
 
   const history = useHistory();
@@ -137,7 +141,7 @@ const DashboardModel = () => {
 
     socket.onopen = () => {
       console.log('Modelo conectado al WebSocket');
-      setError('');
+      setStatus('Esperando cliente...');
       // --- Keepalive cada 30s ---
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = setInterval(() => {
@@ -147,13 +151,18 @@ const DashboardModel = () => {
       }, 30000);
 
       socket.send(JSON.stringify({ type: 'set-role', role: 'model' }));
+      socket.send(JSON.stringify({ type: 'stats' }));
     };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
+
       if (data.type === 'match') {
+        // Emparejada: limpiar estados de "buscando/esperando"
         setError('');
+        setStatus('');
         console.log('Modelo emparejado con cliente. PeerID:', data.peerId);
+
         const peer = new Peer({
           initiator: false,
           trickle: true,
@@ -171,7 +180,9 @@ const DashboardModel = () => {
 
         peer.on('stream', (stream) => {
           console.log('Modelo recibió stream remoto');
+          // Confirmación definitiva de emparejamiento: limpiar cualquier mensaje de estado
           setError('');
+          setStatus('');
           setRemoteStream(stream);
         });
 
@@ -180,12 +191,28 @@ const DashboardModel = () => {
         });
 
       } else if (data.type === 'signal' && peerRef.current) {
+        // Progreso en la señalización → limpiar "buscando/esperando"
         setError('');
+        setStatus('');
         peerRef.current.signal(data.signal);
+
       } else if (data.type === 'chat') {
         setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
+
       } else if (data.type === 'no-client-available') {
-        setError('No hay clientes disponibles.');
+        // Estado neutro: seguir esperando sin marcar error
+        setStatus('Esperando cliente...');
+        // (Opcional) pedir stats para refrescar posición
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ type: 'stats' }));
+        }
+
+      } else if (data.type === 'queue-stats') {
+        // Actualiza métricas de la cola
+        setWaitingModels(data.waitingModels);
+        setWaitingClients(data.waitingClients);
+        setQueuePosition(data.position); // 0 = primera en cola
+
       } else if (data.type === 'peer-disconnected') {
         console.log('Recibido peer-disconnected');
         if (peerRef.current) {
@@ -198,23 +225,15 @@ const DashboardModel = () => {
         }
         setRemoteStream(null);
         setMessages([]);
-        setError('El cliente se ha desconectado.');
+
+        // Volver a estado de espera (mensaje neutro, no error)
+        setError('');
+        setStatus('Esperando cliente...');
+        // (Opcional) refrescar stats
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ type: 'stats' }));
+        }
       }
-    };
-
-    socket.onerror = (err) => {
-      console.error('WebSocket error en modelo:', err);
-      setError('Error de conexión con el servidor.');
-    };
-
-    socket.onclose = () => {
-
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-        pingIntervalRef.current = null;
-      }
-      console.log('WebSocket cerrado (modelo)');
-
     };
   };
 
@@ -234,7 +253,10 @@ const DashboardModel = () => {
     }
     setRemoteStream(null);
     setMessages([]);
-    //setError('Buscando nuevo cliente...');
+    setStatus('Buscando nuevo cliente...');
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+       socketRef.current.send(JSON.stringify({ type: 'stats' }));
+     }
   };
 
   const sendChatMessage = () => {
@@ -245,7 +267,7 @@ const DashboardModel = () => {
     setChatInput('');
   };
 
-   const handleProfile = () => {
+  const handleProfile = () => {
       history.push('/perfil-model');
    };
 
@@ -346,33 +368,54 @@ const DashboardModel = () => {
 
   return (
     <StyledContainer>
-      <StyledNavbar>
-        <span>Mi Logo</span>
-        <div>
-          <span className="me-3">Hola, {displayName}</span>
+        <StyledNavbar>
+          <span>Mi Logo</span>
+          <div>
+            <span className="me-3">Hola, {displayName}</span>
 
             {/* Ver saldo */}
             <span className="me-3">
               {loadingSaldoModel ? 'Saldo: ...' :
                 (saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -')}
             </span>
-           {/* Botón retiro */}
-           <StyledNavButton type="button" onClick={handleRequestPayout}>
-             Solicitar retiro
-           </StyledNavButton>
 
-          {/* Salir y perfil*/}
-          <StyledNavButton type="button" onClick={handleLogout}>
-            <FontAwesomeIcon icon={faSignOutAlt} />
-            <StyledIconWrapper>Salir</StyledIconWrapper>
-          </StyledNavButton>
-          <StyledNavButton type="button" onClick={handleProfile}>
-            <FontAwesomeIcon icon={faUser} />
-            <StyledIconWrapper>Perfil</StyledIconWrapper>
-          </StyledNavButton>
-        </div>
-      </StyledNavbar>
+            {/* Estado */}
+            {status && (
+              <span className="me-3" style={{ color: '#6c757d' }}>
+                {status}
+              </span>
+            )}
 
+            {/* Cola */}
+            {waitingModels !== null && waitingClients !== null && (
+              <span className="me-3" style={{ color: '#6c757d' }}>
+                Modelos en cola: {waitingModels} · Clientes en cola: {waitingClients}
+              </span>
+            )}
+
+            {/* Posición */}
+            {queuePosition !== null && queuePosition >= 0 && (
+              <span className="me-3" style={{ color: '#6c757d' }}>
+                Tu posición: {queuePosition + 1}
+              </span>
+            )}
+
+            {/* Botón retiro */}
+            <StyledNavButton type="button" onClick={handleRequestPayout}>
+              Solicitar retiro
+            </StyledNavButton>
+
+            {/* Salir y perfil*/}
+            <StyledNavButton type="button" onClick={handleLogout}>
+              <FontAwesomeIcon icon={faSignOutAlt} />
+              <StyledIconWrapper>Salir</StyledIconWrapper>
+            </StyledNavButton>
+            <StyledNavButton type="button" onClick={handleProfile}>
+              <FontAwesomeIcon icon={faUser} />
+              <StyledIconWrapper>Perfil</StyledIconWrapper>
+            </StyledNavButton>
+          </div>
+        </StyledNavbar>
       <StyledMainContent>
         <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
