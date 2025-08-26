@@ -16,20 +16,22 @@ import {
   StyledLocalVideo,
   StyledRemoteVideo,
   StyledChatContainer,
-} from '../styles/ModelStyles';
+}  from '../styles/ClientStyles';
 
-const DashboardModel = () => {
+const DashboardClient = () => {
   const [cameraActive, setCameraActive] = useState(false);
-  const [remoteStream, setRemoteStream] = useState(null);
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
+  const [remoteStream, setRemoteStream] = useState(null);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('models');
   const [user, setUser] = useState(null);
-  const [saldoModel, setSaldoModel] = useState(null);
-  const [loadingSaldoModel, setLoadingSaldoModel] = useState(false);
+  const [saldo, setSaldo] = useState(null);
+  const [loadingSaldo, setLoadingSaldo] = useState(false);
+  const [saldoError, setSaldoError] = useState('');
   const [status, setStatus] = useState('');
-  const [queuePosition, setQueuePosition] = useState(null);
+  const [nexting, setNexting] = useState(false);
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -39,6 +41,10 @@ const DashboardModel = () => {
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
   const token = localStorage.getItem('token');
+  const fmtEUR = (v) =>
+    new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
+      .format(Number(v || 0));
+
 
   useEffect(() => {
     const loadUser = async () => {
@@ -51,76 +57,64 @@ const DashboardModel = () => {
           setUser(data);
         }
       } catch (e) {
-        console.error('Error cargando usuario:', e);
+        console.error("Error cargando usuario:", e);
       }
     };
     if (token) loadUser();
   }, [token]);
 
-  // Muestra video local cuando cámara está activa
   useEffect(() => {
     if (localVideoRef.current && localStream.current) {
       localVideoRef.current.srcObject = localStream.current;
     }
   }, [cameraActive]);
 
-  // Muestra video remoto cuando hay conexión
   useEffect(() => {
-    if (remoteVideoRef.current && remoteStream) {
-      remoteVideoRef.current.srcObject = remoteStream;
-    } else if (remoteVideoRef.current) {
-      remoteVideoRef.current.srcObject = null;
-    }
+      if (remoteVideoRef.current && remoteStream) {
+          remoteVideoRef.current.srcObject = remoteStream;
+      } else if (remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = null;
+      }
   }, [remoteStream]);
 
-  // Cargar saldo de la modelo
   useEffect(() => {
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
+    const token = localStorage.getItem('token');
+    if (!token) return;
 
-    const fetchSaldoModel = async () => {
+    const loadSaldo = async () => {
+      setLoadingSaldo(true);
+      setSaldoError('');
       try {
-        setLoadingSaldoModel(true);
-        const res = await fetch('/api/models/me', {
-          headers: { Authorization: `Bearer ${tk}` },
+        const res = await fetch('/api/clients/me', {
+          headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(txt || `Error ${res.status}`);
+          const text = await res.text();
+          throw new Error(text || `Error ${res.status}`);
         }
         const data = await res.json();
-        setSaldoModel(data.saldoActual);
-        setError('');
+        setSaldo(data.saldoActual);
       } catch (e) {
-        console.error(e);
-        setError(e.message || 'Error al cargar saldo de modelo');
+        setSaldoError(e.message);
+        setSaldo(null);
       } finally {
-        setLoadingSaldoModel(false);
+        setLoadingSaldo(false);
       }
     };
 
-    fetchSaldoModel();
+    loadSaldo();
   }, []);
 
-  const startCamera = async () => {
+
+  const handleActivateCamera = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 }, // DESARROLLO reducir ancho de banda
-        audio: true,
-      });
+
+      const stream = await navigator.mediaDevices.getUserMedia({video: { width: 640, height: 480 },audio: true}); //DESARROLLO reduce ancho banda
       localStream.current = stream;
       setCameraActive(true);
-
-      const tk = localStorage.getItem('token');
-      if (!tk) {
-        setError('Sesión expirada. Inicia sesión de nuevo.');
-        return;
-      }
-
-      startWebSocketAndWait(tk);
     } catch (err) {
-      console.error('Error al acceder a la cámara:', err);
-      setError('No se pudo acceder a la cámara.');
+      setError('Error al activar la cámara: ' + err.message);
+      console.error(err);
     }
   };
 
@@ -129,151 +123,204 @@ const DashboardModel = () => {
     history.push('/');
   };
 
-  const startWebSocketAndWait = (tk) => {
-    const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(tk)}`;
-    const socket = new WebSocket(wsUrl);
-    socketRef.current = socket;
+  const handleStartMatch = () => {
+    if (!cameraActive || !localStream.current) {
+      setError('Primero activa la cámara.');
+      return;
+    }
+    setSearching(true);
+    setError('');
 
-    socket.onopen = () => {
-      console.log('Modelo conectado al WebSocket');
-      setStatus('Esperando cliente...');
+    const token = localStorage.getItem('token');
+    if (!token) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
+      setSearching(false);
+      return;
+    }
+
+    const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(token)}`;
+    console.log('WS(Client) ->', wsUrl);
+
+    socketRef.current = new WebSocket(wsUrl);
+
+    socketRef.current.onopen = () => {
+      console.log('WebSocket abierto (client), enviando start-match');
       // --- Keepalive cada 30s ---
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = setInterval(() => {
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
           socketRef.current.send(JSON.stringify({ type: 'ping' }));
-          socketRef.current.send(JSON.stringify({ type: 'stats' }));
         }
       }, 30000);
 
-      socket.send(JSON.stringify({ type: 'set-role', role: 'model' }));
-      socket.send(JSON.stringify({ type: 'stats' }));
+      socketRef.current.send(JSON.stringify({ type: 'set-role', role: 'client' }));
+      socketRef.current.send(JSON.stringify({ type: 'start-match' }));
     };
 
-    socket.onmessage = (event) => {
+    socketRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
       if (data.type === 'match') {
-        // Emparejada: limpiar estados de "buscando/esperando"
-        setError('');
-        setStatus('');
-        console.log('Modelo emparejado con cliente. PeerID:', data.peerId);
+        // 🔒 Asegura que no queda ningún peer/stream previo
+        try {
+          if (peerRef.current) {
+            peerRef.current.destroy();
+            peerRef.current = null;
+          }
+        } catch {}
+        try {
+          if (remoteStream) {
+            remoteStream.getTracks().forEach((t) => t.stop());
+          }
+        } catch {}
+        setRemoteStream(null);
+        setMessages([]);
 
+        // ⬇️ crea el nuevo peer como ya hacías
         const peer = new Peer({
-          initiator: false,
+          initiator: true,
           trickle: true,
           stream: localStream.current,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              {
+                urls: 'turn:openrelay.metered.ca:80',
+                username: 'openrelayproject',
+                credential: 'openrelayproject',
+              },
+            ],
+          },
         });
-        peerRef.current = peer;
 
         peer.on('signal', (signal) => {
-          // Ignorar candidatos vacíos
           if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
           if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
           }
         });
 
-        peer.on('stream', (stream) => {
-          console.log('Modelo recibió stream remoto');
-          // Confirmación definitiva de emparejamiento: limpiar cualquier mensaje de estado
-          setError('');
-          setStatus('');
-          setRemoteStream(stream);
+        peer.on('stream', (stream) => setRemoteStream(stream));
+        peer.on('error', (err) => {
+          console.error('Peer error:', err);
+          setError('Error en la conexión WebRTC: ' + err.message);
+          setSearching(false);
         });
 
-        peer.on('error', (err) => {
-          setError('Error en la conexión WebRTC: ' + err.message);
-        });
-      } else if (data.type === 'signal' && peerRef.current) {
-        // Progreso en la señalización → limpiar "buscando/esperando"
-        setError('');
-        setStatus('');
+        peerRef.current = peer;
+        setSearching(false);
+        return;
+      }
+
+      if (data.type === 'signal' && peerRef.current) {
         peerRef.current.signal(data.signal);
-      } else if (data.type === 'chat') {
+        return;
+      }
+
+      if (data.type === 'chat') {
         setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
-      } else if (data.type === 'no-client-available') {
-        // Estado neutro: seguir esperando sin marcar error
-        setStatus('Esperando cliente...');
-        // (Opcional) pedir stats para refrescar posición
-        if (socketRef.current?.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ type: 'stats' }));
-        }
-      } else if (data.type === 'queue-stats') {
-        // Actualiza solo posición de la modelo (0 = primera en cola)
-        if (typeof data.position === 'number') {
-          setQueuePosition(data.position);
-        }
-      } else if (data.type === 'peer-disconnected') {
-        console.log('Recibido peer-disconnected');
-        if (peerRef.current) {
-          peerRef.current.destroy();
-          peerRef.current = null;
-          console.log('Peer destruido');
-        }
-        if (remoteStream) {
-          remoteStream.getTracks().forEach((track) => track.stop());
-        }
+        return;
+      }
+
+      if (data.type === 'no-model-available') {
+        setError('');
+        setSearching(true);
+        return;
+      }
+
+      if (data.type === 'no-balance') {
+        setError('No tienes saldo suficiente para iniciar una sesión.');
+        setSearching(false);
+        return;
+      }
+
+      if (data.type === 'peer-disconnected') {
+        // limpieza defensiva (por si fue el peer quien cortó)
+        try {
+          if (peerRef.current) {
+            peerRef.current.destroy();
+            peerRef.current = null;
+          }
+        } catch {}
+        try {
+          if (remoteStream) {
+            remoteStream.getTracks().forEach((t) => t.stop());
+          }
+        } catch {}
         setRemoteStream(null);
         setMessages([]);
-
-        // Volver a estado de espera (mensaje neutro, no error)
-        setError('');
-        setStatus('Esperando cliente...');
-        // (Opcional) refrescar stats
+        setSearching(true);
+        setError('Buscando nuevo modelo...');
         if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ type: 'start-match' }));
           socketRef.current.send(JSON.stringify({ type: 'stats' }));
         }
+        return;
       }
     };
 
-    socket.onerror = (err) => {
-      console.error('WebSocket error en modelo:', err);
-      setError('Error de conexión con el servidor.');
+
+    socketRef.current.onerror = (e) => {
+      console.error('WebSocket error (client):', e);
+      setError('Error WebSocket');
+      setSearching(false);
     };
 
-    socket.onclose = () => {
+    socketRef.current.onclose = (e) => {
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = null;
       }
-      console.log('WebSocket cerrado (modelo)');
+      console.log('WebSocket cerrado (client):', e.code, e.reason);
+      setSearching(false);
     };
   };
 
+
   const handleNext = () => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: 'next' }));
+      try {
+        socketRef.current.send(JSON.stringify({ type: 'next' }));
+      } catch (e) {
+        console.error('Error enviando NEXT:', e);
+        setError('Error: no se pudo solicitar NEXT.');
+        return;
+      }
     } else {
       setError('Error: No hay conexión con el servidor.');
       return;
     }
-    if (peerRef.current) {
-      peerRef.current.destroy();
-      peerRef.current = null;
-    }
-    if (remoteStream) {
-      remoteStream.getTracks().forEach((track) => track.stop());
-    }
+
+    try {
+      if (peerRef.current) {
+        peerRef.current.destroy();
+        peerRef.current = null;
+      }
+    } catch {}
+    try {
+      if (remoteStream) {
+        remoteStream.getTracks().forEach((t) => t.stop());
+      }
+    } catch {}
+
     setRemoteStream(null);
     setMessages([]);
-    setStatus('Buscando nuevo cliente...');
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: 'stats' }));
-    }
+    setSearching(true);           // mostramos “buscando…”
+    setError('Buscando nuevo modelo...');
   };
+
 
   const sendChatMessage = () => {
     if (chatInput.trim() === '') return;
     const message = { type: 'chat', message: chatInput };
     socketRef.current.send(JSON.stringify(message));
-    setMessages((prev) => [...prev, { from: 'me', text: chatInput }]);
+    setMessages(prev => [...prev, { from: 'me', text: chatInput }]);
     setChatInput('');
   };
 
-  const handleProfile = () => {
-    history.push('/perfil-model');
-  };
+   const handleProfile = () => {
+      history.push('/perfil-client');
+   };
 
   const stopAll = () => {
     if (pingIntervalRef.current) {
@@ -281,42 +328,40 @@ const DashboardModel = () => {
       pingIntervalRef.current = null;
     }
 
-    // Cierra cámara local
     if (localStream.current) {
-      localStream.current.getTracks().forEach((track) => track.stop());
+      localStream.current.getTracks().forEach(track => track.stop());
       localStream.current = null;
     }
 
-    // Cierra peer
     if (peerRef.current) {
       peerRef.current.destroy();
       peerRef.current = null;
     }
 
-    // Cierra WebSocket
     if (socketRef.current) {
       socketRef.current.close();
       socketRef.current = null;
     }
 
     setCameraActive(false);
+    setSearching(false);
     setRemoteStream(null);
     setError('');
-    setStatus('');
-    setQueuePosition(null);
     setMessages([]);
   };
 
-  const handleRequestPayout = async () => {
-    const tk = localStorage.getItem('token');
-    if (!tk) {
+  const handleAddBalance = async () => {
+    const token = localStorage.getItem('token');
+    if (!token) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
       return;
     }
 
-    let input = window.prompt('Cantidad a retirar (€):', '10');
-    if (input === null) return; // cancelado
+    // Ventana simple para introducir el importe
+    let input = window.prompt('Cantidad a añadir (€):', '10');
+    if (input === null) return; // usuario canceló
 
+    // Permite coma o punto
     input = String(input).replace(',', '.').trim();
     const amount = Number(input);
 
@@ -326,17 +371,19 @@ const DashboardModel = () => {
     }
 
     try {
-      setLoadingSaldoModel(true);
+      setLoadingSaldo(true);
 
-      const res = await fetch('/api/transactions/payout', {
+      // Llamada al endpoint de recarga (INGRESO)
+      const res = await fetch('/api/transactions/add-balance', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${tk}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           amount,
-          description: 'Solicitud de retiro',
+          operationType: 'INGRESO',
+          description: 'Recarga de saldo',
         }),
       });
 
@@ -345,29 +392,33 @@ const DashboardModel = () => {
         throw new Error(txt || `Error ${res.status}`);
       }
 
-      alert('Solicitud de retiro registrada correctamente.');
+      alert('Saldo añadido correctamente.');
 
-      // Refrescar saldo tras el retiro
-      const res2 = await fetch('/api/models/me', {
-        headers: { Authorization: `Bearer ${tk}` },
+      // Refrescar saldo en navbar
+      const res2 = await fetch('/api/clients/me', {
+        headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!res2.ok) {
         const txt = await res2.text();
         throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
       }
+
       const data = await res2.json();
-      setSaldoModel(data.saldoActual);
-      setError('');
+      setSaldo(data.saldoActual);
+      setSaldoError('');
+
     } catch (e) {
       console.error(e);
-      alert(e.message || 'Error al solicitar retiro.');
-      setError(e.message || 'Error al cargar saldo de modelo');
+      alert(e.message || 'Error al añadir saldo.');
+      setSaldoError(e.message || 'Error al cargar saldo');
     } finally {
-      setLoadingSaldoModel(false);
+      setLoadingSaldo(false);
     }
   };
 
-  const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
+
+  const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
   return (
     <StyledContainer>
@@ -375,29 +426,15 @@ const DashboardModel = () => {
         <span>Mi Logo</span>
         <div>
           <span className="me-3">Hola, {displayName}</span>
-
-          {/* Saldo */}
+          {/* Ver saldo */}
           <span className="me-3">
-            {loadingSaldoModel
-              ? 'Saldo: ...'
-              : saldoModel !== null
-              ? `Saldo: €${Number(saldoModel).toFixed(2)}`
-              : 'Saldo: -'}
+            {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
           </span>
-
-          {/* Solo la posición en la cola (modelo) */}
-          {queuePosition !== null && queuePosition >= 0 && (
-            <span className="me-3" style={{ color: '#6c757d' }}>
-              Tu posición: {queuePosition + 1}
-            </span>
-          )}
-
-          {/* Botón retiro */}
-          <StyledNavButton type="button" onClick={handleRequestPayout}>
-            Solicitar retiro
+          {/* Añadir saldo */}
+          <StyledNavButton type="button" onClick={handleAddBalance} style={{ marginRight: '8px' }}>
+            + Saldo
           </StyledNavButton>
-
-          {/* Salir y perfil */}
+          {/* Salir y perfil*/}
           <StyledNavButton type="button" onClick={handleLogout}>
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
@@ -413,21 +450,22 @@ const DashboardModel = () => {
         <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
             <button
-              title="Listar Favoritos"
-              onClick={() => setActiveTab('models')}
+              title="videochat"
+              onClick={() => setActiveTab('videochat')}
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <FontAwesomeIcon icon={faHeart} size="lg" />
             </button>
             <button
-              title="Mensajes"
-              onClick={() => setActiveTab('messages')}
+              title="favoritos"
+              onClick={() => setActiveTab('favoritos')}
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <FontAwesomeIcon icon={faEnvelope} size="lg" />
             </button>
             <button
-              title="Añadir a Favoritos"
+              title="ligoteo"
+              onClick={() => setActiveTab('ligoteo')}
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <FontAwesomeIcon icon={faUserPlus} size="lg" />
@@ -441,37 +479,29 @@ const DashboardModel = () => {
             </button>
           </div>
           <ul className="list-group">
-            {activeTab === 'models' && (
-              <li className="list-group-item">Aquí iría la lista de clientes favoritos</li>
-            )}
-            {activeTab === 'messages' && (
-              <li className="list-group-item">Aquí irían los mensajes</li>
-            )}
-            {activeTab === 'notifications' && (
-              <li className="list-group-item">Aquí irían las notificaciones</li>
-            )}
+            {activeTab === 'models' && <li className="list-group-item">Aquí iría la lista de modelos favoritos</li>}
+            {activeTab === 'messages' && <li className="list-group-item">Aquí irían los mensajes</li>}
+            {activeTab === 'notifications' && <li className="list-group-item">Aquí irían las notificaciones</li>}
           </ul>
         </StyledLeftColumn>
 
         <StyledCenter>
-          {/* Estado neutro (no error) */}
-          {status && <p style={{ color: '#6c757d', marginTop: '10px' }}>{status}</p>}
-
           {!cameraActive && (
-            <StyledActionButton onClick={startCamera}>Activar Cámara</StyledActionButton>
+            <StyledActionButton onClick={handleActivateCamera}>Activar Cámara</StyledActionButton>
           )}
 
           {cameraActive && (
             <>
               <div style={{ marginBottom: '10px' }}>
+                {!searching && <StyledActionButton onClick={handleStartMatch}>Buscar Modelo</StyledActionButton>}
+                {searching && <p>Buscando modelo...</p>}
                 <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}>
                   Stop
                 </StyledActionButton>
-                {remoteStream && (
+                {remoteStream && !searching && (
                   <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
                 )}
               </div>
-
               <StyledLocalVideo>
                 <h5 style={{ color: 'white' }}>Tu Cámara</h5>
                 <video
@@ -481,19 +511,10 @@ const DashboardModel = () => {
                   autoPlay
                 />
               </StyledLocalVideo>
-
               {remoteStream && (
                 <StyledRemoteVideo>
-                  <h5
-                    style={{
-                      position: 'absolute',
-                      top: '10px',
-                      left: '10px',
-                      color: 'white',
-                      zIndex: 2,
-                    }}
-                  >
-                    Cliente
+                  <h5 style={{ position: 'absolute', top: '10px', left: '10px', color: 'white', zIndex: 2 }}>
+                    Modelo
                   </h5>
                   <video
                     ref={remoteVideoRef}
@@ -513,7 +534,7 @@ const DashboardModel = () => {
                           key={index}
                           style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
                         >
-                          <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong> {msg.text}
+                          <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
                         </div>
                       ))}
                     </div>
@@ -522,14 +543,7 @@ const DashboardModel = () => {
                         type="text"
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
-                        style={{
-                          flex: 1,
-                          marginRight: '10px',
-                          background: 'rgba(255, 255, 255, 0.9)',
-                          border: 'none',
-                          borderRadius: '5px',
-                          padding: '5px',
-                        }}
+                        style={{ flex: 1, marginRight: '10px', background: 'rgba(255, 255, 255, 0.9)', border: 'none', borderRadius: '5px', padding: '5px' }}
                       />
                       <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
                     </div>
@@ -548,4 +562,4 @@ const DashboardModel = () => {
   );
 };
 
-export default DashboardModel;
+export default DashboardClient;

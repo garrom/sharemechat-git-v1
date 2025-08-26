@@ -4,9 +4,9 @@ import {
   StyledContainer,
   StyledNavbar,
   StyledNavButton,
-} from '../styles/ClientStyles';
+} from '../../styles/ModelStyles';
 
-const PerfilClient = () => {
+const PerfilModel = () => {
   const history = useHistory();
   const token = localStorage.getItem('token');
 
@@ -15,6 +15,7 @@ const PerfilClient = () => {
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [userId, setUserId] = useState(null);
+
   const [form, setForm] = useState({
     email: '',
     name: '',
@@ -95,18 +96,14 @@ const PerfilClient = () => {
 
   return (
     <StyledContainer>
-      {/* Navbar minimalista */}
+      {/* Navbar minimalista (misma estructura que DashboardClient) */}
       <StyledNavbar>
         <span>Mi Logo</span>
         <div>
           <StyledNavButton type="button" onClick={() => history.push('/change-password')}>
             Cambiar contraseña
           </StyledNavButton>
-          <StyledNavButton
-            type="button"
-            onClick={() => history.goBack()}
-            style={{ marginLeft: 8 }}
-          >
+          <StyledNavButton type="button" onClick={() => history.goBack()} style={{ marginLeft: 8 }}>
             Volver
           </StyledNavButton>
         </div>
@@ -114,7 +111,7 @@ const PerfilClient = () => {
 
       {/* Contenido de perfil */}
       <div style={{ maxWidth: 640, margin: '24px auto', padding: '0 16px' }}>
-        <h2>Perfil (Cliente)</h2>
+        <h2>Perfil (Modelo)</h2>
         {loading && <p>Cargando…</p>}
         {error && <p style={{ color: 'red' }}>{error}</p>}
         {msg && <p style={{ color: 'green' }}>{msg}</p>}
@@ -195,4 +192,4 @@ const PerfilClient = () => {
   );
 };
 
-export default PerfilClient;
+export default PerfilModel;

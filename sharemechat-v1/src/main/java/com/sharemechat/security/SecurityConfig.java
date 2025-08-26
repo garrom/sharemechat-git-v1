@@ -43,6 +43,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/**").authenticated()
                         .requestMatchers("/api/models/**").hasRole("MODEL")
                         .requestMatchers("/api/client/**").hasRole("CLIENT")
+                        .requestMatchers("/api/favorites/**").hasAnyRole("CLIENT","MODEL")
                         .requestMatchers(HttpMethod.POST, "/api/transactions/first").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/api/transactions/add-balance").hasRole("CLIENT")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

@@ -14,6 +14,7 @@ import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 @Component
@@ -24,6 +25,8 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final Map<String, WebSocketSession> pairs = new HashMap<>();
     private final Map<String, String> roles = new HashMap<>();
     private final Map<String, Long> sessionUserIds = new HashMap<>();
+    private final Set<String> switching = Collections.newSetFromMap(new ConcurrentHashMap<>());
+
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
@@ -66,10 +69,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         if ("model".equals(role)) {
             waitingModels.remove(session);
             System.out.println("Modelo eliminado de waitingModels: sessionId=" + session.getId());
-            if (userId != null) {
-                // El modelo pasa a OFFLINE al cerrarse WS
-                modelStatusService.setOffline(userId);
-            }
+            if (userId != null) modelStatusService.setOffline(userId);
         } else if ("client".equals(role)) {
             waitingClients.remove(session);
             System.out.println("Cliente eliminado de waitingClients: sessionId=" + session.getId());
@@ -80,7 +80,6 @@ public class MatchingHandler extends TextWebSocketHandler {
             pairs.remove(peer.getId());
             System.out.println("Par eliminado del mapa: peerId=" + peer.getId());
 
-            // 2) Finalizar sesión de streaming si existía par activo
             Long myId = userId;
             Long peerId = sessionUserIds.get(peer.getId());
             String myRole = role;
@@ -89,12 +88,9 @@ public class MatchingHandler extends TextWebSocketHandler {
             endStreamIfPairKnown(myId, myRole, peerId, peerRole);
 
             if (peer.isOpen()) {
-                try {
-                    peer.sendMessage(new TextMessage("{\"type\":\"peer-disconnected\"}"));
-                    System.out.println("Notificado peer-disconnected a peerId=" + peer.getId());
-                } catch (Exception e) {
-                    System.out.println("Error al enviar peer-disconnected a peerId=" + peer.getId() + ": " + e.getMessage());
-                }
+                safeSend(peer, "{\"type\":\"peer-disconnected\",\"reason\":\"peer-closed\"}");
+                // El peer sigue conectado → reencolarlo para que no se quede “zombie”
+                safeRequeue(peer, peerRole); // <-- NUEVO
             } else {
                 System.out.println("Peer no está abierto: peerId=" + peer.getId());
             }
@@ -103,7 +99,8 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
-    //EL METODO PROCESA LOS MENSAJES RECIBIDOS POR WEBSOCKET SEGUN SU TIPO COMO SIGNAL CHAT SET-ROLE START-MATCH NEXT O STATS
+
+    //EL METODO PARA CHAT EN VIVO POR WEBSOCKET SEGUN SU TIPO COMO SIGNAL CHAT SET-ROLE START-MATCH NEXT O STATS
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
@@ -273,36 +270,47 @@ public class MatchingHandler extends TextWebSocketHandler {
 
     //EL METODO GESTIONA EL CAMBIO DE PAREJA CUANDO UN USUARIO PULSA NEXT FINALIZANDO LA SESION ACTUAL Y BUSCANDO UN NUEVO EMPAREJAMIENTO
     private void handleNext(WebSocketSession session) throws Exception {
-        WebSocketSession peer = pairs.remove(session.getId());
-        if (peer != null) {
-            pairs.remove(peer.getId());
-            System.out.println("Peer encontrado para sessionId=" + session.getId() + ", peerId=" + peer.getId());
-
-            // === FIN STREAM POR NEXT ===
-            Long myId = sessionUserIds.get(session.getId());
-            Long peerId = sessionUserIds.get(peer.getId());
-            String myRole = roles.get(session.getId());
-            String peerRole = roles.get(peer.getId());
-            endStreamIfPairKnown(myId, myRole, peerId, peerRole);
-
-            if (peer.isOpen()) {
-                peer.sendMessage(new TextMessage("{\"type\":\"peer-disconnected\"}"));
-                System.out.println("Enviado 'peer-disconnected' a peerId=" + peer.getId());
-            } else {
-                System.out.println("Peer no está abierto: peerId=" + peer.getId());
-            }
-        } else {
-            System.out.println("No se encontró peer para sessionId=" + session.getId());
+        // --- FUSIBLE anti-reentradas ---
+        if (!switching.add(session.getId())) {
+            // Ya hay un NEXT en curso para esta sesión
+            return;
         }
+        try {
+            WebSocketSession peer = pairs.remove(session.getId());
+            if (peer != null) {
+                pairs.remove(peer.getId());
+                System.out.println("Peer encontrado para sessionId=" + session.getId() + ", peerId=" + peer.getId());
 
-        // Volver a emparejar al que pulsó 'next'
-        String role = roles.get(session.getId());
-        if ("client".equals(role)) {
-            matchClient(session);
-        } else if ("model".equals(role)) {
-            matchModel(session);
+                // FIN STREAM por NEXT
+                Long myId   = sessionUserIds.get(session.getId());
+                Long peerId = sessionUserIds.get(peer.getId());
+                String myRole   = roles.get(session.getId());
+                String peerRole = roles.get(peer.getId());
+                endStreamIfPairKnown(myId, myRole, peerId, peerRole);
+
+                if (peer.isOpen()) {
+                    // Notifica y REENCOLA automáticamente al peer (muy importante)
+                    safeSend(peer, "{\"type\":\"peer-disconnected\",\"reason\":\"next\"}");
+                    safeRequeue(peer, peerRole);  // <-- NUEVO
+                } else {
+                    System.out.println("Peer no está abierto: peerId=" + peer.getId());
+                }
+            } else {
+                System.out.println("No se encontró peer para sessionId=" + session.getId());
+            }
+
+            // Reemparejar al que pulsó 'next'
+            String role = roles.get(session.getId());
+            if ("client".equals(role)) {
+                matchClient(session);
+            } else if ("model".equals(role)) {
+                matchModel(session);
+            }
+        } finally {
+            switching.remove(session.getId());
         }
     }
+
 
     //EL METODO GESTIONA EL CAMBIO DE PAREJA CUANDO UN USUARIO PULSA NEXT FINALIZANDO LA SESION ACTUAL Y BUSCANDO UN NUEVO EMPAREJAMIENTO
     private void endStreamIfPairKnown(Long idA, String roleA, Long idB, String roleB) {

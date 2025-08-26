@@ -7,7 +7,7 @@ import {
   StyledLinkButton,
   StyledError,
   StyledSelect,
-} from '../styles/DashboardAdminStyles';
+} from '../styles/AdminStyles';
 import Roles from '../constants/Roles';
 
 const DashboardAdmin = () => {
