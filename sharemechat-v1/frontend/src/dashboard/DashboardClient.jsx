@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
+import FavoritesClientList from './features/favorites/FavoritesClientList';
+import FunnyplacePage from './features/funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSignOutAlt, faUser, faHeart, faEnvelope, faUserPlus, faBell } from '@fortawesome/free-solid-svg-icons';
+import { faSignOutAlt, faUser, faHeart, faVideo, faFilm } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,
   StyledNavbar,
@@ -25,7 +27,8 @@ const DashboardClient = () => {
   const [remoteStream, setRemoteStream] = useState(null);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
-  const [activeTab, setActiveTab] = useState('models');
+  const [activeTab, setActiveTab] = useState('videochat');
+  const [currentModelId, setCurrentModelId] = useState(null);
   const [user, setUser] = useState(null);
   const [saldo, setSaldo] = useState(null);
   const [loadingSaldo, setLoadingSaldo] = useState(false);
@@ -44,7 +47,6 @@ const DashboardClient = () => {
   const fmtEUR = (v) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
       .format(Number(v || 0));
-
 
   useEffect(() => {
     const loadUser = async () => {
@@ -70,11 +72,11 @@ const DashboardClient = () => {
   }, [cameraActive]);
 
   useEffect(() => {
-      if (remoteVideoRef.current && remoteStream) {
-          remoteVideoRef.current.srcObject = remoteStream;
-      } else if (remoteVideoRef.current) {
-          remoteVideoRef.current.srcObject = null;
-      }
+    if (remoteVideoRef.current && remoteStream) {
+      remoteVideoRef.current.srcObject = remoteStream;
+    } else if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
   }, [remoteStream]);
 
   useEffect(() => {
@@ -105,11 +107,12 @@ const DashboardClient = () => {
     loadSaldo();
   }, []);
 
-
   const handleActivateCamera = async () => {
     try {
-
-      const stream = await navigator.mediaDevices.getUserMedia({video: { width: 640, height: 480 },audio: true}); //DESARROLLO reduce ancho banda
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480 },
+        audio: true
+      }); // DESARROLLO: reducir ancho de banda
       localStream.current = stream;
       setCameraActive(true);
     } catch (err) {
@@ -161,7 +164,14 @@ const DashboardClient = () => {
       const data = JSON.parse(event.data);
 
       if (data.type === 'match') {
-        // 🔒 Asegura que no queda ningún peer/stream previo
+        try {
+          if (data.peerRole === 'model' && Number.isFinite(Number(data.peerUserId))) {
+            setCurrentModelId(Number(data.peerUserId));
+          } else {
+            setCurrentModelId(null);
+          }
+        } catch { setCurrentModelId(null); }
+
         try {
           if (peerRef.current) {
             peerRef.current.destroy();
@@ -176,7 +186,6 @@ const DashboardClient = () => {
         setRemoteStream(null);
         setMessages([]);
 
-        // ⬇️ crea el nuevo peer como ya hacías
         const peer = new Peer({
           initiator: true,
           trickle: true,
@@ -235,7 +244,7 @@ const DashboardClient = () => {
       }
 
       if (data.type === 'peer-disconnected') {
-        // limpieza defensiva (por si fue el peer quien cortó)
+        setCurrentModelId(null);
         try {
           if (peerRef.current) {
             peerRef.current.destroy();
@@ -259,7 +268,6 @@ const DashboardClient = () => {
       }
     };
 
-
     socketRef.current.onerror = (e) => {
       console.error('WebSocket error (client):', e);
       setError('Error WebSocket');
@@ -275,7 +283,6 @@ const DashboardClient = () => {
       setSearching(false);
     };
   };
-
 
   const handleNext = () => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -303,12 +310,12 @@ const DashboardClient = () => {
       }
     } catch {}
 
+    setCurrentModelId(null);
     setRemoteStream(null);
     setMessages([]);
-    setSearching(true);           // mostramos “buscando…”
+    setSearching(true);
     setError('Buscando nuevo modelo...');
   };
-
 
   const sendChatMessage = () => {
     if (chatInput.trim() === '') return;
@@ -318,9 +325,9 @@ const DashboardClient = () => {
     setChatInput('');
   };
 
-   const handleProfile = () => {
-      history.push('/perfil-client');
-   };
+  const handleProfile = () => {
+    history.push('/perfil-client');
+  };
 
   const stopAll = () => {
     if (pingIntervalRef.current) {
@@ -334,15 +341,16 @@ const DashboardClient = () => {
     }
 
     if (peerRef.current) {
-      peerRef.current.destroy();
+      try { peerRef.current.destroy(); } catch {}
       peerRef.current = null;
     }
 
     if (socketRef.current) {
-      socketRef.current.close();
+      try { socketRef.current.close(); } catch {}
       socketRef.current = null;
     }
 
+    setCurrentModelId(null);
     setCameraActive(false);
     setSearching(false);
     setRemoteStream(null);
@@ -357,11 +365,9 @@ const DashboardClient = () => {
       return;
     }
 
-    // Ventana simple para introducir el importe
     let input = window.prompt('Cantidad a añadir (€):', '10');
-    if (input === null) return; // usuario canceló
+    if (input === null) return;
 
-    // Permite coma o punto
     input = String(input).replace(',', '.').trim();
     const amount = Number(input);
 
@@ -373,7 +379,6 @@ const DashboardClient = () => {
     try {
       setLoadingSaldo(true);
 
-      // Llamada al endpoint de recarga (INGRESO)
       const res = await fetch('/api/transactions/add-balance', {
         method: 'POST',
         headers: {
@@ -394,7 +399,6 @@ const DashboardClient = () => {
 
       alert('Saldo añadido correctamente.');
 
-      // Refrescar saldo en navbar
       const res2 = await fetch('/api/clients/me', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -417,6 +421,62 @@ const DashboardClient = () => {
     }
   };
 
+  // ======== GUARDAS DE NAVEGACIÓN DURANTE STREAMING ========
+  const streamingActivo = !!remoteStream;
+
+  const handleGoFunnyplace = () => {
+    if (streamingActivo) {
+      const ok = window.confirm('Si entras en Funnyplace se cortará el streaming actual. ¿Continuar?');
+      if (!ok) return;
+      stopAll();
+    }
+    setActiveTab('funnyplace');
+  };
+
+  const handleGoFavorites = () => {
+    if (streamingActivo) {
+      alert('No puedes salir del Videochat mientras hay streaming. Pulsa Stop o Next si quieres cambiar.');
+      return;
+    }
+    setActiveTab('favoritos');
+  };
+
+  const handleGoNotifications = () => {
+    if (streamingActivo) {
+      alert('No puedes salir del Videochat mientras hay streaming. Pulsa Stop o Next si quieres cambiar.');
+      return;
+    }
+    setActiveTab('notifications');
+  };
+  // ==========================================================
+
+  const handleAddFavorite = async () => {
+    if (!currentModelId) {
+      alert('No se pudo identificar a la modelo actual. (Necesitamos que el backend envíe peerUserId en el mensaje "match").');
+      return;
+    }
+    const tk = localStorage.getItem('token');
+    if (!tk) { setError('Sesión expirada. Inicia sesión de nuevo.'); return; }
+    try {
+      const res = await fetch(`/api/favorites/models/${currentModelId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tk}` },
+      });
+      if (res.status === 204) {
+        alert('Modelo añadida a favoritos.');
+      } else if (res.status === 409) {
+        alert('Esta modelo ya está en tus favoritos.');
+      } else if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Error ${res.status}`);
+      } else {
+        alert('Modelo añadida a favoritos.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert(e.message || 'No se pudo añadir a favoritos.');
+    }
+  };
 
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
@@ -450,110 +510,153 @@ const DashboardClient = () => {
         <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
             <button
-              title="videochat"
+              title="Videochat"
               onClick={() => setActiveTab('videochat')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <FontAwesomeIcon icon={faVideo} size="lg" />
+            </button>
+            <button
+              title="Favoritos"
+              onClick={handleGoFavorites}
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
               <FontAwesomeIcon icon={faHeart} size="lg" />
             </button>
             <button
-              title="favoritos"
-              onClick={() => setActiveTab('favoritos')}
+              title="Funnyplace"
+              onClick={handleGoFunnyplace}
               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
             >
-              <FontAwesomeIcon icon={faEnvelope} size="lg" />
-            </button>
-            <button
-              title="ligoteo"
-              onClick={() => setActiveTab('ligoteo')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <FontAwesomeIcon icon={faUserPlus} size="lg" />
-            </button>
-            <button
-              title="Notificaciones"
-              onClick={() => setActiveTab('notifications')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <FontAwesomeIcon icon={faBell} size="lg" />
+              <FontAwesomeIcon icon={faFilm} size="lg" />
             </button>
           </div>
+
           <ul className="list-group">
-            {activeTab === 'models' && <li className="list-group-item">Aquí iría la lista de modelos favoritos</li>}
-            {activeTab === 'messages' && <li className="list-group-item">Aquí irían los mensajes</li>}
-            {activeTab === 'notifications' && <li className="list-group-item">Aquí irían las notificaciones</li>}
+            {activeTab === 'favoritos' && (
+              <li className="list-group-item p-0 border-0">
+                {/* Lista de modelos favoritos del CLIENTE */}
+                <FavoritesClientList />
+              </li>
+            )}
+            {activeTab === 'videochat' && (
+              <li className="list-group-item">Selecciona “Buscar Modelo” para empezar</li>
+            )}
+            {activeTab === 'funnyplace' && (
+              <li className="list-group-item">Explora Funnyplace en la zona central</li>
+            )}
+            {activeTab === 'notifications' && (
+              <li className="list-group-item">Aquí irían las notificaciones</li>
+            )}
           </ul>
         </StyledLeftColumn>
 
         <StyledCenter>
-          {!cameraActive && (
-            <StyledActionButton onClick={handleActivateCamera}>Activar Cámara</StyledActionButton>
-          )}
-
-          {cameraActive && (
+          {/* CENTRO: o VideoChat (RTC) o Funnyplace */}
+          {activeTab === 'videochat' && (
             <>
-              <div style={{ marginBottom: '10px' }}>
-                {!searching && <StyledActionButton onClick={handleStartMatch}>Buscar Modelo</StyledActionButton>}
-                {searching && <p>Buscando modelo...</p>}
-                <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}>
-                  Stop
+              {!cameraActive && (
+                <StyledActionButton onClick={handleActivateCamera}>
+                  Activar Cámara
                 </StyledActionButton>
-                {remoteStream && !searching && (
-                  <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
-                )}
-              </div>
-              <StyledLocalVideo>
-                <h5 style={{ color: 'white' }}>Tu Cámara</h5>
-                <video
-                  ref={localVideoRef}
-                  style={{ width: '100%', border: '1px solid black' }}
-                  muted
-                  autoPlay
-                />
-              </StyledLocalVideo>
-              {remoteStream && (
-                <StyledRemoteVideo>
-                  <h5 style={{ position: 'absolute', top: '10px', left: '10px', color: 'white', zIndex: 2 }}>
-                    Modelo
-                  </h5>
-                  <video
-                    ref={remoteVideoRef}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
-                    autoPlay
-                  />
-                  <StyledChatContainer>
-                    <div
-                      style={{
-                        maxHeight: '150px',
-                        overflowY: 'auto',
-                        marginBottom: '10px',
-                      }}
-                    >
-                      {messages.map((msg, index) => (
-                        <div
-                          key={index}
-                          style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
-                        >
-                          <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex' }}>
-                      <input
-                        type="text"
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        style={{ flex: 1, marginRight: '10px', background: 'rgba(255, 255, 255, 0.9)', border: 'none', borderRadius: '5px', padding: '5px' }}
-                      />
-                      <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
-                    </div>
-                  </StyledChatContainer>
-                </StyledRemoteVideo>
               )}
+
+              {cameraActive && (
+                <>
+                  <div style={{ marginBottom: '10px' }}>
+                    {!searching && (
+                      <StyledActionButton onClick={handleStartMatch}>
+                        Buscar Modelo
+                      </StyledActionButton>
+                    )}
+                    {searching && <p>Buscando modelo...</p>}
+                    <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}>
+                      Stop
+                    </StyledActionButton>
+                    {remoteStream && !searching && (
+                      <>
+                        <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
+                        <StyledActionButton onClick={handleAddFavorite}>
+                          + Favorito
+                        </StyledActionButton>
+                      </>
+                    )}
+                  </div>
+
+                  <StyledLocalVideo>
+                    <h5 style={{ color: 'white' }}>Tu Cámara</h5>
+                    <video
+                      ref={localVideoRef}
+                      style={{ width: '100%', border: '1px solid black' }}
+                      muted
+                      autoPlay
+                    />
+                  </StyledLocalVideo>
+
+                  {remoteStream && (
+                    <StyledRemoteVideo>
+                      <h5
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          left: '10px',
+                          color: 'white',
+                          zIndex: 2,
+                        }}
+                      >
+                        Modelo
+                      </h5>
+                      <video
+                        ref={remoteVideoRef}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
+                        autoPlay
+                      />
+                      <StyledChatContainer>
+                        <div
+                          style={{
+                            maxHeight: '150px',
+                            overflowY: 'auto',
+                            marginBottom: '10px',
+                          }}
+                        >
+                          {messages.map((msg, index) => (
+                            <div
+                              key={index}
+                              style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
+                            >
+                              <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex' }}>
+                          <input
+                            type="text"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            style={{
+                              flex: 1,
+                              marginRight: '10px',
+                              background: 'rgba(255, 255, 255, 0.9)',
+                              border: 'none',
+                              borderRadius: '5px',
+                              padding: '5px',
+                            }}
+                          />
+                          <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
+                        </div>
+                      </StyledChatContainer>
+                    </StyledRemoteVideo>
+                  )}
+                </>
+              )}
+
+              {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
             </>
           )}
 
-          {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
+          {activeTab === 'funnyplace' && (
+            <FunnyplacePage />
+          )}
         </StyledCenter>
 
         <StyledRightColumn />

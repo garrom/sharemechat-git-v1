@@ -337,10 +337,20 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
-    //EL METODO ENVIA AL USUARIO UN MENSAJE INDICANDO QUE SE HA PRODUCIDO UN EMPAREJAMIENTO CON SU PEER
-    private void sendMatchMessage(WebSocketSession session, String peerId) {
+    //EL METODO ENVIA AL USUARIO UN MENSAJE INDICANDO QUE SE HA PRODUCIDO UN EMPAREJAMIENTO CON SU PEER Y AÑADE PEERUSERID Y PEERROLE
+    private void sendMatchMessage(WebSocketSession session, String peerSessionId) {
         try {
-            String msg = "{\"type\":\"match\",\"peerId\":\"" + peerId + "\"}";
+            Long peerUserId = sessionUserIds.get(peerSessionId);     // <- obtiene userId real del peer
+            String peerRole = roles.get(peerSessionId);              // <- rol real del peer (client/model)
+
+            // payload compatible hacia atrás: si algo viene null, se manda vacío
+            String msg = String.format(
+                    "{\"type\":\"match\",\"peerId\":\"%s\",\"peerUserId\":%s,\"peerRole\":\"%s\"}",
+                    peerSessionId,
+                    peerUserId != null ? peerUserId.toString() : "null",
+                    peerRole != null ? peerRole : ""
+            );
+
             System.out.println("Enviando mensaje de emparejamiento a sessionId=" + session.getId() + ": " + msg);
             session.sendMessage(new TextMessage(msg));
         } catch (Exception e) {
