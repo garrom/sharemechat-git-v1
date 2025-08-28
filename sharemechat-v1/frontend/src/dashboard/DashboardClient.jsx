@@ -440,15 +440,7 @@ const DashboardClient = () => {
     }
     setActiveTab('favoritos');
   };
-
-  const handleGoNotifications = () => {
-    if (streamingActivo) {
-      alert('No puedes salir del Videochat mientras hay streaming. Pulsa Stop o Next si quieres cambiar.');
-      return;
-    }
-    setActiveTab('notifications');
-  };
-  // ==========================================================
+  // =========FIN GUARDAS DE NAVEGACION STREAMING================================
 
   const handleAddFavorite = async () => {
     if (!currentModelId) {
@@ -545,9 +537,6 @@ const DashboardClient = () => {
             {activeTab === 'funnyplace' && (
               <li className="list-group-item">Explora Funnyplace en la zona central</li>
             )}
-            {activeTab === 'notifications' && (
-              <li className="list-group-item">Aquí irían las notificaciones</li>
-            )}
           </ul>
         </StyledLeftColumn>
 
@@ -556,29 +545,20 @@ const DashboardClient = () => {
           {activeTab === 'videochat' && (
             <>
               {!cameraActive && (
-                <StyledActionButton onClick={handleActivateCamera}>
-                  Activar Cámara
-                </StyledActionButton>
+                <StyledActionButton onClick={handleActivateCamera}>Activar Cámara </StyledActionButton>
               )}
-
               {cameraActive && (
                 <>
                   <div style={{ marginBottom: '10px' }}>
                     {!searching && (
-                      <StyledActionButton onClick={handleStartMatch}>
-                        Buscar Modelo
-                      </StyledActionButton>
+                      <StyledActionButton onClick={handleStartMatch}>Buscar Modelo </StyledActionButton>
                     )}
                     {searching && <p>Buscando modelo...</p>}
-                    <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}>
-                      Stop
-                    </StyledActionButton>
+                    <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}> Stop </StyledActionButton>
                     {remoteStream && !searching && (
                       <>
-                        <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
-                        <StyledActionButton onClick={handleAddFavorite}>
-                          + Favorito
-                        </StyledActionButton>
+                        <StyledActionButton onClick={handleNext}>Next </StyledActionButton>
+                        <StyledActionButton onClick={handleAddFavorite}> + Favorito </StyledActionButton>
                       </>
                     )}
                   </div>
@@ -654,8 +634,7 @@ const DashboardClient = () => {
             </>
           )}
 
-          {activeTab === 'funnyplace' && (
-            <FunnyplacePage />
+          {activeTab === 'funnyplace' && ( <FunnyplacePage />
           )}
         </StyledCenter>
 

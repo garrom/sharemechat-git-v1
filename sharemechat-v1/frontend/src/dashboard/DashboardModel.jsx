@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
+import FavoritesModelList from './features/favorites/FavoritesModelList';
+import FunnyplacePage from './features/funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSignOutAlt, faUser, faHeart, faEnvelope, faUserPlus, faBell } from '@fortawesome/free-solid-svg-icons';
+import { faSignOutAlt, faUser, faHeart, faEnvelope, faVideo, faFilm, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,
   StyledNavbar,
@@ -24,12 +26,13 @@ const DashboardModel = () => {
   const [error, setError] = useState('');
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
-  const [activeTab, setActiveTab] = useState('models');
+  const [activeTab, setActiveTab] = useState('videochat');
   const [user, setUser] = useState(null);
   const [saldoModel, setSaldoModel] = useState(null);
   const [loadingSaldoModel, setLoadingSaldoModel] = useState(false);
   const [status, setStatus] = useState('');
   const [queuePosition, setQueuePosition] = useState(null);
+  const [currentClientId, setCurrentClientId] = useState(null);
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -154,6 +157,15 @@ const DashboardModel = () => {
       const data = JSON.parse(event.data);
 
       if (data.type === 'match') {
+        // Guardar el id del cliente si el backend lo envía
+        try {
+          if (data.peerRole === 'client' && Number.isFinite(Number(data.peerUserId))) {
+            setCurrentClientId(Number(data.peerUserId));
+          } else {
+            setCurrentClientId(null);
+          }
+        } catch { setCurrentClientId(null); }
+
         try {
           if (peerRef.current) {
             peerRef.current.destroy();
@@ -219,6 +231,7 @@ const DashboardModel = () => {
         }
       } else if (data.type === 'peer-disconnected') {
         console.log('Recibido peer-disconnected');
+        setCurrentClientId(null);
         if (peerRef.current) {
           peerRef.current.destroy();
           peerRef.current = null;
@@ -268,6 +281,8 @@ const DashboardModel = () => {
     if (remoteStream) {
       remoteStream.getTracks().forEach((track) => track.stop());
     }
+
+    setCurrentClientId(null);
     setRemoteStream(null);
     setMessages([]);
     setStatus('Buscando nuevo cliente...');
@@ -312,6 +327,7 @@ const DashboardModel = () => {
       socketRef.current = null;
     }
 
+    setCurrentClientId(null);
     setCameraActive(false);
     setRemoteStream(null);
     setError('');
@@ -320,6 +336,7 @@ const DashboardModel = () => {
     setMessages([]);
   };
 
+  // RETIRO DINERO
   const handleRequestPayout = async () => {
     const tk = localStorage.getItem('token');
     if (!tk) {
@@ -380,6 +397,58 @@ const DashboardModel = () => {
     }
   };
 
+  // ======== GUARDAS DE NAVEGACIÓN DURANTE STREAMING ========
+  const streamingActivo = !!remoteStream;
+
+  const handleGoFunnyplace = () => {
+    if (streamingActivo) {
+      const ok = window.confirm('Si entras en Funnyplace se cortará el streaming actual. ¿Continuar?');
+      if (!ok) return;
+      stopAll();
+    }
+    setActiveTab('funnyplace');
+  };
+
+  const handleGoFavorites = () => {
+    if (streamingActivo) {
+      alert('No puedes salir del Videochat mientras hay streaming. Pulsa Stop o Next si quieres cambiar.');
+      return;
+    }
+    setActiveTab('favoritos');
+  };
+
+  // =========FIN GUARDAS DE NAVEGACION STREAMING================================
+
+   // AÑADIR CLIENTE A FAVORITOS
+  const handleAddFavoriteClient = async () => {
+     if (!currentClientId) {
+       alert('No se pudo identificar al cliente actual (falta peerUserId en el match).');
+       return;
+     }
+     const tk = localStorage.getItem('token');
+     if (!tk) { setError('Sesión expirada. Inicia sesión de nuevo.'); return; }
+     try {
+       const res = await fetch(`/api/favorites/clients/${currentClientId}`, {
+         method: 'POST',
+         headers: { Authorization: `Bearer ${tk}` },
+       });
+       if (res.status === 204) {
+         alert('Cliente añadido a tus favoritos.');
+       } else if (res.status === 409) {
+         alert('Este cliente ya está en tus favoritos.');
+       } else if (!res.ok) {
+         const txt = await res.text();
+         throw new Error(txt || `Error ${res.status}`);
+       } else {
+         alert('Cliente añadido a tus favoritos.');
+       }
+     } catch (e) {
+       console.error(e);
+       alert(e.message || 'No se pudo añadir a favoritos.');
+     }
+  };
+
+
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
   return (
@@ -424,64 +493,71 @@ const DashboardModel = () => {
 
       <StyledMainContent>
         <StyledLeftColumn>
-          <div className="d-flex justify-content-around mb-3">
-            <button
-              title="Listar Favoritos"
-              onClick={() => setActiveTab('models')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <FontAwesomeIcon icon={faHeart} size="lg" />
-            </button>
-            <button
-              title="Mensajes"
-              onClick={() => setActiveTab('messages')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <FontAwesomeIcon icon={faEnvelope} size="lg" />
-            </button>
-            <button
-              title="Añadir a Favoritos"
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <FontAwesomeIcon icon={faUserPlus} size="lg" />
-            </button>
-            <button
-              title="Notificaciones"
-              onClick={() => setActiveTab('notifications')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
-              <FontAwesomeIcon icon={faBell} size="lg" />
-            </button>
-          </div>
+
+           <div className="d-flex justify-content-around mb-3">
+             <button
+               title="Videochat"
+               onClick={() => setActiveTab('videochat')}
+               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+             >
+               <FontAwesomeIcon icon={faVideo} size="lg" />
+             </button>
+             <button
+               title="Favoritos"
+               onClick={handleGoFavorites}
+               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+             >
+               <FontAwesomeIcon icon={faHeart} size="lg" />
+             </button>
+             <button
+               title="Funnyplace"
+               onClick={handleGoFunnyplace}
+               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+             >
+               <FontAwesomeIcon icon={faFilm} size="lg" />
+             </button>
+           </div>
+
+
           <ul className="list-group">
-            {activeTab === 'models' && (
-              <li className="list-group-item">Aquí iría la lista de clientes favoritos</li>
+            {activeTab === 'favoritos' && (
+              <li className="list-group-item p-0 border-0">
+                {/* Lista de clientes favoritos de la MODELO */}
+                <FavoritesModelList />
+              </li>
             )}
-            {activeTab === 'messages' && (
-              <li className="list-group-item">Aquí irían los mensajes</li>
+            {activeTab === 'videochat' && (
+              <li className="list-group-item">Selecciona “Buscar cliente” para empezar</li>
             )}
-            {activeTab === 'notifications' && (
-              <li className="list-group-item">Aquí irían las notificaciones</li>
+            {activeTab === 'funnyplace' && (
+              <li className="list-group-item">Explora Funnyplace en la zona central</li>
             )}
           </ul>
+
         </StyledLeftColumn>
 
         <StyledCenter>
-          {/* Estado neutro (no error) */}
+           {/* CENTRO: o VideoChat (RTC) o Funnyplace */}
+
+         {activeTab === 'videochat' && (
+          <>
+
           {status && <p style={{ color: '#6c757d', marginTop: '10px' }}>{status}</p>}
 
           {!cameraActive && (
             <StyledActionButton onClick={startCamera}>Activar Cámara</StyledActionButton>
           )}
-
           {cameraActive && (
             <>
               <div style={{ marginBottom: '10px' }}>
-                <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}>
-                  Stop
-                </StyledActionButton>
+                <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}> Stop </StyledActionButton>
                 {remoteStream && (
-                  <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
+                  <>
+                    <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
+                    {currentClientId && (
+                      <StyledActionButton onClick={handleAddFavoriteClient}> + Favorito </StyledActionButton>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -552,7 +628,13 @@ const DashboardModel = () => {
             </>
           )}
 
-          {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
+            {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
+          </>
+        )}
+
+         {activeTab === 'funnyplace' && ( <FunnyplacePage />
+          )}
+
         </StyledCenter>
 
         <StyledRightColumn />
