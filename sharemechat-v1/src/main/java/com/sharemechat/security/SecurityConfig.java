@@ -47,6 +47,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/transactions/first").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/api/transactions/add-balance").hasRole("CLIENT")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/messages/**").permitAll()
                         .requestMatchers("/match/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
@@ -67,7 +68,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("https://test.sharemechat.com"));
+        configuration.setAllowedOrigins(Arrays.asList("https://test.sharemechat.com","http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(false);

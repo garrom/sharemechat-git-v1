@@ -132,4 +132,11 @@ public class FavoriteService {
                 u.getUserType()
         );
     }
+    public boolean isModelInClientFavorites(Long clientId, Long modelId) {
+        return favoriteModelRepo.existsByClientIdAndModelId(clientId, modelId);
+    }
+
+    public boolean isClientInModelFavorites(Long modelId, Long clientId) {
+        return favoriteClientRepo.existsByModelIdAndClientId(modelId, clientId);
+    }
 }

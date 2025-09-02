@@ -1,6 +1,17 @@
 import React from 'react';
 
-const FavoriteItem = ({ user, onClick, onRemove, removing }) => {
+const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
+  // handler local: usa onChat si viene, si no emite un CustomEvent (fallback)
+  const handleChat = (e) => {
+    e.stopPropagation();
+    if (onChat) {
+      onChat(user);
+    } else {
+      // Fallback sin dependencia del padre
+      window.dispatchEvent(new CustomEvent('open-fav-chat', { detail: { user } }));
+    }
+  };
+
   return (
     <div
       onClick={() => onClick && onClick(user)}
@@ -29,6 +40,22 @@ const FavoriteItem = ({ user, onClick, onRemove, removing }) => {
           {user.role || user.userType || ''}
         </div>
       </div>
+
+      {/* Botón Chatear siempre visible en favoritos */}
+      <button
+        onClick={handleChat} // <-- nuevo comportamiento robusto
+        style={{
+          padding: '6px 10px',
+          border: '1px solid #ddd',
+          background: '#fff',
+          borderRadius: 8,
+          cursor: 'pointer',
+          marginRight: 8
+        }}
+      >
+        Chatear
+      </button>
+
       {onRemove && (
         <button
           onClick={(e) => {

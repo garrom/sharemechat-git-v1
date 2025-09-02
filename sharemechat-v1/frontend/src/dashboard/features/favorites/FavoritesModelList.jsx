@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import FavoriteItem from './FavoriteItem';
 
-const FavoritesModelList = ({ onSelect }) => {
+const FavoritesModelList = ({ onSelect, onOpenChat }) => {
   const token = localStorage.getItem('token');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -10,7 +10,8 @@ const FavoritesModelList = ({ onSelect }) => {
 
   const load = async () => {
     if (!token) return;
-    setLoading(true); setErr('');
+    setLoading(true);
+    setErr('');
     try {
       const res = await fetch('/api/favorites/clients', {
         headers: { Authorization: `Bearer ${token}` }
@@ -25,7 +26,10 @@ const FavoritesModelList = ({ onSelect }) => {
     }
   };
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, []);
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line
+  }, []);
 
   const removeOne = async (user) => {
     if (!token) return;
@@ -44,6 +48,11 @@ const FavoritesModelList = ({ onSelect }) => {
     }
   };
 
+  // handler que pasamos al ítem — si el padre no lo pasa, el ítem hará fallback
+  const handleOpenChat = (u) => {
+    if (onOpenChat) onOpenChat(u);
+  };
+
   return (
     <div>
       <h4 style={{ marginBottom: 10 }}>Tus clientes favoritos</h4>
@@ -57,6 +66,7 @@ const FavoritesModelList = ({ onSelect }) => {
           onClick={onSelect}
           onRemove={removeOne}
           removing={removingId === u.id}
+          onChat={handleOpenChat}
         />
       ))}
     </div>

@@ -48,6 +48,18 @@ const DashboardClient = () => {
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
       .format(Number(v || 0));
 
+  // ======== estados/refs para chat central (favoritos) ========
+  const msgSocketRef = useRef(null);                       // WS /messages
+  const [wsReady, setWsReady] = useState(false);           // estado conexión WS mensajes
+  const [centerChatPeerId, setCenterChatPeerId] = useState(null);
+  const [centerChatPeerName, setCenterChatPeerName] = useState('');
+  const [centerMessages, setCenterMessages] = useState([]);
+  const [centerInput, setCenterInput] = useState('');
+  const [centerLoading, setCenterLoading] = useState(false);
+  const msgPingRef = useRef(null);                         // keepalive ping
+  const msgReconnectRef = useRef(null);                    // timeout reconexión
+  // ============================================================
+
   useEffect(() => {
     const loadUser = async () => {
       try {
@@ -80,15 +92,15 @@ const DashboardClient = () => {
   }, [remoteStream]);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
+    const tokenLS = localStorage.getItem('token');
+    if (!tokenLS) return;
 
     const loadSaldo = async () => {
       setLoadingSaldo(true);
       setSaldoError('');
       try {
         const res = await fetch('/api/clients/me', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${tokenLS}` }
         });
         if (!res.ok) {
           const text = await res.text();
@@ -106,6 +118,102 @@ const DashboardClient = () => {
 
     loadSaldo();
   }, []);
+
+  // ======== helpers WS mensajes (abrir/cerrar/reconectar/keepalive) ========
+  const clearMsgTimers = () => {
+    if (msgPingRef.current) {
+      clearInterval(msgPingRef.current);
+      msgPingRef.current = null;
+    }
+    if (msgReconnectRef.current) {
+      clearTimeout(msgReconnectRef.current);
+      msgReconnectRef.current = null;
+    }
+  };
+
+  const closeMsgSocket = () => {
+    try { if (msgSocketRef.current) msgSocketRef.current.close(); } catch {}
+    msgSocketRef.current = null;
+    setWsReady(false);
+    clearMsgTimers();
+  };
+
+  const openMsgSocket = () => {
+    const tk = localStorage.getItem('token');
+    if (!tk) return;
+
+    // mismo host/protocolo que el front (como el WS de streaming)
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const host  = window.location.host;
+    const url   = `${proto}://${host}/messages?token=${encodeURIComponent(tk)}`;
+
+    // si ya está abierto, no dupliques
+    if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
+      setWsReady(true);
+      return;
+    }
+
+    // cierra existentes + timers
+    closeMsgSocket();
+
+    const s = new WebSocket(url);
+    msgSocketRef.current = s;
+
+    s.onopen = () => {
+      setWsReady(true);
+      // keepalive como en /match
+      if (msgPingRef.current) clearInterval(msgPingRef.current);
+      msgPingRef.current = setInterval(() => {
+        try {
+          if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
+            msgSocketRef.current.send(JSON.stringify({ type: 'ping' }));
+          }
+        } catch {}
+      }, 30000);
+    };
+
+    s.onclose = () => {
+      setWsReady(false);
+      // si seguimos en favoritos, reintenta en 1.5s
+      clearMsgTimers();
+      if (activeTab === 'favoritos') {
+        msgReconnectRef.current = setTimeout(() => {
+          openMsgSocket();
+        }, 1500);
+      }
+    };
+
+    s.onerror = () => {
+      setWsReady(false);
+      try { s.close(); } catch {}
+    };
+
+    s.onmessage = (ev) => {
+      try {
+        const data = JSON.parse(ev.data);
+        if (data.type === 'msg:new') {
+          const m = data.message;
+          if (centerChatPeerId && (m.senderId === centerChatPeerId || m.recipientId === centerChatPeerId)) {
+            setCenterMessages(prev => [...prev, m]);
+          }
+        }
+      } catch {}
+    };
+  };
+  // ========================================================================
+
+  // abrir/cerrar WS /messages al entrar/salir de Favoritos
+  useEffect(() => {
+    if (activeTab === 'favoritos') {
+      openMsgSocket();
+    } else {
+      closeMsgSocket();
+    }
+    // cleanup si desmonta
+    return () => closeMsgSocket();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
+  // ========================================================
 
   const handleActivateCamera = async () => {
     try {
@@ -134,14 +242,14 @@ const DashboardClient = () => {
     setSearching(true);
     setError('');
 
-    const token = localStorage.getItem('token');
-    if (!token) {
+    const tokenLS = localStorage.getItem('token');
+    if (!tokenLS) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
       setSearching(false);
       return;
     }
 
-    const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(token)}`;
+    const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(tokenLS)}`;
     console.log('WS(Client) ->', wsUrl);
 
     socketRef.current = new WebSocket(wsUrl);
@@ -350,17 +458,26 @@ const DashboardClient = () => {
       socketRef.current = null;
     }
 
+    // cerrar WS de mensajes si estuviera abierto
+    closeMsgSocket();
+
     setCurrentModelId(null);
     setCameraActive(false);
     setSearching(false);
     setRemoteStream(null);
     setError('');
     setMessages([]);
+
+    // limpiar chat central
+    setCenterChatPeerId(null);
+    setCenterChatPeerName('');
+    setCenterMessages([]);
+    setCenterInput('');
   };
 
   const handleAddBalance = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
+    const tokenLS = localStorage.getItem('token');
+    if (!tokenLS) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
       return;
     }
@@ -383,7 +500,7 @@ const DashboardClient = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${tokenLS}`,
         },
         body: JSON.stringify({
           amount,
@@ -400,7 +517,7 @@ const DashboardClient = () => {
       alert('Saldo añadido correctamente.');
 
       const res2 = await fetch('/api/clients/me', {
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${tokenLS}` },
       });
 
       if (!res2.ok) {
@@ -470,6 +587,71 @@ const DashboardClient = () => {
     }
   };
 
+  // ======== helpers de chat central (REST + WS mensajes) ========
+  const openChatWith = async (peerId, displayName) => {
+    if (streamingActivo) {
+      alert('No puedes abrir el chat central mientras hay streaming. Pulsa Stop si quieres cambiar.');
+      return;
+    }
+    setActiveTab('favoritos'); // asegurar tab
+    setCenterChatPeerId(peerId);
+    setCenterChatPeerName(displayName || `Usuario ${peerId}`);
+    setCenterMessages([]);
+    setCenterLoading(true);
+
+    // asegúrate de tener el WS activo
+    openMsgSocket();
+
+    try {
+      const tk = localStorage.getItem('token');
+      const res = await fetch(`/api/messages/with/${peerId}`, {
+        headers: { Authorization: `Bearer ${tk}` }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setCenterMessages((data || []).reverse()); // backend viene desc
+        try {
+          await fetch(`/api/messages/with/${peerId}/read`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${tk}` }
+          });
+        } catch {}
+      }
+    } catch (e) {
+      console.warn('Historial chat error:', e?.message);
+    } finally {
+      setCenterLoading(false);
+    }
+  };
+
+  const sendCenterMessage = () => {
+    if (!centerChatPeerId || !centerInput.trim()) return;
+    const s = msgSocketRef.current;
+    if (s && s.readyState === WebSocket.OPEN) {
+      const payload = { type: 'msg:send', to: centerChatPeerId, body: centerInput.trim() };
+      s.send(JSON.stringify(payload));
+      // optimista
+      setCenterMessages(prev => [...prev, {
+        id: Date.now(),
+        senderId: user?.id,
+        recipientId: centerChatPeerId,
+        body: centerInput.trim(),
+        createdAt: new Date().toISOString(),
+        readAt: null
+      }]);
+      setCenterInput('');
+    } else {
+      alert('Chat de mensajes desconectado. Reabre el panel.');
+    }
+  };
+  // ==========================================================
+
+  // callback para FavoritesClientList → abrir chat
+  const handleOpenChatFromFavorites = (favUser) => {
+    const name = favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${favUser?.id || ''}`;
+    if (favUser?.id) openChatWith(favUser.id, name);
+  };
+
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
   return (
@@ -528,7 +710,9 @@ const DashboardClient = () => {
             {activeTab === 'favoritos' && (
               <li className="list-group-item p-0 border-0">
                 {/* Lista de modelos favoritos del CLIENTE */}
-                <FavoritesClientList />
+                <FavoritesClientList
+                  onOpenChat={handleOpenChatFromFavorites}
+                />
               </li>
             )}
             {activeTab === 'videochat' && (
@@ -541,7 +725,7 @@ const DashboardClient = () => {
         </StyledLeftColumn>
 
         <StyledCenter>
-          {/* CENTRO: o VideoChat (RTC) o Funnyplace */}
+          {/* CENTRO: o VideoChat (RTC) o Funnyplace o Chat central (favoritos) */}
           {activeTab === 'videochat' && (
             <>
               {!cameraActive && (
@@ -634,8 +818,61 @@ const DashboardClient = () => {
             </>
           )}
 
-          {activeTab === 'funnyplace' && ( <FunnyplacePage />
+          {activeTab === 'funnyplace' && ( <FunnyplacePage /> )}
+
+          {/* Chat central en Favoritos */}
+          {activeTab === 'favoritos' && (
+            <div style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px' }}>
+              {!centerChatPeerId ? (
+                <div style={{ color:'#adb5bd' }}>
+                  Selecciona un favorito y pulsa <em>Chatear</em> para abrir la conversación aquí.
+                </div>
+              ) : (
+                <>
+                  <div style={{ marginBottom:'8px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                    <h5 style={{ margin:0, color:'#fff' }}>Chat con {centerChatPeerName}</h5>
+                    <div style={{ fontSize:12, color: wsReady ? '#20c997' : '#adb5bd' }}>
+                      {wsReady ? 'Conectado' : 'Desconectado'}
+                    </div>
+                  </div>
+
+                  <div style={{ flex:1, overflowY:'auto', border:'1px solid #333', borderRadius:8, padding:10, background:'rgba(0,0,0,0.2)' }}>
+                    {centerLoading && <div style={{ color:'#adb5bd' }}>Cargando historial…</div>}
+                    {!centerLoading && centerMessages.length === 0 && (
+                      <div style={{ color:'#adb5bd' }}>No hay mensajes todavía. ¡Escribe el primero!</div>
+                    )}
+                    {centerMessages.map(m => (
+                      <div key={m.id}
+                           style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
+                        <span style={{
+                          display:'inline-block',
+                          padding:'6px 10px',
+                          borderRadius:10,
+                          background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
+                          color:'#fff',
+                          maxWidth:'80%'
+                        }}>
+                          {m.body}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display:'flex', gap:8, marginTop:10 }}>
+                    <input
+                      value={centerInput}
+                      onChange={(e)=>setCenterInput(e.target.value)}
+                      placeholder="Escribe un mensaje…"
+                      onKeyDown={(e)=>{ if (e.key === 'Enter') sendCenterMessage(); }}
+                      style={{ flex:1, borderRadius:6, border:'1px solid #333', padding:'8px', background:'rgba(255,255,255,0.9)' }}
+                    />
+                    <StyledActionButton onClick={sendCenterMessage}>Enviar</StyledActionButton>
+                  </div>
+                </>
+              )}
+            </div>
           )}
+          {/* fin chat central */}
         </StyledCenter>
 
         <StyledRightColumn />

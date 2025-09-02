@@ -3,8 +3,10 @@ import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from './features/favorites/FavoritesModelList';
 import FunnyplacePage from './features/funnyplace/FunnyplacePage';
+import MessagesPage from './features/messages/MessagesPage';
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSignOutAlt, faUser, faHeart, faEnvelope, faVideo, faFilm, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import { faSignOutAlt, faUser, faHeart, faVideo, faFilm } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,
   StyledNavbar,
@@ -34,6 +36,14 @@ const DashboardModel = () => {
   const [queuePosition, setQueuePosition] = useState(null);
   const [currentClientId, setCurrentClientId] = useState(null);
 
+  // ====== Mensajes (fuera de streaming) ======
+  const [showMsgPanel, setShowMsgPanel] = useState(false);
+  const [openChatWith, setOpenChatWith] = useState(null);
+  const msgSocketRef = useRef(null);
+  const [msgConnected, setMsgConnected] = useState(false);
+  const msgPingRef = useRef(null);       // keepalive
+  const msgReconnectRef = useRef(null);  // reconexión
+
   const history = useHistory();
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -60,14 +70,12 @@ const DashboardModel = () => {
     if (token) loadUser();
   }, [token]);
 
-  // Muestra video local cuando cámara está activa
   useEffect(() => {
     if (localVideoRef.current && localStream.current) {
       localVideoRef.current.srcObject = localStream.current;
     }
   }, [cameraActive]);
 
-  // Muestra video remoto cuando hay conexión
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
       remoteVideoRef.current.srcObject = remoteStream;
@@ -76,7 +84,6 @@ const DashboardModel = () => {
     }
   }, [remoteStream]);
 
-  // Cargar saldo de la modelo
   useEffect(() => {
     const tk = localStorage.getItem('token');
     if (!tk) return;
@@ -105,10 +112,96 @@ const DashboardModel = () => {
     fetchSaldoModel();
   }, []);
 
+  // ========= WS Mensajes: helpers (igual patrón que streaming) =========
+  const clearMsgTimers = () => {
+    if (msgPingRef.current) {
+      clearInterval(msgPingRef.current);
+      msgPingRef.current = null;
+    }
+    if (msgReconnectRef.current) {
+      clearTimeout(msgReconnectRef.current);
+      msgReconnectRef.current = null;
+    }
+  };
+
+  const closeMessagesSocket = () => {
+    try { if (msgSocketRef.current) msgSocketRef.current.close(); } catch {}
+    msgSocketRef.current = null;
+    setMsgConnected(false);
+    clearMsgTimers();
+  };
+
+  const openMessagesSocket = () => {
+    const tk = localStorage.getItem('token');
+    if (!tk) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
+      return;
+    }
+
+    // Evitar doble apertura
+    if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
+      setMsgConnected(true);
+      return;
+    }
+
+    // cerrar existentes + timers
+    closeMessagesSocket();
+
+    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const host  = window.location.host;
+    const url   = `${proto}://${host}/messages?token=${encodeURIComponent(tk)}`;
+
+    const s = new WebSocket(url);
+    msgSocketRef.current = s;
+
+    s.onopen = () => {
+      setMsgConnected(true);
+      if (msgPingRef.current) clearInterval(msgPingRef.current);
+      msgPingRef.current = setInterval(() => {
+        try {
+          if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
+            msgSocketRef.current.send(JSON.stringify({ type: 'ping' }));
+          }
+        } catch {}
+      }, 30000);
+    };
+
+    s.onclose = () => {
+      setMsgConnected(false);
+      clearMsgTimers();
+      // Reintenta si sigues en Favoritos y el panel está abierto
+      if (activeTab === 'favoritos' && showMsgPanel) {
+        msgReconnectRef.current = setTimeout(() => {
+          openMessagesSocket();
+        }, 1500);
+      }
+    };
+
+    s.onerror = () => {
+      setMsgConnected(false);
+      try { s.close(); } catch {}
+    };
+
+    // Si tu backend emite notificaciones push por WS, podrías escuchar aquí:
+    // s.onmessage = (ev) => { ... }
+  };
+
+  // Abrir/cerrar por pestaña Favoritos + panel
+  useEffect(() => {
+    if (activeTab === 'favoritos' && showMsgPanel) {
+      openMessagesSocket();
+    } else {
+      closeMessagesSocket();
+    }
+    return () => closeMessagesSocket();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, showMsgPanel]);
+  // ======================================================================
+
   const startCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 }, // DESARROLLO reducir ancho de banda
+        video: { width: 640, height: 480 },
         audio: true,
       });
       localStream.current = stream;
@@ -140,7 +233,6 @@ const DashboardModel = () => {
     socket.onopen = () => {
       console.log('Modelo conectado al WebSocket');
       setStatus('Esperando cliente...');
-      // --- Keepalive cada 30s ---
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = setInterval(() => {
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -157,7 +249,6 @@ const DashboardModel = () => {
       const data = JSON.parse(event.data);
 
       if (data.type === 'match') {
-        // Guardar el id del cliente si el backend lo envía
         try {
           if (data.peerRole === 'client' && Number.isFinite(Number(data.peerUserId))) {
             setCurrentClientId(Number(data.peerUserId));
@@ -166,20 +257,10 @@ const DashboardModel = () => {
           }
         } catch { setCurrentClientId(null); }
 
-        try {
-          if (peerRef.current) {
-            peerRef.current.destroy();
-            peerRef.current = null;
-          }
-        } catch {}
-        try {
-          if (remoteStream) {
-            remoteStream.getTracks().forEach((t) => t.stop());
-          }
-        } catch {}
+        try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
+        try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
         setRemoteStream(null);
         setMessages([]);
-        // Emparejada: limpiar estados de "buscando/esperando"
         setError('');
         setStatus('');
         console.log('Modelo emparejado con cliente. PeerID:', data.peerId);
@@ -192,7 +273,6 @@ const DashboardModel = () => {
         peerRef.current = peer;
 
         peer.on('signal', (signal) => {
-          // Ignorar candidatos vacíos
           if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
           if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
@@ -201,7 +281,6 @@ const DashboardModel = () => {
 
         peer.on('stream', (stream) => {
           console.log('Modelo recibió stream remoto');
-          // Confirmación definitiva de emparejamiento: limpiar cualquier mensaje de estado
           setError('');
           setStatus('');
           setRemoteStream(stream);
@@ -211,21 +290,17 @@ const DashboardModel = () => {
           setError('Error en la conexión WebRTC: ' + err.message);
         });
       } else if (data.type === 'signal' && peerRef.current) {
-        // Progreso en la señalización → limpiar "buscando/esperando"
         setError('');
         setStatus('');
         peerRef.current.signal(data.signal);
       } else if (data.type === 'chat') {
         setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
       } else if (data.type === 'no-client-available') {
-        // Estado neutro: seguir esperando sin marcar error
         setStatus('Esperando cliente...');
-        // (Opcional) pedir stats para refrescar posición
         if (socketRef.current?.readyState === WebSocket.OPEN) {
           socketRef.current.send(JSON.stringify({ type: 'stats' }));
         }
       } else if (data.type === 'queue-stats') {
-        // Actualiza solo posición de la modelo (0 = primera en cola)
         if (typeof data.position === 'number') {
           setQueuePosition(data.position);
         }
@@ -235,18 +310,14 @@ const DashboardModel = () => {
         if (peerRef.current) {
           peerRef.current.destroy();
           peerRef.current = null;
-          console.log('Peer destruido');
         }
         if (remoteStream) {
           remoteStream.getTracks().forEach((track) => track.stop());
         }
         setRemoteStream(null);
         setMessages([]);
-
-        // Volver a estado de espera (mensaje neutro, no error)
         setError('');
         setStatus('Esperando cliente...');
-        // (Opcional) refrescar stats
         if (socketRef.current?.readyState === WebSocket.OPEN) {
           socketRef.current.send(JSON.stringify({ type: 'stats' }));
         }
@@ -303,40 +374,7 @@ const DashboardModel = () => {
     history.push('/perfil-model');
   };
 
-  const stopAll = () => {
-    if (pingIntervalRef.current) {
-      clearInterval(pingIntervalRef.current);
-      pingIntervalRef.current = null;
-    }
-
-    // Cierra cámara local
-    if (localStream.current) {
-      localStream.current.getTracks().forEach((track) => track.stop());
-      localStream.current = null;
-    }
-
-    // Cierra peer
-    if (peerRef.current) {
-      peerRef.current.destroy();
-      peerRef.current = null;
-    }
-
-    // Cierra WebSocket
-    if (socketRef.current) {
-      socketRef.current.close();
-      socketRef.current = null;
-    }
-
-    setCurrentClientId(null);
-    setCameraActive(false);
-    setRemoteStream(null);
-    setError('');
-    setStatus('');
-    setQueuePosition(null);
-    setMessages([]);
-  };
-
-  // RETIRO DINERO
+  // ======= Retiro de dinero =======
   const handleRequestPayout = async () => {
     const tk = localStorage.getItem('token');
     if (!tk) {
@@ -345,7 +383,7 @@ const DashboardModel = () => {
     }
 
     let input = window.prompt('Cantidad a retirar (€):', '10');
-    if (input === null) return; // cancelado
+    if (input === null) return;
 
     input = String(input).replace(',', '.').trim();
     const amount = Number(input);
@@ -377,7 +415,6 @@ const DashboardModel = () => {
 
       alert('Solicitud de retiro registrada correctamente.');
 
-      // Refrescar saldo tras el retiro
       const res2 = await fetch('/api/models/me', {
         headers: { Authorization: `Bearer ${tk}` },
       });
@@ -395,6 +432,41 @@ const DashboardModel = () => {
     } finally {
       setLoadingSaldoModel(false);
     }
+  };
+  // ================================
+
+  const stopAll = () => {
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
+    }
+
+    if (localStream.current) {
+      localStream.current.getTracks().forEach((track) => track.stop());
+      localStream.current = null;
+    }
+
+    if (peerRef.current) {
+      try { peerRef.current.destroy(); } catch {}
+      peerRef.current = null;
+    }
+
+    if (socketRef.current) {
+      try { socketRef.current.close(); } catch {}
+      socketRef.current = null;
+    }
+
+    closeMessagesSocket(); // cerrar WS mensajes
+
+    setCurrentClientId(null);
+    setCameraActive(false);
+    setRemoteStream(null);
+    setError('');
+    setStatus('');
+    setQueuePosition(null);
+    setMessages([]);
+    setShowMsgPanel(false);
+    setOpenChatWith(null);
   };
 
   // ======== GUARDAS DE NAVEGACIÓN DURANTE STREAMING ========
@@ -416,38 +488,47 @@ const DashboardModel = () => {
     }
     setActiveTab('favoritos');
   };
+  // =========FIN GUARDAS DE NAVEGACION STREAMING============
 
-  // =========FIN GUARDAS DE NAVEGACION STREAMING================================
-
-   // AÑADIR CLIENTE A FAVORITOS
   const handleAddFavoriteClient = async () => {
-     if (!currentClientId) {
-       alert('No se pudo identificar al cliente actual (falta peerUserId en el match).');
-       return;
-     }
-     const tk = localStorage.getItem('token');
-     if (!tk) { setError('Sesión expirada. Inicia sesión de nuevo.'); return; }
-     try {
-       const res = await fetch(`/api/favorites/clients/${currentClientId}`, {
-         method: 'POST',
-         headers: { Authorization: `Bearer ${tk}` },
-       });
-       if (res.status === 204) {
-         alert('Cliente añadido a tus favoritos.');
-       } else if (res.status === 409) {
-         alert('Este cliente ya está en tus favoritos.');
-       } else if (!res.ok) {
-         const txt = await res.text();
-         throw new Error(txt || `Error ${res.status}`);
-       } else {
-         alert('Cliente añadido a tus favoritos.');
-       }
-     } catch (e) {
-       console.error(e);
-       alert(e.message || 'No se pudo añadir a favoritos.');
-     }
+    if (!currentClientId) {
+      alert('No se pudo identificar al cliente actual (falta peerUserId en el match).');
+      return;
+    }
+    const tk = localStorage.getItem('token');
+    if (!tk) { setError('Sesión expirada. Inicia sesión de nuevo.'); return; }
+    try {
+      const res = await fetch(`/api/favorites/clients/${currentClientId}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tk}` },
+      });
+      if (res.status === 204) {
+        alert('Cliente añadido a tus favoritos.');
+      } else if (res.status === 409) {
+        alert('Este cliente ya está en tus favoritos.');
+      } else if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Error ${res.status}`);
+      } else {
+        alert('Cliente añadido a tus favoritos.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert(e.message || 'No se pudo añadir a favoritos.');
+    }
   };
 
+  const handleOpenChatFromFavorite = (favUser) => {
+    if (!favUser?.id) return;
+    if (streamingActivo) {
+      alert('No puedes abrir el chat mientras hay streaming. Pulsa Stop si quieres cambiar.');
+      return;
+    }
+    setActiveTab('favoritos');
+    setOpenChatWith(favUser.id);
+    setShowMsgPanel(true);
+    openMessagesSocket();
+  };
 
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
@@ -458,7 +539,6 @@ const DashboardModel = () => {
         <div>
           <span className="me-3">Hola, {displayName}</span>
 
-          {/* Saldo */}
           <span className="me-3">
             {loadingSaldoModel
               ? 'Saldo: ...'
@@ -467,19 +547,16 @@ const DashboardModel = () => {
               : 'Saldo: -'}
           </span>
 
-          {/* Solo la posición en la cola (modelo) */}
           {queuePosition !== null && queuePosition >= 0 && (
             <span className="me-3" style={{ color: '#6c757d' }}>
               Tu posición: {queuePosition + 1}
             </span>
           )}
 
-          {/* Botón retiro */}
           <StyledNavButton type="button" onClick={handleRequestPayout}>
             Solicitar retiro
           </StyledNavButton>
 
-          {/* Salir y perfil */}
           <StyledNavButton type="button" onClick={handleLogout}>
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
@@ -494,36 +571,36 @@ const DashboardModel = () => {
       <StyledMainContent>
         <StyledLeftColumn>
 
-           <div className="d-flex justify-content-around mb-3">
-             <button
-               title="Videochat"
-               onClick={() => setActiveTab('videochat')}
-               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-             >
-               <FontAwesomeIcon icon={faVideo} size="lg" />
-             </button>
-             <button
-               title="Favoritos"
-               onClick={handleGoFavorites}
-               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-             >
-               <FontAwesomeIcon icon={faHeart} size="lg" />
-             </button>
-             <button
-               title="Funnyplace"
-               onClick={handleGoFunnyplace}
-               style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-             >
-               <FontAwesomeIcon icon={faFilm} size="lg" />
-             </button>
-           </div>
-
+          <div className="d-flex justify-content-around mb-3">
+            <button
+              title="Videochat"
+              onClick={() => setActiveTab('videochat')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <FontAwesomeIcon icon={faVideo} size="lg" />
+            </button>
+            <button
+              title="Favoritos"
+              onClick={handleGoFavorites}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <FontAwesomeIcon icon={faHeart} size="lg" />
+            </button>
+            <button
+              title="Funnyplace"
+              onClick={handleGoFunnyplace}
+              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
+            >
+              <FontAwesomeIcon icon={faFilm} size="lg" />
+            </button>
+          </div>
 
           <ul className="list-group">
             {activeTab === 'favoritos' && (
               <li className="list-group-item p-0 border-0">
-                {/* Lista de clientes favoritos de la MODELO */}
-                <FavoritesModelList />
+                <FavoritesModelList
+                  onOpenChat={handleOpenChatFromFavorite}
+                />
               </li>
             )}
             {activeTab === 'videochat' && (
@@ -537,104 +614,162 @@ const DashboardModel = () => {
         </StyledLeftColumn>
 
         <StyledCenter>
-           {/* CENTRO: o VideoChat (RTC) o Funnyplace */}
-
-         {activeTab === 'videochat' && (
-          <>
-
-          {status && <p style={{ color: '#6c757d', marginTop: '10px' }}>{status}</p>}
-
-          {!cameraActive && (
-            <StyledActionButton onClick={startCamera}>Activar Cámara</StyledActionButton>
-          )}
-          {cameraActive && (
+          {activeTab === 'videochat' && (
             <>
-              <div style={{ marginBottom: '10px' }}>
-                <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}> Stop </StyledActionButton>
-                {remoteStream && (
-                  <>
-                    <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
-                    {currentClientId && (
-                      <StyledActionButton onClick={handleAddFavoriteClient}> + Favorito </StyledActionButton>
-                    )}
-                  </>
-                )}
-              </div>
+              {status && <p style={{ color: '#6c757d', marginTop: '10px' }}>{status}</p>}
 
-              <StyledLocalVideo>
-                <h5 style={{ color: 'white' }}>Tu Cámara</h5>
-                <video
-                  ref={localVideoRef}
-                  style={{ width: '100%', border: '1px solid black' }}
-                  muted
-                  autoPlay
-                />
-              </StyledLocalVideo>
-
-              {remoteStream && (
-                <StyledRemoteVideo>
-                  <h5
-                    style={{
-                      position: 'absolute',
-                      top: '10px',
-                      left: '10px',
-                      color: 'white',
-                      zIndex: 2,
-                    }}
-                  >
-                    Cliente
-                  </h5>
-                  <video
-                    ref={remoteVideoRef}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
-                    autoPlay
-                  />
-                  <StyledChatContainer>
-                    <div
-                      style={{
-                        maxHeight: '150px',
-                        overflowY: 'auto',
-                        marginBottom: '10px',
-                      }}
-                    >
-                      {messages.map((msg, index) => (
-                        <div
-                          key={index}
-                          style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
-                        >
-                          <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong> {msg.text}
-                        </div>
-                      ))}
-                    </div>
-                    <div style={{ display: 'flex' }}>
-                      <input
-                        type="text"
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        style={{
-                          flex: 1,
-                          marginRight: '10px',
-                          background: 'rgba(255, 255, 255, 0.9)',
-                          border: 'none',
-                          borderRadius: '5px',
-                          padding: '5px',
-                        }}
-                      />
-                      <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
-                    </div>
-                  </StyledChatContainer>
-                </StyledRemoteVideo>
+              {!cameraActive && (
+                <StyledActionButton onClick={startCamera}>Activar Cámara</StyledActionButton>
               )}
+              {cameraActive && (
+                <>
+                  <div style={{ marginBottom: '10px' }}>
+                    <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}>
+                      Stop
+                    </StyledActionButton>
+                    {remoteStream && (
+                      <>
+                        <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
+                        {currentClientId && (
+                          <StyledActionButton onClick={handleAddFavoriteClient}> + Favorito </StyledActionButton>
+                        )}
+                      </>
+                    )}
+                  </div>
+
+                  <StyledLocalVideo>
+                    <h5 style={{ color: 'white' }}>Tu Cámara</h5>
+                    <video
+                      ref={localVideoRef}
+                      style={{ width: '100%', border: '1px solid black' }}
+                      muted
+                      autoPlay
+                    />
+                  </StyledLocalVideo>
+
+                  {remoteStream && (
+                    <StyledRemoteVideo>
+                      <h5
+                        style={{
+                          position: 'absolute',
+                          top: '10px',
+                          left: '10px',
+                          color: 'white',
+                          zIndex: 2,
+                        }}
+                      >
+                        Cliente
+                      </h5>
+                      <video
+                        ref={remoteVideoRef}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
+                        autoPlay
+                      />
+                      <StyledChatContainer>
+                        <div
+                          style={{
+                            maxHeight: '150px',
+                            overflowY: 'auto',
+                            marginBottom: '10px',
+                          }}
+                        >
+                          {messages.map((msg, index) => (
+                            <div
+                              key={index}
+                              style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
+                            >
+                              <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong> {msg.text}
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ display: 'flex' }}>
+                          <input
+                            type="text"
+                            value={chatInput}
+                            onChange={(e) => setChatInput(e.target.value)}
+                            style={{
+                              flex: 1,
+                              marginRight: '10px',
+                              background: 'rgba(255, 255, 255, 0.9)',
+                              border: 'none',
+                              borderRadius: '5px',
+                              padding: '5px',
+                            }}
+                          />
+                          <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
+                        </div>
+                      </StyledChatContainer>
+                    </StyledRemoteVideo>
+                  )}
+                </>
+              )}
+
+              {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
             </>
           )}
 
-            {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
-          </>
-        )}
+          {activeTab === 'funnyplace' && <FunnyplacePage />}
 
-         {activeTab === 'funnyplace' && ( <FunnyplacePage />
+          {/* Panel de Mensajes (solo en Favoritos) */}
+          {activeTab === 'favoritos' && showMsgPanel && (
+            <div
+              style={{
+                position: 'relative',
+                width: '100%',
+                minHeight: '420px',
+                border: '1px solid #2b2b2b',
+                borderRadius: '10px',
+                overflow: 'hidden',
+                background: '#0f0f0f',
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '8px 12px',
+                  borderBottom: '1px solid #2b2b2b',
+                }}
+              >
+                <div style={{ fontWeight: 600 }}>
+                  Mensajes {msgConnected ? '(conectado)' : '(conectando…)'}
+                </div>
+                <button
+                  onClick={() => {
+                    setShowMsgPanel(false);
+                    setOpenChatWith(null);
+                    closeMessagesSocket();
+                  }}
+                  style={{
+                    border: '1px solid #444',
+                    background: '#1f1f1f',
+                    color: '#fff',
+                    padding: '6px 10px',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Cerrar
+                </button>
+              </div>
+
+              <div style={{ height: 'calc(100% - 42px)' }}>
+                {user?.id && openChatWith ? (
+                  <MessagesPage
+                    token={token}
+                    meId={user.id}
+                    msgSocketRef={msgSocketRef}
+                    openWithUserId={openChatWith}
+                  />
+                ) : (
+                  <div style={{ padding: '12px', color: '#adb5bd' }}>
+                    Selecciona un favorito y pulsa Chatear para abrir la conversación aquí.
+                  </div>
+                )}
+              </div>
+            </div>
           )}
-
         </StyledCenter>
 
         <StyledRightColumn />

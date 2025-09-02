@@ -196,8 +196,6 @@ public class MatchingHandler extends TextWebSocketHandler {
         waitingClients.remove(client);
         WebSocketSession model = waitingModels.poll();
         if (model != null && model.isOpen()) {
-            pairs.put(client.getId(), model);
-            pairs.put(model.getId(), client);
 
             // === INICIO STREAM EN MATCH ===
             Long clientId = sessionUserIds.get(client.getId());
@@ -206,9 +204,16 @@ public class MatchingHandler extends TextWebSocketHandler {
                 try {
                     // El servicio verifica roles reales contra DB y setea BUSY
                     streamService.startSession(clientId, modelId, false);
+
+                    pairs.put(client.getId(), model);
+                    pairs.put(model.getId(), client);
+
                 } catch (Exception ex) {
                     System.out.println("startSession falló: " + ex.getMessage());
-                    // si falla el inicio, devolvemos el modelo a la cola y avisamos al cliente
+                    // Limpieza defensiva (por si algo se hubiera puesto antes en algún refactor)
+                    pairs.remove(client.getId());
+                    pairs.remove(model.getId());
+
                     safeRequeue(model, "model");
                     // Si es saldo insuficiente -> avisamos correctamente al cliente
                     if (isLowBalance(ex)) {
@@ -234,8 +239,6 @@ public class MatchingHandler extends TextWebSocketHandler {
         waitingModels.remove(model);
         WebSocketSession client = waitingClients.poll();
         if (client != null && client.isOpen()) {
-            pairs.put(model.getId(), client);
-            pairs.put(client.getId(), model);
 
             // === INICIO STREAM EN MATCH ===
             Long clientId = sessionUserIds.get(client.getId());
@@ -243,8 +246,16 @@ public class MatchingHandler extends TextWebSocketHandler {
             if (clientId != null && modelId != null) {
                 try {
                     streamService.startSession(clientId, modelId, false);
+
+                    pairs.put(model.getId(), client);
+                    pairs.put(client.getId(), model);
+
                 } catch (Exception ex) {
                     System.out.println("startSession falló: " + ex.getMessage());
+
+                    // Limpieza defensiva
+                    pairs.remove(model.getId());
+                    pairs.remove(client.getId());
 
                     if (isLowBalance(ex)) {
                         // Cliente sin saldo: infórmale y no lo re-encoles hasta que recargue
@@ -340,10 +351,9 @@ public class MatchingHandler extends TextWebSocketHandler {
     //EL METODO ENVIA AL USUARIO UN MENSAJE INDICANDO QUE SE HA PRODUCIDO UN EMPAREJAMIENTO CON SU PEER Y AÑADE PEERUSERID Y PEERROLE
     private void sendMatchMessage(WebSocketSession session, String peerSessionId) {
         try {
-            Long peerUserId = sessionUserIds.get(peerSessionId);     // <- obtiene userId real del peer
-            String peerRole = roles.get(peerSessionId);              // <- rol real del peer (client/model)
+            Long peerUserId = sessionUserIds.get(peerSessionId);
+            String peerRole = roles.get(peerSessionId);
 
-            // payload compatible hacia atrás: si algo viene null, se manda vacío
             String msg = String.format(
                     "{\"type\":\"match\",\"peerId\":\"%s\",\"peerUserId\":%s,\"peerRole\":\"%s\"}",
                     peerSessionId,
@@ -357,6 +367,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             System.out.println("Error enviando mensaje de emparejamiento a sessionId=" + session.getId() + ": " + e.getMessage());
         }
     }
+
 
     //EL METODO VUELVE A COLOCAR DE FORMA SEGURA UN USUARIO EN LA COLA SEGUN SU ROL SI EL SOCKET SIGUE ABIERTO
     private void safeRequeue(WebSocketSession session, String role) {
