@@ -405,6 +405,25 @@ public class StreamService {
         return false;
     }
 
+    /**
+     * Devuelve true si hay una sesión de streaming ACTIVA (end_time = NULL)
+     * entre el cliente y la modelo indicados.
+     *
+     * Usa primero la pista de ModelStatusService (cache/redis) y, si no existe,
+     * consulta a la base de datos.
+     */
+    public boolean isPairActive(Long clientId, Long modelId) {
+        // 1) Pista en caché: si hay sessionId en curso, ya es activo
+        if (modelStatusService.getActiveSession(clientId, modelId).isPresent()) {
+            return true;
+        }
+        // 2) Fallback a BD por si la caché no está poblada
+        return streamRecordRepository
+                .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId)
+                .isPresent();
+    }
+
+
     private void postEndStatusCleanup(Long clientId, Long modelId) {
         // Limpieza en Redis
         modelStatusService.clearActiveSession(clientId, modelId);

@@ -1,8 +1,10 @@
 package com.sharemechat.handler;
 
+import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
+import com.sharemechat.service.MessageService;
 import com.sharemechat.service.ModelStatusService;
 import com.sharemechat.service.StreamService;
 import org.json.JSONObject;
@@ -20,11 +22,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 @Component
 public class MatchingHandler extends TextWebSocketHandler {
 
-    private final Queue<WebSocketSession> waitingModels = new ConcurrentLinkedQueue<>();
+    private final Queue<WebSocketSession> waitingModels  = new ConcurrentLinkedQueue<>();
     private final Queue<WebSocketSession> waitingClients = new ConcurrentLinkedQueue<>();
-    private final Map<String, WebSocketSession> pairs = new HashMap<>();
-    private final Map<String, String> roles = new HashMap<>();
-    private final Map<String, Long> sessionUserIds = new HashMap<>();
+
+    // ==== IMPORTANTE: concurrentes para evitar race conditions ====
+    private final Map<String, WebSocketSession> pairs       = new ConcurrentHashMap<>();
+    private final Map<String, String>           roles       = new ConcurrentHashMap<>();
+    private final Map<String, Long>             sessionUserIds = new ConcurrentHashMap<>();
+    // =============================================================
+
     private final Set<String> switching = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
 
@@ -32,15 +38,18 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final UserRepository userRepository;
     private final StreamService streamService;
     private final ModelStatusService modelStatusService;
+    private final MessageService messageService;
 
     public MatchingHandler(JwtUtil jwtUtil,
                            UserRepository userRepository,
                            StreamService streamService,
+                           MessageService messageService,
                            ModelStatusService modelStatusService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.streamService = streamService;
         this.modelStatusService = modelStatusService;
+        this.messageService =messageService;
     }
 
     //EL METODO SE EJECUTA CUANDO SE ABRE UNA NUEVA CONEXION WEBSOCKET Y RESUELVE EL USERID A PARTIR DEL TOKEN
@@ -56,7 +65,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             return;
         }
         sessionUserIds.put(session.getId(), userId);
-        // No añadimos a colas hasta que nos digan el rol (set-role)
+        // El rol se fija luego con "set-role"
     }
 
     //EL METODO SE EJECUTA CUANDO SE CIERRA UNA CONEXION WEBSOCKET Y ELIMINA AL USUARIO DE COLAS Y PARES, FINALIZANDO STREAM SI ES NECESARIO
@@ -104,14 +113,12 @@ public class MatchingHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
-        // Deja comentado el log crudo para evitar volcar SDP/candidates gigantes
-        // System.out.println("Mensaje recibido de sessionId=" + session.getId() + ": " + payload);
 
         try {
             JSONObject json = new JSONObject(payload);
             String type = json.getString("type");
 
-            // ===== LOGS SANITIZADOS (no imprimen SDP/candidates) =====
+            // ===== LOGS SANITIZADOS =====
             if ("signal".equals(type)) {
                 JSONObject sig = json.optJSONObject("signal");
                 String sigType = sig != null ? sig.optString("type", "") : "";
@@ -137,7 +144,6 @@ public class MatchingHandler extends TextWebSocketHandler {
             // ===== FIN LOGS SANITIZADOS =====
 
             if ("ping".equals(type)) {
-                // keepalive desde el cliente; no hacer nada
                 checkCutoffAndMaybeEnd(session);
                 return;
             }
@@ -148,7 +154,6 @@ public class MatchingHandler extends TextWebSocketHandler {
                 Long userId = sessionUserIds.get(session.getId());
 
                 if ("model".equals(role)) {
-                    // Evitar duplicados en la cola
                     waitingModels.remove(session);
                     waitingModels.add(session);
                     System.out.println("Modelo añadido a waitingModels: sessionId=" + session.getId());
@@ -156,7 +161,6 @@ public class MatchingHandler extends TextWebSocketHandler {
                         modelStatusService.setAvailable(userId);
                     }
                 } else if ("client".equals(role)) {
-                    // Evitar duplicados en la cola
                     waitingClients.remove(session);
                     waitingClients.add(session);
                     System.out.println("Cliente añadido a waitingClients: sessionId=" + session.getId());
@@ -174,12 +178,52 @@ public class MatchingHandler extends TextWebSocketHandler {
                 handleNext(session);
 
             } else if ("chat".equals(type)) {
+                // persistir chat de streaming en DB y reemitir
                 WebSocketSession peer = pairs.get(session.getId());
                 if (peer != null && peer.isOpen()) {
-                    peer.sendMessage(new TextMessage(payload));
+                    Long senderId    = sessionUserIds.get(session.getId());
+                    Long recipientId = sessionUserIds.get(peer.getId());
+                    String body      = json.optString("message", "").trim();
+
+                    if (senderId != null && recipientId != null && !body.isEmpty()) {
+                        try {
+                            // 1) Persistimos
+                            MessageDTO saved = messageService.send(senderId, recipientId, body);
+
+                            // 2) Reenviamos a ambos (manteniendo compatibilidad: sigue existiendo "message")
+                            JSONObject out = new JSONObject()
+                                    .put("type", "chat")
+                                    .put("message", body)
+                                    .put("senderId", saved.senderId())
+                                    .put("recipientId", saved.recipientId())
+                                    .put("msgId", saved.id())
+                                    .put("createdAt", String.valueOf(saved.createdAt()))
+                                    .put("readAt", saved.readAt() == null ? JSONObject.NULL : String.valueOf(saved.readAt()));
+
+                            TextMessage tm = new TextMessage(out.toString());
+                            try { session.sendMessage(tm); } catch (Exception ignore) {}
+                            try { peer.sendMessage(tm); } catch (Exception ignore) {}
+                        } catch (Exception ex) {
+                            // Si falla la persistencia, al menos reenvía el payload original
+                            System.out.println("Persistencia chat falló: " + ex.getMessage());
+                            try { peer.sendMessage(new TextMessage(payload)); } catch (Exception ignore) {}
+                            // y notifica al remitente
+                            try {
+                                JSONObject err = new JSONObject()
+                                        .put("type","msg:error")
+                                        .put("message", ex.getMessage());
+                                session.sendMessage(new TextMessage(err.toString()));
+                            } catch (Exception ignore) {}
+                        }
+                    } else {
+                        // fallback: reenvío simple si no tenemos IDs válidos
+                        peer.sendMessage(new TextMessage(payload));
+                    }
                 }
+
             } else if ("stats".equals(type)) {
                 sendQueueStats(session);
+
             } else if (pairs.containsKey(session.getId())) {
                 WebSocketSession peer = pairs.get(session.getId());
                 if (peer != null && peer.isOpen()) {
@@ -190,6 +234,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             System.out.println("Error parseando JSON: " + e.getMessage());
         }
     }
+
 
     //EL METODO REALIZA UN EMPAREJAMIENTO ENTRE UN CLIENTE Y UN MODELO DISPONIBLE Y ARRANCA LA SESION DE STREAM
     private void matchClient(WebSocketSession client) throws Exception {

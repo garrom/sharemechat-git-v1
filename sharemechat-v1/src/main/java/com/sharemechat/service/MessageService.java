@@ -18,13 +18,18 @@ public class MessageService {
 
     private final MessageRepository messageRepository;
     private final UserRepository userRepository;
-    private final FavoriteService favoriteService; // ya lo tienes
+    private final FavoriteService favoriteService;
+    private final StreamService streamService;
     private static final int HISTORY_PAGE = 30;
 
-    public MessageService(MessageRepository messageRepository, UserRepository userRepository, FavoriteService favoriteService) {
+    public MessageService(MessageRepository messageRepository,
+                          UserRepository userRepository,
+                          StreamService streamService,
+                          FavoriteService favoriteService) {
         this.messageRepository = messageRepository;
         this.userRepository = userRepository;
         this.favoriteService = favoriteService;
+        this.streamService = streamService;
     }
 
     public static String convKey(Long a, Long b) {
@@ -59,10 +64,30 @@ public class MessageService {
         if (body.isEmpty()) throw new IllegalArgumentException("Mensaje vacío");
         if (body.length() > 1000) body = body.substring(0, 1000);
 
-        if (!canMessage(senderId, recipientId)) {
+        // 1) Regla existente (favoritos / lo que tengas en canMessage)
+        boolean allowed = canMessage(senderId, recipientId);
+
+        // 2) NUEVO: permitir si el par está en streaming activo
+        if (!allowed) {
+            // Cargamos roles para ordenar (clientId, modelId)
+            var sender    = userRepository.findById(senderId).orElseThrow();
+            var recipient = userRepository.findById(recipientId).orElseThrow();
+
+            boolean inActiveStream = false;
+            if ("CLIENT".equals(sender.getRole()) && "MODEL".equals(recipient.getRole())) {
+                inActiveStream = streamService.isPairActive(senderId, recipientId);    // (client, model)
+            } else if ("MODEL".equals(sender.getRole()) && "CLIENT".equals(recipient.getRole())) {
+                inActiveStream = streamService.isPairActive(recipientId, senderId);    // (client, model)
+            }
+
+            allowed = inActiveStream;
+        }
+
+        if (!allowed) {
             throw new IllegalStateException("No autorizado para enviar mensajes a este usuario");
         }
 
+        // 3) Persistencia estándar
         Message m = new Message();
         m.setSenderId(senderId);
         m.setRecipientId(recipientId);
@@ -71,8 +96,16 @@ public class MessageService {
         m.setCreatedAt(LocalDateTime.now());
         messageRepository.save(m);
 
-        return new MessageDTO(m.getId(), m.getSenderId(), m.getRecipientId(), m.getBody(), m.getCreatedAt(), m.getReadAt());
+        return new MessageDTO(
+                m.getId(),
+                m.getSenderId(),
+                m.getRecipientId(),
+                m.getBody(),
+                m.getCreatedAt(),
+                m.getReadAt()
+        );
     }
+
 
     @Transactional(readOnly = true)
     public List<MessageDTO> history(Long me, Long withUser, Long beforeId) {
