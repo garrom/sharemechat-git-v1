@@ -1,9 +1,9 @@
+// DashboardModel.jsx
 import React, { useState, useRef, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from './features/favorites/FavoritesModelList';
 import FunnyplacePage from './features/funnyplace/FunnyplacePage';
-
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt, faUser, faHeart, faVideo, faFilm } from '@fortawesome/free-solid-svg-icons';
@@ -35,21 +35,20 @@ const DashboardModel = () => {
   const [status, setStatus] = useState('');
   const [queuePosition, setQueuePosition] = useState(null);
   const [currentClientId, setCurrentClientId] = useState(null);
-  // === Chat central unificado (como el del cliente) ===
+
+  // Chat central (favoritos)
   const [centerMessages, setCenterMessages] = useState([]);
   const [centerInput, setCenterInput] = useState('');
   const [centerChatPeerName, setCenterChatPeerName] = useState('');
   const [centerLoading, setCenterLoading] = useState(false);
 
-  // ====== Mensajes (fuera de streaming) ======
   const [showMsgPanel, setShowMsgPanel] = useState(false);
   const [openChatWith, setOpenChatWith] = useState(null);
   const [msgConnected, setMsgConnected] = useState(false);
   const msgSocketRef = useRef(null);
-  const msgPingRef = useRef(null);       // keepalive
-  const msgReconnectRef = useRef(null);  // reconexión
-  const modelCenterListRef = useRef(null);  // autoscroll lista
-  const deliveredIdsRef = useRef(new Set());        // ids recibidos para dedupe
+  const msgPingRef = useRef(null);
+  const msgReconnectRef = useRef(null);
+  const modelCenterListRef = useRef(null);
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -60,8 +59,17 @@ const DashboardModel = () => {
   const pingIntervalRef = useRef(null);
   const token = localStorage.getItem('token');
   const meIdRef = useRef(null);
-  const peerIdRef = useRef(null); // client: centerChatPeerId ; model: openChatWith
+  const peerIdRef = useRef(null);
 
+  // --- Dedupe de eco para chat de streaming (RTC)
+  const lastSentRef = useRef({ text: null, at: 0 });
+  const isEcho = (incoming) => {
+    const now = Date.now();
+    return (
+      incoming === lastSentRef.current.text &&
+      now - lastSentRef.current.at < 1500
+    );
+  };
 
   useEffect(() => {
     const loadUser = async () => {
@@ -98,8 +106,7 @@ const DashboardModel = () => {
   useEffect(() => { meIdRef.current = Number(user?.id) || null; }, [user?.id]);
   useEffect(() => { peerIdRef.current = Number(openChatWith) || null; }, [openChatWith]);
 
-
-  // Autoscroll
+  // Autoscroll chat central
   useEffect(() => {
     const el = modelCenterListRef.current;
     if (!el) return;
@@ -134,7 +141,7 @@ const DashboardModel = () => {
     fetchSaldoModel();
   }, []);
 
-  // carga historial NORMALIZANDO cuando cambie el peer
+  // carga historial del chat central al cambiar peer
   useEffect(() => {
     const peer = Number(openChatWith);
     if (!peer || activeTab !== 'favoritos') return;
@@ -158,9 +165,8 @@ const DashboardModel = () => {
           createdAt: raw.createdAt ?? raw.created_at,
           readAt: raw.readAt ?? raw.read_at ?? null,
         }));
-        setCenterMessages(normalized.reverse()); // ascendente
+        setCenterMessages(normalized.reverse());
 
-        // marcar como leídos (opcional ahora, pero listo)
         try {
           await fetch(`/api/messages/with/${peer}/read`, {
             method: 'POST',
@@ -168,7 +174,6 @@ const DashboardModel = () => {
           });
         } catch {}
 
-        // autoscroll
         queueMicrotask(() => {
           const el = modelCenterListRef?.current;
           if (el) el.scrollTop = el.scrollHeight;
@@ -184,7 +189,6 @@ const DashboardModel = () => {
     load();
   }, [openChatWith, activeTab]);
 
-  // ========= WS Mensajes: helpers (igual patrón que streaming) =========
   const clearMsgTimers = () => {
     if (msgPingRef.current) {
       clearInterval(msgPingRef.current);
@@ -205,7 +209,6 @@ const DashboardModel = () => {
     readAt: raw.readAt ?? raw.read_at ?? null,
   });
 
-
   const closeMessagesSocket = () => {
     try { if (msgSocketRef.current) msgSocketRef.current.close(); } catch {}
     msgSocketRef.current = null;
@@ -220,13 +223,11 @@ const DashboardModel = () => {
       return;
     }
 
-    // Evitar doble apertura
     if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
       setMsgConnected(true);
       return;
     }
 
-    // cerrar existentes + timers
     closeMessagesSocket();
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
@@ -264,8 +265,6 @@ const DashboardModel = () => {
     s.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
-        // Debug útil
-        // console.log('[WS messages] IN:', data);
 
         if (data.type === 'msg:new' && data.message) {
           const m = normMsg(data.message);
@@ -273,7 +272,7 @@ const DashboardModel = () => {
           const me   = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
 
-          if (!me || !peer) return; // aún no hay seleccionados
+          if (!me || !peer) return;
 
           const belongsToThisChat =
             (m.senderId === peer && m.recipientId === me) ||
@@ -282,7 +281,6 @@ const DashboardModel = () => {
           if (belongsToThisChat) {
             setCenterMessages(prev => [...prev, m]);
 
-            // autoscroll
             queueMicrotask(() => {
                 const el = modelCenterListRef.current;
                 if (el) el.scrollTop = el.scrollHeight;
@@ -290,20 +288,16 @@ const DashboardModel = () => {
           }
         }
       } catch (e) {
-        // console.warn('WS parse error', e);
+        // silenciar parse errors
       }
     };
-
-
   };
 
-  // WS /messages siempre abierto mientras el dashboard esté montado
   useEffect(() => {
      openMessagesSocket();
      return () => closeMessagesSocket();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  // ======================================================================
 
   const startCamera = async () => {
     try {
@@ -338,7 +332,6 @@ const DashboardModel = () => {
     socketRef.current = socket;
 
     socket.onopen = () => {
-      console.log('Modelo conectado al WebSocket');
       setStatus('Esperando cliente...');
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = setInterval(() => {
@@ -370,7 +363,6 @@ const DashboardModel = () => {
         setMessages([]);
         setError('');
         setStatus('');
-        console.log('Modelo emparejado con cliente. PeerID:', data.peerId);
 
         const peer = new Peer({
           initiator: false,
@@ -387,7 +379,6 @@ const DashboardModel = () => {
         });
 
         peer.on('stream', (stream) => {
-          console.log('Modelo recibió stream remoto');
           setError('');
           setStatus('');
           setRemoteStream(stream);
@@ -401,7 +392,10 @@ const DashboardModel = () => {
         setStatus('');
         peerRef.current.signal(data.signal);
       } else if (data.type === 'chat') {
-        setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
+        // evita eco de mi propio mensaje
+        if (!isEcho(data.message)) {
+          setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
+        }
       } else if (data.type === 'no-client-available') {
         setStatus('Esperando cliente...');
         if (socketRef.current?.readyState === WebSocket.OPEN) {
@@ -412,7 +406,6 @@ const DashboardModel = () => {
           setQueuePosition(data.position);
         }
       } else if (data.type === 'peer-disconnected') {
-        console.log('Recibido peer-disconnected');
         setCurrentClientId(null);
         if (peerRef.current) {
           peerRef.current.destroy();
@@ -431,8 +424,7 @@ const DashboardModel = () => {
       }
     };
 
-    socket.onerror = (err) => {
-      console.error('WebSocket error en modelo:', err);
+    socket.onerror = () => {
       setError('Error de conexión con el servidor.');
     };
 
@@ -441,7 +433,6 @@ const DashboardModel = () => {
         clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = null;
       }
-      console.log('WebSocket cerrado (modelo)');
     };
   };
 
@@ -471,17 +462,20 @@ const DashboardModel = () => {
 
   const sendChatMessage = () => {
     if (chatInput.trim() === '') return;
-    const message = { type: 'chat', message: chatInput };
-    socketRef.current.send(JSON.stringify(message));
-    setMessages((prev) => [...prev, { from: 'me', text: chatInput }]);
-    setChatInput('');
+    const message = { type: 'chat', message: chatInput.trim() };
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      // marca anti-eco y append optimista
+      lastSentRef.current = { text: message.message, at: Date.now() };
+      socketRef.current.send(JSON.stringify(message));
+      setMessages((prev) => [...prev, { from: 'me', text: message.message }]);
+      setChatInput('');
+    }
   };
 
   const handleProfile = () => {
     history.push('/perfil-model');
   };
 
-  // ======= Retiro de dinero =======
   const handleRequestPayout = async () => {
     const tk = localStorage.getItem('token');
     if (!tk) {
@@ -540,7 +534,6 @@ const DashboardModel = () => {
       setLoadingSaldoModel(false);
     }
   };
-  // ================================
 
   const stopAll = () => {
     if (pingIntervalRef.current) {
@@ -574,7 +567,6 @@ const DashboardModel = () => {
     setOpenChatWith(null);
   };
 
-  // ======== GUARDAS DE NAVEGACIÓN DURANTE STREAMING ========
   const streamingActivo = !!remoteStream;
 
   const handleGoFunnyplace = () => {
@@ -593,7 +585,6 @@ const DashboardModel = () => {
     }
     setActiveTab('favoritos');
   };
-  // =========FIN GUARDAS DE NAVEGACION STREAMING============
 
   const handleAddFavoriteClient = async () => {
     if (!currentClientId) {
@@ -626,16 +617,12 @@ const DashboardModel = () => {
   const handleOpenChatFromFavorite = (favUser) => {
     const peerId = Number(favUser?.id ?? favUser?.userId);
     const name = favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${peerId || ''}`;
-    console.log('[MODEL] openChatFromFavorite favUser=', favUser, 'me=', Number(user?.id), 'peerId=', peerId);
     if (!peerId) return;
     setActiveTab('favoritos');
     setOpenChatWith(peerId);
     setShowMsgPanel(true);
     openMessagesSocket();
-    // si cargas histórico en otra función, añade un log similar allí también
   };
-
-
 
   const openChatWithPeer = async (peerId, displayName) => {
     if (streamingActivo) {
@@ -647,7 +634,7 @@ const DashboardModel = () => {
     setCenterChatPeerName(displayName || `Usuario ${peerId}`);
     setCenterMessages([]);
 
-    openMessagesSocket(); // asegúrate de tener el WS activo
+    openMessagesSocket();
 
     try {
       const tk = localStorage.getItem('token');
@@ -656,7 +643,7 @@ const DashboardModel = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        setCenterMessages((data || []).reverse()); // backend viene desc
+        setCenterMessages((data || []).reverse());
         try {
           await fetch(`/api/messages/with/${peerId}/read`, {
             method: 'POST',
@@ -676,13 +663,10 @@ const DashboardModel = () => {
       const payload = { type: 'msg:send', to: Number(openChatWith), body: centerInput.trim() };
       s.send(JSON.stringify(payload));
       setCenterInput('');
-      // sin optimista; llegará msg:new con id real
     } else {
       alert('Chat de mensajes desconectado. Reabre el panel.');
     }
   };
-
-
 
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
@@ -864,7 +848,6 @@ const DashboardModel = () => {
 
           {activeTab === 'funnyplace' && <FunnyplacePage />}
 
-          {/* Panel de Mensajes (solo en Favoritos) */}
           {activeTab === 'favoritos' && (
             <div ref={modelCenterListRef}
               style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px' }}>
