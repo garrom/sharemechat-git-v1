@@ -39,17 +39,21 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final StreamService streamService;
     private final ModelStatusService modelStatusService;
     private final MessageService messageService;
+    private final MessagesWsHandler messagesWsHandler;
 
     public MatchingHandler(JwtUtil jwtUtil,
                            UserRepository userRepository,
                            StreamService streamService,
                            MessageService messageService,
+                           MessagesWsHandler messagesWsHandler,
                            ModelStatusService modelStatusService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.streamService = streamService;
         this.modelStatusService = modelStatusService;
         this.messageService =messageService;
+        this.messagesWsHandler = messagesWsHandler;
+
     }
 
     //EL METODO SE EJECUTA CUANDO SE ABRE UNA NUEVA CONEXION WEBSOCKET Y RESUELVE EL USERID A PARTIR DEL TOKEN
@@ -189,6 +193,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                         try {
                             // 1) Persistimos
                             MessageDTO saved = messageService.send(senderId, recipientId, body);
+                            messagesWsHandler.broadcastNew(saved);
 
                             // 2) Reenviamos a ambos (manteniendo compatibilidad: sigue existiendo "message")
                             JSONObject out = new JSONObject()

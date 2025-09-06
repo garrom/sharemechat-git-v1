@@ -44,12 +44,16 @@ const DashboardClient = () => {
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
   const token = localStorage.getItem('token');
+  const deliveredIdsRef = useRef(new Set());   // <-- NUEVO: para deduplicar
+  const meIdRef = useRef(null);                // <-- NUEVO: para tener mi id estable
+  const peerIdRef = useRef(null); // client: centerChatPeerId ; model: openChatWith
   const fmtEUR = (v) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
       .format(Number(v || 0));
 
   // ======== estados/refs para chat central (favoritos) ========
   const msgSocketRef = useRef(null);                       // WS /messages
+  const centerListRef = useRef(null);
   const [wsReady, setWsReady] = useState(false);           // estado conexión WS mensajes
   const [centerChatPeerId, setCenterChatPeerId] = useState(null);
   const [centerChatPeerName, setCenterChatPeerName] = useState('');
@@ -58,6 +62,7 @@ const DashboardClient = () => {
   const [centerLoading, setCenterLoading] = useState(false);
   const msgPingRef = useRef(null);                         // keepalive ping
   const msgReconnectRef = useRef(null);                    // timeout reconexión
+
   // ============================================================
 
   useEffect(() => {
@@ -69,6 +74,7 @@ const DashboardClient = () => {
         if (res.ok) {
           const data = await res.json();
           setUser(data);
+          meIdRef.current = Number(data?.id || 0);
         }
       } catch (e) {
         console.error("Error cargando usuario:", e);
@@ -76,6 +82,10 @@ const DashboardClient = () => {
     };
     if (token) loadUser();
   }, [token]);
+
+  useEffect(() => { meIdRef.current = Number(user?.id) || null; }, [user?.id]);
+  useEffect(() => { peerIdRef.current = Number(centerChatPeerId) || null; }, [centerChatPeerId]);
+
 
   useEffect(() => {
     if (localVideoRef.current && localStream.current) {
@@ -90,6 +100,14 @@ const DashboardClient = () => {
       remoteVideoRef.current.srcObject = null;
     }
   }, [remoteStream]);
+
+  useEffect(() => {
+    const el = centerListRef.current;
+    if (!el) return;
+    // microtask para asegurar DOM actualizado
+    queueMicrotask(() => { el.scrollTop = el.scrollHeight; });
+  }, [centerMessages, centerLoading, centerChatPeerId]);
+
 
   useEffect(() => {
     const tokenLS = localStorage.getItem('token');
@@ -174,13 +192,11 @@ const DashboardClient = () => {
 
     s.onclose = () => {
       setWsReady(false);
-      // si seguimos en favoritos, reintenta en 1.5s
       clearMsgTimers();
-      if (activeTab === 'favoritos') {
-        msgReconnectRef.current = setTimeout(() => {
+      // reintento incondicional
+      msgReconnectRef.current = setTimeout(() => {
           openMsgSocket();
-        }, 1500);
-      }
+      }, 1500);
     };
 
     s.onerror = () => {
@@ -191,28 +207,47 @@ const DashboardClient = () => {
     s.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
-        if (data.type === 'msg:new') {
-          const m = data.message;
-          if (centerChatPeerId && (m.senderId === centerChatPeerId || m.recipientId === centerChatPeerId)) {
+        // Debug útil
+        // console.log('[WS messages] IN:', data);
+
+        if (data.type === 'msg:new' && data.message) {
+          const m = normMsg(data.message);
+
+          const me   = Number(meIdRef.current);
+          const peer = Number(peerIdRef.current);
+
+          if (!me || !peer) return; // aún no hay seleccionados
+
+          const belongsToThisChat =
+            (m.senderId === peer && m.recipientId === me) ||
+            (m.senderId === me   && m.recipientId === peer);
+
+          if (belongsToThisChat) {
             setCenterMessages(prev => [...prev, m]);
+
+            // autoscroll
+            queueMicrotask(() => {
+                const el = centerListRef.current;
+                if (el) el.scrollTop = el.scrollHeight;
+            });
           }
         }
-      } catch {}
+      } catch (e) {
+        // console.warn('WS parse error', e);
+      }
     };
+
+
+
   };
   // ========================================================================
 
-  // abrir/cerrar WS /messages al entrar/salir de Favoritos
+  // WS /messages siempre abierto mientras el dashboard esté montado
   useEffect(() => {
-    if (activeTab === 'favoritos') {
       openMsgSocket();
-    } else {
-      closeMsgSocket();
-    }
-    // cleanup si desmonta
-    return () => closeMsgSocket();
+      return () => closeMsgSocket();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
+  }, []);
   // ========================================================
 
   const handleActivateCamera = async () => {
@@ -458,9 +493,6 @@ const DashboardClient = () => {
       socketRef.current = null;
     }
 
-    // cerrar WS de mensajes si estuviera abierto
-    closeMsgSocket();
-
     setCurrentModelId(null);
     setCameraActive(false);
     setSearching(false);
@@ -609,7 +641,15 @@ const DashboardClient = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        setCenterMessages((data || []).reverse()); // backend viene desc
+        const normalized = (data || []).map(raw => ({
+          id: raw.id,
+          senderId: Number(raw.senderId ?? raw.sender_id),
+          recipientId: Number(raw.recipientId ?? raw.recipient_id),
+          body: raw.body,
+          createdAt: raw.createdAt ?? raw.created_at,
+          readAt: raw.readAt ?? raw.read_at ?? null,
+        }));
+        setCenterMessages(normalized.reverse());
         try {
           await fetch(`/api/messages/with/${peerId}/read`, {
             method: 'POST',
@@ -624,33 +664,53 @@ const DashboardClient = () => {
     }
   };
 
+  const normMsg = (raw) => ({
+    id: raw.id,
+    senderId: Number(raw.senderId ?? raw.sender_id),
+    recipientId: Number(raw.recipientId ?? raw.recipient_id),
+    body: raw.body,
+    createdAt: raw.createdAt ?? raw.created_at,
+    readAt: raw.readAt ?? raw.read_at ?? null,
+  });
+
+
   const sendCenterMessage = () => {
     if (!centerChatPeerId || !centerInput.trim()) return;
     const s = msgSocketRef.current;
     if (s && s.readyState === WebSocket.OPEN) {
-      const payload = { type: 'msg:send', to: centerChatPeerId, body: centerInput.trim() };
+      const payload = { type: 'msg:send', to: Number(centerChatPeerId), body: centerInput.trim() };
       s.send(JSON.stringify(payload));
-      // optimista
-      setCenterMessages(prev => [...prev, {
-        id: Date.now(),
-        senderId: user?.id,
-        recipientId: centerChatPeerId,
-        body: centerInput.trim(),
-        createdAt: new Date().toISOString(),
-        readAt: null
-      }]);
       setCenterInput('');
+      // no append optimista; el eco msg:new lo añadirá una sola vez
     } else {
       alert('Chat de mensajes desconectado. Reabre el panel.');
     }
   };
+
+
   // ==========================================================
 
   // callback para FavoritesClientList → abrir chat
+  // DashboardClient.jsx
   const handleOpenChatFromFavorites = (favUser) => {
-    const name = favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${favUser?.id || ''}`;
-    if (favUser?.id) openChatWith(favUser.id, name);
+    const name =
+      favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${favUser?.id || ''}`;
+
+    // usa una variable local 'peer' en vez de 'peerId'
+    const peer = Number(favUser?.id ?? favUser?.userId);
+    if (!Number.isFinite(peer) || peer <= 0) {
+      alert('No se pudo determinar el destinatario correcto.');
+      return;
+    }
+    if (Number(user?.id) === peer) {
+      alert('No puedes chatear contigo mismo.');
+      return;
+    }
+
+    // y pasa 'peer' al abrir el chat
+    openChatWith(peer, name);
   };
+
 
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
@@ -836,7 +896,8 @@ const DashboardClient = () => {
                     </div>
                   </div>
 
-                  <div style={{ flex:1, overflowY:'auto', border:'1px solid #333', borderRadius:8, padding:10, background:'rgba(0,0,0,0.2)' }}>
+                  <div ref={centerListRef}
+                    style={{ flex:1, minHeight: 0, overflowY:'auto', border:'1px solid #333', borderRadius:8, padding:10, background:'rgba(0,0,0,0.2)' }}>
                     {centerLoading && <div style={{ color:'#adb5bd' }}>Cargando historial…</div>}
                     {!centerLoading && centerMessages.length === 0 && (
                       <div style={{ color:'#adb5bd' }}>No hay mensajes todavía. ¡Escribe el primero!</div>

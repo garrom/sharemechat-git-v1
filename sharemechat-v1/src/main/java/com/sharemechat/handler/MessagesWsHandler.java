@@ -71,10 +71,54 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         String type = json.optString("type", "");
 
         if ("msg:send".equals(type)) {
-            Long to = json.optLong("to");
+            // --- parseo robusto del destinatario ---
+            Object toObj = json.opt("to");
+            String toRaw = (toObj != null) ? String.valueOf(toObj) : null;
+            Long to = null;
+            try { if (toRaw != null) to = Long.valueOf(toRaw); } catch (Exception ignore) {}
+
             String body = json.optString("body", "");
+            body = (body != null) ? body.trim() : "";
+
+            // --- logs de entrada para diagnóstico ---
+            log.info("WS msg:send IN session={} me={} rawTo='{}' parsedTo={} bodyLen={}",
+                    session.getId(), me, toRaw, to, (body != null ? body.length() : 0));
+
+            // --- validaciones duras ---
+            if (to == null || to <= 0L) {
+                String err = "Destinatario inválido";
+                log.warn("WS msg:send REJECT (invalid to) session={} me={} rawTo='{}' parsedTo={}", session.getId(), me, toRaw, to);
+                safeSend(session, new JSONObject()
+                        .put("type", "msg:error")
+                        .put("message", err)
+                        .toString());
+                return;
+            }
+            if (java.util.Objects.equals(me, to)) {
+                String err = "No puedes enviarte mensajes a ti mismo";
+                log.warn("WS msg:send REJECT (self send) session={} me={} to={}", session.getId(), me, to);
+                safeSend(session, new JSONObject()
+                        .put("type", "msg:error")
+                        .put("message", err)
+                        .toString());
+                return;
+            }
+            if (body.isEmpty()) {
+                String err = "Mensaje vacío";
+                log.warn("WS msg:send REJECT (empty body) session={} me={} to={}", session.getId(), me, to);
+                safeSend(session, new JSONObject()
+                        .put("type", "msg:error")
+                        .put("message", err)
+                        .toString());
+                return;
+            }
+
             try {
                 MessageDTO saved = messageService.send(me, to, body);
+
+                log.info("WS msg:send SAVED id={} senderId={} recipientId={}",
+                        saved.id(), saved.senderId(), saved.recipientId());
+
                 // eco al remitente
                 broadcastToUser(me, new JSONObject()
                         .put("type", "msg:new")
@@ -88,6 +132,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                         .put("message", toJson(saved))
                         .toString());
             } catch (Exception ex) {
+                log.warn("WS msg:send ERROR session={} me={} to={} err={}", session.getId(), me, to, ex.getMessage());
                 safeSend(session, new JSONObject()
                         .put("type", "msg:error")
                         .put("message", ex.getMessage())
@@ -113,11 +158,31 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
     }
 
+
     private void broadcastToUser(Long userId, String json) {
         var set = sessions.get(userId);
         if (set == null) return;
         for (var s : set) safeSend(s, json);
     }
+
+    public void broadcastNew(MessageDTO saved) {
+        String json = new JSONObject()
+                .put("type", "msg:new")
+                .put("message", toJson(saved))
+                .toString();
+
+        // LOG útil para ver a quién estamos notificando
+        org.slf4j.LoggerFactory.getLogger(MessagesWsHandler.class)
+                .info("broadcastNew -> sender={}, recipient={}, sessions(sender)={}, sessions(recipient)={}",
+                        saved.senderId(), saved.recipientId(),
+                        Optional.ofNullable(sessions.get(saved.senderId())).map(Set::size).orElse(0),
+                        Optional.ofNullable(sessions.get(saved.recipientId())).map(Set::size).orElse(0));
+
+        broadcastToUser(saved.senderId(), json);
+        broadcastToUser(saved.recipientId(), json);
+    }
+
+
 
     private void safeSend(WebSocketSession s, String json) {
         if (s != null && s.isOpen()) {
