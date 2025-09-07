@@ -39,20 +39,32 @@ public class SecurityConfig {
                         // PUBLIC
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/register/**", "/api/users/login").permitAll()
-                        // PRIVATE
+
+                        // USERS
                         .requestMatchers("/api/users/**").authenticated()
+
+                        // ROLE-SCOPED APIs
                         .requestMatchers("/api/models/**").hasRole("MODEL")
-                        .requestMatchers("/api/client/**").hasRole("CLIENT")
+                        .requestMatchers("/api/clients/**").hasRole("CLIENT")
                         .requestMatchers("/api/favorites/**").hasAnyRole("CLIENT","MODEL")
-                        .requestMatchers(HttpMethod.POST, "/api/transactions/first").hasRole("USER")
-                        .requestMatchers(HttpMethod.POST, "/api/transactions/add-balance").hasRole("CLIENT")
+
+                        // Transactions: regla general + específicas
+                        .requestMatchers("/api/transactions/payout").hasRole("MODEL")
+                        .requestMatchers("/api/transactions/add-balance").hasRole("CLIENT")
+                        .requestMatchers("/api/transactions/**").authenticated()
+
+                        // Admin
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // WS endpoints (se validan token en el handler)
                         .requestMatchers("/messages/**").permitAll()
                         .requestMatchers("/match/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
+
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
                         .anyRequest().authenticated()
                 )
+
                 .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userDetailsService), UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)));

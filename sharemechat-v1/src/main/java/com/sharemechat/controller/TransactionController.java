@@ -6,6 +6,7 @@ import com.sharemechat.service.TransactionService;
 import com.sharemechat.service.UserService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -31,6 +32,7 @@ public class TransactionController {
     }
 
     // Recargar monedero del Cliente
+    @PreAuthorize("hasRole('CLIENT')")
     @PostMapping("/add-balance")
     public ResponseEntity<String> addBalance(@RequestBody @Valid TransactionRequestDTO request,
                                              Authentication authentication) {
@@ -39,6 +41,7 @@ public class TransactionController {
         return ResponseEntity.ok("Saldo actualizado correctamente.");
     }
     // Retirar dinero modelo
+    @PreAuthorize("hasRole('MODEL')")
     @PostMapping("/payout")
     public ResponseEntity<String> requestPayout(@RequestBody @Valid TransactionRequestDTO request,
                                                 Authentication authentication) {
