@@ -38,6 +38,9 @@ const DashboardModel = () => {
   const [favReload, setFavReload] = useState(0);
   const [selectedFav, setSelectedFav] = useState(null); // { id, nickname, invited, status, role }
 
+  // === NUEVO: estado de búsqueda como en el cliente ===
+  const [searching, setSearching] = useState(false);
+
   // Chat central (favoritos)
   const [centerMessages, setCenterMessages] = useState([]);
   const [centerInput, setCenterInput] = useState('');
@@ -344,6 +347,8 @@ const DashboardModel = () => {
       }, 30000);
 
       socket.send(JSON.stringify({ type: 'set-role', role: 'model' }));
+      // OJO: Igual que en el cliente, el start-match se lanza desde el botón/handler,
+      // no automáticamente al abrir el socket. (Se replica patrón del cliente)
       socket.send(JSON.stringify({ type: 'stats' }));
     };
 
@@ -359,12 +364,14 @@ const DashboardModel = () => {
           }
         } catch { setCurrentClientId(null); }
 
+        // === Igual que el cliente: reset de peer/remote ===
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
         setRemoteStream(null);
         setMessages([]);
         setError('');
         setStatus('');
+        setSearching(false); // <=== NUEVO: como en el cliente, deja de "buscar"
 
         const peer = new Peer({
           initiator: false,
@@ -394,33 +401,31 @@ const DashboardModel = () => {
         setStatus('');
         peerRef.current.signal(data.signal);
       } else if (data.type === 'chat') {
-        // evita eco de mi propio mensaje
         if (!isEcho(data.message)) {
           setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
         }
       } else if (data.type === 'no-client-available') {
+        // === Réplica del cliente: queda "searching" y espera en cola ===
+        setError('');
         setStatus('Esperando cliente...');
-        if (socketRef.current?.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ type: 'stats' }));
-        }
+        setSearching(true);
+        // (El cliente no reenvía start-match aquí; se queda en la cola. Replicado.)
       } else if (data.type === 'queue-stats') {
         if (typeof data.position === 'number') {
           setQueuePosition(data.position);
         }
       } else if (data.type === 'peer-disconnected') {
+        // === Réplica del cliente: limpiar, poner searching y reenviar start-match ===
         setCurrentClientId(null);
-        if (peerRef.current) {
-          peerRef.current.destroy();
-          peerRef.current = null;
-        }
-        if (remoteStream) {
-          remoteStream.getTracks().forEach((track) => track.stop());
-        }
+        try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
+        try { if (remoteStream) { remoteStream.getTracks().forEach((track) => track.stop()); } } catch {}
         setRemoteStream(null);
         setMessages([]);
-        setError('');
-        setStatus('Esperando cliente...');
+        setError('Buscando nuevo cliente...');
+        setStatus('');
+        setSearching(true);
         if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ type: 'start-match' }));
           socketRef.current.send(JSON.stringify({ type: 'stats' }));
         }
       }
@@ -435,7 +440,30 @@ const DashboardModel = () => {
         clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = null;
       }
+      setSearching(false); // proteger estado
     };
+  };
+
+  // === NUEVO: mismo handler que en el cliente para iniciar/relanzar búsqueda ===
+  const handleStartMatch = () => {
+    if (!cameraActive || !localStream.current) {
+      setError('Primero activa la cámara.');
+      return;
+    }
+    setSearching(true);
+    setError('');
+
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      setError('Error: No hay conexión con el servidor.');
+      setSearching(false);
+      return;
+    }
+    try {
+      socketRef.current.send(JSON.stringify({ type: 'start-match' }));
+    } catch (e) {
+      setError('Error enviando start-match.');
+      setSearching(false);
+    }
   };
 
   const handleNext = () => {
@@ -457,6 +485,7 @@ const DashboardModel = () => {
     setRemoteStream(null);
     setMessages([]);
     setStatus('Buscando nuevo cliente...');
+    setSearching(true); // espejo del cliente al hacer NEXT
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ type: 'stats' }));
     }
@@ -466,7 +495,6 @@ const DashboardModel = () => {
     if (chatInput.trim() === '') return;
     const message = { type: 'chat', message: chatInput.trim() };
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      // marca anti-eco y append optimista
       lastSentRef.current = { text: message.message, at: Date.now() };
       socketRef.current.send(JSON.stringify(message));
       setMessages((prev) => [...prev, { from: 'me', text: message.message }]);
@@ -567,6 +595,7 @@ const DashboardModel = () => {
     setMessages([]);
     setShowMsgPanel(false);
     setOpenChatWith(null);
+    setSearching(false); // === NUEVO: espejo del cliente
   };
 
   const streamingActivo = !!remoteStream;
@@ -617,7 +646,6 @@ const DashboardModel = () => {
   };
 
   const handleOpenChatFromFavorite = (favUser) => {
-    // favUser ahora incluye invited/status/role
     const peer = Number(favUser?.id ?? favUser?.userId);
     const name =
       favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${peer || ''}`;
@@ -631,26 +659,22 @@ const DashboardModel = () => {
       return;
     }
 
-    setSelectedFav(favUser);          // guardamos meta (status/invited/role)
-    setActiveTab('favoritos');        // aseguramos pestaña
+    setSelectedFav(favUser);
+    setActiveTab('favoritos');
 
-    // Si la invitación está pendiente, mostramos los botones Aceptar/Rechazar en el centro
     if (String(favUser?.invited) === 'pending') {
-      setOpenChatWith(peer);          // para que el centro sepa con quién es la invitación
-      setCenterChatPeerName(name);    // título del panel
-      setCenterMessages([]);          // limpio visual; no cargamos historial aún
-      setShowMsgPanel(true);          // mantenemos el panel visible
-      // opcional abrir socket, no imprescindible en estado pendiente
+      setOpenChatWith(peer);
+      setCenterChatPeerName(name);
+      setCenterMessages([]);
+      setShowMsgPanel(true);
       openMessagesSocket?.();
       return;
     }
 
-    // Si no está pendiente, abrimos chat normal (carga historial vía useEffect/openChatWithPeer)
     setShowMsgPanel(true);
     openMessagesSocket?.();
     openChatWithPeer(peer, name);
   };
-
 
   const openChatWithPeer = async (peerId, displayName) => {
     if (streamingActivo) {
@@ -708,7 +732,6 @@ const DashboardModel = () => {
       const name = selectedFav.nickname || `Usuario ${selectedFav.id}`;
       setSelectedFav(prev => prev ? ({ ...prev, invited: 'accepted' }) : prev);
       setFavReload(x => x + 1);
-      // abrir chat
       setOpenChatWith(selectedFav.id);
     } catch (e) {
       alert(e.message || 'No se pudo aceptar la invitación');
@@ -730,7 +753,6 @@ const DashboardModel = () => {
       alert(e.message || 'No se pudo rechazar la invitación');
     }
   };
-
 
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
@@ -828,10 +850,17 @@ const DashboardModel = () => {
               {cameraActive && (
                 <>
                   <div style={{ marginBottom: '10px' }}>
+                    {/* === NUEVO: botón Buscar Cliente y estado 'buscando', como en el cliente === */}
+                    {!searching && (
+                      <StyledActionButton onClick={handleStartMatch}>Buscar Cliente</StyledActionButton>
+                    )}
+                    {searching && <p>Buscando cliente...</p>}
+
                     <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}>
                       Stop
                     </StyledActionButton>
-                    {remoteStream && (
+
+                    {remoteStream && !searching && (
                       <>
                         <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
                         {currentClientId && (
@@ -1049,7 +1078,6 @@ const DashboardModel = () => {
         </StyledCenter>
 
         {/* ============================FIN ZONA CENTRAL ================================ */}
-
 
         <StyledRightColumn />
       </StyledMainContent>
