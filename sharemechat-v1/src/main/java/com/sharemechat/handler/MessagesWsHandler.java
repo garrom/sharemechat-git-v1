@@ -4,6 +4,7 @@ import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
+import com.sharemechat.service.FavoriteService;
 import com.sharemechat.service.MessageService;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
@@ -24,15 +25,20 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final MessageService messageService;
+    private final FavoriteService favoriteService;
     private static final Logger log = LoggerFactory.getLogger(MessagesWsHandler.class);
 
     // userId -> sockets
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionUserIds = new ConcurrentHashMap<>();
 
-    public MessagesWsHandler(JwtUtil jwtUtil, UserRepository userRepository, MessageService messageService) {
+    public MessagesWsHandler(JwtUtil jwtUtil,
+                             UserRepository userRepository,
+                             FavoriteService favoriteService,
+                             MessageService messageService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
+        this.favoriteService = favoriteService;
         this.messageService = messageService;
     }
 
@@ -113,7 +119,19 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 return;
             }
 
+            // === BLOQUEO por favoritos: se exige aceptación mutua y activa ===
             try {
+                if (!favoriteService.canUsersMessage(me, to)) {
+                    String err = "Mensajería bloqueada: esta relación no está aceptada por ambas partes o fue rechazada.";
+                    log.warn("WS msg:send REJECT (favorites gate) session={} me={} to={}", session.getId(), me, to);
+                    safeSend(session, new JSONObject()
+                            .put("type", "msg:error")
+                            .put("message", err)
+                            .toString());
+                    return;
+                }
+
+                // Si pasa el gate, enviamos
                 MessageDTO saved = messageService.send(me, to, body);
 
                 log.info("WS msg:send SAVED id={} senderId={} recipientId={}",
@@ -157,6 +175,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             return;
         }
     }
+
 
 
     private void broadcastToUser(Long userId, String json) {

@@ -36,6 +36,9 @@ const DashboardClient = () => {
   const [saldoError, setSaldoError] = useState('');
   const [status, setStatus] = useState('');
   const [nexting, setNexting] = useState(false);
+  const [favReload, setFavReload] = useState(0);           // refresca la lista tras cambios
+  const [selectedFav, setSelectedFav] = useState(null);    // { id, nickname, invited, status, role }
+
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -673,8 +676,54 @@ const DashboardClient = () => {
       return;
     }
 
+    setSelectedFav(favUser); // guardamos meta
+    // si está pendiente, mostramos botones en el centro; si no, abrimos chat
+    if (String(favUser?.invited) === 'pending') {
+      setActiveTab('favoritos');
+      setCenterChatPeerId(peer);
+      setCenterChatPeerName(name);
+      setCenterMessages([]); // limpio visual, pero no cargo historial aún
+      return;
+    }
     openChatWith(peer, name);
   };
+
+  const acceptInvitation = async () => {
+    if (!selectedFav?.id) return;
+    const tk = localStorage.getItem('token');
+    try {
+      const res = await fetch(`/api/favorites/accept/${selectedFav.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tk}` }
+      });
+      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      // actualizar UI: este peer pasa a accepted
+      const name = selectedFav.nickname || `Usuario ${selectedFav.id}`;
+      setSelectedFav(prev => prev ? { ...prev, invited: 'accepted' } : prev);
+      setFavReload(x => x + 1); // refrescar lista
+      openChatWith(selectedFav.id, name); // abrir chat directamente
+    } catch (e) {
+      alert(e.message || 'No se pudo aceptar la invitación');
+    }
+  };
+
+  const rejectInvitation = async () => {
+    if (!selectedFav?.id) return;
+    const tk = localStorage.getItem('token');
+    try {
+      const res = await fetch(`/api/favorites/reject/${selectedFav.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tk}` }
+      });
+      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      setSelectedFav(prev => prev ? { ...prev, invited: 'rejected' } : prev);
+      setFavReload(x => x + 1); // refrescar lista
+      // nos quedamos en el panel central mostrando rechazado
+    } catch (e) {
+      alert(e.message || 'No se pudo rechazar la invitación');
+    }
+  };
+
 
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
@@ -731,7 +780,7 @@ const DashboardClient = () => {
             {activeTab === 'favoritos' && (
               <li className="list-group-item p-0 border-0">
                 <FavoritesClientList
-                  onOpenChat={handleOpenChatFromFavorites}
+                  onSelect={handleOpenChatFromFavorites} reloadTrigger={favReload}
                 />
               </li>
             )}
@@ -743,6 +792,8 @@ const DashboardClient = () => {
             )}
           </ul>
         </StyledLeftColumn>
+
+        {/* ============================INICIO ZONA CENTRAL ================================ */}
 
         <StyledCenter>
           {activeTab === 'videochat' && (
@@ -848,50 +899,94 @@ const DashboardClient = () => {
               ) : (
                 <>
                   <div style={{ marginBottom:'8px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <h5 style={{ margin:0, color:'#fff' }}>Chat con {centerChatPeerName}</h5>
+                    <h5 style={{ margin:0, color:'#fff' }}>
+                      {selectedFav?.invited === 'pending'
+                        ? `Invitación de ${centerChatPeerName}`
+                        : `Chat con ${centerChatPeerName}`}
+                    </h5>
                     <div style={{ fontSize:12, color: wsReady ? '#20c997' : '#adb5bd' }}>
                       {wsReady ? 'Conectado' : 'Desconectado'}
                     </div>
                   </div>
 
-                  <div ref={centerListRef}
-                    style={{ flex:1, minHeight: 0, overflowY:'auto', border:'1px solid #333', borderRadius:8, padding:10, background:'rgba(0,0,0,0.2)' }}>
-                    {centerLoading && <div style={{ color:'#adb5bd' }}>Cargando historial…</div>}
-                    {!centerLoading && centerMessages.length === 0 && (
-                      <div style={{ color:'#adb5bd' }}>No hay mensajes todavía. ¡Escribe el primero!</div>
-                    )}
-                    {centerMessages.map(m => (
-                      <div key={m.id}
-                           style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
-                        <span style={{
-                          display:'inline-block',
-                          padding:'6px 10px',
-                          borderRadius:10,
-                          background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
-                          color:'#fff',
-                          maxWidth:'80%'
-                        }}>
-                          {m.body}
-                        </span>
+                  {selectedFav?.invited === 'pending' ? (
+                    <div style={{
+                      flex:1,
+                      minHeight: 0,
+                      display:'flex',
+                      alignItems:'center',
+                      justifyContent:'center',
+                      border:'1px solid #333',
+                      borderRadius:8,
+                      padding:16,
+                      background:'rgba(0,0,0,0.2)'
+                    }}>
+                      <div style={{ textAlign:'center' }}>
+                        <p style={{ color:'#fff', marginBottom:16 }}>
+                          {centerChatPeerName} te ha invitado a favoritos.
+                        </p>
+                        <div style={{ display:'flex', gap:12, justifyContent:'center' }}>
+                          <StyledActionButton onClick={acceptInvitation}>Aceptar</StyledActionButton>
+                          <StyledActionButton onClick={rejectInvitation} style={{ backgroundColor:'#dc3545' }}>
+                            Rechazar
+                          </StyledActionButton>
+                        </div>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div
+                        ref={centerListRef}
+                        style={{
+                          flex:1,
+                          minHeight: 0,
+                          overflowY:'auto',
+                          border:'1px solid #333',
+                          borderRadius:8,
+                          padding:10,
+                          background:'rgba(0,0,0,0.2)'
+                        }}
+                      >
+                        {centerLoading && <div style={{ color:'#adb5bd' }}>Cargando historial…</div>}
+                        {!centerLoading && centerMessages.length === 0 && (
+                          <div style={{ color:'#adb5bd' }}>No hay mensajes todavía. ¡Escribe el primero!</div>
+                        )}
+                        {centerMessages.map(m => (
+                          <div key={m.id}
+                               style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
+                            <span style={{
+                              display:'inline-block',
+                              padding:'6px 10px',
+                              borderRadius:10,
+                              background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
+                              color:'#fff',
+                              maxWidth:'80%'
+                            }}>
+                              {m.body}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
 
-                  <div style={{ display:'flex', gap:8, marginTop:10 }}>
-                    <input
-                      value={centerInput}
-                      onChange={(e)=>setCenterInput(e.target.value)}
-                      placeholder="Escribe un mensaje…"
-                      onKeyDown={(e)=>{ if (e.key === 'Enter') sendCenterMessage(); }}
-                      style={{ flex:1, borderRadius:6, border:'1px solid #333', padding:'8px', background:'rgba(255,255,255,0.9)' }}
-                    />
-                    <StyledActionButton onClick={sendCenterMessage}>Enviar</StyledActionButton>
-                  </div>
+                      <div style={{ display:'flex', gap:8, marginTop:10 }}>
+                        <input
+                          value={centerInput}
+                          onChange={(e)=>setCenterInput(e.target.value)}
+                          placeholder="Escribe un mensaje…"
+                          onKeyDown={(e)=>{ if (e.key === 'Enter') sendCenterMessage(); }}
+                          style={{ flex:1, borderRadius:6, border:'1px solid #333', padding:'8px', background:'rgba(255,255,255,0.9)' }}
+                        />
+                        <StyledActionButton onClick={sendCenterMessage}>Enviar</StyledActionButton>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
           )}
         </StyledCenter>
+
+        {/* ============================FIN ZONA CENTRAL ================================ */}
 
         <StyledRightColumn />
       </StyledMainContent>

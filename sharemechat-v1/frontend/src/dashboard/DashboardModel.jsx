@@ -35,6 +35,8 @@ const DashboardModel = () => {
   const [status, setStatus] = useState('');
   const [queuePosition, setQueuePosition] = useState(null);
   const [currentClientId, setCurrentClientId] = useState(null);
+  const [favReload, setFavReload] = useState(0);
+  const [selectedFav, setSelectedFav] = useState(null); // { id, nickname, invited, status, role }
 
   // Chat central (favoritos)
   const [centerMessages, setCenterMessages] = useState([]);
@@ -615,14 +617,40 @@ const DashboardModel = () => {
   };
 
   const handleOpenChatFromFavorite = (favUser) => {
-    const peerId = Number(favUser?.id ?? favUser?.userId);
-    const name = favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${peerId || ''}`;
-    if (!peerId) return;
-    setActiveTab('favoritos');
-    setOpenChatWith(peerId);
+    // favUser ahora incluye invited/status/role
+    const peer = Number(favUser?.id ?? favUser?.userId);
+    const name =
+      favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${peer || ''}`;
+
+    if (!Number.isFinite(peer) || peer <= 0) {
+      alert('No se pudo determinar el destinatario correcto.');
+      return;
+    }
+    if (Number(user?.id) === peer) {
+      alert('No puedes chatear contigo mismo.');
+      return;
+    }
+
+    setSelectedFav(favUser);          // guardamos meta (status/invited/role)
+    setActiveTab('favoritos');        // aseguramos pestaña
+
+    // Si la invitación está pendiente, mostramos los botones Aceptar/Rechazar en el centro
+    if (String(favUser?.invited) === 'pending') {
+      setOpenChatWith(peer);          // para que el centro sepa con quién es la invitación
+      setCenterChatPeerName(name);    // título del panel
+      setCenterMessages([]);          // limpio visual; no cargamos historial aún
+      setShowMsgPanel(true);          // mantenemos el panel visible
+      // opcional abrir socket, no imprescindible en estado pendiente
+      openMessagesSocket?.();
+      return;
+    }
+
+    // Si no está pendiente, abrimos chat normal (carga historial vía useEffect/openChatWithPeer)
     setShowMsgPanel(true);
-    openMessagesSocket();
+    openMessagesSocket?.();
+    openChatWithPeer(peer, name);
   };
+
 
   const openChatWithPeer = async (peerId, displayName) => {
     if (streamingActivo) {
@@ -667,6 +695,42 @@ const DashboardModel = () => {
       alert('Chat de mensajes desconectado. Reabre el panel.');
     }
   };
+
+  const acceptInvitation = async () => {
+    if (!selectedFav?.id) return;
+    const tk = localStorage.getItem('token');
+    try {
+      const res = await fetch(`/api/favorites/accept/${selectedFav.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tk}` }
+      });
+      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      const name = selectedFav.nickname || `Usuario ${selectedFav.id}`;
+      setSelectedFav(prev => prev ? ({ ...prev, invited: 'accepted' }) : prev);
+      setFavReload(x => x + 1);
+      // abrir chat
+      setOpenChatWith(selectedFav.id);
+    } catch (e) {
+      alert(e.message || 'No se pudo aceptar la invitación');
+    }
+  };
+
+  const rejectInvitation = async () => {
+    if (!selectedFav?.id) return;
+    const tk = localStorage.getItem('token');
+    try {
+      const res = await fetch(`/api/favorites/reject/${selectedFav.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${tk}` }
+      });
+      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      setSelectedFav(prev => prev ? ({ ...prev, invited: 'rejected' }) : prev);
+      setFavReload(x => x + 1);
+    } catch (e) {
+      alert(e.message || 'No se pudo rechazar la invitación');
+    }
+  };
+
 
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
@@ -737,7 +801,7 @@ const DashboardModel = () => {
             {activeTab === 'favoritos' && (
               <li className="list-group-item p-0 border-0">
                 <FavoritesModelList
-                  onOpenChat={handleOpenChatFromFavorite}
+                  onSelect={handleOpenChatFromFavorite} reloadTrigger={favReload}
                 />
               </li>
             )}
@@ -750,6 +814,8 @@ const DashboardModel = () => {
           </ul>
 
         </StyledLeftColumn>
+
+        {/* ============================INICIO ZONA CENTRAL ================================ */}
 
         <StyledCenter>
           {activeTab === 'videochat' && (
@@ -849,75 +915,141 @@ const DashboardModel = () => {
           {activeTab === 'funnyplace' && <FunnyplacePage />}
 
           {activeTab === 'favoritos' && (
-            <div ref={modelCenterListRef}
-              style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px' }}>
+            <div
+              ref={modelCenterListRef}
+              style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px' }}
+            >
               {!openChatWith ? (
                 <div style={{ color:'#adb5bd' }}>
                   Selecciona un favorito y pulsa <em>Chatear</em> para abrir la conversación aquí.
                 </div>
               ) : (
                 <>
+                  {/* Header del panel */}
                   <div style={{ marginBottom:'8px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <h5 style={{ margin:0, color:'#fff' }}>Chat con {centerChatPeerName}</h5>
+                    <h5 style={{ margin:0, color:'#fff' }}>
+                      Chat con {centerChatPeerName}
+                      {String(selectedFav?.invited) === 'pending' && (
+                        <span style={{
+                          marginLeft: 8,
+                          fontSize: 12,
+                          padding: '2px 8px',
+                          borderRadius: 12,
+                          background: '#ffc107',
+                          color: '#212529'
+                        }}>
+                          Invitación pendiente
+                        </span>
+                      )}
+                    </h5>
                     <div style={{ fontSize:12, color: msgConnected ? '#20c997' : '#adb5bd' }}>
                       {msgConnected ? 'Conectado' : 'Desconectado'}
                     </div>
                   </div>
 
-                  <div
-                    ref={modelCenterListRef}
-                    style={{
-                      flex:1,
-                      minHeight:0,
-                      overflowY:'auto',
-                      border:'1px solid #333',
-                      borderRadius:8,
-                      padding:10,
-                      background:'rgba(0,0,0,0.2)'
-                    }}
-                  >
-                    {centerMessages.length === 0 && (
-                      <div style={{ color:'#adb5bd' }}>No hay mensajes todavía. ¡Escribe el primero!</div>
-                    )}
-                    {centerMessages.map(m => (
-                      <div key={m.id}
-                           style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
-                        <span style={{
-                          display:'inline-block',
-                          padding:'6px 10px',
-                          borderRadius:10,
-                          background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
-                          color:'#fff',
-                          maxWidth:'80%'
-                        }}>
-                          {m.body}
-                        </span>
+                  {/* Vista condicional según invitación */}
+                  {String(selectedFav?.invited) === 'pending' ? (
+                    // ======= MODO INVITACIÓN PENDIENTE: botones persistentes =======
+                    <div style={{
+                      flex: 1,
+                      minHeight: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      border: '1px solid #333',
+                      borderRadius: 8,
+                      padding: 16,
+                      background: 'rgba(0,0,0,0.2)'
+                    }}>
+                      <div style={{ textAlign: 'center', maxWidth: 520 }}>
+                        <p style={{ color:'#e9ecef', marginBottom: 16 }}>
+                          <strong>{centerChatPeerName}</strong> te ha invitado a ser favoritos mutuos.
+                          Acepta para habilitar el chat y que ambos os veáis como favoritos activos.
+                        </p>
+                        <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
+                          <StyledActionButton
+                            onClick={() => acceptInvitation?.(selectedFav)}
+                            title="Aceptar invitación"
+                          >
+                            Aceptar
+                          </StyledActionButton>
+                          <StyledActionButton
+                            onClick={() => rejectInvitation?.(selectedFav)}
+                            style={{ backgroundColor: '#dc3545' }}
+                            title="Rechazar invitación"
+                          >
+                            Rechazar
+                          </StyledActionButton>
+                        </div>
+                        <p style={{ color:'#adb5bd', fontSize: 12, marginTop: 12 }}>
+                          Esta invitación se mantendrá aquí hasta que decidas.
+                        </p>
                       </div>
-                    ))}
-                  </div>
+                    </div>
+                  ) : (
+                    // ======= CHAT NORMAL (no pendiente) =======
+                    <>
+                      <div
+                        ref={modelCenterListRef}
+                        style={{
+                          flex:1,
+                          minHeight:0,
+                          overflowY:'auto',
+                          border:'1px solid #333',
+                          borderRadius:8,
+                          padding:10,
+                          background:'rgba(0,0,0,0.2)'
+                        }}
+                      >
+                        {centerMessages.length === 0 && (
+                          <div style={{ color:'#adb5bd' }}>No hay mensajes todavía. ¡Escribe el primero!</div>
+                        )}
+                        {centerMessages.map(m => (
+                          <div
+                            key={m.id}
+                            style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}
+                          >
+                            <span style={{
+                              display:'inline-block',
+                              padding:'6px 10px',
+                              borderRadius:10,
+                              background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
+                              color:'#fff',
+                              maxWidth:'80%'
+                            }}>
+                              {m.body}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
 
-                  <div style={{ display:'flex', gap:8, marginTop:10 }}>
-                    <input
-                      value={centerInput}
-                      onChange={(e)=>setCenterInput(e.target.value)}
-                      placeholder="Escribe un mensaje…"
-                      onKeyDown={(e)=>{ if (e.key === 'Enter') sendCenterMessage(); }}
-                      style={{
-                        flex:1,
-                        borderRadius:6,
-                        border:'1px solid #333',
-                        padding:'8px',
-                        background:'rgba(255,255,255,0.9)'
-                      }}
-                    />
-                    <StyledActionButton onClick={sendCenterMessage}>Enviar</StyledActionButton>
-                  </div>
+                      <div style={{ display:'flex', gap:8, marginTop:10 }}>
+                        <input
+                          value={centerInput}
+                          onChange={(e)=>setCenterInput(e.target.value)}
+                          placeholder="Escribe un mensaje…"
+                          onKeyDown={(e)=>{ if (e.key === 'Enter') sendCenterMessage(); }}
+                          style={{
+                            flex:1,
+                            borderRadius:6,
+                            border:'1px solid #333',
+                            padding:'8px',
+                            background:'rgba(255,255,255,0.9)'
+                          }}
+                        />
+                        <StyledActionButton onClick={sendCenterMessage}>Enviar</StyledActionButton>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </div>
           )}
 
         </StyledCenter>
+
+        {/* ============================FIN ZONA CENTRAL ================================ */}
+
 
         <StyledRightColumn />
       </StyledMainContent>

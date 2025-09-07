@@ -1,76 +1,73 @@
 import React, { useEffect, useState } from 'react';
-import FavoriteItem from './FavoriteItem';
 
-const FavoritesModelList = ({ onSelect, onOpenChat }) => {
-  const token = localStorage.getItem('token');
+export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [err, setErr] = useState('');
-  const [removingId, setRemovingId] = useState(null);
-
-  const load = async () => {
-    if (!token) return;
-    setLoading(true);
-    setErr('');
-    try {
-      const res = await fetch('/api/favorites/clients', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error((await res.text()) || `Error ${res.status}`);
-      const data = await res.json();
-      setItems(data || []);
-    } catch (e) {
-      setErr(e.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const [loading, setLoading] = useState(false);
+  const token = localStorage.getItem('token');
 
   useEffect(() => {
+    let ignore = false;
+    const load = async () => {
+      if (!token) return;
+      setLoading(true);
+      try {
+        const res = await fetch('/api/favorites/clients/meta', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+        const data = await res.json(); // [{ user, status, invited }]
+        if (!ignore) {
+          const mapped = (data || []).map(d => ({
+            ...d.user,
+            invited: d.invited,
+            status: d.status,
+            role: d.user?.role || 'CLIENT'
+          }));
+          setItems(mapped);
+        }
+      } catch (e) {
+        if (!ignore) setItems([]);
+      } finally {
+        if (!ignore) setLoading(false);
+      }
+    };
     load();
-    // eslint-disable-next-line
-  }, []);
+    return () => { ignore = true; };
+  }, [token, reloadTrigger]);
 
-  const removeOne = async (user) => {
-    if (!token) return;
-    setRemovingId(user.id);
-    try {
-      const res = await fetch(`/api/favorites/clients/${user.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      if (!res.ok) throw new Error((await res.text()) || `Error ${res.status}`);
-      setItems((prev) => prev.filter(i => i.id !== user.id));
-    } catch (e) {
-      alert(e.message || 'Error al quitar favorito');
-    } finally {
-      setRemovingId(null);
-    }
-  };
-
-  // handler que pasamos al ítem — si el padre no lo pasa, el ítem hará fallback
-  const handleOpenChat = (u) => {
-    if (onOpenChat) onOpenChat(u);
-  };
+  if (loading) return <div className="list-group-item">Cargando…</div>;
+  if (!items.length) return <div className="list-group-item">No tienes favoritos todavía.</div>;
 
   return (
-    <div>
-      <h4 style={{ marginBottom: 10 }}>Tus clientes favoritos</h4>
-      {loading && <p>Cargando…</p>}
-      {err && <p style={{ color: 'red' }}>{err}</p>}
-      {!loading && !err && items.length === 0 && <p>No tienes favoritos aún.</p>}
-      {!loading && !err && items.map(u => (
-        <FavoriteItem
-          key={u.id}
-          user={u}
-          onClick={onSelect}
-          onRemove={removeOne}
-          removing={removingId === u.id}
-          onChat={handleOpenChat}
-        />
+    <ul className="list-group list-group-flush">
+      {items.map(u => (
+        <li key={u.id}
+            className="list-group-item d-flex align-items-center justify-content-between"
+            style={{ cursor:'pointer' }}
+            onClick={() => onSelect?.(u)}
+        >
+          <div className="d-flex align-items-center">
+            <img src={u.profilePic || '/img/avatar.png'} alt="" width="28" height="28"
+                 style={{ borderRadius: '50%', objectFit:'cover', marginRight:8 }} />
+            <div>
+              <div style={{ fontWeight: 600 }}>{u.nickname || `Usuario ${u.id}`}</div>
+              <div style={{ fontSize:12, color:'#6c757d' }}>
+                {u.userType || 'CLIENT'}
+              </div>
+            </div>
+          </div>
+          <div className="d-flex" style={{ gap:6 }}>
+            <span className="badge bg-secondary">{u.status}</span>
+            <span className={
+                u.invited === 'pending' ? 'badge bg-warning text-dark'
+              : u.invited === 'rejected' ? 'badge bg-danger'
+              : 'badge bg-success'
+            }>
+              {u.invited}
+            </span>
+          </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
-};
-
-export default FavoritesModelList;
+}

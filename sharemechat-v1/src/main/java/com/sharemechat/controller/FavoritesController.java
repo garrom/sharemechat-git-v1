@@ -1,5 +1,6 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.dto.FavoriteListItemDTO;
 import com.sharemechat.dto.UserSummaryDTO;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
@@ -37,12 +38,6 @@ public class FavoritesController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/models")
-    public ResponseEntity<List<UserSummaryDTO>> listModels(Authentication auth) {
-        Long clientId = currentUserId(auth);
-        return ResponseEntity.ok(favoriteService.listClientFavoriteModels(clientId));
-    }
-
     // ===== MODEL -> CLIENTS =====
     @PostMapping("/clients/{clientId}")
     public ResponseEntity<Void> addClient(Authentication auth, @PathVariable Long clientId) {
@@ -58,10 +53,30 @@ public class FavoritesController {
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/clients")
-    public ResponseEntity<List<UserSummaryDTO>> listClients(Authentication auth) {
+    // ===== LISTADOS con metadatos (nuevos) =====
+    @GetMapping("/models/meta")
+    public ResponseEntity<List<FavoriteListItemDTO>> listModelsMeta(Authentication auth) {
+        Long clientId = currentUserId(auth);
+        return ResponseEntity.ok(favoriteService.listClientFavoritesMeta(clientId));
+    }
+
+    @GetMapping("/clients/meta")
+    public ResponseEntity<List<FavoriteListItemDTO>> listClientsMeta(Authentication auth) {
         Long modelId = currentUserId(auth);
-        return ResponseEntity.ok(favoriteService.listModelFavoriteClients(modelId));
+        return ResponseEntity.ok(favoriteService.listModelFavoritesMeta(modelId));
+    }
+
+    // ===== Aceptar / Rechazar invitación (nuevos) =====
+    @PostMapping("/accept/{peerId}")
+    public ResponseEntity<Void> accept(Authentication auth, @PathVariable Long peerId) {
+        favoriteService.acceptInvitation(currentUserId(auth), peerId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/reject/{peerId}")
+    public ResponseEntity<Void> reject(Authentication auth, @PathVariable Long peerId) {
+        favoriteService.rejectInvitation(currentUserId(auth), peerId);
+        return ResponseEntity.noContent().build();
     }
 
     private Long currentUserId(Authentication auth) {
