@@ -40,9 +40,21 @@ const DashboardAdmin = () => {
   const history = useHistory();
   const token = localStorage.getItem('token');
   const DB_TABLES = [
-    'users','clients','models','transactions','balances',
-    'platform_transactions','platform_balances','stream_records'
-  ]; // ajusta a tus tablas reales
+    'users',
+    'clients',
+    'models',
+    'transactions',
+    'balances',
+    'platform_transactions',
+    'platform_balances',
+    'stream_records',
+    'favorites_clients',
+    'favorites_models',
+    'gifts',
+    'messages',
+    'password_reset_tokens'
+  ];
+
   const LIMIT_OPTIONS = [10,20,30,40,50,100];
 
 
@@ -588,9 +600,12 @@ const DashboardAdmin = () => {
                       {dbRows.map((row, idx) => (
                         <tr key={idx}>
                           {Object.keys(dbRows[0] || {}).map(k => (
-                            <td key={k}>
-                              {row[k] === null || row[k] === undefined ? '—' : String(row[k])}
-                            </td>
+                             <td key={k} title={row[k] == null ? '' : String(row[k])}>
+                               {row[k] == null
+                                 ? '—'
+                                 : String(row[k]).slice(0, 120) +
+                                   (String(row[k]).length > 120 ? '…' : '')}
+                             </td>
                           ))}
                         </tr>
                       ))}

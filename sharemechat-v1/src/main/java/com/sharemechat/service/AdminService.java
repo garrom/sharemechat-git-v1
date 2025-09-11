@@ -32,7 +32,7 @@ public class AdminService {
     private final NamedParameterJdbcTemplate jdbc;
     private static final Map<String, String> TABLE_ORDER = new HashMap<>();
     static {
-        // tabla -> columna por la que ordenar DESC (ajusta a tus esquemas)
+        // tabla -> columna por la que ordenar DESC
         TABLE_ORDER.put("users", "id");
         TABLE_ORDER.put("clients", "user_id");
         TABLE_ORDER.put("models", "user_id");
@@ -41,6 +41,11 @@ public class AdminService {
         TABLE_ORDER.put("platform_transactions", "id");
         TABLE_ORDER.put("platform_balances", "id");
         TABLE_ORDER.put("stream_records", "id");
+        TABLE_ORDER.put("favorites_clients", "id");
+        TABLE_ORDER.put("favorites_models", "id");
+        TABLE_ORDER.put("gifts", "id");
+        TABLE_ORDER.put("messages", "id");
+        TABLE_ORDER.put("password_reset_tokens", "created_at");
     }
 
     public AdminService(UserRepository userRepository, UserService userService,
