@@ -1,12 +1,12 @@
 package com.sharemechat.handler;
 
 import com.sharemechat.dto.MessageDTO;
-import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.MessageService;
 import com.sharemechat.service.ModelStatusService;
 import com.sharemechat.service.StreamService;
+import com.sharemechat.service.TransactionService;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
@@ -40,10 +40,12 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final ModelStatusService modelStatusService;
     private final MessageService messageService;
     private final MessagesWsHandler messagesWsHandler;
+    private final TransactionService transactionService;
 
     public MatchingHandler(JwtUtil jwtUtil,
                            UserRepository userRepository,
                            StreamService streamService,
+                           TransactionService transactionService,
                            MessageService messageService,
                            MessagesWsHandler messagesWsHandler,
                            ModelStatusService modelStatusService) {
@@ -53,6 +55,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         this.modelStatusService = modelStatusService;
         this.messageService =messageService;
         this.messagesWsHandler = messagesWsHandler;
+        this.transactionService = transactionService;
 
     }
 
@@ -122,7 +125,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             JSONObject json = new JSONObject(payload);
             String type = json.getString("type");
 
-            // ===== LOGS SANITIZADOS =====
+            // ===== LOGS SANITIZADOS NO ES FUNCIONA, NO AFECTA A LA LÓGICA, SOLO ES DE LOGGING =====
             if ("signal".equals(type)) {
                 JSONObject sig = json.optJSONObject("signal");
                 String sigType = sig != null ? sig.optString("type", "") : "";
@@ -185,9 +188,9 @@ public class MatchingHandler extends TextWebSocketHandler {
                 // persistir chat de streaming en DB y reemitir
                 WebSocketSession peer = pairs.get(session.getId());
                 if (peer != null && peer.isOpen()) {
-                    Long senderId    = sessionUserIds.get(session.getId());
+                    Long senderId = sessionUserIds.get(session.getId());
                     Long recipientId = sessionUserIds.get(peer.getId());
-                    String body      = json.optString("message", "").trim();
+                    String body = json.optString("message", "").trim();
 
                     if (senderId != null && recipientId != null && !body.isEmpty()) {
                         try {
@@ -206,19 +209,29 @@ public class MatchingHandler extends TextWebSocketHandler {
                                     .put("readAt", saved.readAt() == null ? JSONObject.NULL : String.valueOf(saved.readAt()));
 
                             TextMessage tm = new TextMessage(out.toString());
-                            try { session.sendMessage(tm); } catch (Exception ignore) {}
-                            try { peer.sendMessage(tm); } catch (Exception ignore) {}
+                            try {
+                                session.sendMessage(tm);
+                            } catch (Exception ignore) {
+                            }
+                            try {
+                                peer.sendMessage(tm);
+                            } catch (Exception ignore) {
+                            }
                         } catch (Exception ex) {
                             // Si falla la persistencia, al menos reenvía el payload original
                             System.out.println("Persistencia chat falló: " + ex.getMessage());
-                            try { peer.sendMessage(new TextMessage(payload)); } catch (Exception ignore) {}
+                            try {
+                                peer.sendMessage(new TextMessage(payload));
+                            } catch (Exception ignore) {
+                            }
                             // y notifica al remitente
                             try {
                                 JSONObject err = new JSONObject()
-                                        .put("type","msg:error")
+                                        .put("type", "msg:error")
                                         .put("message", ex.getMessage());
                                 session.sendMessage(new TextMessage(err.toString()));
-                            } catch (Exception ignore) {}
+                            } catch (Exception ignore) {
+                            }
                         }
                     } else {
                         // fallback: reenvío simple si no tenemos IDs válidos
@@ -226,6 +239,8 @@ public class MatchingHandler extends TextWebSocketHandler {
                     }
                 }
 
+            } else if ("gift".equals(type)){
+                handleGiftInMatch(session, json);
             } else if ("stats".equals(type)) {
                 sendQueueStats(session);
 
@@ -372,6 +387,54 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    // EL METODO PROCESA EL ENVÍO DE UN REGALO DURANTE UNA SESIÓN DE STREAMING Y NOTIFICA A CLIENTE Y MODELO.
+    private void handleGiftInMatch(WebSocketSession session, org.json.JSONObject json) {
+        Long senderId = sessionUserIds.get(session.getId());
+        if (senderId == null) { safeSend(session, "{\"type\":\"gift:error\",\"message\":\"No autenticado\"}"); return; }
+        String senderRole = roles.get(session.getId());
+        if (!"client".equals(senderRole)) { safeSend(session, "{\"type\":\"gift:error\",\"message\":\"Solo un CLIENT puede enviar regalos\"}"); return; }
+
+        long giftId = json.optLong("giftId", 0L);
+        if (giftId <= 0L) { safeSend(session, "{\"type\":\"gift:error\",\"message\":\"giftId inválido\"}"); return; }
+
+        WebSocketSession peer = pairs.get(session.getId());
+        if (peer == null || !peer.isOpen()) { safeSend(session, "{\"type\":\"gift:error\",\"message\":\"No hay destinatario conectado\"}"); return; }
+
+        Long peerUserId = sessionUserIds.get(peer.getId());
+        String peerRole = roles.get(peer.getId());
+        if (peerUserId == null || !"model".equals(peerRole)) { safeSend(session, "{\"type\":\"gift:error\",\"message\":\"Destinatario no es MODEL\"}"); return; }
+
+        Long streamId = null;
+        try {
+            // si tienes Redis/cache de sesión activa
+            streamId = modelStatusService.getActiveSession(senderId, peerUserId).orElse(null);
+        } catch (Exception ignore) {}
+
+        try {
+            // requiere inyectar TransactionService en este handler
+            com.sharemechat.entity.Gift g = transactionService.processGift(senderId, peerUserId, giftId, streamId);
+
+            org.json.JSONObject out = new org.json.JSONObject()
+                    .put("type", "gift")
+                    .put("fromUserId", senderId)
+                    .put("toUserId", peerUserId)
+                    .put("gift", new org.json.JSONObject()
+                            .put("id", g.getId())
+                            .put("name", g.getName())
+                            .put("icon", g.getIcon())
+                            .put("cost", g.getCost().toPlainString())
+                    );
+
+            String payload = out.toString();
+            safeSend(session, payload);
+            if (peer.isOpen()) safeSend(peer, payload);
+        } catch (Exception ex) {
+            safeSend(session, new org.json.JSONObject()
+                    .put("type", "gift:error")
+                    .put("message", ex.getMessage())
+                    .toString());
+        }
+    }
 
     //EL METODO GESTIONA EL CAMBIO DE PAREJA CUANDO UN USUARIO PULSA NEXT FINALIZANDO LA SESION ACTUAL Y BUSCANDO UN NUEVO EMPAREJAMIENTO
     private void endStreamIfPairKnown(Long idA, String roleA, Long idB, String roleB) {

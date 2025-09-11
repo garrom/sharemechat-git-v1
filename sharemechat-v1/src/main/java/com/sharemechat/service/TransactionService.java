@@ -4,9 +4,10 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.TransactionRequestDTO;
 import com.sharemechat.entity.*;
 import com.sharemechat.repository.*;
+import com.sharemechat.config.BillingProperties;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import java.math.RoundingMode;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.Optional;
@@ -19,18 +20,35 @@ public class TransactionService {
     private final ClientRepository clientRepository;
     private final ModelRepository modelRepository;
     private final UserRepository userRepository;
+    private final GiftRepository giftRepository;
+    private final StreamRecordRepository streamRecordRepository;
+    private final PlatformTransactionRepository platformTransactionRepository;
+    private final PlatformBalanceRepository platformBalanceRepository;
+    private final BillingProperties billing;
+
 
     public TransactionService(TransactionRepository transactionRepository,
                               BalanceRepository balanceRepository,
                               ClientRepository clientRepository,
                               ModelRepository modelRepository,
-                              UserRepository userRepository) {
+                              UserRepository userRepository,
+                              GiftRepository giftRepository,
+                              StreamRecordRepository streamRecordRepository,
+                              PlatformTransactionRepository platformTransactionRepository,
+                              PlatformBalanceRepository platformBalanceRepository,
+                              BillingProperties billing) {
         this.transactionRepository = transactionRepository;
         this.balanceRepository = balanceRepository;
         this.clientRepository = clientRepository;
         this.modelRepository = modelRepository;
         this.userRepository = userRepository;
+        this.giftRepository = giftRepository;
+        this.streamRecordRepository = streamRecordRepository;
+        this.platformTransactionRepository = platformTransactionRepository;
+        this.platformBalanceRepository = platformBalanceRepository;
+        this.billing = billing;
     }
+
 
     /**
      * PRIMER PAGO (atomicidad total, 4 mapeos):
@@ -263,6 +281,126 @@ public class TransactionService {
         // 8) Actualizar Model.saldo_actual
         model.setSaldoActual(newBalance);
         modelRepository.save(model);
+    }
+
+    @Transactional
+    public Gift processGift(Long clientId, Long modelId, Long giftId, Long streamIdOrNull) {
+        User clientUser = userRepository.findById(clientId)
+                .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado: " + clientId));
+        if (!Constants.Roles.CLIENT.equals(clientUser.getRole())) {
+            throw new IllegalArgumentException("El remitente debe ser CLIENT");
+        }
+        User modelUser = userRepository.findById(modelId)
+                .orElseThrow(() -> new IllegalArgumentException("Modelo no encontrado: " + modelId));
+        if (!Constants.Roles.MODEL.equals(modelUser.getRole())) {
+            throw new IllegalArgumentException("El destinatario debe ser MODEL");
+        }
+
+        Gift gift = giftRepository.findById(giftId)
+                .orElseThrow(() -> new IllegalArgumentException("Gift inexistente: " + giftId));
+        BigDecimal cost = gift.getCost().setScale(2, RoundingMode.HALF_UP);
+
+        // Consistencia y saldo cliente
+        Client client = clientRepository.findByUser(clientUser)
+                .orElseThrow(() -> new IllegalStateException("Cliente no encontrado para userId=" + clientId));
+        BigDecimal lastClientBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(clientId)
+                .map(Balance::getBalance).orElse(BigDecimal.ZERO);
+        if (lastClientBalance.compareTo(client.getSaldoActual()) != 0) {
+            throw new IllegalStateException("Inconsistencia CLIENT: último balance ("+lastClientBalance+") != clients.saldo_actual ("+client.getSaldoActual()+")");
+        }
+        if (client.getSaldoActual().compareTo(cost) < 0) {
+            throw new IllegalArgumentException("Saldo insuficiente para enviar el regalo");
+        }
+
+        // Saldo modelo
+        Model model = modelRepository.findByUser(modelUser)
+                .orElseGet(() -> { Model m=new Model(); m.setUser(modelUser); m.setUserId(modelId); return m; });
+        BigDecimal lastModelBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(modelId)
+                .map(Balance::getBalance).orElse(BigDecimal.ZERO);
+
+        // Split (reusa tu % plataforma vs modelo)
+        BigDecimal modelEarning    = cost.multiply(billing.getModelShare()).setScale(2, RoundingMode.HALF_UP);   // [NEW]
+        BigDecimal platformEarning = cost.subtract(modelEarning).setScale(2, RoundingMode.HALF_UP);
+
+        // (Opcional) enlazar a stream si existe
+        StreamRecord stream = null;
+        if (streamIdOrNull != null) {
+            stream = streamRecordRepository.findById(streamIdOrNull).orElse(null);
+        }
+
+        // ===== CLIENTE =====
+        Transaction txClient = new Transaction();
+        txClient.setUser(clientUser);
+        txClient.setAmount(cost.negate());
+        txClient.setOperationType("GIFT_SEND");
+        txClient.setStreamRecord(stream);
+        txClient.setDescription("Regalo: " + gift.getName());
+        Transaction savedTxClient = transactionRepository.save(txClient);
+
+        BigDecimal newClientBalance = lastClientBalance.subtract(cost);
+        Balance balClient = new Balance();
+        balClient.setUserId(clientId);
+        balClient.setTransactionId(savedTxClient.getId());
+        balClient.setOperationType("GIFT_SEND");
+        balClient.setAmount(cost.negate());
+        balClient.setBalance(newClientBalance);
+        balClient.setDescription("Regalo enviado: " + gift.getName());
+        balanceRepository.save(balClient);
+
+        client.setSaldoActual(newClientBalance);
+        clientRepository.save(client);
+
+        // ===== MODELO =====
+        Transaction txModel = new Transaction();
+        txModel.setUser(modelUser);
+        txModel.setAmount(modelEarning);
+        txModel.setOperationType("GIFT_EARNING");
+        txModel.setStreamRecord(stream);
+        txModel.setDescription("Ingreso por regalo: " + gift.getName());
+        Transaction savedTxModel = transactionRepository.save(txModel);
+
+        BigDecimal newModelBalance = lastModelBalance.add(modelEarning);
+        Balance balModel = new Balance();
+        balModel.setUserId(modelId);
+        balModel.setTransactionId(savedTxModel.getId());
+        balModel.setOperationType("GIFT_EARNING");
+        balModel.setAmount(modelEarning);
+        balModel.setBalance(newModelBalance);
+        balModel.setDescription("Ingreso por regalo: " + gift.getName());
+        balanceRepository.save(balModel);
+
+        model.setSaldoActual(newModelBalance);
+        BigDecimal totalIngresos = model.getTotalIngresos() == null ? BigDecimal.ZERO : model.getTotalIngresos();
+        model.setTotalIngresos(totalIngresos.add(modelEarning));
+        modelRepository.save(model);
+
+        // ===== Plataforma (margen) =====
+        if (platformEarning.compareTo(BigDecimal.ZERO) > 0) {
+            PlatformTransaction ptx = new PlatformTransaction();
+            ptx.setAmount(platformEarning);
+            ptx.setOperationType("GIFT_MARGIN");
+            ptx.setStreamRecord(stream);
+            ptx.setDescription("Margen por regalo: " + gift.getName());
+            PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
+
+            BigDecimal lastPlatformBalance = platformBalanceRepository.findTopByOrderByTimestampDesc()
+                    .map(PlatformBalance::getBalance).orElse(BigDecimal.ZERO);
+
+            PlatformBalance pbal = new PlatformBalance();
+            pbal.setTransactionId(savedPtx.getId());
+            pbal.setAmount(platformEarning);
+            pbal.setBalance(lastPlatformBalance.add(platformEarning));
+            pbal.setDescription("Margen por regalo: " + gift.getName());
+            platformBalanceRepository.save(pbal);
+        }
+
+        return gift;
+    }
+
+    // Azúcar para "chat de favoritos" (sin stream)
+    @Transactional
+    public Gift processGiftInChat(Long clientId, Long modelId, Long giftId) {
+        return processGift(clientId, modelId, giftId, null);
     }
 
 }

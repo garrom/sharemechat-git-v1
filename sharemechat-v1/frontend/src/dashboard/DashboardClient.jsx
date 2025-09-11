@@ -36,9 +36,11 @@ const DashboardClient = () => {
   const [saldoError, setSaldoError] = useState('');
   const [status, setStatus] = useState('');
   const [nexting, setNexting] = useState(false);
-  const [favReload, setFavReload] = useState(0);           // refresca la lista tras cambios
-  const [selectedFav, setSelectedFav] = useState(null);    // { id, nickname, invited, status, role }
-
+  const [favReload, setFavReload] = useState(0);
+  const [selectedFav, setSelectedFav] = useState(null);
+  const [gifts,setGifts]=useState([]);
+  const [showGifts,setShowGifts]=useState(false);
+  const [showCenterGifts,setShowCenterGifts]=useState(false);
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -49,27 +51,25 @@ const DashboardClient = () => {
   const pingIntervalRef = useRef(null);
   const token = localStorage.getItem('token');
 
-  // --- Dedupe de eco para chat de streaming (RTC)
   const lastSentRef = useRef({ text: null, at: 0 });
   const isEcho = (incoming) => {
     const now = Date.now();
     return (
       incoming === lastSentRef.current.text &&
-      now - lastSentRef.current.at < 1500 // ventana corta para ecos
+      now - lastSentRef.current.at < 1500
     );
   };
 
-  // ======== estados/refs para chat central (favoritos) ========
-  const msgSocketRef = useRef(null);                       // WS /messages
+  const msgSocketRef = useRef(null);
   const centerListRef = useRef(null);
-  const [wsReady, setWsReady] = useState(false);           // estado conexión WS mensajes
+  const [wsReady, setWsReady] = useState(false);
   const [centerChatPeerId, setCenterChatPeerId] = useState(null);
   const [centerChatPeerName, setCenterChatPeerName] = useState('');
   const [centerMessages, setCenterMessages] = useState([]);
   const [centerInput, setCenterInput] = useState('');
   const [centerLoading, setCenterLoading] = useState(false);
-  const msgPingRef = useRef(null);                         // keepalive ping
-  const msgReconnectRef = useRef(null);                    // timeout reconexión
+  const msgPingRef = useRef(null);
+  const msgReconnectRef = useRef(null);
 
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
@@ -96,8 +96,13 @@ const DashboardClient = () => {
     if (token) loadUser();
   }, [token]);
 
-  useEffect(() => { meIdRef.current = Number(user?.id) || null; }, [user?.id]);
-  useEffect(() => { peerIdRef.current = Number(centerChatPeerId) || null; }, [centerChatPeerId]);
+  useEffect(() => {
+      meIdRef.current = Number(user?.id) || null;
+  }, [user?.id]);
+
+  useEffect(() => {
+      peerIdRef.current = Number(centerChatPeerId) || null;
+  }, [centerChatPeerId]);
 
   useEffect(() => {
     if (localVideoRef.current && localStream.current) {
@@ -147,7 +152,15 @@ const DashboardClient = () => {
     loadSaldo();
   }, []);
 
-  // ======== helpers WS mensajes (abrir/cerrar/reconectar/keepalive) ========
+  useEffect(()=>{
+      const tk=localStorage.getItem('token');
+      if(!tk) return;
+      fetch('/api/gifts',{ headers:{Authorization:`Bearer ${tk}`} })
+      .then(r=>r.ok?r.json():[])
+      .then(setGifts)
+      .catch(()=>{});
+  },[]);
+
   const clearMsgTimers = () => {
     if (msgPingRef.current) {
       clearInterval(msgPingRef.current);
@@ -213,12 +226,39 @@ const DashboardClient = () => {
       try {
         const data = JSON.parse(ev.data);
 
+        // === (MEJORA 1) Regalo en vivo por /messages filtrado al chat abierto ===
+        if (data.type === 'msg:gift' && data.gift) {
+          const me   = Number(meIdRef.current);
+          const peer = Number(peerIdRef.current);
+          const from = Number(data.from);
+          const to   = Number(data.to);
+          const belongsToThisChat =
+            (from === peer && to === me) || (from === me && to === peer);
+          if (!me || !peer || !belongsToThisChat) return;
+
+          setCenterMessages(prev => [...prev, {
+            id: data.messageId,
+            senderId: from,
+            recipientId: to,
+            body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
+            gift: data.gift
+          }]);
+          queueMicrotask(() => { const el = centerListRef.current; if (el) el.scrollTop = el.scrollHeight; });
+          return;
+        }
+
         if (data.type === 'msg:new' && data.message) {
           const m = normMsg(data.message);
 
-          const me   = Number(meIdRef.current);
-          const peer = Number(peerIdRef.current);
+          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            const parts = m.body.slice(2, -2).split(':');
+            if (parts.length >= 3 && parts[0] === 'GIFT') {
+              m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':'), icon: '🎁' };
+            }
+          }
 
+          const me = Number(meIdRef.current);
+          const peer = Number(peerIdRef.current);
           if (!me || !peer) return;
 
           const belongsToThisChat =
@@ -227,24 +267,20 @@ const DashboardClient = () => {
 
           if (belongsToThisChat) {
             setCenterMessages(prev => [...prev, m]);
-
-            queueMicrotask(() => {
-                const el = centerListRef.current;
-                if (el) el.scrollTop = el.scrollHeight;
-            });
+            queueMicrotask(() => { const el = centerListRef.current; if (el) el.scrollTop = el.scrollHeight; });
           }
+          return;
         }
       } catch (e) {
         // silenciar parse errors
       }
     };
+
   };
 
-  // WS /messages siempre abierto mientras el dashboard esté montado
   useEffect(() => {
       openMsgSocket();
       return () => closeMsgSocket();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleActivateCamera = async () => {
@@ -356,11 +392,23 @@ const DashboardClient = () => {
       }
 
       if (data.type === 'chat') {
-        // evita eco de mi propio mensaje
         if (!isEcho(data.message)) {
           setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
         }
         return;
+      }
+
+      if(data.type==='gift'){
+          const mine=Number(data.fromUserId)===Number(user?.id);
+          setMessages(p=>[...p,{from:mine?'me':'peer',text:`🎁 ${data.gift.name}`,gift:data.gift}]);
+          if(mine&&data.newBalance){
+              setSaldo(Number(data.newBalance));
+          }
+          return;
+      }
+      if(data.type==='gift:error'){
+          setError(data.message||'No se pudo enviar el regalo');
+          return;
       }
 
       if (data.type === 'no-model-available') {
@@ -434,10 +482,8 @@ const DashboardClient = () => {
     if (chatInput.trim() === '') return;
     const message = { type: 'chat', message: chatInput.trim() };
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      // marca para evitar eco
       lastSentRef.current = { text: message.message, at: Date.now() };
       socketRef.current.send(JSON.stringify(message));
-      // append optimista
       setMessages(prev => [...prev, { from: 'me', text: message.message }]);
       setChatInput('');
     }
@@ -474,12 +520,13 @@ const DashboardClient = () => {
     setRemoteStream(null);
     setError('');
     setMessages([]);
-
-    // limpiar chat central
     setCenterChatPeerId(null);
     setCenterChatPeerName('');
     setCenterMessages([]);
     setCenterInput('');
+    // === (MEJORA 2) cerrar pickers de regalos al cortar ===
+    setShowGifts(false);
+    setShowCenterGifts(false);
   };
 
   const handleAddBalance = async () => {
@@ -545,13 +592,12 @@ const DashboardClient = () => {
     }
   };
 
-  // ======== GUARDAS DE NAVEGACIÓN DURANTE STREAMING ========
   const streamingActivo = !!remoteStream;
 
   const handleGoFunnyplace = () => {
     if (streamingActivo) {
       const ok = window.confirm('Si entras en Funnyplace se cortará el streaming actual. ¿Continuar?');
-    if (!ok) return;
+      if (!ok) return;
       stopAll();
     }
     setActiveTab('funnyplace');
@@ -593,7 +639,6 @@ const DashboardClient = () => {
     }
   };
 
-  // ======== helpers de chat central (REST + WS mensajes) ========
   const openChatWith = async (peerId, displayName) => {
     if (streamingActivo) {
       alert('No puedes abrir el chat central mientras hay streaming. Pulsa Stop si quieres cambiar.');
@@ -609,9 +654,8 @@ const DashboardClient = () => {
     try {
       const tk = localStorage.getItem('token');
       const res = await fetch(`/api/messages/with/${peerId}`, {
-        headers: { Authorization: { toString(){ return `Bearer ${tk}`; } }['toString']() } // evita minificador raro
+        headers: { Authorization: { toString(){ return `Bearer ${tk}`; } }['toString']() }
       });
-      // fallback simple:
       const res2 = await fetch(`/api/messages/with/${peerId}`, { headers: { Authorization: `Bearer ${tk}` }});
       const okRes = res.ok ? res : res2;
 
@@ -656,7 +700,6 @@ const DashboardClient = () => {
       const payload = { type: 'msg:send', to: Number(centerChatPeerId), body: centerInput.trim() };
       s.send(JSON.stringify(payload));
       setCenterInput('');
-      // sin optimista; el eco msg:new lo añadirá
     } else {
       alert('Chat de mensajes desconectado. Reabre el panel.');
     }
@@ -676,13 +719,12 @@ const DashboardClient = () => {
       return;
     }
 
-    setSelectedFav(favUser); // guardamos meta
-    // si está pendiente, mostramos botones en el centro; si no, abrimos chat
+    setSelectedFav(favUser);
     if (String(favUser?.invited) === 'pending') {
       setActiveTab('favoritos');
       setCenterChatPeerId(peer);
       setCenterChatPeerName(name);
-      setCenterMessages([]); // limpio visual, pero no cargo historial aún
+      setCenterMessages([]);
       return;
     }
     openChatWith(peer, name);
@@ -697,11 +739,10 @@ const DashboardClient = () => {
         headers: { Authorization: `Bearer ${tk}` }
       });
       if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
-      // actualizar UI: este peer pasa a accepted
       const name = selectedFav.nickname || `Usuario ${selectedFav.id}`;
       setSelectedFav(prev => prev ? { ...prev, invited: 'accepted' } : prev);
-      setFavReload(x => x + 1); // refrescar lista
-      openChatWith(selectedFav.id, name); // abrir chat directamente
+      setFavReload(x => x + 1);
+      openChatWith(selectedFav.id, name);
     } catch (e) {
       alert(e.message || 'No se pudo aceptar la invitación');
     }
@@ -717,18 +758,30 @@ const DashboardClient = () => {
       });
       if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
       setSelectedFav(prev => prev ? { ...prev, invited: 'rejected' } : prev);
-      setFavReload(x => x + 1); // refrescar lista
-      // nos quedamos en el panel central mostrando rechazado
+      setFavReload(x => x + 1);
     } catch (e) {
       alert(e.message || 'No se pudo rechazar la invitación');
     }
   };
 
+  const sendGiftMatch=(giftId)=>{
+      if(!socketRef.current||socketRef.current.readyState!==WebSocket.OPEN) return;
+      socketRef.current.send(JSON.stringify({type:'gift',giftId}));
+      setShowGifts(false);
+  };
+
+  const sendGiftMsg=(giftId)=>{
+      if(!centerChatPeerId||!msgSocketRef.current||msgSocketRef.current.readyState!==WebSocket.OPEN) return;
+      msgSocketRef.current.send(JSON.stringify({type:'msg:gift',to:Number(centerChatPeerId),giftId}));
+      setShowCenterGifts(false);
+  };
 
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
   return (
     <StyledContainer>
+
+      {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
         <span>Mi Logo</span>
         <div>
@@ -749,8 +802,12 @@ const DashboardClient = () => {
           </StyledNavButton>
         </div>
       </StyledNavbar>
+      {/* ========= FIN NAVBAR  ======== */}
 
+      {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent>
+
+       {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
         <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
             <button
@@ -792,9 +849,9 @@ const DashboardClient = () => {
             )}
           </ul>
         </StyledLeftColumn>
+        {/* ========= FIN COLUMNA IZQUIERDA  ======== */}
 
-        {/* ============================INICIO ZONA CENTRAL ================================ */}
-
+       {/* ================INICIO ZONA CENTRAL =================*/}
         <StyledCenter>
           {activeTab === 'videochat' && (
             <>
@@ -858,11 +915,22 @@ const DashboardClient = () => {
                               key={index}
                               style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
                             >
-                              <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
+                              {msg.gift ? (
+                                <div>
+                                  <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong>{' '}
+                                  <img src={msg.gift.icon} alt={msg.gift.name} style={{ width:28, height:28, marginLeft:6 }} />
+                                  <span style={{ marginLeft: 6 }}>{msg.gift.name}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
+                                </>
+                              )}
                             </div>
                           ))}
                         </div>
-                        <div style={{ display: 'flex' }}>
+
+                        <div style={{ display: 'flex', alignItems:'center', position:'relative' }}>
                           <input
                             type="text"
                             value={chatInput}
@@ -877,6 +945,28 @@ const DashboardClient = () => {
                             }}
                           />
                           <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
+
+                          <StyledActionButton onClick={()=>setShowGifts(s=>!s)} title="Enviar regalo" style={{ marginLeft: 8 }}>
+                            🎁
+                          </StyledActionButton>
+                          {showGifts && (
+                            <div style={{
+                              position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)',
+                              padding:10, borderRadius:8, zIndex:10, border:'1px solid #333'
+                            }}>
+                              <div style={{display:'grid', gridTemplateColumns:'repeat(3, 80px)', gap:8, maxHeight:240, overflowY:'auto'}}>
+                                {gifts.map(g=>(
+                                  <button key={g.id}
+                                    onClick={()=>sendGiftMatch(g.id)}
+                                    style={{ background:'transparent', border:'1px solid #555', borderRadius:8, padding:6, cursor:'pointer', color:'#fff' }}>
+                                    <img src={g.icon} alt={g.name} style={{ width:32, height:32, display:'block', margin:'0 auto' }} />
+                                    <div style={{ fontSize:12 }}>{g.name}</div>
+                                    <div style={{ fontSize:12, opacity:.8 }}>{fmtEUR(g.cost)}</div>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </StyledChatContainer>
                     </StyledRemoteVideo>
@@ -891,7 +981,7 @@ const DashboardClient = () => {
           {activeTab === 'funnyplace' && ( <FunnyplacePage /> )}
 
           {activeTab === 'favoritos' && (
-            <div style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px' }}>
+            <div style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px', position:'relative' }}>
               {!centerChatPeerId ? (
                 <div style={{ color:'#adb5bd' }}>
                   Selecciona un favorito y pulsa <em>Chatear</em> para abrir la conversación aquí.
@@ -951,24 +1041,37 @@ const DashboardClient = () => {
                         {!centerLoading && centerMessages.length === 0 && (
                           <div style={{ color:'#adb5bd' }}>No hay mensajes todavía. ¡Escribe el primero!</div>
                         )}
-                        {centerMessages.map(m => (
-                          <div key={m.id}
-                               style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
-                            <span style={{
-                              display:'inline-block',
-                              padding:'6px 10px',
-                              borderRadius:10,
-                              background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
-                              color:'#fff',
-                              maxWidth:'80%'
-                            }}>
-                              {m.body}
-                            </span>
-                          </div>
-                        ))}
+                        {centerMessages.map(m => {
+                          let giftData = m.gift;
+                          if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+                            try {
+                              const parts = m.body.slice(2, -2).split(':');
+                              giftData = { id: Number(parts[1]), name: parts[2], icon: '🎁' };
+                            } catch {}
+                          }
+                          return (
+                            <div key={m.id}
+                                 style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
+                              <span style={{
+                                display:'inline-block',
+                                padding:'6px 10px',
+                                borderRadius:10,
+                                background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
+                                color:'#fff',
+                                maxWidth:'80%'
+                              }}>
+                                {giftData ? (
+                                  <><span style={{ fontSize:24, marginRight:6 }}>{giftData.icon || '🎁'}</span>{giftData.name}</>
+                                ) : (
+                                  m.body
+                                )}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
 
-                      <div style={{ display:'flex', gap:8, marginTop:10 }}>
+                      <div style={{ display:'flex', gap:8, marginTop:10, alignItems:'center', position:'relative' }}>
                         <input
                           value={centerInput}
                           onChange={(e)=>setCenterInput(e.target.value)}
@@ -977,6 +1080,26 @@ const DashboardClient = () => {
                           style={{ flex:1, borderRadius:6, border:'1px solid #333', padding:'8px', background:'rgba(255,255,255,0.9)' }}
                         />
                         <StyledActionButton onClick={sendCenterMessage}>Enviar</StyledActionButton>
+
+                        <StyledActionButton onClick={()=>setShowCenterGifts(s=>!s)} title="Enviar regalo">🎁</StyledActionButton>
+                        {showCenterGifts && (
+                          <div style={{
+                            position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)',
+                            padding:10, borderRadius:8, zIndex:10, border:'1px solid #333'
+                          }}>
+                            <div style={{display:'grid', gridTemplateColumns:'repeat(3, 80px)', gap:8, maxHeight:240, overflowY:'auto'}}>
+                              {gifts.map(g=>(
+                                <button key={g.id}
+                                  onClick={()=>sendGiftMsg(g.id)}
+                                  style={{ background:'transparent', border:'1px solid #555', borderRadius:8, padding:6, cursor:'pointer', color:'#fff' }}>
+                                  <div style={{ fontSize:28, lineHeight:1 }}>{g.icon || '🎁'}</div>
+                                  <div style={{ fontSize:12 }}>{g.name}</div>
+                                  <div style={{ fontSize:12, opacity:.8 }}>{fmtEUR(g.cost)}</div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
@@ -985,11 +1108,13 @@ const DashboardClient = () => {
             </div>
           )}
         </StyledCenter>
-
-        {/* ============================FIN ZONA CENTRAL ================================ */}
+        {/* ================FIN ZONA CENTRAL =================*/}
 
         <StyledRightColumn />
+
       </StyledMainContent>
+      {/* ======FIN MAIN ======== */}
+
     </StyledContainer>
   );
 };

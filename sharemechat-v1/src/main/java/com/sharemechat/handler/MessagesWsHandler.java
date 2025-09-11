@@ -1,11 +1,11 @@
 package com.sharemechat.handler;
 
 import com.sharemechat.dto.MessageDTO;
-import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.FavoriteService;
 import com.sharemechat.service.MessageService;
+import com.sharemechat.service.TransactionService;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
@@ -26,8 +26,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     private final UserRepository userRepository;
     private final MessageService messageService;
     private final FavoriteService favoriteService;
+    private final TransactionService transactionService;
     private static final Logger log = LoggerFactory.getLogger(MessagesWsHandler.class);
-
     // userId -> sockets
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionUserIds = new ConcurrentHashMap<>();
@@ -35,11 +35,13 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     public MessagesWsHandler(JwtUtil jwtUtil,
                              UserRepository userRepository,
                              FavoriteService favoriteService,
-                             MessageService messageService) {
+                             MessageService messageService,
+                             TransactionService transactionService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.favoriteService = favoriteService;
         this.messageService = messageService;
+        this.transactionService = transactionService;
     }
 
     @Override
@@ -159,6 +161,11 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             return;
         }
 
+        if ("msg:gift".equals(type)) {
+            handleMsgGift(session, json);
+            return;
+        }
+
         if ("msg:read".equals(type)) {
             Long withUser = json.optLong("with");
             messageService.markRead(me, withUser);
@@ -176,6 +183,71 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
     }
 
+    private void handleMsgGift(WebSocketSession session, org.json.JSONObject json) {
+        Long me = sessionUserIds.get(session.getId());
+        if (me == null) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"No autenticado\"}"); return; }
+
+        Object toObj = json.opt("to");
+        String toRaw = (toObj != null) ? String.valueOf(toObj) : null;
+        Long to = null; try { if (toRaw != null) to = Long.valueOf(toRaw); } catch (Exception ignore) {}
+        long giftId = json.optLong("giftId", 0L);
+
+        if (to == null || to <= 0L) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Destinatario inválido\"}"); return; }
+        if (java.util.Objects.equals(me, to)) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"No puedes enviarte regalos a ti mismo\"}"); return; }
+        if (giftId <= 0L) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"giftId inválido\"}"); return; }
+
+        com.sharemechat.entity.User sender = userRepository.findById(me).orElse(null);
+        com.sharemechat.entity.User recipient = userRepository.findById(to).orElse(null);
+        if (sender == null || recipient == null) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Usuarios inválidos\"}"); return; }
+        if (!com.sharemechat.constants.Constants.Roles.CLIENT.equals(sender.getRole())) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Solo un CLIENT puede enviar regalos\"}"); return; }
+        if (!com.sharemechat.constants.Constants.Roles.MODEL.equals(recipient.getRole())) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"El destinatario debe ser MODEL\"}"); return; }
+
+        // gate de favoritos (si aplica en tu lógica de mensajería)
+        try {
+            if (!favoriteService.canUsersMessage(me, to)) {
+                safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Mensajería bloqueada entre estos usuarios\"}");
+                return;
+            }
+        } catch (Exception ex) {
+            safeSend(session, new org.json.JSONObject().put("type","msg:error").put("message", ex.getMessage()).toString());
+            return;
+        }
+
+        try {
+            // requiere inyectar TransactionService en este handler
+            com.sharemechat.entity.Gift g = transactionService.processGiftInChat(me, to, giftId);
+
+            // persistimos un mensaje "marcador" para historial
+            String marker = "[[GIFT:" + g.getId() + ":" + g.getName() + "]]";
+            com.sharemechat.dto.MessageDTO saved = messageService.send(me, to, marker);
+
+            // evento específico en vivo
+            org.json.JSONObject live = new org.json.JSONObject()
+                    .put("type","msg:gift")
+                    .put("messageId", saved.id())
+                    .put("from", me)
+                    .put("to", to)
+                    .put("gift", new org.json.JSONObject()
+                            .put("id", g.getId())
+                            .put("name", g.getName())
+                            .put("icon", g.getIcon())
+                            .put("cost", g.getCost().toPlainString())
+                    );
+
+            String payload = live.toString();
+            broadcastToUser(me, payload);
+            broadcastToUser(to, payload);
+
+            // además, mantiene compatibilidad con tu flujo de historiales
+            broadcastNew(saved);
+
+        } catch (Exception ex) {
+            safeSend(session, new org.json.JSONObject()
+                    .put("type","msg:error")
+                    .put("message", ex.getMessage())
+                    .toString());
+        }
+    }
 
 
     private void broadcastToUser(Long userId, String json) {

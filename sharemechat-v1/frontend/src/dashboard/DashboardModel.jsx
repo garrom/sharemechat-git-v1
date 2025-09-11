@@ -170,6 +170,13 @@ const DashboardModel = () => {
           createdAt: raw.createdAt ?? raw.created_at,
           readAt: raw.readAt ?? raw.read_at ?? null,
         }));
+        // === NUEVO: detectar marcadores de regalo en historial ===
+        normalized.forEach(m=>{
+          if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            const parts=m.body.slice(2,-2).split(':'); // GIFT:id:name
+            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':'),icon:'🎁'};
+          }
+        });
         setCenterMessages(normalized.reverse());
 
         try {
@@ -274,6 +281,12 @@ const DashboardModel = () => {
         if (data.type === 'msg:new' && data.message) {
           const m = normMsg(data.message);
 
+          // === NUEVO: si viene como mensaje normal pero lleva marcador de regalo, enriquecer ===
+          if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            const parts=m.body.slice(2,-2).split(':');
+            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':'),icon:'🎁'};
+          }
+
           const me   = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
 
@@ -291,6 +304,31 @@ const DashboardModel = () => {
                 if (el) el.scrollTop = el.scrollHeight;
             });
           }
+        }
+
+        // === NUEVO: evento explícito de regalo por WS mensajes ===
+        if (data.type === 'msg:gift' && data.gift) {
+          const me   = Number(meIdRef.current);
+          const peer = Number(peerIdRef.current);
+          if (!me || !peer) return;
+          const item = {
+            id: data.messageId || `${Date.now()}`,
+            senderId: data.from,
+            recipientId: data.to,
+            body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
+            gift: { id: data.gift.id, name: data.gift.name, icon: data.gift.icon || '🎁' }
+          };
+          const belongsToThisChat =
+            (item.senderId === peer && item.recipientId === me) ||
+            (item.senderId === me   && item.recipientId === peer);
+          if (belongsToThisChat) {
+            setCenterMessages(prev => [...prev, item]);
+            queueMicrotask(() => {
+              const el = modelCenterListRef.current;
+              if (el) el.scrollTop = el.scrollHeight;
+            });
+          }
+          return;
         }
       } catch (e) {
         // silenciar parse errors
@@ -404,6 +442,10 @@ const DashboardModel = () => {
         if (!isEcho(data.message)) {
           setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
         }
+      } else if (data.type === 'gift') {
+        // === NUEVO: recepción de regalo en streaming ===
+        const mine = Number(data.fromUserId) === Number(user?.id);
+        setMessages(prev=>[...prev,{ from: mine?'me':'peer', text:`🎁 ${data?.gift?.name||'Regalo'}`, gift:{ id:data?.gift?.id, name:data?.gift?.name, icon:data?.gift?.icon||'🎁'} }]);
       } else if (data.type === 'no-client-available') {
         // === Réplica del cliente: queda "searching" y espera en cola ===
         setError('');
@@ -695,7 +737,22 @@ const DashboardModel = () => {
       });
       if (res.ok) {
         const data = await res.json();
-        setCenterMessages((data || []).reverse());
+        const normalized=(data||[]).map(raw=>({
+          id: raw.id,
+          senderId: Number(raw.senderId ?? raw.sender_id),
+          recipientId: Number(raw.recipientId ?? raw.recipient_id),
+          body: raw.body,
+          createdAt: raw.createdAt ?? raw.created_at,
+          readAt: raw.readAt ?? raw.read_at ?? null,
+        }));
+        // === NUEVO: detectar regalos en historial también aquí (por si se usa este loader) ===
+        normalized.forEach(m=>{
+          if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            const parts=m.body.slice(2,-2).split(':');
+            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':'),icon:'🎁'};
+          }
+        });
+        setCenterMessages(normalized.reverse());
         try {
           await fetch(`/api/messages/with/${peerId}/read`, {
             method: 'POST',
@@ -758,6 +815,8 @@ const DashboardModel = () => {
 
   return (
     <StyledContainer>
+
+     {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
         <span>Mi Logo</span>
         <div>
@@ -791,10 +850,14 @@ const DashboardModel = () => {
           </StyledNavButton>
         </div>
       </StyledNavbar>
+     {/* ========= FIN NAVBAR  ======== */}
 
+      {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent>
-        <StyledLeftColumn>
 
+
+       {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
+        <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
             <button
               title="Videochat"
@@ -836,14 +899,14 @@ const DashboardModel = () => {
           </ul>
 
         </StyledLeftColumn>
+        {/* ========= FIN COLUMNA IZQUIERDA  ======== */}
 
-        {/* ============================INICIO ZONA CENTRAL ================================ */}
 
+        {/* ==============INICIO ZONA CENTRAL ========== */}
         <StyledCenter>
           {activeTab === 'videochat' && (
             <>
               {status && <p style={{ color: '#6c757d', marginTop: '10px' }}>{status}</p>}
-
               {!cameraActive && (
                 <StyledActionButton onClick={startCamera}>Activar Cámara</StyledActionButton>
               )}
@@ -911,7 +974,17 @@ const DashboardModel = () => {
                               key={index}
                               style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
                             >
-                              <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong> {msg.text}
+                              {msg.gift ? (
+                                <div>
+                                  <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong>{' '}
+                                  <img src={msg.gift.icon} alt={msg.gift.name} style={{ width:28, height:28, marginLeft:6 }} />
+                                  <span style={{ marginLeft: 6 }}>{msg.gift.name}</span>
+                                </div>
+                              ) : (
+                                <>
+                                  <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong> {msg.text}
+                                </>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -940,9 +1013,7 @@ const DashboardModel = () => {
               {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
             </>
           )}
-
           {activeTab === 'funnyplace' && <FunnyplacePage />}
-
           {activeTab === 'favoritos' && (
             <div
               ref={modelCenterListRef}
@@ -1046,7 +1117,14 @@ const DashboardModel = () => {
                               color:'#fff',
                               maxWidth:'80%'
                             }}>
-                              {m.body}
+                              {m.gift ? (
+                                <>
+                                  <img src={m.gift.icon} alt={m.gift.name} style={{ width:24, height:24, marginRight:6 }} />
+                                  {m.gift.name}
+                                </>
+                              ) : (
+                                m.body
+                              )}
                             </span>
                           </div>
                         ))}
@@ -1076,11 +1154,14 @@ const DashboardModel = () => {
           )}
 
         </StyledCenter>
-
-        {/* ============================FIN ZONA CENTRAL ================================ */}
+       {/* ================FIN ZONA CENTRAL =================*/}
 
         <StyledRightColumn />
+
+
       </StyledMainContent>
+      {/* ======FIN MAIN ======== */}
+
     </StyledContainer>
   );
 };

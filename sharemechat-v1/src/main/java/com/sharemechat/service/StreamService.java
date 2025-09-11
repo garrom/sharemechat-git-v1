@@ -1,15 +1,14 @@
 package com.sharemechat.service;
 
+import com.sharemechat.config.BillingProperties;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.*;
 import com.sharemechat.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -24,28 +23,16 @@ public class StreamService {
     private final StreamRecordRepository streamRecordRepository;
     private final UserRepository userRepository;
     private final ModelStatusService modelStatusService;
-
     private final TransactionRepository transactionRepository;
     private final BalanceRepository balanceRepository;
     private final ClientRepository clientRepository;
     private final ModelRepository modelRepository;
-
     private final PlatformTransactionRepository platformTransactionRepository;
     private final PlatformBalanceRepository platformBalanceRepository;
-
+    private final BillingProperties billing;
     // locks por sesión para evitar dobles cierres concurrentes
     private final ConcurrentHashMap<Long, ReentrantLock> sessionLocks = new ConcurrentHashMap<>();
 
-    // === Config billing desde application.properties ===
-    @Value("${billing.rate-per-minute}")
-    private BigDecimal ratePerMinute;              // p.ej. 1.00
-
-    @Value("${billing.model-share}")
-    private BigDecimal modelShare;                 // p.ej. 0.90 (90%)
-
-    // Umbral de corte en caliente (por defecto 1.00 si no se define)
-    @Value("${billing.cutoff-threshold-eur:1.00}")
-    private BigDecimal cutoffThreshold;
 
     public StreamService(StreamRecordRepository streamRecordRepository,
                          UserRepository userRepository,
@@ -55,6 +42,7 @@ public class StreamService {
                          ClientRepository clientRepository,
                          ModelRepository modelRepository,
                          PlatformTransactionRepository platformTransactionRepository,
+                         BillingProperties billing,
                          PlatformBalanceRepository platformBalanceRepository) {
         this.streamRecordRepository = streamRecordRepository;
         this.userRepository = userRepository;
@@ -64,6 +52,7 @@ public class StreamService {
         this.clientRepository = clientRepository;
         this.modelRepository = modelRepository;
         this.platformTransactionRepository = platformTransactionRepository;
+        this.billing = billing;
         this.platformBalanceRepository = platformBalanceRepository;
     }
 
@@ -121,12 +110,13 @@ public class StreamService {
         }
 
         // Validar saldo 3 - Bloquear inicio si saldo < tarifa por minuto (evita saldo=0)
-        if (currentSaldo.compareTo(ratePerMinute) < 0) {
+        if (currentSaldo.compareTo(billing.getRatePerMinute()) < 0) {  // [NEW]
             // *** Mantener esta cadena "Saldo insuficiente" para que MatchingHandler pueda distinguir el motivo. ***
             log.warn("startSession: saldo insuficiente para iniciar. clientId={}, saldo={}, requeridoPorMin={}",
-                    clientId, currentSaldo, ratePerMinute);
+                    clientId, currentSaldo, billing.getRatePerMinute());        // [NEW]
             throw new IllegalStateException("Saldo insuficiente para iniciar el streaming.");
         }
+
 
         // Crear StreamRecord
         StreamRecord sr = new StreamRecord();
@@ -153,8 +143,9 @@ public class StreamService {
     @Transactional
     public void endSession(Long clientId, Long modelId) {
 
-        final BigDecimal RATE_PER_MINUTE = ratePerMinute; // p.ej. 1.00
-        final BigDecimal MODEL_SHARE     = modelShare;    // p.ej. 0.90
+        final BigDecimal RATE_PER_MINUTE = billing.getRatePerMinute(); // p.ej. 1.00
+        final BigDecimal MODEL_SHARE     = billing.getModelShare();    // p.ej. 0.90
+
 
         // 1) Buscar la sesión activa (pista en cache y fallback a DB)
         Long sessionIdHint = modelStatusService.getActiveSession(clientId, modelId).orElse(null);
@@ -383,7 +374,7 @@ public class StreamService {
         if (seconds < 0) seconds = 0;
 
         // coste con precisión intermedia (no redondeamos a 2 decimales aún)
-        BigDecimal costSoFar = ratePerMinute
+        BigDecimal costSoFar = billing.getRatePerMinute()
                 .multiply(BigDecimal.valueOf(seconds))
                 .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
 
@@ -396,12 +387,13 @@ public class StreamService {
         BigDecimal remaining = saldoActual.subtract(costSoFar);
 
         // 4) si remaining < cutoff => cerrar
-        if (remaining.compareTo(cutoffThreshold) < 0) {
+        if (remaining.compareTo(billing.getCutoffThresholdEur()) < 0) {
             log.info("endIfBelowThreshold: corte por umbral. clientId={}, modelId={}, remaining={}, cutoff={}",
-                    clientId, modelId, remaining, cutoffThreshold);
+                    clientId, modelId, remaining, billing.getCutoffThresholdEur());   // [FIX]
             endSession(clientId, modelId);
             return true;
         }
+
         return false;
     }
 
