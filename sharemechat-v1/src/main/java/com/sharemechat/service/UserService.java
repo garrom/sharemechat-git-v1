@@ -45,6 +45,7 @@ public class UserService {
         }
         User user = new User();
         user.setEmail(registerDTO.getEmail());
+        user.setNickname(registerDTO.getNickname());
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
         user.setRole(Constants.Roles.USER);
         user.setUserType(Constants.UserTypes.FORM_CLIENT);
@@ -65,6 +66,7 @@ public class UserService {
         }
         User user = new User();
         user.setEmail(registerDTO.getEmail());
+        user.setNickname(registerDTO.getNickname());
         user.setPassword(passwordEncoder.encode(registerDTO.getPassword()));
         user.setRole(Constants.Roles.USER);
         user.setUserType(Constants.UserTypes.FORM_MODEL);
