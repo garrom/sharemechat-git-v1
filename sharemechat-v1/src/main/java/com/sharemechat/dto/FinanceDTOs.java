@@ -1,4 +1,3 @@
-// src/main/java/com/sharemechat/dto/FinanceDTOs.java
 package com.sharemechat.dto;
 
 import java.math.BigDecimal;

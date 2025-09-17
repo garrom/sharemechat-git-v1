@@ -29,6 +29,10 @@ public class AdminController {
     @PostMapping("/review/{userId}")
     public ResponseEntity<String> reviewModel(@PathVariable Long userId, @RequestParam String action) {
         logger.info("POST /api/admin/review/{} action={}", userId, action);
+        if (userId == null) {
+            logger.error("userId es nulo");
+            return ResponseEntity.badRequest().body("El userId no puede ser nulo");
+        }
         return ResponseEntity.ok(adminService.reviewModel(userId, action));
     }
 

@@ -13,9 +13,6 @@ public class Client {
     @Column(name = "user_id")
     private Long userId;
 
-    @Column(name = "is_active")
-    private Boolean isActive;
-
     @Column(name = "streaming_hours")
     private BigDecimal streamingHours  = BigDecimal.ZERO;
 
@@ -43,15 +40,6 @@ public class Client {
 
     public void setUserId(Long userId) {
         this.userId = userId;
-    }
-
-
-    public Boolean getActive() {
-        return isActive;
-    }
-
-    public void setActive(Boolean active) {
-        isActive = active;
     }
 
     public BigDecimal getStreamingHours() {

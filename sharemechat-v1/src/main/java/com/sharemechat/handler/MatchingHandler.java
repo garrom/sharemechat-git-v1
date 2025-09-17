@@ -268,7 +268,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             if (clientId != null && modelId != null) {
                 try {
                     // El servicio verifica roles reales contra DB y setea BUSY
-                    streamService.startSession(clientId, modelId, false);
+                    streamService.startSession(clientId, modelId);
 
                     pairs.put(client.getId(), model);
                     pairs.put(model.getId(), client);
@@ -310,7 +310,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             Long modelId = sessionUserIds.get(model.getId());
             if (clientId != null && modelId != null) {
                 try {
-                    streamService.startSession(clientId, modelId, false);
+                    streamService.startSession(clientId, modelId);
 
                     pairs.put(model.getId(), client);
                     pairs.put(client.getId(), model);

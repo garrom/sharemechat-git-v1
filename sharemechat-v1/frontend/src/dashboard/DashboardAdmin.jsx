@@ -318,6 +318,19 @@ const DashboardAdmin = () => {
                 {/* 🔧 Usar displayedUsers en vez de users */}
                 {displayedUsers.map((user) => {
                   const v = user.verificationStatus || 'PENDING';
+                    if (!user.id) {
+                      return (
+                        <tr key={user.email || Math.random()}>
+                          <td>{user.email}</td>
+                          <td>{user.role}</td>
+                          <td>{user.userType}</td>
+                          <td>{v}</td>
+                          <td>
+                            <span style={{ color: '#dc3545' }}>ID no válido</span>
+                          </td>
+                        </tr>
+                      );
+                    }
                   return (
                     <tr key={user.id}>
                       <td>{user.email}</td>

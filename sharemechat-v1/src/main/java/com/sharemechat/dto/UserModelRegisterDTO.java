@@ -1,15 +1,13 @@
 package com.sharemechat.dto;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-import jakarta.validation.constraints.Past;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.*;
 
 import java.time.LocalDate;
 
 public class UserModelRegisterDTO {
 
     @NotBlank(message = "El email no puede estar vacío")
+    @Email(message = "El email debe ser válido")
     private String email;
 
     @NotBlank(message = "La contraseña no puede estar vacía")
@@ -20,7 +18,22 @@ public class UserModelRegisterDTO {
     @Past(message = "La fecha de nacimiento debe ser una fecha pasada")
     private LocalDate dateOfBirth;
 
+    @NotBlank(message = "El nickname es obligatorio")
+    private String nickname;
+
+    // Consentimientos / auditoría
+    @NotNull(message = "Debes confirmar que eres mayor de edad")
+    private Boolean confirAdult;
+
+    @NotNull(message = "Debes aceptar los términos y condiciones")
+    private Boolean acceptedTerm;
+
+    private String termVersion;
+    private String registerIp;
+
     // Getters y Setters
+
+
     public String getEmail() {
         return email;
     }
@@ -43,5 +56,45 @@ public class UserModelRegisterDTO {
 
     public void setDateOfBirth(LocalDate dateOfBirth) {
         this.dateOfBirth = dateOfBirth;
+    }
+
+    public String getNickname() {
+        return nickname;
+    }
+
+    public void setNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
+    public Boolean getConfirAdult() {
+        return confirAdult;
+    }
+
+    public void setConfirAdult(Boolean confirAdult) {
+        this.confirAdult = confirAdult;
+    }
+
+    public Boolean getAcceptedTerm() {
+        return acceptedTerm;
+    }
+
+    public void setAcceptedTerm(Boolean acceptedTerm) {
+        this.acceptedTerm = acceptedTerm;
+    }
+
+    public String getTermVersion() {
+        return termVersion;
+    }
+
+    public void setTermVersion(String termVersion) {
+        this.termVersion = termVersion;
+    }
+
+    public String getRegisterIp() {
+        return registerIp;
+    }
+
+    public void setRegisterIp(String registerIp) {
+        this.registerIp = registerIp;
     }
 }

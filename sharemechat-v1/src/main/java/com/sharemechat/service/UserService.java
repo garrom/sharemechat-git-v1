@@ -190,7 +190,7 @@ public class UserService {
         dto.setBiography(user.getBiography());
         dto.setInterests(user.getInterests());
         dto.setVerificationStatus(user.getVerificationStatus());
-        dto.setIsPremium(user.getIsPremium());
+
         dto.setUnsubscribe(user.getUnsubscribe());
         dto.setCreatedAt(user.getCreatedAt());
         dto.setStartDate(user.getStartDate());

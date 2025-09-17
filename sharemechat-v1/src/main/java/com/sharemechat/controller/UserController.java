@@ -1,9 +1,11 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.config.IpConfig;
 import com.sharemechat.dto.*;
 import com.sharemechat.entity.LoginResponse;
 import com.sharemechat.entity.User;
 import com.sharemechat.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,14 +26,17 @@ public class UserController {
     }
 
     @PostMapping("/register/client")
-    public ResponseEntity<UserDTO> registerUser(@RequestBody UserRegisterDTO registerDTO) {
-        UserDTO createdUser = userService.registerClient(registerDTO);
+    public ResponseEntity<UserDTO> registerUser(@RequestBody @Valid UserRegisterDTO registerDTO,
+                                                HttpServletRequest request) {
+        String ip = IpConfig.getClientIp(request);    // <-- capturamos IP
+        UserDTO createdUser = userService.registerClient(registerDTO); // <-- pasamos IP
         return ResponseEntity.ok(createdUser);
     }
 
-
     @PostMapping("/register/model")
-    public ResponseEntity<UserDTO> registerModel(@RequestBody @Valid UserModelRegisterDTO registerDTO) {
+    public ResponseEntity<UserDTO> registerModel(@RequestBody @Valid UserModelRegisterDTO registerDTO,
+                                                 HttpServletRequest request) {
+        String ip = IpConfig.getClientIp(request);
         UserDTO createdUser = userService.registerModel(registerDTO);
         return ResponseEntity.ok(createdUser);
     }

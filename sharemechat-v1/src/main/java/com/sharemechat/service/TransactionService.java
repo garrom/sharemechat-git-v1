@@ -129,7 +129,7 @@ public class TransactionService {
 
         // 7) Promover a CLIENT (unidireccional) + premium y fijar startDate en User si no lo tenía
         user.setRole(Constants.Roles.CLIENT);
-        user.setIsPremium(true);
+
         if (user.getStartDate() == null) {
             user.setStartDate(LocalDate.now());
         }

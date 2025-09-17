@@ -27,9 +27,6 @@ public class StreamRecord {
     @Column(name = "end_time")
     private LocalDateTime endTime;
 
-    @Column(name = "is_premium", nullable = false)
-    private Boolean isPremium;
-
     @Column(name = "timestamp", insertable = false, updatable = false)
     private LocalDateTime timestamp;
 
@@ -50,9 +47,6 @@ public class StreamRecord {
 
     public LocalDateTime getEndTime() { return endTime; }
     public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
-
-    public Boolean getIsPremium() { return isPremium; }
-    public void setIsPremium(Boolean isPremium) { this.isPremium = isPremium; }
 
     public LocalDateTime getTimestamp() { return timestamp; }
 }

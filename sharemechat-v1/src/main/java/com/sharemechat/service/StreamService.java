@@ -66,7 +66,7 @@ public class StreamService {
      *    la cadena "Saldo insuficiente", para que el MatchingHandler envíe "no-balance".
      */
     @Transactional
-    public StreamRecord startSession(Long clientId, Long modelId, boolean isPremium) {
+    public StreamRecord startSession(Long clientId, Long modelId) {
         // Si ya hay sesión activa para este par, reusar (idempotencia)
         Optional<StreamRecord> existing = streamRecordRepository
                 .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId);
@@ -124,7 +124,6 @@ public class StreamService {
         sr.setModel(model);
         sr.setStartTime(LocalDateTime.now());
         sr.setEndTime(null);
-        sr.setIsPremium(Boolean.TRUE.equals(client.getIsPremium()) || isPremium);
 
         StreamRecord saved = streamRecordRepository.save(sr);
         log.info("startSession: creada sesión id={} (client={}, model={})", saved.getId(), clientId, modelId);
