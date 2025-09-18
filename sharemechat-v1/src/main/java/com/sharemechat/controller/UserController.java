@@ -26,10 +26,10 @@ public class UserController {
     }
 
     @PostMapping("/register/client")
-    public ResponseEntity<UserDTO> registerUser(@RequestBody @Valid UserRegisterDTO registerDTO,
+    public ResponseEntity<UserDTO> registerUser(@RequestBody @Valid UserClientRegisterDTO registerDTO,
                                                 HttpServletRequest request) {
         String ip = IpConfig.getClientIp(request);    // <-- capturamos IP
-        UserDTO createdUser = userService.registerClient(registerDTO); // <-- pasamos IP
+        UserDTO createdUser = userService.registerClient(registerDTO,ip); // <-- pasamos IP
         return ResponseEntity.ok(createdUser);
     }
 
@@ -37,7 +37,7 @@ public class UserController {
     public ResponseEntity<UserDTO> registerModel(@RequestBody @Valid UserModelRegisterDTO registerDTO,
                                                  HttpServletRequest request) {
         String ip = IpConfig.getClientIp(request);
-        UserDTO createdUser = userService.registerModel(registerDTO);
+        UserDTO createdUser = userService.registerModel(registerDTO, ip); // <-- pasar IP
         return ResponseEntity.ok(createdUser);
     }
 
@@ -92,5 +92,6 @@ public class UserController {
         userService.changePassword(u.getId(), req.getCurrentPassword(), req.getNewPassword());
         return ResponseEntity.ok("Contraseña actualizada correctamente");
     }
+
 
 }

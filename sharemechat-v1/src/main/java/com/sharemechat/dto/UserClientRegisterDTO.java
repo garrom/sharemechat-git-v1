@@ -4,7 +4,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public class UserRegisterDTO {
+public class UserClientRegisterDTO {
 
     @NotBlank(message = "El email no puede estar vacío")
     @Email(message = "El email debe ser válido")

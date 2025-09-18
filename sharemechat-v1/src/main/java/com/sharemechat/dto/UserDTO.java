@@ -17,13 +17,7 @@ public class UserDTO {
     private String biography;
     private String interests;
     private String verificationStatus;
-
     private Boolean active;
-    private Boolean confirAdult;
-    private Boolean acceptedTerm;
-    private String termVersion;
-    private String registIp;
-
     private Boolean unsubscribe;
     private LocalDateTime createdAt;
     private LocalDate startDate;
@@ -68,22 +62,6 @@ public class UserDTO {
 
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
-
-    public Boolean getConfirAdult() {return confirAdult;}
-
-    public void setConfirAdult(Boolean confirAdult) {this.confirAdult = confirAdult;}
-
-    public Boolean getAcceptedTerm() {return acceptedTerm;}
-
-    public void setAcceptedTerm(Boolean acceptedTerm) {this.acceptedTerm = acceptedTerm;}
-
-    public String getTermVersion() {return termVersion;}
-
-    public void setTermVersion(String termVersion) {this.termVersion = termVersion;}
-
-    public String getRegistIp() {return registIp;}
-
-    public void setRegistIp(String registIp) {this.registIp = registIp;}
 
     public Boolean getUnsubscribe() { return unsubscribe; }
     public void setUnsubscribe(Boolean unsubscribe) { this.unsubscribe = unsubscribe; }
