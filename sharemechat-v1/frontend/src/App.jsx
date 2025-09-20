@@ -15,6 +15,7 @@ import RegisterModel from './public/RegisterModel';
 import Unauthorized from './public/Unauthorized';
 import ResetPassword from './public/ResetPassword';
 import ForgotPassword from './public/ForgotPassword';
+import Roles from './constants/Roles';
 
 function App(){return(<Router><Switch>
   {/* Públicas */}
@@ -37,8 +38,7 @@ function App(){return(<Router><Switch>
   {/* Subpáginas bajo dashboard (protegidas por rol) */}
   <Route path="/perfil-client" render={()=>(<RequireRole role="CLIENT"><PerfilClient/></RequireRole>)}/>
   <Route path="/perfil-model" render={()=>(<RequireRole role="MODEL"><PerfilModel/></RequireRole>)}/>
-  <Route path="/change-password" render={()=>(<RequireRole role="USER"><ChangePasswordPage/></RequireRole>)}/>
-
+  <Route path="/change-password" render={()=>(<RequireRole roles={[Roles.CLIENT, Roles.MODEL, Roles.ADMIN]}><ChangePasswordPage/></RequireRole>)}/>
   {/* Fallback */}
   <Redirect to="/unauthorized"/>
 </Switch></Router>);}

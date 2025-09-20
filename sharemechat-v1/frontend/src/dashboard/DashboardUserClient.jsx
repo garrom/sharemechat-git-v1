@@ -29,15 +29,22 @@ const DashboardUserClient = () => {
       history.push('/login');
       return;
     }
-    // Cargar datos mínimos del usuario
+    // Cargar datos del usuario
     (async () => {
       try {
         const res = await fetch('/api/users/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
+
+        if (res.status === 401) {
+          localStorage.removeItem('token');
+          history.push('/login');
+          return;
+        }
         if (res.ok) {
           const data = await res.json();
-          setUserName(data.name || data.email || 'Usuario');
+          // PRIORIDAD AL NICKNAME
+          setUserName(data.nickname || data.name || data.email || 'Usuario');
         }
       } catch {}
     })();
@@ -97,10 +104,7 @@ const DashboardUserClient = () => {
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
           </StyledNavButton>
-          <StyledNavButton onClick={handleProfile}>
-            <FontAwesomeIcon icon={faUser} />
-            <StyledIconWrapper>Perfil</StyledIconWrapper>
-          </StyledNavButton>
+
         </div>
       </StyledNavbar>
 
