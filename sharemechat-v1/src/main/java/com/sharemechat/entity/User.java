@@ -58,12 +58,6 @@ public class User {
     @Column(name = "regist_ip")
     private String registIp;
 
-    @Column(name = "start_date")
-    private LocalDate startDate;
-
-    @Column(name = "end_date")
-    private LocalDate endDate;
-
     @Column(name = "unsubscribe", nullable = false)
     private Boolean unsubscribe = false;
 
@@ -133,12 +127,6 @@ public class User {
 
     public String getRegistIp() { return registIp; }
     public void setRegistIp(String registIp) { this.registIp = registIp; }
-
-    public LocalDate getStartDate() { return startDate; }
-    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
-
-    public LocalDate getEndDate() { return endDate; }
-    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
 
     public Boolean getUnsubscribe() { return unsubscribe; }
     public void setUnsubscribe(Boolean unsubscribe) { this.unsubscribe = unsubscribe; }

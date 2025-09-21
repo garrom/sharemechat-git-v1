@@ -130,9 +130,6 @@ public class TransactionService {
         // 7) Promover a CLIENT (unidireccional) + premium y fijar startDate en User si no lo tenía
         user.setRole(Constants.Roles.CLIENT);
 
-        if (user.getStartDate() == null) {
-            user.setStartDate(LocalDate.now());
-        }
         userRepository.save(user);
     }
 
@@ -397,7 +394,139 @@ public class TransactionService {
         return gift;
     }
 
-    // Azúcar para "chat de favoritos" (sin stream)
+    // [NEW]
+    @Transactional
+    public java.math.BigDecimal forfeitOnUnsubscribe(Long userId, String role, String description) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado: " + userId));
+
+        java.math.BigDecimal totalForfeited = java.math.BigDecimal.ZERO;
+
+        // === CLIENTE ===
+        if (Constants.Roles.CLIENT.equals(role)) {
+            Optional<Client> clientOpt = clientRepository.findByUser(user);
+            if (clientOpt.isPresent()) {
+                Client client = clientOpt.get();
+                java.math.BigDecimal saldo = client.getSaldoActual() != null ? client.getSaldoActual() : java.math.BigDecimal.ZERO;
+
+                if (saldo.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    // Consistencia con último balance
+                    java.math.BigDecimal lastBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(userId)
+                            .map(Balance::getBalance).orElse(java.math.BigDecimal.ZERO);
+                    if (lastBalance.compareTo(saldo) != 0) {
+                        throw new IllegalStateException("Inconsistencia CLIENT: último balance (" + lastBalance
+                                + ") != clients.saldo_actual (" + saldo + ")");
+                    }
+
+                    // 1) Transaction (usuario) NEGATIVA
+                    Transaction tx = new Transaction();
+                    tx.setUser(user);
+                    tx.setAmount(saldo.negate());
+                    tx.setOperationType("UNSUBSCRIBE_FORFEIT");
+                    tx.setDescription(description);
+                    Transaction savedTx = transactionRepository.save(tx);
+
+                    // 2) Balance (usuario)
+                    Balance bal = new Balance();
+                    bal.setUserId(userId);
+                    bal.setTransactionId(savedTx.getId());
+                    bal.setOperationType("UNSUBSCRIBE_FORFEIT");
+                    bal.setAmount(saldo.negate());
+                    bal.setBalance(lastBalance.subtract(saldo));
+                    bal.setDescription(description);
+                    balanceRepository.save(bal);
+
+                    // 3) Plataforma (contrapartida +)
+                    PlatformTransaction ptx = new PlatformTransaction();
+                    ptx.setAmount(saldo);
+                    ptx.setOperationType("UNSUBSCRIBE_FORFEIT");
+                    ptx.setDescription("Forfeit usuario " + userId);
+                    PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
+
+                    java.math.BigDecimal lastPlatformBalance = platformBalanceRepository.findTopByOrderByTimestampDesc()
+                            .map(PlatformBalance::getBalance).orElse(java.math.BigDecimal.ZERO);
+
+                    PlatformBalance pbal = new PlatformBalance();
+                    pbal.setTransactionId(savedPtx.getId());
+                    pbal.setAmount(saldo);
+                    pbal.setBalance(lastPlatformBalance.add(saldo));
+                    pbal.setDescription("Forfeit usuario " + userId);
+                    platformBalanceRepository.save(pbal);
+
+                    // 4) Agregado rápido -> 0
+                    client.setSaldoActual(java.math.BigDecimal.ZERO);
+                    clientRepository.save(client);
+
+                    totalForfeited = totalForfeited.add(saldo);
+                }
+            }
+        }
+
+        // === MODELO ===
+        if (Constants.Roles.MODEL.equals(role)) {
+            Optional<Model> modelOpt = modelRepository.findByUser(user);
+            if (modelOpt.isPresent()) {
+                Model model = modelOpt.get();
+                java.math.BigDecimal saldo = model.getSaldoActual() != null ? model.getSaldoActual() : java.math.BigDecimal.ZERO;
+
+                if (saldo.compareTo(java.math.BigDecimal.ZERO) > 0) {
+                    // Consistencia con último balance
+                    java.math.BigDecimal lastBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(userId)
+                            .map(Balance::getBalance).orElse(java.math.BigDecimal.ZERO);
+                    if (lastBalance.compareTo(saldo) != 0) {
+                        throw new IllegalStateException("Inconsistencia MODEL: último balance (" + lastBalance
+                                + ") != models.saldo_actual (" + saldo + ")");
+                    }
+
+                    // 1) Transaction (usuario) NEGATIVA
+                    Transaction tx = new Transaction();
+                    tx.setUser(user);
+                    tx.setAmount(saldo.negate());
+                    tx.setOperationType("UNSUBSCRIBE_FORFEIT");
+                    tx.setDescription(description);
+                    Transaction savedTx = transactionRepository.save(tx);
+
+                    // 2) Balance (usuario)
+                    Balance bal = new Balance();
+                    bal.setUserId(userId);
+                    bal.setTransactionId(savedTx.getId());
+                    bal.setOperationType("UNSUBSCRIBE_FORFEIT");
+                    bal.setAmount(saldo.negate());
+                    bal.setBalance(lastBalance.subtract(saldo));
+                    bal.setDescription(description);
+                    balanceRepository.save(bal);
+
+                    // 3) Plataforma (contrapartida +)
+                    PlatformTransaction ptx = new PlatformTransaction();
+                    ptx.setAmount(saldo);
+                    ptx.setOperationType("UNSUBSCRIBE_FORFEIT");
+                    ptx.setDescription("Forfeit modelo " + userId);
+                    PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
+
+                    java.math.BigDecimal lastPlatformBalance = platformBalanceRepository.findTopByOrderByTimestampDesc()
+                            .map(PlatformBalance::getBalance).orElse(java.math.BigDecimal.ZERO);
+
+                    PlatformBalance pbal = new PlatformBalance();
+                    pbal.setTransactionId(savedPtx.getId());
+                    pbal.setAmount(saldo);
+                    pbal.setBalance(lastPlatformBalance.add(saldo));
+                    pbal.setDescription("Forfeit modelo " + userId);
+                    platformBalanceRepository.save(pbal);
+
+                    // 4) Agregado rápido -> 0
+                    model.setSaldoActual(java.math.BigDecimal.ZERO);
+                    modelRepository.save(model);
+
+                    totalForfeited = totalForfeited.add(saldo);
+                }
+            }
+        }
+
+        return totalForfeited;
+    }
+
+
+    // Para "chat de favoritos" (sin stream)
     @Transactional
     public Gift processGiftInChat(Long clientId, Long modelId, Long giftId) {
         return processGift(clientId, modelId, giftId, null);

@@ -93,5 +93,19 @@ public class UserController {
         return ResponseEntity.ok("Contraseña actualizada correctamente");
     }
 
+    @PostMapping("/unsubscribe")
+    public ResponseEntity<String> unsubscribe(@RequestBody(required = false) UnsubscribeRequestDTO dto,
+                                              Authentication auth,
+                                              HttpServletRequest request) {
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).body("No autenticado");
+        }
+        String ip = IpConfig.getClientIp(request);
+        String reason = (dto != null ? dto.getReason() : null);
+        userService.unsubscribe(auth.getName(), reason, ip);
+        return ResponseEntity.ok("Cuenta dada de baja. Se cerrará la sesión.");
+    }
+
+
 
 }

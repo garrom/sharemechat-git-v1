@@ -93,22 +93,45 @@ const PerfilClient = () => {
     }
   };
 
+  const onUnsubscribe = async () => {
+    const reason = window.prompt('Motivo de baja (opcional):') || null;
+    if (!window.confirm('¿Seguro que deseas darte de baja? Perderás tu saldo.')) return;
+
+    const res = await fetch('/api/users/unsubscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ reason }),
+    });
+
+    if (res.ok) {
+      localStorage.removeItem('token');
+      alert('Cuenta dada de baja.');
+      history.push('/login');
+    } else {
+      alert((await res.text()) || 'No se pudo completar la baja.');
+    }
+  };
+
+
   return (
     <StyledContainer>
       {/* Navbar minimalista */}
       <StyledNavbar>
         <span>Mi Logo</span>
         <div>
+
+          <StyledNavButton type="button" onClick={onUnsubscribe}>
+            Darme de baja
+          </StyledNavButton>
+
           <StyledNavButton type="button" onClick={() => history.push('/change-password')}>
             Cambiar contraseña
           </StyledNavButton>
-          <StyledNavButton
-            type="button"
-            onClick={() => history.goBack()}
-            style={{ marginLeft: 8 }}
-          >
+
+          <StyledNavButton type="button" onClick={() => history.goBack()} style={{ marginLeft: 8 }}>
             Volver
           </StyledNavButton>
+
         </div>
       </StyledNavbar>
 

@@ -52,7 +52,8 @@ const DashboardAdmin = () => {
     'favorites_models',
     'gifts',
     'messages',
-    'password_reset_tokens'
+    'password_reset_tokens',
+    'unsubscribe'
   ];
 
   const LIMIT_OPTIONS = [10,20,30,40,50,100];

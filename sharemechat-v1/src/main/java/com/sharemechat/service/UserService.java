@@ -3,11 +3,12 @@ package com.sharemechat.service;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.*;
 import com.sharemechat.entity.LoginResponse;
+import com.sharemechat.entity.Unsubscribe;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailAlreadyInUseException;
-import com.sharemechat.exception.InvalidCredentialsException;
 import com.sharemechat.exception.UnderageModelException;
 import com.sharemechat.exception.UserNotFoundException;
+import com.sharemechat.repository.UnsubscribeRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
 import jakarta.transaction.Transactional;
@@ -30,30 +31,38 @@ public class UserService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final TransactionService transactionService;
+    private final UnsubscribeRepository unsubscribeRepository;
 
 
     @Autowired
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtUtil jwtUtil) {
+    public UserService(UserRepository userRepository,
+                       PasswordEncoder passwordEncoder,
+                       JwtUtil jwtUtil,
+                       TransactionService transactionService,
+                       UnsubscribeRepository unsubscribeRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
+        this.transactionService = transactionService;
+        this.unsubscribeRepository = unsubscribeRepository;
     }
 
     @Transactional
     public UserDTO registerClient(@Valid UserClientRegisterDTO registerDTO, String registerIp) {
         // --- Sanitización ---
         final String email    = sanitizeEmail(registerDTO.getEmail());      // sin espacios, minúsculas
-        final String nickname = sanitizeNickname(registerDTO.getNickname()); // sin espacios en todo el string
+        final String nickname = sanitizeNickname(registerDTO.getNickname()); // sin espacios en el string
         final String password = registerDTO.getPassword();                  // no se altera
 
-        // --- Validaciones extra ---
+
         if (email == null) {
             throw new IllegalArgumentException("El email no puede estar vacío");
         }
         if (nickname == null) {
             throw new IllegalArgumentException("El nickname es obligatorio");
         }
-        validatePasswordPolicy(password); // longitud y sin espacios
+        validatePasswordPolicy(password);
 
         if (!Boolean.TRUE.equals(registerDTO.getConfirAdult())) {
             throw new IllegalArgumentException("Debes confirmar que eres mayor de 18 años");
@@ -65,7 +74,6 @@ public class UserService {
             throw new EmailAlreadyInUseException("El email ya está en uso");
         }
 
-        // --- Construcción entidad ---
         User user = new User();
         user.setEmail(email);
         user.setNickname(nickname);
@@ -76,7 +84,7 @@ public class UserService {
         user.setUnsubscribe(false);
         user.setIsActive(true);
 
-        // Consentimientos / auditoría, entidad: acceptTerm = LocalDateTime)
+        // Consentimientos / auditoría, entidad
         user.setConfirAdult(true);                 // el check se usa para validar
         user.setAcceptTerm(LocalDateTime.now());   // evidencia de aceptación
 
@@ -101,7 +109,6 @@ public class UserService {
         final String nickname = sanitizeNickname(registerDTO.getNickname()); // elimina espacios no deseados
         final String password = registerDTO.getPassword();                   // no se altera
 
-        // --- Validaciones extra (además de Bean Validation) ---
         if (email == null) {
             throw new IllegalArgumentException("El email no puede estar vacío");
         }
@@ -129,7 +136,7 @@ public class UserService {
             throw new UnderageModelException("Debes ser mayor de 18 años para registrarte como modelo");
         }
 
-        // --- Construcción de la entidad ---
+
         User user = new User();
         user.setEmail(email);
         user.setNickname(nickname);
@@ -142,6 +149,7 @@ public class UserService {
         user.setUnsubscribe(false);
         user.setIsActive(true);
         user.setVerificationStatus(Constants.VerificationStatuses.PENDING);
+
 
         // Consentimientos / auditoría:
         user.setConfirAdult(true);                 // el check ya fue validado
@@ -256,6 +264,49 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // Darse de baja como usuario
+    @Transactional
+    public void unsubscribe(String email, String reason, String ip) {
+        // 1) Resolver usuario
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+
+        if (Boolean.TRUE.equals(user.getUnsubscribe())) {
+            // Idempotente: ya estaba de baja, no hacemos nada más
+            return;
+        }
+
+        final Long userId = user.getId();
+        final String currentRole = user.getRole();
+
+        // 2) Forfeit de saldo según rol actual (CLIENT o MODEL)
+        //    (registra transactions/balances y contrapartida plataforma; pone saldo agregado a 0)
+        //    La lógica vive en TransactionService para no duplicar código financiero.
+        String forfeiDesc = "Saldo perdido por baja voluntaria"
+                + (reason != null && !reason.isBlank() ? (" | Motivo: " + reason.trim()) : "");
+        transactionService.forfeitOnUnsubscribe(userId, currentRole, forfeiDesc);  // [NEW]
+
+        // 3) Marcar baja y degradar rol (CLIENT/MODEL -> USER)
+        if (Constants.Roles.CLIENT.equals(currentRole) || Constants.Roles.MODEL.equals(currentRole)) {
+            user.setRole(Constants.Roles.USER);
+        }
+        user.setUnsubscribe(true);
+        user.setIsActive(false);
+        user.setUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        // 4) Insertar registro en la tabla 'unsubscribe' (1 fila por usuario)
+        //    Requiere UnsubscribeRepository y entidad Unsubscribe.
+        if (!unsubscribeRepository.existsByUserId(userId)) {                    // [NEW]
+            Unsubscribe row = new Unsubscribe(userId, LocalDate.now(),          // [NEW]
+                    normalize(reason));                                          // [NEW]
+            unsubscribeRepository.save(row);                                     // [NEW]
+        }
+
+        // (Opcional) Si luego integras cierre de WS/colas, hazlo fuera para no mezclar capas aquí.
+    }
+
+
     /* ================== Helpers privados ================== */
 
     /** Devuelve null si el texto es null o está en blanco; en otro caso devuelve trim(). */
@@ -315,11 +366,9 @@ public class UserService {
         dto.setBiography(user.getBiography());
         dto.setInterests(user.getInterests());
         dto.setVerificationStatus(user.getVerificationStatus());
-
         dto.setUnsubscribe(user.getUnsubscribe());
         dto.setCreatedAt(user.getCreatedAt());
-        dto.setStartDate(user.getStartDate());
-        dto.setEndDate(user.getEndDate());
+
         return dto;
     }
 

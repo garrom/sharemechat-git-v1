@@ -46,6 +46,7 @@ public class AdminService {
         TABLE_ORDER.put("gifts", "id");
         TABLE_ORDER.put("messages", "id");
         TABLE_ORDER.put("password_reset_tokens", "created_at");
+        TABLE_ORDER.put("unsubscribe", "end_date");
     }
 
     public AdminService(UserRepository userRepository, UserService userService,
@@ -106,9 +107,6 @@ public class AdminService {
                 // Promoción a MODEL si aún no lo es
                 if (!Constants.Roles.MODEL.equals(user.getRole())) {
                     user.setRole(Constants.Roles.MODEL);
-                    if (user.getStartDate() == null) {
-                        user.setStartDate(java.time.LocalDate.now());
-                    }
                 }
 
                 // Asegurar registro en tabla models (idempotente)
@@ -124,7 +122,7 @@ public class AdminService {
                 if (Constants.Roles.MODEL.equals(user.getRole())) {
                     user.setRole(Constants.Roles.USER);
                 }
-                user.setEndDate(java.time.LocalDate.now());
+
             }
             case "PENDING" -> {
                 // Solo permitimos PENDING si nunca fue REJECTED antes
