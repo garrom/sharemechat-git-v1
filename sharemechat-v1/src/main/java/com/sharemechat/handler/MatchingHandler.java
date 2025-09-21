@@ -7,6 +7,10 @@ import com.sharemechat.service.MessageService;
 import com.sharemechat.service.ModelStatusService;
 import com.sharemechat.service.StreamService;
 import com.sharemechat.service.TransactionService;
+import com.sharemechat.repository.BalanceRepository;
+import com.sharemechat.entity.Balance;
+import java.math.BigDecimal;
+
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
@@ -41,6 +45,8 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final MessageService messageService;
     private final MessagesWsHandler messagesWsHandler;
     private final TransactionService transactionService;
+    private final BalanceRepository balanceRepository;
+
 
     public MatchingHandler(JwtUtil jwtUtil,
                            UserRepository userRepository,
@@ -48,7 +54,8 @@ public class MatchingHandler extends TextWebSocketHandler {
                            TransactionService transactionService,
                            MessageService messageService,
                            MessagesWsHandler messagesWsHandler,
-                           ModelStatusService modelStatusService) {
+                           ModelStatusService modelStatusService,
+                           BalanceRepository balanceRepository) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.streamService = streamService;
@@ -56,6 +63,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         this.messageService =messageService;
         this.messagesWsHandler = messagesWsHandler;
         this.transactionService = transactionService;
+        this.balanceRepository = balanceRepository;
 
     }
 
@@ -411,8 +419,21 @@ public class MatchingHandler extends TextWebSocketHandler {
         } catch (Exception ignore) {}
 
         try {
-            // requiere inyectar TransactionService en este handler
+
             com.sharemechat.entity.Gift g = transactionService.processGift(senderId, peerUserId, giftId, streamId);
+
+            // --- NUEVO: persistir el regalo como mensaje marcador para historial ---
+            String marker = "[[GIFT:" + g.getId() + ":" + g.getName() + "]]";
+            MessageDTO saved = messageService.send(senderId, peerUserId, marker);
+
+            messagesWsHandler.broadcastNew(saved);
+
+
+            // calcular nuevo saldo del cliente tras el gift
+            BigDecimal newBal = balanceRepository
+                    .findTopByUserIdOrderByTimestampDesc(senderId)
+                    .map(Balance::getBalance)
+                    .orElse(BigDecimal.ZERO);
 
             org.json.JSONObject out = new org.json.JSONObject()
                     .put("type", "gift")
@@ -423,7 +444,8 @@ public class MatchingHandler extends TextWebSocketHandler {
                             .put("name", g.getName())
                             .put("icon", g.getIcon())
                             .put("cost", g.getCost().toPlainString())
-                    );
+                    )
+                    .put("newBalance", newBal.toPlainString());
 
             String payload = out.toString();
             safeSend(session, payload);

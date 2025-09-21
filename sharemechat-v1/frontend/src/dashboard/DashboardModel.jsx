@@ -36,9 +36,11 @@ const DashboardModel = () => {
   const [queuePosition, setQueuePosition] = useState(null);
   const [currentClientId, setCurrentClientId] = useState(null);
   const [favReload, setFavReload] = useState(0);
-  const [selectedFav, setSelectedFav] = useState(null); // { id, nickname, invited, status, role }
+  const [selectedFav, setSelectedFav] = useState(null);
+  const [gifts, setGifts] = useState([]);
+  const [giftsLoaded, setGiftsLoaded] = useState(false);
+  const [giftRenderReady, setGiftRenderReady] = useState(false);
 
-  // === NUEVO: estado de búsqueda como en el cliente ===
   const [searching, setSearching] = useState(false);
 
   // Chat central (favoritos)
@@ -53,6 +55,7 @@ const DashboardModel = () => {
   const msgSocketRef = useRef(null);
   const msgPingRef = useRef(null);
   const msgReconnectRef = useRef(null);
+  const centerSeenIdsRef = useRef(new Set());
   const modelCenterListRef = useRef(null);
 
   const history = useHistory();
@@ -74,6 +77,12 @@ const DashboardModel = () => {
       incoming === lastSentRef.current.text &&
       now - lastSentRef.current.at < 1500
     );
+  };
+
+  const getGiftIcon = (gift) => {
+    if (!gift) return null;
+    const found = gifts.find(gg => Number(gg.id) === Number(gift.id));
+    return found?.icon || null;
   };
 
   useEffect(() => {
@@ -110,6 +119,24 @@ const DashboardModel = () => {
 
   useEffect(() => { meIdRef.current = Number(user?.id) || null; }, [user?.id]);
   useEffect(() => { peerIdRef.current = Number(openChatWith) || null; }, [openChatWith]);
+
+  useEffect(()=>{
+    const tk=localStorage.getItem('token');
+    if(!tk) return;
+    fetch('/api/gifts',{ headers:{Authorization:`Bearer ${tk}`} })
+      .then(r=>r.ok?r.json():[])
+      .then(arr=>{
+        setGifts(Array.isArray(arr)?arr:[]);
+        setGiftsLoaded(true);
+      })
+      .catch(()=> setGiftsLoaded(true));
+  },[]);
+
+  useEffect(() => {
+    if (!giftsLoaded) { setGiftRenderReady(false); return; }
+    const t = setTimeout(() => setGiftRenderReady(true), 200);
+    return () => clearTimeout(t);
+  }, [giftsLoaded]);
 
   // Autoscroll chat central
   useEffect(() => {
@@ -174,9 +201,10 @@ const DashboardModel = () => {
         normalized.forEach(m=>{
           if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
             const parts=m.body.slice(2,-2).split(':'); // GIFT:id:name
-            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':'),icon:'🎁'};
+            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':')};
           }
         });
+        centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));  // nuevo
         setCenterMessages(normalized.reverse());
 
         try {
@@ -284,7 +312,7 @@ const DashboardModel = () => {
           // === NUEVO: si viene como mensaje normal pero lleva marcador de regalo, enriquecer ===
           if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
             const parts=m.body.slice(2,-2).split(':');
-            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':'),icon:'🎁'};
+            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':')};
           }
 
           const me   = Number(meIdRef.current);
@@ -297,8 +325,9 @@ const DashboardModel = () => {
             (m.senderId === me   && m.recipientId === peer);
 
           if (belongsToThisChat) {
+            if (m.id && centerSeenIdsRef.current.has(m.id)) return;
+            if (m.id) centerSeenIdsRef.current.add(m.id);
             setCenterMessages(prev => [...prev, m]);
-
             queueMicrotask(() => {
                 const el = modelCenterListRef.current;
                 if (el) el.scrollTop = el.scrollHeight;
@@ -316,12 +345,16 @@ const DashboardModel = () => {
             senderId: data.from,
             recipientId: data.to,
             body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
-            gift: { id: data.gift.id, name: data.gift.name, icon: data.gift.icon || '🎁' }
+            gift: { id: data.gift.id, name: data.gift.name}
           };
+
           const belongsToThisChat =
             (item.senderId === peer && item.recipientId === me) ||
             (item.senderId === me   && item.recipientId === peer);
           if (belongsToThisChat) {
+            const mid = data.messageId;
+            if (mid && centerSeenIdsRef.current.has(mid)) return;
+            if (mid) centerSeenIdsRef.current.add(mid);
             setCenterMessages(prev => [...prev, item]);
             queueMicrotask(() => {
               const el = modelCenterListRef.current;
@@ -445,7 +478,8 @@ const DashboardModel = () => {
       } else if (data.type === 'gift') {
         // === NUEVO: recepción de regalo en streaming ===
         const mine = Number(data.fromUserId) === Number(user?.id);
-        setMessages(prev=>[...prev,{ from: mine?'me':'peer', text:`🎁 ${data?.gift?.name||'Regalo'}`, gift:{ id:data?.gift?.id, name:data?.gift?.name, icon:data?.gift?.icon||'🎁'} }]);
+        setMessages(prev=>[...prev,{ from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
+
       } else if (data.type === 'no-client-available') {
         // === Réplica del cliente: queda "searching" y espera en cola ===
         setError('');
@@ -708,6 +742,7 @@ const DashboardModel = () => {
       setOpenChatWith(peer);
       setCenterChatPeerName(name);
       setCenterMessages([]);
+      centerSeenIdsRef.current = new Set();
       setShowMsgPanel(true);
       openMessagesSocket?.();
       return;
@@ -975,16 +1010,18 @@ const DashboardModel = () => {
                               style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
                             >
                               {msg.gift ? (
-                                <div>
-                                  <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong>{' '}
-                                  <img src={msg.gift.icon} alt={msg.gift.name} style={{ width:28, height:28, marginLeft:6 }} />
-                                  <span style={{ marginLeft: 6 }}>{msg.gift.name}</span>
-                                </div>
+                                <>
+                                  {giftRenderReady && (() => {
+                                    const src = getGiftIcon(msg.gift);
+                                    return src ? <img src={src} alt="" style={{ width:28, height:28, marginLeft:6 }} /> : null;
+                                  })()}
+                                </>
                               ) : (
                                 <>
                                   <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong> {msg.text}
                                 </>
                               )}
+
                             </div>
                           ))}
                         </div>
@@ -1117,14 +1154,15 @@ const DashboardModel = () => {
                               color:'#fff',
                               maxWidth:'80%'
                             }}>
+
                               {m.gift ? (
-                                <>
-                                  <img src={m.gift.icon} alt={m.gift.name} style={{ width:24, height:24, marginRight:6 }} />
-                                  {m.gift.name}
-                                </>
-                              ) : (
-                                m.body
-                              )}
+                                 giftRenderReady && (() => {
+                                   const src = getGiftIcon(m.gift);
+                                   return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
+                                 })()
+                               ) : (
+                                 m.body
+                               )}
                             </span>
                           </div>
                         ))}

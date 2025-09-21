@@ -30,6 +30,7 @@ public class StreamService {
     private final PlatformTransactionRepository platformTransactionRepository;
     private final PlatformBalanceRepository platformBalanceRepository;
     private final BillingProperties billing;
+    private final TransactionService transactionService;
     // locks por sesión para evitar dobles cierres concurrentes
     private final ConcurrentHashMap<Long, ReentrantLock> sessionLocks = new ConcurrentHashMap<>();
 
@@ -43,7 +44,8 @@ public class StreamService {
                          ModelRepository modelRepository,
                          PlatformTransactionRepository platformTransactionRepository,
                          BillingProperties billing,
-                         PlatformBalanceRepository platformBalanceRepository) {
+                         PlatformBalanceRepository platformBalanceRepository,
+                         TransactionService transactionService) {
         this.streamRecordRepository = streamRecordRepository;
         this.userRepository = userRepository;
         this.modelStatusService = modelStatusService;
@@ -54,6 +56,7 @@ public class StreamService {
         this.platformTransactionRepository = platformTransactionRepository;
         this.billing = billing;
         this.platformBalanceRepository = platformBalanceRepository;
+        this.transactionService = transactionService;
     }
 
     /**
@@ -340,6 +343,25 @@ public class StreamService {
             sessionLocks.remove(session.getId());
         }
     }
+
+    // Metodo para gestionar los Gift
+    @Transactional
+    public Gift sendGiftDuringActiveStream(Long clientId, Long modelId, Long giftId) {
+        // 1) localizar sesión activa
+        StreamRecord session = streamRecordRepository
+                .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId)
+                .orElseThrow(() -> new IllegalStateException("No hay sesión de streaming activa entre el cliente y la modelo"));
+
+        // 2) registrar gift (contabilidad + balances + plataforma)
+        Gift gift = transactionService.processGift(clientId, modelId, giftId, session.getId());
+
+        // 3) (opcional) podrías querer el newBalance del cliente aquí si lo necesitas:
+        // BigDecimal newClientBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(clientId)
+        //        .map(Balance::getBalance).orElse(BigDecimal.ZERO);
+
+        return gift; // el handler WS puede consultar el balance si quiere enviarlo
+    }
+
 
 
     /**

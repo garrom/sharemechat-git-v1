@@ -39,6 +39,8 @@ const DashboardClient = () => {
   const [favReload, setFavReload] = useState(0);
   const [selectedFav, setSelectedFav] = useState(null);
   const [gifts,setGifts]=useState([]);
+  const [giftsLoaded, setGiftsLoaded] = useState(false);
+  const [giftRenderReady, setGiftRenderReady] = useState(false);
   const [showGifts,setShowGifts]=useState(false);
   const [showCenterGifts,setShowCenterGifts]=useState(false);
 
@@ -70,13 +72,21 @@ const DashboardClient = () => {
   const [centerLoading, setCenterLoading] = useState(false);
   const msgPingRef = useRef(null);
   const msgReconnectRef = useRef(null);
-
+  const centerSeenIdsRef = useRef(new Set());  //nuevo
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
 
   const fmtEUR = (v) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
       .format(Number(v || 0));
+
+  // Devuelve el icono del regalo estrictamente desde el catálogo
+  const getGiftIcon = (gift) => {
+    if (!gift) return null;
+    const found = gifts.find(gg => Number(gg.id) === Number(gift.id));
+    return found?.icon || null;
+  };
+
 
   useEffect(() => {
     const loadUser = async () => {
@@ -153,13 +163,25 @@ const DashboardClient = () => {
   }, []);
 
   useEffect(()=>{
-      const tk=localStorage.getItem('token');
-      if(!tk) return;
-      fetch('/api/gifts',{ headers:{Authorization:`Bearer ${tk}`} })
+    const tk=localStorage.getItem('token');
+    if(!tk) return;
+    fetch('/api/gifts',{ headers:{Authorization:`Bearer ${tk}`} })
       .then(r=>r.ok?r.json():[])
-      .then(setGifts)
-      .catch(()=>{});
+      .then(arr=>{
+        setGifts(Array.isArray(arr)?arr:[]);
+        setGiftsLoaded(true);
+      })
+      .catch(()=>{
+        // marcamos como "cargado" aunque falle, así no nos quedamos bloqueados
+        setGiftsLoaded(true);
+      });
   },[]);
+
+  useEffect(() => {
+    if (!giftsLoaded) { setGiftRenderReady(false); return; }
+    const t = setTimeout(() => setGiftRenderReady(true), 200); // 200ms de margen
+    return () => clearTimeout(t);
+  }, [giftsLoaded]);
 
   const clearMsgTimers = () => {
     if (msgPingRef.current) {
@@ -226,7 +248,6 @@ const DashboardClient = () => {
       try {
         const data = JSON.parse(ev.data);
 
-        // === (MEJORA 1) Regalo en vivo por /messages filtrado al chat abierto ===
         if (data.type === 'msg:gift' && data.gift) {
           const me   = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
@@ -236,16 +257,21 @@ const DashboardClient = () => {
             (from === peer && to === me) || (from === me && to === peer);
           if (!me || !peer || !belongsToThisChat) return;
 
+          const mid = data.messageId;
+          if (mid && centerSeenIdsRef.current.has(mid)) return;
+          if (mid) centerSeenIdsRef.current.add(mid);
+
           setCenterMessages(prev => [...prev, {
-            id: data.messageId,
+            id: mid || `${Date.now()}`,
             senderId: from,
             recipientId: to,
             body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
-            gift: data.gift
+            gift: { id: data.gift.id, name: data.gift.name }
           }]);
           queueMicrotask(() => { const el = centerListRef.current; if (el) el.scrollTop = el.scrollHeight; });
           return;
         }
+
 
         if (data.type === 'msg:new' && data.message) {
           const m = normMsg(data.message);
@@ -253,7 +279,7 @@ const DashboardClient = () => {
           if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
             const parts = m.body.slice(2, -2).split(':');
             if (parts.length >= 3 && parts[0] === 'GIFT') {
-              m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':'), icon: '🎁' };
+              m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
             }
           }
 
@@ -266,6 +292,8 @@ const DashboardClient = () => {
             (m.senderId === me   && m.recipientId === peer);
 
           if (belongsToThisChat) {
+            if (m.id && centerSeenIdsRef.current.has(m.id)) return;
+            if (m.id) centerSeenIdsRef.current.add(m.id);
             setCenterMessages(prev => [...prev, m]);
             queueMicrotask(() => { const el = centerListRef.current; if (el) el.scrollTop = el.scrollHeight; });
           }
@@ -398,14 +426,19 @@ const DashboardClient = () => {
         return;
       }
 
-      if(data.type==='gift'){
-          const mine=Number(data.fromUserId)===Number(user?.id);
-          setMessages(p=>[...p,{from:mine?'me':'peer',text:`🎁 ${data.gift.name}`,gift:data.gift}]);
-          if(mine&&data.newBalance){
-              setSaldo(Number(data.newBalance));
-          }
-          return;
+      if (data.type === 'gift') {
+        const mine = Number(data.fromUserId) === Number(user?.id);
+        setMessages(p=>[...p,{ from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
+
+        // newBalance viene del backend en gifts de streaming (MatchingHandler)
+        if (mine && data.newBalance != null) {
+          const nb = Number.parseFloat(String(data.newBalance));
+          if (Number.isFinite(nb)) setSaldo(nb);
+        }
+        return;
       }
+
+
       if(data.type==='gift:error'){
           setError(data.message||'No se pudo enviar el regalo');
           return;
@@ -524,7 +557,6 @@ const DashboardClient = () => {
     setCenterChatPeerName('');
     setCenterMessages([]);
     setCenterInput('');
-    // === (MEJORA 2) cerrar pickers de regalos al cortar ===
     setShowGifts(false);
     setShowCenterGifts(false);
   };
@@ -648,6 +680,7 @@ const DashboardClient = () => {
     setCenterChatPeerId(peerId);
     setCenterChatPeerName(displayName || `Usuario ${peerId}`);
     setCenterMessages([]);
+    centerSeenIdsRef.current = new Set();  // nuevo
     setCenterLoading(true);
     openMsgSocket();
 
@@ -669,6 +702,7 @@ const DashboardClient = () => {
           createdAt: raw.createdAt ?? raw.created_at,
           readAt: raw.readAt ?? raw.read_at ?? null,
         }));
+        centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id)); // nuevo
         setCenterMessages(normalized.reverse());
         try {
           await fetch(`/api/messages/with/${peerId}/read`, {
@@ -916,11 +950,15 @@ const DashboardClient = () => {
                               style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
                             >
                               {msg.gift ? (
-                                <div>
-                                  <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong>{' '}
-                                  <img src={msg.gift.icon} alt={msg.gift.name} style={{ width:28, height:28, marginLeft:6 }} />
-                                  <span style={{ marginLeft: 6 }}>{msg.gift.name}</span>
-                                </div>
+                                  <div>
+                                    <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong>{' '}
+                                    {giftRenderReady && (() => {
+                                      const src = getGiftIcon(msg.gift);
+                                      return src ? (
+                                        <img src={src} alt="" style={{ width:28, height:28, marginLeft:6, verticalAlign:'middle' }} />
+                                      ) : null;
+                                    })()}
+                                  </div>
                               ) : (
                                 <>
                                   <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
@@ -1046,12 +1084,13 @@ const DashboardClient = () => {
                           if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
                             try {
                               const parts = m.body.slice(2, -2).split(':');
-                              giftData = { id: Number(parts[1]), name: parts[2], icon: '🎁' };
+                              giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
                             } catch {}
                           }
                           return (
                             <div key={m.id}
                                  style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
+
                               <span style={{
                                 display:'inline-block',
                                 padding:'6px 10px',
@@ -1061,11 +1100,16 @@ const DashboardClient = () => {
                                 maxWidth:'80%'
                               }}>
                                 {giftData ? (
-                                  <><span style={{ fontSize:24, marginRight:6 }}>{giftData.icon || '🎁'}</span>{giftData.name}</>
+                                  giftRenderReady && (() => {
+                                    const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
+                                    return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
+                                  })()
                                 ) : (
                                   m.body
                                 )}
+
                               </span>
+
                             </div>
                           );
                         })}
@@ -1092,7 +1136,7 @@ const DashboardClient = () => {
                                 <button key={g.id}
                                   onClick={()=>sendGiftMsg(g.id)}
                                   style={{ background:'transparent', border:'1px solid #555', borderRadius:8, padding:6, cursor:'pointer', color:'#fff' }}>
-                                  <div style={{ fontSize:28, lineHeight:1 }}>{g.icon || '🎁'}</div>
+                                  <img src={g.icon} alt={g.name} style={{ width:32, height:32, display:'block', margin:'0 auto' }}/>
                                   <div style={{ fontSize:12 }}>{g.name}</div>
                                   <div style={{ fontSize:12, opacity:.8 }}>{fmtEUR(g.cost)}</div>
                                 </button>
