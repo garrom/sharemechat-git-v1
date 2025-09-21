@@ -23,7 +23,13 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0 }) {
             status: d.status,
             role: d.user?.role || 'MODEL'
           }));
-          setItems(mapped);
+          // Solo mostrar pendientes o aceptados (no rechazados)
+          const filtered = mapped.filter(item => {
+            const v = String(item.invited || '').toLowerCase();
+            return v === 'pending' || v === 'accepted';
+          });
+
+          setItems(filtered);
         }
       } catch (e) {
         if (!ignore) setItems([]);

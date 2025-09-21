@@ -308,10 +308,12 @@ const DashboardAdmin = () => {
             <StyledTable>
               <thead>
                 <tr>
+                  <th>ID</th>
                   <th>Email</th>
                   <th>Rol</th>
                   <th>Tipo</th>
                   <th>Estado de Verificación</th>
+                  <th>Suscripción</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -322,10 +324,12 @@ const DashboardAdmin = () => {
                     if (!user.id) {
                       return (
                         <tr key={user.email || Math.random()}>
+                          <td>—</td>
                           <td>{user.email}</td>
                           <td>{user.role}</td>
                           <td>{user.userType}</td>
                           <td>{v}</td>
+                          <td>{(String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1') ? 'Baja' : 'Alta'}</td>
                           <td>
                             <span style={{ color: '#dc3545' }}>ID no válido</span>
                           </td>
@@ -334,10 +338,12 @@ const DashboardAdmin = () => {
                     }
                   return (
                     <tr key={user.id}>
+                      <td>{user.id}</td>
                       <td>{user.email}</td>
                       <td>{user.role}</td>
                       <td>{user.userType}</td>
                       <td>{v}</td>
+                      <td>{(String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1') ? 'Baja' : 'Alta'}</td>
                       <td>
                         {v === 'PENDING' && (
                           <>

@@ -613,7 +613,7 @@ const DashboardClient = () => {
 
   const handleAddFavorite = async () => {
     if (!currentModelId) {
-      alert('No se pudo identificar a la modelo actual. (Necesitamos que el backend envíe peerUserId en el mensaje "match").');
+      alert('No se pudo identificar a la modelo actual).');
       return;
     }
     const tk = localStorage.getItem('token');
