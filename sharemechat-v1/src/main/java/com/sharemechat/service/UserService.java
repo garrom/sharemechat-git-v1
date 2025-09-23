@@ -220,9 +220,6 @@ public class UserService {
         if (surname != null) {
             user.setSurname(surname);
         }
-        if (profilePicture != null) {
-            user.setProfilePic(profilePicture);
-        }
         if (userUpdateDTO.getDateOfBirth() != null) {
             user.setDateOfBirth(userUpdateDTO.getDateOfBirth());
         }
@@ -361,7 +358,6 @@ public class UserService {
         dto.setUserType(user.getUserType());
         dto.setName(user.getName());
         dto.setSurname(user.getSurname());
-        dto.setProfilePic(user.getProfilePic());
         dto.setDateOfBirth(user.getDateOfBirth());
         dto.setBiography(user.getBiography());
         dto.setInterests(user.getInterests());

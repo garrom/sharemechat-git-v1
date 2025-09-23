@@ -12,7 +12,6 @@ public class UserDTO {
     private String userType;
     private String name;
     private String surname;
-    private String profilePic;
     private LocalDate dateOfBirth;
     private String biography;
     private String interests;
@@ -43,9 +42,6 @@ public class UserDTO {
 
     public String getSurname() { return surname; }
     public void setSurname(String surname) { this.surname = surname; }
-
-    public String getProfilePic() { return profilePic; }
-    public void setProfilePic(String profilePic) { this.profilePic = profilePic; }
 
     public LocalDate getDateOfBirth() { return dateOfBirth; }
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }

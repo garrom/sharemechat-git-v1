@@ -37,9 +37,6 @@ public class User {
     @Column(name = "surname")
     private String surname;
 
-    @Column(name = "profile_pic")
-    private String profilePic;
-
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
@@ -106,9 +103,6 @@ public class User {
 
     public String getSurname() { return surname; }
     public void setSurname(String surname) { this.surname = surname; }
-
-    public String getProfilePic() { return profilePic; }
-    public void setProfilePic(String profilePic) { this.profilePic = profilePic; }
 
     public LocalDate getDateOfBirth() { return dateOfBirth; }
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }

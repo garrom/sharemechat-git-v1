@@ -237,7 +237,6 @@ public class FavoriteService {
         return new UserSummaryDTO(
                 u.getId(),
                 u.getNickname(),
-                u.getProfilePic(),
                 u.getRole(),
                 u.getUserType()
         );

@@ -9,6 +9,7 @@ import DashboardAdmin from './dashboard/DashboardAdmin';
 import PerfilClient from './dashboard/subpages/PerfilClient';
 import PerfilModel from './dashboard/subpages/PerfilModel';
 import ChangePasswordPage from './dashboard/subpages/ChangePasswordPage';
+import ModelDocuments from './dashboard/subpages/ModelDocuments';
 import Login from './public/Login';
 import RegisterClient from './public/RegisterClient';
 import RegisterModel from './public/RegisterModel';
@@ -34,6 +35,8 @@ function App(){return(<Router><Switch>
   {/* Dashboards para USER (pre-conversión) */}
   <Route path="/dashboard-user-client" render={()=>(<RequireRole role="USER"><DashboardUserClient/></RequireRole>)}/>
   <Route path="/dashboard-user-model" render={()=>(<RequireRole role="USER"><DashboardUserModel/></RequireRole>)}/>
+  <Route path="/model-documents" render={()=>(<RequireRole role="USER"><ModelDocuments/></RequireRole>)}/>
+
 
   {/* Subpáginas bajo dashboard (protegidas por rol) */}
   <Route path="/perfil-client" render={()=>(<RequireRole role="CLIENT"><PerfilClient/></RequireRole>)}/>

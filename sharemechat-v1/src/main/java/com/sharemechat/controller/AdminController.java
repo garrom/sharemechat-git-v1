@@ -65,5 +65,4 @@ public class AdminController {
         return ResponseEntity.ok(adminService.viewTable(table, limit));
     }
 
-
 }

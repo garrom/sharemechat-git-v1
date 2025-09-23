@@ -54,8 +54,9 @@ const DashboardUserModel = () => {
   };
 
   const handleUploadDocs = () => {
-    // acción básica: redirigir a la pantalla de documentos (o abre modal si ya la tienes)
-    history.push('/perfil-model'); // o '/model-documents'
+
+    history.push('/model-documents');
+
   };
 
   return (
