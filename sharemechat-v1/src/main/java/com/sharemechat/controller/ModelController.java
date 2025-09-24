@@ -168,6 +168,8 @@ public class ModelController {
      * Eliminar un recurso concreto de los documentos de la modelo.
      * Soporta: field=pic (y opcionalmente field=video para futuro).
      */
+    // ModelController.java  (sustituye SOLO el método deleteModelDocument)
+
     @DeleteMapping("/documents")
     public ResponseEntity<?> deleteModelDocument(Authentication authentication,
                                                  @RequestParam(name = "field") String field) {
@@ -181,12 +183,26 @@ public class ModelController {
 
         ModelDocument doc = modelDocumentRepository.findById(user.getId()).orElse(null);
         if (doc == null) {
+            // Nada que borrar
             return ResponseEntity.noContent().build();
         }
 
         String toDelete = null;
-
         switch (field) {
+            //  soportados: documentación de verificación
+            case "idFront" -> {
+                toDelete = doc.getUrlVerificFront();
+                doc.setUrlVerificFront(null);
+            }
+            case "idBack" -> {
+                toDelete = doc.getUrlVerificBack();
+                doc.setUrlVerificBack(null);
+            }
+            case "verificDoc" -> {
+                toDelete = doc.getUrlVerificDoc();
+                doc.setUrlVerificDoc(null);
+            }
+            //  Ya soportados para perfil
             case "pic" -> {
                 toDelete = doc.getUrlPic();
                 doc.setUrlPic(null);
@@ -208,4 +224,5 @@ public class ModelController {
 
         return ResponseEntity.noContent().build();
     }
+
 }

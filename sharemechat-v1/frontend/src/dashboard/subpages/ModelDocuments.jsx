@@ -15,7 +15,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 
 const DOCS_GET_URL    = '/api/models/documents/me';
-const DOCS_UPLOAD_URL = '/api/models/documents';
+const DOCS_UPLOAD_URL = '/api/models/documents'; // POST: idFront|idBack|verificDoc ; DELETE: ?field=...
 
 const ModelDocuments = () => {
   const history = useHistory();
@@ -24,7 +24,7 @@ const ModelDocuments = () => {
   // Navbar
   const [userName, setUserName] = useState('Usuario');
 
-  // Estado de URLs (lo que ya hay subido)
+  // Estado Docs existentes
   const [doc, setDoc] = useState({
     urlVerificFront: null,
     urlVerificBack: null,
@@ -32,23 +32,28 @@ const ModelDocuments = () => {
     verificationStatus: 'PENDING',
   });
 
-  // Estado de inputs (archivos a subir)
+  // Inputs file (a subir)
   const [idFrontFile, setIdFrontFile]   = useState(null);
   const [idBackFile, setIdBackFile]     = useState(null);
   const [verifDocFile, setVerifDocFile] = useState(null);
 
-  // Keys para resetear los <input type="file"> tras subir
+  // Keys para resetear <input type="file">
   const [idFrontKey, setIdFrontKey]   = useState(0);
   const [idBackKey, setIdBackKey]     = useState(0);
   const [verifDocKey, setVerifDocKey] = useState(0);
 
-  // Estado UI
-  const [loading, setLoading]     = useState(false);
-  const [busyField, setBusyField] = useState(null);
-  const [error, setError]         = useState('');
+  // UI
+  const [loading, setLoading]             = useState(false);
+  const [busyField, setBusyField]         = useState(null);     // subidas
+  const [deletingField, setDeletingField] = useState(null);     // borrados
+  const [error, setError]                 = useState('');
+  const [msg, setMsg]                     = useState('');
 
-  // Cargar nombre usuario + documentos
   useEffect(() => {
+    if (!token) {
+      history.push('/login');
+      return;
+    }
     (async () => {
       try {
         const meRes = await fetch('/api/users/me', {
@@ -64,16 +69,17 @@ const ModelDocuments = () => {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [token, history]);
 
   const refreshDocs = async () => {
     setLoading(true);
     setError('');
+    setMsg('');
     try {
       const res = await fetch(DOCS_GET_URL, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
       const data = await res.json();
       setDoc({
         urlVerificFront: data.urlVerificFront || null,
@@ -88,21 +94,60 @@ const ModelDocuments = () => {
     }
   };
 
-  // Subida de un único campo (idFront | idBack | verificDoc)
+  // Helpers
+  const extractOriginalNameFromUrl = (url) => {
+    if (!url) return '';
+    const raw = (url || '').split('?')[0].split('#')[0].split('/').pop() || '';
+    return decodeURIComponent(
+      raw.replace(/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-/, '')
+    );
+  };
+
+  const renderImagePreview = (url) => {
+    if (!url) return <p style={{ color: '#777', marginBottom: 8 }}>— No subido —</p>;
+    const originalName = extractOriginalNameFromUrl(url);
+    return (
+      <div style={{ marginTop: 8, marginBottom: 8 }}>
+        <img
+          src={url}
+          alt="preview"
+          style={{ maxWidth: 220, maxHeight: 220, borderRadius: 8, display: 'block' }}
+        />
+        <div style={{ marginTop: 6 }}>
+          <a href={url} target="_blank" rel="noreferrer">
+            {originalName || 'Abrir archivo'}
+          </a>
+        </div>
+      </div>
+    );
+  };
+
+  const renderFileLink = (url, label = 'Ver archivo') => {
+    if (!url) return <p style={{ color: '#777', marginBottom: 8 }}>— No subido —</p>;
+    const originalName = extractOriginalNameFromUrl(url);
+    return (
+      <a href={url} target="_blank" rel="noreferrer">
+        {originalName || label}
+      </a>
+    );
+  };
+
+  // Subida de un único campo
   const uploadSingle = async (fieldName, fileObj) => {
     if (!fileObj) return;
     setBusyField(fieldName);
     setError('');
+    setMsg('');
     try {
       const fd = new FormData();
-      // keys: idFront, idBack, verificDoc (coinciden con @RequestPart)
+      // keys esperadas por backend: idFront | idBack | verificDoc
       fd.append(fieldName, fileObj);
       const res = await fetch(DOCS_UPLOAD_URL, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
-      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
       const data = await res.json();
       setDoc({
         urlVerificFront: data.urlVerificFront || null,
@@ -110,14 +155,52 @@ const ModelDocuments = () => {
         urlVerificDoc:   data.urlVerificDoc   || null,
         verificationStatus: data.verificationStatus || 'PENDING',
       });
-      // limpiar input subido + reiniciar control visual
+
+      // limpiar input subido
       if (fieldName === 'idFront') { setIdFrontFile(null); setIdFrontKey(k => k + 1); }
       if (fieldName === 'idBack')  { setIdBackFile(null);  setIdBackKey(k => k + 1); }
       if (fieldName === 'verificDoc') { setVerifDocFile(null); setVerifDocKey(k => k + 1); }
+
+      setMsg('Archivo subido correctamente.');
     } catch (e) {
       setError(e.message || 'No se pudo subir el archivo');
     } finally {
       setBusyField(null);
+    }
+  };
+
+  // Eliminar un único campo (DELETE ?field=...)
+  const deleteSingle = async (fieldName, confirmText) => {
+    if (!window.confirm(confirmText || '¿Eliminar este archivo?')) return;
+    setDeletingField(fieldName);
+    setError('');
+    setMsg('');
+    try {
+      const res = await fetch(`${DOCS_UPLOAD_URL}?field=${encodeURIComponent(fieldName)}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar el archivo');
+
+      // Actualiza estado local
+      setDoc((d) => {
+        const next = { ...d };
+        if (fieldName === 'idFront') next.urlVerificFront = null;
+        if (fieldName === 'idBack')  next.urlVerificBack  = null;
+        if (fieldName === 'verificDoc') next.urlVerificDoc = null;
+        return next;
+      });
+
+      // Limpia input correspondiente
+      if (fieldName === 'idFront') { setIdFrontFile(null); setIdFrontKey(k => k + 1); }
+      if (fieldName === 'idBack')  { setIdBackFile(null);  setIdBackKey(k => k + 1); }
+      if (fieldName === 'verificDoc') { setVerifDocFile(null); setVerifDocKey(k => k + 1); }
+
+      setMsg('Archivo eliminado.');
+    } catch (e) {
+      setError(e.message || 'No se pudo eliminar el archivo');
+    } finally {
+      setDeletingField(null);
     }
   };
 
@@ -126,26 +209,7 @@ const ModelDocuments = () => {
     window.location.href = '/';
   };
 
-  const renderImagePreview = (url) => {
-    if (!url) return <p style={{ color: '#777', marginBottom: 8 }}>— No subido —</p>;
-    return (
-      <div style={{ marginTop: 8, marginBottom: 8 }}>
-        <img
-          src={url}
-          alt="preview"
-          style={{ maxWidth: 220, maxHeight: 220, borderRadius: 8, display: 'block' }}
-        />
-        <div><a href={url} target="_blank" rel="noreferrer" className="small">Abrir en nueva pestaña</a></div>
-      </div>
-    );
-  };
-
-  const renderFileLink = (url, label = 'Ver archivo') => {
-    if (!url) return <p style={{ color: '#777', marginBottom: 8 }}>— No subido —</p>;
-    return <a href={url} target="_blank" rel="noreferrer">{label}</a>;
-  };
-
-  // Color de estado
+  // Badge estado verificación
   const statusClass =
     doc.verificationStatus === 'APPROVED'
       ? { background: '#198754', color: '#fff' }
@@ -170,7 +234,7 @@ const ModelDocuments = () => {
         </div>
       </StyledNavbar>
 
-      {/* Mantengo tu layout base, pero remaqueto el centro a lo PerfilModel */}
+      {/* CONTENIDO */}
       <StyledMainContent>
         <StyledLeftColumn />
         <StyledCenter>
@@ -190,19 +254,37 @@ const ModelDocuments = () => {
 
             {loading && <p>Cargando…</p>}
             {error && <p style={{ color: 'red' }}>{error}</p>}
+            {msg && <p style={{ color: 'green' }}>{msg}</p>}
 
-            {/* Sección: Documento frontal */}
+            {/* Documento frontal */}
             <section style={{ border: '1px solid #e5e5e5', borderRadius: 8, padding: 16, marginBottom: 16 }}>
               <h4 style={{ marginTop: 0 }}>Documento (frontal)</h4>
               {renderImagePreview(doc.urlVerificFront)}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                {/* input oculto + label */}
                 <input
+                  id="model-id-front"
                   key={idFrontKey}
                   type="file"
                   accept="image/*"
+                  style={{ display: 'none' }}
                   onChange={(e) => setIdFrontFile(e.target.files?.[0] || null)}
-                  style={{ flex: 1 }}
                 />
+                <label
+                  htmlFor="model-id-front"
+                  style={{
+                    display: 'inline-block',
+                    padding: '8px 12px',
+                    border: '1px solid #ced4da',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                >
+                  Seleccionar archivo
+                </label>
+
                 <button
                   type="button"
                   onClick={() => uploadSingle('idFront', idFrontFile)}
@@ -211,24 +293,60 @@ const ModelDocuments = () => {
                 >
                   {busyField === 'idFront' ? 'Subiendo…' : 'Subir frontal'}
                 </button>
+
+                {doc.urlVerificFront && (
+                  <button
+                    type="button"
+                    onClick={() => deleteSingle('idFront', '¿Eliminar la imagen frontal del documento?')}
+                    disabled={deletingField === 'idFront'}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      border: '1px solid #dc3545',
+                      background: 'white',
+                      color: '#dc3545',
+                      borderRadius: 6,
+                    }}
+                    title="Eliminar frontal"
+                  >
+                    {deletingField === 'idFront' ? 'Eliminando…' : 'Eliminar frontal'}
+                  </button>
+                )}
               </div>
+
               <p style={{ marginTop: 8, color: '#6c757d' }}>
                 Formatos: JPG/PNG. Nítido y legible.
               </p>
             </section>
 
-            {/* Sección: Documento trasera */}
+            {/* Documento trasera */}
             <section style={{ border: '1px solid #e5e5e5', borderRadius: 8, padding: 16, marginBottom: 16 }}>
               <h4 style={{ marginTop: 0 }}>Documento (trasera)</h4>
               {renderImagePreview(doc.urlVerificBack)}
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 8 }}>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <input
+                  id="model-id-back"
                   key={idBackKey}
                   type="file"
                   accept="image/*"
+                  style={{ display: 'none' }}
                   onChange={(e) => setIdBackFile(e.target.files?.[0] || null)}
-                  style={{ flex: 1 }}
                 />
+                <label
+                  htmlFor="model-id-back"
+                  style={{
+                    display: 'inline-block',
+                    padding: '8px 12px',
+                    border: '1px solid #ced4da',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                >
+                  Seleccionar archivo
+                </label>
+
                 <button
                   type="button"
                   onClick={() => uploadSingle('idBack', idBackFile)}
@@ -237,29 +355,66 @@ const ModelDocuments = () => {
                 >
                   {busyField === 'idBack' ? 'Subiendo…' : 'Subir trasera'}
                 </button>
+
+                {doc.urlVerificBack && (
+                  <button
+                    type="button"
+                    onClick={() => deleteSingle('idBack', '¿Eliminar la imagen trasera del documento?')}
+                    disabled={deletingField === 'idBack'}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      border: '1px solid #dc3545',
+                      background: 'white',
+                      color: '#dc3545',
+                      borderRadius: 6,
+                    }}
+                    title="Eliminar trasera"
+                  >
+                    {deletingField === 'idBack' ? 'Eliminando…' : 'Eliminar trasera'}
+                  </button>
+                )}
               </div>
+
               <p style={{ marginTop: 8, color: '#6c757d' }}>
                 Formatos: JPG/PNG. Nítido y legible.
               </p>
             </section>
 
-            {/* Sección: Selfie con DNI o PDF */}
+            {/* Selfie con DNI o PDF */}
             <section style={{ border: '1px solid #e5e5e5', borderRadius: 8, padding: 16, marginBottom: 16 }}>
               <h4 style={{ marginTop: 0 }}>Selfie con DNI (o documento de verificación)</h4>
               <p className="form-text" style={{ marginBottom: 8 }}>
                 Sube una foto clara con tu DNI visible o un PDF de verificación.
               </p>
+
               <div style={{ marginBottom: 8 }}>
                 {renderFileLink(doc.urlVerificDoc, 'Ver archivo')}
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                 <input
+                  id="model-verific-doc"
                   key={verifDocKey}
                   type="file"
                   accept="image/*,application/pdf"
+                  style={{ display: 'none' }}
                   onChange={(e) => setVerifDocFile(e.target.files?.[0] || null)}
-                  style={{ flex: 1 }}
                 />
+                <label
+                  htmlFor="model-verific-doc"
+                  style={{
+                    display: 'inline-block',
+                    padding: '8px 12px',
+                    border: '1px solid #ced4da',
+                    borderRadius: 6,
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                  }}
+                >
+                  Seleccionar archivo
+                </label>
+
                 <button
                   type="button"
                   onClick={() => uploadSingle('verificDoc', verifDocFile)}
@@ -268,13 +423,33 @@ const ModelDocuments = () => {
                 >
                   {busyField === 'verificDoc' ? 'Subiendo…' : 'Subir archivo'}
                 </button>
+
+                {doc.urlVerificDoc && (
+                  <button
+                    type="button"
+                    onClick={() => deleteSingle('verificDoc', '¿Eliminar el archivo de verificación?')}
+                    disabled={deletingField === 'verificDoc'}
+                    style={{
+                      padding: '8px 12px',
+                      cursor: 'pointer',
+                      border: '1px solid #dc3545',
+                      background: 'white',
+                      color: '#dc3545',
+                      borderRadius: 6,
+                    }}
+                    title="Eliminar archivo"
+                  >
+                    {deletingField === 'verificDoc' ? 'Eliminando…' : 'Eliminar archivo'}
+                  </button>
+                )}
               </div>
+
               <p style={{ marginTop: 8, color: '#6c757d' }}>
                 Acepta JPG/PNG o PDF (varias páginas). Asegúrate de que tu rostro y el documento se vean nítidos.
               </p>
             </section>
 
-            {/* Nota informativa (estilo PerfilModel) */}
+            {/* Nota informativa */}
             <div style={{
               background: '#f1f3f5',
               border: '1px solid #e5e5e5',

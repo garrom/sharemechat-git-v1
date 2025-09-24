@@ -11,6 +11,7 @@ import PerfilModel from './dashboard/subpages/PerfilModel';
 import ChangePasswordPage from './dashboard/subpages/ChangePasswordPage';
 import ModelDocuments from './dashboard/subpages/ModelDocuments';
 import Login from './public/Login';
+import Home from './public/Home';
 import RegisterClient from './public/RegisterClient';
 import RegisterModel from './public/RegisterModel';
 import Unauthorized from './public/Unauthorized';
@@ -36,8 +37,9 @@ function App(){return(
   <Router>
       <Switch>
           {/* Públicas CON MODAL (age-gate/TyC):*/}
-          <PublicWithGuestGate exact path="/" component={Login} />
+          <PublicWithGuestGate exact path="/" component={Home} />
           <PublicWithGuestGate exact path="/login" component={Login} />
+
           <Route path="/register-client" component={RegisterClient}/>
           <Route path="/register-model" component={RegisterModel}/>
           <Route path="/forgot-password" component={ForgotPassword}/>

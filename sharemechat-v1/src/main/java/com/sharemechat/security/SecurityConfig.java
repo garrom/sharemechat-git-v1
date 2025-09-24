@@ -49,11 +49,13 @@ public class SecurityConfig {
                         // MODELS: documentos (incluye DELETE nuevo)
                         .requestMatchers(HttpMethod.GET,    "/api/models/documents/me").hasAnyRole("USER","MODEL")
                         .requestMatchers(HttpMethod.POST,   "/api/models/documents").hasAnyRole("USER","MODEL")
+                        .requestMatchers(HttpMethod.DELETE, "/api/models/documents").hasAnyRole("USER","MODEL")
                         .requestMatchers(HttpMethod.DELETE, "/api/models/documents/**").hasAnyRole("USER","MODEL")
 
                         // CLIENTS: documentos (GET/POST/DELETE)
                         .requestMatchers(HttpMethod.GET,    "/api/clients/documents/me").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.POST,   "/api/clients/documents").hasRole("CLIENT")
+                        .requestMatchers(HttpMethod.DELETE, "/api/clients/documents").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.DELETE, "/api/clients/documents/**").hasRole("CLIENT")
 
                         // ROLE-SCOPED APIs

@@ -145,7 +145,7 @@ const RegisterClient = () => {
         <StyledLinkButton onClick={() => history.push('/register-model')}>
           ¿Quieres ser modelo?
         </StyledLinkButton>
-        <StyledLinkButton onClick={() => history.push('/')}>
+        <StyledLinkButton onClick={() => history.push('/login')}>
           Volver al Login
         </StyledLinkButton>
       </StyledForm>

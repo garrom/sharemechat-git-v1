@@ -55,12 +55,13 @@ const DashboardAdmin = () => {
     'messages',
     'password_reset_tokens',
     'unsubscribe',
+    // nuevas
     'client_documents',
     'model_documents',
     'consent_events',
   ];
 
-  const LIMIT_OPTIONS = [10, 20, 30, 40, 50, 100];
+  const LIMIT_OPTIONS = [10,20,30,40,50,100];
 
   useEffect(() => {
     if (!token) {
@@ -75,7 +76,6 @@ const DashboardAdmin = () => {
 
   useEffect(() => {
     if (activeTab !== 'stats') {
-      // limpiar si salgo de la pestaña
       if (pingAdminRef.current) { clearInterval(pingAdminRef.current); pingAdminRef.current = null; }
       if (wsAdminRef.current) { try { wsAdminRef.current.close(); } catch {} wsAdminRef.current = null; }
       return;
@@ -90,12 +90,11 @@ const DashboardAdmin = () => {
 
       ws.onopen = () => {
         ws.send(JSON.stringify({ type: 'stats' }));
-        // refresco periódico
         pingAdminRef.current = setInterval(() => {
           if (wsAdminRef.current?.readyState === WebSocket.OPEN) {
             wsAdminRef.current.send(JSON.stringify({ type: 'stats' }));
           }
-        }, 60000); // cada 60s
+        }, 60000);
       };
 
       ws.onmessage = (evt) => {
@@ -148,7 +147,7 @@ const DashboardAdmin = () => {
   }, [activeTab, token]);
 
   useEffect(() => {
-    if (activeTab !== 'db' || !dbTable) return; // <- no lances la query hasta elegir tabla
+    if (activeTab !== 'db' || !dbTable) return;
     (async () => {
       setDbLoading(true); setDbError('');
       try {
@@ -193,7 +192,7 @@ const DashboardAdmin = () => {
       if (!response.ok) throw new Error('Error al actualizar verificación');
       const message = await response.text();
       alert(message || 'Estado actualizado');
-      fetchUsers(); // refresco
+      fetchUsers();
     } catch (err) {
       setError(err.message || 'Error actualizando estado');
     }
@@ -204,17 +203,25 @@ const DashboardAdmin = () => {
     history.push('/');
   };
 
-  // Filtro por estado en cliente
   const filteredUsers = useMemo(() => {
     if (statusFilter === 'ALL') return users;
     return users.filter(u => (u.verificationStatus || 'PENDING') === statusFilter);
   }, [users, statusFilter]);
 
-  // Limitar Nº de resultados mostrados
   const displayedUsers = useMemo(
     () => filteredUsers.slice(0, Number(pageSize)),
     [filteredUsers, pageSize]
   );
+
+  // ---------- Ocultación de campos largos/sensibles en la vista BBDD ----------
+  const isHiddenDbCell = (tableName, colName) => {
+    const t = String(tableName || '').toLowerCase();
+    const k = String(colName || '').toLowerCase();
+    if (t === 'users' && (k === 'biography' || k === 'interests')) return true;
+    if (t === 'messages' && k === 'body') return true;
+    return false;
+  };
+  // ---------------------------------------------------------------------------
 
   return (
     <StyledContainer>
@@ -263,7 +270,6 @@ const DashboardAdmin = () => {
         <>
           <h3>Gestión de Modelos</h3>
 
-          {/* Filtros sencillos */}
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
             <div>
               <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Estado</label>
@@ -302,7 +308,6 @@ const DashboardAdmin = () => {
           {loading && <div>Cargando...</div>}
           {error && <StyledError>{error}</StyledError>}
 
-          {/* Contenedor con scroll para la tabla */}
           <div style={{ maxHeight: 480, overflowY: 'auto', border: '1px solid #eee', borderRadius: 6 }}>
             <StyledTable>
               <thead>
@@ -398,7 +403,6 @@ const DashboardAdmin = () => {
               marginTop: 12,
             }}
           >
-            {/* Card: Modelos en cola */}
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
               <div style={{ fontSize: 12, color: '#6c757d' }}>Modelos en cola</div>
               <div style={{ fontSize: 28, fontWeight: 700 }}>
@@ -409,7 +413,6 @@ const DashboardAdmin = () => {
               </div>
             </div>
 
-            {/* Modelos en streaming */}
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
               <div style={{ fontSize: 12, color: '#6c757d' }}>Modelos en streaming</div>
               <div style={{ fontSize: 28, fontWeight: 700 }}>
@@ -420,7 +423,6 @@ const DashboardAdmin = () => {
               </div>
             </div>
 
-            {/* Clientes en streaming */}
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
               <div style={{ fontSize: 12, color: '#6c757d' }}>Clientes en streaming</div>
               <div style={{ fontSize: 28, fontWeight: 700 }}>
@@ -431,7 +433,6 @@ const DashboardAdmin = () => {
               </div>
             </div>
 
-            {/* Cards vacías para futuras KPIs */}
             <div style={{ border: '1px solid #f4f4f4', borderRadius: 10, padding: 16, background: '#fafafa', color: '#bbb' }}>
               <div style={{ fontSize: 12 }}>KPI futura</div>
               <div style={{ fontSize: 20, marginTop: 8 }}>—</div>
@@ -459,7 +460,6 @@ const DashboardAdmin = () => {
               marginTop: 12,
             }}
           >
-            {/* Ganancias brutas (facturación total) */}
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
               <div style={{ fontSize: 12, color: '#6c757d' }}>Ganancias brutas (facturación total)</div>
               <div style={{ fontSize: 28, fontWeight: 700 }}>
@@ -470,7 +470,6 @@ const DashboardAdmin = () => {
               </div>
             </div>
 
-            {/* Ganancias netas (margen plataforma) */}
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
               <div style={{ fontSize: 12, color: '#6c757d' }}>Ganancias netas (plataforma)</div>
               <div style={{ fontSize: 28, fontWeight: 700 }}>
@@ -481,7 +480,6 @@ const DashboardAdmin = () => {
               </div>
             </div>
 
-            {/* % Beneficio sobre facturación */}
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
               <div style={{ fontSize: 12, color: '#6c757d' }}>% beneficio / facturación</div>
               <div style={{ fontSize: 28, fontWeight: 700 }}>
@@ -492,7 +490,6 @@ const DashboardAdmin = () => {
               </div>
             </div>
 
-            {/* Top 10 modelos por ingresos */}
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
               <div style={{ fontSize: 12, color: '#6c757d' }}>Top 10 modelos por ingresos</div>
               <ol style={{ marginTop: 8, paddingLeft: 18 }}>
@@ -505,7 +502,6 @@ const DashboardAdmin = () => {
               </ol>
             </div>
 
-            {/* Top 10 clientes por total_pagos */}
             <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
               <div style={{ fontSize: 12, color: '#6c757d' }}>Top 10 clientes por pagos</div>
               <ol style={{ marginTop: 8, paddingLeft: 18 }}>
@@ -518,7 +514,6 @@ const DashboardAdmin = () => {
               </ol>
             </div>
 
-            {/* Nota (separación por tipo) */}
             <div style={{ border: '1px dashed #eee', borderRadius: 10, padding: 16, background: '#fafafa' }}>
               <div style={{ fontSize: 12, color: '#6c757d' }}>Nota</div>
               <div style={{ fontSize: 14, marginTop: 8 }}>
@@ -526,7 +521,6 @@ const DashboardAdmin = () => {
               </div>
             </div>
 
-            {/* Espacios para futuras métricas */}
             {Array.from({ length: 6 }).map((_, i) => (
               <div key={i} style={{ border: '1px solid #f4f4f4', borderRadius: 10, padding: 16, background: '#fafafa', color: '#bbb' }}>
                 <div style={{ fontSize: 12 }}>KPI futura</div>
@@ -542,7 +536,6 @@ const DashboardAdmin = () => {
         <div style={{ marginTop: 24 }}>
           <h3>Vista BBDD</h3>
 
-          {/* Layout: fila filtros + fila tabla con scroll */}
           <div
             style={{
               display: 'grid',
@@ -552,7 +545,6 @@ const DashboardAdmin = () => {
               overflow: 'visible',
             }}
           >
-            {/* Filtros */}
             <div
               id="dbFilters"
               style={{
@@ -590,7 +582,6 @@ const DashboardAdmin = () => {
               </div>
             </div>
 
-            {/* Tabla con su propio scroll */}
             <div
               style={{
                 overflow: 'auto',
@@ -612,14 +603,19 @@ const DashboardAdmin = () => {
                 <tbody>
                   {dbRows.map((row, idx) => (
                     <tr key={idx}>
-                      {Object.keys(dbRows[0] || {}).map(k => (
-                        <td key={k} title={row[k] == null ? '' : String(row[k])}>
-                          {row[k] == null
-                            ? '—'
-                            : String(row[k]).slice(0, 120) +
-                              (String(row[k]).length > 120 ? '…' : '')}
-                        </td>
-                      ))}
+                      {Object.keys(dbRows[0] || {}).map(k => {
+                        const hide = isHiddenDbCell(dbTable, k);
+                        const raw = row[k];
+                        const text = raw == null ? '' : String(raw);
+                        const shown = hide ? '' : (text.slice(0, 120) + (text.length > 120 ? '…' : ''));
+                        const title = hide ? '' : (raw == null ? '' : text);
+                        return (
+                          <td key={k} title={title}>
+                            {shown === '' ? '' : shown}
+                            {shown === '' && raw == null ? '—' : ''}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -633,7 +629,6 @@ const DashboardAdmin = () => {
             </div>
           </div>
 
-          {/* Botón flotante de rescate para subir a filtros */}
           <button
             type="button"
             onClick={() => document.getElementById('dbFilters')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}

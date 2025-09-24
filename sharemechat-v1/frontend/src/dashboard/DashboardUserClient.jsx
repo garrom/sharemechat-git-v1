@@ -26,7 +26,7 @@ const DashboardUserClient = () => {
 
   useEffect(() => {
     if (!token) {
-      history.push('/login');
+      history.push('/');
       return;
     }
     // Cargar datos del usuario
@@ -38,7 +38,7 @@ const DashboardUserClient = () => {
 
         if (res.status === 401) {
           localStorage.removeItem('token');
-          history.push('/login');
+          history.push('/');
           return;
         }
         if (res.ok) {

@@ -22,7 +22,7 @@ const DashboardUserModel = () => {
 
   useEffect(() => {
     if (!token) {
-      history.push('/login');
+      history.push('/');
       return;
     }
     (async () => {
@@ -32,7 +32,7 @@ const DashboardUserModel = () => {
         });
         if (res.status === 401) {
           localStorage.removeItem('token');
-          history.push('/login');
+          history.push('/');
           return;
         }
         if (res.ok) {

@@ -156,7 +156,7 @@ const RegisterModel = () => {
         {/* --- fin checkboxes --- */}
 
         <StyledButton type="submit">Registrarse</StyledButton>
-        <StyledLinkButton onClick={() => history.push('/')}>
+        <StyledLinkButton onClick={() => history.push('/login')}>
           Volver al Login
         </StyledLinkButton>
       </StyledForm>
