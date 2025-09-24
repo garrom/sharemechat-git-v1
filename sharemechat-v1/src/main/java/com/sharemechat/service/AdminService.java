@@ -47,6 +47,10 @@ public class AdminService {
         TABLE_ORDER.put("messages", "id");
         TABLE_ORDER.put("password_reset_tokens", "created_at");
         TABLE_ORDER.put("unsubscribe", "end_date");
+        TABLE_ORDER.put("client_documents", "created_at");
+        TABLE_ORDER.put("model_documents", "COALESCE(created_at, updated_at)");
+        TABLE_ORDER.put("consent_events", "ts");
+
     }
 
     public AdminService(UserRepository userRepository, UserService userService,
@@ -226,23 +230,27 @@ public class AdminService {
      */
     @Transactional(readOnly = true)
     public List<Map<String,Object>> viewTable(String table, int limit) {
-        if (table == null || !TABLE_ORDER.containsKey(table)) {
+        if (table == null) throw new IllegalArgumentException("Tabla no permitida");
+        String t = table.trim().toLowerCase();
+        if (!TABLE_ORDER.containsKey(t)) {
             throw new IllegalArgumentException("Tabla no permitida");
         }
         int lim = Math.min(Math.max(limit, 1), 100);
-        String orderCol = TABLE_ORDER.get(table);
-        String sql = "SELECT * FROM " + table + " ORDER BY " + orderCol + " DESC LIMIT :lim";
+        String orderColOrExpr = TABLE_ORDER.get(t); // puede ser columna o expresión segura whitelisteada
+
+        String sql = "SELECT * FROM " + t + " ORDER BY " + orderColOrExpr + " DESC LIMIT :lim";
+
         return jdbc.query(sql, new MapSqlParameterSource("lim", lim),
                 (rs, rowNum) -> {
                     var md = rs.getMetaData();
-                    Map<String,Object> row = new LinkedHashMap<>(); // <-- en vez de HashMap
+                    Map<String,Object> row = new LinkedHashMap<>();
                     for (int i = 1; i <= md.getColumnCount(); i++) {
                         row.put(md.getColumnLabel(i), rs.getObject(i));
                     }
                     return row;
                 });
-
     }
+
 
 
 }

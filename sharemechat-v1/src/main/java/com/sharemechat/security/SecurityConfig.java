@@ -40,6 +40,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/register/**", "/api/users/login").permitAll()
 
+                        // NUEVO: eventos de consentimiento (guest)
+                        .requestMatchers("/api/consent/**").permitAll()
+
                         // USERS
                         .requestMatchers("/api/users/**").authenticated()
 
@@ -93,7 +96,7 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList("https://test.sharemechat.com","http://localhost:3000"));
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(false);
+        configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

@@ -16,6 +16,7 @@ public class MessageRetentionJob {
 
     private final MessageRepository repo;
 
+    // Tiempo de guardado del contenido del chat
     // Configuración simple (podrías mover a application.properties)
     private final int daysToKeep = 90;
     private final int perConversationKeep = 2000;
