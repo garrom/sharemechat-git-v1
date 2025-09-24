@@ -3,11 +3,11 @@ package com.sharemechat.service;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.UserDTO;
 import com.sharemechat.entity.Model;
+import com.sharemechat.entity.ModelDocument;
+import com.sharemechat.entity.ModelReviewChecklist;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.UserNotFoundException;
-import com.sharemechat.repository.AdminRepository;
-import com.sharemechat.repository.ModelRepository;
-import com.sharemechat.repository.UserRepository;
+import com.sharemechat.repository.*;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -30,6 +30,8 @@ public class AdminService {
     private final ModelRepository modelRepository;
     private final AdminRepository adminRepository;
     private final NamedParameterJdbcTemplate jdbc;
+    private final ModelDocumentRepository modelDocumentRepository;
+    private final ModelReviewChecklistRepository checklistRepository;
     private static final Map<String, String> TABLE_ORDER = new HashMap<>();
     static {
         // tabla -> columna por la que ordenar DESC
@@ -50,17 +52,21 @@ public class AdminService {
         TABLE_ORDER.put("client_documents", "created_at");
         TABLE_ORDER.put("model_documents", "COALESCE(created_at, updated_at)");
         TABLE_ORDER.put("consent_events", "ts");
+        TABLE_ORDER.put("model_review_checklist", "updated_at");
 
     }
 
     public AdminService(UserRepository userRepository, UserService userService,
                         ModelRepository modelRepository, AdminRepository adminRepository,
-                        NamedParameterJdbcTemplate jdbc) {
+                        NamedParameterJdbcTemplate jdbc,ModelDocumentRepository modelDocumentRepository,
+                        ModelReviewChecklistRepository checklistRepository) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.modelRepository = modelRepository;
         this.adminRepository = adminRepository;
         this.jdbc = jdbc;
+        this.modelDocumentRepository = modelDocumentRepository;
+        this.checklistRepository =checklistRepository;
     }
 
     /**
@@ -251,6 +257,57 @@ public class AdminService {
                 });
     }
 
+    /**
+     * Obtiene, para un userId, las URLs de los documentos de verificación de la modelo
+     * y el estado del checklist de revisión del admin.
+     */
+    @Transactional(readOnly = true)
+    public Map<String,Object> getModelDocsWithChecklist(Long userId) {
+        Map<String,Object> out = new LinkedHashMap<>();
+        ModelDocument doc = modelDocumentRepository.findById(userId).orElse(null);
+        out.put("userId", userId);
+        out.put("urlVerificFront", doc != null ? doc.getUrlVerificFront() : null);
+        out.put("urlVerificBack",  doc != null ? doc.getUrlVerificBack()  : null);
+        out.put("urlVerificDoc",   doc != null ? doc.getUrlVerificDoc()   : null);
 
+        ModelReviewChecklist ck = checklistRepository.findById(userId).orElse(null);
+        Map<String,Object> checklist = new LinkedHashMap<>();
+        checklist.put("frontOk",  ck != null && ck.isFrontOk());
+        checklist.put("backOk",   ck != null && ck.isBackOk());
+        checklist.put("selfieOk", ck != null && ck.isSelfieOk());
+        out.put("checklist", checklist);
+
+        return out;
+    }
+
+    /**
+     * Crea/actualiza (upsert) el checklist de revisión del admin para un userId.
+     * Acepta cambios parciales (frontOk/backOk/selfieOk) e introduce/normaliza valores booleanos.
+     * Idempotente: si no existe la fila, la crea; devuelve el estado consolidado tras guardar.
+     *
+     */
+
+    @Transactional
+    public Map<String,Object> updateModelChecklist(Long userId, Long adminId, Boolean frontOk, Boolean backOk, Boolean selfieOk) {
+        ModelReviewChecklist ck = checklistRepository.findById(userId).orElseGet(() -> {
+            ModelReviewChecklist x = new ModelReviewChecklist();
+            x.setUserId(userId);
+            return x;
+        });
+
+        if (frontOk != null)  ck.setFrontOk(frontOk);
+        if (backOk  != null)  ck.setBackOk(backOk);
+        if (selfieOk!= null)  ck.setSelfieOk(selfieOk);
+
+        ck.setLastReviewerId(adminId);
+        checklistRepository.save(ck);
+
+        Map<String,Object> resp = new LinkedHashMap<>();
+        resp.put("userId", userId);
+        resp.put("frontOk", ck.isFrontOk());
+        resp.put("backOk", ck.isBackOk());
+        resp.put("selfieOk", ck.isSelfieOk());
+        return resp;
+    }
 
 }

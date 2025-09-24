@@ -1,10 +1,14 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.dto.ModelChecklistUpdateDTO;
 import com.sharemechat.dto.UserDTO;
+import com.sharemechat.entity.User;
 import com.sharemechat.service.AdminService;
+import com.sharemechat.service.UserService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -15,8 +19,12 @@ import java.util.Map;
 public class AdminController {
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
     private final AdminService adminService;
+    private final UserService userService;
 
-    public AdminController(AdminService adminService) { this.adminService = adminService; }
+    public AdminController(AdminService adminService,UserService userService) {
+        this.adminService = adminService;
+        this.userService = userService;
+    }
 
     // GET /api/admin/models?verification=PENDING|APPROVED|REJECTED (opcional)
     @GetMapping("/models")
@@ -63,6 +71,29 @@ public class AdminController {
             @RequestParam String table,
             @RequestParam(defaultValue = "10") int limit) {
         return ResponseEntity.ok(adminService.viewTable(table, limit));
+    }
+
+    // GET /api/admin/model-docs/{userId}
+    @GetMapping("/model-docs/{userId}")
+    public ResponseEntity<Map<String,Object>> getModelDocs(@PathVariable Long userId) {
+        return ResponseEntity.ok(adminService.getModelDocsWithChecklist(userId));
+    }
+
+    // POST /api/admin/model-checklist/{userId}
+    @PostMapping("/model-checklist/{userId}")
+    public ResponseEntity<Map<String,Object>> updateChecklist(@PathVariable Long userId,
+                                                              @RequestBody ModelChecklistUpdateDTO dto,
+                                                              Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User admin = userService.findByEmail(auth.getName());
+        Long adminId = admin != null ? admin.getId() : null;
+
+        Map<String,Object> out = adminService.updateModelChecklist(
+                userId, adminId, dto.getFrontOk(), dto.getBackOk(), dto.getSelfieOk()
+        );
+        return ResponseEntity.ok(out);
     }
 
 }

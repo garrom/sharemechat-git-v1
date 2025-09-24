@@ -43,8 +43,21 @@ export const StyledButton = styled.button`
   font-size: 14px;
   cursor: pointer;
   transition: background-color 0.3s;
-  &:hover {
+
+  /* Hover solo cuando NO está deshabilitado */
+  &:not(:disabled):hover {
     background-color: #218838;
+  }
+
+  /* Estado deshabilitado claramente visible */
+  &:disabled,
+  &[disabled] {
+    background-color: #adb5bd !important;
+    color: #fff !important;
+    cursor: not-allowed !important;
+    opacity: 0.65;
+    box-shadow: none;
+    pointer-events: none;
   }
 `;
 
