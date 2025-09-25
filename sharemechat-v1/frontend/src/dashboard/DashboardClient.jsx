@@ -19,6 +19,8 @@ import {
   StyledLocalVideo,
   StyledRemoteVideo,
   StyledChatContainer,
+  StyledNavGroup,
+  StyledNavAvatar
 }  from '../styles/ClientStyles';
 
 const DashboardClient = () => {
@@ -43,6 +45,7 @@ const DashboardClient = () => {
   const [giftRenderReady, setGiftRenderReady] = useState(false);
   const [showGifts,setShowGifts]=useState(false);
   const [showCenterGifts,setShowCenterGifts]=useState(false);
+  const [profilePic, setProfilePic] = useState(null);
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -104,6 +107,23 @@ const DashboardClient = () => {
       }
     };
     if (token) loadUser();
+  }, [token]);
+
+  // Cargar foto de perfil del cliente
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const r = await fetch('/api/clients/documents/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        setProfilePic(d?.urlPic || null);
+      } catch {
+        /* noop */
+      }
+    })();
   }, [token]);
 
   useEffect(() => {
@@ -816,26 +836,38 @@ const DashboardClient = () => {
     <StyledContainer>
 
       {/* ========= INICIO NAVBAR  ======== */}
-      <StyledNavbar>
-        <span>Mi Logo</span>
-        <div>
-          <span className="me-3">Hola, {displayName}</span>
-          <span className="me-3">
-            {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
-          </span>
-          <StyledNavButton type="button" onClick={handleAddBalance} style={{ marginRight: '8px' }}>
-            + Saldo
-          </StyledNavButton>
-          <StyledNavButton type="button" onClick={handleLogout}>
-            <FontAwesomeIcon icon={faSignOutAlt} />
-            <StyledIconWrapper>Salir</StyledIconWrapper>
-          </StyledNavButton>
-          <StyledNavButton type="button" onClick={handleProfile}>
-            <FontAwesomeIcon icon={faUser} />
-            <StyledIconWrapper>Perfil</StyledIconWrapper>
-          </StyledNavButton>
-        </div>
-      </StyledNavbar>
+       <StyledNavbar>
+         <span>Mi Logo</span>
+         <StyledNavGroup>
+           <span className="me-3">Hola, {displayName}</span>
+           <span className="me-3">
+             {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
+           </span>
+
+           <StyledNavButton type="button" onClick={handleAddBalance} style={{ marginRight: '8px' }}>
+             + Saldo
+           </StyledNavButton>
+
+           <StyledNavButton type="button" onClick={handleLogout}>
+             <FontAwesomeIcon icon={faSignOutAlt} />
+             <StyledIconWrapper>Salir</StyledIconWrapper>
+           </StyledNavButton>
+
+           <StyledNavButton type="button" onClick={handleProfile}>
+             <FontAwesomeIcon icon={faUser} />
+             <StyledIconWrapper>Perfil</StyledIconWrapper>
+           </StyledNavButton>
+
+           {/* Avatar (click = ir a Perfil) */}
+           <StyledNavAvatar
+             src={profilePic || '/img/avatar.png'}
+             alt="avatar"
+             title="Ver perfil"
+             onClick={handleProfile}
+           />
+         </StyledNavGroup>
+       </StyledNavbar>
+
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
@@ -1027,7 +1059,7 @@ const DashboardClient = () => {
               ) : (
                 <>
                   <div style={{ marginBottom:'8px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <h5 style={{ margin:0, color:'#fff' }}>
+                    <h5 style={{ margin:0, color:'#ff0000' }}>
                       {selectedFav?.invited === 'pending'
                         ? `Invitación de ${centerChatPeerName}`
                         : `Chat con ${centerChatPeerName}`}

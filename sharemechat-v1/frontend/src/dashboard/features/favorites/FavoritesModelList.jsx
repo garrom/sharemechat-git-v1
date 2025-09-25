@@ -15,15 +15,22 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
           headers: { Authorization: `Bearer ${token}` }
         });
         if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
-        const data = await res.json(); // [{ user, status, invited }]
+        // Esperamos: [{ user:{id,nickname,profilePic|urlPic,role,userType}, status, invited }]
+        const data = await res.json();
         if (!ignore) {
-          const mapped = (data || []).map(d => ({
-            ...d.user,
-            invited: d.invited,
-            status: d.status,
-            role: d.user?.role || 'CLIENT'
-          }));
-          // Solo mostrar pendientes o aceptados (no rechazados)
+          const mapped = (data || []).map(d => {
+            const u = d?.user || {};
+            return {
+              ...u,
+              profilePic: u.profilePic || u.urlPic || null,
+              invited: d?.invited,
+              status: d?.status,
+              role: u.role || 'CLIENT',
+              userType: u.userType || 'CLIENT',
+            };
+          });
+
+          // Pendientes o aceptados
           const filtered = mapped.filter(item => {
             const v = String(item.invited || '').toLowerCase();
             return v === 'pending' || v === 'accepted';
@@ -53,7 +60,8 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
             onClick={() => onSelect?.(u)}
         >
           <div className="d-flex align-items-center">
-            <img src={u.profilePic || '/img/avatar.png'} alt="" width="28" height="28"
+            <img src={u.profilePic || '/img/avatar.png'} alt=""
+                 width="28" height="28"
                  style={{ borderRadius: '50%', objectFit:'cover', marginRight:8 }} />
             <div>
               <div style={{ fontWeight: 600 }}>{u.nickname || `Usuario ${u.id}`}</div>

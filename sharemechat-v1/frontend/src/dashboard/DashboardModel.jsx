@@ -20,6 +20,8 @@ import {
   StyledLocalVideo,
   StyledRemoteVideo,
   StyledChatContainer,
+  StyledNavGroup,
+  StyledNavAvatar
 } from '../styles/ModelStyles';
 
 const DashboardModel = () => {
@@ -40,18 +42,16 @@ const DashboardModel = () => {
   const [gifts, setGifts] = useState([]);
   const [giftsLoaded, setGiftsLoaded] = useState(false);
   const [giftRenderReady, setGiftRenderReady] = useState(false);
-
   const [searching, setSearching] = useState(false);
-
-  // Chat central (favoritos)
+  const [profilePic, setProfilePic] = useState(null);
   const [centerMessages, setCenterMessages] = useState([]);
   const [centerInput, setCenterInput] = useState('');
   const [centerChatPeerName, setCenterChatPeerName] = useState('');
   const [centerLoading, setCenterLoading] = useState(false);
-
   const [showMsgPanel, setShowMsgPanel] = useState(false);
   const [openChatWith, setOpenChatWith] = useState(null);
   const [msgConnected, setMsgConnected] = useState(false);
+
   const msgSocketRef = useRef(null);
   const msgPingRef = useRef(null);
   const msgReconnectRef = useRef(null);
@@ -101,6 +101,22 @@ const DashboardModel = () => {
       }
     };
     if (token) loadUser();
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    (async () => {
+      try {
+        const r = await fetch('/api/models/documents/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        setProfilePic(d?.urlPic || null);
+      } catch {
+        /* noop */
+      }
+    })();
   }, [token]);
 
   useEffect(() => {
@@ -854,7 +870,7 @@ const DashboardModel = () => {
      {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
         <span>Mi Logo</span>
-        <div>
+        <StyledNavGroup>
           <span className="me-3">Hola, {displayName}</span>
 
           <span className="me-3">
@@ -883,7 +899,13 @@ const DashboardModel = () => {
             <FontAwesomeIcon icon={faUser} />
             <StyledIconWrapper>Perfil</StyledIconWrapper>
           </StyledNavButton>
-        </div>
+          <StyledNavAvatar
+            src={profilePic || '/img/avatar.png'}
+            alt="avatar"
+            title="Ver perfil"
+            onClick={handleProfile}
+          />
+        </StyledNavGroup>
       </StyledNavbar>
      {/* ========= FIN NAVBAR  ======== */}
 
@@ -1064,7 +1086,7 @@ const DashboardModel = () => {
                 <>
                   {/* Header del panel */}
                   <div style={{ marginBottom:'8px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <h5 style={{ margin:0, color:'#fff' }}>
+                    <h5 style={{ margin:0, color:'#ff0000' }}>
                       Chat con {centerChatPeerName}
                       {String(selectedFav?.invited) === 'pending' && (
                         <span style={{

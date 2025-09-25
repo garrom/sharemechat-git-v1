@@ -153,3 +153,22 @@ export const StyledChatContainer = styled.div`
   border-radius: 5px;
   z-index: 2;
 `;
+
+
+/** Grupo de acciones a la derecha de la navbar */
+export const StyledNavGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+/** Avatar en la navbar */
+export const StyledNavAvatar = styled.img`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+  cursor: pointer;
+`;

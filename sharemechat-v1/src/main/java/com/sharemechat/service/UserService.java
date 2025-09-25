@@ -8,6 +8,8 @@ import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailAlreadyInUseException;
 import com.sharemechat.exception.UnderageModelException;
 import com.sharemechat.exception.UserNotFoundException;
+import com.sharemechat.repository.ClientDocumentRepository;
+import com.sharemechat.repository.ModelDocumentRepository;
 import com.sharemechat.repository.UnsubscribeRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
@@ -33,6 +35,8 @@ public class UserService {
     private final JwtUtil jwtUtil;
     private final TransactionService transactionService;
     private final UnsubscribeRepository unsubscribeRepository;
+    private final ClientDocumentRepository clientDocumentRepository;
+    private final ModelDocumentRepository modelDocumentRepository;
 
 
     @Autowired
@@ -40,12 +44,16 @@ public class UserService {
                        PasswordEncoder passwordEncoder,
                        JwtUtil jwtUtil,
                        TransactionService transactionService,
-                       UnsubscribeRepository unsubscribeRepository) {
+                       UnsubscribeRepository unsubscribeRepository,
+                       ClientDocumentRepository clientDocumentRepository,
+                       ModelDocumentRepository modelDocumentRepository) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
         this.transactionService = transactionService;
         this.unsubscribeRepository = unsubscribeRepository;
+        this.clientDocumentRepository = clientDocumentRepository;
+        this.modelDocumentRepository = modelDocumentRepository;
     }
 
     @Transactional
@@ -348,7 +356,6 @@ public class UserService {
         }
     }
 
-
     public UserDTO mapToDTO(User user) {
         UserDTO dto = new UserDTO();
         dto.setId(user.getId());
@@ -367,6 +374,5 @@ public class UserService {
 
         return dto;
     }
-
 
 }
