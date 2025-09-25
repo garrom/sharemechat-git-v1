@@ -57,11 +57,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,   "/api/clients/documents").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.DELETE, "/api/clients/documents").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.DELETE, "/api/clients/documents/**").hasRole("CLIENT")
+                        .requestMatchers(HttpMethod.GET, "/api/funnyplace/random").hasRole("CLIENT")
 
                         // ROLE-SCOPED APIs
                         .requestMatchers("/api/models/**").hasRole("MODEL")
                         .requestMatchers("/api/clients/**").hasRole("CLIENT")
                         .requestMatchers("/api/favorites/**").hasAnyRole("CLIENT","MODEL")
+
 
                         // Transactions: regla general + específicas
                         .requestMatchers("/api/transactions/payout").hasRole("MODEL")
