@@ -22,6 +22,7 @@ import {
   StyledChatContainer,
   StyledNavGroup,
   StyledNavAvatar
+
 } from '../styles/ModelStyles';
 
 const DashboardModel = () => {
@@ -1076,7 +1077,7 @@ const DashboardModel = () => {
           {activeTab === 'favoritos' && (
             <div
               ref={modelCenterListRef}
-              style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px' }}
+              style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px', width:'100%', maxWidth:'800px', margin:'0 auto' }}
             >
               {!openChatWith ? (
                 <div style={{ color:'#adb5bd' }}>
@@ -1169,14 +1170,13 @@ const DashboardModel = () => {
                             style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}
                           >
                             <span style={{
-                              display:'inline-block',
-                              padding:'6px 10px',
-                              borderRadius:10,
-                              background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
-                              color:'#fff',
-                              maxWidth:'80%'
+                               display:'inline-block',
+                               padding:'6px 10px',
+                               borderRadius:10,
+                               background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
+                               color:'#fff',
+                               maxWidth:'80%'
                             }}>
-
                               {m.gift ? (
                                  giftRenderReady && (() => {
                                    const src = getGiftIcon(m.gift);
@@ -1185,7 +1185,8 @@ const DashboardModel = () => {
                                ) : (
                                  m.body
                                )}
-                            </span>
+
+                             </span>
                           </div>
                         ))}
                       </div>

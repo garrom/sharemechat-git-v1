@@ -1,9 +1,15 @@
 package com.sharemechat.controller;
 
 import com.sharemechat.config.IpConfig;
+import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.*;
+import com.sharemechat.entity.ClientDocument;
 import com.sharemechat.entity.LoginResponse;
+import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
+import com.sharemechat.repository.ClientDocumentRepository;
+import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -12,7 +18,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 
 @RestController
@@ -20,9 +27,18 @@ import java.util.Optional;
 public class UserController {
 
     private final UserService userService;
+    private final UserRepository userRepository;
+    private final ModelDocumentRepository modelDocumentRepository;
+    private final ClientDocumentRepository clientDocumentRepository;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService,
+                          UserRepository userRepository,
+                          ModelDocumentRepository modelDocumentRepository,
+                          ClientDocumentRepository clientDocumentRepository) {
         this.userService = userService;
+        this.modelDocumentRepository = modelDocumentRepository;
+        this.clientDocumentRepository = clientDocumentRepository;
+        this.userRepository = userRepository;
     }
 
     @PostMapping("/register/client")
@@ -106,6 +122,74 @@ public class UserController {
         return ResponseEntity.ok("Cuenta dada de baja. Se cerrará la sesión.");
     }
 
+    @GetMapping("/avatars")
+    public ResponseEntity<Map<Long,String>> getAvatarsBatch(@RequestParam("ids") String idsCsv) {
+        if (idsCsv == null || idsCsv.isBlank()) return ResponseEntity.ok(Map.of());
 
+        // Parseo CSV a lista de IDs única y válida
+        List<Long> ids = Arrays.stream(idsCsv.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(s -> {
+                    try { return Long.valueOf(s); } catch (NumberFormatException ex) { return null; }
+                })
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (ids.isEmpty()) return ResponseEntity.ok(Map.of());
+
+        // Cargamos usuarios y los separamos por rol
+        List<User> users = userRepository.findAllById(ids);
+        Set<Long> modelIds  = new HashSet<>();
+        Set<Long> clientIds = new HashSet<>();
+
+        Map<Long,String> result = new HashMap<>();
+        for (User u : users) {
+            result.put(u.getId(), null); // default
+            String role = String.valueOf(u.getRole());
+            if (Constants.Roles.MODEL.equals(role)) {
+                modelIds.add(u.getId());
+            } else if (Constants.Roles.CLIENT.equals(role)) {
+                clientIds.add(u.getId());
+            }
+        }
+
+        // Una consulta por tipo para traer urlPic
+        if (!modelIds.isEmpty()) {
+            for (ModelDocument md : modelDocumentRepository.findAllById(modelIds)) {
+                if (md != null) result.put(md.getUserId(), md.getUrlPic());
+            }
+        }
+        if (!clientIds.isEmpty()) {
+            for (ClientDocument cd : clientDocumentRepository.findAllById(clientIds)) {
+                if (cd != null) result.put(cd.getUserId(), cd.getUrlPic());
+            }
+        }
+
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Devuelve el avatar de un usuario concreto.
+     * Ejemplo: GET /api/users/123/avatar  -> { "profilePic": "/uploads/..." }
+     */
+    @GetMapping("/{id}/avatar")
+    public ResponseEntity<Map<String,String>> getAvatar(@PathVariable Long id) {
+        Optional<User> opt = userRepository.findById(id);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+
+        User u = opt.get();
+        String url = null;
+        String role = String.valueOf(u.getRole());
+
+        if (Constants.Roles.MODEL.equals(role)) {
+            url = modelDocumentRepository.findById(id).map(ModelDocument::getUrlPic).orElse(null);
+        } else if (Constants.Roles.CLIENT.equals(role)) {
+            url = clientDocumentRepository.findById(id).map(ClientDocument::getUrlPic).orElse(null);
+        }
+
+        return ResponseEntity.ok(Collections.singletonMap("profilePic", url));
+    }
 
 }

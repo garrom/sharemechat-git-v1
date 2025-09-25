@@ -1,16 +1,53 @@
 import React from 'react';
 
+const resolveProfilePic = (user = {}, ctx = 'FavoriteItem') => {
+  const pick = {
+    profilePic: user?.profilePic,
+    urlPic: user?.urlPic ?? user?.url_pic,
+    pic: user?.pic,
+    avatar: user?.avatar,
+    photo: user?.photo,
+    docs_urlPic:
+      user?.documents?.urlPic ??
+      user?.documents?.url_pic ??
+      user?.modelDocuments?.urlPic ??
+      user?.model_documents?.url_pic ??
+      user?.clientDocuments?.urlPic ??
+      user?.client_documents?.url_pic,
+  };
+  const result =
+    pick.profilePic ||
+    pick.urlPic ||
+    pick.pic ||
+    pick.avatar ||
+    pick.photo ||
+    pick.docs_urlPic ||
+    null;
+
+  // LOG: trazamos qué llegó y qué seleccionamos
+  try {
+    console.debug(`[avatar][${ctx}]`, {
+      userId: user?.id,
+      nickname: user?.nickname,
+      chosen: result,
+      picks: pick,
+    });
+  } catch {}
+
+  return result;
+};
+
 const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
-  // handler local: usa onChat si viene, si no emite un CustomEvent (fallback)
   const handleChat = (e) => {
     e.stopPropagation();
     if (onChat) {
       onChat(user);
     } else {
-      // Fallback sin dependencia del padre
       window.dispatchEvent(new CustomEvent('open-fav-chat', { detail: { user } }));
     }
   };
+
+  const avatar = resolveProfilePic(user, 'FavoriteItem') || '/img/avatar.png';
 
   return (
     <div
@@ -28,8 +65,9 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
       }}
     >
       <img
-        src={user.profilePic || 'https://via.placeholder.com/48'}
+        src={avatar}
         alt={user.nickname || user.email || 'user'}
+        onError={(e) => { e.currentTarget.src = '/img/avatar.png'; }}
         style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
       />
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -41,9 +79,8 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
         </div>
       </div>
 
-      {/* Botón Chatear siempre visible en favoritos */}
       <button
-        onClick={handleChat} // <-- nuevo comportamiento robusto
+        onClick={handleChat}
         style={{
           padding: '6px 10px',
           border: '1px solid #ddd',

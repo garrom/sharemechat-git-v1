@@ -171,3 +171,4 @@ export const StyledNavAvatar = styled.img`
   box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
   cursor: pointer;
 `;
+

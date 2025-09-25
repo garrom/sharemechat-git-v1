@@ -21,6 +21,7 @@ import {
   StyledChatContainer,
   StyledNavGroup,
   StyledNavAvatar
+
 }  from '../styles/ClientStyles';
 
 const DashboardClient = () => {
@@ -1051,7 +1052,7 @@ const DashboardClient = () => {
           {activeTab === 'funnyplace' && ( <FunnyplacePage /> )}
 
           {activeTab === 'favoritos' && (
-            <div style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px', position:'relative' }}>
+            <div style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px', position:'relative', width:'100%', maxWidth:'800px', margin:'0 auto' }}>
               {!centerChatPeerId ? (
                 <div style={{ color:'#adb5bd' }}>
                   Selecciona un favorito y pulsa <em>Chatear</em> para abrir la conversación aquí.
@@ -1122,14 +1123,14 @@ const DashboardClient = () => {
                           return (
                             <div key={m.id}
                                  style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
-
                               <span style={{
-                                display:'inline-block',
-                                padding:'6px 10px',
-                                borderRadius:10,
-                                background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
-                                color:'#fff',
-                                maxWidth:'80%'
+                                  display:'inline-block',
+                                  padding:'6px 10px',
+                                  borderRadius:10,
+                                  background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
+                                  color:'#fff',
+                                  maxWidth:'80%'
+
                               }}>
                                 {giftData ? (
                                   giftRenderReady && (() => {
@@ -1139,9 +1140,7 @@ const DashboardClient = () => {
                                 ) : (
                                   m.body
                                 )}
-
                               </span>
-
                             </div>
                           );
                         })}
