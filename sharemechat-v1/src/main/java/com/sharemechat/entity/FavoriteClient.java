@@ -23,8 +23,8 @@ public class FavoriteClient {
     @Column(name="model_id",  nullable=false) private Long modelId;
     @Column(name="client_id", nullable=false) private Long clientId;
 
-    @Column(name="status",   nullable=false) private String status = "active";     // active|inactive
-    @Column(name="invited",  nullable=false) private String invited = "accepted";  // accepted|rejected|pending
+    @Column(name="status",   nullable=false) private String status = "active";
+    @Column(name="invited",  nullable=false) private String invited = "pending";
 
     @Column(name="created_at", nullable=false,
             columnDefinition="DATETIME DEFAULT CURRENT_TIMESTAMP")

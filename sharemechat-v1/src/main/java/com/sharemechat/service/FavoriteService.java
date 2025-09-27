@@ -41,7 +41,7 @@ public class FavoriteService {
         FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
                 .orElseGet(() -> new FavoriteModel(clientId, modelId));
         mine.setStatus("active");
-        mine.setInvited("accepted"); // el que invita lo considera aceptado en su vista
+        mine.setInvited("pending"); // el que invita lo considera aceptado en su vista
         favoriteModelRepo.save(mine);
 
         // Vista de la MODELO (favorites_clients)
@@ -52,6 +52,28 @@ public class FavoriteService {
         peer.setStatus("active");
         peer.setInvited("pending");
         favoriteClientRepo.save(peer);
+    }
+
+    // =================== MODELO -> CLIENTE ===================
+    @Transactional
+    public void addClientToModelFavorites(Long modelId, Long clientId) {
+        if (Objects.equals(modelId, clientId)) throw new IllegalArgumentException("No puedes agregarte a ti mismo.");
+        User model  = requireUser(modelId);  ensureRole(model,  "MODEL");
+        User client = requireUser(clientId); ensureRole(client, "CLIENT");
+
+        // Vista de la MODELO (favorites_clients)
+        FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
+                .orElseGet(() -> new FavoriteClient(modelId, clientId));
+        mine.setStatus("active");
+        mine.setInvited("pending"); // el que invita lo considera aceptado en su vista
+        favoriteClientRepo.save(mine);
+
+        // Vista del CLIENTE (favorites_models)
+        FavoriteModel peer = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
+                .orElseGet(() -> new FavoriteModel(clientId, modelId));
+        peer.setStatus("active");
+        peer.setInvited("pending");
+        favoriteModelRepo.save(peer);
     }
 
     @Transactional
@@ -84,28 +106,6 @@ public class FavoriteService {
         }).toList();
     }
 
-    // =================== MODELO -> CLIENTE ===================
-    @Transactional
-    public void addClientToModelFavorites(Long modelId, Long clientId) {
-        if (Objects.equals(modelId, clientId)) throw new IllegalArgumentException("No puedes agregarte a ti mismo.");
-        User model  = requireUser(modelId);  ensureRole(model,  "MODEL");
-        User client = requireUser(clientId); ensureRole(client, "CLIENT");
-
-        // Vista de la MODELO (favorites_clients)
-        FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
-                .orElseGet(() -> new FavoriteClient(modelId, clientId));
-        mine.setStatus("active");
-        mine.setInvited("accepted"); // el que invita lo considera aceptado en su vista
-        favoriteClientRepo.save(mine);
-
-        // Vista del CLIENTE (favorites_models)
-        FavoriteModel peer = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
-                .orElseGet(() -> new FavoriteModel(clientId, modelId));
-        peer.setStatus("active");
-        peer.setInvited("pending");
-        favoriteModelRepo.save(peer);
-    }
-
     @Transactional
     public void removeClientFromModelFavorites(Long modelId, Long clientId) {
         favoriteClientRepo.findByModelIdAndClientId(modelId, clientId).ifPresent(f -> {
@@ -136,51 +136,84 @@ public class FavoriteService {
     }
 
     // =================== ACEPTAR / RECHAZAR (mi vista) ===================
+
     @Transactional
     public void acceptInvitation(Long meId, Long peerId) {
-        User me = requireUser(meId);
+        User me   = requireUser(meId);
         User peer = requireUser(peerId);
 
         if ("CLIENT".equalsIgnoreCase(me.getRole()) && "MODEL".equalsIgnoreCase(peer.getRole())) {
-            // cliente acepta invitación que le hizo la modelo → su fila está en favorites_models
+            // mi vista: favorites_models
             FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(meId, peerId)
-                    .orElseThrow(() -> new NoSuchElementException("No existe invitación"));
+                    .orElseGet(() -> new FavoriteModel(meId, peerId));
             mine.setStatus("active");
             mine.setInvited("accepted");
             favoriteModelRepo.save(mine);
+
+            // peer vista: favorites_clients
+            FavoriteClient other = favoriteClientRepo.findByModelIdAndClientId(peerId, meId)
+                    .orElseGet(() -> new FavoriteClient(peerId, meId));
+            other.setStatus("active");
+            other.setInvited("accepted");
+            favoriteClientRepo.save(other);
+
         } else if ("MODEL".equalsIgnoreCase(me.getRole()) && "CLIENT".equalsIgnoreCase(peer.getRole())) {
-            // modelo acepta invitación que le hizo el cliente → su fila está en favorites_clients
+            // mi vista: favorites_clients
             FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(meId, peerId)
-                    .orElseThrow(() -> new NoSuchElementException("No existe invitación"));
+                    .orElseGet(() -> new FavoriteClient(meId, peerId));
             mine.setStatus("active");
             mine.setInvited("accepted");
             favoriteClientRepo.save(mine);
+
+            // peer vista: favorites_models
+            FavoriteModel other = favoriteModelRepo.findByClientIdAndModelId(peerId, meId)
+                    .orElseGet(() -> new FavoriteModel(peerId, meId));
+            other.setStatus("active");
+            other.setInvited("accepted");
+            favoriteModelRepo.save(other);
+
         } else {
             throw new IllegalArgumentException("Roles inválidos para aceptar.");
         }
     }
 
+
     @Transactional
     public void rejectInvitation(Long meId, Long peerId) {
-        User me = requireUser(meId);
+        User me   = requireUser(meId);
         User peer = requireUser(peerId);
 
         if ("CLIENT".equalsIgnoreCase(me.getRole()) && "MODEL".equalsIgnoreCase(peer.getRole())) {
             FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(meId, peerId)
-                    .orElseThrow(() -> new NoSuchElementException("No existe invitación"));
-            mine.setStatus("active");    // mantener visible para poder re-invitar
+                    .orElseGet(() -> new FavoriteModel(meId, peerId));
+            mine.setStatus("active");
             mine.setInvited("rejected");
             favoriteModelRepo.save(mine);
+
+            FavoriteClient other = favoriteClientRepo.findByModelIdAndClientId(peerId, meId)
+                    .orElseGet(() -> new FavoriteClient(peerId, meId));
+            other.setStatus("active");
+            other.setInvited("rejected");
+            favoriteClientRepo.save(other);
+
         } else if ("MODEL".equalsIgnoreCase(me.getRole()) && "CLIENT".equalsIgnoreCase(peer.getRole())) {
             FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(meId, peerId)
-                    .orElseThrow(() -> new NoSuchElementException("No existe invitación"));
+                    .orElseGet(() -> new FavoriteClient(meId, peerId));
             mine.setStatus("active");
             mine.setInvited("rejected");
             favoriteClientRepo.save(mine);
+
+            FavoriteModel other = favoriteModelRepo.findByClientIdAndModelId(peerId, meId)
+                    .orElseGet(() -> new FavoriteModel(peerId, meId));
+            other.setStatus("active");
+            other.setInvited("rejected");
+            favoriteModelRepo.save(other);
+
         } else {
             throw new IllegalArgumentException("Roles inválidos para rechazar.");
         }
     }
+
 
     /**
      * Devuelve true solo si AMBAS vistas del par (cliente→modelo y modelo→cliente)
