@@ -1,4 +1,7 @@
 import React from 'react';
+import {
+  ItemCard, Avatar, Info, Name, Meta, Actions, Btn,
+} from '../../../styles/features/FavoritesStyles';
 
 const resolveProfilePic = (user = {}, ctx = 'FavoriteItem') => {
   const pick = {
@@ -16,102 +19,48 @@ const resolveProfilePic = (user = {}, ctx = 'FavoriteItem') => {
       user?.client_documents?.url_pic,
   };
   const result =
-    pick.profilePic ||
-    pick.urlPic ||
-    pick.pic ||
-    pick.avatar ||
-    pick.photo ||
-    pick.docs_urlPic ||
-    null;
+    pick.profilePic || pick.urlPic || pick.pic || pick.avatar || pick.photo || pick.docs_urlPic || null;
 
-  // LOG: trazamos qué llegó y qué seleccionamos
-  try {
-    console.debug(`[avatar][${ctx}]`, {
-      userId: user?.id,
-      nickname: user?.nickname,
-      chosen: result,
-      picks: pick,
-    });
-  } catch {}
-
+  try { console.debug(`[avatar][${ctx}]`, { userId: user?.id, nickname: user?.nickname, chosen: result, picks: pick }); } catch {}
   return result;
 };
 
 const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
   const handleChat = (e) => {
     e.stopPropagation();
-    if (onChat) {
-      onChat(user);
-    } else {
-      window.dispatchEvent(new CustomEvent('open-fav-chat', { detail: { user } }));
-    }
+    if (onChat) onChat(user);
+    else window.dispatchEvent(new CustomEvent('open-fav-chat', { detail: { user } }));
   };
 
   const avatar = resolveProfilePic(user, 'FavoriteItem') || '/img/avatar.png';
 
   return (
-    <div
-      onClick={() => onClick && onClick(user)}
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        padding: '8px 10px',
-        border: '1px solid #eee',
-        borderRadius: 10,
-        marginBottom: 8,
-        cursor: onClick ? 'pointer' : 'default',
-        background: '#fff'
-      }}
-    >
-      <img
+    <ItemCard $clickable={!!onClick} onClick={() => onClick && onClick(user)}>
+      <Avatar
         src={avatar}
         alt={user.nickname || user.email || 'user'}
         onError={(e) => { e.currentTarget.src = '/img/avatar.png'; }}
-        style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
       />
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-          {user.nickname || user.name || user.email || `Usuario ${user.id}`}
-        </div>
-        <div style={{ fontSize: 12, color: '#6c757d' }}>
-          {user.role || user.userType || ''}
-        </div>
-      </div>
+      <Info>
+        <Name>{user.nickname || user.name || user.email || `Usuario ${user.id}`}</Name>
+        <Meta>{user.role || user.userType || ''}</Meta>
+      </Info>
 
-      <button
-        onClick={handleChat}
-        style={{
-          padding: '6px 10px',
-          border: '1px solid #ddd',
-          background: '#fff',
-          borderRadius: 8,
-          cursor: 'pointer',
-          marginRight: 8
-        }}
-      >
-        Chatear
-      </button>
-
-      {onRemove && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove(user);
-          }}
-          disabled={removing}
-          style={{
-            padding: '6px 10px',
-            border: '1px solid #ddd',
-            background: removing ? '#f8f9fa' : '#fff',
-            borderRadius: 8,
-            cursor: 'pointer'
-          }}
-        >
-          {removing ? 'Quitando…' : 'Quitar'}
-        </button>
-      )}
-    </div>
+      <Actions>
+        <Btn type="button" onClick={handleChat}>Chatear</Btn>
+        {onRemove && (
+          <Btn
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onRemove(user); }}
+            disabled={removing}
+            aria-label="Quitar de favoritos"
+            title="Quitar de favoritos"
+          >
+            {removing ? 'Quitando…' : 'Quitar'}
+          </Btn>
+        )}
+      </Actions>
+    </ItemCard>
   );
 };
 

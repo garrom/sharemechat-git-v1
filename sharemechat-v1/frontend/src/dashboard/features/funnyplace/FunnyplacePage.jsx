@@ -1,4 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
+import {
+  Wrap, Header, Avatar, AvatarFallback, Title, Spacer,
+  Actions, Button, Status, VideoNote, VideoBox, VideoEl,
+} from '../../../styles/features/FunnyplaceStyles';
 
 const FunnyplacePage = ({ videoUrl: propVideoUrl }) => {
   const [loading, setLoading] = useState(!propVideoUrl);
@@ -17,7 +21,6 @@ const FunnyplacePage = ({ videoUrl: propVideoUrl }) => {
     setLoading(true);
     setError('');
     try {
-      // Ajusta esta ruta/propiedades a tu backend
       const res = await fetch('/api/funnyplace/random', {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -26,7 +29,6 @@ const FunnyplacePage = ({ videoUrl: propVideoUrl }) => {
         throw new Error(txt || `Error ${res.status}`);
       }
       const data = await res.json();
-      // Se espera algo tipo: { videoUrl, modelName, avatarUrl }
       setVideoUrl(data.videoUrl || '');
       setModelInfo({
         name: data.modelName || 'Modelo',
@@ -47,7 +49,7 @@ const FunnyplacePage = ({ videoUrl: propVideoUrl }) => {
     } else {
       setLoading(false);
     }
-    // Limpieza: pausa el video al desmontar
+    // Limpieza al desmontar
     return () => {
       try {
         if (videoRef.current) {
@@ -60,7 +62,6 @@ const FunnyplacePage = ({ videoUrl: propVideoUrl }) => {
   }, []);
 
   const handleNext = () => {
-    // “Otro video”
     if (videoRef.current) {
       try {
         videoRef.current.pause();
@@ -76,86 +77,64 @@ const FunnyplacePage = ({ videoUrl: propVideoUrl }) => {
   };
 
   const isHls = typeof videoUrl === 'string' && videoUrl.endsWith('.m3u8');
+  const initial = (modelInfo?.name || 'M').trim().charAt(0).toUpperCase();
 
   return (
-    <div style={{ display: 'grid', gap: 12 }}>
-      {/* Encabezado sencillo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+    <Wrap>
+      {/* Encabezado */}
+      <Header>
         {modelInfo?.avatar ? (
-          <img
+          <Avatar
             src={modelInfo.avatar}
             alt={modelInfo.name}
-            style={{ width: 40, height: 40, borderRadius: '50%', objectFit: 'cover' }}
+            onError={(e) => { e.currentTarget.src = ''; }}
           />
         ) : (
-          <div
-            style={{
-              width: 40, height: 40, borderRadius: '50%',
-              background: '#e9ecef', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 14, color: '#6c757d'
-            }}
-          >
-            M
-          </div>
+          <AvatarFallback aria-hidden>{initial || 'M'}</AvatarFallback>
         )}
-        <div style={{ fontWeight: 600 }}>{modelInfo?.name || 'Modelo'}</div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button
-            type="button"
-            onClick={handleNext}
-            style={{
-              padding: '6px 10px', border: 'none', borderRadius: 8, cursor: 'pointer',
-              background: '#0d6efd', color: 'white'
-            }}
-            disabled={loading}
-          >
-            Otro video
-          </button>
-        </div>
-      </div>
+        <Title>{modelInfo?.name || 'Modelo'}</Title>
+        <Spacer />
+        <Actions>
+          <Button type="button" onClick={handleNext} disabled={loading}>
+            {loading ? 'Cargando…' : 'Otro video'}
+          </Button>
+        </Actions>
+      </Header>
 
       {/* Estado */}
-      {loading && <div style={{ color: '#6c757d' }}>Cargando video…</div>}
-      {error && <div style={{ color: '#dc3545' }}>{error}</div>}
+      {loading && <Status $muted>Cargando video…</Status>}
+      {error && <Status $error role="alert">{error}</Status>}
 
       {/* Video */}
       {!loading && !error && videoUrl && (
         <>
-          {/* Aviso si es HLS y el navegador no lo soporta nativo */}
           {isHls && !canPlayHlsNativo() && (
-            <div style={{ color: '#6c757d', fontSize: 14 }}>
-              Tu navegador no reproduce HLS de forma nativa. Abre el enlace directamente:
-              {' '}
+            <VideoNote>
+              Tu navegador no reproduce HLS de forma nativa. Abre el enlace directamente:{' '}
               <a href={videoUrl} target="_blank" rel="noreferrer">{videoUrl}</a>
-            </div>
+            </VideoNote>
           )}
 
-          <video
-            ref={videoRef}
-            style={{
-              width: '100%',
-              maxHeight: 480,
-              background: 'black',
-              borderRadius: 12,
-              border: '1px solid #222',
-              objectFit: 'contain'
-            }}
-            src={videoUrl}
-            controls
-            playsInline
-            muted
-            autoPlay
-          />
+          <VideoBox>
+            <VideoEl
+              ref={videoRef}
+              src={videoUrl}
+              controls
+              playsInline
+              muted
+              autoPlay
+            />
+          </VideoBox>
         </>
       )}
 
       {/* Fallback si no hay video */}
       {!loading && !error && !videoUrl && (
-        <div style={{ color: '#6c757d' }}>
+        <Status $muted>
           No se recibió ninguna URL de video. Pulsa “Otro video” para reintentar.
-        </div>
+        </Status>
       )}
-    </div>
+    </Wrap>
   );
 };
 

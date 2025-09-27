@@ -21,8 +21,10 @@ import {
   StyledRemoteVideo,
   StyledChatContainer,
   StyledNavGroup,
-  StyledNavAvatar
-
+  StyledNavAvatar,
+  StyledIconBtn,
+  StyledTopActions,
+  StyledVideoTitle
 } from '../styles/ModelStyles';
 
 const DashboardModel = () => {
@@ -214,14 +216,14 @@ const DashboardModel = () => {
           createdAt: raw.createdAt ?? raw.created_at,
           readAt: raw.readAt ?? raw.read_at ?? null,
         }));
-        // === NUEVO: detectar marcadores de regalo en historial ===
+        // detectar marcadores de regalo en historial
         normalized.forEach(m=>{
           if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
             const parts=m.body.slice(2,-2).split(':'); // GIFT:id:name
             if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':')};
           }
         });
-        centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));  // nuevo
+        centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
         setCenterMessages(normalized.reverse());
 
         try {
@@ -288,6 +290,8 @@ const DashboardModel = () => {
     closeMessagesSocket();
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    thehost: {
+    }
     const host  = window.location.host;
     const url   = `${proto}://${host}/messages?token=${encodeURIComponent(tk)}`;
 
@@ -326,7 +330,7 @@ const DashboardModel = () => {
         if (data.type === 'msg:new' && data.message) {
           const m = normMsg(data.message);
 
-          // === NUEVO: si viene como mensaje normal pero lleva marcador de regalo, enriquecer ===
+          // si viene como mensaje normal pero lleva marcador de regalo, enriquecer
           if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
             const parts=m.body.slice(2,-2).split(':');
             if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':')};
@@ -352,7 +356,7 @@ const DashboardModel = () => {
           }
         }
 
-        // === NUEVO: evento explícito de regalo por WS mensajes ===
+        // evento explícito de regalo por WS mensajes
         if (data.type === 'msg:gift' && data.gift) {
           const me   = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
@@ -435,8 +439,6 @@ const DashboardModel = () => {
       }, 30000);
 
       socket.send(JSON.stringify({ type: 'set-role', role: 'model' }));
-      // OJO: Igual que en el cliente, el start-match se lanza desde el botón/handler,
-      // no automáticamente al abrir el socket. (Se replica patrón del cliente)
       socket.send(JSON.stringify({ type: 'stats' }));
     };
 
@@ -452,14 +454,14 @@ const DashboardModel = () => {
           }
         } catch { setCurrentClientId(null); }
 
-        // === Igual que el cliente: reset de peer/remote ===
+        // reset de peer/remote
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
         setRemoteStream(null);
         setMessages([]);
         setError('');
         setStatus('');
-        setSearching(false); // <=== NUEVO: como en el cliente, deja de "buscar"
+        setSearching(false);
 
         const peer = new Peer({
           initiator: false,
@@ -493,22 +495,18 @@ const DashboardModel = () => {
           setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
         }
       } else if (data.type === 'gift') {
-        // === NUEVO: recepción de regalo en streaming ===
         const mine = Number(data.fromUserId) === Number(user?.id);
         setMessages(prev=>[...prev,{ from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
 
       } else if (data.type === 'no-client-available') {
-        // === Réplica del cliente: queda "searching" y espera en cola ===
         setError('');
         setStatus('Esperando cliente...');
         setSearching(true);
-        // (El cliente no reenvía start-match aquí; se queda en la cola. Replicado.)
       } else if (data.type === 'queue-stats') {
         if (typeof data.position === 'number') {
           setQueuePosition(data.position);
         }
       } else if (data.type === 'peer-disconnected') {
-        // === Réplica del cliente: limpiar, poner searching y reenviar start-match ===
         setCurrentClientId(null);
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((track) => track.stop()); } } catch {}
@@ -533,11 +531,10 @@ const DashboardModel = () => {
         clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = null;
       }
-      setSearching(false); // proteger estado
+      setSearching(false);
     };
   };
 
-  // === NUEVO: mismo handler que en el cliente para iniciar/relanzar búsqueda ===
   const handleStartMatch = () => {
     if (!cameraActive || !localStream.current) {
       setError('Primero activa la cámara.');
@@ -578,7 +575,7 @@ const DashboardModel = () => {
     setRemoteStream(null);
     setMessages([]);
     setStatus('Buscando nuevo cliente...');
-    setSearching(true); // espejo del cliente al hacer NEXT
+    setSearching(true);
     if (socketRef.current?.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ type: 'stats' }));
     }
@@ -688,7 +685,7 @@ const DashboardModel = () => {
     setMessages([]);
     setShowMsgPanel(false);
     setOpenChatWith(null);
-    setSearching(false); // === NUEVO: espejo del cliente
+    setSearching(false);
   };
 
   const streamingActivo = !!remoteStream;
@@ -797,7 +794,7 @@ const DashboardModel = () => {
           createdAt: raw.createdAt ?? raw.created_at,
           readAt: raw.readAt ?? raw.read_at ?? null,
         }));
-        // === NUEVO: detectar regalos en historial también aquí (por si se usa este loader) ===
+        // detectar regalos en historial
         normalized.forEach(m=>{
           if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
             const parts=m.body.slice(2,-2).split(':');
@@ -913,31 +910,18 @@ const DashboardModel = () => {
       {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent>
 
-
        {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
         <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
-            <button
-              title="Videochat"
-              onClick={() => setActiveTab('videochat')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
+            <StyledIconBtn title="Videochat" onClick={() => setActiveTab('videochat')}>
               <FontAwesomeIcon icon={faVideo} size="lg" />
-            </button>
-            <button
-              title="Favoritos"
-              onClick={handleGoFavorites}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
+            </StyledIconBtn>
+            <StyledIconBtn title="Favoritos" onClick={handleGoFavorites}>
               <FontAwesomeIcon icon={faHeart} size="lg" />
-            </button>
-            <button
-              title="Funnyplace"
-              onClick={handleGoFunnyplace}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
+            </StyledIconBtn>
+            <StyledIconBtn title="Funnyplace" onClick={handleGoFunnyplace}>
               <FontAwesomeIcon icon={faFilm} size="lg" />
-            </button>
+            </StyledIconBtn>
           </div>
 
           <ul className="list-group">
@@ -959,7 +943,6 @@ const DashboardModel = () => {
         </StyledLeftColumn>
         {/* ========= FIN COLUMNA IZQUIERDA  ======== */}
 
-
         {/* ==============INICIO ZONA CENTRAL ========== */}
         <StyledCenter>
           {activeTab === 'videochat' && (
@@ -970,8 +953,7 @@ const DashboardModel = () => {
               )}
               {cameraActive && (
                 <>
-                  <div style={{ marginBottom: '10px' }}>
-                    {/* === NUEVO: botón Buscar Cliente y estado 'buscando', como en el cliente === */}
+                  <StyledTopActions>
                     {!searching && (
                       <StyledActionButton onClick={handleStartMatch}>Buscar Cliente</StyledActionButton>
                     )}
@@ -989,7 +971,7 @@ const DashboardModel = () => {
                         )}
                       </>
                     )}
-                  </div>
+                  </StyledTopActions>
 
                   <StyledLocalVideo>
                     <h5 style={{ color: 'white' }}>Tu Cámara</h5>
@@ -1003,17 +985,7 @@ const DashboardModel = () => {
 
                   {remoteStream && (
                     <StyledRemoteVideo>
-                      <h5
-                        style={{
-                          position: 'absolute',
-                          top: '10px',
-                          left: '10px',
-                          color: 'white',
-                          zIndex: 2,
-                        }}
-                      >
-                        Cliente
-                      </h5>
+                      <StyledVideoTitle>Cliente</StyledVideoTitle>
                       <video
                         ref={remoteVideoRef}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
@@ -1044,7 +1016,6 @@ const DashboardModel = () => {
                                   <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong> {msg.text}
                                 </>
                               )}
-
                             </div>
                           ))}
                         </div>
@@ -1109,7 +1080,7 @@ const DashboardModel = () => {
 
                   {/* Vista condicional según invitación */}
                   {String(selectedFav?.invited) === 'pending' ? (
-                    // ======= MODO INVITACIÓN PENDIENTE: botones persistentes =======
+                    // ======= MODO INVITACIÓN PENDIENTE =======
                     <div style={{
                       flex: 1,
                       minHeight: 0,
@@ -1185,7 +1156,6 @@ const DashboardModel = () => {
                                ) : (
                                  m.body
                                )}
-
                              </span>
                           </div>
                         ))}
@@ -1218,7 +1188,6 @@ const DashboardModel = () => {
        {/* ================FIN ZONA CENTRAL =================*/}
 
         <StyledRightColumn />
-
 
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}

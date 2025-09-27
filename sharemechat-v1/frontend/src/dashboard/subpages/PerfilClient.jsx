@@ -1,11 +1,37 @@
-// PerfilClient.jsx
+// src/dashboard/subpages/PerfilClient.jsx
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+
+// Reusables actuales (mantén los que ya usas)
 import {
   StyledContainer,
   StyledNavbar,
   StyledNavButton,
 } from '../../styles/ClientStyles';
+
+// Estilos específicos de la página
+import {
+  PageWrap,
+  Title,
+  Message,
+  Form,
+  FormRow,
+  Label,
+  Input,
+  Textarea,
+  ButtonPrimary,
+  Hr,
+  SectionCard,
+  SectionTitle,
+  PhotoBlock,
+  Photo,
+  FileInput,
+  FileLabel,
+  ButtonRow,
+  ButtonDangerOutline,
+  Hint,
+  BackButton,
+} from '../../styles/pages/PerfilClientModelStyle.js';
 
 const DOCS_GET_URL    = '/api/clients/documents/me';
 const DOCS_UPLOAD_URL = '/api/clients/documents'; // POST subir, DELETE eliminar ?field=pic
@@ -195,187 +221,123 @@ const PerfilClient = () => {
           <StyledNavButton type="button" onClick={() => history.push('/change-password')}>
             Cambiar contraseña
           </StyledNavButton>
-          <StyledNavButton type="button" onClick={() => history.goBack()} style={{ marginLeft: 8 }}>
+          <BackButton type="button" onClick={() => history.goBack()}>
             Volver
-          </StyledNavButton>
+          </BackButton>
         </div>
       </StyledNavbar>
 
-     <div style={{ maxWidth: 720, margin: '24px auto', padding: '0 16px' }}>
-        <h2>Perfil (Cliente)</h2>
+      <PageWrap>
+        <Title>Perfil (Cliente)</Title>
         {loading && <p>Cargando…</p>}
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {msg && <p style={{ color: 'green' }}>{msg}</p>}
+        {error && <Message type="error">{error}</Message>}
+        {msg && <Message type="ok">{msg}</Message>}
 
         {!loading && (
           <>
             {/* Datos básicos */}
-            <form onSubmit={(e) => e.preventDefault()}>
-              <div style={{ marginBottom: 12 }}>
-                <label>Email (solo lectura)</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  readOnly
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
-                />
-              </div>
+            <Form onSubmit={(e) => e.preventDefault()}>
+              <FormRow>
+                <Label>Email (solo lectura)</Label>
+                <Input type="email" value={form.email} readOnly />
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Nombre</label>
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={onChange}
-                  placeholder="Tu nombre"
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
-                />
-              </div>
+              <FormRow>
+                <Label>Nombre</Label>
+                <Input name="name" value={form.name} onChange={onChange} placeholder="Tu nombre" />
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Apellido</label>
-                <input
-                  name="surname"
-                  value={form.surname}
-                  onChange={onChange}
-                  placeholder="Tu apellido"
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
-                />
-              </div>
+              <FormRow>
+                <Label>Apellido</Label>
+                <Input name="surname" value={form.surname} onChange={onChange} placeholder="Tu apellido" />
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Nickname</label>
-                <input
-                  name="nickname"
-                  value={form.nickname}
-                  onChange={onChange}
-                  placeholder="Tu nickname"
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
-                />
-              </div>
+              <FormRow>
+                <Label>Nickname</Label>
+                <Input name="nickname" value={form.nickname} onChange={onChange} placeholder="Tu nickname" />
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Biografía</label>
-                <textarea
+              <FormRow>
+                <Label>Biografía</Label>
+                <Textarea
                   name="biography"
                   value={form.biography}
                   onChange={onChange}
                   placeholder="Cuéntanos sobre ti"
                   rows={4}
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6, resize: 'vertical' }}
                 />
-              </div>
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Intereses (separados por comas)</label>
-                <input
+              <FormRow>
+                <Label>Intereses (separados por comas)</Label>
+                <Input
                   name="interests"
                   value={form.interests}
                   onChange={onChange}
                   placeholder="cine, música, viajes…"
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
                 />
+              </FormRow>
+
+              <div>
+                <ButtonPrimary type="button" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Guardando…' : 'Guardar cambios'}
+                </ButtonPrimary>
               </div>
+            </Form>
 
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                style={{ padding: '10px 16px', cursor: 'pointer' }}
-              >
-                {saving ? 'Guardando…' : 'Guardar cambios'}
-              </button>
-            </form>
-
-            <hr style={{ margin: '24px 0' }} />
+            <Hr />
 
             {/* Foto de perfil */}
-            <section>
-              <h3 style={{ marginBottom: 12 }}>Foto de perfil</h3>
+            <SectionCard>
+              <SectionTitle>Foto de perfil</SectionTitle>
 
-              <div style={{ border: '1px solid #e5e5e5', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                <div style={{ marginBottom: 12 }}>
-                  {docs.urlPic ? (
-                    <div>
-                      <img src={docs.urlPic} alt="foto actual" style={{ maxWidth: 220, borderRadius: 8 }} />
-                         <div style={{ marginTop: 6 }}>
-                           <a href={docs.urlPic} target="_blank" rel="noreferrer">
-                             {(() => {
-                               const raw = (docs.urlPic || '').split('?')[0].split('#')[0].split('/').pop() || '';
-                               const originalName = raw.replace(
-                                 /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-/,
-                                 ''
-                               );
-                               return decodeURIComponent(originalName);
-                             })()}
-                           </a>
-                         </div>
-
+              <PhotoBlock>
+                {docs.urlPic ? (
+                  <div>
+                    <Photo src={docs.urlPic} alt="foto actual" />
+                    <div style={{ marginTop: 6 }}>
+                      <a href={docs.urlPic} target="_blank" rel="noreferrer">
+                        {(() => {
+                          const raw = (docs.urlPic || '').split('?')[0].split('#')[0].split('/').pop() || '';
+                          const originalName = raw.replace(
+                            /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-/,
+                            ''
+                          );
+                          return decodeURIComponent(originalName);
+                        })()}
+                      </a>
                     </div>
-                  ) : (
-                    <p style={{ color: '#777', margin: 0 }}>— Sin foto —</p>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <Message $muted>— Sin foto —</Message>
+                )}
+              </PhotoBlock>
 
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  <input
-                    id="client-pic"
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={(e) => setPicFile(e.target.files?.[0] || null)}
-                  />
-                  <label
-                    htmlFor="client-pic"
-                    style={{
-                      display: 'inline-block',
-                      padding: '8px 12px',
-                      border: '1px solid #ced4da',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                    }}
-                  >
-                    Seleccionar archivo
-                  </label>
+              <ButtonRow>
+                <FileInput
+                  id="client-pic"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setPicFile(e.target.files?.[0] || null)}
+                />
+                <FileLabel htmlFor="client-pic">Seleccionar archivo</FileLabel>
 
-                  <button
-                    type="button"
-                    onClick={uploadPhoto}
-                    disabled={!picFile || uploading}
-                    style={{ padding: '8px 12px', cursor: 'pointer' }}
-                  >
-                    {uploading ? 'Subiendo…' : 'Subir foto'}
-                  </button>
+                <ButtonPrimary type="button" onClick={uploadPhoto} disabled={!picFile || uploading}>
+                  {uploading ? 'Subiendo…' : 'Subir foto'}
+                </ButtonPrimary>
 
-                  {docs.urlPic && (
-                    <button
-                      type="button"
-                      onClick={deletePhoto}
-                      disabled={deleting}
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        border: '1px solid #dc3545',
-                        background: 'white',
-                        color: '#dc3545',
-                        borderRadius: 6,
-                      }}
-                      title="Eliminar foto actual"
-                    >
-                      {deleting ? 'Eliminando…' : 'Eliminar foto'}
-                    </button>
-                  )}
-                </div>
+                {docs.urlPic && (
+                  <ButtonDangerOutline type="button" onClick={deletePhoto} disabled={deleting} title="Eliminar foto actual">
+                    {deleting ? 'Eliminando…' : 'Eliminar foto'}
+                  </ButtonDangerOutline>
+                )}
+              </ButtonRow>
 
-                <p style={{ marginTop: 8, color: '#6c757d' }}>
-                  Formato recomendado JPG/PNG. Elige un archivo y pulsa “Subir foto”.
-                </p>
-              </div>
-            </section>
+              <Hint>Formato recomendado JPG/PNG. Elige un archivo y pulsa “Subir foto”.</Hint>
+            </SectionCard>
           </>
         )}
-      </div>
+      </PageWrap>
     </StyledContainer>
   );
 };

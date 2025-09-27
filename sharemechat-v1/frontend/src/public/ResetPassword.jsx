@@ -1,19 +1,18 @@
 import React, { useMemo, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
-
-const box = {
-  maxWidth: 400,
-  margin: '40px auto',
-  padding: 20,
-  border: '1px solid #eee',
-  borderRadius: 8,
-  boxShadow: '0 2px 10px rgba(0,0,0,0.05)',
-};
+import {
+  Container, Card, Title, Paragraph,
+  StatusOk, StatusErr, Form, Input,
+  ButtonPrimary, ButtonSecondary
+} from '../styles/ForgotResetPassStyles';
 
 const ResetPassword = () => {
   const history = useHistory();
   const location = useLocation();
-  const token = useMemo(() => new URLSearchParams(location.search).get('token') || '', [location.search]);
+  const token = useMemo(
+    () => new URLSearchParams(location.search).get('token') || '',
+    [location.search]
+  );
 
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -48,53 +47,51 @@ const ResetPassword = () => {
         return;
       }
       setStatus({ loading: false, ok: 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.', err: '' });
-    } catch (err) {
+    } catch {
       setStatus({ loading: false, ok: '', err: 'Error de conexión. Inténtalo de nuevo.' });
     }
   };
 
   return (
-    <div style={box}>
-      <h2>Establecer nueva contraseña</h2>
-      {!token && <div style={{ color: 'red', marginBottom: 10 }}>Token ausente o inválido.</div>}
-      {status.ok && <div style={{ color: 'green', marginBottom: 10 }}>{status.ok}</div>}
-      {status.err && <div style={{ color: 'red', marginBottom: 10 }}>{status.err}</div>}
+    <Container>
+      <Card>
+        <Title>Establecer nueva contraseña</Title>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="password"
-          placeholder="Nueva contraseña (mín. 8)"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-          style={{ width: '100%', padding: 10, marginBottom: 10, borderRadius: 6, border: '1px solid #ccc' }}
-        />
-        <input
-          type="password"
-          placeholder="Repite la nueva contraseña"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          required
-          minLength={8}
-          style={{ width: '100%', padding: 10, marginBottom: 10, borderRadius: 6, border: '1px solid #ccc' }}
-        />
-        <button
-          type="submit"
-          disabled={status.loading || !token}
-          style={{ width: '100%', padding: 10, borderRadius: 6, border: 'none', background: '#28a745', color: '#fff' }}
-        >
-          {status.loading ? 'Actualizando…' : 'Guardar nueva contraseña'}
-        </button>
-      </form>
+        {!token && <StatusErr role="alert">Token ausente o inválido.</StatusErr>}
+        {status.ok && <StatusOk role="status">{status.ok}</StatusOk>}
+        {status.err && <StatusErr role="alert">{status.err}</StatusErr>}
 
-      <button
-        onClick={() => history.push('/')}
-        style={{ width: '100%', marginTop: 10, padding: 10, borderRadius: 6, border: '1px solid #ccc', background: '#f8f9fa' }}
-      >
-        Volver al inicio
-      </button>
-    </div>
+        <Form onSubmit={handleSubmit} noValidate>
+          <Input
+            type="password"
+            placeholder="Nueva contraseña (mín. 8)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            autoComplete="new-password"
+            aria-label="Nueva contraseña"
+          />
+          <Input
+            type="password"
+            placeholder="Repite la nueva contraseña"
+            value={confirm}
+            onChange={(e) => setConfirm(e.target.value)}
+            required
+            minLength={8}
+            autoComplete="new-password"
+            aria-label="Confirmar nueva contraseña"
+          />
+          <ButtonPrimary type="submit" disabled={status.loading || !token}>
+            {status.loading ? 'Actualizando…' : 'Guardar nueva contraseña'}
+          </ButtonPrimary>
+        </Form>
+
+        <ButtonSecondary type="button" onClick={() => history.push('/')}>
+          Volver al inicio
+        </ButtonSecondary>
+      </Card>
+    </Container>
   );
 };
 

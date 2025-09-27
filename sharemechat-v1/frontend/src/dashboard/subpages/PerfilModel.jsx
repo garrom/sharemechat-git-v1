@@ -1,10 +1,37 @@
+// src/dashboard/subpages/PerfilModel.jsx
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+
 import {
   StyledContainer,
   StyledNavbar,
   StyledNavButton,
 } from '../../styles/ModelStyles';
+
+import {
+  PageWrap,
+  Title,
+  Message,
+  Form,
+  FormRow,
+  Label,
+  Input,
+  Textarea,
+  ButtonPrimary,
+  ButtonDangerOutline,
+  ButtonRow,
+  FileInput,
+  FileLabel,
+  Hr,
+  SectionCard,
+  SectionTitle,
+  FileName,
+  Photo,
+  Hint,
+  BackButton,
+} from '../../styles/pages/PerfilClientModelStyle.js';
+
+import { Video } from '../../styles/pages/PerfilModelStyles';
 
 const DOCS_GET_URL    = '/api/models/documents/me';
 const DOCS_UPLOAD_URL = '/api/models/documents';
@@ -18,7 +45,6 @@ const PerfilModel = () => {
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
   const [userId, setUserId] = useState(null);
-
 
   const [form, setForm] = useState({
     email: '',
@@ -51,7 +77,6 @@ const PerfilModel = () => {
       setLoading(true);
       setError('');
       try {
-        // Perfil
         const res = await fetch('/api/users/me', {
           headers: { Authorization: `Bearer ${token}` },
         });
@@ -66,8 +91,6 @@ const PerfilModel = () => {
           biography: data.biography || '',
           interests: data.interests || '',
         });
-
-        // Documentos (foto/vídeo)
         await loadDocs();
       } catch (e) {
         setError(e.message);
@@ -90,9 +113,7 @@ const PerfilModel = () => {
         urlPic:   data.urlPic   || null,
         urlVideo: data.urlVideo || null,
       });
-    } catch {
-      // silencioso
-    }
+    } catch { /* noop */ }
   };
 
   const onChange = (e) => {
@@ -201,7 +222,7 @@ const PerfilModel = () => {
       if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar el vídeo');
       setDocs((d) => ({ ...d, urlVideo: null }));
       setVideoFile(null);
-      setVideoKey((k) => k + 1); // reset input file
+      setVideoKey((k) => k + 1);
       setMsg('Vídeo eliminado.');
     } catch (e) {
       setError(e.message);
@@ -224,7 +245,7 @@ const PerfilModel = () => {
       if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar la foto');
       setDocs((d) => ({ ...d, urlPic: null }));
       setPicFile(null);
-      setPicKey(k => k + 1); // limpia el input file
+      setPicKey(k => k + 1);
       setMsg('Foto eliminada.');
     } catch (e) {
       setError(e.message);
@@ -244,277 +265,193 @@ const PerfilModel = () => {
           <StyledNavButton type="button" onClick={() => history.push('/change-password')}>
             Cambiar contraseña
           </StyledNavButton>
-          <StyledNavButton type="button" onClick={() => history.goBack()} style={{ marginLeft: 8 }}>
+          <BackButton type="button" onClick={() => history.goBack()}>
             Volver
-          </StyledNavButton>
+          </BackButton>
         </div>
       </StyledNavbar>
 
-      <div style={{ maxWidth: 720, margin: '24px auto', padding: '0 16px 56px' }}>
-        <h2>Perfil (Modelo)</h2>
+      <PageWrap>
+        <Title>Perfil (Modelo)</Title>
         {loading && <p>Cargando…</p>}
-        {error && <p style={{ color: 'red' }}>{error}</p>}
-        {msg && <p style={{ color: 'green' }}>{msg}</p>}
+        {error && <Message type="error">{error}</Message>}
+        {msg && <Message type="ok">{msg}</Message>}
 
         {!loading && (
           <>
             {/* Datos básicos */}
-            <form onSubmit={(e) => e.preventDefault()}>
-              <div style={{ marginBottom: 12 }}>
-                <label>Email (solo lectura)</label>
-                <input
-                  type="email"
-                  value={form.email}
-                  readOnly
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
-                />
-              </div>
+            <Form onSubmit={(e) => e.preventDefault()}>
+              <FormRow>
+                <Label>Email (solo lectura)</Label>
+                <Input type="email" value={form.email} readOnly />
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Nombre</label>
-                <input
-                  name="name"
-                  value={form.name}
-                  onChange={onChange}
-                  placeholder="Tu nombre"
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
-                />
-              </div>
+              <FormRow>
+                <Label>Nombre</Label>
+                <Input name="name" value={form.name} onChange={onChange} placeholder="Tu nombre" />
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Apellido</label>
-                <input
-                  name="surname"
-                  value={form.surname}
-                  onChange={onChange}
-                  placeholder="Tu apellido"
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
-                />
-              </div>
+              <FormRow>
+                <Label>Apellido</Label>
+                <Input name="surname" value={form.surname} onChange={onChange} placeholder="Tu apellido" />
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Nickname</label>
-                <input
-                  name="nickname"
-                  value={form.nickname}
-                  onChange={onChange}
-                  placeholder="Tu nickname"
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
-                />
-              </div>
+              <FormRow>
+                <Label>Nickname</Label>
+                <Input name="nickname" value={form.nickname} onChange={onChange} placeholder="Tu nickname" />
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Biografía</label>
-                <textarea
+              <FormRow>
+                <Label>Biografía</Label>
+                <Textarea
                   name="biography"
                   value={form.biography}
                   onChange={onChange}
                   placeholder="Cuéntanos sobre ti y tu estilo"
                   rows={4}
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6, resize: 'vertical' }}
                 />
-              </div>
+              </FormRow>
 
-              <div style={{ marginBottom: 12 }}>
-                <label>Intereses (separados por comas)</label>
-                <input
+              <FormRow>
+                <Label>Intereses (separados por comas)</Label>
+                <Input
                   name="interests"
                   value={form.interests}
                   onChange={onChange}
                   placeholder="gaming, cosplay, baile…"
-                  style={{ width: '100%', padding: 8, border: '1px solid #ccc', borderRadius: 6 }}
                 />
+              </FormRow>
+
+              <div>
+                <ButtonPrimary type="button" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Guardando…' : 'Guardar cambios'}
+                </ButtonPrimary>
               </div>
+            </Form>
 
-              <button
-                type="button"
-                onClick={handleSave}
-                disabled={saving}
-                style={{ padding: '10px 16px', cursor: 'pointer' }}
-              >
-                {saving ? 'Guardando…' : 'Guardar cambios'}
-              </button>
-            </form>
+            <Hr />
 
-            {/* Separador */}
-            <hr style={{ margin: '24px 0' }} />
-
-            {/* Multimedia del perfil vía Documentos */}
-            <section>
-              <h3 style={{ marginBottom: 12 }}>Multimedia del perfil</h3>
+            {/* Multimedia del perfil */}
+            <SectionCard>
+              <SectionTitle>Multimedia del perfil</SectionTitle>
 
               {/* Foto */}
-              <div style={{ border: '1px solid #e5e5e5', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-                <h4 style={{ marginTop: 0 }}>Foto de perfil (archivo)</h4>
-                <div>
-                  {docs.urlPic ? (
-                    <div style={{ marginBottom: 8 }}>
-                      <img src={docs.urlPic} alt="foto actual" style={{ maxWidth: 220, borderRadius: 8 }} />
-                      <div style={{ marginTop: 6 }}>
-                        <a href={docs.urlPic} target="_blank" rel="noreferrer">
-                          {(() => {
-                            const raw = (docs.urlPic || '').split('?')[0].split('#')[0].split('/').pop() || '';
-                            const originalName = raw.replace(
-                              /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-/,
-                              ''
-                            );
-                            return decodeURIComponent(originalName);
-                          })()}
-                        </a>
-                      </div>
-                    </div>
-                  ) : (
-                    <p style={{ color: '#777' }}>— No subido —</p>
-                  )}
-                </div>
+              <SectionCard as="div">
+                <h4>Foto de perfil (archivo)</h4>
+                {docs.urlPic ? (
+                  <>
+                    <Photo src={docs.urlPic} alt="foto actual" />
+                    <FileName>
+                      <a href={docs.urlPic} target="_blank" rel="noreferrer">
+                        {(() => {
+                          const raw = (docs.urlPic || '').split('?')[0].split('#')[0].split('/').pop() || '';
+                          const originalName = raw.replace(
+                            /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-/,
+                            ''
+                          );
+                          return decodeURIComponent(originalName);
+                        })()}
+                      </a>
+                    </FileName>
+                  </>
+                ) : (
+                  <Message $muted>— No subido —</Message>
+                )}
 
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  {/* input oculto + label-botón */}
-                  <input
+                <ButtonRow>
+                  <FileInput
                     key={picKey}
                     id="model-pic"
                     type="file"
                     accept="image/*"
-                    style={{ display: 'none' }}
                     onChange={(e) => setPicFile(e.target.files?.[0] || null)}
                   />
-                  <label
-                    htmlFor="model-pic"
-                    style={{
-                      display: 'inline-block',
-                      padding: '8px 12px',
-                      border: '1px solid #ced4da',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                    }}
-                  >
-                    Seleccionar archivo
-                  </label>
+                  <FileLabel htmlFor="model-pic">Seleccionar archivo</FileLabel>
 
-                  <button
+                  <ButtonPrimary
                     type="button"
                     onClick={() => uploadSingle('pic', picFile)}
                     disabled={!picFile || uploadingField === 'pic'}
-                    style={{ padding: '8px 12px', cursor: 'pointer' }}
                   >
                     {uploadingField === 'pic' ? 'Subiendo…' : 'Subir foto'}
-                  </button>
+                  </ButtonPrimary>
 
                   {docs.urlPic && (
-                    <button
+                    <ButtonDangerOutline
                       type="button"
                       onClick={deletePhoto}
                       disabled={deleting}
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        border: '1px solid #dc3545',
-                        background: 'white',
-                        color: '#dc3545',
-                        borderRadius: 6,
-                      }}
                       title="Eliminar foto actual"
                     >
                       {deleting ? 'Eliminando…' : 'Eliminar foto'}
-                    </button>
+                    </ButtonDangerOutline>
                   )}
-                </div>
+                </ButtonRow>
 
-                <p style={{ marginTop: 8, color: '#6c757d' }}>
-                  Formato recomendado JPG/PNG.
-                </p>
-              </div>
+                <Hint>Formato recomendado JPG/PNG.</Hint>
+              </SectionCard>
 
               {/* Vídeo */}
-              <div style={{ border: '1px solid #e5e5e5', borderRadius: 8, padding: 16 }}>
-                <h4 style={{ marginTop: 0 }}>Vídeo de presentación</h4>
-                <div>
-                  {docs.urlVideo ? (
-                    <div style={{ marginBottom: 8 }}>
-                      <video src={docs.urlVideo} controls style={{ maxWidth: '100%', maxHeight: 300 }} />
-                      <div style={{ marginTop: 6 }}>
-                        <a href={docs.urlVideo} target="_blank" rel="noreferrer">
-                          {(() => {
-                            const raw = (docs.urlVideo || '').split('?')[0].split('#')[0].split('/').pop() || '';
-                            const originalName = raw.replace(
-                              /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-/,
-                              ''
-                            );
-                            return decodeURIComponent(originalName);
-                          })()}
-                        </a>
-                      </div>
-                    </div>
-                  ) : (
-                    <p style={{ color: '#777' }}>— No subido —</p>
-                  )}
-                </div>
+              <SectionCard as="div" style={{ marginTop: 16 }}>
+                <h4>Vídeo de presentación</h4>
+                {docs.urlVideo ? (
+                  <>
+                    <Video src={docs.urlVideo} controls />
+                    <FileName>
+                      <a href={docs.urlVideo} target="_blank" rel="noreferrer">
+                        {(() => {
+                          const raw = (docs.urlVideo || '').split('?')[0].split('#')[0].split('/').pop() || '';
+                          const originalName = raw.replace(
+                            /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}-/,
+                            ''
+                          );
+                          return decodeURIComponent(originalName);
+                        })()}
+                      </a>
+                    </FileName>
+                  </>
+                ) : (
+                  <Message $muted>— No subido —</Message>
+                )}
 
-                <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                  {/* input oculto + label-botón */}
-                  <input
+                <ButtonRow>
+                  <FileInput
                     key={videoKey}
                     id="model-video"
                     type="file"
                     accept="video/*"
-                    style={{ display: 'none' }}
                     onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
                   />
-                  <label
-                    htmlFor="model-video"
-                    style={{
-                      display: 'inline-block',
-                      padding: '8px 12px',
-                      border: '1px solid #ced4da',
-                      borderRadius: 6,
-                      cursor: 'pointer',
-                      userSelect: 'none',
-                    }}
-                  >
-                    Seleccionar archivo
-                  </label>
+                  <FileLabel htmlFor="model-video">Seleccionar archivo</FileLabel>
 
-                  <button
+                  <ButtonPrimary
                     type="button"
                     onClick={() => uploadSingle('video', videoFile)}
                     disabled={!videoFile || uploadingField === 'video'}
-                    style={{ padding: '8px 12px', cursor: 'pointer' }}
                   >
                     {uploadingField === 'video' ? 'Subiendo…' : 'Subir vídeo'}
-                  </button>
+                  </ButtonPrimary>
 
                   {docs.urlVideo && (
-                    <button
+                    <ButtonDangerOutline
                       type="button"
                       onClick={deleteVideo}
                       disabled={deletingVideo}
-                      style={{
-                        padding: '8px 12px',
-                        cursor: 'pointer',
-                        border: '1px solid #dc3545',
-                        background: 'white',
-                        color: '#dc3545',
-                        borderRadius: 6,
-                      }}
                       title="Eliminar vídeo actual"
                     >
                       {deletingVideo ? 'Eliminando…' : 'Eliminar vídeo'}
-                    </button>
+                    </ButtonDangerOutline>
                   )}
-                </div>
+                </ButtonRow>
 
-                <p style={{ marginTop: 8, color: '#6c757d' }}>
-                  Formato recomendado MP4. Tamaño razonable para carga rápida.
-                </p>
-              </div>
-            </section>
+                <Hint>Formato recomendado MP4. Tamaño razonable para carga rápida.</Hint>
+              </SectionCard>
+            </SectionCard>
           </>
         )}
-      </div>
+      </PageWrap>
     </StyledContainer>
   );
-
 };
 
 export default PerfilModel;

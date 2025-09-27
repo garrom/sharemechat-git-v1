@@ -1,36 +1,43 @@
 import React, { useEffect, useState } from 'react';
+import {
+  List, StateRow, ItemCard, Avatar, Info, Name, Meta, Badges, Badge
+} from '../../../styles/features/FavoritesStyles';
 
-const resolveProfilePic = (user = {}, ctx = 'FavoritesModelList') => {
-  const pick = {
-    profilePic: user?.profilePic,
-    urlPic: user?.urlPic ?? user?.url_pic,
-    pic: user?.pic,
-    avatar: user?.avatar,
-    photo: user?.photo,
-    docs_urlPic:
-      user?.documents?.urlPic ??
-      user?.documents?.url_pic ??
-      user?.modelDocuments?.urlPic ??
-      user?.model_documents?.url_pic ??
-      user?.clientDocuments?.urlPic ??
-      user?.client_documents?.url_pic,
-  };
-  const result =
-    pick.profilePic ||
-    pick.urlPic ||
-    pick.pic ||
-    pick.avatar ||
-    pick.photo ||
-    pick.docs_urlPic ||
-    null;
+function FavListItem({ user, avatarUrl, onSelect }) {
+  const placeholder = '/img/avatar.png';
+  const [imgSrc, setImgSrc] = useState(placeholder);
 
-  try { console.debug(`[avatar][${ctx}]`, { userId: user?.id, chosen: result, picks: pick }); } catch {}
-  return result;
-};
+  // Solo actualiza si llega una URL válida; si no hay URL, permanece el placeholder (sin flicker)
+  useEffect(() => {
+    if (avatarUrl && typeof avatarUrl === 'string') {
+      setImgSrc(avatarUrl);
+    }
+    // si no hay avatarUrl, no tocamos el src para evitar repaints
+  }, [avatarUrl]);
+
+  const invited = String(user.invited || '').toLowerCase();
+  const invitedVariant =
+    invited === 'pending' ? 'warning' :
+    invited === 'rejected' ? 'danger' : 'success';
+
+  return (
+    <ItemCard $clickable onClick={() => onSelect?.(user)}>
+      <Avatar src={imgSrc} alt="" $size={28} />
+      <Info>
+        <Name>{user.nickname || `Usuario #${user.id}`}</Name>
+        <Meta>{user.userType || 'CLIENT'}</Meta>
+      </Info>
+      <Badges>
+        <Badge $variant="secondary">{user.status}</Badge>
+        <Badge $variant={invitedVariant}>{user.invited}</Badge>
+      </Badges>
+    </ItemCard>
+  );
+}
 
 export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
   const [items, setItems] = useState([]);
-  const [avatarMap, setAvatarMap] = useState({}); // id -> url
+  const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);
   const token = localStorage.getItem('token');
 
@@ -43,10 +50,9 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
         const res = await fetch('/api/favorites/clients/meta', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
         const data = await res.json();
         if (!ignore) {
-          console.debug('[favorites-model][raw]', data);
           const mapped = (data || []).map(d => {
             const u = d?.user || {};
             return {
@@ -55,17 +61,12 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
               status: d?.status,
               role: u.role || 'CLIENT',
               userType: u.userType || 'CLIENT',
-              documents: d?.documents || d?.clientDocuments || d?.modelDocuments || u?.documents || null,
-              modelDocuments: d?.modelDocuments || u?.modelDocuments || null,
-              clientDocuments: d?.clientDocuments || u?.clientDocuments || null,
             };
           });
-
           const filtered = mapped.filter(item => {
             const v = String(item.invited || '').toLowerCase();
             return v === 'pending' || v === 'accepted';
           });
-
           setItems(filtered);
         }
       } catch (e) {
@@ -79,7 +80,6 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
     return () => { ignore = true; };
   }, [token, reloadTrigger]);
 
-  // batch avatars
   useEffect(() => {
     let ignore = false;
     const run = async () => {
@@ -90,12 +90,9 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
         const r = await fetch(`/api/users/avatars?ids=${qs}`, {
           headers: { Authorization: `Bearer ${token}` }
         });
-        if (!r.ok) throw new Error(await r.text() || `HTTP ${r.status}`);
-        const map = await r.json(); // { "12": "/uploads/...", "34": null, ... }
-        if (!ignore) {
-          console.debug('[favorites-model][avatars-batch]', map);
-          setAvatarMap(map || {});
-        }
+        if (!r.ok) throw new Error((await r.text()) || `HTTP ${r.status}`);
+        const map = await r.json();
+        if (!ignore) setAvatarMap(map || {});
       } catch (e) {
         console.warn('[favorites-model] avatars error:', e?.message);
       }
@@ -104,51 +101,19 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
     return () => { ignore = true; };
   }, [items, token]);
 
-  if (loading) return <div className="list-group-item">Cargando…</div>;
-  if (!items.length) return <div className="list-group-item">No tienes favoritos todavía.</div>;
+  if (loading) return <StateRow>Cargando…</StateRow>;
+  if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;
 
   return (
-    <ul className="list-group list-group-flush">
-      {items.map(u => {
-        const fromBatch = avatarMap?.[u.id] || null;
-        const fallbackResolved = resolveProfilePic(u, 'FavoritesModelList->render');
-        const avatar = fromBatch || fallbackResolved || '/img/avatar.png';
-
-        return (
-          <li key={u.id}
-              className="list-group-item d-flex align-items-center justify-content-between"
-              style={{ cursor:'pointer' }}
-              onClick={() => onSelect?.(u)}
-          >
-            <div className="d-flex align-items-center">
-              <img
-                src={avatar}
-                alt=""
-                width="28"
-                height="28"
-                onError={(e) => { e.currentTarget.src = '/img/avatar.png'; }}
-                style={{ borderRadius: '50%', objectFit:'cover', marginRight:8 }}
-              />
-              <div>
-                <div style={{ fontWeight: 600 }}>{u.nickname || `Usuario #${u.id}`}</div>
-                <div style={{ fontSize:12, color:'#6c757d' }}>
-                  {u.userType || 'CLIENT'}
-                </div>
-              </div>
-            </div>
-            <div className="d-flex" style={{ gap:6 }}>
-              <span className="badge bg-secondary">{u.status}</span>
-              <span className={
-                  u.invited === 'pending' ? 'badge bg-warning text-dark'
-                : u.invited === 'rejected' ? 'badge bg-danger'
-                : 'badge bg-success'
-              }>
-                {u.invited}
-              </span>
-            </div>
-          </li>
-        );
-      })}
-    </ul>
+    <List>
+      {items.map(u => (
+        <FavListItem
+          key={u.id}
+          user={u}
+          avatarUrl={avatarMap?.[u.id] || null}
+          onSelect={onSelect}
+        />
+      ))}
+    </List>
   );
 }

@@ -74,6 +74,7 @@ export const StyledCenter = styled.main`
   @media (max-width: 768px) {
     width: 100%;
     padding: 10px;
+    min-width: 0;
   }
 
   @media (min-width: 769px) and (max-width: 1024px) {
@@ -146,12 +147,47 @@ export const StyledChatContainer = styled.div`
   position: absolute;
   bottom: 10px;
   left: 10px;
-  width: 300px;
+  width: clamp(220px, 42vw, 320px);
   background: rgba(0, 0, 0, 0.7);
   color: white;
   padding: 10px;
   border-radius: 5px;
   z-index: 2;
+  @media (max-width: 480px) {
+    left: 5px;
+    right: 5px;
+    width: auto;
+  }
+`;
+
+/** Botón de icono (sidebar izquierda) */
+export const StyledIconBtn = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background .2s ease;
+  &:hover { background: #f1f3f5; }
+`;
+
+/** Fila de acciones bajo "activar cámara" */
+export const StyledTopActions = styled.div`
+  margin-bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+`;
+
+/** Título flotante encima del video remoto */
+export const StyledVideoTitle = styled.h5`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  z-index: 2;
+  margin: 0;
 `;
 
 /** Grupo de acciones a la derecha de la navbar */

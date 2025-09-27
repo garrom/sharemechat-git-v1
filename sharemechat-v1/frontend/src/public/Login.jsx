@@ -1,3 +1,4 @@
+// src/public/Login.jsx
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
@@ -7,6 +8,10 @@ import {
   StyledButton,
   StyledLinkButton,
   StyledError,
+  Status,
+  Field,
+  FieldError,
+  FormTitle,
 } from '../styles/LoginStyles';
 import Roles from '../constants/Roles';
 import UserTypes from '../constants/UserTypes';
@@ -14,9 +19,9 @@ import UserTypes from '../constants/UserTypes';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');        // <- errores generales (backend/red)
-  const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' }); // <- validación de usuario
-  const [status, setStatus] = useState('');      // <- mensajes informativos (no error)
+  const [error, setError] = useState('');                    // errores generales
+  const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' });
+  const [status, setStatus] = useState('');                  // mensajes informativos
   const [loading, setLoading] = useState(false);
   const history = useHistory();
 
@@ -31,10 +36,8 @@ const Login = () => {
 
   const validate = () => {
     const fe = { email: '', password: '' };
-    // Email simple
     if (!email.trim()) fe.email = 'Introduce tu email.';
     else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = 'Formato de email no válido.';
-    // Password
     if (!password) fe.password = 'Introduce tu contraseña.';
     else if (password.length < 8) fe.password = 'La contraseña debe tener al menos 8 caracteres.';
     setFieldErrors(fe);
@@ -77,7 +80,7 @@ const Login = () => {
         } else if (data.user.userType === UserTypes.FORM_MODEL) {
           history.push('/dashboard-user-model');
         } else {
-          setError('Tipo de usuario no válido'); // <- esto sí es general
+          setError('Tipo de usuario no válido');
         }
       } else {
         setError('Rol de usuario no válido');
@@ -91,15 +94,15 @@ const Login = () => {
 
   return (
     <StyledContainer>
-      <StyledForm onSubmit={handleLogin}>
-        <h2>LOGIN SHAREMECHAT</h2>
+      <StyledForm onSubmit={handleLogin} noValidate>
+        <FormTitle>LOGIN SHAREMECHAT</FormTitle>
 
         {/* Mensajes generales */}
-        {status && <div style={{ color: '#6c757d', marginBottom: 8 }}>{status}</div>}
-        {error && <StyledError>{error}</StyledError>}
+        {status && <Status role="status">{status}</Status>}
+        {error && <StyledError role="alert">{error}</StyledError>}
 
         {/* Email */}
-        <div style={{ marginBottom: 8 }}>
+        <Field>
           <StyledInput
             type="email"
             value={email}
@@ -108,17 +111,16 @@ const Login = () => {
             required
             disabled={loading}
             aria-invalid={!!fieldErrors.email}
-            aria-describedby="email-error"
+            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+            autoComplete="username"
           />
           {fieldErrors.email && (
-            <div id="email-error" style={{ color: '#dc3545', fontSize: 12, marginTop: 4 }}>
-              {fieldErrors.email}
-            </div>
+            <FieldError id="email-error">{fieldErrors.email}</FieldError>
           )}
-        </div>
+        </Field>
 
         {/* Password */}
-        <div style={{ marginBottom: 8 }}>
+        <Field>
           <StyledInput
             type="password"
             value={password}
@@ -127,26 +129,25 @@ const Login = () => {
             required
             disabled={loading}
             aria-invalid={!!fieldErrors.password}
-            aria-describedby="password-error"
+            aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+            autoComplete="current-password"
           />
           {fieldErrors.password && (
-            <div id="password-error" style={{ color: '#dc3545', fontSize: 12, marginTop: 4 }}>
-              {fieldErrors.password}
-            </div>
+            <FieldError id="password-error">{fieldErrors.password}</FieldError>
           )}
-        </div>
+        </Field>
 
         <StyledButton type="submit" disabled={loading}>
           {loading ? 'Entrando…' : 'Iniciar Sesión'}
         </StyledButton>
 
-        <StyledLinkButton onClick={() => !loading && history.push('/register-client')}>
+        <StyledLinkButton type="button" onClick={() => !loading && history.push('/register-client')}>
           Regístrate como Cliente
         </StyledLinkButton>
-        <StyledLinkButton onClick={() => !loading && history.push('/register-model')}>
+        <StyledLinkButton type="button" onClick={() => !loading && history.push('/register-model')}>
           Regístrate como Modelo
         </StyledLinkButton>
-        <StyledLinkButton onClick={() => !loading && history.push('/forgot-password')}>
+        <StyledLinkButton type="button" onClick={() => !loading && history.push('/forgot-password')}>
           ¿Olvidaste tu contraseña?
         </StyledLinkButton>
       </StyledForm>

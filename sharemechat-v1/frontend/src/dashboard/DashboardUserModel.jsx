@@ -1,18 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
-  StyledContainer,
-  StyledNavbar,
-  StyledNavButton,
-  StyledIconWrapper,
-  StyledMainContent,
-  StyledLeftColumn,
-  StyledCenter,
-  StyledRightColumn,
-  StyledActionButton,
-} from '../styles/ModelStyles';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSignOutAlt, faUser } from '@fortawesome/free-solid-svg-icons';
+  Shell, Navbar, NavbarRight, LogoutBtn,
+  Main, Card, PrimaryBtn, Muted
+} from '../styles/DashboardUserCliModStyles';
 
 const DashboardUserModel = () => {
   const history = useHistory();
@@ -21,20 +12,11 @@ const DashboardUserModel = () => {
   const [info, setInfo] = useState('');
 
   useEffect(() => {
-    if (!token) {
-      history.push('/');
-      return;
-    }
+    if (!token) { history.push('/'); return; }
     (async () => {
       try {
-        const res = await fetch('/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.status === 401) {
-          localStorage.removeItem('token');
-          history.push('/');
-          return;
-        }
+        const res = await fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } });
+        if (res.status === 401) { localStorage.removeItem('token'); history.push('/'); return; }
         if (res.ok) {
           const data = await res.json();
           setUserName(data.nickname || data.name || data.email || 'Usuario');
@@ -44,54 +26,36 @@ const DashboardUserModel = () => {
     })();
   }, [token, history]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    history.push('/');
-  };
-
-  const handleProfile = () => {
-    history.push('/perfil-model'); // tu ruta de perfil/modelo-docs
-  };
-
-  const handleUploadDocs = () => {
-
-    history.push('/model-documents');
-
-  };
+  const handleLogout = () => { localStorage.removeItem('token'); history.push('/'); };
+  const handleUploadDocs = () => { history.push('/model-documents'); };
 
   return (
-    <StyledContainer>
-      <StyledNavbar>
+    <Shell>
+      <Navbar $variant="model">
         <span>Mi Logo</span>
-        <div>
-          <span className="me-3">Hola, {userName}</span>
-          <StyledNavButton onClick={handleLogout}>
-            <FontAwesomeIcon icon={faSignOutAlt} />
-            <StyledIconWrapper>Salir</StyledIconWrapper>
-          </StyledNavButton>
+        <NavbarRight>
+          <span>Hola, {userName}</span>
+          <LogoutBtn onClick={handleLogout} title="Cerrar sesión">Salir</LogoutBtn>
+        </NavbarRight>
+      </Navbar>
 
-        </div>
-      </StyledNavbar>
-
-      <StyledMainContent>
-        <StyledLeftColumn />
-        <StyledCenter>
+      <Main>
+        <Card>
           <h3>Completa tu verificación de Modelo</h3>
-          {info && <p style={{ marginTop: 8, opacity: 0.8 }}>{info}</p>}
+          {info && <Muted>{info}</Muted>}
 
           <div style={{ marginTop: 16 }}>
-            <StyledActionButton onClick={handleUploadDocs}>
+            <PrimaryBtn onClick={handleUploadDocs}>
               Actualizar / Subir documentos
-            </StyledActionButton>
+            </PrimaryBtn>
           </div>
 
-          <p style={{ marginTop: 12, opacity: 0.75 }}>
+          <Muted style={{ marginTop: 12 }}>
             Una vez validados por el administrador, tu cuenta pasará a <strong>MODEL</strong>.
-          </p>
-        </StyledCenter>
-        <StyledRightColumn />
-      </StyledMainContent>
-    </StyledContainer>
+          </Muted>
+        </Card>
+      </Main>
+    </Shell>
   );
 };
 

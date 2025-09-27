@@ -1,9 +1,9 @@
-// src/styles/LoginStyles.js
+// src/styles/RegisterClientModelStyles.js
 import styled from 'styled-components';
 import { bp, colors, radius, space, shadow } from './core/tokens';
 import { inputBase, buttonBase, focusRing } from './core/mixins';
 
-export const StyledContainer = styled.div`
+export const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -13,13 +13,13 @@ export const StyledContainer = styled.div`
   padding: ${space.lg};
 `;
 
-export const StyledForm = styled.form`
+export const Form = styled.form`
   background-color: ${colors.white};
   padding: ${space.xl};
   border-radius: ${radius.lg};
   box-shadow: ${shadow.card};
   width: 100%;
-  max-width: 420px;
+  max-width: 440px;
 
   @media (max-width: ${bp.md}) {
     padding: ${space.lg};
@@ -27,19 +27,13 @@ export const StyledForm = styled.form`
   }
 `;
 
-export const FormTitle = styled.h2`
+export const Title = styled.h2`
   margin: 0 0 ${space.lg};
   font-weight: 600;
   text-align: center;
 `;
 
-export const Status = styled.div`
-  color: ${colors.textMuted};
-  margin-bottom: ${space.sm};
-  font-size: 0.95rem;
-`;
-
-export const StyledError = styled.p`
+export const Error = styled.p`
   color: ${colors.error};
   margin: ${space.sm} 0;
   font-size: 0.95rem;
@@ -49,7 +43,7 @@ export const Field = styled.div`
   margin-bottom: ${space.sm};
 `;
 
-export const StyledInput = styled.input`
+export const Input = styled.input`
   ${inputBase}
   font-size: 1rem;
 `;
@@ -60,7 +54,7 @@ export const FieldError = styled.div`
   margin-top: 4px;
 `;
 
-export const StyledButton = styled.button`
+export const Button = styled.button`
   ${buttonBase}
   width: 100%;
   padding: 10px;
@@ -71,7 +65,7 @@ export const StyledButton = styled.button`
   &:disabled { opacity: 0.7; cursor: not-allowed; }
 `;
 
-export const StyledLinkButton = styled.button`
+export const LinkButton = styled.button`
   ${buttonBase}
   width: 100%;
   margin-top: ${space.sm};
@@ -81,5 +75,24 @@ export const StyledLinkButton = styled.button`
   font-size: 0.95rem;
   text-decoration: underline;
   justify-content: flex-start;
+
   &:focus { ${focusRing} }
+`;
+
+export const CheckRow = styled.label`
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: ${space.sm} 0;
+  cursor: pointer;
+  user-select: none;
+`;
+
+export const CheckInput = styled.input`
+  margin-top: 2px;
+`;
+
+export const CheckText = styled.span`
+  color: ${colors.text};
+  a { color: #007bff; text-decoration: underline; }
 `;

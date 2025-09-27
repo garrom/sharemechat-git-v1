@@ -1,56 +1,56 @@
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
+
 import {
-  StyledContainer,
-  StyledForm,
-  StyledInput,
-  StyledButton,
-  StyledLinkButton,
-  StyledError,
-} from '../styles/RegisterModelStyles';
+  Container,
+  Form,
+  Title,
+  Input,
+  Button,
+  LinkButton,
+  Error as ErrorText,
+  Field,
+  FieldError,
+  CheckRow,
+  CheckInput,
+  CheckText,
+} from '../styles/RegisterClientModelStyles';
 
 const RegisterModel = () => {
   const [nickname, setNickname] = useState('');
-  const [email, setEmail] = useState('');
+  const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [isOver18, setIsOver18] = useState(false);
   const [acceptsTerms, setAcceptsTerms] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]       = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ nickname: '', email: '', password: '', dateOfBirth: '' });
   const history = useHistory();
+
+  const validate = () => {
+    const fe = { nickname: '', email: '', password: '', dateOfBirth: '' };
+    if (!nickname.trim()) fe.nickname = 'El apodo (nickname) es obligatorio.';
+    if (!email.trim()) fe.email = 'El email es obligatorio.';
+    else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = 'Formato de email no válido.';
+    if (password.length < 8) fe.password = 'La contraseña debe tener al menos 8 caracteres';
+    if (!dateOfBirth) fe.dateOfBirth = 'La fecha de nacimiento es obligatoria.';
+    setFieldErrors(fe);
+    return !fe.nickname && !fe.email && !fe.password && !fe.dateOfBirth;
+  };
 
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
 
-    const nick = nickname.trim();
-    if (!nick) {
-      setError('El apodo (nickname) es obligatorio.');
-      return;
-    }
-    if (password.length < 8) {
-      setError('La contraseña debe tener al menos 8 caracteres');
-      return;
-    }
-    if (!dateOfBirth) {
-      setError('La fecha de nacimiento es obligatoria.');
-      return;
-    }
-    if (!isOver18) {
-      setError('Debes confirmar que eres mayor de 18 años.');
-      return;
-    }
-    if (!acceptsTerms) {
-      setError('Debes aceptar los términos y condiciones.');
-      return;
-    }
+    if (!validate()) return;
+    if (!isOver18)   return setError('Debes confirmar que eres mayor de 18 años.');
+    if (!acceptsTerms) return setError('Debes aceptar los términos y condiciones.');
 
-    // OJO: el backend espera confirAdult y acceptedTerm
     const registerData = {
-      nickname: nick,
+      nickname: nickname.trim(),
       email,
       password,
-      dateOfBirth,              // formato YYYY-MM-DD (input type="date")
+      dateOfBirth,              // YYYY-MM-DD
       confirAdult: isOver18,
       acceptedTerm: acceptsTerms,
     };
@@ -72,95 +72,110 @@ const RegisterModel = () => {
           } catch {
             errorMessage = responseText || errorMessage;
           }
-        } catch {
-          // ignore
-        }
+        } catch {}
         throw new Error(errorMessage);
       }
 
       alert('Registro exitoso');
       history.push('/');
-    } catch (error) {
-      setError(error.message);
-      console.error('Error en el registro:', error);
+    } catch (err) {
+      setError(err.message || 'Error de red');
+      console.error('Error en el registro:', err);
     }
   };
 
   return (
-    <StyledContainer>
-      <StyledForm onSubmit={handleRegister}>
-        <h2>Registro como Modelo</h2>
-        {error && <StyledError>{error}</StyledError>}
+    <Container>
+      <Form onSubmit={handleRegister} noValidate>
+        <Title>Registro como Modelo</Title>
+        {error && <ErrorText role="alert">{error}</ErrorText>}
 
-        <StyledInput
-          type="text"
-          value={nickname}
-          onChange={(e) => setNickname(e.target.value)}
-          placeholder="Apodo / Nickname"
-          required
-        />
+        <Field>
+          <Input
+            type="text"
+            value={nickname}
+            onChange={(e) => { setNickname(e.target.value); if (fieldErrors.nickname) setFieldErrors(f => ({...f, nickname: ''})); }}
+            placeholder="Apodo / Nickname"
+            required
+            aria-invalid={!!fieldErrors.nickname}
+            aria-describedby={fieldErrors.nickname ? 'nick-error' : undefined}
+            autoComplete="nickname"
+          />
+          {fieldErrors.nickname && <FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
+        </Field>
 
-        <StyledInput
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          required
-        />
+        <Field>
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(f => ({...f, email: ''})); }}
+            placeholder="Email"
+            required
+            aria-invalid={!!fieldErrors.email}
+            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+            autoComplete="email"
+          />
+          {fieldErrors.email && <FieldError id="email-error">{fieldErrors.email}</FieldError>}
+        </Field>
 
-        <StyledInput
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Contraseña (mínimo 8 caracteres)"
-          required
-        />
+        <Field>
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(f => ({...f, password: ''})); }}
+            placeholder="Contraseña (mínimo 8 caracteres)"
+            required
+            aria-invalid={!!fieldErrors.password}
+            aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+            autoComplete="new-password"
+          />
+          {fieldErrors.password && <FieldError id="password-error">{fieldErrors.password}</FieldError>}
+        </Field>
 
-        <StyledInput
-          type="date"
-          value={dateOfBirth}
-          onChange={(e) => setDateOfBirth(e.target.value)}
-          placeholder="Fecha de Nacimiento"
-          required
-        />
+        <Field>
+          <Input
+            type="date"
+            value={dateOfBirth}
+            onChange={(e) => { setDateOfBirth(e.target.value); if (fieldErrors.dateOfBirth) setFieldErrors(f => ({...f, dateOfBirth: ''})); }}
+            placeholder="Fecha de Nacimiento"
+            required
+            aria-invalid={!!fieldErrors.dateOfBirth}
+            aria-describedby={fieldErrors.dateOfBirth ? 'dob-error' : undefined}
+            autoComplete="bday"
+          />
+          {fieldErrors.dateOfBirth && <FieldError id="dob-error">{fieldErrors.dateOfBirth}</FieldError>}
+        </Field>
 
-        {/* --- Checkboxes legales --- */}
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
-          <input
+        {/* Checkboxes legales */}
+        <CheckRow>
+          <CheckInput
             type="checkbox"
             checked={isOver18}
             onChange={(e) => setIsOver18(e.target.checked)}
             required
           />
-          <span>Soy mayor de 18 años</span>
-        </label>
+          <CheckText>Soy mayor de 18 años</CheckText>
+        </CheckRow>
 
-        <label style={{ display: 'flex', gap: 8, alignItems: 'center', margin: '8px 0' }}>
-          <input
+        <CheckRow>
+          <CheckInput
             type="checkbox"
             checked={acceptsTerms}
             onChange={(e) => setAcceptsTerms(e.target.checked)}
             required
           />
-          <span>
-            Acepto los{' '}
-            <a href="/terms" target="_blank" rel="noreferrer">
-              Términos y Condiciones
-            </a>{' '}
-            y la{' '}
-            <a href="/privacy" target="_blank" rel="noreferrer">
-              Política de Privacidad
-            </a>
-          </span>
-        </label>
-        {/* --- fin checkboxes --- */}
+          <CheckText>
+            Acepto los <a href="/terms" target="_blank" rel="noreferrer">Términos y Condiciones</a> y la{' '}
+            <a href="/privacy" target="_blank" rel="noreferrer">Política de Privacidad</a>
+          </CheckText>
+        </CheckRow>
 
-        <StyledButton type="submit">Registrarse</StyledButton>
-        <StyledLinkButton onClick={() => history.push('/login')}>
+        <Button type="submit">Registrarse</Button>
+        <LinkButton type="button" onClick={() => history.push('/login')}>
           Volver al Login
-        </StyledLinkButton>
-      </StyledForm>
-    </StyledContainer>
+        </LinkButton>
+      </Form>
+    </Container>
   );
 };
 

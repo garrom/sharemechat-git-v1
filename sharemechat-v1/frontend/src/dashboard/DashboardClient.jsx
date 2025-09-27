@@ -20,7 +20,10 @@ import {
   StyledRemoteVideo,
   StyledChatContainer,
   StyledNavGroup,
-  StyledNavAvatar
+  StyledNavAvatar,
+  StyledIconBtn,
+  StyledTopActions,
+  StyledVideoTitle
 
 }  from '../styles/ClientStyles';
 
@@ -877,27 +880,15 @@ const DashboardClient = () => {
        {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
         <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
-            <button
-              title="Videochat"
-              onClick={() => setActiveTab('videochat')}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
+            <StyledIconBtn title="Videochat" onClick={() => setActiveTab('videochat')}>
               <FontAwesomeIcon icon={faVideo} size="lg" />
-            </button>
-            <button
-              title="Favoritos"
-              onClick={handleGoFavorites}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
+            </StyledIconBtn>
+            <StyledIconBtn title="Favoritos" onClick={handleGoFavorites}>
               <FontAwesomeIcon icon={faHeart} size="lg" />
-            </button>
-            <button
-              title="Funnyplace"
-              onClick={handleGoFunnyplace}
-              style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-            >
+            </StyledIconBtn>
+            <StyledIconBtn title="Funnyplace" onClick={handleGoFunnyplace}>
               <FontAwesomeIcon icon={faFilm} size="lg" />
-            </button>
+            </StyledIconBtn>
           </div>
 
           <ul className="list-group">
@@ -927,7 +918,7 @@ const DashboardClient = () => {
               )}
               {cameraActive && (
                 <>
-                  <div style={{ marginBottom: '10px' }}>
+                  <StyledTopActions>
                     {!searching && (
                       <StyledActionButton onClick={handleStartMatch}>Buscar Modelo </StyledActionButton>
                     )}
@@ -939,7 +930,7 @@ const DashboardClient = () => {
                         <StyledActionButton onClick={handleAddFavorite}> + Favorito </StyledActionButton>
                       </>
                     )}
-                  </div>
+                  </StyledTopActions>
 
                   <StyledLocalVideo>
                     <h5 style={{ color: 'white' }}>Tu Cámara</h5>
@@ -953,17 +944,7 @@ const DashboardClient = () => {
 
                   {remoteStream && (
                     <StyledRemoteVideo>
-                      <h5
-                        style={{
-                          position: 'absolute',
-                          top: '10px',
-                          left: '10px',
-                          color: 'white',
-                          zIndex: 2,
-                        }}
-                      >
-                        Modelo
-                      </h5>
+                      <StyledVideoTitle>Modelo</StyledVideoTitle>
                       <video
                         ref={remoteVideoRef}
                         style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}

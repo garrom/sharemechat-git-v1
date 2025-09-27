@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
+import Roles from '../constants/Roles';
 import {
   StyledContainer,
   StyledTable,
@@ -7,8 +8,28 @@ import {
   StyledLinkButton,
   StyledError,
   StyledSelect,
+  HeaderBar,
+  TabsBar,
+  TabButton,
+  ControlsRow,
+  FieldBlock,
+  RightInfo,
+  ScrollBox,
+  SectionTitle,
+  CardsGrid,
+  StatCard,
+  NoteCard,
+  FinanceList,
+  FinanceItem,
+  DbLayout,
+  DbFilters,
+  DbTableWrap,
+  FloatingBtn,
+  DocGrid,
+  DocLink,
+  CheckBox,
+  LogoutButton
 } from '../styles/AdminStyles';
-import Roles from '../constants/Roles';
 
 const DashboardAdmin = () => {
   const [userData] = useState({ name: 'Administrador' });
@@ -41,9 +62,9 @@ const DashboardAdmin = () => {
   const [dbLoading, setDbLoading] = useState(false);
   const [dbError, setDbError] = useState('');
 
-  // ---- Revisión de documentos (nuevo)
-  const [docsByUser, setDocsByUser] = useState({});     // { [userId]: { urlVerificFront, urlVerificBack, urlVerificDoc } }
-  const [checksByUser, setChecksByUser] = useState({}); // { [userId]: { frontOk, backOk, selfieOk } }
+  // ---- Revisión de documentos
+  const [docsByUser, setDocsByUser] = useState({});
+  const [checksByUser, setChecksByUser] = useState({});
   const [savingCheckKey, setSavingCheckKey] = useState(null); // "userId:field"
 
   const wsAdminRef = useRef(null);
@@ -69,7 +90,7 @@ const DashboardAdmin = () => {
     'client_documents',
     'model_documents',
     'consent_events',
-    'model_review_checklist'
+    'model_review_checklist',
   ];
 
   const LIMIT_OPTIONS = [10, 20, 30, 40, 50, 100];
@@ -126,7 +147,6 @@ const DashboardAdmin = () => {
       }));
     } catch (e) {
       alert(e.message || 'No se pudo guardar el check');
-      // revert
       setChecksByUser((prev) => ({ ...prev, [userId]: { ...prev[userId], [field]: !value } }));
     } finally {
       setSavingCheckKey(null);
@@ -140,11 +160,9 @@ const DashboardAdmin = () => {
     const hasB = !!d.urlVerificBack;
     const hasS = !!d.urlVerificDoc;
     return hasF && hasB && hasS && !!c.frontOk && !!c.backOk && !!c.selfieOk;
-    // Si quisieras exigir solo checks (aunque falte doc): return !!c.frontOk && !!c.backOk && !!c.selfieOk;
   };
 
   // ---------------- effects
-
   useEffect(() => {
     if (!token) {
       history.push('/');
@@ -156,7 +174,6 @@ const DashboardAdmin = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, history, activeTab]);
 
-  // Cargar docs/checks para cada modelo PENDING visible (una vez tengamos users)
   useEffect(() => {
     if (activeTab !== 'models') return;
     const ids = (users || [])
@@ -300,14 +317,12 @@ const DashboardAdmin = () => {
     }
   };
 
-  // Dentro de DashboardAdmin.jsx
   const handleReview = async (userId, action) => {
-    // Confirmación específica para RECHAZAR
     if (action === 'REJECT') {
       const ok = window.confirm(
         '¿Quiere realmente rechazar la verificación de la modelo?\nEsta acción es permanente.'
       );
-      if (!ok) return; // el admin canceló
+      if (!ok) return;
     }
 
     try {
@@ -324,7 +339,6 @@ const DashboardAdmin = () => {
     }
   };
 
-
   const handleLogout = () => {
     localStorage.removeItem('token');
     history.push('/');
@@ -337,7 +351,6 @@ const DashboardAdmin = () => {
 
   const displayedUsers = useMemo(() => filteredUsers.slice(0, Number(pageSize)), [filteredUsers, pageSize]);
 
-  // ---------- Ocultación de campos largos/sensibles en la vista BBDD ----------
   const isHiddenDbCell = (tableName, colName) => {
     const t = String(tableName || '').toLowerCase();
     const k = String(colName || '').toLowerCase();
@@ -345,72 +358,41 @@ const DashboardAdmin = () => {
     if (t === 'messages' && k === 'body') return true;
     return false;
   };
-  // ---------------------------------------------------------------------------
 
   return (
     <StyledContainer>
       {/* Header + Logout */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2>
-          Hola, {userData.name} (Rol: {Roles.ADMIN})
-        </h2>
-        <StyledLinkButton onClick={handleLogout}>Salir</StyledLinkButton>
-      </div>
+      <HeaderBar>
+        <h2>Hola, {userData.name} (Rol: {Roles.ADMIN})</h2>
+        <LogoutButton onClick={handleLogout} title="Cerrar sesión">Salir</LogoutButton>
+      </HeaderBar>
 
-      {/* Navbar simple de secciones */}
-      <div
-        style={{
-          display: 'flex',
-          gap: 8,
-          marginBottom: 20,
-          borderBottom: '1px solid #e5e5e5',
-          paddingBottom: 8,
-        }}
-      >
-        <StyledButton
-          onClick={() => setActiveTab('models')}
-          style={{ backgroundColor: activeTab === 'models' ? '#007bff' : '#6c757d' }}
-        >
-          Gestión Modelos
-        </StyledButton>
-        <StyledButton
-          onClick={() => setActiveTab('stats')}
-          style={{ backgroundColor: activeTab === 'stats' ? '#007bff' : '#6c757d' }}
-        >
-          Estadisticas
-        </StyledButton>
-        <StyledButton
-          onClick={() => setActiveTab('finance')}
-          style={{ backgroundColor: activeTab === 'finance' ? '#007bff' : '#6c757d' }}
-        >
-          Analisis Financiero
-        </StyledButton>
-        <StyledButton
-          onClick={() => setActiveTab('db')}
-          style={{ backgroundColor: activeTab === 'db' ? '#007bff' : '#6c757d' }}
-        >
-          Vista BBDD
-        </StyledButton>
-      </div>
+      {/* Tabs */}
+      <TabsBar>
+        <TabButton active={activeTab === 'models'} onClick={() => setActiveTab('models')}>Gestión Modelos</TabButton>
+        <TabButton active={activeTab === 'stats'} onClick={() => setActiveTab('stats')}>Estadísticas</TabButton>
+        <TabButton active={activeTab === 'finance'} onClick={() => setActiveTab('finance')}>Análisis Financiero</TabButton>
+        <TabButton active={activeTab === 'db'} onClick={() => setActiveTab('db')}>Vista BBDD</TabButton>
+      </TabsBar>
 
-      {/* PESTAÑA GESTION MODELOS */}
+      {/* MODELOS */}
       {activeTab === 'models' && (
         <>
-          <h3>Gestión de Modelos</h3>
+          <SectionTitle>Gestión de Modelos</SectionTitle>
 
-          <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 12 }}>
-            <div>
-              <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Estado</label>
+          <ControlsRow>
+            <FieldBlock>
+              <label>Estado</label>
               <StyledSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
                 <option value="ALL">Todos</option>
                 <option value="PENDING">Pendiente</option>
                 <option value="APPROVED">Aprobado</option>
                 <option value="REJECTED">Rechazado</option>
               </StyledSelect>
-            </div>
+            </FieldBlock>
 
-            <div>
-              <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Resultados</label>
+            <FieldBlock>
+              <label>Resultados</label>
               <StyledSelect value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
                 <option value={10}>10</option>
                 <option value={20}>20</option>
@@ -418,19 +400,19 @@ const DashboardAdmin = () => {
                 <option value={40}>40</option>
                 <option value={50}>50</option>
               </StyledSelect>
-            </div>
+            </FieldBlock>
 
-            <div style={{ marginLeft: 'auto' }}>
+            <RightInfo>
               <StyledButton onClick={fetchUsers} disabled={loading}>
                 {loading ? 'Actualizando...' : 'Refrescar'}
               </StyledButton>
-            </div>
-          </div>
+            </RightInfo>
+          </ControlsRow>
 
           {loading && <div>Cargando...</div>}
           {error && <StyledError>{error}</StyledError>}
 
-          <div style={{ maxHeight: 480, overflowY: 'auto', border: '1px solid #eee', borderRadius: 6 }}>
+          <ScrollBox>
             <StyledTable>
               <thead>
                 <tr>
@@ -468,27 +450,17 @@ const DashboardAdmin = () => {
                     const saving = savingCheckKey === `${user.id}:${fieldKey}`;
                     return (
                       <div key={fieldKey} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <a
+                        <DocLink
                           href={url || '#'}
                           target="_blank"
                           rel="noreferrer"
-                          onClick={(e) => {
-                            if (!url) e.preventDefault();
-                          }}
-                          style={{
-                            pointerEvents: url ? 'auto' : 'none',
-                            opacity: url ? 1 : 0.5,
-                            border: '1px solid #ced4da',
-                            padding: '6px 8px',
-                            borderRadius: 6,
-                            textDecoration: 'none',
-                            color: '#0d6efd',
-                          }}
+                          $disabled={!url}
+                          onClick={(e) => { if (!url) e.preventDefault(); }}
                           title={url ? 'Abrir documento' : 'No disponible'}
                         >
                           {label}
-                        </a>
-                        <input
+                        </DocLink>
+                        <CheckBox
                           type="checkbox"
                           disabled={!url || saving}
                           checked={!!checks[fieldKey]}
@@ -510,19 +482,11 @@ const DashboardAdmin = () => {
                       <td>
                         {v === 'PENDING' && (
                           <>
-                            {/* Descargas + checks */}
-                            <div
-                              style={{
-                                display: 'grid',
-                                gridTemplateColumns: 'repeat(3, minmax(160px, 1fr))',
-                                gap: 8,
-                                marginBottom: 8,
-                              }}
-                            >
+                            <DocGrid>
                               {mkBtn('Frontal', docUrls.urlVerificFront, 'frontOk')}
                               {mkBtn('Trasera', docUrls.urlVerificBack, 'backOk')}
                               {mkBtn('Selfie/PDF', docUrls.urlVerificDoc, 'selfieOk')}
-                            </div>
+                            </DocGrid>
 
                             <StyledButton
                               onClick={() => handleReview(user.id, 'APPROVE')}
@@ -560,242 +524,158 @@ const DashboardAdmin = () => {
                 })}
               </tbody>
             </StyledTable>
-          </div>
+          </ScrollBox>
         </>
       )}
 
-      {/* PESTAÑA ESTADISTICA */}
+      {/* ESTADÍSTICAS */}
       {activeTab === 'stats' && (
-        <div style={{ marginTop: 24 }}>
-          <h3>Estadísticas</h3>
+        <div>
+          <SectionTitle>Estadísticas</SectionTitle>
           {statsError && <StyledError>{statsError}</StyledError>}
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: 12,
-              marginTop: 12,
-            }}
-          >
-            <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>Modelos en cola</div>
-              <div style={{ fontSize: 28, fontWeight: 700 }}>{waitingModelsCount ?? '—'}</div>
-              <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>
+          <CardsGrid>
+            <StatCard>
+              <div className="label">Modelos en cola</div>
+              <div className="value">{waitingModelsCount ?? '—'}</div>
+              <div className="meta">
                 {statsUpdatedAt ? `Actualizado: ${statsUpdatedAt.toLocaleTimeString()}` : 'Actualizando…'}
               </div>
-            </div>
+            </StatCard>
 
-            <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>Modelos en streaming</div>
-              <div style={{ fontSize: 28, fontWeight: 700 }}>{modelsStreamingCount ?? '—'}</div>
-              <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>
+            <StatCard>
+              <div className="label">Modelos en streaming</div>
+              <div className="value">{modelsStreamingCount ?? '—'}</div>
+              <div className="meta">
                 {statsUpdatedAt ? `Actualizado: ${statsUpdatedAt.toLocaleTimeString()}` : 'Actualizando…'}
               </div>
-            </div>
+            </StatCard>
 
-            <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>Clientes en streaming</div>
-              <div style={{ fontSize: 28, fontWeight: 700 }}>{clientsStreamingCount ?? '—'}</div>
-              <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>
+            <StatCard>
+              <div className="label">Clientes en streaming</div>
+              <div className="value">{clientsStreamingCount ?? '—'}</div>
+              <div className="meta">
                 {statsUpdatedAt ? `Actualizado: ${statsUpdatedAt.toLocaleTimeString()}` : 'Actualizando…'}
               </div>
-            </div>
+            </StatCard>
 
-            <div
-              style={{
-                border: '1px solid #f4f4f4',
-                borderRadius: 10,
-                padding: 16,
-                background: '#fafafa',
-                color: '#bbb',
-              }}
-            >
-              <div style={{ fontSize: 12 }}>KPI futura</div>
-              <div style={{ fontSize: 20, marginTop: 8 }}>—</div>
-            </div>
+            <NoteCard>
+              <div className="label">KPI futura</div>
+              <div className="value">—</div>
+            </NoteCard>
 
-            <div
-              style={{
-                border: '1px solid #f4f4f4',
-                borderRadius: 10,
-                padding: 16,
-                background: '#fafafa',
-                color: '#bbb',
-              }}
-            >
-              <div style={{ fontSize: 12 }}>KPI futura</div>
-              <div style={{ fontSize: 20, marginTop: 8 }}>—</div>
-            </div>
-          </div>
+            <NoteCard>
+              <div className="label">KPI futura</div>
+              <div className="value">—</div>
+            </NoteCard>
+          </CardsGrid>
         </div>
       )}
 
-      {/* PESTAÑA ANALISIS FINANCIERO */}
+      {/* FINANZAS */}
       {activeTab === 'finance' && (
-        <div style={{ marginTop: 24 }}>
-          <h3>Análisis financieros</h3>
+        <div>
+          <SectionTitle>Análisis financieros</SectionTitle>
           {financeError && <StyledError>{financeError}</StyledError>}
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: 12,
-              marginTop: 12,
-            }}
-          >
-            <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>Ganancias brutas (facturación total)</div>
-              <div style={{ fontSize: 28, fontWeight: 700 }}>
-                {financeLoading ? '…' : financeSummary?.grossBillingEUR ?? '—'}
-              </div>
-              <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>Sin descontar participación de modelos.</div>
-            </div>
+          <CardsGrid>
+            <StatCard>
+              <div className="label">Ganancias brutas (facturación total)</div>
+              <div className="value">{financeLoading ? '…' : financeSummary?.grossBillingEUR ?? '—'}</div>
+              <div className="meta">Sin descontar participación de modelos.</div>
+            </StatCard>
 
-            <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>Ganancias netas (plataforma)</div>
-              <div style={{ fontSize: 28, fontWeight: 700 }}>
-                {financeLoading ? '…' : financeSummary?.netProfitEUR ?? '—'}
-              </div>
-              <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>Descontado lo que se lleva la modelo.</div>
-            </div>
+            <StatCard>
+              <div className="label">Ganancias netas (plataforma)</div>
+              <div className="value">{financeLoading ? '…' : financeSummary?.netProfitEUR ?? '—'}</div>
+              <div className="meta">Descontado lo que se lleva la modelo.</div>
+            </StatCard>
 
-            <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>% beneficio / facturación</div>
-              <div style={{ fontSize: 28, fontWeight: 700 }}>
-                {financeLoading ? '…' : financeSummary?.profitPercent ?? '—'}
-              </div>
-              <div style={{ fontSize: 12, color: '#6c757d', marginTop: 6 }}>(neto / bruto) × 100</div>
-            </div>
+            <StatCard>
+              <div className="label">% beneficio / facturación</div>
+              <div className="value">{financeLoading ? '…' : financeSummary?.profitPercent ?? '—'}</div>
+              <div className="meta">(neto / bruto) × 100</div>
+            </StatCard>
 
-            <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>Top 10 modelos por ingresos</div>
-              <ol style={{ marginTop: 8, paddingLeft: 18 }}>
+            <StatCard>
+              <div className="label">Top 10 modelos por ingresos</div>
+              <FinanceList>
                 {(financeLoading ? [] : topModels).map((it, i) => (
-                  <li key={i} style={{ marginBottom: 6 }}>
-                    {it.nickname || it.name || it.email || `Modelo #${it.modelId}`} —{' '}
-                    <strong>{it.totalEarningsEUR}</strong>
-                  </li>
+                  <FinanceItem key={i}>
+                    {it.nickname || it.name || it.email || `Modelo #${it.modelId}`} — <strong>{it.totalEarningsEUR}</strong>
+                  </FinanceItem>
                 ))}
                 {!financeLoading && topModels.length === 0 && <div>Sin datos.</div>}
-              </ol>
-            </div>
+              </FinanceList>
+            </StatCard>
 
-            <div style={{ border: '1px solid #eee', borderRadius: 10, padding: 16, background: '#fff' }}>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>Top 10 clientes por pagos</div>
-              <ol style={{ marginTop: 8, paddingLeft: 18 }}>
+            <StatCard>
+              <div className="label">Top 10 clientes por pagos</div>
+              <FinanceList>
                 {(financeLoading ? [] : topClients).map((it, i) => (
-                  <li key={i} style={{ marginBottom: 6 }}>
-                    {it.nickname || it.name || it.email || `Cliente #${it.clientId}`} —{' '}
-                    <strong>{it.totalPagosEUR}</strong>
-                  </li>
+                  <FinanceItem key={i}>
+                    {it.nickname || it.name || it.email || `Cliente #${it.clientId}`} — <strong>{it.totalPagosEUR}</strong>
+                  </FinanceItem>
                 ))}
                 {!financeLoading && topClients.length === 0 && <div>Sin datos.</div>}
-              </ol>
-            </div>
+              </FinanceList>
+            </StatCard>
 
-            <div style={{ border: '1px dashed #eee', borderRadius: 10, padding: 16, background: '#fafafa' }}>
-              <div style={{ fontSize: 12, color: '#6c757d' }}>Nota</div>
-              <div style={{ fontSize: 14, marginTop: 8 }}>
-                Pendiente: Separar ganacia Sreaming y Regalos, Mostrar num usuarios modelo y cliente y num clientes y modelos
+            <NoteCard $muted>
+              <div className="label">Nota</div>
+              <div className="meta">
+                Pendiente: Separar ganacia Streaming y Regalos; mostrar nº usuarios modelo/cliente y nº clientes/modelos
               </div>
-            </div>
+            </NoteCard>
 
             {Array.from({ length: 6 }).map((_, i) => (
-              <div
-                key={i}
-                style={{
-                  border: '1px solid #f4f4f4',
-                  borderRadius: 10,
-                  padding: 16,
-                  background: '#fafafa',
-                  color: '#bbb',
-                }}
-              >
-                <div style={{ fontSize: 12 }}>KPI futura</div>
-                <div style={{ fontSize: 20, marginTop: 8 }}>—</div>
-              </div>
+              <NoteCard key={i}>
+                <div className="label">KPI futura</div>
+                <div className="value">—</div>
+              </NoteCard>
             ))}
-          </div>
+          </CardsGrid>
         </div>
       )}
 
-      {/* PESTAÑA VISTA BBDD */}
+      {/* VISTA BBDD */}
       {activeTab === 'db' && (
-        <div style={{ marginTop: 24 }}>
-          <h3>Vista BBDD</h3>
+        <div>
+          <SectionTitle>Vista BBDD</SectionTitle>
 
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateRows: 'auto 1fr',
-              height: '75vh',
-              minHeight: 480,
-              overflow: 'visible',
-            }}
-          >
-            <div
-              id="dbFilters"
-              style={{
-                display: 'flex',
-                gap: 12,
-                alignItems: 'flex-end',
-                padding: '8px 0',
-                borderBottom: '1px solid #eee',
-                background: '#fff',
-                overflow: 'visible',
-                zIndex: 1,
-              }}
-            >
-              <div style={{ minWidth: 220 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Tabla</label>
+          <DbLayout>
+            <DbFilters id="dbFilters">
+              <FieldBlock style={{ minWidth: 220 }}>
+                <label>Tabla</label>
                 <StyledSelect value={dbTable} onChange={(e) => setDbTable(e.target.value)}>
-                  <option value="" disabled>
-                    Selecciona una tabla…
-                  </option>
+                  <option value="" disabled>Selecciona una tabla…</option>
                   {DB_TABLES.map((t) => (
-                    <option key={t} value={t}>
-                      {t}
-                    </option>
+                    <option key={t} value={t}>{t}</option>
                   ))}
                 </StyledSelect>
-              </div>
+              </FieldBlock>
 
-              <div style={{ minWidth: 120 }}>
-                <label style={{ display: 'block', fontSize: 12, marginBottom: 4 }}>Últimos</label>
+              <FieldBlock style={{ minWidth: 120 }}>
+                <label>Últimos</label>
                 <StyledSelect value={dbLimit} onChange={(e) => setDbLimit(Number(e.target.value))} disabled={!dbTable}>
                   {LIMIT_OPTIONS.map((n) => (
-                    <option key={n} value={n}>
-                      {n}
-                    </option>
+                    <option key={n} value={n}>{n}</option>
                   ))}
                 </StyledSelect>
-              </div>
+              </FieldBlock>
 
-              <div style={{ marginLeft: 'auto', fontSize: 12, color: '#6c757d' }}>
+              <RightInfo>
                 {dbTable === '' ? 'Elige una tabla para ver datos.' : dbLoading ? 'Cargando…' : ''}
-              </div>
-            </div>
+              </RightInfo>
+            </DbFilters>
 
-            <div
-              style={{
-                overflow: 'auto',
-                border: '1px solid #eee',
-                borderRadius: 6,
-                marginTop: 8,
-                position: 'relative',
-                background: '#fff',
-              }}
-            >
+            <DbTableWrap>
               <StyledTable>
                 <thead>
                   <tr>
-                    {dbRows.length > 0 ? (
-                      Object.keys(dbRows[0]).map((k) => <th key={k}>{k}</th>)
-                    ) : (
-                      <th style={{ textAlign: 'left' }}>Sin datos</th>
-                    )}
+                    {dbRows.length > 0
+                      ? Object.keys(dbRows[0]).map((k) => <th key={k}>{k}</th>)
+                      : <th style={{ textAlign: 'left' }}>Sin datos</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -824,28 +704,17 @@ const DashboardAdmin = () => {
                   <StyledError>{dbError}</StyledError>
                 </div>
               )}
-            </div>
-          </div>
+            </DbTableWrap>
+          </DbLayout>
 
-          <button
+          <FloatingBtn
             type="button"
             onClick={() =>
               document.getElementById('dbFilters')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }
-            style={{
-              position: 'fixed',
-              right: 16,
-              bottom: 16,
-              zIndex: 9999,
-              padding: '10px 14px',
-              border: '1px solid #ddd',
-              borderRadius: 8,
-              background: '#fff',
-              cursor: 'pointer',
-            }}
           >
             Filtros
-          </button>
+          </FloatingBtn>
         </div>
       )}
     </StyledContainer>
