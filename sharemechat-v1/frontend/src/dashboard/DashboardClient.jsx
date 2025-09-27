@@ -23,7 +23,19 @@ import {
   StyledNavAvatar,
   StyledIconBtn,
   StyledTopActions,
-  StyledVideoTitle
+  StyledVideoTitle,
+  StyledChatList,
+  StyledChatMessageRow,
+  StyledChatBubble,
+  StyledChatControls,
+  StyledChatInput,
+  StyledGiftToggle,
+  StyledGiftsPanel,
+  StyledGiftGrid,
+  StyledGiftIcon,
+  StyledVideoArea,
+  StyledChatDock,
+  StyledTitleAvatar
 
 }  from '../styles/ClientStyles';
 
@@ -50,6 +62,8 @@ const DashboardClient = () => {
   const [showGifts,setShowGifts]=useState(false);
   const [showCenterGifts,setShowCenterGifts]=useState(false);
   const [profilePic, setProfilePic] = useState(null);
+  const [modelNickname, setModelNickname] = useState('Modelo');
+  const [modelAvatar, setModelAvatar] = useState('');
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -129,6 +143,38 @@ const DashboardClient = () => {
       }
     })();
   }, [token]);
+
+  useEffect(() => {
+    if (!token || !currentModelId) return;
+    (async () => {
+      try {
+        const r = await fetch(`/api/users/${currentModelId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const d = await r.json(); // <-- ‘d’ es el user
+        const nn = d?.nickname || d?.name || d?.email || 'Modelo';
+        setModelNickname(nn);
+      } catch {/* noop */}
+    })();
+  }, [token, currentModelId]);
+
+  useEffect(() => {
+    if (!token || !currentModelId) return;
+
+    (async () => {
+      try {
+        const r = await fetch(`/api/users/avatars?ids=${encodeURIComponent(currentModelId)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const map = await r.json(); // { [id]: url }
+        const url = map?.[currentModelId] || '';
+        setModelAvatar(url);
+      } catch {/* noop */}
+    })();
+  }, [token, currentModelId]);
+
 
   useEffect(() => {
       meIdRef.current = Number(user?.id) || null;
@@ -837,47 +883,47 @@ const DashboardClient = () => {
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
   return (
+
     <StyledContainer>
 
       {/* ========= INICIO NAVBAR  ======== */}
-       <StyledNavbar>
-         <span>Mi Logo</span>
-         <StyledNavGroup>
-           <span className="me-3">Hola, {displayName}</span>
-           <span className="me-3">
-             {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
-           </span>
+      <StyledNavbar>
+        <span>Mi Logo</span>
+        <StyledNavGroup>
+          <span className="me-3">Hola, {displayName}</span>
+          <span className="me-3">
+            {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
+          </span>
 
-           <StyledNavButton type="button" onClick={handleAddBalance} style={{ marginRight: '8px' }}>
-             + Saldo
-           </StyledNavButton>
+          <StyledNavButton type="button" onClick={handleAddBalance} style={{ marginRight: '8px' }}>
+            + Saldo
+          </StyledNavButton>
 
-           <StyledNavButton type="button" onClick={handleLogout}>
-             <FontAwesomeIcon icon={faSignOutAlt} />
-             <StyledIconWrapper>Salir</StyledIconWrapper>
-           </StyledNavButton>
+          <StyledNavButton type="button" onClick={handleLogout}>
+            <FontAwesomeIcon icon={faSignOutAlt} />
+            <StyledIconWrapper>Salir</StyledIconWrapper>
+          </StyledNavButton>
 
-           <StyledNavButton type="button" onClick={handleProfile}>
-             <FontAwesomeIcon icon={faUser} />
-             <StyledIconWrapper>Perfil</StyledIconWrapper>
-           </StyledNavButton>
+          <StyledNavButton type="button" onClick={handleProfile}>
+            <FontAwesomeIcon icon={faUser} />
+            <StyledIconWrapper>Perfil</StyledIconWrapper>
+          </StyledNavButton>
 
-           {/* Avatar (click = ir a Perfil) */}
-           <StyledNavAvatar
-             src={profilePic || '/img/avatar.png'}
-             alt="avatar"
-             title="Ver perfil"
-             onClick={handleProfile}
-           />
-         </StyledNavGroup>
-       </StyledNavbar>
-
+          {/* Avatar (click = ir a Perfil) */}
+          <StyledNavAvatar
+            src={profilePic || '/img/avatar.png'}
+            alt="avatar"
+            title="Ver perfil"
+            onClick={handleProfile}
+          />
+        </StyledNavGroup>
+      </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent>
 
-       {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
+        {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
         <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
             <StyledIconBtn title="Videochat" onClick={() => setActiveTab('videochat')}>
@@ -909,13 +955,14 @@ const DashboardClient = () => {
         </StyledLeftColumn>
         {/* ========= FIN COLUMNA IZQUIERDA  ======== */}
 
-       {/* ================INICIO ZONA CENTRAL =================*/}
+        {/* ================INICIO ZONA CENTRAL =================*/}
         <StyledCenter>
           {activeTab === 'videochat' && (
             <>
               {!cameraActive && (
                 <StyledActionButton onClick={handleActivateCamera}>Activar Cámara </StyledActionButton>
               )}
+
               {cameraActive && (
                 <>
                   <StyledTopActions>
@@ -943,85 +990,87 @@ const DashboardClient = () => {
                   </StyledLocalVideo>
 
                   {remoteStream && (
-                    <StyledRemoteVideo>
-                      <StyledVideoTitle>Modelo</StyledVideoTitle>
-                      <video
-                        ref={remoteVideoRef}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
-                        autoPlay
-                      />
-                      <StyledChatContainer>
-                        <div
-                          style={{
-                            maxHeight: '150px',
-                            overflowY: 'auto',
-                            marginBottom: '10px',
-                          }}
-                        >
-                          {messages.map((msg, index) => (
-                            <div
-                              key={index}
-                              style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
-                            >
-                              {msg.gift ? (
-                                  <div>
-                                    <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong>{' '}
-                                    {giftRenderReady && (() => {
-                                      const src = getGiftIcon(msg.gift);
-                                      return src ? (
-                                        <img src={src} alt="" style={{ width:28, height:28, marginLeft:6, verticalAlign:'middle' }} />
-                                      ) : null;
-                                    })()}
-                                  </div>
-                              ) : (
-                                <>
-                                  <strong>{msg.from === 'me' ? 'Yo' : 'Modelo'}:</strong> {msg.text}
-                                </>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div style={{ display: 'flex', alignItems:'center', position:'relative' }}>
-                          <input
-                            type="text"
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            style={{
-                              flex: 1,
-                              marginRight: '10px',
-                              background: 'rgba(255, 255, 255, 0.9)',
-                              border: 'none',
-                              borderRadius: '5px',
-                              padding: '5px',
-                            }}
+                    <>
+                      {/* 90%: área de vídeo + overlay de mensajes */}
+                      <StyledVideoArea>
+                        <StyledRemoteVideo>
+                            <StyledVideoTitle><StyledTitleAvatar src={modelAvatar || '/img/avatar.png'}
+                             alt="" />{modelNickname || 'Modelo'}
+                            </StyledVideoTitle>
+                          <video
+                            ref={remoteVideoRef}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
+                            autoPlay
                           />
-                          <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
+                        </StyledRemoteVideo>
 
-                          <StyledActionButton onClick={()=>setShowGifts(s=>!s)} title="Enviar regalo" style={{ marginLeft: 8 }}>
-                            🎁
-                          </StyledActionButton>
-                          {showGifts && (
-                            <div style={{
-                              position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)',
-                              padding:10, borderRadius:8, zIndex:10, border:'1px solid #333'
-                            }}>
-                              <div style={{display:'grid', gridTemplateColumns:'repeat(3, 80px)', gap:8, maxHeight:240, overflowY:'auto'}}>
-                                {gifts.map(g=>(
-                                  <button key={g.id}
-                                    onClick={()=>sendGiftMatch(g.id)}
-                                    style={{ background:'transparent', border:'1px solid #555', borderRadius:8, padding:6, cursor:'pointer', color:'#fff' }}>
-                                    <img src={g.icon} alt={g.name} style={{ width:32, height:32, display:'block', margin:'0 auto' }} />
-                                    <div style={{ fontSize:12 }}>{g.name}</div>
-                                    <div style={{ fontSize:12, opacity:.8 }}>{fmtEUR(g.cost)}</div>
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      </StyledChatContainer>
-                    </StyledRemoteVideo>
+                        {/* Overlay de mensajes sobre el vídeo */}
+                        <StyledChatContainer>
+                          <StyledChatList>
+                            {messages.map((msg, index) => {
+                              const isMe = msg.from === 'me';
+                              return (
+                                <StyledChatMessageRow key={index} $me={isMe}>
+                                  {msg.gift ? (
+                                    <StyledChatBubble $me={isMe}>
+                                      <strong>{isMe ? 'Yo' : 'Modelo'}:</strong>{' '}
+                                      {giftRenderReady && (() => {
+                                        const src = getGiftIcon(msg.gift);
+                                        return src ? (<StyledGiftIcon src={src} alt="" />) : null;
+                                      })()}
+                                    </StyledChatBubble>
+                                  ) : (
+                                    <StyledChatBubble $me={isMe}>
+                                      <strong>{isMe ? 'Yo' : 'Modelo'}:</strong> {msg.text}
+                                    </StyledChatBubble>
+                                  )}
+                                </StyledChatMessageRow>
+                              );
+                            })}
+                          </StyledChatList>
+                        </StyledChatContainer>
+                      </StyledVideoArea>
+
+                      {/* 10%: dock de entrada (fuera del vídeo, mismo ancho que el contenedor) */}
+                      <StyledChatDock>
+                        <StyledChatInput
+                          type="text"
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          placeholder="Escribe un mensaje…"
+                          autoComplete="off"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              sendChatMessage();
+                            }
+                          }}
+                        />
+                        <StyledActionButton type="button" onClick={sendChatMessage}>Enviar</StyledActionButton>
+
+                        <StyledGiftToggle
+                          type="button"
+                          onClick={() => setShowGifts(s => !s)}
+                          title="Enviar regalo"
+                        >
+                          🎁
+                        </StyledGiftToggle>
+
+                        {showGifts && (
+                          <StyledGiftsPanel>
+                            <StyledGiftGrid>
+                              {gifts.map(g => (
+                                <button key={g.id} onClick={() => sendGiftMatch(g.id)}>
+                                  <img src={g.icon} alt={g.name} />
+                                  <div>{g.name}</div>
+                                  <div>{fmtEUR(g.cost)}</div>
+                                </button>
+                              ))}
+                            </StyledGiftGrid>
+                          </StyledGiftsPanel>
+                        )}
+                      </StyledChatDock>
+                    </>
                   )}
                 </>
               )}
@@ -1174,5 +1223,4 @@ const DashboardClient = () => {
     </StyledContainer>
   );
 };
-
 export default DashboardClient;

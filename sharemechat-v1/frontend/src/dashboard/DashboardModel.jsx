@@ -24,7 +24,18 @@ import {
   StyledNavAvatar,
   StyledIconBtn,
   StyledTopActions,
-  StyledVideoTitle
+  StyledVideoTitle,
+  StyledVideoArea,
+  StyledChatDock,
+  StyledChatList,
+  StyledChatMessageRow,
+  StyledChatBubble,
+  StyledChatInput,
+  StyledGiftToggle,
+  StyledGiftsPanel,
+  StyledGiftGrid,
+  StyledGiftIcon,
+  StyledTitleAvatar
 } from '../styles/ModelStyles';
 
 const DashboardModel = () => {
@@ -54,6 +65,8 @@ const DashboardModel = () => {
   const [showMsgPanel, setShowMsgPanel] = useState(false);
   const [openChatWith, setOpenChatWith] = useState(null);
   const [msgConnected, setMsgConnected] = useState(false);
+  const [clientNickname, setClientNickname] = useState('Cliente');
+  const [clientAvatar, setClientAvatar] = useState('');
 
   const msgSocketRef = useRef(null);
   const msgPingRef = useRef(null);
@@ -121,6 +134,39 @@ const DashboardModel = () => {
       }
     })();
   }, [token]);
+
+  useEffect(() => {
+    if (!token || !currentClientId) return;
+
+    (async () => {
+      try {
+        const r = await fetch(`/api/users/${currentClientId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        const nn = d?.nickname || d?.name || d?.email || 'Cliente';
+        setClientNickname(nn);
+      } catch {/* noop */}
+    })();
+  }, [token, currentClientId]);
+
+  useEffect(() => {
+    if (!token || !currentClientId) return;
+
+    (async () => {
+      try {
+        const r = await fetch(`/api/users/avatars?ids=${encodeURIComponent(currentClientId)}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!r.ok) return;
+        const map = await r.json(); // { [id]: url }
+        const url = map?.[currentClientId] || '';
+        setClientAvatar(url);
+      } catch {/* noop */}
+    })();
+  }, [token, currentClientId]);
+
 
   useEffect(() => {
     if (localVideoRef.current && localStream.current) {
@@ -863,9 +909,10 @@ const DashboardModel = () => {
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
   return (
+
     <StyledContainer>
 
-     {/* ========= INICIO NAVBAR  ======== */}
+      {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
         <span>Mi Logo</span>
         <StyledNavGroup>
@@ -905,12 +952,12 @@ const DashboardModel = () => {
           />
         </StyledNavGroup>
       </StyledNavbar>
-     {/* ========= FIN NAVBAR  ======== */}
+      {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent>
 
-       {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
+        {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
         <StyledLeftColumn>
           <div className="d-flex justify-content-around mb-3">
             <StyledIconBtn title="Videochat" onClick={() => setActiveTab('videochat')}>
@@ -984,59 +1031,66 @@ const DashboardModel = () => {
                   </StyledLocalVideo>
 
                   {remoteStream && (
-                    <StyledRemoteVideo>
-                      <StyledVideoTitle>Cliente</StyledVideoTitle>
-                      <video
-                        ref={remoteVideoRef}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
-                        autoPlay
-                      />
-                      <StyledChatContainer>
-                        <div
-                          style={{
-                            maxHeight: '150px',
-                            overflowY: 'auto',
-                            marginBottom: '10px',
-                          }}
-                        >
-                          {messages.map((msg, index) => (
-                            <div
-                              key={index}
-                              style={{ textAlign: msg.from === 'me' ? 'right' : 'left', color: 'white' }}
-                            >
-                              {msg.gift ? (
-                                <>
-                                  {giftRenderReady && (() => {
-                                    const src = getGiftIcon(msg.gift);
-                                    return src ? <img src={src} alt="" style={{ width:28, height:28, marginLeft:6 }} /> : null;
-                                  })()}
-                                </>
-                              ) : (
-                                <>
-                                  <strong>{msg.from === 'me' ? 'Yo' : 'Cliente'}:</strong> {msg.text}
-                                </>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                        <div style={{ display: 'flex' }}>
-                          <input
-                            type="text"
-                            value={chatInput}
-                            onChange={(e) => setChatInput(e.target.value)}
-                            style={{
-                              flex: 1,
-                              marginRight: '10px',
-                              background: 'rgba(255, 255, 255, 0.9)',
-                              border: 'none',
-                              borderRadius: '5px',
-                              padding: '5px',
-                            }}
+                    <>
+                      {/* 95%: área de vídeo + overlay de mensajes */}
+                      <StyledVideoArea>
+                        <StyledRemoteVideo>
+                          <StyledVideoTitle>
+                            {clientAvatar && <StyledTitleAvatar src={clientAvatar} alt="" />}
+                            {clientNickname}
+                          </StyledVideoTitle>
+                          <video
+                            ref={remoteVideoRef}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
+                            autoPlay
                           />
-                          <StyledActionButton onClick={sendChatMessage}>Enviar</StyledActionButton>
-                        </div>
-                      </StyledChatContainer>
-                    </StyledRemoteVideo>
+                        </StyledRemoteVideo>
+
+                        {/* Overlay de mensajes sobre el vídeo */}
+                        <StyledChatContainer>
+                          <StyledChatList>
+                            {messages.map((msg, index) => {
+                              const isMe = msg.from === 'me';
+                              return (
+                                <StyledChatMessageRow key={index} $me={isMe}>
+                                  {msg.gift ? (
+                                    <StyledChatBubble $me={isMe}>
+                                      <strong>{isMe ? 'Yo' : 'Cliente'}:</strong>{' '}
+                                      {giftRenderReady && (() => {
+                                        const src = getGiftIcon(msg.gift);
+                                        return src ? (<StyledGiftIcon src={src} alt="" />) : null;
+                                      })()}
+                                    </StyledChatBubble>
+                                  ) : (
+                                    <StyledChatBubble $me={isMe}>
+                                      <strong>{isMe ? 'Yo' : 'Cliente'}:</strong> {msg.text}
+                                    </StyledChatBubble>
+                                  )}
+                                </StyledChatMessageRow>
+                              );
+                            })}
+                          </StyledChatList>
+                        </StyledChatContainer>
+                      </StyledVideoArea>
+
+                      {/* 5%: dock de entrada (fuera del vídeo, mismo ancho que el contenedor) */}
+                      <StyledChatDock>
+                        <StyledChatInput
+                          type="text"
+                          value={chatInput}
+                          onChange={(e) => setChatInput(e.target.value)}
+                          placeholder="Escribe un mensaje…"
+                          autoComplete="off"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                              e.preventDefault();
+                              sendChatMessage();
+                            }
+                          }}
+                        />
+                        <StyledActionButton type="button" onClick={sendChatMessage}>Enviar</StyledActionButton>
+                      </StyledChatDock>
+                    </>
                   )}
                 </>
               )}
@@ -1185,7 +1239,7 @@ const DashboardModel = () => {
           )}
 
         </StyledCenter>
-       {/* ================FIN ZONA CENTRAL =================*/}
+        {/* ================FIN ZONA CENTRAL =================*/}
 
         <StyledRightColumn />
 
@@ -1197,3 +1251,4 @@ const DashboardModel = () => {
 };
 
 export default DashboardModel;
+

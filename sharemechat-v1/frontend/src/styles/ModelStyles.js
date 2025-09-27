@@ -70,6 +70,7 @@ export const StyledCenter = styled.main`
   min-height: 480px;
   max-width: 90%;
   position: relative;
+  background-color: #D3D3D3;
 
   @media (max-width: 768px) {
     width: 100%;
@@ -142,23 +143,131 @@ export const StyledRemoteVideo = styled.div`
   z-index: 1;
 `;
 
+export const StyledVideoArea = styled.div`
+  position: relative;
+  width: 100%;
+  height: 95%;
+  min-height: 360px;
+`;
+
+export const StyledChatDock = styled.div`
+  height: 5%;
+  min-height: 56px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  // background: #ffffff;
+  border-top: 1px solid #e9ecef;
+  padding: 1px 1px;
+  border-radius: 1px;
+  box-shadow: 0 -2px 8px rgba(0,0,0,.06);
+`;
+
 // Contenedor para el chat
 export const StyledChatContainer = styled.div`
   position: absolute;
   bottom: 10px;
   left: 10px;
-  width: clamp(220px, 42vw, 320px);
-  background: rgba(0, 0, 0, 0.7);
-  color: white;
-  padding: 10px;
-  border-radius: 5px;
+  width: clamp(300px, 38vw, 560px);
+  background: transparent;
+  color: #ffffff;
+  padding: 12px;
+  border-radius: 8px;
   z-index: 2;
-  @media (max-width: 480px) {
-    left: 5px;
-    right: 5px;
+  box-shadow: 0 -2px 8px rgba(0,0,0,.06);
+
+  @media (max-width: 1024px) {
+    width: clamp(280px, 46vw, 520px);
+  }
+  @media (max-width: 768px) {
+    left: 8px;
+    right: 8px;
     width: auto;
   }
 `;
+
+export const StyledChatList = styled.div`
+  max-height: 260px;
+  overflow-y: auto;
+  margin-bottom: 10px;
+`;
+
+export const StyledChatMessageRow = styled.div`
+  display: flex;
+  justify-content: ${p => (p.$me ? 'flex-end' : 'flex-start')};
+  margin: 6px 0;
+`;
+
+/** Burbuja del mensaje */
+export const StyledChatBubble = styled.span`
+  display: inline-block;
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: ${p => (p.$me ? '#0D6EFD40' : '#343A4040')};
+  color: #fff;
+  max-width: 80%;
+  line-height: 1.35;
+`;
+
+/** Input del chat */
+export const StyledChatInput = styled.input`
+  flex: 1;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 8px;
+  outline: none;
+
+  &:focus {
+    border-color: #0d6efd55;
+    box-shadow: 0 0 0 3px #0d6efd22;
+  }
+`;
+
+export const StyledGiftToggle = styled(StyledActionButton)`
+  padding: 10px 12px;
+`;
+
+export const StyledGiftsPanel = styled.div`
+  position: absolute;
+  right: 0;
+  bottom: 44px;
+  background: rgba(0,0,0,0.85);
+  padding: 10px;
+  border-radius: 8px;
+  z-index: 10;
+  border: 1px solid #333;
+`;
+
+export const StyledGiftGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, 80px);
+  gap: 8px;
+  max-height: 240px;
+  overflow-y: auto;
+
+  button {
+    background: transparent;
+    border: 1px solid #555;
+    border-radius: 8px;
+    padding: 6px;
+    cursor: pointer;
+    color: #fff;
+
+    img { width: 32px; height: 32px; display: block; margin: 0 auto; }
+    div { font-size: 12px; }
+    div:last-child { opacity: .8; }
+  }
+`;
+
+export const StyledGiftIcon = styled.img`
+  width: 24px;
+  height: 24px;
+  vertical-align: middle;
+  margin-left: 6px;
+`;
+
 
 /** Botón de icono (sidebar izquierda) */
 export const StyledIconBtn = styled.button`
@@ -189,6 +298,17 @@ export const StyledVideoTitle = styled.h5`
   z-index: 2;
   margin: 0;
 `;
+
+export const StyledTitleAvatar = styled.img`
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-right: 8px;
+  border: 1px solid rgba(255,255,255,0.35);
+`;
+
 
 /** Grupo de acciones a la derecha de la navbar */
 export const StyledNavGroup = styled.div`
