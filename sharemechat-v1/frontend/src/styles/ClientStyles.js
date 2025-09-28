@@ -1,3 +1,4 @@
+//ClientStyles.js
 import styled from 'styled-components';
 
 // Contenedor principal
@@ -10,7 +11,7 @@ export const StyledContainer = styled.div`
 
 // Navbar
 export const StyledNavbar = styled.nav`
-  background-color: #355C7D;
+  background-color: #B4717E;
   color: white;
   padding: 15px 20px;
   display: flex;
@@ -20,18 +21,51 @@ export const StyledNavbar = styled.nav`
 
 // Botón de la Navbar
 export const StyledNavButton = styled.button`
-  background: none;
-  border: 1px solid white;
-  color: white;
-  padding: 8px 15px;
-  border-radius: 5px;
-  margin-left: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Tamaño unificado */
+  height: 36px;
+  padding: 0 14px;
+  white-space: nowrap;
+
+  /* Tipografía y estética */
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1;
+  border-radius: 8px;
+
+  /* Estilo coherente con el navbar actual */
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  color: #fff;
+
+  /* Espacios y transiciones */
+  gap: 8px;
+  margin: 0;
   cursor: pointer;
-  transition: background-color 0.3s;
+  transition: background-color .2s ease, border-color .2s ease, color .2s ease;
+
   &:hover {
-    background-color: #495057;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: #fff;
+  }
+
+  /* Iconos dentro del botón */
+  & > svg {
+    width: 16px;
+    height: 16px;
+    display: block;
+  }
+
+  /* Evita dobles márgenes si usas StyledIconWrapper como label */
+  & > span {
+    margin: 0;
+    font-size: inherit;
   }
 `;
+
 
 // Contenido principal
 export const StyledMainContent = styled.div`

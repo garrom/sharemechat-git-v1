@@ -895,7 +895,7 @@ const DashboardClient = () => {
             {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
           </span>
 
-          <StyledNavButton type="button" onClick={handleAddBalance} style={{ marginRight: '8px' }}>
+          <StyledNavButton type="button" onClick={handleAddBalance}>
             + Saldo
           </StyledNavButton>
 
