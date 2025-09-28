@@ -4,8 +4,8 @@ import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from './features/favorites/FavoritesModelList';
 import FunnyplacePage from './features/funnyplace/FunnyplacePage';
-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { faSignOutAlt, faUser, faHeart, faVideo, faFilm } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,
@@ -35,7 +35,11 @@ import {
   StyledGiftsPanel,
   StyledGiftGrid,
   StyledGiftIcon,
-  StyledTitleAvatar
+  StyledTitleAvatar,
+  StyledTabsBar,
+  StyledTabButton,
+  StyledTabIcon
+
 } from '../styles/ModelStyles';
 
 const DashboardModel = () => {
@@ -932,6 +936,11 @@ const DashboardModel = () => {
             </span>
           )}
 
+          <StyledNavButton type="button" title="Estadísticas" aria-label="Estadísticas">
+            <FontAwesomeIcon icon={faChartLine} />
+            <StyledIconWrapper>Estadísticas</StyledIconWrapper>
+          </StyledNavButton>
+
           <StyledNavButton type="button" onClick={handleRequestPayout}>
             Solicitar retiro
           </StyledNavButton>
@@ -959,33 +968,47 @@ const DashboardModel = () => {
 
         {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
         <StyledLeftColumn>
-          <div className="d-flex justify-content-around mb-3">
-            <StyledIconBtn title="Videochat" onClick={() => setActiveTab('videochat')}>
-              <FontAwesomeIcon icon={faVideo} size="lg" />
-            </StyledIconBtn>
-            <StyledIconBtn title="Favoritos" onClick={handleGoFavorites}>
-              <FontAwesomeIcon icon={faHeart} size="lg" />
-            </StyledIconBtn>
-            <StyledIconBtn title="Funnyplace" onClick={handleGoFunnyplace}>
-              <FontAwesomeIcon icon={faFilm} size="lg" />
-            </StyledIconBtn>
-          </div>
+          <StyledTabsBar role="tablist" aria-label="Secciones">
+            <StyledTabIcon
+              role="tab"
+              aria-selected={activeTab === 'videochat'}
+              data-active={activeTab === 'videochat'}
+              onClick={() => setActiveTab('videochat')}
+              title="Videochat"
+              aria-label="Videochat"
+            >
+              <FontAwesomeIcon icon={faVideo} />
+            </StyledTabIcon>
 
-          <ul className="list-group">
-            {activeTab === 'favoritos' && (
-              <li className="list-group-item p-0 border-0">
-                <FavoritesModelList
-                  onSelect={handleOpenChatFromFavorite} reloadTrigger={favReload}
-                />
-              </li>
-            )}
-            {activeTab === 'videochat' && (
-              <li className="list-group-item">Selecciona “Buscar cliente” para empezar</li>
-            )}
-            {activeTab === 'funnyplace' && (
-              <li className="list-group-item">Explora Funnyplace en la zona central</li>
-            )}
-          </ul>
+            <StyledTabIcon
+              role="tab"
+              aria-selected={activeTab === 'favoritos'}
+              data-active={activeTab === 'favoritos'}
+              onClick={handleGoFavorites}
+              title="Favoritos"
+              aria-label="Favoritos"
+            >
+              <FontAwesomeIcon icon={faHeart} />
+            </StyledTabIcon>
+
+            <StyledTabIcon
+              role="tab"
+              aria-selected={activeTab === 'funnyplace'}
+              data-active={activeTab === 'funnyplace'}
+              onClick={handleGoFunnyplace}
+              title="Funnyplace"
+              aria-label="Funnyplace"
+            >
+              <FontAwesomeIcon icon={faFilm} />
+            </StyledTabIcon>
+          </StyledTabsBar>
+
+          {activeTab === 'favoritos' && (
+            <FavoritesModelList
+              onSelect={handleOpenChatFromFavorite}
+              reloadTrigger={favReload}
+            />
+          )}
 
         </StyledLeftColumn>
         {/* ========= FIN COLUMNA IZQUIERDA  ======== */}

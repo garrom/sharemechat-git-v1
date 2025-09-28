@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  List, StateRow, ItemCard, Avatar, Info, Name, Meta, Badges, Badge
+  List, StateRow, ItemCard, Avatar, Info, Name, Badges, Badge
 } from '../../../styles/features/FavoritesStyles';
 
 function FavListItem({ user, avatarUrl, onSelect }) {
@@ -25,10 +25,8 @@ function FavListItem({ user, avatarUrl, onSelect }) {
       <Avatar src={imgSrc} alt="" $size={28} />
       <Info>
         <Name>{user.nickname || `Usuario #${user.id}`}</Name>
-        <Meta>{user.userType || 'MODEL'}</Meta>
       </Info>
       <Badges>
-        <Badge $variant="secondary">{user.status}</Badge>
         <Badge $variant={invitedVariant}>{user.invited}</Badge>
       </Badges>
     </ItemCard>

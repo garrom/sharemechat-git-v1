@@ -66,6 +66,67 @@ export const StyledNavButton = styled.button`
   }
 `;
 
+// Barra contenedora de las pestañas
+export const StyledTabsBar = styled.div`
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+`;
+
+// Botón de pestaña: icono grande, sin texto
+export const StyledTabIcon = styled.button`
+  --tab-bg: #f8f9fa;
+  --tab-fg: #495057;
+  --tab-border: #dee2e6;
+  --tab-bg-hover: #eef1f4;
+  --tab-active-bg: #0d6efd;
+  --tab-active-fg: #ffffff;
+
+  width: 32px;
+  height: 32px;
+  border-radius: 2px;            /* <- radio 2px */
+  border: 1px solid var(--tab-border);
+  background: var(--tab-bg);
+  color: var(--tab-fg);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .06s ease;
+
+  &:hover { background: var(--tab-bg-hover); }
+  &:active { transform: translateY(1px); }
+
+  &[data-active="true"] {
+    background: var(--tab-active-bg);
+    border-color: var(--tab-active-bg);
+    color: var(--tab-active-fg);
+  }
+
+  /* icono más grande */
+  & > svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+  }
+
+  /* accesibilidad */
+  &:focus-visible {
+    outline: 2px solid rgba(13,110,253,.45);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 1024px) {
+    width: 30px;
+    height: 30px;
+    & > svg { width: 18px; height: 18px; }
+  }
+`;
+
 
 // Contenido principal
 export const StyledMainContent = styled.div`
