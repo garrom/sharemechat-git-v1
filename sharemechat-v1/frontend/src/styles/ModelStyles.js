@@ -2,12 +2,14 @@
 import styled from 'styled-components';
 
 // Contenedor principal
-export const StyledContainer = styled.div`
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  background-color: #f0f2f5;
-`;
+ export const StyledContainer = styled.div`
+   display: flex;
+   flex-direction: column;
+   height: 100vh;
+   background-color: #f0f2f5;
+   min-width: 48px;
+ `;
+
 
 // Navbar
 export const StyledNavbar = styled.nav`
@@ -73,6 +75,13 @@ export const StyledTabsBar = styled.div`
   margin-bottom: 12px;
   flex-wrap: wrap;
   align-items: center;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-bottom: 0;
+  }
 `;
 
 // Botón de pestaña: icono grande, sin texto
@@ -127,7 +136,6 @@ export const StyledTabIcon = styled.button`
   }
 `;
 
-
 // Contenido principal
 export const StyledMainContent = styled.div`
   display: flex;
@@ -143,14 +151,26 @@ export const StyledLeftColumn = styled.aside`
   box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
   overflow-y: auto;
 
-  @media (max-width: 768px) {
-    display: none;
-  }
-
   @media (min-width: 769px) and (max-width: 1024px) {
     width: 25%;
   }
+
+  @media (max-width: 768px) {
+    width: 56px;
+    padding: 8px;
+    box-shadow: none;
+
+    &[data-rail] {
+      width: 56px;
+      padding: 8px;
+    }
+
+    & > *:not(:first-child):not(:nth-child(2)) {
+      display: none !important;
+    }
+  }
 `;
+
 
 // Área central
 export const StyledCenter = styled.main`

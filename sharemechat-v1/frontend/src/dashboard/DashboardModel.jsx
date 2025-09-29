@@ -967,7 +967,8 @@ const DashboardModel = () => {
       <StyledMainContent>
 
         {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
-        <StyledLeftColumn>
+        <StyledLeftColumn data-rail>
+
           <StyledTabsBar role="tablist" aria-label="Secciones">
             <StyledTabIcon
               role="tab"
