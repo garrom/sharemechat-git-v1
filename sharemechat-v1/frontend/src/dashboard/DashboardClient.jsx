@@ -68,6 +68,25 @@ const DashboardClient = () => {
   const [modelNickname, setModelNickname] = useState('Modelo');
   const [modelAvatar, setModelAvatar] = useState('');
 
+  // ====== CALLING (1-a-1) ======
+  const [callCameraActive, setCallCameraActive] = useState(false);
+  const [callStatus, setCallStatus] = useState('idle'); // idle | camera-ready | connecting | ringing | incoming | in-call
+  const [callPeerId, setCallPeerId] = useState(null);
+  const [callPeerName, setCallPeerName] = useState('');
+  const [callRemoteStream, setCallRemoteStream] = useState(null);
+  const [callError, setCallError] = useState('');
+  const [callRole, setCallRole] = useState(null); // 'caller' | 'callee'
+  const [callPeerAvatar, setCallPeerAvatar] = useState('');
+
+  const callLocalVideoRef = useRef(null);
+  const callRemoteVideoRef = useRef(null);
+  const callLocalStreamRef = useRef(null);
+  const callPeerRef = useRef(null);
+  const callPingRef = useRef(null);
+  const callRingTimeoutRef = useRef(null);
+  const callRoleRef = useRef(null);
+  const callPeerIdRef = useRef(null);
+
   const history = useHistory();
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -76,16 +95,6 @@ const DashboardClient = () => {
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
   const token = localStorage.getItem('token');
-
-  const lastSentRef = useRef({ text: null, at: 0 });
-  const isEcho = (incoming) => {
-    const now = Date.now();
-    return (
-      incoming === lastSentRef.current.text &&
-      now - lastSentRef.current.at < 1500
-    );
-  };
-
   const msgSocketRef = useRef(null);
   const centerListRef = useRef(null);
   const [wsReady, setWsReady] = useState(false);
@@ -99,6 +108,15 @@ const DashboardClient = () => {
   const centerSeenIdsRef = useRef(new Set());  //nuevo
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
+  const lastSentRef = useRef({ text: null, at: 0 });
+
+  const isEcho = (incoming) => {
+    const now = Date.now();
+    return (
+      incoming === lastSentRef.current.text &&
+      now - lastSentRef.current.at < 1500
+    );
+  };
 
   const fmtEUR = (v) =>
     new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
@@ -178,7 +196,6 @@ const DashboardClient = () => {
     })();
   }, [token, currentModelId]);
 
-
   useEffect(() => {
       meIdRef.current = Number(user?.id) || null;
   }, [user?.id]);
@@ -201,11 +218,111 @@ const DashboardClient = () => {
     }
   }, [remoteStream]);
 
+  // CALLING: enlazar local stream a su video
+  useEffect(() => {
+    if (callLocalVideoRef.current && callLocalStreamRef.current) {
+      console.log('[CALL][cam] bind local stream to video');
+      callLocalVideoRef.current.srcObject = callLocalStreamRef.current;
+    }
+  }, [callCameraActive]);
+
+  // CALLING: enlazar remote stream a su video
+  useEffect(() => {
+    if (callRemoteVideoRef.current && callRemoteStream) {
+      console.log('[CALL][remote] bind remote stream to video');
+      callRemoteVideoRef.current.srcObject = callRemoteStream;
+    } else if (callRemoteVideoRef.current) {
+      callRemoteVideoRef.current.srcObject = null;
+    }
+  }, [callRemoteStream]);
+
+
   useEffect(() => {
     const el = centerListRef.current;
     if (!el) return;
     queueMicrotask(() => { el.scrollTop = el.scrollHeight; });
   }, [centerMessages, centerLoading, centerChatPeerId]);
+
+  // [CALL][Client] target dinámico desde Favoritos (chat central) o favorito seleccionado
+  useEffect(() => {
+    // 1) Prioridad: chat central -> favorito seleccionado -> sin target
+    if (centerChatPeerId) {
+      const id = Number(centerChatPeerId);
+      const name = centerChatPeerName || `Usuario ${id}`;
+      setCallPeerId(id);
+      callPeerIdRef.current = id;
+      setCallPeerName(name);
+      console.log('[CALL][Client] target <- Favorites chat:', id, name, '(tab:', activeTab, ')');
+    } else if (selectedFav?.id) {
+      const id = Number(selectedFav.id);
+      const name =
+        selectedFav?.nickname || selectedFav?.name || selectedFav?.email || `Usuario ${id}`;
+      setCallPeerId(id);
+      callPeerIdRef.current = id;
+      setCallPeerName(name);
+      console.log('[CALL][Client] target <- Selected favorite:', id, name, '(tab:', activeTab, ')');
+    } else {
+      // 2) Sin target: deshabilita el botón de llamar
+      setCallPeerId(null);
+      callPeerIdRef.current = null;
+      setCallPeerName('');
+      console.log('[CALL][Client] sin target: abre un chat de Favoritos para elegir destinatario (tab:', activeTab, ')');
+    }
+
+    // Nota: NO hacemos early-return por activeTab para no perder sincronización
+  }, [
+    activeTab,                 // lo mantenemos solo para log y para reaccionar si cambian pestañas
+    centerChatPeerId,
+    centerChatPeerName,
+    selectedFav?.id,
+    selectedFav?.nickname,
+    selectedFav?.name,
+    selectedFav?.email
+  ]);
+
+
+  // [CALL] Si tenemos peerId pero no nombre coherente, lo resolvemos desde /api/users/{id}
+  useEffect(() => {
+    const tk = localStorage.getItem('token');
+    if (!tk) return;
+    const id = Number(callPeerId);
+    if (!Number.isFinite(id) || id <= 0) return;
+
+    // Solo refresca si no tenemos un nombre “bonito”
+    if (callPeerName && callPeerName !== `Usuario ${id}`) return;
+
+    (async () => {
+      try {
+        console.log('[CALL] Resolviendo nombre remoto via /api/users/', id);
+        const r = await fetch(`/api/users/${id}`, { headers: { Authorization: `Bearer ${tk}` } });
+        if (!r.ok) return;
+        const d = await r.json();
+        const nn = d?.nickname || d?.name || d?.email || `Usuario ${id}`;
+        setCallPeerName(nn);
+      } catch {/* noop */}
+    })();
+  }, [callPeerId, callPeerName]);
+
+  // [CALL] Avatar del destinatario
+  useEffect(() => {
+    const tk = localStorage.getItem('token');
+    if (!tk) return;
+    const id = Number(callPeerId);
+    if (!Number.isFinite(id) || id <= 0) return;
+
+    (async () => {
+      try {
+        console.log('[CALL] Resolviendo avatar remoto via /api/users/avatars?ids=', id);
+        const r = await fetch(`/api/users/avatars?ids=${encodeURIComponent(id)}`, {
+          headers: { Authorization: `Bearer ${tk}` },
+        });
+        if (!r.ok) return;
+        const map = await r.json(); // { [id]: url }
+        setCallPeerAvatar(map?.[id] || '');
+      } catch {/* noop */}
+    })();
+  }, [callPeerId]);
+
 
   useEffect(() => {
     const tokenLS = localStorage.getItem('token');
@@ -293,18 +410,25 @@ const DashboardClient = () => {
     msgSocketRef.current = s;
 
     s.onopen = () => {
+      console.log('[WS][messages] OPEN');
       setWsReady(true);
       if (msgPingRef.current) clearInterval(msgPingRef.current);
       msgPingRef.current = setInterval(() => {
         try {
           if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
             msgSocketRef.current.send(JSON.stringify({ type: 'ping' }));
+            // si hay llamada activa, además envio call:ping
+            if (callStatus === 'in-call' || callStatus === 'connecting') {
+              msgSocketRef.current.send(JSON.stringify({ type: 'call:ping' }));
+              console.log('[CALL][ping] sent');
+            }
           }
         } catch {}
       }, 30000);
     };
 
     s.onclose = () => {
+      console.log('[WS][messages] CLOSE');
       setWsReady(false);
       clearMsgTimers();
       msgReconnectRef.current = setTimeout(() => {
@@ -312,7 +436,8 @@ const DashboardClient = () => {
       }, 1500);
     };
 
-    s.onerror = () => {
+    s.onerror = (e) => {
+      console.log('[WS][messages] ERROR', e);
       setWsReady(false);
       try { s.close(); } catch {}
     };
@@ -320,7 +445,7 @@ const DashboardClient = () => {
     s.onmessage = (ev) => {
       try {
         const data = JSON.parse(ev.data);
-
+        // ====== GESTIÓN DE REGALOS/MENSAJES EXISTENTES (sin tocar) ======
         if (data.type === 'msg:gift' && data.gift) {
           const me   = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
@@ -344,7 +469,6 @@ const DashboardClient = () => {
           queueMicrotask(() => { const el = centerListRef.current; if (el) el.scrollTop = el.scrollHeight; });
           return;
         }
-
 
         if (data.type === 'msg:new' && data.message) {
           const m = normMsg(data.message);
@@ -372,12 +496,118 @@ const DashboardClient = () => {
           }
           return;
         }
+
+        // ====== CALLING: EVENTOS call:* ======
+        if (data.type === 'call:incoming') {
+          console.log('[CALL][incoming][Client] from=', data.from, 'name=', data.displayName);
+          setActiveTab('calling');
+          const id = Number(data.from);
+          setCallPeerId(id);
+          callPeerIdRef.current = id;
+          setCallPeerName(String(data.displayName || `Usuario ${id}`));
+          setCallStatus('incoming');
+          setCallError('');
+          return;
+        }
+
+        if (data.type === 'call:ringing') {
+          console.log('[CALL][ringing] to=', callPeerId);
+          setCallStatus('ringing');
+          setCallError('');
+          // timeout de 45s si nadie responde
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          callRingTimeoutRef.current = setTimeout(() => {
+            console.log('[CALL][ringing] timeout -> cancel local');
+            handleCallEnd(true); // fuerza limpieza y envia cancel si procede
+          }, 45000);
+          return;
+        }
+
+        if (data.type === 'call:accepted') {
+          console.log('[CALL][accepted][Client] peer=', callPeerIdRef.current, 'role=', callRoleRef.current);
+          const initiator = (callRoleRef.current === 'caller');
+          wireCallPeer(initiator);
+          setCallStatus('in-call');
+          setCallError('');
+          if (callPingRef.current) clearInterval(callPingRef.current);
+          callPingRef.current = setInterval(() => {
+            try {
+              if (msgSocketRef.current?.readyState === WebSocket.OPEN) {
+                msgSocketRef.current.send(JSON.stringify({ type: 'call:ping' }));
+                console.log('[CALL][ping] sent (in-call loop)');
+              }
+            } catch {}
+          }, 30000);
+          return;
+        }
+
+        if (data.type === 'call:signal' && data.signal) {
+          console.log('[CALL][signal:in][Client]', data.signal?.type || (data.signal?.candidate ? 'candidate' : 'unknown'));
+          if (callPeerRef.current) {
+            callPeerRef.current.signal(data.signal);
+          }
+          return;
+        }
+
+
+        if (data.type === 'call:rejected') {
+          console.log('[CALL][rejected]');
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          setCallStatus('idle');
+          setCallError('La llamada fue rechazada.');
+          return;
+        }
+
+        if (data.type === 'call:canceled') {
+          console.log('[CALL][canceled] reason=', data.reason);
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          cleanupCall('canceled');
+          return;
+        }
+
+        if (data.type === 'call:ended') {
+          console.log('[CALL][ended] reason=', data.reason);
+          cleanupCall('ended');
+          return;
+        }
+
+        if (data.type === 'call:no-balance') {
+          console.log('[CALL][no-balance]');
+          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+          setCallError('Saldo insuficiente para iniciar la llamada.');
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          return;
+        }
+
+        if (data.type === 'call:busy') {
+          console.log('[CALL][busy]', data);
+          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+          setCallError('El usuario está ocupado.');
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          return;
+        }
+
+        if (data.type === 'call:offline') {
+          console.log('[CALL][offline]');
+          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+          setCallError('El usuario no está disponible.');
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          return;
+        }
+
+        if (data.type === 'call:error') {
+          console.log('[CALL][error]', data.message);
+          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+          setCallError(String(data.message || 'Error en la llamada'));
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          return;
+        }
       } catch (e) {
         // silenciar parse errors
       }
     };
-
   };
+
 
   useEffect(() => {
       openMsgSocket();
@@ -599,40 +829,45 @@ const DashboardClient = () => {
     history.push('/perfil-client');
   };
 
+
   const stopAll = () => {
     if (pingIntervalRef.current) {
       clearInterval(pingIntervalRef.current);
       pingIntervalRef.current = null;
     }
 
+    // RANDOM
     if (localStream.current) {
       localStream.current.getTracks().forEach(track => track.stop());
       localStream.current = null;
     }
-
     if (peerRef.current) {
       try { peerRef.current.destroy(); } catch {}
       peerRef.current = null;
     }
-
     if (socketRef.current) {
       try { socketRef.current.close(); } catch {}
       socketRef.current = null;
     }
-
     setCurrentModelId(null);
     setCameraActive(false);
     setSearching(false);
     setRemoteStream(null);
     setError('');
     setMessages([]);
+
+    // FAVORITOS
     setCenterChatPeerId(null);
     setCenterChatPeerName('');
     setCenterMessages([]);
     setCenterInput('');
     setShowGifts(false);
     setShowCenterGifts(false);
+
+    // CALLING
+    try { handleCallEnd(true); } catch {}
   };
+
 
   const handleAddBalance = async () => {
     const tokenLS = localStorage.getItem('token');
@@ -705,6 +940,11 @@ const DashboardClient = () => {
       if (!ok) return;
       stopAll();
     }
+    if (callStatus !== 'idle') {
+      const ok = window.confirm('Hay una llamada en curso o sonando. Se colgará la llamada. ¿Continuar?');
+      if (!ok) return;
+      handleCallEnd(true); // fuerza limpieza
+    }
     setActiveTab('funnyplace');
   };
 
@@ -713,8 +953,14 @@ const DashboardClient = () => {
       alert('No puedes salir del Videochat mientras hay streaming. Pulsa Stop o Next si quieres cambiar.');
       return;
     }
+    if (callStatus !== 'idle') {
+      const ok = window.confirm('Hay una llamada en curso o sonando. Se colgará la llamada. ¿Continuar?');
+      if (!ok) return;
+      handleCallEnd(true);
+    }
     setActiveTab('favoritos');
   };
+
 
   const handleAddFavorite = async () => {
     if (!currentModelId) {
@@ -883,6 +1129,318 @@ const DashboardClient = () => {
       setShowCenterGifts(false);
   };
 
+  //Activar cámara (Calling)
+  const handleCallActivateCamera = async () => {
+    console.log('[CALL][cam:on] requesting user media');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: 640, height: 480 },
+        audio: true
+      });
+      callLocalStreamRef.current = stream;
+      setCallCameraActive(true);
+      setCallStatus('camera-ready');
+      setCallError('');
+      // bind inmediato por si el useEffect tarda un frame
+      if (callLocalVideoRef.current) {
+        callLocalVideoRef.current.srcObject = stream;
+      }
+      console.log('[CALL][cam:on] success tracks=', stream.getTracks().length);
+    } catch (err) {
+      console.error('[CALL][cam:on] error', err);
+      setCallError('Error al activar la cámara: ' + err.message);
+      setCallCameraActive(false);
+      setCallStatus('idle');
+    }
+  };
+
+  //Enviar invitación
+  // Enviar invitación (FIX: no usar 'openChatWith' como ID)
+  const handleCallInvite = () => {
+    if (!callCameraActive || !callLocalStreamRef.current) {
+      setCallError('Primero activa la cámara para llamar.');
+      return;
+    }
+
+    // Prioridad: ref -> state -> chat central -> favorito seleccionado
+    const toId =
+      Number(callPeerIdRef.current ?? callPeerId ?? centerChatPeerId ?? selectedFav?.id);
+
+    let toName = '';
+    if (Number.isFinite(toId) && toId > 0) {
+      toName =
+        callPeerName ||
+        centerChatPeerName ||
+        selectedFav?.nickname ||
+        selectedFav?.name ||
+        selectedFav?.email ||
+        `Usuario ${toId}`;
+    }
+
+    if (!Number.isFinite(toId) || toId <= 0) {
+      setCallError('Abre un chat de Favoritos o selecciona un destinatario para llamar.');
+      return;
+    }
+
+    if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) {
+      setCallError('El chat de mensajes no está conectado.');
+      return;
+    }
+
+    try {
+      console.log('[CALL][invite:send][Client] to=', toId, 'name=', toName);
+      setCallPeerId(toId);
+      callPeerIdRef.current = toId;
+      setCallPeerName(toName);
+
+      msgSocketRef.current.send(JSON.stringify({ type: 'call:invite', to: toId }));
+
+      setCallRole('caller');
+      callRoleRef.current = 'caller';
+      setCallStatus('connecting');
+      setCallError('');
+
+      if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+      callRingTimeoutRef.current = setTimeout(() => {
+        if (callStatus === 'connecting') {
+          console.log('[CALL][invite][Client] no ringing -> cancel');
+          handleCallEnd(true);
+          setCallError('No se pudo iniciar el timbrado.');
+        }
+      }, 10000);
+    } catch (e) {
+      console.error('[CALL][invite:send][Client] error', e);
+      setCallError('No se pudo enviar la invitación.');
+    }
+  };
+
+
+  //Aceptar invitación
+  const handleCallAccept = async () => {
+    if (!callPeerIdRef.current) return;
+    if (!callCameraActive || !callLocalStreamRef.current) {
+      await handleCallActivateCamera();
+      if (!callLocalStreamRef.current) {
+        setCallError('No se pudo activar la cámara para aceptar la llamada.');
+        return;
+      }
+    }
+    if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) {
+      setCallError('El chat de mensajes no está conectado.');
+      return;
+    }
+    try {
+      const peer = Number(callPeerIdRef.current);
+      console.log('[CALL][accept:send][Client] with=', peer);
+      msgSocketRef.current.send(JSON.stringify({ type: 'call:accept', with: peer }));
+      setCallRole('callee');
+      callRoleRef.current = 'callee';
+      setCallStatus('connecting');
+      setCallError('');
+    } catch (e) {
+      console.error('[CALL][accept:send][Client] error', e);
+      setCallError('No se pudo aceptar la llamada.');
+    }
+  };
+
+  //Rechazar invitación
+  const handleCallReject = () => {
+    if (!callPeerId) return;
+    if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) {
+      setCallError('El chat de mensajes no está conectado.');
+      return;
+    }
+    try {
+      console.log('[CALL][reject:send] with=', callPeerId);
+      msgSocketRef.current.send(JSON.stringify({ type: 'call:reject', with: Number(callPeerId) }));
+      cleanupCall('rejected');
+    } catch (e) {
+      console.error('[CALL][reject:send] error', e);
+      setCallError('No se pudo rechazar la llamada.');
+    }
+  };
+
+  // Colgar / Cancelar force=true para casos de navegación donde queremos limpiar aunque el WS falle
+  const handleCallEnd = (force = false) => {
+    try {
+      if (callStatus === 'ringing' && callRole === 'caller') {
+        if (msgSocketRef.current?.readyState === WebSocket.OPEN) {
+          console.log('[CALL][hangup:send] cancel (ringing)');
+          msgSocketRef.current.send(JSON.stringify({ type: 'call:cancel', to: Number(callPeerId) }));
+        }
+      } else if (callStatus === 'in-call' || callStatus === 'connecting') {
+        if (msgSocketRef.current?.readyState === WebSocket.OPEN) {
+          console.log('[CALL][hangup:send] end (in-call)');
+          msgSocketRef.current.send(JSON.stringify({ type: 'call:end' }));
+        }
+      }
+    } catch (e) {
+      console.warn('[CALL][hangup] send error', e);
+    } finally {
+      if (force) cleanupCall('forced-end');
+    }
+  };
+
+  //Crear Peer y cablear eventos
+  const wireCallPeer = (initiator) => {
+    if (!callLocalStreamRef.current) {
+      setCallError('No hay cámara activa.');
+      return;
+    }
+    if (callPeerRef.current) {
+      try { callPeerRef.current.destroy(); } catch {}
+      callPeerRef.current = null;
+    }
+
+    console.log('[CALL][peer:create][Client] initiator=', initiator);
+    const p = new Peer({
+      initiator,
+      trickle: true,
+      stream: callLocalStreamRef.current,
+      config: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          { urls: 'stun:global.stun.twilio.com:3478' },
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          },
+        ],
+      },
+    });
+
+    p.on('signal', (signal) => {
+      try {
+        // Normalizamos tipo de señal
+        const type =
+          signal?.type ||
+          (signal?.candidate ? 'candidate' : 'unknown');
+
+        // 1) Ignorar candidates vacíos o fin de candidates
+        if (type === 'candidate') {
+          const cand = signal?.candidate;
+          if (!cand || cand.candidate === '' || cand.candidate == null) return;
+        }
+
+        // 2) Destinatario SIEMPRE el remoto (ref)
+        const toId = Number(callPeerIdRef.current);
+
+        // 3) Comprobaciones previas
+        const wsOpen = msgSocketRef.current?.readyState === WebSocket.OPEN;
+        const validTo = Number.isFinite(toId) && toId > 0;
+
+        console.log('[CALL][signal:out][Client]', { type, toId, wsOpen, validTo });
+
+        if (wsOpen && validTo) {
+          msgSocketRef.current.send(JSON.stringify({
+            type: 'call:signal',
+            to: toId,
+            signal
+          }));
+        } else {
+          console.warn('[CALL][signal:out][Client] omitido -> socket no abierto o toId inválido', { toId, wsOpen, validTo });
+        }
+      } catch (e) {
+        console.warn('[CALL][signal:out][Client] error', e);
+      }
+    });
+
+
+    p.on('stream', (stream) => {
+      console.log('[CALL][remote:stream][Client] tracks=', stream.getTracks().length);
+      setCallRemoteStream(stream);
+    });
+
+    p.on('error', (err) => {
+      console.error('[CALL][peer:error][Client]', err);
+      setCallError('Error en la conexión WebRTC: ' + err.message);
+    });
+
+    p.on('close', () => {
+      console.log('[CALL][peer:close][Client]');
+    });
+
+    callPeerRef.current = p;
+  };
+
+
+  //Limpieza integral de llamada
+  const cleanupCall = (reason = 'cleanup') => {
+    console.log('[CALL][cleanup] reason=', reason);
+
+    if (callPingRef.current) {
+      clearInterval(callPingRef.current);
+      callPingRef.current = null;
+    }
+    if (callRingTimeoutRef.current) {
+      clearTimeout(callRingTimeoutRef.current);
+      callRingTimeoutRef.current = null;
+    }
+
+    if (callPeerRef.current) {
+      try { callPeerRef.current.destroy(); } catch {}
+      callPeerRef.current = null;
+    }
+
+    if (callRemoteStream) {
+      try { callRemoteStream.getTracks().forEach(t => t.stop()); } catch {}
+      setCallRemoteStream(null);
+    }
+
+    // ¡no apagamos la cámara local automáticamente si el usuario quiere reintentar!
+    // pero si el motivo fue 'forced-end' o 'ended', puedes valorar apagar:
+    if (reason === 'forced-end' || reason === 'ended') {
+      if (callLocalStreamRef.current) {
+        try { callLocalStreamRef.current.getTracks().forEach(t => t.stop()); } catch {}
+      }
+      callLocalStreamRef.current = null;
+      setCallCameraActive(false);
+      if (callLocalVideoRef.current) callLocalVideoRef.current.srcObject = null;
+    }
+
+    setCallStatus('idle');
+    setCallRole(null);
+    callRoleRef.current = null;
+    setCallError('');
+    // mantenemos callPeerId/name para reintentos; si prefieres resetear:
+    // setCallPeerId(null); setCallPeerName('');
+  };
+
+  // [CALL] Selección directa desde la lista de favoritos (pestaña Calling): no abre chat, solo fija destino
+  const handleSelectCallTargetFromFavorites = (favUser) => {
+    if (streamingActivo) {
+      alert('No puedes seleccionar destino mientras hay streaming random activo.');
+      return;
+    }
+    const peer = Number(favUser?.id ?? favUser?.userId);
+    if (!Number.isFinite(peer) || peer <= 0) {
+      alert('No se pudo determinar el destinatario correcto.');
+      return;
+    }
+    if (Number(user?.id) === peer) {
+      alert('No puedes llamarte a ti mismo.');
+      return;
+    }
+
+    const name =
+      favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${peer}`;
+
+    console.log('[CALL] Target seleccionado desde lista (Calling):', peer, name);
+
+    setActiveTab('calling');     // asegurar que estamos en Calling
+    setSelectedFav(favUser);     // opcional: conservar selección
+    setCenterChatPeerId(null);   // no abrimos chat central
+    setCenterChatPeerName('');
+
+    setCallPeerId(peer);
+    callPeerIdRef.current = peer;
+    setCallPeerName(name);
+    // avatar se resolverá por el useEffect de callPeerId; si lo tienes en favUser, setéalo:
+    if (favUser?.avatarUrl) setCallPeerAvatar(favUser.avatarUrl);
+  };
+
+
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
   return (
@@ -926,8 +1484,9 @@ const DashboardClient = () => {
       {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent>
 
-        {/* ========= INICIO COLUMNA IZQUIERDA  ======== */}
         <StyledLeftColumn data-rail>
+
+          {/* ========= INICIO COLUMNA IZQUIERDA PESTAÑAS ======== */}
           <StyledTabsBar role="tablist" aria-label="Secciones">
             <StyledTabIcon
               role="tab"
@@ -961,22 +1520,45 @@ const DashboardClient = () => {
             >
               <FontAwesomeIcon icon={faFilm} />
             </StyledTabIcon>
+
+            <StyledTabIcon
+              role="tab"
+              aria-selected={activeTab === 'calling'}
+              data-active={activeTab === 'calling'}
+              onClick={() => {
+                if (streamingActivo) {
+                  alert('No puedes entrar en Calling mientras hay streaming random activo.');
+                  return;
+                }
+                setActiveTab('calling');
+              }}
+              title="Calling"
+              aria-label="Calling"
+            >
+              <FontAwesomeIcon icon={faVideo} />
+            </StyledTabIcon>
           </StyledTabsBar>
+          {/* ========= FIN COLUMNA IZQUIERDA PESTAÑAS ======== */}
 
-          {/* Solo renderizamos la lista cuando la pestaña es Favoritos */}
-          {activeTab === 'favoritos' && (
-
+          {/* Lista de usuarios a la izquierda:
+              - En Favoritos: abre chat central (handler original)
+              - En Calling: fija destinatario de la llamada (NO abre chat) */}
+          {(activeTab === 'favoritos' || activeTab === 'calling') && (
             <FavoritesClientList
-               onSelect={handleOpenChatFromFavorites}
-               reloadTrigger={favReload}
+              onSelect={activeTab === 'favoritos'
+                ? handleOpenChatFromFavorites
+                : handleSelectCallTargetFromFavorites}
+              reloadTrigger={favReload}
             />
           )}
 
         </StyledLeftColumn>
-        {/* ========= FIN COLUMNA IZQUIERDA  ======== */}
+        {/* ========= FIN COLUMNA IZQUIERDA PESTAÑAS ======== */}
 
         {/* ================INICIO ZONA CENTRAL =================*/}
         <StyledCenter>
+
+          {/*RENDERIZADO VIDEOCHAT */}
           {activeTab === 'videochat' && (
             <>
               {!cameraActive && (
@@ -1098,9 +1680,103 @@ const DashboardClient = () => {
               {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
             </>
           )}
+          {/*FIN RENDERIZADO VIDEOCHAT */}
 
+          {/*RENDERIZADO CALLING */}
+          {activeTab === 'calling' && (
+            <>
+              {/* Estado y error */}
+              {callError && <p style={{ color: 'orange', marginTop: 6 }}>[CALL] {callError}</p>}
+              <div style={{ color: '#9bd' }}>
+                Estado: <strong>{callStatus}</strong>
+                {callPeerName ? ` | Con: ${callPeerName} (#${callPeerId||''})` : ''}
+              </div>
+               {/* Controles superiores */}
+              <StyledTopActions style={{ gap: 8 }}>
+                {!callCameraActive && (
+                  <StyledActionButton onClick={handleCallActivateCamera}>
+                    Activar Cámara para Llamar
+                  </StyledActionButton>
+                )}
+
+                {callCameraActive && callStatus !== 'in-call' && callStatus !== 'ringing' && (
+                  <>
+                    <StyledActionButton
+                      onClick={handleCallInvite}
+                      disabled={!callPeerId}
+                      title={!callPeerId ? 'Abre un chat en Favoritos para elegir destinatario' : `Llamar a ${callPeerName || callPeerId}`}
+                    >
+                      {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
+                    </StyledActionButton>
+                  </>
+                )}
+
+                {(callStatus === 'ringing' || callStatus === 'in-call' || callStatus === 'connecting') && (
+                  <StyledActionButton onClick={() => handleCallEnd(false)} style={{ backgroundColor: '#dc3545' }}>
+                    Colgar
+                  </StyledActionButton>
+                )}
+              </StyledTopActions>
+              {/* Área de videollamada (remoto full + local overlay, como en videochat) */}
+              <StyledVideoArea>
+                <StyledRemoteVideo>
+                  <StyledVideoTitle>
+                    <StyledTitleAvatar src={callPeerAvatar || '/img/avatar.png'} alt="" />
+                    {callPeerName || 'Remoto'}
+                  </StyledVideoTitle>
+                  <video
+                    ref={callRemoteVideoRef}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    autoPlay
+                    playsInline
+                  />
+                </StyledRemoteVideo>
+
+                <StyledLocalVideo>
+                  <h5 style={{ color: 'white', margin: 0, fontSize: 12 }}>Tu Cámara</h5>
+                  <video
+                    ref={callLocalVideoRef}
+                    style={{ width: '100%', display: 'block', border: '1px solid rgba(255,255,255,0.25)' }}
+                    muted
+                    autoPlay
+                    playsInline
+                  />
+                </StyledLocalVideo>
+              </StyledVideoArea>
+
+              {/* Incoming: aceptar / rechazar */}
+              {callStatus === 'incoming' && (
+                <div style={{
+                  marginTop: 12, padding: 12, border: '1px solid #333', borderRadius: 8,
+                  background:'rgba(0,0,0,0.35)'
+                }}>
+                  <div style={{ color:'#fff', marginBottom: 8 }}>
+                    Te está llamando <strong>{callPeerName || `Usuario ${callPeerId}`}</strong>.
+                  </div>
+                  <div style={{ display:'flex', gap: 10 }}>
+                    <StyledActionButton onClick={handleCallAccept}>Aceptar</StyledActionButton>
+                    <StyledActionButton onClick={handleCallReject} style={{ backgroundColor:'#dc3545' }}>
+                      Rechazar
+                    </StyledActionButton>
+                  </div>
+                </div>
+              )}
+              {/* Ringing: indicador */}
+              {callStatus === 'ringing' && (
+                <div style={{ marginTop: 12, color:'#fff' }}>
+                  Llamando a {callPeerName || `Usuario ${callPeerId}`}… (sonando)
+                </div>
+              )}
+            </>
+          )}
+
+          {/*FIN RENDERIZADO CALLING */}
+
+          {/*RENDERIZADO FUNNYPLACE */}
           {activeTab === 'funnyplace' && ( <FunnyplacePage /> )}
+          {/*FIN RENDERIZADO FUNNYPLACE */}
 
+          {/*RENDERIZADO FAVORITOS */}
           {activeTab === 'favoritos' && (
             <div style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px', position:'relative', width:'100%', maxWidth:'800px', margin:'0 auto' }}>
               {!centerChatPeerId ? (
@@ -1232,6 +1908,8 @@ const DashboardClient = () => {
               )}
             </div>
           )}
+          {/*FIN RENDERIZADO FAVORITOS */}
+
         </StyledCenter>
         {/* ================FIN ZONA CENTRAL =================*/}
 
