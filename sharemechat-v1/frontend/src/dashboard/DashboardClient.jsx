@@ -196,6 +196,17 @@ const DashboardClient = () => {
     })();
   }, [token, currentModelId]);
 
+  // [CALL] Enlaza el chat central al peer de la llamada para poder chatear durante la llamada
+  useEffect(() => {
+    if (activeTab !== 'calling') return;
+    if (!callPeerId) return;
+
+    // No cambiamos pestañas, solo “apuntamos” el chat central al peer activo de la llamada
+    setCenterChatPeerId(callPeerId);
+    setCenterChatPeerName(callPeerName || `Usuario ${callPeerId}`);
+    // IMPORTANT: peerIdRef ya se actualiza cuando cambia centerChatPeerId (tienes un useEffect para eso)
+  }, [activeTab, callPeerId, callPeerName]);
+
   useEffect(() => {
       meIdRef.current = Number(user?.id) || null;
   }, [user?.id]);
@@ -524,11 +535,21 @@ const DashboardClient = () => {
         }
 
         if (data.type === 'call:accepted') {
-          console.log('[CALL][accepted][Client] peer=', callPeerIdRef.current, 'role=', callRoleRef.current);
+          console.log('[CALL][accepted][...] peer=', callPeerIdRef.current, 'role=', callRoleRef.current);
+
+          // 🔧 FIX: limpiar el timeout de timbrado si seguía vivo
+          if (callRingTimeoutRef.current) {
+            clearTimeout(callRingTimeoutRef.current);
+            callRingTimeoutRef.current = null;
+          }
+
           const initiator = (callRoleRef.current === 'caller');
           wireCallPeer(initiator);
+
           setCallStatus('in-call');
           setCallError('');
+
+          // mantener ping periódico de saldo
           if (callPingRef.current) clearInterval(callPingRef.current);
           callPingRef.current = setInterval(() => {
             try {
@@ -538,8 +559,10 @@ const DashboardClient = () => {
               }
             } catch {}
           }, 30000);
+
           return;
         }
+
 
         if (data.type === 'call:signal' && data.signal) {
           console.log('[CALL][signal:in][Client]', data.signal?.type || (data.signal?.candidate ? 'candidate' : 'unknown'));
@@ -1364,11 +1387,11 @@ const DashboardClient = () => {
     callPeerRef.current = p;
   };
 
-
   //Limpieza integral de llamada
   const cleanupCall = (reason = 'cleanup') => {
     console.log('[CALL][cleanup] reason=', reason);
 
+    // 1) timers
     if (callPingRef.current) {
       clearInterval(callPingRef.current);
       callPingRef.current = null;
@@ -1378,34 +1401,52 @@ const DashboardClient = () => {
       callRingTimeoutRef.current = null;
     }
 
+    // 2) peer/webrtc
     if (callPeerRef.current) {
       try { callPeerRef.current.destroy(); } catch {}
       callPeerRef.current = null;
     }
 
+    // 3) remote stream + DOM video (evitar “frame congelado”)
     if (callRemoteStream) {
       try { callRemoteStream.getTracks().forEach(t => t.stop()); } catch {}
       setCallRemoteStream(null);
     }
+    if (callRemoteVideoRef?.current) {
+      try {
+        callRemoteVideoRef.current.srcObject = null;
+        // forzamos repaint del elemento
+        if (typeof callRemoteVideoRef.current.load === 'function') {
+          callRemoteVideoRef.current.load();
+        }
+      } catch {}
+    }
 
-    // ¡no apagamos la cámara local automáticamente si el usuario quiere reintentar!
-    // pero si el motivo fue 'forced-end' o 'ended', puedes valorar apagar:
-    if (reason === 'forced-end' || reason === 'ended') {
+    // 4) local stream (solo si cierre total)
+    if (reason === 'forced-end' || reason === 'ended' || reason === 'canceled') {
       if (callLocalStreamRef.current) {
         try { callLocalStreamRef.current.getTracks().forEach(t => t.stop()); } catch {}
       }
       callLocalStreamRef.current = null;
       setCallCameraActive(false);
-      if (callLocalVideoRef.current) callLocalVideoRef.current.srcObject = null;
+      if (callLocalVideoRef?.current) {
+        try { callLocalVideoRef.current.srcObject = null; callLocalVideoRef.current.load?.(); } catch {}
+      }
     }
 
+    // 5) estado UI de Calling (limpiar cabecera/nombre/target)
     setCallStatus('idle');
     setCallRole(null);
     callRoleRef.current = null;
     setCallError('');
-    // mantenemos callPeerId/name para reintentos; si prefieres resetear:
-    // setCallPeerId(null); setCallPeerName('');
+
+    // Opcional: ocultar datos del último peer en la UI de Calling
+    setCallPeerId(null);
+    callPeerIdRef.current = null;
+    setCallPeerName('');
+    setCallPeerAvatar('');
   };
+
 
   // [CALL] Selección directa desde la lista de favoritos (pestaña Calling): no abre chat, solo fija destino
   const handleSelectCallTargetFromFavorites = (favUser) => {
@@ -1731,7 +1772,7 @@ const DashboardClient = () => {
                     playsInline
                   />
                 </StyledRemoteVideo>
-
+                {/* Video Local superpuesto */}
                 <StyledLocalVideo>
                   <h5 style={{ color: 'white', margin: 0, fontSize: 12 }}>Tu Cámara</h5>
                   <video
@@ -1742,7 +1783,92 @@ const DashboardClient = () => {
                     playsInline
                   />
                 </StyledLocalVideo>
+
+                {/* Overlay de mensajes (reuso de Favoritos/videochat) */}
+                <StyledChatContainer>
+                  <StyledChatList>
+                    {centerMessages.map((m) => {
+                      // Detecta regalo inline si viene como [[GIFT:id:nombre]]
+                      let giftData = m.gift;
+                      if (
+                        !giftData &&
+                        typeof m.body === 'string' &&
+                        m.body.startsWith('[[GIFT:') &&
+                        m.body.endsWith(']]')
+                      ) {
+                        try {
+                          const parts = m.body.slice(2, -2).split(':');
+                          giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
+                        } catch {}
+                      }
+                      const isMe = Number(m.senderId) === Number(user?.id);
+                      return (
+                        <StyledChatMessageRow key={m.id} $me={isMe}>
+                          {giftData ? (
+                            giftRenderReady && (() => {
+                              const src =
+                                gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon || null;
+                              return src ? (
+                                <StyledChatBubble $me={isMe}>
+                                  <img src={src} alt="" style={{ width: 24, height: 24, verticalAlign: 'middle' }} />
+                                </StyledChatBubble>
+                              ) : null;
+                            })()
+                          ) : (
+                            <StyledChatBubble $me={isMe}>
+                              {m.body}
+                            </StyledChatBubble>
+                          )}
+                        </StyledChatMessageRow>
+                      );
+                    })}
+                  </StyledChatList>
+                </StyledChatContainer>
               </StyledVideoArea>
+
+              {/* Dock de entrada (mismo que videochat, usando el chat central con el peer de la llamada) */}
+              <StyledChatDock>
+                <StyledChatInput
+                  type="text"
+                  value={centerInput}
+                  onChange={(e) => setCenterInput(e.target.value)}
+                  placeholder="Escribe un mensaje…"
+                  autoComplete="off"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendCenterMessage();
+                    }
+                  }}
+                />
+                <StyledActionButton type="button" onClick={sendCenterMessage}>
+                  Enviar
+                </StyledActionButton>
+
+                {/* (Opcional) regalos en llamada, igual que en favoritos */}
+                <StyledGiftToggle
+                  type="button"
+                  onClick={() => setShowCenterGifts(s => !s)}
+                  title="Enviar regalo"
+                >
+                  🎁
+                </StyledGiftToggle>
+
+                {showCenterGifts && (
+                  <StyledGiftsPanel>
+                    <StyledGiftGrid>
+                      {gifts.map(g => (
+                        <button key={g.id} onClick={() => sendGiftMsg(g.id)}>
+                          <img src={g.icon} alt={g.name} />
+                          <div>{g.name}</div>
+                          <div>{fmtEUR(g.cost)}</div>
+                        </button>
+                      ))}
+                    </StyledGiftGrid>
+                  </StyledGiftsPanel>
+                )}
+              </StyledChatDock>
+
 
               {/* Incoming: aceptar / rechazar */}
               {callStatus === 'incoming' && (
