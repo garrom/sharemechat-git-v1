@@ -256,6 +256,11 @@ const DashboardClient = () => {
 
   // [CALL][Client] target dinámico desde Favoritos (chat central) o favorito seleccionado
   useEffect(() => {
+    // Si la llamada NO está en idle, no tocamos el target actual (evita bucles / reseteos).
+    if (callStatus !== 'idle') {
+      return;
+    }
+
     // 1) Prioridad: chat central -> favorito seleccionado -> sin target
     if (centerChatPeerId) {
       const id = Number(centerChatPeerId);
@@ -263,7 +268,7 @@ const DashboardClient = () => {
       setCallPeerId(id);
       callPeerIdRef.current = id;
       setCallPeerName(name);
-      console.log('[CALL][Client] target <- Favorites chat:', id, name, '(tab:', activeTab, ')');
+      console.log('[CALL][Client] target <- Favorites chat:', id, name);
     } else if (selectedFav?.id) {
       const id = Number(selectedFav.id);
       const name =
@@ -271,18 +276,17 @@ const DashboardClient = () => {
       setCallPeerId(id);
       callPeerIdRef.current = id;
       setCallPeerName(name);
-      console.log('[CALL][Client] target <- Selected favorite:', id, name, '(tab:', activeTab, ')');
+      console.log('[CALL][Client] target <- Selected favorite:', id, name);
     } else {
       // 2) Sin target: deshabilita el botón de llamar
       setCallPeerId(null);
       callPeerIdRef.current = null;
       setCallPeerName('');
-      console.log('[CALL][Client] sin target: abre un chat de Favoritos para elegir destinatario (tab:', activeTab, ')');
+      console.log('[CALL][Client] sin target: abre un chat de Favoritos para elegir destinatario');
     }
-
-    // Nota: NO hacemos early-return por activeTab para no perder sincronización
   }, [
-    activeTab,                 // lo mantenemos solo para log y para reaccionar si cambian pestañas
+    // quitamos activeTab de dependencias para no re-ejecutar al entrar en Calling
+    callStatus,
     centerChatPeerId,
     centerChatPeerName,
     selectedFav?.id,
@@ -1584,14 +1588,27 @@ const DashboardClient = () => {
           {/* Lista de usuarios a la izquierda:
               - En Favoritos: abre chat central (handler original)
               - En Calling: fija destinatario de la llamada (NO abre chat) */}
-          {(activeTab === 'favoritos' || activeTab === 'calling') && (
+
+          {activeTab === 'favoritos' && (
             <FavoritesClientList
-              onSelect={activeTab === 'favoritos'
-                ? handleOpenChatFromFavorites
-                : handleSelectCallTargetFromFavorites}
+              onSelect={handleOpenChatFromFavorites}
               reloadTrigger={favReload}
             />
           )}
+
+          {activeTab === 'calling' && (
+            callStatus === 'idle' ? (
+              <FavoritesClientList
+                onSelect={handleSelectCallTargetFromFavorites}
+                reloadTrigger={favReload}
+              />
+            ) : (
+              <div style={{ padding: 8, color: '#adb5bd' }}>
+                En llamada: la lista se bloquea hasta colgar.
+              </div>
+            )
+          )}
+
 
         </StyledLeftColumn>
         {/* ========= FIN COLUMNA IZQUIERDA PESTAÑAS ======== */}
