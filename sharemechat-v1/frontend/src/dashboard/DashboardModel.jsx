@@ -1043,6 +1043,7 @@ const DashboardModel = () => {
 
 
   const streamingActivo = !!remoteStream;
+  const showCallMedia = callStatus === 'in-call';
 
   const handleGoFunnyplace = () => {
     if (streamingActivo) {
@@ -1985,7 +1986,7 @@ const DashboardModel = () => {
               </StyledTopActions>
 
               {/* Área de videollamada (remoto full + local overlay + chat overlay) */}
-              <StyledVideoArea>
+              <StyledVideoArea style={{ display: showCallMedia ? 'block' : 'none' }}>
                 <StyledRemoteVideo>
                   <StyledVideoTitle>
                     <StyledTitleAvatar src={callPeerAvatar || '/img/avatar.png'} alt="" />
@@ -2054,7 +2055,7 @@ const DashboardModel = () => {
               </StyledVideoArea>
 
               {/* Dock de entrada para el chat central durante la llamada */}
-              <StyledChatDock>
+              <StyledChatDock style={{ display: showCallMedia ? 'flex' : 'none' }}>
                 <StyledChatInput
                   type="text"
                   value={centerInput}
