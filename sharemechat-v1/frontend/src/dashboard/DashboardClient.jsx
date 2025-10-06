@@ -70,7 +70,7 @@ const DashboardClient = () => {
 
   // ====== CALLING (1-a-1) ======
   const [callCameraActive, setCallCameraActive] = useState(false);
-  const [callStatus, setCallStatus] = useState('idle'); // idle | camera-ready | connecting | ringing | incoming | in-call
+  const [callStatus, setCallStatus] = useState('idle');
   const [callPeerId, setCallPeerId] = useState(null);
   const [callPeerName, setCallPeerName] = useState('');
   const [callRemoteStream, setCallRemoteStream] = useState(null);
@@ -86,6 +86,7 @@ const DashboardClient = () => {
   const callRingTimeoutRef = useRef(null);
   const callRoleRef = useRef(null);
   const callPeerIdRef = useRef(null);
+  const callTargetLockedRef = useRef(false);
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -256,8 +257,13 @@ const DashboardClient = () => {
 
   // [CALL][Client] target dinámico desde Favoritos (chat central) o favorito seleccionado
   useEffect(() => {
-    // Si la llamada NO está en idle, no tocamos el target actual (evita bucles / reseteos).
+    // Si hay llamada activa O hay lock, no recalculamos target
     if (callStatus !== 'idle') {
+      console.log('[CALL][effect] target-from-favorites skipped (status!=idle)');
+      return;
+    }
+    if (callTargetLockedRef.current) {
+      console.log('[CALL][effect] target-from-favorites skipped (locked)');
       return;
     }
 
@@ -285,7 +291,6 @@ const DashboardClient = () => {
       console.log('[CALL][Client] sin target: abre un chat de Favoritos para elegir destinatario');
     }
   }, [
-    // quitamos activeTab de dependencias para no re-ejecutar al entrar en Calling
     callStatus,
     centerChatPeerId,
     centerChatPeerName,
@@ -337,6 +342,18 @@ const DashboardClient = () => {
       } catch {/* noop */}
     })();
   }, [callPeerId]);
+
+  // [CALL][Client] Efecto anti-deriva: si hay llamada activa y el chat apunta a otro peer, corrige.
+  useEffect(() => {
+    if (callStatus === 'idle') return;
+    const callPeer = Number(callPeerId);
+    const chatPeer = Number(centerChatPeerId);
+    if (Number.isFinite(callPeer) && callPeer > 0 && chatPeer !== callPeer) {
+      console.log('[CALL][drift] centerChatPeerId=', chatPeer, 'vs callPeerId=', callPeer, '-> force-sync to callPeerId');
+      setCenterChatPeerId(callPeer);
+      setCenterChatPeerName(callPeerName || `Usuario ${callPeer}`);
+    }
+  }, [callStatus, callPeerId, callPeerName, centerChatPeerId]);
 
 
   useEffect(() => {
@@ -514,12 +531,27 @@ const DashboardClient = () => {
 
         // ====== CALLING: EVENTOS call:* ======
         if (data.type === 'call:incoming') {
-          console.log('[CALL][incoming][Client] from=', data.from, 'name=', data.displayName);
-          setActiveTab('calling');
           const id = Number(data.from);
+          const name = String(data.displayName || `Usuario ${id}`);
+          console.log('[CALL][incoming][Client] from=', id, 'name=', name);
+
+          // Lock duro del target
+          callTargetLockedRef.current = true;
+          console.log('[CALL][lock] incoming -> lock on', id, '| prev selectedFav=', selectedFav?.id, 'centerChatPeerId=', centerChatPeerId);
+
+          // Forzar pestaña y sincronizar TODO a A
+          setActiveTab('calling');
           setCallPeerId(id);
           callPeerIdRef.current = id;
-          setCallPeerName(String(data.displayName || `Usuario ${id}`));
+          setCallPeerName(name);
+
+          // Sincroniza chat central con el peer de la llamada
+          setCenterChatPeerId(id);
+          setCenterChatPeerName(name);
+
+          // Limpia selección que pueda confundir UI
+          setSelectedFav(null);
+
           setCallStatus('incoming');
           setCallError('');
           return;
@@ -545,6 +577,14 @@ const DashboardClient = () => {
           if (callRingTimeoutRef.current) {
             clearTimeout(callRingTimeoutRef.current);
             callRingTimeoutRef.current = null;
+          }
+
+          // Reforzar sincronización (por si hubiera drift)
+          const peer = Number(callPeerIdRef.current);
+          if (Number.isFinite(peer) && peer > 0) {
+            console.log('[CALL][lock] accepted -> keep lock; peer=', peer);
+            setCenterChatPeerId(peer);
+            setCenterChatPeerName(callPeerName || `Usuario ${peer}`);
           }
 
           const initiator = (callRoleRef.current === 'caller');
@@ -1449,6 +1489,12 @@ const DashboardClient = () => {
     callPeerIdRef.current = null;
     setCallPeerName('');
     setCallPeerAvatar('');
+
+    // 6) unlock target
+    if (callTargetLockedRef.current) {
+      callTargetLockedRef.current = false;
+      console.log('[CALL][lock] cleanup -> unlock');
+    }
   };
 
 

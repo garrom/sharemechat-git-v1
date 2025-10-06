@@ -90,6 +90,7 @@ const DashboardModel = () => {
   const callRingTimeoutRef = useRef(null);
   const callRoleRef = useRef(null);
   const callPeerIdRef = useRef(null);
+  const callTargetLockedRef = useRef(false);
 
   const msgSocketRef = useRef(null);
   const msgPingRef = useRef(null);
@@ -273,8 +274,13 @@ const DashboardModel = () => {
 
   // [CALL][Model] target dinámico desde Favoritos (chat central) o favorito seleccionado
   useEffect(() => {
-    // Si la llamada NO está en idle, no recalculamos destino
+    // Si hay llamada activa O hay lock, no recalculamos destino
     if (callStatus !== 'idle') {
+      console.log('[CALL][effect] target-from-favorites skipped (status!=idle) [Model]');
+      return;
+    }
+    if (callTargetLockedRef.current) {
+      console.log('[CALL][effect] target-from-favorites skipped (locked) [Model]');
       return;
     }
 
@@ -302,7 +308,6 @@ const DashboardModel = () => {
       console.log('[CALL][Model] sin target: abre un chat de Favoritos para elegir destinatario');
     }
   }, [
-    // quitamos activeTab de dependencias
     callStatus,
     openChatWith,
     centerChatPeerName,
@@ -353,6 +358,18 @@ const DashboardModel = () => {
       } catch {/* noop */}
     })();
   }, [callPeerId]);
+
+  // [CALL][Model] Efecto anti-deriva: si hay llamada activa y el chat apunta a otro peer, corrige.
+  useEffect(() => {
+    if (callStatus === 'idle') return;
+    const callPeer = Number(callPeerId);
+    const chatPeer = Number(openChatWith);
+    if (Number.isFinite(callPeer) && callPeer > 0 && chatPeer !== callPeer) {
+      console.log('[CALL][drift][Model] openChatWith=', chatPeer, 'vs callPeerId=', callPeer, '-> force-sync to callPeerId');
+      setOpenChatWith(callPeer);
+      setCenterChatPeerName(callPeerName || `Usuario ${callPeer}`);
+    }
+  }, [callStatus, callPeerId, callPeerName, openChatWith]);
 
 
   useEffect(() => {
@@ -581,16 +598,32 @@ const DashboardModel = () => {
 
         // ==== CALLING: eventos call:* ====
         if (data.type === 'call:incoming') {
-          console.log('[CALL][incoming][Model] from=', data.from, 'name=', data.displayName);
-          setActiveTab('calling');
           const id = Number(data.from);
+          const name = String(data.displayName || `Usuario ${id}`);
+          console.log('[CALL][incoming][Model] from=', id, 'name=', name);
+
+          // Lock duro del target
+          callTargetLockedRef.current = true;
+          console.log('[CALL][lock] incoming -> lock on', id, '| prev selectedFav=', selectedFav?.id, 'openChatWith=', openChatWith);
+
+          // Forzar pestaña y sincronizar TODO a A
+          setActiveTab('calling');
           setCallPeerId(id);
           callPeerIdRef.current = id;
-          setCallPeerName(String(data.displayName || `Usuario ${id}`));
+          setCallPeerName(name);
+
+          // Sincroniza chat central con el peer de la llamada
+          setOpenChatWith(id);
+          setCenterChatPeerName(name);
+
+          // Limpia selección que pueda confundir UI
+          setSelectedFav(null);
+
           setCallStatus('incoming');
           setCallError('');
           return;
         }
+
 
         if (data.type === 'call:ringing') {
           console.log('[CALL][ringing][Model] to=', callPeerId);
@@ -611,6 +644,13 @@ const DashboardModel = () => {
           if (callRingTimeoutRef.current) {
             clearTimeout(callRingTimeoutRef.current);
             callRingTimeoutRef.current = null;
+          }
+          // Reforzar sincronización (por si hubiera drift)
+          const peer = Number(callPeerIdRef.current);
+          if (Number.isFinite(peer) && peer > 0) {
+            console.log('[CALL][lock] accepted -> keep lock [Model]; peer=', peer);
+            setOpenChatWith(peer);
+            setCenterChatPeerName(callPeerName || `Usuario ${peer}`);
           }
 
           const initiator = (callRoleRef.current === 'caller');
@@ -1242,6 +1282,7 @@ const DashboardModel = () => {
       console.log('[CALL][invite:send][Model] to=', toId, 'name=', toName);
       setCallPeerId(toId);
       callPeerIdRef.current = toId;
+      console.log('[CALL][invite:send][Model] to=', toId, 'name=', toName);
       setCallPeerName(toName);
       msgSocketRef.current.send(JSON.stringify({ type: 'call:invite', to: toId }));
       setCallRole('caller');
@@ -1469,6 +1510,13 @@ const DashboardModel = () => {
     callPeerIdRef.current = null;
     setCallPeerName('');
     setCallPeerAvatar('');
+
+    // 6) unlock target
+    if (callTargetLockedRef.current) {
+      callTargetLockedRef.current = false;
+      console.log('[CALL][lock] cleanup -> unlock [Model]');
+    }
+
   };
 
 
