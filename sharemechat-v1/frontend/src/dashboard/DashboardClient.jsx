@@ -1532,6 +1532,21 @@ const DashboardClient = () => {
     if (favUser?.avatarUrl) setCallPeerAvatar(favUser.avatarUrl);
   };
 
+  // Id “activo” para resaltar en la lista de contactos (favoritos/calling)
+  const selectedContactId = (() => {
+    // En Calling, prioriza el peer de la llamada si lo hay
+    if (activeTab === 'calling') {
+      return Number(callPeerId ?? selectedFav?.id ?? centerChatPeerId) || null;
+    }
+    // En Favoritos, prioriza el chat abierto; si no, el seleccionado
+    if (activeTab === 'favoritos') {
+      return Number(centerChatPeerId ?? selectedFav?.id ?? callPeerId) || null;
+    }
+    // Otras pestañas: intenta mantener algo coherente
+    return Number(centerChatPeerId ?? selectedFav?.id ?? callPeerId) || null;
+  })();
+
+
 
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
@@ -1640,6 +1655,7 @@ const DashboardClient = () => {
             <FavoritesClientList
               onSelect={handleOpenChatFromFavorites}
               reloadTrigger={favReload}
+              selectedId={selectedContactId}
             />
           )}
 
@@ -1648,6 +1664,7 @@ const DashboardClient = () => {
               <FavoritesClientList
                 onSelect={handleSelectCallTargetFromFavorites}
                 reloadTrigger={favReload}
+                selectedId={selectedContactId}
               />
             ) : (
               <div style={{ padding: 8, color: '#adb5bd' }}>

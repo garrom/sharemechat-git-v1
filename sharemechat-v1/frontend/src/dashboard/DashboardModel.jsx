@@ -38,7 +38,8 @@ import {
   StyledTitleAvatar,
   StyledTabsBar,
   StyledTabButton,
-  StyledTabIcon
+  StyledTabIcon,
+  StyledSelectableRow
 
 } from '../styles/ModelStyles';
 
@@ -1554,6 +1555,17 @@ const DashboardModel = () => {
     if (favUser?.avatarUrl) setCallPeerAvatar(favUser.avatarUrl);
   };
 
+  // Id “activo” para resaltar en la lista de contactos (favoritos/calling)
+  const selectedContactId = (() => {
+    if (activeTab === 'calling') {
+      return Number(callPeerId ?? selectedFav?.id ?? openChatWith) || null;
+    }
+    if (activeTab === 'favoritos') {
+      return Number(openChatWith ?? selectedFav?.id ?? callPeerId) || null;
+    }
+    return Number(openChatWith ?? selectedFav?.id ?? callPeerId) || null;
+  })();
+
 
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
@@ -1675,6 +1687,7 @@ const DashboardModel = () => {
             <FavoritesModelList
               onSelect={handleOpenChatFromFavorite}
               reloadTrigger={favReload}
+              selectedId={selectedContactId}
             />
           )}
 
@@ -1683,6 +1696,7 @@ const DashboardModel = () => {
               <FavoritesModelList
                 onSelect={handleSelectCallTargetFromFavorites}
                 reloadTrigger={favReload}
+                selectedId={selectedContactId}
               />
             ) : (
               <div style={{ padding: 8, color: '#adb5bd' }}>

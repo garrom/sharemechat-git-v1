@@ -463,3 +463,21 @@ export const StyledNavAvatar = styled.img`
   cursor: pointer;
 `;
 
+// === FILA SELECCIONABLE PARA LISTADOS (favoritos/contactos) ===
+export const StyledSelectableRow = styled.div`
+  border-radius: 8px;
+  padding: 8px;
+  transition: background-color .15s ease, border-color .15s ease;
+  border: 1px solid transparent;
+
+  /* Hover genérico (cuando NO está seleccionado) */
+  &:hover {
+    background: #f8f9fa;
+  }
+
+  /* Estado seleccionado con data-attr estandar */
+  &[data-selected="true"] {
+    background: #e7f1ff;   /* azul muy suave */
+    border-color: #b6d4fe;  /* borde azul suave */
+  }
+`;

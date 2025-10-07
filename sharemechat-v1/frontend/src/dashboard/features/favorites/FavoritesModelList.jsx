@@ -3,7 +3,7 @@ import {
   List, StateRow, ItemCard, Avatar, Info, Name, Badges, Badge
 } from '../../../styles/features/FavoritesStyles';
 
-function FavListItem({ user, avatarUrl, onSelect }) {
+function FavListItem({ user, avatarUrl, onSelect, selected = false }) {
   const placeholder = '/img/avatar.png';
   const [imgSrc, setImgSrc] = useState(placeholder);
 
@@ -21,7 +21,14 @@ function FavListItem({ user, avatarUrl, onSelect }) {
     invited === 'rejected' ? 'danger' : 'success';
 
   return (
-    <ItemCard $clickable onClick={() => onSelect?.(user)}>
+    <ItemCard
+      $clickable
+      data-selected={selected ? 'true' : 'false'}
+      aria-selected={selected ? 'true' : 'false'}
+      onClick={() => onSelect?.(user)}
+      style={selected ? { background: '#e7f1ff', borderColor: '#b6d4fe' } : undefined}
+    >
+
       <Avatar src={imgSrc} alt="" $size={28} />
       <Info>
         <Name>{user.nickname || `Usuario #${user.id}`}</Name>
@@ -33,7 +40,7 @@ function FavListItem({ user, avatarUrl, onSelect }) {
   );
 }
 
-export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
+export default function FavoritesModelList({ onSelect, reloadTrigger = 0, selectedId = null }) {
   const [items, setItems] = useState([]);
   const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);
@@ -104,14 +111,16 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0 }) {
 
   return (
     <List>
-      {items.map(u => (
-        <FavListItem
-          key={u.id}
-          user={u}
-          avatarUrl={avatarMap?.[u.id] || null}
-          onSelect={onSelect}
-        />
-      ))}
+     {items.map(u => (
+       <FavListItem
+         key={u.id}
+         user={u}
+         avatarUrl={avatarMap?.[u.id] || null}
+         onSelect={onSelect}
+         selected={Number(u.id) === Number(selectedId)}
+       />
+     ))}
+
     </List>
   );
 }
