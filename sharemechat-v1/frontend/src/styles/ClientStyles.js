@@ -250,8 +250,8 @@ export const StyledIconWrapper = styled.span`
 // Contenedor para cámara local
 export const StyledLocalVideo = styled.div`
   position: absolute;
-  top: 10px;
-  right: 10px;
+  top: 14px;
+  right: 28px;
   width: 10%;
   z-index: 2;
 `;

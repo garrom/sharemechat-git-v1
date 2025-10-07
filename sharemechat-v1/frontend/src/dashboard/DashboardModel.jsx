@@ -92,6 +92,8 @@ const DashboardModel = () => {
   const callRoleRef = useRef(null);
   const callPeerIdRef = useRef(null);
   const callTargetLockedRef = useRef(false);
+  const remoteVideoWrapRef = useRef(null);
+  const callRemoteWrapRef  = useRef(null);
 
   const msgSocketRef = useRef(null);
   const msgPingRef = useRef(null);
@@ -747,6 +749,21 @@ const DashboardModel = () => {
      return () => closeMessagesSocket();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // === Fullscreen helper (genérico) ===
+  const toggleFullscreen = (el) => {
+    if (!el) return;
+    const d = document;
+    const isFs = d.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement;
+    if (!isFs) {
+      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      try { req && req.call(el); } catch {}
+    } else {
+      const exit = d.exitFullscreen || d.webkitExitFullscreen || d.mozCancelFullScreen || d.msExitFullscreen;
+      try { exit && exit.call(d); } catch {}
+    }
+  };
+
 
   const startCamera = async () => {
     try {
@@ -1755,15 +1772,31 @@ const DashboardModel = () => {
                     <>
                       {/* 95%: área de vídeo + overlay de mensajes */}
                       <StyledVideoArea>
-                        <StyledRemoteVideo>
+                        <StyledRemoteVideo ref={remoteVideoWrapRef}>
                           <StyledVideoTitle>
                             {clientAvatar && <StyledTitleAvatar src={clientAvatar} alt="" />}
                             {clientNickname}
+                            {/* Botón expandir */}
+                            <button
+                              type="button"
+                              onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
+                              title="Pantalla completa"
+                              style={{
+                                marginLeft: 8,
+                                padding: '2px 8px',
+                                borderRadius: 6,
+                                border: '1px solid rgba(255,255,255,.6)',
+                                background: 'rgba(0,0,0,.25)',
+                                color: '#fff',
+                                cursor: 'pointer'
+                              }}
+                            >⤢</button>
                           </StyledVideoTitle>
                           <video
                             ref={remoteVideoRef}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
                             autoPlay
+                            onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                           />
                         </StyledRemoteVideo>
 
@@ -2001,16 +2034,32 @@ const DashboardModel = () => {
 
               {/* Área de videollamada (remoto full + local overlay + chat overlay) */}
               <StyledVideoArea style={{ display: showCallMedia ? 'block' : 'none' }}>
-                <StyledRemoteVideo>
+                <StyledRemoteVideo ref={callRemoteWrapRef}>
                   <StyledVideoTitle>
                     <StyledTitleAvatar src={callPeerAvatar || '/img/avatar.png'} alt="" />
                     {callPeerName || 'Remoto'}
+                    {/* Botón expandir */}
+                    <button
+                      type="button"
+                      onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
+                      title="Pantalla completa"
+                      style={{
+                        marginLeft: 8,
+                        padding: '2px 8px',
+                        borderRadius: 6,
+                        border: '1px solid rgba(255,255,255,.6)',
+                        background: 'rgba(0,0,0,.25)',
+                        color: '#fff',
+                        cursor: 'pointer'
+                      }}
+                    >⤢</button>
                   </StyledVideoTitle>
                   <video
                     ref={callRemoteVideoRef}
                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                     autoPlay
                     playsInline
+                    onDoubleClick={() => toggleFullscreen(callRemoteWrapRef.current)}
                   />
                 </StyledRemoteVideo>
 
