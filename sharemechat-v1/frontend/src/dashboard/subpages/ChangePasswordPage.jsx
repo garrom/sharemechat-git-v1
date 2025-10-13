@@ -6,7 +6,20 @@ const NavbarLite = ({ onBack }) => (
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     padding: '12px 16px', borderBottom: '1px solid #eee', position: 'sticky', top: 0, background: '#fff', zIndex: 10
   }}>
-    <div style={{ fontWeight: 700 }}>Mi Logo</div>
+    <a
+      href="/"
+      aria-label="SharemeChat"
+      style={{
+        display: 'inline-block',
+        width: 180,
+        height: 36,
+        backgroundImage: "url('/img/SharemeChat_2.svg')",
+        backgroundRepeat: 'no-repeat',
+        backgroundPosition: 'left center',
+        backgroundSize: 'contain'
+      }}
+    />
+
     <button onClick={onBack} style={{ padding: '8px 12px', cursor: 'pointer' }}>
       Volver
     </button>

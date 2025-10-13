@@ -96,3 +96,33 @@ export const CheckText = styled.span`
   color: ${colors.text};
   a { color: #007bff; text-decoration: underline; }
 `;
+
+export const StyledBrand = styled.a`
+  display: block;                /* ocupa todo el ancho disponible */
+  margin: 0 auto ${space.lg};    /* centrado + separación con el título */
+  width: 240px;                  /* tamaño grande del logo */
+  height: 60px;
+  background: url('/img/SharemeChat_2.svg') no-repeat center / contain;
+
+  /* oculta el texto interno si dejas “SharemeChat” dentro */
+  text-indent: -9999px;
+  overflow: hidden;
+  line-height: 0;
+  color: transparent;
+
+  &:hover { opacity: .96; }
+  &:focus-visible {
+    outline: 2px solid rgba(13,110,253,.35);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: ${bp.md}) {
+    width: 200px;
+    height: 50px;
+  }
+  @media (max-width: 420px) {
+    width: 170px;
+    height: 42px;
+  }
+`;
+

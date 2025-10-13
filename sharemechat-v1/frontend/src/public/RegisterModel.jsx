@@ -14,6 +14,7 @@ import {
   CheckRow,
   CheckInput,
   CheckText,
+  StyledBrand
 } from '../styles/RegisterClientModelStyles';
 
 const RegisterModel = () => {
@@ -87,7 +88,8 @@ const RegisterModel = () => {
   return (
     <Container>
       <Form onSubmit={handleRegister} noValidate>
-        <Title>Registro como Modelo</Title>
+        <StyledBrand href="/" aria-label="SharemeChat"/>
+        <Title>Registro Modelo</Title>
         {error && <ErrorText role="alert">{error}</ErrorText>}
 
         <Field>

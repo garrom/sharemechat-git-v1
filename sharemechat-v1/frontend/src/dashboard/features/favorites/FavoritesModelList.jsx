@@ -4,7 +4,7 @@ import {
 } from '../../../styles/features/FavoritesStyles';
 
 function FavListItem({ user, avatarUrl, onSelect, selected = false }) {
-  const placeholder = '/img/avatar.png';
+  const placeholder = '/img/avatarChico.png';
   const [imgSrc, setImgSrc] = useState(placeholder);
 
   // Solo actualiza si llega una URL válida; si no hay URL, permanece el placeholder (sin flicker)
@@ -29,7 +29,12 @@ function FavListItem({ user, avatarUrl, onSelect, selected = false }) {
       style={selected ? { background: '#e7f1ff', borderColor: '#b6d4fe' } : undefined}
     >
 
-      <Avatar src={imgSrc} alt="" $size={28} />
+      <Avatar
+        src={imgSrc}
+        alt=""
+        $size={28}
+        onError={(e) => { e.currentTarget.src = '/img/avatarChico.png'; }}
+      />
       <Info>
         <Name>{user.nickname || `Usuario #${user.id}`}</Name>
       </Info>

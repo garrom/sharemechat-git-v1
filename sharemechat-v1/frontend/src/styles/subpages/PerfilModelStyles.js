@@ -1,4 +1,4 @@
-// src/styles/pages/PerfilModelStyles.js
+// src/styles/subpages/PerfilModelStyles.js
 import styled from 'styled-components';
 import { radius } from '../core/tokens';
 

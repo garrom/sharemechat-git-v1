@@ -1,13 +1,14 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
-import { Wrap, Card, Title, Sub, Row, Btn } from '../styles/HomeStyles';
+import { Wrap, Card, Title, Sub, Row, Btn, StyledBrand  } from '../styles/HomeStyles';
 
 const Home = () => {
   const history = useHistory();
   return (
     <Wrap>
       <Card>
-        <Title>ShareMeChat</Title>
+        <StyledBrand href="/" aria-label="SharemeChat">ShareMeChat</StyledBrand>
+        <Title>Welcome</Title>
         <Sub>Videochat 1:1. Modelos verificadas. Acceso solo 18+.</Sub>
         <Row>
           <Btn $primary onClick={() => history.push('/login')}>Entrar</Btn>

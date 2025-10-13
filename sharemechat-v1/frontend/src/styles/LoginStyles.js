@@ -28,10 +28,11 @@ export const StyledForm = styled.form`
 `;
 
 export const FormTitle = styled.h2`
-  margin: 0 0 ${space.lg};
+  margin: ${space.xs} 0 ${space.lg};
   font-weight: 600;
   text-align: center;
 `;
+
 
 export const Status = styled.div`
   color: ${colors.textMuted};
@@ -83,3 +84,33 @@ export const StyledLinkButton = styled.button`
   justify-content: flex-start;
   &:focus { ${focusRing} }
 `;
+
+export const StyledBrand = styled.a`
+  display: block;                /* ocupa todo el ancho disponible */
+  margin: 0 auto ${space.lg};    /* centrado horizontal con margen abajo */
+  width: 240px;                  /* tamaño más grande */
+  height: 60px;                  /* alto más grande */
+  background: url('/img/SharemeChat_2.svg') no-repeat center / contain;
+
+  /* oculta el texto si lo dejas dentro */
+  text-indent: -9999px;
+  overflow: hidden;
+  line-height: 0;
+  color: transparent;
+
+  &:hover { opacity: .96; }
+  &:focus-visible {
+    outline: 2px solid rgba(13,110,253,.35);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: ${bp.md}) {
+    width: 200px;
+    height: 50px;
+  }
+  @media (max-width: 420px) {
+    width: 170px;
+    height: 42px;
+  }
+`;
+

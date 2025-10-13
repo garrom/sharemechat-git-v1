@@ -10,6 +10,8 @@ import {
   StyledLeftColumn,
   StyledCenter,
   StyledRightColumn,
+  StyledBrand
+
 } from '../../styles/ModelStyles';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
@@ -221,7 +223,7 @@ const ModelDocuments = () => {
     <StyledContainer>
       {/* NAVBAR */}
       <StyledNavbar>
-        <span>Mi Logo</span>
+        <StyledBrand href="/" aria-label="SharemeChat" />
         <div>
           <span className="me-3" style={{ marginLeft: 8 }}>Hola, {userName}</span>
           <StyledNavButton type="button" onClick={() => history.push('/dashboard-user-model')}>

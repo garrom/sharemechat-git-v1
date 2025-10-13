@@ -12,12 +12,13 @@ export const StyledContainer = styled.div`
 
 // Navbar
 export const StyledNavbar = styled.nav`
-  background-color: #B4717E;
+  background-color: #2B2F33;
   color: white;
-  padding: 15px 20px;
+  padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  background: linear-gradient(180deg, #2B2F33 0%, #272B30 100%);
 `;
 
 // Botón de la Navbar
@@ -463,7 +464,7 @@ export const StyledNavAvatar = styled.img`
   cursor: pointer;
 `;
 
-// === FILA SELECCIONABLE PARA LISTADOS (favoritos/contactos) ===
+// FILA SELECCIONABLE PARA LISTADOS
 export const StyledSelectableRow = styled.div`
   border-radius: 8px;
   padding: 8px;
@@ -480,4 +481,29 @@ export const StyledSelectableRow = styled.div`
     background: #e7f1ff;   /* azul muy suave */
     border-color: #b6d4fe;  /* borde azul suave */
   }
+`;
+
+// MARCA/LOGO
+export const StyledBrand = styled.a`
+  display: inline-block;
+  width: 200px;
+  height: 36px;
+  background-image: url('/img/SharemeChat.svg'); /* <- AQUÍ el nombre del fichero */
+  background-repeat: no-repeat;
+  background-position: left center;
+  background-size: contain;
+
+  /* Texto oculto (accesible para screen readers) */
+  text-indent: -9999px;
+  overflow: hidden;
+  white-space: nowrap;
+
+  outline: none;
+  border-radius: 6px;
+  &:focus-visible {
+    box-shadow: 0 0 0 3px rgba(13,110,253,.35);
+  }
+
+  @media (max-width: 1024px) { width: 136px; height: 26px; }
+  @media (max-width: 768px)  { width: 120px; height: 24px; }
 `;

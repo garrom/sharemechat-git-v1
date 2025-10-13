@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
   Shell, Navbar, NavbarRight, LogoutBtn,
-  Main, Card, Row, Input, PrimaryBtn,
+  Main, Card, Row, Input, PrimaryBtn,StyledBrand,
   Muted, OkMsg, ErrMsg
 } from '../styles/DashboardUserCliModStyles';
 
@@ -57,7 +57,7 @@ const DashboardUserClient = () => {
   return (
     <Shell>
       <Navbar $variant="client">
-        <span>Mi Logo</span>
+        <StyledBrand href="/" aria-label="SharemeChat" />
         <NavbarRight>
           <span>Hola, {userName}</span>
           <LogoutBtn onClick={handleLogout} title="Cerrar sesión">Salir</LogoutBtn>

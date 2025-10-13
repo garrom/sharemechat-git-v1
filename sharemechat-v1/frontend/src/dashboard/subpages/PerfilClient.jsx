@@ -7,6 +7,7 @@ import {
   StyledContainer,
   StyledNavbar,
   StyledNavButton,
+  StyledBrand
 } from '../../styles/ClientStyles';
 
 // Estilos específicos de la página
@@ -31,7 +32,8 @@ import {
   ButtonDangerOutline,
   Hint,
   BackButton,
-} from '../../styles/pages/PerfilClientModelStyle.js';
+
+} from '../../styles/subpages/PerfilClientModelStyle.js';
 
 const DOCS_GET_URL    = '/api/clients/documents/me';
 const DOCS_UPLOAD_URL = '/api/clients/documents'; // POST subir, DELETE eliminar ?field=pic
@@ -213,7 +215,7 @@ const PerfilClient = () => {
   return (
     <StyledContainer>
       <StyledNavbar>
-        <span>Mi Logo</span>
+        <StyledBrand href="/" aria-label="SharemeChat" />
         <div>
           <StyledNavButton type="button" onClick={onUnsubscribe}>
             Darme de baja

@@ -32,14 +32,20 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
     else window.dispatchEvent(new CustomEvent('open-fav-chat', { detail: { user } }));
   };
 
-  const avatar = resolveProfilePic(user, 'FavoriteItem') || '/img/avatar.png';
+  const role = String(user?.role || user?.userType || '').toUpperCase();
+  const fallback = role === 'MODEL' ? '/img/avatarChica.png' : '/img/avatarChico.png';
+  const avatar = resolveProfilePic(user, 'FavoriteItem') || fallback;
+
 
   return (
     <ItemCard $clickable={!!onClick} onClick={() => onClick && onClick(user)}>
       <Avatar
         src={avatar}
         alt={user.nickname || user.email || 'user'}
-        onError={(e) => { e.currentTarget.src = '/img/avatar.png'; }}
+        onError={(e) => {
+          const r = String(user?.role || user?.userType || '').toUpperCase();
+          e.currentTarget.src = r === 'MODEL' ? '/img/avatarChica.png' : '/img/avatarChico.png';
+        }}
       />
       <Info>
         <Name>{user.nickname || user.name || user.email || `Usuario ${user.id}`}</Name>

@@ -39,7 +39,8 @@ import {
   StyledTabsBar,
   StyledTabButton,
   StyledTabIcon,
-  StyledSelectableRow
+  StyledSelectableRow,
+  StyledBrand
 
 } from '../styles/ModelStyles';
 
@@ -204,7 +205,7 @@ const DashboardModel = () => {
     setCenterChatPeerName(callPeerName || `Usuario ${callPeerId}`);
 
     // Garantiza socket de mensajes activo
-    openMessagesSocket?.();
+    openMsgSocket?.();
   }, [activeTab, callPeerId, callPeerName]);
 
 
@@ -479,7 +480,7 @@ const DashboardModel = () => {
     readAt: raw.readAt ?? raw.read_at ?? null,
   });
 
-  const closeMessagesSocket = () => {
+  const closeMsgSocket = () => {
     try { if (msgSocketRef.current) msgSocketRef.current.close(); } catch {}
     msgSocketRef.current = null;
     setMsgConnected(false);
@@ -487,7 +488,7 @@ const DashboardModel = () => {
   };
 
 
-  const openMessagesSocket = () => {
+  const openMsgSocket = () => {
     const tk = localStorage.getItem('token');
     if (!tk) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
@@ -499,7 +500,7 @@ const DashboardModel = () => {
       return;
     }
 
-    closeMessagesSocket();
+    closeMsgSocket();
 
     const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const host  = window.location.host;
@@ -530,7 +531,7 @@ const DashboardModel = () => {
       setMsgConnected(false);
       clearMsgTimers();
       msgReconnectRef.current = setTimeout(() => {
-        openMessagesSocket();
+        openMsgSocket();
       }, 1500);
     };
 
@@ -745,8 +746,8 @@ const DashboardModel = () => {
 
 
   useEffect(() => {
-     openMessagesSocket();
-     return () => closeMessagesSocket();
+     openMsgSocket();
+     return () => closeMsgSocket();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -765,7 +766,7 @@ const DashboardModel = () => {
   };
 
 
-  const startCamera = async () => {
+  const handleActivateCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 640, height: 480 },
@@ -1092,7 +1093,7 @@ const DashboardModel = () => {
   };
 
 
-  const handleAddFavoriteClient = async () => {
+  const handleAddFavorite = async () => {
     if (!currentClientId) {
       alert('No se pudo identificar al cliente actual (falta peerUserId en el match).');
       return;
@@ -1120,7 +1121,7 @@ const DashboardModel = () => {
     }
   };
 
-  const handleOpenChatFromFavorite = (favUser) => {
+  const handleOpenChatFromFavorites = (favUser) => {
     const peer = Number(favUser?.id ?? favUser?.userId);
     const name =
       favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${peer || ''}`;
@@ -1143,12 +1144,12 @@ const DashboardModel = () => {
       setCenterMessages([]);
       centerSeenIdsRef.current = new Set();
       setShowMsgPanel(true);
-      openMessagesSocket?.();
+      openMsgSocket?.();
       return;
     }
 
     setShowMsgPanel(true);
-    openMessagesSocket?.();
+    openMsgSocket?.();
     openChatWithPeer(peer, name);
   };
 
@@ -1162,7 +1163,7 @@ const DashboardModel = () => {
     setCenterChatPeerName(displayName || `Usuario ${peerId}`);
     setCenterMessages([]);
 
-    openMessagesSocket();
+    openMsgSocket();
 
     try {
       const tk = localStorage.getItem('token');
@@ -1592,7 +1593,7 @@ const DashboardModel = () => {
 
       {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
-        <span>Mi Logo</span>
+        <StyledBrand href="/" aria-label="SharemeChat" />
         <StyledNavGroup>
           <span className="me-3">Hola, {displayName}</span>
 
@@ -1628,7 +1629,7 @@ const DashboardModel = () => {
             <StyledIconWrapper>Perfil</StyledIconWrapper>
           </StyledNavButton>
           <StyledNavAvatar
-            src={profilePic || '/img/avatar.png'}
+            src={profilePic || '/img/avatarChica.png'}
             alt="avatar"
             title="Ver perfil"
             onClick={handleProfile}
@@ -1702,7 +1703,7 @@ const DashboardModel = () => {
 
           {activeTab === 'favoritos' && (
             <FavoritesModelList
-              onSelect={handleOpenChatFromFavorite}
+              onSelect={handleOpenChatFromFavorites}
               reloadTrigger={favReload}
               selectedId={selectedContactId}
             />
@@ -1734,7 +1735,7 @@ const DashboardModel = () => {
             <>
               {status && <p style={{ color: '#6c757d', marginTop: '10px' }}>{status}</p>}
               {!cameraActive && (
-                <StyledActionButton onClick={startCamera}>Activar Cámara</StyledActionButton>
+                <StyledActionButton onClick={handleActivateCamera}>Activar Cámara</StyledActionButton>
               )}
               {cameraActive && (
                 <>
@@ -1752,7 +1753,7 @@ const DashboardModel = () => {
                       <>
                         <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
                         {currentClientId && (
-                          <StyledActionButton onClick={handleAddFavoriteClient}> + Favorito </StyledActionButton>
+                          <StyledActionButton onClick={handleAddFavorite}> + Favorito </StyledActionButton>
                         )}
                       </>
                     )}
@@ -1774,7 +1775,7 @@ const DashboardModel = () => {
                       <StyledVideoArea>
                         <StyledRemoteVideo ref={remoteVideoWrapRef}>
                           <StyledVideoTitle>
-                            {clientAvatar && <StyledTitleAvatar src={clientAvatar} alt="" />}
+                            <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
                             {clientNickname}
                             {/* Botón expandir */}
                             <button
@@ -2036,7 +2037,7 @@ const DashboardModel = () => {
               <StyledVideoArea style={{ display: showCallMedia ? 'block' : 'none' }}>
                 <StyledRemoteVideo ref={callRemoteWrapRef}>
                   <StyledVideoTitle>
-                    <StyledTitleAvatar src={callPeerAvatar || '/img/avatar.png'} alt="" />
+                    <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
                     {callPeerName || 'Remoto'}
                     {/* Botón expandir */}
                     <button

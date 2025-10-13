@@ -12,6 +12,7 @@ import {
   Field,
   FieldError,
   FormTitle,
+  StyledBrand
 } from '../styles/LoginStyles';
 import Roles from '../constants/Roles';
 import UserTypes from '../constants/UserTypes';
@@ -95,7 +96,8 @@ const Login = () => {
   return (
     <StyledContainer>
       <StyledForm onSubmit={handleLogin} noValidate>
-        <FormTitle>LOGIN SHAREMECHAT</FormTitle>
+        <StyledBrand href="/" aria-label="SharemeChat"/>
+        <FormTitle>LOGIN</FormTitle>
 
         {/* Mensajes generales */}
         {status && <Status role="status">{status}</Status>}
@@ -140,6 +142,14 @@ const Login = () => {
         <StyledButton type="submit" disabled={loading}>
           {loading ? 'Entrando…' : 'Iniciar Sesión'}
         </StyledButton>
+
+        <StyledLinkButton
+          type="button"
+          onClick={() => !loading && history.push('/')}
+          aria-label="Volver a Home"
+        >
+          Volver a inicio
+        </StyledLinkButton>
 
         <StyledLinkButton type="button" onClick={() => !loading && history.push('/register-client')}>
           Regístrate como Cliente

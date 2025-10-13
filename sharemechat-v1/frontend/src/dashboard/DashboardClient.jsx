@@ -38,7 +38,8 @@ import {
   StyledTitleAvatar,
   StyledTabsBar,
   StyledTabButton,
-  StyledTabIcon
+  StyledTabIcon,
+  StyledBrand
 
 }  from '../styles/ClientStyles';
 
@@ -1573,7 +1574,7 @@ const DashboardClient = () => {
 
       {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
-        <span>Mi Logo</span>
+        <StyledBrand href="/" aria-label="SharemeChat" />
         <StyledNavGroup>
           <span className="me-3">Hola, {displayName}</span>
           <span className="me-3">
@@ -1596,7 +1597,7 @@ const DashboardClient = () => {
 
           {/* Avatar (click = ir a Perfil) */}
           <StyledNavAvatar
-            src={profilePic || '/img/avatar.png'}
+            src={profilePic || '/img/avatarChico.png'}
             alt="avatar"
             title="Ver perfil"
             onClick={handleProfile}
@@ -1736,7 +1737,7 @@ const DashboardClient = () => {
                       <StyledVideoArea>
                         <StyledRemoteVideo ref={remoteVideoWrapRef}>
                           <StyledVideoTitle>
-                            <StyledTitleAvatar src={modelAvatar || '/img/avatar.png'} alt="" />
+                            <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
                             {modelNickname || 'Modelo'}
                             {/* Botón expandir */}
                             <button
@@ -1877,7 +1878,7 @@ const DashboardClient = () => {
               <StyledVideoArea style={{ display: showCallMedia ? 'block' : 'none' }}>
                 <StyledRemoteVideo ref={callRemoteWrapRef}>
                   <StyledVideoTitle>
-                    <StyledTitleAvatar src={callPeerAvatar || '/img/avatar.png'} alt="" />
+                    <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChica.png'} alt="" />
                     {callPeerName || 'Remoto'}
                     {/* Botón expandir */}
                     <button

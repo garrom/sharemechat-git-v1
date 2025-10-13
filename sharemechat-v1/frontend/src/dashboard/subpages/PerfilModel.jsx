@@ -6,6 +6,7 @@ import {
   StyledContainer,
   StyledNavbar,
   StyledNavButton,
+  StyledBrand
 } from '../../styles/ModelStyles';
 
 import {
@@ -29,9 +30,9 @@ import {
   Photo,
   Hint,
   BackButton,
-} from '../../styles/pages/PerfilClientModelStyle.js';
+} from '../../styles/subpages/PerfilClientModelStyle.js';
 
-import { Video } from '../../styles/pages/PerfilModelStyles';
+import { Video } from '../../styles/subpages/PerfilModelStyles';
 
 const DOCS_GET_URL    = '/api/models/documents/me';
 const DOCS_UPLOAD_URL = '/api/models/documents';
@@ -257,7 +258,7 @@ const PerfilModel = () => {
   return (
     <StyledContainer>
       <StyledNavbar>
-        <span>Mi Logo</span>
+        <StyledBrand href="/" aria-label="SharemeChat" />
         <div>
           <StyledNavButton type="button" onClick={onUnsubscribe}>
             Darme de baja

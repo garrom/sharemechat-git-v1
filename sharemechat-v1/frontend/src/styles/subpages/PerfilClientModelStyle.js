@@ -1,4 +1,4 @@
-// src/styles/pages/PerfilClientModelStyle.js
+// src/styles/subpages/PerfilClientModelStyle.js
 import styled from 'styled-components';
 import { bp, colors, radius, space, shadow } from '../core/tokens';
 import { inputBase, buttonBase } from '../core/mixins';

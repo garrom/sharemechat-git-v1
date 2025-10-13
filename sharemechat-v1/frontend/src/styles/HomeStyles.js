@@ -42,3 +42,24 @@ export const Btn = styled.button`
   color:#fff;
   &:hover { filter: brightness(0.95); }
 `;
+
+export const StyledBrand = styled.a`
+  display: inline-block;
+  width: 240px;          /* un poco más grande para la portada */
+  height: 44px;
+  background-image: url('/img/SharemeChat.svg');
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: contain;
+  margin: 0 0 14px;
+
+  text-indent: -9999px;
+  overflow: hidden;
+  white-space: nowrap;
+
+  @media (max-width: ${bp.md}) {
+    width: 200px;
+    height: 40px;
+    margin-bottom: 12px;
+  }
+`;
