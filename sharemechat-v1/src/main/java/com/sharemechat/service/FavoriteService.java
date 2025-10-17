@@ -10,7 +10,8 @@ import com.sharemechat.repository.FavoriteModelRepository;
 import com.sharemechat.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
+import com.sharemechat.exception.AlreadyFavoritesException;
+import com.sharemechat.exception.InvitationAlreadyPendingException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -33,107 +34,215 @@ public class FavoriteService {
     // =================== CLIENTE -> MODELO ===================
     @Transactional
     public void addModelToClientFavorites(Long clientId, Long modelId) {
-        if (Objects.equals(clientId, modelId)) throw new IllegalArgumentException("No puedes agregarte a ti mismo.");
+        if (Objects.equals(clientId, modelId)) {
+            throw new IllegalArgumentException("No puedes agregarte a ti mismo.");
+        }
         User client = requireUser(clientId); ensureRole(client, "CLIENT");
         User model  = requireUser(modelId);  ensureRole(model,  "MODEL");
 
-        // Vista del CLIENTE (favorites_models)
+        // 1) Si ya están aceptados ambos lados, no recrear
+        if (canUsersMessage(clientId, modelId)) {
+            throw new AlreadyFavoritesException();
+        }
+
+        // 2) Cargar/crear filas
         FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
                 .orElseGet(() -> new FavoriteModel(clientId, modelId));
-        mine.setStatus("active");
-        mine.setInvited("pending"); // el que invita lo considera aceptado en su vista
-        favoriteModelRepo.save(mine);
-
-        // Vista de la MODELO (favorites_clients)
         FavoriteClient peer = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
                 .orElseGet(() -> new FavoriteClient(modelId, clientId));
 
-        // si existía rechazado/inactivo → reabrimos como pending
-        peer.setStatus("active");
+        String myInv   = Optional.ofNullable(mine.getInvited()).orElse("").toLowerCase();
+        String myStat  = Optional.ofNullable(mine.getStatus()).orElse("").toLowerCase();
+        String peerInv = Optional.ofNullable(peer.getInvited()).orElse("").toLowerCase();
+        String peerSta = Optional.ofNullable(peer.getStatus()).orElse("").toLowerCase();
+
+        // 3) Si YO ya envié (inactive/sent), no duplicar
+        if ("inactive".equals(myStat) && "sent".equals(myInv)) {
+            throw new InvitationAlreadyPendingException();
+        }
+
+        // 4) Si el peer YA me había invitado (yo tengo inactive/pending o el peer tiene inactive/sent) → fusionar a accepted
+        boolean iAmPendingReceiver = "inactive".equals(myStat) && "pending".equals(myInv);
+        boolean peerSentToMe       = "inactive".equals(peerSta) && "sent".equals(peerInv);
+        if (iAmPendingReceiver || peerSentToMe) {
+            mine.setStatus("active");
+            mine.setInvited("accepted");
+            favoriteModelRepo.save(mine);
+
+            peer.setStatus("active");
+            peer.setInvited("accepted");
+            favoriteClientRepo.save(peer);
+            return;
+        }
+
+        // 5) Caso normal: ambos INACTIVE; invitador=SENT, receptor=PENDING
+        mine.setStatus("inactive");
+        mine.setInvited("sent");
+        favoriteModelRepo.save(mine);
+
+        peer.setStatus("inactive");
         peer.setInvited("pending");
         favoriteClientRepo.save(peer);
     }
 
+
+
     // =================== MODELO -> CLIENTE ===================
     @Transactional
     public void addClientToModelFavorites(Long modelId, Long clientId) {
-        if (Objects.equals(modelId, clientId)) throw new IllegalArgumentException("No puedes agregarte a ti mismo.");
+        if (Objects.equals(modelId, clientId)) {
+            throw new IllegalArgumentException("No puedes agregarte a ti mismo.");
+        }
         User model  = requireUser(modelId);  ensureRole(model,  "MODEL");
         User client = requireUser(clientId); ensureRole(client, "CLIENT");
 
-        // Vista de la MODELO (favorites_clients)
+        // 1) Si ya están aceptados ambos lados, no recrear
+        if (canUsersMessage(modelId, clientId)) {
+            throw new AlreadyFavoritesException();
+        }
+
+        // 2) Cargar/crear filas
         FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
                 .orElseGet(() -> new FavoriteClient(modelId, clientId));
-        mine.setStatus("active");
-        mine.setInvited("pending"); // el que invita lo considera aceptado en su vista
+        FavoriteModel peer  = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
+                .orElseGet(() -> new FavoriteModel(clientId, modelId));
+
+        String myInv   = Optional.ofNullable(mine.getInvited()).orElse("").toLowerCase();
+        String myStat  = Optional.ofNullable(mine.getStatus()).orElse("").toLowerCase();
+        String peerInv = Optional.ofNullable(peer.getInvited()).orElse("").toLowerCase();
+        String peerSta = Optional.ofNullable(peer.getStatus()).orElse("").toLowerCase();
+
+        // 3) Si YO ya envié (inactive/sent), no duplicar
+        if ("inactive".equals(myStat) && "sent".equals(myInv)) {
+            throw new InvitationAlreadyPendingException();
+        }
+
+        // 4) Si el peer YA me había invitado → fusionar a accepted
+        boolean iAmPendingReceiver = "inactive".equals(myStat) && "pending".equals(myInv);
+        boolean peerSentToMe       = "inactive".equals(peerSta) && "sent".equals(peerInv);
+        if (iAmPendingReceiver || peerSentToMe) {
+            mine.setStatus("active");
+            mine.setInvited("accepted");
+            favoriteClientRepo.save(mine);
+
+            peer.setStatus("active");
+            peer.setInvited("accepted");
+            favoriteModelRepo.save(peer);
+            return;
+        }
+
+        // 5) Caso normal: ambos INACTIVE; invitador=SENT, receptor=PENDING
+        mine.setStatus("inactive");
+        mine.setInvited("sent");
         favoriteClientRepo.save(mine);
 
-        // Vista del CLIENTE (favorites_models)
-        FavoriteModel peer = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
-                .orElseGet(() -> new FavoriteModel(clientId, modelId));
-        peer.setStatus("active");
+        peer.setStatus("inactive");
         peer.setInvited("pending");
         favoriteModelRepo.save(peer);
     }
 
+
     @Transactional
     public void removeModelFromClientFavorites(Long clientId, Long modelId) {
-        // SOFT delete solo en MI vista
-        favoriteModelRepo.findByClientIdAndModelId(clientId, modelId).ifPresent(f -> {
-            f.setStatus("inactive");
-            favoriteModelRepo.save(f);
-        });
+        // Cliente → Modelo
+        FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
+                .orElseGet(() -> new FavoriteModel(clientId, modelId));
+        mine.setStatus("inactive");
+        mine.setInvited("rejected");
+        favoriteModelRepo.save(mine);
+
+        // Modelo → Cliente
+        FavoriteClient peer = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
+                .orElseGet(() -> new FavoriteClient(modelId, clientId));
+        peer.setStatus("inactive");
+        peer.setInvited("rejected");
+        favoriteClientRepo.save(peer);
     }
+
 
     @Transactional(readOnly = true)
     public List<FavoriteListItemDTO> listClientFavoritesMeta(Long clientId) {
         requireRole(clientId, "CLIENT");
-        List<FavoriteModel> links = favoriteModelRepo.findAllByClientIdAndStatusOrderByCreatedAtDesc(clientId, "active");
+
+        // Necesitas en el repo: findAllByClientIdAndStatusInOrderByCreatedAtDesc(Long, Collection<String>)
+        List<FavoriteModel> links = favoriteModelRepo.findAllByClientIdAndStatusInOrderByCreatedAtDesc(
+                clientId, List.of("active", "inactive")
+        );
         if (links.isEmpty()) return List.of();
 
-        List<Long> modelIds = links.stream().map(FavoriteModel::getModelId).toList();
+        // Filtrar rechazados
+        List<FavoriteModel> visible = links.stream()
+                .filter(l -> !"rejected".equalsIgnoreCase(l.getInvited()))
+                .toList();
+
+        if (visible.isEmpty()) return List.of();
+
+        List<Long> modelIds = visible.stream().map(FavoriteModel::getModelId).toList();
         Map<Long, User> usersById = userRepository.findAllById(modelIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
 
-        return links.stream().map(l -> {
+        return visible.stream().map(l -> {
             User u = usersById.get(l.getModelId());
             return new FavoriteListItemDTO(
                     toSummary(u),
                     l.getStatus(),
                     l.getInvited(),
-                    "outbound" // esta lista es "yo cliente → modelos"
+                    "outbound"
             );
         }).toList();
     }
 
+
     @Transactional
     public void removeClientFromModelFavorites(Long modelId, Long clientId) {
-        favoriteClientRepo.findByModelIdAndClientId(modelId, clientId).ifPresent(f -> {
-            f.setStatus("inactive"); // soft
-            favoriteClientRepo.save(f);
-        });
+        // Modelo → Cliente
+        FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
+                .orElseGet(() -> new FavoriteClient(modelId, clientId));
+        mine.setStatus("inactive");
+        mine.setInvited("rejected");
+        favoriteClientRepo.save(mine);
+
+        // Cliente → Modelo
+        FavoriteModel peer = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
+                .orElseGet(() -> new FavoriteModel(clientId, modelId));
+        peer.setStatus("inactive");
+        peer.setInvited("rejected");
+        favoriteModelRepo.save(peer);
     }
+
 
     @Transactional(readOnly = true)
     public List<FavoriteListItemDTO> listModelFavoritesMeta(Long modelId) {
         requireRole(modelId, "MODEL");
-        List<FavoriteClient> links = favoriteClientRepo.findAllByModelIdAndStatusOrderByCreatedAtDesc(modelId, "active");
+
+        // Necesitas en el repo: findAllByModelIdAndStatusInOrderByCreatedAtDesc(Long, Collection<String>)
+        List<FavoriteClient> links = favoriteClientRepo.findAllByModelIdAndStatusInOrderByCreatedAtDesc(
+                modelId, List.of("active", "inactive")
+        );
         if (links.isEmpty()) return List.of();
 
-        List<Long> clientIds = links.stream().map(FavoriteClient::getClientId).toList();
+        // Filtrar rechazados
+        List<FavoriteClient> visible = links.stream()
+                .filter(l -> !"rejected".equalsIgnoreCase(l.getInvited()))
+                .toList();
+
+        if (visible.isEmpty()) return List.of();
+
+        List<Long> clientIds = visible.stream().map(FavoriteClient::getClientId).toList();
         Map<Long, User> usersById = userRepository.findAllById(clientIds).stream()
                 .collect(Collectors.toMap(User::getId, u -> u));
 
-        return links.stream().map(l -> {
+        return visible.stream().map(l -> {
             User u = usersById.get(l.getClientId());
             return new FavoriteListItemDTO(
                     toSummary(u),
                     l.getStatus(),
                     l.getInvited(),
-                    "outbound" // modelo → clientes
+                    "outbound"
             );
         }).toList();
     }
+
 
     // =================== ACEPTAR / RECHAZAR (mi vista) ===================
 
@@ -143,31 +252,29 @@ public class FavoriteService {
         User peer = requireUser(peerId);
 
         if ("CLIENT".equalsIgnoreCase(me.getRole()) && "MODEL".equalsIgnoreCase(peer.getRole())) {
-            // mi vista: favorites_models
             FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(meId, peerId)
                     .orElseGet(() -> new FavoriteModel(meId, peerId));
+            FavoriteClient other = favoriteClientRepo.findByModelIdAndClientId(peerId, meId)
+                    .orElseGet(() -> new FavoriteClient(peerId, meId));
+
             mine.setStatus("active");
             mine.setInvited("accepted");
             favoriteModelRepo.save(mine);
 
-            // peer vista: favorites_clients
-            FavoriteClient other = favoriteClientRepo.findByModelIdAndClientId(peerId, meId)
-                    .orElseGet(() -> new FavoriteClient(peerId, meId));
             other.setStatus("active");
             other.setInvited("accepted");
             favoriteClientRepo.save(other);
 
         } else if ("MODEL".equalsIgnoreCase(me.getRole()) && "CLIENT".equalsIgnoreCase(peer.getRole())) {
-            // mi vista: favorites_clients
             FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(meId, peerId)
                     .orElseGet(() -> new FavoriteClient(meId, peerId));
+            FavoriteModel other = favoriteModelRepo.findByClientIdAndModelId(peerId, meId)
+                    .orElseGet(() -> new FavoriteModel(peerId, meId));
+
             mine.setStatus("active");
             mine.setInvited("accepted");
             favoriteClientRepo.save(mine);
 
-            // peer vista: favorites_models
-            FavoriteModel other = favoriteModelRepo.findByClientIdAndModelId(peerId, meId)
-                    .orElseGet(() -> new FavoriteModel(peerId, meId));
             other.setStatus("active");
             other.setInvited("accepted");
             favoriteModelRepo.save(other);
@@ -186,26 +293,28 @@ public class FavoriteService {
         if ("CLIENT".equalsIgnoreCase(me.getRole()) && "MODEL".equalsIgnoreCase(peer.getRole())) {
             FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(meId, peerId)
                     .orElseGet(() -> new FavoriteModel(meId, peerId));
-            mine.setStatus("active");
+            FavoriteClient other = favoriteClientRepo.findByModelIdAndClientId(peerId, meId)
+                    .orElseGet(() -> new FavoriteClient(peerId, meId));
+
+            mine.setStatus("inactive");
             mine.setInvited("rejected");
             favoriteModelRepo.save(mine);
 
-            FavoriteClient other = favoriteClientRepo.findByModelIdAndClientId(peerId, meId)
-                    .orElseGet(() -> new FavoriteClient(peerId, meId));
-            other.setStatus("active");
+            other.setStatus("inactive");
             other.setInvited("rejected");
             favoriteClientRepo.save(other);
 
         } else if ("MODEL".equalsIgnoreCase(me.getRole()) && "CLIENT".equalsIgnoreCase(peer.getRole())) {
             FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(meId, peerId)
                     .orElseGet(() -> new FavoriteClient(meId, peerId));
-            mine.setStatus("active");
+            FavoriteModel other = favoriteModelRepo.findByClientIdAndModelId(peerId, meId)
+                    .orElseGet(() -> new FavoriteModel(peerId, meId));
+
+            mine.setStatus("inactive");
             mine.setInvited("rejected");
             favoriteClientRepo.save(mine);
 
-            FavoriteModel other = favoriteModelRepo.findByClientIdAndModelId(peerId, meId)
-                    .orElseGet(() -> new FavoriteModel(peerId, meId));
-            other.setStatus("active");
+            other.setStatus("inactive");
             other.setInvited("rejected");
             favoriteModelRepo.save(other);
 
@@ -213,6 +322,7 @@ public class FavoriteService {
             throw new IllegalArgumentException("Roles inválidos para rechazar.");
         }
     }
+
 
 
     /**
@@ -244,6 +354,7 @@ public class FavoriteService {
         // Si los roles no son CLIENT/MODEL, bloqueamos
         return false;
     }
+
 
     private boolean isAcceptedActive(Optional<String> statusOpt, Optional<String> invitedOpt) {
         return "active".equalsIgnoreCase(statusOpt.orElse(null))

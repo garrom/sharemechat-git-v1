@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   ItemCard, Avatar, Info, Name, Meta, Actions, Btn,
-} from '../../../styles/features/FavoritesStyles';
+} from '../../styles/FavoritesStyles';
 
 const resolveProfilePic = (user = {}, ctx = 'FavoriteItem') => {
   const pick = {

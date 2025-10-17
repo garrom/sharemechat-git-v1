@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import {
   Wrap, Header, Avatar, AvatarFallback, Title, Spacer,
   Actions, Button, Status, VideoNote, VideoBox, VideoEl,
-} from '../../../styles/features/FunnyplaceStyles';
+} from '../../styles/FunnyplaceStyles';
 
 const FunnyplacePage = ({ videoUrl: propVideoUrl }) => {
   const [loading, setLoading] = useState(!propVideoUrl);

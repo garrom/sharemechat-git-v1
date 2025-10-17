@@ -9,8 +9,8 @@ public interface FavoriteClientRepository extends JpaRepository<FavoriteClient, 
     boolean existsByModelIdAndClientId(Long modelId, Long clientId);
     Optional<FavoriteClient> findByModelIdAndClientId(Long modelId, Long clientId);
     List<FavoriteClient> findAllByModelIdAndStatusOrderByCreatedAtDesc(Long modelId, String status);
-    // soft delete
     long deleteByModelIdAndClientId(Long modelId, Long clientId);
+    List<FavoriteClient> findAllByModelIdAndStatusInOrderByCreatedAtDesc(Long modelId, List<String> statuses);
 
 
 }

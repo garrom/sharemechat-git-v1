@@ -2,8 +2,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
-import FavoritesClientList from './features/favorites/FavoritesClientList';
-import FunnyplacePage from './features/funnyplace/FunnyplacePage';
+import FavoritesClientList from './favorites/FavoritesClientList';
+import { useModal } from '../components/ModalProvider';
+import FunnyplacePage from './funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt, faUser, faHeart, faVideo, faFilm } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -44,6 +45,8 @@ import {
 }  from '../styles/ClientStyles';
 
 const DashboardClient = () => {
+
+  const { alert } = useModal();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -1050,31 +1053,115 @@ const DashboardClient = () => {
 
   const handleAddFavorite = async () => {
     if (!currentModelId) {
-      alert('No se pudo identificar a la modelo actual).');
+      await alert({
+        variant: 'warning',
+        title: 'Favoritos',
+        message: 'No se pudo identificar a la modelo actual.',
+      });
       return;
     }
+
     const tk = localStorage.getItem('token');
-    if (!tk) { setError('Sesión expirada. Inicia sesión de nuevo.'); return; }
+    if (!tk) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
+      await alert({
+        variant: 'warning',
+        title: 'Sesión',
+        message: 'Sesión expirada. Inicia sesión de nuevo.',
+      });
+      return;
+    }
+
     try {
       const res = await fetch(`/api/favorites/models/${currentModelId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${tk}` },
       });
-      if (res.status === 204) {
-        alert('Modelo añadida a favoritos.');
-      } else if (res.status === 409) {
-        alert('Esta modelo ya está en tus favoritos.');
-      } else if (!res.ok) {
+
+      if (res.status === 409) {
+        await alert({
+          variant: 'info',
+          title: 'Favoritos',
+          message: 'Esta modelo ya está en tus favoritos.',
+        });
+        return;
+      }
+
+      if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
-      } else {
-        alert('Modelo añadida a favoritos.');
       }
+
+      // 204 => consultamos meta para mensaje contextual
+      try {
+        const metaRes = await fetch('/api/favorites/models/meta', {
+          headers: { Authorization: `Bearer ${tk}` }
+        });
+
+        if (metaRes.ok) {
+          const meta = await metaRes.json();
+          const found = (meta || [])
+            .map(d => ({
+              id: d?.user?.id,
+              invited: d?.invited,
+              status: d?.status
+            }))
+            .find(x => Number(x.id) === Number(currentModelId));
+
+          const inv = String(found?.invited || '').toLowerCase();
+
+          if (inv === 'pending') {
+            await alert({
+              variant: 'success',
+              title: 'Solicitud enviada',
+              message: 'Se activará cuando la modelo acepte.',
+            });
+          } else if (inv === 'accepted') {
+            await alert({
+              variant: 'success',
+              title: 'Favoritos',
+              message: 'Ya estáis en favoritos mutuamente.',
+            });
+          } else if (inv === 'rejected') {
+            await alert({
+              variant: 'warning',
+              title: 'Favoritos',
+              message: 'La modelo rechazó previamente la invitación.',
+            });
+          } else {
+            await alert({
+              variant: 'success',
+              title: 'Favoritos',
+              message: 'Solicitud procesada.',
+            });
+          }
+        } else {
+          await alert({
+            variant: 'success',
+            title: 'Favoritos',
+            message: 'Solicitud enviada.',
+          });
+        }
+      } catch {
+        await alert({
+          variant: 'success',
+          title: 'Favoritos',
+          message: 'Solicitud enviada.',
+        });
+      }
+
+      // refrescar listas
+      setFavReload(x => x + 1);
     } catch (e) {
       console.error(e);
-      alert(e.message || 'No se pudo añadir a favoritos.');
+      await alert({
+        variant: 'danger',
+        title: 'Error',
+        message: e.message || 'No se pudo añadir a favoritos.',
+      });
     }
   };
+
 
   const openChatWith = async (peerId, displayName) => {
     if (streamingActivo) {
@@ -1564,6 +1651,12 @@ const DashboardClient = () => {
     return Number(centerChatPeerId ?? selectedFav?.id ?? callPeerId) || null;
   })();
 
+  //---FLAG DE RENDERIZADO favoritos---//
+  const invited   = String(selectedFav?.invited || '').toLowerCase();
+  const favStatus = String(selectedFav?.status  || '').toLowerCase();
+  const allowChat      = favStatus === 'active'   && invited === 'accepted';
+  const isPendingPanel = favStatus === 'inactive' && invited === 'pending';
+  const isSentPanel    = favStatus === 'inactive' && invited === 'sent';
 
 
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
@@ -2043,10 +2136,13 @@ const DashboardClient = () => {
                 </div>
               ) : (
                 <>
+                  {/* Header */}
                   <div style={{ marginBottom:'8px', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
-                    <h5 style={{ margin:0, color:'#ff0000' }}>
-                      {selectedFav?.invited === 'pending'
+                    <h5 style={{ margin:0, color: allowChat ? '#20c997' : (isPendingPanel || isSentPanel ? '#ffc107' : '#ff0000') }}>
+                      {isPendingPanel
                         ? `Invitación de ${centerChatPeerName}`
+                        : isSentPanel
+                        ? `Invitación enviada a ${centerChatPeerName}`
                         : `Chat con ${centerChatPeerName}`}
                     </h5>
                     <div style={{ fontSize:12, color: wsReady ? '#20c997' : '#adb5bd' }}>
@@ -2054,21 +2150,15 @@ const DashboardClient = () => {
                     </div>
                   </div>
 
-                  {selectedFav?.invited === 'pending' ? (
+                  {/* Panel PENDIENTE (receptor) */}
+                  {isPendingPanel && (
                     <div style={{
-                      flex:1,
-                      minHeight: 0,
-                      display:'flex',
-                      alignItems:'center',
-                      justifyContent:'center',
-                      border:'1px solid #333',
-                      borderRadius:8,
-                      padding:16,
-                      background:'rgba(0,0,0,0.2)'
+                      flex:1, minHeight:0, display:'flex', alignItems:'center', justifyContent:'center',
+                      border:'1px solid #333', borderRadius:8, padding:16, background:'rgba(0,0,0,0.2)'
                     }}>
                       <div style={{ textAlign:'center' }}>
                         <p style={{ color:'#fff', marginBottom:16 }}>
-                          {centerChatPeerName} te ha invitado a favoritos.
+                          {centerChatPeerName} te ha invitado a favoritos. Acepta para habilitar el chat.
                         </p>
                         <div style={{ display:'flex', gap:12, justifyContent:'center' }}>
                           <StyledActionButton onClick={acceptInvitation}>Aceptar</StyledActionButton>
@@ -2078,7 +2168,27 @@ const DashboardClient = () => {
                         </div>
                       </div>
                     </div>
-                  ) : (
+                  )}
+
+                  {/* Panel ENVIADA (emisor) */}
+                  {isSentPanel && (
+                    <div style={{
+                      flex:1, minHeight:0, display:'flex', alignItems:'center', justifyContent:'center',
+                      border:'1px solid #333', borderRadius:8, padding:16, background:'rgba(0,0,0,0.2)'
+                    }}>
+                      <div style={{ textAlign:'center', color:'#e9ecef' }}>
+                        <p style={{ marginBottom:8 }}>
+                          Invitación enviada. Esperando respuesta de <strong>{centerChatPeerName}</strong>.
+                        </p>
+                        <p style={{ fontSize:12, color:'#adb5bd' }}>
+                          El chat se habilitará cuando acepte tu invitación.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CHAT (no pendiente ni enviada) */}
+                  {!isPendingPanel && !isSentPanel && (
                     <>
                       <div
                         ref={centerListRef}
@@ -2094,7 +2204,9 @@ const DashboardClient = () => {
                       >
                         {centerLoading && <div style={{ color:'#adb5bd' }}>Cargando historial…</div>}
                         {!centerLoading && centerMessages.length === 0 && (
-                          <div style={{ color:'#adb5bd' }}>No hay mensajes todavía. ¡Escribe el primero!</div>
+                          <div style={{ color:'#adb5bd' }}>
+                            {allowChat ? 'No hay mensajes todavía. ¡Escribe el primero!' : 'Este chat no está activo.'}
+                          </div>
                         )}
                         {centerMessages.map(m => {
                           let giftData = m.gift;
@@ -2106,7 +2218,7 @@ const DashboardClient = () => {
                           }
                           return (
                             <div key={m.id}
-                                 style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
+                                style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
                               <span style={{
                                   display:'inline-block',
                                   padding:'6px 10px',
@@ -2114,7 +2226,6 @@ const DashboardClient = () => {
                                   background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
                                   color:'#fff',
                                   maxWidth:'80%'
-
                               }}>
                                 {giftData ? (
                                   giftRenderReady && (() => {
@@ -2134,14 +2245,15 @@ const DashboardClient = () => {
                         <input
                           value={centerInput}
                           onChange={(e)=>setCenterInput(e.target.value)}
-                          placeholder="Escribe un mensaje…"
-                          onKeyDown={(e)=>{ if (e.key === 'Enter') sendCenterMessage(); }}
+                          placeholder={allowChat ? 'Escribe un mensaje…' : 'Chat inactivo'}
+                          onKeyDown={(e)=>{ if (e.key === 'Enter' && allowChat) sendCenterMessage(); }}
+                          disabled={!allowChat}
                           style={{ flex:1, borderRadius:6, border:'1px solid #333', padding:'8px', background:'rgba(255,255,255,0.9)' }}
                         />
-                        <StyledActionButton onClick={sendCenterMessage}>Enviar</StyledActionButton>
+                        <StyledActionButton onClick={sendCenterMessage} disabled={!allowChat}>Enviar</StyledActionButton>
 
-                        <StyledActionButton onClick={()=>setShowCenterGifts(s=>!s)} title="Enviar regalo">🎁</StyledActionButton>
-                        {showCenterGifts && (
+                        <StyledActionButton onClick={()=>setShowCenterGifts(s=>!s)} title="Enviar regalo" disabled={!allowChat}>🎁</StyledActionButton>
+                        {showCenterGifts && allowChat && (
                           <div style={{
                             position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)',
                             padding:10, borderRadius:8, zIndex:10, border:'1px solid #333'
@@ -2167,6 +2279,7 @@ const DashboardClient = () => {
             </div>
           )}
           {/*FIN RENDERIZADO FAVORITOS */}
+
 
         </StyledCenter>
         {/* ================FIN ZONA CENTRAL =================*/}

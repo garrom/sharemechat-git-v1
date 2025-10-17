@@ -77,4 +77,22 @@ public class GlobalExceptionHandler {
                 "Ha ocurrido un error interno. Inténtalo de nuevo.", req.getRequestURI());
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
+
+    // 409 – Ya son favoritos mutuos
+    @ExceptionHandler(AlreadyFavoritesException.class)
+    public ResponseEntity<ApiError> handleAlreadyFavorites(AlreadyFavoritesException ex, HttpServletRequest req) {
+        log.warn("Favoritos ya aceptados: {}", ex.getMessage());
+        ApiError body = new ApiError(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+    // 409 – Invitación ya existente en estado pending
+    @ExceptionHandler(InvitationAlreadyPendingException.class)
+    public ResponseEntity<ApiError> handleInvitationPending(InvitationAlreadyPendingException ex, HttpServletRequest req) {
+        log.warn("Invitación ya pendiente: {}", ex.getMessage());
+        ApiError body = new ApiError(HttpStatus.CONFLICT.value(), "Conflict", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
+    }
+
+
 }

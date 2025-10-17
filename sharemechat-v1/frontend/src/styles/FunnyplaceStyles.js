@@ -1,7 +1,7 @@
 //FunnyplaceStyles.js
 import styled from 'styled-components';
-import { bp, colors, radius, space, shadow } from '../core/tokens';
-import { buttonBase } from '../core/mixins';
+import { bp, colors, radius, space, shadow } from './core/tokens';
+import { buttonBase } from './core/mixins';
 
 export const Wrap = styled.div`
   display: grid;

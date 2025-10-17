@@ -43,16 +43,20 @@ export const Avatar = styled.img.attrs(({ $size = 40 }) => ({
 
 // Bloque de info (nombre + meta)
 export const Info = styled.div`
-  flex: 1;
-  min-width: 0;
+  display: flex;
+  align-items: center;
+  min-width: 0;  /* permite ellipsis en hijos */
+  flex: 1;       /* ocupa espacio entre avatar y badges */
 `;
 
-export const Name = styled.div`
+
+export const Name = styled.span`
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: ellipsis; /* ... si no cabe */
 `;
+
 
 export const Meta = styled.div`
   font-size: 12px;
@@ -77,9 +81,12 @@ export const Btn = styled.button`
 
 // Contenedor de badges (status/invited)
 export const Badges = styled.div`
-  display: flex;
-  gap: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;              /* espacio entre iconos */
+  margin-left: auto;     /* empuja badges hacia la derecha */
 `;
+
 
 // Badge sencillo con variantes
 export const Badge = styled.span`

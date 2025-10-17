@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import {
-  List, StateRow, ItemCard, Avatar, Info, Name, Badges, Badge
-} from '../../../styles/features/FavoritesStyles';
+  List, StateRow, ItemCard, Avatar, Info, Name, Badges
+} from '../../styles/FavoritesStyles';
+import StatusBadge from '../../widgets/StatusBadge';
 
-function FavListItem({ user, avatarUrl, onSelect, selected = false }) {
+
+function FavListItem({ user, avatarUrl, onSelect, onRemove, selected = false }) {
   const placeholder = '/img/avatarChica.png';
   const [imgSrc, setImgSrc] = useState(placeholder);
 
@@ -15,10 +17,9 @@ function FavListItem({ user, avatarUrl, onSelect, selected = false }) {
     // si no hay avatarUrl, no tocamos el src para evitar repaints
   }, [avatarUrl]);
 
-  const invited = String(user.invited || '').toLowerCase();
-  const invitedVariant =
-    invited === 'pending' ? 'warning' :
-    invited === 'rejected' ? 'danger' : 'success';
+  const invited = String(user.invited || '').trim().toLowerCase();
+  const status  = String(user.status  || '').trim().toLowerCase();
+
 
   return (
     <ItemCard
@@ -40,8 +41,44 @@ function FavListItem({ user, avatarUrl, onSelect, selected = false }) {
         <Name>{user.nickname || `Usuario #${user.id}`}</Name>
       </Info>
       <Badges>
-        <Badge $variant={invitedVariant}>{user.invited}</Badge>
+        <StatusBadge
+          value={invited}
+          title={invited === 'sent' ? 'enviado' : invited}
+          size={16}
+        />
+        <StatusBadge
+          value={status}
+          title={status}
+          size={16}
+        />
       </Badges>
+
+      <button
+        type="button"
+        title="Eliminar de favoritos"
+        onClick={(e) => { e.stopPropagation(); onRemove?.(user); }}
+        style={{
+          marginLeft: 8,
+          padding: 6,
+          width: 32,
+          height: 32,
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 6,
+          border: '1px solid #dc3545',
+          background: 'transparent',
+          color: '#dc3545',
+          cursor: 'pointer'
+        }}
+        aria-label="Eliminar de favoritos"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2h-1v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4V5h4V4a1 1 0 0 1 1-1zm1 2v0h4V5h-4zM7 7v12h10V7H7zm3 3h2v8h-2v-8zm4 0h2v8h-2v-8z"/>
+        </svg>
+      </button>
+
+
     </ItemCard>
   );
 }
@@ -74,11 +111,9 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
               userType: u?.userType || 'MODEL',
             };
           });
-          const filtered = mapped.filter(item => {
-            const v = String(item.invited || '').toLowerCase();
-            return v === 'pending' || v === 'accepted';
-          });
+          const filtered = mapped.filter(item => String(item.invited || '').toLowerCase() !== 'rejected');
           setItems(filtered);
+
         }
       } catch (e) {
         console.warn('[favorites] load error:', e?.message);
@@ -115,18 +150,43 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   if (loading) return <StateRow>Cargando…</StateRow>;
   if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;
 
+
+  const handleRemove = async (user) => {
+    if (!user?.id) return;
+    const ok = window.confirm(`¿Eliminar a ${user.nickname || `Usuario #${user.id}`} de tus favoritos?`);
+    if (!ok) return;
+
+    try {
+      const res = await fetch(`/api/favorites/models/${user.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `HTTP ${res.status}`);
+      }
+      // actualización optimista
+      setItems(prev => prev.filter(i => Number(i.id) !== Number(user.id)));
+      // opcional: feedback
+      // alert('Eliminado de favoritos.');
+    } catch (e) {
+      alert(e.message || 'No se pudo eliminar de favoritos.');
+    }
+  };
+
   return (
     <List>
-     {items.map(u => (
-       <FavListItem
-         key={u.id}
-         user={u}
-         avatarUrl={avatarMap?.[u.id] || null}
-         onSelect={onSelect}
-         selected={Number(u.id) === Number(selectedId)}
-       />
-     ))}
-
+      {items.map(u => (
+        <FavListItem
+          key={u.id}
+          user={u}
+          avatarUrl={avatarMap?.[u.id] || null}
+          onSelect={onSelect}
+          onRemove={handleRemove}
+          selected={Number(u.id) === Number(selectedId)}
+        />
+      ))}
     </List>
   );
+
 }
