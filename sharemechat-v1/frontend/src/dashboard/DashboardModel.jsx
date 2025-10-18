@@ -86,9 +86,10 @@ const DashboardModel = () => {
   const [callError, setCallError] = useState('');
   const [callRole, setCallRole] = useState(null); // 'caller' | 'callee'
   const [callPeerAvatar, setCallPeerAvatar] = useState('');
-  //Click derecho
+  // Context menu (click derecho)
   const [ctxUser, setCtxUser] = useState(null);
-  const [ctxPos, setCtxPos]   = useState({ x: 0, y: 0 });
+  const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
+
 
   const callLocalVideoRef = useRef(null);
   const callRemoteVideoRef = useRef(null);
@@ -137,11 +138,16 @@ const DashboardModel = () => {
     return found?.icon || null;
   };
 
-  // click derecho
+  // click derecho (cerrar con click global o ESC)
   useEffect(() => {
     const close = () => setCtxUser(null);
+    const closeEsc = (e) => { if (e.key === 'Escape') setCtxUser(null); };
     window.addEventListener('click', close);
-    return () => window.removeEventListener('click', close);
+    window.addEventListener('keydown', closeEsc);
+    return () => {
+      window.removeEventListener('click', close);
+      window.removeEventListener('keydown', closeEsc);
+    };
   }, []);
 
 
@@ -2316,6 +2322,7 @@ const DashboardModel = () => {
               boxShadow: '0 8px 24px rgba(0,0,0,.12)'
             }}
             onClick={(e) => e.stopPropagation()}
+            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
           >
             <button
               style={{
@@ -2323,13 +2330,16 @@ const DashboardModel = () => {
                 padding: '10px 14px',
                 background: 'transparent',
                 border: 'none',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                width: '100%',
+                textAlign: 'left'
               }}
               onClick={async () => {
                 try {
+                  const sure = window.confirm(`Eliminar a "${ctxUser.nickname || ctxUser.name || ctxUser.email || ('Usuario ' + ctxUser.id)}" de tus favoritos?`);
+                  if (!sure) return;
                   const tk = localStorage.getItem('token');
                   if (!tk) return;
-                  // endpoint simétrico: eliminar favorito (modelo -> cliente)
                   await fetch(`/api/favorites/clients/${ctxUser.id}`, {
                     method: 'DELETE',
                     headers: { Authorization: `Bearer ${tk}` }
@@ -2345,6 +2355,7 @@ const DashboardModel = () => {
             </button>
           </div>
         )}
+
 
       {/*FIN CLICK DERECHO */}
 

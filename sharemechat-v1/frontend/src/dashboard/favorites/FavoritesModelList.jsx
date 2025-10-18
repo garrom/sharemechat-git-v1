@@ -5,7 +5,7 @@ import {
 import StatusBadge from '../../widgets/StatusBadge';
 
 
-function FavListItem({ user, avatarUrl, onSelect, onRemove, selected = false }) {
+function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selected = false }) {
   const placeholder = '/img/avatarChico.png';
   const [imgSrc, setImgSrc] = useState(placeholder);
 
@@ -27,6 +27,7 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, selected = false }) 
       data-selected={selected ? 'true' : 'false'}
       aria-selected={selected ? 'true' : 'false'}
       onClick={() => onSelect?.(user)}
+      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(user, { x: e.clientX, y: e.clientY }); }}
       style={selected ? { background: '#e7f1ff', borderColor: '#b6d4fe' } : undefined}
     >
 
@@ -40,49 +41,20 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, selected = false }) 
         <Name>{user.nickname || `Usuario #${user.id}`}</Name>
       </Info>
       <Badges>
-        <StatusBadge
-          value={invited}
-          title={invited === 'sent' ? 'enviado' : invited}
-          size={16}
-        />
-        <StatusBadge
-          value={status}
-          title={status}
-          size={16}
-        />
+        {invited !== 'accepted' && (
+          <StatusBadge
+            value={invited}
+            title={invited === 'sent' ? 'enviado' : invited}
+            size={16}
+          />
+        )}
       </Badges>
-
-      <button
-        type="button"
-        title="Eliminar de favoritos"
-        onClick={(e) => { e.stopPropagation(); onRemove?.(user); }}
-        style={{
-          marginLeft: 8,
-          padding: 6,
-          width: 32,
-          height: 32,
-          display: 'inline-flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: 6,
-          border: '1px solid #dc3545',
-          background: 'transparent',
-          color: '#dc3545',
-          cursor: 'pointer'
-        }}
-        aria-label="Eliminar de favoritos"
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M9 3h6a1 1 0 0 1 1 1v1h4v2h-1v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7H4V5h4V4a1 1 0 0 1 1-1zm1 2v0h4V5h-4zM7 7v12h10V7H7zm3 3h2v8h-2v-8zm4 0h2v8h-2v-8z"/>
-        </svg>
-      </button>
-
 
     </ItemCard>
   );
 }
 
-export default function FavoritesModelList({ onSelect, reloadTrigger = 0, selectedId = null }) {
+export default function FavoritesModelList({ onSelect, reloadTrigger = 0, selectedId = null, onContextMenu  }) {
   const [items, setItems] = useState([]);
   const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);
@@ -181,6 +153,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
           avatarUrl={avatarMap?.[u.id] || null}
           onSelect={onSelect}
           onRemove={handleRemove}
+          onContextMenu={onContextMenu}
           selected={Number(u.id) === Number(selectedId)}
         />
       ))}

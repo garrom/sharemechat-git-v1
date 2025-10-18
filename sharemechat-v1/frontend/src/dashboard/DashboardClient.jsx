@@ -81,6 +81,8 @@ const DashboardClient = () => {
   const [callError, setCallError] = useState('');
   const [callRole, setCallRole] = useState(null); // 'caller' | 'callee'
   const [callPeerAvatar, setCallPeerAvatar] = useState('');
+  const [ctxUser, setCtxUser] = useState(null);
+  const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
 
   const callLocalVideoRef = useRef(null);
   const callRemoteVideoRef = useRef(null);
@@ -93,8 +95,8 @@ const DashboardClient = () => {
   const callTargetLockedRef = useRef(false);
   const remoteVideoWrapRef = useRef(null);
   const callRemoteWrapRef  = useRef(null);
-  const vcListRef = useRef(null);          // lista overlay videochat (messages)
-  const callListRef = useRef(null);        // lista overlay calling (centerMessages)
+  const vcListRef = useRef(null);
+  const callListRef = useRef(null);
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -138,6 +140,11 @@ const DashboardClient = () => {
     return found?.icon || null;
   };
 
+  useEffect(() => {
+    const close = () => setCtxUser(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, []);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -1782,6 +1789,7 @@ const DashboardClient = () => {
               onSelect={handleOpenChatFromFavorites}
               reloadTrigger={favReload}
               selectedId={selectedContactId}
+              onContextMenu={(user, pos) => { setCtxUser(user); setCtxPos(pos); }}
             />
           )}
 
@@ -1791,6 +1799,7 @@ const DashboardClient = () => {
                 onSelect={handleSelectCallTargetFromFavorites}
                 reloadTrigger={favReload}
                 selectedId={selectedContactId}
+                onContextMenu={(user, pos) => { setCtxUser(user); setCtxPos(pos); }}
               />
             ) : (
               <div style={{ padding: 8, color: '#adb5bd' }}>
@@ -2310,6 +2319,59 @@ const DashboardClient = () => {
 
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
+
+      {/*INICIO CLICK DERECHO */}
+       /* === CONTEXT MENU (click derecho en favoritos) === */
+       {ctxUser && (
+         <div
+           style={{
+             position: 'fixed',
+             left: ctxPos.x,
+             top: ctxPos.y,
+             zIndex: 9999,
+             background: '#fff',
+             border: '1px solid #dee2e6',
+             borderRadius: 8,
+             boxShadow: '0 8px 24px rgba(0,0,0,.12)'
+           }}
+           onClick={(e) => e.stopPropagation()}
+         >
+           <button
+             type="button"
+             style={{
+               display: 'block',
+               padding: '10px 14px',
+               background: 'transparent',
+               border: 'none',
+               cursor: 'pointer'
+             }}
+             onClick={async () => {
+               try {
+                 const tk = localStorage.getItem('token');
+                 if (!tk) return;
+                 // Cliente elimina a una MODELO de sus favoritos:
+                 await fetch(`/api/favorites/models/${ctxUser.id}`, {
+                   method: 'DELETE',
+                   headers: { Authorization: `Bearer ${tk}` }
+                 });
+                 setCtxUser(null);
+                 setFavReload(x => x + 1);
+                 // Opcional: si el chat abierto es justo este contacto, límpialo:
+                 if (Number(centerChatPeerId) === Number(ctxUser.id)) {
+                   setCenterChatPeerId(null);
+                   setCenterChatPeerName('');
+                   setCenterMessages([]);
+                 }
+               } catch (e) {
+                 alert(e.message || 'No se pudo eliminar de favoritos');
+               }
+             }}
+           >
+             Eliminar de favoritos
+           </button>
+         </div>
+       )}
+      {/*FIN CLICK DERECHO */}
 
     </StyledContainer>
   );
