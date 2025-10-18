@@ -79,7 +79,7 @@ const DashboardModel = () => {
 
   // ====== CALLING (1-a-1) ======
   const [callCameraActive, setCallCameraActive] = useState(false);
-  const [callStatus, setCallStatus] = useState('idle'); // idle | camera-ready | connecting | ringing | incoming | in-call
+  const [callStatus, setCallStatus] = useState('idle');
   const [callPeerId, setCallPeerId] = useState(null);
   const [callPeerName, setCallPeerName] = useState('');
   const [callRemoteStream, setCallRemoteStream] = useState(null);
@@ -101,6 +101,8 @@ const DashboardModel = () => {
   const callTargetLockedRef = useRef(false);
   const remoteVideoWrapRef = useRef(null);
   const callRemoteWrapRef  = useRef(null);
+  const vcListRef = useRef(null);
+  const callListRef = useRef(null);
 
   const msgSocketRef = useRef(null);
   const msgPingRef = useRef(null);
@@ -286,8 +288,21 @@ const DashboardModel = () => {
   useEffect(() => {
     const el = modelCenterListRef.current;
     if (!el) return;
-    queueMicrotask(() => { el.scrollTop = el.scrollHeight; });
-  }, [centerMessages, openChatWith]);
+    requestAnimationFrame(() => { el.scrollTop = el.scrollHeight; });
+  }, [centerMessages, centerLoading, openChatWith]);
+
+  // Autoscroll overlay de VIDEOCHAT (messages)
+  useEffect(() => {
+    const el = vcListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  // Autoscroll overlay de CALLING (centerMessages) solo cuando hay llamada
+  useEffect(() => {
+    if (callStatus !== 'in-call') return;
+    const el = callListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [centerMessages, callStatus]);
 
 
   // [CALL][Model] target dinámico desde Favoritos (chat central) o favorito seleccionado
@@ -1911,7 +1926,7 @@ const DashboardModel = () => {
 
                         {/* Overlay de mensajes sobre el vídeo */}
                         <StyledChatContainer data-wide="true">
-                          <StyledChatList>
+                          <StyledChatList ref={vcListRef}>
                            {messages.map((msg, index) => {
                              const isMe = msg.from === 'me';
                              // Queremos: modelo (yo) → rosa ; cliente → azul
@@ -1971,7 +1986,6 @@ const DashboardModel = () => {
           {/*RENDERIZADO FAVORITOS */}
           {activeTab === 'favoritos' && (
             <div
-              ref={modelCenterListRef}
               style={{ display:'flex', flexDirection:'column', height:'100%', padding:'8px', width:'100%', maxWidth:'800px', margin:'0 auto' }}
             >
               {!openChatWith ? (
@@ -2200,7 +2214,7 @@ const DashboardModel = () => {
 
                 {/* Overlay de mensajes (reutiliza el chat central) */}
                 <StyledChatContainer data-wide="true">
-                  <StyledChatList>
+                  <StyledChatList ref={callListRef}>
                     {centerMessages.map((m) => {
                       let giftData = m.gift;
                       if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {

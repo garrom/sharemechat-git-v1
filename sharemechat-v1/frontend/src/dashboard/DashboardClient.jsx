@@ -93,6 +93,8 @@ const DashboardClient = () => {
   const callTargetLockedRef = useRef(false);
   const remoteVideoWrapRef = useRef(null);
   const callRemoteWrapRef  = useRef(null);
+  const vcListRef = useRef(null);          // lista overlay videochat (messages)
+  const callListRef = useRef(null);        // lista overlay calling (centerMessages)
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -254,12 +256,23 @@ const DashboardClient = () => {
     }
   }, [callRemoteStream]);
 
-
   useEffect(() => {
     const el = centerListRef.current;
     if (!el) return;
     queueMicrotask(() => { el.scrollTop = el.scrollHeight; });
   }, [centerMessages, centerLoading, centerChatPeerId]);
+
+  useEffect(() => {
+    const el = vcListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
+
+  useEffect(() => {
+    if (callStatus !== 'in-call') return;
+    const el = callListRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [centerMessages, callStatus]);
+
 
   // [CALL][Client] target dinámico desde Favoritos (chat central) o favorito seleccionado
   useEffect(() => {
@@ -1860,7 +1873,7 @@ const DashboardClient = () => {
 
                         {/* Overlay de mensajes sobre el vídeo */}
                         <StyledChatContainer data-wide="true">
-                          <StyledChatList>
+                          <StyledChatList ref={vcListRef}>
                             {messages.map((msg, index) => {
                               const isMe = msg.from === 'me';
                               const variant = isMe ? 'me' : 'peer';
@@ -2178,7 +2191,7 @@ const DashboardClient = () => {
 
                   {/* Overlay de mensajes (reuso de Favoritos/videochat) */}
                   <StyledChatContainer data-wide="true">
-                    <StyledChatList>
+                    <StyledChatList ref={callListRef}>
                       {centerMessages.map((m) => {
                         let giftData = m.gift;
                         if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
