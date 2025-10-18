@@ -86,6 +86,9 @@ const DashboardModel = () => {
   const [callError, setCallError] = useState('');
   const [callRole, setCallRole] = useState(null); // 'caller' | 'callee'
   const [callPeerAvatar, setCallPeerAvatar] = useState('');
+  //Click derecho
+  const [ctxUser, setCtxUser] = useState(null);
+  const [ctxPos, setCtxPos]   = useState({ x: 0, y: 0 });
 
   const callLocalVideoRef = useRef(null);
   const callRemoteVideoRef = useRef(null);
@@ -131,6 +134,14 @@ const DashboardModel = () => {
     const found = gifts.find(gg => Number(gg.id) === Number(gift.id));
     return found?.icon || null;
   };
+
+  // click derecho
+  useEffect(() => {
+    const close = () => setCtxUser(null);
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, []);
+
 
   useEffect(() => {
     const loadUser = async () => {
@@ -1801,6 +1812,7 @@ const DashboardModel = () => {
               onSelect={handleOpenChatFromFavorites}
               reloadTrigger={favReload}
               selectedId={selectedContactId}
+              onContextMenu={(user, pos) => { setCtxUser(user); setCtxPos(pos); }}
             />
           )}
 
@@ -1810,6 +1822,7 @@ const DashboardModel = () => {
                 onSelect={handleSelectCallTargetFromFavorites}
                 reloadTrigger={favReload}
                 selectedId={selectedContactId}
+                onContextMenu={(user, pos) => { setCtxUser(user); setCtxPos(pos); }}
               />
             ) : (
               <div style={{ padding: 8, color: '#adb5bd' }}>
@@ -1858,7 +1871,7 @@ const DashboardModel = () => {
                     <h5 style={{ color: 'white' }}>Tu Cámara</h5>
                     <video
                       ref={localVideoRef}
-                      style={{ width: '100%', border: '1px solid black' }}
+                      style={{ width: '100%'}}
                       muted
                       autoPlay
                     />
@@ -1890,35 +1903,36 @@ const DashboardModel = () => {
                           </StyledVideoTitle>
                           <video
                             ref={remoteVideoRef}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             autoPlay
                             onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                           />
                         </StyledRemoteVideo>
 
                         {/* Overlay de mensajes sobre el vídeo */}
-                        <StyledChatContainer>
+                        <StyledChatContainer data-wide="true">
                           <StyledChatList>
-                            {messages.map((msg, index) => {
-                              const isMe = msg.from === 'me';
-                              return (
-                                <StyledChatMessageRow key={index} $me={isMe}>
-                                  {msg.gift ? (
-                                    <StyledChatBubble $me={isMe}>
-                                      <strong>{isMe ? 'Yo' : 'Cliente'}:</strong>{' '}
-                                      {giftRenderReady && (() => {
-                                        const src = getGiftIcon(msg.gift);
-                                        return src ? (<StyledGiftIcon src={src} alt="" />) : null;
-                                      })()}
-                                    </StyledChatBubble>
-                                  ) : (
-                                    <StyledChatBubble $me={isMe}>
-                                      <strong>{isMe ? 'Yo' : 'Cliente'}:</strong> {msg.text}
-                                    </StyledChatBubble>
-                                  )}
-                                </StyledChatMessageRow>
-                              );
-                            })}
+                           {messages.map((msg, index) => {
+                             const isMe = msg.from === 'me';
+                             // Queremos: modelo (yo) → rosa ; cliente → azul
+                             const variant = isMe ? 'peer' : 'me';
+                             const prefix  = isMe ? 'me' : (clientNickname || 'Cliente');
+
+                             return (
+                               <StyledChatMessageRow key={index}>
+                                 <StyledChatBubble $variant={variant}>
+                                   <strong>{prefix} :</strong>{' '}
+                                   {msg.gift
+                                     ? (giftRenderReady && (() => {
+                                         const src = getGiftIcon(msg.gift);
+                                         return src ? (<StyledGiftIcon src={src} alt="" />) : null;
+                                       })())
+                                     : msg.text}
+                                 </StyledChatBubble>
+                               </StyledChatMessageRow>
+                             );
+                           })}
+
                           </StyledChatList>
                         </StyledChatContainer>
                       </StyledVideoArea>
@@ -2047,30 +2061,40 @@ const DashboardModel = () => {
                             {allowChat ? 'No hay mensajes todavía. ¡Escribe el primero!' : 'Este chat no está activo.'}
                           </div>
                         )}
-                        {centerMessages.map(m => (
-                          <div
-                            key={m.id}
-                            style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}
-                          >
-                            <span style={{
-                              display:'inline-block',
-                              padding:'6px 10px',
-                              borderRadius:10,
-                              background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
-                              color:'#fff',
-                              maxWidth:'80%'
-                            }}>
-                              {m.gift ? (
-                                giftRenderReady && (() => {
-                                  const src = getGiftIcon(m.gift);
-                                  return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
-                                })()
-                              ) : (
-                                m.body
-                              )}
-                            </span>
-                          </div>
-                        ))}
+                        {centerMessages.map(m => {
+                          let giftData = m.gift;
+                          if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+                            try {
+                              const parts = m.body.slice(2, -2).split(':'); // GIFT:id:name
+                              giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
+                            } catch {}
+                          }
+
+                          const isMe = Number(m.senderId) === Number(user?.id);
+                          const variant = isMe ? 'me' : 'peer';
+                          const prefix = isMe ? 'me' : (centerChatPeerName || `Usuario ${openChatWith || ''}`);
+
+                          return (
+                            <StyledChatMessageRow key={m.id}>
+                              <StyledChatBubble $variant={variant}>
+                                {giftData ? (
+                                  <>
+                                    <strong>{prefix} :</strong>{' '}
+                                    {giftRenderReady && (() => {
+                                      const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
+                                      return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
+                                    })()}
+                                  </>
+                                ) : (
+                                  <>
+                                    <strong>{prefix} :</strong> {m.body}
+                                  </>
+                                )}
+                              </StyledChatBubble>
+                            </StyledChatMessageRow>
+                          );
+                        })}
+
                       </div>
 
                       <div style={{ display:'flex', gap:8, marginTop:10 }}>
@@ -2097,7 +2121,6 @@ const DashboardModel = () => {
             </div>
           )}
           {/*FIN RENDERIZADO FAVORITOS */}
-
 
           {/* RENDERIZADO CALLING */}
           {activeTab === 'calling' && (
@@ -2176,17 +2199,11 @@ const DashboardModel = () => {
                 </StyledLocalVideo>
 
                 {/* Overlay de mensajes (reutiliza el chat central) */}
-                <StyledChatContainer>
+                <StyledChatContainer data-wide="true">
                   <StyledChatList>
                     {centerMessages.map((m) => {
-                      // Soporte de regalos inline [[GIFT:id:nombre]]
                       let giftData = m.gift;
-                      if (
-                        !giftData &&
-                        typeof m.body === 'string' &&
-                        m.body.startsWith('[[GIFT:') &&
-                        m.body.endsWith(']]')
-                      ) {
+                      if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
                         try {
                           const parts = m.body.slice(2, -2).split(':');
                           giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
@@ -2194,25 +2211,24 @@ const DashboardModel = () => {
                       }
 
                       const isMe = Number(m.senderId) === Number(user?.id);
+                      const variant = isMe ? 'peer' : 'me'; // modelo=rosa, cliente=azul
+                      const prefix  = isMe ? 'me' : (callPeerName || `Usuario ${callPeerId || ''}`);
+
                       return (
-                        <StyledChatMessageRow key={m.id} $me={isMe}>
-                          {giftData ? (
-                            giftRenderReady && (() => {
-                              const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
-                              return src ? (
-                                <StyledChatBubble $me={isMe}>
-                                  <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} />
-                                </StyledChatBubble>
-                              ) : null;
-                            })()
-                          ) : (
-                            <StyledChatBubble $me={isMe}>
-                              {m.body}
-                            </StyledChatBubble>
-                          )}
+                        <StyledChatMessageRow key={m.id}>
+                          <StyledChatBubble $variant={variant}>
+                            <strong>{prefix} :</strong>{' '}
+                            {giftData
+                              ? (giftRenderReady && (() => {
+                                  const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
+                                  return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
+                                })())
+                              : m.body}
+                          </StyledChatBubble>
                         </StyledChatMessageRow>
                       );
                     })}
+
                   </StyledChatList>
                 </StyledChatContainer>
               </StyledVideoArea>
@@ -2271,6 +2287,52 @@ const DashboardModel = () => {
 
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
+
+      {/*INICIO CLICK DERECHO */}
+        {ctxUser && (
+          <div
+            style={{
+              position: 'fixed',
+              left: ctxPos.x,
+              top: ctxPos.y,
+              zIndex: 9999,
+              background: '#fff',
+              border: '1px solid #dee2e6',
+              borderRadius: 8,
+              boxShadow: '0 8px 24px rgba(0,0,0,.12)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              style={{
+                display: 'block',
+                padding: '10px 14px',
+                background: 'transparent',
+                border: 'none',
+                cursor: 'pointer'
+              }}
+              onClick={async () => {
+                try {
+                  const tk = localStorage.getItem('token');
+                  if (!tk) return;
+                  // endpoint simétrico: eliminar favorito (modelo -> cliente)
+                  await fetch(`/api/favorites/clients/${ctxUser.id}`, {
+                    method: 'DELETE',
+                    headers: { Authorization: `Bearer ${tk}` }
+                  });
+                  setCtxUser(null);
+                  setFavReload(x => x + 1);
+                } catch (e) {
+                  alert(e.message || 'No se pudo eliminar de favoritos');
+                }
+              }}
+            >
+              Eliminar de favoritos
+            </button>
+          </div>
+        )}
+
+      {/*FIN CLICK DERECHO */}
 
     </StyledContainer>
   );

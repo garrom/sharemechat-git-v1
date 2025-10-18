@@ -853,8 +853,9 @@ const DashboardClient = () => {
         try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
         setRemoteStream(null);
         setMessages([]);
+        setStatus('Buscando nueva modelo...');
         setSearching(true);
-        setError('Buscando nuevo modelo...');
+
         if (socketRef.current?.readyState === WebSocket.OPEN) {
           socketRef.current.send(JSON.stringify({ type: 'start-match' }));
           socketRef.current.send(JSON.stringify({ type: 'stats' }));
@@ -898,8 +899,9 @@ const DashboardClient = () => {
     setCurrentModelId(null);
     setRemoteStream(null);
     setMessages([]);
+    setStatus('Buscando nueva modelo...');
     setSearching(true);
-    setError('Buscando nuevo modelo...');
+
   };
 
   const sendChatMessage = () => {
@@ -1818,7 +1820,7 @@ const DashboardClient = () => {
                     <h5 style={{ color: 'white' }}>Tu Cámara</h5>
                     <video
                       ref={localVideoRef}
-                      style={{ width: '100%', border: '1px solid black' }}
+                      style={{ width: '100%' }}
                       muted
                       autoPlay
                     />
@@ -1850,35 +1852,39 @@ const DashboardClient = () => {
                           </StyledVideoTitle>
                           <video
                             ref={remoteVideoRef}
-                            style={{ width: '100%', height: '100%', objectFit: 'cover', border: '1px solid black' }}
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             autoPlay
                             onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                           />
                         </StyledRemoteVideo>
 
                         {/* Overlay de mensajes sobre el vídeo */}
-                        <StyledChatContainer>
+                        <StyledChatContainer data-wide="true">
                           <StyledChatList>
                             {messages.map((msg, index) => {
                               const isMe = msg.from === 'me';
+                              const variant = isMe ? 'me' : 'peer';
+                              const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
+
                               return (
-                                <StyledChatMessageRow key={index} $me={isMe}>
+                                <StyledChatMessageRow key={index}>
                                   {msg.gift ? (
-                                    <StyledChatBubble $me={isMe}>
-                                      <strong>{isMe ? 'Yo' : 'Modelo'}:</strong>{' '}
+                                    <StyledChatBubble $variant={variant}>
+                                      <strong>{prefix} :</strong>{' '}
                                       {giftRenderReady && (() => {
                                         const src = getGiftIcon(msg.gift);
                                         return src ? (<StyledGiftIcon src={src} alt="" />) : null;
                                       })()}
                                     </StyledChatBubble>
                                   ) : (
-                                    <StyledChatBubble $me={isMe}>
-                                      <strong>{isMe ? 'Yo' : 'Modelo'}:</strong> {msg.text}
+                                    <StyledChatBubble $variant={variant}>
+                                      <strong>{prefix} :</strong> {msg.text}
                                     </StyledChatBubble>
                                   )}
                                 </StyledChatMessageRow>
                               );
                             })}
+
                           </StyledChatList>
                         </StyledChatContainer>
                       </StyledVideoArea>
@@ -1932,196 +1938,6 @@ const DashboardClient = () => {
           )}
           {/*FIN RENDERIZADO VIDEOCHAT */}
 
-          {/*RENDERIZADO CALLING */}
-          {activeTab === 'calling' && (
-            <>
-              {/* Estado y error */}
-              {callError && <p style={{ color: 'orange', marginTop: 6 }}>[CALL] {callError}</p>}
-              <div style={{ color: '#9bd' }}>
-                Estado: <strong>{callStatus}</strong>
-                {callPeerName ? ` | Con: ${callPeerName} (#${callPeerId||''})` : ''}
-              </div>
-               {/* Controles superiores */}
-              <StyledTopActions style={{ gap: 8 }}>
-                {!callCameraActive && (
-                  <StyledActionButton onClick={handleCallActivateCamera}>
-                    Activar Cámara para Llamar
-                  </StyledActionButton>
-                )}
-
-                {callCameraActive && callStatus !== 'in-call' && callStatus !== 'ringing' && (
-                  <>
-                    <StyledActionButton
-                      onClick={handleCallInvite}
-                      disabled={!callPeerId}
-                      title={!callPeerId ? 'Abre un chat en Favoritos para elegir destinatario' : `Llamar a ${callPeerName || callPeerId}`}
-                    >
-                      {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
-                    </StyledActionButton>
-                  </>
-                )}
-
-                {(callStatus === 'ringing' || callStatus === 'in-call' || callStatus === 'connecting') && (
-                  <StyledActionButton onClick={() => handleCallEnd(false)} style={{ backgroundColor: '#dc3545' }}>
-                    Colgar
-                  </StyledActionButton>
-                )}
-              </StyledTopActions>
-              {/* Área de videollamada (remoto full + local overlay, como en videochat) */}
-              <StyledVideoArea style={{ display: showCallMedia ? 'block' : 'none' }}>
-                <StyledRemoteVideo ref={callRemoteWrapRef}>
-                  <StyledVideoTitle>
-                    <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChica.png'} alt="" />
-                    {callPeerName || 'Remoto'}
-                    {/* Botón expandir */}
-                    <button
-                      type="button"
-                      onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
-                      title="Pantalla completa"
-                      style={{
-                        marginLeft: 8,
-                        padding: '2px 8px',
-                        borderRadius: 6,
-                        border: '1px solid rgba(255,255,255,.6)',
-                        background: 'rgba(0,0,0,.25)',
-                        color: '#fff',
-                        cursor: 'pointer'
-                      }}
-                    >⤢</button>
-                  </StyledVideoTitle>
-                  <video
-                    ref={callRemoteVideoRef}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    autoPlay
-                    playsInline
-                    onDoubleClick={() => toggleFullscreen(callRemoteWrapRef.current)}
-                  />
-                </StyledRemoteVideo>
-                {/* Video Local superpuesto */}
-                <StyledLocalVideo>
-                  <h5 style={{ color: 'white', margin: 0, fontSize: 12 }}>Tu Cámara</h5>
-                  <video
-                    ref={callLocalVideoRef}
-                    style={{ width: '100%', display: 'block', border: '1px solid rgba(255,255,255,0.25)' }}
-                    muted
-                    autoPlay
-                    playsInline
-                  />
-                </StyledLocalVideo>
-
-                {/* Overlay de mensajes (reuso de Favoritos/videochat) */}
-                <StyledChatContainer>
-                  <StyledChatList>
-                    {centerMessages.map((m) => {
-                      // Detecta regalo inline si viene como [[GIFT:id:nombre]]
-                      let giftData = m.gift;
-                      if (
-                        !giftData &&
-                        typeof m.body === 'string' &&
-                        m.body.startsWith('[[GIFT:') &&
-                        m.body.endsWith(']]')
-                      ) {
-                        try {
-                          const parts = m.body.slice(2, -2).split(':');
-                          giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
-                        } catch {}
-                      }
-                      const isMe = Number(m.senderId) === Number(user?.id);
-                      return (
-                        <StyledChatMessageRow key={m.id} $me={isMe}>
-                          {giftData ? (
-                            giftRenderReady && (() => {
-                              const src =
-                                gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon || null;
-                              return src ? (
-                                <StyledChatBubble $me={isMe}>
-                                  <img src={src} alt="" style={{ width: 24, height: 24, verticalAlign: 'middle' }} />
-                                </StyledChatBubble>
-                              ) : null;
-                            })()
-                          ) : (
-                            <StyledChatBubble $me={isMe}>
-                              {m.body}
-                            </StyledChatBubble>
-                          )}
-                        </StyledChatMessageRow>
-                      );
-                    })}
-                  </StyledChatList>
-                </StyledChatContainer>
-              </StyledVideoArea>
-
-              {/* Dock de entrada (mismo que videochat, usando el chat central con el peer de la llamada) */}
-              <StyledChatDock style={{ display: showCallMedia ? 'flex' : 'none' }}>
-                <StyledChatInput
-                  type="text"
-                  value={centerInput}
-                  onChange={(e) => setCenterInput(e.target.value)}
-                  placeholder="Escribe un mensaje…"
-                  autoComplete="off"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      sendCenterMessage();
-                    }
-                  }}
-                />
-                <StyledActionButton type="button" onClick={sendCenterMessage}>
-                  Enviar
-                </StyledActionButton>
-
-                {/* (Opcional) regalos en llamada, igual que en favoritos */}
-                <StyledGiftToggle
-                  type="button"
-                  onClick={() => setShowCenterGifts(s => !s)}
-                  title="Enviar regalo"
-                >
-                  🎁
-                </StyledGiftToggle>
-
-                {showCenterGifts && (
-                  <StyledGiftsPanel>
-                    <StyledGiftGrid>
-                      {gifts.map(g => (
-                        <button key={g.id} onClick={() => sendGiftMsg(g.id)}>
-                          <img src={g.icon} alt={g.name} />
-                          <div>{g.name}</div>
-                          <div>{fmtEUR(g.cost)}</div>
-                        </button>
-                      ))}
-                    </StyledGiftGrid>
-                  </StyledGiftsPanel>
-                )}
-              </StyledChatDock>
-
-
-              {/* Incoming: aceptar / rechazar */}
-              {callStatus === 'incoming' && (
-                <div style={{
-                  marginTop: 12, padding: 12, border: '1px solid #333', borderRadius: 8,
-                  background:'rgba(0,0,0,0.35)'
-                }}>
-                  <div style={{ color:'#fff', marginBottom: 8 }}>
-                    Te está llamando <strong>{callPeerName || `Usuario ${callPeerId}`}</strong>.
-                  </div>
-                  <div style={{ display:'flex', gap: 10 }}>
-                    <StyledActionButton onClick={handleCallAccept}>Aceptar</StyledActionButton>
-                    <StyledActionButton onClick={handleCallReject} style={{ backgroundColor:'#dc3545' }}>
-                      Rechazar
-                    </StyledActionButton>
-                  </div>
-                </div>
-              )}
-              {/* Ringing: indicador */}
-              {callStatus === 'ringing' && (
-                <div style={{ marginTop: 12, color:'#fff' }}>
-                  Llamando a {callPeerName || `Usuario ${callPeerId}`}… (sonando)
-                </div>
-              )}
-            </>
-          )}
-
-          {/*FIN RENDERIZADO CALLING */}
 
           {/*RENDERIZADO FUNNYPLACE */}
           {activeTab === 'funnyplace' && ( <FunnyplacePage /> )}
@@ -2216,29 +2032,32 @@ const DashboardClient = () => {
                               giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
                             } catch {}
                           }
+
+                          const isMe = Number(m.senderId) === Number(user?.id);
+                          const variant = isMe ? 'me' : 'peer';
+                          const prefix = isMe ? 'me' : (centerChatPeerName || `Usuario ${centerChatPeerId || ''}`);
+
                           return (
-                            <div key={m.id}
-                                style={{ textAlign: m.senderId === user?.id ? 'right' : 'left', margin:'6px 0' }}>
-                              <span style={{
-                                  display:'inline-block',
-                                  padding:'6px 10px',
-                                  borderRadius:10,
-                                  background: m.senderId === user?.id ? '#0d6efd' : '#343a40',
-                                  color:'#fff',
-                                  maxWidth:'80%'
-                              }}>
+                            <StyledChatMessageRow key={m.id}>
+                              <StyledChatBubble $variant={variant}>
                                 {giftData ? (
-                                  giftRenderReady && (() => {
-                                    const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
-                                    return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
-                                  })()
+                                  <>
+                                    <strong>{prefix} :</strong>{' '}
+                                    {giftRenderReady && (() => {
+                                      const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
+                                      return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
+                                    })()}
+                                  </>
                                 ) : (
-                                  m.body
+                                  <>
+                                    <strong>{prefix} :</strong> {m.body}
+                                  </>
                                 )}
-                              </span>
-                            </div>
+                              </StyledChatBubble>
+                            </StyledChatMessageRow>
                           );
                         })}
+
                       </div>
 
                       <div style={{ display:'flex', gap:8, marginTop:10, alignItems:'center', position:'relative' }}>
@@ -2280,6 +2099,196 @@ const DashboardClient = () => {
           )}
           {/*FIN RENDERIZADO FAVORITOS */}
 
+            {/*RENDERIZADO CALLING */}
+            {activeTab === 'calling' && (
+              <>
+                {/* Estado y error */}
+                {callError && <p style={{ color: 'orange', marginTop: 6 }}>[CALL] {callError}</p>}
+                <div style={{ color: '#9bd' }}>
+                  Estado: <strong>{callStatus}</strong>
+                  {callPeerName ? ` | Con: ${callPeerName} (#${callPeerId||''})` : ''}
+                </div>
+                 {/* Controles superiores */}
+                <StyledTopActions style={{ gap: 8 }}>
+                  {!callCameraActive && (
+                    <StyledActionButton onClick={handleCallActivateCamera}>
+                      Activar Cámara para Llamar
+                    </StyledActionButton>
+                  )}
+
+                  {callCameraActive && callStatus !== 'in-call' && callStatus !== 'ringing' && (
+                    <>
+                      <StyledActionButton
+                        onClick={handleCallInvite}
+                        disabled={!callPeerId}
+                        title={!callPeerId ? 'Abre un chat en Favoritos para elegir destinatario' : `Llamar a ${callPeerName || callPeerId}`}
+                      >
+                        {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
+                      </StyledActionButton>
+                    </>
+                  )}
+
+                  {(callStatus === 'ringing' || callStatus === 'in-call' || callStatus === 'connecting') && (
+                    <StyledActionButton onClick={() => handleCallEnd(false)} style={{ backgroundColor: '#dc3545' }}>
+                      Colgar
+                    </StyledActionButton>
+                  )}
+                </StyledTopActions>
+                {/* Área de videollamada (remoto full + local overlay, como en videochat) */}
+                <StyledVideoArea style={{ display: showCallMedia ? 'block' : 'none' }}>
+                  <StyledRemoteVideo ref={callRemoteWrapRef}>
+                    <StyledVideoTitle>
+                      <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChica.png'} alt="" />
+                      {callPeerName || 'Remoto'}
+                      {/* Botón expandir */}
+                      <button
+                        type="button"
+                        onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
+                        title="Pantalla completa"
+                        style={{
+                          marginLeft: 8,
+                          padding: '2px 8px',
+                          borderRadius: 6,
+                          border: '1px solid rgba(255,255,255,.6)',
+                          background: 'rgba(0,0,0,.25)',
+                          color: '#fff',
+                          cursor: 'pointer'
+                        }}
+                      >⤢</button>
+                    </StyledVideoTitle>
+                    <video
+                      ref={callRemoteVideoRef}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      autoPlay
+                      playsInline
+                      onDoubleClick={() => toggleFullscreen(callRemoteWrapRef.current)}
+                    />
+                  </StyledRemoteVideo>
+                  {/* Video Local superpuesto */}
+                  <StyledLocalVideo>
+                    <h5 style={{ color: 'white', margin: 0, fontSize: 12 }}>Tu Cámara</h5>
+                    <video
+                      ref={callLocalVideoRef}
+                      style={{ width: '100%', display: 'block', border: '1px solid rgba(255,255,255,0.25)' }}
+                      muted
+                      autoPlay
+                      playsInline
+                    />
+                  </StyledLocalVideo>
+
+                  {/* Overlay de mensajes (reuso de Favoritos/videochat) */}
+                  <StyledChatContainer data-wide="true">
+                    <StyledChatList>
+                      {centerMessages.map((m) => {
+                        let giftData = m.gift;
+                        if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+                          try {
+                            const parts = m.body.slice(2, -2).split(':');
+                            giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
+                          } catch {}
+                        }
+
+                        const isMe = Number(m.senderId) === Number(user?.id);
+                        const variant = isMe ? 'me' : 'peer';
+                        const prefix = isMe ? 'me' : (callPeerName || `Usuario ${callPeerId || ''}`);
+
+                        return (
+                          <StyledChatMessageRow key={m.id}>
+                            {giftData ? (
+                              giftRenderReady && (() => {
+                                const src = gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon || null;
+                                return src ? (
+                                  <StyledChatBubble $variant={variant}>
+                                    <strong>{prefix} :</strong>{' '}
+                                    <img src={src} alt="" style={{ width: 24, height: 24, verticalAlign: 'middle' }} />
+                                  </StyledChatBubble>
+                                ) : null;
+                              })()
+                            ) : (
+                              <StyledChatBubble $variant={variant}>
+                                <strong>{prefix} :</strong> {m.body}
+                              </StyledChatBubble>
+                            )}
+                          </StyledChatMessageRow>
+                        );
+                      })}
+
+
+                    </StyledChatList>
+                  </StyledChatContainer>
+                </StyledVideoArea>
+
+                {/* Dock de entrada (mismo que videochat, usando el chat central con el peer de la llamada) */}
+                <StyledChatDock style={{ display: showCallMedia ? 'flex' : 'none' }}>
+                  <StyledChatInput
+                    type="text"
+                    value={centerInput}
+                    onChange={(e) => setCenterInput(e.target.value)}
+                    placeholder="Escribe un mensaje…"
+                    autoComplete="off"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendCenterMessage();
+                      }
+                    }}
+                  />
+                  <StyledActionButton type="button" onClick={sendCenterMessage}>
+                    Enviar
+                  </StyledActionButton>
+
+                  {/* (Opcional) regalos en llamada, igual que en favoritos */}
+                  <StyledGiftToggle
+                    type="button"
+                    onClick={() => setShowCenterGifts(s => !s)}
+                    title="Enviar regalo"
+                  >
+                    🎁
+                  </StyledGiftToggle>
+
+                  {showCenterGifts && (
+                    <StyledGiftsPanel>
+                      <StyledGiftGrid>
+                        {gifts.map(g => (
+                          <button key={g.id} onClick={() => sendGiftMsg(g.id)}>
+                            <img src={g.icon} alt={g.name} />
+                            <div>{g.name}</div>
+                            <div>{fmtEUR(g.cost)}</div>
+                          </button>
+                        ))}
+                      </StyledGiftGrid>
+                    </StyledGiftsPanel>
+                  )}
+                </StyledChatDock>
+
+
+                {/* Incoming: aceptar / rechazar */}
+                {callStatus === 'incoming' && (
+                  <div style={{
+                    marginTop: 12, padding: 12, border: '1px solid #333', borderRadius: 8,
+                    background:'rgba(0,0,0,0.35)'
+                  }}>
+                    <div style={{ color:'#fff', marginBottom: 8 }}>
+                      Te está llamando <strong>{callPeerName || `Usuario ${callPeerId}`}</strong>.
+                    </div>
+                    <div style={{ display:'flex', gap: 10 }}>
+                      <StyledActionButton onClick={handleCallAccept}>Aceptar</StyledActionButton>
+                      <StyledActionButton onClick={handleCallReject} style={{ backgroundColor:'#dc3545' }}>
+                        Rechazar
+                      </StyledActionButton>
+                    </div>
+                  </div>
+                )}
+                {/* Ringing: indicador */}
+                {callStatus === 'ringing' && (
+                  <div style={{ marginTop: 12, color:'#fff' }}>
+                    Llamando a {callPeerName || `Usuario ${callPeerId}`}… (sonando)
+                  </div>
+                )}
+              </>
+            )}
+
+            {/*FIN RENDERIZADO CALLING */}
 
         </StyledCenter>
         {/* ================FIN ZONA CENTRAL =================*/}

@@ -20,6 +20,8 @@ import ForgotPassword from './public/ForgotPassword';
 import Roles from './constants/Roles';
 import { ModalProvider } from './components/ModalProvider';
 import GuestConsentGate from './consent/GuestConsentGate';
+import { GlobalTypography } from './styles/core/typography';
+
 
 // Wrapper para rutas públicas que requieren age-gate/TyC (guest/no logueado)
 const PublicWithGuestGate = ({ component: Component, ...rest }) => (
@@ -35,7 +37,9 @@ const PublicWithGuestGate = ({ component: Component, ...rest }) => (
 
 function App(){return(
   <ModalProvider>
-    <Router>
+    <>
+      <GlobalTypography />
+      <Router>
         <Switch>
             {/* Públicas CON MODAL (age-gate/TyC):*/}
             <PublicWithGuestGate exact path="/" component={Home} />
@@ -64,7 +68,10 @@ function App(){return(
             {/* Fallback */}
             <Redirect to="/unauthorized"/>
         </Switch>
-    </Router>
-  </ModalProvider>);}
+      </Router>
+    </>
+  </ModalProvider>
+);}
+
 
 export default App;

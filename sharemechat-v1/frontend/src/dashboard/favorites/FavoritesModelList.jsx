@@ -52,7 +52,6 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, selected = false }) 
         />
       </Badges>
 
-
       <button
         type="button"
         title="Eliminar de favoritos"

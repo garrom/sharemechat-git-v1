@@ -143,14 +143,22 @@ export const StyledMainContent = styled.div`
   display: flex;
   flex: 1;
   overflow: hidden;
+  gap: 12px;              /* separa columnas sin bloques grises */
+  padding: 12px 12px 16px;/* margen interior uniforme */
+  box-sizing: border-box; /* evita desbordes */
 `;
+
 
 // Columna izquierda
 export const StyledLeftColumn = styled.aside`
-  width: 20%;
+  flex: 0 0 22%;
+  max-width: 320px;
+  min-width: 220px;
   background-color: #ffffff;
-  padding: 20px;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.04);
   overflow-y: auto;
 
   /* tablets */
@@ -179,18 +187,26 @@ export const StyledLeftColumn = styled.aside`
 
 // Área central
 export const StyledCenter = styled.main`
-  flex: 1;
-  padding: 20px;
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 60%;
-  min-width: 640px;
-  min-height: 480px;
-  max-width: 90%;
+  align-items: stretch;
+  justify-content: flex-start;
   position: relative;
-  background-color: #D3D3D3 //gris claro
+  background-color: #f7f8fa;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+
+  /* Patrón opcional (sutil). Sustituye la URL cuando elijas uno */
+  background-image: url('/img/patterns/paper-1.png');
+  background-repeat: repeat;
+  background-size: auto;
+  background-blend-mode: normal;
+
+
 ;
 
   @media (max-width: 768px) {
@@ -206,15 +222,17 @@ export const StyledCenter = styled.main`
 
 // Columna derecha
 export const StyledRightColumn = styled.aside`
-  width: 20%;
+  flex: 0 0 22%;
+  max-width: 320px;
+  min-width: 220px;
   background-color: #ffffff;
-  padding: 20px;
-  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+  padding: 16px;
+  border: 1px solid #e9ecef;
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0,0,0,.04);
   overflow-y: auto;
 
-  @media (max-width: 768px) {
-    display: none;
-  }
+  @media (max-width: 1024px) { display: none; } /* limpia vista en tablet/móvil */
 
   @media (min-width: 769px) and (max-width: 1024px) {
     width: 25%;
@@ -267,14 +285,14 @@ export const StyledRemoteVideo = styled.div`
 export const StyledVideoArea = styled.div`
   position: relative;
   width: 100%;
-  height: 95%;         /* 95% de la altura para vídeo + overlay */
-  min-height: 360px;   /* por si el viewport es pequeño */
+  height: calc(100% - 60px); /* deja sitio al dock sin solape */
+  min-height: 360px;
 `;
 
 export const StyledChatDock = styled.div`
   /* El 5% restante para el dock de entrada */
-  height: 5%;
-  min-height: 56px;          /* asegura usabilidad en pantallas bajas */
+  height: 60px;           /* fijo = coherencia visual */
+  min-height: 60px;
   width: 100%;
   display: flex;
   align-items: center;
@@ -308,6 +326,16 @@ export const StyledChatContainer = styled.div`
     right: 8px;
     width: auto;
   }
+  /* Modo “ancho”: se pega a los bordes, sin sombra ni radios */
+  &[data-wide="true"] {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    padding: 8px 10px;
+    border-radius: 0;
+    box-shadow: none;
+  }
 `;
 
 /** Lista de mensajes dentro del chat del streaming */
@@ -315,25 +343,45 @@ export const StyledChatList = styled.div`
   max-height: 260px;
   overflow-y: auto;
   margin-bottom: 10px;
+
+  /* Oculta scrollbar (firefox + webkit) para aspecto limpio */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
 `;
 
-/** Fila de mensaje: alinea izq/der según si es mío */
-export const StyledChatMessageRow = styled.div`
-  display: flex;
-  justify-content: ${p => (p.$me ? 'flex-end' : 'flex-start')};
-  margin: 6px 0;
-`;
+/** Fila de mensajes **/
+ export const StyledChatMessageRow = styled.div`
+   display: flex;
+   justify-content: ${p => (p.$me ? 'flex-end' : 'flex-start')};
+   justify-content: flex-start;
+   margin: 6px 0;
+ `;
 
 /** Burbuja del mensaje */
 export const StyledChatBubble = styled.span`
   display: inline-block;
   padding: 6px 10px;
   border-radius: 10px;
-  background: ${p => (p.$me ? '#0D6EFD40' : '#343A4040')};
-  color: #fff;
+  background: #ffffff;
+  color: ${p => (p.$variant === 'me' ? '#0d6efd' : '#b10d3a')};
+  border: 1px solid ${p => (p.$variant === 'me' ? '#b6d4fe' : '#f5b5c1')};
+
+  font-family: var(--app-font, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji");
+
   max-width: 80%;
   line-height: 1.35;
+
+  & > strong {
+    margin-right: 6px;
+    opacity: .9;
+    font-weight: 600;
+  }
 `;
+
 
 /** Pie de controles del chat (input + botones) */
 export const StyledChatControls = styled.div`
