@@ -271,7 +271,7 @@ export const StyledLocalVideo = styled.div`
   position: absolute;
   top: 14px;
   right: 28px;
-  width: 10%;
+  width: 20%;
   z-index: 2;
 `;
 

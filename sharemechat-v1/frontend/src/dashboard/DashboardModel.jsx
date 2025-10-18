@@ -783,7 +783,7 @@ const DashboardModel = () => {
   const handleActivateCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 },
+        video: true,
         audio: true,
       });
       localStream.current = stream;
@@ -1350,7 +1350,7 @@ const DashboardModel = () => {
     console.log('[CALL][cam:on][Model] requesting user media');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 640, height: 480 },
+        video: true,
         audio: true
       });
       callLocalStreamRef.current = stream;
