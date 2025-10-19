@@ -5,10 +5,7 @@ import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.repository.ClientRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
-import com.sharemechat.service.FavoriteService;
-import com.sharemechat.service.MessageService;
-import com.sharemechat.service.StreamService;
-import com.sharemechat.service.TransactionService;
+import com.sharemechat.service.*;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
@@ -35,6 +32,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     private final StreamService streamService;               // para start/end/cutoff
     private final ClientRepository clientRepository;         // leer saldo_actual del CLIENT
     private final BillingProperties billing;                 // ratePerMinute, cutoff, etc.
+    private final ModelStatusService modelStatusService;
 
     private static final Logger log = LoggerFactory.getLogger(MessagesWsHandler.class);
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
@@ -51,7 +49,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                              TransactionService transactionService,
                              StreamService streamService,
                              ClientRepository clientRepository,
-                             BillingProperties billing) {
+                             BillingProperties billing,
+                             ModelStatusService modelStatusService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.favoriteService = favoriteService;
@@ -60,6 +59,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         this.streamService = streamService;
         this.clientRepository = clientRepository;
         this.billing = billing;
+        this.modelStatusService = modelStatusService;
 
     }
 
@@ -73,6 +73,12 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         log.info("WS /messages conectado: session={} userId={}", session.getId(), userId);
         sessionUserIds.put(session.getId(), userId);
         sessions.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet()).add(session);
+
+        // PRESENCIA: si es MODEL -> AVAILABLE
+        var u = userRepository.findById(userId).orElse(null);
+        if (u != null && com.sharemechat.constants.Constants.Roles.MODEL.equals(u.getRole())) {
+            modelStatusService.setAvailable(userId);
+        }
     }
 
     @Override
@@ -86,7 +92,16 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 if (set.isEmpty()) sessions.remove(userId);
             }
 
-            // --- NUEVO: si estaba en RINGING como receptor, cancela invitación ---
+            // Si es MODEL y ya no quedan sockets ni llamada activa -> OFFLINE
+            var u2 = userRepository.findById(userId).orElse(null);
+            if (u2 != null && com.sharemechat.constants.Constants.Roles.MODEL.equals(u2.getRole())) {
+                boolean stillOnline = sessions.getOrDefault(userId, java.util.Set.of()).size() > 0;
+                if (!stillOnline && inCallWith(userId) == null) {
+                    modelStatusService.setOffline(userId);
+                }
+            }
+
+            // Si estaba en RINGING como receptor, cancela invitación ---
             if (ringing.remove(userId)) {
                 Long caller = null;
                 // buscar quién estaba invitando a este receptor (puede que ninguno si usas "ringing" puro)
@@ -98,7 +113,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                         .toString());
             }
 
-            // --- NUEVO: si estaba en llamada activa, cerrar sesión y avisar peer ---
+            // Si estaba en llamada activa, cerrar sesión y avisar peer ---
             Long peer = inCallWith(userId);
             if (peer != null) {
                 try {
@@ -290,6 +305,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             // startSession (billing y estado BUSY/activeSession lo hace dentro)
             try {
                 streamService.startSession(clientId, modelId);
+                modelStatusService.setBusy(modelId);
+
             } catch (Exception ex) {
                 clearRinging(me);
                 String msg = ex.getMessage() != null ? ex.getMessage() : "No se pudo iniciar la sesión";
@@ -566,10 +583,23 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 .put("readAt", m.readAt() == null ? JSONObject.NULL : String.valueOf(m.readAt()));
     }
 
-    // ==== UTILIDAD: ¿usuario online? ====
-    private boolean isUserOnline(Long userId) {
+    // ==== Ver usuario online====
+    public boolean isUserOnline(Long userId) {
         var set = sessions.get(userId);
-        return set != null && !set.isEmpty();
+        boolean online = set != null && !set.isEmpty();
+        if (log.isDebugEnabled()) {
+            log.debug("[WS] isUserOnline userId={} -> {}", userId, online);
+        }
+        return online;
+    }
+
+    // === Ver usuario ocupado ===
+    public boolean isBusy(Long userId) {
+        boolean busy = (inCallWith(userId) != null);
+        if (log.isDebugEnabled()) {
+            log.debug("[WS] isBusy userId={} -> {}", userId, busy);
+        }
+        return busy;
     }
 
     // ==== ESTADO: llamadas activas (mantenemos simetría A<->B) ====
@@ -643,6 +673,12 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             } catch (Exception ex) {
                 log.warn("endCallAndSession endSession error clientId={} modelId={} err={}", clientId, modelId, ex.getMessage());
             }
+
+            // PRESENCIA tras finalizar la sesión: si el modelo sigue con sockets, AVAILABLE; si no, OFFLINE
+            boolean modelStillOnline = sessions.getOrDefault(modelId, java.util.Set.of()).size() > 0;
+            if (modelStillOnline) modelStatusService.setAvailable(modelId);
+            else modelStatusService.setOffline(modelId);
+
         }
         // Notificar a ambos y limpiar estado
         broadcastToUser(a, new org.json.JSONObject().put("type","call:ended").put("reason", reason).toString());
@@ -652,5 +688,16 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         clearRinging(a);
         clearRinging(b);
     }
+
+    // ==== API pública ligera para PresenceService ====
+    public boolean hasOnlineSession(Long userId) {
+        var set = sessions.get(userId);
+        return set != null && !set.isEmpty();
+    }
+
+    public boolean isInActiveCall(Long userId) {
+        return activeCalls.containsKey(userId);
+    }
+
 
 }

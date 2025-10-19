@@ -2321,7 +2321,6 @@ const DashboardClient = () => {
       {/* ======FIN MAIN ======== */}
 
       {/*INICIO CLICK DERECHO */}
-       /* === CONTEXT MENU (click derecho en favoritos) === */
        {ctxUser && (
          <div
            style={{

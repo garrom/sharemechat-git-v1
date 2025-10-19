@@ -3,6 +3,7 @@ package com.sharemechat.controller;
 import com.sharemechat.dto.FavoriteListItemDTO;
 import com.sharemechat.dto.UserSummaryDTO;
 import com.sharemechat.entity.User;
+import com.sharemechat.handler.MessagesWsHandler;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.FavoriteService;
 import org.springframework.http.ResponseEntity;
@@ -15,12 +16,17 @@ import java.util.List;
 @RequestMapping("/api/favorites")
 public class FavoritesController {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FavoritesController.class);
     private final FavoriteService favoriteService;
     private final UserRepository userRepository;
+    private final MessagesWsHandler messagesWsHandler;
 
-    public FavoritesController(FavoriteService favoriteService, UserRepository userRepository) {
+    public FavoritesController(FavoriteService favoriteService,
+                               UserRepository userRepository,
+                               MessagesWsHandler messagesWsHandler) {
         this.favoriteService = favoriteService;
         this.userRepository = userRepository;
+        this.messagesWsHandler = messagesWsHandler;
     }
 
     // ===== CLIENT -> MODELS =====
@@ -53,18 +59,97 @@ public class FavoritesController {
         return ResponseEntity.noContent().build();
     }
 
-    // ===== LISTADOS con metadatos (nuevos) =====
     @GetMapping("/models/meta")
     public ResponseEntity<List<FavoriteListItemDTO>> listModelsMeta(Authentication auth) {
         Long clientId = currentUserId(auth);
-        return ResponseEntity.ok(favoriteService.listClientFavoritesMeta(clientId));
+
+        // 1) Obtenemos la lista base (modelos favoritos del cliente)
+        List<FavoriteListItemDTO> base = favoriteService.listClientFavoritesMeta(clientId);
+
+        log.info("[Fav:models] clientId={} items={}", clientId, (base != null ? base.size() : 0));
+
+        // 2) Enriquecemos con presence usando SIEMPRE el userId de la MODELO
+        List<FavoriteListItemDTO> enriched = base.stream().map(item -> {
+            // OJO: item.user() debe ser el "usuario" de la MODELO (no el del cliente)
+            Long modelUserId = (item.user() != null) ? item.user().getId() : null;
+
+            String presence = "offline";
+            boolean online = false;
+            boolean busy = false;
+
+            if (modelUserId != null) {
+                busy = messagesWsHandler.isBusy(modelUserId);
+                online = messagesWsHandler.isUserOnline(modelUserId);
+                presence = busy ? "busy" : (online ? "online" : "offline");
+            }
+
+            // Logs finos para cada ítem
+            log.info("[Fav:models] peer(modelUserId)={} nick={} status={} invited={} -> presence={} (busy={}, online={})",
+                    modelUserId,
+                    (item.user() != null ? item.user().getNickname() : null),
+                    item.status(),
+                    item.invited(),
+                    presence,
+                    busy,
+                    online
+            );
+
+            return new FavoriteListItemDTO(
+                    item.user(),       // <-- el UserSummaryDTO de la MODELO
+                    item.status(),
+                    item.invited(),
+                    item.direction(),
+                    presence            // <-- presencia final
+            );
+        }).toList();
+
+        return ResponseEntity.ok(enriched);
     }
+
 
     @GetMapping("/clients/meta")
     public ResponseEntity<List<FavoriteListItemDTO>> listClientsMeta(Authentication auth) {
         Long modelId = currentUserId(auth);
-        return ResponseEntity.ok(favoriteService.listModelFavoritesMeta(modelId));
+
+        List<FavoriteListItemDTO> base = favoriteService.listModelFavoritesMeta(modelId);
+
+        log.info("[Fav:clients] modelId={} items={}", modelId, (base != null ? base.size() : 0));
+
+        List<FavoriteListItemDTO> enriched = base.stream().map(item -> {
+            Long clientUserId = (item.user() != null) ? item.user().getId() : null;
+
+            String presence = "offline";
+            boolean online = false;
+            boolean busy = false;
+
+            if (clientUserId != null) {
+                busy = messagesWsHandler.isBusy(clientUserId);
+                online = messagesWsHandler.isUserOnline(clientUserId);
+                presence = busy ? "busy" : (online ? "online" : "offline");
+            }
+
+            log.info("[Fav:clients] peer(clientUserId)={} nick={} status={} invited={} -> presence={} (busy={}, online={})",
+                    clientUserId,
+                    (item.user() != null ? item.user().getNickname() : null),
+                    item.status(),
+                    item.invited(),
+                    presence,
+                    busy,
+                    online
+            );
+
+            return new FavoriteListItemDTO(
+                    item.user(),
+                    item.status(),
+                    item.invited(),
+                    item.direction(),
+                    presence
+            );
+        }).toList();
+
+        return ResponseEntity.ok(enriched);
     }
+
 
     // ===== Aceptar / Rechazar invitación (nuevos) =====
     @PostMapping("/accept/{peerId}")

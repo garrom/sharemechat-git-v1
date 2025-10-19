@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  List, StateRow, ItemCard, Avatar, Info, Name, Badges
+  List, StateRow, ItemCard, Avatar, Info, Name, Badges, DotWrap,StatusDot
 } from '../../styles/FavoritesStyles';
 import StatusBadge from '../../widgets/StatusBadge';
 
@@ -9,7 +9,6 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selec
   const placeholder = '/img/avatarChica.png';
   const [imgSrc, setImgSrc] = useState(placeholder);
 
-  // Solo actualiza si llega una URL válida; si no hay URL, permanece el placeholder (sin flicker)
   useEffect(() => {
     if (avatarUrl && typeof avatarUrl === 'string') {
       setImgSrc(avatarUrl);
@@ -18,8 +17,12 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selec
   }, [avatarUrl]);
 
   const invited = String(user.invited || '').trim().toLowerCase();
-  const status  = String(user.status  || '').trim().toLowerCase();
-
+  const presence = String(user.presence || 'offline').toLowerCase();
+  console.log('[Fav:clients] item presence', {
+    id: user?.id,
+    nick: user?.nickname,
+    presence
+  });
 
   return (
     <ItemCard
@@ -30,13 +33,20 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selec
       onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(user, { x: e.clientX, y: e.clientY }); }}
       style={selected ? { background: '#e7f1ff', borderColor: '#b6d4fe' } : undefined}
     >
+      <DotWrap>
+        <Avatar
+          src={imgSrc}
+          alt=""
+          $size={28}
+          onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }}
+        />
+        <StatusDot
+          className={presence === 'busy' ? 'busy' : (presence === 'online' ? 'online' : 'offline')}
+          aria-label={presence}
+        />
 
-      <Avatar
-        src={imgSrc}
-        alt=""
-        $size={28}
-        onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }}
-      />
+      </DotWrap>
+
       <Info>
         <Name>{user.nickname || `Usuario #${user.id}`}</Name>
       </Info>
@@ -78,6 +88,7 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
               ...u,
               invited: d?.invited,
               status: d?.status,
+              presence: d?.presence || 'offline',
               role: u?.role || 'MODEL',
               userType: u?.userType || 'MODEL',
             };

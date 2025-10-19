@@ -21,13 +21,17 @@ public class FavoriteService {
     private final FavoriteModelRepository favoriteModelRepo;
     private final FavoriteClientRepository favoriteClientRepo;
     private final UserRepository userRepository;
+    private final ModelStatusService modelStatusService;
 
     public FavoriteService(FavoriteModelRepository favoriteModelRepo,
                            FavoriteClientRepository favoriteClientRepo,
-                           UserRepository userRepository) {
+                           UserRepository userRepository,
+                           ModelStatusService modelStatusService) {
         this.favoriteModelRepo = favoriteModelRepo;
         this.favoriteClientRepo = favoriteClientRepo;
         this.userRepository = userRepository;
+        this.modelStatusService = modelStatusService;
+
     }
 
 
@@ -61,19 +65,14 @@ public class FavoriteService {
             throw new InvitationAlreadyPendingException();
         }
 
-        // 4) Si el peer YA me había invitado (yo tengo inactive/pending o el peer tiene inactive/sent) → fusionar a accepted
+        // 4) Si el otro lado ya inició la invitación o yo estoy como receptor pendiente → NO aceptar automáticamente
         boolean iAmPendingReceiver = "inactive".equals(myStat) && "pending".equals(myInv);
         boolean peerSentToMe       = "inactive".equals(peerSta) && "sent".equals(peerInv);
         if (iAmPendingReceiver || peerSentToMe) {
-            mine.setStatus("active");
-            mine.setInvited("accepted");
-            favoriteModelRepo.save(mine);
-
-            peer.setStatus("active");
-            peer.setInvited("accepted");
-            favoriteClientRepo.save(peer);
-            return;
+            throw new InvitationAlreadyPendingException("Ya tienes la solicitud en proceso");
         }
+
+
 
         // 5) Caso normal: ambos INACTIVE; invitador=SENT, receptor=PENDING
         mine.setStatus("inactive");
@@ -84,7 +83,6 @@ public class FavoriteService {
         peer.setInvited("pending");
         favoriteClientRepo.save(peer);
     }
-
 
 
     // =================== MODELO -> CLIENTE ===================
@@ -117,18 +115,11 @@ public class FavoriteService {
             throw new InvitationAlreadyPendingException();
         }
 
-        // 4) Si el peer YA me había invitado → fusionar a accepted
+        // 4) Hay solicitud en curso (yo pendiente o el otro ya envió) → NO aceptar automáticamente
         boolean iAmPendingReceiver = "inactive".equals(myStat) && "pending".equals(myInv);
         boolean peerSentToMe       = "inactive".equals(peerSta) && "sent".equals(peerInv);
         if (iAmPendingReceiver || peerSentToMe) {
-            mine.setStatus("active");
-            mine.setInvited("accepted");
-            favoriteClientRepo.save(mine);
-
-            peer.setStatus("active");
-            peer.setInvited("accepted");
-            favoriteModelRepo.save(peer);
-            return;
+            throw new InvitationAlreadyPendingException("Ya tienes la solicitud en proceso");
         }
 
         // 5) Caso normal: ambos INACTIVE; invitador=SENT, receptor=PENDING
@@ -183,13 +174,22 @@ public class FavoriteService {
 
         return visible.stream().map(l -> {
             User u = usersById.get(l.getModelId());
+
+            // presence desde ModelStatusService
+            String raw = modelStatusService.getStatus(l.getModelId());
+            String presence = "offline";
+            if ("BUSY".equalsIgnoreCase(raw)) presence = "busy";
+            else if ("AVAILABLE".equalsIgnoreCase(raw)) presence = "online";
+
             return new FavoriteListItemDTO(
                     toSummary(u),
                     l.getStatus(),
                     l.getInvited(),
-                    "outbound"
+                    "outbound",
+                    null    // presence se completará en el controller
             );
         }).toList();
+
     }
 
 
@@ -238,7 +238,8 @@ public class FavoriteService {
                     toSummary(u),
                     l.getStatus(),
                     l.getInvited(),
-                    "outbound"
+                    "outbound",
+                    presenceOf(l.getClientId())
             );
         }).toList();
     }
@@ -361,7 +362,15 @@ public class FavoriteService {
                 && "accepted".equalsIgnoreCase(invitedOpt.orElse(null));
     }
 
-    // ===== Helpers =====
+    // ===== HELPERS =====
+
+    private String presenceOf(Long userId) {
+        String s = modelStatusService.getStatus(userId);
+        if ("BUSY".equalsIgnoreCase(s)) return "busy";
+        if ("AVAILABLE".equalsIgnoreCase(s)) return "online";
+        return "offline";
+    }
+
     private User requireUser(Long id) {
         return userRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Usuario no encontrado: " + id));
     }

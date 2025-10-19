@@ -2,7 +2,9 @@ package com.sharemechat.dto;
 
 public record FavoriteListItemDTO(
         UserSummaryDTO user,   // el peer
-        String status,         // active|inactive (siempre te devolveremos active)
-        String invited,        // accepted|rejected|pending (TU vista)
-        String direction       // "outbound" (lo invitaste tú) | "inbound" (te invitaron)
+        String status,         // active|inactive (tu vista)
+        String invited,        // accepted|rejected|pending (tu vista)
+        String direction,      // "outbound" | "inbound"
+        String presence        // "busy" | "online" | "offline"
 ) {}
+

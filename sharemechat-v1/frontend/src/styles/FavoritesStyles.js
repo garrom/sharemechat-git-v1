@@ -114,3 +114,39 @@ export const Badge = styled.span`
       background: #28a745;
     `}
 `;
+
+// DOT Contenedor para superponer el punto de presencia sobre el avatar
+export const DotWrap = styled.div`
+  position: relative;
+  display: inline-block;
+`;
+
+// DOT Punto de presencia: verde=online, rojo=busy, gris=offline
+export const PresenceDot = styled.span`
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  background: ${({ $p }) =>
+    $p === 'busy' ? '#dc3545' :
+    $p === 'online' ? '#28a745' :
+    '#6c757d'};
+`;
+
+export const StatusDot = styled.span`
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  /* color por defecto (offline) */
+  background: #9ca3af;
+
+  &.online  { background: #22c55e; } /* verde */
+  &.busy    { background: #f59e0b; } /* ámbar */
+  &.offline { background: #9ca3af; } /* gris */
+`;
+
