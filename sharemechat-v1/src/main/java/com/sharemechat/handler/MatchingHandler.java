@@ -4,7 +4,7 @@ import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.MessageService;
-import com.sharemechat.service.ModelStatusService;
+import com.sharemechat.service.StatusService;
 import com.sharemechat.service.StreamService;
 import com.sharemechat.service.TransactionService;
 import com.sharemechat.repository.BalanceRepository;
@@ -40,7 +40,7 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final StreamService streamService;
-    private final ModelStatusService modelStatusService;
+    private final StatusService statusService;
     private final MessageService messageService;
     private final MessagesWsHandler messagesWsHandler;
     private final TransactionService transactionService;
@@ -52,12 +52,12 @@ public class MatchingHandler extends TextWebSocketHandler {
                            TransactionService transactionService,
                            MessageService messageService,
                            MessagesWsHandler messagesWsHandler,
-                           ModelStatusService modelStatusService,
+                           StatusService statusService,
                            BalanceRepository balanceRepository) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.streamService = streamService;
-        this.modelStatusService = modelStatusService;
+        this.statusService = statusService;
         this.messageService =messageService;
         this.messagesWsHandler = messagesWsHandler;
         this.transactionService = transactionService;
@@ -91,7 +91,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         if ("model".equals(role)) {
             waitingModels.remove(session);
             System.out.println("Modelo eliminado de waitingModels: sessionId=" + session.getId());
-            if (userId != null) modelStatusService.setOffline(userId);
+            if (userId != null) statusService.setOffline(userId);
         } else if ("client".equals(role)) {
             waitingClients.remove(session);
             System.out.println("Cliente eliminado de waitingClients: sessionId=" + session.getId());
@@ -164,7 +164,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                 String role = roles.get(session.getId());
                 if (me != null && "model".equals(role)) {
                     try {
-                        modelStatusService.heartbeat(me);
+                        statusService.heartbeat(me);
                     } catch (Exception ignore) {}
                 }
                 return;
@@ -180,7 +180,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                     waitingModels.add(session);
                     System.out.println("Modelo añadido a waitingModels: sessionId=" + session.getId());
                     if (userId != null) {
-                        modelStatusService.setAvailable(userId);
+                        statusService.setAvailable(userId);
                     }
                 } else if ("client".equals(role)) {
                     waitingClients.remove(session);
@@ -422,7 +422,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         Long streamId = null;
         try {
             // si tienes Redis/cache de sesión activa
-            streamId = modelStatusService.getActiveSession(senderId, peerUserId).orElse(null);
+            streamId = statusService.getActiveSession(senderId, peerUserId).orElse(null);
         } catch (Exception ignore) {}
 
         try {

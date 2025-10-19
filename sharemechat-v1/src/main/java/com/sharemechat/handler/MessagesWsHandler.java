@@ -32,7 +32,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     private final StreamService streamService;               // para start/end/cutoff
     private final ClientRepository clientRepository;         // leer saldo_actual del CLIENT
     private final BillingProperties billing;                 // ratePerMinute, cutoff, etc.
-    private final ModelStatusService modelStatusService;
+    private final StatusService statusService;
 
     private static final Logger log = LoggerFactory.getLogger(MessagesWsHandler.class);
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
@@ -50,7 +50,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                              StreamService streamService,
                              ClientRepository clientRepository,
                              BillingProperties billing,
-                             ModelStatusService modelStatusService) {
+                             StatusService statusService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.favoriteService = favoriteService;
@@ -59,7 +59,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         this.streamService = streamService;
         this.clientRepository = clientRepository;
         this.billing = billing;
-        this.modelStatusService = modelStatusService;
+        this.statusService = statusService;
 
     }
 
@@ -77,7 +77,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         // PRESENCIA: si es MODEL -> AVAILABLE
         var u = userRepository.findById(userId).orElse(null);
         if (u != null && com.sharemechat.constants.Constants.Roles.MODEL.equals(u.getRole())) {
-            modelStatusService.setAvailable(userId);
+            statusService.setAvailable(userId);
         }
     }
 
@@ -97,7 +97,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             if (u2 != null && com.sharemechat.constants.Constants.Roles.MODEL.equals(u2.getRole())) {
                 boolean stillOnline = sessions.getOrDefault(userId, java.util.Set.of()).size() > 0;
                 if (!stillOnline && inCallWith(userId) == null) {
-                    modelStatusService.setOffline(userId);
+                    statusService.setOffline(userId);
                 }
             }
 
@@ -200,7 +200,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 if (meId != null) {
                     var u = userRepository.findById(meId).orElse(null);
                     if (u != null && com.sharemechat.constants.Constants.Roles.MODEL.equals(u.getRole())) {
-                        modelStatusService.heartbeat(meId);
+                        statusService.heartbeat(meId);
                     }
                 }
             } catch (Exception ignore) {}
@@ -346,7 +346,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             // startSession (billing y estado BUSY/activeSession lo hace dentro)
             try {
                 streamService.startSession(clientId, modelId);
-                modelStatusService.setBusy(modelId);
+                statusService.setBusy(modelId);
 
             } catch (Exception ex) {
                 clearRinging(me);
@@ -650,7 +650,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
         // Busy por estado Redis (modelos)
         try {
-            String s = modelStatusService.getStatus(userId);
+            String s = statusService.getStatus(userId);
             boolean busy = "BUSY".equals(s);
             if (log.isDebugEnabled()) log.debug("[WS] isBusy userId={} -> {} (redis={})", userId, busy, s);
             return busy;
@@ -733,8 +733,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
 
             // PRESENCIA tras finalizar la sesión: si el modelo sigue con sockets, AVAILABLE; si no, OFFLINE
             boolean modelStillOnline = sessions.getOrDefault(modelId, java.util.Set.of()).size() > 0;
-            if (modelStillOnline) modelStatusService.setAvailable(modelId);
-            else modelStatusService.setOffline(modelId);
+            if (modelStillOnline) statusService.setAvailable(modelId);
+            else statusService.setOffline(modelId);
 
         }
         // Notificar a ambos y limpiar estado

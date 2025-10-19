@@ -6,7 +6,7 @@ import com.sharemechat.entity.User;
 import com.sharemechat.handler.MessagesWsHandler;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.FavoriteService;
-import com.sharemechat.service.ModelStatusService;
+import com.sharemechat.service.StatusService;
 import com.sharemechat.service.StreamService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -22,18 +22,18 @@ public class FavoritesController {
     private final FavoriteService favoriteService;
     private final UserRepository userRepository;
     private final MessagesWsHandler messagesWsHandler;
-    private final ModelStatusService modelStatusService;
+    private final StatusService statusService;
     private final StreamService streamService;
 
     public FavoritesController(FavoriteService favoriteService,
                                UserRepository userRepository,
                                MessagesWsHandler messagesWsHandler,
-                               ModelStatusService modelStatusService,
+                               StatusService statusService,
                                StreamService streamService) {
         this.favoriteService = favoriteService;
         this.userRepository = userRepository;
         this.messagesWsHandler = messagesWsHandler;
-        this.modelStatusService = modelStatusService;
+        this.statusService = statusService;
         this.streamService = streamService;
     }
 
@@ -83,7 +83,7 @@ public class FavoritesController {
 
             if (modelUserId != null) {
                 // 1) Fuente de verdad para modelos: Redis (ModelStatusService)
-                String s = modelStatusService.getStatus(modelUserId); // "AVAILABLE", "BUSY" o null
+                String s = statusService.getStatus(modelUserId); // "AVAILABLE", "BUSY" o null
                 if ("BUSY".equals(s)) {
                     busy = true;
                     presence = "busy";

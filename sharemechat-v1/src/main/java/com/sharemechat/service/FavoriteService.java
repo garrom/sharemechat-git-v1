@@ -22,16 +22,16 @@ public class FavoriteService {
     private final FavoriteModelRepository favoriteModelRepo;
     private final FavoriteClientRepository favoriteClientRepo;
     private final UserRepository userRepository;
-    private final ModelStatusService modelStatusService;
+    private final StatusService statusService;
 
     public FavoriteService(FavoriteModelRepository favoriteModelRepo,
                            FavoriteClientRepository favoriteClientRepo,
                            UserRepository userRepository,
-                           ModelStatusService modelStatusService) {
+                           StatusService statusService) {
         this.favoriteModelRepo = favoriteModelRepo;
         this.favoriteClientRepo = favoriteClientRepo;
         this.userRepository = userRepository;
-        this.modelStatusService = modelStatusService;
+        this.statusService = statusService;
 
     }
 
@@ -180,7 +180,7 @@ public class FavoriteService {
             User u = usersById.get(l.getModelId());
 
             // presence desde ModelStatusService
-            String raw = modelStatusService.getStatus(l.getModelId());
+            String raw = statusService.getStatus(l.getModelId());
             String presence = "offline";
             if ("BUSY".equalsIgnoreCase(raw)) presence = "busy";
             else if ("AVAILABLE".equalsIgnoreCase(raw)) presence = "online";
@@ -216,8 +216,6 @@ public class FavoriteService {
         peer.setInvited("rejected");
         favoriteModelRepo.save(peer);
     }
-
-
 
     @Transactional(readOnly = true)
     public List<FavoriteListItemDTO> listModelFavoritesMeta(Long modelId) {
@@ -372,7 +370,7 @@ public class FavoriteService {
     // ===== HELPERS =====
 
     private String presenceOf(Long userId) {
-        String s = modelStatusService.getStatus(userId);
+        String s = statusService.getStatus(userId);
         if ("BUSY".equalsIgnoreCase(s)) return "busy";
         if ("AVAILABLE".equalsIgnoreCase(s)) return "online";
         return "offline";

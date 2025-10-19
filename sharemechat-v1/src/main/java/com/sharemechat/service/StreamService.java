@@ -22,7 +22,7 @@ public class StreamService {
 
     private final StreamRecordRepository streamRecordRepository;
     private final UserRepository userRepository;
-    private final ModelStatusService modelStatusService;
+    private final StatusService statusService;
     private final TransactionRepository transactionRepository;
     private final BalanceRepository balanceRepository;
     private final ClientRepository clientRepository;
@@ -37,7 +37,7 @@ public class StreamService {
 
     public StreamService(StreamRecordRepository streamRecordRepository,
                          UserRepository userRepository,
-                         ModelStatusService modelStatusService,
+                         StatusService statusService,
                          BalanceRepository balanceRepository,
                          TransactionRepository transactionRepository,
                          ClientRepository clientRepository,
@@ -48,7 +48,7 @@ public class StreamService {
                          TransactionService transactionService) {
         this.streamRecordRepository = streamRecordRepository;
         this.userRepository = userRepository;
-        this.modelStatusService = modelStatusService;
+        this.statusService = statusService;
         this.balanceRepository = balanceRepository;
         this.transactionRepository = transactionRepository;
         this.clientRepository = clientRepository;
@@ -76,8 +76,8 @@ public class StreamService {
         if (existing.isPresent()) {
             StreamRecord sr = existing.get();
             log.info("startSession: ya existe sesión activa id={} para client={}, model={}", sr.getId(), clientId, modelId);
-            modelStatusService.setBusy(modelId);
-            modelStatusService.setActiveSession(clientId, modelId, sr.getId());
+            statusService.setBusy(modelId);
+            statusService.setActiveSession(clientId, modelId, sr.getId());
             return sr;
         }
 
@@ -132,8 +132,8 @@ public class StreamService {
         log.info("startSession: creada sesión id={} (client={}, model={})", saved.getId(), clientId, modelId);
 
         // Estado y lookup rápido (Redis)
-        modelStatusService.setBusy(modelId);
-        modelStatusService.setActiveSession(clientId, modelId, saved.getId());
+        statusService.setBusy(modelId);
+        statusService.setActiveSession(clientId, modelId, saved.getId());
 
         return saved;
     }
@@ -150,7 +150,7 @@ public class StreamService {
 
 
         // 1) Buscar la sesión activa (pista en cache y fallback a DB)
-        Long sessionIdHint = modelStatusService.getActiveSession(clientId, modelId).orElse(null);
+        Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
 
         StreamRecord session = null;
         if (sessionIdHint != null) {
@@ -371,7 +371,7 @@ public class StreamService {
     @Transactional
     public boolean endIfBelowThreshold(Long clientId, Long modelId) {
         // 1) localizar sesión activa
-        Long sessionIdHint = modelStatusService.getActiveSession(clientId, modelId).orElse(null);
+        Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
         StreamRecord session = null;
         if (sessionIdHint != null) {
             session = streamRecordRepository.findById(sessionIdHint).orElse(null);
@@ -425,7 +425,7 @@ public class StreamService {
      */
     public boolean isPairActive(Long clientId, Long modelId) {
         // 1) Pista en caché: si hay sessionId en curso, ya es activo
-        if (modelStatusService.getActiveSession(clientId, modelId).isPresent()) {
+        if (statusService.getActiveSession(clientId, modelId).isPresent()) {
             return true;
         }
         // 2) Fallback a BD por si la caché no está poblada
@@ -436,14 +436,14 @@ public class StreamService {
 
     private void postEndStatusCleanup(Long clientId, Long modelId) {
         // Limpieza en Redis
-        modelStatusService.clearActiveSession(clientId, modelId);
+        statusService.clearActiveSession(clientId, modelId);
 
         // Política simple: si la modelo no está OFFLINE, restaurar a AVAILABLE
-        String status = modelStatusService.getStatus(modelId);
+        String status = statusService.getStatus(modelId);
         if (status == null || "OFFLINE".equals(status)) {
             // nada
         } else {
-            modelStatusService.setAvailable(modelId);
+            statusService.setAvailable(modelId);
         }
     }
 
