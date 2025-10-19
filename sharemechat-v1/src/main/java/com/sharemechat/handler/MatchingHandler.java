@@ -37,7 +37,6 @@ public class MatchingHandler extends TextWebSocketHandler {
 
     private final Set<String> switching = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final StreamService streamService;
@@ -46,7 +45,6 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final MessagesWsHandler messagesWsHandler;
     private final TransactionService transactionService;
     private final BalanceRepository balanceRepository;
-
 
     public MatchingHandler(JwtUtil jwtUtil,
                            UserRepository userRepository,
@@ -123,7 +121,6 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
-
     //EL METODO PARA CHAT EN VIVO POR WEBSOCKET SEGUN SU TIPO COMO SIGNAL CHAT SET-ROLE START-MATCH NEXT O STATS
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
@@ -159,7 +156,17 @@ public class MatchingHandler extends TextWebSocketHandler {
             // ===== FIN LOGS SANITIZADOS =====
 
             if ("ping".equals(type)) {
+                // Mantener la lógica de corte por saldo
                 checkCutoffAndMaybeEnd(session);
+
+                // Renovar TTL de presencia si es MODELO
+                Long me = sessionUserIds.get(session.getId());
+                String role = roles.get(session.getId());
+                if (me != null && "model".equals(role)) {
+                    try {
+                        modelStatusService.heartbeat(me);
+                    } catch (Exception ignore) {}
+                }
                 return;
             }
 

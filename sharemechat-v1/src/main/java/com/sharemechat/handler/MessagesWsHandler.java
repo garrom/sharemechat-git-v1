@@ -194,8 +194,19 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
 
         if ("ping".equals(type)) {
+            // Renovar TTL de presencia si el WS corresponde a un MODELO
+            try {
+                Long meId = me; // ya resuelto arriba
+                if (meId != null) {
+                    var u = userRepository.findById(meId).orElse(null);
+                    if (u != null && com.sharemechat.constants.Constants.Roles.MODEL.equals(u.getRole())) {
+                        modelStatusService.heartbeat(meId);
+                    }
+                }
+            } catch (Exception ignore) {}
             return;
         }
+
 
         // =======================
         //     LLAMADAS DIRECTAS
@@ -240,6 +251,19 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 safeSend(session, new JSONObject().put("type","call:busy").put("who","peer_ringing").toString());
                 return;
             }
+
+            // ¿Alguno está en streaming RANDOM activo (VIDEOCHAT)?
+            try {
+                if (streamService.isUserInActiveStream(me)) {
+                    safeSend(session, new JSONObject().put("type","call:busy").put("who","me_streaming").toString());
+                    return;
+                }
+                if (streamService.isUserInActiveStream(to)) {
+                    safeSend(session, new JSONObject().put("type","call:busy").put("who","peer_streaming").toString());
+                    return;
+                }
+            } catch (Exception ignore) {}
+
 
             // Validación de saldo mínimo antes de timbrar (CLIENT debe poder iniciar)
             // Determinamos quién será CLIENT/MODEL para el billing de startSession
@@ -515,7 +539,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
     }
 
-
     private void broadcastToUser(Long userId, String json) {
         var set = sessions.get(userId);
         if (set == null) return;
@@ -538,7 +561,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         broadcastToUser(saved.senderId(), json);
         broadcastToUser(saved.recipientId(), json);
     }
-
 
     private void safeSend(WebSocketSession s, String json) {
         if (s != null && s.isOpen()) {
@@ -612,11 +634,30 @@ public class MessagesWsHandler extends TextWebSocketHandler {
 
     // === Ver usuario ocupado ===
     public boolean isBusy(Long userId) {
-        boolean busy = (inCallWith(userId) != null);
-        if (log.isDebugEnabled()) {
-            log.debug("[WS] isBusy userId={} -> {}", userId, busy);
+        // Busy por llamada directa 1:1 (CALLING)
+        if (inCallWith(userId) != null) {
+            if (log.isDebugEnabled()) log.debug("[WS] isBusy userId={} -> true (activeCalls)", userId);
+            return true;
         }
-        return busy;
+        // Busy por streaming RANDOM (VIDEOCHAT) para cualquier usuario (cliente o modelo)
+        try {
+            if (streamService.isUserInActiveStream(userId)) {
+                if (log.isDebugEnabled()) log.debug("[WS] isBusy userId={} -> true (active stream)", userId);
+                return true;
+            }
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) log.debug("[WS] isBusy userId={} -> false (stream check error: {})", userId, e.getMessage());
+        }
+        // Busy por estado Redis (modelos)
+        try {
+            String s = modelStatusService.getStatus(userId);
+            boolean busy = "BUSY".equals(s);
+            if (log.isDebugEnabled()) log.debug("[WS] isBusy userId={} -> {} (redis={})", userId, busy, s);
+            return busy;
+        } catch (Exception e) {
+            if (log.isDebugEnabled()) log.debug("[WS] isBusy userId={} -> false (redis error: {})", userId, e.getMessage());
+            return false;
+        }
     }
 
     // ==== ESTADO: llamadas activas (mantenemos simetría A<->B) ====
@@ -645,7 +686,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     }
 
     // ==== Resolver quién es CLIENT y quién MODEL por rol real ====
-    // Devuelve Pair<clientId, modelId> o null si la pareja no es válida
     private Pair<Long, Long> resolveClientModel(Long a, Long b) {
         if (a == null || b == null) return null;
         var ua = userRepository.findById(a).orElse(null);

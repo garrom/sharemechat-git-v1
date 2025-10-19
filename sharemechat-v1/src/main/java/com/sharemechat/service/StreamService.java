@@ -362,8 +362,6 @@ public class StreamService {
         return gift; // el handler WS puede consultar el balance si quiere enviarlo
     }
 
-
-
     /**
      * Corte preventivo: si saldo_actual - coste_acumulado < cutoff, cerrar ya la sesión.
      * Devuelve true si ha cerrado; false si aún puede continuar.
@@ -436,7 +434,6 @@ public class StreamService {
                 .isPresent();
     }
 
-
     private void postEndStatusCleanup(Long clientId, Long modelId) {
         // Limpieza en Redis
         modelStatusService.clearActiveSession(clientId, modelId);
@@ -449,4 +446,21 @@ public class StreamService {
             modelStatusService.setAvailable(modelId);
         }
     }
+
+    /**
+     * Devuelve true si el userId (sea CLIENT o MODEL) está en alguna sesión activa (end_time NULL).
+     * Implementación basada en los métodos existentes del StreamRecordRepository.
+     */
+    public boolean isUserInActiveStream(Long userId) {
+        try {
+            boolean asClient = !streamRecordRepository.findByClient_IdAndEndTimeIsNull(userId).isEmpty();
+            if (asClient) return true;
+            boolean asModel  = !streamRecordRepository.findByModel_IdAndEndTimeIsNull(userId).isEmpty();
+            return asModel;
+        } catch (Exception ignore) {
+            return false;
+        }
+    }
+
+
 }
