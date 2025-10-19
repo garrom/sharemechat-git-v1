@@ -1369,6 +1369,12 @@ const DashboardModel = () => {
   //Activar cámara para Calling
   const handleCallActivateCamera = async () => {
     console.log('[CALL][cam:on][Model] requesting user media');
+
+    if (callStatus === 'idle' && !callAllowed) {
+      setCallError('No puedes activar la cámara: la relación aún no está aceptada.');
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -1394,6 +1400,11 @@ const DashboardModel = () => {
   const handleCallInvite = () => {
     if (!callCameraActive || !callLocalStreamRef.current) {
       setCallError('Primero activa la cámara para llamar.');
+      return;
+    }
+
+    if (!callAllowed) {
+      setCallError('Llamadas bloqueadas: la relación no está aceptada.');
       return;
     }
 
@@ -1711,6 +1722,16 @@ const DashboardModel = () => {
   const isPendingPanel = favStatus === 'inactive' && invited === 'pending';
   const isSentPanel    = favStatus === 'inactive' && invited === 'sent';
 
+  // detectar si estamos en flujo de entrada (callee)
+  const isIncomingFlow =
+    callStatus === 'incoming' ||
+    (callStatus === 'connecting' && callRoleRef.current === 'callee');
+  // Solo se puede llamar si el target seleccionado está ACCEPTED/ACTIVE
+  const isAcceptedForCall = favStatus === 'active' && invited === 'accepted';
+  const callAllowed =
+    isIncomingFlow
+      ? true
+      : (Number(selectedFav?.id) === Number(callPeerId) && isAcceptedForCall);
 
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
@@ -2009,9 +2030,6 @@ const DashboardModel = () => {
                         ? `Invitación enviada a ${centerChatPeerName}`
                         : `Chat con ${centerChatPeerName}`}
                     </h5>
-                    <div style={{ fontSize:12, color: msgConnected ? '#20c997' : '#adb5bd' }}>
-                      {msgConnected ? 'Conectado' : 'Desconectado'}
-                    </div>
                   </div>
 
                   {/* PENDIENTE (receptor) */}
@@ -2153,7 +2171,15 @@ const DashboardModel = () => {
 
               <StyledTopActions style={{ gap: 8 }}>
                 {!callCameraActive && (
-                  <StyledActionButton onClick={handleCallActivateCamera}>
+                  <StyledActionButton
+                    onClick={handleCallActivateCamera}
+                    disabled={callStatus === 'idle' ? !callAllowed : false}
+                    title={
+                       callStatus === 'idle'
+                         ? (callAllowed ? 'Activa tu cámara' : 'Debéis ser favoritos aceptados para poder llamar')
+                         : 'Activa tu cámara'
+                    }
+                  >
                     Activar Cámara para Llamar
                   </StyledActionButton>
                 )}
@@ -2161,11 +2187,18 @@ const DashboardModel = () => {
                 {callCameraActive && callStatus !== 'in-call' && callStatus !== 'ringing' && (
                   <StyledActionButton
                     onClick={handleCallInvite}
-                    disabled={!callPeerId}
-                    title={!callPeerId ? 'Abre un chat en Favoritos para elegir destinatario' : `Llamar a ${callPeerName || callPeerId}`}
+                    disabled={!callAllowed || !callPeerId}
+                    title={
+                      !callAllowed
+                        ? 'Debéis ser favoritos aceptados para poder llamar'
+                        : (!callPeerId
+                            ? 'Abre un chat en Favoritos para elegir destinatario'
+                            : `Llamar a ${callPeerName || callPeerId}`)
+                    }
                   >
                     {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
                   </StyledActionButton>
+
                 )}
 
                 {(callStatus === 'ringing' || callStatus === 'in-call' || callStatus === 'connecting') && (
@@ -2336,6 +2369,12 @@ const DashboardModel = () => {
               }}
               onClick={async () => {
                 try {
+                  const inv = String(ctxUser?.invited || '').toLowerCase();
+                  if (inv === 'pending' || inv === 'sent') {
+                    alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
+                    setCtxUser(null);
+                    return;
+                  }
                   const sure = window.confirm(`Eliminar a "${ctxUser.nickname || ctxUser.name || ctxUser.email || ('Usuario ' + ctxUser.id)}" de tus favoritos?`);
                   if (!sure) return;
                   const tk = localStorage.getItem('token');

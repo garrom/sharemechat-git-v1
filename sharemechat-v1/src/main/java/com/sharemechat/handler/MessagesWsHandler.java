@@ -286,6 +286,23 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 return;
             }
 
+            // Gate de favoritos (idéntico a call:invite)
+            try {
+                if (!favoriteService.canUsersMessage(me, with)) {
+                    safeSend(session, new JSONObject()
+                            .put("type", "call:error")
+                            .put("message", "Llamadas bloqueadas: relación no aceptada")
+                            .toString());
+                    return;
+                }
+            } catch (Exception ex) {
+                safeSend(session, new JSONObject()
+                        .put("type", "call:error")
+                        .put("message", ex.getMessage())
+                        .toString());
+                return;
+            }
+
             // Comprobar otra vez que nadie está en llamada
             if (inCallWith(me) != null || inCallWith(with) != null) {
                 clearRinging(me);

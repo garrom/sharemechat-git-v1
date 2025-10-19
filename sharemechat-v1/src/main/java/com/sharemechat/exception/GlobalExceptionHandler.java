@@ -94,5 +94,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    @ExceptionHandler(NotMutualFavoritesException.class)
+    public ResponseEntity<ApiError> handleNotMutualFavorites(NotMutualFavoritesException ex, HttpServletRequest req) {
+        log.warn("Llamada bloqueada por favoritos no aceptados: {}", ex.getMessage());
+        ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Forbidden", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
 
 }

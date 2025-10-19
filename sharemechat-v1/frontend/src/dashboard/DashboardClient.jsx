@@ -1327,6 +1327,13 @@ const DashboardClient = () => {
   //Activar cámara (Calling)
   const handleCallActivateCamera = async () => {
     console.log('[CALL][cam:on] requesting user media');
+
+    //SOLO bloqueamos si se intenta iniciar llamada desde idle (caller)
+    if (callStatus === 'idle' && !callAllowed) {
+      setCallError('No puedes activar la cámara: la relación aún no está aceptada.');
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -1349,11 +1356,15 @@ const DashboardClient = () => {
     }
   };
 
-  //Enviar invitación
   // Enviar invitación (FIX: no usar 'openChatWith' como ID)
   const handleCallInvite = () => {
     if (!callCameraActive || !callLocalStreamRef.current) {
       setCallError('Primero activa la cámara para llamar.');
+      return;
+    }
+
+    if (!callAllowed) {
+      setCallError('Llamadas bloqueadas: la relación no está aceptada.');
       return;
     }
 
@@ -1673,13 +1684,23 @@ const DashboardClient = () => {
     return Number(centerChatPeerId ?? selectedFav?.id ?? callPeerId) || null;
   })();
 
-  //---FLAG DE RENDERIZADO favoritos---//
+  //---FLAG DE RENDERIZADO--//
   const invited   = String(selectedFav?.invited || '').toLowerCase();
   const favStatus = String(selectedFav?.status  || '').toLowerCase();
   const allowChat      = favStatus === 'active'   && invited === 'accepted';
   const isPendingPanel = favStatus === 'inactive' && invited === 'pending';
   const isSentPanel    = favStatus === 'inactive' && invited === 'sent';
 
+  // Detectar si estamos en flujo de entrada (callee)
+  const isIncomingFlow =
+    callStatus === 'incoming' ||
+    (callStatus === 'connecting' && callRoleRef.current === 'callee');
+  // Llamadas: solo si el target seleccionado está ACCEPTED/ACTIVE
+  const isAcceptedForCall = favStatus === 'active' && invited === 'accepted';
+  const callAllowed =
+    isIncomingFlow
+      ? true
+      : (Number(selectedFav?.id) === Number(callPeerId) && isAcceptedForCall);
 
   const displayName = user?.nickname || user?.name || user?.email || "Cliente";
 
@@ -1983,9 +2004,6 @@ const DashboardClient = () => {
                         ? `Invitación enviada a ${centerChatPeerName}`
                         : `Chat con ${centerChatPeerName}`}
                     </h5>
-                    <div style={{ fontSize:12, color: wsReady ? '#20c997' : '#adb5bd' }}>
-                      {wsReady ? 'Conectado' : 'Desconectado'}
-                    </div>
                   </div>
 
                   {/* Panel PENDIENTE (receptor) */}
@@ -2133,7 +2151,15 @@ const DashboardClient = () => {
                  {/* Controles superiores */}
                 <StyledTopActions style={{ gap: 8 }}>
                   {!callCameraActive && (
-                    <StyledActionButton onClick={handleCallActivateCamera}>
+                    <StyledActionButton
+                      onClick={handleCallActivateCamera}
+                      disabled={callStatus === 'idle' ? !callAllowed : false}
+                      title={
+                        callStatus === 'idle'
+                          ? (callAllowed ? 'Activa tu cámara' : 'Debéis ser favoritos aceptados para poder llamar')
+                          : 'Activa tu cámara'
+                      }
+                    >
                       Activar Cámara para Llamar
                     </StyledActionButton>
                   )}
@@ -2142,11 +2168,18 @@ const DashboardClient = () => {
                     <>
                       <StyledActionButton
                         onClick={handleCallInvite}
-                        disabled={!callPeerId}
-                        title={!callPeerId ? 'Abre un chat en Favoritos para elegir destinatario' : `Llamar a ${callPeerName || callPeerId}`}
+                        disabled={!callAllowed || !callPeerId}
+                        title={
+                          !callAllowed
+                            ? 'Debéis ser favoritos aceptados para poder llamar'
+                            : (!callPeerId
+                                ? 'Abre un chat en Favoritos para elegir destinatario'
+                                : `Llamar a ${callPeerName || callPeerId}`)
+                        }
                       >
                         {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
                       </StyledActionButton>
+
                     </>
                   )}
 
@@ -2346,6 +2379,12 @@ const DashboardClient = () => {
              }}
              onClick={async () => {
                try {
+                 const inv = String(ctxUser?.invited || '').toLowerCase();
+                 if (inv === 'pending' || inv === 'sent') {
+                   alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
+                   setCtxUser(null);
+                   return;
+                 }
                  const tk = localStorage.getItem('token');
                  if (!tk) return;
                  // Cliente elimina a una MODELO de sus favoritos:

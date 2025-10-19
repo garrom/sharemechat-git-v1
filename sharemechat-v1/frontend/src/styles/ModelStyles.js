@@ -242,16 +242,27 @@ export const StyledActionButton = styled.button`
   font-size: 16px;
   cursor: pointer;
   transition: background-color 0.3s;
+
   &:hover {
     background-color: #218838;
   }
+
   &[style*='backgroundColor: #dc3545'] {
     background-color: #dc3545;
     &:hover {
       background-color: #c82333;
     }
   }
+
+  /* Igual que en Client */
+  &:disabled {
+    opacity: .55;
+    cursor: not-allowed;
+    pointer-events: none;
+    filter: grayscale(15%);
+  }
 `;
+
 
 // Estilo para íconos
 export const StyledIconWrapper = styled.span`

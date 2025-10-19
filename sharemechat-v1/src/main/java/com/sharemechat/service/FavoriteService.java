@@ -5,6 +5,7 @@ import com.sharemechat.dto.UserSummaryDTO;
 import com.sharemechat.entity.FavoriteClient;
 import com.sharemechat.entity.FavoriteModel;
 import com.sharemechat.entity.User;
+import com.sharemechat.exception.NotMutualFavoritesException;
 import com.sharemechat.repository.FavoriteClientRepository;
 import com.sharemechat.repository.FavoriteModelRepository;
 import com.sharemechat.repository.UserRepository;
@@ -135,14 +136,17 @@ public class FavoriteService {
 
     @Transactional
     public void removeModelFromClientFavorites(Long clientId, Long modelId) {
-        // Cliente → Modelo
         FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
-                .orElseGet(() -> new FavoriteModel(clientId, modelId));
+                .orElseThrow(() -> new IllegalArgumentException("No existe relación a eliminar."));
+        String inv = Optional.ofNullable(mine.getInvited()).orElse("").toLowerCase();
+        if ("pending".equals(inv) || "sent".equals(inv)) {
+            throw new IllegalArgumentException("No puedes eliminar mientras la solicitud está en proceso.");
+        }
+
         mine.setStatus("inactive");
         mine.setInvited("rejected");
         favoriteModelRepo.save(mine);
 
-        // Modelo → Cliente
         FavoriteClient peer = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
                 .orElseGet(() -> new FavoriteClient(modelId, clientId));
         peer.setStatus("inactive");
@@ -195,20 +199,24 @@ public class FavoriteService {
 
     @Transactional
     public void removeClientFromModelFavorites(Long modelId, Long clientId) {
-        // Modelo → Cliente
         FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
-                .orElseGet(() -> new FavoriteClient(modelId, clientId));
+                .orElseThrow(() -> new IllegalArgumentException("No existe relación a eliminar."));
+        String inv = Optional.ofNullable(mine.getInvited()).orElse("").toLowerCase();
+        if ("pending".equals(inv) || "sent".equals(inv)) {
+            throw new IllegalArgumentException("No puedes eliminar mientras la solicitud está en proceso.");
+        }
+
         mine.setStatus("inactive");
         mine.setInvited("rejected");
         favoriteClientRepo.save(mine);
 
-        // Cliente → Modelo
         FavoriteModel peer = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
                 .orElseGet(() -> new FavoriteModel(clientId, modelId));
         peer.setStatus("inactive");
         peer.setInvited("rejected");
         favoriteModelRepo.save(peer);
     }
+
 
 
     @Transactional(readOnly = true)
@@ -325,7 +333,6 @@ public class FavoriteService {
     }
 
 
-
     /**
      * Devuelve true solo si AMBAS vistas del par (cliente→modelo y modelo→cliente)
      * están en status='active' e invited='accepted'.
@@ -401,4 +408,11 @@ public class FavoriteService {
     public boolean isClientInModelFavorites(Long modelId, Long clientId) {
         return favoriteClientRepo.existsByModelIdAndClientId(modelId, clientId);
     }
+
+    public void requireMutualAcceptance(Long aId, Long bId) {
+        if (!canUsersMessage(aId, bId)) {
+            throw new NotMutualFavoritesException("Debes tener la relación de favoritos aceptada en ambos sentidos para llamar.");
+        }
+    }
+
 }

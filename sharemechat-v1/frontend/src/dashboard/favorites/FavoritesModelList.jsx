@@ -31,7 +31,14 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selec
       data-selected={selected ? 'true' : 'false'}
       aria-selected={selected ? 'true' : 'false'}
       onClick={() => onSelect?.(user)}
-      onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); onContextMenu?.(user, { x: e.clientX, y: e.clientY }); }}
+      onContextMenu={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const inv = String(user?.invited || '').toLowerCase();
+        if (inv === 'pending' || inv === 'sent') return; // no abrir menú si no se puede borrar
+        onContextMenu?.(user, { x: e.clientX, y: e.clientY });
+      }}
+
       style={selected ? { background: '#e7f1ff', borderColor: '#b6d4fe' } : undefined}
     >
       <DotWrap>
@@ -134,6 +141,13 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
   if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;
 
   const handleRemove = async (user) => {
+
+    const inv = String(user?.invited || '').toLowerCase();
+    if (inv === 'pending' || inv === 'sent') {
+      alert('No puedes eliminar favoritos mientras la solicitud está en proceso.');
+      return;
+    }
+
     if (!user?.id) return;
     const ok = window.confirm(`¿Eliminar a ${user.nickname || `Usuario #${user.id}`} de tus favoritos?`);
     if (!ok) return;
