@@ -1,6 +1,7 @@
-// src/pages/Model/ModelDocuments.jsx
+// src/dashboard/subpages/ModelDocuments.jsx
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+
 import {
   StyledContainer,
   StyledNavbar,
@@ -10,8 +11,10 @@ import {
   StyledLeftColumn,
   StyledCenter,
   StyledRightColumn,
-  StyledBrand
+  StyledBrand,
+  StyledNavGroup
 } from '../../styles/ModelDocumentStyles';
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 
@@ -223,8 +226,8 @@ const ModelDocuments = () => {
       {/* NAVBAR */}
       <StyledNavbar>
         <StyledBrand href="/" aria-label="SharemeChat" />
-        <div>
-          <span className="me-3" style={{ marginLeft: 8 }}>Hola, {userName}</span>
+        <StyledNavGroup>
+          <span>Hola, {userName}</span>
           <StyledNavButton type="button" onClick={() => history.push('/dashboard-user-model')}>
             Volver
           </StyledNavButton>
@@ -232,7 +235,7 @@ const ModelDocuments = () => {
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
           </StyledNavButton>
-        </div>
+        </StyledNavGroup>
       </StyledNavbar>
 
       {/* CONTENIDO */}

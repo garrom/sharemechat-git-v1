@@ -57,6 +57,26 @@ export const StyledIconWrapper = styled.span`
   font-size: 18px;
 `;
 
+export const StyledNavGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: nowrap;          /* evita que los botones salten a otra línea */
+
+  /* Asegura que los hijos no fuercen wrap por texto */
+  & > * {
+    white-space: nowrap;
+  }
+
+  /* En pantallas muy pequeñas, si quieres permitir wrap, descomenta:
+  @media (max-width: 420px) {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    row-gap: 8px;
+  }
+  */
+`;
+
 /* LAYOUT PRINCIPAL
    - Importante: NO usar overflow:hidden aquí para no recortar el contenido. */
 export const StyledMainContent = styled.div`

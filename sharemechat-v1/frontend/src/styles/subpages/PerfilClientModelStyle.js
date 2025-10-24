@@ -6,12 +6,15 @@ import { inputBase, buttonBase } from '../core/mixins';
 export const PageWrap = styled.div`
   max-width: 720px;
   margin: ${space.xl} auto;
-  padding: 0 ${space.lg};
+  /* Añadimos padding-bottom generoso para dar aire en la parte baja */
+  padding: 0 ${space.lg} calc(${space.xl} * 2);
+
   @media (max-width: ${bp.md}) {
     margin: ${space.lg} auto;
-    padding: 0 ${space.md};
+    padding: 0 ${space.md} ${space.xl};
   }
 `;
+
 
 export const Title = styled.h2`
   margin: 0 0 ${space.lg};
