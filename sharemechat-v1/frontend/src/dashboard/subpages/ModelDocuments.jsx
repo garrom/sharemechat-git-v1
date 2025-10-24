@@ -1,4 +1,4 @@
-// ModelDocuments.jsx
+// src/pages/Model/ModelDocuments.jsx
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
@@ -11,8 +11,7 @@ import {
   StyledCenter,
   StyledRightColumn,
   StyledBrand
-
-} from '../../styles/ModelStyles';
+} from '../../styles/ModelDocumentStyles';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 
