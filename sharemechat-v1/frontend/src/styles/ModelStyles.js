@@ -1,25 +1,81 @@
-//ModelStyles.js
+// ModelStyles.js
+
+/* ==================================
+ * ÍNDICE
+ * 1. LAYOUT BASE
+ * 2. NAVBAR
+ * 3. ESTRUCTURA DE CONTENIDO (3 COLUMNAS)
+ * 4. ACCIONES / BOTONES GENERALES
+ * 5. ÁREA DE VIDEO (LOCAL/REMOTO + DOCK)
+ * 6. CHAT OVERLAY EN VIDEO
+ * 7. REGALOS (PANEL Y GRID)
+ * 8. LISTADOS / FILAS SELECCIONABLES
+ * 9. VIDEOCHAT LAYOUT (2 COLUMNAS 50/50)
+ * 10. MARCA / LOGO
+ * ================================== */
+
 import styled from 'styled-components';
 
+/* ==================================
+ * LAYOUT BASE
+ * ================================== */
+
 // Contenedor principal
- export const StyledContainer = styled.div`
-   display: flex;
-   flex-direction: column;
-   min-height: 100vh;
-   background-color: #f0f2f5;
-   min-width: 48px;
- `;
+export const StyledContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-width: 48px;
+
+  /* Fondo igual que el navbar */
+  background: linear-gradient(180deg, #2B2F33 0%, #272B30 100%);
+  background-attachment: fixed;
+`;
 
 
-// Navbar
+// Contenido principal
+export const StyledMainContent = styled.div`
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  gap: 0;
+  padding: 0;
+  box-sizing: border-box;
+`;
+
+
+/* ==================================
+ * NAVBAR
+ * ================================== */
+
 export const StyledNavbar = styled.nav`
-  background-color: #2B2F33;
   color: white;
   padding: 12px 16px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(180deg, #2B2F33 0%, #272B30 100%);
+
+  /* Transparente para fusionarse con el fondo del container */
+  background: transparent;
+`;
+
+
+/** Grupo de acciones a la derecha de la navbar */
+export const StyledNavGroup = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+`;
+
+/** Avatar en la navbar */
+export const StyledNavAvatar = styled.img`
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
+  cursor: pointer;
 `;
 
 // Botón de la Navbar
@@ -69,84 +125,46 @@ export const StyledNavButton = styled.button`
   }
 `;
 
-// Barra contenedora de las pestañas
-export const StyledTabsBar = styled.div`
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  align-items: center;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    margin-bottom: 0;
-  }
-`;
-
-// Botón de pestaña: icono grande, sin texto
-export const StyledTabIcon = styled.button`
-  --tab-bg: #f8f9fa;
-  --tab-fg: #495057;
-  --tab-border: #dee2e6;
-  --tab-bg-hover: #eef1f4;
-  --tab-active-bg: #0d6efd;
-  --tab-active-fg: #ffffff;
-
-  width: 32px;
-  height: 32px;
-  border-radius: 2px;            /* <- radio 2px */
-  border: 1px solid var(--tab-border);
-  background: var(--tab-bg);
-  color: var(--tab-fg);
-
+/** Botón-text para tabs en el navbar (hover invertido) */
+export const StyledNavTab = styled.button`
+  appearance: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+
+  border: 1px solid rgba(255,255,255,.85);
+  background: #000;   /* integra con el navbar negro */
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
+
   transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .06s ease;
 
-  &:hover { background: var(--tab-bg-hover); }
+  &:hover {
+    background: #fff;
+    color: #000;
+    border-color: #fff;
+  }
   &:active { transform: translateY(1px); }
 
+  /* Estado activo (por accesibilidad/estilo) */
   &[data-active="true"] {
-    background: var(--tab-active-bg);
-    border-color: var(--tab-active-bg);
-    color: var(--tab-active-fg);
-  }
-
-  /* icono más grande */
-  & > svg {
-    width: 20px;
-    height: 20px;
-    display: block;
-  }
-
-  /* accesibilidad */
-  &:focus-visible {
-    outline: 2px solid rgba(13,110,253,.45);
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 1024px) {
-    width: 30px;
-    height: 30px;
-    & > svg { width: 18px; height: 18px; }
+    background: #fff;
+    color: #000;
+    border-color: #fff;
   }
 `;
 
-// Contenido principal
-export const StyledMainContent = styled.div`
-  display: flex;
-  flex: 1;
-  overflow: hidden;
-  gap: 12px;
-  padding: 12px 12px 16px;
-  box-sizing: border-box;
-`;
 
+/* ==================================
+ * ESTRUCTURA DE CONTENIDO (3 COLUMNAS)
+ * ================================== */
 
 // Columna izquierda
 export const StyledLeftColumn = styled.aside`
@@ -160,10 +178,12 @@ export const StyledLeftColumn = styled.aside`
   box-shadow: 0 2px 10px rgba(0,0,0,.04);
   overflow-y: auto;
 
+  /* tablets */
   @media (min-width: 769px) and (max-width: 1024px) {
     width: 25%;
   }
 
+  /* móvil: modo rail compacto cuando se marca data-rail */
   @media (max-width: 768px) {
     width: 56px;
     padding: 8px;
@@ -180,12 +200,11 @@ export const StyledLeftColumn = styled.aside`
   }
 `;
 
-
 // Área central
 export const StyledCenter = styled.main`
   flex: 1 1 auto;
   min-width: 0;
-  padding: 16px;
+  padding: 16px 16px 8px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -193,7 +212,6 @@ export const StyledCenter = styled.main`
   position: relative;
 
   background-color: #f7f8fa;
-  /* Opcional: cuando elijas patrón, descomenta/ajusta */
   background-image: url('/img/patterns/paper-1.png');
   background-repeat: repeat;
   background-size: auto;
@@ -204,7 +222,7 @@ export const StyledCenter = styled.main`
 
   @media (max-width: 768px) {
     width: 100%;
-    padding: 10px;
+    padding: 10px 10px 6px;
     min-width: 0;
   }
 
@@ -212,6 +230,7 @@ export const StyledCenter = styled.main`
     width: 50%;
   }
 `;
+
 
 // Columna derecha
 export const StyledRightColumn = styled.aside`
@@ -225,12 +244,17 @@ export const StyledRightColumn = styled.aside`
   box-shadow: 0 2px 10px rgba(0,0,0,.04);
   overflow-y: auto;
 
-  @media (max-width: 1024px) { display: none; }
+  @media (max-width: 1024px) { display: none; } /* limpia vista en tablet/móvil */
 
   @media (min-width: 769px) and (max-width: 1024px) {
     width: 25%;
   }
 `;
+
+
+/* ==================================
+ * ACCIONES / BOTONES GENERALES
+ * ================================== */
 
 // Botón de acción
 export const StyledActionButton = styled.button`
@@ -247,6 +271,7 @@ export const StyledActionButton = styled.button`
     background-color: #218838;
   }
 
+  /* Danger inline */
   &[style*='backgroundColor: #dc3545'] {
     background-color: #dc3545;
     &:hover {
@@ -254,7 +279,7 @@ export const StyledActionButton = styled.button`
     }
   }
 
-  /* Igual que en Client */
+  /* Estado deshabilitado universal */
   &:disabled {
     opacity: .55;
     cursor: not-allowed;
@@ -263,14 +288,58 @@ export const StyledActionButton = styled.button`
   }
 `;
 
-
-// Estilo para íconos
+// Estilo para íconos inline
 export const StyledIconWrapper = styled.span`
   margin-right: 8px;
   font-size: 18px;
 `;
 
-// Contenedor para cámara local
+/** Botón de icono (sidebar izquierda) */
+export const StyledIconBtn = styled.button`
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background .2s ease;
+  &:hover { background: #f1f3f5; }
+`;
+
+/** Fila de acciones bajo "activar cámara" */
+export const StyledTopActions = styled.div`
+  margin-bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+`;
+
+/** Título flotante encima del video remoto */
+export const StyledVideoTitle = styled.h5`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  color: white;
+  z-index: 2;
+  margin: 0;
+`;
+
+export const StyledTitleAvatar = styled.img`
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  vertical-align: middle;
+  margin-right: 8px;
+  border: 1px solid rgba(255,255,255,0.35);
+`;
+
+
+/* ==================================
+ * ÁREA DE VIDEO (LOCAL/REMOTO + DOCK)
+ * ================================== */
+
+// Contenedor para cámara local (PIP – si se usa)
 export const StyledLocalVideo = styled.div`
   position: absolute;
   top: 14px;
@@ -289,25 +358,33 @@ export const StyledRemoteVideo = styled.div`
 export const StyledVideoArea = styled.div`
   position: relative;
   width: 100%;
-  height: calc(100% - 60px);
+  height: calc(100% - 60px); /* deja sitio al dock sin solape */
   min-height: 360px;
 `;
 
+// Dock de entrada (input + enviar + regalos)
 export const StyledChatDock = styled.div`
-  height: 60px;
-  min-height: 60px;
   width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
-  // background: #ffffff;
+
+  /* Compacto y sin sombra (como en cliente) */
+  height: 56px;
+  min-height: 56px;
+  padding: 0;
   border-top: 1px solid #e9ecef;
-  padding: 1px 1px;
-  border-radius: 1px;
-  box-shadow: 0 -2px 8px rgba(0,0,0,.06);
+  border-radius: 0;
+  box-shadow: none;
+  margin: 0;
 `;
 
-// Contenedor para el chat (overlay en el video remoto)
+
+/* ==================================
+ * CHAT OVERLAY EN VIDEO
+ * ================================== */
+
+// Contenedor para el chat (overlay)
 export const StyledChatContainer = styled.div`
   position: absolute;
   bottom: 10px;
@@ -318,7 +395,7 @@ export const StyledChatContainer = styled.div`
   padding: 12px;
   border-radius: 8px;
   z-index: 2;
-  box-shadow: 0 -2px 8px rgba(0,0,0,.06);
+
 
   @media (max-width: 1024px) {
     width: clamp(280px, 46vw, 520px);
@@ -341,28 +418,28 @@ export const StyledChatContainer = styled.div`
   }
 `;
 
+/** Lista de mensajes dentro del chat del streaming */
 export const StyledChatList = styled.div`
   max-height: 260px;
   overflow-y: auto;
   margin-bottom: 10px;
 
-  /* Oculta scrollbar para aspecto limpio */
-  scrollbar-width: none;          /* Firefox */
-  -ms-overflow-style: none;       /* IE/Edge antiguo */
-  &::-webkit-scrollbar {          /* WebKit */
+  /* Oculta scrollbar (firefox + webkit) para aspecto limpio */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  &::-webkit-scrollbar {
     width: 0;
     height: 0;
   }
 `;
 
 /** Fila de mensajes **/
- export const StyledChatMessageRow = styled.div`
-   display: flex;
-   justify-content: ${p => (p.$me ? 'flex-end' : 'flex-start')};
-   justify-content: flex-start;
-   margin: 6px 0;
- `;
-
+export const StyledChatMessageRow = styled.div`
+  display: flex;
+  justify-content: ${p => (p.$me ? 'flex-end' : 'flex-start')};
+  justify-content: flex-start;
+  margin: 6px 0;
+`;
 
 /** Burbuja del mensaje */
 export const StyledChatBubble = styled.span`
@@ -385,7 +462,6 @@ export const StyledChatBubble = styled.span`
   }
 `;
 
-
 /** Input del chat */
 export const StyledChatInput = styled.input`
   flex: 1;
@@ -400,6 +476,11 @@ export const StyledChatInput = styled.input`
     box-shadow: 0 0 0 3px #0d6efd22;
   }
 `;
+
+
+/* ==================================
+ * REGALOS (PANEL Y GRID)
+ * ================================== */
 
 export const StyledGiftToggle = styled(StyledActionButton)`
   padding: 10px 12px;
@@ -445,64 +526,9 @@ export const StyledGiftIcon = styled.img`
 `;
 
 
-/** Botón de icono (sidebar izquierda) */
-export const StyledIconBtn = styled.button`
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 6px;
-  border-radius: 8px;
-  transition: background .2s ease;
-  &:hover { background: #f1f3f5; }
-`;
-
-/** Fila de acciones bajo "activar cámara" */
-export const StyledTopActions = styled.div`
-  margin-bottom: 10px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-`;
-
-/** Título flotante encima del video remoto */
-export const StyledVideoTitle = styled.h5`
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  color: white;
-  z-index: 2;
-  margin: 0;
-`;
-
-export const StyledTitleAvatar = styled.img`
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-  vertical-align: middle;
-  margin-right: 8px;
-  border: 1px solid rgba(255,255,255,0.35);
-`;
-
-
-/** Grupo de acciones a la derecha de la navbar */
-export const StyledNavGroup = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 10px;
-`;
-
-/** Avatar en la navbar */
-export const StyledNavAvatar = styled.img`
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
-  cursor: pointer;
-`;
+/* ==================================
+ * LISTADOS / FILAS SELECCIONABLES
+ * ================================== */
 
 // === FILA SELECCIONABLE PARA LISTADOS (favoritos/contactos) ===
 export const StyledSelectableRow = styled.div`
@@ -511,15 +537,113 @@ export const StyledSelectableRow = styled.div`
   transition: background-color .15s ease, border-color .15s ease;
   border: 1px solid transparent;
 
+  /* Hover genérico (cuando NO está seleccionado) */
   &:hover {
     background: #f1f3f5;
   }
 
+  /* Estado seleccionado con data-attr estandar */
   &[data-selected="true"] {
-    background: #e7f1ff;
-    border-color: #b6d4fe;
+    background: #e7f1ff;   /* azul muy suave */
+    border-color: #b6d4fe;  /* borde azul suave */
   }
 `;
+
+
+/* ==================================
+ * VIDEOCHAT LAYOUT (2 COLUMNAS 50/50)
+ * ================================== */
+
+/** Grid 2 columnas (50/50) para videochat */
+export const StyledSplit2 = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;  /* exactamente DOS contenedores */
+  gap: 14px;
+  width: 100%;
+  min-height: 0;
+
+  @media (max-width: 768px){
+    grid-template-columns: 1fr;
+  }
+`;
+
+/** Panel simétrico de cada lado */
+export const StyledPane = styled.section`
+  position: relative;
+  background: radial-gradient(120% 120% at 50% 0%, #f2f3f5 0%, #e9ecef 50%, #dde1e6 100%);
+  border-radius: 14px;
+  overflow: hidden;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 56vh;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+
+  /* Mobile: oculta el pane izquierdo para que solo se vea el remoto */
+  &[data-side="left"] {
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+`;
+
+/** Grid de miniaturas (estado pre-cámara) */
+export const StyledThumbsGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(3, minmax(80px,1fr));
+  gap: 10px;
+  padding: 12px;
+  width: 100%;
+  box-sizing: border-box;
+
+  img,
+  .thumb{
+    display:block;
+    width:100%;
+    aspect-ratio:3/4;
+    object-fit:cover;
+    border-radius:10px;
+    overflow:hidden;
+    border:2px solid rgba(0,0,0,.12);
+    background:#000;
+  }
+
+  @media (max-width: 768px){
+    grid-template-columns: repeat(3, minmax(72px,1fr));
+    gap: 8px;
+  }
+`;
+
+/** Botón CTA estilo “blanco -> negro” (activar cámara) */
+export const StyledPrimaryCta = styled.button`
+  appearance: none;
+  border: 1px solid #000;
+  background: #fff;
+  color: #000;
+  font-weight: 700;
+  font-size: 16px;
+  padding: 14px 22px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease, transform .06s ease;
+
+  &:hover {
+    background: #000;
+    color: #fff;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  &:active {
+    transform: translateY(1px);
+  }
+`;
+
+
+/* ==================================
+ * MARCA / LOGO
+ * ================================== */
 
 // MARCA/LOGO
 export const StyledBrand = styled.a`
@@ -531,6 +655,7 @@ export const StyledBrand = styled.a`
   background-position: left center;
   background-size: contain;
 
+  /* Texto oculto (accesible para screen readers) */
   text-indent: -9999px;
   overflow: hidden;
   white-space: nowrap;
