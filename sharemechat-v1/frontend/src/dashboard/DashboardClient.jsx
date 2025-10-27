@@ -45,6 +45,8 @@ import {
   StyledThumbsGrid,
   StyledPrimaryCta
 } from '../styles/ClientStyles';
+import { GlobalBlack } from '../styles/ClientStyles';
+
 
 
 const DashboardClient = () => {
@@ -1740,7 +1742,7 @@ const DashboardClient = () => {
   return (
 
     <StyledContainer>
-
+      <GlobalBlack />
       {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
         <StyledBrand href="/" aria-label="SharemeChat" />
@@ -1820,9 +1822,11 @@ const DashboardClient = () => {
                 {/* ---- Pane IZQUIERDO (CTA / PREVIEW LOCAL) ---- */}
                 <StyledPane data-side="left">
                   {!cameraActive ? (
-                    <StyledPrimaryCta onClick={handleActivateCamera}>
-                      Activar cámara
-                    </StyledPrimaryCta>
+                    <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <StyledPrimaryCta onClick={handleActivateCamera}>
+                        Activar cámara
+                      </StyledPrimaryCta>
+                    </div>
                   ) : (
                     <>
                       <StyledVideoArea>

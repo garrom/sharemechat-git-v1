@@ -45,6 +45,8 @@ import {
   StyledPrimaryCta,
   StyledNavTab
 } from '../styles/ModelStyles';
+import { GlobalBlack } from '../styles/ModelStyles';
+
 
 const DashboardModel = () => {
 
@@ -1767,7 +1769,7 @@ const DashboardModel = () => {
   return (
 
     <StyledContainer>
-
+      <GlobalBlack />
       {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
         <StyledBrand href="/" aria-label="SharemeChat" />
@@ -1858,9 +1860,11 @@ const DashboardModel = () => {
               {/* ================== PANE IZQUIERDO ================== */}
               <StyledPane data-side="left">
                 {!cameraActive ? (
-                  <StyledPrimaryCta onClick={handleActivateCamera}>
-                    Activar Cámara
-                  </StyledPrimaryCta>
+                  <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                    <StyledPrimaryCta onClick={handleActivateCamera}>
+                      Activar cámara
+                    </StyledPrimaryCta>
+                  </div>
                 ) : (
                   <StyledVideoArea>
                     {/* Video Local SIEMPRE aquí (izquierda) */}

@@ -1,4 +1,5 @@
 // ModelStyles.js
+import styled, { createGlobalStyle } from 'styled-components';
 
 /* ==================================
  * ÍNDICE
@@ -14,8 +15,6 @@
  * 10. MARCA / LOGO
  * ================================== */
 
-import styled from 'styled-components';
-
 /* ==================================
  * LAYOUT BASE
  * ================================== */
@@ -25,12 +24,10 @@ export const StyledContainer = styled.div`
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  background: #000;     /* fondo negro sólido */
   min-width: 48px;
-
-  /* Fondo igual que el navbar */
-  background: linear-gradient(180deg, #2B2F33 0%, #272B30 100%);
-  background-attachment: fixed;
 `;
+
 
 
 // Contenido principal
@@ -136,7 +133,7 @@ export const StyledNavTab = styled.button`
   padding: 0 14px;
   border-radius: 999px;
 
-  border: 1px solid rgba(255,255,255,.85);
+  border: none;
   background: #000;   /* integra con el navbar negro */
   color: #fff;
   font-size: 14px;
@@ -147,9 +144,8 @@ export const StyledNavTab = styled.button`
   transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .06s ease;
 
   &:hover {
-    background: #fff;
-    color: #000;
-    border-color: #fff;
+    background: #111;
+    color: #fff;
   }
   &:active { transform: translateY(1px); }
 
@@ -157,7 +153,7 @@ export const StyledNavTab = styled.button`
   &[data-active="true"] {
     background: #fff;
     color: #000;
-    border-color: #fff;
+
   }
 `;
 
@@ -171,11 +167,12 @@ export const StyledLeftColumn = styled.aside`
   flex: 0 0 22%;
   max-width: 320px;
   min-width: 220px;
-  background-color: #ffffff;
-  padding: 16px;
-  border: 1px solid #e9ecef;
+  background: linear-gradient(180deg, #f7f8fa 0%, #eceff3 100%);
+  color: #e9ecef;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+  box-shadow: none;
   overflow-y: auto;
 
   /* tablets */
@@ -204,32 +201,21 @@ export const StyledLeftColumn = styled.aside`
 export const StyledCenter = styled.main`
   flex: 1 1 auto;
   min-width: 0;
-  padding: 16px 16px 8px;
+  padding: 12px;
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
   position: relative;
 
-  background-color: #f7f8fa;
-  background-image: url('/img/patterns/paper-1.png');
-  background-repeat: repeat;
-  background-size: auto;
-
-  border: 1px solid #e9ecef;
-  border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
 
   @media (max-width: 768px) {
-    width: 100%;
-    padding: 10px 10px 6px;
-    min-width: 0;
-  }
-
-  @media (min-width: 769px) and (max-width: 1024px) {
-    width: 50%;
+    padding: 10px;
   }
 `;
+
 
 
 // Columna derecha
@@ -237,11 +223,12 @@ export const StyledRightColumn = styled.aside`
   flex: 0 0 22%;
   max-width: 320px;
   min-width: 220px;
-  background-color: #ffffff;
-  padding: 16px;
-  border: 1px solid #e9ecef;
+  background: linear-gradient(180deg, #f7f8fa 0%, #eceff3 100%);
+  color: #e9ecef;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,0.06);
   border-radius: 10px;
-  box-shadow: 0 2px 10px rgba(0,0,0,.04);
+  box-shadow: none;
   overflow-y: auto;
 
   @media (max-width: 1024px) { display: none; } /* limpia vista en tablet/móvil */
@@ -368,8 +355,6 @@ export const StyledChatDock = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-
-  /* Compacto y sin sombra (como en cliente) */
   height: 56px;
   min-height: 56px;
   padding: 0;
@@ -570,17 +555,10 @@ export const StyledSplit2 = styled.div`
 /** Panel simétrico de cada lado */
 export const StyledPane = styled.section`
   position: relative;
-  background: radial-gradient(120% 120% at 50% 0%, #f2f3f5 0%, #e9ecef 50%, #dde1e6 100%);
-  border-radius: 14px;
+  background: linear-gradient(180deg, #e9edf2 0%, #dee4eb 100%);
+  border: 1px solid #bcc6d1;
+  border-radius: 10px;
   overflow: hidden;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  min-height: 56vh;
-  border: 1px solid #e9ecef;
-  box-shadow: 0 2px 10px rgba(0,0,0,.04);
 
   /* Mobile: oculta el pane izquierdo para que solo se vea el remoto */
   &[data-side="left"] {
@@ -668,4 +646,17 @@ export const StyledBrand = styled.a`
 
   @media (max-width: 1024px) { width: 136px; height: 26px; }
   @media (max-width: 768px)  { width: 120px; height: 24px; }
+`;
+
+//Este export siempre al final del fichero
+export const GlobalBlack = createGlobalStyle`
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #000;
+  }
+  body {
+    overflow-x: hidden;
+  }
 `;
