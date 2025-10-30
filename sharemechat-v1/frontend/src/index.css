@@ -1,0 +1,60 @@
+/* src/index.css */
+
+/* ===== RESET BÁSICO ===== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* ===== FUENTE Y TIPOGRAFÍA ===== */
+html {
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ===== FONDO OSCURO PARA DASHBOARD ===== */
+body,
+html,
+#root {
+  background: #0f0f0f !important;
+  color: #e0e0e0 !important;
+  min-height: 100vh;
+}
+
+/* ===== SCROLLBAR PERSONALIZADA (opcional) ===== */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* ===== ENLACES ===== */
+a {
+  color: #4a9eff;
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* ===== BOTONES NATIVOS ===== */
+button {
+  font-family: inherit;
+}
+
+/* ===== INPUTS NATIVOS ===== */
+input, textarea, select {
+  font-family: inherit;
+}

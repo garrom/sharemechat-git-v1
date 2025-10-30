@@ -6,7 +6,6 @@ import { inputBase, buttonBase } from '../core/mixins';
 export const PageWrap = styled.div`
   max-width: 720px;
   margin: ${space.xl} auto;
-  /* Añadimos padding-bottom generoso para dar aire en la parte baja */
   padding: 0 ${space.lg} calc(${space.xl} * 2);
 
   @media (max-width: ${bp.md}) {
@@ -15,10 +14,10 @@ export const PageWrap = styled.div`
   }
 `;
 
-
 export const Title = styled.h2`
   margin: 0 0 ${space.lg};
   font-weight: 600;
+  color: #fff;
 `;
 
 export const Message = styled.p`
@@ -35,20 +34,39 @@ export const Form = styled.form`
   display: grid;
   gap: ${space.md};
 `;
+
 export const FormRow = styled.div`
   display: grid;
   gap: ${space.xs};
 `;
+
 export const Label = styled.label`
   font-size: 0.95rem;
+  color: #e0e0e0;
 `;
+
 export const Input = styled.input`
   ${inputBase}
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #fff;
+
+  &::placeholder {
+    color: #888;
+  }
 `;
+
 export const Textarea = styled.textarea`
   ${inputBase}
   resize: vertical;
   min-height: 110px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  color: #fff;
+
+  &::placeholder {
+    color: #888;
+  }
 `;
 
 export const ButtonPrimary = styled.button`
@@ -58,6 +76,7 @@ export const ButtonPrimary = styled.button`
   &:hover { background: ${colors.successHover}; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
+
 export const ButtonDangerOutline = styled.button`
   ${buttonBase}
   border: 1px solid ${colors.danger};
@@ -66,6 +85,7 @@ export const ButtonDangerOutline = styled.button`
   &:hover { background: #fff5f5; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 `;
+
 export const ButtonRow = styled.div`
   display: flex;
   gap: ${space.sm};
@@ -74,6 +94,7 @@ export const ButtonRow = styled.div`
 `;
 
 export const FileInput = styled.input` display: none; `;
+
 export const FileLabel = styled.label`
   ${buttonBase}
   border: 1px solid ${colors.border};
@@ -93,16 +114,12 @@ export const SectionCard = styled.section`
   padding: ${space.lg};
   box-shadow: ${shadow.card};
   background: ${colors.white};
+  color: #333;
 `;
 
 export const SectionTitle = styled.h3`
   margin: 0 0 ${space.md};
   font-weight: 600;
-`;
-
-export const FileName = styled.div`
-  margin-top: 6px;
-  a { color: inherit; text-decoration: underline; }
 `;
 
 export const Photo = styled.img`
@@ -111,6 +128,7 @@ export const Photo = styled.img`
   height: auto;
   border-radius: ${radius.lg};
   display: block;
+  background: #eee;
 `;
 
 export const Hint = styled.p`
@@ -121,14 +139,24 @@ export const Hint = styled.p`
 
 export const BackButton = styled.button`
   ${buttonBase}
-  border: 1px solid ${colors.white};
+  border: 1px solid ${colors.white}40;
   background: transparent;
   color: ${colors.white};
   margin-left: ${space.sm};
-  &:hover { background: ${colors.primaryHover}; }
+  &:hover { background: ${colors.white}15; }
   @media (max-width: ${bp.md}) { margin-left: 0; }
 `;
 
 export const PhotoBlock = styled.div`
   margin-bottom: ${space.md};
+`;
+
+// NUEVO: Video unificado
+export const Video = styled.video`
+  max-width: 100%;
+  max-height: 300px;
+  display: block;
+  border-radius: ${radius.lg};
+  background: #000;
+  margin-bottom: ${space.sm};
 `;
