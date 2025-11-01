@@ -50,7 +50,12 @@ import {
   GlobalBlack,
 
 } from '../styles/ClientStyles';
-import { StyledNavbar, StyledNavButton, StyledBrand, NavText, SaldoText } from '../styles/NavbarStyles';
+
+import {
+  StyledNavbar, StyledNavButton, StyledBrand,
+  NavText, SaldoText,
+  HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton
+} from '../styles/NavbarStyles';
 
 
 
@@ -86,7 +91,7 @@ const DashboardClient = () => {
   const [targetPeerName, setTargetPeerName] = useState('');
   // Modo del panel de contacto (chat o llamada)
   const [contactMode, setContactMode] = useState(null); // 'chat' | 'call' | null
-
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // ====== CALLING (1-a-1) ======
   const [callCameraActive, setCallCameraActive] = useState(false);
@@ -1752,7 +1757,7 @@ const DashboardClient = () => {
       <StyledNavbar>
         <StyledBrand href="/" aria-label="SharemeChat" />
         {/* Botones-text en el navbar (Videochat / Favoritos / Funnyplace) */}
-        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+        <div className="desktop-only" style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1, justifyContent: 'center' }}>
           <StyledNavTab
             type="button"
             data-active={activeTab === 'videochat'}
@@ -1784,7 +1789,7 @@ const DashboardClient = () => {
           </StyledNavTab>
         </div>
 
-        <StyledNavGroup>
+        <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <NavText className="me-3">Hola, {displayName}</NavText>
           <SaldoText className="me-3">
             {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
@@ -1794,24 +1799,35 @@ const DashboardClient = () => {
             + Saldo
           </StyledNavButton>
 
-          <StyledNavButton type="button" onClick={handleLogout}>
-            <FontAwesomeIcon icon={faSignOutAlt} />
-            <StyledIconWrapper>Salir</StyledIconWrapper>
-          </StyledNavButton>
-
-          <StyledNavButton type="button" onClick={handleProfile}>
-            <FontAwesomeIcon icon={faUser} />
-            <StyledIconWrapper>Perfil</StyledIconWrapper>
-          </StyledNavButton>
-
-          {/* Avatar (click = ir a Perfil) */}
           <StyledNavAvatar
             src={profilePic || '/img/avatarChico.png'}
             alt="avatar"
             title="Ver perfil"
             onClick={handleProfile}
           />
-        </StyledNavGroup>
+          <StyledNavButton type="button" onClick={handleLogout} title="Cerrar sesión">
+            <FontAwesomeIcon icon={faSignOutAlt} />
+          </StyledNavButton>
+        </div>
+
+        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} title="Menú">
+          Menu
+        </HamburgerButton>
+
+        <MobileMenu className={!menuOpen && 'hidden'}>
+          <StyledNavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
+            <FontAwesomeIcon icon={faUser} />
+            <StyledIconWrapper>Perfil</StyledIconWrapper>
+          </StyledNavButton>
+          <StyledNavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
+            <FontAwesomeIcon icon={faSignOutAlt} />
+            <StyledIconWrapper>Salir</StyledIconWrapper>
+          </StyledNavButton>
+          <StyledNavButton onClick={() => { handleAddBalance(); setMenuOpen(false); }}>
+            + Saldo
+          </StyledNavButton>
+        </MobileMenu>
+
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
 
@@ -1836,7 +1852,14 @@ const DashboardClient = () => {
                     <>
                       <StyledVideoArea>
                         {/* Video Local SIEMPRE aquí */}
-                        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                        <div style={{
+                          position: 'relative',
+                          width: '100%',
+                          height: '100%',
+                          borderRadius: '12px',
+                          overflow: 'hidden',
+                          background: '#000'
+                        }}>
                           <video
                             ref={localVideoRef}
                             muted
@@ -1936,7 +1959,17 @@ const DashboardClient = () => {
                       {remoteStream ? (
                         <>
                           <StyledVideoArea>
-                            <StyledRemoteVideo ref={remoteVideoWrapRef}>
+                            <StyledRemoteVideo
+                              ref={remoteVideoWrapRef}
+                              style={{
+                                position: 'relative',
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                background: '#000'
+                              }}
+                            >
                               <StyledVideoTitle>
                                 <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
                                 {modelNickname || 'Modelo'}
@@ -1953,11 +1986,16 @@ const DashboardClient = () => {
                                     color: '#fff',
                                     cursor: 'pointer'
                                   }}
-                                >⤢</button>
+                                >Pantalla completa</button>
                               </StyledVideoTitle>
                               <video
                                 ref={remoteVideoRef}
-                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover',
+                                  display: 'block'
+                                }}
                                 autoPlay
                                 playsInline
                                 onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
@@ -2407,9 +2445,30 @@ const DashboardClient = () => {
             <StyledRightColumn />
           </>
         )}
-
       </StyledMainContent>
+
       {/* ======FIN MAIN ======== */}
+
+      <MobileBottomNav>
+        <BottomNavButton
+          active={activeTab === 'videochat'}
+          onClick={() => setActiveTab('videochat')}
+        >
+          <span>Video</span> Videochat
+        </BottomNavButton>
+        <BottomNavButton
+          active={activeTab === 'favoritos'}
+          onClick={handleGoFavorites}
+        >
+          <span>Heart</span> Favoritos
+        </BottomNavButton>
+        <BottomNavButton
+          active={activeTab === 'funnyplace'}
+          onClick={handleGoFunnyplace}
+        >
+          <span>Laugh</span> Funnyplace
+        </BottomNavButton>
+      </MobileBottomNav>
 
       {/*INICIO CLICK DERECHO */}
        {ctxUser && (

@@ -22,5 +22,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 
-# Mock login (solo desarrollo local)
-src/dev-only/
+# Mock/MSW solo local
+src/mocks/
+public/mockServiceWorker.js

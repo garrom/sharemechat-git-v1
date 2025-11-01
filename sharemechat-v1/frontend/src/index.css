@@ -58,3 +58,31 @@ button {
 input, textarea, select {
   font-family: inherit;
 }
+
+/* ==== OCULTAR TABS Y NAVBAR EN MÓVIL ==== */
+@media (max-width: 768px) {
+  /* Ocultar tabs y grupo de usuario/saldo/botones */
+  .desktop-tabs,
+  [data-nav-group] {
+    display: none !important;
+  }
+
+  /* Asegurar que el navbar no se desborde */
+  [data-navbar] {
+    justify-content: space-between;
+    padding: 0.5rem 1rem;
+  }
+
+  /* Responsive para layout 3 columnas → 1 columna */
+  [data-layout="three"] {
+    display: block !important;
+  }
+  [data-layout="three"] > * {
+    width: 100% !important;
+    margin-bottom: 1rem;
+  }
+  [data-layout="three"] > [data-rail],
+  [data-layout="three"] > [data-right] {
+    display: none !important;
+  }
+}
