@@ -56,14 +56,19 @@ export const StyledContainer = styled.div`
   min-width: 48px;
 `;
 
-// MODIFICADO: gap + padding para espacio entre bloques y bordes
+// MODIFICADO: gap + padding
 export const StyledMainContent = styled.div`
   display: flex;
   flex: 1;
   overflow: hidden;
-  gap: 16px;           // ← ESPACIO ENTRE LAS 3 COLUMNAS
-  padding: 16px;       // ← ESPACIO CON LOS BORDES DE LA PANTALLA
+  gap: 16px;
+  padding: 16px;
   box-sizing: border-box;
+
+  /* hueco para el BottomNav en móvil */
+  @media (max-width: 768px) {
+    padding-bottom: 72px;
+  }
 `;
 
 /* ==================================
@@ -85,7 +90,6 @@ export const StyledNavAvatar = styled.img`
   box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
   cursor: pointer;
 `;
-
 
 export const StyledNavTab = styled.button`
   appearance: none;
@@ -114,7 +118,13 @@ export const StyledNavTab = styled.button`
     background: var(--c-white);
     color: var(--c-black);
   }
+
+  /* Ocultar SOLO los tabs superiores en móvil */
+  @media (max-width: 768px) {
+    display: none !important;
+  }
 `;
+
 
 /* ==================================
  * 3. BLOQUE COMÚN: PLATEADO + SOMBRA
@@ -313,9 +323,12 @@ export const StyledRemoteVideo = styled.div`
 export const StyledVideoArea = styled.div`
   position: relative;
   width: 100%;
-  height: calc(100% - 60px);
+  flex: 1;
   min-height: 360px;
+  height: auto;
+  min-width: 0;
 `;
+
 
 export const StyledChatDock = styled.div`
   width: 100%;
@@ -455,6 +468,7 @@ export const StyledSplit2 = styled.div`
   gap: 14px;
   width: 100%;
   min-height: 0;
+  flex: 1;
 
   @media (max-width: 768px){ grid-template-columns: 1fr; }
 `;
@@ -465,6 +479,8 @@ export const StyledPane = styled.section`
   border: 1px solid #bcc6d1;
   border-radius: 10px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
   &[data-side="left"] {
     @media (max-width: 768px) { display: none; }

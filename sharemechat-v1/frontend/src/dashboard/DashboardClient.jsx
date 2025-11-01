@@ -6,7 +6,7 @@ import FavoritesClientList from './favorites/FavoritesClientList';
 import { useModal } from '../components/ModalProvider';
 import FunnyplacePage from './funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSignOutAlt, faUser, faHeart, faVideo, faFilm } from '@fortawesome/free-solid-svg-icons';
+import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,
   StyledIconWrapper,
@@ -52,8 +52,7 @@ import {
 } from '../styles/ClientStyles';
 
 import {
-  StyledNavbar, StyledNavButton, StyledBrand,
-  NavText, SaldoText,
+  StyledNavbar, StyledNavButton, StyledBrand,NavText, SaldoText,
   HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton
 } from '../styles/NavbarStyles';
 
@@ -1789,14 +1788,18 @@ const DashboardClient = () => {
           </StyledNavTab>
         </div>
 
-        <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <NavText className="me-3">Hola, {displayName}</NavText>
+        <div className="desktop-only" data-nav-group style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <NavText className="me-3">{displayName}</NavText>
           <SaldoText className="me-3">
             {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
           </SaldoText>
 
           <StyledNavButton type="button" onClick={handleAddBalance}>
-            + Saldo
+            COMPRAR
+          </StyledNavButton>
+
+          <StyledNavButton type="button" onClick={handleLogout} title="Cerrar sesión">
+            <FontAwesomeIcon icon={faSignOutAlt} />
           </StyledNavButton>
 
           <StyledNavAvatar
@@ -1805,26 +1808,28 @@ const DashboardClient = () => {
             title="Ver perfil"
             onClick={handleProfile}
           />
-          <StyledNavButton type="button" onClick={handleLogout} title="Cerrar sesión">
-            <FontAwesomeIcon icon={faSignOutAlt} />
-          </StyledNavButton>
         </div>
 
-        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} title="Menú">
-          Menu
+        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">
+          <FontAwesomeIcon icon={faBars} />
         </HamburgerButton>
 
         <MobileMenu className={!menuOpen && 'hidden'}>
+          <SaldoText>
+            {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
+          </SaldoText>
           <StyledNavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
             <FontAwesomeIcon icon={faUser} />
             <StyledIconWrapper>Perfil</StyledIconWrapper>
           </StyledNavButton>
+
+          <StyledNavButton onClick={() => { handleAddBalance(); setMenuOpen(false); }}>
+            <StyledIconWrapper>Comprar</StyledIconWrapper>
+          </StyledNavButton>
+
           <StyledNavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
-          </StyledNavButton>
-          <StyledNavButton onClick={() => { handleAddBalance(); setMenuOpen(false); }}>
-            + Saldo
           </StyledNavButton>
         </MobileMenu>
 

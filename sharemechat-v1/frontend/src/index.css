@@ -63,6 +63,7 @@ input, textarea, select {
 @media (max-width: 768px) {
   /* Ocultar tabs y grupo de usuario/saldo/botones */
   .desktop-tabs,
+  .desktop-only,
   [data-nav-group] {
     display: none !important;
   }

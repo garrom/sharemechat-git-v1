@@ -7,7 +7,7 @@ import { useModal } from '../components/ModalProvider';
 import FunnyplacePage from './funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
-import { faSignOutAlt, faUser, faHeart, faVideo, faFilm } from '@fortawesome/free-solid-svg-icons';
+import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,
   StyledIconWrapper,
@@ -50,7 +50,11 @@ import {
   GlobalBlack,
 
 } from '../styles/ModelStyles';
-import { StyledNavbar, StyledNavButton, StyledBrand, NavText, SaldoText, QueueText } from '../styles/NavbarStyles';
+
+import {
+    StyledNavbar, StyledNavButton, StyledBrand, NavText, SaldoText, QueueText,
+    HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton
+} from '../styles/NavbarStyles';
 
 
 const DashboardModel = () => {
@@ -84,12 +88,10 @@ const DashboardModel = () => {
   const [msgConnected, setMsgConnected] = useState(false);
   const [clientNickname, setClientNickname] = useState('Cliente');
   const [clientAvatar, setClientAvatar] = useState('');
-  // === FUENTE ÚNICA DE VERDAD PARA CONTACTO SELECCIONADO (SIMÉTRICO A CLIENT) ===
   const [targetPeerId, setTargetPeerId] = useState(null);
   const [targetPeerName, setTargetPeerName] = useState('');
-
-  // Modo del panel de contacto (chat o llamada)
   const [contactMode, setContactMode] = useState(null); // 'chat' | 'call' | null
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // ====== CALLING (1-a-1) ======
   const [callCameraActive, setCallCameraActive] = useState(false);
@@ -103,7 +105,6 @@ const DashboardModel = () => {
   // Context menu (click derecho)
   const [ctxUser, setCtxUser] = useState(null);
   const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
-
 
   const callLocalVideoRef = useRef(null);
   const callRemoteVideoRef = useRef(null);
@@ -1780,7 +1781,7 @@ const DashboardModel = () => {
         <StyledBrand href="/" aria-label="SharemeChat" />
 
         {/* Botones-text en el navbar (Videochat / Favoritos / Funnyplace) */}
-        <div style={{ display:'flex', gap:8, alignItems:'center' }}>
+        <div className="desktop-only" style={{ display:'flex', gap:8, alignItems:'center' }}>
           <StyledNavTab
             type="button"
             data-active={activeTab === 'videochat'}
@@ -1811,8 +1812,8 @@ const DashboardModel = () => {
             Funnyplace
           </StyledNavTab>
         </div>
-        <StyledNavGroup>
-          <NavText className="me-3">Hola, {displayName}</NavText>
+        <StyledNavGroup className="desktop-only" data-nav-group>
+          <NavText className="me-3">{displayName}</NavText>
           <SaldoText className="me-3">
             {loadingSaldoModel ? 'Saldo: ...' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -'}
           </SaldoText>
@@ -1829,16 +1830,11 @@ const DashboardModel = () => {
           </StyledNavButton>
 
           <StyledNavButton type="button" onClick={handleRequestPayout}>
-            Solicitar retiro
+            RETIRAR
           </StyledNavButton>
 
           <StyledNavButton type="button" onClick={handleLogout}>
             <FontAwesomeIcon icon={faSignOutAlt} />
-            <StyledIconWrapper>Salir</StyledIconWrapper>
-          </StyledNavButton>
-          <StyledNavButton type="button" onClick={handleProfile}>
-            <FontAwesomeIcon icon={faUser} />
-            <StyledIconWrapper>Perfil</StyledIconWrapper>
           </StyledNavButton>
           <StyledNavAvatar
             src={profilePic || '/img/avatarChica.png'}
@@ -1847,6 +1843,42 @@ const DashboardModel = () => {
             onClick={handleProfile}
           />
         </StyledNavGroup>
+
+        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">
+          <FontAwesomeIcon icon={faBars} />
+        </HamburgerButton>
+
+        <MobileMenu className={!menuOpen && 'hidden'}>
+          {/* Saludo + Saldo arriba del menú */}
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+            <NavText>{displayName}</NavText>
+            <SaldoText>
+              {loadingSaldoModel ? 'Saldo: …' : (saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: n/d')}
+            </SaldoText>
+          </div>
+
+          <StyledNavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
+            <FontAwesomeIcon icon={faUser} />
+            <StyledIconWrapper>Perfil</StyledIconWrapper>
+          </StyledNavButton>
+
+          {/* (Opcional) Estadísticas: puedes dejarlo ya listo aunque no tenga acción */}
+          <StyledNavButton onClick={() => { /* TODO: abrir stats */ setMenuOpen(false); }} title="Estadísticas">
+            <FontAwesomeIcon icon={faChartLine} />
+            <StyledIconWrapper>Estadísticas</StyledIconWrapper>
+          </StyledNavButton>
+
+          <StyledNavButton onClick={() => { handleRequestPayout(); setMenuOpen(false); }}>
+            RETIRAR
+          </StyledNavButton>
+
+          <StyledNavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
+            <FontAwesomeIcon icon={faSignOutAlt} />
+            <StyledIconWrapper>Salir</StyledIconWrapper>
+          </StyledNavButton>
+        </MobileMenu>
+
+
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
 
@@ -2420,6 +2452,28 @@ const DashboardModel = () => {
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
 
+      <MobileBottomNav>
+        <BottomNavButton
+          active={activeTab === 'videochat'}
+          onClick={() => setActiveTab('videochat')}
+        >
+          <span>Video</span> Videochat
+        </BottomNavButton>
+
+        <BottomNavButton
+          active={activeTab === 'favoritos'}
+          onClick={handleGoFavorites}
+        >
+          <span>Heart</span> Favoritos
+        </BottomNavButton>
+
+        <BottomNavButton
+          active={activeTab === 'funnyplace'}
+          onClick={handleGoFunnyplace}
+        >
+          <span>Laugh</span> Funnyplace
+        </BottomNavButton>
+      </MobileBottomNav>
 
       {/*INICIO CLICK DERECHO */}
         {ctxUser && (

@@ -17,12 +17,25 @@ export const StyledNavbar = styled.nav`
   flex-wrap: wrap;
   gap: ${space.sm};
 
+
+  @media (max-width: 768px) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: ${space.sm} ${space.md};
+    position: sticky;
+
+    .desktop-only,
+    [data-nav-group] {
+      display: none !important;
+    }
+  }
+
   @media (max-width: 640px) {
     padding: ${space.sm} ${space.md};
-    flex-direction: column;
-    align-items: stretch;
   }
 `;
+
 
 export const StyledBrand = styled.a`
   display: block;
@@ -114,7 +127,7 @@ export const HamburgerButton = styled.button`
   background: none;
   border: none;
   color: ${colors.white};
-  font-size: 1.8rem;
+  font-size: 2.2rem;
   cursor: pointer;
   padding: 8px;
   border-radius: ${radius.md};
@@ -123,8 +136,14 @@ export const HamburgerButton = styled.button`
     display: flex;
     align-items: center;
     justify-content: center;
+
+    /* fija el botón en la esquina superior derecha del navbar */
+    position: absolute;
+    top: 8px;
+    right: 8px;
   }
 `;
+
 
 export const MobileMenu = styled.div`
   position: absolute;

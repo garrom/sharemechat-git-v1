@@ -112,7 +112,6 @@ export const StyledNavAvatar = styled.img`
   cursor: pointer;
 `;
 
-
 export const StyledNavTab = styled.button`
   appearance: none;
   display: inline-flex;
@@ -140,7 +139,13 @@ export const StyledNavTab = styled.button`
     background: var(--c-white);
     color: var(--c-black);
   }
+
+  /* Ocultar SOLO los tabs superiores en móvil */
+  @media (max-width: 768px) {
+    display: none !important;
+  }
 `;
+
 
 /* --------------------------------
  * 3. ESTRUCTURA DE CONTENIDO (3 COLUMNAS) ← MODIFICADO
@@ -151,8 +156,8 @@ export const StyledMainContent = styled.div`
   display: flex;
   flex: 1;
   overflow: hidden;
-  gap: 16px;           // ← ESPACIO ENTRE COLUMNAS
-  padding: 16px;       // ← ESPACIO CON BORDES DE PANTALLA
+  gap: 16px;
+  padding: 16px;
   box-sizing: border-box;
 `;
 
@@ -310,9 +315,12 @@ export const StyledTopActions = styled.div`
 export const StyledVideoArea = styled.div`
   position: relative;
   width: 100%;
-  height: calc(100% - 60px);
+  flex: 1;
   min-height: 360px;
+  height: auto;
+  min-width: 0;
 `;
+
 
 export const StyledRemoteVideo = styled.div`
   width: 100%;
@@ -528,6 +536,7 @@ export const StyledSplit2 = styled.div`
   gap: 14px;
   width: 100%;
   min-height: 0;
+  flex: 1;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -540,6 +549,8 @@ export const StyledPane = styled.section`
   border: 1px solid #bcc6d1;
   border-radius: 10px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
   &[data-side="left"] {
     @media (max-width: 768px) {
