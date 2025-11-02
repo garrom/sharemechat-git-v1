@@ -87,9 +87,14 @@ export const GlobalBlack = createGlobalStyle`
 export const StyledContainer = styled.div`
   display: flex;
   flex-direction: column;
+  /* Usar dvh para iOS: evita que el teclado “coma” el vh */
   height: 100vh;
-  background: var(--c-bg);
+  background: var(--c-black);
   min-width: 48px;
+
+  @supports (height: 100dvh) {
+    height: 100dvh;
+  }
 `;
 
 /* --------------------------------
@@ -159,7 +164,13 @@ export const StyledMainContent = styled.div`
   gap: 16px;
   padding: 16px;
   box-sizing: border-box;
+
+  /* Hueco para el BottomNav en móvil (ajustado) */
+  @media (max-width: 768px) {
+    padding-bottom: 60px;
+  }
 `;
+
 
 // NUEVO: estilo base para columnas plateadas
 const ColumnBlock = styled.div`
@@ -356,18 +367,28 @@ export const StyledTitleAvatar = styled.img`
 `;
 
 export const StyledChatDock = styled.div`
-  height: 60px;
-  min-height: 60px;
   width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
+  height: 56px;
+  min-height: 56px;
+  padding: 8px 0 8px 0;
   border-top: 1px solid var(--c-border);
-  padding: 0 8px;
   border-radius: 0;
   box-shadow: none;
   margin: 0;
+  background: var(--c-surface);
+  z-index: 5;
+
+  /* En móvil: que se pegue por encima del bottom nav y respete safe-area */
+  @media (max-width: 768px) {
+    position: sticky;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px)); /* 56px ≈ alto BottomNav */
+  }
 `;
+
+
 
 /* --------------------------------
  * 6. CHAT OVERLAY EN VIDEO (SIN CAMBIOS)
@@ -636,8 +657,17 @@ export const StyledChatScroller = styled.div`
   border: 1px solid var(--c-border-dark);
   border-radius: 8px;
   padding: 10px;
-  background: rgba(0,0,0,0.2);
 
+  /* 👇 margen interior extra para que el último mensaje no quede tapado por el dock */
+  @media (max-width: 768px) {
+    padding-bottom: 88px;
+    scroll-padding-bottom: 88px;
+  }
+
+  background: rgba(0,0,0,0.2);
   scrollbar-width: thin;
   &::-webkit-scrollbar { width: 8px; }
+
+  /* Suaviza el rebote en móviles y evita saltos raros */
+  overscroll-behavior: contain;
 `;
