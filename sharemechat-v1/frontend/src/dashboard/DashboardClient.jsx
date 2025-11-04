@@ -8,55 +8,33 @@ import FunnyplacePage from './funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import {
-  StyledContainer,
-  StyledIconWrapper,
-  StyledMainContent,
-  StyledLeftColumn,
-  StyledCenter,
-  StyledRightColumn,
-  StyledActionButton,
-  StyledLocalVideo,
-  StyledRemoteVideo,
-  StyledChatContainer,
-  StyledNavGroup,
-  StyledNavAvatar,
-  StyledTopActions,
-  StyledVideoTitle,
-  StyledTitleAvatar,
-  StyledChatDock,
-  StyledChatList,
-  StyledChatMessageRow,
-  StyledChatBubble,
-  StyledChatControls,
-  StyledChatInput,
-  StyledGiftToggle,
-  StyledGiftsPanel,
-  StyledGiftGrid,
-  StyledGiftIcon,
-  StyledIconBtn,
-  StyledSelectableRow,
-  StyledNavTab,
-  StyledVideoArea,
-  StyledSplit2,
-  StyledPane,
-  StyledThumbsGrid,
-  StyledPrimaryCta,
-  StyledCenterPanel,
-  StyledCenterBody,
-  StyledChatScroller,
-  StyledCenterVideochat,
-  StyledFavoritesShell,
-  StyledFavoritesColumns,
-  GlobalBlack,
-
+  StyledContainer,StyledIconWrapper,StyledMainContent,
+  StyledLeftColumn,StyledCenter,StyledRightColumn,
+  StyledActionButton,StyledLocalVideo,StyledRemoteVideo,
+  StyledChatContainer,StyledNavGroup,StyledNavAvatar,
+  StyledTopActions,StyledVideoTitle,StyledTitleAvatar,
+  StyledChatDock,StyledChatList,StyledChatMessageRow,
+  StyledChatBubble,StyledChatControls,StyledChatInput,
+  StyledGiftToggle,StyledGiftsPanel,StyledGiftGrid,
+  StyledGiftIcon,StyledIconBtn,StyledSelectableRow,
+  StyledNavTab,StyledVideoArea,StyledSplit2,
+  StyledPane,StyledThumbsGrid, StyledCenterPanel,
+  StyledCenterBody,StyledChatScroller, StyledCenterVideochat,
+  StyledFavoritesShell,StyledFavoritesColumns,GlobalBlack,
 } from '../styles/ClientStyles';
-
 import {
   StyledNavbar, StyledNavButton, StyledBrand,NavText, SaldoText,
   HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton
 } from '../styles/NavbarStyles';
-
-
+import {
+  ButtonActivarCam,ButtonBuscarModelo,
+  ButtonBuscarCliente,ButtonNext,
+  ButtonStop, ButtonAddFavorite,
+  ButtonLlamar,ButtonColgar,
+  ButtonAceptar,ButtonRechazar,
+  ButtonVolver, ButtonEnviar,
+  ButtonRegalo,ButtonActivarCamMobile
+} from '../styles/ButtonStyles';
 
 const DashboardClient = () => {
 
@@ -161,24 +139,25 @@ const DashboardClient = () => {
     return found?.icon || null;
   };
 
-  //MOVIL
+  //**** PARA MOVIL ****/
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
+    const mq = window.matchMedia('(max-width: 768px)');
+    const onChange = (e) => setIsMobile(e.matches);
+    setIsMobile(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
   }, []);
 
   useLayoutEffect(() => {
     const el = centerListRef?.current;
     if (!el) return;
-
     // Intenta autoscroll si ya está cerca del fondo o si es primera carga
     const nearBottom = (el.scrollHeight - el.scrollTop - el.clientHeight) < 120;
     if (nearBottom || !centerMessages.length) {
       el.scrollTop = el.scrollHeight;
     }
   }, [centerMessages, centerLoading, showCenterGifts]);
-
+  //****FIN MOVIL ****/
 
   useEffect(() => {
     const close = () => setCtxUser(null);
@@ -1877,9 +1856,9 @@ const DashboardClient = () => {
                 <StyledPane data-side="left">
                   {!cameraActive ? (
                     <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                      <StyledPrimaryCta onClick={handleActivateCamera}>
+                      <ButtonActivarCam onClick={handleActivateCamera}>
                         Activar cámara
-                      </StyledPrimaryCta>
+                      </ButtonActivarCam>
                     </div>
                   ) : (
                     <>
@@ -1943,16 +1922,37 @@ const DashboardClient = () => {
                 </StyledPane>
 
                 {/* ---- PANE DERECHO (REMOTO + PIP + OVERLAY + DOCK) ---- */}
-                <StyledPane data-side="right">
+                <StyledPane data-side="right" style={{ position: 'relative' }}>
                   {!cameraActive ? (
-                    <StyledThumbsGrid>
-                      <img className="thumb" src="https://picsum.photos/seed/a/300/400" alt="" />
-                      <img className="thumb" src="https://picsum.photos/seed/b/300/400" alt="" />
-                      <img className="thumb" src="https://picsum.photos/seed/c/300/400" alt="" />
-                      <img className="thumb" src="https://picsum.photos/seed/d/300/400" alt="" />
-                      <img className="thumb" src="https://picsum.photos/seed/e/300/400" alt="" />
-                      <img className="thumb" src="https://picsum.photos/seed/f/300/400" alt="" />
-                    </StyledThumbsGrid>
+                    <>
+                      <StyledThumbsGrid>
+                        <img className="thumb" src="https://picsum.photos/seed/a/300/400" alt="" />
+                        <img className="thumb" src="https://picsum.photos/seed/b/300/400" alt="" />
+                        <img className="thumb" src="https://picsum.photos/seed/c/300/400" alt="" />
+                        <img className="thumb" src="https://picsum.photos/seed/d/300/400" alt="" />
+                        <img className="thumb" src="https://picsum.photos/seed/e/300/400" alt="" />
+                        <img className="thumb" src="https://picsum.photos/seed/f/300/400" alt="" />
+                      </StyledThumbsGrid>
+
+                      {/* === CTA flotante SOLO MÓVIL cuando NO hay cámara activa === */}
+                      {isMobile && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            bottom: 12,
+                            left: 12,
+                            right: 12,
+                            zIndex: 5,
+                            display: 'flex',
+                            justifyContent: 'center'
+                          }}
+                        >
+                          <ButtonActivarCamMobile onClick={handleActivateCamera}>
+                            Activar cámara
+                          </ButtonActivarCamMobile>
+                        </div>
+                      )}
+                    </>
                   ) : (
                     <>
                       {/* Controles superiores */}
@@ -1970,20 +1970,20 @@ const DashboardClient = () => {
                         }}
                       >
                         {!searching && (
-                          <StyledActionButton onClick={handleStartMatch}>
+                          <ButtonBuscarModelo onClick={handleStartMatch}>
                             Buscar Modelo
-                          </StyledActionButton>
+                          </ButtonBuscarModelo>
                         )}
                         {searching && <p style={{ margin: 0 }}>Buscando modelo...</p>}
 
-                        <StyledActionButton onClick={stopAll} style={{ backgroundColor: '#dc3545' }}>
+                        <ButtonStop onClick={stopAll}>
                           Stop
-                        </StyledActionButton>
+                        </ButtonStop>
 
                         {remoteStream && !searching && (
                           <>
-                            <StyledActionButton onClick={handleNext}>Next</StyledActionButton>
-                            <StyledActionButton onClick={handleAddFavorite}>+ Favorito</StyledActionButton>
+                            <ButtonNext onClick={handleNext}>Next</ButtonNext>
+                            <ButtonAddFavorite onClick={handleAddFavorite}>+ Favorito</ButtonAddFavorite>
                           </>
                         )}
                       </div>
@@ -2019,7 +2019,9 @@ const DashboardClient = () => {
                                     color: '#fff',
                                     cursor: 'pointer'
                                   }}
-                                >Pantalla completa</button>
+                                >
+                                  Pantalla completa
+                                </button>
                               </StyledVideoTitle>
                               <video
                                 ref={remoteVideoRef}
@@ -2035,7 +2037,6 @@ const DashboardClient = () => {
                               />
                             </StyledRemoteVideo>
                           </StyledVideoArea>
-
                         </>
                       ) : (
                         <div style={{ color: '#6c757d' }}>
@@ -2045,6 +2046,7 @@ const DashboardClient = () => {
                     </>
                   )}
                 </StyledPane>
+
               </StyledSplit2>
               {/* Dock de entrada (debajo de ambas columnas) — solo con match */}
               {remoteStream && (
@@ -2149,13 +2151,13 @@ const DashboardClient = () => {
                                    Chatear
                                  </StyledActionButton>
 
-                                 <StyledActionButton
+                                 <ButtonLlamar
                                    onClick={enterCallMode}
                                    disabled={!centerChatPeerId}
                                    title="Llamar"
                                  >
                                    Llamar
-                                 </StyledActionButton>
+                                 </ButtonLlamar>
                                </div>
                              </div>
 
@@ -2171,10 +2173,10 @@ const DashboardClient = () => {
                                        {centerChatPeerName} te ha invitado a favoritos. Acepta para habilitar el chat.
                                      </p>
                                      <div style={{ display:'flex', gap:12, justifyContent:'center' }}>
-                                       <StyledActionButton onClick={acceptInvitation}>Aceptar</StyledActionButton>
-                                       <StyledActionButton onClick={rejectInvitation} style={{ backgroundColor:'#dc3545' }}>
+                                       <ButtonAceptar onClick={acceptInvitation}>Aceptar</ButtonAceptar>
+                                       <ButtonRechazar onClick={rejectInvitation} style={{ backgroundColor:'#dc3545' }}>
                                          Rechazar
-                                       </StyledActionButton>
+                                       </ButtonRechazar>
                                      </div>
                                    </div>
                                  </div>
@@ -2207,7 +2209,7 @@ const DashboardClient = () => {
 
                                   <StyledTopActions style={{ gap: 8 }}>
                                     {!callCameraActive && (
-                                      <StyledActionButton
+                                      <ButtonActivarCam
                                         onClick={handleCallActivateCamera}
                                         disabled={callStatus === 'idle' ? !allowChat : false}
                                         title={
@@ -2217,11 +2219,11 @@ const DashboardClient = () => {
                                         }
                                       >
                                         Activar Cámara para Llamar
-                                      </StyledActionButton>
+                                      </ButtonActivarCam>
                                     )}
 
                                     {callCameraActive && callStatus !== 'in-call' && callStatus !== 'ringing' && (
-                                      <StyledActionButton
+                                      <ButtonLlamar
                                         onClick={handleCallInvite}
                                         disabled={!allowChat || !callPeerId}
                                         title={
@@ -2233,13 +2235,13 @@ const DashboardClient = () => {
                                         }
                                       >
                                         {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
-                                      </StyledActionButton>
+                                      </ButtonLlamar>
                                     )}
 
                                     {(callStatus === 'ringing' || callStatus === 'in-call' || callStatus === 'connecting') && (
-                                      <StyledActionButton onClick={() => handleCallEnd(false)} style={{ backgroundColor: '#dc3545' }}>
+                                      <ButtonColgar onClick={() => handleCallEnd(false)}>
                                         Colgar
-                                      </StyledActionButton>
+                                      </ButtonColgar>
                                     )}
                                   </StyledTopActions>
 
@@ -2378,10 +2380,10 @@ const DashboardClient = () => {
                                         Te está llamando <strong>{callPeerName || `Usuario ${callPeerId}`}</strong>.
                                       </div>
                                       <div style={{ display:'flex', gap: 10 }}>
-                                        <StyledActionButton onClick={handleCallAccept}>Aceptar</StyledActionButton>
-                                        <StyledActionButton onClick={handleCallReject} style={{ backgroundColor:'#dc3545' }}>
+                                        <ButtonAceptar onClick={handleCallAccept}>Aceptar</ButtonAceptar>
+                                        <ButtonRechazar onClick={handleCallReject} style={{ backgroundColor:'#dc3545' }}>
                                           Rechazar
-                                        </StyledActionButton>
+                                        </ButtonRechazar>
                                       </div>
                                     </div>
                                   )}
@@ -2449,7 +2451,7 @@ const DashboardClient = () => {
                                       disabled={!allowChat}
                                       onFocus={() => setTimeout(() => chatEndRef.current?.scrollIntoView({ block: 'end' }), 50)}
                                     />
-                                    <StyledActionButton onClick={sendCenterMessage} disabled={!allowChat}>Enviar</StyledActionButton>
+                                    <ButtonEnviar onClick={sendCenterMessage} disabled={!allowChat}>Enviar</ButtonEnviar>
 
                                     <StyledActionButton onClick={()=>setShowCenterGifts(s=>!s)} title="Enviar regalo" disabled={!allowChat}>🎁</StyledActionButton>
                                     {showCenterGifts && allowChat && (
@@ -2507,7 +2509,7 @@ const DashboardClient = () => {
                        <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
                          {/* Header móvil con botón volver */}
                          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                           <button
+                           <ButtonVolver
                              type="button"
                              onClick={() => {
                                setCenterChatPeerId(null);
@@ -2516,21 +2518,9 @@ const DashboardClient = () => {
                              }}
                              aria-label="Volver a la lista"
                              title="Volver"
-                             style={{
-                               background: '#ffffff',
-                               color: '#000000',
-                               border: '1px solid #000000',
-                               borderRadius: 8,
-                               padding: '8px 12px',
-                               cursor: 'pointer',
-                               display: 'inline-flex',
-                               alignItems: 'center',
-                               gap: 6,
-                               lineHeight: 1
-                             }}
                            >
                              <FontAwesomeIcon icon={faArrowLeft} />
-                           </button>
+                           </ButtonVolver>
                            <h5 style={{ margin:0, color: allowChat ? '#20c997' : (isPendingPanel || isSentPanel ? '#ffc107' : '#ff0000') }}>
                              {isPendingPanel
                                ? `Invitación de ${centerChatPeerName}`
@@ -2539,6 +2529,138 @@ const DashboardClient = () => {
                                : `Contacto: ${centerChatPeerName}`}
                            </h5>
                          </div>
+
+                         {/* ====== INICIO: CONTROLES CALL EN MÓVIL (CLIENT) ====== */}
+                         <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8 }}>
+                           {/* Si no estás en modo call, botón para entrar en modo call */}
+                           {contactMode !== 'call' && allowChat && (
+                             <ButtonLlamar
+                               onClick={enterCallMode}
+                               title="Llamar"
+                             >
+                               Llamar
+                             </ButtonLlamar>
+                           )}
+
+                           {/* Ya en modo call: mostrar controles de llamada */}
+                           {contactMode === 'call' && (
+                             <>
+                               {/* Activar cámara (caller/callee) */}
+                               {!callCameraActive && (
+                                 <ButtonActivarCamMobile
+                                   onClick={handleCallActivateCamera}
+                                   disabled={callStatus === 'idle' ? !allowChat : false}
+                                   title={
+                                     callStatus === 'idle'
+                                       ? (allowChat ? 'Activa tu cámara' : 'Debéis ser favoritos aceptados para poder llamar')
+                                       : 'Activa tu cámara'
+                                   }
+                                 >
+                                   Activar cámara
+                                 </ButtonActivarCamMobile>
+                               )}
+
+                               {/* Llamar (solo si cámara activa y no en llamada/ringing) */}
+                               {callCameraActive && (callStatus !== 'in-call' && callStatus !== 'ringing' && callStatus !== 'connecting') && (
+                                 <ButtonLlamar
+                                   onClick={handleCallInvite}
+                                   disabled={!allowChat || !callPeerId}
+                                   title={
+                                     !allowChat
+                                       ? 'Debéis ser favoritos aceptados para poder llamar'
+                                       : (!callPeerId
+                                           ? 'Selecciona un contacto para llamar'
+                                           : `Llamar a ${callPeerName || callPeerId}`)
+                                   }
+                                 >
+                                   {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
+                                 </ButtonLlamar>
+                               )}
+
+                               {/* Colgar (cuando ringing / connecting / in-call) */}
+                               {(callStatus === 'ringing' || callStatus === 'connecting' || callStatus === 'in-call') && (
+                                 <ButtonColgar onClick={() => handleCallEnd(false)}>
+                                   Colgar
+                                 </ButtonColgar>
+                               )}
+
+                               {/* Invitación entrante: Aceptar / Rechazar */}
+                               {callStatus === 'incoming' && (
+                                 <>
+                                   <ButtonAceptar onClick={handleCallAccept}>Aceptar</ButtonAceptar>
+                                   <ButtonRechazar onClick={handleCallReject}>Rechazar</ButtonRechazar>
+                                 </>
+                               )}
+                             </>
+                           )}
+                         </div>
+                         {/* ====== FIN: CONTROLES CALL EN MÓVIL (CLIENT) ====== */}
+
+                         {/* ====== INICIO: VIDEO LLAMADA EN MÓVIL (CLIENT) ====== */}
+                         {contactMode === 'call' && (
+                           <div style={{ marginBottom: 8 }}>
+                             {/* Zona de vídeo: visible cuando hay llamada establecida */}
+                             <StyledVideoArea style={{ display: (callStatus === 'in-call') ? 'block' : 'none', position:'relative' }}>
+                               <StyledRemoteVideo ref={callRemoteWrapRef}>
+                                 <StyledVideoTitle>
+                                   <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
+                                   {callPeerName || 'Remoto'}
+                                   <button
+                                     type="button"
+                                     onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
+                                     title="Pantalla completa"
+                                     style={{
+                                       marginLeft: 8,
+                                       padding: '2px 8px',
+                                       borderRadius: 6,
+                                       border: '1px solid rgba(255,255,255,.6)',
+                                       background: 'rgba(0,0,0,.25)',
+                                       color: '#fff',
+                                       cursor: 'pointer'
+                                     }}
+                                   >⤢</button>
+                                 </StyledVideoTitle>
+                                 <video
+                                   ref={callRemoteVideoRef}
+                                   autoPlay
+                                   playsInline
+                                   style={{ width:'100%', height:'100%', objectFit:'cover' }}
+                                 />
+                               </StyledRemoteVideo>
+
+                               {/* PIP local */}
+                               <StyledLocalVideo>
+                                 <h5 style={{ color:'#fff', margin:0, fontSize:12 }}>Tu Cámara</h5>
+                                 <video
+                                   ref={callLocalVideoRef}
+                                   muted
+                                   autoPlay
+                                   playsInline
+                                   style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }}
+                                 />
+                               </StyledLocalVideo>
+                             </StyledVideoArea>
+
+                             {/* Estados transitorios antes de 'in-call' */}
+                             {callStatus !== 'in-call' && (
+                               <div style={{
+                                 textAlign:'center',
+                                 color:'#e9ecef',
+                                 padding:12,
+                                 border:'1px solid #333',
+                                 borderRadius:8,
+                                 background:'rgba(0,0,0,.35)'
+                               }}>
+                                 {callStatus === 'connecting' && 'Conectando…'}
+                                 {callStatus === 'ringing' && `Llamando a ${callPeerName || 'usuario'}…`}
+                                 {callStatus === 'incoming' && `Te está llamando ${callPeerName || 'usuario'}…`}
+                                 {callStatus === 'idle' && 'Activa la cámara y pulsa Llamar.'}
+                               </div>
+                             )}
+                           </div>
+                         )}
+                         {/* ====== FIN: VIDEO LLAMADA EN MÓVIL (CLIENT) ====== */}
+
 
                          {/* Cuerpo del chat (mismo contenido que desktop) */}
                          <StyledCenterBody>
@@ -2552,10 +2674,8 @@ const DashboardClient = () => {
                                    {centerChatPeerName} te ha invitado a favoritos. Acepta para habilitar el chat.
                                  </p>
                                  <div style={{ display:'flex', gap:12, justifyContent:'center' }}>
-                                   <StyledActionButton onClick={acceptInvitation}>Aceptar</StyledActionButton>
-                                   <StyledActionButton onClick={rejectInvitation} style={{ backgroundColor:'#dc3545' }}>
-                                     Rechazar
-                                   </StyledActionButton>
+                                   <ButtonAceptar onClick={acceptInvitation}>Aceptar</ButtonAceptar>
+                                   <ButtonRechazar onClick={rejectInvitation}>Rechazar</ButtonRechazar>
                                  </div>
                                </div>
                              </div>
@@ -2634,9 +2754,9 @@ const DashboardClient = () => {
                                      setTimeout(() => chatEndRef.current?.scrollIntoView({ block: 'end' }), 50);
                                    }}
                                  />
-                                 <StyledActionButton onClick={sendCenterMessage} disabled={!allowChat}>Enviar</StyledActionButton>
+                                 <ButtonEnviar onClick={sendCenterMessage} disabled={!allowChat}>Enviar</ButtonEnviar>
 
-                                 <StyledActionButton onClick={()=>setShowCenterGifts(s=>!s)} title="Enviar regalo" disabled={!allowChat}>🎁</StyledActionButton>
+                                 <ButtonRegalo onClick={()=>setShowCenterGifts(s=>!s)} title="Enviar regalo" disabled={!allowChat}>🎁</ButtonRegalo>
                                  {showCenterGifts && allowChat && (
                                    <div style={{
                                      position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)',
@@ -2742,6 +2862,7 @@ const DashboardClient = () => {
                  if (Number(centerChatPeerId) === Number(ctxUser.id)) {
                    setCenterChatPeerId(null);
                    setCenterChatPeerName('');
+
                    setCenterMessages([]);
                  }
                } catch (e) {
