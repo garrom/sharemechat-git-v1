@@ -1,22 +1,22 @@
 import React from 'react';
 import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 import RequireRole from './components/RequireRole';
-import DashboardClient from './dashboard/DashboardClient';
-import DashboardModel from './dashboard/DashboardModel';
-import DashboardUserClient from './dashboard/DashboardUserClient';
-import DashboardUserModel from './dashboard/DashboardUserModel';
-import DashboardAdmin from './dashboard/DashboardAdmin';
-import PerfilClient from './dashboard/subpages/PerfilClient';
-import PerfilModel from './dashboard/subpages/PerfilModel';
-import ChangePasswordPage from './dashboard/subpages/ChangePasswordPage';
-import ModelDocuments from './dashboard/subpages/ModelDocuments';
-import Login from './public/Login';
-import Home from './public/Home';
-import RegisterClient from './public/RegisterClient';
-import RegisterModel from './public/RegisterModel';
-import Unauthorized from './public/Unauthorized';
-import ResetPassword from './public/ResetPassword';
-import ForgotPassword from './public/ForgotPassword';
+import DashboardClient from './pages/dashboard/DashboardClient';
+import DashboardModel from './pages/dashboard/DashboardModel';
+import DashboardUserClient from './pages/dashboard/DashboardUserClient';
+import DashboardUserModel from './pages/dashboard/DashboardUserModel';
+import DashboardAdmin from './pages/dashboard/DashboardAdmin';
+import PerfilClient from './pages/subpages/PerfilClient';
+import PerfilModel from './pages/subpages/PerfilModel';
+import ChangePasswordPage from './pages/subpages/ChangePasswordPage';
+import ModelDocuments from './pages/subpages/ModelDocuments';
+import Login from './public-pages/Login';
+import Home from './public-pages/Home';
+import RegisterClient from './public-pages/RegisterClient';
+import RegisterModel from './public-pages/RegisterModel';
+import Unauthorized from './public-pages/Unauthorized';
+import ResetPassword from './public-pages/ResetPassword';
+import ForgotPassword from './public-pages/ForgotPassword';
 import Roles from './constants/Roles';
 import { ModalProvider } from './components/ModalProvider';
 import GuestConsentGate from './consent/GuestConsentGate';
@@ -72,6 +72,5 @@ function App(){return(
     </>
   </ModalProvider>
 );}
-
 
 export default App;
