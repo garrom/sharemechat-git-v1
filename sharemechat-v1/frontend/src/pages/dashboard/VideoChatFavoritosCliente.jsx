@@ -57,8 +57,7 @@ export default function VideoChatFavoritosCliente(props) {
 
   return (
     <>
-      {/* === BLOQUE FAVORITOS VIDEOCHAT DashboardClient.jsx === */}
-
+      {/* === Desktop Favoritos ALL  === */}
         <>
           {!isMobile && (
             <StyledFavoritesShell>
@@ -101,7 +100,7 @@ export default function VideoChatFavoritosCliente(props) {
                             </div>
                           </div>
                         )}
-
+                        {/* Desktop Favoritos Calling */}
                         {!isPendingPanel && !isSentPanel && contactMode === 'call' && (
                           <>
                             {callError && <p style={{ color:'orange', marginTop:6 }}>[CALL] {callError}</p>}
@@ -121,6 +120,7 @@ export default function VideoChatFavoritosCliente(props) {
                               )}
                             </StyledTopActions>
 
+                            {/* Desktop Favoritos Chat in calling */}
                             <StyledVideoArea style={{ display:(callStatus === 'in-call') ? 'block' : 'none' }}>
                               <StyledRemoteVideo ref={callRemoteWrapRef}>
                                 <StyledVideoTitle>
@@ -136,6 +136,7 @@ export default function VideoChatFavoritosCliente(props) {
                                 <video ref={callLocalVideoRef} style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} muted autoPlay playsInline />
                               </StyledLocalVideo>
 
+                              {/* Desktop Favoritos Chat in calling  */}
                               <StyledChatContainer data-wide="true">
                                 <StyledChatList ref={callListRef}>
                                   {centerMessages.map(m => {
@@ -204,6 +205,7 @@ export default function VideoChatFavoritosCliente(props) {
                           </>
                         )}
 
+                        {/* Desktop Favoritos chat */}
                         {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                           <>
                             <StyledChatScroller ref={centerListRef}>
@@ -271,6 +273,7 @@ export default function VideoChatFavoritosCliente(props) {
             </StyledFavoritesShell>
           )}
 
+          {/* Movil Favoritos ALL */}
           {isMobile && (
             <>
               {!centerChatPeerId && (
@@ -299,6 +302,8 @@ export default function VideoChatFavoritosCliente(props) {
                     {contactMode !== 'call' && allowChat && (
                       <ButtonLlamar onClick={enterCallMode} title="Llamar">Llamar</ButtonLlamar>
                     )}
+
+                    {/* Movil Favoritos Calling */}
                     {contactMode === 'call' && (
                       <>
                         {!callCameraActive && (
@@ -333,11 +338,61 @@ export default function VideoChatFavoritosCliente(props) {
                           </StyledVideoTitle>
                           <video ref={callRemoteVideoRef} autoPlay playsInline style={{ width:'100%', height:'100%', objectFit:'cover' }} />
                         </StyledRemoteVideo>
+
                         <StyledLocalVideo>
                           <h5 style={{ color:'#fff', margin:0, fontSize:12 }}>Tu Cámara</h5>
                           <video ref={callLocalVideoRef} muted autoPlay playsInline style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} />
                         </StyledLocalVideo>
+
+                        {/* Movil Favoritos chat in calling  */}
+                        <StyledChatContainer data-wide="true">
+                          <StyledChatList ref={callListRef}>
+                            {centerMessages.map(m => {
+                              let giftData = m.gift;
+                              if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+                                try { const parts = m.body.slice(2, -2).split(':'); giftData = { id:Number(parts[1]), name:parts.slice(2).join(':') }; } catch {}
+                              }
+                              const isMe = Number(m.senderId) === Number(user?.id);
+                              const variant = isMe ? 'me' : 'peer';
+                              const prefix  = isMe ? 'me' : (callPeerName || `Usuario ${callPeerId || ''}`);
+                              return (
+                                <StyledChatMessageRow key={m.id}>
+                                  {giftData ? (
+                                    giftRenderReady && (() => {
+                                      const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
+                                      return src ? (
+                                        <StyledChatBubble $variant={variant}>
+                                          <strong>{prefix} :</strong>{' '}
+                                          <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} />
+                                        </StyledChatBubble>
+                                      ) : null;
+                                    })()
+                                  ) : (
+                                    <StyledChatBubble $variant={variant}>
+                                      <strong>{prefix} :</strong> {m.body}
+                                    </StyledChatBubble>
+                                  )}
+                                </StyledChatMessageRow>
+                              );
+                            })}
+                          </StyledChatList>
+                        </StyledChatContainer>
                       </StyledVideoArea>
+
+                      {/* Caja input del chat solo durante Movil Calling favoritos */}
+                      <StyledChatDock style={{ display:(callStatus === 'in-call') ? 'flex' : 'none' }}>
+                        <StyledChatInput
+                          type="text"
+                          value={centerInput}
+                          onChange={e => setCenterInput(e.target.value)}
+                          placeholder="Escribe un mensaje…"
+                          autoComplete="off"
+                          onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCenterMessage(); } }}
+                          onFocus={() => setTimeout(() => chatEndRef.current?.scrollIntoView({ block:'end' }), 50)}
+                        />
+                        <StyledActionButton type="button" onClick={sendCenterMessage}>Enviar</StyledActionButton>
+                      </StyledChatDock>
+
                       {callStatus !== 'in-call' && (
                         <div style={{ textAlign:'center', color:'#e9ecef', padding:12, border:'1px solid #333', borderRadius:8, background:'rgba(0,0,0,.35)' }}>
                           {callStatus === 'connecting' && 'Conectando…'}
@@ -371,6 +426,7 @@ export default function VideoChatFavoritosCliente(props) {
                       </div>
                     )}
 
+                    {/* Movil Favoritos Chat */}
                     {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                       <>
                         <StyledChatScroller ref={centerListRef}>

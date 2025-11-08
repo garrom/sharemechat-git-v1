@@ -40,7 +40,7 @@ export default function VideoChatFavoritosModelo(props) {
 
   return (
     <>
-      {/* ====== DESKTOP: centro (la columna izquierda sigue en DashboardModel) ====== */}
+      {/* === Desktop Favoritos ALL === */}
       {!isMobile && (
         <StyledFavoritesShell>
           <StyledFavoritesColumns>
@@ -84,7 +84,7 @@ export default function VideoChatFavoritosModelo(props) {
                       </div>
                     )}
 
-                    {/* ====== MODO LLAMADA ====== */}
+                    {/* Desktop Favoritos Calling */}
                     {!isPendingPanel && !isSentPanel && contactMode === 'call' && (
                       <>
                         {callError && <p style={{ color:'orange', marginTop:6 }}>[CALL] {callError}</p>}
@@ -102,6 +102,7 @@ export default function VideoChatFavoritosModelo(props) {
                           )}
                         </div>
 
+                        {/* Desktop Favoritos Chat in calling */}
                         <StyledVideoArea style={{ display:(callStatus === 'in-call') ? 'block' : 'none' }}>
                           <StyledRemoteVideo ref={callRemoteWrapRef}>
                             <StyledVideoTitle>
@@ -117,6 +118,7 @@ export default function VideoChatFavoritosModelo(props) {
                             <video ref={callLocalVideoRef} style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} muted autoPlay playsInline />
                           </StyledLocalVideo>
 
+                          {/* Desktop Favoritos Chat in calling  */}
                           <StyledChatContainer data-wide="true">
                             <StyledChatList ref={callListRef}>
                               {centerMessages.map((m) => {
@@ -156,7 +158,7 @@ export default function VideoChatFavoritosModelo(props) {
                       </>
                     )}
 
-                    {/* ====== CHAT NORMAL ====== */}
+                    {/* Desktop Favoritos chat */}
                     {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                       <>
                         <StyledChatScroller ref={modelCenterListRef}>
@@ -191,7 +193,7 @@ export default function VideoChatFavoritosModelo(props) {
         </StyledFavoritesShell>
       )}
 
-      {/* ====== MÓVIL: lista ↔ chat ====== */}
+      {/* Movil Favoritos ALL  */}
       {isMobile && (
         <>
           {!openChatWith && (
@@ -226,7 +228,7 @@ export default function VideoChatFavoritosModelo(props) {
                 </h5>
               </div>
 
-              {/* Controles de llamada en móvil */}
+              {/*  Movil Favoritos Calling */}
               {!isPendingPanel && !isSentPanel && (
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8 }}>
                   {contactMode !== 'call' && allowChat && <ButtonLlamar onClick={enterCallMode} title="Llamar">Llamar</ButtonLlamar>}
@@ -269,7 +271,7 @@ export default function VideoChatFavoritosModelo(props) {
 
                     <StyledLocalVideo>
                       <h5 style={{ color:'#fff', margin:0, fontSize:12 }}>Tu Cámara</h5>
-                      <video style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} muted autoPlay playsInline />
+                      <video ref={callLocalVideoRef} style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} muted autoPlay playsInline />
                     </StyledLocalVideo>
 
                     <StyledChatContainer data-wide="true">
@@ -323,6 +325,7 @@ export default function VideoChatFavoritosModelo(props) {
                   </div>
                 )}
 
+                {/* Movil Favoritos Chat */}
                 {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                   <>
                     <StyledChatScroller ref={modelCenterListRef}>
