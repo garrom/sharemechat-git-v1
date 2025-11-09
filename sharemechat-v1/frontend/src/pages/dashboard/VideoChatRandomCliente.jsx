@@ -37,7 +37,7 @@ export default function VideoChatRandomCliente(props) {
               <StyledVideoArea>
                 <div style={{ position:'relative', width:'100%', height:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}>
                   <video ref={localVideoRef} muted autoPlay playsInline style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
-                  {remoteStream && (
+                  {!isMobile && remoteStream && (
                     <StyledChatContainer data-wide="true">
                       <StyledChatList ref={vcListRef}>
                         {messages.map((msg, index) => {
@@ -49,10 +49,7 @@ export default function VideoChatRandomCliente(props) {
                               {msg.gift ? (
                                 <StyledChatBubble $variant={variant}>
                                   <strong>{prefix} :</strong>{' '}
-                                  {giftRenderReady && (() => {
-                                    const src = getGiftIcon(msg.gift);
-                                    return src ? (<StyledGiftIcon src={src} alt="" />) : null;
-                                  })()}
+                                  {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : null; })()}
                                 </StyledChatBubble>
                               ) : (
                                 <StyledChatBubble $variant={variant}>
@@ -65,6 +62,7 @@ export default function VideoChatRandomCliente(props) {
                       </StyledChatList>
                     </StyledChatContainer>
                   )}
+
                 </div>
               </StyledVideoArea>
             </>
@@ -113,6 +111,33 @@ export default function VideoChatRandomCliente(props) {
                         <button type="button" onClick={() => toggleFullscreen(remoteVideoWrapRef.current)} title="Pantalla completa" style={{ marginLeft:8, padding:'2px 8px', borderRadius:6, border:'1px solid rgba(255,255,255,.6)', background:'rgba(0,0,0,.25)', color:'#fff', cursor:'pointer' }}>Pantalla completa</button>
                       </StyledVideoTitle>
                       <video ref={remoteVideoRef} style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} autoPlay playsInline onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)} />
+
+                      {isMobile && (
+                        <StyledChatContainer data-wide="true">
+                          <StyledChatList ref={vcListRef}>
+                            {messages.map((msg, index) => {
+                              const isMe = msg.from === 'me';
+                              const variant = isMe ? 'me' : 'peer';
+                              const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
+                              return (
+                                <StyledChatMessageRow key={index}>
+                                  {msg.gift ? (
+                                    <StyledChatBubble $variant={variant}>
+                                      <strong>{prefix} :</strong>{' '}
+                                      {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : null; })()}
+                                    </StyledChatBubble>
+                                  ) : (
+                                    <StyledChatBubble $variant={variant}>
+                                      <strong>{prefix} :</strong> {msg.text}
+                                    </StyledChatBubble>
+                                  )}
+                                </StyledChatMessageRow>
+                              );
+                            })}
+                          </StyledChatList>
+                        </StyledChatContainer>
+                      )}
+
                     </StyledRemoteVideo>
                   </StyledVideoArea>
                 </>

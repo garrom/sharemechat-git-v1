@@ -55,6 +55,7 @@ export default function VideoChatFavoritosCliente(props) {
     user,
   } = props;
 
+ {/* === FICHERO SOLO DE FAVORITOS === */}
   return (
     <>
       {/* === Desktop Favoritos ALL  === */}

@@ -38,6 +38,7 @@ export default function VideoChatFavoritosModelo(props) {
     setTargetPeerId, setTargetPeerName, setSelectedFav
   } = props;
 
+  {/* === FICHERO SOLO DE FAVORITOS === */}
   return (
     <>
       {/* === Desktop Favoritos ALL === */}

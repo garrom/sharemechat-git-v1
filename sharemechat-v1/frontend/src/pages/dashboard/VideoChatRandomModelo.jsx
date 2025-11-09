@@ -44,34 +44,35 @@ export default function VideoChatRandomModelo(props) {
                   playsInline
                   style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                 />
-                {/* Overlay de mensajes SOBRE la cámara local */}
-                <StyledChatContainer data-wide="true">
-                  <StyledChatList ref={vcListRef}>
-                    {messages.map((msg, index) => {
-                      const isMe = msg.from === 'me';
-                      // modelo (yo) → rosa ; cliente → azul (simetría con Client)
-                      const variant = isMe ? 'peer' : 'me';
-                      const prefix = isMe ? 'me' : (clientNickname || 'Cliente');
-                      return (
-                        <StyledChatMessageRow key={index}>
-                          {msg.gift ? (
-                            <StyledChatBubble $variant={variant}>
-                              <strong>{prefix} :</strong>{' '}
-                              {giftRenderReady && (() => {
-                                const src = getGiftIcon(msg.gift);
-                                return src ? (<StyledGiftIcon src={src} alt="" />) : (<span>{msg.gift.name || '🎁'}</span>);
-                              })()}
-                            </StyledChatBubble>
-                          ) : (
-                            <StyledChatBubble $variant={variant}>
-                              <strong>{prefix} :</strong> {msg.text}
-                            </StyledChatBubble>
-                          )}
-                        </StyledChatMessageRow>
-                      );
-                    })}
-                  </StyledChatList>
-                </StyledChatContainer>
+                {!isMobile && (
+                  <>
+                    {/* Overlay de mensajes SOBRE la cámara local */}
+                    <StyledChatContainer data-wide="true">
+                      <StyledChatList ref={vcListRef}>
+                        {messages.map((msg, index) => {
+                          const isMe = msg.from === 'me';
+                          const variant = isMe ? 'peer' : 'me';
+                          const prefix = isMe ? 'me' : (clientNickname || 'Cliente');
+                          return (
+                            <StyledChatMessageRow key={index}>
+                              {msg.gift ? (
+                                <StyledChatBubble $variant={variant}>
+                                  <strong>{prefix} :</strong>{' '}
+                                  {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : (<span>{msg.gift.name || '🎁'}</span>); })()}
+                                </StyledChatBubble>
+                              ) : (
+                                <StyledChatBubble $variant={variant}>
+                                  <strong>{prefix} :</strong> {msg.text}
+                                </StyledChatBubble>
+                              )}
+                            </StyledChatMessageRow>
+                          );
+                        })}
+                      </StyledChatList>
+                    </StyledChatContainer>
+                  </>
+                )}
+
               </div>
             </StyledVideoArea>
           )}
@@ -132,6 +133,33 @@ export default function VideoChatRandomModelo(props) {
                       playsInline
                       onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                     />
+
+                    {isMobile && (
+                      <StyledChatContainer data-wide="true">
+                        <StyledChatList ref={vcListRef}>
+                          {messages.map((msg, index) => {
+                            const isMe = msg.from === 'me';
+                            const variant = isMe ? 'peer' : 'me';
+                            const prefix = isMe ? 'me' : (clientNickname || 'Cliente');
+                            return (
+                              <StyledChatMessageRow key={index}>
+                                {msg.gift ? (
+                                  <StyledChatBubble $variant={variant}>
+                                    <strong>{prefix} :</strong>{' '}
+                                    {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : (<span>{msg.gift.name || '🎁'}</span>); })()}
+                                  </StyledChatBubble>
+                                ) : (
+                                  <StyledChatBubble $variant={variant}>
+                                    <strong>{prefix} :</strong> {msg.text}
+                                  </StyledChatBubble>
+                                )}
+                              </StyledChatMessageRow>
+                            );
+                          })}
+                        </StyledChatList>
+                      </StyledChatContainer>
+                    )}
+
                   </StyledRemoteVideo>
                 </StyledVideoArea>
               ) : (
