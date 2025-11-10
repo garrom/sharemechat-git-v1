@@ -10,12 +10,12 @@ import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft } f
 import {
   StyledContainer,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
-  StyledActionButton,StyledLocalVideo,StyledRemoteVideo,
+  StyledLocalVideo,StyledRemoteVideo,
   StyledChatContainer,StyledNavGroup,StyledNavAvatar,
   StyledTopActions,StyledVideoTitle,StyledTitleAvatar,
   StyledChatDock,StyledChatList,StyledChatMessageRow,
   StyledChatBubble,StyledChatControls,StyledChatInput,
-  StyledGiftToggle,StyledGiftsPanel,StyledGiftGrid,
+  StyledGiftsPanel,StyledGiftGrid,
   StyledGiftIcon,StyledIconBtn,StyledSelectableRow,
   StyledNavTab,StyledVideoArea,StyledSplit2,
   StyledPane,StyledThumbsGrid, StyledCenterPanel,
@@ -23,7 +23,7 @@ import {
   StyledFavoritesShell,StyledFavoritesColumns,GlobalBlack,
 } from '../../styles/pages-styles/ClientStyles';
 import {
-  StyledNavbar, StyledNavButton, StyledBrand,NavText, SaldoText,
+  StyledNavbar, StyledBrand,NavText, SaldoText,
   HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton
 } from '../../styles/NavbarStyles';
 import {
@@ -33,7 +33,8 @@ import {
   ButtonLlamar,ButtonColgar,
   ButtonAceptar,ButtonRechazar,
   ButtonVolver, ButtonEnviar,
-  ButtonRegalo,ButtonActivarCamMobile
+  ButtonRegalo,ButtonActivarCamMobile,
+  StyledActionButton,StyledGiftToggle,NavButton
 } from '../../styles/ButtonStyles';
 import VideoChatRandomCliente from './VideoChatRandomCliente';
 import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
@@ -1803,13 +1804,13 @@ const DashboardClient = () => {
             {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
           </SaldoText>
 
-          <StyledNavButton type="button" onClick={handleAddBalance}>
+          <NavButton type="button" onClick={handleAddBalance}>
             COMPRAR
-          </StyledNavButton>
+          </NavButton>
 
-          <StyledNavButton type="button" onClick={handleLogout} title="Cerrar sesión">
+          <NavButton type="button" onClick={handleLogout} title="Cerrar sesión">
             <FontAwesomeIcon icon={faSignOutAlt} />
-          </StyledNavButton>
+          </NavButton>
 
           <StyledNavAvatar
             src={profilePic || '/img/avatarChico.png'}
@@ -1827,19 +1828,19 @@ const DashboardClient = () => {
           <SaldoText>
             {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
           </SaldoText>
-          <StyledNavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
+          <NavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
             <FontAwesomeIcon icon={faUser} />
             <StyledIconWrapper>Perfil</StyledIconWrapper>
-          </StyledNavButton>
+          </NavButton>
 
-          <StyledNavButton onClick={() => { handleAddBalance(); setMenuOpen(false); }}>
+          <NavButton onClick={() => { handleAddBalance(); setMenuOpen(false); }}>
             <StyledIconWrapper>Comprar</StyledIconWrapper>
-          </StyledNavButton>
+          </NavButton>
 
-          <StyledNavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
+          <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
-          </StyledNavButton>
+          </NavButton>
         </MobileMenu>
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}

@@ -1,12 +1,12 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft,faPhone, faPhoneSlash } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import {
   StyledCenter,
   StyledFavoritesShell, StyledFavoritesColumns, StyledCenterPanel,
   StyledCenterBody, StyledChatScroller, StyledChatDock, StyledChatInput,
-  StyledActionButton, StyledVideoArea, StyledRemoteVideo, StyledVideoTitle,
+  StyledVideoArea, StyledRemoteVideo, StyledVideoTitle,
   StyledTitleAvatar, StyledLocalVideo, StyledTopActions,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble
 } from '../../styles/pages-styles/ClientStyles';
@@ -14,7 +14,7 @@ import {
 import {
   ButtonLlamar, ButtonColgar, ButtonAceptar, ButtonRechazar,
   ButtonEnviar, ButtonRegalo, ButtonActivarCam, ButtonActivarCamMobile,
-  ButtonVolver
+  ButtonVolver, ActionButton
 } from '../../styles/ButtonStyles';
 
 // Este componente solo renderiza la pestaña FAVORITOS (desktop + móvil),
@@ -75,8 +75,11 @@ export default function VideoChatFavoritosCliente(props) {
                           {isPendingPanel ? `Invitación de ${centerChatPeerName}` : isSentPanel ? `Invitación enviada a ${centerChatPeerName}` : `Contacto: ${centerChatPeerName}`}
                         </h5>
                         <div style={{ display:'flex', gap:8 }}>
-                          <StyledActionButton onClick={() => setContactMode('chat')} disabled={!centerChatPeerId} title="Abrir chat">Chatear</StyledActionButton>
-                          <ButtonLlamar onClick={enterCallMode} disabled={!centerChatPeerId} title="Llamar">Llamar</ButtonLlamar>
+                          <ActionButton onClick={() => setContactMode('chat')} disabled={!centerChatPeerId} title="Abrir chat">Chatear</ActionButton>
+                          <ButtonLlamar onClick={enterCallMode} disabled={!centerChatPeerId} title="Llamar" aria-label="Llamar">
+                            <FontAwesomeIcon icon={faPhone} />
+                          </ButtonLlamar>
+
                         </div>
                       </div>
 
@@ -112,12 +115,19 @@ export default function VideoChatFavoritosCliente(props) {
                                 <ButtonActivarCam onClick={handleCallActivateCamera} disabled={callStatus === 'idle' ? !allowChat : false} title={callStatus === 'idle' ? (allowChat ? 'Activa tu cámara' : 'Debéis ser favoritos aceptados para poder llamar') : 'Activa tu cámara'}>Activar Cámara para Llamar</ButtonActivarCam>
                               )}
                               {callCameraActive && callStatus !== 'in-call' && callStatus !== 'ringing' && (
-                                <ButtonLlamar onClick={handleCallInvite} disabled={!allowChat || !callPeerId} title={!allowChat ? 'Debéis ser favoritos aceptados para poder llamar' : (!callPeerId ? 'Selecciona un contacto para llamar' : `Llamar a ${callPeerName || callPeerId}`)}>
-                                  {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
+                                <ButtonLlamar
+                                  onClick={handleCallInvite}
+                                  disabled={!allowChat || !callPeerId}
+                                  title={!allowChat ? 'Debéis ser favoritos aceptados para poder llamar' : (!callPeerId ? 'Selecciona un contacto para llamar' : `Llamar a ${callPeerName || callPeerId}`)}
+                                  aria-label="Llamar"
+                                >
+                                  <FontAwesomeIcon icon={faPhone} />
                                 </ButtonLlamar>
                               )}
                               {(callStatus === 'ringing' || callStatus === 'in-call' || callStatus === 'connecting') && (
-                                <ButtonColgar onClick={() => handleCallEnd(false)}>Colgar</ButtonColgar>
+                                <ButtonColgar onClick={() => handleCallEnd(false)} title="Colgar" aria-label="Colgar">
+                                  <FontAwesomeIcon icon={faPhoneSlash} />
+                                </ButtonColgar>
                               )}
                             </StyledTopActions>
 
@@ -174,8 +184,8 @@ export default function VideoChatFavoritosCliente(props) {
 
                             <StyledChatDock style={{ display:(callStatus === 'in-call') ? 'flex' : 'none' }}>
                               <StyledChatInput type="text" value={centerInput} onChange={e => setCenterInput(e.target.value)} placeholder="Escribe un mensaje…" autoComplete="off" onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCenterMessage(); } }} onFocus={() => setTimeout(() => chatEndRef.current?.scrollIntoView({ block:'end' }), 50)} />
-                              <StyledActionButton type="button" onClick={sendCenterMessage}>Enviar</StyledActionButton>
-                              <StyledActionButton type="button" onClick={() => setShowCenterGifts(s => !s)} title="Enviar regalo">Gift</StyledActionButton>
+                              <ActionButton type="button" onClick={sendCenterMessage}>Enviar</ActionButton>
+                              <ActionButton type="button" onClick={() => setShowCenterGifts(s => !s)} title="Enviar regalo">Gift</ActionButton>
                               {showCenterGifts && (
                                 <div style={{ position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)', padding:10, borderRadius:8, zIndex:10, border:'1px solid #333' }}>
                                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 80px)', gap:8, maxHeight:240, overflowY:'auto' }}>
@@ -249,7 +259,7 @@ export default function VideoChatFavoritosCliente(props) {
                             <StyledChatDock>
                               <StyledChatInput value={centerInput} onChange={e => setCenterInput(e.target.value)} placeholder={allowChat ? 'Escribe un mensaje…' : 'Chat inactivo'} onKeyDown={e => { if (e.key === 'Enter' && allowChat) sendCenterMessage(); }} disabled={!allowChat} onFocus={() => setTimeout(() => chatEndRef.current?.scrollIntoView({ block:'end' }), 50)} />
                               <ButtonEnviar onClick={sendCenterMessage} disabled={!allowChat}>Enviar</ButtonEnviar>
-                              <StyledActionButton onClick={() => setShowCenterGifts(s => !s)} title="Enviar regalo" disabled={!allowChat}>Gift</StyledActionButton>
+                              <ActionButton onClick={() => setShowCenterGifts(s => !s)} title="Enviar regalo" disabled={!allowChat}>Gift</ActionButton>
                               {showCenterGifts && allowChat && (
                                 <div style={{ position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)', padding:10, borderRadius:8, zIndex:10, border:'1px solid #333' }}>
                                   <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 80px)', gap:8, maxHeight:240, overflowY:'auto' }}>
@@ -301,9 +311,10 @@ export default function VideoChatFavoritosCliente(props) {
 
                   <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8 }}>
                     {contactMode !== 'call' && allowChat && (
-                      <ButtonLlamar onClick={enterCallMode} title="Llamar">Llamar</ButtonLlamar>
+                      <ButtonLlamar onClick={enterCallMode} title="Llamar" aria-label="Llamar">
+                        <FontAwesomeIcon icon={faPhone} />
+                      </ButtonLlamar>
                     )}
-
                     {/* Movil Favoritos Calling */}
                     {contactMode === 'call' && (
                       <>
@@ -311,12 +322,19 @@ export default function VideoChatFavoritosCliente(props) {
                           <ButtonActivarCamMobile onClick={handleCallActivateCamera} disabled={callStatus === 'idle' ? !allowChat : false} title={callStatus === 'idle' ? (allowChat ? 'Activa tu cámara' : 'Debéis ser favoritos aceptados para poder llamar') : 'Activa tu cámara'}>Activar cámara</ButtonActivarCamMobile>
                         )}
                         {callCameraActive && (callStatus !== 'in-call' && callStatus !== 'ringing' && callStatus !== 'connecting') && (
-                          <ButtonLlamar onClick={handleCallInvite} disabled={!allowChat || !callPeerId} title={!allowChat ? 'Debéis ser favoritos aceptados para poder llamar' : (!callPeerId ? 'Selecciona un contacto para llamar' : `Llamar a ${callPeerName || callPeerId}`)}>
-                            {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
+                          <ButtonLlamar
+                            onClick={handleCallInvite}
+                            disabled={!allowChat || !callPeerId}
+                            title={!allowChat ? 'Debéis ser favoritos aceptados para poder llamar' : (!callPeerId ? 'Selecciona un contacto para llamar' : `Llamar a ${callPeerName || callPeerId}`)}
+                            aria-label="Llamar"
+                          >
+                            <FontAwesomeIcon icon={faPhone} />
                           </ButtonLlamar>
                         )}
                         {(callStatus === 'ringing' || callStatus === 'connecting' || callStatus === 'in-call') && (
-                          <ButtonColgar onClick={() => handleCallEnd(false)}>Colgar</ButtonColgar>
+                          <ButtonColgar onClick={() => handleCallEnd(false)} title="Colgar" aria-label="Colgar">
+                            <FontAwesomeIcon icon={faPhoneSlash} />
+                          </ButtonColgar>
                         )}
                         {callStatus === 'incoming' && (
                           <>
@@ -391,7 +409,7 @@ export default function VideoChatFavoritosCliente(props) {
                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCenterMessage(); } }}
                           onFocus={() => setTimeout(() => chatEndRef.current?.scrollIntoView({ block:'end' }), 50)}
                         />
-                        <StyledActionButton type="button" onClick={sendCenterMessage}>Enviar</StyledActionButton>
+                        <ActionButton type="button" onClick={sendCenterMessage}>Enviar</ActionButton>
                       </StyledChatDock>
 
                       {callStatus !== 'in-call' && (

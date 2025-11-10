@@ -1,11 +1,40 @@
 // src/styles/ButtonStyles.js
 import styled, { css } from 'styled-components';
 
-/* ==================================
- *   BOTONES DASHBOARD CLIENTES Y MODELOS
- * ================================== */
+/* ============================================================
+ * ESTRUCTURA
+ *  - Utilidades base
+ *  - Botones genéricos (ActionButton)
+ *  - Botones Videochat (desktop + móvil)
+ *  - Botones Favoritos / Chat persistente
+ *  - Botones Navbar
+ *  - Aliases de compatibilidad (mantener imports existentes)
+ * ============================================================ */
 
-// Base común para todos los botones de acción (esquinas redondeadas, padding, foco, disabled)
+/* ========== UTILIDADES BASE ========== */
+
+const focusRing = (color = '#20c99766') => css`
+  &:focus-visible {
+    outline: 2px solid ${color};
+    outline-offset: 2px;
+  }
+`;
+
+const variant = (fg, bg, border, hoverBg = null, hoverFg = null) => css`
+  color: ${fg};
+  background: ${bg};
+  border-color: ${border};
+  &:hover:not(:disabled) {
+    ${hoverBg ? `background: ${hoverBg};` : ''}
+    ${hoverFg ? `color: ${hoverFg};` : ''}
+  }
+`;
+
+const shadowLift = css`
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+`;
+
+/* Base compacta (texto) */
 const ButtonBase = styled.button`
   display: inline-flex;
   align-items: center;
@@ -22,7 +51,6 @@ const ButtonBase = styled.button`
   cursor: pointer;
 
   transition: transform .05s ease, filter .15s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
-
   &:active { transform: translateY(1px); }
   &:disabled {
     opacity: .6;
@@ -30,118 +58,177 @@ const ButtonBase = styled.button`
     filter: grayscale(.2);
   }
 
-  /* Modo oscuro base del proyecto */
+  /* modo oscuro base */
   color: #111;
   background: #f8f9fa;
   border-color: #ced4da;
 
-  &:hover:not(:disabled) {
-    filter: brightness(0.98);
-  }
+  &:hover:not(:disabled) { filter: brightness(0.98); }
 
-  &:focus-visible {
-    outline: 2px solid #20c99766;
-    outline-offset: 2px;
-  }
+  ${focusRing()}
 `;
 
-// Pequeña utilidad para variantes de color
-const variant = (fg, bg, border, hoverBg = null, hoverFg = null) => css`
-  color: ${fg};
-  background: ${bg};
-  border-color: ${border};
-  &:hover:not(:disabled) {
-    ${hoverBg ? `background: ${hoverBg};` : ''}
-    ${hoverFg ? `color: ${hoverFg};` : ''}
-  }
+/* Base pill (laterales redondeados como Activar cámara) */
+const PillButtonBase = styled(ButtonBase)`
+  border-radius: 999px;
 `;
 
-/*-- Boton activar camara --*/
-export const ButtonActivarCam = styled(ButtonBase)`
+/* Base para botones SOLO icono (cuadrados redondos) */
+const IconButtonBase = styled.button`
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  min-height: 44px;
+
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+
+  background: #f8f9fa;
+  color: #111;
+  transition: transform .05s ease, filter .15s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
+
+  &:active { transform: translateY(1px); }
+  &:disabled { opacity: .6; cursor: not-allowed; filter: grayscale(.2); }
+
+  ${focusRing()}
+`;
+
+/* ========== BOTÓN GENÉRICO TEXTO ========== */
+
+export const ActionButton = styled(PillButtonBase)`
+  ${variant('#fff', '#28a745', '#218838', '#218838')}
+`;
+
+/* ========== VIDEOCHAT: DESKTOP + MÓVIL ========== */
+
+/* Activar cámara (texto) */
+export const ButtonActivarCam = styled(PillButtonBase)`
   ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
 `;
 
-/*-- Boton buscar cliente --*/
-export const ButtonBuscarCliente = styled(ButtonBase)`
-  ${variant('#fff', '#6f42c1', '#5a32a3', '#643ab0')}
-`;
-
-/*-- Boton buscar modelo --*/
-export const ButtonBuscarModelo = styled(ButtonBase)`
-  ${variant('#fff', '#198754', '#146c43', '#157347')}
-`;
-
-/*-- Boton next --*/
-export const ButtonNext = styled(ButtonBase)`
-  ${variant('#111', '#ffc107', '#e0a800', '#ffca2c', '#111')}
-`;
-
-/*-- Boton stop --*/
-export const ButtonStop = styled(ButtonBase)`
-  ${variant('#fff', '#dc3545', '#b02a37', '#bb2d3b')}
-`;
-
-/*-- Boton añadir favoritos --*/
-export const ButtonAddFavorite = styled(ButtonBase)`
-  ${variant('#fff', '#0dcaf0', '#0aa2c0', '#31d2f2')}
-`;
-
-/*-- Boton llamar --*/
-export const ButtonLlamar = styled(ButtonBase)`
-  ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
-`;
-
-/*-- Boton colgar --*/
-export const ButtonColgar = styled(ButtonBase)`
-  ${variant('#fff', '#dc3545', '#b02a37', '#bb2d3b')}
-`;
-
-/*-- Boton aceptar --*/
-export const ButtonAceptar = styled(ButtonBase)`
-  ${variant('#fff', '#198754', '#146c43', '#157347')}
-`;
-
-/*-- Boton rechazar --*/
-export const ButtonRechazar = styled(ButtonBase)`
-  ${variant('#fff', '#dc3545', '#b02a37', '#bb2d3b')}
-`;
-
-/* ==================================
- *   BOTONES MÓVIL (FAVORITOS)
- * ================================== */
-
-/*-- Boton volver (flecha atrás en header móvil) --*/
-export const ButtonVolver = styled(ButtonBase)`
-  ${variant('#000', '#ffffff', '#000000', '#f1f3f5')}
-  border-width: 1px;
-  border-style: solid;
-  border-color: #000000;
-  padding: 8px 12px;
-  border-radius: 8px;
-`
-
-/*-- Boton enviar (dock chat móvil) --*/
-export const ButtonEnviar = styled(ButtonBase)`
-  ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
-`
-
-/*-- Boton regalo (dock chat móvil) --*/
-export const ButtonRegalo = styled(ButtonBase)`
-  ${variant('#111', '#ffe066', '#fcc419', '#ffd43b')}
-`
-
-/*-- Boton activar camara (móvil) --*/
-export const ButtonActivarCamMobile = styled(ButtonBase)`
+/* Activar cámara (móvil, algo mayor y con sombra) */
+export const ButtonActivarCamMobile = styled(PillButtonBase)`
   ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
   font-size: 16px;
   padding: 12px 16px;
-  border-radius: 999px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-`
+  ${shadowLift}
+`;
 
-/* ==================================
- *   BOTONES DEL NAVBAR
- * ================================== */
+/* Buscar (Cliente/Modelo) → texto “Buscar” */
+export const ButtonBuscar = styled(PillButtonBase)`
+  ${variant('#fff', '#6f42c1', '#5a32a3', '#643ab0')}
+  /* Alias: para modelo usamos verde si lo prefieres, pero unificamos morado para simplificar estilo */
+`;
 
-// (De momento no migramos los del navbar; se añadirán aquí cuando toque)
+/* Next (mantiene texto) */
+export const ButtonNext = styled(PillButtonBase)`
+  ${variant('#111', '#ffc107', '#e0a800', '#ffca2c', '#111')}
+`;
 
+/* Stop (texto o icono; por defecto texto si lo pones) */
+export const ButtonStop = styled(PillButtonBase)`
+  ${variant('#fff', '#dc3545', '#b02a37', '#bb2d3b')}
+`;
+
+/* Añadir favorito (texto o icono) */
+export const ButtonAddFavorite = styled(PillButtonBase)`
+  ${variant('#fff', '#0dcaf0', '#0aa2c0', '#31d2f2')}
+`;
+
+/* Llamar (texto o icono) */
+export const ButtonLlamar = styled(PillButtonBase)`
+  ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
+`;
+
+/* Colgar (texto o icono) */
+export const ButtonColgar = styled(PillButtonBase)`
+  ${variant('#fff', '#dc3545', '#b02a37', '#bb2d3b')}
+`;
+
+/* ========== FAVORITOS / CHAT PERSISTENTE ========== */
+
+/* Enviar (dock chat) */
+export const ButtonEnviar = styled(PillButtonBase)`
+  ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
+`;
+
+/* Regalo (dock chat) */
+export const ButtonRegalo = styled(PillButtonBase)`
+  ${variant('#111', '#ffe066', '#fcc419', '#ffd43b')}
+`;
+
+/* Volver (flecha atrás en móvil) */
+export const ButtonVolver = styled(PillButtonBase)`
+  ${variant('#000', '#ffffff', '#000000', '#f1f3f5')}
+  border-width: 1px;
+  border-style: solid;
+`;
+
+/* Aceptar / Rechazar para invitaciones */
+export const ButtonAceptar = styled(PillButtonBase)`
+  ${variant('#fff', '#198754', '#146c43', '#157347')}
+`;
+export const ButtonRechazar = styled(PillButtonBase)`
+  ${variant('#fff', '#dc3545', '#b02a37', '#bb2d3b')}
+`;
+
+/* Toggle de regalos (equivalente a StyledGiftToggle) */
+export const ButtonGiftToggle = styled(ActionButton)`
+  padding: 10px 12px;
+`;
+
+/* ========== NAVBAR ========== */
+
+export const NavButton = styled(PillButtonBase)`
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.2);
+  color: #fff;
+
+  &:hover {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.35);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+`;
+
+/* ========== ICON-ONLY VARIANTS (para cuando quites texto) ========== */
+/* Si quieres usar botones 100% icono (☎, ⛔, ⏹, 👤+), usa estos: */
+
+export const BtnCall = styled(IconButtonBase)`
+  ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
+`;
+export const BtnHangup = styled(IconButtonBase)`
+  ${variant('#fff', '#dc3545', '#b02a37', '#bb2d3b')}
+`;
+export const BtnStopIcon = styled(IconButtonBase)`
+  ${variant('#fff', '#6c757d', '#5c636a', '#666f76')}
+`;
+export const BtnFavAdd = styled(IconButtonBase)`
+  ${variant('#fff', '#0dcaf0', '#0aa2c0', '#31d2f2')}
+`;
+
+/* ============================================================
+ * ALIASES DE COMPATIBILIDAD
+ * (para no romper imports existentes mientras migras)
+ * ============================================================ */
+
+/* Buscar Cliente/Modelo (se abrevia a “Buscar”) */
+export const ButtonBuscarCliente = ButtonBuscar;
+export const ButtonBuscarModelo  = ButtonBuscar;
+
+/* Mantener nombre histórico “StyledGiftToggle” si algún sitio lo importa así */
+export const StyledGiftToggle = ButtonGiftToggle;
+
+/* Por si algún sitio usaba “StyledActionButton” desde estilos (mejor migrar a ActionButton) */
+export const StyledActionButton = ActionButton;

@@ -235,6 +235,7 @@ export const StyledCenterVideochat = styled(StyledCenter)`
   border: none;
   border-radius: 0;
   box-shadow: none;
+
 `;
 
 /** Columna derecha */
@@ -271,30 +272,6 @@ export const StyledFavoritesColumns = styled.div`
  * 4. ACCIONES / BOTONES GENERALES (SIN CAMBIOS)
  * -------------------------------- */
 
-export const StyledActionButton = styled.button`
-  background-color: var(--c-action);
-  color: var(--c-white);
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-
-  &:hover { background-color: var(--c-action-hover); }
-
-  &[style*='backgroundColor: #dc3545'] {
-    background-color: var(--c-danger-btn);
-    &:hover { background-color: var(--c-danger-hover); }
-  }
-
-  &:disabled {
-    opacity: .55;
-    cursor: not-allowed;
-    pointer-events: none;
-    filter: grayscale(15%);
-  }
-`;
 
 export const StyledIconWrapper = styled.span`
   margin-right: 8px;
@@ -330,13 +307,14 @@ export const StyledVideoArea = styled.div`
   min-height: 360px;
   height: auto;
   min-width: 0;
-`;
 
+`;
 
 export const StyledRemoteVideo = styled.div`
   width: 100%;
   height: 100%;
   z-index: 1;
+
 `;
 
 export const StyledLocalVideo = styled.div`
@@ -358,7 +336,7 @@ export const StyledVideoTitle = styled.h5`
 
 export const StyledTitleAvatar = styled.img`
   width: 28px;
- Maintain 28px;
+  height: 28px;
   border-radius: 50%;
   object-fit: cover;
   vertical-align: middle;
@@ -386,9 +364,8 @@ export const StyledChatDock = styled.div`
     position: sticky;
     bottom: calc(56px + env(safe-area-inset-bottom, 0px)); /* 56px ≈ alto BottomNav */
   }
+
 `;
-
-
 
 /* --------------------------------
  * 6. CHAT OVERLAY EN VIDEO (SIN CAMBIOS)
@@ -405,23 +382,12 @@ export const StyledChatContainer = styled.div`
   border-radius: 8px;
   z-index: 2;
 
-  @media (max-width: 1024px) {
-    width: clamp(280px, 46vw, 520px);
-  }
-  @media (max-width: 768px) {
-    left: 8px;
-    right: 8px;
-    width: auto;
-  }
+  @media (max-width: 1024px) { width: clamp(280px, 46vw, 520px); }
+  @media (max-width: 768px) { left: 8px; right: 8px; width: auto; }
 
   &[data-wide="true"] {
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: auto;
-    padding: 8px 10px;
-    border-radius: 0;
-    box-shadow: none;
+    left: 0; right: 0; bottom: 0; width: auto;
+    padding: 8px 10px; border-radius: 0; box-shadow: none;
   }
 `;
 
@@ -484,9 +450,6 @@ export const StyledChatInput = styled.input`
  * 7. REGALOS (SIN CAMBIOS)
  * -------------------------------- */
 
-export const StyledGiftToggle = styled(StyledActionButton)`
-  padding: 10px 12px;
-`;
 
 export const StyledGiftsPanel = styled.div`
   position: absolute;
@@ -559,9 +522,7 @@ export const StyledSplit2 = styled.div`
   min-height: 0;
   flex: 1;
 
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
+  @media (max-width: 768px){ grid-template-columns: 1fr; }
 `;
 
 export const StyledPane = styled.section`
@@ -578,6 +539,7 @@ export const StyledPane = styled.section`
       display: none;
     }
   }
+
 `;
 
 export const StyledThumbsGrid = styled.div`

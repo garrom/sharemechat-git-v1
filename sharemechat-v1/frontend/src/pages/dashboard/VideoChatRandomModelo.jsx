@@ -1,26 +1,27 @@
 // src/pages/dashboard/VideoChatRandomModelo.jsx
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faStop, faUserPlus } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat, StyledSplit2, StyledPane, StyledVideoArea,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble,
   StyledGiftIcon, StyledThumbsGrid, StyledRemoteVideo, StyledVideoTitle,
-  StyledTitleAvatar, StyledChatDock, StyledChatInput, StyledActionButton
+  StyledTitleAvatar, StyledChatDock, StyledChatInput
 } from '../../styles/pages-styles/ModelStyles';
 import {
   ButtonActivarCam, ButtonActivarCamMobile, ButtonStop, ButtonNext,
-  ButtonAddFavorite, ButtonBuscarCliente
+  ButtonAddFavorite, ButtonBuscar, ActionButton
 } from '../../styles/ButtonStyles';
 
-
 export default function VideoChatRandomModelo(props) {
-    // Usa los props del padre
+  // Usa los props del padre
   const {
-      cameraActive, handleActivateCamera,localVideoRef, vcListRef,
-      messages, giftRenderReady, getGiftIcon, remoteStream,
-      isMobile,remoteVideoWrapRef, stopAll,searching,
-      handleNext, currentClientId,handleAddFavorite,clientAvatar,
-      clientNickname,remoteVideoRef,toggleFullscreen,handleStartMatch,
-      chatInput, setChatInput, sendChatMessage, error
+    cameraActive, handleActivateCamera, localVideoRef, vcListRef,
+    messages, giftRenderReady, getGiftIcon, remoteStream,
+    isMobile, remoteVideoWrapRef, stopAll, searching,
+    handleNext, currentClientId, handleAddFavorite, clientAvatar,
+    clientNickname, remoteVideoRef, toggleFullscreen, handleStartMatch,
+    chatInput, setChatInput, sendChatMessage, error
   } = props;
 
   return (
@@ -72,7 +73,6 @@ export default function VideoChatRandomModelo(props) {
                     </StyledChatContainer>
                   </>
                 )}
-
               </div>
             </StyledVideoArea>
           )}
@@ -100,16 +100,35 @@ export default function VideoChatRandomModelo(props) {
             </>
           ) : (
             <>
-              {/* Controles superiores (anclados al Pane) - SOLO con remoto */}
-              {remoteStream && (
-                <div style={{ position:'absolute', top:12, left:12, right:12, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap', zIndex:5 }}>
-                  <ButtonStop onClick={stopAll}>Stop</ButtonStop>
+              {/* ====== CONTROLES INFERIORES, CENTRADOS ====== */}
+              {remoteStream ? (
+                // En streaming: NO mostrar "Buscar"; solo Stop / Next / +Favorito
+                <div style={{ position:'absolute', bottom:12, left:12, right:12, display:'flex', justifyContent:'center', alignItems:'center', gap:8, zIndex:5 }}>
+                  <ButtonStop aria-label="Detener" onClick={stopAll} title="Detener">
+                    <FontAwesomeIcon icon={faStop} />
+                  </ButtonStop>
                   {!searching && (
                     <>
                       <ButtonNext onClick={handleNext}>Next</ButtonNext>
-                      {currentClientId && <ButtonAddFavorite onClick={handleAddFavorite}>+ Favorito</ButtonAddFavorite>}
+                      {currentClientId && (
+                        <ButtonAddFavorite aria-label="Añadir a favoritos" onClick={handleAddFavorite} title="Añadir a favoritos">
+                          <FontAwesomeIcon icon={faUserPlus} />
+                        </ButtonAddFavorite>
+                      )}
                     </>
                   )}
+                </div>
+              ) : (
+                // Sin streaming: Mostrar Buscar / Stop abajo y centrados
+                <div style={{ position:'absolute', bottom:12, left:12, right:12, display:'flex', justifyContent:'center', alignItems:'center', gap:8, zIndex:5 }}>
+                  {!searching ? (
+                    <ButtonBuscar onClick={handleStartMatch}>Buscar</ButtonBuscar>
+                  ) : (
+                    <span style={{ color:'#e9ecef' }}>Buscando...</span>
+                  )}
+                  <ButtonStop aria-label="Detener" onClick={stopAll} title="Detener">
+                    <FontAwesomeIcon icon={faStop} />
+                  </ButtonStop>
                 </div>
               )}
 
@@ -159,21 +178,11 @@ export default function VideoChatRandomModelo(props) {
                         </StyledChatList>
                       </StyledChatContainer>
                     )}
-
                   </StyledRemoteVideo>
                 </StyledVideoArea>
               ) : (
                 <>
-                  {/* Controles centrados (sin remoto) */}
-                  <div style={{ display:'flex', justifyContent:'center', gap:8, alignItems:'center', marginBottom:12 }}>
-                    {!searching ? (
-                      <ButtonBuscarCliente onClick={handleStartMatch}>Buscar Cliente</ButtonBuscarCliente>
-                    ) : (
-                      <p style={{ margin:0 }}>Buscando cliente...</p>
-                    )}
-                    <ButtonStop onClick={stopAll}>Stop</ButtonStop>
-                  </div>
-                  <div style={{ color:'#6c757d', textAlign:'center' }}>Pulsa “Buscar Cliente” para empezar.</div>
+                  <div style={{ color:'#6c757d', textAlign:'center' }}>Pulsa “Buscar” para empezar.</div>
                 </>
               )}
             </>
@@ -193,7 +202,7 @@ export default function VideoChatRandomModelo(props) {
             autoComplete="off"
             onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
           />
-          <StyledActionButton type="button" onClick={sendChatMessage}>Enviar</StyledActionButton>
+          <ActionButton type="button" onClick={sendChatMessage}>Enviar</ActionButton>
         </StyledChatDock>
       )}
 
@@ -201,5 +210,3 @@ export default function VideoChatRandomModelo(props) {
     </StyledCenterVideochat>
   );
 };
-
-

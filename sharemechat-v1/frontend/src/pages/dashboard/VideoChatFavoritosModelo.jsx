@@ -1,19 +1,18 @@
 // src/pages/dashboard/VideoChatFavoritosModelo.jsx
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowLeft,faPhone, faPhoneSlash } from '@fortawesome/free-solid-svg-icons';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import {
   StyledFavoritesShell, StyledFavoritesColumns, StyledCenterPanel, StyledCenterBody, StyledChatScroller,
   StyledVideoArea, StyledRemoteVideo, StyledVideoTitle, StyledTitleAvatar, StyledLocalVideo,
-  StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble, StyledChatDock, StyledChatInput,
-  StyledActionButton
+  StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble, StyledChatDock, StyledChatInput
 } from '../../styles/pages-styles/ModelStyles';
 
 import {
   ButtonEnviar, ButtonLlamar, ButtonActivarCam, ButtonActivarCamMobile,
-  ButtonAceptar, ButtonRechazar, ButtonColgar, ButtonVolver
+  ButtonAceptar, ButtonRechazar, ButtonColgar, ButtonVolver,ActionButton
 } from '../../styles/ButtonStyles';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 
 export default function VideoChatFavoritosModelo(props) {
   const {
@@ -56,8 +55,10 @@ export default function VideoChatFavoritosModelo(props) {
                       {isPendingPanel ? `Invitación de ${centerChatPeerName}` : isSentPanel ? `Invitación enviada a ${centerChatPeerName}` : `Contacto: ${centerChatPeerName}`}
                     </h5>
                     <div style={{ display:'flex', gap:8 }}>
-                      <StyledActionButton onClick={() => setContactMode('chat')} disabled={!openChatWith} title="Abrir chat">Chatear</StyledActionButton>
-                      <ButtonLlamar onClick={enterCallMode} disabled={!openChatWith || !allowChat} title="Llamar">Llamar</ButtonLlamar>
+                      <ActionButton onClick={() => setContactMode('chat')} disabled={!openChatWith} title="Abrir chat">Chatear</ActionButton>
+                      <ButtonLlamar onClick={enterCallMode} disabled={!openChatWith || !allowChat} title="Llamar" aria-label="Llamar">
+                        <FontAwesomeIcon icon={faPhone} />
+                      </ButtonLlamar>
                     </div>
                   </div>
 
@@ -96,10 +97,19 @@ export default function VideoChatFavoritosModelo(props) {
                             <ButtonActivarCam onClick={handleCallActivateCamera} disabled={false} title="Activa tu cámara">Activar Cámara para Llamar</ButtonActivarCam>
                           )}
                           {callCameraActive && callStatus !== 'in-call' && callStatus !== 'ringing' && (
-                            <ButtonLlamar onClick={handleCallInvite} disabled={!callPeerId} title={callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Selecciona un contacto'}>{callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}</ButtonLlamar>
+                            <ButtonLlamar
+                              onClick={handleCallInvite}
+                              disabled={!callPeerId}
+                              title={callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Selecciona un contacto'}
+                              aria-label="Llamar"
+                            >
+                              <FontAwesomeIcon icon={faPhone} />
+                            </ButtonLlamar>
                           )}
                           {(callStatus === 'ringing' || callStatus === 'in-call' || callStatus === 'connecting') && (
-                            <ButtonColgar onClick={() => handleCallEnd(false)}>Colgar</ButtonColgar>
+                            <ButtonColgar onClick={() => handleCallEnd(false)} title="Colgar" aria-label="Colgar">
+                              <FontAwesomeIcon icon={faPhoneSlash} />
+                            </ButtonColgar>
                           )}
                         </div>
 
@@ -143,7 +153,7 @@ export default function VideoChatFavoritosModelo(props) {
 
                         <StyledChatDock style={{ display:(callStatus === 'in-call') ? 'flex' : 'none' }}>
                           <StyledChatInput value={centerInput} onChange={(e)=>setCenterInput(e.target.value)} placeholder="Escribe un mensaje…" onKeyDown={(e)=>{ if (e.key === 'Enter') sendCenterMessage(); }} />
-                          <StyledActionButton type="button" onClick={sendCenterMessage}>Enviar</StyledActionButton>
+                          <ActionButton type="button" onClick={sendCenterMessage}>Enviar</ActionButton>
                         </StyledChatDock>
 
                         {callStatus === 'incoming' && (
@@ -243,7 +253,11 @@ export default function VideoChatFavoritosModelo(props) {
                           {callPeerId ? `Llamar a ${callPeerName || callPeerId}` : 'Llamar'}
                         </ButtonLlamar>
                       )}
-                      {(callStatus === 'ringing' || callStatus === 'connecting' || callStatus === 'in-call') && <ButtonColgar onClick={() => handleCallEnd(false)}>Colgar</ButtonColgar>}
+                      {(callStatus === 'ringing' || callStatus === 'connecting' || callStatus === 'in-call') &&
+                        <ButtonColgar onClick={() => handleCallEnd(false)} title="Colgar" aria-label="Colgar">
+                          <FontAwesomeIcon icon={faPhoneSlash} />
+                        </ButtonColgar>
+                      }
                       {callStatus === 'incoming' && (<><ButtonAceptar onClick={props.handleCallAccept}>Aceptar</ButtonAceptar><ButtonRechazar onClick={props.handleCallReject}>Rechazar</ButtonRechazar></>)}
                     </>
                   )}
@@ -298,7 +312,7 @@ export default function VideoChatFavoritosModelo(props) {
 
                   <StyledChatDock style={{ display:(callStatus === 'in-call') ? 'flex' : 'none' }}>
                     <StyledChatInput value={centerInput} onChange={(e)=>setCenterInput(e.target.value)} placeholder="Escribe un mensaje…" onKeyDown={(e)=>{ if (e.key === 'Enter') sendCenterMessage(); }} />
-                    <StyledActionButton type="button" onClick={sendCenterMessage}>Enviar</StyledActionButton>
+                    <ActionButton type="button" onClick={sendCenterMessage}>Enviar</ActionButton>
                   </StyledChatDock>
                 </>
               )}

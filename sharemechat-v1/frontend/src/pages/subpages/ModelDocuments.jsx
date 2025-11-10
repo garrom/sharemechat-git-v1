@@ -5,7 +5,6 @@ import { useHistory } from 'react-router-dom';
 import {
   StyledContainer,
   StyledNavbar,
-  StyledNavButton,
   StyledIconWrapper,
   StyledMainContent,
   StyledLeftColumn,
@@ -14,6 +13,7 @@ import {
   StyledBrand,
   StyledNavGroup
 } from '../../styles/pages-styles/ModelDocumentStyles';
+import { NavButton } from '../../styles/ButtonStyles';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
@@ -228,13 +228,13 @@ const ModelDocuments = () => {
         <StyledBrand href="/" aria-label="SharemeChat" />
         <StyledNavGroup>
           <span>Hola, {userName}</span>
-          <StyledNavButton type="button" onClick={() => history.push('/dashboard-user-model')}>
+          <NavButton type="button" onClick={() => history.push('/dashboard-user-model')}>
             Volver
-          </StyledNavButton>
-          <StyledNavButton onClick={handleLogout}>
+          </NavButton>
+          <NavButton onClick={handleLogout}>
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
-          </StyledNavButton>
+          </NavButton>
         </StyledNavGroup>
       </StyledNavbar>
 

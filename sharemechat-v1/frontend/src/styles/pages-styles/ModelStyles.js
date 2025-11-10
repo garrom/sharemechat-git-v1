@@ -243,31 +243,6 @@ export const StyledFavoritesColumns = styled.div`
 /* ==================================
  * 4. BOTONES Y ACCIONES (SIN CAMBIOS)
  * ================================== */
-export const StyledActionButton = styled.button`
-  background-color: var(--c-action);
-  color: var(--c-white);
-  padding: 10px 20px;
-  border: none;
-  border-radius: 5px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.3s;
-
-  &:hover { background-color: var(--c-action-hover); }
-
-  &[style*='backgroundColor: #dc3545'],
-  &[style*='background-color: #dc3545'] {
-    background-color: var(--c-danger-btn);
-    &:hover { background-color: var(--c-danger-hover); }
-  }
-
-  &:disabled {
-    opacity: .55;
-    cursor: not-allowed;
-    pointer-events: none;
-    filter: grayscale(15%);
-  }
-`;
 
 export const StyledIconWrapper = styled.span`
   margin-right: 8px;
@@ -360,11 +335,10 @@ export const StyledChatDock = styled.div`
   }
 `;
 
-
-
 /* ==================================
  * 6. CHAT OVERLAY (SIN CAMBIOS)
  * ================================== */
+
 export const StyledChatContainer = styled.div`
   position: absolute;
   bottom: 10px;
@@ -432,8 +406,6 @@ export const StyledChatInput = styled.input`
  * 7-11. RESTO (SIN CAMBIOS)
  * ================================== */
 // ... (GiftToggle, GiftsPanel, SelectableRow, Split2, Pane, ThumbsGrid, PrimaryCta, Brand, CenterPanel, CenterBody, ChatScroller)
-
-export const StyledGiftToggle = styled(StyledActionButton)` padding: 10px 12px; `;
 
 export const StyledGiftsPanel = styled.div`
   position: absolute;

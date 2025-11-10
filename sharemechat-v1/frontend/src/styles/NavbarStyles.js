@@ -50,33 +50,6 @@ export const StyledBrand = styled.a`
   }
 `;
 
-// === BOTONES ===
-export const StyledNavButton = styled.button`
-  background: transparent;
-  border: 1px solid ${colors.white}30;
-  color: ${colors.white};
-  padding: ${space.xs} ${space.md};
-  border-radius: ${radius.md};
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: all 0.2s;
-  white-space: nowrap;
-
-  &:hover {
-    background: ${colors.white}15;
-    border-color: ${colors.white}50;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  @media (max-width: 640px) {
-    flex: 1;
-  }
-`;
-
 //=== StyledContainer ===
 export const StyledContainer = styled.div`
   min-height: 100vh;

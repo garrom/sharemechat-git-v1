@@ -11,12 +11,12 @@ import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft } f
 import {
   StyledContainer,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
-  StyledActionButton,StyledLocalVideo,StyledRemoteVideo,
+  StyledLocalVideo,StyledRemoteVideo,
   StyledChatContainer,StyledNavGroup,StyledNavAvatar,
   StyledIconBtn,StyledTopActions,StyledVideoTitle,
   StyledVideoArea,StyledChatDock, StyledChatList,
   StyledChatMessageRow,StyledChatBubble,StyledChatInput,
-  StyledGiftToggle,StyledGiftsPanel,StyledGiftGrid,
+  StyledGiftsPanel,StyledGiftGrid,
   StyledGiftIcon,StyledTitleAvatar,StyledSelectableRow,
   StyledSplit2,StyledPane, StyledThumbsGrid,
   StyledNavTab,StyledCenterPanel, StyledCenterBody,
@@ -24,7 +24,7 @@ import {
   StyledFavoritesColumns,GlobalBlack
 } from '../../styles/pages-styles/ModelStyles';
 import {
-    StyledNavbar, StyledNavButton, StyledBrand, NavText, SaldoText, QueueText,
+    StyledNavbar, StyledBrand, NavText, SaldoText, QueueText,
     HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton
 } from '../../styles/NavbarStyles';
 import {
@@ -34,7 +34,8 @@ import {
   ButtonLlamar,ButtonColgar,
   ButtonAceptar,ButtonRechazar,
   ButtonVolver, ButtonEnviar,
-  ButtonRegalo,ButtonActivarCamMobile
+  ButtonRegalo,ButtonActivarCamMobile,
+  StyledActionButton,StyledGiftToggle,NavButton
 } from '../../styles/ButtonStyles';
 import VideoChatRandomModelo from './VideoChatRandomModelo';
 import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
@@ -1846,18 +1847,18 @@ const DashboardModel = () => {
             </QueueText>
           )}
 
-          <StyledNavButton type="button" title="Estadísticas" aria-label="Estadísticas">
+          <NavButton type="button" title="Estadísticas" aria-label="Estadísticas">
             <FontAwesomeIcon icon={faChartLine} />
             <StyledIconWrapper>Estadísticas</StyledIconWrapper>
-          </StyledNavButton>
+          </NavButton>
 
-          <StyledNavButton type="button" onClick={handleRequestPayout}>
+          <NavButton type="button" onClick={handleRequestPayout}>
             RETIRAR
-          </StyledNavButton>
+          </NavButton>
 
-          <StyledNavButton type="button" onClick={handleLogout}>
+          <NavButton type="button" onClick={handleLogout}>
             <FontAwesomeIcon icon={faSignOutAlt} />
-          </StyledNavButton>
+          </NavButton>
           <StyledNavAvatar
             src={profilePic || '/img/avatarChica.png'}
             alt="avatar"
@@ -1879,25 +1880,25 @@ const DashboardModel = () => {
             </SaldoText>
           </div>
 
-          <StyledNavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
+          <NavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
             <FontAwesomeIcon icon={faUser} />
             <StyledIconWrapper>Perfil</StyledIconWrapper>
-          </StyledNavButton>
+          </NavButton>
 
           {/* (Opcional) Estadísticas: puedes dejarlo ya listo aunque no tenga acción */}
-          <StyledNavButton onClick={() => { /* TODO: abrir stats */ setMenuOpen(false); }} title="Estadísticas">
+          <NavButton onClick={() => { /* TODO: abrir stats */ setMenuOpen(false); }} title="Estadísticas">
             <FontAwesomeIcon icon={faChartLine} />
             <StyledIconWrapper>Estadísticas</StyledIconWrapper>
-          </StyledNavButton>
+          </NavButton>
 
-          <StyledNavButton onClick={() => { handleRequestPayout(); setMenuOpen(false); }}>
+          <NavButton onClick={() => { handleRequestPayout(); setMenuOpen(false); }}>
             RETIRAR
-          </StyledNavButton>
+          </NavButton>
 
-          <StyledNavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
+          <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
-          </StyledNavButton>
+          </NavButton>
         </MobileMenu>
 
 

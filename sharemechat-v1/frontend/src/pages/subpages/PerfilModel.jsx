@@ -5,9 +5,9 @@ import { useHistory } from 'react-router-dom';
 import {
   StyledContainer,
   StyledNavbar,
-  StyledNavButton,
   StyledBrand
 } from '../../styles/NavbarStyles';
+import { NavButton } from '../../styles/ButtonStyles';
 
 import {
   PageWrap,
@@ -186,8 +186,8 @@ const PerfilModel = () => {
       <StyledNavbar>
         <StyledBrand href="/" aria-label="SharemeChat" />
         <div>
-          <StyledNavButton type="button" onClick={onUnsubscribe}>Darme de baja</StyledNavButton>
-          <StyledNavButton type="button" onClick={() => history.push('/change-password')}>Cambiar contraseña</StyledNavButton>
+          <NavButton type="button" onClick={onUnsubscribe}>Darme de baja</NavButton>
+          <NavButton type="button" onClick={() => history.push('/change-password')}>Cambiar contraseña</NavButton>
           <BackButton type="button" onClick={() => history.goBack()}>Volver</BackButton>
         </div>
       </StyledNavbar>
