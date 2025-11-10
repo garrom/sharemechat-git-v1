@@ -165,18 +165,18 @@ export const StyledMainContent = styled.div`
   padding: 16px;
   box-sizing: border-box;
 
-  /* Hueco para el BottomNav en móvil (ajustado) */
   @media (max-width: 768px) {
-    padding-bottom: 60px;
+    padding: 0;
+    gap: 0;
   }
 `;
 
 
 // NUEVO: estilo base para columnas plateadas
 const ColumnBlock = styled.div`
-  background: #d1d8e0;                     // ← PLATEADO CLARO
-  border-radius: 16px;                      // ← Bordes redondeados
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15); // ← Sombra flotante
+  background: #d1d8e0;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -221,7 +221,7 @@ export const StyledCenter = styled(ColumnBlock)`
 
   @media (max-width: 768px) {
     width: 100%;
-    padding: 10px;
+    padding: 0px;
   }
 
   @media (min-width: 769px) and (max-width: 1024px) {
@@ -235,6 +235,11 @@ export const StyledCenterVideochat = styled(StyledCenter)`
   border: none;
   border-radius: 0;
   box-shadow: none;
+  padding: 0;
+
+  @media (max-width: 768px) {
+    padding: 0; /* explícito en móvil también */
+  }
 
 `;
 
@@ -308,6 +313,12 @@ export const StyledVideoArea = styled.div`
   height: auto;
   min-width: 0;
 
+  /* En móvil: ocupar TODO sin altura mínima que empuje hacia abajo */
+  @media (max-width: 768px) {
+    min-height: 0;
+    height: 100%;
+  }
+
 `;
 
 export const StyledRemoteVideo = styled.div`
@@ -359,10 +370,9 @@ export const StyledChatDock = styled.div`
   background: var(--c-surface);
   z-index: 5;
 
-  /* En móvil: que se pegue por encima del bottom nav y respete safe-area */
   @media (max-width: 768px) {
     position: sticky;
-    bottom: calc(56px + env(safe-area-inset-bottom, 0px)); /* 56px ≈ alto BottomNav */
+    bottom: none;
   }
 
 `;
@@ -391,6 +401,7 @@ export const StyledChatContainer = styled.div`
   }
 `;
 
+
 export const StyledChatList = styled.div`
   max-height: 260px;
   overflow-y: auto;
@@ -399,6 +410,7 @@ export const StyledChatList = styled.div`
   -ms-overflow-style: none;
   &::-webkit-scrollbar { width: 0; height: 0; }
 `;
+
 
 export const StyledChatMessageRow = styled.div`
   display: flex;
@@ -522,7 +534,10 @@ export const StyledSplit2 = styled.div`
   min-height: 0;
   flex: 1;
 
-  @media (max-width: 768px){ grid-template-columns: 1fr; }
+  @media (max-width: 768px){
+  grid-template-columns: 1fr;
+  gap: 0;
+  }
 `;
 
 export const StyledPane = styled.section`
@@ -538,6 +553,13 @@ export const StyledPane = styled.section`
     @media (max-width: 768px) {
       display: none;
     }
+  }
+
+  /* En móvil quitamos caja/bordes para ganar área útil */
+  @media (max-width: 768px) {
+    background: transparent;
+    border: none;
+    border-radius: 0;
   }
 
 `;

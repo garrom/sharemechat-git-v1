@@ -72,9 +72,9 @@ export const StyledMainContent = styled.div`
   padding: 16px;
   box-sizing: border-box;
 
-  /* Hueco extra para el BottomNav en móvil */
   @media (max-width: 768px) {
-    padding-bottom: 60px;
+    padding: 0;
+    gap: 0;
   }
 `;
 
@@ -185,13 +185,12 @@ export const StyledCenter = styled(ColumnBlock)`
   position: relative;
 
   background-color: var(--c-surface);
-  background-image: url('/img/patterns/paper-1.png');
   background-repeat: repeat;
   background-size: auto;
 
   @media (max-width: 768px) {
     width: 100%;
-    padding: 10px;
+    padding: 0px;
   }
 
   @media (min-width: 769px) and (max-width: 1024px) {
@@ -214,12 +213,18 @@ export const StyledRightColumn = styled(ColumnBlock)`
   }
 `;
 
-// VIDEOCHAT: sin bordes ni fondo (fondo negro global)
+// Centro específico para VIDEOCHAT (sin caja)
 export const StyledCenterVideochat = styled(StyledCenter)`
   background-color: var(--c-bg);
   border: none;
   border-radius: 0;
   box-shadow: none;
+  padding: 0;
+
+  @media (max-width: 768px) {
+    padding: 0; /* explícito en móvil también */
+  }
+
 `;
 
 /* ==================================
@@ -310,6 +315,14 @@ export const StyledVideoArea = styled.div`
   min-height: 360px;
   height: auto;
   min-width: 0;
+
+  /* En móvil: ocupar TODO sin altura mínima que empuje hacia abajo */
+  @media (max-width: 768px) {
+    min-height: 0;
+    height: 100%;
+  }
+
+
 `;
 
 
@@ -328,10 +341,9 @@ export const StyledChatDock = styled.div`
   background: var(--c-surface);
   z-index: 5;
 
-  /* En móvil: que se pegue por encima del bottom nav y respete safe-area */
   @media (max-width: 768px) {
     position: sticky;
-    bottom: calc(56px + env(safe-area-inset-bottom, 0px)); /* 56px ≈ alto BottomNav */
+    bottom: none;
   }
 `;
 
@@ -460,7 +472,10 @@ export const StyledSplit2 = styled.div`
   min-height: 0;
   flex: 1;
 
-  @media (max-width: 768px){ grid-template-columns: 1fr; }
+  @media (max-width: 768px){
+  grid-template-columns: 1fr;
+  gap: 0;
+  }
 `;
 
 export const StyledPane = styled.section`
@@ -473,7 +488,16 @@ export const StyledPane = styled.section`
   flex-direction: column;
 
   &[data-side="left"] {
-    @media (max-width: 768px) { display: none; }
+    @media (max-width: 768px) {
+      display: none;
+    }
+  }
+
+  /* En móvil quitamos caja/bordes para ganar área útil */
+  @media (max-width: 768px) {
+    background: transparent;
+    border: none;
+    border-radius: 0;
   }
 `;
 
