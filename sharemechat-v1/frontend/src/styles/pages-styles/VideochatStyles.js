@@ -650,7 +650,7 @@ export const StyledChatScroller = styled.div`
   border-radius: 8px;
   padding: 10px;
 
-  /* 👇 margen interior extra para que el último mensaje no quede tapado por el dock */
+  /* margen interior extra para que el último mensaje no quede tapado por el dock */
   @media (max-width: 768px) {
     padding-bottom: 88px;
     scroll-padding-bottom: 88px;
@@ -662,4 +662,41 @@ export const StyledChatScroller = styled.div`
 
   /* Suaviza el rebote en móviles y evita saltos raros */
   overscroll-behavior: contain;
+`;
+
+// === Centro PRE-CALL: “Activar cámara” centrado ===
+export const StyledPreCallCenter = styled.div`
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  @media (min-width: 769px) { display: none; }
+`;
+
+export const StyledHelperLine = styled.div`
+  margin-top: 12px;
+  color: #e9ecef;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: .9;
+`;
+
+// === Barra inferior (encima del tab de 3 botones) para acciones de llamada ===
+export const StyledBottomActionsMobile = styled.div`
+  position: sticky;
+  bottom: 64px; /* deja margen para el TAB inferior */
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px;
+  z-index: 6;
+
+  @media (min-width: 769px) { display: none; }
 `;

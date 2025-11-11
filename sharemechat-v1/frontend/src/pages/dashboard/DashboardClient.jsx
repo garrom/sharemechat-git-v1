@@ -21,7 +21,7 @@ import {
   StyledPane,StyledThumbsGrid, StyledCenterPanel,
   StyledCenterBody,StyledChatScroller, StyledCenterVideochat,
   StyledFavoritesShell,StyledFavoritesColumns,GlobalBlack,
-} from '../../styles/pages-styles/ClientStyles';
+} from '../../styles/pages-styles/VideochatStyles';
 import {
   StyledNavbar, StyledBrand,NavText, SaldoText,
   HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton

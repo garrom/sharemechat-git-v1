@@ -22,7 +22,7 @@ import {
   StyledNavTab,StyledCenterPanel, StyledCenterBody,
   StyledChatScroller,StyledCenterVideochat, StyledFavoritesShell,
   StyledFavoritesColumns,GlobalBlack
-} from '../../styles/pages-styles/ModelStyles';
+} from '../../styles/pages-styles/VideochatStyles';
 import {
     StyledNavbar, StyledBrand, NavText, SaldoText, QueueText,
     HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton

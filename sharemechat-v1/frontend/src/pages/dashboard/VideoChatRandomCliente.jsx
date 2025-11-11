@@ -7,7 +7,7 @@ import {
   StyledChatDock, StyledChatInput,
   StyledGiftsPanel, StyledGiftGrid, StyledGiftIcon, StyledThumbsGrid,
   StyledRemoteVideo, StyledVideoTitle, StyledTitleAvatar
-} from '../../styles/pages-styles/ClientStyles';
+} from '../../styles/pages-styles/VideochatStyles';
 import {
   ButtonActivarCam, ButtonActivarCamMobile, ButtonBuscar,
   ButtonStop, ButtonNext, ButtonAddFavorite, ActionButton,

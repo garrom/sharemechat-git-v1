@@ -9,7 +9,7 @@ import {
   StyledVideoArea, StyledRemoteVideo, StyledVideoTitle,
   StyledTitleAvatar, StyledLocalVideo, StyledTopActions,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble
-} from '../../styles/pages-styles/ClientStyles';
+} from '../../styles/pages-styles/VideochatStyles';
 
 import {
   ButtonLlamar, ButtonColgar, ButtonAceptar, ButtonRechazar,

@@ -68,13 +68,6 @@ export const StyledNavGroup = styled.div`
     white-space: nowrap;
   }
 
-  /* En pantallas muy pequeñas, si quieres permitir wrap, descomenta:
-  @media (max-width: 420px) {
-    flex-wrap: wrap;
-    justify-content: flex-end;
-    row-gap: 8px;
-  }
-  */
 `;
 
 /* LAYOUT PRINCIPAL

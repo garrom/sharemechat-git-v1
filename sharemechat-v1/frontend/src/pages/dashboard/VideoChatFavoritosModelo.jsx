@@ -7,7 +7,7 @@ import {
   StyledFavoritesShell, StyledFavoritesColumns, StyledCenterPanel, StyledCenterBody, StyledChatScroller,
   StyledVideoArea, StyledRemoteVideo, StyledVideoTitle, StyledTitleAvatar, StyledLocalVideo,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble, StyledChatDock, StyledChatInput
-} from '../../styles/pages-styles/ModelStyles';
+} from '../../styles/pages-styles/VideochatStyles';
 
 import {
   ButtonEnviar, ButtonLlamar, ButtonActivarCam, ButtonActivarCamMobile,

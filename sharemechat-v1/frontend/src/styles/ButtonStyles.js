@@ -202,33 +202,32 @@ export const NavButton = styled(PillButtonBase)`
   }
 `;
 
-/* ========== ICON-ONLY VARIANTS (para cuando quites texto) ========== */
-/* Si quieres usar botones 100% icono (☎, ⛔, ⏹, 👤+), usa estos: */
 
+/* ========== ICON-ONLY VARIANTS (para cuando quites texto) ========== */
+/* botones 100% icono (☎, ⛔, ⏹, 👤+ ) */
+
+// llamar
 export const BtnCall = styled(IconButtonBase)`
   ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
 `;
+// colgar
 export const BtnHangup = styled(IconButtonBase)`
   ${variant('#fff', '#dc3545', '#b02a37', '#bb2d3b')}
 `;
+// stop
 export const BtnStopIcon = styled(IconButtonBase)`
   ${variant('#fff', '#6c757d', '#5c636a', '#666f76')}
 `;
+// añadir favoritos
 export const BtnFavAdd = styled(IconButtonBase)`
   ${variant('#fff', '#0dcaf0', '#0aa2c0', '#31d2f2')}
 `;
+// videocamara
+export const BtnRoundVideo = styled(IconButtonBase)`
+  ${variant('#fff', '#198754', '#146c43', '#157347')}
+  width: 72px;
+  height: 72px;
+  font-size: 22px;
+  ${shadowLift}
+`;
 
-/* ============================================================
- * ALIASES DE COMPATIBILIDAD
- * (para no romper imports existentes mientras migras)
- * ============================================================ */
-
-/* Buscar Cliente/Modelo (se abrevia a “Buscar”) */
-export const ButtonBuscarCliente = ButtonBuscar;
-export const ButtonBuscarModelo  = ButtonBuscar;
-
-/* Mantener nombre histórico “StyledGiftToggle” si algún sitio lo importa así */
-export const StyledGiftToggle = ButtonGiftToggle;
-
-/* Por si algún sitio usaba “StyledActionButton” desde estilos (mejor migrar a ActionButton) */
-export const StyledActionButton = ActionButton;
