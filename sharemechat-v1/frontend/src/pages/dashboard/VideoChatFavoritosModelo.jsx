@@ -55,7 +55,6 @@ export default function VideoChatFavoritosModelo(props) {
                       {isPendingPanel ? `Invitación de ${centerChatPeerName}` : isSentPanel ? `Invitación enviada a ${centerChatPeerName}` : `Contacto: ${centerChatPeerName}`}
                     </h5>
                     <div style={{ display:'flex', gap:8 }}>
-                      <ActionButton onClick={() => setContactMode('chat')} disabled={!openChatWith} title="Abrir chat">Chatear</ActionButton>
                       <ButtonLlamar onClick={enterCallMode} disabled={!openChatWith || !allowChat} title="Llamar" aria-label="Llamar">
                         <FontAwesomeIcon icon={faPhone} />
                       </ButtonLlamar>
@@ -209,9 +208,6 @@ export default function VideoChatFavoritosModelo(props) {
         <>
           {!openChatWith && (
             <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
-              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-                <h5 style={{ margin:0 }}>Favoritos</h5>
-              </div>
               <div style={{ flex:1, minHeight:0, overflowY:'auto' }}>
                 <FavoritesModelList
                   onSelect={handleOpenChatFromFavorites}
@@ -242,7 +238,8 @@ export default function VideoChatFavoritosModelo(props) {
               {/*  Movil Favoritos Calling */}
               {!isPendingPanel && !isSentPanel && (
                 <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8 }}>
-                  {contactMode !== 'call' && allowChat && <ButtonLlamar onClick={enterCallMode} title="Llamar">Llamar</ButtonLlamar>}
+                  {contactMode !== 'call' && allowChat &&
+                      <ButtonLlamar onClick={enterCallMode} title="Llamar">Iniciar VideoChat</ButtonLlamar>}
                   {contactMode === 'call' && (
                     <>
                       {!callCameraActive && (
@@ -318,7 +315,7 @@ export default function VideoChatFavoritosModelo(props) {
               )}
 
               {/* Chat normal móvil (oculto en modo call) */}
-              <StyledCenterBody>
+              <StyledCenterBody data-call={contactMode === 'call' ? 'true' : undefined}>
                 {isPendingPanel && (
                   <div style={{ flex:1, minHeight:0, display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid #333', borderRadius:8, padding:16, background:'rgba(0,0,0,0.2)' }}>
                     <div style={{ textAlign:'center' }}>

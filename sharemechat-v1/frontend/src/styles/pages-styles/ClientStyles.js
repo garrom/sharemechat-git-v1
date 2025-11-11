@@ -632,6 +632,14 @@ export const StyledCenterBody = styled.div`
   flex: 1;
   min-height: 0;
   gap: 8px;
+
+  @media (max-width: 768px) {
+    &[data-call="true"] {
+      flex: 0 0 auto;
+      min-height: auto;
+      gap: 0;
+    }
+  }
 `;
 
 export const StyledChatScroller = styled.div`

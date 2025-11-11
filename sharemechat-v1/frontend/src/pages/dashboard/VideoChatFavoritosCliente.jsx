@@ -75,7 +75,6 @@ export default function VideoChatFavoritosCliente(props) {
                           {isPendingPanel ? `Invitación de ${centerChatPeerName}` : isSentPanel ? `Invitación enviada a ${centerChatPeerName}` : `Contacto: ${centerChatPeerName}`}
                         </h5>
                         <div style={{ display:'flex', gap:8 }}>
-                          <ActionButton onClick={() => setContactMode('chat')} disabled={!centerChatPeerId} title="Abrir chat">Chatear</ActionButton>
                           <ButtonLlamar onClick={enterCallMode} disabled={!centerChatPeerId} title="Llamar" aria-label="Llamar">
                             <FontAwesomeIcon icon={faPhone} />
                           </ButtonLlamar>
@@ -289,9 +288,6 @@ export default function VideoChatFavoritosCliente(props) {
             <>
               {!centerChatPeerId && (
                 <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
-                  <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
-                    <h5 style={{ margin:0 }}>Favoritos</h5>
-                  </div>
                   <div style={{ flex:1, minHeight:0, overflowY:'auto' }}>
                     <FavoritesClientList onSelect={handleOpenChatFromFavorites} reloadTrigger={favReload} selectedId={selectedContactId} onContextMenu={(user, pos) => { setCtxUser(user); setCtxPos(pos); }} />
                   </div>
@@ -311,9 +307,7 @@ export default function VideoChatFavoritosCliente(props) {
 
                   <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:8 }}>
                     {contactMode !== 'call' && allowChat && (
-                      <ButtonLlamar onClick={enterCallMode} title="Llamar" aria-label="Llamar">
-                        <FontAwesomeIcon icon={faPhone} />
-                      </ButtonLlamar>
+                      <ButtonLlamar onClick={enterCallMode} title="Llamar" aria-label="Llamar">Iniciar VideoChat</ButtonLlamar>
                     )}
                     {/* Movil Favoritos Calling */}
                     {contactMode === 'call' && (
@@ -347,7 +341,7 @@ export default function VideoChatFavoritosCliente(props) {
                   </div>
 
                   {contactMode === 'call' && (
-                    <div style={{ marginBottom:8 }}>
+                    <div style={{ margin:0, display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
                       <StyledVideoArea style={{ display:(callStatus === 'in-call') ? 'block' : 'none', position:'relative' }}>
                         <StyledRemoteVideo ref={callRemoteWrapRef}>
                           <StyledVideoTitle>
@@ -423,7 +417,7 @@ export default function VideoChatFavoritosCliente(props) {
                     </div>
                   )}
 
-                  <StyledCenterBody>
+                  <StyledCenterBody data-call={contactMode === 'call' ? 'true' : undefined}>
                     {isPendingPanel && (
                       <div style={{ flex:1, minHeight:0, display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid #333', borderRadius:8, padding:16, background:'rgba(0,0,0,0.2)' }}>
                         <div style={{ textAlign:'center' }}>
