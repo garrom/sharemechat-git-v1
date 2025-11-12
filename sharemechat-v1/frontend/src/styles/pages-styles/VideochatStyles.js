@@ -67,6 +67,7 @@ export const GlobalBlack = createGlobalStyle`
     --c-hover-bg: #f8f9fa;
     --c-selected-bg: #e7f1ff;
     --c-thumb-border: rgba(0,0,0,.12);
+
   }
 
   html, body, #root {
@@ -315,13 +316,12 @@ export const StyledVideoArea = styled.div`
   height: auto;
   min-width: 0;
 
-  /* En móvil: ocupar TODO sin altura mínima que empuje hacia abajo */
   @media (max-width: 768px) {
     min-height: 0;
     height: 100%;
   }
-
 `;
+
 
 export const StyledRemoteVideo = styled.div`
   width: 100%;
@@ -651,10 +651,9 @@ export const StyledChatScroller = styled.div`
   border-radius: 0px;
   padding: 10px;
 
-  /* margen interior extra para que el último mensaje no quede tapado por el dock */
   @media (max-width: 768px) {
-    padding-bottom: 88px;
-    scroll-padding-bottom: 88px;
+    padding-bottom: 64px;
+    scroll-padding-bottom: 64px;
   }
 
   background: rgba(0,0,0,0.2);
@@ -668,12 +667,13 @@ export const StyledChatScroller = styled.div`
 // === Centro PRE-CALL: “Activar cámara” centrado ===
 export const StyledPreCallCenter = styled.div`
   display: flex;
-  flex: 1;
-  min-height: 0;
+  /* No ocupes todo para evitar pantallas larguísimas en móvil */
+  flex: 0 0 auto;
+  min-height: 24vh;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 16px;
+  padding: 8px;
   @media (min-width: 769px) { display: none; }
 `;
 
@@ -688,22 +688,22 @@ export const StyledHelperLine = styled.div`
 `;
 
 
-// === Barra inferior (encima del tab de 3 botones) para acciones de llamada ===
 export const StyledBottomActionsMobile = styled.div`
-  position: sticky;
-  bottom: 64px; /* deja margen para el TAB inferior */
+  position: static;
   left: 0;
   right: 0;
   display: flex;
+  align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 8px;
+  min-height: 16vh;
+  gap: 10px;
+  padding: 6px;
   z-index: 6;
 
   @media (min-width: 769px) { display: none; }
 `;
 
-// === Barra superior móvil 3 columnas (Volver | Iniciar | Conectado con…) ===
+
 export const StyledMobile3ColBar = styled.div`
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -722,6 +722,7 @@ export const StyledMobile3ColBar = styled.div`
   }
 `;
 
+
 export const StyledTopCenter = styled.div`
   justify-self: center;
   display: flex;
@@ -737,4 +738,21 @@ export const StyledConnectedText = styled.div`
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 42vw; /* evita desbordes en móviles */
+`;
+
+export const StyledFloatingHangup = styled.div`
+  position: absolute;
+  /* centrado horizontal sobre el vídeo, por encima del dock de chat */
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 72px;
+
+  z-index: 8; /* por encima del video y del overlay de chat */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  @media (min-width: 769px) {
+    display: none; /* solo móvil */
+  }
 `;

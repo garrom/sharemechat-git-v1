@@ -10,7 +10,7 @@ import {
   StyledTitleAvatar, StyledLocalVideo, StyledTopActions,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble,
   StyledPreCallCenter, StyledHelperLine, StyledBottomActionsMobile,
-  StyledMobile3ColBar, StyledTopCenter, StyledConnectedText
+  StyledMobile3ColBar, StyledTopCenter, StyledConnectedText, StyledFloatingHangup
 } from '../../styles/pages-styles/VideochatStyles';
 
 import {
@@ -42,7 +42,7 @@ export default function VideoChatFavoritosCliente(props) {
     showCenterGifts, setShowCenterGifts,
     sendGiftMsg,
     // llamada 1-a-1
-    contactMode, setContactMode, enterCallMode,
+    contactMode, enterCallMode,
     callStatus, callCameraActive,
     callPeerId, callPeerName, callPeerAvatar,
     callRemoteVideoRef, callLocalVideoRef,
@@ -57,10 +57,9 @@ export default function VideoChatFavoritosCliente(props) {
     user,
   } = props;
 
-  {/* === FICHERO SOLO DE FAVORITOS === */}
   return (
     <>
-      {/* === Desktop Favoritos ALL  === */}
+      {/* === Desktop Favoritos ALL (sin cambios de layout) === */}
       <>
         {!isMobile && (
           <StyledFavoritesShell>
@@ -304,34 +303,34 @@ export default function VideoChatFavoritosCliente(props) {
 
             {centerChatPeerId && (
               <div style={{ display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
-                {/* Header móvil: Volver | (Iniciar Videochat centrado) | Nombre */}
-                <StyledMobile3ColBar>
-                  <ButtonVolver
-                    type="button"
-                    onClick={backToList}
-                    aria-label="Volver a la lista"
-                    title="Volver"
-                    disabled={callStatus === 'incoming' || callStatus === 'connecting' || callStatus === 'ringing' || callStatus === 'in-call'}
-                  >
-                    <FontAwesomeIcon icon={faArrowLeft} />
-                  </ButtonVolver>
+                {/* Header móvil: SOLO volver + iniciar (centrado) + texto; NO aparece en llamada */}
+                {contactMode !== 'call' && (
+                  <StyledMobile3ColBar>
+                    <ButtonVolver
+                      type="button"
+                      onClick={backToList}
+                      aria-label="Volver a la lista"
+                      title="Volver"
+                    >
+                      <FontAwesomeIcon icon={faArrowLeft} />
+                    </ButtonVolver>
 
-                  <StyledTopCenter>
-                    {contactMode !== 'call' && allowChat && (
-                      <ButtonLlamar onClick={enterCallMode} title="Llamar" aria-label="Llamar">
-                        Iniciar VideoChat
-                      </ButtonLlamar>
-                    )}
-                  </StyledTopCenter>
+                    <StyledTopCenter>
+                      {allowChat && (
+                        <ButtonLlamar onClick={enterCallMode} title="Llamar" aria-label="Llamar">
+                          Iniciar VideoChat
+                        </ButtonLlamar>
+                      )}
+                    </StyledTopCenter>
 
-                  <StyledConnectedText>{centerChatPeerName}</StyledConnectedText>
-                </StyledMobile3ColBar>
+                    <StyledConnectedText> {centerChatPeerName}</StyledConnectedText>
+                  </StyledMobile3ColBar>
+                )}
 
-                {/* === CONTROLES DE LLAMADA EN MÓVIL (centrados) === */}
+                {/* === CONTROLES DE LLAMADA EN MÓVIL === */}
                 {contactMode === 'call' && (
                   <>
-                    {/* (A) PRE-CALL: Activar cámara centrado
-                        - Si recibimos la llamada (incoming), el botón aparece DESHABILITADO */}
+                    {/* PRE-CALL: Activar cámara (ya NO ocupa toda la altura) */}
                     {!callCameraActive && callStatus !== 'incoming' && (
                       <StyledPreCallCenter>
                         <div>
@@ -353,59 +352,20 @@ export default function VideoChatFavoritosCliente(props) {
                       </StyledPreCallCenter>
                     )}
 
-                    {/* Incoming: mostramos el mismo bloque pero con botón deshabilitado */}
+                    {/* INCOMING (móvil): SOLO Aceptar/Rechazar, centrado verticalmente */}
                     {!callCameraActive && callStatus === 'incoming' && (
                       <StyledPreCallCenter>
-                        <div>
-                          <ButtonActivarCamMobile disabled title="No necesario al recibir llamada">
-                            Activar cámara
-                          </ButtonActivarCamMobile>
-
-                          <StyledHelperLine>
-                            <FontAwesomeIcon icon={faVideo} />
-                            activar cámara para iniciar videochat
-                          </StyledHelperLine>
+                        <div style={{ display:'flex', gap:10, justifyContent:'center' }}>
+                          <ButtonAceptar onClick={handleCallAccept}>Aceptar</ButtonAceptar>
+                          <ButtonRechazar onClick={handleCallReject}>Rechazar</ButtonRechazar>
                         </div>
                       </StyledPreCallCenter>
                     )}
 
-                    {/* (B) BARRA SUPERIOR en estados de llamada:
-                         - Volver (deshabilitado en streaming) y Colgar en la misma línea
-                         - Estados: incoming | connecting | ringing | in-call
-                         - Para 'incoming': también deshabilitamos 'Colgar' */}
-                    {(callStatus === 'incoming' || callStatus === 'connecting' || callStatus === 'ringing' || callStatus === 'in-call') && (
-                      <StyledMobile3ColBar>
-                        <ButtonVolver
-                          type="button"
-                          onClick={backToList}
-                          aria-label="Volver a la lista"
-                          title="Volver"
-                          disabled={callStatus === 'incoming' || callStatus === 'connecting' || callStatus === 'ringing' || callStatus === 'in-call'}
-                        >
-                          <FontAwesomeIcon icon={faArrowLeft} />
-                        </ButtonVolver>
-
-                        <StyledTopCenter />
-
-                        <div>
-                          <BtnHangup
-                            onClick={() => handleCallEnd(false)}
-                            title="Colgar"
-                            aria-label="Colgar"
-                            disabled={callStatus === 'incoming'}
-                          >
-                            <FontAwesomeIcon icon={faPhoneSlash} />
-                          </BtnHangup>
-                        </div>
-                      </StyledMobile3ColBar>
-                    )}
-
-                    {/* (C) Botón LLAMAR en la barra inferior SOLO cuando:
-                         - cámara activa
-                         - NO estamos en connecting/ringing/in-call  (cuando llamas tú) */}
+                    {/* Botón LLAMAR (verde) SOLO cuando cámara activa y no hay conexión en curso */}
                     {callCameraActive && (callStatus !== 'in-call' && callStatus !== 'ringing' && callStatus !== 'connecting') && (
                       <StyledBottomActionsMobile>
-                        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:4 }}>
                           <BtnRoundVideo
                             onClick={handleCallInvite}
                             disabled={!allowChat || !callPeerId}
@@ -417,24 +377,17 @@ export default function VideoChatFavoritosCliente(props) {
                             <FontAwesomeIcon icon={faVideo} />
                           </BtnRoundVideo>
 
-                          <StyledHelperLine style={{ marginTop: 6 }}>
+                          <StyledHelperLine style={{ marginTop: 4 }}>
                             <FontAwesomeIcon icon={faVideo} />
                             pulsar botón para iniciar llamada
                           </StyledHelperLine>
                         </div>
                       </StyledBottomActionsMobile>
                     )}
-
-                    {/* (D) Incoming: aceptar / rechazar (centrado) */}
-                    {callStatus === 'incoming' && (
-                      <div style={{ display:'flex', gap:10, justifyContent:'center', margin:'8px 0' }}>
-                        <ButtonAceptar onClick={handleCallAccept}>Aceptar</ButtonAceptar>
-                        <ButtonRechazar onClick={handleCallReject}>Rechazar</ButtonRechazar>
-                      </div>
-                    )}
                   </>
                 )}
 
+                {/* Área de vídeo + chat en llamada */}
                 {contactMode === 'call' && (
                   <div style={{ margin:0, display:'flex', flexDirection:'column', flex:1, minHeight:0 }}>
                     <StyledVideoArea style={{ display:(callStatus === 'in-call') ? 'block' : 'none', position:'relative' }}>
@@ -452,7 +405,16 @@ export default function VideoChatFavoritosCliente(props) {
                         <video ref={callLocalVideoRef} muted autoPlay playsInline style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} />
                       </StyledLocalVideo>
 
-                      {/* Movil Favoritos chat in calling  */}
+                      {/* Botón Colgar flotante sobre el streaming (móvil) */}
+                      {callStatus === 'in-call' && (
+                        <StyledFloatingHangup>
+                          <BtnHangup onClick={() => handleCallEnd(false)} title="Colgar" aria-label="Colgar">
+                            <FontAwesomeIcon icon={faPhoneSlash} />
+                          </BtnHangup>
+                        </StyledFloatingHangup>
+                      )}
+
+                      {/* Chat overlay durante la llamada */}
                       <StyledChatContainer data-wide="true">
                         <StyledChatList ref={callListRef}>
                           {centerMessages.map(m => {
@@ -487,7 +449,7 @@ export default function VideoChatFavoritosCliente(props) {
                       </StyledChatContainer>
                     </StyledVideoArea>
 
-                    {/* Caja input del chat solo durante Movil Calling favoritos */}
+                    {/* Input chat solo en llamada + Gift */}
                     <StyledChatDock style={{ display:(callStatus === 'in-call') ? 'flex' : 'none' }}>
                       <StyledChatInput
                         type="text"
@@ -499,10 +461,35 @@ export default function VideoChatFavoritosCliente(props) {
                         onFocus={() => setTimeout(() => chatEndRef.current?.scrollIntoView({ block:'end' }), 50)}
                       />
                       <ActionButton type="button" onClick={sendCenterMessage}>Enviar</ActionButton>
+                      <ButtonRegalo
+                        title="Enviar regalo"
+                        onClick={() => setShowCenterGifts(s => !s)}
+                      >
+                        Gift
+                      </ButtonRegalo>
+
+                      {showCenterGifts && (
+                        <div style={{ position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)', padding:10, borderRadius:8, zIndex:10, border:'1px solid #333' }}>
+                          <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 80px)', gap:8, maxHeight:240, overflowY:'auto' }}>
+                            {gifts.map(g => (
+                              <button
+                                key={g.id}
+                                onClick={() => sendGiftMsg(g.id)}
+                                style={{ background:'transparent', border:'1px solid #555', borderRadius:8, padding:6, cursor:'pointer', color:'#fff' }}
+                              >
+                                <img src={g.icon} alt={g.name} style={{ width:32, height:32, display:'block', margin:'0 auto' }}/>
+                                <div style={{ fontSize:12 }}>{g.name}</div>
+                                <div style={{ fontSize:12, opacity:.8 }}>{fmtEUR(g.cost)}</div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </StyledChatDock>
 
+                    {/* Mensaje de estado compacto */}
                     {(callStatus === 'connecting' || callStatus === 'ringing' || callStatus === 'incoming') && (
-                      <p style={{ color:'#000', textAlign:'center', margin:'8px 0' }}>
+                      <p style={{ color:'#000', textAlign:'center', margin:'6px 0' }}>
                         {callStatus === 'connecting' && 'Conectando…'}
                         {callStatus === 'ringing' && `Llamando a ${callPeerName || 'usuario'}…`}
                         {callStatus === 'incoming' && `Te está llamando ${callPeerName || 'usuario'}…`}
@@ -511,6 +498,7 @@ export default function VideoChatFavoritosCliente(props) {
                   </div>
                 )}
 
+                {/* Chat persistente cuando NO estás en llamada */}
                 <StyledCenterBody data-call={contactMode === 'call' ? 'true' : undefined}>
                   {isPendingPanel && (
                     <div style={{ flex:1, minHeight:0, display:'flex', alignItems:'center', justifyContent:'center', border:'1px solid #333', borderRadius:8, padding:16, background:'rgba(0,0,0,0.2)' }}>
@@ -533,7 +521,6 @@ export default function VideoChatFavoritosCliente(props) {
                     </div>
                   )}
 
-                  {/* Movil Favoritos Chat */}
                   {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                     <>
                       <StyledChatScroller ref={centerListRef}>
