@@ -222,6 +222,7 @@ export const StyledCenter = styled(ColumnBlock)`
   @media (max-width: 768px) {
     width: 100%;
     padding: 0px;
+    border-radius: 0;
   }
 
   @media (min-width: 769px) and (max-width: 1024px) {
@@ -238,7 +239,8 @@ export const StyledCenterVideochat = styled(StyledCenter)`
   padding: 0;
 
   @media (max-width: 768px) {
-    padding: 0; /* explícito en móvil también */
+    padding: 0;
+    border-radius: 0;
   }
 
 `;
@@ -401,16 +403,15 @@ export const StyledChatContainer = styled.div`
   }
 `;
 
-
 export const StyledChatList = styled.div`
   max-height: 260px;
   overflow-y: auto;
   margin-bottom: 10px;
+  border-radius: 0;
   scrollbar-width: none;
   -ms-overflow-style: none;
   &::-webkit-scrollbar { width: 0; height: 0; }
 `;
-
 
 export const StyledChatMessageRow = styled.div`
   display: flex;
@@ -647,7 +648,7 @@ export const StyledChatScroller = styled.div`
   min-height: 0;
   overflow-y: auto;
   border: 1px solid var(--c-border-dark);
-  border-radius: 8px;
+  border-radius: 0px;
   padding: 10px;
 
   /* margen interior extra para que el último mensaje no quede tapado por el dock */
@@ -678,13 +679,14 @@ export const StyledPreCallCenter = styled.div`
 
 export const StyledHelperLine = styled.div`
   margin-top: 12px;
-  color: #e9ecef;
+  color: #111; /* antes: #e9ecef */
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  opacity: .9;
+  opacity: .95;
 `;
+
 
 // === Barra inferior (encima del tab de 3 botones) para acciones de llamada ===
 export const StyledBottomActionsMobile = styled.div`
@@ -699,4 +701,40 @@ export const StyledBottomActionsMobile = styled.div`
   z-index: 6;
 
   @media (min-width: 769px) { display: none; }
+`;
+
+// === Barra superior móvil 3 columnas (Volver | Iniciar | Conectado con…) ===
+export const StyledMobile3ColBar = styled.div`
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+
+  /* espacio alrededor */
+  padding: 8px 12px;
+  margin: 8px 12px;
+  box-sizing: border-box;
+
+  /* mantiene el ajuste en móvil */
+  @media (max-width: 768px) {
+    margin: 8px 10px;
+    padding: 8px 10px;
+  }
+`;
+
+export const StyledTopCenter = styled.div`
+  justify-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+export const StyledConnectedText = styled.div`
+  justify-self: end;
+  font-size: 14px;
+  color: var(--c-text); /* negro sobre fondo claro */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 42vw; /* evita desbordes en móviles */
 `;
