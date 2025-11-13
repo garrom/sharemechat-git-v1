@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhone, faPhoneSlash, faVideo } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPhone, faPhoneSlash, faVideo,faPaperPlane  } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import {
   StyledCenter,

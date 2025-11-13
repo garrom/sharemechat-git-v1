@@ -68,6 +68,9 @@ export const GlobalBlack = createGlobalStyle`
     --c-selected-bg: #e7f1ff;
     --c-thumb-border: rgba(0,0,0,.12);
 
+     /* Layout */
+     --navbar-height: 52px; /* altura estándar navbar */
+
   }
 
   html, body, #root {
@@ -327,7 +330,6 @@ export const StyledRemoteVideo = styled.div`
   width: 100%;
   height: 100%;
   z-index: 1;
-
 `;
 
 export const StyledLocalVideo = styled.div`
@@ -364,20 +366,22 @@ export const StyledChatDock = styled.div`
   gap: 8px;
   height: 56px;
   min-height: 56px;
-  padding: 8px 0 8px 0;
+  padding: 8px 10px;
   border-top: 1px solid var(--c-border);
   border-radius: 0;
   box-shadow: none;
   margin: 0;
   background: var(--c-surface);
-  z-index: 5;
+  z-index: 100;
 
   @media (max-width: 768px) {
-    position: sticky;
-    bottom: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 64px; /* altura del TAB inferior de 3 botones */
   }
-
 `;
+
 
 /* --------------------------------
  * 6. CHAT OVERLAY EN VIDEO (SIN CAMBIOS)
@@ -407,7 +411,11 @@ export const StyledChatList = styled.div`
   max-height: 260px;
   overflow-y: auto;
   margin-bottom: 10px;
-  border-radius: 0;
+
+  /* margen interno arriba*/
+  padding-top: 12px;
+  box-sizing: border-box;
+
   scrollbar-width: none;
   -ms-overflow-style: none;
   &::-webkit-scrollbar { width: 0; height: 0; }
@@ -447,10 +455,12 @@ export const StyledChatControls = styled.div`
 
 export const StyledChatInput = styled.input`
   flex: 1;
+  min-width: 0;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid transparent;
   border-radius: 6px;
-  padding: 8px;
+  padding: 6px 8px;
+  font-size: 14px;
   outline: none;
 
   &:focus {
@@ -458,6 +468,7 @@ export const StyledChatInput = styled.input`
     box-shadow: 0 0 0 3px #0d6efd22;
   }
 `;
+
 
 /* --------------------------------
  * 7. REGALOS (SIN CAMBIOS)
@@ -633,12 +644,14 @@ export const StyledCenterBody = styled.div`
   flex: 1;
   min-height: 0;
   gap: 8px;
+  overflow: hidden; /* clave: que NO genere scroll propio */
 
   @media (max-width: 768px) {
     &[data-call="true"] {
       flex: 0 0 auto;
       min-height: auto;
       gap: 0;
+      overflow: hidden;
     }
   }
 `;
@@ -652,17 +665,23 @@ export const StyledChatScroller = styled.div`
   padding: 10px;
 
   @media (max-width: 768px) {
-    padding-bottom: 64px;
-    scroll-padding-bottom: 64px;
+    /* usa siempre la altura del navbar como referencia */
+    padding-top: var(--navbar-height);
+    scroll-padding-top: var(--navbar-height);
+
+    /* deja hueco para el dock fijo + tab inferior */
+    padding-bottom: 120px;
+    scroll-padding-bottom: 120px;
   }
 
   background: rgba(0,0,0,0.2);
   scrollbar-width: thin;
   &::-webkit-scrollbar { width: 8px; }
 
-  /* Suaviza el rebote en móviles y evita saltos raros */
   overscroll-behavior: contain;
 `;
+
+
 
 // === Centro PRE-CALL: “Activar cámara” centrado ===
 export const StyledPreCallCenter = styled.div`
@@ -703,22 +722,28 @@ export const StyledBottomActionsMobile = styled.div`
   @media (min-width: 769px) { display: none; }
 `;
 
-
 export const StyledMobile3ColBar = styled.div`
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 8px;
-
-  /* espacio alrededor */
-  padding: 8px 12px;
-  margin: 8px 12px;
   box-sizing: border-box;
 
-  /* mantiene el ajuste en móvil */
+  /* fija arriba en móvil, exactamente debajo del navbar */
   @media (max-width: 768px) {
-    margin: 8px 10px;
+    position: fixed;
+    top: var(--navbar-height);
+    left: 0;
+    right: 0;
+    z-index: 100;
+    margin: 0;
     padding: 8px 10px;
+    background: var(--c-surface);
+  }
+
+  @media (min-width: 769px) {
+    padding: 8px 12px;
+    margin: 8px 12px;
   }
 `;
 
