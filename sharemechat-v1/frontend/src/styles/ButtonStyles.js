@@ -160,9 +160,11 @@ export const ButtonEnviar = styled(PillButtonBase)`
 `;
 
 /* Regalo (dock chat) */
-export const ButtonRegalo = styled(PillButtonBase)`
+export const ButtonRegalo = styled(IconButtonBase)`
   ${variant('#111', '#ffe066', '#fcc419', '#ffd43b')}
+  width: 36px; height: 36px; min-width: 36px; min-height: 36px; font-size: 14px;
 `;
+
 
 /* Volver (flecha atrás en móvil) */
 export const ButtonVolver = styled(PillButtonBase)`
@@ -224,10 +226,15 @@ export const BtnFavAdd = styled(IconButtonBase)`
 `;
 // videocamara
 export const BtnRoundVideo = styled(IconButtonBase)`
-  ${variant('#fff', '#198754', '#146c43', '#157347')}
-  width: 72px;
-  height: 72px;
-  font-size: 22px;
-  ${shadowLift}
+  ${variant('#fff','#198754','#146c43','#157347')}
+  width:72px;height:72px;font-size:22px;${shadowLift}
 `;
+
+// send
+export const BtnSend = styled(IconButtonBase)`
+  ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
+  width: 36px; height: 36px; min-width: 36px; min-height: 36px; font-size: 14px;
+`;
+
+
 

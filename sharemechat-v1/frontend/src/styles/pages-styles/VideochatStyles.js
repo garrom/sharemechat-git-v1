@@ -70,6 +70,7 @@ export const GlobalBlack = createGlobalStyle`
 
      /* Layout */
      --navbar-height: 52px; /* altura estándar navbar */
+     --bottom-nav-height: 80px;  /* altura estándar tab 3 botones */
 
   }
 
@@ -154,7 +155,6 @@ export const StyledNavTab = styled.button`
     display: none !important;
   }
 `;
-
 
 /* --------------------------------
  * 3. ESTRUCTURA DE CONTENIDO (3 COLUMNAS) ← MODIFICADO
@@ -378,7 +378,22 @@ export const StyledChatDock = styled.div`
     position: fixed;
     left: 0;
     right: 0;
-    bottom: 64px; /* altura del TAB inferior de 3 botones */
+    bottom: var(--bottom-nav-height);
+    box-sizing: border-box;
+    gap: 6px;
+    padding: 8px 10px;
+    height: auto;
+    min-height: 56px;
+
+    input {
+      font-size: 13px;
+    }
+
+    button {
+      padding-inline: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
   }
 `;
 
@@ -419,6 +434,11 @@ export const StyledChatList = styled.div`
   scrollbar-width: none;
   -ms-overflow-style: none;
   &::-webkit-scrollbar { width: 0; height: 0; }
+
+  @media (max-width: 768px) {
+    max-height: 450px;
+    padding-bottom: 72px;
+  }
 `;
 
 export const StyledChatMessageRow = styled.div`
@@ -454,7 +474,7 @@ export const StyledChatControls = styled.div`
 `;
 
 export const StyledChatInput = styled.input`
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid transparent;
@@ -729,7 +749,6 @@ export const StyledMobile3ColBar = styled.div`
   gap: 8px;
   box-sizing: border-box;
 
-  /* fija arriba en móvil, exactamente debajo del navbar */
   @media (max-width: 768px) {
     position: fixed;
     top: var(--navbar-height);
@@ -737,7 +756,8 @@ export const StyledMobile3ColBar = styled.div`
     right: 0;
     z-index: 100;
     margin: 0;
-    padding: 8px 10px;
+    padding: 12px 10px;
+    min-height: 62px;
     background: var(--c-surface);
   }
 
@@ -746,6 +766,7 @@ export const StyledMobile3ColBar = styled.div`
     margin: 8px 12px;
   }
 `;
+
 
 
 export const StyledTopCenter = styled.div`

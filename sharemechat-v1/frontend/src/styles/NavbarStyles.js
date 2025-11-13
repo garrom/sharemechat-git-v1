@@ -7,7 +7,8 @@ export const StyledNavbar = styled.nav`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: ${space.md} ${space.lg};
+  height: var(--navbar-height);
+  padding: 0 ${space.lg};
   background: #1a1a1a; /* Fondo oscuro sólido */
   backdrop-filter: blur(8px);
   box-shadow: ${shadow.card};
@@ -17,12 +18,12 @@ export const StyledNavbar = styled.nav`
   flex-wrap: wrap;
   gap: ${space.sm};
 
-
   @media (max-width: 768px) {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    padding: ${space.sm} ${space.md};
+    height: var(--navbar-height);
+    padding: 0 ${space.md};
     position: sticky;
 
     .desktop-only,
@@ -32,9 +33,10 @@ export const StyledNavbar = styled.nav`
   }
 
   @media (max-width: 640px) {
-    padding: ${space.sm} ${space.md};
+    padding: 0 ${space.md};
   }
 `;
+
 
 
 export const StyledBrand = styled.a`
@@ -110,12 +112,12 @@ export const HamburgerButton = styled.button`
     align-items: center;
     justify-content: center;
 
-    /* fija el botón en la esquina superior derecha del navbar */
-    position: absolute;
-    top: 8px;
-    right: 8px;
+    /* se alinea verticalmente dentro del navbar y se empuja a la derecha */
+    position: static;
+    margin-left: auto;
   }
 `;
+
 
 
 export const MobileMenu = styled.div`
@@ -141,17 +143,20 @@ export const MobileBottomNav = styled.div`
   bottom: 0;
   left: 0;
   right: 0;
+  height: var(--bottom-nav-height);
   background: #1a1a1a;
   border-top: 1px solid #333;
   display: none;
-  padding: ${space.sm} 0;
+  padding: 0;
   z-index: 1000;
 
   @media (max-width: 768px) {
     display: flex;
     justify-content: space-around;
+    align-items: center;
   }
 `;
+
 
 export const BottomNavButton = styled.button`
   background: ${props => props.active ? colors.primary : 'transparent'};

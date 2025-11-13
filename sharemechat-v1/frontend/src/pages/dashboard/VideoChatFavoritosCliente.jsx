@@ -16,7 +16,7 @@ import {
 import {
   ButtonLlamar, ButtonColgar, ButtonAceptar, ButtonRechazar,
   ButtonEnviar, ButtonRegalo, ButtonActivarCam, ButtonActivarCamMobile,
-  ButtonVolver, ActionButton, BtnRoundVideo, BtnHangup
+  ButtonVolver, ActionButton, BtnRoundVideo, BtnHangup,BtnSend
 } from '../../styles/ButtonStyles';
 
 // Este componente solo renderiza la pestaña FAVORITOS (desktop + móvil),
@@ -264,8 +264,8 @@ export default function VideoChatFavoritosCliente(props) {
 
                           <StyledChatDock>
                             <StyledChatInput value={centerInput} onChange={e => setCenterInput(e.target.value)} placeholder={allowChat ? 'Escribe un mensaje…' : 'Chat inactivo'} onKeyDown={e => { if (e.key === 'Enter' && allowChat) sendCenterMessage(); }} disabled={!allowChat} onFocus={() => { setTimeout(() => chatEndRef.current?.scrollIntoView({ block:'end' }), 50); }} />
-                            <ButtonEnviar onClick={sendCenterMessage} disabled={!allowChat}>Enviar</ButtonEnviar>
-                            <ActionButton onClick={() => setShowCenterGifts(s => !s)} title="Enviar regalo" disabled={!allowChat}>Gift</ActionButton>
+                            <BtnSend type="button" onClick={sendCenterMessage} disabled={!allowChat} aria-label="Enviar"><FontAwesomeIcon icon={faPaperPlane} /></BtnSend>
+                            <ButtonRegalo onClick={() => setShowCenterGifts(s => !s)} title="Enviar regalo" disabled={!allowChat}>Gift</ButtonRegalo>
                             {showCenterGifts && allowChat && (
                               <div style={{ position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)', padding:10, borderRadius:8, zIndex:10, border:'1px solid #333' }}>
                                 <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 80px)', gap:8, maxHeight:240, overflowY:'auto' }}>
@@ -280,6 +280,7 @@ export default function VideoChatFavoritosCliente(props) {
                               </div>
                             )}
                           </StyledChatDock>
+
                         </>
                       )}
                     </StyledCenterBody>
@@ -460,7 +461,14 @@ export default function VideoChatFavoritosCliente(props) {
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendCenterMessage(); } }}
                         onFocus={() => setTimeout(() => chatEndRef.current?.scrollIntoView({ block:'end' }), 50)}
                       />
-                      <ActionButton type="button" onClick={sendCenterMessage}>Enviar</ActionButton>
+                        <BtnSend
+                          type="button"
+                          onClick={sendCenterMessage}
+                          aria-label="Enviar"
+                        >
+                          <FontAwesomeIcon icon={faPaperPlane} />
+                        </BtnSend>
+
                       <ButtonRegalo
                         title="Enviar regalo"
                         onClick={() => setShowCenterGifts(s => !s)}
@@ -562,7 +570,7 @@ export default function VideoChatFavoritosCliente(props) {
 
                       <StyledChatDock>
                         <StyledChatInput value={centerInput} onChange={e => setCenterInput(e.target.value)} placeholder={allowChat ? 'Escribe un mensaje…' : 'Chat inactivo'} onKeyDown={e => { if (e.key === 'Enter' && allowChat) sendCenterMessage(); }} disabled={!allowChat} onFocus={() => { setTimeout(() => chatEndRef.current?.scrollIntoView({ block:'end' }), 50); }} />
-                        <ButtonEnviar onClick={sendCenterMessage} disabled={!allowChat}>Enviar</ButtonEnviar>
+                        <BtnSend type="button" onClick={sendCenterMessage} disabled={!allowChat} aria-label="Enviar"><FontAwesomeIcon icon={faPaperPlane} /></BtnSend>
                         <ButtonRegalo onClick={() => setShowCenterGifts(s => !s)} title="Enviar regalo" disabled={!allowChat}>Gift</ButtonRegalo>
                         {showCenterGifts && allowChat && (
                           <div style={{ position:'absolute', bottom:44, right:0, background:'rgba(0,0,0,0.85)', padding:10, borderRadius:8, zIndex:10, border:'1px solid #333' }}>
@@ -578,6 +586,7 @@ export default function VideoChatFavoritosCliente(props) {
                           </div>
                         )}
                       </StyledChatDock>
+
                     </>
                   )}
                 </StyledCenterBody>
