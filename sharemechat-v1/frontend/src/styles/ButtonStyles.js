@@ -112,37 +112,28 @@ export const ActionButton = styled(PillButtonBase)`
 
 /* Activar cámara (texto) */
 export const ButtonActivarCam = styled(PillButtonBase)`
-  ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
+  ${variant(colors.black, colors.white, colors.white, colors.black, colors.white)}
+  font-size: 16px;
+  padding: 14px 22px;
+  ${shadowLift}
 `;
 
-/* Activar cámara (móvil, algo mayor y con sombra) */
+/* Activar cámara móvil*/
 export const ButtonActivarCamMobile = styled(PillButtonBase)`
-  ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
+  ${variant(colors.black, colors.white, colors.white, colors.black, colors.white)}
   font-size: 16px;
-  padding: 12px 16px;
+  padding: 14px 22px;
   ${shadowLift}
 `;
 
 /* Buscar  */
-export const ButtonBuscar = styled.button`
-  padding: 10px 26px;
-  border-radius: ${radius.pill};
-  border: none;
-  font-weight: 700;
-  font-size: 0.95rem;
-  cursor: pointer;
-  background: ${colors.green};
-  color: ${colors.white};
-  box-shadow: 0 0 12px rgba(9, 208, 135, 0.5);
-  min-width: 140px;
-  text-align: center;
-  transition: transform .1s ease, box-shadow .1s ease, background .15s ease;
-
-  &:hover { background: #06c07f; transform: translateY(-1px); box-shadow: 0 0 16px rgba(9, 208, 135, 0.7); }
-  &:active { transform: translateY(0); box-shadow: 0 0 8px rgba(9, 208, 135, 0.4); }
-  &:disabled { opacity: .6; cursor: not-allowed; box-shadow: none; }
+export const ButtonBuscar = styled(PillButtonBase)`
+  ${variant(colors.black, colors.white, colors.white, colors.black, colors.white)}
+  padding: 14px 32px;
+  font-size: 1rem;
+  min-width: 180px;
+  ${shadowLift}
 `;
-
 
 /* Next (mantiene texto) */
 export const ButtonNext = styled(PillButtonBase)`
@@ -252,6 +243,3 @@ export const BtnSend = styled(IconButtonBase)`
   ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
   width: 36px; height: 36px; min-width: 36px; min-height: 36px; font-size: 14px;
 `;
-
-
-

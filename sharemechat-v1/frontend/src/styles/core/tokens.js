@@ -12,8 +12,10 @@ export const colors = {
   border: '#ced4da',
   borderSoft: '#e5e5e5',
   white: '#ffffff',
+  black: '#000000',
+  backsolid:'#1a1a1a',
   error: '#d7263d',
-  green: '#37CC5A',
+  green: '#4CAF50',
   ok: '#2e7d32',
 };
 

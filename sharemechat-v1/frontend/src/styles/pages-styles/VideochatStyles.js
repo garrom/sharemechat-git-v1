@@ -1,4 +1,5 @@
 import styled, { createGlobalStyle } from 'styled-components'
+import { colors } from '../core/tokens'
 
 /* ==================================
  * ÍNDICE
@@ -395,7 +396,13 @@ export const StyledChatDock = styled.div`
       flex-shrink: 0;
     }
   }
+
+  @media (min-width: 769px) {
+    background: transparent;
+    border-top: none;
+  }
 `;
+
 
 
 /* --------------------------------
@@ -487,8 +494,11 @@ export const StyledChatInput = styled.input`
     border-color: #0d6efd55;
     box-shadow: 0 0 0 3px #0d6efd22;
   }
-`;
 
+  @media (min-width: 769px) {
+    max-width: 450px;
+  }
+`;
 
 /* --------------------------------
  * 7. REGALOS (SIN CAMBIOS)
@@ -575,16 +585,24 @@ export const StyledSplit2 = styled.div`
 export const StyledPane = styled.section`
   position: relative;
   background: linear-gradient(180deg, var(--c-surface-3) 0%, #dee4eb 100%);
-  border: 1px solid #bcc6d1;
+  border: 1px ${colors.green};
   border-radius: 10px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
 
   &[data-side="left"] {
+    background: ${colors.backsolid};
+    border: none;
+
     @media (max-width: 768px) {
       display: none;
     }
+  }
+
+  &[data-side="right"] {
+    background: ${colors.backsolid};
+    border: none;
   }
 
   /* En móvil quitamos caja/bordes para ganar área útil */

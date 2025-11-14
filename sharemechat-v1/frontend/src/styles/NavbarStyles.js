@@ -9,7 +9,7 @@ export const StyledNavbar = styled.nav`
   align-items: center;
   height: var(--navbar-height);
   padding: 0 ${space.lg};
-  background: #1a1a1a; /* Fondo oscuro sólido */
+  background:${colors.blacksolid};
   backdrop-filter: blur(8px);
   box-shadow: ${shadow.card};
   position: sticky;
@@ -37,18 +37,17 @@ export const StyledNavbar = styled.nav`
   }
 `;
 
-
-
+//Logotipo
 export const StyledBrand = styled.a`
   display: block;
-  width: 140px;
-  height: 40px;
+  width: 180px;
+  height: 52px;
   background: url('/img/SharemeChat_white.svg') no-repeat center / contain;
   text-indent: -9999px;
 
   @media (max-width: 640px) {
-    width: 120px;
-    height: 36px;
+    width: 180px;
+    height: 52px;
   }
 `;
 
@@ -118,8 +117,6 @@ export const HamburgerButton = styled.button`
   }
 `;
 
-
-
 export const MobileMenu = styled.div`
   position: absolute;
   top: 100%;
@@ -156,7 +153,6 @@ export const MobileBottomNav = styled.div`
     align-items: center;
   }
 `;
-
 
 export const BottomNavButton = styled.button`
   background: ${props => props.active ? colors.primary : 'transparent'};

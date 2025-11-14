@@ -36,7 +36,13 @@ export default function VideoChatRandomCliente(props) {
               ? <div style={{ width:'100%', height:'100%' }} />
               : (
                 <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+                    <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
+                    <StyledHelperLine style={{ color:'#fff', justifyContent:'center' }}>
+                      <FontAwesomeIcon icon={faVideo} />
+                      activar cámara para iniciar videochat
+                    </StyledHelperLine>
+                  </div>
                 </div>
               )
           ) : (
