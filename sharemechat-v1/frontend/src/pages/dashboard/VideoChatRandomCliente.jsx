@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserPlus, faVideo, faPhoneSlash, faForward } from '@fortawesome/free-solid-svg-icons';
+import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat, StyledSplit2, StyledPane, StyledVideoArea,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble,
@@ -12,8 +12,8 @@ import {
 } from '../../styles/pages-styles/VideochatStyles';
 import {
   ButtonActivarCam, ButtonActivarCamMobile, ButtonBuscar,
-  ButtonNext, ButtonAddFavorite, ActionButton,
-  ButtonGiftToggle, BtnHangup
+  ButtonNext, ButtonAddFavorite,
+  ButtonRegalo, BtnSend, BtnHangup
 } from '../../styles/ButtonStyles';
 
 export default function VideoChatRandomCliente(props) {
@@ -226,16 +226,17 @@ export default function VideoChatRandomCliente(props) {
                       </StyledChatContainer>
                     )}
                   </StyledRemoteVideo>
-                  A
-                  {isMobile && (
-                    <StyledFloatingHangup>
-                      <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
-                        <FontAwesomeIcon icon={faPhoneSlash} />
-                      </BtnHangup>
-                    </StyledFloatingHangup>
-                  )}
                 </StyledVideoArea>
               ) : null}
+
+              {isMobile && cameraActive && (
+                <StyledFloatingHangup>
+                  <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
+                    <FontAwesomeIcon icon={faPhoneSlash} />
+                  </BtnHangup>
+                </StyledFloatingHangup>
+              )}
+
             </>
           )}
         </StyledPane>
@@ -251,8 +252,21 @@ export default function VideoChatRandomCliente(props) {
             autoComplete="off"
             onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); } }}
           />
-          <ActionButton type="button" onClick={sendChatMessage}>Enviar</ActionButton>
-          <ButtonGiftToggle type="button" onClick={() => setShowGifts(s => !s)} title="Enviar regalo">Gift</ButtonGiftToggle>
+          <BtnSend
+            type="button"
+            onClick={sendChatMessage}
+            aria-label="Enviar mensaje"
+          >
+            <FontAwesomeIcon icon={faPaperPlane} />
+          </BtnSend>
+          <ButtonRegalo
+            type="button"
+            onClick={() => setShowGifts(s => !s)}
+            title="Enviar regalo"
+            aria-label="Enviar regalo"
+          >
+            <FontAwesomeIcon icon={faGift} />
+          </ButtonRegalo>
           {showGifts && (
             <StyledGiftsPanel>
               <StyledGiftGrid>

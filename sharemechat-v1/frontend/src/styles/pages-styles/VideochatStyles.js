@@ -375,6 +375,12 @@ export const StyledChatDock = styled.div`
   background: var(--c-surface);
   z-index: 100;
 
+  /* DESKTOP: dock transparente */
+  @media (min-width: 769px) {
+    background: transparent;
+    border-top: none;
+  }
+
   @media (max-width: 768px) {
     position: fixed;
     left: 0;
@@ -496,7 +502,7 @@ export const StyledChatInput = styled.input`
   }
 
   @media (min-width: 769px) {
-    max-width: 450px;
+    max-width: 400px;
   }
 `;
 
