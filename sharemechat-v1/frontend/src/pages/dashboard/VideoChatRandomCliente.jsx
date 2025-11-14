@@ -1,21 +1,22 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faStop, faUserPlus } from '@fortawesome/free-solid-svg-icons';
+import { faUserPlus, faVideo, faPhoneSlash, faForward } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat, StyledSplit2, StyledPane, StyledVideoArea,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble,
   StyledChatDock, StyledChatInput,
   StyledGiftsPanel, StyledGiftGrid, StyledGiftIcon, StyledThumbsGrid,
-  StyledRemoteVideo, StyledVideoTitle, StyledTitleAvatar
+  StyledRemoteVideo, StyledVideoTitle, StyledTitleAvatar,
+  StyledPreCallCenter, StyledHelperLine, StyledRandomSearchControls,
+  StyledRandomSearchCol, StyledSearchHint, StyledFloatingHangup
 } from '../../styles/pages-styles/VideochatStyles';
 import {
   ButtonActivarCam, ButtonActivarCamMobile, ButtonBuscar,
-  ButtonStop, ButtonNext, ButtonAddFavorite, ActionButton,
-  ButtonGiftToggle
+  ButtonNext, ButtonAddFavorite, ActionButton,
+  ButtonGiftToggle, BtnHangup
 } from '../../styles/ButtonStyles';
 
 export default function VideoChatRandomCliente(props) {
-  // Usa los props del padre
   const {
     isMobile, cameraActive, remoteStream, localVideoRef, remoteVideoRef,
     vcListRef, messages, modelNickname, giftRenderReady, getGiftIcon,
@@ -28,55 +29,57 @@ export default function VideoChatRandomCliente(props) {
   return (
     <StyledCenterVideochat>
       <StyledSplit2>
-        {/* ---- Pane IZQUIERDO (CTA / PREVIEW LOCAL) ---- */}
+        {/* ---- Pane IZQUIERDO (LOCAL) ---- */}
         <StyledPane data-side="left">
           {!cameraActive ? (
-            <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
-              <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
-            </div>
-          ) : (
-            <>
-              <StyledVideoArea>
-                <div style={{ position:'relative', width:'100%', height:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}>
-                  <video
-                    ref={localVideoRef}
-                    muted
-                    autoPlay
-                    playsInline
-                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-                  />
-                  {!isMobile && remoteStream && (
-                    <StyledChatContainer data-wide="true">
-                      <StyledChatList ref={vcListRef}>
-                        {messages.map((msg, index) => {
-                          const isMe = msg.from === 'me';
-                          const variant = isMe ? 'me' : 'peer';
-                          const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
-                          return (
-                            <StyledChatMessageRow key={index}>
-                              {msg.gift ? (
-                                <StyledChatBubble $variant={variant}>
-                                  <strong>{prefix} :</strong>{' '}
-                                  {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : null; })()}
-                                </StyledChatBubble>
-                              ) : (
-                                <StyledChatBubble $variant={variant}>
-                                  <strong>{prefix} :</strong> {msg.text}
-                                </StyledChatBubble>
-                              )}
-                            </StyledChatMessageRow>
-                          );
-                        })}
-                      </StyledChatList>
-                    </StyledChatContainer>
-                  )}
+            isMobile
+              ? <div style={{ width:'100%', height:'100%' }} />
+              : (
+                <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
                 </div>
-              </StyledVideoArea>
-            </>
+              )
+          ) : (
+            <StyledVideoArea>
+              <div style={{ position:'relative', width:'100%', height:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}>
+                <video
+                  ref={localVideoRef}
+                  muted
+                  autoPlay
+                  playsInline
+                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                />
+                {!isMobile && remoteStream && (
+                  <StyledChatContainer data-wide="true">
+                    <StyledChatList ref={vcListRef}>
+                      {messages.map((msg, index) => {
+                        const isMe = msg.from === 'me';
+                        const variant = isMe ? 'me' : 'peer';
+                        const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
+                        return (
+                          <StyledChatMessageRow key={index}>
+                            {msg.gift ? (
+                              <StyledChatBubble $variant={variant}>
+                                <strong>{prefix} :</strong>{' '}
+                                {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : null; })()}
+                              </StyledChatBubble>
+                            ) : (
+                              <StyledChatBubble $variant={variant}>
+                                <strong>{prefix} :</strong> {msg.text}
+                              </StyledChatBubble>
+                            )}
+                          </StyledChatMessageRow>
+                        );
+                      })}
+                    </StyledChatList>
+                  </StyledChatContainer>
+                )}
+              </div>
+            </StyledVideoArea>
           )}
         </StyledPane>
 
-        {/* ---- PANE DERECHO (REMOTO + OVERLAY + DOCK) ---- */}
+        {/* ---- PANE DERECHO (REMOTO + CTA CÁMARA / CONTROLES) ---- */}
         <StyledPane data-side="right" style={{ position:'relative' }}>
           {!cameraActive ? (
             <>
@@ -90,99 +93,143 @@ export default function VideoChatRandomCliente(props) {
               </StyledThumbsGrid>
 
               {isMobile && (
-                <div style={{ position:'absolute', bottom:12, left:12, right:12, zIndex:5, display:'flex', justifyContent:'center' }}>
-                  <ButtonActivarCamMobile onClick={handleActivateCamera}>Activar cámara</ButtonActivarCamMobile>
-                </div>
+                <StyledPreCallCenter style={{ position:'absolute', top:'70%', left:0, right:0, transform:'translateY(-50%)' }}>
+                  <div>
+                    <ButtonActivarCamMobile onClick={handleActivateCamera}>Activar cámara</ButtonActivarCamMobile>
+                    <StyledHelperLine style={{ color:'#fff' }}>
+                      <FontAwesomeIcon icon={faVideo} />
+                      activar cámara para iniciar videochat
+                    </StyledHelperLine>
+                  </div>
+                </StyledPreCallCenter>
               )}
             </>
           ) : (
             <>
               {/* ====== CONTROLES INFERIORES, CENTRADOS ====== */}
-              {remoteStream ? (
-                // En streaming: NO mostrar "Buscar"; solo Stop / Next / +Favorito
+              {cameraActive && (remoteStream || searching) && (
                 <div style={{ position:'absolute', bottom:12, left:12, right:12, display:'flex', justifyContent:'center', alignItems:'center', gap:8, zIndex:5 }}>
-                  <ButtonStop aria-label="Detener" onClick={stopAll} title="Detener">
-                    <FontAwesomeIcon icon={faStop} />
-                  </ButtonStop>
-                  {!searching && (
+                  {!isMobile && (
+                    <BtnHangup
+                      onClick={stopAll}
+                      title="Colgar"
+                      aria-label="Colgar"
+                      style={{ width:44, height:44, borderRadius:'999px', display:'flex', alignItems:'center', justifyContent:'center', padding:0, background:'#dc3545', color:'#fff', border:'1px solid rgba(255,255,255,0.4)' }}
+                      onMouseEnter={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#dc3545'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background='#dc3545'; e.currentTarget.style.color='#fff'; }}
+                    >
+                      <FontAwesomeIcon icon={faPhoneSlash} />
+                    </BtnHangup>
+                  )}
+
+                  {remoteStream && (
                     <>
-                      <ButtonNext onClick={handleNext}>Next</ButtonNext>
-                      <ButtonAddFavorite aria-label="Añadir a favoritos" onClick={handleAddFavorite} title="Añadir a favoritos">
+                      <ButtonNext
+                        onClick={handleNext}
+                        style={{ width:44, height:44, borderRadius:'999px', display:'flex', alignItems:'center', justifyContent:'center', padding:0, background:'#fff', color:'#000', border:'1px solid rgba(255,255,255,0.4)' }}
+                        onMouseEnter={e => { e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
+                      >
+                        <FontAwesomeIcon icon={faForward} />
+                      </ButtonNext>
+
+                      <ButtonAddFavorite
+                        aria-label="Añadir a favoritos"
+                        onClick={handleAddFavorite}
+                        title="Añadir a favoritos"
+                        style={{ width:44, height:44, borderRadius:'999px', display:'flex', alignItems:'center', justifyContent:'center', padding:0, background:'#fff', color:'#000', border:'1px solid rgba(255,255,255,0.4)' }}
+                        onMouseEnter={e => { e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
+                      >
                         <FontAwesomeIcon icon={faUserPlus} />
                       </ButtonAddFavorite>
                     </>
                   )}
                 </div>
-              ) : (
-                // Sin streaming: Mostrar Buscar / Stop abajo y centrados
-                <div style={{ position:'absolute', bottom:12, left:12, right:12, display:'flex', justifyContent:'center', alignItems:'center', gap:8, zIndex:5 }}>
-                  {!searching ? (
-                    <ButtonBuscar onClick={handleStartMatch}>Buscar</ButtonBuscar>
-                  ) : (
-                    <span style={{ color:'#e9ecef' }}>Buscando...</span>
-                  )}
-                  <ButtonStop aria-label="Detener" onClick={stopAll} title="Detener">
-                    <FontAwesomeIcon icon={faStop} />
-                  </ButtonStop>
-                </div>
+              )}
+
+              {!remoteStream && (
+                // Sin streaming: solo botón Buscar centrado a media altura
+                <StyledRandomSearchControls>
+                  <StyledRandomSearchCol>
+                    {!searching ? (
+                      <>
+                        <ButtonBuscar onClick={handleStartMatch}>Buscar</ButtonBuscar>
+                        <StyledSearchHint>Pulsa “Buscar” para empezar.</StyledSearchHint>
+                      </>
+                    ) : (
+                      <StyledSearchHint>Buscando...</StyledSearchHint>
+                    )}
+                  </StyledRandomSearchCol>
+                </StyledRandomSearchControls>
               )}
 
               {remoteStream ? (
-                <>
-                  <StyledVideoArea>
-                    <StyledRemoteVideo
-                      ref={remoteVideoWrapRef}
-                      style={{ position:'relative', width:'100%', height:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}
-                    >
-                      <StyledVideoTitle>
-                        <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
-                        {modelNickname || 'Modelo'}
-                        <button
-                          type="button"
-                          onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                          title="Pantalla completa"
-                          style={{ marginLeft:8, padding:'2px 8px', borderRadius:6, border:'1px solid rgba(255,255,255,.6)', background:'rgba(0,0,0,.25)', color:'#fff', cursor:'pointer' }}
-                        >Pantalla completa</button>
-                      </StyledVideoTitle>
-                      <video
-                        ref={remoteVideoRef}
-                        style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-                        autoPlay
-                        playsInline
-                        onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                      />
+                <StyledVideoArea>
+                  <StyledRemoteVideo
+                    ref={remoteVideoWrapRef}
+                    style={{ position:'relative', width:'100%', height:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}
+                  >
+                    <StyledVideoTitle>
+                      <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
+                      {modelNickname || 'Modelo'}
+                      <button
+                        type="button"
+                        onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
+                        title="Pantalla completa"
+                        style={{ marginLeft:8, padding:'2px 8px', borderRadius:6, border:'1px solid rgba(255,255,255,.6)', background:'rgba(0,0,0,.25)', color:'#fff', cursor:'pointer' }}
+                      >
+                        Pantalla completa
+                      </button>
+                    </StyledVideoTitle>
 
-                      {isMobile && (
-                        <StyledChatContainer data-wide="true">
-                          <StyledChatList ref={vcListRef}>
-                            {messages.map((msg, index) => {
-                              const isMe = msg.from === 'me';
-                              const variant = isMe ? 'me' : 'peer';
-                              const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
-                              return (
-                                <StyledChatMessageRow key={index}>
-                                  {msg.gift ? (
-                                    <StyledChatBubble $variant={variant}>
-                                      <strong>{prefix} :</strong>{' '}
-                                      {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : null; })()}
-                                    </StyledChatBubble>
-                                  ) : (
-                                    <StyledChatBubble $variant={variant}>
-                                      <strong>{prefix} :</strong> {msg.text}
-                                    </StyledChatBubble>
-                                  )}
-                                </StyledChatMessageRow>
-                              );
-                            })}
-                          </StyledChatList>
-                        </StyledChatContainer>
-                      )}
-                    </StyledRemoteVideo>
-                  </StyledVideoArea>
-                </>
-              ) : (
-                <div style={{ color:'#6c757d' }}>Pulsa “Buscar” para empezar.</div>
-              )}
+                    <video
+                      ref={remoteVideoRef}
+                      style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                      autoPlay
+                      playsInline
+                      onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
+                    />
+
+                    {isMobile && (
+                      <StyledChatContainer data-wide="true">
+                        <StyledChatList ref={vcListRef}>
+                          {messages.map((msg, index) => {
+                            const isMe = msg.from === 'me';
+                            const variant = isMe ? 'me' : 'peer';
+                            const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
+                            return (
+                              <StyledChatMessageRow key={index}>
+                                {msg.gift ? (
+                                  <StyledChatBubble $variant={variant}>
+                                    <strong>{prefix} :</strong>{' '}
+                                    {giftRenderReady && (() => {
+                                      const src = getGiftIcon(msg.gift);
+                                      return src ? (<StyledGiftIcon src={src} alt="" />) : null;
+                                    })()}
+                                  </StyledChatBubble>
+                                ) : (
+                                  <StyledChatBubble $variant={variant}>
+                                    <strong>{prefix} :</strong> {msg.text}
+                                  </StyledChatBubble>
+                                )}
+                              </StyledChatMessageRow>
+                            );
+                          })}
+                        </StyledChatList>
+                      </StyledChatContainer>
+                    )}
+                  </StyledRemoteVideo>
+                  A
+                  {isMobile && (
+                    <StyledFloatingHangup>
+                      <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
+                        <FontAwesomeIcon icon={faPhoneSlash} />
+                      </BtnHangup>
+                    </StyledFloatingHangup>
+                  )}
+                </StyledVideoArea>
+              ) : null}
             </>
           )}
         </StyledPane>

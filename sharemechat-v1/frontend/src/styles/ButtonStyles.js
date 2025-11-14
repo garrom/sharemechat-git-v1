@@ -1,5 +1,7 @@
 // src/styles/ButtonStyles.js
 import styled, { css } from 'styled-components';
+import { colors, radius } from './core/tokens';
+
 
 /* ============================================================
  * ESTRUCTURA
@@ -121,11 +123,26 @@ export const ButtonActivarCamMobile = styled(PillButtonBase)`
   ${shadowLift}
 `;
 
-/* Buscar (Cliente/Modelo) → texto “Buscar” */
-export const ButtonBuscar = styled(PillButtonBase)`
-  ${variant('#fff', '#6f42c1', '#5a32a3', '#643ab0')}
-  /* Alias: para modelo usamos verde si lo prefieres, pero unificamos morado para simplificar estilo */
+/* Buscar  */
+export const ButtonBuscar = styled.button`
+  padding: 10px 26px;
+  border-radius: ${radius.pill};
+  border: none;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  background: ${colors.green};
+  color: ${colors.white};
+  box-shadow: 0 0 12px rgba(9, 208, 135, 0.5);
+  min-width: 140px;
+  text-align: center;
+  transition: transform .1s ease, box-shadow .1s ease, background .15s ease;
+
+  &:hover { background: #06c07f; transform: translateY(-1px); box-shadow: 0 0 16px rgba(9, 208, 135, 0.7); }
+  &:active { transform: translateY(0); box-shadow: 0 0 8px rgba(9, 208, 135, 0.4); }
+  &:disabled { opacity: .6; cursor: not-allowed; box-shadow: none; }
 `;
+
 
 /* Next (mantiene texto) */
 export const ButtonNext = styled(PillButtonBase)`

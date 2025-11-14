@@ -13,6 +13,7 @@ export const colors = {
   borderSoft: '#e5e5e5',
   white: '#ffffff',
   error: '#d7263d',
+  green: '#37CC5A',
   ok: '#2e7d32',
 };
 

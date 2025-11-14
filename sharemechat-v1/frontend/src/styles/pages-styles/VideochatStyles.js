@@ -593,7 +593,35 @@ export const StyledPane = styled.section`
     border: none;
     border-radius: 0;
   }
+`;
 
+export const StyledRandomSearchControls = styled.div`
+  position: absolute;
+  top: 70%;
+  left: 0;
+  right: 0;
+  transform: translateY(-50%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  z-index: 5;
+
+  @media (min-width: 769px) {
+    top: 50%;
+  }
+`;
+
+export const StyledRandomSearchCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+`;
+
+export const StyledSearchHint = styled.div`
+  font-size: 0.85rem;
+  color: #e9ecef;
 `;
 
 export const StyledThumbsGrid = styled.div`
