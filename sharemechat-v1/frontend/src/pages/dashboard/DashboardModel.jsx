@@ -254,7 +254,7 @@ const DashboardModel = () => {
     if (!callPeerId) return;
 
     setOpenChatWith(callPeerId);
-    setCenterChatPeerName(callPeerName || `Usuario ${callPeerId}`);
+    setCenterChatPeerName(callPeerName || 'Usuario');
     openMsgSocket?.();
   }, [contactMode, callPeerId, callPeerName]);
 
@@ -303,7 +303,7 @@ const DashboardModel = () => {
   useEffect(() => {
     if (Number(targetPeerId) > 0) {
       setOpenChatWith(Number(targetPeerId));
-      setCenterChatPeerName(targetPeerName || `Usuario ${targetPeerId}`);
+      setCenterChatPeerName(targetPeerName || 'Usuario');
     } else {
       setOpenChatWith(null);
       setCenterChatPeerName('');
@@ -364,7 +364,7 @@ const DashboardModel = () => {
     // 1) Prioridad: chat central -> favorito seleccionado -> sin target
     if (openChatWith) {
       const id = Number(openChatWith);
-      const name = centerChatPeerName || `Usuario ${id}`;
+      const name = centerChatPeerName || 'Usuario';
       setCallPeerId(id);
       callPeerIdRef.current = id; // REF
       setCallPeerName(name);
@@ -372,7 +372,7 @@ const DashboardModel = () => {
     } else if (selectedFav?.id) {
       const id = Number(selectedFav.id);
       const name =
-        selectedFav?.nickname || selectedFav?.name || selectedFav?.email || `Usuario ${id}`;
+        selectedFav?.nickname || selectedFav?.name || selectedFav?.email || 'Usuario';
       setCallPeerId(id);
       callPeerIdRef.current = id; // REF
       setCallPeerName(name);
@@ -402,7 +402,7 @@ const DashboardModel = () => {
     const id = Number(callPeerId);
     if (!Number.isFinite(id) || id <= 0) return;
 
-    if (callPeerName && callPeerName !== `Usuario ${id}`) return;
+    if (callPeerName) return;
 
     (async () => {
       try {
@@ -410,7 +410,7 @@ const DashboardModel = () => {
         const r = await fetch(`/api/users/${id}`, { headers: { Authorization: `Bearer ${tk}` } });
         if (!r.ok) return;
         const d = await r.json();
-        const nn = d?.nickname || d?.name || d?.email || `Usuario ${id}`;
+        const nn = d?.nickname || d?.name || d?.email || 'Usuario';
         setCallPeerName(nn);
       } catch {/* noop */}
     })();
@@ -443,7 +443,7 @@ const DashboardModel = () => {
     if (Number.isFinite(cId) && cId > 0 && Number(targetPeerId) !== cId) {
       console.log('[CALL][drift][Model] targetPeerId != callPeerId -> forzar target');
       setTargetPeerId(cId);
-      setTargetPeerName(callPeerName || `Usuario ${cId}`);
+      setTargetPeerName(callPeerName || 'Usuario');
     }
   }, [callStatus, callPeerId, callPeerName, targetPeerId]);
 
@@ -674,7 +674,7 @@ const DashboardModel = () => {
         // ==== CALLING ====
         if (data.type === 'call:incoming') {
           const id = Number(data.from);
-          const name = String(data.displayName || `Usuario ${id}`);
+          const name = String(data.displayName || 'Usuario');
           console.log('[CALL][incoming][Model] from=', id, 'name=', name);
 
           // Lock duro del target
@@ -725,7 +725,7 @@ const DashboardModel = () => {
           if (Number.isFinite(peer) && peer > 0) {
             console.log('[CALL][lock] accepted -> keep lock [Model]; peer=', peer);
             setOpenChatWith(peer);
-            setCenterChatPeerName(callPeerName || `Usuario ${peer}`);
+            setCenterChatPeerName(callPeerName || 'Usuario');
           }
 
           const initiator = (callRoleRef.current === 'caller');
@@ -1180,7 +1180,7 @@ const DashboardModel = () => {
     // Sincronizar universo CALL con el target
     setCallPeerId(Number(targetPeerId));
     callPeerIdRef.current = Number(targetPeerId);
-    setCallPeerName(targetPeerName || `Usuario ${targetPeerId}`);
+    setCallPeerName(targetPeerName || 'Usuario');
     setContactMode('call');
     setCallError('');
   };
@@ -1301,7 +1301,7 @@ const DashboardModel = () => {
   const handleOpenChatFromFavorites = (favUser) => {
     const peer = Number(favUser?.id ?? favUser?.userId);
     const name =
-      favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${peer || ''}`;
+      favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
 
     if (!Number.isFinite(peer) || peer <= 0) {
       alert('No se pudo determinar el destinatario correcto.');
@@ -1339,7 +1339,7 @@ const DashboardModel = () => {
     }
     setActiveTab('favoritos');
     setOpenChatWith(peerId);
-    setCenterChatPeerName(displayName || `Usuario ${peerId}`);
+    setCenterChatPeerName(displayName || 'Usuario');
     setCenterMessages([]);
 
     openMsgSocket();
@@ -1400,7 +1400,7 @@ const DashboardModel = () => {
         headers: { Authorization: `Bearer ${tk}` }
       });
       if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
-      const name = selectedFav.nickname || `Usuario ${selectedFav.id}`;
+      const name = selectedFav.nickname || 'Usuario';
       setSelectedFav(prev => prev ? ({ ...prev, invited: 'accepted' }) : prev);
       setFavReload(x => x + 1);
       setOpenChatWith(selectedFav.id);
@@ -1472,10 +1472,10 @@ const DashboardModel = () => {
 
     if (openChatWith) {
       toId = Number(openChatWith);
-      toName = centerChatPeerName || `Usuario ${openChatWith}`;
+      toName = centerChatPeerName || 'Usuario';
     } else if (selectedFav?.id) {
       toId = Number(selectedFav.id);
-      toName = selectedFav?.nickname || selectedFav?.name || selectedFav?.email || `Usuario ${selectedFav.id}`;
+      toName = selectedFav?.nickname || selectedFav?.name || selectedFav?.email || 'Usuario';
     }
 
     if (!Number.isFinite(toId) || toId <= 0) {
@@ -1748,7 +1748,7 @@ const DashboardModel = () => {
     }
 
     const name =
-      favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${peer}`;
+      favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
 
     console.log('[CALL][Model] Target seleccionado desde lista (Calling):', peer, name);
 

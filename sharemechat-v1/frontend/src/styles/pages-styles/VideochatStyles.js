@@ -136,7 +136,7 @@ export const StyledNavTab = styled.button`
   background: var(--c-black);
   color: var(--c-white);
 
-  /* Estilo homogéneo tipo Azar */
+  /* Estilo homogéneo */
   font-family: var(--font-nav);
   font-size: 0.9rem;        /* ~14–15px */
   font-weight: 600;
@@ -418,7 +418,6 @@ export const StyledChatDock = styled.div`
 `;
 
 
-
 /* --------------------------------
  * 6. CHAT OVERLAY EN VIDEO (SIN CAMBIOS)
  * -------------------------------- */
@@ -427,6 +426,7 @@ export const StyledChatContainer = styled.div`
   position: absolute;
   bottom: 10px;
   left: 10px;
+  max-height: 80%;
   width: clamp(300px, 38vw, 560px);
   background: transparent;
   color: var(--c-white);
@@ -724,7 +724,7 @@ export const StyledCenterBody = styled.div`
   flex: 1;
   min-height: 0;
   gap: 8px;
-  overflow: hidden; /* clave: que NO genere scroll propio */
+  overflow: hidden;
 
   @media (max-width: 768px) {
     &[data-call="true"] {
@@ -745,11 +745,8 @@ export const StyledChatScroller = styled.div`
   padding: 10px;
 
   @media (max-width: 768px) {
-    /* usa siempre la altura del navbar como referencia */
     padding-top: var(--navbar-height);
     scroll-padding-top: var(--navbar-height);
-
-    /* deja hueco para el dock fijo + tab inferior */
     padding-bottom: 120px;
     scroll-padding-bottom: 120px;
   }

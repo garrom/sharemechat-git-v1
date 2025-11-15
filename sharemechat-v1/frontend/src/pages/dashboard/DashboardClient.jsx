@@ -241,7 +241,7 @@ const DashboardClient = () => {
     if (!callPeerId) return;
 
     setCenterChatPeerId(callPeerId);
-    setCenterChatPeerName(callPeerName || `Usuario ${callPeerId}`);
+    setCenterChatPeerName(callPeerName || 'Usuario');
   }, [contactMode, callPeerId, callPeerName]);
 
 
@@ -253,7 +253,7 @@ const DashboardClient = () => {
   useEffect(() => {
     if (Number(targetPeerId) > 0) {
       setCenterChatPeerId(Number(targetPeerId));
-      setCenterChatPeerName(targetPeerName || `Usuario ${targetPeerId}`);
+      setCenterChatPeerName(targetPeerName || 'Usuario');
     } else {
       setCenterChatPeerId(null);
       setCenterChatPeerName('');
@@ -329,7 +329,7 @@ const DashboardClient = () => {
     // 1) Prioridad: chat central -> favorito seleccionado -> sin target
     if (centerChatPeerId) {
       const id = Number(centerChatPeerId);
-      const name = centerChatPeerName || `Usuario ${id}`;
+      const name = centerChatPeerName || 'Usuario';
       setCallPeerId(id);
       callPeerIdRef.current = id;
       setCallPeerName(name);
@@ -337,7 +337,7 @@ const DashboardClient = () => {
     } else if (selectedFav?.id) {
       const id = Number(selectedFav.id);
       const name =
-        selectedFav?.nickname || selectedFav?.name || selectedFav?.email || `Usuario ${id}`;
+        selectedFav?.nickname || selectedFav?.name || selectedFav?.email || 'Usuario';
       setCallPeerId(id);
       callPeerIdRef.current = id;
       setCallPeerName(name);
@@ -367,8 +367,8 @@ const DashboardClient = () => {
     const id = Number(callPeerId);
     if (!Number.isFinite(id) || id <= 0) return;
 
-    // Solo refresca si no tenemos un nombre “bonito”
-    if (callPeerName && callPeerName !== `Usuario ${id}`) return;
+    // Si ya tenemos un nombre (nickname/name/email), no volvemos a pedirlo
+    if (callPeerName) return;
 
     (async () => {
       try {
@@ -376,7 +376,7 @@ const DashboardClient = () => {
         const r = await fetch(`/api/users/${id}`, { headers: { Authorization: `Bearer ${tk}` } });
         if (!r.ok) return;
         const d = await r.json();
-        const nn = d?.nickname || d?.name || d?.email || `Usuario ${id}`;
+        const nn = d?.nickname || d?.name || d?.email || 'Usuario';
         setCallPeerName(nn);
       } catch {/* noop */}
     })();
@@ -409,7 +409,7 @@ const DashboardClient = () => {
     if (Number.isFinite(cId) && cId > 0 && Number(targetPeerId) !== cId) {
       console.log('[CALL][drift] targetPeerId != callPeerId -> forzar target');
       setTargetPeerId(cId);
-      setTargetPeerName(callPeerName || `Usuario ${cId}`);
+      setTargetPeerName(callPeerName || 'Usuario');
     }
   }, [callStatus, callPeerId, callPeerName, targetPeerId]);
 
@@ -592,7 +592,7 @@ const DashboardClient = () => {
         // ====== CALLING: EVENTOS call:* ======
         if (data.type === 'call:incoming') {
           const id = Number(data.from);
-          const name = String(data.displayName || `Usuario ${id}`);
+          const name = String(data.displayName || 'Usuario');
           console.log('[CALL][incoming][Client] from=', id, 'name=', name);
 
           // Lock del target
@@ -641,9 +641,9 @@ const DashboardClient = () => {
           const peer = Number(callPeerIdRef.current);
           if (Number.isFinite(peer) && peer > 0) {
             setTargetPeerId(peer);
-            setTargetPeerName(callPeerName || `Usuario ${peer}`);
+            setTargetPeerName(callPeerName || 'Usuario');
             setCenterChatPeerId(peer);
-            setCenterChatPeerName(callPeerName || `Usuario ${peer}`);
+            setCenterChatPeerName(callPeerName || 'Usuario');
           }
 
           const initiator = (callRoleRef.current === 'caller');
@@ -1119,7 +1119,7 @@ const DashboardClient = () => {
     // Sincronizar universo CALL con el target
     setCallPeerId(Number(targetPeerId));
     callPeerIdRef.current = Number(targetPeerId);
-    setCallPeerName(targetPeerName || `Usuario ${targetPeerId}`);
+    setCallPeerName(targetPeerName || 'Usuario');
     setContactMode('call');
     setCallError('');
   };
@@ -1244,9 +1244,9 @@ const DashboardClient = () => {
     }
     setActiveTab('favoritos');
     setCenterChatPeerId(peerId);
-    setCenterChatPeerName(displayName || `Usuario ${peerId}`);
+    setCenterChatPeerName(displayName || 'Usuario');
     setCenterMessages([]);
-    centerSeenIdsRef.current = new Set();  // nuevo
+    centerSeenIdsRef.current = new Set();
     setCenterLoading(true);
     openMsgSocket();
 
@@ -1307,7 +1307,7 @@ const DashboardClient = () => {
 
   const handleOpenChatFromFavorites = (favUser) => {
     const name =
-      favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${favUser?.id || ''}`;
+      favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
 
     const peer = Number(favUser?.id ?? favUser?.userId);
     if (!Number.isFinite(peer) || peer <= 0) {
@@ -1342,7 +1342,7 @@ const DashboardClient = () => {
         headers: { Authorization: `Bearer ${tk}` }
       });
       if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
-      const name = selectedFav.nickname || `Usuario ${selectedFav.id}`;
+      const name = selectedFav.nickname || 'Usuario';
       setSelectedFav(prev => prev ? { ...prev, invited: 'accepted' } : prev);
       setFavReload(x => x + 1);
       openChatWith(selectedFav.id, name);
@@ -1435,7 +1435,7 @@ const DashboardClient = () => {
         selectedFav?.nickname ||
         selectedFav?.name ||
         selectedFav?.email ||
-        `Usuario ${toId}`;
+        'Usuario';
     }
 
     if (!Number.isFinite(toId) || toId <= 0) {
@@ -1711,7 +1711,7 @@ const DashboardClient = () => {
     }
 
     const name =
-      favUser?.nickname || favUser?.name || favUser?.email || `Usuario ${peer}`;
+      favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
 
     console.log('[CALL] Target seleccionado desde lista (Calling):', peer, name);
 
