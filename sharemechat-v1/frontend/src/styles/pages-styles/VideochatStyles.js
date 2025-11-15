@@ -70,8 +70,9 @@ export const GlobalBlack = createGlobalStyle`
     --c-thumb-border: rgba(0,0,0,.12);
 
      /* Layout */
-     --navbar-height: 52px; /* altura estándar navbar */
-     --bottom-nav-height: 80px;  /* altura estándar tab 3 botones */
+     --navbar-height: 52px;           /* altura base / móvil */
+     --navbar-height-desktop: 64px;   /* altura navbar escritorio */
+     --bottom-nav-height: 80px;       /* altura estándar tab 3 botones */
 
   }
 
@@ -129,13 +130,19 @@ export const StyledNavTab = styled.button`
   align-items: center;
   justify-content: center;
   height: 34px;
-  padding: 0 14px;
+  padding: 0 18px;
   border-radius: 999px;
   border: none;
   background: var(--c-black);
   color: var(--c-white);
-  font-size: 14px;
-  font-weight: 700;
+
+  /* Estilo homogéneo tipo Azar */
+  font-family: var(--font-nav);
+  font-size: 0.9rem;        /* ~14–15px */
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
   line-height: 1;
   cursor: pointer;
   transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .06s ease;
@@ -156,6 +163,7 @@ export const StyledNavTab = styled.button`
     display: none !important;
   }
 `;
+
 
 /* --------------------------------
  * 3. ESTRUCTURA DE CONTENIDO (3 COLUMNAS) ← MODIFICADO
@@ -286,8 +294,8 @@ export const StyledFavoritesColumns = styled.div`
 
 
 export const StyledIconWrapper = styled.span`
-  margin-right: 8px;
-  font-size: 18px;
+  margin-left: 8px;
+  font-size: inherit;
 `;
 
 export const StyledIconBtn = styled.button`

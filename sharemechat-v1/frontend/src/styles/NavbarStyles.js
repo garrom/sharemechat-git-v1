@@ -7,7 +7,10 @@ export const StyledNavbar = styled.nav`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  height: var(--navbar-height);
+
+  /* Desktop: navbar más alto */
+  height: var(--navbar-height-desktop);
+
   padding: 0 ${space.lg};
   background:${colors.blacksolid};
   backdrop-filter: blur(8px);
@@ -22,9 +25,12 @@ export const StyledNavbar = styled.nav`
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
+
+    /* Móvil: volvemos a la altura base */
     height: var(--navbar-height);
     padding: 0 ${space.md};
     position: sticky;
+
 
     .desktop-only,
     [data-nav-group] {
@@ -86,14 +92,28 @@ export const QueueText = styled.span`
 `;
 
 export const SaldoText = styled.span`
-  background: ${colors.success};
-  color: white;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding: 4px 12px;
   border-radius: ${radius.full};
+
+  font-family: var(--font-nav);
+  font-size: 0.8rem;
   font-weight: 600;
-  font-size: 0.85rem;
-  &.me-3 { margin-right: 1rem; }
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  border: 1px solid rgba(255,255,255,0.3);
+  color: ${colors.white};
+  background: rgba(0,0,0,0.35);
+
+  &.me-3 {
+    margin-right: 1rem;
+  }
 `;
+
 
 // === HAMBURGUESA ===
 export const HamburgerButton = styled.button`
@@ -160,13 +180,18 @@ export const BottomNavButton = styled.button`
   border: none;
   padding: ${space.md};
   border-radius: ${radius.lg};
-  font-weight: 600;
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  font-size: 0.85rem;
+
+  /* Tipografía homogénea con el navbar */
+  font-family: var(--font-nav);
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 
   &:hover { background: ${colors.primaryHover}; }
 `;

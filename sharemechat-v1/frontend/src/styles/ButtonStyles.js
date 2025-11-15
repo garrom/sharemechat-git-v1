@@ -201,6 +201,16 @@ export const NavButton = styled(PillButtonBase)`
   border: 1px solid rgba(255,255,255,0.2);
   color: #fff;
 
+  /* Estilo homogéneo navbar / tabs */
+  font-family: var(--font-nav);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  padding-inline: 16px;
+  padding-block: 8px;
+
   &:hover {
     background: rgba(255,255,255,0.12);
     border-color: rgba(255,255,255,0.35);
@@ -211,6 +221,7 @@ export const NavButton = styled(PillButtonBase)`
     cursor: not-allowed;
   }
 `;
+
 
 
 /* ========== ICON-ONLY VARIANTS (para cuando quites texto) ========== */
