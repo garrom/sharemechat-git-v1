@@ -163,7 +163,6 @@ export default function VideoChatFavoritosModelo(props) {
                           </StyledRemoteVideo>
 
                           <StyledLocalVideo>
-                            <h5 style={{ color:'white', margin:0, fontSize:12 }}>Tu Cámara</h5>
                             <video ref={callLocalVideoRef} style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} muted autoPlay playsInline />
                           </StyledLocalVideo>
 
@@ -403,7 +402,6 @@ export default function VideoChatFavoritosModelo(props) {
                     </StyledRemoteVideo>
 
                     <StyledLocalVideo>
-                      <h5 style={{ color:'#fff', margin:0, fontSize:12 }}>Tu Cámara</h5>
                       <video ref={callLocalVideoRef} muted autoPlay playsInline style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} />
                     </StyledLocalVideo>
 

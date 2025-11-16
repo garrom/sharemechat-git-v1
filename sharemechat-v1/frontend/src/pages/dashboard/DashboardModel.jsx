@@ -845,19 +845,13 @@ const DashboardModel = () => {
       });
       localStream.current = stream;
       setCameraActive(true);
-
-      const tk = localStorage.getItem('token');
-      if (!tk) {
-        setError('Sesión expirada. Inicia sesión de nuevo.');
-        return;
-      }
-
-      startWebSocketAndWait(tk);
+      setError('');
     } catch (err) {
       console.error('Error al acceder a la cámara:', err);
       setError('No se pudo acceder a la cámara.');
     }
   };
+
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -984,11 +978,20 @@ const DashboardModel = () => {
     setSearching(true);
     setError('');
 
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      setError('Error: No hay conexión con el servidor.');
+    const tk = localStorage.getItem('token');
+    if (!tk) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
       setSearching(false);
       return;
     }
+
+    // Primera vez: no hay socket, lo abrimos aquí
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      startWebSocketAndWait(tk);
+      return;
+    }
+
+    // Si ya hay socket abierto, opcionalmente pedimos otro match
     try {
       socketRef.current.send(JSON.stringify({ type: 'start-match' }));
     } catch (e) {
@@ -996,6 +999,7 @@ const DashboardModel = () => {
       setSearching(false);
     }
   };
+
 
   const handleNext = () => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {

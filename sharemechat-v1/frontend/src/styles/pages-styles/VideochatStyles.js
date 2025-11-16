@@ -334,7 +334,6 @@ export const StyledVideoArea = styled.div`
   }
 `;
 
-
 export const StyledRemoteVideo = styled.div`
   width: 100%;
   height: 100%;
@@ -343,11 +342,12 @@ export const StyledRemoteVideo = styled.div`
 
 export const StyledLocalVideo = styled.div`
   position: absolute;
-  top: 14px;
-  right: 28px;
-  width: 20%;
+  top: 0;
+  right: 0;
+  width: 30%;
   z-index: 2;
 `;
+
 
 export const StyledVideoTitle = styled.h5`
   position: absolute;

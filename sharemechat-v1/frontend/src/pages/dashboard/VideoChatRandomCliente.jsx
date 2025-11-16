@@ -4,7 +4,7 @@ import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faGift } fr
 import {
   StyledCenterVideochat, StyledSplit2, StyledPane, StyledVideoArea,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble,
-  StyledChatDock, StyledChatInput,
+  StyledChatDock, StyledChatInput,StyledLocalVideo,
   StyledGiftsPanel, StyledGiftGrid, StyledGiftIcon, StyledThumbsGrid,
   StyledRemoteVideo, StyledVideoTitle, StyledTitleAvatar,
   StyledPreCallCenter, StyledHelperLine, StyledRandomSearchControls,
@@ -31,59 +31,58 @@ export default function VideoChatRandomCliente(props) {
       <StyledSplit2>
         {/* ---- Pane IZQUIERDO (LOCAL) ---- */}
         <StyledPane data-side="left">
-          {!cameraActive ? (
-            isMobile
-              ? <div style={{ width:'100%', height:'100%' }} />
-              : (
-                <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
-                    <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
-                    <StyledHelperLine style={{ color:'#fff', justifyContent:'center' }}>
-                      <FontAwesomeIcon icon={faVideo} />
-                      activar cámara para iniciar videochat
-                    </StyledHelperLine>
-                  </div>
+          {!isMobile && (
+            !cameraActive ? (
+              <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+                  <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
+                  <StyledHelperLine style={{ color:'#fff', justifyContent:'center' }}>
+                    <FontAwesomeIcon icon={faVideo} />
+                    activar cámara para iniciar videochat
+                  </StyledHelperLine>
                 </div>
-              )
-          ) : (
-            <StyledVideoArea>
-              <div style={{ position:'relative', width:'100%', height:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}>
-                <video
-                  ref={localVideoRef}
-                  muted
-                  autoPlay
-                  playsInline
-                  style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-                />
-                {!isMobile && remoteStream && (
-                  <StyledChatContainer data-wide="true">
-                    <StyledChatList ref={vcListRef}>
-                      {messages.map((msg, index) => {
-                        const isMe = msg.from === 'me';
-                        const variant = isMe ? 'me' : 'peer';
-                        const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
-                        return (
-                          <StyledChatMessageRow key={index}>
-                            {msg.gift ? (
-                              <StyledChatBubble $variant={variant}>
-                                <strong>{prefix} :</strong>{' '}
-                                {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : null; })()}
-                              </StyledChatBubble>
-                            ) : (
-                              <StyledChatBubble $variant={variant}>
-                                <strong>{prefix} :</strong> {msg.text}
-                              </StyledChatBubble>
-                            )}
-                          </StyledChatMessageRow>
-                        );
-                      })}
-                    </StyledChatList>
-                  </StyledChatContainer>
-                )}
               </div>
-            </StyledVideoArea>
+            ) : (
+              <StyledVideoArea>
+                <div style={{ position:'relative', width:'100%', height:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}>
+                  <video
+                    ref={localVideoRef}
+                    muted
+                    autoPlay
+                    playsInline
+                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                  />
+                  {!isMobile && remoteStream && (
+                    <StyledChatContainer data-wide="true">
+                      <StyledChatList ref={vcListRef}>
+                        {messages.map((msg, index) => {
+                          const isMe = msg.from === 'me';
+                          const variant = isMe ? 'me' : 'peer';
+                          const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
+                          return (
+                            <StyledChatMessageRow key={index}>
+                              {msg.gift ? (
+                                <StyledChatBubble $variant={variant}>
+                                  <strong>{prefix} :</strong>{' '}
+                                  {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : null; })()}
+                                </StyledChatBubble>
+                              ) : (
+                                <StyledChatBubble $variant={variant}>
+                                  <strong>{prefix} :</strong> {msg.text}
+                                </StyledChatBubble>
+                              )}
+                            </StyledChatMessageRow>
+                          );
+                        })}
+                      </StyledChatList>
+                    </StyledChatContainer>
+                  )}
+                </div>
+              </StyledVideoArea>
+            )
           )}
         </StyledPane>
+
 
         {/* ---- PANE DERECHO (REMOTO + CTA CÁMARA / CONTROLES) ---- */}
         <StyledPane data-side="right" style={{ position:'relative' }}>
@@ -229,12 +228,40 @@ export default function VideoChatRandomCliente(props) {
                 </StyledVideoArea>
               ) : null}
 
+              {/* PiP móvil: cámara local SIEMPRE que haya cámara activa, haya o no remoto */}
               {isMobile && cameraActive && (
-                <StyledFloatingHangup>
+                <StyledLocalVideo>
+                  <video
+                    ref={localVideoRef}
+                    muted
+                    autoPlay
+                    playsInline
+                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                  />
+                </StyledLocalVideo>
+              )}
+              {isMobile && cameraActive && (
+                <div style={{position:'absolute',left:0,right:0,bottom:'72px',zIndex:8,display:'flex',justifyContent:'center',alignItems:'center',gap:'12px'}}>
                   <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
-                    <FontAwesomeIcon icon={faPhoneSlash} />
+                    <FontAwesomeIcon icon={faPhoneSlash}/>
                   </BtnHangup>
-                </StyledFloatingHangup>
+                  {remoteStream && (
+                    <>
+                      <ButtonNext
+                        onClick={handleNext}
+                        style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                      >
+                        <FontAwesomeIcon icon={faForward}/>
+                      </ButtonNext>
+                      <ButtonAddFavorite
+                        onClick={handleAddFavorite}
+                        style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                      >
+                        <FontAwesomeIcon icon={faUserPlus}/>
+                      </ButtonAddFavorite>
+                    </>
+                  )}
+                </div>
               )}
 
             </>

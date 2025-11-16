@@ -6,7 +6,7 @@ import {
   StyledCenterVideochat, StyledSplit2, StyledPane, StyledVideoArea,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble,
   StyledChatDock, StyledChatInput,
-  StyledGiftIcon, StyledThumbsGrid,
+  StyledGiftIcon, StyledThumbsGrid, StyledLocalVideo,
   StyledRemoteVideo, StyledVideoTitle, StyledTitleAvatar,
   StyledPreCallCenter, StyledHelperLine, StyledRandomSearchControls,
   StyledRandomSearchCol, StyledSearchHint, StyledFloatingHangup
@@ -238,14 +238,48 @@ export default function VideoChatRandomModelo(props) {
                 </StyledVideoArea>
               ) : null}
 
+              {/* PiP móvil: cámara local encima del remoto */}
+              {isMobile && cameraActive && (
+                <StyledLocalVideo>
+                  <video
+                    ref={localVideoRef}
+                    muted
+                    autoPlay
+                    playsInline
+                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
+                  />
+                </StyledLocalVideo>
+              )}
+
               {/* Botón colgar flotante en MÓVIL mientras la cámara esté activa */}
               {isMobile && cameraActive && (
-                <StyledFloatingHangup>
+                <div style={{position:'absolute',left:0,right:0,bottom:'72px',zIndex:8,display:'flex',justifyContent:'center',alignItems:'center',gap:'12px'}}>
                   <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
-                    <FontAwesomeIcon icon={faPhoneSlash} />
+                    <FontAwesomeIcon icon={faPhoneSlash}/>
                   </BtnHangup>
-                </StyledFloatingHangup>
+                  {remoteStream && (
+                    <>
+                      <ButtonNext
+                        onClick={handleNext}
+                        style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                      >
+                        <FontAwesomeIcon icon={faForward}/>
+                      </ButtonNext>
+                      {currentClientId && (
+                        <ButtonAddFavorite
+                          aria-label="Añadir a favoritos"
+                          onClick={handleAddFavorite}
+                          title="Añadir a favoritos"
+                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                        >
+                          <FontAwesomeIcon icon={faUserPlus}/>
+                        </ButtonAddFavorite>
+                      )}
+                    </>
+                  )}
+                </div>
               )}
+
             </>
           )}
         </StyledPane>
