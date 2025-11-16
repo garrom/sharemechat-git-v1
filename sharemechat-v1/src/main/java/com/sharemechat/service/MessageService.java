@@ -6,6 +6,7 @@ import com.sharemechat.entity.Message;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.MessageRepository;
 import com.sharemechat.repository.UserRepository;
+import org.springframework.data.domain.Sort;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -122,11 +123,12 @@ public class MessageService {
         return messageRepository.markRead(me, withUser);
     }
 
-    // Listado de conversaciones (último + no leídos). MVP: lo resolvemos por agregación in-memory.
+    // Carga los 200 mensajes más recientes y calcula las conversaciones y no leídos por usuario.
     @Transactional(readOnly = true)
     public List<ConversationSummaryDTO> conversations(Long me) {
-        // Cargar últimas N páginas con heurística simple (para MVP).
-        var page = PageRequest.of(0, 200);
+        // Cargar los 200 mensajes más recientes (por fecha/id descendente)
+        var page = PageRequest.of(0, 200,
+                Sort.by(Sort.Direction.DESC, "createdAt", "id"));
         List<Message> recent = messageRepository.findAll(page).getContent();
 
         Map<String, List<Message>> byConv = new HashMap<>();
@@ -152,4 +154,5 @@ public class MessageService {
         out.sort(Comparator.comparing(ConversationSummaryDTO::lastAt).reversed());
         return out;
     }
+
 }

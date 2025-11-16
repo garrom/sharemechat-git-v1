@@ -7,7 +7,7 @@ import {
 } from '../../styles/pages-styles/FavoritesStyles';
 import StatusBadge from '../../widgets/StatusBadge';
 
-function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selected = false }) {
+function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selected = false, hasUnread = false }) {
   const placeholder = '/img/avatarChico.png';
   const [imgSrc, setImgSrc] = useState(placeholder);
 
@@ -62,6 +62,20 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selec
         )}
       </Badges>
 
+      {hasUnread && (
+        <div
+          style={{
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: '#0d6efd',
+            marginRight: 6,
+          }}
+          aria-label="Tienes mensajes sin leer"
+          title="Tienes mensajes sin leer"
+        />
+      )}
+
       {/* Botón menú (tres puntos) */}
       <button
         type="button"
@@ -109,8 +123,10 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
   const [items, setItems] = useState([]);
   const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);
+  const [unreadMap, setUnreadMap] = useState({});
   const token = localStorage.getItem('token');
 
+  // 1) Cargar favoritos + presencia
   useEffect(() => {
     let ignore = false;
     const load = async () => {
@@ -148,6 +164,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     return () => { ignore = true; };
   }, [token, reloadTrigger]);
 
+  // 2) Cargar avatares
   useEffect(() => {
     let ignore = false;
     const run = async () => {
@@ -168,6 +185,45 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     run();
     return () => { ignore = true; };
   }, [items, token]);
+
+  // 3) Cargar resumen de conversaciones
+  useEffect(() => {
+    let ignore = false;
+
+    const loadUnread = async () => {
+      if (!token) return;
+      try {
+        const res = await fetch('/api/messages/conversations', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (ignore) return;
+
+        console.log('[favorites-model] conversations:', data);
+
+        const map = {};
+        (data || []).forEach(conv => {
+          const peerId = Number(conv.peer ?? conv.peerId);
+          const unread = Number(conv.unreadCount ?? conv.unread_count ?? 0);
+          if (Number.isFinite(peerId) && unread > 0) {
+            map[peerId] = true;
+          }
+        });
+
+        console.log('[favorites-model] unreadMap built:', map);
+        setUnreadMap(map);
+      } catch (e) {
+        console.warn('[favorites-model] unread load error:', e?.message);
+        if (!ignore) setUnreadMap({});
+      }
+    };
+
+    loadUnread();
+    return () => { ignore = true; };
+  }, [token, reloadTrigger]);
+
 
   if (loading) return <StateRow>Cargando…</StateRow>;
   if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;
@@ -210,6 +266,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
           onRemove={handleRemove}
           onContextMenu={onContextMenu}
           selected={Number(u.id) === Number(selectedId)}
+          hasUnread={!!unreadMap[u.id]}
         />
       ))}
     </List>

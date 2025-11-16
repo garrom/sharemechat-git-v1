@@ -1274,7 +1274,14 @@ const DashboardClient = () => {
             method: 'POST',
             headers: { Authorization: `Bearer ${tk}` }
           });
+          // Notificar a la lista de favoritos que esta conversación ya está leída
+          try {
+            window.dispatchEvent(new CustomEvent('chat-read', {
+              detail: { peerId: Number(peerId) }
+            }));
+          } catch {/* noop */}
         } catch {}
+
       }
     } catch (e) {
       console.warn('Historial chat error:', e?.message);
