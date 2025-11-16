@@ -269,7 +269,18 @@ export default function FavoritesClientList({
           key={u.id}
           user={u}
           avatarUrl={avatarMap?.[u.id] || null}
-          onSelect={onSelect}
+          onSelect={(user) => {
+            // 1) Quitar el punto azul en UI
+            setUnreadMap((prev) => {
+              if (!prev || !prev[user.id]) return prev; // nada que cambiar
+              const next = { ...prev };
+              delete next[user.id];
+              return next;
+            });
+
+            // 2) Mantener el comportamiento original
+            onSelect?.(user);
+          }}
           onRemove={handleRemove}
           onContextMenu={onContextMenu}
           selected={Number(u.id) === Number(selectedId)}
@@ -278,4 +289,5 @@ export default function FavoritesClientList({
       ))}
     </List>
   );
+
 }

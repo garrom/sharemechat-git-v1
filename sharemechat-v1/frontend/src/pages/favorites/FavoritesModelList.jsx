@@ -262,7 +262,16 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
           key={u.id}
           user={u}
           avatarUrl={avatarMap?.[u.id] || null}
-          onSelect={onSelect}
+          onSelect={(user) => {
+            setUnreadMap((prev) => {
+              if (!prev || !prev[user.id]) return prev;
+              const next = { ...prev };
+              delete next[user.id];
+              return next;
+            });
+
+            onSelect?.(user);
+          }}
           onRemove={handleRemove}
           onContextMenu={onContextMenu}
           selected={Number(u.id) === Number(selectedId)}
@@ -271,4 +280,5 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
       ))}
     </List>
   );
+
 }
