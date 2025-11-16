@@ -298,7 +298,7 @@ export default function VideoChatFavoritosCliente(props) {
                       {/* Desktop Favoritos chat normal */}
                       {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                         <StyledChatWhatsApp>
-                          <StyledChatScroller ref={centerListRef}>
+                          <StyledChatScroller ref={centerListRef} data-bg="whatsapp">
                             {centerLoading && <div style={{ color:'#adb5bd' }}>Cargando historial…</div>}
                             {!centerLoading && centerMessages.length === 0 && (
                               <div style={{ color:'#adb5bd' }}>
@@ -317,7 +317,7 @@ export default function VideoChatFavoritosCliente(props) {
                               const variant = isMe ? 'me' : 'peer';
 
                               return (
-                                <StyledChatMessageRow key={m.id}>
+                                <StyledChatMessageRow key={m.id} style={{ justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                                   <StyledChatBubble $variant={variant}>
                                     {giftData ? (
                                       giftRenderReady && (() => {
@@ -624,7 +624,7 @@ export default function VideoChatFavoritosCliente(props) {
 
                   {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                     <StyledChatWhatsApp>
-                      <StyledChatScroller ref={centerListRef}>
+                      <StyledChatScroller ref={centerListRef} data-bg="whatsapp">
                         {centerLoading && <div style={{ color:'#adb5bd' }}>Cargando historial…</div>}
                         {!centerLoading && centerMessages.length === 0 && (
                           <div style={{ color:'#adb5bd' }}>
@@ -643,7 +643,7 @@ export default function VideoChatFavoritosCliente(props) {
                           const variant = isMe ? 'me' : 'peer';
 
                           return (
-                            <StyledChatMessageRow key={m.id}>
+                            <StyledChatMessageRow key={m.id} style={{ justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
                               <StyledChatBubble $variant={variant}>
                                 {giftData ? (
                                   giftRenderReady && (() => {

@@ -1,10 +1,11 @@
 //FavoritesModelList.jsx
 import React, { useEffect, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
 import {
-  List, StateRow, ItemCard, Avatar, Info, Name, Badges,DotWrap,StatusDot
+  List, StateRow, ItemCard, Avatar, Info, Name, Badges, DotWrap, StatusDot
 } from '../../styles/pages-styles/FavoritesStyles';
 import StatusBadge from '../../widgets/StatusBadge';
-
 
 function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selected = false }) {
   const placeholder = '/img/avatarChico.png';
@@ -25,21 +26,13 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selec
     presence
   });
 
-
   return (
     <ItemCard
       $clickable
+      data-fav-card="true"
       data-selected={selected ? 'true' : 'false'}
       aria-selected={selected ? 'true' : 'false'}
       onClick={() => onSelect?.(user)}
-      onContextMenu={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const inv = String(user?.invited || '').toLowerCase();
-        if (inv === 'pending' || inv === 'sent') return; // no abrir menú si no se puede borrar
-        onContextMenu?.(user, { x: e.clientX, y: e.clientY });
-      }}
-
       style={selected ? { background: '#e7f1ff', borderColor: '#b6d4fe' } : undefined}
     >
       <DotWrap>
@@ -53,12 +46,12 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selec
           className={presence === 'busy' ? 'busy' : (presence === 'online' ? 'online' : 'offline')}
           aria-label={presence}
         />
-
       </DotWrap>
 
       <Info>
         <Name>{user.nickname || `Usuario #${user.id}`}</Name>
       </Info>
+
       <Badges>
         {invited !== 'accepted' && (
           <StatusBadge
@@ -69,11 +62,50 @@ function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selec
         )}
       </Badges>
 
+      {/* Botón menú (tres puntos) */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          const inv = invited;
+          if (inv === 'pending' || inv === 'sent') return;
+
+          const cardEl = e.currentTarget.closest('[data-fav-card]');
+          const rect = cardEl ? cardEl.getBoundingClientRect() : e.currentTarget.getBoundingClientRect();
+
+          const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+          const menuWidth = 220;
+          let x = rect.left;
+          if (x + menuWidth > vw - 8) {
+            x = vw - menuWidth - 8;
+          }
+
+          const y = rect.bottom + 4;
+
+          if (onContextMenu) {
+            onContextMenu(user, { x, y });
+          }
+        }}
+        style={{
+          background: 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '4px 6px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+        aria-label="Opciones"
+        title="Opciones"
+      >
+        <FontAwesomeIcon icon={faEllipsisVertical} />
+      </button>
+
     </ItemCard>
   );
 }
 
-export default function FavoritesModelList({ onSelect, reloadTrigger = 0, selectedId = null, onContextMenu  }) {
+export default function FavoritesModelList({ onSelect, reloadTrigger = 0, selectedId = null, onContextMenu }) {
   const [items, setItems] = useState([]);
   const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);
@@ -104,7 +136,6 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
           });
           const filtered = mapped.filter(item => String(item.invited || '').toLowerCase() !== 'rejected');
           setItems(filtered);
-
         }
       } catch (e) {
         console.warn('[favorites-model] load error:', e?.message);
@@ -142,7 +173,6 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
   if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;
 
   const handleRemove = async (user) => {
-
     const inv = String(user?.invited || '').toLowerCase();
     if (inv === 'pending' || inv === 'sent') {
       alert('No puedes eliminar favoritos mientras la solicitud está en proceso.');
@@ -164,8 +194,6 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
       }
       // actualización optimista
       setItems(prev => prev.filter(i => Number(i.id) !== Number(user.id)));
-      // opcional: feedback
-      // alert('Eliminado de favoritos.');
     } catch (e) {
       alert(e.message || 'No se pudo eliminar de favoritos.');
     }
@@ -186,6 +214,4 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
       ))}
     </List>
   );
-
-
 }

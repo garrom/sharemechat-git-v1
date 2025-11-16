@@ -2028,21 +2028,21 @@ const DashboardModel = () => {
           active={activeTab === 'videochat'}
           onClick={() => setActiveTab('videochat')}
         >
-          <span>Video</span> Videochat
+          <span>Videochat</span>
         </BottomNavButton>
 
         <BottomNavButton
           active={activeTab === 'favoritos'}
           onClick={handleGoFavorites}
         >
-          <span>Heart</span> Favoritos
+          <span>Favoritos</span>
         </BottomNavButton>
 
         <BottomNavButton
           active={activeTab === 'funnyplace'}
           onClick={handleGoFunnyplace}
         >
-          <span>Laugh</span> Funnyplace
+          <span>Funnyplace</span>
         </BottomNavButton>
       </MobileBottomNav>
 
