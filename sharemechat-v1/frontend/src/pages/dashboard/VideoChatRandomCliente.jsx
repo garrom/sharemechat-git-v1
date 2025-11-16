@@ -58,17 +58,18 @@ export default function VideoChatRandomCliente(props) {
                         {messages.map((msg, index) => {
                           const isMe = msg.from === 'me';
                           const variant = isMe ? 'me' : 'peer';
-                          const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
                           return (
                             <StyledChatMessageRow key={index}>
                               {msg.gift ? (
                                 <StyledChatBubble $variant={variant}>
-                                  <strong>{prefix} :</strong>{' '}
-                                  {giftRenderReady && (() => { const src = getGiftIcon(msg.gift); return src ? (<StyledGiftIcon src={src} alt="" />) : null; })()}
+                                  {giftRenderReady && (() => {
+                                    const src = getGiftIcon(msg.gift);
+                                    return src ? (<StyledGiftIcon src={src} alt="" />) : null;
+                                  })()}
                                 </StyledChatBubble>
                               ) : (
                                 <StyledChatBubble $variant={variant}>
-                                  <strong>{prefix} :</strong> {msg.text}
+                                  {msg.text}
                                 </StyledChatBubble>
                               )}
                             </StyledChatMessageRow>
@@ -202,12 +203,10 @@ export default function VideoChatRandomCliente(props) {
                           {messages.map((msg, index) => {
                             const isMe = msg.from === 'me';
                             const variant = isMe ? 'me' : 'peer';
-                            const prefix = isMe ? 'me' : (modelNickname || 'Modelo');
                             return (
                               <StyledChatMessageRow key={index}>
                                 {msg.gift ? (
                                   <StyledChatBubble $variant={variant}>
-                                    <strong>{prefix} :</strong>{' '}
                                     {giftRenderReady && (() => {
                                       const src = getGiftIcon(msg.gift);
                                       return src ? (<StyledGiftIcon src={src} alt="" />) : null;
@@ -215,7 +214,7 @@ export default function VideoChatRandomCliente(props) {
                                   </StyledChatBubble>
                                 ) : (
                                   <StyledChatBubble $variant={variant}>
-                                    <strong>{prefix} :</strong> {msg.text}
+                                    {msg.text}
                                   </StyledChatBubble>
                                 )}
                               </StyledChatMessageRow>

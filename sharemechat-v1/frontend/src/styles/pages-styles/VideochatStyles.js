@@ -424,24 +424,29 @@ export const StyledChatDock = styled.div`
 
 export const StyledChatContainer = styled.div`
   position: absolute;
-  bottom: 10px;
-  left: 10px;
-  max-height: 80%;
-  width: clamp(300px, 38vw, 560px);
-  background: transparent;
-  color: var(--c-white);
+  inset: 0;
   padding: 12px;
-  border-radius: 8px;
-  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  pointer-events: none;
 
-  @media (max-width: 1024px) { width: clamp(280px, 46vw, 520px); }
-  @media (max-width: 768px) { left: 8px; right: 8px; width: auto; }
-
-  &[data-wide="true"] {
-    left: 0; right: 0; bottom: 0; width: auto;
-    padding: 8px 10px; border-radius: 0; box-shadow: none;
+  &[data-wide='true'] {
+    pointer-events: auto;
   }
 `;
+
+export const StyledChatWhatsApp = styled.div`
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background-color: #ece5dd;
+  background-image:
+    radial-gradient(circle at 0 0, rgba(0,0,0,0.03) 0, rgba(0,0,0,0.03) 2px, transparent 2px),
+    radial-gradient(circle at 10px 10px, rgba(0,0,0,0.03) 0, rgba(0,0,0,0.03) 2px, transparent 2px);
+  background-size: 20px 20px;
+`;
+
 
 export const StyledChatList = styled.div`
   max-height: 260px;
@@ -472,20 +477,17 @@ export const StyledChatBubble = styled.span`
   display: inline-block;
   padding: 6px 10px;
   border-radius: 10px;
-  background: var(--c-white);
-  color: ${p => (p.$variant === 'me' ? 'var(--c-me-text)' : 'var(--c-peer-text)')};
-  border: 1px solid ${p => (p.$variant === 'me' ? 'var(--c-me-border)' : 'var(--c-peer-border)')};
-
-  font-family: var(--app-font, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji");
   max-width: 80%;
-  line-height: 1.35;
+  line-height: 1.4;
+  font-family: var(--app-font, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji");
 
-  & > strong {
-    margin-right: 6px;
-    opacity: .9;
-    font-weight: 600;
-  }
+  /* WhatsApp-like */
+  background: ${p => (p.$variant === 'me' ? '#dcf8c6' : '#ffffff')}; /* verde suave / blanco */
+  color: #111;
+  border: none;
+  box-shadow: 0 1px 1px rgba(0,0,0,0.12);
 `;
+
 
 export const StyledChatControls = styled.div`
   display: flex;
@@ -751,14 +753,12 @@ export const StyledChatScroller = styled.div`
     scroll-padding-bottom: 120px;
   }
 
-  background: rgba(0,0,0,0.2);
+  background: #ece5dd; /* fondo tipo WhatsApp */
   scrollbar-width: thin;
   &::-webkit-scrollbar { width: 8px; }
 
   overscroll-behavior: contain;
 `;
-
-
 
 // === Centro PRE-CALL: “Activar cámara” centrado ===
 export const StyledPreCallCenter = styled.div`

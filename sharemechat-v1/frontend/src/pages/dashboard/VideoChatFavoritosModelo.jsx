@@ -8,7 +8,7 @@ import {
   StyledFavoritesShell, StyledFavoritesColumns, StyledCenterPanel,
   StyledCenterBody, StyledChatScroller, StyledChatDock, StyledChatInput,
   StyledVideoArea, StyledRemoteVideo, StyledVideoTitle,
-  StyledTitleAvatar, StyledLocalVideo, StyledTopActions,
+  StyledTitleAvatar, StyledLocalVideo, StyledTopActions,StyledChatWhatsApp,
   StyledChatContainer, StyledChatList, StyledChatMessageRow, StyledChatBubble,
   StyledPreCallCenter, StyledHelperLine, StyledBottomActionsMobile,
   StyledMobile3ColBar, StyledTopCenter, StyledConnectedText, StyledFloatingHangup
@@ -132,14 +132,15 @@ export default function VideoChatFavoritosModelo(props) {
                             </div>
                           )}
 
-                          {(callStatus === 'ringing' || callStatus === 'in-call' || callStatus === 'connecting') && (
+                          {(callStatus === 'ringing' || callStatus === 'connecting') && (
                             <ButtonColgar onClick={() => handleCallEnd(false)} title="Colgar" aria-label="Colgar">
                               <FontAwesomeIcon icon={faPhoneSlash} />
                             </ButtonColgar>
                           )}
+
                         </StyledTopActions>
 
-                        <StyledVideoArea style={{ display: callStatus === 'in-call' ? 'block' : 'none' }}>
+                        <StyledVideoArea style={{ display: callStatus === 'in-call' ? 'block' : 'none', position:'relative' }}>
                           <StyledRemoteVideo ref={callRemoteWrapRef}>
                             <StyledVideoTitle>
                               <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
@@ -161,10 +162,31 @@ export default function VideoChatFavoritosModelo(props) {
                               onDoubleClick={() => toggleFullscreen(callRemoteWrapRef.current)}
                             />
                           </StyledRemoteVideo>
-
                           <StyledLocalVideo>
                             <video ref={callLocalVideoRef} style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} muted autoPlay playsInline />
                           </StyledLocalVideo>
+
+                          {callStatus === 'in-call' && (
+                            <div
+                              style={{
+                                position:'absolute',
+                                left:0,
+                                right:0,
+                                bottom:16,
+                                display:'flex',
+                                justifyContent:'center',
+                                zIndex:10,
+                              }}
+                            >
+                              <BtnHangup
+                                onClick={() => handleCallEnd(false)}
+                                title="Colgar"
+                                aria-label="Colgar"
+                              >
+                                <FontAwesomeIcon icon={faPhoneSlash} />
+                              </BtnHangup>
+                            </div>
+                          )}
 
                           <StyledChatContainer data-wide="true" style={{ maxHeight:'70vh' }}>
                             <StyledChatList ref={callListRef}>
@@ -175,11 +197,10 @@ export default function VideoChatFavoritosModelo(props) {
                                 }
                                 const isMe = Number(m.senderId) === Number(user?.id);
                                 const variant = isMe ? 'peer' : 'me'; // modelo=rosa, cliente=azul
-                                const prefix = isMe ? 'me' : (callPeerName || 'Usuario');
+
                                 return (
                                   <StyledChatMessageRow key={m.id}>
                                     <StyledChatBubble $variant={variant}>
-                                      <strong>{prefix} :</strong>{' '}
                                       {giftData
                                         ? (giftRenderReady && (() => {
                                           const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
@@ -192,6 +213,7 @@ export default function VideoChatFavoritosModelo(props) {
                               })}
                             </StyledChatList>
                           </StyledChatContainer>
+
                         </StyledVideoArea>
 
                         <StyledChatDock style={{ display: callStatus === 'in-call' ? 'flex' : 'none' }}>
@@ -225,7 +247,7 @@ export default function VideoChatFavoritosModelo(props) {
 
                     {/* Desktop Favoritos chat (MODELO, sin gift button) */}
                     {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
-                      <>
+                      <StyledChatWhatsApp>
                         <StyledChatScroller ref={modelCenterListRef}>
                           {centerMessages.length === 0 && (
                             <div style={{ color:'#adb5bd' }}>
@@ -239,22 +261,17 @@ export default function VideoChatFavoritosModelo(props) {
                             }
                             const isMe = Number(m.senderId) === Number(user?.id);
                             const variant = isMe ? 'me' : 'peer';
-                            const prefix = isMe ? 'me' : (centerChatPeerName || 'Usuario');
+
                             return (
                               <StyledChatMessageRow key={m.id}>
                                 <StyledChatBubble $variant={variant}>
                                   {giftData ? (
-                                    <>
-                                      <strong>{prefix} :</strong>{' '}
-                                      {giftRenderReady && (() => {
-                                        const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
-                                        return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
-                                      })()}
-                                    </>
+                                    giftRenderReady && (() => {
+                                      const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
+                                      return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
+                                    })()
                                   ) : (
-                                    <>
-                                      <strong>{prefix} :</strong> {m.body}
-                                    </>
+                                    m.body
                                   )}
                                 </StyledChatBubble>
                               </StyledChatMessageRow>
@@ -274,8 +291,9 @@ export default function VideoChatFavoritosModelo(props) {
                             <FontAwesomeIcon icon={faPaperPlane} />
                           </BtnSend>
                         </StyledChatDock>
-                      </>
+                      </StyledChatWhatsApp>
                     )}
+
                   </StyledCenterBody>
                 </>
               )}
@@ -422,11 +440,10 @@ export default function VideoChatFavoritosModelo(props) {
                           }
                           const isMe = Number(m.senderId) === Number(user?.id);
                           const variant = isMe ? 'peer' : 'me';
-                          const prefix = isMe ? 'me' : (callPeerName || 'Usuario');
+
                           return (
                             <StyledChatMessageRow key={m.id}>
                               <StyledChatBubble $variant={variant}>
-                                <strong>{prefix} :</strong>{' '}
                                 {giftData
                                   ? (giftRenderReady && (() => {
                                     const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
@@ -489,7 +506,7 @@ export default function VideoChatFavoritosModelo(props) {
                 )}
 
                 {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
-                  <>
+                  <StyledChatWhatsApp>
                     <StyledChatScroller ref={modelCenterListRef}>
                       {centerMessages.length === 0 && (
                         <div style={{ color:'#adb5bd' }}>
@@ -503,22 +520,17 @@ export default function VideoChatFavoritosModelo(props) {
                         }
                         const isMe = Number(m.senderId) === Number(user?.id);
                         const variant = isMe ? 'me' : 'peer';
-                        const prefix = isMe ? 'me' : (centerChatPeerName || 'Usuario');
+
                         return (
                           <StyledChatMessageRow key={m.id}>
                             <StyledChatBubble $variant={variant}>
                               {giftData ? (
-                                <>
-                                  <strong>{prefix} :</strong>{' '}
-                                  {giftRenderReady && (() => {
-                                    const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
-                                    return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
-                                  })()}
-                                </>
+                                giftRenderReady && (() => {
+                                  const src = (gifts.find(gg => Number(gg.id) === Number(giftData.id))?.icon) || null;
+                                  return src ? <img src={src} alt="" style={{ width:24, height:24, verticalAlign:'middle' }} /> : null;
+                                })()
                               ) : (
-                                <>
-                                  <strong>{prefix} :</strong> {m.body}
-                                </>
+                                m.body
                               )}
                             </StyledChatBubble>
                           </StyledChatMessageRow>
@@ -538,8 +550,9 @@ export default function VideoChatFavoritosModelo(props) {
                         <FontAwesomeIcon icon={faPaperPlane} />
                       </BtnSend>
                     </StyledChatDock>
-                  </>
+                  </StyledChatWhatsApp>
                 )}
+
               </StyledCenterBody>
             </div>
           )}

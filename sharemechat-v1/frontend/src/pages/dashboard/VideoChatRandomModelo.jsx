@@ -62,14 +62,11 @@ export default function VideoChatRandomModelo(props) {
                     <StyledChatList ref={vcListRef}>
                       {messages.map((msg, index) => {
                         const isMe = msg.from === 'me';
-                        // En modelo mantenemos el esquema original: el "peer" resaltado
-                        const variant = isMe ? 'peer' : 'me';
-                        const prefix = isMe ? 'me' : (clientNickname || 'Cliente');
+                        const variant = isMe ? 'peer' : 'me'; // mantenemos tu lógica original de variante
                         return (
                           <StyledChatMessageRow key={index}>
                             {msg.gift ? (
                               <StyledChatBubble $variant={variant}>
-                                <strong>{prefix} :</strong>{' '}
                                 {giftRenderReady && (() => {
                                   const src = getGiftIcon(msg.gift);
                                   return src ? (<StyledGiftIcon src={src} alt="" />) : null;
@@ -77,7 +74,7 @@ export default function VideoChatRandomModelo(props) {
                               </StyledChatBubble>
                             ) : (
                               <StyledChatBubble $variant={variant}>
-                                <strong>{prefix} :</strong> {msg.text}
+                                {msg.text}
                               </StyledChatBubble>
                             )}
                           </StyledChatMessageRow>
@@ -211,13 +208,11 @@ export default function VideoChatRandomModelo(props) {
                         <StyledChatList ref={vcListRef}>
                           {messages.map((msg, index) => {
                             const isMe = msg.from === 'me';
-                            const variant = isMe ? 'peer' : 'me';
-                            const prefix = isMe ? 'me' : (clientNickname || 'Cliente');
+                            const variant = isMe ? 'peer' : 'me'; // mantenemos tu lógica original de variante
                             return (
                               <StyledChatMessageRow key={index}>
                                 {msg.gift ? (
                                   <StyledChatBubble $variant={variant}>
-                                    <strong>{prefix} :</strong>{' '}
                                     {giftRenderReady && (() => {
                                       const src = getGiftIcon(msg.gift);
                                       return src ? (<StyledGiftIcon src={src} alt="" />) : null;
@@ -225,7 +220,7 @@ export default function VideoChatRandomModelo(props) {
                                   </StyledChatBubble>
                                 ) : (
                                   <StyledChatBubble $variant={variant}>
-                                    <strong>{prefix} :</strong> {msg.text}
+                                    {msg.text}
                                   </StyledChatBubble>
                                 )}
                               </StyledChatMessageRow>
