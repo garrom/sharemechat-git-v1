@@ -1,15 +1,27 @@
+// src/components/ModalBase.js
 import React, { useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { Backdrop, Wrapper, Dialog, Header, Title, CloseBtn, Body, Footer, ModalBtn } from '../styles/ModalStyles';
+import {
+  Backdrop,
+  Wrapper,
+  Dialog,
+  Header,
+  Title,
+  CloseBtn,
+  Body,
+  Footer,
+  ModalBtn
+} from '../styles/ModalStyles';
 
 /**
  * Modal base reusable
+ *
  * Props:
  * - open (bool)
  * - onClose () => void
  * - title (string|node)
  * - children (node)
- * - actions: [{ label, onClick, primary, danger, autoFocus }]
+ * - actions: [{ label, onClick, primary, danger, autoFocus, type }]
  * - size: 'sm' | 'md' | 'lg'
  * - variant: 'info' | 'success' | 'warning' | 'danger' | 'confirm' | 'select'
  * - icon: node opcional (en header)
@@ -33,45 +45,60 @@ const ModalBase = ({
   const dialogRef = useRef(null);
   const lastFocusedRef = useRef(null);
 
-  // bloquear scroll del body
+  /* ==========================================
+   * Bloquear scroll del body mientras está abierto
+   * ========================================== */
   useEffect(() => {
     if (!open) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = prevOverflow; };
+    return () => {
+      document.body.style.overflow = prevOverflow;
+    };
   }, [open]);
 
-  // recordar foco anterior y hacer focus trap
+  /* ==========================================
+   * Gestionar foco: guardar el previo y trap dentro
+   * ========================================== */
   useEffect(() => {
     if (!open) return;
+
+    // recordar elemento con foco antes de abrir
     lastFocusedRef.current = document.activeElement;
+
     const el = dialogRef.current;
     if (!el) return;
 
-    const focusables = el.querySelectorAll(
+    // focus inicial en el primer elemento interactivo
+    const getFocusables = () => el.querySelectorAll(
       'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
     );
+    const focusables = getFocusables();
     const first = focusables[0];
-    if (first && typeof first.focus === 'function') first.focus();
+    if (first && typeof first.focus === 'function') {
+      first.focus();
+    }
 
     const onKeyDown = (e) => {
       if (e.key === 'Escape' && closeOnEsc) {
         e.stopPropagation();
         onClose?.();
+        return;
       }
+
       if (e.key === 'Tab') {
-        // simple trap
-        const nodes = Array.from(focusables);
+        const nodes = Array.from(getFocusables());
         if (!nodes.length) return;
+
         const currentIdx = nodes.indexOf(document.activeElement);
         if (e.shiftKey) {
-          // back
+          // shift + tab => atrás
           if (currentIdx <= 0) {
             e.preventDefault();
             nodes[nodes.length - 1].focus();
           }
         } else {
-          // forward
+          // tab normal => adelante
           if (currentIdx === nodes.length - 1) {
             e.preventDefault();
             nodes[0].focus();
@@ -79,11 +106,16 @@ const ModalBase = ({
         }
       }
     };
+
     el.addEventListener('keydown', onKeyDown);
-    return () => el.removeEventListener('keydown', onKeyDown);
+    return () => {
+      el.removeEventListener('keydown', onKeyDown);
+    };
   }, [open, onClose, closeOnEsc]);
 
-  // devolver foco al cerrar
+  /* ==========================================
+   * Devolver foco al cerrar
+   * ========================================== */
   useEffect(() => {
     if (open) return;
     const prev = lastFocusedRef.current;
@@ -92,8 +124,13 @@ const ModalBase = ({
     }
   }, [open]);
 
+  /* ==========================================
+   * Click en backdrop
+   * ========================================== */
   const handleBackdrop = useCallback(() => {
-    if (closeOnBackdrop) onClose?.();
+    if (closeOnBackdrop) {
+      onClose?.();
+    }
   }, [closeOnBackdrop, onClose]);
 
   if (!open) return null;
@@ -101,6 +138,7 @@ const ModalBase = ({
   return ReactDOM.createPortal(
     <>
       <Backdrop onClick={handleBackdrop} />
+
       <Wrapper aria-hidden={false}>
         <Dialog
           ref={dialogRef}

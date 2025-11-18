@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
-import { useModal } from '../../components/ModalProvider';
+import { useAppModals } from '../../components/useAppModals';
 import FunnyplacePage from '../funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
@@ -42,7 +42,7 @@ import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
 
 const DashboardModel = () => {
 
-  const { alert } = useModal();
+  const { alert, openPurchaseModal } = useAppModals();
   const [cameraActive, setCameraActive] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
   const [error, setError] = useState('');
@@ -761,9 +761,21 @@ const DashboardModel = () => {
           console.log('[CALL][rejected][Model]');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
           setCallStatus('idle');
-          setCallError('La llamada fue rechazada.');
+          setCallError('');
+          (async () => {
+            try {
+              await alert({
+                title: 'Llamada rechazada',
+                message: 'El cliente ha rechazado tu llamada.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal de rechazo (Model):', e);
+            }
+          })();
           return;
         }
+
 
         if (data.type === 'call:canceled') {
           console.log('[CALL][canceled][Model] reason=', data.reason);
@@ -781,26 +793,62 @@ const DashboardModel = () => {
         if (data.type === 'call:no-balance') {
           console.log('[CALL][no-balance][Model]');
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError('El cliente no tiene saldo suficiente para iniciar la llamada.');
+          setCallError('');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          (async () => {
+            try {
+              await alert({
+                title: 'Sin saldo del cliente',
+                message: 'El cliente no tiene saldo suficiente para continuar la llamada.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal no-balance (Model):', e);
+            }
+          })();
           return;
         }
+
 
         if (data.type === 'call:busy') {
           console.log('[CALL][busy][Model]', data);
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError('El usuario está ocupado.');
+          setCallError('');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          (async () => {
+            try {
+              await alert({
+                title: 'Cliente ocupado',
+                message: 'El cliente está en otra llamada o en streaming.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal de ocupado (Model):', e);
+            }
+          })();
           return;
         }
+
 
         if (data.type === 'call:offline') {
           console.log('[CALL][offline][Model]');
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError('El usuario no está disponible.');
+          setCallError('');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          (async () => {
+            try {
+              await alert({
+                title: 'Cliente no disponible',
+                message: 'El cliente no está conectado en este momento.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal de offline (Model):', e);
+            }
+          })();
           return;
         }
+
 
         if (data.type === 'call:error') {
           console.log('[CALL][error][Model]', data.message);

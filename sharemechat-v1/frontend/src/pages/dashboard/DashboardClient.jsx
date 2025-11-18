@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect,useLayoutEffect  } from 'react';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesClientList from '../favorites/FavoritesClientList';
-import { useModal } from '../../components/ModalProvider';
+import { useAppModals } from '../../components/useAppModals';
 import FunnyplacePage from '../funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -42,7 +42,7 @@ import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
 
 const DashboardClient = () => {
 
-  const { alert } = useModal();
+  const { alert, openPurchaseModal } = useAppModals();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -589,6 +589,25 @@ const DashboardClient = () => {
           return;
         }
 
+        // ====== GIFT / MENSAJES: saldo insuficiente ======
+        if (
+          (data.type === 'gift:error' || data.type === 'msg:error') &&
+          typeof data.message === 'string' &&
+          data.message.toLowerCase().includes('saldo insuficiente')
+        ) {
+          console.log('[GIFT][no-balance] message=', data.message);
+
+          // Aquí podemos reutilizar el mismo flujo que el botón "+ Saldo"
+          (async () => {
+            try {
+              await handleAddBalance();
+            } catch (e) {
+              console.error('Error en handleAddBalance (gift no-balance):', e);
+            }
+          })();
+          return;
+        }
+
         // ====== CALLING: EVENTOS call:* ======
         if (data.type === 'call:incoming') {
           const id = Number(data.from);
@@ -676,9 +695,23 @@ const DashboardClient = () => {
           console.log('[CALL][rejected]');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
           setCallStatus('idle');
-          setCallError('La llamada fue rechazada.');
+          setCallError('');
+
+          (async () => {
+            try {
+              await alert({
+                title: 'Llamada rechazada',
+                message: 'La otra persona ha rechazado tu llamada.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal de rechazo:', e);
+            }
+          })();
+
           return;
         }
+
 
         if (data.type === 'call:canceled') {
           console.log('[CALL][canceled] reason=', data.reason);
@@ -689,33 +722,82 @@ const DashboardClient = () => {
 
         if (data.type === 'call:ended') {
           console.log('[CALL][ended] reason=', data.reason);
+          const reason = data.reason;
           cleanupCall('ended');
+          // saldo bajo -> abrir modal de compra
+          if (reason === 'low-balance') {
+            (async () => {
+              try {
+                await handlePurchaseFromCalling();
+              } catch (e) {
+                console.error('Error en handlePurchaseFromCalling (ended/low-balance):', e);
+              }
+            })();
+          }
+
           return;
         }
 
+        // CAll 1 a 1
         if (data.type === 'call:no-balance') {
           console.log('[CALL][no-balance]');
-          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError('Saldo insuficiente para iniciar la llamada.');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
+          // Volvemos al estado previo de cámara, pero sin mensaje de error "plano"
+          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+          setCallError('');
+
+          // Disparamos el modal de compra específico para llamadas
+          (async () => {
+            try {
+              await handlePurchaseFromCalling();
+            } catch (e) {
+              console.error('Error en handlePurchaseFromCalling:', e);
+            }
+          })();
+
           return;
         }
 
         if (data.type === 'call:busy') {
           console.log('[CALL][busy]', data);
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError('El usuario está ocupado.');
+          setCallError('');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          (async () => {
+            try {
+              await alert({
+                title: 'Usuario ocupado',
+                message: 'El usuario está en otra llamada o en streaming.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal de ocupado:', e);
+            }
+          })();
           return;
         }
+
 
         if (data.type === 'call:offline') {
           console.log('[CALL][offline]');
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError('El usuario no está disponible.');
+          setCallError('');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          (async () => {
+            try {
+              await alert({
+                title: 'Usuario no disponible',
+                message: 'El usuario no está conectado en este momento.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal de offline:', e);
+            }
+          })();
           return;
         }
+
 
         if (data.type === 'call:error') {
           console.log('[CALL][error]', data.message);
@@ -878,11 +960,27 @@ const DashboardClient = () => {
         return;
       }
 
+      if (data.type === 'gift:error') {
+        const msg = data.message || 'No se pudo enviar el regalo';
+        const isSaldo = String(msg).toLowerCase().includes('saldo');
 
-      if(data.type==='gift:error'){
-          setError(data.message||'No se pudo enviar el regalo');
+        // Caso saldo insuficiente: solo modal, SIN texto rojo en pantalla
+        if (isSaldo) {
+          setError(''); // limpiamos cualquier mensaje previo
+          (async () => {
+            try {
+              await handlePurchaseFromGift();
+            } catch (e) {
+              console.error('Error en handlePurchaseFromGift:', e);
+            }
+          })();
           return;
+        }
+        // Resto de errores de regalo: sí mostramos el texto en rojo
+        setError(msg);
+        return;
       }
+
 
       if (data.type === 'no-model-available') {
         setError('');
@@ -890,18 +988,60 @@ const DashboardClient = () => {
         return;
       }
 
+      // Random
       if (data.type === 'no-balance') {
-        setError('No tienes saldo suficiente para iniciar una sesión.');
         setSearching(false);
+        setError('');
+
+        // Lanzamos el flujo de compra específico para RANDOM
+        (async () => {
+          try {
+            await handlePurchaseFromRandom();
+          } catch (e) {
+            console.error('Error en handlePurchaseFromRandom:', e);
+          }
+        })();
+
         return;
       }
 
       if (data.type === 'peer-disconnected') {
+        console.log('[RANDOM][peer-disconnected]', data);
+        const reason = data.reason || '';
+        // Limpieza común: peer + streams + mensajes
         setCurrentModelId(null);
-        try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
-        try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
+        try {
+          if (peerRef.current) {
+            peerRef.current.destroy();
+            peerRef.current = null;
+          }
+        } catch {}
+        try {
+          if (remoteStream) {
+            remoteStream.getTracks().forEach((t) => t.stop());
+          }
+        } catch {}
         setRemoteStream(null);
         setMessages([]);
+
+        // Caso especial: corte por saldo bajo
+        if (reason === 'low-balance') {
+          setStatus('');
+          setSearching(false);
+
+          // Lanzamos flujo de compra específico para RANDOM
+          (async () => {
+            try {
+              await handlePurchaseFromRandom();
+            } catch (e) {
+              console.error('Error en handlePurchaseFromRandom (low-balance):', e);
+            }
+          })();
+          // MUY IMPORTANTE: NO reenviamos start-match aquí
+          return;
+        }
+
+        // Resto de casos: seguimos auto-buscando como antes
         setStatus('Buscando nueva modelo...');
         setSearching(true);
 
@@ -911,6 +1051,7 @@ const DashboardClient = () => {
         }
         return;
       }
+
     };
 
     socketRef.current.onerror = (e) => {
@@ -1007,24 +1148,27 @@ const DashboardClient = () => {
     try { handleCallEnd(true); } catch {}
   };
 
-
   const handleAddBalance = async () => {
     const tokenLS = localStorage.getItem('token');
     if (!tokenLS) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
+      await alert({
+        title: 'Sesión',
+        message: 'Sesión expirada. Inicia sesión de nuevo.',
+        variant: 'warning',
+      });
       return;
     }
 
-    let input = window.prompt('Cantidad a añadir (€):', '10');
-    if (input === null) return;
+    // Usamos el modal de compra genérico y que él coja sus packs por defecto
+    const result = await openPurchaseModal({
+      context: 'navbar-comprar', // etiqueta opcional por si quieres loguear contexto
+    });
 
-    input = String(input).replace(',', '.').trim();
-    const amount = Number(input);
+    if (!result.confirmed || !result.pack) return;
 
-    if (!Number.isFinite(amount) || amount <= 0) {
-      alert('Introduce un importe válido mayor que 0.');
-      return;
-    }
+    const { pack } = result;
+    const amount = Number(pack.price);
 
     try {
       setLoadingSaldo(true);
@@ -1038,7 +1182,7 @@ const DashboardClient = () => {
         body: JSON.stringify({
           amount,
           operationType: 'INGRESO',
-          description: 'Recarga de saldo',
+          description: `Recarga de saldo (${pack.minutes} minutos)`,
         }),
       });
 
@@ -1047,7 +1191,157 @@ const DashboardClient = () => {
         throw new Error(txt || `Error ${res.status}`);
       }
 
-      alert('Saldo añadido correctamente.');
+      await alert({
+        title: 'Saldo actualizado',
+        message: `Se ha añadido el pack de ${pack.minutes} minutos.`,
+        variant: 'success',
+      });
+
+      const res2 = await fetch('/api/clients/me', {
+        headers: { Authorization: `Bearer ${tokenLS}` },
+      });
+
+      if (!res2.ok) {
+        const txt = await res2.text();
+        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
+      }
+
+      const data = await res2.json();
+      setSaldo(data.saldoActual);
+      setSaldoError('');
+    } catch (e) {
+      console.error(e);
+      await alert({
+        title: 'Error',
+        message: e.message || 'Error al añadir saldo.',
+        variant: 'danger',
+      });
+      setSaldoError(e.message || 'Error al cargar saldo');
+    } finally {
+      setLoadingSaldo(false);
+    }
+  };
+
+  const handlePurchaseFromRandom = async () => {
+    const tokenLS = localStorage.getItem('token');
+    if (!tokenLS) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
+      await alert({
+        title: 'Sesión',
+        message: 'Sesión expirada. Inicia sesión de nuevo.',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    // Abrimos el modal de compra reutilizando la plantilla #3
+    const result = await openPurchaseModal({
+      context: 'random', // etiqueta para distinguir el contexto
+    });
+
+    if (!result.confirmed || !result.pack) {
+      // El usuario canceló o cerró el modal
+      return;
+    }
+
+    const { pack } = result;
+    const amount = Number(pack.price);
+
+    try {
+      setLoadingSaldo(true);
+
+      // Llamada al backend para crear la recarga
+      const res = await fetch('/api/transactions/add-balance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenLS}`,
+        },
+        body: JSON.stringify({
+          amount,
+          operationType: 'INGRESO',
+          description: `Recarga de saldo (random ${pack.minutes} minutos)`,
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Error ${res.status}`);
+      }
+
+      // Refrescamos saldo
+      const res2 = await fetch('/api/clients/me', {
+        headers: { Authorization: `Bearer ${tokenLS}` },
+      });
+
+      if (!res2.ok) {
+        const txt = await res2.text();
+        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
+      }
+
+      const data = await res2.json();
+      setSaldo(data.saldoActual);
+      setSaldoError('');
+
+      await alert({
+        title: 'Saldo actualizado',
+        message: `Se ha añadido el pack de ${pack.minutes} minutos. Vuelve a pulsar "Iniciar videochat" para empezar el streaming.`,
+        variant: 'success',
+      });
+    } catch (e) {
+      console.error(e);
+      setSaldoError(e.message || 'Error al cargar saldo');
+      await alert({
+        title: 'Error',
+        message: e.message || 'Error al añadir saldo.',
+        variant: 'danger',
+      });
+    } finally {
+      setLoadingSaldo(false);
+    }
+  };
+
+  const handlePurchaseFromCalling = async () => {
+    const tokenLS = localStorage.getItem('token');
+    if (!tokenLS) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
+      await alert({
+        title: 'Sesión',
+        message: 'Sesión expirada. Inicia sesión de nuevo.',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    const result = await openPurchaseModal({
+      context: 'calling',
+    });
+
+    if (!result.confirmed || !result.pack) return;
+
+    const { pack } = result;
+    const amount = Number(pack.price);
+
+    try {
+      setLoadingSaldo(true);
+
+      const res = await fetch('/api/transactions/add-balance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenLS}`,
+        },
+        body: JSON.stringify({
+          amount,
+          operationType: 'INGRESO',
+          description: `Recarga de saldo (llamada 1 a 1, ${pack.minutes} minutos)`,
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Error ${res.status}`);
+      }
 
       const res2 = await fetch('/api/clients/me', {
         headers: { Authorization: `Bearer ${tokenLS}` },
@@ -1062,14 +1356,97 @@ const DashboardClient = () => {
       setSaldo(data.saldoActual);
       setSaldoError('');
 
+      await alert({
+        title: 'Saldo actualizado',
+        message: `Se ha añadido el pack de ${pack.minutes} minutos. Vuelve a intentar la llamada.`,
+        variant: 'success',
+      });
     } catch (e) {
       console.error(e);
-      alert(e.message || 'Error al añadir saldo.');
       setSaldoError(e.message || 'Error al cargar saldo');
+      await alert({
+        title: 'Error',
+        message: e.message || 'Error al añadir saldo.',
+        variant: 'danger',
+      });
     } finally {
       setLoadingSaldo(false);
     }
   };
+
+  const handlePurchaseFromGift = async () => {
+    const tokenLS = localStorage.getItem('token');
+    if (!tokenLS) {
+      setError('Sesión expirada. Inicia sesión de nuevo.');
+      await alert({
+        title: 'Sesión',
+        message: 'Sesión expirada. Inicia sesión de nuevo.',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    const result = await openPurchaseModal({
+      context: 'gift',
+    });
+
+    if (!result.confirmed || !result.pack) return;
+
+    const { pack } = result;
+    const amount = Number(pack.price);
+
+    try {
+      setLoadingSaldo(true);
+
+      const res = await fetch('/api/transactions/add-balance', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${tokenLS}`,
+        },
+        body: JSON.stringify({
+          amount,
+          operationType: 'INGRESO',
+          description: `Recarga de saldo (envío de regalos, ${pack.minutes} minutos)`,
+        }),
+      });
+
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(txt || `Error ${res.status}`);
+      }
+
+      const res2 = await fetch('/api/clients/me', {
+        headers: { Authorization: `Bearer ${tokenLS}` },
+      });
+
+      if (!res2.ok) {
+        const txt = await res2.text();
+        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
+      }
+
+      const data = await res2.json();
+      setSaldo(data.saldoActual);
+      setSaldoError('');
+
+      await alert({
+        title: 'Saldo actualizado',
+        message: 'Se ha añadido saldo para que puedas enviar regalos.',
+        variant: 'success',
+      });
+    } catch (e) {
+      console.error(e);
+      setSaldoError(e.message || 'Error al cargar saldo');
+      await alert({
+        title: 'Error',
+        message: e.message || 'Error al añadir saldo.',
+        variant: 'danger',
+      });
+    } finally {
+      setLoadingSaldo(false);
+    }
+  };
+
 
   const streamingActivo = !!remoteStream;
   const showCallMedia = callStatus === 'in-call';
