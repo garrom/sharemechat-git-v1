@@ -91,30 +91,30 @@ const PackHint = styled.span`
   color: #8b949e;
 `;
 
-// === Hook de alto nivel con todos los modales de la app ===
+const PayoutInput = styled.input`
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  color: #e6edf3;
+  font-size: 14px;
+  margin-top: 6px;
+  outline: none;
+
+  &:focus {
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 1px #58a6ff44;
+  }
+`;
+
+
+//###########
+//## HOOK
+//#########
 
 export const useAppModals = () => {
   const { alert, confirm, openModal, closeModal } = useModal();
-
-  /**
-   * Modal genérico para confirmar navegación que cortaría el streaming/llamada.
-   */
-  const openNavigationGuard = useCallback(
-    async (message) => {
-      const ok = await confirm({
-        title: '¿Salir ahora?',
-        message:
-          message ||
-          'Si sales ahora se interrumpirá el streaming o la llamada actual. ¿Quieres continuar?',
-        okText: 'Salir',
-        cancelText: 'Cancelar',
-        variant: 'confirm',
-        size: 'sm',
-      });
-      return ok; // true -> salir, false -> quedarse
-    },
-    [confirm]
-  );
 
   /**
    * Confirmación al eliminar un favorito.
@@ -151,21 +151,27 @@ export const useAppModals = () => {
   );
 
   /**
+   * Aviso cuando el usuario intenta salir teniendo una comunicación activa.
+   */
+  const openActiveSessionGuard = useCallback(
+    async ({ hasStreaming, hasCalling }) => {
+      const active = !!hasStreaming || !!hasCalling;
+      if (!active) return true;
+
+      await alert({
+        title: 'Comunicación activa',
+        message: 'Tienes un streaming activo. Pulsa COLGAR para salir.',
+        variant: 'warning',
+        size: 'sm',
+      });
+      return false;
+    },
+    [alert]
+  );
+
+
+  /**
    * Modal de selección de pack de minutos / saldo.
-   *
-   * Ejemplo de uso:
-   *   const { openPurchaseModal } = useAppModals();
-   *   const result = await openPurchaseModal({
-   *     packs: [
-   *       { id: 'P5',  minutes: 5,  price: 1.99, currency: 'EUR' },
-   *       { id: 'P15', minutes: 15, price: 4.50, currency: 'EUR', recommended: true },
-   *       ...
-   *     ],
-   *     currency: 'EUR',
-   *     context: 'insufficient-balance',
-   *   });
-   *
-   *   if (result.confirmed) { ... }
    */
   const openPurchaseModal = useCallback(
     ({ packs, currency = 'EUR', context = 'manual' } = {}) => {
@@ -217,7 +223,7 @@ export const useAppModals = () => {
           variant: 'select',
           size: 'md',
           // bodyKind 'default' porque usamos nuestro propio layout
-          bodyKind: 'default',
+          bodyKind: 'payout',
           content: (
             <div>
               <PackHint>{subtitleByContext}</PackHint>
@@ -253,15 +259,103 @@ export const useAppModals = () => {
     [openModal, closeModal]
   );
 
+  /**
+   * Modal para solicitar un retiro (payout) indicando un importe.
+   */
+  const openPayoutModal = useCallback(
+    ({ title = 'Solicitud de retiro', message, initialAmount = 10 } = {}) => {
+      return new Promise((resolve) => {
+        let currentValue =
+          initialAmount !== null && initialAmount !== undefined
+            ? String(initialAmount)
+            : '';
+
+        const handleCancel = () => {
+          closeModal();
+          resolve({ confirmed: false });
+        };
+
+        const handleConfirm = () => {
+          const numeric = Number(currentValue);
+
+          if (!Number.isFinite(numeric) || numeric <= 0) {
+            // No cerramos el modal, solo avisamos
+            alert({
+              title: 'Importe no válido',
+              message: 'Introduce una cantidad numérica positiva.',
+              variant: 'warning',
+              size: 'sm',
+            });
+            return;
+          }
+
+          closeModal();
+          resolve({ confirmed: true, amount: numeric });
+        };
+
+        openModal({
+          title,
+          variant: 'confirm',
+          size: 'sm',
+          bodyKind: 'payout',
+          content: (
+            <div>
+              <PackHint>
+                {message || 'Introduce la cantidad que deseas retirar:'}
+              </PackHint>
+              <PayoutInput
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                defaultValue={currentValue}
+                onChange={(e) => {
+                  // Aceptar solo dígitos 0–9
+                  const digits = e.target.value.replace(/\D/g, '');
+                  currentValue = digits;
+                  e.target.value = digits;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleConfirm();
+                  }
+                }}
+              />
+            </div>
+          ),
+          actions: [
+            {
+              label: 'Cancelar',
+              primary: false,
+              danger: false,
+              onClick: handleCancel,
+            },
+            {
+              label: 'Solicitar retiro',
+              primary: true,
+              danger: false,
+              onClick: handleConfirm,
+            },
+          ],
+        }).then(() => {
+          // la resolución real se hace en handleCancel / handleConfirm
+        });
+      });
+    },
+    [openModal, closeModal, alert]
+  );
+
+
   return {
-    // Exponemos helpers base por si quieres usarlos en algún sitio:
+    // Exponemos helpers base
     alert,
     confirm,
-    // Y nuestros modales de alto nivel:
-    openNavigationGuard,
+    // modales de alto nivel:
     openRemoveFavoriteConfirm,
     openCallOfflineNotice,
     openPurchaseModal,
+    openPayoutModal,
+    openActiveSessionGuard,
   };
 };
 

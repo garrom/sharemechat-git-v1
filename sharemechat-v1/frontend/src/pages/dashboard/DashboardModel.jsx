@@ -42,7 +42,7 @@ import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
 
 const DashboardModel = () => {
 
-  const { alert, confirm, openPurchaseModal } = useAppModals();
+  const { alert, confirm, openPayoutModal,openActiveSessionGuard } = useAppModals();
   const [cameraActive, setCameraActive] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
   const [error, setError] = useState('');
@@ -1092,7 +1092,6 @@ const DashboardModel = () => {
   const handleProfile = async () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
-
     stopAll();
     history.push('/perfil-model');
   };
@@ -1109,13 +1108,15 @@ const DashboardModel = () => {
       });
       return;
     }
-
-    let input = window.prompt('Cantidad a retirar (€):', '10');
-    if (input === null) return;
-
-    input = String(input).replace(',', '.').trim();
-    const amount = Number(input);
-
+    // 1) Abrimos nuestro modal propio para pedir el importe
+    const result = await openPayoutModal({
+      title: 'Solicitud de retiro',
+      message: 'Introduce la cantidad que deseas retirar:',
+      initialAmount: 10,
+    });
+    // Si cierra o cancela el modal
+    if (!result || !result.confirmed) return;
+    const amount = Number(result.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       await alert({
         title: 'Importe no válido',
@@ -1124,10 +1125,8 @@ const DashboardModel = () => {
       });
       return;
     }
-
     try {
       setLoadingSaldoModel(true);
-
       const res = await fetch('/api/transactions/payout', {
         method: 'POST',
         headers: {
@@ -1139,18 +1138,16 @@ const DashboardModel = () => {
           description: 'Solicitud de retiro',
         }),
       });
-
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
       }
-
       await alert({
         title: 'Solicitud enviada',
-        message: 'Solicitud de retiro registrada correctamente.',
+        message: 'Tu solicitud de retiro se ha registrado correctamente.',
         variant: 'success',
       });
-
+      // Refrescar saldo de la modelo
       const res2 = await fetch('/api/models/me', {
         headers: { Authorization: `Bearer ${tk}` },
       });
@@ -1163,10 +1160,11 @@ const DashboardModel = () => {
       setError('');
     } catch (e) {
       console.error(e);
-      setError(e.message || 'Error al cargar saldo de modelo');
+      const msg = e.message || 'Error al solicitar retiro.';
+      setError(msg);
       await alert({
         title: 'Error',
-        message: e.message || 'Error al solicitar retiro.',
+        message: msg,
         variant: 'danger',
       });
     } finally {
@@ -1224,29 +1222,16 @@ const DashboardModel = () => {
 
   // Confirmación genérica al intentar salir de una comunicación activa
   const confirmarSalidaSesionActiva = async () => {
-    // Sesión activa = streaming random o llamada 1 a 1 en curso
-    const haySesionActiva =
-      !!remoteStream ||
+    const hayLlamada =
       callStatus === 'in-call' ||
       callStatus === 'connecting' ||
       callStatus === 'ringing';
 
-    // Si NO hay sesión activa, dejamos continuar
-    if (!haySesionActiva) {
-      return true;
-    }
-
-    // Si hay sesión activa, solo avisamos y NO dejamos continuar
-    await alert({
-      title: 'Comunicación activa',
-      message: 'Tienes un streaming activo. Pulsa COLGAR para salir.',
-      variant: 'warning',
+    return openActiveSessionGuard({
+      hasStreaming: !!remoteStream,
+      hasCalling: hayLlamada,
     });
-
-    return false;
   };
-
-
 
   const handleGoFunnyplace = async () => {
     const ok = await confirmarSalidaSesionActiva();

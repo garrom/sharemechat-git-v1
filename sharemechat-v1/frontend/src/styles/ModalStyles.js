@@ -242,6 +242,11 @@ export const Body = styled.div`
       }
     }
   }
+  /* Payout: sin scroll interno, nunca */
+  &[data-kind='payout'] {
+    max-height: none;
+    overflow: visible;
+  }
 `;
 
 /* ============================

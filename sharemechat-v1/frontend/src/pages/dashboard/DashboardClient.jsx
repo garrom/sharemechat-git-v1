@@ -42,7 +42,7 @@ import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
 
 const DashboardClient = () => {
 
-  const { alert, confirm, openPurchaseModal } = useAppModals();
+  const { alert, confirm, openPurchaseModal,openActiveSessionGuard } = useAppModals();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -1467,29 +1467,16 @@ const DashboardClient = () => {
 
   // Confirmación genérica al intentar salir de una comunicación activa
   const confirmarSalidaSesionActiva = async () => {
-    // Sesión activa = streaming random o llamada 1 a 1 en curso
-    const haySesionActiva =
-      !!remoteStream ||
+    const hayLlamada =
       callStatus === 'in-call' ||
       callStatus === 'connecting' ||
       callStatus === 'ringing';
 
-    // Si NO hay sesión activa, dejamos continuar
-    if (!haySesionActiva) {
-      return true;
-    }
-
-    // Si hay sesión activa, solo avisamos y NO dejamos continuar
-    await alert({
-      title: 'Comunicación activa',
-      message: 'Tienes un streaming activo. Pulsa COLGAR para salir.',
-      variant: 'warning',
+    return openActiveSessionGuard({
+      hasStreaming: !!remoteStream,
+      hasCalling: hayLlamada,
     });
-
-    return false;
   };
-
-
 
   const handleGoFunnyplace = async () => {
     const ok = await confirmarSalidaSesionActiva();
