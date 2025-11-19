@@ -42,7 +42,7 @@ import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
 
 const DashboardClient = () => {
 
-  const { alert, openPurchaseModal } = useAppModals();
+  const { alert, confirm, openPurchaseModal } = useAppModals();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -847,7 +847,11 @@ const DashboardClient = () => {
     }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+
+    stopAll();
     localStorage.removeItem('token');
     history.push('/');
   };
@@ -1105,10 +1109,13 @@ const DashboardClient = () => {
     }
   };
 
-  const handleProfile = () => {
+  const handleProfile = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+
+    stopAll();
     history.push('/perfil-client');
   };
-
 
   const stopAll = () => {
     if (pingIntervalRef.current) {
@@ -1451,32 +1458,70 @@ const DashboardClient = () => {
   const streamingActivo = !!remoteStream;
   const showCallMedia = callStatus === 'in-call';
 
-  const handleGoFunnyplace = () => {
-    if (streamingActivo) {
-      const ok = window.confirm('Si entras en Funnyplace se cortará el streaming actual. ¿Continuar?');
-      if (!ok) return;
-      stopAll();
+  // Llamada 1 a 1 en curso (no solo cámara encendida)
+  const callEnCurso =
+    callStatus === 'connecting' ||
+    callStatus === 'in-call' ||
+    callStatus === 'ringing' ||
+    callStatus === 'incoming';
+
+  // Confirmación genérica al intentar salir de una comunicación activa
+  const confirmarSalidaSesionActiva = async () => {
+    // Sesión activa = streaming random o llamada 1 a 1 en curso
+    const haySesionActiva =
+      !!remoteStream ||
+      callStatus === 'in-call' ||
+      callStatus === 'connecting' ||
+      callStatus === 'ringing';
+
+    // Si NO hay sesión activa, dejamos continuar
+    if (!haySesionActiva) {
+      return true;
     }
-    if (callStatus !== 'idle') {
-      const ok = window.confirm('Hay una llamada en curso o sonando. Se colgará la llamada. ¿Continuar?');
-      if (!ok) return;
-      handleCallEnd(true); // fuerza limpieza
-    }
+
+    // Si hay sesión activa, solo avisamos y NO dejamos continuar
+    await alert({
+      title: 'Comunicación activa',
+      message: 'Tienes un streaming activo. Pulsa COLGAR para salir.',
+      variant: 'warning',
+    });
+
+    return false;
+  };
+
+
+
+  const handleGoFunnyplace = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+    stopAll();
     setActiveTab('funnyplace');
   };
 
-  const handleGoFavorites = () => {
-    if (streamingActivo) {
-      alert('No puedes salir del Videochat mientras hay streaming. Pulsa Stop o Next si quieres cambiar.');
-      return;
-    }
-    if (callStatus !== 'idle') {
-      const ok = window.confirm('Hay una llamada en curso o sonando. Se colgará la llamada. ¿Continuar?');
-      if (!ok) return;
-      handleCallEnd(true);
-    }
+  const handleGoFavorites = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+    stopAll();
     setActiveTab('favoritos');
   };
+
+  const handleGoVideochat = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+    stopAll();
+    setActiveTab('videochat');
+  };
+
+  const handleLogoClick = (e) => {
+    // nos lleva a tab videochat
+    e.preventDefault();
+    if (streamingActivo || callStatus !== 'idle') {
+      alert('Tienes una LLAMADA activa. Pulsa STOP para salir.');
+      return;
+    }
+    setActiveTab('videochat');
+  };
+
 
   // Cambiar a modo llamada sobre el target actual
   const enterCallMode = () => {
@@ -2147,14 +2192,14 @@ const DashboardClient = () => {
       <GlobalBlack />
       {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
-        <StyledBrand href="/" aria-label="SharemeChat" />
+        <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick} />
         {/* Botones-text en el navbar (Videochat / Favoritos / Funnyplace) */}
         <div className="desktop-only" style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1, justifyContent: 'center' }}>
           <StyledNavTab
             type="button"
             data-active={activeTab === 'videochat'}
             aria-pressed={activeTab === 'videochat'}
-            onClick={() => setActiveTab('videochat')}
+            onClick={handleGoVideochat}
             title="Videochat"
           >
             Videochat
@@ -2372,7 +2417,7 @@ const DashboardClient = () => {
       <MobileBottomNav>
         <BottomNavButton
           active={activeTab === 'videochat'}
-          onClick={() => setActiveTab('videochat')}
+          onClick={handleGoVideochat}
         >
           <span>Videochat</span>
         </BottomNavButton>
