@@ -64,6 +64,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/clients/**").hasRole("CLIENT")
                         .requestMatchers("/api/favorites/**").hasAnyRole("CLIENT","MODEL")
 
+                        // Billing / PSP (CCBill)
+                        .requestMatchers("/api/billing/ccbill/notify").permitAll()
+                        .requestMatchers("/api/billing/ccbill/session").hasAnyRole("USER","CLIENT")
 
                         // Transactions: regla general + específicas
                         .requestMatchers("/api/transactions/payout").hasRole("MODEL")
