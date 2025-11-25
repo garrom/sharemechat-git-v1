@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -30,10 +31,11 @@ public class StreamService {
     private final PlatformTransactionRepository platformTransactionRepository;
     private final PlatformBalanceRepository platformBalanceRepository;
     private final BillingProperties billing;
+    private final ModelTierService modelTierService;
     private final TransactionService transactionService;
+
     // locks por sesión para evitar dobles cierres concurrentes
     private final ConcurrentHashMap<Long, ReentrantLock> sessionLocks = new ConcurrentHashMap<>();
-
 
     public StreamService(StreamRecordRepository streamRecordRepository,
                          UserRepository userRepository,
@@ -44,6 +46,7 @@ public class StreamService {
                          ModelRepository modelRepository,
                          PlatformTransactionRepository platformTransactionRepository,
                          BillingProperties billing,
+                         ModelTierService modelTierService,
                          PlatformBalanceRepository platformBalanceRepository,
                          TransactionService transactionService) {
         this.streamRecordRepository = streamRecordRepository;
@@ -55,6 +58,7 @@ public class StreamService {
         this.modelRepository = modelRepository;
         this.platformTransactionRepository = platformTransactionRepository;
         this.billing = billing;
+        this.modelTierService = modelTierService;
         this.platformBalanceRepository = platformBalanceRepository;
         this.transactionService = transactionService;
     }
@@ -98,7 +102,9 @@ public class StreamService {
         Client clientEntity = clientRepository.findById(clientId)
                 .orElseThrow(() -> new IllegalStateException("Cliente (tabla clients) no encontrado para userId=" + clientId));
 
-        BigDecimal currentSaldo = clientEntity.getSaldoActual() != null ? clientEntity.getSaldoActual() : BigDecimal.ZERO;
+        BigDecimal currentSaldo = clientEntity.getSaldoActual() != null
+                ? clientEntity.getSaldoActual()
+                : BigDecimal.ZERO;
 
         // Validar saldo 2 - Verificar consistencia con el último balance inmutable
         BigDecimal lastClientBalance = balanceRepository
@@ -113,13 +119,12 @@ public class StreamService {
         }
 
         // Validar saldo 3 - Bloquear inicio si saldo < tarifa por minuto (evita saldo=0)
-        if (currentSaldo.compareTo(billing.getRatePerMinute()) < 0) {  // [NEW]
+        if (currentSaldo.compareTo(billing.getRatePerMinute()) < 0) {
             // *** Mantener esta cadena "Saldo insuficiente" para que MatchingHandler pueda distinguir el motivo. ***
             log.warn("startSession: saldo insuficiente para iniciar. clientId={}, saldo={}, requeridoPorMin={}",
-                    clientId, currentSaldo, billing.getRatePerMinute());        // [NEW]
+                    clientId, currentSaldo, billing.getRatePerMinute());
             throw new IllegalStateException("Saldo insuficiente para iniciar el streaming.");
         }
-
 
         // Crear StreamRecord
         StreamRecord sr = new StreamRecord();
@@ -146,8 +151,7 @@ public class StreamService {
     public void endSession(Long clientId, Long modelId) {
 
         final BigDecimal RATE_PER_MINUTE = billing.getRatePerMinute(); // p.ej. 1.00
-        final BigDecimal MODEL_SHARE     = billing.getModelShare();    // p.ej. 0.90
-
+        final BigDecimal MODEL_SHARE     = billing.getModelShare();    // fallback p.ej. 0.90
 
         // 1) Buscar la sesión activa (pista en cache y fallback a DB)
         Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
@@ -203,7 +207,10 @@ public class StreamService {
             Client clientEntity = clientRepository.findById(clientId)
                     .orElseThrow(() -> new IllegalStateException("Cliente (tabla clients) no encontrado para userId=" + clientId));
 
-            BigDecimal currentSaldo = clientEntity.getSaldoActual() != null ? clientEntity.getSaldoActual() : BigDecimal.ZERO;
+            BigDecimal currentSaldo = clientEntity.getSaldoActual() != null
+                    ? clientEntity.getSaldoActual()
+                    : BigDecimal.ZERO;
+
             BigDecimal lastClientBalance = balanceRepository
                     .findTopByUserIdOrderByTimestampDesc(clientId)
                     .map(Balance::getBalance)
@@ -248,9 +255,53 @@ public class StreamService {
                 return;
             }
 
-            // 8) Reparto (90/10 u otro) con redondeo a céntimo
-            BigDecimal modelEarning    = cost.multiply(MODEL_SHARE).setScale(2, java.math.RoundingMode.HALF_UP);
-            BigDecimal platformEarning = cost.subtract(modelEarning).setScale(2, java.math.RoundingMode.HALF_UP);
+            // 8) Reparto: calcular ganancia de la modelo según tier (o fallback a MODEL_SHARE)
+            ModelEarningTier tier = null;
+            try {
+                tier = modelTierService.resolveTierForModel(modelId);
+            } catch (Exception ex) {
+                log.warn("endSession: error resolviendo tier para modelId={} -> {}", modelId, ex.getMessage());
+            }
+
+            BigDecimal modelEarning;
+
+            if (tier == null) {
+                // Fallback: comportamiento antiguo (porcentaje fijo)
+                modelEarning = cost.multiply(MODEL_SHARE)
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
+            } else {
+                // Primeros 60 segundos a firstMinuteEarningPerMin,
+                // resto a nextMinutesEarningPerMin
+                long secondsFirst = Math.min(seconds, 60L);
+                long secondsNext  = Math.max(0L, seconds - 60L);
+
+                BigDecimal earnFirst = BigDecimal.ZERO;
+                BigDecimal earnNext  = BigDecimal.ZERO;
+
+                if (secondsFirst > 0) {
+                    earnFirst = tier.getFirstMinuteEarningPerMin()
+                            .multiply(BigDecimal.valueOf(secondsFirst))
+                            .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
+                }
+                if (secondsNext > 0) {
+                    earnNext = tier.getNextMinutesEarningPerMin()
+                            .multiply(BigDecimal.valueOf(secondsNext))
+                            .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
+                }
+
+                BigDecimal rawModelEarning = earnFirst.add(earnNext);
+                modelEarning = rawModelEarning.setScale(2, java.math.RoundingMode.HALF_UP);
+            }
+
+            BigDecimal platformEarning = cost.subtract(modelEarning)
+                    .setScale(2, java.math.RoundingMode.HALF_UP);
+
+            // Seguridad: nunca pagar más a la modelo de lo que paga el cliente
+            if (platformEarning.compareTo(BigDecimal.ZERO) < 0) {
+                log.warn("endSession: platformEarning < 0 ajustado a 0. cost={} modelEarning={}", cost, modelEarning);
+                platformEarning = BigDecimal.ZERO;
+                modelEarning = cost;
+            }
 
             // 9) ===== CLIENTE: transactions + balances + clients =====
             Transaction txClient = new Transaction();
@@ -271,7 +322,10 @@ public class StreamService {
             balClient.setDescription("Cargo por streaming de " + seconds + " segundos");
             balanceRepository.save(balClient);
 
-            BigDecimal clientHours = clientEntity.getStreamingHours() != null ? clientEntity.getStreamingHours() : BigDecimal.ZERO;
+            BigDecimal clientHours = clientEntity.getStreamingHours() != null
+                    ? clientEntity.getStreamingHours()
+                    : BigDecimal.ZERO;
+
             clientEntity.setSaldoActual(newClientBalance);
             clientEntity.setStreamingHours(clientHours.add(hoursAsBigDecimal));
             clientRepository.save(clientEntity);
@@ -289,6 +343,7 @@ public class StreamService {
                     .findTopByUserIdOrderByTimestampDesc(modelId)
                     .map(Balance::getBalance)
                     .orElse(BigDecimal.ZERO);
+
             BigDecimal newModelBalance = lastModelBalance.add(modelEarning);
 
             Balance balModel = new Balance();
@@ -306,9 +361,18 @@ public class StreamService {
                 m.setUserId(modelId);
                 return m;
             });
-            BigDecimal mSaldo = modelEntity.getSaldoActual() != null ? modelEntity.getSaldoActual() : BigDecimal.ZERO;
-            BigDecimal mTotal = modelEntity.getTotalIngresos() != null ? modelEntity.getTotalIngresos() : BigDecimal.ZERO;
-            BigDecimal mHours = modelEntity.getStreamingHours() != null ? modelEntity.getStreamingHours() : BigDecimal.ZERO;
+
+            BigDecimal mSaldo = modelEntity.getSaldoActual() != null
+                    ? modelEntity.getSaldoActual()
+                    : BigDecimal.ZERO;
+
+            BigDecimal mTotal = modelEntity.getTotalIngresos() != null
+                    ? modelEntity.getTotalIngresos()
+                    : BigDecimal.ZERO;
+
+            BigDecimal mHours = modelEntity.getStreamingHours() != null
+                    ? modelEntity.getStreamingHours()
+                    : BigDecimal.ZERO;
 
             modelEntity.setSaldoActual(mSaldo.add(modelEarning));
             modelEntity.setTotalIngresos(mTotal.add(modelEarning));
@@ -353,13 +417,7 @@ public class StreamService {
                 .orElseThrow(() -> new IllegalStateException("No hay sesión de streaming activa entre el cliente y la modelo"));
 
         // 2) registrar gift (contabilidad + balances + plataforma)
-        Gift gift = transactionService.processGift(clientId, modelId, giftId, session.getId());
-
-        // 3) (opcional) podrías querer el newBalance del cliente aquí si lo necesitas:
-        // BigDecimal newClientBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(clientId)
-        //        .map(Balance::getBalance).orElse(BigDecimal.ZERO);
-
-        return gift; // el handler WS puede consultar el balance si quiere enviarlo
+        return transactionService.processGift(clientId, modelId, giftId, session.getId());
     }
 
     /**
@@ -392,7 +450,6 @@ public class StreamService {
         long seconds = java.time.Duration.between(session.getStartTime(), LocalDateTime.now()).getSeconds();
         if (seconds < 0) seconds = 0;
 
-        // coste con precisión intermedia (no redondeamos a 2 decimales aún)
         BigDecimal costSoFar = billing.getRatePerMinute()
                 .multiply(BigDecimal.valueOf(seconds))
                 .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
@@ -408,7 +465,7 @@ public class StreamService {
         // 4) si remaining < cutoff => cerrar
         if (remaining.compareTo(billing.getCutoffThresholdEur()) < 0) {
             log.info("endIfBelowThreshold: corte por umbral. clientId={}, modelId={}, remaining={}, cutoff={}",
-                    clientId, modelId, remaining, billing.getCutoffThresholdEur());   // [FIX]
+                    clientId, modelId, remaining, billing.getCutoffThresholdEur());
             endSession(clientId, modelId);
             return true;
         }
@@ -419,16 +476,11 @@ public class StreamService {
     /**
      * Devuelve true si hay una sesión de streaming ACTIVA (end_time = NULL)
      * entre el cliente y la modelo indicados.
-     *
-     * Usa primero la pista de ModelStatusService (cache/redis) y, si no existe,
-     * consulta a la base de datos.
      */
     public boolean isPairActive(Long clientId, Long modelId) {
-        // 1) Pista en caché: si hay sessionId en curso, ya es activo
         if (statusService.getActiveSession(clientId, modelId).isPresent()) {
             return true;
         }
-        // 2) Fallback a BD por si la caché no está poblada
         return streamRecordRepository
                 .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId)
                 .isPresent();
@@ -449,7 +501,6 @@ public class StreamService {
 
     /**
      * Devuelve true si el userId (sea CLIENT o MODEL) está en alguna sesión activa (end_time NULL).
-     * Implementación basada en los métodos existentes del StreamRecordRepository.
      */
     public boolean isUserInActiveStream(Long userId) {
         try {
@@ -461,6 +512,4 @@ public class StreamService {
             return false;
         }
     }
-
-
 }

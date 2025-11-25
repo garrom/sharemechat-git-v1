@@ -5,7 +5,7 @@ import { faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
 import {
   List, StateRow, ItemCard, Avatar, Info, Name, Badges, DotWrap, StatusDot
 } from '../../styles/pages-styles/FavoritesStyles';
-import StatusBadge from '../../widgets/StatusBadge';
+import StatusBadge from '../../components/StatusBadge';
 
 function FavListItem({ user, avatarUrl, onSelect, onRemove, onContextMenu, selected = false, hasUnread = false }) {
   const placeholder = '/img/avatarChico.png';

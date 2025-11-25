@@ -14,4 +14,8 @@ public interface StreamRecordRepository extends JpaRepository<StreamRecord, Long
     // (opcionales, útiles para diagnósticos)
     List<StreamRecord> findByClient_IdAndEndTimeIsNull(Long clientId);
     List<StreamRecord> findByModel_IdAndEndTimeIsNull(Long modelId);
+
+    // Sesiones ya finalizadas de una modelo desde un instante concreto en adelante
+    java.util.List<StreamRecord> findByModel_IdAndEndTimeIsNotNullAndEndTimeAfter(Long modelId, java.time.LocalDateTime since);
+
 }

@@ -1,4 +1,4 @@
-// src/widgets/StatusBadge.jsx
+// src/components/StatusBadge.jsx
 import React from 'react';
 import styled from 'styled-components';
 import {
