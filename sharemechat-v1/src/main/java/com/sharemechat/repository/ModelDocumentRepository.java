@@ -1,6 +1,6 @@
 package com.sharemechat.repository;
 
-import com.sharemechat.dto.FunnyplaceItemDTO;
+import com.sharemechat.dto.ModelTeaserDTO;
 import com.sharemechat.entity.ModelDocument;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,9 +10,11 @@ import java.util.List;
 import java.util.Optional;
 
 public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Long> {
+
     Optional<ModelDocument> findByUserId(Long userId);
     boolean existsByUserId(Long userId);
 
+    // Cantidad total de modelos aprobadas con video
     @Query("""
            select count(md)
            from ModelDocument md, User u
@@ -23,8 +25,9 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
            """)
     long countEligibleModelsWithVideo();
 
+    // Consulta paginada para teasers
     @Query("""
-           select new com.sharemechat.dto.FunnyplaceItemDTO(
+           select new com.sharemechat.dto.ModelTeaserDTO(
                u.id,
                COALESCE(u.nickname, u.name, u.email),
                md.urlPic,
@@ -37,6 +40,6 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
              and u.verificationStatus = 'APPROVED'
            order by u.id asc
            """)
-    List<FunnyplaceItemDTO> findEligiblePage(Pageable pageable);
+    List<ModelTeaserDTO> findTeasersPage(Pageable pageable);
 
 }

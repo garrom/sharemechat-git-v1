@@ -1,38 +1,64 @@
-// PerfilModel.jsx
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 
 import {
   StyledContainer,
   StyledNavbar,
-  StyledBrand
+  StyledBrand,
 } from '../../styles/NavbarStyles';
-import { NavButton } from '../../styles/ButtonStyles';
 
 import {
-  PageWrap,
-  Title,
+  NavButton,
+  ProfilePrimaryButton,
+  ProfileSecondaryButton,
+  ProfileDangerOutlineButton,
+} from '../../styles/ButtonStyles';
+
+import {
   Message,
-  Form,
-  FormRow,
   Label,
   Input,
   Textarea,
-  ButtonPrimary,
-  ButtonDangerOutline,
-  ButtonRow,
   FileInput,
-  FileLabel,
-  Hr,
-  SectionCard,
-  SectionTitle,
-  Photo,
   Hint,
-  BackButton,
+  FileNameWrapper,
   Video,
-} from '../../styles/subpages/PerfilClientModelStyle.js';
+  ProfileMain,
+  ProfileHeader,
+  ProfileHeaderAvatar,
+  Avatar,
+  AvatarImg,
+  ProfileHeaderInfo,
+  ProfileHeaderTitleRow,
+  ProfileHeaderName,
+  ChipRole,
+  ProfileHeaderSubtitle,
+  ProfileHeaderMeta,
+  MetaItem,
+  MetaLabel,
+  MetaValue,
+  MetaValueOk,
+  ProfileGrid,
+  ProfileColMain,
+  ProfileColSide,
+  ProfileCard,
+  MediaCard,
+  SecurityCard,
+  CardHeader,
+  CardTitle,
+  CardSubtitle,
+  CardBody,
+  CardFooter,
+  FormGridNew,
+  FormFieldNew,
+  PhotoPreview,
+  PhotoImg,
+  PhotoEmpty,
+  PhotoActions,
+  SecurityActions,
+} from '../../styles/subpages/PerfilClientModelStyle';
 
-const DOCS_GET_URL    = '/api/models/documents/me';
+const DOCS_GET_URL = '/api/models/documents/me';
 const DOCS_UPLOAD_URL = '/api/models/documents';
 
 const PerfilModel = () => {
@@ -45,22 +71,53 @@ const PerfilModel = () => {
   const [msg, setMsg] = useState('');
   const [userId, setUserId] = useState(null);
 
-  const [form, setForm] = useState({ email: '', name: '', surname: '', nickname: '', biography: '', interests: '' });
+  const [form, setForm] = useState({
+    email: '',
+    name: '',
+    surname: '',
+    nickname: '',
+    biography: '',
+    interests: '',
+  });
+
   const [docs, setDocs] = useState({ urlPic: null, urlVideo: null });
   const [picFile, setPicFile] = useState(null);
   const [videoFile, setVideoFile] = useState(null);
   const [uploadingField, setUploadingField] = useState(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deletingPic, setDeletingPic] = useState(false);
   const [deletingVideo, setDeletingVideo] = useState(false);
   const [picKey, setPicKey] = useState(0);
   const [videoKey, setVideoKey] = useState(0);
 
+  const loadDocs = async () => {
+    try {
+      const res = await fetch(DOCS_GET_URL, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setDocs({
+        urlPic: data.urlPic || null,
+        urlVideo: data.urlVideo || null,
+      });
+    } catch {
+      // noop
+    }
+  };
+
   useEffect(() => {
-    if (!token) { history.push('/login'); return; }
+    if (!token) {
+      history.push('/login');
+      return;
+    }
+
     const load = async () => {
-      setLoading(true); setError('');
+      setLoading(true);
+      setError('');
       try {
-        const res = await fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch('/api/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) throw new Error((await res.text()) || 'No se pudo cargar el perfil');
         const data = await res.json();
         setUserId(data.id);
@@ -79,17 +136,9 @@ const PerfilModel = () => {
         setLoading(false);
       }
     };
+
     load();
   }, [token, history]);
-
-  const loadDocs = async () => {
-    try {
-      const res = await fetch(DOCS_GET_URL, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) return;
-      const data = await res.json();
-      setDocs({ urlPic: data.urlPic || null, urlVideo: data.urlVideo || null });
-    } catch { /* noop */ }
-  };
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -98,12 +147,23 @@ const PerfilModel = () => {
 
   const handleSave = async () => {
     if (!userId) return;
-    setSaving(true); setError(''); setMsg('');
+    setSaving(true);
+    setError('');
+    setMsg('');
     try {
-      const payload = { name: form.name || null, surname: form.surname || null, nickname: form.nickname || null, biography: form.biography || null, interests: form.interests || null };
+      const payload = {
+        name: form.name || null,
+        surname: form.surname || null,
+        nickname: form.nickname || null,
+        biography: form.biography || null,
+        interests: form.interests || null,
+      };
       const res = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error((await res.text()) || 'No se pudo guardar');
@@ -134,15 +194,31 @@ const PerfilModel = () => {
 
   const uploadSingle = async (fieldName, fileObj) => {
     if (!fileObj) return;
-    setUploadingField(fieldName); setError(''); setMsg('');
+    setUploadingField(fieldName);
+    setError('');
+    setMsg('');
     try {
-      const fd = new FormData(); fd.append(fieldName, fileObj);
-      const res = await fetch(DOCS_UPLOAD_URL, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const fd = new FormData();
+      fd.append(fieldName, fileObj);
+      const res = await fetch(DOCS_UPLOAD_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
       if (!res.ok) throw new Error((await res.text()) || 'No se pudo subir el archivo');
       const data = await res.json();
-      setDocs({ urlPic: data.urlPic || null, urlVideo: data.urlVideo || null });
-      if (fieldName === 'pic') { setPicFile(null); setPicKey(k => k + 1); }
-      if (fieldName === 'video') { setVideoFile(null); setVideoKey(k => k + 1); }
+      setDocs({
+        urlPic: data.urlPic || null,
+        urlVideo: data.urlVideo || null,
+      });
+      if (fieldName === 'pic') {
+        setPicFile(null);
+        setPicKey((k) => k + 1);
+      }
+      if (fieldName === 'video') {
+        setVideoFile(null);
+        setVideoKey((k) => k + 1);
+      }
       setMsg('Archivo subido correctamente.');
     } catch (e) {
       setError(e.message);
@@ -153,26 +229,40 @@ const PerfilModel = () => {
 
   const deletePhoto = async () => {
     if (!docs.urlPic || !window.confirm('¿Eliminar tu foto de perfil?')) return;
-    setDeleting(true); setError(''); setMsg('');
+    setDeletingPic(true);
+    setError('');
+    setMsg('');
     try {
-      const res = await fetch(`${DOCS_UPLOAD_URL}?field=pic`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${DOCS_UPLOAD_URL}?field=pic`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar');
-      setDocs(d => ({ ...d, urlPic: null })); setPicFile(null); setPicKey(k => k + 1);
+      setDocs((d) => ({ ...d, urlPic: null }));
+      setPicFile(null);
+      setPicKey((k) => k + 1);
       setMsg('Foto eliminada.');
     } catch (e) {
       setError(e.message);
     } finally {
-      setDeleting(false);
+      setDeletingPic(false);
     }
   };
 
   const deleteVideo = async () => {
     if (!docs.urlVideo || !window.confirm('¿Eliminar tu vídeo de presentación?')) return;
-    setDeletingVideo(true); setError(''); setMsg('');
+    setDeletingVideo(true);
+    setError('');
+    setMsg('');
     try {
-      const res = await fetch(`${DOCS_UPLOAD_URL}?field=video`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${DOCS_UPLOAD_URL}?field=video`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar');
-      setDocs(d => ({ ...d, urlVideo: null })); setVideoFile(null); setVideoKey(k => k + 1);
+      setDocs((d) => ({ ...d, urlVideo: null }));
+      setVideoFile(null);
+      setVideoKey((k) => k + 1);
       setMsg('Vídeo eliminado.');
     } catch (e) {
       setError(e.message);
@@ -181,109 +271,326 @@ const PerfilModel = () => {
     }
   };
 
+  const displayName = form.nickname || form.name || form.email || 'Tu perfil de modelo';
+
+  const currentPicName = (() => {
+    if (!docs.urlPic) return '';
+    const raw = (docs.urlPic || '').split('?')[0].split('#')[0].split('/').pop() || '';
+    const originalName = raw.replace(/^[0-9a-fA-F-]{36}-/, '');
+    return decodeURIComponent(originalName);
+  })();
+
+  const currentVideoName = (() => {
+    if (!docs.urlVideo) return '';
+    const raw = (docs.urlVideo || '').split('?')[0].split('#')[0].split('/').pop() || '';
+    const originalName = raw.replace(/^[0-9a-fA-F-]{36}-/, '');
+    return decodeURIComponent(originalName);
+  })();
+
   return (
     <StyledContainer>
       <StyledNavbar>
         <StyledBrand href="/" aria-label="SharemeChat" />
         <div>
-          <NavButton type="button" onClick={onUnsubscribe}>Darme de baja</NavButton>
-          <NavButton type="button" onClick={() => history.push('/change-password')}>Cambiar contraseña</NavButton>
-          <BackButton type="button" onClick={() => history.goBack()}>Volver</BackButton>
+          <NavButton type="button" onClick={() => history.goBack()}>
+            Volver
+          </NavButton>
         </div>
       </StyledNavbar>
 
-      <PageWrap>
-        <Title>Perfil (Modelo)</Title>
+      <ProfileMain>
+        {/* CABECERA PERFIL */}
+        <ProfileHeader>
+          <ProfileHeaderAvatar>
+            <Avatar>
+              {docs.urlPic && (
+                <AvatarImg src={docs.urlPic} alt="Foto de perfil" />
+              )}
+            </Avatar>
+          </ProfileHeaderAvatar>
+
+          <ProfileHeaderInfo>
+            <ProfileHeaderTitleRow>
+              <ProfileHeaderName>{displayName}</ProfileHeaderName>
+              <ChipRole>Modelo</ChipRole>
+            </ProfileHeaderTitleRow>
+            <ProfileHeaderSubtitle>
+              Completa tus datos y sube una foto y un vídeo de presentación para atraer más clientes.
+            </ProfileHeaderSubtitle>
+            <ProfileHeaderMeta>
+              <MetaItem>
+                <MetaLabel>Estado</MetaLabel>
+                <MetaValueOk>Cuenta activa</MetaValueOk>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Email</MetaLabel>
+                <MetaValue>{form.email || '—'}</MetaValue>
+              </MetaItem>
+            </ProfileHeaderMeta>
+          </ProfileHeaderInfo>
+        </ProfileHeader>
+
+        {/* Mensajes de estado */}
         {loading && <p>Cargando…</p>}
         {error && <Message type="error">{error}</Message>}
         {msg && <Message type="ok">{msg}</Message>}
 
         {!loading && (
-          <>
-            <Form onSubmit={(e) => e.preventDefault()}>
-              <FormRow><Label>Email (solo lectura)</Label><Input type="email" value={form.email} readOnly /></FormRow>
-              <FormRow><Label>Nombre</Label><Input name="name" value={form.name} onChange={onChange} placeholder="Tu nombre" /></FormRow>
-              <FormRow><Label>Apellido</Label><Input name="surname" value={form.surname} onChange={onChange} placeholder="Tu apellido" /></FormRow>
-              <FormRow><Label>Nickname</Label><Input name="nickname" value={form.nickname} onChange={onChange} placeholder="Tu nickname" /></FormRow>
-              <FormRow><Label>Biografía</Label><Textarea name="biography" value={form.biography} onChange={onChange} placeholder="Cuéntanos sobre ti y tu estilo" rows={4} /></FormRow>
-              <FormRow><Label>Intereses (separados por comas)</Label><Input name="interests" value={form.interests} onChange={onChange} placeholder="gaming, cosplay, baile…" /></FormRow>
-              <div><ButtonPrimary type="button" onClick={handleSave} disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</ButtonPrimary></div>
-            </Form>
+          <ProfileGrid>
+            {/* COLUMNA IZQUIERDA: DATOS */}
+            <ProfileColMain>
+              <ProfileCard>
+                <CardHeader>
+                  <CardTitle>Datos básicos</CardTitle>
+                  <CardSubtitle>
+                    Estos datos no se muestran a los clientes salvo tu nickname.
+                  </CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  <FormGridNew>
+                    <FormFieldNew>
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={form.email}
+                        readOnly
+                      />
+                    </FormFieldNew>
 
-            <Hr />
+                    <FormFieldNew>
+                      <Label>Nombre</Label>
+                      <Input
+                        name="name"
+                        value={form.name}
+                        onChange={onChange}
+                        placeholder="Tu nombre"
+                      />
+                    </FormFieldNew>
 
-            <SectionCard>
-              <SectionTitle>Multimedia del perfil</SectionTitle>
+                    <FormFieldNew>
+                      <Label>Apellido</Label>
+                      <Input
+                        name="surname"
+                        value={form.surname}
+                        onChange={onChange}
+                        placeholder="Tu apellido"
+                      />
+                    </FormFieldNew>
 
-              <SectionCard as="div">
-                <h4>Foto de perfil (archivo)</h4>
-                {docs.urlPic ? (
-                  <>
-                    <Photo src={docs.urlPic} alt="foto actual" />
-                    <div style={{ marginTop: 6 }}>
-                      <a href={docs.urlPic} target="_blank" rel="noreferrer">
-                        {(() => {
-                          const raw = (docs.urlPic || '').split('?')[0].split('#')[0].split('/').pop() || '';
-                          const originalName = raw.replace(/^[0-9a-fA-F-]{36}-/, '');
-                          return decodeURIComponent(originalName);
-                        })()}
-                      </a>
-                    </div>
-                  </>
-                ) : (
-                  <Message $muted>— No subido —</Message>
-                )}
-                <ButtonRow>
-                  <FileInput key={picKey} id="model-pic" type="file" accept="image/*" onChange={(e) => setPicFile(e.target.files?.[0] || null)} />
-                  <FileLabel htmlFor="model-pic">Seleccionar archivo</FileLabel>
-                  <ButtonPrimary type="button" onClick={() => uploadSingle('pic', picFile)} disabled={!picFile || uploadingField === 'pic'}>
-                    {uploadingField === 'pic' ? 'Subiendo…' : 'Subir foto'}
-                  </ButtonPrimary>
-                  {docs.urlPic && (
-                    <ButtonDangerOutline type="button" onClick={deletePhoto} disabled={deleting}>
-                      {deleting ? 'Eliminando…' : 'Eliminar foto'}
-                    </ButtonDangerOutline>
+                    <FormFieldNew>
+                      <Label>Nickname</Label>
+                      <Input
+                        name="nickname"
+                        value={form.nickname}
+                        onChange={onChange}
+                        placeholder="Tu nickname público"
+                      />
+                    </FormFieldNew>
+                  </FormGridNew>
+                </CardBody>
+              </ProfileCard>
+
+              <ProfileCard style={{ marginTop: '16px' }}>
+                <CardHeader>
+                  <CardTitle>Sobre ti</CardTitle>
+                  <CardSubtitle>
+                    Cuéntanos tu estilo, qué ofreces y qué te gusta hacer en las sesiones.
+                  </CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  <FormFieldNew>
+                    <Label>Biografía</Label>
+                    <Textarea
+                      name="biography"
+                      value={form.biography}
+                      onChange={onChange}
+                      placeholder="Cuéntanos sobre ti y tu estilo"
+                      rows={4}
+                    />
+                  </FormFieldNew>
+
+                  <FormFieldNew>
+                    <Label>Intereses</Label>
+                    <Input
+                      name="interests"
+                      value={form.interests}
+                      onChange={onChange}
+                      placeholder="gaming, cosplay, baile…"
+                    />
+                    <Hint>
+                      Separa los intereses con comas. Los usamos para sugerir mejores clientes.
+                    </Hint>
+                  </FormFieldNew>
+                </CardBody>
+                <CardFooter>
+                  <ProfilePrimaryButton
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? 'Guardando…' : 'Guardar cambios'}
+                  </ProfilePrimaryButton>
+                </CardFooter>
+              </ProfileCard>
+            </ProfileColMain>
+
+            {/* COLUMNA DERECHA: MULTIMEDIA + SEGURIDAD */}
+            <ProfileColSide>
+              {/* FOTO DE PERFIL */}
+              <MediaCard>
+                <CardHeader>
+                  <CardTitle>Foto de perfil</CardTitle>
+                  <CardSubtitle>
+                    Esta imagen se usa como portada de tu perfil de modelo.
+                  </CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  {docs.urlPic ? (
+                    <>
+                      <PhotoPreview>
+                        <PhotoImg src={docs.urlPic} alt="Foto de perfil actual" />
+                      </PhotoPreview>
+                      {currentPicName && (
+                        <FileNameWrapper>
+                          <a href={docs.urlPic} target="_blank" rel="noreferrer">
+                            {currentPicName}
+                          </a>
+                        </FileNameWrapper>
+                      )}
+                    </>
+                  ) : (
+                    <PhotoEmpty>— No subido —</PhotoEmpty>
                   )}
-                </ButtonRow>
-                <Hint>Formato recomendado JPG/PNG.</Hint>
-              </SectionCard>
 
-              <SectionCard as="div" style={{ marginTop: 16 }}>
-                <h4>Vídeo de presentación</h4>
-                {docs.urlVideo ? (
-                  <>
-                    <Video src={docs.urlVideo} controls />
-                    <div style={{ marginTop: 6 }}>
-                      <a href={docs.urlVideo} target="_blank" rel="noreferrer">
-                        {(() => {
-                          const raw = (docs.urlVideo || '').split('?')[0].split('#')[0].split('/').pop() || '';
-                          const originalName = raw.replace(/^[0-9a-fA-F-]{36}-/, '');
-                          return decodeURIComponent(originalName);
-                        })()}
-                      </a>
-                    </div>
-                  </>
-                ) : (
-                  <Message $muted>— No subido —</Message>
-                )}
-                <ButtonRow>
-                  <FileInput key={videoKey} id="model-video" type="file" accept="video/*" onChange={(e) => setVideoFile(e.target.files?.[0] || null)} />
-                  <FileLabel htmlFor="model-video">Seleccionar archivo</FileLabel>
-                  <ButtonPrimary type="button" onClick={() => uploadSingle('video', videoFile)} disabled={!videoFile || uploadingField === 'video'}>
-                    {uploadingField === 'video' ? 'Subiendo…' : 'Subir vídeo'}
-                  </ButtonPrimary>
-                  {docs.urlVideo && (
-                    <ButtonDangerOutline type="button" onClick={deleteVideo} disabled={deletingVideo}>
-                      {deletingVideo ? 'Eliminando…' : 'Eliminar vídeo'}
-                    </ButtonDangerOutline>
+                  <PhotoActions>
+                    <FileInput
+                      key={picKey}
+                      id="model-pic"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setPicFile(e.target.files?.[0] || null)}
+                    />
+                    <label htmlFor="model-pic">
+                      <ProfileSecondaryButton type="button">
+                        Seleccionar archivo
+                      </ProfileSecondaryButton>
+                    </label>
+
+                    <ProfilePrimaryButton
+                      type="button"
+                      onClick={() => uploadSingle('pic', picFile)}
+                      disabled={!picFile || uploadingField === 'pic'}
+                    >
+                      {uploadingField === 'pic' ? 'Subiendo…' : 'Subir foto'}
+                    </ProfilePrimaryButton>
+
+                    {docs.urlPic && (
+                      <ProfileDangerOutlineButton
+                        type="button"
+                        onClick={deletePhoto}
+                        disabled={deletingPic}
+                      >
+                        {deletingPic ? 'Eliminando…' : 'Eliminar foto'}
+                      </ProfileDangerOutlineButton>
+                    )}
+                  </PhotoActions>
+
+                  <Hint>Formato recomendado JPG/PNG.</Hint>
+                </CardBody>
+              </MediaCard>
+
+              {/* VÍDEO DE PRESENTACIÓN */}
+              <MediaCard style={{ marginTop: '16px' }}>
+                <CardHeader>
+                  <CardTitle>Vídeo de presentación</CardTitle>
+                  <CardSubtitle>
+                    Un breve vídeo te ayuda a destacar y aumentar la conversión de clientes.
+                  </CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  {docs.urlVideo ? (
+                    <>
+                      <Video src={docs.urlVideo} controls />
+                      {currentVideoName && (
+                        <FileNameWrapper>
+                          <a href={docs.urlVideo} target="_blank" rel="noreferrer">
+                            {currentVideoName}
+                          </a>
+                        </FileNameWrapper>
+                      )}
+                    </>
+                  ) : (
+                    <PhotoEmpty>— No subido —</PhotoEmpty>
                   )}
-                </ButtonRow>
-                <Hint>Formato recomendado MP4. Tamaño razonable para carga rápida.</Hint>
-              </SectionCard>
-            </SectionCard>
-          </>
+
+                  <PhotoActions>
+                    <FileInput
+                      key={videoKey}
+                      id="model-video"
+                      type="file"
+                      accept="video/*"
+                      onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
+                    />
+                    <label htmlFor="model-video">
+                      <ProfileSecondaryButton type="button">
+                        Seleccionar archivo
+                      </ProfileSecondaryButton>
+                    </label>
+
+                    <ProfilePrimaryButton
+                      type="button"
+                      onClick={() => uploadSingle('video', videoFile)}
+                      disabled={!videoFile || uploadingField === 'video'}
+                    >
+                      {uploadingField === 'video' ? 'Subiendo…' : 'Subir vídeo'}
+                    </ProfilePrimaryButton>
+
+                    {docs.urlVideo && (
+                      <ProfileDangerOutlineButton
+                        type="button"
+                        onClick={deleteVideo}
+                        disabled={deletingVideo}
+                      >
+                        {deletingVideo ? 'Eliminando…' : 'Eliminar vídeo'}
+                      </ProfileDangerOutlineButton>
+                    )}
+                  </PhotoActions>
+
+                  <Hint>
+                    Formato recomendado MP4. Tamaño razonable para carga rápida.
+                  </Hint>
+                </CardBody>
+              </MediaCard>
+
+              {/* SEGURIDAD Y CUENTA */}
+              <SecurityCard style={{ marginTop: '16px' }}>
+                <CardHeader>
+                  <CardTitle>Seguridad y cuenta</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <SecurityActions>
+                    <ProfileSecondaryButton
+                      type="button"
+                      onClick={() => history.push('/change-password')}
+                    >
+                      Cambiar contraseña
+                    </ProfileSecondaryButton>
+                    <ProfileDangerOutlineButton
+                      type="button"
+                      onClick={onUnsubscribe}
+                    >
+                      Darme de baja
+                    </ProfileDangerOutlineButton>
+                  </SecurityActions>
+                  <Hint>
+                    Si te das de baja, perderás tu saldo y no podrás acceder al historial de chats.
+                  </Hint>
+                </CardBody>
+              </SecurityCard>
+            </ProfileColSide>
+          </ProfileGrid>
         )}
-      </PageWrap>
+      </ProfileMain>
     </StyledContainer>
   );
 };

@@ -225,4 +225,30 @@ public class ModelController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/teasers")
+    public ResponseEntity<?> getModelTeasers(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            Authentication authentication) {
+
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
+        }
+
+        User user = userService.findByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
+        }
+
+        // Solo CLIENT accede a ver modelos
+        if (!Constants.Roles.CLIENT.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Solo los clientes pueden ver los vídeos de modelos");
+        }
+
+        var teasers = modelService.listTeasers(page, size);
+        return ResponseEntity.ok(teasers);
+    }
+
+
 }

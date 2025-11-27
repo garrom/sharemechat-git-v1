@@ -1,4 +1,4 @@
-// src/styles/ModelDocumentStyles.js
+// src/styles/pages-styles/ModelDocumentStyles.js
 import styled from 'styled-components';
 
 /* CONTENEDOR PRINCIPAL
@@ -23,7 +23,7 @@ export const StyledNavbar = styled.nav`
   background: linear-gradient(180deg, #2B2F33 0%, #272B30 100%);
 `;
 
-/* Botón Navbar */
+/* Botón Navbar (no lo usas aquí, pero lo dejamos por compatibilidad) */
 export const StyledNavButton = styled.button`
   display: inline-flex;
   align-items: center;
@@ -67,7 +67,6 @@ export const StyledNavGroup = styled.div`
   & > * {
     white-space: nowrap;
   }
-
 `;
 
 /* LAYOUT PRINCIPAL

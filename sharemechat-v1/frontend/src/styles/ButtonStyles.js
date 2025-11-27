@@ -108,6 +108,30 @@ export const ActionButton = styled(PillButtonBase)`
   ${variant('#fff', '#28a745', '#218838', '#218838')}
 `;
 
+// Botones perfil (mockup PerfilClient)
+export const ProfilePrimaryButton = styled(PillButtonBase)`
+  ${variant('#fff', '#0d6efd', '#0a58ca', '#1b74ff')}
+  box-shadow: 0 14px 30px rgba(37,99,235,0.38);
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+`;
+
+export const ProfileSecondaryButton = styled(PillButtonBase)`
+  ${variant('#111827', '#f9fafb', '#94a3b8', '#e5e7eb')}
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+`;
+
+export const ProfileDangerOutlineButton = styled(PillButtonBase)`
+  ${variant('#ef4444', 'transparent', '#f87171', 'rgba(254,242,242,0.06)')}
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+`;
+
+
 /* ========== VIDEOCHAT: DESKTOP + MÓVIL ========== */
 
 /* Activar cámara (texto) */
@@ -222,8 +246,6 @@ export const NavButton = styled(PillButtonBase)`
   }
 `;
 
-
-
 /* ========== ICON-ONLY VARIANTS (para cuando quites texto) ========== */
 /* botones 100% icono (☎, ⛔, ⏹, 👤+ ) */
 
@@ -253,4 +275,24 @@ export const BtnRoundVideo = styled(IconButtonBase)`
 export const BtnSend = styled(IconButtonBase)`
   ${variant('#fff', '#0d6efd', '#0a58ca', '#0b5ed7')}
   width: 36px; height: 36px; min-width: 36px; min-height: 36px; font-size: 14px;
+`;
+
+// navegación vídeos promo (‹ › grandes en el lightbox)
+export const BtnPromoNav = styled(IconButtonBase)`
+  ${variant('#fff', 'rgba(0,0,0,0.78)', 'rgba(255,255,255,0.7)', 'rgba(255,255,255,0.16)', '#fff')}
+
+  width: 88px;
+  height: 88px;
+  min-width: 88px;
+  min-height: 88px;
+  font-size: 38px;
+  box-shadow: 0 18px 40px rgba(0,0,0,0.8);
+
+  @media (max-width: 768px) {
+    width: 68px;
+    height: 68px;
+    min-width: 68px;
+    min-height: 68px;
+    font-size: 30px;
+  }
 `;

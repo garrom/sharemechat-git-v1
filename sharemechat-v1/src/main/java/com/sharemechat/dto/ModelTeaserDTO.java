@@ -1,12 +1,13 @@
 package com.sharemechat.dto;
 
-public class FunnyplaceItemDTO {
+public class ModelTeaserDTO {
+
     private Long modelId;
     private String modelName;
     private String avatarUrl;
     private String videoUrl;
 
-    public FunnyplaceItemDTO(Long modelId, String modelName, String avatarUrl, String videoUrl) {
+    public ModelTeaserDTO(Long modelId, String modelName, String avatarUrl, String videoUrl) {
         this.modelId = modelId;
         this.modelName = modelName;
         this.avatarUrl = avatarUrl;

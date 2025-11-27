@@ -1,4 +1,4 @@
-//PerfilClient.jsx
+// src/pages/subpages/PerfilClient.jsx
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 
@@ -8,33 +8,57 @@ import {
   StyledNavbar,
   StyledBrand
 } from '../../styles/NavbarStyles';
-import { NavButton } from '../../styles/ButtonStyles';
-
-// Estilos de perfil
 import {
-  PageWrap,
-  Title,
+  NavButton,
+  ProfilePrimaryButton,
+  ProfileSecondaryButton,
+  ProfileDangerOutlineButton,
+} from '../../styles/ButtonStyles';
+
+import {
   Message,
-  Form,
-  FormRow,
   Label,
   Input,
   Textarea,
-  ButtonPrimary,
-  Hr,
-  SectionCard,
-  SectionTitle,
-  PhotoBlock,
-  Photo,
   FileInput,
-  FileLabel,
-  ButtonRow,
-  ButtonDangerOutline,
   Hint,
-  BackButton,
-} from '../../styles/subpages/PerfilClientModelStyle.js';
+  FileNameWrapper,
+  ProfileMain,
+  ProfileHeader,
+  ProfileHeaderAvatar,
+  Avatar,
+  AvatarImg,
+  ProfileHeaderInfo,
+  ProfileHeaderTitleRow,
+  ProfileHeaderName,
+  ChipRole,
+  ProfileHeaderSubtitle,
+  ProfileHeaderMeta,
+  MetaItem,
+  MetaLabel,
+  MetaValue,
+  MetaValueOk,
+  ProfileGrid,
+  ProfileColMain,
+  ProfileColSide,
+  ProfileCard,
+  MediaCard,
+  SecurityCard,
+  CardHeader,
+  CardTitle,
+  CardSubtitle,
+  CardBody,
+  CardFooter,
+  FormGridNew,
+  FormFieldNew,
+  PhotoPreview,
+  PhotoImg,
+  PhotoEmpty,
+  PhotoActions,
+  SecurityActions,
+} from '../../styles/subpages/PerfilClientModelStyle';
 
-const DOCS_GET_URL    = '/api/clients/documents/me';
+const DOCS_GET_URL = '/api/clients/documents/me';
 const DOCS_UPLOAD_URL = '/api/clients/documents';
 
 const PerfilClient = () => {
@@ -58,11 +82,14 @@ const PerfilClient = () => {
 
   useEffect(() => {
     if (!token) { history.push('/login'); return; }
+
     const load = async () => {
       setLoading(true);
       setError('');
       try {
-        const res = await fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } });
+        const res = await fetch('/api/users/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
         if (!res.ok) throw new Error((await res.text()) || 'No se pudo cargar el perfil');
         const data = await res.json();
         setUserId(data.id);
@@ -81,7 +108,20 @@ const PerfilClient = () => {
         setLoading(false);
       }
     };
+
+    const loadDocs = async () => {
+      try {
+        const r = await fetch(DOCS_GET_URL, { headers: { Authorization: `Bearer ${token}` } });
+        if (!r.ok) return;
+        const d = await r.json();
+        setDocs({ urlPic: d.urlPic || null });
+      } catch {
+        // noop
+      }
+    };
+
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, history]);
 
   const loadDocs = async () => {
@@ -90,7 +130,9 @@ const PerfilClient = () => {
       if (!r.ok) return;
       const d = await r.json();
       setDocs({ urlPic: d.urlPic || null });
-    } catch { /* noop */ }
+    } catch {
+      // noop
+    }
   };
 
   const onChange = (e) => {
@@ -100,9 +142,17 @@ const PerfilClient = () => {
 
   const handleSave = async () => {
     if (!userId) return;
-    setSaving(true); setError(''); setMsg('');
+    setSaving(true);
+    setError('');
+    setMsg('');
     try {
-      const payload = { name: form.name || null, surname: form.surname || null, nickname: form.nickname || null, biography: form.biography || null, interests: form.interests || null };
+      const payload = {
+        name: form.name || null,
+        surname: form.surname || null,
+        nickname: form.nickname || null,
+        biography: form.biography || null,
+        interests: form.interests || null,
+      };
       const res = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -136,10 +186,17 @@ const PerfilClient = () => {
 
   const uploadPhoto = async () => {
     if (!picFile) return;
-    setUploading(true); setError(''); setMsg('');
+    setUploading(true);
+    setError('');
+    setMsg('');
     try {
-      const fd = new FormData(); fd.append('pic', picFile);
-      const res = await fetch(DOCS_UPLOAD_URL, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: fd });
+      const fd = new FormData();
+      fd.append('pic', picFile);
+      const res = await fetch(DOCS_UPLOAD_URL, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: fd,
+      });
       if (!res.ok) throw new Error((await res.text()) || 'No se pudo subir la foto');
       const data = await res.json();
       setDocs({ urlPic: data.urlPic || null });
@@ -155,11 +212,17 @@ const PerfilClient = () => {
   const deletePhoto = async () => {
     if (!docs.urlPic) return;
     if (!window.confirm('¿Eliminar tu foto de perfil?')) return;
-    setDeleting(true); setError(''); setMsg('');
+    setDeleting(true);
+    setError('');
+    setMsg('');
     try {
-      const res = await fetch(`${DOCS_UPLOAD_URL}?field=pic`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${DOCS_UPLOAD_URL}?field=pic`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
       if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar la foto');
-      setDocs({ urlPic: null }); setPicFile(null);
+      setDocs({ urlPic: null });
+      setPicFile(null);
       setMsg('Foto eliminada.');
     } catch (e) {
       setError(e.message);
@@ -168,81 +231,257 @@ const PerfilClient = () => {
     }
   };
 
+  const displayName = form.nickname || form.name || form.email || 'Tu perfil';
+
+  const currentFileName = (() => {
+    if (!docs.urlPic) return '';
+    const raw = (docs.urlPic || '').split('?')[0].split('#')[0].split('/').pop() || '';
+    const originalName = raw.replace(/^[0-9a-fA-F-]{36}-/, '');
+    return decodeURIComponent(originalName);
+  })();
+
   return (
     <StyledContainer>
       <StyledNavbar>
         <StyledBrand href="/" aria-label="SharemeChat" />
         <div>
-          <NavButton type="button" onClick={onUnsubscribe}>
-            Darme de baja
-          </NavButton>
-          <NavButton type="button" onClick={() => history.push('/change-password')}>
-            Cambiar contraseña
-          </NavButton>
-          <BackButton type="button" onClick={() => history.goBack()}>
+          <NavButton type="button" onClick={() => history.goBack()}>
             Volver
-          </BackButton>
+          </NavButton>
         </div>
       </StyledNavbar>
 
-      <PageWrap>
-        <Title>Perfil (Cliente)</Title>
+      <ProfileMain>
+        {/* CABECERA PERFIL */}
+        <ProfileHeader>
+          <ProfileHeaderAvatar>
+            <Avatar>
+              {docs.urlPic && (
+                <AvatarImg src={docs.urlPic} alt="Foto de perfil" />
+              )}
+            </Avatar>
+          </ProfileHeaderAvatar>
+
+          <ProfileHeaderInfo>
+            <ProfileHeaderTitleRow>
+              <ProfileHeaderName>{displayName}</ProfileHeaderName>
+              <ChipRole>Cliente</ChipRole>
+            </ProfileHeaderTitleRow>
+            <ProfileHeaderSubtitle>
+              Gestiona tus datos personales y la foto que verán las modelos.
+            </ProfileHeaderSubtitle>
+            <ProfileHeaderMeta>
+              <MetaItem>
+                <MetaLabel>Estado</MetaLabel>
+                <MetaValueOk>Cuenta activa</MetaValueOk>
+              </MetaItem>
+              <MetaItem>
+                <MetaLabel>Email</MetaLabel>
+                <MetaValue>{form.email || '—'}</MetaValue>
+              </MetaItem>
+            </ProfileHeaderMeta>
+          </ProfileHeaderInfo>
+        </ProfileHeader>
+
+        {/* Mensajes de estado */}
         {loading && <p>Cargando…</p>}
         {error && <Message type="error">{error}</Message>}
         {msg && <Message type="ok">{msg}</Message>}
 
         {!loading && (
-          <>
-            <Form onSubmit={(e) => e.preventDefault()}>
-              <FormRow><Label>Email (solo lectura)</Label><Input type="email" value={form.email} readOnly /></FormRow>
-              <FormRow><Label>Nombre</Label><Input name="name" value={form.name} onChange={onChange} placeholder="Tu nombre" /></FormRow>
-              <FormRow><Label>Apellido</Label><Input name="surname" value={form.surname} onChange={onChange} placeholder="Tu apellido" /></FormRow>
-              <FormRow><Label>Nickname</Label><Input name="nickname" value={form.nickname} onChange={onChange} placeholder="Tu nickname" /></FormRow>
-              <FormRow><Label>Biografía</Label><Textarea name="biography" value={form.biography} onChange={onChange} placeholder="Cuéntanos sobre ti" rows={4} /></FormRow>
-              <FormRow><Label>Intereses (separados por comas)</Label><Input name="interests" value={form.interests} onChange={onChange} placeholder="cine, música, viajes…" /></FormRow>
-              <div><ButtonPrimary type="button" onClick={handleSave} disabled={saving}>{saving ? 'Guardando…' : 'Guardar cambios'}</ButtonPrimary></div>
-            </Form>
+          <ProfileGrid>
+            {/* COLUMNA IZQUIERDA: DATOS */}
+            <ProfileColMain>
+              <ProfileCard>
+                <CardHeader>
+                  <CardTitle>Datos básicos</CardTitle>
+                  <CardSubtitle>
+                    Estos datos no se muestran a otros usuarios salvo tu nickname.
+                  </CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  <FormGridNew>
+                    <FormFieldNew>
+                      <Label>Email</Label>
+                      <Input
+                        type="email"
+                        value={form.email}
+                        readOnly
+                      />
+                    </FormFieldNew>
 
-            <Hr />
+                    <FormFieldNew>
+                      <Label>Nombre</Label>
+                      <Input
+                        name="name"
+                        value={form.name}
+                        onChange={onChange}
+                        placeholder="Tu nombre"
+                      />
+                    </FormFieldNew>
 
-            <SectionCard>
-              <SectionTitle>Foto de perfil</SectionTitle>
-              <PhotoBlock>
-                {docs.urlPic ? (
-                  <div>
-                    <Photo src={docs.urlPic} alt="foto actual" />
-                    <div style={{ marginTop: 6 }}>
-                      <a href={docs.urlPic} target="_blank" rel="noreferrer">
-                        {(() => {
-                          const raw = (docs.urlPic || '').split('?')[0].split('#')[0].split('/').pop() || '';
-                          const originalName = raw.replace(/^[0-9a-fA-F-]{36}-/, '');
-                          return decodeURIComponent(originalName);
-                        })()}
-                      </a>
-                    </div>
-                  </div>
-                ) : (
-                  <Message $muted>— Sin foto —</Message>
-                )}
-              </PhotoBlock>
+                    <FormFieldNew>
+                      <Label>Apellido</Label>
+                      <Input
+                        name="surname"
+                        value={form.surname}
+                        onChange={onChange}
+                        placeholder="Tu apellido"
+                      />
+                    </FormFieldNew>
 
-              <ButtonRow>
-                <FileInput id="client-pic" type="file" accept="image/*" onChange={(e) => setPicFile(e.target.files?.[0] || null)} />
-                <FileLabel htmlFor="client-pic">Seleccionar archivo</FileLabel>
-                <ButtonPrimary type="button" onClick={uploadPhoto} disabled={!picFile || uploading}>
-                  {uploading ? 'Subiendo…' : 'Subir foto'}
-                </ButtonPrimary>
-                {docs.urlPic && (
-                  <ButtonDangerOutline type="button" onClick={deletePhoto} disabled={deleting}>
-                    {deleting ? 'Eliminando…' : 'Eliminar foto'}
-                  </ButtonDangerOutline>
-                )}
-              </ButtonRow>
-              <Hint>Formato recomendado JPG/PNG. Elige un archivo y pulsa “Subir foto”.</Hint>
-            </SectionCard>
-          </>
+                    <FormFieldNew>
+                      <Label>Nickname</Label>
+                      <Input
+                        name="nickname"
+                        value={form.nickname}
+                        onChange={onChange}
+                        placeholder="Tu nickname público"
+                      />
+                    </FormFieldNew>
+                  </FormGridNew>
+                </CardBody>
+              </ProfileCard>
+
+              <ProfileCard style={{ marginTop: '16px' }}>
+                <CardHeader>
+                  <CardTitle>Sobre ti</CardTitle>
+                  <CardSubtitle>
+                    Ayúdanos a encontrar mejores matches según tus gustos.
+                  </CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  <FormFieldNew>
+                    <Label>Biografía</Label>
+                    <Textarea
+                      name="biography"
+                      value={form.biography}
+                      onChange={onChange}
+                      placeholder="Cuéntanos algo sobre ti, qué buscas, etc."
+                      rows={4}
+                    />
+                  </FormFieldNew>
+
+                  <FormFieldNew>
+                    <Label>Intereses</Label>
+                    <Input
+                      name="interests"
+                      value={form.interests}
+                      onChange={onChange}
+                      placeholder="cine, música, viajes…"
+                    />
+                    <Hint>
+                      Separa los intereses con comas. Los usamos para sugerir mejores modelos.
+                    </Hint>
+                  </FormFieldNew>
+                </CardBody>
+                <CardFooter>
+                  <ProfilePrimaryButton
+                    type="button"
+                    onClick={handleSave}
+                    disabled={saving}
+                  >
+                    {saving ? 'Guardando…' : 'Guardar cambios'}
+                  </ProfilePrimaryButton>
+                </CardFooter>
+              </ProfileCard>
+            </ProfileColMain>
+
+            {/* COLUMNA DERECHA: FOTO + SEGURIDAD */}
+            <ProfileColSide>
+              <MediaCard>
+                <CardHeader>
+                  <CardTitle>Foto de perfil</CardTitle>
+                  <CardSubtitle>
+                    Esta imagen se muestra a las modelos durante el videochat.
+                  </CardSubtitle>
+                </CardHeader>
+                <CardBody>
+                  {docs.urlPic ? (
+                    <>
+                      <PhotoPreview>
+                        <PhotoImg src={docs.urlPic} alt="Foto de perfil actual" />
+                      </PhotoPreview>
+                      {currentFileName && (
+                        <FileNameWrapper>
+                          <a href={docs.urlPic} target="_blank" rel="noreferrer">
+                            {currentFileName}
+                          </a>
+                        </FileNameWrapper>
+                      )}
+                    </>
+                  ) : (
+                    <PhotoEmpty>— Sin foto —</PhotoEmpty>
+                  )}
+
+                  <PhotoActions>
+                    {/* input oculto */}
+                    <FileInput
+                      id="client-pic"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setPicFile(e.target.files?.[0] || null)}
+                    />
+                    {/* botón visual desde ButtonStyles, envuelto en label */}
+                    <label htmlFor="client-pic">
+                      <ProfileSecondaryButton type="button">
+                        Seleccionar archivo
+                      </ProfileSecondaryButton>
+                    </label>
+
+                    <ProfilePrimaryButton
+                      type="button"
+                      onClick={uploadPhoto}
+                      disabled={!picFile || uploading}
+                    >
+                      {uploading ? 'Subiendo…' : 'Subir foto'}
+                    </ProfilePrimaryButton>
+
+                    {docs.urlPic && (
+                      <ProfileDangerOutlineButton
+                        type="button"
+                        onClick={deletePhoto}
+                        disabled={deleting}
+                      >
+                        {deleting ? 'Eliminando…' : 'Eliminar foto'}
+                      </ProfileDangerOutlineButton>
+                    )}
+                  </PhotoActions>
+
+                  <Hint>
+                    Formato recomendado JPG/PNG. Se recortará automáticamente para verse bien en móvil.
+                  </Hint>
+                </CardBody>
+              </MediaCard>
+
+              <SecurityCard style={{ marginTop: '16px' }}>
+                <CardHeader>
+                  <CardTitle>Seguridad y cuenta</CardTitle>
+                </CardHeader>
+                <CardBody>
+                  <SecurityActions>
+                    <ProfileSecondaryButton
+                      type="button"
+                      onClick={() => history.push('/change-password')}
+                    >
+                      Cambiar contraseña
+                    </ProfileSecondaryButton>
+                    <ProfileDangerOutlineButton
+                      type="button"
+                      onClick={onUnsubscribe}
+                    >
+                      Darme de baja
+                    </ProfileDangerOutlineButton>
+                  </SecurityActions>
+                  <Hint>
+                    Si te das de baja, perderás tu saldo y no podrás acceder al historial de chats.
+                  </Hint>
+                </CardBody>
+              </SecurityCard>
+            </ProfileColSide>
+          </ProfileGrid>
         )}
-      </PageWrap>
+      </ProfileMain>
     </StyledContainer>
   );
 };

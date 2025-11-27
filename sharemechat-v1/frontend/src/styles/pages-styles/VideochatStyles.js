@@ -1,3 +1,4 @@
+// src/styles/pages-styles/VideochatStyles.js
 import styled, { createGlobalStyle } from 'styled-components'
 import { colors } from '../core/tokens'
 
@@ -105,7 +106,7 @@ export const StyledContainer = styled.div`
 `;
 
 /* --------------------------------
- * 2. NAVBAR (SIN CAMBIOS)
+ * 2. NAVBAR (SIN CAMBIOS AQUÍ)
  * -------------------------------- */
 
 export const StyledNavGroup = styled.div`
@@ -169,18 +170,25 @@ export const StyledNavTab = styled.button`
  * 3. ESTRUCTURA DE CONTENIDO (3 COLUMNAS) ← MODIFICADO
  * -------------------------------- */
 
-// MODIFICADO: gap + padding
+// MODIFICADO: gap + padding + OVERFLOW SEGÚN data-tab
 export const StyledMainContent = styled.div`
   display: flex;
   flex: 1;
-  overflow: hidden;
   gap: 16px;
   padding: 16px;
   box-sizing: border-box;
 
+  /* Regla clave:
+     - videochat: sin scroll interno (como antes)
+     - resto (onboarding, documentos, etc.): permite scroll vertical */
+  overflow: ${props =>
+    props['data-tab'] === 'videochat' ? 'hidden' : 'auto'};
+
   @media (max-width: 768px) {
     padding: 0;
     gap: 0;
+    /* En móvil permitimos scroll en cualquier caso */
+    overflow: auto;
   }
 `;
 
@@ -291,7 +299,6 @@ export const StyledFavoritesColumns = styled.div`
 /* --------------------------------
  * 4. ACCIONES / BOTONES GENERALES (SIN CAMBIOS)
  * -------------------------------- */
-
 
 export const StyledIconWrapper = styled.span`
   margin-left: 8px;
@@ -519,7 +526,6 @@ export const StyledChatInput = styled.input`
 /* --------------------------------
  * 7. REGALOS (SIN CAMBIOS)
  * -------------------------------- */
-
 
 export const StyledGiftsPanel = styled.div`
   position: absolute;
@@ -832,8 +838,6 @@ export const StyledMobile3ColBar = styled.div`
     margin: 8px 12px;
   }
 `;
-
-
 
 export const StyledTopCenter = styled.div`
   justify-self: center;
