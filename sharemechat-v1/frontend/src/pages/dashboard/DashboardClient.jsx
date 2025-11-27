@@ -6,7 +6,7 @@ import FavoritesClientList from '../favorites/FavoritesClientList';
 import { useAppModals } from '../../components/useAppModals';
 import FunnyplacePage from '../funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft,faGem } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
@@ -2220,11 +2220,16 @@ const DashboardClient = () => {
           </SaldoText>
 
           <NavButton type="button" onClick={handleAddBalance}>
-            COMPRAR
+            <FontAwesomeIcon
+              icon={faGem}
+              style={{ color: '#22c55e', fontSize: '1rem' }}
+            />
+            <span>Comprar</span>
           </NavButton>
 
           <NavButton type="button" onClick={handleLogout} title="Cerrar sesión">
             <FontAwesomeIcon icon={faSignOutAlt} />
+            Salir
           </NavButton>
 
           <StyledNavAvatar
@@ -2240,16 +2245,26 @@ const DashboardClient = () => {
         </HamburgerButton>
 
         <MobileMenu className={!menuOpen && 'hidden'}>
-          <SaldoText>
-            {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
-          </SaldoText>
+
+          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+            <NavText>{displayName}</NavText>
+            <SaldoText>
+              {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
+            </SaldoText>
+          </div>
+
+
           <NavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
             <FontAwesomeIcon icon={faUser} />
             <StyledIconWrapper>Perfil</StyledIconWrapper>
           </NavButton>
 
           <NavButton onClick={() => { handleAddBalance(); setMenuOpen(false); }}>
-            <StyledIconWrapper>Comprar</StyledIconWrapper>
+            <FontAwesomeIcon
+              icon={faGem}
+              style={{ color: '#22c55e', fontSize: '1rem' }}
+            />
+            <span>Comprar</span>
           </NavButton>
 
           <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>

@@ -577,7 +577,7 @@ const DashboardUserClient = () => {
             marginLeft: 'auto',
           }}
         >
-          <NavText className="me-3">Hola, {displayName}</NavText>
+          <NavText className="me-3">{displayName}</NavText>
 
           <NavButton
             type="button"

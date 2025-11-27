@@ -66,10 +66,24 @@ export const StyledContainer = styled.div`
 
 // === TEXTO ===
 export const NavText = styled.span`
-  color: ${colors.white};
-  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  padding-block: 9px;
+  padding-inline: 18px;
+  border-radius: ${radius.pill};
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: #020617;
+
+  font-family: var(--font-nav);
   font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: #e5e7eb;
   white-space: nowrap;
+  opacity: 0.9;
 
   &.me-3 {
     margin-right: 1rem;
@@ -77,6 +91,7 @@ export const NavText = styled.span`
 
   @media (max-width: 640px) {
     font-size: 0.9rem;
+    padding-inline: 12px;
   }
 `;
 
@@ -91,26 +106,34 @@ export const QueueText = styled.span`
   }
 `;
 
+
 export const SaldoText = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
-  padding: 4px 12px;
-  border-radius: ${radius.full};
+  padding-block: 9px;
+  padding-inline: 18px;
+  border-radius: ${radius.pill};
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: #020617;
 
   font-family: var(--font-nav);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-
-  border: 1px solid rgba(255,255,255,0.3);
-  color: ${colors.white};
-  background: rgba(0,0,0,0.35);
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  color: #e5e7eb;
+  white-space: nowrap;
+  opacity: 0.9;
 
   &.me-3 {
     margin-right: 1rem;
+  }
+
+  @media (max-width: 640px) {
+    font-size: 0.9rem;
+    padding-inline: 12px;
   }
 `;
 
@@ -175,23 +198,29 @@ export const MobileBottomNav = styled.div`
 `;
 
 export const BottomNavButton = styled.button`
-  background: ${props => props.active ? colors.primary : 'transparent'};
-  color: ${colors.white};
+  appearance: none;
+  background: transparent;
   border: none;
-  padding: ${space.md};
-  border-radius: ${radius.lg};
+  border-bottom: 3px solid ${props => (props.active ? '#f97316' : 'transparent')};
+
   flex: 1;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: center;
 
-  /* Tipografía homogénea con el navbar */
+  padding: 10px 4px;
+
+  /* Misma tipografía que tabs de desktop */
   font-family: var(--font-nav);
-  font-size: 0.8rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
 
-  &:hover { background: ${colors.primaryHover}; }
+  color: ${props => (props.active ? colors.white : 'rgba(255,255,255,0.65)')};
+  cursor: pointer;
+
+  &:hover {
+    color: ${colors.white};
+  }
 `;

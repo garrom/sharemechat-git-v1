@@ -25,7 +25,7 @@ export const GlobalBlack = createGlobalStyle`
     /* Marca y básicos */
     --c-black: #000000;
     --c-white: #ffffff;
-    --c-bg: #0e0f12;    /* negro suave global */
+    --c-bg: #0e0f12;    /* negro suave global (ya no forza fondo global) */
 
     /* Marca */
     --c-brand: #000000;
@@ -81,12 +81,13 @@ export const GlobalBlack = createGlobalStyle`
     margin: 0;
     padding: 0;
     height: 100%;
-    background: var(--c-bg);
   }
+
   body {
     overflow-x: hidden;
   }
 `;
+
 
 /* --------------------------------
  * 1. LAYOUT BASE
@@ -127,43 +128,53 @@ export const StyledNavAvatar = styled.img`
 
 export const StyledNavTab = styled.button`
   appearance: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 34px;
-  padding: 0 18px;
-  border-radius: 999px;
+  background: transparent;
   border: none;
-  background: var(--c-black);
-  color: var(--c-white);
-
-  /* Estilo homogéneo */
-  font-family: var(--font-nav);
-  font-size: 0.9rem;        /* ~14–15px */
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-
-  line-height: 1;
+  padding: 4px 0 10px;
+  margin: 0 14px;
   cursor: pointer;
-  transition: background-color .18s ease, color .18s ease, border-color .18s ease, transform .06s ease;
 
-  &:hover {
-    background: #111;
-    color: var(--c-white);
+  /* Tipografía estilo Azar: grande y muy gruesa */
+  font-family: var(--font-nav);
+  font-size: 1rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: none;
+
+  color: #9ca3af; /* gris para inactivo */
+  position: relative;
+  white-space: nowrap;
+  line-height: 1;
+
+  /* subrayado grueso SOLO cuando está activo */
+  &::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 3px;
+    border-radius: 999px;
+    background: transparent;
   }
-  &:active { transform: translateY(1px); }
 
   &[data-active="true"] {
-    background: var(--c-white);
-    color: var(--c-black);
+    color: #f9fafb; /* blanco fuerte para activo */
   }
 
-  /* Ocultar SOLO los tabs superiores en móvil */
+  &[data-active="true"]::after {
+    background: #f9fafb; /* subrayado blanco grueso */
+  }
+
+  &:hover {
+    color: #e5e7eb;
+  }
+
   @media (max-width: 768px) {
     display: none !important;
   }
 `;
+
 
 
 /* --------------------------------

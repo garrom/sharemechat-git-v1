@@ -8,12 +8,12 @@ export const GlobalTypography = createGlobalStyle`
 
   :root{
     /* Sans general y marca: ajústalas a tu gusto */
-    --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans",
+    --font-sans: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans",
                  "Helvetica Neue", Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 
     --font-brand: "Nixie One", var(--font-sans);  /* si no cargas Nixie, heredará sans */
 
-    /* Nueva: tipografía específica para botones navbar (tipo Azar) */
+    /* Tipografía específica navbar/botones (look tipo Azar) */
     --font-nav: "Poppins", var(--font-sans);
   }
 
@@ -21,7 +21,7 @@ export const GlobalTypography = createGlobalStyle`
   html, body, #root { height: 100%; }
 
   body {
-    font-family: var(--font-sans);
+    font-family: var(--font-nav);
     color: #222;
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;

@@ -139,6 +139,7 @@ export const ButtonActivarCam = styled(PillButtonBase)`
   ${variant(colors.black, colors.white, colors.white, colors.black, colors.white)}
   font-size: 16px;
   padding: 14px 22px;
+  border-color: transparent;
   ${shadowLift}
 `;
 
@@ -219,25 +220,25 @@ export const ButtonGiftToggle = styled(ActionButton)`
 `;
 
 /* ========== NAVBAR ========== */
-
 export const NavButton = styled(PillButtonBase)`
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.2);
-  color: #fff;
+  background: #ffffff;
+  color: #020617;
+  border: 1px solid rgba(15, 23, 42, 0.9);
 
-  /* Estilo homogéneo navbar / tabs */
   font-family: var(--font-nav);
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
 
-  padding-inline: 16px;
-  padding-block: 8px;
+  padding-inline: 20px;
+  padding-block: 9px;
 
-  &:hover {
-    background: rgba(255,255,255,0.12);
-    border-color: rgba(255,255,255,0.35);
+  /* HOVER: inverso → fondo oscuro, texto blanco */
+  &:hover:not(:disabled) {
+    background: ${colors.backsolid};
+    color: #f9fafb;
+    border-color: transparent;
   }
 
   &:disabled {
@@ -245,6 +246,7 @@ export const NavButton = styled(PillButtonBase)`
     cursor: not-allowed;
   }
 `;
+
 
 /* ========== ICON-ONLY VARIANTS (para cuando quites texto) ========== */
 /* botones 100% icono (☎, ⛔, ⏹, 👤+ ) */

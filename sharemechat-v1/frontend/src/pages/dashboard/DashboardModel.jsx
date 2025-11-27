@@ -7,7 +7,7 @@ import { useAppModals } from '../../components/useAppModals';
 import FunnyplacePage from '../funnyplace/FunnyplacePage';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
-import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft,faGem } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
@@ -1950,16 +1950,23 @@ const DashboardModel = () => {
           )}
 
           <NavButton type="button" title="Estadísticas" aria-label="Estadísticas">
-            <FontAwesomeIcon icon={faChartLine} />
-            <StyledIconWrapper>Estadísticas</StyledIconWrapper>
+            <FontAwesomeIcon icon={faChartLine}
+             style={{ color: '#22c55e', fontSize: '1rem' }}
+             />
+            <span>Estadísticas</span>
           </NavButton>
 
           <NavButton type="button" onClick={handleRequestPayout}>
-            RETIRAR
+            <FontAwesomeIcon
+              icon={faGem}
+              style={{ color: '#f97316', fontSize: '1rem'}}
+            />
+            <span>Retirar</span>
           </NavButton>
 
           <NavButton type="button" onClick={handleLogout} title="Cerrar sesión">
             <FontAwesomeIcon icon={faSignOutAlt} />
+            Salir
           </NavButton>
           <StyledNavAvatar
             src={profilePic || '/img/avatarChica.png'}
@@ -1989,12 +1996,18 @@ const DashboardModel = () => {
 
           {/* (Opcional) Estadísticas: puedes dejarlo ya listo aunque no tenga acción */}
           <NavButton onClick={() => { /* TODO: abrir stats */ setMenuOpen(false); }} title="Estadísticas">
-            <FontAwesomeIcon icon={faChartLine} />
-            <StyledIconWrapper>Estadísticas</StyledIconWrapper>
+            <FontAwesomeIcon icon={faChartLine}
+             style={{ color: '#22c55e', fontSize: '1rem' }}
+             />
+            <span>Estadísticas</span>
           </NavButton>
 
           <NavButton onClick={() => { handleRequestPayout(); setMenuOpen(false); }}>
-            RETIRAR
+            <FontAwesomeIcon
+              icon={faGem}
+              style={{ color: '#f97316', fontSize: '1rem'}}
+            />
+            <span>Retirar</span>
           </NavButton>
 
           <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
