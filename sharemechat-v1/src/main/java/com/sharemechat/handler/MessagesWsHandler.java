@@ -233,37 +233,40 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 safeSend(session, new JSONObject().put("type","call:error").put("message", ex.getMessage()).toString());
                 return;
             }
+            //probar nuevo codigo
+            // ¿Alguno está ocupado por cualquier motivo?
+            // (llamada 1:1 activa, streaming random, TRIAL, BUSY en Redis)
+            if (isBusy(me)) {
+                safeSend(session, new JSONObject()
+                        .put("type","call:busy")
+                        .put("who","me")              // mantiene etiqueta anterior para el caller
+                        .toString());
+                return;
+            }
+            if (isBusy(to)) {
+                safeSend(session, new JSONObject()
+                        .put("type","call:busy")
+                        .put("who","peer_streaming")  // misma etiqueta que antes cuando el peer está en stream
+                        .toString());
+                return;
+            }
 
-            // ¿Alguien está ya en llamada?
-            if (inCallWith(me) != null) {
-                safeSend(session, new JSONObject().put("type","call:busy").put("who","me").toString());
-                return;
-            }
-            if (inCallWith(to) != null) {
-                safeSend(session, new JSONObject().put("type","call:busy").put("who","peer").toString());
-                return;
-            }
+            // ¿Está online el receptor?
             if (!isUserOnline(to)) {
                 safeSend(session, new JSONObject().put("type","call:offline").toString());
                 return;
             }
+
+            // ¿Está ya sonando otra invitación a este usuario?
             if (ringing.contains(to)) {
-                safeSend(session, new JSONObject().put("type","call:busy").put("who","peer_ringing").toString());
+                safeSend(session, new JSONObject()
+                        .put("type","call:busy")
+                        .put("who","peer_ringing")
+                        .toString());
                 return;
             }
 
-            // ¿Alguno está en streaming RANDOM activo (VIDEOCHAT)?
-            try {
-                if (streamService.isUserInActiveStream(me)) {
-                    safeSend(session, new JSONObject().put("type","call:busy").put("who","me_streaming").toString());
-                    return;
-                }
-                if (streamService.isUserInActiveStream(to)) {
-                    safeSend(session, new JSONObject().put("type","call:busy").put("who","peer_streaming").toString());
-                    return;
-                }
-            } catch (Exception ignore) {}
-
+            //fin prueba nuevo codigo
 
             // Validación de saldo mínimo antes de timbrar (CLIENT debe poder iniciar)
             // Determinamos quién será CLIENT/MODEL para el billing de startSession

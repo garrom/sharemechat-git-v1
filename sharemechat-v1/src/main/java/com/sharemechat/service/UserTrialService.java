@@ -50,6 +50,7 @@ public class UserTrialService {
     private final BalanceRepository balanceRepository;
     private final PlatformTransactionRepository platformTransactionRepository;
     private final PlatformBalanceRepository platformBalanceRepository;
+    private final StatusService statusService;
 
     public UserTrialService(UserTrialStreamRepository userTrialStreamRepository,
                             UserRepository userRepository,
@@ -58,7 +59,8 @@ public class UserTrialService {
                             TransactionRepository transactionRepository,
                             BalanceRepository balanceRepository,
                             PlatformTransactionRepository platformTransactionRepository,
-                            PlatformBalanceRepository platformBalanceRepository) {
+                            PlatformBalanceRepository platformBalanceRepository,
+                            StatusService statusService) {
 
         this.userTrialStreamRepository = userTrialStreamRepository;
         this.userRepository = userRepository;
@@ -68,6 +70,7 @@ public class UserTrialService {
         this.balanceRepository = balanceRepository;
         this.platformTransactionRepository = platformTransactionRepository;
         this.platformBalanceRepository = platformBalanceRepository;
+        this.statusService = statusService;
     }
 
     /**
@@ -208,6 +211,14 @@ public class UserTrialService {
 
         log.info("startTrialStream: creada trial id={} (viewer USER={}, model={})",
                 saved.getId(), viewerId, modelId);
+
+        // marcar modelo ocupada en Redis ===
+        try {
+            statusService.setBusy(modelId);
+        } catch (Exception e) {
+            log.warn("startTrialStream: no se pudo marcar BUSY en Redis para modelId={}: {}",
+                    modelId, e.getMessage());
+        }
 
         return saved;
     }
@@ -414,6 +425,18 @@ public class UserTrialService {
 
         log.info("closeTrialStreamAndSettle: trial cerrada id={} (viewerId={}, modelId={}, seconds={}, earningModel={}, costPlatform={})",
                 session.getId(), viewerId, modelId, seconds, modelEarning, platformCost);
+
+        // limpiar estado en Redis para la modelo
+        try {
+            String status = statusService.getStatus(modelId);
+            if (status != null && !"OFFLINE".equals(status)) {
+                statusService.setAvailable(modelId);
+            }
+        } catch (Exception e) {
+            log.warn("closeTrialStreamAndSettle: error al actualizar estado Redis para modelId={}: {}",
+                    modelId, e.getMessage());
+        }
+
     }
 
 }
