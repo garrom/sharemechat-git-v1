@@ -284,7 +284,7 @@ const DashboardClient = () => {
       console.log('[CALL][cam] bind local stream to video');
       callLocalVideoRef.current.srcObject = callLocalStreamRef.current;
     }
-  }, [callCameraActive]);
+  }, [callCameraActive,callStatus]);
 
   // CALLING: enlazar remote stream a su video
   useEffect(() => {
@@ -1465,6 +1465,13 @@ const DashboardClient = () => {
     callStatus === 'ringing' ||
     callStatus === 'incoming';
 
+  const showFavoritesFullCall =
+    !isMobile &&
+    activeTab === 'favoritos' &&
+    contactMode === 'call' &&
+    callEnCurso;
+
+
   // Confirmación genérica al intentar salir de una comunicación activa
   const confirmarSalidaSesionActiva = async () => {
     const hayLlamada =
@@ -2181,7 +2188,16 @@ const DashboardClient = () => {
       <StyledNavbar>
         <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick} />
         {/* Botones-text en el navbar (Videochat / Favoritos / Funnyplace) */}
-        <div className="desktop-only" style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1, justifyContent: 'center' }}>
+        <div
+          className="desktop-only"
+          style={{
+            display: 'flex',
+            gap: 8,
+            alignItems: 'center',
+            flex: 1,
+            justifyContent: 'center',
+          }}
+        >
           <StyledNavTab
             type="button"
             data-active={activeTab === 'videochat'}
@@ -2213,10 +2229,18 @@ const DashboardClient = () => {
           </StyledNavTab>
         </div>
 
-        <div className="desktop-only" data-nav-group style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div
+          className="desktop-only"
+          data-nav-group
+          style={{ display: 'flex', alignItems: 'center', gap: 12 }}
+        >
           <NavText className="me-3">{displayName}</NavText>
           <SaldoText className="me-3">
-            {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
+            {loadingSaldo
+              ? 'Saldo: …'
+              : saldoError
+              ? 'Saldo: n/d'
+              : `Saldo: ${fmtEUR(saldo)}`}
           </SaldoText>
 
           <NavButton type="button" onClick={handleAddBalance}>
@@ -2240,26 +2264,49 @@ const DashboardClient = () => {
           />
         </div>
 
-        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">
+        <HamburgerButton
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Abrir menú"
+          title="Menú"
+        >
           <FontAwesomeIcon icon={faBars} />
         </HamburgerButton>
 
         <MobileMenu className={!menuOpen && 'hidden'}>
-
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginBottom: 8,
+            }}
+          >
             <NavText>{displayName}</NavText>
             <SaldoText>
-              {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
+              {loadingSaldo
+                ? 'Saldo: …'
+                : saldoError
+                ? 'Saldo: n/d'
+                : `Saldo: ${fmtEUR(saldo)}`}
             </SaldoText>
           </div>
 
-
-          <NavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
+          <NavButton
+            onClick={() => {
+              handleProfile();
+              setMenuOpen(false);
+            }}
+          >
             <FontAwesomeIcon icon={faUser} />
             <StyledIconWrapper>Perfil</StyledIconWrapper>
           </NavButton>
 
-          <NavButton onClick={() => { handleAddBalance(); setMenuOpen(false); }}>
+          <NavButton
+            onClick={() => {
+              handleAddBalance();
+              setMenuOpen(false);
+            }}
+          >
             <FontAwesomeIcon
               icon={faGem}
               style={{ color: '#22c55e', fontSize: '1rem' }}
@@ -2267,7 +2314,12 @@ const DashboardClient = () => {
             <span>Comprar</span>
           </NavButton>
 
-          <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
+          <NavButton
+            onClick={() => {
+              handleLogout();
+              setMenuOpen(false);
+            }}
+          >
             <FontAwesomeIcon icon={faSignOutAlt} />
             <StyledIconWrapper>Salir</StyledIconWrapper>
           </NavButton>
@@ -2278,7 +2330,6 @@ const DashboardClient = () => {
       {/* ========= INICIO MAIN  ======== */}
 
       <StyledMainContent data-tab={activeTab}>
-
         {/* ====== LAYOUT POR PESTAÑAS ====== */}
 
         {activeTab === 'videochat' ? (
@@ -2319,98 +2370,163 @@ const DashboardClient = () => {
           </>
         ) : (
           <>
-            {/* === LAYOUT RESTO (FAVORITOS / FUNNYPLACE): 3 COLUMNAS / MÓVIL FULL === */}
-            {!isMobile && (
-              <StyledLeftColumn data-rail>
-                {callStatus === 'idle' ? (
-                  <FavoritesClientList
-                    onSelect={handleOpenChatFromFavorites}
-                    reloadTrigger={favReload}
-                    selectedId={selectedContactId}
-                    onContextMenu={(user, pos) => { setCtxUser(user); setCtxPos(pos); }}
+            {/* === LAYOUT RESTO (FAVORITOS / FUNNYPLACE) === */}
+
+            {showFavoritesFullCall ? (
+              // ===== FAVORITOS EN LLAMADA: FULL-WIDTH (ocupa las 3 columnas) =====
+              <StyledCenter>
+                {activeTab === 'funnyplace' && <FunnyplacePage />}
+
+                {activeTab === 'favoritos' && (
+                  <VideoChatFavoritosCliente
+                    /* flags de entorno */
+                    isMobile={isMobile}
+                    /* lista móvil (la desktop izquierda se queda fuera) */
+                    handleOpenChatFromFavorites={handleOpenChatFromFavorites}
+                    favReload={favReload}
+                    selectedContactId={selectedContactId}
+                    setCtxUser={setCtxUser}
+                    setCtxPos={setCtxPos}
+                    /* chat persistente */
+                    centerChatPeerId={centerChatPeerId}
+                    centerChatPeerName={centerChatPeerName}
+                    centerMessages={centerMessages}
+                    centerLoading={centerLoading}
+                    centerListRef={centerListRef}
+                    chatEndRef={chatEndRef}
+                    centerInput={centerInput}
+                    setCenterInput={setCenterInput}
+                    sendCenterMessage={sendCenterMessage}
+                    /* estado favorito/invitaciones */
+                    allowChat={allowChat}
+                    isPendingPanel={isPendingPanel}
+                    isSentPanel={isSentPanel}
+                    acceptInvitation={acceptInvitation}
+                    rejectInvitation={rejectInvitation}
+                    /* gifts persistentes */
+                    gifts={gifts}
+                    giftRenderReady={giftRenderReady}
+                    fmtEUR={fmtEUR}
+                    showCenterGifts={showCenterGifts}
+                    setShowCenterGifts={setShowCenterGifts}
+                    sendGiftMsg={sendGiftMsg}
+                    /* llamada 1-a-1 */
+                    contactMode={contactMode}
+                    enterCallMode={enterCallMode}
+                    callStatus={callStatus}
+                    callCameraActive={callCameraActive}
+                    callPeerId={callPeerId}
+                    callPeerName={callPeerName}
+                    callPeerAvatar={callPeerAvatar}
+                    callRemoteVideoRef={callRemoteVideoRef}
+                    callLocalVideoRef={callLocalVideoRef}
+                    callRemoteWrapRef={callRemoteWrapRef}
+                    callListRef={callListRef}
+                    handleCallActivateCamera={handleCallActivateCamera}
+                    handleCallInvite={handleCallInvite}
+                    handleCallAccept={handleCallAccept}
+                    handleCallReject={handleCallReject}
+                    handleCallEnd={handleCallEnd}
+                    toggleFullscreen={toggleFullscreen}
+                    /* utilidades móviles */
+                    backToList={backToList}
+                    /* user para pintar remitente */
+                    user={user}
                   />
-                ) : (
-                  <div style={{ padding: 8, color: '#adb5bd' }}>
-                    En llamada: la lista se bloquea hasta colgar.
-                  </div>
                 )}
-              </StyledLeftColumn>
+              </StyledCenter>
+            ) : (
+              <>
+                {/* === Layout clásico 3 columnas (desktop) === */}
+                {!isMobile && (
+                  <StyledLeftColumn data-rail>
+                    {callStatus === 'idle' ? (
+                      <FavoritesClientList
+                        onSelect={handleOpenChatFromFavorites}
+                        reloadTrigger={favReload}
+                        selectedId={selectedContactId}
+                        onContextMenu={(user, pos) => {
+                          setCtxUser(user);
+                          setCtxPos(pos);
+                        }}
+                      />
+                    ) : (
+                      <div style={{ padding: 8, color: '#adb5bd' }}>
+                        En llamada: la lista se bloquea hasta colgar.
+                      </div>
+                    )}
+                  </StyledLeftColumn>
+                )}
+
+                {/* ==============INICIO ZONA CENTRAL ========== */}
+                <StyledCenter>
+                  {/* === TAB FUNNYPLACE === */}
+                  {activeTab === 'funnyplace' && <FunnyplacePage />}
+
+                  {/* ===== TAB FAVORITOS VideoChatFavoritosCliente ==== */}
+                  {activeTab === 'favoritos' && (
+                    <VideoChatFavoritosCliente
+                      /* flags de entorno */
+                      isMobile={isMobile}
+                      /* lista móvil (la desktop izquierda se queda fuera) */
+                      handleOpenChatFromFavorites={handleOpenChatFromFavorites}
+                      favReload={favReload}
+                      selectedContactId={selectedContactId}
+                      setCtxUser={setCtxUser}
+                      setCtxPos={setCtxPos}
+                      /* chat persistente */
+                      centerChatPeerId={centerChatPeerId}
+                      centerChatPeerName={centerChatPeerName}
+                      centerMessages={centerMessages}
+                      centerLoading={centerLoading}
+                      centerListRef={centerListRef}
+                      chatEndRef={chatEndRef}
+                      centerInput={centerInput}
+                      setCenterInput={setCenterInput}
+                      sendCenterMessage={sendCenterMessage}
+                      /* estado favorito/invitaciones */
+                      allowChat={allowChat}
+                      isPendingPanel={isPendingPanel}
+                      isSentPanel={isSentPanel}
+                      acceptInvitation={acceptInvitation}
+                      rejectInvitation={rejectInvitation}
+                      /* gifts persistentes */
+                      gifts={gifts}
+                      giftRenderReady={giftRenderReady}
+                      fmtEUR={fmtEUR}
+                      showCenterGifts={showCenterGifts}
+                      setShowCenterGifts={setShowCenterGifts}
+                      sendGiftMsg={sendGiftMsg}
+                      /* llamada 1-a-1 */
+                      contactMode={contactMode}
+                      enterCallMode={enterCallMode}
+                      callStatus={callStatus}
+                      callCameraActive={callCameraActive}
+                      callPeerId={callPeerId}
+                      callPeerName={callPeerName}
+                      callPeerAvatar={callPeerAvatar}
+                      callRemoteVideoRef={callRemoteVideoRef}
+                      callLocalVideoRef={callLocalVideoRef}
+                      callRemoteWrapRef={callRemoteWrapRef}
+                      callListRef={callListRef}
+                      handleCallActivateCamera={handleCallActivateCamera}
+                      handleCallInvite={handleCallInvite}
+                      handleCallAccept={handleCallAccept}
+                      handleCallReject={handleCallReject}
+                      handleCallEnd={handleCallEnd}
+                      toggleFullscreen={toggleFullscreen}
+                      /* utilidades móviles */
+                      backToList={backToList}
+                      /* user para pintar remitente */
+                      user={user}
+                    />
+                  )}
+                </StyledCenter>
+
+                {/* Columna derecha (vacía/oculta en responsive como antes) */}
+                <StyledRightColumn />
+              </>
             )}
-
-            {/* ==============INICIO ZONA CENTRAL ========== */}
-            <StyledCenter>
-              {/* === TAB FUNNYPLACE === */}
-              {activeTab === 'funnyplace' && (<FunnyplacePage />)}
-
-              {/* ===== TAB FAVORITOS VideoChatFavoritosCliente ==== */}
-              {activeTab === 'favoritos' && (
-                <VideoChatFavoritosCliente
-                  /* flags de entorno */
-                  isMobile={isMobile}
-
-                  /* lista móvil (la desktop izquierda se queda fuera) */
-                  handleOpenChatFromFavorites={handleOpenChatFromFavorites}
-                  favReload={favReload}
-                  selectedContactId={selectedContactId}
-                  setCtxUser={setCtxUser}
-                  setCtxPos={setCtxPos}
-
-                  /* chat persistente */
-                  centerChatPeerId={centerChatPeerId}
-                  centerChatPeerName={centerChatPeerName}
-                  centerMessages={centerMessages}
-                  centerLoading={centerLoading}
-                  centerListRef={centerListRef}
-                  chatEndRef={chatEndRef}
-                  centerInput={centerInput}
-                  setCenterInput={setCenterInput}
-                  sendCenterMessage={sendCenterMessage}
-
-                  /* estado favorito/invitaciones */
-                  allowChat={allowChat}
-                  isPendingPanel={isPendingPanel}
-                  isSentPanel={isSentPanel}
-                  acceptInvitation={acceptInvitation}
-                  rejectInvitation={rejectInvitation}
-
-                  /* gifts persistentes */
-                  gifts={gifts}
-                  giftRenderReady={giftRenderReady}
-                  fmtEUR={fmtEUR}
-                  showCenterGifts={showCenterGifts}
-                  setShowCenterGifts={setShowCenterGifts}
-                  sendGiftMsg={sendGiftMsg}
-
-                  /* llamada 1-a-1 */
-                  contactMode={contactMode}
-                  enterCallMode={enterCallMode}
-                  callStatus={callStatus}
-                  callCameraActive={callCameraActive}
-                  callPeerId={callPeerId}
-                  callPeerName={callPeerName}
-                  callPeerAvatar={callPeerAvatar}
-                  callRemoteVideoRef={callRemoteVideoRef}
-                  callLocalVideoRef={callLocalVideoRef}
-                  callRemoteWrapRef={callRemoteWrapRef}
-                  callListRef={callListRef}
-                  handleCallActivateCamera={handleCallActivateCamera}
-                  handleCallInvite={handleCallInvite}
-                  handleCallAccept={handleCallAccept}
-                  handleCallReject={handleCallReject}
-                  handleCallEnd={handleCallEnd}
-                  toggleFullscreen={toggleFullscreen}
-
-                  /* utilidades móviles */
-                  backToList={backToList}
-
-                  /* user para pintar remitente */
-                  user={user}
-                />
-              )}
-            </StyledCenter>
-
-            {/* Columna derecha (vacía/oculta en responsive como antes) */}
-            <StyledRightColumn />
           </>
         )}
       </StyledMainContent>
@@ -2448,7 +2564,7 @@ const DashboardClient = () => {
             background: '#fff',
             border: '1px solid #dee2e6',
             borderRadius: 8,
-            boxShadow: '0 8px 24px rgba(0,0,0,.12)'
+            boxShadow: '0 8px 24px rgba(0,0,0,.12)',
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -2459,13 +2575,15 @@ const DashboardClient = () => {
               padding: '10px 14px',
               background: 'transparent',
               border: 'none',
-              cursor: 'pointer'
+              cursor: 'pointer',
             }}
             onClick={async () => {
               try {
                 const inv = String(ctxUser?.invited || '').toLowerCase();
                 if (inv === 'pending' || inv === 'sent') {
-                  alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
+                  alert(
+                    'No puedes eliminar esta relación mientras la invitación está en proceso.'
+                  );
                   setCtxUser(null);
                   return;
                 }
@@ -2474,10 +2592,10 @@ const DashboardClient = () => {
                 // Cliente elimina a una MODELO de sus favoritos:
                 await fetch(`/api/favorites/models/${ctxUser.id}`, {
                   method: 'DELETE',
-                  headers: { Authorization: `Bearer ${tk}` }
+                  headers: { Authorization: `Bearer ${tk}` },
                 });
                 setCtxUser(null);
-                setFavReload(x => x + 1);
+                setFavReload((x) => x + 1);
                 // Opcional: si el chat abierto es justo este contacto, límpialo:
                 if (Number(centerChatPeerId) === Number(ctxUser.id)) {
                   setCenterChatPeerId(null);

@@ -278,7 +278,7 @@ const DashboardModel = () => {
       console.log('[CALL][cam] bind local stream to video');
       callLocalVideoRef.current.srcObject = callLocalStreamRef.current;
     }
-  }, [callCameraActive]);
+  }, [callCameraActive,callStatus]);
 
   // CALLING: enlazar remote stream a su video
   useEffect(() => {
@@ -1240,6 +1240,12 @@ const DashboardModel = () => {
     callStatus === 'ringing' ||
     callStatus === 'incoming';
 
+  // Layout “full call” en Favoritos (escritorio)
+  const showFavoritesFullCall =
+    !isMobile &&
+    activeTab === 'favoritos' &&
+    contactMode === 'call' &&
+    callEnCurso;
 
   // Confirmación genérica al intentar salir de una comunicación activa
   const confirmarSalidaSesionActiva = async () => {
@@ -1971,9 +1977,10 @@ const DashboardModel = () => {
           )}
 
           <NavButton type="button" title="Estadísticas" aria-label="Estadísticas">
-            <FontAwesomeIcon icon={faChartLine}
-             style={{ color: '#22c55e', fontSize: '1rem' }}
-             />
+            <FontAwesomeIcon
+              icon={faChartLine}
+              style={{ color: '#22c55e', fontSize: '1rem' }}
+            />
             <span>Estadísticas</span>
           </NavButton>
 
@@ -2017,9 +2024,10 @@ const DashboardModel = () => {
 
           {/* (Opcional) Estadísticas: puedes dejarlo ya listo aunque no tenga acción */}
           <NavButton onClick={() => { /* TODO: abrir stats */ setMenuOpen(false); }} title="Estadísticas">
-            <FontAwesomeIcon icon={faChartLine}
-             style={{ color: '#22c55e', fontSize: '1rem' }}
-             />
+            <FontAwesomeIcon
+              icon={faChartLine}
+              style={{ color: '#22c55e', fontSize: '1rem' }}
+            />
             <span>Estadísticas</span>
           </NavButton>
 
@@ -2073,7 +2081,7 @@ const DashboardModel = () => {
         ) : (
           /* ====== LAYOUT 3 COLUMNAS PARA EL RESTO (FAVORITOS / FUNNYPLACE) ====== */
           <>
-            {!isMobile && (
+            {!isMobile && !showFavoritesFullCall && (
               <StyledLeftColumn data-rail>
                 {callStatus === 'idle' ? (
                   <FavoritesModelList
@@ -2148,7 +2156,7 @@ const DashboardModel = () => {
             </StyledCenter>
             {/* ================FIN ZONA CENTRAL =================*/}
 
-            <StyledRightColumn />
+            {!showFavoritesFullCall && <StyledRightColumn />}
           </>
         )}
 
@@ -2179,60 +2187,58 @@ const DashboardModel = () => {
       </MobileBottomNav>
 
       {/*INICIO CLICK DERECHO */}
-        {ctxUser && (
-          <div
+      {ctxUser && (
+        <div
+          style={{
+            position: 'fixed',
+            left: ctxPos.x,
+            top: ctxPos.y,
+            zIndex: 9999,
+            background: '#fff',
+            border: '1px solid #dee2e6',
+            borderRadius: 8,
+            boxShadow: '0 8px 24px rgba(0,0,0,.12)'
+          }}
+          onClick={(e) => e.stopPropagation()}
+          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+        >
+          <button
             style={{
-              position: 'fixed',
-              left: ctxPos.x,
-              top: ctxPos.y,
-              zIndex: 9999,
-              background: '#fff',
-              border: '1px solid #dee2e6',
-              borderRadius: 8,
-              boxShadow: '0 8px 24px rgba(0,0,0,.12)'
+              display: 'block',
+              padding: '10px 14px',
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              width: '100%',
+              textAlign: 'left'
             }}
-            onClick={(e) => e.stopPropagation()}
-            onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
-          >
-            <button
-              style={{
-                display: 'block',
-                padding: '10px 14px',
-                background: 'transparent',
-                border: 'none',
-                cursor: 'pointer',
-                width: '100%',
-                textAlign: 'left'
-              }}
-              onClick={async () => {
-                try {
-                  const inv = String(ctxUser?.invited || '').toLowerCase();
-                  if (inv === 'pending' || inv === 'sent') {
-                    alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
-                    setCtxUser(null);
-                    return;
-                  }
-                  const sure = window.confirm(`Eliminar a "${ctxUser.nickname || ctxUser.name || ctxUser.email || ('Usuario ' + ctxUser.id)}" de tus favoritos?`);
-                  if (!sure) return;
-                  const tk = localStorage.getItem('token');
-                  if (!tk) return;
-                  await fetch(`/api/favorites/clients/${ctxUser.id}`, {
-                    method: 'DELETE',
-                    headers: { Authorization: `Bearer ${tk}` }
-                  });
+            onClick={async () => {
+              try {
+                const inv = String(ctxUser?.invited || '').toLowerCase();
+                if (inv === 'pending' || inv === 'sent') {
+                  alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
                   setCtxUser(null);
-                  setFavReload(x => x + 1);
-                } catch (e) {
-                  alert(e.message || 'No se pudo eliminar de favoritos');
+                  return;
                 }
-              }}
-            >
-              Eliminar de favoritos
-            </button>
-          </div>
-        )}
-
-
+                const sure = window.confirm(`Eliminar a "${ctxUser.nickname || ctxUser.name || ctxUser.email || ('Usuario ' + ctxUser.id)}" de tus favoritos?`);
+                if (!sure) return;
+                const tk = localStorage.getItem('token');
+                if (!tk) return;
+                await fetch(`/api/favorites/clients/${ctxUser.id}`, {
+                  method: 'DELETE',
+                  headers: { Authorization: `Bearer ${tk}` }
+                });
+                setCtxUser(null);
+                setFavReload(x => x + 1);
+              } catch (e) {
+                alert(e.message || 'No se pudo eliminar de favoritos');
+              }
+            }}
+          >
+            Eliminar de favoritos
+          </button>
+        </div>
+      )}
       {/*FIN CLICK DERECHO */}
 
     </StyledContainer>

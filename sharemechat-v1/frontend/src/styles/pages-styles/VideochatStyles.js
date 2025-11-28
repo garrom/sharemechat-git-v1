@@ -364,26 +364,26 @@ export const StyledLocalVideo = styled.div`
   right: 0px;
   width: 24%;
   max-width: 260px;
-  //aspect-ratio: 3 / 4;
   border-radius: 0px;
   overflow: hidden;
-  box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.6),
-    0 8px 24px rgba(0, 0, 0, 0.6);
   z-index: 8;
+
+  /* sin marco ni sombra */
+  box-shadow: none;
+  border: none;
 `;
 
-// debajo de StyledLocalVideo, por ejemplo
 
 export const StyledLocalVideoDesktop = styled.div`
   position: absolute;
   top: 0;
   z-index: 8;
   overflow: hidden;
-  box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.6),
-    0 8px 24px rgba(0, 0, 0, 0.6);
   border-radius: 0;
+
+  /* sin marco ni sombra */
+  box-shadow: none;
+  border: none;
 
   /* Cuando NO hay remoto: ocupa toda la mitad izquierda (modo "grande") */
   &[data-has-remote="false"] {

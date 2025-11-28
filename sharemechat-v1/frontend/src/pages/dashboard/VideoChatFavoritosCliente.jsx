@@ -176,9 +176,20 @@ export default function VideoChatFavoritosCliente(props) {
                                 onDoubleClick={() => toggleFullscreen(callRemoteWrapRef.current)}
                               />
                             </StyledRemoteVideo>
-
                             <StyledLocalVideo>
-                              <video ref={callLocalVideoRef} style={{ width:'100%', display:'block', border:'1px solid rgba(255,255,255,0.25)' }} muted autoPlay playsInline />
+                              <video
+                                ref={callLocalVideoRef}
+                                muted
+                                autoPlay
+                                playsInline
+                                style={{
+                                  width: '100%',
+                                  height: '100%',
+                                  objectFit: 'cover',
+                                  display: 'block',
+                                  border: '1px solid rgba(255,255,255,0.25)',
+                                }}
+                              />
                             </StyledLocalVideo>
 
                             {callStatus === 'in-call' && (
