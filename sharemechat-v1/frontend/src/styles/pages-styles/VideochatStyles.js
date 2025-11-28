@@ -360,10 +360,49 @@ export const StyledRemoteVideo = styled.div`
 
 export const StyledLocalVideo = styled.div`
   position: absolute;
+  top: 0px;
+  right: 0px;
+  width: 24%;
+  max-width: 260px;
+  //aspect-ratio: 3 / 4;
+  border-radius: 0px;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.6),
+    0 8px 24px rgba(0, 0, 0, 0.6);
+  z-index: 8;
+`;
+
+// debajo de StyledLocalVideo, por ejemplo
+
+export const StyledLocalVideoDesktop = styled.div`
+  position: absolute;
   top: 0;
-  right: 0;
-  width: 30%;
-  z-index: 2;
+  z-index: 8;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 2px rgba(0, 0, 0, 0.6),
+    0 8px 24px rgba(0, 0, 0, 0.6);
+  border-radius: 0;
+
+  /* Cuando NO hay remoto: ocupa toda la mitad izquierda (modo "grande") */
+  &[data-has-remote="false"] {
+    left: 0;
+    width: 50%;
+    height: 100%;
+  }
+
+  /* Cuando hay remoto: PiP arriba a la derecha */
+  &[data-has-remote="true"] {
+    right: 0;
+    width: 24%;
+    max-width: 260px;
+    height: auto;
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
 
 
@@ -598,22 +637,25 @@ export const StyledSelectableRow = styled.div`
 `;
 
 /* --------------------------------
- * 9. VIDEOCHAT LAYOUT (SIN CAMBIOS)
+ * 9. VIDEOCHAT LAYOUT
  * -------------------------------- */
 
 export const StyledSplit2 = styled.div`
+  position: relative;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: ${props =>
+    props['data-mode'] === 'full-remote' ? '0fr 1fr' : '1fr 1fr'};
   gap: 14px;
   width: 100%;
   min-height: 0;
   flex: 1;
 
   @media (max-width: 768px){
-  grid-template-columns: 1fr;
-  gap: 0;
+    grid-template-columns: 1fr;
+    gap: 0;
   }
 `;
+
 
 export const StyledPane = styled.section`
   position: relative;

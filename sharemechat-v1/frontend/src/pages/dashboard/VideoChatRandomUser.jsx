@@ -18,6 +18,7 @@ import {
   StyledRandomSearchCol,
   StyledSearchHint,
   StyledLocalVideo,
+  StyledLocalVideoDesktop,
 } from '../../styles/pages-styles/VideochatStyles';
 
 import {
@@ -48,8 +49,9 @@ export default function VideoChatRandomUser(props) {
 
   return (
     <StyledCenterVideochat>
-      <StyledSplit2>
-        {/* ------- PANE IZQUIERDO (LOCAL) ------- */}
+      {/* Igual que cliente/modelo: si hay remoto en desktop, colapsamos la columna izquierda */}
+      <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
+        {/* ------- PANE IZQUIERDO (LOCAL / CTA) ------- */}
         <StyledPane data-side="left">
           {!isMobile && (
             !cameraActive ? (
@@ -62,42 +64,28 @@ export default function VideoChatRandomUser(props) {
                   justifyContent: 'center',
                 }}
               >
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 8,
+                  }}
+                >
                   <ButtonActivarCam onClick={handleActivateCamera}>
                     Activar cámara
                   </ButtonActivarCam>
-                  <StyledHelperLine style={{ color: '#fff', justifyContent: 'center' }}>
+                  <StyledHelperLine
+                    style={{ color: '#fff', justifyContent: 'center' }}
+                  >
                     <FontAwesomeIcon icon={faVideo} />
                     activar cámara para iniciar videochat
                   </StyledHelperLine>
                 </div>
               </div>
             ) : (
-              <StyledVideoArea>
-                <div
-                  style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    background: '#000',
-                  }}
-                >
-                  <video
-                    ref={localVideoRef}
-                    muted
-                    autoPlay
-                    playsInline
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
-                  />
-                </div>
-              </StyledVideoArea>
+              // Desktop, cámara activa: el vídeo local lo pinta el overlay global (StyledLocalVideoDesktop)
+              <StyledVideoArea />
             )
           )}
         </StyledPane>
@@ -221,11 +209,17 @@ export default function VideoChatRandomUser(props) {
                   <StyledRandomSearchCol>
                     {!searching ? (
                       <>
-                        <ButtonBuscar onClick={handleStartMatch}>Buscar</ButtonBuscar>
-                        <StyledSearchHint>Pulsa “Buscar” para empezar.</StyledSearchHint>
+                        <ButtonBuscar onClick={handleStartMatch}>
+                          Buscar
+                        </ButtonBuscar>
+                        <StyledSearchHint>
+                          Pulsa “Buscar” para empezar.
+                        </StyledSearchHint>
                       </>
                     ) : (
-                      <StyledSearchHint>Buscando modelo disponible…</StyledSearchHint>
+                      <StyledSearchHint>
+                        Buscando modelo disponible…
+                      </StyledSearchHint>
                     )}
                   </StyledRandomSearchCol>
                 </StyledRandomSearchControls>
@@ -250,7 +244,9 @@ export default function VideoChatRandomUser(props) {
                       Modelo
                       <button
                         type="button"
-                        onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
+                        onClick={() =>
+                          toggleFullscreen(remoteVideoWrapRef.current)
+                        }
                         title="Pantalla completa"
                         style={{
                           marginLeft: 8,
@@ -276,7 +272,9 @@ export default function VideoChatRandomUser(props) {
                       }}
                       autoPlay
                       playsInline
-                      onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
+                      onDoubleClick={() =>
+                        toggleFullscreen(remoteVideoWrapRef.current)
+                      }
                     />
                   </StyledRemoteVideo>
                 </StyledVideoArea>
@@ -314,7 +312,11 @@ export default function VideoChatRandomUser(props) {
                     gap: '12px',
                   }}
                 >
-                  <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
+                  <BtnHangup
+                    onClick={stopAll}
+                    title="Colgar"
+                    aria-label="Colgar"
+                  >
                     <FontAwesomeIcon icon={faPhoneSlash} />
                   </BtnHangup>
                   {remoteStream && (
@@ -341,6 +343,24 @@ export default function VideoChatRandomUser(props) {
             </>
           )}
         </StyledPane>
+
+        {/* Local video DESKTOP: único <video>, grande sin remoto y PiP con remoto */}
+        {!isMobile && cameraActive && (
+          <StyledLocalVideoDesktop data-has-remote={remoteStream ? 'true' : 'false'}>
+            <video
+              ref={localVideoRef}
+              muted
+              autoPlay
+              playsInline
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+          </StyledLocalVideoDesktop>
+        )}
       </StyledSplit2>
 
       {/* Mensajes de estado / error debajo del layout */}

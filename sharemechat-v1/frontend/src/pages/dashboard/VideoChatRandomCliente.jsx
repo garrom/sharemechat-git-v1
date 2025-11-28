@@ -21,6 +21,7 @@ import {
   StyledChatDock,
   StyledChatInput,
   StyledLocalVideo,
+  StyledLocalVideoDesktop,
   StyledGiftsPanel,
   StyledGiftGrid,
   StyledGiftIcon,
@@ -48,12 +49,34 @@ import PromoVideoLightbox from '../../components/PromoVideoLightbox';
 
 export default function VideoChatRandomCliente(props) {
   const {
-    isMobile, cameraActive, remoteStream, localVideoRef, remoteVideoRef,
-    vcListRef, messages, modelNickname, giftRenderReady, getGiftIcon,
-    chatInput, setChatInput, sendChatMessage, showGifts, setShowGifts,
-    gifts, sendGiftMatch, fmtEUR, searching, stopAll, handleStartMatch,
-    handleNext, handleAddFavorite, error, toggleFullscreen, remoteVideoWrapRef,
-    modelAvatar, handleActivateCamera,
+    isMobile,
+    cameraActive,
+    remoteStream,
+    localVideoRef,
+    remoteVideoRef,
+    vcListRef,
+    messages,
+    modelNickname,
+    giftRenderReady,
+    getGiftIcon,
+    chatInput,
+    setChatInput,
+    sendChatMessage,
+    showGifts,
+    setShowGifts,
+    gifts,
+    sendGiftMatch,
+    fmtEUR,
+    searching,
+    stopAll,
+    handleStartMatch,
+    handleNext,
+    handleAddFavorite,
+    error,
+    toggleFullscreen,
+    remoteVideoWrapRef,
+    modelAvatar,
+    handleActivateCamera,
   } = props;
 
   // ====== Vídeos promocionales: ahora desde backend (mismo contrato que Funnyplace) ======
@@ -125,8 +148,9 @@ export default function VideoChatRandomCliente(props) {
 
   return (
     <StyledCenterVideochat>
-      <StyledSplit2>
-        {/* ---- Pane IZQUIERDO (LOCAL) ---- */}
+      {/* En desktop, si hay remoto => colapsamos pane izq y damos todo el ancho al derecho */}
+      <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
+        {/* ---- Pane IZQUIERDO (LOCAL / CTA) ---- */}
         <StyledPane data-side="left">
           {!isMobile && (
             !cameraActive ? (
@@ -159,65 +183,13 @@ export default function VideoChatRandomCliente(props) {
                 </div>
               </div>
             ) : (
-              <StyledVideoArea>
-                <div
-                  style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    borderRadius: '12px',
-                    overflow: 'hidden',
-                    background: '#000',
-                  }}
-                >
-                  <video
-                    ref={localVideoRef}
-                    muted
-                    autoPlay
-                    playsInline
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
-                  />
-                  {!isMobile && remoteStream && (
-                    <StyledChatContainer data-wide="true">
-                      <StyledChatList ref={vcListRef}>
-                        {messages.map((msg, index) => {
-                          const isMe = msg.from === 'me';
-                          const variant = isMe ? 'me' : 'peer';
-                          return (
-                            <StyledChatMessageRow key={index}>
-                              {msg.gift ? (
-                                <StyledChatBubble $variant={variant}>
-                                  {giftRenderReady &&
-                                    (() => {
-                                      const src = getGiftIcon(msg.gift);
-                                      return src ? (
-                                        <StyledGiftIcon src={src} alt="" />
-                                      ) : null;
-                                    })()}
-                                </StyledChatBubble>
-                              ) : (
-                                <StyledChatBubble $variant={variant}>
-                                  {msg.text}
-                                </StyledChatBubble>
-                              )}
-                            </StyledChatMessageRow>
-                          );
-                        })}
-                      </StyledChatList>
-                    </StyledChatContainer>
-                  )}
-                </div>
-              </StyledVideoArea>
+              // Desktop, cámara activa: el vídeo local se pinta en el overlay global (StyledLocalVideoDesktop)
+              <StyledVideoArea />
             )
           )}
         </StyledPane>
 
-        {/* ---- PANE DERECHO (REMOTO + CTA CÁMARA / CONTROLES) ---- */}
+        {/* ---- PANE DERECHO (REMOTO + CONTROLES) ---- */}
         <StyledPane data-side="right" style={{ position: 'relative' }}>
           {!cameraActive ? (
             <>
@@ -306,7 +278,7 @@ export default function VideoChatRandomCliente(props) {
             </>
           ) : (
             <>
-              {/* ====== CONTROLES INFERIORES, CENTRADOS ====== */}
+              {/* ====== CONTROLES INFERIORES, CENTRADOS (DESKTOP) ====== */}
               {cameraActive && (remoteStream || searching) && (
                 <div
                   style={{
@@ -412,7 +384,7 @@ export default function VideoChatRandomCliente(props) {
               )}
 
               {!remoteStream && (
-                // Sin streaming: solo botón Buscar centrado a media altura
+                // Sin streaming: solo botón Buscar centrado
                 <StyledRandomSearchControls>
                   <StyledRandomSearchCol>
                     {!searching ? (
@@ -485,43 +457,39 @@ export default function VideoChatRandomCliente(props) {
                       }
                     />
 
-                    {isMobile && (
-                      <StyledChatContainer data-wide="true">
-                        <StyledChatList ref={vcListRef}>
-                          {messages.map((msg, index) => {
-                            const isMe = msg.from === 'me';
-                            const variant = isMe ? 'me' : 'peer';
-                            return (
-                              <StyledChatMessageRow key={index}>
-                                {msg.gift ? (
-                                  <StyledChatBubble $variant={variant}>
-                                    {giftRenderReady &&
-                                      (() => {
-                                        const src = getGiftIcon(msg.gift);
-                                        return src ? (
-                                          <StyledGiftIcon
-                                            src={src}
-                                            alt=""
-                                          />
-                                        ) : null;
-                                      })()}
-                                  </StyledChatBubble>
-                                ) : (
-                                  <StyledChatBubble $variant={variant}>
-                                    {msg.text}
-                                  </StyledChatBubble>
-                                )}
-                              </StyledChatMessageRow>
-                            );
-                          })}
-                        </StyledChatList>
-                      </StyledChatContainer>
-                    )}
+                    {/* Chat overlay (desktop + móvil) */}
+                    <StyledChatContainer data-wide="true">
+                      <StyledChatList ref={vcListRef}>
+                        {messages.map((msg, index) => {
+                          const isMe = msg.from === 'me';
+                          const variant = isMe ? 'me' : 'peer';
+                          return (
+                            <StyledChatMessageRow key={index}>
+                              {msg.gift ? (
+                                <StyledChatBubble $variant={variant}>
+                                  {giftRenderReady &&
+                                    (() => {
+                                      const src = getGiftIcon(msg.gift);
+                                      return src ? (
+                                        <StyledGiftIcon src={src} alt="" />
+                                      ) : null;
+                                    })()}
+                                </StyledChatBubble>
+                              ) : (
+                                <StyledChatBubble $variant={variant}>
+                                  {msg.text}
+                                </StyledChatBubble>
+                              )}
+                            </StyledChatMessageRow>
+                          );
+                        })}
+                      </StyledChatList>
+                    </StyledChatContainer>
                   </StyledRemoteVideo>
                 </StyledVideoArea>
               ) : null}
 
-              {/* PiP móvil: cámara local SIEMPRE que haya cámara activa, haya o no remoto */}
+              {/* PiP MÓVIL: cámara local siempre que haya cámara activa */}
               {isMobile && cameraActive && (
                 <StyledLocalVideo>
                   <video
@@ -602,6 +570,24 @@ export default function VideoChatRandomCliente(props) {
             </>
           )}
         </StyledPane>
+
+        {/* Local video DESKTOP: único <video>, grande sin remoto y PiP con remoto */}
+        {!isMobile && cameraActive && (
+          <StyledLocalVideoDesktop data-has-remote={remoteStream ? 'true' : 'false'}>
+            <video
+              ref={localVideoRef}
+              muted
+              autoPlay
+              playsInline
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+              }}
+            />
+          </StyledLocalVideoDesktop>
+        )}
       </StyledSplit2>
 
       {remoteStream && (
