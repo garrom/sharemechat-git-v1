@@ -1108,14 +1108,17 @@ const DashboardModel = () => {
       });
       return;
     }
+
     // 1) Abrimos nuestro modal propio para pedir el importe
     const result = await openPayoutModal({
       title: 'Solicitud de retiro',
       message: 'Introduce la cantidad que deseas retirar:',
       initialAmount: 10,
     });
+
     // Si cierra o cancela el modal
     if (!result || !result.confirmed) return;
+
     const amount = Number(result.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       await alert({
@@ -1125,8 +1128,10 @@ const DashboardModel = () => {
       });
       return;
     }
+
     try {
       setLoadingSaldoModel(true);
+
       const res = await fetch('/api/transactions/payout', {
         method: 'POST',
         headers: {
@@ -1138,15 +1143,32 @@ const DashboardModel = () => {
           description: 'Solicitud de retiro',
         }),
       });
+
       if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Error ${res.status}`);
+        let friendlyMsg = `Error ${res.status}`;
+        try {
+          const data = await res.json();
+          if (data && data.message) {
+            friendlyMsg = data.message; // p.ej. "Saldo insuficiente para completar el retiro"
+          }
+        } catch {
+          try {
+            const txt = await res.text();
+            if (txt) friendlyMsg = txt;
+          } catch {
+            // nos quedamos con friendlyMsg por defecto
+          }
+        }
+
+        throw new Error(friendlyMsg);
       }
+
       await alert({
         title: 'Solicitud enviada',
         message: 'Tu solicitud de retiro se ha registrado correctamente.',
         variant: 'success',
       });
+
       // Refrescar saldo de la modelo
       const res2 = await fetch('/api/models/me', {
         headers: { Authorization: `Bearer ${tk}` },
@@ -1161,7 +1183,6 @@ const DashboardModel = () => {
     } catch (e) {
       console.error(e);
       const msg = e.message || 'Error al solicitar retiro.';
-      setError(msg);
       await alert({
         title: 'Error',
         message: msg,
