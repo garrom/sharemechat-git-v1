@@ -240,16 +240,18 @@ export const StyledCenter = styled(ColumnBlock)`
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  padding: 8px 12px; /* antes 16px en todos los lados */
+  padding: 4px 8px; /* menos aire alrededor del contenido */
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
   position: relative;
 
-  background-color: var(--c-surface);
-  background-repeat: repeat;
-  background-size: auto;
+  /* Sin “card” clara detrás: dejamos ver el fondo global oscuro */
+  background:transparent;
+  border-radius: 20px;
+  border: 3px solid #c084fc; /* lila bastante visible */
+  box-shadow: none;
 
   @media (max-width: 768px) {
     width: 100%;
@@ -261,6 +263,7 @@ export const StyledCenter = styled(ColumnBlock)`
     width: 50%;
   }
 `;
+
 
 
 // Centro específico para VIDEOCHAT (sin caja)
@@ -370,19 +373,26 @@ export const StyledCallCardDesktop = styled.div`
   width: 100%;
   max-width: 1040px;
   margin: 0 auto;
-  border-radius: 16px;
-  background: #111;
+
+  /* Borde lila + radio, fondo transparente */
+  border-radius: 20px;
+  border: 3px solid #b48cff;
+  background: transparent;
+
   padding: 10px 12px 8px;
   box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
   box-sizing: border-box;
 
   @media (max-width: 768px) {
+    /* En móvil lo dejamos full-screen sin caja */
     background: transparent;
     box-shadow: none;
     padding: 0;
     border-radius: 0;
+    border: none;
   }
 `;
+
 
 export const StyledCallHeaderDesktop = styled.div`
   display: flex;

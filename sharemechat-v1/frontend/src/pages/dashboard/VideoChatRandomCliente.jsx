@@ -346,8 +346,8 @@ export default function VideoChatRandomCliente(props) {
                   {/* CUERPO 16:9 CON HEADER SOBRE EL VÍDEO */}
                   <StyledVideoArea
                     style={{
-                      height: 'calc(100vh - 160px)',
-                      maxHeight: 'calc(100vh - 160px)',
+                      height: 'calc(100vh - 180px)',
+                      maxHeight: 'calc(100vh - 180px)',
                     }}
                   >
                     <StyledRemoteVideo
