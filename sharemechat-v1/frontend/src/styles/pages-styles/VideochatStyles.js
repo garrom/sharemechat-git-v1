@@ -240,7 +240,7 @@ export const StyledCenter = styled(ColumnBlock)`
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  padding: 16px;
+  padding: 8px 12px; /* antes 16px en todos los lados */
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -261,6 +261,7 @@ export const StyledCenter = styled(ColumnBlock)`
     width: 50%;
   }
 `;
+
 
 // Centro específico para VIDEOCHAT (sin caja)
 export const StyledCenterVideochat = styled(StyledCenter)`
@@ -341,22 +342,78 @@ export const StyledTopActions = styled.div`
 export const StyledVideoArea = styled.div`
   position: relative;
   width: 100%;
-  flex: 1;
-  min-height: 360px;
-  height: auto;
   min-width: 0;
 
+  /* DESKTOP: caja rígida 16:9 centrada */
+  @media (min-width: 769px) {
+    flex: 0 0 auto;          /* la altura viene del aspect-ratio, no del flex */
+    aspect-ratio: 16 / 9;    /* formato 16:9 fijo */
+    max-width: 960px;
+    margin: 0 auto;          /* centrado dentro del pane */
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  /* MÓVIL: mantenemos el comportamiento */
   @media (max-width: 768px) {
+    flex: 1;
     min-height: 0;
     height: 100%;
   }
 `;
 
+// CARD de llamada en escritorio: header + cuerpo 16:9 + footer chat
+export const StyledCallCardDesktop = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+  border-radius: 16px;
+  background: #111;
+  padding: 10px 12px 8px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+  }
+`;
+
+export const StyledCallHeaderDesktop = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  color: var(--c-white);
+  font-size: 0.95rem;
+`;
+
+export const StyledCallFooterDesktop = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
+`;
+
+
 export const StyledRemoteVideo = styled.div`
+  position: relative;
   width: 100%;
   height: 100%;
   z-index: 1;
+
+  /* En escritorio forzamos 16:9 sin tocar el comportamiento en móvil */
+  @media (min-width: 769px) {
+    aspect-ratio: 16 / 9;
+    height: auto;   /* la altura la marca el ratio */
+  }
 `;
+
 
 export const StyledLocalVideo = styled.div`
   position: absolute;
@@ -440,12 +497,7 @@ export const StyledChatDock = styled.div`
   background: var(--c-surface);
   z-index: 100;
 
-  /* DESKTOP: dock transparente */
-  @media (min-width: 769px) {
-    background: transparent;
-    border-top: none;
-  }
-
+  /* MOBILE: igual que estaba */
   @media (max-width: 768px) {
     position: fixed;
     left: 0;
@@ -468,12 +520,15 @@ export const StyledChatDock = styled.div`
     }
   }
 
+  /* DESKTOP: pegamos más el dock al chat */
   @media (min-width: 769px) {
+    height: 48px;
+    min-height: 48px;
+    padding: 4px 8px 0;   /* menos padding y sin aire debajo */
     background: transparent;
     border-top: none;
   }
 `;
-
 
 /* --------------------------------
  * 6. CHAT OVERLAY EN VIDEO (SIN CAMBIOS)
@@ -482,7 +537,7 @@ export const StyledChatDock = styled.div`
 export const StyledChatContainer = styled.div`
   position: absolute;
   inset: 0;
-  padding: 12px;
+  padding: 12px 12px 28px;
   display: flex;
   align-items: flex-end;
   pointer-events: none;
@@ -775,16 +830,17 @@ export const StyledCenterPanel = styled.div`
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  padding: 8px;
+  padding: 4px 8px; /* antes padding: 8px; */
   width: 100%;
 `;
+
 
 export const StyledCenterBody = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  gap: 8px;
+  gap: 4px;       /* antes gap: 8px; */
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -797,13 +853,14 @@ export const StyledCenterBody = styled.div`
   }
 `;
 
+
 export const StyledChatScroller = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   border: 1px solid var(--c-border-dark);
   border-radius: 0px;
-  padding: 10px;
+  padding: 6px 10px 4px;  /* antes 10px en todos los lados */
 
   @media (max-width: 768px) {
     padding-top: var(--navbar-height);
@@ -818,7 +875,7 @@ export const StyledChatScroller = styled.div`
     background-color: #e5ddd5;
     background-image: url("data:image/svg+xml,%3Csvg%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cg%20fill%3D%22none%22%20stroke%3D%22%23b2a79a%22%20stroke-width%3D%221.1%22%20stroke-opacity%3D%220.55%22%20stroke-linecap%3D%22round%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M14%2016h22a7%207%200%200%201%207%207v5a7%207%200%200%201-7%207h-7l-6%205v-5h-9a7%207%200%200%201-7-7v-5a7%207%200%200%201%207-7z%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M72%2018c-1.7-2.5-5.1-2.5-6.8%200-1.7-2.5-5.1-2.5-6.8%200-1.8%202.6-0.8%206%202.5%208.6l4.3%203.3%204.3-3.3c3.3-2.6%204.3-6%202.5-8.6z%22/%3E%0A%20%20%20%20%3Crect%20x%3D%2212%22%20y%3D%2256%22%20rx%3D%224%22%20ry%3D%224%22%20width%3D%2220%22%20height%3D%2226%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M15%2059h14M15%2064h9M15%2069h10%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M76%2060l2.5%205.1%205.2%200.8-3.7%203.7%200.9%205.1-4.9-2.6-4.9%202.6%200.9-5.1-3.7-3.7%205.2-0.8z%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2210%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2284%22%20cy%3D%2240%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2212%22%20cy%3D%2242%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2284%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M34%2040c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M56%2050c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M30%2030h0.1M35%2033h0.1M40%2030h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M64%2080h0.1M69%2083h0.1M74%2080h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M4%204l8%208M84%208l8-8%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M8%2084l8%208M80%2088l8-8%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A");
     background-repeat: repeat;
-    background-size: 80px 80px; /* densidad*/
+    background-size: 120px 120px; /* densidad*/
   }
 
   scrollbar-width: thin;
@@ -826,6 +883,7 @@ export const StyledChatScroller = styled.div`
 
   overscroll-behavior: contain;
 `;
+
 
 
 // === Centro PRE-CALL: “Activar cámara” centrado ===

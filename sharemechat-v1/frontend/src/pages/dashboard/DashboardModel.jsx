@@ -262,7 +262,7 @@ const DashboardModel = () => {
     if (localVideoRef.current && localStream.current) {
       localVideoRef.current.srcObject = localStream.current;
     }
-  }, [cameraActive]);
+  }, [cameraActive,remoteStream]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
@@ -1564,10 +1564,12 @@ const DashboardModel = () => {
     }
 
     try {
+
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: true
+        audio: true,
       });
+
       callLocalStreamRef.current = stream;
       setCallCameraActive(true);
       setCallStatus('camera-ready');
