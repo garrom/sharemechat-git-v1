@@ -403,15 +403,7 @@ export default function VideoChatFavoritosModelo(props) {
                             </StyledVideoArea>
 
                             {/* Footer alineado al ancho del vídeo: input + send (sin gifts) */}
-                            <StyledCallFooterDesktop
-                              style={{
-                                maxWidth: 960,
-                                margin: '8px auto 0',
-                                width: '100%',
-                                padding: '0 8px',
-                                position: 'relative',
-                              }}
-                            >
+                            <StyledCallFooterDesktop style={{ maxWidth: 960, margin: '0px auto 0', width: '100%', padding: '0 8px', position: 'relative' }}>
                               <StyledChatDock>
                                 <StyledChatInput
                                   type="text"

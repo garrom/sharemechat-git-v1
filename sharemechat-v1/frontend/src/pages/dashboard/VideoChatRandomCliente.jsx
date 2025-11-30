@@ -1,14 +1,7 @@
 // src/pages/dashboard/VideoChatRandomCliente.jsx
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faUserPlus,
-  faVideo,
-  faPhoneSlash,
-  faForward,
-  faPaperPlane,
-  faGift,
-} from '@fortawesome/free-solid-svg-icons';
+import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat,
   StyledSplit2,
@@ -35,7 +28,7 @@ import {
   StyledRandomSearchCol,
   StyledSearchHint,
   StyledCallCardDesktop,
-  StyledCallHeaderDesktop, // reservado por si luego lo usamos
+  StyledCallHeaderDesktop,
   StyledCallFooterDesktop,
 } from '../../styles/pages-styles/VideochatStyles';
 import {
@@ -82,7 +75,6 @@ export default function VideoChatRandomCliente(props) {
     handleActivateCamera,
   } = props;
 
-  // ====== Vídeos promocionales: ahora desde backend (mismo contrato que Funnyplace) ======
   const [promoVideos, setPromoVideos] = useState([]);
   const [activePromoIndex, setActivePromoIndex] = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
@@ -91,23 +83,15 @@ export default function VideoChatRandomCliente(props) {
   const fetchTeasers = async () => {
     const token = localStorage.getItem('token');
     if (!token) return;
-
     setPromoLoading(true);
     setPromoError('');
-
     try {
-      const res = await fetch('/api/models/teasers?page=0&size=20', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
+      const res = await fetch('/api/models/teasers?page=0&size=20', { headers: { Authorization: `Bearer ${token}` } });
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || 'Error cargando vídeos de modelos');
       }
-
       const data = await res.json();
-
-      // data = [ { modelId, modelName, avatarUrl, videoUrl }, … ]
       const mapped = data.map((item) => ({
         id: item.modelId,
         title: `${item.modelName} · teaser`,
@@ -116,7 +100,6 @@ export default function VideoChatRandomCliente(props) {
         src: item.videoUrl,
         durationSec: null,
       }));
-
       setPromoVideos(mapped);
     } catch (e) {
       setPromoError(e.message);
@@ -126,101 +109,51 @@ export default function VideoChatRandomCliente(props) {
   };
 
   useEffect(() => {
-    // Cargamos inicial al montar el componente
     fetchTeasers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleOpenPromo = (index) => {
-    setActivePromoIndex(index);
-  };
-
-  const handleClosePromo = () => {
-    setActivePromoIndex(null);
-  };
-
-  const handlePrevPromo = () => {
-    setActivePromoIndex((idx) => (idx > 0 ? idx - 1 : idx));
-  };
-
-  const handleNextPromo = () => {
-    setActivePromoIndex((idx) =>
-      idx < promoVideos.length - 1 ? idx + 1 : idx
-    );
-  };
+  const handleOpenPromo = (index) => { setActivePromoIndex(index); };
+  const handleClosePromo = () => { setActivePromoIndex(null); };
+  const handlePrevPromo = () => { setActivePromoIndex((idx) => (idx > 0 ? idx - 1 : idx)); };
+  const handleNextPromo = () => { setActivePromoIndex((idx) => (idx < promoVideos.length - 1 ? idx + 1 : idx)); };
 
   return (
     <StyledCenterVideochat>
-      {/* En desktop, si hay remoto => colapsamos pane izq y damos todo el ancho al derecho */}
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
-        {/* ---- Pane IZQUIERDO (LOCAL / CTA) ---- */}
+        {/* PANE IZQUIERDO (LOCAL / CTA) */}
         <StyledPane data-side="left">
           {!isMobile && (
             !cameraActive ? (
-              <div
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <div
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 8,
-                  }}
-                >
-                  <ButtonActivarCam onClick={handleActivateCamera}>
-                    Activar cámara
-                  </ButtonActivarCam>
-                  <StyledHelperLine
-                    style={{ color: '#fff', justifyContent: 'center' }}
-                  >
+              <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+                  <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
+                  <StyledHelperLine style={{ color:'#fff', justifyContent:'center' }}>
                     <FontAwesomeIcon icon={faVideo} />
                     activar cámara para iniciar videochat
                   </StyledHelperLine>
                 </div>
               </div>
             ) : (
-              // Desktop, cámara activa: el vídeo local se pinta en el overlay (cuando no hay remoto)
               <StyledVideoArea />
             )
           )}
         </StyledPane>
 
-        {/* ---- PANE DERECHO (REMOTO + CONTROLES) ---- */}
-        <StyledPane data-side="right" style={{ position: 'relative' }}>
+        {/* PANE DERECHO (REMOTO + CONTROLES) */}
+        <StyledPane data-side="right" style={{ position:'relative' }}>
           {!cameraActive ? (
             <>
-              {/* Estado de carga/error de promos */}
               {promoLoading && (
-                <div
-                  style={{
-                    color: '#e9ecef',
-                    padding: '8px 12px',
-                    fontSize: '0.9rem',
-                  }}
-                >
+                <div style={{ color:'#e9ecef', padding:'8px 12px', fontSize:'0.9rem' }}>
                   Cargando vídeos de modelos…
                 </div>
               )}
               {promoError && (
-                <div
-                  style={{
-                    color: '#ffb3b3',
-                    padding: '8px 12px',
-                    fontSize: '0.9rem',
-                  }}
-                >
+                <div style={{ color:'#ffb3b3', padding:'8px 12px', fontSize:'0.9rem' }}>
                   {promoError}
                 </div>
               )}
-
-              {/* Grid de vídeos promocionales (teasers de modelos) */}
               {promoVideos.length > 0 && (
                 <StyledThumbsGrid>
                   {promoVideos.map((video, index) => (
@@ -228,50 +161,23 @@ export default function VideoChatRandomCliente(props) {
                       key={video.id}
                       type="button"
                       onClick={() => handleOpenPromo(index)}
-                      style={{
-                        border: 'none',
-                        padding: 0,
-                        background: 'transparent',
-                        cursor: 'pointer',
-                      }}
+                      style={{ border:'none', padding:0, background:'transparent', cursor:'pointer' }}
                     >
-                      <img
-                        className="thumb"
-                        src={video.thumb}
-                        alt={video.title || 'Vídeo modelo'}
-                      />
+                      <img className="thumb" src={video.thumb} alt={video.title || 'Vídeo modelo'} />
                     </button>
                   ))}
                 </StyledThumbsGrid>
               )}
-
               {!promoLoading && !promoError && promoVideos.length === 0 && (
-                <div
-                  style={{
-                    color: '#e9ecef',
-                    padding: '8px 12px',
-                    fontSize: '0.9rem',
-                  }}
-                >
+                <div style={{ color:'#e9ecef', padding:'8px 12px', fontSize:'0.9rem' }}>
                   No hay vídeos promocionales disponibles por el momento.
                 </div>
               )}
-
               {isMobile && (
-                <StyledPreCallCenter
-                  style={{
-                    position: 'absolute',
-                    top: '70%',
-                    left: 0,
-                    right: 0,
-                    transform: 'translateY(-50%)',
-                  }}
-                >
+                <StyledPreCallCenter style={{ position:'absolute', top:'70%', left:0, right:0, transform:'translateY(-50%)' }}>
                   <div>
-                    <ButtonActivarCamMobile onClick={handleActivateCamera}>
-                      Activar cámara
-                    </ButtonActivarCamMobile>
-                    <StyledHelperLine style={{ color: '#fff' }}>
+                    <ButtonActivarCamMobile onClick={handleActivateCamera}>Activar cámara</ButtonActivarCamMobile>
+                    <StyledHelperLine style={{ color:'#fff' }}>
                       <FontAwesomeIcon icon={faVideo} />
                       activar cámara para iniciar videochat
                     </StyledHelperLine>
@@ -281,55 +187,37 @@ export default function VideoChatRandomCliente(props) {
             </>
           ) : (
             <>
-              {/* ====== CONTROLES INFERIORES (SE MUEVEN SOBRE EL VÍDEO EN ESCRITORIO) ====== */}
-
+              {/* CONTROLES BUSCAR / BUSCANDO (SIN REMOTO) */}
               {!remoteStream && (
-                // Sin streaming: botón Buscar o estado "Buscando..." + Colgar
                 <StyledRandomSearchControls>
                   <StyledRandomSearchCol>
                     {!searching ? (
                       <>
-                        <ButtonBuscar onClick={handleStartMatch}>
-                          Buscar
-                        </ButtonBuscar>
-                        <StyledSearchHint>
-                          Pulsa “Buscar” para empezar.
-                        </StyledSearchHint>
+                        <ButtonBuscar onClick={handleStartMatch}>Buscar</ButtonBuscar>
+                        <StyledSearchHint>Pulsa “Buscar” para empezar.</StyledSearchHint>
                       </>
                     ) : (
                       <>
                         <StyledSearchHint>Buscando modelo disponible…</StyledSearchHint>
-                        <div
-                          style={{
-                            marginTop: 8,
-                            display: 'flex',
-                            justifyContent: 'center',
-                          }}
-                        >
+                        <div style={{ marginTop:8, display:'flex', justifyContent:'center' }}>
                           <BtnHangup
                             onClick={stopAll}
                             title="Detener búsqueda"
                             aria-label="Detener búsqueda"
                             style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: '999px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: 0,
-                              background: '#dc3545',
-                              color: '#fff',
-                              border: '1px solid rgba(255,255,255,0.4)',
+                              width:44,
+                              height:44,
+                              borderRadius:'999px',
+                              display:'flex',
+                              alignItems:'center',
+                              justifyContent:'center',
+                              padding:0,
+                              background:'#dc3545',
+                              color:'#fff',
+                              border:'1px solid rgba(255,255,255,0.4)',
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#fff';
-                              e.currentTarget.style.color = '#dc3545';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = '#dc3545';
-                              e.currentTarget.style.color = '#fff';
-                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#dc3545'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = '#dc3545'; e.currentTarget.style.color = '#fff'; }}
                           >
                             <FontAwesomeIcon icon={faPhoneSlash} />
                           </BtnHangup>
@@ -340,83 +228,54 @@ export default function VideoChatRandomCliente(props) {
                 </StyledRandomSearchControls>
               )}
 
-              {/* ====== CUANDO HAY REMOTO (DESKTOP) ====== */}
+              {/* DESKTOP: REMOTO + CARD */}
               {remoteStream && !isMobile && (
                 <StyledCallCardDesktop>
-                  {/* CUERPO 16:9 CON HEADER SOBRE EL VÍDEO */}
-                  <StyledVideoArea
-                    style={{
-                      height: 'calc(100vh - 180px)',
-                      maxHeight: 'calc(100vh - 180px)',
-                    }}
-                  >
+                  <StyledVideoArea style={{ height:'calc(100vh - 180px)', maxHeight:'calc(100vh - 180px)' }}>
                     <StyledRemoteVideo
                       ref={remoteVideoWrapRef}
-                      style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        background: '#000',
-                      }}
+                      style={{ position:'relative', width:'100%', height:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}
                     >
-
-                      {/* HEADER SOBRE EL VIDEO (avatar + nickname + fullscreen) */}
                       <StyledVideoTitle>
-                        <StyledTitleAvatar
-                          src={modelAvatar || '/img/avatarChica.png'}
-                          alt=""
-                        />
+                        <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
                         {modelNickname || 'Modelo'}
                         <button
                           type="button"
-                          onClick={() =>
-                            toggleFullscreen(remoteVideoWrapRef.current)
-                          }
+                          onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                           title="Pantalla completa"
                           style={{
-                            marginLeft: 8,
-                            padding: '2px 8px',
-                            borderRadius: 6,
-                            border: '1px solid rgba(255,255,255,0.6)',
-                            background: 'rgba(0,0,0,0.25)',
-                            color: '#fff',
-                            cursor: 'pointer',
+                            marginLeft:8,
+                            padding:'2px 8px',
+                            borderRadius:6,
+                            border:'1px solid rgba(255,255,255,0.6)',
+                            background:'rgba(0,0,0,0.25)',
+                            color:'#fff',
+                            cursor:'pointer',
                           }}
                         >
                           Pantalla completa
                         </button>
                       </StyledVideoTitle>
 
-                      {/* VIDEO REMOTO */}
                       <video
                         ref={remoteVideoRef}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          display: 'block',
-                        }}
+                        style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                         autoPlay
                         playsInline
-                        onDoubleClick={() =>
-                          toggleFullscreen(remoteVideoWrapRef.current)
-                        }
+                        onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                       />
 
-                      {/* PIP LOCAL ESCRITORIO: SOBRE EL REMOTO, ARRIBA DERECHA */}
                       {!isMobile && cameraActive && (
                         <div
                           style={{
-                            position: 'absolute',
-                            top: 0,
-                            right: 0,
-                            width: '24%',
-                            maxWidth: 260,
-                            height: 'auto',
-                            overflow: 'hidden',
-                            zIndex: 8,
+                            position:'absolute',
+                            top:0,
+                            right:0,
+                            width:'24%',
+                            maxWidth:260,
+                            height:'auto',
+                            overflow:'hidden',
+                            zIndex:8,
                           }}
                         >
                           <video
@@ -424,29 +283,23 @@ export default function VideoChatRandomCliente(props) {
                             muted
                             autoPlay
                             playsInline
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              display: 'block',
-                            }}
+                            style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                           />
                         </div>
                       )}
 
-                      {/* Botones colgar / next / fav SOBRE el vídeo (solo escritorio) */}
                       {!isMobile && cameraActive && (
                         <div
                           style={{
-                            position: 'absolute',
-                            bottom: 16,
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8,
-                            zIndex: 9,
+                            position:'absolute',
+                            bottom:16,
+                            left:'50%',
+                            transform:'translateX(-50%)',
+                            display:'flex',
+                            alignItems:'center',
+                            justifyContent:'center',
+                            gap:8,
+                            zIndex:9,
                           }}
                         >
                           <BtnHangup
@@ -454,25 +307,19 @@ export default function VideoChatRandomCliente(props) {
                             title="Colgar"
                             aria-label="Colgar"
                             style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: '999px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: 0,
-                              background: '#dc3545',
-                              color: '#fff',
-                              border: '1px solid rgba(255, 255, 255, 0.4)',
+                              width:44,
+                              height:44,
+                              borderRadius:'999px',
+                              display:'flex',
+                              alignItems:'center',
+                              justifyContent:'center',
+                              padding:0,
+                              background:'#dc3545',
+                              color:'#fff',
+                              border:'1px solid rgba(255,255,255,0.4)',
                             }}
-                            onMouseEnter={(e) => {
-                              e.currentTarget.style.background = '#fff';
-                              e.currentTarget.style.color = '#dc3545';
-                            }}
-                            onMouseLeave={(e) => {
-                              e.currentTarget.style.background = '#dc3545';
-                              e.currentTarget.style.color = '#fff';
-                            }}
+                            onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#dc3545'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background = '#dc3545'; e.currentTarget.style.color = '#fff'; }}
                           >
                             <FontAwesomeIcon icon={faPhoneSlash} />
                           </BtnHangup>
@@ -482,25 +329,19 @@ export default function VideoChatRandomCliente(props) {
                               <ButtonNext
                                 onClick={handleNext}
                                 style={{
-                                  width: 44,
-                                  height: 44,
-                                  borderRadius: '999px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  padding: 0,
-                                  background: '#fff',
-                                  color: '#000',
-                                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                                  width:44,
+                                  height:44,
+                                  borderRadius:'999px',
+                                  display:'flex',
+                                  alignItems:'center',
+                                  justifyContent:'center',
+                                  padding:0,
+                                  background:'#fff',
+                                  color:'#000',
+                                  border:'1px solid rgba(255,255,255,0.4)',
                                 }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = '#000';
-                                  e.currentTarget.style.color = '#fff';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = '#fff';
-                                  e.currentTarget.style.color = '#000';
-                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
                               >
                                 <FontAwesomeIcon icon={faForward} />
                               </ButtonNext>
@@ -510,25 +351,19 @@ export default function VideoChatRandomCliente(props) {
                                 onClick={handleAddFavorite}
                                 title="Añadir a favoritos"
                                 style={{
-                                  width: 44,
-                                  height: 44,
-                                  borderRadius: '999px',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  justifyContent: 'center',
-                                  padding: 0,
-                                  background: '#fff',
-                                  color: '#000',
-                                  border: '1px solid rgba(255, 255, 255, 0.4)',
+                                  width:44,
+                                  height:44,
+                                  borderRadius:'999px',
+                                  display:'flex',
+                                  alignItems:'center',
+                                  justifyContent:'center',
+                                  padding:0,
+                                  background:'#fff',
+                                  color:'#000',
+                                  border:'1px solid rgba(255,255,255,0.4)',
                                 }}
-                                onMouseEnter={(e) => {
-                                  e.currentTarget.style.background = '#000';
-                                  e.currentTarget.style.color = '#fff';
-                                }}
-                                onMouseLeave={(e) => {
-                                  e.currentTarget.style.background = '#fff';
-                                  e.currentTarget.style.color = '#000';
-                                }}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
                               >
                                 <FontAwesomeIcon icon={faUserPlus} />
                               </ButtonAddFavorite>
@@ -537,7 +372,6 @@ export default function VideoChatRandomCliente(props) {
                         </div>
                       )}
 
-                      {/* Chat overlay (escritorio) */}
                       <StyledChatContainer data-wide="true">
                         <StyledChatList ref={vcListRef}>
                           {messages.map((msg, index) => {
@@ -550,15 +384,11 @@ export default function VideoChatRandomCliente(props) {
                                     {giftRenderReady &&
                                       (() => {
                                         const src = getGiftIcon(msg.gift);
-                                        return src ? (
-                                          <StyledGiftIcon src={src} alt="" />
-                                        ) : null;
+                                        return src ? <StyledGiftIcon src={src} alt="" /> : null;
                                       })()}
                                   </StyledChatBubble>
                                 ) : (
-                                  <StyledChatBubble $variant={variant}>
-                                    {msg.text}
-                                  </StyledChatBubble>
+                                  <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
                                 )}
                               </StyledChatMessageRow>
                             );
@@ -568,23 +398,8 @@ export default function VideoChatRandomCliente(props) {
                     </StyledRemoteVideo>
                   </StyledVideoArea>
 
-                  {/* FOOTER DEL CARD: caja de chat + gift dentro, centrado y del mismo ancho que el vídeo */}
-                  <StyledCallFooterDesktop
-                    style={{
-                      maxWidth: 960,
-                      margin: '8px auto 0',
-                      width: '100%',
-                      padding: '0 8px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        position: 'relative',
-                        width: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                      }}
-                    >
+                  <StyledCallFooterDesktop style={{ maxWidth:960, margin:'8px auto 0', width:'100%', padding:'0 8px' }}>
+                    <div style={{ position:'relative', width:'100%', display:'flex', alignItems:'center' }}>
                       <StyledChatInput
                         type="text"
                         value={chatInput}
@@ -597,32 +412,26 @@ export default function VideoChatRandomCliente(props) {
                             sendChatMessage();
                           }
                         }}
-                        style={{
-                          width: '100%',
-                          borderRadius: 999,       // extremos redondos
-                          paddingRight: 44,        // hueco para el icono de regalo
-                        }}
+                        style={{ width:'100%', borderRadius:999, paddingRight:44 }}
                       />
-
-                      {/* Icono de regalo dentro del input (derecha) */}
                       <button
                         type="button"
                         onClick={() => setShowGifts((s) => !s)}
                         title="Enviar regalo"
                         aria-label="Enviar regalo"
                         style={{
-                          position: 'absolute',
-                          right: 10,
-                          width: 28,
-                          height: 28,
-                          borderRadius: '999px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          border: 'none',
-                          background: 'transparent',
-                          color: '#fff',
-                          cursor: 'pointer',
+                          position:'absolute',
+                          right:10,
+                          width:28,
+                          height:28,
+                          borderRadius:'999px',
+                          display:'flex',
+                          alignItems:'center',
+                          justifyContent:'center',
+                          border:'none',
+                          background:'transparent',
+                          color:'#fff',
+                          cursor:'pointer',
                         }}
                       >
                         <FontAwesomeIcon icon={faGift} />
@@ -643,43 +452,31 @@ export default function VideoChatRandomCliente(props) {
                       </StyledGiftsPanel>
                     )}
                   </StyledCallFooterDesktop>
-
                 </StyledCallCardDesktop>
               )}
 
-              {/* MÓVIL: mantenemos el layout que ya tenías */}
+              {/* MÓVIL: REMOTO + CHAT OVERLAY */}
               {remoteStream && isMobile && (
                 <StyledVideoArea>
                   <StyledRemoteVideo
                     ref={remoteVideoWrapRef}
-                    style={{
-                      position: 'relative',
-                      width: '100%',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      background: '#000',
-                    }}
+                    style={{ position:'relative', width:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}
                   >
                     <StyledVideoTitle>
-                      <StyledTitleAvatar
-                        src={modelAvatar || '/img/avatarChica.png'}
-                        alt=""
-                      />
+                      <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
                       {modelNickname || 'Modelo'}
                       <button
                         type="button"
-                        onClick={() =>
-                          toggleFullscreen(remoteVideoWrapRef.current)
-                        }
+                        onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                         title="Pantalla completa"
                         style={{
-                          marginLeft: 8,
-                          padding: '2px 8px',
-                          borderRadius: 6,
-                          border: '1px solid rgba(255,255,255,0.6)',
-                          background: 'rgba(0,0,0,0.25)',
-                          color: '#fff',
-                          cursor: 'pointer',
+                          marginLeft:8,
+                          padding:'2px 8px',
+                          borderRadius:6,
+                          border:'1px solid rgba(255,255,255,0.6)',
+                          background:'rgba(0,0,0,0.25)',
+                          color:'#fff',
+                          cursor:'pointer',
                         }}
                       >
                         Pantalla completa
@@ -688,20 +485,12 @@ export default function VideoChatRandomCliente(props) {
 
                     <video
                       ref={remoteVideoRef}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        display: 'block',
-                      }}
+                      style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                       autoPlay
                       playsInline
-                      onDoubleClick={() =>
-                        toggleFullscreen(remoteVideoWrapRef.current)
-                      }
+                      onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                     />
 
-                    {/* Chat overlay (móvil) */}
                     <StyledChatContainer data-wide="true">
                       <StyledChatList ref={vcListRef}>
                         {messages.map((msg, index) => {
@@ -714,15 +503,11 @@ export default function VideoChatRandomCliente(props) {
                                   {giftRenderReady &&
                                     (() => {
                                       const src = getGiftIcon(msg.gift);
-                                      return src ? (
-                                        <StyledGiftIcon src={src} alt="" />
-                                      ) : null;
+                                      return src ? <StyledGiftIcon src={src} alt="" /> : null;
                                     })()}
                                 </StyledChatBubble>
                               ) : (
-                                <StyledChatBubble $variant={variant}>
-                                  {msg.text}
-                                </StyledChatBubble>
+                                <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
                               )}
                             </StyledChatMessageRow>
                           );
@@ -733,7 +518,7 @@ export default function VideoChatRandomCliente(props) {
                 </StyledVideoArea>
               )}
 
-              {/* PiP MÓVIL: cámara local siempre que haya cámara activa */}
+              {/* PiP MÓVIL (LOCAL) */}
               {isMobile && cameraActive && (
                 <StyledLocalVideo>
                   <video
@@ -741,34 +526,27 @@ export default function VideoChatRandomCliente(props) {
                     muted
                     autoPlay
                     playsInline
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
+                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                   />
                 </StyledLocalVideo>
               )}
-              {isMobile && cameraActive && (
+
+              {/* BOTONES FLOTTANTES MÓVIL: AHORA SOLO EN LLAMADA (remoteStream) */}
+              {isMobile && cameraActive && remoteStream && (
                 <div
                   style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: '72px',
-                    zIndex: 8,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '12px',
+                    position:'absolute',
+                    left:0,
+                    right:0,
+                    bottom:'72px',
+                    zIndex:8,
+                    display:'flex',
+                    justifyContent:'center',
+                    alignItems:'center',
+                    gap:'12px',
                   }}
                 >
-                  <BtnHangup
-                    onClick={stopAll}
-                    title="Colgar"
-                    aria-label="Colgar"
-                  >
+                  <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
                     <FontAwesomeIcon icon={faPhoneSlash} />
                   </BtnHangup>
                   {remoteStream && (
@@ -776,16 +554,16 @@ export default function VideoChatRandomCliente(props) {
                       <ButtonNext
                         onClick={handleNext}
                         style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: '999px',
-                          padding: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: '#fff',
-                          color: '#000',
-                          border: '1px solid rgba(255,255,255,0.4)',
+                          width:44,
+                          height:44,
+                          borderRadius:'999px',
+                          padding:0,
+                          display:'flex',
+                          alignItems:'center',
+                          justifyContent:'center',
+                          background:'#fff',
+                          color:'#000',
+                          border:'1px solid rgba(255,255,255,0.4)',
                         }}
                       >
                         <FontAwesomeIcon icon={faForward} />
@@ -793,16 +571,16 @@ export default function VideoChatRandomCliente(props) {
                       <ButtonAddFavorite
                         onClick={handleAddFavorite}
                         style={{
-                          width: 44,
-                          height: 44,
-                          borderRadius: '999px',
-                          padding: 0,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          background: '#fff',
-                          color: '#000',
-                          border: '1px solid rgba(255,255,255,0.4)',
+                          width:44,
+                          height:44,
+                          borderRadius:'999px',
+                          padding:0,
+                          display:'flex',
+                          alignItems:'center',
+                          justifyContent:'center',
+                          background:'#fff',
+                          color:'#000',
+                          border:'1px solid rgba(255,255,255,0.4)',
                         }}
                       >
                         <FontAwesomeIcon icon={faUserPlus} />
@@ -815,7 +593,7 @@ export default function VideoChatRandomCliente(props) {
           )}
         </StyledPane>
 
-        {/* Local video DESKTOP: único <video> grande sin remoto (pre-call) */}
+        {/* LOCAL DESKTOP: PRE-CALL GRANDE */}
         {!isMobile && cameraActive && !remoteStream && (
           <StyledLocalVideoDesktop data-has-remote="false">
             <video
@@ -823,18 +601,13 @@ export default function VideoChatRandomCliente(props) {
               muted
               autoPlay
               playsInline
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-              }}
+              style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
             />
           </StyledLocalVideoDesktop>
         )}
       </StyledSplit2>
 
-      {/* DOCK DE CHAT SOLO MÓVIL (en desktop ya va en el footer del CARD) */}
+      {/* DOCK CHAT SOLO MÓVIL EN LLAMADA */}
       {remoteStream && isMobile && (
         <StyledChatDock>
           <StyledChatInput
@@ -850,11 +623,7 @@ export default function VideoChatRandomCliente(props) {
               }
             }}
           />
-          <BtnSend
-            type="button"
-            onClick={sendChatMessage}
-            aria-label="Enviar mensaje"
-          >
+          <BtnSend type="button" onClick={sendChatMessage} aria-label="Enviar mensaje">
             <FontAwesomeIcon icon={faPaperPlane} />
           </BtnSend>
           <ButtonRegalo
@@ -881,11 +650,8 @@ export default function VideoChatRandomCliente(props) {
         </StyledChatDock>
       )}
 
-      {error && (
-        <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>
-      )}
+      {error && <p style={{ color:'red', marginTop:'10px' }}>{error}</p>}
 
-      {/* Lightbox de vídeos promo */}
       {activePromoIndex != null && (
         <PromoVideoLightbox
           videos={promoVideos}

@@ -240,18 +240,15 @@ export const StyledCenter = styled(ColumnBlock)`
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  padding: 4px 8px; /* menos aire alrededor del contenido */
+  padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: stretch;
   justify-content: flex-start;
   position: relative;
-
-  /* Sin “card” clara detrás: dejamos ver el fondo global oscuro */
-  background:transparent;
-  border-radius: 20px;
-  border: 3px solid #c084fc; /* lila bastante visible */
-  box-shadow: none;
+  background-color: ${p => (p['data-mode'] === 'call' ? colors.backsolid : 'var(--c-surface)')};
+  background-repeat: repeat;
+  background-size: auto;
 
   @media (max-width: 768px) {
     width: 100%;
@@ -264,22 +261,25 @@ export const StyledCenter = styled(ColumnBlock)`
   }
 `;
 
-
-
-// Centro específico para VIDEOCHAT (sin caja)
 export const StyledCenterVideochat = styled(StyledCenter)`
-  background-color: var(--c-bg);
+  background: transparent;
   border: none;
   border-radius: 0;
   box-shadow: none;
   padding: 0;
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 
   @media (max-width: 768px) {
     padding: 0;
+    margin: 0;
     border-radius: 0;
   }
-
 `;
+
 
 /** Columna derecha */
 export const StyledRightColumn = styled(ColumnBlock)`
@@ -296,7 +296,7 @@ export const StyledRightColumn = styled(ColumnBlock)`
   }
 `;
 
-// MODIFICADO: sin padding (lo da StyledCenter)
+
 export const StyledFavoritesShell = styled.div`
   display: flex;
   flex-direction: column;
@@ -345,85 +345,34 @@ export const StyledTopActions = styled.div`
 export const StyledVideoArea = styled.div`
   position: relative;
   width: 100%;
+  flex: 1;
+  min-height: 360px;
+  height: auto;
   min-width: 0;
+  height: calc(100vh - 180px);
+  max-height: calc(100vh - 180px);
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0px;
 
-  /* DESKTOP: caja rígida 16:9 centrada */
-  @media (min-width: 769px) {
-    flex: 0 0 auto;          /* la altura viene del aspect-ratio, no del flex */
-    aspect-ratio: 16 / 9;    /* formato 16:9 fijo */
-    max-width: 960px;
-    margin: 0 auto;          /* centrado dentro del pane */
-    background: #000;
-    border-radius: 12px;
-    overflow: hidden;
-  }
 
-  /* MÓVIL: mantenemos el comportamiento */
   @media (max-width: 768px) {
-    flex: 1;
     min-height: 0;
     height: 100%;
+    max-height: 100%;
   }
 `;
-
-// CARD de llamada en escritorio: header + cuerpo 16:9 + footer chat
-export const StyledCallCardDesktop = styled.div`
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 1040px;
-  margin: 0 auto;
-
-  /* Borde lila + radio, fondo transparente */
-  border-radius: 20px;
-  border: 3px solid #b48cff;
-  background: transparent;
-
-  padding: 10px 12px 8px;
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
-  box-sizing: border-box;
-
-  @media (max-width: 768px) {
-    /* En móvil lo dejamos full-screen sin caja */
-    background: transparent;
-    box-shadow: none;
-    padding: 0;
-    border-radius: 0;
-    border: none;
-  }
-`;
-
-
-export const StyledCallHeaderDesktop = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: 8px;
-  color: var(--c-white);
-  font-size: 0.95rem;
-`;
-
-export const StyledCallFooterDesktop = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-top: 8px;
-`;
-
 
 export const StyledRemoteVideo = styled.div`
-  position: relative;
   width: 100%;
   height: 100%;
   z-index: 1;
+  aspect-ratio: unset;
+  max-height: 100%;
+  border-radius: 0 !important;
+  overflow: visible !important;
 
-  /* En escritorio forzamos 16:9 sin tocar el comportamiento en móvil */
-  @media (min-width: 769px) {
-    aspect-ratio: 16 / 9;
-    height: auto;   /* la altura la marca el ratio */
-  }
 `;
-
 
 export const StyledLocalVideo = styled.div`
   position: absolute;
@@ -507,7 +456,12 @@ export const StyledChatDock = styled.div`
   background: var(--c-surface);
   z-index: 100;
 
-  /* MOBILE: igual que estaba */
+  /* DESKTOP: dock transparente */
+  @media (min-width: 769px) {
+    background: transparent;
+    border-top: none;
+  }
+
   @media (max-width: 768px) {
     position: fixed;
     left: 0;
@@ -530,15 +484,12 @@ export const StyledChatDock = styled.div`
     }
   }
 
-  /* DESKTOP: pegamos más el dock al chat */
   @media (min-width: 769px) {
-    height: 48px;
-    min-height: 48px;
-    padding: 4px 8px 0;   /* menos padding y sin aire debajo */
     background: transparent;
     border-top: none;
   }
 `;
+
 
 /* --------------------------------
  * 6. CHAT OVERLAY EN VIDEO (SIN CAMBIOS)
@@ -547,7 +498,7 @@ export const StyledChatDock = styled.div`
 export const StyledChatContainer = styled.div`
   position: absolute;
   inset: 0;
-  padding: 12px 12px 28px;
+  padding: 12px;
   display: flex;
   align-items: flex-end;
   pointer-events: none;
@@ -710,7 +661,7 @@ export const StyledSplit2 = styled.div`
   display: grid;
   grid-template-columns: ${props =>
     props['data-mode'] === 'full-remote' ? '0fr 1fr' : '1fr 1fr'};
-  gap: 14px;
+  gap: ${props => (props['data-mode'] === 'full-remote' ? '0px' : '14px')};
   width: 100%;
   min-height: 0;
   flex: 1;
@@ -724,12 +675,18 @@ export const StyledSplit2 = styled.div`
 
 export const StyledPane = styled.section`
   position: relative;
-  background: linear-gradient(180deg, var(--c-surface-3) 0%, #dee4eb 100%);
+  background: transparent;
   border: 1px ${colors.green};
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
+  height:100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+
 
   &[data-side="left"] {
     background: ${colors.backsolid};
@@ -745,11 +702,10 @@ export const StyledPane = styled.section`
     border: none;
   }
 
-  /* En móvil quitamos caja/bordes para ganar área útil */
+  /* En móvil */
   @media (max-width: 768px) {
     background: transparent;
-    border: none;
-    border-radius: 0;
+    border-radius: 0 !important;
   }
 `;
 
@@ -840,17 +796,16 @@ export const StyledCenterPanel = styled.div`
   flex: 1;
   min-height: 0;
   overflow: hidden;
-  padding: 4px 8px; /* antes padding: 8px; */
+  padding: 0px;
   width: 100%;
 `;
-
 
 export const StyledCenterBody = styled.div`
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  gap: 4px;       /* antes gap: 8px; */
+  gap: 8px;
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -863,14 +818,13 @@ export const StyledCenterBody = styled.div`
   }
 `;
 
-
 export const StyledChatScroller = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   border: 1px solid var(--c-border-dark);
   border-radius: 0px;
-  padding: 6px 10px 4px;  /* antes 10px en todos los lados */
+  padding: 10px;
 
   @media (max-width: 768px) {
     padding-top: var(--navbar-height);
@@ -885,7 +839,7 @@ export const StyledChatScroller = styled.div`
     background-color: #e5ddd5;
     background-image: url("data:image/svg+xml,%3Csvg%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cg%20fill%3D%22none%22%20stroke%3D%22%23b2a79a%22%20stroke-width%3D%221.1%22%20stroke-opacity%3D%220.55%22%20stroke-linecap%3D%22round%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M14%2016h22a7%207%200%200%201%207%207v5a7%207%200%200%201-7%207h-7l-6%205v-5h-9a7%207%200%200%201-7-7v-5a7%207%200%200%201%207-7z%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M72%2018c-1.7-2.5-5.1-2.5-6.8%200-1.7-2.5-5.1-2.5-6.8%200-1.8%202.6-0.8%206%202.5%208.6l4.3%203.3%204.3-3.3c3.3-2.6%204.3-6%202.5-8.6z%22/%3E%0A%20%20%20%20%3Crect%20x%3D%2212%22%20y%3D%2256%22%20rx%3D%224%22%20ry%3D%224%22%20width%3D%2220%22%20height%3D%2226%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M15%2059h14M15%2064h9M15%2069h10%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M76%2060l2.5%205.1%205.2%200.8-3.7%203.7%200.9%205.1-4.9-2.6-4.9%202.6%200.9-5.1-3.7-3.7%205.2-0.8z%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2210%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2284%22%20cy%3D%2240%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2212%22%20cy%3D%2242%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2284%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M34%2040c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M56%2050c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M30%2030h0.1M35%2033h0.1M40%2030h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M64%2080h0.1M69%2083h0.1M74%2080h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M4%204l8%208M84%208l8-8%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M8%2084l8%208M80%2088l8-8%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A");
     background-repeat: repeat;
-    background-size: 120px 120px; /* densidad*/
+    background-size: 150px 150px; /* densidad*/
   }
 
   scrollbar-width: thin;
@@ -893,7 +847,6 @@ export const StyledChatScroller = styled.div`
 
   overscroll-behavior: contain;
 `;
-
 
 
 // === Centro PRE-CALL: “Activar cámara” centrado ===
@@ -992,4 +945,47 @@ export const StyledFloatingHangup = styled.div`
   @media (min-width: 769px) {
     display: none; /* solo móvil */
   }
+`;
+
+
+// CARD de llamada en escritorio: header + cuerpo 16:9 + footer chat
+export const StyledCallCardDesktop = styled.div`
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+
+  /* Ahora usamos SOLO el marco lila de StyledCenter */
+  border-radius: 16px;
+  border: none;
+  background: transparent;
+  padding: 10px 12px 8px;
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
+  box-sizing: border-box;
+
+  /* DESKTOP:*/
+  @media (min-width: 769px) {
+    border: none;
+    border-radius: 0;
+    background:transparent;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  @media (max-width: 768px) {
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    border-radius: 0;
+    border: none;
+  }
+`;
+
+
+export const StyledCallFooterDesktop = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 8px;
 `;

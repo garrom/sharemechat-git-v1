@@ -2101,7 +2101,7 @@ const DashboardModel = () => {
             )}
 
             {/* ==============INICIO ZONA CENTRAL ========== */}
-            <StyledCenter>
+            <StyledCenter data-mode={activeTab === 'favoritos' && contactMode === 'call' ? 'call' : undefined}>
 
               {/*RENDERIZADO FUNNYPLACE */}
               {activeTab === 'funnyplace' && <FunnyplacePage />}

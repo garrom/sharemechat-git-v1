@@ -2188,66 +2188,28 @@ const DashboardClient = () => {
       <StyledNavbar>
         <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick} />
         {/* Botones-text en el navbar (Videochat / Favoritos / Funnyplace) */}
-        <div
-          className="desktop-only"
-          style={{
-            display: 'flex',
-            gap: 8,
-            alignItems: 'center',
-            flex: 1,
-            justifyContent: 'center',
-          }}
-        >
-          <StyledNavTab
-            type="button"
-            data-active={activeTab === 'videochat'}
-            aria-pressed={activeTab === 'videochat'}
-            onClick={handleGoVideochat}
-            title="Videochat"
-          >
+        <div className="desktop-only" style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1, justifyContent: 'center' }}>
+          <StyledNavTab type="button" data-active={activeTab === 'videochat'} aria-pressed={activeTab === 'videochat'} onClick={handleGoVideochat} title="Videochat">
             Videochat
           </StyledNavTab>
 
-          <StyledNavTab
-            type="button"
-            data-active={activeTab === 'favoritos'}
-            aria-pressed={activeTab === 'favoritos'}
-            onClick={handleGoFavorites}
-            title="Favoritos"
-          >
+          <StyledNavTab type="button" data-active={activeTab === 'favoritos'} aria-pressed={activeTab === 'favoritos'} onClick={handleGoFavorites} title="Favoritos">
             Favoritos
           </StyledNavTab>
 
-          <StyledNavTab
-            type="button"
-            data-active={activeTab === 'funnyplace'}
-            aria-pressed={activeTab === 'funnyplace'}
-            onClick={handleGoFunnyplace}
-            title="Funnyplace"
-          >
+          <StyledNavTab type="button" data-active={activeTab === 'funnyplace'} aria-pressed={activeTab === 'funnyplace'} onClick={handleGoFunnyplace} title="Funnyplace">
             Funnyplace
           </StyledNavTab>
         </div>
 
-        <div
-          className="desktop-only"
-          data-nav-group
-          style={{ display: 'flex', alignItems: 'center', gap: 12 }}
-        >
+        <div className="desktop-only" data-nav-group style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <NavText className="me-3">{displayName}</NavText>
           <SaldoText className="me-3">
-            {loadingSaldo
-              ? 'Saldo: …'
-              : saldoError
-              ? 'Saldo: n/d'
-              : `Saldo: ${fmtEUR(saldo)}`}
+            {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
           </SaldoText>
 
           <NavButton type="button" onClick={handleAddBalance}>
-            <FontAwesomeIcon
-              icon={faGem}
-              style={{ color: '#22c55e', fontSize: '1rem' }}
-            />
+            <FontAwesomeIcon icon={faGem} style={{ color: '#22c55e', fontSize: '1rem' }} />
             <span>Comprar</span>
           </NavButton>
 
@@ -2256,39 +2218,17 @@ const DashboardClient = () => {
             Salir
           </NavButton>
 
-          <StyledNavAvatar
-            src={profilePic || '/img/avatarChico.png'}
-            alt="avatar"
-            title="Ver perfil"
-            onClick={handleProfile}
-          />
+          <StyledNavAvatar src={profilePic || '/img/avatarChico.png'} alt="avatar" title="Ver perfil" onClick={handleProfile} />
         </div>
 
-        <HamburgerButton
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Abrir menú"
-          title="Menú"
-        >
+        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">
           <FontAwesomeIcon icon={faBars} />
         </HamburgerButton>
 
         <MobileMenu className={!menuOpen && 'hidden'}>
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: 8,
-            }}
-          >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
             <NavText>{displayName}</NavText>
-            <SaldoText>
-              {loadingSaldo
-                ? 'Saldo: …'
-                : saldoError
-                ? 'Saldo: n/d'
-                : `Saldo: ${fmtEUR(saldo)}`}
-            </SaldoText>
+            <SaldoText>{loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}</SaldoText>
           </div>
 
           <NavButton
@@ -2307,10 +2247,7 @@ const DashboardClient = () => {
               setMenuOpen(false);
             }}
           >
-            <FontAwesomeIcon
-              icon={faGem}
-              style={{ color: '#22c55e', fontSize: '1rem' }}
-            />
+            <FontAwesomeIcon icon={faGem} style={{ color: '#22c55e', fontSize: '1rem' }} />
             <span>Comprar</span>
           </NavButton>
 
@@ -2328,10 +2265,8 @@ const DashboardClient = () => {
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
-
       <StyledMainContent data-tab={activeTab}>
         {/* ====== LAYOUT POR PESTAÑAS ====== */}
-
         {activeTab === 'videochat' ? (
           <>
             {/* === TAB VIDEOCHAT VideoChatRandomCliente ==== */}
@@ -2371,10 +2306,9 @@ const DashboardClient = () => {
         ) : (
           <>
             {/* === LAYOUT RESTO (FAVORITOS / FUNNYPLACE) === */}
-
             {showFavoritesFullCall ? (
               // ===== FAVORITOS EN LLAMADA: FULL-WIDTH (ocupa las 3 columnas) =====
-              <StyledCenter>
+              <StyledCenter data-mode={activeTab === 'favoritos' && contactMode === 'call' ? 'call' : undefined}>
                 {activeTab === 'funnyplace' && <FunnyplacePage />}
 
                 {activeTab === 'favoritos' && (
@@ -2459,7 +2393,7 @@ const DashboardClient = () => {
                 )}
 
                 {/* ==============INICIO ZONA CENTRAL ========== */}
-                <StyledCenter>
+                <StyledCenter data-mode={activeTab === 'favoritos' && contactMode === 'call' ? 'call' : undefined}>
                   {/* === TAB FUNNYPLACE === */}
                   {activeTab === 'funnyplace' && <FunnyplacePage />}
 
@@ -2533,22 +2467,13 @@ const DashboardClient = () => {
       {/* ======FIN MAIN ======== */}
 
       <MobileBottomNav>
-        <BottomNavButton
-          active={activeTab === 'videochat'}
-          onClick={handleGoVideochat}
-        >
+        <BottomNavButton active={activeTab === 'videochat'} onClick={handleGoVideochat}>
           <span>Videochat</span>
         </BottomNavButton>
-        <BottomNavButton
-          active={activeTab === 'favoritos'}
-          onClick={handleGoFavorites}
-        >
+        <BottomNavButton active={activeTab === 'favoritos'} onClick={handleGoFavorites}>
           <span>Favoritos</span>
         </BottomNavButton>
-        <BottomNavButton
-          active={activeTab === 'funnyplace'}
-          onClick={handleGoFunnyplace}
-        >
+        <BottomNavButton active={activeTab === 'funnyplace'} onClick={handleGoFunnyplace}>
           <span>Funnyplace</span>
         </BottomNavButton>
       </MobileBottomNav>
@@ -2581,9 +2506,7 @@ const DashboardClient = () => {
               try {
                 const inv = String(ctxUser?.invited || '').toLowerCase();
                 if (inv === 'pending' || inv === 'sent') {
-                  alert(
-                    'No puedes eliminar esta relación mientras la invitación está en proceso.'
-                  );
+                  alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
                   setCtxUser(null);
                   return;
                 }
