@@ -240,7 +240,7 @@ export const StyledCenter = styled(ColumnBlock)`
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  padding: 16px;
+  padding:0;
   display: flex;
   flex-direction: column;
   align-items: stretch;
@@ -366,8 +366,8 @@ export const StyledVideoArea = styled.div`
 export const StyledRemoteVideo = styled.div`
   width: 100%;
   height: 100%;
+  //aspect-ratio: 16 / 9;
   z-index: 1;
-  aspect-ratio: unset;
   max-height: 100%;
   border-radius: 0 !important;
   overflow: visible !important;
@@ -396,11 +396,8 @@ export const StyledLocalVideoDesktop = styled.div`
   z-index: 8;
   overflow: hidden;
   border-radius: 0;
-
-  /* sin marco ni sombra */
   box-shadow: none;
   border: none;
-
   /* Cuando NO hay remoto: ocupa toda la mitad izquierda (modo "grande") */
   &[data-has-remote="false"] {
     left: 0;
@@ -416,9 +413,7 @@ export const StyledLocalVideoDesktop = styled.div`
     height: auto;
   }
 
-  @media (max-width: 768px) {
-    display: none;
-  }
+
 `;
 
 
@@ -684,8 +679,12 @@ export const StyledPane = styled.section`
   height:100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
+
+  @media (min-width: 769px) {
+    justify-content: center;
+  }
 
 
   &[data-side="left"] {
@@ -805,7 +804,7 @@ export const StyledCenterBody = styled.div`
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  gap: 8px;
+  gap: 0px;
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -822,9 +821,9 @@ export const StyledChatScroller = styled.div`
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  border: 1px solid var(--c-border-dark);
+  border: none;
   border-radius: 0px;
-  padding: 10px;
+  padding: 0px;
 
   @media (max-width: 768px) {
     padding-top: var(--navbar-height);
@@ -837,9 +836,9 @@ export const StyledChatScroller = styled.div`
   &[data-bg='whatsapp'] {
     border: none; /* sin borde en modo WhatsApp */
     background-color: #e5ddd5;
-    background-image: url("data:image/svg+xml,%3Csvg%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cg%20fill%3D%22none%22%20stroke%3D%22%23b2a79a%22%20stroke-width%3D%221.1%22%20stroke-opacity%3D%220.55%22%20stroke-linecap%3D%22round%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M14%2016h22a7%207%200%200%201%207%207v5a7%207%200%200%201-7%207h-7l-6%205v-5h-9a7%207%200%200%201-7-7v-5a7%207%200%200%201%207-7z%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M72%2018c-1.7-2.5-5.1-2.5-6.8%200-1.7-2.5-5.1-2.5-6.8%200-1.8%202.6-0.8%206%202.5%208.6l4.3%203.3%204.3-3.3c3.3-2.6%204.3-6%202.5-8.6z%22/%3E%0A%20%20%20%20%3Crect%20x%3D%2212%22%20y%3D%2256%22%20rx%3D%224%22%20ry%3D%224%22%20width%3D%2220%22%20height%3D%2226%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M15%2059h14M15%2064h9M15%2069h10%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M76%2060l2.5%205.1%205.2%200.8-3.7%203.7%200.9%205.1-4.9-2.6-4.9%202.6%200.9-5.1-3.7-3.7%205.2-0.8z%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2210%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2284%22%20cy%3D%2240%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2212%22%20cy%3D%2242%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2284%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M34%2040c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M56%2050c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M30%2030h0.1M35%2033h0.1M40%2030h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M64%2080h0.1M69%2083h0.1M74%2080h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M4%204l8%208M84%208l8-8%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M8%2084l8%208M80%2088l8-8%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A");
+    background-image:url("data:image/svg+xml,%3Csvg%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cg%20fill%3D%22none%22%20stroke%3D%22%23b2a79a%22%20stroke-width%3D%221.1%22%20stroke-opacity%3D%220.55%22%20stroke-linecap%3D%22round%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M14%2016h22a7%207%200%200%201%207%207v5a7%207%200%200%201-7%207h-7l-6%205v-5h-9a7%207%200%200%201-7-7v-5a7%207%200%200%201%207-7z%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M72%2018c-1.7-2.5-5.1-2.5-6.8%200-1.7-2.5-5.1-2.5-6.8%200-1.8%202.6-0.8%206%202.5%208.6l4.3%203.3%204.3-3.3c3.3-2.6%204.3-6%202.5-8.6z%22/%3E%0A%20%20%20%20%3Crect%20x%3D%2212%22%20y%3D%2256%22%20rx%3D%224%22%20ry%3D%224%22%20width%3D%2220%22%20height%3D%2226%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M15%2059h14M15%2064h9M15%2069h10%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M76%2060l2.5%205.1%205.2%200.8-3.7%203.7%200.9%205.1-4.9-2.6-4.9%202.6%200.9-5.1-3.7-3.7%205.2-0.8z%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2210%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2284%22%20cy%3D%2240%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2212%22%20cy%3D%2242%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2284%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M34%2040c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M56%2050c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M30%2030h0.1M35%2033h0.1M40%2030h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M64%2080h0.1M69%2083h0.1M74%2080h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M4%204l8%208M84%208l8-8%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M8%2084l8%208M80%2088l8-8%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A");
     background-repeat: repeat;
-    background-size: 150px 150px; /* densidad*/
+    background-size: 120px; /* densidad*/
   }
 
   scrollbar-width: thin;

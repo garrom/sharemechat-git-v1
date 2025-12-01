@@ -21,7 +21,7 @@ export const StyledNavbar = styled.nav`
   flex-wrap: wrap;
   gap: ${space.sm};
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
@@ -149,7 +149,7 @@ export const HamburgerButton = styled.button`
   padding: 8px;
   border-radius: ${radius.md};
 
-  @media (max-width: 768px) {
+  @media (max-width: 1024px) {
     display: flex;
     align-items: center;
     justify-content: center;

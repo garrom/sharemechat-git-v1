@@ -455,7 +455,7 @@ export default function VideoChatRandomCliente(props) {
                 </StyledCallCardDesktop>
               )}
 
-              {/* MÓVIL: REMOTO + CHAT OVERLAY */}
+              {/* MÓVIL: REMOTO + CHAT OVERLAY + PIP + CONTROLES */}
               {remoteStream && isMobile && (
                 <StyledVideoArea>
                   <StyledRemoteVideo
@@ -491,6 +491,74 @@ export default function VideoChatRandomCliente(props) {
                       onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                     />
 
+                    {/* PiP LOCAL MÓVIL DENTRO DEL VÍDEO */}
+                    {cameraActive && (
+                      <StyledLocalVideo>
+                        <video
+                          ref={localVideoRef}
+                          muted
+                          autoPlay
+                          playsInline
+                          style={{ width:'100%', objectFit:'cover', display:'block' }} // sin height:'100%'
+                        />
+                      </StyledLocalVideo>
+                    )}
+
+                    {/* BOTONES FLOTTANTES MÓVIL DENTRO DEL VÍDEO */}
+                    {cameraActive && (
+                      <div
+                        style={{
+                          position:'absolute',
+                          left:0,
+                          right:0,
+                          bottom:'72px',
+                          zIndex:8,
+                          display:'flex',
+                          justifyContent:'center',
+                          alignItems:'center',
+                          gap:'12px',
+                        }}
+                      >
+                        <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
+                          <FontAwesomeIcon icon={faPhoneSlash} />
+                        </BtnHangup>
+                        <ButtonNext
+                          onClick={handleNext}
+                          style={{
+                            width:44,
+                            height:44,
+                            borderRadius:'999px',
+                            padding:0,
+                            display:'flex',
+                            alignItems:'center',
+                            justifyContent:'center',
+                            background:'#fff',
+                            color:'#000',
+                            border:'1px solid rgba(255,255,255,0.4)',
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faForward} />
+                        </ButtonNext>
+                        <ButtonAddFavorite
+                          onClick={handleAddFavorite}
+                          style={{
+                            width:44,
+                            height:44,
+                            borderRadius:'999px',
+                            padding:0,
+                            display:'flex',
+                            alignItems:'center',
+                            justifyContent:'center',
+                            background:'#fff',
+                            color:'#000',
+                            border:'1px solid rgba(255,255,255,0.4)',
+                          }}
+                        >
+                          <FontAwesomeIcon icon={faUserPlus} />
+                        </ButtonAddFavorite>
+                      </div>
+                    )}
+
                     <StyledChatContainer data-wide="true">
                       <StyledChatList ref={vcListRef}>
                         {messages.map((msg, index) => {
@@ -516,78 +584,6 @@ export default function VideoChatRandomCliente(props) {
                     </StyledChatContainer>
                   </StyledRemoteVideo>
                 </StyledVideoArea>
-              )}
-
-              {/* PiP MÓVIL (LOCAL) */}
-              {isMobile && cameraActive && (
-                <StyledLocalVideo>
-                  <video
-                    ref={localVideoRef}
-                    muted
-                    autoPlay
-                    playsInline
-                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
-                  />
-                </StyledLocalVideo>
-              )}
-
-              {/* BOTONES FLOTTANTES MÓVIL: AHORA SOLO EN LLAMADA (remoteStream) */}
-              {isMobile && cameraActive && remoteStream && (
-                <div
-                  style={{
-                    position:'absolute',
-                    left:0,
-                    right:0,
-                    bottom:'72px',
-                    zIndex:8,
-                    display:'flex',
-                    justifyContent:'center',
-                    alignItems:'center',
-                    gap:'12px',
-                  }}
-                >
-                  <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
-                    <FontAwesomeIcon icon={faPhoneSlash} />
-                  </BtnHangup>
-                  {remoteStream && (
-                    <>
-                      <ButtonNext
-                        onClick={handleNext}
-                        style={{
-                          width:44,
-                          height:44,
-                          borderRadius:'999px',
-                          padding:0,
-                          display:'flex',
-                          alignItems:'center',
-                          justifyContent:'center',
-                          background:'#fff',
-                          color:'#000',
-                          border:'1px solid rgba(255,255,255,0.4)',
-                        }}
-                      >
-                        <FontAwesomeIcon icon={faForward} />
-                      </ButtonNext>
-                      <ButtonAddFavorite
-                        onClick={handleAddFavorite}
-                        style={{
-                          width:44,
-                          height:44,
-                          borderRadius:'999px',
-                          padding:0,
-                          display:'flex',
-                          alignItems:'center',
-                          justifyContent:'center',
-                          background:'#fff',
-                          color:'#000',
-                          border:'1px solid rgba(255,255,255,0.4)',
-                        }}
-                      >
-                        <FontAwesomeIcon icon={faUserPlus} />
-                      </ButtonAddFavorite>
-                    </>
-                  )}
-                </div>
               )}
             </>
           )}
