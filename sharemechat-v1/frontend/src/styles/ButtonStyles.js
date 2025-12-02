@@ -270,7 +270,7 @@ export const BtnFavAdd = styled(IconButtonBase)`
 // videocamara
 export const BtnRoundVideo = styled(IconButtonBase)`
   ${variant('#fff','#198754','#146c43','#157347')}
-  width:72px;height:72px;font-size:22px;${shadowLift}
+  width:52px;height:52px;min-width:52px;min-height:52px;font-size:18px;${shadowLift}
 `;
 
 // send

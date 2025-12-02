@@ -366,11 +366,13 @@ export const StyledVideoArea = styled.div`
 export const StyledRemoteVideo = styled.div`
   width: 100%;
   height: 100%;
-  //aspect-ratio: 16 / 9;
   z-index: 1;
   max-height: 100%;
   border-radius: 0 !important;
   overflow: visible !important;
+  @media (min-width: 769px) {
+    aspect-ratio: 16 / 9;
+  }
 
 `;
 

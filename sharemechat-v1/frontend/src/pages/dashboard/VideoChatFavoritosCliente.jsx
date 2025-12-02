@@ -55,10 +55,10 @@ export default function VideoChatFavoritosCliente(props){
                   )}
 
                   {!isPendingPanel&&!isSentPanel&&contactMode==='call'&&(
-                    <>
+                    <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center'}}>
                       {callError&&<p style={{color:'orange',marginTop:6}}>[CALL] {callError}</p>}
 
-                      <StyledTopActions style={{gap:8}}>
+                      <StyledTopActions style={{gap:8,display:'flex',justifyContent:'center',alignItems:'center',flexDirection:'column'}}>
                         {!callCameraActive&&callStatus!=='incoming'&&(
                           <div style={{display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:6,marginTop:8}}>
                             <ButtonActivarCam
@@ -89,9 +89,16 @@ export default function VideoChatFavoritosCliente(props){
                         )}
 
                         {(callStatus==='ringing'||callStatus==='connecting')&&(
-                          <ButtonColgar onClick={()=>handleCallEnd(false)} title="Colgar" aria-label="Colgar">
-                            <FontAwesomeIcon icon={faPhoneSlash}/>
-                          </ButtonColgar>
+                          <div style={{display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',gap:8,marginTop:8}}>
+                            <div style={{color:'#fff',textAlign:'center'}}>
+                              {callStatus==='ringing'
+                                ? `Llamando a ${callPeerName||'Usuario'}… (sonando)`
+                                : 'Conectando…'}
+                            </div>
+                            <BtnHangup onClick={()=>handleCallEnd(false)} title="Colgar" aria-label="Colgar">
+                              <FontAwesomeIcon icon={faPhoneSlash}/>
+                            </BtnHangup>
+                          </div>
                         )}
                       </StyledTopActions>
 
@@ -150,7 +157,7 @@ export default function VideoChatFavoritosCliente(props){
                                           giftRenderReady&&(()=>{
                                             const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
                                             return src?(
-                                              <StyledChatBubble $variant={variant}>
+                                              <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
                                                 <img src={src} alt="" style={{width:24,height:24,verticalAlign:'middle'}}/>
                                               </StyledChatBubble>
                                             ):null;
@@ -200,18 +207,15 @@ export default function VideoChatFavoritosCliente(props){
                       )}
 
                       {callStatus==='incoming'&&(
-                        <div style={{marginTop:12,padding:12,border:'1px solid #333',borderRadius:8,background:'rgba(0,0,0,0.35)'}}>
-                          <div style={{color:'#fff',marginBottom:8}}>Te está llamando <strong>{callPeerName||'Usuario'}</strong>.</div>
-                          <div style={{display:'flex',gap:10}}>
+                        <div style={{marginTop:12,padding:12,border:'1px solid #333',borderRadius:8,background:'rgba(0,0,0,0.35)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',alignSelf:'center'}}>
+                          <div style={{color:'#fff',marginBottom:8,textAlign:'center'}}>Te está llamando <strong>{callPeerName||'Usuario'}</strong>.</div>
+                          <div style={{display:'flex',gap:10,justifyContent:'center',alignItems:'center'}}>
                             <ButtonAceptar onClick={handleCallAccept}>Aceptar</ButtonAceptar>
                             <ButtonRechazar onClick={handleCallReject} style={{backgroundColor:'#dc3545'}}>Rechazar</ButtonRechazar>
                           </div>
                         </div>
                       )}
-                      {callStatus==='ringing'&&(
-                        <div style={{marginTop:12,color:'#fff'}}>Llamando a {callPeerName||'Usuario'}… (sonando)</div>
-                      )}
-                    </>
+                    </div>
                   )}
 
                   {/* Desktop chat normal */}
@@ -234,7 +238,7 @@ export default function VideoChatFavoritosCliente(props){
                           const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
                           return(
                             <StyledChatMessageRow key={m.id} style={{justifyContent:isMe?'flex-end':'flex-start'}}>
-                              <StyledChatBubble $variant={variant}>
+                              <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
                                 {giftData?(
                                   giftRenderReady&&(()=>{
                                     const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
@@ -271,7 +275,7 @@ export default function VideoChatFavoritosCliente(props){
                           disabled={!centerChatPeerId||!allowChat}
                           title="Llamar"
                           aria-label="Llamar"
-                          style={{marginLeft:4}}
+                          style={{marginLeft:4,width:40,height:40,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center'}}
                         >
                           <FontAwesomeIcon icon={faVideo}/>
                         </ButtonLlamar>
@@ -430,7 +434,7 @@ export default function VideoChatFavoritosCliente(props){
                               giftRenderReady&&(()=>{
                                 const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
                                 return src?(
-                                  <StyledChatBubble $variant={variant}>
+                                  <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
                                     <img src={src} alt="" style={{width:24,height:24,verticalAlign:'middle'}}/>
                                   </StyledChatBubble>
                                 ):null;
@@ -529,7 +533,7 @@ export default function VideoChatFavoritosCliente(props){
                       const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
                       return(
                         <StyledChatMessageRow key={m.id} style={{justifyContent:isMe?'flex-end':'flex-start'}}>
-                          <StyledChatBubble $variant={variant}>
+                          <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
                             {giftData?(
                               giftRenderReady&&(()=>{
                                 const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
