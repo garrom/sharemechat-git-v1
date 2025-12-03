@@ -330,6 +330,16 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 return;
             }
 
+            // Comprobar que el llamante sigue online (evita sesiones fantasma)
+            if (!isUserOnline(with)) {
+                clearRinging(me);
+                safeSend(session, new JSONObject()
+                        .put("type","call:error")
+                        .put("message","El usuario que te llamaba ya no está disponible")
+                        .toString());
+                return;
+            }
+
             // Comprobar otra vez que nadie está en llamada
             if (inCallWith(me) != null || inCallWith(with) != null) {
                 clearRinging(me);
@@ -346,28 +356,13 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             Long clientId = cm.getLeft();
             Long modelId  = cm.getRight();
 
-            // startSession (billing y estado BUSY/activeSession lo hace dentro)
-            try {
-                streamService.startSession(clientId, modelId);
-                statusService.setBusy(modelId);
-
-            } catch (Exception ex) {
-                clearRinging(me);
-                String msg = ex.getMessage() != null ? ex.getMessage() : "No se pudo iniciar la sesión";
-                if (msg.contains("Saldo insuficiente")) {
-                    // notificar a ambos
-                    broadcastToUser(me,   new JSONObject().put("type","call:no-balance").toString());
-                    broadcastToUser(with, new JSONObject().put("type","call:no-balance").toString());
-                } else {
-                    broadcastToUser(me,   new JSONObject().put("type","call:error").put("message", msg).toString());
-                    broadcastToUser(with, new JSONObject().put("type","call:error").put("message", msg).toString());
-                }
-                return;
-            }
-
-            // OK, establecer llamada activa y limpiar ringing
+            // ⚠️ IMPORTANTE: AQUÍ YA NO SE HACE startSession
+            // Solo marcamos la llamada como activa y limpiamos RINGING
             setActiveCall(me, with);
             clearRinging(me);
+
+            // Opcional (si quieres marcar BUSY en cuanto acepta, aunque aún no cobre):
+            statusService.setBusy(modelId);
 
             JSONObject accepted = new JSONObject()
                     .put("type","call:accepted")
@@ -378,6 +373,54 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             broadcastToUser(with, accepted.toString());
             return;
         }
+
+        // --- CONNECTED ---
+        // Se llama cuando el WebRTC ya ha establecido conexión y SOLO desde el CALLER (para no cobrar doble).
+        if ("call:connected".equals(type)) {
+            Long with = json.has("with") ? json.optLong("with", 0L) : null;
+            if (with == null || with <= 0L) {
+                safeSend(session, new JSONObject().put("type","call:error").put("message","Par inválido (connected)").toString());
+                return;
+            }
+
+            // Comprobamos que realmente hay una llamada activa entre me y with
+            Long current = inCallWith(me);
+            if (current == null || !current.equals(with)) {
+                safeSend(session, new JSONObject().put("type","call:error").put("message","No hay llamada activa para conectar").toString());
+                return;
+            }
+
+            Pair<Long, Long> cm = resolveClientModel(me, with);
+            if (cm == null) {
+                safeSend(session, new JSONObject().put("type","call:error").put("message","Solo CLIENT↔MODEL").toString());
+                return;
+            }
+            Long clientId = cm.getLeft();
+            Long modelId  = cm.getRight();
+
+            try {
+                // AHORA SÍ: se abre el stream de negocio
+                streamService.startSession(clientId, modelId);
+                // Si antes statusService.setBusy(modelId) lo hacía startSession, puedes quitarlo de aquí
+                // o dejarlo, según tu implementación actual.
+            } catch (Exception ex) {
+                String msg = ex.getMessage() != null ? ex.getMessage() : "No se pudo iniciar la sesión";
+                if (msg.contains("Saldo insuficiente")) {
+                    broadcastToUser(clientId, new JSONObject().put("type","call:no-balance").toString());
+                    broadcastToUser(modelId,  new JSONObject().put("type","call:no-balance").toString());
+                    // Cerrar la llamada por falta de saldo
+                    broadcastToUser(clientId, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
+                    broadcastToUser(modelId,  new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
+                } else {
+                    broadcastToUser(clientId, new JSONObject().put("type","call:error").put("message", msg).toString());
+                    broadcastToUser(modelId,  new JSONObject().put("type","call:error").put("message", msg).toString());
+                }
+                return;
+            }
+            return;
+        }
+
+
 
         // --- REJECT ---
         if ("call:reject".equals(type)) {

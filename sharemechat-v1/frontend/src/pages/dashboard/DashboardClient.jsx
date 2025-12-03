@@ -1995,32 +1995,17 @@ const DashboardClient = () => {
 
     p.on('signal', (signal) => {
       try {
-        // Normalizamos tipo de señal
-        const type =
-          signal?.type ||
-          (signal?.candidate ? 'candidate' : 'unknown');
-
-        // 1) Ignorar candidates vacíos o fin de candidates
+        const type = signal?.type || (signal?.candidate ? 'candidate' : 'unknown');
         if (type === 'candidate') {
           const cand = signal?.candidate;
           if (!cand || cand.candidate === '' || cand.candidate == null) return;
         }
-
-        // 2) Destinatario SIEMPRE el remoto (ref)
-        const toId = Number(callPeerIdRef.current);
-
-        // 3) Comprobaciones previas
+        const toId   = Number(callPeerIdRef.current);
         const wsOpen = msgSocketRef.current?.readyState === WebSocket.OPEN;
         const validTo = Number.isFinite(toId) && toId > 0;
-
         console.log('[CALL][signal:out][Client]', { type, toId, wsOpen, validTo });
-
         if (wsOpen && validTo) {
-          msgSocketRef.current.send(JSON.stringify({
-            type: 'call:signal',
-            to: toId,
-            signal
-          }));
+          msgSocketRef.current.send(JSON.stringify({ type: 'call:signal', to: toId, signal }));
         } else {
           console.warn('[CALL][signal:out][Client] omitido -> socket no abierto o toId inválido', { toId, wsOpen, validTo });
         }
@@ -2029,6 +2014,17 @@ const DashboardClient = () => {
       }
     });
 
+    p.on('connect', () => {
+      console.log('[CALL][peer:connected][Client]');
+      // Solo el CALLER notifica call:connected para evitar doble startSession
+      if (callRoleRef.current !== 'caller') return;
+      const ws = msgSocketRef.current;
+      const toId = Number(callPeerIdRef.current);
+      if (ws?.readyState === WebSocket.OPEN && Number.isFinite(toId) && toId > 0) {
+        ws.send(JSON.stringify({ type: 'call:connected', with: toId }));
+        console.log('[CALL][connected] enviado ->', toId);
+      }
+    });
 
     p.on('stream', (stream) => {
       console.log('[CALL][remote:stream][Client] tracks=', stream.getTracks().length);
@@ -2046,6 +2042,7 @@ const DashboardClient = () => {
 
     callPeerRef.current = p;
   };
+
 
   //Limpieza integral de llamada
   const cleanupCall = (reason = 'cleanup') => {
