@@ -57,29 +57,10 @@ export default function VideoChatRandomUser(props) {
         {/* ------- PANE IZQUIERDO (LOCAL / CTA) ------- */}
         <StyledPane data-side="left">
           {!isMobile && !cameraActive && (
-            <div
-              style={{
-                width: '100%',
-                height: '100%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 8,
-                }}
-              >
-                <ButtonActivarCam onClick={handleActivateCamera}>
-                  Activar cámara
-                </ButtonActivarCam>
-                <StyledHelperLine
-                  style={{ color: '#fff', justifyContent: 'center' }}
-                >
+            <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center' }}>
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+                <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
+                <StyledHelperLine style={{ color:'#fff', justifyContent:'center' }}>
                   <FontAwesomeIcon icon={faVideo} />
                   activar cámara para iniciar videochat
                 </StyledHelperLine>
@@ -89,7 +70,7 @@ export default function VideoChatRandomUser(props) {
         </StyledPane>
 
         {/* ------- PANE DERECHO (REMOTO + CONTROLES) ------- */}
-        <StyledPane data-side="right" style={{ position: 'relative' }}>
+        <StyledPane data-side="right" style={{ position:'relative' }}>
           {/* SIN CÁMARA: thumbs + CTA activar cámara (especial móvil) */}
           {!cameraActive ? (
             <>
@@ -103,20 +84,10 @@ export default function VideoChatRandomUser(props) {
               </StyledThumbsGrid>
 
               {isMobile && (
-                <StyledPreCallCenter
-                  style={{
-                    position: 'absolute',
-                    top: '70%',
-                    left: 0,
-                    right: 0,
-                    transform: 'translateY(-50%)',
-                  }}
-                >
+                <StyledPreCallCenter style={{ position:'absolute', top:'70%', left:0, right:0, transform:'translateY(-50%)' }}>
                   <div>
-                    <ButtonActivarCamMobile onClick={handleActivateCamera}>
-                      Activar cámara
-                    </ButtonActivarCamMobile>
-                    <StyledHelperLine style={{ color: '#fff' }}>
+                    <ButtonActivarCamMobile onClick={handleActivateCamera}>Activar cámara</ButtonActivarCamMobile>
+                    <StyledHelperLine style={{ color:'#fff' }}>
                       <FontAwesomeIcon icon={faVideo} />
                       activar cámara para iniciar videochat
                     </StyledHelperLine>
@@ -132,17 +103,11 @@ export default function VideoChatRandomUser(props) {
                   <StyledRandomSearchCol>
                     {!searching ? (
                       <>
-                        <ButtonBuscar onClick={handleStartMatch}>
-                          Buscar
-                        </ButtonBuscar>
-                        <StyledSearchHint>
-                          Pulsa “Buscar” para empezar.
-                        </StyledSearchHint>
+                        <ButtonBuscar onClick={handleStartMatch}>Buscar</ButtonBuscar>
+                        <StyledSearchHint>Pulsa “Buscar” para empezar.</StyledSearchHint>
                       </>
                     ) : (
-                      <StyledSearchHint>
-                        Buscando modelo disponible…
-                      </StyledSearchHint>
+                      <StyledSearchHint>Buscando modelo disponible…</StyledSearchHint>
                     )}
                   </StyledRandomSearchCol>
                 </StyledRandomSearchControls>
@@ -151,40 +116,26 @@ export default function VideoChatRandomUser(props) {
               {/* REMOTO ACTIVO (DESKTOP) EN CARD 16:9 */}
               {remoteStream && !isMobile && (
                 <StyledCallCardDesktop>
-                  <StyledVideoArea
-                    style={{
-                      height: 'calc(100vh - 160px)',
-                      maxHeight: 'calc(100vh - 160px)',
-                    }}
-                  >
+                  <StyledVideoArea style={{ height:'calc(100vh - 160px)', maxHeight:'calc(100vh - 160px)' }}>
                     <StyledRemoteVideo
                       ref={remoteVideoWrapRef}
-                      style={{
-                        position: 'relative',
-                        width: '100%',
-                        height: '100%',
-                        borderRadius: '12px',
-                        overflow: 'hidden',
-                        background: '#000',
-                      }}
+                      style={{ position:'relative', width:'100%', height:'100%', borderRadius:'0px', overflow:'hidden', background:'#000' }}
                     >
                       <StyledVideoTitle>
                         <StyledTitleAvatar src="/img/avatarChica.png" alt="" />
                         Modelo
                         <button
                           type="button"
-                          onClick={() =>
-                            toggleFullscreen(remoteVideoWrapRef.current)
-                          }
+                          onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                           title="Pantalla completa"
                           style={{
-                            marginLeft: 8,
-                            padding: '2px 8px',
-                            borderRadius: 6,
-                            border: '1px solid rgba(255,255,255,.6)',
-                            background: 'rgba(0,0,0,.25)',
-                            color: '#fff',
-                            cursor: 'pointer',
+                            marginLeft:8,
+                            padding:'2px 8px',
+                            borderRadius:6,
+                            border:'1px solid rgba(255,255,255,.6)',
+                            background:'rgba(0,0,0,.25)',
+                            color:'#fff',
+                            cursor:'pointer',
                           }}
                         >
                           Pantalla completa
@@ -193,31 +144,28 @@ export default function VideoChatRandomUser(props) {
 
                       <video
                         ref={remoteVideoRef}
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'cover',
-                          display: 'block',
-                        }}
+                        style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                         autoPlay
                         playsInline
-                        onDoubleClick={() =>
-                          toggleFullscreen(remoteVideoWrapRef.current)
-                        }
+                        onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                       />
 
                       {/* PiP local desktop, igual que cliente/modelo */}
                       {cameraActive && (
                         <div
+                          /* CAMBIO: altura fija + fondo negro para que no sea transparente */
                           style={{
-                            position: 'absolute',
-                            top: 0,
-                            right: 0,
-                            width: '24%',
-                            maxWidth: 260,
-                            height: 'auto',
-                            overflow: 'hidden',
-                            zIndex: 8,
+                            position:'absolute',
+                            top:0,
+                            right:0,
+                            width:'24%',
+                            maxWidth:260,
+                            height:'24%',
+                            maxHeight:260,
+                            overflow:'hidden',
+                            zIndex:8,
+                            background:'#000',
+                            borderRadius:0,
                           }}
                         >
                           <video
@@ -225,12 +173,7 @@ export default function VideoChatRandomUser(props) {
                             muted
                             autoPlay
                             playsInline
-                            style={{
-                              width: '100%',
-                              height: '100%',
-                              objectFit: 'cover',
-                              display: 'block',
-                            }}
+                            style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                           />
                         </div>
                       )}
@@ -239,15 +182,15 @@ export default function VideoChatRandomUser(props) {
                       {cameraActive && (
                         <div
                           style={{
-                            position: 'absolute',
-                            bottom: 16,
-                            left: '50%',
-                            transform: 'translateX(-50%)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8,
-                            zIndex: 9,
+                            position:'absolute',
+                            bottom:16,
+                            left:'50%',
+                            transform:'translateX(-50%)',
+                            display:'flex',
+                            alignItems:'center',
+                            justifyContent:'center',
+                            gap:8,
+                            zIndex:9,
                           }}
                         >
                           <BtnHangup
@@ -255,16 +198,16 @@ export default function VideoChatRandomUser(props) {
                             title="Colgar"
                             aria-label="Colgar"
                             style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: '999px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: 0,
-                              background: '#dc3545',
-                              color: '#fff',
-                              border: '1px solid rgba(255,255,255,0.4)',
+                              width:44,
+                              height:44,
+                              borderRadius:'999px',
+                              display:'flex',
+                              alignItems:'center',
+                              justifyContent:'center',
+                              padding:0,
+                              background:'#dc3545',
+                              color:'#fff',
+                              border:'1px solid rgba(255,255,255,0.4)',
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.background = '#fff';
@@ -281,16 +224,16 @@ export default function VideoChatRandomUser(props) {
                           <ButtonNext
                             onClick={handleNext}
                             style={{
-                              width: 44,
-                              height: 44,
-                              borderRadius: '999px',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: 0,
-                              background: '#fff',
-                              color: '#000',
-                              border: '1px solid rgba(255,255,255,0.4)',
+                              width:44,
+                              height:44,
+                              borderRadius:'999px',
+                              display:'flex',
+                              alignItems:'center',
+                              justifyContent:'center',
+                              padding:0,
+                              background:'#fff',
+                              color:'#000',
+                              border:'1px solid rgba(255,255,255,0.4)',
                             }}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.background = '#000';
@@ -311,13 +254,13 @@ export default function VideoChatRandomUser(props) {
                   {/* Trial user: NO chat, footer solo informativo */}
                   <StyledCallFooterDesktop
                     style={{
-                      maxWidth: 960,
-                      margin: '8px auto 0',
-                      width: '100%',
-                      padding: '0 8px',
-                      textAlign: 'center',
-                      fontSize: 14,
-                      color: '#adb5bd',
+                      maxWidth:960,
+                      margin:'8px auto 0',
+                      width:'100%',
+                      padding:'0 8px',
+                      textAlign:'center',
+                      fontSize:14,
+                      color:'#adb5bd',
                     }}
                   >
                     {statusText || 'Estás probando el videochat de ShareMeChat.'}
@@ -330,31 +273,23 @@ export default function VideoChatRandomUser(props) {
                 <StyledVideoArea>
                   <StyledRemoteVideo
                     ref={remoteVideoWrapRef}
-                    style={{
-                      position: 'relative',
-                      width: '100%',
-                      borderRadius: '12px',
-                      overflow: 'hidden',
-                      background: '#000',
-                    }}
+                    style={{ position:'relative', width:'100%', borderRadius:'0px', overflow:'hidden', background:'#000' }}
                   >
                     <StyledVideoTitle>
                       <StyledTitleAvatar src="/img/avatarChica.png" alt="" />
                       Modelo
                       <button
                         type="button"
-                        onClick={() =>
-                          toggleFullscreen(remoteVideoWrapRef.current)
-                        }
+                        onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                         title="Pantalla completa"
                         style={{
-                          marginLeft: 8,
-                          padding: '2px 8px',
-                          borderRadius: 6,
-                          border: '1px solid rgba(255,255,255,.6)',
-                          background: 'rgba(0,0,0,.25)',
-                          color: '#fff',
-                          cursor: 'pointer',
+                          marginLeft:8,
+                          padding:'2px 8px',
+                          borderRadius:6,
+                          border:'1px solid rgba(255,255,255,.6)',
+                          background:'rgba(0,0,0,.25)',
+                          color:'#fff',
+                          cursor:'pointer',
                         }}
                       >
                         Pantalla completa
@@ -363,17 +298,10 @@ export default function VideoChatRandomUser(props) {
 
                     <video
                       ref={remoteVideoRef}
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        objectFit: 'cover',
-                        display: 'block',
-                      }}
+                      style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                       autoPlay
                       playsInline
-                      onDoubleClick={() =>
-                        toggleFullscreen(remoteVideoWrapRef.current)
-                      }
+                      onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                     />
                   </StyledRemoteVideo>
                 </StyledVideoArea>
@@ -387,12 +315,7 @@ export default function VideoChatRandomUser(props) {
                     muted
                     autoPlay
                     playsInline
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      objectFit: 'cover',
-                      display: 'block',
-                    }}
+                    style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
                   />
                 </StyledLocalVideo>
               )}
@@ -401,38 +324,34 @@ export default function VideoChatRandomUser(props) {
               {isMobile && cameraActive && (
                 <div
                   style={{
-                    position: 'absolute',
-                    left: 0,
-                    right: 0,
-                    bottom: '72px',
-                    zIndex: 8,
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: '12px',
+                    position:'absolute',
+                    left:0,
+                    right:0,
+                    bottom:'72px',
+                    zIndex:8,
+                    display:'flex',
+                    justifyContent:'center',
+                    alignItems:'center',
+                    gap:'12px',
                   }}
                 >
-                  <BtnHangup
-                    onClick={stopAll}
-                    title="Colgar"
-                    aria-label="Colgar"
-                  >
+                  <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
                     <FontAwesomeIcon icon={faPhoneSlash} />
                   </BtnHangup>
                   {remoteStream && (
                     <ButtonNext
                       onClick={handleNext}
                       style={{
-                        width: 44,
-                        height: 44,
-                        borderRadius: '999px',
-                        padding: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        background: '#fff',
-                        color: '#000',
-                        border: '1px solid rgba(255,255,255,0.4)',
+                        width:44,
+                        height:44,
+                        borderRadius:'999px',
+                        padding:0,
+                        display:'flex',
+                        alignItems:'center',
+                        justifyContent:'center',
+                        background:'#fff',
+                        color:'#000',
+                        border:'1px solid rgba(255,255,255,0.4)',
                       }}
                     >
                       <FontAwesomeIcon icon={faForward} />
@@ -452,28 +371,15 @@ export default function VideoChatRandomUser(props) {
               muted
               autoPlay
               playsInline
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                display: 'block',
-              }}
+              style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }}
             />
           </StyledLocalVideoDesktop>
         )}
       </StyledSplit2>
 
       {/* Mensajes de estado / error debajo del layout (complementan el footer en desktop) */}
-      {statusText && (
-        <p style={{ marginTop: 10, color: '#adb5bd', fontSize: 14 }}>
-          {statusText}
-        </p>
-      )}
-      {error && (
-        <p style={{ marginTop: 4, color: 'red', fontSize: 14 }}>
-          {error}
-        </p>
-      )}
+      {statusText && <p style={{ marginTop:10, color:'#adb5bd', fontSize:14 }}>{statusText}</p>}
+      {error && <p style={{ marginTop:4, color:'red', fontSize:14 }}>{error}</p>}
     </StyledCenterVideochat>
   );
 }

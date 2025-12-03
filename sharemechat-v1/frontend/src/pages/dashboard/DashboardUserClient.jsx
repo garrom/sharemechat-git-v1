@@ -98,7 +98,7 @@ const DashboardUserClient = () => {
     } else if (localVideoRef.current && !cameraActive) {
       localVideoRef.current.srcObject = null;
     }
-  }, [cameraActive]);
+  }, [cameraActive, remoteStream]);
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
