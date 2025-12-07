@@ -10,15 +10,12 @@ import {
 } from '../styles/public-styles/LoginStyles';
 
 import Roles from '../constants/Roles';
+import UserTypes from '../constants/UserTypes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHouse, faXmark } from '@fortawesome/free-solid-svg-icons';
+import { faXmark } from '@fortawesome/free-solid-svg-icons';
 
 const LoginModalContent = ({ onClose }) => {
-  // Vistas posibles:
-  // - 'login'            → formulario de login
-  // - 'register-gender'  → ¿eres chico o chica?
-  // - 'register-client'  → formulario registro hombre (cliente)
-  // - 'register-model'   → formulario registro mujer (modelo)
+  // vistas: login | register-gender | register-client | register-model
   const [view, setView] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,6 +24,14 @@ const LoginModalContent = ({ onClose }) => {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const history = useHistory();
+
+  const safeNavigate = (path) => {
+    if (history && typeof history.push === 'function') {
+      history.push(path);
+    } else {
+      window.location.href = path;
+    }
+  };
 
   const readErrorMessage = async (res) => {
     if (res.status === 401) return 'Credenciales inválidas.';
@@ -68,12 +73,25 @@ const LoginModalContent = ({ onClose }) => {
       const data = await response.json();
       localStorage.setItem('token', data.token);
       setStatus('Acceso correcto. Redirigiendo…');
-      if (data.user.role === Roles.CLIENT) {
-        history.push('/client');
-      } else if (data.user.role === Roles.MODEL) {
-        history.push('/model');
+
+      const user = data.user || {};
+
+      if (user.role === Roles.ADMIN) {
+        safeNavigate('/dashboard-admin');
+      } else if (user.role === Roles.CLIENT) {
+        safeNavigate('/client');
+      } else if (user.role === Roles.MODEL) {
+        safeNavigate('/model');
+      } else if (user.role === Roles.USER) {
+        if (user.userType === UserTypes.FORM_CLIENT) {
+          safeNavigate('/dashboard-user-client');
+        } else if (user.userType === UserTypes.FORM_MODEL) {
+          safeNavigate('/dashboard-user-model');
+        } else {
+          setError('Tipo de usuario no válido');
+        }
       } else {
-        history.push('/');
+        setError('Rol de usuario no válido');
       }
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
@@ -87,32 +105,18 @@ const LoginModalContent = ({ onClose }) => {
 
   return (
     <StyledForm onSubmit={view === 'login' ? handleLogin : undefined} noValidate>
-      {/* X de cierre */}
       {onClose && (
         <LoginCloseBtn type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
           <FontAwesomeIcon icon={faXmark} />
         </LoginCloseBtn>
       )}
 
-      {/* PESTAÑAS Login / Regístrate */}
       <TabsRow>
-        <TabButton
-          type="button"
-          data-active={isLoginTab}
-          onClick={() => setView('login')}
-        >
-          Login
-        </TabButton>
-        <TabButton
-          type="button"
-          data-active={isRegisterTab}
-          onClick={() => setView('register-gender')}
-        >
-          Regístrate
-        </TabButton>
+        <TabButton type="button" data-active={isLoginTab} onClick={() => setView('login')}>Login</TabButton>
+        <TabButton type="button" data-active={isRegisterTab} onClick={() => setView('register-gender')}>Regístrate</TabButton>
       </TabsRow>
 
-      {/* =============== VISTA LOGIN =============== */}
+      {/* LOGIN */}
       {view === 'login' && (
         <>
           <FormTitle>Iniciar sesión</FormTitle>
@@ -159,14 +163,13 @@ const LoginModalContent = ({ onClose }) => {
             {loading ? 'Entrando…' : 'Iniciar Sesión'}
           </StyledButton>
 
-          <StyledLinkButton type="button" onClick={() => history.push('/forgot-password')}>
+          <StyledLinkButton type="button" onClick={() => safeNavigate('/forgot-password')}>
             ¿Olvidaste tu contraseña?
           </StyledLinkButton>
-
         </>
       )}
 
-      {/* =========== VISTA REGISTRO: ELECCIÓN GÉNERO =========== */}
+      {/* REGISTRO: ELECCIÓN GÉNERO */}
       {view === 'register-gender' && (
         <>
           <FormTitle>¿Eres chico o chica?</FormTitle>
@@ -178,11 +181,10 @@ const LoginModalContent = ({ onClose }) => {
           <StyledButton type="button" onClick={() => setView('register-model')}>
             Soy Chica
           </StyledButton>
-
         </>
       )}
 
-      {/* =========== VISTA REGISTRO HOMBRE (CLIENTE) =========== */}
+      {/* REGISTRO HOMBRE */}
       {view === 'register-client' && (
         <RegisterClientModalContent
           onClose={onClose}
@@ -190,7 +192,7 @@ const LoginModalContent = ({ onClose }) => {
         />
       )}
 
-      {/* =========== VISTA REGISTRO MUJER (MODELO) =========== */}
+      {/* REGISTRO MUJER */}
       {view === 'register-model' && (
         <RegisterModelModalContent
           onClose={onClose}
