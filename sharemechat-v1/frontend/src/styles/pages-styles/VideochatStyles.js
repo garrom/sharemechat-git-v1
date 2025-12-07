@@ -369,8 +369,8 @@ export const StyledRemoteVideo = styled.div`
   height: 100%;
   z-index: 1;
   max-height: 100%;
-  border-radius: 0 !important;
-  overflow: visible !important;
+  border-radius:16px;
+  overflow: hidden;
   @media (min-width: 769px) {
     aspect-ratio: 16 / 9;
   }

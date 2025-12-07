@@ -317,22 +317,18 @@ export default function VideoChatRandomModelo(props) {
                       </StyledChatContainer>
                     </StyledRemoteVideo>
                   </StyledVideoArea>
-
-                  <StyledCallFooterDesktop style={{ maxWidth:960, margin:'8px auto 0', width:'100%', padding:'0 8px' }}>
+                  <StyledCallFooterDesktop style={{maxWidth:960,margin:'8px auto 0',width:'100%',padding:'0 8px',display:'flex',alignItems:'center',gap:8}}>
                     <StyledChatInput
                       type="text"
                       value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
+                      onChange={e=>setChatInput(e.target.value)}
                       placeholder="Escribe un mensaje…"
                       autoComplete="off"
-                      style={{ width:'100%', borderRadius:999 }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          sendChatMessage();
-                        }
-                      }}
+                      onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();}}}
                     />
+                    <BtnSend type="button" onClick={sendChatMessage} aria-label="Enviar mensaje">
+                      <FontAwesomeIcon icon={faPaperPlane}/>
+                    </BtnSend>
                   </StyledCallFooterDesktop>
                 </StyledCallCardDesktop>
               )}

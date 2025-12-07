@@ -398,52 +398,35 @@ export default function VideoChatRandomCliente(props) {
                     </StyledRemoteVideo>
                   </StyledVideoArea>
 
-                  <StyledCallFooterDesktop style={{ maxWidth:960, margin:'8px auto 0', width:'100%', padding:'0 8px' }}>
-                    <div style={{ position:'relative', width:'100%', display:'flex', alignItems:'center' }}>
-                      <StyledChatInput
-                        type="text"
-                        value={chatInput}
-                        onChange={(e) => setChatInput(e.target.value)}
-                        placeholder="Escribe un mensaje…"
-                        autoComplete="off"
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            sendChatMessage();
-                          }
-                        }}
-                        style={{ width:'100%', borderRadius:999, paddingRight:44 }}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowGifts((s) => !s)}
-                        title="Enviar regalo"
-                        aria-label="Enviar regalo"
-                        style={{
-                          position:'absolute',
-                          right:10,
-                          width:28,
-                          height:28,
-                          borderRadius:'999px',
-                          display:'flex',
-                          alignItems:'center',
-                          justifyContent:'center',
-                          border:'none',
-                          background:'transparent',
-                          color:'#fff',
-                          cursor:'pointer',
-                        }}
-                      >
-                        <FontAwesomeIcon icon={faGift} />
-                      </button>
-                    </div>
+                  <StyledCallFooterDesktop style={{maxWidth:960,margin:'8px auto 0',width:'100%',padding:'0 8px',display:'flex',alignItems:'center',gap:8}}>
+                    <StyledChatInput
+                      type="text"
+                      value={chatInput}
+                      onChange={e=>setChatInput(e.target.value)}
+                      placeholder="Escribe un mensaje…"
+                      autoComplete="off"
+                      onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();}}}
+                    />
+                    {/* botón enviar opcional, igual que en otros docks (si no lo quieres, lo quitas) */}
+                    <BtnSend type="button" onClick={sendChatMessage} aria-label="Enviar mensaje">
+                      <FontAwesomeIcon icon={faPaperPlane}/>
+                    </BtnSend>
+                    {/* botón gift amarillo, mismo envoltorio que en favoritos */}
+                    <ButtonRegalo
+                      type="button"
+                      onClick={()=>setShowGifts(s=>!s)}
+                      title="Enviar regalo"
+                      aria-label="Enviar regalo"
+                    >
+                      <FontAwesomeIcon icon={faGift}/>
+                    </ButtonRegalo>
 
                     {showGifts && (
                       <StyledGiftsPanel>
                         <StyledGiftGrid>
-                          {gifts.map((g) => (
-                            <button key={g.id} onClick={() => sendGiftMatch(g.id)}>
-                              <img src={g.icon} alt={g.name} />
+                          {gifts.map(g=>(
+                            <button key={g.id} onClick={()=>sendGiftMatch(g.id)}>
+                              <img src={g.icon} alt={g.name}/>
                               <div>{g.name}</div>
                               <div>{fmtEUR(g.cost)}</div>
                             </button>
@@ -452,6 +435,7 @@ export default function VideoChatRandomCliente(props) {
                       </StyledGiftsPanel>
                     )}
                   </StyledCallFooterDesktop>
+
                 </StyledCallCardDesktop>
               )}
 
