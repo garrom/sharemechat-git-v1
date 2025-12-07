@@ -237,29 +237,30 @@ export const StyledLeftColumn = styled(ColumnBlock)`
 
 /** Área central */
 export const StyledCenter = styled(ColumnBlock)`
-  flex: 1 1 auto;
-  min-width: 0;
-  min-height: 0;
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0;
   padding:0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: flex-start;
-  position: relative;
-  background-color: ${p => (p['data-mode'] === 'call' ? colors.backsolid : 'var(--c-surface)')};
-  background-repeat: repeat;
-  background-size: auto;
-
-  @media (max-width: 768px) {
-    width: 100%;
-    padding: 0px;
-    border-radius: 0;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:flex-start;
+  position:relative;
+  background-color:${p=>p['data-kind']==='blog'?'transparent':(p['data-mode']==='call'?colors.backsolid:'var(--c-surface)')};
+  border-radius:${p=>p['data-kind']==='blog'?'0':'16px'};
+  box-shadow:${p=>p['data-kind']==='blog'?'none':'0 8px 24px rgba(0,0,0,0.15)'};
+  background-repeat:repeat;
+  background-size:auto;
+  @media (max-width:768px){
+    width:100%;
+    padding:0;
+    border-radius:0;
   }
-
-  @media (min-width: 769px) and (max-width: 1024px) {
-    width: 50%;
+  @media (min-width:769px) and (max-width:1024px){
+    width:50%;
   }
 `;
+
 
 export const StyledCenterVideochat = styled(StyledCenter)`
   background: transparent;
@@ -957,7 +958,6 @@ export const StyledCallCardDesktop = styled.div`
   max-width: 1040px;
   margin: 0 auto;
 
-  /* Ahora usamos SOLO el marco lila de StyledCenter */
   border-radius: 16px;
   border: none;
   background: transparent;

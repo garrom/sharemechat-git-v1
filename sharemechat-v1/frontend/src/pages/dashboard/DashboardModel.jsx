@@ -4,7 +4,7 @@ import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import { useAppModals } from '../../components/useAppModals';
-import Blog from '../blog/Blog';
+import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft,faGem } from '@fortawesome/free-solid-svg-icons';
@@ -1260,12 +1260,7 @@ const DashboardModel = () => {
     });
   };
 
-  const handleGoBlog = async () => {
-    const ok = await confirmarSalidaSesionActiva();
-    if (!ok) return;
-    stopAll();
-    setActiveTab('blog');
-  };
+  const handleGoBlog = () => { setActiveTab('blog'); };
 
   const handleGoFavorites = async () => {
     const ok = await confirmarSalidaSesionActiva();
@@ -1926,134 +1921,45 @@ const DashboardModel = () => {
 
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
-  return (
-
+  return(
     <StyledContainer>
-      <GlobalBlack />
+      <GlobalBlack/>
       {/* ========= INICIO NAVBAR  ======== */}
-      <StyledNavbar>
-        <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick}/>
-
-        {/* Botones-text en el navbar (Videochat / Favoritos / Blog) */}
-        <div className="desktop-only" style={{ display:'flex', alignItems:'center',gap:8, marginLeft:16 }}>
-          <StyledNavTab
-            type="button"
-            data-active={activeTab === 'videochat'}
-            aria-pressed={activeTab === 'videochat'}
-            onClick={handleGoVideochat}
-            title="Videochat"
-          >
-            Videochat
-          </StyledNavTab>
-
-          <StyledNavTab
-            type="button"
-            data-active={activeTab === 'favoritos'}
-            aria-pressed={activeTab === 'favoritos'}
-            onClick={handleGoFavorites}
-            title="Favoritos"
-          >
-            Favoritos
-          </StyledNavTab>
-
-          <StyledNavTab
-            type="button"
-            data-active={activeTab === 'blog'}
-            aria-pressed={activeTab === 'blog'}
-            onClick={handleGoBlog}
-            title="blog"
-          >
-            Blog
-          </StyledNavTab>
-        </div>
-        <StyledNavGroup className="desktop-only" data-nav-group>
-          <NavText className="me-3">{displayName}</NavText>
-          <SaldoText className="me-3">
-            {loadingSaldoModel ? 'Saldo: ...' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -'}
-          </SaldoText>
-
-          {queuePosition !== null && queuePosition >= 0 && (
-            <QueueText className="me-3">
-              Tu posición: {queuePosition + 1}
-            </QueueText>
-          )}
-
-          <NavButton type="button" title="Estadísticas" aria-label="Estadísticas">
-            <FontAwesomeIcon
-              icon={faChartLine}
-              style={{ color: '#22c55e', fontSize: '1rem' }}
-            />
-            <span>Estadísticas</span>
-          </NavButton>
-
-          <NavButton type="button" onClick={handleRequestPayout}>
-            <FontAwesomeIcon
-              icon={faGem}
-              style={{ color: '#f97316', fontSize: '1rem'}}
-            />
-            <span>Retirar</span>
-          </NavButton>
-
-          <NavButton type="button" onClick={handleLogout} title="Cerrar sesión">
-            <FontAwesomeIcon icon={faSignOutAlt} />
-            Salir
-          </NavButton>
-          <StyledNavAvatar
-            src={profilePic || '/img/avatarChica.png'}
-            alt="avatar"
-            title="Ver perfil"
-            onClick={handleProfile}
-          />
-        </StyledNavGroup>
-
-        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">
-          <FontAwesomeIcon icon={faBars} />
-        </HamburgerButton>
-
-        <MobileMenu className={!menuOpen && 'hidden'}>
-          {/* Saludo + Saldo arriba del menú */}
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
-            <NavText>{displayName}</NavText>
-            <SaldoText>
-              {loadingSaldoModel ? 'Saldo: …' : (saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: n/d')}
-            </SaldoText>
+      <StyledNavbar style={{padding:'0 24px'}}>
+        <div style={{display:'flex',alignItems:'center'}}>
+          <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick}/>
+          <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
+            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title="Videochat">Videochat</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title="Favoritos">Favoritos</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title="Blog">Blog</StyledNavTab>
           </div>
-
-          <NavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
-            <FontAwesomeIcon icon={faUser} />
-            <StyledIconWrapper>Perfil</StyledIconWrapper>
-          </NavButton>
-
-          {/* (Opcional) Estadísticas: puedes dejarlo ya listo aunque no tenga acción */}
-          <NavButton onClick={() => { /* TODO: abrir stats */ setMenuOpen(false); }} title="Estadísticas">
-            <FontAwesomeIcon
-              icon={faChartLine}
-              style={{ color: '#22c55e', fontSize: '1rem' }}
-            />
-            <span>Estadísticas</span>
-          </NavButton>
-
-          <NavButton onClick={() => { handleRequestPayout(); setMenuOpen(false); }}>
-            <FontAwesomeIcon
-              icon={faGem}
-              style={{ color: '#f97316', fontSize: '1rem'}}
-            />
-            <span>Retirar</span>
-          </NavButton>
-
-          <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }}>
-            <FontAwesomeIcon icon={faSignOutAlt} />
-            <StyledIconWrapper>Salir</StyledIconWrapper>
-          </NavButton>
+        </div>
+        <StyledNavGroup className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
+          <NavText className="me-3">{displayName}</NavText>
+          <SaldoText className="me-3">{loadingSaldoModel?'Saldo: ...':saldoModel!==null?`Saldo: €${Number(saldoModel).toFixed(2)}`:'Saldo: -'}</SaldoText>
+          {queuePosition!==null&&queuePosition>=0&&(<QueueText className="me-3">Tu posición: {queuePosition+1}</QueueText>)}
+          <NavButton type="button" title="Estadísticas" aria-label="Estadísticas"><FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}}/><span>Estadísticas</span></NavButton>
+          <NavButton type="button" onClick={handleRequestPayout}><FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}}/><span>Retirar</span></NavButton>
+          <NavButton type="button" onClick={handleLogout} title="Cerrar sesión"><FontAwesomeIcon icon={faSignOutAlt}/><span>Salir</span></NavButton>
+          <StyledNavAvatar src={profilePic||'/img/avatarChica.png'} alt="avatar" title="Ver perfil" onClick={handleProfile}/>
+        </StyledNavGroup>
+        <HamburgerButton onClick={()=>setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú"><FontAwesomeIcon icon={faBars}/></HamburgerButton>
+        <MobileMenu className={!menuOpen&&'hidden'}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <NavText>{displayName}</NavText>
+            <SaldoText>{loadingSaldoModel?'Saldo: …':saldoModel!==null?`Saldo: €${Number(saldoModel).toFixed(2)}`:'Saldo: n/d'}</SaldoText>
+          </div>
+          <NavButton onClick={()=>{handleProfile();setMenuOpen(false);}}><FontAwesomeIcon icon={faUser}/><StyledIconWrapper>Perfil</StyledIconWrapper></NavButton>
+          <NavButton onClick={()=>{/* TODO: abrir stats */setMenuOpen(false);}} title="Estadísticas"><FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}}/><span>Estadísticas</span></NavButton>
+          <NavButton onClick={()=>{handleRequestPayout();setMenuOpen(false);}}><FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}}/><span>Retirar</span></NavButton>
+          <NavButton onClick={()=>{handleLogout();setMenuOpen(false);}}><FontAwesomeIcon icon={faSignOutAlt}/><StyledIconWrapper>Salir</StyledIconWrapper></NavButton>
         </MobileMenu>
-
-
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent data-tab={activeTab}>
-        {activeTab === 'videochat' ? (
+        {activeTab==='videochat'?(
           <VideoChatRandomModelo
             cameraActive={cameraActive}
             handleActivateCamera={handleActivateCamera}
@@ -2080,34 +1986,30 @@ const DashboardModel = () => {
             sendChatMessage={sendChatMessage}
             error={error}
           />
-        ) : (
-          /* ====== LAYOUT 3 COLUMNAS PARA EL RESTO (FAVORITOS / FUNNYPLACE) ====== */
+        ):activeTab==='blog'?(
+          /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
+          <div style={{flex:1,minWidth:0,minHeight:0}}>
+            <BlogContent mode="private"/>
+          </div>
+        ):(
+          /* === SOLO FAVORITOS USA EL LAYOUT 3 COLUMNAS === */
           <>
-            {!isMobile && !showFavoritesFullCall && (
+            {!isMobile&&!showFavoritesFullCall&&(
               <StyledLeftColumn data-rail>
-                {callStatus === 'idle' ? (
+                {callStatus==='idle'?(
                   <FavoritesModelList
                     onSelect={handleOpenChatFromFavorites}
                     reloadTrigger={favReload}
                     selectedId={selectedContactId}
-                    onContextMenu={(user, pos) => { setCtxUser(user); setCtxPos(pos); }}
+                    onContextMenu={(user,pos)=>{setCtxUser(user);setCtxPos(pos);}}
                   />
-                ) : (
-                  <div style={{ padding: 8, color: '#adb5bd' }}>
-                    En llamada: la lista se bloquea hasta colgar.
-                  </div>
+                ):(
+                  <div style={{padding:8,color:'#adb5bd'}}>En llamada: la lista se bloquea hasta colgar.</div>
                 )}
               </StyledLeftColumn>
             )}
-
-            {/* ==============INICIO ZONA CENTRAL ========== */}
-            <StyledCenter data-mode={activeTab === 'favoritos' && contactMode === 'call' ? 'call' : undefined}>
-
-              {/*RENDERIZADO FUNNYPLACE */}
-              {activeTab === 'blog' && <Blog />}
-
-              {/* RENDERIZADO FAVORITOS */}
-              {activeTab === 'favoritos' && (
+            <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
+              {activeTab==='favoritos'&&(
                 <VideoChatFavoritosModelo
                   isMobile={isMobile}
                   allowChat={allowChat}
@@ -2154,86 +2056,63 @@ const DashboardModel = () => {
                   handleCallReject={handleCallReject}
                 />
               )}
-
             </StyledCenter>
-            {/* ================FIN ZONA CENTRAL =================*/}
-
-            {!showFavoritesFullCall && <StyledRightColumn />}
+            {!showFavoritesFullCall&&<StyledRightColumn/>}
           </>
         )}
-
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
 
+
       <MobileBottomNav>
-        <BottomNavButton
-          active={activeTab === 'videochat'}
-          onClick={handleGoVideochat}
-        >
-          <span>Videochat</span>
-        </BottomNavButton>
-
-        <BottomNavButton
-          active={activeTab === 'favoritos'}
-          onClick={handleGoFavorites}
-        >
-          <span>Favoritos</span>
-        </BottomNavButton>
-
-        <BottomNavButton
-          active={activeTab === 'blog'}
-          onClick={handleGoBlog}
-        >
-          <span>Blog</span>
-        </BottomNavButton>
+        <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
+        <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
+        <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
       </MobileBottomNav>
 
       {/*INICIO CLICK DERECHO */}
-      {ctxUser && (
+      {ctxUser&&(
         <div
           style={{
-            position: 'fixed',
-            left: ctxPos.x,
-            top: ctxPos.y,
-            zIndex: 9999,
-            background: '#fff',
-            border: '1px solid #dee2e6',
-            borderRadius: 8,
-            boxShadow: '0 8px 24px rgba(0,0,0,.12)'
+            position:'fixed',
+            left:ctxPos.x,
+            top:ctxPos.y,
+            zIndex:9999,
+            background:'#fff',
+            border:'1px solid #dee2e6',
+            borderRadius:8,
+            boxShadow:'0 8px 24px rgba(0,0,0,.12)'
           }}
-          onClick={(e) => e.stopPropagation()}
-          onContextMenu={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onClick={e=>e.stopPropagation()}
+          onContextMenu={e=>{e.preventDefault();e.stopPropagation();}}
         >
           <button
             style={{
-              display: 'block',
-              padding: '10px 14px',
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              width: '100%',
-              textAlign: 'left'
+              display:'block',
+              padding:'10px 14px',
+              background:'transparent',
+              border:'none',
+              cursor:'pointer',
+              width:'100%',
+              textAlign:'left'
             }}
-            onClick={async () => {
-              try {
-                const inv = String(ctxUser?.invited || '').toLowerCase();
-                if (inv === 'pending' || inv === 'sent') {
+            onClick={async()=>{
+              try{
+                const inv=String(ctxUser?.invited||'').toLowerCase();
+                if(inv==='pending'||inv==='sent'){
                   alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
                   setCtxUser(null);
                   return;
                 }
-                const sure = window.confirm(`Eliminar a "${ctxUser.nickname || ctxUser.name || ctxUser.email || ('Usuario ' + ctxUser.id)}" de tus favoritos?`);
-                if (!sure) return;
-                const tk = localStorage.getItem('token');
-                if (!tk) return;
-                await fetch(`/api/favorites/clients/${ctxUser.id}`, {
-                  method: 'DELETE',
-                  headers: { Authorization: `Bearer ${tk}` }
-                });
+                const sure=window.confirm(`Eliminar a "${ctxUser.nickname||ctxUser.name||ctxUser.email||('Usuario '+ctxUser.id)}" de tus favoritos?`);
+                if(!sure)return;
+                const tk=localStorage.getItem('token');
+                if(!tk)return;
+                await fetch(`/api/favorites/clients/${ctxUser.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${tk}`}});
                 setCtxUser(null);
-                setFavReload(x => x + 1);
-              } catch (e) {
-                alert(e.message || 'No se pudo eliminar de favoritos');
+                setFavReload(x=>x+1);
+              }catch(e){
+                alert(e.message||'No se pudo eliminar de favoritos');
               }
             }}
           >
@@ -2242,9 +2121,9 @@ const DashboardModel = () => {
         </div>
       )}
       {/*FIN CLICK DERECHO */}
-
     </StyledContainer>
   );
 };
 
 export default DashboardModel;
+

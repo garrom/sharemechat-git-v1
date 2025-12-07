@@ -62,7 +62,7 @@ export default function Home() {
     <>
       <GlobalBlack />
       {/* NAVBAR PÚBLICO: logo + tabs + botones derecha */}
-      <StyledNavbar>
+      <StyledNavbar style={{ padding:'0 24px' }}>
         {/* Logo */}
         <StyledBrand href="/" aria-label="SharemeChat" onClick={handleLogoClick} />
 
