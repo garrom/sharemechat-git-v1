@@ -1,24 +1,25 @@
 // src/components/LoginModalContent.jsx
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import RegisterClientModalContent from './RegisterClientModalContent';
+import RegisterModelModalContent from './RegisterModelModalContent';
 import {
-    StyledForm, StyledInput, StyledButton, StyledLinkButton, StyledError, Status, Field, FieldError, FormTitle,
-    CloseBtn as LoginCloseBtn
+  StyledForm, StyledInput, StyledButton, StyledLinkButton,
+  StyledError, Status, Field, FieldError, FormTitle,
+  CloseBtn as LoginCloseBtn, TabsRow, TabButton
 } from '../styles/public-styles/LoginStyles';
-import Roles from '../constants/Roles';
-import UserTypes from '../constants/UserTypes';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHouse,faXmark  } from '@fortawesome/free-solid-svg-icons';
 
-/**
- * Card de login reutilizable:
- * - No pinta fondo ni navbar, solo el formulario.
- * - Puede usarse dentro de un modal o en una página.
- *
- * Props:
- * - onClose?: () => void   -> se usará cuando está dentro de un modal (cerrar al ir a Inicio/registro).
- */
+import Roles from '../constants/Roles';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHouse, faXmark } from '@fortawesome/free-solid-svg-icons';
+
 const LoginModalContent = ({ onClose }) => {
+  // Vistas posibles:
+  // - 'login'            → formulario de login
+  // - 'register-gender'  → ¿eres chico o chica?
+  // - 'register-client'  → formulario registro hombre (cliente)
+  // - 'register-model'   → formulario registro mujer (modelo)
+  const [view, setView] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -28,12 +29,14 @@ const LoginModalContent = ({ onClose }) => {
   const history = useHistory();
 
   const readErrorMessage = async (res) => {
-    try { const data = await res.json(); if (data?.message) return data.message; } catch {}
-    try { const text = await res.text(); if (text) return text; } catch {}
     if (res.status === 401) return 'Credenciales inválidas.';
     if (res.status === 403) return 'Acceso denegado.';
-    if (res.status === 404) return 'Recurso no encontrado.';
-    return `Error en el login: ${res.status} ${res.statusText}`;
+    if (res.status === 404) return 'Servicio no disponible.';
+    try {
+      const data = await res.json();
+      if (data?.message) return data.message;
+    } catch {}
+    return 'Error al iniciar sesión';
   };
 
   const validate = () => {
@@ -53,7 +56,11 @@ const LoginModalContent = ({ onClose }) => {
     if (!validate()) return;
     setLoading(true);
     try {
-      const response = await fetch('/api/users/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      const response = await fetch('/api/users/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
       if (!response.ok) {
         const msg = await readErrorMessage(response);
         throw new Error(msg);
@@ -61,114 +68,135 @@ const LoginModalContent = ({ onClose }) => {
       const data = await response.json();
       localStorage.setItem('token', data.token);
       setStatus('Acceso correcto. Redirigiendo…');
-
-      // Si quieres, puedes llamar onClose() antes de la navegación, pero no es estrictamente necesario
-      // porque al cambiar de ruta el modal se desmonta.
-      if (data.user.role === Roles.ADMIN) {
-        history.push('/dashboard-admin');
-      } else if (data.user.role === Roles.CLIENT) {
+      if (data.user.role === Roles.CLIENT) {
         history.push('/client');
       } else if (data.user.role === Roles.MODEL) {
         history.push('/model');
-      } else if (data.user.role === Roles.USER) {
-        if (data.user.userType === UserTypes.FORM_CLIENT) {
-          history.push('/dashboard-user-client');
-        } else if (data.user.userType === UserTypes.FORM_MODEL) {
-          history.push('/dashboard-user-model');
-        } else {
-          setError('Tipo de usuario no válido');
-        }
       } else {
-        setError('Rol de usuario no válido');
+        history.push('/');
       }
     } catch (err) {
-      setError(err.message || 'Error de red');
+      setError(err.message || 'Error al iniciar sesión');
     } finally {
       setLoading(false);
     }
   };
 
-  const goHome = () => {
-    if (loading) return;
-    if (onClose) onClose();  // cerrar modal si aplica
-    history.push('/');
-  };
-
-  const goForgotPassword = () => {
-    if (loading) return;
-    if (onClose) onClose();
-    history.push('/forgot-password');
-  };
-
-  const goRegisterClient = () => {
-    if (loading) return;
-    if (onClose) onClose();
-    history.push('/register-client');
-  };
-
-  const goRegisterModel = () => {
-    if (loading) return;
-    if (onClose) onClose();
-    history.push('/register-model');
-  };
+  const isLoginTab = view === 'login';
+  const isRegisterTab = view !== 'login';
 
   return (
-    <StyledForm onSubmit={handleLogin} noValidate>
+    <StyledForm onSubmit={view === 'login' ? handleLogin : undefined} noValidate>
+      {/* X de cierre */}
       {onClose && (
         <LoginCloseBtn type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
           <FontAwesomeIcon icon={faXmark} />
         </LoginCloseBtn>
       )}
 
-      <FormTitle>LOGIN</FormTitle>
-      {status && <Status role="status">{status}</Status>}
-      {error && <StyledError role="alert">{error}</StyledError>}
+      {/* PESTAÑAS Login / Regístrate */}
+      <TabsRow>
+        <TabButton
+          type="button"
+          data-active={isLoginTab}
+          onClick={() => setView('login')}
+        >
+          Login
+        </TabButton>
+        <TabButton
+          type="button"
+          data-active={isRegisterTab}
+          onClick={() => setView('register-gender')}
+        >
+          Regístrate
+        </TabButton>
+      </TabsRow>
 
-      <Field>
-        <StyledInput
-          type="email"
-          value={email}
-          onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors((f) => ({ ...f, email: '' })); }}
-          placeholder="Email"
-          required
-          disabled={loading}
-          aria-invalid={!!fieldErrors.email}
-          aria-describedby={fieldErrors.email ? 'email-error' : undefined}
-          autoComplete="username"
-        />
-        {fieldErrors.email && <FieldError id="email-error">{fieldErrors.email}</FieldError>}
-      </Field>
+      {/* =============== VISTA LOGIN =============== */}
+      {view === 'login' && (
+        <>
+          <FormTitle>Iniciar sesión</FormTitle>
+          {status && <Status role="status">{status}</Status>}
+          {error && <StyledError role="alert">{error}</StyledError>}
 
-      <Field>
-        <StyledInput
-          type="password"
-          value={password}
-          onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors((f) => ({ ...f, password: '' })); }}
-          placeholder="Contraseña (mínimo 8 caracteres)"
-          required
-          disabled={loading}
-          aria-invalid={!!fieldErrors.password}
-          aria-describedby={fieldErrors.password ? 'password-error' : undefined}
-          autoComplete="current-password"
-        />
-        {fieldErrors.password && <FieldError id="password-error">{fieldErrors.password}</FieldError>}
-      </Field>
+          <Field>
+            <StyledInput
+              type="email"
+              value={email}
+              onChange={(e) => {
+                setEmail(e.target.value);
+                if (fieldErrors.email) setFieldErrors(f => ({ ...f, email: '' }));
+              }}
+              placeholder="Email"
+              required
+              disabled={loading}
+              aria-invalid={!!fieldErrors.email}
+              aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+              autoComplete="username"
+            />
+            {fieldErrors.email && <FieldError id="email-error">{fieldErrors.email}</FieldError>}
+          </Field>
 
-      <StyledButton type="submit" disabled={loading}>{loading ? 'Entrando…' : 'Iniciar Sesión'}</StyledButton>
+          <Field>
+            <StyledInput
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                if (fieldErrors.password) setFieldErrors(f => ({ ...f, password: '' }));
+              }}
+              placeholder="Contraseña (mínimo 8 caracteres)"
+              required
+              disabled={loading}
+              aria-invalid={!!fieldErrors.password}
+              aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+              autoComplete="current-password"
+            />
+            {fieldErrors.password && <FieldError id="password-error">{fieldErrors.password}</FieldError>}
+          </Field>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 16 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <StyledLinkButton type="button" onClick={goHome} aria-label="Volver a inicio">
-            <FontAwesomeIcon icon={faHouse} style={{ marginRight: 8 }} />
-            Inicio
+          <StyledButton type="submit" disabled={loading}>
+            {loading ? 'Entrando…' : 'Iniciar Sesión'}
+          </StyledButton>
+
+          <StyledLinkButton type="button" onClick={() => history.push('/forgot-password')}>
+            ¿Olvidaste tu contraseña?
           </StyledLinkButton>
-          <StyledLinkButton type="button" onClick={goForgotPassword}>¿Olvidaste tu contraseña?</StyledLinkButton>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <StyledLinkButton type="button" onClick={goRegisterClient}>Regístro de Cliente</StyledLinkButton>
-          <StyledLinkButton type="button" onClick={goRegisterModel}>Regístro de Modelo</StyledLinkButton>
-        </div>
-      </div>
+
+        </>
+      )}
+
+      {/* =========== VISTA REGISTRO: ELECCIÓN GÉNERO =========== */}
+      {view === 'register-gender' && (
+        <>
+          <FormTitle>¿Eres chico o chica?</FormTitle>
+
+          <StyledButton type="button" onClick={() => setView('register-client')}>
+            Soy Chico
+          </StyledButton>
+
+          <StyledButton type="button" onClick={() => setView('register-model')}>
+            Soy Chica
+          </StyledButton>
+
+        </>
+      )}
+
+      {/* =========== VISTA REGISTRO HOMBRE (CLIENTE) =========== */}
+      {view === 'register-client' && (
+        <RegisterClientModalContent
+          onClose={onClose}
+          onBack={() => setView('register-gender')}
+        />
+      )}
+
+      {/* =========== VISTA REGISTRO MUJER (MODELO) =========== */}
+      {view === 'register-model' && (
+        <RegisterModelModalContent
+          onClose={onClose}
+          onBack={() => setView('register-gender')}
+        />
+      )}
     </StyledForm>
   );
 };

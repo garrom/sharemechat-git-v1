@@ -129,6 +129,42 @@ export const StyledButton = styled.button`
   }
 `;
 
+// Fila de pestañas Login / Regístrate
+export const TabsRow = styled.div`
+  display: flex;
+  gap: 28px;              /* separación entre Login | Registrate */
+  margin-bottom: 22px;   /* separación con el contenido de abajo */
+  border-bottom: 1px solid #1f2933;
+  padding-bottom: 6px;
+`;
+
+
+// Botón de pestaña aspecto de tab
+export const TabButton = styled.button`
+  ${buttonBase}
+  background: transparent;
+  border: 0;
+  padding: 6px 0;
+  margin: 0;
+  border-radius: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #9ca3af;
+  border-bottom: 2px solid transparent;
+  justify-content: flex-start;
+  text-transform: none;
+
+  &[data-active='true'] {
+    color: #f9fafb;
+    border-bottom-color: #f9fafb;
+  }
+
+  &:hover:not(:disabled) {
+    color: #e5e7eb;
+  }
+`;
+
+
 /* LINKS DEBAJO (alineados y con mismo espacio gracias al gap) */
 export const StyledLinkButton = styled.button`
   ${buttonBase}

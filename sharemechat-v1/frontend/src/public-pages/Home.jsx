@@ -40,11 +40,11 @@ export default function Home() {
   }, [location.pathname, loginModalOpened, openLoginModal]);
 
   const goLogin = () => {
-    history.push('/login');
+    openLoginModal();
   };
 
   const goRegister = () => {
-    history.push('/register-client');
+    openLoginModal();
   };
 
   const handleLogoClick = (e) => { e.preventDefault(); window.location.href = '/'; };

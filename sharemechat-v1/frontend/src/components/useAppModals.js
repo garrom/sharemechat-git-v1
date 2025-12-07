@@ -163,19 +163,13 @@ export const useAppModals = () => {
     });
   }, [openModal, closeModal, alert]);
 
-  /**
-   * Modal de LOGIN sobre Home.
-   * - Si estamos en /login y se cierra con la X/backdrop/ESC, volvemos a /
-   * - hideChrome: solo se ve el card, sin cabecera/foot del modal
-   */
+
   const openLoginModal = useCallback(() => {
     const cameFromLoginRoute = location.pathname === '/login';
 
     const handleClose = () => {
-      if (cameFromLoginRoute) {
-        history.push('/');
-      }
-      closeModal(); // cerrar el modal de verdad
+      if (cameFromLoginRoute) history.push('/');
+      closeModal();
     };
 
     openModal({
