@@ -86,6 +86,10 @@ export const Dialog = styled.div`
     pointer-events: none;
   }
 
+  &[data-hidechrome='true']::before {
+    display: none !important;
+  }
+
   &[data-variant='success']::before {
     opacity: 1;
     background: linear-gradient(90deg, #1f6f43, #2ecc71);

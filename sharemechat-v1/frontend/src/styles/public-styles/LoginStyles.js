@@ -183,7 +183,7 @@ export const CloseBtn = styled.button`
   height: 40px;
   border-radius: 999px;
   border: none;
-  background: inherit;  /* <- MISMO FONDO QUE EL CARD */
+  background: inherit;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -191,12 +191,11 @@ export const CloseBtn = styled.button`
   padding: 0;
   box-shadow: 0 6px 18px rgba(0,0,0,0.5);
   transition: background .15s ease, transform .05s ease, box-shadow .15s ease;
+  color: #f9fafb; /* <- X en blanco */
 
   svg {
     width: 22px;
     height: 22px;
-    stroke: #f9fafb;
-    stroke-width: 2.4;
   }
 
   &:hover {
@@ -207,5 +206,6 @@ export const CloseBtn = styled.button`
     transform: translateY(1px);
   }
 `;
+
 
 

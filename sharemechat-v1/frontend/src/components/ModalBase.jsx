@@ -1,17 +1,7 @@
-// src/components/ModalBase.js
+// src/components/ModalBase.jsx
 import React, { useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import {
-  Backdrop,
-  Wrapper,
-  Dialog,
-  Header,
-  Title,
-  CloseBtn,
-  Body,
-  Footer,
-  ModalBtn
-} from '../styles/ModalStyles';
+import { Backdrop, Wrapper, Dialog, Header, Title, CloseBtn, Body, Footer, ModalBtn } from '../styles/ModalStyles';
 
 /**
  * Modal base reusable
@@ -27,7 +17,8 @@ import {
  * - icon: node opcional (en header)
  * - closeOnBackdrop = true
  * - closeOnEsc = true
- * - bodyKind: 'default' | 'choices'  (para listas de opciones rápidas)
+ * - bodyKind: 'default' | 'choices'
+ * - hideChrome: si true, NO renderiza Header/Footer y el Dialog es transparente
  */
 const ModalBase = ({
   open,
@@ -41,13 +32,12 @@ const ModalBase = ({
   closeOnBackdrop = true,
   closeOnEsc = true,
   bodyKind = 'default',
+  hideChrome = false,
 }) => {
   const dialogRef = useRef(null);
   const lastFocusedRef = useRef(null);
 
-  /* ==========================================
-   * Bloquear scroll del body mientras está abierto
-   * ========================================== */
+  // Bloquear scroll body
   useEffect(() => {
     if (!open) return;
     const prevOverflow = document.body.style.overflow;
@@ -57,27 +47,20 @@ const ModalBase = ({
     };
   }, [open]);
 
-  /* ==========================================
-   * Gestionar foco: guardar el previo y trap dentro
-   * ========================================== */
+  // Gestión de foco + trap
   useEffect(() => {
     if (!open) return;
-
-    // recordar elemento con foco antes de abrir
     lastFocusedRef.current = document.activeElement;
 
     const el = dialogRef.current;
     if (!el) return;
 
-    // focus inicial en el primer elemento interactivo
-    const getFocusables = () => el.querySelectorAll(
-      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-    );
+    const getFocusables = () =>
+      el.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])');
+
     const focusables = getFocusables();
     const first = focusables[0];
-    if (first && typeof first.focus === 'function') {
-      first.focus();
-    }
+    if (first && typeof first.focus === 'function') first.focus();
 
     const onKeyDown = (e) => {
       if (e.key === 'Escape' && closeOnEsc) {
@@ -85,20 +68,16 @@ const ModalBase = ({
         onClose?.();
         return;
       }
-
       if (e.key === 'Tab') {
         const nodes = Array.from(getFocusables());
         if (!nodes.length) return;
-
         const currentIdx = nodes.indexOf(document.activeElement);
         if (e.shiftKey) {
-          // shift + tab => atrás
           if (currentIdx <= 0) {
             e.preventDefault();
             nodes[nodes.length - 1].focus();
           }
         } else {
-          // tab normal => adelante
           if (currentIdx === nodes.length - 1) {
             e.preventDefault();
             nodes[0].focus();
@@ -108,29 +87,19 @@ const ModalBase = ({
     };
 
     el.addEventListener('keydown', onKeyDown);
-    return () => {
-      el.removeEventListener('keydown', onKeyDown);
-    };
+    return () => el.removeEventListener('keydown', onKeyDown);
   }, [open, onClose, closeOnEsc]);
 
-  /* ==========================================
-   * Devolver foco al cerrar
-   * ========================================== */
+  // Devolver foco al cerrar
   useEffect(() => {
     if (open) return;
     const prev = lastFocusedRef.current;
-    if (prev && typeof prev.focus === 'function') {
-      prev.focus();
-    }
+    if (prev && typeof prev.focus === 'function') prev.focus();
   }, [open]);
 
-  /* ==========================================
-   * Click en backdrop
-   * ========================================== */
+  // Click en backdrop
   const handleBackdrop = useCallback(() => {
-    if (closeOnBackdrop) {
-      onClose?.();
-    }
+    if (closeOnBackdrop) onClose?.();
   }, [closeOnBackdrop, onClose]);
 
   if (!open) return null;
@@ -138,7 +107,6 @@ const ModalBase = ({
   return ReactDOM.createPortal(
     <>
       <Backdrop onClick={handleBackdrop} />
-
       <Wrapper aria-hidden={false}>
         <Dialog
           ref={dialogRef}
@@ -147,37 +115,45 @@ const ModalBase = ({
           aria-labelledby="modal-title"
           data-variant={variant}
           $size={size}
+          style={hideChrome ? {
+            background: 'transparent',
+            boxShadow: 'none',
+            padding: 0,
+            border: 'none',
+            width: 'auto',
+          } : undefined}
+          data-hidechrome={hideChrome ? 'true' : 'false'}
         >
-          <Header>
-            {icon}
-            <Title id="modal-title">{title}</Title>
-            <CloseBtn
-              aria-label="Cerrar"
-              onClick={() => onClose?.()}
-              title="Cerrar"
-            >
-              ×
-            </CloseBtn>
-          </Header>
 
-          <Body data-kind={bodyKind}>
-            {children}
-          </Body>
-
-          <Footer>
-            {actions.map((a, i) => (
-              <ModalBtn
-                key={i}
-                data-primary={a.primary ? 'true' : 'false'}
-                data-danger={a.danger ? 'true' : 'false'}
-                autoFocus={a.autoFocus}
-                onClick={a.onClick}
-                type={a.type || 'button'}
-              >
-                {a.label}
-              </ModalBtn>
-            ))}
-          </Footer>
+          {hideChrome ? (
+            // SOLO el contenido (tu card de login)
+            children
+          ) : (
+            <>
+              <Header>
+                {icon}
+                <Title id="modal-title">{title}</Title>
+                <CloseBtn aria-label="Cerrar" onClick={() => onClose?.()} title="Cerrar">
+                  ×
+                </CloseBtn>
+              </Header>
+              <Body data-kind={bodyKind}>{children}</Body>
+              <Footer>
+                {actions.map((a, i) => (
+                  <ModalBtn
+                    key={i}
+                    data-primary={a.primary ? 'true' : 'false'}
+                    data-danger={a.danger ? 'true' : 'false'}
+                    autoFocus={a.autoFocus}
+                    onClick={a.onClick}
+                    type={a.type || 'button'}
+                  >
+                    {a.label}
+                  </ModalBtn>
+                ))}
+              </Footer>
+            </>
+          )}
         </Dialog>
       </Wrapper>
     </>,

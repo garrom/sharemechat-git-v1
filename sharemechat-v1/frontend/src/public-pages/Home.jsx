@@ -1,5 +1,8 @@
 // src/public-pages/Home.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useHistory, useLocation } from 'react-router-dom';
+import useAppModals from '../components/useAppModals';
+
 import {
   GlobalBlack, StyledCenterVideochat, StyledSplit2, StyledPane,
   StyledThumbsGrid, StyledPrimaryCta,StyledSecondaryCta, HomeHeroText
@@ -16,6 +19,10 @@ import { faGem } from '@fortawesome/free-solid-svg-icons';
 export default function Home() {
   const [activeTab, setActiveTab] = useState('videochat');
   const [menuOpen, setMenuOpen] = useState(false);
+  const history = useHistory();
+  const location = useLocation();
+  const { openLoginModal } = useAppModals();
+  const [loginModalOpened, setLoginModalOpened] = useState(false);
 
   const thumbs = [
     '/img/avatarChica.png','/img/avatarChica.png','/img/avatarChica.png',
@@ -23,8 +30,23 @@ export default function Home() {
     '/img/avatarChica.png','/img/avatarChica.png','/img/avatarChica.png'
   ];
 
-  const goLogin = () => { window.location.href = '/login'; };
-  const goRegister = () => { window.location.href = '/register-client'; };
+  useEffect(() => {
+    if (location.pathname === '/login' && !loginModalOpened) {
+      openLoginModal();
+      setLoginModalOpened(true);
+    } else if (location.pathname !== '/login' && loginModalOpened) {
+      setLoginModalOpened(false);
+    }
+  }, [location.pathname, loginModalOpened, openLoginModal]);
+
+  const goLogin = () => {
+    history.push('/login');
+  };
+
+  const goRegister = () => {
+    history.push('/register-client');
+  };
+
   const handleLogoClick = (e) => { e.preventDefault(); window.location.href = '/'; };
 
   const handleTabClick = (tab) => {
