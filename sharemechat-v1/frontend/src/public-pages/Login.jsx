@@ -1,28 +1,24 @@
-// Login.jsx
+// src/public-pages/Login.jsx
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import {
-  StyledContainer,
-  StyledForm,
-  StyledInput,
-  StyledButton,
-  StyledLinkButton,
-  StyledError,
-  Status,
-  Field,
-  FieldError,
-  FormTitle,
-  StyledBrand
+  StyledContainer, StyledForm, StyledInput, StyledButton,
+  StyledLinkButton, StyledError, Status, Field, FieldError,
+  FormTitle
 } from '../styles/public-styles/LoginStyles';
+import { GlobalBlack } from '../styles/public-styles/HomeStyles';
+import { StyledNavbar, StyledBrand as NavBrand } from '../styles/NavbarStyles';
 import Roles from '../constants/Roles';
 import UserTypes from '../constants/UserTypes';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHouse } from '@fortawesome/free-solid-svg-icons';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState('');                    // errores generales
+  const [error, setError] = useState('');
   const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' });
-  const [status, setStatus] = useState('');                  // mensajes informativos
+  const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const history = useHistory();
 
@@ -50,7 +46,6 @@ const Login = () => {
     setError('');
     setStatus('');
     if (!validate()) return;
-
     setLoading(true);
     try {
       const response = await fetch('/api/users/login', {
@@ -58,17 +53,13 @@ const Login = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
-
       if (!response.ok) {
         const msg = await readErrorMessage(response);
         throw new Error(msg);
       }
-
       const data = await response.json();
       localStorage.setItem('token', data.token);
       setStatus('Acceso correcto. Redirigiendo…');
-
-      // Routing según rol y userType
       if (data.user.role === Roles.ADMIN) {
         history.push('/dashboard-admin');
       } else if (data.user.role === Roles.CLIENT) {
@@ -93,75 +84,63 @@ const Login = () => {
     }
   };
 
+  const handleLogoClick = (e) => { e.preventDefault(); if (!loading) history.push('/'); };
+
   return (
-    <StyledContainer>
-      <StyledForm onSubmit={handleLogin} noValidate>
-        <StyledBrand href="/" aria-label="SharemeChat"/>
-        <FormTitle>LOGIN</FormTitle>
+    <>
+      {/* Fondo negro global, igual que en Home */}
+      <GlobalBlack />
 
-        {/* Mensajes generales */}
-        {status && <Status role="status">{status}</Status>}
-        {error && <StyledError role="alert">{error}</StyledError>}
+      {/* NAVBAR COMO EN HOME, SOLO LOGO */}
+      <StyledNavbar>
+        <NavBrand href="/" aria-label="SharemeChat" onClick={handleLogoClick} />
+      </StyledNavbar>
 
-        {/* Email */}
-        <Field>
-          <StyledInput
-            type="email"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(f => ({...f, email: ''})); }}
-            placeholder="Email"
-            required
-            disabled={loading}
-            aria-invalid={!!fieldErrors.email}
-            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
-            autoComplete="username"
-          />
-          {fieldErrors.email && (
-            <FieldError id="email-error">{fieldErrors.email}</FieldError>
-          )}
-        </Field>
+      {/* CONTENEDOR DEL LOGIN */}
+      <StyledContainer>
+        <StyledForm onSubmit={handleLogin} noValidate>
+          <FormTitle>LOGIN</FormTitle>
 
-        {/* Password */}
-        <Field>
-          <StyledInput
-            type="password"
-            value={password}
-            onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(f => ({...f, password: ''})); }}
-            placeholder="Contraseña (mínimo 8 caracteres)"
-            required
-            disabled={loading}
-            aria-invalid={!!fieldErrors.password}
-            aria-describedby={fieldErrors.password ? 'password-error' : undefined}
-            autoComplete="current-password"
-          />
-          {fieldErrors.password && (
-            <FieldError id="password-error">{fieldErrors.password}</FieldError>
-          )}
-        </Field>
+          {status && <Status role="status">{status}</Status>}
+          {error && <StyledError role="alert">{error}</StyledError>}
 
-        <StyledButton type="submit" disabled={loading}>
-          {loading ? 'Entrando…' : 'Iniciar Sesión'}
-        </StyledButton>
+          <Field>
+            <StyledInput type="email" value={email} onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(f => ({ ...f, email: '' })); }} placeholder="Email" required disabled={loading} aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'email-error' : undefined} autoComplete="username" />
+            {fieldErrors.email && <FieldError id="email-error">{fieldErrors.email}</FieldError>}
+          </Field>
 
-        <StyledLinkButton
-          type="button"
-          onClick={() => !loading && history.push('/')}
-          aria-label="Volver a Home"
-        >
-          Volver a inicio
-        </StyledLinkButton>
+          <Field>
+            <StyledInput type="password" value={password} onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(f => ({ ...f, password: '' })); }} placeholder="Contraseña (mínimo 8 caracteres)" required disabled={loading} aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'password-error' : undefined} autoComplete="current-password" />
+            {fieldErrors.password && <FieldError id="password-error">{fieldErrors.password}</FieldError>}
+          </Field>
 
-        <StyledLinkButton type="button" onClick={() => !loading && history.push('/register-client')}>
-          Regístrate como Cliente
-        </StyledLinkButton>
-        <StyledLinkButton type="button" onClick={() => !loading && history.push('/register-model')}>
-          Regístrate como Modelo
-        </StyledLinkButton>
-        <StyledLinkButton type="button" onClick={() => !loading && history.push('/forgot-password')}>
-          ¿Olvidaste tu contraseña?
-        </StyledLinkButton>
-      </StyledForm>
-    </StyledContainer>
+          <StyledButton type="submit" disabled={loading}>{loading ? 'Entrando…' : 'Iniciar Sesión'}</StyledButton>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, marginTop:16 }}>
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <StyledLinkButton type="button" onClick={() => !loading && history.push('/')} aria-label="Volver a inicio">
+                <FontAwesomeIcon icon={faHouse} style={{ marginRight:8 }} />
+                Inicio
+              </StyledLinkButton>
+
+              <StyledLinkButton type="button" onClick={() => !loading && history.push('/forgot-password')}>
+                ¿Olvidaste tu contraseña?
+              </StyledLinkButton>
+            </div>
+
+            <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+              <StyledLinkButton type="button" onClick={() => !loading && history.push('/register-client')}>
+                Regístro de Cliente
+              </StyledLinkButton>
+
+              <StyledLinkButton type="button" onClick={() => !loading && history.push('/register-model')}>
+                Regístro de Modelo
+              </StyledLinkButton>
+            </div>
+          </div>
+        </StyledForm>
+      </StyledContainer>
+    </>
   );
 };
 

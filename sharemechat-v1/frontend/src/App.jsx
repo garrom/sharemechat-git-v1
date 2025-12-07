@@ -9,6 +9,7 @@ import DashboardUserModel from './pages/dashboard/DashboardUserModel';
 import DashboardAdmin from './pages/dashboard/DashboardAdmin';
 import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
+import Blog from './pages/blog/Blog';
 import ChangePasswordPage from './pages/subpages/ChangePasswordPage';
 import ModelDocuments from './pages/subpages/ModelDocuments';
 import Login from './public-pages/Login';
@@ -23,6 +24,7 @@ import { ModalProvider } from './components/ModalProvider';
 import GuestConsentGate from './consent/GuestConsentGate';
 import { GlobalTypography } from './styles/core/typography';
 import Footer from './components/Footer';
+import CookieBanner from './components/CookieBanner';
 
 // Wrapper para rutas públicas que requieren age-gate/TyC (guest/no logueado)
 const PublicWithGuestGate = ({ component: Component, ...rest }) => (
@@ -46,6 +48,7 @@ function App() {
               {/* Públicas CON MODAL (age-gate/TyC):*/}
               <PublicWithGuestGate exact path="/" component={Home} />
               <PublicWithGuestGate exact path="/login" component={Login} />
+              <PublicWithGuestGate exact path="/blog" component={Blog} />
 
               <Route path="/register-client" component={RegisterClient}/>
               <Route path="/register-model" component={RegisterModel}/>
@@ -73,6 +76,7 @@ function App() {
 
           {/* Footer siempre visible en todas las páginas */}
           <Footer />
+          <CookieBanner />
         </Router>
       </>
     </ModalProvider>

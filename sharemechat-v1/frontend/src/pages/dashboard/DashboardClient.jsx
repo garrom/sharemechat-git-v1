@@ -4,7 +4,7 @@ import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import { useAppModals } from '../../components/useAppModals';
-import FunnyplacePage from '../funnyplace/FunnyplacePage';
+import Blog from '../blog/Blog';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft,faGem } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -38,6 +38,7 @@ import {
 } from '../../styles/ButtonStyles';
 import VideoChatRandomCliente from './VideoChatRandomCliente';
 import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
+
 
 
 const DashboardClient = () => {
@@ -461,6 +462,7 @@ const DashboardClient = () => {
     const t = setTimeout(() => setGiftRenderReady(true), 200); // 200ms de margen
     return () => clearTimeout(t);
   }, [giftsLoaded]);
+
 
   const clearMsgTimers = () => {
     if (msgPingRef.current) {
@@ -1485,11 +1487,11 @@ const DashboardClient = () => {
     });
   };
 
-  const handleGoFunnyplace = async () => {
+  const handleGoBlog = async () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
     stopAll();
-    setActiveTab('funnyplace');
+    setActiveTab('blog');
   };
 
   const handleGoFavorites = async () => {
@@ -2184,8 +2186,8 @@ const DashboardClient = () => {
       {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar>
         <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick} />
-        {/* Botones-text en el navbar (Videochat / Favoritos / Funnyplace) */}
-        <div className="desktop-only" style={{ display: 'flex', gap: 8, alignItems: 'center', flex: 1, justifyContent: 'center' }}>
+        {/* Botones-text en el navbar (Videochat / Favoritos / Blog) */}
+        <div className="desktop-only" style={{ display: 'flex', alignItems: 'center', gap:8, marginLeft:16 }}>
           <StyledNavTab type="button" data-active={activeTab === 'videochat'} aria-pressed={activeTab === 'videochat'} onClick={handleGoVideochat} title="Videochat">
             Videochat
           </StyledNavTab>
@@ -2194,8 +2196,8 @@ const DashboardClient = () => {
             Favoritos
           </StyledNavTab>
 
-          <StyledNavTab type="button" data-active={activeTab === 'funnyplace'} aria-pressed={activeTab === 'funnyplace'} onClick={handleGoFunnyplace} title="Funnyplace">
-            Funnyplace
+          <StyledNavTab type="button" data-active={activeTab === 'blog'} aria-pressed={activeTab === 'blog'} onClick={handleGoBlog} title="Blog">
+            Blog
           </StyledNavTab>
         </div>
 
@@ -2306,7 +2308,7 @@ const DashboardClient = () => {
             {showFavoritesFullCall ? (
               // ===== FAVORITOS EN LLAMADA: FULL-WIDTH (ocupa las 3 columnas) =====
               <StyledCenter data-mode={activeTab === 'favoritos' && contactMode === 'call' ? 'call' : undefined}>
-                {activeTab === 'funnyplace' && <FunnyplacePage />}
+                {activeTab === 'blog' && <Blog/>}
 
                 {activeTab === 'favoritos' && (
                   <VideoChatFavoritosCliente
@@ -2392,7 +2394,7 @@ const DashboardClient = () => {
                 {/* ==============INICIO ZONA CENTRAL ========== */}
                 <StyledCenter data-mode={activeTab === 'favoritos' && contactMode === 'call' ? 'call' : undefined}>
                   {/* === TAB FUNNYPLACE === */}
-                  {activeTab === 'funnyplace' && <FunnyplacePage />}
+                  {activeTab === 'blog' && <Blog/>}
 
                   {/* ===== TAB FAVORITOS VideoChatFavoritosCliente ==== */}
                   {activeTab === 'favoritos' && (
@@ -2470,8 +2472,8 @@ const DashboardClient = () => {
         <BottomNavButton active={activeTab === 'favoritos'} onClick={handleGoFavorites}>
           <span>Favoritos</span>
         </BottomNavButton>
-        <BottomNavButton active={activeTab === 'funnyplace'} onClick={handleGoFunnyplace}>
-          <span>Funnyplace</span>
+        <BottomNavButton active={activeTab === 'blog'} onClick={handleGoBlog}>
+          <span>Blog</span>
         </BottomNavButton>
       </MobileBottomNav>
 

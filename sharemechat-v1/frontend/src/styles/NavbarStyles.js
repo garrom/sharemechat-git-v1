@@ -46,8 +46,8 @@ export const StyledNavbar = styled.nav`
 //Logotipo
 export const StyledBrand = styled.a`
   display: block;
-  width: 180px;
-  height: 52px;
+  width: 220px;
+  height: 64px;
   background: url('/img/SharemeChat_white.svg') no-repeat center / contain;
   text-indent: -9999px;
 
@@ -60,9 +60,12 @@ export const StyledBrand = styled.a`
 //=== StyledContainer ===
 export const StyledContainer = styled.div`
   min-height: 100vh;
+  display: flex;           /* <- NUEVO */
+  flex-direction: column;  /* <- NUEVO */
   background: #0f0f0f;
   color: #e0e0e0;
 `;
+
 
 // === TEXTO ===
 export const NavText = styled.span`

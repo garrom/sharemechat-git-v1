@@ -4,7 +4,7 @@ import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import { useAppModals } from '../../components/useAppModals';
-import FunnyplacePage from '../funnyplace/FunnyplacePage';
+import Blog from '../blog/Blog';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
 import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft,faGem } from '@fortawesome/free-solid-svg-icons';
@@ -1260,11 +1260,11 @@ const DashboardModel = () => {
     });
   };
 
-  const handleGoFunnyplace = async () => {
+  const handleGoBlog = async () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
     stopAll();
-    setActiveTab('funnyplace');
+    setActiveTab('blog');
   };
 
   const handleGoFavorites = async () => {
@@ -1934,8 +1934,8 @@ const DashboardModel = () => {
       <StyledNavbar>
         <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick}/>
 
-        {/* Botones-text en el navbar (Videochat / Favoritos / Funnyplace) */}
-        <div className="desktop-only" style={{ display:'flex', gap:8, alignItems:'center' }}>
+        {/* Botones-text en el navbar (Videochat / Favoritos / Blog) */}
+        <div className="desktop-only" style={{ display:'flex', alignItems:'center',gap:8, marginLeft:16 }}>
           <StyledNavTab
             type="button"
             data-active={activeTab === 'videochat'}
@@ -1958,12 +1958,12 @@ const DashboardModel = () => {
 
           <StyledNavTab
             type="button"
-            data-active={activeTab === 'funnyplace'}
-            aria-pressed={activeTab === 'funnyplace'}
-            onClick={handleGoFunnyplace}
-            title="Funnyplace"
+            data-active={activeTab === 'blog'}
+            aria-pressed={activeTab === 'blog'}
+            onClick={handleGoBlog}
+            title="blog"
           >
-            Funnyplace
+            Blog
           </StyledNavTab>
         </div>
         <StyledNavGroup className="desktop-only" data-nav-group>
@@ -2104,7 +2104,7 @@ const DashboardModel = () => {
             <StyledCenter data-mode={activeTab === 'favoritos' && contactMode === 'call' ? 'call' : undefined}>
 
               {/*RENDERIZADO FUNNYPLACE */}
-              {activeTab === 'funnyplace' && <FunnyplacePage />}
+              {activeTab === 'blog' && <Blog />}
 
               {/* RENDERIZADO FAVORITOS */}
               {activeTab === 'favoritos' && (
@@ -2181,10 +2181,10 @@ const DashboardModel = () => {
         </BottomNavButton>
 
         <BottomNavButton
-          active={activeTab === 'funnyplace'}
-          onClick={handleGoFunnyplace}
+          active={activeTab === 'blog'}
+          onClick={handleGoBlog}
         >
-          <span>Funnyplace</span>
+          <span>Blog</span>
         </BottomNavButton>
       </MobileBottomNav>
 
