@@ -1,6 +1,8 @@
+// src/public-pages/RegisterModel.jsx
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
-
+import { GlobalBlack } from '../styles/public-styles/HomeStyles';
+import { StyledNavbar, StyledBrand as NavBrand } from '../styles/NavbarStyles';
 import {
   Container,
   Form,
@@ -13,9 +15,10 @@ import {
   FieldError,
   CheckRow,
   CheckInput,
-  CheckText,
-  StyledBrand
+  CheckText
 } from '../styles/public-styles/RegisterClientModelStyles';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHouse } from '@fortawesome/free-solid-svg-icons';
 
 const RegisterModel = () => {
   const [nickname, setNickname] = useState('');
@@ -42,7 +45,6 @@ const RegisterModel = () => {
   const handleRegister = async (e) => {
     e.preventDefault();
     setError('');
-
     if (!validate()) return;
     if (!isOver18)   return setError('Debes confirmar que eres mayor de 18 años.');
     if (!acceptsTerms) return setError('Debes aceptar los términos y condiciones.');
@@ -51,7 +53,7 @@ const RegisterModel = () => {
       nickname: nickname.trim(),
       email,
       password,
-      dateOfBirth,              // YYYY-MM-DD
+      dateOfBirth,
       confirAdult: isOver18,
       acceptedTerm: acceptsTerms,
     };
@@ -85,99 +87,100 @@ const RegisterModel = () => {
     }
   };
 
+  const handleLogoClick = (e) => { e.preventDefault(); history.push('/'); };
+
   return (
-    <Container>
-      <Form onSubmit={handleRegister} noValidate>
-        <StyledBrand href="/" aria-label="SharemeChat"/>
-        <Title>Registro Modelo</Title>
-        {error && <ErrorText role="alert">{error}</ErrorText>}
+    <>
+      <GlobalBlack />
 
-        <Field>
-          <Input
-            type="text"
-            value={nickname}
-            onChange={(e) => { setNickname(e.target.value); if (fieldErrors.nickname) setFieldErrors(f => ({...f, nickname: ''})); }}
-            placeholder="Apodo / Nickname"
-            required
-            aria-invalid={!!fieldErrors.nickname}
-            aria-describedby={fieldErrors.nickname ? 'nick-error' : undefined}
-            autoComplete="nickname"
-          />
-          {fieldErrors.nickname && <FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
-        </Field>
+      {/* NAVBAR NEGRO SOLO CON LOGO (igual que Login y RegisterClient) */}
+      <StyledNavbar>
+        <NavBrand href="/" aria-label="SharemeChat" onClick={handleLogoClick} />
+      </StyledNavbar>
 
-        <Field>
-          <Input
-            type="email"
-            value={email}
-            onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(f => ({...f, email: ''})); }}
-            placeholder="Email"
-            required
-            aria-invalid={!!fieldErrors.email}
-            aria-describedby={fieldErrors.email ? 'email-error' : undefined}
-            autoComplete="email"
-          />
-          {fieldErrors.email && <FieldError id="email-error">{fieldErrors.email}</FieldError>}
-        </Field>
+      {/* CONTENEDOR REGISTRO */}
+      <Container>
+        <Form onSubmit={handleRegister} noValidate>
+          <Title>Registro Mujer</Title>
+          {error && <ErrorText role="alert">{error}</ErrorText>}
 
-        <Field>
-          <Input
-            type="password"
-            value={password}
-            onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(f => ({...f, password: ''})); }}
-            placeholder="Contraseña (mínimo 8 caracteres)"
-            required
-            aria-invalid={!!fieldErrors.password}
-            aria-describedby={fieldErrors.password ? 'password-error' : undefined}
-            autoComplete="new-password"
-          />
-          {fieldErrors.password && <FieldError id="password-error">{fieldErrors.password}</FieldError>}
-        </Field>
+          <Field>
+            <Input
+              type="text"
+              value={nickname}
+              onChange={(e) => { setNickname(e.target.value); if (fieldErrors.nickname) setFieldErrors(f => ({...f, nickname: ''})); }}
+              placeholder="Apodo / Nickname"
+              required
+              aria-invalid={!!fieldErrors.nickname}
+              aria-describedby={fieldErrors.nickname ? 'nick-error' : undefined}
+              autoComplete="nickname"
+            />
+            {fieldErrors.nickname && <FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
+          </Field>
 
-        <Field>
-          <Input
-            type="date"
-            value={dateOfBirth}
-            onChange={(e) => { setDateOfBirth(e.target.value); if (fieldErrors.dateOfBirth) setFieldErrors(f => ({...f, dateOfBirth: ''})); }}
-            placeholder="Fecha de Nacimiento"
-            required
-            aria-invalid={!!fieldErrors.dateOfBirth}
-            aria-describedby={fieldErrors.dateOfBirth ? 'dob-error' : undefined}
-            autoComplete="bday"
-          />
-          {fieldErrors.dateOfBirth && <FieldError id="dob-error">{fieldErrors.dateOfBirth}</FieldError>}
-        </Field>
+          <Field>
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(f => ({...f, email: ''})); }}
+              placeholder="Email"
+              required
+              aria-invalid={!!fieldErrors.email}
+              aria-describedby={fieldErrors.email ? 'email-error' : undefined}
+              autoComplete="email"
+            />
+            {fieldErrors.email && <FieldError id="email-error">{fieldErrors.email}</FieldError>}
+          </Field>
 
-        {/* Checkboxes legales */}
-        <CheckRow>
-          <CheckInput
-            type="checkbox"
-            checked={isOver18}
-            onChange={(e) => setIsOver18(e.target.checked)}
-            required
-          />
-          <CheckText>Soy mayor de 18 años</CheckText>
-        </CheckRow>
+          <Field>
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(f => ({...f, password: ''})); }}
+              placeholder="Contraseña (mínimo 8 caracteres)"
+              required
+              aria-invalid={!!fieldErrors.password}
+              aria-describedby={fieldErrors.password ? 'password-error' : undefined}
+              autoComplete="new-password"
+            />
+            {fieldErrors.password && <FieldError id="password-error">{fieldErrors.password}</FieldError>}
+          </Field>
 
-        <CheckRow>
-          <CheckInput
-            type="checkbox"
-            checked={acceptsTerms}
-            onChange={(e) => setAcceptsTerms(e.target.checked)}
-            required
-          />
-          <CheckText>
-            Acepto los <a href="/terms" target="_blank" rel="noreferrer">Términos y Condiciones</a> y la{' '}
-            <a href="/privacy" target="_blank" rel="noreferrer">Política de Privacidad</a>
-          </CheckText>
-        </CheckRow>
+          <Field>
+            <Input
+              type="date"
+              value={dateOfBirth}
+              onChange={(e) => { setDateOfBirth(e.target.value); if (fieldErrors.dateOfBirth) setFieldErrors(f => ({...f, dateOfBirth: ''})); }}
+              required
+              aria-invalid={!!fieldErrors.dateOfBirth}
+              aria-describedby={fieldErrors.dateOfBirth ? 'dob-error' : undefined}
+              autoComplete="bday"
+            />
+            {fieldErrors.dateOfBirth && <FieldError id="dob-error">{fieldErrors.dateOfBirth}</FieldError>}
+          </Field>
 
-        <Button type="submit">Registrarse</Button>
-        <LinkButton type="button" onClick={() => history.push('/login')}>
-          Volver al Login
-        </LinkButton>
-      </Form>
-    </Container>
+          <CheckRow>
+            <CheckInput type="checkbox" checked={isOver18} onChange={(e) => setIsOver18(e.target.checked)} required />
+            <CheckText>Soy mayor de 18 años</CheckText>
+          </CheckRow>
+
+          <CheckRow>
+            <CheckInput type="checkbox" checked={acceptsTerms} onChange={(e) => setAcceptsTerms(e.target.checked)} required />
+            <CheckText>
+              Acepto los <a href="/terms" target="_blank" rel="noreferrer">Términos y Condiciones</a> y la{' '}
+              <a href="/privacy" target="_blank" rel="noreferrer">Política de Privacidad</a>
+            </CheckText>
+          </CheckRow>
+
+          <Button type="submit">Registrarse</Button>
+
+          <LinkButton type="button" onClick={() => history.push('/login')}>
+            <FontAwesomeIcon icon={faHouse} style={{ marginRight:8 }} />
+            Volver al Login
+          </LinkButton>
+        </Form>
+      </Container>
+    </>
   );
 };
 
