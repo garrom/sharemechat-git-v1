@@ -100,6 +100,14 @@ public class GlobalExceptionHandler {
         ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Forbidden", ex.getMessage(), req.getRequestURI());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
+    // 400 – Nickname en uso
+    @ExceptionHandler(NicknameAlreadyInUseException.class)
+    public ResponseEntity<ApiError> handleNicknameInUse(NicknameAlreadyInUseException ex, HttpServletRequest req) {
+        log.warn("Nickname en uso: {}", ex.getMessage());
+        ApiError body = new ApiError(HttpStatus.BAD_REQUEST.value(), "Bad Request", ex.getMessage(), req.getRequestURI());
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
 
 
 }

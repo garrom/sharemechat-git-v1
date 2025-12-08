@@ -6,6 +6,7 @@ import com.sharemechat.entity.LoginResponse;
 import com.sharemechat.entity.Unsubscribe;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailAlreadyInUseException;
+import com.sharemechat.exception.NicknameAlreadyInUseException;
 import com.sharemechat.exception.UnderageModelException;
 import com.sharemechat.exception.UserNotFoundException;
 import com.sharemechat.repository.ClientDocumentRepository;
@@ -82,6 +83,10 @@ public class UserService {
             throw new EmailAlreadyInUseException("El email ya está en uso");
         }
 
+        if (userRepository.existsByNickname(nickname)) {
+            throw new NicknameAlreadyInUseException("Ese nickname ya existe, debes elegir otro.");
+        }
+
         User user = new User();
         user.setEmail(email);
         user.setNickname(nickname);
@@ -134,6 +139,10 @@ public class UserService {
 
         if (userRepository.existsByEmail(email)) {
             throw new EmailAlreadyInUseException("El email ya está en uso");
+        }
+
+        if (userRepository.existsByNickname(nickname)) {
+            throw new NicknameAlreadyInUseException("Ese nickname ya existe, debes elegir otro.");
         }
 
         // --- Mayoría de edad ---

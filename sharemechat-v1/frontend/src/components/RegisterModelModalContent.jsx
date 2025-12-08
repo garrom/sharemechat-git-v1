@@ -1,125 +1,116 @@
-import React, { useState } from 'react';
-import styled from 'styled-components';
-import {
-  Form as RegForm, Title, Input, Button, LinkButton,
-  Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText
-} from '../styles/public-styles/RegisterClientModelStyles';
+// src/modals/RegisterModelModalContent.jsx
+import React,{useState}from'react';
+import styled from'styled-components';
+import{Form as RegForm,Title,Input,Button,LinkButton,Error as ErrorText,Field,FieldError,CheckRow,CheckInput,CheckText}from'../styles/public-styles/RegisterClientModelStyles';
+import { useAppModals } from './useAppModals';
 
-const InlineForm = styled(RegForm)`
-  background: transparent;
-  border: 0;
-  box-shadow: none;
-  margin: 0;
-  padding: 0;
+const InlineForm=styled(RegForm)`
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  margin:0;
+  padding:0;
 `;
 
-const RegisterModelModalContent = ({ onClose, onBack }) => {
-  const [nickname, setNickname] = useState('');
-  const [email, setEmail]       = useState('');
-  const [password, setPassword] = useState('');
-  const [dateOfBirth, setDateOfBirth] = useState('');
-  const [isOver18, setIsOver18] = useState(false);
-  const [acceptsTerms, setAcceptsTerms] = useState(false);
-  const [error, setError]       = useState('');
-  const [fieldErrors, setFieldErrors] = useState({ nickname:'', email:'', password:'', dateOfBirth:'' });
-  const [loading, setLoading] = useState(false);
+const RegisterModelModalContent=({onClose,onBack})=>{
+  const { alert } = useAppModals()
+  const[nickname,setNickname]=useState('');
+  const[email,setEmail]=useState('');
+  const[password,setPassword]=useState('');
+  const[dateOfBirth,setDateOfBirth]=useState('');
+  const[isOver18,setIsOver18]=useState(false);
+  const[acceptsTerms,setAcceptsTerms]=useState(false);
+  const[error,setError]=useState('');
+  const[fieldErrors,setFieldErrors]=useState({nickname:'',email:'',password:'',dateOfBirth:''});
+  const[loading,setLoading]=useState(false);
 
-  const validate = () => {
-    const fe = { nickname:'', email:'', password:'', dateOfBirth:'' };
-    if (!nickname.trim()) fe.nickname = 'El apodo (nickname) es obligatorio.';
-    if (!email.trim()) fe.email = 'El email es obligatorio.';
-    else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = 'Formato de email no válido.';
-    if (password.length < 8) fe.password = 'La contraseña debe tener al menos 8 caracteres';
-    if (!dateOfBirth) fe.dateOfBirth = 'La fecha de nacimiento es obligatoria.';
+  const validate=()=>{
+    const fe={nickname:'',email:'',password:'',dateOfBirth:''};
+    if(!nickname.trim())fe.nickname='El apodo (nickname) es obligatorio.';
+    if(!email.trim())fe.email='El email es obligatorio.';else if(!/^\S+@\S+\.\S+$/.test(email))fe.email='Formato de email no válido.';
+    if(password.length<8)fe.password='La contraseña debe tener al menos 8 caracteres';
+    if(!dateOfBirth)fe.dateOfBirth='La fecha de nacimiento es obligatoria.';
     setFieldErrors(fe);
-    return !fe.nickname && !fe.email && !fe.password && !fe.dateOfBirth;
+    return!fe.nickname&&!fe.email&&!fe.password&&!fe.dateOfBirth;
   };
 
-  const handleRegister = async (e) => {
-    e.preventDefault();
-    if (loading) return;
+  const handleRegister=async(e)=>{
+    if(e&&e.preventDefault)e.preventDefault();
+    if(loading)return;
     setError('');
-    if (!validate()) return;
-    if (!isOver18)   return setError('Debes confirmar que eres mayor de 18 años.');
-    if (!acceptsTerms) return setError('Debes aceptar los términos y condiciones.');
+    if(!validate())return;
+    if(!isOver18)return setError('Debes confirmar que eres mayor de 18 años.');
+    if(!acceptsTerms)return setError('Debes aceptar los términos y condiciones.');
 
-    const registerData = {
-      nickname: nickname.trim(),
-      email,
-      password,
-      dateOfBirth,
-      confirAdult: isOver18,
-      acceptedTerm: acceptsTerms,
-    };
+    const registerData={nickname:nickname.trim(),email,password,dateOfBirth,confirAdult:isOver18,acceptedTerm:acceptsTerms};
 
     setLoading(true);
-    try {
-      const response = await fetch('/api/users/register/model', {
-        method:'POST',
-        headers:{ 'Content-Type':'application/json' },
-        body: JSON.stringify(registerData),
-      });
-
-      if (!response.ok) {
-        let errorMessage = `Error en el registro: ${response.status} ${response.statusText}`;
-        try {
-          const responseText = await response.text();
-          try {
-            const err = JSON.parse(responseText);
-            errorMessage = err.message || err.error || responseText || errorMessage;
-          } catch { errorMessage = responseText || errorMessage; }
-        } catch {}
+    try{
+      const response=await fetch('/api/users/register/model',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(registerData)});
+      if(!response.ok){
+        let errorMessage=`Error en el registro: ${response.status} ${response.statusText}`;
+        try{
+          const responseText=await response.text();
+          try{
+            const err=JSON.parse(responseText);
+            errorMessage=err.message||err.error||responseText||errorMessage;
+          }catch{errorMessage=responseText||errorMessage;}
+        }catch{}
         throw new Error(errorMessage);
       }
-
-      alert('Registro exitoso');
+      await alert({
+        title: 'Registro completado',
+        message: 'Tu cuenta de usuario se ha creado correctamente.',
+        variant: 'success',
+        size: 'sm',
+      });
       if (onClose) onClose();
-    } catch (err) {
-      setError(err.message || 'Error de red');
-      console.error('Error en el registro:', err);
-    } finally {
+
+    }catch(err){
+      setError(err.message||'Error de red');
+      console.error('Error en el registro:',err);
+    }finally{
       setLoading(false);
     }
   };
 
-  return (
-    <InlineForm onSubmit={handleRegister} noValidate>
-      <Title>Registro </Title>
-      {error && <ErrorText role="alert">{error}</ErrorText>}
+  return(
+    <InlineForm noValidate>
+      <Title>Registro</Title>
+      {error&&<ErrorText role="alert">{error}</ErrorText>}
 
       <Field>
-        <Input type="text" value={nickname} onChange={(e)=>{setNickname(e.target.value);if(fieldErrors.nickname)setFieldErrors(f=>({...f,nickname:''}));}} placeholder="Apodo / Nickname" required aria-invalid={!!fieldErrors.nickname} aria-describedby={fieldErrors.nickname?'nick-error':undefined} autoComplete="nickname" />
-        {fieldErrors.nickname && <FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
+        <Input type="text" value={nickname} onChange={e=>{setNickname(e.target.value);if(fieldErrors.nickname)setFieldErrors(f=>({...f,nickname:''}));}} placeholder="Apodo / Nickname" required aria-invalid={!!fieldErrors.nickname} aria-describedby={fieldErrors.nickname?'nick-error':undefined} autoComplete="nickname"/>
+        {fieldErrors.nickname&&<FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
       </Field>
 
       <Field>
-        <Input type="email" value={email} onChange={(e)=>{setEmail(e.target.value);if(fieldErrors.email)setFieldErrors(f=>({...f,email:''}));}} placeholder="Email" required aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email?'email-error':undefined} autoComplete="email" />
-        {fieldErrors.email && <FieldError id="email-error">{fieldErrors.email}</FieldError>}
+        <Input type="email" value={email} onChange={e=>{setEmail(e.target.value);if(fieldErrors.email)setFieldErrors(f=>({...f,email:''}));}} placeholder="Email" required aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email?'email-error':undefined} autoComplete="email"/>
+        {fieldErrors.email&&<FieldError id="email-error">{fieldErrors.email}</FieldError>}
       </Field>
 
       <Field>
-        <Input type="password" value={password} onChange={(e)=>{setPassword(e.target.value);if(fieldErrors.password)setFieldErrors(f=>({...f,password:''}));}} placeholder="Contraseña (mínimo 8 caracteres)" required aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password?'password-error':undefined} autoComplete="new-password" />
-        {fieldErrors.password && <FieldError id="password-error">{fieldErrors.password}</FieldError>}
+        <Input type="password" value={password} onChange={e=>{setPassword(e.target.value);if(fieldErrors.password)setFieldErrors(f=>({...f,password:''}));}} placeholder="Contraseña (mínimo 8 caracteres)" required aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password?'password-error':undefined} autoComplete="new-password"/>
+        {fieldErrors.password&&<FieldError id="password-error">{fieldErrors.password}</FieldError>}
       </Field>
 
       <Field>
-        <Input type="date" value={dateOfBirth} onChange={(e)=>{setDateOfBirth(e.target.value);if(fieldErrors.dateOfBirth)setFieldErrors(f=>({...f,dateOfBirth:''}));}} required aria-invalid={!!fieldErrors.dateOfBirth} aria-describedby={fieldErrors.dateOfBirth?'dob-error':undefined} autoComplete="bday" />
-        {fieldErrors.dateOfBirth && <FieldError id="dob-error">{fieldErrors.dateOfBirth}</FieldError>}
+        <Input type="date" value={dateOfBirth} onChange={e=>{setDateOfBirth(e.target.value);if(fieldErrors.dateOfBirth)setFieldErrors(f=>({...f,dateOfBirth:''}));}} required aria-invalid={!!fieldErrors.dateOfBirth} aria-describedby={fieldErrors.dateOfBirth?'dob-error':undefined} autoComplete="bday"/>
+        {fieldErrors.dateOfBirth&&<FieldError id="dob-error">{fieldErrors.dateOfBirth}</FieldError>}
       </Field>
 
       <CheckRow>
-        <CheckInput type="checkbox" checked={isOver18} onChange={(e)=>setIsOver18(e.target.checked)} />
+        <CheckInput type="checkbox" checked={isOver18} onChange={e=>setIsOver18(e.target.checked)}/>
         <CheckText>Soy mayor de 18 años</CheckText>
       </CheckRow>
 
       <CheckRow>
-        <CheckInput type="checkbox" checked={acceptsTerms} onChange={(e)=>setAcceptsTerms(e.target.checked)} />
+        <CheckInput type="checkbox" checked={acceptsTerms} onChange={e=>setAcceptsTerms(e.target.checked)}/>
         <CheckText>Acepto los <a href="/terms" target="_blank" rel="noreferrer">Términos y Condiciones</a> y la <a href="/privacy" target="_blank" rel="noreferrer">Política de Privacidad</a></CheckText>
       </CheckRow>
 
-      <Button type="submit" disabled={loading}>{loading ? 'Registrando…' : 'Registrarse'}</Button>
-
-      {onBack && <LinkButton type="button" onClick={onBack}>Volver</LinkButton>}
+      <Button type="button" disabled={loading} onClick={handleRegister}>{loading?'Registrando…':'Registrarse'}</Button>
+      {onBack&&<LinkButton type="button" onClick={onBack}>Volver</LinkButton>}
     </InlineForm>
   );
 };

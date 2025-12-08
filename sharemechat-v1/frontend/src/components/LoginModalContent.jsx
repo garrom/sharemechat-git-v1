@@ -1,4 +1,3 @@
-// src/components/LoginModalContent.jsx
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import RegisterClientModalContent from './RegisterClientModalContent';
@@ -14,7 +13,7 @@ import UserTypes from '../constants/UserTypes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 
-const LoginModalContent = ({ onClose }) => {
+const LoginModalContent = ({ onClose, onLoginSuccess }) => {
   // vistas: login | register-gender | register-client | register-model
   const [view, setView] = useState('login');
   const [email, setEmail] = useState('');
@@ -78,15 +77,25 @@ const LoginModalContent = ({ onClose }) => {
 
       if (user.role === Roles.ADMIN) {
         safeNavigate('/dashboard-admin');
+        if (onLoginSuccess) onLoginSuccess();
+        return;
       } else if (user.role === Roles.CLIENT) {
         safeNavigate('/client');
+        if (onLoginSuccess) onLoginSuccess();
+        return;
       } else if (user.role === Roles.MODEL) {
         safeNavigate('/model');
+        if (onLoginSuccess) onLoginSuccess();
+        return;
       } else if (user.role === Roles.USER) {
         if (user.userType === UserTypes.FORM_CLIENT) {
           safeNavigate('/dashboard-user-client');
+          if (onLoginSuccess) onLoginSuccess();
+          return;
         } else if (user.userType === UserTypes.FORM_MODEL) {
           safeNavigate('/dashboard-user-model');
+          if (onLoginSuccess) onLoginSuccess();
+          return;
         } else {
           setError('Tipo de usuario no válido');
         }

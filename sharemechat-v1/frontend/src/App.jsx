@@ -27,16 +27,14 @@ import Footer from './components/Footer';
 import CookieBanner from './components/CookieBanner';
 
 // Wrapper para rutas públicas que requieren age-gate/TyC (guest/no logueado)
-const PublicWithGuestGate = ({ component: Component, ...rest }) => (
-  <Route {...rest} render={(props) => (<GuestConsentGate><Component {...props} /></GuestConsentGate>)} />
-);
+const PublicWithGuestGate = ({ component: Component, ...rest }) => (<Route {...rest} render={(props) => (<GuestConsentGate><Component {...props} /></GuestConsentGate>)} />);
 
 function App() {
   return (
-    <ModalProvider>
-      <>
-        <GlobalTypography />
-        <Router>
+    <Router>
+      <ModalProvider>
+        <>
+          <GlobalTypography />
           <Switch>
             {/* Públicas CON MODAL (age-gate/TyC):*/}
             <PublicWithGuestGate exact path="/" component={Home} />
@@ -72,9 +70,9 @@ function App() {
           {/* Footer siempre visible en todas las páginas */}
           <Footer />
           <CookieBanner />
-        </Router>
-      </>
-    </ModalProvider>
+        </>
+      </ModalProvider>
+    </Router>
   );
 }
 

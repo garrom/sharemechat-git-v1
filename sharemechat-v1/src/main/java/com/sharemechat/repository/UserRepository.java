@@ -13,5 +13,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     List<User> findByUserTypeAndVerificationStatus(String userType, String verificationStatus);
     List<User> findByVerificationStatusIsNotNull();
     List<User> findByVerificationStatus(String verificationStatus);
+    boolean existsByNickname(String nickname);
 
 }

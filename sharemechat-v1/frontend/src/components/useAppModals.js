@@ -1,4 +1,3 @@
-// src/components/useAppModals.js
 import { useCallback } from 'react';
 import styled from 'styled-components';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -163,7 +162,6 @@ export const useAppModals = () => {
     });
   }, [openModal, closeModal, alert]);
 
-
   const openLoginModal = useCallback(() => {
     const cameFromLoginRoute = location.pathname === '/login';
 
@@ -179,17 +177,14 @@ export const useAppModals = () => {
       bodyKind: 'default',
       hideChrome: true,
       onClose: handleClose,
-      content: <LoginModalContent onClose={handleClose} />,
+      content: <LoginModalContent onClose={handleClose} onLoginSuccess={closeModal} />,
       actions: [],
     }).then(() => {});
   }, [openModal, closeModal, history, location.pathname]);
 
-
   return {
-    // Exponemos helpers base
     alert,
     confirm,
-    // modales de alto nivel:
     openRemoveFavoriteConfirm,
     openCallOfflineNotice,
     openPurchaseModal,
