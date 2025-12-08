@@ -68,16 +68,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    // 500 – Cualquier otro error no controlado
-    @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleOther(Exception ex, HttpServletRequest req) {
-        // Logueamos el stack una sola vez a nivel ERROR (útil para investigar)
-        log.error("Error no controlado en {}: {}", req.getRequestURI(), ex.getMessage(), ex);
-        ApiError body = new ApiError(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Internal Server Error",
-                "Ha ocurrido un error interno. Inténtalo de nuevo.", req.getRequestURI());
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
-    }
-
     // 409 – Ya son favoritos mutuos
     @ExceptionHandler(AlreadyFavoritesException.class)
     public ResponseEntity<ApiError> handleAlreadyFavorites(AlreadyFavoritesException ex, HttpServletRequest req) {
@@ -94,12 +84,14 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(body);
     }
 
+    // 403 – No son favoritos mutuos
     @ExceptionHandler(NotMutualFavoritesException.class)
     public ResponseEntity<ApiError> handleNotMutualFavorites(NotMutualFavoritesException ex, HttpServletRequest req) {
         log.warn("Llamada bloqueada por favoritos no aceptados: {}", ex.getMessage());
         ApiError body = new ApiError(HttpStatus.FORBIDDEN.value(), "Forbidden", ex.getMessage(), req.getRequestURI());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
+
     // 400 – Nickname en uso
     @ExceptionHandler(NicknameAlreadyInUseException.class)
     public ResponseEntity<ApiError> handleNicknameInUse(NicknameAlreadyInUseException ex, HttpServletRequest req) {
@@ -108,6 +100,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
+    // 503 – Home sin featured models precargadas
+    @ExceptionHandler(HomeFeaturedEmptyException.class)
+    public ResponseEntity<ApiError> handleHomeFeaturedEmpty(HomeFeaturedEmptyException ex, HttpServletRequest req) {
+        log.warn("Home sin modelos destacados: {}", ex.getMessage());
+        ApiError body = new ApiError(
+                HttpStatus.SERVICE_UNAVAILABLE.value(),
+                "Service Unavailable",
+                ex.getMessage(),
+                req.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(body);
+    }
 
+    // 500 – Cualquier otro error no controlado
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiError> handleOther(Exception ex, HttpServletRequest req) {
+        log.error("Error no controlado en {}: {}", req.getRequestURI(), ex.getMessage(), ex);
+        ApiError body = new ApiError(
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal Server Error",
+                "Ha ocurrido un error interno. Inténtalo de nuevo.",
+                req.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
 
 }

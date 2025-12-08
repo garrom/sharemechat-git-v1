@@ -146,7 +146,6 @@ export const StyledThumbsGrid = styled.div`
     overflow: hidden;
     border: 2px solid var(--c-thumb-border);
     background: var(--c-black);
-    filter: blur(3px);
   }
 
   @media (max-width: 768px) {
@@ -251,6 +250,7 @@ export const CookieBar = styled.div`
   box-sizing:border-box;
   font-size:0.85rem;
 `;
+
 export const CookieText = styled.p`
   flex:1 1 320px;
   margin:0;
@@ -259,6 +259,7 @@ export const CookieText = styled.p`
   strong{font-weight:700;}
   a{color:#ffffff;text-decoration:underline;}
 `;
+
 export const CookieActions = styled.div`
   display:flex;
   flex-wrap:wrap;
@@ -266,6 +267,7 @@ export const CookieActions = styled.div`
   justify-content:flex-end;
   gap:10px;
 `;
+
 export const CookieBtnSecondary = styled.button`
   appearance:none;
   border:1px solid #ffffff;
@@ -280,6 +282,7 @@ export const CookieBtnSecondary = styled.button`
   transition:background .16s ease,color .16s ease,border-color .16s ease;
   &:hover{background:#ffffff10;}
 `;
+
 export const CookieBtnPrimary = styled.button`
   appearance:none;
   border:none;
@@ -295,6 +298,7 @@ export const CookieBtnPrimary = styled.button`
   &:hover{background:#f3f3f3;box-shadow:0 4px 14px rgba(0,0,0,0.35);}
   &:active{transform:translateY(1px);}
 `;
+
 export const CookieLinkPlain = styled.button`
   appearance:none;
   border:none;

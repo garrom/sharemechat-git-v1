@@ -1,5 +1,5 @@
 // src/pages/subpages/PerfilClient.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 
 // Navbar unificado
@@ -79,6 +79,8 @@ const PerfilClient = () => {
   const [picFile, setPicFile] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [deleting, setDeleting] = useState(false);
+
+  const picInputRef = useRef(null);
 
   useEffect(() => {
     if (!token) { history.push('/login'); return; }
@@ -415,19 +417,19 @@ const PerfilClient = () => {
                   )}
 
                   <PhotoActions>
-                    {/* input oculto */}
                     <FileInput
                       id="client-pic"
                       type="file"
                       accept="image/*"
+                      ref={picInputRef}
                       onChange={(e) => setPicFile(e.target.files?.[0] || null)}
                     />
-                    {/* botón visual desde ButtonStyles, envuelto en label */}
-                    <label htmlFor="client-pic">
-                      <ProfileSecondaryButton type="button">
-                        Seleccionar archivo
-                      </ProfileSecondaryButton>
-                    </label>
+                    <ProfileSecondaryButton
+                      type="button"
+                      onClick={() => picInputRef.current && picInputRef.current.click()}
+                    >
+                      Seleccionar archivo
+                    </ProfileSecondaryButton>
 
                     <ProfilePrimaryButton
                       type="button"

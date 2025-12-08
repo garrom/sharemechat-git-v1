@@ -356,12 +356,18 @@ export const StyledVideoArea = styled.div`
   margin: 0 auto;
   padding: 0px;
 
-
   @media (max-width: 768px) {
     min-height: 0;
     height: 100%;
     max-height: 100%;
   }
+
+  @media (min-width: 1400px) {
+    max-width: 1280px;
+    height: calc(100vh - 120px);
+    max-height: calc(100vh - 120px);
+  }
+
 `;
 
 export const StyledRemoteVideo = styled.div`
@@ -684,12 +690,9 @@ export const StyledPane = styled.section`
   flex-direction: column;
   justify-content: flex-start;
   align-items: center;
-
   @media (min-width: 769px) {
     justify-content: center;
   }
-
-
   &[data-side="left"] {
     background: ${colors.backsolid};
     border: none;
@@ -698,12 +701,14 @@ export const StyledPane = styled.section`
       display: none;
     }
   }
-
   &[data-side="right"] {
     background: ${colors.backsolid};
     border: none;
   }
-
+  &[data-side="right"][data-view="thumbs"] {
+    align-items: stretch;
+    overflow-y: auto;
+  }
   /* En móvil */
   @media (max-width: 768px) {
     background: transparent;
@@ -740,6 +745,7 @@ export const StyledSearchHint = styled.div`
   color: #e9ecef;
 `;
 
+
 export const StyledThumbsGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(3, minmax(80px, 1fr));
@@ -747,7 +753,14 @@ export const StyledThumbsGrid = styled.div`
   padding: 12px;
   width: 100%;
   box-sizing: border-box;
-
+  /* ESCRITORIO: 3x3 siempre visible dentro del viewport */
+  @media (min-width: 769px) {
+    max-width: 960px;
+    margin: 0 auto;
+    /* Altura fija relativa a la ventana: ajustalo */
+    //height: calc(100vh - 180px);
+    grid-auto-rows: 1fr;
+  }
   img,
   .thumb {
     display: block;
@@ -759,12 +772,12 @@ export const StyledThumbsGrid = styled.div`
     border: 2px solid var(--c-thumb-border);
     background: var(--c-black);
   }
-
   @media (max-width: 768px) {
     grid-template-columns: repeat(3, minmax(72px, 1fr));
     gap: 8px;
   }
 `;
+
 
 export const StyledPrimaryCta = styled.button`
   appearance: none;

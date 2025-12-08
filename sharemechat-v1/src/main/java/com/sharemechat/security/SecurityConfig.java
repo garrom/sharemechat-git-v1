@@ -39,6 +39,7 @@ public class SecurityConfig {
                         // PUBLIC
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/register/**", "/api/users/login").permitAll()
+                        .requestMatchers("/api/public/home/**").permitAll()
 
                         // NUEVO: eventos de consentimiento (guest)
                         .requestMatchers("/api/consent/**").permitAll()

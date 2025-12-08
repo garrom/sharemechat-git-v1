@@ -29,7 +29,7 @@ import {
   StyledSearchHint,
   StyledCallCardDesktop,
   StyledCallHeaderDesktop,
-  StyledCallFooterDesktop,
+  StyledCallFooterDesktop
 } from '../../styles/pages-styles/VideochatStyles';
 import {
   ButtonActivarCam,
@@ -141,7 +141,7 @@ export default function VideoChatRandomCliente(props) {
         </StyledPane>
 
         {/* PANE DERECHO (REMOTO + CONTROLES) */}
-        <StyledPane data-side="right" style={{ position:'relative' }}>
+        <StyledPane data-side="right" data-view={cameraActive ? 'call' : 'thumbs'} style={{ position:'relative' }}>
           {!cameraActive ? (
             <>
               {promoLoading && (
@@ -155,18 +155,22 @@ export default function VideoChatRandomCliente(props) {
                 </div>
               )}
               {promoVideos.length > 0 && (
-                <StyledThumbsGrid>
-                  {promoVideos.map((video, index) => (
-                    <button
-                      key={video.id}
-                      type="button"
-                      onClick={() => handleOpenPromo(index)}
-                      style={{ border:'none', padding:0, background:'transparent', cursor:'pointer' }}
-                    >
-                      <img className="thumb" src={video.thumb} alt={video.title || 'Vídeo modelo'} />
-                    </button>
-                  ))}
-                </StyledThumbsGrid>
+                <div style={{position:'absolute',top:'50%',left:0,right:0,transform:'translateY(-50%)',display:'flex',justifyContent:'center'}}>
+                  <div style={{width:'100%',maxWidth:420}}>
+                    <StyledThumbsGrid>
+                      {promoVideos.slice(0,6).map((video,index)=>(
+                        <button
+                          key={video.id}
+                          type="button"
+                          onClick={()=>handleOpenPromo(index)}
+                          style={{border:'none',padding:0,background:'transparent',cursor:'pointer'}}
+                        >
+                          <img className="thumb" src={video.thumb} alt={video.title||'Vídeo modelo'}/>
+                        </button>
+                      ))}
+                    </StyledThumbsGrid>
+                  </div>
+                </div>
               )}
               {!promoLoading && !promoError && promoVideos.length === 0 && (
                 <div style={{ color:'#e9ecef', padding:'8px 12px', fontSize:'0.9rem' }}>

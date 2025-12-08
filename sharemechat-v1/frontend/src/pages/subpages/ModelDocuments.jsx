@@ -1,5 +1,5 @@
 // src/pages/subpages/ModelDocuments.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 
 import {
@@ -68,6 +68,11 @@ const ModelDocuments = () => {
   const [deletingField, setDeletingField] = useState(null);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
+
+  // refs para los 3 inputs file
+  const idFrontInputRef = useRef(null);
+  const idBackInputRef = useRef(null);
+  const verifDocInputRef = useRef(null);
 
   const refreshDocs = async () => {
     setLoading(true);
@@ -336,13 +341,17 @@ const ModelDocuments = () => {
                     key={idFrontKey}
                     type="file"
                     accept="image/*"
+                    ref={idFrontInputRef}
                     onChange={(e) => setIdFrontFile(e.target.files?.[0] || null)}
                   />
-                  <label htmlFor="model-id-front">
-                    <ProfileSecondaryButton type="button">
-                      Seleccionar archivo
-                    </ProfileSecondaryButton>
-                  </label>
+                  <ProfileSecondaryButton
+                    type="button"
+                    onClick={() =>
+                      idFrontInputRef.current && idFrontInputRef.current.click()
+                    }
+                  >
+                    Seleccionar archivo
+                  </ProfileSecondaryButton>
 
                   <ProfilePrimaryButton
                     type="button"
@@ -386,13 +395,17 @@ const ModelDocuments = () => {
                     key={idBackKey}
                     type="file"
                     accept="image/*"
+                    ref={idBackInputRef}
                     onChange={(e) => setIdBackFile(e.target.files?.[0] || null)}
                   />
-                  <label htmlFor="model-id-back">
-                    <ProfileSecondaryButton type="button">
-                      Seleccionar archivo
-                    </ProfileSecondaryButton>
-                  </label>
+                  <ProfileSecondaryButton
+                    type="button"
+                    onClick={() =>
+                      idBackInputRef.current && idBackInputRef.current.click()
+                    }
+                  >
+                    Seleccionar archivo
+                  </ProfileSecondaryButton>
 
                   <ProfilePrimaryButton
                     type="button"
@@ -439,13 +452,17 @@ const ModelDocuments = () => {
                     key={verifDocKey}
                     type="file"
                     accept="image/*,application/pdf"
+                    ref={verifDocInputRef}
                     onChange={(e) => setVerifDocFile(e.target.files?.[0] || null)}
                   />
-                  <label htmlFor="model-verific-doc">
-                    <ProfileSecondaryButton type="button">
-                      Seleccionar archivo
-                    </ProfileSecondaryButton>
-                  </label>
+                  <ProfileSecondaryButton
+                    type="button"
+                    onClick={() =>
+                      verifDocInputRef.current && verifDocInputRef.current.click()
+                    }
+                  >
+                    Seleccionar archivo
+                  </ProfileSecondaryButton>
 
                   <ProfilePrimaryButton
                     type="button"

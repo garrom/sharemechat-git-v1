@@ -138,7 +138,12 @@ export const ButtonRow = styled.div`
 /* ================== ARCHIVOS (INPUT / LABEL / NOMBRE) ================== */
 
 export const FileInput = styled.input`
-  display: none;
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
 `;
 
 // OJO: ya no se usa como “botón” en PerfilClient, solo como helper legacy.

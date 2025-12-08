@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+// src/pages/subpages/PerfilModel.jsx
+import React, { useEffect, useState, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 
 import {
@@ -88,6 +89,10 @@ const PerfilModel = () => {
   const [deletingVideo, setDeletingVideo] = useState(false);
   const [picKey, setPicKey] = useState(0);
   const [videoKey, setVideoKey] = useState(0);
+
+  // refs para disparar el click del input oculto
+  const picInputRef = useRef(null);
+  const videoInputRef = useRef(null);
 
   const loadDocs = async () => {
     try {
@@ -468,13 +473,16 @@ const PerfilModel = () => {
                       id="model-pic"
                       type="file"
                       accept="image/*"
+                      ref={picInputRef}
                       onChange={(e) => setPicFile(e.target.files?.[0] || null)}
                     />
-                    <label htmlFor="model-pic">
-                      <ProfileSecondaryButton type="button">
-                        Seleccionar archivo
-                      </ProfileSecondaryButton>
-                    </label>
+
+                    <ProfileSecondaryButton
+                      type="button"
+                      onClick={() => picInputRef.current && picInputRef.current.click()}
+                    >
+                      Seleccionar archivo
+                    </ProfileSecondaryButton>
 
                     <ProfilePrimaryButton
                       type="button"
@@ -529,13 +537,16 @@ const PerfilModel = () => {
                       id="model-video"
                       type="file"
                       accept="video/*"
+                      ref={videoInputRef}
                       onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
                     />
-                    <label htmlFor="model-video">
-                      <ProfileSecondaryButton type="button">
-                        Seleccionar archivo
-                      </ProfileSecondaryButton>
-                    </label>
+
+                    <ProfileSecondaryButton
+                      type="button"
+                      onClick={() => videoInputRef.current && videoInputRef.current.click()}
+                    >
+                      Seleccionar archivo
+                    </ProfileSecondaryButton>
 
                     <ProfilePrimaryButton
                       type="button"
