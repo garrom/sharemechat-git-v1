@@ -1,3 +1,4 @@
+// src/main/java/com/sharemechat/entity/HomeFeaturedModel.java
 package com.sharemechat.entity;
 
 import jakarta.persistence.*;
@@ -29,17 +30,17 @@ public class HomeFeaturedModel {
     @Column(name = "snapshot_time", nullable = false)
     private LocalDateTime snapshotTime;
 
-    @Column(name = "active", nullable = false)
-    private Boolean active = true;
-
     @PrePersist
     public void prePersist() {
-        snapshotTime = LocalDateTime.now();
+        if (snapshotTime == null) {
+            snapshotTime = LocalDateTime.now();
+        }
     }
 
     public HomeFeaturedModel() {}
 
     public Long getId() { return id; }
+
     public Long getModelId() { return modelId; }
     public void setModelId(Long modelId) { this.modelId = modelId; }
 
@@ -56,7 +57,5 @@ public class HomeFeaturedModel {
     public void setVideoUrl(String videoUrl) { this.videoUrl = videoUrl; }
 
     public LocalDateTime getSnapshotTime() { return snapshotTime; }
-
-    public Boolean getActive() { return active; }
-    public void setActive(Boolean active) { this.active = active; }
+    public void setSnapshotTime(LocalDateTime snapshotTime) { this.snapshotTime = snapshotTime; }
 }

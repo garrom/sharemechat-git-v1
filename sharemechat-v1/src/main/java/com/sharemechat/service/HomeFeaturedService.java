@@ -1,3 +1,4 @@
+// src/main/java/com/sharemechat/service/HomeFeaturedService.java
 package com.sharemechat.service;
 
 import com.sharemechat.dto.HomeFeaturedDTO;
@@ -41,8 +42,8 @@ public class HomeFeaturedService {
     @Transactional
     public void rebuildHomeFeatured() {
 
-        // En vez de borrar, DESACTIVAMOS las filas activas para no romper histórico
-        homeRepo.deactivateAllActive();
+        // 1) Borramos todo el snapshot anterior
+        homeRepo.deleteAllInBatch();
 
         int topCount = (int) (TOTAL_HOME_MODELS * 0.5);  // ~50%
         int newCount = (int) (TOTAL_HOME_MODELS * 0.3);  // ~30%
@@ -104,7 +105,7 @@ public class HomeFeaturedService {
         int pos = 1;
         for (ModelTeaserDTO dto : finalList) {
 
-            // 🔒 BLINDAJE: si no hay avatar, no intentamos insertar (la columna es NOT NULL)
+            // BLINDAJE: si no hay avatar, no intentamos insertar (la columna es NOT NULL)
             if (dto.getAvatarUrl() == null || dto.getAvatarUrl().trim().isEmpty()) {
                 continue;
             }
@@ -115,8 +116,6 @@ public class HomeFeaturedService {
             h.setVideoUrl(dto.getVideoUrl());
             h.setSourceType(resolveSource(dto, finalTop, finalNew));
             h.setPosition(pos++);
-            h.setActive(true); // importante: activo para el índice (position, active)
-
             homeRepo.save(h);
         }
     }
@@ -141,7 +140,7 @@ public class HomeFeaturedService {
     // CONSUMO DESDE LA HOME (API)
     // ===========================
     public List<HomeFeaturedDTO> getHomeFeatured() {
-        var list = homeRepo.findActiveOrdered();
+        var list = homeRepo.findAllOrdered();
         if (list.isEmpty()) {
             throw new HomeFeaturedEmptyException();
         }
