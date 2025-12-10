@@ -33,7 +33,7 @@ export const StyledForm = styled.form`
   gap: 14px; /* mismo espacio entre todos los elementos del form */
 
   @media (max-width: ${bp.md}) {
-    max-width: 100%;
+    max-width: 92%;
     padding: 24px 20px;
     border-radius: 20px;
   }

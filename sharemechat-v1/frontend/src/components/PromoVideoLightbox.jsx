@@ -1,25 +1,11 @@
 // src/components/PromoVideoLightbox.jsx
-import React from 'react';
-import {
-  Backdrop,
-  Wrapper,
-  Dialog,
-  Header,
-  Title,
-  CloseBtn,
-  Body,
-} from '../styles/ModalStyles';
-import { BtnPromoNav } from '../styles/ButtonStyles';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
+import React from'react';
+import{Backdrop,Wrapper,Dialog,CloseBtn,Body}from'../styles/ModalStyles';
+import{BtnPromoNav,ButtonAddFavorite}from'../styles/ButtonStyles';
+import{FontAwesomeIcon}from'@fortawesome/react-fontawesome';
+import{faChevronLeft,faChevronRight,faUserPlus}from'@fortawesome/free-solid-svg-icons';
 
-export default function PromoVideoLightbox({
-  videos,
-  activeIndex,
-  onClose,
-  onPrev,
-  onNext,
-}) {
+export default function PromoVideoLightbox({videos,activeIndex,onClose,onPrev,onNext,onAddFavorite}){
   if(!Array.isArray(videos)||videos.length===0)return null;
   if(activeIndex==null||activeIndex<0||activeIndex>=videos.length)return null;
 
@@ -33,29 +19,48 @@ export default function PromoVideoLightbox({
   const canPrev=activeIndex>0;
   const canNext=activeIndex<videos.length-1;
 
+  const handleAddFavoriteClick=()=>{
+    if(typeof onAddFavorite==='function'){
+      onAddFavorite(video);
+    }
+  };
+
   return(
     <>
       <Backdrop onClick={handleBackdropClick}/>
       <Wrapper onClick={handleBackdropClick}>
         <Dialog data-variant="info" data-hidechrome="true" $size="xl" onClick={stopPropagation}>
-          <Header>
-            <Title>{video.title||'Vídeo de modelo'}</Title>
-            <CloseBtn onClick={onClose} aria-label="Cerrar vídeo">×</CloseBtn>
-          </Header>
-
           <Body data-kind="promo-video">
-            {/* CABECERA TIPO HOME: avatar + "Modelo destacada" + nombre */}
-            <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:12}}>
-              <img src={avatarSrc} alt={modelName} style={{width:56,height:56,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,255,255,0.4)'}}/>
-              <div style={{display:'flex',flexDirection:'column'}}>
-                <span style={{fontSize:'0.78rem',color:'#9ca3af',textTransform:'uppercase',letterSpacing:'.08em'}}>Modelo destacada</span>
-                <span style={{fontSize:'1.1rem',fontWeight:700,color:'#f9fafb'}}>{modelName}</span>
+            {/* CABECERA: avatar + textos + botón cerrar en la misma línea */}
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8,gap:12}}>
+              <div style={{display:'flex',alignItems:'center',gap:12}}>
+                <img src={avatarSrc} alt={modelName} style={{width:56,height:56,borderRadius:'50%',objectFit:'cover',border:'2px solid rgba(255,255,255,0.4)'}}/>
+                <div style={{display:'flex',flexDirection:'column'}}>
+                  <span style={{fontSize:'0.78rem',color:'#9ca3af',textTransform:'uppercase',letterSpacing:'.08em'}}>Modelo destacada</span>
+                  <span style={{fontSize:'1.1rem',fontWeight:700,color:'#f9fafb'}}>{modelName}</span>
+                </div>
               </div>
+              <CloseBtn onClick={onClose} aria-label="Cerrar vídeo">×</CloseBtn>
             </div>
 
-            {/* CONTENEDOR DEL VÍDEO GRANDE (formato vertical tipo TikTok) */}
+            {/* CONTENEDOR DEL VÍDEO GRANDE (vertical tipo TikTok) */}
             <div style={{position:'relative',margin:'0 auto',width:'min(420px, 100%)',height:'calc(100vh - 220px)',borderRadius:14,overflow:'hidden',background:'#000'}}>
-              {/* Botón anterior */}
+              {/* Botón favoritos flotando SOBRE el vídeo */}
+              {onAddFavorite&&(
+                <ButtonAddFavorite
+                  type="button"
+                  onClick={handleAddFavoriteClick}
+                  aria-label="Añadir a favoritos"
+                  title="Añadir a favoritos"
+                  style={{position:'absolute',right:12,top:12,zIndex:3,width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000'}}
+                  onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                  onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                >
+                  <FontAwesomeIcon icon={faUserPlus}/>
+                </ButtonAddFavorite>
+
+              )}
+
               {canPrev&&(
                 <BtnPromoNav
                   type="button"
@@ -67,7 +72,6 @@ export default function PromoVideoLightbox({
                 </BtnPromoNav>
               )}
 
-              {/* Botón siguiente */}
               {canNext&&(
                 <BtnPromoNav
                   type="button"
@@ -79,7 +83,6 @@ export default function PromoVideoLightbox({
                 </BtnPromoNav>
               )}
 
-              {/* Vídeo principal */}
               <video
                 src={video.src}
                 controls
@@ -89,7 +92,6 @@ export default function PromoVideoLightbox({
               />
             </div>
 
-            {/* PIE CON INFO EXTRA (de momento solo duración) */}
             <div style={{marginTop:10,fontSize:13,opacity:0.9,textAlign:'left'}}>
               {video.durationSec!=null&&(
                 <div><strong>Duración:</strong> {video.durationSec} s</div>

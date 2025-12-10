@@ -1537,8 +1537,10 @@ const DashboardClient = () => {
   };
 
 
-  const handleAddFavorite = async () => {
-    if (!currentModelId) {
+  const handleAddFavorite = async (explicitModelId) => {
+    const modelId = explicitModelId || currentModelId;
+
+    if (!modelId) {
       await alert({
         variant: 'warning',
         title: 'Favoritos',
@@ -1559,7 +1561,7 @@ const DashboardClient = () => {
     }
 
     try {
-      const res = await fetch(`/api/favorites/models/${currentModelId}`, {
+      const res = await fetch(`/api/favorites/models/${modelId}`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${tk}` },
       });
@@ -1592,7 +1594,7 @@ const DashboardClient = () => {
               invited: d?.invited,
               status: d?.status
             }))
-            .find(x => Number(x.id) === Number(currentModelId));
+            .find(x => Number(x.id) === Number(modelId));
 
           const inv = String(found?.invited || '').toLowerCase();
 
@@ -1647,6 +1649,7 @@ const DashboardClient = () => {
       });
     }
   };
+
 
 
   const openChatWith = async (peerId, displayName) => {

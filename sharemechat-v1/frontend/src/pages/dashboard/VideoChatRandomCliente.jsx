@@ -1,8 +1,8 @@
 // src/pages/dashboard/VideoChatRandomCliente.jsx
-import React,{useState,useEffect} from 'react';
-import {FontAwesomeIcon} from '@fortawesome/react-fontawesome';
-import {faUserPlus,faVideo,faPhoneSlash,faForward,faPaperPlane,faGift,faChevronLeft,faChevronRight} from '@fortawesome/free-solid-svg-icons';
-import {
+import React,{useState,useEffect}from'react';
+import{FontAwesomeIcon}from'@fortawesome/react-fontawesome';
+import{faUserPlus,faVideo,faPhoneSlash,faForward,faPaperPlane,faGift,faChevronLeft,faChevronRight}from'@fortawesome/free-solid-svg-icons';
+import{
   StyledCenterVideochat,
   StyledSplit2,
   StyledPane,
@@ -33,8 +33,8 @@ import {
   StyledTeaserInner,
   StyledTeaserCard,
   StyledTeaserMediaButton
-} from '../../styles/pages-styles/VideochatStyles';
-import {
+}from'../../styles/pages-styles/VideochatStyles';
+import{
   ButtonActivarCam,
   ButtonActivarCamMobile,
   ButtonBuscar,
@@ -43,8 +43,8 @@ import {
   ButtonRegalo,
   BtnSend,
   BtnHangup
-} from '../../styles/ButtonStyles';
-import PromoVideoLightbox from '../../components/PromoVideoLightbox';
+}from'../../styles/ButtonStyles';
+import PromoVideoLightbox from'../../components/PromoVideoLightbox';
 
 export default function VideoChatRandomCliente(props){
   const{
@@ -78,11 +78,11 @@ export default function VideoChatRandomCliente(props){
     handleActivateCamera,
   }=props;
 
-  const [promoVideos,setPromoVideos]=useState([]);
-  const [activePromoIndex,setActivePromoIndex]=useState(null);
-  const [promoLoading,setPromoLoading]=useState(false);
-  const [promoError,setPromoError]=useState('');
-  const [currentPromoIndex,setCurrentPromoIndex]=useState(0);
+  const[promoVideos,setPromoVideos]=useState([]);
+  const[activePromoIndex,setActivePromoIndex]=useState(null);
+  const[promoLoading,setPromoLoading]=useState(false);
+  const[promoError,setPromoError]=useState('');
+  const[currentPromoIndex,setCurrentPromoIndex]=useState(0);
 
   const fetchTeasers=async()=>{
     const token=localStorage.getItem('token');
@@ -125,6 +125,13 @@ export default function VideoChatRandomCliente(props){
 
   const currentPromo=promoVideos.length>0?promoVideos[Math.min(currentPromoIndex,promoVideos.length-1)]:null;
 
+  const handleAddFavoriteFromTeaser=promoVideo=>{
+    if(!promoVideo||!promoVideo.id)return;
+    if(typeof handleAddFavorite==='function'){
+      handleAddFavorite(promoVideo.id);
+    }
+  };
+
   return(
     <StyledCenterVideochat>
       <StyledSplit2 data-mode={!isMobile&&remoteStream?'full-remote':'split'}>
@@ -148,7 +155,7 @@ export default function VideoChatRandomCliente(props){
         </StyledPane>
 
         {/* PANE DERECHO (REMOTO + CONTROLES / TEASERS) */}
-        <StyledPane data-side="right" data-view={cameraActive?'call':'thumbs'} style={{position:'relative'}}>
+        <StyledPane data-side="right" data-view={cameraActive?'call':'thumbs'}style={{position:'relative'}}>
           {!cameraActive?(
             <>
               {promoLoading&&(
@@ -171,17 +178,19 @@ export default function VideoChatRandomCliente(props){
                         <FontAwesomeIcon icon={faChevronLeft}/>
                       </button>
 
-                      <StyledTeaserMediaButton type="button" onClick={()=>handleOpenPromo(currentPromoIndex)} title={currentPromo.title||'Ver teaser'}>
-                        <video src={currentPromo.src} autoPlay muted loop playsInline style={{width:'100%',height:'100%',display:'block',objectFit:'cover',background:'#000'}}/>
+                      <StyledTeaserMediaButton type="button"onClick={()=>handleOpenPromo(currentPromoIndex)}title={currentPromo.title||'Ver teaser'}>
+                        <video src={currentPromo.src}autoPlay muted loop playsInline style={{width:'100%',height:'100%',display:'block',objectFit:'cover',background:'#000'}}/>
                       </StyledTeaserMediaButton>
 
                       <div style={{position:'absolute',right:12,bottom:12,zIndex:4}}>
                         <ButtonAddFavorite
                           type="button"
-                          onClick={handleAddFavorite}
+                          onClick={()=>currentPromo&&handleAddFavorite(currentPromo.id)}
                           aria-label="Añadir a favoritos"
                           title="Añadir a favoritos"
-                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000'}}
+                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                          onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                          onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
                         >
                           <FontAwesomeIcon icon={faUserPlus}/>
                         </ButtonAddFavorite>
@@ -251,9 +260,9 @@ export default function VideoChatRandomCliente(props){
               {remoteStream&&!isMobile&&(
                 <StyledCallCardDesktop>
                   <StyledVideoArea style={{height:'calc(100vh - 180px)',maxHeight:'calc(100vh - 180px)'}}>
-                    <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'16px',overflow:'hidden',background:'#000'}}>
+                    <StyledRemoteVideo ref={remoteVideoWrapRef}style={{position:'relative',width:'100%',height:'100%',borderRadius:'16px',overflow:'hidden',background:'#000'}}>
                       <StyledVideoTitle>
-                        <StyledTitleAvatar src={modelAvatar||'/img/avatarChica.png'} alt=""/>
+                        <StyledTitleAvatar src={modelAvatar||'/img/avatarChica.png'}alt=""/>
                         {modelNickname||'Modelo'}
                         <button
                           type="button"
@@ -275,7 +284,7 @@ export default function VideoChatRandomCliente(props){
 
                       {!isMobile&&cameraActive&&(
                         <div style={{position:'absolute',top:0,right:0,width:'24%',maxWidth:260,height:'auto',overflow:'hidden',zIndex:8}}>
-                          <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+                          <video ref={localVideoRef}muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
                         </div>
                       )}
 
@@ -296,20 +305,20 @@ export default function VideoChatRandomCliente(props){
                             <>
                               <ButtonNext
                                 onClick={handleNext}
-                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'2px solid rgba(255,255,255,0.9)'}}
-                                onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.15)';}}
-                                onMouseLeave={e=>{e.currentTarget.style.background='transparent';}}
+                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                                onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                                onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
                               >
                                 <FontAwesomeIcon icon={faForward}/>
                               </ButtonNext>
 
                               <ButtonAddFavorite
                                 aria-label="Añadir a favoritos"
-                                onClick={handleAddFavorite}
+                                onClick={()=>handleAddFavorite&&handleAddFavorite()}
                                 title="Añadir a favoritos"
-                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'2px solid rgba(255,255,255,0.9)'}}
-                                onMouseEnter={e=>{e.currentTarget.style.background='rgba(255,255,255,0.15)';}}
-                                onMouseLeave={e=>{e.currentTarget.style.background='transparent';}}
+                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                                onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                                onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
                               >
                                 <FontAwesomeIcon icon={faUserPlus}/>
                               </ButtonAddFavorite>
@@ -329,7 +338,7 @@ export default function VideoChatRandomCliente(props){
                                   <StyledChatBubble $variant={variant}>
                                     {giftRenderReady&&(()=>{
                                       const src=getGiftIcon(msg.gift);
-                                      return src?<StyledGiftIcon src={src} alt=""/>:null;
+                                      return src?<StyledGiftIcon src={src}alt=""/>:null;
                                     })()}
                                   </StyledChatBubble>
                                 ):(
@@ -352,7 +361,7 @@ export default function VideoChatRandomCliente(props){
                       autoComplete="off"
                       onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();}}}
                     />
-                    <BtnSend type="button" onClick={sendChatMessage} aria-label="Enviar mensaje">
+                    <BtnSend type="button"onClick={sendChatMessage}aria-label="Enviar mensaje">
                       <FontAwesomeIcon icon={faPaperPlane}/>
                     </BtnSend>
                     <ButtonRegalo
@@ -368,8 +377,8 @@ export default function VideoChatRandomCliente(props){
                       <StyledGiftsPanel>
                         <StyledGiftGrid>
                           {gifts.map(g=>(
-                            <button key={g.id} onClick={()=>sendGiftMatch(g.id)}>
-                              <img src={g.icon} alt={g.name}/>
+                            <button key={g.id}onClick={()=>sendGiftMatch(g.id)}>
+                              <img src={g.icon}alt={g.name}/>
                               <div>{g.name}</div>
                               <div>{fmtEUR(g.cost)}</div>
                             </button>
@@ -383,11 +392,11 @@ export default function VideoChatRandomCliente(props){
               )}
 
               {/* MÓVIL: REMOTO + CHAT OVERLAY + PIP + CONTROLES */}
-              {remoteStream && isMobile && (
+              {remoteStream&&isMobile&&(
                 <StyledVideoArea>
-                  <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%', overflow:'hidden',background:'#000'}}>
+                  <StyledRemoteVideo ref={remoteVideoWrapRef}style={{position:'relative',width:'100%',overflow:'hidden',background:'#000'}}>
                     <StyledVideoTitle>
-                      <StyledTitleAvatar src={modelAvatar||'/img/avatarChica.png'} alt=""/>
+                      <StyledTitleAvatar src={modelAvatar||'/img/avatarChica.png'}alt=""/>
                       {modelNickname||'Modelo'}
                       <button
                         type="button"
@@ -409,24 +418,28 @@ export default function VideoChatRandomCliente(props){
 
                     {cameraActive&&(
                       <StyledLocalVideo>
-                        <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',objectFit:'cover',display:'block'}}/>
+                        <video ref={localVideoRef}muted autoPlay playsInline style={{width:'100%',objectFit:'cover',display:'block'}}/>
                       </StyledLocalVideo>
                     )}
 
                     {cameraActive&&(
                       <div style={{position:'absolute',left:0,right:0,bottom:'72px',zIndex:8,display:'flex',justifyContent:'center',alignItems:'center',gap:'12px'}}>
-                        <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
+                        <BtnHangup onClick={stopAll}title="Colgar"aria-label="Colgar">
                           <FontAwesomeIcon icon={faPhoneSlash}/>
                         </BtnHangup>
                         <ButtonNext
                           onClick={handleNext}
-                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'2px solid rgba(255,255,255,0.9)'}}
+                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                          onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                          onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
                         >
                           <FontAwesomeIcon icon={faForward}/>
                         </ButtonNext>
                         <ButtonAddFavorite
-                          onClick={handleAddFavorite}
-                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'2px solid rgba(255,255,255,0.9)'}}
+                          onClick={()=>handleAddFavorite&&handleAddFavorite()}
+                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                          onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                          onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
                         >
                           <FontAwesomeIcon icon={faUserPlus}/>
                         </ButtonAddFavorite>
@@ -444,7 +457,7 @@ export default function VideoChatRandomCliente(props){
                                 <StyledChatBubble $variant={variant}>
                                   {giftRenderReady&&(()=>{
                                     const src=getGiftIcon(msg.gift);
-                                    return src?<StyledGiftIcon src={src} alt=""/>:null;
+                                    return src?<StyledGiftIcon src={src}alt=""/>:null;
                                   })()}
                                 </StyledChatBubble>
                               ):(
@@ -465,7 +478,7 @@ export default function VideoChatRandomCliente(props){
         {/* LOCAL DESKTOP: PRE-CALL GRANDE */}
         {!isMobile&&cameraActive&&!remoteStream&&(
           <StyledLocalVideoDesktop data-has-remote="false">
-            <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
+            <video ref={localVideoRef}muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>
           </StyledLocalVideoDesktop>
         )}
       </StyledSplit2>
@@ -481,7 +494,7 @@ export default function VideoChatRandomCliente(props){
             autoComplete="off"
             onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();}}}
           />
-          <BtnSend type="button" onClick={sendChatMessage} aria-label="Enviar mensaje">
+          <BtnSend type="button"onClick={sendChatMessage}aria-label="Enviar mensaje">
             <FontAwesomeIcon icon={faPaperPlane}/>
           </BtnSend>
           <ButtonRegalo
@@ -496,8 +509,8 @@ export default function VideoChatRandomCliente(props){
             <StyledGiftsPanel>
               <StyledGiftGrid>
                 {gifts.map(g=>(
-                  <button key={g.id} onClick={()=>sendGiftMatch(g.id)}>
-                    <img src={g.icon} alt={g.name}/>
+                  <button key={g.id}onClick={()=>sendGiftMatch(g.id)}>
+                    <img src={g.icon}alt={g.name}/>
                     <div>{g.name}</div>
                     <div>{fmtEUR(g.cost)}</div>
                   </button>
@@ -517,6 +530,7 @@ export default function VideoChatRandomCliente(props){
           onClose={handleClosePromo}
           onPrev={handlePrevPromo}
           onNext={handleNextPromo}
+          onAddFavorite={handleAddFavoriteFromTeaser}
         />
       )}
     </StyledCenterVideochat>
