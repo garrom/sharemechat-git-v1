@@ -338,7 +338,7 @@ export default function VideoChatRandomModelo(props) {
                 <StyledVideoArea>
                   <StyledRemoteVideo
                     ref={remoteVideoWrapRef}
-                    style={{ position:'relative', width:'100%', borderRadius:'12px', overflow:'hidden', background:'#000' }}
+                    style={{ position:'relative', width:'100%', overflow:'hidden', background:'#000' }}
                   >
                     <StyledVideoTitle>
                       <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />

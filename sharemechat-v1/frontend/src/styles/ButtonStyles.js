@@ -298,3 +298,24 @@ export const BtnPromoNav = styled(IconButtonBase)`
     font-size: 30px;
   }
 `;
+
+// navegación teasers random en pane derecho (‹ › grandes, fondo transparente, blanco)
+export const BtnTeaserPrev = styled(IconButtonBase)`
+  ${variant('#fff', 'transparent', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0.18)', '#fff')}
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  min-height: 60px;
+  font-size: 24px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.55);
+`;
+
+export const BtnTeaserNext = styled(IconButtonBase)`
+  ${variant('#fff', 'transparent', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0.18)', '#fff')}
+  width: 60px;
+  height: 60px;
+  min-width: 60px;
+  min-height: 60px;
+  font-size: 24px;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.55);
+`;

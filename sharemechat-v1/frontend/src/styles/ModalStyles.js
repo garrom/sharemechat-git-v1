@@ -58,10 +58,12 @@ export const Dialog = styled.div`
 
   width: 100%;
   max-width: ${({ $size }) => (
+    $size === 'xl' ? '960px' :
     $size === 'lg' ? '720px' :
     $size === 'sm' ? '360px' :
     '520px'
   )};
+
 
   background: radial-gradient(circle at top left, #151823 0, #050509 55%);
   color: #e9ecef;
@@ -246,6 +248,15 @@ export const Body = styled.div`
       }
     }
   }
+
+  /* Lightbox de vídeo promo */
+  &[data-kind='promo-video'] {
+    max-height: none;
+    overflow: visible;
+    padding: 10px 14px 12px;
+  }
+
+
   /* Payout: sin scroll interno, nunca */
   &[data-kind='payout'] {
     max-height: none;

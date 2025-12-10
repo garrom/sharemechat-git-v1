@@ -375,10 +375,11 @@ export const StyledRemoteVideo = styled.div`
   height: 100%;
   z-index: 1;
   max-height: 100%;
-  border-radius:16px;
+  border-radius:0 px;
   overflow: hidden;
   @media (min-width: 769px) {
     aspect-ratio: 16 / 9;
+    border-radius:16px;
   }
 
 `;
@@ -778,6 +779,50 @@ export const StyledThumbsGrid = styled.div`
   }
 `;
 
+// === TEASER RANDOM (card tipo TikTok en pane derecho desktop / mobile) ===
+export const StyledTeaserCenter = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+`;
+
+
+export const StyledTeaserInner = styled.div`
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  pointer-events: auto;
+`;
+
+export const StyledTeaserCard = styled.div`
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  aspect-ratio: 9 / 16;
+  max-height: calc(100vh - 220px);
+  border-radius: 16px;
+  overflow: hidden;
+  background: #000000;
+`;
+
+
+export const StyledTeaserMediaButton = styled.button`
+  border: none;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+  display: block;
+`;
 
 export const StyledPrimaryCta = styled.button`
   appearance: none;
