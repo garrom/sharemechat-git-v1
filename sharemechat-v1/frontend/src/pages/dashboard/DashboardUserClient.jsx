@@ -3,7 +3,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import { useAppModals } from '../../components/useAppModals';
-
+import { useCallUi } from '../../components/CallUiContext';
 import VideoChatRandomUser from './VideoChatRandomUser';
 import TrialCooldownModal from '../../components/TrialCooldownModal';
 
@@ -25,6 +25,7 @@ import {
 const DashboardUserClient = () => {
   const history = useHistory();
   const { alert, openPurchaseModal } = useAppModals();
+  const { setInCall } = useCallUi();
 
   const [userName, setUserName] = useState('Usuario');
   const [user, setUser] = useState(null);
@@ -37,7 +38,6 @@ const DashboardUserClient = () => {
   const [statusText, setStatusText] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
-
   const [loadingFirstPayment, setLoadingFirstPayment] = useState(false);
 
   // Modal de cooldown (sin más trials)
@@ -108,6 +108,16 @@ const DashboardUserClient = () => {
     }
   }, [remoteStream]);
 
+  // === Sincronizar flag global inCall (solo RANDOM trial, sin calling) ===
+  useEffect(() => {
+    const hayRandom = !!remoteStream;
+    setInCall(hayRandom);
+
+    return () => {
+      setInCall(false);
+    };
+  }, [remoteStream, setInCall]);
+
   // ======= Helpers =======
   const clearPing = () => {
     if (pingIntervalRef.current) {
@@ -120,7 +130,7 @@ const DashboardUserClient = () => {
     try {
       if (socketRef.current) socketRef.current.close();
     } catch {
-      // noop
+      /* noop */
     }
     socketRef.current = null;
     clearPing();
@@ -455,7 +465,6 @@ const DashboardUserClient = () => {
         setSearching(false);
         setStatusText('Has agotado las pruebas gratuitas por ahora.');
 
-        // Si el backend empieza a mandar data.remainingMs, lo usamos.
         setTrialRemainingMs(
           typeof data.remainingMs === 'number' ? data.remainingMs : null
         );
@@ -493,7 +502,6 @@ const DashboardUserClient = () => {
         if (reason === 'trial-ended') {
           setStatusText('Tu prueba gratuita con esta modelo ha terminado.');
 
-          // Enganchamos el modal de COMPRAR (1ª y 2ª prueba)
           try {
             await openPurchaseModal({ context: 'trial-ended' });
           } catch {

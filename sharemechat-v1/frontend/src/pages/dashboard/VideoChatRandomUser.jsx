@@ -119,7 +119,7 @@ export default function VideoChatRandomUser(props) {
                   <StyledVideoArea style={{ height:'calc(100vh - 160px)', maxHeight:'calc(100vh - 160px)' }}>
                     <StyledRemoteVideo
                       ref={remoteVideoWrapRef}
-                      style={{ position:'relative', width:'100%', height:'100%', borderRadius:'0px', overflow:'hidden', background:'#000' }}
+                      style={{ position:'relative', width:'100%', height:'100%', borderRadius:'16px', overflow:'hidden', background:'#000' }}
                     >
                       <StyledVideoTitle>
                         <StyledTitleAvatar src="/img/avatarChica.png" alt="" />

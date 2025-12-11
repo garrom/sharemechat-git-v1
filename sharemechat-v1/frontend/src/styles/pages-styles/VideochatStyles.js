@@ -471,7 +471,8 @@ export const StyledChatDock = styled.div`
     position: fixed;
     left: 0;
     right: 0;
-    bottom: var(--bottom-nav-height);
+    //bottom: var(--bottom-nav-height);
+    bottom: 0;
     box-sizing: border-box;
     gap: 6px;
     padding: 8px 10px;

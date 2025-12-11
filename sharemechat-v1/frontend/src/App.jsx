@@ -25,6 +25,7 @@ import GuestConsentGate from './consent/GuestConsentGate';
 import { GlobalTypography } from './styles/core/typography';
 import Footer from './components/Footer';
 import CookieBanner from './components/CookieBanner';
+import { CallUiProvider } from './components/CallUiContext';
 
 // Wrapper para rutas públicas que requieren age-gate/TyC (guest/no logueado)
 const PublicWithGuestGate = ({ component: Component, ...rest }) => (<Route {...rest} render={(props) => (<GuestConsentGate><Component {...props} /></GuestConsentGate>)} />);
@@ -32,46 +33,48 @@ const PublicWithGuestGate = ({ component: Component, ...rest }) => (<Route {...r
 function App() {
   return (
     <Router>
-      <ModalProvider>
-        <>
-          <GlobalTypography />
-          <Switch>
-            {/* Públicas CON MODAL (age-gate/TyC):*/}
-            <PublicWithGuestGate exact path="/" component={Home} />
-            {/* Ahora /login también usa Home como fondo; el propio Home abrirá el modal de login */}
-            <PublicWithGuestGate exact path="/login" component={Home} />
-            <PublicWithGuestGate exact path="/blog" component={Blog} />
+      <CallUiProvider>
+        <ModalProvider>
+          <>
+            <GlobalTypography />
+            <Switch>
+              {/* Públicas CON MODAL (age-gate/TyC):*/}
+              <PublicWithGuestGate exact path="/" component={Home} />
+              {/* Ahora /login también usa Home como fondo; el propio Home abrirá el modal de login */}
+              <PublicWithGuestGate exact path="/login" component={Home} />
+              <PublicWithGuestGate exact path="/blog" component={Blog} />
 
-            <Route path="/register-client" component={RegisterClient} />
-            <Route path="/register-model" component={RegisterModel} />
-            <Route path="/forgot-password" component={ForgotPassword} />
-            <Route path="/unauthorized" component={Unauthorized} />
-            <Route path="/reset-password" component={ResetPassword} />
+              <Route path="/register-client" component={RegisterClient} />
+              <Route path="/register-model" component={RegisterModel} />
+              <Route path="/forgot-password" component={ForgotPassword} />
+              <Route path="/unauthorized" component={Unauthorized} />
+              <Route path="/reset-password" component={ResetPassword} />
 
-            {/* Dashboards por rol */}
-            <Route path="/client" render={() => (<RequireRole role="CLIENT"><DashboardClient /></RequireRole>)} />
-            <Route path="/model" render={() => (<RequireRole role="MODEL"><DashboardModel /></RequireRole>)} />
-            <Route path="/dashboard-admin" render={() => (<RequireRole role="ADMIN"><DashboardAdmin /></RequireRole>)} />
+              {/* Dashboards por rol */}
+              <Route path="/client" render={() => (<RequireRole role="CLIENT"><DashboardClient /></RequireRole>)} />
+              <Route path="/model" render={() => (<RequireRole role="MODEL"><DashboardModel /></RequireRole>)} />
+              <Route path="/dashboard-admin" render={() => (<RequireRole role="ADMIN"><DashboardAdmin /></RequireRole>)} />
 
-            {/* Dashboards para USER (pre-conversión) */}
-            <Route path="/dashboard-user-client" render={() => (<RequireRole role="USER"><DashboardUserClient /></RequireRole>)} />
-            <Route path="/dashboard-user-model" render={() => (<RequireRole role="USER"><DashboardUserModel /></RequireRole>)} />
-            <Route path="/model-documents" render={() => (<RequireRole role="USER"><ModelDocuments /></RequireRole>)} />
+              {/* Dashboards para USER (pre-conversión) */}
+              <Route path="/dashboard-user-client" render={() => (<RequireRole role="USER"><DashboardUserClient /></RequireRole>)} />
+              <Route path="/dashboard-user-model" render={() => (<RequireRole role="USER"><DashboardUserModel /></RequireRole>)} />
+              <Route path="/model-documents" render={() => (<RequireRole role="USER"><ModelDocuments /></RequireRole>)} />
 
-            {/* Subpáginas bajo dashboard (protegidas por rol) */}
-            <Route path="/perfil-client" render={() => (<RequireRole role="CLIENT"><PerfilClient /></RequireRole>)} />
-            <Route path="/perfil-model" render={() => (<RequireRole role="MODEL"><PerfilModel /></RequireRole>)} />
-            <Route path="/change-password" render={() => (<RequireRole roles={[Roles.CLIENT, Roles.MODEL, Roles.ADMIN]}><ChangePasswordPage /></RequireRole>)} />
+              {/* Subpáginas bajo dashboard (protegidas por rol) */}
+              <Route path="/perfil-client" render={() => (<RequireRole role="CLIENT"><PerfilClient /></RequireRole>)} />
+              <Route path="/perfil-model" render={() => (<RequireRole role="MODEL"><PerfilModel /></RequireRole>)} />
+              <Route path="/change-password" render={() => (<RequireRole roles={[Roles.CLIENT, Roles.MODEL, Roles.ADMIN]}><ChangePasswordPage /></RequireRole>)} />
 
-            {/* Fallback */}
-            <Redirect to="/unauthorized" />
-          </Switch>
+              {/* Fallback */}
+              <Redirect to="/unauthorized" />
+            </Switch>
 
-          {/* Footer siempre visible en todas las páginas */}
-          <Footer />
-          <CookieBanner />
-        </>
-      </ModalProvider>
+            {/* Footer siempre visible en todas las páginas */}
+            <Footer />
+            <CookieBanner />
+          </>
+        </ModalProvider>
+      </CallUiProvider>
     </Router>
   );
 }

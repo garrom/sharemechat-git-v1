@@ -4,6 +4,7 @@ import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import { useAppModals } from '../../components/useAppModals';
+import { useCallUi } from '../../components/CallUiContext';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
@@ -43,6 +44,7 @@ import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
 const DashboardModel = () => {
 
   const { alert, confirm, openPayoutModal,openActiveSessionGuard } = useAppModals();
+  const { inCall, setInCall } = useCallUi();
   const [cameraActive, setCameraActive] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
   const [error, setError] = useState('');
@@ -530,6 +532,25 @@ const DashboardModel = () => {
 
     load();
   }, [openChatWith, activeTab]);
+
+  // === Sincronizar flag global inCall (RANDOM + CALLING) ===
+  useEffect(() => {
+    const hayRandom = !!remoteStream;
+    const hayCalling =
+      callStatus === 'connecting' ||
+      callStatus === 'in-call' ||
+      callStatus === 'ringing' ||
+      callStatus === 'incoming';
+
+    const nextInCall = hayRandom || hayCalling;
+    setInCall(nextInCall);
+
+    return () => {
+      // En desmontaje del Dashboard limpiamos el flag por seguridad
+      setInCall(false);
+    };
+  }, [remoteStream, callStatus, setInCall]);
+
 
   const clearMsgTimers = () => {
     if (msgPingRef.current) {
@@ -2064,11 +2085,14 @@ const DashboardModel = () => {
       {/* ======FIN MAIN ======== */}
 
 
-      <MobileBottomNav>
-        <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
-        <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
-        <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
-      </MobileBottomNav>
+      {!inCall && (
+        <MobileBottomNav>
+          <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
+          <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
+          <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
+        </MobileBottomNav>
+      )}
+
 
       {/*INICIO CLICK DERECHO */}
       {ctxUser&&(

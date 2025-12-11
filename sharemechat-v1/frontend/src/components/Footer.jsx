@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import { useCallUi } from './CallUiContext';
 
 /* CONTENEDORES BASE */
 const FooterWrap = styled.footer`
@@ -113,7 +114,11 @@ const SocialRow = styled.div`
 `;
 
 export default function Footer() {
+  const { inCall } = useCallUi();
   const year = new Date().getFullYear();
+
+  // Si hay videollamada (random o 1 a 1), ocultamos completamente el footer
+  if (inCall) return null;
 
   return (
     <FooterWrap>
@@ -141,9 +146,9 @@ export default function Footer() {
         © {year} SharemeChat™. All rights reserved.
       </LegalText>
 
-      {/* APPS */}
+      {/* APPS (futuro) */}
 
-      {/* REDES */}
+      {/* REDES (futuro) */}
     </FooterWrap>
   );
 }

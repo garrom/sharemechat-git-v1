@@ -4,6 +4,7 @@ import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import { useAppModals } from '../../components/useAppModals';
+import { useCallUi } from '../../components/CallUiContext';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft,faGem } from '@fortawesome/free-solid-svg-icons';
@@ -44,6 +45,7 @@ import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
 const DashboardClient = () => {
 
   const { alert, confirm, openPurchaseModal,openActiveSessionGuard } = useAppModals();
+  const { inCall, setInCall } = useCallUi();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -462,6 +464,24 @@ const DashboardClient = () => {
     const t = setTimeout(() => setGiftRenderReady(true), 200); // 200ms de margen
     return () => clearTimeout(t);
   }, [giftsLoaded]);
+
+  // === Sincronizar flag global inCall (RANDOM + CALLING) ===
+  useEffect(() => {
+    const hayRandom = !!remoteStream;
+    const hayCalling =
+      callStatus === 'connecting' ||
+      callStatus === 'in-call' ||
+      callStatus === 'ringing' ||
+      callStatus === 'incoming';
+
+    const nextInCall = hayRandom || hayCalling;
+    setInCall(nextInCall);
+
+    return () => {
+      // En desmontaje del Dashboard limpiamos el flag por seguridad
+      setInCall(false);
+    };
+  }, [remoteStream, callStatus, setInCall]);
 
 
   const clearMsgTimers = () => {
@@ -2375,12 +2395,13 @@ const DashboardClient = () => {
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
 
-
-      <MobileBottomNav>
-        <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
-        <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
-        <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
-      </MobileBottomNav>
+      {!inCall && (
+        <MobileBottomNav>
+          <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
+          <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
+          <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
+        </MobileBottomNav>
+      )}
 
       {/* INICIO CLICK DERECHO */}
       {ctxUser&&(
