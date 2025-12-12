@@ -52,7 +52,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,   "/api/models/documents").hasAnyRole("USER","MODEL")
                         .requestMatchers(HttpMethod.DELETE, "/api/models/documents").hasAnyRole("USER","MODEL")
                         .requestMatchers(HttpMethod.DELETE, "/api/models/documents/**").hasAnyRole("USER","MODEL")
-                        .requestMatchers(HttpMethod.GET, "/api/models/teasers").hasRole("CLIENT")
+                        .requestMatchers(HttpMethod.GET, "/api/models/teasers").hasAnyRole("USER","CLIENT","MODEL","ADMIN")
+
                         // CLIENTS: documentos (GET/POST/DELETE)
                         .requestMatchers(HttpMethod.GET,    "/api/clients/documents/me").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.POST,   "/api/clients/documents").hasRole("CLIENT")

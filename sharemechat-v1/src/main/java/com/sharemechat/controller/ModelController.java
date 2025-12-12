@@ -240,15 +240,23 @@ public class ModelController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
         }
 
-        // Solo CLIENT accede a ver modelos
-        if (!Constants.Roles.CLIENT.equals(user.getRole())) {
+        // Permitir USER/CLIENT/MODEL/ADMIN (trial, clientes, modelos y admins)
+        String role = user.getRole();
+        boolean allowed =
+                Constants.Roles.USER.equals(role) ||
+                        Constants.Roles.CLIENT.equals(role) ||
+                        Constants.Roles.MODEL.equals(role) ||
+                        Constants.Roles.ADMIN.equals(role);
+
+        if (!allowed) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("Solo los clientes pueden ver los vídeos de modelos");
+                    .body("No autorizado");
         }
 
         var teasers = modelService.listTeasers(page, size);
         return ResponseEntity.ok(teasers);
     }
+
 
 
 }

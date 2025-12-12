@@ -657,6 +657,7 @@ const DashboardUserClient = () => {
           handleActivateCamera={handleActivateCamera}
           statusText={statusText}
           error={error}
+          openPurchaseModal={openPurchaseModal}
         />
       </StyledMainContent>
 
