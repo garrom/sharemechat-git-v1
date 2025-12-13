@@ -69,7 +69,7 @@ export const useAppModals = () => {
       if (context === 'random') return 'Añadir minutos para seguir chateando';
       if (context === 'calling') return 'Añadir minutos para la llamada';
       if (context === 'gift') return 'Saldo insuficiente para regalos';
-      return 'Añadir minutos';
+      return 'Comprar minutos';
     })();
 
     const subtitleByContext = (() => {

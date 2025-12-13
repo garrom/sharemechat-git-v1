@@ -6,27 +6,21 @@ import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import VideoChatRandomUser from './VideoChatRandomUser';
 import TrialCooldownModal from '../../components/TrialCooldownModal';
-
+import {StyledContainer, StyledMainContent, GlobalBlack,StyledNavTab} from '../../styles/pages-styles/VideochatStyles';
 import {
-  StyledContainer,
-  StyledMainContent,
-  GlobalBlack,
-} from '../../styles/pages-styles/VideochatStyles';
-
-import {
-  StyledNavbar, StyledBrand, NavText,
-  HamburgerButton, MobileMenu,
+  StyledNavbar, StyledBrand, NavText, HamburgerButton, MobileMenu
 } from '../../styles/NavbarStyles';
+import {NavButton} from '../../styles/ButtonStyles';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faGem,faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
+import BlogContent from '../blog/BlogContent';
 
-import {
-  NavButton,
-} from '../../styles/ButtonStyles';
+
 
 const DashboardUserClient = () => {
   const history = useHistory();
   const { alert, openPurchaseModal } = useAppModals();
   const { setInCall } = useCallUi();
-
   const [userName, setUserName] = useState('Usuario');
   const [user, setUser] = useState(null);
 
@@ -37,6 +31,7 @@ const DashboardUserClient = () => {
   const [error, setError] = useState('');
   const [statusText, setStatusText] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState('videochat');
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [loadingFirstPayment, setLoadingFirstPayment] = useState(false);
 
@@ -232,12 +227,24 @@ const DashboardUserClient = () => {
     setCameraActive(false);
   };
 
-  // ======= Logout =======
   const handleLogout = async () => {
     stopAll();
     localStorage.removeItem('token');
     history.push('/');
   };
+
+  const handleGoVideochat = () => {
+    setActiveTab('videochat');
+  };
+
+  const handleGoFavorites = async () => {
+    await openPurchaseModal({ context: 'user-favorites' });
+  };
+
+  const handleGoBlog = () => {
+    setActiveTab('blog');
+  };
+
 
   // ======= Primer pago -> hacerme CLIENT =======
   const handleFirstPayment = async () => {
@@ -565,45 +572,32 @@ const DashboardUserClient = () => {
     <StyledContainer>
       <GlobalBlack />
 
-      {/* NAVBAR */}
+      {/* DESK TOP NAVBAR */}
       <StyledNavbar>
-        <StyledBrand
-          href="#"
-          aria-label="SharemeChat"
-          onClick={(e) => {
-            e.preventDefault();
-          }}
-        />
+        <div style={{display:'flex',alignItems:'center'}}>
+          <StyledBrand href="#" aria-label="SharemeChat" onClick={(e)=>e.preventDefault()}/>
+          <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
+            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title="Videochat">Videochat</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title="Favoritos">Favoritos</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title="Blog">Blog</StyledNavTab>
+          </div>
+        </div>
 
-        {/* Desktop */}
-        <div
-          className="desktop-only"
-          style={{
-            display: 'flex',
-            gap: 12,
-            alignItems: 'center',
-            marginLeft: 'auto',
-          }}
-        >
+        <div className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
           <NavText className="me-3">{displayName}</NavText>
 
-          <NavButton
-            type="button"
-            onClick={handleFirstPayment}
-            disabled={loadingFirstPayment}
-            title="Hacerme CLIENT (premium)"
-          >
-            {loadingFirstPayment ? 'Procesando…' : 'Hazte Premium'}
+          <NavButton type="button" onClick={handleFirstPayment} disabled={loadingFirstPayment}>
+            <FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/>
+            <span>{loadingFirstPayment?'Procesando…':'Hazte Premium'}</span>
           </NavButton>
 
-          <NavButton
-            type="button"
-            onClick={handleLogout}
-            title="Cerrar sesión"
-          >
-            Salir
+          <NavButton type="button" onClick={handleLogout} title="Cerrar sesión">
+            <FontAwesomeIcon icon={faSignOutAlt}/>
+            <span>Salir</span>
           </NavButton>
         </div>
+
+
 
         {/* Móvil: hamburguesa */}
         <HamburgerButton
@@ -641,25 +635,35 @@ const DashboardUserClient = () => {
       </StyledNavbar>
 
       {/* MAIN */}
-      <StyledMainContent data-tab="videochat">
-        <VideoChatRandomUser
-          isMobile={isMobile}
-          cameraActive={cameraActive}
-          remoteStream={remoteStream}
-          localVideoRef={localVideoRef}
-          remoteVideoRef={remoteVideoRef}
-          searching={searching}
-          stopAll={stopAll}
-          handleStartMatch={handleStartMatch}
-          handleNext={handleNext}
-          toggleFullscreen={toggleFullscreen}
-          remoteVideoWrapRef={remoteVideoWrapRef}
-          handleActivateCamera={handleActivateCamera}
-          statusText={statusText}
-          error={error}
-          openPurchaseModal={openPurchaseModal}
-        />
+      <StyledMainContent data-tab={activeTab}>
+        {activeTab === 'videochat' && (
+          <VideoChatRandomUser
+            isMobile={isMobile}
+            cameraActive={cameraActive}
+            remoteStream={remoteStream}
+            localVideoRef={localVideoRef}
+            remoteVideoRef={remoteVideoRef}
+            searching={searching}
+            stopAll={stopAll}
+            handleStartMatch={handleStartMatch}
+            handleNext={handleNext}
+            toggleFullscreen={toggleFullscreen}
+            remoteVideoWrapRef={remoteVideoWrapRef}
+            handleActivateCamera={handleActivateCamera}
+            statusText={statusText}
+            error={error}
+            openPurchaseModal={openPurchaseModal}
+          />
+        )}
+
+        {activeTab === 'blog' && (
+          <div style={{ flex:1, minWidth:0, minHeight:0 }}>
+            {/* mismo Blog que Client */}
+            <BlogContent mode="private" />
+          </div>
+        )}
       </StyledMainContent>
+
 
       {/* MODAL: trials agotados */}
       <TrialCooldownModal
