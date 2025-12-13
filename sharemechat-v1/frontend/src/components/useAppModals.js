@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useModal } from './ModalProvider';
 import LoginModalContent from './LoginModalContent';
+import PublicSignupTeaserModal from './PublicSignupTeaserModal';
+
 
 /**
  * Tipos de contexto para el modal de compra:
@@ -182,6 +184,30 @@ export const useAppModals = () => {
     }).then(() => {});
   }, [openModal, closeModal, history, location.pathname]);
 
+  const openPublicSignupTeaser = useCallback(() => {
+    openModal({
+      title: '',
+      variant: 'info',
+      size: 'lg',
+      bodyKind: 'default',
+      hideChrome: true,
+      onClose: () => {
+        closeModal();
+        openLoginModal();
+      },
+      content: (
+        <PublicSignupTeaserModal
+          onClose={() => {
+            closeModal();
+            openLoginModal();
+          }}
+        />
+      ),
+      actions: [],
+    }).then(() => {});
+  }, [openModal, closeModal, openLoginModal]);
+
+
   return {
     alert,
     confirm,
@@ -191,6 +217,7 @@ export const useAppModals = () => {
     openPayoutModal,
     openActiveSessionGuard,
     openLoginModal,
+    openPublicSignupTeaser
   };
 };
 
