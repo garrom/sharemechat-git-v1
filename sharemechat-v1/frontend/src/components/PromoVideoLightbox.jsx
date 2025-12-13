@@ -29,7 +29,7 @@ export default function PromoVideoLightbox({videos,activeIndex,onClose,onPrev,on
     <>
       <Backdrop onClick={handleBackdropClick}/>
       <Wrapper onClick={handleBackdropClick}>
-        <Dialog data-variant="info" data-hidechrome="true" $size="xl" onClick={stopPropagation}>
+        <Dialog data-variant="info" data-hidechrome="true" $size="xl" onClick={stopPropagation} style={{width:'min(600px, calc(100% - 24px))',maxWidth:'none'}}>
           <Body data-kind="promo-video">
             {/* CABECERA: avatar + textos + botón cerrar en la misma línea */}
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8,gap:12}}>
@@ -44,7 +44,7 @@ export default function PromoVideoLightbox({videos,activeIndex,onClose,onPrev,on
             </div>
 
             {/* CONTENEDOR DEL VÍDEO GRANDE (vertical tipo TikTok) */}
-            <div style={{position:'relative',margin:'0 auto',width:'min(420px, 100%)',height:'calc(100vh - 220px)',borderRadius:14,overflow:'hidden',background:'#000'}}>
+            <div style={{position:'relative',margin:'0 auto',width:'min(360px, calc(100% - 32px))',height:'calc(100vh - 220px)',borderRadius:14,overflow:'hidden',background:'#000'}}>
               {/* Botón favoritos flotando SOBRE el vídeo */}
               {onAddFavorite&&(
                 <ButtonAddFavorite
