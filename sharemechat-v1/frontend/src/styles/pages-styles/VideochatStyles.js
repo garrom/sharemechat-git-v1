@@ -590,9 +590,7 @@ export const StyledChatInput = styled.input`
     box-shadow: 0 0 0 3px #0d6efd22;
   }
 
-  @media (min-width: 769px) {
-    max-width: 400px;
-  }
+
 `;
 
 /* --------------------------------

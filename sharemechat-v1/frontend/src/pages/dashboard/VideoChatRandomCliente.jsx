@@ -353,7 +353,7 @@ export default function VideoChatRandomCliente(props){
                     </StyledRemoteVideo>
                   </StyledVideoArea>
 
-                  <StyledCallFooterDesktop style={{margin:'8px auto 0',padding:'0 8px',display:'flex',alignItems:'center',gap:8}}>
+                  <StyledCallFooterDesktop style={{margin:'8px 0 0',padding:'0 0px',display:'flex',alignItems:'center',gap:8}}>
                     <StyledChatInput
                       type="text"
                       value={chatInput}

@@ -183,7 +183,7 @@ export default function VideoChatFavoritosModelo(props) {
                               </StyledRemoteVideo>
                             </StyledVideoArea>
 
-                            <StyledCallFooterDesktop style={{ maxWidth: 960, margin: '0px auto 0', width: '100%', padding: '0 8px', position: 'relative' }}>
+                            <StyledCallFooterDesktop style={{margin:'8px 0 0',padding:'0 0px',display:'flex',alignItems:'center',gap:8}}>
                               <StyledChatDock>
                                 <StyledChatInput
                                   type="text"

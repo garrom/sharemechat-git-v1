@@ -317,7 +317,7 @@ export default function VideoChatRandomModelo(props) {
                       </StyledChatContainer>
                     </StyledRemoteVideo>
                   </StyledVideoArea>
-                  <StyledCallFooterDesktop style={{maxWidth:960,margin:'8px auto 0',width:'100%',padding:'0 8px',display:'flex',alignItems:'center',gap:8}}>
+                  <StyledCallFooterDesktop style={{margin:'8px 0 0',padding:'0 0px',display:'flex',alignItems:'center',gap:8}}>
                     <StyledChatInput
                       type="text"
                       value={chatInput}
