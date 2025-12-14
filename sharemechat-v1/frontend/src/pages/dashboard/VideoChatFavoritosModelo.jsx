@@ -220,7 +220,7 @@ export default function VideoChatFavoritosModelo(props) {
                     )}
 
 
-                    {/* Desktop chat (sin llamada) */}
+                    {/* Desktop chat normal */}
                     {!isPendingPanel && !isSentPanel && contactMode !== 'call' && (
                       <StyledChatWhatsApp>
                         <StyledChatScroller ref={modelCenterListRef} data-bg="whatsapp">
@@ -255,7 +255,7 @@ export default function VideoChatFavoritosModelo(props) {
                           })}
                         </StyledChatScroller>
 
-                        <StyledChatDock>
+                        <StyledChatDock >
                           <StyledChatInput
                             value={centerInput}
                             onChange={e => setCenterInput(e.target.value)}
@@ -273,7 +273,7 @@ export default function VideoChatFavoritosModelo(props) {
                             disabled={!openChatWith || !allowChat}
                             title="Llamar"
                             aria-label="Llamar"
-                            style={{marginLeft:4,width:40,height:40,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center'}}
+                            style={{marginRight:16, marginLeft:4,width:40,height:40,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center'}}
                           >
                             <FontAwesomeIcon icon={faVideo} />
                           </ButtonLlamar>

@@ -267,6 +267,7 @@ export default function VideoChatFavoritosCliente(props){
                           title="Enviar regalo"
                           disabled={!allowChat}
                           aria-label="Enviar regalo"
+
                         >
                           <FontAwesomeIcon icon={faGift}/>
                         </ButtonRegalo>
@@ -275,7 +276,7 @@ export default function VideoChatFavoritosCliente(props){
                           disabled={!centerChatPeerId||!allowChat}
                           title="Llamar"
                           aria-label="Llamar"
-                          style={{marginLeft:4,width:40,height:40,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center'}}
+                          style={{marginRight:16, marginLeft:4,width:40,height:40,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center'}}
                         >
                           <FontAwesomeIcon icon={faVideo}/>
                         </ButtonLlamar>
