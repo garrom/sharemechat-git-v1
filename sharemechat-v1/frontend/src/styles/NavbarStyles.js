@@ -43,7 +43,7 @@ export const StyledNavbar = styled.nav`
   }
 `;
 
-//Logotipo
+// Logotipo
 export const StyledBrand = styled.a`
   display: block;
   width: 220px;

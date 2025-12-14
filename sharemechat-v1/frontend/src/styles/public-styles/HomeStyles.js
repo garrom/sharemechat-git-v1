@@ -99,8 +99,15 @@ export const StyledSplit2 = styled.div`
 
   @media (max-width: 768px){
     grid-template-columns: 1fr;
-    gap: 12px;
-    padding: 12px;
+    gap: 0;
+    padding: 0;
+  }
+
+  /* SOLO MÓVIL: ocultar el pane izquierdo completo (no solo el contenido) */
+  @media (max-width: 768px){
+    & > section[data-side="left"]{
+      display: none;
+    }
   }
 `;
 
@@ -121,9 +128,27 @@ export const StyledPane = styled.section`
   box-sizing: border-box;
 
   @media (max-width: 768px) {
-    border-radius: 16px;
-    padding: 20px;
-    box-shadow: 0 10px 28px rgba(0,0,0,0.45);
+    padding: 0;
+    max-height: none;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    background: transparent;
+    justify-content: stretch;
+    align-items: stretch;
+  }
+
+  /* SOLO MÓVIL: el media del pane derecho debe ser full y sin radios */
+  @media (max-width: 768px) {
+    &[data-side="right"]{
+      overflow: hidden;
+    }
+
+    &[data-side="right"] .home-hero-media{
+      border-radius: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
+    }
   }
 `;
 
@@ -234,7 +259,6 @@ export const HomeHeroText = styled.div`
       margin: 0 0 12px;
     }
   }
-
 `;
 
 // === COOKIE BANNER (estilo Azar) ===
@@ -316,4 +340,37 @@ export const CookieLinkPlain = styled.button`
   margin-left:10px;
   white-space:nowrap;
   &:hover{color:#ffffff;}
+`;
+
+/* OVERLAY CTA HOME – SOLO MÓVIL (encima del vídeo) */
+export const StyledHomeMobileOverlay = styled.div`
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 64px;
+    z-index: 20;
+
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+
+    & > div {
+      pointer-events: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+    }
+  }
+`;
+
+/* OCULTAR HERO IZQUIERDO EN MÓVIL */
+export const HideOnMobile = styled.div`
+  @media (max-width: 768px) {
+    display: none;
+  }
 `;
