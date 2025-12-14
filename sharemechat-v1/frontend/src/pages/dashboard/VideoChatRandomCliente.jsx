@@ -1,6 +1,7 @@
 // src/pages/dashboard/VideoChatRandomCliente.jsx
 import React,{useState,useEffect}from'react';
 import{FontAwesomeIcon}from'@fortawesome/react-fontawesome';
+import BlurredPreview from'../../components/BlurredPreview';
 import{faUserPlus,faVideo,faPhoneSlash,faForward,faPaperPlane,faGift,faChevronLeft,faChevronRight}from'@fortawesome/free-solid-svg-icons';
 import{
   StyledCenterVideochat,
@@ -178,8 +179,8 @@ export default function VideoChatRandomCliente(props){
                         <FontAwesomeIcon icon={faChevronLeft}/>
                       </button>
 
-                      <StyledTeaserMediaButton type="button"onClick={()=>handleOpenPromo(currentPromoIndex)}title={currentPromo.title||'Ver teaser'}>
-                        <video src={currentPromo.src}autoPlay muted loop playsInline style={{width:'100%',height:'100%',display:'block',objectFit:'cover',background:'#000'}}/>
+                      <StyledTeaserMediaButton type="button"onClick={()=>handleOpenPromo(currentPromoIndex)}title={currentPromo.title||'Ver teaser'} style={{width:'100%',height:'100%'}}>
+                        <BlurredPreview type="video" src={currentPromo.src} poster={currentPromo.thumb||'/img/avatarChica.png'} muted={true} autoPlay={true} loop={true} playsInline={true} controls={false} showVignette={true} style={{width:'100%',height:'100%'}}/>
                       </StyledTeaserMediaButton>
 
                       <div style={{position:'absolute',right:12,bottom:12,zIndex:4}}>
@@ -352,7 +353,7 @@ export default function VideoChatRandomCliente(props){
                     </StyledRemoteVideo>
                   </StyledVideoArea>
 
-                  <StyledCallFooterDesktop style={{maxWidth:960,margin:'8px auto 0',width:'100%',padding:'0 8px',display:'flex',alignItems:'center',gap:8}}>
+                  <StyledCallFooterDesktop style={{margin:'8px auto 0',padding:'0 8px',display:'flex',alignItems:'center',gap:8}}>
                     <StyledChatInput
                       type="text"
                       value={chatInput}

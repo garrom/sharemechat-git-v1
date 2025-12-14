@@ -468,7 +468,7 @@ export const StyledChatDock = styled.div`
   }
 
   @media (max-width: 768px) {
-    position: fixed;
+    position: relative;
     left: 0;
     right: 0;
     //bottom: var(--bottom-nav-height);
@@ -707,10 +707,12 @@ export const StyledPane = styled.section`
     background: ${colors.backsolid};
     border: none;
   }
-  &[data-side="right"][data-view="thumbs"] {
-    align-items: stretch;
-    overflow-y: auto;
+  &[data-side="right"][data-view="thumbs"]{
+    align-items:stretch;
+    justify-content:stretch;
+    overflow:hidden;
   }
+
   /* En móvil */
   @media (max-width: 768px) {
     background: transparent;
@@ -780,39 +782,40 @@ export const StyledThumbsGrid = styled.div`
   }
 `;
 
-// === TEASER RANDOM (card tipo TikTok en pane derecho desktop / mobile) ===
-export const StyledTeaserCenter = styled.div`
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
+// === TEASER RANDOM card tipo TikTok  ===
+export const StyledTeaserCenter=styled.div`
+  position:relative;
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:stretch;
+  justify-content:stretch;
+  pointer-events:none;
 `;
 
-
-export const StyledTeaserInner = styled.div`
-  width: 100%;
-  max-width: 420px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  pointer-events: auto;
+export const StyledTeaserInner=styled.div`
+  width:100%;
+  height:100%;
+  max-width:none;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:stretch;
+  gap:0;
+  pointer-events:auto;
 `;
 
-export const StyledTeaserCard = styled.div`
-  position: relative;
-  width: 100%;
-  max-width: 420px;
-  aspect-ratio: 9 / 16;
-  max-height: calc(100vh - 220px);
-  border-radius: 16px;
-  overflow: hidden;
-  background: #000000;
+export const StyledTeaserCard=styled.div`
+  position:relative;
+  width:100%;
+  height:100%;
+  max-width:none;
+  max-height:none;
+  aspect-ratio:auto;
+  border-radius:0;
+  overflow:hidden;
+  background:#000;
 `;
-
 
 export const StyledTeaserMediaButton = styled.button`
   border: none;
@@ -874,7 +877,7 @@ export const StyledCenterBody = styled.div`
       flex: 0 0 auto;
       min-height: auto;
       gap: 0;
-      overflow: hidden;
+      overflow: auto;
     }
   }
 `;

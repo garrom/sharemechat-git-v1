@@ -1,22 +1,23 @@
 // src/pages/dashboard/VideoChatRandomUser.jsx
-import React, {useEffect,useState,useRef} from'react';
+import React,{useEffect,useState}from'react';
 import{FontAwesomeIcon}from'@fortawesome/react-fontawesome';
 import{faUserPlus,faVideo,faPhoneSlash,faForward,faChevronLeft,faChevronRight}from'@fortawesome/free-solid-svg-icons';
 import{
-    StyledCenterVideochat,StyledSplit2,StyledPane,StyledVideoArea,StyledThumbsGrid,StyledRemoteVideo,
-    StyledVideoTitle,StyledTitleAvatar,StyledPreCallCenter,StyledHelperLine,StyledRandomSearchControls,
-    StyledRandomSearchCol,StyledSearchHint,StyledLocalVideo,StyledLocalVideoDesktop,StyledCallCardDesktop,
-    StyledCallFooterDesktop,StyledTeaserCenter,StyledTeaserInner,StyledTeaserCard,StyledTeaserMediaButton
+  StyledCenterVideochat,StyledSplit2,StyledPane,StyledVideoArea,StyledRemoteVideo,
+  StyledVideoTitle,StyledTitleAvatar,StyledPreCallCenter,StyledHelperLine,StyledRandomSearchControls,
+  StyledRandomSearchCol,StyledSearchHint,StyledLocalVideo,StyledLocalVideoDesktop,StyledCallCardDesktop,
+  StyledCallFooterDesktop,StyledTeaserCenter,StyledTeaserInner,StyledTeaserCard
 }from'../../styles/pages-styles/VideochatStyles';
 import{
-    ButtonActivarCam,ButtonActivarCamMobile,ButtonBuscar,ButtonNext,ButtonAddFavorite,BtnHangup
+  ButtonActivarCam,ButtonActivarCamMobile,ButtonBuscar,ButtonNext,ButtonAddFavorite,BtnHangup
 }from'../../styles/ButtonStyles';
 import PromoVideoLightbox from'../../components/PromoVideoLightbox';
+import BlurredPreview from'../../components/BlurredPreview';
 
 export default function VideoChatRandomUser(props){
   const{isMobile,cameraActive,remoteStream,localVideoRef,remoteVideoRef,searching,stopAll,handleStartMatch,
-      handleNext,toggleFullscreen,remoteVideoWrapRef,handleActivateCamera,statusText,error,modelNickname,
-      modelAvatar,handleFavoriteGate,openPurchaseModal}=props;
+    handleNext,toggleFullscreen,remoteVideoWrapRef,handleActivateCamera,statusText,error,modelNickname,
+    modelAvatar,handleFavoriteGate,openPurchaseModal}=props;
 
   const[promoVideos,setPromoVideos]=useState([]);
   const[activePromoIndex,setActivePromoIndex]=useState(null);
@@ -50,7 +51,16 @@ export default function VideoChatRandomUser(props){
 
   const currentPromo=promoVideos.length>0?promoVideos[Math.min(currentPromoIndex,promoVideos.length-1)]:null;
 
-  const handleFavoriteFromTeaser=async(promoVideo)=>{if(!promoVideo||!promoVideo.id)return;try{if(typeof openPurchaseModal==='function'){await openPurchaseModal({context:'user-favorite',modelId:promoVideo.id});}else if(typeof handleFavoriteGate==='function'){handleFavoriteGate(promoVideo.id);}}catch{/* noop */}};
+  const handleFavoriteFromTeaser=async(promoVideo)=>{
+    if(!promoVideo||!promoVideo.id)return;
+    try{
+      if(typeof openPurchaseModal==='function'){
+        await openPurchaseModal({context:'user-favorite',modelId:promoVideo.id});
+      }else if(typeof handleFavoriteGate==='function'){
+        handleFavoriteGate(promoVideo.id);
+      }
+    }catch{/* noop */}
+  };
 
   return(
     <StyledCenterVideochat>
@@ -59,7 +69,14 @@ export default function VideoChatRandomUser(props){
         <StyledPane data-side="left">
           {!isMobile&&(
             !cameraActive?(
-              <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}><div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}><ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam><StyledHelperLine style={{color:'#fff',justifyContent:'center'}}><FontAwesomeIcon icon={faVideo}/>activar cámara para iniciar videochat</StyledHelperLine></div></div>
+              <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+                  <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
+                  <StyledHelperLine style={{color:'#fff',justifyContent:'center'}}>
+                    <FontAwesomeIcon icon={faVideo}/>activar cámara para iniciar videochat
+                  </StyledHelperLine>
+                </div>
+              </div>
             ):(
               <StyledVideoArea/>
             )
@@ -67,33 +84,46 @@ export default function VideoChatRandomUser(props){
         </StyledPane>
 
         {/* PANE DERECHO (REMOTO + CONTROLES / TEASERS DINÁMICOS) */}
-        <StyledPane data-side="right" style={{position:'relative'}}>
+        <StyledPane data-side="right" data-view={!cameraActive?'thumbs':'call'} style={{position:'relative'}}>
           {!cameraActive?(
             <>
               {promoLoading&&(<div style={{color:'#e9ecef',padding:'8px 12px',fontSize:'0.9rem'}}>Cargando vídeos de modelos…</div>)}
               {promoError&&(<div style={{color:'#ffb3b3',padding:'8px 12px',fontSize:'0.9rem'}}>{promoError}</div>)}
+
               {currentPromo&&(
-                <StyledTeaserCenter>
-                  <StyledTeaserInner>
-                    <StyledTeaserCard>
-                      <button type="button"onClick={goPrevCard}aria-label="Modelo anterior"title="Modelo anterior"style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}><FontAwesomeIcon icon={faChevronLeft}/></button>
-                      <StyledTeaserMediaButton type="button"onClick={()=>handleOpenPromo(currentPromoIndex)}title={currentPromo.title||'Ver teaser'}>
-                        <video src={currentPromo.src}autoPlay muted loop playsInline style={{width:'100%',height:'100%',display:'block',objectFit:'cover',background:'#000'}}/>
-                      </StyledTeaserMediaButton>
+                <StyledTeaserCenter style={{pointerEvents:'auto'}}>
+                  <StyledTeaserInner style={{width:'100%',maxWidth:'none',height:'100%'}}>
+                    {/* Forzamos a ocupar TODO el card derecho */}
+                    <StyledTeaserCard style={{width:'100%',maxWidth:'none',height:'100%',maxHeight:'none',aspectRatio:'auto',borderRadius:16,overflow:'hidden',background:'#000'}}>
+                      <button type="button"onClick={goPrevCard}aria-label="Modelo anterior"title="Modelo anterior"style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}>
+                        <FontAwesomeIcon icon={faChevronLeft}/>
+                      </button>
+
+                      {/* BLUR PREVIEW (click => abre lightbox con teaser nítido) */}
+                      <BlurredPreview type="video"src={currentPromo.src}poster={currentPromo.thumb}onClick={()=>handleOpenPromo(currentPromoIndex)}style={{width:'100%',height:'100%'}}/>
+
                       <div style={{position:'absolute',right:12,bottom:12,zIndex:4}}>
                         <ButtonAddFavorite type="button"onClick={()=>openPurchaseModal&&openPurchaseModal({context:'user-favorite',modelId:currentPromo?.id})}aria-label="Añadir a favoritos"title="Añadir a favoritos (requiere premium)"style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}} onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}} onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}>
                           <FontAwesomeIcon icon={faUserPlus}/>
                         </ButtonAddFavorite>
                       </div>
-                      <button type="button"onClick={goNextCard}aria-label="Siguiente modelo"title="Siguiente modelo"style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}><FontAwesomeIcon icon={faChevronRight}/></button>
+
+                      <button type="button"onClick={goNextCard}aria-label="Siguiente modelo"title="Siguiente modelo"style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}>
+                        <FontAwesomeIcon icon={faChevronRight}/>
+                      </button>
                     </StyledTeaserCard>
                   </StyledTeaserInner>
                 </StyledTeaserCenter>
               )}
+
               {!promoLoading&&!promoError&&promoVideos.length===0&&(<div style={{color:'#e9ecef',padding:'8px 12px',fontSize:'0.9rem'}}>No hay vídeos promocionales disponibles por el momento.</div>)}
+
               {isMobile&&(
                 <StyledPreCallCenter style={{position:'absolute',top:'70%',left:0,right:0,transform:'translateY(-50%)'}}>
-                  <div><ButtonActivarCamMobile onClick={handleActivateCamera}>Activar cámara</ButtonActivarCamMobile><StyledHelperLine style={{color:'#fff'}}><FontAwesomeIcon icon={faVideo}/>activar cámara para iniciar videochat</StyledHelperLine></div>
+                  <div>
+                    <ButtonActivarCamMobile onClick={handleActivateCamera}>Activar cámara</ButtonActivarCamMobile>
+                    <StyledHelperLine style={{color:'#fff'}}><FontAwesomeIcon icon={faVideo}/>activar cámara para iniciar videochat</StyledHelperLine>
+                  </div>
                 </StyledPreCallCenter>
               )}
             </>
@@ -206,7 +236,7 @@ export default function VideoChatRandomUser(props){
                 </StyledVideoArea>
               )}
 
-              {/* PiP móvil: cámara local SIEMPRE que esté activa (cuando NO hay remoto también aplica por diseño actual) */}
+              {/* PiP móvil: cámara local cuando NO hay remoto */}
               {isMobile&&cameraActive&&!remoteStream&&(
                 <StyledLocalVideo>
                   <video ref={localVideoRef}muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}/>

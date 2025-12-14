@@ -27,30 +27,26 @@ const Base = styled.div`
   }
 `;
 
-const BlurSupport = styled.div`
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background: rgba(0, 0, 0, 0.10);
-
-  backdrop-filter: blur(14px) saturate(1.1);
-  -webkit-backdrop-filter: blur(14px) saturate(1.1);
-
-  @supports not ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
-    display: none;
-  }
+const BlurSupport=styled.div`
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  background:rgba(0,0,0,.08);
+  backdrop-filter:blur(8px) saturate(1.05);
+  -webkit-backdrop-filter:blur(8px) saturate(1.05);
+  @supports not ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){display:none;}
 `;
 
-const BlurFallback = styled.div`
-  position: absolute;
-  inset: -10px;
-  z-index: 2;
-  pointer-events: none;
 
-  filter: blur(16px) saturate(1.1);
-  transform: scale(1.06);
-  opacity: 0.85;
+const BlurFallback = styled.div`
+  position:absolute;
+  inset:-8px;
+  z-index:2;
+  pointer-events:none;
+  filter:blur(10px) saturate(1.05);
+  transform:scale(1.04);
+  opacity:.65;
 
   @supports ((backdrop-filter: blur(2px)) or (-webkit-backdrop-filter: blur(2px))) {
     display: none;
@@ -71,7 +67,7 @@ const Dark = styled.div`
   inset: 0;
   z-index: 3;
   pointer-events: none;
-  background: rgba(0, 0, 0, 0.45);
+  background:rgba(0,0,0,.30);
 `;
 
 const Vignette = styled.div`
@@ -79,7 +75,7 @@ const Vignette = styled.div`
   inset: 0;
   z-index: 4;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.55) 100%);
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0) 0%, rgba(0,0,0,.45) 100%);
   opacity: 0.55;
 `;
 
