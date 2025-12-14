@@ -223,13 +223,18 @@ export const HomeHeroText = styled.div`
     text-align: center;
 
     h1 {
-      font-size: 1.8rem;
+      font-size: 1.35rem;
+      line-height: 1.1;
+      margin: 0 0 10px;
     }
 
     p {
-      font-size: 0.95rem;
+      font-size: 0.85rem;
+      line-height: 1.35;
+      margin: 0 0 12px;
     }
   }
+
 `;
 
 // === COOKIE BANNER (estilo Azar) ===
