@@ -206,7 +206,6 @@ export default function VideoChatRandomUser(props){
                     <StyledVideoTitle>
                       <StyledTitleAvatar src={modelAvatar||'/img/avatarChica.png'}alt=""/>
                       {modelNickname||'Modelo'}
-                      <button type="button"onClick={()=>toggleFullscreen(remoteVideoWrapRef.current)}title="Pantalla completa"style={{marginLeft:8,padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}>Pantalla completa</button>
                     </StyledVideoTitle>
 
                     <video ref={remoteVideoRef}style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} autoPlay playsInline onDoubleClick={()=>toggleFullscreen(remoteVideoWrapRef.current)}/>

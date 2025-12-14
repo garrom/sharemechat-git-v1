@@ -343,22 +343,7 @@ export default function VideoChatRandomModelo(props) {
                     <StyledVideoTitle>
                       <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
                       {clientNickname || 'Cliente'}
-                      <button
-                        type="button"
-                        onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                        title="Pantalla completa"
-                        style={{
-                          marginLeft:8,
-                          padding:'2px 8px',
-                          borderRadius:6,
-                          border:'1px solid rgba(255,255,255,.6)',
-                          background:'rgba(0,0,0,.25)',
-                          color:'#fff',
-                          cursor:'pointer',
-                        }}
-                      >
-                        Pantalla completa
-                      </button>
+
                     </StyledVideoTitle>
 
                     <video

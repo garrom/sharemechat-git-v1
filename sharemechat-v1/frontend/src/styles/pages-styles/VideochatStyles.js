@@ -468,10 +468,9 @@ export const StyledChatDock = styled.div`
   }
 
   @media (max-width: 768px) {
-    position: relative;
+    position: sticky;
     left: 0;
     right: 0;
-    //bottom: var(--bottom-nav-height);
     bottom: 0;
     box-sizing: border-box;
     gap: 6px;
@@ -889,11 +888,12 @@ export const StyledChatScroller = styled.div`
   padding: 0px;
 
   @media (max-width: 768px) {
-    padding-top: var(--navbar-height);
-    scroll-padding-top: var(--navbar-height);
-    padding-bottom: 120px;
-    scroll-padding-bottom: 120px;
+    padding-top: 4px;
+    scroll-padding-top: 12px;
+    padding-bottom: 80px;
+    scroll-padding-bottom: 80px;
   }
+
 
   /* fondo solo cuando se indique explícitamente */
   &[data-bg='whatsapp'] {

@@ -1,5 +1,5 @@
 // src/pages/dashboard/VideoChatFavoritosModelo.jsx
-import React from 'react';
+import React,{useEffect,useRef} from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import FavoritesModelList from '../favorites/FavoritesModelList';
@@ -396,14 +396,7 @@ export default function VideoChatFavoritosModelo(props) {
                       <StyledVideoTitle>
                         <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
                         {callPeerName || 'Remoto'}
-                        <button
-                          type="button"
-                          onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
-                          title="Pantalla completa"
-                          style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 6, border: '1px solid rgba(255,255,255,.6)', background: 'rgba(0,0,0,0.25)', color: '#fff', cursor: 'pointer' }}
-                        >
-                          Full Screen
-                        </button>
+
                       </StyledVideoTitle>
                       <video ref={callRemoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </StyledRemoteVideo>
@@ -541,11 +534,13 @@ export default function VideoChatFavoritosModelo(props) {
                         onChange={e => setCenterInput(e.target.value)}
                         placeholder={allowChat ? 'Escribe un mensaje…' : 'Chat inactivo'}
                         onKeyDown={e => {
-                          if (e.key === 'Enter' && allowChat) {
+                          if (e.key === 'Enter' && !e.shiftKey && allowChat) {
+                            e.preventDefault();
                             sendCenterMessage();
                           }
                         }}
                         disabled={!allowChat}
+                        onFocus={()=>{setTimeout(()=>modelCenterListRef.current?.scrollIntoView({block:'end'}),50);}}
                       />
 
                     </StyledChatDock>
