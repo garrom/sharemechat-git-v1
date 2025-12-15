@@ -1,34 +1,46 @@
-// src/pages/favorites/FavoritesClientList.jsx
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faEllipsisVertical } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faTrash, faBan } from '@fortawesome/free-solid-svg-icons';
+
 import {
-  List, StateRow, ItemCard, Avatar, Info, Name, Badges, DotWrap, StatusDot
+  List,
+  StateRow,
+  ItemCard,
+  Avatar,
+  Info,
+  Name,
+  Badges,
+  DotWrap,
+  StatusDot,
+  FavMenuTrigger,
+  FavMenu,
+  FavMenuItem,
+  FavMenuIcon,
+  FavMenuDivider,
 } from '../../styles/pages-styles/FavoritesStyles';
+
 import StatusBadge from '../../components/StatusBadge';
 
 function FavListItem({
   user,
   avatarUrl,
   onSelect,
-  onRemove,
-  onContextMenu,
+  onOpenMenu,
   selected = false,
   hasUnread = false,
+  menuOpen = false,
 }) {
   const placeholder = '/img/avatarChica.png';
   const [imgSrc, setImgSrc] = useState(placeholder);
 
   useEffect(() => {
-    if (avatarUrl && typeof avatarUrl === 'string') {
-      setImgSrc(avatarUrl);
-    }
+    if (avatarUrl && typeof avatarUrl === 'string') setImgSrc(avatarUrl);
   }, [avatarUrl]);
 
   const invited = String(user.invited || '').trim().toLowerCase();
   const presence = String(user.presence || 'offline').toLowerCase();
-
-  console.log('[FavListItem] user', user?.id, 'hasUnread=', hasUnread, 'presence=', presence);
+  const isMenuDisabled = invited === 'pending' || invited === 'sent';
 
   return (
     <ItemCard
@@ -37,20 +49,26 @@ function FavListItem({
       data-selected={selected ? 'true' : 'false'}
       aria-selected={selected ? 'true' : 'false'}
       onClick={() => onSelect?.(user)}
-      style={selected ? { background: '#e7f1ff', borderColor: '#b6d4fe' } : undefined}
     >
       <DotWrap>
         <Avatar
           src={imgSrc}
           alt=""
           $size={28}
-          onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }}
+          onError={(e) => {
+            e.currentTarget.src = '/img/avatarChica.png';
+          }}
         />
         <StatusDot
-          className={presence === 'busy' ? 'busy' : (presence === 'online' ? 'online' : 'offline')}
+          className={
+            presence === 'busy'
+              ? 'busy'
+              : presence === 'online'
+              ? 'online'
+              : 'offline'
+          }
           aria-label={presence}
         />
-
       </DotWrap>
 
       <Info>
@@ -67,58 +85,33 @@ function FavListItem({
         )}
       </Badges>
 
-      {/* PUNTO AZUL DE NO LEÍDOS */}
       {hasUnread && (
         <div
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            backgroundColor: '#0d6efd',
-            marginRight: 6,
-          }}
+          style={{ width:10,height:10,borderRadius:'50%',backgroundColor:'#0d6efd',marginRight:6 }}
           aria-label="Tienes mensajes sin leer"
           title="Tienes mensajes sin leer"
         />
       )}
 
-      {/* Botón menú (tres puntos) */}
-      <button
+      <FavMenuTrigger
         type="button"
+        data-open={menuOpen ? 'true' : 'false'}
+        aria-label="Más opciones"
+        title="Más opciones"
         onClick={(e) => {
           e.stopPropagation();
-          const inv = invited;
-          if (inv === 'pending' || inv === 'sent') return;
+          if (isMenuDisabled) return;
 
           const cardEl = e.currentTarget.closest('[data-fav-card]');
-          const rect = cardEl ? cardEl.getBoundingClientRect() : e.currentTarget.getBoundingClientRect();
+          const rect = cardEl
+            ? cardEl.getBoundingClientRect()
+            : e.currentTarget.getBoundingClientRect();
 
-          const vw = window.innerWidth || document.documentElement.clientWidth || 0;
-          const menuWidth = 220;
-          let x = rect.left;
-          if (x + menuWidth > vw - 8) {
-            x = vw - menuWidth - 8;
-          }
-
-          const y = rect.bottom + 4;
-
-          onContextMenu && onContextMenu(user, { x, y });
+          onOpenMenu?.(user, rect);
         }}
-        style={{
-          background: 'transparent',
-          border: 'none',
-          cursor: 'pointer',
-          padding: '4px 6px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
-        }}
-        aria-label="Opciones"
-        title="Opciones"
       >
-        <FontAwesomeIcon icon={faEllipsisVertical} />
-      </button>
-
+        <FontAwesomeIcon icon={faChevronDown} />
+      </FavMenuTrigger>
     </ItemCard>
   );
 }
@@ -127,40 +120,99 @@ export default function FavoritesClientList({
   onSelect,
   reloadTrigger = 0,
   selectedId = null,
-  onContextMenu
 }) {
   const [items, setItems] = useState([]);
   const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [unreadMap, setUnreadMap] = useState({});
-  const token = localStorage.getItem('token');
+  const [menu, setMenu] = useState({ open: false, user: null, x: 0, y: 0 });
 
-  // 1) Cargar favoritos + presencia
+  const token = localStorage.getItem('token');
+  const menuWidthDesktop = 220;
+
+  const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+
+  const closeMenu = () => {
+    setMenu({ open: false, user: null, x: 0, y: 0 });
+  };
+
+  useEffect(() => {
+    const close = () => closeMenu();
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, []);
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === 'Escape') closeMenu();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  /**
+   * TOGGLE LOGIC CLAVE
+   * - Si el menú está abierto para el mismo usuario → cerrar
+   * - Si está abierto para otro → recalcular posición y abrir
+   * - Si está cerrado → abrir
+   */
+  const openMenuFromRect = (user, rect) => {
+    if (menu.open && Number(menu.user?.id) === Number(user.id)) {
+      closeMenu();
+      return;
+    }
+
+    const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+    const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+
+    const width = Math.min(menuWidthDesktop, vw - 16);
+
+    let x = rect.left + rect.width / 2 - width / 2;
+    x = clamp(x, 8, vw - width - 8);
+
+    let y = rect.bottom + 6;
+    const maxY = vh - 8;
+    if (y > maxY) y = maxY;
+
+    setMenu({ open: true, user, x, y });
+  };
+
+  // === 1) Cargar favoritos + presencia
   useEffect(() => {
     let ignore = false;
+
     const load = async () => {
       if (!token) return;
       setLoading(true);
+
       try {
         const res = await fetch('/api/favorites/models/meta', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+
+        if (!res.ok) {
+          throw new Error((await res.text()) || `HTTP ${res.status}`);
+        }
+
         const data = await res.json();
+
         if (!ignore) {
-          const mapped = (data || []).map(d => {
+          const mapped = (data || []).map((d) => {
             const u = d?.user || {};
             return {
               ...u,
               invited: d?.invited,
               status: d?.status,
               presence: d?.presence || 'offline',
-              role: u?.role || 'MODEL',
-              userType: u?.userType || 'MODEL',
             };
           });
-          const filtered = mapped.filter(item => String(item.invited || '').toLowerCase() !== 'rejected');
-          setItems(filtered);
+
+          setItems(
+            mapped.filter(
+              (item) =>
+                String(item.invited || '').toLowerCase() !== 'rejected'
+            )
+          );
         }
       } catch (e) {
         console.warn('[favorites] load error:', e?.message);
@@ -169,59 +221,72 @@ export default function FavoritesClientList({
         if (!ignore) setLoading(false);
       }
     };
+
     load();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [token, reloadTrigger]);
 
-  // 2) Cargar avatares
+  // === 2) Avatares
   useEffect(() => {
     let ignore = false;
+
     const run = async () => {
       if (!items.length || !token) return;
-      const ids = items.map(i => i.id).filter(Boolean);
+
+      const ids = items.map((i) => i.id).filter(Boolean);
       const qs = encodeURIComponent(ids.join(','));
+
       try {
         const r = await fetch(`/api/users/avatars?ids=${qs}`, {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
-        if (!r.ok) throw new Error((await r.text()) || `HTTP ${r.status}`);
+
+        if (!r.ok) {
+          throw new Error((await r.text()) || `HTTP ${r.status}`);
+        }
+
         const map = await r.json();
         if (!ignore) setAvatarMap(map || {});
       } catch (e) {
         console.warn('[favorites] avatars error:', e?.message);
       }
     };
+
     run();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [items, token]);
 
-  // 3) Cargar resumen de conversaciones (para saber qué peers tienen no leídos)
+  // === 3) No leídos
   useEffect(() => {
     let ignore = false;
 
     const loadUnread = async () => {
       if (!token) return;
+
       try {
         const res = await fetch('/api/messages/conversations', {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: { Authorization: `Bearer ${token}` },
         });
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+
+        if (!res.ok) {
+          throw new Error((await res.text()) || `HTTP ${res.status}`);
+        }
+
         const data = await res.json();
 
         if (ignore) return;
 
-        console.log('[favorites] conversations:', data);
-
         const map = {};
-        (data || []).forEach(conv => {
+        (data || []).forEach((conv) => {
           const peerId = Number(conv.peer ?? conv.peerId);
-          const unread = Number(conv.unreadCount ?? conv.unread_count ?? 0);
-          if (Number.isFinite(peerId) && unread > 0) {
-            map[peerId] = true;
-          }
+          const unread = Number(conv.unreadCount ?? 0);
+          if (peerId && unread > 0) map[peerId] = true;
         });
 
-        console.log('[favorites] unreadMap built:', map);
         setUnreadMap(map);
       } catch (e) {
         console.warn('[favorites] unread load error:', e?.message);
@@ -230,11 +295,10 @@ export default function FavoritesClientList({
     };
 
     loadUnread();
-    return () => { ignore = true; };
+    return () => {
+      ignore = true;
+    };
   }, [token, reloadTrigger]);
-
-  if (loading) return <StateRow>Cargando…</StateRow>;
-  if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;
 
   const handleRemove = async (user) => {
     const inv = String(user?.invited || '').toLowerCase();
@@ -244,50 +308,98 @@ export default function FavoritesClientList({
     }
 
     if (!user?.id) return;
-    const ok = window.confirm(`¿Eliminar a ${user.nickname || `Usuario #${user.id}`} de tus favoritos?`);
+
+    const ok = window.confirm(
+      `¿Eliminar a ${user.nickname || `Usuario #${user.id}`} de tus favoritos?`
+    );
     if (!ok) return;
 
     try {
       const res = await fetch(`/api/favorites/models/${user.id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` }
+        headers: { Authorization: `Bearer ${token}` },
       });
+
       if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `HTTP ${res.status}`);
+        throw new Error((await res.text()) || `HTTP ${res.status}`);
       }
-      setItems(prev => prev.filter(i => Number(i.id) !== Number(user.id)));
+
+      setItems((prev) => prev.filter((i) => i.id !== user.id));
     } catch (e) {
       alert(e.message || 'No se pudo eliminar de favoritos.');
     }
   };
 
-  return (
-    <List>
-      {items.map(u => (
-        <FavListItem
-          key={u.id}
-          user={u}
-          avatarUrl={avatarMap?.[u.id] || null}
-          onSelect={(user) => {
-            // 1) Quitar el punto azul en UI
-            setUnreadMap((prev) => {
-              if (!prev || !prev[user.id]) return prev; // nada que cambiar
-              const next = { ...prev };
-              delete next[user.id];
-              return next;
-            });
+  const menuNode = useMemo(() => {
+    if (!menu.open || !menu.user) return null;
 
-            // 2) Mantener el comportamiento original
-            onSelect?.(user);
+    return ReactDOM.createPortal(
+      <FavMenu
+        style={{ left: menu.x, top: menu.y }}
+        onClick={(e) => e.stopPropagation()}
+        role="menu"
+      >
+        <FavMenuItem
+          type="button"
+          onClick={async () => {
+            closeMenu();
+            await handleRemove(menu.user);
           }}
-          onRemove={handleRemove}
-          onContextMenu={onContextMenu}
-          selected={Number(u.id) === Number(selectedId)}
-          hasUnread={!!unreadMap[u.id]}
-        />
-      ))}
-    </List>
-  );
+        >
+          <FavMenuIcon>
+            <FontAwesomeIcon icon={faTrash} />
+          </FavMenuIcon>
+          <span>Eliminar</span>
+        </FavMenuItem>
 
+        <FavMenuDivider />
+
+        <FavMenuItem
+          type="button"
+          onClick={() => {
+            closeMenu();
+            alert('Bloquear contacto: vista disponible, backend pendiente.');
+          }}
+        >
+          <FavMenuIcon>
+            <FontAwesomeIcon icon={faBan} />
+          </FavMenuIcon>
+          <span>Bloquear</span>
+        </FavMenuItem>
+      </FavMenu>,
+      document.body
+    );
+  }, [menu]);
+
+  if (loading) return <StateRow>Cargando…</StateRow>;
+  if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;
+
+  return (
+    <>
+      <List>
+        {items.map((u) => (
+          <FavListItem
+            key={u.id}
+            user={u}
+            avatarUrl={avatarMap?.[u.id] || null}
+            selected={Number(u.id) === Number(selectedId)}
+            hasUnread={!!unreadMap[u.id]}
+            menuOpen={menu.open && Number(menu.user?.id) === Number(u.id)}
+            onSelect={(user) => {
+              setUnreadMap((prev) => {
+                if (!prev?.[user.id]) return prev;
+                const next = { ...prev };
+                delete next[user.id];
+                return next;
+              });
+              onSelect?.(user);
+            }}
+            onOpenMenu={(user, rect) => openMenuFromRect(user, rect)}
+          />
+        ))}
+      </List>
+
+      {menuNode}
+    </>
+  );
 }

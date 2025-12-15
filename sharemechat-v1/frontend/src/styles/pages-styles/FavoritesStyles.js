@@ -26,6 +26,12 @@ export const ItemCard = styled.li`
   background: #fff;
   cursor: ${({ $clickable }) => ($clickable ? 'pointer' : 'default')};
   margin-bottom: 8px;
+  transition: background-color .12s ease, border-color .12s ease;
+
+  &[data-selected="true"]{
+    background: #f1f5f9;
+    border-color: #d7dde5;
+  }
 `;
 
 // Avatar con tamaño fijo → evita reflow/parpadeo
@@ -49,14 +55,12 @@ export const Info = styled.div`
   flex: 1;       /* ocupa espacio entre avatar y badges */
 `;
 
-
 export const Name = styled.span`
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis; /* ... si no cabe */
 `;
-
 
 export const Meta = styled.div`
   font-size: 12px;
@@ -86,7 +90,6 @@ export const Badges = styled.div`
   gap: 6px;              /* espacio entre iconos */
   margin-left: auto;     /* empuja badges hacia la derecha */
 `;
-
 
 // Badge sencillo con variantes
 export const Badge = styled.span`
@@ -118,7 +121,9 @@ export const Badge = styled.span`
 // DOT Contenedor para superponer el punto de presencia sobre el avatar
 export const DotWrap = styled.div`
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 `;
 
 // DOT Punto de presencia: verde=online, rojo=busy, gris=offline
@@ -142,11 +147,97 @@ export const StatusDot = styled.span`
   height: 10px;
   border-radius: 50%;
   flex: 0 0 auto;
-  /* color por defecto (offline) */
   background: #9ca3af;
-
-  &.online  { background: #22c55e; } /* verde */
-  &.busy    { background: #f59e0b; } /* ámbar */
-  &.offline { background: #9ca3af; } /* gris */
+  &.online  { background: #22c55e; }
+  &.busy    { background: #f59e0b; }
+  &.offline { background: #9ca3af; }
 `;
 
+/* =========================
+   WhatsApp-like: botón chevron + menú centrado
+   ========================= */
+
+export const FavMenuTrigger = styled.button`
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: background-color .12s ease, transform .08s ease;
+
+  &:hover { background: rgba(0,0,0,0.06); }
+  &:active { transform: translateY(1px); }
+
+  &[data-open="true"]{
+    background: rgba(0,0,0,0.08);
+  }
+
+  @media (max-width: 768px){
+    padding: 8px;
+  }
+`;
+
+export const FavMenu = styled.div`
+  position: fixed;
+  z-index: 9999;
+  width: 220px;
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+  border-radius: 12px;
+  box-shadow: 0 12px 28px rgba(0,0,0,.14);
+  overflow: hidden;
+
+  @media (max-width: 768px){
+    width: min(240px, calc(100vw - 20px));
+    border-radius: 14px;
+  }
+`;
+
+export const FavMenuItem = styled.button`
+  width: 100%;
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  font-size: 14px;
+  color: #111;
+  text-align: left;
+
+  /* WhatsApp-style danger hover */
+  &:hover{
+    background: #fff1f2;          /* rojo muy claro */
+    color: #b91c1c;               /* rojo */
+  }
+
+  &:active{
+    background: #ffe4e6;
+  }
+
+  @media (max-width: 768px){
+    padding: 14px 14px;
+    font-size: 14px;
+  }
+`;
+
+export const FavMenuIcon = styled.span`
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+`;
+
+export const FavMenuDivider = styled.div`
+  height: 1px;
+  background: #f1f5f9;
+`;
