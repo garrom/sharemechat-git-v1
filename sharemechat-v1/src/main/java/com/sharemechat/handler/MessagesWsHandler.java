@@ -2,6 +2,7 @@ package com.sharemechat.handler;
 
 import com.sharemechat.config.BillingProperties;
 import com.sharemechat.dto.MessageDTO;
+import com.sharemechat.exception.UserBlockedException;
 import com.sharemechat.repository.ClientRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
@@ -33,6 +34,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     private final ClientRepository clientRepository;         // leer saldo_actual del CLIENT
     private final BillingProperties billing;                 // ratePerMinute, cutoff, etc.
     private final StatusService statusService;
+    private final UserBlockService userBlockService;
 
     private static final Logger log = LoggerFactory.getLogger(MessagesWsHandler.class);
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
@@ -50,7 +52,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                              StreamService streamService,
                              ClientRepository clientRepository,
                              BillingProperties billing,
-                             StatusService statusService) {
+                             StatusService statusService,
+                             UserBlockService userBlockService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.favoriteService = favoriteService;
@@ -60,6 +63,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         this.clientRepository = clientRepository;
         this.billing = billing;
         this.statusService = statusService;
+        this.userBlockService = userBlockService;
 
     }
 
@@ -791,6 +795,23 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         clearRinging(a);
         clearRinging(b);
     }
+
+    // Verifica si existe un bloqueo entre ambos usuarios (en cualquier dirección).
+    public void assertNotBlocked(Long fromUserId, Long toUserId) {
+        if (fromUserId == null || toUserId == null) return;
+
+        try {
+            if (userBlockService.isBlockedBetween(fromUserId, toUserId)) {
+                throw UserBlockedException.blockedByOther();
+            }
+        } catch (UserBlockedException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            // fallback defensivo: ante error, bloqueamos acción
+            throw new UserBlockedException("No se puede realizar la acción por bloqueo entre usuarios.");
+        }
+    }
+
 
     // ==== API pública ligera para PresenceService ====
     public boolean hasOnlineSession(Long userId) {

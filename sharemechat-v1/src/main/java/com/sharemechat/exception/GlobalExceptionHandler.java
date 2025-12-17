@@ -126,4 +126,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
     }
 
+    // 403 – Bloqueo entre usuarios
+    @ExceptionHandler(UserBlockedException.class)
+    public ResponseEntity<ApiError> handleUserBlocked(UserBlockedException ex, HttpServletRequest req) {
+        log.warn("Acción bloqueada por user_block: {}", ex.getMessage());
+        ApiError body = new ApiError(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                ex.getMessage(),
+                req.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+
 }

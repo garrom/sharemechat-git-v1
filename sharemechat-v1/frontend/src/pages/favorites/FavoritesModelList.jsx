@@ -1,4 +1,3 @@
-// src/pages/favorites/FavoritesModelList.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -88,13 +87,7 @@ function FavListItem({
 
       {hasUnread && (
         <div
-          style={{
-            width: 10,
-            height: 10,
-            borderRadius: '50%',
-            backgroundColor: '#0d6efd',
-            marginRight: 6,
-          }}
+          style={{width:10,height:10,borderRadius:'50%',backgroundColor:'#0d6efd',marginRight:6}}
           aria-label="Tienes mensajes sin leer"
           title="Tienes mensajes sin leer"
         />
@@ -157,12 +150,6 @@ export default function FavoritesModelList({
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  /**
-   * TOGGLE LOGIC CLAVE
-   * - Si el menú está abierto para el mismo usuario → cerrar
-   * - Si está abierto para otro → recalcular posición y abrir
-   * - Si está cerrado → abrir
-   */
   const openMenuFromRect = (user, rect) => {
     if (menu.open && Number(menu.user?.id) === Number(user.id)) {
       closeMenu();
@@ -184,7 +171,7 @@ export default function FavoritesModelList({
     setMenu({ open: true, user, x, y });
   };
 
-  // === 1) Cargar favoritos + presencia (MODELO ve CLIENTES) ===
+  // === 1) Cargar favoritos + presencia (MODELO ve CLIENTES)
   useEffect(() => {
     let ignore = false;
 
@@ -236,7 +223,7 @@ export default function FavoritesModelList({
     };
   }, [token, reloadTrigger]);
 
-  // === 2) Avatares ===
+  // === 2) Avatares
   useEffect(() => {
     let ignore = false;
 
@@ -268,7 +255,7 @@ export default function FavoritesModelList({
     };
   }, [items, token]);
 
-  // === 3) No leídos ===
+  // === 3) No leídos
   useEffect(() => {
     let ignore = false;
 
@@ -340,6 +327,36 @@ export default function FavoritesModelList({
     }
   };
 
+  const handleBlock = async (user) => {
+    if (!token) { alert('No autenticado'); return; }
+    if (!user?.id) return;
+
+    const ok = window.confirm(`¿Bloquear a ${user.nickname || `Usuario #${user.id}`}?`);
+    if (!ok) return;
+
+    const reason = window.prompt('Motivo del bloqueo (opcional):', '') ?? '';
+    try {
+      const res = await fetch(`/api/blocks/${user.id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+
+      setItems((prev) => prev.filter((i) => Number(i.id) !== Number(user.id)));
+      setUnreadMap((prev) => {
+        if (!prev?.[user.id]) return prev;
+        const next = { ...prev };
+        delete next[user.id];
+        return next;
+      });
+
+      alert('Usuario bloqueado.');
+    } catch (e) {
+      alert(e?.message || 'No se pudo bloquear.');
+    }
+  };
+
   const menuNode = useMemo(() => {
     if (!menu.open || !menu.user) return null;
 
@@ -366,9 +383,9 @@ export default function FavoritesModelList({
 
         <FavMenuItem
           type="button"
-          onClick={() => {
+          onClick={async () => {
             closeMenu();
-            alert('Bloquear contacto: vista disponible, backend pendiente.');
+            await handleBlock(menu.user);
           }}
         >
           <FavMenuIcon>

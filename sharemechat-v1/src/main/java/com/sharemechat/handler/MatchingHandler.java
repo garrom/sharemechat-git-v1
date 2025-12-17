@@ -2,13 +2,10 @@ package com.sharemechat.handler;
 
 import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.entity.User;
+import com.sharemechat.entity.UserBlock;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
-import com.sharemechat.service.MessageService;
-import com.sharemechat.service.StatusService;
-import com.sharemechat.service.StreamService;
-import com.sharemechat.service.TransactionService;
-import com.sharemechat.service.UserTrialService;
+import com.sharemechat.service.*;
 import com.sharemechat.repository.BalanceRepository;
 import com.sharemechat.entity.Balance;
 import com.sharemechat.constants.Constants;
@@ -50,6 +47,7 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final TransactionService transactionService;
     private final BalanceRepository balanceRepository;
     private final UserTrialService userTrialService;
+    private final UserBlockService userBlockService;
 
     public MatchingHandler(JwtUtil jwtUtil,
                            UserRepository userRepository,
@@ -59,7 +57,8 @@ public class MatchingHandler extends TextWebSocketHandler {
                            MessagesWsHandler messagesWsHandler,
                            StatusService statusService,
                            BalanceRepository balanceRepository,
-                           UserTrialService userTrialService) {
+                           UserTrialService userTrialService,
+                           UserBlockService userBlockService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.streamService = streamService;
@@ -69,6 +68,8 @@ public class MatchingHandler extends TextWebSocketHandler {
         this.transactionService = transactionService;
         this.balanceRepository = balanceRepository;
         this.userTrialService = userTrialService;
+        this.userBlockService = userBlockService;
+
     }
 
     @Override
@@ -255,122 +256,145 @@ public class MatchingHandler extends TextWebSocketHandler {
     // EMPAREJA LADO CLIENT (viewer) CON MODELO Y ARRANCA SESIÓN (NORMAL O TRIAL)
     private void matchClient(WebSocketSession client) throws Exception {
         waitingClients.remove(client);
-        WebSocketSession model = waitingModels.poll();
-        if (model != null && model.isOpen()) {
 
-            Long clientId = sessionUserIds.get(client.getId());
-            Long modelId  = sessionUserIds.get(model.getId());
-            if (clientId != null && modelId != null) {
-                try {
-                    User viewer = userRepository.findById(clientId).orElse(null);
-                    String realRole = viewer != null ? viewer.getRole() : null;
-
-                    if (Constants.Roles.USER.equals(realRole)) {
-                        // === MODO TRIAL: viewer es USER ===
-
-                        // PRE-CHECK: ¿le quedan trials a este USER?
-                        if (!userTrialService.canStartTrial(clientId)) {
-                            // No más trials: informamos al viewer y devolvemos el modelo a la cola
-                            safeSend(client, "{\"type\":\"trial-unavailable\"}");
-                            safeRequeue(model, "model");
-                            return;
-                        }
-
-                        userTrialService.startTrialStream(clientId, modelId);
-
-                        pairs.put(client.getId(), model);
-                        pairs.put(model.getId(), client);
-                    } else {
-                        // === MODO NORMAL: viewer es CLIENT ===
-                        streamService.startSession(clientId, modelId);
-
-                        pairs.put(client.getId(), model);
-                        pairs.put(model.getId(), client);
-                    }
-
-                } catch (Exception ex) {
-                    System.out.println("startSession/startTrialStream falló: " + ex.getMessage());
-                    pairs.remove(client.getId());
-                    pairs.remove(model.getId());
-
-                    safeRequeue(model, "model");
-
-                    if (isLowBalance(ex)) {
-                        safeSend(client, "{\"type\":\"no-balance\"}");
-                    } else {
-                        safeSend(client, "{\"type\":\"no-model-available\"}");
-                    }
-                    return;
-                }
-            }
-
-            sendMatchMessage(client, model.getId());
-            sendMatchMessage(model, client.getId());
-        } else {
-            client.sendMessage(new TextMessage("{\"type\":\"no-model-available\"}"));
+        Long clientId = sessionUserIds.get(client.getId());
+        if (clientId == null) {
             waitingClients.add(client);
+            return;
         }
+
+        WebSocketSession model;
+
+        while ((model = waitingModels.poll()) != null) {
+
+            if (!model.isOpen()) continue;
+
+            Long modelId = sessionUserIds.get(model.getId());
+            if (modelId == null) continue;
+
+            // ===== BLOQUEO (PRE-CHECK, NO ROMPE FLUJO) =====
+            try {
+                messagesWsHandler.assertNotBlocked(clientId, modelId);
+            } catch (Exception ex) {
+                // Par bloqueado → probamos otro modelo
+                continue;
+            }
+            // ==============================================
+
+            try {
+                User viewer = userRepository.findById(clientId).orElse(null);
+                String realRole = viewer != null ? viewer.getRole() : null;
+
+                if (Constants.Roles.USER.equals(realRole)) {
+                    // === MODO TRIAL ===
+                    if (!userTrialService.canStartTrial(clientId)) {
+                        safeSend(client, "{\"type\":\"trial-unavailable\"}");
+                        waitingModels.add(model);
+                        waitingClients.add(client);
+                        return;
+                    }
+
+                    userTrialService.startTrialStream(clientId, modelId);
+                } else {
+                    // === MODO NORMAL ===
+                    streamService.startSession(clientId, modelId);
+                }
+
+                pairs.put(client.getId(), model);
+                pairs.put(model.getId(), client);
+
+                sendMatchMessage(client, model.getId());
+                sendMatchMessage(model, client.getId());
+                return;
+
+            } catch (Exception ex) {
+                System.out.println("startSession/startTrialStream falló: " + ex.getMessage());
+
+                pairs.remove(client.getId());
+                pairs.remove(model.getId());
+
+                waitingModels.add(model);
+
+                if (isLowBalance(ex)) {
+                    safeSend(client, "{\"type\":\"no-balance\"}");
+                } else {
+                    safeSend(client, "{\"type\":\"no-model-available\"}");
+                }
+
+                waitingClients.add(client);
+                return;
+            }
+        }
+        // No se encontró ningún modelo compatible
+        safeSend(client, "{\"type\":\"no-model-available\"}");
+        waitingClients.add(client);
     }
+
 
     // EMPAREJA LADO MODELO CON CLIENT (viewer) Y ARRANCA SESIÓN (NORMAL O TRIAL)
     private void matchModel(WebSocketSession model) throws Exception {
         waitingModels.remove(model);
-        WebSocketSession client = waitingClients.poll();
-        if (client != null && client.isOpen()) {
+
+        Long modelId = sessionUserIds.get(model.getId());
+        if (modelId == null) {
+            waitingModels.add(model);
+            return;
+        }
+
+        WebSocketSession client;
+
+        while ((client = waitingClients.poll()) != null) {
+
+            if (!client.isOpen()) continue;
 
             Long clientId = sessionUserIds.get(client.getId());
-            Long modelId  = sessionUserIds.get(model.getId());
-            if (clientId != null && modelId != null) {
-                try {
-                    User viewer = userRepository.findById(clientId).orElse(null);
-                    String realRole = viewer != null ? viewer.getRole() : null;
+            if (clientId == null) continue;
 
-                    if (Constants.Roles.USER.equals(realRole)) {
-                        // === MODO TRIAL: viewer es USER ===
-                        userTrialService.startTrialStream(clientId, modelId);
-
-                        pairs.put(model.getId(), client);
-                        pairs.put(client.getId(), model);
-                    } else {
-                        // === MODO NORMAL: viewer es CLIENT ===
-                        streamService.startSession(clientId, modelId);
-
-                        pairs.put(model.getId(), client);
-                        pairs.put(client.getId(), model);
-                    }
-
-                } catch (Exception ex) {
-                    System.out.println("startSession/startTrialStream falló: " + ex.getMessage());
-
-                    pairs.remove(model.getId());
-                    pairs.remove(client.getId());
-
-                    User viewer = null;
-                    try { viewer = userRepository.findById(clientId).orElse(null); } catch (Exception ignore) {}
-
-                    String realRole = viewer != null ? viewer.getRole() : null;
-
-                    if (Constants.Roles.CLIENT.equals(realRole) && isLowBalance(ex)) {
-                        safeSend(client, "{\"type\":\"no-balance\"}");
-                        safeRequeue(model, "model");
-                    } else if (Constants.Roles.USER.equals(realRole)) {
-                        safeSend(client, "{\"type\":\"trial-unavailable\"}");
-                        safeRequeue(model, "model");
-                    } else {
-                        safeRequeue(client, "client");
-                        safeSend(model, "{\"type\":\"no-client-available\"}");
-                    }
-                    return;
-                }
+            // ===== BLOQUEO (PRE-CHECK, NO ROMPE FLUJO) =====
+            try {
+                messagesWsHandler.assertNotBlocked(clientId, modelId);
+            } catch (Exception ex) {
+                continue;
             }
+            // ==============================================
 
-            sendMatchMessage(model, client.getId());
-            sendMatchMessage(client, model.getId());
-        } else {
-            model.sendMessage(new TextMessage("{\"type\":\"no-client-available\"}"));
-            waitingModels.add(model);
+            try {
+                User viewer = userRepository.findById(clientId).orElse(null);
+                String realRole = viewer != null ? viewer.getRole() : null;
+
+                if (Constants.Roles.USER.equals(realRole)) {
+                    userTrialService.startTrialStream(clientId, modelId);
+                } else {
+                    streamService.startSession(clientId, modelId);
+                }
+
+                pairs.put(model.getId(), client);
+                pairs.put(client.getId(), model);
+
+                sendMatchMessage(model, client.getId());
+                sendMatchMessage(client, model.getId());
+                return;
+
+            } catch (Exception ex) {
+                System.out.println("startSession/startTrialStream falló: " + ex.getMessage());
+
+                pairs.remove(model.getId());
+                pairs.remove(client.getId());
+
+                if (isLowBalance(ex)) {
+                    safeSend(client, "{\"type\":\"no-balance\"}");
+                }
+
+                waitingClients.add(client);
+                waitingModels.add(model);
+                return;
+            }
         }
+
+        safeSend(model, "{\"type\":\"no-client-available\"}");
+        waitingModels.add(model);
     }
+
 
     private void handleNext(WebSocketSession session) throws Exception {
         if (!switching.add(session.getId())) {
@@ -766,5 +790,20 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
         return count;
     }
+
+    private boolean canMatch(Long userAId, Long userBId) {
+        if (userAId == null || userBId == null) return false;
+
+        try {
+            if (userBlockService.isBlockedBetween(userAId, userBId)) {
+                return false;
+            }
+            return true;
+        } catch (Exception ex) {
+            // Fail-safe: ante cualquier error, NO emparejamos
+            return false;
+        }
+    }
+
 
 }

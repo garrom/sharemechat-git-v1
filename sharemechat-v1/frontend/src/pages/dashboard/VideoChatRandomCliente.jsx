@@ -2,7 +2,9 @@
 import React,{useState,useEffect}from'react';
 import{FontAwesomeIcon}from'@fortawesome/react-fontawesome';
 import BlurredPreview from'../../components/BlurredPreview';
-import{faUserPlus,faVideo,faPhoneSlash,faForward,faPaperPlane,faGift,faChevronLeft,faChevronRight}from'@fortawesome/free-solid-svg-icons';
+import{
+    faUserPlus,faVideo,faPhoneSlash,faForward,faPaperPlane,faGift,faChevronLeft,faChevronRight,faBan
+}from'@fortawesome/free-solid-svg-icons';
 import{
   StyledCenterVideochat,
   StyledSplit2,
@@ -43,7 +45,8 @@ import{
   ButtonAddFavorite,
   ButtonRegalo,
   BtnSend,
-  BtnHangup
+  BtnHangup,
+  BtnBlock
 }from'../../styles/ButtonStyles';
 import PromoVideoLightbox from'../../components/PromoVideoLightbox';
 
@@ -77,6 +80,7 @@ export default function VideoChatRandomCliente(props){
     remoteVideoWrapRef,
     modelAvatar,
     handleActivateCamera,
+    handleBlockPeer
   }=props;
 
   const[promoVideos,setPromoVideos]=useState([]);
@@ -290,43 +294,56 @@ export default function VideoChatRandomCliente(props){
                       )}
 
                       {!isMobile&&cameraActive&&(
-                        <div style={{position:'absolute',bottom:16,left:'50%',transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:8,zIndex:9}}>
-                          <BtnHangup
-                            onClick={stopAll}
-                            title="Colgar"
-                            aria-label="Colgar"
-                            style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
-                            onMouseEnter={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#dc3545';}}
-                            onMouseLeave={e=>{e.currentTarget.style.background='#dc3545';e.currentTarget.style.color='#fff';}}
-                          >
-                            <FontAwesomeIcon icon={faPhoneSlash}/>
-                          </BtnHangup>
-
-                          {remoteStream&&(
-                            <>
-                              <ButtonNext
-                                onClick={handleNext}
-                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                                onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                                onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                        <div style={{position:'absolute',bottom:16,left:16,right:16,zIndex:9}}>
+                          <div style={{position:'relative',height:44}}>
+                            <div style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
+                              <BtnHangup
+                                onClick={stopAll}
+                                title="Colgar"
+                                aria-label="Colgar"
+                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
+                                onMouseEnter={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#dc3545';}}
+                                onMouseLeave={e=>{e.currentTarget.style.background='#dc3545';e.currentTarget.style.color='#fff';}}
                               >
-                                <FontAwesomeIcon icon={faForward}/>
-                              </ButtonNext>
+                                <FontAwesomeIcon icon={faPhoneSlash}/>
+                              </BtnHangup>
 
-                              <ButtonAddFavorite
-                                aria-label="Añadir a favoritos"
-                                onClick={()=>handleAddFavorite&&handleAddFavorite()}
-                                title="Añadir a favoritos"
-                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                                onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                                onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
-                              >
-                                <FontAwesomeIcon icon={faUserPlus}/>
-                              </ButtonAddFavorite>
-                            </>
-                          )}
+                              {remoteStream&&(
+                                <>
+                                  <ButtonNext
+                                    onClick={handleNext}
+                                    style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                                    onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                                    onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                                  >
+                                    <FontAwesomeIcon icon={faForward}/>
+                                  </ButtonNext>
+
+                                  <ButtonAddFavorite
+                                    aria-label="Añadir a favoritos"
+                                    onClick={()=>handleAddFavorite&&handleAddFavorite()}
+                                    title="Añadir a favoritos"
+                                    style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                                    onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                                    onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                                  >
+                                    <FontAwesomeIcon icon={faUserPlus}/>
+                                  </ButtonAddFavorite>
+                                </>
+                              )}
+                            </div>
+
+                            {remoteStream&&(
+                              <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
+                                <BtnBlock type="button"onClick={()=>handleBlockPeer&&handleBlockPeer()}aria-label="Bloquear"title="Bloquear"style={{width:44,height:44}}>
+                                  <FontAwesomeIcon icon={faBan}/>
+                                </BtnBlock>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
+
 
                       <StyledChatContainer data-wide="true">
                         <StyledChatList ref={vcListRef}>
@@ -417,26 +434,38 @@ export default function VideoChatRandomCliente(props){
                     )}
 
                     {cameraActive&&(
-                      <div style={{position:'absolute',left:0,right:0,bottom:'72px',zIndex:8,display:'flex',justifyContent:'center',alignItems:'center',gap:'12px'}}>
-                        <BtnHangup onClick={stopAll}title="Colgar"aria-label="Colgar">
-                          <FontAwesomeIcon icon={faPhoneSlash}/>
-                        </BtnHangup>
-                        <ButtonNext
-                          onClick={handleNext}
-                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                          onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                          onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
-                        >
-                          <FontAwesomeIcon icon={faForward}/>
-                        </ButtonNext>
-                        <ButtonAddFavorite
-                          onClick={()=>handleAddFavorite&&handleAddFavorite()}
-                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                          onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                          onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
-                        >
-                          <FontAwesomeIcon icon={faUserPlus}/>
-                        </ButtonAddFavorite>
+                      <div style={{position:'absolute',left:12,right:12,bottom:'72px',zIndex:8}}>
+                        <div style={{position:'relative',height:44}}>
+                          <div style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:'12px'}}>
+                            <BtnHangup onClick={stopAll}title="Colgar"aria-label="Colgar">
+                              <FontAwesomeIcon icon={faPhoneSlash}/>
+                            </BtnHangup>
+
+                            <ButtonNext
+                              onClick={handleNext}
+                              style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                              onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                              onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                            >
+                              <FontAwesomeIcon icon={faForward}/>
+                            </ButtonNext>
+
+                            <ButtonAddFavorite
+                              onClick={()=>handleAddFavorite&&handleAddFavorite()}
+                              style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                              onMouseEnter={e=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                              onMouseLeave={e=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                            >
+                              <FontAwesomeIcon icon={faUserPlus}/>
+                            </ButtonAddFavorite>
+                          </div>
+
+                          <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
+                            <BtnBlock type="button"onClick={()=>handleBlockPeer&&handleBlockPeer()}aria-label="Bloquear"title="Bloquear"style={{width:44,height:44}}>
+                              <FontAwesomeIcon icon={faBan}/>
+                            </BtnBlock>
+                          </div>
+                        </div>
                       </div>
                     )}
 

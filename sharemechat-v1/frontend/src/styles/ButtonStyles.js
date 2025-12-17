@@ -319,3 +319,8 @@ export const BtnTeaserNext = styled(IconButtonBase)`
   font-size: 24px;
   box-shadow: 0 10px 26px rgba(0,0,0,0.55);
 `;
+
+// bloquear (acción destructiva / especial)
+export const BtnBlock = styled(IconButtonBase)`
+  ${variant('#dc3545', '#ffffff', 'rgba(220,53,69,0.65)', '#dc3545', '#ffffff')}
+`;
