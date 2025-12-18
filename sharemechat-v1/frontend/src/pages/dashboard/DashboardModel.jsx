@@ -124,6 +124,7 @@ const DashboardModel = () => {
   const token = localStorage.getItem('token');
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
+  const blockedClientIdsRef = useRef(new Set());
 
   // --- Dedupe de eco para chat de streaming (RTC)
   const lastSentRef = useRef({ text: null, at: 0 });
@@ -160,6 +161,13 @@ const DashboardModel = () => {
     }
   }, [centerMessages, centerLoading]);
   //**** FIN MOVIL ****/
+
+  // ===== BLOQUEOS (RANDOM) - INIT LOAD =====
+  useEffect(() => {
+    loadBlockedClients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   // click derecho (cerrar con click global o ESC)
   useEffect(() => {
@@ -905,6 +913,20 @@ const DashboardModel = () => {
     }
   };
 
+  // ===== BLOQUEOS (RANDOM) - MODEL SIDE =====
+  const persistBlockedClients = () => {
+    try { localStorage.setItem('blockedClients', JSON.stringify(Array.from(blockedClientIdsRef.current))); } catch {}
+  };
+  const loadBlockedClients = () => {
+    try {
+      const raw = localStorage.getItem('blockedClients');
+      const arr = raw ? JSON.parse(raw) : [];
+      blockedClientIdsRef.current = new Set((Array.isArray(arr) ? arr : []).map(n => Number(n)).filter(n => Number.isFinite(n) && n > 0));
+    } catch {
+      blockedClientIdsRef.current = new Set();
+    }
+  };
+
 
   const handleActivateCamera = async () => {
     try {
@@ -962,6 +984,23 @@ const DashboardModel = () => {
           }
         } catch { setCurrentClientId(null); }
 
+        const incomingId = Number(data.peerUserId);
+        if (Number.isFinite(incomingId) && blockedClientIdsRef.current.has(incomingId)) {
+          console.log('[RANDOM][block] match bloqueado -> pedir next', incomingId);
+          setCurrentClientId(null);
+          setRemoteStream(null);
+          setMessages([]);
+          setSearching(true);
+          setStatus('Buscando nuevo cliente...');
+
+          try {
+            if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+              socketRef.current.send(JSON.stringify({ type: 'next' }));
+            }
+          } catch {}
+          return;
+        }
+
         // reset de peer/remote
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
@@ -977,6 +1016,7 @@ const DashboardModel = () => {
           stream: localStream.current,
         });
         peerRef.current = peer;
+
 
         peer.on('signal', (signal) => {
           if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
@@ -1108,6 +1148,44 @@ const DashboardModel = () => {
       setMessages((prev) => [...prev, { from: 'me', text: message.message }]);
       setChatInput('');
     }
+  };
+
+
+  // ===== BLOQUEOS (RANDOM) - MODEL SIDE =====
+  const handleBlockPeer = async () => {
+    const id = Number(currentClientId);
+    if (!Number.isFinite(id) || id <= 0) {
+      await alert({ title:'Bloquear', message:'No se pudo identificar al cliente actual.', variant:'warning' });
+      return;
+    }
+    const ok = await confirm({
+      title: 'Bloquear',
+      message: '¿Quieres bloquear a este cliente? No volverás a emparejar con él en videochat aleatorio.',
+      confirmText: 'Bloquear',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    });
+    if (!ok) return;
+    blockedClientIdsRef.current.add(id);
+    persistBlockedClients();
+    // Persistimos también en backend (bloqueo real en matching)
+    const tk = localStorage.getItem('token');
+    if (tk) {
+      try {
+        await fetch(`/api/blocks/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
+          body: JSON.stringify({ reason: 'random-block' }),
+        });
+      } catch {}
+    }
+    // Si estamos en streaming, salimos de inmediato (simétrico al UX esperado)
+    if (remoteStream) {
+      try { handleNext(); } catch { stopAll(); }
+    } else {
+      setSearching(false);
+    }
+    await alert({ title:'Bloquear', message:'Cliente bloqueado.', variant:'success' });
   };
 
   const handleProfile = async () => {
@@ -1878,6 +1956,7 @@ const DashboardModel = () => {
   };
 
 
+
   // [CALL][Model] Selección directa desde Favoritos en pestaña Calling (NO abre chat, solo fija destino)
   const handleSelectCallTargetFromFavorites = (favUser) => {
     if (streamingActivo) {
@@ -2005,6 +2084,7 @@ const DashboardModel = () => {
             chatInput={chatInput}
             setChatInput={setChatInput}
             sendChatMessage={sendChatMessage}
+            handleBlockPeer={handleBlockPeer}
             error={error}
           />
         ):activeTab==='blog'?(

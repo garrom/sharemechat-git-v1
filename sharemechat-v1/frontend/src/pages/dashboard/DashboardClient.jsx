@@ -122,10 +122,11 @@ const DashboardClient = () => {
   const [centerLoading, setCenterLoading] = useState(false);
   const msgPingRef = useRef(null);
   const msgReconnectRef = useRef(null);
-  const centerSeenIdsRef = useRef(new Set());  //nuevo
+  const centerSeenIdsRef = useRef(new Set());
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
   const lastSentRef = useRef({ text: null, at: 0 });
+  const blockedModelIdsRef = useRef(new Set());
 
   const isEcho = (incoming) => {
     const now = Date.now();
@@ -145,6 +146,10 @@ const DashboardClient = () => {
     const found = gifts.find(gg => Number(gg.id) === Number(gift.id));
     return found?.icon || null;
   };
+
+  useEffect(() => {
+      loadBlockedModels();
+  }, []);
 
   //**** PARA MOVIL ****/
   useEffect(() => {
@@ -922,6 +927,25 @@ const DashboardClient = () => {
           }
         } catch { setCurrentModelId(null); }
 
+        // === BLOQUEO CLIENT-SIDE: si el match viene con un modelId bloqueado, pedimos NEXT y salimos ===
+        const incomingId = Number(data.peerUserId);
+        if (Number.isFinite(incomingId) && blockedModelIdsRef.current.has(incomingId)) {
+          console.log('[RANDOM][block] match bloqueado -> pedir next', incomingId);
+          setCurrentModelId(null);
+          setRemoteStream(null);
+          setMessages([]);
+          setSearching(true);
+          setStatus('Buscando nueva modelo...');
+
+          try {
+            if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+              socketRef.current.send(JSON.stringify({ type: 'next' }));
+            }
+          } catch {}
+          return;
+        }
+
+
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
         setRemoteStream(null);
@@ -1474,6 +1498,37 @@ const DashboardClient = () => {
     } finally {
       setLoadingSaldo(false);
     }
+  };
+
+  const handleBlockPeer = async () => {
+    const id = Number(currentModelId);
+    if (!Number.isFinite(id) || id <= 0) {
+      await alert({ title:'Bloquear', message:'No se pudo identificar a la modelo actual.', variant:'warning' });
+      return;
+    }
+
+    const ok = await confirm({
+      title: 'Bloquear',
+      message: '¿Quieres bloquear a esta modelo? No volverás a emparejar con ella en videochat aleatorio.',
+      confirmText: 'Bloquear',
+      cancelText: 'Cancelar',
+      variant: 'danger',
+    });
+    if (!ok) return;
+
+    blockedModelIdsRef.current.add(id);
+    persistBlockedModels();
+
+    // Si estamos en streaming, salimos de inmediato (simétrico al UX esperado)
+    if (remoteStream) {
+      try { handleNext(); } catch { stopAll(); }
+    } else {
+      // Si no hay remoto, detenemos búsqueda/cámara según tu estado actual
+      // (mantengo conservador: no paro cámara, solo paro la búsqueda si estaba)
+      setSearching(false);
+    }
+
+    await alert({ title:'Bloquear', message:'Modelo bloqueada.', variant:'success' });
   };
 
 
@@ -2132,6 +2187,23 @@ const DashboardClient = () => {
     }
   };
 
+  // ===== BLOQUEOS (RANDOM) - CLIENT SIDE =====
+  const persistBlockedModels = () => {
+    try {
+        localStorage.setItem('blockedModels', JSON.stringify(Array.from(blockedModelIdsRef.current)));
+    } catch {}
+  };
+
+  const loadBlockedModels = () => {
+    try {
+      const raw = localStorage.getItem('blockedModels');
+      const arr = raw ? JSON.parse(raw) : [];
+      blockedModelIdsRef.current = new Set((Array.isArray(arr) ? arr : []).map(n => Number(n)).filter(n => Number.isFinite(n) && n > 0));
+    } catch {
+      blockedModelIdsRef.current = new Set();
+    }
+  };
+
 
   // [CALL] Selección directa desde la lista de favoritos (pestaña Calling): no abre chat, solo fija destino
   const handleSelectCallTargetFromFavorites = (favUser) => {
@@ -2263,6 +2335,7 @@ const DashboardClient = () => {
             remoteVideoWrapRef={remoteVideoWrapRef}
             modelAvatar={modelAvatar}
             handleActivateCamera={handleActivateCamera}
+            handleBlockPeer={handleBlockPeer}
           />
         ):activeTab==='blog'?(
           /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
