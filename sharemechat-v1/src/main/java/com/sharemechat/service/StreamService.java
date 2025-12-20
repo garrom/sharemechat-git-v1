@@ -71,6 +71,9 @@ public class StreamService {
      * IMPORTANTE:
      *  - Si el cliente no tiene saldo suficiente, lanza IllegalStateException cuyo mensaje contiene
      *    la cadena "Saldo insuficiente", para que el MatchingHandler envíe "no-balance".
+     *
+     * confirmed_at:
+     *  - Se crea como NULL. La sesión se confirmará explícitamente cuando el flujo esté estable.
      */
     @Transactional
     public StreamRecord startSession(Long clientId, Long modelId) {
@@ -131,10 +134,11 @@ public class StreamService {
         sr.setClient(client);
         sr.setModel(model);
         sr.setStartTime(LocalDateTime.now());
+        sr.setConfirmedAt(null);
         sr.setEndTime(null);
 
         StreamRecord saved = streamRecordRepository.save(sr);
-        log.info("startSession: creada sesión id={} (client={}, model={})", saved.getId(), clientId, modelId);
+        log.info("startSession: creada sesión id={} (client={}, model={}) confirmedAt=NULL", saved.getId(), clientId, modelId);
 
         // Estado y lookup rápido (Redis)
         statusService.setBusy(modelId);
@@ -144,8 +148,37 @@ public class StreamService {
     }
 
     /**
+     * Marca la sesión activa del par como confirmada (confirmed_at = now) si aún no lo estaba.
+     * Es idempotente.
+     */
+    @Transactional
+    public void confirmActiveSession(Long clientId, Long modelId) {
+        Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
+
+        StreamRecord session = null;
+        if (sessionIdHint != null) {
+            session = streamRecordRepository.findById(sessionIdHint).orElse(null);
+        }
+        if (session == null) {
+            session = streamRecordRepository
+                    .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId)
+                    .orElse(null);
+        }
+        if (session == null) return;
+        if (session.getEndTime() != null) return;
+        if (session.getConfirmedAt() != null) return;
+
+        session.setConfirmedAt(LocalDateTime.now());
+        streamRecordRepository.save(session);
+        log.info("confirmActiveSession: confirmada sesión id={} (client={}, model={})", session.getId(), clientId, modelId);
+    }
+
+    /**
      * Finaliza la sesión activa para el par client-model (si existe), y liquida cobros/pagos.
      * Idempotente. Marca end_time=now y limpia claves auxiliares. Facturación atómica.
+     *
+     * confirmed_at:
+     *  - Si confirmed_at es NULL, se cierra el stream sin cargos (aunque haya segundos) y se limpia estado.
      */
     @Transactional
     public void endSession(Long clientId, Long modelId) {
@@ -184,11 +217,17 @@ public class StreamService {
                 return; // idempotente
             }
 
-            // 3) Marcar fin
+            // === CALCULAR endTime PERO NO PERSISTIR AÚN ===
             LocalDateTime endTime = LocalDateTime.now();
-            session.setEndTime(endTime);
-            streamRecordRepository.save(session);
-            log.info("endSession: cerrada sesión id={} (client={}, model={})", session.getId(), clientId, modelId);
+
+            // 3.1) Si no está confirmada, cerrar sin cargos y limpiar estado
+            if (session.getConfirmedAt() == null) {
+                session.setEndTime(endTime);
+                streamRecordRepository.save(session);
+                postEndStatusCleanup(clientId, modelId);
+                log.info("endSession: sin cargos (stream no confirmado). Finalizado únicamente el registro de stream.");
+                return;
+            }
 
             // 4) Duración en segundos (SIN ceil a minutos)
             long seconds = java.time.Duration.between(session.getStartTime(), endTime).getSeconds();
@@ -223,7 +262,7 @@ public class StreamService {
                 );
             }
 
-            // 7) Coste por segundo (1 €/min => 1/60 €/s) con posible "cap" por saldo
+            // 7) Coste por segundo (1 €/min => 1/60 €/s)
             BigDecimal rawCost = RATE_PER_MINUTE
                     .multiply(BigDecimal.valueOf(seconds))
                     .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
@@ -231,7 +270,6 @@ public class StreamService {
             BigDecimal cost = rawCost.setScale(2, java.math.RoundingMode.HALF_UP);
 
             if (cost.compareTo(BigDecimal.ZERO) > 0 && currentSaldo.compareTo(cost) < 0) {
-                // Cap: ¿cuántos segundos puede pagar el cliente con su saldo?
                 long secondsCap = currentSaldo
                         .multiply(BigDecimal.valueOf(60))
                         .divide(RATE_PER_MINUTE, 0, java.math.RoundingMode.FLOOR)
@@ -239,23 +277,26 @@ public class StreamService {
 
                 seconds = Math.max(0L, secondsCap);
 
-                // Recalcular métricas y coste con el cap
                 hoursAsBigDecimal = BigDecimal.valueOf(seconds)
                         .divide(BigDecimal.valueOf(3600), 2, java.math.RoundingMode.HALF_UP);
+
                 rawCost = RATE_PER_MINUTE
                         .multiply(BigDecimal.valueOf(seconds))
                         .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
+
                 cost = rawCost.setScale(2, java.math.RoundingMode.HALF_UP);
             }
 
-            // Si no hay segundos o el coste es 0, no generamos apuntes
+            // 7.1) Si no hay segundos o coste, cerrar sin cargos
             if (seconds <= 0 || cost.compareTo(BigDecimal.ZERO) <= 0) {
+                session.setEndTime(endTime);
+                streamRecordRepository.save(session);
                 postEndStatusCleanup(clientId, modelId);
                 log.info("endSession: sin cargos (0 s). Finalizado únicamente el registro de stream.");
                 return;
             }
 
-            // 8) Reparto: calcular ganancia de la modelo según tier (o fallback a MODEL_SHARE)
+            // 8) Reparto modelo / plataforma
             ModelEarningTier tier = null;
             try {
                 tier = modelTierService.resolveTierForModel(modelId);
@@ -266,12 +307,9 @@ public class StreamService {
             BigDecimal modelEarning;
 
             if (tier == null) {
-                // Fallback: comportamiento antiguo (porcentaje fijo)
                 modelEarning = cost.multiply(MODEL_SHARE)
                         .setScale(2, java.math.RoundingMode.HALF_UP);
             } else {
-                // Primeros 60 segundos a firstMinuteEarningPerMin,
-                // resto a nextMinutesEarningPerMin
                 long secondsFirst = Math.min(seconds, 60L);
                 long secondsNext  = Math.max(0L, seconds - 60L);
 
@@ -289,51 +327,49 @@ public class StreamService {
                             .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
                 }
 
-                BigDecimal rawModelEarning = earnFirst.add(earnNext);
-                modelEarning = rawModelEarning.setScale(2, java.math.RoundingMode.HALF_UP);
+                modelEarning = earnFirst.add(earnNext)
+                        .setScale(2, java.math.RoundingMode.HALF_UP);
             }
 
             BigDecimal platformEarning = cost.subtract(modelEarning)
                     .setScale(2, java.math.RoundingMode.HALF_UP);
 
-            // Seguridad: nunca pagar más a la modelo de lo que paga el cliente
             if (platformEarning.compareTo(BigDecimal.ZERO) < 0) {
-                log.warn("endSession: platformEarning < 0 ajustado a 0. cost={} modelEarning={}", cost, modelEarning);
                 platformEarning = BigDecimal.ZERO;
                 modelEarning = cost;
             }
 
-            // 9) ===== CLIENTE: transactions + balances + clients =====
+            // 9) CLIENTE
             Transaction txClient = new Transaction();
             txClient.setUser(clientUser);
-            txClient.setAmount(cost.negate()); // gasto
+            txClient.setAmount(cost.negate());
             txClient.setOperationType("STREAM_CHARGE");
             txClient.setStreamRecord(session);
             txClient.setDescription("Cargo por streaming de " + seconds + " segundos");
             Transaction savedTxClient = transactionRepository.save(txClient);
 
             BigDecimal newClientBalance = lastClientBalance.subtract(cost);
+
             Balance balClient = new Balance();
             balClient.setUserId(clientId);
             balClient.setTransactionId(savedTxClient.getId());
             balClient.setOperationType("STREAM_CHARGE");
-            balClient.setAmount(cost.negate()); // negativo
+            balClient.setAmount(cost.negate());
             balClient.setBalance(newClientBalance);
             balClient.setDescription("Cargo por streaming de " + seconds + " segundos");
             balanceRepository.save(balClient);
 
-            BigDecimal clientHours = clientEntity.getStreamingHours() != null
-                    ? clientEntity.getStreamingHours()
-                    : BigDecimal.ZERO;
-
             clientEntity.setSaldoActual(newClientBalance);
-            clientEntity.setStreamingHours(clientHours.add(hoursAsBigDecimal));
+            clientEntity.setStreamingHours(
+                    (clientEntity.getStreamingHours() != null ? clientEntity.getStreamingHours() : BigDecimal.ZERO)
+                            .add(hoursAsBigDecimal)
+            );
             clientRepository.save(clientEntity);
 
-            // 10) ===== MODELO: transactions + balances + models =====
+            // 10) MODELO
             Transaction txModel = new Transaction();
             txModel.setUser(modelUser);
-            txModel.setAmount(modelEarning); // ingreso
+            txModel.setAmount(modelEarning);
             txModel.setOperationType("STREAM_EARNING");
             txModel.setStreamRecord(session);
             txModel.setDescription("Ganancia por streaming de " + seconds + " segundos");
@@ -344,44 +380,39 @@ public class StreamService {
                     .map(Balance::getBalance)
                     .orElse(BigDecimal.ZERO);
 
-            BigDecimal newModelBalance = lastModelBalance.add(modelEarning);
-
             Balance balModel = new Balance();
             balModel.setUserId(modelId);
             balModel.setTransactionId(savedTxModel.getId());
             balModel.setOperationType("STREAM_EARNING");
-            balModel.setAmount(modelEarning); // positivo
-            balModel.setBalance(newModelBalance);
+            balModel.setAmount(modelEarning);
+            balModel.setBalance(lastModelBalance.add(modelEarning));
             balModel.setDescription("Ganancia por streaming de " + seconds + " segundos");
             balanceRepository.save(balModel);
 
             Model modelEntity = modelRepository.findById(modelId).orElseGet(() -> {
                 Model m = new Model();
-                m.setUser(modelUser); // @MapsId
+                m.setUser(modelUser);
                 m.setUserId(modelId);
                 return m;
             });
 
-            BigDecimal mSaldo = modelEntity.getSaldoActual() != null
-                    ? modelEntity.getSaldoActual()
-                    : BigDecimal.ZERO;
-
-            BigDecimal mTotal = modelEntity.getTotalIngresos() != null
-                    ? modelEntity.getTotalIngresos()
-                    : BigDecimal.ZERO;
-
-            BigDecimal mHours = modelEntity.getStreamingHours() != null
-                    ? modelEntity.getStreamingHours()
-                    : BigDecimal.ZERO;
-
-            modelEntity.setSaldoActual(mSaldo.add(modelEarning));
-            modelEntity.setTotalIngresos(mTotal.add(modelEarning));
-            modelEntity.setStreamingHours(mHours.add(hoursAsBigDecimal));
+            modelEntity.setSaldoActual(
+                    (modelEntity.getSaldoActual() != null ? modelEntity.getSaldoActual() : BigDecimal.ZERO)
+                            .add(modelEarning)
+            );
+            modelEntity.setTotalIngresos(
+                    (modelEntity.getTotalIngresos() != null ? modelEntity.getTotalIngresos() : BigDecimal.ZERO)
+                            .add(modelEarning)
+            );
+            modelEntity.setStreamingHours(
+                    (modelEntity.getStreamingHours() != null ? modelEntity.getStreamingHours() : BigDecimal.ZERO)
+                            .add(hoursAsBigDecimal)
+            );
             modelRepository.save(modelEntity);
 
-            // 11) ===== PLATAFORMA: libro propio =====
+            // 11) PLATAFORMA
             PlatformTransaction ptx = new PlatformTransaction();
-            ptx.setAmount(platformEarning); // ingreso plataforma
+            ptx.setAmount(platformEarning);
             ptx.setOperationType("STREAM_MARGIN");
             ptx.setStreamRecord(session);
             ptx.setDescription("Margen plataforma por streaming de " + seconds + " segundos");
@@ -399,6 +430,11 @@ public class StreamService {
             pbal.setDescription("Margen plataforma por streaming de " + seconds + " segundos");
             platformBalanceRepository.save(pbal);
 
+            // === AHORA SÍ: CERRAR STREAM ===
+            session.setEndTime(endTime);
+            streamRecordRepository.save(session);
+            log.info("endSession: cerrada sesión id={} (client={}, model={})", session.getId(), clientId, modelId);
+
             // 12) Limpieza de estado
             postEndStatusCleanup(clientId, modelId);
 
@@ -407,6 +443,7 @@ public class StreamService {
             sessionLocks.remove(session.getId());
         }
     }
+
 
     // Metodo para gestionar los Gift
     @Transactional

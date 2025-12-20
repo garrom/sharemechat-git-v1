@@ -24,15 +24,14 @@ import org.slf4j.LoggerFactory;
 @Component
 public class MessagesWsHandler extends TextWebSocketHandler {
 
-
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
     private final MessageService messageService;
     private final FavoriteService favoriteService;
     private final TransactionService transactionService;
-    private final StreamService streamService;               // para start/end/cutoff
-    private final ClientRepository clientRepository;         // leer saldo_actual del CLIENT
-    private final BillingProperties billing;                 // ratePerMinute, cutoff, etc.
+    private final StreamService streamService;
+    private final ClientRepository clientRepository;
+    private final BillingProperties billing;
     private final StatusService statusService;
     private final UserBlockService userBlockService;
 
@@ -40,7 +39,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionUserIds = new ConcurrentHashMap<>();
 
-    // ====== NUEVO estado de llamadas dirigidas ======
     private final Map<Long, Long> activeCalls = new ConcurrentHashMap<>();
     private final Set<Long> ringing = ConcurrentHashMap.newKeySet();
 
@@ -64,7 +62,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         this.billing = billing;
         this.statusService = statusService;
         this.userBlockService = userBlockService;
-
     }
 
     @Override
@@ -78,7 +75,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         sessionUserIds.put(session.getId(), userId);
         sessions.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet()).add(session);
 
-        // PRESENCIA: si es MODEL -> AVAILABLE
         var u = userRepository.findById(userId).orElse(null);
         if (u != null && com.sharemechat.constants.Constants.Roles.MODEL.equals(u.getRole())) {
             statusService.setAvailable(userId);
@@ -89,35 +85,25 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
         Long userId = sessionUserIds.remove(session.getId());
         if (userId != null) {
-            // sacar socket de sus sets
             var set = sessions.get(userId);
             if (set != null) {
                 set.remove(session);
                 if (set.isEmpty()) sessions.remove(userId);
             }
 
-            // Si es MODEL y ya no quedan sockets ni llamada activa -> OFFLINE
             var u2 = userRepository.findById(userId).orElse(null);
             if (u2 != null && com.sharemechat.constants.Constants.Roles.MODEL.equals(u2.getRole())) {
                 boolean stillOnline = sessions.getOrDefault(userId, java.util.Set.of()).size() > 0;
-                if (!stillOnline && inCallWith(userId) == null) {
-                    statusService.setOffline(userId);
-                }
+                if (!stillOnline && inCallWith(userId) == null) statusService.setOffline(userId);
             }
 
-            // Si estaba en RINGING como receptor, cancela invitación ---
             if (ringing.remove(userId)) {
-                Long caller = null;
-                // buscar quién estaba invitando a este receptor (puede que ninguno si usas "ringing" puro)
-                // En este diseño minimal, solo informamos al propio usuario; si quieres relación caller<->callee de invites, añade un map invites.
-                // Notificamos a todos por si hay llamadas en curso relacionadas.
                 broadcastToUser(userId, new org.json.JSONObject()
                         .put("type", "call:canceled")
                         .put("reason", "receiver_ws_closed")
                         .toString());
             }
 
-            // Si estaba en llamada activa, cerrar sesión y avisar peer ---
             Long peer = inCallWith(userId);
             if (peer != null) {
                 try {
@@ -129,22 +115,17 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
     }
 
-
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        if (log.isTraceEnabled()) log.trace("WS /messages in: {}", message.getPayload());
 
-        log.debug("WS /messages in: {}", message.getPayload());
         Long me = sessionUserIds.get(session.getId());
         if (me == null) return;
 
         JSONObject json = new JSONObject(message.getPayload());
         String type = json.optString("type", "");
 
-        // =======================
-        //   MENSAJERÍA EXISTENTE
-        // =======================
         if ("msg:send".equals(type)) {
-            // --- parseo robusto del destinatario ---
             Object toObj = json.opt("to");
             String toRaw = (toObj != null) ? String.valueOf(toObj) : null;
             Long to = null;
@@ -198,9 +179,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
 
         if ("ping".equals(type)) {
-            // Renovar TTL de presencia si el WS corresponde a un MODELO
             try {
-                Long meId = me; // ya resuelto arriba
+                Long meId = me;
                 if (meId != null) {
                     var u = userRepository.findById(meId).orElse(null);
                     if (u != null && com.sharemechat.constants.Constants.Roles.MODEL.equals(u.getRole())) {
@@ -211,12 +191,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             return;
         }
 
-
-        // =======================
-        //     LLAMADAS DIRECTAS
-        // =======================
-
-        // --- INVITE ---
         if ("call:invite".equals(type)) {
             Long to = json.has("to") ? json.optLong("to", 0L) : null;
             if (to == null || to <= 0L) {
@@ -227,7 +201,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 safeSend(session, new JSONObject().put("type","call:error").put("message","No puedes llamarte a ti mismo").toString());
                 return;
             }
-            // Gate de favoritos (igual que en mensajes)
             try {
                 if (!favoriteService.canUsersMessage(me, to)) {
                     safeSend(session, new JSONObject().put("type","call:error").put("message","Llamadas bloqueadas: relación no aceptada").toString());
@@ -237,43 +210,24 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 safeSend(session, new JSONObject().put("type","call:error").put("message", ex.getMessage()).toString());
                 return;
             }
-            //probar nuevo codigo
-            // ¿Alguno está ocupado por cualquier motivo?
-            // (llamada 1:1 activa, streaming random, TRIAL, BUSY en Redis)
+
             if (isBusy(me)) {
-                safeSend(session, new JSONObject()
-                        .put("type","call:busy")
-                        .put("who","me")              // mantiene etiqueta anterior para el caller
-                        .toString());
+                safeSend(session, new JSONObject().put("type","call:busy").put("who","me").toString());
                 return;
             }
             if (isBusy(to)) {
-                safeSend(session, new JSONObject()
-                        .put("type","call:busy")
-                        .put("who","peer_streaming")  // misma etiqueta que antes cuando el peer está en stream
-                        .toString());
+                safeSend(session, new JSONObject().put("type","call:busy").put("who","peer_streaming").toString());
                 return;
             }
-
-            // ¿Está online el receptor?
             if (!isUserOnline(to)) {
                 safeSend(session, new JSONObject().put("type","call:offline").toString());
                 return;
             }
-
-            // ¿Está ya sonando otra invitación a este usuario?
             if (ringing.contains(to)) {
-                safeSend(session, new JSONObject()
-                        .put("type","call:busy")
-                        .put("who","peer_ringing")
-                        .toString());
+                safeSend(session, new JSONObject().put("type","call:busy").put("who","peer_ringing").toString());
                 return;
             }
 
-            //fin prueba nuevo codigo
-
-            // Validación de saldo mínimo antes de timbrar (CLIENT debe poder iniciar)
-            // Determinamos quién será CLIENT/MODEL para el billing de startSession
             Pair<Long, Long> cm = resolveClientModel(me, to);
             if (cm == null) {
                 safeSend(session, new JSONObject().put("type","call:error").put("message","Solo se permiten llamadas CLIENT↔MODEL").toString());
@@ -287,11 +241,9 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 return;
             }
 
-            // Marca RINGING de receptor y notificaciones
             beginRinging(to);
             safeSend(session, new JSONObject().put("type","call:ringing").put("to", to).toString());
 
-            // Notificar al receptor
             String display = userRepository.findById(me)
                     .map(u -> Optional.ofNullable(u.getNickname()).orElse(Optional.ofNullable(u.getName()).orElse(u.getEmail())))
                     .orElse("Usuario " + me);
@@ -304,7 +256,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             return;
         }
 
-        // --- ACCEPT ---
         if ("call:accept".equals(type)) {
             Long with = json.has("with") ? json.optLong("with", 0L) : null;
             if (with == null || with <= 0L) {
@@ -312,39 +263,26 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 return;
             }
             if (!ringing.contains(me)) {
-                // Solo quien está sonando puede aceptar
                 safeSend(session, new JSONObject().put("type","call:error").put("message","No estás en RINGING").toString());
                 return;
             }
 
-            // Gate de favoritos (idéntico a call:invite)
             try {
                 if (!favoriteService.canUsersMessage(me, with)) {
-                    safeSend(session, new JSONObject()
-                            .put("type", "call:error")
-                            .put("message", "Llamadas bloqueadas: relación no aceptada")
-                            .toString());
+                    safeSend(session, new JSONObject().put("type","call:error").put("message","Llamadas bloqueadas: relación no aceptada").toString());
                     return;
                 }
             } catch (Exception ex) {
-                safeSend(session, new JSONObject()
-                        .put("type", "call:error")
-                        .put("message", ex.getMessage())
-                        .toString());
+                safeSend(session, new JSONObject().put("type","call:error").put("message", ex.getMessage()).toString());
                 return;
             }
 
-            // Comprobar que el llamante sigue online (evita sesiones fantasma)
             if (!isUserOnline(with)) {
                 clearRinging(me);
-                safeSend(session, new JSONObject()
-                        .put("type","call:error")
-                        .put("message","El usuario que te llamaba ya no está disponible")
-                        .toString());
+                safeSend(session, new JSONObject().put("type","call:error").put("message","El usuario que te llamaba ya no está disponible").toString());
                 return;
             }
 
-            // Comprobar otra vez que nadie está en llamada
             if (inCallWith(me) != null || inCallWith(with) != null) {
                 clearRinging(me);
                 safeSend(session, new JSONObject().put("type","call:busy").toString());
@@ -360,26 +298,21 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             Long clientId = cm.getLeft();
             Long modelId  = cm.getRight();
 
-            // ⚠️ IMPORTANTE: AQUÍ YA NO SE HACE startSession
-            // Solo marcamos la llamada como activa y limpiamos RINGING
             setActiveCall(me, with);
             clearRinging(me);
 
-            // Opcional (si quieres marcar BUSY en cuanto acepta, aunque aún no cobre):
             statusService.setBusy(modelId);
 
             JSONObject accepted = new JSONObject()
                     .put("type","call:accepted")
                     .put("clientId", clientId)
-                    .put("modelId",  modelId);
+                    .put("modelId", modelId);
 
-            broadcastToUser(me,   accepted.toString());
+            broadcastToUser(me, accepted.toString());
             broadcastToUser(with, accepted.toString());
             return;
         }
 
-        // --- CONNECTED ---
-        // Se llama cuando el WebRTC ya ha establecido conexión y SOLO desde el CALLER (para no cobrar doble).
         if ("call:connected".equals(type)) {
             Long with = json.has("with") ? json.optLong("with", 0L) : null;
             if (with == null || with <= 0L) {
@@ -387,7 +320,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 return;
             }
 
-            // Comprobamos que realmente hay una llamada activa entre me y with
             Long current = inCallWith(me);
             if (current == null || !current.equals(with)) {
                 safeSend(session, new JSONObject().put("type","call:error").put("message","No hay llamada activa para conectar").toString());
@@ -403,16 +335,12 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             Long modelId  = cm.getRight();
 
             try {
-                // AHORA SÍ: se abre el stream de negocio
                 streamService.startSession(clientId, modelId);
-                // Si antes statusService.setBusy(modelId) lo hacía startSession, puedes quitarlo de aquí
-                // o dejarlo, según tu implementación actual.
             } catch (Exception ex) {
                 String msg = ex.getMessage() != null ? ex.getMessage() : "No se pudo iniciar la sesión";
                 if (msg.contains("Saldo insuficiente")) {
                     broadcastToUser(clientId, new JSONObject().put("type","call:no-balance").toString());
                     broadcastToUser(modelId,  new JSONObject().put("type","call:no-balance").toString());
-                    // Cerrar la llamada por falta de saldo
                     broadcastToUser(clientId, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
                     broadcastToUser(modelId,  new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
                 } else {
@@ -424,9 +352,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             return;
         }
 
-
-
-        // --- REJECT ---
         if ("call:reject".equals(type)) {
             Long with = json.has("with") ? json.optLong("with", 0L) : null;
             if (with == null || with <= 0L) {
@@ -434,7 +359,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 return;
             }
             if (ringing.remove(me)) {
-                broadcastToUser(me,   new JSONObject().put("type","call:rejected").put("by", me).toString());
+                broadcastToUser(me, new JSONObject().put("type","call:rejected").put("by", me).toString());
                 broadcastToUser(with, new JSONObject().put("type","call:rejected").put("by", me).toString());
             } else {
                 safeSend(session, new JSONObject().put("type","call:error").put("message","No estabas en RINGING").toString());
@@ -442,14 +367,12 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             return;
         }
 
-        // --- CANCEL (el que llama cuelga mientras suena) ---
         if ("call:cancel".equals(type)) {
             Long to = json.has("to") ? json.optLong("to", 0L) : null;
             if (to == null || to <= 0L) {
                 safeSend(session, new JSONObject().put("type","call:error").put("message","Destinatario inválido").toString());
                 return;
             }
-            // Cancelamos el ringing del receptor, si estaba
             if (ringing.remove(to)) {
                 broadcastToUser(me, new JSONObject().put("type","call:canceled").put("reason","caller_cancel").toString());
                 broadcastToUser(to, new JSONObject().put("type","call:canceled").put("reason","caller_cancel").toString());
@@ -459,7 +382,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             return;
         }
 
-        // --- SIGNAL (relay SDP/ICE) ---
         if ("call:signal".equals(type)) {
             Long to = json.has("to") ? json.optLong("to", 0L) : null;
             JSONObject signal = json.optJSONObject("signal");
@@ -467,7 +389,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 safeSend(session, new JSONObject().put("type","call:error").put("message","Signal inválido").toString());
                 return;
             }
-            // solo permitimos signal si hay llamada activa entre ambos
             Long peer = inCallWith(me);
             if (peer == null || !Objects.equals(peer, to)) {
                 safeSend(session, new JSONObject().put("type","call:error").put("message","No hay llamada activa con el destinatario").toString());
@@ -477,7 +398,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             return;
         }
 
-        // --- END (colgar) ---
         if ("call:end".equals(type)) {
             Long peer = inCallWith(me);
             if (peer == null) {
@@ -488,13 +408,11 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 endCallAndSession(me, peer, "hangup");
             } catch (Exception ex) {
                 log.warn("call:end error me={} peer={} err={}", me, peer, ex.getMessage());
-                // aun así limpiamos estado local
                 clearActiveCall(me, peer);
             }
             return;
         }
 
-        // --- PING (corte por saldo durante llamada directa) ---
         if ("call:ping".equals(type)) {
             Long peer = inCallWith(me);
             if (peer == null) return;
@@ -507,8 +425,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             try {
                 boolean closed = streamService.endIfBelowThreshold(clientId, modelId);
                 if (closed) {
-                    // sesión cerrada por saldo; avisar y limpiar
-                    broadcastToUser(me,   new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
+                    broadcastToUser(me, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
                     broadcastToUser(peer, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
                     clearActiveCall(me, peer);
                 }
@@ -518,10 +435,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             return;
         }
 
-        // Tipo desconocido
         safeSend(session, new JSONObject().put("type","call:error").put("message","Tipo no soportado: " + type).toString());
     }
-
 
     private void handleMsgGift(WebSocketSession session, org.json.JSONObject json) {
         Long me = sessionUserIds.get(session.getId());
@@ -542,7 +457,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         if (!com.sharemechat.constants.Constants.Roles.CLIENT.equals(sender.getRole())) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Solo un CLIENT puede enviar regalos\"}"); return; }
         if (!com.sharemechat.constants.Constants.Roles.MODEL.equals(recipient.getRole())) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"El destinatario debe ser MODEL\"}"); return; }
 
-        // gate de favoritos (si aplica en tu lógica de mensajería)
         try {
             if (!favoriteService.canUsersMessage(me, to)) {
                 safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Mensajería bloqueada entre estos usuarios\"}");
@@ -554,14 +468,11 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
 
         try {
-            // requiere inyectar TransactionService en este handler
             com.sharemechat.entity.Gift g = transactionService.processGiftInChat(me, to, giftId);
 
-            // persistimos un mensaje "marcador" para historial
             String marker = "[[GIFT:" + g.getId() + ":" + g.getName() + "]]";
             com.sharemechat.dto.MessageDTO saved = messageService.send(me, to, marker);
 
-            // evento específico en vivo
             org.json.JSONObject live = new org.json.JSONObject()
                     .put("type","msg:gift")
                     .put("messageId", saved.id())
@@ -578,14 +489,10 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             broadcastToUser(me, payload);
             broadcastToUser(to, payload);
 
-            // además, mantiene compatibilidad con tu flujo de historiales
             broadcastNew(saved);
 
         } catch (Exception ex) {
-            safeSend(session, new org.json.JSONObject()
-                    .put("type","msg:error")
-                    .put("message", ex.getMessage())
-                    .toString());
+            safeSend(session, new org.json.JSONObject().put("type","msg:error").put("message", ex.getMessage()).toString());
         }
     }
 
@@ -601,7 +508,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 .put("message", toJson(saved))
                 .toString();
 
-        // LOG útil para ver a quién estamos notificando
         org.slf4j.LoggerFactory.getLogger(MessagesWsHandler.class)
                 .info("broadcastNew -> sender={}, recipient={}, sessions(sender)={}, sessions(recipient)={}",
                         saved.senderId(), saved.recipientId(),
@@ -672,24 +578,18 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 .put("readAt", m.readAt() == null ? JSONObject.NULL : String.valueOf(m.readAt()));
     }
 
-    // ==== Ver usuario online====
     public boolean isUserOnline(Long userId) {
         var set = sessions.get(userId);
         boolean online = set != null && !set.isEmpty();
-        if (log.isDebugEnabled()) {
-            log.debug("[WS] isUserOnline userId={} -> {}", userId, online);
-        }
+        if (log.isDebugEnabled()) log.debug("[WS] isUserOnline userId={} -> {}", userId, online);
         return online;
     }
 
-    // === Ver usuario ocupado ===
     public boolean isBusy(Long userId) {
-        // Busy por llamada directa 1:1 (CALLING)
         if (inCallWith(userId) != null) {
             if (log.isDebugEnabled()) log.debug("[WS] isBusy userId={} -> true (activeCalls)", userId);
             return true;
         }
-        // Busy por streaming RANDOM (VIDEOCHAT) para cualquier usuario (cliente o modelo)
         try {
             if (streamService.isUserInActiveStream(userId)) {
                 if (log.isDebugEnabled()) log.debug("[WS] isBusy userId={} -> true (active stream)", userId);
@@ -698,7 +598,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         } catch (Exception e) {
             if (log.isDebugEnabled()) log.debug("[WS] isBusy userId={} -> false (stream check error: {})", userId, e.getMessage());
         }
-        // Busy por estado Redis (modelos)
         try {
             String s = statusService.getStatus(userId);
             boolean busy = "BUSY".equals(s);
@@ -710,7 +609,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
     }
 
-    // ==== ESTADO: llamadas activas (mantenemos simetría A<->B) ====
     private void setActiveCall(Long a, Long b) {
         if (a == null || b == null) return;
         activeCalls.put(a, b);
@@ -726,7 +624,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         return activeCalls.get(userId);
     }
 
-    // ==== ESTADO: ringing (solo receptor) ====
     private void beginRinging(Long userId) {
         if (userId != null) ringing.add(userId);
     }
@@ -735,7 +632,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         if (userId != null) ringing.remove(userId);
     }
 
-    // ==== Resolver quién es CLIENT y quién MODEL por rol real ====
     private Pair<Long, Long> resolveClientModel(Long a, Long b) {
         if (a == null || b == null) return null;
         var ua = userRepository.findById(a).orElse(null);
@@ -756,12 +652,10 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         return null;
     }
 
-    // ==== Saldo mínimo para iniciar llamada (CLIENT) ====
     private boolean hasSufficientBalance(Long clientId) {
         try {
             var ce = clientRepository.findById(clientId).orElse(null);
-            java.math.BigDecimal saldo = (ce != null && ce.getSaldoActual() != null)
-                    ? ce.getSaldoActual() : java.math.BigDecimal.ZERO;
+            java.math.BigDecimal saldo = (ce != null && ce.getSaldoActual() != null) ? ce.getSaldoActual() : java.math.BigDecimal.ZERO;
             return saldo.compareTo(billing.getRatePerMinute()) >= 0;
         } catch (Exception ex) {
             log.warn("hasSufficientBalance error clientId={} err={}", clientId, ex.getMessage());
@@ -769,7 +663,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
     }
 
-    // ==== Finalizar llamada + sesión de billing de forma segura ====
     private void endCallAndSession(Long a, Long b, String reason) {
         Pair<Long, Long> cm = resolveClientModel(a, b);
         if (cm != null) {
@@ -781,39 +674,29 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 log.warn("endCallAndSession endSession error clientId={} modelId={} err={}", clientId, modelId, ex.getMessage());
             }
 
-            // PRESENCIA tras finalizar la sesión: si el modelo sigue con sockets, AVAILABLE; si no, OFFLINE
             boolean modelStillOnline = sessions.getOrDefault(modelId, java.util.Set.of()).size() > 0;
             if (modelStillOnline) statusService.setAvailable(modelId);
             else statusService.setOffline(modelId);
-
         }
-        // Notificar a ambos y limpiar estado
+
         broadcastToUser(a, new org.json.JSONObject().put("type","call:ended").put("reason", reason).toString());
         broadcastToUser(b, new org.json.JSONObject().put("type","call:ended").put("reason", reason).toString());
         clearActiveCall(a, b);
-        // por si alguno estaba en RINGING, limpiar
         clearRinging(a);
         clearRinging(b);
     }
 
-    // Verifica si existe un bloqueo entre ambos usuarios (en cualquier dirección).
     public void assertNotBlocked(Long fromUserId, Long toUserId) {
         if (fromUserId == null || toUserId == null) return;
-
         try {
-            if (userBlockService.isBlockedBetween(fromUserId, toUserId)) {
-                throw UserBlockedException.blockedByOther();
-            }
+            if (userBlockService.isBlockedBetween(fromUserId, toUserId)) throw UserBlockedException.blockedByOther();
         } catch (UserBlockedException ex) {
             throw ex;
         } catch (Exception ex) {
-            // fallback defensivo: ante error, bloqueamos acción
             throw new UserBlockedException("No se puede realizar la acción por bloqueo entre usuarios.");
         }
     }
 
-
-    // ==== API pública ligera para PresenceService ====
     public boolean hasOnlineSession(Long userId) {
         var set = sessions.get(userId);
         return set != null && !set.isEmpty();
@@ -822,6 +705,4 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     public boolean isInActiveCall(Long userId) {
         return activeCalls.containsKey(userId);
     }
-
-
 }

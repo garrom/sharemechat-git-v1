@@ -125,6 +125,8 @@ const DashboardModel = () => {
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
   const blockedClientIdsRef = useRef(new Set());
+  const nextGuardRef = useRef(false);
+
 
   // --- Dedupe de eco para chat de streaming (RTC)
   const lastSentRef = useRef({ text: null, at: 0 });
@@ -976,6 +978,13 @@ const DashboardModel = () => {
       const data = JSON.parse(event.data);
 
       if (data.type === 'match') {
+
+        // ping inmediato
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          try { socketRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
+        }
+
+        // setCurrentClientId robusto
         try {
           if (data.peerRole === 'client' && Number.isFinite(Number(data.peerUserId))) {
             setCurrentClientId(Number(data.peerUserId));
@@ -984,20 +993,14 @@ const DashboardModel = () => {
           }
         } catch { setCurrentClientId(null); }
 
+        //BLOQUEO CLIENT-SIDE: si el match viene con un clientId bloqueado, pedimos NEXT y salimos
         const incomingId = Number(data.peerUserId);
         if (Number.isFinite(incomingId) && blockedClientIdsRef.current.has(incomingId)) {
           console.log('[RANDOM][block] match bloqueado -> pedir next', incomingId);
           setCurrentClientId(null);
-          setRemoteStream(null);
-          setMessages([]);
-          setSearching(true);
           setStatus('Buscando nuevo cliente...');
-
-          try {
-            if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-              socketRef.current.send(JSON.stringify({ type: 'next' }));
-            }
-          } catch {}
+          setSearching(true);
+          try { socketRef.current?.readyState === WebSocket.OPEN && socketRef.current.send(JSON.stringify({ type: 'next' })); } catch {}
           return;
         }
 
@@ -1113,31 +1116,38 @@ const DashboardModel = () => {
     }
   };
 
-
   const handleNext = () => {
-    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: 'next' }));
-    } else {
-      setError('Error: No hay conexión con el servidor.');
-      return;
-    }
-    if (peerRef.current) {
-      peerRef.current.destroy();
-      peerRef.current = null;
-    }
-    if (remoteStream) {
-      remoteStream.getTracks().forEach((track) => track.stop());
-    }
+    if (nextGuardRef.current) return;
+    nextGuardRef.current = true;
 
-    setCurrentClientId(null);
-    setRemoteStream(null);
-    setMessages([]);
-    setStatus('Buscando nuevo cliente...');
-    setSearching(true);
-    if (socketRef.current?.readyState === WebSocket.OPEN) {
-      socketRef.current.send(JSON.stringify({ type: 'stats' }));
+    try {
+      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+        setError('Error: No hay conexión con el servidor.');
+        return;
+      }
+
+      // Si NO hay remoto todavía y ya estamos "searching", no dispares next en bucle
+      if (!remoteStream && searching) {
+        return;
+      }
+
+      socketRef.current.send(JSON.stringify({ type: 'next' }));
+
+      if (peerRef.current) { try { peerRef.current.destroy(); } catch {} peerRef.current = null; }
+      if (remoteStream) { try { remoteStream.getTracks().forEach((track) => track.stop()); } catch {} }
+
+      setCurrentClientId(null);
+      setRemoteStream(null);
+      setMessages([]);
+      setStatus('Buscando nuevo cliente...');
+      setSearching(true);
+
+      try { socketRef.current?.readyState === WebSocket.OPEN && socketRef.current.send(JSON.stringify({ type: 'stats' })); } catch {}
+    } finally {
+      setTimeout(() => { nextGuardRef.current = false; }, 700);
     }
   };
+
 
   const sendChatMessage = () => {
     if (chatInput.trim() === '') return;

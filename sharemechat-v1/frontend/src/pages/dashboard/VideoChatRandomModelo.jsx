@@ -1,7 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan
-} from '@fortawesome/free-solid-svg-icons';
+import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat,
   StyledSplit2,
@@ -134,7 +133,7 @@ export default function VideoChatRandomModelo(props) {
                             onClick={stopAll}
                             title="Detener búsqueda"
                             aria-label="Detener búsqueda"
-                            style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
+                            style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
                             onMouseEnter={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#dc3545';}}
                             onMouseLeave={(e)=>{e.currentTarget.style.background='#dc3545';e.currentTarget.style.color='#fff';}}
                           >
@@ -188,7 +187,7 @@ export default function VideoChatRandomModelo(props) {
                                 onClick={stopAll}
                                 title="Colgar"
                                 aria-label="Colgar"
-                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
+                                style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
                                 onMouseEnter={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#dc3545';}}
                                 onMouseLeave={(e)=>{e.currentTarget.style.background='#dc3545';e.currentTarget.style.color='#fff';}}
                               >
@@ -196,8 +195,8 @@ export default function VideoChatRandomModelo(props) {
                               </BtnHangup>
 
                               <ButtonNext
-                                onClick={handleNext}
-                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                                onClick={()=>handleNext && handleNext()}
+                                style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
                                 onMouseEnter={(e)=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
                                 onMouseLeave={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
                               >
@@ -209,7 +208,7 @@ export default function VideoChatRandomModelo(props) {
                                   aria-label="Añadir a favoritos"
                                   onClick={handleAddFavorite}
                                   title="Añadir a favoritos"
-                                  style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
+                                  style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
                                   onMouseEnter={(e)=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
                                   onMouseLeave={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
                                 >
@@ -231,7 +230,7 @@ export default function VideoChatRandomModelo(props) {
                         <StyledChatList ref={vcListRef}>
                           {messages.map((msg, index) => {
                             const isMe = msg.from === 'me';
-                            const variant = isMe ? 'peer' : 'me';
+                            const variant = isMe ? 'me' : 'peer';
                             return (
                               <StyledChatMessageRow key={index}>
                                 {msg.gift ? (
@@ -301,7 +300,7 @@ export default function VideoChatRandomModelo(props) {
                             </BtnHangup>
 
                             <ButtonNext
-                              onClick={handleNext}
+                              onClick={()=>handleNext && handleNext()}
                               style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
                               onMouseEnter={(e)=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
                               onMouseLeave={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
@@ -336,7 +335,7 @@ export default function VideoChatRandomModelo(props) {
                       <StyledChatList ref={vcListRef}>
                         {messages.map((msg, index) => {
                           const isMe = msg.from === 'me';
-                          const variant = isMe ? 'peer' : 'me';
+                          const variant = isMe ? 'me' : 'peer';
                           return (
                             <StyledChatMessageRow key={index}>
                               {msg.gift ? (

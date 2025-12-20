@@ -80,7 +80,8 @@ export default function VideoChatRandomCliente(props){
     remoteVideoWrapRef,
     modelAvatar,
     handleActivateCamera,
-    handleBlockPeer
+    handleBlockPeer,
+    matchGraceRef
   }=props;
 
   const[promoVideos,setPromoVideos]=useState([]);
@@ -281,6 +282,7 @@ export default function VideoChatRandomCliente(props){
 
                       <video
                         ref={remoteVideoRef}
+                        onPlaying={()=>{ if(matchGraceRef) matchGraceRef.current=false; }}
                         style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
                         autoPlay
                         playsInline
@@ -421,6 +423,7 @@ export default function VideoChatRandomCliente(props){
 
                     <video
                       ref={remoteVideoRef}
+                      onPlaying={()=>{ if(matchGraceRef) matchGraceRef.current=false; }}
                       style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
                       autoPlay
                       playsInline

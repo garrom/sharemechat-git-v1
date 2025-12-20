@@ -127,6 +127,8 @@ const DashboardClient = () => {
   const peerIdRef = useRef(null);
   const lastSentRef = useRef({ text: null, at: 0 });
   const blockedModelIdsRef = useRef(new Set());
+  const matchGraceRef = useRef(false);
+
 
   const isEcho = (incoming) => {
     const now = Date.now();
@@ -905,20 +907,35 @@ const DashboardClient = () => {
 
     socketRef.current.onopen = () => {
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
+
+      // 1) ping inmediato para que el backend pueda confirmar cuanto antes
+      try { socketRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
+
+      // 2) durante matchmaking/arranque, ping más frecuente (reduce streams 0s sin confirmar)
       pingIntervalRef.current = setInterval(() => {
-        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ type: 'ping' }));
-        }
-      }, 30000);
+        try {
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send(JSON.stringify({ type: 'ping' }));
+          }
+        } catch {}
+      }, 5000);
 
       socketRef.current.send(JSON.stringify({ type: 'set-role', role: 'client' }));
       socketRef.current.send(JSON.stringify({ type: 'start-match' }));
     };
 
+
     socketRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
       if (data.type === 'match') {
+
+        matchGraceRef.current = true;
+        setTimeout(() => { matchGraceRef.current = false; }, isMobile ? 3000 : 1500);
+
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          try { socketRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
+        }
         try {
           if (data.peerRole === 'model' && Number.isFinite(Number(data.peerUserId))) {
             setCurrentModelId(Number(data.peerUserId));
@@ -932,19 +949,11 @@ const DashboardClient = () => {
         if (Number.isFinite(incomingId) && blockedModelIdsRef.current.has(incomingId)) {
           console.log('[RANDOM][block] match bloqueado -> pedir next', incomingId);
           setCurrentModelId(null);
-          setRemoteStream(null);
-          setMessages([]);
-          setSearching(true);
           setStatus('Buscando nueva modelo...');
-
-          try {
-            if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-              socketRef.current.send(JSON.stringify({ type: 'next' }));
-            }
-          } catch {}
+          setSearching(true);
+          try { socketRef.current?.readyState === WebSocket.OPEN && socketRef.current.send(JSON.stringify({ type: 'next' })); } catch {}
           return;
         }
-
 
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
@@ -1521,7 +1530,7 @@ const DashboardClient = () => {
 
     // Si estamos en streaming, salimos de inmediato (simétrico al UX esperado)
     if (remoteStream) {
-      try { handleNext(); } catch { stopAll(); }
+      try { if (!matchGraceRef.current) handleNext(); } catch { stopAll(); }
     } else {
       // Si no hay remoto, detenemos búsqueda/cámara según tu estado actual
       // (mantengo conservador: no paro cámara, solo paro la búsqueda si estaba)
@@ -2336,6 +2345,7 @@ const DashboardClient = () => {
             modelAvatar={modelAvatar}
             handleActivateCamera={handleActivateCamera}
             handleBlockPeer={handleBlockPeer}
+            matchGraceRef={matchGraceRef}
           />
         ):activeTab==='blog'?(
           /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
