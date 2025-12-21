@@ -245,9 +245,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             Long modelId = sessionUserIds.get(model.getId());
             if (modelId == null) continue;
 
-            try {
-                messagesWsHandler.assertNotBlocked(clientId, modelId);
-            } catch (Exception ex) {
+            if (!canMatch(clientId, modelId)) {
                 continue;
             }
 
@@ -316,9 +314,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             Long clientId = sessionUserIds.get(client.getId());
             if (clientId == null) continue;
 
-            try {
-                messagesWsHandler.assertNotBlocked(clientId, modelId);
-            } catch (Exception ex) {
+            if (!canMatch(clientId, modelId)) {
                 continue;
             }
 

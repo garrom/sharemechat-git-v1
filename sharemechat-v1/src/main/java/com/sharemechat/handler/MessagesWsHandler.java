@@ -686,23 +686,5 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         clearRinging(b);
     }
 
-    public void assertNotBlocked(Long fromUserId, Long toUserId) {
-        if (fromUserId == null || toUserId == null) return;
-        try {
-            if (userBlockService.isBlockedBetween(fromUserId, toUserId)) throw UserBlockedException.blockedByOther();
-        } catch (UserBlockedException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            throw new UserBlockedException("No se puede realizar la acción por bloqueo entre usuarios.");
-        }
-    }
 
-    public boolean hasOnlineSession(Long userId) {
-        var set = sessions.get(userId);
-        return set != null && !set.isEmpty();
-    }
-
-    public boolean isInActiveCall(Long userId) {
-        return activeCalls.containsKey(userId);
-    }
 }

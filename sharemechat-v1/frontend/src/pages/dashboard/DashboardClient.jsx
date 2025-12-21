@@ -126,9 +126,9 @@ const DashboardClient = () => {
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
   const lastSentRef = useRef({ text: null, at: 0 });
-  const blockedModelIdsRef = useRef(new Set());
+  //const blockedModelIdsRef = useRef(new Set());
   const matchGraceRef = useRef(false);
-
+  //const blockedKeyFor = (meId) => `blockedModels:v1:${Number(meId)||0}`;
 
   const isEcho = (incoming) => {
     const now = Date.now();
@@ -149,9 +149,15 @@ const DashboardClient = () => {
     return found?.icon || null;
   };
 
+  /* //UseEffect para bloquear local store
   useEffect(() => {
-      loadBlockedModels();
-  }, []);
+      loadBlockedModels(meIdRef.current);
+  },[]);
+
+  useEffect(() => {
+      if(Number(meIdRef.current)>0) loadBlockedModels(meIdRef.current);
+  }, [user?.id]);*/
+
 
   //**** PARA MOVIL ****/
   useEffect(() => {
@@ -944,7 +950,7 @@ const DashboardClient = () => {
           }
         } catch { setCurrentModelId(null); }
 
-        // === BLOQUEO CLIENT-SIDE: si el match viene con un modelId bloqueado, pedimos NEXT y salimos ===
+        /* === BLOQUEO CLIENT-SIDE: si el match viene con un modelId bloqueado, pedimos NEXT y salimos ===
         const incomingId = Number(data.peerUserId);
         if (Number.isFinite(incomingId) && blockedModelIdsRef.current.has(incomingId)) {
           console.log('[RANDOM][block] match bloqueado -> pedir next', incomingId);
@@ -953,7 +959,7 @@ const DashboardClient = () => {
           setSearching(true);
           try { socketRef.current?.readyState === WebSocket.OPEN && socketRef.current.send(JSON.stringify({ type: 'next' })); } catch {}
           return;
-        }
+        }*/
 
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
@@ -1517,29 +1523,35 @@ const DashboardClient = () => {
     }
 
     const ok = await confirm({
-      title: 'Bloquear',
-      message: '¿Quieres bloquear a esta modelo? No volverás a emparejar con ella en videochat aleatorio.',
-      confirmText: 'Bloquear',
-      cancelText: 'Cancelar',
-      variant: 'danger',
+      title:'Bloquear',
+      message:'¿Quieres bloquear a esta modelo?',
+      confirmText:'Bloquear',
+      cancelText:'Cancelar',
+      variant:'danger',
     });
     if (!ok) return;
 
-    blockedModelIdsRef.current.add(id);
-    persistBlockedModels();
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`/api/blocks/${id}`,{
+        method:'POST',
+        headers:{
+          Authorization:`Bearer ${token}`,
+          'Content-Type':'application/json'
+        },
+        body:JSON.stringify({ reason:'' })
+      });
+    } catch {}
 
-    // Si estamos en streaming, salimos de inmediato (simétrico al UX esperado)
+    // UX: cortar llamada / búsqueda inmediatamente
     if (remoteStream) {
       try { if (!matchGraceRef.current) handleNext(); } catch { stopAll(); }
     } else {
-      // Si no hay remoto, detenemos búsqueda/cámara según tu estado actual
-      // (mantengo conservador: no paro cámara, solo paro la búsqueda si estaba)
       setSearching(false);
     }
 
     await alert({ title:'Bloquear', message:'Modelo bloqueada.', variant:'success' });
   };
-
 
   const streamingActivo = !!remoteStream;
   const showCallMedia = callStatus === 'in-call';
@@ -2196,22 +2208,38 @@ const DashboardClient = () => {
     }
   };
 
-  // ===== BLOQUEOS (RANDOM) - CLIENT SIDE =====
-  const persistBlockedModels = () => {
+  /* ===== BLOQUEOS (RANDOM) - CLIENT SIDE (namespaced por usuario) =====
+  const persistBlockedModels = (meId) => {
     try {
-        localStorage.setItem('blockedModels', JSON.stringify(Array.from(blockedModelIdsRef.current)));
+      const key = blockedKeyFor(meIdRef.current ?? meId);
+      localStorage.setItem(key, JSON.stringify(Array.from(blockedModelIdsRef.current)));
     } catch {}
-  };
+  }; */
 
-  const loadBlockedModels = () => {
+  /*
+  const loadBlockedModels = (meId) => {
     try {
-      const raw = localStorage.getItem('blockedModels');
-      const arr = raw ? JSON.parse(raw) : [];
+      const id = Number(meIdRef.current ?? meId);
+      const key = blockedKeyFor(id);
+      const raw = localStorage.getItem(key);
+
+      // Migración: si no existe la nueva clave pero existe la antigua, la migramos
+      if (!raw) {
+        const legacyRaw = localStorage.getItem('blockedModels');
+        if (legacyRaw) {
+          localStorage.setItem(key, legacyRaw);
+          try { localStorage.removeItem('blockedModels'); } catch {}
+        }
+      }
+
+      const raw2 = localStorage.getItem(key);
+      const arr = raw2 ? JSON.parse(raw2) : [];
       blockedModelIdsRef.current = new Set((Array.isArray(arr) ? arr : []).map(n => Number(n)).filter(n => Number.isFinite(n) && n > 0));
     } catch {
       blockedModelIdsRef.current = new Set();
     }
-  };
+  }; */
+
 
 
   // [CALL] Selección directa desde la lista de favoritos (pestaña Calling): no abre chat, solo fija destino
