@@ -22,6 +22,7 @@ import {
 } from '../../styles/pages-styles/FavoritesStyles';
 
 import StatusBadge from '../../components/StatusBadge';
+import { useAppModals } from '../../components/useAppModals';
 
 function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, hasUnread = false, menuOpen = false }) {
   const placeholder = '/img/avatarChico.png';
@@ -94,14 +95,15 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
   const [blockedMap, setBlockedMap] = useState({});
 
   const token = localStorage.getItem('token');
+  const { alert, confirm, openBlockReasonModal } = useAppModals();
   const menuWidthDesktop = 220;
-
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
-
   const closeMenu = useCallback(() => { setMenu({ open: false, user: null, x: 0, y: 0 }); }, []);
 
-  useEffect(() => { const close = () => closeMenu(); window.addEventListener('click', close); return () => window.removeEventListener('click', close); }, [closeMenu]);
-  useEffect(() => { const onKey = (e) => { if (e.key === 'Escape') closeMenu(); }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [closeMenu]);
+  useEffect(() => {
+      const close = () => closeMenu(); window.addEventListener('click', close); return () => window.removeEventListener('click', close); }, [closeMenu]);
+  useEffect(() => {
+      const onKey = (e) => { if (e.key === 'Escape') closeMenu(); }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [closeMenu]);
 
   const openMenuFromRect = useCallback((user, rect) => {
     if (menu.open && Number(menu.user?.id) === Number(user?.id)) { closeMenu(); return; }
@@ -291,49 +293,49 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
   }, [token]);
 
   const handleBlock = useCallback(async (user) => {
-    if (!token) { alert('No autenticado'); return; }
+    if (!token) { await alert({ title:'Sesión', message:'No autenticado', variant:'warning', size:'sm' }); return; }
     if (!user?.id) return;
 
-    const ok = window.confirm(`¿Bloquear a ${user.nickname || `Usuario #${user.id}`}?`);
-    if (!ok) return;
+    const displayName = user?.nickname || `Usuario #${user.id}`;
+    const pick = await openBlockReasonModal({ displayName });
+    if (!pick?.confirmed) return;
 
-    const reason = window.prompt('Motivo del bloqueo (opcional):', '') ?? '';
     try {
-      const res = await fetch(`/api/blocks/${user.id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+      const res = await fetch(`/api/blocks/${user.id}`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || '' }) });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
       setBlockedMap((prev) => ({ ...(prev || {}), [user.id]: true }));
-      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked: true, blockedByMe: true, blockedByOther: false } : i)));
+      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked:true, blockedByMe:true, blockedByOther:false } : i)));
       setUnreadMap((prev) => { if (!prev?.[user.id]) return prev; const next = { ...prev }; delete next[user.id]; return next; });
 
-      alert('Usuario bloqueado.');
+      await alert({ title:'Bloquear', message:'Usuario bloqueado.', variant:'success', size:'sm' });
     } catch (e) {
-      alert(e?.message || 'No se pudo bloquear.');
+      await alert({ title:'Bloquear', message: e?.message || 'No se pudo bloquear.', variant:'danger', size:'sm' });
     }
-  }, [token]);
+  }, [token, alert, openBlockReasonModal]);
+
 
   const handleUnblock = useCallback(async (user) => {
-    if (!token) { alert('No autenticado'); return; }
+    if (!token) { await alert({ title:'Sesión', message:'No autenticado', variant:'warning', size:'sm' }); return; }
     if (!user?.id) return;
 
-    const ok = window.confirm(`¿Desbloquear a ${user.nickname || `Usuario #${user.id}`}?`);
+    const displayName = user?.nickname || `Usuario #${user.id}`;
+    const ok = await confirm({ title:'Desbloquear', message:`¿Quieres desbloquear a ${displayName}?`, okText:'Desbloquear', cancelText:'Cancelar', variant:'confirm', size:'sm', danger:false });
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/blocks/${user.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`/api/blocks/${user.id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${token}` } });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
       setBlockedMap((prev) => { const next = { ...(prev || {}) }; delete next[user.id]; return next; });
+      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked:false, blockedByMe:false, blockedByOther:false } : i)));
 
-      // Optimista: dejo de marcarlo bloqueado; si el backend seguía diciendo d.blocked=true (porque el otro te bloqueó),
-      // volverá a quedar bloqueado en la próxima carga / reloadTrigger.
-      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked: false, blockedByMe: false, blockedByOther: false } : i)));
-
-      alert('Usuario desbloqueado.');
+      await alert({ title:'Desbloquear', message:'Usuario desbloqueado.', variant:'success', size:'sm' });
     } catch (e) {
-      alert(e?.message || 'No se pudo desbloquear.');
+      await alert({ title:'Desbloquear', message: e?.message || 'No se pudo desbloquear.', variant:'danger', size:'sm' });
     }
-  }, [token]);
+  }, [token, alert, confirm]);
+
 
   // Permite disparar desbloqueo desde fuera
   useEffect(() => {

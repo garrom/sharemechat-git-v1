@@ -22,6 +22,7 @@ import {
 } from '../../styles/pages-styles/FavoritesStyles';
 
 import StatusBadge from '../../components/StatusBadge';
+import { useAppModals } from '../../components/useAppModals';
 
 function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, hasUnread = false, menuOpen = false }) {
   const placeholder = '/img/avatarChica.png';
@@ -94,8 +95,8 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   const [blockedMap, setBlockedMap] = useState({});
 
   const token = localStorage.getItem('token');
+  const { alert, confirm, openBlockReasonModal } = useAppModals();
   const menuWidthDesktop = 220;
-
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const closeMenu = useCallback(() => { setMenu({ open: false, user: null, x: 0, y: 0 }); }, []);
 
@@ -132,30 +133,26 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   }, [menu.open, menu.user?.id, closeMenu]);
 
   const handleUnblock = useCallback(async (user) => {
-    if (!token) { alert('No autenticado'); return; }
+    if (!token) { await alert({ title:'Sesión', message:'No autenticado', variant:'warning', size:'sm' }); return; }
     if (!user?.id) return;
 
-    const ok = window.confirm(`¿Desbloquear a ${user.nickname || `Usuario #${user.id}`}?`);
+    const displayName = user?.nickname || `Usuario #${user.id}`;
+    const ok = await confirm({ title:'Desbloquear', message:`¿Quieres desbloquear a ${displayName}?`, okText:'Desbloquear', cancelText:'Cancelar', variant:'confirm', size:'sm', danger:false });
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/blocks/${user.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`/api/blocks/${user.id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${token}` } });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
-      setBlockedMap((prev) => {
-        const next = { ...(prev || {}) };
-        delete next[user.id];
-        return next;
-      });
+      setBlockedMap((prev) => { const next = { ...(prev || {}) }; delete next[user.id]; return next; });
+      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked:false, blockedByMe:false, blockedByOther:false } : i)));
 
-      // Optimista: si el otro lado te bloquea, el backend volverá a traer blocked=true en meta/incoming (según tu implementación)
-      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked: false, blockedByMe: false, blockedByOther: false } : i)));
-
-      alert('Usuario desbloqueado.');
+      await alert({ title:'Desbloquear', message:'Usuario desbloqueado.', variant:'success', size:'sm' });
     } catch (e) {
-      alert(e?.message || 'No se pudo desbloquear.');
+      await alert({ title:'Desbloquear', message: e?.message || 'No se pudo desbloquear.', variant:'danger', size:'sm' });
     }
-  }, [token]);
+  }, [token, alert, confirm]);
+
 
   // === 1) Cargar MIS bloqueos (bloqueos donde yo soy el blocker)
   useEffect(() => {
@@ -325,31 +322,27 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   }, [token]);
 
   const handleBlock = useCallback(async (user) => {
-    if (!token) { alert('No autenticado'); return; }
+    if (!token) { await alert({ title:'Sesión', message:'No autenticado', variant:'warning', size:'sm' }); return; }
     if (!user?.id) return;
 
-    const ok = window.confirm(`¿Bloquear a ${user.nickname || `Usuario #${user.id}`}?`);
-    if (!ok) return;
+    const displayName = user?.nickname || `Usuario #${user.id}`;
+    const pick = await openBlockReasonModal({ displayName });
+    if (!pick?.confirmed) return;
 
-    const reason = window.prompt('Motivo del bloqueo (opcional):', '') ?? '';
     try {
-      const res = await fetch(`/api/blocks/${user.id}`, { method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) });
+      const res = await fetch(`/api/blocks/${user.id}`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || '' }) });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
       setBlockedMap((prev) => ({ ...(prev || {}), [user.id]: true }));
-      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked: true, blockedByMe: true, blockedByOther: false } : i)));
-      setUnreadMap((prev) => {
-        if (!prev?.[user.id]) return prev;
-        const next = { ...prev };
-        delete next[user.id];
-        return next;
-      });
+      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked:true, blockedByMe:true, blockedByOther:false } : i)));
+      setUnreadMap((prev) => { if (!prev?.[user.id]) return prev; const next = { ...prev }; delete next[user.id]; return next; });
 
-      alert('Usuario bloqueado.');
+      await alert({ title:'Bloquear', message:'Usuario bloqueado.', variant:'success', size:'sm' });
     } catch (e) {
-      alert(e?.message || 'No se pudo bloquear.');
+      await alert({ title:'Bloquear', message: e?.message || 'No se pudo bloquear.', variant:'danger', size:'sm' });
     }
-  }, [token]);
+  }, [token, alert, openBlockReasonModal]);
+
 
   const menuNode = useMemo(() => {
     if (!menu.open || !menu.user) return null;

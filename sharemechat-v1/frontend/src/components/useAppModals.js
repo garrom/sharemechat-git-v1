@@ -1,3 +1,4 @@
+// src/components/useAppModals.js
 import { useCallback } from 'react';
 import styled from 'styled-components';
 import { useHistory, useLocation } from 'react-router-dom';
@@ -5,15 +6,12 @@ import { useModal } from './ModalProvider';
 import LoginModalContent from './LoginModalContent';
 import PublicSignupTeaserModal from './PublicSignupTeaserModal';
 
-
 /**
  * Tipos de contexto para el modal de compra:
  *  - 'random'               → streaming aleatorio
  *  - 'calling'              → llamada 1 a 1
  *  - 'insufficient-balance' → disparado por "saldo insuficiente"
  *  - 'manual'               → botones de "añadir saldo/minutos"
- *
- * NO son obligatorios, pero ayudan si luego quieres afinar textos.
  */
 
 // === Packs por defecto (TEMPORAL, luego se sacarán de BBDD/backend) ===
@@ -33,6 +31,13 @@ const PackPrice = styled.span`font-weight:600;font-size:15px;`;
 const PackTag = styled.span`display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;background:#1f6feb22;color:#58a6ff;`;
 const PackHint = styled.span`font-size:12px;color:#8b949e;`;
 const PayoutInput = styled.input`width:100%;padding:8px 10px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#e6edf3;font-size:14px;margin-top:6px;outline:none;&:focus{border-color:#58a6ff;box-shadow:0 0 0 1px #58a6ff44;}}`;
+
+// === Estilos: modal de bloqueo (radio) ===
+const ChoiceWrap = styled.div`display:grid;gap:10px;margin-top:10px;`;
+const ChoiceRow = styled.label`display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #30363d;border-radius:10px;background:#0a0f16;cursor:pointer;transition:background .15s ease,border-color .15s ease,transform .08s ease;&:hover{background:#101622;border-color:#3a3f46;transform:translateY(-1px);}input{accent-color:#2f81f7;}`;
+const ChoiceText = styled.span`display:flex;flex-direction:column;gap:2px;`;
+const ChoiceTitle = styled.span`font-weight:700;color:#e6edf3;font-size:14px;`;
+const ChoiceSub = styled.span`color:#9aa1a9;font-size:12px;line-height:1.35;`;
 
 //###########
 //## HOOK
@@ -164,6 +169,57 @@ export const useAppModals = () => {
     });
   }, [openModal, closeModal, alert]);
 
+  /**
+   * Modal de BLOQUEO (radio 1 de 3).
+   * Retorna: { confirmed:boolean, reason:'pause'|'never'|'other'|null }
+   */
+  const openBlockReasonModal = useCallback(({ displayName = 'este usuario' } = {}) => {
+    return new Promise((resolve) => {
+      let selected = 'pause';
+
+      const onCancel = () => { closeModal(); resolve({ confirmed:false, reason:null }); };
+      const onConfirm = () => { closeModal(); resolve({ confirmed:true, reason:selected }); };
+
+      openModal({
+        title: 'Bloquear',
+        variant: 'danger',
+        size: 'sm',
+        bodyKind: 'payout',
+        content: (
+          <div>
+            <PackHint>Elige un motivo para bloquear a {displayName}:</PackHint>
+            <ChoiceWrap>
+              <ChoiceRow>
+                <input type="radio" name="block-reason" defaultChecked onChange={() => { selected = 'pause'; }} />
+                <ChoiceText>
+                  <ChoiceTitle>Pausarlo un tiempo</ChoiceTitle>
+                </ChoiceText>
+              </ChoiceRow>
+
+              <ChoiceRow>
+                <input type="radio" name="block-reason" onChange={() => { selected = 'never'; }} />
+                <ChoiceText>
+                  <ChoiceTitle>No quiero verlo más</ChoiceTitle>
+                </ChoiceText>
+              </ChoiceRow>
+
+              <ChoiceRow>
+                <input type="radio" name="block-reason" onChange={() => { selected = 'other'; }} />
+                <ChoiceText>
+                  <ChoiceTitle>Otro</ChoiceTitle>
+                </ChoiceText>
+              </ChoiceRow>
+            </ChoiceWrap>
+          </div>
+        ),
+        actions: [
+          { label:'Cancelar', primary:false, danger:false, onClick:onCancel },
+          { label:'Bloquear', primary:false, danger:true, onClick:onConfirm },
+        ],
+      }).then(() => {});
+    });
+  }, [openModal, closeModal]);
+
   const openLoginModal = useCallback(() => {
     const cameFromLoginRoute = location.pathname === '/login';
 
@@ -207,7 +263,6 @@ export const useAppModals = () => {
     }).then(() => {});
   }, [openModal, closeModal, openLoginModal]);
 
-
   return {
     alert,
     confirm,
@@ -217,7 +272,8 @@ export const useAppModals = () => {
     openPayoutModal,
     openActiveSessionGuard,
     openLoginModal,
-    openPublicSignupTeaser
+    openPublicSignupTeaser,
+    openBlockReasonModal,
   };
 };
 

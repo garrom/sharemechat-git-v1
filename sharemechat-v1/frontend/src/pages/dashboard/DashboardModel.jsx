@@ -43,7 +43,7 @@ import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
 
 const DashboardModel = () => {
 
-  const { alert, confirm, openPayoutModal,openActiveSessionGuard } = useAppModals();
+  const { alert, confirm, openPayoutModal,openActiveSessionGuard,openBlockReasonModal } = useAppModals();
   const { inCall, setInCall } = useCallUi();
   const [cameraActive, setCameraActive] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -1128,15 +1128,11 @@ const DashboardModel = () => {
       await alert({ title:'Bloquear', message:'No se pudo identificar al cliente actual.', variant:'warning' });
       return;
     }
-    const ok = await confirm({
-      title: 'Bloquear',
-      message: '¿Quieres bloquear a este cliente?',
-      confirmText: 'Bloquear',
-      cancelText: 'Cancelar',
-      variant: 'danger',
-    });
-    if (!ok) return;
-    // Persistimos también en backend (bloqueo real en matching)
+
+    const displayName = clientNickname || `Usuario #${id}`;
+    const pick = await openBlockReasonModal({ displayName });
+    if (!pick?.confirmed) return;
+
     const tk = localStorage.getItem('token');
     if (!tk) {
       await alert({ title:'Sesión', message:'Sesión expirada. Inicia sesión de nuevo.', variant:'warning' });
@@ -1144,11 +1140,7 @@ const DashboardModel = () => {
     }
 
     try {
-      const r = await fetch(`/api/blocks/${id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${tk}` },
-        body: JSON.stringify({ reason: 'random-block' }),
-      });
+      const r = await fetch(`/api/blocks/${id}`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${tk}` }, body:JSON.stringify({ reason: pick.reason || 'random-block' }) });
       if (!r.ok) {
         const txt = await r.text().catch(()=> '');
         throw new Error(txt || `HTTP ${r.status}`);
@@ -1158,14 +1150,15 @@ const DashboardModel = () => {
       return;
     }
 
-    // Si estamos en streaming, salimos de inmediato (simétrico al UX esperado)
     if (remoteStream) {
       try { handleNext(); } catch { stopAll(); }
     } else {
       setSearching(false);
     }
+
     await alert({ title:'Bloquear', message:'Cliente bloqueado.', variant:'success' });
   };
+
 
   const handleProfile = async () => {
     const ok = await confirmarSalidaSesionActiva();
@@ -1227,7 +1220,7 @@ const DashboardModel = () => {
         try {
           const data = await res.json();
           if (data && data.message) {
-            friendlyMsg = data.message; // p.ej. "Saldo insuficiente para completar el retiro"
+            friendlyMsg = data.message;
           }
         } catch {
           try {

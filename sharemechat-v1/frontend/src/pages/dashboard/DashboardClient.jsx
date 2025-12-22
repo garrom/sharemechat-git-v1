@@ -43,7 +43,7 @@ import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
 
 const DashboardClient = () => {
 
-  const { alert, confirm, openPurchaseModal,openActiveSessionGuard } = useAppModals();
+  const { alert, confirm, openPurchaseModal,openActiveSessionGuard,openBlockReasonModal } = useAppModals();
   const { inCall, setInCall } = useCallUi();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -1492,6 +1492,7 @@ const DashboardClient = () => {
     }
   };
 
+  // ===== BLOQUEOS (RANDOM) - CLIENT SIDE =====
   const handleBlockPeer = async () => {
     const id = Number(currentModelId);
     if (!Number.isFinite(id) || id <= 0) {
@@ -1499,28 +1500,15 @@ const DashboardClient = () => {
       return;
     }
 
-    const ok = await confirm({
-      title:'Bloquear',
-      message:'¿Quieres bloquear a esta modelo?',
-      confirmText:'Bloquear',
-      cancelText:'Cancelar',
-      variant:'danger',
-    });
-    if (!ok) return;
+    const displayName = modelNickname || `Usuario #${id}`;
+    const pick = await openBlockReasonModal({ displayName });
+    if (!pick?.confirmed) return;
 
     try {
       const token = localStorage.getItem('token');
-      await fetch(`/api/blocks/${id}`,{
-        method:'POST',
-        headers:{
-          Authorization:`Bearer ${token}`,
-          'Content-Type':'application/json'
-        },
-        body:JSON.stringify({ reason:'' })
-      });
+      await fetch(`/api/blocks/${id}`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || '' }) });
     } catch {}
 
-    // UX: cortar llamada / búsqueda inmediatamente
     if (remoteStream) {
       try { if (!matchGraceRef.current) handleNext(); } catch { stopAll(); }
     } else {
@@ -1529,6 +1517,7 @@ const DashboardClient = () => {
 
     await alert({ title:'Bloquear', message:'Modelo bloqueada.', variant:'success' });
   };
+
 
   const streamingActivo = !!remoteStream;
   const showCallMedia = callStatus === 'in-call';
