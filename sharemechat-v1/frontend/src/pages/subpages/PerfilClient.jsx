@@ -1,6 +1,7 @@
 // src/pages/subpages/PerfilClient.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
+import { useAppModals } from '../../components/useAppModals';
 
 // Navbar unificado
 import {
@@ -64,6 +65,7 @@ const DOCS_UPLOAD_URL = '/api/clients/documents';
 const PerfilClient = () => {
   const history = useHistory();
   const token = localStorage.getItem('token');
+  const { alert, openUnsubscribeModal } = useAppModals();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -170,21 +172,30 @@ const PerfilClient = () => {
   };
 
   const onUnsubscribe = async () => {
-    const reason = window.prompt('Motivo de baja (opcional):') || null;
-    if (!window.confirm('¿Seguro que deseas darte de baja? Perderás tu saldo.')) return;
-    const res = await fetch('/api/users/unsubscribe', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ reason }),
-    });
-    if (res.ok) {
-      localStorage.removeItem('token');
-      alert('Cuenta dada de baja.');
-      history.push('/login');
-    } else {
-      alert((await res.text()) || 'No se pudo completar la baja.');
+    const { confirmed, reason } = await openUnsubscribeModal();
+    if (!confirmed) return;
+
+    try {
+      const res = await fetch('/api/users/unsubscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reason }),
+      });
+
+      if (res.ok) {
+        localStorage.removeItem('token');
+        await alert({ title:'Cuenta', message:'Cuenta dada de baja.', variant:'success', size:'sm' });
+        history.push('/login');
+        return;
+      }
+
+      const txt = await res.text().catch(() => '');
+      await alert({ title:'Cuenta', message: txt || 'No se pudo completar la baja.', variant:'danger', size:'sm' });
+    } catch (e) {
+      await alert({ title:'Cuenta', message: e?.message || 'No se pudo completar la baja.', variant:'danger', size:'sm' });
     }
   };
+
 
   const uploadPhoto = async () => {
     if (!picFile) return;

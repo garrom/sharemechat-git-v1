@@ -32,6 +32,13 @@ const PackTag = styled.span`display:inline-flex;align-items:center;padding:2px 8
 const PackHint = styled.span`font-size:12px;color:#8b949e;`;
 const PayoutInput = styled.input`width:100%;padding:8px 10px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#e6edf3;font-size:14px;margin-top:6px;outline:none;&:focus{border-color:#58a6ff;box-shadow:0 0 0 1px #58a6ff44;}}`;
 
+// === Estilo modal para dar de baja ===
+const RadioGroup = styled.div`display:grid;gap:8px;margin-top:10px;text-align:left;`;
+const RadioOption = styled.label`display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid #30363d;background:#0a0f16;color:#e6edf3;cursor:pointer;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .08s ease;&:hover{background:#101622;border-color:#3a3f46;box-shadow:0 0 0 1px rgba(47,129,247,.22);transform:translateY(-1px);}input{margin-top:3px;}`;
+const RadioText = styled.div`display:flex;flex-direction:column;gap:2px;`;
+const RadioTitle = styled.div`font-weight:700;font-size:14px;line-height:1.2;`;
+const RadioDesc = styled.div`font-size:12px;color:#9aa1a9;line-height:1.35;`;
+
 // === Estilos: modal de bloqueo (radio) ===
 const ChoiceWrap = styled.div`display:grid;gap:10px;margin-top:10px;`;
 const ChoiceRow = styled.label`display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #30363d;border-radius:10px;background:#0a0f16;cursor:pointer;transition:background .15s ease,border-color .15s ease,transform .08s ease;&:hover{background:#101622;border-color:#3a3f46;transform:translateY(-1px);}input{accent-color:#2f81f7;}`;
@@ -66,7 +73,7 @@ export const useAppModals = () => {
     return false;
   }, [alert]);
 
-  /** Modal de selección de pack de minutos / saldo. */
+  // Modal PACK COMPRAR MINUTOS
   const openPurchaseModal = useCallback(({ packs, currency = 'EUR', context = 'manual' } = {}) => {
     const effectivePacks = Array.isArray(packs) && packs.length > 0 ? packs : DEFAULT_PACKS;
     if (!effectivePacks.length) return Promise.resolve({ confirmed:false });
@@ -118,7 +125,7 @@ export const useAppModals = () => {
     });
   }, [openModal, closeModal]);
 
-  /** Modal para solicitar un retiro (payout) indicando un importe. */
+  //Modal para RETIRO DINERO (payout)
   const openPayoutModal = useCallback(({ title = 'Solicitud de retiro', message, initialAmount = 10 } = {}) => {
     return new Promise((resolve) => {
       let currentValue = initialAmount !== null && initialAmount !== undefined ? String(initialAmount) : '';
@@ -169,10 +176,54 @@ export const useAppModals = () => {
     });
   }, [openModal, closeModal, alert]);
 
-  /**
-   * Modal de BLOQUEO (radio 1 de 3).
-   * Retorna: { confirmed:boolean, reason:'pause'|'never'|'other'|null }
-   */
+  // Modal DARSE DE BAJA (radio de 5)
+  const openUnsubscribeModal = useCallback(({ title = 'Darme de baja', size = 'sm', options } = {}) => {
+    const effectiveOptions = Array.isArray(options) && options.length ? options : [
+      { value:'not-matching', label:'No encuentro buenos matches', desc:'No encuentro personas que me encajen.' },
+      { value:'too-expensive', label:'Es caro', desc:'El precio es un poco alto.' },
+      { value:'privacy', label:'Privacidad / seguridad', desc:'No me siento cómodo con la privacidad o seguridad.' },
+      { value:'technical', label:'Problemas técnicos', desc:'He tenido errores o mala experiencia técnica.' },
+      { value:'other', label:'Otro', desc:'Prefiero no especificar.' },
+    ];
+
+    return new Promise((resolve) => {
+      let selected = effectiveOptions[0]?.value ?? 'pause';
+
+      const handleCancel = () => { closeModal(); resolve({ confirmed:false, reason:null }); };
+      const handleConfirm = () => { closeModal(); resolve({ confirmed:true, reason:selected || null }); };
+
+      openModal({
+        title,
+        variant: 'danger',
+        size,
+        bodyKind: 'payout',
+        content: (
+          <div>
+            <PackHint>Selecciona el motivo de la baja:</PackHint>
+            <RadioGroup role="radiogroup" aria-label="Motivo de baja">
+              {effectiveOptions.map((opt) => (
+                <RadioOption key={opt.value}>
+                  <input type="radio" name="unsubscribeReason" defaultChecked={opt.value === selected} onChange={() => { selected = opt.value; }} />
+                  <RadioText>
+                    <RadioTitle>{opt.label}</RadioTitle>
+                    {opt.desc ? <RadioDesc>{opt.desc}</RadioDesc> : null}
+                  </RadioText>
+                </RadioOption>
+              ))}
+            </RadioGroup>
+            <PackHint style={{ marginTop: 10 }}>Si continúas, perderás tu saldo y el acceso al historial.</PackHint>
+          </div>
+        ),
+        actions: [
+          { label:'Cancelar', primary:false, danger:false, onClick:handleCancel },
+          { label:'Darme de baja', primary:false, danger:true, onClick:handleConfirm },
+        ],
+      }).then(() => {});
+    });
+  }, [openModal, closeModal]);
+
+
+  //Modal de BLOQUEO (radio 1 de 3).
   const openBlockReasonModal = useCallback(({ displayName = 'este usuario' } = {}) => {
     return new Promise((resolve) => {
       let selected = 'pause';
@@ -274,6 +325,7 @@ export const useAppModals = () => {
     openLoginModal,
     openPublicSignupTeaser,
     openBlockReasonModal,
+    openUnsubscribeModal
   };
 };
 

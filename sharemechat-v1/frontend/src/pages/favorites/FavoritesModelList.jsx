@@ -95,7 +95,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
   const [blockedMap, setBlockedMap] = useState({});
 
   const token = localStorage.getItem('token');
-  const { alert, confirm, openBlockReasonModal } = useAppModals();
+  const { alert, confirm, openBlockReasonModal,openRemoveFavoriteConfirm } = useAppModals();
   const menuWidthDesktop = 220;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const closeMenu = useCallback(() => { setMenu({ open: false, user: null, x: 0, y: 0 }); }, []);
@@ -122,7 +122,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     setMenu({ open: true, user, x, y });
   }, [menu.open, menu.user?.id, closeMenu]);
 
-  // === 1) Cargar MIS bloqueos (yo como blocker) → /api/blocks devuelve blockedUserId (ids que yo he bloqueado)
+  // Cargar MIS bloqueos
   useEffect(() => {
     let ignore = false;
 
@@ -151,9 +151,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     return () => { ignore = true; };
   }, [token, reloadTrigger]);
 
-  // === 2) Cargar favoritos + presencia (MODELO ve CLIENTES)
-  // FIX: combinamos blocked del backend (d.blocked) con mis bloqueos (blockedMap)
-  //      y además etiquetamos si el bloqueo es mío (blockedByMe) o del otro (blockedByOther)
+  // Cargar favoritos + presencia (MODELO ve CLIENTES)
   useEffect(() => {
     let ignore = false;
 
@@ -276,21 +274,24 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
 
   const handleRemove = useCallback(async (user) => {
     const inv = String(user?.invited || '').toLowerCase();
-    if (inv === 'pending' || inv === 'sent') { alert('No puedes eliminar favoritos mientras la solicitud está en proceso.'); return; }
+    if (inv === 'pending' || inv === 'sent') { await alert({ title:'Favoritos', message:'No puedes eliminar mientras la solicitud está en proceso.', variant:'warning', size:'sm' }); return; }
     if (!user?.id) return;
 
-    const ok = window.confirm(`¿Eliminar a ${user.nickname || `Usuario #${user.id}`} de tus favoritos?`);
+    const displayName = user?.nickname || `Usuario #${user.id}`;
+    const ok = await openRemoveFavoriteConfirm(displayName);
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/favorites/clients/${user.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`/api/favorites/clients/${user.id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${token}` } });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
 
       setItems((prev) => (prev || []).filter((i) => Number(i.id) !== Number(user.id)));
+      await alert({ title:'Favoritos', message:'Eliminado de favoritos.', variant:'success', size:'sm' });
     } catch (e) {
-      alert(e.message || 'No se pudo eliminar de favoritos.');
+      await alert({ title:'Favoritos', message: e?.message || 'No se pudo eliminar de favoritos.', variant:'danger', size:'sm' });
     }
-  }, [token]);
+  }, [token, alert, openRemoveFavoriteConfirm]);
+
 
   const handleBlock = useCallback(async (user) => {
     if (!token) { await alert({ title:'Sesión', message:'No autenticado', variant:'warning', size:'sm' }); return; }
