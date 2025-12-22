@@ -6,8 +6,8 @@ import com.sharemechat.service.UserBlockService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/blocks")
@@ -28,7 +28,6 @@ public class UserBlockController {
         return ResponseEntity.ok(userBlockService.blockUser(blockedUserId, body));
     }
 
-
     // Eliminar bloqueo (idempotente)
     @DeleteMapping("/{blockedUserId}")
     public ResponseEntity<Void> unblock(@PathVariable Long blockedUserId) {
@@ -42,6 +41,19 @@ public class UserBlockController {
         return ResponseEntity.ok(userBlockService.listMyBlocks());
     }
 
+    // Batch: mapa id -> true/false (para UI: favoritos "Bloqueado")
+    @GetMapping("/map")
+    public ResponseEntity<Map<Long, Boolean>> blockedMap(@RequestParam(name = "ids") String ids) {
+        List<Long> requested = parseIds(ids);
+        if (requested.isEmpty()) return ResponseEntity.ok(Collections.emptyMap());
+
+        Set<Long> blocked = userBlockService.findBlockedIdsByMe(requested);
+
+        Map<Long, Boolean> out = new LinkedHashMap<>();
+        for (Long id : requested) out.put(id, blocked.contains(id));
+        return ResponseEntity.ok(out);
+    }
+
     // Comprobación útil para UI / debugging
     @GetMapping("/between/{otherUserId}")
     public ResponseEntity<Map<String, Object>> isBlockedBetween(@PathVariable Long otherUserId) {
@@ -52,5 +64,38 @@ public class UserBlockController {
                 "other", otherUserId,
                 "blockedBetween", blocked
         ));
+    }
+
+    // Endpoint GET /api/blocks/incoming: lista bloqueos entrantes (quién me bloqueó)
+    @GetMapping("/incoming")
+    public ResponseEntity<List<UserBlockDTO>> listIncomingBlocks() {
+        return ResponseEntity.ok(userBlockService.listIncomingBlocks());
+    }
+
+
+    @GetMapping("/incoming/map")
+    public ResponseEntity<Map<Long, Boolean>> incomingBlockedMap(@RequestParam(name = "ids") String ids) {
+        List<Long> requested = parseIds(ids);
+        if (requested.isEmpty()) return ResponseEntity.ok(Collections.emptyMap());
+
+        Set<Long> blockers = userBlockService.findBlockerIdsWhoBlockedMe(requested);
+
+        Map<Long, Boolean> out = new LinkedHashMap<>();
+        for (Long id : requested) out.put(id, blockers.contains(id));
+        return ResponseEntity.ok(out);
+    }
+
+    private static List<Long> parseIds(String raw) {
+        if (raw == null || raw.trim().isEmpty()) return Collections.emptyList();
+        return Arrays.stream(raw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .map(s -> {
+                    try { return Long.parseLong(s); } catch (Exception e) { return null; }
+                })
+                .filter(Objects::nonNull)
+                .filter(v -> v > 0)
+                .distinct()
+                .collect(Collectors.toList());
     }
 }

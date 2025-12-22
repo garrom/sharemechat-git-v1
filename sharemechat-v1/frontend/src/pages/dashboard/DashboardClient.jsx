@@ -41,7 +41,6 @@ import VideoChatRandomCliente from './VideoChatRandomCliente';
 import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
 
 
-
 const DashboardClient = () => {
 
   const { alert, confirm, openPurchaseModal,openActiveSessionGuard } = useAppModals();
@@ -70,7 +69,6 @@ const DashboardClient = () => {
   const [profilePic, setProfilePic] = useState(null);
   const [modelNickname, setModelNickname] = useState('Modelo');
   const [modelAvatar, setModelAvatar] = useState('');
-  // === FUENTE ÚNICA DE VERDAD PARA CONTACTO SELECCIONADO ===
   const [targetPeerId, setTargetPeerId] = useState(null);
   const [targetPeerName, setTargetPeerName] = useState('');
   // Modo del panel de contacto (chat o llamada)
@@ -128,7 +126,7 @@ const DashboardClient = () => {
   const lastSentRef = useRef({ text: null, at: 0 });
   //const blockedModelIdsRef = useRef(new Set());
   const matchGraceRef = useRef(false);
-  //const blockedKeyFor = (meId) => `blockedModels:v1:${Number(meId)||0}`;
+
 
   const isEcho = (incoming) => {
     const now = Date.now();
@@ -148,16 +146,6 @@ const DashboardClient = () => {
     const found = gifts.find(gg => Number(gg.id) === Number(gift.id));
     return found?.icon || null;
   };
-
-  /* //UseEffect para bloquear local store
-  useEffect(() => {
-      loadBlockedModels(meIdRef.current);
-  },[]);
-
-  useEffect(() => {
-      if(Number(meIdRef.current)>0) loadBlockedModels(meIdRef.current);
-  }, [user?.id]);*/
-
 
   //**** PARA MOVIL ****/
   useEffect(() => {
@@ -949,17 +937,6 @@ const DashboardClient = () => {
             setCurrentModelId(null);
           }
         } catch { setCurrentModelId(null); }
-
-        /* === BLOQUEO CLIENT-SIDE: si el match viene con un modelId bloqueado, pedimos NEXT y salimos ===
-        const incomingId = Number(data.peerUserId);
-        if (Number.isFinite(incomingId) && blockedModelIdsRef.current.has(incomingId)) {
-          console.log('[RANDOM][block] match bloqueado -> pedir next', incomingId);
-          setCurrentModelId(null);
-          setStatus('Buscando nueva modelo...');
-          setSearching(true);
-          try { socketRef.current?.readyState === WebSocket.OPEN && socketRef.current.send(JSON.stringify({ type: 'next' })); } catch {}
-          return;
-        }*/
 
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
@@ -2207,39 +2184,6 @@ const DashboardClient = () => {
       console.log('[CALL][lock] cleanup -> unlock');
     }
   };
-
-  /* ===== BLOQUEOS (RANDOM) - CLIENT SIDE (namespaced por usuario) =====
-  const persistBlockedModels = (meId) => {
-    try {
-      const key = blockedKeyFor(meIdRef.current ?? meId);
-      localStorage.setItem(key, JSON.stringify(Array.from(blockedModelIdsRef.current)));
-    } catch {}
-  }; */
-
-  /*
-  const loadBlockedModels = (meId) => {
-    try {
-      const id = Number(meIdRef.current ?? meId);
-      const key = blockedKeyFor(id);
-      const raw = localStorage.getItem(key);
-
-      // Migración: si no existe la nueva clave pero existe la antigua, la migramos
-      if (!raw) {
-        const legacyRaw = localStorage.getItem('blockedModels');
-        if (legacyRaw) {
-          localStorage.setItem(key, legacyRaw);
-          try { localStorage.removeItem('blockedModels'); } catch {}
-        }
-      }
-
-      const raw2 = localStorage.getItem(key);
-      const arr = raw2 ? JSON.parse(raw2) : [];
-      blockedModelIdsRef.current = new Set((Array.isArray(arr) ? arr : []).map(n => Number(n)).filter(n => Number.isFinite(n) && n > 0));
-    } catch {
-      blockedModelIdsRef.current = new Set();
-    }
-  }; */
-
 
 
   // [CALL] Selección directa desde la lista de favoritos (pestaña Calling): no abre chat, solo fija destino

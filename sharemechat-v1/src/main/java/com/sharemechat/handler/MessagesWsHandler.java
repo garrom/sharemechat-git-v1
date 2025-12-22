@@ -151,6 +151,12 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             }
 
             try {
+                // === FIX: bloqueo en cualquier dirección (me <-> to)
+                if (userBlockService.isBlockedBetween(me, to)) {
+                    safeSend(session, new JSONObject().put("type","msg:error").put("message","Mensajería bloqueada: usuario bloqueado").toString());
+                    return;
+                }
+
                 if (!favoriteService.canUsersMessage(me, to)) {
                     safeSend(session, new JSONObject().put("type","msg:error").put("message","Mensajería bloqueada: relación no aceptada").toString());
                     return;
@@ -201,7 +207,14 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 safeSend(session, new JSONObject().put("type","call:error").put("message","No puedes llamarte a ti mismo").toString());
                 return;
             }
+
             try {
+                // === FIX: bloqueo en cualquier dirección (me <-> to)
+                if (userBlockService.isBlockedBetween(me, to)) {
+                    safeSend(session, new JSONObject().put("type","call:error").put("message","Llamadas bloqueadas: usuario bloqueado").toString());
+                    return;
+                }
+
                 if (!favoriteService.canUsersMessage(me, to)) {
                     safeSend(session, new JSONObject().put("type","call:error").put("message","Llamadas bloqueadas: relación no aceptada").toString());
                     return;
@@ -268,6 +281,13 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             }
 
             try {
+                // === FIX: bloqueo en cualquier dirección (me <-> with)
+                if (userBlockService.isBlockedBetween(me, with)) {
+                    clearRinging(me);
+                    safeSend(session, new JSONObject().put("type","call:error").put("message","Llamadas bloqueadas: usuario bloqueado").toString());
+                    return;
+                }
+
                 if (!favoriteService.canUsersMessage(me, with)) {
                     safeSend(session, new JSONObject().put("type","call:error").put("message","Llamadas bloqueadas: relación no aceptada").toString());
                     return;
@@ -438,6 +458,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         safeSend(session, new JSONObject().put("type","call:error").put("message","Tipo no soportado: " + type).toString());
     }
 
+
     private void handleMsgGift(WebSocketSession session, org.json.JSONObject json) {
         Long me = sessionUserIds.get(session.getId());
         if (me == null) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"No autenticado\"}"); return; }
@@ -450,6 +471,17 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         if (to == null || to <= 0L) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Destinatario inválido\"}"); return; }
         if (java.util.Objects.equals(me, to)) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"No puedes enviarte regalos a ti mismo\"}"); return; }
         if (giftId <= 0L) { safeSend(session, "{\"type\":\"msg:error\",\"message\":\"giftId inválido\"}"); return; }
+
+        // === FIX: bloqueo en cualquier dirección (me <-> to)
+        try {
+            if (userBlockService.isBlockedBetween(me, to)) {
+                safeSend(session, new org.json.JSONObject().put("type","msg:error").put("message","Mensajería bloqueada: usuario bloqueado").toString());
+                return;
+            }
+        } catch (Exception ex) {
+            safeSend(session, new org.json.JSONObject().put("type","msg:error").put("message", ex.getMessage()).toString());
+            return;
+        }
 
         com.sharemechat.entity.User sender = userRepository.findById(me).orElse(null);
         com.sharemechat.entity.User recipient = userRepository.findById(to).orElse(null);
@@ -495,6 +527,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             safeSend(session, new org.json.JSONObject().put("type","msg:error").put("message", ex.getMessage()).toString());
         }
     }
+
 
     private void broadcastToUser(Long userId, String json) {
         var set = sessions.get(userId);

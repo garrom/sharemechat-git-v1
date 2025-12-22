@@ -10,8 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -28,7 +27,6 @@ public class UserBlockService {
     /**
      * IMPORTANTE:
      * Asumo que el "username" del JWT/Spring Security es el email.
-     * Si en tu proyecto usas otro identificador, cambia este método.
      */
     public User getCurrentUserOrThrow() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -77,7 +75,6 @@ public class UserBlockService {
         return toDto(saved);
     }
 
-
     @Transactional
     public void unblockUser(Long blockedUserId) {
         User me = getCurrentUserOrThrow();
@@ -103,6 +100,64 @@ public class UserBlockService {
         if (a.equals(b)) return false;
         return userBlockRepository.existsBlockBetween(a, b);
     }
+
+    // === Batch para UI: dados ids, devuelve SET de ids que YO tengo bloqueados ===
+    @Transactional(readOnly = true)
+    public Set<Long> findBlockedIdsByMe(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Collections.emptySet();
+
+        User me = getCurrentUserOrThrow();
+        Long meId = me.getId();
+        if (meId == null) return Collections.emptySet();
+
+        List<Long> clean = ids.stream()
+                .filter(Objects::nonNull)
+                .map(Long::valueOf)
+                .filter(v -> v > 0)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (clean.isEmpty()) return Collections.emptySet();
+
+        List<Long> blocked = userBlockRepository.findBlockedIdsByBlockerIn(meId, clean);
+        return new HashSet<>(blocked == null ? Collections.emptyList() : blocked);
+    }
+
+    // Servicio: obtiene mis bloqueos entrantes y los devuelve como DTO
+    @Transactional(readOnly = true)
+    public List<UserBlockDTO> listIncomingBlocks() {
+        User me = getCurrentUserOrThrow();
+        Long meId = me.getId();
+        if (meId == null) return Collections.emptyList();
+
+        return userBlockRepository.findAllByBlockedUserIdOrderByCreatedAtDesc(meId)
+                .stream()
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    // Servicio batch: dado un listado de ids, marca cuáles me han bloqueado
+    @Transactional(readOnly = true)
+    public Set<Long> findBlockerIdsWhoBlockedMe(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return Collections.emptySet();
+
+        User me = getCurrentUserOrThrow();
+        Long meId = me.getId();
+        if (meId == null) return Collections.emptySet();
+
+        List<Long> clean = ids.stream()
+                .filter(Objects::nonNull)
+                .map(Long::valueOf)
+                .filter(v -> v > 0)
+                .distinct()
+                .collect(Collectors.toList());
+
+        if (clean.isEmpty()) return Collections.emptySet();
+
+        List<Long> blockers = userBlockRepository.findBlockerIdsWhoBlockedMeIn(meId, clean);
+        return new HashSet<>(blockers == null ? Collections.emptyList() : blockers);
+    }
+
 
     private UserBlockDTO toDto(UserBlock ub) {
         return new UserBlockDTO(

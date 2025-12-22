@@ -123,7 +123,6 @@ const DashboardModel = () => {
   const token = localStorage.getItem('token');
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
-  //const blockedClientIdsRef = useRef(new Set());
   const nextGuardRef = useRef(false);
 
 
@@ -154,12 +153,6 @@ const DashboardModel = () => {
     }
   }, [centerMessages, centerLoading]);
   //**** FIN MOVIL ****/
-
-  /* ===== BLOQUEOS (RANDOM) - INIT LOAD =====
-  useEffect(() => {
-    loadBlockedClients();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); */
 
 
   // click derecho (cerrar con click global o ESC)
@@ -907,21 +900,6 @@ const DashboardModel = () => {
     }
   };
 
-  /* ===== BLOQUEOS (RANDOM) - MODEL SIDE =====
-  const persistBlockedClients = () => {
-    try { localStorage.setItem('blockedClients', JSON.stringify(Array.from(blockedClientIdsRef.current))); } catch {}
-  };
-  const loadBlockedClients = () => {
-    try {
-      const raw = localStorage.getItem('blockedClients');
-      const arr = raw ? JSON.parse(raw) : [];
-      blockedClientIdsRef.current = new Set((Array.isArray(arr) ? arr : []).map(n => Number(n)).filter(n => Number.isFinite(n) && n > 0));
-    } catch {
-      blockedClientIdsRef.current = new Set();
-    }
-  };*/
-
-
   const handleActivateCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -985,17 +963,6 @@ const DashboardModel = () => {
             setCurrentClientId(null);
           }
         } catch { setCurrentClientId(null); }
-
-        /*BLOQUEO CLIENT-SIDE: si el match viene con un clientId bloqueado, pedimos NEXT y salimos
-        const incomingId = Number(data.peerUserId);
-        if (Number.isFinite(incomingId) && blockedClientIdsRef.current.has(incomingId)) {
-          console.log('[RANDOM][block] match bloqueado -> pedir next', incomingId);
-          setCurrentClientId(null);
-          setStatus('Buscando nuevo cliente...');
-          setSearching(true);
-          try { socketRef.current?.readyState === WebSocket.OPEN && socketRef.current.send(JSON.stringify({ type: 'next' })); } catch {}
-          return;
-        } */
 
         // reset de peer/remote
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
@@ -1163,7 +1130,7 @@ const DashboardModel = () => {
     }
     const ok = await confirm({
       title: 'Bloquear',
-      message: '¿Quieres bloquear a este cliente? No volverás a emparejar con él en videochat aleatorio.',
+      message: '¿Quieres bloquear a este cliente?',
       confirmText: 'Bloquear',
       cancelText: 'Cancelar',
       variant: 'danger',
@@ -1966,7 +1933,6 @@ const DashboardModel = () => {
     }
 
   };
-
 
 
   // [CALL][Model] Selección directa desde Favoritos en pestaña Calling (NO abre chat, solo fija destino)

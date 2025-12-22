@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.sharemechat.exception.AlreadyFavoritesException;
 import com.sharemechat.exception.InvitationAlreadyPendingException;
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,9 +33,7 @@ public class FavoriteService {
         this.favoriteClientRepo = favoriteClientRepo;
         this.userRepository = userRepository;
         this.statusService = statusService;
-
     }
-
 
     // =================== CLIENTE -> MODELO ===================
     @Transactional
@@ -45,12 +44,10 @@ public class FavoriteService {
         User client = requireUser(clientId); ensureRole(client, "CLIENT");
         User model  = requireUser(modelId);  ensureRole(model,  "MODEL");
 
-        // 1) Si ya están aceptados ambos lados, no recrear
         if (canUsersMessage(clientId, modelId)) {
             throw new AlreadyFavoritesException();
         }
 
-        // 2) Cargar/crear filas
         FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
                 .orElseGet(() -> new FavoriteModel(clientId, modelId));
         FavoriteClient peer = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
@@ -61,21 +58,16 @@ public class FavoriteService {
         String peerInv = Optional.ofNullable(peer.getInvited()).orElse("").toLowerCase();
         String peerSta = Optional.ofNullable(peer.getStatus()).orElse("").toLowerCase();
 
-        // 3) Si YO ya envié (inactive/sent), no duplicar
         if ("inactive".equals(myStat) && "sent".equals(myInv)) {
             throw new InvitationAlreadyPendingException();
         }
 
-        // 4) Si el otro lado ya inició la invitación o yo estoy como receptor pendiente → NO aceptar automáticamente
         boolean iAmPendingReceiver = "inactive".equals(myStat) && "pending".equals(myInv);
         boolean peerSentToMe       = "inactive".equals(peerSta) && "sent".equals(peerInv);
         if (iAmPendingReceiver || peerSentToMe) {
             throw new InvitationAlreadyPendingException("Ya tienes la solicitud en proceso");
         }
 
-
-
-        // 5) Caso normal: ambos INACTIVE; invitador=SENT, receptor=PENDING
         mine.setStatus("inactive");
         mine.setInvited("sent");
         favoriteModelRepo.save(mine);
@@ -84,7 +76,6 @@ public class FavoriteService {
         peer.setInvited("pending");
         favoriteClientRepo.save(peer);
     }
-
 
     // =================== MODELO -> CLIENTE ===================
     @Transactional
@@ -95,12 +86,10 @@ public class FavoriteService {
         User model  = requireUser(modelId);  ensureRole(model,  "MODEL");
         User client = requireUser(clientId); ensureRole(client, "CLIENT");
 
-        // 1) Si ya están aceptados ambos lados, no recrear
         if (canUsersMessage(modelId, clientId)) {
             throw new AlreadyFavoritesException();
         }
 
-        // 2) Cargar/crear filas
         FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
                 .orElseGet(() -> new FavoriteClient(modelId, clientId));
         FavoriteModel peer  = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
@@ -111,19 +100,16 @@ public class FavoriteService {
         String peerInv = Optional.ofNullable(peer.getInvited()).orElse("").toLowerCase();
         String peerSta = Optional.ofNullable(peer.getStatus()).orElse("").toLowerCase();
 
-        // 3) Si YO ya envié (inactive/sent), no duplicar
         if ("inactive".equals(myStat) && "sent".equals(myInv)) {
             throw new InvitationAlreadyPendingException();
         }
 
-        // 4) Hay solicitud en curso (yo pendiente o el otro ya envió) → NO aceptar automáticamente
         boolean iAmPendingReceiver = "inactive".equals(myStat) && "pending".equals(myInv);
         boolean peerSentToMe       = "inactive".equals(peerSta) && "sent".equals(peerInv);
         if (iAmPendingReceiver || peerSentToMe) {
             throw new InvitationAlreadyPendingException("Ya tienes la solicitud en proceso");
         }
 
-        // 5) Caso normal: ambos INACTIVE; invitador=SENT, receptor=PENDING
         mine.setStatus("inactive");
         mine.setInvited("sent");
         favoriteClientRepo.save(mine);
@@ -132,7 +118,6 @@ public class FavoriteService {
         peer.setInvited("pending");
         favoriteModelRepo.save(peer);
     }
-
 
     @Transactional
     public void removeModelFromClientFavorites(Long clientId, Long modelId) {
@@ -154,22 +139,20 @@ public class FavoriteService {
         favoriteClientRepo.save(peer);
     }
 
+    // =================== LISTADOS ===================
 
     @Transactional(readOnly = true)
     public List<FavoriteListItemDTO> listClientFavoritesMeta(Long clientId) {
         requireRole(clientId, "CLIENT");
 
-        // Necesitas en el repo: findAllByClientIdAndStatusInOrderByCreatedAtDesc(Long, Collection<String>)
         List<FavoriteModel> links = favoriteModelRepo.findAllByClientIdAndStatusInOrderByCreatedAtDesc(
                 clientId, List.of("active", "inactive")
         );
         if (links.isEmpty()) return List.of();
 
-        // Filtrar rechazados
         List<FavoriteModel> visible = links.stream()
                 .filter(l -> !"rejected".equalsIgnoreCase(l.getInvited()))
                 .toList();
-
         if (visible.isEmpty()) return List.of();
 
         List<Long> modelIds = visible.stream().map(FavoriteModel::getModelId).toList();
@@ -178,24 +161,16 @@ public class FavoriteService {
 
         return visible.stream().map(l -> {
             User u = usersById.get(l.getModelId());
-
-            // presence desde ModelStatusService
-            String raw = statusService.getStatus(l.getModelId());
-            String presence = "offline";
-            if ("BUSY".equalsIgnoreCase(raw)) presence = "busy";
-            else if ("AVAILABLE".equalsIgnoreCase(raw)) presence = "online";
-
             return new FavoriteListItemDTO(
                     toSummary(u),
                     l.getStatus(),
                     l.getInvited(),
                     "outbound",
-                    null    // presence se completará en el controller
+                    null,     // presence lo completa el controller
+                    false     // blocked por defecto (se sobreescribe en controller)
             );
         }).toList();
-
     }
-
 
     @Transactional
     public void removeClientFromModelFavorites(Long modelId, Long clientId) {
@@ -221,17 +196,14 @@ public class FavoriteService {
     public List<FavoriteListItemDTO> listModelFavoritesMeta(Long modelId) {
         requireRole(modelId, "MODEL");
 
-        // Necesitas en el repo: findAllByModelIdAndStatusInOrderByCreatedAtDesc(Long, Collection<String>)
         List<FavoriteClient> links = favoriteClientRepo.findAllByModelIdAndStatusInOrderByCreatedAtDesc(
                 modelId, List.of("active", "inactive")
         );
         if (links.isEmpty()) return List.of();
 
-        // Filtrar rechazados
         List<FavoriteClient> visible = links.stream()
                 .filter(l -> !"rejected".equalsIgnoreCase(l.getInvited()))
                 .toList();
-
         if (visible.isEmpty()) return List.of();
 
         List<Long> clientIds = visible.stream().map(FavoriteClient::getClientId).toList();
@@ -245,13 +217,13 @@ public class FavoriteService {
                     l.getStatus(),
                     l.getInvited(),
                     "outbound",
-                    presenceOf(l.getClientId())
+                    presenceOf(l.getClientId()),
+                    false   // blocked por defecto
             );
         }).toList();
     }
 
-
-    // =================== ACEPTAR / RECHAZAR (mi vista) ===================
+    // =================== ACEPTAR / RECHAZAR ===================
 
     @Transactional
     public void acceptInvitation(Long meId, Long peerId) {
@@ -285,12 +257,10 @@ public class FavoriteService {
             other.setStatus("active");
             other.setInvited("accepted");
             favoriteModelRepo.save(other);
-
         } else {
             throw new IllegalArgumentException("Roles inválidos para aceptar.");
         }
     }
-
 
     @Transactional
     public void rejectInvitation(Long meId, Long peerId) {
@@ -324,25 +294,18 @@ public class FavoriteService {
             other.setStatus("inactive");
             other.setInvited("rejected");
             favoriteModelRepo.save(other);
-
         } else {
             throw new IllegalArgumentException("Roles inválidos para rechazar.");
         }
     }
 
+    // =================== VALIDACIONES ===================
 
-    /**
-     * Devuelve true solo si AMBAS vistas del par (cliente→modelo y modelo→cliente)
-     * están en status='active' e invited='accepted'.
-     * Cualquier otro estado (pending/rejected/inactive o inexistente) bloquea el chat.
-     */
     @Transactional(readOnly = true)
     public boolean canUsersMessage(Long aId, Long bId) {
         User a = requireUser(aId);
         User b = requireUser(bId);
 
-        // Normalizamos para encontrar las DOS filas del par:
-        // fila A->B en su tabla correspondiente y la fila "peer" B->A en la otra tabla
         if ("CLIENT".equalsIgnoreCase(a.getRole()) && "MODEL".equalsIgnoreCase(b.getRole())) {
             Optional<FavoriteModel> a2b = favoriteModelRepo.findByClientIdAndModelId(aId, bId);
             Optional<FavoriteClient> b2a = favoriteClientRepo.findByModelIdAndClientId(bId, aId);
@@ -357,17 +320,15 @@ public class FavoriteService {
                     && isAcceptedActive(b2a.map(FavoriteModel::getStatus),  b2a.map(FavoriteModel::getInvited));
         }
 
-        // Si los roles no son CLIENT/MODEL, bloqueamos
         return false;
     }
-
 
     private boolean isAcceptedActive(Optional<String> statusOpt, Optional<String> invitedOpt) {
         return "active".equalsIgnoreCase(statusOpt.orElse(null))
                 && "accepted".equalsIgnoreCase(invitedOpt.orElse(null));
     }
 
-    // ===== HELPERS =====
+    // =================== HELPERS ===================
 
     private String presenceOf(Long userId) {
         String s = statusService.getStatus(userId);
@@ -377,7 +338,8 @@ public class FavoriteService {
     }
 
     private User requireUser(Long id) {
-        return userRepository.findById(id).orElseThrow(() -> new NoSuchElementException("Usuario no encontrado: " + id));
+        return userRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("Usuario no encontrado: " + id));
     }
 
     private void ensureRole(User u, String required) {
@@ -399,18 +361,13 @@ public class FavoriteService {
                 u.getUserType()
         );
     }
+
     public boolean isModelInClientFavorites(Long clientId, Long modelId) {
         return favoriteModelRepo.existsByClientIdAndModelId(clientId, modelId);
     }
 
     public boolean isClientInModelFavorites(Long modelId, Long clientId) {
         return favoriteClientRepo.existsByModelIdAndClientId(modelId, clientId);
-    }
-
-    public void requireMutualAcceptance(Long aId, Long bId) {
-        if (!canUsersMessage(aId, bId)) {
-            throw new NotMutualFavoritesException("Debes tener la relación de favoritos aceptada en ambos sentidos para llamar.");
-        }
     }
 
 }

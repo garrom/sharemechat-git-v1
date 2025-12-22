@@ -29,6 +29,7 @@ const resolveProfilePic = (user = {}, ctx = 'FavoriteItem') => {
 const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
   const handleChat = (e) => {
     e.stopPropagation();
+    if (user?.blocked) return;
     if (onChat) onChat(user);
     else window.dispatchEvent(new CustomEvent('open-fav-chat', { detail: { user } }));
   };
@@ -39,7 +40,14 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
 
 
   return (
-    <ItemCard $clickable={!!onClick} onClick={() => onClick && onClick(user)}>
+    <ItemCard
+      $clickable={!!onClick && !user?.blocked}
+      data-disabled={user?.blocked ? 'true' : 'false'}
+      onClick={() => {
+        if (user?.blocked) return;
+        onClick && onClick(user);
+      }}
+    >
       <Avatar
         src={avatar}
         alt={user.nickname || user.email || 'user'}
@@ -50,22 +58,48 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
       />
       <Info>
         <Name>{user.nickname || user.name || user.email || `Usuario ${user.id}`}</Name>
-        <Meta>{user.role || user.userType || ''}</Meta>
+        <Meta>
+          {user.role || user.userType || ''}
+        </Meta>
+
       </Info>
 
       <Actions>
-        <Btn type="button" onClick={handleChat}>Chatear</Btn>
+        <Btn
+          type="button"
+          onClick={handleChat}
+          disabled={user?.blocked}
+          title={user?.blocked ? 'Usuario bloqueado' : 'Chatear'}
+        >
+          Chatear
+        </Btn>
         {onRemove && (
           <Btn
             type="button"
-            onClick={(e) => { e.stopPropagation(); onRemove(user); }}
-            disabled={removing}
+            onClick={(e) => { e.stopPropagation(); if (user?.blocked) return; onRemove(user); }}
+            disabled={removing || user?.blocked}
             aria-label="Quitar de favoritos"
-            title="Quitar de favoritos"
+            title={user?.blocked ? 'Usuario bloqueado' : 'Quitar de favoritos'}
           >
             {removing ? 'Quitando…' : 'Quitar'}
           </Btn>
+
         )}
+        {user?.blocked && (
+          <Btn
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              window.dispatchEvent(
+                new CustomEvent('unblock-user', { detail: { user } })
+              );
+            }}
+            title="Desbloquear usuario"
+          >
+            Desbloquear
+          </Btn>
+        )}
+
       </Actions>
     </ItemCard>
   );
