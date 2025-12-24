@@ -15,12 +15,6 @@ public class Model {
     @Column(name = "profile_visits")
     private Integer profileVisits = 0;
 
-    @Column(name = "referral_code")
-    private String referralCode;
-
-    @Column(name = "referral_earnings")
-    private BigDecimal referralEarnings = BigDecimal.ZERO;
-
     @Column(name = "streaming_hours")
     private BigDecimal streamingHours = BigDecimal.ZERO;
 
@@ -62,21 +56,6 @@ public class Model {
         this.profileVisits = profileVisits;
     }
 
-    public String getReferralCode() {
-        return referralCode;
-    }
-
-    public void setReferralCode(String referralCode) {
-        this.referralCode = referralCode;
-    }
-
-    public BigDecimal getReferralEarnings() {
-        return referralEarnings;
-    }
-
-    public void setReferralEarnings(BigDecimal referralEarnings) {
-        this.referralEarnings = referralEarnings;
-    }
 
     public BigDecimal getStreamingHours() {
         return streamingHours;

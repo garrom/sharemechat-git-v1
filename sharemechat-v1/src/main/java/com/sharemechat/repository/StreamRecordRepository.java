@@ -18,4 +18,17 @@ public interface StreamRecordRepository extends JpaRepository<StreamRecord, Long
     // Sesiones ya finalizadas de una modelo desde un instante concreto en adelante
     java.util.List<StreamRecord> findByModel_IdAndEndTimeIsNotNullAndEndTimeAfter(Long modelId, java.time.LocalDateTime since);
 
+    @org.springframework.data.jpa.repository.Query("""
+       SELECT COALESCE(SUM(FUNCTION('TIMESTAMPDIFF', SECOND, sr.startTime, sr.endTime)), 0)
+       FROM StreamRecord sr
+       WHERE sr.model.id = :modelId
+         AND sr.endTime IS NOT NULL
+         AND sr.endTime >= :since
+         AND sr.endTime < :until
+    """)
+    Long sumPaidSecondsBetween(@org.springframework.data.repository.query.Param("modelId") Long modelId,
+                               @org.springframework.data.repository.query.Param("since") java.time.LocalDateTime since,
+                               @org.springframework.data.repository.query.Param("until") java.time.LocalDateTime until);
+
+
 }

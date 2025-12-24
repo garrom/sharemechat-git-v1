@@ -15,6 +15,7 @@ import { colors } from '../core/tokens'
  * 8. LISTADOS / FILAS SELECCIONABLES
  * 9. VIDEOCHAT LAYOUT (2 COLUMNAS 50/50)
  * 10. FAVORITOS: GOBERNADORES DE ALTURA ← MODIFICADO
+ * 11. STATS
  * ================================== */
 
 /* --------------------------------
@@ -1049,4 +1050,181 @@ export const StyledCallFooterDesktop = styled.div`
   align-items: center;
   gap: 8px;
   padding-top: 8px;
+`;
+
+
+/* --------------------------------
+ * 11. STATS (NUEVO)
+ * -------------------------------- */
+
+export const StyledStatsWrap = styled.div`
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  padding: 16px;
+  color: var(--c-text-on-dark);
+  background: transparent;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+  }
+`;
+
+export const StyledStatsTopBar = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+`;
+
+export const StyledStatsTitle = styled.div`
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  color: var(--c-white);
+`;
+
+export const StyledStatsActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+export const StyledStatsSelect = styled.select`
+  height: 36px;
+  border-radius: 10px;
+  padding: 0 10px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: var(--c-glass-mid);
+  color: var(--c-white);
+  outline: none;
+
+  &:focus {
+    box-shadow: 0 0 0 3px rgba(13,110,253,.18);
+    border-color: rgba(13,110,253,.55);
+  }
+`;
+
+export const StyledStatsBtn = styled.button`
+  appearance: none;
+  height: 36px;
+  border-radius: 10px;
+  padding: 0 12px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: var(--c-glass-mid);
+  color: var(--c-white);
+  cursor: pointer;
+  font-weight: 700;
+
+  &:hover {
+    background: rgba(0,0,0,.45);
+  }
+`;
+
+export const StyledStatsGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+`;
+
+export const StyledStatsCard = styled.div`
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 18px;
+  padding: 16px;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 120px;
+  box-shadow:
+    0 12px 30px rgba(0,0,0,.25),
+    inset 0 1px 0 rgba(255,255,255,.06);
+`;
+
+
+export const StyledStatsCardLabel = styled.div`
+  font-size: 12px;
+  opacity: .8;
+  color: var(--c-text-on-dark);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+`;
+
+export const StyledStatsCardValue = styled.div`
+  margin-top: 2px;
+  font-size: 18px;
+  font-weight: 900;
+  color: var(--c-white);
+
+  /* si el value es largo, que no rompa el ancho */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+`;
+
+export const StyledStatsInline = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+  font-size: 13px;
+  opacity: .95;
+  color: var(--c-text-on-dark);
+
+  min-width: 0;
+
+  b { color: var(--c-white); }
+`;
+
+
+export const StyledStatsTable = styled.div`
+  display: grid;
+  grid-template-columns: 120px 1fr 1fr;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--c-text-on-dark);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 110px 1fr 1fr;
+  }
+`;
+
+export const StyledStatsTableHead = styled.div`
+  opacity: .7;
+`;
+
+export const StyledStatsPrecallCard = styled.div`
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+  padding: 16px;
+  box-sizing: border-box;
+
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  @media (max-width: 768px) {
+    padding: 12px;
+    gap: 10px;
+  }
+`;
+
+
+export const StyledStatsPrecallGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  min-width: 0;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 `;

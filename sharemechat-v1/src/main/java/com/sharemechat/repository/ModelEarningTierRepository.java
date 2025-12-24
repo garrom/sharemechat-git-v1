@@ -8,8 +8,10 @@ import java.util.List;
 public interface ModelEarningTierRepository extends JpaRepository<ModelEarningTier, Long> {
 
     /**
-     * Devolvemos los tiers activos ordenados por min_billed_minutes ascendente.
-     * Luego en el servicio elegiremos el que toque según los minutos del modelo.
+     * Tiers activos ordenados por min_billed_minutes ascendente.
+     * El servicio elige el tier aplicable según los minutos del modelo.
      */
     List<ModelEarningTier> findByActiveTrueOrderByMinBilledMinutesAsc();
+
+    boolean existsByMinBilledMinutes(Integer minBilledMinutes);
 }

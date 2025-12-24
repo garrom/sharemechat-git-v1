@@ -1,5 +1,6 @@
 package com.sharemechat.service;
 
+import com.sharemechat.config.GiftProperties;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.TransactionRequestDTO;
 import com.sharemechat.entity.*;
@@ -25,6 +26,7 @@ public class TransactionService {
     private final PlatformTransactionRepository platformTransactionRepository;
     private final PlatformBalanceRepository platformBalanceRepository;
     private final BillingProperties billing;
+    private final GiftProperties giftProperties;
 
 
     public TransactionService(TransactionRepository transactionRepository,
@@ -36,7 +38,8 @@ public class TransactionService {
                               StreamRecordRepository streamRecordRepository,
                               PlatformTransactionRepository platformTransactionRepository,
                               PlatformBalanceRepository platformBalanceRepository,
-                              BillingProperties billing) {
+                              BillingProperties billing,
+                              GiftProperties giftProperties) {
         this.transactionRepository = transactionRepository;
         this.balanceRepository = balanceRepository;
         this.clientRepository = clientRepository;
@@ -47,6 +50,7 @@ public class TransactionService {
         this.platformTransactionRepository = platformTransactionRepository;
         this.platformBalanceRepository = platformBalanceRepository;
         this.billing = billing;
+        this.giftProperties = giftProperties;
     }
 
 
@@ -315,8 +319,10 @@ public class TransactionService {
         BigDecimal lastModelBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(modelId)
                 .map(Balance::getBalance).orElse(BigDecimal.ZERO);
 
-        // Split (reusa tu % plataforma vs modelo)
-        BigDecimal modelEarning    = cost.multiply(billing.getModelShare()).setScale(2, RoundingMode.HALF_UP);   // [NEW]
+        // Split
+        BigDecimal share = (giftProperties.getModelShare() != null ? giftProperties.getModelShare() : BigDecimal.ZERO);
+        BigDecimal modelEarning    = cost.multiply(share).setScale(2, RoundingMode.HALF_UP);
+
         BigDecimal platformEarning = cost.subtract(modelEarning).setScale(2, RoundingMode.HALF_UP);
 
         // (Opcional) enlazar a stream si existe

@@ -9,4 +9,7 @@ import java.util.Optional;
 public interface ModelRepository extends JpaRepository<Model, Long> {
     Optional<Model> findByUser(User user);
     boolean existsByUserId(Long userId);
+
+    @org.springframework.data.jpa.repository.Query("SELECT m.userId FROM Model m")
+    java.util.List<Long> findAllModelUserIds();
 }

@@ -22,7 +22,7 @@ import {
   StyledSplit2,StyledPane, StyledThumbsGrid,
   StyledNavTab,StyledCenterPanel, StyledCenterBody,
   StyledChatScroller,StyledCenterVideochat, StyledFavoritesShell,
-  StyledFavoritesColumns,GlobalBlack
+  StyledFavoritesColumns,GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
 import {
     StyledNavbar, StyledBrand, NavText, SaldoText, QueueText,
@@ -40,6 +40,8 @@ import {
 } from '../../styles/ButtonStyles';
 import VideoChatRandomModelo from './VideoChatRandomModelo';
 import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
+import { buildWsUrl, WS_PATHS } from '../../config/api';
+import { apiFetch } from '../../config/http';
 
 const DashboardModel = () => {
 
@@ -91,8 +93,18 @@ const DashboardModel = () => {
   const [ctxUser, setCtxUser] = useState(null);
   const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
-  const [mobileFavMode, setMobileFavMode] = useState('list'); // 'list' | 'chat'
+  const [mobileFavMode, setMobileFavMode] = useState('list');
+  // ====== STATS (Model tier snapshot summary) ======
+  const [modelStatsSummary, setModelStatsSummary] = useState(null);
+  const [modelStatsLoading, setModelStatsLoading] = useState(false);
+  const [modelStatsError, setModelStatsError] = useState('');
+  const [modelStats, setModelStats] = useState(null); // { current, history, tiers }
+  const [modelStatsDays, setModelStatsDays] = useState(30);
+  const [modelStatsDetailLoading, setModelStatsDetailLoading] = useState(false);
+  const [modelStatsDetailError, setModelStatsDetailError] = useState('');
 
+
+  // ===  UseRef ===
   const callLocalVideoRef = useRef(null);
   const callRemoteVideoRef = useRef(null);
   const callLocalStreamRef = useRef(null);
@@ -124,6 +136,9 @@ const DashboardModel = () => {
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
   const nextGuardRef = useRef(false);
+  const statsSummaryLoadedRef = useRef(false);
+  const statsDetailLoadedRef = useRef(false);
+
 
 
   // --- Dedupe de eco para chat de streaming (RTC)
@@ -182,17 +197,13 @@ const DashboardModel = () => {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const res = await fetch('/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-          meIdRef.current = Number(data?.id || 0);
-        }
+        const data = await apiFetch('/users/me');
+        setUser(data);
+        meIdRef.current = Number(data?.id || 0);
       } catch (e) {
         console.error('Error cargando usuario:', e);
       }
+
     };
     if (token) loadUser();
   }, [token]);
@@ -201,11 +212,7 @@ const DashboardModel = () => {
     if (!token) return;
     (async () => {
       try {
-        const r = await fetch('/api/models/documents/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!r.ok) return;
-        const d = await r.json();
+        const d = await apiFetch('/models/documents/me');
         setProfilePic(d?.urlPic || null);
       } catch {
         /* noop */
@@ -218,11 +225,7 @@ const DashboardModel = () => {
 
     (async () => {
       try {
-        const r = await fetch(`/api/users/${currentClientId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!r.ok) return;
-        const d = await r.json();
+        const d = await apiFetch(`/users/${currentClientId}`);
         const nn = d?.nickname || d?.name || d?.email || 'Cliente';
         setClientNickname(nn);
       } catch {/* noop */}
@@ -234,14 +237,11 @@ const DashboardModel = () => {
 
     (async () => {
       try {
-        const r = await fetch(`/api/users/avatars?ids=${encodeURIComponent(currentClientId)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!r.ok) return;
-        const map = await r.json(); // { [id]: url }
+        const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(currentClientId)}`); // { [id]: url }
         const url = map?.[currentClientId] || '';
         setClientAvatar(url);
       } catch {/* noop */}
+
     })();
   }, [token, currentClientId]);
 
@@ -310,13 +310,13 @@ const DashboardModel = () => {
   useEffect(()=>{
     const tk=localStorage.getItem('token');
     if(!tk) return;
-    fetch('/api/gifts',{ headers:{Authorization:`Bearer ${tk}`} })
-      .then(r=>r.ok?r.json():[])
+    apiFetch('/gifts')
       .then(arr=>{
         setGifts(Array.isArray(arr)?arr:[]);
         setGiftsLoaded(true);
       })
       .catch(()=> setGiftsLoaded(true));
+
   },[]);
 
   useEffect(() => {
@@ -404,11 +404,10 @@ const DashboardModel = () => {
     (async () => {
       try {
         console.log('[CALL][Model] Resolviendo nombre via /api/users/', id);
-        const r = await fetch(`/api/users/${id}`, { headers: { Authorization: `Bearer ${tk}` } });
-        if (!r.ok) return;
-        const d = await r.json();
+        const d = await apiFetch(`/users/${id}`);
         const nn = d?.nickname || d?.name || d?.email || 'Usuario';
         setCallPeerName(nn);
+
       } catch {/* noop */}
     })();
   }, [callPeerId, callPeerName]);
@@ -423,12 +422,9 @@ const DashboardModel = () => {
     (async () => {
       try {
         console.log('[CALL][Model] Resolviendo avatar via /api/users/avatars?ids=', id);
-        const r = await fetch(`/api/users/avatars?ids=${encodeURIComponent(id)}`, {
-          headers: { Authorization: `Bearer ${tk}` },
-        });
-        if (!r.ok) return;
-        const map = await r.json(); // { [id]: url }
+        const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(id)}`); // { [id]: url }
         setCallPeerAvatar(map?.[id] || '');
+
       } catch {/* noop */}
     })();
   }, [callPeerId]);
@@ -447,18 +443,10 @@ const DashboardModel = () => {
   useEffect(() => {
     const tk = localStorage.getItem('token');
     if (!tk) return;
-
     const fetchSaldoModel = async () => {
       try {
         setLoadingSaldoModel(true);
-        const res = await fetch('/api/models/me', {
-          headers: { Authorization: `Bearer ${tk}` },
-        });
-        if (!res.ok) {
-          const txt = await res.text();
-          throw new Error(txt || `Error ${res.status}`);
-        }
-        const data = await res.json();
+        const data = await apiFetch('/models/me');
         setSaldoModel(data.saldoActual);
         setError('');
       } catch (e) {
@@ -468,9 +456,9 @@ const DashboardModel = () => {
         setLoadingSaldoModel(false);
       }
     };
-
     fetchSaldoModel();
   }, []);
+
 
   // carga historial del chat central al cambiar peer
   useEffect(() => {
@@ -483,11 +471,8 @@ const DashboardModel = () => {
     const load = async () => {
       setCenterLoading(true);
       try {
-        const res = await fetch(`/api/messages/with/${peer}`, {
-          headers: { Authorization: `Bearer ${tk}` }
-        });
-        if (!res.ok) throw new Error(await res.text() || `Error ${res.status}`);
-        const data = await res.json();
+        const data = await apiFetch(`/messages/with/${peer}`);
+
         const normalized = (data || []).map(raw => ({
           id: raw.id,
           senderId: Number(raw.senderId ?? raw.sender_id),
@@ -505,14 +490,9 @@ const DashboardModel = () => {
         });
         centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
         setCenterMessages(normalized.reverse());
-
         try {
-          await fetch(`/api/messages/with/${peer}/read`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${tk}` }
-          });
+          await apiFetch(`/messages/with/${peer}/read`, { method: 'POST' });
         } catch {}
-
         queueMicrotask(() => {
           const el = modelCenterListRef?.current;
           if (el) el.scrollTop = el.scrollHeight;
@@ -524,9 +504,9 @@ const DashboardModel = () => {
         setCenterLoading(false);
       }
     };
-
     load();
   }, [openChatWith, activeTab]);
+
 
   // === Sincronizar flag global inCall (RANDOM + CALLING) ===
   useEffect(() => {
@@ -536,15 +516,63 @@ const DashboardModel = () => {
       callStatus === 'in-call' ||
       callStatus === 'ringing' ||
       callStatus === 'incoming';
-
     const nextInCall = hayRandom || hayCalling;
     setInCall(nextInCall);
-
     return () => {
       // En desmontaje del Dashboard limpiamos el flag por seguridad
       setInCall(false);
     };
   }, [remoteStream, callStatus, setInCall]);
+
+
+  // UseEffect Stats
+  useEffect(() => {
+    if (activeTab !== 'videochat') return;
+    if (statsSummaryLoadedRef.current) return;
+    const tk = localStorage.getItem('token');
+    if (!tk) return;
+
+    statsSummaryLoadedRef.current = true;
+    const loadSummary = async () => {
+      try {
+        setModelStatsLoading(true);
+        setModelStatsError('');
+        const data = await apiFetch('/models/stats/summary');
+        setModelStatsSummary(data || null);
+      } catch (e) {
+        console.warn('[MODEL][stats/summary] error:', e?.message);
+        setModelStatsError(e?.message || 'Error cargando estadísticas');
+        setModelStatsSummary(null);
+      } finally {
+        setModelStatsLoading(false);
+      }
+    };
+    loadSummary();
+  }, [activeTab]);
+
+
+  useEffect(() => {
+    if (activeTab !== 'stats') return;
+    if (statsDetailLoadedRef.current) return;
+    const tk = localStorage.getItem('token');
+    if (!tk) return;
+    statsDetailLoadedRef.current = true;
+    const loadStats = async () => {
+      try {
+        setModelStatsDetailLoading(true);
+        setModelStatsDetailError('');
+        const data = await apiFetch(`/models/stats?days=${encodeURIComponent(modelStatsDays)}`);
+        setModelStats(data || null);
+      } catch (e) {
+        console.warn('[MODEL][stats] error:', e?.message);
+        setModelStatsDetailError(e?.message || 'Error cargando estadísticas');
+        setModelStats(null);
+      } finally {
+        setModelStatsDetailLoading(false);
+      }
+    };
+    loadStats();
+  }, [activeTab, modelStatsDays]);
 
 
   const clearMsgTimers = () => {
@@ -589,11 +617,10 @@ const DashboardModel = () => {
 
     closeMsgSocket();
 
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const host  = window.location.host;
-    const url   = `${proto}://${host}/messages?token=${encodeURIComponent(tk)}`;
+    const url = buildWsUrl(WS_PATHS.messages, { token: tk });
 
     const s = new WebSocket(url);
+
     msgSocketRef.current = s;
 
     s.onopen = () => {
@@ -925,10 +952,18 @@ const DashboardModel = () => {
     history.push('/');
   };
 
+  const handleGoStats = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+    stopAll();
+    setActiveTab('stats');
+  };
+
+
   const startWebSocketAndWait = (tk) => {
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const wsUrl = `${proto}://${window.location.host}/match?token=${encodeURIComponent(tk)}`;
+    const wsUrl = buildWsUrl(WS_PATHS.match, { token: tk });
     const socket = new WebSocket(wsUrl);
+
     socketRef.current = socket;
 
     socket.onopen = () => {
@@ -1140,11 +1175,8 @@ const DashboardModel = () => {
     }
 
     try {
-      const r = await fetch(`/api/blocks/${id}`, { method:'POST', headers:{ 'Content-Type':'application/json', Authorization:`Bearer ${tk}` }, body:JSON.stringify({ reason: pick.reason || 'random-block' }) });
-      if (!r.ok) {
-        const txt = await r.text().catch(()=> '');
-        throw new Error(txt || `HTTP ${r.status}`);
-      }
+      await apiFetch(`/blocks/${id}`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || 'random-block' }) });
+
     } catch (e) {
       await alert({ title:'Bloquear', message: e?.message || 'No se pudo bloquear en el servidor.', variant:'danger' });
       return;
@@ -1264,7 +1296,6 @@ const DashboardModel = () => {
     }
   };
 
-
   const stopAll = () => {
     if (pingIntervalRef.current) {
       clearInterval(pingIntervalRef.current);
@@ -1331,7 +1362,13 @@ const DashboardModel = () => {
     });
   };
 
-  const handleGoBlog = () => { setActiveTab('blog'); };
+  const handleGoBlog = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+    stopAll();
+    setActiveTab('blog');
+  };
+
 
   const handleGoFavorites = async () => {
     const ok = await confirmarSalidaSesionActiva();
@@ -1540,12 +1577,8 @@ const DashboardModel = () => {
     openMsgSocket();
 
     try {
-      const tk = localStorage.getItem('token');
-      const res = await fetch(`/api/messages/with/${peerId}`, {
-        headers: { Authorization: `Bearer ${tk}` }
-      });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await apiFetch(`/messages/with/${peerId}`);
+      if (data) {
         const normalized=(data||[]).map(raw=>({
           id: raw.id,
           senderId: Number(raw.senderId ?? raw.sender_id),
@@ -1563,10 +1596,8 @@ const DashboardModel = () => {
         });
         setCenterMessages(normalized.reverse());
         try {
-          await fetch(`/api/messages/with/${peerId}/read`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${tk}` }
-          });
+          await apiFetch(`/messages/with/${peerId}/read`, { method: 'POST' });
+
         } catch {}
       }
     } catch (e) {
@@ -1590,11 +1621,8 @@ const DashboardModel = () => {
     if (!selectedFav?.id) return;
     const tk = localStorage.getItem('token');
     try {
-      const res = await fetch(`/api/favorites/accept/${selectedFav.id}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${tk}` }
-      });
-      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      await apiFetch(`/favorites/accept/${selectedFav.id}`, { method: 'POST' });
+
       const name = selectedFav.nickname || 'Usuario';
       setSelectedFav(prev => prev ? ({ ...prev, invited: 'accepted' }) : prev);
       setFavReload(x => x + 1);
@@ -1608,11 +1636,8 @@ const DashboardModel = () => {
     if (!selectedFav?.id) return;
     const tk = localStorage.getItem('token');
     try {
-      const res = await fetch(`/api/favorites/reject/${selectedFav.id}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${tk}` }
-      });
-      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      await apiFetch(`/favorites/reject/${selectedFav.id}`, { method: 'POST' });
+
       setSelectedFav(prev => prev ? ({ ...prev, invited: 'rejected' }) : prev);
       setFavReload(x => x + 1);
     } catch (e) {
@@ -2000,37 +2025,49 @@ const DashboardModel = () => {
         <div style={{display:'flex',alignItems:'center'}}>
           <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick}/>
           <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title="Videochat">Videochat</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title="Favoritos">Favoritos</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title="Blog">Blog</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title="Videochat">
+                Videochat</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title="Favoritos">
+                Favoritos</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title="Blog">
+                Blog</StyledNavTab>
           </div>
         </div>
         <StyledNavGroup className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
           <NavText className="me-3">{displayName}</NavText>
           <SaldoText className="me-3">{loadingSaldoModel?'Saldo: ...':saldoModel!==null?`Saldo: €${Number(saldoModel).toFixed(2)}`:'Saldo: -'}</SaldoText>
-          {queuePosition!==null&&queuePosition>=0&&(<QueueText className="me-3">Tu posición: {queuePosition+1}</QueueText>)}
-          <NavButton type="button" title="Estadísticas" aria-label="Estadísticas"><FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}}/><span>Estadísticas</span></NavButton>
-          <NavButton type="button" onClick={handleRequestPayout}><FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}}/><span>Retirar</span></NavButton>
-          <NavButton type="button" onClick={handleLogout} title="Cerrar sesión"><FontAwesomeIcon icon={faSignOutAlt}/><span>Salir</span></NavButton>
+          {queuePosition!==null&&queuePosition>=0&&(<QueueText className="me-3">
+              Tu posición: {queuePosition+1}</QueueText>)}
+          <NavButton type="button" onClick={handleGoStats} title="Estadísticas"><FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}}/><span>
+              Estadísticas</span></NavButton>
+          <NavButton type="button" onClick={handleRequestPayout} title="Retirar"><FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}}/><span>
+              Retirar</span></NavButton>
+          <NavButton type="button" onClick={handleLogout} title="Salir"><FontAwesomeIcon icon={faSignOutAlt}/><span>
+              Salir</span></NavButton>
           <StyledNavAvatar src={profilePic||'/img/avatarChica.png'} alt="avatar" title="Ver perfil" onClick={handleProfile}/>
         </StyledNavGroup>
+
         <HamburgerButton onClick={()=>setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú"><FontAwesomeIcon icon={faBars}/></HamburgerButton>
         <MobileMenu className={!menuOpen&&'hidden'}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
             <NavText>{displayName}</NavText>
             <SaldoText>{loadingSaldoModel?'Saldo: …':saldoModel!==null?`Saldo: €${Number(saldoModel).toFixed(2)}`:'Saldo: n/d'}</SaldoText>
           </div>
-          <NavButton onClick={()=>{handleProfile();setMenuOpen(false);}}><FontAwesomeIcon icon={faUser}/><StyledIconWrapper>Perfil</StyledIconWrapper></NavButton>
-          <NavButton onClick={()=>{/* TODO: abrir stats */setMenuOpen(false);}} title="Estadísticas"><FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}}/><span>Estadísticas</span></NavButton>
-          <NavButton onClick={()=>{handleRequestPayout();setMenuOpen(false);}}><FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}}/><span>Retirar</span></NavButton>
-          <NavButton onClick={()=>{handleLogout();setMenuOpen(false);}}><FontAwesomeIcon icon={faSignOutAlt}/><StyledIconWrapper>Salir</StyledIconWrapper></NavButton>
+          <NavButton onClick={()=>{handleProfile();setMenuOpen(false);}}><FontAwesomeIcon icon={faUser}/><StyledIconWrapper>
+              Perfil</StyledIconWrapper></NavButton>
+          <NavButton onClick={()=>{handleGoStats(); setMenuOpen(false);}} title="Estadísticas"><FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}}/><span>
+              Estadísticas</span></NavButton>
+          <NavButton onClick={()=>{handleRequestPayout();setMenuOpen(false);}} title="Retirar"><FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}}/><span>
+              Retirar</span></NavButton>
+          <NavButton onClick={()=>{handleLogout();setMenuOpen(false);}} title="Salir"><FontAwesomeIcon icon={faSignOutAlt}/><StyledIconWrapper>
+              Salir</StyledIconWrapper></NavButton>
         </MobileMenu>
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent data-tab={activeTab}>
-        {activeTab==='videochat'?(
+        {activeTab === 'videochat' ? (
           <VideoChatRandomModelo
             cameraActive={cameraActive}
             handleActivateCamera={handleActivateCamera}
@@ -2057,31 +2094,159 @@ const DashboardModel = () => {
             sendChatMessage={sendChatMessage}
             handleBlockPeer={handleBlockPeer}
             error={error}
+            modelStatsSummary={modelStatsSummary}
           />
-        ):activeTab==='blog'?(
+        ) : activeTab === 'stats' ? (
+          <div style={{flex:1,minWidth:0,minHeight:0,padding:16,display:'flex',flexDirection:'column',gap:12}}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
+              <div style={{display:'flex',alignItems:'center',gap:10}}>
+                <FontAwesomeIcon icon={faChartLine} />
+                <div style={{fontWeight:700}}>Estadísticas</div>
+              </div>
+
+              <div style={{display:'flex',alignItems:'center',gap:8}}>
+                <span style={{opacity:0.8}}>Histórico:</span>
+                <select
+                  value={modelStatsDays}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    setModelStatsDays(Number.isFinite(v) ? v : 30);
+                    statsDetailLoadedRef.current = false;
+                  }}
+                  style={{padding:'6px 10px',borderRadius:8}}
+                >
+                  <option value={7}>7 días</option>
+                  <option value={30}>30 días</option>
+                  <option value={60}>60 días</option>
+                  <option value={90}>90 días</option>
+                  <option value={120}>120 días</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => { statsDetailLoadedRef.current = false; setActiveTab('stats'); }}
+                  style={{padding:'6px 10px',borderRadius:8,cursor:'pointer'}}
+                  disabled={modelStatsDetailLoading}
+                >
+                  Recargar
+                </button>
+              </div>
+            </div>
+
+            {modelStatsDetailLoading && (
+              <div style={{opacity:0.85}}>Cargando estadísticas…</div>
+            )}
+
+            {modelStatsDetailError && (
+              <div style={{color:'#dc2626'}}>Error: {modelStatsDetailError}</div>
+            )}
+
+            {!modelStatsDetailLoading && !modelStatsDetailError && (
+              <>
+                {/* CURRENT */}
+                <div style={{border:'1px solid rgba(255,255,255,0.12)',borderRadius:12,padding:12}}>
+                  <div style={{fontWeight:700,marginBottom:8}}>Snapshot actual (ayer)</div>
+                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',gap:10}}>
+                    <div><span style={{opacity:0.75}}>Fecha:</span> <b>{modelStats?.current?.snapshotDate || '—'}</b></div>
+                    <div><span style={{opacity:0.75}}>Tier:</span> <b>{modelStats?.current?.tierName || '—'}</b></div>
+                    <div><span style={{opacity:0.75}}>Minutos (30d):</span> <b>{Number(modelStats?.current?.billedMinutes30d || 0)}</b></div>
+                    <div><span style={{opacity:0.75}}>Horas (30d):</span> <b>{modelStats?.current?.billedHours30d || '—'}</b></div>
+                    <div><span style={{opacity:0.75}}>1º min:</span> <b>€{modelStats?.current?.firstMinuteEURPerMin || '0.0000'}/min</b></div>
+                    <div><span style={{opacity:0.75}}>Sig.:</span> <b>€{modelStats?.current?.nextMinutesEURPerMin || '0.0000'}/min</b></div>
+                  </div>
+                </div>
+
+                {/* HISTORY */}
+                <div style={{border:'1px solid rgba(255,255,255,0.12)',borderRadius:12,padding:12}}>
+                  <div style={{fontWeight:700,marginBottom:8}}>Historial</div>
+                  <div style={{overflowX:'auto'}}>
+                    <table style={{width:'100%',borderCollapse:'collapse'}}>
+                      <thead>
+                        <tr>
+                          <th style={{textAlign:'left',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Fecha</th>
+                          <th style={{textAlign:'left',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Tier</th>
+                          <th style={{textAlign:'right',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Minutos (30d)</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(modelStats?.history || []).map((r, idx) => (
+                          <tr key={`${r?.snapshotDate || idx}`}>
+                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>{r?.snapshotDate || '—'}</td>
+                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>{r?.tierName || '—'}</td>
+                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>{Number(r?.billedMinutes30d || 0)}</td>
+                          </tr>
+                        ))}
+                        {(!modelStats?.history || modelStats.history.length === 0) && (
+                          <tr>
+                            <td colSpan={3} style={{padding:'10px',opacity:0.8}}>Sin historial.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* TIERS */}
+                <div style={{border:'1px solid rgba(255,255,255,0.12)',borderRadius:12,padding:12}}>
+                  <div style={{fontWeight:700,marginBottom:8}}>Tiers activos</div>
+                  <div style={{overflowX:'auto'}}>
+                    <table style={{width:'100%',borderCollapse:'collapse'}}>
+                      <thead>
+                        <tr>
+                          <th style={{textAlign:'left',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Nombre</th>
+                          <th style={{textAlign:'right',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Min. facturados</th>
+                          <th style={{textAlign:'right',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>1º min (€/min)</th>
+                          <th style={{textAlign:'right',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Sig. (€/min)</th>
+                          <th style={{textAlign:'center',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Activo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(modelStats?.tiers || []).map((t) => (
+                          <tr key={t?.tierId}>
+                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>{t?.name || '—'}</td>
+                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>{Number(t?.minBilledMinutes || 0)}</td>
+                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>€{t?.firstMinuteEURPerMin || '0.0000'}</td>
+                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>€{t?.nextMinutesEURPerMin || '0.0000'}</td>
+                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'center'}}>{t?.active ? 'Sí' : 'No'}</td>
+                          </tr>
+                        ))}
+                        {(!modelStats?.tiers || modelStats.tiers.length === 0) && (
+                          <tr>
+                            <td colSpan={5} style={{padding:'10px',opacity:0.8}}>No hay tiers configurados.</td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        ) : activeTab === 'blog' ? (
           /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
           <div style={{flex:1,minWidth:0,minHeight:0}}>
-            <BlogContent mode="private"/>
+            <BlogContent mode="private" />
           </div>
-        ):(
+        ) : (
           /* === SOLO FAVORITOS USA EL LAYOUT 3 COLUMNAS === */
           <>
-            {!isMobile&&!showFavoritesFullCall&&(
+            {!isMobile && !showFavoritesFullCall && (
               <StyledLeftColumn data-rail>
-                {callStatus==='idle'?(
+                {callStatus === 'idle' ? (
                   <FavoritesModelList
                     onSelect={handleOpenChatFromFavorites}
                     reloadTrigger={favReload}
                     selectedId={selectedContactId}
-                    onContextMenu={(user,pos)=>{setCtxUser(user);setCtxPos(pos);}}
+                    onContextMenu={(user, pos) => { setCtxUser(user); setCtxPos(pos); }}
                   />
-                ):(
+                ) : (
                   <div style={{padding:8,color:'#adb5bd'}}>En llamada: la lista se bloquea hasta colgar.</div>
                 )}
               </StyledLeftColumn>
             )}
-            <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
-              {activeTab==='favoritos'&&(
+
+            <StyledCenter data-mode={contactMode === 'call' ? 'call' : undefined}>
+              {activeTab === 'favoritos' && (
                 <VideoChatFavoritosModelo
                   isMobile={isMobile}
                   allowChat={allowChat}
@@ -2129,11 +2294,13 @@ const DashboardModel = () => {
                 />
               )}
             </StyledCenter>
-            {!showFavoritesFullCall&&<StyledRightColumn/>}
+
+            {!showFavoritesFullCall && <StyledRightColumn />}
           </>
         )}
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
+
 
 
       {!inCall && (
@@ -2183,7 +2350,7 @@ const DashboardModel = () => {
                 if(!sure)return;
                 const tk=localStorage.getItem('token');
                 if(!tk)return;
-                await fetch(`/api/favorites/clients/${ctxUser.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${tk}`}});
+                await apiFetch(`/favorites/clients/${ctxUser.id}`, { method:'DELETE' });
                 setCtxUser(null);
                 setFavReload(x=>x+1);
               }catch(e){

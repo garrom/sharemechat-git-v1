@@ -184,7 +184,6 @@ public class StreamService {
     public void endSession(Long clientId, Long modelId) {
 
         final BigDecimal RATE_PER_MINUTE = billing.getRatePerMinute(); // p.ej. 1.00
-        final BigDecimal MODEL_SHARE     = billing.getModelShare();    // fallback p.ej. 0.90
 
         // 1) Buscar la sesión activa (pista en cache y fallback a DB)
         Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
@@ -299,7 +298,7 @@ public class StreamService {
             // 8) Reparto modelo / plataforma
             ModelEarningTier tier = null;
             try {
-                tier = modelTierService.resolveTierForModel(modelId);
+                tier = modelTierService.resolveEffectiveTierForPayout(modelId);
             } catch (Exception ex) {
                 log.warn("endSession: error resolviendo tier para modelId={} -> {}", modelId, ex.getMessage());
             }
@@ -307,8 +306,7 @@ public class StreamService {
             BigDecimal modelEarning;
 
             if (tier == null) {
-                modelEarning = cost.multiply(MODEL_SHARE)
-                        .setScale(2, java.math.RoundingMode.HALF_UP);
+                modelEarning = BigDecimal.ZERO;
             } else {
                 long secondsFirst = Math.min(seconds, 60L);
                 long secondsNext  = Math.max(0L, seconds - 60L);

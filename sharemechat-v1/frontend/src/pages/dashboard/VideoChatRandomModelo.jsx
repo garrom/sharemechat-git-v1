@@ -13,7 +13,6 @@ import {
   StyledChatDock,
   StyledChatInput,
   StyledGiftIcon,
-  StyledThumbsGrid,
   StyledLocalVideo,
   StyledLocalVideoDesktop,
   StyledRemoteVideo,
@@ -26,7 +25,14 @@ import {
   StyledSearchHint,
   StyledCallCardDesktop,
   StyledCallFooterDesktop,
+  StyledStatsPrecallCard,
+  StyledStatsCard,
+  StyledStatsCardLabel,
+  StyledStatsCardValue,
+  StyledStatsPrecallGrid,
+  StyledStatsInline,
 } from '../../styles/pages-styles/VideochatStyles';
+
 import {
   ButtonActivarCam,
   ButtonActivarCamMobile,
@@ -65,6 +71,7 @@ export default function VideoChatRandomModelo(props) {
     sendChatMessage,
     handleBlockPeer,
     error,
+    modelStatsSummary
   } = props;
 
   return (
@@ -93,14 +100,36 @@ export default function VideoChatRandomModelo(props) {
         <StyledPane data-side="right" style={{position:'relative'}}>
           {!cameraActive ? (
             <>
-              <StyledThumbsGrid>
-                <img className="thumb" src="https://picsum.photos/seed/a/300/400" alt="" />
-                <img className="thumb" src="https://picsum.photos/seed/b/300/400" alt="" />
-                <img className="thumb" src="https://picsum.photos/seed/c/300/400" alt="" />
-                <img className="thumb" src="https://picsum.photos/seed/d/300/400" alt="" />
-                <img className="thumb" src="https://picsum.photos/seed/e/300/400" alt="" />
-                <img className="thumb" src="https://picsum.photos/seed/f/300/400" alt="" />
-              </StyledThumbsGrid>
+              <StyledStatsPrecallCard>
+                <StyledStatsCard>
+                  <StyledStatsCardLabel>Tier (snapshot)</StyledStatsCardLabel>
+                  <StyledStatsCardValue>{modelStatsSummary?.tierName || '—'}</StyledStatsCardValue>
+
+                  <StyledStatsInline>
+                    <div>Fecha: <b>{modelStatsSummary?.snapshotDate || '—'}</b></div>
+                  </StyledStatsInline>
+                </StyledStatsCard>
+
+                <StyledStatsPrecallGrid>
+                  <StyledStatsCard>
+                    <StyledStatsCardLabel>Minutos (30d)</StyledStatsCardLabel>
+                    <StyledStatsCardValue>{Number(modelStatsSummary?.billedMinutes30d || 0)}</StyledStatsCardValue>
+
+                    <StyledStatsInline>
+                      <div>Horas: <b>{modelStatsSummary?.billedHours30d || '—'}</b></div>
+                    </StyledStatsInline>
+                  </StyledStatsCard>
+
+                  <StyledStatsCard>
+                    <StyledStatsCardLabel>Tarifas tier</StyledStatsCardLabel>
+
+                    <StyledStatsInline>
+                      <div>1º min: <b>€{modelStatsSummary?.firstMinuteEURPerMin || '0.0000'}/min</b></div>
+                      <div>Sig.: <b>€{modelStatsSummary?.nextMinutesEURPerMin || '0.0000'}/min</b></div>
+                    </StyledStatsInline>
+                  </StyledStatsCard>
+                </StyledStatsPrecallGrid>
+              </StyledStatsPrecallCard>
 
               {isMobile && (
                 <StyledPreCallCenter style={{position:'absolute',top:'70%',left:0,right:0,transform:'translateY(-50%)'}}>

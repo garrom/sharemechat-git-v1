@@ -39,6 +39,8 @@ import {
 } from '../../styles/ButtonStyles';
 import VideoChatRandomCliente from './VideoChatRandomCliente';
 import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
+import { apiFetch } from '../../config/http';
+import { buildWsUrl, WS_PATHS } from '../../config/api';
 
 
 const DashboardClient = () => {
@@ -176,14 +178,10 @@ const DashboardClient = () => {
   useEffect(() => {
     const loadUser = async () => {
       try {
-        const res = await fetch('/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-          meIdRef.current = Number(data?.id || 0);
-        }
+        const data = await apiFetch('/users/me');
+        setUser(data);
+        meIdRef.current = Number(data?.id || 0);
+
       } catch (e) {
         console.error("Error cargando usuario:", e);
       }
@@ -196,12 +194,9 @@ const DashboardClient = () => {
     if (!token) return;
     (async () => {
       try {
-        const r = await fetch('/api/clients/documents/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!r.ok) return;
-        const d = await r.json();
+        const d = await apiFetch('/clients/documents/me');
         setProfilePic(d?.urlPic || null);
+
       } catch {
         /* noop */
       }
@@ -212,11 +207,8 @@ const DashboardClient = () => {
     if (!token || !currentModelId) return;
     (async () => {
       try {
-        const r = await fetch(`/api/users/${currentModelId}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!r.ok) return;
-        const d = await r.json(); // <-- ‘d’ es el user
+        const d = await apiFetch(`/users/${currentModelId}`);
+
         const nn = d?.nickname || d?.name || d?.email || 'Modelo';
         setModelNickname(nn);
       } catch {/* noop */}
@@ -228,11 +220,8 @@ const DashboardClient = () => {
 
     (async () => {
       try {
-        const r = await fetch(`/api/users/avatars?ids=${encodeURIComponent(currentModelId)}`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!r.ok) return;
-        const map = await r.json(); // { [id]: url }
+        const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(currentModelId)}`);
+
         const url = map?.[currentModelId] || '';
         setModelAvatar(url);
       } catch {/* noop */}
@@ -377,9 +366,8 @@ const DashboardClient = () => {
     (async () => {
       try {
         console.log('[CALL] Resolviendo nombre remoto via /api/users/', id);
-        const r = await fetch(`/api/users/${id}`, { headers: { Authorization: `Bearer ${tk}` } });
-        if (!r.ok) return;
-        const d = await r.json();
+        const d = await apiFetch(`/users/${id}`);
+
         const nn = d?.nickname || d?.name || d?.email || 'Usuario';
         setCallPeerName(nn);
       } catch {/* noop */}
@@ -396,11 +384,8 @@ const DashboardClient = () => {
     (async () => {
       try {
         console.log('[CALL] Resolviendo avatar remoto via /api/users/avatars?ids=', id);
-        const r = await fetch(`/api/users/avatars?ids=${encodeURIComponent(id)}`, {
-          headers: { Authorization: `Bearer ${tk}` },
-        });
-        if (!r.ok) return;
-        const map = await r.json(); // { [id]: url }
+        const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(id)}`);
+
         setCallPeerAvatar(map?.[id] || '');
       } catch {/* noop */}
     })();
@@ -425,14 +410,8 @@ const DashboardClient = () => {
       setLoadingSaldo(true);
       setSaldoError('');
       try {
-        const res = await fetch('/api/clients/me', {
-          headers: { Authorization: `Bearer ${tokenLS}` }
-        });
-        if (!res.ok) {
-          const text = await res.text();
-          throw new Error(text || `Error ${res.status}`);
-        }
-        const data = await res.json();
+        const data = await apiFetch('/clients/me');
+
         setSaldo(data.saldoActual);
       } catch (e) {
         setSaldoError(e.message);
@@ -448,8 +427,7 @@ const DashboardClient = () => {
   useEffect(()=>{
     const tk=localStorage.getItem('token');
     if(!tk) return;
-    fetch('/api/gifts',{ headers:{Authorization:`Bearer ${tk}`} })
-      .then(r=>r.ok?r.json():[])
+    apiFetch('/gifts')
       .then(arr=>{
         setGifts(Array.isArray(arr)?arr:[]);
         setGiftsLoaded(true);
@@ -507,9 +485,7 @@ const DashboardClient = () => {
     const tk = localStorage.getItem('token');
     if (!tk) return;
 
-    const proto = window.location.protocol === 'https:' ? 'wss' : 'ws';
-    const host  = window.location.host;
-    const url   = `${proto}://${host}/messages?token=${encodeURIComponent(tk)}`;
+    const url = buildWsUrl(WS_PATHS.messages, { token: tk });
 
     if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
       setWsReady(true);
@@ -894,7 +870,7 @@ const DashboardClient = () => {
       return;
     }
 
-    const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(tokenLS)}`;
+    const wsUrl = buildWsUrl(WS_PATHS.match, { token: tokenLS });
     console.log('WS(Client) ->', wsUrl);
 
     socketRef.current = new WebSocket(wsUrl);
@@ -1506,7 +1482,7 @@ const DashboardClient = () => {
 
     try {
       const token = localStorage.getItem('token');
-      await fetch(`/api/blocks/${id}`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || '' }) });
+      await apiFetch(`/blocks/${id}`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || '' }) });
     } catch {}
 
     if (remoteStream) {
@@ -1729,14 +1705,9 @@ const DashboardClient = () => {
 
     try {
       const tk = localStorage.getItem('token');
-      const res = await fetch(`/api/messages/with/${peerId}`, {
-        headers: { Authorization: { toString(){ return `Bearer ${tk}`; } }['toString']() }
-      });
-      const res2 = await fetch(`/api/messages/with/${peerId}`, { headers: { Authorization: `Bearer ${tk}` }});
-      const okRes = res.ok ? res : res2;
+      const data = await apiFetch(`/messages/with/${peerId}`);
+      if (data) {
 
-      if (okRes.ok) {
-        const data = await okRes.json();
         const normalized = (data || []).map(raw => ({
           id: raw.id,
           senderId: Number(raw.senderId ?? raw.sender_id),
@@ -1748,10 +1719,8 @@ const DashboardClient = () => {
         centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id)); // nuevo
         setCenterMessages(normalized.reverse());
         try {
-          await fetch(`/api/messages/with/${peerId}/read`, {
-            method: 'POST',
-            headers: { Authorization: `Bearer ${tk}` }
-          });
+          await apiFetch(`/messages/with/${peerId}/read`, { method: 'POST' });
+
           // Notificar a la lista de favoritos que esta conversación ya está leída
           try {
             window.dispatchEvent(new CustomEvent('chat-read', {
@@ -1821,11 +1790,8 @@ const DashboardClient = () => {
     if (!selectedFav?.id) return;
     const tk = localStorage.getItem('token');
     try {
-      const res = await fetch(`/api/favorites/accept/${selectedFav.id}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${tk}` }
-      });
-      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      await apiFetch(`/favorites/accept/${selectedFav.id}`, { method: 'POST' });
+
       const name = selectedFav.nickname || 'Usuario';
       setSelectedFav(prev => prev ? { ...prev, invited: 'accepted' } : prev);
       setFavReload(x => x + 1);
@@ -1839,11 +1805,8 @@ const DashboardClient = () => {
     if (!selectedFav?.id) return;
     const tk = localStorage.getItem('token');
     try {
-      const res = await fetch(`/api/favorites/reject/${selectedFav.id}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${tk}` }
-      });
-      if (!res.ok) throw new Error(await res.text() || `HTTP ${res.status}`);
+      await apiFetch(`/favorites/reject/${selectedFav.id}`, { method: 'POST' });
+
       setSelectedFav(prev => prev ? { ...prev, invited: 'rejected' } : prev);
       setFavReload(x => x + 1);
     } catch (e) {
@@ -2481,7 +2444,7 @@ const DashboardClient = () => {
                 }
                 const tk=localStorage.getItem('token');
                 if(!tk)return;
-                await fetch(`/api/favorites/models/${ctxUser.id}`,{method:'DELETE',headers:{Authorization:`Bearer ${tk}`}});
+                await apiFetch(`/favorites/models/${ctxUser.id}`, { method:'DELETE' });
                 setCtxUser(null);
                 setFavReload(x=>x+1);
                 if(Number(centerChatPeerId)===Number(ctxUser.id)){

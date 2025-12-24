@@ -339,7 +339,7 @@ public class UserTrialService {
 
         ModelEarningTier tier = null;
         try {
-            tier = modelTierService.resolveTierForModel(modelId);
+            tier = modelTierService.resolveEffectiveTierForPayout(modelId);
         } catch (Exception ex) {
             log.warn("closeTrialStreamAndSettle: error resolviendo tier para modelId={} -> {}",
                     modelId, ex.getMessage());

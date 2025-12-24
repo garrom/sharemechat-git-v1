@@ -6,6 +6,7 @@ import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModelDocumentRepository;
 import com.sharemechat.service.ModelService;
+import com.sharemechat.service.ModelStatsService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.storage.StorageService;
 import org.springframework.http.HttpStatus;
@@ -23,15 +24,18 @@ public class ModelController {
     private final UserService userService;
     private final ModelDocumentRepository modelDocumentRepository;
     private final StorageService storageService;
+    private final ModelStatsService modelStatsService;
 
     public ModelController(ModelService modelService,
                            UserService userService,
                            ModelDocumentRepository modelDocumentRepository,
-                           StorageService storageService) {
+                           StorageService storageService,
+                           ModelStatsService modelStatsService) {
         this.modelService = modelService;
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
         this.storageService = storageService;
+        this.modelStatsService = modelStatsService;
     }
 
     @GetMapping("/me")
@@ -257,6 +261,36 @@ public class ModelController {
         return ResponseEntity.ok(teasers);
     }
 
+    @GetMapping("/stats/summary")
+    public ResponseEntity<?> getMyStatsSummary(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
+        }
+        User user = userService.findByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
+        }
+        if (!Constants.Roles.MODEL.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
+        }
+        return ResponseEntity.ok(modelStatsService.getMySummary(user.getId()));
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<?> getMyStats(Authentication authentication,
+                                        @RequestParam(name = "days", defaultValue = "30") int days) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
+        }
+        User user = userService.findByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
+        }
+        if (!Constants.Roles.MODEL.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
+        }
+        return ResponseEntity.ok(modelStatsService.getMyStats(user.getId(), days));
+    }
 
 
 }
