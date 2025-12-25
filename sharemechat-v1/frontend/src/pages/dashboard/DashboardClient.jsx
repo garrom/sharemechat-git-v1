@@ -86,9 +86,6 @@ const DashboardClient = () => {
   const [callError, setCallError] = useState('');
   const [callRole, setCallRole] = useState(null); // 'caller' | 'callee'
   const [callPeerAvatar, setCallPeerAvatar] = useState('');
-  const [ctxUser, setCtxUser] = useState(null);
-  const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
-
   const callLocalVideoRef = useRef(null);
   const callRemoteVideoRef = useRef(null);
   const callLocalStreamRef = useRef(null);
@@ -167,13 +164,7 @@ const DashboardClient = () => {
       el.scrollTop = el.scrollHeight;
     }
   }, [centerMessages, centerLoading, showCenterGifts]);
-  //****FIN MOVIL ****/
 
-  useEffect(() => {
-    const close = () => setCtxUser(null);
-    window.addEventListener('click', close);
-    return () => window.removeEventListener('click', close);
-  }, []);
 
   useEffect(() => {
     const loadUser = async () => {
@@ -1525,7 +1516,13 @@ const DashboardClient = () => {
     });
   };
 
-  const handleGoBlog = () => { setActiveTab('blog'); };
+  const handleGoBlog = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+
+    stopAll();
+    setActiveTab('blog');
+  };
 
   const handleGoFavorites = async () => {
     const ok = await confirmarSalidaSesionActiva();
@@ -2286,8 +2283,6 @@ const DashboardClient = () => {
                   handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                   favReload={favReload}
                   selectedContactId={selectedContactId}
-                  setCtxUser={setCtxUser}
-                  setCtxPos={setCtxPos}
                   centerChatPeerId={centerChatPeerId}
                   centerChatPeerName={centerChatPeerName}
                   centerMessages={centerMessages}
@@ -2338,7 +2333,6 @@ const DashboardClient = () => {
                         onSelect={handleOpenChatFromFavorites}
                         reloadTrigger={favReload}
                         selectedId={selectedContactId}
-                        onContextMenu={(user,pos)=>{setCtxUser(user);setCtxPos(pos);}}
                       />
                     ):(
                       <div style={{padding:8,color:'#adb5bd'}}>En llamada: la lista se bloquea hasta colgar.</div>
@@ -2351,8 +2345,6 @@ const DashboardClient = () => {
                     handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                     favReload={favReload}
                     selectedContactId={selectedContactId}
-                    setCtxUser={setCtxUser}
-                    setCtxPos={setCtxPos}
                     centerChatPeerId={centerChatPeerId}
                     centerChatPeerName={centerChatPeerName}
                     centerMessages={centerMessages}
@@ -2410,58 +2402,6 @@ const DashboardClient = () => {
         </MobileBottomNav>
       )}
 
-      {/* INICIO CLICK DERECHO */}
-      {ctxUser&&(
-        <div
-          style={{
-            position:'fixed',
-            left:ctxPos.x,
-            top:ctxPos.y,
-            zIndex:9999,
-            background:'#fff',
-            border:'1px solid #dee2e6',
-            borderRadius:8,
-            boxShadow:'0 8px 24px rgba(0,0,0,.12)'
-          }}
-          onClick={e=>e.stopPropagation()}
-        >
-          <button
-            type="button"
-            style={{
-              display:'block',
-              padding:'10px 14px',
-              background:'transparent',
-              border:'none',
-              cursor:'pointer'
-            }}
-            onClick={async()=>{
-              try{
-                const inv=String(ctxUser?.invited||'').toLowerCase();
-                if(inv==='pending'||inv==='sent'){
-                  alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
-                  setCtxUser(null);
-                  return;
-                }
-                const tk=localStorage.getItem('token');
-                if(!tk)return;
-                await apiFetch(`/favorites/models/${ctxUser.id}`, { method:'DELETE' });
-                setCtxUser(null);
-                setFavReload(x=>x+1);
-                if(Number(centerChatPeerId)===Number(ctxUser.id)){
-                  setCenterChatPeerId(null);
-                  setCenterChatPeerName('');
-                  setCenterMessages([]);
-                }
-              }catch(e){
-                alert(e.message||'No se pudo eliminar de favoritos');
-              }
-            }}
-          >
-            Eliminar de favoritos
-          </button>
-        </div>
-      )}
-      {/* FIN CLICK DERECHO */}
     </StyledContainer>
   );
 };

@@ -91,9 +91,6 @@ const DashboardModel = () => {
   const [callError, setCallError] = useState('');
   const [callRole, setCallRole] = useState(null); // 'caller' | 'callee'
   const [callPeerAvatar, setCallPeerAvatar] = useState('');
-  // Context menu (click derecho)
-  const [ctxUser, setCtxUser] = useState(null);
-  const [ctxPos, setCtxPos] = useState({ x: 0, y: 0 });
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [mobileFavMode, setMobileFavMode] = useState('list');
   // ====== STATS (Model tier snapshot summary) ======
@@ -169,22 +166,8 @@ const DashboardModel = () => {
       el.scrollTop = el.scrollHeight;
     }
   }, [centerMessages, centerLoading]);
-  //**** FIN MOVIL ****/
 
-
-  // click derecho (cerrar con click global o ESC)
-  useEffect(() => {
-    const close = () => setCtxUser(null);
-    const closeEsc = (e) => { if (e.key === 'Escape') setCtxUser(null); };
-    window.addEventListener('click', close);
-    window.addEventListener('keydown', closeEsc);
-    return () => {
-      window.removeEventListener('click', close);
-      window.removeEventListener('keydown', closeEsc);
-    };
-  }, []);
-
-  //**** PARA MOVIL ****/
+  //**** MOVIL ****/
   useEffect(() => {
     const mq = window.matchMedia('(max-width:768px)');
     const onChange = (e) => setIsMobile(e.matches);
@@ -2206,7 +2189,6 @@ const DashboardModel = () => {
                     onSelect={handleOpenChatFromFavorites}
                     reloadTrigger={favReload}
                     selectedId={selectedContactId}
-                    onContextMenu={(user, pos) => { setCtxUser(user); setCtxPos(pos); }}
                   />
                 ) : (
                   <div style={{padding:8,color:'#adb5bd'}}>En llamada: la lista se bloquea hasta colgar.</div>
@@ -2253,8 +2235,6 @@ const DashboardModel = () => {
                   handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                   favReload={favReload}
                   selectedContactId={selectedContactId}
-                  setCtxUser={setCtxUser}
-                  setCtxPos={setCtxPos}
                   setTargetPeerId={setTargetPeerId}
                   setTargetPeerName={setTargetPeerName}
                   setSelectedFav={setSelectedFav}
@@ -2278,39 +2258,6 @@ const DashboardModel = () => {
         </MobileBottomNav>
       )}
 
-      {/*INICIO CLICK DERECHO */}
-      {ctxUser && (
-        <div
-          style={{position:'fixed',left:ctxPos.x,top:ctxPos.y,zIndex:9999,background:'#fff',border:'1px solid #dee2e6',borderRadius:8,boxShadow:'0 8px 24px rgba(0,0,0,.12)'}}
-          onClick={e => e.stopPropagation()}
-          onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}
-        >
-          <button
-            style={{display:'block',padding:'10px 14px',background:'transparent',border:'none',cursor:'pointer',width:'100%',textAlign:'left'}}
-            onClick={async () => {
-              try {
-                const inv = String(ctxUser?.invited || '').toLowerCase();
-                if (inv === 'pending' || inv === 'sent') {
-                  alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
-                  setCtxUser(null);
-                  return;
-                }
-                const sure = window.confirm(`Eliminar a "${ctxUser.nickname || ctxUser.name || ctxUser.email || ('Usuario ' + ctxUser.id)}" de tus favoritos?`);
-                if (!sure) return;
-                const tk = localStorage.getItem('token');
-                if (!tk) return;
-                await apiFetch(`/favorites/clients/${ctxUser.id}`, { method: 'DELETE' });
-                setCtxUser(null);
-                setFavReload(x => x + 1);
-              } catch (e) {
-                alert(e.message || 'No se pudo eliminar de favoritos');
-              }
-            }}
-          >
-            Eliminar de favoritos
-          </button>
-        </div>
-      )}
       {/*FIN CLICK DERECHO */}
     </StyledContainer>
   );
