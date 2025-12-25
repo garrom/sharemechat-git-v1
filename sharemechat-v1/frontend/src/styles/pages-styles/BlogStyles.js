@@ -7,6 +7,7 @@ export const PageWrap = styled.div`
   background: #f8fafc;
   padding: 24px 0 80px;
   box-sizing: border-box;
+  border-radius: 6px;
 
   @media (max-width: 768px) {
     padding-top: 16px;

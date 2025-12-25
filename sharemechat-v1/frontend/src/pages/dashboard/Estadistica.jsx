@@ -63,6 +63,23 @@ export default function Estadistica({
     setModelStatsDays(Number.isFinite(v) ? v : 30);
   };
 
+  const formatEurPerMin = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return '0.0000';
+    return n.toFixed(4);
+  };
+
+  const buildTierTooltip = (t) => {
+    if (!t) return '';
+    const first = formatEurPerMin(t.firstMinuteEURPerMin);
+    const next = formatEurPerMin(t.nextMinutesEURPerMin);
+    const minReq = Number(t.minBilledMinutes || 0);
+
+    return `Tier "${t.name || ''}". Requisito: ${minReq} min facturados (ventana 30d). ` +
+      `Tarifa: a partir de haber completado el primer minuto se cobra €${first}/min. ` +
+      `Tarifa: desde el minuto 1 en adelante se cobra €${next}/min.`;
+  };
+
   const computed = useMemo(() => {
     const billed = Number(current?.billedMinutes30d || 0);
 
@@ -93,6 +110,7 @@ export default function Estadistica({
       : 100;
 
     const reached = nextTier ? billed >= nextMin : true;
+
 
     return {
       billed,
@@ -163,13 +181,6 @@ export default function Estadistica({
         </TopRight>
       </TopBar>
 
-      {disableLongRanges && (
-        <InfoLine>
-          Aún no hay 7 días de histórico. Por ahora solo puedes ver el rango de 7 días (aunque se muestren
-          menos filas).
-        </InfoLine>
-      )}
-
       <TabsBar>
         <TabButton
           type="button"
@@ -177,7 +188,7 @@ export default function Estadistica({
           onClick={() => setTab('progress')}
         >
           <FontAwesomeIcon icon={faBullseye} />
-          Progreso de tarifa
+          Progreso
         </TabButton>
 
         <TabButton
@@ -186,9 +197,19 @@ export default function Estadistica({
           onClick={() => setTab('detail')}
         >
           <FontAwesomeIcon icon={faClockRotateLeft} />
-          Histórico y detalle
+          Histórico
+        </TabButton>
+
+        <TabButton
+          type="button"
+          data-active={tab === 'billing'}
+          onClick={() => setTab('billing')}
+        >
+          <FontAwesomeIcon icon={faChartLine} />
+          Facturación
         </TabButton>
       </TabsBar>
+
 
       {loading && <StateLine>Cargando estadísticas…</StateLine>}
 
@@ -218,7 +239,7 @@ export default function Estadistica({
                   </MiniCard>
 
                   <MiniCard $accent="green">
-                    <MiniLabel>Minutos (30d)</MiniLabel>
+                    <MiniLabel>Minutos (30días)</MiniLabel>
                     <MiniValue>{Number(current?.billedMinutes30d || 0)}</MiniValue>
                     <MiniMeta>
                       Horas: <b>{current?.billedHours30d || '—'}</b>
@@ -234,7 +255,7 @@ export default function Estadistica({
                   <MiniCard $accent="purple">
                     <MiniLabel>Tarifa siguientes</MiniLabel>
                     <MiniValue>€{current?.nextMinutesEURPerMin || '0.0000'}/min</MiniValue>
-                    <MiniMeta>Se aplica a partir del primer minuto</MiniMeta>
+                    <MiniMeta>Se aplica a partir del 2º minuto</MiniMeta>
                   </MiniCard>
                 </GridCards>
               </Section>
@@ -305,7 +326,7 @@ export default function Estadistica({
               <Section>
                 <SectionHead>
                   <SectionTitle>Tiers activos</SectionTitle>
-                  <SectionHint>Tabla de referencia.</SectionHint>
+                  <SectionHint>Tabla de referencia (configuración actual).</SectionHint>
                 </SectionHead>
 
                 <TableWrap>
@@ -316,26 +337,29 @@ export default function Estadistica({
                         <th style={{textAlign:'right'}}>Min. facturados</th>
                         <th style={{textAlign:'right'}}>1º min (€/min)</th>
                         <th style={{textAlign:'right'}}>Sig. (€/min)</th>
-                        <th style={{textAlign:'center'}}>Activo</th>
                       </tr>
                     </thead>
 
                     <tbody>
                       {tiers.map((t) => (
                         <tr key={t?.tierId || t?.name}>
-                          <td className="name">{t?.name || '—'}</td>
+                          <td className="name">
+                            <TierNameCell>
+                              <span>{t?.name || '—'}</span>
+                              <TierHelpIcon title={buildTierTooltip(t)} aria-label="Información del tier">
+                                ?
+                              </TierHelpIcon>
+                            </TierNameCell>
+                          </td>
                           <td style={{textAlign:'right'}}>{Number(t?.minBilledMinutes || 0)}</td>
                           <td style={{textAlign:'right'}}>€{t?.firstMinuteEURPerMin || '0.0000'}</td>
                           <td style={{textAlign:'right'}}>€{t?.nextMinutesEURPerMin || '0.0000'}</td>
-                          <td style={{textAlign:'center'}}>
-                            <Badge data-on={t?.active ? '1' : '0'}>{t?.active ? 'Sí' : 'No'}</Badge>
-                          </td>
                         </tr>
                       ))}
 
                       {tiers.length === 0 && (
                         <tr>
-                          <td colSpan={5} style={{padding:'14px',opacity:0.85}}>
+                          <td colSpan={4} style={{padding:'14px',opacity:0.85}}>
                             No hay tiers configurados.
                           </td>
                         </tr>
@@ -345,12 +369,12 @@ export default function Estadistica({
                 </TableWrap>
               </Section>
             </>
-          ) : (
+          ) : tab === 'detail' ? (
             <>
               <Section>
                 <SectionHead>
                   <SectionTitle>Historial</SectionTitle>
-                  <SectionHint>Evolución por fecha (según días seleccionados).</SectionHint>
+                  <SectionHint>Evolución por fecha.</SectionHint>
                 </SectionHead>
 
                 <TableWrap>
@@ -359,7 +383,7 @@ export default function Estadistica({
                       <tr>
                         <th>Fecha</th>
                         <th>Tier</th>
-                        <th style={{textAlign:'right'}}>Minutos (30d)</th>
+                        <th style={{textAlign:'right'}}>Minutos (30días)</th>
                       </tr>
                     </thead>
 
@@ -383,45 +407,23 @@ export default function Estadistica({
                   </Table>
                 </TableWrap>
               </Section>
-
-              <Section>
-                <SectionHead>
-                  <SectionTitle>Snapshot actual (referencia)</SectionTitle>
-                  <SectionHint>Datos del último snapshot disponible (ayer).</SectionHint>
-                </SectionHead>
-
-                <GridCards data-compact="true">
-                  <MiniCard>
-                    <MiniLabel>Fecha</MiniLabel>
-                    <MiniValue>{current?.snapshotDate || '—'}</MiniValue>
-                  </MiniCard>
-
-                  <MiniCard $accent="blue">
-                    <MiniLabel>Tier</MiniLabel>
-                    <MiniValue>{current?.tierName || '—'}</MiniValue>
-                  </MiniCard>
-
-                  <MiniCard $accent="green">
-                    <MiniLabel>Minutos (30d)</MiniLabel>
-                    <MiniValue>{Number(current?.billedMinutes30d || 0)}</MiniValue>
-                    <MiniMeta>
-                      Horas: <b>{current?.billedHours30d || '—'}</b>
-                    </MiniMeta>
-                  </MiniCard>
-
-                  <MiniCard $accent="amber">
-                    <MiniLabel>1º min</MiniLabel>
-                    <MiniValue>€{current?.firstMinuteEURPerMin || '0.0000'}/min</MiniValue>
-                  </MiniCard>
-
-                  <MiniCard $accent="purple">
-                    <MiniLabel>Sig.</MiniLabel>
-                    <MiniValue>€{current?.nextMinutesEURPerMin || '0.0000'}/min</MiniValue>
-                  </MiniCard>
-                </GridCards>
-              </Section>
             </>
+          ) : (
+            <Section>
+              <SectionHead>
+                <SectionTitle>Facturación</SectionTitle>
+                <SectionHint>En construcción</SectionHint>
+              </SectionHead>
+
+              <Placeholder>
+                <PlaceholderTitle>En construcción</PlaceholderTitle>
+                <PlaceholderText>
+                  Esta sección se habilitará en próximas versiones para mostrar desglose, periodos y liquidaciones.
+                </PlaceholderText>
+              </Placeholder>
+            </Section>
           )}
+
         </>
       )}
     </Wrap>
@@ -450,7 +452,7 @@ const Wrap = styled.div`
 
   color: rgba(15,23,42,0.92);
   overflow: auto;
-  border-radius: 18px;
+  border-radius: 6px;
   border: 1px solid rgba(15,23,42,0.06);
 
   @media (max-width: 768px) {
@@ -597,35 +599,72 @@ const InfoLine = styled.div`
 
 const TabsBar = styled.div`
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 0px;
   flex-wrap: wrap;
+
+  width: 100%;
+  padding: 2px 2px 0 2px;
+
+  /* Línea base tipo navegador (rosa pastel) */
+  border-bottom: 1px solid rgba(236,72,153,0.22);
+
+  @media (max-width: 768px) {
+    flex-wrap: nowrap;
+  }
+
 `;
+
 
 const TabButton = styled.button`
   appearance: none;
-  border: 1px solid rgba(15,23,42,0.14);
-  background: rgba(255,255,255,0.72);
-  color: rgba(2,6,23,0.88);
-
-  padding: 10px 12px;
-  border-radius: 14px;
-  cursor: pointer;
+  -webkit-appearance: none;
 
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  font-weight: 900;
 
-  &[data-active="true"] {
-    background: rgba(34,197,94,0.12);
-    border-color: rgba(34,197,94,0.26);
-    color: rgba(3,105,161,0.92);
-  }
+  padding: 10px 14px;
+  border-radius: 2px 2px 0 0;
+
+  cursor: pointer;
+  font-weight: 900;
+  white-space: nowrap;
+
+  /* Estado normal: claro, visible */
+  background: rgba(255,255,255,0.82);
+  color: rgba(2,6,23,0.88);
+  border: 1px solid rgba(15,23,42,0.12);
+
+  /* Para que parezca pestaña sobre la línea */
+  border-bottom-color: transparent;
 
   &:hover {
-    background: rgba(255,255,255,0.92);
+    background: rgba(236,72,153,0.08);
+    border-color: rgba(236,72,153,0.22);
+    border-bottom-color: transparent;
+  }
+
+  /* Activa: rosa pastel + “se integra” con la línea */
+  &[data-active="true"] {
+    background: rgba(236,72,153,0.14);
+    border-color: rgba(236,72,153,0.28);
+    color: rgba(157,23,77,0.96);
+    border-bottom-color: rgba(248,250,252,0.92);
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgba(236,72,153,0.32);
+    outline-offset: 2px;
+  }
+
+  @media (max-width: 768px) {
+    padding: 8px 10px;
+    font-size: 12px;
+    gap: 6px;
   }
 `;
+
 
 const StateLine = styled.div`
   color: rgba(30,41,59,0.80);
@@ -924,26 +963,53 @@ const Table = styled.table`
   }
 `;
 
-const Badge = styled.span`
+const Placeholder = styled.div`
+  border-radius: 14px;
+  border: 1px dashed rgba(15,23,42,0.18);
+  background: rgba(255,255,255,0.60);
+  padding: 16px;
+`;
+
+const PlaceholderTitle = styled.div`
+  font-weight: 1000;
+  color: rgba(2,6,23,0.90);
+`;
+
+const PlaceholderText = styled.div`
+  margin-top: 6px;
+  color: rgba(30,41,59,0.74);
+  font-weight: 700;
+  line-height: 1.45;
+`;
+
+const TierNameCell = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const TierHelpIcon = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 54px;
-  height: 26px;
-  padding: 0 10px;
+
+  width: 18px;
+  height: 18px;
   border-radius: 999px;
+
   font-size: 12px;
   font-weight: 1000;
+  line-height: 1;
 
-  &[data-on="1"] {
-    background: rgba(34,197,94,0.14);
-    border: 1px solid rgba(34,197,94,0.22);
-    color: rgba(22,101,52,0.92);
-  }
+  cursor: help;
+  user-select: none;
 
-  &[data-on="0"] {
-    background: rgba(239,68,68,0.10);
-    border: 1px solid rgba(239,68,68,0.18);
-    color: rgba(153,27,27,0.92);
+  background: rgba(236,72,153,0.14);
+  border: 1px solid rgba(236,72,153,0.22);
+  color: rgba(157,23,77,0.96);
+
+  &:hover {
+    background: rgba(236,72,153,0.20);
+    border-color: rgba(236,72,153,0.30);
   }
 `;
