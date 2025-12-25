@@ -575,7 +575,7 @@ const DashboardModel = () => {
       } catch (e) {
         console.warn('[MODEL][stats tiers for videochat] error:', e?.message);
         setModelStatsDetailError(e?.message || 'Error cargando tiers');
-        setModelStats(null);
+        //setModelStats(null);
       } finally {
         setModelStatsDetailLoading(false);
       }
@@ -588,6 +588,12 @@ const DashboardModel = () => {
   useEffect(() => {
     if (activeTab !== 'stats') return;
     if (statsDetailLoadedRef.current) return;
+
+    const currentDays = Number(modelStats?.current?.days);
+    if (Number(modelStatsDays) === 30 && currentDays === 30) {
+      statsDetailLoadedRef.current = true;
+      return;
+    }
 
     const tk = localStorage.getItem('token');
     if (!tk) return;
