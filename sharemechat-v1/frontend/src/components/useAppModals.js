@@ -250,14 +250,14 @@ export const useAppModals = () => {
               <ChoiceRow>
                 <input type="radio" name="block-reason" onChange={() => { selected = 'never'; }} />
                 <ChoiceText>
-                  <ChoiceTitle>No quiero ver a esta persona</ChoiceTitle>
+                  <ChoiceTitle>No quiero ver a este usuario</ChoiceTitle>
                 </ChoiceText>
               </ChoiceRow>
 
               <ChoiceRow>
                 <input type="radio" name="block-reason" onChange={() => { selected = 'other'; }} />
                 <ChoiceText>
-                  <ChoiceTitle>Otro</ChoiceTitle>
+                  <ChoiceTitle>Otros motivos</ChoiceTitle>
                 </ChoiceText>
               </ChoiceRow>
             </ChoiceWrap>
