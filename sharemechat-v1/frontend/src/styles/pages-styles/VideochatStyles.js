@@ -1212,3 +1212,70 @@ export const StyledStatsPrecallGrid = styled.div`
     gap: 12px;
   }
 `;
+
+// === ESTADISTICA TIERS ===
+export const StyledTierProgressCard = styled.div`
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 16px;
+  padding: 14px;
+  box-sizing: border-box;
+`;
+
+export const StyledTierProgressRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const StyledTierKpiCol = styled.div`
+  min-width: 0;
+`;
+
+export const StyledTierKpiTitle = styled.div`
+  font-weight: 900;
+  color: var(--c-white);
+  margin-bottom: 6px;
+`;
+
+export const StyledTierKpiLine = styled.div`
+  font-size: 13px;
+  color: rgba(255,255,255,0.85);
+  line-height: 1.45;
+
+  b { color: var(--c-white); }
+`;
+
+export const StyledTierBarWrap = styled.div`
+  margin-top: 12px;
+`;
+
+export const StyledTierBarTrack = styled.div`
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.10);
+  border: 1px solid rgba(255,255,255,0.14);
+  overflow: hidden;
+`;
+
+export const StyledTierBarFill = styled.div`
+  position: absolute;
+  inset: 0 auto 0 0;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(236,72,153,0.85) 0%, rgba(59,130,246,0.85) 55%, rgba(34,197,94,0.80) 100%);
+`;
+
+export const StyledTierBarLegend = styled.div`
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(255,255,255,0.80);
+`;

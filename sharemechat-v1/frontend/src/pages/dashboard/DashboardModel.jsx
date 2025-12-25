@@ -528,13 +528,16 @@ const DashboardModel = () => {
 
 
   // UseEffect Stats
+  // 1) Summary: se carga al entrar en Videochat (una vez)
   useEffect(() => {
     if (activeTab !== 'videochat') return;
     if (statsSummaryLoadedRef.current) return;
+
     const tk = localStorage.getItem('token');
     if (!tk) return;
 
     statsSummaryLoadedRef.current = true;
+
     const loadSummary = async () => {
       try {
         setModelStatsLoading(true);
@@ -549,16 +552,48 @@ const DashboardModel = () => {
         setModelStatsLoading(false);
       }
     };
+
     loadSummary();
   }, [activeTab]);
 
+  // 2) Tiers para Videochat: si estamos en Videochat y NO tenemos tiers todavía,
+  useEffect(() => {
+    if (activeTab !== 'videochat') return;
 
+    const tk = localStorage.getItem('token');
+    if (!tk) return;
+
+    const tiersCount = Array.isArray(modelStats?.tiers) ? modelStats.tiers.length : 0;
+    if (tiersCount > 0) return;
+
+    const loadTiersForVideochat = async () => {
+      try {
+        setModelStatsDetailLoading(true);
+        setModelStatsDetailError('');
+        const data = await apiFetch(`/models/stats?days=${encodeURIComponent(30)}`);
+        setModelStats(data || null);
+      } catch (e) {
+        console.warn('[MODEL][stats tiers for videochat] error:', e?.message);
+        setModelStatsDetailError(e?.message || 'Error cargando tiers');
+        setModelStats(null);
+      } finally {
+        setModelStatsDetailLoading(false);
+      }
+    };
+
+    loadTiersForVideochat();
+  }, [activeTab, modelStats?.tiers]);
+
+  // 3) Detail para pestaña Estadística: lógica original
   useEffect(() => {
     if (activeTab !== 'stats') return;
     if (statsDetailLoadedRef.current) return;
+
     const tk = localStorage.getItem('token');
     if (!tk) return;
+
     statsDetailLoadedRef.current = true;
+
     const loadStats = async () => {
       try {
         setModelStatsDetailLoading(true);
@@ -573,6 +608,7 @@ const DashboardModel = () => {
         setModelStatsDetailLoading(false);
       }
     };
+
     loadStats();
   }, [activeTab, modelStatsDays]);
 
@@ -2132,6 +2168,7 @@ const DashboardModel = () => {
             handleBlockPeer={handleBlockPeer}
             error={error}
             modelStatsSummary={modelStatsSummary}
+            modelStatsTiers={modelStats?.tiers}
           />
         ) : activeTab === 'stats' ? (
           <Estadistica

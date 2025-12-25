@@ -239,7 +239,7 @@ export default function Estadistica({
                   </MiniCard>
 
                   <MiniCard $accent="green">
-                    <MiniLabel>Minutos (30días)</MiniLabel>
+                    <MiniLabel>Minutos (30 días)</MiniLabel>
                     <MiniValue>{Number(current?.billedMinutes30d || 0)}</MiniValue>
                     <MiniMeta>
                       Horas: <b>{current?.billedHours30d || '—'}</b>
@@ -383,7 +383,7 @@ export default function Estadistica({
                       <tr>
                         <th>Fecha</th>
                         <th>Tier</th>
-                        <th style={{textAlign:'right'}}>Minutos (30días)</th>
+                        <th style={{textAlign:'right'}}>Minutos (30 días)</th>
                       </tr>
                     </thead>
 

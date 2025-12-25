@@ -31,6 +31,15 @@ import {
   StyledStatsCardValue,
   StyledStatsPrecallGrid,
   StyledStatsInline,
+  StyledTierProgressCard,
+  StyledTierProgressRow,
+  StyledTierKpiCol,
+  StyledTierKpiTitle,
+  StyledTierKpiLine,
+  StyledTierBarWrap,
+  StyledTierBarTrack,
+  StyledTierBarFill,
+  StyledTierBarLegend,
 } from '../../styles/pages-styles/VideochatStyles';
 
 import {
@@ -43,6 +52,7 @@ import {
   BtnHangup,
   BtnBlock,
 } from '../../styles/ButtonStyles';
+
 
 export default function VideoChatRandomModelo(props) {
   const {
@@ -71,8 +81,45 @@ export default function VideoChatRandomModelo(props) {
     sendChatMessage,
     handleBlockPeer,
     error,
-    modelStatsSummary
+    modelStatsSummary,
+    modelStatsTiers,
   } = props;
+
+  const tierProgress = React.useMemo(() => {
+    const billed = Number(modelStatsSummary?.billedMinutes30d || 0);
+
+    const tiers = Array.isArray(modelStatsTiers) ? modelStatsTiers : [];
+    const ordered = [...tiers]
+      .filter((t) => t && (t.active === true || t.active === false))
+      .sort((a, b) => Number(a?.minBilledMinutes || 0) - Number(b?.minBilledMinutes || 0));
+
+    if (!ordered.length) {
+      return { billed, hasTiers: false, currentTier: null, nextTier: null, remaining: 0, pct: 0 };
+    }
+
+    const byName = ordered.find((t) => String(t?.name || '') === String(modelStatsSummary?.tierName || ''));
+
+    let byMinutes = null;
+    for (const t of ordered) {
+      if (Number(t?.minBilledMinutes || 0) <= billed) byMinutes = t;
+    }
+
+    const currentTier = byName || byMinutes || ordered[0] || null;
+    const currentMin = Number(currentTier?.minBilledMinutes || 0);
+
+    const nextTier = ordered.find((t) => Number(t?.minBilledMinutes || 0) > currentMin) || null;
+    const nextMin = Number(nextTier?.minBilledMinutes || 0);
+
+    const remaining = nextTier ? Math.max(0, nextMin - billed) : 0;
+
+    const pct = nextTier
+      ? Math.max(0, Math.min(100, (billed / Math.max(1, nextMin)) * 100))
+      : 100;
+
+    return { billed, hasTiers: true, currentTier, nextTier, remaining, pct };
+  }, [modelStatsSummary, modelStatsTiers]);
+
+
 
   return (
     <StyledCenterVideochat>
@@ -101,43 +148,73 @@ export default function VideoChatRandomModelo(props) {
           {!cameraActive ? (
             <>
               <StyledStatsPrecallCard>
-                <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                <div style={{display:'flex',flexDirection:'column',gap:8}}>
                   <div style={{fontWeight:900,fontSize:16,color:'#fff',letterSpacing:'.2px'}}>
-                    Resumen de rendimiento (último snapshot)
+                    Progreso hacia el siguiente tier
                   </div>
-                  <div style={{fontSize:16,color:'rgba(255,255,255,.9)'}}>
-                    Estos datos determinan tu tier y las tarifas aplicadas según tus minutos facturados en los últimos 30 días.
+                  <div style={{fontSize:14,color:'rgba(255,255,255,.85)'}}>
+                    Basado en tus minutos facturados (30 días).
                   </div>
                 </div>
-                <StyledStatsCard>
-                  <StyledStatsCardLabel>Tier (snapshot)</StyledStatsCardLabel>
-                  <StyledStatsCardValue>{modelStatsSummary?.tierName || '—'}</StyledStatsCardValue>
 
-                  <StyledStatsInline>
-                    <div>Fecha: <b>{modelStatsSummary?.snapshotDate || '—'}</b></div>
-                  </StyledStatsInline>
-                </StyledStatsCard>
-
-                <StyledStatsPrecallGrid>
-                  <StyledStatsCard>
-                    <StyledStatsCardLabel>Minutos (30d)</StyledStatsCardLabel>
-                    <StyledStatsCardValue>{Number(modelStatsSummary?.billedMinutes30d || 0)}</StyledStatsCardValue>
-
+                <StyledTierProgressCard>
+                  {!tierProgress.hasTiers ? (
                     <StyledStatsInline>
-                      <div>Horas: <b>{modelStatsSummary?.billedHours30d || '—'}</b></div>
+                      <div>No hay datos de tiers disponibles para calcular el progreso.</div>
+                      <div>Minutos actuales (30d): <b>{Number(modelStatsSummary?.billedMinutes30d || 0)}</b></div>
                     </StyledStatsInline>
-                  </StyledStatsCard>
+                  ) : (
+                    <>
+                      <StyledTierProgressRow>
+                        <StyledTierKpiCol>
+                          <StyledTierKpiTitle>Tu situación</StyledTierKpiTitle>
+                          <StyledTierKpiLine>
+                            Minutos actuales: <b>{tierProgress.billed}</b>
+                          </StyledTierKpiLine>
+                          <StyledTierKpiLine>
+                            Tier detectado: <b>{tierProgress.currentTier?.name || modelStatsSummary?.tierName || '—'}</b>
+                          </StyledTierKpiLine>
+                        </StyledTierKpiCol>
 
-                  <StyledStatsCard>
-                    <StyledStatsCardLabel>Tarifas tier</StyledStatsCardLabel>
+                        <StyledTierKpiCol>
+                          <StyledTierKpiTitle>Siguiente objetivo</StyledTierKpiTitle>
+                          {tierProgress.nextTier ? (
+                            <>
+                              <StyledTierKpiLine>
+                                Siguiente tier: <b>{tierProgress.nextTier?.name || '—'}</b>
+                              </StyledTierKpiLine>
+                              <StyledTierKpiLine>
+                                Requisito: <b>{Number(tierProgress.nextTier?.minBilledMinutes || 0)}</b> min
+                              </StyledTierKpiLine>
+                              <StyledTierKpiLine>
+                                Te faltan: <b>{tierProgress.remaining}</b> min
+                              </StyledTierKpiLine>
+                            </>
+                          ) : (
+                            <StyledTierKpiLine>
+                              Ya estás en el tier máximo (o no hay siguiente tier configurado).
+                            </StyledTierKpiLine>
+                          )}
+                        </StyledTierKpiCol>
+                      </StyledTierProgressRow>
 
-                    <StyledStatsInline>
-                      <div>Primer minuto: <b>€{modelStatsSummary?.firstMinuteEURPerMin || '0.0000'}/min</b></div>
-                      <div>Siguiente minuto: <b>€{modelStatsSummary?.nextMinutesEURPerMin || '0.0000'}/min</b></div>
-                    </StyledStatsInline>
-                  </StyledStatsCard>
-                </StyledStatsPrecallGrid>
+                      <StyledTierBarWrap>
+                        <StyledTierBarTrack>
+                          <StyledTierBarFill style={{width:`${tierProgress.pct}%`}} />
+                        </StyledTierBarTrack>
+
+                        <StyledTierBarLegend>
+                          <span>{tierProgress.billed} min</span>
+                          <span>
+                            {tierProgress.nextTier ? `${Number(tierProgress.nextTier?.minBilledMinutes || 0)} min` : '—'}
+                          </span>
+                        </StyledTierBarLegend>
+                      </StyledTierBarWrap>
+                    </>
+                  )}
+                </StyledTierProgressCard>
               </StyledStatsPrecallCard>
+
 
               {isMobile && (
                 <StyledPreCallCenter style={{position:'absolute',top:'70%',left:0,right:0,transform:'translateY(-50%)'}}>
