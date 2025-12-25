@@ -101,7 +101,8 @@ const DashboardModel = () => {
   const [modelStatsDays, setModelStatsDays] = useState(30);
   const [modelStatsDetailLoading, setModelStatsDetailLoading] = useState(false);
   const [modelStatsDetailError, setModelStatsDetailError] = useState('');
-
+  const [clientSaldo, setClientSaldo] = useState(null);
+  const [clientSaldoLoading, setClientSaldoLoading] = useState(false);
 
   // ===  UseRef ===
   const callLocalVideoRef = useRef(null);
@@ -229,6 +230,7 @@ const DashboardModel = () => {
 
     })();
   }, [token, currentClientId]);
+
 
   // [CALL][Model] Usa el chat central contra el peer de la llamada cuando estamos en modo 'call'
   useEffect(() => {
@@ -1018,15 +1020,30 @@ const DashboardModel = () => {
         }
 
         // setCurrentClientId robusto
+        let matchedClientId = null;
         try {
           if (data.peerRole === 'client' && Number.isFinite(Number(data.peerUserId))) {
-            setCurrentClientId(Number(data.peerUserId));
+            matchedClientId = Number(data.peerUserId);
+            setCurrentClientId(matchedClientId);
           } else {
             setCurrentClientId(null);
           }
-        } catch { setCurrentClientId(null); }
+        } catch {
+          setCurrentClientId(null);
+        }
 
-        // reset de peer/remote
+        // saldo del cliente (viene por WS en el match; se usará en UI)
+        try {
+          setClientSaldoLoading(true);
+          const v = data?.clientBalance;
+          setClientSaldo(v !== null && v !== undefined && Number.isFinite(Number(v)) ? Number(v) : null);
+        } catch {
+          setClientSaldo(null);
+        } finally {
+          setClientSaldoLoading(false);
+        }
+
+        // reset de peer/remote (incluye limpieza de saldo anterior si hubiera)
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
         setRemoteStream(null);
@@ -1041,7 +1058,6 @@ const DashboardModel = () => {
           stream: localStream.current,
         });
         peerRef.current = peer;
-
 
         peer.on('signal', (signal) => {
           if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
@@ -1081,6 +1097,8 @@ const DashboardModel = () => {
         }
       } else if (data.type === 'peer-disconnected') {
         setCurrentClientId(null);
+        setClientSaldo(null);
+        setClientSaldoLoading(false);
         try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
         try { if (remoteStream) { remoteStream.getTracks().forEach((track) => track.stop()); } } catch {}
         setRemoteStream(null);
@@ -1161,6 +1179,8 @@ const DashboardModel = () => {
       setCurrentClientId(null);
       setRemoteStream(null);
       setMessages([]);
+      setClientSaldo(null);
+      setClientSaldoLoading(false);
       setStatus('Buscando nuevo cliente...');
       setSearching(true);
 
@@ -1350,6 +1370,8 @@ const DashboardModel = () => {
     setStatus('');
     setQueuePosition(null);
     setMessages([]);
+    setClientSaldo(null);
+    setClientSaldoLoading(false);
     setShowMsgPanel(false);
     setOpenChatWith(null);
     setSearching(false);
@@ -2065,15 +2087,14 @@ const DashboardModel = () => {
         </div>
 
         <StyledNavGroup className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
+
+          {queuePosition !== null && queuePosition >= 0 && (
+            <QueueText className="me-3">Pos.: {queuePosition + 1}</QueueText>
+          )}
           <NavText className="me-3">{displayName}</NavText>
           <SaldoText className="me-3">
             {loadingSaldoModel ? 'Saldo: ...' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -'}
           </SaldoText>
-
-          {queuePosition !== null && queuePosition >= 0 && (
-            <QueueText className="me-3">Tu posición: {queuePosition + 1}</QueueText>
-          )}
-
           <NavButton type="button" onClick={handleGoStats} title="Estadísticas">
             <FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}} />
             <span>Estadísticas</span>
@@ -2158,6 +2179,8 @@ const DashboardModel = () => {
             error={error}
             modelStatsSummary={modelStatsSummary}
             modelStatsTiers={modelStats?.tiers}
+            clientSaldo={clientSaldo}
+            clientSaldoLoading={clientSaldoLoading}
           />
         ) : activeTab === 'stats' ? (
           <Estadistica

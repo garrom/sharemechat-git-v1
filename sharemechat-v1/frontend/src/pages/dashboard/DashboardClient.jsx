@@ -768,7 +768,6 @@ const DashboardClient = () => {
           return;
         }
 
-
         if (data.type === 'call:offline') {
           console.log('[CALL][offline]');
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
@@ -787,8 +786,6 @@ const DashboardClient = () => {
           })();
           return;
         }
-
-
         if (data.type === 'call:error') {
           console.log('[CALL][error]', data.message);
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');

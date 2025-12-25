@@ -83,6 +83,8 @@ export default function VideoChatRandomModelo(props) {
     error,
     modelStatsSummary,
     modelStatsTiers,
+    clientSaldo,
+    clientSaldoLoading,
   } = props;
 
   const tierProgress = React.useMemo(() => {
@@ -266,17 +268,35 @@ export default function VideoChatRandomModelo(props) {
                   <StyledVideoArea style={{height:'calc(100vh - 180px)',maxHeight:'calc(100vh - 180px)'}}>
                     <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'12px',overflow:'hidden',background:'#000'}}>
                       <StyledVideoTitle>
-                        <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
-                        {clientNickname || 'Cliente'}
-                        <button
-                          type="button"
-                          onClick={()=>toggleFullscreen(remoteVideoWrapRef.current)}
-                          title="Pantalla completa"
-                          style={{marginLeft:8,padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
-                        >
-                          Pantalla completa
-                        </button>
+                        <div style={{display:'flex',alignItems:'center',gap:10}}>
+                          <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
+                          <div style={{display:'flex',flexDirection:'column',lineHeight:1.15}}>
+                            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
+                              <span>{clientNickname || 'Cliente'}</span>
+
+                              <button
+                                type="button"
+                                onClick={()=>toggleFullscreen(remoteVideoWrapRef.current)}
+                                title="Pantalla completa"
+                                style={{padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
+                              >
+                                Pantalla completa
+                              </button>
+                            </div>
+
+                            <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
+                              {clientSaldoLoading ? (
+                                <span>Saldo: …</span>
+                              ) : Number.isFinite(Number(clientSaldo)) ? (
+                                <span>Saldo: €{Number(clientSaldo).toFixed(2)}</span>
+                              ) : (
+                                <span>Saldo: —</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </StyledVideoTitle>
+
 
                       <video
                         ref={remoteVideoRef}
@@ -386,8 +406,22 @@ export default function VideoChatRandomModelo(props) {
                 <StyledVideoArea>
                   <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',overflow:'hidden',background:'#000'}}>
                     <StyledVideoTitle>
-                      <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
-                      {clientNickname || 'Cliente'}
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
+                        <div style={{display:'flex',flexDirection:'column',lineHeight:1.15}}>
+                          <div>{clientNickname || 'Cliente'}</div>
+
+                          <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
+                            {clientSaldoLoading ? (
+                              <span>Saldo: …</span>
+                            ) : Number.isFinite(Number(clientSaldo)) ? (
+                              <span>Saldo: €{Number(clientSaldo).toFixed(2)}</span>
+                            ) : (
+                              <span>Saldo: —</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
                     </StyledVideoTitle>
 
                     <video

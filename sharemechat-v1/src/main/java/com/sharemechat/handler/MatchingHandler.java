@@ -502,19 +502,28 @@ public class MatchingHandler extends TextWebSocketHandler {
             Long peerUserId = sessionUserIds.get(peerSessionId);
             String peerRole = roles.get(peerSessionId);
 
+            BigDecimal clientBalance = null;
+
+            // Si el peer es el CLIENT (para el modelo), incluimos saldo.
+
+            if ("client".equals(peerRole)) {
+                clientBalance = getCurrentBalanceOrZero(peerUserId);
+            }
+
             String msg = String.format(
-                    "{\"type\":\"match\",\"peerId\":\"%s\",\"peerUserId\":%s,\"peerRole\":\"%s\"}",
+                    "{\"type\":\"match\",\"peerId\":\"%s\",\"peerUserId\":%s,\"peerRole\":\"%s\",\"clientBalance\":%s}",
                     peerSessionId,
                     peerUserId != null ? peerUserId.toString() : "null",
-                    peerRole != null ? peerRole : ""
+                    peerRole != null ? peerRole : "",
+                    clientBalance != null ? ("\"" + clientBalance.toPlainString() + "\"") : "null"
             );
 
-            // System.out.println("Enviando mensaje de emparejamiento a sessionId=" + session.getId() + ": " + msg);
             session.sendMessage(new TextMessage(msg));
         } catch (Exception e) {
             System.out.println("Error enviando match a sessionId=" + session.getId() + ": " + e.getMessage());
         }
     }
+
 
     private void safeRequeue(WebSocketSession session, String role) {
         if (session != null && session.isOpen()) {
@@ -693,6 +702,19 @@ public class MatchingHandler extends TextWebSocketHandler {
         return -1;
     }
 
+    private BigDecimal getCurrentBalanceOrZero(Long userId) {
+        if (userId == null) return BigDecimal.ZERO;
+        try {
+            return balanceRepository
+                    .findTopByUserIdOrderByTimestampDesc(userId)
+                    .map(Balance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+        } catch (Exception ex) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+
     private void sendQueueStats(WebSocketSession s) {
         try {
             int waitingModelsCount = waitingModels.size();
@@ -780,4 +802,5 @@ public class MatchingHandler extends TextWebSocketHandler {
             return false;
         }
     }
+
 }
