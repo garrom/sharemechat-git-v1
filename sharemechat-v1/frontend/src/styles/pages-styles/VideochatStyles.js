@@ -1062,13 +1062,14 @@ export const StyledStatsWrap = styled.div`
   min-width: 0;
   min-height: 0;
   padding: 16px;
-  color: var(--c-text-on-dark);
+  color: var(--c-white);
   background: transparent;
 
   @media (max-width: 768px) {
     padding: 12px;
   }
 `;
+
 
 export const StyledStatsTopBar = styled.div`
   display: flex;
@@ -1129,29 +1130,17 @@ export const StyledStatsGrid = styled.div`
 `;
 
 export const StyledStatsCard = styled.div`
-  background: rgba(0,0,0,.28);
-  border: 1px solid rgba(255,255,255,.14);
-  border-radius: 18px;
-  padding: 16px;
-  min-width: 0;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.16);
+  border-radius: 16px;
+  padding: 14px;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-height: 120px;
-  box-shadow:
-    0 12px 30px rgba(0,0,0,.25),
-    inset 0 1px 0 rgba(255,255,255,.06);
 `;
-
 
 export const StyledStatsCardLabel = styled.div`
   font-size: 12px;
-  opacity: .8;
-  color: var(--c-text-on-dark);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  opacity: 0.9;
+  color: rgba(255,255,255,0.78);
 `;
 
 export const StyledStatsCardValue = styled.div`
@@ -1159,8 +1148,6 @@ export const StyledStatsCardValue = styled.div`
   font-size: 18px;
   font-weight: 900;
   color: var(--c-white);
-
-  /* si el value es largo, que no rompa el ancho */
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1169,14 +1156,11 @@ export const StyledStatsCardValue = styled.div`
 export const StyledStatsInline = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 6px;
+  gap: 12px;
+  margin-top: 10px;
   font-size: 13px;
-  opacity: .95;
-  color: var(--c-text-on-dark);
-
-  min-width: 0;
-
+  opacity: 1;
+  color: rgba(255,255,255,0.85);
   b { color: var(--c-white); }
 `;
 

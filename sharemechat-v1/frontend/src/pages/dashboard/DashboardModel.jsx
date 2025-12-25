@@ -42,6 +42,8 @@ import VideoChatRandomModelo from './VideoChatRandomModelo';
 import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
+import Estadistica from './Estadistica';
+
 
 const DashboardModel = () => {
 
@@ -2017,50 +2019,85 @@ const DashboardModel = () => {
 
   const displayName = user?.nickname || user?.name || user?.email || 'Modelo';
 
-  return(
+  return (
     <StyledContainer>
-      <GlobalBlack/>
+      <GlobalBlack />
       {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar style={{padding:'0 24px'}}>
         <div style={{display:'flex',alignItems:'center'}}>
-          <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick}/>
+          <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick} />
           <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title="Videochat">
-                Videochat</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title="Favoritos">
-                Favoritos</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title="Blog">
-                Blog</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab === 'videochat'} aria-pressed={activeTab === 'videochat'} onClick={handleGoVideochat} title="Videochat">
+              Videochat
+            </StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab === 'favoritos'} aria-pressed={activeTab === 'favoritos'} onClick={handleGoFavorites} title="Favoritos">
+              Favoritos
+            </StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab === 'blog'} aria-pressed={activeTab === 'blog'} onClick={handleGoBlog} title="Blog">
+              Blog
+            </StyledNavTab>
           </div>
         </div>
+
         <StyledNavGroup className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
           <NavText className="me-3">{displayName}</NavText>
-          <SaldoText className="me-3">{loadingSaldoModel?'Saldo: ...':saldoModel!==null?`Saldo: €${Number(saldoModel).toFixed(2)}`:'Saldo: -'}</SaldoText>
-          {queuePosition!==null&&queuePosition>=0&&(<QueueText className="me-3">
-              Tu posición: {queuePosition+1}</QueueText>)}
-          <NavButton type="button" onClick={handleGoStats} title="Estadísticas"><FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}}/><span>
-              Estadísticas</span></NavButton>
-          <NavButton type="button" onClick={handleRequestPayout} title="Retirar"><FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}}/><span>
-              Retirar</span></NavButton>
-          <NavButton type="button" onClick={handleLogout} title="Salir"><FontAwesomeIcon icon={faSignOutAlt}/><span>
-              Salir</span></NavButton>
-          <StyledNavAvatar src={profilePic||'/img/avatarChica.png'} alt="avatar" title="Ver perfil" onClick={handleProfile}/>
+          <SaldoText className="me-3">
+            {loadingSaldoModel ? 'Saldo: ...' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -'}
+          </SaldoText>
+
+          {queuePosition !== null && queuePosition >= 0 && (
+            <QueueText className="me-3">Tu posición: {queuePosition + 1}</QueueText>
+          )}
+
+          <NavButton type="button" onClick={handleGoStats} title="Estadísticas">
+            <FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}} />
+            <span>Estadísticas</span>
+          </NavButton>
+
+          <NavButton type="button" onClick={handleRequestPayout} title="Retirar">
+            <FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}} />
+            <span>Retirar</span>
+          </NavButton>
+
+          <NavButton type="button" onClick={handleLogout} title="Salir">
+            <FontAwesomeIcon icon={faSignOutAlt} />
+            <span>Salir</span>
+          </NavButton>
+
+          <StyledNavAvatar src={profilePic || '/img/avatarChica.png'} alt="avatar" title="Ver perfil" onClick={handleProfile} />
         </StyledNavGroup>
 
-        <HamburgerButton onClick={()=>setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú"><FontAwesomeIcon icon={faBars}/></HamburgerButton>
-        <MobileMenu className={!menuOpen&&'hidden'}>
+        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">
+          <FontAwesomeIcon icon={faBars} />
+        </HamburgerButton>
+
+        <MobileMenu className={!menuOpen && 'hidden'}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
             <NavText>{displayName}</NavText>
-            <SaldoText>{loadingSaldoModel?'Saldo: …':saldoModel!==null?`Saldo: €${Number(saldoModel).toFixed(2)}`:'Saldo: n/d'}</SaldoText>
+            <SaldoText>
+              {loadingSaldoModel ? 'Saldo: …' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: n/d'}
+            </SaldoText>
           </div>
-          <NavButton onClick={()=>{handleProfile();setMenuOpen(false);}}><FontAwesomeIcon icon={faUser}/><StyledIconWrapper>
-              Perfil</StyledIconWrapper></NavButton>
-          <NavButton onClick={()=>{handleGoStats(); setMenuOpen(false);}} title="Estadísticas"><FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}}/><span>
-              Estadísticas</span></NavButton>
-          <NavButton onClick={()=>{handleRequestPayout();setMenuOpen(false);}} title="Retirar"><FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}}/><span>
-              Retirar</span></NavButton>
-          <NavButton onClick={()=>{handleLogout();setMenuOpen(false);}} title="Salir"><FontAwesomeIcon icon={faSignOutAlt}/><StyledIconWrapper>
-              Salir</StyledIconWrapper></NavButton>
+
+          <NavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
+            <FontAwesomeIcon icon={faUser} />
+            <StyledIconWrapper>Perfil</StyledIconWrapper>
+          </NavButton>
+
+          <NavButton onClick={() => { handleGoStats(); setMenuOpen(false); }} title="Estadísticas">
+            <FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}} />
+            <span>Estadísticas</span>
+          </NavButton>
+
+          <NavButton onClick={() => { handleRequestPayout(); setMenuOpen(false); }} title="Retirar">
+            <FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}} />
+            <span>Retirar</span>
+          </NavButton>
+
+          <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }} title="Salir">
+            <FontAwesomeIcon icon={faSignOutAlt} />
+            <StyledIconWrapper>Salir</StyledIconWrapper>
+          </NavButton>
         </MobileMenu>
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
@@ -2097,131 +2134,20 @@ const DashboardModel = () => {
             modelStatsSummary={modelStatsSummary}
           />
         ) : activeTab === 'stats' ? (
-          <div style={{flex:1,minWidth:0,minHeight:0,padding:16,display:'flex',flexDirection:'column',gap:12}}>
-            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
-              <div style={{display:'flex',alignItems:'center',gap:10}}>
-                <FontAwesomeIcon icon={faChartLine} />
-                <div style={{fontWeight:700}}>Estadísticas</div>
-              </div>
-
-              <div style={{display:'flex',alignItems:'center',gap:8}}>
-                <span style={{opacity:0.8}}>Histórico:</span>
-                <select
-                  value={modelStatsDays}
-                  onChange={(e) => {
-                    const v = Number(e.target.value);
-                    setModelStatsDays(Number.isFinite(v) ? v : 30);
-                    statsDetailLoadedRef.current = false;
-                  }}
-                  style={{padding:'6px 10px',borderRadius:8}}
-                >
-                  <option value={7}>7 días</option>
-                  <option value={30}>30 días</option>
-                  <option value={60}>60 días</option>
-                  <option value={90}>90 días</option>
-                  <option value={120}>120 días</option>
-                </select>
-
-                <button
-                  type="button"
-                  onClick={() => { statsDetailLoadedRef.current = false; setActiveTab('stats'); }}
-                  style={{padding:'6px 10px',borderRadius:8,cursor:'pointer'}}
-                  disabled={modelStatsDetailLoading}
-                >
-                  Recargar
-                </button>
-              </div>
-            </div>
-
-            {modelStatsDetailLoading && (
-              <div style={{opacity:0.85}}>Cargando estadísticas…</div>
-            )}
-
-            {modelStatsDetailError && (
-              <div style={{color:'#dc2626'}}>Error: {modelStatsDetailError}</div>
-            )}
-
-            {!modelStatsDetailLoading && !modelStatsDetailError && (
-              <>
-                {/* CURRENT */}
-                <div style={{border:'1px solid rgba(255,255,255,0.12)',borderRadius:12,padding:12}}>
-                  <div style={{fontWeight:700,marginBottom:8}}>Snapshot actual (ayer)</div>
-                  <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit, minmax(220px, 1fr))',gap:10}}>
-                    <div><span style={{opacity:0.75}}>Fecha:</span> <b>{modelStats?.current?.snapshotDate || '—'}</b></div>
-                    <div><span style={{opacity:0.75}}>Tier:</span> <b>{modelStats?.current?.tierName || '—'}</b></div>
-                    <div><span style={{opacity:0.75}}>Minutos (30d):</span> <b>{Number(modelStats?.current?.billedMinutes30d || 0)}</b></div>
-                    <div><span style={{opacity:0.75}}>Horas (30d):</span> <b>{modelStats?.current?.billedHours30d || '—'}</b></div>
-                    <div><span style={{opacity:0.75}}>1º min:</span> <b>€{modelStats?.current?.firstMinuteEURPerMin || '0.0000'}/min</b></div>
-                    <div><span style={{opacity:0.75}}>Sig.:</span> <b>€{modelStats?.current?.nextMinutesEURPerMin || '0.0000'}/min</b></div>
-                  </div>
-                </div>
-
-                {/* HISTORY */}
-                <div style={{border:'1px solid rgba(255,255,255,0.12)',borderRadius:12,padding:12}}>
-                  <div style={{fontWeight:700,marginBottom:8}}>Historial</div>
-                  <div style={{overflowX:'auto'}}>
-                    <table style={{width:'100%',borderCollapse:'collapse'}}>
-                      <thead>
-                        <tr>
-                          <th style={{textAlign:'left',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Fecha</th>
-                          <th style={{textAlign:'left',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Tier</th>
-                          <th style={{textAlign:'right',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Minutos (30d)</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(modelStats?.history || []).map((r, idx) => (
-                          <tr key={`${r?.snapshotDate || idx}`}>
-                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>{r?.snapshotDate || '—'}</td>
-                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>{r?.tierName || '—'}</td>
-                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>{Number(r?.billedMinutes30d || 0)}</td>
-                          </tr>
-                        ))}
-                        {(!modelStats?.history || modelStats.history.length === 0) && (
-                          <tr>
-                            <td colSpan={3} style={{padding:'10px',opacity:0.8}}>Sin historial.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-                {/* TIERS */}
-                <div style={{border:'1px solid rgba(255,255,255,0.12)',borderRadius:12,padding:12}}>
-                  <div style={{fontWeight:700,marginBottom:8}}>Tiers activos</div>
-                  <div style={{overflowX:'auto'}}>
-                    <table style={{width:'100%',borderCollapse:'collapse'}}>
-                      <thead>
-                        <tr>
-                          <th style={{textAlign:'left',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Nombre</th>
-                          <th style={{textAlign:'right',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Min. facturados</th>
-                          <th style={{textAlign:'right',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>1º min (€/min)</th>
-                          <th style={{textAlign:'right',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Sig. (€/min)</th>
-                          <th style={{textAlign:'center',padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.12)'}}>Activo</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {(modelStats?.tiers || []).map((t) => (
-                          <tr key={t?.tierId}>
-                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)'}}>{t?.name || '—'}</td>
-                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>{Number(t?.minBilledMinutes || 0)}</td>
-                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>€{t?.firstMinuteEURPerMin || '0.0000'}</td>
-                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'right'}}>€{t?.nextMinutesEURPerMin || '0.0000'}</td>
-                            <td style={{padding:'8px 10px',borderBottom:'1px solid rgba(255,255,255,0.06)',textAlign:'center'}}>{t?.active ? 'Sí' : 'No'}</td>
-                          </tr>
-                        ))}
-                        {(!modelStats?.tiers || modelStats.tiers.length === 0) && (
-                          <tr>
-                            <td colSpan={5} style={{padding:'10px',opacity:0.8}}>No hay tiers configurados.</td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </>
-            )}
-          </div>
+          <Estadistica
+            modelStatsDays={modelStatsDays}
+            setModelStatsDays={(v) => {
+              setModelStatsDays(v);
+              statsDetailLoadedRef.current = false;
+            }}
+            onReload={() => {
+              statsDetailLoadedRef.current = false;
+              setActiveTab('stats');
+            }}
+            loading={modelStatsDetailLoading}
+            error={modelStatsDetailError}
+            modelStats={modelStats}
+          />
         ) : activeTab === 'blog' ? (
           /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
           <div style={{flex:1,minWidth:0,minHeight:0}}>
@@ -2301,60 +2227,40 @@ const DashboardModel = () => {
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
 
-
-
       {!inCall && (
         <MobileBottomNav>
-          <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
-          <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
-          <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
+          <BottomNavButton active={activeTab === 'videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
+          <BottomNavButton active={activeTab === 'favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
+          <BottomNavButton active={activeTab === 'blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
         </MobileBottomNav>
       )}
 
-
       {/*INICIO CLICK DERECHO */}
-      {ctxUser&&(
+      {ctxUser && (
         <div
-          style={{
-            position:'fixed',
-            left:ctxPos.x,
-            top:ctxPos.y,
-            zIndex:9999,
-            background:'#fff',
-            border:'1px solid #dee2e6',
-            borderRadius:8,
-            boxShadow:'0 8px 24px rgba(0,0,0,.12)'
-          }}
-          onClick={e=>e.stopPropagation()}
-          onContextMenu={e=>{e.preventDefault();e.stopPropagation();}}
+          style={{position:'fixed',left:ctxPos.x,top:ctxPos.y,zIndex:9999,background:'#fff',border:'1px solid #dee2e6',borderRadius:8,boxShadow:'0 8px 24px rgba(0,0,0,.12)'}}
+          onClick={e => e.stopPropagation()}
+          onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }}
         >
           <button
-            style={{
-              display:'block',
-              padding:'10px 14px',
-              background:'transparent',
-              border:'none',
-              cursor:'pointer',
-              width:'100%',
-              textAlign:'left'
-            }}
-            onClick={async()=>{
-              try{
-                const inv=String(ctxUser?.invited||'').toLowerCase();
-                if(inv==='pending'||inv==='sent'){
+            style={{display:'block',padding:'10px 14px',background:'transparent',border:'none',cursor:'pointer',width:'100%',textAlign:'left'}}
+            onClick={async () => {
+              try {
+                const inv = String(ctxUser?.invited || '').toLowerCase();
+                if (inv === 'pending' || inv === 'sent') {
                   alert('No puedes eliminar esta relación mientras la invitación está en proceso.');
                   setCtxUser(null);
                   return;
                 }
-                const sure=window.confirm(`Eliminar a "${ctxUser.nickname||ctxUser.name||ctxUser.email||('Usuario '+ctxUser.id)}" de tus favoritos?`);
-                if(!sure)return;
-                const tk=localStorage.getItem('token');
-                if(!tk)return;
-                await apiFetch(`/favorites/clients/${ctxUser.id}`, { method:'DELETE' });
+                const sure = window.confirm(`Eliminar a "${ctxUser.nickname || ctxUser.name || ctxUser.email || ('Usuario ' + ctxUser.id)}" de tus favoritos?`);
+                if (!sure) return;
+                const tk = localStorage.getItem('token');
+                if (!tk) return;
+                await apiFetch(`/favorites/clients/${ctxUser.id}`, { method: 'DELETE' });
                 setCtxUser(null);
-                setFavReload(x=>x+1);
-              }catch(e){
-                alert(e.message||'No se pudo eliminar de favoritos');
+                setFavReload(x => x + 1);
+              } catch (e) {
+                alert(e.message || 'No se pudo eliminar de favoritos');
               }
             }}
           >
@@ -2365,6 +2271,7 @@ const DashboardModel = () => {
       {/*FIN CLICK DERECHO */}
     </StyledContainer>
   );
+
 };
 
 export default DashboardModel;

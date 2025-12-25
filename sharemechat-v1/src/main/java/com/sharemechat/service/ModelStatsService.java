@@ -7,8 +7,6 @@ import com.sharemechat.repository.ModelEarningTierRepository;
 import com.sharemechat.repository.ModelTierDailySnapshotRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Page;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -21,24 +19,21 @@ public class ModelStatsService {
 
     private final ModelTierDailySnapshotRepository snapshotRepository;
     private final ModelEarningTierRepository tierRepository;
-    private final ModelTierService modelTierService;
 
     public ModelStatsService(ModelTierDailySnapshotRepository snapshotRepository,
-                             ModelEarningTierRepository tierRepository,
-                             ModelTierService modelTierService) {
+                             ModelEarningTierRepository tierRepository) {
         this.snapshotRepository = snapshotRepository;
         this.tierRepository = tierRepository;
-        this.modelTierService = modelTierService;
     }
 
     @Transactional(readOnly = true)
     public FinanceDTOs.ModelTierSnapshotSummary getMySummary(Long modelId) {
-        LocalDate day = LocalDate.now().minusDays(1); // AYER (opción 2)
+        LocalDate day = LocalDate.now().minusDays(1); // AYER
         ModelTierDailySnapshot snap = snapshotRepository.findByModelIdAndSnapshotDate(modelId, day).orElse(null);
 
-        // Fallback sin “error de config”: si no existe, lo calculamos y guardamos
+        // Si no hay snapshot (job aún no lo ha creado), devolvemos resumen vacío pero válido
         if (snap == null) {
-            snap = modelTierService.computeAndUpsertSnapshot(modelId, day);
+            return emptySummary(day);
         }
 
         return toSummary(snap);
@@ -48,21 +43,17 @@ public class ModelStatsService {
     public FinanceDTOs.ModelTierStats getMyStats(Long modelId, int historyDays) {
         LocalDate day = LocalDate.now().minusDays(1);
 
-        // Asegurar snapshot de ayer
         ModelTierDailySnapshot snap = snapshotRepository.findByModelIdAndSnapshotDate(modelId, day).orElse(null);
-        if (snap == null) {
-            snap = modelTierService.computeAndUpsertSnapshot(modelId, day);
-        }
 
         FinanceDTOs.ModelTierStats out = new FinanceDTOs.ModelTierStats();
-        out.current = toSummary(snap);
+        out.current = (snap != null) ? toSummary(snap) : emptySummary(day);
 
-        // Historial: últimos N snapshots (paginado)
-        int limit = Math.max(1, Math.min(historyDays, 120)); // hard cap razonable
-        org.springframework.data.domain.Page<ModelTierDailySnapshot> page = snapshotRepository.findByModelIdOrderBySnapshotDateDesc(
-                modelId,
-                org.springframework.data.domain.PageRequest.of(0, limit)
-        );
+        int limit = Math.max(1, Math.min(historyDays, 120));
+        org.springframework.data.domain.Page<ModelTierDailySnapshot> page =
+                snapshotRepository.findByModelIdOrderBySnapshotDateDesc(
+                        modelId,
+                        org.springframework.data.domain.PageRequest.of(0, limit)
+                );
 
         List<FinanceDTOs.ModelTierHistoryRow> history = new ArrayList<>();
         for (ModelTierDailySnapshot s : page.getContent()) {
@@ -74,7 +65,6 @@ public class ModelStatsService {
         }
         out.history = history;
 
-        // Tabla tiers: activos ordenados
         List<ModelEarningTier> tiers = tierRepository.findByActiveTrueOrderByMinBilledMinutesAsc();
         List<FinanceDTOs.TierRow> tierRows = new ArrayList<>();
         for (ModelEarningTier t : tiers) {
@@ -92,6 +82,16 @@ public class ModelStatsService {
         return out;
     }
 
+    private FinanceDTOs.ModelTierSnapshotSummary emptySummary(LocalDate day) {
+        FinanceDTOs.ModelTierSnapshotSummary dto = new FinanceDTOs.ModelTierSnapshotSummary();
+        dto.snapshotDate = day != null ? day.toString() : null;
+        dto.billedMinutes30d = 0;
+        dto.billedHours30d = "0.00";
+        dto.tierName = "—";
+        dto.firstMinuteEURPerMin = "0.0000";
+        dto.nextMinutesEURPerMin = "0.0000";
+        return dto;
+    }
 
     private FinanceDTOs.ModelTierSnapshotSummary toSummary(ModelTierDailySnapshot s) {
         FinanceDTOs.ModelTierSnapshotSummary dto = new FinanceDTOs.ModelTierSnapshotSummary();

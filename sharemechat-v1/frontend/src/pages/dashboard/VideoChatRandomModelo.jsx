@@ -101,6 +101,14 @@ export default function VideoChatRandomModelo(props) {
           {!cameraActive ? (
             <>
               <StyledStatsPrecallCard>
+                <div style={{display:'flex',flexDirection:'column',gap:12}}>
+                  <div style={{fontWeight:900,fontSize:16,color:'#fff',letterSpacing:'.2px'}}>
+                    Resumen de rendimiento (último snapshot)
+                  </div>
+                  <div style={{fontSize:16,color:'rgba(255,255,255,.9)'}}>
+                    Estos datos determinan tu tier y las tarifas aplicadas según tus minutos facturados en los últimos 30 días.
+                  </div>
+                </div>
                 <StyledStatsCard>
                   <StyledStatsCardLabel>Tier (snapshot)</StyledStatsCardLabel>
                   <StyledStatsCardValue>{modelStatsSummary?.tierName || '—'}</StyledStatsCardValue>
@@ -124,8 +132,8 @@ export default function VideoChatRandomModelo(props) {
                     <StyledStatsCardLabel>Tarifas tier</StyledStatsCardLabel>
 
                     <StyledStatsInline>
-                      <div>1º min: <b>€{modelStatsSummary?.firstMinuteEURPerMin || '0.0000'}/min</b></div>
-                      <div>Sig.: <b>€{modelStatsSummary?.nextMinutesEURPerMin || '0.0000'}/min</b></div>
+                      <div>Primer minuto: <b>€{modelStatsSummary?.firstMinuteEURPerMin || '0.0000'}/min</b></div>
+                      <div>Siguiente minuto: <b>€{modelStatsSummary?.nextMinutesEURPerMin || '0.0000'}/min</b></div>
                     </StyledStatsInline>
                   </StyledStatsCard>
                 </StyledStatsPrecallGrid>
