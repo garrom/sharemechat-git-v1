@@ -75,7 +75,7 @@ export default function Estadistica({
     const next = formatEurPerMin(t.nextMinutesEURPerMin);
     const minReq = Number(t.minBilledMinutes || 0);
 
-    return `Tier "${t.name || ''}". Requisito: ${minReq} min facturados (ventana 30d). ` +
+    return `Tier "${t.name || ''}". Requisito: ${minReq} min facturados (ventana 30 días). ` +
       `Tarifa: a partir de haber completado el primer minuto se cobra €${first}/min. ` +
       `Tarifa: desde el minuto 1 en adelante se cobra €${next}/min.`;
   };

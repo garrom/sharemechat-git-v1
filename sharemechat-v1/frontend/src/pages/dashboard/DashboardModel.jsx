@@ -101,8 +101,12 @@ const DashboardModel = () => {
   const [modelStatsDays, setModelStatsDays] = useState(30);
   const [modelStatsDetailLoading, setModelStatsDetailLoading] = useState(false);
   const [modelStatsDetailError, setModelStatsDetailError] = useState('');
+  // ====== SALDO CLIENTE RANDOM ======
   const [clientSaldo, setClientSaldo] = useState(null);
   const [clientSaldoLoading, setClientSaldoLoading] = useState(false);
+  // ====== SALDO CLIENTE (CALL 1-a-1) ======
+  const [callClientSaldo, setCallClientSaldo] = useState(null);
+  const [callClientSaldoLoading, setCallClientSaldoLoading] = useState(false);
 
   // ===  UseRef ===
   const callLocalVideoRef = useRef(null);
@@ -661,7 +665,8 @@ const DashboardModel = () => {
           if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
             msgSocketRef.current.send(JSON.stringify({ type: 'ping' }));
             if (callStatus === 'in-call' || callStatus === 'connecting') {
-              msgSocketRef.current.send(JSON.stringify({ type: 'call:ping' }));
+              setCallClientSaldoLoading(true);
+              msgSocketRef.current.send(JSON.stringify({ type: 'call:ping', with: Number(callPeerIdRef.current) }));
               console.log('[CALL][ping] sent (model)');
             }
           }
@@ -811,7 +816,8 @@ const DashboardModel = () => {
           callPingRef.current = setInterval(() => {
             try {
               if (msgSocketRef.current?.readyState === WebSocket.OPEN) {
-                msgSocketRef.current.send(JSON.stringify({ type: 'call:ping' }));
+                setCallClientSaldoLoading(true);
+                msgSocketRef.current.send(JSON.stringify({ type: 'call:ping', with: Number(callPeerIdRef.current) }));
                 console.log('[CALL][ping] sent (in-call loop)');
               }
             } catch {}
@@ -929,6 +935,17 @@ const DashboardModel = () => {
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
           return;
         }
+
+        // ==== CALL SALDO (1-a-1) ====
+        if (data.type === 'call:saldo') {
+          const v = data?.clientBalance;
+          setCallClientSaldo(
+            v !== null && v !== undefined && Number.isFinite(Number(v)) ? Number(v) : null
+          );
+          setCallClientSaldoLoading(false);
+          return;
+        }
+
       } catch (e) {
         // silenciar parse errors
       }
@@ -1986,6 +2003,9 @@ const DashboardModel = () => {
     callRoleRef.current = null;
     setCallError('');
 
+    setCallClientSaldo(null);
+    setCallClientSaldoLoading(false);
+
     // Opcional: ocultar datos del último peer en la UI de Calling
     setCallPeerId(null);
     callPeerIdRef.current = null;
@@ -2263,6 +2283,9 @@ const DashboardModel = () => {
                   setSelectedFav={setSelectedFav}
                   handleCallAccept={handleCallAccept}
                   handleCallReject={handleCallReject}
+                  callClientSaldo={callClientSaldo}
+                  callClientSaldoLoading={callClientSaldoLoading}
+
                 />
               )}
             </StyledCenter>

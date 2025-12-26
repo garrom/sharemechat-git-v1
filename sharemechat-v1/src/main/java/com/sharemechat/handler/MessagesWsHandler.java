@@ -2,7 +2,9 @@ package com.sharemechat.handler;
 
 import com.sharemechat.config.BillingProperties;
 import com.sharemechat.dto.MessageDTO;
+import com.sharemechat.entity.Balance;
 import com.sharemechat.exception.UserBlockedException;
+import com.sharemechat.repository.BalanceRepository;
 import com.sharemechat.repository.ClientRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
@@ -13,6 +15,7 @@ import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.apache.commons.lang3.tuple.Pair;
 
+import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -34,7 +37,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     private final BillingProperties billing;
     private final StatusService statusService;
     private final UserBlockService userBlockService;
-
+    private final BalanceRepository balanceRepository;
     private static final Logger log = LoggerFactory.getLogger(MessagesWsHandler.class);
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionUserIds = new ConcurrentHashMap<>();
@@ -51,7 +54,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                              ClientRepository clientRepository,
                              BillingProperties billing,
                              StatusService statusService,
-                             UserBlockService userBlockService) {
+                             UserBlockService userBlockService,
+                             BalanceRepository balanceRepository) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.favoriteService = favoriteService;
@@ -62,6 +66,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         this.billing = billing;
         this.statusService = statusService;
         this.userBlockService = userBlockService;
+        this.balanceRepository = balanceRepository;
     }
 
     @Override
@@ -330,8 +335,24 @@ public class MessagesWsHandler extends TextWebSocketHandler {
 
             broadcastToUser(me, accepted.toString());
             broadcastToUser(with, accepted.toString());
+
+            // === NUEVO: saldo del CLIENT -> MODEL (misma fuente que Random: BalanceRepository / tabla balances)
+            try {
+                BigDecimal bal = getCurrentBalanceOrZero(clientId);
+
+                JSONObject out = new JSONObject()
+                        .put("type", "call:saldo")
+                        .put("clientBalance", bal.toPlainString());
+
+                // solo lo necesita la MODEL emparejada
+                broadcastToUser(modelId, out.toString());
+            } catch (Exception ex) {
+                log.warn("call:accept saldo error clientId={} modelId={} err={}", clientId, modelId, ex.getMessage());
+            }
+
             return;
         }
+
 
         if ("call:connected".equals(type)) {
             Long with = json.has("with") ? json.optLong("with", 0L) : null;
@@ -439,9 +460,26 @@ public class MessagesWsHandler extends TextWebSocketHandler {
 
             Pair<Long, Long> cm = resolveClientModel(me, peer);
             if (cm == null) return;
+
             Long clientId = cm.getLeft();
             Long modelId  = cm.getRight();
 
+            // 1) Enviar saldo del CLIENT a la MODEL (misma fuente que Random: balances)
+            try {
+                BigDecimal bal = getCurrentBalanceOrZero(clientId);
+
+                JSONObject out = new JSONObject()
+                        .put("type", "call:saldo")
+                        // como en Random, lo mandamos como string para no pelear con JSON/BigDecimal
+                        .put("clientBalance", bal.toPlainString());
+
+                // Solo lo necesita la MODEL (la que está en llamada con ese clientId)
+                broadcastToUser(modelId, out.toString());
+            } catch (Exception ex) {
+                log.warn("call:ping saldo error clientId={} modelId={} err={}", clientId, modelId, ex.getMessage());
+            }
+
+            // 2) Cutoff (si cae por debajo del umbral, cerramos)
             try {
                 boolean closed = streamService.endIfBelowThreshold(clientId, modelId);
                 if (closed) {
@@ -454,6 +492,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             }
             return;
         }
+
 
         safeSend(session, new JSONObject().put("type","call:error").put("message","Tipo no soportado: " + type).toString());
     }
@@ -717,6 +756,18 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         clearActiveCall(a, b);
         clearRinging(a);
         clearRinging(b);
+    }
+
+    private BigDecimal getCurrentBalanceOrZero(Long userId) {
+        if (userId == null) return BigDecimal.ZERO;
+        try {
+            return balanceRepository
+                    .findTopByUserIdOrderByTimestampDesc(userId)
+                    .map(Balance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+        } catch (Exception ex) {
+            return BigDecimal.ZERO;
+        }
     }
 
 

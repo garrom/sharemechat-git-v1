@@ -1,7 +1,7 @@
 // src/pages/dashboard/VideoChatFavoritosModelo.jsx
-import React,{useEffect,useRef} from 'react';
+import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPhoneSlash, faVideo } from '@fortawesome/free-solid-svg-icons';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import { StyledCenter, StyledFavoritesShell, StyledFavoritesColumns, StyledCenterPanel, StyledCenterBody,
     StyledChatScroller, StyledChatDock, StyledChatInput, StyledVideoArea, StyledRemoteVideo, StyledVideoTitle,
@@ -10,7 +10,7 @@ import { StyledCenter, StyledFavoritesShell, StyledFavoritesColumns, StyledCente
     StyledMobile3ColBar, StyledTopCenter, StyledConnectedText, StyledFloatingHangup, StyledCallCardDesktop,
     StyledCallFooterDesktop
 } from '../../styles/pages-styles/VideochatStyles';
-import { ButtonLlamar, ButtonColgar, ButtonAceptar, ButtonRechazar, ButtonActivarCam, ButtonActivarCamMobile,
+import { ButtonLlamar, ButtonAceptar, ButtonRechazar, ButtonActivarCam, ButtonActivarCamMobile,
     ButtonVolver, BtnRoundVideo, BtnHangup
 } from '../../styles/ButtonStyles';
 
@@ -21,7 +21,7 @@ export default function VideoChatFavoritosModelo(props) {
       setContactMode, enterCallMode, sendCenterMessage, setCenterInput, acceptInvitation, rejectInvitation,
       handleCallActivateCamera, handleCallInvite, handleCallEnd, toggleFullscreen, handleCallAccept,
       handleCallReject, user, gifts, giftRenderReady, handleOpenChatFromFavorites, favReload, selectedContactId,
-      setCtxUser, setCtxPos, setTargetPeerId, setTargetPeerName, setSelectedFav
+      setTargetPeerId, setTargetPeerName, setSelectedFav,callClientSaldo,callClientSaldoLoading,
       } = props;
 
   return (
@@ -116,16 +116,36 @@ export default function VideoChatFavoritosModelo(props) {
                             <StyledVideoArea style={{ height: 'calc(100vh - 220px)', maxHeight: 'calc(100vh - 220px)', position: 'relative' }}>
                               <StyledRemoteVideo ref={callRemoteWrapRef} style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
                                 <StyledVideoTitle>
-                                  <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
-                                  {callPeerName || 'Remoto'}
-                                  <button
-                                    type="button"
-                                    onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
-                                    title="Pantalla completa"
-                                    style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 6, border: '1px solid rgba(255,255,255,.6)', background: 'rgba(0,0,0,.25)', color: '#fff', cursor: 'pointer' }}
-                                  >
-                                    Full Screen
-                                  </button>
+                                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                                    <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
+
+                                    <div style={{display:'flex',flexDirection:'column',lineHeight:1.15,minWidth:0}}>
+                                      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',minWidth:0}}>
+                                        <span style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                                          {callPeerName || 'Remoto'}
+                                        </span>
+
+                                        <button
+                                          type="button"
+                                          onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
+                                          title="Pantalla completa"
+                                          style={{padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
+                                        >
+                                          Full Screen
+                                        </button>
+                                      </div>
+
+                                      <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
+                                        {callClientSaldoLoading ? (
+                                          <span>Saldo: …</span>
+                                        ) : Number.isFinite(Number(callClientSaldo)) ? (
+                                          <span>Saldo: €{Number(callClientSaldo).toFixed(2)}</span>
+                                        ) : (
+                                          <span>Saldo: —</span>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
                                 </StyledVideoTitle>
 
                                 <video
@@ -298,10 +318,6 @@ export default function VideoChatFavoritosModelo(props) {
                   onSelect={handleOpenChatFromFavorites}
                   reloadTrigger={favReload}
                   selectedId={selectedContactId}
-                  onContextMenu={(user, pos) => {
-                    setCtxUser(user);
-                    setCtxPos(pos);
-                  }}
                 />
               </div>
             </div>
@@ -394,10 +410,27 @@ export default function VideoChatFavoritosModelo(props) {
                   <StyledVideoArea style={{ display: callStatus === 'in-call' ? 'block' : 'none', position: 'relative' }}>
                     <StyledRemoteVideo ref={callRemoteWrapRef}>
                       <StyledVideoTitle>
-                        <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
-                        {callPeerName || 'Remoto'}
+                        <div style={{display:'flex',alignItems:'center',gap:10}}>
+                          <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
 
+                          <div style={{display:'flex',flexDirection:'column',lineHeight:1.15,minWidth:0}}>
+                            <div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                              {callPeerName || 'Remoto'}
+                            </div>
+
+                            <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
+                              {callClientSaldoLoading ? (
+                                <span>Saldo: …</span>
+                              ) : Number.isFinite(Number(callClientSaldo)) ? (
+                                <span>Saldo: €{Number(callClientSaldo).toFixed(2)}</span>
+                              ) : (
+                                <span>Saldo: —</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
                       </StyledVideoTitle>
+
                       <video ref={callRemoteVideoRef} autoPlay playsInline style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     </StyledRemoteVideo>
 
