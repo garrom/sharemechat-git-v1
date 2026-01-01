@@ -101,33 +101,19 @@ public class StreamService {
             throw new IllegalArgumentException("El usuario " + modelId + " no tiene rol MODEL");
         }
 
-        // Validar saldo 1 - Leer el registro mutable del cliente
-        Client clientEntity = clientRepository.findById(clientId)
-                .orElseThrow(() -> new IllegalStateException("Cliente (tabla clients) no encontrado para userId=" + clientId));
-
-        BigDecimal currentSaldo = clientEntity.getSaldoActual() != null
-                ? clientEntity.getSaldoActual()
-                : BigDecimal.ZERO;
-
-        // Validar saldo 2 - Verificar consistencia con el último balance inmutable
-        BigDecimal lastClientBalance = balanceRepository
+        // Saldo desde ledger (fuente de verdad)
+        BigDecimal ledgerSaldo = balanceRepository
                 .findTopByUserIdOrderByTimestampDesc(clientId)
                 .map(Balance::getBalance)
                 .orElse(BigDecimal.ZERO);
 
-        if (lastClientBalance.compareTo(currentSaldo) != 0) {
-            throw new IllegalStateException(
-                    "Inconsistencia: último balance del cliente (" + lastClientBalance + ") != clients.saldo_actual (" + currentSaldo + ")"
-            );
-        }
-
-        // Validar saldo 3 - Bloquear inicio si saldo < tarifa por minuto (evita saldo=0)
-        if (currentSaldo.compareTo(billing.getRatePerMinute()) < 0) {
-            // *** Mantener esta cadena "Saldo insuficiente" para que MatchingHandler pueda distinguir el motivo. ***
+        // Bloquear inicio si ledgerSaldo < tarifa por minuto
+        if (ledgerSaldo.compareTo(billing.getRatePerMinute()) < 0) {
             log.warn("startSession: saldo insuficiente para iniciar. clientId={}, saldo={}, requeridoPorMin={}",
-                    clientId, currentSaldo, billing.getRatePerMinute());
+                    clientId, ledgerSaldo, billing.getRatePerMinute());
             throw new IllegalStateException("Saldo insuficiente para iniciar el streaming.");
         }
+
 
         // Crear StreamRecord
         StreamRecord sr = new StreamRecord();
@@ -245,21 +231,12 @@ public class StreamService {
             Client clientEntity = clientRepository.findById(clientId)
                     .orElseThrow(() -> new IllegalStateException("Cliente (tabla clients) no encontrado para userId=" + clientId));
 
-            BigDecimal currentSaldo = clientEntity.getSaldoActual() != null
-                    ? clientEntity.getSaldoActual()
-                    : BigDecimal.ZERO;
-
+            // 6) Saldo desde ledger (fuente de verdad)
             BigDecimal lastClientBalance = balanceRepository
                     .findTopByUserIdOrderByTimestampDesc(clientId)
                     .map(Balance::getBalance)
                     .orElse(BigDecimal.ZERO);
 
-            // 6) Verificación de consistencia cliente
-            if (lastClientBalance.compareTo(currentSaldo) != 0) {
-                throw new IllegalStateException(
-                        "Inconsistencia: último balance del cliente (" + lastClientBalance + ") != clients.saldo_actual (" + currentSaldo + ")"
-                );
-            }
 
             // 7) Coste por segundo (1 €/min => 1/60 €/s)
             BigDecimal rawCost = RATE_PER_MINUTE
@@ -268,8 +245,8 @@ public class StreamService {
 
             BigDecimal cost = rawCost.setScale(2, java.math.RoundingMode.HALF_UP);
 
-            if (cost.compareTo(BigDecimal.ZERO) > 0 && currentSaldo.compareTo(cost) < 0) {
-                long secondsCap = currentSaldo
+            if (cost.compareTo(BigDecimal.ZERO) > 0 && lastClientBalance.compareTo(cost) < 0) {
+                long secondsCap = lastClientBalance
                         .multiply(BigDecimal.valueOf(60))
                         .divide(RATE_PER_MINUTE, 0, java.math.RoundingMode.FLOOR)
                         .longValue();
@@ -357,6 +334,7 @@ public class StreamService {
             balClient.setDescription("Cargo por streaming de " + seconds + " segundos");
             balanceRepository.save(balClient);
 
+            // cache/denormalizado: se actualiza, pero NO es fuente de verdad
             clientEntity.setSaldoActual(newClientBalance);
             clientEntity.setStreamingHours(
                     (clientEntity.getStreamingHours() != null ? clientEntity.getStreamingHours() : BigDecimal.ZERO)
@@ -489,13 +467,14 @@ public class StreamService {
                 .multiply(BigDecimal.valueOf(seconds))
                 .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
 
-        // 3) leer saldo_actual (mutable) del cliente (por si recargó durante el stream)
-        Client clientEntity = clientRepository.findById(clientId).orElse(null);
-        BigDecimal saldoActual = (clientEntity != null && clientEntity.getSaldoActual() != null)
-                ? clientEntity.getSaldoActual()
-                : BigDecimal.ZERO;
+        // 3) saldo desde ledger (fuente de verdad)
+        BigDecimal ledgerSaldo = balanceRepository
+                .findTopByUserIdOrderByTimestampDesc(clientId)
+                .map(Balance::getBalance)
+                .orElse(BigDecimal.ZERO);
 
-        BigDecimal remaining = saldoActual.subtract(costSoFar);
+        BigDecimal remaining = ledgerSaldo.subtract(costSoFar);
+
 
         // 4) si remaining < cutoff => cerrar
         if (remaining.compareTo(billing.getCutoffThresholdEur()) < 0) {

@@ -301,17 +301,22 @@ public class TransactionService {
                 .orElseThrow(() -> new IllegalArgumentException("Gift inexistente: " + giftId));
         BigDecimal cost = gift.getCost().setScale(2, RoundingMode.HALF_UP);
 
-        // Consistencia y saldo cliente
         Client client = clientRepository.findByUser(clientUser)
                 .orElseThrow(() -> new IllegalStateException("Cliente no encontrado para userId=" + clientId));
+
         BigDecimal lastClientBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(clientId)
                 .map(Balance::getBalance).orElse(BigDecimal.ZERO);
-        if (lastClientBalance.compareTo(client.getSaldoActual()) != 0) {
+
+        // (Opcional) auditoría: detectando desvíos de cache
+        if (client.getSaldoActual() != null && lastClientBalance.compareTo(client.getSaldoActual()) != 0) {
             throw new IllegalStateException("Inconsistencia CLIENT: último balance ("+lastClientBalance+") != clients.saldo_actual ("+client.getSaldoActual()+")");
         }
-        if (client.getSaldoActual().compareTo(cost) < 0) {
+
+        // Fuente de verdad para validar fondos: ledger
+        if (lastClientBalance.compareTo(cost) < 0) {
             throw new IllegalArgumentException("Saldo insuficiente para enviar el regalo");
         }
+
 
         // Saldo modelo
         Model model = modelRepository.findByUser(modelUser)
@@ -413,18 +418,21 @@ public class TransactionService {
             Optional<Client> clientOpt = clientRepository.findByUser(user);
             if (clientOpt.isPresent()) {
                 Client client = clientOpt.get();
-                java.math.BigDecimal saldo = client.getSaldoActual() != null ? client.getSaldoActual() : java.math.BigDecimal.ZERO;
+
+                java.math.BigDecimal lastBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(userId)
+                        .map(Balance::getBalance).orElse(java.math.BigDecimal.ZERO);
+
+                java.math.BigDecimal saldoCache = client.getSaldoActual() != null ? client.getSaldoActual() : java.math.BigDecimal.ZERO;
+
+                if (saldoCache.compareTo(java.math.BigDecimal.ZERO) > 0 && lastBalance.compareTo(saldoCache) != 0) {
+                    throw new IllegalStateException("Inconsistencia CLIENT: último balance (" + lastBalance
+                            + ") != clients.saldo_actual (" + saldoCache + ")");
+                }
+
+                java.math.BigDecimal saldo = lastBalance;
 
                 if (saldo.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                    // Consistencia con último balance
-                    java.math.BigDecimal lastBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(userId)
-                            .map(Balance::getBalance).orElse(java.math.BigDecimal.ZERO);
-                    if (lastBalance.compareTo(saldo) != 0) {
-                        throw new IllegalStateException("Inconsistencia CLIENT: último balance (" + lastBalance
-                                + ") != clients.saldo_actual (" + saldo + ")");
-                    }
 
-                    // 1) Transaction (usuario) NEGATIVA
                     Transaction tx = new Transaction();
                     tx.setUser(user);
                     tx.setAmount(saldo.negate());
@@ -432,7 +440,6 @@ public class TransactionService {
                     tx.setDescription(description);
                     Transaction savedTx = transactionRepository.save(tx);
 
-                    // 2) Balance (usuario)
                     Balance bal = new Balance();
                     bal.setUserId(userId);
                     bal.setTransactionId(savedTx.getId());
@@ -442,7 +449,6 @@ public class TransactionService {
                     bal.setDescription(description);
                     balanceRepository.save(bal);
 
-                    // 3) Plataforma (contrapartida +)
                     PlatformTransaction ptx = new PlatformTransaction();
                     ptx.setAmount(saldo);
                     ptx.setOperationType("UNSUBSCRIBE_FORFEIT");
@@ -459,7 +465,6 @@ public class TransactionService {
                     pbal.setDescription("Forfeit usuario " + userId);
                     platformBalanceRepository.save(pbal);
 
-                    // 4) Agregado rápido -> 0
                     client.setSaldoActual(java.math.BigDecimal.ZERO);
                     clientRepository.save(client);
 
@@ -468,23 +473,27 @@ public class TransactionService {
             }
         }
 
+
         // === MODELO ===
         if (Constants.Roles.MODEL.equals(role)) {
             Optional<Model> modelOpt = modelRepository.findByUser(user);
             if (modelOpt.isPresent()) {
                 Model model = modelOpt.get();
-                java.math.BigDecimal saldo = model.getSaldoActual() != null ? model.getSaldoActual() : java.math.BigDecimal.ZERO;
+
+                java.math.BigDecimal lastBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(userId)
+                        .map(Balance::getBalance).orElse(java.math.BigDecimal.ZERO);
+
+                java.math.BigDecimal saldoCache = model.getSaldoActual() != null ? model.getSaldoActual() : java.math.BigDecimal.ZERO;
+
+                if (saldoCache.compareTo(java.math.BigDecimal.ZERO) > 0 && lastBalance.compareTo(saldoCache) != 0) {
+                    throw new IllegalStateException("Inconsistencia MODEL: último balance (" + lastBalance
+                            + ") != models.saldo_actual (" + saldoCache + ")");
+                }
+
+                java.math.BigDecimal saldo = lastBalance;
 
                 if (saldo.compareTo(java.math.BigDecimal.ZERO) > 0) {
-                    // Consistencia con último balance
-                    java.math.BigDecimal lastBalance = balanceRepository.findTopByUserIdOrderByTimestampDesc(userId)
-                            .map(Balance::getBalance).orElse(java.math.BigDecimal.ZERO);
-                    if (lastBalance.compareTo(saldo) != 0) {
-                        throw new IllegalStateException("Inconsistencia MODEL: último balance (" + lastBalance
-                                + ") != models.saldo_actual (" + saldo + ")");
-                    }
 
-                    // 1) Transaction (usuario) NEGATIVA
                     Transaction tx = new Transaction();
                     tx.setUser(user);
                     tx.setAmount(saldo.negate());
@@ -492,7 +501,6 @@ public class TransactionService {
                     tx.setDescription(description);
                     Transaction savedTx = transactionRepository.save(tx);
 
-                    // 2) Balance (usuario)
                     Balance bal = new Balance();
                     bal.setUserId(userId);
                     bal.setTransactionId(savedTx.getId());
@@ -502,7 +510,6 @@ public class TransactionService {
                     bal.setDescription(description);
                     balanceRepository.save(bal);
 
-                    // 3) Plataforma (contrapartida +)
                     PlatformTransaction ptx = new PlatformTransaction();
                     ptx.setAmount(saldo);
                     ptx.setOperationType("UNSUBSCRIBE_FORFEIT");
@@ -519,7 +526,6 @@ public class TransactionService {
                     pbal.setDescription("Forfeit modelo " + userId);
                     platformBalanceRepository.save(pbal);
 
-                    // 4) Agregado rápido -> 0
                     model.setSaldoActual(java.math.BigDecimal.ZERO);
                     modelRepository.save(model);
 
@@ -527,6 +533,7 @@ public class TransactionService {
                 }
             }
         }
+
 
         return totalForfeited;
     }

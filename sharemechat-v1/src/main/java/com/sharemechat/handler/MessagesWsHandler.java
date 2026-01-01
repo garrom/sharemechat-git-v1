@@ -726,14 +726,18 @@ public class MessagesWsHandler extends TextWebSocketHandler {
 
     private boolean hasSufficientBalance(Long clientId) {
         try {
-            var ce = clientRepository.findById(clientId).orElse(null);
-            java.math.BigDecimal saldo = (ce != null && ce.getSaldoActual() != null) ? ce.getSaldoActual() : java.math.BigDecimal.ZERO;
-            return saldo.compareTo(billing.getRatePerMinute()) >= 0;
+            BigDecimal bal = balanceRepository
+                    .findTopByUserIdOrderByTimestampDesc(clientId)
+                    .map(Balance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+
+            return bal.compareTo(billing.getRatePerMinute()) >= 0;
         } catch (Exception ex) {
             log.warn("hasSufficientBalance error clientId={} err={}", clientId, ex.getMessage());
             return false;
         }
     }
+
 
     private void endCallAndSession(Long a, Long b, String reason) {
         Pair<Long, Long> cm = resolveClientModel(a, b);
