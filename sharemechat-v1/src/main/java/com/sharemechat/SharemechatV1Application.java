@@ -8,7 +8,9 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableScheduling
 public class SharemechatV1Application {
 
-	public static void main(String[] args) {
-		SpringApplication.run(SharemechatV1Application.class, args);
-	}
+	   public static void main(String[] args) {
+
+					   SpringApplication.run(SharemechatV1Application.class, args);
+	   }
+
 }

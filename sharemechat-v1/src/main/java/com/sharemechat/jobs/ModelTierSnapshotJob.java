@@ -24,7 +24,7 @@ public class ModelTierSnapshotJob {
     }
 
     // Diario a las 03:10 (server time)
-    @Scheduled(cron = "0 10 3 * * *", zone = "Europe/Madrid")
+    @Scheduled(cron = "0 10 3 * * *")
     public void runDaily() {
 
         LocalDate snapshotDate = LocalDate.now().minusDays(1); // AYER
