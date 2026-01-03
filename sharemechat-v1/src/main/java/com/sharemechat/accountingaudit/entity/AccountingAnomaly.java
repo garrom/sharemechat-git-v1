@@ -11,25 +11,23 @@ public class AccountingAnomaly {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-
     private String anomalyType;
     private String severity;
-
     private Long userId;
     private Long streamRecordId;
     private Long transactionId;
-
     private Instant detectedAt;
-
     private BigDecimal expectedValue;
     private BigDecimal actualValue;
     private BigDecimal deltaValue;
+
+    @Column(name = "platform_transaction_id")
+    private Long platformTransactionId;
 
     @Column(columnDefinition = "TEXT", nullable = false)
     private String description;
 
     private String status;
-
     private Instant resolvedAt;
 
     @Column(columnDefinition = "TEXT")
@@ -169,5 +167,13 @@ public class AccountingAnomaly {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Long getPlatformTransactionId() {
+        return platformTransactionId;
+    }
+
+    public void setPlatformTransactionId(Long platformTransactionId) {
+        this.platformTransactionId = platformTransactionId;
     }
 }

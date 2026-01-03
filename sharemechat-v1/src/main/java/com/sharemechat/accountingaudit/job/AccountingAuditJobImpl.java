@@ -180,6 +180,41 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
                     accountingAnomalyRepository.saveAll(mismatchAnomalies);
                     run.setAnomaliesCreated(run.getAnomaliesCreated() + mismatchAnomalies.size());
                 }
+
+                // ==========================================
+                // CHECK #3: Plataforma - platform_transactions sin platform_balance
+                // ==========================================
+                final List<Long> orphanPlatformTxIds =
+                        balanceLedgerAuditRepository.fetchPlatformTransactionIdsWithoutPlatformBalance();
+
+                run.setChecksExecuted(run.getChecksExecuted() + 1);
+                run.setAnomaliesFound(run.getAnomaliesFound() + orphanPlatformTxIds.size());
+
+                if (!run.isDryRun() && !orphanPlatformTxIds.isEmpty()) {
+
+                    List<AccountingAnomaly> anomalies = new ArrayList<>(orphanPlatformTxIds.size());
+
+                    for (Long ptId : orphanPlatformTxIds) {
+                        AccountingAnomaly a = new AccountingAnomaly();
+
+                        a.setAnomalyType("PLATFORM_TX_WITHOUT_PLATFORM_BALANCE");
+                        a.setSeverity("ERROR");
+                        a.setPlatformTransactionId(ptId);
+
+                        a.setDescription("Platform transaction sin platform_balance asociado. platform_transaction_id=" + ptId);
+
+                        a.setStatus("OPEN");
+
+                        a.setDetectedAt(now);
+                        a.setCreatedAt(now);
+                        a.setAuditRunId(String.valueOf(run.getId()));
+
+                        anomalies.add(a);
+                    }
+
+                    accountingAnomalyRepository.saveAll(anomalies);
+                    run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
+                }
             }
 
             run.setStatus("SUCCESS");
