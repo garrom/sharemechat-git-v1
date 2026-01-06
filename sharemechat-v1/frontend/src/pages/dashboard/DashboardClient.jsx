@@ -478,27 +478,51 @@ const DashboardClient = () => {
 
     const url = buildWsUrl(WS_PATHS.messages, { token: tk });
 
-    if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
+    const cur = msgSocketRef.current;
+
+    // 1) Si ya está OPEN, no hacemos nada
+    if (cur && cur.readyState === WebSocket.OPEN) {
       setWsReady(true);
       return;
     }
 
-    closeMsgSocket();
+    // 2) Si está CONNECTING, NO reabrimos (evita duplicados)
+    if (cur && cur.readyState === WebSocket.CONNECTING) {
+      return;
+    }
 
+    // 3) Si había uno CLOSING/CLOSED o algo inconsistente, cerramos de forma "silenciosa"
+    //    (evita que el onclose de un socket anterior dispare reconnect y genere duplicados)
+    if (cur) {
+      try {
+        cur.__manualClose = true; // marca cierre intencional
+        cur.close();
+      } catch {}
+    }
+    msgSocketRef.current = null;
+    setWsReady(false);
+    clearMsgTimers();
+
+    // 4) Abrimos uno nuevo
     const s = new WebSocket(url);
     msgSocketRef.current = s;
 
     s.onopen = () => {
+      // Si este evento llega de un socket que ya no es el actual, ignoramos
+      if (msgSocketRef.current !== s) return;
+
       console.log('[WS][messages] OPEN');
       setWsReady(true);
+
       if (msgPingRef.current) clearInterval(msgPingRef.current);
       msgPingRef.current = setInterval(() => {
         try {
-          if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
-            msgSocketRef.current.send(JSON.stringify({ type: 'ping' }));
-            // si hay llamada activa, además envio call:ping
+          // Importante: solo usar el socket si sigue siendo "s" y sigue OPEN
+          if (msgSocketRef.current === s && s.readyState === WebSocket.OPEN) {
+            s.send(JSON.stringify({ type: 'ping' }));
+
             if (callStatus === 'in-call' || callStatus === 'connecting') {
-              msgSocketRef.current.send(JSON.stringify({ type: 'call:ping' }));
+              s.send(JSON.stringify({ type: 'call:ping' }));
               console.log('[CALL][ping] sent');
             }
           }
@@ -507,30 +531,51 @@ const DashboardClient = () => {
     };
 
     s.onclose = () => {
+      // Si el cierre es de un socket viejo, no tocamos estado ni reconectamos
+      if (msgSocketRef.current !== s) return;
+
       console.log('[WS][messages] CLOSE');
       setWsReady(false);
       clearMsgTimers();
+      msgSocketRef.current = null;
+
+      // Si fue cierre intencional (cleanup/stop), no reconectamos
+      if (s.__manualClose) return;
+
+      // Reconexión segura: solo si no hay otro OPEN/CONNECTING en ese momento
       msgReconnectRef.current = setTimeout(() => {
-          openMsgSocket();
+        const now = msgSocketRef.current;
+        if (now && (now.readyState === WebSocket.OPEN || now.readyState === WebSocket.CONNECTING)) return;
+        openMsgSocket();
       }, 1500);
     };
 
     s.onerror = (e) => {
+      // Si el error es de un socket viejo, ignoramos
+      if (msgSocketRef.current !== s) return;
+
       console.log('[WS][messages] ERROR', e);
       setWsReady(false);
-      try { s.close(); } catch {}
+
+      try {
+        // forzamos cierre; onclose decidirá si reconectar (y evitará duplicados)
+        s.close();
+      } catch {}
     };
 
     s.onmessage = (ev) => {
+      // Si llega un mensaje de un socket viejo, lo ignoramos
+      if (msgSocketRef.current !== s) return;
+
       try {
         const data = JSON.parse(ev.data);
 
         // ====== MENSAJES / REGALOS ======
         if (data.type === 'msg:gift' && data.gift) {
-          const me   = Number(meIdRef.current);
+          const me = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
           const from = Number(data.from);
-          const to   = Number(data.to);
+          const to = Number(data.to);
           const belongsToThisChat =
             (from === peer && to === me) || (from === me && to === peer);
           if (!me || !peer || !belongsToThisChat) return;
@@ -568,7 +613,7 @@ const DashboardClient = () => {
 
           const belongsToThisChat =
             (m.senderId === peer && m.recipientId === me) ||
-            (m.senderId === me   && m.recipientId === peer);
+            (m.senderId === me && m.recipientId === peer);
 
           if (belongsToThisChat) {
             if (m.id && centerSeenIdsRef.current.has(m.id)) return;
@@ -702,7 +747,6 @@ const DashboardClient = () => {
           return;
         }
 
-
         if (data.type === 'call:canceled') {
           console.log('[CALL][canceled] reason=', data.reason);
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
@@ -786,6 +830,7 @@ const DashboardClient = () => {
           })();
           return;
         }
+
         if (data.type === 'call:error') {
           console.log('[CALL][error]', data.message);
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
@@ -797,7 +842,6 @@ const DashboardClient = () => {
         // silenciar parse errors
       }
     };
-
   };
 
 
@@ -932,7 +976,7 @@ const DashboardClient = () => {
 
         peer.on('stream', (stream) => setRemoteStream(stream));
         peer.on('error', (err) => {
-          console.error('Peer error:', err);
+          //console.error('Peer error:', err);
           setError('Error en la conexión WebRTC: ' + err.message);
           setSearching(false);
         });
@@ -1552,21 +1596,31 @@ const DashboardClient = () => {
       setCallError('Selecciona un contacto primero.');
       return;
     }
+
     // Regla de permiso actual (accepted+active)
     const inv = String(selectedFav?.invited || '').toLowerCase();
     const st  = String(selectedFav?.status  || '').toLowerCase();
     const isAcceptedForCall = (st === 'active' && inv === 'accepted');
+
     if (!isAcceptedForCall) {
       setCallError('Llamadas bloqueadas: la relación no está aceptada o activa.');
       return;
     }
+
+    const id = Number(targetPeerId);
+    const name = targetPeerName || 'Usuario';
+
+    // Fuente de verdad única también en call
+    setActivePeer(id, name, 'call', selectedFav);
+
     // Sincronizar universo CALL con el target
-    setCallPeerId(Number(targetPeerId));
-    callPeerIdRef.current = Number(targetPeerId);
-    setCallPeerName(targetPeerName || 'Usuario');
-    setContactMode('call');
+    setCallPeerId(id);
+    callPeerIdRef.current = id;
+    setCallPeerName(name);
+
     setCallError('');
   };
+
 
 
   const handleAddFavorite = async (explicitModelId) => {
@@ -1683,25 +1737,33 @@ const DashboardClient = () => {
   };
 
 
-
   const openChatWith = async (peerId, displayName) => {
+    const peer = Number(peerId);
+
     if (streamingActivo) {
       alert('No puedes abrir el chat central mientras hay streaming. Pulsa Stop si quieres cambiar.');
       return;
     }
+
+    if (!Number.isFinite(peer) || peer <= 0) {
+      console.warn('[openChatWith][Client] peerId inválido:', peerId);
+      return;
+    }
+
+    // IMPORTANTE:
+    // Aquí NO fijamos targetPeerId/targetPeerName (eso lo hace setActivePeer).
+    // centerChatPeerId se deriva por el effect de compatibilidad (target -> centerChat).
     setActiveTab('favoritos');
-    setCenterChatPeerId(peerId);
     setCenterChatPeerName(displayName || 'Usuario');
     setCenterMessages([]);
     centerSeenIdsRef.current = new Set();
     setCenterLoading(true);
+
     openMsgSocket();
 
     try {
-      const tk = localStorage.getItem('token');
-      const data = await apiFetch(`/messages/with/${peerId}`);
+      const data = await apiFetch(`/messages/with/${peer}`);
       if (data) {
-
         const normalized = (data || []).map(raw => ({
           id: raw.id,
           senderId: Number(raw.senderId ?? raw.sender_id),
@@ -1710,19 +1772,19 @@ const DashboardClient = () => {
           createdAt: raw.createdAt ?? raw.created_at,
           readAt: raw.readAt ?? raw.read_at ?? null,
         }));
-        centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id)); // nuevo
-        setCenterMessages(normalized.reverse());
-        try {
-          await apiFetch(`/messages/with/${peerId}/read`, { method: 'POST' });
 
-          // Notificar a la lista de favoritos que esta conversación ya está leída
+        centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
+        setCenterMessages(normalized.reverse());
+
+        try {
+          await apiFetch(`/messages/with/${peer}/read`, { method: 'POST' });
+
           try {
             window.dispatchEvent(new CustomEvent('chat-read', {
-              detail: { peerId: Number(peerId) }
+              detail: { peerId: Number(peer) }
             }));
           } catch {/* noop */}
         } catch {}
-
       }
     } catch (e) {
       console.warn('Historial chat error:', e?.message);
@@ -1730,6 +1792,7 @@ const DashboardClient = () => {
       setCenterLoading(false);
     }
   };
+
 
   const normMsg = (raw) => ({
     id: raw.id,
@@ -1752,6 +1815,40 @@ const DashboardClient = () => {
     }
   };
 
+  const setActivePeer = (peerId, peerName, mode, favUser = null) => {
+    const id = Number(peerId);
+    const name = peerName || 'Usuario';
+
+    if (!Number.isFinite(id) || id <= 0) {
+      console.warn('[ActivePeer][Client] peerId inválido:', peerId);
+      return;
+    }
+
+    // 1) Fuente de verdad ÚNICA del contacto activo
+    setTargetPeerId(id);
+    setTargetPeerName(name);
+
+    // 2) Guardar seleccionado (si viene de favoritos)
+    if (favUser) {
+      setSelectedFav(favUser);
+    }
+
+    // 3) Modo de contacto (chat/call)
+    setContactMode(mode || 'chat');
+
+    // 4) UI: entrar en favoritos (panel central)
+    setActiveTab('favoritos');
+
+    // 5) Limpieza mínima coherente
+    centerSeenIdsRef.current = new Set();
+    setCenterMessages([]);
+    setCenterChatPeerName(name);
+
+    // 6) Asegurar socket de mensajes (singleton ya lo tienes)
+    openMsgSocket?.();
+  };
+
+
   const handleOpenChatFromFavorites = (favUser) => {
     const name =
       favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
@@ -1766,16 +1863,18 @@ const DashboardClient = () => {
       return;
     }
 
-    setSelectedFav(favUser);
-    setTargetPeerId(peer);
-    setTargetPeerName(name);
-    setContactMode('chat');
-    setActiveTab('favoritos');
+    // Fuente de verdad única
+    setActivePeer(peer, name, 'chat', favUser);
 
+    // Panel invitación pendiente: mantenemos comportamiento actual
     if (String(favUser?.invited) === 'pending') {
       setCenterMessages([]);
+      centerSeenIdsRef.current = new Set();
+      openMsgSocket?.();
       return;
     }
+
+    // Cargar historial
     openChatWith(peer, name);
   };
 
@@ -2051,7 +2150,7 @@ const DashboardClient = () => {
     });
 
     p.on('error', (err) => {
-      console.error('[CALL][peer:error][Client]', err);
+      //console.error('[CALL][peer:error][Client]', err);
       setCallError('Error en la conexión WebRTC: ' + err.message);
     });
 
@@ -2138,6 +2237,7 @@ const DashboardClient = () => {
       alert('No puedes seleccionar destino mientras hay streaming random activo.');
       return;
     }
+
     const peer = Number(favUser?.id ?? favUser?.userId);
     if (!Number.isFinite(peer) || peer <= 0) {
       alert('No se pudo determinar el destinatario correcto.');
@@ -2151,28 +2251,38 @@ const DashboardClient = () => {
     const name =
       favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
 
-    console.log('[CALL] Target seleccionado desde lista (Calling):', peer, name);
+    console.log('[CALL][Client] Target seleccionado desde lista (Calling):', peer, name);
 
-    setActiveTab('calling');     // asegurar que estamos en Calling
-    setSelectedFav(favUser);     // opcional: conservar selección
-    setCenterChatPeerId(null);   // no abrimos chat central
-    setCenterChatPeerName('');
+    // Fuente de verdad única
+    setActivePeer(peer, name, 'call', favUser);
 
+    // UI específica del flujo calling
+    setActiveTab('calling');
+    setCenterChatPeerName(name);
+
+    // Sincronizar universo CALL
     setCallPeerId(peer);
     callPeerIdRef.current = peer;
     setCallPeerName(name);
-    // avatar se resolverá por el useEffect de callPeerId; si lo tienes en favUser, setéalo:
+
     if (favUser?.avatarUrl) setCallPeerAvatar(favUser.avatarUrl);
   };
 
+
   // === Volver a la lista (favoritos móvil)
   const backToList = () => {
+    // Al volver a lista, dejamos de “tener contacto activo”
+    setTargetPeerId(null);
+    setTargetPeerName('');
+
     setCenterChatPeerId(null);
     setCenterChatPeerName('');
     setContactMode('chat');
     setShowCenterGifts(false);
     setCenterMessages([]);
+    centerSeenIdsRef.current = new Set();
   };
+
 
   // Id activo en lista = el objetivo seleccionado
   const selectedContactId = Number(targetPeerId) || null;

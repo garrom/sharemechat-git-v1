@@ -445,7 +445,6 @@ const DashboardAdmin = () => {
       <HeaderBar>
         <h2>Hola, {userData.name} (Rol: {Roles.ADMIN})</h2>
         <LogoutButton onClick={handleLogout} title="Cerrar sesión">Salir</LogoutButton>
-        <div style={{ fontSize: 12, opacity: 0.6 }}>ADMIN_BUILD_MARK_20260103_1450</div>
       </HeaderBar>
 
       {/* Tabs */}

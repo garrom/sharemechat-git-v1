@@ -643,30 +643,55 @@ const DashboardModel = () => {
       return;
     }
 
-    if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
+    const url = buildWsUrl(WS_PATHS.messages, { token: tk });
+    const cur = msgSocketRef.current;
+
+    // 1) Si ya está OPEN, no hacemos nada
+    if (cur && cur.readyState === WebSocket.OPEN) {
       setMsgConnected(true);
       return;
     }
 
-    closeMsgSocket();
+    // 2) Si está CONNECTING, NO reabrimos
+    if (cur && cur.readyState === WebSocket.CONNECTING) {
+      return;
+    }
 
-    const url = buildWsUrl(WS_PATHS.messages, { token: tk });
+    // 3) Si había uno viejo (CLOSING/CLOSED), cerramos de forma silenciosa
+    if (cur) {
+      try {
+        cur.__manualClose = true;
+        cur.close();
+      } catch {}
+    }
 
+    msgSocketRef.current = null;
+    setMsgConnected(false);
+    clearMsgTimers();
+
+    // 4) Abrimos socket nuevo
     const s = new WebSocket(url);
-
     msgSocketRef.current = s;
 
     s.onopen = () => {
+      // Ignorar si este socket ya no es el actual
+      if (msgSocketRef.current !== s) return;
+
       console.log('[WS][messages] OPEN (Model)');
       setMsgConnected(true);
+
       if (msgPingRef.current) clearInterval(msgPingRef.current);
       msgPingRef.current = setInterval(() => {
         try {
-          if (msgSocketRef.current && msgSocketRef.current.readyState === WebSocket.OPEN) {
-            msgSocketRef.current.send(JSON.stringify({ type: 'ping' }));
+          if (msgSocketRef.current === s && s.readyState === WebSocket.OPEN) {
+            s.send(JSON.stringify({ type: 'ping' }));
+
             if (callStatus === 'in-call' || callStatus === 'connecting') {
               setCallClientSaldoLoading(true);
-              msgSocketRef.current.send(JSON.stringify({ type: 'call:ping', with: Number(callPeerIdRef.current) }));
+              s.send(JSON.stringify({
+                type: 'call:ping',
+                with: Number(callPeerIdRef.current),
+              }));
               console.log('[CALL][ping] sent (model)');
             }
           }
@@ -675,31 +700,59 @@ const DashboardModel = () => {
     };
 
     s.onclose = () => {
+      // Ignorar cierre de sockets viejos
+      if (msgSocketRef.current !== s) return;
+
       console.log('[WS][messages] CLOSE (Model)');
       setMsgConnected(false);
       clearMsgTimers();
+      msgSocketRef.current = null;
+
+      // Si fue cierre manual, no reconectamos
+      if (s.__manualClose) return;
+
+      // Reconexión segura
       msgReconnectRef.current = setTimeout(() => {
+        const now = msgSocketRef.current;
+        if (now && (
+          now.readyState === WebSocket.OPEN ||
+          now.readyState === WebSocket.CONNECTING
+        )) {
+          return;
+        }
         openMsgSocket();
       }, 1500);
     };
 
     s.onerror = (e) => {
+      // Ignorar errores de sockets viejos
+      if (msgSocketRef.current !== s) return;
+
       console.log('[WS][messages] ERROR (Model)', e);
       setMsgConnected(false);
-      try { s.close(); } catch {}
+
+      try {
+        // Forzamos cierre; onclose decidirá si reconectar
+        s.close();
+      } catch {}
     };
 
     s.onmessage = (ev) => {
+      // Ignorar mensajes de sockets viejos
+      if (msgSocketRef.current !== s) return;
+
       try {
         const data = JSON.parse(ev.data);
 
         // ==== MENSAJERÍA EXISTENTE ====
         if (data.type === 'msg:new' && data.message) {
           const m = normMsg(data.message);
-          if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-            const parts=m.body.slice(2,-2).split(':');
-            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':')};
+
+          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            const parts = m.body.slice(2, -2).split(':');
+            if (parts.length >= 3) m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
           }
+
           const me   = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
           if (!me || !peer) return;
@@ -711,6 +764,7 @@ const DashboardModel = () => {
           if (belongsToThisChat) {
             if (m.id && centerSeenIdsRef.current.has(m.id)) return;
             if (m.id) centerSeenIdsRef.current.add(m.id);
+
             setCenterMessages(prev => [...prev, m]);
             queueMicrotask(() => {
               const el = modelCenterListRef.current;
@@ -724,6 +778,7 @@ const DashboardModel = () => {
           const me   = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
           if (!me || !peer) return;
+
           const item = {
             id: data.messageId || `${Date.now()}`,
             senderId: data.from,
@@ -735,10 +790,12 @@ const DashboardModel = () => {
           const belongsToThisChat =
             (item.senderId === peer && item.recipientId === me) ||
             (item.senderId === me   && item.recipientId === peer);
+
           if (belongsToThisChat) {
             const mid = data.messageId;
             if (mid && centerSeenIdsRef.current.has(mid)) return;
             if (mid) centerSeenIdsRef.current.add(mid);
+
             setCenterMessages(prev => [...prev, item]);
             queueMicrotask(() => {
               const el = modelCenterListRef.current;
@@ -781,6 +838,7 @@ const DashboardModel = () => {
           console.log('[CALL][ringing][Model] to=', callPeerId);
           setCallStatus('ringing');
           setCallError('');
+
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
           callRingTimeoutRef.current = setTimeout(() => {
             console.log('[CALL][ringing] timeout -> cancel local (Model)');
@@ -792,11 +850,12 @@ const DashboardModel = () => {
         if (data.type === 'call:accepted') {
           console.log('[CALL][accepted][...] peer=', callPeerIdRef.current, 'role=', callRoleRef.current);
 
-          // 🔧 FIX: limpiar el timeout de timbrado si seguía vivo
+          // limpiar el timeout de timbrado si seguía vivo
           if (callRingTimeoutRef.current) {
             clearTimeout(callRingTimeoutRef.current);
             callRingTimeoutRef.current = null;
           }
+
           // Reforzar sincronización (por si hubiera drift)
           const peer = Number(callPeerIdRef.current);
           if (Number.isFinite(peer) && peer > 0) {
@@ -834,12 +893,13 @@ const DashboardModel = () => {
           return;
         }
 
-
         if (data.type === 'call:rejected') {
           console.log('[CALL][rejected][Model]');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
           setCallStatus('idle');
           setCallError('');
+
           (async () => {
             try {
               await alert({
@@ -853,7 +913,6 @@ const DashboardModel = () => {
           })();
           return;
         }
-
 
         if (data.type === 'call:canceled') {
           console.log('[CALL][canceled][Model] reason=', data.reason);
@@ -873,6 +932,7 @@ const DashboardModel = () => {
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
           setCallError('');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
           (async () => {
             try {
               await alert({
@@ -887,12 +947,12 @@ const DashboardModel = () => {
           return;
         }
 
-
         if (data.type === 'call:busy') {
           console.log('[CALL][busy][Model]', data);
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
           setCallError('');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
           (async () => {
             try {
               await alert({
@@ -907,12 +967,12 @@ const DashboardModel = () => {
           return;
         }
 
-
         if (data.type === 'call:offline') {
           console.log('[CALL][offline][Model]');
           setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
           setCallError('');
           if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
           (async () => {
             try {
               await alert({
@@ -926,7 +986,6 @@ const DashboardModel = () => {
           })();
           return;
         }
-
 
         if (data.type === 'call:error') {
           console.log('[CALL][error][Model]', data.message);
@@ -951,6 +1010,7 @@ const DashboardModel = () => {
       }
     };
   };
+
 
 
   useEffect(() => {
@@ -1467,19 +1527,28 @@ const DashboardModel = () => {
       setCallError('Selecciona un contacto primero.');
       return;
     }
+
     // Regla: ACCEPTED + ACTIVE
     const inv = String(selectedFav?.invited || '').toLowerCase();
     const st  = String(selectedFav?.status  || '').toLowerCase();
     const isAcceptedForCall = (st === 'active' && inv === 'accepted');
+
     if (!isAcceptedForCall) {
       setCallError('Llamadas bloqueadas: la relación no está aceptada o activa.');
       return;
     }
+
+    const id = Number(targetPeerId);
+    const name = targetPeerName || 'Usuario';
+
+    // Fuente de verdad única también en call
+    setActivePeer(id, name, 'call', selectedFav);
+
     // Sincronizar universo CALL con el target
-    setCallPeerId(Number(targetPeerId));
-    callPeerIdRef.current = Number(targetPeerId);
-    setCallPeerName(targetPeerName || 'Usuario');
-    setContactMode('call');
+    setCallPeerId(id);
+    callPeerIdRef.current = id;
+    setCallPeerName(name);
+
     setCallError('');
   };
 
@@ -1595,6 +1664,41 @@ const DashboardModel = () => {
     }
   };
 
+  const setActivePeer = (peerId, peerName, mode, favUser = null) => {
+    const id = Number(peerId);
+    const name = peerName || 'Usuario';
+
+    if (!Number.isFinite(id) || id <= 0) {
+      console.warn('[ActivePeer][Model] peerId inválido:', peerId);
+      return;
+    }
+
+    // 1) Fuente de verdad ÚNICA del contacto activo
+    setTargetPeerId(id);
+    setTargetPeerName(name);
+
+    // 2) Guardar seleccionado (si viene de favoritos)
+    if (favUser) {
+      setSelectedFav(favUser);
+    }
+
+    // 3) Modo de contacto (chat/call)
+    setContactMode(mode || 'chat');
+
+    // 4) UI: entrar en favoritos y mostrar panel
+    setActiveTab('favoritos');
+    setShowMsgPanel(true);
+
+    // 5) Limpieza mínima coherente
+    // Si cambiamos de peer, reiniciamos dedupe y el buffer visible (se recargará historial)
+    centerSeenIdsRef.current = new Set();
+    setCenterMessages([]);
+    setCenterChatPeerName(name);
+
+    // 6) Asegurar socket de mensajes (single-flight ya lo tienes en openMsgSocket)
+    openMsgSocket?.();
+  };
+
 
   const handleOpenChatFromFavorites = (favUser) => {
     const peer = Number(favUser?.id ?? favUser?.userId);
@@ -1610,12 +1714,10 @@ const DashboardModel = () => {
       return;
     }
 
-    setSelectedFav(favUser);
-    setTargetPeerId(peer);
-    setTargetPeerName(name);
-    setContactMode('chat');
-    setActiveTab('favoritos');
+    // Fuente de verdad única
+    setActivePeer(peer, name, 'chat', favUser);
 
+    // Panel de invitación pendiente: mantenemos el comportamiento actual
     if (String(favUser?.invited) === 'pending') {
       setCenterMessages([]);
       centerSeenIdsRef.current = new Set();
@@ -1624,28 +1726,37 @@ const DashboardModel = () => {
       return;
     }
 
-    setShowMsgPanel(true);
-    openMsgSocket?.();
+    // Cargar historial del peer seleccionado (sin tocar openChatWith aquí)
     openChatWithPeer(peer, name);
   };
 
 
   const openChatWithPeer = async (peerId, displayName) => {
+    const peer = Number(peerId);
+
     if (streamingActivo) {
       alert('No puedes abrir el chat central mientras hay streaming. Pulsa Stop si quieres cambiar.');
       return;
     }
+
+    if (!Number.isFinite(peer) || peer <= 0) {
+      console.warn('[openChatWithPeer][Model] peerId inválido:', peerId);
+      return;
+    }
+
+    // IMPORTANTE:
+    // Aquí NO volvemos a fijar openChatWith.
+    // La fuente de verdad es targetPeerId, y el effect de compatibilidad lo reflejará.
     setActiveTab('favoritos');
-    setOpenChatWith(peerId);
     setCenterChatPeerName(displayName || 'Usuario');
     setCenterMessages([]);
 
     openMsgSocket();
 
     try {
-      const data = await apiFetch(`/messages/with/${peerId}`);
+      const data = await apiFetch(`/messages/with/${peer}`);
       if (data) {
-        const normalized=(data||[]).map(raw=>({
+        const normalized = (data || []).map(raw => ({
           id: raw.id,
           senderId: Number(raw.senderId ?? raw.sender_id),
           recipientId: Number(raw.recipientId ?? raw.recipient_id),
@@ -1653,23 +1764,26 @@ const DashboardModel = () => {
           createdAt: raw.createdAt ?? raw.created_at,
           readAt: raw.readAt ?? raw.read_at ?? null,
         }));
+
         // detectar regalos en historial
-        normalized.forEach(m=>{
-          if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-            const parts=m.body.slice(2,-2).split(':');
-            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':'),icon:'🎁'};
+        normalized.forEach(m => {
+          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            const parts = m.body.slice(2, -2).split(':');
+            if (parts.length >= 3) m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':'), icon: '🎁' };
           }
         });
-        setCenterMessages(normalized.reverse());
-        try {
-          await apiFetch(`/messages/with/${peerId}/read`, { method: 'POST' });
 
+        setCenterMessages(normalized.reverse());
+
+        try {
+          await apiFetch(`/messages/with/${peer}/read`, { method: 'POST' });
         } catch {}
       }
     } catch (e) {
       console.warn('Historial chat error:', e?.message);
     }
   };
+
 
   const sendCenterMessage = () => {
     if (!openChatWith || !centerInput.trim()) return;
@@ -1938,7 +2052,7 @@ const DashboardModel = () => {
     });
 
     p.on('error', (err) => {
-      console.error('[CALL][peer:error][Model]', err);
+      //console.error('[CALL][peer:error][Model]', err);
       setCallError('Error en la conexión WebRTC: ' + err.message);
     });
 
@@ -2028,6 +2142,7 @@ const DashboardModel = () => {
       alert('No puedes seleccionar destino mientras hay streaming random activo.');
       return;
     }
+
     const peer = Number(favUser?.id ?? favUser?.userId);
     if (!Number.isFinite(peer) || peer <= 0) {
       alert('No se pudo determinar el destinatario correcto.');
@@ -2043,25 +2158,37 @@ const DashboardModel = () => {
 
     console.log('[CALL][Model] Target seleccionado desde lista (Calling):', peer, name);
 
-    setActiveTab('calling');     // aseguramos estar en Calling
-    setSelectedFav(favUser);     // opcional: mantener la selección
-    setOpenChatWith(null);       // NO abrimos chat central
-    setCenterChatPeerName('');
+    // Fuente de verdad única
+    setActivePeer(peer, name, 'call', favUser);
 
+    // UI específica del flujo calling
+    setActiveTab('calling');
+    setCenterChatPeerName(name);
+
+    // Sincronizar universo CALL
     setCallPeerId(peer);
     callPeerIdRef.current = peer;
     setCallPeerName(name);
+
     // Si FavoriteList te da avatar, úsalo; si no, lo obtendrá el useEffect
     if (favUser?.avatarUrl) setCallPeerAvatar(favUser.avatarUrl);
   };
 
+
+
   // Volver a la lista (favoritos móvil)
   const backToList = () => {
+    // Al volver a lista, dejamos de “tener contacto activo”
+    setTargetPeerId(null);
+    setTargetPeerName('');
+
     setOpenChatWith(null);
     setCenterChatPeerName('');
     setContactMode('chat');
     setCenterMessages([]);
+    centerSeenIdsRef.current = new Set();
   };
+
 
   // Id activo en lista = el objetivo seleccionado
   const selectedContactId = Number(targetPeerId) || null;
