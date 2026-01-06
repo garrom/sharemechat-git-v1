@@ -100,7 +100,7 @@ const DashboardClient = () => {
   const vcListRef = useRef(null);
   const callListRef = useRef(null);
   const chatEndRef = useRef(null);
-
+  const callStatusRef = useRef(callStatus);
   const history = useHistory();
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -146,7 +146,7 @@ const DashboardClient = () => {
     return found?.icon || null;
   };
 
-  //**** PARA MOVIL ****/
+
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
     const onChange = (e) => setIsMobile(e.matches);
@@ -154,6 +154,12 @@ const DashboardClient = () => {
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);
   }, []);
+
+
+  useEffect(() => {
+    callStatusRef.current = callStatus;
+  }, [callStatus]);
+
 
   useLayoutEffect(() => {
     const el = centerListRef?.current;
@@ -477,90 +483,85 @@ const DashboardClient = () => {
     if (!tk) return;
 
     const url = buildWsUrl(WS_PATHS.messages, { token: tk });
-
     const cur = msgSocketRef.current;
 
-    // 1) Si ya está OPEN, no hacemos nada
+    // 1) OPEN → no hacer nada
     if (cur && cur.readyState === WebSocket.OPEN) {
       setWsReady(true);
       return;
     }
 
-    // 2) Si está CONNECTING, NO reabrimos (evita duplicados)
-    if (cur && cur.readyState === WebSocket.CONNECTING) {
-      return;
-    }
+    // 2) CONNECTING → no reabrir
+    if (cur && cur.readyState === WebSocket.CONNECTING) return;
 
-    // 3) Si había uno CLOSING/CLOSED o algo inconsistente, cerramos de forma "silenciosa"
-    //    (evita que el onclose de un socket anterior dispare reconnect y genere duplicados)
+    // 3) Cerrar socket viejo
     if (cur) {
       try {
-        cur.__manualClose = true; // marca cierre intencional
+        cur.__manualClose = true;
         cur.close();
       } catch {}
     }
+
     msgSocketRef.current = null;
     setWsReady(false);
     clearMsgTimers();
 
-    // 4) Abrimos uno nuevo
     const s = new WebSocket(url);
     msgSocketRef.current = s;
 
     s.onopen = () => {
-      // Si este evento llega de un socket que ya no es el actual, ignoramos
       if (msgSocketRef.current !== s) return;
 
-      console.log('[WS][messages] OPEN');
+      console.log('[WS][messages] OPEN (Client)');
       setWsReady(true);
 
       if (msgPingRef.current) clearInterval(msgPingRef.current);
+
       msgPingRef.current = setInterval(() => {
         try {
-          // Importante: solo usar el socket si sigue siendo "s" y sigue OPEN
-          if (msgSocketRef.current === s && s.readyState === WebSocket.OPEN) {
-            s.send(JSON.stringify({ type: 'ping' }));
+          if (msgSocketRef.current !== s) return;
+          if (s.readyState !== WebSocket.OPEN) return;
 
-            if (callStatus === 'in-call' || callStatus === 'connecting') {
-              s.send(JSON.stringify({ type: 'call:ping' }));
-              console.log('[CALL][ping] sent');
-            }
+          s.send(JSON.stringify({ type: 'ping' }));
+
+          // 🔥 CLAVE: leer estado VIVO
+          const st = callStatusRef.current;
+          if (st === 'in-call' || st === 'connecting') {
+            s.send(JSON.stringify({
+              type: 'call:ping',
+              with: Number(callPeerIdRef.current),
+            }));
+            console.log('[CALL][ping] sent (Client)');
           }
         } catch {}
       }, 30000);
     };
 
     s.onclose = () => {
-      // Si el cierre es de un socket viejo, no tocamos estado ni reconectamos
       if (msgSocketRef.current !== s) return;
 
-      console.log('[WS][messages] CLOSE');
+      console.log('[WS][messages] CLOSE (Client)');
       setWsReady(false);
       clearMsgTimers();
       msgSocketRef.current = null;
 
-      // Si fue cierre intencional (cleanup/stop), no reconectamos
       if (s.__manualClose) return;
 
-      // Reconexión segura: solo si no hay otro OPEN/CONNECTING en ese momento
       msgReconnectRef.current = setTimeout(() => {
         const now = msgSocketRef.current;
-        if (now && (now.readyState === WebSocket.OPEN || now.readyState === WebSocket.CONNECTING)) return;
+        if (now && (
+          now.readyState === WebSocket.OPEN ||
+          now.readyState === WebSocket.CONNECTING
+        )) return;
+
         openMsgSocket();
       }, 1500);
     };
 
-    s.onerror = (e) => {
-      // Si el error es de un socket viejo, ignoramos
+    s.onerror = () => {
       if (msgSocketRef.current !== s) return;
-
-      console.log('[WS][messages] ERROR', e);
       setWsReady(false);
-
-      try {
-        // forzamos cierre; onclose decidirá si reconectar (y evitará duplicados)
-        s.close();
-      } catch {}
+      try { s.close(); } catch {}
     };
 
     s.onmessage = (ev) => {
@@ -2003,7 +2004,7 @@ const DashboardClient = () => {
 
       if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
       callRingTimeoutRef.current = setTimeout(() => {
-        if (callStatus === 'connecting') {
+        if (callStatusRef.current === 'connecting') {
           console.log('[CALL][invite][Client] no ringing -> cancel');
           handleCallEnd(true);
           setCallError('No se pudo iniciar el timbrado.');

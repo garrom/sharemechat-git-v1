@@ -122,7 +122,7 @@ const DashboardModel = () => {
   const callRemoteWrapRef  = useRef(null);
   const vcListRef = useRef(null);
   const callListRef = useRef(null);
-
+  const callStatusRef = useRef(callStatus);
   const msgSocketRef = useRef(null);
   const msgPingRef = useRef(null);
   const msgReconnectRef = useRef(null);
@@ -161,6 +161,9 @@ const DashboardModel = () => {
     return found?.icon || null;
   };
 
+  useEffect(() => {
+    callStatusRef.current = callStatus;
+  }, [callStatus]);
 
   // Autoscroll en el chat central
   useLayoutEffect(() => {
@@ -681,19 +684,23 @@ const DashboardModel = () => {
       setMsgConnected(true);
 
       if (msgPingRef.current) clearInterval(msgPingRef.current);
+
       msgPingRef.current = setInterval(() => {
         try {
-          if (msgSocketRef.current === s && s.readyState === WebSocket.OPEN) {
-            s.send(JSON.stringify({ type: 'ping' }));
+          if (msgSocketRef.current !== s) return;
+          if (s.readyState !== WebSocket.OPEN) return;
 
-            if (callStatus === 'in-call' || callStatus === 'connecting') {
-              setCallClientSaldoLoading(true);
-              s.send(JSON.stringify({
-                type: 'call:ping',
-                with: Number(callPeerIdRef.current),
-              }));
-              console.log('[CALL][ping] sent (model)');
-            }
+          s.send(JSON.stringify({ type: 'ping' }));
+
+          // IMPORTANTE: leer callStatus "vivo" desde ref, no desde closure
+          const st = callStatusRef.current;
+          if (st === 'in-call' || st === 'connecting') {
+            setCallClientSaldoLoading(true);
+            s.send(JSON.stringify({
+              type: 'call:ping',
+              with: Number(callPeerIdRef.current),
+            }));
+            console.log('[CALL][ping] sent (model)');
           }
         } catch {}
       }, 30000);
@@ -753,13 +760,13 @@ const DashboardModel = () => {
             if (parts.length >= 3) m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
           }
 
-          const me   = Number(meIdRef.current);
+          const me = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
           if (!me || !peer) return;
 
           const belongsToThisChat =
             (m.senderId === peer && m.recipientId === me) ||
-            (m.senderId === me   && m.recipientId === peer);
+            (m.senderId === me && m.recipientId === peer);
 
           if (belongsToThisChat) {
             if (m.id && centerSeenIdsRef.current.has(m.id)) return;
@@ -775,7 +782,7 @@ const DashboardModel = () => {
         }
 
         if (data.type === 'msg:gift' && data.gift) {
-          const me   = Number(meIdRef.current);
+          const me = Number(meIdRef.current);
           const peer = Number(peerIdRef.current);
           if (!me || !peer) return;
 
@@ -789,7 +796,7 @@ const DashboardModel = () => {
 
           const belongsToThisChat =
             (item.senderId === peer && item.recipientId === me) ||
-            (item.senderId === me   && item.recipientId === peer);
+            (item.senderId === me && item.recipientId === peer);
 
           if (belongsToThisChat) {
             const mid = data.messageId;
@@ -811,22 +818,18 @@ const DashboardModel = () => {
           const name = String(data.displayName || 'Usuario');
           console.log('[CALL][incoming][Model] from=', id, 'name=', name);
 
-          // Lock duro del target
           callTargetLockedRef.current = true;
           console.log('[CALL][lock] incoming -> lock on', id, '| prev selectedFav=', selectedFav?.id, 'openChatWith=', openChatWith);
 
-          // Forzar Favoritos + modo call y sincronizar target
           setActiveTab('favoritos');
           setTargetPeerId(id);
           setTargetPeerName(name);
           setContactMode('call');
 
-          // Sincroniza universo CALL
           setCallPeerId(id);
           callPeerIdRef.current = id;
           setCallPeerName(name);
 
-          // Limpia selección que pueda confundir UI
           setSelectedFav(null);
 
           setCallStatus('incoming');
@@ -850,13 +853,11 @@ const DashboardModel = () => {
         if (data.type === 'call:accepted') {
           console.log('[CALL][accepted][...] peer=', callPeerIdRef.current, 'role=', callRoleRef.current);
 
-          // limpiar el timeout de timbrado si seguía vivo
           if (callRingTimeoutRef.current) {
             clearTimeout(callRingTimeoutRef.current);
             callRingTimeoutRef.current = null;
           }
 
-          // Reforzar sincronización (por si hubiera drift)
           const peer = Number(callPeerIdRef.current);
           if (Number.isFinite(peer) && peer > 0) {
             console.log('[CALL][lock] accepted -> keep lock [Model]; peer=', peer);
@@ -870,7 +871,6 @@ const DashboardModel = () => {
           setCallStatus('in-call');
           setCallError('');
 
-          // mantener ping periódico de saldo
           if (callPingRef.current) clearInterval(callPingRef.current);
           callPingRef.current = setInterval(() => {
             try {
@@ -1010,7 +1010,6 @@ const DashboardModel = () => {
       }
     };
   };
-
 
 
   useEffect(() => {
@@ -1892,19 +1891,24 @@ const DashboardModel = () => {
 
     try {
       console.log('[CALL][invite:send][Model] to=', toId, 'name=', toName);
+
       setCallPeerId(toId);
       callPeerIdRef.current = toId;
-      console.log('[CALL][invite:send][Model] to=', toId, 'name=', toName);
       setCallPeerName(toName);
+
       msgSocketRef.current.send(JSON.stringify({ type: 'call:invite', to: toId }));
+
       setCallRole('caller');
       callRoleRef.current = 'caller';
+
       setCallStatus('connecting');
       setCallError('');
 
       if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
       callRingTimeoutRef.current = setTimeout(() => {
-        if (callStatus === 'connecting') {
+        // IMPORTANTE: estado vivo desde ref
+        if (callStatusRef.current === 'connecting') {
           console.log('[CALL][invite][Model] no ringing -> cancel');
           handleCallEnd(true);
           setCallError('No se pudo iniciar el timbrado.');
