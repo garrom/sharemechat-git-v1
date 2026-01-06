@@ -142,7 +142,7 @@ const DashboardModel = () => {
   const nextGuardRef = useRef(false);
   const statsSummaryLoadedRef = useRef(false);
   const statsDetailLoadedRef = useRef(false);
-
+  const activePeerRef = useRef({ id: null, name: '' });
 
 
   // --- Dedupe de eco para chat de streaming (RTC)
@@ -293,13 +293,21 @@ const DashboardModel = () => {
   // Mantener compatibilidad: reflejar target -> openChatWith (mientras migramos)
   useEffect(() => {
     if (Number(targetPeerId) > 0) {
-      setOpenChatWith(Number(targetPeerId));
-      setCenterChatPeerName(targetPeerName || 'Usuario');
+      const id = Number(targetPeerId);
+      const name = targetPeerName || 'Usuario';
+
+      setOpenChatWith(id);
+      setCenterChatPeerName(name);
+
+      // NUEVO: mantener ref sincronizado en modo compat
+      activePeerRef.current = { id, name };
     } else {
       setOpenChatWith(null);
       setCenterChatPeerName('');
+      activePeerRef.current = { id: null, name: '' };
     }
   }, [targetPeerId, targetPeerName]);
+
 
   useEffect(()=>{
     const tk=localStorage.getItem('token');
@@ -761,7 +769,7 @@ const DashboardModel = () => {
           }
 
           const me = Number(meIdRef.current);
-          const peer = Number(peerIdRef.current);
+          const peer = Number(activePeerRef.current?.id);
           if (!me || !peer) return;
 
           const belongsToThisChat =
@@ -783,7 +791,7 @@ const DashboardModel = () => {
 
         if (data.type === 'msg:gift' && data.gift) {
           const me = Number(meIdRef.current);
-          const peer = Number(peerIdRef.current);
+          const peer = Number(activePeerRef.current?.id);
           if (!me || !peer) return;
 
           const item = {
@@ -1672,31 +1680,26 @@ const DashboardModel = () => {
       return;
     }
 
-    // 1) Fuente de verdad ÚNICA del contacto activo
+    // NUEVO: autoridad única "viva"
+    activePeerRef.current = { id, name };
+
+    // (lo que ya haces)
     setTargetPeerId(id);
     setTargetPeerName(name);
 
-    // 2) Guardar seleccionado (si viene de favoritos)
-    if (favUser) {
-      setSelectedFav(favUser);
-    }
+    if (favUser) setSelectedFav(favUser);
 
-    // 3) Modo de contacto (chat/call)
     setContactMode(mode || 'chat');
-
-    // 4) UI: entrar en favoritos y mostrar panel
     setActiveTab('favoritos');
     setShowMsgPanel(true);
 
-    // 5) Limpieza mínima coherente
-    // Si cambiamos de peer, reiniciamos dedupe y el buffer visible (se recargará historial)
     centerSeenIdsRef.current = new Set();
     setCenterMessages([]);
     setCenterChatPeerName(name);
 
-    // 6) Asegurar socket de mensajes (single-flight ya lo tienes en openMsgSocket)
     openMsgSocket?.();
   };
+
 
 
   const handleOpenChatFromFavorites = (favUser) => {
@@ -1783,18 +1786,40 @@ const DashboardModel = () => {
     }
   };
 
-
   const sendCenterMessage = () => {
-    if (!openChatWith || !centerInput.trim()) return;
+    const body = String(centerInput || '').trim();
+    if (!body) return;
+
+    // Prioridad: autoridad (ref) -> openChatWith -> targetPeerId
+    const to =
+      Number(activePeerRef.current?.id) ||
+      Number(openChatWith) ||
+      Number(targetPeerId);
+
+    if (!Number.isFinite(to) || to <= 0) {
+      console.warn('[sendCenterMessage][Model] destinatario inválido', {
+        activePeer: activePeerRef.current,
+        openChatWith,
+        targetPeerId
+      });
+      return;
+    }
+
     const s = msgSocketRef.current;
     if (s && s.readyState === WebSocket.OPEN) {
-      const payload = { type: 'msg:send', to: Number(openChatWith), body: centerInput.trim() };
-      s.send(JSON.stringify(payload));
-      setCenterInput('');
+      const payload = { type: 'msg:send', to, body };
+      try {
+        s.send(JSON.stringify(payload));
+        setCenterInput('');
+      } catch (e) {
+        console.warn('[sendCenterMessage][Model] error enviando WS', e);
+        alert('No se pudo enviar el mensaje. Reintenta.');
+      }
     } else {
       alert('Chat de mensajes desconectado. Reabre el panel.');
     }
   };
+
 
   const acceptInvitation = async () => {
     if (!selectedFav?.id) return;
@@ -2182,10 +2207,10 @@ const DashboardModel = () => {
 
   // Volver a la lista (favoritos móvil)
   const backToList = () => {
-    // Al volver a lista, dejamos de “tener contacto activo”
+
+    activePeerRef.current = { id: null, name: '' };
     setTargetPeerId(null);
     setTargetPeerName('');
-
     setOpenChatWith(null);
     setCenterChatPeerName('');
     setContactMode('chat');

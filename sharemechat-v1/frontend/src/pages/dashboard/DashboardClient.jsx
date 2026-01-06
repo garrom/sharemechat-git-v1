@@ -123,8 +123,9 @@ const DashboardClient = () => {
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
   const lastSentRef = useRef({ text: null, at: 0 });
-  //const blockedModelIdsRef = useRef(new Set());
   const matchGraceRef = useRef(false);
+  const activePeerRef = useRef({ id: null, name: '' });
+
 
 
   const isEcho = (incoming) => {
@@ -239,16 +240,26 @@ const DashboardClient = () => {
       meIdRef.current = Number(user?.id) || null;
   }, [user?.id]);
 
-  // Mantener compatibilidad: reflejar target -> centerChat (mientras migramos)
+
+  // Mantener compatibilidad: reflejar target -> centerChat
   useEffect(() => {
     if (Number(targetPeerId) > 0) {
-      setCenterChatPeerId(Number(targetPeerId));
-      setCenterChatPeerName(targetPeerName || 'Usuario');
+      const id = Number(targetPeerId);
+      const name = targetPeerName || 'Usuario';
+
+      setCenterChatPeerId(id);
+      setCenterChatPeerName(name);
+
+      // NUEVO: mantener ref sincronizado en modo compat
+      activePeerRef.current = { id, name };
     } else {
       setCenterChatPeerId(null);
       setCenterChatPeerName('');
+
+      activePeerRef.current = { id: null, name: '' };
     }
   }, [targetPeerId, targetPeerName]);
+
 
   useEffect(() => {
       peerIdRef.current = Number(centerChatPeerId) || null;
@@ -574,7 +585,7 @@ const DashboardClient = () => {
         // ====== MENSAJES / REGALOS ======
         if (data.type === 'msg:gift' && data.gift) {
           const me = Number(meIdRef.current);
-          const peer = Number(peerIdRef.current);
+          const peer = Number(activePeerRef.current?.id);
           const from = Number(data.from);
           const to = Number(data.to);
           const belongsToThisChat =
@@ -609,7 +620,7 @@ const DashboardClient = () => {
           }
 
           const me = Number(meIdRef.current);
-          const peer = Number(peerIdRef.current);
+          const peer = Number(activePeerRef.current?.id);
           if (!me || !peer) return;
 
           const belongsToThisChat =
@@ -1805,16 +1816,39 @@ const DashboardClient = () => {
   });
 
   const sendCenterMessage = () => {
-    if (!centerChatPeerId || !centerInput.trim()) return;
+    const body = String(centerInput || '').trim();
+    if (!body) return;
+
+    // Prioridad: autoridad (ref) -> centerChatPeerId -> targetPeerId
+    const to =
+      Number(activePeerRef.current?.id) ||
+      Number(centerChatPeerId) ||
+      Number(targetPeerId);
+
+    if (!Number.isFinite(to) || to <= 0) {
+      console.warn('[sendCenterMessage][Client] destinatario inválido', {
+        activePeer: activePeerRef.current,
+        centerChatPeerId,
+        targetPeerId,
+      });
+      return;
+    }
+
     const s = msgSocketRef.current;
     if (s && s.readyState === WebSocket.OPEN) {
-      const payload = { type: 'msg:send', to: Number(centerChatPeerId), body: centerInput.trim() };
-      s.send(JSON.stringify(payload));
-      setCenterInput('');
+      const payload = { type: 'msg:send', to, body };
+      try {
+        s.send(JSON.stringify(payload));
+        setCenterInput('');
+      } catch (e) {
+        console.warn('[sendCenterMessage][Client] error enviando WS', e);
+        alert('No se pudo enviar el mensaje. Reintenta.');
+      }
     } else {
       alert('Chat de mensajes desconectado. Reabre el panel.');
     }
   };
+
 
   const setActivePeer = (peerId, peerName, mode, favUser = null) => {
     const id = Number(peerId);
@@ -1825,29 +1859,24 @@ const DashboardClient = () => {
       return;
     }
 
-    // 1) Fuente de verdad ÚNICA del contacto activo
+    activePeerRef.current = { id, name };
+
     setTargetPeerId(id);
     setTargetPeerName(name);
 
-    // 2) Guardar seleccionado (si viene de favoritos)
-    if (favUser) {
-      setSelectedFav(favUser);
-    }
+    if (favUser) {setSelectedFav(favUser);}
 
-    // 3) Modo de contacto (chat/call)
     setContactMode(mode || 'chat');
-
-    // 4) UI: entrar en favoritos (panel central)
     setActiveTab('favoritos');
 
-    // 5) Limpieza mínima coherente
     centerSeenIdsRef.current = new Set();
     setCenterMessages([]);
     setCenterChatPeerName(name);
 
-    // 6) Asegurar socket de mensajes (singleton ya lo tienes)
+    // 6) Asegurar socket de mensajes
     openMsgSocket?.();
   };
+
 
 
   const handleOpenChatFromFavorites = (favUser) => {
@@ -2272,6 +2301,9 @@ const DashboardClient = () => {
 
   // === Volver a la lista (favoritos móvil)
   const backToList = () => {
+
+    activePeerRef.current = { id: null, name: '' };
+
     // Al volver a lista, dejamos de “tener contacto activo”
     setTargetPeerId(null);
     setTargetPeerName('');
@@ -2283,6 +2315,7 @@ const DashboardClient = () => {
     setCenterMessages([]);
     centerSeenIdsRef.current = new Set();
   };
+
 
 
   // Id activo en lista = el objetivo seleccionado

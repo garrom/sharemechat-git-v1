@@ -154,7 +154,7 @@ export default function Home() {
               <HomeHeroText>
                 <h1>VideoChat con modelos</h1>
                 <p>Conecta al instante con modelos reales, en vivo, en una experiencia 1 a 1 inspirada en plataformas como Coomeet, pero con la tecnología y control total de SharemeChat.</p>
-                <p>Regístrate y prueba GRATIS TEST_DEPLOY_20260106_19-40</p>
+                <p>Regístrate y prueba GRATIS TEST_DEPLOY_20260106_00-20</p>
                 <div style={{marginTop:16,display:'flex',alignItems:'center',justifyContent:'flex-start'}}>
                   <ButtonActivarCam onClick={goRegister}>Iniciar Video Chat</ButtonActivarCam>
                 </div>
