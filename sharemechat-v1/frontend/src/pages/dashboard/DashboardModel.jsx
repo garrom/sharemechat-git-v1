@@ -239,15 +239,18 @@ const DashboardModel = () => {
   }, [token, currentClientId]);
 
 
-  // [CALL][Model] Usa el chat central contra el peer de la llamada cuando estamos en modo 'call'
+  // [CALL][Model] Solo aseguramos UI (nombre) y socket. El peer “verdadero
   useEffect(() => {
     if (contactMode !== 'call') return;
-    if (!callPeerId) return;
+    const peerId = Number(activePeerRef.current?.id);
+    if (!Number.isFinite(peerId) || peerId <= 0) return;
 
-    setOpenChatWith(callPeerId);
-    setCenterChatPeerName(callPeerName || 'Usuario');
+    const nm = activePeerRef.current?.name || callPeerName || targetPeerName || 'Usuario';
+    setCenterChatPeerName(nm);
     openMsgSocket?.();
-  }, [contactMode, callPeerId, callPeerName]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactMode]);
+
 
   useEffect(() => {
     if (localVideoRef.current && localStream.current) {
@@ -824,26 +827,28 @@ const DashboardModel = () => {
         if (data.type === 'call:incoming') {
           const id = Number(data.from);
           const name = String(data.displayName || 'Usuario');
+
           console.log('[CALL][incoming][Model] from=', id, 'name=', name);
 
+          // Lock duro del target
           callTargetLockedRef.current = true;
-          console.log('[CALL][lock] incoming -> lock on', id, '| prev selectedFav=', selectedFav?.id, 'openChatWith=', openChatWith);
 
-          setActiveTab('favoritos');
-          setTargetPeerId(id);
-          setTargetPeerName(name);
-          setContactMode('call');
+          // Autoridad única: fijar peer activo en modo call
+          setActivePeer(id, name, 'call', null);
 
+          // Sincroniza universo CALL
           setCallPeerId(id);
           callPeerIdRef.current = id;
           setCallPeerName(name);
 
+          // Limpia selección que pueda confundir UI
           setSelectedFav(null);
 
           setCallStatus('incoming');
           setCallError('');
           return;
         }
+
 
         if (data.type === 'call:ringing') {
           console.log('[CALL][ringing][Model] to=', callPeerId);
@@ -869,9 +874,15 @@ const DashboardModel = () => {
           const peer = Number(callPeerIdRef.current);
           if (Number.isFinite(peer) && peer > 0) {
             console.log('[CALL][lock] accepted -> keep lock [Model]; peer=', peer);
-            setOpenChatWith(peer);
-            setCenterChatPeerName(callPeerName || 'Usuario');
+
+            // Refuerzo: ActivePeer debe ser el peer de la llamada
+            const nm = callPeerName || activePeerRef.current?.name || 'Usuario';
+            activePeerRef.current = { id: peer, name: nm };
+
+            // UI
+            setCenterChatPeerName(nm);
           }
+
 
           const initiator = (callRoleRef.current === 'caller');
           wireCallPeer(initiator);
@@ -1680,10 +1691,13 @@ const DashboardModel = () => {
       return;
     }
 
-    // NUEVO: autoridad única "viva"
+    const prevId = Number(activePeerRef.current?.id) || null;
+    const isSamePeer = prevId === id;
+
+    // Autoridad única "viva"
     activePeerRef.current = { id, name };
 
-    // (lo que ya haces)
+    // Fuente de verdad del contacto activo (estado React)
     setTargetPeerId(id);
     setTargetPeerName(name);
 
@@ -1693,10 +1707,12 @@ const DashboardModel = () => {
     setActiveTab('favoritos');
     setShowMsgPanel(true);
 
-    centerSeenIdsRef.current = new Set();
-    setCenterMessages([]);
+    // Solo limpiamos buffers si CAMBIA el peer
+    if (!isSamePeer) {
+      centerSeenIdsRef.current = new Set();
+      setCenterMessages([]);
+    }
     setCenterChatPeerName(name);
-
     openMsgSocket?.();
   };
 
