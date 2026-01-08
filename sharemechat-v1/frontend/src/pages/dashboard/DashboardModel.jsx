@@ -465,18 +465,27 @@ const DashboardModel = () => {
   }, []);
 
 
-  // carga historial del chat central al cambiar peer
+  // carga historial del chat central al cambiar peer (FUENTE DE VERDAD: targetPeerId)
   useEffect(() => {
-    const peer = Number(openChatWith);
+    const peer = Number(targetPeerId);
     if (!peer || activeTab !== 'favoritos') return;
 
     const tk = localStorage.getItem('token');
     if (!tk) return;
 
+    // Guard contra carreras: si cambias rápido de contacto, no pintamos históricos viejos
+    const expectedPeer = peer;
+    let canceled = false;
+
     const load = async () => {
       setCenterLoading(true);
       try {
-        const data = await apiFetch(`/messages/with/${peer}`);
+        const data = await apiFetch(`/messages/with/${expectedPeer}`);
+
+        // Si mientras tanto cambió el target o se salió de Favoritos, abortamos
+        if (canceled) return;
+        if (Number(targetPeerId) !== expectedPeer) return;
+        if (activeTab !== 'favoritos') return;
 
         const normalized = (data || []).map(raw => ({
           id: raw.id,
@@ -486,18 +495,22 @@ const DashboardModel = () => {
           createdAt: raw.createdAt ?? raw.created_at,
           readAt: raw.readAt ?? raw.read_at ?? null,
         }));
+
         // detectar marcadores de regalo en historial
-        normalized.forEach(m=>{
-          if (typeof m.body==='string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-            const parts=m.body.slice(2,-2).split(':'); // GIFT:id:name
-            if (parts.length>=3) m.gift={id:Number(parts[1]),name:parts.slice(2).join(':')};
+        normalized.forEach(m => {
+          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            const parts = m.body.slice(2, -2).split(':'); // GIFT:id:name
+            if (parts.length >= 3) m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
           }
         });
+
         centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
         setCenterMessages(normalized.reverse());
+
         try {
-          await apiFetch(`/messages/with/${peer}/read`, { method: 'POST' });
+          await apiFetch(`/messages/with/${expectedPeer}/read`, { method: 'POST' });
         } catch {}
+
         queueMicrotask(() => {
           const el = modelCenterListRef?.current;
           if (el) el.scrollTop = el.scrollHeight;
@@ -506,11 +519,17 @@ const DashboardModel = () => {
         console.warn('Historial chat MODEL error:', e?.message);
         setCenterMessages([]);
       } finally {
-        setCenterLoading(false);
+        if (!canceled) setCenterLoading(false);
       }
     };
+
     load();
-  }, [openChatWith, activeTab]);
+
+    return () => {
+      canceled = true;
+    };
+  }, [targetPeerId, activeTab]);
+
 
 
   // === Sincronizar flag global inCall (RANDOM + CALLING) ===

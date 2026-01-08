@@ -454,6 +454,80 @@ const DashboardClient = () => {
     return () => clearTimeout(t);
   }, [giftsLoaded]);
 
+
+  // carga historial del chat central al cambiar peer (FUENTE DE VERDAD: targetPeerId)
+  useEffect(() => {
+    const peer = Number(targetPeerId);
+    if (!peer || activeTab !== 'favoritos') return;
+
+    const tk = localStorage.getItem('token');
+    if (!tk) return;
+
+    // Guard contra carreras: si cambias rápido de contacto, no pintamos históricos viejos
+    const expectedPeer = peer;
+    let canceled = false;
+
+    const load = async () => {
+      setCenterLoading(true);
+      try {
+        const data = await apiFetch(`/messages/with/${expectedPeer}`);
+
+        // Si mientras tanto cambió el target o se salió de Favoritos, abortamos
+        if (canceled) return;
+        if (Number(targetPeerId) !== expectedPeer) return;
+        if (activeTab !== 'favoritos') return;
+
+        const normalized = (data || []).map(raw => ({
+          id: raw.id,
+          senderId: Number(raw.senderId ?? raw.sender_id),
+          recipientId: Number(raw.recipientId ?? raw.recipient_id),
+          body: raw.body,
+          createdAt: raw.createdAt ?? raw.created_at,
+          readAt: raw.readAt ?? raw.read_at ?? null,
+        }));
+
+        // detectar marcadores de regalo en historial (SIMÉTRICO al Model)
+        normalized.forEach(m => {
+          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            const parts = m.body.slice(2, -2).split(':'); // GIFT:id:name
+            if (parts.length >= 3) m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
+          }
+        });
+
+        centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
+        setCenterMessages(normalized.reverse());
+
+        try {
+          await apiFetch(`/messages/with/${expectedPeer}/read`, { method: 'POST' });
+
+          // (mantengo tu evento, pero ahora atado al peer correcto)
+          try {
+            window.dispatchEvent(new CustomEvent('chat-read', {
+              detail: { peerId: Number(expectedPeer) }
+            }));
+          } catch {/* noop */}
+        } catch {}
+
+        queueMicrotask(() => {
+          const el = centerListRef?.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      } catch (e) {
+        console.warn('Historial chat CLIENT error:', e?.message);
+        setCenterMessages([]);
+      } finally {
+        if (!canceled) setCenterLoading(false);
+      }
+    };
+
+    load();
+
+    return () => {
+      canceled = true;
+    };
+  }, [targetPeerId, activeTab]);
+
+
   // === Sincronizar flag global inCall (RANDOM + CALLING) ===
   useEffect(() => {
     const hayRandom = !!remoteStream;
@@ -1758,7 +1832,7 @@ const DashboardClient = () => {
   };
 
 
-  const openChatWith = async (peerId, displayName) => {
+  const openChatWith = (peerId, displayName) => {
     const peer = Number(peerId);
 
     if (streamingActivo) {
@@ -1771,47 +1845,17 @@ const DashboardClient = () => {
       return;
     }
 
-    // IMPORTANTE:
-    // Aquí NO fijamos targetPeerId/targetPeerName (eso lo hace setActivePeer).
-    // centerChatPeerId se deriva por el effect de compatibilidad (target -> centerChat).
+    // SIMÉTRICO a Model: esta función NO carga histórico.
+    // El histórico lo carga el useEffect(targetPeerId, activeTab).
     setActiveTab('favoritos');
     setCenterChatPeerName(displayName || 'Usuario');
+
+    // Mantengo limpieza “optimista” para UX (mientras carga)
     setCenterMessages([]);
     centerSeenIdsRef.current = new Set();
     setCenterLoading(true);
 
     openMsgSocket();
-
-    try {
-      const data = await apiFetch(`/messages/with/${peer}`);
-      if (data) {
-        const normalized = (data || []).map(raw => ({
-          id: raw.id,
-          senderId: Number(raw.senderId ?? raw.sender_id),
-          recipientId: Number(raw.recipientId ?? raw.recipient_id),
-          body: raw.body,
-          createdAt: raw.createdAt ?? raw.created_at,
-          readAt: raw.readAt ?? raw.read_at ?? null,
-        }));
-
-        centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
-        setCenterMessages(normalized.reverse());
-
-        try {
-          await apiFetch(`/messages/with/${peer}/read`, { method: 'POST' });
-
-          try {
-            window.dispatchEvent(new CustomEvent('chat-read', {
-              detail: { peerId: Number(peer) }
-            }));
-          } catch {/* noop */}
-        } catch {}
-      }
-    } catch (e) {
-      console.warn('Historial chat error:', e?.message);
-    } finally {
-      setCenterLoading(false);
-    }
   };
 
 
