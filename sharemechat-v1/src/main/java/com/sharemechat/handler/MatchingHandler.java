@@ -323,7 +323,17 @@ public class MatchingHandler extends TextWebSocketHandler {
                 String realRole = viewer != null ? viewer.getRole() : null;
 
                 if (Constants.Roles.USER.equals(realRole)) {
+
+                    if (!userTrialService.canStartTrial(clientId)) {
+                        safeSend(client, "{\"type\":\"trial-unavailable\"}");
+
+                        waitingClients.add(client);
+                        waitingModels.add(model);
+                        return;
+                    }
+
                     userTrialService.startTrialStream(clientId, modelId);
+
                 } else {
                     streamService.startSession(clientId, modelId);
                 }
