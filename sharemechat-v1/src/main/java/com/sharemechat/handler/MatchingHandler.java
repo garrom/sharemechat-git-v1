@@ -12,6 +12,7 @@ import com.sharemechat.constants.Constants;
 import java.math.BigDecimal;
 
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -22,6 +23,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.time.Duration;
+
 
 @Component
 public class MatchingHandler extends TextWebSocketHandler {
@@ -34,6 +37,7 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final Map<String, Long> sessionUserIds = new ConcurrentHashMap<>();
     private final Map<String, Long> lastMatchAt = new ConcurrentHashMap<>();
     private final Set<String> switching = Collections.newSetFromMap(new ConcurrentHashMap<>());
+    private final Map<String, String> pairLockOwnerBySessionId = new ConcurrentHashMap<>();
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
@@ -45,6 +49,11 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final BalanceRepository balanceRepository;
     private final UserTrialService userTrialService;
     private final UserBlockService userBlockService;
+    private final SeenService seenService;
+    private final int seenMaxScan;
+    private final StreamLockService streamLockService;
+    private final Duration streamLockTtl = Duration.ofSeconds(15);
+
 
     public MatchingHandler(JwtUtil jwtUtil,
                            UserRepository userRepository,
@@ -55,7 +64,10 @@ public class MatchingHandler extends TextWebSocketHandler {
                            StatusService statusService,
                            BalanceRepository balanceRepository,
                            UserTrialService userTrialService,
-                           UserBlockService userBlockService) {
+                           UserBlockService userBlockService,
+                           SeenService seenService,
+                           StreamLockService streamLockService,
+                           @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.streamService = streamService;
@@ -66,15 +78,15 @@ public class MatchingHandler extends TextWebSocketHandler {
         this.balanceRepository = balanceRepository;
         this.userTrialService = userTrialService;
         this.userBlockService = userBlockService;
+        this.seenService = seenService;
+        this.seenMaxScan = seenMaxScan;
+        this.streamLockService = streamLockService;
     }
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
-        // System.out.println("Nueva conexión establecida: sessionId=" + session.getId());
-        // System.out.println("WS URI recibida: " + session.getUri());
         Long userId = resolveUserId(session);
         if (userId == null) {
-            // System.out.println("Sin token válido, cerrando sesión: " + session.getId());
             session.close(CloseStatus.BAD_DATA);
             return;
         }
@@ -91,33 +103,30 @@ public class MatchingHandler extends TextWebSocketHandler {
 
         if ("model".equals(role)) {
             waitingModels.remove(session);
-            // System.out.println("Modelo eliminado de waitingModels: sessionId=" + session.getId());
             if (userId != null) statusService.setOffline(userId);
         } else if ("client".equals(role)) {
             waitingClients.remove(session);
-            // System.out.println("Cliente eliminado de waitingClients: sessionId=" + session.getId());
         }
 
         WebSocketSession peer = pairs.remove(session.getId());
         if (peer != null) {
             pairs.remove(peer.getId());
-            // System.out.println("Par eliminado del mapa: peerId=" + peer.getId());
 
             Long myId = userId;
             Long peerId = sessionUserIds.get(peer.getId());
             String myRole = role;
             String peerRole = roles.get(peer.getId());
 
-            endStreamIfPairKnown(myId, myRole, peerId, peerRole, "DISCONNECT");
+            endStreamIfPairKnown(
+                    session.getId(), myId, myRole,
+                    peer.getId(), peerId, peerRole,
+                    "DISCONNECT"
+            );
 
             if (peer.isOpen()) {
                 safeSend(peer, "{\"type\":\"peer-disconnected\",\"reason\":\"peer-closed\"}");
                 safeRequeue(peer, peerRole);
-            } else {
-                // System.out.println("Peer no está abierto: peerId=" + peer.getId());
             }
-        } else {
-            // System.out.println("No se encontró peer para sessionId=" + session.getId());
         }
     }
 
@@ -128,14 +137,6 @@ public class MatchingHandler extends TextWebSocketHandler {
         try {
             JSONObject json = new JSONObject(payload);
             String type = json.getString("type");
-
-            // Logs ruidosos (SDP/ICE/ping/chat/desconocidos) silenciados
-            /*
-            if ("signal".equals(type)) { ... }
-            else if ("chat".equals(type)) { ... }
-            else if ("set-role".equals(type) || "start-match".equals(type) || "next".equals(type)) { ... }
-            else if (!"ping".equals(type)) { ... }
-            */
 
             if ("ping".equals(type)) {
 
@@ -159,12 +160,10 @@ public class MatchingHandler extends TextWebSocketHandler {
                 if ("model".equals(role)) {
                     waitingModels.remove(session);
                     waitingModels.add(session);
-                    // System.out.println("Modelo añadido a waitingModels: sessionId=" + session.getId());
                     if (userId != null) statusService.setAvailable(userId);
                 } else if ("client".equals(role)) {
                     waitingClients.remove(session);
                     waitingClients.add(session);
-                    // System.out.println("Cliente añadido a waitingClients: sessionId=" + session.getId());
                 }
 
             } else if ("start-match".equals(type)) {
@@ -227,6 +226,10 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
+    /* =========================================================
+       MATCHING (con Seen TTL robusto)
+       ========================================================= */
+
     private void matchClient(WebSocketSession client) throws Exception {
         waitingClients.remove(client);
 
@@ -236,61 +239,13 @@ public class MatchingHandler extends TextWebSocketHandler {
             return;
         }
 
-        WebSocketSession model;
+        // Pass 1: intentar evitar repetidos (UNSEEN)
+        MatchAttemptResult r1 = tryMatchClientAgainstModels(client, clientId, true);
+        if (r1.handled) return;
 
-        while ((model = waitingModels.poll()) != null) {
-
-            if (!model.isOpen()) continue;
-
-            Long modelId = sessionUserIds.get(model.getId());
-            if (modelId == null) continue;
-
-            if (!canMatch(clientId, modelId)) {
-                continue;
-            }
-
-            try {
-                User viewer = userRepository.findById(clientId).orElse(null);
-                String realRole = viewer != null ? viewer.getRole() : null;
-
-                if (Constants.Roles.USER.equals(realRole)) {
-                    if (!userTrialService.canStartTrial(clientId)) {
-                        safeSend(client, "{\"type\":\"trial-unavailable\"}");
-                        waitingModels.add(model);
-                        waitingClients.add(client);
-                        return;
-                    }
-                    userTrialService.startTrialStream(clientId, modelId);
-                } else {
-                    streamService.startSession(clientId, modelId);
-                }
-
-                pairs.put(client.getId(), model);
-                pairs.put(model.getId(), client);
-
-                long now = System.currentTimeMillis();
-                lastMatchAt.put(client.getId(), now);
-                lastMatchAt.put(model.getId(), now);
-
-                sendMatchMessage(client, model.getId());
-                sendMatchMessage(model, client.getId());
-                return;
-
-            } catch (Exception ex) {
-                System.out.println("startSession/startTrialStream falló: " + ex.getMessage());
-
-                pairs.remove(client.getId());
-                pairs.remove(model.getId());
-
-                waitingModels.add(model);
-
-                if (isLowBalance(ex)) safeSend(client, "{\"type\":\"no-balance\"}");
-                else safeSend(client, "{\"type\":\"no-model-available\"}");
-
-                waitingClients.add(client);
-                return;
-            }
-        }
+        // Pass 2: fallback permitir repetidos si no hay alternativas
+        MatchAttemptResult r2 = tryMatchClientAgainstModels(client, clientId, false);
+        if (r2.handled) return;
 
         safeSend(client, "{\"type\":\"no-model-available\"}");
         waitingClients.add(client);
@@ -305,9 +260,131 @@ public class MatchingHandler extends TextWebSocketHandler {
             return;
         }
 
-        WebSocketSession client;
+        // Pass 1: intentar evitar repetidos (UNSEEN para el viewer/clientId)
+        MatchAttemptResult r1 = tryMatchModelAgainstClients(model, modelId, true);
+        if (r1.handled) return;
 
-        while ((client = waitingClients.poll()) != null) {
+        // Pass 2: fallback permitir repetidos si no hay alternativas
+        MatchAttemptResult r2 = tryMatchModelAgainstClients(model, modelId, false);
+        if (r2.handled) return;
+
+        safeSend(model, "{\"type\":\"no-client-available\"}");
+        waitingModels.add(model);
+    }
+
+    private static class MatchAttemptResult {
+        final boolean handled; // true si ya enviamos algo / hicimos match / ya reencolamos y no hay que seguir
+        MatchAttemptResult(boolean handled) { this.handled = handled; }
+        static MatchAttemptResult HANDLED() { return new MatchAttemptResult(true); }
+        static MatchAttemptResult NOT_HANDLED() { return new MatchAttemptResult(false); }
+    }
+
+    private MatchAttemptResult tryMatchClientAgainstModels(WebSocketSession client, Long clientId, boolean enforceUnseen) throws Exception {
+
+        List<WebSocketSession> skipped = new ArrayList<>();
+        int scanned = 0;
+
+        WebSocketSession model;
+        while (scanned++ < seenMaxScan && (model = waitingModels.poll()) != null) {
+
+            if (!model.isOpen()) continue;
+
+            Long modelId = sessionUserIds.get(model.getId());
+            if (modelId == null) continue;
+
+            if (!canMatch(clientId, modelId)) {
+                skipped.add(model);
+                continue;
+            }
+
+            if (enforceUnseen && seenService.hasSeen(clientId, modelId)) {
+                skipped.add(model);
+                continue;
+            }
+
+            String owner = streamLockService.newOwnerToken();
+            if (!tryAcquirePairLocks(clientId, modelId, owner)) {
+                skipped.add(model);
+                continue;
+            }
+
+            boolean matched = false;
+
+            try {
+                User viewer = userRepository.findById(clientId).orElse(null);
+                String realRole = viewer != null ? viewer.getRole() : null;
+
+                if (Constants.Roles.USER.equals(realRole)) {
+                    if (!userTrialService.canStartTrial(clientId)) {
+                        safeSend(client, "{\"type\":\"trial-unavailable\"}");
+
+                        skipped.add(model);
+                        requeueModels(skipped);
+
+                        waitingClients.add(client);
+                        return MatchAttemptResult.HANDLED();
+                    }
+                    userTrialService.startTrialStream(clientId, modelId);
+                } else {
+                    streamService.startSession(clientId, modelId);
+                }
+
+                // Match real => marcar SEEN
+                seenService.markSeen(clientId, modelId);
+
+                pairs.put(client.getId(), model);
+                pairs.put(model.getId(), client);
+
+                long now = System.currentTimeMillis();
+                lastMatchAt.put(client.getId(), now);
+                lastMatchAt.put(model.getId(), now);
+
+                // Guardar owner del lock para liberar al cerrar
+                pairLockOwnerBySessionId.put(client.getId(), owner);
+                pairLockOwnerBySessionId.put(model.getId(), owner);
+
+                sendMatchMessage(client, model.getId());
+                sendMatchMessage(model, client.getId());
+
+                requeueModels(skipped);
+
+                matched = true;
+                return MatchAttemptResult.HANDLED();
+
+            } catch (Exception ex) {
+                System.out.println("startSession/startTrialStream falló: " + ex.getMessage());
+
+                pairs.remove(client.getId());
+                pairs.remove(model.getId());
+
+                skipped.add(model);
+                requeueModels(skipped);
+
+                if (isLowBalance(ex)) safeSend(client, "{\"type\":\"no-balance\"}");
+                else safeSend(client, "{\"type\":\"no-model-available\"}");
+
+                waitingClients.add(client);
+                return MatchAttemptResult.HANDLED();
+
+            } finally {
+                // OJO: si hubo match, NO liberamos aquí. Se libera al cerrar el stream (o por TTL).
+                if (!matched) {
+                    releasePairLocks(clientId, modelId, owner);
+                }
+            }
+        }
+
+        requeueModels(skipped);
+        return MatchAttemptResult.NOT_HANDLED();
+    }
+
+    private MatchAttemptResult tryMatchModelAgainstClients(WebSocketSession model, Long modelId, boolean enforceUnseen) throws Exception {
+
+        List<WebSocketSession> skipped = new ArrayList<>();
+        int scanned = 0;
+
+        WebSocketSession client;
+        while (scanned++ < seenMaxScan && (client = waitingClients.poll()) != null) {
 
             if (!client.isOpen()) continue;
 
@@ -315,8 +392,22 @@ public class MatchingHandler extends TextWebSocketHandler {
             if (clientId == null) continue;
 
             if (!canMatch(clientId, modelId)) {
+                skipped.add(client);
                 continue;
             }
+
+            if (enforceUnseen && seenService.hasSeen(clientId, modelId)) {
+                skipped.add(client);
+                continue;
+            }
+
+            String owner = streamLockService.newOwnerToken();
+            if (!tryAcquirePairLocks(clientId, modelId, owner)) {
+                skipped.add(client);
+                continue;
+            }
+
+            boolean matched = false;
 
             try {
                 User viewer = userRepository.findById(clientId).orElse(null);
@@ -327,9 +418,11 @@ public class MatchingHandler extends TextWebSocketHandler {
                     if (!userTrialService.canStartTrial(clientId)) {
                         safeSend(client, "{\"type\":\"trial-unavailable\"}");
 
-                        waitingClients.add(client);
+                        skipped.add(client);
+                        requeueClients(skipped);
+
                         waitingModels.add(model);
-                        return;
+                        return MatchAttemptResult.HANDLED();
                     }
 
                     userTrialService.startTrialStream(clientId, modelId);
@@ -338,6 +431,9 @@ public class MatchingHandler extends TextWebSocketHandler {
                     streamService.startSession(clientId, modelId);
                 }
 
+                // Match real => marcar SEEN (viewer=clientId)
+                seenService.markSeen(clientId, modelId);
+
                 pairs.put(model.getId(), client);
                 pairs.put(client.getId(), model);
 
@@ -345,9 +441,17 @@ public class MatchingHandler extends TextWebSocketHandler {
                 lastMatchAt.put(model.getId(), now);
                 lastMatchAt.put(client.getId(), now);
 
+                // Guardar owner del lock para liberar al cerrar
+                pairLockOwnerBySessionId.put(model.getId(), owner);
+                pairLockOwnerBySessionId.put(client.getId(), owner);
+
                 sendMatchMessage(model, client.getId());
                 sendMatchMessage(client, model.getId());
-                return;
+
+                requeueClients(skipped);
+
+                matched = true;
+                return MatchAttemptResult.HANDLED();
 
             } catch (Exception ex) {
                 System.out.println("startSession/startTrialStream falló: " + ex.getMessage());
@@ -357,15 +461,40 @@ public class MatchingHandler extends TextWebSocketHandler {
 
                 if (isLowBalance(ex)) safeSend(client, "{\"type\":\"no-balance\"}");
 
-                waitingClients.add(client);
+                skipped.add(client);
+                requeueClients(skipped);
+
                 waitingModels.add(model);
-                return;
+                return MatchAttemptResult.HANDLED();
+
+            } finally {
+                // OJO: si hubo match, NO liberamos aquí. Se libera al cerrar el stream (o por TTL).
+                if (!matched) {
+                    releasePairLocks(clientId, modelId, owner);
+                }
             }
         }
 
-        safeSend(model, "{\"type\":\"no-client-available\"}");
-        waitingModels.add(model);
+        requeueClients(skipped);
+        return MatchAttemptResult.NOT_HANDLED();
     }
+
+
+    private void requeueModels(List<WebSocketSession> list) {
+        for (WebSocketSession s : list) {
+            if (s != null && s.isOpen()) waitingModels.add(s);
+        }
+    }
+
+    private void requeueClients(List<WebSocketSession> list) {
+        for (WebSocketSession s : list) {
+            if (s != null && s.isOpen()) waitingClients.add(s);
+        }
+    }
+
+    /* =========================================================
+       NEXT / STREAM END / OTHER EVENTS
+       ========================================================= */
 
     private void handleNext(WebSocketSession session) throws Exception {
         if (!switching.add(session.getId())) return;
@@ -380,22 +509,22 @@ public class MatchingHandler extends TextWebSocketHandler {
             WebSocketSession peer = pairs.remove(session.getId());
             if (peer != null) {
                 pairs.remove(peer.getId());
-                // System.out.println("Peer encontrado para sessionId=" + session.getId() + ", peerId=" + peer.getId());
 
                 Long myId = sessionUserIds.get(session.getId());
                 Long peerId = sessionUserIds.get(peer.getId());
                 String myRole = roles.get(session.getId());
                 String peerRole = roles.get(peer.getId());
-                endStreamIfPairKnown(myId, myRole, peerId, peerRole, "NEXT");
+                endStreamIfPairKnown(
+                        session.getId(), myId, myRole,
+                        peer.getId(), peerId, peerRole,
+                        "NEXT"
+                );
+
 
                 if (peer.isOpen()) {
                     safeSend(peer, "{\"type\":\"peer-disconnected\",\"reason\":\"next\"}");
                     safeRequeue(peer, peerRole);
-                } else {
-                    // System.out.println("Peer no está abierto: peerId=" + peer.getId());
                 }
-            } else {
-                // System.out.println("No se encontró peer para sessionId=" + session.getId());
             }
 
             String role = roles.get(session.getId());
@@ -474,8 +603,10 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
-    private void endStreamIfPairKnown(Long idA, String roleA, Long idB, String roleB, String closeReason) {
-        if (idA == null || idB == null || roleA == null || roleB == null) return;
+    private void endStreamIfPairKnown(String sessionIdA, Long idA, String roleA, String sessionIdB, Long idB, String roleB, String closeReason) {
+        if (idA == null || idB == null || roleA == null || roleB == null) {
+            return;
+        }
 
         Long viewerId;
         Long modelId;
@@ -491,10 +622,13 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
 
         try {
-            System.out.println("endStreamIfPairKnown: reason=" + closeReason + " viewerId=" + viewerId + " modelId=" + modelId);
+            System.out.println(
+                    "endStreamIfPairKnown: reason=" + closeReason +
+                            " viewerId=" + viewerId +
+                            " modelId=" + modelId
+            );
+
             User viewer = userRepository.findById(viewerId).orElse(null);
-
-
             String realRole = viewer != null ? viewer.getRole() : null;
 
             if (Constants.Roles.CLIENT.equals(realRole)) {
@@ -502,10 +636,45 @@ public class MatchingHandler extends TextWebSocketHandler {
             } else if (Constants.Roles.USER.equals(realRole)) {
                 userTrialService.endTrialStream(viewerId, modelId, closeReason);
             }
+
         } catch (Exception ex) {
             System.out.println("endSession/endTrialSession falló: " + ex.getMessage());
+
+        } finally {
+            // 🔐 liberar locks de forma segura e idempotente
+            String ownerA = null;
+            String ownerB = null;
+
+            if (sessionIdA != null) {
+                ownerA = pairLockOwnerBySessionId.remove(sessionIdA);
+            }
+            if (sessionIdB != null) {
+                ownerB = pairLockOwnerBySessionId.remove(sessionIdB);
+            }
+
+            // Si por cualquier razón no estaba por sessionId, intentamos fallback por userId (sin NPE)
+            if (ownerA == null) {
+                String sid = findSessionIdByUserId(viewerId);
+                if (sid != null) ownerA = pairLockOwnerBySessionId.remove(sid);
+            }
+            if (ownerB == null) {
+                String sid = findSessionIdByUserId(modelId);
+                if (sid != null) ownerB = pairLockOwnerBySessionId.remove(sid);
+            }
+
+            String owner = ownerA != null ? ownerA : ownerB;
+
+            if (owner != null) {
+                try {
+                    releasePairLocks(viewerId, modelId, owner);
+                } catch (Exception ex) {
+                    System.out.println("Error liberando locks: " + ex.getMessage());
+                }
+            }
         }
     }
+
+
 
     private void sendMatchMessage(WebSocketSession session, String peerSessionId) {
         try {
@@ -513,8 +682,6 @@ public class MatchingHandler extends TextWebSocketHandler {
             String peerRole = roles.get(peerSessionId);
 
             BigDecimal clientBalance = null;
-
-            // Si el peer es el CLIENT (para el modelo), incluimos saldo.
 
             if ("client".equals(peerRole)) {
                 clientBalance = getCurrentBalanceOrZero(peerUserId);
@@ -534,7 +701,6 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
     }
 
-
     private void safeRequeue(WebSocketSession session, String role) {
         if (session != null && session.isOpen()) {
             if ("model".equals(role)) waitingModels.add(session);
@@ -549,7 +715,6 @@ public class MatchingHandler extends TextWebSocketHandler {
             if (!jwtUtil.isTokenValid(token)) return null;
             return jwtUtil.extractUserId(token);
         } catch (Exception ex) {
-            // System.out.println("Token inválido: " + ex.getMessage());
             return null;
         }
     }
@@ -626,7 +791,6 @@ public class MatchingHandler extends TextWebSocketHandler {
             User clientUser = userRepository.findById(clientId).orElse(null);
             if (clientUser == null || !Constants.Roles.CLIENT.equals(clientUser.getRole())) return false;
         } catch (Exception ex) {
-            // System.out.println("checkCutoff: error rol cliente: " + ex.getMessage());
             return false;
         }
 
@@ -679,7 +843,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
 
         try {
-            System.out.println("trialPingCheck: viewerId=" + viewerId + " modelId=" + modelId);
+            
             User viewer = userRepository.findById(viewerId).orElse(null);
 
             if (viewer == null || !Constants.Roles.USER.equals(viewer.getRole())) return;
@@ -723,7 +887,6 @@ public class MatchingHandler extends TextWebSocketHandler {
             return BigDecimal.ZERO;
         }
     }
-
 
     private void sendQueueStats(WebSocketSession s) {
         try {
@@ -803,7 +966,6 @@ public class MatchingHandler extends TextWebSocketHandler {
         } catch (Exception ignore) {}
     }
 
-
     private boolean canMatch(Long userAId, Long userBId) {
         if (userAId == null || userBId == null) return false;
         try {
@@ -812,5 +974,37 @@ public class MatchingHandler extends TextWebSocketHandler {
             return false;
         }
     }
+
+    private boolean tryAcquirePairLocks(Long clientId, Long modelId, String owner) {
+        // Orden fijo para evitar “deadlocks” lógicos en el futuro
+        // (aunque aquí usemos tryLock, el orden consistente es buena práctica)
+        boolean clientLocked = streamLockService.tryLockClient(clientId, owner, streamLockTtl);
+        if (!clientLocked) return false;
+
+        boolean modelLocked = streamLockService.tryLockModel(modelId, owner, streamLockTtl);
+        if (!modelLocked) {
+            streamLockService.unlockClient(clientId, owner);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void releasePairLocks(Long clientId, Long modelId, String owner) {
+        streamLockService.unlockModel(modelId, owner);
+        streamLockService.unlockClient(clientId, owner);
+    }
+
+    private String findSessionIdByUserId(Long userId) {
+        if (userId == null) return null;
+
+        for (Map.Entry<String, Long> e : sessionUserIds.entrySet()) {
+            if (userId.equals(e.getValue())) {
+                return e.getKey();
+            }
+        }
+        return null;
+    }
+
 
 }
