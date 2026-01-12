@@ -23,6 +23,8 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.time.Duration;
+
 
 @Component
 public class MessagesWsHandler extends TextWebSocketHandler {
@@ -38,10 +40,12 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     private final StatusService statusService;
     private final UserBlockService userBlockService;
     private final BalanceRepository balanceRepository;
+    private final StreamLockService streamLockService;
+
     private static final Logger log = LoggerFactory.getLogger(MessagesWsHandler.class);
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionUserIds = new ConcurrentHashMap<>();
-
+    private final Map<Long, String> activeCallOwners = new ConcurrentHashMap<>();
     private final Map<Long, Long> activeCalls = new ConcurrentHashMap<>();
     private final Set<Long> ringing = ConcurrentHashMap.newKeySet();
 
@@ -55,7 +59,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                              BillingProperties billing,
                              StatusService statusService,
                              UserBlockService userBlockService,
-                             BalanceRepository balanceRepository) {
+                             BalanceRepository balanceRepository,
+                             StreamLockService streamLockService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.favoriteService = favoriteService;
@@ -67,6 +72,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         this.statusService = statusService;
         this.userBlockService = userBlockService;
         this.balanceRepository = balanceRepository;
+        this.streamLockService = streamLockService;
     }
 
     @Override
@@ -357,41 +363,71 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         if ("call:connected".equals(type)) {
             Long with = json.has("with") ? json.optLong("with", 0L) : null;
             if (with == null || with <= 0L) {
-                safeSend(session, new JSONObject().put("type","call:error").put("message","Par inválido (connected)").toString());
+                safeSend(session, new JSONObject()
+                        .put("type","call:error")
+                        .put("message","Par inválido (connected)")
+                        .toString());
                 return;
             }
 
             Long current = inCallWith(me);
             if (current == null || !current.equals(with)) {
-                safeSend(session, new JSONObject().put("type","call:error").put("message","No hay llamada activa para conectar").toString());
+                // idempotente: ignorar
                 return;
             }
 
             Pair<Long, Long> cm = resolveClientModel(me, with);
             if (cm == null) {
-                safeSend(session, new JSONObject().put("type","call:error").put("message","Solo CLIENT↔MODEL").toString());
                 return;
             }
+
             Long clientId = cm.getLeft();
             Long modelId  = cm.getRight();
 
+            // === INDUSTRIAL: LOCK DISTRIBUIDO POR PAR ===
+            String owner = streamLockService.newOwnerToken();
+            boolean lockedClient = false;
+            boolean lockedModel  = false;
+
             try {
-                streamService.startSession(clientId, modelId);
-            } catch (Exception ex) {
-                String msg = ex.getMessage() != null ? ex.getMessage() : "No se pudo iniciar la sesión";
-                if (msg.contains("Saldo insuficiente")) {
-                    broadcastToUser(clientId, new JSONObject().put("type","call:no-balance").toString());
-                    broadcastToUser(modelId,  new JSONObject().put("type","call:no-balance").toString());
-                    broadcastToUser(clientId, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
-                    broadcastToUser(modelId,  new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
-                } else {
-                    broadcastToUser(clientId, new JSONObject().put("type","call:error").put("message", msg).toString());
-                    broadcastToUser(modelId,  new JSONObject().put("type","call:error").put("message", msg).toString());
+                lockedClient = streamLockService.tryLockClient(clientId, owner, Duration.ofSeconds(20));
+                lockedModel  = streamLockService.tryLockModel(modelId, owner, Duration.ofSeconds(20));
+
+                if (!lockedClient || !lockedModel) {
+                    // Otro hilo/instancia ya está iniciando el stream
+                    return;
                 }
-                return;
+
+                // Guardar owner para liberar al final
+                activeCallOwners.put(clientId, owner);
+                activeCallOwners.put(modelId, owner);
+
+                // === START SESSION (IDEMPOTENTE EN StreamService) ===
+                try {
+                    streamService.startSession(clientId, modelId);
+                } catch (Exception ex) {
+                    String msg = ex.getMessage() != null ? ex.getMessage() : "No se pudo iniciar la sesión";
+
+                    if (msg.contains("Saldo insuficiente")) {
+                        broadcastToUser(clientId, new JSONObject().put("type","call:no-balance").toString());
+                        broadcastToUser(modelId,  new JSONObject().put("type","call:no-balance").toString());
+                        broadcastToUser(clientId, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
+                        broadcastToUser(modelId,  new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
+                    } else {
+                        broadcastToUser(clientId, new JSONObject().put("type","call:error").put("message", msg).toString());
+                        broadcastToUser(modelId,  new JSONObject().put("type","call:error").put("message", msg).toString());
+                    }
+                }
+
+            } finally {
+                // liberar locks inmediatamente (la sesión ya está creada)
+                if (lockedClient) streamLockService.unlockClient(clientId, owner);
+                if (lockedModel)  streamLockService.unlockModel(modelId, owner);
             }
+
             return;
         }
+
 
         if ("call:reject".equals(type)) {
             Long with = json.has("with") ? json.optLong("with", 0L) : null;
@@ -744,10 +780,12 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         if (cm != null) {
             Long clientId = cm.getLeft();
             Long modelId  = cm.getRight();
+
             try {
                 streamService.endSession(clientId, modelId);
             } catch (Exception ex) {
-                log.warn("endCallAndSession endSession error clientId={} modelId={} err={}", clientId, modelId, ex.getMessage());
+                log.warn("endCallAndSession endSession error clientId={} modelId={} err={}",
+                        clientId, modelId, ex.getMessage());
             }
 
             boolean modelStillOnline = sessions.getOrDefault(modelId, java.util.Set.of()).size() > 0;
@@ -755,12 +793,19 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             else statusService.setOffline(modelId);
         }
 
-        broadcastToUser(a, new org.json.JSONObject().put("type","call:ended").put("reason", reason).toString());
-        broadcastToUser(b, new org.json.JSONObject().put("type","call:ended").put("reason", reason).toString());
+        broadcastToUser(a, new JSONObject().put("type","call:ended").put("reason", reason).toString());
+        broadcastToUser(b, new JSONObject().put("type","call:ended").put("reason", reason).toString());
+
+        // --- LIMPIEZA ESTADO ---
         clearActiveCall(a, b);
         clearRinging(a);
         clearRinging(b);
+
+        // --- LIMPIEZA OWNER ---
+        activeCallOwners.remove(a);
+        activeCallOwners.remove(b);
     }
+
 
     private BigDecimal getCurrentBalanceOrZero(Long userId) {
         if (userId == null) return BigDecimal.ZERO;

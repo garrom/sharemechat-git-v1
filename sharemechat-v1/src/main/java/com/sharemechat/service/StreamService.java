@@ -205,12 +205,35 @@ public class StreamService {
             // === CALCULAR endTime PERO NO PERSISTIR AÚN ===
             LocalDateTime endTime = LocalDateTime.now();
 
-            // 3.1) Si no está confirmada, cerrar sin cargos y limpiar estado
+            // 3.1) Si no está confirmada, aplicar FAILSAFE por duración
+            long secondsSoFar = java.time.Duration.between(session.getStartTime(), endTime).getSeconds();
+            if (secondsSoFar < 0) secondsSoFar = 0;
+
+            // FAILSAFE DESACTIVADO: nunca auto-confirmamos.
+            // Si confirmed_at es NULL, el flujo de más abajo cerrará sin cargos (aunque haya segundos).
+            if (session.getConfirmedAt() == null && secondsSoFar >= 3) {
+                log.warn(
+                        "endSession: sesión {} >=3s pero NO confirmada -> se cerrará SIN cargos (duración={}s)",
+                        session.getId(),
+                        secondsSoFar
+                );
+            }
+
+
+            // PERSISTENCIA ÚNICA del FAILSAFE (solo si se auto-confirmó arriba)
+            if (session.getConfirmedAt() != null) {
+                streamRecordRepository.save(session);
+            }
+
+            // Si sigue sin confirmar (streams fantasma < 3s), cerrar sin cargos
             if (session.getConfirmedAt() == null) {
                 session.setEndTime(endTime);
                 streamRecordRepository.save(session);
                 postEndStatusCleanup(clientId, modelId);
-                log.info("endSession: sin cargos (stream no confirmado). Finalizado únicamente el registro de stream.");
+                log.info(
+                        "endSession: sin cargos (stream no confirmado, duración={}s).",
+                        secondsSoFar
+                );
                 return;
             }
 
