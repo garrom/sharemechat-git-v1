@@ -143,7 +143,8 @@ const DashboardModel = () => {
   const statsSummaryLoadedRef = useRef(false);
   const statsDetailLoadedRef = useRef(false);
   const activePeerRef = useRef({ id: null, name: '' });
-
+  const [activeStreamRecordId, setActiveStreamRecordId] = useState(null);
+  const activeStreamRecordIdRef = useRef(null);
 
   // --- Dedupe de eco para chat de streaming (RTC)
   const lastSentRef = useRef({ text: null, at: 0 });
@@ -707,7 +708,6 @@ const DashboardModel = () => {
     msgSocketRef.current = s;
 
     s.onopen = () => {
-      // Ignorar si este socket ya no es el actual
       if (msgSocketRef.current !== s) return;
 
       console.log('[WS][messages] OPEN (Model)');
@@ -722,7 +722,7 @@ const DashboardModel = () => {
 
           s.send(JSON.stringify({ type: 'ping' }));
 
-          // IMPORTANTE: leer callStatus "vivo" desde ref, no desde closure
+          // CALL ping: leer callStatus "vivo" desde ref, no closure
           const st = callStatusRef.current;
           if (st === 'in-call' || st === 'connecting') {
             setCallClientSaldoLoading(true);
@@ -737,7 +737,6 @@ const DashboardModel = () => {
     };
 
     s.onclose = () => {
-      // Ignorar cierre de sockets viejos
       if (msgSocketRef.current !== s) return;
 
       console.log('[WS][messages] CLOSE (Model)');
@@ -745,10 +744,8 @@ const DashboardModel = () => {
       clearMsgTimers();
       msgSocketRef.current = null;
 
-      // Si fue cierre manual, no reconectamos
       if (s.__manualClose) return;
 
-      // Reconexión segura
       msgReconnectRef.current = setTimeout(() => {
         const now = msgSocketRef.current;
         if (now && (
@@ -762,20 +759,15 @@ const DashboardModel = () => {
     };
 
     s.onerror = (e) => {
-      // Ignorar errores de sockets viejos
       if (msgSocketRef.current !== s) return;
 
       console.log('[WS][messages] ERROR (Model)', e);
       setMsgConnected(false);
 
-      try {
-        // Forzamos cierre; onclose decidirá si reconectar
-        s.close();
-      } catch {}
+      try { s.close(); } catch {}
     };
 
     s.onmessage = (ev) => {
-      // Ignorar mensajes de sockets viejos
       if (msgSocketRef.current !== s) return;
 
       try {
@@ -849,25 +841,20 @@ const DashboardModel = () => {
 
           console.log('[CALL][incoming][Model] from=', id, 'name=', name);
 
-          // Lock duro del target
           callTargetLockedRef.current = true;
 
-          // Autoridad única: fijar peer activo en modo call
           setActivePeer(id, name, 'call', null);
 
-          // Sincroniza universo CALL
           setCallPeerId(id);
           callPeerIdRef.current = id;
           setCallPeerName(name);
 
-          // Limpia selección que pueda confundir UI
           setSelectedFav(null);
 
           setCallStatus('incoming');
           setCallError('');
           return;
         }
-
 
         if (data.type === 'call:ringing') {
           console.log('[CALL][ringing][Model] to=', callPeerId);
@@ -892,16 +879,10 @@ const DashboardModel = () => {
 
           const peer = Number(callPeerIdRef.current);
           if (Number.isFinite(peer) && peer > 0) {
-            console.log('[CALL][lock] accepted -> keep lock [Model]; peer=', peer);
-
-            // Refuerzo: ActivePeer debe ser el peer de la llamada
             const nm = callPeerName || activePeerRef.current?.name || 'Usuario';
             activePeerRef.current = { id: peer, name: nm };
-
-            // UI
             setCenterChatPeerName(nm);
           }
-
 
           const initiator = (callRoleRef.current === 'caller');
           wireCallPeer(initiator);
@@ -1050,6 +1031,7 @@ const DashboardModel = () => {
   };
 
 
+
   useEffect(() => {
      openMsgSocket();
      return () => closeMsgSocket();
@@ -1117,7 +1099,7 @@ const DashboardModel = () => {
           socketRef.current.send(JSON.stringify({ type: 'ping' }));
           socketRef.current.send(JSON.stringify({ type: 'stats' }));
         }
-      }, 30000);
+      }, 15000);
 
       socket.send(JSON.stringify({ type: 'set-role', role: 'model' }));
       socket.send(JSON.stringify({ type: 'stats' }));
@@ -1125,12 +1107,22 @@ const DashboardModel = () => {
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-
       if (data.type === 'match') {
 
         // ping inmediato
         if (socketRef.current?.readyState === WebSocket.OPEN) {
           try { socketRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
+        }
+
+        // Capturar streamRecordId (puede venir null en casos no aplicables)
+        try {
+          const sid = data?.streamRecordId;
+          const parsed = (sid !== null && sid !== undefined && Number.isFinite(Number(sid))) ? Number(sid) : null;
+          setActiveStreamRecordId(parsed);
+          activeStreamRecordIdRef.current = parsed;
+        } catch {
+          setActiveStreamRecordId(null);
+          activeStreamRecordIdRef.current = null;
         }
 
         // setCurrentClientId robusto
@@ -1184,6 +1176,14 @@ const DashboardModel = () => {
           setError('');
           setStatus('');
           setRemoteStream(stream);
+
+          // Confirm/heartbeat cuando hay media REAL (equivale a “ACK operativo”)
+          // Backend ya confirma billable pair en ping.
+          try {
+            if (socketRef.current?.readyState === WebSocket.OPEN) {
+              socketRef.current.send(JSON.stringify({ type: 'ping' }));
+            }
+          } catch {}
         });
 
         peer.on('error', (err) => {
@@ -1245,8 +1245,13 @@ const DashboardModel = () => {
       setError('Primero activa la cámara.');
       return;
     }
+
     setSearching(true);
     setError('');
+
+    // Reset del streamRecordId antes de buscar
+    setActiveStreamRecordId(null);
+    activeStreamRecordIdRef.current = null;
 
     const tk = localStorage.getItem('token');
     if (!tk) {
@@ -1261,14 +1266,16 @@ const DashboardModel = () => {
       return;
     }
 
-    // Si ya hay socket abierto, opcionalmente pedimos otro match
+    // Si ya hay socket abierto, pedimos match
     try {
       socketRef.current.send(JSON.stringify({ type: 'start-match' }));
+      socketRef.current.send(JSON.stringify({ type: 'stats' }));
     } catch (e) {
       setError('Error enviando start-match.');
       setSearching(false);
     }
   };
+
 
   const handleNext = () => {
     if (nextGuardRef.current) return;

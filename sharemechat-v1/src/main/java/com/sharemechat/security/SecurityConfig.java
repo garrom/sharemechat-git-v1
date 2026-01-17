@@ -41,7 +41,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/register/**", "/api/users/login").permitAll()
                         .requestMatchers("/api/public/home/**").permitAll()
 
-                        // NUEVO: eventos de consentimiento (guest)
+                        // STREAMS: ACK media (cliente o modelo)
+                        .requestMatchers(HttpMethod.POST, "/api/streams/*/ack-media").hasAnyRole("CLIENT","MODEL")
+
+                        // Eventos de consentimiento (guest)
                         .requestMatchers("/api/consent/**").permitAll()
 
                         // USERS
@@ -82,6 +85,9 @@ public class SecurityConfig {
                         .requestMatchers("/messages/**").permitAll()
                         .requestMatchers("/match/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
+
+                        // REST messages → autenticado
+                        .requestMatchers("/api/messages/**").authenticated()
 
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
                         .anyRequest().authenticated()

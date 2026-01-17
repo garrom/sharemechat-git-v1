@@ -7,6 +7,7 @@ import com.sharemechat.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -139,6 +140,18 @@ public class StreamService {
      */
     @Transactional
     public void confirmActiveSession(Long clientId, Long modelId) {
+
+        // LOG: entrada + thread
+        log.warn(
+                "confirmActiveSession ENTER client={} model={} thread={}",
+                clientId,
+                modelId,
+                Thread.currentThread().getName()
+        );
+
+        // LOG: stacktrace (activar solo si lo necesitas)
+        // new Exception("confirmActiveSession trace").printStackTrace();
+
         Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
 
         StreamRecord session = null;
@@ -150,14 +163,76 @@ public class StreamService {
                     .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId)
                     .orElse(null);
         }
-        if (session == null) return;
-        if (session.getEndTime() != null) return;
-        if (session.getConfirmedAt() != null) return;
+
+        if (session == null) {
+            log.warn("confirmActiveSession EXIT (no-session) client={} model={} hint={}", clientId, modelId, sessionIdHint);
+            return;
+        }
+        if (session.getEndTime() != null) {
+            log.warn("confirmActiveSession EXIT (already-ended) sessionId={} client={} model={}", session.getId(), clientId, modelId);
+            return;
+        }
+        if (session.getConfirmedAt() != null) {
+            log.warn("confirmActiveSession EXIT (already-confirmed) sessionId={} client={} model={} confirmedAt={}",
+                    session.getId(), clientId, modelId, session.getConfirmedAt());
+            return;
+        }
 
         session.setConfirmedAt(LocalDateTime.now());
         streamRecordRepository.save(session);
-        log.info("confirmActiveSession: confirmada sesión id={} (client={}, model={})", session.getId(), clientId, modelId);
+
+        log.info(
+                "confirmActiveSession: confirmada sesión id={} (client={}, model={})",
+                session.getId(),
+                clientId,
+                modelId
+        );
     }
+
+
+    /**
+     * ACK industrial: marca confirmed_at cuando el frontend confirma que el WebRTC está realmente conectado.
+     *
+     * Reglas:
+     * - Solo puede confirmar si el userId es el client o el model de ese stream_record.
+     * - Si end_time no es NULL, no hace nada (sesión ya cerrada).
+     * - Idempotente: si confirmed_at ya está, no cambia nada.
+     */
+    @Transactional
+    public void ackMedia(Long streamRecordId, Long userId) {
+        StreamRecord session = streamRecordRepository.findById(streamRecordId)
+                .orElseThrow(() -> new EntityNotFoundException("StreamRecord no encontrado: " + streamRecordId));
+
+        // Seguridad: solo client o model pueden confirmar
+        Long clientId = session.getClient() != null ? session.getClient().getId() : null;
+        Long modelId  = session.getModel()  != null ? session.getModel().getId()  : null;
+
+        if (clientId == null || modelId == null) {
+            throw new IllegalStateException("StreamRecord inválido (client/model NULL) id=" + streamRecordId);
+        }
+
+        if (!userId.equals(clientId) && !userId.equals(modelId)) {
+            throw new IllegalArgumentException("No autorizado: userId=" + userId + " no pertenece a la sesión " + streamRecordId);
+        }
+
+        if (session.getEndTime() != null) {
+            // ya cerrada -> ignorar (idempotencia)
+            log.info("ackMedia: sesión {} ya cerrada, ignorando ACK (userId={})", streamRecordId, userId);
+            return;
+        }
+
+        if (session.getConfirmedAt() != null) {
+            // ya confirmada -> idempotente
+            return;
+        }
+
+        session.setConfirmedAt(LocalDateTime.now());
+        streamRecordRepository.save(session);
+
+        log.info("ackMedia: confirmada sesión id={} por userId={} (client={}, model={})",
+                session.getId(), userId, clientId, modelId);
+    }
+
 
     /**
      * Finaliza la sesión activa para el par client-model (si existe), y liquida cobros/pagos.
@@ -219,11 +294,6 @@ public class StreamService {
                 );
             }
 
-
-            // PERSISTENCIA ÚNICA del FAILSAFE (solo si se auto-confirmó arriba)
-            if (session.getConfirmedAt() != null) {
-                streamRecordRepository.save(session);
-            }
 
             // Si sigue sin confirmar (streams fantasma < 3s), cerrar sin cargos
             if (session.getConfirmedAt() == null) {
@@ -462,11 +532,13 @@ public class StreamService {
      *
      * Se debe invocar periódicamente (p.ej. en cada "ping" desde el MatchingHandler).
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public boolean endIfBelowThreshold(Long clientId, Long modelId) {
+
         // 1) localizar sesión activa
         Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
         StreamRecord session = null;
+
         if (sessionIdHint != null) {
             session = streamRecordRepository.findById(sessionIdHint).orElse(null);
         }
@@ -475,22 +547,26 @@ public class StreamService {
                     .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId)
                     .orElse(null);
         }
-        if (session == null) {
-            return false; // no hay nada que cortar
-        }
-        if (session.getEndTime() != null) {
-            return false; // ya cerrada
+        if (session == null) return false;
+        if (session.getEndTime() != null) return false;
+
+        // ⚠️ CLAVE INDUSTRIAL:
+        // Si no está confirmada, NO hay consumo real
+        if (session.getConfirmedAt() == null) {
+            return false;
         }
 
-        // 2) calcular coste acumulado hasta ahora (por segundo, SIN ceil)
-        long seconds = java.time.Duration.between(session.getStartTime(), LocalDateTime.now()).getSeconds();
+        // 2) calcular coste SOLO desde confirmedAt
+        long seconds = java.time.Duration
+                .between(session.getConfirmedAt(), LocalDateTime.now())
+                .getSeconds();
         if (seconds < 0) seconds = 0;
 
         BigDecimal costSoFar = billing.getRatePerMinute()
                 .multiply(BigDecimal.valueOf(seconds))
                 .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
 
-        // 3) saldo desde ledger (fuente de verdad)
+        // 3) saldo desde ledger
         BigDecimal ledgerSaldo = balanceRepository
                 .findTopByUserIdOrderByTimestampDesc(clientId)
                 .map(Balance::getBalance)
@@ -498,17 +574,22 @@ public class StreamService {
 
         BigDecimal remaining = ledgerSaldo.subtract(costSoFar);
 
+        // 4) solo evaluamos
+        boolean below = remaining.compareTo(billing.getCutoffThresholdEur()) < 0;
 
-        // 4) si remaining < cutoff => cerrar
-        if (remaining.compareTo(billing.getCutoffThresholdEur()) < 0) {
-            log.info("endIfBelowThreshold: corte por umbral. clientId={}, modelId={}, remaining={}, cutoff={}",
-                    clientId, modelId, remaining, billing.getCutoffThresholdEur());
-            endSession(clientId, modelId);
-            return true;
+        if (below) {
+            log.info(
+                    "endIfBelowThreshold: DETECTADO bajo saldo (sin cerrar). client={}, model={}, remaining={}, cutoff={}",
+                    clientId,
+                    modelId,
+                    remaining,
+                    billing.getCutoffThresholdEur()
+            );
         }
 
-        return false;
+        return below;
     }
+
 
     /**
      * Devuelve true si hay una sesión de streaming ACTIVA (end_time = NULL)
@@ -549,4 +630,21 @@ public class StreamService {
             return false;
         }
     }
+
+    @Async
+    public void endSessionAsync(Long clientId, Long modelId) {
+        try {
+            log.info("endSessionAsync: programado cierre async client={}, model={}", clientId, modelId);
+            endSession(clientId, modelId);
+        } catch (Exception ex) {
+            log.error(
+                    "endSessionAsync: error cerrando sesión client={}, model={} -> {}",
+                    clientId,
+                    modelId,
+                    ex.getMessage(),
+                    ex
+            );
+        }
+    }
+
 }

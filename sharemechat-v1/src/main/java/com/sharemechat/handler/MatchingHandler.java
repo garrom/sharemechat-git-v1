@@ -12,6 +12,8 @@ import com.sharemechat.constants.Constants;
 import java.math.BigDecimal;
 
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.*;
@@ -53,6 +55,7 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final int seenMaxScan;
     private final StreamLockService streamLockService;
     private final Duration streamLockTtl = Duration.ofSeconds(15);
+    private static final Logger log = LoggerFactory.getLogger(MatchingHandler.class);
 
 
     public MatchingHandler(JwtUtil jwtUtil,
@@ -96,10 +99,28 @@ public class MatchingHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
-        System.out.println("Conexión cerrada: sessionId=" + session.getId() + ", status=" + status);
-        String role = roles.remove(session.getId());
-        Long userId = sessionUserIds.remove(session.getId());
-        lastMatchAt.remove(session.getId());
+
+        final String sid = session != null ? session.getId() : null;
+
+        // Snapshot ANTES de mutar mapas
+        final String roleSnap = (sid != null) ? roles.get(sid) : null;
+        final Long uidSnap = (sid != null) ? sessionUserIds.get(sid) : null;
+        final WebSocketSession peerSnap = (sid != null) ? pairs.get(sid) : null;
+
+        log.debug(
+                "[WS][match][CLOSE] sid={} code={} reason='{}' open={} role={} uid={} peerSid={}",
+                sid,
+                status != null ? status.getCode() : null,
+                status != null ? status.getReason() : null,
+                (session != null && session.isOpen()),
+                roleSnap,
+                uidSnap,
+                peerSnap != null ? peerSnap.getId() : null
+        );
+
+        String role = roles.remove(sid);
+        Long userId = sessionUserIds.remove(sid);
+        lastMatchAt.remove(sid);
 
         if ("model".equals(role)) {
             waitingModels.remove(session);
@@ -108,7 +129,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             waitingClients.remove(session);
         }
 
-        WebSocketSession peer = pairs.remove(session.getId());
+        WebSocketSession peer = pairs.remove(sid);
         if (peer != null) {
             pairs.remove(peer.getId());
 
@@ -117,8 +138,19 @@ public class MatchingHandler extends TextWebSocketHandler {
             String myRole = role;
             String peerRole = roles.get(peer.getId());
 
+            log.debug(
+                    "[WS][match][CLOSE][PAIR] sid={} myId={} myRole={} peerSid={} peerId={} peerRole={} peerOpen={}",
+                    sid,
+                    myId,
+                    myRole,
+                    peer.getId(),
+                    peerId,
+                    peerRole,
+                    peer.isOpen()
+            );
+
             endStreamIfPairKnown(
-                    session.getId(), myId, myRole,
+                    sid, myId, myRole,
                     peer.getId(), peerId, peerRole,
                     "DISCONNECT"
             );
@@ -129,6 +161,8 @@ public class MatchingHandler extends TextWebSocketHandler {
             }
         }
     }
+
+
 
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
@@ -622,15 +656,13 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
 
         try {
-            System.out.println(
-                    "endStreamIfPairKnown: reason=" + closeReason +
-                            " viewerId=" + viewerId +
-                            " modelId=" + modelId
-            );
+            log.debug("endStreamIfPairKnown: reason={} viewerId={} modelId={}", closeReason, viewerId, modelId);
 
             User viewer = userRepository.findById(viewerId).orElse(null);
             String realRole = viewer != null ? viewer.getRole() : null;
 
+            // IMPORTANTE:
+            // - Aquí NO usamos endSessionAsync: necesitamos cierre determinista antes de liberar locks / reencolar.
             if (Constants.Roles.CLIENT.equals(realRole)) {
                 streamService.endSession(viewerId, modelId);
             } else if (Constants.Roles.USER.equals(realRole)) {
@@ -638,10 +670,11 @@ public class MatchingHandler extends TextWebSocketHandler {
             }
 
         } catch (Exception ex) {
-            System.out.println("endSession/endTrialSession falló: " + ex.getMessage());
+            log.warn("endSession/endTrialStream falló: reason={} viewerId={} modelId={} msg={}",
+                    closeReason, viewerId, modelId, ex.getMessage(), ex);
 
         } finally {
-            // 🔐 liberar locks de forma segura e idempotente
+            // liberar locks de forma segura e idempotente
             String ownerA = null;
             String ownerB = null;
 
@@ -652,7 +685,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                 ownerB = pairLockOwnerBySessionId.remove(sessionIdB);
             }
 
-            // Si por cualquier razón no estaba por sessionId, intentamos fallback por userId (sin NPE)
+            // Fallback por userId si no estaba por sessionId (sin NPE)
             if (ownerA == null) {
                 String sid = findSessionIdByUserId(viewerId);
                 if (sid != null) ownerA = pairLockOwnerBySessionId.remove(sid);
@@ -668,38 +701,83 @@ public class MatchingHandler extends TextWebSocketHandler {
                 try {
                     releasePairLocks(viewerId, modelId, owner);
                 } catch (Exception ex) {
-                    System.out.println("Error liberando locks: " + ex.getMessage());
+                    log.warn("Error liberando locks: viewerId={} modelId={} owner={} msg={}",
+                            viewerId, modelId, owner, ex.getMessage(), ex);
                 }
+            } else {
+                log.debug("Locks owner no encontrado (posible TTL expirado): viewerId={} modelId={} reason={}",
+                        viewerId, modelId, closeReason);
             }
         }
     }
 
 
-
     private void sendMatchMessage(WebSocketSession session, String peerSessionId) {
         try {
+            Long myUserId   = sessionUserIds.get(session.getId());
             Long peerUserId = sessionUserIds.get(peerSessionId);
             String peerRole = roles.get(peerSessionId);
 
             BigDecimal clientBalance = null;
+            Long streamRecordId = null;
 
+            // Solo tiene sentido resolver stream para pares CLIENT–MODEL
+            if (myUserId != null && peerUserId != null) {
+
+                String myRole = roles.get(session.getId());
+
+                Long clientId = null;
+                Long modelId  = null;
+
+                if ("client".equals(myRole) && "model".equals(peerRole)) {
+                    clientId = myUserId;
+                    modelId  = peerUserId;
+                } else if ("model".equals(myRole) && "client".equals(peerRole)) {
+                    clientId = peerUserId;
+                    modelId  = myUserId;
+                }
+
+                if (clientId != null && modelId != null) {
+                    try {
+                        // 🔑 FUENTE DE VERDAD DEL STREAM
+                        streamRecordId = statusService
+                                .getActiveSession(clientId, modelId)
+                                .orElse(null);
+                    } catch (Exception ignore) {}
+                }
+            }
+
+            // Balance solo se envía al CLIENT
             if ("client".equals(peerRole)) {
                 clientBalance = getCurrentBalanceOrZero(peerUserId);
             }
 
             String msg = String.format(
-                    "{\"type\":\"match\",\"peerId\":\"%s\",\"peerUserId\":%s,\"peerRole\":\"%s\",\"clientBalance\":%s}",
+                    Locale.US,
+                    "{"
+                            + "\"type\":\"match\","
+                            + "\"peerId\":\"%s\","
+                            + "\"peerUserId\":%s,"
+                            + "\"peerRole\":\"%s\","
+                            + "\"clientBalance\":%s,"
+                            + "\"streamRecordId\":%s"
+                            + "}",
                     peerSessionId,
                     peerUserId != null ? peerUserId.toString() : "null",
                     peerRole != null ? peerRole : "",
-                    clientBalance != null ? ("\"" + clientBalance.toPlainString() + "\"") : "null"
+                    clientBalance != null ? ("\"" + clientBalance.toPlainString() + "\"") : "null",
+                    streamRecordId != null ? streamRecordId.toString() : "null"
             );
 
             session.sendMessage(new TextMessage(msg));
+
         } catch (Exception e) {
-            System.out.println("Error enviando match a sessionId=" + session.getId() + ": " + e.getMessage());
+            System.out.println(
+                    "Error enviando match a sessionId=" + session.getId() + ": " + e.getMessage()
+            );
         }
     }
+
 
     private void safeRequeue(WebSocketSession session, String role) {
         if (session != null && session.isOpen()) {
@@ -757,10 +835,36 @@ public class MatchingHandler extends TextWebSocketHandler {
     }
 
     private void safeSend(WebSocketSession s, String json) {
-        if (s != null && s.isOpen()) {
-            try { s.sendMessage(new TextMessage(json)); } catch (Exception ignore) {}
+        if (s == null) return;
+
+        if (!s.isOpen()) {
+            log.debug("[WS][match][SEND_SKIP] sid={} reason=not-open payloadType={}", s.getId(), safeType(json));
+            return;
+        }
+
+        try {
+            s.sendMessage(new TextMessage(json));
+        } catch (Exception ex) {
+            log.error(
+                    "[WS][match][SEND_FAIL] sid={} payloadType={} exClass={} exMsg={}",
+                    s.getId(),
+                    safeType(json),
+                    ex.getClass().getName(),
+                    ex.getMessage(),
+                    ex
+            );
         }
     }
+
+    private String safeType(String json) {
+        if (json == null) return "null";
+        try {
+            return new org.json.JSONObject(json).optString("type", "unknown");
+        } catch (Exception ignore) {
+            return "non-json";
+        }
+    }
+
 
     private boolean checkCutoffAndMaybeEnd(WebSocketSession session) {
         WebSocketSession peer = pairs.get(session.getId());
@@ -779,37 +883,56 @@ public class MatchingHandler extends TextWebSocketHandler {
 
         if ("client".equals(myRole) && "model".equals(peerRole)) {
             clientId = myUserId;
-            modelId = peerUserId;
+            modelId  = peerUserId;
         } else if ("model".equals(myRole) && "client".equals(peerRole)) {
             clientId = peerUserId;
-            modelId = myUserId;
+            modelId  = myUserId;
         } else {
             return false;
         }
 
+        // Solo aplicamos cutoff a CLIENT real (no a USER trial)
         try {
             User clientUser = userRepository.findById(clientId).orElse(null);
-            if (clientUser == null || !Constants.Roles.CLIENT.equals(clientUser.getRole())) return false;
+            if (clientUser == null || !Constants.Roles.CLIENT.equals(clientUser.getRole())) {
+                return false;
+            }
         } catch (Exception ex) {
             return false;
         }
 
-        boolean closed;
+        final boolean shouldEnd;
         try {
-            closed = streamService.endIfBelowThreshold(clientId, modelId);
+            shouldEnd = streamService.endIfBelowThreshold(clientId, modelId);
         } catch (Exception ex) {
-            System.out.println("endIfBelowThreshold error: " + ex.getMessage());
+            log.warn("endIfBelowThreshold error: clientId={} modelId={} msg={}",
+                    clientId, modelId, ex.getMessage(), ex);
             return false;
         }
 
-        if (closed) {
-            safeSend(session, "{\"type\":\"peer-disconnected\",\"reason\":\"low-balance\"}");
-            safeSend(peer, "{\"type\":\"peer-disconnected\",\"reason\":\"low-balance\"}");
-            pairs.remove(session.getId());
-            pairs.remove(peer.getId());
+        if (!shouldEnd) return false;
+
+        // Importante: feedback inmediato al frontend
+        safeSend(session, "{\"type\":\"peer-disconnected\",\"reason\":\"low-balance\"}");
+        safeSend(peer,    "{\"type\":\"peer-disconnected\",\"reason\":\"low-balance\"}");
+
+        // Desparejar ya (UX inmediata). Los locks pueden quedar vivos hasta:
+        // - cierre real en endSessionAsync, o
+        // - TTL de locks (15s) si tu unlock depende del cierre.
+        pairs.remove(session.getId());
+        pairs.remove(peer.getId());
+
+        // ✅ Aquí SÍ usamos ASYNC para no bloquear el hilo WS en un cierre “pesado”
+        try {
+            streamService.endSessionAsync(clientId, modelId);
+        } catch (Exception ex) {
+            log.warn("endSessionAsync launch failed: clientId={} modelId={} msg={}",
+                    clientId, modelId, ex.getMessage(), ex);
         }
-        return closed;
+
+        return true;
     }
+
 
     private void handleTrialPingAndMaybeEnd(WebSocketSession session) {
         WebSocketSession peer = pairs.get(session.getId());
@@ -1005,6 +1128,38 @@ public class MatchingHandler extends TextWebSocketHandler {
         }
         return null;
     }
+
+    @Override
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        final String sid = session != null ? session.getId() : null;
+
+        Long uid = null;
+        String role = null;
+        String peerSid = null;
+
+        try { uid = (sid != null) ? sessionUserIds.get(sid) : null; } catch (Exception ignore) {}
+        try { role = (sid != null) ? roles.get(sid) : null; } catch (Exception ignore) {}
+        try {
+            WebSocketSession peer = (sid != null) ? pairs.get(sid) : null;
+            peerSid = peer != null ? peer.getId() : null;
+        } catch (Exception ignore) {}
+
+        log.error(
+                "[WS][match][TRANSPORT_ERROR] sid={} uid={} role={} open={} peerSid={} exClass={} exMsg={}",
+                sid,
+                uid,
+                role,
+                (session != null && session.isOpen()),
+                peerSid,
+                exception != null ? exception.getClass().getName() : null,
+                exception != null ? exception.getMessage() : null,
+                exception
+        );
+
+        // deja que el ciclo de vida cierre como corresponda
+        super.handleTransportError(session, exception);
+    }
+
 
 
 }
