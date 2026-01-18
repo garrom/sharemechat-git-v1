@@ -243,8 +243,7 @@ const DashboardClient = () => {
   }, [user?.id]);
 
 
-  // Mantener compatibilidad: reflejar target -> centerChat (UI ONLY)
-  // Importante: NO pisar activePeerRef aquí (activePeerRef es autoridad viva)
+  // Mantener compatibilidad: reflejar target -> centerChat
   useEffect(() => {
     if (Number(targetPeerId) > 0) {
       const id = Number(targetPeerId);
@@ -252,12 +251,16 @@ const DashboardClient = () => {
 
       setCenterChatPeerId(id);
       setCenterChatPeerName(name);
+
+      // NUEVO: mantener ref sincronizado en modo compat
+      activePeerRef.current = { id, name };
     } else {
       setCenterChatPeerId(null);
       setCenterChatPeerName('');
+
+      activePeerRef.current = { id: null, name: '' };
     }
   }, [targetPeerId, targetPeerName]);
-
 
 
   useEffect(() => {
@@ -544,10 +547,6 @@ const DashboardClient = () => {
   }, [remoteStream, callStatus, setInCall]);
 
 
-  // =======================
-  // MSG SOCKET (Client)
-  // =======================
-
   const clearMsgTimers = () => {
     if (msgPingRef.current) {
       clearInterval(msgPingRef.current);
@@ -560,400 +559,10 @@ const DashboardClient = () => {
   };
 
   const closeMsgSocket = () => {
-    try {
-      if (msgSocketRef.current) {
-        msgSocketRef.current.__manualClose = true;
-        msgSocketRef.current.close();
-      }
-    } catch {}
+    try { if (msgSocketRef.current) msgSocketRef.current.close(); } catch {}
     msgSocketRef.current = null;
     setWsReady(false);
     clearMsgTimers();
-  };
-
-  const isSameChat = (from, to) => {
-    const me = Number(meIdRef.current);
-    const peer = Number(activePeerRef.current?.id);
-    if (!me || !peer) return false;
-    return (Number(from) === peer && Number(to) === me) || (Number(from) === me && Number(to) === peer);
-  };
-
-  const parseGiftMarker = (body) => {
-    if (typeof body !== 'string') return null;
-    if (!body.startsWith('[[GIFT:') || !body.endsWith(']]')) return null;
-    try {
-      const parts = body.slice(2, -2).split(':'); // GIFT:id:name
-      if (parts.length >= 3 && parts[0] === 'GIFT') {
-        return { id: Number(parts[1]), name: parts.slice(2).join(':') };
-      }
-    } catch {}
-    return null;
-  };
-
-  const handleMsgGift = (data) => {
-    if (!data?.gift) return;
-
-    const from = Number(data.from);
-    const to = Number(data.to);
-    if (!isSameChat(from, to)) return;
-
-    const mid = data.messageId;
-    if (mid && centerSeenIdsRef.current.has(mid)) return;
-    if (mid) centerSeenIdsRef.current.add(mid);
-
-    setCenterMessages(prev => [
-      ...prev,
-      {
-        id: mid || `${Date.now()}`,
-        senderId: from,
-        recipientId: to,
-        body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
-        gift: { id: data.gift.id, name: data.gift.name },
-      },
-    ]);
-
-    queueMicrotask(() => {
-      const el = centerListRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
-    });
-  };
-
-  const handleMsgNew = (data) => {
-    if (!data?.message) return;
-
-    const m = normMsg(data.message);
-
-    const gift = parseGiftMarker(m.body);
-    if (gift) m.gift = gift;
-
-    if (!isSameChat(m.senderId, m.recipientId)) return;
-
-    if (m.id && centerSeenIdsRef.current.has(m.id)) return;
-    if (m.id) centerSeenIdsRef.current.add(m.id);
-
-    setCenterMessages(prev => [...prev, m]);
-
-    queueMicrotask(() => {
-      const el = centerListRef.current;
-      if (el) el.scrollTop = el.scrollHeight;
-    });
-  };
-
-  const handleMsgOrGiftNoBalance = (data) => {
-    const msg = String(data?.message || '');
-    if (!msg.toLowerCase().includes('saldo insuficiente')) return false;
-
-    (async () => {
-      try {
-        await handleAddBalance();
-      } catch (e) {
-        console.error('Error en handleAddBalance (msg/gift no-balance):', e);
-      }
-    })();
-
-    return true;
-  };
-
-  const handleCallIncoming = (data) => {
-    const id = Number(data.from);
-    const name = String(data.displayName || 'Usuario');
-
-    console.log('[CALL][incoming][Client] from=', id, 'name=', name);
-
-    callTargetLockedRef.current = true;
-
-    setActivePeer(id, name, 'call', null);
-
-    setCallPeerId(id);
-    callPeerIdRef.current = id;
-    setCallPeerName(name);
-
-    setSelectedFav(null);
-
-    setCallStatus('incoming');
-    setCallError('');
-  };
-
-  const handleCallRinging = () => {
-    console.log('[CALL][ringing] to=', callPeerId);
-    setCallStatus('ringing');
-    setCallError('');
-
-    if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-
-    callRingTimeoutRef.current = setTimeout(() => {
-      console.log('[CALL][ringing] timeout -> cancel local');
-      handleCallEnd(true);
-    }, 45000);
-  };
-
-  const handleCallAccepted = () => {
-    console.log('[CALL][accepted]', { peer: callPeerIdRef.current, role: callRoleRef.current });
-
-    if (callRingTimeoutRef.current) {
-      clearTimeout(callRingTimeoutRef.current);
-      callRingTimeoutRef.current = null;
-    }
-
-    const peer = Number(callPeerIdRef.current);
-
-    if (Number.isFinite(peer) && peer > 0) {
-      const nm = callPeerName || activePeerRef.current?.name || 'Usuario';
-
-      activePeerRef.current = { id: peer, name: nm };
-
-      setTargetPeerId(peer);
-      setTargetPeerName(nm);
-
-      setCenterChatPeerName(nm);
-    }
-
-    const initiator = (callRoleRef.current === 'caller');
-    wireCallPeer(initiator);
-
-    setCallStatus('in-call');
-    setCallError('');
-
-    if (callPingRef.current) clearInterval(callPingRef.current);
-
-    callPingRef.current = setInterval(() => {
-      try {
-        if (msgSocketRef.current?.readyState === WebSocket.OPEN) {
-          msgSocketRef.current.send(JSON.stringify({ type: 'call:ping' }));
-          console.log('[CALL][ping] sent (in-call loop)');
-        }
-      } catch {}
-    }, 30000);
-  };
-
-  const handleCallSignalIn = (data) => {
-    console.log(
-      '[CALL][signal:in][Client]',
-      data.signal?.type || (data.signal?.candidate ? 'candidate' : 'unknown')
-    );
-
-    if (callPeerRef.current) {
-      callPeerRef.current.signal(data.signal);
-    }
-  };
-
-  const handleCallRejected = () => {
-    console.log('[CALL][rejected]');
-
-    if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-
-    setCallStatus('idle');
-    setCallError('');
-
-    (async () => {
-      try {
-        await alert({
-          title: 'Llamada rechazada',
-          message: 'La otra persona ha rechazado tu llamada.',
-          variant: 'info',
-        });
-      } catch (e) {
-        console.error('Error mostrando modal de rechazo:', e);
-      }
-    })();
-  };
-
-  const handleCallCanceled = (data) => {
-    console.log('[CALL][canceled] reason=', data.reason);
-
-    if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-
-    cleanupCall('canceled');
-  };
-
-  const handleCallEnded = (data) => {
-    console.log('[CALL][ended] reason=', data.reason);
-
-    const reason = data.reason;
-    cleanupCall('ended');
-
-    if (reason === 'low-balance') {
-      (async () => {
-        try {
-          await handlePurchaseFromCalling();
-        } catch (e) {
-          console.error('Error en handlePurchaseFromCalling (ended/low-balance):', e);
-        }
-      })();
-    }
-  };
-
-  const handleCallNoBalance = () => {
-    console.log('[CALL][no-balance]');
-
-    if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-
-    setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-    setCallError('');
-
-    (async () => {
-      try {
-        await handlePurchaseFromCalling();
-      } catch (e) {
-        console.error('Error en handlePurchaseFromCalling:', e);
-      }
-    })();
-  };
-
-  const handleCallBusy = (data) => {
-    console.log('[CALL][busy]', data);
-
-    setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-    setCallError('');
-
-    if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-
-    (async () => {
-      try {
-        await alert({
-          title: 'Usuario ocupado',
-          message: 'El usuario está en otra llamada o en streaming.',
-          variant: 'info',
-        });
-      } catch (e) {
-        console.error('Error mostrando modal de ocupado:', e);
-      }
-    })();
-  };
-
-  const handleCallOffline = () => {
-    console.log('[CALL][offline]');
-
-    setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-    setCallError('');
-
-    if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-
-    (async () => {
-      try {
-        await alert({
-          title: 'Usuario no disponible',
-          message: 'El usuario no está conectado en este momento.',
-          variant: 'info',
-        });
-      } catch (e) {
-        console.error('Error mostrando modal de offline:', e);
-      }
-    })();
-  };
-
-  const handleCallErrorEvt = (data) => {
-    console.log('[CALL][error]', data.message);
-
-    setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-    setCallError(String(data.message || 'Error en la llamada'));
-
-    if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-  };
-
-  const sendMsgPingLoop = (sock) => {
-    if (msgPingRef.current) clearInterval(msgPingRef.current);
-
-    msgPingRef.current = setInterval(() => {
-      try {
-        if (msgSocketRef.current !== sock) return;
-        if (sock.readyState !== WebSocket.OPEN) return;
-
-        sock.send(JSON.stringify({ type: 'ping' }));
-
-        const st = callStatusRef.current;
-        if (st === 'in-call' || st === 'connecting') {
-          sock.send(JSON.stringify({
-            type: 'call:ping',
-            with: Number(callPeerIdRef.current),
-          }));
-          console.log('[CALL][ping] sent (Client)');
-        }
-      } catch {}
-    }, 30000);
-  };
-
-  const scheduleMsgReconnect = () => {
-    clearMsgTimers();
-
-    msgReconnectRef.current = setTimeout(() => {
-      const now = msgSocketRef.current;
-      if (now && (now.readyState === WebSocket.OPEN || now.readyState === WebSocket.CONNECTING)) return;
-      openMsgSocket();
-    }, 1500);
-  };
-
-  const routeMsgEvent = (data) => {
-    // ====== MENSAJES / REGALOS ======
-    if (data.type === 'msg:gift') {
-      handleMsgGift(data);
-      return;
-    }
-
-    if (data.type === 'msg:new') {
-      handleMsgNew(data);
-      return;
-    }
-
-    // ====== saldo insuficiente en gift/msg (mensajería) ======
-    if ((data.type === 'gift:error' || data.type === 'msg:error') && handleMsgOrGiftNoBalance(data)) {
-      return;
-    }
-
-    // ====== CALLING ======
-    if (data.type === 'call:incoming') {
-      handleCallIncoming(data);
-      return;
-    }
-
-    if (data.type === 'call:ringing') {
-      handleCallRinging();
-      return;
-    }
-
-    if (data.type === 'call:accepted') {
-      handleCallAccepted();
-      return;
-    }
-
-    if (data.type === 'call:signal' && data.signal) {
-      handleCallSignalIn(data);
-      return;
-    }
-
-    if (data.type === 'call:rejected') {
-      handleCallRejected();
-      return;
-    }
-
-    if (data.type === 'call:canceled') {
-      handleCallCanceled(data);
-      return;
-    }
-
-    if (data.type === 'call:ended') {
-      handleCallEnded(data);
-      return;
-    }
-
-    if (data.type === 'call:no-balance') {
-      handleCallNoBalance();
-      return;
-    }
-
-    if (data.type === 'call:busy') {
-      handleCallBusy(data);
-      return;
-    }
-
-    if (data.type === 'call:offline') {
-      handleCallOffline();
-      return;
-    }
-
-    if (data.type === 'call:error') {
-      handleCallErrorEvt(data);
-    }
   };
 
   const openMsgSocket = () => {
@@ -993,7 +602,26 @@ const DashboardClient = () => {
       console.log('[WS][messages] OPEN (Client)');
       setWsReady(true);
 
-      sendMsgPingLoop(s);
+      if (msgPingRef.current) clearInterval(msgPingRef.current);
+
+      msgPingRef.current = setInterval(() => {
+        try {
+          if (msgSocketRef.current !== s) return;
+          if (s.readyState !== WebSocket.OPEN) return;
+
+          s.send(JSON.stringify({ type: 'ping' }));
+
+          // 🔥 CLAVE: leer estado VIVO
+          const st = callStatusRef.current;
+          if (st === 'in-call' || st === 'connecting') {
+            s.send(JSON.stringify({
+              type: 'call:ping',
+              with: Number(callPeerIdRef.current),
+            }));
+            console.log('[CALL][ping] sent (Client)');
+          }
+        } catch {}
+      }, 30000);
     };
 
     s.onclose = () => {
@@ -1001,14 +629,20 @@ const DashboardClient = () => {
 
       console.log('[WS][messages] CLOSE (Client)');
       setWsReady(false);
+      clearMsgTimers();
       msgSocketRef.current = null;
 
-      if (s.__manualClose) {
-        clearMsgTimers();
-        return;
-      }
+      if (s.__manualClose) return;
 
-      scheduleMsgReconnect();
+      msgReconnectRef.current = setTimeout(() => {
+        const now = msgSocketRef.current;
+        if (now && (
+          now.readyState === WebSocket.OPEN ||
+          now.readyState === WebSocket.CONNECTING
+        )) return;
+
+        openMsgSocket();
+      }, 1500);
     };
 
     s.onerror = () => {
@@ -1018,13 +652,289 @@ const DashboardClient = () => {
     };
 
     s.onmessage = (ev) => {
+      // Si llega un mensaje de un socket viejo, lo ignoramos
       if (msgSocketRef.current !== s) return;
 
       try {
         const data = JSON.parse(ev.data);
-        routeMsgEvent(data);
-      } catch {
-        // noop (parse errors)
+
+        // ====== MENSAJES / REGALOS ======
+        if (data.type === 'msg:gift' && data.gift) {
+          const me = Number(meIdRef.current);
+          const peer = Number(activePeerRef.current?.id);
+          const from = Number(data.from);
+          const to = Number(data.to);
+          const belongsToThisChat =
+            (from === peer && to === me) || (from === me && to === peer);
+          if (!me || !peer || !belongsToThisChat) return;
+
+          const mid = data.messageId;
+          if (mid && centerSeenIdsRef.current.has(mid)) return;
+          if (mid) centerSeenIdsRef.current.add(mid);
+
+          setCenterMessages(prev => [...prev, {
+            id: mid || `${Date.now()}`,
+            senderId: from,
+            recipientId: to,
+            body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
+            gift: { id: data.gift.id, name: data.gift.name }
+          }]);
+          queueMicrotask(() => { const el = centerListRef.current; if (el) el.scrollTop = el.scrollHeight; });
+          return;
+        }
+
+        if (data.type === 'msg:new' && data.message) {
+          const m = normMsg(data.message);
+
+          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            try {
+              const parts = m.body.slice(2, -2).split(':');
+              if (parts.length >= 3 && parts[0] === 'GIFT') {
+                m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
+              }
+            } catch {}
+          }
+
+          const me = Number(meIdRef.current);
+          const peer = Number(activePeerRef.current?.id);
+          if (!me || !peer) return;
+
+          const belongsToThisChat =
+            (m.senderId === peer && m.recipientId === me) ||
+            (m.senderId === me && m.recipientId === peer);
+
+          if (belongsToThisChat) {
+            if (m.id && centerSeenIdsRef.current.has(m.id)) return;
+            if (m.id) centerSeenIdsRef.current.add(m.id);
+            setCenterMessages(prev => [...prev, m]);
+            queueMicrotask(() => { const el = centerListRef.current; if (el) el.scrollTop = el.scrollHeight; });
+          }
+          return;
+        }
+
+        // ====== GIFT / MENSAJES: saldo insuficiente ======
+        if (
+          (data.type === 'gift:error' || data.type === 'msg:error') &&
+          typeof data.message === 'string' &&
+          data.message.toLowerCase().includes('saldo insuficiente')
+        ) {
+          console.log('[GIFT][no-balance] message=', data.message);
+
+          // Aquí podemos reutilizar el mismo flujo que el botón "+ Saldo"
+          (async () => {
+            try {
+              await handleAddBalance();
+            } catch (e) {
+              console.error('Error en handleAddBalance (gift no-balance):', e);
+            }
+          })();
+          return;
+        }
+
+        // ====== CALLING: EVENTOS call:* ======
+        if (data.type === 'call:incoming') {
+          const id = Number(data.from);
+          const name = String(data.displayName || 'Usuario');
+
+          console.log('[CALL][incoming][Client] from=', id, 'name=', name);
+
+          // Lock del target
+          callTargetLockedRef.current = true;
+
+          // Autoridad única: fijar peer activo en modo call
+          setActivePeer(id, name, 'call', null);
+
+          // Sincronizar universo CALL
+          setCallPeerId(id);
+          callPeerIdRef.current = id;
+          setCallPeerName(name);
+
+          // Limpiar selección
+          setSelectedFav(null);
+
+          setCallStatus('incoming');
+          setCallError('');
+          return;
+        }
+
+
+        if (data.type === 'call:ringing') {
+          console.log('[CALL][ringing] to=', callPeerId);
+          setCallStatus('ringing');
+          setCallError('');
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          callRingTimeoutRef.current = setTimeout(() => {
+            console.log('[CALL][ringing] timeout -> cancel local');
+            handleCallEnd(true);
+          }, 45000);
+          return;
+        }
+
+        if (data.type === 'call:accepted') {
+          console.log('[CALL][accepted]', { peer: callPeerIdRef.current, role: callRoleRef.current });
+
+          if (callRingTimeoutRef.current) {
+            clearTimeout(callRingTimeoutRef.current);
+            callRingTimeoutRef.current = null;
+          }
+
+          const peer = Number(callPeerIdRef.current);
+          if (Number.isFinite(peer) && peer > 0) {
+            console.log('[CALL][lock] accepted -> keep lock [Client]; peer=', peer);
+
+            // Refuerzo: ActivePeer debe ser el peer de la llamada
+            const nm = callPeerName || activePeerRef.current?.name || 'Usuario';
+            activePeerRef.current = { id: peer, name: nm };
+
+            // Estado "compat" (target) debe seguir al peer activo (lo demás deriva de ahí por tu effect target->centerChat)
+            setTargetPeerId(peer);
+            setTargetPeerName(nm);
+
+            // UI
+            setCenterChatPeerName(nm);
+          }
+
+          const initiator = (callRoleRef.current === 'caller');
+          wireCallPeer(initiator);
+
+          setCallStatus('in-call');
+          setCallError('');
+
+          if (callPingRef.current) clearInterval(callPingRef.current);
+          callPingRef.current = setInterval(() => {
+            try {
+              if (msgSocketRef.current?.readyState === WebSocket.OPEN) {
+                msgSocketRef.current.send(JSON.stringify({ type: 'call:ping' }));
+                console.log('[CALL][ping] sent (in-call loop)');
+              }
+            } catch {}
+          }, 30000);
+          return;
+        }
+
+
+        if (data.type === 'call:signal' && data.signal) {
+          console.log('[CALL][signal:in][Client]', data.signal?.type || (data.signal?.candidate ? 'candidate' : 'unknown'));
+          if (callPeerRef.current) {
+            callPeerRef.current.signal(data.signal);
+          }
+          return;
+        }
+
+        if (data.type === 'call:rejected') {
+          console.log('[CALL][rejected]');
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          setCallStatus('idle');
+          setCallError('');
+
+          (async () => {
+            try {
+              await alert({
+                title: 'Llamada rechazada',
+                message: 'La otra persona ha rechazado tu llamada.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal de rechazo:', e);
+            }
+          })();
+
+          return;
+        }
+
+        if (data.type === 'call:canceled') {
+          console.log('[CALL][canceled] reason=', data.reason);
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          cleanupCall('canceled');
+          return;
+        }
+
+        if (data.type === 'call:ended') {
+          console.log('[CALL][ended] reason=', data.reason);
+          const reason = data.reason;
+          cleanupCall('ended');
+          // saldo bajo -> abrir modal de compra
+          if (reason === 'low-balance') {
+            (async () => {
+              try {
+                await handlePurchaseFromCalling();
+              } catch (e) {
+                console.error('Error en handlePurchaseFromCalling (ended/low-balance):', e);
+              }
+            })();
+          }
+
+          return;
+        }
+
+        // CAll 1 a 1
+        if (data.type === 'call:no-balance') {
+          console.log('[CALL][no-balance]');
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
+          // Volvemos al estado previo de cámara, pero sin mensaje de error "plano"
+          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+          setCallError('');
+
+          // Disparamos el modal de compra específico para llamadas
+          (async () => {
+            try {
+              await handlePurchaseFromCalling();
+            } catch (e) {
+              console.error('Error en handlePurchaseFromCalling:', e);
+            }
+          })();
+
+          return;
+        }
+
+        if (data.type === 'call:busy') {
+          console.log('[CALL][busy]', data);
+          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+          setCallError('');
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          (async () => {
+            try {
+              await alert({
+                title: 'Usuario ocupado',
+                message: 'El usuario está en otra llamada o en streaming.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal de ocupado:', e);
+            }
+          })();
+          return;
+        }
+
+        if (data.type === 'call:offline') {
+          console.log('[CALL][offline]');
+          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+          setCallError('');
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          (async () => {
+            try {
+              await alert({
+                title: 'Usuario no disponible',
+                message: 'El usuario no está conectado en este momento.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal de offline:', e);
+            }
+          })();
+          return;
+        }
+
+        if (data.type === 'call:error') {
+          console.log('[CALL][error]', data.message);
+          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+          setCallError(String(data.message || 'Error en la llamada'));
+          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+          return;
+        }
+      } catch (e) {
+        // silenciar parse errors
       }
     };
   };
@@ -1072,66 +982,14 @@ const DashboardClient = () => {
     history.push('/');
   };
 
-  // =======================
-  // RANDOM MATCH (CLIENT)
-  // =======================
+  const handleStartMatch = () => {
+    if (!cameraActive || !localStream.current) {
+      setError('Primero activa la cámara.');
+      return;
+    }
+    setSearching(true);
+    setError('');
 
-  const cleanupRandom = () => {
-
-    try {
-      if (peerRef.current) {
-        peerRef.current.destroy();
-        peerRef.current = null;
-      }
-    } catch {}
-
-    try {
-      if (remoteStream) {
-        remoteStream.getTracks().forEach(t => t.stop());
-      }
-    } catch {}
-
-    setRemoteStream(null);
-    setMessages([]);
-  };
-
-  const wireRandomPeer = () => {
-    const peer = new Peer({
-      initiator: true,
-      trickle: true,
-      stream: localStream.current,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-        ],
-      },
-    });
-
-    peer.on('signal', (signal) => {
-      if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
-      if (socketRef.current?.readyState === WebSocket.OPEN) {
-        socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
-      }
-    });
-
-    peer.on('stream', (stream) => {
-      setRemoteStream(stream);
-    });
-
-    peer.on('error', (err) => {
-      setError('Error en la conexión WebRTC: ' + err.message);
-      setSearching(false);
-    });
-
-    peerRef.current = peer;
-  };
-
-  const openMatchSocket = () => {
     const tokenLS = localStorage.getItem('token');
     if (!tokenLS) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
@@ -1140,20 +998,20 @@ const DashboardClient = () => {
     }
 
     const wsUrl = buildWsUrl(WS_PATHS.match, { token: tokenLS });
-    console.log('[RANDOM][WS][Client] ->', wsUrl);
+    console.log('WS(Client) ->', wsUrl);
 
     socketRef.current = new WebSocket(wsUrl);
 
     socketRef.current.onopen = () => {
       if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
 
-      // ping inmediato
+      // 1) ping inmediato para que el backend pueda confirmar cuanto antes
       try { socketRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
 
-      // ping agresivo durante arranque
+      // 2) durante matchmaking/arranque, ping más frecuente (reduce streams 0s sin confirmar)
       pingIntervalRef.current = setInterval(() => {
         try {
-          if (socketRef.current?.readyState === WebSocket.OPEN) {
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ type: 'ping' }));
           }
         } catch {}
@@ -1163,29 +1021,62 @@ const DashboardClient = () => {
       socketRef.current.send(JSON.stringify({ type: 'start-match' }));
     };
 
+
     socketRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
       if (data.type === 'match') {
+
         matchGraceRef.current = true;
-        setTimeout(
-          () => { matchGraceRef.current = false; },
-          isMobile ? 3000 : 1500
-        );
+        setTimeout(() => { matchGraceRef.current = false; }, isMobile ? 3000 : 1500);
 
-        cleanupRandom();
-
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          try { socketRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
+        }
         try {
           if (data.peerRole === 'model' && Number.isFinite(Number(data.peerUserId))) {
             setCurrentModelId(Number(data.peerUserId));
           } else {
             setCurrentModelId(null);
           }
-        } catch {
-          setCurrentModelId(null);
-        }
+        } catch { setCurrentModelId(null); }
 
-        wireRandomPeer();
+        try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
+        try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
+        setRemoteStream(null);
+        setMessages([]);
+
+        const peer = new Peer({
+          initiator: true,
+          trickle: true,
+          stream: localStream.current,
+          config: {
+            iceServers: [
+              { urls: 'stun:stun.l.google.com:19302' },
+              {
+                urls: 'turn:openrelay.metered.ca:80',
+                username: 'openrelayproject',
+                credential: 'openrelayproject',
+              },
+            ],
+          },
+        });
+
+        peer.on('signal', (signal) => {
+          if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+            socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
+          }
+        });
+
+        peer.on('stream', (stream) => setRemoteStream(stream));
+        peer.on('error', (err) => {
+          //console.error('Peer error:', err);
+          setError('Error en la conexión WebRTC: ' + err.message);
+          setSearching(false);
+        });
+
+        peerRef.current = peer;
         setSearching(false);
         return;
       }
@@ -1197,18 +1088,16 @@ const DashboardClient = () => {
 
       if (data.type === 'chat') {
         if (!isEcho(data.message)) {
-          setMessages(prev => [...prev, { from: 'peer', text: data.message }]);
+          setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
         }
         return;
       }
 
       if (data.type === 'gift') {
         const mine = Number(data.fromUserId) === Number(user?.id);
-        setMessages(p => [
-          ...p,
-          { from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }
-        ]);
+        setMessages(p=>[...p,{ from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
 
+        // newBalance viene del backend en gifts de streaming (MatchingHandler)
         if (mine && data.newBalance != null) {
           const nb = Number.parseFloat(String(data.newBalance));
           if (Number.isFinite(nb)) setSaldo(nb);
@@ -1220,17 +1109,23 @@ const DashboardClient = () => {
         const msg = data.message || 'No se pudo enviar el regalo';
         const isSaldo = String(msg).toLowerCase().includes('saldo');
 
+        // Caso saldo insuficiente: solo modal, SIN texto rojo en pantalla
         if (isSaldo) {
-          setError('');
+          setError(''); // limpiamos cualquier mensaje previo
           (async () => {
-            try { await handlePurchaseFromGift(); } catch {}
+            try {
+              await handlePurchaseFromGift();
+            } catch (e) {
+              console.error('Error en handlePurchaseFromGift:', e);
+            }
           })();
           return;
         }
-
+        // Resto de errores de regalo: sí mostramos el texto en rojo
         setError(msg);
         return;
       }
+
 
       if (data.type === 'no-model-available') {
         setError('');
@@ -1238,28 +1133,60 @@ const DashboardClient = () => {
         return;
       }
 
+      // Random
       if (data.type === 'no-balance') {
         setSearching(false);
         setError('');
+
+        // Lanzamos el flujo de compra específico para RANDOM
         (async () => {
-          try { await handlePurchaseFromRandom(); } catch {}
+          try {
+            await handlePurchaseFromRandom();
+          } catch (e) {
+            console.error('Error en handlePurchaseFromRandom:', e);
+          }
         })();
+
         return;
       }
 
       if (data.type === 'peer-disconnected') {
+        console.log('[RANDOM][peer-disconnected]', data);
         const reason = data.reason || '';
-        cleanupRandom();
+        // Limpieza común: peer + streams + mensajes
         setCurrentModelId(null);
+        try {
+          if (peerRef.current) {
+            peerRef.current.destroy();
+            peerRef.current = null;
+          }
+        } catch {}
+        try {
+          if (remoteStream) {
+            remoteStream.getTracks().forEach((t) => t.stop());
+          }
+        } catch {}
+        setRemoteStream(null);
+        setMessages([]);
 
+        // Caso especial: corte por saldo bajo
         if (reason === 'low-balance') {
+          setStatus('');
           setSearching(false);
+
+          // Lanzamos flujo de compra específico para RANDOM
           (async () => {
-            try { await handlePurchaseFromRandom(); } catch {}
+            try {
+              await handlePurchaseFromRandom();
+            } catch (e) {
+              console.error('Error en handlePurchaseFromRandom (low-balance):', e);
+            }
           })();
+          // MUY IMPORTANTE: NO reenviamos start-match aquí
           return;
         }
 
+        // Resto de casos: seguimos auto-buscando como antes
         setStatus('Buscando nueva modelo...');
         setSearching(true);
 
@@ -1269,14 +1196,16 @@ const DashboardClient = () => {
         }
         return;
       }
+
     };
 
-    socketRef.current.onerror = () => {
+    socketRef.current.onerror = (e) => {
+      console.error('WebSocket error (client):', e);
       setError('Error WebSocket');
       setSearching(false);
     };
 
-    socketRef.current.onclose = () => {
+    socketRef.current.onclose = (e) => {
       if (pingIntervalRef.current) {
         clearInterval(pingIntervalRef.current);
         pingIntervalRef.current = null;
@@ -1284,20 +1213,6 @@ const DashboardClient = () => {
       setSearching(false);
     };
   };
-
-  const handleStartMatch = () => {
-    if (!cameraActive || !localStream.current) {
-      setError('Primero activa la cámara.');
-      return;
-    }
-
-    setSearching(true);
-    setError('');
-
-    cleanupRandom();
-    openMatchSocket();
-  };
-
 
   const handleNext = () => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -1917,7 +1832,7 @@ const DashboardClient = () => {
   };
 
 
-  const openChatWith = (peerId, displayName, favUser = null) => {
+  const openChatWith = (peerId, displayName) => {
     const peer = Number(peerId);
 
     if (streamingActivo) {
@@ -1930,17 +1845,18 @@ const DashboardClient = () => {
       return;
     }
 
-    // Autoridad única: fija peer + modo + tab
-    setActivePeer(peer, displayName || 'Usuario', 'chat', favUser);
+    // SIMÉTRICO a Model: esta función NO carga histórico.
+    // El histórico lo carga el useEffect(targetPeerId, activeTab).
+    setActiveTab('favoritos');
+    setCenterChatPeerName(displayName || 'Usuario');
 
-    // UX: mientras llega el histórico (useEffect targetPeerId+activeTab)
+    // Mantengo limpieza “optimista” para UX (mientras carga)
     setCenterMessages([]);
     centerSeenIdsRef.current = new Set();
     setCenterLoading(true);
 
-    openMsgSocket?.();
+    openMsgSocket();
   };
-
 
 
   const normMsg = (raw) => ({
@@ -1999,12 +1915,17 @@ const DashboardClient = () => {
     const prevId = Number(activePeerRef.current?.id) || null;
     const isSamePeer = prevId === id;
 
-    // Autoridad única "viva"
+    // 👉 Autoridad viva (id + name)
     activePeerRef.current = { id, name };
 
-    // Fuente de verdad del contacto activo (estado React)
+    // 👉 Fuente de verdad React
     setTargetPeerId(id);
     setTargetPeerName(name);
+
+    // 👉 NUEVO: preservar avatar si viene de favoritos
+    if (favUser?.avatarUrl) {
+      setCallPeerAvatar(favUser.avatarUrl);
+    }
 
     if (favUser) {
       setSelectedFav(favUser);
@@ -2013,7 +1934,6 @@ const DashboardClient = () => {
     setContactMode(mode || 'chat');
     setActiveTab('favoritos');
 
-    // Solo limpiamos buffers si CAMBIA el peer
     if (!isSamePeer) {
       centerSeenIdsRef.current = new Set();
       setCenterMessages([]);
@@ -2021,7 +1941,6 @@ const DashboardClient = () => {
 
     setCenterChatPeerName(name);
 
-    // Asegurar socket de mensajes
     openMsgSocket?.();
   };
 
@@ -2039,16 +1958,20 @@ const DashboardClient = () => {
       alert('No puedes chatear contigo mismo.');
       return;
     }
-    // Panel invitación pendiente: mantenemos comportamiento actual (no abrir historial)
+
+    // Fuente de verdad única
+    setActivePeer(peer, name, 'chat', favUser);
+
+    // Panel invitación pendiente: mantenemos comportamiento actual
     if (String(favUser?.invited) === 'pending') {
-      setActivePeer(peer, name, 'chat', favUser);
       setCenterMessages([]);
       centerSeenIdsRef.current = new Set();
       openMsgSocket?.();
       return;
     }
-    // Flujo normal: un único entrypoint (openChatWith ya fija peer canónico)
-    openChatWith(peer, name, favUser);
+
+    // Cargar historial
+    openChatWith(peer, name);
   };
 
 
@@ -2061,7 +1984,7 @@ const DashboardClient = () => {
       const name = selectedFav.nickname || 'Usuario';
       setSelectedFav(prev => prev ? { ...prev, invited: 'accepted' } : prev);
       setFavReload(x => x + 1);
-      openChatWith(selectedFav.id, name, selectedFav);
+      openChatWith(selectedFav.id, name);
     } catch (e) {
       alert(e.message || 'No se pudo aceptar la invitación');
     }
@@ -2089,13 +2012,13 @@ const DashboardClient = () => {
   const sendGiftMsg = (giftId) => {
     const to =
       Number(activePeerRef.current?.id) ||
-      Number(centerChatPeerId) ||
-      Number(targetPeerId);
+      Number(targetPeerId) ||
+      Number(centerChatPeerId);
 
     if (!Number.isFinite(to) || to <= 0) return;
     if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) return;
 
-    msgSocketRef.current.send(JSON.stringify({ type: 'msg:gift', to, giftId }));
+    msgSocketRef.current.send(JSON.stringify({ type:'msg:gift', to, giftId }));
     setShowCenterGifts(false);
   };
 
@@ -2175,7 +2098,7 @@ const DashboardClient = () => {
       callPeerIdRef.current = toId;
       setCallPeerName(toName);
 
-      msgSocketRef.current.send(JSON.stringify({ type: 'call:invite', to: toId }));
+      msgSocketRef.current.send(JSON.stringify({ type: 'call:invite', to: toId, displayName: toName }));
 
       setCallRole('caller');
       callRoleRef.current = 'caller';
@@ -2699,4 +2622,3 @@ const DashboardClient = () => {
 };
 
 export default DashboardClient;
-

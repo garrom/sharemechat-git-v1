@@ -2337,6 +2337,9 @@ const DashboardModel = () => {
 
         <MobileMenu className={!menuOpen && 'hidden'}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            {queuePosition !== null && queuePosition >= 0 && (
+              <QueueText className="me-3">Pos.: {queuePosition + 1}</QueueText>
+            )}
             <NavText>{displayName}</NavText>
             <SaldoText>
               {loadingSaldoModel ? 'Saldo: …' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: n/d'}
