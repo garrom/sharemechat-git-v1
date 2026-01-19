@@ -68,7 +68,6 @@ export default function VideoChatRandomModelo(props) {
     remoteVideoWrapRef,
     stopAll,
     searching,
-    handleNext,
     currentClientId,
     handleAddFavorite,
     clientAvatar,
@@ -85,6 +84,8 @@ export default function VideoChatRandomModelo(props) {
     modelStatsTiers,
     clientSaldo,
     clientSaldoLoading,
+    handleNext,
+    nextDisabled,
   } = props;
 
   const tierProgress = React.useMemo(() => {

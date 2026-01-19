@@ -46,8 +46,7 @@ import Estadistica from './Estadistica';
 
 
 const DashboardModel = () => {
-
-  const { alert, confirm, openPayoutModal,openActiveSessionGuard,openBlockReasonModal } = useAppModals();
+  const { alert,confirm, openPayoutModal, openActiveSessionGuard, openBlockReasonModal, openNextWaitModal} = useAppModals();
   const { inCall, setInCall } = useCallUi();
   const [cameraActive, setCameraActive] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -81,6 +80,8 @@ const DashboardModel = () => {
   const [targetPeerName, setTargetPeerName] = useState('');
   const [contactMode, setContactMode] = useState(null); // 'chat' | 'call' | null
   const [menuOpen, setMenuOpen] = useState(false);
+  const [nexting, setNexting] = useState(false);
+
 
   // ====== CALLING (1-a-1) ======
   const [callCameraActive, setCallCameraActive] = useState(false);
@@ -1107,6 +1108,74 @@ const DashboardModel = () => {
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
+
+      // ===== NUEVO: Control industrial de NEXT (MODEL SIDE) =====
+      if (data.type === 'next-wait') {
+        const retryAfterMs = Number(data.retryAfterMs || 0);
+        const reason = String(data.reason || 'cooldown');
+
+        setNexting(false);
+
+        const title =
+          reason === 'grace'
+            ? 'Espera un momento'
+            : 'Preparando el siguiente cliente';
+
+        const message =
+          reason === 'grace'
+            ? 'Acabas de emparejarte. Espera un instante antes de pasar al siguiente.'
+            : 'Estamos cerrando la sesión y preparando el siguiente emparejamiento…';
+
+        try {
+          openNextWaitModal({
+            title,
+            message,
+            durationMs: Math.max(600, Math.min(8000, retryAfterMs || 1500)),
+          });
+        } catch {}
+
+        return;
+      }
+
+      if (data.type === 'next-rate-limited') {
+        const retryAfterMs = Number(data.retryAfterMs || 0);
+
+        setNexting(false);
+
+        try {
+          openNextWaitModal({
+            title: 'Demasiados saltos',
+            message: 'Has pulsado “Next” muy rápido. Espera un momento.',
+            durationMs: Math.max(1500, Math.min(20000, retryAfterMs || 8000)),
+          });
+        } catch {}
+
+        return;
+      }
+
+      // Compatibilidad con backend actual
+      if (data.type === 'next-ignored') {
+        const retryAfterMs = Number(data.retryAfterMs || 0);
+        setNexting(false);
+
+        try {
+          openNextWaitModal({
+            title: 'Espera un momento',
+            message: 'Espera un instante…',
+            durationMs: Math.max(600, Math.min(8000, retryAfterMs || 1200)),
+          });
+        } catch {}
+
+        return;
+      }
+
+      if (data.type === 'next-accepted') {
+        // El cierre real llegará por peer-disconnected
+        setNexting(false);
+        return;
+      }
+
+
       if (data.type === 'match') {
 
         // ping inmediato
@@ -1210,6 +1279,7 @@ const DashboardModel = () => {
           setQueuePosition(data.position);
         }
       } else if (data.type === 'peer-disconnected') {
+        setNexting(false);
         setCurrentClientId(null);
         setClientSaldo(null);
         setClientSaldoLoading(false);
@@ -1278,37 +1348,39 @@ const DashboardModel = () => {
 
 
   const handleNext = () => {
-    if (nextGuardRef.current) return;
-    nextGuardRef.current = true;
+    // Guard local (doble click rápido)
+    if (nexting) return;
+
+    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
+      setError('Error: No hay conexión con el servidor.');
+      return;
+    }
+
+    // Si no hay remoto y ya estamos buscando, no spameamos NEXT
+    if (!remoteStream && searching) {
+      return;
+    }
 
     try {
-      if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-        setError('Error: No hay conexión con el servidor.');
-        return;
-      }
-
-      // Si NO hay remoto todavía y ya estamos "searching", no dispares next en bucle
-      if (!remoteStream && searching) {
-        return;
-      }
-
+      setNexting(true);
       socketRef.current.send(JSON.stringify({ type: 'next' }));
-
-      if (peerRef.current) { try { peerRef.current.destroy(); } catch {} peerRef.current = null; }
-      if (remoteStream) { try { remoteStream.getTracks().forEach((track) => track.stop()); } catch {} }
-
-      setCurrentClientId(null);
-      setRemoteStream(null);
-      setMessages([]);
-      setClientSaldo(null);
-      setClientSaldoLoading(false);
-      setStatus('Buscando nuevo cliente...');
-      setSearching(true);
-
-      try { socketRef.current?.readyState === WebSocket.OPEN && socketRef.current.send(JSON.stringify({ type: 'stats' })); } catch {}
-    } finally {
-      setTimeout(() => { nextGuardRef.current = false; }, 700);
+    } catch (e) {
+      console.error('[MODEL][NEXT] send error', e);
+      setNexting(false);
+      setError('No se pudo solicitar el siguiente cliente.');
+      return;
     }
+
+    /**
+     * MUY IMPORTANTE (industrial):
+     * - NO destruimos peer
+     * - NO paramos tracks
+     * - NO limpiamos estado aquí
+     *
+     * El cierre REAL vendrá por:
+     *  - peer-disconnected (aceptado)
+     *  - o se ignorará (wait / rate-limit)
+     */
   };
 
 
@@ -2402,6 +2474,7 @@ const DashboardModel = () => {
             modelStatsTiers={modelStats?.tiers}
             clientSaldo={clientSaldo}
             clientSaldoLoading={clientSaldoLoading}
+            nextDisabled={nexting}
           />
         ) : activeTab === 'stats' ? (
           <Estadistica

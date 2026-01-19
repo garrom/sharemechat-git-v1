@@ -45,7 +45,7 @@ import { buildWsUrl, WS_PATHS } from '../../config/api';
 
 const DashboardClient = () => {
 
-  const { alert, confirm, openPurchaseModal,openActiveSessionGuard,openBlockReasonModal } = useAppModals();
+  const { alert, confirm, openPurchaseModal, openActiveSessionGuard, openBlockReasonModal, openNextWaitModal } = useAppModals();
   const { inCall, setInCall } = useCallUi();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -1025,8 +1025,89 @@ const DashboardClient = () => {
     socketRef.current.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      if (data.type === 'match') {
+      // ===== NUEVO: Control industrial de NEXT (server authoritative + UX) =====
+      if (data.type === 'next-wait') {
+        const retryAfterMs = Number(data.retryAfterMs || 0);
+        const reason = String(data.reason || 'cooldown');
 
+        // liberamos el flag local para que el usuario no quede "bloqueado" si el server rechazó
+        setNexting(false);
+
+        const title =
+          reason === 'grace'
+            ? 'Espera un momento'
+            : 'Preparando el siguiente match';
+
+        const message =
+          reason === 'grace'
+            ? 'Acabas de emparejarte. Espera un instante antes de pasar al siguiente.'
+            : 'Estamos cerrando la sesión y preparando el siguiente emparejamiento…';
+
+        try {
+          openNextWaitModal({
+            title,
+            message,
+            durationMs: Math.max(600, Math.min(8000, retryAfterMs || 1500)),
+          });
+        } catch {}
+
+        return;
+      }
+
+      if (data.type === 'next-rate-limited') {
+        const retryAfterMs = Number(data.retryAfterMs || 0);
+
+        setNexting(false);
+
+        try {
+          openNextWaitModal({
+            title: 'Demasiados saltos',
+            message: 'Has pulsado “Next” muy rápido. Espera un momento para continuar.',
+            durationMs: Math.max(1500, Math.min(20000, retryAfterMs || 8000)),
+          });
+        } catch {}
+
+        return;
+      }
+
+      // Compat: si backend sigue mandando next-ignored (tu handler actual lo hace)
+      if (data.type === 'next-ignored') {
+        const reason = String(data.reason || 'cooldown');
+        const retryAfterMs = Number(data.retryAfterMs || 0);
+
+        setNexting(false);
+
+        const title =
+          reason === 'grace'
+            ? 'Espera un momento'
+            : 'Preparando el siguiente match';
+
+        const message =
+          reason === 'grace'
+            ? 'Acabas de emparejarte. Espera un instante antes de pasar al siguiente.'
+            : 'Espera un instante…';
+
+        try {
+          openNextWaitModal({
+            title,
+            message,
+            durationMs: Math.max(600, Math.min(8000, retryAfterMs || 1200)),
+          });
+        } catch {}
+
+        return;
+      }
+
+      // Opcional: si el backend implementa "next-accepted"
+      if (data.type === 'next-accepted') {
+        // No limpiamos nada aquí; el corte real llega por peer-disconnected o por el flujo normal.
+        // Solo liberamos el flag.
+        setNexting(false);
+        return;
+      }
+
+      // ===== Tu lógica actual =====
+      if (data.type === 'match') {
         matchGraceRef.current = true;
         setTimeout(() => { matchGraceRef.current = false; }, isMobile ? 3000 : 1500);
 
@@ -1071,13 +1152,15 @@ const DashboardClient = () => {
 
         peer.on('stream', (stream) => setRemoteStream(stream));
         peer.on('error', (err) => {
-          //console.error('Peer error:', err);
           setError('Error en la conexión WebRTC: ' + err.message);
           setSearching(false);
         });
 
         peerRef.current = peer;
         setSearching(false);
+
+        // Si veníamos de "next", ya estamos en transición resuelta
+        setNexting(false);
         return;
       }
 
@@ -1095,7 +1178,7 @@ const DashboardClient = () => {
 
       if (data.type === 'gift') {
         const mine = Number(data.fromUserId) === Number(user?.id);
-        setMessages(p=>[...p,{ from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
+        setMessages(p => [...p, { from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
 
         // newBalance viene del backend en gifts de streaming (MatchingHandler)
         if (mine && data.newBalance != null) {
@@ -1111,7 +1194,7 @@ const DashboardClient = () => {
 
         // Caso saldo insuficiente: solo modal, SIN texto rojo en pantalla
         if (isSaldo) {
-          setError(''); // limpiamos cualquier mensaje previo
+          setError('');
           (async () => {
             try {
               await handlePurchaseFromGift();
@@ -1126,7 +1209,6 @@ const DashboardClient = () => {
         return;
       }
 
-
       if (data.type === 'no-model-available') {
         setError('');
         setSearching(true);
@@ -1138,7 +1220,6 @@ const DashboardClient = () => {
         setSearching(false);
         setError('');
 
-        // Lanzamos el flujo de compra específico para RANDOM
         (async () => {
           try {
             await handlePurchaseFromRandom();
@@ -1153,6 +1234,10 @@ const DashboardClient = () => {
       if (data.type === 'peer-disconnected') {
         console.log('[RANDOM][peer-disconnected]', data);
         const reason = data.reason || '';
+
+        // FIN de transición "next"
+        setNexting(false);
+
         // Limpieza común: peer + streams + mensajes
         setCurrentModelId(null);
         try {
@@ -1174,7 +1259,6 @@ const DashboardClient = () => {
           setStatus('');
           setSearching(false);
 
-          // Lanzamos flujo de compra específico para RANDOM
           (async () => {
             try {
               await handlePurchaseFromRandom();
@@ -1182,7 +1266,6 @@ const DashboardClient = () => {
               console.error('Error en handlePurchaseFromRandom (low-balance):', e);
             }
           })();
-          // MUY IMPORTANTE: NO reenviamos start-match aquí
           return;
         }
 
@@ -1196,8 +1279,8 @@ const DashboardClient = () => {
         }
         return;
       }
-
     };
+
 
     socketRef.current.onerror = (e) => {
       console.error('WebSocket error (client):', e);
@@ -1215,29 +1298,32 @@ const DashboardClient = () => {
   };
 
   const handleNext = () => {
+    // Guard: si estamos ya en transición de NEXT, no spameamos
+    if (nexting) return;
+
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       try {
+        setNexting(true);
         socketRef.current.send(JSON.stringify({ type: 'next' }));
       } catch (e) {
         console.error('Error enviando NEXT:', e);
+        setNexting(false);
         setError('Error: no se pudo solicitar NEXT.');
         return;
       }
     } else {
+      setNexting(false);
       setError('Error: No hay conexión con el servidor.');
       return;
     }
 
-    try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
-    try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
-
-    setCurrentModelId(null);
-    setRemoteStream(null);
-    setMessages([]);
-    setStatus('Buscando nueva modelo...');
-    setSearching(true);
-
+    // MUY IMPORTANTE (industrial):
+    // - No destruimos peerRef ni paramos tracks aquí.
+    // - El cierre real vendrá por 'peer-disconnected' (reason NEXT) o por el flujo normal del backend.
+    // - Si el backend responde con next-wait/next-rate-limited, mantenemos la llamada intacta.
   };
+
+
 
   const sendChatMessage = () => {
     if (chatInput.trim() === '') return;
@@ -2482,6 +2568,7 @@ const DashboardClient = () => {
             handleActivateCamera={handleActivateCamera}
             handleBlockPeer={handleBlockPeer}
             matchGraceRef={matchGraceRef}
+            nextDisabled={nexting}
           />
         ):activeTab==='blog'?(
           /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */

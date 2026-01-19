@@ -1,6 +1,6 @@
 // src/components/useAppModals.js
-import { useCallback } from 'react';
-import styled from 'styled-components';
+import React, { useCallback, useRef } from 'react';
+import styled, { keyframes } from 'styled-components';
 import { useHistory, useLocation } from 'react-router-dom';
 import { useModal } from './ModalProvider';
 import LoginModalContent from './LoginModalContent';
@@ -23,28 +23,226 @@ const DEFAULT_PACKS = [
 ];
 
 // === Estilos específicos para el modal de compra ===
-const PacksGrid = styled.div`display:grid;gap:10px;margin:4px 0;grid-template-columns:1fr;@media (min-width:640px){grid-template-columns:repeat(2,minmax(0,1fr));}}`;
-const PackCard = styled.button`display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;padding:10px 12px;border-radius:10px;border:1px solid #30363d;background:#0d1117;color:#e6edf3;cursor:pointer;text-align:left;transition:background .15s ease,border-color .15s ease,transform .1s ease;&:hover{background:#11161d;border-color:#3a3f46;transform:translateY(-1px);}}`;
-const PackHeader = styled.div`display:flex;align-items:center;justify-content:space-between;width:100%;`;
-const PackMinutes = styled.span`font-weight:600;font-size:15px;`;
-const PackPrice = styled.span`font-weight:600;font-size:15px;`;
-const PackTag = styled.span`display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;background:#1f6feb22;color:#58a6ff;`;
-const PackHint = styled.span`font-size:12px;color:#8b949e;`;
-const PayoutInput = styled.input`width:100%;padding:8px 10px;border-radius:6px;border:1px solid #30363d;background:#0d1117;color:#e6edf3;font-size:14px;margin-top:6px;outline:none;&:focus{border-color:#58a6ff;box-shadow:0 0 0 1px #58a6ff44;}}`;
+const PacksGrid = styled.div`
+  display: grid;
+  gap: 10px;
+  margin: 4px 0;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+`;
+
+const PackCard = styled.button`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  color: #e6edf3;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+
+  &:hover {
+    background: #11161d;
+    border-color: #3a3f46;
+    transform: translateY(-1px);
+  }
+`;
+
+const PackHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+`;
+
+const PackMinutes = styled.span`
+  font-weight: 600;
+  font-size: 15px;
+`;
+
+const PackPrice = styled.span`
+  font-weight: 600;
+  font-size: 15px;
+`;
+
+const PackTag = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  background: #1f6feb22;
+  color: #58a6ff;
+`;
+
+const PackHint = styled.span`
+  font-size: 12px;
+  color: #8b949e;
+`;
+
+const PayoutInput = styled.input`
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  color: #e6edf3;
+  font-size: 14px;
+  margin-top: 6px;
+  outline: none;
+
+  &:focus {
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 1px #58a6ff44;
+  }
+`;
 
 // === Estilo modal para dar de baja ===
-const RadioGroup = styled.div`display:grid;gap:8px;margin-top:10px;text-align:left;`;
-const RadioOption = styled.label`display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:10px;border:1px solid #30363d;background:#0a0f16;color:#e6edf3;cursor:pointer;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease,transform .08s ease;&:hover{background:#101622;border-color:#3a3f46;box-shadow:0 0 0 1px rgba(47,129,247,.22);transform:translateY(-1px);}input{margin-top:3px;}`;
-const RadioText = styled.div`display:flex;flex-direction:column;gap:2px;`;
-const RadioTitle = styled.div`font-weight:700;font-size:14px;line-height:1.2;`;
-const RadioDesc = styled.div`font-size:12px;color:#9aa1a9;line-height:1.35;`;
+const RadioGroup = styled.div`
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+  text-align: left;
+`;
+
+const RadioOption = styled.label`
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #30363d;
+  background: #0a0f16;
+  color: #e6edf3;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.08s ease;
+
+  &:hover {
+    background: #101622;
+    border-color: #3a3f46;
+    box-shadow: 0 0 0 1px rgba(47, 129, 247, 0.22);
+    transform: translateY(-1px);
+  }
+
+  input {
+    margin-top: 3px;
+  }
+`;
+
+const RadioText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const RadioTitle = styled.div`
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+`;
+
+const RadioDesc = styled.div`
+  font-size: 12px;
+  color: #9aa1a9;
+  line-height: 1.35;
+`;
 
 // === Estilos: modal de bloqueo (radio) ===
-const ChoiceWrap = styled.div`display:grid;gap:10px;margin-top:10px;`;
-const ChoiceRow = styled.label`display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid #30363d;border-radius:10px;background:#0a0f16;cursor:pointer;transition:background .15s ease,border-color .15s ease,transform .08s ease;&:hover{background:#101622;border-color:#3a3f46;transform:translateY(-1px);}input{accent-color:#2f81f7;}`;
-const ChoiceText = styled.span`display:flex;flex-direction:column;gap:2px;`;
-const ChoiceTitle = styled.span`font-weight:700;color:#e6edf3;font-size:14px;`;
-const ChoiceSub = styled.span`color:#9aa1a9;font-size:12px;line-height:1.35;`;
+const ChoiceWrap = styled.div`
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+`;
+
+const ChoiceRow = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  background: #0a0f16;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+
+  &:hover {
+    background: #101622;
+    border-color: #3a3f46;
+    transform: translateY(-1px);
+  }
+
+  input {
+    accent-color: #2f81f7;
+  }
+`;
+
+const ChoiceText = styled.span`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+`;
+
+const ChoiceTitle = styled.span`
+  font-weight: 700;
+  color: #e6edf3;
+  font-size: 14px;
+`;
+
+const ChoiceSub = styled.span`
+  color: #9aa1a9;
+  font-size: 12px;
+  line-height: 1.35;
+`;
+
+// === NUEVO: Modal ligero para "espera / cooldown" de NEXT ===
+const spin = keyframes`
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+`;
+
+const NextWaitWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 4px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: #e6edf3;
+`;
+
+const NextWaitSpinner = styled.div`
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 3px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.85);
+  animation: ${spin} 0.9s linear infinite;
+`;
+
+const NextWaitTitle = styled.div`
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 0.02em;
+`;
+
+const NextWaitText = styled.div`
+  font-size: 12px;
+  color: #9aa1a9;
+  line-height: 1.35;
+  max-width: 320px;
+`;
 
 //###########
 //## HOOK
@@ -54,29 +252,91 @@ export const useAppModals = () => {
   const history = useHistory();
   const location = useLocation();
 
+  const nextWaitTimerRef = useRef(null);
+
+  const clearNextWaitTimer = useCallback(() => {
+    if (nextWaitTimerRef.current) {
+      clearTimeout(nextWaitTimerRef.current);
+      nextWaitTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * Modal "ligero" de espera para NEXT/backpressure/rate-limit.
+   * - Sin botones.
+   * - Cierre automático por timeout.
+   * - Pensado para UX "industrial" (feedback inmediato + no spam clicks).
+   */
+  const openNextWaitModal = useCallback(
+    ({ title = 'Espera un momento', message = 'Estamos preparando el siguiente emparejamiento…', durationMs = 1500 } = {}) => {
+      try {
+        clearNextWaitTimer();
+      } catch {}
+
+      openModal({
+        title: '',
+        variant: 'info',
+        size: 'sm',
+        bodyKind: 'default',
+        hideChrome: true,
+        onClose: () => {
+          try {
+            clearNextWaitTimer();
+          } catch {}
+          closeModal();
+        },
+        content: (
+          <NextWaitWrap>
+            <NextWaitSpinner />
+            <NextWaitTitle>{title}</NextWaitTitle>
+            <NextWaitText>{message}</NextWaitText>
+          </NextWaitWrap>
+        ),
+        actions: [],
+      }).then(() => {});
+
+      const ms = Math.max(350, Number(durationMs) || 0);
+      nextWaitTimerRef.current = setTimeout(() => {
+        nextWaitTimerRef.current = null;
+        try {
+          closeModal();
+        } catch {}
+      }, ms);
+    },
+    [openModal, closeModal, clearNextWaitTimer]
+  );
+
   /** Confirmación al eliminar un favorito. */
   const openRemoveFavoriteConfirm = useCallback(async (displayName = 'este usuario') => {
-    const ok = await confirm({ title:'Eliminar de favoritos', message:`¿Seguro que quieres eliminar a ${displayName} de tus favoritos?`, okText:'Eliminar', cancelText:'Cancelar', variant:'confirm', size:'sm', danger:true });
+    const ok = await confirm({
+      title: 'Eliminar de favoritos',
+      message: `¿Seguro que quieres eliminar a ${displayName} de tus favoritos?`,
+      okText: 'Eliminar',
+      cancelText: 'Cancelar',
+      variant: 'confirm',
+      size: 'sm',
+      danger: true,
+    });
     return ok;
   }, [confirm]);
 
   /** Aviso típico cuando el contacto no está conectado / disponible y tratamos de llamar. */
   const openCallOfflineNotice = useCallback(async (displayName = 'este usuario') => {
-    await alert({ title:'Usuario no disponible', message:`${displayName} no está conectado en este momento.`, variant:'info', size:'sm' });
+    await alert({ title: 'Usuario no disponible', message: `${displayName} no está conectado en este momento.`, variant: 'info', size: 'sm' });
   }, [alert]);
 
   /** Aviso cuando el usuario intenta salir teniendo una comunicación activa. */
   const openActiveSessionGuard = useCallback(async ({ hasStreaming, hasCalling }) => {
     const active = !!hasStreaming || !!hasCalling;
     if (!active) return true;
-    await alert({ title:'Comunicación activa', message:'Tienes un streaming activo. Pulsa COLGAR para salir.', variant:'warning', size:'sm' });
+    await alert({ title: 'Comunicación activa', message: 'Tienes un streaming activo. Pulsa COLGAR para salir.', variant: 'warning', size: 'sm' });
     return false;
   }, [alert]);
 
   // Modal PACK COMPRAR MINUTOS
   const openPurchaseModal = useCallback(({ packs, currency = 'EUR', context = 'manual' } = {}) => {
     const effectivePacks = Array.isArray(packs) && packs.length > 0 ? packs : DEFAULT_PACKS;
-    if (!effectivePacks.length) return Promise.resolve({ confirmed:false });
+    if (!effectivePacks.length) return Promise.resolve({ confirmed: false });
 
     const titleByContext = (() => {
       if (context === 'insufficient-balance') return 'Saldo insuficiente';
@@ -95,8 +355,8 @@ export const useAppModals = () => {
     })();
 
     return new Promise((resolve) => {
-      const handleCancel = () => { closeModal(); resolve({ confirmed:false }); };
-      const handleSelect = (pack) => { closeModal(); resolve({ confirmed:true, pack }); };
+      const handleCancel = () => { closeModal(); resolve({ confirmed: false }); };
+      const handleSelect = (pack) => { closeModal(); resolve({ confirmed: true, pack }); };
 
       openModal({
         title: titleByContext,
@@ -120,7 +380,7 @@ export const useAppModals = () => {
             </PacksGrid>
           </div>
         ),
-        actions: [{ label:'Cancelar', primary:false, danger:false, onClick:handleCancel }],
+        actions: [{ label: 'Cancelar', primary: false, danger: false, onClick: handleCancel }],
       }).then(() => {});
     });
   }, [openModal, closeModal]);
@@ -130,15 +390,15 @@ export const useAppModals = () => {
     return new Promise((resolve) => {
       let currentValue = initialAmount !== null && initialAmount !== undefined ? String(initialAmount) : '';
 
-      const handleCancel = () => { closeModal(); resolve({ confirmed:false }); };
+      const handleCancel = () => { closeModal(); resolve({ confirmed: false }); };
       const handleConfirm = () => {
         const numeric = Number(currentValue);
         if (!Number.isFinite(numeric) || numeric <= 0) {
-          alert({ title:'Importe no válido', message:'Introduce una cantidad numérica positiva.', variant:'warning', size:'sm' });
+          alert({ title: 'Importe no válido', message: 'Introduce una cantidad numérica positiva.', variant: 'warning', size: 'sm' });
           return;
         }
         closeModal();
-        resolve({ confirmed:true, amount:numeric });
+        resolve({ confirmed: true, amount: numeric });
       };
 
       openModal({
@@ -169,8 +429,8 @@ export const useAppModals = () => {
           </div>
         ),
         actions: [
-          { label:'Cancelar', primary:false, danger:false, onClick:handleCancel },
-          { label:'Solicitar retiro', primary:true, danger:false, onClick:handleConfirm },
+          { label: 'Cancelar', primary: false, danger: false, onClick: handleCancel },
+          { label: 'Solicitar retiro', primary: true, danger: false, onClick: handleConfirm },
         ],
       }).then(() => {});
     });
@@ -179,18 +439,18 @@ export const useAppModals = () => {
   // Modal DARSE DE BAJA (radio de 5)
   const openUnsubscribeModal = useCallback(({ title = 'Darme de baja', size = 'sm', options } = {}) => {
     const effectiveOptions = Array.isArray(options) && options.length ? options : [
-      { value:'not-matching', label:'No encuentro buenos matches', desc:'No encuentro personas que me encajen.' },
-      { value:'too-expensive', label:'Es caro', desc:'El precio es un poco alto.' },
-      { value:'privacy', label:'Privacidad / seguridad', desc:'No me siento cómodo con la privacidad o seguridad.' },
-      { value:'technical', label:'Problemas técnicos', desc:'He tenido errores o mala experiencia técnica.' },
-      { value:'other', label:'Otro', desc:'Prefiero no especificar.' },
+      { value: 'not-matching', label: 'No encuentro buenos matches', desc: 'No encuentro personas que me encajen.' },
+      { value: 'too-expensive', label: 'Es caro', desc: 'El precio es un poco alto.' },
+      { value: 'privacy', label: 'Privacidad / seguridad', desc: 'No me siento cómodo con la privacidad o seguridad.' },
+      { value: 'technical', label: 'Problemas técnicos', desc: 'He tenido errores o mala experiencia técnica.' },
+      { value: 'other', label: 'Otro', desc: 'Prefiero no especificar.' },
     ];
 
     return new Promise((resolve) => {
       let selected = effectiveOptions[0]?.value ?? 'pause';
 
-      const handleCancel = () => { closeModal(); resolve({ confirmed:false, reason:null }); };
-      const handleConfirm = () => { closeModal(); resolve({ confirmed:true, reason:selected || null }); };
+      const handleCancel = () => { closeModal(); resolve({ confirmed: false, reason: null }); };
+      const handleConfirm = () => { closeModal(); resolve({ confirmed: true, reason: selected || null }); };
 
       openModal({
         title,
@@ -203,7 +463,12 @@ export const useAppModals = () => {
             <RadioGroup role="radiogroup" aria-label="Motivo de baja">
               {effectiveOptions.map((opt) => (
                 <RadioOption key={opt.value}>
-                  <input type="radio" name="unsubscribeReason" defaultChecked={opt.value === selected} onChange={() => { selected = opt.value; }} />
+                  <input
+                    type="radio"
+                    name="unsubscribeReason"
+                    defaultChecked={opt.value === selected}
+                    onChange={() => { selected = opt.value; }}
+                  />
                   <RadioText>
                     <RadioTitle>{opt.label}</RadioTitle>
                     {opt.desc ? <RadioDesc>{opt.desc}</RadioDesc> : null}
@@ -215,21 +480,20 @@ export const useAppModals = () => {
           </div>
         ),
         actions: [
-          { label:'Cancelar', primary:false, danger:false, onClick:handleCancel },
-          { label:'Darme de baja', primary:false, danger:true, onClick:handleConfirm },
+          { label: 'Cancelar', primary: false, danger: false, onClick: handleCancel },
+          { label: 'Darme de baja', primary: false, danger: true, onClick: handleConfirm },
         ],
       }).then(() => {});
     });
   }, [openModal, closeModal]);
-
 
   //Modal de BLOQUEO (radio 1 de 3).
   const openBlockReasonModal = useCallback(({ displayName = 'este usuario' } = {}) => {
     return new Promise((resolve) => {
       let selected = 'pause';
 
-      const onCancel = () => { closeModal(); resolve({ confirmed:false, reason:null }); };
-      const onConfirm = () => { closeModal(); resolve({ confirmed:true, reason:selected }); };
+      const onCancel = () => { closeModal(); resolve({ confirmed: false, reason: null }); };
+      const onConfirm = () => { closeModal(); resolve({ confirmed: true, reason: selected }); };
 
       openModal({
         title: 'Bloquear',
@@ -264,8 +528,8 @@ export const useAppModals = () => {
           </div>
         ),
         actions: [
-          { label:'Cancelar', primary:false, danger:false, onClick:onCancel },
-          { label:'Bloquear', primary:false, danger:true, onClick:onConfirm },
+          { label: 'Cancelar', primary: false, danger: false, onClick: onCancel },
+          { label: 'Bloquear', primary: false, danger: true, onClick: onConfirm },
         ],
       }).then(() => {});
     });
@@ -325,7 +589,8 @@ export const useAppModals = () => {
     openLoginModal,
     openPublicSignupTeaser,
     openBlockReasonModal,
-    openUnsubscribeModal
+    openUnsubscribeModal,
+    openNextWaitModal,
   };
 };
 

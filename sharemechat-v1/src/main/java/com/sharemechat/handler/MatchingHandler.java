@@ -56,6 +56,7 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final StreamLockService streamLockService;
     private final Duration streamLockTtl = Duration.ofSeconds(15);
     private static final Logger log = LoggerFactory.getLogger(MatchingHandler.class);
+    private final NextRateLimitService nextRateLimitService;
 
 
     public MatchingHandler(JwtUtil jwtUtil,
@@ -70,6 +71,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                            UserBlockService userBlockService,
                            SeenService seenService,
                            StreamLockService streamLockService,
+                           NextRateLimitService nextRateLimitService,
                            @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
@@ -84,6 +86,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         this.seenService = seenService;
         this.seenMaxScan = seenMaxScan;
         this.streamLockService = streamLockService;
+        this.nextRateLimitService = nextRateLimitService;
     }
 
     @Override
@@ -534,9 +537,31 @@ public class MatchingHandler extends TextWebSocketHandler {
         if (!switching.add(session.getId())) return;
         try {
 
+            log.info("[NEXT_IN] sid={} uid={} role={}",
+                    session.getId(),
+                    sessionUserIds.get(session.getId()),
+                    roles.get(session.getId())
+            );
+
             Long t = lastMatchAt.get(session.getId());
             if (t != null && (System.currentTimeMillis() - t) < 1500L) {
+                log.info("[NEXT_IGNORED] sid={} reason=grace ageMs={}",
+                        session.getId(),
+                        System.currentTimeMillis() - t
+                );
                 safeSend(session, "{\"type\":\"next-ignored\",\"reason\":\"grace\"}");
+                return;
+            }
+
+            Long uid = sessionUserIds.get(session.getId());
+            Optional<Long> retryAfterMsOpt = nextRateLimitService.checkAndConsume(uid);
+            if (retryAfterMsOpt.isPresent()) {
+                long retryAfterMs = retryAfterMsOpt.get();
+                log.info("[NEXT_IGNORED] sid={} reason=rate-limit retryAfterMs={}",
+                        session.getId(),
+                        retryAfterMs
+                );
+                safeSend(session, "{\"type\":\"next-ignored\",\"reason\":\"rate-limit\",\"retryAfterMs\":" + retryAfterMs + "}");
                 return;
             }
 
@@ -548,12 +573,21 @@ public class MatchingHandler extends TextWebSocketHandler {
                 Long peerId = sessionUserIds.get(peer.getId());
                 String myRole = roles.get(session.getId());
                 String peerRole = roles.get(peer.getId());
+
+                log.info("[NEXT_END_STREAM] sid={} myId={} myRole={} peerSid={} peerId={} peerRole={}",
+                        session.getId(),
+                        myId,
+                        myRole,
+                        peer.getId(),
+                        peerId,
+                        peerRole
+                );
+
                 endStreamIfPairKnown(
                         session.getId(), myId, myRole,
                         peer.getId(), peerId, peerRole,
                         "NEXT"
                 );
-
 
                 if (peer.isOpen()) {
                     safeSend(peer, "{\"type\":\"peer-disconnected\",\"reason\":\"next\"}");
@@ -561,13 +595,22 @@ public class MatchingHandler extends TextWebSocketHandler {
                 }
             }
 
+            log.info("[NEXT_REMATCH] sid={} uid={} role={}",
+                    session.getId(),
+                    sessionUserIds.get(session.getId()),
+                    roles.get(session.getId())
+            );
+
             String role = roles.get(session.getId());
             if ("client".equals(role)) matchClient(session);
             else if ("model".equals(role)) matchModel(session);
+
         } finally {
             switching.remove(session.getId());
         }
     }
+
+
 
     private void handleGiftInMatch(WebSocketSession session, org.json.JSONObject json) {
         Long senderId = sessionUserIds.get(session.getId());
