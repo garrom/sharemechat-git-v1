@@ -57,6 +57,7 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final Duration streamLockTtl = Duration.ofSeconds(15);
     private static final Logger log = LoggerFactory.getLogger(MatchingHandler.class);
     private final NextRateLimitService nextRateLimitService;
+    private final UserLanguageService userLanguageService;
 
 
     public MatchingHandler(JwtUtil jwtUtil,
@@ -72,6 +73,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                            SeenService seenService,
                            StreamLockService streamLockService,
                            NextRateLimitService nextRateLimitService,
+                           UserLanguageService userLanguageService,
                            @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
@@ -87,6 +89,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         this.seenMaxScan = seenMaxScan;
         this.streamLockService = streamLockService;
         this.nextRateLimitService = nextRateLimitService;
+        this.userLanguageService = userLanguageService;
     }
 
     @Override
@@ -267,6 +270,7 @@ public class MatchingHandler extends TextWebSocketHandler {
        MATCHING (con Seen TTL robusto)
        ========================================================= */
 
+
     private void matchClient(WebSocketSession client) throws Exception {
         waitingClients.remove(client);
 
@@ -276,17 +280,27 @@ public class MatchingHandler extends TextWebSocketHandler {
             return;
         }
 
-        // Pass 1: intentar evitar repetidos (UNSEEN)
+        // Pass 1: intentar evitar repetidos (UNSEEN) + idioma compatible (score>0)
         MatchAttemptResult r1 = tryMatchClientAgainstModels(client, clientId, true);
         if (r1.handled) return;
 
-        // Pass 2: fallback permitir repetidos si no hay alternativas
+        // Pass 2: fallback permitir repetidos y permitir idioma no compatible (score==0)
         MatchAttemptResult r2 = tryMatchClientAgainstModels(client, clientId, false);
         if (r2.handled) return;
 
-        safeSend(client, "{\"type\":\"no-model-available\"}");
+        // Contract limpio: backend manda reasonCode, frontend traduce
+        boolean anySupply = waitingModels.size() > 0;
+
+        String reasonCode = anySupply ? "NO_MATCH_FOUND" : "NO_SUPPLY_MODELS";
+        String payload = new JSONObject()
+                .put("type", "no-model-available")
+                .put("reasonCode", reasonCode)
+                .toString();
+
+        safeSend(client, payload);
         waitingClients.add(client);
     }
+
 
     private void matchModel(WebSocketSession model) throws Exception {
         waitingModels.remove(model);
@@ -297,17 +311,26 @@ public class MatchingHandler extends TextWebSocketHandler {
             return;
         }
 
-        // Pass 1: intentar evitar repetidos (UNSEEN para el viewer/clientId)
+        // Pass 1: intentar evitar repetidos (UNSEEN) + idioma compatible (score>0)
         MatchAttemptResult r1 = tryMatchModelAgainstClients(model, modelId, true);
         if (r1.handled) return;
 
-        // Pass 2: fallback permitir repetidos si no hay alternativas
+        // Pass 2: fallback permitir repetidos y permitir idioma no compatible (score==0)
         MatchAttemptResult r2 = tryMatchModelAgainstClients(model, modelId, false);
         if (r2.handled) return;
 
-        safeSend(model, "{\"type\":\"no-client-available\"}");
+        boolean anySupply = waitingClients.size() > 0;
+
+        String reasonCode = anySupply ? "NO_MATCH_FOUND" : "NO_SUPPLY_CLIENTS";
+        String payload = new JSONObject()
+                .put("type", "no-client-available")
+                .put("reasonCode", reasonCode)
+                .toString();
+
+        safeSend(model, payload);
         waitingModels.add(model);
     }
+
 
     private static class MatchAttemptResult {
         final boolean handled; // true si ya enviamos algo / hicimos match / ya reencolamos y no hay que seguir
@@ -316,13 +339,26 @@ public class MatchingHandler extends TextWebSocketHandler {
         static MatchAttemptResult NOT_HANDLED() { return new MatchAttemptResult(false); }
     }
 
+
     private MatchAttemptResult tryMatchClientAgainstModels(WebSocketSession client, Long clientId, boolean enforceUnseen) throws Exception {
 
-        List<WebSocketSession> skipped = new ArrayList<>();
+        List<WebSocketSession> scannedList = new ArrayList<>();
         int scanned = 0;
 
-        WebSocketSession model;
-        while (scanned++ < seenMaxScan && (model = waitingModels.poll()) != null) {
+        WebSocketSession best = null;
+        Long bestModelId = null;
+        String bestOwner = null;
+
+        // Ranking: menor es mejor
+        // 0 = sameLang+unseen
+        // 1 = otherLang+unseen
+        // 2 = sameLang+seen
+        // 3 = otherLang+seen
+        int bestRank = Integer.MAX_VALUE;
+
+        while (scanned++ < seenMaxScan) {
+            WebSocketSession model = waitingModels.poll();
+            if (model == null) break;
 
             if (!model.isOpen()) continue;
 
@@ -330,92 +366,124 @@ public class MatchingHandler extends TextWebSocketHandler {
             if (modelId == null) continue;
 
             if (!canMatch(clientId, modelId)) {
-                skipped.add(model);
+                scannedList.add(model);
                 continue;
             }
 
-            if (enforceUnseen && seenService.hasSeen(clientId, modelId)) {
-                skipped.add(model);
+            boolean seen = false;
+            if (enforceUnseen) {
+                seen = seenService.hasSeen(clientId, modelId);
+            }
+
+            int languageScore = 0;
+            try { languageScore = userLanguageService.languageMatchScore(clientId, modelId); } catch (Exception ignore) {}
+
+            boolean sameLanguage = languageScore >= 100; // tu criterio actual (PRIMARY)
+            int rank = (sameLanguage ? 0 : 1) + (seen ? 2 : 0);
+
+            // Si enforceUnseen=true, no queremos aceptar SEEN en este pass
+            if (enforceUnseen && seen) {
+                scannedList.add(model);
                 continue;
             }
 
-            String owner = streamLockService.newOwnerToken();
-            if (!tryAcquirePairLocks(clientId, modelId, owner)) {
-                skipped.add(model);
-                continue;
-            }
-
-            boolean matched = false;
-
-            try {
-                User viewer = userRepository.findById(clientId).orElse(null);
-                String realRole = viewer != null ? viewer.getRole() : null;
-
-                if (Constants.Roles.USER.equals(realRole)) {
-                    if (!userTrialService.canStartTrial(clientId)) {
-                        safeSend(client, "{\"type\":\"trial-unavailable\"}");
-
-                        skipped.add(model);
-                        requeueModels(skipped);
-
-                        waitingClients.add(client);
-                        return MatchAttemptResult.HANDLED();
-                    }
-                    userTrialService.startTrialStream(clientId, modelId);
-                } else {
-                    streamService.startSession(clientId, modelId);
+            // Elegir el mejor candidato por ranking
+            if (rank < bestRank) {
+                // Intentar locks ya aquí para no elegir un candidato que luego no podamos bloquear
+                String owner = streamLockService.newOwnerToken();
+                if (!tryAcquirePairLocks(clientId, modelId, owner)) {
+                    scannedList.add(model);
+                    continue;
                 }
 
-                // Match real => marcar SEEN
-                seenService.markSeen(clientId, modelId);
-
-                pairs.put(client.getId(), model);
-                pairs.put(model.getId(), client);
-
-                long now = System.currentTimeMillis();
-                lastMatchAt.put(client.getId(), now);
-                lastMatchAt.put(model.getId(), now);
-
-                // Guardar owner del lock para liberar al cerrar
-                pairLockOwnerBySessionId.put(client.getId(), owner);
-                pairLockOwnerBySessionId.put(model.getId(), owner);
-
-                sendMatchMessage(client, model.getId());
-                sendMatchMessage(model, client.getId());
-
-                requeueModels(skipped);
-
-                matched = true;
-                return MatchAttemptResult.HANDLED();
-
-            } catch (Exception ex) {
-                System.out.println("startSession/startTrialStream falló: " + ex.getMessage());
-
-                pairs.remove(client.getId());
-                pairs.remove(model.getId());
-
-                skipped.add(model);
-                requeueModels(skipped);
-
-                if (isLowBalance(ex)) safeSend(client, "{\"type\":\"no-balance\"}");
-                else safeSend(client, "{\"type\":\"no-model-available\"}");
-
-                waitingClients.add(client);
-                return MatchAttemptResult.HANDLED();
-
-            } finally {
-                // OJO: si hubo match, NO liberamos aquí. Se libera al cerrar el stream (o por TTL).
-                if (!matched) {
-                    releasePairLocks(clientId, modelId, owner);
+                // Si ya había un "best" anterior con locks tomados, liberarlos antes de cambiar
+                if (best != null && bestModelId != null && bestOwner != null) {
+                    try { releasePairLocks(clientId, bestModelId, bestOwner); } catch (Exception ignore) {}
+                    scannedList.add(best);
                 }
+
+                best = model;
+                bestModelId = modelId;
+                bestOwner = owner;
+                bestRank = rank;
+
+                // Early-exit: si encontramos sameLang+unseen, no hay nada mejor
+                if (bestRank == 0) break;
+            } else {
+                scannedList.add(model);
             }
         }
 
-        requeueModels(skipped);
-        return MatchAttemptResult.NOT_HANDLED();
+        // Reencolar lo escaneado (excepto el elegido, que ya está en "best")
+        requeueModels(scannedList);
+
+        if (best == null || bestModelId == null || bestOwner == null) {
+            return MatchAttemptResult.NOT_HANDLED();
+        }
+
+        boolean matched = false;
+
+        try {
+            User viewer = userRepository.findById(clientId).orElse(null);
+            String realRole = viewer != null ? viewer.getRole() : null;
+
+            if (Constants.Roles.USER.equals(realRole)) {
+                if (!userTrialService.canStartTrial(clientId)) {
+                    safeSend(client, "{\"type\":\"trial-unavailable\"}");
+                    waitingClients.add(client);
+                    return MatchAttemptResult.HANDLED();
+                }
+                userTrialService.startTrialStream(clientId, bestModelId);
+            } else {
+                streamService.startSession(clientId, bestModelId);
+            }
+
+            // Seen se marca al emparejar, como ya hacías
+            seenService.markSeen(clientId, bestModelId);
+
+            pairs.put(client.getId(), best);
+            pairs.put(best.getId(), client);
+
+            long now = System.currentTimeMillis();
+            lastMatchAt.put(client.getId(), now);
+            lastMatchAt.put(best.getId(), now);
+
+            pairLockOwnerBySessionId.put(client.getId(), bestOwner);
+            pairLockOwnerBySessionId.put(best.getId(), bestOwner);
+
+            sendMatchMessage(client, best.getId());
+            sendMatchMessage(best, client.getId());
+
+            matched = true;
+            return MatchAttemptResult.HANDLED();
+
+        } catch (Exception ex) {
+
+            pairs.remove(client.getId());
+            pairs.remove(best.getId());
+
+            if (isLowBalance(ex)) safeSend(client, "{\"type\":\"no-balance\"}");
+            else safeSend(client, "{\"type\":\"no-model-available\"}");
+
+            waitingClients.add(client);
+            return MatchAttemptResult.HANDLED();
+
+        } finally {
+            if (!matched) {
+                try { releasePairLocks(clientId, bestModelId, bestOwner); } catch (Exception ignore) {}
+                // Si no hubo match, reencolar la modelo elegida
+                if (best != null && best.isOpen()) waitingModels.add(best);
+            }
+        }
     }
 
-    private MatchAttemptResult tryMatchModelAgainstClients(WebSocketSession model, Long modelId, boolean enforceUnseen) throws Exception {
+
+
+    private MatchAttemptResult tryMatchModelAgainstClients(
+            WebSocketSession model,
+            Long modelId,
+            boolean enforceUnseen
+    ) throws Exception {
 
         List<WebSocketSession> skipped = new ArrayList<>();
         int scanned = 0;
@@ -438,6 +506,12 @@ public class MatchingHandler extends TextWebSocketHandler {
                 continue;
             }
 
+            int languageScore = userLanguageService.languageMatchScore(clientId, modelId);
+            if (languageScore == 0 && enforceUnseen) {
+                skipped.add(client);
+                continue;
+            }
+
             String owner = streamLockService.newOwnerToken();
             if (!tryAcquirePairLocks(clientId, modelId, owner)) {
                 skipped.add(client);
@@ -451,24 +525,18 @@ public class MatchingHandler extends TextWebSocketHandler {
                 String realRole = viewer != null ? viewer.getRole() : null;
 
                 if (Constants.Roles.USER.equals(realRole)) {
-
                     if (!userTrialService.canStartTrial(clientId)) {
                         safeSend(client, "{\"type\":\"trial-unavailable\"}");
-
                         skipped.add(client);
                         requeueClients(skipped);
-
                         waitingModels.add(model);
                         return MatchAttemptResult.HANDLED();
                     }
-
                     userTrialService.startTrialStream(clientId, modelId);
-
                 } else {
                     streamService.startSession(clientId, modelId);
                 }
 
-                // Match real => marcar SEEN (viewer=clientId)
                 seenService.markSeen(clientId, modelId);
 
                 pairs.put(model.getId(), client);
@@ -478,7 +546,6 @@ public class MatchingHandler extends TextWebSocketHandler {
                 lastMatchAt.put(model.getId(), now);
                 lastMatchAt.put(client.getId(), now);
 
-                // Guardar owner del lock para liberar al cerrar
                 pairLockOwnerBySessionId.put(model.getId(), owner);
                 pairLockOwnerBySessionId.put(client.getId(), owner);
 
@@ -491,7 +558,6 @@ public class MatchingHandler extends TextWebSocketHandler {
                 return MatchAttemptResult.HANDLED();
 
             } catch (Exception ex) {
-                System.out.println("startSession/startTrialStream falló: " + ex.getMessage());
 
                 pairs.remove(model.getId());
                 pairs.remove(client.getId());
@@ -505,7 +571,6 @@ public class MatchingHandler extends TextWebSocketHandler {
                 return MatchAttemptResult.HANDLED();
 
             } finally {
-                // OJO: si hubo match, NO liberamos aquí. Se libera al cerrar el stream (o por TTL).
                 if (!matched) {
                     releasePairLocks(clientId, modelId, owner);
                 }
@@ -515,6 +580,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         requeueClients(skipped);
         return MatchAttemptResult.NOT_HANDLED();
     }
+
 
 
     private void requeueModels(List<WebSocketSession> list) {
@@ -764,6 +830,16 @@ public class MatchingHandler extends TextWebSocketHandler {
             BigDecimal clientBalance = null;
             Long streamRecordId = null;
 
+            String languageReasonCode = "LANGUAGE_MATCH_FALLBACK";
+            try {
+                if (myUserId != null && peerUserId != null) {
+                    int score = userLanguageService.languageMatchScore(myUserId, peerUserId);
+                    if (score >= 100) languageReasonCode = "LANGUAGE_MATCH_PRIMARY";
+                    else if (score >= 50) languageReasonCode = "LANGUAGE_MATCH_SHARED";
+                    else languageReasonCode = "LANGUAGE_MATCH_FALLBACK";
+                }
+            } catch (Exception ignore) {}
+
             // Solo tiene sentido resolver stream para pares CLIENT–MODEL
             if (myUserId != null && peerUserId != null) {
 
@@ -803,13 +879,15 @@ public class MatchingHandler extends TextWebSocketHandler {
                             + "\"peerUserId\":%s,"
                             + "\"peerRole\":\"%s\","
                             + "\"clientBalance\":%s,"
-                            + "\"streamRecordId\":%s"
+                            + "\"streamRecordId\":%s,"
+                            + "\"reasonCode\":\"%s\""
                             + "}",
                     peerSessionId,
                     peerUserId != null ? peerUserId.toString() : "null",
                     peerRole != null ? peerRole : "",
                     clientBalance != null ? ("\"" + clientBalance.toPlainString() + "\"") : "null",
-                    streamRecordId != null ? streamRecordId.toString() : "null"
+                    streamRecordId != null ? streamRecordId.toString() : "null",
+                    languageReasonCode
             );
 
             session.sendMessage(new TextMessage(msg));
@@ -820,6 +898,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             );
         }
     }
+
 
 
     private void safeRequeue(WebSocketSession session, String role) {

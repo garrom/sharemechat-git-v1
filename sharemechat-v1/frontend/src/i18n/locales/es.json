@@ -1,0 +1,21 @@
+{
+  "ws": {
+    "match": {
+      "language": {
+        "primary": "Te hemos conectado con alguien que habla tu idioma",
+        "shared": "Te hemos conectado con alguien con idioma compatible",
+        "fallback": "Te hemos conectado con alguien aunque no compartáis idioma"
+      }
+    },
+    "noModel": {
+      "supply": "No hay modelos disponibles ahora mismo"
+    },
+    "noClient": {
+      "supply": "No hay clientes disponibles ahora mismo"
+    },
+    "noMatch": {
+      "found": "No se ha encontrado un emparejamiento adecuado"
+    },
+    "unknown": "Se ha producido un evento no reconocido"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "ws": {
+    "match": {
+      "language": {
+        "primary": "You have been connected with someone who speaks your language",
+        "shared": "You have been connected with someone with a compatible language",
+        "fallback": "You have been connected even though you don’t share a language"
+      }
+    },
+    "noModel": {
+      "supply": "No models are available right now"
+    },
+    "noClient": {
+      "supply": "No clients are available right now"
+    },
+    "noMatch": {
+      "found": "No suitable match was found"
+    },
+    "unknown": "An unknown event has occurred"
+  }
+}

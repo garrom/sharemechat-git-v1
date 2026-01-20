@@ -25,6 +25,9 @@ public class User {
     @Column(name = "role", nullable = false)
     private String role;
 
+    @Column(name = "ui_locale", length = 5, nullable = false)
+    private String uiLocale;
+
     @Column(name = "user_type", nullable = false)
     private String userType;
 
@@ -136,4 +139,8 @@ public class User {
 
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public String getUiLocale() {return uiLocale;}
+
+    public void setUiLocale(String uiLocale) {this.uiLocale = uiLocale;}
 }

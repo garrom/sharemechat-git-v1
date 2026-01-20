@@ -142,7 +142,7 @@ public class StreamService {
     public void confirmActiveSession(Long clientId, Long modelId) {
 
         // LOG: entrada + thread
-        log.warn(
+        log.debug(
                 "confirmActiveSession ENTER client={} model={} thread={}",
                 clientId,
                 modelId,
@@ -173,7 +173,7 @@ public class StreamService {
             return;
         }
         if (session.getConfirmedAt() != null) {
-            log.warn("confirmActiveSession EXIT (already-confirmed) sessionId={} client={} model={} confirmedAt={}",
+            log.debug("confirmActiveSession EXIT (already-confirmed) sessionId={} client={} model={} confirmedAt={}",
                     session.getId(), clientId, modelId, session.getConfirmedAt());
             return;
         }

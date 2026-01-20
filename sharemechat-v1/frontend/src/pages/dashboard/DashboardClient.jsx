@@ -40,13 +40,18 @@ import {
 import VideoChatRandomCliente from './VideoChatRandomCliente';
 import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
 import { apiFetch } from '../../config/http';
+import { useSession } from '../../components/SessionProvider';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
+import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
+import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
+
 
 
 const DashboardClient = () => {
 
   const { alert, confirm, openPurchaseModal, openActiveSessionGuard, openBlockReasonModal, openNextWaitModal } = useAppModals();
   const { inCall, setInCall } = useCallUi();
+  const { user: sessionUser } = useSession();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -55,7 +60,6 @@ const DashboardClient = () => {
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
   const [currentModelId, setCurrentModelId] = useState(null);
-  const [user, setUser] = useState(null);
   const [saldo, setSaldo] = useState(null);
   const [loadingSaldo, setLoadingSaldo] = useState(false);
   const [saldoError, setSaldoError] = useState('');
@@ -125,6 +129,9 @@ const DashboardClient = () => {
   const lastSentRef = useRef({ text: null, at: 0 });
   const matchGraceRef = useRef(false);
   const activePeerRef = useRef({ id: null, name: '' });
+  const matchEngineRef = useRef(null);
+  const msgEngineRef = useRef(null);
+  const cameraActiveRef = useRef(false);
 
 
 
@@ -146,6 +153,168 @@ const DashboardClient = () => {
     const found = gifts.find(gg => Number(gg.id) === Number(gift.id));
     return found?.icon || null;
   };
+
+
+  useEffect(() => {
+    cameraActiveRef.current = cameraActive;
+  }, [cameraActive]);
+
+
+  useEffect(() => {
+    // Match engine (Client)
+    matchEngineRef.current = createMatchSocketEngine({
+      buildWsUrl,
+      WS_PATHS,
+
+      socketRef,
+      pingIntervalRef,
+      peerRef,
+      localStreamRef: localStream,
+
+      getRemoteStream: () => remoteStream,
+      getIsMobile: () => isMobile,
+      getSessionUser: () => sessionUser,
+
+      setSearching,
+      setError,
+      setStatus,
+      setRemoteStream,
+      setMessages,
+      setNexting,
+
+      openNextWaitModal,
+
+      role: 'client',
+      initiator: true,
+
+      cameraActiveGetter: () => cameraActiveRef.current,
+
+      // Client: set-role básico + start-match onopen (como tu código original)
+      getRolePayload: () => ({ type: 'set-role', role: 'client' }),
+      startMatchOnOpen: true,
+
+      // Client: ping más agresivo en arranque
+      useFastPingOnOpen: true,
+      pingFastEveryMs: 5000,
+      pingEveryMs: 15000,
+
+      // Client: ICE config (sin inventar: uso EXACTO lo que ya tenías)
+      peerConfig: {
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          {
+            urls: 'turn:openrelay.metered.ca:80',
+            username: 'openrelayproject',
+            credential: 'openrelayproject',
+          },
+        ],
+      },
+
+      // Grace como en tu client
+      onMatchGrace: (mobile) => {
+        matchGraceRef.current = true;
+        setTimeout(() => { matchGraceRef.current = false; }, mobile ? 3000 : 1500);
+      },
+
+      // Meta por rol: currentModelId
+      onMatchMeta: (data) => {
+        try {
+          if (data.peerRole === 'model' && Number.isFinite(Number(data.peerUserId))) {
+            setCurrentModelId(Number(data.peerUserId));
+          } else {
+            setCurrentModelId(null);
+          }
+        } catch { setCurrentModelId(null); }
+      },
+
+      // Chat (igual que tú)
+      isEcho,
+
+      onChatMessage: (data) => {
+        if (!isEcho(data.message)) {
+          setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
+        }
+      },
+
+      // Gift (igual que tú)
+      onGiftMessage: (data) => {
+        const mine = Number(data.fromUserId) === Number(sessionUser?.id);
+        setMessages((p) => [...p, { from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
+
+        if (mine && data.newBalance != null) {
+          const nb = Number.parseFloat(String(data.newBalance));
+          if (Number.isFinite(nb)) setSaldo(nb);
+        }
+      },
+
+      // No model available (tu client)
+      noPeerAvailableType: 'no-model-available',
+      onNoPeerAvailable: () => {
+        setError('');
+        setSearching(true);
+      },
+
+      // No balance (tu client)
+      onNoBalance: async () => {
+        setSearching(false);
+        setError('');
+        try { await handlePurchaseFromRandom(); } catch (e) { console.error(e); }
+      },
+
+      // Peer disconnected (tu client)
+      onPeerDisconnectedPost: async (data) => {
+        const reason = data.reason || '';
+
+        setCurrentModelId(null);
+        setRemoteStream(null);
+        setMessages([]);
+
+        if (reason === 'low-balance') {
+          setStatus('');
+          setSearching(false);
+          try { await handlePurchaseFromRandom(); } catch (e) { console.error(e); }
+          return;
+        }
+
+        setStatus('Buscando nueva modelo...');
+        setSearching(true);
+
+        try {
+          if (socketRef.current?.readyState === WebSocket.OPEN) {
+            socketRef.current.send(JSON.stringify({ type: 'start-match' }));
+            socketRef.current.send(JSON.stringify({ type: 'stats' }));
+          }
+        } catch {}
+      },
+    });
+
+    // Msg engine (Client)
+    msgEngineRef.current = createMsgSocketEngine({
+      buildWsUrl,
+      WS_PATHS,
+
+      msgSocketRef,
+      msgPingRef,
+      msgReconnectRef,
+
+      setReady: setWsReady,
+      clearMsgTimers,
+
+      callStatusRef,
+      callPeerIdRef,
+
+      onMessage: (ev) => {
+        handleMsgSocketMessageClient(ev);
+      },
+    });
+  }, [
+  ]);
+
+
+
+  useEffect(() => {
+    meIdRef.current = Number(sessionUser?.id || 0) || null;
+  }, [sessionUser?.id]);
 
 
   useEffect(() => {
@@ -173,23 +342,9 @@ const DashboardClient = () => {
   }, [centerMessages, centerLoading, showCenterGifts]);
 
 
-  useEffect(() => {
-    const loadUser = async () => {
-      try {
-        const data = await apiFetch('/users/me');
-        setUser(data);
-        meIdRef.current = Number(data?.id || 0);
-
-      } catch (e) {
-        console.error("Error cargando usuario:", e);
-      }
-    };
-    if (token) loadUser();
-  }, [token]);
-
   // Cargar foto de perfil del cliente
   useEffect(() => {
-    if (!token) return;
+    if (!sessionUser?.id) return;
     (async () => {
       try {
         const d = await apiFetch('/clients/documents/me');
@@ -199,23 +354,22 @@ const DashboardClient = () => {
         /* noop */
       }
     })();
-  }, [token]);
+  }, [sessionUser?.id]);
 
   useEffect(() => {
-    if (!token || !currentModelId) return;
+    if (!sessionUser?.id || !currentModelId) return;
     (async () => {
       try {
         const d = await apiFetch(`/users/${currentModelId}`);
-
         const nn = d?.nickname || d?.name || d?.email || 'Modelo';
         setModelNickname(nn);
       } catch {/* noop */}
     })();
-  }, [token, currentModelId]);
+  }, [sessionUser?.id, currentModelId]);
+
 
   useEffect(() => {
-    if (!token || !currentModelId) return;
-
+    if (!sessionUser?.id || !currentModelId) return;
     (async () => {
       try {
         const map = await apiFetch(`/users/avatars?ids=${encodeURIComponent(currentModelId)}`);
@@ -224,7 +378,7 @@ const DashboardClient = () => {
         setModelAvatar(url);
       } catch {/* noop */}
     })();
-  }, [token, currentModelId]);
+  }, [sessionUser?.id, currentModelId]);
 
   // [CALL][Client] Solo aseguramos UI (nombre) y socket. El peer “verdadero”
   useEffect(() => {
@@ -236,11 +390,6 @@ const DashboardClient = () => {
     openMsgSocket?.();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [contactMode]);
-
-
-  useEffect(() => {
-      meIdRef.current = Number(user?.id) || null;
-  }, [user?.id]);
 
 
   // Mantener compatibilidad: reflejar target -> centerChat
@@ -565,378 +714,9 @@ const DashboardClient = () => {
     clearMsgTimers();
   };
 
+
   const openMsgSocket = () => {
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
-
-    const url = buildWsUrl(WS_PATHS.messages, { token: tk });
-    const cur = msgSocketRef.current;
-
-    // 1) OPEN → no hacer nada
-    if (cur && cur.readyState === WebSocket.OPEN) {
-      setWsReady(true);
-      return;
-    }
-
-    // 2) CONNECTING → no reabrir
-    if (cur && cur.readyState === WebSocket.CONNECTING) return;
-
-    // 3) Cerrar socket viejo
-    if (cur) {
-      try {
-        cur.__manualClose = true;
-        cur.close();
-      } catch {}
-    }
-
-    msgSocketRef.current = null;
-    setWsReady(false);
-    clearMsgTimers();
-
-    const s = new WebSocket(url);
-    msgSocketRef.current = s;
-
-    s.onopen = () => {
-      if (msgSocketRef.current !== s) return;
-
-      console.log('[WS][messages] OPEN (Client)');
-      setWsReady(true);
-
-      if (msgPingRef.current) clearInterval(msgPingRef.current);
-
-      msgPingRef.current = setInterval(() => {
-        try {
-          if (msgSocketRef.current !== s) return;
-          if (s.readyState !== WebSocket.OPEN) return;
-
-          s.send(JSON.stringify({ type: 'ping' }));
-
-          // 🔥 CLAVE: leer estado VIVO
-          const st = callStatusRef.current;
-          if (st === 'in-call' || st === 'connecting') {
-            s.send(JSON.stringify({
-              type: 'call:ping',
-              with: Number(callPeerIdRef.current),
-            }));
-            console.log('[CALL][ping] sent (Client)');
-          }
-        } catch {}
-      }, 30000);
-    };
-
-    s.onclose = () => {
-      if (msgSocketRef.current !== s) return;
-
-      console.log('[WS][messages] CLOSE (Client)');
-      setWsReady(false);
-      clearMsgTimers();
-      msgSocketRef.current = null;
-
-      if (s.__manualClose) return;
-
-      msgReconnectRef.current = setTimeout(() => {
-        const now = msgSocketRef.current;
-        if (now && (
-          now.readyState === WebSocket.OPEN ||
-          now.readyState === WebSocket.CONNECTING
-        )) return;
-
-        openMsgSocket();
-      }, 1500);
-    };
-
-    s.onerror = () => {
-      if (msgSocketRef.current !== s) return;
-      setWsReady(false);
-      try { s.close(); } catch {}
-    };
-
-    s.onmessage = (ev) => {
-      // Si llega un mensaje de un socket viejo, lo ignoramos
-      if (msgSocketRef.current !== s) return;
-
-      try {
-        const data = JSON.parse(ev.data);
-
-        // ====== MENSAJES / REGALOS ======
-        if (data.type === 'msg:gift' && data.gift) {
-          const me = Number(meIdRef.current);
-          const peer = Number(activePeerRef.current?.id);
-          const from = Number(data.from);
-          const to = Number(data.to);
-          const belongsToThisChat =
-            (from === peer && to === me) || (from === me && to === peer);
-          if (!me || !peer || !belongsToThisChat) return;
-
-          const mid = data.messageId;
-          if (mid && centerSeenIdsRef.current.has(mid)) return;
-          if (mid) centerSeenIdsRef.current.add(mid);
-
-          setCenterMessages(prev => [...prev, {
-            id: mid || `${Date.now()}`,
-            senderId: from,
-            recipientId: to,
-            body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
-            gift: { id: data.gift.id, name: data.gift.name }
-          }]);
-          queueMicrotask(() => { const el = centerListRef.current; if (el) el.scrollTop = el.scrollHeight; });
-          return;
-        }
-
-        if (data.type === 'msg:new' && data.message) {
-          const m = normMsg(data.message);
-
-          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-            try {
-              const parts = m.body.slice(2, -2).split(':');
-              if (parts.length >= 3 && parts[0] === 'GIFT') {
-                m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
-              }
-            } catch {}
-          }
-
-          const me = Number(meIdRef.current);
-          const peer = Number(activePeerRef.current?.id);
-          if (!me || !peer) return;
-
-          const belongsToThisChat =
-            (m.senderId === peer && m.recipientId === me) ||
-            (m.senderId === me && m.recipientId === peer);
-
-          if (belongsToThisChat) {
-            if (m.id && centerSeenIdsRef.current.has(m.id)) return;
-            if (m.id) centerSeenIdsRef.current.add(m.id);
-            setCenterMessages(prev => [...prev, m]);
-            queueMicrotask(() => { const el = centerListRef.current; if (el) el.scrollTop = el.scrollHeight; });
-          }
-          return;
-        }
-
-        // ====== GIFT / MENSAJES: saldo insuficiente ======
-        if (
-          (data.type === 'gift:error' || data.type === 'msg:error') &&
-          typeof data.message === 'string' &&
-          data.message.toLowerCase().includes('saldo insuficiente')
-        ) {
-          console.log('[GIFT][no-balance] message=', data.message);
-
-          // Aquí podemos reutilizar el mismo flujo que el botón "+ Saldo"
-          (async () => {
-            try {
-              await handleAddBalance();
-            } catch (e) {
-              console.error('Error en handleAddBalance (gift no-balance):', e);
-            }
-          })();
-          return;
-        }
-
-        // ====== CALLING: EVENTOS call:* ======
-        if (data.type === 'call:incoming') {
-          const id = Number(data.from);
-          const name = String(data.displayName || 'Usuario');
-
-          console.log('[CALL][incoming][Client] from=', id, 'name=', name);
-
-          // Lock del target
-          callTargetLockedRef.current = true;
-
-          // Autoridad única: fijar peer activo en modo call
-          setActivePeer(id, name, 'call', null);
-
-          // Sincronizar universo CALL
-          setCallPeerId(id);
-          callPeerIdRef.current = id;
-          setCallPeerName(name);
-
-          // Limpiar selección
-          setSelectedFav(null);
-
-          setCallStatus('incoming');
-          setCallError('');
-          return;
-        }
-
-
-        if (data.type === 'call:ringing') {
-          console.log('[CALL][ringing] to=', callPeerId);
-          setCallStatus('ringing');
-          setCallError('');
-          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-          callRingTimeoutRef.current = setTimeout(() => {
-            console.log('[CALL][ringing] timeout -> cancel local');
-            handleCallEnd(true);
-          }, 45000);
-          return;
-        }
-
-        if (data.type === 'call:accepted') {
-          console.log('[CALL][accepted]', { peer: callPeerIdRef.current, role: callRoleRef.current });
-
-          if (callRingTimeoutRef.current) {
-            clearTimeout(callRingTimeoutRef.current);
-            callRingTimeoutRef.current = null;
-          }
-
-          const peer = Number(callPeerIdRef.current);
-          if (Number.isFinite(peer) && peer > 0) {
-            console.log('[CALL][lock] accepted -> keep lock [Client]; peer=', peer);
-
-            // Refuerzo: ActivePeer debe ser el peer de la llamada
-            const nm = callPeerName || activePeerRef.current?.name || 'Usuario';
-            activePeerRef.current = { id: peer, name: nm };
-
-            // Estado "compat" (target) debe seguir al peer activo (lo demás deriva de ahí por tu effect target->centerChat)
-            setTargetPeerId(peer);
-            setTargetPeerName(nm);
-
-            // UI
-            setCenterChatPeerName(nm);
-          }
-
-          const initiator = (callRoleRef.current === 'caller');
-          wireCallPeer(initiator);
-
-          setCallStatus('in-call');
-          setCallError('');
-
-          if (callPingRef.current) clearInterval(callPingRef.current);
-          callPingRef.current = setInterval(() => {
-            try {
-              if (msgSocketRef.current?.readyState === WebSocket.OPEN) {
-                msgSocketRef.current.send(JSON.stringify({ type: 'call:ping' }));
-                console.log('[CALL][ping] sent (in-call loop)');
-              }
-            } catch {}
-          }, 30000);
-          return;
-        }
-
-
-        if (data.type === 'call:signal' && data.signal) {
-          console.log('[CALL][signal:in][Client]', data.signal?.type || (data.signal?.candidate ? 'candidate' : 'unknown'));
-          if (callPeerRef.current) {
-            callPeerRef.current.signal(data.signal);
-          }
-          return;
-        }
-
-        if (data.type === 'call:rejected') {
-          console.log('[CALL][rejected]');
-          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-          setCallStatus('idle');
-          setCallError('');
-
-          (async () => {
-            try {
-              await alert({
-                title: 'Llamada rechazada',
-                message: 'La otra persona ha rechazado tu llamada.',
-                variant: 'info',
-              });
-            } catch (e) {
-              console.error('Error mostrando modal de rechazo:', e);
-            }
-          })();
-
-          return;
-        }
-
-        if (data.type === 'call:canceled') {
-          console.log('[CALL][canceled] reason=', data.reason);
-          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-          cleanupCall('canceled');
-          return;
-        }
-
-        if (data.type === 'call:ended') {
-          console.log('[CALL][ended] reason=', data.reason);
-          const reason = data.reason;
-          cleanupCall('ended');
-          // saldo bajo -> abrir modal de compra
-          if (reason === 'low-balance') {
-            (async () => {
-              try {
-                await handlePurchaseFromCalling();
-              } catch (e) {
-                console.error('Error en handlePurchaseFromCalling (ended/low-balance):', e);
-              }
-            })();
-          }
-
-          return;
-        }
-
-        // CAll 1 a 1
-        if (data.type === 'call:no-balance') {
-          console.log('[CALL][no-balance]');
-          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-
-          // Volvemos al estado previo de cámara, pero sin mensaje de error "plano"
-          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError('');
-
-          // Disparamos el modal de compra específico para llamadas
-          (async () => {
-            try {
-              await handlePurchaseFromCalling();
-            } catch (e) {
-              console.error('Error en handlePurchaseFromCalling:', e);
-            }
-          })();
-
-          return;
-        }
-
-        if (data.type === 'call:busy') {
-          console.log('[CALL][busy]', data);
-          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError('');
-          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-          (async () => {
-            try {
-              await alert({
-                title: 'Usuario ocupado',
-                message: 'El usuario está en otra llamada o en streaming.',
-                variant: 'info',
-              });
-            } catch (e) {
-              console.error('Error mostrando modal de ocupado:', e);
-            }
-          })();
-          return;
-        }
-
-        if (data.type === 'call:offline') {
-          console.log('[CALL][offline]');
-          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError('');
-          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-          (async () => {
-            try {
-              await alert({
-                title: 'Usuario no disponible',
-                message: 'El usuario no está conectado en este momento.',
-                variant: 'info',
-              });
-            } catch (e) {
-              console.error('Error mostrando modal de offline:', e);
-            }
-          })();
-          return;
-        }
-
-        if (data.type === 'call:error') {
-          console.log('[CALL][error]', data.message);
-          setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
-          setCallError(String(data.message || 'Error en la llamada'));
-          if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
-          return;
-        }
-      } catch (e) {
-        // silenciar parse errors
-      }
-    };
+    msgEngineRef.current?.open();
   };
 
 
@@ -944,6 +724,7 @@ const DashboardClient = () => {
       openMsgSocket();
       return () => closeMsgSocket();
   }, []);
+
 
   // === Fullscreen helper (genérico) ===
   const toggleFullscreen = (el) => {
@@ -959,6 +740,7 @@ const DashboardClient = () => {
     }
   };
 
+
   const handleActivateCamera = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -973,329 +755,332 @@ const DashboardClient = () => {
     }
   };
 
+
   const handleLogout = async () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
-
     stopAll();
     localStorage.removeItem('token');
     history.push('/');
   };
 
+
   const handleStartMatch = () => {
-    if (!cameraActive || !localStream.current) {
-      setError('Primero activa la cámara.');
-      return;
-    }
-    setSearching(true);
-    setError('');
-
-    const tokenLS = localStorage.getItem('token');
-    if (!tokenLS) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
-      setSearching(false);
-      return;
-    }
-
-    const wsUrl = buildWsUrl(WS_PATHS.match, { token: tokenLS });
-    console.log('WS(Client) ->', wsUrl);
-
-    socketRef.current = new WebSocket(wsUrl);
-
-    socketRef.current.onopen = () => {
-      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
-
-      // 1) ping inmediato para que el backend pueda confirmar cuanto antes
-      try { socketRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
-
-      // 2) durante matchmaking/arranque, ping más frecuente (reduce streams 0s sin confirmar)
-      pingIntervalRef.current = setInterval(() => {
-        try {
-          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            socketRef.current.send(JSON.stringify({ type: 'ping' }));
-          }
-        } catch {}
-      }, 5000);
-
-      socketRef.current.send(JSON.stringify({ type: 'set-role', role: 'client' }));
-      socketRef.current.send(JSON.stringify({ type: 'start-match' }));
-    };
+    matchEngineRef.current?.start();
+  };
 
 
-    socketRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data);
+  const handleMsgSocketMessageClient = (ev) => {
+    try {
+      const data = JSON.parse(ev.data);
 
-      // ===== NUEVO: Control industrial de NEXT (server authoritative + UX) =====
-      if (data.type === 'next-wait') {
-        const retryAfterMs = Number(data.retryAfterMs || 0);
-        const reason = String(data.reason || 'cooldown');
+      // ====== MENSAJES / REGALOS ======
+      if (data.type === 'msg:gift' && data.gift) {
+        const me = Number(meIdRef.current);
+        const peer = Number(activePeerRef.current?.id);
+        const from = Number(data.from);
+        const to = Number(data.to);
 
-        // liberamos el flag local para que el usuario no quede "bloqueado" si el server rechazó
-        setNexting(false);
+        const belongsToThisChat =
+          (from === peer && to === me) || (from === me && to === peer);
 
-        const title =
-          reason === 'grace'
-            ? 'Espera un momento'
-            : 'Preparando el siguiente match';
+        if (!me || !peer || !belongsToThisChat) return;
 
-        const message =
-          reason === 'grace'
-            ? 'Acabas de emparejarte. Espera un instante antes de pasar al siguiente.'
-            : 'Estamos cerrando la sesión y preparando el siguiente emparejamiento…';
+        const mid = data.messageId;
+        if (mid && centerSeenIdsRef.current.has(mid)) return;
+        if (mid) centerSeenIdsRef.current.add(mid);
 
-        try {
-          openNextWaitModal({
-            title,
-            message,
-            durationMs: Math.max(600, Math.min(8000, retryAfterMs || 1500)),
-          });
-        } catch {}
+        setCenterMessages(prev => [...prev, {
+          id: mid || `${Date.now()}`,
+          senderId: from,
+          recipientId: to,
+          body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
+          gift: { id: data.gift.id, name: data.gift.name }
+        }]);
 
-        return;
-      }
-
-      if (data.type === 'next-rate-limited') {
-        const retryAfterMs = Number(data.retryAfterMs || 0);
-
-        setNexting(false);
-
-        try {
-          openNextWaitModal({
-            title: 'Demasiados saltos',
-            message: 'Has pulsado “Next” muy rápido. Espera un momento para continuar.',
-            durationMs: Math.max(1500, Math.min(20000, retryAfterMs || 8000)),
-          });
-        } catch {}
-
-        return;
-      }
-
-      // Compat: si backend sigue mandando next-ignored (tu handler actual lo hace)
-      if (data.type === 'next-ignored') {
-        const reason = String(data.reason || 'cooldown');
-        const retryAfterMs = Number(data.retryAfterMs || 0);
-
-        setNexting(false);
-
-        const title =
-          reason === 'grace'
-            ? 'Espera un momento'
-            : 'Preparando el siguiente match';
-
-        const message =
-          reason === 'grace'
-            ? 'Acabas de emparejarte. Espera un instante antes de pasar al siguiente.'
-            : 'Espera un instante…';
-
-        try {
-          openNextWaitModal({
-            title,
-            message,
-            durationMs: Math.max(600, Math.min(8000, retryAfterMs || 1200)),
-          });
-        } catch {}
-
-        return;
-      }
-
-      // Opcional: si el backend implementa "next-accepted"
-      if (data.type === 'next-accepted') {
-        // No limpiamos nada aquí; el corte real llega por peer-disconnected o por el flujo normal.
-        // Solo liberamos el flag.
-        setNexting(false);
-        return;
-      }
-
-      // ===== Tu lógica actual =====
-      if (data.type === 'match') {
-        matchGraceRef.current = true;
-        setTimeout(() => { matchGraceRef.current = false; }, isMobile ? 3000 : 1500);
-
-        if (socketRef.current?.readyState === WebSocket.OPEN) {
-          try { socketRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
-        }
-        try {
-          if (data.peerRole === 'model' && Number.isFinite(Number(data.peerUserId))) {
-            setCurrentModelId(Number(data.peerUserId));
-          } else {
-            setCurrentModelId(null);
-          }
-        } catch { setCurrentModelId(null); }
-
-        try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
-        try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
-        setRemoteStream(null);
-        setMessages([]);
-
-        const peer = new Peer({
-          initiator: true,
-          trickle: true,
-          stream: localStream.current,
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              {
-                urls: 'turn:openrelay.metered.ca:80',
-                username: 'openrelayproject',
-                credential: 'openrelayproject',
-              },
-            ],
-          },
+        queueMicrotask(() => {
+          const el = centerListRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
         });
 
-        peer.on('signal', (signal) => {
-          if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
-          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
-          }
-        });
-
-        peer.on('stream', (stream) => setRemoteStream(stream));
-        peer.on('error', (err) => {
-          setError('Error en la conexión WebRTC: ' + err.message);
-          setSearching(false);
-        });
-
-        peerRef.current = peer;
-        setSearching(false);
-
-        // Si veníamos de "next", ya estamos en transición resuelta
-        setNexting(false);
         return;
       }
 
-      if (data.type === 'signal' && peerRef.current) {
-        peerRef.current.signal(data.signal);
-        return;
-      }
+      if (data.type === 'msg:new' && data.message) {
+        const m = normMsg(data.message);
 
-      if (data.type === 'chat') {
-        if (!isEcho(data.message)) {
-          setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
-        }
-        return;
-      }
-
-      if (data.type === 'gift') {
-        const mine = Number(data.fromUserId) === Number(user?.id);
-        setMessages(p => [...p, { from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
-
-        // newBalance viene del backend en gifts de streaming (MatchingHandler)
-        if (mine && data.newBalance != null) {
-          const nb = Number.parseFloat(String(data.newBalance));
-          if (Number.isFinite(nb)) setSaldo(nb);
-        }
-        return;
-      }
-
-      if (data.type === 'gift:error') {
-        const msg = data.message || 'No se pudo enviar el regalo';
-        const isSaldo = String(msg).toLowerCase().includes('saldo');
-
-        // Caso saldo insuficiente: solo modal, SIN texto rojo en pantalla
-        if (isSaldo) {
-          setError('');
-          (async () => {
-            try {
-              await handlePurchaseFromGift();
-            } catch (e) {
-              console.error('Error en handlePurchaseFromGift:', e);
+        if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+          try {
+            const parts = m.body.slice(2, -2).split(':');
+            if (parts.length >= 3 && parts[0] === 'GIFT') {
+              m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
             }
-          })();
-          return;
+          } catch {}
         }
-        // Resto de errores de regalo: sí mostramos el texto en rojo
-        setError(msg);
+
+        const me = Number(meIdRef.current);
+        const peer = Number(activePeerRef.current?.id);
+        if (!me || !peer) return;
+
+        const belongsToThisChat =
+          (m.senderId === peer && m.recipientId === me) ||
+          (m.senderId === me && m.recipientId === peer);
+
+        if (belongsToThisChat) {
+          if (m.id && centerSeenIdsRef.current.has(m.id)) return;
+          if (m.id) centerSeenIdsRef.current.add(m.id);
+
+          setCenterMessages(prev => [...prev, m]);
+
+          queueMicrotask(() => {
+            const el = centerListRef.current;
+            if (el) el.scrollTop = el.scrollHeight;
+          });
+        }
+
         return;
       }
 
-      if (data.type === 'no-model-available') {
-        setError('');
-        setSearching(true);
-        return;
-      }
-
-      // Random
-      if (data.type === 'no-balance') {
-        setSearching(false);
-        setError('');
+      // ====== GIFT / MENSAJES: saldo insuficiente ======
+      if (
+        (data.type === 'gift:error' || data.type === 'msg:error') &&
+        typeof data.message === 'string' &&
+        data.message.toLowerCase().includes('saldo insuficiente')
+      ) {
+        console.log('[GIFT][no-balance] message=', data.message);
 
         (async () => {
           try {
-            await handlePurchaseFromRandom();
+            await handleAddBalance();
           } catch (e) {
-            console.error('Error en handlePurchaseFromRandom:', e);
+            console.error('Error en handleAddBalance (gift no-balance):', e);
           }
         })();
 
         return;
       }
 
-      if (data.type === 'peer-disconnected') {
-        console.log('[RANDOM][peer-disconnected]', data);
-        const reason = data.reason || '';
+      // ====== CALLING: EVENTOS call:* ======
+      if (data.type === 'call:incoming') {
+        const id = Number(data.from);
+        const name = String(data.displayName || 'Usuario');
 
-        // FIN de transición "next"
-        setNexting(false);
+        console.log('[CALL][incoming][Client] from=', id, 'name=', name);
 
-        // Limpieza común: peer + streams + mensajes
-        setCurrentModelId(null);
-        try {
-          if (peerRef.current) {
-            peerRef.current.destroy();
-            peerRef.current = null;
-          }
-        } catch {}
-        try {
-          if (remoteStream) {
-            remoteStream.getTracks().forEach((t) => t.stop());
-          }
-        } catch {}
-        setRemoteStream(null);
-        setMessages([]);
+        callTargetLockedRef.current = true;
 
-        // Caso especial: corte por saldo bajo
-        if (reason === 'low-balance') {
-          setStatus('');
-          setSearching(false);
+        setActivePeer(id, name, 'call', null);
 
-          (async () => {
-            try {
-              await handlePurchaseFromRandom();
-            } catch (e) {
-              console.error('Error en handlePurchaseFromRandom (low-balance):', e);
-            }
-          })();
-          return;
-        }
+        setCallPeerId(id);
+        callPeerIdRef.current = id;
+        setCallPeerName(name);
 
-        // Resto de casos: seguimos auto-buscando como antes
-        setStatus('Buscando nueva modelo...');
-        setSearching(true);
+        setSelectedFav(null);
 
-        if (socketRef.current?.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ type: 'start-match' }));
-          socketRef.current.send(JSON.stringify({ type: 'stats' }));
-        }
+        setCallStatus('incoming');
+        setCallError('');
         return;
       }
-    };
 
+      if (data.type === 'call:ringing') {
+        console.log('[CALL][ringing] to=', callPeerId);
 
-    socketRef.current.onerror = (e) => {
-      console.error('WebSocket error (client):', e);
-      setError('Error WebSocket');
-      setSearching(false);
-    };
+        setCallStatus('ringing');
+        setCallError('');
 
-    socketRef.current.onclose = (e) => {
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-        pingIntervalRef.current = null;
+        if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
+        callRingTimeoutRef.current = setTimeout(() => {
+          console.log('[CALL][ringing] timeout -> cancel local');
+          handleCallEnd(true);
+        }, 45000);
+
+        return;
       }
-      setSearching(false);
-    };
+
+      if (data.type === 'call:accepted') {
+        console.log('[CALL][accepted]', { peer: callPeerIdRef.current, role: callRoleRef.current });
+
+        if (callRingTimeoutRef.current) {
+          clearTimeout(callRingTimeoutRef.current);
+          callRingTimeoutRef.current = null;
+        }
+
+        const peer = Number(callPeerIdRef.current);
+        if (Number.isFinite(peer) && peer > 0) {
+          console.log('[CALL][lock] accepted -> keep lock [Client]; peer=', peer);
+
+          const nm = callPeerName || activePeerRef.current?.name || 'Usuario';
+          activePeerRef.current = { id: peer, name: nm };
+
+          setTargetPeerId(peer);
+          setTargetPeerName(nm);
+
+          setCenterChatPeerName(nm);
+        }
+
+        const initiator = (callRoleRef.current === 'caller');
+        wireCallPeer(initiator);
+
+        setCallStatus('in-call');
+        setCallError('');
+
+        if (callPingRef.current) clearInterval(callPingRef.current);
+
+        callPingRef.current = setInterval(() => {
+          try {
+            if (msgSocketRef.current?.readyState === WebSocket.OPEN) {
+              msgSocketRef.current.send(JSON.stringify({ type: 'call:ping' }));
+              console.log('[CALL][ping] sent (in-call loop)');
+            }
+          } catch {}
+        }, 30000);
+
+        return;
+      }
+
+      if (data.type === 'call:signal' && data.signal) {
+        console.log('[CALL][signal:in][Client]', data.signal?.type || (data.signal?.candidate ? 'candidate' : 'unknown'));
+
+        if (callPeerRef.current) {
+          callPeerRef.current.signal(data.signal);
+        }
+
+        return;
+      }
+
+      if (data.type === 'call:rejected') {
+        console.log('[CALL][rejected]');
+
+        if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
+        setCallStatus('idle');
+        setCallError('');
+
+        (async () => {
+          try {
+            await alert({
+              title: 'Llamada rechazada',
+              message: 'La otra persona ha rechazado tu llamada.',
+              variant: 'info',
+            });
+          } catch (e) {
+            console.error('Error mostrando modal de rechazo:', e);
+          }
+        })();
+
+        return;
+      }
+
+      if (data.type === 'call:canceled') {
+        console.log('[CALL][canceled] reason=', data.reason);
+
+        if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
+        cleanupCall('canceled');
+        return;
+      }
+
+      if (data.type === 'call:ended') {
+        console.log('[CALL][ended] reason=', data.reason);
+
+        const reason = data.reason;
+        cleanupCall('ended');
+
+        if (reason === 'low-balance') {
+          (async () => {
+            try {
+              await handlePurchaseFromCalling();
+            } catch (e) {
+              console.error('Error en handlePurchaseFromCalling (ended/low-balance):', e);
+            }
+          })();
+        }
+
+        return;
+      }
+
+      if (data.type === 'call:no-balance') {
+        console.log('[CALL][no-balance]');
+
+        if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
+        setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+        setCallError('');
+
+        (async () => {
+          try {
+            await handlePurchaseFromCalling();
+          } catch (e) {
+            console.error('Error en handlePurchaseFromCalling:', e);
+          }
+        })();
+
+        return;
+      }
+
+      if (data.type === 'call:busy') {
+        console.log('[CALL][busy]', data);
+
+        setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+        setCallError('');
+
+        if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
+        (async () => {
+          try {
+            await alert({
+              title: 'Usuario ocupado',
+              message: 'El usuario está en otra llamada o en streaming.',
+              variant: 'info',
+            });
+          } catch (e) {
+            console.error('Error mostrando modal de ocupado:', e);
+          }
+        })();
+
+        return;
+      }
+
+      if (data.type === 'call:offline') {
+        console.log('[CALL][offline]');
+
+        setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+        setCallError('');
+
+        if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
+        (async () => {
+          try {
+            await alert({
+              title: 'Usuario no disponible',
+              message: 'El usuario no está conectado en este momento.',
+              variant: 'info',
+            });
+          } catch (e) {
+            console.error('Error mostrando modal de offline:', e);
+          }
+        })();
+
+        return;
+      }
+
+      if (data.type === 'call:error') {
+        console.log('[CALL][error]', data.message);
+
+        setCallStatus(callCameraActive ? 'camera-ready' : 'idle');
+        setCallError(String(data.message || 'Error en la llamada'));
+
+        if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
+
+        return;
+      }
+    } catch (e) {
+      // silenciar parse errors
+    }
   };
+
+
 
   const handleNext = () => {
     // Guard: si estamos ya en transición de NEXT, no spameamos
@@ -1324,7 +1109,6 @@ const DashboardClient = () => {
   };
 
 
-
   const sendChatMessage = () => {
     if (chatInput.trim() === '') return;
     const message = { type: 'chat', message: chatInput.trim() };
@@ -1336,6 +1120,7 @@ const DashboardClient = () => {
     }
   };
 
+
   const handleProfile = async () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
@@ -1343,6 +1128,7 @@ const DashboardClient = () => {
     stopAll();
     history.push('/perfil-client');
   };
+
 
   const stopAll = () => {
     if (pingIntervalRef.current) {
@@ -1382,6 +1168,7 @@ const DashboardClient = () => {
     try { handleCallEnd(true); } catch {}
   };
 
+
   const handleAddBalance = async () => {
     const tokenLS = localStorage.getItem('token');
     if (!tokenLS) {
@@ -1393,20 +1180,15 @@ const DashboardClient = () => {
       });
       return;
     }
-
-    // Usamos el modal de compra genérico y que él coja sus packs por defecto
+    // model copra generico
     const result = await openPurchaseModal({
       context: 'navbar-comprar', // etiqueta opcional por si quieres loguear contexto
     });
-
     if (!result.confirmed || !result.pack) return;
-
     const { pack } = result;
     const amount = Number(pack.price);
-
     try {
       setLoadingSaldo(true);
-
       const res = await fetch('/api/transactions/add-balance', {
         method: 'POST',
         headers: {
@@ -1419,12 +1201,10 @@ const DashboardClient = () => {
           description: `Recarga de saldo (${pack.minutes} minutos)`,
         }),
       });
-
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
       }
-
       await alert({
         title: 'Saldo actualizado',
         message: `Se ha añadido el pack de ${pack.minutes} minutos.`,
@@ -1456,6 +1236,7 @@ const DashboardClient = () => {
     }
   };
 
+
   const handlePurchaseFromRandom = async () => {
     const tokenLS = localStorage.getItem('token');
     if (!tokenLS) {
@@ -1467,23 +1248,18 @@ const DashboardClient = () => {
       });
       return;
     }
-
     // Abrimos el modal de compra reutilizando la plantilla #3
     const result = await openPurchaseModal({
       context: 'random', // etiqueta para distinguir el contexto
     });
-
     if (!result.confirmed || !result.pack) {
       // El usuario canceló o cerró el modal
       return;
     }
-
     const { pack } = result;
     const amount = Number(pack.price);
-
     try {
       setLoadingSaldo(true);
-
       // Llamada al backend para crear la recarga
       const res = await fetch('/api/transactions/add-balance', {
         method: 'POST',
@@ -1502,17 +1278,14 @@ const DashboardClient = () => {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
       }
-
       // Refrescamos saldo
       const res2 = await fetch('/api/clients/me', {
         headers: { Authorization: `Bearer ${tokenLS}` },
       });
-
       if (!res2.ok) {
         const txt = await res2.text();
         throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
       }
-
       const data = await res2.json();
       setSaldo(data.saldoActual);
       setSaldoError('');
@@ -1535,6 +1308,7 @@ const DashboardClient = () => {
     }
   };
 
+
   const handlePurchaseFromCalling = async () => {
     const tokenLS = localStorage.getItem('token');
     if (!tokenLS) {
@@ -1546,19 +1320,16 @@ const DashboardClient = () => {
       });
       return;
     }
-
     const result = await openPurchaseModal({
       context: 'calling',
     });
 
     if (!result.confirmed || !result.pack) return;
-
     const { pack } = result;
     const amount = Number(pack.price);
 
     try {
       setLoadingSaldo(true);
-
       const res = await fetch('/api/transactions/add-balance', {
         method: 'POST',
         headers: {
@@ -1576,7 +1347,6 @@ const DashboardClient = () => {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
       }
-
       const res2 = await fetch('/api/clients/me', {
         headers: { Authorization: `Bearer ${tokenLS}` },
       });
@@ -1585,7 +1355,6 @@ const DashboardClient = () => {
         const txt = await res2.text();
         throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
       }
-
       const data = await res2.json();
       setSaldo(data.saldoActual);
       setSaldoError('');
@@ -1608,6 +1377,7 @@ const DashboardClient = () => {
     }
   };
 
+
   const handlePurchaseFromGift = async () => {
     const tokenLS = localStorage.getItem('token');
     if (!tokenLS) {
@@ -1619,19 +1389,15 @@ const DashboardClient = () => {
       });
       return;
     }
-
     const result = await openPurchaseModal({
       context: 'gift',
     });
-
     if (!result.confirmed || !result.pack) return;
-
     const { pack } = result;
     const amount = Number(pack.price);
 
     try {
       setLoadingSaldo(true);
-
       const res = await fetch('/api/transactions/add-balance', {
         method: 'POST',
         headers: {
@@ -1644,12 +1410,10 @@ const DashboardClient = () => {
           description: `Recarga de saldo (envío de regalos, ${pack.minutes} minutos)`,
         }),
       });
-
       if (!res.ok) {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
       }
-
       const res2 = await fetch('/api/clients/me', {
         headers: { Authorization: `Bearer ${tokenLS}` },
       });
@@ -1658,7 +1422,6 @@ const DashboardClient = () => {
         const txt = await res2.text();
         throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
       }
-
       const data = await res2.json();
       setSaldo(data.saldoActual);
       setSaldoError('');
@@ -1681,14 +1444,14 @@ const DashboardClient = () => {
     }
   };
 
-  // ===== BLOQUEOS (RANDOM) - CLIENT SIDE =====
+
+  // BLOQUEOS (RANDOM) - CLIENT SIDE
   const handleBlockPeer = async () => {
     const id = Number(currentModelId);
     if (!Number.isFinite(id) || id <= 0) {
       await alert({ title:'Bloquear', message:'No se pudo identificar a la modelo actual.', variant:'warning' });
       return;
     }
-
     const displayName = modelNickname || `Usuario #${id}`;
     const pick = await openBlockReasonModal({ displayName });
     if (!pick?.confirmed) return;
@@ -1703,7 +1466,6 @@ const DashboardClient = () => {
     } else {
       setSearching(false);
     }
-
     await alert({ title:'Bloquear', message:'Modelo bloqueada.', variant:'success' });
   };
 
@@ -1731,20 +1493,20 @@ const DashboardClient = () => {
       callStatus === 'in-call' ||
       callStatus === 'connecting' ||
       callStatus === 'ringing';
-
     return openActiveSessionGuard({
       hasStreaming: !!remoteStream,
       hasCalling: hayLlamada,
     });
   };
 
+
   const handleGoBlog = async () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
-
     stopAll();
     setActiveTab('blog');
   };
+
 
   const handleGoFavorites = async () => {
     const ok = await confirmarSalidaSesionActiva();
@@ -1753,12 +1515,14 @@ const DashboardClient = () => {
     setActiveTab('favoritos');
   };
 
+
   const handleGoVideochat = async () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
     stopAll();
     setActiveTab('videochat');
   };
+
 
   const handleLogoClick = (e) => {
     // nos lleva a tab videochat
@@ -1777,28 +1541,22 @@ const DashboardClient = () => {
       setCallError('Selecciona un contacto primero.');
       return;
     }
-
     // Regla de permiso actual (accepted+active)
     const inv = String(selectedFav?.invited || '').toLowerCase();
     const st  = String(selectedFav?.status  || '').toLowerCase();
     const isAcceptedForCall = (st === 'active' && inv === 'accepted');
-
     if (!isAcceptedForCall) {
       setCallError('Llamadas bloqueadas: la relación no está aceptada o activa.');
       return;
     }
-
     const id = Number(targetPeerId);
     const name = targetPeerName || 'Usuario';
-
     // Fuente de verdad única también en call
     setActivePeer(id, name, 'call', selectedFav);
-
     // Sincronizar universo CALL con el target
     setCallPeerId(id);
     callPeerIdRef.current = id;
     setCallPeerName(name);
-
     setCallError('');
   };
 
@@ -1815,7 +1573,6 @@ const DashboardClient = () => {
       });
       return;
     }
-
     const tk = localStorage.getItem('token');
     if (!tk) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
@@ -1826,7 +1583,6 @@ const DashboardClient = () => {
       });
       return;
     }
-
     try {
       const res = await fetch(`/api/favorites/models/${modelId}`, {
         method: 'POST',
@@ -1846,7 +1602,6 @@ const DashboardClient = () => {
         const txt = await res.text();
         throw new Error(txt || `Error ${res.status}`);
       }
-
       // 204 => consultamos meta para mensaje contextual
       try {
         const metaRes = await fetch('/api/favorites/models/meta', {
@@ -1925,22 +1680,18 @@ const DashboardClient = () => {
       alert('No puedes abrir el chat central mientras hay streaming. Pulsa Stop si quieres cambiar.');
       return;
     }
-
     if (!Number.isFinite(peer) || peer <= 0) {
       console.warn('[openChatWith][Client] peerId inválido:', peerId);
       return;
     }
-
     // SIMÉTRICO a Model: esta función NO carga histórico.
     // El histórico lo carga el useEffect(targetPeerId, activeTab).
     setActiveTab('favoritos');
     setCenterChatPeerName(displayName || 'Usuario');
-
     // Mantengo limpieza “optimista” para UX (mientras carga)
     setCenterMessages([]);
     centerSeenIdsRef.current = new Set();
     setCenterLoading(true);
-
     openMsgSocket();
   };
 
@@ -1954,10 +1705,10 @@ const DashboardClient = () => {
     readAt: raw.readAt ?? raw.read_at ?? null,
   });
 
+
   const sendCenterMessage = () => {
     const body = String(centerInput || '').trim();
     if (!body) return;
-
     // Prioridad: autoridad (ref) -> centerChatPeerId -> targetPeerId
     const to =
       Number(activePeerRef.current?.id) ||
@@ -1972,7 +1723,6 @@ const DashboardClient = () => {
       });
       return;
     }
-
     const s = msgSocketRef.current;
     if (s && s.readyState === WebSocket.OPEN) {
       const payload = { type: 'msg:send', to, body };
@@ -1992,23 +1742,19 @@ const DashboardClient = () => {
   const setActivePeer = (peerId, peerName, mode, favUser = null) => {
     const id = Number(peerId);
     const name = peerName || 'Usuario';
-
     if (!Number.isFinite(id) || id <= 0) {
       console.warn('[ActivePeer][Client] peerId inválido:', peerId);
       return;
     }
-
     const prevId = Number(activePeerRef.current?.id) || null;
     const isSamePeer = prevId === id;
 
-    // 👉 Autoridad viva (id + name)
+    // Autoridad viva (id + name)
     activePeerRef.current = { id, name };
-
-    // 👉 Fuente de verdad React
+    // Fuente de verdad React
     setTargetPeerId(id);
     setTargetPeerName(name);
-
-    // 👉 NUEVO: preservar avatar si viene de favoritos
+    // preservar avatar si viene de favoritos
     if (favUser?.avatarUrl) {
       setCallPeerAvatar(favUser.avatarUrl);
     }
@@ -2016,7 +1762,6 @@ const DashboardClient = () => {
     if (favUser) {
       setSelectedFav(favUser);
     }
-
     setContactMode(mode || 'chat');
     setActiveTab('favoritos');
 
@@ -2024,9 +1769,7 @@ const DashboardClient = () => {
       centerSeenIdsRef.current = new Set();
       setCenterMessages([]);
     }
-
     setCenterChatPeerName(name);
-
     openMsgSocket?.();
   };
 
@@ -2040,11 +1783,10 @@ const DashboardClient = () => {
       alert('No se pudo determinar el destinatario correcto.');
       return;
     }
-    if (Number(user?.id) === peer) {
+    if (Number(sessionUser?.id) === peer) {
       alert('No puedes chatear contigo mismo.');
       return;
     }
-
     // Fuente de verdad única
     setActivePeer(peer, name, 'chat', favUser);
 
@@ -2055,7 +1797,6 @@ const DashboardClient = () => {
       openMsgSocket?.();
       return;
     }
-
     // Cargar historial
     openChatWith(peer, name);
   };
@@ -2076,6 +1817,7 @@ const DashboardClient = () => {
     }
   };
 
+
   const rejectInvitation = async () => {
     if (!selectedFav?.id) return;
     const tk = localStorage.getItem('token');
@@ -2089,18 +1831,19 @@ const DashboardClient = () => {
     }
   };
 
+
   const sendGiftMatch=(giftId)=>{
       if(!socketRef.current||socketRef.current.readyState!==WebSocket.OPEN) return;
       socketRef.current.send(JSON.stringify({type:'gift',giftId}));
       setShowGifts(false);
   };
 
+
   const sendGiftMsg = (giftId) => {
     const to =
       Number(activePeerRef.current?.id) ||
       Number(targetPeerId) ||
       Number(centerChatPeerId);
-
     if (!Number.isFinite(to) || to <= 0) return;
     if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) return;
 
@@ -2118,7 +1861,6 @@ const DashboardClient = () => {
       setCallError('No puedes activar la cámara: la relación aún no está aceptada.');
       return;
     }
-
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -2141,22 +1883,20 @@ const DashboardClient = () => {
     }
   };
 
+
   // Enviar invitación (FIX: no usar 'openChatWith' como ID)
   const handleCallInvite = () => {
     if (!callCameraActive || !callLocalStreamRef.current) {
       setCallError('Primero activa la cámara para llamar.');
       return;
     }
-
     if (!callAllowed) {
       setCallError('Llamadas bloqueadas: la relación no está aceptada.');
       return;
     }
-
     // Prioridad: ref -> state -> chat central -> favorito seleccionado
     const toId =
       Number(callPeerIdRef.current ?? callPeerId ?? centerChatPeerId ?? selectedFav?.id);
-
     let toName = '';
     if (Number.isFinite(toId) && toId > 0) {
       toName =
@@ -2167,17 +1907,14 @@ const DashboardClient = () => {
         selectedFav?.email ||
         'Usuario';
     }
-
     if (!Number.isFinite(toId) || toId <= 0) {
       setCallError('Abre un chat de Favoritos o selecciona un destinatario para llamar.');
       return;
     }
-
     if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) {
       setCallError('El chat de mensajes no está conectado.');
       return;
     }
-
     try {
       console.log('[CALL][invite:send][Client] to=', toId, 'name=', toName);
       setCallPeerId(toId);
@@ -2234,6 +1971,7 @@ const DashboardClient = () => {
     }
   };
 
+
   //Rechazar invitación
   const handleCallReject = () => {
     if (!callPeerId) return;
@@ -2250,6 +1988,7 @@ const DashboardClient = () => {
       setCallError('No se pudo rechazar la llamada.');
     }
   };
+
 
   // Colgar / Cancelar force=true para casos de navegación donde queremos limpiar aunque el WS falle
   const handleCallEnd = (force = false) => {
@@ -2271,6 +2010,7 @@ const DashboardClient = () => {
       if (force) cleanupCall('forced-end');
     }
   };
+
 
   //Crear Peer y cablear eventos
   const wireCallPeer = (initiator) => {
@@ -2300,7 +2040,6 @@ const DashboardClient = () => {
         ],
       },
     });
-
     p.on('signal', (signal) => {
       try {
         const type = signal?.type || (signal?.candidate ? 'candidate' : 'unknown');
@@ -2321,7 +2060,6 @@ const DashboardClient = () => {
         console.warn('[CALL][signal:out][Client] error', e);
       }
     });
-
     p.on('connect', () => {
       console.log('[CALL][peer:connected][Client]');
       // Solo el CALLER notifica call:connected para evitar doble startSession
@@ -2333,7 +2071,6 @@ const DashboardClient = () => {
         console.log('[CALL][connected] enviado ->', toId);
       }
     });
-
     p.on('stream', (stream) => {
       console.log('[CALL][remote:stream][Client] tracks=', stream.getTracks().length);
       setCallRemoteStream(stream);
@@ -2433,11 +2170,10 @@ const DashboardClient = () => {
       alert('No se pudo determinar el destinatario correcto.');
       return;
     }
-    if (Number(user?.id) === peer) {
+    if (Number(sessionUser?.id) === peer) {
       alert('No puedes llamarte a ti mismo.');
       return;
     }
-
     const name =
       favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
 
@@ -2459,7 +2195,7 @@ const DashboardClient = () => {
   };
 
 
-  // === Volver a la lista (favoritos móvil)
+  //Volver a la lista (favoritos móvil)
   const backToList = () => {
 
     activePeerRef.current = { id: null, name: '' };
@@ -2499,7 +2235,7 @@ const DashboardClient = () => {
       ? true
       : (Number(selectedFav?.id) === Number(callPeerId) && isAcceptedForCall);
 
-  const displayName = user?.nickname || user?.name || user?.email || "Cliente";
+  const displayName = sessionUser?.nickname || sessionUser?.name || sessionUser?.email || "Cliente";
 
   return(
     <StyledContainer>
@@ -2623,7 +2359,7 @@ const DashboardClient = () => {
                   handleCallEnd={handleCallEnd}
                   toggleFullscreen={toggleFullscreen}
                   backToList={backToList}
-                  user={user}
+                  user={sessionUser}
                 />
               </StyledCenter>
             ):(
@@ -2685,7 +2421,7 @@ const DashboardClient = () => {
                     handleCallEnd={handleCallEnd}
                     toggleFullscreen={toggleFullscreen}
                     backToList={backToList}
-                    user={user}
+                    user={sessionUser}
                   />
                 </StyledCenter>
                 <StyledRightColumn/>
