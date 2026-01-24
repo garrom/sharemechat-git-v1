@@ -42,7 +42,17 @@ const RegisterModelModalContent=({onClose,onBack})=>{
     if(!isOver18)return setError('Debes confirmar que eres mayor de 18 años.');
     if(!acceptsTerms)return setError('Debes aceptar los términos y condiciones.');
 
-    const registerData={nickname:nickname.trim(),email,password,dateOfBirth,confirAdult:isOver18,acceptedTerm:acceptsTerms};
+    const uiLocale = String(navigator.language || 'es').toLowerCase().split('-')[0];
+
+    const registerData = {
+      nickname: nickname.trim(),
+      email,
+      password,
+      dateOfBirth,
+      confirAdult: isOver18,
+      acceptedTerm: acceptsTerms,
+      uiLocale
+    };
 
     setLoading(true);
     try{

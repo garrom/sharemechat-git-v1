@@ -14,8 +14,6 @@ import Blog from './pages/blog/Blog';
 import ChangePasswordPage from './pages/subpages/ChangePasswordPage';
 import ModelDocuments from './pages/subpages/ModelDocuments';
 import Home from './public-pages/Home';
-import RegisterClient from './public-pages/RegisterClient';
-import RegisterModel from './public-pages/RegisterModel';
 import Unauthorized from './public-pages/Unauthorized';
 import ResetPassword from './public-pages/ResetPassword';
 import ForgotPassword from './public-pages/ForgotPassword';
@@ -45,8 +43,6 @@ function App() {
                 {/* Ahora /login también usa Home como fondo; el propio Home abrirá el modal de login */}
                 <PublicWithGuestGate exact path="/login" component={Home} />
                 <PublicWithGuestGate exact path="/blog" component={Blog} />
-                <Route path="/register-client" component={RegisterClient} />
-                <Route path="/register-model" component={RegisterModel} />
                 <Route path="/forgot-password" component={ForgotPassword} />
                 <Route path="/unauthorized" component={Unauthorized} />
                 <Route path="/reset-password" component={ResetPassword} />

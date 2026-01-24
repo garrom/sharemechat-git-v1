@@ -42,10 +42,35 @@ public class UserController {
     }
 
     @PostMapping("/register/client")
-    public ResponseEntity<UserDTO> registerUser(@RequestBody @Valid UserClientRegisterDTO registerDTO,
-                                                HttpServletRequest request) {
-        String ip = IpConfig.getClientIp(request);    // <-- capturamos IP
-        UserDTO createdUser = userService.registerClient(registerDTO,ip); // <-- pasamos IP
+    public ResponseEntity<UserDTO> registerClient(@RequestBody @Valid UserClientRegisterDTO registerDTO,
+                                                  HttpServletRequest request) {
+        String ip = IpConfig.getClientIp(request); // <-- capturamos IP
+
+        // Captura idioma del navegador (HTTP). Ej: "es-ES,es;q=0.9,en;q=0.8"
+        String acceptLanguage = request.getHeader("Accept-Language");
+
+        // País detectado (industrial): primero por headers del edge (CloudFront/Cloudflare/etc),
+        // y si no existe, lo dejamos null (tu UserService ya lo soporta).
+        String countryDetected = request.getHeader("CloudFront-Viewer-Country");
+        if (countryDetected == null || countryDetected.isBlank()) {
+            countryDetected = request.getHeader("CF-IPCountry");
+        }
+        if (countryDetected == null || countryDetected.isBlank()) {
+            countryDetected = request.getHeader("X-AppEngine-Country");
+        }
+        if (countryDetected == null || countryDetected.isBlank()) {
+            countryDetected = request.getHeader("X-Country-Code");
+        }
+        if (countryDetected != null && !countryDetected.isBlank()) {
+            countryDetected = countryDetected.trim().toUpperCase(Locale.ROOT);
+            if (countryDetected.length() != 2) {
+                countryDetected = null;
+            }
+        } else {
+            countryDetected = null;
+        }
+
+        UserDTO createdUser = userService.registerClient(registerDTO, ip, acceptLanguage, countryDetected);
         return ResponseEntity.ok(createdUser);
     }
 
@@ -53,7 +78,31 @@ public class UserController {
     public ResponseEntity<UserDTO> registerModel(@RequestBody @Valid UserModelRegisterDTO registerDTO,
                                                  HttpServletRequest request) {
         String ip = IpConfig.getClientIp(request);
-        UserDTO createdUser = userService.registerModel(registerDTO, ip); // <-- pasar IP
+
+        String acceptLanguage = request.getHeader("Accept-Language");
+
+        // País detectado (industrial): primero por headers del edge (CloudFront/Cloudflare/etc),
+        // y si no existe, lo dejamos null (tu UserService ya lo soporta).
+        String countryDetected = request.getHeader("CloudFront-Viewer-Country");
+        if (countryDetected == null || countryDetected.isBlank()) {
+            countryDetected = request.getHeader("CF-IPCountry");
+        }
+        if (countryDetected == null || countryDetected.isBlank()) {
+            countryDetected = request.getHeader("X-AppEngine-Country");
+        }
+        if (countryDetected == null || countryDetected.isBlank()) {
+            countryDetected = request.getHeader("X-Country-Code");
+        }
+        if (countryDetected != null && !countryDetected.isBlank()) {
+            countryDetected = countryDetected.trim().toUpperCase(Locale.ROOT);
+            if (countryDetected.length() != 2) {
+                countryDetected = null;
+            }
+        } else {
+            countryDetected = null;
+        }
+
+        UserDTO createdUser = userService.registerModel(registerDTO, ip, acceptLanguage, countryDetected);
         return ResponseEntity.ok(createdUser);
     }
 

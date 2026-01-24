@@ -28,6 +28,9 @@ public class User {
     @Column(name = "ui_locale", length = 5, nullable = false)
     private String uiLocale;
 
+    @Column(name = "country_detected", columnDefinition = "CHAR(2)")
+    private String countryDetected;
+
     @Column(name = "user_type", nullable = false)
     private String userType;
 
@@ -79,6 +82,8 @@ public class User {
     }
 
     // ===== Getters y Setters =====
+
+
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -141,6 +146,9 @@ public class User {
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
     public String getUiLocale() {return uiLocale;}
-
     public void setUiLocale(String uiLocale) {this.uiLocale = uiLocale;}
+
+    public String getCountryDetected() {return countryDetected;}
+    public void setCountryDetected(String countryDetected) {this.countryDetected = countryDetected;}
+
 }

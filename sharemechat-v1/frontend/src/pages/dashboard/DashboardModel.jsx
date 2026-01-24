@@ -205,9 +205,7 @@ const DashboardModel = () => {
 
       // Payload exacto de tu startWebSocketAndWait (lang/country)
       getRolePayload: () => {
-        const lang = String(sessionUser?.lang || sessionUser?.language || navigator.language || 'es')
-          .toLowerCase()
-          .split('-')[0];
+        const lang = String(sessionUser?.lang || sessionUser?.language || navigator.language || 'es').toLowerCase().split('-')[0];
         const country = String(sessionUser?.country || 'ES').toUpperCase();
         return { type: 'set-role', role: 'model', lang, country };
       },

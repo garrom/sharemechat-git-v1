@@ -190,7 +190,12 @@ const DashboardClient = () => {
       cameraActiveGetter: () => cameraActiveRef.current,
 
       // Client: set-role básico + start-match onopen (como tu código original)
-      getRolePayload: () => ({ type: 'set-role', role: 'client' }),
+      getRolePayload: () => {
+        const lang = String(sessionUser?.lang || sessionUser?.language || navigator.language || 'es').toLowerCase().split('-')[0];
+        const country = String(sessionUser?.country || 'ES').toUpperCase();
+        return { type: 'set-role', role: 'client', lang, country };
+      },
+
       startMatchOnOpen: true,
 
       // Client: ping más agresivo en arranque
@@ -309,7 +314,6 @@ const DashboardClient = () => {
     });
   }, [
   ]);
-
 
 
   useEffect(() => {
@@ -2255,7 +2259,7 @@ const DashboardClient = () => {
           <SaldoText className="me-3">{loadingSaldo?'Saldo: …':saldoError?'Saldo: n/d':`Saldo: ${fmtEUR(saldo)}`}</SaldoText>
           <NavButton type="button" onClick={handleAddBalance}><FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/><span>Comprar</span></NavButton>
           <NavButton type="button" onClick={handleLogout} title="Cerrar sesión"><FontAwesomeIcon icon={faSignOutAlt}/><span>Salir</span></NavButton>
-          <StyledNavAvatar src={profilePic||'/img/avatarChico.png'} alt="avatar" title="Ver perfil" onClick={handleProfile}/>
+          <StyledNavAvatar src={profilePic || '/img/avatarChico.png'} alt="avatar" title="Ver perfil" onClick={handleProfile}/>
         </div>
         <HamburgerButton onClick={()=>setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú"><FontAwesomeIcon icon={faBars}/></HamburgerButton>
         <MobileMenu className={!menuOpen&&'hidden'}>

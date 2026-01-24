@@ -17,12 +17,14 @@ public class UserClientRegisterDTO {
     @NotBlank(message = "El nickname es obligatorio")
     private String nickname;
 
-    // Consentimientos / auditoría
     @NotNull(message = "Debes confirmar que eres mayor de edad")
     private Boolean confirAdult;
 
     @NotNull(message = "Debes aceptar los términos y condiciones")
     private Boolean acceptedTerm;
+
+    @NotBlank(message = "El idioma de interfaz es obligatorio")
+    private String uiLocale;
 
     // Versión de términos e IP de registro (opcional que vengan del frontal)
     private String termVersion;
@@ -30,6 +32,9 @@ public class UserClientRegisterDTO {
 
     // getter y setter
 
+
+    public String getUiLocale() {return uiLocale;}
+    public void setUiLocale(String uiLocale) {this.uiLocale = uiLocale;}
 
     public String getEmail() {
         return email;

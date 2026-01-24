@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import RegisterClientModalContent from './RegisterClientModalContent';
 import RegisterModelModalContent from './RegisterModelModalContent';
+import { useSession } from '../components/SessionProvider';
 import {
   StyledForm, StyledInput, StyledButton, StyledLinkButton,
   StyledError, Status, Field, FieldError, FormTitle,
@@ -23,6 +24,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const history = useHistory();
+  const { refresh } = useSession();
 
   const safeNavigate = (path) => {
     if (history && typeof history.push === 'function') {
@@ -76,23 +78,28 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
       const user = data.user || {};
 
       if (user.role === Roles.ADMIN) {
+        await refresh();
         safeNavigate('/dashboard-admin');
         if (onLoginSuccess) onLoginSuccess();
         return;
       } else if (user.role === Roles.CLIENT) {
+        await refresh();
         safeNavigate('/client');
         if (onLoginSuccess) onLoginSuccess();
         return;
       } else if (user.role === Roles.MODEL) {
+        await refresh();
         safeNavigate('/model');
         if (onLoginSuccess) onLoginSuccess();
         return;
       } else if (user.role === Roles.USER) {
         if (user.userType === UserTypes.FORM_CLIENT) {
+          await refresh();
           safeNavigate('/dashboard-user-client');
           if (onLoginSuccess) onLoginSuccess();
           return;
         } else if (user.userType === UserTypes.FORM_MODEL) {
+          await refresh();
           safeNavigate('/dashboard-user-model');
           if (onLoginSuccess) onLoginSuccess();
           return;

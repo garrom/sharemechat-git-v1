@@ -31,8 +31,8 @@ import java.time.Duration;
 @Component
 public class MatchingHandler extends TextWebSocketHandler {
 
-    private final Queue<WebSocketSession> waitingModels  = new ConcurrentLinkedQueue<>();
-    private final Queue<WebSocketSession> waitingClients = new ConcurrentLinkedQueue<>();
+    private final Map<String, Queue<WebSocketSession>> waitingModelsByBucket  = new ConcurrentHashMap<>();
+    private final Map<String, Queue<WebSocketSession>> waitingClientsByBucket = new ConcurrentHashMap<>();
 
     private final Map<String, WebSocketSession> pairs = new ConcurrentHashMap<>();
     private final Map<String, String> roles = new ConcurrentHashMap<>();
@@ -40,6 +40,9 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final Map<String, Long> lastMatchAt = new ConcurrentHashMap<>();
     private final Set<String> switching = Collections.newSetFromMap(new ConcurrentHashMap<>());
     private final Map<String, String> pairLockOwnerBySessionId = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionLang = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionCountry = new ConcurrentHashMap<>();
+    private final Map<String, String> sessionBucketKey = new ConcurrentHashMap<>();
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
@@ -127,12 +130,15 @@ public class MatchingHandler extends TextWebSocketHandler {
         String role = roles.remove(sid);
         Long userId = sessionUserIds.remove(sid);
         lastMatchAt.remove(sid);
+        sessionLang.remove(sid);
+        sessionCountry.remove(sid);
+        sessionBucketKey.remove(sid);
 
         if ("model".equals(role)) {
-            waitingModels.remove(session);
+            removeFromAllBuckets(session, "model");
             if (userId != null) statusService.setOffline(userId);
         } else if ("client".equals(role)) {
-            waitingClients.remove(session);
+            removeFromAllBuckets(session, "client");
         }
 
         WebSocketSession peer = pairs.remove(sid);
@@ -169,7 +175,6 @@ public class MatchingHandler extends TextWebSocketHandler {
     }
 
 
-
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
         String payload = message.getPayload();
@@ -195,15 +200,20 @@ public class MatchingHandler extends TextWebSocketHandler {
             if ("set-role".equals(type)) {
                 String role = json.getString("role");
                 roles.put(session.getId(), role);
+                String lang = normLang(json.optString("lang", "*"));
+                String country = normCountry(json.optString("country", "*"));
+                sessionLang.put(session.getId(), lang);
+                sessionCountry.put(session.getId(), country);
+                sessionBucketKey.put(session.getId(), bucketKey(lang, country));
+
                 Long userId = sessionUserIds.get(session.getId());
 
                 if ("model".equals(role)) {
-                    waitingModels.remove(session);
-                    waitingModels.add(session);
+                    moveToBucket(session, "model", sessionBucketKey.get(session.getId()));
+
                     if (userId != null) statusService.setAvailable(userId);
                 } else if ("client".equals(role)) {
-                    waitingClients.remove(session);
-                    waitingClients.add(session);
+                    moveToBucket(session, "client", sessionBucketKey.get(session.getId()));
                 }
 
             } else if ("start-match".equals(type)) {
@@ -267,29 +277,123 @@ public class MatchingHandler extends TextWebSocketHandler {
     }
 
     /* =========================================================
+   BUCKETS (lang:country con fallback)
+   ========================================================= */
+
+    private String normLang(String lang) {
+        if (lang == null) return "*";
+        String x = lang.trim().toLowerCase(Locale.ROOT);
+        return x.isEmpty() ? "*" : x;
+    }
+
+    private String normCountry(String c) {
+        if (c == null) return "*";
+        String x = c.trim().toUpperCase(Locale.ROOT);
+        return x.isEmpty() ? "*" : x;
+    }
+
+    private String bucketKey(String lang, String country) {
+        lang = normLang(lang);
+        country = normCountry(country);
+        if ("*".equals(lang)) return "*";
+        if ("*".equals(country)) return lang + ":*";
+        return lang + ":" + country;
+    }
+
+    private Queue<WebSocketSession> modelsBucket(String key) {
+        return waitingModelsByBucket.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>());
+    }
+
+    private Queue<WebSocketSession> clientsBucket(String key) {
+        return waitingClientsByBucket.computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>());
+    }
+
+    private String getSessionBucketKey(WebSocketSession session) {
+        String sid = session.getId();
+        String lang = sessionLang.get(sid);
+        String ctry = sessionCountry.get(sid);
+        return bucketKey(lang, ctry);
+    }
+
+    private void removeFromAllBuckets(WebSocketSession session, String role) {
+        if (session == null) return;
+        if ("model".equals(role)) {
+            for (Queue<WebSocketSession> q : waitingModelsByBucket.values()) q.remove(session);
+        } else if ("client".equals(role)) {
+            for (Queue<WebSocketSession> q : waitingClientsByBucket.values()) q.remove(session);
+        }
+    }
+
+    private void moveToBucket(WebSocketSession session, String role, String key) {
+        if (key == null) key = "*";
+        if (session == null || role == null) return;
+        removeFromAllBuckets(session, role);
+        if ("model".equals(role)) modelsBucket(key).add(session);
+        else if ("client".equals(role)) clientsBucket(key).add(session);
+
+        sessionBucketKey.put(session.getId(), key);
+    }
+
+    private int totalWaitingModels() {
+        int n = 0;
+        for (Queue<WebSocketSession> q : waitingModelsByBucket.values()) n += q.size();
+        return n;
+    }
+
+    private int totalWaitingClients() {
+        int n = 0;
+        for (Queue<WebSocketSession> q : waitingClientsByBucket.values()) n += q.size();
+        return n;
+    }
+
+    private List<String> preferredBucketsForSession(WebSocketSession session) {
+        String sid = session.getId();
+        String lang = normLang(sessionLang.get(sid));
+        String ctry = normCountry(sessionCountry.get(sid));
+
+        List<String> keys = new ArrayList<>();
+        // 1) lang+country
+        if (!"*".equals(lang) && !"*".equals(ctry)) keys.add(lang + ":" + ctry);
+        // 2) lang:*
+        if (!"*".equals(lang)) keys.add(lang + ":*");
+        // 3) global
+        keys.add("*");
+
+        return keys;
+    }
+
+
+    /* =========================================================
        MATCHING (con Seen TTL robusto)
        ========================================================= */
 
 
     private void matchClient(WebSocketSession client) throws Exception {
-        waitingClients.remove(client);
+
+        // quitar de buckets antes de intentar match
+        removeFromAllBuckets(client, "client");
 
         Long clientId = sessionUserIds.get(client.getId());
         if (clientId == null) {
-            waitingClients.add(client);
+            moveToBucket(client, "client", getSessionBucketKey(client));
             return;
         }
 
-        // Pass 1: intentar evitar repetidos (UNSEEN) + idioma compatible (score>0)
-        MatchAttemptResult r1 = tryMatchClientAgainstModels(client, clientId, true);
-        if (r1.handled) return;
+        List<String> buckets = preferredBucketsForSession(client);
 
-        // Pass 2: fallback permitir repetidos y permitir idioma no compatible (score==0)
-        MatchAttemptResult r2 = tryMatchClientAgainstModels(client, clientId, false);
-        if (r2.handled) return;
+        // Pass 1: UNSEEN + idioma compatible (tu lógica actual)
+        for (String b : buckets) {
+            MatchAttemptResult r1 = tryMatchClientAgainstModels(client, clientId, true, modelsBucket(b));
+            if (r1.handled) return;
+        }
 
-        // Contract limpio: backend manda reasonCode, frontend traduce
-        boolean anySupply = waitingModels.size() > 0;
+        // Pass 2: fallback permitir repetidos / idioma no compatible
+        for (String b : buckets) {
+            MatchAttemptResult r2 = tryMatchClientAgainstModels(client, clientId, false, modelsBucket(b));
+            if (r2.handled) return;
+        }
+
+        boolean anySupply = totalWaitingModels() > 0;
 
         String reasonCode = anySupply ? "NO_MATCH_FOUND" : "NO_SUPPLY_MODELS";
         String payload = new JSONObject()
@@ -298,28 +402,37 @@ public class MatchingHandler extends TextWebSocketHandler {
                 .toString();
 
         safeSend(client, payload);
-        waitingClients.add(client);
+
+        // reencolar al final en su bucket (para fairness)
+        moveToBucket(client, "client", getSessionBucketKey(client));
     }
 
 
     private void matchModel(WebSocketSession model) throws Exception {
-        waitingModels.remove(model);
+
+        removeFromAllBuckets(model, "model");
 
         Long modelId = sessionUserIds.get(model.getId());
         if (modelId == null) {
-            waitingModels.add(model);
+            moveToBucket(model, "model", getSessionBucketKey(model));
             return;
         }
 
-        // Pass 1: intentar evitar repetidos (UNSEEN) + idioma compatible (score>0)
-        MatchAttemptResult r1 = tryMatchModelAgainstClients(model, modelId, true);
-        if (r1.handled) return;
+        List<String> buckets = preferredBucketsForSession(model);
 
-        // Pass 2: fallback permitir repetidos y permitir idioma no compatible (score==0)
-        MatchAttemptResult r2 = tryMatchModelAgainstClients(model, modelId, false);
-        if (r2.handled) return;
+        // Pass 1: UNSEEN + idioma compatible
+        for (String b : buckets) {
+            MatchAttemptResult r1 = tryMatchModelAgainstClients(model, modelId, true, clientsBucket(b));
+            if (r1.handled) return;
+        }
 
-        boolean anySupply = waitingClients.size() > 0;
+        // Pass 2: fallback
+        for (String b : buckets) {
+            MatchAttemptResult r2 = tryMatchModelAgainstClients(model, modelId, false, clientsBucket(b));
+            if (r2.handled) return;
+        }
+
+        boolean anySupply = totalWaitingClients() > 0;
 
         String reasonCode = anySupply ? "NO_MATCH_FOUND" : "NO_SUPPLY_CLIENTS";
         String payload = new JSONObject()
@@ -328,7 +441,8 @@ public class MatchingHandler extends TextWebSocketHandler {
                 .toString();
 
         safeSend(model, payload);
-        waitingModels.add(model);
+
+        moveToBucket(model, "model", getSessionBucketKey(model));
     }
 
 
@@ -340,7 +454,7 @@ public class MatchingHandler extends TextWebSocketHandler {
     }
 
 
-    private MatchAttemptResult tryMatchClientAgainstModels(WebSocketSession client, Long clientId, boolean enforceUnseen) throws Exception {
+    private MatchAttemptResult tryMatchClientAgainstModels(WebSocketSession client, Long clientId, boolean enforceUnseen, Queue<WebSocketSession> pool) throws Exception {
 
         List<WebSocketSession> scannedList = new ArrayList<>();
         int scanned = 0;
@@ -349,15 +463,10 @@ public class MatchingHandler extends TextWebSocketHandler {
         Long bestModelId = null;
         String bestOwner = null;
 
-        // Ranking: menor es mejor
-        // 0 = sameLang+unseen
-        // 1 = otherLang+unseen
-        // 2 = sameLang+seen
-        // 3 = otherLang+seen
         int bestRank = Integer.MAX_VALUE;
 
         while (scanned++ < seenMaxScan) {
-            WebSocketSession model = waitingModels.poll();
+            WebSocketSession model = pool.poll();
             if (model == null) break;
 
             if (!model.isOpen()) continue;
@@ -378,25 +487,21 @@ public class MatchingHandler extends TextWebSocketHandler {
             int languageScore = 0;
             try { languageScore = userLanguageService.languageMatchScore(clientId, modelId); } catch (Exception ignore) {}
 
-            boolean sameLanguage = languageScore >= 100; // tu criterio actual (PRIMARY)
+            boolean sameLanguage = languageScore >= 100;
             int rank = (sameLanguage ? 0 : 1) + (seen ? 2 : 0);
 
-            // Si enforceUnseen=true, no queremos aceptar SEEN en este pass
             if (enforceUnseen && seen) {
                 scannedList.add(model);
                 continue;
             }
 
-            // Elegir el mejor candidato por ranking
             if (rank < bestRank) {
-                // Intentar locks ya aquí para no elegir un candidato que luego no podamos bloquear
                 String owner = streamLockService.newOwnerToken();
                 if (!tryAcquirePairLocks(clientId, modelId, owner)) {
                     scannedList.add(model);
                     continue;
                 }
 
-                // Si ya había un "best" anterior con locks tomados, liberarlos antes de cambiar
                 if (best != null && bestModelId != null && bestOwner != null) {
                     try { releasePairLocks(clientId, bestModelId, bestOwner); } catch (Exception ignore) {}
                     scannedList.add(best);
@@ -407,15 +512,16 @@ public class MatchingHandler extends TextWebSocketHandler {
                 bestOwner = owner;
                 bestRank = rank;
 
-                // Early-exit: si encontramos sameLang+unseen, no hay nada mejor
                 if (bestRank == 0) break;
             } else {
                 scannedList.add(model);
             }
         }
 
-        // Reencolar lo escaneado (excepto el elegido, que ya está en "best")
-        requeueModels(scannedList);
+        // reencolar lo escaneado en el mismo bucket
+        for (WebSocketSession s : scannedList) {
+            if (s != null && s.isOpen()) pool.add(s);
+        }
 
         if (best == null || bestModelId == null || bestOwner == null) {
             return MatchAttemptResult.NOT_HANDLED();
@@ -430,7 +536,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             if (Constants.Roles.USER.equals(realRole)) {
                 if (!userTrialService.canStartTrial(clientId)) {
                     safeSend(client, "{\"type\":\"trial-unavailable\"}");
-                    waitingClients.add(client);
+                    moveToBucket(client, "client", getSessionBucketKey(client));
                     return MatchAttemptResult.HANDLED();
                 }
                 userTrialService.startTrialStream(clientId, bestModelId);
@@ -438,7 +544,6 @@ public class MatchingHandler extends TextWebSocketHandler {
                 streamService.startSession(clientId, bestModelId);
             }
 
-            // Seen se marca al emparejar, como ya hacías
             seenService.markSeen(clientId, bestModelId);
 
             pairs.put(client.getId(), best);
@@ -465,14 +570,14 @@ public class MatchingHandler extends TextWebSocketHandler {
             if (isLowBalance(ex)) safeSend(client, "{\"type\":\"no-balance\"}");
             else safeSend(client, "{\"type\":\"no-model-available\"}");
 
-            waitingClients.add(client);
+            moveToBucket(client, "client", getSessionBucketKey(client));
             return MatchAttemptResult.HANDLED();
 
         } finally {
             if (!matched) {
                 try { releasePairLocks(clientId, bestModelId, bestOwner); } catch (Exception ignore) {}
-                // Si no hubo match, reencolar la modelo elegida
-                if (best != null && best.isOpen()) waitingModels.add(best);
+                // si no hubo match, reencolar la modelo elegida en el mismo bucket pool
+                if (best != null && best.isOpen()) pool.add(best);
             }
         }
     }
@@ -482,14 +587,15 @@ public class MatchingHandler extends TextWebSocketHandler {
     private MatchAttemptResult tryMatchModelAgainstClients(
             WebSocketSession model,
             Long modelId,
-            boolean enforceUnseen
+            boolean enforceUnseen,
+            Queue<WebSocketSession> pool
     ) throws Exception {
 
         List<WebSocketSession> skipped = new ArrayList<>();
         int scanned = 0;
 
         WebSocketSession client;
-        while (scanned++ < seenMaxScan && (client = waitingClients.poll()) != null) {
+        while (scanned++ < seenMaxScan && (client = pool.poll()) != null) {
 
             if (!client.isOpen()) continue;
 
@@ -527,9 +633,9 @@ public class MatchingHandler extends TextWebSocketHandler {
                 if (Constants.Roles.USER.equals(realRole)) {
                     if (!userTrialService.canStartTrial(clientId)) {
                         safeSend(client, "{\"type\":\"trial-unavailable\"}");
-                        skipped.add(client);
-                        requeueClients(skipped);
-                        waitingModels.add(model);
+                        // reencolar skipped en el mismo pool
+                        for (WebSocketSession s : skipped) if (s != null && s.isOpen()) pool.add(s);
+                        moveToBucket(model, "model", getSessionBucketKey(model));
                         return MatchAttemptResult.HANDLED();
                     }
                     userTrialService.startTrialStream(clientId, modelId);
@@ -552,7 +658,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                 sendMatchMessage(model, client.getId());
                 sendMatchMessage(client, model.getId());
 
-                requeueClients(skipped);
+                for (WebSocketSession s : skipped) if (s != null && s.isOpen()) pool.add(s);
 
                 matched = true;
                 return MatchAttemptResult.HANDLED();
@@ -565,9 +671,9 @@ public class MatchingHandler extends TextWebSocketHandler {
                 if (isLowBalance(ex)) safeSend(client, "{\"type\":\"no-balance\"}");
 
                 skipped.add(client);
-                requeueClients(skipped);
+                for (WebSocketSession s : skipped) if (s != null && s.isOpen()) pool.add(s);
 
-                waitingModels.add(model);
+                moveToBucket(model, "model", getSessionBucketKey(model));
                 return MatchAttemptResult.HANDLED();
 
             } finally {
@@ -577,23 +683,10 @@ public class MatchingHandler extends TextWebSocketHandler {
             }
         }
 
-        requeueClients(skipped);
+        for (WebSocketSession s : skipped) if (s != null && s.isOpen()) pool.add(s);
         return MatchAttemptResult.NOT_HANDLED();
     }
 
-
-
-    private void requeueModels(List<WebSocketSession> list) {
-        for (WebSocketSession s : list) {
-            if (s != null && s.isOpen()) waitingModels.add(s);
-        }
-    }
-
-    private void requeueClients(List<WebSocketSession> list) {
-        for (WebSocketSession s : list) {
-            if (s != null && s.isOpen()) waitingClients.add(s);
-        }
-    }
 
     /* =========================================================
        NEXT / STREAM END / OTHER EVENTS
@@ -902,11 +995,14 @@ public class MatchingHandler extends TextWebSocketHandler {
 
 
     private void safeRequeue(WebSocketSession session, String role) {
-        if (session != null && session.isOpen()) {
-            if ("model".equals(role)) waitingModels.add(session);
-            else if ("client".equals(role)) waitingClients.add(session);
-        }
+        if (session == null || !session.isOpen() || role == null) return;
+
+        String key = sessionBucketKey.get(session.getId());
+        if (key == null) key = getSessionBucketKey(session);
+
+        moveToBucket(session, role, key);
     }
+
 
     private Long resolveUserId(WebSocketSession session) {
         String token = extractToken(session);
@@ -1135,12 +1231,21 @@ public class MatchingHandler extends TextWebSocketHandler {
 
     private void sendQueueStats(WebSocketSession s) {
         try {
-            int waitingModelsCount = waitingModels.size();
-            int waitingClientsCount = waitingClients.size();
+            int waitingModelsCount = totalWaitingModels();
+            int waitingClientsCount = totalWaitingClients();
 
             String role = roles.get(s.getId());
             int myPosition = -1;
-            if ("model".equals(role)) myPosition = positionInQueue(waitingModels, s);
+
+            if ("model".equals(role)) {
+                String key = sessionBucketKey.get(s.getId());
+                if (key == null) key = getSessionBucketKey(s);
+                myPosition = positionInQueue(modelsBucket(key), s);
+            } else if ("client".equals(role)) {
+                String key = sessionBucketKey.get(s.getId());
+                if (key == null) key = getSessionBucketKey(s);
+                myPosition = positionInQueue(clientsBucket(key), s);
+            }
 
             int activePairs = computeActivePairs();
             int modelsStreaming = activePairs;
