@@ -6,21 +6,19 @@ import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import VideoChatRandomUser from './VideoChatRandomUser';
 import TrialCooldownModal from '../../components/TrialCooldownModal';
-import {StyledContainer, StyledMainContent, GlobalBlack,StyledNavTab} from '../../styles/pages-styles/VideochatStyles';
-import {
-  StyledNavbar, StyledBrand, NavText, HamburgerButton, MobileMenu
-} from '../../styles/NavbarStyles';
-import {NavButton} from '../../styles/ButtonStyles';
+import { StyledContainer, StyledMainContent, GlobalBlack, StyledNavTab } from '../../styles/pages-styles/VideochatStyles';
+import { StyledNavbar, StyledBrand, NavText, HamburgerButton, MobileMenu } from '../../styles/NavbarStyles';
+import { NavButton } from '../../styles/ButtonStyles';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGem,faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
+import { faGem, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 import BlogContent from '../blog/BlogContent';
-
-
+import { buildWsUrl, WS_PATHS } from '../../config/api';
 
 const DashboardUserClient = () => {
   const history = useHistory();
   const { alert, openPurchaseModal } = useAppModals();
   const { setInCall } = useCallUi();
+
   const [userName, setUserName] = useState('Usuario');
   const [user, setUser] = useState(null);
 
@@ -47,8 +45,6 @@ const DashboardUserClient = () => {
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
 
-  const token = localStorage.getItem('token');
-
   // ======= Responsive (móvil) =======
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -58,33 +54,34 @@ const DashboardUserClient = () => {
     return () => mq.removeEventListener('change', onChange);
   }, []);
 
-  // ======= Carga de usuario =======
+  // ======= Carga de usuario (COOKIE AUTH) =======
   useEffect(() => {
-    if (!token) {
-      history.push('/');
-      return;
-    }
-
     (async () => {
       try {
         const res = await fetch('/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
+          method: 'GET',
+          credentials: 'include',
         });
+
         if (res.status === 401) {
-          localStorage.removeItem('token');
           history.push('/');
           return;
         }
-        if (res.ok) {
-          const data = await res.json();
-          setUser(data);
-          setUserName(data.nickname || data.name || data.email || 'Usuario');
+
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || 'Error cargando usuario');
         }
+
+        const data = await res.json();
+        setUser(data);
+        setUserName(data.nickname || data.name || data.email || 'Usuario');
       } catch (e) {
         console.error('Error cargando usuario USER:', e);
+        history.push('/');
       }
     })();
-  }, [token, history]);
+  }, [history]);
 
   // ======= Unión de streams a los <video> =======
   useEffect(() => {
@@ -134,29 +131,17 @@ const DashboardUserClient = () => {
   const toggleFullscreen = (el) => {
     if (!el) return;
     const d = document;
-    const isFs =
-      d.fullscreenElement ||
-      d.webkitFullscreenElement ||
-      d.mozFullScreenElement ||
-      d.msFullscreenElement;
+    const isFs = d.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement;
 
     if (!isFs) {
-      const req =
-        el.requestFullscreen ||
-        el.webkitRequestFullscreen ||
-        el.mozRequestFullScreen ||
-        el.msRequestFullscreen;
+      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
       try {
         req && req.call(el);
       } catch {
         /* noop */
       }
     } else {
-      const exit =
-        d.exitFullscreen ||
-        d.webkitExitFullscreen ||
-        d.mozCancelFullScreen ||
-        d.msExitFullscreen;
+      const exit = d.exitFullscreen || d.webkitExitFullscreen || d.mozCancelFullScreen || d.msExitFullscreen;
       try {
         exit && exit.call(d);
       } catch {
@@ -170,10 +155,7 @@ const DashboardUserClient = () => {
     setError('');
     setStatusText('');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      });
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       localStreamRef.current = stream;
       setCameraActive(true);
       if (localVideoRef.current) {
@@ -229,44 +211,29 @@ const DashboardUserClient = () => {
 
   const handleLogout = async () => {
     stopAll();
-    localStorage.removeItem('token');
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch {
+      /* noop */
+    }
+    localStorage.removeItem('token'); // por si quedaba basura vieja
     history.push('/');
   };
 
-  const handleGoVideochat = () => {
-    setActiveTab('videochat');
-  };
+  const handleGoVideochat = () => setActiveTab('videochat');
 
   const handleGoFavorites = async () => {
     await openPurchaseModal({ context: 'user-favorites' });
   };
 
-  const handleGoBlog = () => {
-    setActiveTab('blog');
-  };
+  const handleGoBlog = () => setActiveTab('blog');
 
-
-  // ======= Primer pago -> hacerme CLIENT =======
+  // ======= Primer pago -> hacerme CLIENT (COOKIE AUTH) =======
   const handleFirstPayment = async () => {
     setError('');
     setStatusText('');
 
-    const tokenLS = localStorage.getItem('token');
-    if (!tokenLS) {
-      await alert({
-        title: 'Sesión expirada',
-        message: 'Inicia sesión de nuevo para completar el pago.',
-        variant: 'warning',
-        size: 'sm',
-      });
-      history.push('/');
-      return;
-    }
-
-    const result = await openPurchaseModal({
-      context: 'first-payment-user',
-    });
-
+    const result = await openPurchaseModal({ context: 'first-payment-user' });
     if (!result.confirmed || !result.pack) return;
 
     const { pack } = result;
@@ -276,10 +243,8 @@ const DashboardUserClient = () => {
     try {
       const res = await fetch('/api/transactions/first', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${tokenLS}`,
-        },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount,
           operationType: 'INGRESO',
@@ -301,12 +266,7 @@ const DashboardUserClient = () => {
     } catch (e) {
       const msgErr = e.message || 'Error al procesar el pago.';
       setError(msgErr);
-      await alert({
-        title: 'Error',
-        message: msgErr,
-        variant: 'danger',
-        size: 'sm',
-      });
+      await alert({ title: 'Error', message: msgErr, variant: 'danger', size: 'sm' });
     } finally {
       setLoadingFirstPayment(false);
     }
@@ -322,23 +282,15 @@ const DashboardUserClient = () => {
       setError('Primero activa la cámara.');
       return;
     }
-
-    const tokenLS = localStorage.getItem('token');
-    if (!tokenLS) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
-      history.push('/');
-      return;
-    }
-
+    // WS por cookie-auth (igual que Client/Model): NO token en querystring
     closeSocket();
     setSearching(true);
 
-    const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(
-      tokenLS
-    )}`;
+    const wsUrl = buildWsUrl(WS_PATHS.match);
     console.log('[USER][WS] ->', wsUrl);
 
     const s = new WebSocket(wsUrl);
+
     socketRef.current = s;
 
     s.onopen = () => {
@@ -355,9 +307,10 @@ const DashboardUserClient = () => {
         }
       }, 30000);
 
-      // IMPORTANTE: rol "client" para que el handler use el lado viewer.
-      // El rol REAL (USER/CLIENT) se mira en la BBDD.
-      s.send(JSON.stringify({ type: 'set-role', role: 'client' }));
+      const lang = String(user?.lang || user?.language || navigator.language || 'es').toLowerCase().split('-')[0];
+      const country = String(user?.country || 'ES').toUpperCase();
+      s.send(JSON.stringify({ type: 'set-role', role: 'client', lang, country }));
+
       s.send(JSON.stringify({ type: 'start-match' }));
     };
 
@@ -381,23 +334,18 @@ const DashboardUserClient = () => {
         return;
       }
 
-      // === MATCH ENCONTRADO ===
       if (data.type === 'match') {
         console.log('[USER][WS] match=', data);
 
         try {
-          if (peerRef.current) {
-            peerRef.current.destroy();
-          }
+          if (peerRef.current) peerRef.current.destroy();
         } catch {
           /* noop */
         }
         peerRef.current = null;
 
         try {
-          if (remoteStream) {
-            remoteStream.getTracks().forEach((t) => t.stop());
-          }
+          if (remoteStream) remoteStream.getTracks().forEach((t) => t.stop());
         } catch {
           /* noop */
         }
@@ -410,26 +358,14 @@ const DashboardUserClient = () => {
           config: {
             iceServers: [
               { urls: 'stun:stun.l.google.com:19302' },
-              {
-                urls: 'turn:openrelay.metered.ca:80',
-                username: 'openrelayproject',
-                credential: 'openrelayproject',
-              },
+              { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
             ],
           },
         });
 
         peer.on('signal', (signal) => {
-          if (
-            signal?.type === 'candidate' &&
-            signal?.candidate?.candidate === ''
-          ) {
-            return;
-          }
-          if (
-            socketRef.current &&
-            socketRef.current.readyState === WebSocket.OPEN
-          ) {
+          if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
+          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
             socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
           }
         });
@@ -451,13 +387,11 @@ const DashboardUserClient = () => {
         return;
       }
 
-      // === Señal WebRTC ===
       if (data.type === 'signal' && peerRef.current) {
         peerRef.current.signal(data.signal);
         return;
       }
 
-      // === No hay modelos disponibles ===
       if (data.type === 'no-model-available') {
         console.log('[USER][WS] no-model-available');
         setStatusText('No hay modelos disponibles ahora mismo. Inténtalo de nuevo en unos segundos.');
@@ -465,41 +399,32 @@ const DashboardUserClient = () => {
         return;
       }
 
-      // === Trials agotados: no se puede iniciar otro ===
       if (data.type === 'trial-unavailable') {
         console.log('[USER][WS] trial-unavailable', data);
 
         setSearching(false);
         setStatusText('Has agotado las pruebas gratuitas por ahora.');
 
-        setTrialRemainingMs(
-          typeof data.remainingMs === 'number' ? data.remainingMs : null
-        );
+        setTrialRemainingMs(typeof data.remainingMs === 'number' ? data.remainingMs : null);
         setShowTrialCooldownModal(true);
 
-        // Cerramos solo el socket; mantenemos la cámara encendida
         closeSocket();
         return;
       }
 
-      // === Desconexión del peer ===
       if (data.type === 'peer-disconnected') {
         console.log('[USER][WS] peer-disconnected', data);
         const reason = data.reason || '';
 
         try {
-          if (peerRef.current) {
-            peerRef.current.destroy();
-          }
+          if (peerRef.current) peerRef.current.destroy();
         } catch {
           /* noop */
         }
         peerRef.current = null;
 
         try {
-          if (remoteStream) {
-            remoteStream.getTracks().forEach((t) => t.stop());
-          }
+          if (remoteStream) remoteStream.getTracks().forEach((t) => t.stop());
         } catch {
           /* noop */
         }
@@ -508,7 +433,6 @@ const DashboardUserClient = () => {
 
         if (reason === 'trial-ended') {
           setStatusText('Tu prueba gratuita con esta modelo ha terminado.');
-
           try {
             await openPurchaseModal({ context: 'trial-ended' });
           } catch {
@@ -522,8 +446,6 @@ const DashboardUserClient = () => {
 
         return;
       }
-
-      // Otros mensajes en modo trial los ignoramos por ahora
     };
   };
 
@@ -546,18 +468,14 @@ const DashboardUserClient = () => {
     }
 
     try {
-      if (peerRef.current) {
-        peerRef.current.destroy();
-      }
+      if (peerRef.current) peerRef.current.destroy();
     } catch {
       /* noop */
     }
     peerRef.current = null;
 
     try {
-      if (remoteStream) {
-        remoteStream.getTracks().forEach((t) => t.stop());
-      }
+      if (remoteStream) remoteStream.getTracks().forEach((t) => t.stop());
     } catch {
       /* noop */
     }
@@ -572,14 +490,13 @@ const DashboardUserClient = () => {
     <StyledContainer>
       <GlobalBlack />
 
-      {/* DESK TOP NAVBAR */}
       <StyledNavbar>
         <div style={{display:'flex',alignItems:'center'}}>
-          <StyledBrand href="#" aria-label="SharemeChat" onClick={(e)=>e.preventDefault()}/>
+          <StyledBrand href="#" aria-label="SharemeChat" onClick={(e) => e.preventDefault()} />
           <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title="Videochat">Videochat</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title="Favoritos">Favoritos</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title="Blog">Blog</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab === 'videochat'} aria-pressed={activeTab === 'videochat'} onClick={handleGoVideochat} title="Videochat">Videochat</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab === 'favoritos'} aria-pressed={activeTab === 'favoritos'} onClick={handleGoFavorites} title="Favoritos">Favoritos</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab === 'blog'} aria-pressed={activeTab === 'blog'} onClick={handleGoBlog} title="Blog">Blog</StyledNavTab>
           </div>
         </div>
 
@@ -587,29 +504,20 @@ const DashboardUserClient = () => {
           <NavText className="me-3">{displayName}</NavText>
 
           <NavButton type="button" onClick={handleFirstPayment} disabled={loadingFirstPayment}>
-            <FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/>
-            <span>{loadingFirstPayment?'Procesando…':'Hazte Premium'}</span>
+            <FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}} />
+            <span>{loadingFirstPayment ? 'Procesando…' : 'Hazte Premium'}</span>
           </NavButton>
 
           <NavButton type="button" onClick={handleLogout} title="Cerrar sesión">
-            <FontAwesomeIcon icon={faSignOutAlt}/>
+            <FontAwesomeIcon icon={faSignOutAlt} />
             <span>Salir</span>
           </NavButton>
         </div>
 
-
-
-        {/* Móvil: hamburguesa */}
-        <HamburgerButton
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Abrir menú"
-          title="Menú"
-        >
-          ☰
-        </HamburgerButton>
+        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">☰</HamburgerButton>
 
         <MobileMenu className={!menuOpen && 'hidden'}>
-          <NavText style={{ marginBottom: 8 }}>Hola, {displayName}</NavText>
+          <NavText style={{marginBottom:8}}>Hola, {displayName}</NavText>
 
           <NavButton
             type="button"
@@ -634,7 +542,6 @@ const DashboardUserClient = () => {
         </MobileMenu>
       </StyledNavbar>
 
-      {/* MAIN */}
       <StyledMainContent data-tab={activeTab}>
         {activeTab === 'videochat' && (
           <VideoChatRandomUser
@@ -657,15 +564,12 @@ const DashboardUserClient = () => {
         )}
 
         {activeTab === 'blog' && (
-          <div style={{ flex:1, minWidth:0, minHeight:0 }}>
-            {/* mismo Blog que Client */}
+          <div style={{flex:1,minWidth:0,minHeight:0}}>
             <BlogContent mode="private" />
           </div>
         )}
       </StyledMainContent>
 
-
-      {/* MODAL: trials agotados */}
       <TrialCooldownModal
         open={showTrialCooldownModal}
         remainingMs={trialRemainingMs}

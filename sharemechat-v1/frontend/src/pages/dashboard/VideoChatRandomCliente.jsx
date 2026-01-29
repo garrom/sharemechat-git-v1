@@ -56,6 +56,8 @@ import {
   BtnBlock
 } from '../../styles/ButtonStyles';
 import PromoVideoLightbox from '../../components/PromoVideoLightbox';
+import { useSession } from '../../components/SessionProvider';
+import { apiFetch } from '../../config/http';
 
 export default function VideoChatRandomCliente(props) {
   const {
@@ -92,6 +94,8 @@ export default function VideoChatRandomCliente(props) {
     nextDisabled
   } = props;
 
+  const { user: sessionUser, loading: sessionLoading } = useSession();
+
   const [promoVideos, setPromoVideos] = useState([]);
   const [activePromoIndex, setActivePromoIndex] = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
@@ -99,18 +103,12 @@ export default function VideoChatRandomCliente(props) {
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
 
   const fetchTeasers = async () => {
-    const token = localStorage.getItem('token');
-    if (!token) return;
     setPromoLoading(true);
     setPromoError('');
     try {
-      const res = await fetch('/api/models/teasers?page=0&size=20', { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || 'Error cargando vídeos de modelos');
-      }
-      const data = await res.json();
-      const mapped = data.map(item => ({
+      const data = await apiFetch('/models/teasers?page=0&size=20');
+
+      const mapped = (Array.isArray(data) ? data : []).map(item => ({
         id: item.modelId,
         title: `${item.modelName} · teaser`,
         modelName: item.modelName,
@@ -118,19 +116,23 @@ export default function VideoChatRandomCliente(props) {
         src: item.videoUrl,
         durationSec: null,
       }));
+
       setPromoVideos(mapped);
       if (mapped.length > 0) setCurrentPromoIndex(0);
     } catch (e) {
-      setPromoError(e.message);
+      setPromoError(e?.message || 'Error cargando vídeos de modelos');
     } finally {
       setPromoLoading(false);
     }
   };
 
   useEffect(() => {
+    if (sessionLoading) return;
+    if (!sessionUser) return;
+
     fetchTeasers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [sessionLoading, sessionUser]);
 
   const handleOpenPromo = index => { setActivePromoIndex(index); };
   const handleClosePromo = () => { setActivePromoIndex(null); };

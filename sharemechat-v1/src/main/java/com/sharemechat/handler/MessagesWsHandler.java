@@ -603,7 +603,6 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
     }
 
-
     private void broadcastToUser(Long userId, String json) {
         var set = sessions.get(userId);
         if (set == null) return;
@@ -634,30 +633,71 @@ public class MessagesWsHandler extends TextWebSocketHandler {
 
     private Long resolveUserId(WebSocketSession session) {
         String token = extractToken(session);
-        if (token == null) return null;
+
+        if (token == null) {
+            log.warn("[WS][messages][AUTH_FAIL] sid={} reason=no_token uri={}",
+                    session != null ? session.getId() : null,
+                    session != null ? session.getUri() : null
+            );
+            return null;
+        }
+
         try {
-            if (!jwtUtil.isTokenValid(token)) return null;
-            return jwtUtil.extractUserId(token);
+            if (!jwtUtil.isTokenValid(token)) {
+                log.warn("[WS][messages][AUTH_FAIL] sid={} reason=invalid_token uri={}",
+                        session != null ? session.getId() : null,
+                        session != null ? session.getUri() : null
+                );
+                return null;
+            }
+
+            Long uid = jwtUtil.extractUserId(token);
+
+            log.info("[WS][messages][AUTH_OK] sid={} uid={} uri={}",
+                    session != null ? session.getId() : null,
+                    uid,
+                    session != null ? session.getUri() : null
+            );
+
+            return uid;
         } catch (Exception ex) {
+            log.warn("[WS][messages][AUTH_FAIL] sid={} reason=exception exClass={} exMsg={}",
+                    session != null ? session.getId() : null,
+                    ex.getClass().getName(),
+                    ex.getMessage()
+            );
             return null;
         }
     }
 
     private String extractToken(WebSocketSession session) {
+
+        // 1) Cookie "access_token" (NUEVO industrial)
+        try {
+            String cookieHeader = session.getHandshakeHeaders().getFirst("Cookie");
+            String tokenFromCookie = readCookieFromHeader(cookieHeader, "access_token");
+            if (tokenFromCookie != null) return tokenFromCookie;
+        } catch (Exception ignore) {}
+
+        // 2) Query param token (compat antigua: wss://.../messages?token=...)
         try {
             URI uri = session.getUri();
             if (uri != null && uri.getQuery() != null) {
                 Map<String, String> qs = parseQuery(uri.getQuery());
-                if (qs.containsKey("token")) return qs.get("token");
+                String t = qs.get("token");
+                if (t != null && !t.isBlank()) return t;
             }
         } catch (Exception ignore) {}
+
+        // 3) Authorization: Bearer ...
         try {
-            List<String> auths = session.getHandshakeHeaders().get("Authorization");
-            if (auths != null && !auths.isEmpty()) {
-                String h = auths.get(0);
-                if (h != null && h.startsWith("Bearer ")) return h.substring(7);
+            String auth = session.getHandshakeHeaders().getFirst("Authorization");
+            if (auth != null && auth.startsWith("Bearer ")) {
+                String t = auth.substring(7);
+                return (t == null || t.isBlank()) ? null : t;
             }
         } catch (Exception ignore) {}
+
         return null;
     }
 
@@ -675,6 +715,37 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
         return m;
     }
+
+    private String readCookieFromHeader(String cookieHeader, String name) {
+        if (cookieHeader == null || cookieHeader.isBlank() || name == null || name.isBlank()) return null;
+
+        try {
+            String[] parts = cookieHeader.split(";");
+            for (String p : parts) {
+                String part = p != null ? p.trim() : "";
+                if (part.isEmpty()) continue;
+
+                int eq = part.indexOf('=');
+                if (eq <= 0) continue;
+
+                String k = part.substring(0, eq).trim();
+                if (!name.equals(k)) continue;
+
+                String v = part.substring(eq + 1).trim();
+                if (v.isEmpty()) return null;
+
+                // Por si viene URL-encoded
+                try {
+                    v = URLDecoder.decode(v, StandardCharsets.UTF_8);
+                } catch (Exception ignore) {}
+
+                return v.isBlank() ? null : v;
+            }
+        } catch (Exception ignore) {}
+
+        return null;
+    }
+
 
     private JSONObject toJson(MessageDTO m) {
         return new JSONObject()
@@ -729,14 +800,17 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     }
 
     private Long inCallWith(Long userId) {
+
         return activeCalls.get(userId);
     }
 
     private void beginRinging(Long userId) {
+
         if (userId != null) ringing.add(userId);
     }
 
     private void clearRinging(Long userId) {
+
         if (userId != null) ringing.remove(userId);
     }
 

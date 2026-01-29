@@ -1,8 +1,6 @@
 export const API_BASE = '/api';
 export const WS_PATHS = { match: '/match', messages: '/messages' };
 
-export const getToken = () => localStorage.getItem('token') || '';
-
 export const buildApiUrl = (path) => `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
 
 export const wsBase = () => {

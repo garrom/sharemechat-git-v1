@@ -24,7 +24,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const history = useHistory();
-  const { refresh } = useSession();
+  const { refresh, user } = useSession();
 
   const safeNavigate = (path) => {
     if (history && typeof history.push === 'function') {
@@ -55,60 +55,46 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
     return !fe.email && !fe.password;
   };
 
+
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setStatus('');
     if (!validate()) return;
     setLoading(true);
+
     try {
-      const response = await fetch('/api/users/login', {
+      const response = await fetch('/api/auth/login', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
+
       if (!response.ok) {
         const msg = await readErrorMessage(response);
         throw new Error(msg);
       }
-      const data = await response.json();
-      localStorage.setItem('token', data.token);
+
       setStatus('Acceso correcto. Redirigiendo…');
 
-      const user = data.user || {};
+      const u = await refresh();
 
-      if (user.role === Roles.ADMIN) {
-        await refresh();
+      if (u?.role === Roles.ADMIN) {
         safeNavigate('/dashboard-admin');
-        if (onLoginSuccess) onLoginSuccess();
-        return;
-      } else if (user.role === Roles.CLIENT) {
-        await refresh();
+      } else if (u?.role === Roles.CLIENT) {
         safeNavigate('/client');
-        if (onLoginSuccess) onLoginSuccess();
-        return;
-      } else if (user.role === Roles.MODEL) {
-        await refresh();
+      } else if (u?.role === Roles.MODEL) {
         safeNavigate('/model');
-        if (onLoginSuccess) onLoginSuccess();
-        return;
-      } else if (user.role === Roles.USER) {
-        if (user.userType === UserTypes.FORM_CLIENT) {
-          await refresh();
-          safeNavigate('/dashboard-user-client');
-          if (onLoginSuccess) onLoginSuccess();
-          return;
-        } else if (user.userType === UserTypes.FORM_MODEL) {
-          await refresh();
-          safeNavigate('/dashboard-user-model');
-          if (onLoginSuccess) onLoginSuccess();
-          return;
-        } else {
-          setError('Tipo de usuario no válido');
-        }
+      } else if (u?.role === Roles.USER) {
+        if (u?.userType === UserTypes.FORM_CLIENT) safeNavigate('/dashboard-user-client');
+        else if (u?.userType === UserTypes.FORM_MODEL) safeNavigate('/dashboard-user-model');
+        else setError('Tipo de usuario no válido');
       } else {
-        setError('Rol de usuario no válido');
+        // Si aún no está resuelto el user, manda a Home/Login y RequireRole hará su trabajo al re-render
+        safeNavigate('/');
       }
+      if (onLoginSuccess) onLoginSuccess();
     } catch (err) {
       setError(err.message || 'Error al iniciar sesión');
     } finally {

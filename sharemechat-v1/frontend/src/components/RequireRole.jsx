@@ -1,43 +1,38 @@
-import React, { useEffect, useState } from 'react';
+// src/components/RequireRole.jsx
+import React from 'react';
 import { Redirect } from 'react-router-dom';
 import Roles from '../constants/Roles';
+import { useSession } from './SessionProvider';
 
 const RequireRole = ({ role, roles, children }) => {
-  const token = localStorage.getItem('token');
-  const [me, setMe] = useState(null); // null=cargando, false=no auth, objeto=ok
+  const { user, loading } = useSession();
 
-  useEffect(() => {
-    let alive = true;
-    if (!token) { setMe(false); return; }
+  // Mientras SessionProvider hace /api/users/me
+  if (loading) return null;
 
-    fetch('/api/users/me', { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => (r.ok ? r.json() : null))
-      .then(d => { if (alive) setMe(d || false); })
-      .catch(() => { if (alive) setMe(false); });
+  // No autenticado => login
+  if (!user) return <Redirect to="/login" />;
 
-    return () => { alive = false; };
-  }, [token]);
+  const meRole = user?.role;
 
-  if (me === null) return null;          // spinner opcional
-  if (me === false) return <Redirect to="/login" />;
+  const redirectToOwnDashboard = () => {
+    if (meRole === Roles.CLIENT) return <Redirect to="/client" />;
+    if (meRole === Roles.MODEL) return <Redirect to="/model" />;
+    if (meRole === Roles.ADMIN) return <Redirect to="/dashboard-admin" />;
+    return <Redirect to="/" />;
+  };
 
-  // Si se pasa 'roles' (array), comprobar membresía
+  // Caso 1: roles (array)
   if (Array.isArray(roles) && roles.length > 0) {
-    if (!me?.role || !roles.includes(me.role)) {
-      if (me.role === Roles.CLIENT) return <Redirect to="/client" />;
-      if (me.role === Roles.MODEL)  return <Redirect to="/model" />;
-      if (me.role === Roles.ADMIN)  return <Redirect to="/dashboard-admin" />;
-      return <Redirect to="/" />;
+    if (!meRole || !roles.includes(meRole)) {
+      return redirectToOwnDashboard();
     }
     return children;
   }
 
-  if (!me?.role || me.role !== role) {
-    // Envía al dashboard que le corresponde
-    if (me.role === Roles.CLIENT) return <Redirect to="/client" />;
-    if (me.role === Roles.MODEL)  return <Redirect to="/model" />;
-    if (me.role === Roles.ADMIN)  return <Redirect to="/dashboard-admin" />;
-    return <Redirect to="/" />;
+  // Caso 2: role (string)
+  if (!meRole || meRole !== role) {
+    return redirectToOwnDashboard();
   }
 
   return children;

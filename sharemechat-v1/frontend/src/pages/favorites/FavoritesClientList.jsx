@@ -1,7 +1,8 @@
+// src/pages/favorites/FavoritesClientList.jsx
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faTrash, faBan,faUnlock } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faTrash, faBan, faUnlock } from '@fortawesome/free-solid-svg-icons';
 
 import {
   List,
@@ -11,7 +12,6 @@ import {
   Info,
   Name,
   Badges,
-  Badge,
   DotWrap,
   StatusDot,
   FavMenuTrigger,
@@ -23,12 +23,16 @@ import {
 
 import StatusBadge from '../../components/StatusBadge';
 import { useAppModals } from '../../components/useAppModals';
+import { useSession } from '../../components/SessionProvider';
+import { apiFetch } from '../../config/http';
 
 function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, hasUnread = false, menuOpen = false }) {
   const placeholder = '/img/avatarChica.png';
   const [imgSrc, setImgSrc] = useState(placeholder);
 
-  useEffect(() => { if (avatarUrl && typeof avatarUrl === 'string') setImgSrc(avatarUrl); }, [avatarUrl]);
+  useEffect(() => {
+    if (avatarUrl && typeof avatarUrl === 'string') setImgSrc(avatarUrl);
+  }, [avatarUrl]);
 
   const invited = String(user?.invited || '').trim().toLowerCase();
   const presence = String(user?.presence || 'offline').toLowerCase();
@@ -51,8 +55,16 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
       title={isBlocked ? (blockedByMe ? 'Usuario bloqueado (lo has bloqueado tú)' : (blockedByOther ? 'Usuario bloqueado' : 'Usuario bloqueado')) : undefined}
     >
       <DotWrap>
-        <Avatar src={imgSrc} alt="" $size={28} onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }} />
-        <StatusDot className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'} aria-label={presence} />
+        <Avatar
+          src={imgSrc}
+          alt=""
+          $size={28}
+          onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }}
+        />
+        <StatusDot
+          className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'}
+          aria-label={presence}
+        />
       </DotWrap>
 
       <Info>
@@ -60,10 +72,18 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
       </Info>
 
       <Badges>
-        {!isBlocked && invited !== 'accepted' && <StatusBadge value={invited} title={invited === 'sent' ? 'enviado' : invited} size={16} />}
+        {!isBlocked && invited !== 'accepted' && (
+          <StatusBadge value={invited} title={invited === 'sent' ? 'enviado' : invited} size={16} />
+        )}
       </Badges>
 
-      {hasUnread && !isBlocked && <div style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#0d6efd', marginRight: 6 }} aria-label="Tienes mensajes sin leer" title="Tienes mensajes sin leer" />}
+      {hasUnread && !isBlocked && (
+        <div
+          style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#0d6efd', marginRight: 6 }}
+          aria-label="Tienes mensajes sin leer"
+          title="Tienes mensajes sin leer"
+        />
+      )}
 
       <FavMenuTrigger
         type="button"
@@ -94,8 +114,9 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   const [menu, setMenu] = useState({ open: false, user: null, x: 0, y: 0 });
   const [blockedMap, setBlockedMap] = useState({});
 
-  const token = localStorage.getItem('token');
-  const { alert, confirm, openBlockReasonModal,openRemoveFavoriteConfirm } = useAppModals();
+  const { user: sessionUser, loading: sessionLoading } = useSession();
+  const { alert, confirm, openBlockReasonModal, openRemoveFavoriteConfirm } = useAppModals();
+
   const menuWidthDesktop = 220;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const closeMenu = useCallback(() => { setMenu({ open: false, user: null, x: 0, y: 0 }); }, []);
@@ -133,37 +154,55 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   }, [menu.open, menu.user?.id, closeMenu]);
 
   const handleUnblock = useCallback(async (user) => {
-    if (!token) { await alert({ title:'Sesión', message:'No autenticado', variant:'warning', size:'sm' }); return; }
+    if (!sessionUser && !sessionLoading) {
+      await alert({ title: 'Sesión', message: 'No autenticado', variant: 'warning', size: 'sm' });
+      return;
+    }
     if (!user?.id) return;
 
     const displayName = user?.nickname || `Usuario #${user.id}`;
-    const ok = await confirm({ title:'Desbloquear', message:`¿Quieres desbloquear a ${displayName}?`, okText:'Desbloquear', cancelText:'Cancelar', variant:'confirm', size:'sm', danger:false });
+    const ok = await confirm({
+      title: 'Desbloquear',
+      message: `¿Quieres desbloquear a ${displayName}?`,
+      okText: 'Desbloquear',
+      cancelText: 'Cancelar',
+      variant: 'confirm',
+      size: 'sm',
+      danger: false,
+    });
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/blocks/${user.id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${token}` } });
-      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      await apiFetch(`/blocks/${user.id}`, { method: 'DELETE' });
 
-      setBlockedMap((prev) => { const next = { ...(prev || {}) }; delete next[user.id]; return next; });
-      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked:false, blockedByMe:false, blockedByOther:false } : i)));
+      setBlockedMap((prev) => {
+        const next = { ...(prev || {}) };
+        delete next[user.id];
+        return next;
+      });
 
-      await alert({ title:'Desbloquear', message:'Usuario desbloqueado.', variant:'success', size:'sm' });
+      setItems((prev) => (prev || []).map((i) => (
+        Number(i.id) === Number(user.id)
+          ? { ...i, blocked: false, blockedByMe: false, blockedByOther: false }
+          : i
+      )));
+
+      await alert({ title: 'Desbloquear', message: 'Usuario desbloqueado.', variant: 'success', size: 'sm' });
     } catch (e) {
-      await alert({ title:'Desbloquear', message: e?.message || 'No se pudo desbloquear.', variant:'danger', size:'sm' });
+      await alert({ title: 'Desbloquear', message: e?.message || 'No se pudo desbloquear.', variant: 'danger', size: 'sm' });
     }
-  }, [token, alert, confirm]);
-
+  }, [sessionUser, sessionLoading, alert, confirm]);
 
   // === 1) Cargar MIS bloqueos (bloqueos donde yo soy el blocker)
   useEffect(() => {
     let ignore = false;
 
     const loadBlocks = async () => {
-      if (!token) return;
+      if (sessionLoading) return;
+      if (!sessionUser) return;
+
       try {
-        const res = await fetch('/api/blocks', { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await apiFetch('/blocks');
         if (ignore) return;
 
         const map = {};
@@ -180,24 +219,23 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
 
     loadBlocks();
     return () => { ignore = true; };
-  }, [token, reloadTrigger]);
+  }, [sessionUser?.id, sessionLoading, reloadTrigger]);
 
   // === 2) Cargar favoritos + presencia
   // FIX #2: diferenciamos "blockedByMe" vs "blockedByOther"
-  // - blockedByMe: sale de /api/blocks
+  // - blockedByMe: sale de /blocks
   // - blockedByOther: lo deducimos cuando meta trae blocked=true pero blockedMap no lo contiene
   useEffect(() => {
     let ignore = false;
 
     const load = async () => {
-      if (!token) return;
+      if (sessionLoading) return;
+      if (!sessionUser) return;
+
       setLoading(true);
 
       try {
-        const res = await fetch('/api/favorites/models/meta', { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-
-        const data = await res.json();
+        const data = await apiFetch('/favorites/models/meta');
 
         if (!ignore) {
           const mapped = (data || []).map((d) => {
@@ -207,7 +245,16 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
             const blockedFromBackend = !!d?.blocked;
             const blocked = blockedFromBackend || blockedByMe;
             const blockedByOther = blocked && !blockedByMe;
-            return { ...u, invited: d?.invited, status: d?.status, presence: d?.presence || 'offline', blocked, blockedByMe, blockedByOther };
+
+            return {
+              ...u,
+              invited: d?.invited,
+              status: d?.status,
+              presence: d?.presence || 'offline',
+              blocked,
+              blockedByMe,
+              blockedByOther,
+            };
           });
 
           setItems(mapped.filter((item) => String(item?.invited || '').toLowerCase() !== 'rejected'));
@@ -222,16 +269,22 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
 
     load();
     return () => { ignore = true; };
-  }, [token, reloadTrigger, blockedMap]);
+  }, [sessionUser?.id, sessionLoading, reloadTrigger, blockedMap]);
 
-  // === 3) Reconciliar blocked si llega /api/blocks después
+  // === 3) Reconciliar blocked si llega /blocks después
   useEffect(() => {
     setItems((prev) => (prev || []).map((u) => {
       const id = u?.id;
       const blockedByMe = !!blockedMap?.[id];
       const blocked = !!u?.blocked || blockedByMe;
       const blockedByOther = blocked && !blockedByMe;
-      if (!!u?.blockedByMe === blockedByMe && !!u?.blocked === blocked && !!u?.blockedByOther === blockedByOther) return u;
+
+      if (
+        !!u?.blockedByMe === blockedByMe &&
+        !!u?.blocked === blocked &&
+        !!u?.blockedByOther === blockedByOther
+      ) return u;
+
       return { ...u, blocked, blockedByMe, blockedByOther };
     }));
   }, [blockedMap]);
@@ -241,16 +294,15 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
     let ignore = false;
 
     const run = async () => {
-      if (!items.length || !token) return;
+      if (sessionLoading) return;
+      if (!sessionUser) return;
+      if (!items.length) return;
 
       const ids = items.map((i) => i.id).filter(Boolean);
       const qs = encodeURIComponent(ids.join(','));
 
       try {
-        const r = await fetch(`/api/users/avatars?ids=${qs}`, { headers: { Authorization: `Bearer ${token}` } });
-        if (!r.ok) throw new Error((await r.text()) || `HTTP ${r.status}`);
-
-        const map = await r.json();
+        const map = await apiFetch(`/users/avatars?ids=${qs}`);
         if (!ignore) setAvatarMap(map || {});
       } catch (e) {
         console.warn('[favorites] avatars error:', e?.message);
@@ -259,20 +311,18 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
 
     run();
     return () => { ignore = true; };
-  }, [items, token]);
+  }, [items, sessionUser?.id, sessionLoading]);
 
   // No leídos
   useEffect(() => {
     let ignore = false;
 
     const loadUnread = async () => {
-      if (!token) return;
+      if (sessionLoading) return;
+      if (!sessionUser) return;
 
       try {
-        const res = await fetch('/api/messages/conversations', { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-
-        const data = await res.json();
+        const data = await apiFetch('/messages/conversations');
         if (ignore) return;
 
         const map = {};
@@ -291,7 +341,7 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
 
     loadUnread();
     return () => { ignore = true; };
-  }, [token, reloadTrigger]);
+  }, [sessionUser?.id, sessionLoading, reloadTrigger]);
 
   // Listener global para "Desbloquear" desde otros componentes
   useEffect(() => {
@@ -306,7 +356,10 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
 
   const handleRemove = useCallback(async (user) => {
     const inv = String(user?.invited || '').toLowerCase();
-    if (inv === 'pending' || inv === 'sent') { await alert({ title:'Favoritos', message:'No puedes eliminar mientras la solicitud está en proceso.', variant:'warning', size:'sm' }); return; }
+    if (inv === 'pending' || inv === 'sent') {
+      await alert({ title: 'Favoritos', message: 'No puedes eliminar mientras la solicitud está en proceso.', variant: 'warning', size: 'sm' });
+      return;
+    }
     if (!user?.id) return;
 
     const displayName = user?.nickname || `Usuario #${user.id}`;
@@ -314,18 +367,19 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/favorites/models/${user.id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${token}` } });
-      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      await apiFetch(`/favorites/models/${user.id}`, { method: 'DELETE' });
       setItems((prev) => (prev || []).filter((i) => Number(i.id) !== Number(user.id)));
-      await alert({ title:'Favoritos', message:'Eliminado de favoritos.', variant:'success', size:'sm' });
+      await alert({ title: 'Favoritos', message: 'Eliminado de favoritos.', variant: 'success', size: 'sm' });
     } catch (e) {
-      await alert({ title:'Favoritos', message: e?.message || 'No se pudo eliminar de favoritos.', variant:'danger', size:'sm' });
+      await alert({ title: 'Favoritos', message: e?.message || 'No se pudo eliminar de favoritos.', variant: 'danger', size: 'sm' });
     }
-  }, [token, alert, openRemoveFavoriteConfirm]);
-
+  }, [alert, openRemoveFavoriteConfirm]);
 
   const handleBlock = useCallback(async (user) => {
-    if (!token) { await alert({ title:'Sesión', message:'No autenticado', variant:'warning', size:'sm' }); return; }
+    if (!sessionUser && !sessionLoading) {
+      await alert({ title: 'Sesión', message: 'No autenticado', variant: 'warning', size: 'sm' });
+      return;
+    }
     if (!user?.id) return;
 
     const displayName = user?.nickname || `Usuario #${user.id}`;
@@ -333,19 +387,30 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
     if (!pick?.confirmed) return;
 
     try {
-      const res = await fetch(`/api/blocks/${user.id}`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || '' }) });
-      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      await apiFetch(`/blocks/${user.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: pick.reason || '' }),
+      });
 
       setBlockedMap((prev) => ({ ...(prev || {}), [user.id]: true }));
-      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked:true, blockedByMe:true, blockedByOther:false } : i)));
-      setUnreadMap((prev) => { if (!prev?.[user.id]) return prev; const next = { ...prev }; delete next[user.id]; return next; });
+      setItems((prev) => (prev || []).map((i) => (
+        Number(i.id) === Number(user.id)
+          ? { ...i, blocked: true, blockedByMe: true, blockedByOther: false }
+          : i
+      )));
+      setUnreadMap((prev) => {
+        if (!prev?.[user.id]) return prev;
+        const next = { ...prev };
+        delete next[user.id];
+        return next;
+      });
 
-      await alert({ title:'Bloquear', message:'Usuario bloqueado.', variant:'success', size:'sm' });
+      await alert({ title: 'Bloquear', message: 'Usuario bloqueado.', variant: 'success', size: 'sm' });
     } catch (e) {
-      await alert({ title:'Bloquear', message: e?.message || 'No se pudo bloquear.', variant:'danger', size:'sm' });
+      await alert({ title: 'Bloquear', message: e?.message || 'No se pudo bloquear.', variant: 'danger', size: 'sm' });
     }
-  }, [token, alert, openBlockReasonModal]);
-
+  }, [sessionUser, sessionLoading, alert, openBlockReasonModal]);
 
   const menuNode = useMemo(() => {
     if (!menu.open || !menu.user) return null;
@@ -353,7 +418,6 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
     const u = menu.user;
     const isBlocked = !!u?.blocked;
     const blockedByMe = !!u?.blockedByMe;
-    const blockedByOther = !!u?.blockedByOther;
 
     return ReactDOM.createPortal(
       <FavMenu style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()} role="menu">
@@ -383,6 +447,9 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
       document.body
     );
   }, [menu, closeMenu, handleRemove, handleBlock, handleUnblock]);
+
+  if (sessionLoading) return <StateRow>Cargando sesión…</StateRow>;
+  if (!sessionUser) return <StateRow>Inicia sesión para ver tus favoritos.</StateRow>;
 
   if (loading) return <StateRow>Cargando…</StateRow>;
   if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;

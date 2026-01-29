@@ -106,18 +106,6 @@ public class UserController {
         return ResponseEntity.ok(createdUser);
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody @Valid UserLoginDTO loginDTO) {
-        Optional<LoginResponse> loginResponse = userService.login(loginDTO);
-        if (loginResponse.isPresent()) {
-            return ResponseEntity.ok()
-                    .header("Authorization", "Bearer " + loginResponse.get().getToken())
-                    .body(loginResponse.get());
-        } else {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body("Error: Email o contraseña incorrectos, o cuenta deshabilitada");
-        }
-    }
 
     @GetMapping("/{id}")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {

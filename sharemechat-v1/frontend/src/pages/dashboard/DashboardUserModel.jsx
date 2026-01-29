@@ -18,7 +18,7 @@ import {
   MobileMenu,
 } from '../../styles/NavbarStyles';
 
-import { ProfilePrimaryButton,NavButton } from '../../styles/ButtonStyles';
+import { ProfilePrimaryButton, NavButton } from '../../styles/ButtonStyles';
 
 // Estilos de tarjetas ya existentes (perfil) + nuevos
 import {
@@ -28,45 +28,28 @@ import {
   ButtonPrimary,
 } from '../../styles/subpages/PerfilClientModelStyle';
 
+import { useSession } from '../../components/SessionProvider';
+import { apiFetch } from '../../config/http';
+
 const DashboardUserModel = () => {
   const history = useHistory();
-  const token = localStorage.getItem('token');
+  const { user: sessionUser, loading: sessionLoading } = useSession();
 
   const [userName, setUserName] = useState('Modelo');
   const [info, setInfo] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
-    if (!token) {
+    if (sessionLoading) return;
+
+    if (!sessionUser) {
       history.push('/');
       return;
     }
-    (async () => {
-      try {
-        const res = await fetch('/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (res.status === 401) {
-          localStorage.removeItem('token');
-          history.push('/');
-          return;
-        }
-        if (res.ok) {
-          const data = await res.json();
-          setUserName(
-            data.nickname || data.name || data.email || 'Usuario'
-          );
-          setInfo(
-            `Estado de verificación: ${
-              data.verificationStatus || 'PENDING'
-            }`
-          );
-        }
-      } catch {
-        // noop
-      }
-    })();
-  }, [token, history]);
+
+    setUserName(sessionUser.nickname || sessionUser.name || sessionUser.email || 'Usuario');
+    setInfo(`Estado de verificación: ${sessionUser.verificationStatus || 'PENDING'}`);
+  }, [sessionUser, sessionLoading, history]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -78,6 +61,17 @@ const DashboardUserModel = () => {
   };
 
   const displayName = userName || 'Modelo';
+
+  if (sessionLoading) {
+    return (
+      <StyledContainer>
+        <GlobalBlack />
+        <StyledMainContent>
+          <div style={{ padding: 16, color: '#fff' }}>Cargando sesión…</div>
+        </StyledMainContent>
+      </StyledContainer>
+    );
+  }
 
   return (
     <StyledContainer>
@@ -94,12 +88,7 @@ const DashboardUserModel = () => {
         {/* Desktop */}
         <div
           className="desktop-only"
-          style={{
-            display: 'flex',
-            gap: 12,
-            alignItems: 'center',
-            marginLeft: 'auto',
-          }}
+          style={{ display: 'flex', gap: 12, alignItems: 'center', marginLeft: 'auto' }}
         >
           <NavText className="me-3">{displayName}</NavText>
 

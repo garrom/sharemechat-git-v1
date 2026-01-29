@@ -112,7 +112,7 @@ const DashboardClient = () => {
   const localStream = useRef(null);
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
-  const token = localStorage.getItem('token');
+
   const msgSocketRef = useRef(null);
   const centerListRef = useRef(null);
   const [wsReady, setWsReady] = useState(false);
@@ -516,10 +516,8 @@ const DashboardClient = () => {
   ]);
 
 
-  // [CALL] Si tenemos peerId pero no nombre coherente, lo resolvemos desde /api/users/{id}
+  // [CALL] Si tenemos peerId pero no nombre coherente
   useEffect(() => {
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
     const id = Number(callPeerId);
     if (!Number.isFinite(id) || id <= 0) return;
 
@@ -537,10 +535,9 @@ const DashboardClient = () => {
     })();
   }, [callPeerId, callPeerName]);
 
+
   // [CALL] Avatar del destinatario
   useEffect(() => {
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
     const id = Number(callPeerId);
     if (!Number.isFinite(id) || id <= 0) return;
 
@@ -565,16 +562,13 @@ const DashboardClient = () => {
     }
   }, [callStatus, callPeerId, callPeerName, targetPeerId]);
 
-  useEffect(() => {
-    const tokenLS = localStorage.getItem('token');
-    if (!tokenLS) return;
 
+  useEffect(() => {
     const loadSaldo = async () => {
       setLoadingSaldo(true);
       setSaldoError('');
       try {
         const data = await apiFetch('/clients/me');
-
         setSaldo(data.saldoActual);
       } catch (e) {
         setSaldoError(e.message);
@@ -587,9 +581,8 @@ const DashboardClient = () => {
     loadSaldo();
   }, []);
 
+
   useEffect(()=>{
-    const tk=localStorage.getItem('token');
-    if(!tk) return;
     apiFetch('/gifts')
       .then(arr=>{
         setGifts(Array.isArray(arr)?arr:[]);
@@ -608,15 +601,11 @@ const DashboardClient = () => {
   }, [giftsLoaded]);
 
 
-  // carga historial del chat central al cambiar peer (FUENTE DE VERDAD: targetPeerId)
+  // carga historial del chat central al cambiar peer
   useEffect(() => {
     const peer = Number(targetPeerId);
     if (!peer || activeTab !== 'favoritos') return;
-
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
-
-    // Guard contra carreras: si cambias rápido de contacto, no pintamos históricos viejos
+    // Guard contra carreras
     const expectedPeer = peer;
     let canceled = false;
 
@@ -625,7 +614,6 @@ const DashboardClient = () => {
       try {
         const data = await apiFetch(`/messages/with/${expectedPeer}`);
 
-        // Si mientras tanto cambió el target o se salió de Favoritos, abortamos
         if (canceled) return;
         if (Number(targetPeerId) !== expectedPeer) return;
         if (activeTab !== 'favoritos') return;
@@ -653,7 +641,6 @@ const DashboardClient = () => {
         try {
           await apiFetch(`/messages/with/${expectedPeer}/read`, { method: 'POST' });
 
-          // (mantengo tu evento, pero ahora atado al peer correcto)
           try {
             window.dispatchEvent(new CustomEvent('chat-read', {
               detail: { peerId: Number(expectedPeer) }
@@ -681,7 +668,7 @@ const DashboardClient = () => {
   }, [targetPeerId, activeTab]);
 
 
-  // === Sincronizar flag global inCall (RANDOM + CALLING) ===
+  //Sincronizar flag global inCall (RANDOM + CALLING)
   useEffect(() => {
     const hayRandom = !!remoteStream;
     const hayCalling =
@@ -763,8 +750,14 @@ const DashboardClient = () => {
   const handleLogout = async () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
+
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch {
+      // noop (aunque falle, limpiamos cliente)
+    }
+
     stopAll();
-    localStorage.removeItem('token');
     history.push('/');
   };
 
@@ -1174,57 +1167,32 @@ const DashboardClient = () => {
 
 
   const handleAddBalance = async () => {
-    const tokenLS = localStorage.getItem('token');
-    if (!tokenLS) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
-      await alert({
-        title: 'Sesión',
-        message: 'Sesión expirada. Inicia sesión de nuevo.',
-        variant: 'warning',
-      });
-      return;
-    }
-    // model copra generico
-    const result = await openPurchaseModal({
-      context: 'navbar-comprar', // etiqueta opcional por si quieres loguear contexto
-    });
+    const result = await openPurchaseModal({ context: 'navbar-comprar' });
     if (!result.confirmed || !result.pack) return;
+
     const { pack } = result;
     const amount = Number(pack.price);
+
     try {
       setLoadingSaldo(true);
-      const res = await fetch('/api/transactions/add-balance', {
+
+      await apiFetch('/transactions/add-balance', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${tokenLS}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount,
           operationType: 'INGRESO',
           description: `Recarga de saldo (${pack.minutes} minutos)`,
         }),
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Error ${res.status}`);
-      }
+
       await alert({
         title: 'Saldo actualizado',
         message: `Se ha añadido el pack de ${pack.minutes} minutos.`,
         variant: 'success',
       });
 
-      const res2 = await fetch('/api/clients/me', {
-        headers: { Authorization: `Bearer ${tokenLS}` },
-      });
-
-      if (!res2.ok) {
-        const txt = await res2.text();
-        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
-      }
-
-      const data = await res2.json();
+      const data = await apiFetch('/clients/me');
       setSaldo(data.saldoActual);
       setSaldoError('');
     } catch (e) {
@@ -1235,6 +1203,7 @@ const DashboardClient = () => {
         variant: 'danger',
       });
       setSaldoError(e.message || 'Error al cargar saldo');
+      setSaldo(null);
     } finally {
       setLoadingSaldo(false);
     }
@@ -1242,35 +1211,18 @@ const DashboardClient = () => {
 
 
   const handlePurchaseFromRandom = async () => {
-    const tokenLS = localStorage.getItem('token');
-    if (!tokenLS) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
-      await alert({
-        title: 'Sesión',
-        message: 'Sesión expirada. Inicia sesión de nuevo.',
-        variant: 'warning',
-      });
-      return;
-    }
-    // Abrimos el modal de compra reutilizando la plantilla #3
-    const result = await openPurchaseModal({
-      context: 'random', // etiqueta para distinguir el contexto
-    });
-    if (!result.confirmed || !result.pack) {
-      // El usuario canceló o cerró el modal
-      return;
-    }
+    const result = await openPurchaseModal({ context: 'random' });
+    if (!result.confirmed || !result.pack) return;
+
     const { pack } = result;
     const amount = Number(pack.price);
+
     try {
       setLoadingSaldo(true);
-      // Llamada al backend para crear la recarga
-      const res = await fetch('/api/transactions/add-balance', {
+
+      await apiFetch('/transactions/add-balance', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${tokenLS}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount,
           operationType: 'INGRESO',
@@ -1278,19 +1230,7 @@ const DashboardClient = () => {
         }),
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Error ${res.status}`);
-      }
-      // Refrescamos saldo
-      const res2 = await fetch('/api/clients/me', {
-        headers: { Authorization: `Bearer ${tokenLS}` },
-      });
-      if (!res2.ok) {
-        const txt = await res2.text();
-        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
-      }
-      const data = await res2.json();
+      const data = await apiFetch('/clients/me');
       setSaldo(data.saldoActual);
       setSaldoError('');
 
@@ -1314,32 +1254,18 @@ const DashboardClient = () => {
 
 
   const handlePurchaseFromCalling = async () => {
-    const tokenLS = localStorage.getItem('token');
-    if (!tokenLS) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
-      await alert({
-        title: 'Sesión',
-        message: 'Sesión expirada. Inicia sesión de nuevo.',
-        variant: 'warning',
-      });
-      return;
-    }
-    const result = await openPurchaseModal({
-      context: 'calling',
-    });
-
+    const result = await openPurchaseModal({ context: 'calling' });
     if (!result.confirmed || !result.pack) return;
+
     const { pack } = result;
     const amount = Number(pack.price);
 
     try {
       setLoadingSaldo(true);
-      const res = await fetch('/api/transactions/add-balance', {
+
+      await apiFetch('/transactions/add-balance', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${tokenLS}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount,
           operationType: 'INGRESO',
@@ -1347,19 +1273,7 @@ const DashboardClient = () => {
         }),
       });
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Error ${res.status}`);
-      }
-      const res2 = await fetch('/api/clients/me', {
-        headers: { Authorization: `Bearer ${tokenLS}` },
-      });
-
-      if (!res2.ok) {
-        const txt = await res2.text();
-        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
-      }
-      const data = await res2.json();
+      const data = await apiFetch('/clients/me');
       setSaldo(data.saldoActual);
       setSaldoError('');
 
@@ -1383,50 +1297,26 @@ const DashboardClient = () => {
 
 
   const handlePurchaseFromGift = async () => {
-    const tokenLS = localStorage.getItem('token');
-    if (!tokenLS) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
-      await alert({
-        title: 'Sesión',
-        message: 'Sesión expirada. Inicia sesión de nuevo.',
-        variant: 'warning',
-      });
-      return;
-    }
-    const result = await openPurchaseModal({
-      context: 'gift',
-    });
+    const result = await openPurchaseModal({ context: 'gift' });
     if (!result.confirmed || !result.pack) return;
+
     const { pack } = result;
     const amount = Number(pack.price);
 
     try {
       setLoadingSaldo(true);
-      const res = await fetch('/api/transactions/add-balance', {
+
+      await apiFetch('/transactions/add-balance', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${tokenLS}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount,
           operationType: 'INGRESO',
           description: `Recarga de saldo (envío de regalos, ${pack.minutes} minutos)`,
         }),
       });
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Error ${res.status}`);
-      }
-      const res2 = await fetch('/api/clients/me', {
-        headers: { Authorization: `Bearer ${tokenLS}` },
-      });
 
-      if (!res2.ok) {
-        const txt = await res2.text();
-        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
-      }
-      const data = await res2.json();
+      const data = await apiFetch('/clients/me');
       setSaldo(data.saldoActual);
       setSaldoError('');
 
@@ -1461,7 +1351,7 @@ const DashboardClient = () => {
     if (!pick?.confirmed) return;
 
     try {
-      const token = localStorage.getItem('token');
+
       await apiFetch(`/blocks/${id}`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || '' }) });
     } catch {}
 
@@ -1565,7 +1455,6 @@ const DashboardClient = () => {
   };
 
 
-
   const handleAddFavorite = async (explicitModelId) => {
     const modelId = explicitModelId || currentModelId;
 
@@ -1577,83 +1466,48 @@ const DashboardClient = () => {
       });
       return;
     }
-    const tk = localStorage.getItem('token');
-    if (!tk) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
-      await alert({
-        variant: 'warning',
-        title: 'Sesión',
-        message: 'Sesión expirada. Inicia sesión de nuevo.',
-      });
-      return;
-    }
+
     try {
-      const res = await fetch(`/api/favorites/models/${modelId}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${tk}` },
-      });
+      // PRE (cookies): sin token, apiFetch ya va con credentials: 'include'
+      await apiFetch(`/favorites/models/${modelId}`, { method: 'POST' });
 
-      if (res.status === 409) {
-        await alert({
-          variant: 'info',
-          title: 'Favoritos',
-          message: 'Esta modelo ya está en tus favoritos.',
-        });
-        return;
-      }
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Error ${res.status}`);
-      }
       // 204 => consultamos meta para mensaje contextual
       try {
-        const metaRes = await fetch('/api/favorites/models/meta', {
-          headers: { Authorization: `Bearer ${tk}` }
-        });
+        const meta = await apiFetch('/favorites/models/meta');
 
-        if (metaRes.ok) {
-          const meta = await metaRes.json();
-          const found = (meta || [])
-            .map(d => ({
-              id: d?.user?.id,
-              invited: d?.invited,
-              status: d?.status
-            }))
-            .find(x => Number(x.id) === Number(modelId));
+        const found = (meta || [])
+          .map(d => ({
+            id: d?.user?.id,
+            invited: d?.invited,
+            status: d?.status
+          }))
+          .find(x => Number(x.id) === Number(modelId));
 
-          const inv = String(found?.invited || '').toLowerCase();
+        const inv = String(found?.invited || '').toLowerCase();
 
-          if (inv === 'pending') {
-            await alert({
-              variant: 'success',
-              title: 'Solicitud enviada',
-              message: 'Se activará cuando la modelo acepte.',
-            });
-          } else if (inv === 'accepted') {
-            await alert({
-              variant: 'success',
-              title: 'Favoritos',
-              message: 'Ya estáis en favoritos mutuamente.',
-            });
-          } else if (inv === 'rejected') {
-            await alert({
-              variant: 'warning',
-              title: 'Favoritos',
-              message: 'La modelo rechazó previamente la invitación.',
-            });
-          } else {
-            await alert({
-              variant: 'success',
-              title: 'Favoritos',
-              message: 'Solicitud procesada.',
-            });
-          }
+        if (inv === 'pending') {
+          await alert({
+            variant: 'success',
+            title: 'Solicitud enviada',
+            message: 'Se activará cuando la modelo acepte.',
+          });
+        } else if (inv === 'accepted') {
+          await alert({
+            variant: 'success',
+            title: 'Favoritos',
+            message: 'Ya estáis en favoritos mutuamente.',
+          });
+        } else if (inv === 'rejected') {
+          await alert({
+            variant: 'warning',
+            title: 'Favoritos',
+            message: 'La modelo rechazó previamente la invitación.',
+          });
         } else {
           await alert({
             variant: 'success',
             title: 'Favoritos',
-            message: 'Solicitud enviada.',
+            message: 'Solicitud procesada.',
           });
         }
       } catch {
@@ -1667,6 +1521,18 @@ const DashboardClient = () => {
       // refrescar listas
       setFavReload(x => x + 1);
     } catch (e) {
+      const msg = String(e?.message || '');
+
+      // Mantener UX equivalente al 409 anterior (cuando ya es favorito)
+      if (msg.includes('"status":409') || msg.includes('HTTP 409')) {
+        await alert({
+          variant: 'info',
+          title: 'Favoritos',
+          message: 'Esta modelo ya está en tus favoritos.',
+        });
+        return;
+      }
+
       console.error(e);
       await alert({
         variant: 'danger',
@@ -1808,7 +1674,6 @@ const DashboardClient = () => {
 
   const acceptInvitation = async () => {
     if (!selectedFav?.id) return;
-    const tk = localStorage.getItem('token');
     try {
       await apiFetch(`/favorites/accept/${selectedFav.id}`, { method: 'POST' });
 
@@ -1824,7 +1689,6 @@ const DashboardClient = () => {
 
   const rejectInvitation = async () => {
     if (!selectedFav?.id) return;
-    const tk = localStorage.getItem('token');
     try {
       await apiFetch(`/favorites/reject/${selectedFav.id}`, { method: 'POST' });
 

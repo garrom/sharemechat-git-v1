@@ -2,6 +2,8 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppModals } from '../../components/useAppModals';
+import { useSession } from '../../components/SessionProvider';
+import { apiFetch } from '../../config/http';
 
 import {
   StyledContainer,
@@ -60,13 +62,13 @@ import {
   SecurityActions,
 } from '../../styles/subpages/PerfilClientModelStyle';
 
-const DOCS_GET_URL = '/api/models/documents/me';
-const DOCS_UPLOAD_URL = '/api/models/documents';
+const DOCS_GET_URL = '/models/documents/me';
+const DOCS_UPLOAD_URL = '/models/documents';
 
 const PerfilModel = () => {
   const history = useHistory();
-  const token = localStorage.getItem('token');
   const { alert, openUnsubscribeModal } = useAppModals();
+  const { user: sessionUser, loading: sessionLoading } = useSession();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -98,14 +100,10 @@ const PerfilModel = () => {
 
   const loadDocs = async () => {
     try {
-      const res = await fetch(DOCS_GET_URL, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) return;
-      const data = await res.json();
+      const data = await apiFetch(DOCS_GET_URL);
       setDocs({
-        urlPic: data.urlPic || null,
-        urlVideo: data.urlVideo || null,
+        urlPic: data?.urlPic || null,
+        urlVideo: data?.urlVideo || null,
       });
     } catch {
       // noop
@@ -113,21 +111,22 @@ const PerfilModel = () => {
   };
 
   useEffect(() => {
-    if (!token) {
+    if (!sessionUser && !sessionLoading) {
       history.push('/login');
       return;
     }
 
+    if (!sessionUser) return;
+
     const load = async () => {
       setLoading(true);
       setError('');
+
       try {
-        const res = await fetch('/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error((await res.text()) || 'No se pudo cargar el perfil');
-        const data = await res.json();
+        const data = await apiFetch('/users/me');
+
         setUserId(data.id);
+
         setForm({
           email: data.email || '',
           name: data.name || '',
@@ -136,16 +135,17 @@ const PerfilModel = () => {
           biography: data.biography || '',
           interests: data.interests || '',
         });
+
         await loadDocs();
       } catch (e) {
-        setError(e.message);
+        setError(e?.message || 'No se pudo cargar el perfil');
       } finally {
         setLoading(false);
       }
     };
 
     load();
-  }, [token, history]);
+  }, [sessionUser, sessionLoading, history]);
 
   const onChange = (e) => {
     const { name, value } = e.target;
@@ -154,9 +154,11 @@ const PerfilModel = () => {
 
   const handleSave = async () => {
     if (!userId) return;
+
     setSaving(true);
     setError('');
     setMsg('');
+
     try {
       const payload = {
         name: form.name || null,
@@ -165,68 +167,71 @@ const PerfilModel = () => {
         biography: form.biography || null,
         interests: form.interests || null,
       };
-      const res = await fetch(`/api/users/${userId}`, {
+
+      await apiFetch(`/users/${userId}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error((await res.text()) || 'No se pudo guardar');
+
       setMsg('Datos guardados correctamente.');
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'No se pudo guardar');
     } finally {
       setSaving(false);
     }
   };
 
-   const onUnsubscribe = async () => {
-     const { confirmed, reason } = await openUnsubscribeModal();
-     if (!confirmed) return;
+  const onUnsubscribe = async () => {
+    const { confirmed, reason } = await openUnsubscribeModal();
+    if (!confirmed) return;
 
-     try {
-       const res = await fetch('/api/users/unsubscribe', {
-         method: 'POST',
-         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-         body: JSON.stringify({ reason }),
-       });
+    try {
+      await apiFetch('/users/unsubscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason }),
+      });
 
-       if (res.ok) {
-         localStorage.removeItem('token');
-         await alert({ title:'Cuenta', message:'Cuenta dada de baja.', variant:'success', size:'sm' });
-         history.push('/login');
-         return;
-       }
+      await alert({
+        title: 'Cuenta',
+        message: 'Cuenta dada de baja.',
+        variant: 'success',
+        size: 'sm',
+      });
 
-       const txt = await res.text().catch(() => '');
-       await alert({ title:'Cuenta', message: txt || 'No se pudo completar la baja.', variant:'danger', size:'sm' });
-     } catch (e) {
-       await alert({ title:'Cuenta', message: e?.message || 'No se pudo completar la baja.', variant:'danger', size:'sm' });
-     }
-   };
-
+      history.push('/login');
+    } catch (e) {
+      await alert({
+        title: 'Cuenta',
+        message: e?.message || 'No se pudo completar la baja.',
+        variant: 'danger',
+        size: 'sm',
+      });
+    }
+  };
 
   const uploadSingle = async (fieldName, fileObj) => {
     if (!fileObj) return;
+
     setUploadingField(fieldName);
     setError('');
     setMsg('');
+
     try {
       const fd = new FormData();
       fd.append(fieldName, fileObj);
-      const res = await fetch(DOCS_UPLOAD_URL, {
+
+      const data = await apiFetch(DOCS_UPLOAD_URL, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
-      if (!res.ok) throw new Error((await res.text()) || 'No se pudo subir el archivo');
-      const data = await res.json();
+
       setDocs({
-        urlPic: data.urlPic || null,
-        urlVideo: data.urlVideo || null,
+        urlPic: data?.urlPic || null,
+        urlVideo: data?.urlVideo || null,
       });
+
       if (fieldName === 'pic') {
         setPicFile(null);
         setPicKey((k) => k + 1);
@@ -235,53 +240,58 @@ const PerfilModel = () => {
         setVideoFile(null);
         setVideoKey((k) => k + 1);
       }
+
       setMsg('Archivo subido correctamente.');
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'No se pudo subir el archivo');
     } finally {
       setUploadingField(null);
     }
   };
 
   const deletePhoto = async () => {
-    if (!docs.urlPic || !window.confirm('¿Eliminar tu foto de perfil?')) return;
+    if (!docs.urlPic) return;
+    if (!window.confirm('¿Eliminar tu foto de perfil?')) return;
+
     setDeletingPic(true);
     setError('');
     setMsg('');
+
     try {
-      const res = await fetch(`${DOCS_UPLOAD_URL}?field=pic`, {
+      await apiFetch(`${DOCS_UPLOAD_URL}?field=pic`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar');
+
       setDocs((d) => ({ ...d, urlPic: null }));
       setPicFile(null);
       setPicKey((k) => k + 1);
       setMsg('Foto eliminada.');
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'No se pudo eliminar');
     } finally {
       setDeletingPic(false);
     }
   };
 
   const deleteVideo = async () => {
-    if (!docs.urlVideo || !window.confirm('¿Eliminar tu vídeo de presentación?')) return;
+    if (!docs.urlVideo) return;
+    if (!window.confirm('¿Eliminar tu vídeo de presentación?')) return;
+
     setDeletingVideo(true);
     setError('');
     setMsg('');
+
     try {
-      const res = await fetch(`${DOCS_UPLOAD_URL}?field=video`, {
+      await apiFetch(`${DOCS_UPLOAD_URL}?field=video`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar');
+
       setDocs((d) => ({ ...d, urlVideo: null }));
       setVideoFile(null);
       setVideoKey((k) => k + 1);
       setMsg('Vídeo eliminado.');
     } catch (e) {
-      setError(e.message);
+      setError(e?.message || 'No se pudo eliminar');
     } finally {
       setDeletingVideo(false);
     }

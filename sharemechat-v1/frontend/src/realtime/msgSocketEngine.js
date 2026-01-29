@@ -43,10 +43,9 @@ export function createMsgSocketEngine(adapter) {
   }
 
   function open() {
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
+    // Cookies JWT -> NO token en querystring
+    const url = buildWsUrl(WS_PATHS.messages);
 
-    const url = buildWsUrl(WS_PATHS.messages, { token: tk });
     const cur = msgSocketRef.current;
 
     // 1) OPEN -> no hacer nada

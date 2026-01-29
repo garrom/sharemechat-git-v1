@@ -294,8 +294,8 @@ export function createMatchSocketEngine(adapter) {
     setSearching(false);
   }
 
-  function ensureSocketOpen(token) {
-    const wsUrl = buildWsUrl(WS_PATHS.match, { token });
+  function ensureSocketOpen() {
+    const wsUrl = buildWsUrl(WS_PATHS.match);
 
     // Si hay OPEN, no tocar
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) return;
@@ -326,14 +326,16 @@ export function createMatchSocketEngine(adapter) {
     setSearching(true);
     setError('');
 
-    const tokenLS = localStorage.getItem('token');
-    if (!tokenLS) {
+    // Auth industrial por cookie:
+    // la sesión viva es la del SessionProvider (/users/me).
+    const me = (typeof getSessionUser === 'function') ? getSessionUser() : null;
+    if (!me) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
       setSearching(false);
       return;
     }
 
-    ensureSocketOpen(tokenLS);
+    ensureSocketOpen();
 
     // Si ya estaba abierto, pedimos match aquí (simétrico)
     safeSend({ type: 'start-match' });

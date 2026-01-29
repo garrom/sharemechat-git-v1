@@ -140,7 +140,6 @@ const DashboardModel = () => {
   const localStream = useRef(null);
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
-  const token = localStorage.getItem('token');
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
   const nextGuardRef = useRef(false);
@@ -358,20 +357,19 @@ const DashboardModel = () => {
 
 
   useEffect(() => {
-    if (!token) return;
+    if (!sessionUser?.id) return;
+
     (async () => {
       try {
         const d = await apiFetch('/models/documents/me');
         setProfilePic(d?.urlPic || null);
-      } catch {
-        /* noop */
-      }
+      } catch {}
     })();
-  }, [token]);
+  }, [sessionUser?.id]);
 
 
   useEffect(() => {
-    if (!token || !currentClientId) return;
+    if (!sessionUser?.id || !currentClientId) return;
 
     (async () => {
       try {
@@ -380,11 +378,11 @@ const DashboardModel = () => {
         setClientNickname(nn);
       } catch {/* noop */}
     })();
-  }, [token, currentClientId]);
+  }, [sessionUser?.id, currentClientId]);
 
 
   useEffect(() => {
-    if (!token || !currentClientId) return;
+    if (!sessionUser?.id || !currentClientId) return;
 
     (async () => {
       try {
@@ -394,7 +392,7 @@ const DashboardModel = () => {
       } catch {/* noop */}
 
     })();
-  }, [token, currentClientId]);
+  }, [sessionUser?.id, currentClientId]);
 
 
   // [CALL][Model] Solo aseguramos UI (nombre) y socket. El peer “verdadero
@@ -471,8 +469,7 @@ const DashboardModel = () => {
 
 
   useEffect(()=>{
-    const tk=localStorage.getItem('token');
-    if(!tk) return;
+
     apiFetch('/gifts')
       .then(arr=>{
         setGifts(Array.isArray(arr)?arr:[]);
@@ -560,8 +557,7 @@ const DashboardModel = () => {
 
   // [CALL][Model] Si tenemos peerId pero el nombre no está “bonito”, lo resolvemos vía API
   useEffect(() => {
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
+    if (!sessionUser?.id) return;
     const id = Number(callPeerId);
     if (!Number.isFinite(id) || id <= 0) return;
 
@@ -581,8 +577,7 @@ const DashboardModel = () => {
 
   // [CALL][Model] Avatar del destinatario
   useEffect(() => {
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
+    if (!sessionUser?.id) return;
     const id = Number(callPeerId);
     if (!Number.isFinite(id) || id <= 0) return;
 
@@ -610,8 +605,7 @@ const DashboardModel = () => {
 
 
   useEffect(() => {
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
+    if (!sessionUser?.id) return;
     const fetchSaldoModel = async () => {
       try {
         setLoadingSaldoModel(true);
@@ -634,8 +628,7 @@ const DashboardModel = () => {
     const peer = Number(targetPeerId);
     if (!peer || activeTab !== 'favoritos') return;
 
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
+    if (!sessionUser?.id) return;
 
     // Guard contra carreras: si cambias rápido de contacto, no pintamos históricos viejos
     const expectedPeer = peer;
@@ -719,8 +712,7 @@ const DashboardModel = () => {
     if (activeTab !== 'videochat') return;
     if (statsSummaryLoadedRef.current) return;
 
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
+    if (!sessionUser?.id) return;
 
     statsSummaryLoadedRef.current = true;
 
@@ -747,8 +739,7 @@ const DashboardModel = () => {
   useEffect(() => {
     if (activeTab !== 'videochat') return;
 
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
+    if (!sessionUser?.id) return;
 
     const tiersCount = Array.isArray(modelStats?.tiers) ? modelStats.tiers.length : 0;
     if (tiersCount > 0) return;
@@ -782,9 +773,7 @@ const DashboardModel = () => {
       statsDetailLoadedRef.current = true;
       return;
     }
-
-    const tk = localStorage.getItem('token');
-    if (!tk) return;
+    if (!sessionUser?.id) return;
 
     statsDetailLoadedRef.current = true;
 
@@ -1172,7 +1161,7 @@ const DashboardModel = () => {
     if (!ok) return;
 
     stopAll();
-    localStorage.removeItem('token');
+    // token gestionado por SessionProvider/apiFetch (no localStorage)
     history.push('/');
   };
 
@@ -1182,233 +1171,6 @@ const DashboardModel = () => {
     if (!ok) return;
     stopAll();
     setActiveTab('stats');
-  };
-
-
-  const startWebSocketAndWait = (tk) => {
-    const wsUrl = buildWsUrl(WS_PATHS.match, { token: tk });
-    const socket = new WebSocket(wsUrl);
-
-    socketRef.current = socket;
-
-    socket.onopen = () => {
-      setStatus('Esperando cliente...');
-      if (pingIntervalRef.current) clearInterval(pingIntervalRef.current);
-      pingIntervalRef.current = setInterval(() => {
-        if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ type: 'ping' }));
-          socketRef.current.send(JSON.stringify({ type: 'stats' }));
-        }
-      }, 15000);
-
-      const lang = String(sessionUser?.lang || sessionUser?.language || navigator.language || 'es').toLowerCase().split('-')[0];
-      const country = String(sessionUser?.country || 'ES').toUpperCase();
-      socket.send(JSON.stringify({ type: 'set-role', role: 'model', lang, country }));
-      socket.send(JSON.stringify({ type: 'stats' }));
-    };
-
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      // ===== NUEVO: Control industrial de NEXT (MODEL SIDE) =====
-      if (data.type === 'next-wait') {
-        const retryAfterMs = Number(data.retryAfterMs || 0);
-        const reason = String(data.reason || 'cooldown');
-
-        setNexting(false);
-
-        const title =
-          reason === 'grace'
-            ? 'Espera un momento'
-            : 'Preparando el siguiente cliente';
-
-        const message =
-          reason === 'grace'
-            ? 'Acabas de emparejarte. Espera un instante antes de pasar al siguiente.'
-            : 'Estamos cerrando la sesión y preparando el siguiente emparejamiento…';
-
-        try {
-          openNextWaitModal({
-            title,
-            message,
-            durationMs: Math.max(600, Math.min(8000, retryAfterMs || 1500)),
-          });
-        } catch {}
-
-        return;
-      }
-
-      if (data.type === 'next-rate-limited') {
-        const retryAfterMs = Number(data.retryAfterMs || 0);
-
-        setNexting(false);
-
-        try {
-          openNextWaitModal({
-            title: 'Demasiados saltos',
-            message: 'Has pulsado “Next” muy rápido. Espera un momento.',
-            durationMs: Math.max(1500, Math.min(20000, retryAfterMs || 8000)),
-          });
-        } catch {}
-
-        return;
-      }
-
-      // Compatibilidad con backend actual
-      if (data.type === 'next-ignored') {
-        const retryAfterMs = Number(data.retryAfterMs || 0);
-        setNexting(false);
-
-        try {
-          openNextWaitModal({
-            title: 'Espera un momento',
-            message: 'Espera un instante…',
-            durationMs: Math.max(600, Math.min(8000, retryAfterMs || 1200)),
-          });
-        } catch {}
-
-        return;
-      }
-
-      if (data.type === 'next-accepted') {
-        // El cierre real llegará por peer-disconnected
-        setNexting(false);
-        return;
-      }
-
-
-      if (data.type === 'match') {
-
-        // ping inmediato
-        if (socketRef.current?.readyState === WebSocket.OPEN) {
-          try { socketRef.current.send(JSON.stringify({ type: 'ping' })); } catch {}
-        }
-
-        // Capturar streamRecordId (puede venir null en casos no aplicables)
-        try {
-          const sid = data?.streamRecordId;
-          const parsed = (sid !== null && sid !== undefined && Number.isFinite(Number(sid))) ? Number(sid) : null;
-          setActiveStreamRecordId(parsed);
-          activeStreamRecordIdRef.current = parsed;
-        } catch {
-          setActiveStreamRecordId(null);
-          activeStreamRecordIdRef.current = null;
-        }
-
-        // setCurrentClientId robusto
-        let matchedClientId = null;
-        try {
-          if (data.peerRole === 'client' && Number.isFinite(Number(data.peerUserId))) {
-            matchedClientId = Number(data.peerUserId);
-            setCurrentClientId(matchedClientId);
-          } else {
-            setCurrentClientId(null);
-          }
-        } catch {
-          setCurrentClientId(null);
-        }
-
-        // saldo del cliente (viene por WS en el match; se usará en UI)
-        try {
-          setClientSaldoLoading(true);
-          const v = data?.clientBalance;
-          setClientSaldo(v !== null && v !== undefined && Number.isFinite(Number(v)) ? Number(v) : null);
-        } catch {
-          setClientSaldo(null);
-        } finally {
-          setClientSaldoLoading(false);
-        }
-
-        // reset de peer/remote (incluye limpieza de saldo anterior si hubiera)
-        try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
-        try { if (remoteStream) { remoteStream.getTracks().forEach((t) => t.stop()); } } catch {}
-        setRemoteStream(null);
-        setMessages([]);
-        setError('');
-        setStatus('');
-        setSearching(false);
-
-        const peer = new Peer({
-          initiator: false,
-          trickle: true,
-          stream: localStream.current,
-        });
-        peerRef.current = peer;
-
-        peer.on('signal', (signal) => {
-          if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
-          if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-            socketRef.current.send(JSON.stringify({ type: 'signal', signal }));
-          }
-        });
-
-        peer.on('stream', (stream) => {
-          setError('');
-          setStatus('');
-          setRemoteStream(stream);
-
-          // Confirm/heartbeat cuando hay media REAL (equivale a “ACK operativo”)
-          // Backend ya confirma billable pair en ping.
-          try {
-            if (socketRef.current?.readyState === WebSocket.OPEN) {
-              socketRef.current.send(JSON.stringify({ type: 'ping' }));
-            }
-          } catch {}
-        });
-
-        peer.on('error', (err) => {
-          setError('Error en la conexión WebRTC: ' + err.message);
-        });
-      } else if (data.type === 'signal' && peerRef.current) {
-        setError('');
-        setStatus('');
-        peerRef.current.signal(data.signal);
-      } else if (data.type === 'chat') {
-        if (!isEcho(data.message)) {
-          setMessages((prev) => [...prev, { from: 'peer', text: data.message }]);
-        }
-      } else if (data.type === 'gift') {
-        const mine = Number(data.fromUserId) === Number(sessionUser?.id);
-        setMessages(prev=>[...prev,{ from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
-
-      } else if (data.type === 'no-client-available') {
-        setError('');
-        setStatus('Esperando cliente...');
-        setSearching(true);
-      } else if (data.type === 'queue-stats') {
-        if (typeof data.position === 'number') {
-          setQueuePosition(data.position);
-        }
-      } else if (data.type === 'peer-disconnected') {
-        setNexting(false);
-        setCurrentClientId(null);
-        setClientSaldo(null);
-        setClientSaldoLoading(false);
-        try { if (peerRef.current) { peerRef.current.destroy(); peerRef.current = null; } } catch {}
-        try { if (remoteStream) { remoteStream.getTracks().forEach((track) => track.stop()); } } catch {}
-        setRemoteStream(null);
-        setMessages([]);
-        setError('Buscando nuevo cliente...');
-        setStatus('');
-        setSearching(true);
-        if (socketRef.current?.readyState === WebSocket.OPEN) {
-          socketRef.current.send(JSON.stringify({ type: 'start-match' }));
-          socketRef.current.send(JSON.stringify({ type: 'stats' }));
-        }
-      }
-    };
-
-    socket.onerror = () => {
-      setError('Error de conexión con el servidor.');
-    };
-
-    socket.onclose = () => {
-      if (pingIntervalRef.current) {
-        clearInterval(pingIntervalRef.current);
-        pingIntervalRef.current = null;
-      }
-      setSearching(false);
-    };
   };
 
 
@@ -1482,8 +1244,7 @@ const DashboardModel = () => {
     const pick = await openBlockReasonModal({ displayName });
     if (!pick?.confirmed) return;
 
-    const tk = localStorage.getItem('token');
-    if (!tk) {
+    if (!sessionUser?.id) {
       await alert({ title:'Sesión', message:'Sesión expirada. Inicia sesión de nuevo.', variant:'warning' });
       return;
     }
@@ -1515,8 +1276,8 @@ const DashboardModel = () => {
 
 
   const handleRequestPayout = async () => {
-    const tk = localStorage.getItem('token');
-    if (!tk) {
+
+    if (!sessionUser?.id) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
       await alert({
         title: 'Sesión',
@@ -1525,6 +1286,7 @@ const DashboardModel = () => {
       });
       return;
     }
+
     // 1) Abrimos nuestro modal propio para pedir el importe
     const result = await openPayoutModal({
       title: 'Solicitud de retiro',
@@ -1534,6 +1296,7 @@ const DashboardModel = () => {
 
     // Si cierra o cancela el modal
     if (!result || !result.confirmed) return;
+
     const amount = Number(result.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       await alert({
@@ -1543,39 +1306,19 @@ const DashboardModel = () => {
       });
       return;
     }
+
     try {
       setLoadingSaldoModel(true);
 
-      const res = await fetch('/api/transactions/payout', {
+      // 2) Crear payout (apiFetch ya gestiona credenciales)
+      await apiFetch('/transactions/payout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${tk}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount,
           description: 'Solicitud de retiro',
         }),
       });
-
-      if (!res.ok) {
-        let friendlyMsg = `Error ${res.status}`;
-        try {
-          const data = await res.json();
-          if (data && data.message) {
-            friendlyMsg = data.message;
-          }
-        } catch {
-          try {
-            const txt = await res.text();
-            if (txt) friendlyMsg = txt;
-          } catch {
-            // nos quedamos con friendlyMsg por defecto
-          }
-        }
-
-        throw new Error(friendlyMsg);
-      }
 
       await alert({
         title: 'Solicitud enviada',
@@ -1583,25 +1326,21 @@ const DashboardModel = () => {
         variant: 'success',
       });
 
-      // Refrescar saldo de la modelo
-      const res2 = await fetch('/api/models/me', {
-        headers: { Authorization: `Bearer ${tk}` },
-      });
-      if (!res2.ok) {
-        const txt = await res2.text();
-        throw new Error(txt || `Error refrescando saldo: ${res2.status}`);
-      }
-      const data = await res2.json();
-      setSaldoModel(data.saldoActual);
+      // 3) Refrescar saldo de la modelo
+      const me = await apiFetch('/models/me');
+      setSaldoModel(me?.saldoActual ?? null);
       setError('');
+
     } catch (e) {
       console.error(e);
-      const msg = e.message || 'Error al solicitar retiro.';
+
+      const msg = e?.message || 'Error al solicitar retiro.';
       await alert({
         title: 'Error',
         message: msg,
         variant: 'danger',
       });
+
     } finally {
       setLoadingSaldoModel(false);
     }
@@ -1754,8 +1493,8 @@ const DashboardModel = () => {
       });
       return;
     }
-    const tk = localStorage.getItem('token');
-    if (!tk) {
+
+    if (!sessionUser?.id) {
       setError('Sesión expirada. Inicia sesión de nuevo.');
       await alert({
         variant: 'warning',
@@ -1766,76 +1505,68 @@ const DashboardModel = () => {
     }
 
     try {
-      const res = await fetch(`/api/favorites/clients/${currentClientId}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${tk}` },
-      });
-
-      if (res.status === 409) {
-        await alert({
-          variant: 'info',
-          title: 'Favoritos',
-          message: 'Este cliente ya está en tus favoritos.',
-        });
-        return;
-      }
-
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || `Error ${res.status}`);
-      }
-
-      // 204 => consultamos meta para mensaje contextual
+      // === POST add favorite ===
       try {
-        const metaRes = await fetch('/api/favorites/clients/meta', {
-          headers: { Authorization: `Bearer ${tk}` }
+        await apiFetch(`/favorites/clients/${currentClientId}`, {
+          method: 'POST',
         });
+      } catch (e) {
+        // Conflicto -> ya existe
+        if (
+          e?.status === 409 ||
+          String(e?.message || '').includes('409')
+        ) {
+          await alert({
+            variant: 'info',
+            title: 'Favoritos',
+            message: 'Este cliente ya está en tus favoritos.',
+          });
+          return;
+        }
+        throw e;
+      }
 
-        if (metaRes.ok) {
-          const meta = await metaRes.json();
-          const found = (meta || [])
-            .map(d => ({
-              id: d?.user?.id,
-              invited: d?.invited,
-              status: d?.status
-            }))
-            .find(x => Number(x.id) === Number(currentClientId));
+      // === META para mensaje contextual ===
+      try {
+        const meta = await apiFetch('/favorites/clients/meta');
 
-          const inv = String(found?.invited || '').toLowerCase();
+        const found = (meta || [])
+          .map(d => ({
+            id: d?.user?.id,
+            invited: d?.invited,
+            status: d?.status,
+          }))
+          .find(x => Number(x.id) === Number(currentClientId));
 
-          if (inv === 'pending') {
-            await alert({
-              variant: 'success',
-              title: 'Solicitud enviada',
-              message: 'Se activará cuando el cliente acepte.',
-            });
-          } else if (inv === 'accepted') {
-            await alert({
-              variant: 'success',
-              title: 'Favoritos',
-              message: 'Ya estáis en favoritos mutuamente.',
-            });
-          } else if (inv === 'rejected') {
-            await alert({
-              variant: 'warning',
-              title: 'Favoritos',
-              message: 'El cliente rechazó previamente la invitación.',
-            });
-          } else {
-            await alert({
-              variant: 'success',
-              title: 'Favoritos',
-              message: 'Solicitud procesada.',
-            });
-          }
+        const inv = String(found?.invited || '').toLowerCase();
+
+        if (inv === 'pending') {
+          await alert({
+            variant: 'success',
+            title: 'Solicitud enviada',
+            message: 'Se activará cuando el cliente acepte.',
+          });
+        } else if (inv === 'accepted') {
+          await alert({
+            variant: 'success',
+            title: 'Favoritos',
+            message: 'Ya estáis en favoritos mutuamente.',
+          });
+        } else if (inv === 'rejected') {
+          await alert({
+            variant: 'warning',
+            title: 'Favoritos',
+            message: 'El cliente rechazó previamente la invitación.',
+          });
         } else {
           await alert({
             variant: 'success',
             title: 'Favoritos',
-            message: 'Solicitud enviada.',
+            message: 'Solicitud procesada.',
           });
         }
       } catch {
+        // fallback si meta falla
         await alert({
           variant: 'success',
           title: 'Favoritos',
@@ -1845,12 +1576,13 @@ const DashboardModel = () => {
 
       // refrescar listas
       setFavReload(x => x + 1);
+
     } catch (e) {
       console.error(e);
       await alert({
         variant: 'danger',
         title: 'Error',
-        message: e.message || 'No se pudo añadir a favoritos.',
+        message: e?.message || 'No se pudo añadir a favoritos.',
       });
     }
   };
@@ -2013,7 +1745,7 @@ const DashboardModel = () => {
 
   const acceptInvitation = async () => {
     if (!selectedFav?.id) return;
-    const tk = localStorage.getItem('token');
+
     try {
       await apiFetch(`/favorites/accept/${selectedFav.id}`, { method: 'POST' });
 
@@ -2029,7 +1761,7 @@ const DashboardModel = () => {
 
   const rejectInvitation = async () => {
     if (!selectedFav?.id) return;
-    const tk = localStorage.getItem('token');
+
     try {
       await apiFetch(`/favorites/reject/${selectedFav.id}`, { method: 'POST' });
 

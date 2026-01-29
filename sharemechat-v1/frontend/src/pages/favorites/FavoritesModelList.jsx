@@ -23,12 +23,16 @@ import {
 
 import StatusBadge from '../../components/StatusBadge';
 import { useAppModals } from '../../components/useAppModals';
+import { useSession } from '../../components/SessionProvider';
+import { apiFetch } from '../../config/http';
 
 function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, hasUnread = false, menuOpen = false }) {
   const placeholder = '/img/avatarChico.png';
   const [imgSrc, setImgSrc] = useState(placeholder);
 
-  useEffect(() => { if (avatarUrl && typeof avatarUrl === 'string') setImgSrc(avatarUrl); }, [avatarUrl]);
+  useEffect(() => {
+    if (avatarUrl && typeof avatarUrl === 'string') setImgSrc(avatarUrl);
+  }, [avatarUrl]);
 
   const invited = String(user?.invited || '').trim().toLowerCase();
   const presence = String(user?.presence || 'offline').toLowerCase();
@@ -51,8 +55,16 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
       title={isBlocked ? (blockedByMe ? 'Usuario bloqueado (lo has bloqueado tú)' : blockedByOther ? 'Te ha bloqueado este usuario' : 'Usuario bloqueado') : undefined}
     >
       <DotWrap>
-        <Avatar src={imgSrc} alt="" $size={28} onError={(e) => { e.currentTarget.src = '/img/avatarChico.png'; }} />
-        <StatusDot className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'} aria-label={presence} />
+        <Avatar
+          src={imgSrc}
+          alt=""
+          $size={28}
+          onError={(e) => { e.currentTarget.src = '/img/avatarChico.png'; }}
+        />
+        <StatusDot
+          className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'}
+          aria-label={presence}
+        />
       </DotWrap>
 
       <Info>
@@ -60,10 +72,18 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
       </Info>
 
       <Badges>
-        {!isBlocked && invited !== 'accepted' && <StatusBadge value={invited} title={invited === 'sent' ? 'enviado' : invited} size={16} />}
+        {!isBlocked && invited !== 'accepted' && (
+          <StatusBadge value={invited} title={invited === 'sent' ? 'enviado' : invited} size={16} />
+        )}
       </Badges>
 
-      {hasUnread && !isBlocked && <div style={{width:10,height:10,borderRadius:'50%',backgroundColor:'#0d6efd',marginRight:6}} aria-label="Tienes mensajes sin leer" title="Tienes mensajes sin leer" />}
+      {hasUnread && !isBlocked && (
+        <div
+          style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#0d6efd', marginRight: 6 }}
+          aria-label="Tienes mensajes sin leer"
+          title="Tienes mensajes sin leer"
+        />
+      )}
 
       <FavMenuTrigger
         type="button"
@@ -94,19 +114,30 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
   const [menu, setMenu] = useState({ open: false, user: null, x: 0, y: 0 });
   const [blockedMap, setBlockedMap] = useState({});
 
-  const token = localStorage.getItem('token');
-  const { alert, confirm, openBlockReasonModal,openRemoveFavoriteConfirm } = useAppModals();
+  const { user: sessionUser, loading: sessionLoading } = useSession();
+  const { alert, confirm, openBlockReasonModal, openRemoveFavoriteConfirm } = useAppModals();
+
   const menuWidthDesktop = 220;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
   const closeMenu = useCallback(() => { setMenu({ open: false, user: null, x: 0, y: 0 }); }, []);
 
   useEffect(() => {
-      const close = () => closeMenu(); window.addEventListener('click', close); return () => window.removeEventListener('click', close); }, [closeMenu]);
+    const close = () => closeMenu();
+    window.addEventListener('click', close);
+    return () => window.removeEventListener('click', close);
+  }, [closeMenu]);
+
   useEffect(() => {
-      const onKey = (e) => { if (e.key === 'Escape') closeMenu(); }; window.addEventListener('keydown', onKey); return () => window.removeEventListener('keydown', onKey); }, [closeMenu]);
+    const onKey = (e) => { if (e.key === 'Escape') closeMenu(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [closeMenu]);
 
   const openMenuFromRect = useCallback((user, rect) => {
-    if (menu.open && Number(menu.user?.id) === Number(user?.id)) { closeMenu(); return; }
+    if (menu.open && Number(menu.user?.id) === Number(user?.id)) {
+      closeMenu();
+      return;
+    }
 
     const vw = window.innerWidth || document.documentElement.clientWidth || 0;
     const vh = window.innerHeight || document.documentElement.clientHeight || 0;
@@ -122,16 +153,56 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     setMenu({ open: true, user, x, y });
   }, [menu.open, menu.user?.id, closeMenu]);
 
+  const handleUnblock = useCallback(async (user) => {
+    if (!sessionUser && !sessionLoading) {
+      await alert({ title: 'Sesión', message: 'No autenticado', variant: 'warning', size: 'sm' });
+      return;
+    }
+    if (!user?.id) return;
+
+    const displayName = user?.nickname || `Usuario #${user.id}`;
+    const ok = await confirm({
+      title: 'Desbloquear',
+      message: `¿Quieres desbloquear a ${displayName}?`,
+      okText: 'Desbloquear',
+      cancelText: 'Cancelar',
+      variant: 'confirm',
+      size: 'sm',
+      danger: false,
+    });
+    if (!ok) return;
+
+    try {
+      await apiFetch(`/blocks/${user.id}`, { method: 'DELETE' });
+
+      setBlockedMap((prev) => {
+        const next = { ...(prev || {}) };
+        delete next[user.id];
+        return next;
+      });
+
+      setItems((prev) => (prev || []).map((i) => (
+        Number(i.id) === Number(user.id)
+          ? { ...i, blocked: false, blockedByMe: false, blockedByOther: false }
+          : i
+      )));
+
+      await alert({ title: 'Desbloquear', message: 'Usuario desbloqueado.', variant: 'success', size: 'sm' });
+    } catch (e) {
+      await alert({ title: 'Desbloquear', message: e?.message || 'No se pudo desbloquear.', variant: 'danger', size: 'sm' });
+    }
+  }, [sessionUser, sessionLoading, alert, confirm]);
+
   // Cargar MIS bloqueos
   useEffect(() => {
     let ignore = false;
 
     const loadBlocks = async () => {
-      if (!token) return;
+      if (sessionLoading) return;
+      if (!sessionUser) return;
+
       try {
-        const res = await fetch('/api/blocks', { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-        const data = await res.json();
+        const data = await apiFetch('/blocks');
         if (ignore) return;
 
         const map = {};
@@ -149,21 +220,20 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
 
     loadBlocks();
     return () => { ignore = true; };
-  }, [token, reloadTrigger]);
+  }, [sessionUser?.id, sessionLoading, reloadTrigger]);
 
   // Cargar favoritos + presencia (MODELO ve CLIENTES)
   useEffect(() => {
     let ignore = false;
 
     const load = async () => {
-      if (!token) return;
+      if (sessionLoading) return;
+      if (!sessionUser) return;
+
       setLoading(true);
 
       try {
-        const res = await fetch('/api/favorites/clients/meta', { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-
-        const data = await res.json();
+        const data = await apiFetch('/favorites/clients/meta');
 
         if (!ignore) {
           const mapped = (data || []).map((d) => {
@@ -200,17 +270,22 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
 
     load();
     return () => { ignore = true; };
-  }, [token, reloadTrigger, blockedMap]);
+  }, [sessionUser?.id, sessionLoading, reloadTrigger, blockedMap]);
 
-  // === 3) Reconciliar si /api/blocks llega después (evita “parpadeos” y estados inconsistentes)
+  // Reconciliar si /blocks llega después
   useEffect(() => {
     setItems((prev) => (prev || []).map((u) => {
       const id = u?.id;
       const blockedByMe = !!blockedMap?.[id];
-      const blocked = !!u?.blocked || blockedByMe; // respeta blocked del backend si ya venía true
+      const blocked = !!u?.blocked || blockedByMe;
       const blockedByOther = blocked && !blockedByMe;
 
-      if (!!u?.blockedByMe === blockedByMe && !!u?.blocked === blocked && !!u?.blockedByOther === blockedByOther) return u;
+      if (
+        !!u?.blockedByMe === blockedByMe &&
+        !!u?.blocked === blocked &&
+        !!u?.blockedByOther === blockedByOther
+      ) return u;
+
       return { ...u, blocked, blockedByMe, blockedByOther };
     }));
   }, [blockedMap]);
@@ -220,16 +295,15 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     let ignore = false;
 
     const run = async () => {
-      if (!items.length || !token) return;
+      if (sessionLoading) return;
+      if (!sessionUser) return;
+      if (!items.length) return;
 
       const ids = items.map((i) => i.id).filter(Boolean);
       const qs = encodeURIComponent(ids.join(','));
 
       try {
-        const r = await fetch(`/api/users/avatars?ids=${qs}`, { headers: { Authorization: `Bearer ${token}` } });
-        if (!r.ok) throw new Error((await r.text()) || `HTTP ${r.status}`);
-
-        const map = await r.json();
+        const map = await apiFetch(`/users/avatars?ids=${qs}`);
         if (!ignore) setAvatarMap(map || {});
       } catch (e) {
         console.warn('[favorites-model] avatars error:', e?.message);
@@ -238,20 +312,18 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
 
     run();
     return () => { ignore = true; };
-  }, [items, token]);
+  }, [items, sessionUser?.id, sessionLoading]);
 
   // No leídos
   useEffect(() => {
     let ignore = false;
 
     const loadUnread = async () => {
-      if (!token) return;
+      if (sessionLoading) return;
+      if (!sessionUser) return;
 
       try {
-        const res = await fetch('/api/messages/conversations', { headers: { Authorization: `Bearer ${token}` } });
-        if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-
-        const data = await res.json();
+        const data = await apiFetch('/messages/conversations');
         if (ignore) return;
 
         const map = {};
@@ -270,11 +342,14 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
 
     loadUnread();
     return () => { ignore = true; };
-  }, [token, reloadTrigger]);
+  }, [sessionUser?.id, sessionLoading, reloadTrigger]);
 
   const handleRemove = useCallback(async (user) => {
     const inv = String(user?.invited || '').toLowerCase();
-    if (inv === 'pending' || inv === 'sent') { await alert({ title:'Favoritos', message:'No puedes eliminar mientras la solicitud está en proceso.', variant:'warning', size:'sm' }); return; }
+    if (inv === 'pending' || inv === 'sent') {
+      await alert({ title: 'Favoritos', message: 'No puedes eliminar mientras la solicitud está en proceso.', variant: 'warning', size: 'sm' });
+      return;
+    }
     if (!user?.id) return;
 
     const displayName = user?.nickname || `Usuario #${user.id}`;
@@ -282,19 +357,20 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     if (!ok) return;
 
     try {
-      const res = await fetch(`/api/favorites/clients/${user.id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${token}` } });
-      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      await apiFetch(`/favorites/clients/${user.id}`, { method: 'DELETE' });
 
       setItems((prev) => (prev || []).filter((i) => Number(i.id) !== Number(user.id)));
-      await alert({ title:'Favoritos', message:'Eliminado de favoritos.', variant:'success', size:'sm' });
+      await alert({ title: 'Favoritos', message: 'Eliminado de favoritos.', variant: 'success', size: 'sm' });
     } catch (e) {
-      await alert({ title:'Favoritos', message: e?.message || 'No se pudo eliminar de favoritos.', variant:'danger', size:'sm' });
+      await alert({ title: 'Favoritos', message: e?.message || 'No se pudo eliminar de favoritos.', variant: 'danger', size: 'sm' });
     }
-  }, [token, alert, openRemoveFavoriteConfirm]);
-
+  }, [alert, openRemoveFavoriteConfirm]);
 
   const handleBlock = useCallback(async (user) => {
-    if (!token) { await alert({ title:'Sesión', message:'No autenticado', variant:'warning', size:'sm' }); return; }
+    if (!sessionUser && !sessionLoading) {
+      await alert({ title: 'Sesión', message: 'No autenticado', variant: 'warning', size: 'sm' });
+      return;
+    }
     if (!user?.id) return;
 
     const displayName = user?.nickname || `Usuario #${user.id}`;
@@ -302,41 +378,30 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     if (!pick?.confirmed) return;
 
     try {
-      const res = await fetch(`/api/blocks/${user.id}`, { method:'POST', headers:{ Authorization:`Bearer ${token}`, 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || '' }) });
-      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
+      await apiFetch(`/blocks/${user.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: pick.reason || '' }),
+      });
 
       setBlockedMap((prev) => ({ ...(prev || {}), [user.id]: true }));
-      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked:true, blockedByMe:true, blockedByOther:false } : i)));
-      setUnreadMap((prev) => { if (!prev?.[user.id]) return prev; const next = { ...prev }; delete next[user.id]; return next; });
+      setItems((prev) => (prev || []).map((i) => (
+        Number(i.id) === Number(user.id)
+          ? { ...i, blocked: true, blockedByMe: true, blockedByOther: false }
+          : i
+      )));
+      setUnreadMap((prev) => {
+        if (!prev?.[user.id]) return prev;
+        const next = { ...prev };
+        delete next[user.id];
+        return next;
+      });
 
-      await alert({ title:'Bloquear', message:'Usuario bloqueado.', variant:'success', size:'sm' });
+      await alert({ title: 'Bloquear', message: 'Usuario bloqueado.', variant: 'success', size: 'sm' });
     } catch (e) {
-      await alert({ title:'Bloquear', message: e?.message || 'No se pudo bloquear.', variant:'danger', size:'sm' });
+      await alert({ title: 'Bloquear', message: e?.message || 'No se pudo bloquear.', variant: 'danger', size: 'sm' });
     }
-  }, [token, alert, openBlockReasonModal]);
-
-
-  const handleUnblock = useCallback(async (user) => {
-    if (!token) { await alert({ title:'Sesión', message:'No autenticado', variant:'warning', size:'sm' }); return; }
-    if (!user?.id) return;
-
-    const displayName = user?.nickname || `Usuario #${user.id}`;
-    const ok = await confirm({ title:'Desbloquear', message:`¿Quieres desbloquear a ${displayName}?`, okText:'Desbloquear', cancelText:'Cancelar', variant:'confirm', size:'sm', danger:false });
-    if (!ok) return;
-
-    try {
-      const res = await fetch(`/api/blocks/${user.id}`, { method:'DELETE', headers:{ Authorization:`Bearer ${token}` } });
-      if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-
-      setBlockedMap((prev) => { const next = { ...(prev || {}) }; delete next[user.id]; return next; });
-      setItems((prev) => (prev || []).map((i) => (Number(i.id) === Number(user.id) ? { ...i, blocked:false, blockedByMe:false, blockedByOther:false } : i)));
-
-      await alert({ title:'Desbloquear', message:'Usuario desbloqueado.', variant:'success', size:'sm' });
-    } catch (e) {
-      await alert({ title:'Desbloquear', message: e?.message || 'No se pudo desbloquear.', variant:'danger', size:'sm' });
-    }
-  }, [token, alert, confirm]);
-
+  }, [sessionUser, sessionLoading, alert, openBlockReasonModal]);
 
   // Permite disparar desbloqueo desde fuera
   useEffect(() => {
@@ -375,7 +440,6 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
           </>
         )}
 
-        {/* Si está bloqueado y el bloqueo es mío → puedo desbloquear */}
         {isBlocked && blockedByMe && (
           <FavMenuItem type="button" onClick={async () => { closeMenu(); await handleUnblock(u); }}>
             <FavMenuIcon><FontAwesomeIcon icon={faUnlock} /></FavMenuIcon>
@@ -383,7 +447,6 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
           </FavMenuItem>
         )}
 
-        {/* Si está bloqueado por el otro lado → informativo, sin acción */}
         {isBlocked && !blockedByMe && blockedByOther && (
           <FavMenuItem type="button" disabled title="Solo el otro usuario puede desbloquear">
             <FavMenuIcon><FontAwesomeIcon icon={faBan} /></FavMenuIcon>
@@ -391,7 +454,6 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
           </FavMenuItem>
         )}
 
-        {/* Caso raro: bloqueado pero no sé de quién → lo trato como “sin acción” */}
         {isBlocked && !blockedByMe && !blockedByOther && (
           <FavMenuItem type="button" disabled title="Acción no disponible">
             <FavMenuIcon><FontAwesomeIcon icon={faBan} /></FavMenuIcon>
@@ -402,6 +464,9 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
       document.body
     );
   }, [menu, closeMenu, handleRemove, handleBlock, handleUnblock]);
+
+  if (sessionLoading) return <StateRow>Cargando sesión…</StateRow>;
+  if (!sessionUser) return <StateRow>Inicia sesión para ver tus favoritos.</StateRow>;
 
   if (loading) return <StateRow>Cargando…</StateRow>;
   if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;

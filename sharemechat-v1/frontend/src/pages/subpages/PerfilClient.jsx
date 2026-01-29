@@ -1,6 +1,8 @@
 // src/pages/subpages/PerfilClient.jsx
 import React, { useEffect, useState, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
+import { useSession } from '../../components/SessionProvider';
+import { apiFetch } from '../../config/http';
 import { useAppModals } from '../../components/useAppModals';
 
 // Navbar unificado
@@ -59,13 +61,13 @@ import {
   SecurityActions,
 } from '../../styles/subpages/PerfilClientModelStyle';
 
-const DOCS_GET_URL = '/api/clients/documents/me';
-const DOCS_UPLOAD_URL = '/api/clients/documents';
+const DOCS_GET_URL = '/clients/documents/me';
+const DOCS_UPLOAD_URL = '/clients/documents';
 
 const PerfilClient = () => {
   const history = useHistory();
-  const token = localStorage.getItem('token');
   const { alert, openUnsubscribeModal } = useAppModals();
+  const { user: sessionUser, loading: sessionLoading } = useSession();
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -85,18 +87,22 @@ const PerfilClient = () => {
   const picInputRef = useRef(null);
 
   useEffect(() => {
-    if (!token) { history.push('/login'); return; }
+    if (!sessionUser && !sessionLoading) {
+      history.push('/login');
+      return;
+    }
+
+    if (!sessionUser) return;
 
     const load = async () => {
       setLoading(true);
       setError('');
+
       try {
-        const res = await fetch('/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!res.ok) throw new Error((await res.text()) || 'No se pudo cargar el perfil');
-        const data = await res.json();
+        const data = await apiFetch('/users/me');
+
         setUserId(data.id);
+
         setForm({
           email: data.email || '',
           name: data.name || '',
@@ -105,34 +111,22 @@ const PerfilClient = () => {
           biography: data.biography || '',
           interests: data.interests || '',
         });
+
         await loadDocs();
       } catch (e) {
-        setError(e.message);
+        setError(e.message || 'No se pudo cargar el perfil');
       } finally {
         setLoading(false);
       }
     };
 
-    const loadDocs = async () => {
-      try {
-        const r = await fetch(DOCS_GET_URL, { headers: { Authorization: `Bearer ${token}` } });
-        if (!r.ok) return;
-        const d = await r.json();
-        setDocs({ urlPic: d.urlPic || null });
-      } catch {
-        // noop
-      }
-    };
-
     load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, history]);
+  }, [sessionUser, sessionLoading, history]);
+
 
   const loadDocs = async () => {
     try {
-      const r = await fetch(DOCS_GET_URL, { headers: { Authorization: `Bearer ${token}` } });
-      if (!r.ok) return;
-      const d = await r.json();
+      const d = await apiFetch(DOCS_GET_URL);
       setDocs({ urlPic: d.urlPic || null });
     } catch {
       // noop
@@ -149,6 +143,7 @@ const PerfilClient = () => {
     setSaving(true);
     setError('');
     setMsg('');
+
     try {
       const payload = {
         name: form.name || null,
@@ -157,15 +152,16 @@ const PerfilClient = () => {
         biography: form.biography || null,
         interests: form.interests || null,
       };
-      const res = await fetch(`/api/users/${userId}`, {
+
+      await apiFetch(`/users/${userId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
-      if (!res.ok) throw new Error((await res.text()) || 'No se pudo guardar');
+
       setMsg('Datos guardados correctamente.');
     } catch (e) {
-      setError(e.message);
+      setError(e.message || 'No se pudo guardar');
     } finally {
       setSaving(false);
     }
@@ -176,47 +172,52 @@ const PerfilClient = () => {
     if (!confirmed) return;
 
     try {
-      const res = await fetch('/api/users/unsubscribe', {
+      await apiFetch('/users/unsubscribe', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason }),
       });
 
-      if (res.ok) {
-        localStorage.removeItem('token');
-        await alert({ title:'Cuenta', message:'Cuenta dada de baja.', variant:'success', size:'sm' });
-        history.push('/login');
-        return;
-      }
+      await alert({
+        title: 'Cuenta',
+        message: 'Cuenta dada de baja.',
+        variant: 'success',
+        size: 'sm',
+      });
 
-      const txt = await res.text().catch(() => '');
-      await alert({ title:'Cuenta', message: txt || 'No se pudo completar la baja.', variant:'danger', size:'sm' });
+      history.push('/login');
     } catch (e) {
-      await alert({ title:'Cuenta', message: e?.message || 'No se pudo completar la baja.', variant:'danger', size:'sm' });
+      await alert({
+        title: 'Cuenta',
+        message: e?.message || 'No se pudo completar la baja.',
+        variant: 'danger',
+        size: 'sm',
+      });
     }
   };
 
 
   const uploadPhoto = async () => {
     if (!picFile) return;
+
     setUploading(true);
     setError('');
     setMsg('');
+
     try {
       const fd = new FormData();
       fd.append('pic', picFile);
-      const res = await fetch(DOCS_UPLOAD_URL, {
+
+      const data = await apiFetch(DOCS_UPLOAD_URL, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
         body: fd,
       });
-      if (!res.ok) throw new Error((await res.text()) || 'No se pudo subir la foto');
-      const data = await res.json();
+
       setDocs({ urlPic: data.urlPic || null });
       setPicFile(null);
       setMsg('Foto subida correctamente.');
     } catch (e) {
-      setError(e.message);
+      setError(e.message || 'No se pudo subir la foto');
     } finally {
       setUploading(false);
     }
@@ -225,20 +226,21 @@ const PerfilClient = () => {
   const deletePhoto = async () => {
     if (!docs.urlPic) return;
     if (!window.confirm('¿Eliminar tu foto de perfil?')) return;
+
     setDeleting(true);
     setError('');
     setMsg('');
+
     try {
-      const res = await fetch(`${DOCS_UPLOAD_URL}?field=pic`, {
+      await apiFetch(`${DOCS_UPLOAD_URL}?field=pic`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar la foto');
+
       setDocs({ urlPic: null });
       setPicFile(null);
       setMsg('Foto eliminada.');
     } catch (e) {
-      setError(e.message);
+      setError(e.message || 'No se pudo eliminar la foto');
     } finally {
       setDeleting(false);
     }

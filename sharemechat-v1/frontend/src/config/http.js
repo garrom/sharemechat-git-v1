@@ -1,14 +1,15 @@
-import { buildApiUrl, getToken } from './api';
+import { buildApiUrl } from './api';
 
 const isJsonResponse = (res) => (res.headers.get('content-type') || '').includes('application/json');
 
-export const apiFetch = async (path, { auth = true, headers = {}, ...options } = {}) => {
-  const token = getToken();
+export const apiFetch = async (path, { headers = {}, ...options } = {}) => {
   const finalHeaders = { ...headers };
 
-  if (auth && token) finalHeaders.Authorization = `Bearer ${token}`;
-
-  const res = await fetch(buildApiUrl(path), { ...options, headers: finalHeaders });
+  const res = await fetch(buildApiUrl(path), {
+    credentials: 'include',
+    ...options,
+    headers: finalHeaders
+  });
 
   if (!res.ok) {
     const msg = isJsonResponse(res) ? JSON.stringify(await res.json()) : (await res.text());

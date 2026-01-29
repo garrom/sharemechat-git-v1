@@ -97,7 +97,14 @@ public class MatchingHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+
         Long userId = resolveUserId(session);
+        log.info(
+                "[WS][match][OPEN] sid={} uid={} cookies={}",
+                session.getId(),
+                userId,
+                session.getHandshakeHeaders().get("Cookie")
+        );
         if (userId == null) {
             session.close(CloseStatus.BAD_DATA);
             return;
@@ -105,6 +112,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         sessionUserIds.put(session.getId(), userId);
         // El rol se fija luego con "set-role"
     }
+
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
@@ -1016,6 +1024,8 @@ public class MatchingHandler extends TextWebSocketHandler {
     }
 
     private String extractToken(WebSocketSession session) {
+
+        // 1 Querystring fallback
         try {
             URI uri = session.getUri();
             if (uri != null && uri.getQuery() != null) {
@@ -1024,11 +1034,27 @@ public class MatchingHandler extends TextWebSocketHandler {
             }
         } catch (Exception ignored) {}
 
+        // 2 Authorization header fallback
         try {
             List<String> auths = session.getHandshakeHeaders().get("Authorization");
             if (auths != null && !auths.isEmpty()) {
                 String h = auths.get(0);
                 if (h != null && h.startsWith("Bearer ")) return h.substring(7);
+            }
+        } catch (Exception ignored) {}
+
+        // 3 COOKIE JWT (ACCESS_TOKEN)
+        try {
+            List<String> cookies = session.getHandshakeHeaders().get("Cookie");
+            if (cookies != null) {
+                for (String c : cookies) {
+                    for (String part : c.split(";")) {
+                        String[] kv = part.trim().split("=", 2);
+                        if (kv.length == 2 && kv[0].equals("access_token")) {
+                            return kv[1];
+                        }
+                    }
+                }
             }
         } catch (Exception ignored) {}
 

@@ -16,8 +16,6 @@ export const SessionProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const token = useMemo(() => localStorage.getItem('token'), []);
-
   const applyLocale = (u) => {
     const uiLocale = (u && (u.uiLocale || u.ui_locale)) ? (u.uiLocale || u.ui_locale) : null;
     if (!uiLocale) return;
@@ -35,20 +33,26 @@ export const SessionProvider = ({ children }) => {
     setError(null);
 
     try {
-      if (!localStorage.getItem('token')) {
-        setUser(null);
-        setLoading(false);
-        return;
-      }
-
       const data = await apiFetch('/users/me');
+
       setUser(data || null);
       applyLocale(data);
+
       setLoading(false);
+
+      // IMPORTANTE: devolvemos el user recién cargado
+      return data || null;
     } catch (e) {
+      // si no hay sesión (401), user null sin “error”
       setUser(null);
-      setError(e);
       setLoading(false);
+
+      if (!String(e?.message || '').includes('401')) {
+        setError(e);
+      }
+
+      // IMPORTANTE: devolvemos null para que el caller lo sepa
+      return null;
     }
   };
 

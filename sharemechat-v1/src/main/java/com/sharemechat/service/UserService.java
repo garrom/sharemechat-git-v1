@@ -6,10 +6,7 @@ import com.sharemechat.entity.LoginResponse;
 import com.sharemechat.entity.Unsubscribe;
 import com.sharemechat.entity.User;
 import com.sharemechat.entity.UserLanguage;
-import com.sharemechat.exception.EmailAlreadyInUseException;
-import com.sharemechat.exception.NicknameAlreadyInUseException;
-import com.sharemechat.exception.UnderageModelException;
-import com.sharemechat.exception.UserNotFoundException;
+import com.sharemechat.exception.*;
 import com.sharemechat.repository.*;
 import com.sharemechat.security.JwtUtil;
 import jakarta.transaction.Transactional;
@@ -270,6 +267,12 @@ public class UserService {
         return userRepository.findByEmail(email).orElse(null);
     }
 
+    public User findById(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(
+                        "Usuario no encontrado con ID: " + id));
+    }
+
     @Transactional
     public UserDTO updateUser(Long id, @Valid UserUpdateDTO userUpdateDTO) {
         User user = userRepository.findById(id)
@@ -393,6 +396,7 @@ public class UserService {
 
     /** Devuelve null si el texto es null o está en blanco; en otro caso devuelve trim(). */
     private String normalize(String text) {
+
         return (text == null || text.trim().isEmpty()) ? null : text.trim();
     }
 
@@ -449,6 +453,28 @@ public class UserService {
 
         userLanguageRepository.save(ul);
     }
+
+
+    public User authenticateAndLoadUser(@Valid UserLoginDTO loginDTO) {
+
+        Optional<User> userOpt = userRepository.findByEmail(loginDTO.getEmail());
+        if (userOpt.isEmpty()) {
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+
+        User user = userOpt.get();
+
+        if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+
+        if (Boolean.TRUE.equals(user.getUnsubscribe())) {
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+
+        return user;
+    }
+
 
     public UserDTO mapToDTO(User user) {
         UserDTO dto = new UserDTO();
