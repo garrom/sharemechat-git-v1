@@ -18,6 +18,7 @@ const ForgotPassword = () => {
     try {
       const res = await fetch('/api/auth/password/forgot', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),
       });
@@ -34,6 +35,7 @@ const ForgotPassword = () => {
       setStatus({ loading: false, ok: '', err: 'Error de conexión. Inténtalo de nuevo.' });
     }
   };
+
 
   return (
     <Container>
