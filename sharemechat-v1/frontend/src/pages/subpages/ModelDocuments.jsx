@@ -44,7 +44,6 @@ const DOCS_UPLOAD_URL = '/api/models/documents'; // POST: idFront|idBack|verific
 
 const ModelDocuments = () => {
   const history = useHistory();
-  const token = localStorage.getItem('token');
 
   const [userName, setUserName] = useState('Usuario');
 
@@ -80,7 +79,8 @@ const ModelDocuments = () => {
     setMsg('');
     try {
       const res = await fetch(DOCS_GET_URL, {
-        headers: { Authorization: `Bearer ${token}` },
+        method: 'GET',
+        credentials: 'include',
       });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
       const data = await res.json();
@@ -98,14 +98,11 @@ const ModelDocuments = () => {
   };
 
   useEffect(() => {
-    if (!token) {
-      history.push('/login');
-      return;
-    }
     (async () => {
       try {
         const meRes = await fetch('/api/users/me', {
-          headers: { Authorization: `Bearer ${token}` },
+          method: 'GET',
+          credentials: 'include',
         });
         if (meRes.ok) {
           const me = await meRes.json();
@@ -117,7 +114,7 @@ const ModelDocuments = () => {
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, history]);
+  }, [history]);
 
   const extractOriginalNameFromUrl = (url) => {
     if (!url) return '';
@@ -145,13 +142,15 @@ const ModelDocuments = () => {
     try {
       const fd = new FormData();
       fd.append(fieldName, fileObj);
+
       const res = await fetch(DOCS_UPLOAD_URL, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
         body: fd,
       });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
       const data = await res.json();
+
       setDoc({
         urlVerificFront: data.urlVerificFront || null,
         urlVerificBack: data.urlVerificBack || null,
@@ -186,13 +185,10 @@ const ModelDocuments = () => {
     setError('');
     setMsg('');
     try {
-      const res = await fetch(
-        `${DOCS_UPLOAD_URL}?field=${encodeURIComponent(fieldName)}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const res = await fetch(`${DOCS_UPLOAD_URL}?field=${encodeURIComponent(fieldName)}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
       if (!res.ok) throw new Error((await res.text()) || 'No se pudo eliminar el archivo');
 
       setDoc((d) => {
@@ -225,7 +221,6 @@ const ModelDocuments = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
     window.location.href = '/';
   };
 
@@ -283,29 +278,11 @@ const ModelDocuments = () => {
             </CardSubtitle>
           </CardHeader>
           <CardBody>
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: 12,
-                marginBottom: 8,
-                flexWrap: 'wrap',
-              }}
-            >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
               <span style={{ fontSize: '0.9rem', color: '#cbd5f5' }}>
                 Estado actual de la revisión
               </span>
-              <span
-                style={{
-                  ...statusStyles,
-                  padding: '4px 10px',
-                  borderRadius: 999,
-                  fontSize: 12,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.08em',
-                }}
-              >
+              <span style={{ ...statusStyles, padding: '4px 10px', borderRadius: 999, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
                 {doc.verificationStatus || 'PENDING'}
               </span>
             </div>
@@ -346,9 +323,7 @@ const ModelDocuments = () => {
                   />
                   <ProfileSecondaryButton
                     type="button"
-                    onClick={() =>
-                      idFrontInputRef.current && idFrontInputRef.current.click()
-                    }
+                    onClick={() => idFrontInputRef.current && idFrontInputRef.current.click()}
                   >
                     Seleccionar archivo
                   </ProfileSecondaryButton>
@@ -364,9 +339,7 @@ const ModelDocuments = () => {
                   {doc.urlVerificFront && (
                     <ProfileDangerOutlineButton
                       type="button"
-                      onClick={() =>
-                        deleteSingle('idFront', '¿Eliminar la imagen frontal del documento?')
-                      }
+                      onClick={() => deleteSingle('idFront', '¿Eliminar la imagen frontal del documento?')}
                       disabled={deletingField === 'idFront'}
                     >
                       {deletingField === 'idFront' ? 'Eliminando…' : 'Eliminar frontal'}
@@ -400,9 +373,7 @@ const ModelDocuments = () => {
                   />
                   <ProfileSecondaryButton
                     type="button"
-                    onClick={() =>
-                      idBackInputRef.current && idBackInputRef.current.click()
-                    }
+                    onClick={() => idBackInputRef.current && idBackInputRef.current.click()}
                   >
                     Seleccionar archivo
                   </ProfileSecondaryButton>
@@ -418,9 +389,7 @@ const ModelDocuments = () => {
                   {doc.urlVerificBack && (
                     <ProfileDangerOutlineButton
                       type="button"
-                      onClick={() =>
-                        deleteSingle('idBack', '¿Eliminar la imagen trasera del documento?')
-                      }
+                      onClick={() => deleteSingle('idBack', '¿Eliminar la imagen trasera del documento?')}
                       disabled={deletingField === 'idBack'}
                     >
                       {deletingField === 'idBack' ? 'Eliminando…' : 'Eliminar trasera'}
@@ -457,9 +426,7 @@ const ModelDocuments = () => {
                   />
                   <ProfileSecondaryButton
                     type="button"
-                    onClick={() =>
-                      verifDocInputRef.current && verifDocInputRef.current.click()
-                    }
+                    onClick={() => verifDocInputRef.current && verifDocInputRef.current.click()}
                   >
                     Seleccionar archivo
                   </ProfileSecondaryButton>
@@ -475,12 +442,7 @@ const ModelDocuments = () => {
                   {doc.urlVerificDoc && (
                     <ProfileDangerOutlineButton
                       type="button"
-                      onClick={() =>
-                        deleteSingle(
-                          'verificDoc',
-                          '¿Eliminar el archivo de verificación?'
-                        )
-                      }
+                      onClick={() => deleteSingle('verificDoc', '¿Eliminar el archivo de verificación?')}
                       disabled={deletingField === 'verificDoc'}
                     >
                       {deletingField === 'verificDoc' ? 'Eliminando…' : 'Eliminar archivo'}

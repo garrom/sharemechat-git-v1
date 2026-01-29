@@ -28,6 +28,7 @@ export const SessionProvider = ({ children }) => {
     }
   };
 
+  // SessionProvider.jsx (sustituye SOLO loadMe por esto)
   const loadMe = async () => {
     setLoading(true);
     setError(null);
@@ -39,22 +40,30 @@ export const SessionProvider = ({ children }) => {
       applyLocale(data);
 
       setLoading(false);
-
-      // IMPORTANTE: devolvemos el user recién cargado
       return data || null;
     } catch (e) {
-      // si no hay sesión (401), user null sin “error”
-      setUser(null);
+      const msg = String(e?.message || '');
+
+      // ✅ Solo consideramos "sin sesión" cuando es 401
+      if (msg.includes('401')) {
+        setUser(null);
+      } else {
+        // ✅ Si es un error temporal (502/504/etc), NO tiramos al usuario
+        // mantenemos el user anterior para no expulsar a nadie
+        // (si user ya era null, seguirá null)
+      }
+
       setLoading(false);
 
-      if (!String(e?.message || '').includes('401')) {
+      // Guardamos error solo si no es 401
+      if (!msg.includes('401')) {
         setError(e);
       }
 
-      // IMPORTANTE: devolvemos null para que el caller lo sepa
-      return null;
+      return msg.includes('401') ? null : user;
     }
   };
+
 
   useEffect(() => {
     loadMe();

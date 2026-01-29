@@ -1,16 +1,28 @@
 // src/components/RequireRole.jsx
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Redirect } from 'react-router-dom';
 import Roles from '../constants/Roles';
 import { useSession } from './SessionProvider';
 
 const RequireRole = ({ role, roles, children }) => {
-  const { user, loading } = useSession();
+  const { user, loading, refresh } = useSession();
+  const triedRef = useRef(false);
+  const [retrying, setRetrying] = useState(false);
 
-  // Mientras SessionProvider hace /api/users/me
-  if (loading) return null;
+  useEffect(() => {
+    if (loading) return;
 
-  // No autenticado => login
+    // Si no hay user, reintentamos 1 vez (por si hubo fallo temporal)
+    if (!user && !triedRef.current) {
+      triedRef.current = true;
+      setRetrying(true);
+      Promise.resolve(refresh())
+        .finally(() => setRetrying(false));
+    }
+  }, [loading, user, refresh]);
+
+  if (loading || retrying) return null;
+
   if (!user) return <Redirect to="/login" />;
 
   const meRole = user?.role;
@@ -22,18 +34,12 @@ const RequireRole = ({ role, roles, children }) => {
     return <Redirect to="/" />;
   };
 
-  // Caso 1: roles (array)
   if (Array.isArray(roles) && roles.length > 0) {
-    if (!meRole || !roles.includes(meRole)) {
-      return redirectToOwnDashboard();
-    }
+    if (!meRole || !roles.includes(meRole)) return redirectToOwnDashboard();
     return children;
   }
 
-  // Caso 2: role (string)
-  if (!meRole || meRole !== role) {
-    return redirectToOwnDashboard();
-  }
+  if (!meRole || meRole !== role) return redirectToOwnDashboard();
 
   return children;
 };

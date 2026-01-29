@@ -52,7 +52,7 @@ const DashboardUserModel = () => {
   }, [sessionUser, sessionLoading, history]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     history.push('/');
   };
 

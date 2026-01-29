@@ -30,6 +30,7 @@ import {
   CheckBox,
   LogoutButton
 } from '../../styles/AdminStyles';
+import { buildWsUrl, WS_PATHS } from '../../config/api';
 
 const DashboardAdmin = () => {
   const [userData] = useState({ name: 'Administrador' });
@@ -82,7 +83,6 @@ const DashboardAdmin = () => {
   const wsAdminRef = useRef(null);
   const pingAdminRef = useRef(null);
   const history = useHistory();
-  const token = localStorage.getItem('token');
 
   // Tablas según tu SHOW TABLES
   const DB_TABLES = [
@@ -121,7 +121,7 @@ const DashboardAdmin = () => {
   const loadModelDocs = async (userId) => {
     try {
       const res = await fetch(`/api/admin/model-docs/${userId}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (!res.ok) return;
       const data = await res.json();
@@ -154,7 +154,8 @@ const DashboardAdmin = () => {
     try {
       const res = await fetch(`/api/admin/model-checklist/${userId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: value }),
       });
       if (!res.ok) throw new Error((await res.text()) || 'Error guardando checklist');
@@ -186,15 +187,33 @@ const DashboardAdmin = () => {
 
   // ---------------- effects
   useEffect(() => {
-    if (!token) {
-      history.push('/');
-      return;
-    }
+    (async () => {
+      try {
+        const res = await fetch('/api/users/me', {
+          credentials: 'include',
+        });
+
+        if (res.status === 401) {
+          history.push('/');
+          return;
+        }
+
+        if (!res.ok) throw new Error();
+
+        const data = await res.json();
+        if (data.role !== Roles.ADMIN) {
+          history.push('/');
+        }
+      } catch {
+        history.push('/');
+      }
+    })();
+
     if (activeTab === 'models') {
       fetchUsers();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, history, activeTab]);
+  }, [history, activeTab]);
 
   useEffect(() => {
     if (activeTab !== 'models') return;
@@ -223,11 +242,10 @@ const DashboardAdmin = () => {
       }
       return;
     }
-    if (!token) return;
 
     setStatsError('');
     try {
-      const wsUrl = `wss://test.sharemechat.com/match?token=${encodeURIComponent(token)}`;
+      const wsUrl = buildWsUrl(WS_PATHS.match);
       const ws = new WebSocket(wsUrl);
       wsAdminRef.current = ws;
 
@@ -274,7 +292,7 @@ const DashboardAdmin = () => {
         wsAdminRef.current = null;
       }
     };
-  }, [activeTab, token]);
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab !== 'finance') return;
@@ -283,9 +301,9 @@ const DashboardAdmin = () => {
       setFinanceError('');
       try {
         const [mRes, cRes, sRes] = await Promise.all([
-          fetch('/api/admin/finance/top-models?limit=10', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/admin/finance/top-clients?limit=10', { headers: { Authorization: `Bearer ${token}` } }),
-          fetch('/api/admin/finance/summary', { headers: { Authorization: `Bearer ${token}` } }),
+          fetch('/api/admin/finance/top-models?limit=10', { credentials: 'include' }),
+          fetch('/api/admin/finance/top-clients?limit=10', { credentials: 'include' }),
+          fetch('/api/admin/finance/summary', { credentials: 'include' }),
         ]);
         if (!mRes.ok || !cRes.ok || !sRes.ok) throw new Error('Error al cargar análisis financieros');
         const [m, c, s] = await Promise.all([mRes.json(), cRes.json(), sRes.json()]);
@@ -298,7 +316,7 @@ const DashboardAdmin = () => {
         setFinanceLoading(false);
       }
     })();
-  }, [activeTab, token]);
+  }, [activeTab]);
 
   useEffect(() => {
     if (activeTab !== 'db' || !dbTable) return;
@@ -307,7 +325,7 @@ const DashboardAdmin = () => {
       setDbError('');
       try {
         const res = await fetch(`/api/admin/db/view?table=${encodeURIComponent(dbTable)}&limit=${dbLimit}`, {
-          headers: { Authorization: `Bearer ${token}` },
+          credentials: 'include',
         });
         if (!res.ok) throw new Error((await res.text()) || 'Error al consultar BBDD');
         const data = await res.json();
@@ -319,7 +337,7 @@ const DashboardAdmin = () => {
         setDbLoading(false);
       }
     })();
-  }, [activeTab, dbTable, dbLimit, token]);
+  }, [activeTab, dbTable, dbLimit]);
 
   // --------------- data fetchers base
   const fetchUsers = async () => {
@@ -327,7 +345,7 @@ const DashboardAdmin = () => {
     setError('');
     try {
       const response = await fetch('/api/admin/models', {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Error al cargar modelos');
       const data = await response.json();
@@ -350,7 +368,7 @@ const DashboardAdmin = () => {
     try {
       const response = await fetch(`/api/admin/review/${userId}?action=${action}`, {
         method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (!response.ok) throw new Error('Error al actualizar verificación');
       const message = await response.text();
@@ -362,7 +380,7 @@ const DashboardAdmin = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     history.push('/');
   };
 
@@ -373,9 +391,9 @@ const DashboardAdmin = () => {
     try {
       const res = await fetch('/api/admin/audit/run', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ scope: auditScope, dryRun: auditDryRun }),
       });
@@ -394,7 +412,7 @@ const DashboardAdmin = () => {
     setAnomError('');
     try {
       const res = await fetch(`/api/admin/audit/anomalies?limit=${encodeURIComponent(anomLimit)}`, {
-        headers: { Authorization: `Bearer ${token}` },
+        credentials: 'include',
       });
       if (!res.ok) throw new Error((await res.text()) || 'Error cargando anomalías');
       const data = await res.json();
