@@ -182,13 +182,14 @@ public class AuthController {
                 .httpOnly(true)
                 .secure(secureCookies)
                 .sameSite("None")
-                .path("/api/auth/refresh")
+                .path("/")
                 .domain(cookieDomain)
                 .maxAge(seconds)
                 .build();
 
         res.addHeader("Set-Cookie", cookie.toString());
     }
+
 
     private void deleteCookie(HttpServletResponse res, String name) {
 

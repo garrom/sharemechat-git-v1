@@ -1160,10 +1160,16 @@ const DashboardModel = () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
 
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch {
+      // noop (aunque falle, limpiamos cliente)
+    }
+
     stopAll();
-    // token gestionado por SessionProvider/apiFetch (no localStorage)
     history.push('/');
   };
+
 
 
   const handleGoStats = async () => {

@@ -9,7 +9,6 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.stream.Collectors;
 
 @ControllerAdvice
@@ -151,5 +150,25 @@ public class GlobalExceptionHandler {
         );
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(body);
     }
+
+    // 429 – Rate limit
+    @ExceptionHandler(TooManyRequestsException.class)
+    public ResponseEntity<ApiError> handleTooManyRequests(TooManyRequestsException ex, HttpServletRequest req) {
+        log.warn("Rate limit: {} uri={}", ex.getMessage(), req.getRequestURI());
+
+        ApiError body = new ApiError(
+                HttpStatus.TOO_MANY_REQUESTS.value(),
+                "Too Many Requests",
+                ex.getMessage() != null ? ex.getMessage() : "Demasiadas solicitudes",
+                req.getRequestURI()
+        );
+
+        long retryAfterSec = Math.max(1L, ex.getRetryAfterMs() / 1000L);
+
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .header("Retry-After", String.valueOf(retryAfterSec))
+                .body(body);
+    }
+
 
 }
