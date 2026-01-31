@@ -13,6 +13,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGem, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 import BlogContent from '../blog/BlogContent';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
+import { apiFetch } from '../../config/http';
+
 
 const DashboardUserClient = () => {
   const history = useHistory();
@@ -212,11 +214,10 @@ const DashboardUserClient = () => {
   const handleLogout = async () => {
     stopAll();
     try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      await apiFetch('/auth/logout', { method: 'POST' });
     } catch {
       /* noop */
     }
-    localStorage.removeItem('token'); // por si quedaba basura vieja
     history.push('/');
   };
 

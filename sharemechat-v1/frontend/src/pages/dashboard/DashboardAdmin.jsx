@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
+import { apiFetch } from '../../config/http';
 import Roles from '../../constants/Roles';
 import {
   StyledContainer,
@@ -379,8 +380,13 @@ const DashboardAdmin = () => {
     }
   };
 
-  const handleLogout = () => {
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  const handleLogout = async () => {
+
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch {
+      /* noop */
+    }
     history.push('/');
   };
 

@@ -51,8 +51,13 @@ const DashboardUserModel = () => {
     setInfo(`Estado de verificación: ${sessionUser.verificationStatus || 'PENDING'}`);
   }, [sessionUser, sessionLoading, history]);
 
-  const handleLogout = () => {
-    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+  const handleLogout = async () => {
+
+    try {
+      await apiFetch('/auth/logout', { method: 'POST' });
+    } catch {
+      /* noop */
+    }
     history.push('/');
   };
 
