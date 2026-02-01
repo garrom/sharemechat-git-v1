@@ -97,10 +97,10 @@ public class PasswordResetService {
     // en com.sharemechat.service.PasswordResetService
 
     @Transactional
-    public void createAndSendToken(String email) {
-        // Reutilizamos tu método existente requestReset(...)
-        requestReset(email, "0.0.0.0", "password-reset-controller");
+    public void createAndSendToken(String email, String requestIp, String userAgent) {
+        requestReset(email, requestIp, userAgent);
     }
+
 
     /**
      * Valida el token (raw), comprueba expiración y marca como usado.

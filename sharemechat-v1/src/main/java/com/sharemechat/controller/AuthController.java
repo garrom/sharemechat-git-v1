@@ -6,6 +6,8 @@ import com.sharemechat.entity.User;
 import com.sharemechat.repository.RefreshTokenRepository;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.UserService;
+import com.sharemechat.config.IpConfig;
+import com.sharemechat.service.ApiRateLimitService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,6 +26,8 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserService userService;
     private final RefreshTokenRepository refreshRepo;
+    private final ApiRateLimitService rateLimitService;
+
 
     @Value("${auth.cookieDomain}")
     private String cookieDomain;
@@ -34,11 +38,13 @@ public class AuthController {
     public AuthController(
             JwtUtil jwtUtil,
             UserService userService,
-            RefreshTokenRepository refreshRepo
+            RefreshTokenRepository refreshRepo,
+            ApiRateLimitService rateLimitService
     ) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
         this.refreshRepo = refreshRepo;
+        this.rateLimitService = rateLimitService;
     }
 
     // =========================================================
@@ -51,6 +57,8 @@ public class AuthController {
             HttpServletRequest req,
             HttpServletResponse res
     ) {
+
+        rateLimitService.checkLoginEmail(dto.getEmail());
 
         User u = userService.authenticateAndLoadUser(dto);
 
@@ -67,7 +75,7 @@ public class AuthController {
         rt.setUserId(u.getId());
         rt.setTokenHash(hash);
         rt.setExpiresAt(LocalDateTime.now().plusDays(14));
-        rt.setIpAddress(req.getRemoteAddr());
+        rt.setIpAddress(IpConfig.getClientIp(req));
         rt.setUserAgent(req.getHeader("User-Agent"));
 
         refreshRepo.save(rt);
@@ -82,11 +90,13 @@ public class AuthController {
     // REFRESH
     // =========================================================
 
-    @PostMapping("/refresh")
     public ResponseEntity<?> refresh(
             @CookieValue(name = "refresh_token", required = false) String refreshToken,
+            HttpServletRequest req,
             HttpServletResponse res
     ) {
+        rateLimitService.checkRefreshIp(IpConfig.getClientIp(req));
+
 
         if (refreshToken == null) {
             return ResponseEntity.status(401).build();
@@ -103,6 +113,8 @@ public class AuthController {
 
             return ResponseEntity.status(401).build();
         }
+
+        rateLimitService.checkRefreshUser(stored.getUserId());
 
         User u = userService.findById(stored.getUserId());
 
