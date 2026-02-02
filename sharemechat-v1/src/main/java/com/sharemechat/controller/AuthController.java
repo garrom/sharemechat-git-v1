@@ -87,25 +87,25 @@ public class AuthController {
     }
 
     // =========================================================
-    // REFRESH
-    // =========================================================
-
+// REFRESH
+// =========================================================
+    @PostMapping("/refresh")
     public ResponseEntity<?> refresh(
             @CookieValue(name = "refresh_token", required = false) String refreshToken,
             HttpServletRequest req,
             HttpServletResponse res
     ) {
-        rateLimitService.checkRefreshIp(IpConfig.getClientIp(req));
+        // ✅ IMPORTANTE:
+        // - El rate limit por IP ya lo hace ApiRateLimitFilter para /api/auth/refresh
+        // - Aquí solo aplicamos rate limit por USER una vez que resolvemos userId desde DB
 
-
-        if (refreshToken == null) {
+        if (refreshToken == null || refreshToken.isBlank()) {
             return ResponseEntity.status(401).build();
         }
 
         String hash = sha256(refreshToken);
 
-        RefreshToken stored = refreshRepo.findByTokenHash(hash)
-                .orElse(null);
+        RefreshToken stored = refreshRepo.findByTokenHash(hash).orElse(null);
 
         if (stored == null ||
                 stored.getRevokedAt() != null ||
@@ -114,6 +114,7 @@ public class AuthController {
             return ResponseEntity.status(401).build();
         }
 
+        // ✅ Rate limit por usuario (ya sabemos quién es)
         rateLimitService.checkRefreshUser(stored.getUserId());
 
         User u = userService.findById(stored.getUserId());
@@ -131,6 +132,7 @@ public class AuthController {
         next.setUserId(u.getId());
         next.setTokenHash(newHash);
         next.setExpiresAt(LocalDateTime.now().plusDays(14));
+        // Auditoría: mantenemos IP/UA original del refresh token
         next.setIpAddress(stored.getIpAddress());
         next.setUserAgent(stored.getUserAgent());
 
@@ -145,6 +147,7 @@ public class AuthController {
 
         return ResponseEntity.ok().build();
     }
+
 
     // =========================================================
     // LOGOUT

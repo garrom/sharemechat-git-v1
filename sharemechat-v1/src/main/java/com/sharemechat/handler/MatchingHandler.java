@@ -206,33 +206,81 @@ public class MatchingHandler extends TextWebSocketHandler {
             }
 
             if ("set-role".equals(type)) {
-                String role = json.getString("role");
-                roles.put(session.getId(), role);
+
+                // ===== 1) Datos no privilegiados (lang/country) desde payload =====
                 String lang = normLang(json.optString("lang", "*"));
                 String country = normCountry(json.optString("country", "*"));
                 sessionLang.put(session.getId(), lang);
                 sessionCountry.put(session.getId(), country);
                 sessionBucketKey.put(session.getId(), bucketKey(lang, country));
 
+                // ===== 2) Resolver userId + rol REAL (servidor) =====
                 Long userId = sessionUserIds.get(session.getId());
+                if (userId == null) {
+                    log.warn("[WS][match][SET-ROLE][NO_UID] sid={} payload={}", session.getId(), payload);
+                    session.close(CloseStatus.BAD_DATA);
+                    return;
+                }
 
-                if ("model".equals(role)) {
+                // role pedido por el cliente (NO se usa para decidir colas; solo log)
+                String requestedRole = String.valueOf(json.optString("role", "")).toLowerCase();
+
+                // role real desde DB (AUTORITATIVO)
+                String dbRole;
+                try {
+                    dbRole = userRepository.findById(userId)
+                            .map(u -> String.valueOf(u.getRole()))
+                            .orElse(null);
+                } catch (Exception ex) {
+                    log.error("[WS][match][SET-ROLE][DB_ERROR] sid={} uid={} ex={}", session.getId(), userId, ex.toString());
+                    session.close(CloseStatus.SERVER_ERROR);
+                    return;
+                }
+
+                if (dbRole == null) {
+                    log.warn("[WS][match][SET-ROLE][USER_NOT_FOUND] sid={} uid={}", session.getId(), userId);
+                    session.close(CloseStatus.BAD_DATA);
+                    return;
+                }
+
+                // Normaliza lo que venga de DB: "MODEL"/"CLIENT" -> "model"/"client"
+                String mappedRole = "client";
+                String dbRoleUpper = dbRole.toUpperCase(Locale.ROOT);
+                if ("MODEL".equals(dbRoleUpper)) mappedRole = "model";
+                else if ("CLIENT".equals(dbRoleUpper)) mappedRole = "client";
+
+                // ===== 3) Log clave (no rompe nada) =====
+                log.info(
+                        "[WS][match][SET-ROLE] sid={} userId={} requestedRole={} dbRole={} mappedRole={} bucket={}",
+                        session.getId(), userId, requestedRole, dbRoleUpper, mappedRole, sessionBucketKey.get(session.getId())
+                );
+
+                // ===== 4) Rol efectivo en sesión + colas según mappedRole =====
+                roles.put(session.getId(), mappedRole);
+
+                if ("model".equals(mappedRole)) {
                     moveToBucket(session, "model", sessionBucketKey.get(session.getId()));
-
-                    if (userId != null) statusService.setAvailable(userId);
-                } else if ("client".equals(role)) {
+                    try { statusService.setAvailable(userId); } catch (Exception ignore) {}
+                } else {
                     moveToBucket(session, "client", sessionBucketKey.get(session.getId()));
                 }
 
-            } else if ("start-match".equals(type)) {
+                return;
+            }
+
+            if ("start-match".equals(type)) {
                 String role = roles.get(session.getId());
                 if ("client".equals(role)) matchClient(session);
                 else if ("model".equals(role)) matchModel(session);
+                return;
+            }
 
-            } else if ("next".equals(type)) {
+            if ("next".equals(type)) {
                 handleNext(session);
+                return;
+            }
 
-            } else if ("chat".equals(type)) {
+            if ("chat".equals(type)) {
                 WebSocketSession peer = pairs.get(session.getId());
                 if (peer != null && peer.isOpen()) {
                     Long senderId = sessionUserIds.get(session.getId());
@@ -257,7 +305,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                             try { session.sendMessage(tm); } catch (Exception ignore) {}
                             try { peer.sendMessage(tm); } catch (Exception ignore) {}
                         } catch (Exception ex) {
-                            System.out.println("Persistencia chat falló: " + ex.getMessage());
+                            log.warn("[WS][match][CHAT_PERSIST_FAIL] sid={} ex={}", session.getId(), ex.getMessage());
                             try { peer.sendMessage(new TextMessage(payload)); } catch (Exception ignore) {}
                             try {
                                 JSONObject err = new JSONObject().put("type", "msg:error").put("message", ex.getMessage());
@@ -265,24 +313,35 @@ public class MatchingHandler extends TextWebSocketHandler {
                             } catch (Exception ignore) {}
                         }
                     } else {
-                        peer.sendMessage(new TextMessage(payload));
+                        try { peer.sendMessage(new TextMessage(payload)); } catch (Exception ignore) {}
                     }
                 }
-
-            } else if ("gift".equals(type)) {
-                handleGiftInMatch(session, json);
-
-            } else if ("stats".equals(type)) {
-                sendQueueStats(session);
-
-            } else if (pairs.containsKey(session.getId())) {
-                WebSocketSession peer = pairs.get(session.getId());
-                if (peer != null && peer.isOpen()) peer.sendMessage(message);
+                return;
             }
+
+            if ("gift".equals(type)) {
+                handleGiftInMatch(session, json);
+                return;
+            }
+
+            if ("stats".equals(type)) {
+                sendQueueStats(session);
+                return;
+            }
+
+            if (pairs.containsKey(session.getId())) {
+                WebSocketSession peer = pairs.get(session.getId());
+                if (peer != null && peer.isOpen()) {
+                    try { peer.sendMessage(message); } catch (Exception ignore) {}
+                }
+                return;
+            }
+
         } catch (Exception e) {
-            System.out.println("Error parseando JSON: " + e.getMessage());
+            log.warn("[WS][match][BAD_JSON] sid={} err={}", session.getId(), e.getMessage());
         }
     }
+
 
     /* =========================================================
    BUCKETS (lang:country con fallback)
