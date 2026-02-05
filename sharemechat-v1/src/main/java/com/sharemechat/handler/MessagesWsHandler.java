@@ -405,6 +405,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                 // === START SESSION (IDEMPOTENTE EN StreamService) ===
                 try {
                     streamService.startSession(clientId, modelId);
+                    streamService.confirmActiveSession(clientId, modelId);
                 } catch (Exception ex) {
                     String msg = ex.getMessage() != null ? ex.getMessage() : "No se pudo iniciar la sesión";
 
@@ -519,6 +520,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             try {
                 boolean closed = streamService.endIfBelowThreshold(clientId, modelId);
                 if (closed) {
+                    streamService.endSessionAsync(clientId, modelId);
                     broadcastToUser(me, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
                     broadcastToUser(peer, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
                     clearActiveCall(me, peer);
