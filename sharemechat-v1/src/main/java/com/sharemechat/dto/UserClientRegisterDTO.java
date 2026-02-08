@@ -1,8 +1,5 @@
 package com.sharemechat.dto;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 
 public class UserClientRegisterDTO {
 
@@ -11,7 +8,8 @@ public class UserClientRegisterDTO {
     private String email;
 
     @NotBlank(message = "La contraseña no puede estar vacía")
-    @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
+    @Size(min = 10, message = "La contraseña debe tener al menos 10 caracteres")
+    @Pattern(regexp = "^\\S+$", message = "La contraseña no puede contener espacios")
     private String password;
 
     @NotBlank(message = "El nickname es obligatorio")

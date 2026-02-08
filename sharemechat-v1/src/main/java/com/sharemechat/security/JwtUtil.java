@@ -24,19 +24,18 @@ public class JwtUtil {
     private long refreshExpiration;
 
     private Key getSigningKey() {
-        return Keys.hmacShaKeyFor(jwtSecret.getBytes());
+
+        byte[] keyBytes = jwtSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                    "JWT secret demasiado corto para HS256 (mínimo 32 bytes). Longitud actual=" + keyBytes.length
+            );
+        }
+
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(String email, String role, Long userId) {
-        return Jwts.builder()
-                .setSubject(email)
-                .claim("role",  role) // Añadir ROLE_ prefijo
-                .claim("userId", userId)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + jwtExpiration))
-                .signWith(getSigningKey(), SignatureAlgorithm.HS256)
-                .compact();
-    }
 
     public boolean isTokenValid(String token) {
         try {

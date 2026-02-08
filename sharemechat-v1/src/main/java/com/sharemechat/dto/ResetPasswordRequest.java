@@ -1,6 +1,7 @@
 package com.sharemechat.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class ResetPasswordRequest {
@@ -8,7 +9,8 @@ public class ResetPasswordRequest {
     private String token;
 
     @NotBlank
-    @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
+    @Size(min = 10, message = "La contraseña debe tener al menos 10 caracteres")
+    @Pattern(regexp = "^\\S+$", message = "La contraseña no puede contener espacios")
     private String newPassword;
 
     public String getToken() { return token; }

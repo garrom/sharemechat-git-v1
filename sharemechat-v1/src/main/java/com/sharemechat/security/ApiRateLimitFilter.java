@@ -34,7 +34,11 @@ public class ApiRateLimitFilter extends OncePerRequestFilter {
                 rateLimitService.checkLoginIp(ip);
             }
 
-            // REFRESH
+            // REFRESH:
+            // - Rate limit por IP se aplica aquí (filtro HTTP global).
+            // - Rate limit por USER se aplica después en AuthController,
+            //   cuando ya se ha resuelto el refresh token en DB.
+
             if ("POST".equalsIgnoreCase(method) && "/api/auth/refresh".equals(path)) {
                 rateLimitService.checkRefreshIp(ip);
             }

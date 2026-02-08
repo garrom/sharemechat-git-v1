@@ -11,7 +11,8 @@ public class UserModelRegisterDTO {
     private String email;
 
     @NotBlank(message = "La contraseña no puede estar vacía")
-    @Size(min = 8, message = "La contraseña debe tener al menos 8 caracteres")
+    @Size(min = 10, message = "La contraseña debe tener al menos 10 caracteres")
+    @Pattern(regexp = "^\\S+$", message = "La contraseña no puede contener espacios")
     private String password;
 
     @NotNull(message = "La fecha de nacimiento no puede estar vacía")

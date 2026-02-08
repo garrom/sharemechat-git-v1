@@ -1,6 +1,7 @@
 package com.sharemechat.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public class ChangePasswordRequest {
@@ -8,7 +9,8 @@ public class ChangePasswordRequest {
     private String currentPassword;
 
     @NotBlank
-    @Size(min = 8, max = 128)
+    @Size(min = 10, max = 128)
+    @Pattern(regexp = "^\\S+$", message = "La contraseña no puede contener espacios")
     private String newPassword;
 
     // getters/setters

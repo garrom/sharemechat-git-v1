@@ -252,7 +252,7 @@ public class UserService {
         if (user.getUnsubscribe()) {
             return Optional.empty();
         }
-        String token = jwtUtil.generateToken(user.getEmail(), user.getRole(), user.getId());
+        String token = jwtUtil.generateAccessToken(user.getEmail(), user.getRole(), user.getId());
         return Optional.of(new LoginResponse(token, mapToDTO(user)));
     }
 
@@ -316,9 +316,7 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con ID: " + userId));
 
-        if (newPlainPassword == null || newPlainPassword.length() < 8) {
-            throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres");
-        }
+        validatePasswordPolicy(newPlainPassword);
 
         user.setPassword(passwordEncoder.encode(newPlainPassword));
         user.setUpdatedAt(LocalDateTime.now());
@@ -334,7 +332,7 @@ public class UserService {
             throw new IllegalArgumentException("La contraseña actual no es correcta");
         }
 
-        // Puedes añadir checks de robustez de newRaw si quieres extra validación
+        validatePasswordPolicy(newRaw);
         user.setPassword(passwordEncoder.encode(newRaw));
         userRepository.save(user);
     }
@@ -426,8 +424,8 @@ public class UserService {
 
     /** No modificamos la contraseña: validamos política y rechazamos si no cumple. */
     private void validatePasswordPolicy(String pwd) {
-        if (pwd == null || pwd.length() < 8) {
-            throw new IllegalArgumentException("La contraseña debe tener al menos 8 caracteres.");
+        if (pwd == null || pwd.length() < 10) {
+            throw new IllegalArgumentException("La contraseña debe tener al menos 10 caracteres.");
         }
         // Rechaza cualquier espacio o separador Unicode (incluye NBSP)
         boolean hasSpace = pwd.codePoints()
