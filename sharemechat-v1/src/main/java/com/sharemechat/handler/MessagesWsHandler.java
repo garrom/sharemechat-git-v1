@@ -3,7 +3,7 @@ package com.sharemechat.handler;
 import com.sharemechat.config.BillingProperties;
 import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.entity.Balance;
-import com.sharemechat.exception.UserBlockedException;
+import com.sharemechat.exception.TooManyRequestsException;
 import com.sharemechat.repository.BalanceRepository;
 import com.sharemechat.repository.ClientRepository;
 import com.sharemechat.repository.UserRepository;
@@ -41,6 +41,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     private final UserBlockService userBlockService;
     private final BalanceRepository balanceRepository;
     private final StreamLockService streamLockService;
+    private final ApiRateLimitService apiRateLimitService;
+
 
     private static final Logger log = LoggerFactory.getLogger(MessagesWsHandler.class);
     private final Map<Long, Set<WebSocketSession>> sessions = new ConcurrentHashMap<>();
@@ -60,7 +62,8 @@ public class MessagesWsHandler extends TextWebSocketHandler {
                              StatusService statusService,
                              UserBlockService userBlockService,
                              BalanceRepository balanceRepository,
-                             StreamLockService streamLockService) {
+                             StreamLockService streamLockService,
+                             ApiRateLimitService apiRateLimitService) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
         this.favoriteService = favoriteService;
@@ -73,6 +76,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         this.userBlockService = userBlockService;
         this.balanceRepository = balanceRepository;
         this.streamLockService = streamLockService;
+        this.apiRateLimitService = apiRateLimitService;
     }
 
     @Override
@@ -137,6 +141,19 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         String type = json.optString("type", "");
 
         if ("msg:send".equals(type)) {
+            // === RATE LIMIT WS: msg:send ===
+            try {
+                apiRateLimitService.checkWsMsgUser(me);
+            } catch (TooManyRequestsException e) {
+                safeSend(session, new JSONObject()
+                        .put("type", "rate-limit")
+                        .put("scope", "ws:msg")
+                        .put("message", "Rate limit: mensajes")
+                        .put("retryAfterMs", e.getRetryAfterMs())
+                        .toString());
+                return;
+            }
+
             Object toObj = json.opt("to");
             String toRaw = (toObj != null) ? String.valueOf(toObj) : null;
             Long to = null;
@@ -209,6 +226,19 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
 
         if ("call:invite".equals(type)) {
+            // === RATE LIMIT WS: call:invite ===
+            try {
+                apiRateLimitService.checkWsCallUser(me);
+            } catch (TooManyRequestsException e) {
+                safeSend(session, new JSONObject()
+                        .put("type", "rate-limit")
+                        .put("scope", "ws:call")
+                        .put("message", "Rate limit: llamadas")
+                        .put("retryAfterMs", e.getRetryAfterMs())
+                        .toString());
+                return;
+            }
+
             Long to = json.has("to") ? json.optLong("to", 0L) : null;
             if (to == null || to <= 0L) {
                 safeSend(session, new JSONObject().put("type","call:error").put("message","Destinatario inválido").toString());

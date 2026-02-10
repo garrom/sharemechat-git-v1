@@ -70,6 +70,7 @@ export function createMsgSocketEngine(adapter) {
     clearMsgTimers?.();
 
     const s = new WebSocket(url);
+    window.ws = s;
     msgSocketRef.current = s;
 
     s.onopen = () => {
