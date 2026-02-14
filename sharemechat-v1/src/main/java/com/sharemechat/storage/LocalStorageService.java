@@ -68,6 +68,9 @@ public class LocalStorageService implements StorageService {
             throw new IllegalArgumentException("Extensión no permitida");
         }
 
+        // === HARDENING: validar contenido real (magic bytes) ===
+        validateMagicBytes(file, ext);
+
         String base = (dot > 0) ? sanitized.substring(0, dot) : sanitized;
         if (base.length() > maxBaseNameLength) {
             base = base.substring(0, maxBaseNameLength);
@@ -140,5 +143,104 @@ public class LocalStorageService implements StorageService {
         // (opcional) restringir a un solo nivel de carpeta:
         // if (p.contains("/")) throw new SecurityException("Prefijo con subcarpetas no permitido");
         return p;
+    }
+
+    // =========================
+    // MAGIC BYTES (HARDENING)
+    // =========================
+
+    private void validateMagicBytes(MultipartFile file, String ext) throws IOException {
+        byte[] head = readHead(file, 32);
+
+        // Imagen JPEG: FF D8 FF
+        if (ext.equals("jpg") || ext.equals("jpeg")) {
+            if (!(head.length >= 3
+                    && (head[0] & 0xFF) == 0xFF
+                    && (head[1] & 0xFF) == 0xD8
+                    && (head[2] & 0xFF) == 0xFF)) {
+                throw new IllegalArgumentException("Contenido no es JPEG válido");
+            }
+            return;
+        }
+
+        // PNG: 89 50 4E 47 0D 0A 1A 0A
+        if (ext.equals("png")) {
+            byte[] sig = new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A};
+            if (!startsWith(head, sig)) {
+                throw new IllegalArgumentException("Contenido no es PNG válido");
+            }
+            return;
+        }
+
+        // GIF: "GIF87a" o "GIF89a"
+        if (ext.equals("gif")) {
+            if (!(head.length >= 6
+                    && head[0] == 'G' && head[1] == 'I' && head[2] == 'F'
+                    && head[3] == '8' && (head[4] == '7' || head[4] == '9') && head[5] == 'a')) {
+                throw new IllegalArgumentException("Contenido no es GIF válido");
+            }
+            return;
+        }
+
+        // WEBP: "RIFF" .... "WEBP"
+        if (ext.equals("webp")) {
+            if (!(head.length >= 12
+                    && head[0] == 'R' && head[1] == 'I' && head[2] == 'F' && head[3] == 'F'
+                    && head[8] == 'W' && head[9] == 'E' && head[10] == 'B' && head[11] == 'P')) {
+                throw new IllegalArgumentException("Contenido no es WEBP válido");
+            }
+            return;
+        }
+
+        // PDF: "%PDF-"
+        if (ext.equals("pdf")) {
+            if (!(head.length >= 5
+                    && head[0] == '%' && head[1] == 'P' && head[2] == 'D' && head[3] == 'F' && head[4] == '-')) {
+                throw new IllegalArgumentException("Contenido no es PDF válido");
+            }
+            return;
+        }
+
+        // MP4: bytes 4..7 == "ftyp"
+        if (ext.equals("mp4")) {
+            if (!(head.length >= 8
+                    && head[4] == 'f' && head[5] == 't' && head[6] == 'y' && head[7] == 'p')) {
+                throw new IllegalArgumentException("Contenido no es MP4 válido");
+            }
+            return;
+        }
+
+        // WEBM (Matroska): EBML header 1A 45 DF A3
+        if (ext.equals("webm")) {
+            if (!(head.length >= 4
+                    && (head[0] & 0xFF) == 0x1A
+                    && (head[1] & 0xFF) == 0x45
+                    && (head[2] & 0xFF) == 0xDF
+                    && (head[3] & 0xFF) == 0xA3)) {
+                throw new IllegalArgumentException("Contenido no es WEBM válido");
+            }
+            return;
+        }
+
+        // Extensión permitida pero sin validador: bloquear por defecto
+        throw new IllegalArgumentException("Tipo de archivo no validable (magic-bytes) para ext=" + ext);
+    }
+
+    private byte[] readHead(MultipartFile file, int max) throws IOException {
+        try (var in = file.getInputStream()) {
+            byte[] buf = new byte[max];
+            int n = in.read(buf);
+            if (n <= 0) return new byte[0];
+            return Arrays.copyOf(buf, n);
+        }
+    }
+
+    private boolean startsWith(byte[] data, byte[] prefix) {
+        if (data == null || prefix == null) return false;
+        if (data.length < prefix.length) return false;
+        for (int i = 0; i < prefix.length; i++) {
+            if (data[i] != prefix[i]) return false;
+        }
+        return true;
     }
 }
