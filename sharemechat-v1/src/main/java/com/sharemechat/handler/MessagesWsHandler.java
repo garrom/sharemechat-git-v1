@@ -522,6 +522,20 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         }
 
         if ("call:ping".equals(type)) {
+
+            // === RATE LIMIT WS: call:ping (anti-abuso; no afecta a tráfico normal) ===
+            try {
+                apiRateLimitService.checkWsPingUser(me);
+            } catch (TooManyRequestsException e) {
+                safeSend(session, new JSONObject()
+                        .put("type", "rate-limit")
+                        .put("scope", "ws:ping")
+                        .put("message", "Rate limit: ping de llamada")
+                        .put("retryAfterMs", e.getRetryAfterMs())
+                        .toString());
+                return;
+            }
+
             Long peer = inCallWith(me);
             if (peer == null) return;
 
