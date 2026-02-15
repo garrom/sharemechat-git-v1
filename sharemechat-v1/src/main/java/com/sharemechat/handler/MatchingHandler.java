@@ -259,8 +259,14 @@ public class MatchingHandler extends TextWebSocketHandler {
                 roles.put(session.getId(), mappedRole);
 
                 if ("model".equals(mappedRole)) {
+                    // GATING DURO: no entra a cola si no está APPROVED + activa + no-unsub
+                    if (!isApprovedActiveModel(userId)) {
+                        blockModelSession(session, userId, "KYC_NOT_APPROVED_OR_INACTIVE");
+                        return;
+                    }
                     moveToBucket(session, "model", sessionBucketKey.get(session.getId()));
                     try { statusService.setAvailable(userId); } catch (Exception ignore) {}
+
                 } else {
                     moveToBucket(session, "client", sessionBucketKey.get(session.getId()));
                 }
@@ -429,11 +435,50 @@ public class MatchingHandler extends TextWebSocketHandler {
         return keys;
     }
 
+    private boolean isApprovedActiveModel(Long userId) {
+        if (userId == null) return false;
+        try {
+            User u = userRepository.findById(userId).orElse(null);
+            if (u == null) return false;
+
+            boolean roleOk = Constants.Roles.MODEL.equals(String.valueOf(u.getRole()));
+            boolean kycOk  = Constants.VerificationStatuses.APPROVED.equals(String.valueOf(u.getVerificationStatus()));
+            boolean active = u.getIsActive() != null && u.getIsActive();
+            boolean unsub  = u.getUnsubscribe() != null && u.getUnsubscribe();
+
+            return roleOk && kycOk && active && !unsub;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    private void blockModelSession(WebSocketSession session, Long userId, String reasonCode) {
+        try {
+            String v = null;
+            try {
+                v = userRepository.findById(userId).map(User::getVerificationStatus).orElse(null);
+            } catch (Exception ignore) {}
+
+            String payload = new org.json.JSONObject()
+                    .put("type", "model-blocked")
+                    .put("reasonCode", reasonCode)
+                    .put("verificationStatus", v == null ? org.json.JSONObject.NULL : v)
+                    .toString();
+
+            safeSend(session, payload);
+        } catch (Exception ignore) {}
+
+        try { removeFromAllBuckets(session, "model"); } catch (Exception ignore) {}
+        try { if (userId != null) statusService.setOffline(userId); } catch (Exception ignore) {}
+
+        try { session.close(CloseStatus.POLICY_VIOLATION); } catch (Exception ignore) {}
+    }
+
+
 
     /* =========================================================
        MATCHING (con Seen TTL robusto)
        ========================================================= */
-
 
     private void matchClient(WebSocketSession client) throws Exception {
 
@@ -540,6 +585,12 @@ public class MatchingHandler extends TextWebSocketHandler {
 
             Long modelId = sessionUserIds.get(model.getId());
             if (modelId == null) continue;
+
+            // Si por cualquier motivo hay un MODEL no aprobado en cola, lo expulsamos
+            if (!isApprovedActiveModel(modelId)) {
+                try { statusService.setOffline(modelId); } catch (Exception ignore) {}
+                continue; // NO reencolar
+            }
 
             if (!canMatch(clientId, modelId)) {
                 scannedList.add(model);
@@ -1018,7 +1069,7 @@ public class MatchingHandler extends TextWebSocketHandler {
 
                 if (clientId != null && modelId != null) {
                     try {
-                        // 🔑 FUENTE DE VERDAD DEL STREAM
+                        // FUENTE DE VERDAD DEL STREAM
                         streamRecordId = statusService
                                 .getActiveSession(clientId, modelId)
                                 .orElse(null);
@@ -1225,7 +1276,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         pairs.remove(session.getId());
         pairs.remove(peer.getId());
 
-        // ✅ Aquí SÍ usamos ASYNC para no bloquear el hilo WS en un cierre “pesado”
+        // Aquí SÍ usamos ASYNC para no bloquear el hilo WS en un cierre “pesado”
         try {
             streamService.endSessionAsync(clientId, modelId);
         } catch (Exception ex) {
