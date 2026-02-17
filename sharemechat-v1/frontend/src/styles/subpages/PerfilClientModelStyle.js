@@ -267,6 +267,14 @@ export const OnboardingCard = styled.section`
   background: ${colors.white};
   box-shadow: ${shadow.card};
   color: #333;
+  a {
+    color: #000 !important;
+  }
+
+  a:visited {
+    color: #000 !important;
+  }
+
 `;
 
 /* =====================================================================

@@ -32,7 +32,7 @@ export default function VideoChatFavoritosModelo(props) {
           <StyledFavoritesColumns>
             <StyledCenterPanel>
               {!openChatWith ? (
-                <div style={{ color: '#adb5bd' textAlign:'center'}}>Selecciona un favorito para abrir la conversación aquí.</div>
+                <div style={{ color: '#adb5bd', textAlign:'center'}}>Selecciona un favorito para abrir la conversación aquí.</div>
               ) : (
                 <>
                   <StyledCenterBody>

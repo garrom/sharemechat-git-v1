@@ -55,9 +55,23 @@ public class ConsentController {
         if (body != null) {
             Object p = body.get("path");
             if (p != null && StringUtils.hasText(String.valueOf(p))) {
-                return String.valueOf(p);
+                return clamp(String.valueOf(p), 1024);
             }
         }
-        return request.getHeader("Referer") != null ? request.getHeader("Referer") : request.getRequestURI();
+
+        // Mejor: ruta interna (corta) en vez de URL completa del referer
+        String uri = request.getRequestURI();
+        if (StringUtils.hasText(uri)) return clamp(uri, 1024);
+
+        String ref = request.getHeader("Referer");
+        return clamp(ref != null ? ref : "unknown", 1024);
     }
+
+    private static String clamp(String s, int max) {
+        if (s == null) return null;
+        s = s.trim();
+        if (s.length() <= max) return s;
+        return s.substring(0, max);
+    }
+
 }

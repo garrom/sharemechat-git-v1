@@ -97,17 +97,48 @@ const ModelDocuments = () => {
     }
   };
 
+  const ensureContractAccepted = async () => {
+    const res = await fetch('/api/consent/model-contract/status', {
+      method: 'GET',
+      credentials: 'include',
+    });
+
+    if (res.status === 401) {
+      history.push('/');
+      return false;
+    }
+
+    if (res.ok) {
+      const st = await res.json();
+      if (!st?.accepted) {
+        history.push('/dashboard-user-model');
+        return false;
+      }
+      return true;
+    }
+
+    // Si falla, por seguridad UX devolvemos al dashboard
+    history.push('/dashboard-user-model');
+    return false;
+  };
+
+
   useEffect(() => {
     (async () => {
       try {
+        const ok = await ensureContractAccepted();
+        if (!ok) return;
+
         const meRes = await fetch('/api/users/me', {
           method: 'GET',
           credentials: 'include',
         });
+
         if (meRes.ok) {
           const me = await meRes.json();
           setUserName(me.nickname || me.name || me.email || 'Usuario');
         }
+
         await refreshDocs();
       } catch {
         // noop
@@ -115,6 +146,7 @@ const ModelDocuments = () => {
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history]);
+
 
   const extractOriginalNameFromUrl = (url) => {
     if (!url) return '';

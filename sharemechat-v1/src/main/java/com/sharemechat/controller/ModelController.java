@@ -5,6 +5,7 @@ import com.sharemechat.dto.ModelDTO;
 import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.ModelService;
 import com.sharemechat.service.ModelStatsService;
 import com.sharemechat.service.UserService;
@@ -28,18 +29,21 @@ public class ModelController {
     private final ModelDocumentRepository modelDocumentRepository;
     private final StorageService storageService;
     private final ModelStatsService modelStatsService;
+    private final ModelContractService modelContractService;
     private static final Logger log = LoggerFactory.getLogger(ModelController.class);
 
     public ModelController(ModelService modelService,
                            UserService userService,
                            ModelDocumentRepository modelDocumentRepository,
                            StorageService storageService,
-                           ModelStatsService modelStatsService) {
+                           ModelStatsService modelStatsService,
+                           ModelContractService modelContractService) {
         this.modelService = modelService;
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
         this.storageService = storageService;
         this.modelStatsService = modelStatsService;
+        this.modelContractService = modelContractService;
     }
 
     @GetMapping("/me")
@@ -70,6 +74,12 @@ public class ModelController {
         if (user == null) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
         }
+
+        // GATING: contrato modelo debe estar aceptado
+        if (!modelContractService.isAccepted(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Debes aceptar el contrato de modelo");
+        }
+
         var doc = modelDocumentRepository.findById(user.getId()).orElse(null);
 
         var body = new java.util.HashMap<String, Object>();
@@ -87,6 +97,7 @@ public class ModelController {
         }
         return ResponseEntity.ok(body);
     }
+
 
     @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadDocuments(
@@ -106,6 +117,11 @@ public class ModelController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
         }
 
+        // GATING: contrato modelo debe estar aceptado
+        if (!modelContractService.isAccepted(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Debes aceptar el contrato de modelo");
+        }
+
         ModelDocument doc = modelDocumentRepository.findById(user.getId()).orElseGet(() -> {
             var x = new ModelDocument();
             x.setUserId(user.getId());
@@ -114,7 +130,6 @@ public class ModelController {
 
         String base = "models/" + user.getId();
 
-        // Guardamos URLs antiguas por si hay que borrarlas tras reemplazo
         String oldPic = doc.getUrlPic();
         String oldVideo = doc.getUrlVideo();
 
@@ -145,7 +160,6 @@ public class ModelController {
 
         modelDocumentRepository.save(doc);
 
-        // Borrado best-effort de lo anterior si se ha reemplazado
         if (pic != null && !pic.isEmpty()) {
             try { storageService.deleteByPublicUrl(oldPic); } catch (Exception ignore) {}
         }
@@ -168,12 +182,6 @@ public class ModelController {
     }
 
 
-    /**
-     * Eliminar un recurso concreto de los documentos de la modelo.
-     * Soporta: field=pic (y opcionalmente field=video para futuro).
-     */
-    // ModelController.java  (sustituye SOLO el método deleteModelDocument)
-
     @DeleteMapping("/documents")
     public ResponseEntity<?> deleteModelDocument(Authentication authentication,
                                                  @RequestParam(name = "field") String field) {
@@ -185,15 +193,18 @@ public class ModelController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
         }
 
+        // ✅ GATING: contrato modelo debe estar aceptado
+        if (!modelContractService.isAccepted(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Debes aceptar el contrato de modelo");
+        }
+
         ModelDocument doc = modelDocumentRepository.findById(user.getId()).orElse(null);
         if (doc == null) {
-            // Nada que borrar
             return ResponseEntity.noContent().build();
         }
 
         String toDelete = null;
         switch (field) {
-            //  soportados: documentación de verificación
             case "idFront" -> {
                 toDelete = doc.getUrlVerificFront();
                 doc.setUrlVerificFront(null);
@@ -206,7 +217,6 @@ public class ModelController {
                 toDelete = doc.getUrlVerificDoc();
                 doc.setUrlVerificDoc(null);
             }
-            //  Ya soportados para perfil
             case "pic" -> {
                 toDelete = doc.getUrlPic();
                 doc.setUrlPic(null);
@@ -228,6 +238,7 @@ public class ModelController {
 
         return ResponseEntity.noContent().build();
     }
+
 
     @GetMapping("/teasers")
     public ResponseEntity<?> getModelTeasers(

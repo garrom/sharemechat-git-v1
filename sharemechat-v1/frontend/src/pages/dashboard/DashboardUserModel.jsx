@@ -39,6 +39,16 @@ const DashboardUserModel = () => {
   const [info, setInfo] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
 
+  // ===== CONTRATO LEGAL (modelo) =====
+  const [contractCurrent, setContractCurrent] = useState(null);
+  const [contractAccepted, setContractAccepted] = useState(null);
+  const [accepting, setAccepting] = useState(false);
+  const [contractErr, setContractErr] = useState('');
+
+  // UX: obligar a abrir el PDF + checkbox antes de permitir "Acepto"
+  const [openedContract, setOpenedContract] = useState(false);
+  const [confirmChecked, setConfirmChecked] = useState(false);
+
   useEffect(() => {
     if (sessionLoading) return;
 
@@ -50,6 +60,60 @@ const DashboardUserModel = () => {
     setUserName(sessionUser.nickname || sessionUser.name || sessionUser.email || 'Usuario');
     setInfo(`Estado de verificación: ${sessionUser.verificationStatus || 'PENDING'}`);
   }, [sessionUser, sessionLoading, history]);
+
+  // Cargar contrato vigente + estado aceptación (auth)
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!sessionUser) return;
+
+    let cancelled = false;
+
+    const run = async () => {
+      try {
+        const cur = await apiFetch('/consent/model-contract/current');
+        const st = await apiFetch('/consent/model-contract/status');
+
+        if (cancelled) return;
+
+        setContractCurrent(cur || null);
+        setContractAccepted(Boolean(st?.accepted));
+
+        if (Boolean(st?.accepted)) {
+          setOpenedContract(true);
+          setConfirmChecked(true);
+        } else {
+          setOpenedContract(false);
+          setConfirmChecked(false);
+        }
+      } catch (e) {
+        if (cancelled) return;
+        setContractErr('No se pudo cargar el contrato legal. Intenta recargar.');
+        setContractAccepted(null);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionUser, sessionLoading]);
+
+  const handleAcceptContract = async () => {
+    setAccepting(true);
+    setContractErr('');
+
+    try {
+      await apiFetch('/consent/model-contract/accept', { method: 'POST' });
+      setContractAccepted(true);
+      setOpenedContract(true);
+      setConfirmChecked(true);
+    } catch (e) {
+      setContractErr('No se pudo registrar la aceptación. Inténtalo de nuevo.');
+    } finally {
+      setAccepting(false);
+    }
+  };
 
   const handleLogout = async () => {
 
@@ -66,6 +130,9 @@ const DashboardUserModel = () => {
   };
 
   const displayName = userName || 'Modelo';
+  const mustAcceptContract = contractAccepted === false;
+
+  const canAcceptContract = openedContract && confirmChecked && !accepting;
 
   if (sessionLoading) {
     return (
@@ -126,6 +193,8 @@ const DashboardUserModel = () => {
               handleUploadDocs();
               setMenuOpen(false);
             }}
+            disabled={mustAcceptContract}
+            title={mustAcceptContract ? 'Debes aceptar el contrato primero' : undefined}
           >
             Subir documentos
           </NavButton>
@@ -148,12 +217,78 @@ const DashboardUserModel = () => {
           <OnboardingCard>
             <h3>Completa tu verificación de Modelo</h3>
 
-            {info && <Hint style={{ marginTop: 8 }}>{info}</Hint>}
+            {info && <Hint style={{ marginTop: 8 ,color: '#000'}}>{info}</Hint>}
+
+            {/* CONTRATO LEGAL (gating UX) */}
+            {contractAccepted === false && (
+              <div style={{ marginTop: 16 }}>
+                <Hint>
+                  Antes de continuar, debes aceptar el contrato legal de modelo.
+                </Hint>
+
+                {contractCurrent?.url && (
+                  <Hint style={{ marginTop: 8 ,color: '#000'}}>
+                    <a
+                      href={contractCurrent.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      onClick={() => setOpenedContract(true)}
+                      style={{ color: '#000', textDecoration: 'underline' }}
+                    >
+                      Ver contrato (PDF)
+                    </a>
+                  </Hint>
+                )}
+
+                <div style={{ marginTop: 10 }}>
+                  <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={confirmChecked}
+                      onChange={(e) => setConfirmChecked(e.target.checked)}
+                    />
+                    <span style={{ color: '#000' }}>
+                      He leído y acepto el contrato de modelo
+                    </span>
+                  </label>
+                </div>
+
+                <div style={{ marginTop: 12 }}>
+                  <ProfilePrimaryButton
+                    type="button"
+                    onClick={handleAcceptContract}
+                    disabled={!canAcceptContract}
+                    title={
+                      accepting
+                        ? 'Registrando aceptación…'
+                        : !openedContract
+                        ? 'Abre el contrato (PDF) primero'
+                        : !confirmChecked
+                        ? 'Marca la casilla para continuar'
+                        : 'Aceptar contrato'
+                    }
+                  >
+                    {accepting ? 'Registrando aceptación…' : 'Acepto el contrato'}
+                  </ProfilePrimaryButton>
+                </div>
+
+                {contractErr && <Hint style={{ marginTop: 10 }}>{contractErr}</Hint>}
+              </div>
+            )}
+
+            {/* Si contractAccepted === null (no pudimos cargar) mostramos aviso */}
+            {contractAccepted === null && contractErr && (
+              <div style={{ marginTop: 16 }}>
+                <Hint>{contractErr}</Hint>
+              </div>
+            )}
 
             <div style={{ marginTop: 16 }}>
               <ProfilePrimaryButton
                 type="button"
                 onClick={() => history.push('/model-documents')}
+                disabled={mustAcceptContract}
+                title={mustAcceptContract ? 'Debes aceptar el contrato primero' : undefined}
               >
                 Actualizar / Subir documentos
               </ProfilePrimaryButton>
