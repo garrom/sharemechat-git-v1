@@ -2,6 +2,7 @@ package com.sharemechat.controller;
 
 import com.sharemechat.config.IpConfig;
 import com.sharemechat.entity.User;
+import com.sharemechat.repository.ModelContractAcceptanceRepository;
 import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -17,10 +19,16 @@ public class ModelContractController {
 
     private final ModelContractService modelContractService;
     private final UserService userService;
+    private final ModelContractAcceptanceRepository acceptanceRepo;
 
-    public ModelContractController(ModelContractService modelContractService, UserService userService) {
+    public ModelContractController(
+            ModelContractService modelContractService,
+            UserService userService,
+            ModelContractAcceptanceRepository acceptanceRepo
+    ) {
         this.modelContractService = modelContractService;
         this.userService = userService;
+        this.acceptanceRepo = acceptanceRepo;
     }
 
     // GET /api/consent/model-contract/current  (público)
@@ -37,11 +45,27 @@ public class ModelContractController {
         }
 
         User u = userService.findByEmail(auth.getName());
-        boolean accepted = modelContractService.isAccepted(u != null ? u.getId() : null);
+        if (u == null) {
+            return ResponseEntity.status(401).build();
+        }
 
-        return ResponseEntity.ok(Map.of(
-                "accepted", accepted
-        ));
+        boolean acceptedCurrent = modelContractService.isAccepted(u.getId());
+        boolean acceptedEver = (u.getId() != null) && acceptanceRepo.existsByUserId(u.getId());
+
+        Map<String, String> cur = modelContractService.current();
+
+        // ✅ Backward compatibility:
+        // - "accepted" MUST exist for older frontend (ModelDocuments.ensureContractAccepted)
+        // - Keep richer fields for future UX/debug
+        Map<String, Object> out = new HashMap<>();
+        out.put("accepted", acceptedCurrent);          // <--- IMPORTANT (compat)
+        out.put("acceptedCurrent", acceptedCurrent);
+        out.put("acceptedEver", acceptedEver);
+
+        out.put("currentVersion", cur.get("version"));
+        out.put("currentSha256", cur.get("sha256"));
+
+        return ResponseEntity.ok(out);
     }
 
     // POST /api/consent/model-contract/accept (auth)
@@ -69,9 +93,6 @@ public class ModelContractController {
             return ResponseEntity.noContent().build();
         }
 
-        // Si acaba de aceptar (o re-aceptar por cambio de versión/hash), devolvemos 200 con info
         return ResponseEntity.ok(result);
     }
-
-
 }

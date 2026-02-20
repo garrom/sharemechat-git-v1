@@ -10,7 +10,6 @@ import com.sharemechat.service.ModelService;
 import com.sharemechat.service.ModelStatsService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.storage.StorageService;
-import com.sharemechat.exception.ApiError;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -46,37 +45,78 @@ public class ModelController {
         this.modelContractService = modelContractService;
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<?> getMyModelInfo(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
-        }
-
-        User user = userService.findByEmail(authentication.getName());
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
-        }
-
-        if (!Constants.Roles.MODEL.equals(user.getRole())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
-        }
-
-        ModelDTO dto = modelService.getModelDTO(user);
-        return ResponseEntity.ok(dto);
+    // ==========================
+    // Helpers
+    // ==========================
+    private ResponseEntity<?> unauth() {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
     }
 
-    @GetMapping("/documents/me")
-    public ResponseEntity<?> getMyDocuments(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
-        }
-        User user = userService.findByEmail(authentication.getName());
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
+    private User requireUser(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) return null;
+        return userService.findByEmail(authentication.getName());
+    }
+
+    /** Onboarding model: role=USER y userType=FORM_MODEL */
+    private boolean isOnboardingModel(User u) {
+        return u != null
+                && Constants.Roles.USER.equals(u.getRole())
+                && Constants.UserTypes.FORM_MODEL.equals(u.getUserType());
+    }
+
+    /** Actor válido para endpoints de modelo en onboarding o ya en MODEL */
+    private boolean isModelActor(User u) {
+        return u != null && (Constants.Roles.MODEL.equals(u.getRole()) || isOnboardingModel(u));
+    }
+
+    /** ✅ CONTRATO SOLO PARA ONBOARDING (USER+FORM_MODEL). MODEL no se bloquea. */
+    private boolean mustHaveAcceptedContract(User u) {
+        return isOnboardingModel(u);
+    }
+
+    private boolean hasAcceptedContract(Long userId) {
+        return modelContractService.isAccepted(userId);
+    }
+
+    // ==========================
+    // API: /me (dual)
+    // ==========================
+    @GetMapping("/me")
+    public ResponseEntity<?> getMyModelInfo(Authentication authentication) {
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
+
+        if (Constants.Roles.MODEL.equals(user.getRole())) {
+            ModelDTO dto = modelService.getModelDTO(user);
+            return ResponseEntity.ok(dto);
         }
 
-        // GATING: contrato modelo debe estar aceptado
-        if (!modelContractService.isAccepted(user.getId())) {
+        if (isOnboardingModel(user)) {
+            ModelDTO dto = new ModelDTO();
+            dto.setUserId(user.getId());
+            dto.setStreamingHours(java.math.BigDecimal.ZERO);
+            dto.setSaldoActual(java.math.BigDecimal.ZERO);
+            dto.setTotalIngresos(java.math.BigDecimal.ZERO);
+            return ResponseEntity.ok(dto);
+        }
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
+    }
+
+    // ==========================
+    // Documents
+    // ==========================
+    @GetMapping("/documents/me")
+    public ResponseEntity<?> getMyDocuments(Authentication authentication) {
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
+
+        if (!isModelActor(user)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
+        }
+
+        // ✅ SOLO ONBOARDING necesita contrato
+        if (mustHaveAcceptedContract(user) && !hasAcceptedContract(user.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Debes aceptar el contrato de modelo");
         }
 
@@ -84,41 +124,44 @@ public class ModelController {
 
         var body = new java.util.HashMap<String, Object>();
         body.put("userId", user.getId());
+        body.put("role", user.getRole());
+        body.put("userType", user.getUserType());
         body.put("verificationStatus", user.getVerificationStatus());
+
         if (doc != null) {
             body.put("urlVerificFront", doc.getUrlVerificFront());
-            body.put("urlVerificBack",  doc.getUrlVerificBack());
-            body.put("urlVerificDoc",   doc.getUrlVerificDoc());
-            body.put("urlPic",          doc.getUrlPic());
-            body.put("urlVideo",        doc.getUrlVideo());
-            body.put("urlConsent",      doc.getUrlConsent());
-            body.put("createdAt",       doc.getCreatedAt());
-            body.put("updatedAt",       doc.getUpdatedAt());
+            body.put("urlVerificBack", doc.getUrlVerificBack());
+            body.put("urlVerificDoc", doc.getUrlVerificDoc());
+            body.put("urlPic", doc.getUrlPic());
+            body.put("urlVideo", doc.getUrlVideo());
+            body.put("urlConsent", doc.getUrlConsent());
+            body.put("createdAt", doc.getCreatedAt());
+            body.put("updatedAt", doc.getUpdatedAt());
         }
+
         return ResponseEntity.ok(body);
     }
-
 
     @PostMapping(value = "/documents", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<?> uploadDocuments(
             Authentication authentication,
-            @RequestPart(value = "idFront",    required = false) MultipartFile idFront,
-            @RequestPart(value = "idBack",     required = false) MultipartFile idBack,
+            @RequestPart(value = "idFront", required = false) MultipartFile idFront,
+            @RequestPart(value = "idBack", required = false) MultipartFile idBack,
             @RequestPart(value = "verificDoc", required = false) MultipartFile verificDoc,
-            @RequestPart(value = "pic",        required = false) MultipartFile pic,
-            @RequestPart(value = "video",      required = false) MultipartFile video,
-            @RequestPart(value = "consent",    required = false) MultipartFile consent
+            @RequestPart(value = "pic", required = false) MultipartFile pic,
+            @RequestPart(value = "video", required = false) MultipartFile video,
+            @RequestPart(value = "consent", required = false) MultipartFile consent
     ) throws java.io.IOException {
-        if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
-        }
-        User user = userService.findByEmail(authentication.getName());
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
+
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
+
+        if (!isModelActor(user)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
         }
 
-        // GATING: contrato modelo debe estar aceptado
-        if (!modelContractService.isAccepted(user.getId())) {
+        // ✅ SOLO ONBOARDING necesita contrato
+        if (mustHaveAcceptedContract(user) && !hasAcceptedContract(user.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Debes aceptar el contrato de modelo");
         }
 
@@ -169,6 +212,8 @@ public class ModelController {
 
         var body = new java.util.HashMap<String, Object>();
         body.put("userId", user.getId());
+        body.put("role", user.getRole());
+        body.put("userType", user.getUserType());
         body.put("verificationStatus", user.getVerificationStatus());
         body.put("urlVerificFront", doc.getUrlVerificFront());
         body.put("urlVerificBack", doc.getUrlVerificBack());
@@ -181,20 +226,18 @@ public class ModelController {
         return ResponseEntity.ok(body);
     }
 
-
     @DeleteMapping("/documents")
     public ResponseEntity<?> deleteModelDocument(Authentication authentication,
                                                  @RequestParam(name = "field") String field) {
-        if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
-        }
-        User user = userService.findByEmail(authentication.getName());
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
+
+        if (!isModelActor(user)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
         }
 
-        // ✅ GATING: contrato modelo debe estar aceptado
-        if (!modelContractService.isAccepted(user.getId())) {
+        // ✅ SOLO ONBOARDING necesita contrato
+        if (mustHaveAcceptedContract(user) && !hasAcceptedContract(user.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Debes aceptar el contrato de modelo");
         }
 
@@ -205,29 +248,12 @@ public class ModelController {
 
         String toDelete = null;
         switch (field) {
-            case "idFront" -> {
-                toDelete = doc.getUrlVerificFront();
-                doc.setUrlVerificFront(null);
-            }
-            case "idBack" -> {
-                toDelete = doc.getUrlVerificBack();
-                doc.setUrlVerificBack(null);
-            }
-            case "verificDoc" -> {
-                toDelete = doc.getUrlVerificDoc();
-                doc.setUrlVerificDoc(null);
-            }
-            case "pic" -> {
-                toDelete = doc.getUrlPic();
-                doc.setUrlPic(null);
-            }
-            case "video" -> {
-                toDelete = doc.getUrlVideo();
-                doc.setUrlVideo(null);
-            }
-            default -> {
-                return ResponseEntity.badRequest().body("Campo no soportado: " + field);
-            }
+            case "idFront" -> { toDelete = doc.getUrlVerificFront(); doc.setUrlVerificFront(null); }
+            case "idBack" -> { toDelete = doc.getUrlVerificBack(); doc.setUrlVerificBack(null); }
+            case "verificDoc" -> { toDelete = doc.getUrlVerificDoc(); doc.setUrlVerificDoc(null); }
+            case "pic" -> { toDelete = doc.getUrlPic(); doc.setUrlPic(null); }
+            case "video" -> { toDelete = doc.getUrlVideo(); doc.setUrlVideo(null); }
+            default -> { return ResponseEntity.badRequest().body("Campo no soportado: " + field); }
         }
 
         modelDocumentRepository.save(doc);
@@ -239,23 +265,16 @@ public class ModelController {
         return ResponseEntity.noContent().build();
     }
 
-
+    // Teasers (sin cambios)
     @GetMapping("/teasers")
     public ResponseEntity<?> getModelTeasers(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             Authentication authentication) {
 
-        if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
-        }
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
 
-        User user = userService.findByEmail(authentication.getName());
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
-        }
-
-        // Permitir USER/CLIENT/MODEL/ADMIN (trial, clientes, modelos y admins)
         String role = user.getRole();
         boolean allowed =
                 Constants.Roles.USER.equals(role) ||
@@ -264,23 +283,18 @@ public class ModelController {
                         Constants.Roles.ADMIN.equals(role);
 
         if (!allowed) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                    .body("No autorizado");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
         }
 
         var teasers = modelService.listTeasers(page, size);
         return ResponseEntity.ok(teasers);
     }
 
+    // Stats (solo MODEL real)
     @GetMapping("/stats/summary")
     public ResponseEntity<?> getMyStatsSummary(Authentication authentication) {
-        if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
-        }
-        User user = userService.findByEmail(authentication.getName());
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
-        }
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
         if (!Constants.Roles.MODEL.equals(user.getRole())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
         }
@@ -290,18 +304,11 @@ public class ModelController {
     @GetMapping("/stats")
     public ResponseEntity<?> getMyStats(Authentication authentication,
                                         @RequestParam(name = "days", defaultValue = "30") int days) {
-        if (authentication == null || authentication.getName() == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
-        }
-        User user = userService.findByEmail(authentication.getName());
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
-        }
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
         if (!Constants.Roles.MODEL.equals(user.getRole())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
         }
         return ResponseEntity.ok(modelStatsService.getMyStats(user.getId(), days));
     }
-
-
 }

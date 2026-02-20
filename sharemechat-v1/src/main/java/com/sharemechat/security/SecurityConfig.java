@@ -49,23 +49,34 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/register/**", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
                         .requestMatchers("/api/public/home/**").permitAll()
-
                         .requestMatchers(HttpMethod.GET, "/api/users/avatars/**").permitAll()
 
                         // STREAMS: ACK media (cliente o modelo)
                         .requestMatchers(HttpMethod.POST, "/api/streams/*/ack-media").hasAnyRole("CLIENT", "MODEL")
 
-                        // Eventos de consentimiento (guest)
+                        // Consent
                         .requestMatchers("/api/consent/**").permitAll()
 
                         // USERS
                         .requestMatchers("/api/users/**").authenticated()
 
-                        // MODELS: documentos
+                        // ==========================
+                        // MODELS - KYC (onboarding)
+                        // ==========================
+                        .requestMatchers(HttpMethod.GET, "/api/models/kyc/me").hasRole("USER")
+                        .requestMatchers(HttpMethod.POST, "/api/models/kyc").hasRole("USER")
+                        .requestMatchers(HttpMethod.DELETE, "/api/models/kyc").hasRole("USER")
+
+                        // ==========================
+                        // MODELS - DOCUMENTS (ONBOARDING + MODEL)
+                        // IMPORTANT: must be BEFORE "/api/models/**"
+                        // ==========================
                         .requestMatchers(HttpMethod.GET, "/api/models/documents/me").hasAnyRole("USER", "MODEL")
                         .requestMatchers(HttpMethod.POST, "/api/models/documents").hasAnyRole("USER", "MODEL")
                         .requestMatchers(HttpMethod.DELETE, "/api/models/documents").hasAnyRole("USER", "MODEL")
                         .requestMatchers(HttpMethod.DELETE, "/api/models/documents/**").hasAnyRole("USER", "MODEL")
+
+                        // Teasers
                         .requestMatchers(HttpMethod.GET, "/api/models/teasers/**").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
 
                         // CLIENTS: documentos
@@ -74,11 +85,6 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/clients/documents").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.DELETE, "/api/clients/documents/**").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.GET, "/api/funnyplace/random").hasRole("CLIENT")
-
-                        // ROLE-SCOPED APIs
-                        .requestMatchers("/api/models/**").hasRole("MODEL")
-                        .requestMatchers("/api/clients/**").hasRole("CLIENT")
-                        .requestMatchers("/api/favorites/**").hasAnyRole("CLIENT", "MODEL")
 
                         // Billing / PSP (CCBill)
                         .requestMatchers("/api/billing/ccbill/notify").permitAll()
@@ -92,7 +98,7 @@ public class SecurityConfig {
                         // Admin
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // WS endpoints (Fase 2)
+                        // WS endpoints
                         .requestMatchers("/messages/**").permitAll()
                         .requestMatchers("/match/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
@@ -102,14 +108,17 @@ public class SecurityConfig {
 
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
 
+                        // ROLE-SCOPED APIs (AL FINAL, para no pisar endpoints específicos)
+                        .requestMatchers("/api/models/**").hasRole("MODEL")
+                        .requestMatchers("/api/clients/**").hasRole("CLIENT")
+                        .requestMatchers("/api/favorites/**").hasAnyRole("CLIENT", "MODEL")
+
                         .anyRequest().authenticated()
                 )
-                // 1) Rate limit primero (antes de auth), para frenar bruteforce incluso sin sesión
                 .addFilterBefore(
                         new ApiRateLimitFilter(apiRateLimitService),
                         UsernamePasswordAuthenticationFilter.class
                 )
-                // 2) Luego auth por cookie JWT
                 .addFilterBefore(
                         new CookieJwtAuthenticationFilter(jwtUtil, userDetailsService),
                         UsernamePasswordAuthenticationFilter.class
