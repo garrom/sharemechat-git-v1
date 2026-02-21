@@ -1,11 +1,13 @@
 package com.sharemechat.controller;
 
 import com.sharemechat.config.IpConfig;
+import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModelContractAcceptanceRepository;
 import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -31,6 +33,29 @@ public class ModelContractController {
         this.acceptanceRepo = acceptanceRepo;
     }
 
+    // ==========================
+    // Helpers
+    // ==========================
+    private User requireUser(Authentication auth) {
+        if (auth == null || auth.getName() == null) return null;
+        return userService.findByEmail(auth.getName());
+    }
+
+    /** Onboarding model: role=USER y userType=FORM_MODEL */
+    private boolean isOnboardingModel(User u) {
+        return u != null
+                && Constants.Roles.USER.equals(u.getRole())
+                && Constants.UserTypes.FORM_MODEL.equals(u.getUserType());
+    }
+
+    /** Actor válido de contrato de modelo: onboarding o MODEL real */
+    private boolean isModelContractActor(User u) {
+        return u != null && (
+                Constants.Roles.MODEL.equals(u.getRole()) ||
+                        isOnboardingModel(u)
+        );
+    }
+
     // GET /api/consent/model-contract/current  (público)
     @GetMapping("/current")
     public ResponseEntity<Map<String, String>> current() {
@@ -40,30 +65,41 @@ public class ModelContractController {
     // GET /api/consent/model-contract/status  (auth)
     @GetMapping("/status")
     public ResponseEntity<Map<String, Object>> status(Authentication auth) {
-        if (auth == null || auth.getName() == null) {
-            return ResponseEntity.status(401).build();
+        User u = requireUser(auth);
+        if (u == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        User u = userService.findByEmail(auth.getName());
-        if (u == null) {
-            return ResponseEntity.status(401).build();
+        if (!isModelContractActor(u)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                    "message", "No autorizado para contrato de modelo"
+            ));
         }
 
         boolean acceptedCurrent = modelContractService.isAccepted(u.getId());
         boolean acceptedEver = (u.getId() != null) && acceptanceRepo.existsByUserId(u.getId());
 
+        // ✅ Caso clave para ROLE_MODEL cuando se publica nueva versión:
+        // acceptedEver=true y acceptedCurrent=false => necesita reaceptar
+        boolean needsReaccept = acceptedEver && !acceptedCurrent;
+
         Map<String, String> cur = modelContractService.current();
 
-        // ✅ Backward compatibility:
-        // - "accepted" MUST exist for older frontend (ModelDocuments.ensureContractAccepted)
-        // - Keep richer fields for future UX/debug
         Map<String, Object> out = new HashMap<>();
-        out.put("accepted", acceptedCurrent);          // <--- IMPORTANT (compat)
+        // Backward compatibility (frontend antiguo)
+        out.put("accepted", acceptedCurrent);
+
+        // Campos explícitos (frontend nuevo)
         out.put("acceptedCurrent", acceptedCurrent);
         out.put("acceptedEver", acceptedEver);
+        out.put("needsReaccept", needsReaccept);
 
+        // Contexto útil para UX/debug
+        out.put("role", u.getRole());
+        out.put("userType", u.getUserType());
         out.put("currentVersion", cur.get("version"));
         out.put("currentSha256", cur.get("sha256"));
+        out.put("currentUrl", cur.get("url"));
 
         return ResponseEntity.ok(out);
     }
@@ -71,13 +107,13 @@ public class ModelContractController {
     // POST /api/consent/model-contract/accept (auth)
     @PostMapping("/accept")
     public ResponseEntity<?> accept(Authentication auth, HttpServletRequest req) {
-        if (auth == null || auth.getName() == null) {
-            return ResponseEntity.status(401).build();
+        User u = requireUser(auth);
+        if (u == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        User u = userService.findByEmail(auth.getName());
-        if (u == null) {
-            return ResponseEntity.status(401).build();
+        if (!isModelContractActor(u)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado para contrato de modelo");
         }
 
         String ip = IpConfig.getClientIp(req);
@@ -85,7 +121,7 @@ public class ModelContractController {
 
         Map<String, Object> result = modelContractService.accept(u.getId(), ip, ua);
 
-        // Si ya estaba aceptado y coincidía con el contrato vigente → idempotente: 204
+        // Idempotente si ya estaba aceptado para versión actual
         boolean alreadyAccepted = Boolean.TRUE.equals(result.get("alreadyAccepted"));
         boolean matchesCurrent = Boolean.TRUE.equals(result.get("matchesCurrent"));
 

@@ -94,6 +94,19 @@ const PerfilModel = () => {
   const [picKey, setPicKey] = useState(0);
   const [videoKey, setVideoKey] = useState(0);
 
+  // Contrato (solo UX de ROLE_MODEL)
+  const [contractLoading, setContractLoading] = useState(false);
+  const [contractAccepting, setContractAccepting] = useState(false);
+  const [contractInfo, setContractInfo] = useState({
+    accepted: true,
+    acceptedCurrent: true,
+    acceptedEver: false,
+    needsReaccept: false,
+    currentVersion: null,
+    currentSha256: null,
+    currentUrl: null,
+  });
+
   // refs para disparar el click del input oculto
   const picInputRef = useRef(null);
   const videoInputRef = useRef(null);
@@ -107,6 +120,33 @@ const PerfilModel = () => {
       });
     } catch {
       // noop
+    }
+  };
+
+  const loadContractStatus = async () => {
+    setContractLoading(true);
+    try {
+      const data = await apiFetch('/consent/model-contract/status');
+
+      setContractInfo({
+        accepted: !!data?.accepted,
+        acceptedCurrent: !!data?.acceptedCurrent,
+        acceptedEver: !!data?.acceptedEver,
+        needsReaccept: !!data?.needsReaccept,
+        currentVersion: data?.currentVersion || null,
+        currentSha256: data?.currentSha256 || null,
+        currentUrl: data?.currentUrl || null,
+      });
+    } catch {
+      // Si falla, no rompemos perfil. Dejamos sin bloqueo UX extra.
+      setContractInfo((prev) => ({
+        ...prev,
+        accepted: true,
+        acceptedCurrent: true,
+        needsReaccept: false,
+      }));
+    } finally {
+      setContractLoading(false);
     }
   };
 
@@ -136,7 +176,10 @@ const PerfilModel = () => {
           interests: data.interests || '',
         });
 
-        await loadDocs();
+        await Promise.all([
+          loadDocs(),
+          loadContractStatus(),
+        ]);
       } catch (e) {
         setError(e?.message || 'No se pudo cargar el perfil');
       } finally {
@@ -211,8 +254,44 @@ const PerfilModel = () => {
     }
   };
 
+  const handleAcceptNewContract = async () => {
+    const url = contractInfo?.currentUrl;
+
+    const confirmed = window.confirm(
+      'Se ha actualizado el contrato de modelo. Debes aceptar la nueva versión para seguir gestionando tu perfil de modelo.\n\n¿Deseas aceptarlo ahora?'
+    );
+
+    if (!confirmed) return;
+
+    setContractAccepting(true);
+    setError('');
+    setMsg('');
+
+    try {
+      await apiFetch('/consent/model-contract/accept', {
+        method: 'POST',
+      });
+
+      await loadContractStatus();
+      setMsg('Contrato de modelo aceptado correctamente.');
+    } catch (e) {
+      setError(e?.message || 'No se pudo aceptar el contrato');
+      if (url) {
+        // El contrato se puede abrir igualmente
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
+    } finally {
+      setContractAccepting(false);
+    }
+  };
+
   const uploadSingle = async (fieldName, fileObj) => {
     if (!fileObj) return;
+
+    if (contractInfo?.needsReaccept) {
+      setError('Debes aceptar la nueva versión del contrato de modelo antes de subir archivos.');
+      return;
+    }
 
     setUploadingField(fieldName);
     setError('');
@@ -244,6 +323,11 @@ const PerfilModel = () => {
       setMsg('Archivo subido correctamente.');
     } catch (e) {
       setError(e?.message || 'No se pudo subir el archivo');
+
+      // Si backend devuelve mensaje de contrato, refrescamos estado para actualizar UX
+      if ((e?.message || '').toLowerCase().includes('contrato')) {
+        loadContractStatus();
+      }
     } finally {
       setUploadingField(null);
     }
@@ -251,6 +335,12 @@ const PerfilModel = () => {
 
   const deletePhoto = async () => {
     if (!docs.urlPic) return;
+
+    if (contractInfo?.needsReaccept) {
+      setError('Debes aceptar la nueva versión del contrato de modelo antes de modificar archivos.');
+      return;
+    }
+
     if (!window.confirm('¿Eliminar tu foto de perfil?')) return;
 
     setDeletingPic(true);
@@ -268,6 +358,9 @@ const PerfilModel = () => {
       setMsg('Foto eliminada.');
     } catch (e) {
       setError(e?.message || 'No se pudo eliminar');
+      if ((e?.message || '').toLowerCase().includes('contrato')) {
+        loadContractStatus();
+      }
     } finally {
       setDeletingPic(false);
     }
@@ -275,6 +368,12 @@ const PerfilModel = () => {
 
   const deleteVideo = async () => {
     if (!docs.urlVideo) return;
+
+    if (contractInfo?.needsReaccept) {
+      setError('Debes aceptar la nueva versión del contrato de modelo antes de modificar archivos.');
+      return;
+    }
+
     if (!window.confirm('¿Eliminar tu vídeo de presentación?')) return;
 
     setDeletingVideo(true);
@@ -292,6 +391,9 @@ const PerfilModel = () => {
       setMsg('Vídeo eliminado.');
     } catch (e) {
       setError(e?.message || 'No se pudo eliminar');
+      if ((e?.message || '').toLowerCase().includes('contrato')) {
+        loadContractStatus();
+      }
     } finally {
       setDeletingVideo(false);
     }
@@ -312,6 +414,8 @@ const PerfilModel = () => {
     const originalName = raw.replace(/^[0-9a-fA-F-]{36}-/, '');
     return decodeURIComponent(originalName);
   })();
+
+  const contractBlocked = contractInfo?.acceptedCurrent === false;
 
   return (
     <StyledContainer>
@@ -355,6 +459,44 @@ const PerfilModel = () => {
             </ProfileHeaderMeta>
           </ProfileHeaderInfo>
         </ProfileHeader>
+
+        {/* Aviso contrato actualizado (solo cuando aplica) */}
+        {!loading && contractBlocked && (
+          <ProfileCard style={{ marginTop: '16px', border: '1px solid rgba(255, 160, 0, 0.35)' }}>
+            <CardHeader>
+              <CardTitle>Contrato de modelo actualizado</CardTitle>
+              <CardSubtitle>
+                Se ha publicado una nueva versión del contrato. Debes aceptarla para seguir gestionando tu foto y vídeo de perfil.
+              </CardSubtitle>
+            </CardHeader>
+            <CardBody>
+              {contractInfo?.currentVersion && (
+                <Hint>
+                  Versión vigente: <strong>{contractInfo.currentVersion}</strong>
+                </Hint>
+              )}
+
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+                {contractInfo?.currentUrl && (
+                  <ProfileSecondaryButton
+                    type="button"
+                    onClick={() => window.open(contractInfo.currentUrl, '_blank', 'noopener,noreferrer')}
+                  >
+                    Ver contrato
+                  </ProfileSecondaryButton>
+                )}
+
+                <ProfilePrimaryButton
+                  type="button"
+                  onClick={handleAcceptNewContract}
+                  disabled={contractAccepting || contractLoading}
+                >
+                  {contractAccepting ? 'Aceptando…' : 'Aceptar nueva versión'}
+                </ProfilePrimaryButton>
+              </div>
+            </CardBody>
+          </ProfileCard>
+        )}
 
         {/* Mensajes de estado */}
         {loading && <p>Cargando…</p>}
@@ -501,6 +643,7 @@ const PerfilModel = () => {
                     <ProfileSecondaryButton
                       type="button"
                       onClick={() => picInputRef.current && picInputRef.current.click()}
+                      disabled={contractBlocked}
                     >
                       Seleccionar archivo
                     </ProfileSecondaryButton>
@@ -508,7 +651,7 @@ const PerfilModel = () => {
                     <ProfilePrimaryButton
                       type="button"
                       onClick={() => uploadSingle('pic', picFile)}
-                      disabled={!picFile || uploadingField === 'pic'}
+                      disabled={contractBlocked || !picFile || uploadingField === 'pic'}
                     >
                       {uploadingField === 'pic' ? 'Subiendo…' : 'Subir foto'}
                     </ProfilePrimaryButton>
@@ -517,14 +660,18 @@ const PerfilModel = () => {
                       <ProfileDangerOutlineButton
                         type="button"
                         onClick={deletePhoto}
-                        disabled={deletingPic}
+                        disabled={contractBlocked || deletingPic}
                       >
                         {deletingPic ? 'Eliminando…' : 'Eliminar foto'}
                       </ProfileDangerOutlineButton>
                     )}
                   </PhotoActions>
 
-                  <Hint>Formato recomendado JPG/PNG.</Hint>
+                  <Hint>
+                    {contractBlocked
+                      ? 'Debes aceptar la nueva versión del contrato para modificar tu foto.'
+                      : 'Formato recomendado JPG/PNG.'}
+                  </Hint>
                 </CardBody>
               </MediaCard>
 
@@ -565,6 +712,7 @@ const PerfilModel = () => {
                     <ProfileSecondaryButton
                       type="button"
                       onClick={() => videoInputRef.current && videoInputRef.current.click()}
+                      disabled={contractBlocked}
                     >
                       Seleccionar archivo
                     </ProfileSecondaryButton>
@@ -572,7 +720,7 @@ const PerfilModel = () => {
                     <ProfilePrimaryButton
                       type="button"
                       onClick={() => uploadSingle('video', videoFile)}
-                      disabled={!videoFile || uploadingField === 'video'}
+                      disabled={contractBlocked || !videoFile || uploadingField === 'video'}
                     >
                       {uploadingField === 'video' ? 'Subiendo…' : 'Subir vídeo'}
                     </ProfilePrimaryButton>
@@ -581,7 +729,7 @@ const PerfilModel = () => {
                       <ProfileDangerOutlineButton
                         type="button"
                         onClick={deleteVideo}
-                        disabled={deletingVideo}
+                        disabled={contractBlocked || deletingVideo}
                       >
                         {deletingVideo ? 'Eliminando…' : 'Eliminar vídeo'}
                       </ProfileDangerOutlineButton>
@@ -589,7 +737,9 @@ const PerfilModel = () => {
                   </PhotoActions>
 
                   <Hint>
-                    Formato recomendado MP4. Tamaño razonable para carga rápida.
+                    {contractBlocked
+                      ? 'Debes aceptar la nueva versión del contrato para modificar tu vídeo.'
+                      : 'Formato recomendado MP4. Tamaño razonable para carga rápida.'}
                   </Hint>
                 </CardBody>
               </MediaCard>
