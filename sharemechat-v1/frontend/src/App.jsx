@@ -10,6 +10,7 @@ import DashboardUserModel from './pages/dashboard/DashboardUserModel';
 import DashboardAdmin from './pages/dashboard/DashboardAdmin';
 import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
+import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
 import Blog from './pages/blog/Blog';
 import ChangePasswordPage from './pages/subpages/ChangePasswordPage';
 import ModelDocuments from './pages/subpages/ModelDocuments';
@@ -27,7 +28,9 @@ import { CallUiProvider } from './components/CallUiContext';
 import { SessionProvider } from './components/SessionProvider';
 
 // Wrapper para rutas públicas que requieren age-gate/TyC (guest/no logueado)
-const PublicWithGuestGate = ({ component: Component, ...rest }) => (<Route {...rest} render={(props) => (<GuestConsentGate><Component {...props} /></GuestConsentGate>)} />);
+const PublicWithGuestGate = ({ component: Component, ...rest }) => (
+  <Route {...rest} render={(props) => (<GuestConsentGate><Component {...props} /></GuestConsentGate>)} />
+);
 
 function App() {
   return (
@@ -46,21 +49,29 @@ function App() {
                 <Route path="/forgot-password" component={ForgotPassword} />
                 <Route path="/unauthorized" component={Unauthorized} />
                 <Route path="/reset-password" component={ResetPassword} />
+
                 {/* Dashboards por rol */}
                 <Route path="/client" render={() => (<RequireRole role="CLIENT"><DashboardClient /></RequireRole>)} />
                 <Route path="/model" render={() => (<RequireRole role="MODEL"><DashboardModel /></RequireRole>)} />
                 <Route path="/dashboard-admin" render={() => (<RequireRole role="ADMIN"><DashboardAdmin /></RequireRole>)} />
+
                 {/* Dashboards para USER (pre-conversión) */}
                 <Route path="/dashboard-user-client" render={() => (<RequireRole role="USER"><DashboardUserClient /></RequireRole>)} />
                 <Route path="/dashboard-user-model" render={() => (<RequireRole role="USER"><DashboardUserModel /></RequireRole>)} />
+
+                {/* KYC onboarding USER (manual / veriff) */}
                 <Route path="/model-documents" render={() => (<RequireRole role="USER"><ModelDocuments /></RequireRole>)} />
+                <Route path="/model-kyc" render={() => (<RequireRole role="USER"><ModelKycVeriffPage /></RequireRole>)} />
+
                 {/* Subpáginas bajo dashboard (protegidas por rol) */}
                 <Route path="/perfil-client" render={() => (<RequireRole role="CLIENT"><PerfilClient /></RequireRole>)} />
                 <Route path="/perfil-model" render={() => (<RequireRole role="MODEL"><PerfilModel /></RequireRole>)} />
                 <Route path="/change-password" render={() => (<RequireRole roles={[Roles.CLIENT, Roles.MODEL, Roles.ADMIN]}><ChangePasswordPage /></RequireRole>)} />
+
                 {/* Fallback */}
                 <Redirect to="/unauthorized" />
               </Switch>
+
               {/* Footer siempre visible en todas las páginas */}
               <Footer />
               <CookieBanner />

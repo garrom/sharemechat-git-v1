@@ -1,10 +1,10 @@
-
 package com.sharemechat.controller;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.service.KycProviderConfigService;
 import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.storage.StorageService;
@@ -23,15 +23,18 @@ public class ModelKycController {
     private final ModelDocumentRepository modelDocumentRepository;
     private final StorageService storageService;
     private final ModelContractService modelContractService;
+    private final KycProviderConfigService kycProviderConfigService;
 
     public ModelKycController(UserService userService,
                               ModelDocumentRepository modelDocumentRepository,
                               StorageService storageService,
-                              ModelContractService modelContractService) {
+                              ModelContractService modelContractService,
+                              KycProviderConfigService kycProviderConfigService) {
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
         this.storageService = storageService;
         this.modelContractService = modelContractService;
+        this.kycProviderConfigService = kycProviderConfigService;
     }
 
     private ResponseEntity<?> enforceOnboardingModelAndContract(User user) {
@@ -39,7 +42,6 @@ public class ModelKycController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
         }
 
-        // Solo onboarding: USER + FORM_MODEL
         boolean isOnboardingModel =
                 Constants.Roles.USER.equals(user.getRole())
                         && Constants.UserTypes.FORM_MODEL.equals(user.getUserType());
@@ -48,12 +50,54 @@ public class ModelKycController {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
         }
 
-        // Contrato vigente obligatorio durante onboarding
         if (!modelContractService.isAcceptedCurrent(user.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Debes aceptar el contrato de modelo");
         }
 
         return null;
+    }
+
+    // Bloquea flujo manual cuando el modo activo no es MANUAL
+    private ResponseEntity<?> enforceManualKycEnabled() {
+        if (!kycProviderConfigService.isManualEnabledForModelOnboarding()) {
+            String mode = kycProviderConfigService.getActiveModeForModelOnboarding();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("KYC manual no disponible. Modo activo: " + mode);
+        }
+        return null;
+    }
+
+    /**
+     * Endpoint de entrada para que frontend sepa qué flujo abrir.
+     * (DashboardUserModel -> decide si ir a Veriff o Manual)
+     */
+    @GetMapping("/entrypoint")
+    public ResponseEntity<?> getKycEntrypoint(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
+        }
+
+        User user = userService.findByEmail(authentication.getName());
+
+        ResponseEntity<?> denied = enforceOnboardingModelAndContract(user);
+        if (denied != null) return denied;
+
+        String activeMode = kycProviderConfigService.getActiveModeForModelOnboarding();
+
+        var body = new java.util.HashMap<String, Object>();
+        body.put("userId", user.getId());
+        body.put("userType", user.getUserType());
+        body.put("role", user.getRole());
+        body.put("verificationStatus", user.getVerificationStatus() != null
+                ? user.getVerificationStatus()
+                : Constants.VerificationStatuses.PENDING);
+        body.put("kycMode", activeMode);
+
+        // flags cómodos para frontend
+        body.put("manualEnabled", Constants.KycModes.MANUAL.equalsIgnoreCase(activeMode));
+        body.put("veriffEnabled", Constants.KycModes.VERIFF.equalsIgnoreCase(activeMode));
+
+        return ResponseEntity.ok(body);
     }
 
     @GetMapping("/me")
@@ -63,14 +107,22 @@ public class ModelKycController {
         }
 
         User user = userService.findByEmail(authentication.getName());
+
         ResponseEntity<?> denied = enforceOnboardingModelAndContract(user);
         if (denied != null) return denied;
+
+        ResponseEntity<?> manualDenied = enforceManualKycEnabled();
+        if (manualDenied != null) return manualDenied;
 
         var doc = modelDocumentRepository.findById(user.getId()).orElse(null);
 
         var body = new java.util.HashMap<String, Object>();
         body.put("userId", user.getId());
-        body.put("verificationStatus", user.getVerificationStatus());
+        body.put("verificationStatus", user.getVerificationStatus() != null
+                ? user.getVerificationStatus()
+                : Constants.VerificationStatuses.PENDING);
+        body.put("kycMode", kycProviderConfigService.getActiveModeForModelOnboarding());
+
         if (doc != null) {
             body.put("urlVerificFront", doc.getUrlVerificFront());
             body.put("urlVerificBack",  doc.getUrlVerificBack());
@@ -79,6 +131,7 @@ public class ModelKycController {
             body.put("createdAt",       doc.getCreatedAt());
             body.put("updatedAt",       doc.getUpdatedAt());
         }
+
         return ResponseEntity.ok(body);
     }
 
@@ -96,8 +149,12 @@ public class ModelKycController {
         }
 
         User user = userService.findByEmail(authentication.getName());
+
         ResponseEntity<?> denied = enforceOnboardingModelAndContract(user);
         if (denied != null) return denied;
+
+        ResponseEntity<?> manualDenied = enforceManualKycEnabled();
+        if (manualDenied != null) return manualDenied;
 
         if ((idFront == null || idFront.isEmpty())
                 && (idBack == null || idBack.isEmpty())
@@ -135,13 +192,17 @@ public class ModelKycController {
 
         var body = new java.util.HashMap<String, Object>();
         body.put("userId", user.getId());
-        body.put("verificationStatus", user.getVerificationStatus());
+        body.put("verificationStatus", user.getVerificationStatus() != null
+                ? user.getVerificationStatus()
+                : Constants.VerificationStatuses.PENDING);
+        body.put("kycMode", kycProviderConfigService.getActiveModeForModelOnboarding());
         body.put("urlVerificFront", doc.getUrlVerificFront());
         body.put("urlVerificBack", doc.getUrlVerificBack());
         body.put("urlVerificDoc", doc.getUrlVerificDoc());
         body.put("urlConsent", doc.getUrlConsent());
         body.put("createdAt", doc.getCreatedAt());
         body.put("updatedAt", doc.getUpdatedAt());
+
         return ResponseEntity.ok(body);
     }
 
@@ -153,8 +214,12 @@ public class ModelKycController {
         }
 
         User user = userService.findByEmail(authentication.getName());
+
         ResponseEntity<?> denied = enforceOnboardingModelAndContract(user);
         if (denied != null) return denied;
+
+        ResponseEntity<?> manualDenied = enforceManualKycEnabled();
+        if (manualDenied != null) return manualDenied;
 
         ModelDocument doc = modelDocumentRepository.findById(user.getId()).orElse(null);
         if (doc == null) {
@@ -162,6 +227,7 @@ public class ModelKycController {
         }
 
         String toDelete = null;
+
         switch (field) {
             case "idFront" -> {
                 toDelete = doc.getUrlVerificFront();
@@ -187,7 +253,11 @@ public class ModelKycController {
         modelDocumentRepository.save(doc);
 
         if (toDelete != null) {
-            try { storageService.deleteByPublicUrl(toDelete); } catch (Exception ignore) {}
+            try {
+                storageService.deleteByPublicUrl(toDelete);
+            } catch (Exception ignore) {
+                // noop
+            }
         }
 
         return ResponseEntity.noContent().build();

@@ -1,4 +1,3 @@
-// src/pages/dashboard/DashboardUserModel.jsx
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 
@@ -25,7 +24,6 @@ import {
   Hint,
   CenteredMain,
   OnboardingCard,
-  ButtonPrimary,
 } from '../../styles/subpages/PerfilClientModelStyle';
 
 import { useSession } from '../../components/SessionProvider';
@@ -48,6 +46,11 @@ const DashboardUserModel = () => {
   // UX: obligar a abrir el PDF + checkbox antes de permitir "Acepto"
   const [openedContract, setOpenedContract] = useState(false);
   const [confirmChecked, setConfirmChecked] = useState(false);
+
+  // Estado KYC (routing + modo activo)
+  const [routingKyc, setRoutingKyc] = useState(false);
+  const [kycRouteErr, setKycRouteErr] = useState('');
+  const [kycMode, setKycMode] = useState('');
 
   useEffect(() => {
     if (sessionLoading) return;
@@ -99,6 +102,34 @@ const DashboardUserModel = () => {
     };
   }, [sessionUser, sessionLoading]);
 
+  // Cargar modo KYC activo (solo informativo para el botón/UX)
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!sessionUser) return;
+    if (contractAccepted !== true) return;
+
+    let cancelled = false;
+
+    const loadKycMode = async () => {
+      try {
+        const entry = await apiFetch('/kyc/config/model-onboarding');
+        if (cancelled) return;
+
+        const mode = String(entry?.activeMode || '').toUpperCase();
+        setKycMode(mode);
+      } catch (e) {
+        if (cancelled) return;
+        setKycMode('');
+      }
+    };
+
+    loadKycMode();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionUser, sessionLoading, contractAccepted]);
+
   const handleAcceptContract = async () => {
     setAccepting(true);
     setContractErr('');
@@ -108,6 +139,15 @@ const DashboardUserModel = () => {
       setContractAccepted(true);
       setOpenedContract(true);
       setConfirmChecked(true);
+
+      // Tras aceptar, intentamos cargar el modo KYC activo
+      try {
+        const entry = await apiFetch('/kyc/config/model-onboarding');
+        const mode = String(entry?.activeMode || '').toUpperCase();
+        setKycMode(mode);
+      } catch {
+        setKycMode('');
+      }
     } catch (e) {
       setContractErr('No se pudo registrar la aceptación. Inténtalo de nuevo.');
     } finally {
@@ -116,7 +156,6 @@ const DashboardUserModel = () => {
   };
 
   const handleLogout = async () => {
-
     try {
       await apiFetch('/auth/logout', { method: 'POST' });
     } catch {
@@ -125,14 +164,52 @@ const DashboardUserModel = () => {
     history.push('/');
   };
 
-  const handleUploadDocs = () => {
-    history.push('/model-documents');
+  // Decide flujo (MANUAL vs VERIFF) desde backend
+  const handleUploadDocs = async () => {
+    setRoutingKyc(true);
+    setKycRouteErr('');
+
+    try {
+      const entry = await apiFetch('/kyc/config/model-onboarding');
+      const mode = String(entry?.activeMode || '').toUpperCase();
+
+      setKycMode(mode);
+
+      if (mode === 'MANUAL') {
+        history.push('/model-documents');
+        return;
+      }
+
+      if (mode === 'VERIFF') {
+        history.push('/model-kyc');
+        return;
+      }
+
+      setKycRouteErr(`Modo KYC no soportado: ${mode || 'N/D'}`);
+    } catch (e) {
+      setKycRouteErr('No se pudo obtener el flujo KYC. Inténtalo de nuevo.');
+    } finally {
+      setRoutingKyc(false);
+    }
   };
 
   const displayName = userName || 'Modelo';
   const mustAcceptContract = contractAccepted === false;
-
   const canAcceptContract = openedContract && confirmChecked && !accepting;
+
+  const mainButtonLabel =
+    kycMode === 'VERIFF'
+      ? 'Ir a Veriff'
+      : kycMode === 'MANUAL'
+      ? 'Subir documentos (manual)'
+      : 'Actualizar / Subir documentos';
+
+  const mobileButtonLabel =
+    kycMode === 'VERIFF'
+      ? 'Ir a Veriff'
+      : kycMode === 'MANUAL'
+      ? 'Subir documentos'
+      : 'Subir documentos';
 
   if (sessionLoading) {
     return (
@@ -189,14 +266,14 @@ const DashboardUserModel = () => {
 
           <NavButton
             type="button"
-            onClick={() => {
-              handleUploadDocs();
+            onClick={async () => {
+              await handleUploadDocs();
               setMenuOpen(false);
             }}
-            disabled={mustAcceptContract}
+            disabled={mustAcceptContract || routingKyc}
             title={mustAcceptContract ? 'Debes aceptar el contrato primero' : undefined}
           >
-            Subir documentos
+            {routingKyc ? 'Abriendo KYC…' : mobileButtonLabel}
           </NavButton>
 
           <NavButton
@@ -217,7 +294,7 @@ const DashboardUserModel = () => {
           <OnboardingCard>
             <h3>Completa tu verificación de Modelo</h3>
 
-            {info && <Hint style={{ marginTop: 8 ,color: '#000'}}>{info}</Hint>}
+            {info && <Hint style={{ marginTop: 8, color: '#000' }}>{info}</Hint>}
 
             {/* CONTRATO LEGAL (gating UX) */}
             {contractAccepted === false && (
@@ -227,7 +304,7 @@ const DashboardUserModel = () => {
                 </Hint>
 
                 {contractCurrent?.url && (
-                  <Hint style={{ marginTop: 8 ,color: '#000'}}>
+                  <Hint style={{ marginTop: 8, color: '#000' }}>
                     <a
                       href={contractCurrent.url}
                       target="_blank"
@@ -283,16 +360,28 @@ const DashboardUserModel = () => {
               </div>
             )}
 
+            {contractAccepted === true && kycMode && (
+              <Hint style={{ marginTop: 12, color: '#000' }}>
+                Método KYC activo: <strong>{kycMode}</strong>
+              </Hint>
+            )}
+
             <div style={{ marginTop: 16 }}>
               <ProfilePrimaryButton
                 type="button"
-                onClick={() => history.push('/model-documents')}
-                disabled={mustAcceptContract}
+                onClick={handleUploadDocs}
+                disabled={mustAcceptContract || routingKyc}
                 title={mustAcceptContract ? 'Debes aceptar el contrato primero' : undefined}
               >
-                Actualizar / Subir documentos
+                {routingKyc ? 'Abriendo verificación…' : mainButtonLabel}
               </ProfilePrimaryButton>
             </div>
+
+            {kycRouteErr && (
+              <Hint style={{ marginTop: 10 }}>
+                {kycRouteErr}
+              </Hint>
+            )}
 
             <Hint style={{ marginTop: 12 }}>
               Una vez validados por el administrador, tu cuenta pasará a{' '}

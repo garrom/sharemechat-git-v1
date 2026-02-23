@@ -1,6 +1,5 @@
-// src/pages/subpages/ModelDocuments.jsx
 import React, { useEffect, useState, useRef } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 
 import {
   StyledContainer,
@@ -39,11 +38,14 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 
-const DOCS_GET_URL = '/api/models/documents/me';
-const DOCS_UPLOAD_URL = '/api/models/documents'; // POST: idFront|idBack|verificDoc ; DELETE: ?field=...
-
 const ModelDocuments = () => {
   const history = useHistory();
+  const location = useLocation();
+  const isVeriffRoute = location.pathname === '/model-kyc';
+
+  // ✅ MÍNIMO CAMBIO: usar KYC solo en rutas KYC; en el resto usar documents clásico
+  const DOCS_GET_URL = isVeriffRoute ? '/api/models/kyc/me' : '/api/models/documents/me';
+  const DOCS_UPLOAD_URL = isVeriffRoute ? '/api/models/kyc' : '/api/models/documents'; // POST/DELETE
 
   const [userName, setUserName] = useState('Usuario');
 
@@ -67,6 +69,9 @@ const ModelDocuments = () => {
   const [deletingField, setDeletingField] = useState(null);
   const [error, setError] = useState('');
   const [msg, setMsg] = useState('');
+
+  // NUEVO: estado arranque Veriff
+  const [startingVeriff, setStartingVeriff] = useState(false);
 
   // refs para los 3 inputs file
   const idFrontInputRef = useRef(null);
@@ -122,6 +127,34 @@ const ModelDocuments = () => {
     return false;
   };
 
+  const startVeriff = async () => {
+    setStartingVeriff(true);
+    setError('');
+    setMsg('');
+
+    try {
+      const res = await fetch('/api/kyc/veriff/start', {
+        method: 'POST',
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        throw new Error((await res.text()) || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      const url = data?.verificationUrl;
+
+      if (!url) {
+        throw new Error('El proveedor KYC no devolvió URL de verificación');
+      }
+
+      window.location.href = url;
+    } catch (e) {
+      setError(e.message || 'No se pudo iniciar la verificación con Veriff');
+      setStartingVeriff(false);
+    }
+  };
 
   useEffect(() => {
     (async () => {
@@ -139,14 +172,20 @@ const ModelDocuments = () => {
           setUserName(me.nickname || me.name || me.email || 'Usuario');
         }
 
+        // ✅ Si entras por /model-kyc, lanzar Veriff (no mostrar flujo manual)
+        if (isVeriffRoute) {
+          await startVeriff();
+          return;
+        }
+
+        // ✅ Si entras por /model-documents (u otras), flujo docs normal
         await refreshDocs();
       } catch {
         // noop
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [history]);
-
+  }, [history, isVeriffRoute]);
 
   const extractOriginalNameFromUrl = (url) => {
     if (!url) return '';
@@ -285,6 +324,56 @@ const ModelDocuments = () => {
     );
   };
 
+  // ✅ Vista para Veriff (/model-kyc)
+  if (isVeriffRoute) {
+    return (
+      <StyledContainer>
+        <StyledNavbar>
+          <StyledBrand href="/" aria-label="SharemeChat" />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ color: '#e9ecef', fontSize: '0.9rem' }}>{userName}</span>
+            <NavButton
+              type="button"
+              onClick={() => history.push('/dashboard-user-model')}
+            >
+              Volver
+            </NavButton>
+          </div>
+        </StyledNavbar>
+
+        <ProfileMain>
+          <ProfileCard>
+            <CardHeader>
+              <CardTitle>Verificación de identidad (Veriff)</CardTitle>
+              <CardSubtitle>
+                Te estamos redirigiendo al proveedor de verificación.
+              </CardSubtitle>
+            </CardHeader>
+            <CardBody>
+              {startingVeriff && <p>Abriendo verificación…</p>}
+              {error && <Message type="error">{error}</Message>}
+
+              {!startingVeriff && error && (
+                <div style={{ marginTop: 12 }}>
+                  <ProfilePrimaryButton
+                    type="button"
+                    onClick={startVeriff}
+                  >
+                    Reintentar
+                  </ProfilePrimaryButton>
+                </div>
+              )}
+
+              <Hint style={{ marginTop: 12 }}>
+                Si el problema persiste, el administrador puede activar el flujo manual de KYC.
+              </Hint>
+            </CardBody>
+          </ProfileCard>
+        </ProfileMain>
+      </StyledContainer>
+    );
+  }
+
   return (
     <StyledContainer>
       <StyledNavbar>
@@ -360,6 +449,12 @@ const ModelDocuments = () => {
                     Seleccionar archivo
                   </ProfileSecondaryButton>
 
+                  {idFrontFile && (
+                    <FileNameWrapper>
+                      <span>{idFrontFile.name}</span>
+                    </FileNameWrapper>
+                  )}
+
                   <ProfilePrimaryButton
                     type="button"
                     onClick={() => uploadSingle('idFront', idFrontFile)}
@@ -409,6 +504,12 @@ const ModelDocuments = () => {
                   >
                     Seleccionar archivo
                   </ProfileSecondaryButton>
+
+                  {idBackFile && (
+                    <FileNameWrapper>
+                      <span>{idBackFile.name}</span>
+                    </FileNameWrapper>
+                  )}
 
                   <ProfilePrimaryButton
                     type="button"
@@ -462,6 +563,12 @@ const ModelDocuments = () => {
                   >
                     Seleccionar archivo
                   </ProfileSecondaryButton>
+
+                  {verifDocFile && (
+                    <FileNameWrapper>
+                      <span>{verifDocFile.name}</span>
+                    </FileNameWrapper>
+                  )}
 
                   <ProfilePrimaryButton
                     type="button"

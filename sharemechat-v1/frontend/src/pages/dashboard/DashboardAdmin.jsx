@@ -42,6 +42,13 @@ const DashboardAdmin = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // ---- KYC onboarding config (admin)
+  const [kycCfgLoading, setKycCfgLoading] = useState(false);
+  const [kycCfgSaving, setKycCfgSaving] = useState(false);
+  const [kycCfgError, setKycCfgError] = useState('');
+  const [kycCfg, setKycCfg] = useState(null);
+  const [kycModeDraft, setKycModeDraft] = useState('VERIFF');
+
   // ---- Stats
   const [waitingModelsCount, setWaitingModelsCount] = useState(null);
   const [waitingClientsCount, setWaitingClientsCount] = useState(null);
@@ -212,6 +219,7 @@ const DashboardAdmin = () => {
 
     if (activeTab === 'models') {
       fetchUsers();
+      loadKycConfig();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [history, activeTab]);
@@ -358,6 +366,47 @@ const DashboardAdmin = () => {
     }
   };
 
+  const loadKycConfig = async () => {
+    setKycCfgLoading(true);
+    setKycCfgError('');
+    try {
+      const res = await fetch('/api/kyc/config/model-onboarding', {
+        credentials: 'include',
+      });
+      if (!res.ok) throw new Error((await res.text()) || 'Error cargando configuración KYC');
+      const data = await res.json();
+      setKycCfg(data || null);
+      setKycModeDraft((data?.activeMode || 'VERIFF').toUpperCase());
+    } catch (e) {
+      setKycCfgError(e.message || 'Error cargando configuración KYC');
+      setKycCfg(null);
+    } finally {
+      setKycCfgLoading(false);
+    }
+  };
+
+  const saveKycMode = async () => {
+    setKycCfgSaving(true);
+    setKycCfgError('');
+    try {
+      const res = await fetch('/api/admin/kyc/model-onboarding/mode', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mode: kycModeDraft,
+          note: `Cambio desde Admin UI a ${kycModeDraft}`,
+        }),
+      });
+      if (!res.ok) throw new Error((await res.text()) || 'Error guardando modo KYC');
+      await loadKycConfig();
+    } catch (e) {
+      setKycCfgError(e.message || 'Error guardando modo KYC');
+    } finally {
+      setKycCfgSaving(false);
+    }
+  };
+
   const handleReview = async (userId, action) => {
     if (action === 'REJECT') {
       const ok = window.confirm(
@@ -381,7 +430,6 @@ const DashboardAdmin = () => {
   };
 
   const handleLogout = async () => {
-
     try {
       await apiFetch('/auth/logout', { method: 'POST' });
     } catch {
@@ -484,6 +532,52 @@ const DashboardAdmin = () => {
       {activeTab === 'models' && (
         <>
           <SectionTitle>Gestión de Modelos</SectionTitle>
+
+          <div
+            style={{
+              width: '100%',
+              maxWidth: '1200px',
+              background: '#fff',
+              border: '1px solid #eee',
+              borderRadius: '10px',
+              padding: '14px',
+              marginBottom: '12px',
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 10 }}>
+              Configuración KYC Onboarding
+            </div>
+
+            {kycCfgError && <StyledError>{kycCfgError}</StyledError>}
+
+            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <FieldBlock>
+                <label>Modo KYC</label>
+                <StyledSelect
+                  value={kycModeDraft}
+                  onChange={(e) => setKycModeDraft(e.target.value)}
+                  disabled={kycCfgLoading || kycCfgSaving}
+                >
+                  <option value="VERIFF">VERIFF (automático)</option>
+                  <option value="MANUAL">MANUAL (documentos)</option>
+                </StyledSelect>
+              </FieldBlock>
+
+              <StyledButton onClick={saveKycMode} disabled={kycCfgLoading || kycCfgSaving}>
+                {kycCfgSaving ? 'Guardando…' : 'Guardar modo'}
+              </StyledButton>
+            </div>
+
+            <div style={{ marginTop: 10, fontSize: 12, color: '#6c757d' }}>
+              <div>
+                <strong>Actual:</strong> {kycCfg?.activeMode || '—'}
+              </div>
+              <div>
+                <strong>manualEnabled:</strong> {String(kycCfg?.manualEnabled ?? '—')} |{' '}
+                <strong>veriffEnabled:</strong> {String(kycCfg?.veriffEnabled ?? '—')}
+              </div>
+            </div>
+          </div>
 
           <ControlsRow>
             <FieldBlock>

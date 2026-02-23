@@ -64,6 +64,7 @@ public class SecurityConfig {
                         // MODELS - KYC (onboarding)
                         // ==========================
                         .requestMatchers(HttpMethod.GET, "/api/models/kyc/me").hasRole("USER")
+                        .requestMatchers(HttpMethod.GET, "/api/models/kyc/entrypoint").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/api/models/kyc").hasRole("USER")
                         .requestMatchers(HttpMethod.DELETE, "/api/models/kyc").hasRole("USER")
 
@@ -89,6 +90,10 @@ public class SecurityConfig {
                         // Billing / PSP (CCBill)
                         .requestMatchers("/api/billing/ccbill/notify").permitAll()
                         .requestMatchers("/api/billing/ccbill/session").hasAnyRole("USER", "CLIENT")
+
+                        // KYC (VERIFF)
+                        .requestMatchers(HttpMethod.POST, "/api/kyc/veriff/start").hasRole("USER")
+                        .requestMatchers(HttpMethod.POST, "/api/kyc/veriff/webhook").permitAll()
 
                         // Transactions
                         .requestMatchers("/api/transactions/payout").hasRole("MODEL")
