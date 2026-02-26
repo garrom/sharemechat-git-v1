@@ -1,6 +1,9 @@
 package com.sharemechat.service;
 
-import com.sharemechat.dto.*;
+import com.sharemechat.dto.ModerationReportDTO;
+import com.sharemechat.dto.ModerationReportReviewDTO;
+import com.sharemechat.dto.ReportAbuseCreateDTO;
+import com.sharemechat.dto.UserBlockDTO;
 import com.sharemechat.entity.ModerationReport;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModerationReportRepository;
@@ -60,14 +63,43 @@ public class ModerationReportService {
         userRepository.findById(dto.getReportedUserId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario reportado no existe"));
 
+        // Anti-spam mínimo (sin tocar repositorio): evita 2 reportes al mismo usuario en <2 min
+        try {
+            List<ModerationReport> mine = moderationReportRepository.findAllByReporterUserIdOrderByCreatedAtDesc(reporterId);
+            ModerationReport lastSame = mine.stream()
+                    .filter(r -> r != null && dto.getReportedUserId().equals(r.getReportedUserId()))
+                    .findFirst()
+                    .orElse(null);
+
+            if (lastSame != null && lastSame.getCreatedAt() != null) {
+                if (lastSame.getCreatedAt().isAfter(LocalDateTime.now().minusMinutes(2))) {
+                    throw new IllegalArgumentException("Has reportado a este usuario recientemente. Espera un momento.");
+                }
+            }
+        } catch (IllegalArgumentException e) {
+            throw e;
+        } catch (Exception ignore) {
+            // si falla esta comprobación por cualquier motivo, no bloqueamos el reporte
+        }
+
         String reportType = normalizeReportType(dto.getReportType());
         String description = trimToNull(dto.getDescription(), 1000);
+
+        // Medida anti-XSS mínima: no permitimos < o > en texto libre
+        if (description != null && (description.contains("<") || description.contains(">"))) {
+            throw new IllegalArgumentException("description contiene caracteres no permitidos");
+        }
+
         boolean alsoBlock = dto.getAlsoBlock() == null || dto.getAlsoBlock();
+
+        // streamRecordId: si viene basura, lo nulificamos
+        Long streamId = dto.getStreamRecordId();
+        if (streamId != null && streamId <= 0) streamId = null;
 
         ModerationReport row = new ModerationReport();
         row.setReporterUserId(reporterId);
         row.setReportedUserId(dto.getReportedUserId());
-        row.setStreamRecordId(dto.getStreamRecordId());
+        row.setStreamRecordId(streamId);
         row.setReportType(reportType);
         row.setDescription(description);
         row.setStatus("OPEN");
@@ -86,7 +118,7 @@ public class ModerationReportService {
             }
         }
 
-        // Política de escalado mínimo PSP: MINOR => desactivar inmediatamente (suspensión preventiva)
+        // Política de escalado mínimo PSP: MINOR => suspensión preventiva + REVIEWING
         if ("MINOR".equals(reportType)) {
             User reported = userRepository.findById(dto.getReportedUserId()).orElse(null);
             if (reported != null) {
@@ -94,7 +126,7 @@ public class ModerationReportService {
                 userRepository.save(reported);
                 row.setAdminAction("SUSPEND");
                 row.setStatus("REVIEWING");
-                row.setResolutionNotes("Auto-suspend por reporte tipo MINOR (revisión pendiente).");
+                row.setResolutionNotes("SYSTEM: Auto-suspend por reporte tipo MINOR (revisión pendiente).");
             }
         }
 
@@ -138,6 +170,16 @@ public class ModerationReportService {
         String adminAction = normalizeAdminAction(dto.getAdminAction());
         String notes = trimToNull(dto.getResolutionNotes(), 2000);
 
+        // Medida anti-XSS mínima: no permitimos < o > en notas internas
+        if (notes != null && (notes.contains("<") || notes.contains(">"))) {
+            throw new IllegalArgumentException("resolutionNotes contiene caracteres no permitidos");
+        }
+
+        // Si BAN/SUSPEND sin notas, dejamos una traza mínima
+        if ((notes == null || notes.isBlank()) && ("SUSPEND".equals(adminAction) || "BAN".equals(adminAction))) {
+            notes = "AdminAction=" + adminAction;
+        }
+
         // Acción administrativa sobre el usuario reportado
         if ("SUSPEND".equals(adminAction) || "BAN".equals(adminAction)) {
             User reported = userRepository.findById(row.getReportedUserId())
@@ -162,7 +204,7 @@ public class ModerationReportService {
         String v = raw.trim().toUpperCase(Locale.ROOT);
 
         return switch (v) {
-            case "ABUSE", "HARASSMENT", "NUDITY", "FRAUD", "MINOR" , "OTHER" -> v;
+            case "ABUSE", "HARASSMENT", "NUDITY", "FRAUD", "MINOR", "OTHER" -> v;
             default -> throw new IllegalArgumentException("reportType no válido: " + raw);
         };
     }
