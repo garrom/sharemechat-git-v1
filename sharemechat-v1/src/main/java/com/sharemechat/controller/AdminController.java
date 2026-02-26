@@ -7,6 +7,9 @@ import com.sharemechat.entity.User;
 import com.sharemechat.service.AdminService;
 import com.sharemechat.service.KycProviderConfigService;
 import com.sharemechat.service.UserService;
+import com.sharemechat.dto.ModerationReportDTO;
+import com.sharemechat.dto.ModerationReportReviewDTO;
+import com.sharemechat.service.ModerationReportService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -24,15 +27,19 @@ public class AdminController {
     private final AdminService adminService;
     private final UserService userService;
     private final KycProviderConfigService kycProviderConfigService;
+    private final ModerationReportService moderationReportService;
 
+    // constructor
     public AdminController(
             AdminService adminService,
             UserService userService,
-            KycProviderConfigService kycProviderConfigService
+            KycProviderConfigService kycProviderConfigService,
+            ModerationReportService moderationReportService
     ) {
         this.adminService = adminService;
         this.userService = userService;
         this.kycProviderConfigService = kycProviderConfigService;
+        this.moderationReportService = moderationReportService;
     }
 
     // GET /api/admin/models?verification=PENDING|APPROVED|REJECTED (opcional)
@@ -108,8 +115,7 @@ public class AdminController {
         return ResponseEntity.ok(out);
     }
 
-    // POST /api/admin/kyc/model-onboarding/mode
-    // body: { "mode": "VERIFF" | "MANUAL", "note": "opcional" }
+    //  "VERIFF" | "MANUAL",
     @PostMapping("/kyc/model-onboarding/mode")
     public ResponseEntity<?> setAdminKycModelOnboardingMode(
             @RequestBody Map<String, String> body,
@@ -141,4 +147,40 @@ public class AdminController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    // ======================================
+    // MODERATION REPORTS (PSP / Compliance)
+    // ======================================
+
+    // GET /api/admin/moderation/reports?status=OPEN|REVIEWING|RESOLVED|REJECTED (opcional)
+    @GetMapping("/moderation/reports")
+    public ResponseEntity<List<ModerationReportDTO>> moderationReports(
+            @RequestParam(required = false) String status
+    ) {
+        return ResponseEntity.ok(moderationReportService.adminList(status));
+    }
+
+    // GET /api/admin/moderation/reports/{id}
+    @GetMapping("/moderation/reports/{id}")
+    public ResponseEntity<ModerationReportDTO> moderationReportById(@PathVariable Long id) {
+        return ResponseEntity.ok(moderationReportService.adminGetById(id));
+    }
+
+    // POST /api/admin/moderation/reports/{id}/review
+    @PostMapping("/moderation/reports/{id}/review")
+    public ResponseEntity<ModerationReportDTO> reviewModerationReport(
+            @PathVariable Long id,
+            @RequestBody ModerationReportReviewDTO dto,
+            Authentication auth
+    ) {
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        User admin = userService.findByEmail(auth.getName());
+        Long adminId = admin != null ? admin.getId() : null;
+
+        return ResponseEntity.ok(moderationReportService.adminReview(id, adminId, dto));
+    }
+
 }

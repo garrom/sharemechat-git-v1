@@ -49,7 +49,16 @@ import Estadistica from './Estadistica';
 
 
 const DashboardModel = () => {
-  const { alert,confirm, openPayoutModal, openActiveSessionGuard, openBlockReasonModal, openNextWaitModal} = useAppModals();
+  const {
+    alert,
+    confirm,
+    openPayoutModal,
+    openActiveSessionGuard,
+    openBlockReasonModal,
+    openReportAbuseModal,
+    openNextWaitModal
+  } = useAppModals();
+
   const { user: sessionUser } = useSession();
   const { inCall, setInCall } = useCallUi();
   const [cameraActive, setCameraActive] = useState(false);
@@ -152,6 +161,7 @@ const DashboardModel = () => {
   const msgEngineRef = useRef(null);
   const lastSentRef = useRef({ text: null, at: 0 });
   const cameraActiveRef = useRef(false);
+
 
   const isEcho = (incoming) => {
     const now = Date.now();
@@ -1238,6 +1248,72 @@ const DashboardModel = () => {
   };
 
 
+  // REPORT/ABUSE (RANDOM) - MODEL SIDE
+  const handleReportPeer = async () => {
+    const id = Number(currentClientId);
+
+    if (!Number.isFinite(id) || id <= 0) {
+      await alert({
+        title: 'Reportar abuso',
+        message: 'No se pudo identificar al cliente actual.',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    const displayName = clientNickname || `Usuario #${id}`;
+
+    // Modal de report (el nuevo, igual que cliente)
+    const report = await openReportAbuseModal({ displayName });
+    if (!report?.confirmed) return;
+
+    // StreamRecordId: en Model lo tienes
+    const streamRecordId = Number(activeStreamRecordIdRef.current);
+    const streamIdToSend =
+      Number.isFinite(streamRecordId) && streamRecordId > 0 ? streamRecordId : null;
+
+    try {
+      await apiFetch('/reports/abuse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportedUserId: id,
+          streamRecordId: streamIdToSend,
+          reportType: report.reportType || 'ABUSE',
+          description: report.description || '',
+          alsoBlock: !!report.alsoBlock,
+        }),
+      });
+
+      // UX moderación: igual que cliente → salir del peer actual
+      if (remoteStream) {
+        try {
+          handleNext();
+        } catch {
+          stopAll();
+        }
+      } else {
+        setSearching(false);
+      }
+
+      await alert({
+        title: 'Reporte enviado',
+        message: report.alsoBlock
+          ? 'Gracias. Hemos recibido tu reporte y el usuario ha sido bloqueado.'
+          : 'Gracias. Hemos recibido tu reporte y lo revisaremos.',
+        variant: 'success',
+      });
+    } catch (e) {
+      console.error('Error reportando abuso (Model):', e);
+      await alert({
+        title: 'Error',
+        message: e?.message || 'No se pudo enviar el reporte.',
+        variant: 'danger',
+      });
+    }
+  };
+
+
   // ===== BLOQUEOS (RANDOM) - MODEL SIDE =====
   const handleBlockPeer = async () => {
     const id = Number(currentClientId);
@@ -2286,6 +2362,7 @@ const DashboardModel = () => {
             setChatInput={setChatInput}
             sendChatMessage={sendChatMessage}
             handleBlockPeer={handleBlockPeer}
+            handleReportPeer={handleReportPeer}
             error={error}
             modelStatsSummary={modelStatsSummary}
             modelStatsTiers={modelStats?.tiers}

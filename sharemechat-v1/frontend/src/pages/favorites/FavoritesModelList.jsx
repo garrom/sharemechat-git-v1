@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faTrash, faBan, faUnlock } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faTrash, faBan, faUnlock,faFlag  } from '@fortawesome/free-solid-svg-icons';
 
 import {
   List,
@@ -115,7 +115,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
   const [blockedMap, setBlockedMap] = useState({});
 
   const { user: sessionUser, loading: sessionLoading } = useSession();
-  const { alert, confirm, openBlockReasonModal, openRemoveFavoriteConfirm } = useAppModals();
+  const { alert, confirm, openBlockReasonModal, openReportAbuseModal, openRemoveFavoriteConfirm } = useAppModals();
 
   const menuWidthDesktop = 220;
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
@@ -344,6 +344,19 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     return () => { ignore = true; };
   }, [sessionUser?.id, sessionLoading, reloadTrigger]);
 
+
+  // Permite disparar desbloqueo desde fuera
+  useEffect(() => {
+    const onUnblock = (e) => {
+      const u = e?.detail?.user;
+      if (!u?.id) return;
+      handleUnblock(u);
+    };
+    window.addEventListener('unblock-user', onUnblock);
+    return () => window.removeEventListener('unblock-user', onUnblock);
+  }, [handleUnblock]);
+
+
   const handleRemove = useCallback(async (user) => {
     const inv = String(user?.invited || '').toLowerCase();
     if (inv === 'pending' || inv === 'sent') {
@@ -403,16 +416,65 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     }
   }, [sessionUser, sessionLoading, alert, openBlockReasonModal]);
 
-  // Permite disparar desbloqueo desde fuera
-  useEffect(() => {
-    const onUnblock = (e) => {
-      const u = e?.detail?.user;
-      if (!u?.id) return;
-      handleUnblock(u);
-    };
-    window.addEventListener('unblock-user', onUnblock);
-    return () => window.removeEventListener('unblock-user', onUnblock);
-  }, [handleUnblock]);
+
+  const handleReport = useCallback(async (user) => {
+    if (!sessionUser && !sessionLoading) {
+      await alert({ title: 'Sesión', message: 'No autenticado', variant: 'warning', size: 'sm' });
+      return;
+    }
+    if (!user?.id) return;
+
+    const displayName = user?.nickname || `Usuario #${user.id}`;
+    const report = await openReportAbuseModal({ displayName });
+    if (!report?.confirmed) return;
+
+    try {
+      await apiFetch('/reports/abuse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportedUserId: Number(user.id),
+          streamRecordId: null, // favoritos/chat: no hay streamRecord
+          reportType: report.reportType || 'ABUSE',
+          description: report.description || '',
+          alsoBlock: !!report.alsoBlock,
+        }),
+      });
+
+      // Si también bloquea, reflejamos UI como en handleBlock
+      if (report.alsoBlock) {
+        setBlockedMap((prev) => ({ ...(prev || {}), [user.id]: true }));
+        setItems((prev) => (prev || []).map((i) => (
+          Number(i.id) === Number(user.id)
+            ? { ...i, blocked: true, blockedByMe: true, blockedByOther: false }
+            : i
+        )));
+        setUnreadMap((prev) => {
+          if (!prev?.[user.id]) return prev;
+          const next = { ...prev };
+          delete next[user.id];
+          return next;
+        });
+      }
+
+      await alert({
+        title: 'Reporte enviado',
+        message: report.alsoBlock
+          ? 'Gracias. Hemos recibido tu reporte y el usuario ha sido bloqueado.'
+          : 'Gracias. Hemos recibido tu reporte y lo revisaremos.',
+        variant: 'success',
+        size: 'sm',
+      });
+    } catch (e) {
+      await alert({
+        title: 'Reportar',
+        message: e?.message || 'No se pudo enviar el reporte.',
+        variant: 'danger',
+        size: 'sm',
+      });
+    }
+  }, [sessionUser, sessionLoading, alert, openReportAbuseModal, setBlockedMap, setItems, setUnreadMap]);
+
 
   const menuNode = useMemo(() => {
     if (!menu.open || !menu.user) return null;
@@ -429,6 +491,13 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
             <FavMenuItem type="button" onClick={async () => { closeMenu(); await handleRemove(u); }}>
               <FavMenuIcon><FontAwesomeIcon icon={faTrash} /></FavMenuIcon>
               <span>Eliminar</span>
+            </FavMenuItem>
+
+            <FavMenuDivider />
+
+            <FavMenuItem type="button" onClick={async () => { closeMenu(); await handleReport(u); }}>
+              <FavMenuIcon><FontAwesomeIcon icon={faFlag} /></FavMenuIcon>
+              <span>Reportar</span>
             </FavMenuItem>
 
             <FavMenuDivider />
@@ -463,7 +532,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
       </FavMenu>,
       document.body
     );
-  }, [menu, closeMenu, handleRemove, handleBlock, handleUnblock]);
+  }, [menu, closeMenu, handleRemove,handleReport,handleBlock, handleUnblock]);
 
   if (sessionLoading) return <StateRow>Cargando sesión…</StateRow>;
   if (!sessionUser) return <StateRow>Inicia sesión para ver tus favoritos.</StateRow>;

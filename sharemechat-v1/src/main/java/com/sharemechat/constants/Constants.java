@@ -45,10 +45,32 @@ public class Constants {
         private KycModes() {}
     }
 
-    public static class KycProviders {
-        public static final String VERIFF = "VERIFF";
-        public static final String MANUAL = "MANUAL";
 
-        private KycProviders() {}
+    public static class ModerationReportStatuses {
+        public static final String OPEN = "OPEN";
+        public static final String REVIEWING = "REVIEWING";
+        public static final String RESOLVED = "RESOLVED";
+        public static final String REJECTED = "REJECTED";
+        private ModerationReportStatuses() {}
     }
+
+    public static class ModerationAdminActions {
+        public static final String NONE = "NONE";
+        public static final String WARNING = "WARNING";
+        public static final String SUSPEND = "SUSPEND";
+        public static final String BAN = "BAN";
+        private ModerationAdminActions() {}
+    }
+
+    public static class ModerationReportTypes {
+        public static final String ABUSE = "ABUSE";
+        public static final String HARASSMENT = "HARASSMENT";
+        public static final String NUDITY = "NUDITY";
+        public static final String FRAUD = "FRAUD";
+        public static final String MINOR = "MINOR";
+        public static final String SPAM = "SPAM";
+        public static final String OTHER = "OTHER";
+        private ModerationReportTypes() {}
+    }
+
 }

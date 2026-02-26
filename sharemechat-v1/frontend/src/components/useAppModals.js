@@ -28,7 +28,6 @@ const PacksGrid = styled.div`
   gap: 10px;
   margin: 4px 0;
   grid-template-columns: 1fr;
-
   @media (min-width: 640px) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -48,7 +47,6 @@ const PackCard = styled.button`
   cursor: pointer;
   text-align: left;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
-
   &:hover {
     background: #11161d;
     border-color: #3a3f46;
@@ -101,7 +99,6 @@ const PayoutInput = styled.input`
   font-size: 14px;
   margin-top: 6px;
   outline: none;
-
   &:focus {
     border-color: #58a6ff;
     box-shadow: 0 0 0 1px #58a6ff44;
@@ -134,7 +131,6 @@ const RadioOption = styled.label`
     box-shadow: 0 0 0 1px rgba(47, 129, 247, 0.22);
     transform: translateY(-1px);
   }
-
   input {
     margin-top: 3px;
   }
@@ -163,25 +159,28 @@ const ChoiceWrap = styled.div`
   display: grid;
   gap: 10px;
   margin-top: 10px;
+  grid-template-columns: 1fr;
+
+  @media (min-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 `;
 
 const ChoiceRow = styled.label`
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  padding: 8px 10px;
   border: 1px solid #30363d;
   border-radius: 10px;
   background: #0a0f16;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
-
   &:hover {
     background: #101622;
     border-color: #3a3f46;
     transform: translateY(-1px);
   }
-
   input {
     accent-color: #2f81f7;
   }
@@ -205,7 +204,46 @@ const ChoiceSub = styled.span`
   line-height: 1.35;
 `;
 
-// === NUEVO: Modal ligero para "espera / cooldown" de NEXT ===
+const ReportWrap = styled.div`
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+`;
+
+const ReportTextArea = styled.textarea`
+  width: 100%;
+  min-height: 50px;
+  resize: vertical;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #30363d;
+  background: #0d1117;
+  color: #e6edf3;
+  font-size: 14px;
+  outline: none;
+
+  &:focus {
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 1px #58a6ff44;
+  }
+`;
+
+const CheckRow = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  font-size: 13px;
+  color: #e6edf3;
+  cursor: pointer;
+
+  input {
+    accent-color: #2f81f7;
+  }
+`;
+
+
+// Modal ligero para "espera / cooldown" de NEXT
 const spin = keyframes`
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -487,6 +525,152 @@ export const useAppModals = () => {
     });
   }, [openModal, closeModal]);
 
+
+  // Modal REPORT / ABUSE (categoría + descripción + bloquear)
+  const openReportAbuseModal = useCallback(({ displayName = 'este usuario' } = {}) => {
+    return new Promise((resolve) => {
+      let selectedType = 'ABUSE';
+      let description = '';
+      let alsoBlock = true;
+
+      const onCancel = () => {
+        closeModal();
+        resolve({ confirmed: false });
+      };
+
+      const onConfirm = () => {
+        const desc = String(description || '').trim();
+
+        // Regla mínima útil:
+        if (selectedType === 'OTHER' && !desc) {
+          alert({
+            title: 'Descripción requerida',
+            message: 'Si eliges "Otro", añade una descripción breve.',
+            variant: 'warning',
+            size: 'sm',
+          });
+          return;
+        }
+
+        closeModal();
+        resolve({
+          confirmed: true,
+          reportType: selectedType,
+          description: desc,
+          alsoBlock: !!alsoBlock,
+        });
+      };
+
+      openModal({
+        title: 'Reportar abuso',
+        variant: 'danger',
+        size: 'sm',
+        bodyKind: 'payout',
+        content: (
+          <div>
+            <ReportWrap>
+              <ChoiceWrap>
+                <ChoiceRow>
+                  <input
+                    type="radio"
+                    name="report-type"
+                    defaultChecked
+                    onChange={() => { selectedType = 'ABUSE'; }}
+                  />
+                  <ChoiceText>
+                    <ChoiceTitle>Abuso / Comportamiento inapropiado</ChoiceTitle>
+
+                  </ChoiceText>
+                </ChoiceRow>
+
+                <ChoiceRow>
+                  <input
+                    type="radio"
+                    name="report-type"
+                    onChange={() => { selectedType = 'HARASSMENT'; }}
+                  />
+                  <ChoiceText>
+                    <ChoiceTitle>Acoso / Intimidación </ChoiceTitle>
+
+                  </ChoiceText>
+                </ChoiceRow>
+
+                <ChoiceRow>
+                  <input
+                    type="radio"
+                    name="report-type"
+                    onChange={() => { selectedType = 'NUDITY'; }}
+                  />
+                  <ChoiceText>
+                    <ChoiceTitle>Desnudez / Contenido explícito</ChoiceTitle>
+
+                  </ChoiceText>
+                </ChoiceRow>
+
+                <ChoiceRow>
+                  <input
+                    type="radio"
+                    name="report-type"
+                    onChange={() => { selectedType = 'FRAUD'; }}
+                  />
+                  <ChoiceText>
+                    <ChoiceTitle>Fraude / Estafa / Suplantación</ChoiceTitle>
+
+                  </ChoiceText>
+                </ChoiceRow>
+
+                <ChoiceRow>
+                  <input
+                    type="radio"
+                    name="report-type"
+                    onChange={() => { selectedType = 'MINOR'; }}
+                  />
+                  <ChoiceText>
+                    <ChoiceTitle>Posible menor de edad</ChoiceTitle>
+
+                  </ChoiceText>
+                </ChoiceRow>
+
+                <ChoiceRow>
+                  <input
+                    type="radio"
+                    name="report-type"
+                    onChange={() => { selectedType = 'OTHER'; }}
+                  />
+                  <ChoiceText>
+                    <ChoiceTitle>Otro</ChoiceTitle>
+
+                  </ChoiceText>
+                </ChoiceRow>
+              </ChoiceWrap>
+
+              <div>
+                <PackHint>Descripción (opcional, pero recomendable):</PackHint>
+                <ReportTextArea
+                  placeholder="Describe brevemente qué ha ocurrido…"
+                  onChange={(e) => { description = e.target.value; }}
+                />
+              </div>
+
+              <CheckRow>
+                <input
+                  type="checkbox"
+                  defaultChecked
+                  onChange={(e) => { alsoBlock = e.target.checked; }}
+                />
+                <span>Bloquear también a este usuario</span>
+              </CheckRow>
+            </ReportWrap>
+          </div>
+        ),
+        actions: [
+          { label: 'Cancelar', primary: false, danger: false, onClick: onCancel },
+          { label: 'Enviar reporte', primary: false, danger: true, onClick: onConfirm },
+        ],
+      }).then(() => {});
+    });
+  }, [openModal, closeModal, alert]);
+
   //Modal de BLOQUEO (radio 1 de 3).
   const openBlockReasonModal = useCallback(({ displayName = 'este usuario' } = {}) => {
     return new Promise((resolve) => {
@@ -589,6 +773,7 @@ export const useAppModals = () => {
     openLoginModal,
     openPublicSignupTeaser,
     openBlockReasonModal,
+    openReportAbuseModal,
     openUnsubscribeModal,
     openNextWaitModal,
   };

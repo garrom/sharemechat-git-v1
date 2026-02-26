@@ -49,7 +49,15 @@ import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
 
 const DashboardClient = () => {
 
-  const { alert, confirm, openPurchaseModal, openActiveSessionGuard, openBlockReasonModal, openNextWaitModal } = useAppModals();
+  const {
+    alert,
+    confirm,
+    openPurchaseModal,
+    openActiveSessionGuard,
+    openBlockReasonModal,
+    openReportAbuseModal,
+    openNextWaitModal
+  } = useAppModals();
   const { inCall, setInCall } = useCallUi();
   const { user: sessionUser } = useSession();
   const [cameraActive, setCameraActive] = useState(false);
@@ -1339,6 +1347,68 @@ const DashboardClient = () => {
   };
 
 
+  // REPORT/ABUSE (RANDOM) - CLIENT SIDE
+  const handleReportPeer = async () => {
+    const id = Number(currentModelId);
+
+    if (!Number.isFinite(id) || id <= 0) {
+      await alert({
+        title: 'Reportar abuso',
+        message: 'No se pudo identificar a la modelo actual.',
+        variant: 'warning',
+      });
+      return;
+    }
+
+    const displayName = modelNickname || `Usuario #${id}`;
+
+    const report = await openReportAbuseModal({ displayName });
+    if (!report?.confirmed) return;
+
+    try {
+      await apiFetch('/reports/abuse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportedUserId: id,
+          streamRecordId: null, // cuando tengas streamId real, lo metes aquí
+          reportType: report.reportType || 'ABUSE',
+          description: report.description || '',
+          alsoBlock: !!report.alsoBlock,
+        }),
+      });
+
+      // UX moderación: salimos del match actual tras reportar
+      if (remoteStream) {
+        try {
+          if (!matchGraceRef.current) {
+            handleNext();
+          }
+        } catch {
+          stopAll();
+        }
+      } else {
+        setSearching(false);
+      }
+
+      await alert({
+        title: 'Reporte enviado',
+        message: report.alsoBlock
+          ? 'Gracias. Hemos recibido tu reporte y el usuario ha sido bloqueado.'
+          : 'Gracias. Hemos recibido tu reporte y lo revisaremos.',
+        variant: 'success',
+      });
+    } catch (e) {
+      console.error('Error reportando abuso:', e);
+      await alert({
+        title: 'Error',
+        message: e?.message || 'No se pudo enviar el reporte.',
+        variant: 'danger',
+      });
+    }
+  };
+
+
   // BLOQUEOS (RANDOM) - CLIENT SIDE
   const handleBlockPeer = async () => {
     const id = Number(currentModelId);
@@ -2171,6 +2241,7 @@ const DashboardClient = () => {
             modelAvatar={modelAvatar}
             handleActivateCamera={handleActivateCamera}
             handleBlockPeer={handleBlockPeer}
+            handleReportPeer={handleReportPeer}
             matchGraceRef={matchGraceRef}
             nextDisabled={nexting}
           />

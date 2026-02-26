@@ -290,3 +290,56 @@ export const LogoutButton = styled(StyledButton)`
   &:not(:disabled):hover { background-color: #c82333; }
 `;
 
+export const InlinePanel = styled.div`
+  width: 100%;
+  border: 1px solid #eee;
+  border-radius: 10px;
+  background: #fff;
+  padding: 14px;
+`;
+
+export const PanelRow = styled.div`
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-top: 10px;
+`;
+
+export const TextArea = styled.textarea`
+  width: 100%;
+  min-height: 90px;
+  padding: 10px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: vertical;
+`;
+
+export const SmallBtn = styled.button`
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+
+  &:hover { background: #f8f9fa; }
+  &:disabled { opacity: 0.6; cursor: not-allowed; }
+`;
+
+export const Badge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: #f1f3f5;
+  color: #343a40;
+
+  &[data-variant='open'] { background: #fff3cd; color: #856404; }
+  &[data-variant='reviewing'] { background: #d1ecf1; color: #0c5460; }
+  &[data-variant='resolved'] { background: #d4edda; color: #155724; }
+  &[data-variant='rejected'] { background: #f8d7da; color: #721c24; }
+`;

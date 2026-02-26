@@ -108,9 +108,9 @@ public class SecurityConfig {
                         .requestMatchers("/match/**").permitAll()
                         .requestMatchers("/ws/**").permitAll()
 
-                        // REST messages
+                        // REST
                         .requestMatchers("/api/messages/**").authenticated()
-
+                        .requestMatchers("/api/reports/**").authenticated()
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
 
                         // ROLE-SCOPED APIs (AL FINAL, para no pisar endpoints específicos)

@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan } from '@fortawesome/free-solid-svg-icons';
+import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat,
   StyledSplit2,
@@ -79,6 +79,7 @@ export default function VideoChatRandomModelo(props) {
     setChatInput,
     sendChatMessage,
     handleBlockPeer,
+    handleReportPeer,
     error,
     modelStatsSummary,
     modelStatsTiers,
@@ -331,9 +332,11 @@ export default function VideoChatRandomModelo(props) {
 
                               <ButtonNext
                                 onClick={()=>handleNext && handleNext()}
-                                style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                                onMouseEnter={(e)=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                                onMouseLeave={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                                disabled={!!nextDisabled}
+                                aria-disabled={!!nextDisabled}
+                                style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)',opacity:nextDisabled?0.55:1,cursor:nextDisabled?'not-allowed':'pointer'}}
+                                onMouseEnter={(e)=>{if(nextDisabled)return;e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                                onMouseLeave={(e)=>{if(nextDisabled)return;e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
                               >
                                 <FontAwesomeIcon icon={faForward} />
                               </ButtonNext>
@@ -352,7 +355,17 @@ export default function VideoChatRandomModelo(props) {
                               )}
                             </div>
 
-                            <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
+                            <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end',gap:8}}>
+                              <BtnBlock
+                                type="button"
+                                onClick={()=>handleReportPeer && handleReportPeer()}
+                                aria-label="Reportar"
+                                title="Reportar"
+                                style={{width:44,height:44}}
+                              >
+                                <FontAwesomeIcon icon={faFlag} />
+                              </BtnBlock>
+
                               <BtnBlock type="button" onClick={()=>handleBlockPeer&&handleBlockPeer()} aria-label="Bloquear" title="Bloquear" style={{width:44,height:44}}>
                                 <FontAwesomeIcon icon={faBan} />
                               </BtnBlock>
@@ -450,9 +463,11 @@ export default function VideoChatRandomModelo(props) {
 
                             <ButtonNext
                               onClick={()=>handleNext && handleNext()}
-                              style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                              onMouseEnter={(e)=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                              onMouseLeave={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                              disabled={!!nextDisabled}
+                              aria-disabled={!!nextDisabled}
+                              style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)',opacity:nextDisabled?0.55:1,cursor:nextDisabled?'not-allowed':'pointer'}}
+                              onMouseEnter={(e)=>{if(nextDisabled)return;e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
+                              onMouseLeave={(e)=>{if(nextDisabled)return;e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
                             >
                               <FontAwesomeIcon icon={faForward} />
                             </ButtonNext>
@@ -471,7 +486,17 @@ export default function VideoChatRandomModelo(props) {
                             )}
                           </div>
 
-                          <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end'}}>
+                          <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end',gap:8}}>
+                            <BtnBlock
+                              type="button"
+                              onClick={()=>handleReportPeer && handleReportPeer()}
+                              aria-label="Reportar"
+                              title="Reportar"
+                              style={{width:44,height:44}}
+                            >
+                              <FontAwesomeIcon icon={faFlag} />
+                            </BtnBlock>
+
                             <BtnBlock type="button" onClick={()=>handleBlockPeer&&handleBlockPeer()} aria-label="Bloquear" title="Bloquear" style={{width:44,height:44}}>
                               <FontAwesomeIcon icon={faBan} />
                             </BtnBlock>
