@@ -1,13 +1,15 @@
 // src/pages/dashboard/VideoChatRandomUser.jsx
 import React, { useEffect, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { TEASERS_PAGE_SIZE, TEASERS_PAGE_DEFAULT } from '../../config/appConfig';
 import {
   faUserPlus,
   faVideo,
   faPhoneSlash,
   faForward,
   faChevronLeft,
-  faChevronRight
+  faChevronRight,
+  faFlag
 } from '@fortawesome/free-solid-svg-icons';
 
 import {
@@ -63,7 +65,8 @@ export default function VideoChatRandomUser(props) {
     modelNickname,
     modelAvatar,
     handleFavoriteGate,
-    openPurchaseModal
+    openPurchaseModal,
+    handleReportPeer, // ✅ NUEVO
   } = props;
 
   const [promoVideos, setPromoVideos] = useState([]);
@@ -77,7 +80,7 @@ export default function VideoChatRandomUser(props) {
     setPromoError('');
 
     try {
-      const res = await fetch('/api/models/teasers?page=0&size=20', {
+      const res = await fetch(`/api/models/teasers?page=${TEASERS_PAGE_DEFAULT}&size=${TEASERS_PAGE_SIZE}`, {
         method: 'GET',
         credentials: 'include'
       });
@@ -141,6 +144,14 @@ export default function VideoChatRandomUser(props) {
       } else if (typeof handleFavoriteGate === 'function') {
         handleFavoriteGate(promoVideo.id);
       }
+    } catch {
+      // noop
+    }
+  };
+
+  const onReportClick = () => {
+    try {
+      if (typeof handleReportPeer === 'function') handleReportPeer();
     } catch {
       // noop
     }
@@ -354,6 +365,19 @@ export default function VideoChatRandomUser(props) {
                               >
                                 <FontAwesomeIcon icon={faUserPlus} />
                               </ButtonAddFavorite>
+
+                              {/* ✅ BOTÓN REPORT (solo trial user) */}
+                              <button
+                                type="button"
+                                onClick={onReportClick}
+                                title="Reportar abuso"
+                                aria-label="Reportar abuso"
+                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#111',color:'#fff',border:'1px solid rgba(255,255,255,0.35)',cursor:'pointer'}}
+                                onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#111'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background = '#111'; e.currentTarget.style.color = '#fff'; }}
+                              >
+                                <FontAwesomeIcon icon={faFlag} />
+                              </button>
                             </>
                           )}
                         </div>
@@ -394,6 +418,7 @@ export default function VideoChatRandomUser(props) {
                         <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
                           <FontAwesomeIcon icon={faPhoneSlash} />
                         </BtnHangup>
+
                         {remoteStream && (
                           <>
                             <ButtonNext
@@ -404,6 +429,7 @@ export default function VideoChatRandomUser(props) {
                             >
                               <FontAwesomeIcon icon={faForward} />
                             </ButtonNext>
+
                             <ButtonAddFavorite
                               onClick={() => openPurchaseModal && openPurchaseModal({ context:'user-favorite', modelId: null })}
                               title="Añadir a favoritos (requiere premium)"
@@ -413,6 +439,19 @@ export default function VideoChatRandomUser(props) {
                             >
                               <FontAwesomeIcon icon={faUserPlus} />
                             </ButtonAddFavorite>
+
+                            {/* ✅ BOTÓN REPORT (móvil) */}
+                            <button
+                              type="button"
+                              onClick={onReportClick}
+                              title="Reportar abuso"
+                              aria-label="Reportar abuso"
+                              style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#111',color:'#fff',border:'1px solid rgba(255,255,255,0.35)',cursor:'pointer'}}
+                              onTouchStart={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#111'; }}
+                              onTouchEnd={(e) => { e.currentTarget.style.background = '#111'; e.currentTarget.style.color = '#fff'; }}
+                            >
+                              <FontAwesomeIcon icon={faFlag} />
+                            </button>
                           </>
                         )}
                       </div>

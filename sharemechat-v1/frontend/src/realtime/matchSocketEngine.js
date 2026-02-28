@@ -1,9 +1,8 @@
 // src/realtime/matchSocketEngine.js
 import Peer from 'simple-peer';
-
+import { NEXT_WAIT_MODAL_MIN_MS, NEXT_WAIT_MODAL_MAX_MS } from '../config/appConfig';
 /**
- * Motor común (Client/Model) para WS de matching + WebRTC signaling.
- * Nivel 1: una sola fuente de verdad. Dashboard solo aporta un adaptador.
+ * Motor común para WS de matching + WebRTC signaling.
  */
 export function createMatchSocketEngine(adapter) {
   const {
@@ -120,7 +119,7 @@ export function createMatchSocketEngine(adapter) {
         openNextWaitModal?.({
           title,
           message,
-          durationMs: Math.max(600, Math.min(20000, retryAfterMs || 1500)),
+          durationMs: Math.max(NEXT_WAIT_MODAL_MIN_MS, Math.min(NEXT_WAIT_MODAL_MAX_MS, retryAfterMs || 1500)),
         });
       } catch {}
 

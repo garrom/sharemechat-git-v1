@@ -6,8 +6,19 @@ import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import VideoChatRandomUser from './VideoChatRandomUser';
 import TrialCooldownModal from '../../components/TrialCooldownModal';
-import { StyledContainer, StyledMainContent, GlobalBlack, StyledNavTab } from '../../styles/pages-styles/VideochatStyles';
-import { StyledNavbar, StyledBrand, NavText, HamburgerButton, MobileMenu } from '../../styles/NavbarStyles';
+import {
+  StyledContainer,
+  StyledMainContent,
+  GlobalBlack,
+  StyledNavTab,
+} from '../../styles/pages-styles/VideochatStyles';
+import {
+  StyledNavbar,
+  StyledBrand,
+  NavText,
+  HamburgerButton,
+  MobileMenu,
+} from '../../styles/NavbarStyles';
 import { NavButton } from '../../styles/ButtonStyles';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGem, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
@@ -15,10 +26,9 @@ import BlogContent from '../blog/BlogContent';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
 
-
 const DashboardUserClient = () => {
   const history = useHistory();
-  const { alert, openPurchaseModal } = useAppModals();
+  const { alert, openPurchaseModal, openReportAbuseModal } = useAppModals();
   const { setInCall } = useCallUi();
 
   const [userName, setUserName] = useState('Usuario');
@@ -38,6 +48,10 @@ const DashboardUserClient = () => {
   // Modal de cooldown (sin más trials)
   const [showTrialCooldownModal, setShowTrialCooldownModal] = useState(false);
   const [trialRemainingMs, setTrialRemainingMs] = useState(null);
+
+  // Report (Trial): modelo actual (para reportar sin bloquear)
+  const [currentModelId, setCurrentModelId] = useState(null);
+  const currentModelIdRef = useRef(null);
 
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
@@ -84,6 +98,11 @@ const DashboardUserClient = () => {
       }
     })();
   }, [history]);
+
+  // Mantener ref viva del modelo actual
+  useEffect(() => {
+    currentModelIdRef.current = currentModelId;
+  }, [currentModelId]);
 
   // ======= Unión de streams a los <video> =======
   useEffect(() => {
@@ -133,17 +152,29 @@ const DashboardUserClient = () => {
   const toggleFullscreen = (el) => {
     if (!el) return;
     const d = document;
-    const isFs = d.fullscreenElement || d.webkitFullscreenElement || d.mozFullScreenElement || d.msFullscreenElement;
+    const isFs =
+      d.fullscreenElement ||
+      d.webkitFullscreenElement ||
+      d.mozFullScreenElement ||
+      d.msFullscreenElement;
 
     if (!isFs) {
-      const req = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+      const req =
+        el.requestFullscreen ||
+        el.webkitRequestFullscreen ||
+        el.mozRequestFullScreen ||
+        el.msRequestFullscreen;
       try {
         req && req.call(el);
       } catch {
         /* noop */
       }
     } else {
-      const exit = d.exitFullscreen || d.webkitExitFullscreen || d.mozCancelFullScreen || d.msExitFullscreen;
+      const exit =
+        d.exitFullscreen ||
+        d.webkitExitFullscreen ||
+        d.mozCancelFullScreen ||
+        d.msExitFullscreen;
       try {
         exit && exit.call(d);
       } catch {
@@ -157,7 +188,10 @@ const DashboardUserClient = () => {
     setError('');
     setStatusText('');
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: true,
+      });
       localStreamRef.current = stream;
       setCameraActive(true);
       if (localVideoRef.current) {
@@ -209,6 +243,7 @@ const DashboardUserClient = () => {
     }
 
     setCameraActive(false);
+    setCurrentModelId(null);
   };
 
   const handleLogout = async () => {
@@ -283,7 +318,8 @@ const DashboardUserClient = () => {
       setError('Primero activa la cámara.');
       return;
     }
-    // WS por cookie-auth (igual que Client/Model): NO token en querystring
+
+    // WS por cookie-auth: NO token en querystring
     closeSocket();
     setSearching(true);
 
@@ -291,7 +327,6 @@ const DashboardUserClient = () => {
     console.log('[USER][WS] ->', wsUrl);
 
     const s = new WebSocket(wsUrl);
-
     socketRef.current = s;
 
     s.onopen = () => {
@@ -308,7 +343,9 @@ const DashboardUserClient = () => {
         }
       }, 30000);
 
-      const lang = String(user?.lang || user?.language || navigator.language || 'es').toLowerCase().split('-')[0];
+      const lang = String(user?.lang || user?.language || navigator.language || 'es')
+        .toLowerCase()
+        .split('-')[0];
       const country = String(user?.country || 'ES').toUpperCase();
       s.send(JSON.stringify({ type: 'set-role', role: 'client', lang, country }));
 
@@ -338,6 +375,14 @@ const DashboardUserClient = () => {
       if (data.type === 'match') {
         console.log('[USER][WS] match=', data);
 
+        const mid =
+          Number(data?.peerUserId) ||
+          Number(data?.modelUserId) ||
+          Number(data?.peerId) ||
+          null;
+
+        setCurrentModelId(Number.isFinite(mid) && mid > 0 ? mid : null);
+
         try {
           if (peerRef.current) peerRef.current.destroy();
         } catch {
@@ -359,7 +404,11 @@ const DashboardUserClient = () => {
           config: {
             iceServers: [
               { urls: 'stun:stun.l.google.com:19302' },
-              { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+              {
+                urls: 'turn:openrelay.metered.ca:80',
+                username: 'openrelayproject',
+                credential: 'openrelayproject',
+              },
             ],
           },
         });
@@ -431,6 +480,7 @@ const DashboardUserClient = () => {
         }
         setRemoteStream(null);
         setSearching(false);
+        setCurrentModelId(null);
 
         if (reason === 'trial-ended') {
           setStatusText('Tu prueba gratuita con esta modelo ha terminado.');
@@ -483,6 +533,60 @@ const DashboardUserClient = () => {
     setRemoteStream(null);
     setSearching(true);
     setStatusText('Buscando nueva modelo…');
+    setCurrentModelId(null);
+  };
+
+  // ======= REPORT (TRIAL): solo reportar, sin bloquear =======
+  const handleReportPeer = async () => {
+    const id = Number(currentModelIdRef.current);
+    if (!Number.isFinite(id) || id <= 0) {
+      await alert({
+        title: 'Reportar',
+        message: 'No se pudo identificar a la modelo.',
+        variant: 'warning',
+        size: 'sm',
+      });
+      return;
+    }
+
+    const displayName = 'Modelo';
+
+    const report = await openReportAbuseModal({ displayName });
+    if (!report?.confirmed) return;
+
+    try {
+      await apiFetch('/reports/abuse', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportedUserId: id,
+          streamRecordId: null,
+          reportType: report.reportType || 'ABUSE',
+          description: report.description || '',
+          alsoBlock: false, // TRIAL: NO BLOQUEA
+        }),
+      });
+
+      try {
+        handleNext();
+      } catch {
+        stopAll();
+      }
+
+      await alert({
+        title: 'Reporte enviado',
+        message: 'Gracias. Hemos recibido tu reporte.',
+        variant: 'success',
+        size: 'sm',
+      });
+    } catch (e) {
+      await alert({
+        title: 'Error',
+        message: e?.message || 'No se pudo enviar el reporte.',
+        variant: 'danger',
+        size: 'sm',
+      });
+    }
   };
 
   const displayName = userName || 'Usuario';
@@ -561,6 +665,7 @@ const DashboardUserClient = () => {
             statusText={statusText}
             error={error}
             openPurchaseModal={openPurchaseModal}
+            handleReportPeer={handleReportPeer}
           />
         )}
 
