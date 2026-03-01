@@ -16,11 +16,13 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 public class TransactionService {
 
     private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
+    private final ReentrantLock platformLedgerLock = new ReentrantLock(true);
 
     private final TransactionRepository transactionRepository;
     private final BalanceRepository balanceRepository;
@@ -48,7 +50,7 @@ public class TransactionService {
             StreamRecordRepository streamRecordRepository,
             PlatformTransactionRepository platformTransactionRepository,
             PlatformBalanceRepository platformBalanceRepository,
-            PayoutRequestRepository payoutRequestRepository, // [NEW]
+            PayoutRequestRepository payoutRequestRepository,
             BillingProperties billing,
             GiftProperties giftProperties
     ) {
@@ -61,14 +63,14 @@ public class TransactionService {
         this.streamRecordRepository = streamRecordRepository;
         this.platformTransactionRepository = platformTransactionRepository;
         this.platformBalanceRepository = platformBalanceRepository;
-        this.payoutRequestRepository = payoutRequestRepository; // [NEW]
+        this.payoutRequestRepository = payoutRequestRepository;
         this.billing = billing;
         this.giftProperties = giftProperties;
     }
 
     /**
      * LOCK wallet industrial:
-     * - Serializa por usuario antes de leer "último balance" y escribir ledger.
+     * - Serializa por usuario antes de leer "ultimo balance" y escribir ledger.
      * - Para regalos, lock de 2 usuarios en orden fijo (minId -> maxId) para evitar deadlocks.
      */
     private User lockUserOrThrow(Long userId) {
@@ -93,18 +95,25 @@ public class TransactionService {
         return balance;
     }
 
-    private void lockPlatformBalance() {
-        // Fuerza serialización de platform_balances (evita carreras en saldo plataforma).
-        log.info("processGift: locking platform balance");
-        platformBalanceRepository.findTopForUpdate();
-    }
+    private BigDecimal appendPlatformBalance(Long transactionId, BigDecimal amount, String description) {
+        platformLedgerLock.lock();
+        try {
+            BigDecimal previousBalance = platformBalanceRepository.findTopByOrderByTimestampDescIdDesc()
+                    .map(PlatformBalance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+            BigDecimal newBalance = previousBalance.add(amount);
 
-    private BigDecimal lastPlatformBalance() {
-        BigDecimal balance = platformBalanceRepository.findTopByOrderByTimestampDescIdDesc()
-                .map(PlatformBalance::getBalance)
-                .orElse(BigDecimal.ZERO);
-        log.info("processGift: lastPlatformBalance balance={}", balance);
-        return balance;
+            PlatformBalance pbal = new PlatformBalance();
+            pbal.setTransactionId(transactionId);
+            pbal.setAmount(amount);
+            pbal.setBalance(newBalance);
+            pbal.setDescription(description);
+            platformBalanceRepository.save(pbal);
+
+            return newBalance;
+        } finally {
+            platformLedgerLock.unlock();
+        }
     }
 
     /**
@@ -117,14 +126,12 @@ public class TransactionService {
      * Reglas:
      * - Debe venir con operationType = "INGRESO"
      * - amount > 0
-     * - Consistencia: último balance == clients.saldo_actual (si existe fila clientes)
+     * - Consistencia: ultimo balance == clients.saldo_actual (si existe fila clients)
      */
     @Transactional
     public void processFirstTransaction(Long userId, TransactionRequestDTO request) {
-        // 0) LOCK wallet
         User user = lockUserOrThrow(userId);
 
-        // 1) Validaciones básicas
         if (!Constants.Roles.USER.equals(user.getRole())) {
             throw new IllegalArgumentException("El usuario ya es CLIENT o MODEL");
         }
@@ -140,7 +147,6 @@ public class TransactionService {
             throw new IllegalArgumentException("Para el primer pago, operationType debe ser INGRESO");
         }
 
-        // 2) Último balance & consistencia con clients.saldo_actual (si existe)
         BigDecimal lastBalance = lastBalanceOf(userId);
 
         Optional<Client> existingClientOpt = clientRepository.findByUser(user);
@@ -148,15 +154,13 @@ public class TransactionService {
             BigDecimal currentSaldo = existingClientOpt.get().getSaldoActual();
             if (currentSaldo != null && currentSaldo.compareTo(lastBalance) != 0) {
                 throw new IllegalStateException(
-                        "Inconsistencia: saldo_actual (" + currentSaldo + ") != último balance (" + lastBalance + ")"
+                        "Inconsistencia: saldo_actual (" + currentSaldo + ") != ultimo balance (" + lastBalance + ")"
                 );
             }
         }
 
-        // 3) Calcular nuevo saldo
         BigDecimal newBalance = lastBalance.add(request.getAmount());
 
-        // 4) Registrar transacción (amount positivo)
         Transaction tx = new Transaction();
         tx.setUser(user);
         tx.setAmount(request.getAmount());
@@ -164,17 +168,15 @@ public class TransactionService {
         tx.setDescription(request.getDescription());
         Transaction savedTx = transactionRepository.save(tx);
 
-        // 5) Registrar balance
         Balance bal = new Balance();
         bal.setUserId(userId);
         bal.setTransactionId(savedTx.getId());
         bal.setOperationType(op);
-        bal.setAmount(request.getAmount()); // positivo
+        bal.setAmount(request.getAmount());
         bal.setBalance(newBalance);
         bal.setDescription(request.getDescription());
         balanceRepository.save(bal);
 
-        // 6) Upsert en clients
         Client client = existingClientOpt.orElseGet(() -> {
             Client c = new Client();
             c.setUser(user);
@@ -186,23 +188,14 @@ public class TransactionService {
         client.setTotalPagos((client.getTotalPagos() == null ? BigDecimal.ZERO : client.getTotalPagos()).add(request.getAmount()));
         clientRepository.save(client);
 
-        // 7) Promover a CLIENT (unidireccional)
         user.setRole(Constants.Roles.CLIENT);
         userRepository.save(user);
     }
 
-    /**
-     * Recargas y gastos posteriores (CLIENT ya existente).
-     * - Usa último balance como referencia (no recalcula histórico).
-     * - Verifica consistencia contra clients.saldo_actual.
-     * - Soporta operationType = "INGRESO" (positiva) o "GASTO" (negativa, sin permitir saldo < 0).
-     */
     @Transactional
     public void addBalance(Long userId, TransactionRequestDTO request) {
-        // 0) LOCK wallet
         User user = lockUserOrThrow(userId);
 
-        // 1) Validaciones
         if (!Constants.Roles.CLIENT.equals(user.getRole())) {
             throw new IllegalArgumentException("El usuario debe ser CLIENT");
         }
@@ -218,7 +211,6 @@ public class TransactionService {
             throw new IllegalArgumentException("operationType no soportado: " + op);
         }
 
-        // 2) Último balance + consistencia
         BigDecimal lastBalance = lastBalanceOf(userId);
 
         Client client = clientRepository.findByUser(user)
@@ -226,16 +218,15 @@ public class TransactionService {
 
         BigDecimal saldoActual = client.getSaldoActual() == null ? BigDecimal.ZERO : client.getSaldoActual();
         if (saldoActual.compareTo(lastBalance) != 0) {
-            throw new IllegalStateException("Inconsistencia: saldo_actual (" + saldoActual + ") != último balance (" + lastBalance + ")");
+            throw new IllegalStateException("Inconsistencia: saldo_actual (" + saldoActual + ") != ultimo balance (" + lastBalance + ")");
         }
 
-        // 3) Cálculo con signo
         BigDecimal signedAmount;
         BigDecimal newBalance;
         if ("INGRESO".equals(op)) {
             signedAmount = request.getAmount();
             newBalance = lastBalance.add(request.getAmount());
-        } else { // GASTO
+        } else {
             signedAmount = request.getAmount().negate();
             newBalance = lastBalance.subtract(request.getAmount());
             if (newBalance.compareTo(BigDecimal.ZERO) < 0) {
@@ -243,7 +234,6 @@ public class TransactionService {
             }
         }
 
-        // 4) Registrar transacción
         Transaction tx = new Transaction();
         tx.setUser(user);
         tx.setAmount(signedAmount);
@@ -251,7 +241,6 @@ public class TransactionService {
         tx.setDescription(request.getDescription());
         Transaction savedTx = transactionRepository.save(tx);
 
-        // 5) Registrar balance
         Balance bal = new Balance();
         bal.setUserId(userId);
         bal.setTransactionId(savedTx.getId());
@@ -261,7 +250,6 @@ public class TransactionService {
         bal.setDescription(request.getDescription());
         balanceRepository.save(bal);
 
-        // 6) Actualizar cliente (cache)
         client.setSaldoActual(newBalance);
         if ("INGRESO".equals(op)) {
             BigDecimal totalPagos = client.getTotalPagos() == null ? BigDecimal.ZERO : client.getTotalPagos();
@@ -270,24 +258,10 @@ public class TransactionService {
         clientRepository.save(client);
     }
 
-    /**
-     * Retirada de fondos por parte de un MODELO.
-     * (PSP aún NO. Esto solo asienta ledger interno y ajusta cache.)
-     *
-     * [MEJORA 3.3] payout_requests (sin PSP):
-     * - Creamos un registro en payout_requests con status=REQUESTED
-     * - Descontamos saldo en ledger con operación PAYOUT_REQUEST (amount NEGATIVO)
-     * - Ajustamos models.saldo_actual (cache) para que siga consistente con ledger
-     *
-     * Nota: La revisión/admin (APPROVE/REJECT/PAID) se implementa fuera (AdminController),
-     * aquí solo dejamos cerrado el alta y el asiento contable del request.
-     */
     @Transactional
     public void requestPayout(Long userId, TransactionRequestDTO request) {
-        // 0) LOCK wallet
         User user = lockUserOrThrow(userId);
 
-        // 1) Validaciones básicas
         if (request == null) {
             throw new IllegalArgumentException("Body requerido");
         }
@@ -295,32 +269,27 @@ public class TransactionService {
             throw new IllegalArgumentException("El monto debe ser mayor a cero");
         }
 
-        // 2) Validar rol
         if (!Constants.Roles.MODEL.equals(user.getRole())) {
             throw new IllegalArgumentException("El usuario debe tener rol MODEL para solicitar un retiro");
         }
 
-        // 3) Buscar entidad Model
         Model model = modelRepository.findByUser(user)
                 .orElseThrow(() -> new IllegalStateException("No existe registro de modelo para el usuario: " + userId));
 
-        // 4) Fuente de verdad: ledger
         BigDecimal amountAbs = request.getAmount().setScale(2, RoundingMode.HALF_UP);
         BigDecimal previousBalance = lastBalanceOf(userId);
 
         BigDecimal saldoCache = model.getSaldoActual() == null ? BigDecimal.ZERO : model.getSaldoActual();
         if (saldoCache.compareTo(previousBalance) != 0) {
             throw new IllegalStateException(
-                    "Inconsistencia detectada: último balance (" + previousBalance + ") != models.saldo_actual (" + saldoCache + ")"
+                    "Inconsistencia detectada: ultimo balance (" + previousBalance + ") != models.saldo_actual (" + saldoCache + ")"
             );
         }
 
-        // 5) Verificar fondos suficientes (ledger)
         if (previousBalance.compareTo(amountAbs) < 0) {
             throw new IllegalArgumentException("Saldo insuficiente para completar el retiro");
         }
 
-        // 6) Crear payout_request (sin PSP)
         PayoutRequest pr = new PayoutRequest();
         pr.setModelUserId(userId);
         pr.setAmount(amountAbs);
@@ -329,7 +298,6 @@ public class TransactionService {
         pr.setReason(request.getDescription());
         PayoutRequest savedPr = payoutRequestRepository.save(pr);
 
-        // 7) Asentar ledger (retención/solicitud)
         BigDecimal signedAmount = amountAbs.negate();
 
         Transaction tx = new Transaction();
@@ -350,34 +318,17 @@ public class TransactionService {
         b.setDescription("Payout request #" + savedPr.getId());
         balanceRepository.save(b);
 
-        // 8) Actualizar cache
         model.setSaldoActual(newBalance);
         modelRepository.save(model);
     }
 
-    /**
-     * Admin review para payout_requests (sin PSP).
-     *
-     * Reglas:
-     * - APPROVED: solo status + auditoría admin (NO ledger)
-     * - PAID: solo status + auditoría admin (NO ledger)
-     * - REJECTED/CANCELED: revierte el hold contable creado por PAYOUT_REQUEST:
-     *     - crea asiento compensatorio (amount POSITIVO) con operation_type = PAYOUT_REQUEST_REVERT
-     *     - crea balance nuevo
-     *     - actualiza models.saldo_actual
-     *
-     * Reglas de transición mínimas (seguras):
-     * - REQUESTED -> APPROVED | REJECTED | CANCELED
-     * - APPROVED  -> PAID | REJECTED | CANCELED
-     * - Estados terminales: REJECTED | CANCELED | PAID (no se pueden cambiar)
-     */
     @Transactional
     public PayoutRequest adminReviewPayoutRequest(Long payoutRequestId, Long adminId, String newStatus, String adminNotes) {
         if (payoutRequestId == null || payoutRequestId <= 0) {
-            throw new IllegalArgumentException("payoutRequestId inválido");
+            throw new IllegalArgumentException("payoutRequestId invalido");
         }
         if (adminId == null || adminId <= 0) {
-            throw new IllegalArgumentException("adminId inválido");
+            throw new IllegalArgumentException("adminId invalido");
         }
         if (newStatus == null || newStatus.isBlank()) {
             throw new IllegalArgumentException("status requerido");
@@ -385,46 +336,39 @@ public class TransactionService {
 
         final String target = newStatus.trim().toUpperCase(Locale.ROOT);
 
-        // Validar status permitido (según tu entidad)
         if (!"REQUESTED".equals(target)
                 && !"APPROVED".equals(target)
                 && !"REJECTED".equals(target)
                 && !"PAID".equals(target)
                 && !"CANCELED".equals(target)) {
-            throw new IllegalArgumentException("status no válido: " + newStatus);
+            throw new IllegalArgumentException("status no valido: " + newStatus);
         }
 
-        // 1) LOCK payout_request
-        //    Requiere que exista en PayoutRequestRepository un método findByIdForUpdate(...)
         PayoutRequest pr = payoutRequestRepository.findByIdForUpdate(payoutRequestId)
                 .orElseThrow(() -> new IllegalArgumentException("PayoutRequest no encontrada: " + payoutRequestId));
 
         final String current = (pr.getStatus() == null ? "REQUESTED" : pr.getStatus().trim().toUpperCase(Locale.ROOT));
 
-        // 2) Estados terminales: no se tocan
         if ("REJECTED".equals(current) || "CANCELED".equals(current) || "PAID".equals(current)) {
             throw new IllegalStateException("PayoutRequest en estado terminal: " + current);
         }
 
-        // 3) Validar transiciones permitidas
         if ("REQUESTED".equals(current)) {
             if (!"APPROVED".equals(target) && !"REJECTED".equals(target) && !"CANCELED".equals(target)) {
-                throw new IllegalStateException("Transición no permitida: " + current + " -> " + target);
+                throw new IllegalStateException("Transicion no permitida: " + current + " -> " + target);
             }
         } else if ("APPROVED".equals(current)) {
             if (!"PAID".equals(target) && !"REJECTED".equals(target) && !"CANCELED".equals(target)) {
-                throw new IllegalStateException("Transición no permitida: " + current + " -> " + target);
+                throw new IllegalStateException("Transicion no permitida: " + current + " -> " + target);
             }
         }
 
-        // 4) LOCK wallet del modelo (serializa ledger y cache)
         Long modelUserId = pr.getModelUserId();
         if (modelUserId == null || modelUserId <= 0) {
-            throw new IllegalStateException("modelUserId inválido en payout_request");
+            throw new IllegalStateException("modelUserId invalido en payout_request");
         }
         User modelUser = lockUserOrThrow(modelUserId);
 
-        // Validación de rol (coherencia básica)
         if (!Constants.Roles.MODEL.equals(modelUser.getRole())) {
             throw new IllegalStateException("El usuario no es MODEL: " + modelUserId);
         }
@@ -432,11 +376,10 @@ public class TransactionService {
         Model model = modelRepository.findByUser(modelUser)
                 .orElseThrow(() -> new IllegalStateException("No existe registro de modelo para userId=" + modelUserId));
 
-        // 5) Si REJECTED/CANCELED => revertir hold contable
         if ("REJECTED".equals(target) || "CANCELED".equals(target)) {
             BigDecimal amountAbs = pr.getAmount() == null ? BigDecimal.ZERO : pr.getAmount().setScale(2, RoundingMode.HALF_UP);
             if (amountAbs.compareTo(BigDecimal.ZERO) <= 0) {
-                throw new IllegalStateException("Amount inválido en payout_request: " + pr.getAmount());
+                throw new IllegalStateException("Amount invalido en payout_request: " + pr.getAmount());
             }
 
             BigDecimal previousBalance = lastBalanceOf(modelUserId);
@@ -444,12 +387,11 @@ public class TransactionService {
             BigDecimal saldoCache = model.getSaldoActual() == null ? BigDecimal.ZERO : model.getSaldoActual();
             if (saldoCache.compareTo(previousBalance) != 0) {
                 throw new IllegalStateException(
-                        "Inconsistencia MODEL: último balance (" + previousBalance + ") != models.saldo_actual (" + saldoCache + ")"
+                        "Inconsistencia MODEL: ultimo balance (" + previousBalance + ") != models.saldo_actual (" + saldoCache + ")"
                 );
             }
 
-            // Asiento compensatorio (+amount) => devuelve fondos al modelo
-            BigDecimal signedAmount = amountAbs; // positivo
+            BigDecimal signedAmount = amountAbs;
 
             Transaction tx = new Transaction();
             tx.setUser(modelUser);
@@ -469,12 +411,10 @@ public class TransactionService {
             bal.setDescription("Revert payout request #" + pr.getId());
             balanceRepository.save(bal);
 
-            // cache
             model.setSaldoActual(newBalance);
             modelRepository.save(model);
         }
 
-        // 6) Persistir review en payout_requests (sin inventar columnas nuevas)
         pr.setStatus(target);
         pr.setAdminNotes(adminNotes);
         pr.setReviewedByUserId(adminId);
@@ -486,10 +426,8 @@ public class TransactionService {
     @Transactional
     public Gift processGift(Long clientId, Long modelId, Long giftId, Long streamIdOrNull) {
         log.info("processGift: start clientId={} modelId={} giftId={} streamIdOrNull={}", clientId, modelId, giftId, streamIdOrNull);
-        // 0) LOCK ambos wallets (orden fijo)
         lockUsersInOrder(clientId, modelId);
 
-        // 1) Cargar users y validar roles (puedes usar findById normal porque el lock ya está tomado)
         User clientUser = userRepository.findById(clientId)
                 .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado: " + clientId));
         log.info("processGift: loaded client userId={} role={}", clientId, clientUser.getRole());
@@ -515,23 +453,20 @@ public class TransactionService {
 
         BigDecimal lastClientBalance = lastBalanceOf(clientId);
 
-        // Auditoría cache vs ledger
         BigDecimal clientSaldoCache = client.getSaldoActual() == null ? BigDecimal.ZERO : client.getSaldoActual();
         log.info("processGift: validating client balances clientId={} ledgerBalance={} saldoCache={}",
                 clientId, lastClientBalance, clientSaldoCache);
         if (clientSaldoCache.compareTo(BigDecimal.ZERO) > 0 && lastClientBalance.compareTo(clientSaldoCache) != 0) {
             throw new IllegalStateException(
-                    "Inconsistencia CLIENT: último balance (" + lastClientBalance + ") != clients.saldo_actual (" + clientSaldoCache + ")"
+                    "Inconsistencia CLIENT: ultimo balance (" + lastClientBalance + ") != clients.saldo_actual (" + clientSaldoCache + ")"
             );
         }
 
-        // Fuente de verdad para validar fondos: ledger
         log.info("processGift: validating funds clientId={} cost={} balance={}", clientId, cost, lastClientBalance);
         if (lastClientBalance.compareTo(cost) < 0) {
             throw new IllegalArgumentException("Saldo insuficiente para enviar el regalo");
         }
 
-        // Modelo (crear si no existe fila)
         Model model = modelRepository.findByUser(modelUser)
                 .orElseGet(() -> {
                     Model m = new Model();
@@ -544,14 +479,12 @@ public class TransactionService {
 
         BigDecimal lastModelBalance = lastBalanceOf(modelId);
 
-        // Split
         BigDecimal share = (giftProperties.getModelShare() != null ? giftProperties.getModelShare() : BigDecimal.ZERO);
         BigDecimal modelEarning = cost.multiply(share).setScale(2, RoundingMode.HALF_UP);
         BigDecimal platformEarning = cost.subtract(modelEarning).setScale(2, RoundingMode.HALF_UP);
         log.info("processGift: split giftId={} share={} modelEarning={} platformEarning={}",
                 giftId, share, modelEarning, platformEarning);
 
-        // Stream (opcional)
         StreamRecord stream = null;
         if (streamIdOrNull != null) {
             stream = streamRecordRepository.findById(streamIdOrNull).orElse(null);
@@ -559,7 +492,6 @@ public class TransactionService {
         log.info("processGift: resolved stream streamIdOrNull={} foundStreamId={}",
                 streamIdOrNull, stream != null ? stream.getId() : null);
 
-        // ===== CLIENTE (ledger) =====
         Transaction txClient = new Transaction();
         txClient.setUser(clientUser);
         txClient.setAmount(cost.negate());
@@ -586,7 +518,6 @@ public class TransactionService {
         clientRepository.save(client);
         log.info("processGift: updated client cache userId={} saldoActual={}", clientId, client.getSaldoActual());
 
-        // ===== MODELO (ledger) =====
         Transaction txModel = new Transaction();
         txModel.setUser(modelUser);
         txModel.setAmount(modelEarning);
@@ -616,11 +547,7 @@ public class TransactionService {
         log.info("processGift: updated model cache userId={} saldoActual={} totalIngresos={}",
                 modelId, model.getSaldoActual(), model.getTotalIngresos());
 
-        // ===== PLATAFORMA (ledger plataforma) =====
         if (platformEarning.compareTo(BigDecimal.ZERO) > 0) {
-            // LOCK plataforma antes de calcular el balance
-            lockPlatformBalance();
-
             PlatformTransaction ptx = new PlatformTransaction();
             ptx.setAmount(platformEarning);
             ptx.setOperationType("GIFT_MARGIN");
@@ -630,16 +557,12 @@ public class TransactionService {
             log.info("processGift: saved platform transaction txId={} amount={} op={}",
                     savedPtx.getId(), ptx.getAmount(), ptx.getOperationType());
 
-            BigDecimal lastPlatformBalance = lastPlatformBalance();
-
-            PlatformBalance pbal = new PlatformBalance();
-            pbal.setTransactionId(savedPtx.getId());
-            pbal.setAmount(platformEarning);
-            pbal.setBalance(lastPlatformBalance.add(platformEarning));
-            pbal.setDescription("Margen por regalo: " + gift.getName());
-            platformBalanceRepository.save(pbal);
-            log.info("processGift: saved platform balance previousBalance={} newBalance={}",
-                    lastPlatformBalance, lastPlatformBalance.add(platformEarning));
+            BigDecimal newPlatformBalance = appendPlatformBalance(
+                    savedPtx.getId(),
+                    platformEarning,
+                    "Margen por regalo: " + gift.getName()
+            );
+            log.info("processGift: saved platform balance newBalance={}", newPlatformBalance);
         }
 
         log.info("processGift: success clientId={} modelId={} giftId={} finalClientBalance={} finalModelBalance={}",
@@ -647,18 +570,12 @@ public class TransactionService {
         return gift;
     }
 
-    /**
-     * Forfeit interno actual (OJO: esto lo vas a cambiar para MODELO cuando metamos payout_requests).
-     * Mantengo la lógica, pero con LOCKS (usuario + plataforma) y lectura determinista.
-     */
     @Transactional
     public BigDecimal forfeitOnUnsubscribe(Long userId, String role, String description) {
-        // 0) LOCK wallet
         User user = lockUserOrThrow(userId);
 
         BigDecimal totalForfeited = BigDecimal.ZERO;
 
-        // === CLIENTE ===
         if (Constants.Roles.CLIENT.equals(role)) {
             Optional<Client> clientOpt = clientRepository.findByUser(user);
             if (clientOpt.isPresent()) {
@@ -669,14 +586,13 @@ public class TransactionService {
 
                 if (saldoCache.compareTo(BigDecimal.ZERO) > 0 && lastBalance.compareTo(saldoCache) != 0) {
                     throw new IllegalStateException(
-                            "Inconsistencia CLIENT: último balance (" + lastBalance + ") != clients.saldo_actual (" + saldoCache + ")"
+                            "Inconsistencia CLIENT: ultimo balance (" + lastBalance + ") != clients.saldo_actual (" + saldoCache + ")"
                     );
                 }
 
                 BigDecimal saldo = lastBalance;
 
                 if (saldo.compareTo(BigDecimal.ZERO) > 0) {
-                    // Ledger cliente
                     Transaction tx = new Transaction();
                     tx.setUser(user);
                     tx.setAmount(saldo.negate());
@@ -693,25 +609,18 @@ public class TransactionService {
                     bal.setDescription(description);
                     balanceRepository.save(bal);
 
-                    // Ledger plataforma (LOCK)
-                    lockPlatformBalance();
-
                     PlatformTransaction ptx = new PlatformTransaction();
                     ptx.setAmount(saldo);
                     ptx.setOperationType("UNSUBSCRIBE_FORFEIT");
                     ptx.setDescription("Forfeit usuario " + userId);
                     PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
 
-                    BigDecimal lastPlatformBalance = lastPlatformBalance();
+                    appendPlatformBalance(
+                            savedPtx.getId(),
+                            saldo,
+                            "Forfeit usuario " + userId
+                    );
 
-                    PlatformBalance pbal = new PlatformBalance();
-                    pbal.setTransactionId(savedPtx.getId());
-                    pbal.setAmount(saldo);
-                    pbal.setBalance(lastPlatformBalance.add(saldo));
-                    pbal.setDescription("Forfeit usuario " + userId);
-                    platformBalanceRepository.save(pbal);
-
-                    // cache
                     client.setSaldoActual(BigDecimal.ZERO);
                     clientRepository.save(client);
 
@@ -720,7 +629,6 @@ public class TransactionService {
             }
         }
 
-        // === MODELO ===
         if (Constants.Roles.MODEL.equals(role)) {
             Optional<Model> modelOpt = modelRepository.findByUser(user);
             if (modelOpt.isPresent()) {
@@ -731,14 +639,13 @@ public class TransactionService {
 
                 if (saldoCache.compareTo(BigDecimal.ZERO) > 0 && lastBalance.compareTo(saldoCache) != 0) {
                     throw new IllegalStateException(
-                            "Inconsistencia MODEL: último balance (" + lastBalance + ") != models.saldo_actual (" + saldoCache + ")"
+                            "Inconsistencia MODEL: ultimo balance (" + lastBalance + ") != models.saldo_actual (" + saldoCache + ")"
                     );
                 }
 
                 BigDecimal saldo = lastBalance;
 
                 if (saldo.compareTo(BigDecimal.ZERO) > 0) {
-                    // Ledger modelo
                     Transaction tx = new Transaction();
                     tx.setUser(user);
                     tx.setAmount(saldo.negate());
@@ -755,25 +662,18 @@ public class TransactionService {
                     bal.setDescription(description);
                     balanceRepository.save(bal);
 
-                    // Ledger plataforma (LOCK)
-                    lockPlatformBalance();
-
                     PlatformTransaction ptx = new PlatformTransaction();
                     ptx.setAmount(saldo);
                     ptx.setOperationType("UNSUBSCRIBE_FORFEIT");
                     ptx.setDescription("Forfeit modelo " + userId);
                     PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
 
-                    BigDecimal lastPlatformBalance = lastPlatformBalance();
+                    appendPlatformBalance(
+                            savedPtx.getId(),
+                            saldo,
+                            "Forfeit modelo " + userId
+                    );
 
-                    PlatformBalance pbal = new PlatformBalance();
-                    pbal.setTransactionId(savedPtx.getId());
-                    pbal.setAmount(saldo);
-                    pbal.setBalance(lastPlatformBalance.add(saldo));
-                    pbal.setDescription("Forfeit modelo " + userId);
-                    platformBalanceRepository.save(pbal);
-
-                    // cache
                     model.setSaldoActual(BigDecimal.ZERO);
                     modelRepository.save(model);
 
@@ -785,7 +685,6 @@ public class TransactionService {
         return totalForfeited;
     }
 
-    // Para "chat de favoritos" (sin stream)
     @Transactional
     public Gift processGiftInChat(Long clientId, Long modelId, Long giftId) {
         return processGift(clientId, modelId, giftId, null);
