@@ -3,20 +3,25 @@ package com.sharemechat.controller;
 import com.sharemechat.dto.ModelChecklistUpdateDTO;
 import com.sharemechat.dto.UserDTO;
 import com.sharemechat.entity.KycProviderConfig;
+import com.sharemechat.entity.PayoutRequest;
 import com.sharemechat.entity.User;
 import com.sharemechat.service.AdminService;
 import com.sharemechat.service.KycProviderConfigService;
+import com.sharemechat.service.ModerationReportService;
+import com.sharemechat.service.TransactionService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.dto.ModerationReportDTO;
 import com.sharemechat.dto.ModerationReportReviewDTO;
-import com.sharemechat.service.ModerationReportService;
+import com.sharemechat.repository.PayoutRequestRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -29,17 +34,24 @@ public class AdminController {
     private final KycProviderConfigService kycProviderConfigService;
     private final ModerationReportService moderationReportService;
 
-    // constructor
+    // [NEW] payouts
+    private final PayoutRequestRepository payoutRequestRepository;
+    private final TransactionService transactionService;
+
     public AdminController(
             AdminService adminService,
             UserService userService,
             KycProviderConfigService kycProviderConfigService,
-            ModerationReportService moderationReportService
+            ModerationReportService moderationReportService,
+            PayoutRequestRepository payoutRequestRepository,
+            TransactionService transactionService
     ) {
         this.adminService = adminService;
         this.userService = userService;
         this.kycProviderConfigService = kycProviderConfigService;
         this.moderationReportService = moderationReportService;
+        this.payoutRequestRepository = payoutRequestRepository;
+        this.transactionService = transactionService;
     }
 
     // GET /api/admin/models?verification=PENDING|APPROVED|REJECTED (opcional)
@@ -183,4 +195,61 @@ public class AdminController {
         return ResponseEntity.ok(moderationReportService.adminReview(id, adminId, dto));
     }
 
+    // ======================================
+    // PAYOUT REQUESTS (sin PSP)
+    // ======================================
+
+    // GET /api/admin/payout/requests?status=REQUESTED|APPROVED|REJECTED|PAID|CANCELED (opcional)
+    @GetMapping("/payout/requests")
+    public ResponseEntity<List<PayoutRequest>> listPayoutRequests(@RequestParam(required = false) String status) {
+        if (status == null || status.isBlank()) {
+            return ResponseEntity.ok(payoutRequestRepository.findAllByOrderByCreatedAtDesc());
+        }
+        String st = status.trim().toUpperCase(Locale.ROOT);
+        return ResponseEntity.ok(payoutRequestRepository.findAllByStatusOrderByCreatedAtDesc(st));
+    }
+
+    // GET /api/admin/payout/requests/{id}
+    @GetMapping("/payout/requests/{id}")
+    public ResponseEntity<PayoutRequest> getPayoutRequest(@PathVariable Long id) {
+        PayoutRequest pr = payoutRequestRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("PayoutRequest no encontrada"));
+        return ResponseEntity.ok(pr);
+    }
+
+    /**
+     * POST /api/admin/payout/requests/{id}/review
+     * Body:
+     *  - status: APPROVED | REJECTED | PAID | CANCELED
+     *  - adminNotes: texto opcional
+     *
+     * Reglas:
+     * - APPROVED/PAID: NO toca ledger (ya se descontó en REQUEST)
+     * - REJECTED/CANCELED: revierte el hold PAYOUT_REQUEST en ledger
+     */
+    @PostMapping("/payout/requests/{id}/review")
+    public ResponseEntity<PayoutRequest> reviewPayoutRequest(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            Authentication auth
+    ) {
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+        User admin = userService.findByEmail(auth.getName());
+        Long adminId = admin != null ? admin.getId() : null;
+
+        String newStatus = body != null ? body.get("status") : null;
+        String adminNotes = body != null ? body.get("adminNotes") : null;
+
+        if (newStatus == null || newStatus.isBlank()) {
+            throw new IllegalArgumentException("status requerido");
+        }
+        String st = newStatus.trim().toUpperCase(Locale.ROOT);
+
+        // lock + transición + (si REJECT/CANCELED => reversión ledger)
+        PayoutRequest updated = transactionService.adminReviewPayoutRequest(id, adminId, st, adminNotes);
+
+        return ResponseEntity.ok(updated);
+    }
 }

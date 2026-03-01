@@ -8,4 +8,6 @@ import java.util.Optional;
 public interface BalanceRepository extends JpaRepository<Balance, Long> {
 
     Optional<Balance> findTopByUserIdOrderByTimestampDesc(Long userId);
+
+    Optional<Balance> findTopByUserIdOrderByTimestampDescIdDesc(Long userId);
 }
