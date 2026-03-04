@@ -201,14 +201,13 @@ public class StreamService {
             log.warn("confirmActiveSession EXIT (already-ended) sessionId={} client={} model={}", session.getId(), clientId, modelId);
             return;
         }
-        if (session.getConfirmedAt() != null) {
-            log.debug("confirmActiveSession EXIT (already-confirmed) sessionId={} client={} model={} confirmedAt={}",
-                    session.getId(), clientId, modelId, session.getConfirmedAt());
+
+        LocalDateTime now = LocalDateTime.now();
+        int updated = streamRecordRepository.confirmIfNotConfirmed(session.getId(), now);
+        if (updated == 0) {
             return;
         }
 
-        session.setConfirmedAt(LocalDateTime.now());
-        streamRecordRepository.save(session);
         recordStreamEvent(session.getId(), Constants.StreamEventTypes.CONFIRMED, null, null);
 
         log.info(
@@ -737,6 +736,30 @@ public class StreamService {
         detail.setStream(mapStreamRecordToAdminRow(stream, LocalDateTime.now()));
         detail.setEvents(events);
         return detail;
+    }
+
+    @Transactional
+    public StreamRecord killStreamAsAdmin(Long streamId, String reason) {
+        StreamRecord stream = streamRecordRepository.findById(streamId)
+                .orElseThrow(() -> new EntityNotFoundException("StreamRecord no encontrado: " + streamId));
+
+        if (stream.getEndTime() != null) {
+            return stream;
+        }
+
+        Long clientId = stream.getClient() != null ? stream.getClient().getId() : null;
+        Long modelId = stream.getModel() != null ? stream.getModel().getId() : null;
+        if (clientId == null || modelId == null) {
+            throw new IllegalStateException("StreamRecord inválido (client/model NULL) id=" + streamId);
+        }
+
+        String normalizedReason = reason == null ? null : reason.trim();
+        String endReason = (normalizedReason == null || normalizedReason.isBlank())
+                ? "ADMIN_KILL"
+                : "ADMIN_KILL:" + normalizedReason;
+
+        endSession(clientId, modelId, endReason);
+        return stream;
     }
 
     private void recordEndEvents(Long streamId, String endReason) {

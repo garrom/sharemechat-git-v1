@@ -35,6 +35,7 @@ public class MatchingHandler extends TextWebSocketHandler {
     private final Map<String, Queue<WebSocketSession>> waitingClientsByBucket = new ConcurrentHashMap<>();
 
     private final Map<String, WebSocketSession> pairs = new ConcurrentHashMap<>();
+    private final Map<String, WebSocketSession> sessionsById = new ConcurrentHashMap<>();
     private final Map<String, String> roles = new ConcurrentHashMap<>();
     private final Map<String, Long> sessionUserIds = new ConcurrentHashMap<>();
     private final Map<String, Long> lastMatchAt = new ConcurrentHashMap<>();
@@ -109,6 +110,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             session.close(CloseStatus.BAD_DATA);
             return;
         }
+        sessionsById.put(session.getId(), session);
         sessionUserIds.put(session.getId(), userId);
         // El rol se fija luego con "set-role"
     }
@@ -136,6 +138,7 @@ public class MatchingHandler extends TextWebSocketHandler {
         );
 
         String role = roles.remove(sid);
+        sessionsById.remove(sid);
         Long userId = sessionUserIds.remove(sid);
         lastMatchAt.remove(sid);
         sessionLang.remove(sid);
@@ -1490,6 +1493,27 @@ public class MatchingHandler extends TextWebSocketHandler {
             }
         }
         return null;
+    }
+
+    public void adminKillPair(Long clientUserId, Long modelUserId, String reason) {
+        String clientSid = findSessionIdByUserId(clientUserId);
+        String modelSid = findSessionIdByUserId(modelUserId);
+
+        WebSocketSession clientSession = clientSid != null ? sessionsById.get(clientSid) : null;
+        WebSocketSession modelSession = modelSid != null ? sessionsById.get(modelSid) : null;
+
+        if (clientSid != null) {
+            pairs.remove(clientSid);
+        }
+        if (modelSid != null) {
+            pairs.remove(modelSid);
+        }
+
+        String safeReason = (reason == null || reason.isBlank()) ? "admin-kill" : reason;
+        String payload = "{\"type\":\"peer-disconnected\",\"reason\":\"" + safeReason + "\"}";
+
+        safeSend(clientSession, payload);
+        safeSend(modelSession, payload);
     }
 
     @Override

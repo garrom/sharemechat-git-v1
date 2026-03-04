@@ -926,6 +926,22 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         activeCallOwners.remove(b);
     }
 
+    public void adminKillCallPair(Long clientId, Long modelId, String reason) {
+        if (clientId == null || modelId == null) return;
+
+        String safeReason = (reason == null || reason.isBlank()) ? "admin-kill" : reason;
+        log.info("adminKillCallPair clientId={} modelId={} reason={}", clientId, modelId, safeReason);
+
+        broadcastToUser(clientId, new JSONObject().put("type", "call:ended").put("reason", safeReason).toString());
+        broadcastToUser(modelId, new JSONObject().put("type", "call:ended").put("reason", safeReason).toString());
+
+        clearActiveCall(clientId, modelId);
+        clearRinging(clientId);
+        clearRinging(modelId);
+        activeCallOwners.remove(clientId);
+        activeCallOwners.remove(modelId);
+    }
+
 
     private BigDecimal getCurrentBalanceOrZero(Long userId) {
         if (userId == null) return BigDecimal.ZERO;

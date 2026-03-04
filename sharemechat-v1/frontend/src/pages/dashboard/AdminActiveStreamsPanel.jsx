@@ -152,6 +152,30 @@ const AdminActiveStreamsPanel = () => {
     }
   };
 
+  const killStream = async (streamId) => {
+    if (!streamId) return;
+    if (!window.confirm('¿Cortar este stream ahora?')) return;
+
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/streams/${streamId}/kill`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error((await res.text()) || 'Error al cortar el stream');
+      await fetchActiveStreams(filters);
+      if (selectedStreamId === streamId) {
+        setSelectedStreamId(null);
+        setSelectedDetail(null);
+        setDetailError('');
+      }
+    } catch (e) {
+      setError(e.message || 'Error al cortar el stream');
+    }
+  };
+
   const applyFilters = () => {
     fetchActiveStreams(filters);
   };
@@ -255,6 +279,7 @@ const AdminActiveStreamsPanel = () => {
               <th>Estado</th>
               <th></th>
               <th></th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -283,13 +308,20 @@ const AdminActiveStreamsPanel = () => {
                       {selectedStreamId === streamId ? 'Cerrar' : 'Detalle'}
                     </SmallBtn>
                   </td>
+                  <td>
+                    {derivedStatus !== 'closed' && (
+                      <SmallBtn type="button" onClick={() => killStream(streamId)}>
+                        KILL
+                      </SmallBtn>
+                    )}
+                  </td>
                 </tr>
               );
             })}
 
             {!loading && streams.length === 0 && (
               <tr>
-                <td colSpan={9} style={{ color: '#6c757d' }}>Sin streams activos.</td>
+                <td colSpan={10} style={{ color: '#6c757d' }}>Sin streams activos.</td>
               </tr>
             )}
           </tbody>

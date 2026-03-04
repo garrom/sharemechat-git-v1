@@ -1,12 +1,16 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.ModelChecklistUpdateDTO;
 import com.sharemechat.dto.StreamActiveAdminRowDto;
 import com.sharemechat.dto.StreamAdminDetailDto;
 import com.sharemechat.dto.UserDTO;
 import com.sharemechat.entity.KycProviderConfig;
 import com.sharemechat.entity.PayoutRequest;
+import com.sharemechat.entity.StreamRecord;
+import com.sharemechat.handler.MessagesWsHandler;
 import com.sharemechat.entity.User;
+import com.sharemechat.handler.MatchingHandler;
 import com.sharemechat.service.AdminService;
 import com.sharemechat.service.KycProviderConfigService;
 import com.sharemechat.service.ModerationReportService;
@@ -37,6 +41,8 @@ public class AdminController {
     private final KycProviderConfigService kycProviderConfigService;
     private final ModerationReportService moderationReportService;
     private final StreamService streamService;
+    private final MatchingHandler matchingHandler;
+    private final MessagesWsHandler messagesWsHandler;
 
     // [NEW] payouts
     private final PayoutRequestRepository payoutRequestRepository;
@@ -48,6 +54,8 @@ public class AdminController {
             KycProviderConfigService kycProviderConfigService,
             ModerationReportService moderationReportService,
             StreamService streamService,
+            MatchingHandler matchingHandler,
+            MessagesWsHandler messagesWsHandler,
             PayoutRequestRepository payoutRequestRepository,
             TransactionService transactionService
     ) {
@@ -56,6 +64,8 @@ public class AdminController {
         this.kycProviderConfigService = kycProviderConfigService;
         this.moderationReportService = moderationReportService;
         this.streamService = streamService;
+        this.matchingHandler = matchingHandler;
+        this.messagesWsHandler = messagesWsHandler;
         this.payoutRequestRepository = payoutRequestRepository;
         this.transactionService = transactionService;
     }
@@ -135,6 +145,31 @@ public class AdminController {
             @RequestParam(required = false) Integer limitEvents
     ) {
         return ResponseEntity.ok(streamService.getAdminStreamDetail(id, limitEvents));
+    }
+
+    // POST /api/admin/streams/{id}/kill
+    @PostMapping("/streams/{id}/kill")
+    public ResponseEntity<Map<String, Object>> killStream(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body
+    ) {
+        String reason = body != null ? body.get("reason") : null;
+        StreamRecord sr = streamService.killStreamAsAdmin(id, reason);
+        String wsReason = (reason == null || reason.isBlank()) ? "admin-kill" : "admin-kill:" + reason.trim();
+        if (sr != null
+                && sr.getStreamType() != null
+                && Constants.StreamTypes.RANDOM.equalsIgnoreCase(sr.getStreamType())
+                && sr.getClient() != null
+                && sr.getModel() != null) {
+            matchingHandler.adminKillPair(sr.getClient().getId(), sr.getModel().getId(), "admin-kill");
+        } else if (sr != null
+                && sr.getStreamType() != null
+                && Constants.StreamTypes.CALLING.equalsIgnoreCase(sr.getStreamType())
+                && sr.getClient() != null
+                && sr.getModel() != null) {
+            messagesWsHandler.adminKillCallPair(sr.getClient().getId(), sr.getModel().getId(), wsReason);
+        }
+        return ResponseEntity.ok(Map.of("ok", true, "streamId", id));
     }
 
     // POST /api/admin/model-checklist/{userId}

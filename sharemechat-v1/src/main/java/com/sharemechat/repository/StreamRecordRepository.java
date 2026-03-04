@@ -2,10 +2,12 @@ package com.sharemechat.repository;
 
 import com.sharemechat.entity.StreamRecord;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -61,6 +63,16 @@ public interface StreamRecordRepository extends JpaRepository<StreamRecord, Long
        WHERE sr.id = :id
     """)
     Optional<StreamRecord> findAdminDetailById(@Param("id") Long id);
+
+    @Modifying
+    @Query("""
+       UPDATE StreamRecord sr
+          SET sr.confirmedAt = :now
+        WHERE sr.id = :streamId
+          AND sr.endTime IS NULL
+          AND sr.confirmedAt IS NULL
+    """)
+    int confirmIfNotConfirmed(@Param("streamId") Long streamId, @Param("now") LocalDateTime now);
 
     @org.springframework.data.jpa.repository.Query("""
        SELECT COALESCE(SUM(FUNCTION('TIMESTAMPDIFF', SECOND, sr.startTime, sr.endTime)), 0)
