@@ -18,7 +18,7 @@ public class Constants {
     public static class UserTypes {
         public static final String FORM_CLIENT = "FORM_CLIENT";
         public static final String FORM_MODEL = "FORM_MODEL";
-        public static final String ADMIN = "ADMIN";
+
 
         private UserTypes() {}
     }
@@ -36,6 +36,25 @@ public class Constants {
         public static final String STREAM_EARNING = "STREAM_EARNING";
 
         private OperationTypes() {}
+    }
+
+    public static class StreamTypes {
+        public static final String UNKNOWN = "UNKNOWN";
+        public static final String RANDOM = "RANDOM";
+        public static final String CALLING = "CALLING";
+
+        private StreamTypes() {}
+    }
+
+    public static class StreamEventTypes {
+        public static final String CREATED = "CREATED";
+        public static final String CONFIRMED = "CONFIRMED";
+        public static final String ENDED = "ENDED";
+        public static final String CUT_LOW_BALANCE = "CUT_LOW_BALANCE";
+        public static final String DISCONNECT = "DISCONNECT";
+        public static final String TIMEOUT = "TIMEOUT";
+
+        private StreamEventTypes() {}
     }
 
     public static class KycModes {
@@ -68,7 +87,6 @@ public class Constants {
         public static final String NUDITY = "NUDITY";
         public static final String FRAUD = "FRAUD";
         public static final String MINOR = "MINOR";
-        public static final String SPAM = "SPAM";
         public static final String OTHER = "OTHER";
         private ModerationReportTypes() {}
     }

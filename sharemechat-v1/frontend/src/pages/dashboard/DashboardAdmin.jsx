@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useHistory } from 'react-router-dom';
 import { apiFetch } from '../../config/http';
 import Roles from '../../constants/Roles';
+import AdminActiveStreamsPanel from './AdminActiveStreamsPanel';
 import {
   StyledContainer,
   StyledTable,
@@ -619,6 +620,7 @@ const DashboardAdmin = () => {
         <TabButton active={activeTab === 'db'} onClick={() => setActiveTab('db')}>Vista BBDD</TabButton>
         <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')}>Auditoría</TabButton>
         <TabButton active={activeTab === 'moderation'} onClick={() => setActiveTab('moderation')}>Moderación</TabButton>
+        <TabButton active={activeTab === 'streams'} onClick={() => setActiveTab('streams')}>Streams activos</TabButton>
       </TabsBar>
 
       {/* MODELOS */}
@@ -1293,6 +1295,13 @@ const DashboardAdmin = () => {
               </InlinePanel>
             </div>
           </DbLayout>
+        </div>
+      )}
+
+      {activeTab === 'streams' && (
+        <div>
+          <SectionTitle>Streams activos</SectionTitle>
+          <AdminActiveStreamsPanel />
         </div>
       )}
 

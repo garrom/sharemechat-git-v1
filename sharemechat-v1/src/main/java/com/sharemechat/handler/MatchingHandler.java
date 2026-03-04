@@ -659,7 +659,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                 }
                 userTrialService.startTrialStream(clientId, bestModelId);
             } else {
-                streamService.startSession(clientId, bestModelId);
+                streamService.startSession(clientId, bestModelId, Constants.StreamTypes.RANDOM);
             }
 
             seenService.markSeen(clientId, bestModelId);
@@ -758,7 +758,7 @@ public class MatchingHandler extends TextWebSocketHandler {
                     }
                     userTrialService.startTrialStream(clientId, modelId);
                 } else {
-                    streamService.startSession(clientId, modelId);
+                    streamService.startSession(clientId, modelId, Constants.StreamTypes.RANDOM);
                 }
 
                 seenService.markSeen(clientId, modelId);
@@ -984,7 +984,7 @@ public class MatchingHandler extends TextWebSocketHandler {
             // IMPORTANTE:
             // - Aquí NO usamos endSessionAsync: necesitamos cierre determinista antes de liberar locks / reencolar.
             if (Constants.Roles.CLIENT.equals(realRole)) {
-                streamService.endSession(viewerId, modelId);
+                streamService.endSession(viewerId, modelId, closeReason);
             } else if (Constants.Roles.USER.equals(realRole)) {
                 userTrialService.endTrialStream(viewerId, modelId, closeReason);
             }
@@ -1278,7 +1278,7 @@ public class MatchingHandler extends TextWebSocketHandler {
 
         // Aquí SÍ usamos ASYNC para no bloquear el hilo WS en un cierre “pesado”
         try {
-            streamService.endSessionAsync(clientId, modelId);
+            streamService.endSessionAsync(clientId, modelId, "low-balance");
         } catch (Exception ex) {
             log.warn("endSessionAsync launch failed: clientId={} modelId={} msg={}",
                     clientId, modelId, ex.getMessage(), ex);

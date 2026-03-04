@@ -2,17 +2,24 @@ package com.sharemechat.service;
 
 import com.sharemechat.config.BillingProperties;
 import com.sharemechat.constants.Constants;
+import com.sharemechat.dto.StreamActiveAdminRowDto;
+import com.sharemechat.dto.StreamAdminDetailDto;
+import com.sharemechat.dto.StreamStatusEventDto;
 import com.sharemechat.entity.*;
 import com.sharemechat.repository.*;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -34,6 +41,13 @@ public class StreamService {
     private final BillingProperties billing;
     private final ModelTierService modelTierService;
     private final TransactionService transactionService;
+    private final StreamStatusEventRepository streamStatusEventRepository;
+
+    private static final int ADMIN_ACTIVE_DEFAULT_LIMIT = 200;
+    private static final int ADMIN_ACTIVE_MAX_LIMIT = 500;
+    private static final int ADMIN_DETAIL_DEFAULT_EVENTS = 20;
+    private static final int ADMIN_DETAIL_MAX_EVENTS = 100;
+    private static final long ADMIN_STUCK_AFTER_SECONDS = 120L;
 
     // locks por sesión para evitar dobles cierres concurrentes
     private final ConcurrentHashMap<Long, ReentrantLock> sessionLocks = new ConcurrentHashMap<>();
@@ -49,7 +63,8 @@ public class StreamService {
                          BillingProperties billing,
                          ModelTierService modelTierService,
                          PlatformBalanceRepository platformBalanceRepository,
-                         TransactionService transactionService) {
+                         TransactionService transactionService,
+                         StreamStatusEventRepository streamStatusEventRepository) {
         this.streamRecordRepository = streamRecordRepository;
         this.userRepository = userRepository;
         this.statusService = statusService;
@@ -62,6 +77,7 @@ public class StreamService {
         this.modelTierService = modelTierService;
         this.platformBalanceRepository = platformBalanceRepository;
         this.transactionService = transactionService;
+        this.streamStatusEventRepository = streamStatusEventRepository;
     }
 
     /**
@@ -78,11 +94,22 @@ public class StreamService {
      */
     @Transactional
     public StreamRecord startSession(Long clientId, Long modelId) {
+        return startSession(clientId, modelId, Constants.StreamTypes.UNKNOWN);
+    }
+
+    @Transactional
+    public StreamRecord startSession(Long clientId, Long modelId, String streamType) {
+        String normalizedStreamType = normalizeStreamType(streamType);
         // Si ya hay sesión activa para este par, reusar (idempotencia)
         Optional<StreamRecord> existing = streamRecordRepository
                 .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId);
         if (existing.isPresent()) {
             StreamRecord sr = existing.get();
+            if (Constants.StreamTypes.UNKNOWN.equals(normalizeStreamType(sr.getStreamType()))
+                    && !Constants.StreamTypes.UNKNOWN.equals(normalizedStreamType)) {
+                sr.setStreamType(normalizedStreamType);
+                sr = streamRecordRepository.save(sr);
+            }
             log.info("startSession: ya existe sesión activa id={} para client={}, model={}", sr.getId(), clientId, modelId);
             statusService.setBusy(modelId);
             statusService.setActiveSession(clientId, modelId, sr.getId());
@@ -122,9 +149,11 @@ public class StreamService {
         sr.setModel(model);
         sr.setStartTime(LocalDateTime.now());
         sr.setConfirmedAt(null);
+        sr.setStreamType(normalizedStreamType);
         sr.setEndTime(null);
 
         StreamRecord saved = streamRecordRepository.save(sr);
+        recordStreamEvent(saved.getId(), Constants.StreamEventTypes.CREATED, null, null);
         log.info("startSession: creada sesión id={} (client={}, model={}) confirmedAt=NULL", saved.getId(), clientId, modelId);
 
         // Estado y lookup rápido (Redis)
@@ -180,6 +209,7 @@ public class StreamService {
 
         session.setConfirmedAt(LocalDateTime.now());
         streamRecordRepository.save(session);
+        recordStreamEvent(session.getId(), Constants.StreamEventTypes.CONFIRMED, null, null);
 
         log.info(
                 "confirmActiveSession: confirmada sesión id={} (client={}, model={})",
@@ -228,6 +258,7 @@ public class StreamService {
 
         session.setConfirmedAt(LocalDateTime.now());
         streamRecordRepository.save(session);
+        recordStreamEvent(session.getId(), Constants.StreamEventTypes.CONFIRMED, null, null);
 
         log.info("ackMedia: confirmada sesión id={} por userId={} (client={}, model={})",
                 session.getId(), userId, clientId, modelId);
@@ -243,6 +274,11 @@ public class StreamService {
      */
     @Transactional
     public void endSession(Long clientId, Long modelId) {
+        endSession(clientId, modelId, null);
+    }
+
+    @Transactional
+    public void endSession(Long clientId, Long modelId, String endReason) {
 
         final BigDecimal RATE_PER_MINUTE = billing.getRatePerMinute(); // p.ej. 1.00
 
@@ -299,6 +335,7 @@ public class StreamService {
             if (session.getConfirmedAt() == null) {
                 session.setEndTime(endTime);
                 streamRecordRepository.save(session);
+                recordEndEvents(session.getId(), endReason);
                 postEndStatusCleanup(clientId, modelId);
                 log.info(
                         "endSession: sin cargos (stream no confirmado, duración={}s).",
@@ -360,6 +397,7 @@ public class StreamService {
             if (seconds <= 0 || cost.compareTo(BigDecimal.ZERO) <= 0) {
                 session.setEndTime(endTime);
                 streamRecordRepository.save(session);
+                recordEndEvents(session.getId(), endReason);
                 postEndStatusCleanup(clientId, modelId);
                 log.info("endSession: sin cargos (0 s). Finalizado únicamente el registro de stream.");
                 return;
@@ -502,6 +540,7 @@ public class StreamService {
             // === AHORA SÍ: CERRAR STREAM ===
             session.setEndTime(endTime);
             streamRecordRepository.save(session);
+            recordEndEvents(session.getId(), endReason);
             log.info("endSession: cerrada sesión id={} (client={}, model={})", session.getId(), clientId, modelId);
 
             // 12) Limpieza de estado
@@ -633,9 +672,14 @@ public class StreamService {
 
     @Async
     public void endSessionAsync(Long clientId, Long modelId) {
+        endSessionAsync(clientId, modelId, null);
+    }
+
+    @Async
+    public void endSessionAsync(Long clientId, Long modelId, String endReason) {
         try {
-            log.info("endSessionAsync: programado cierre async client={}, model={}", clientId, modelId);
-            endSession(clientId, modelId);
+            log.info("endSessionAsync: programado cierre async client={}, model={}, reason={}", clientId, modelId, endReason);
+            endSession(clientId, modelId, endReason);
         } catch (Exception ex) {
             log.error(
                     "endSessionAsync: error cerrando sesión client={}, model={} -> {}",
@@ -645,6 +689,222 @@ public class StreamService {
                     ex
             );
         }
+    }
+
+    @Transactional(readOnly = true)
+    public List<StreamActiveAdminRowDto> listActiveStreamsForAdmin(String q,
+                                                                   Long minDurationSec,
+                                                                   String streamType,
+                                                                   String status,
+                                                                   Integer limit) {
+        String normalizedQuery = normalizeQuery(q);
+        Long numericQueryId = tryParseLong(normalizedQuery);
+        boolean queryIsNumeric = numericQueryId != null;
+        Long normalizedMinDurationSec = minDurationSec != null && minDurationSec >= 0 ? minDurationSec : null;
+        String normalizedStreamType = normalizeAdminStreamType(streamType);
+        String normalizedStatus = normalizeAdminStatus(status);
+        int safeLimit = normalizeLimit(limit, ADMIN_ACTIVE_DEFAULT_LIMIT, ADMIN_ACTIVE_MAX_LIMIT);
+
+        List<StreamRecord> active = streamRecordRepository.findActiveForAdmin(
+                normalizedQuery,
+                numericQueryId,
+                queryIsNumeric,
+                normalizedMinDurationSec,
+                normalizedStreamType,
+                normalizedStatus,
+                PageRequest.of(0, safeLimit)
+        );
+
+        LocalDateTime now = LocalDateTime.now();
+        return active.stream()
+                .map(sr -> mapStreamRecordToAdminRow(sr, now))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public StreamAdminDetailDto getAdminStreamDetail(Long streamId, Integer limitEvents) {
+        StreamRecord stream = streamRecordRepository.findAdminDetailById(streamId)
+                .orElseThrow(() -> new EntityNotFoundException("StreamRecord no encontrado: " + streamId));
+
+        int safeLimitEvents = normalizeLimit(limitEvents, ADMIN_DETAIL_DEFAULT_EVENTS, ADMIN_DETAIL_MAX_EVENTS);
+        List<StreamStatusEventDto> events = streamStatusEventRepository
+                .findByStreamRecordIdOrderByCreatedAtDesc(streamId, PageRequest.of(0, safeLimitEvents))
+                .stream()
+                .map(this::mapEventToDto)
+                .toList();
+
+        StreamAdminDetailDto detail = new StreamAdminDetailDto();
+        detail.setStream(mapStreamRecordToAdminRow(stream, LocalDateTime.now()));
+        detail.setEvents(events);
+        return detail;
+    }
+
+    private void recordEndEvents(Long streamId, String endReason) {
+        String specialEventType = mapSpecialEndEventType(endReason);
+        if (specialEventType != null) {
+            recordStreamEvent(streamId, specialEventType, endReason, null);
+        }
+        recordStreamEvent(streamId, Constants.StreamEventTypes.ENDED, endReason, null);
+    }
+
+    private void recordStreamEvent(Long streamId, String eventType, String reason, String metadataJsonOrNull) {
+        if (streamId == null || eventType == null || eventType.isBlank()) {
+            return;
+        }
+        if (Constants.StreamEventTypes.CONFIRMED.equals(eventType)
+                && streamStatusEventRepository.existsByStreamRecordIdAndEventType(streamId, eventType)) {
+            return;
+        }
+
+        StreamStatusEvent event = new StreamStatusEvent();
+        event.setStreamRecordId(streamId);
+        event.setEventType(eventType);
+        event.setReason(normalizeReason(reason));
+        event.setMetadata(normalizeMetadata(metadataJsonOrNull));
+        if (Constants.StreamEventTypes.CONFIRMED.equals(eventType)) {
+            streamStatusEventRepository.saveAndFlush(event);
+        } else {
+            streamStatusEventRepository.save(event);
+        }
+    }
+
+    private StreamActiveAdminRowDto mapStreamRecordToAdminRow(StreamRecord sr, LocalDateTime now) {
+        StreamActiveAdminRowDto dto = new StreamActiveAdminRowDto();
+        dto.setStreamId(sr.getId());
+        dto.setStreamType(normalizeStreamType(sr.getStreamType()));
+        dto.setClientId(sr.getClient() != null ? sr.getClient().getId() : null);
+        dto.setClientEmail(sr.getClient() != null ? sr.getClient().getEmail() : null);
+        dto.setClientNickname(sr.getClient() != null ? sr.getClient().getNickname() : null);
+        dto.setModelId(sr.getModel() != null ? sr.getModel().getId() : null);
+        dto.setModelEmail(sr.getModel() != null ? sr.getModel().getEmail() : null);
+        dto.setModelNickname(sr.getModel() != null ? sr.getModel().getNickname() : null);
+        dto.setStartTime(sr.getStartTime());
+        dto.setConfirmedAt(sr.getConfirmedAt());
+        dto.setEndTime(sr.getEndTime());
+
+        LocalDateTime durationUntil = sr.getEndTime() != null ? sr.getEndTime() : now;
+        long durationSeconds = 0L;
+        if (sr.getStartTime() != null && durationUntil != null) {
+            durationSeconds = Duration.between(sr.getStartTime(), durationUntil).getSeconds();
+            if (durationSeconds < 0) durationSeconds = 0L;
+        }
+        dto.setDurationSeconds(durationSeconds);
+
+        String statusDerivado = deriveStatus(sr);
+        dto.setStatusDerivado(statusDerivado);
+        dto.setStuck("connecting".equals(statusDerivado) && durationSeconds > ADMIN_STUCK_AFTER_SECONDS);
+        return dto;
+    }
+
+    private StreamStatusEventDto mapEventToDto(StreamStatusEvent event) {
+        StreamStatusEventDto dto = new StreamStatusEventDto();
+        dto.setId(event.getId());
+        dto.setEventType(event.getEventType());
+        dto.setReason(event.getReason());
+        dto.setMetadata(event.getMetadata());
+        dto.setCreatedAt(event.getCreatedAt());
+        return dto;
+    }
+
+    private String deriveStatus(StreamRecord sr) {
+        if (sr.getEndTime() != null) {
+            return "closed";
+        }
+        if (sr.getConfirmedAt() == null) {
+            return "connecting";
+        }
+        return "active";
+    }
+
+    private String normalizeStreamType(String streamType) {
+        if (streamType == null || streamType.isBlank()) {
+            return Constants.StreamTypes.UNKNOWN;
+        }
+
+        String normalized = streamType.trim().toUpperCase(Locale.ROOT);
+        if (Constants.StreamTypes.RANDOM.equals(normalized)
+                || Constants.StreamTypes.CALLING.equals(normalized)
+                || Constants.StreamTypes.UNKNOWN.equals(normalized)) {
+            return normalized;
+        }
+        return Constants.StreamTypes.UNKNOWN;
+    }
+
+    private String normalizeAdminStreamType(String streamType) {
+        if (streamType == null || streamType.isBlank()) {
+            return null;
+        }
+
+        String normalized = streamType.trim().toUpperCase(Locale.ROOT);
+        if (Constants.StreamTypes.RANDOM.equals(normalized)
+                || Constants.StreamTypes.CALLING.equals(normalized)
+                || Constants.StreamTypes.UNKNOWN.equals(normalized)) {
+            return normalized;
+        }
+        throw new IllegalArgumentException("streamType inválido");
+    }
+
+    private String normalizeAdminStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+
+        String normalized = status.trim().toLowerCase(Locale.ROOT);
+        if ("connecting".equals(normalized) || "active".equals(normalized)) {
+            return normalized;
+        }
+        throw new IllegalArgumentException("status inválido");
+    }
+
+    private String normalizeQuery(String q) {
+        if (q == null) return null;
+        String trimmed = q.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private Long tryParseLong(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private int normalizeLimit(Integer requested, int defaultValue, int maxValue) {
+        if (requested == null) return defaultValue;
+        if (requested < 1) return defaultValue;
+        return Math.min(requested, maxValue);
+    }
+
+    private String mapSpecialEndEventType(String endReason) {
+        if (endReason == null || endReason.isBlank()) {
+            return null;
+        }
+
+        String normalized = endReason.trim().toUpperCase(Locale.ROOT);
+        if ("LOW-BALANCE".equals(normalized) || "LOW_BALANCE".equals(normalized)) {
+            return Constants.StreamEventTypes.CUT_LOW_BALANCE;
+        }
+        if ("DISCONNECT".equals(normalized) || "WS_CLOSED".equals(normalized)) {
+            return Constants.StreamEventTypes.DISCONNECT;
+        }
+        if ("TIMEOUT".equals(normalized)) {
+            return Constants.StreamEventTypes.TIMEOUT;
+        }
+        return null;
+    }
+
+    private String normalizeReason(String reason) {
+        if (reason == null) return null;
+        String trimmed = reason.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeMetadata(String metadataJsonOrNull) {
+        if (metadataJsonOrNull == null) return null;
+        String trimmed = metadataJsonOrNull.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
 }

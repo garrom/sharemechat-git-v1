@@ -1,6 +1,8 @@
 package com.sharemechat.controller;
 
 import com.sharemechat.dto.ModelChecklistUpdateDTO;
+import com.sharemechat.dto.StreamActiveAdminRowDto;
+import com.sharemechat.dto.StreamAdminDetailDto;
 import com.sharemechat.dto.UserDTO;
 import com.sharemechat.entity.KycProviderConfig;
 import com.sharemechat.entity.PayoutRequest;
@@ -8,6 +10,7 @@ import com.sharemechat.entity.User;
 import com.sharemechat.service.AdminService;
 import com.sharemechat.service.KycProviderConfigService;
 import com.sharemechat.service.ModerationReportService;
+import com.sharemechat.service.StreamService;
 import com.sharemechat.service.TransactionService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.dto.ModerationReportDTO;
@@ -33,6 +36,7 @@ public class AdminController {
     private final UserService userService;
     private final KycProviderConfigService kycProviderConfigService;
     private final ModerationReportService moderationReportService;
+    private final StreamService streamService;
 
     // [NEW] payouts
     private final PayoutRequestRepository payoutRequestRepository;
@@ -43,6 +47,7 @@ public class AdminController {
             UserService userService,
             KycProviderConfigService kycProviderConfigService,
             ModerationReportService moderationReportService,
+            StreamService streamService,
             PayoutRequestRepository payoutRequestRepository,
             TransactionService transactionService
     ) {
@@ -50,6 +55,7 @@ public class AdminController {
         this.userService = userService;
         this.kycProviderConfigService = kycProviderConfigService;
         this.moderationReportService = moderationReportService;
+        this.streamService = streamService;
         this.payoutRequestRepository = payoutRequestRepository;
         this.transactionService = transactionService;
     }
@@ -106,6 +112,29 @@ public class AdminController {
     @GetMapping("/model-docs/{userId}")
     public ResponseEntity<Map<String, Object>> getModelDocs(@PathVariable Long userId) {
         return ResponseEntity.ok(adminService.getModelDocsWithChecklist(userId));
+    }
+
+    // GET /api/admin/streams/active
+    @GetMapping("/streams/active")
+    public ResponseEntity<List<StreamActiveAdminRowDto>> activeStreams(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long minDurationSec,
+            @RequestParam(required = false) String streamType,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return ResponseEntity.ok(streamService.listActiveStreamsForAdmin(
+                q, minDurationSec, streamType, status, limit
+        ));
+    }
+
+    // GET /api/admin/streams/{id}
+    @GetMapping("/streams/{id}")
+    public ResponseEntity<StreamAdminDetailDto> streamDetail(
+            @PathVariable Long id,
+            @RequestParam(required = false) Integer limitEvents
+    ) {
+        return ResponseEntity.ok(streamService.getAdminStreamDetail(id, limitEvents));
     }
 
     // POST /api/admin/model-checklist/{userId}

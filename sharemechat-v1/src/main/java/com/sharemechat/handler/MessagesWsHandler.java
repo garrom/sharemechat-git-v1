@@ -434,7 +434,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
 
                 // === START SESSION (IDEMPOTENTE EN StreamService) ===
                 try {
-                    streamService.startSession(clientId, modelId);
+                    streamService.startSession(clientId, modelId, com.sharemechat.constants.Constants.StreamTypes.CALLING);
                     streamService.confirmActiveSession(clientId, modelId);
                 } catch (Exception ex) {
                     String msg = ex.getMessage() != null ? ex.getMessage() : "No se pudo iniciar la sesión";
@@ -564,7 +564,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             try {
                 boolean closed = streamService.endIfBelowThreshold(clientId, modelId);
                 if (closed) {
-                    streamService.endSessionAsync(clientId, modelId);
+                    streamService.endSessionAsync(clientId, modelId, "low-balance");
                     broadcastToUser(me, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
                     broadcastToUser(peer, new JSONObject().put("type","call:ended").put("reason","low-balance").toString());
                     clearActiveCall(me, peer);
@@ -902,7 +902,7 @@ public class MessagesWsHandler extends TextWebSocketHandler {
             Long modelId  = cm.getRight();
 
             try {
-                streamService.endSession(clientId, modelId);
+                streamService.endSession(clientId, modelId, reason);
             } catch (Exception ex) {
                 log.warn("endCallAndSession endSession error clientId={} modelId={} err={}",
                         clientId, modelId, ex.getMessage());
