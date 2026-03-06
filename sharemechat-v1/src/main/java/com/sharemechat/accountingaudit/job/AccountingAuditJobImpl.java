@@ -1,4 +1,3 @@
-// src/main/java/com/sharemechat/accountingaudit/job/AccountingAuditJobImpl.java
 package com.sharemechat.accountingaudit.job;
 
 import com.sharemechat.accountingaudit.dto.AuditJobRequest;
@@ -8,14 +7,19 @@ import com.sharemechat.accountingaudit.entity.AuditRun;
 import com.sharemechat.accountingaudit.repository.AccountingAnomalyRepository;
 import com.sharemechat.accountingaudit.repository.AuditRunRepository;
 import com.sharemechat.accountingaudit.repository.BalanceLedgerAuditRepository;
+import com.sharemechat.entity.StreamRecord;
+import com.sharemechat.handler.MatchingHandler;
+import com.sharemechat.handler.MessagesWsHandler;
+import com.sharemechat.repository.StreamRecordRepository;
 import com.sharemechat.repository.TransactionRepository;
+import com.sharemechat.service.StatusService;
+import com.sharemechat.service.StreamLockService;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Component
 public class AccountingAuditJobImpl implements AccountingAuditJob {
@@ -26,17 +30,32 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
     private final TransactionRepository transactionRepository;
     private final AccountingAnomalyRepository accountingAnomalyRepository;
     private final BalanceLedgerAuditRepository balanceLedgerAuditRepository;
+    private final StreamRecordRepository streamRecordRepository;
+    private final MatchingHandler matchingHandler;
+    private final MessagesWsHandler messagesWsHandler;
+    private final StatusService statusService;
+    private final StreamLockService streamLockService;
 
     public AccountingAuditJobImpl(
             AuditRunRepository auditRunRepository,
             TransactionRepository transactionRepository,
             AccountingAnomalyRepository accountingAnomalyRepository,
-            BalanceLedgerAuditRepository balanceLedgerAuditRepository
+            BalanceLedgerAuditRepository balanceLedgerAuditRepository,
+            StreamRecordRepository streamRecordRepository,
+            MatchingHandler matchingHandler,
+            MessagesWsHandler messagesWsHandler,
+            StatusService statusService,
+            StreamLockService streamLockService
     ) {
         this.auditRunRepository = auditRunRepository;
         this.transactionRepository = transactionRepository;
         this.accountingAnomalyRepository = accountingAnomalyRepository;
         this.balanceLedgerAuditRepository = balanceLedgerAuditRepository;
+        this.streamRecordRepository = streamRecordRepository;
+        this.matchingHandler = matchingHandler;
+        this.messagesWsHandler = messagesWsHandler;
+        this.statusService = statusService;
+        this.streamLockService = streamLockService;
     }
 
     @Override
@@ -64,17 +83,13 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
 
         try {
             final Instant now = Instant.now();
-            final String scope = normalizeScope(run.getScope());
 
-            if ("SELFTEST".equals(scope)) {
-                executeSelftest(run, now);
-            } else if ("SESSION_INTEGRITY".equals(scope)) {
-                executeSessionIntegrityChecks(run, now);
-            } else if ("FULL".equals(scope)) {
-                executeAccountingChecks(run, now);
-                executeSessionIntegrityChecks(run, now);
+            if ("SELFTEST".equalsIgnoreCase(run.getScope())) {
+                runSelfTest(run, now);
+            } else if ("RUNTIME_HEALTH".equalsIgnoreCase(run.getScope())) {
+                runRuntimeHealth(run, now);
             } else {
-                executeAccountingChecks(run, now);
+                runDefaultAccountingChecks(run, now);
             }
 
             run.setStatus("SUCCESS");
@@ -101,19 +116,7 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
         return result;
     }
 
-    private String normalizeScope(String raw) {
-        if (raw == null || raw.isBlank()) {
-            return "DEFAULT";
-        }
-
-        String s = raw.trim().toUpperCase();
-        return switch (s) {
-            case "DEFAULT", "SELFTEST", "SESSION_INTEGRITY", "FULL" -> s;
-            default -> "DEFAULT";
-        };
-    }
-
-    private void executeSelftest(AuditRun run, Instant now) {
+    private void runSelfTest(AuditRun run, Instant now) {
         run.setChecksExecuted(run.getChecksExecuted() + 1);
         run.setAnomaliesFound(run.getAnomaliesFound() + 1);
 
@@ -121,62 +124,49 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
             AccountingAnomaly a = new AccountingAnomaly();
             a.setAnomalyType("SELFTEST");
             a.setSeverity("INFO");
-            a.setDescription("Self-test anomaly to validate audit pipeline.");
+            a.setDescription("Self-test anomaly to validate accounting audit pipeline.");
             a.setStatus("RESOLVED");
             a.setResolutionNote("Selftest auto-resolved");
             a.setResolvedAt(now);
             a.setDetectedAt(now);
             a.setCreatedAt(now);
             a.setAuditRunId(String.valueOf(run.getId()));
-
             accountingAnomalyRepository.save(a);
             run.setAnomaliesCreated(run.getAnomaliesCreated() + 1);
         }
     }
 
-    private void executeAccountingChecks(AuditRun run, Instant now) {
-        executeTransactionsWithoutBalance(run, now);
-        executeBalanceVsLedger(run, now);
-        executePlatformTransactionsWithoutPlatformBalance(run, now);
-    }
-
-    private void executeTransactionsWithoutBalance(AuditRun run, Instant now) {
-        List<Long> orphanTxIds = transactionRepository.findTransactionIdsWithoutBalance();
+    private void runDefaultAccountingChecks(AuditRun run, Instant now) {
+        final List<Long> orphanTxIds = transactionRepository.findTransactionIdsWithoutBalance();
 
         run.setChecksExecuted(run.getChecksExecuted() + 1);
         run.setAnomaliesFound(run.getAnomaliesFound() + orphanTxIds.size());
 
-        if (run.isDryRun() || orphanTxIds.isEmpty()) {
-            return;
+        if (!run.isDryRun() && !orphanTxIds.isEmpty()) {
+            List<AccountingAnomaly> anomalies = new ArrayList<>(orphanTxIds.size());
+            for (Long txId : orphanTxIds) {
+                AccountingAnomaly a = new AccountingAnomaly();
+                a.setAnomalyType("TX_WITHOUT_BALANCE");
+                a.setSeverity("WARNING");
+                a.setTransactionId(txId);
+                a.setDescription("Transaction sin balance asociado. transaction_id=" + txId);
+                a.setStatus("OPEN");
+                a.setDetectedAt(now);
+                a.setCreatedAt(now);
+                a.setAuditRunId(String.valueOf(run.getId()));
+                anomalies.add(a);
+            }
+            accountingAnomalyRepository.saveAll(anomalies);
+            run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
         }
 
-        List<AccountingAnomaly> anomalies = new ArrayList<>(orphanTxIds.size());
-
-        for (Long txId : orphanTxIds) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("TX_WITHOUT_BALANCE");
-            a.setSeverity("WARNING");
-            a.setTransactionId(txId);
-            a.setDescription("Transaction sin balance asociado. transaction_id=" + txId);
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
-        }
-
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
-    }
-
-    private void executeBalanceVsLedger(AuditRun run, Instant now) {
-        List<BalanceLedgerAuditRepository.BalanceLedgerRow> rows =
+        final List<BalanceLedgerAuditRepository.BalanceLedgerRow> rows =
                 balanceLedgerAuditRepository.fetchLedgerSumAndLastBalanceByUser();
 
         int mismatches = 0;
         List<AccountingAnomaly> mismatchAnomalies = new ArrayList<>();
 
-        for (BalanceLedgerAuditRepository.BalanceLedgerRow r : rows) {
+        for (var r : rows) {
             Long userId = r.getUserId();
             BigDecimal ledgerSum = r.getLedgerSum() != null ? r.getLedgerSum() : BigDecimal.ZERO;
             BigDecimal lastBalance = r.getLastBalance() != null ? r.getLastBalance() : BigDecimal.ZERO;
@@ -184,7 +174,6 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
 
             if (delta.compareTo(EPSILON) > 0) {
                 mismatches++;
-
                 if (!run.isDryRun()) {
                     AccountingAnomaly a = new AccountingAnomaly();
                     a.setAnomalyType("BALANCE_LEDGER_MISMATCH");
@@ -193,11 +182,9 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
                     a.setExpectedValue(ledgerSum);
                     a.setActualValue(lastBalance);
                     a.setDeltaValue(ledgerSum.subtract(lastBalance));
-                    a.setDescription(
-                            "Mismatch balance vs ledger. user_id=" + userId
-                                    + " ledgerSum=" + ledgerSum
-                                    + " lastBalance=" + lastBalance
-                    );
+                    a.setDescription("Mismatch balance vs ledger. user_id=" + userId
+                            + " ledgerSum=" + ledgerSum
+                            + " lastBalance=" + lastBalance);
                     a.setStatus("OPEN");
                     a.setDetectedAt(now);
                     a.setCreatedAt(now);
@@ -214,317 +201,279 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
             accountingAnomalyRepository.saveAll(mismatchAnomalies);
             run.setAnomaliesCreated(run.getAnomaliesCreated() + mismatchAnomalies.size());
         }
-    }
 
-    private void executePlatformTransactionsWithoutPlatformBalance(AuditRun run, Instant now) {
-        List<Long> orphanPlatformTxIds = balanceLedgerAuditRepository.fetchPlatformTransactionIdsWithoutPlatformBalance();
+        final List<Long> orphanPlatformTxIds =
+                balanceLedgerAuditRepository.fetchPlatformTransactionIdsWithoutPlatformBalance();
 
         run.setChecksExecuted(run.getChecksExecuted() + 1);
         run.setAnomaliesFound(run.getAnomaliesFound() + orphanPlatformTxIds.size());
 
-        if (run.isDryRun() || orphanPlatformTxIds.isEmpty()) {
-            return;
+        if (!run.isDryRun() && !orphanPlatformTxIds.isEmpty()) {
+            List<AccountingAnomaly> anomalies = new ArrayList<>(orphanPlatformTxIds.size());
+            for (Long ptId : orphanPlatformTxIds) {
+                AccountingAnomaly a = new AccountingAnomaly();
+                a.setAnomalyType("PLATFORM_TX_WITHOUT_PLATFORM_BALANCE");
+                a.setSeverity("ERROR");
+                a.setPlatformTransactionId(ptId);
+                a.setDescription("Platform transaction sin platform_balance asociado. platform_transaction_id=" + ptId);
+                a.setStatus("OPEN");
+                a.setDetectedAt(now);
+                a.setCreatedAt(now);
+                a.setAuditRunId(String.valueOf(run.getId()));
+                anomalies.add(a);
+            }
+            accountingAnomalyRepository.saveAll(anomalies);
+            run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
         }
-
-        List<AccountingAnomaly> anomalies = new ArrayList<>(orphanPlatformTxIds.size());
-
-        for (Long ptId : orphanPlatformTxIds) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("PLATFORM_TX_WITHOUT_PLATFORM_BALANCE");
-            a.setSeverity("ERROR");
-            a.setPlatformTransactionId(ptId);
-            a.setDescription("Platform transaction sin platform_balance asociado. platform_transaction_id=" + ptId);
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
-        }
-
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
     }
 
-    private void executeSessionIntegrityChecks(AuditRun run, Instant now) {
-        executeClosedStreamsWithoutEndedEvent(run, now);
-        executeConfirmedStreamsWithoutConfirmedEvent(run, now);
-        executeConfirmEventWithoutConfirmedAt(run, now);
-        executeTerminalEventWithoutEndTime(run, now);
-        executeInvalidStreamTimestamps(run, now);
-        executeMultipleActiveStreamsSameUser(run, now);
-        executeClosedConfirmedStreamsWithoutCharge(run, now);
-        executeClosedConfirmedStreamsWithoutEarning(run, now);
-    }
+    @SuppressWarnings("unchecked")
+    private void runRuntimeHealth(AuditRun run, Instant now) {
+        Map<String, Object> matching = matchingHandler.adminRuntimeSnapshot();
+        Map<String, Object> messages = messagesWsHandler.adminRuntimeSnapshot();
 
-    private void executeClosedStreamsWithoutEndedEvent(AuditRun run, Instant now) {
-        List<BalanceLedgerAuditRepository.StreamLifecycleRow> rows =
-                balanceLedgerAuditRepository.findClosedStreamsWithoutEndedEvent(1000);
+        List<Map<String, Object>> pairs =
+                (List<Map<String, Object>>) matching.getOrDefault("pairs", List.of());
+        List<Map<String, Object>> waitingModels =
+                (List<Map<String, Object>>) matching.getOrDefault("waitingModels", List.of());
+        List<Map<String, Object>> waitingClients =
+                (List<Map<String, Object>>) matching.getOrDefault("waitingClients", List.of());
+        List<Map<String, Object>> activeCalls =
+                (List<Map<String, Object>>) messages.getOrDefault("activeCalls", List.of());
+        List<Object> ringingUsers =
+                (List<Object>) messages.getOrDefault("ringingUsers", List.of());
 
+        Map<Long, String> statuses = statusService.listCurrentStatuses();
+        List<Map<String, Object>> redisSessions = statusService.listActiveSessionsSnapshot();
+        List<Map<String, Object>> redisLocks = streamLockService.listCurrentLocks();
+
+        Set<String> pairedSessionIds = new HashSet<>();
+        Set<Long> pairedClientIds = new HashSet<>();
+        Set<Long> pairedModelIds = new HashSet<>();
+
+        for (Map<String, Object> pair : pairs) {
+            Object sidA = pair.get("sessionIdA");
+            Object sidB = pair.get("sessionIdB");
+            if (sidA != null) pairedSessionIds.add(String.valueOf(sidA));
+            if (sidB != null) pairedSessionIds.add(String.valueOf(sidB));
+
+            Long clientId = toLong(pair.get("clientId"));
+            Long modelId = toLong(pair.get("modelId"));
+            if (clientId != null) pairedClientIds.add(clientId);
+            if (modelId != null) pairedModelIds.add(modelId);
+        }
+
+        Set<Long> activeCallUserIds = new HashSet<>();
+        Set<Long> activeCallModelIds = new HashSet<>();
+
+        // CHECK 1: Pair RANDOM activo en memoria sin stream activo en DB
         run.setChecksExecuted(run.getChecksExecuted() + 1);
-        run.setAnomaliesFound(run.getAnomaliesFound() + rows.size());
+        for (Map<String, Object> pair : pairs) {
+            Long clientId = toLong(pair.get("clientId"));
+            Long modelId = toLong(pair.get("modelId"));
+            if (clientId == null || modelId == null) continue;
 
-        if (run.isDryRun() || rows.isEmpty()) {
-            return;
+            Optional<StreamRecord> sr = streamRecordRepository
+                    .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId);
+
+            if (sr.isEmpty()) {
+                createAnomaly(run, now, "RH_ACTIVE_PAIR_WITHOUT_DB_STREAM", "CRITICAL",
+                        clientId, null, null,
+                        "Pair RANDOM activa en memoria sin stream_record activo. clientId=" + clientId + " modelId=" + modelId);
+            }
         }
 
-        List<AccountingAnomaly> anomalies = new ArrayList<>(rows.size());
-        for (BalanceLedgerAuditRepository.StreamLifecycleRow row : rows) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("SI_CLOSED_STREAM_WITHOUT_ENDED_EVENT");
-            a.setSeverity("WARNING");
-            a.setStreamRecordId(row.getStreamRecordId());
-            a.setUserId(row.getClientUserId());
-            a.setDescription(
-                    "Stream cerrado sin evento ENDED. stream_record_id=" + row.getStreamRecordId()
-                            + " client_id=" + row.getClientUserId()
-                            + " model_id=" + row.getModelUserId()
-            );
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
+        // CHECK 2: Call activa en memoria sin stream CALLING activo en DB
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (Map<String, Object> row : activeCalls) {
+            Long clientId = toLong(row.get("clientId"));
+            Long modelId = toLong(row.get("modelId"));
+            if (clientId == null || modelId == null) continue;
+
+            activeCallUserIds.add(clientId);
+            activeCallUserIds.add(modelId);
+            activeCallModelIds.add(modelId);
+
+            Optional<StreamRecord> sr = streamRecordRepository
+                    .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId);
+
+            if (sr.isEmpty() || !"CALLING".equalsIgnoreCase(sr.get().getStreamType())) {
+                createAnomaly(run, now, "RH_ACTIVE_CALL_WITHOUT_DB_STREAM", "CRITICAL",
+                        clientId, null, null,
+                        "Call activa en memoria sin stream CALLING activo. clientId=" + clientId + " modelId=" + modelId);
+            }
         }
 
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
+        // CHECK 3: Modelo AVAILABLE pero con trabajo activo
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (String s : statusService.listAvailableModels()) {
+            Long modelId = tryParseLong(s);
+            if (modelId == null) continue;
+
+            boolean hasRuntimeWork = pairedModelIds.contains(modelId) || activeCallModelIds.contains(modelId);
+            boolean hasDbWork = streamRecordRepository.findByModel_IdAndEndTimeIsNull(modelId).stream().findAny().isPresent();
+
+            if (hasRuntimeWork || hasDbWork) {
+                createAnomaly(run, now, "RH_MODEL_AVAILABLE_WITH_ACTIVE_WORK", "WARNING",
+                        modelId, null, null,
+                        "Modelo marcada AVAILABLE pero con trabajo activo. modelId=" + modelId);
+            }
+        }
+
+        // CHECK 4: Modelo BUSY pero sin trabajo activo
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (Map.Entry<Long, String> e : statuses.entrySet()) {
+            Long userId = e.getKey();
+            String status = e.getValue();
+            if (!"BUSY".equalsIgnoreCase(status)) continue;
+
+            boolean hasRuntimeWork = pairedModelIds.contains(userId) || activeCallModelIds.contains(userId);
+            boolean hasDbWork = streamRecordRepository.findByModel_IdAndEndTimeIsNull(userId).stream().findAny().isPresent();
+
+            if (!hasRuntimeWork && !hasDbWork) {
+                createAnomaly(run, now, "RH_MODEL_BUSY_WITHOUT_ACTIVE_WORK", "WARNING",
+                        userId, null, null,
+                        "Modelo marcada BUSY sin trabajo activo en runtime ni en DB. modelId=" + userId);
+            }
+        }
+
+        // CHECK 5: Usuario en cola y a la vez emparejado
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        List<Map<String, Object>> allQueued = new ArrayList<>();
+        allQueued.addAll(waitingModels);
+        allQueued.addAll(waitingClients);
+
+        for (Map<String, Object> row : allQueued) {
+            String sid = row.get("sessionId") != null ? String.valueOf(row.get("sessionId")) : null;
+            if (sid != null && pairedSessionIds.contains(sid)) {
+                Long userId = toLong(row.get("userId"));
+                createAnomaly(run, now, "RH_QUEUE_MEMBER_ALREADY_PAIRED", "ERROR",
+                        userId, null, null,
+                        "Sesión presente en cola y en pairs a la vez. sessionId=" + sid + " userId=" + userId);
+            }
+        }
+
+        // CHECK 6: Ringing colgado sobre usuario no online o ya en llamada
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        Set<Long> onlineUsers = new HashSet<>();
+        List<Map<String, Object>> onlineRows =
+                (List<Map<String, Object>>) messages.getOrDefault("onlineUsers", List.of());
+        for (Map<String, Object> row : onlineRows) {
+            Long userId = toLong(row.get("userId"));
+            if (userId != null) onlineUsers.add(userId);
+        }
+
+        for (Object o : ringingUsers) {
+            Long userId = toLong(o);
+            if (userId == null) continue;
+
+            if (!onlineUsers.contains(userId) || activeCallUserIds.contains(userId)) {
+                createAnomaly(run, now, "RH_RINGING_STALE", "WARNING",
+                        userId, null, null,
+                        "Usuario en ringing incoherente. userId=" + userId
+                                + " online=" + onlineUsers.contains(userId)
+                                + " activeCall=" + activeCallUserIds.contains(userId));
+            }
+        }
+
+        // CHECK 7: Redis active session sin DB activa
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (Map<String, Object> row : redisSessions) {
+            Long clientId = toLong(row.get("clientId"));
+            Long modelId = toLong(row.get("modelId"));
+            Long streamId = toLong(row.get("streamRecordId"));
+
+            Optional<StreamRecord> sr = streamRecordRepository
+                    .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId);
+
+            if (sr.isEmpty()) {
+                createAnomaly(run, now, "RH_REDIS_ACTIVE_SESSION_WITHOUT_DB_STREAM", "CRITICAL",
+                        clientId, streamId, null,
+                        "Redis session:active sin stream_record activo. clientId=" + clientId + " modelId=" + modelId + " streamIdHint=" + streamId);
+            }
+        }
+
+        // CHECK 8: Lock huérfano sin trabajo activo
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (Map<String, Object> row : redisLocks) {
+            String key = row.get("key") != null ? String.valueOf(row.get("key")) : null;
+            if (key == null) continue;
+
+            Long userId = extractUserIdFromLockKey(key);
+            if (userId == null) continue;
+
+            boolean hasRuntimeWork = pairedClientIds.contains(userId)
+                    || pairedModelIds.contains(userId)
+                    || activeCallUserIds.contains(userId);
+
+            boolean hasDbWork = streamRecordRepository.findByClient_IdAndEndTimeIsNull(userId).stream().findAny().isPresent()
+                    || streamRecordRepository.findByModel_IdAndEndTimeIsNull(userId).stream().findAny().isPresent();
+
+            if (!hasRuntimeWork && !hasDbWork) {
+                createAnomaly(run, now, "RH_LOCK_WITHOUT_ACTIVE_WORK", "WARNING",
+                        userId, null, null,
+                        "Lock de stream sin trabajo activo asociado. key=" + key + " ttlSec=" + row.get("ttlSec"));
+            }
+        }
     }
 
-    private void executeConfirmedStreamsWithoutConfirmedEvent(AuditRun run, Instant now) {
-        List<BalanceLedgerAuditRepository.StreamLifecycleRow> rows =
-                balanceLedgerAuditRepository.findConfirmedStreamsWithoutConfirmedEvent(1000);
+    private void createAnomaly(AuditRun run,
+                               Instant now,
+                               String type,
+                               String severity,
+                               Long userId,
+                               Long streamRecordId,
+                               Long transactionId,
+                               String description) {
+        run.setAnomaliesFound(run.getAnomaliesFound() + 1);
 
-        run.setChecksExecuted(run.getChecksExecuted() + 1);
-        run.setAnomaliesFound(run.getAnomaliesFound() + rows.size());
-
-        if (run.isDryRun() || rows.isEmpty()) {
+        if (run.isDryRun()) {
             return;
         }
 
-        List<AccountingAnomaly> anomalies = new ArrayList<>(rows.size());
-        for (BalanceLedgerAuditRepository.StreamLifecycleRow row : rows) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("SI_CONFIRMED_STREAM_WITHOUT_CONFIRMED_EVENT");
-            a.setSeverity("ERROR");
-            a.setStreamRecordId(row.getStreamRecordId());
-            a.setUserId(row.getClientUserId());
-            a.setDescription(
-                    "Stream confirmado sin evento CONFIRMED. stream_record_id=" + row.getStreamRecordId()
-                            + " client_id=" + row.getClientUserId()
-                            + " model_id=" + row.getModelUserId()
-            );
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
-        }
+        AccountingAnomaly a = new AccountingAnomaly();
+        a.setAnomalyType(type);
+        a.setSeverity(severity);
+        a.setUserId(userId);
+        a.setStreamRecordId(streamRecordId);
+        a.setTransactionId(transactionId);
+        a.setDescription(description);
+        a.setStatus("OPEN");
+        a.setDetectedAt(now);
+        a.setCreatedAt(now);
+        a.setAuditRunId(String.valueOf(run.getId()));
 
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
+        accountingAnomalyRepository.save(a);
+        run.setAnomaliesCreated(run.getAnomaliesCreated() + 1);
     }
 
-    private void executeConfirmEventWithoutConfirmedAt(AuditRun run, Instant now) {
-        List<BalanceLedgerAuditRepository.StreamLifecycleRow> rows =
-                balanceLedgerAuditRepository.findConfirmEventWithoutConfirmedAt(1000);
-
-        run.setChecksExecuted(run.getChecksExecuted() + 1);
-        run.setAnomaliesFound(run.getAnomaliesFound() + rows.size());
-
-        if (run.isDryRun() || rows.isEmpty()) {
-            return;
+    private Long toLong(Object v) {
+        if (v == null) return null;
+        if (v instanceof Number n) return n.longValue();
+        try {
+            return Long.parseLong(String.valueOf(v));
+        } catch (Exception ex) {
+            return null;
         }
-
-        List<AccountingAnomaly> anomalies = new ArrayList<>(rows.size());
-        for (BalanceLedgerAuditRepository.StreamLifecycleRow row : rows) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("SI_CONFIRM_EVENT_WITHOUT_CONFIRMED_AT");
-            a.setSeverity("ERROR");
-            a.setStreamRecordId(row.getStreamRecordId());
-            a.setUserId(row.getClientUserId());
-            a.setDescription(
-                    "Existe evento CONFIRMED pero confirmed_at es NULL. stream_record_id=" + row.getStreamRecordId()
-                            + " client_id=" + row.getClientUserId()
-                            + " model_id=" + row.getModelUserId()
-            );
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
-        }
-
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
     }
 
-    private void executeTerminalEventWithoutEndTime(AuditRun run, Instant now) {
-        List<BalanceLedgerAuditRepository.StreamLifecycleRow> rows =
-                balanceLedgerAuditRepository.findTerminalEventWithoutEndTime(1000);
-
-        run.setChecksExecuted(run.getChecksExecuted() + 1);
-        run.setAnomaliesFound(run.getAnomaliesFound() + rows.size());
-
-        if (run.isDryRun() || rows.isEmpty()) {
-            return;
+    private Long tryParseLong(String v) {
+        if (v == null || v.isBlank()) return null;
+        try {
+            return Long.parseLong(v);
+        } catch (Exception ex) {
+            return null;
         }
-
-        List<AccountingAnomaly> anomalies = new ArrayList<>(rows.size());
-        for (BalanceLedgerAuditRepository.StreamLifecycleRow row : rows) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("SI_TERMINAL_EVENT_WITHOUT_END_TIME");
-            a.setSeverity("CRITICAL");
-            a.setStreamRecordId(row.getStreamRecordId());
-            a.setUserId(row.getClientUserId());
-            a.setDescription(
-                    "Existe evento terminal pero end_time es NULL. stream_record_id=" + row.getStreamRecordId()
-                            + " client_id=" + row.getClientUserId()
-                            + " model_id=" + row.getModelUserId()
-            );
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
-        }
-
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
     }
 
-    private void executeInvalidStreamTimestamps(AuditRun run, Instant now) {
-        List<BalanceLedgerAuditRepository.InvalidStreamTimestampRow> rows =
-                balanceLedgerAuditRepository.findInvalidStreamTimestamps(1000);
-
-        run.setChecksExecuted(run.getChecksExecuted() + 1);
-        run.setAnomaliesFound(run.getAnomaliesFound() + rows.size());
-
-        if (run.isDryRun() || rows.isEmpty()) {
-            return;
+    private Long extractUserIdFromLockKey(String key) {
+        if (key == null) return null;
+        int idx = key.lastIndexOf(':');
+        if (idx < 0 || idx >= key.length() - 1) return null;
+        try {
+            return Long.parseLong(key.substring(idx + 1));
+        } catch (Exception ex) {
+            return null;
         }
-
-        List<AccountingAnomaly> anomalies = new ArrayList<>(rows.size());
-        for (BalanceLedgerAuditRepository.InvalidStreamTimestampRow row : rows) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("SI_INVALID_STREAM_TIMESTAMPS");
-            a.setSeverity("ERROR");
-            a.setStreamRecordId(row.getStreamRecordId());
-            a.setUserId(row.getClientUserId());
-            a.setDescription(
-                    "Timestamps invalidos en stream. stream_record_id=" + row.getStreamRecordId()
-                            + " problem=" + row.getProblemCode()
-                            + " client_id=" + row.getClientUserId()
-                            + " model_id=" + row.getModelUserId()
-            );
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
-        }
-
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
-    }
-
-    private void executeMultipleActiveStreamsSameUser(AuditRun run, Instant now) {
-        List<BalanceLedgerAuditRepository.ActiveUserConflictRow> rows =
-                balanceLedgerAuditRepository.findMultipleActiveStreamsSameUser(1000);
-
-        run.setChecksExecuted(run.getChecksExecuted() + 1);
-        run.setAnomaliesFound(run.getAnomaliesFound() + rows.size());
-
-        if (run.isDryRun() || rows.isEmpty()) {
-            return;
-        }
-
-        List<AccountingAnomaly> anomalies = new ArrayList<>(rows.size());
-        for (BalanceLedgerAuditRepository.ActiveUserConflictRow row : rows) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("SI_MULTIPLE_ACTIVE_STREAMS_SAME_USER");
-            a.setSeverity("CRITICAL");
-            a.setUserId(row.getUserId());
-            a.setDescription(
-                    "Usuario con multiples streams activos. user_id=" + row.getUserId()
-                            + " user_role=" + row.getUserRole()
-                            + " active_count=" + row.getActiveCount()
-            );
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
-        }
-
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
-    }
-
-    private void executeClosedConfirmedStreamsWithoutCharge(AuditRun run, Instant now) {
-        List<BalanceLedgerAuditRepository.StreamLifecycleRow> rows =
-                balanceLedgerAuditRepository.findClosedConfirmedStreamsWithoutStreamCharge(1000);
-
-        run.setChecksExecuted(run.getChecksExecuted() + 1);
-        run.setAnomaliesFound(run.getAnomaliesFound() + rows.size());
-
-        if (run.isDryRun() || rows.isEmpty()) {
-            return;
-        }
-
-        List<AccountingAnomaly> anomalies = new ArrayList<>(rows.size());
-        for (BalanceLedgerAuditRepository.StreamLifecycleRow row : rows) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("SI_CLOSED_CONFIRMED_STREAM_WITHOUT_STREAM_CHARGE");
-            a.setSeverity("CRITICAL");
-            a.setStreamRecordId(row.getStreamRecordId());
-            a.setUserId(row.getClientUserId());
-            a.setDescription(
-                    "Stream cerrado y confirmado sin STREAM_CHARGE. stream_record_id=" + row.getStreamRecordId()
-                            + " client_id=" + row.getClientUserId()
-                            + " model_id=" + row.getModelUserId()
-            );
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
-        }
-
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
-    }
-
-    private void executeClosedConfirmedStreamsWithoutEarning(AuditRun run, Instant now) {
-        List<BalanceLedgerAuditRepository.StreamLifecycleRow> rows =
-                balanceLedgerAuditRepository.findClosedConfirmedStreamsWithoutStreamEarning(1000);
-
-        run.setChecksExecuted(run.getChecksExecuted() + 1);
-        run.setAnomaliesFound(run.getAnomaliesFound() + rows.size());
-
-        if (run.isDryRun() || rows.isEmpty()) {
-            return;
-        }
-
-        List<AccountingAnomaly> anomalies = new ArrayList<>(rows.size());
-        for (BalanceLedgerAuditRepository.StreamLifecycleRow row : rows) {
-            AccountingAnomaly a = new AccountingAnomaly();
-            a.setAnomalyType("SI_CLOSED_CONFIRMED_STREAM_WITHOUT_STREAM_EARNING");
-            a.setSeverity("CRITICAL");
-            a.setStreamRecordId(row.getStreamRecordId());
-            a.setUserId(row.getModelUserId());
-            a.setDescription(
-                    "Stream cerrado y confirmado sin STREAM_EARNING. stream_record_id=" + row.getStreamRecordId()
-                            + " client_id=" + row.getClientUserId()
-                            + " model_id=" + row.getModelUserId()
-            );
-            a.setStatus("OPEN");
-            a.setDetectedAt(now);
-            a.setCreatedAt(now);
-            a.setAuditRunId(String.valueOf(run.getId()));
-            anomalies.add(a);
-        }
-
-        accountingAnomalyRepository.saveAll(anomalies);
-        run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
     }
 }

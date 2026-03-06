@@ -1548,5 +1548,102 @@ public class MatchingHandler extends TextWebSocketHandler {
     }
 
 
+    // =========================================================
+    // ADMIN RUNTIME SNAPSHOT (read-only)
+    // =========================================================
+
+    public Map<String, Object> adminRuntimeSnapshot() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("pairs", snapshotPairs());
+        out.put("waitingModels", snapshotQueues(waitingModelsByBucket, "model"));
+        out.put("waitingClients", snapshotQueues(waitingClientsByBucket, "client"));
+        out.put("sessionUserIds", new LinkedHashMap<>(sessionUserIds));
+        out.put("roles", new LinkedHashMap<>(roles));
+        out.put("pairLockOwnerBySessionId", new LinkedHashMap<>(pairLockOwnerBySessionId));
+        return out;
+    }
+
+    private List<Map<String, Object>> snapshotPairs() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+
+        for (Map.Entry<String, WebSocketSession> e : pairs.entrySet()) {
+            String sidA = e.getKey();
+            WebSocketSession peer = e.getValue();
+            if (sidA == null || peer == null) continue;
+
+            String sidB = peer.getId();
+            if (sidB == null) continue;
+
+            String min = sidA.compareTo(sidB) <= 0 ? sidA : sidB;
+            String max = sidA.compareTo(sidB) <= 0 ? sidB : sidA;
+            String pairKey = min + "|" + max;
+            if (!seen.add(pairKey)) continue;
+
+            Long uidA = sessionUserIds.get(sidA);
+            Long uidB = sessionUserIds.get(sidB);
+            String roleA = roles.get(sidA);
+            String roleB = roles.get(sidB);
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("sessionIdA", sidA);
+            row.put("sessionIdB", sidB);
+            row.put("userIdA", uidA);
+            row.put("userIdB", uidB);
+            row.put("roleA", roleA);
+            row.put("roleB", roleB);
+
+            if ("client".equals(roleA) && "model".equals(roleB)) {
+                row.put("clientId", uidA);
+                row.put("modelId", uidB);
+            } else if ("model".equals(roleA) && "client".equals(roleB)) {
+                row.put("clientId", uidB);
+                row.put("modelId", uidA);
+            } else {
+                row.put("clientId", null);
+                row.put("modelId", null);
+            }
+
+            Long tA = lastMatchAt.get(sidA);
+            Long tB = lastMatchAt.get(sidB);
+            Long base = null;
+            if (tA != null && tB != null) base = Math.min(tA, tB);
+            else if (tA != null) base = tA;
+            else if (tB != null) base = tB;
+
+            row.put("ageMs", base != null ? (System.currentTimeMillis() - base) : null);
+            out.add(row);
+        }
+
+        return out;
+    }
+
+    private List<Map<String, Object>> snapshotQueues(Map<String, Queue<WebSocketSession>> source, String role) {
+        List<Map<String, Object>> out = new ArrayList<>();
+
+        for (Map.Entry<String, Queue<WebSocketSession>> entry : source.entrySet()) {
+            String bucket = entry.getKey();
+            Queue<WebSocketSession> queue = entry.getValue();
+            if (queue == null) continue;
+
+            int pos = 0;
+            for (WebSocketSession s : queue) {
+                if (s == null) continue;
+
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("bucket", bucket);
+                row.put("role", role);
+                row.put("position", pos++);
+                row.put("sessionId", s.getId());
+                row.put("userId", sessionUserIds.get(s.getId()));
+                row.put("mappedRole", roles.get(s.getId()));
+                row.put("open", s.isOpen());
+                out.add(row);
+            }
+        }
+
+        return out;
+    }
+
 
 }

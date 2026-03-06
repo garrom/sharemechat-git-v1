@@ -980,4 +980,73 @@ public class MessagesWsHandler extends TextWebSocketHandler {
     }
 
 
+    // =========================================================
+    // ADMIN RUNTIME SNAPSHOT (read-only)
+    // =========================================================
+
+    public Map<String, Object> adminRuntimeSnapshot() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("onlineUsers", snapshotOnlineUsers());
+        out.put("activeCalls", snapshotActiveCalls());
+        out.put("ringingUsers", new ArrayList<>(ringing));
+        return out;
+    }
+
+    private List<Map<String, Object>> snapshotOnlineUsers() {
+        List<Map<String, Object>> out = new ArrayList<>();
+
+        for (Map.Entry<Long, Set<WebSocketSession>> e : sessions.entrySet()) {
+            Long userId = e.getKey();
+            Set<WebSocketSession> set = e.getValue();
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("userId", userId);
+            row.put("sessionCount", set != null ? set.size() : 0);
+
+            List<String> sids = new ArrayList<>();
+            if (set != null) {
+                for (WebSocketSession s : set) {
+                    if (s != null) sids.add(s.getId());
+                }
+            }
+            row.put("sessionIds", sids);
+            out.add(row);
+        }
+
+        return out;
+    }
+
+    private List<Map<String, Object>> snapshotActiveCalls() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        Set<Long> seen = new HashSet<>();
+
+        for (Map.Entry<Long, Long> e : activeCalls.entrySet()) {
+            Long a = e.getKey();
+            Long b = e.getValue();
+            if (a == null || b == null) continue;
+            if (seen.contains(a) || seen.contains(b)) continue;
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("userA", a);
+            row.put("userB", b);
+            row.put("ownerA", activeCallOwners.get(a));
+            row.put("ownerB", activeCallOwners.get(b));
+
+            Pair<Long, Long> cm = resolveClientModel(a, b);
+            if (cm != null) {
+                row.put("clientId", cm.getLeft());
+                row.put("modelId", cm.getRight());
+            } else {
+                row.put("clientId", null);
+                row.put("modelId", null);
+            }
+
+            out.add(row);
+            seen.add(a);
+            seen.add(b);
+        }
+
+        return out;
+    }
+
 }

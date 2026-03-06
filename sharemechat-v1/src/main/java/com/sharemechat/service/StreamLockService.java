@@ -5,8 +5,7 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 public class StreamLockService {
@@ -53,7 +52,7 @@ public class StreamLockService {
         try {
             redis.execute(RELEASE_IF_OWNER, List.of(key), owner);
         } catch (Exception ignore) {
-            // si Redis falla liberando, TTL evitará lock permanente
+            // TTL evita lock permanente
         }
     }
 
@@ -63,5 +62,34 @@ public class StreamLockService {
 
     private String keyModel(Long modelId) {
         return "lock:stream:model:" + modelId;
+    }
+
+    // =========================
+    // READ-ONLY helpers audit
+    // =========================
+
+    public List<Map<String, Object>> listCurrentLocks() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        try {
+            Set<String> keys = redis.keys("lock:stream:*");
+            if (keys == null) return out;
+
+            for (String key : keys) {
+                if (key == null) continue;
+
+                String owner = redis.opsForValue().get(key);
+                Long ttlSec = null;
+                try {
+                    ttlSec = redis.getExpire(key);
+                } catch (Exception ignore) {}
+
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("key", key);
+                row.put("owner", owner);
+                row.put("ttlSec", ttlSec);
+                out.add(row);
+            }
+        } catch (Exception ignore) {}
+        return out;
     }
 }
