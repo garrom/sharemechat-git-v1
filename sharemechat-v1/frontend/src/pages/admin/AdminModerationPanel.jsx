@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
   Badge,
   ControlsRow,
@@ -92,7 +92,7 @@ const AdminModerationPanel = () => {
   };
 
   const fmtTs = (v) => {
-    if (!v) return '—';
+    if (!v) return '-';
     try {
       const d = new Date(v);
       if (Number.isNaN(d.getTime())) return String(v);
@@ -109,7 +109,7 @@ const AdminModerationPanel = () => {
 
   return (
     <div>
-      <SectionTitle>Moderación (Reports)</SectionTitle>
+      <SectionTitle>Moderacion (Reports)</SectionTitle>
 
       <ControlsRow>
         <FieldBlock>
@@ -125,7 +125,7 @@ const AdminModerationPanel = () => {
 
         <RightInfo>
           <StyledButton onClick={loadModerationReports} disabled={modLoading}>
-            {modLoading ? 'Cargando…' : 'Refrescar'}
+            {modLoading ? 'Cargando...' : 'Refrescar'}
           </StyledButton>
         </RightInfo>
       </ControlsRow>
@@ -141,11 +141,12 @@ const AdminModerationPanel = () => {
                 <th>Creado</th>
                 <th>Tipo</th>
                 <th>Status</th>
-                <th>Acción</th>
+                <th>Accion</th>
                 <th>AutoBlock</th>
                 <th>Reporter</th>
                 <th>Reported</th>
                 <th>Stream</th>
+                <th>ReviewedBy</th>
                 <th>Revisado</th>
                 <th></th>
               </tr>
@@ -155,14 +156,15 @@ const AdminModerationPanel = () => {
                 <tr key={r.id}>
                   <td>{r.id}</td>
                   <td>{fmtTs(r.createdAt)}</td>
-                  <td><Badge>{r.reportType || '—'}</Badge></td>
-                  <td><Badge data-variant={String(r.status || '').toLowerCase()}>{r.status || '—'}</Badge></td>
-                  <td>{r.adminAction || '—'}</td>
-                  <td>{r.autoBlocked ? 'Sí' : 'No'}</td>
-                  <td>{r.reporterUserId ?? '—'}</td>
-                  <td>{r.reportedUserId ?? '—'}</td>
-                  <td>{r.streamRecordId ?? '—'}</td>
-                  <td>{r.reviewedAt ? fmtTs(r.reviewedAt) : '—'}</td>
+                  <td><Badge>{r.reportType || '-'}</Badge></td>
+                  <td><Badge data-variant={String(r.status || '').toLowerCase()}>{r.status || '-'}</Badge></td>
+                  <td>{r.adminAction || '-'}</td>
+                  <td>{r.autoBlocked ? 'Si' : 'No'}</td>
+                  <td>{r.reporterUserId ?? '-'}</td>
+                  <td>{r.reportedUserId ?? '-'}</td>
+                  <td>{r.streamRecordId ?? '-'}</td>
+                  <td>{r.reviewedByUserId ?? '-'}</td>
+                  <td>{r.reviewedAt ? fmtTs(r.reviewedAt) : '-'}</td>
                   <td>
                     <SmallBtn
                       type="button"
@@ -177,7 +179,7 @@ const AdminModerationPanel = () => {
 
               {!modLoading && modReports.length === 0 && (
                 <tr>
-                  <td colSpan={11} style={{ color: '#6c757d' }}>Sin reports.</td>
+                  <td colSpan={12} style={{ color: '#6c757d' }}>Sin reports.</td>
                 </tr>
               )}
             </tbody>
@@ -197,7 +199,7 @@ const AdminModerationPanel = () => {
                     Recargar
                   </SmallBtn>
                   <StyledButton type="button" onClick={saveModerationReview} disabled={modSaving}>
-                    {modSaving ? 'Guardando…' : 'Guardar'}
+                    {modSaving ? 'Guardando...' : 'Guardar'}
                   </StyledButton>
                 </div>
               )}
@@ -232,7 +234,7 @@ const AdminModerationPanel = () => {
                   <TextArea
                     value={modReviewNotes}
                     onChange={(e) => setModReviewNotes(e.target.value)}
-                    placeholder="Notas internas de resolución (opcional)…"
+                    placeholder="Notas internas de resolucion (opcional)..."
                   />
                 </FieldBlock>
               </>
