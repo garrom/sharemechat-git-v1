@@ -1,0 +1,1571 @@
+package com.sharemechat.handler;
+
+import com.sharemechat.constants.Constants;
+import com.sharemechat.dto.MessageDTO;
+import com.sharemechat.entity.Balance;
+import com.sharemechat.entity.User;
+import com.sharemechat.repository.BalanceRepository;
+import com.sharemechat.repository.UserRepository;
+import com.sharemechat.security.JwtUtil;
+import com.sharemechat.service.*;
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.CloseStatus;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+
+import java.math.BigDecimal;
+import java.net.URI;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.util.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+
+@Component
+public class MatchingHandlerSupport {
+
+    private static final Logger log = LoggerFactory.getLogger(MatchingHandlerSupport.class);
+
+    private final MatchingRuntimeState state;
+    private final JwtUtil jwtUtil;
+    private final UserRepository userRepository;
+    private final StreamService streamService;
+    private final StatusService statusService;
+    private final MessageService messageService;
+    private final MessagesWsHandler messagesWsHandler;
+    private final TransactionService transactionService;
+    private final BalanceRepository balanceRepository;
+    private final UserTrialService userTrialService;
+    private final UserBlockService userBlockService;
+    private final SeenService seenService;
+    private final int seenMaxScan;
+    private final StreamLockService streamLockService;
+    private final Duration streamLockTtl = Duration.ofSeconds(15);
+    private final NextRateLimitService nextRateLimitService;
+    private final UserLanguageService userLanguageService;
+
+    public MatchingHandlerSupport(MatchingRuntimeState state,
+                                  JwtUtil jwtUtil,
+                                  UserRepository userRepository,
+                                  StreamService streamService,
+                                  TransactionService transactionService,
+                                  MessageService messageService,
+                                  MessagesWsHandler messagesWsHandler,
+                                  StatusService statusService,
+                                  BalanceRepository balanceRepository,
+                                  UserTrialService userTrialService,
+                                  UserBlockService userBlockService,
+                                  SeenService seenService,
+                                  StreamLockService streamLockService,
+                                  NextRateLimitService nextRateLimitService,
+                                  UserLanguageService userLanguageService,
+                                  @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
+        this.state = state;
+        this.jwtUtil = jwtUtil;
+        this.userRepository = userRepository;
+        this.streamService = streamService;
+        this.statusService = statusService;
+        this.messageService = messageService;
+        this.messagesWsHandler = messagesWsHandler;
+        this.transactionService = transactionService;
+        this.balanceRepository = balanceRepository;
+        this.userTrialService = userTrialService;
+        this.userBlockService = userBlockService;
+        this.seenService = seenService;
+        this.seenMaxScan = seenMaxScan;
+        this.streamLockService = streamLockService;
+        this.nextRateLimitService = nextRateLimitService;
+        this.userLanguageService = userLanguageService;
+    }
+
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        Long userId = resolveUserId(session);
+        log.info(
+                "[WS][match][OPEN] sid={} uid={} cookies={}",
+                session.getId(),
+                userId,
+                session.getHandshakeHeaders().get("Cookie")
+        );
+        if (userId == null) {
+            session.close(CloseStatus.BAD_DATA);
+            return;
+        }
+        state.getSessionsById().put(session.getId(), session);
+        state.getSessionUserIds().put(session.getId(), userId);
+    }
+
+    public void afterConnectionClosed(WebSocketSession session, CloseStatus status) throws Exception {
+        final String sid = session != null ? session.getId() : null;
+
+        final String roleSnap = (sid != null) ? state.getRoles().get(sid) : null;
+        final Long uidSnap = (sid != null) ? state.getSessionUserIds().get(sid) : null;
+        final WebSocketSession peerSnap = (sid != null) ? state.getPairs().get(sid) : null;
+
+        log.debug(
+                "[WS][match][CLOSE] sid={} code={} reason='{}' open={} role={} uid={} peerSid={}",
+                sid,
+                status != null ? status.getCode() : null,
+                status != null ? status.getReason() : null,
+                (session != null && session.isOpen()),
+                roleSnap,
+                uidSnap,
+                peerSnap != null ? peerSnap.getId() : null
+        );
+
+        String role = state.getRoles().remove(sid);
+        state.getSessionsById().remove(sid);
+        Long userId = state.getSessionUserIds().remove(sid);
+        state.getLastMatchAt().remove(sid);
+        state.getSessionLang().remove(sid);
+        state.getSessionCountry().remove(sid);
+        state.getSessionBucketKey().remove(sid);
+
+        if ("model".equals(role)) {
+            removeFromAllBuckets(session, "model");
+            if (userId != null) statusService.setOffline(userId);
+        } else if ("client".equals(role)) {
+            removeFromAllBuckets(session, "client");
+        }
+
+        WebSocketSession peer = state.getPairs().remove(sid);
+        if (peer != null) {
+            state.getPairs().remove(peer.getId());
+
+            Long myId = userId;
+            Long peerId = state.getSessionUserIds().get(peer.getId());
+            String myRole = role;
+            String peerRole = state.getRoles().get(peer.getId());
+
+            log.debug(
+                    "[WS][match][CLOSE][PAIR] sid={} myId={} myRole={} peerSid={} peerId={} peerRole={} peerOpen={}",
+                    sid,
+                    myId,
+                    myRole,
+                    peer.getId(),
+                    peerId,
+                    peerRole,
+                    peer.isOpen()
+            );
+
+            endStreamIfPairKnown(
+                    sid, myId, myRole,
+                    peer.getId(), peerId, peerRole,
+                    "DISCONNECT"
+            );
+
+            if (peer.isOpen()) {
+                safeSend(peer, "{\"type\":\"peer-disconnected\",\"reason\":\"peer-closed\"}");
+                safeRequeue(peer, peerRole);
+            }
+        }
+    }
+
+    public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+        String payload = message.getPayload();
+
+        try {
+            JSONObject json = new JSONObject(payload);
+            String type = json.getString("type");
+
+            if ("ping".equals(type)) {
+                confirmIfBillablePair(session);
+                checkCutoffAndMaybeEnd(session);
+                handleTrialPingAndMaybeEnd(session);
+
+                Long me = state.getSessionUserIds().get(session.getId());
+                String role = state.getRoles().get(session.getId());
+                if (me != null && "model".equals(role)) {
+                    try {
+                        statusService.heartbeat(me);
+                    } catch (Exception ignore) {}
+                }
+                return;
+            }
+
+            if ("set-role".equals(type)) {
+                String lang = normLang(json.optString("lang", "*"));
+                String country = normCountry(json.optString("country", "*"));
+                state.getSessionLang().put(session.getId(), lang);
+                state.getSessionCountry().put(session.getId(), country);
+                state.getSessionBucketKey().put(session.getId(), bucketKey(lang, country));
+
+                Long userId = state.getSessionUserIds().get(session.getId());
+                if (userId == null) {
+                    log.warn("[WS][match][SET-ROLE][NO_UID] sid={} payload={}", session.getId(), payload);
+                    session.close(CloseStatus.BAD_DATA);
+                    return;
+                }
+
+                String requestedRole = String.valueOf(json.optString("role", "")).toLowerCase();
+
+                String dbRole;
+                try {
+                    dbRole = userRepository.findById(userId)
+                            .map(u -> String.valueOf(u.getRole()))
+                            .orElse(null);
+                } catch (Exception ex) {
+                    log.error("[WS][match][SET-ROLE][DB_ERROR] sid={} uid={} ex={}", session.getId(), userId, ex.toString());
+                    session.close(CloseStatus.SERVER_ERROR);
+                    return;
+                }
+
+                if (dbRole == null) {
+                    log.warn("[WS][match][SET-ROLE][USER_NOT_FOUND] sid={} uid={}", session.getId(), userId);
+                    session.close(CloseStatus.BAD_DATA);
+                    return;
+                }
+
+                String mappedRole = "client";
+                String dbRoleUpper = dbRole.toUpperCase(Locale.ROOT);
+                if ("MODEL".equals(dbRoleUpper)) mappedRole = "model";
+                else if ("CLIENT".equals(dbRoleUpper)) mappedRole = "client";
+
+                log.info(
+                        "[WS][match][SET-ROLE] sid={} userId={} requestedRole={} dbRole={} mappedRole={} bucket={}",
+                        session.getId(), userId, requestedRole, dbRoleUpper, mappedRole, state.getSessionBucketKey().get(session.getId())
+                );
+
+                state.getRoles().put(session.getId(), mappedRole);
+
+                if ("model".equals(mappedRole)) {
+                    if (!isApprovedActiveModel(userId)) {
+                        blockModelSession(session, userId, "KYC_NOT_APPROVED_OR_INACTIVE");
+                        return;
+                    }
+                    moveToBucket(session, "model", state.getSessionBucketKey().get(session.getId()));
+                    try {
+                        statusService.setAvailable(userId);
+                    } catch (Exception ignore) {}
+                } else {
+                    moveToBucket(session, "client", state.getSessionBucketKey().get(session.getId()));
+                }
+
+                return;
+            }
+
+            if ("start-match".equals(type)) {
+                String role = state.getRoles().get(session.getId());
+                if ("client".equals(role)) matchClient(session);
+                else if ("model".equals(role)) matchModel(session);
+                return;
+            }
+
+            if ("next".equals(type)) {
+                handleNext(session);
+                return;
+            }
+
+            if ("chat".equals(type)) {
+                WebSocketSession peer = state.getPairs().get(session.getId());
+                if (peer != null && peer.isOpen()) {
+                    Long senderId = state.getSessionUserIds().get(session.getId());
+                    Long recipientId = state.getSessionUserIds().get(peer.getId());
+                    String body = json.optString("message", "").trim();
+
+                    if (senderId != null && recipientId != null && !body.isEmpty()) {
+                        try {
+                            MessageDTO saved = messageService.send(senderId, recipientId, body);
+                            messagesWsHandler.broadcastNew(saved);
+
+                            JSONObject out = new JSONObject()
+                                    .put("type", "chat")
+                                    .put("message", body)
+                                    .put("senderId", saved.senderId())
+                                    .put("recipientId", saved.recipientId())
+                                    .put("msgId", saved.id())
+                                    .put("createdAt", String.valueOf(saved.createdAt()))
+                                    .put("readAt", saved.readAt() == null ? JSONObject.NULL : String.valueOf(saved.readAt()));
+
+                            TextMessage tm = new TextMessage(out.toString());
+                            try {
+                                session.sendMessage(tm);
+                            } catch (Exception ignore) {}
+                            try {
+                                peer.sendMessage(tm);
+                            } catch (Exception ignore) {}
+                        } catch (Exception ex) {
+                            log.warn("[WS][match][CHAT_PERSIST_FAIL] sid={} ex={}", session.getId(), ex.getMessage());
+                            try {
+                                peer.sendMessage(new TextMessage(payload));
+                            } catch (Exception ignore) {}
+                            try {
+                                JSONObject err = new JSONObject().put("type", "msg:error").put("message", ex.getMessage());
+                                session.sendMessage(new TextMessage(err.toString()));
+                            } catch (Exception ignore) {}
+                        }
+                    } else {
+                        try {
+                            peer.sendMessage(new TextMessage(payload));
+                        } catch (Exception ignore) {}
+                    }
+                }
+                return;
+            }
+
+            if ("gift".equals(type)) {
+                handleGiftInMatch(session, json);
+                return;
+            }
+
+            if ("stats".equals(type)) {
+                sendQueueStats(session);
+                return;
+            }
+
+            if (state.getPairs().containsKey(session.getId())) {
+                WebSocketSession peer = state.getPairs().get(session.getId());
+                if (peer != null && peer.isOpen()) {
+                    try {
+                        peer.sendMessage(message);
+                    } catch (Exception ignore) {}
+                }
+                return;
+            }
+
+        } catch (Exception e) {
+            log.warn("[WS][match][BAD_JSON] sid={} err={}", session.getId(), e.getMessage());
+        }
+    }
+
+    public void handleTransportError(WebSocketSession session, Throwable exception) throws Exception {
+        final String sid = session != null ? session.getId() : null;
+
+        Long uid = null;
+        String role = null;
+        String peerSid = null;
+
+        try {
+            uid = (sid != null) ? state.getSessionUserIds().get(sid) : null;
+        } catch (Exception ignore) {}
+        try {
+            role = (sid != null) ? state.getRoles().get(sid) : null;
+        } catch (Exception ignore) {}
+        try {
+            WebSocketSession peer = (sid != null) ? state.getPairs().get(sid) : null;
+            peerSid = peer != null ? peer.getId() : null;
+        } catch (Exception ignore) {}
+
+        log.error(
+                "[WS][match][TRANSPORT_ERROR] sid={} uid={} role={} open={} peerSid={} exClass={} exMsg={}",
+                sid,
+                uid,
+                role,
+                (session != null && session.isOpen()),
+                peerSid,
+                exception != null ? exception.getClass().getName() : null,
+                exception != null ? exception.getMessage() : null,
+                exception
+        );
+    }
+
+    private String normLang(String lang) {
+        if (lang == null) return "*";
+        String x = lang.trim().toLowerCase(Locale.ROOT);
+        return x.isEmpty() ? "*" : x;
+    }
+
+    private String normCountry(String c) {
+        if (c == null) return "*";
+        String x = c.trim().toUpperCase(Locale.ROOT);
+        return x.isEmpty() ? "*" : x;
+    }
+
+    private String bucketKey(String lang, String country) {
+        lang = normLang(lang);
+        country = normCountry(country);
+        if ("*".equals(lang)) return "*";
+        if ("*".equals(country)) return lang + ":*";
+        return lang + ":" + country;
+    }
+
+    private Queue<WebSocketSession> modelsBucket(String key) {
+        return state.getWaitingModelsByBucket().computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>());
+    }
+
+    private Queue<WebSocketSession> clientsBucket(String key) {
+        return state.getWaitingClientsByBucket().computeIfAbsent(key, k -> new ConcurrentLinkedQueue<>());
+    }
+
+    private String getSessionBucketKey(WebSocketSession session) {
+        String sid = session.getId();
+        String lang = state.getSessionLang().get(sid);
+        String ctry = state.getSessionCountry().get(sid);
+        return bucketKey(lang, ctry);
+    }
+
+    private void removeFromAllBuckets(WebSocketSession session, String role) {
+        if (session == null) return;
+        if ("model".equals(role)) {
+            for (Queue<WebSocketSession> q : state.getWaitingModelsByBucket().values()) q.remove(session);
+        } else if ("client".equals(role)) {
+            for (Queue<WebSocketSession> q : state.getWaitingClientsByBucket().values()) q.remove(session);
+        }
+    }
+
+    private void moveToBucket(WebSocketSession session, String role, String key) {
+        if (key == null) key = "*";
+        if (session == null || role == null) return;
+        removeFromAllBuckets(session, role);
+        if ("model".equals(role)) modelsBucket(key).add(session);
+        else if ("client".equals(role)) clientsBucket(key).add(session);
+
+        state.getSessionBucketKey().put(session.getId(), key);
+    }
+
+    private int totalWaitingModels() {
+        int n = 0;
+        for (Queue<WebSocketSession> q : state.getWaitingModelsByBucket().values()) n += q.size();
+        return n;
+    }
+
+    private int totalWaitingClients() {
+        int n = 0;
+        for (Queue<WebSocketSession> q : state.getWaitingClientsByBucket().values()) n += q.size();
+        return n;
+    }
+
+    private List<String> preferredBucketsForSession(WebSocketSession session) {
+        String sid = session.getId();
+        String lang = normLang(state.getSessionLang().get(sid));
+        String ctry = normCountry(state.getSessionCountry().get(sid));
+
+        List<String> keys = new ArrayList<>();
+        if (!"*".equals(lang) && !"*".equals(ctry)) keys.add(lang + ":" + ctry);
+        if (!"*".equals(lang)) keys.add(lang + ":*");
+        keys.add("*");
+
+        return keys;
+    }
+
+    private boolean isApprovedActiveModel(Long userId) {
+        if (userId == null) return false;
+        try {
+            User u = userRepository.findById(userId).orElse(null);
+            if (u == null) return false;
+
+            boolean roleOk = Constants.Roles.MODEL.equals(String.valueOf(u.getRole()));
+            boolean kycOk = Constants.VerificationStatuses.APPROVED.equals(String.valueOf(u.getVerificationStatus()));
+            boolean active = u.getIsActive() != null && u.getIsActive();
+            boolean unsub = u.getUnsubscribe() != null && u.getUnsubscribe();
+
+            return roleOk && kycOk && active && !unsub;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    private void blockModelSession(WebSocketSession session, Long userId, String reasonCode) {
+        try {
+            String v = null;
+            try {
+                v = userRepository.findById(userId).map(User::getVerificationStatus).orElse(null);
+            } catch (Exception ignore) {}
+
+            String payload = new JSONObject()
+                    .put("type", "model-blocked")
+                    .put("reasonCode", reasonCode)
+                    .put("verificationStatus", v == null ? JSONObject.NULL : v)
+                    .toString();
+
+            safeSend(session, payload);
+        } catch (Exception ignore) {}
+
+        try {
+            removeFromAllBuckets(session, "model");
+        } catch (Exception ignore) {}
+        try {
+            if (userId != null) statusService.setOffline(userId);
+        } catch (Exception ignore) {}
+
+        try {
+            session.close(CloseStatus.POLICY_VIOLATION);
+        } catch (Exception ignore) {}
+    }
+
+    private void matchClient(WebSocketSession client) throws Exception {
+        removeFromAllBuckets(client, "client");
+
+        Long clientId = state.getSessionUserIds().get(client.getId());
+        if (clientId == null) {
+            moveToBucket(client, "client", getSessionBucketKey(client));
+            return;
+        }
+
+        List<String> buckets = preferredBucketsForSession(client);
+
+        for (String b : buckets) {
+            MatchAttemptResult r1 = tryMatchClientAgainstModels(client, clientId, true, modelsBucket(b));
+            if (r1.handled) return;
+        }
+
+        for (String b : buckets) {
+            MatchAttemptResult r2 = tryMatchClientAgainstModels(client, clientId, false, modelsBucket(b));
+            if (r2.handled) return;
+        }
+
+        boolean anySupply = totalWaitingModels() > 0;
+
+        String reasonCode = anySupply ? "NO_MATCH_FOUND" : "NO_SUPPLY_MODELS";
+        String payload = new JSONObject()
+                .put("type", "no-model-available")
+                .put("reasonCode", reasonCode)
+                .toString();
+
+        safeSend(client, payload);
+        moveToBucket(client, "client", getSessionBucketKey(client));
+    }
+
+    private void matchModel(WebSocketSession model) throws Exception {
+        removeFromAllBuckets(model, "model");
+
+        Long modelId = state.getSessionUserIds().get(model.getId());
+        if (modelId == null) {
+            moveToBucket(model, "model", getSessionBucketKey(model));
+            return;
+        }
+
+        List<String> buckets = preferredBucketsForSession(model);
+
+        for (String b : buckets) {
+            MatchAttemptResult r1 = tryMatchModelAgainstClients(model, modelId, true, clientsBucket(b));
+            if (r1.handled) return;
+        }
+
+        for (String b : buckets) {
+            MatchAttemptResult r2 = tryMatchModelAgainstClients(model, modelId, false, clientsBucket(b));
+            if (r2.handled) return;
+        }
+
+        boolean anySupply = totalWaitingClients() > 0;
+
+        String reasonCode = anySupply ? "NO_MATCH_FOUND" : "NO_SUPPLY_CLIENTS";
+        String payload = new JSONObject()
+                .put("type", "no-client-available")
+                .put("reasonCode", reasonCode)
+                .toString();
+
+        safeSend(model, payload);
+        moveToBucket(model, "model", getSessionBucketKey(model));
+    }
+
+    private static class MatchAttemptResult {
+        final boolean handled;
+
+        MatchAttemptResult(boolean handled) {
+            this.handled = handled;
+        }
+
+        static MatchAttemptResult HANDLED() {
+            return new MatchAttemptResult(true);
+        }
+
+        static MatchAttemptResult NOT_HANDLED() {
+            return new MatchAttemptResult(false);
+        }
+    }
+
+    private MatchAttemptResult tryMatchClientAgainstModels(WebSocketSession client, Long clientId, boolean enforceUnseen, Queue<WebSocketSession> pool) throws Exception {
+        List<WebSocketSession> scannedList = new ArrayList<>();
+        int scanned = 0;
+
+        WebSocketSession best = null;
+        Long bestModelId = null;
+        String bestOwner = null;
+
+        int bestRank = Integer.MAX_VALUE;
+
+        while (scanned++ < seenMaxScan) {
+            WebSocketSession model = pool.poll();
+            if (model == null) break;
+
+            if (!model.isOpen()) continue;
+
+            Long modelId = state.getSessionUserIds().get(model.getId());
+            if (modelId == null) continue;
+
+            if (!isApprovedActiveModel(modelId)) {
+                try {
+                    statusService.setOffline(modelId);
+                } catch (Exception ignore) {}
+                continue;
+            }
+
+            if (!canMatch(clientId, modelId)) {
+                scannedList.add(model);
+                continue;
+            }
+
+            boolean seen = false;
+            if (enforceUnseen) {
+                seen = seenService.hasSeen(clientId, modelId);
+            }
+
+            int languageScore = 0;
+            try {
+                languageScore = userLanguageService.languageMatchScore(clientId, modelId);
+            } catch (Exception ignore) {}
+
+            boolean sameLanguage = languageScore >= 100;
+            int rank = (sameLanguage ? 0 : 1) + (seen ? 2 : 0);
+
+            if (enforceUnseen && seen) {
+                scannedList.add(model);
+                continue;
+            }
+
+            if (rank < bestRank) {
+                String owner = streamLockService.newOwnerToken();
+                if (!tryAcquirePairLocks(clientId, modelId, owner)) {
+                    scannedList.add(model);
+                    continue;
+                }
+
+                if (best != null && bestModelId != null && bestOwner != null) {
+                    try {
+                        releasePairLocks(clientId, bestModelId, bestOwner);
+                    } catch (Exception ignore) {}
+                    scannedList.add(best);
+                }
+
+                best = model;
+                bestModelId = modelId;
+                bestOwner = owner;
+                bestRank = rank;
+
+                if (bestRank == 0) break;
+            } else {
+                scannedList.add(model);
+            }
+        }
+
+        for (WebSocketSession s : scannedList) {
+            if (s != null && s.isOpen()) pool.add(s);
+        }
+
+        if (best == null || bestModelId == null || bestOwner == null) {
+            return MatchAttemptResult.NOT_HANDLED();
+        }
+
+        boolean matched = false;
+
+        try {
+            User viewer = userRepository.findById(clientId).orElse(null);
+            String realRole = viewer != null ? viewer.getRole() : null;
+
+            if (Constants.Roles.USER.equals(realRole)) {
+                if (!userTrialService.canStartTrial(clientId)) {
+                    safeSend(client, "{\"type\":\"trial-unavailable\"}");
+                    moveToBucket(client, "client", getSessionBucketKey(client));
+                    return MatchAttemptResult.HANDLED();
+                }
+                userTrialService.startTrialStream(clientId, bestModelId);
+            } else {
+                streamService.startSession(clientId, bestModelId, Constants.StreamTypes.RANDOM);
+            }
+
+            seenService.markSeen(clientId, bestModelId);
+
+            state.getPairs().put(client.getId(), best);
+            state.getPairs().put(best.getId(), client);
+
+            long now = System.currentTimeMillis();
+            state.getLastMatchAt().put(client.getId(), now);
+            state.getLastMatchAt().put(best.getId(), now);
+
+            state.getPairLockOwnerBySessionId().put(client.getId(), bestOwner);
+            state.getPairLockOwnerBySessionId().put(best.getId(), bestOwner);
+
+            sendMatchMessage(client, best.getId());
+            sendMatchMessage(best, client.getId());
+
+            matched = true;
+            return MatchAttemptResult.HANDLED();
+
+        } catch (Exception ex) {
+            state.getPairs().remove(client.getId());
+            state.getPairs().remove(best.getId());
+
+            if (isLowBalance(ex)) safeSend(client, "{\"type\":\"no-balance\"}");
+            else safeSend(client, "{\"type\":\"no-model-available\"}");
+
+            moveToBucket(client, "client", getSessionBucketKey(client));
+            return MatchAttemptResult.HANDLED();
+
+        } finally {
+            if (!matched) {
+                try {
+                    releasePairLocks(clientId, bestModelId, bestOwner);
+                } catch (Exception ignore) {}
+                if (best != null && best.isOpen()) pool.add(best);
+            }
+        }
+    }
+
+    private MatchAttemptResult tryMatchModelAgainstClients(WebSocketSession model, Long modelId, boolean enforceUnseen, Queue<WebSocketSession> pool) throws Exception {
+        List<WebSocketSession> skipped = new ArrayList<>();
+        int scanned = 0;
+
+        WebSocketSession client;
+        while (scanned++ < seenMaxScan && (client = pool.poll()) != null) {
+            if (!client.isOpen()) continue;
+
+            Long clientId = state.getSessionUserIds().get(client.getId());
+            if (clientId == null) continue;
+
+            if (!canMatch(clientId, modelId)) {
+                skipped.add(client);
+                continue;
+            }
+
+            if (enforceUnseen && seenService.hasSeen(clientId, modelId)) {
+                skipped.add(client);
+                continue;
+            }
+
+            int languageScore = userLanguageService.languageMatchScore(clientId, modelId);
+            if (languageScore == 0 && enforceUnseen) {
+                skipped.add(client);
+                continue;
+            }
+
+            String owner = streamLockService.newOwnerToken();
+            if (!tryAcquirePairLocks(clientId, modelId, owner)) {
+                skipped.add(client);
+                continue;
+            }
+
+            boolean matched = false;
+
+            try {
+                User viewer = userRepository.findById(clientId).orElse(null);
+                String realRole = viewer != null ? viewer.getRole() : null;
+
+                if (Constants.Roles.USER.equals(realRole)) {
+                    if (!userTrialService.canStartTrial(clientId)) {
+                        safeSend(client, "{\"type\":\"trial-unavailable\"}");
+                        for (WebSocketSession s : skipped) if (s != null && s.isOpen()) pool.add(s);
+                        moveToBucket(model, "model", getSessionBucketKey(model));
+                        return MatchAttemptResult.HANDLED();
+                    }
+                    userTrialService.startTrialStream(clientId, modelId);
+                } else {
+                    streamService.startSession(clientId, modelId, Constants.StreamTypes.RANDOM);
+                }
+
+                seenService.markSeen(clientId, modelId);
+
+                state.getPairs().put(model.getId(), client);
+                state.getPairs().put(client.getId(), model);
+
+                long now = System.currentTimeMillis();
+                state.getLastMatchAt().put(model.getId(), now);
+                state.getLastMatchAt().put(client.getId(), now);
+
+                state.getPairLockOwnerBySessionId().put(model.getId(), owner);
+                state.getPairLockOwnerBySessionId().put(client.getId(), owner);
+
+                sendMatchMessage(model, client.getId());
+                sendMatchMessage(client, model.getId());
+
+                for (WebSocketSession s : skipped) if (s != null && s.isOpen()) pool.add(s);
+
+                matched = true;
+                return MatchAttemptResult.HANDLED();
+
+            } catch (Exception ex) {
+                state.getPairs().remove(model.getId());
+                state.getPairs().remove(client.getId());
+
+                if (isLowBalance(ex)) safeSend(client, "{\"type\":\"no-balance\"}");
+
+                skipped.add(client);
+                for (WebSocketSession s : skipped) if (s != null && s.isOpen()) pool.add(s);
+
+                moveToBucket(model, "model", getSessionBucketKey(model));
+                return MatchAttemptResult.HANDLED();
+
+            } finally {
+                if (!matched) {
+                    releasePairLocks(clientId, modelId, owner);
+                }
+            }
+        }
+
+        for (WebSocketSession s : skipped) if (s != null && s.isOpen()) pool.add(s);
+        return MatchAttemptResult.NOT_HANDLED();
+    }
+
+    private void handleNext(WebSocketSession session) throws Exception {
+        if (!state.getSwitching().add(session.getId())) return;
+        try {
+            log.info("[NEXT_IN] sid={} uid={} role={}",
+                    session.getId(),
+                    state.getSessionUserIds().get(session.getId()),
+                    state.getRoles().get(session.getId())
+            );
+
+            Long t = state.getLastMatchAt().get(session.getId());
+            if (t != null && (System.currentTimeMillis() - t) < 1500L) {
+                log.info("[NEXT_IGNORED] sid={} reason=grace ageMs={}",
+                        session.getId(),
+                        System.currentTimeMillis() - t
+                );
+                safeSend(session, "{\"type\":\"next-ignored\",\"reason\":\"grace\"}");
+                return;
+            }
+
+            Long uid = state.getSessionUserIds().get(session.getId());
+            Optional<Long> retryAfterMsOpt = nextRateLimitService.checkAndConsume(uid);
+            if (retryAfterMsOpt.isPresent()) {
+                long retryAfterMs = retryAfterMsOpt.get();
+                log.info("[NEXT_IGNORED] sid={} reason=rate-limit retryAfterMs={}",
+                        session.getId(),
+                        retryAfterMs
+                );
+                safeSend(session, "{\"type\":\"next-ignored\",\"reason\":\"rate-limit\",\"retryAfterMs\":" + retryAfterMs + "}");
+                return;
+            }
+
+            WebSocketSession peer = state.getPairs().remove(session.getId());
+            if (peer != null) {
+                state.getPairs().remove(peer.getId());
+
+                Long myId = state.getSessionUserIds().get(session.getId());
+                Long peerId = state.getSessionUserIds().get(peer.getId());
+                String myRole = state.getRoles().get(session.getId());
+                String peerRole = state.getRoles().get(peer.getId());
+
+                log.info("[NEXT_END_STREAM] sid={} myId={} myRole={} peerSid={} peerId={} peerRole={}",
+                        session.getId(),
+                        myId,
+                        myRole,
+                        peer.getId(),
+                        peerId,
+                        peerRole
+                );
+
+                endStreamIfPairKnown(
+                        session.getId(), myId, myRole,
+                        peer.getId(), peerId, peerRole,
+                        "NEXT"
+                );
+
+                if (peer.isOpen()) {
+                    safeSend(peer, "{\"type\":\"peer-disconnected\",\"reason\":\"next\"}");
+                    safeRequeue(peer, peerRole);
+                }
+            }
+
+            log.info("[NEXT_REMATCH] sid={} uid={} role={}",
+                    session.getId(),
+                    state.getSessionUserIds().get(session.getId()),
+                    state.getRoles().get(session.getId())
+            );
+
+            String role = state.getRoles().get(session.getId());
+            if ("client".equals(role)) matchClient(session);
+            else if ("model".equals(role)) matchModel(session);
+
+        } finally {
+            state.getSwitching().remove(session.getId());
+        }
+    }
+
+    private void handleGiftInMatch(WebSocketSession session, JSONObject json) {
+        Long senderId = state.getSessionUserIds().get(session.getId());
+        if (senderId == null) {
+            safeSend(session, "{\"type\":\"gift:error\",\"message\":\"No autenticado\"}");
+            return;
+        }
+        String senderRole = state.getRoles().get(session.getId());
+        if (!"client".equals(senderRole)) {
+            safeSend(session, "{\"type\":\"gift:error\",\"message\":\"Solo un CLIENT puede enviar regalos\"}");
+            return;
+        }
+
+        long giftId = json.optLong("giftId", 0L);
+        if (giftId <= 0L) {
+            safeSend(session, "{\"type\":\"gift:error\",\"message\":\"giftId inválido\"}");
+            return;
+        }
+
+        WebSocketSession peer = state.getPairs().get(session.getId());
+        if (peer == null || !peer.isOpen()) {
+            safeSend(session, "{\"type\":\"gift:error\",\"message\":\"No hay destinatario conectado\"}");
+            return;
+        }
+
+        Long peerUserId = state.getSessionUserIds().get(peer.getId());
+        String peerRole = state.getRoles().get(peer.getId());
+        if (peerUserId == null || !"model".equals(peerRole)) {
+            safeSend(session, "{\"type\":\"gift:error\",\"message\":\"Destinatario no es MODEL\"}");
+            return;
+        }
+
+        Long streamId = null;
+        try {
+            streamId = statusService.getActiveSession(senderId, peerUserId).orElse(null);
+        } catch (Exception ignore) {}
+
+        try {
+            com.sharemechat.entity.Gift g = transactionService.processGift(senderId, peerUserId, giftId, streamId);
+
+            String marker = "[[GIFT:" + g.getId() + ":" + g.getName() + "]]";
+            MessageDTO saved = messageService.send(senderId, peerUserId, marker);
+
+            messagesWsHandler.broadcastNew(saved);
+
+            BigDecimal newBal = balanceRepository
+                    .findTopByUserIdOrderByTimestampDesc(senderId)
+                    .map(Balance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+
+            JSONObject out = new JSONObject()
+                    .put("type", "gift")
+                    .put("fromUserId", senderId)
+                    .put("toUserId", peerUserId)
+                    .put("gift", new JSONObject()
+                            .put("id", g.getId())
+                            .put("name", g.getName())
+                            .put("icon", g.getIcon())
+                            .put("cost", g.getCost().toPlainString())
+                    )
+                    .put("newBalance", newBal.toPlainString());
+
+            String payload = out.toString();
+            safeSend(session, payload);
+            if (peer.isOpen()) safeSend(peer, payload);
+        } catch (Exception ex) {
+            JSONObject err = new JSONObject().put("type", "gift:error").put("message", ex.getMessage());
+            safeSend(session, err.toString());
+        }
+    }
+
+    private void endStreamIfPairKnown(String sessionIdA, Long idA, String roleA, String sessionIdB, Long idB, String roleB, String closeReason) {
+        if (idA == null || idB == null || roleA == null || roleB == null) {
+            return;
+        }
+
+        Long viewerId;
+        Long modelId;
+
+        if ("client".equals(roleA) && "model".equals(roleB)) {
+            viewerId = idA;
+            modelId = idB;
+        } else if ("model".equals(roleA) && "client".equals(roleB)) {
+            viewerId = idB;
+            modelId = idA;
+        } else {
+            return;
+        }
+
+        try {
+            log.debug("endStreamIfPairKnown: reason={} viewerId={} modelId={}", closeReason, viewerId, modelId);
+
+            User viewer = userRepository.findById(viewerId).orElse(null);
+            String realRole = viewer != null ? viewer.getRole() : null;
+
+            if (Constants.Roles.CLIENT.equals(realRole)) {
+                streamService.endSession(viewerId, modelId, closeReason);
+            } else if (Constants.Roles.USER.equals(realRole)) {
+                userTrialService.endTrialStream(viewerId, modelId, closeReason);
+            }
+
+        } catch (Exception ex) {
+            log.warn("endSession/endTrialStream falló: reason={} viewerId={} modelId={} msg={}",
+                    closeReason, viewerId, modelId, ex.getMessage(), ex);
+
+        } finally {
+            String ownerA = null;
+            String ownerB = null;
+
+            if (sessionIdA != null) {
+                ownerA = state.getPairLockOwnerBySessionId().remove(sessionIdA);
+            }
+            if (sessionIdB != null) {
+                ownerB = state.getPairLockOwnerBySessionId().remove(sessionIdB);
+            }
+
+            if (ownerA == null) {
+                String sid = findSessionIdByUserId(viewerId);
+                if (sid != null) ownerA = state.getPairLockOwnerBySessionId().remove(sid);
+            }
+            if (ownerB == null) {
+                String sid = findSessionIdByUserId(modelId);
+                if (sid != null) ownerB = state.getPairLockOwnerBySessionId().remove(sid);
+            }
+
+            String owner = ownerA != null ? ownerA : ownerB;
+
+            if (owner != null) {
+                try {
+                    releasePairLocks(viewerId, modelId, owner);
+                } catch (Exception ex) {
+                    log.warn("Error liberando locks: viewerId={} modelId={} owner={} msg={}",
+                            viewerId, modelId, owner, ex.getMessage(), ex);
+                }
+            } else {
+                log.debug("Locks owner no encontrado (posible TTL expirado): viewerId={} modelId={} reason={}",
+                        viewerId, modelId, closeReason);
+            }
+        }
+    }
+
+    private void sendMatchMessage(WebSocketSession session, String peerSessionId) {
+        try {
+            Long myUserId = state.getSessionUserIds().get(session.getId());
+            Long peerUserId = state.getSessionUserIds().get(peerSessionId);
+            String peerRole = state.getRoles().get(peerSessionId);
+
+            BigDecimal clientBalance = null;
+            Long streamRecordId = null;
+
+            String languageReasonCode = "LANGUAGE_MATCH_FALLBACK";
+            try {
+                if (myUserId != null && peerUserId != null) {
+                    int score = userLanguageService.languageMatchScore(myUserId, peerUserId);
+                    if (score >= 100) languageReasonCode = "LANGUAGE_MATCH_PRIMARY";
+                    else if (score >= 50) languageReasonCode = "LANGUAGE_MATCH_SHARED";
+                    else languageReasonCode = "LANGUAGE_MATCH_FALLBACK";
+                }
+            } catch (Exception ignore) {}
+
+            if (myUserId != null && peerUserId != null) {
+                String myRole = state.getRoles().get(session.getId());
+
+                Long clientId = null;
+                Long modelId = null;
+
+                if ("client".equals(myRole) && "model".equals(peerRole)) {
+                    clientId = myUserId;
+                    modelId = peerUserId;
+                } else if ("model".equals(myRole) && "client".equals(peerRole)) {
+                    clientId = peerUserId;
+                    modelId = myUserId;
+                }
+
+                if (clientId != null && modelId != null) {
+                    try {
+                        streamRecordId = statusService
+                                .getActiveSession(clientId, modelId)
+                                .orElse(null);
+                    } catch (Exception ignore) {}
+                }
+            }
+
+            if ("client".equals(peerRole)) {
+                clientBalance = getCurrentBalanceOrZero(peerUserId);
+            }
+
+            String msg = String.format(
+                    Locale.US,
+                    "{"
+                            + "\"type\":\"match\","
+                            + "\"peerId\":\"%s\","
+                            + "\"peerUserId\":%s,"
+                            + "\"peerRole\":\"%s\","
+                            + "\"clientBalance\":%s,"
+                            + "\"streamRecordId\":%s,"
+                            + "\"reasonCode\":\"%s\""
+                            + "}",
+                    peerSessionId,
+                    peerUserId != null ? peerUserId.toString() : "null",
+                    peerRole != null ? peerRole : "",
+                    clientBalance != null ? ("\"" + clientBalance.toPlainString() + "\"") : "null",
+                    streamRecordId != null ? streamRecordId.toString() : "null",
+                    languageReasonCode
+            );
+
+            session.sendMessage(new TextMessage(msg));
+
+        } catch (Exception e) {
+            System.out.println(
+                    "Error enviando match a sessionId=" + session.getId() + ": " + e.getMessage()
+            );
+        }
+    }
+
+    private void safeRequeue(WebSocketSession session, String role) {
+        if (session == null || !session.isOpen() || role == null) return;
+
+        String key = state.getSessionBucketKey().get(session.getId());
+        if (key == null) key = getSessionBucketKey(session);
+
+        moveToBucket(session, role, key);
+    }
+
+    private Long resolveUserId(WebSocketSession session) {
+        String token = extractToken(session);
+        if (token == null) return null;
+        try {
+            if (!jwtUtil.isTokenValid(token)) return null;
+            return jwtUtil.extractUserId(token);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private String extractToken(WebSocketSession session) {
+        try {
+            URI uri = session.getUri();
+            if (uri != null && uri.getQuery() != null) {
+                Map<String, String> qs = parseQuery(uri.getQuery());
+                if (qs.containsKey("token")) return qs.get("token");
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            List<String> auths = session.getHandshakeHeaders().get("Authorization");
+            if (auths != null && !auths.isEmpty()) {
+                String h = auths.get(0);
+                if (h != null && h.startsWith("Bearer ")) return h.substring(7);
+            }
+        } catch (Exception ignored) {}
+
+        try {
+            List<String> cookies = session.getHandshakeHeaders().get("Cookie");
+            if (cookies != null) {
+                for (String c : cookies) {
+                    for (String part : c.split(";")) {
+                        String[] kv = part.trim().split("=", 2);
+                        if (kv.length == 2 && kv[0].equals("access_token")) {
+                            return kv[1];
+                        }
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return null;
+    }
+
+    private Map<String, String> parseQuery(String query) {
+        Map<String, String> map = new HashMap<>();
+        String[] parts = query.split("&");
+        for (String p : parts) {
+            int i = p.indexOf('=');
+            if (i > 0) {
+                String k = URLDecoder.decode(p.substring(0, i), StandardCharsets.UTF_8);
+                String v = URLDecoder.decode(p.substring(i + 1), StandardCharsets.UTF_8);
+                map.put(k, v);
+            } else {
+                String k = URLDecoder.decode(p, StandardCharsets.UTF_8);
+                map.put(k, "");
+            }
+        }
+        return map;
+    }
+
+    private void safeSend(WebSocketSession s, String json) {
+        if (s == null) return;
+
+        if (!s.isOpen()) {
+            log.debug("[WS][match][SEND_SKIP] sid={} reason=not-open payloadType={}", s.getId(), safeType(json));
+            return;
+        }
+
+        try {
+            s.sendMessage(new TextMessage(json));
+        } catch (Exception ex) {
+            log.error(
+                    "[WS][match][SEND_FAIL] sid={} payloadType={} exClass={} exMsg={}",
+                    s.getId(),
+                    safeType(json),
+                    ex.getClass().getName(),
+                    ex.getMessage(),
+                    ex
+            );
+        }
+    }
+
+    private String safeType(String json) {
+        if (json == null) return "null";
+        try {
+            return new JSONObject(json).optString("type", "unknown");
+        } catch (Exception ignore) {
+            return "non-json";
+        }
+    }
+
+    private boolean checkCutoffAndMaybeEnd(WebSocketSession session) {
+        WebSocketSession peer = state.getPairs().get(session.getId());
+        if (peer == null) return false;
+
+        String myRole = state.getRoles().get(session.getId());
+        String peerRole = state.getRoles().get(peer.getId());
+        if (myRole == null || peerRole == null) return false;
+
+        Long myUserId = state.getSessionUserIds().get(session.getId());
+        Long peerUserId = state.getSessionUserIds().get(peer.getId());
+        if (myUserId == null || peerUserId == null) return false;
+
+        Long clientId;
+        Long modelId;
+
+        if ("client".equals(myRole) && "model".equals(peerRole)) {
+            clientId = myUserId;
+            modelId = peerUserId;
+        } else if ("model".equals(myRole) && "client".equals(peerRole)) {
+            clientId = peerUserId;
+            modelId = myUserId;
+        } else {
+            return false;
+        }
+
+        try {
+            User clientUser = userRepository.findById(clientId).orElse(null);
+            if (clientUser == null || !Constants.Roles.CLIENT.equals(clientUser.getRole())) {
+                return false;
+            }
+        } catch (Exception ex) {
+            return false;
+        }
+
+        final boolean shouldEnd;
+        try {
+            shouldEnd = streamService.endIfBelowThreshold(clientId, modelId);
+        } catch (Exception ex) {
+            log.warn("endIfBelowThreshold error: clientId={} modelId={} msg={}",
+                    clientId, modelId, ex.getMessage(), ex);
+            return false;
+        }
+
+        if (!shouldEnd) return false;
+
+        safeSend(session, "{\"type\":\"peer-disconnected\",\"reason\":\"low-balance\"}");
+        safeSend(peer, "{\"type\":\"peer-disconnected\",\"reason\":\"low-balance\"}");
+
+        state.getPairs().remove(session.getId());
+        state.getPairs().remove(peer.getId());
+
+        try {
+            streamService.endSessionAsync(clientId, modelId, "low-balance");
+        } catch (Exception ex) {
+            log.warn("endSessionAsync launch failed: clientId={} modelId={} msg={}",
+                    clientId, modelId, ex.getMessage(), ex);
+        }
+
+        return true;
+    }
+
+    private void handleTrialPingAndMaybeEnd(WebSocketSession session) {
+        WebSocketSession peer = state.getPairs().get(session.getId());
+        if (peer == null) return;
+
+        String myRole = state.getRoles().get(session.getId());
+        String peerRole = state.getRoles().get(peer.getId());
+        if (myRole == null || peerRole == null) return;
+
+        Long myUserId = state.getSessionUserIds().get(session.getId());
+        Long peerUserId = state.getSessionUserIds().get(peer.getId());
+        if (myUserId == null || peerUserId == null) return;
+
+        Long viewerId;
+        Long modelId;
+        WebSocketSession viewerSession;
+        WebSocketSession modelSession;
+
+        if ("client".equals(myRole) && "model".equals(peerRole)) {
+            viewerId = myUserId;
+            modelId = peerUserId;
+            viewerSession = session;
+            modelSession = peer;
+        } else if ("model".equals(myRole) && "client".equals(peerRole)) {
+            viewerId = peerUserId;
+            modelId = myUserId;
+            viewerSession = peer;
+            modelSession = session;
+        } else {
+            return;
+        }
+
+        try {
+            User viewer = userRepository.findById(viewerId).orElse(null);
+
+            if (viewer == null || !Constants.Roles.USER.equals(viewer.getRole())) return;
+
+            boolean ended = userTrialService.endTrialIfTimeExceeded(viewerId, modelId);
+            if (!ended) return;
+
+            safeSend(viewerSession, "{\"type\":\"peer-disconnected\",\"reason\":\"trial-ended\"}");
+            safeSend(modelSession, "{\"type\":\"peer-disconnected\",\"reason\":\"trial-ended\"}");
+
+            state.getPairs().remove(viewerSession.getId());
+            state.getPairs().remove(modelSession.getId());
+
+        } catch (Exception ex) {
+            System.out.println("handleTrialPingAndMaybeEnd error: " + ex.getMessage());
+        }
+    }
+
+    private boolean isLowBalance(Exception ex) {
+        String m = ex != null ? ex.getMessage() : null;
+        return m != null && m.contains("Saldo insuficiente");
+    }
+
+    private int positionInQueue(Queue<WebSocketSession> q, WebSocketSession s) {
+        int i = 0;
+        for (WebSocketSession x : q) {
+            if (x == s) return i;
+            i++;
+        }
+        return -1;
+    }
+
+    private BigDecimal getCurrentBalanceOrZero(Long userId) {
+        if (userId == null) return BigDecimal.ZERO;
+        try {
+            return balanceRepository
+                    .findTopByUserIdOrderByTimestampDesc(userId)
+                    .map(Balance::getBalance)
+                    .orElse(BigDecimal.ZERO);
+        } catch (Exception ex) {
+            return BigDecimal.ZERO;
+        }
+    }
+
+    private void sendQueueStats(WebSocketSession s) {
+        try {
+            int waitingModelsCount = totalWaitingModels();
+            int waitingClientsCount = totalWaitingClients();
+
+            String role = state.getRoles().get(s.getId());
+            int myPosition = -1;
+
+            if ("model".equals(role)) {
+                String key = state.getSessionBucketKey().get(s.getId());
+                if (key == null) key = getSessionBucketKey(s);
+                myPosition = positionInQueue(modelsBucket(key), s);
+            } else if ("client".equals(role)) {
+                String key = state.getSessionBucketKey().get(s.getId());
+                if (key == null) key = getSessionBucketKey(s);
+                myPosition = positionInQueue(clientsBucket(key), s);
+            }
+
+            int activePairs = computeActivePairs();
+            int modelsStreaming = activePairs;
+            int clientsStreaming = activePairs;
+
+            String json = String.format(
+                    "{\"type\":\"queue-stats\",\"waitingModels\":%d,\"waitingClients\":%d," +
+                            "\"position\":%d,\"modelsStreaming\":%d,\"clientsStreaming\":%d,\"activePairs\":%d}",
+                    waitingModelsCount, waitingClientsCount, myPosition,
+                    modelsStreaming, clientsStreaming, activePairs
+            );
+            safeSend(s, json);
+        } catch (Exception ignore) {}
+    }
+
+    private int computeActivePairs() {
+        Set<String> used = new HashSet<>();
+        int count = 0;
+        for (Map.Entry<String, WebSocketSession> e : state.getPairs().entrySet()) {
+            String a = e.getKey();
+            WebSocketSession peer = e.getValue();
+            if (peer == null) continue;
+            String b = peer.getId();
+            if (used.contains(a) || used.contains(b)) continue;
+
+            String ra = state.getRoles().get(a);
+            String rb = state.getRoles().get(b);
+            if (("model".equals(ra) && "client".equals(rb)) || ("client".equals(ra) && "model".equals(rb))) {
+                count++;
+                used.add(a);
+                used.add(b);
+            }
+        }
+        return count;
+    }
+
+    private void confirmIfBillablePair(WebSocketSession session) {
+        try {
+            WebSocketSession peer = state.getPairs().get(session.getId());
+            if (peer == null) return;
+
+            String myRole = state.getRoles().get(session.getId());
+            String peerRole = state.getRoles().get(peer.getId());
+            if (myRole == null || peerRole == null) return;
+
+            Long myUserId = state.getSessionUserIds().get(session.getId());
+            Long peerUserId = state.getSessionUserIds().get(peer.getId());
+            if (myUserId == null || peerUserId == null) return;
+
+            Long clientId;
+            Long modelId;
+
+            if ("client".equals(myRole) && "model".equals(peerRole)) {
+                clientId = myUserId;
+                modelId = peerUserId;
+            } else if ("model".equals(myRole) && "client".equals(peerRole)) {
+                clientId = peerUserId;
+                modelId = myUserId;
+            } else {
+                return;
+            }
+
+            User clientUser = userRepository.findById(clientId).orElse(null);
+            if (clientUser == null || !Constants.Roles.CLIENT.equals(clientUser.getRole())) {
+                return;
+            }
+
+            streamService.confirmActiveSession(clientId, modelId);
+
+        } catch (Exception ignore) {}
+    }
+
+    private boolean canMatch(Long userAId, Long userBId) {
+        if (userAId == null || userBId == null) return false;
+        try {
+            return !userBlockService.isBlockedBetween(userAId, userBId);
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    private boolean tryAcquirePairLocks(Long clientId, Long modelId, String owner) {
+        boolean clientLocked = streamLockService.tryLockClient(clientId, owner, streamLockTtl);
+        if (!clientLocked) return false;
+
+        boolean modelLocked = streamLockService.tryLockModel(modelId, owner, streamLockTtl);
+        if (!modelLocked) {
+            streamLockService.unlockClient(clientId, owner);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void releasePairLocks(Long clientId, Long modelId, String owner) {
+        streamLockService.unlockModel(modelId, owner);
+        streamLockService.unlockClient(clientId, owner);
+    }
+
+    private String findSessionIdByUserId(Long userId) {
+        if (userId == null) return null;
+
+        for (Map.Entry<String, Long> e : state.getSessionUserIds().entrySet()) {
+            if (userId.equals(e.getValue())) {
+                return e.getKey();
+            }
+        }
+        return null;
+    }
+
+    public void adminKillPair(Long clientUserId, Long modelUserId, String reason) {
+        String clientSid = findSessionIdByUserId(clientUserId);
+        String modelSid = findSessionIdByUserId(modelUserId);
+
+        WebSocketSession clientSession = clientSid != null ? state.getSessionsById().get(clientSid) : null;
+        WebSocketSession modelSession = modelSid != null ? state.getSessionsById().get(modelSid) : null;
+
+        if (clientSid != null) {
+            state.getPairs().remove(clientSid);
+        }
+        if (modelSid != null) {
+            state.getPairs().remove(modelSid);
+        }
+
+        String safeReason = (reason == null || reason.isBlank()) ? "admin-kill" : reason;
+        String payload = "{\"type\":\"peer-disconnected\",\"reason\":\"" + safeReason + "\"}";
+
+        safeSend(clientSession, payload);
+        safeSend(modelSession, payload);
+    }
+
+    public Map<String, Object> adminRuntimeSnapshot() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("pairs", snapshotPairs());
+        out.put("waitingModels", snapshotQueues(state.getWaitingModelsByBucket(), "model"));
+        out.put("waitingClients", snapshotQueues(state.getWaitingClientsByBucket(), "client"));
+        out.put("sessionUserIds", new LinkedHashMap<>(state.getSessionUserIds()));
+        out.put("roles", new LinkedHashMap<>(state.getRoles()));
+        out.put("pairLockOwnerBySessionId", new LinkedHashMap<>(state.getPairLockOwnerBySessionId()));
+        return out;
+    }
+
+    private List<Map<String, Object>> snapshotPairs() {
+        List<Map<String, Object>> out = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+
+        for (Map.Entry<String, WebSocketSession> e : state.getPairs().entrySet()) {
+            String sidA = e.getKey();
+            WebSocketSession peer = e.getValue();
+            if (sidA == null || peer == null) continue;
+
+            String sidB = peer.getId();
+            if (sidB == null) continue;
+
+            String min = sidA.compareTo(sidB) <= 0 ? sidA : sidB;
+            String max = sidA.compareTo(sidB) <= 0 ? sidB : sidA;
+            String pairKey = min + "|" + max;
+            if (!seen.add(pairKey)) continue;
+
+            Long uidA = state.getSessionUserIds().get(sidA);
+            Long uidB = state.getSessionUserIds().get(sidB);
+            String roleA = state.getRoles().get(sidA);
+            String roleB = state.getRoles().get(sidB);
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("sessionIdA", sidA);
+            row.put("sessionIdB", sidB);
+            row.put("userIdA", uidA);
+            row.put("userIdB", uidB);
+            row.put("roleA", roleA);
+            row.put("roleB", roleB);
+
+            if ("client".equals(roleA) && "model".equals(roleB)) {
+                row.put("clientId", uidA);
+                row.put("modelId", uidB);
+            } else if ("model".equals(roleA) && "client".equals(roleB)) {
+                row.put("clientId", uidB);
+                row.put("modelId", uidA);
+            } else {
+                row.put("clientId", null);
+                row.put("modelId", null);
+            }
+
+            Long tA = state.getLastMatchAt().get(sidA);
+            Long tB = state.getLastMatchAt().get(sidB);
+            Long base = null;
+            if (tA != null && tB != null) base = Math.min(tA, tB);
+            else if (tA != null) base = tA;
+            else if (tB != null) base = tB;
+
+            row.put("ageMs", base != null ? (System.currentTimeMillis() - base) : null);
+            out.add(row);
+        }
+
+        return out;
+    }
+
+    private List<Map<String, Object>> snapshotQueues(Map<String, Queue<WebSocketSession>> source, String role) {
+        List<Map<String, Object>> out = new ArrayList<>();
+
+        for (Map.Entry<String, Queue<WebSocketSession>> entry : source.entrySet()) {
+            String bucket = entry.getKey();
+            Queue<WebSocketSession> queue = entry.getValue();
+            if (queue == null) continue;
+
+            int pos = 0;
+            for (WebSocketSession s : queue) {
+                if (s == null) continue;
+
+                Map<String, Object> row = new LinkedHashMap<>();
+                row.put("bucket", bucket);
+                row.put("role", role);
+                row.put("position", pos++);
+                row.put("sessionId", s.getId());
+                row.put("userId", state.getSessionUserIds().get(s.getId()));
+                row.put("mappedRole", state.getRoles().get(s.getId()));
+                row.put("open", s.isOpen());
+                out.add(row);
+            }
+        }
+
+        return out;
+    }
+}
