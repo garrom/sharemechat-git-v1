@@ -7,7 +7,7 @@ import DashboardClient from './pages/dashboard/DashboardClient';
 import DashboardModel from './pages/dashboard/DashboardModel';
 import DashboardUserClient from './pages/dashboard/DashboardUserClient';
 import DashboardUserModel from './pages/dashboard/DashboardUserModel';
-import DashboardAdmin from './pages/dashboard/DashboardAdmin';
+import DashboardAdmin from './pages/admin/DashboardAdmin';
 import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
 import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
