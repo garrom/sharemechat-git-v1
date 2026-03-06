@@ -18,7 +18,6 @@ import {
 const DEFAULT_FILTERS = {
   q: '',
   streamType: 'ALL',
-  status: 'ALL',
   minDurationSec: '',
   limit: 200,
 };
@@ -106,7 +105,6 @@ const AdminActiveStreamsPanel = () => {
     const params = new URLSearchParams();
     if (nextFilters.q && nextFilters.q.trim()) params.set('q', nextFilters.q.trim());
     if (nextFilters.streamType && nextFilters.streamType !== 'ALL') params.set('streamType', nextFilters.streamType);
-    if (nextFilters.status && nextFilters.status !== 'ALL') params.set('status', nextFilters.status);
     if (nextFilters.minDurationSec !== '' && nextFilters.minDurationSec != null) params.set('minDurationSec', String(nextFilters.minDurationSec));
     if (nextFilters.limit) params.set('limit', String(nextFilters.limit));
     return params.toString();
@@ -218,15 +216,6 @@ const AdminActiveStreamsPanel = () => {
             <option value="CALLING">CALLING</option>
             <option value="RANDOM">RANDOM</option>
             <option value="UNKNOWN">UNKNOWN</option>
-          </StyledSelect>
-        </FieldBlock>
-
-        <FieldBlock>
-          <label>Status</label>
-          <StyledSelect value={filters.status} onChange={(e) => setFilters((prev) => ({ ...prev, status: e.target.value }))}>
-            <option value="ALL">ALL</option>
-            <option value="active">active</option>
-            <option value="connecting">connecting</option>
           </StyledSelect>
         </FieldBlock>
 

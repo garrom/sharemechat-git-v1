@@ -103,6 +103,7 @@ const DashboardModel = () => {
   const [callRemoteStream, setCallRemoteStream] = useState(null);
   const [callError, setCallError] = useState('');
   const [callRole, setCallRole] = useState(null); // 'caller' | 'callee'
+  const [, setCallStreamRecordId] = useState(null);
   const [callPeerAvatar, setCallPeerAvatar] = useState('');
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [mobileFavMode, setMobileFavMode] = useState('list');
@@ -130,6 +131,7 @@ const DashboardModel = () => {
   const callRingTimeoutRef = useRef(null);
   const callRoleRef = useRef(null);
   const callPeerIdRef = useRef(null);
+  const callStreamRecordIdRef = useRef(null);
   const callTargetLockedRef = useRef(false);
   const remoteVideoWrapRef = useRef(null);
   const callRemoteWrapRef  = useRef(null);
@@ -951,6 +953,14 @@ const DashboardModel = () => {
           clearTimeout(callRingTimeoutRef.current);
           callRingTimeoutRef.current = null;
         }
+
+        const acceptedStreamRecordId = Number(data?.streamRecordId);
+        if (!Number.isFinite(acceptedStreamRecordId) || acceptedStreamRecordId <= 0) {
+          cleanupCall('ended');
+          return;
+        }
+        setCallStreamRecordId(acceptedStreamRecordId);
+        callStreamRecordIdRef.current = acceptedStreamRecordId;
 
         const peer = Number(callPeerIdRef.current);
         if (Number.isFinite(peer) && peer > 0) {
@@ -2152,6 +2162,8 @@ const DashboardModel = () => {
     setCallStatus('idle');
     setCallRole(null);
     callRoleRef.current = null;
+    setCallStreamRecordId(null);
+    callStreamRecordIdRef.current = null;
     setCallError('');
 
     setCallClientSaldo(null);
