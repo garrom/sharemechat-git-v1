@@ -41,6 +41,8 @@ public class Constants {
     public static class OperationTypes {
         public static final String STREAM_CHARGE = "STREAM_CHARGE";
         public static final String STREAM_EARNING = "STREAM_EARNING";
+        public static final String MANUAL_REFUND = "MANUAL_REFUND";
+        public static final String MANUAL_REFUND_EXPENSE = "MANUAL_REFUND_EXPENSE";
 
         private OperationTypes() {}
     }
@@ -99,4 +101,6 @@ public class Constants {
 
         private ModerationReportTypes() {}
     }
+
+
 }

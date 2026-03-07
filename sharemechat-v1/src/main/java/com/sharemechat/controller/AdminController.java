@@ -1,10 +1,7 @@
 package com.sharemechat.controller;
 
 import com.sharemechat.constants.Constants;
-import com.sharemechat.dto.ModelChecklistUpdateDTO;
-import com.sharemechat.dto.StreamActiveAdminRowDto;
-import com.sharemechat.dto.StreamAdminDetailDto;
-import com.sharemechat.dto.UserDTO;
+import com.sharemechat.dto.*;
 import com.sharemechat.entity.KycProviderConfig;
 import com.sharemechat.entity.PayoutRequest;
 import com.sharemechat.entity.StreamRecord;
@@ -17,8 +14,6 @@ import com.sharemechat.service.ModerationReportService;
 import com.sharemechat.service.StreamService;
 import com.sharemechat.service.TransactionService;
 import com.sharemechat.service.UserService;
-import com.sharemechat.dto.ModerationReportDTO;
-import com.sharemechat.dto.ModerationReportReviewDTO;
 import com.sharemechat.repository.PayoutRequestRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
@@ -315,5 +311,30 @@ public class AdminController {
         PayoutRequest updated = transactionService.adminReviewPayoutRequest(id, adminId, st, adminNotes);
 
         return ResponseEntity.ok(updated);
+    }
+
+    @PostMapping("/finance/refund/{userId}")
+    public ResponseEntity<Map<String, Object>> manualRefund(
+            @PathVariable Long userId,
+            @RequestBody TransactionRequestDTO request,
+            Authentication auth
+    ) {
+        if (auth == null || auth.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        User admin = userService.findByEmail(auth.getName());
+        Long adminId = admin != null ? admin.getId() : null;
+
+        BigDecimal newBalance = transactionService.manualRefundToClient(userId, adminId, request);
+
+        return ResponseEntity.ok(Map.of(
+                "ok", true,
+                "userId", userId,
+                "operationType", Constants.OperationTypes.MANUAL_REFUND,
+                "amount", request.getAmount(),
+                "newBalance", newBalance,
+                "description", request.getDescription()
+        ));
     }
 }

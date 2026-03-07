@@ -686,6 +686,92 @@ public class TransactionService {
     }
 
     @Transactional
+    public BigDecimal manualRefundToClient(Long clientUserId, Long adminId, TransactionRequestDTO request) {
+        if (clientUserId == null || clientUserId <= 0) {
+            throw new IllegalArgumentException("clientUserId invalido");
+        }
+        if (adminId == null || adminId <= 0) {
+            throw new IllegalArgumentException("adminId invalido");
+        }
+        if (request == null) {
+            throw new IllegalArgumentException("Body requerido");
+        }
+        if (request.getAmount() == null || request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("El monto debe ser mayor a cero");
+        }
+        if (request.getDescription() == null || request.getDescription().trim().isEmpty()) {
+            throw new IllegalArgumentException("La descripcion es obligatoria");
+        }
+
+        BigDecimal refundAmount = request.getAmount().setScale(2, RoundingMode.HALF_UP);
+        if (refundAmount.compareTo(new BigDecimal("1000.00")) > 0) {
+            throw new IllegalArgumentException("Refund demasiado alto");
+        }
+
+        User user = lockUserOrThrow(clientUserId);
+
+        if (!Constants.Roles.CLIENT.equals(user.getRole())) {
+            throw new IllegalArgumentException("El usuario debe ser CLIENT para recibir refund manual");
+        }
+
+        Client client = clientRepository.findByUser(user)
+                .orElseThrow(() -> new IllegalStateException("Cliente no encontrado para userId=" + clientUserId));
+
+        BigDecimal previousBalance = lastBalanceOf(clientUserId);
+
+        BigDecimal saldoCache = client.getSaldoActual() == null ? BigDecimal.ZERO : client.getSaldoActual();
+        if (saldoCache.compareTo(previousBalance) != 0) {
+            throw new IllegalStateException(
+                    "Inconsistencia CLIENT: ultimo balance (" + previousBalance + ") != clients.saldo_actual (" + saldoCache + ")"
+            );
+        }
+
+        String cleanDescription = request.getDescription().trim();
+        String finalDescription = "Manual refund by adminId=" + adminId + " | " + cleanDescription;
+
+        log.info("manualRefundToClient: start adminId={} clientUserId={} amount={} previousBalance={}",
+                adminId, clientUserId, refundAmount, previousBalance);
+
+        Transaction tx = new Transaction();
+        tx.setUser(user);
+        tx.setAmount(refundAmount);
+        tx.setOperationType(Constants.OperationTypes.MANUAL_REFUND);
+        tx.setDescription(finalDescription);
+        Transaction savedTx = transactionRepository.save(tx);
+
+        BigDecimal newBalance = previousBalance.add(refundAmount);
+
+        Balance bal = new Balance();
+        bal.setUserId(clientUserId);
+        bal.setTransactionId(savedTx.getId());
+        bal.setOperationType(Constants.OperationTypes.MANUAL_REFUND);
+        bal.setAmount(refundAmount);
+        bal.setBalance(newBalance);
+        bal.setDescription(finalDescription);
+        balanceRepository.save(bal);
+
+        client.setSaldoActual(newBalance);
+        clientRepository.save(client);
+
+        PlatformTransaction ptx = new PlatformTransaction();
+        ptx.setAmount(refundAmount.negate());
+        ptx.setOperationType(Constants.OperationTypes.MANUAL_REFUND_EXPENSE);
+        ptx.setDescription(finalDescription);
+        PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
+
+        BigDecimal newPlatformBalance = appendPlatformBalance(
+                savedPtx.getId(),
+                refundAmount.negate(),
+                finalDescription
+        );
+
+        log.info("manualRefundToClient: success adminId={} clientUserId={} txId={} platformTxId={} refundAmount={} newBalance={} newPlatformBalance={}",
+                adminId, clientUserId, savedTx.getId(), savedPtx.getId(), refundAmount, newBalance, newPlatformBalance);
+
+        return newBalance;
+    }
+
+    @Transactional
     public Gift processGiftInChat(Long clientId, Long modelId, Long giftId) {
         return processGift(clientId, modelId, giftId, null);
     }
