@@ -20,11 +20,15 @@ public class UserDTO {
     private Boolean unsubscribe;
     private LocalDateTime createdAt;
 
-
-    // Getters y setters
+    private String accountStatus;
+    private LocalDateTime suspendedUntil;
+    private String riskReason;
+    private LocalDateTime riskUpdatedAt;
+    private Long riskUpdatedBy;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
+
     public String getNickname() { return nickname; }
     public void setNickname(String nickname) { this.nickname = nickname; }
 
@@ -64,6 +68,18 @@ public class UserDTO {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
+    public String getAccountStatus() { return accountStatus; }
+    public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }
 
+    public LocalDateTime getSuspendedUntil() { return suspendedUntil; }
+    public void setSuspendedUntil(LocalDateTime suspendedUntil) { this.suspendedUntil = suspendedUntil; }
 
+    public String getRiskReason() { return riskReason; }
+    public void setRiskReason(String riskReason) { this.riskReason = riskReason; }
+
+    public LocalDateTime getRiskUpdatedAt() { return riskUpdatedAt; }
+    public void setRiskUpdatedAt(LocalDateTime riskUpdatedAt) { this.riskUpdatedAt = riskUpdatedAt; }
+
+    public Long getRiskUpdatedBy() { return riskUpdatedBy; }
+    public void setRiskUpdatedBy(Long riskUpdatedBy) { this.riskUpdatedBy = riskUpdatedBy; }
 }

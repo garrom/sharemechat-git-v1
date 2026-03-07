@@ -17,6 +17,8 @@ import {
   TextArea,
 } from '../../styles/AdminStyles';
 
+const FINAL_ACTIONS = new Set(['WARNING', 'SUSPEND', 'BAN']);
+
 const AdminModerationPanel = () => {
   const [modStatus, setModStatus] = useState('ALL');
   const [modReports, setModReports] = useState([]);
@@ -28,6 +30,8 @@ const AdminModerationPanel = () => {
   const [modReviewStatus, setModReviewStatus] = useState('REVIEWING');
   const [modReviewAction, setModReviewAction] = useState('NONE');
   const [modReviewNotes, setModReviewNotes] = useState('');
+
+  const isFinalAction = FINAL_ACTIONS.has(String(modReviewAction || '').toUpperCase());
 
   const loadModerationReports = async () => {
     setModLoading(true);
@@ -53,18 +57,33 @@ const AdminModerationPanel = () => {
       if (!res.ok) throw new Error((await res.text()) || 'Error cargando reporte');
       const r = await res.json();
 
+      const nextAction = String(r?.adminAction || 'NONE').toUpperCase();
+      const nextStatusRaw = String(r?.status || 'REVIEWING').toUpperCase();
+      const nextStatus = FINAL_ACTIONS.has(nextAction) ? 'RESOLVED' : nextStatusRaw;
+
       setModSelectedId(r?.id || null);
-      setModReviewStatus(String(r?.status || 'REVIEWING').toUpperCase());
-      setModReviewAction(String(r?.adminAction || 'NONE').toUpperCase());
+      setModReviewAction(nextAction);
+      setModReviewStatus(nextStatus);
       setModReviewNotes(r?.resolutionNotes || '');
     } catch (e) {
       setModError(e.message || 'Error cargando reporte');
     }
   };
 
+  const handleReviewActionChange = (value) => {
+    const nextAction = String(value || 'NONE').toUpperCase();
+    setModReviewAction(nextAction);
+
+    if (FINAL_ACTIONS.has(nextAction)) {
+      setModReviewStatus('RESOLVED');
+    }
+  };
+
   const saveModerationReview = async () => {
     const id = Number(modSelectedId);
     if (!id) return;
+
+    const finalStatus = isFinalAction ? 'RESOLVED' : modReviewStatus;
 
     setModSaving(true);
     setModError('');
@@ -74,7 +93,7 @@ const AdminModerationPanel = () => {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          status: modReviewStatus,
+          status: finalStatus,
           adminAction: modReviewAction,
           resolutionNotes: modReviewNotes,
         }),
@@ -209,22 +228,29 @@ const AdminModerationPanel = () => {
               <>
                 <PanelRow>
                   <FieldBlock>
-                    <label>Status</label>
-                    <StyledSelect value={modReviewStatus} onChange={(e) => setModReviewStatus(e.target.value)}>
-                      <option value="OPEN">OPEN</option>
-                      <option value="REVIEWING">REVIEWING</option>
-                      <option value="RESOLVED">RESOLVED</option>
-                      <option value="REJECTED">REJECTED</option>
-                    </StyledSelect>
-                  </FieldBlock>
-
-                  <FieldBlock>
                     <label>Admin action</label>
-                    <StyledSelect value={modReviewAction} onChange={(e) => setModReviewAction(e.target.value)}>
+                    <StyledSelect
+                      value={modReviewAction}
+                      onChange={(e) => handleReviewActionChange(e.target.value)}
+                    >
                       <option value="NONE">NONE</option>
                       <option value="WARNING">WARNING</option>
                       <option value="SUSPEND">SUSPEND</option>
                       <option value="BAN">BAN</option>
+                    </StyledSelect>
+                  </FieldBlock>
+
+                  <FieldBlock>
+                    <label>Status</label>
+                    <StyledSelect
+                      value={isFinalAction ? 'RESOLVED' : modReviewStatus}
+                      onChange={(e) => setModReviewStatus(e.target.value)}
+                      disabled={isFinalAction}
+                    >
+                      {!isFinalAction && <option value="OPEN">OPEN</option>}
+                      {!isFinalAction && <option value="REVIEWING">REVIEWING</option>}
+                      <option value="RESOLVED">RESOLVED</option>
+                      {!isFinalAction && <option value="REJECTED">REJECTED</option>}
                     </StyledSelect>
                   </FieldBlock>
                 </PanelRow>

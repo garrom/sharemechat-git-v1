@@ -1,5 +1,6 @@
 package com.sharemechat.security;
 
+import com.sharemechat.constants.Constants;
 import com.sharemechat.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -10,9 +11,11 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import java.util.Collections;
+import java.util.Locale;
 
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
+
     @Autowired
     private UserRepository userRepository;
 
@@ -20,6 +23,22 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         com.sharemechat.entity.User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado: " + email));
+
+        if (Boolean.TRUE.equals(user.getUnsubscribe())) {
+            throw new UsernameNotFoundException("Cuenta no disponible");
+        }
+
+        String accountStatus = user.getAccountStatus();
+        if (accountStatus == null || accountStatus.isBlank()) {
+            accountStatus = Constants.AccountStatuses.ACTIVE;
+        } else {
+            accountStatus = accountStatus.trim().toUpperCase(Locale.ROOT);
+        }
+
+        if (!Constants.AccountStatuses.ACTIVE.equals(accountStatus)) {
+            throw new UsernameNotFoundException("Cuenta suspendida o bloqueada");
+        }
+
         return new User(
                 user.getEmail(),
                 user.getPassword(),

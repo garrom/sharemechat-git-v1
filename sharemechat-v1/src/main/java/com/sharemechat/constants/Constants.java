@@ -19,7 +19,6 @@ public class Constants {
         public static final String FORM_CLIENT = "FORM_CLIENT";
         public static final String FORM_MODEL = "FORM_MODEL";
 
-
         private UserTypes() {}
     }
 
@@ -29,6 +28,14 @@ public class Constants {
         public static final String REJECTED = "REJECTED";
 
         private VerificationStatuses() {}
+    }
+
+    public static class AccountStatuses {
+        public static final String ACTIVE = "ACTIVE";
+        public static final String SUSPENDED = "SUSPENDED";
+        public static final String BANNED = "BANNED";
+
+        private AccountStatuses() {}
     }
 
     public static class OperationTypes {
@@ -64,12 +71,12 @@ public class Constants {
         private KycModes() {}
     }
 
-
     public static class ModerationReportStatuses {
         public static final String OPEN = "OPEN";
         public static final String REVIEWING = "REVIEWING";
         public static final String RESOLVED = "RESOLVED";
         public static final String REJECTED = "REJECTED";
+
         private ModerationReportStatuses() {}
     }
 
@@ -78,6 +85,7 @@ public class Constants {
         public static final String WARNING = "WARNING";
         public static final String SUSPEND = "SUSPEND";
         public static final String BAN = "BAN";
+
         private ModerationAdminActions() {}
     }
 
@@ -88,7 +96,7 @@ public class Constants {
         public static final String FRAUD = "FRAUD";
         public static final String MINOR = "MINOR";
         public static final String OTHER = "OTHER";
+
         private ModerationReportTypes() {}
     }
-
 }

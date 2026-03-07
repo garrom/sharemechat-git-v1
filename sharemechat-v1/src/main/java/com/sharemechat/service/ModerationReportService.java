@@ -1,5 +1,6 @@
 package com.sharemechat.service;
 
+import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.ModerationReportDTO;
 import com.sharemechat.dto.ModerationReportReviewDTO;
 import com.sharemechat.dto.ReportAbuseCreateDTO;
@@ -7,6 +8,7 @@ import com.sharemechat.dto.UserBlockDTO;
 import com.sharemechat.entity.ModerationReport;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModerationReportRepository;
+import com.sharemechat.repository.RefreshTokenRepository;
 import com.sharemechat.repository.UserRepository;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,15 +26,18 @@ public class ModerationReportService {
     private final ModerationReportRepository moderationReportRepository;
     private final UserRepository userRepository;
     private final UserBlockService userBlockService;
+    private final RefreshTokenRepository refreshTokenRepository;
 
     public ModerationReportService(
             ModerationReportRepository moderationReportRepository,
             UserRepository userRepository,
-            UserBlockService userBlockService
+            UserBlockService userBlockService,
+            RefreshTokenRepository refreshTokenRepository
     ) {
         this.moderationReportRepository = moderationReportRepository;
         this.userRepository = userRepository;
         this.userBlockService = userBlockService;
+        this.refreshTokenRepository = refreshTokenRepository;
     }
 
     public User getCurrentUserOrThrow() {
@@ -63,7 +68,6 @@ public class ModerationReportService {
         userRepository.findById(dto.getReportedUserId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuario reportado no existe"));
 
-        // Anti-spam mínimo (sin tocar repositorio): evita 2 reportes al mismo usuario en <2 min
         try {
             List<ModerationReport> mine = moderationReportRepository.findAllByReporterUserIdOrderByCreatedAtDesc(reporterId);
             ModerationReport lastSame = mine.stream()
@@ -85,14 +89,12 @@ public class ModerationReportService {
         String reportType = normalizeReportType(dto.getReportType());
         String description = trimToNull(dto.getDescription(), 1000);
 
-        // Medida anti-XSS mínima: no permitimos < o > en texto libre
         if (description != null && (description.contains("<") || description.contains(">"))) {
             throw new IllegalArgumentException("description contiene caracteres no permitidos");
         }
 
         boolean alsoBlock = dto.getAlsoBlock() == null || dto.getAlsoBlock();
 
-        // streamRecordId: si viene basura, lo nulificamos
         Long streamId = dto.getStreamRecordId();
         if (streamId != null && streamId <= 0) streamId = null;
 
@@ -102,10 +104,9 @@ public class ModerationReportService {
         row.setStreamRecordId(streamId);
         row.setReportType(reportType);
         row.setDescription(description);
-        row.setStatus("OPEN");
-        row.setAdminAction("NONE");
+        row.setStatus(Constants.ModerationReportStatuses.OPEN);
+        row.setAdminAction(Constants.ModerationAdminActions.NONE);
 
-        // opcional: auto-block del reportado
         if (alsoBlock) {
             try {
                 UserBlockDTO blockDto = new UserBlockDTO();
@@ -113,19 +114,24 @@ public class ModerationReportService {
                 userBlockService.blockUser(dto.getReportedUserId(), blockDto);
                 row.setAutoBlocked(true);
             } catch (Exception ignore) {
-                // No rompemos el reporte por fallo de bloqueo; el reporte es lo prioritario
                 row.setAutoBlocked(false);
             }
         }
 
-        // Política de escalado mínimo PSP: MINOR => suspensión preventiva + REVIEWING
-        if ("MINOR".equals(reportType)) {
+        if (Constants.ModerationReportTypes.MINOR.equals(reportType)) {
             User reported = userRepository.findById(dto.getReportedUserId()).orElse(null);
             if (reported != null) {
-                reported.setIsActive(false);
+                reported.setAccountStatus(Constants.AccountStatuses.SUSPENDED);
+                reported.setSuspendedUntil(null);
+                reported.setRiskReason("SYSTEM: Auto-suspend por reporte tipo MINOR");
+                reported.setRiskUpdatedAt(LocalDateTime.now());
+                reported.setRiskUpdatedBy(null);
                 userRepository.save(reported);
-                row.setAdminAction("SUSPEND");
-                row.setStatus("REVIEWING");
+
+                refreshTokenRepository.deleteByUserId(reported.getId());
+
+                row.setAdminAction(Constants.ModerationAdminActions.SUSPEND);
+                row.setStatus(Constants.ModerationReportStatuses.REVIEWING);
                 row.setResolutionNotes("SYSTEM: Auto-suspend por reporte tipo MINOR (revisión pendiente).");
             }
         }
@@ -166,28 +172,47 @@ public class ModerationReportService {
         ModerationReport row = moderationReportRepository.findById(reportId)
                 .orElseThrow(() -> new IllegalArgumentException("Reporte no encontrado"));
 
-        String newStatus = normalizeReviewStatus(dto.getStatus());
         String adminAction = normalizeAdminAction(dto.getAdminAction());
         String notes = trimToNull(dto.getResolutionNotes(), 2000);
 
-        // Medida anti-XSS mínima: no permitimos < o > en notas internas
         if (notes != null && (notes.contains("<") || notes.contains(">"))) {
             throw new IllegalArgumentException("resolutionNotes contiene caracteres no permitidos");
         }
 
-        // Si BAN/SUSPEND sin notas, dejamos una traza mínima
-        if ((notes == null || notes.isBlank()) && ("SUSPEND".equals(adminAction) || "BAN".equals(adminAction))) {
+        if ((notes == null || notes.isBlank()) &&
+                (Constants.ModerationAdminActions.SUSPEND.equals(adminAction) ||
+                        Constants.ModerationAdminActions.BAN.equals(adminAction) ||
+                        Constants.ModerationAdminActions.WARNING.equals(adminAction))) {
             notes = "AdminAction=" + adminAction;
         }
 
-        // Acción administrativa sobre el usuario reportado
-        if ("SUSPEND".equals(adminAction) || "BAN".equals(adminAction)) {
-            User reported = userRepository.findById(row.getReportedUserId())
-                    .orElseThrow(() -> new IllegalArgumentException("Usuario reportado no existe"));
-            reported.setIsActive(false);
-            userRepository.save(reported);
+        String newStatus;
+        if (Constants.ModerationAdminActions.NONE.equals(adminAction)) {
+            newStatus = normalizeReviewStatus(dto.getStatus());
+        } else {
+            newStatus = Constants.ModerationReportStatuses.RESOLVED;
         }
-        // WARNING / NONE => sin tocar usuario
+
+        User reported = userRepository.findById(row.getReportedUserId())
+                .orElseThrow(() -> new IllegalArgumentException("Usuario reportado no existe"));
+
+        if (Constants.ModerationAdminActions.SUSPEND.equals(adminAction)) {
+            reported.setAccountStatus(Constants.AccountStatuses.SUSPENDED);
+            reported.setSuspendedUntil(null);
+            reported.setRiskReason(notes);
+            reported.setRiskUpdatedAt(LocalDateTime.now());
+            reported.setRiskUpdatedBy(adminUserId);
+            userRepository.save(reported);
+            refreshTokenRepository.deleteByUserId(reported.getId());
+        } else if (Constants.ModerationAdminActions.BAN.equals(adminAction)) {
+            reported.setAccountStatus(Constants.AccountStatuses.BANNED);
+            reported.setSuspendedUntil(null);
+            reported.setRiskReason(notes);
+            reported.setRiskUpdatedAt(LocalDateTime.now());
+            reported.setRiskUpdatedBy(adminUserId);
+            userRepository.save(reported);
+            refreshTokenRepository.deleteByUserId(reported.getId());
+        }
 
         row.setStatus(newStatus);
         row.setAdminAction(adminAction);
@@ -220,7 +245,7 @@ public class ModerationReportService {
     }
 
     private String normalizeAdminAction(String raw) {
-        if (raw == null || raw.isBlank()) return "NONE";
+        if (raw == null || raw.isBlank()) return Constants.ModerationAdminActions.NONE;
         String v = raw.trim().toUpperCase(Locale.ROOT);
 
         return switch (v) {

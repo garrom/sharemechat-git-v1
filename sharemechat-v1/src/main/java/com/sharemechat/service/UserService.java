@@ -23,6 +23,7 @@ import java.time.Period;
 import java.util.Locale;
 import java.util.Optional;
 
+
 @Service
 @Validated
 public class UserService {
@@ -122,6 +123,12 @@ public class UserService {
         user.setUserType(Constants.UserTypes.FORM_CLIENT);
         user.setUnsubscribe(false);
         user.setIsActive(true);
+        user.setAccountStatus(Constants.AccountStatuses.ACTIVE);
+        user.setSuspendedUntil(null);
+        user.setRiskReason(null);
+        user.setRiskUpdatedAt(LocalDateTime.now());
+        user.setRiskUpdatedBy(null);
+
 
         // Consentimientos / auditoría, entidad
         user.setConfirAdult(true);                 // el check se usa para validar
@@ -211,13 +218,16 @@ public class UserService {
         user.setEmail(email);
         user.setNickname(nickname);
         user.setPassword(passwordEncoder.encode(password));
-
         user.setRole(Constants.Roles.USER);
         user.setUserType(Constants.UserTypes.FORM_MODEL);
-
         user.setDateOfBirth(dob);
         user.setUnsubscribe(false);
         user.setIsActive(true);
+        user.setAccountStatus(Constants.AccountStatuses.ACTIVE);
+        user.setSuspendedUntil(null);
+        user.setRiskReason(null);
+        user.setRiskUpdatedAt(LocalDateTime.now());
+        user.setRiskUpdatedBy(null);
         user.setVerificationStatus(Constants.VerificationStatuses.PENDING);
 
 
@@ -245,13 +255,17 @@ public class UserService {
         if (userOpt.isEmpty()) {
             return Optional.empty();
         }
+
         User user = userOpt.get();
+
         if (!passwordEncoder.matches(loginDTO.getPassword(), user.getPassword())) {
             return Optional.empty();
         }
-        if (user.getUnsubscribe()) {
+
+        if (isBlockedForGlobalAccess(user)) {
             return Optional.empty();
         }
+
         String token = jwtUtil.generateAccessToken(user.getEmail(), user.getRole(), user.getId());
         return Optional.of(new LoginResponse(token, mapToDTO(user)));
     }
@@ -366,6 +380,11 @@ public class UserService {
         user.setUnsubscribe(true);
         user.setIsActive(false);
         user.setUpdatedAt(LocalDateTime.now());
+        user.setAccountStatus(Constants.AccountStatuses.ACTIVE);
+        user.setSuspendedUntil(null);
+        user.setRiskReason("UNSUBSCRIBE");
+        user.setRiskUpdatedAt(LocalDateTime.now());
+        user.setRiskUpdatedBy(null);
         userRepository.save(user);
 
         // 4) Insertar registro en la tabla 'unsubscribe' (1 fila por usuario)
@@ -452,6 +471,25 @@ public class UserService {
         userLanguageRepository.save(ul);
     }
 
+    private boolean isBlockedForGlobalAccess(User user) {
+        if (user == null) {
+            return true;
+        }
+
+        if (Boolean.TRUE.equals(user.getUnsubscribe())) {
+            return true;
+        }
+
+        String accountStatus = normalize(user.getAccountStatus());
+        if (accountStatus == null) {
+            accountStatus = Constants.AccountStatuses.ACTIVE;
+        } else {
+            accountStatus = accountStatus.toUpperCase(Locale.ROOT);
+        }
+
+        return !Constants.AccountStatuses.ACTIVE.equals(accountStatus);
+    }
+
 
     public User authenticateAndLoadUser(@Valid UserLoginDTO loginDTO) {
 
@@ -466,8 +504,8 @@ public class UserService {
             throw new InvalidCredentialsException("Credenciales inválidas");
         }
 
-        if (Boolean.TRUE.equals(user.getUnsubscribe())) {
-            throw new InvalidCredentialsException("Credenciales inválidas");
+        if (isBlockedForGlobalAccess(user)) {
+            throw new InvalidCredentialsException("Cuenta suspendida, baneada o no disponible");
         }
 
         return user;
@@ -487,8 +525,15 @@ public class UserService {
         dto.setBiography(user.getBiography());
         dto.setInterests(user.getInterests());
         dto.setVerificationStatus(user.getVerificationStatus());
+        dto.setActive(user.getIsActive());
         dto.setUnsubscribe(user.getUnsubscribe());
         dto.setCreatedAt(user.getCreatedAt());
+
+        dto.setAccountStatus(user.getAccountStatus());
+        dto.setSuspendedUntil(user.getSuspendedUntil());
+        dto.setRiskReason(user.getRiskReason());
+        dto.setRiskUpdatedAt(user.getRiskUpdatedAt());
+        dto.setRiskUpdatedBy(user.getRiskUpdatedBy());
 
         return dto;
     }

@@ -1,6 +1,8 @@
 package com.sharemechat.entity;
 
+import com.sharemechat.constants.Constants;
 import jakarta.persistence.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -76,14 +78,27 @@ public class User {
     @Column(name = "updated_at", nullable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
+    @Column(name = "account_status", nullable = false)
+    private String accountStatus = Constants.AccountStatuses.ACTIVE;
+
+    @Column(name = "suspended_until")
+    private LocalDateTime suspendedUntil;
+
+    @Column(name = "risk_reason", length = 200)
+    private String riskReason;
+
+    @Column(name = "risk_updated_at", nullable = false)
+    private LocalDateTime riskUpdatedAt = LocalDateTime.now();
+
+    @Column(name = "risk_updated_by")
+    private Long riskUpdatedBy;
+
     public User() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
+        this.riskUpdatedAt = LocalDateTime.now();
+        this.accountStatus = Constants.AccountStatuses.ACTIVE;
     }
-
-    // ===== Getters y Setters =====
-
-
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -145,10 +160,24 @@ public class User {
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
 
-    public String getUiLocale() {return uiLocale;}
-    public void setUiLocale(String uiLocale) {this.uiLocale = uiLocale;}
+    public String getUiLocale() { return uiLocale; }
+    public void setUiLocale(String uiLocale) { this.uiLocale = uiLocale; }
 
-    public String getCountryDetected() {return countryDetected;}
-    public void setCountryDetected(String countryDetected) {this.countryDetected = countryDetected;}
+    public String getCountryDetected() { return countryDetected; }
+    public void setCountryDetected(String countryDetected) { this.countryDetected = countryDetected; }
 
+    public String getAccountStatus() { return accountStatus; }
+    public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }
+
+    public LocalDateTime getSuspendedUntil() { return suspendedUntil; }
+    public void setSuspendedUntil(LocalDateTime suspendedUntil) { this.suspendedUntil = suspendedUntil; }
+
+    public String getRiskReason() { return riskReason; }
+    public void setRiskReason(String riskReason) { this.riskReason = riskReason; }
+
+    public LocalDateTime getRiskUpdatedAt() { return riskUpdatedAt; }
+    public void setRiskUpdatedAt(LocalDateTime riskUpdatedAt) { this.riskUpdatedAt = riskUpdatedAt; }
+
+    public Long getRiskUpdatedBy() { return riskUpdatedBy; }
+    public void setRiskUpdatedBy(Long riskUpdatedBy) { this.riskUpdatedBy = riskUpdatedBy; }
 }

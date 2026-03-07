@@ -1,5 +1,6 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.UserLoginDTO;
 import com.sharemechat.entity.RefreshToken;
 import com.sharemechat.entity.User;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
+import java.util.Locale;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -87,19 +89,17 @@ public class AuthController {
     }
 
     // =========================================================
-// REFRESH
-// =========================================================
+    // REFRESH
+    // =========================================================
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(
             @CookieValue(name = "refresh_token", required = false) String refreshToken,
             HttpServletRequest req,
             HttpServletResponse res
     ) {
-        // ✅ IMPORTANTE:
-        // - El rate limit por IP ya lo hace ApiRateLimitFilter para /api/auth/refresh
-        // - Aquí solo aplicamos rate limit por USER una vez que resolvemos userId desde DB
-
         if (refreshToken == null || refreshToken.isBlank()) {
+            deleteCookie(res, "access_token");
+            deleteCookie(res, "refresh_token");
             return ResponseEntity.status(401).build();
         }
 
@@ -111,13 +111,31 @@ public class AuthController {
                 stored.getRevokedAt() != null ||
                 stored.getExpiresAt().isBefore(LocalDateTime.now())) {
 
+            deleteCookie(res, "access_token");
+            deleteCookie(res, "refresh_token");
             return ResponseEntity.status(401).build();
         }
 
-        // ✅ Rate limit por usuario (ya sabemos quién es)
         rateLimitService.checkRefreshUser(stored.getUserId());
 
         User u = userService.findById(stored.getUserId());
+
+        String accountStatus = u.getAccountStatus();
+        if (accountStatus == null || accountStatus.isBlank()) {
+            accountStatus = Constants.AccountStatuses.ACTIVE;
+        } else {
+            accountStatus = accountStatus.trim().toUpperCase(Locale.ROOT);
+        }
+
+        if (u == null ||
+                Boolean.TRUE.equals(u.getUnsubscribe()) ||
+                !Constants.AccountStatuses.ACTIVE.equals(accountStatus)) {
+
+            refreshRepo.deleteByUserId(stored.getUserId());
+            deleteCookie(res, "access_token");
+            deleteCookie(res, "refresh_token");
+            return ResponseEntity.status(401).build();
+        }
 
         String newAccess = jwtUtil.generateAccessToken(
                 u.getEmail(),
@@ -132,7 +150,6 @@ public class AuthController {
         next.setUserId(u.getId());
         next.setTokenHash(newHash);
         next.setExpiresAt(LocalDateTime.now().plusDays(14));
-        // Auditoría: mantenemos IP/UA original del refresh token
         next.setIpAddress(stored.getIpAddress());
         next.setUserAgent(stored.getUserAgent());
 
