@@ -22,6 +22,8 @@ import {
   StyledPane,StyledThumbsGrid, StyledCenterPanel,
   StyledCenterBody,StyledChatScroller, StyledCenterVideochat,
   StyledFavoritesShell,StyledFavoritesColumns,GlobalBlack,
+  StyledIncomingCallOverlay,StyledIncomingCallCard,StyledIncomingCallTitle,
+  StyledIncomingCallText, StyledIncomingCallActions
 } from '../../styles/pages-styles/VideochatStyles';
 import {
   StyledNavbar, StyledBrand,NavText, SaldoText,
@@ -2389,6 +2391,30 @@ const DashboardClient = () => {
           <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
           <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
         </MobileBottomNav>
+      )}
+
+      {callStatus === 'incoming' && activeTab !== 'favoritos' && (
+        <StyledIncomingCallOverlay>
+          <StyledIncomingCallCard>
+            <StyledIncomingCallTitle>
+              Llamada entrante
+            </StyledIncomingCallTitle>
+
+            <StyledIncomingCallText>
+              Te está llamando <strong>{callPeerName || 'Usuario'}</strong>.
+            </StyledIncomingCallText>
+
+            <StyledIncomingCallActions>
+              <ButtonAceptar onClick={handleCallAccept}>
+                Aceptar
+              </ButtonAceptar>
+
+              <ButtonRechazar onClick={handleCallReject} style={{backgroundColor:'#dc3545'}}>
+                Rechazar
+              </ButtonRechazar>
+            </StyledIncomingCallActions>
+          </StyledIncomingCallCard>
+        </StyledIncomingCallOverlay>
       )}
 
     </StyledContainer>

@@ -1052,6 +1052,46 @@ export const StyledCallFooterDesktop = styled.div`
   padding-top: 8px;
 `;
 
+export const StyledIncomingCallOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0,0,0,0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+`;
+
+export const StyledIncomingCallCard = styled.div`
+  width: 100%;
+  max-width: 420px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+`;
+
+export const StyledIncomingCallTitle = styled.div`
+  color: #fff;
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 8px;
+`;
+
+export const StyledIncomingCallText = styled.div`
+  color: #e5e7eb;
+  margin-bottom: 18px;
+`;
+
+export const StyledIncomingCallActions = styled.div`
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+`;
+
 
 /* --------------------------------
  * 11. STATS (NUEVO)

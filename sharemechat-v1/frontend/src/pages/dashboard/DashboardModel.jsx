@@ -22,7 +22,9 @@ import {
   StyledSplit2,StyledPane, StyledThumbsGrid,
   StyledNavTab,StyledCenterPanel, StyledCenterBody,
   StyledChatScroller,StyledCenterVideochat, StyledFavoritesShell,
-  StyledFavoritesColumns,GlobalBlack,
+  StyledFavoritesColumns,GlobalBlack, StyledIncomingCallOverlay,
+  StyledIncomingCallCard, StyledIncomingCallTitle,StyledIncomingCallText,
+  StyledIncomingCallActions
 } from '../../styles/pages-styles/VideochatStyles';
 import {
     StyledNavbar, StyledBrand, NavText, SaldoText, QueueText,
@@ -2484,7 +2486,30 @@ const DashboardModel = () => {
         </MobileBottomNav>
       )}
 
-      {/*FIN CLICK DERECHO */}
+      {callStatus === 'incoming' && activeTab !== 'favoritos' && (
+        <StyledIncomingCallOverlay>
+          <StyledIncomingCallCard>
+            <StyledIncomingCallTitle>
+              Llamada entrante
+            </StyledIncomingCallTitle>
+
+            <StyledIncomingCallText>
+              Te está llamando <strong>{callPeerName || 'Usuario'}</strong>.
+            </StyledIncomingCallText>
+
+            <StyledIncomingCallActions>
+              <ButtonAceptar onClick={handleCallAccept}>
+                Aceptar
+              </ButtonAceptar>
+
+              <ButtonRechazar onClick={handleCallReject} style={{backgroundColor:'#dc3545'}}>
+                Rechazar
+              </ButtonRechazar>
+            </StyledIncomingCallActions>
+          </StyledIncomingCallCard>
+        </StyledIncomingCallOverlay>
+      )}
+
     </StyledContainer>
   );
 
