@@ -2263,253 +2263,361 @@ const DashboardModel = () => {
 
   const displayName = sessionUser?.nickname || sessionUser?.name || sessionUser?.email || 'Modelo';
 
+  const renderNavbarDesktopTabs = () => (
+    <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
+      <StyledNavTab
+        type="button"
+        data-active={activeTab === 'videochat'}
+        aria-pressed={activeTab === 'videochat'}
+        onClick={handleGoVideochat}
+        title="Videochat"
+      >
+        Videochat
+      </StyledNavTab>
+
+      <StyledNavTab
+        type="button"
+        data-active={activeTab === 'favoritos'}
+        aria-pressed={activeTab === 'favoritos'}
+        onClick={handleGoFavorites}
+        title="Favoritos"
+      >
+        Favoritos
+      </StyledNavTab>
+
+      <StyledNavTab
+        type="button"
+        data-active={activeTab === 'blog'}
+        aria-pressed={activeTab === 'blog'}
+        onClick={handleGoBlog}
+        title="Blog"
+      >
+        Blog
+      </StyledNavTab>
+    </div>
+  );
+
+  const renderNavbarDesktopActions = () => (
+    <StyledNavGroup className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
+      {queuePosition !== null && queuePosition >= 0 && (
+        <QueueText className="me-3">Pos.: {queuePosition + 1}</QueueText>
+      )}
+
+      <NavText className="me-3">{displayName}</NavText>
+
+      <SaldoText className="me-3">
+        {loadingSaldoModel ? 'Saldo: ...' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -'}
+      </SaldoText>
+
+      <NavButton type="button" onClick={handleGoStats} title="Estadísticas">
+        <FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}} />
+        <span>Estadísticas</span>
+      </NavButton>
+
+      <NavButton type="button" onClick={handleRequestPayout} title="Retirar">
+        <FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}} />
+        <span>Retirar</span>
+      </NavButton>
+
+      <NavButton type="button" onClick={handleLogout} title="Salir">
+        <FontAwesomeIcon icon={faSignOutAlt} />
+        <span>Salir</span>
+      </NavButton>
+
+      <StyledNavAvatar
+        src={profilePic || '/img/avatarChica.png'}
+        alt="avatar"
+        title="Ver perfil"
+        onClick={handleProfile}
+      />
+    </StyledNavGroup>
+  );
+
+  const renderNavbarMobileMenu = () => (
+    <MobileMenu className={!menuOpen && 'hidden'}>
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+        {queuePosition !== null && queuePosition >= 0 && (
+          <QueueText className="me-3">Pos.: {queuePosition + 1}</QueueText>
+        )}
+
+        <NavText>{displayName}</NavText>
+
+        <SaldoText>
+          {loadingSaldoModel ? 'Saldo: …' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: n/d'}
+        </SaldoText>
+      </div>
+
+      <NavButton
+        onClick={() => {
+          handleProfile();
+          setMenuOpen(false);
+        }}
+      >
+        <FontAwesomeIcon icon={faUser} />
+        <StyledIconWrapper>Perfil</StyledIconWrapper>
+      </NavButton>
+
+      <NavButton
+        onClick={() => {
+          handleGoStats();
+          setMenuOpen(false);
+        }}
+        title="Estadísticas"
+      >
+        <FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}} />
+        <span>Estadísticas</span>
+      </NavButton>
+
+      <NavButton
+        onClick={() => {
+          handleRequestPayout();
+          setMenuOpen(false);
+        }}
+        title="Retirar"
+      >
+        <FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}} />
+        <span>Retirar</span>
+      </NavButton>
+
+      <NavButton
+        onClick={() => {
+          handleLogout();
+          setMenuOpen(false);
+        }}
+        title="Salir"
+      >
+        <FontAwesomeIcon icon={faSignOutAlt} />
+        <StyledIconWrapper>Salir</StyledIconWrapper>
+      </NavButton>
+    </MobileMenu>
+  );
+
+  const renderVideochatTab = () => (
+    <VideoChatRandomModelo
+      cameraActive={cameraActive}
+      handleActivateCamera={handleActivateCamera}
+      localVideoRef={localVideoRef}
+      vcListRef={vcListRef}
+      messages={messages}
+      giftRenderReady={giftRenderReady}
+      getGiftIcon={getGiftIcon}
+      remoteStream={remoteStream}
+      isMobile={isMobile}
+      remoteVideoWrapRef={remoteVideoWrapRef}
+      stopAll={stopAll}
+      searching={searching}
+      handleNext={handleNext}
+      currentClientId={currentClientId}
+      handleAddFavorite={handleAddFavorite}
+      clientAvatar={clientAvatar}
+      clientNickname={clientNickname}
+      remoteVideoRef={remoteVideoRef}
+      toggleFullscreen={toggleFullscreen}
+      handleStartMatch={handleStartMatch}
+      chatInput={chatInput}
+      setChatInput={setChatInput}
+      sendChatMessage={sendChatMessage}
+      handleBlockPeer={handleBlockPeer}
+      handleReportPeer={handleReportPeer}
+      error={error}
+      modelStatsSummary={modelStatsSummary}
+      modelStatsTiers={modelStats?.tiers}
+      clientSaldo={clientSaldo}
+      clientSaldoLoading={clientSaldoLoading}
+      nextDisabled={nexting}
+    />
+  );
+
+  const renderStatsTab = () => (
+    <Estadistica
+      modelStatsDays={modelStatsDays}
+      setModelStatsDays={(v) => {
+        setModelStatsDays(v);
+        statsDetailLoadedRef.current = false;
+      }}
+      onReload={() => {
+        statsDetailLoadedRef.current = false;
+        setActiveTab('stats');
+      }}
+      loading={modelStatsDetailLoading}
+      error={modelStatsDetailError}
+      modelStats={modelStats}
+    />
+  );
+
+  const renderBlogTab = () => (
+    <div style={{flex:1,minWidth:0,minHeight:0}}>
+      <BlogContent mode="private" />
+    </div>
+  );
+
+  const renderFavoritesPanel = () => (
+    <VideoChatFavoritosModelo
+      isMobile={isMobile}
+      allowChat={allowChat}
+      isPendingPanel={isPendingPanel}
+      isSentPanel={isSentPanel}
+      contactMode={contactMode}
+      openChatWith={openChatWith}
+      centerChatPeerName={centerChatPeerName}
+      callPeerName={callPeerName}
+      callPeerId={callPeerId}
+      callPeerAvatar={callPeerAvatar}
+      callError={callError}
+      callStatus={callStatus}
+      callCameraActive={callCameraActive}
+      centerMessages={centerMessages}
+      centerInput={centerInput}
+      callRemoteWrapRef={callRemoteWrapRef}
+      callRemoteVideoRef={callRemoteVideoRef}
+      callLocalVideoRef={callLocalVideoRef}
+      callListRef={callListRef}
+      modelCenterListRef={modelCenterListRef}
+      setContactMode={setContactMode}
+      enterCallMode={enterCallMode}
+      sendCenterMessage={sendCenterMessage}
+      setCenterInput={setCenterInput}
+      acceptInvitation={acceptInvitation}
+      rejectInvitation={rejectInvitation}
+      handleCallActivateCamera={handleCallActivateCamera}
+      handleCallInvite={handleCallInvite}
+      handleCallEnd={handleCallEnd}
+      toggleFullscreen={toggleFullscreen}
+      user={sessionUser}
+      gifts={gifts}
+      giftRenderReady={giftRenderReady}
+      handleOpenChatFromFavorites={handleOpenChatFromFavorites}
+      favReload={favReload}
+      selectedContactId={selectedContactId}
+      setTargetPeerId={setTargetPeerId}
+      setTargetPeerName={setTargetPeerName}
+      setSelectedFav={setSelectedFav}
+      handleCallAccept={handleCallAccept}
+      handleCallReject={handleCallReject}
+      callClientSaldo={callClientSaldo}
+      callClientSaldoLoading={callClientSaldoLoading}
+    />
+  );
+
+  const renderFavoritesSidebar = () => {
+    if (isMobile || showFavoritesFullCall) return null;
+
+    return (
+      <StyledLeftColumn data-rail>
+        {callStatus === 'idle' ? (
+          <FavoritesModelList
+            onSelect={handleOpenChatFromFavorites}
+            reloadTrigger={favReload}
+            selectedId={selectedContactId}
+          />
+        ) : (
+          <div style={{padding:8,color:'#adb5bd'}}>
+            En llamada: la lista se bloquea hasta colgar.
+          </div>
+        )}
+      </StyledLeftColumn>
+    );
+  };
+
+  const renderFavoritesCenter = () => (
+    <StyledCenter data-mode={contactMode === 'call' ? 'call' : undefined}>
+      {activeTab === 'favoritos' && renderFavoritesPanel()}
+    </StyledCenter>
+  );
+
+  const renderFavoritesRight = () => {
+    if (showFavoritesFullCall) return null;
+    return <StyledRightColumn />;
+  };
+
+  const renderFavoritesTab = () => (
+    <>
+      {renderFavoritesSidebar()}
+      {renderFavoritesCenter()}
+      {renderFavoritesRight()}
+    </>
+  );
+
+  const renderMainContent = () => {
+    if (activeTab === 'videochat') return renderVideochatTab();
+    if (activeTab === 'stats') return renderStatsTab();
+    if (activeTab === 'blog') return renderBlogTab();
+    return renderFavoritesTab();
+  };
+
+  const renderIncomingCallOverlay = () => {
+    if (!(callStatus === 'incoming' && activeTab !== 'favoritos')) return null;
+
+    return (
+      <StyledIncomingCallOverlay>
+        <StyledIncomingCallCard>
+          <StyledIncomingCallTitle>
+            Llamada entrante
+          </StyledIncomingCallTitle>
+
+          <StyledIncomingCallText>
+            Te está llamando <strong>{callPeerName || 'Usuario'}</strong>.
+          </StyledIncomingCallText>
+
+          <StyledIncomingCallActions>
+            <ButtonAceptar onClick={handleCallAccept}>
+              Aceptar
+            </ButtonAceptar>
+
+            <ButtonRechazar onClick={handleCallReject} style={{backgroundColor:'#dc3545'}}>
+              Rechazar
+            </ButtonRechazar>
+          </StyledIncomingCallActions>
+        </StyledIncomingCallCard>
+      </StyledIncomingCallOverlay>
+    );
+  };
+
+
   return (
     <StyledContainer>
       <GlobalBlack />
+
       {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar style={{padding:'0 24px'}}>
         <div style={{display:'flex',alignItems:'center'}}>
           <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick} />
-          <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-            <StyledNavTab type="button" data-active={activeTab === 'videochat'} aria-pressed={activeTab === 'videochat'} onClick={handleGoVideochat} title="Videochat">
-              Videochat
-            </StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab === 'favoritos'} aria-pressed={activeTab === 'favoritos'} onClick={handleGoFavorites} title="Favoritos">
-              Favoritos
-            </StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab === 'blog'} aria-pressed={activeTab === 'blog'} onClick={handleGoBlog} title="Blog">
-              Blog
-            </StyledNavTab>
-          </div>
+          {renderNavbarDesktopTabs()}
         </div>
 
-        <StyledNavGroup className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
-
-          {queuePosition !== null && queuePosition >= 0 && (
-            <QueueText className="me-3">Pos.: {queuePosition + 1}</QueueText>
-          )}
-          <NavText className="me-3">{displayName}</NavText>
-          <SaldoText className="me-3">
-            {loadingSaldoModel ? 'Saldo: ...' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -'}
-          </SaldoText>
-          <NavButton type="button" onClick={handleGoStats} title="Estadísticas">
-            <FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}} />
-            <span>Estadísticas</span>
-          </NavButton>
-
-          <NavButton type="button" onClick={handleRequestPayout} title="Retirar">
-            <FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}} />
-            <span>Retirar</span>
-          </NavButton>
-
-          <NavButton type="button" onClick={handleLogout} title="Salir">
-            <FontAwesomeIcon icon={faSignOutAlt} />
-            <span>Salir</span>
-          </NavButton>
-
-          <StyledNavAvatar src={profilePic || '/img/avatarChica.png'} alt="avatar" title="Ver perfil" onClick={handleProfile} />
-        </StyledNavGroup>
+        {renderNavbarDesktopActions()}
 
         <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">
           <FontAwesomeIcon icon={faBars} />
         </HamburgerButton>
 
-        <MobileMenu className={!menuOpen && 'hidden'}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-            {queuePosition !== null && queuePosition >= 0 && (
-              <QueueText className="me-3">Pos.: {queuePosition + 1}</QueueText>
-            )}
-            <NavText>{displayName}</NavText>
-            <SaldoText>
-              {loadingSaldoModel ? 'Saldo: …' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: n/d'}
-            </SaldoText>
-          </div>
-
-          <NavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
-            <FontAwesomeIcon icon={faUser} />
-            <StyledIconWrapper>Perfil</StyledIconWrapper>
-          </NavButton>
-
-          <NavButton onClick={() => { handleGoStats(); setMenuOpen(false); }} title="Estadísticas">
-            <FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}} />
-            <span>Estadísticas</span>
-          </NavButton>
-
-          <NavButton onClick={() => { handleRequestPayout(); setMenuOpen(false); }} title="Retirar">
-            <FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}} />
-            <span>Retirar</span>
-          </NavButton>
-
-          <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }} title="Salir">
-            <FontAwesomeIcon icon={faSignOutAlt} />
-            <StyledIconWrapper>Salir</StyledIconWrapper>
-          </NavButton>
-        </MobileMenu>
+        {renderNavbarMobileMenu()}
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent data-tab={activeTab}>
-        {activeTab === 'videochat' ? (
-          <VideoChatRandomModelo
-            cameraActive={cameraActive}
-            handleActivateCamera={handleActivateCamera}
-            localVideoRef={localVideoRef}
-            vcListRef={vcListRef}
-            messages={messages}
-            giftRenderReady={giftRenderReady}
-            getGiftIcon={getGiftIcon}
-            remoteStream={remoteStream}
-            isMobile={isMobile}
-            remoteVideoWrapRef={remoteVideoWrapRef}
-            stopAll={stopAll}
-            searching={searching}
-            handleNext={handleNext}
-            currentClientId={currentClientId}
-            handleAddFavorite={handleAddFavorite}
-            clientAvatar={clientAvatar}
-            clientNickname={clientNickname}
-            remoteVideoRef={remoteVideoRef}
-            toggleFullscreen={toggleFullscreen}
-            handleStartMatch={handleStartMatch}
-            chatInput={chatInput}
-            setChatInput={setChatInput}
-            sendChatMessage={sendChatMessage}
-            handleBlockPeer={handleBlockPeer}
-            handleReportPeer={handleReportPeer}
-            error={error}
-            modelStatsSummary={modelStatsSummary}
-            modelStatsTiers={modelStats?.tiers}
-            clientSaldo={clientSaldo}
-            clientSaldoLoading={clientSaldoLoading}
-            nextDisabled={nexting}
-          />
-        ) : activeTab === 'stats' ? (
-          <Estadistica
-            modelStatsDays={modelStatsDays}
-            setModelStatsDays={(v) => {
-              setModelStatsDays(v);
-              statsDetailLoadedRef.current = false;
-            }}
-            onReload={() => {
-              statsDetailLoadedRef.current = false;
-              setActiveTab('stats');
-            }}
-            loading={modelStatsDetailLoading}
-            error={modelStatsDetailError}
-            modelStats={modelStats}
-          />
-        ) : activeTab === 'blog' ? (
-          /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
-          <div style={{flex:1,minWidth:0,minHeight:0}}>
-            <BlogContent mode="private" />
-          </div>
-        ) : (
-          /* === SOLO FAVORITOS USA EL LAYOUT 3 COLUMNAS === */
-          <>
-            {!isMobile && !showFavoritesFullCall && (
-              <StyledLeftColumn data-rail>
-                {callStatus === 'idle' ? (
-                  <FavoritesModelList
-                    onSelect={handleOpenChatFromFavorites}
-                    reloadTrigger={favReload}
-                    selectedId={selectedContactId}
-                  />
-                ) : (
-                  <div style={{padding:8,color:'#adb5bd'}}>En llamada: la lista se bloquea hasta colgar.</div>
-                )}
-              </StyledLeftColumn>
-            )}
-
-            <StyledCenter data-mode={contactMode === 'call' ? 'call' : undefined}>
-              {activeTab === 'favoritos' && (
-                <VideoChatFavoritosModelo
-                  isMobile={isMobile}
-                  allowChat={allowChat}
-                  isPendingPanel={isPendingPanel}
-                  isSentPanel={isSentPanel}
-                  contactMode={contactMode}
-                  openChatWith={openChatWith}
-                  centerChatPeerName={centerChatPeerName}
-                  callPeerName={callPeerName}
-                  callPeerId={callPeerId}
-                  callPeerAvatar={callPeerAvatar}
-                  callError={callError}
-                  callStatus={callStatus}
-                  callCameraActive={callCameraActive}
-                  centerMessages={centerMessages}
-                  centerInput={centerInput}
-                  callRemoteWrapRef={callRemoteWrapRef}
-                  callRemoteVideoRef={callRemoteVideoRef}
-                  callLocalVideoRef={callLocalVideoRef}
-                  callListRef={callListRef}
-                  modelCenterListRef={modelCenterListRef}
-                  setContactMode={setContactMode}
-                  enterCallMode={enterCallMode}
-                  sendCenterMessage={sendCenterMessage}
-                  setCenterInput={setCenterInput}
-                  acceptInvitation={acceptInvitation}
-                  rejectInvitation={rejectInvitation}
-                  handleCallActivateCamera={handleCallActivateCamera}
-                  handleCallInvite={handleCallInvite}
-                  handleCallEnd={handleCallEnd}
-                  toggleFullscreen={toggleFullscreen}
-                  user={sessionUser}
-                  gifts={gifts}
-                  giftRenderReady={giftRenderReady}
-                  handleOpenChatFromFavorites={handleOpenChatFromFavorites}
-                  favReload={favReload}
-                  selectedContactId={selectedContactId}
-                  setTargetPeerId={setTargetPeerId}
-                  setTargetPeerName={setTargetPeerName}
-                  setSelectedFav={setSelectedFav}
-                  handleCallAccept={handleCallAccept}
-                  handleCallReject={handleCallReject}
-                  callClientSaldo={callClientSaldo}
-                  callClientSaldoLoading={callClientSaldoLoading}
-
-                />
-              )}
-            </StyledCenter>
-
-            {!showFavoritesFullCall && <StyledRightColumn />}
-          </>
-        )}
+        {renderMainContent()}
       </StyledMainContent>
-      {/* ======FIN MAIN ======== */}
+      {/* ====== FIN MAIN ======== */}
 
       {!inCall && (
         <MobileBottomNav>
-          <BottomNavButton active={activeTab === 'videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
-          <BottomNavButton active={activeTab === 'favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
-          <BottomNavButton active={activeTab === 'blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
+          <BottomNavButton active={activeTab === 'videochat'} onClick={handleGoVideochat}>
+            <span>Videochat</span>
+          </BottomNavButton>
+
+          <BottomNavButton active={activeTab === 'favoritos'} onClick={handleGoFavorites}>
+            <span>Favoritos</span>
+          </BottomNavButton>
+
+          <BottomNavButton active={activeTab === 'blog'} onClick={handleGoBlog}>
+            <span>Blog</span>
+          </BottomNavButton>
         </MobileBottomNav>
       )}
 
-      {callStatus === 'incoming' && activeTab !== 'favoritos' && (
-        <StyledIncomingCallOverlay>
-          <StyledIncomingCallCard>
-            <StyledIncomingCallTitle>
-              Llamada entrante
-            </StyledIncomingCallTitle>
-
-            <StyledIncomingCallText>
-              Te está llamando <strong>{callPeerName || 'Usuario'}</strong>.
-            </StyledIncomingCallText>
-
-            <StyledIncomingCallActions>
-              <ButtonAceptar onClick={handleCallAccept}>
-                Aceptar
-              </ButtonAceptar>
-
-              <ButtonRechazar onClick={handleCallReject} style={{backgroundColor:'#dc3545'}}>
-                Rechazar
-              </ButtonRechazar>
-            </StyledIncomingCallActions>
-          </StyledIncomingCallCard>
-        </StyledIncomingCallOverlay>
-      )}
-
+      {renderIncomingCallOverlay()}
     </StyledContainer>
   );
 
