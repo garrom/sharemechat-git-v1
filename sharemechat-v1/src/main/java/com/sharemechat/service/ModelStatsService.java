@@ -19,16 +19,20 @@ public class ModelStatsService {
 
     private final ModelTierDailySnapshotRepository snapshotRepository;
     private final ModelEarningTierRepository tierRepository;
+    private final ModelTierService modelTierService;
 
     public ModelStatsService(ModelTierDailySnapshotRepository snapshotRepository,
-                             ModelEarningTierRepository tierRepository) {
+                             ModelEarningTierRepository tierRepository,
+                             ModelTierService modelTierService) {
         this.snapshotRepository = snapshotRepository;
         this.tierRepository = tierRepository;
+        this.modelTierService = modelTierService;
     }
 
     @Transactional(readOnly = true)
     public FinanceDTOs.ModelTierSnapshotSummary getMySummary(Long modelId) {
         LocalDate day = LocalDate.now().minusDays(1); // AYER
+        modelTierService.ensureSnapshotExists(modelId, day);
         ModelTierDailySnapshot snap = snapshotRepository.findByModelIdAndSnapshotDate(modelId, day).orElse(null);
 
         // Si no hay snapshot (job aún no lo ha creado), devolvemos resumen vacío pero válido
@@ -42,13 +46,16 @@ public class ModelStatsService {
     @Transactional(readOnly = true)
     public FinanceDTOs.ModelTierStats getMyStats(Long modelId, int historyDays) {
         LocalDate day = LocalDate.now().minusDays(1);
+        int limit = Math.max(1, Math.min(historyDays, 120));
+        LocalDate fromDay = day.minusDays(limit - 1L);
+
+        modelTierService.ensureSnapshotsInRange(modelId, fromDay, day);
 
         ModelTierDailySnapshot snap = snapshotRepository.findByModelIdAndSnapshotDate(modelId, day).orElse(null);
 
         FinanceDTOs.ModelTierStats out = new FinanceDTOs.ModelTierStats();
         out.current = (snap != null) ? toSummary(snap) : emptySummary(day);
 
-        int limit = Math.max(1, Math.min(historyDays, 120));
         org.springframework.data.domain.Page<ModelTierDailySnapshot> page =
                 snapshotRepository.findByModelIdOrderBySnapshotDateDesc(
                         modelId,

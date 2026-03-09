@@ -1,5 +1,5 @@
 // DashboardModel.jsx
-import React, { useState, useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
@@ -156,7 +156,6 @@ const DashboardModel = () => {
   const peerIdRef = useRef(null);
   const nextGuardRef = useRef(false);
   const statsSummaryLoadedRef = useRef(false);
-  const statsDetailLoadedRef = useRef(false);
   const activePeerRef = useRef({ id: null, name: '' });
   const [activeStreamRecordId, setActiveStreamRecordId] = useState(null);
   const activeStreamRecordIdRef = useRef(null);
@@ -784,37 +783,28 @@ const DashboardModel = () => {
   }, [activeTab, modelStats?.tiers]);
 
 
-  // 3) Detail para pestaña Estadística: lógica original
+  const fetchModelStats = useCallback(async (days) => {
+    const safeDays = Number.isFinite(Number(days)) ? Number(days) : 30;
+    try {
+      setModelStatsDetailLoading(true);
+      setModelStatsDetailError('');
+      const data = await apiFetch(`/models/stats?days=${encodeURIComponent(safeDays)}`);
+      setModelStats(data || null);
+    } catch (e) {
+      console.warn('[MODEL][stats] error:', e?.message);
+      setModelStatsDetailError(e?.message || 'Error cargando estadísticas');
+      setModelStats(null);
+    } finally {
+      setModelStatsDetailLoading(false);
+    }
+  }, []);
+
+  // 3) Detail para pestaña Estadística: cargar al entrar y al cambiar rango
   useEffect(() => {
     if (activeTab !== 'stats') return;
-    if (statsDetailLoadedRef.current) return;
-
-    const currentDays = Number(modelStats?.current?.days);
-    if (Number(modelStatsDays) === 30 && currentDays === 30) {
-      statsDetailLoadedRef.current = true;
-      return;
-    }
     if (!sessionUser?.id) return;
-
-    statsDetailLoadedRef.current = true;
-
-    const loadStats = async () => {
-      try {
-        setModelStatsDetailLoading(true);
-        setModelStatsDetailError('');
-        const data = await apiFetch(`/models/stats?days=${encodeURIComponent(modelStatsDays)}`);
-        setModelStats(data || null);
-      } catch (e) {
-        console.warn('[MODEL][stats] error:', e?.message);
-        setModelStatsDetailError(e?.message || 'Error cargando estadísticas');
-        setModelStats(null);
-      } finally {
-        setModelStatsDetailLoading(false);
-      }
-    };
-
-    loadStats();
-  }, [activeTab, modelStatsDays]);
+    fetchModelStats(modelStatsDays);
+  }, [activeTab, modelStatsDays, sessionUser?.id, fetchModelStats]);
 
 
   const clearMsgTimers = () => {
@@ -2389,14 +2379,8 @@ const DashboardModel = () => {
         ) : activeTab === 'stats' ? (
           <Estadistica
             modelStatsDays={modelStatsDays}
-            setModelStatsDays={(v) => {
-              setModelStatsDays(v);
-              statsDetailLoadedRef.current = false;
-            }}
-            onReload={() => {
-              statsDetailLoadedRef.current = false;
-              setActiveTab('stats');
-            }}
+            setModelStatsDays={setModelStatsDays}
+            onReload={() => fetchModelStats(modelStatsDays)}
             loading={modelStatsDetailLoading}
             error={modelStatsDetailError}
             modelStats={modelStats}

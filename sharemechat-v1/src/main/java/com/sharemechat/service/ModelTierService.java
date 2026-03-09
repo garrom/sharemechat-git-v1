@@ -7,7 +7,10 @@ import com.sharemechat.repository.ModelEarningTierRepository;
 import com.sharemechat.repository.ModelTierDailySnapshotRepository;
 import com.sharemechat.repository.StreamRecordRepository;
 import com.sharemechat.repository.UserTrialStreamRepository;
+import org.springframework.context.annotation.Lazy;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Duration;
@@ -22,6 +25,7 @@ public class ModelTierService {
     private final StreamRecordRepository streamRecordRepository;
     private final UserTrialStreamRepository userTrialStreamRepository;
     private final ModelTierDailySnapshotRepository snapshotRepository;
+    private final ModelTierService self;
 
     private static final int WINDOW_DAYS = 30;
 
@@ -33,11 +37,35 @@ public class ModelTierService {
     public ModelTierService(ModelEarningTierRepository tierRepository,
                             StreamRecordRepository streamRecordRepository,
                             UserTrialStreamRepository userTrialStreamRepository,
-                            ModelTierDailySnapshotRepository snapshotRepository) {
+                            ModelTierDailySnapshotRepository snapshotRepository,
+                            @Lazy ModelTierService self) {
         this.tierRepository = tierRepository;
         this.streamRecordRepository = streamRecordRepository;
         this.userTrialStreamRepository = userTrialStreamRepository;
         this.snapshotRepository = snapshotRepository;
+        this.self = self;
+    }
+
+    public void ensureSnapshotsInRange(Long modelId, LocalDate fromDay, LocalDate toDay) {
+        if (modelId == null || fromDay == null || toDay == null || fromDay.isAfter(toDay)) return;
+
+        LocalDate cursor = fromDay;
+        while (!cursor.isAfter(toDay)) {
+            self.ensureSnapshotExists(modelId, cursor);
+            cursor = cursor.plusDays(1);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public ModelTierDailySnapshot ensureSnapshotExists(Long modelId, LocalDate snapshotDate) {
+        ModelTierDailySnapshot existing = snapshotRepository.findByModelIdAndSnapshotDate(modelId, snapshotDate).orElse(null);
+        if (existing != null) return existing;
+
+        try {
+            return computeAndUpsertSnapshot(modelId, snapshotDate);
+        } catch (DataIntegrityViolationException ex) {
+            return snapshotRepository.findByModelIdAndSnapshotDate(modelId, snapshotDate).orElse(null);
+        }
     }
 
     /**
