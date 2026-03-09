@@ -72,6 +72,7 @@ const DashboardModel = () => {
   const [status, setStatus] = useState('');
   const [queuePosition, setQueuePosition] = useState(null);
   const [currentClientId, setCurrentClientId] = useState(null);
+  const [currentClientRole, setCurrentClientRole] = useState(null);
   const [favReload, setFavReload] = useState(0);
   const [selectedFav, setSelectedFav] = useState(null);
   const [gifts, setGifts] = useState([]);
@@ -291,8 +292,8 @@ const DashboardModel = () => {
 
         setRemoteStream(null);
         setMessages([]);
-        setError('Buscando nuevo cliente...');
-        setStatus('');
+        setError('');
+        setStatus('Buscando nuevo cliente...');
         setSearching(true);
 
         try {
@@ -381,14 +382,22 @@ const DashboardModel = () => {
 
 
   useEffect(() => {
-    if (!sessionUser?.id || !currentClientId) return;
-
+    if (!sessionUser?.id || !currentClientId) {
+      setClientNickname('Cliente');
+      setCurrentClientRole(null);
+      return;
+    }
     (async () => {
       try {
         const d = await apiFetch(`/users/${currentClientId}`);
         const nn = d?.nickname || d?.name || d?.email || 'Cliente';
+        const role = String(d?.role || '').toUpperCase() || null;
         setClientNickname(nn);
-      } catch {/* noop */}
+        setCurrentClientRole(role);
+      } catch {
+        setClientNickname('Cliente');
+        setCurrentClientRole(null);
+      }
     })();
   }, [sessionUser?.id, currentClientId]);
 
@@ -1233,16 +1242,6 @@ const DashboardModel = () => {
       return;
     }
 
-    /**
-     * MUY IMPORTANTE (industrial):
-     * - NO destruimos peer
-     * - NO paramos tracks
-     * - NO limpiamos estado aquí
-     *
-     * El cierre REAL vendrá por:
-     *  - peer-disconnected (aceptado)
-     *  - o se ignorará (wait / rate-limit)
-     */
   };
 
 
@@ -1370,7 +1369,6 @@ const DashboardModel = () => {
   const handleRequestPayout = async () => {
 
     if (!sessionUser?.id) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
       await alert({
         title: 'Sesión',
         message: 'Sesión expirada. Inicia sesión de nuevo.',
@@ -1421,7 +1419,6 @@ const DashboardModel = () => {
       // 3) Refrescar saldo de la modelo
       const me = await apiFetch('/models/me');
       setSaldoModel(me?.saldoActual ?? null);
-      setError('');
 
     } catch (e) {
       console.error(e);
@@ -1587,11 +1584,18 @@ const DashboardModel = () => {
     }
 
     if (!sessionUser?.id) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
       await alert({
         variant: 'warning',
         title: 'Sesión',
         message: 'Sesión expirada. Inicia sesión de nuevo.',
+      });
+      return;
+    }
+    if (String(currentClientRole || '').toUpperCase() !== 'CLIENT') {
+      await alert({
+        variant: 'info',
+        title: 'Favoritos no disponibles',
+        message: 'Los usuarios trial todavía no pueden añadirse a favoritos.',
       });
       return;
     }

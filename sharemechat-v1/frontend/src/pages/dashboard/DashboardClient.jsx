@@ -1117,10 +1117,6 @@ const DashboardClient = () => {
       return;
     }
 
-    // MUY IMPORTANTE (industrial):
-    // - No destruimos peerRef ni paramos tracks aquí.
-    // - El cierre real vendrá por 'peer-disconnected' (reason NEXT) o por el flujo normal del backend.
-    // - Si el backend responde con next-wait/next-rate-limited, mantenemos la llamada intacta.
   };
 
 
