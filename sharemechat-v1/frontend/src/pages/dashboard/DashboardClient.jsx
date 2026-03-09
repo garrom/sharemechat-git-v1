@@ -22,8 +22,6 @@ import {
   StyledPane,StyledThumbsGrid, StyledCenterPanel,
   StyledCenterBody,StyledChatScroller, StyledCenterVideochat,
   StyledFavoritesShell,StyledFavoritesColumns,GlobalBlack,
-  StyledIncomingCallOverlay,StyledIncomingCallCard,StyledIncomingCallTitle,
-  StyledIncomingCallText, StyledIncomingCallActions
 } from '../../styles/pages-styles/VideochatStyles';
 import {
   StyledNavbar, StyledBrand,NavText, SaldoText,
@@ -2165,6 +2163,7 @@ const DashboardClient = () => {
   };
 
 
+
   // Id activo en lista = el objetivo seleccionado
   const selectedContactId = Number(targetPeerId) || null;
 
@@ -2188,320 +2187,210 @@ const DashboardClient = () => {
 
   const displayName = sessionUser?.nickname || sessionUser?.name || sessionUser?.email || "Cliente";
 
-  const renderNavbarDesktopTabs = () => (
-    <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-      <StyledNavTab
-        type="button"
-        data-active={activeTab === 'videochat'}
-        aria-pressed={activeTab === 'videochat'}
-        onClick={handleGoVideochat}
-        title="Videochat"
-      >
-        Videochat
-      </StyledNavTab>
-
-      <StyledNavTab
-        type="button"
-        data-active={activeTab === 'favoritos'}
-        aria-pressed={activeTab === 'favoritos'}
-        onClick={handleGoFavorites}
-        title="Favoritos"
-      >
-        Favoritos
-      </StyledNavTab>
-
-      <StyledNavTab
-        type="button"
-        data-active={activeTab === 'blog'}
-        aria-pressed={activeTab === 'blog'}
-        onClick={handleGoBlog}
-        title="Blog"
-      >
-        Blog
-      </StyledNavTab>
-    </div>
-  );
-
-  const renderNavbarDesktopActions = () => (
-    <div className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
-      <NavText className="me-3">{displayName}</NavText>
-      <SaldoText className="me-3">
-        {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
-      </SaldoText>
-
-      <NavButton type="button" onClick={handleAddBalance}>
-        <FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}} />
-        <span>Comprar</span>
-      </NavButton>
-
-      <NavButton type="button" onClick={handleLogout} title="Cerrar sesión">
-        <FontAwesomeIcon icon={faSignOutAlt} />
-        <span>Salir</span>
-      </NavButton>
-
-      <StyledNavAvatar
-        src={profilePic || '/img/avatarChico.png'}
-        alt="avatar"
-        title="Ver perfil"
-        onClick={handleProfile}
-      />
-    </div>
-  );
-
-  const renderNavbarMobileMenu = () => (
-    <MobileMenu className={!menuOpen && 'hidden'}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-        <NavText>{displayName}</NavText>
-        <SaldoText>
-          {loadingSaldo ? 'Saldo: …' : saldoError ? 'Saldo: n/d' : `Saldo: ${fmtEUR(saldo)}`}
-        </SaldoText>
-      </div>
-
-      <NavButton
-        onClick={() => {
-          handleProfile();
-          setMenuOpen(false);
-        }}
-      >
-        <FontAwesomeIcon icon={faUser} />
-        <StyledIconWrapper>Perfil</StyledIconWrapper>
-      </NavButton>
-
-      <NavButton
-        onClick={() => {
-          handleAddBalance();
-          setMenuOpen(false);
-        }}
-      >
-        <FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}} />
-        <span>Comprar</span>
-      </NavButton>
-
-      <NavButton
-        onClick={() => {
-          handleLogout();
-          setMenuOpen(false);
-        }}
-      >
-        <FontAwesomeIcon icon={faSignOutAlt} />
-        <StyledIconWrapper>Salir</StyledIconWrapper>
-      </NavButton>
-    </MobileMenu>
-  );
-
-  const renderVideochatTab = () => (
-    <VideoChatRandomCliente
-      isMobile={isMobile}
-      cameraActive={cameraActive}
-      remoteStream={remoteStream}
-      localVideoRef={localVideoRef}
-      remoteVideoRef={remoteVideoRef}
-      vcListRef={vcListRef}
-      messages={messages}
-      modelNickname={modelNickname}
-      giftRenderReady={giftRenderReady}
-      getGiftIcon={getGiftIcon}
-      chatInput={chatInput}
-      setChatInput={setChatInput}
-      sendChatMessage={sendChatMessage}
-      showGifts={showGifts}
-      setShowGifts={setShowGifts}
-      gifts={gifts}
-      sendGiftMatch={sendGiftMatch}
-      fmtEUR={fmtEUR}
-      searching={searching}
-      stopAll={stopAll}
-      handleStartMatch={handleStartMatch}
-      handleNext={handleNext}
-      handleAddFavorite={handleAddFavorite}
-      error={error}
-      toggleFullscreen={toggleFullscreen}
-      remoteVideoWrapRef={remoteVideoWrapRef}
-      modelAvatar={modelAvatar}
-      handleActivateCamera={handleActivateCamera}
-      handleBlockPeer={handleBlockPeer}
-      handleReportPeer={handleReportPeer}
-      matchGraceRef={matchGraceRef}
-      nextDisabled={nexting}
-    />
-  );
-
-  const renderBlogTab = () => (
-    <div style={{flex:1,minWidth:0,minHeight:0}}>
-      <BlogContent mode="private" />
-    </div>
-  );
-
-  const renderFavoritesPanel = () => (
-    <VideoChatFavoritosCliente
-      isMobile={isMobile}
-      handleOpenChatFromFavorites={handleOpenChatFromFavorites}
-      favReload={favReload}
-      selectedContactId={selectedContactId}
-      centerChatPeerId={centerChatPeerId}
-      centerChatPeerName={centerChatPeerName}
-      centerMessages={centerMessages}
-      centerLoading={centerLoading}
-      centerListRef={centerListRef}
-      chatEndRef={chatEndRef}
-      centerInput={centerInput}
-      setCenterInput={setCenterInput}
-      sendCenterMessage={sendCenterMessage}
-      allowChat={allowChat}
-      isPendingPanel={isPendingPanel}
-      isSentPanel={isSentPanel}
-      acceptInvitation={acceptInvitation}
-      rejectInvitation={rejectInvitation}
-      gifts={gifts}
-      giftRenderReady={giftRenderReady}
-      fmtEUR={fmtEUR}
-      showCenterGifts={showCenterGifts}
-      setShowCenterGifts={setShowCenterGifts}
-      sendGiftMsg={sendGiftMsg}
-      contactMode={contactMode}
-      enterCallMode={enterCallMode}
-      callStatus={callStatus}
-      callCameraActive={callCameraActive}
-      callPeerId={callPeerId}
-      callPeerName={callPeerName}
-      callPeerAvatar={callPeerAvatar}
-      callRemoteVideoRef={callRemoteVideoRef}
-      callLocalVideoRef={callLocalVideoRef}
-      callRemoteWrapRef={callRemoteWrapRef}
-      callListRef={callListRef}
-      handleCallActivateCamera={handleCallActivateCamera}
-      handleCallInvite={handleCallInvite}
-      handleCallAccept={handleCallAccept}
-      handleCallReject={handleCallReject}
-      handleCallEnd={handleCallEnd}
-      toggleFullscreen={toggleFullscreen}
-      backToList={backToList}
-      user={sessionUser}
-    />
-  );
-
-  const renderFavoritesSidebar = () => {
-    if (isMobile) return null;
-
-    return (
-      <StyledLeftColumn data-rail>
-        {callStatus === 'idle' ? (
-          <FavoritesClientList
-            onSelect={handleOpenChatFromFavorites}
-            reloadTrigger={favReload}
-            selectedId={selectedContactId}
-          />
-        ) : (
-          <div style={{padding:8,color:'#adb5bd'}}>
-            En llamada: la lista se bloquea hasta colgar.
-          </div>
-        )}
-      </StyledLeftColumn>
-    );
-  };
-
-  const renderFavoritesFullCallLayout = () => (
-    <StyledCenter data-mode={contactMode === 'call' ? 'call' : undefined}>
-      {renderFavoritesPanel()}
-    </StyledCenter>
-  );
-
-  const renderFavoritesStandardLayout = () => (
-    <>
-      {renderFavoritesSidebar()}
-
-      <StyledCenter data-mode={contactMode === 'call' ? 'call' : undefined}>
-        {renderFavoritesPanel()}
-      </StyledCenter>
-
-      <StyledRightColumn />
-    </>
-  );
-
-  const renderFavoritesTab = () => (
-    <>
-      {showFavoritesFullCall ? renderFavoritesFullCallLayout() : renderFavoritesStandardLayout()}
-    </>
-  );
-
-  const renderMainContent = () => {
-    if (activeTab === 'videochat') return renderVideochatTab();
-    if (activeTab === 'blog') return renderBlogTab();
-    return renderFavoritesTab();
-  };
-
-  const renderIncomingCallOverlay = () => {
-    if (!(callStatus === 'incoming' && activeTab !== 'favoritos')) return null;
-
-    return (
-      <StyledIncomingCallOverlay>
-        <StyledIncomingCallCard>
-          <StyledIncomingCallTitle>
-            Llamada entrante
-          </StyledIncomingCallTitle>
-
-          <StyledIncomingCallText>
-            Te está llamando <strong>{callPeerName || 'Usuario'}</strong>.
-          </StyledIncomingCallText>
-
-          <StyledIncomingCallActions>
-            <ButtonAceptar onClick={handleCallAccept}>
-              Aceptar
-            </ButtonAceptar>
-
-            <ButtonRechazar onClick={handleCallReject} style={{backgroundColor:'#dc3545'}}>
-              Rechazar
-            </ButtonRechazar>
-          </StyledIncomingCallActions>
-        </StyledIncomingCallCard>
-      </StyledIncomingCallOverlay>
-    );
-  };
-
-  return (
+  return(
     <StyledContainer>
-      <GlobalBlack />
-
+      <GlobalBlack/>
       {/* ========= INICIO NAVBAR  ======== */}
       <StyledNavbar style={{padding:'0 24px'}}>
         <div style={{display:'flex',alignItems:'center'}}>
-          <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick} />
-          {renderNavbarDesktopTabs()}
+          <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick}/>
+          <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
+            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title="Videochat">Videochat</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title="Favoritos">Favoritos</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title="Blog">Blog</StyledNavTab>
+          </div>
         </div>
-
-        {renderNavbarDesktopActions()}
-
-        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">
-          <FontAwesomeIcon icon={faBars} />
-        </HamburgerButton>
-
-        {renderNavbarMobileMenu()}
+        <div className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
+          <NavText className="me-3">{displayName}</NavText>
+          <SaldoText className="me-3">{loadingSaldo?'Saldo: …':saldoError?'Saldo: n/d':`Saldo: ${fmtEUR(saldo)}`}</SaldoText>
+          <NavButton type="button" onClick={handleAddBalance}><FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/><span>Comprar</span></NavButton>
+          <NavButton type="button" onClick={handleLogout} title="Cerrar sesión"><FontAwesomeIcon icon={faSignOutAlt}/><span>Salir</span></NavButton>
+          <StyledNavAvatar src={profilePic || '/img/avatarChico.png'} alt="avatar" title="Ver perfil" onClick={handleProfile}/>
+        </div>
+        <HamburgerButton onClick={()=>setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú"><FontAwesomeIcon icon={faBars}/></HamburgerButton>
+        <MobileMenu className={!menuOpen&&'hidden'}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
+            <NavText>{displayName}</NavText>
+            <SaldoText>{loadingSaldo?'Saldo: …':saldoError?'Saldo: n/d':`Saldo: ${fmtEUR(saldo)}`}</SaldoText>
+          </div>
+          <NavButton onClick={()=>{handleProfile();setMenuOpen(false);}}><FontAwesomeIcon icon={faUser}/><StyledIconWrapper>Perfil</StyledIconWrapper></NavButton>
+          <NavButton onClick={()=>{handleAddBalance();setMenuOpen(false);}}><FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/><span>Comprar</span></NavButton>
+          <NavButton onClick={()=>{handleLogout();setMenuOpen(false);}}><FontAwesomeIcon icon={faSignOutAlt}/><StyledIconWrapper>Salir</StyledIconWrapper></NavButton>
+        </MobileMenu>
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent data-tab={activeTab}>
-        {renderMainContent()}
+        {activeTab==='videochat'?(
+          <VideoChatRandomCliente
+            isMobile={isMobile}
+            cameraActive={cameraActive}
+            remoteStream={remoteStream}
+            localVideoRef={localVideoRef}
+            remoteVideoRef={remoteVideoRef}
+            vcListRef={vcListRef}
+            messages={messages}
+            modelNickname={modelNickname}
+            giftRenderReady={giftRenderReady}
+            getGiftIcon={getGiftIcon}
+            chatInput={chatInput}
+            setChatInput={setChatInput}
+            sendChatMessage={sendChatMessage}
+            showGifts={showGifts}
+            setShowGifts={setShowGifts}
+            gifts={gifts}
+            sendGiftMatch={sendGiftMatch}
+            fmtEUR={fmtEUR}
+            searching={searching}
+            stopAll={stopAll}
+            handleStartMatch={handleStartMatch}
+            handleNext={handleNext}
+            handleAddFavorite={handleAddFavorite}
+            error={error}
+            toggleFullscreen={toggleFullscreen}
+            remoteVideoWrapRef={remoteVideoWrapRef}
+            modelAvatar={modelAvatar}
+            handleActivateCamera={handleActivateCamera}
+            handleBlockPeer={handleBlockPeer}
+            handleReportPeer={handleReportPeer}
+            matchGraceRef={matchGraceRef}
+            nextDisabled={nexting}
+          />
+        ):activeTab==='blog'?(
+          /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
+          <div style={{flex:1,minWidth:0,minHeight:0}}>
+            <BlogContent mode="private"/>
+          </div>
+        ):(
+          /* === SOLO FAVORITOS USA EL LAYOUT 3 COLUMNAS === */
+          <>
+            {showFavoritesFullCall?(
+              <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
+                <VideoChatFavoritosCliente
+                  isMobile={isMobile}
+                  handleOpenChatFromFavorites={handleOpenChatFromFavorites}
+                  favReload={favReload}
+                  selectedContactId={selectedContactId}
+                  centerChatPeerId={centerChatPeerId}
+                  centerChatPeerName={centerChatPeerName}
+                  centerMessages={centerMessages}
+                  centerLoading={centerLoading}
+                  centerListRef={centerListRef}
+                  chatEndRef={chatEndRef}
+                  centerInput={centerInput}
+                  setCenterInput={setCenterInput}
+                  sendCenterMessage={sendCenterMessage}
+                  allowChat={allowChat}
+                  isPendingPanel={isPendingPanel}
+                  isSentPanel={isSentPanel}
+                  acceptInvitation={acceptInvitation}
+                  rejectInvitation={rejectInvitation}
+                  gifts={gifts}
+                  giftRenderReady={giftRenderReady}
+                  fmtEUR={fmtEUR}
+                  showCenterGifts={showCenterGifts}
+                  setShowCenterGifts={setShowCenterGifts}
+                  sendGiftMsg={sendGiftMsg}
+                  contactMode={contactMode}
+                  enterCallMode={enterCallMode}
+                  callStatus={callStatus}
+                  callCameraActive={callCameraActive}
+                  callPeerId={callPeerId}
+                  callPeerName={callPeerName}
+                  callPeerAvatar={callPeerAvatar}
+                  callRemoteVideoRef={callRemoteVideoRef}
+                  callLocalVideoRef={callLocalVideoRef}
+                  callRemoteWrapRef={callRemoteWrapRef}
+                  callListRef={callListRef}
+                  handleCallActivateCamera={handleCallActivateCamera}
+                  handleCallInvite={handleCallInvite}
+                  handleCallAccept={handleCallAccept}
+                  handleCallReject={handleCallReject}
+                  handleCallEnd={handleCallEnd}
+                  toggleFullscreen={toggleFullscreen}
+                  backToList={backToList}
+                  user={sessionUser}
+                />
+              </StyledCenter>
+            ):(
+              <>
+                {!isMobile&&(
+                  <StyledLeftColumn data-rail>
+                    {callStatus==='idle'?(
+                      <FavoritesClientList
+                        onSelect={handleOpenChatFromFavorites}
+                        reloadTrigger={favReload}
+                        selectedId={selectedContactId}
+                      />
+                    ):(
+                      <div style={{padding:8,color:'#adb5bd'}}>En llamada: la lista se bloquea hasta colgar.</div>
+                    )}
+                  </StyledLeftColumn>
+                )}
+                <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
+                  <VideoChatFavoritosCliente
+                    isMobile={isMobile}
+                    handleOpenChatFromFavorites={handleOpenChatFromFavorites}
+                    favReload={favReload}
+                    selectedContactId={selectedContactId}
+                    centerChatPeerId={centerChatPeerId}
+                    centerChatPeerName={centerChatPeerName}
+                    centerMessages={centerMessages}
+                    centerLoading={centerLoading}
+                    centerListRef={centerListRef}
+                    chatEndRef={chatEndRef}
+                    centerInput={centerInput}
+                    setCenterInput={setCenterInput}
+                    sendCenterMessage={sendCenterMessage}
+                    allowChat={allowChat}
+                    isPendingPanel={isPendingPanel}
+                    isSentPanel={isSentPanel}
+                    acceptInvitation={acceptInvitation}
+                    rejectInvitation={rejectInvitation}
+                    gifts={gifts}
+                    giftRenderReady={giftRenderReady}
+                    fmtEUR={fmtEUR}
+                    showCenterGifts={showCenterGifts}
+                    setShowCenterGifts={setShowCenterGifts}
+                    sendGiftMsg={sendGiftMsg}
+                    contactMode={contactMode}
+                    enterCallMode={enterCallMode}
+                    callStatus={callStatus}
+                    callCameraActive={callCameraActive}
+                    callPeerId={callPeerId}
+                    callPeerName={callPeerName}
+                    callPeerAvatar={callPeerAvatar}
+                    callRemoteVideoRef={callRemoteVideoRef}
+                    callLocalVideoRef={callLocalVideoRef}
+                    callRemoteWrapRef={callRemoteWrapRef}
+                    callListRef={callListRef}
+                    handleCallActivateCamera={handleCallActivateCamera}
+                    handleCallInvite={handleCallInvite}
+                    handleCallAccept={handleCallAccept}
+                    handleCallReject={handleCallReject}
+                    handleCallEnd={handleCallEnd}
+                    toggleFullscreen={toggleFullscreen}
+                    backToList={backToList}
+                    user={sessionUser}
+                  />
+                </StyledCenter>
+                <StyledRightColumn/>
+              </>
+            )}
+          </>
+        )}
       </StyledMainContent>
-      {/* ====== FIN MAIN ======== */}
+      {/* ======FIN MAIN ======== */}
 
       {!inCall && (
         <MobileBottomNav>
-          <BottomNavButton active={activeTab === 'videochat'} onClick={handleGoVideochat}>
-            <span>Videochat</span>
-          </BottomNavButton>
-
-          <BottomNavButton active={activeTab === 'favoritos'} onClick={handleGoFavorites}>
-            <span>Favoritos</span>
-          </BottomNavButton>
-
-          <BottomNavButton active={activeTab === 'blog'} onClick={handleGoBlog}>
-            <span>Blog</span>
-          </BottomNavButton>
+          <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
+          <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
+          <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
         </MobileBottomNav>
       )}
 
-      {renderIncomingCallOverlay()}
     </StyledContainer>
   );
 };
