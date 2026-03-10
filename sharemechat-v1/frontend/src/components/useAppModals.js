@@ -514,7 +514,7 @@ export const useAppModals = () => {
                 </RadioOption>
               ))}
             </RadioGroup>
-            <PackHint style={{ marginTop: 10 }}>Si continúas, perderás tu saldo y el acceso al historial.</PackHint>
+            <PackHint style={{ marginTop: 10 }}>Si te das de baja, no podrás acceder al historial de chats y tu cuenta quedará cerrada según la política vigente de la plataforma.</PackHint>
           </div>
         ),
         actions: [

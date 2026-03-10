@@ -18,6 +18,9 @@ public class Unsubscribe {
     @Column(name = "reason")
     private String reason;            // motivo opcional
 
+    @Column(name = "forfeit_after")
+    private LocalDate forfeitAfter;   // fecha a partir de la cual puede ejecutarse el forfeit diferido
+
     @Column(name = "created_at", nullable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt = LocalDateTime.now();
 
@@ -29,9 +32,6 @@ public class Unsubscribe {
         this.reason = reason;
         this.createdAt = LocalDateTime.now();
     }
-
-    // getters/setters
-
 
     public Long getUserId() {
         return userId;
@@ -55,6 +55,14 @@ public class Unsubscribe {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public LocalDate getForfeitAfter() {
+        return forfeitAfter;
+    }
+
+    public void setForfeitAfter(LocalDate forfeitAfter) {
+        this.forfeitAfter = forfeitAfter;
     }
 
     public LocalDateTime getCreatedAt() {

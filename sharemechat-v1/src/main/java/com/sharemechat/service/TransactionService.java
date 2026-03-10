@@ -575,6 +575,7 @@ public class TransactionService {
         User user = lockUserOrThrow(userId);
 
         BigDecimal totalForfeited = BigDecimal.ZERO;
+        final BigDecimal MODEL_MIN_PAYOUT_THRESHOLD = new BigDecimal("100.00");
 
         if (Constants.Roles.CLIENT.equals(role)) {
             Optional<Client> clientOpt = clientRepository.findByUser(user);
@@ -590,43 +591,14 @@ public class TransactionService {
                     );
                 }
 
-                BigDecimal saldo = lastBalance;
-
-                if (saldo.compareTo(BigDecimal.ZERO) > 0) {
-                    Transaction tx = new Transaction();
-                    tx.setUser(user);
-                    tx.setAmount(saldo.negate());
-                    tx.setOperationType("UNSUBSCRIBE_FORFEIT");
-                    tx.setDescription(description);
-                    Transaction savedTx = transactionRepository.save(tx);
-
-                    Balance bal = new Balance();
-                    bal.setUserId(userId);
-                    bal.setTransactionId(savedTx.getId());
-                    bal.setOperationType("UNSUBSCRIBE_FORFEIT");
-                    bal.setAmount(saldo.negate());
-                    bal.setBalance(lastBalance.subtract(saldo));
-                    bal.setDescription(description);
-                    balanceRepository.save(bal);
-
-                    PlatformTransaction ptx = new PlatformTransaction();
-                    ptx.setAmount(saldo);
-                    ptx.setOperationType("UNSUBSCRIBE_FORFEIT");
-                    ptx.setDescription("Forfeit usuario " + userId);
-                    PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
-
-                    appendPlatformBalance(
-                            savedPtx.getId(),
-                            saldo,
-                            "Forfeit usuario " + userId
-                    );
-
-                    client.setSaldoActual(BigDecimal.ZERO);
-                    clientRepository.save(client);
-
-                    totalForfeited = totalForfeited.add(saldo);
-                }
+                log.info(
+                        "forfeitOnUnsubscribe CLIENT standby: userId={} balance={} -> no se aplica forfeit inmediato",
+                        userId,
+                        lastBalance
+                );
             }
+
+            return BigDecimal.ZERO;
         }
 
         if (Constants.Roles.MODEL.equals(role)) {
@@ -645,7 +617,9 @@ public class TransactionService {
 
                 BigDecimal saldo = lastBalance;
 
-                if (saldo.compareTo(BigDecimal.ZERO) > 0) {
+                if (saldo.compareTo(BigDecimal.ZERO) > 0
+                        && saldo.compareTo(MODEL_MIN_PAYOUT_THRESHOLD) < 0) {
+
                     Transaction tx = new Transaction();
                     tx.setUser(user);
                     tx.setAmount(saldo.negate());
@@ -678,6 +652,20 @@ public class TransactionService {
                     modelRepository.save(model);
 
                     totalForfeited = totalForfeited.add(saldo);
+
+                    log.info(
+                            "forfeitOnUnsubscribe MODEL forfeited: userId={} saldo={} threshold={}",
+                            userId,
+                            saldo,
+                            MODEL_MIN_PAYOUT_THRESHOLD
+                    );
+                } else {
+                    log.info(
+                            "forfeitOnUnsubscribe MODEL no forfeit: userId={} saldo={} threshold={}",
+                            userId,
+                            saldo,
+                            MODEL_MIN_PAYOUT_THRESHOLD
+                    );
                 }
             }
         }

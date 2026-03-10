@@ -366,12 +366,12 @@ public class UserService {
         final Long userId = user.getId();
         final String currentRole = user.getRole();
 
-        // 2) Forfeit de saldo según rol actual (CLIENT o MODEL)
-        //    (registra transactions/balances y contrapartida plataforma; pone saldo agregado a 0)
-        //    La lógica vive en TransactionService para no duplicar código financiero.
-        String forfeiDesc = "Saldo perdido por baja voluntaria"
+        // 2) Forfeit según rol actual
+        //    - CLIENT: no pierde saldo al instante; queda para forfeit diferido.
+        //    - MODEL: solo pierde saldo si el pendiente es > 0 y < 100 EUR.
+        String forfeitDesc = "Saldo perdido por baja voluntaria"
                 + (reason != null && !reason.isBlank() ? (" | Motivo: " + reason.trim()) : "");
-        transactionService.forfeitOnUnsubscribe(userId, currentRole, forfeiDesc);  // [NEW]
+        transactionService.forfeitOnUnsubscribe(userId, currentRole, forfeitDesc);
 
         // 3) Marcar baja y degradar rol (CLIENT/MODEL -> USER)
         if (Constants.Roles.CLIENT.equals(currentRole) || Constants.Roles.MODEL.equals(currentRole)) {
@@ -388,11 +388,21 @@ public class UserService {
         userRepository.save(user);
 
         // 4) Insertar registro en la tabla 'unsubscribe' (1 fila por usuario)
-        //    Requiere UnsubscribeRepository y entidad Unsubscribe.
-        if (!unsubscribeRepository.existsByUserId(userId)) {                    // [NEW]
-            Unsubscribe row = new Unsubscribe(userId, LocalDate.now(),          // [NEW]
-                    normalize(reason));                                          // [NEW]
-            unsubscribeRepository.save(row);                                     // [NEW]
+        if (!unsubscribeRepository.existsByUserId(userId)) {
+            Unsubscribe row = new Unsubscribe(
+                    userId,
+                    LocalDate.now(),
+                    normalize(reason)
+            );
+
+            // CLIENT: saldo en standby 3 meses antes de posible forfeit diferido
+            if (Constants.Roles.CLIENT.equals(currentRole)) {
+                row.setForfeitAfter(LocalDate.now().plusMonths(3));
+            } else {
+                row.setForfeitAfter(null);
+            }
+
+            unsubscribeRepository.save(row);
         }
 
         // (Opcional) Si luego integras cierre de WS/colas, hazlo fuera para no mezclar capas aquí.

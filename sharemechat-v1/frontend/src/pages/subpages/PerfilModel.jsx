@@ -765,7 +765,7 @@ const PerfilModel = () => {
                     </ProfileDangerOutlineButton>
                   </SecurityActions>
                   <Hint>
-                    Si te das de baja, perderás tu saldo y no podrás acceder al historial de chats.
+                    Si te das de baja, no podrás acceder al historial de chats y tu cuenta quedará cerrada según la política vigente de la plataforma.
                   </Hint>
                 </CardBody>
               </SecurityCard>
