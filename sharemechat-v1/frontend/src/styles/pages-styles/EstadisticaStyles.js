@@ -498,10 +498,11 @@ export const Table = styled.table`
   thead th {
     text-align: left;
     padding: 12px 12px;
-    font-size: 12px;
+    font-size: 13px;
+    font-weight: 900;
     letter-spacing: .2px;
 
-    color: rgba(30,41,59,0.72);
+    color: rgba(15,23,42,0.82);
     border-bottom: 1px solid rgba(15,23,42,0.08);
     background: rgba(248,250,252,0.92);
   }
@@ -548,8 +549,19 @@ export const Table = styled.table`
     font-weight: 1000;
   }
 
+  td.hist-date,
+  td.hist-tier {
+    font-size: 14px;
+    font-weight: 900;
+    color: rgba(2,6,23,0.92);
+  }
+
   @media (max-width: 900px) {
     min-width: 680px;
+
+    thead th {
+      font-size: 12px;
+    }
   }
 `;
 

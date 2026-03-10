@@ -287,7 +287,7 @@ export default function Estadistica({
                   </MiniCard>
 
                   <MiniCard $accent="green">
-                    <MiniLabel>Minutos (30 días)</MiniLabel>
+                    <MiniLabel>Minutos últimos 30 días</MiniLabel>
                     <MiniValue>{Number(current?.billedMinutes30d || 0)}</MiniValue>
                     <MiniMeta>
                       Horas: <b>{current?.billedHours30d || '—'}</b>
@@ -451,15 +451,15 @@ export default function Estadistica({
                       <tr>
                         <th>Fecha</th>
                         <th>Tier</th>
-                        <th style={{textAlign:'right'}}>Minutos (30 días)</th>
+                        <th style={{textAlign:'right'}}>Minutos últimos 30 días</th>
                       </tr>
                     </thead>
 
                     <tbody>
                       {history.map((r, idx) => (
                         <tr key={`${r?.snapshotDate || idx}`}>
-                          <td>{r?.snapshotDate || '—'}</td>
-                          <td className="name">{r?.tierName || '—'}</td>
+                          <td className="hist-date">{r?.snapshotDate || '—'}</td>
+                          <td className="name hist-tier">{r?.tierName || '—'}</td>
                           <td style={{textAlign:'right'}}>{Number(r?.billedMinutes30d || 0)}</td>
                         </tr>
                       ))}
