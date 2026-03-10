@@ -12,7 +12,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.text.Collator;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 @RestController
@@ -20,6 +23,7 @@ import java.util.Set;
 public class FavoritesController {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(FavoritesController.class);
+
     private final FavoriteService favoriteService;
     private final UserRepository userRepository;
     private final MessagesWsHandler messagesWsHandler;
@@ -75,55 +79,52 @@ public class FavoritesController {
     public ResponseEntity<List<FavoriteListItemDTO>> listModelsMeta(Authentication auth) {
         Long clientId = currentUserId(auth);
 
-        // 1) Obtenemos la lista base (modelos favoritos del cliente)
         List<FavoriteListItemDTO> base = favoriteService.listClientFavoritesMeta(clientId);
 
-        // 2) Batch: ids de peers
         List<Long> peerIds = base.stream()
                 .map(item -> item.user() != null ? item.user().getId() : null)
                 .filter(id -> id != null && id > 0)
                 .distinct()
                 .toList();
 
-        // 3) Bloqueos: por mí + hacia mí
         Set<Long> blockedByMe = userBlockService.findBlockedIdsByMe(peerIds);
         Set<Long> blockedMe = userBlockService.findBlockerIdsWhoBlockedMe(peerIds);
 
-        // 4) Enriquecemos presence + blocked usando SIEMPRE el userId de la MODELO
-        List<FavoriteListItemDTO> enriched = base.stream().map(item -> {
-            Long modelUserId = (item.user() != null) ? item.user().getId() : null;
+        List<FavoriteListItemDTO> enriched = base.stream()
+                .map(item -> {
+                    Long modelUserId = (item.user() != null) ? item.user().getId() : null;
 
-            String presence = "offline";
+                    String presence = "offline";
 
-            if (modelUserId != null) {
-                // 1) Fuente de verdad para modelos: Redis (ModelStatusService)
-                String s = statusService.getStatus(modelUserId); // "AVAILABLE", "BUSY" o null
-                if ("BUSY".equals(s)) {
-                    presence = "busy";
-                } else if ("AVAILABLE".equals(s)) {
-                    presence = "online";
-                } else {
-                    // 2) Fallback opcional: si Redis no tiene estado, infiere online desde /messages
-                    boolean online = messagesWsHandler.isUserOnline(modelUserId);
-                    presence = online ? "online" : "offline";
-                }
-            }
+                    if (modelUserId != null) {
+                        String s = statusService.getStatus(modelUserId); // "AVAILABLE", "BUSY" o null
+                        if ("BUSY".equals(s)) {
+                            presence = "busy";
+                        } else if ("AVAILABLE".equals(s)) {
+                            presence = "online";
+                        } else {
+                            boolean online = messagesWsHandler.isUserOnline(modelUserId);
+                            presence = online ? "online" : "offline";
+                        }
+                    }
 
-            boolean blocked = modelUserId != null && (blockedByMe.contains(modelUserId) || blockedMe.contains(modelUserId));
+                    boolean blocked = modelUserId != null
+                            && (blockedByMe.contains(modelUserId) || blockedMe.contains(modelUserId));
 
-            return new FavoriteListItemDTO(
-                    item.user(),
-                    item.status(),
-                    item.invited(),
-                    item.direction(),
-                    presence,
-                    blocked
-            );
-        }).toList();
+                    return new FavoriteListItemDTO(
+                            item.user(),
+                            item.status(),
+                            item.invited(),
+                            item.direction(),
+                            presence,
+                            blocked
+                    );
+                })
+                .sorted(favoritesComparator())
+                .toList();
 
         return ResponseEntity.ok(enriched);
     }
-
 
     @GetMapping("/clients/meta")
     public ResponseEntity<List<FavoriteListItemDTO>> listClientsMeta(Authentication auth) {
@@ -131,54 +132,54 @@ public class FavoritesController {
 
         List<FavoriteListItemDTO> base = favoriteService.listModelFavoritesMeta(modelId);
 
-        // Batch peers
         List<Long> peerIds = base.stream()
                 .map(item -> item.user() != null ? item.user().getId() : null)
                 .filter(id -> id != null && id > 0)
                 .distinct()
                 .toList();
 
-        // Bloqueos: por mí + hacia mí
         Set<Long> blockedByMe = userBlockService.findBlockedIdsByMe(peerIds);
         Set<Long> blockedMe = userBlockService.findBlockerIdsWhoBlockedMe(peerIds);
 
-        List<FavoriteListItemDTO> enriched = base.stream().map(item -> {
-            Long clientUserId = (item.user() != null) ? item.user().getId() : null;
+        List<FavoriteListItemDTO> enriched = base.stream()
+                .map(item -> {
+                    Long clientUserId = (item.user() != null) ? item.user().getId() : null;
 
-            String presence = "offline";
+                    String presence = "offline";
 
-            if (clientUserId != null) {
-                // Busy si el CLIENTE está en cualquier stream activo (random)
-                try {
-                    if (streamService.isUserInActiveStream(clientUserId)) {
-                        presence = "busy";
-                    } else {
-                        boolean online = messagesWsHandler.isUserOnline(clientUserId);
-                        presence = online ? "online" : "offline";
+                    if (clientUserId != null) {
+                        try {
+                            if (streamService.isUserInActiveStream(clientUserId)) {
+                                presence = "busy";
+                            } else {
+                                boolean online = messagesWsHandler.isUserOnline(clientUserId);
+                                presence = online ? "online" : "offline";
+                            }
+                        } catch (Exception e) {
+                            boolean online = messagesWsHandler.isUserOnline(clientUserId);
+                            presence = online ? "online" : "offline";
+                        }
                     }
-                } catch (Exception e) {
-                    boolean online = messagesWsHandler.isUserOnline(clientUserId);
-                    presence = online ? "online" : "offline";
-                }
-            }
 
-            boolean blocked = clientUserId != null && (blockedByMe.contains(clientUserId) || blockedMe.contains(clientUserId));
+                    boolean blocked = clientUserId != null
+                            && (blockedByMe.contains(clientUserId) || blockedMe.contains(clientUserId));
 
-            return new FavoriteListItemDTO(
-                    item.user(),
-                    item.status(),
-                    item.invited(),
-                    item.direction(),
-                    presence,
-                    blocked
-            );
-        }).toList();
+                    return new FavoriteListItemDTO(
+                            item.user(),
+                            item.status(),
+                            item.invited(),
+                            item.direction(),
+                            presence,
+                            blocked
+                    );
+                })
+                .sorted(favoritesComparator())
+                .toList();
 
         return ResponseEntity.ok(enriched);
     }
 
-
-    // ===== Aceptar / Rechazar invitación (nuevos) =====
+    // ===== Aceptar / Rechazar invitación =====
     @PostMapping("/accept/{peerId}")
     public ResponseEntity<Void> accept(Authentication auth, @PathVariable Long peerId) {
         favoriteService.acceptInvitation(currentUserId(auth), peerId);
@@ -192,8 +193,43 @@ public class FavoritesController {
     }
 
     private Long currentUserId(Authentication auth) {
-        String email = auth.getName(); // establecido por UserDetailsService
+        String email = auth.getName();
         User u = userRepository.findByEmail(email).orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
         return u.getId();
+    }
+
+    private Comparator<FavoriteListItemDTO> favoritesComparator() {
+        Collator collator = Collator.getInstance(new Locale("es", "ES"));
+        collator.setStrength(Collator.PRIMARY);
+
+        return Comparator
+                .comparingInt(this::blockedRank)
+                .thenComparingInt(this::connectionRank)
+                .thenComparing(this::safeNickname, collator);
+    }
+
+    private int blockedRank(FavoriteListItemDTO item) {
+        return item != null && item.blocked() ? 1 : 0;
+    }
+
+    private int connectionRank(FavoriteListItemDTO item) {
+        if (item != null && item.blocked()) {
+            return 2;
+        }
+
+        String presence = item != null ? item.presence() : null;
+
+        if ("online".equalsIgnoreCase(presence) || "busy".equalsIgnoreCase(presence)) {
+            return 0;
+        }
+
+        return 1; // offline o null
+    }
+
+    private String safeNickname(FavoriteListItemDTO item) {
+        if (item == null || item.user() == null || item.user().getNickname() == null) {
+            return "";
+        }
+        return item.user().getNickname().trim();
     }
 }
