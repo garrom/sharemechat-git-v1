@@ -1,4 +1,3 @@
-// src/App.jsx
 import React from 'react';
 import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 import './i18n';
@@ -22,7 +21,12 @@ import Roles from './constants/Roles';
 import { ModalProvider } from './components/ModalProvider';
 import GuestConsentGate from './consent/GuestConsentGate';
 import { GlobalTypography } from './styles/core/typography';
-import Footer from './components/Footer';
+import Footer from './footer/Footer';
+import Legal from './footer/Legal';
+import Faq from './footer/Faq';
+import Safety from './footer/Safety';
+import Rules from './footer/Rules';
+import Config from './footer/Config';
 import CookieBanner from './components/CookieBanner';
 import { CallUiProvider } from './components/CallUiContext';
 import { SessionProvider } from './components/SessionProvider';
@@ -49,6 +53,11 @@ function App() {
                 <Route path="/forgot-password" component={ForgotPassword} />
                 <Route path="/unauthorized" component={Unauthorized} />
                 <Route path="/reset-password" component={ResetPassword} />
+                <Route path="/legal" component={Legal} />
+                <Route path="/faq" component={Faq} />
+                <Route path="/safety" component={Safety} />
+                <Route path="/community-guidelines" component={Rules} />
+                <Route path="/cookies-settings" component={Config} />
 
                 {/* Dashboards por rol */}
                 <Route path="/client" render={() => (<RequireRole role="CLIENT"><DashboardClient /></RequireRole>)} />
