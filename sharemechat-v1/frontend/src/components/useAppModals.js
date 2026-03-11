@@ -91,6 +91,7 @@ const PackHint = styled.span`
 
 const PayoutInput = styled.input`
   width: 100%;
+  box-sizing: border-box;
   padding: 8px 10px;
   border-radius: 6px;
   border: 1px solid #30363d;
@@ -99,11 +100,23 @@ const PayoutInput = styled.input`
   font-size: 14px;
   margin-top: 6px;
   outline: none;
+
   &:focus {
     border-color: #58a6ff;
     box-shadow: 0 0 0 1px #58a6ff44;
   }
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  &[type='number'] {
+    -moz-appearance: textfield;
+  }
 `;
+
 
 // === Estilo modal para dar de baja ===
 const RadioGroup = styled.div`
@@ -424,7 +437,7 @@ export const useAppModals = () => {
   }, [openModal, closeModal]);
 
   //Modal para RETIRO DINERO (payout)
-  const openPayoutModal = useCallback(({ title = 'Solicitud de retiro', message, initialAmount = 10 } = {}) => {
+  const openPayoutModal = useCallback(({ title = 'Solicitud de retiro', message, initialAmount = 50 } = {}) => {
     return new Promise((resolve) => {
       let currentValue = initialAmount !== null && initialAmount !== undefined ? String(initialAmount) : '';
 
@@ -448,8 +461,9 @@ export const useAppModals = () => {
           <div>
             <PackHint>{message || 'Introduce la cantidad que deseas retirar:'}</PackHint>
             <PayoutInput
-              type="text"
+              type="number"
               inputMode="numeric"
+              min="50"
               autoComplete="off"
               defaultValue={currentValue}
               onChange={(e) => {

@@ -36,7 +36,7 @@ public class ModelTierSnapshotJob {
 
         for (Long modelId : modelIds) {
             try {
-                modelTierService.computeAndUpsertSnapshot(modelId, snapshotDate);
+                modelTierService.ensureSnapshotExists(modelId, snapshotDate);
             } catch (Exception e) {
                 log.warn("ModelTierSnapshotJob: error modelId={} -> {}", modelId, e.getMessage());
             }

@@ -12,8 +12,14 @@ export const apiFetch = async (path, { headers = {}, ...options } = {}) => {
   });
 
   if (!res.ok) {
-    const msg = isJsonResponse(res) ? JSON.stringify(await res.json()) : (await res.text());
-    throw new Error(msg || `HTTP ${res.status}`);
+    if (isJsonResponse(res)) {
+      const data = await res.json().catch(() => null);
+      const message = data?.message || `HTTP ${res.status}`;
+      throw new Error(message);
+    }
+
+    const text = await res.text().catch(() => null);
+    throw new Error(text || `HTTP ${res.status}`);
   }
 
   return isJsonResponse(res) ? res.json() : res.text();

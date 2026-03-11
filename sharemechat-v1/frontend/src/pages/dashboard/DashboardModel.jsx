@@ -40,7 +40,7 @@ import {
 } from '../../styles/ButtonStyles';
 import VideoChatRandomModelo from './VideoChatRandomModelo';
 import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
-import { buildWsUrl, WS_PATHS } from '../../config/api';
+import { buildApiUrl, buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
 import { useSession } from '../../components/SessionProvider';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
@@ -1371,7 +1371,7 @@ const DashboardModel = () => {
     const result = await openPayoutModal({
       title: 'Solicitud de retiro',
       message: 'Introduce la cantidad que deseas retirar:',
-      initialAmount: 10,
+      initialAmount: 50,
     });
 
     // Si cierra o cancela el modal
@@ -1390,15 +1390,41 @@ const DashboardModel = () => {
     try {
       setLoadingSaldoModel(true);
 
-      // 2) Crear payout (apiFetch ya gestiona credenciales)
-      await apiFetch('/transactions/payout', {
+      // 2) Crear payout con manejo específico de saldo insuficiente
+      const payoutRes = await fetch(buildApiUrl('/transactions/payout'), {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount,
           description: 'Solicitud de retiro',
         }),
       });
+
+      const payoutContentType = payoutRes.headers.get('content-type') || '';
+      const payoutData = payoutContentType.includes('application/json')
+        ? await payoutRes.json().catch(() => null)
+        : null;
+
+      const payoutMessage = payoutData?.message || (!payoutData ? await payoutRes.text() : '');
+
+      if (!payoutRes.ok) {
+        const insufficientBalance =
+          payoutRes.status === 400 &&
+          String(payoutMessage || '').toLowerCase().includes('saldo insuficiente');
+
+        if (insufficientBalance) {
+          await alert({
+            title: 'Saldo insuficiente',
+            message: 'No tienes saldo suficiente para realizar este retiro.',
+            variant: 'warning',
+            size: 'sm',
+          });
+          return;
+        }
+
+        throw new Error(payoutMessage || `HTTP ${payoutRes.status}`);
+      }
 
       await alert({
         title: 'Solicitud enviada',

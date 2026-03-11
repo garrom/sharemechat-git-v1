@@ -277,6 +277,13 @@ public class TransactionService {
                 .orElseThrow(() -> new IllegalStateException("No existe registro de modelo para el usuario: " + userId));
 
         BigDecimal amountAbs = request.getAmount().setScale(2, RoundingMode.HALF_UP);
+        if (amountAbs.compareTo(new BigDecimal("50.00")) < 0) {
+            throw new IllegalArgumentException("El retiro mínimo es de 50 EUR");
+        }
+
+        if (amountAbs.compareTo(new BigDecimal("1000.00")) > 0) {
+            throw new IllegalArgumentException("El retiro máximo por solicitud es de 1000 EUR");
+        }
         BigDecimal previousBalance = lastBalanceOf(userId);
 
         BigDecimal saldoCache = model.getSaldoActual() == null ? BigDecimal.ZERO : model.getSaldoActual();
