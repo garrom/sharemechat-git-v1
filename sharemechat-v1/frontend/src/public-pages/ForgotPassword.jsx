@@ -28,7 +28,7 @@ const ForgotPassword = () => {
       }
       setStatus({
         loading: false,
-        ok: 'Si el email existe, te hemos enviado un enlace para restablecer tu contraseña.',
+        ok: 'Si el email está registrado en SharemeChat, recibirás en unos minutos un enlace para restablecer tu contraseña.',
         err: '',
       });
     } catch {

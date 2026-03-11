@@ -36,6 +36,7 @@ public class UserService {
     private final ClientDocumentRepository clientDocumentRepository;
     private final ModelDocumentRepository modelDocumentRepository;
     private final UserLanguageRepository userLanguageRepository;
+    private final EmailService emailService;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
@@ -46,7 +47,8 @@ public class UserService {
                        UnsubscribeRepository unsubscribeRepository,
                        ClientDocumentRepository clientDocumentRepository,
                        ModelDocumentRepository modelDocumentRepository,
-                       UserLanguageRepository userLanguageRepository) {
+                       UserLanguageRepository userLanguageRepository,
+                       EmailService emailService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -55,6 +57,7 @@ public class UserService {
         this.clientDocumentRepository = clientDocumentRepository;
         this.modelDocumentRepository = modelDocumentRepository;
         this.userLanguageRepository = userLanguageRepository;
+        this.emailService = emailService;
     }
 
     @Transactional
@@ -129,22 +132,25 @@ public class UserService {
         user.setRiskUpdatedAt(LocalDateTime.now());
         user.setRiskUpdatedBy(null);
 
-
         // Consentimientos / auditoría, entidad
-        user.setConfirAdult(true);                 // el check se usa para validar
-        user.setAcceptTerm(LocalDateTime.now());   // evidencia de aceptación
+        user.setConfirAdult(true);
+        user.setAcceptTerm(LocalDateTime.now());
 
-        // Versión de términos (usa normalize)
+        // Versión de términos
         String termVersion = normalize(registerDTO.getTermVersion());
         user.setTermVersion(termVersion != null ? termVersion : "v1");
 
-        // IP de registro (desde el controller con IpConfig)
+        // IP de registro
         if (registerIp != null && !registerIp.isBlank()) {
             user.setRegistIp(registerIp.trim());
         }
 
         User savedUser = userRepository.save(user);
+
         seedPrimaryLanguageIfMissing(savedUser);
+
+        sendWelcomeEmail(savedUser);
+
         return mapToDTO(savedUser);
     }
 
@@ -154,9 +160,9 @@ public class UserService {
                                  String acceptLanguage,
                                  String countryDetected) {
         // --- Sanitización y normalización ---
-        final String email    = sanitizeEmail(registerDTO.getEmail());        // trim + rechaza espacios internos + minúsculas
-        final String nickname = sanitizeNickname(registerDTO.getNickname());  // elimina espacios no deseados
-        final String password = registerDTO.getPassword();                    // no se altera
+        final String email    = sanitizeEmail(registerDTO.getEmail());
+        final String nickname = sanitizeNickname(registerDTO.getNickname());
+        final String password = registerDTO.getPassword();
 
         if (email == null) {
             throw new IllegalArgumentException("El email no puede estar vacío");
@@ -164,7 +170,7 @@ public class UserService {
         if (nickname == null) {
             throw new IllegalArgumentException("El nickname es obligatorio");
         }
-        validatePasswordPolicy(password); // longitud y sin espacios
+        validatePasswordPolicy(password);
 
         if (!Boolean.TRUE.equals(registerDTO.getConfirAdult())) {
             throw new IllegalArgumentException("Debes confirmar que eres mayor de 18 años");
@@ -189,10 +195,9 @@ public class UserService {
             throw new UnderageModelException("Debes ser mayor de 18 años para registrarte como modelo");
         }
 
-
         User user = new User();
 
-        // ===== UI LOCALE (Industrial): DTO -> Accept-Language -> default "es" =====
+        // ===== UI LOCALE =====
         String uiLocale = normalize(registerDTO.getUiLocale());
         if (uiLocale == null) {
             uiLocale = resolveUiLocaleFromAcceptLanguage(acceptLanguage);
@@ -210,7 +215,6 @@ public class UserService {
                 registerIp
         );
 
-        // ===== Country detected (persistido en users.country_detected) =====
         if (countryDetected != null && !countryDetected.isBlank()) {
             user.setCountryDetected(countryDetected.trim().toUpperCase(Locale.ROOT));
         }
@@ -230,25 +234,26 @@ public class UserService {
         user.setRiskUpdatedBy(null);
         user.setVerificationStatus(Constants.VerificationStatuses.PENDING);
 
+        // Consentimientos
+        user.setConfirAdult(true);
+        user.setAcceptTerm(LocalDateTime.now());
 
-        // Consentimientos / auditoría:
-        user.setConfirAdult(true);                 // el check ya fue validado
-        user.setAcceptTerm(LocalDateTime.now());   // marca de tiempo de aceptación
-
-        // Versión de términos
         String termVersion = normalize(registerDTO.getTermVersion());
         user.setTermVersion(termVersion != null ? termVersion : "v1");
 
-        // IP de registro (obtenida en el controller con IpConfig)
         if (registerIp != null && !registerIp.isBlank()) {
             user.setRegistIp(registerIp.trim());
         }
 
-        // Persistencia
         User savedUser = userRepository.save(user);
+
         seedPrimaryLanguageIfMissing(savedUser);
+
+        sendWelcomeEmail(savedUser);
+
         return mapToDTO(savedUser);
     }
+
 
     public Optional<LoginResponse> login(@Valid UserLoginDTO loginDTO) {
         Optional<User> userOpt = userRepository.findByEmail(loginDTO.getEmail());
@@ -403,6 +408,8 @@ public class UserService {
             }
 
             unsubscribeRepository.save(row);
+
+            sendUnsubscribeEmail(user);
         }
 
         // (Opcional) Si luego integras cierre de WS/colas, hazlo fuera para no mezclar capas aquí.
@@ -462,6 +469,40 @@ public class UserService {
         if (hasSpace) {
             throw new IllegalArgumentException("La contraseña no puede contener espacios en blanco.");
         }
+    }
+
+    //EMAIL
+    private void sendWelcomeEmail(User user) {
+
+        String subject = "Bienvenido a SharemeChat";
+
+        String body = """
+            <p>Hola %s,</p>
+            <p>Tu cuenta en <b>SharemeChat</b> se ha creado correctamente.</p>
+            <p>Ya puedes acceder a la plataforma.</p>
+            <p>Si no has creado esta cuenta, contacta con soporte.</p>
+            """.formatted(user.getNickname());
+
+        emailService.send(user.getEmail(), subject, body);
+    }
+
+    //EMAIL
+    private void sendUnsubscribeEmail(User user) {
+
+        String subject = "Confirmación de baja en SharemeChat";
+
+        String body = """
+            <p>Hola %s,</p>
+
+            <p>Tu cuenta en <b>SharemeChat</b> ha sido dada de baja correctamente.</p>
+
+            <p>Si no has solicitado esta baja o crees que se trata de un error,
+            puedes contactar con nuestro equipo de soporte.</p>
+
+            <p>Gracias por haber utilizado SharemeChat.</p>
+            """.formatted(user.getNickname());
+
+        emailService.send(user.getEmail(), subject, body);
     }
 
     private void seedPrimaryLanguageIfMissing(User user) {

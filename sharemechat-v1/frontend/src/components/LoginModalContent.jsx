@@ -165,7 +165,13 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
             {loading ? 'Entrando…' : 'Iniciar Sesión'}
           </StyledButton>
 
-          <StyledLinkButton type="button" onClick={() => safeNavigate('/forgot-password')}>
+          <StyledLinkButton
+            type="button"
+            onClick={() => {
+              if (onClose) onClose();
+              safeNavigate('/forgot-password');
+            }}
+          >
             ¿Olvidaste tu contraseña?
           </StyledLinkButton>
         </>
