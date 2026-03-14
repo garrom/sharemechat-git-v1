@@ -1,4 +1,6 @@
+// src/pages/dashboard/DashboardUserModel.jsx
 import React, { useEffect, useState } from 'react';
+import i18n from '../../i18n';
 import { useHistory } from 'react-router-dom';
 
 // Layout base (mismo que DashboardUserClient)
@@ -33,6 +35,8 @@ const DashboardUserModel = () => {
   const history = useHistory();
   const { user: sessionUser, loading: sessionLoading } = useSession();
 
+  const t = (key, options) => i18n.t(key, options);
+
   const [userName, setUserName] = useState('Modelo');
   const [info, setInfo] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
@@ -60,8 +64,12 @@ const DashboardUserModel = () => {
       return;
     }
 
-    setUserName(sessionUser.nickname || sessionUser.name || sessionUser.email || 'Usuario');
-    setInfo(`Estado de verificación: ${sessionUser.verificationStatus || 'PENDING'}`);
+    setUserName(sessionUser.nickname || sessionUser.name || sessionUser.email || t('dashboardUserModel.user.defaultName'));
+    setInfo(
+      t('dashboardUserModel.info.verificationStatus', {
+        status: sessionUser.verificationStatus || 'PENDING',
+      })
+    );
   }, [sessionUser, sessionLoading, history]);
 
   // Cargar contrato vigente + estado aceptación (auth)
@@ -90,7 +98,7 @@ const DashboardUserModel = () => {
         }
       } catch (e) {
         if (cancelled) return;
-        setContractErr('No se pudo cargar el contrato legal. Intenta recargar.');
+        setContractErr(t('dashboardUserModel.contract.errors.load'));
         setContractAccepted(null);
       }
     };
@@ -149,7 +157,7 @@ const DashboardUserModel = () => {
         setKycMode('');
       }
     } catch (e) {
-      setContractErr('No se pudo registrar la aceptación. Inténtalo de nuevo.');
+      setContractErr(t('dashboardUserModel.contract.errors.accept'));
     } finally {
       setAccepting(false);
     }
@@ -185,38 +193,44 @@ const DashboardUserModel = () => {
         return;
       }
 
-      setKycRouteErr(`Modo KYC no soportado: ${mode || 'N/D'}`);
+      setKycRouteErr(
+        t('dashboardUserModel.kyc.errors.unsupportedMode', {
+          mode: mode || t('dashboardUserModel.kyc.notAvailable'),
+        })
+      );
     } catch (e) {
-      setKycRouteErr('No se pudo obtener el flujo KYC. Inténtalo de nuevo.');
+      setKycRouteErr(t('dashboardUserModel.kyc.errors.load'));
     } finally {
       setRoutingKyc(false);
     }
   };
 
-  const displayName = userName || 'Modelo';
+  const displayName = userName || t('dashboardUserModel.user.defaultName');
   const mustAcceptContract = contractAccepted === false;
   const canAcceptContract = openedContract && confirmChecked && !accepting;
 
   const mainButtonLabel =
     kycMode === 'VERIFF'
-      ? 'Ir a Veriff'
+      ? t('dashboardUserModel.kyc.actions.goVeriff')
       : kycMode === 'MANUAL'
-      ? 'Subir documentos (manual)'
-      : 'Actualizar / Subir documentos';
+      ? t('dashboardUserModel.kyc.actions.uploadDocumentsManual')
+      : t('dashboardUserModel.kyc.actions.updateOrUploadDocuments');
 
   const mobileButtonLabel =
     kycMode === 'VERIFF'
-      ? 'Ir a Veriff'
+      ? t('dashboardUserModel.kyc.actions.goVeriff')
       : kycMode === 'MANUAL'
-      ? 'Subir documentos'
-      : 'Subir documentos';
+      ? t('dashboardUserModel.kyc.actions.uploadDocumentsShort')
+      : t('dashboardUserModel.kyc.actions.uploadDocumentsShort');
 
   if (sessionLoading) {
     return (
       <StyledContainer>
         <GlobalBlack />
         <StyledMainContent>
-          <div style={{ padding: 16, color: '#fff' }}>Cargando sesión…</div>
+          <div style={{ padding: 16, color: '#fff' }}>
+            {t('dashboardUserModel.loading.session')}
+          </div>
         </StyledMainContent>
       </StyledContainer>
     );
@@ -244,24 +258,24 @@ const DashboardUserModel = () => {
           <NavButton
             type="button"
             onClick={handleLogout}
-            title="Cerrar sesión"
+            title={t('dashboardUserModel.actions.logoutTitle')}
           >
-            Salir
+            {t('dashboardUserModel.actions.logout')}
           </NavButton>
         </div>
 
         {/* Móvil: hamburguesa */}
         <HamburgerButton
           onClick={() => setMenuOpen((open) => !open)}
-          aria-label="Abrir menú"
-          title="Menú"
+          aria-label={t('dashboardUserModel.nav.openMenu')}
+          title={t('dashboardUserModel.nav.menu')}
         >
           ☰
         </HamburgerButton>
 
         <MobileMenu className={!menuOpen && 'hidden'}>
           <NavText style={{ marginBottom: 8 }}>
-            Hola, {displayName}
+            {t('dashboardUserModel.greeting.hello', { name: displayName })}
           </NavText>
 
           <NavButton
@@ -271,9 +285,9 @@ const DashboardUserModel = () => {
               setMenuOpen(false);
             }}
             disabled={mustAcceptContract || routingKyc}
-            title={mustAcceptContract ? 'Debes aceptar el contrato primero' : undefined}
+            title={mustAcceptContract ? t('dashboardUserModel.contract.mustAcceptFirst') : undefined}
           >
-            {routingKyc ? 'Abriendo KYC…' : mobileButtonLabel}
+            {routingKyc ? t('dashboardUserModel.kyc.actions.openingShort') : mobileButtonLabel}
           </NavButton>
 
           <NavButton
@@ -283,7 +297,7 @@ const DashboardUserModel = () => {
               setMenuOpen(false);
             }}
           >
-            Salir
+            {t('dashboardUserModel.actions.logout')}
           </NavButton>
         </MobileMenu>
       </StyledNavbar>
@@ -292,7 +306,7 @@ const DashboardUserModel = () => {
       <StyledMainContent data-tab="onboarding">
         <CenteredMain>
           <OnboardingCard>
-            <h3>Completa tu verificación de Modelo</h3>
+            <h3>{t('dashboardUserModel.title')}</h3>
 
             {info && <Hint style={{ marginTop: 8, color: '#000' }}>{info}</Hint>}
 
@@ -300,7 +314,7 @@ const DashboardUserModel = () => {
             {contractAccepted === false && (
               <div style={{ marginTop: 16 }}>
                 <Hint>
-                  Antes de continuar, debes aceptar el contrato legal de modelo.
+                  {t('dashboardUserModel.contract.mustAcceptMessage')}
                 </Hint>
 
                 {contractCurrent?.url && (
@@ -312,7 +326,7 @@ const DashboardUserModel = () => {
                       onClick={() => setOpenedContract(true)}
                       style={{ color: '#000', textDecoration: 'underline' }}
                     >
-                      Ver contrato (PDF)
+                      {t('dashboardUserModel.contract.viewPdf')}
                     </a>
                   </Hint>
                 )}
@@ -325,7 +339,7 @@ const DashboardUserModel = () => {
                       onChange={(e) => setConfirmChecked(e.target.checked)}
                     />
                     <span style={{ color: '#000' }}>
-                      He leído y acepto el contrato de modelo
+                      {t('dashboardUserModel.contract.checkbox')}
                     </span>
                   </label>
                 </div>
@@ -337,15 +351,17 @@ const DashboardUserModel = () => {
                     disabled={!canAcceptContract}
                     title={
                       accepting
-                        ? 'Registrando aceptación…'
+                        ? t('dashboardUserModel.contract.actions.accepting')
                         : !openedContract
-                        ? 'Abre el contrato (PDF) primero'
+                        ? t('dashboardUserModel.contract.tooltips.openPdfFirst')
                         : !confirmChecked
-                        ? 'Marca la casilla para continuar'
-                        : 'Aceptar contrato'
+                        ? t('dashboardUserModel.contract.tooltips.checkToContinue')
+                        : t('dashboardUserModel.contract.actions.accept')
                     }
                   >
-                    {accepting ? 'Registrando aceptación…' : 'Acepto el contrato'}
+                    {accepting
+                      ? t('dashboardUserModel.contract.actions.accepting')
+                      : t('dashboardUserModel.contract.actions.accept')}
                   </ProfilePrimaryButton>
                 </div>
 
@@ -362,7 +378,7 @@ const DashboardUserModel = () => {
 
             {contractAccepted === true && kycMode && (
               <Hint style={{ marginTop: 12, color: '#000' }}>
-                Método KYC activo: <strong>{kycMode}</strong>
+                {t('dashboardUserModel.kyc.activeMethod')} <strong>{kycMode}</strong>
               </Hint>
             )}
 
@@ -371,9 +387,9 @@ const DashboardUserModel = () => {
                 type="button"
                 onClick={handleUploadDocs}
                 disabled={mustAcceptContract || routingKyc}
-                title={mustAcceptContract ? 'Debes aceptar el contrato primero' : undefined}
+                title={mustAcceptContract ? t('dashboardUserModel.contract.mustAcceptFirst') : undefined}
               >
-                {routingKyc ? 'Abriendo verificación…' : mainButtonLabel}
+                {routingKyc ? t('dashboardUserModel.kyc.actions.opening') : mainButtonLabel}
               </ProfilePrimaryButton>
             </div>
 
@@ -384,8 +400,8 @@ const DashboardUserModel = () => {
             )}
 
             <Hint style={{ marginTop: 12 }}>
-              Una vez validados por el administrador, tu cuenta pasará a{' '}
-              <strong>MODEL</strong>.
+              {t('dashboardUserModel.footerHint.prefix')}{' '}
+              <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
             </Hint>
           </OnboardingCard>
         </CenteredMain>

@@ -17,5 +17,309 @@
       "found": "No se ha encontrado un emparejamiento adecuado"
     },
     "unknown": "Se ha producido un evento no reconocido"
+  },
+  "home": {
+    "nav": {
+      "videochat": "Videochat",
+      "favorites": "Favoritos",
+      "blog": "Blog",
+      "openMenuAria": "Abrir menú",
+      "menuTitle": "Menú"
+    },
+    "cta": {
+      "buy": "Comprar",
+      "login": "Iniciar sesión",
+      "startVideoChat": "Iniciar Video Chat"
+    },
+    "hero": {
+      "title": "VideoChat con modelos",
+      "subtitle": "Conecta al instante con modelos reales, en vivo, en una experiencia 1 a 1 inspirada en plataformas como Coomeet, pero con la tecnología y control total de SharemeChat.",
+      "freeTrial": "Regístrate y pruébalo GRATIS.",
+      "loading": "Cargando modelos…",
+      "prevAria": "Modelo anterior",
+      "nextAria": "Modelo siguiente",
+      "slot": {
+        "top": "Top modelos",
+        "new": "Nueva modelo",
+        "random": "Descubre"
+      }
+    }
+  },
+  "common": {
+    "close": "Cerrar",
+    "back": "Volver",
+    "networkError": "Error de red"
+  },
+  "auth": {
+    "tabs": {
+      "login": "Login",
+      "register": "Regístrate"
+    },
+    "login": {
+      "title": "Iniciar sesión",
+      "status": {
+        "successRedirecting": "Acceso correcto. Redirigiendo…"
+      },
+      "placeholders": {
+        "email": "Email",
+        "password": "Contraseña (mínimo 8 caracteres)"
+      },
+      "actions": {
+        "submit": "Iniciar Sesión",
+        "loading": "Entrando…",
+        "forgotPassword": "¿Olvidaste tu contraseña?"
+      },
+      "validation": {
+        "emailRequired": "Introduce tu email.",
+        "emailInvalid": "Formato de email no válido.",
+        "passwordRequired": "Introduce tu contraseña.",
+        "passwordMin": "La contraseña debe tener al menos 8 caracteres."
+      },
+      "errors": {
+        "invalidCredentials": "Credenciales inválidas.",
+        "accessDenied": "Acceso denegado.",
+        "serviceUnavailable": "Servicio no disponible.",
+        "generic": "Error al iniciar sesión",
+        "invalidUserType": "Tipo de usuario no válido"
+      }
+    },
+    "registerGender": {
+      "title": "¿Eres chico o chica?",
+      "male": "Soy Chico",
+      "female": "Soy Chica"
+    },
+    "registerClient": {
+      "title": "Registro",
+      "placeholders": {
+        "nickname": "Apodo / Nickname",
+        "email": "Email",
+        "password": "Contraseña (mínimo 8 caracteres)"
+      },
+      "checks": {
+        "over18": "Soy mayor de 18 años",
+        "acceptPrefix": "Acepto los",
+        "terms": "Términos y Condiciones",
+        "and": "y la",
+        "privacy": "Política de Privacidad"
+      },
+      "actions": {
+        "submit": "Registrarse",
+        "loading": "Registrando…"
+      },
+      "validation": {
+        "nicknameRequired": "El apodo (nickname) es obligatorio.",
+        "emailRequired": "El email es obligatorio.",
+        "emailInvalid": "Formato de email no válido.",
+        "passwordMin": "La contraseña debe tener al menos 8 caracteres",
+        "confirmAdult": "Debes confirmar que eres mayor de 18 años.",
+        "acceptTerms": "Debes aceptar los términos y condiciones."
+      },
+      "success": {
+        "title": "Registro completado",
+        "message": "Tu cuenta de usuario se ha creado correctamente."
+      }
+    },
+    "registerModel": {
+      "title": "Registro",
+      "placeholders": {
+        "nickname": "Apodo / Nickname",
+        "email": "Email",
+        "password": "Contraseña (mínimo 8 caracteres)"
+      },
+      "checks": {
+        "over18": "Soy mayor de 18 años",
+        "acceptPrefix": "Acepto los",
+        "terms": "Términos y Condiciones",
+        "and": "y la",
+        "privacy": "Política de Privacidad"
+      },
+      "actions": {
+        "submit": "Registrarse",
+        "loading": "Registrando…"
+      },
+      "validation": {
+        "nicknameRequired": "El apodo (nickname) es obligatorio.",
+        "emailRequired": "El email es obligatorio.",
+        "emailInvalid": "Formato de email no válido.",
+        "passwordMin": "La contraseña debe tener al menos 8 caracteres",
+        "dateOfBirthRequired": "La fecha de nacimiento es obligatoria.",
+        "confirmAdult": "Debes confirmar que eres mayor de 18 años.",
+        "acceptTerms": "Debes aceptar los términos y condiciones."
+      },
+      "success": {
+        "title": "Registro completado",
+        "message": "Tu cuenta de usuario se ha creado correctamente."
+      }
+    }
+  },
+  "dashboardClient": {
+    "nav": {
+      "videochat": "Videochat",
+      "favorites": "Favoritos",
+      "blog": "Blog",
+      "openMenu": "Abrir menú",
+      "menu": "Menú"
+    },
+    "balance": {
+      "label": "Saldo:",
+      "loading": "Saldo: …",
+      "unavailable": "Saldo: n/d"
+    },
+    "actions": {
+      "buy": "Comprar",
+      "logout": "Salir",
+      "logoutTitle": "Cerrar sesión",
+      "viewProfile": "Ver perfil",
+      "profile": "Perfil"
+    },
+    "favorites": {
+      "inCallLocked": "En llamada: la lista se bloquea hasta colgar."
+    }
+  },
+  "dashboardModel": {
+    "nav": {
+      "videochat": "Videochat",
+      "favorites": "Favoritos",
+      "blog": "Blog",
+      "openMenu": "Abrir menú",
+      "menu": "Menú"
+    },
+    "queue": {
+      "label": "Pos.:"
+    },
+    "balance": {
+      "label": "Saldo:",
+      "loading": "Saldo: …",
+      "unavailable": "Saldo: -",
+      "unavailableMobile": "Saldo: n/d"
+    },
+    "actions": {
+      "stats": "Estadísticas",
+      "withdraw": "Retirar",
+      "logout": "Salir",
+      "logoutTitle": "Salir",
+      "viewProfile": "Ver perfil",
+      "profile": "Perfil"
+    },
+    "favorites": {
+      "inCallLocked": "En llamada: la lista se bloquea hasta colgar."
+    }
+  },
+  "dashboardUserClient": {
+    "nav": {
+      "videochat": "Videochat",
+      "favorites": "Favoritos",
+      "blog": "Blog",
+      "openMenu": "Abrir menú",
+      "menu": "Menú"
+    },
+    "greeting": {
+      "hello": "Hola, {{name}}"
+    },
+    "user": {
+      "defaultName": "Usuario"
+    },
+    "actions": {
+      "goPremium": "Hazte Premium",
+      "processing": "Procesando…",
+      "logout": "Salir",
+      "logoutTitle": "Cerrar sesión"
+    },
+    "firstPayment": {
+      "success": {
+        "title": "Pago realizado",
+        "message": "Se ha procesado el pack de {{minutes}} minutos. Tu cuenta ya está activada como CLIENT."
+      }
+    },
+    "status": {
+      "noModelsAvailable": "No hay modelos disponibles ahora mismo. Inténtalo de nuevo en unos segundos.",
+      "trialUnavailable": "Has agotado las pruebas gratuitas por ahora.",
+      "trialEnded": "Tu prueba gratuita con esta modelo ha terminado.",
+      "cooldown": "Has agotado las pruebas gratuitas por ahora. Vuelve más tarde para nuevas pruebas.",
+      "connectionClosed": "La conexión con la modelo se ha cerrado.",
+      "searchingNewModel": "Buscando nueva modelo…"
+    },
+    "report": {
+      "title": "Reportar",
+      "displayName": "Modelo",
+      "modelNotIdentified": "No se pudo identificar a la modelo.",
+      "sentTitle": "Reporte enviado",
+      "sentMessage": "Gracias. Hemos recibido tu reporte.",
+      "sendError": "No se pudo enviar el reporte."
+    },
+    "common": {
+      "errorTitle": "Error"
+    },
+    "errors": {
+      "loadUser": "Error cargando usuario",
+      "cameraActivate": "Error al activar la cámara:",
+      "websocket": "Error WebSocket",
+      "webrtc": "Error en la conexión WebRTC:",
+      "activateCameraFirst": "Primero activa la cámara.",
+      "firstPayment": "Error al procesar el pago.",
+      "noServerConnection": "No hay conexión con el servidor. Pulsa \"Buscar\" de nuevo.",
+      "next": "No se pudo solicitar NEXT."
+    }
+  },
+  "dashboardUserModel": {
+    "title": "Completa tu verificación de Modelo",
+    "nav": {
+      "openMenu": "Abrir menú",
+      "menu": "Menú"
+    },
+    "greeting": {
+      "hello": "Hola, {{name}}"
+    },
+    "user": {
+      "defaultName": "Modelo"
+    },
+    "info": {
+      "verificationStatus": "Estado de verificación: {{status}}"
+    },
+    "actions": {
+      "logout": "Salir",
+      "logoutTitle": "Cerrar sesión"
+    },
+    "loading": {
+      "session": "Cargando sesión…"
+    },
+    "contract": {
+      "mustAcceptMessage": "Antes de continuar, debes aceptar el contrato legal de modelo.",
+      "viewPdf": "Ver contrato (PDF)",
+      "checkbox": "He leído y acepto el contrato de modelo",
+      "mustAcceptFirst": "Debes aceptar el contrato primero",
+      "actions": {
+        "accept": "Acepto el contrato",
+        "accepting": "Registrando aceptación…"
+      },
+      "tooltips": {
+        "openPdfFirst": "Abre el contrato (PDF) primero",
+        "checkToContinue": "Marca la casilla para continuar"
+      },
+      "errors": {
+        "load": "No se pudo cargar el contrato legal. Intenta recargar.",
+        "accept": "No se pudo registrar la aceptación. Inténtalo de nuevo."
+      }
+    },
+    "kyc": {
+      "activeMethod": "Método KYC activo:",
+      "notAvailable": "N/D",
+      "actions": {
+        "goVeriff": "Ir a Veriff",
+        "uploadDocumentsManual": "Subir documentos (manual)",
+        "updateOrUploadDocuments": "Actualizar / Subir documentos",
+        "uploadDocumentsShort": "Subir documentos",
+        "opening": "Abriendo verificación…",
+        "openingShort": "Abriendo KYC…"
+      },
+      "errors": {
+        "unsupportedMode": "Modo KYC no soportado: {{mode}}",
+        "load": "No se pudo obtener el flujo KYC. Inténtalo de nuevo."
+      }
+    },
+    "footerHint": {
+      "prefix": "Una vez validados por el administrador, tu cuenta pasará a",
+      "role": "MODEL"
+    }
   }
 }

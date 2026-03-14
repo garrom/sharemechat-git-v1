@@ -1,4 +1,3 @@
-// src/styles/NavbarStyles.js
 import styled from 'styled-components';
 import { colors, radius, space, shadow } from './core/tokens';
 
@@ -137,6 +136,45 @@ export const SaldoText = styled.span`
   @media (max-width: 640px) {
     font-size: 0.9rem;
     padding-inline: 12px;
+  }
+`;
+
+export const LocaleSwitch = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: ${radius.pill};
+  border: 1px solid rgba(148, 163, 184, 0.45);
+  background: #020617;
+`;
+
+export const LocaleButton = styled.button`
+  appearance: none;
+  border: none;
+  background: ${props => props.$active ? '#ffffff' : 'transparent'};
+  color: ${props => props.$active ? '#020617' : '#e5e7eb'};
+  border-radius: ${radius.pill};
+  padding: 6px 10px;
+  min-width: 42px;
+  cursor: pointer;
+
+  font-family: var(--font-nav);
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1;
+
+  transition: background-color .15s ease, color .15s ease, opacity .15s ease;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
   }
 `;
 

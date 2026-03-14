@@ -119,6 +119,18 @@ public class UserController {
         return ResponseEntity.ok(updatedUser);
     }
 
+    @PutMapping("/me/ui-locale")
+    public ResponseEntity<UserDTO> updateMyUiLocale(@RequestBody Map<String, String> body,
+                                                    Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).body(null);
+        }
+
+        String uiLocale = body != null ? body.get("uiLocale") : null;
+        UserDTO updatedUser = userService.updateUiLocale(authentication.getName(), uiLocale);
+        return ResponseEntity.ok(updatedUser);
+    }
+
     // Usamos /me usa para referirse al usuario en curso en el frontal
     @GetMapping("/me")
     public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {

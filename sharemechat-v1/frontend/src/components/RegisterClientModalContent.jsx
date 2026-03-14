@@ -1,46 +1,50 @@
-// src/modals/RegisterClientModalContent.jsx
-import React,{useState}from 'react';
+import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
-import{Form as RegForm,Title,Input,Button,LinkButton,Error as ErrorText,Field,FieldError,CheckRow,CheckInput,CheckText}from'../styles/public-styles/RegisterClientModelStyles';
+import i18n from '../i18n';
+import { getResolvedLocale } from '../i18n/localeUtils';
+import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
 
-const InlineForm=styled(RegForm)`
-  background:transparent;
-  border:0;
-  box-shadow:none;
-  margin:0;
-  padding:0;
+const InlineForm = styled(RegForm)`
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
 `;
 
-const RegisterClientModalContent=({onClose,onBack})=>{
-  const { alert } = useAppModals()
-  const[nickname,setNickname]=useState('');
-  const[email,setEmail]=useState('');
-  const[password,setPassword]=useState('');
-  const[isOver18,setIsOver18]=useState(false);
-  const[acceptsTerms,setAcceptsTerms]=useState(false);
-  const[error,setError]=useState('');
-  const[fieldErrors,setFieldErrors]=useState({nickname:'',email:'',password:''});
-  const[loading,setLoading]=useState(false);
+const RegisterClientModalContent = ({ onClose, onBack }) => {
 
-  const validate=()=>{
-    const fe={nickname:'',email:'',password:''};
-    if(!nickname.trim())fe.nickname='El apodo (nickname) es obligatorio.';
-    if(!email.trim())fe.email='El email es obligatorio.';else if(!/^\S+@\S+\.\S+$/.test(email))fe.email='Formato de email no válido.';
-    if(password.length<8)fe.password='La contraseña debe tener al menos 8 caracteres';
+  const { alert } = useAppModals();
+  const [nickname, setNickname] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isOver18, setIsOver18] = useState(false);
+  const [acceptsTerms, setAcceptsTerms] = useState(false);
+  const [error, setError] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({ nickname: '', email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+
+
+  const validate = () => {
+    const fe = { nickname: '', email: '', password: '' };
+    if (!nickname.trim()) fe.nickname = i18n.t('auth.registerClient.validation.nicknameRequired');
+    if (!email.trim()) fe.email = i18n.t('auth.registerClient.validation.emailRequired');
+    else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = i18n.t('auth.registerClient.validation.emailInvalid');
+    if (password.length < 8) fe.password = i18n.t('auth.registerClient.validation.passwordMin');
     setFieldErrors(fe);
-    return!fe.nickname&&!fe.email&&!fe.password;
+    return !fe.nickname && !fe.email && !fe.password;
   };
 
-  const handleRegister=async(e)=>{
-    if(e&&e.preventDefault)e.preventDefault();
-    if(loading)return;
+  const handleRegister = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (loading) return;
     setError('');
-    if(!validate())return;
-    if(!isOver18)return setError('Debes confirmar que eres mayor de 18 años.');
-    if(!acceptsTerms)return setError('Debes aceptar los términos y condiciones.');
+    if (!validate()) return;
+    if (!isOver18) return setError(i18n.t('auth.registerClient.validation.confirmAdult'));
+    if (!acceptsTerms) return setError(i18n.t('auth.registerClient.validation.acceptTerms'));
 
-    const uiLocale = String(navigator.language || 'es').toLowerCase().split('-')[0];
+    const uiLocale = getResolvedLocale(i18n);
 
     const registerData = {
       nickname: nickname.trim(),
@@ -52,66 +56,68 @@ const RegisterClientModalContent=({onClose,onBack})=>{
     };
 
     setLoading(true);
-    try{
-      const response=await fetch('/api/users/register/client',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(registerData)});
-      if(!response.ok){
-        let errorMessage=`Error en el registro: ${response.status} ${response.statusText}`;
-        try{
-          const responseText=await response.text();
-          try{
-            const err=JSON.parse(responseText);
-            errorMessage=err.message||err.error||responseText||errorMessage;
-          }catch{errorMessage=responseText||errorMessage;}
-        }catch{}
+    try {
+      const response = await fetch('/api/users/register/client', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(registerData) });
+      if (!response.ok) {
+        let errorMessage = `Error en el registro: ${response.status} ${response.statusText}`;
+        try {
+          const responseText = await response.text();
+          try {
+            const err = JSON.parse(responseText);
+            errorMessage = err.message || err.error || responseText || errorMessage;
+          } catch {
+            errorMessage = responseText || errorMessage;
+          }
+        } catch {}
         throw new Error(errorMessage);
       }
       await alert({
-        title: 'Registro completado',
-        message: 'Tu cuenta de usuario se ha creado correctamente.',
+        title: i18n.t('auth.registerClient.success.title'),
+        message: i18n.t('auth.registerClient.success.message'),
         variant: 'success',
         size: 'sm',
       });
       if (onClose) onClose();
 
-    }catch(err){
-      setError(err.message||'Error de red');
-    }finally{
+    } catch (err) {
+      setError(err.message || i18n.t('common.networkError'));
+    } finally {
       setLoading(false);
     }
   };
 
-  return(
+  return (
     <InlineForm noValidate>
-      <Title>Registro</Title>
-      {error&&<ErrorText role="alert">{error}</ErrorText>}
+      <Title>{i18n.t('auth.registerClient.title')}</Title>
+      {error && <ErrorText role="alert">{error}</ErrorText>}
 
       <Field>
-        <Input type="text" value={nickname} onChange={e=>{setNickname(e.target.value);if(fieldErrors.nickname)setFieldErrors(f=>({...f,nickname:''}));}} placeholder="Apodo / Nickname" required aria-invalid={!!fieldErrors.nickname} aria-describedby={fieldErrors.nickname?'nick-error':undefined} autoComplete="nickname"/>
-        {fieldErrors.nickname&&<FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
+        <Input type="text" value={nickname} onChange={e => { setNickname(e.target.value); if (fieldErrors.nickname) setFieldErrors(f => ({ ...f, nickname: '' })); }} placeholder={i18n.t('auth.registerClient.placeholders.nickname')} required aria-invalid={!!fieldErrors.nickname} aria-describedby={fieldErrors.nickname ? 'nick-error' : undefined} autoComplete="nickname" />
+        {fieldErrors.nickname && <FieldError id="nick-error">{fieldErrors.nickname}</FieldError>}
       </Field>
 
       <Field>
-        <Input type="email" value={email} onChange={e=>{setEmail(e.target.value);if(fieldErrors.email)setFieldErrors(f=>({...f,email:''}));}} placeholder="Email" required aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email?'email-error':undefined} autoComplete="email"/>
-        {fieldErrors.email&&<FieldError id="email-error">{fieldErrors.email}</FieldError>}
+        <Input type="email" value={email} onChange={e => { setEmail(e.target.value); if (fieldErrors.email) setFieldErrors(f => ({ ...f, email: '' })); }} placeholder={i18n.t('auth.registerClient.placeholders.email')} required aria-invalid={!!fieldErrors.email} aria-describedby={fieldErrors.email ? 'email-error' : undefined} autoComplete="email" />
+        {fieldErrors.email && <FieldError id="email-error">{fieldErrors.email}</FieldError>}
       </Field>
 
       <Field>
-        <Input type="password" value={password} onChange={e=>{setPassword(e.target.value);if(fieldErrors.password)setFieldErrors(f=>({...f,password:''}));}} placeholder="Contraseña (mínimo 8 caracteres)" required aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password?'password-error':undefined} autoComplete="new-password"/>
-        {fieldErrors.password&&<FieldError id="password-error">{fieldErrors.password}</FieldError>}
+        <Input type="password" value={password} onChange={e => { setPassword(e.target.value); if (fieldErrors.password) setFieldErrors(f => ({ ...f, password: '' })); }} placeholder={i18n.t('auth.registerClient.placeholders.password')} required aria-invalid={!!fieldErrors.password} aria-describedby={fieldErrors.password ? 'password-error' : undefined} autoComplete="new-password" />
+        {fieldErrors.password && <FieldError id="password-error">{fieldErrors.password}</FieldError>}
       </Field>
 
       <CheckRow>
-        <CheckInput type="checkbox" checked={isOver18} onChange={e=>setIsOver18(e.target.checked)}/>
-        <CheckText>Soy mayor de 18 años</CheckText>
+        <CheckInput type="checkbox" checked={isOver18} onChange={e => setIsOver18(e.target.checked)} />
+        <CheckText>{i18n.t('auth.registerClient.checks.over18')}</CheckText>
       </CheckRow>
 
       <CheckRow>
-        <CheckInput type="checkbox" checked={acceptsTerms} onChange={e=>setAcceptsTerms(e.target.checked)}/>
-        <CheckText>Acepto los <a href="/terms" target="_blank" rel="noreferrer">Términos y Condiciones</a> y la <a href="/privacy" target="_blank" rel="noreferrer">Política de Privacidad</a></CheckText>
+        <CheckInput type="checkbox" checked={acceptsTerms} onChange={e => setAcceptsTerms(e.target.checked)} />
+        <CheckText>{i18n.t('auth.registerClient.checks.acceptPrefix')} <a href="/terms" target="_blank" rel="noreferrer">{i18n.t('auth.registerClient.checks.terms')}</a> {i18n.t('auth.registerClient.checks.and')} <a href="/privacy" target="_blank" rel="noreferrer">{i18n.t('auth.registerClient.checks.privacy')}</a></CheckText>
       </CheckRow>
 
-      <Button type="button" disabled={loading} onClick={handleRegister}>{loading?'Registrando…':'Registrarse'}</Button>
-      {onBack&&<LinkButton type="button" onClick={onBack}>Volver</LinkButton>}
+      <Button type="button" disabled={loading} onClick={handleRegister}>{loading ? i18n.t('auth.registerClient.actions.loading') : i18n.t('auth.registerClient.actions.submit')}</Button>
+      {onBack && <LinkButton type="button" onClick={onBack}>{i18n.t('common.back')}</LinkButton>}
     </InlineForm>
   );
 };

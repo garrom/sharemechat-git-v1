@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
+import i18n from '../i18n';
 import RegisterClientModalContent from './RegisterClientModalContent';
 import RegisterModelModalContent from './RegisterModelModalContent';
 import { useSession } from '../components/SessionProvider';
@@ -15,7 +16,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 
 const LoginModalContent = ({ onClose, onLoginSuccess }) => {
-  // vistas: login | register-gender | register-client | register-model
+
   const [view, setView] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,6 +27,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
   const history = useHistory();
   const { refresh, user } = useSession();
 
+
   const safeNavigate = (path) => {
     if (history && typeof history.push === 'function') {
       history.push(path);
@@ -35,26 +37,25 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
   };
 
   const readErrorMessage = async (res) => {
-    if (res.status === 401) return 'Credenciales inválidas.';
-    if (res.status === 403) return 'Acceso denegado.';
-    if (res.status === 404) return 'Servicio no disponible.';
+    if (res.status === 401) return i18n.t('auth.login.errors.invalidCredentials');
+    if (res.status === 403) return i18n.t('auth.login.errors.accessDenied');
+    if (res.status === 404) return i18n.t('auth.login.errors.serviceUnavailable');
     try {
       const data = await res.json();
       if (data?.message) return data.message;
     } catch {}
-    return 'Error al iniciar sesión';
+    return i18n.t('auth.login.errors.generic');
   };
 
   const validate = () => {
     const fe = { email: '', password: '' };
-    if (!email.trim()) fe.email = 'Introduce tu email.';
-    else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = 'Formato de email no válido.';
-    if (!password) fe.password = 'Introduce tu contraseña.';
-    else if (password.length < 8) fe.password = 'La contraseña debe tener al menos 8 caracteres.';
+    if (!email.trim()) fe.email = i18n.t('auth.login.validation.emailRequired');
+    else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = i18n.t('auth.login.validation.emailInvalid');
+    if (!password) fe.password = i18n.t('auth.login.validation.passwordRequired');
+    else if (password.length < 8) fe.password = i18n.t('auth.login.validation.passwordMin');
     setFieldErrors(fe);
     return !fe.email && !fe.password;
   };
-
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -76,7 +77,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
         throw new Error(msg);
       }
 
-      setStatus('Acceso correcto. Redirigiendo…');
+      setStatus(i18n.t('auth.login.status.successRedirecting'));
 
       const u = await refresh();
 
@@ -89,14 +90,13 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
       } else if (u?.role === Roles.USER) {
         if (u?.userType === UserTypes.FORM_CLIENT) safeNavigate('/dashboard-user-client');
         else if (u?.userType === UserTypes.FORM_MODEL) safeNavigate('/dashboard-user-model');
-        else setError('Tipo de usuario no válido');
+        else setError(i18n.t('auth.login.errors.invalidUserType'));
       } else {
-        // Si aún no está resuelto el user, manda a Home/Login y RequireRole hará su trabajo al re-render
         safeNavigate('/');
       }
       if (onLoginSuccess) onLoginSuccess();
     } catch (err) {
-      setError(err.message || 'Error al iniciar sesión');
+      setError(err.message || i18n.t('auth.login.errors.generic'));
     } finally {
       setLoading(false);
     }
@@ -108,20 +108,19 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
   return (
     <StyledForm onSubmit={view === 'login' ? handleLogin : undefined} noValidate>
       {onClose && (
-        <LoginCloseBtn type="button" onClick={onClose} aria-label="Cerrar" title="Cerrar">
+        <LoginCloseBtn type="button" onClick={onClose} aria-label={i18n.t('common.close')} title={i18n.t('common.close')}>
           <FontAwesomeIcon icon={faXmark} />
         </LoginCloseBtn>
       )}
 
       <TabsRow>
-        <TabButton type="button" data-active={isLoginTab} onClick={() => setView('login')}>Login</TabButton>
-        <TabButton type="button" data-active={isRegisterTab} onClick={() => setView('register-gender')}>Regístrate</TabButton>
+        <TabButton type="button" data-active={isLoginTab} onClick={() => setView('login')}>{i18n.t('auth.tabs.login')}</TabButton>
+        <TabButton type="button" data-active={isRegisterTab} onClick={() => setView('register-gender')}>{i18n.t('auth.tabs.register')}</TabButton>
       </TabsRow>
 
-      {/* LOGIN */}
       {view === 'login' && (
         <>
-          <FormTitle>Iniciar sesión</FormTitle>
+          <FormTitle>{i18n.t('auth.login.title')}</FormTitle>
           {status && <Status role="status">{status}</Status>}
           {error && <StyledError role="alert">{error}</StyledError>}
 
@@ -133,7 +132,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
                 setEmail(e.target.value);
                 if (fieldErrors.email) setFieldErrors(f => ({ ...f, email: '' }));
               }}
-              placeholder="Email"
+              placeholder={i18n.t('auth.login.placeholders.email')}
               required
               disabled={loading}
               aria-invalid={!!fieldErrors.email}
@@ -151,7 +150,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
                 setPassword(e.target.value);
                 if (fieldErrors.password) setFieldErrors(f => ({ ...f, password: '' }));
               }}
-              placeholder="Contraseña (mínimo 8 caracteres)"
+              placeholder={i18n.t('auth.login.placeholders.password')}
               required
               disabled={loading}
               aria-invalid={!!fieldErrors.password}
@@ -162,7 +161,7 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
           </Field>
 
           <StyledButton type="submit" disabled={loading}>
-            {loading ? 'Entrando…' : 'Iniciar Sesión'}
+            {loading ? i18n.t('auth.login.actions.loading') : i18n.t('auth.login.actions.submit')}
           </StyledButton>
 
           <StyledLinkButton
@@ -172,27 +171,25 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
               safeNavigate('/forgot-password');
             }}
           >
-            ¿Olvidaste tu contraseña?
+            {i18n.t('auth.login.actions.forgotPassword')}
           </StyledLinkButton>
         </>
       )}
 
-      {/* REGISTRO: ELECCIÓN GÉNERO */}
       {view === 'register-gender' && (
         <>
-          <FormTitle>¿Eres chico o chica?</FormTitle>
+          <FormTitle>{i18n.t('auth.registerGender.title')}</FormTitle>
 
           <StyledButton type="button" onClick={() => setView('register-client')}>
-            Soy Chico
+            {i18n.t('auth.registerGender.male')}
           </StyledButton>
 
           <StyledButton type="button" onClick={() => setView('register-model')}>
-            Soy Chica
+            {i18n.t('auth.registerGender.female')}
           </StyledButton>
         </>
       )}
 
-      {/* REGISTRO HOMBRE */}
       {view === 'register-client' && (
         <RegisterClientModalContent
           onClose={onClose}
@@ -200,7 +197,6 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
         />
       )}
 
-      {/* REGISTRO MUJER */}
       {view === 'register-model' && (
         <RegisterModelModalContent
           onClose={onClose}

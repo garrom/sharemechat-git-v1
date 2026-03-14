@@ -1,5 +1,6 @@
 // DashboardModel.jsx
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
+import i18n from '../../i18n';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
@@ -28,6 +29,7 @@ import {
     StyledNavbar, StyledBrand, NavText, SaldoText, QueueText,
     HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton
 } from '../../styles/NavbarStyles';
+import LocaleSwitcher from '../../components/LocaleSwitcher';
 import {
   ButtonActivarCam,ButtonBuscarModelo,
   ButtonBuscarCliente,ButtonNext,
@@ -59,7 +61,7 @@ const DashboardModel = () => {
     openNextWaitModal
   } = useAppModals();
 
-  const { user: sessionUser } = useSession();
+  const { user: sessionUser, updateUiLocale } = useSession();
   const { inCall, setInCall } = useCallUi();
   const [cameraActive, setCameraActive] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
@@ -279,7 +281,7 @@ const DashboardModel = () => {
       noPeerAvailableType: 'no-client-available',
       onNoPeerAvailable: () => {
         setError('');
-        setStatus('Esperando cliente...');
+        setStatus(i18n.t('dashboardModel.status.waitingClient'));
         setSearching(true);
       },
 
@@ -292,7 +294,7 @@ const DashboardModel = () => {
         setRemoteStream(null);
         setMessages([]);
         setError('');
-        setStatus('Buscando nuevo cliente...');
+        setStatus(i18n.t('dashboardModel.status.searchingNewClient'));
         setSearching(true);
 
         try {
@@ -2289,14 +2291,14 @@ const DashboardModel = () => {
         <div style={{display:'flex',alignItems:'center'}}>
           <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick} />
           <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-            <StyledNavTab type="button" data-active={activeTab === 'videochat'} aria-pressed={activeTab === 'videochat'} onClick={handleGoVideochat} title="Videochat">
-              Videochat
+            <StyledNavTab type="button" data-active={activeTab === 'videochat'} aria-pressed={activeTab === 'videochat'} onClick={handleGoVideochat} title={i18n.t('dashboardModel.nav.videochat')}>
+              {i18n.t('dashboardModel.nav.videochat')}
             </StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab === 'favoritos'} aria-pressed={activeTab === 'favoritos'} onClick={handleGoFavorites} title="Favoritos">
-              Favoritos
+            <StyledNavTab type="button" data-active={activeTab === 'favoritos'} aria-pressed={activeTab === 'favoritos'} onClick={handleGoFavorites} title={i18n.t('dashboardModel.nav.favorites')}>
+              {i18n.t('dashboardModel.nav.favorites')}
             </StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab === 'blog'} aria-pressed={activeTab === 'blog'} onClick={handleGoBlog} title="Blog">
-              Blog
+            <StyledNavTab type="button" data-active={activeTab === 'blog'} aria-pressed={activeTab === 'blog'} onClick={handleGoBlog} title={i18n.t('dashboardModel.nav.blog')}>
+              {i18n.t('dashboardModel.nav.blog')}
             </StyledNavTab>
           </div>
         </div>
@@ -2304,64 +2306,70 @@ const DashboardModel = () => {
         <StyledNavGroup className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
 
           {queuePosition !== null && queuePosition >= 0 && (
-            <QueueText className="me-3">Pos.: {queuePosition + 1}</QueueText>
+            <QueueText className="me-3">{i18n.t('dashboardModel.queue.label')} {queuePosition + 1}</QueueText>
           )}
           <NavText className="me-3">{displayName}</NavText>
           <SaldoText className="me-3">
-            {loadingSaldoModel ? 'Saldo: ...' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: -'}
+            {loadingSaldoModel ? i18n.t('dashboardModel.balance.loading') : saldoModel !== null ? `${i18n.t('dashboardModel.balance.label')} €${Number(saldoModel).toFixed(2)}` : i18n.t('dashboardModel.balance.unavailable')}
           </SaldoText>
-          <NavButton type="button" onClick={handleGoStats} title="Estadísticas">
+
+          <LocaleSwitcher />
+
+          <NavButton type="button" onClick={handleGoStats} title={i18n.t('dashboardModel.actions.stats')}>
             <FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}} />
-            <span>Estadísticas</span>
+            <span>{i18n.t('dashboardModel.actions.stats')}</span>
           </NavButton>
 
-          <NavButton type="button" onClick={handleRequestPayout} title="Retirar">
+          <NavButton type="button" onClick={handleRequestPayout} title={i18n.t('dashboardModel.actions.withdraw')}>
             <FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}} />
-            <span>Retirar</span>
+            <span>{i18n.t('dashboardModel.actions.withdraw')}</span>
           </NavButton>
 
-          <NavButton type="button" onClick={handleLogout} title="Salir">
+          <NavButton type="button" onClick={handleLogout} title={i18n.t('dashboardModel.actions.logoutTitle')}>
             <FontAwesomeIcon icon={faSignOutAlt} />
-            <span>Salir</span>
+            <span>{i18n.t('dashboardModel.actions.logout')}</span>
           </NavButton>
 
-          <StyledNavAvatar src={profilePic || '/img/avatarChica.png'} alt="avatar" title="Ver perfil" onClick={handleProfile} />
+          <StyledNavAvatar src={profilePic || '/img/avatarChica.png'} alt="avatar" title={i18n.t('dashboardModel.actions.viewProfile')} onClick={handleProfile} />
         </StyledNavGroup>
 
-        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">
+        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label={i18n.t('dashboardModel.nav.openMenu')} title={i18n.t('dashboardModel.nav.menu')}>
           <FontAwesomeIcon icon={faBars} />
         </HamburgerButton>
 
         <MobileMenu className={!menuOpen && 'hidden'}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
             {queuePosition !== null && queuePosition >= 0 && (
-              <QueueText className="me-3">Pos.: {queuePosition + 1}</QueueText>
+              <QueueText className="me-3">{i18n.t('dashboardModel.queue.label')} {queuePosition + 1}</QueueText>
             )}
             <NavText>{displayName}</NavText>
             <SaldoText>
-              {loadingSaldoModel ? 'Saldo: …' : saldoModel !== null ? `Saldo: €${Number(saldoModel).toFixed(2)}` : 'Saldo: n/d'}
+              {loadingSaldoModel ? i18n.t('dashboardModel.balance.loading') : saldoModel !== null ? `${i18n.t('dashboardModel.balance.label')} €${Number(saldoModel).toFixed(2)}` : i18n.t('dashboardModel.balance.unavailableMobile')}
             </SaldoText>
           </div>
 
+          <LocaleSwitcher onAfterChange={()=>setMenuOpen(false)} />
+
           <NavButton onClick={() => { handleProfile(); setMenuOpen(false); }}>
             <FontAwesomeIcon icon={faUser} />
-            <StyledIconWrapper>Perfil</StyledIconWrapper>
+            <StyledIconWrapper>{i18n.t('dashboardModel.actions.profile')}</StyledIconWrapper>
           </NavButton>
 
-          <NavButton onClick={() => { handleGoStats(); setMenuOpen(false); }} title="Estadísticas">
+          <NavButton onClick={() => { handleGoStats(); setMenuOpen(false); }} title={i18n.t('dashboardModel.actions.stats')}>
             <FontAwesomeIcon icon={faChartLine} style={{color:'#22c55e',fontSize:'1rem'}} />
-            <span>Estadísticas</span>
+            <span>{i18n.t('dashboardModel.actions.stats')}</span>
           </NavButton>
 
-          <NavButton onClick={() => { handleRequestPayout(); setMenuOpen(false); }} title="Retirar">
+          <NavButton onClick={() => { handleRequestPayout(); setMenuOpen(false); }} title={i18n.t('dashboardModel.actions.withdraw')}>
             <FontAwesomeIcon icon={faGem} style={{color:'#f97316',fontSize:'1rem'}} />
-            <span>Retirar</span>
+            <span>{i18n.t('dashboardModel.actions.withdraw')}</span>
           </NavButton>
 
-          <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }} title="Salir">
+          <NavButton onClick={() => { handleLogout(); setMenuOpen(false); }} title={i18n.t('dashboardModel.actions.logoutTitle')}>
             <FontAwesomeIcon icon={faSignOutAlt} />
-            <StyledIconWrapper>Salir</StyledIconWrapper>
+            <StyledIconWrapper>{i18n.t('dashboardModel.actions.logout')}</StyledIconWrapper>
           </NavButton>
+
         </MobileMenu>
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
@@ -2428,7 +2436,7 @@ const DashboardModel = () => {
                     selectedId={selectedContactId}
                   />
                 ) : (
-                  <div style={{padding:8,color:'#adb5bd'}}>En llamada: la lista se bloquea hasta colgar.</div>
+                  <div style={{padding:8,color:'#adb5bd'}}>{i18n.t('dashboardModel.favorites.inCallLocked')}</div>
                 )}
               </StyledLeftColumn>
             )}
@@ -2492,9 +2500,9 @@ const DashboardModel = () => {
 
       {!inCall && (
         <MobileBottomNav>
-          <BottomNavButton active={activeTab === 'videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
-          <BottomNavButton active={activeTab === 'favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
-          <BottomNavButton active={activeTab === 'blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
+          <BottomNavButton active={activeTab === 'videochat'} onClick={handleGoVideochat}><span>{i18n.t('dashboardModel.nav.videochat')}</span></BottomNavButton>
+          <BottomNavButton active={activeTab === 'favoritos'} onClick={handleGoFavorites}><span>{i18n.t('dashboardModel.nav.favorites')}</span></BottomNavButton>
+          <BottomNavButton active={activeTab === 'blog'} onClick={handleGoBlog}><span>{i18n.t('dashboardModel.nav.blog')}</span></BottomNavButton>
         </MobileBottomNav>
       )}
 

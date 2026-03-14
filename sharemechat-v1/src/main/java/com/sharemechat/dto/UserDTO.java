@@ -19,6 +19,7 @@ public class UserDTO {
     private Boolean active;
     private Boolean unsubscribe;
     private LocalDateTime createdAt;
+    private String uiLocale;
 
     private String accountStatus;
     private LocalDateTime suspendedUntil;
@@ -67,6 +68,9 @@ public class UserDTO {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public String getUiLocale() { return uiLocale; }
+    public void setUiLocale(String uiLocale) { this.uiLocale = uiLocale; }
 
     public String getAccountStatus() { return accountStatus; }
     public void setAccountStatus(String accountStatus) { this.accountStatus = accountStatus; }

@@ -1,4 +1,3 @@
-// src/pages/dashboard/VideoChatRandomCliente.jsx
 import React, { useState, useEffect } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import BlurredPreview from '../../components/BlurredPreview';
@@ -130,11 +129,11 @@ export default function VideoChatRandomCliente(props) {
 
   useEffect(() => {
     if (sessionLoading) return;
-    if (!sessionUser) return;
+    if (!sessionUser?.id) return;
 
     fetchTeasers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sessionLoading, sessionUser]);
+  }, [sessionLoading, sessionUser?.id]);
 
   const handleOpenPromo = (index) => {
     setActivePromoIndex(index);
@@ -202,7 +201,7 @@ export default function VideoChatRandomCliente(props) {
         >
           {!cameraActive ? (
             <>
-              {promoLoading && (
+              {promoLoading && promoVideos.length === 0 && (
                 <div style={{color:'#e9ecef',padding:'8px 12px',fontSize:'0.9rem'}}>
                   Cargando vídeos de modelos…
                 </div>

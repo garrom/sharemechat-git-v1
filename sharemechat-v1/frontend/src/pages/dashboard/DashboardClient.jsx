@@ -1,5 +1,7 @@
 // DashboardClient.jsx
 import React, { useState, useRef, useEffect,useLayoutEffect  } from 'react';
+import i18n from '../../i18n';
+import { getResolvedLocale } from '../../i18n/localeUtils';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesClientList from '../favorites/FavoritesClientList';
@@ -27,6 +29,7 @@ import {
   StyledNavbar, StyledBrand,NavText, SaldoText,
   HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton
 } from '../../styles/NavbarStyles';
+import LocaleSwitcher from '../../components/LocaleSwitcher';
 import {
   ButtonActivarCam,ButtonBuscarModelo,
   ButtonBuscarCliente,ButtonNext,
@@ -45,8 +48,6 @@ import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
 
-
-
 const DashboardClient = () => {
 
   const {
@@ -59,7 +60,7 @@ const DashboardClient = () => {
     openNextWaitModal
   } = useAppModals();
   const { inCall, setInCall } = useCallUi();
-  const { user: sessionUser } = useSession();
+  const { user: sessionUser, updateUiLocale } = useSession();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -144,7 +145,6 @@ const DashboardClient = () => {
   const cameraActiveRef = useRef(false);
 
 
-
   const isEcho = (incoming) => {
     const now = Date.now();
     return (
@@ -154,7 +154,7 @@ const DashboardClient = () => {
   };
 
   const fmtEUR = (v) =>
-    new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' })
+    new Intl.NumberFormat(getResolvedLocale(i18n), { style: 'currency', currency: 'EUR' })
       .format(Number(v || 0));
 
   // Devuelve el icono del regalo estrictamente desde el catálogo
@@ -291,7 +291,7 @@ const DashboardClient = () => {
           return;
         }
 
-        setStatus('Buscando nueva modelo...');
+        setStatus(i18n.t('dashboardClient.status.searchingNewModel'));
         setSearching(true);
 
         try {
@@ -2191,27 +2191,34 @@ const DashboardClient = () => {
         <div style={{display:'flex',alignItems:'center'}}>
           <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick}/>
           <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title="Videochat">Videochat</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title="Favoritos">Favoritos</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title="Blog">Blog</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title={i18n.t('dashboardClient.nav.videochat')}>{i18n.t('dashboardClient.nav.videochat')}</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title={i18n.t('dashboardClient.nav.favorites')}>{i18n.t('dashboardClient.nav.favorites')}</StyledNavTab>
+            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title={i18n.t('dashboardClient.nav.blog')}>{i18n.t('dashboardClient.nav.blog')}</StyledNavTab>
           </div>
         </div>
         <div className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
           <NavText className="me-3">{displayName}</NavText>
-          <SaldoText className="me-3">{loadingSaldo?'Saldo: …':saldoError?'Saldo: n/d':`Saldo: ${fmtEUR(saldo)}`}</SaldoText>
-          <NavButton type="button" onClick={handleAddBalance}><FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/><span>Comprar</span></NavButton>
-          <NavButton type="button" onClick={handleLogout} title="Cerrar sesión"><FontAwesomeIcon icon={faSignOutAlt}/><span>Salir</span></NavButton>
-          <StyledNavAvatar src={profilePic || '/img/avatarChico.png'} alt="avatar" title="Ver perfil" onClick={handleProfile}/>
+          <SaldoText className="me-3">{loadingSaldo ? i18n.t('dashboardClient.balance.loading') : saldoError ? i18n.t('dashboardClient.balance.unavailable') : `${i18n.t('dashboardClient.balance.label')} ${fmtEUR(saldo)}`}</SaldoText>
+
+          <LocaleSwitcher />
+
+          <NavButton type="button" onClick={handleAddBalance}><FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/><span>{i18n.t('dashboardClient.actions.buy')}</span></NavButton>
+          <NavButton type="button" onClick={handleLogout} title={i18n.t('dashboardClient.actions.logoutTitle')}><FontAwesomeIcon icon={faSignOutAlt}/><span>{i18n.t('dashboardClient.actions.logout')}</span></NavButton>
+          <StyledNavAvatar src={profilePic || '/img/avatarChico.png'} alt="avatar" title={i18n.t('dashboardClient.actions.viewProfile')} onClick={handleProfile}/>
         </div>
-        <HamburgerButton onClick={()=>setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú"><FontAwesomeIcon icon={faBars}/></HamburgerButton>
+        <HamburgerButton onClick={()=>setMenuOpen(!menuOpen)} aria-label={i18n.t('dashboardClient.nav.openMenu')} title={i18n.t('dashboardClient.nav.menu')}><FontAwesomeIcon icon={faBars}/></HamburgerButton>
         <MobileMenu className={!menuOpen&&'hidden'}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
             <NavText>{displayName}</NavText>
-            <SaldoText>{loadingSaldo?'Saldo: …':saldoError?'Saldo: n/d':`Saldo: ${fmtEUR(saldo)}`}</SaldoText>
+            <SaldoText>{loadingSaldo ? i18n.t('dashboardClient.balance.loading') : saldoError ? i18n.t('dashboardClient.balance.unavailable') : `${i18n.t('dashboardClient.balance.label')} ${fmtEUR(saldo)}`}</SaldoText>
           </div>
-          <NavButton onClick={()=>{handleProfile();setMenuOpen(false);}}><FontAwesomeIcon icon={faUser}/><StyledIconWrapper>Perfil</StyledIconWrapper></NavButton>
-          <NavButton onClick={()=>{handleAddBalance();setMenuOpen(false);}}><FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/><span>Comprar</span></NavButton>
-          <NavButton onClick={()=>{handleLogout();setMenuOpen(false);}}><FontAwesomeIcon icon={faSignOutAlt}/><StyledIconWrapper>Salir</StyledIconWrapper></NavButton>
+
+          <LocaleSwitcher onAfterChange={()=>setMenuOpen(false)} />
+
+          <NavButton onClick={()=>{handleProfile();setMenuOpen(false);}}><FontAwesomeIcon icon={faUser}/><StyledIconWrapper>{i18n.t('dashboardClient.actions.profile')}</StyledIconWrapper></NavButton>
+          <NavButton onClick={()=>{handleAddBalance();setMenuOpen(false);}}><FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/><span>{i18n.t('dashboardClient.actions.buy')}</span></NavButton>
+          <NavButton onClick={()=>{handleLogout();setMenuOpen(false);}}><FontAwesomeIcon icon={faSignOutAlt}/><StyledIconWrapper>{i18n.t('dashboardClient.actions.logout')}</StyledIconWrapper></NavButton>
+
         </MobileMenu>
       </StyledNavbar>
       {/* ========= FIN NAVBAR  ======== */}
@@ -2320,7 +2327,7 @@ const DashboardClient = () => {
                         selectedId={selectedContactId}
                       />
                     ):(
-                      <div style={{padding:8,color:'#adb5bd'}}>En llamada: la lista se bloquea hasta colgar.</div>
+                      <div style={{padding:8,color:'#adb5bd'}}>{i18n.t('dashboardClient.favorites.inCallLocked')}</div>
                     )}
                   </StyledLeftColumn>
                 )}
@@ -2381,9 +2388,9 @@ const DashboardClient = () => {
 
       {!inCall && (
         <MobileBottomNav>
-          <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>Videochat</span></BottomNavButton>
-          <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>Favoritos</span></BottomNavButton>
-          <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>Blog</span></BottomNavButton>
+          <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>{i18n.t('dashboardClient.nav.videochat')}</span></BottomNavButton>
+          <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>{i18n.t('dashboardClient.nav.favorites')}</span></BottomNavButton>
+          <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>{i18n.t('dashboardClient.nav.blog')}</span></BottomNavButton>
         </MobileBottomNav>
       )}
 

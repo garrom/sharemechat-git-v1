@@ -1,5 +1,6 @@
 // src/pages/dashboard/DashboardUserClient.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import i18n from '../../i18n';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import { useAppModals } from '../../components/useAppModals';
@@ -31,6 +32,8 @@ const DashboardUserClient = () => {
   const { alert, openPurchaseModal, openReportAbuseModal } = useAppModals();
   const { setInCall } = useCallUi();
 
+  const t = (key, options) => i18n.t(key, options);
+
   const [userName, setUserName] = useState('Usuario');
   const [user, setUser] = useState(null);
 
@@ -61,6 +64,7 @@ const DashboardUserClient = () => {
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
 
+
   // ======= Responsive (móvil) =======
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
@@ -86,12 +90,12 @@ const DashboardUserClient = () => {
 
         if (!res.ok) {
           const txt = await res.text();
-          throw new Error(txt || 'Error cargando usuario');
+          throw new Error(txt || t('dashboardUserClient.errors.loadUser'));
         }
 
         const data = await res.json();
         setUser(data);
-        setUserName(data.nickname || data.name || data.email || 'Usuario');
+        setUserName(data.nickname || data.name || data.email || t('dashboardUserClient.user.defaultName'));
       } catch (e) {
         console.error('Error cargando usuario USER:', e);
         history.push('/');
@@ -199,7 +203,7 @@ const DashboardUserClient = () => {
       }
     } catch (err) {
       console.error('Error al activar la cámara (USER):', err);
-      setError('Error al activar la cámara: ' + err.message);
+      setError(`${t('dashboardUserClient.errors.cameraActivate')} ${err.message}`);
       setCameraActive(false);
       localStreamRef.current = null;
     }
@@ -289,20 +293,20 @@ const DashboardUserClient = () => {
       });
 
       const txt = await res.text();
-      if (!res.ok) throw new Error(txt || 'Error al procesar el pago');
+      if (!res.ok) throw new Error(txt || t('dashboardUserClient.errors.firstPayment'));
 
       await alert({
-        title: 'Pago realizado',
-        message: `Se ha procesado el pack de ${pack.minutes} minutos. Tu cuenta ya está activada como CLIENT.`,
+        title: t('dashboardUserClient.firstPayment.success.title'),
+        message: t('dashboardUserClient.firstPayment.success.message', { minutes: pack.minutes }),
         variant: 'success',
         size: 'sm',
       });
 
       history.push('/client');
     } catch (e) {
-      const msgErr = e.message || 'Error al procesar el pago.';
+      const msgErr = e.message || t('dashboardUserClient.errors.firstPayment');
       setError(msgErr);
-      await alert({ title: 'Error', message: msgErr, variant: 'danger', size: 'sm' });
+      await alert({ title: t('dashboardUserClient.common.errorTitle'), message: msgErr, variant: 'danger', size: 'sm' });
     } finally {
       setLoadingFirstPayment(false);
     }
@@ -315,7 +319,7 @@ const DashboardUserClient = () => {
     setShowTrialCooldownModal(false);
 
     if (!cameraActive || !localStreamRef.current) {
-      setError('Primero activa la cámara.');
+      setError(t('dashboardUserClient.errors.activateCameraFirst'));
       return;
     }
 
@@ -354,7 +358,7 @@ const DashboardUserClient = () => {
 
     s.onerror = (e) => {
       console.error('[USER][WS] ERROR', e);
-      setError('Error WebSocket');
+      setError(t('dashboardUserClient.errors.websocket'));
       setSearching(false);
     };
 
@@ -429,7 +433,7 @@ const DashboardUserClient = () => {
 
         peer.on('error', (err) => {
           console.error('[USER][Peer] error:', err);
-          setError('Error en la conexión WebRTC: ' + err.message);
+          setError(`${t('dashboardUserClient.errors.webrtc')} ${err.message}`);
           setSearching(false);
         });
 
@@ -444,7 +448,7 @@ const DashboardUserClient = () => {
 
       if (data.type === 'no-model-available') {
         console.log('[USER][WS] no-model-available');
-        setStatusText('No hay modelos disponibles ahora mismo. Inténtalo de nuevo en unos segundos.');
+        setStatusText(t('dashboardUserClient.status.noModelsAvailable'));
         setSearching(false);
         return;
       }
@@ -453,7 +457,7 @@ const DashboardUserClient = () => {
         console.log('[USER][WS] trial-unavailable', data);
 
         setSearching(false);
-        setStatusText('Has agotado las pruebas gratuitas por ahora.');
+        setStatusText(t('dashboardUserClient.status.trialUnavailable'));
 
         setTrialRemainingMs(typeof data.remainingMs === 'number' ? data.remainingMs : null);
         setShowTrialCooldownModal(true);
@@ -483,16 +487,16 @@ const DashboardUserClient = () => {
         setCurrentModelId(null);
 
         if (reason === 'trial-ended') {
-          setStatusText('Tu prueba gratuita con esta modelo ha terminado.');
+          setStatusText(t('dashboardUserClient.status.trialEnded'));
           try {
             await openPurchaseModal({ context: 'trial-ended' });
           } catch {
             /* noop */
           }
         } else if (reason === 'cooldown') {
-          setStatusText('Has agotado las pruebas gratuitas por ahora. Vuelve más tarde para nuevas pruebas.');
+          setStatusText(t('dashboardUserClient.status.cooldown'));
         } else {
-          setStatusText('La conexión con la modelo se ha cerrado.');
+          setStatusText(t('dashboardUserClient.status.connectionClosed'));
         }
 
         return;
@@ -506,7 +510,7 @@ const DashboardUserClient = () => {
     setStatusText('');
 
     if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      setError('No hay conexión con el servidor. Pulsa "Buscar" de nuevo.');
+      setError(t('dashboardUserClient.errors.noServerConnection'));
       return;
     }
 
@@ -514,7 +518,7 @@ const DashboardUserClient = () => {
       socketRef.current.send(JSON.stringify({ type: 'next' }));
     } catch (e) {
       console.error('[USER] Error enviando NEXT:', e);
-      setError('No se pudo solicitar NEXT.');
+      setError(t('dashboardUserClient.errors.next'));
       return;
     }
 
@@ -532,7 +536,7 @@ const DashboardUserClient = () => {
     }
     setRemoteStream(null);
     setSearching(true);
-    setStatusText('Buscando nueva modelo…');
+    setStatusText(t('dashboardUserClient.status.searchingNewModel'));
     setCurrentModelId(null);
   };
 
@@ -541,15 +545,15 @@ const DashboardUserClient = () => {
     const id = Number(currentModelIdRef.current);
     if (!Number.isFinite(id) || id <= 0) {
       await alert({
-        title: 'Reportar',
-        message: 'No se pudo identificar a la modelo.',
+        title: t('dashboardUserClient.report.title'),
+        message: t('dashboardUserClient.report.modelNotIdentified'),
         variant: 'warning',
         size: 'sm',
       });
       return;
     }
 
-    const displayName = 'Modelo';
+    const displayName = t('dashboardUserClient.report.displayName');
 
     const report = await openReportAbuseModal({ displayName });
     if (!report?.confirmed) return;
@@ -563,7 +567,7 @@ const DashboardUserClient = () => {
           streamRecordId: null,
           reportType: report.reportType || 'ABUSE',
           description: report.description || '',
-          alsoBlock: false, // TRIAL: NO BLOQUEA
+          alsoBlock: false,
         }),
       });
 
@@ -574,22 +578,22 @@ const DashboardUserClient = () => {
       }
 
       await alert({
-        title: 'Reporte enviado',
-        message: 'Gracias. Hemos recibido tu reporte.',
+        title: t('dashboardUserClient.report.sentTitle'),
+        message: t('dashboardUserClient.report.sentMessage'),
         variant: 'success',
         size: 'sm',
       });
     } catch (e) {
       await alert({
-        title: 'Error',
-        message: e?.message || 'No se pudo enviar el reporte.',
+        title: t('dashboardUserClient.common.errorTitle'),
+        message: e?.message || t('dashboardUserClient.report.sendError'),
         variant: 'danger',
         size: 'sm',
       });
     }
   };
 
-  const displayName = userName || 'Usuario';
+  const displayName = userName || t('dashboardUserClient.user.defaultName');
 
   return (
     <StyledContainer>
@@ -599,9 +603,33 @@ const DashboardUserClient = () => {
         <div style={{display:'flex',alignItems:'center'}}>
           <StyledBrand href="#" aria-label="SharemeChat" onClick={(e) => e.preventDefault()} />
           <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-            <StyledNavTab type="button" data-active={activeTab === 'videochat'} aria-pressed={activeTab === 'videochat'} onClick={handleGoVideochat} title="Videochat">Videochat</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab === 'favoritos'} aria-pressed={activeTab === 'favoritos'} onClick={handleGoFavorites} title="Favoritos">Favoritos</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab === 'blog'} aria-pressed={activeTab === 'blog'} onClick={handleGoBlog} title="Blog">Blog</StyledNavTab>
+            <StyledNavTab
+              type="button"
+              data-active={activeTab === 'videochat'}
+              aria-pressed={activeTab === 'videochat'}
+              onClick={handleGoVideochat}
+              title={t('dashboardUserClient.nav.videochat')}
+            >
+              {t('dashboardUserClient.nav.videochat')}
+            </StyledNavTab>
+            <StyledNavTab
+              type="button"
+              data-active={activeTab === 'favoritos'}
+              aria-pressed={activeTab === 'favoritos'}
+              onClick={handleGoFavorites}
+              title={t('dashboardUserClient.nav.favorites')}
+            >
+              {t('dashboardUserClient.nav.favorites')}
+            </StyledNavTab>
+            <StyledNavTab
+              type="button"
+              data-active={activeTab === 'blog'}
+              aria-pressed={activeTab === 'blog'}
+              onClick={handleGoBlog}
+              title={t('dashboardUserClient.nav.blog')}
+            >
+              {t('dashboardUserClient.nav.blog')}
+            </StyledNavTab>
           </div>
         </div>
 
@@ -610,19 +638,27 @@ const DashboardUserClient = () => {
 
           <NavButton type="button" onClick={handleFirstPayment} disabled={loadingFirstPayment}>
             <FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}} />
-            <span>{loadingFirstPayment ? 'Procesando…' : 'Hazte Premium'}</span>
+            <span>{loadingFirstPayment ? t('dashboardUserClient.actions.processing') : t('dashboardUserClient.actions.goPremium')}</span>
           </NavButton>
 
-          <NavButton type="button" onClick={handleLogout} title="Cerrar sesión">
+          <NavButton type="button" onClick={handleLogout} title={t('dashboardUserClient.actions.logoutTitle')}>
             <FontAwesomeIcon icon={faSignOutAlt} />
-            <span>Salir</span>
+            <span>{t('dashboardUserClient.actions.logout')}</span>
           </NavButton>
         </div>
 
-        <HamburgerButton onClick={() => setMenuOpen(!menuOpen)} aria-label="Abrir menú" title="Menú">☰</HamburgerButton>
+        <HamburgerButton
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label={t('dashboardUserClient.nav.openMenu')}
+          title={t('dashboardUserClient.nav.menu')}
+        >
+          ☰
+        </HamburgerButton>
 
         <MobileMenu className={!menuOpen && 'hidden'}>
-          <NavText style={{marginBottom:8}}>Hola, {displayName}</NavText>
+          <NavText style={{marginBottom:8}}>
+            {t('dashboardUserClient.greeting.hello', { name: displayName })}
+          </NavText>
 
           <NavButton
             type="button"
@@ -632,7 +668,7 @@ const DashboardUserClient = () => {
             }}
             disabled={loadingFirstPayment}
           >
-            {loadingFirstPayment ? 'Procesando…' : 'Hazte Premium'}
+            {loadingFirstPayment ? t('dashboardUserClient.actions.processing') : t('dashboardUserClient.actions.goPremium')}
           </NavButton>
 
           <NavButton
@@ -642,7 +678,7 @@ const DashboardUserClient = () => {
               setMenuOpen(false);
             }}
           >
-            Salir
+            {t('dashboardUserClient.actions.logout')}
           </NavButton>
         </MobileMenu>
       </StyledNavbar>

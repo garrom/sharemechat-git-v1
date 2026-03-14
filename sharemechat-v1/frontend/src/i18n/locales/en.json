@@ -17,5 +17,309 @@
       "found": "No suitable match was found"
     },
     "unknown": "An unknown event has occurred"
+  },
+  "home": {
+    "nav": {
+      "videochat": "Videochat",
+      "favorites": "Favorites",
+      "blog": "Blog",
+      "openMenuAria": "Open menu",
+      "menuTitle": "Menu"
+    },
+    "cta": {
+      "buy": "Buy",
+      "login": "Log in",
+      "startVideoChat": "Start Video Chat"
+    },
+    "hero": {
+      "title": "VideoChat with models",
+      "subtitle": "Connect instantly with real models, live, in a 1-to-1 experience inspired by platforms like Coomeet, but with SharemeChat technology and full control.",
+      "freeTrial": "Sign up and try it FREE.",
+      "loading": "Loading models…",
+      "prevAria": "Previous model",
+      "nextAria": "Next model",
+      "slot": {
+        "top": "Top models",
+        "new": "New model",
+        "random": "Discover"
+      }
+    }
+  },
+  "common": {
+    "close": "Close",
+    "back": "Back",
+    "networkError": "Network error"
+  },
+  "auth": {
+    "tabs": {
+      "login": "Login",
+      "register": "Sign up"
+    },
+    "login": {
+      "title": "Log in",
+      "status": {
+        "successRedirecting": "Access granted. Redirecting…"
+      },
+      "placeholders": {
+        "email": "Email",
+        "password": "Password (minimum 8 characters)"
+      },
+      "actions": {
+        "submit": "Log In",
+        "loading": "Signing in…",
+        "forgotPassword": "Forgot your password?"
+      },
+      "validation": {
+        "emailRequired": "Enter your email.",
+        "emailInvalid": "Invalid email format.",
+        "passwordRequired": "Enter your password.",
+        "passwordMin": "Password must be at least 8 characters long."
+      },
+      "errors": {
+        "invalidCredentials": "Invalid credentials.",
+        "accessDenied": "Access denied.",
+        "serviceUnavailable": "Service unavailable.",
+        "generic": "Error logging in",
+        "invalidUserType": "Invalid user type"
+      }
+    },
+    "registerGender": {
+      "title": "Are you male or female?",
+      "male": "I'm Male",
+      "female": "I'm Female"
+    },
+    "registerClient": {
+      "title": "Sign up",
+      "placeholders": {
+        "nickname": "Nickname",
+        "email": "Email",
+        "password": "Password (minimum 8 characters)"
+      },
+      "checks": {
+        "over18": "I'm over 18 years old",
+        "acceptPrefix": "I accept the",
+        "terms": "Terms and Conditions",
+        "and": "and the",
+        "privacy": "Privacy Policy"
+      },
+      "actions": {
+        "submit": "Sign up",
+        "loading": "Signing up…"
+      },
+      "validation": {
+        "nicknameRequired": "Nickname is required.",
+        "emailRequired": "Email is required.",
+        "emailInvalid": "Invalid email format.",
+        "passwordMin": "Password must be at least 8 characters long",
+        "confirmAdult": "You must confirm that you are over 18 years old.",
+        "acceptTerms": "You must accept the terms and conditions."
+      },
+      "success": {
+        "title": "Registration completed",
+        "message": "Your user account has been created successfully."
+      }
+    },
+    "registerModel": {
+      "title": "Sign up",
+      "placeholders": {
+        "nickname": "Nickname",
+        "email": "Email",
+        "password": "Password (minimum 8 characters)"
+      },
+      "checks": {
+        "over18": "I'm over 18 years old",
+        "acceptPrefix": "I accept the",
+        "terms": "Terms and Conditions",
+        "and": "and the",
+        "privacy": "Privacy Policy"
+      },
+      "actions": {
+        "submit": "Sign up",
+        "loading": "Signing up…"
+      },
+      "validation": {
+        "nicknameRequired": "Nickname is required.",
+        "emailRequired": "Email is required.",
+        "emailInvalid": "Invalid email format.",
+        "passwordMin": "Password must be at least 8 characters long",
+        "dateOfBirthRequired": "Date of birth is required.",
+        "confirmAdult": "You must confirm that you are over 18 years old.",
+        "acceptTerms": "You must accept the terms and conditions."
+      },
+      "success": {
+        "title": "Registration completed",
+        "message": "Your user account has been created successfully."
+      }
+    }
+  },
+  "dashboardClient": {
+    "nav": {
+      "videochat": "Videochat",
+      "favorites": "Favorites",
+      "blog": "Blog",
+      "openMenu": "Open menu",
+      "menu": "Menu"
+    },
+    "balance": {
+      "label": "Balance:",
+      "loading": "Balance: …",
+      "unavailable": "Balance: n/a"
+    },
+    "actions": {
+      "buy": "Buy",
+      "logout": "Log out",
+      "logoutTitle": "Log out",
+      "viewProfile": "View profile",
+      "profile": "Profile"
+    },
+    "favorites": {
+      "inCallLocked": "In call: the list is locked until you hang up."
+    }
+  },
+  "dashboardModel": {
+    "nav": {
+      "videochat": "Videochat",
+      "favorites": "Favorites",
+      "blog": "Blog",
+      "openMenu": "Open menu",
+      "menu": "Menu"
+    },
+    "queue": {
+      "label": "Pos.:"
+    },
+    "balance": {
+      "label": "Balance:",
+      "loading": "Balance: …",
+      "unavailable": "Balance: -",
+      "unavailableMobile": "Balance: n/a"
+    },
+    "actions": {
+      "stats": "Stats",
+      "withdraw": "Withdraw",
+      "logout": "Log out",
+      "logoutTitle": "Log out",
+      "viewProfile": "View profile",
+      "profile": "Profile"
+    },
+    "favorites": {
+      "inCallLocked": "In call: the list is locked until you hang up."
+    }
+  },
+  "dashboardUserClient": {
+    "nav": {
+      "videochat": "Videochat",
+      "favorites": "Favorites",
+      "blog": "Blog",
+      "openMenu": "Open menu",
+      "menu": "Menu"
+    },
+    "greeting": {
+      "hello": "Hello, {{name}}"
+    },
+    "user": {
+      "defaultName": "User"
+    },
+    "actions": {
+      "goPremium": "Go Premium",
+      "processing": "Processing…",
+      "logout": "Log out",
+      "logoutTitle": "Log out"
+    },
+    "firstPayment": {
+      "success": {
+        "title": "Payment completed",
+        "message": "The {{minutes}}-minute pack has been processed. Your account is now activated as CLIENT."
+      }
+    },
+    "status": {
+      "noModelsAvailable": "No models are available right now. Try again in a few seconds.",
+      "trialUnavailable": "You have used up the free trials for now.",
+      "trialEnded": "Your free trial with this model has ended.",
+      "cooldown": "You have used up the free trials for now. Come back later for new trials.",
+      "connectionClosed": "The connection with the model has been closed.",
+      "searchingNewModel": "Searching for a new model…"
+    },
+    "report": {
+      "title": "Report",
+      "displayName": "Model",
+      "modelNotIdentified": "The model could not be identified.",
+      "sentTitle": "Report sent",
+      "sentMessage": "Thank you. We have received your report.",
+      "sendError": "The report could not be sent."
+    },
+    "common": {
+      "errorTitle": "Error"
+    },
+    "errors": {
+      "loadUser": "Error loading user",
+      "cameraActivate": "Error activating the camera:",
+      "websocket": "WebSocket error",
+      "webrtc": "WebRTC connection error:",
+      "activateCameraFirst": "Activate the camera first.",
+      "firstPayment": "Error processing the payment.",
+      "noServerConnection": "No connection to the server. Press \"Search\" again.",
+      "next": "Could not request NEXT."
+    }
+  },
+  "dashboardUserModel": {
+    "title": "Complete your Model verification",
+    "nav": {
+      "openMenu": "Open menu",
+      "menu": "Menu"
+    },
+    "greeting": {
+      "hello": "Hello, {{name}}"
+    },
+    "user": {
+      "defaultName": "Model"
+    },
+    "info": {
+      "verificationStatus": "Verification status: {{status}}"
+    },
+    "actions": {
+      "logout": "Log out",
+      "logoutTitle": "Log out"
+    },
+    "loading": {
+      "session": "Loading session…"
+    },
+    "contract": {
+      "mustAcceptMessage": "Before continuing, you must accept the model legal contract.",
+      "viewPdf": "View contract (PDF)",
+      "checkbox": "I have read and accept the model contract",
+      "mustAcceptFirst": "You must accept the contract first",
+      "actions": {
+        "accept": "I accept the contract",
+        "accepting": "Recording acceptance…"
+      },
+      "tooltips": {
+        "openPdfFirst": "Open the contract (PDF) first",
+        "checkToContinue": "Tick the checkbox to continue"
+      },
+      "errors": {
+        "load": "The legal contract could not be loaded. Please try refreshing.",
+        "accept": "The acceptance could not be recorded. Please try again."
+      }
+    },
+    "kyc": {
+      "activeMethod": "Active KYC method:",
+      "notAvailable": "N/A",
+      "actions": {
+        "goVeriff": "Go to Veriff",
+        "uploadDocumentsManual": "Upload documents (manual)",
+        "updateOrUploadDocuments": "Update / Upload documents",
+        "uploadDocumentsShort": "Upload documents",
+        "opening": "Opening verification…",
+        "openingShort": "Opening KYC…"
+      },
+      "errors": {
+        "unsupportedMode": "Unsupported KYC mode: {{mode}}",
+        "load": "The KYC flow could not be retrieved. Please try again."
+      }
+    },
+    "footerHint": {
+      "prefix": "Once validated by the administrator, your account will become",
+      "role": "MODEL"
+    }
   }
 }

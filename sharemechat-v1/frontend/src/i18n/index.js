@@ -4,6 +4,14 @@ import { initReactI18next } from 'react-i18next';
 import es from './locales/es.json';
 import en from './locales/en.json';
 
+import {
+  FALLBACK_LOCALE,
+  SUPPORTED_LOCALES
+} from './localeConfig';
+import {
+  getInitialLocale
+} from './localeUtils';
+
 i18n
   .use(initReactI18next)
   .init({
@@ -11,8 +19,9 @@ i18n
       es: { translation: es },
       en: { translation: en }
     },
-    lng: 'es',              // default
-    fallbackLng: 'en',
+    lng: getInitialLocale(),
+    fallbackLng: FALLBACK_LOCALE,
+    supportedLngs: SUPPORTED_LOCALES,
     interpolation: {
       escapeValue: false
     }

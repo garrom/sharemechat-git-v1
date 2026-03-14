@@ -95,12 +95,12 @@ public class UserService {
 
         User user = new User();
 
-        // ===== UI LOCALE (Industrial): DTO -> Accept-Language -> default "es" =====
-        String uiLocale = normalize(registerDTO.getUiLocale());
+        // ===== UI LOCALE (Industrial): DTO -> Accept-Language -> default "en" =====
+        String uiLocale = normalizeUiLocale(registerDTO.getUiLocale());
         if (uiLocale == null) {
             uiLocale = resolveUiLocaleFromAcceptLanguage(acceptLanguage);
         }
-        user.setUiLocale(uiLocale != null ? uiLocale : "es");
+        user.setUiLocale(uiLocale != null ? uiLocale : "en");
 
         log.info(
                 "REGISTER_CLIENT email={} nick={} uiLocaleDTO={} acceptLanguage={} resolvedUiLocale={} countryDetected={} ip={}",
@@ -198,11 +198,11 @@ public class UserService {
         User user = new User();
 
         // ===== UI LOCALE =====
-        String uiLocale = normalize(registerDTO.getUiLocale());
+        String uiLocale = normalizeUiLocale(registerDTO.getUiLocale());
         if (uiLocale == null) {
             uiLocale = resolveUiLocaleFromAcceptLanguage(acceptLanguage);
         }
-        user.setUiLocale(uiLocale != null ? uiLocale : "es");
+        user.setUiLocale(uiLocale != null ? uiLocale : "en");
 
         log.info(
                 "REGISTER_MODEL email={} nick={} uiLocaleDTO={} acceptLanguage={} resolvedUiLocale={} countryDetected={} ip={}",
@@ -331,6 +331,23 @@ public class UserService {
     }
 
     @Transactional
+    public UserDTO updateUiLocale(String email, String uiLocale) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado"));
+
+        String normalizedUiLocale = normalizeUiLocale(uiLocale);
+        if (normalizedUiLocale == null) {
+            throw new IllegalArgumentException("uiLocale no válido");
+        }
+
+        user.setUiLocale(normalizedUiLocale);
+        user.setUpdatedAt(LocalDateTime.now());
+
+        User updatedUser = userRepository.save(user);
+        return mapToDTO(updatedUser);
+    }
+
+    @Transactional
     public void updatePassword(Long userId, String newPlainPassword) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UserNotFoundException("Usuario no encontrado con ID: " + userId));
@@ -425,13 +442,34 @@ public class UserService {
         if (first.isEmpty()) return null;
 
         String lang = first.split("-")[0].trim().toLowerCase(Locale.ROOT);
-        return lang.isEmpty() ? null : lang;
+        return normalizeUiLocale(lang);
     }
 
     /** Devuelve null si el texto es null o está en blanco; en otro caso devuelve trim(). */
     private String normalize(String text) {
 
         return (text == null || text.trim().isEmpty()) ? null : text.trim();
+    }
+
+    private String normalizeUiLocale(String uiLocale) {
+        String normalized = normalize(uiLocale);
+        if (normalized == null) {
+            return null;
+        }
+
+        normalized = normalized.toLowerCase(Locale.ROOT);
+
+        if (normalized.contains("-")) {
+            normalized = normalized.split("-")[0];
+        } else if (normalized.contains("_")) {
+            normalized = normalized.split("_")[0];
+        }
+
+        if ("es".equals(normalized) || "en".equals(normalized)) {
+            return normalized;
+        }
+
+        return null;
     }
 
     /** Elimina cualquier espacio (incluido NBSP) y normaliza a minúsculas. */
@@ -510,8 +548,8 @@ public class UserService {
 
         if (!userLanguageRepository.findByUserId(user.getId()).isEmpty()) return;
 
-        String lang = normalize(user.getUiLocale());
-        if (lang == null) lang = "es";
+        String lang = normalizeUiLocale(user.getUiLocale());
+        if (lang == null) lang = "en";
 
         UserLanguage ul = new UserLanguage();
         ul.setUserId(user.getId());
@@ -579,6 +617,7 @@ public class UserService {
         dto.setActive(user.getIsActive());
         dto.setUnsubscribe(user.getUnsubscribe());
         dto.setCreatedAt(user.getCreatedAt());
+        dto.setUiLocale(user.getUiLocale());
 
         dto.setAccountStatus(user.getAccountStatus());
         dto.setSuspendedUntil(user.getSuspendedUntil());
