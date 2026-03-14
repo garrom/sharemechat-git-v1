@@ -1,6 +1,6 @@
-// src/components/ModalBase.jsx
 import React, { useEffect, useRef, useCallback } from 'react';
 import ReactDOM from 'react-dom';
+import i18n from '../i18n';
 import { Backdrop, Wrapper, Dialog, Header, Title, CloseBtn, Body, Footer, ModalBtn } from '../styles/ModalStyles';
 
 /**
@@ -115,25 +115,22 @@ const ModalBase = ({
           aria-labelledby="modal-title"
           data-variant={variant}
           $size={size}
-          style={hideChrome ? {
-            background: 'transparent',
-            boxShadow: 'none',
-            padding: 0,
-            border: 'none',
-            width: 'auto',
-          } : undefined}
+          style={hideChrome ? { background: 'transparent', boxShadow: 'none', padding: 0, border: 'none', width: 'auto', } : undefined}
           data-hidechrome={hideChrome ? 'true' : 'false'}
         >
 
           {hideChrome ? (
-            // SOLO el contenido (tu card de login)
             children
           ) : (
             <>
               <Header>
                 {icon}
                 <Title id="modal-title">{title}</Title>
-                <CloseBtn aria-label="Cerrar" onClick={() => onClose?.()} title="Cerrar">
+                <CloseBtn
+                  aria-label={i18n.t('common.close')}
+                  onClick={() => onClose?.()}
+                  title={i18n.t('common.close')}
+                >
                   ×
                 </CloseBtn>
               </Header>

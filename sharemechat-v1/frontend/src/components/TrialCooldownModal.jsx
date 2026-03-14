@@ -1,5 +1,5 @@
-// src/components/TrialCooldownModal.jsx
 import React from 'react';
+import i18n from '../i18n';
 import {
   Backdrop,
   Wrapper,
@@ -40,7 +40,6 @@ function formatRemaining(remainingMs) {
     return `${hours} hora${hours > 1 ? 's' : ''}`;
   }
 
-  // Menos de 1h → minutos (mínimo 1)
   const mins = Math.max(minutes, 1);
   return `${mins} min`;
 }
@@ -52,7 +51,7 @@ function formatRemaining(remainingMs) {
  *  - open          : boolean → si se muestra o no
  *  - remainingMs   : número (ms hasta el siguiente trial) o null
  *  - onClose       : () => void
- *  - onPurchase    : () => void   // aquí llamas a openPurchaseModal(...)
+ *  - onPurchase    : () => void
  */
 export default function TrialCooldownModal({
   open,
@@ -71,33 +70,28 @@ export default function TrialCooldownModal({
       <Wrapper>
         <Dialog data-variant="info" $size="sm">
           <Header>
-            <Title>Has agotado tus pruebas gratuitas</Title>
-            <CloseBtn onClick={onClose} aria-label="Cerrar modal">
+            <Title>{i18n.t('modals.trialCooldown.title')}</Title>
+            <CloseBtn onClick={onClose} aria-label={i18n.t('common.close')}>
               ×
             </CloseBtn>
           </Header>
 
           <Body data-kind="default">
-            <p style={{ marginBottom: 8 }}>
-              Ya has utilizado las <strong>3 pruebas gratuitas</strong> disponibles.
+            <p style={{marginBottom:8}}>
+              {i18n.t('modals.trialCooldown.usedAll')}
             </p>
-            <p style={{ marginBottom: 8 }}>
-              Podrás volver a probar el videochat gratuito en{' '}
-              <strong>{remainingText}</strong>.
+            <p style={{marginBottom:8}}>
+              Podrás volver a probar el videochat gratuito en <strong>{remainingText}</strong>.
             </p>
-            <p style={{ marginTop: 12 }}>
-              Si no quieres esperar, puedes hacerte <strong>Premium</strong> y
-              chatear sin límite con todas las modelos.
+            <p style={{marginTop:12}}>
+              {i18n.t('modals.trialCooldown.upgradeHint')}
             </p>
           </Body>
 
           <Footer>
-            <ModalBtn onClick={onClose}>Más tarde</ModalBtn>
-            <ModalBtn
-              data-primary="true"
-              onClick={onPurchase}
-            >
-              Hazme Premium
+            <ModalBtn onClick={onClose}>{i18n.t('common.actions.later')}</ModalBtn>
+            <ModalBtn data-primary="true" onClick={onPurchase}>
+              {i18n.t('dashboardUserClient.actions.goPremium')}
             </ModalBtn>
           </Footer>
         </Dialog>

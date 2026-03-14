@@ -1,5 +1,6 @@
 import React from 'react';
 import styled from 'styled-components';
+import i18n from '../i18n';
 import { ButtonActivarCam } from '../styles/ButtonStyles';
 
 const Wrap = styled.div`
@@ -45,16 +46,13 @@ const Actions = styled.div`
 export default function PublicSignupTeaserModal({ onClose }) {
   return (
     <Wrap>
-      <Title>Regístrate y prueba GRATIS</Title>
-      <Subtitle>Videochat con modelos reales</Subtitle>
-      <Text>
-        Accede al videochat en vivo con modelos reales.
-        Registro rápido, sin compromisos y con pruebas gratuitas.
-      </Text>
+      <Title>{i18n.t('modals.publicSignup.title')}</Title>
+      <Subtitle>{i18n.t('modals.publicSignup.subtitle')}</Subtitle>
+      <Text>{i18n.t('modals.publicSignup.body')}</Text>
 
       <Actions>
         <ButtonActivarCam type="button" onClick={onClose}>
-          Quiero Registrarme
+          {i18n.t('modals.publicSignup.cta')}
         </ButtonActivarCam>
       </Actions>
     </Wrap>

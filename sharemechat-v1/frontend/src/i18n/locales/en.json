@@ -47,8 +47,133 @@
   },
   "common": {
     "close": "Close",
+    "cancel": "Cancel",
+    "other": "Other",
+    "exit": "Exit",
     "back": "Back",
-    "networkError": "Network error"
+    "networkError": "Network error",
+    "actions": {
+      "addToFavorites": "Add to favorites"
+    },
+    "cookies": {
+      "configure": "Cookie settings",
+      "acceptAll": "Accept all cookies",
+      "continueWithoutAccepting": "Continue without accepting",
+      "bannerText": "By clicking “Accept all cookies”, you agree to cookies being stored on your device to improve site navigation, analyze site usage, and support our marketing efforts. For more information, see our Cookie Policy."
+    }
+  },
+  "modals": {
+    "publicSignup": {
+      "title": "Sign up and try it FREE",
+      "subtitle": "Videochat with real models",
+      "body": "Access live video chat with real models. Quick sign-up, no commitment, and free trials.",
+      "cta": "I want to sign up"
+    },
+    "trialCooldown": {
+      "title": "You have used up your free trials",
+      "usedAll": "You have already used the 3 available free trials.",
+      "upgradeHint": "If you do not want to wait, you can go Premium and keep chatting without waiting.",
+      "later": "Later",
+      "goPremium": "Go Premium"
+    },
+    "promoVideo": {
+      "featuredModel": "Featured model",
+      "close": "Close video",
+      "previous": "Previous video",
+      "next": "Next video",
+      "duration": "Duration:"
+    },
+    "nextWait": {
+      "title": "Please wait a moment",
+      "message": "We are preparing the next match…"
+    },
+    "removeFavorite": {
+      "title": "Remove from favorites",
+      "message": "Are you sure you want to remove {{displayName}} from your favorites?",
+      "confirm": "Remove"
+    },
+    "callOffline": {
+      "title": "User unavailable",
+      "message": "{{displayName}} is not connected at the moment."
+    },
+    "activeSession": {
+      "title": "Active session",
+      "message": "You have an active stream. Press HANG UP to exit."
+    },
+    "purchase": {
+      "insufficientBalanceTitle": "Insufficient balance",
+      "randomTitle": "Add minutes to keep chatting",
+      "callingTitle": "Add minutes for the call",
+      "giftTitle": "Insufficient balance for gifts",
+      "defaultTitle": "Buy minutes",
+      "insufficientBalanceSubtitle": "Choose a minute pack to continue using the service.",
+      "randomSubtitle": "Select a pack to continue in video chat.",
+      "callingSubtitle": "Select a pack to continue with the one-to-one call.",
+      "giftSubtitle": "Select a pack so you can send gifts.",
+      "defaultSubtitle": "Select the pack you prefer.",
+      "recommended": "Recommended"
+    },
+    "payout": {
+      "invalidAmountTitle": "Invalid amount",
+      "invalidAmountMessage": "Enter a positive numeric amount.",
+      "defaultMessage": "Enter the amount you want to withdraw:",
+      "submit": "Request withdrawal"
+    },
+    "unsubscribe": {
+      "title": "Delete my account",
+      "reasonLabel": "Select the reason for leaving:",
+      "warning": "If you unsubscribe, you will lose access to chat history and your account will be closed according to the current platform policy.",
+      "submit": "Delete my account",
+      "options": {
+        "notMatching": {
+          "title": "I can't find good matches",
+          "desc": "I can't find people who fit me."
+        },
+        "expensive": {
+          "title": "It's expensive",
+          "desc": "The price is a bit high."
+        },
+        "privacy": {
+          "title": "Privacy / security",
+          "desc": "I don't feel comfortable with the privacy or security."
+        },
+        "technical": {
+          "title": "Technical issues",
+          "desc": "I have had errors or a poor technical experience."
+        },
+        "other": {
+          "title": "Other",
+          "desc": "I prefer not to specify."
+        }
+      }
+    },
+    "report": {
+      "title": "Report abuse",
+      "descriptionRequiredTitle": "Description required",
+      "descriptionRequiredMessage": "If you choose \"Other\", add a short description.",
+      "descriptionLabel": "Description (optional, but recommended):",
+      "descriptionPlaceholder": "Briefly describe what happened…",
+      "alsoBlock": "Also block this user",
+      "submit": "Submit report",
+      "options": {
+        "abuse": "Abuse / Inappropriate behavior",
+        "harassment": "Harassment / Intimidation",
+        "nudity": "Nudity / Explicit content",
+        "fraud": "Fraud / Scam / Impersonation",
+        "minor": "Possible minor",
+        "other": "Other"
+      }
+    },
+    "block": {
+      "title": "Block",
+      "reasonLabel": "Choose a reason to block {{displayName}}:",
+      "submit": "Block",
+      "options": {
+        "pause": "Pause for a while",
+        "never": "I don't want to see this user",
+        "other": "Other reasons"
+      }
+    }
   },
   "auth": {
     "tabs": {

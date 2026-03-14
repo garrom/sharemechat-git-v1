@@ -47,8 +47,133 @@
   },
   "common": {
     "close": "Cerrar",
+    "cancel": "Cancelar",
+    "other": "Otro",
+    "exit": "Salir",
     "back": "Volver",
-    "networkError": "Error de red"
+    "networkError": "Error de red",
+    "actions": {
+      "addToFavorites": "Añadir a favoritos"
+    },
+    "cookies": {
+      "configure": "Configuración de cookies",
+      "acceptAll": "Aceptar todas las cookies",
+      "continueWithoutAccepting": "Continuar sin aceptar",
+      "bannerText": "Al hacer clic en “Aceptar todas las cookies”, usted acepta que las cookies se guarden en su dispositivo para mejorar la navegación del sitio, analizar el uso del mismo y colaborar con nuestros estudios para marketing. Para más información, consulta nuestra Política de cookies."
+    }
+  },
+  "modals": {
+    "publicSignup": {
+      "title": "Regístrate y prueba GRATIS",
+      "subtitle": "Videochat con modelos reales",
+      "body": "Accede al videochat en vivo con modelos reales. Registro rápido, sin compromisos y con pruebas gratuitas.",
+      "cta": "Quiero registrarme"
+    },
+    "trialCooldown": {
+      "title": "Has agotado tus pruebas gratuitas",
+      "usedAll": "Ya has utilizado las 3 pruebas gratuitas disponibles.",
+      "upgradeHint": "Si no quieres esperar, puedes hacerte Premium y seguir chateando sin esperar.",
+      "later": "Más tarde",
+      "goPremium": "Hazte Premium"
+    },
+    "promoVideo": {
+      "featuredModel": "Modelo destacada",
+      "close": "Cerrar vídeo",
+      "previous": "Vídeo anterior",
+      "next": "Siguiente vídeo",
+      "duration": "Duración:"
+    },
+    "nextWait": {
+      "title": "Espera un momento",
+      "message": "Estamos preparando el siguiente emparejamiento…"
+    },
+    "removeFavorite": {
+      "title": "Eliminar de favoritos",
+      "message": "¿Seguro que quieres eliminar a {{displayName}} de tus favoritos?",
+      "confirm": "Eliminar"
+    },
+    "callOffline": {
+      "title": "Usuario no disponible",
+      "message": "{{displayName}} no está conectado en este momento."
+    },
+    "activeSession": {
+      "title": "Comunicación activa",
+      "message": "Tienes un streaming activo. Pulsa COLGAR para salir."
+    },
+    "purchase": {
+      "insufficientBalanceTitle": "Saldo insuficiente",
+      "randomTitle": "Añadir minutos para seguir chateando",
+      "callingTitle": "Añadir minutos para la llamada",
+      "giftTitle": "Saldo insuficiente para regalos",
+      "defaultTitle": "Comprar minutos",
+      "insufficientBalanceSubtitle": "Elige un pack de minutos para continuar usando el servicio.",
+      "randomSubtitle": "Selecciona un pack para seguir en el videochat.",
+      "callingSubtitle": "Selecciona un pack para continuar con la llamada 1 a 1.",
+      "giftSubtitle": "Selecciona un pack para poder enviar regalos.",
+      "defaultSubtitle": "Selecciona el pack que prefieras.",
+      "recommended": "Recomendado"
+    },
+    "payout": {
+      "invalidAmountTitle": "Importe no válido",
+      "invalidAmountMessage": "Introduce una cantidad numérica positiva.",
+      "defaultMessage": "Introduce la cantidad que deseas retirar:",
+      "submit": "Solicitar retiro"
+    },
+    "unsubscribe": {
+      "title": "Darme de baja",
+      "reasonLabel": "Selecciona el motivo de la baja:",
+      "warning": "Si te das de baja, no podrás acceder al historial de chats y tu cuenta quedará cerrada según la política vigente de la plataforma.",
+      "submit": "Darme de baja",
+      "options": {
+        "notMatching": {
+          "title": "No encuentro buenos matches",
+          "desc": "No encuentro personas que me encajen."
+        },
+        "expensive": {
+          "title": "Es caro",
+          "desc": "El precio es un poco alto."
+        },
+        "privacy": {
+          "title": "Privacidad / seguridad",
+          "desc": "No me siento cómodo con la privacidad o seguridad."
+        },
+        "technical": {
+          "title": "Problemas técnicos",
+          "desc": "He tenido errores o mala experiencia técnica."
+        },
+        "other": {
+          "title": "Otro",
+          "desc": "Prefiero no especificar."
+        }
+      }
+    },
+    "report": {
+      "title": "Reportar abuso",
+      "descriptionRequiredTitle": "Descripción requerida",
+      "descriptionRequiredMessage": "Si eliges \"Otro\", añade una descripción breve.",
+      "descriptionLabel": "Descripción (opcional, pero recomendable):",
+      "descriptionPlaceholder": "Describe brevemente qué ha ocurrido…",
+      "alsoBlock": "Bloquear también a este usuario",
+      "submit": "Enviar reporte",
+      "options": {
+        "abuse": "Abuso / Comportamiento inapropiado",
+        "harassment": "Acoso / Intimidación",
+        "nudity": "Desnudez / Contenido explícito",
+        "fraud": "Fraude / Estafa / Suplantación",
+        "minor": "Posible menor de edad",
+        "other": "Otro"
+      }
+    },
+    "block": {
+      "title": "Bloquear",
+      "reasonLabel": "Elige un motivo para bloquear a {{displayName}}:",
+      "submit": "Bloquear",
+      "options": {
+        "pause": "Pausarlo un tiempo",
+        "never": "No quiero ver a este usuario",
+        "other": "Otros motivos"
+      }
+    }
   },
   "auth": {
     "tabs": {
