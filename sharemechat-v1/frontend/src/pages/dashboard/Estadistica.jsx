@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef } from 'react';
+import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faChartLine,
@@ -56,24 +57,6 @@ import {
   TierDetailText,
 } from '../../styles/pages-styles/EstadisticaStyles';
 
-/**
- * Estadistica (DashboardModel)
- * - 2 pestañas: Progreso / Histórico
- * - NO incluye "días libres"
- *
- * Props esperadas (mínimas):
- *  - modelStatsDays: number
- *  - setModelStatsDays: (n:number)=>void
- *  - onReload: ()=>void
- *  - loading: boolean
- *  - error: string|null
- *  - modelStats: {
- *      current: { snapshotDate, billedMinutes30d, billedHours30d, tierName, firstMinuteEURPerMin, nextMinutesEURPerMin }
- *      history: [{ snapshotDate, billedMinutes30d, tierName }]
- *      tiers: [{ tierId, name, minBilledMinutes, firstMinuteEURPerMin, nextMinutesEURPerMin, active }]
- *    }
- */
-
 export default function Estadistica({
   modelStatsDays,
   setModelStatsDays,
@@ -82,7 +65,8 @@ export default function Estadistica({
   error,
   modelStats,
 }) {
-  const [tab, setTab] = useState('progress'); // 'progress' | 'detail'
+  const t = (key, options) => i18n.t(key, options);
+  const [tab, setTab] = useState('progress');
   const [expandedTier, setExpandedTier] = useState(null);
 
   const current = modelStats?.current || null;
@@ -92,16 +76,13 @@ export default function Estadistica({
   const forcedDaysRef = useRef(false);
   const snapshotsCount = history.length;
 
-  // Regla UX: si < 7 snapshots, deshabilitar 30/60/90/120 (dejando 7)
   const disableLongRanges = !loading && snapshotsCount > 0 && snapshotsCount < 7;
 
-  // Si no hay suficiente histórico, forzamos a 7 para mantener coherencia visual
   if (!loading && !error && disableLongRanges && modelStatsDays !== 7 && !forcedDaysRef.current) {
     forcedDaysRef.current = true;
     setTimeout(() => setModelStatsDays(7), 0);
   }
 
-  // Cuando ya hay suficiente histórico, reseteamos el guard
   if (!loading && (snapshotsCount >= 7 || snapshotsCount === 0) && forcedDaysRef.current) {
     forcedDaysRef.current = false;
   }
@@ -117,36 +98,41 @@ export default function Estadistica({
     return n.toFixed(4);
   };
 
-  const buildTierTooltip = (t) => {
-    if (!t) return '';
-    const first = formatEurPerMin(t.firstMinuteEURPerMin);
-    const next = formatEurPerMin(t.nextMinutesEURPerMin);
-    const minReq = Number(t.minBilledMinutes || 0);
+  const buildTierTooltip = (tier) => {
+    if (!tier) return '';
+    const first = formatEurPerMin(tier.firstMinuteEURPerMin);
+    const next = formatEurPerMin(tier.nextMinutesEURPerMin);
+    const minReq = Number(tier.minBilledMinutes || 0);
 
-    return `Tier "${t.name || ''}". Requisito: ${minReq} minutos facturados en ventana móvil de 30 días. Tarifa del primer minuto: €${first}/min. Tarifa a partir del segundo minuto: €${next}/min.`;
+    return t('dashboardModel.statistics.tooltips.tier', {
+      name: tier.name || '',
+      minReq,
+      first,
+      next,
+    });
   };
 
   const computed = useMemo(() => {
     const billed = Number(current?.billedMinutes30d || 0);
 
     const ordered = [...tiers]
-      .filter((t) => t && (t.active === true || t.active === false))
+      .filter((tier) => tier && (tier.active === true || tier.active === false))
       .sort((a, b) => Number(a?.minBilledMinutes || 0) - Number(b?.minBilledMinutes || 0));
 
     const byName = ordered.find(
-      (t) => String(t?.name || '') === String(current?.tierName || '')
+      (tier) => String(tier?.name || '') === String(current?.tierName || '')
     );
 
     let byMinutes = null;
-    for (const t of ordered) {
-      if (Number(t?.minBilledMinutes || 0) <= billed) byMinutes = t;
+    for (const tier of ordered) {
+      if (Number(tier?.minBilledMinutes || 0) <= billed) byMinutes = tier;
     }
 
     const currentTier = byName || byMinutes || ordered[0] || null;
     const currentMin = Number(currentTier?.minBilledMinutes || 0);
 
     const pivot = currentTier ? currentMin : billed;
-    const nextTier = ordered.find((t) => Number(t?.minBilledMinutes || 0) > pivot) || null;
+    const nextTier = ordered.find((tier) => Number(tier?.minBilledMinutes || 0) > pivot) || null;
 
     const nextMin = Number(nextTier?.minBilledMinutes || 0);
     const remaining = nextTier ? Math.max(0, nextMin - billed) : 0;
@@ -170,10 +156,10 @@ export default function Estadistica({
 
   const availabilityText = useMemo(() => {
     if (loading) return '';
-    if (snapshotsCount === 0) return 'Histórico disponible: 0 días (aún no hay snapshots).';
-    if (snapshotsCount === 1) return 'Histórico disponible: 1 día.';
-    return `Histórico disponible: ${snapshotsCount} días.`;
-  }, [loading, snapshotsCount]);
+    if (snapshotsCount === 0) return t('dashboardModel.statistics.availability.zero');
+    if (snapshotsCount === 1) return t('dashboardModel.statistics.availability.one');
+    return t('dashboardModel.statistics.availability.many', { count: snapshotsCount });
+  }, [loading, snapshotsCount, t]);
 
   return (
     <Wrap>
@@ -184,46 +170,47 @@ export default function Estadistica({
           </TopIcon>
 
           <div>
-            <Title>Estadísticas</Title>
-            <SubTitle>Resumen de tier, minutos y tarifas. Datos basados en snapshots diarios.</SubTitle>
+            <Title>{t('dashboardModel.statistics.header.title')}</Title>
+            <SubTitle>{t('dashboardModel.statistics.header.subtitle')}</SubTitle>
           </div>
         </TopLeft>
 
         <TopRight>
-          <PayoutNotice role="note" aria-label="Minimum payout threshold">
-            <b>Minimum payout threshold:</b> La Plataforma aplica actualmente un umbral mínimo de pago de €100 para retiros y liquidaciones, sujeto a la política vigente y al cumplimiento de los requisitos de verificación, datos de pago válidos y revisiones aplicables.
+          <PayoutNotice role="note" aria-label={t('dashboardModel.statistics.payoutNotice.ariaLabel')}>
+            <b>{t('dashboardModel.statistics.payoutNotice.label')}</b>{' '}
+            {t('dashboardModel.statistics.payoutNotice.message')}
           </PayoutNotice>
 
           <Filters>
-            <FilterLabel>Histórico:</FilterLabel>
+            <FilterLabel>{t('dashboardModel.statistics.filters.history')}</FilterLabel>
 
             <Select
               value={modelStatsDays}
               onChange={handleChangeDays}
-              aria-label="Seleccionar rango histórico"
+              aria-label={t('dashboardModel.statistics.filters.rangeAriaLabel')}
             >
-              <option value={7}>7 días</option>
+              <option value={7}>{t('dashboardModel.statistics.filters.days7')}</option>
               <option value={30} disabled={disableLongRanges}>
-                30 días
+                {t('dashboardModel.statistics.filters.days30')}
               </option>
               <option value={60} disabled={disableLongRanges}>
-                60 días
+                {t('dashboardModel.statistics.filters.days60')}
               </option>
               <option value={90} disabled={disableLongRanges}>
-                90 días
+                {t('dashboardModel.statistics.filters.days90')}
               </option>
               <option value={120} disabled={disableLongRanges}>
-                120 días
+                {t('dashboardModel.statistics.filters.days120')}
               </option>
             </Select>
 
             <ReloadBtn type="button" onClick={onReload} disabled={loading}>
-              Recargar
+              {t('dashboardModel.statistics.filters.reload')}
             </ReloadBtn>
           </Filters>
 
           {availabilityText && (
-            <AvailabilityPill title="Disponibilidad real de histórico (según snapshots existentes)">
+            <AvailabilityPill title={t('dashboardModel.statistics.availability.title')}>
               {availabilityText}
             </AvailabilityPill>
           )}
@@ -237,7 +224,7 @@ export default function Estadistica({
           onClick={() => setTab('progress')}
         >
           <FontAwesomeIcon icon={faBullseye} />
-          Progreso
+          {t('dashboardModel.statistics.tabs.progress')}
         </TabButton>
 
         <TabButton
@@ -246,7 +233,7 @@ export default function Estadistica({
           onClick={() => setTab('detail')}
         >
           <FontAwesomeIcon icon={faClockRotateLeft} />
-          Histórico
+          {t('dashboardModel.statistics.tabs.history')}
         </TabButton>
 
         <TabButton
@@ -255,13 +242,15 @@ export default function Estadistica({
           onClick={() => setTab('billing')}
         >
           <FontAwesomeIcon icon={faChartLine} />
-          Facturación
+          {t('dashboardModel.statistics.tabs.billing')}
         </TabButton>
       </TabsBar>
 
-      {loading && <StateLine>Cargando estadísticas…</StateLine>}
+      {loading && <StateLine>{t('dashboardModel.statistics.status.loading')}</StateLine>}
 
-      {!loading && error && <ErrorLine>Error: {error}</ErrorLine>}
+      {!loading && error && (
+        <ErrorLine>{t('dashboardModel.statistics.status.error', { error })}</ErrorLine>
+      )}
 
       {!loading && !error && (
         <>
@@ -269,41 +258,51 @@ export default function Estadistica({
             <>
               <Section>
                 <SectionHead>
-                  <SectionTitle>Snapshot actual (ayer)</SectionTitle>
-                  <SectionHint>Vista rápida para que sepas en qué punto estás.</SectionHint>
+                  <SectionTitle>{t('dashboardModel.statistics.currentSnapshot.title')}</SectionTitle>
+                  <SectionHint>{t('dashboardModel.statistics.currentSnapshot.hint')}</SectionHint>
                 </SectionHead>
 
                 <GridCards>
                   <MiniCard>
-                    <MiniLabel>Fecha</MiniLabel>
+                    <MiniLabel>{t('dashboardModel.statistics.cards.date.label')}</MiniLabel>
                     <MiniValue>{current?.snapshotDate || '—'}</MiniValue>
-                    <MiniMeta>Último snapshot disponible</MiniMeta>
+                    <MiniMeta>{t('dashboardModel.statistics.cards.date.meta')}</MiniMeta>
                   </MiniCard>
 
                   <MiniCard $accent="blue">
-                    <MiniLabel>Tier actual</MiniLabel>
+                    <MiniLabel>{t('dashboardModel.statistics.cards.currentTier.label')}</MiniLabel>
                     <MiniValue>{current?.tierName || '—'}</MiniValue>
-                    <MiniMeta>Según ventana móvil de 30 días</MiniMeta>
+                    <MiniMeta>{t('dashboardModel.statistics.cards.currentTier.meta')}</MiniMeta>
                   </MiniCard>
 
                   <MiniCard $accent="green">
-                    <MiniLabel>Minutos últimos 30 días</MiniLabel>
+                    <MiniLabel>{t('dashboardModel.statistics.cards.minutes30d.label')}</MiniLabel>
                     <MiniValue>{Number(current?.billedMinutes30d || 0)}</MiniValue>
                     <MiniMeta>
-                      Horas: <b>{current?.billedHours30d || '—'}</b>
+                      {t('dashboardModel.statistics.cards.minutes30d.hours', {
+                        hours: current?.billedHours30d || '—',
+                      })}
                     </MiniMeta>
                   </MiniCard>
 
                   <MiniCard $accent="amber">
-                    <MiniLabel>Tarifa primer minuto</MiniLabel>
-                    <MiniValue>€{current?.firstMinuteEURPerMin || '0.0000'}/min</MiniValue>
-                    <MiniMeta>Se aplica al primer minuto completo de la sesión.</MiniMeta>
+                    <MiniLabel>{t('dashboardModel.statistics.cards.firstMinuteRate.label')}</MiniLabel>
+                    <MiniValue>
+                      {t('dashboardModel.statistics.cards.firstMinuteRate.value', {
+                        amount: current?.firstMinuteEURPerMin || '0.0000',
+                      })}
+                    </MiniValue>
+                    <MiniMeta>{t('dashboardModel.statistics.cards.firstMinuteRate.meta')}</MiniMeta>
                   </MiniCard>
 
                   <MiniCard $accent="purple">
-                    <MiniLabel>Tarifa minutos siguientes</MiniLabel>
-                    <MiniValue>€{current?.nextMinutesEURPerMin || '0.0000'}/min</MiniValue>
-                    <MiniMeta>Se aplica a partir del segundo minuto de la sesión.</MiniMeta>
+                    <MiniLabel>{t('dashboardModel.statistics.cards.nextMinutesRate.label')}</MiniLabel>
+                    <MiniValue>
+                      {t('dashboardModel.statistics.cards.nextMinutesRate.value', {
+                        amount: current?.nextMinutesEURPerMin || '0.0000',
+                      })}
+                    </MiniValue>
+                    <MiniMeta>{t('dashboardModel.statistics.cards.nextMinutesRate.meta')}</MiniMeta>
                   </MiniCard>
                 </GridCards>
               </Section>
@@ -312,39 +311,39 @@ export default function Estadistica({
                 <SectionHead>
                   <SectionTitle>
                     <FontAwesomeIcon icon={faArrowUpRightDots} style={{marginRight:8}} />
-                    Progreso hacia el siguiente tier
+                    {t('dashboardModel.statistics.progress.title')}
                   </SectionTitle>
-                  <SectionHint>Objetivo y minutos que te faltan para subir.</SectionHint>
+                  <SectionHint>{t('dashboardModel.statistics.progress.hint')}</SectionHint>
                 </SectionHead>
 
                 <ProgressCard>
                   <ProgressRow>
                     <ProgressCol>
-                      <KpiTitle>Tu situación</KpiTitle>
+                      <KpiTitle>{t('dashboardModel.statistics.progress.current.title')}</KpiTitle>
                       <KpiLine>
-                        Minutos actuales: <b>{computed.billed}</b>
+                        {t('dashboardModel.statistics.progress.current.minutesLabel')} <b>{computed.billed}</b>
                       </KpiLine>
                       <KpiLine>
-                        Tier detectado: <b>{computed.currentTier?.name || current?.tierName || '—'}</b>
+                        {t('dashboardModel.statistics.progress.current.tierLabel')} <b>{computed.currentTier?.name || current?.tierName || '—'}</b>
                       </KpiLine>
                     </ProgressCol>
 
                     <ProgressCol>
-                      <KpiTitle>Siguiente objetivo</KpiTitle>
+                      <KpiTitle>{t('dashboardModel.statistics.progress.next.title')}</KpiTitle>
                       {computed.nextTier ? (
                         <>
                           <KpiLine>
-                            Siguiente tier: <b>{computed.nextTier?.name || '—'}</b>
+                            {t('dashboardModel.statistics.progress.next.tierLabel')} <b>{computed.nextTier?.name || '—'}</b>
                           </KpiLine>
                           <KpiLine>
-                            Requisito: <b>{Number(computed.nextTier?.minBilledMinutes || 0)}</b> min
+                            {t('dashboardModel.statistics.progress.next.requirementLabel')} <b>{Number(computed.nextTier?.minBilledMinutes || 0)}</b> {t('dashboardModel.statistics.units.minutesShort')}
                           </KpiLine>
                           <KpiLine>
-                            Te faltan: <b>{computed.remaining}</b> min
+                            {t('dashboardModel.statistics.progress.next.remainingLabel')} <b>{computed.remaining}</b> {t('dashboardModel.statistics.units.minutesShort')}
                           </KpiLine>
                         </>
                       ) : (
-                        <KpiLine>Ya estás en el tier máximo (o no hay siguiente tier configurado).</KpiLine>
+                        <KpiLine>{t('dashboardModel.statistics.progress.next.maxTier')}</KpiLine>
                       )}
                     </ProgressCol>
                   </ProgressRow>
@@ -356,41 +355,55 @@ export default function Estadistica({
                     </BarTrack>
 
                     <BarLegend>
-                      <span>{computed.billed} min</span>
+                      <span>
+                        {t('dashboardModel.statistics.progress.legend.current', {
+                          count: computed.billed,
+                          unit: t('dashboardModel.statistics.units.minutesShort'),
+                        })}
+                      </span>
                       <span>
                         {computed.nextTier
-                          ? `${Number(computed.nextTier?.minBilledMinutes || 0)} min`
+                          ? t('dashboardModel.statistics.progress.legend.next', {
+                              count: Number(computed.nextTier?.minBilledMinutes || 0),
+                              unit: t('dashboardModel.statistics.units.minutesShort'),
+                            })
                           : '—'}
                       </span>
                     </BarLegend>
                   </BarWrap>
 
                   {computed.nextTier && computed.remaining === 0 && (
-                    <SuccessPill>Tier objetivo alcanzado</SuccessPill>
+                    <SuccessPill>{t('dashboardModel.statistics.progress.goalReached')}</SuccessPill>
                   )}
                 </ProgressCard>
               </Section>
 
               <Section>
                 <SectionHead>
-                  <SectionTitle>Tiers activos</SectionTitle>
-                  <SectionHint>Tabla de referencia (configuración actual).</SectionHint>
+                  <SectionTitle>{t('dashboardModel.statistics.tiers.title')}</SectionTitle>
+                  <SectionHint>{t('dashboardModel.statistics.tiers.hint')}</SectionHint>
                 </SectionHead>
 
                 <TableWrap>
                   <Table>
                     <thead>
                       <tr>
-                        <th>Nombre</th>
-                        <th style={{textAlign:'right'}}>Min. facturados</th>
-                        <th style={{textAlign:'right'}}>1º min (€/min)</th>
-                        <th style={{textAlign:'right'}}>Sig. (€/min)</th>
+                        <th>{t('dashboardModel.statistics.tiers.table.name')}</th>
+                        <th style={{textAlign:'right'}}>
+                          {t('dashboardModel.statistics.tiers.table.minBilled')}
+                        </th>
+                        <th style={{textAlign:'right'}}>
+                          {t('dashboardModel.statistics.tiers.table.firstMinute')}
+                        </th>
+                        <th style={{textAlign:'right'}}>
+                          {t('dashboardModel.statistics.tiers.table.nextMinutes')}
+                        </th>
                       </tr>
                     </thead>
 
                     <tbody>
-                      {tiers.map((t) => {
-                        const tierId = t?.tierId ?? t?.name;
+                      {tiers.map((tier) => {
+                        const tierId = tier?.tierId ?? tier?.name;
 
                         return (
                           <React.Fragment key={tierId}>
@@ -406,18 +419,18 @@ export default function Estadistica({
                                       icon={expandedTier === tierId ? faChevronDown : faChevronRight}
                                     />
                                   </TierExpandIcon>
-                                  <span>{t?.name || '—'}</span>
+                                  <span>{tier?.name || '—'}</span>
                                 </TierNameCell>
                               </td>
-                              <td style={{textAlign:'right'}}>{Number(t?.minBilledMinutes || 0)}</td>
-                              <td style={{textAlign:'right'}}>€{t?.firstMinuteEURPerMin || '0.0000'}</td>
-                              <td style={{textAlign:'right'}}>€{t?.nextMinutesEURPerMin || '0.0000'}</td>
+                              <td style={{textAlign:'right'}}>{Number(tier?.minBilledMinutes || 0)}</td>
+                              <td style={{textAlign:'right'}}>€{tier?.firstMinuteEURPerMin || '0.0000'}</td>
+                              <td style={{textAlign:'right'}}>€{tier?.nextMinutesEURPerMin || '0.0000'}</td>
                             </tr>
 
                             {expandedTier === tierId && (
                               <tr className="tier-detail">
                                 <td colSpan={4}>
-                                  <TierDetailText>{buildTierTooltip(t)}</TierDetailText>
+                                  <TierDetailText>{buildTierTooltip(tier)}</TierDetailText>
                                 </td>
                               </tr>
                             )}
@@ -428,7 +441,7 @@ export default function Estadistica({
                       {tiers.length === 0 && (
                         <tr>
                           <td colSpan={4} style={{padding:'14px',opacity:0.85}}>
-                            No hay tiers configurados.
+                            {t('dashboardModel.statistics.tiers.empty')}
                           </td>
                         </tr>
                       )}
@@ -441,33 +454,35 @@ export default function Estadistica({
             <>
               <Section>
                 <SectionHead>
-                  <SectionTitle>Historial</SectionTitle>
-                  <SectionHint>Evolución por fecha.</SectionHint>
+                  <SectionTitle>{t('dashboardModel.statistics.history.title')}</SectionTitle>
+                  <SectionHint>{t('dashboardModel.statistics.history.hint')}</SectionHint>
                 </SectionHead>
 
                 <TableWrap>
                   <Table>
                     <thead>
                       <tr>
-                        <th>Fecha</th>
-                        <th>Tier</th>
-                        <th style={{textAlign:'right'}}>Minutos últimos 30 días</th>
+                        <th>{t('dashboardModel.statistics.history.table.date')}</th>
+                        <th>{t('dashboardModel.statistics.history.table.tier')}</th>
+                        <th style={{textAlign:'right'}}>
+                          {t('dashboardModel.statistics.history.table.minutes30d')}
+                        </th>
                       </tr>
                     </thead>
 
                     <tbody>
-                      {history.map((r, idx) => (
-                        <tr key={`${r?.snapshotDate || idx}`}>
-                          <td className="hist-date">{r?.snapshotDate || '—'}</td>
-                          <td className="name hist-tier">{r?.tierName || '—'}</td>
-                          <td style={{textAlign:'right'}}>{Number(r?.billedMinutes30d || 0)}</td>
+                      {history.map((row, idx) => (
+                        <tr key={`${row?.snapshotDate || idx}`}>
+                          <td className="hist-date">{row?.snapshotDate || '—'}</td>
+                          <td className="name hist-tier">{row?.tierName || '—'}</td>
+                          <td style={{textAlign:'right'}}>{Number(row?.billedMinutes30d || 0)}</td>
                         </tr>
                       ))}
 
                       {history.length === 0 && (
                         <tr>
                           <td colSpan={3} style={{padding:'14px',opacity:0.85}}>
-                            Sin historial.
+                            {t('dashboardModel.statistics.history.empty')}
                           </td>
                         </tr>
                       )}
@@ -479,14 +494,14 @@ export default function Estadistica({
           ) : (
             <Section>
               <SectionHead>
-                <SectionTitle>Facturación</SectionTitle>
-                <SectionHint>En construcción</SectionHint>
+                <SectionTitle>{t('dashboardModel.statistics.billing.title')}</SectionTitle>
+                <SectionHint>{t('dashboardModel.statistics.billing.hint')}</SectionHint>
               </SectionHead>
 
               <Placeholder>
-                <PlaceholderTitle>En construcción</PlaceholderTitle>
+                <PlaceholderTitle>{t('dashboardModel.statistics.billing.placeholderTitle')}</PlaceholderTitle>
                 <PlaceholderText>
-                  Esta sección se habilitará en próximas versiones para mostrar desglose, periodos y liquidaciones.
+                  {t('dashboardModel.statistics.billing.placeholderText')}
                 </PlaceholderText>
               </Placeholder>
             </Section>

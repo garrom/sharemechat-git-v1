@@ -695,6 +695,124 @@
       "title": "Favoritos",
       "clientAlreadyFavorite": "Este cliente ya está en tus favoritos."
     },
+    "statistics": {
+      "header": {
+        "title": "Estadísticas",
+        "subtitle": "Resumen de tier, minutos y tarifas. Datos basados en snapshots diarios."
+      },
+      "payoutNotice": {
+        "ariaLabel": "Umbral mínimo de pago",
+        "label": "Umbral mínimo de pago:",
+        "message": "La Plataforma aplica actualmente un umbral mínimo de pago de €100 para retiros y liquidaciones, sujeto a la política vigente y al cumplimiento de los requisitos de verificación, datos de pago válidos y revisiones aplicables."
+      },
+      "filters": {
+        "history": "Histórico:",
+        "rangeAriaLabel": "Seleccionar rango histórico",
+        "days7": "7 días",
+        "days30": "30 días",
+        "days60": "60 días",
+        "days90": "90 días",
+        "days120": "120 días",
+        "reload": "Recargar"
+      },
+      "availability": {
+        "title": "Disponibilidad real de histórico (según snapshots existentes)",
+        "zero": "Histórico disponible: 0 días (aún no hay snapshots).",
+        "one": "Histórico disponible: 1 día.",
+        "many": "Histórico disponible: {{count}} días."
+      },
+      "tabs": {
+        "progress": "Progreso",
+        "history": "Histórico",
+        "billing": "Facturación"
+      },
+      "status": {
+        "loading": "Cargando estadísticas…",
+        "error": "Error: {{error}}"
+      },
+      "currentSnapshot": {
+        "title": "Snapshot actual (ayer)",
+        "hint": "Vista rápida para que sepas en qué punto estás."
+      },
+      "cards": {
+        "date": {
+          "label": "Fecha",
+          "meta": "Último snapshot disponible"
+        },
+        "currentTier": {
+          "label": "Tier actual",
+          "meta": "Según ventana móvil de 30 días"
+        },
+        "minutes30d": {
+          "label": "Minutos últimos 30 días",
+          "hours": "Horas: {{hours}}"
+        },
+        "firstMinuteRate": {
+          "label": "Tarifa primer minuto",
+          "value": "€{{amount}}/min",
+          "meta": "Se aplica al primer minuto completo de la sesión."
+        },
+        "nextMinutesRate": {
+          "label": "Tarifa minutos siguientes",
+          "value": "€{{amount}}/min",
+          "meta": "Se aplica a partir del segundo minuto de la sesión."
+        }
+      },
+      "progress": {
+        "title": "Progreso hacia el siguiente tier",
+        "hint": "Objetivo y minutos que te faltan para subir.",
+        "goalReached": "Tier objetivo alcanzado",
+        "current": {
+          "title": "Tu situación",
+          "minutesLabel": "Minutos actuales:",
+          "tierLabel": "Tier detectado:"
+        },
+        "next": {
+          "title": "Siguiente objetivo",
+          "tierLabel": "Siguiente tier:",
+          "requirementLabel": "Requisito:",
+          "remainingLabel": "Te faltan:",
+          "maxTier": "Ya estás en el tier máximo (o no hay siguiente tier configurado)."
+        },
+        "legend": {
+          "current": "{{count}} {{unit}}",
+          "next": "{{count}} {{unit}}"
+        }
+      },
+      "units": {
+        "minutesShort": "min"
+      },
+      "tiers": {
+        "title": "Tiers activos",
+        "hint": "Tabla de referencia (configuración actual).",
+        "empty": "No hay tiers configurados.",
+        "table": {
+          "name": "Nombre",
+          "minBilled": "Min. facturados",
+          "firstMinute": "1º min (€/min)",
+          "nextMinutes": "Sig. (€/min)"
+        }
+      },
+      "history": {
+        "title": "Historial",
+        "hint": "Evolución por fecha.",
+        "empty": "Sin historial.",
+        "table": {
+          "date": "Fecha",
+          "tier": "Tier",
+          "minutes30d": "Minutos últimos 30 días"
+        }
+      },
+      "billing": {
+        "title": "Facturación",
+        "hint": "En construcción",
+        "placeholderTitle": "En construcción",
+        "placeholderText": "Esta sección se habilitará en próximas versiones para mostrar desglose, periodos y liquidaciones."
+      },
+      "tooltips": {
+        "tier": "Tier \"{{name}}\". Requisito: {{minReq}} minutos facturados en ventana móvil de 30 días. Tarifa del primer minuto: €{{first}}/min. Tarifa a partir del segundo minuto: €{{next}}/min."
+      }
+    },
     "payout": {
       "sessionExpiredTitle": "Sesión",
       "sessionExpiredMessage": "Sesión expirada. Inicia sesión de nuevo.",
@@ -745,8 +863,8 @@
     },
     "videoChatFavoritosModelo": {
       "actions": {
-        "acceptInvitation": "Aceptar invitaci?n",
-        "rejectInvitation": "Rechazar invitaci?n",
+        "acceptInvitation": "Aceptar invitación",
+        "rejectInvitation": "Rechazar invitación",
         "fullscreenButton": "Full Screen"
       },
       "invitation": {
@@ -774,17 +892,17 @@
       },
       "stats": {
         "progressTitle": "Progreso hacia el siguiente tier",
-        "progressSubtitle": "Basado en tus minutos facturados (30 d?as).",
+        "progressSubtitle": "Basado en tus minutos facturados (30 días).",
         "noTierData": "No hay datos de tiers disponibles para calcular el progreso.",
         "currentMinutes30d": "Minutos actuales (30d):",
-        "yourSituation": "Tu situaci?n",
+        "yourSituation": "Tu situación",
         "currentMinutes": "Minutos actuales:",
         "detectedTier": "Tier detectado:",
         "nextGoal": "Siguiente objetivo",
         "nextTier": "Siguiente tier:",
         "requirement": "Requisito:",
         "remaining": "Te faltan:",
-        "maxTier": "Ya est?s en el tier m?ximo (o no hay siguiente tier configurado).",
+        "maxTier": "Ya estás en el tier máximo (o no hay siguiente tier configurado).",
         "minutesShort": "min"
       }
     }

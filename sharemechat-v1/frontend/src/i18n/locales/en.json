@@ -695,6 +695,124 @@
       "title": "Favorites",
       "clientAlreadyFavorite": "This client is already in your favorites."
     },
+    "statistics": {
+      "header": {
+        "title": "Statistics",
+        "subtitle": "Summary of tier, minutes, and rates. Data based on daily snapshots."
+      },
+      "payoutNotice": {
+        "ariaLabel": "Minimum payout threshold",
+        "label": "Minimum payout threshold:",
+        "message": "The Platform currently applies a minimum payout threshold of €100 for withdrawals and settlements, subject to the current policy and compliance with verification requirements, valid payout details, and applicable reviews."
+      },
+      "filters": {
+        "history": "History:",
+        "rangeAriaLabel": "Select historical range",
+        "days7": "7 days",
+        "days30": "30 days",
+        "days60": "60 days",
+        "days90": "90 days",
+        "days120": "120 days",
+        "reload": "Reload"
+      },
+      "availability": {
+        "title": "Actual history availability (based on existing snapshots)",
+        "zero": "History available: 0 days (there are no snapshots yet).",
+        "one": "History available: 1 day.",
+        "many": "History available: {{count}} days."
+      },
+      "tabs": {
+        "progress": "Progress",
+        "history": "History",
+        "billing": "Billing"
+      },
+      "status": {
+        "loading": "Loading statistics…",
+        "error": "Error: {{error}}"
+      },
+      "currentSnapshot": {
+        "title": "Current snapshot (yesterday)",
+        "hint": "Quick view so you know where you stand."
+      },
+      "cards": {
+        "date": {
+          "label": "Date",
+          "meta": "Latest available snapshot"
+        },
+        "currentTier": {
+          "label": "Current tier",
+          "meta": "Based on a rolling 30-day window"
+        },
+        "minutes30d": {
+          "label": "Minutes in the last 30 days",
+          "hours": "Hours: {{hours}}"
+        },
+        "firstMinuteRate": {
+          "label": "First-minute rate",
+          "value": "€{{amount}}/min",
+          "meta": "Applies to the first full minute of the session."
+        },
+        "nextMinutesRate": {
+          "label": "Next-minutes rate",
+          "value": "€{{amount}}/min",
+          "meta": "Applies from the second minute of the session onward."
+        }
+      },
+      "progress": {
+        "title": "Progress toward the next tier",
+        "hint": "Goal and minutes remaining to level up.",
+        "goalReached": "Target tier reached",
+        "current": {
+          "title": "Your situation",
+          "minutesLabel": "Current minutes:",
+          "tierLabel": "Detected tier:"
+        },
+        "next": {
+          "title": "Next goal",
+          "tierLabel": "Next tier:",
+          "requirementLabel": "Requirement:",
+          "remainingLabel": "Remaining:",
+          "maxTier": "You are already at the highest tier (or there is no next configured tier)."
+        },
+        "legend": {
+          "current": "{{count}} {{unit}}",
+          "next": "{{count}} {{unit}}"
+        }
+      },
+      "units": {
+        "minutesShort": "min"
+      },
+      "tiers": {
+        "title": "Active tiers",
+        "hint": "Reference table (current configuration).",
+        "empty": "There are no configured tiers.",
+        "table": {
+          "name": "Name",
+          "minBilled": "Min. billed",
+          "firstMinute": "1st min (€/min)",
+          "nextMinutes": "Next (€/min)"
+        }
+      },
+      "history": {
+        "title": "History",
+        "hint": "Evolution by date.",
+        "empty": "No history.",
+        "table": {
+          "date": "Date",
+          "tier": "Tier",
+          "minutes30d": "Minutes in the last 30 days"
+        }
+      },
+      "billing": {
+        "title": "Billing",
+        "hint": "Under construction",
+        "placeholderTitle": "Under construction",
+        "placeholderText": "This section will be enabled in future versions to show breakdowns, periods, and settlements."
+      },
+      "tooltips": {
+        "tier": "Tier \"{{name}}\". Requirement: {{minReq}} billed minutes in a rolling 30-day window. First-minute rate: €{{first}}/min. Rate from the second minute onward: €{{next}}/min."
+      }
+    },
     "payout": {
       "sessionExpiredTitle": "Session",
       "sessionExpiredMessage": "Your session has expired. Sign in again.",

@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import i18n from '../../i18n';
+import { apiFetch } from '../../config/http';
 
 const NavbarLite = ({ onBack, t }) => (
   <div style={{
@@ -49,7 +50,6 @@ const strengthLabel = (s) => {
 const ChangePasswordPage = () => {
   const t = (key, options) => i18n.t(key, options);
   const history = useHistory();
-  const token = localStorage.getItem('token');
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -65,10 +65,6 @@ const ChangePasswordPage = () => {
     setError('');
     setOkMsg('');
 
-    if (!token) {
-      setError(t('auth.changePasswordPage.errors.sessionExpired'));
-      return;
-    }
     if (!currentPassword || !newPassword || !repeatPassword) {
       setError(t('auth.changePasswordPage.errors.completeFields'));
       return;
@@ -84,19 +80,13 @@ const ChangePasswordPage = () => {
 
     try {
       setSubmitting(true);
-      const res = await fetch('/api/users/change-password', {
+      await apiFetch('/users/change-password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({ currentPassword, newPassword }),
       });
-
-      await res.text();
-      if (!res.ok) {
-        throw new Error('change_password_error');
-      }
 
       setOkMsg(t('auth.changePasswordPage.success.updated'));
       setCurrentPassword('');
