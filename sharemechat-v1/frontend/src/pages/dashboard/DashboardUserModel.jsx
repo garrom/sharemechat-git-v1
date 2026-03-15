@@ -37,7 +37,7 @@ const DashboardUserModel = () => {
 
   const t = (key, options) => i18n.t(key, options);
 
-  const [userName, setUserName] = useState('Modelo');
+  const [userName, setUserName] = useState('');
   const [info, setInfo] = useState('');
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -56,6 +56,20 @@ const DashboardUserModel = () => {
   const [kycRouteErr, setKycRouteErr] = useState('');
   const [kycMode, setKycMode] = useState('');
 
+  const getVerificationStatusLabel = (status) => {
+    const normalizedStatus = String(status || 'PENDING').toUpperCase();
+    if (normalizedStatus === 'APPROVED') return t('dashboardUserModel.info.statuses.approved');
+    if (normalizedStatus === 'REJECTED') return t('dashboardUserModel.info.statuses.rejected');
+    return t('dashboardUserModel.info.statuses.pending');
+  };
+
+  const getKycModeLabel = (mode) => {
+    const normalizedMode = String(mode || '').toUpperCase();
+    if (normalizedMode === 'VERIFF') return t('dashboardUserModel.kyc.modes.veriff');
+    if (normalizedMode === 'MANUAL') return t('dashboardUserModel.kyc.modes.manual');
+    return normalizedMode || t('dashboardUserModel.kyc.notAvailable');
+  };
+
   useEffect(() => {
     if (sessionLoading) return;
 
@@ -67,7 +81,7 @@ const DashboardUserModel = () => {
     setUserName(sessionUser.nickname || sessionUser.name || sessionUser.email || t('dashboardUserModel.user.defaultName'));
     setInfo(
       t('dashboardUserModel.info.verificationStatus', {
-        status: sessionUser.verificationStatus || 'PENDING',
+        status: getVerificationStatusLabel(sessionUser.verificationStatus),
       })
     );
   }, [sessionUser, sessionLoading, history]);
@@ -378,7 +392,7 @@ const DashboardUserModel = () => {
 
             {contractAccepted === true && kycMode && (
               <Hint style={{ marginTop: 12, color: '#000' }}>
-                {t('dashboardUserModel.kyc.activeMethod')} <strong>{kycMode}</strong>
+                {t('dashboardUserModel.kyc.activeMethod')} <strong>{getKycModeLabel(kycMode)}</strong>
               </Hint>
             )}
 

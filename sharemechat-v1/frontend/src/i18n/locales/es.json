@@ -381,6 +381,85 @@
         "invalidUserType": "Tipo de usuario no válido"
       }
     },
+    "forgotPasswordPage": {
+      "title": "Recuperar contraseña",
+      "subtitle": "Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.",
+      "actions": {
+        "submit": "Enviar enlace",
+        "loading": "Enviando…"
+      },
+      "status": {
+        "success": "Si el email está registrado en SharemeChat, recibirás en unos minutos un enlace para restablecer tu contraseña.",
+        "connectionError": "Error de conexión. Inténtalo de nuevo."
+      }
+    },
+    "resetPasswordPage": {
+      "title": "Establecer nueva contraseña",
+      "subtitle": "Introduce y confirma tu nueva contraseña para completar el cambio.",
+      "placeholders": {
+        "password": "Nueva contraseña (mín. 8)",
+        "confirmPassword": "Repite la nueva contraseña"
+      },
+      "aria": {
+        "password": "Nueva contraseña",
+        "confirmPassword": "Confirmar nueva contraseña"
+      },
+      "actions": {
+        "submit": "Guardar nueva contraseña",
+        "loading": "Actualizando…",
+        "backHome": "Volver al inicio"
+      },
+      "validation": {
+        "passwordMismatch": "Las contraseñas no coinciden."
+      },
+      "status": {
+        "success": "Contraseña actualizada correctamente. Ya puedes iniciar sesión."
+      },
+      "errors": {
+        "tokenMissing": "Token no encontrado en el enlace.",
+        "tokenInvalid": "Token ausente o inválido.",
+        "submit": "No se pudo restablecer la contraseña.",
+        "connection": "Error de conexión. Inténtalo de nuevo."
+      }
+    },
+    "changePasswordPage": {
+      "title": "Cambiar contraseña",
+      "subtitle": "Por seguridad, vuelve a introducir tu contraseña actual.",
+      "labels": {
+        "currentPassword": "Contraseña actual",
+        "newPassword": "Nueva contraseña",
+        "repeatPassword": "Repite la nueva contraseña"
+      },
+      "placeholders": {
+        "currentPassword": "Tu contraseña actual",
+        "newPassword": "Mín. 8 caracteres",
+        "repeatPassword": "Vuelve a escribirla"
+      },
+      "hints": {
+        "passwordStrength": "Fortalece tu contraseña usando mayúsculas, minúsculas, números y símbolos."
+      },
+      "strength": {
+        "label": "Fortaleza",
+        "veryWeak": "Muy débil",
+        "weak": "Débil",
+        "medium": "Media",
+        "strong": "Fuerte",
+        "veryStrong": "Muy fuerte"
+      },
+      "actions": {
+        "submit": "Guardar",
+        "loading": "Guardando…"
+      },
+      "success": {
+        "updated": "Contraseña actualizada correctamente."
+      },
+      "errors": {
+        "sessionExpired": "Sesión expirada. Inicia sesión de nuevo.",
+        "completeFields": "Completa todos los campos.",
+        "passwordMismatch": "La nueva contraseña y su repetición no coinciden.",
+        "submit": "Error al cambiar la contraseña"
+      }
+    },
     "registerGender": {
       "title": "¿Eres chico o chica?",
       "male": "Soy Chico",
@@ -807,7 +886,12 @@
       "defaultName": "Modelo"
     },
     "info": {
-      "verificationStatus": "Estado de verificación: {{status}}"
+      "verificationStatus": "Estado de verificación: {{status}}",
+      "statuses": {
+        "pending": "Pendiente",
+        "approved": "Aprobado",
+        "rejected": "Rechazado"
+      }
     },
     "actions": {
       "logout": "Salir",
@@ -837,6 +921,10 @@
     "kyc": {
       "activeMethod": "Método KYC activo:",
       "notAvailable": "N/D",
+      "modes": {
+        "veriff": "Veriff",
+        "manual": "Manual"
+      },
       "actions": {
         "goVeriff": "Ir a Veriff",
         "uploadDocumentsManual": "Subir documentos (manual)",
@@ -853,6 +941,84 @@
     "footerHint": {
       "prefix": "Una vez validados por el administrador, tu cuenta pasará a",
       "role": "MODEL"
+    }
+  },
+  "modelDocuments": {
+    "title": "Verificación de identidad",
+    "subtitle": "Sube las fotos de tu documento y un archivo de verificación para que podamos aprobar tu perfil de modelo.",
+    "currentStatus": "Estado actual de la revisión",
+    "reviewHint": "Revisa que las fotos estén nítidas y que los datos sean legibles. Nuestro equipo revisará la información lo antes posible.",
+    "actions": {
+      "openFile": "Abrir archivo"
+    },
+    "alt": {
+      "document": "Documento"
+    },
+    "status": {
+      "pending": "Pendiente",
+      "approved": "Aprobado",
+      "rejected": "Rechazado"
+    },
+    "success": {
+      "upload": "Archivo subido correctamente.",
+      "delete": "Archivo eliminado."
+    },
+    "errors": {
+      "load": "No se pudo cargar la información.",
+      "upload": "No se pudo subir el archivo.",
+      "delete": "No se pudo eliminar el archivo."
+    },
+    "confirm": {
+      "deleteFile": "¿Eliminar este archivo?"
+    },
+    "veriff": {
+      "title": "Verificación de identidad (Veriff)",
+      "subtitle": "Te estamos redirigiendo al proveedor de verificación.",
+      "loading": "Abriendo verificación…",
+      "hint": "Si el problema persiste, el administrador puede activar el flujo manual de KYC.",
+      "actions": {
+        "retry": "Reintentar"
+      },
+      "errors": {
+        "start": "No se pudo iniciar la verificación con Veriff."
+      }
+    },
+    "front": {
+      "title": "Documento (frontal)",
+      "subtitle": "Sube la parte frontal de tu DNI o documento de identidad.",
+      "hint": "Formatos aceptados: JPG/PNG. Asegúrate de que todos los datos se vean claros.",
+      "confirmDelete": "¿Eliminar la imagen frontal del documento?",
+      "actions": {
+        "upload": "Subir frontal",
+        "delete": "Eliminar frontal"
+      }
+    },
+    "back": {
+      "title": "Documento (trasera)",
+      "subtitle": "Sube la parte trasera de tu DNI o documento de identidad.",
+      "hint": "Formatos aceptados: JPG/PNG. Comprueba que no haya reflejos ni recortes.",
+      "confirmDelete": "¿Eliminar la imagen trasera del documento?",
+      "actions": {
+        "upload": "Subir trasera",
+        "delete": "Eliminar trasera"
+      }
+    },
+    "verificationFile": {
+      "title": "Selfie con DNI o documento de verificación",
+      "subtitle": "Puedes subir una foto tuya con el documento visible o un PDF de verificación.",
+      "linkLabel": "Ver archivo de verificación",
+      "hint": "Acepta JPG/PNG o PDF. Asegúrate de que tu rostro y el documento sean claramente visibles.",
+      "confirmDelete": "¿Eliminar el archivo de verificación?",
+      "actions": {
+        "upload": "Subir archivo",
+        "delete": "Eliminar archivo"
+      }
+    },
+    "nextSteps": {
+      "title": "¿Qué pasa después?",
+      "prefix": "Una vez aprobada tu identidad, podrás completar tu",
+      "role": "Perfil de modelo",
+      "suffix": "subiendo foto de perfil y vídeo de presentación desde la sección de Perfil."
     }
   }
 }

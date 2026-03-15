@@ -1,6 +1,7 @@
 //ForgotPassword.jsx
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import i18n from '../i18n';
 import {
   Container, Card, Title, Paragraph,
   StatusOk, StatusErr, Form, Input,
@@ -8,6 +9,7 @@ import {
 } from '../styles/public-styles/ForgotResetPassStyles';
 
 const ForgotPassword = () => {
+  const t = (key, options) => i18n.t(key, options);
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState({ loading: false, ok: '', err: '' });
   const history = useHistory();
@@ -28,11 +30,11 @@ const ForgotPassword = () => {
       }
       setStatus({
         loading: false,
-        ok: 'Si el email está registrado en SharemeChat, recibirás en unos minutos un enlace para restablecer tu contraseña.',
+        ok: t('auth.forgotPasswordPage.status.success'),
         err: '',
       });
     } catch {
-      setStatus({ loading: false, ok: '', err: 'Error de conexión. Inténtalo de nuevo.' });
+      setStatus({ loading: false, ok: '', err: t('auth.forgotPasswordPage.status.connectionError') });
     }
   };
 
@@ -40,8 +42,8 @@ const ForgotPassword = () => {
   return (
     <Container>
       <Card>
-        <Title>Recuperar contraseña</Title>
-        <Paragraph>Introduce tu email y te enviaremos un enlace para restablecer tu contraseña.</Paragraph>
+        <Title>{t('auth.forgotPasswordPage.title')}</Title>
+        <Paragraph>{t('auth.forgotPasswordPage.subtitle')}</Paragraph>
 
         {status.ok && <StatusOk role="status">{status.ok}</StatusOk>}
         {status.err && <StatusErr role="alert">{status.err}</StatusErr>}
@@ -49,20 +51,20 @@ const ForgotPassword = () => {
         <Form onSubmit={handleSubmit} noValidate>
           <Input
             type="email"
-            placeholder="Tu email"
+            placeholder={t('auth.login.placeholders.email')}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
             autoComplete="email"
-            aria-label="Email"
+            aria-label={t('auth.login.placeholders.email')}
           />
           <ButtonPrimary type="submit" disabled={status.loading}>
-            {status.loading ? 'Enviando…' : 'Enviar enlace'}
+            {status.loading ? t('auth.forgotPasswordPage.actions.loading') : t('auth.forgotPasswordPage.actions.submit')}
           </ButtonPrimary>
         </Form>
 
         <ButtonSecondary type="button" onClick={() => history.push('/')}>
-          Volver
+          {t('common.back')}
         </ButtonSecondary>
       </Card>
     </Container>

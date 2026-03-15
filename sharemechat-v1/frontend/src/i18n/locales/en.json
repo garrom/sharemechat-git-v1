@@ -381,6 +381,85 @@
         "invalidUserType": "Invalid user type"
       }
     },
+    "forgotPasswordPage": {
+      "title": "Recover password",
+      "subtitle": "Enter your email and we will send you a link to reset your password.",
+      "actions": {
+        "submit": "Send link",
+        "loading": "Sending…"
+      },
+      "status": {
+        "success": "If the email is registered in SharemeChat, you will receive a password reset link within a few minutes.",
+        "connectionError": "Connection error. Please try again."
+      }
+    },
+    "resetPasswordPage": {
+      "title": "Set new password",
+      "subtitle": "Enter and confirm your new password to complete the change.",
+      "placeholders": {
+        "password": "New password (min. 8)",
+        "confirmPassword": "Repeat the new password"
+      },
+      "aria": {
+        "password": "New password",
+        "confirmPassword": "Confirm new password"
+      },
+      "actions": {
+        "submit": "Save new password",
+        "loading": "Updating…",
+        "backHome": "Back to home"
+      },
+      "validation": {
+        "passwordMismatch": "Passwords do not match."
+      },
+      "status": {
+        "success": "Password updated successfully. You can now sign in."
+      },
+      "errors": {
+        "tokenMissing": "Token not found in the link.",
+        "tokenInvalid": "Missing or invalid token.",
+        "submit": "The password could not be reset.",
+        "connection": "Connection error. Please try again."
+      }
+    },
+    "changePasswordPage": {
+      "title": "Change password",
+      "subtitle": "For security, enter your current password again.",
+      "labels": {
+        "currentPassword": "Current password",
+        "newPassword": "New password",
+        "repeatPassword": "Repeat the new password"
+      },
+      "placeholders": {
+        "currentPassword": "Your current password",
+        "newPassword": "Min. 8 characters",
+        "repeatPassword": "Type it again"
+      },
+      "hints": {
+        "passwordStrength": "Strengthen your password using uppercase letters, lowercase letters, numbers, and symbols."
+      },
+      "strength": {
+        "label": "Strength",
+        "veryWeak": "Very weak",
+        "weak": "Weak",
+        "medium": "Medium",
+        "strong": "Strong",
+        "veryStrong": "Very strong"
+      },
+      "actions": {
+        "submit": "Save",
+        "loading": "Saving…"
+      },
+      "success": {
+        "updated": "Password updated successfully."
+      },
+      "errors": {
+        "sessionExpired": "Session expired. Sign in again.",
+        "completeFields": "Complete all fields.",
+        "passwordMismatch": "The new password and its confirmation do not match.",
+        "submit": "Error changing the password"
+      }
+    },
     "registerGender": {
       "title": "Are you male or female?",
       "male": "I'm Male",
@@ -807,7 +886,12 @@
       "defaultName": "Model"
     },
     "info": {
-      "verificationStatus": "Verification status: {{status}}"
+      "verificationStatus": "Verification status: {{status}}",
+      "statuses": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      }
     },
     "actions": {
       "logout": "Log out",
@@ -837,6 +921,10 @@
     "kyc": {
       "activeMethod": "Active KYC method:",
       "notAvailable": "N/A",
+      "modes": {
+        "veriff": "Veriff",
+        "manual": "Manual"
+      },
       "actions": {
         "goVeriff": "Go to Veriff",
         "uploadDocumentsManual": "Upload documents (manual)",
@@ -853,6 +941,84 @@
     "footerHint": {
       "prefix": "Once validated by the administrator, your account will become",
       "role": "MODEL"
+    }
+  },
+  "modelDocuments": {
+    "title": "Identity verification",
+    "subtitle": "Upload photos of your document and a verification file so we can approve your model profile.",
+    "currentStatus": "Current review status",
+    "reviewHint": "Check that the photos are sharp and that the data is readable. Our team will review the information as soon as possible.",
+    "actions": {
+      "openFile": "Open file"
+    },
+    "alt": {
+      "document": "Document"
+    },
+    "status": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "success": {
+      "upload": "File uploaded successfully.",
+      "delete": "File deleted."
+    },
+    "errors": {
+      "load": "Could not load the information.",
+      "upload": "Could not upload the file.",
+      "delete": "Could not delete the file."
+    },
+    "confirm": {
+      "deleteFile": "Delete this file?"
+    },
+    "veriff": {
+      "title": "Identity verification (Veriff)",
+      "subtitle": "We are redirecting you to the verification provider.",
+      "loading": "Opening verification…",
+      "hint": "If the problem persists, the administrator can enable the manual KYC flow.",
+      "actions": {
+        "retry": "Retry"
+      },
+      "errors": {
+        "start": "Could not start verification with Veriff."
+      }
+    },
+    "front": {
+      "title": "Document (front)",
+      "subtitle": "Upload the front side of your ID card or identity document.",
+      "hint": "Accepted formats: JPG/PNG. Make sure all details are clearly visible.",
+      "confirmDelete": "Delete the front image of the document?",
+      "actions": {
+        "upload": "Upload front",
+        "delete": "Delete front"
+      }
+    },
+    "back": {
+      "title": "Document (back)",
+      "subtitle": "Upload the back side of your ID card or identity document.",
+      "hint": "Accepted formats: JPG/PNG. Make sure there are no reflections or cropped edges.",
+      "confirmDelete": "Delete the back image of the document?",
+      "actions": {
+        "upload": "Upload back",
+        "delete": "Delete back"
+      }
+    },
+    "verificationFile": {
+      "title": "Selfie with ID or verification document",
+      "subtitle": "You can upload a photo of yourself with the document visible or a verification PDF.",
+      "linkLabel": "View verification file",
+      "hint": "Accepted formats: JPG/PNG or PDF. Make sure your face and the document are clearly visible.",
+      "confirmDelete": "Delete the verification file?",
+      "actions": {
+        "upload": "Upload file",
+        "delete": "Delete file"
+      }
+    },
+    "nextSteps": {
+      "title": "What happens next?",
+      "prefix": "Once your identity is approved, you will be able to complete your",
+      "role": "Model profile",
+      "suffix": "by uploading a profile photo and introduction video from the Profile section."
     }
   }
 }

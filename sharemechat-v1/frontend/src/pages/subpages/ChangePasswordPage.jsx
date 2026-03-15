@@ -1,8 +1,9 @@
 //ChangePasswordPage.jsx
 import React, { useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import i18n from '../../i18n';
 
-const NavbarLite = ({ onBack }) => (
+const NavbarLite = ({ onBack, t }) => (
   <div style={{
     display: 'flex', justifyContent: 'space-between', alignItems: 'center',
     padding: '12px 16px', borderBottom: '1px solid #eee', position: 'sticky', top: 0, background: '#fff', zIndex: 10
@@ -22,7 +23,7 @@ const NavbarLite = ({ onBack }) => (
     />
 
     <button onClick={onBack} style={{ padding: '8px 12px', cursor: 'pointer' }}>
-      Volver
+      {t('common.back')}
     </button>
   </div>
 );
@@ -34,18 +35,19 @@ const checkStrength = (pwd) => {
   if (/[a-z]/.test(pwd)) score++;
   if (/[0-9]/.test(pwd)) score++;
   if (/[^A-Za-z0-9]/.test(pwd)) score++;
-  return score; // 0..5
+  return score;
 };
 
 const strengthLabel = (s) => {
-  if (s <= 1) return 'Muy débil';
-  if (s === 2) return 'Débil';
-  if (s === 3) return 'Media';
-  if (s === 4) return 'Fuerte';
-  return 'Muy fuerte';
+  if (s <= 1) return i18n.t('auth.changePasswordPage.strength.veryWeak');
+  if (s === 2) return i18n.t('auth.changePasswordPage.strength.weak');
+  if (s === 3) return i18n.t('auth.changePasswordPage.strength.medium');
+  if (s === 4) return i18n.t('auth.changePasswordPage.strength.strong');
+  return i18n.t('auth.changePasswordPage.strength.veryStrong');
 };
 
 const ChangePasswordPage = () => {
+  const t = (key, options) => i18n.t(key, options);
   const history = useHistory();
   const token = localStorage.getItem('token');
 
@@ -64,19 +66,19 @@ const ChangePasswordPage = () => {
     setOkMsg('');
 
     if (!token) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
+      setError(t('auth.changePasswordPage.errors.sessionExpired'));
       return;
     }
     if (!currentPassword || !newPassword || !repeatPassword) {
-      setError('Completa todos los campos.');
+      setError(t('auth.changePasswordPage.errors.completeFields'));
       return;
     }
     if (newPassword !== repeatPassword) {
-      setError('La nueva contraseña y su repetición no coinciden.');
+      setError(t('auth.changePasswordPage.errors.passwordMismatch'));
       return;
     }
     if (newPassword.length < 8) {
-      setError('La nueva contraseña debe tener al menos 8 caracteres.');
+      setError(t('auth.login.validation.passwordMin'));
       return;
     }
 
@@ -91,20 +93,18 @@ const ChangePasswordPage = () => {
         body: JSON.stringify({ currentPassword, newPassword }),
       });
 
-      const text = await res.text();
+      await res.text();
       if (!res.ok) {
-        // Procura mostrar mensaje del backend si viene
-        throw new Error(text || 'Error al cambiar la contraseña');
+        throw new Error('change_password_error');
       }
 
-      setOkMsg(text || 'Contraseña actualizada correctamente.');
+      setOkMsg(t('auth.changePasswordPage.success.updated'));
       setCurrentPassword('');
       setNewPassword('');
       setRepeatPassword('');
-      // Opcional: redirigir de vuelta tras 1.5s
       setTimeout(() => history.goBack(), 1500);
     } catch (err) {
-      setError(err.message || 'Error al cambiar la contraseña');
+      setError(t('auth.changePasswordPage.errors.submit'));
     } finally {
       setSubmitting(false);
     }
@@ -112,44 +112,43 @@ const ChangePasswordPage = () => {
 
   return (
     <div style={{ minHeight: '100vh', background: '#fafafa' }}>
-      <NavbarLite onBack={() => history.goBack()} />
+      <NavbarLite onBack={() => history.goBack()} t={t} />
 
       <div style={{ maxWidth: 520, margin: '24px auto', padding: '0 16px' }}>
-        <h2 style={{ marginBottom: 8 }}>Cambiar contraseña</h2>
+        <h2 style={{ marginBottom: 8 }}>{t('auth.changePasswordPage.title')}</h2>
         <p style={{ color: '#6c757d', marginTop: 0 }}>
-          Por seguridad, vuelve a introducir tu contraseña actual.
+          {t('auth.changePasswordPage.subtitle')}
         </p>
 
         <form onSubmit={handleSubmit} style={{
           background: '#fff', border: '1px solid #eee', borderRadius: 10, padding: 16
         }}>
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', marginBottom: 6 }}>Contraseña actual</label>
+            <label style={{ display: 'block', marginBottom: 6 }}>{t('auth.changePasswordPage.labels.currentPassword')}</label>
             <input
               type="password"
               value={currentPassword}
               onChange={e => setCurrentPassword(e.target.value)}
-              placeholder="Tu contraseña actual"
+              placeholder={t('auth.changePasswordPage.placeholders.currentPassword')}
               autoComplete="current-password"
               style={{ width: '100%', padding: 10, border: '1px solid #ccc', borderRadius: 8 }}
             />
           </div>
 
           <div style={{ marginBottom: 8 }}>
-            <label style={{ display: 'block', marginBottom: 6 }}>Nueva contraseña</label>
+            <label style={{ display: 'block', marginBottom: 6 }}>{t('auth.changePasswordPage.labels.newPassword')}</label>
             <input
               type="password"
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
-              placeholder="Mín. 8 caracteres"
+              placeholder={t('auth.changePasswordPage.placeholders.newPassword')}
               autoComplete="new-password"
               style={{ width: '100%', padding: 10, border: '1px solid #ccc', borderRadius: 8 }}
             />
             <div style={{ marginTop: 6, fontSize: 12, color: '#6c757d' }}>
-              Fortalece tu contraseña usando mayúsculas, minúsculas, números y símbolos.
+              {t('auth.changePasswordPage.hints.passwordStrength')}
             </div>
 
-            {/* Indicador simple de fuerza */}
             <div style={{ marginTop: 8 }}>
               <div style={{ height: 8, background: '#eee', borderRadius: 999 }}>
                 <div
@@ -163,18 +162,18 @@ const ChangePasswordPage = () => {
                 />
               </div>
               <div style={{ fontSize: 12, marginTop: 6 }}>
-                Fortaleza: <strong>{strengthLabel(strength)}</strong>
+                {t('auth.changePasswordPage.strength.label')}: <strong>{strengthLabel(strength)}</strong>
               </div>
             </div>
           </div>
 
           <div style={{ marginBottom: 12 }}>
-            <label style={{ display: 'block', marginBottom: 6 }}>Repite la nueva contraseña</label>
+            <label style={{ display: 'block', marginBottom: 6 }}>{t('auth.changePasswordPage.labels.repeatPassword')}</label>
             <input
               type="password"
               value={repeatPassword}
               onChange={e => setRepeatPassword(e.target.value)}
-              placeholder="Vuelve a escribirla"
+              placeholder={t('auth.changePasswordPage.placeholders.repeatPassword')}
               autoComplete="new-password"
               style={{ width: '100%', padding: 10, border: '1px solid #ccc', borderRadius: 8 }}
             />
@@ -189,14 +188,14 @@ const ChangePasswordPage = () => {
               onClick={() => history.goBack()}
               style={{ padding: '10px 14px', background: '#6c757d', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}
             >
-              Cancelar
+              {t('common.cancel')}
             </button>
             <button
               type="submit"
               disabled={submitting}
               style={{ padding: '10px 14px', background: '#007bff', color: '#fff', border: 'none', borderRadius: 8, cursor: 'pointer' }}
             >
-              {submitting ? 'Guardando…' : 'Guardar'}
+              {submitting ? t('auth.changePasswordPage.actions.loading') : t('auth.changePasswordPage.actions.submit')}
             </button>
           </div>
         </form>
