@@ -4,6 +4,7 @@ import { useHistory } from 'react-router-dom';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
 import { useAppModals } from '../../components/useAppModals';
+import i18n from '../../i18n';
 
 // Navbar unificado
 import {
@@ -65,6 +66,7 @@ const DOCS_GET_URL = '/clients/documents/me';
 const DOCS_UPLOAD_URL = '/clients/documents';
 
 const PerfilClient = () => {
+  const t = (key, options) => i18n.t(key, options);
   const history = useHistory();
   const { alert, openUnsubscribeModal } = useAppModals();
   const { user: sessionUser, loading: sessionLoading } = useSession();
@@ -114,7 +116,7 @@ const PerfilClient = () => {
 
         await loadDocs();
       } catch (e) {
-        setError(e.message || 'No se pudo cargar el perfil');
+        setError(e.message || t('profileCommon.errors.loadProfile'));
       } finally {
         setLoading(false);
       }
@@ -159,9 +161,9 @@ const PerfilClient = () => {
         body: JSON.stringify(payload),
       });
 
-      setMsg('Datos guardados correctamente.');
+      setMsg(t('profileCommon.success.saved'));
     } catch (e) {
-      setError(e.message || 'No se pudo guardar');
+      setError(e.message || t('profileCommon.errors.save'));
     } finally {
       setSaving(false);
     }
@@ -179,8 +181,8 @@ const PerfilClient = () => {
       });
 
       await alert({
-        title: 'Cuenta',
-        message: 'Cuenta dada de baja.',
+        title: t('profileCommon.accountTitle'),
+        message: t('profileCommon.success.unsubscribed'),
         variant: 'success',
         size: 'sm',
       });
@@ -188,8 +190,8 @@ const PerfilClient = () => {
       history.push('/login');
     } catch (e) {
       await alert({
-        title: 'Cuenta',
-        message: e?.message || 'No se pudo completar la baja.',
+        title: t('profileCommon.accountTitle'),
+        message: e?.message || t('profileCommon.errors.unsubscribe'),
         variant: 'danger',
         size: 'sm',
       });
@@ -215,9 +217,9 @@ const PerfilClient = () => {
 
       setDocs({ urlPic: data.urlPic || null });
       setPicFile(null);
-      setMsg('Foto subida correctamente.');
+      setMsg(t('profileCommon.success.photoUploaded'));
     } catch (e) {
-      setError(e.message || 'No se pudo subir la foto');
+      setError(e.message || t('profileCommon.errors.uploadPhoto'));
     } finally {
       setUploading(false);
     }
@@ -225,7 +227,7 @@ const PerfilClient = () => {
 
   const deletePhoto = async () => {
     if (!docs.urlPic) return;
-    if (!window.confirm('¿Eliminar tu foto de perfil?')) return;
+    if (!window.confirm(t('profileCommon.confirm.deletePhoto'))) return;
 
     setDeleting(true);
     setError('');
@@ -238,15 +240,15 @@ const PerfilClient = () => {
 
       setDocs({ urlPic: null });
       setPicFile(null);
-      setMsg('Foto eliminada.');
+      setMsg(t('profileCommon.success.photoDeleted'));
     } catch (e) {
-      setError(e.message || 'No se pudo eliminar la foto');
+      setError(e.message || t('profileCommon.errors.deletePhoto'));
     } finally {
       setDeleting(false);
     }
   };
 
-  const displayName = form.nickname || form.name || form.email || 'Tu perfil';
+  const displayName = form.nickname || form.name || form.email || t('perfilClient.displayName');
 
   const currentFileName = (() => {
     if (!docs.urlPic) return '';
@@ -261,7 +263,7 @@ const PerfilClient = () => {
         <StyledBrand href="/" aria-label="SharemeChat" />
         <div>
           <NavButton type="button" onClick={() => history.goBack()}>
-            Volver
+            {t('common.back')}
           </NavButton>
         </div>
       </StyledNavbar>
@@ -272,7 +274,7 @@ const PerfilClient = () => {
           <ProfileHeaderAvatar>
             <Avatar>
               {docs.urlPic && (
-                <AvatarImg src={docs.urlPic} alt="Foto de perfil" />
+                <AvatarImg src={docs.urlPic} alt={t('profileCommon.alt.profilePhoto')} />
               )}
             </Avatar>
           </ProfileHeaderAvatar>
@@ -280,26 +282,26 @@ const PerfilClient = () => {
           <ProfileHeaderInfo>
             <ProfileHeaderTitleRow>
               <ProfileHeaderName>{displayName}</ProfileHeaderName>
-              <ChipRole>Cliente</ChipRole>
+              <ChipRole>{t('perfilClient.role')}</ChipRole>
             </ProfileHeaderTitleRow>
             <ProfileHeaderSubtitle>
-              Gestiona tus datos personales y la foto que verán las modelos.
+              {t('perfilClient.header.subtitle')}
             </ProfileHeaderSubtitle>
             <ProfileHeaderMeta>
               <MetaItem>
-                <MetaLabel>Estado</MetaLabel>
-                <MetaValueOk>Cuenta activa</MetaValueOk>
+                <MetaLabel>{t('profileCommon.labels.status')}</MetaLabel>
+                <MetaValueOk>{t('profileCommon.status.active')}</MetaValueOk>
               </MetaItem>
               <MetaItem>
-                <MetaLabel>Email</MetaLabel>
-                <MetaValue>{form.email || '—'}</MetaValue>
+                <MetaLabel>{t('profileCommon.labels.email')}</MetaLabel>
+                <MetaValue>{form.email || t('profileCommon.empty.value')}</MetaValue>
               </MetaItem>
             </ProfileHeaderMeta>
           </ProfileHeaderInfo>
         </ProfileHeader>
 
         {/* Mensajes de estado */}
-        {loading && <p>Cargando…</p>}
+        {loading && <p>{t('profileCommon.loading.default')}</p>}
         {error && <Message type="error">{error}</Message>}
         {msg && <Message type="ok">{msg}</Message>}
 
@@ -309,15 +311,15 @@ const PerfilClient = () => {
             <ProfileColMain>
               <ProfileCard>
                 <CardHeader>
-                  <CardTitle>Datos básicos</CardTitle>
+                  <CardTitle>{t('profileCommon.sections.basicData.title')}</CardTitle>
                   <CardSubtitle>
-                    Estos datos no se muestran a otros usuarios salvo tu nickname.
+                    {t('perfilClient.sections.basicData.subtitle')}
                   </CardSubtitle>
                 </CardHeader>
                 <CardBody>
                   <FormGridNew>
                     <FormFieldNew>
-                      <Label>Email</Label>
+                      <Label>{t('profileCommon.labels.email')}</Label>
                       <Input
                         type="email"
                         value={form.email}
@@ -326,32 +328,32 @@ const PerfilClient = () => {
                     </FormFieldNew>
 
                     <FormFieldNew>
-                      <Label>Nombre</Label>
+                      <Label>{t('profileCommon.labels.name')}</Label>
                       <Input
                         name="name"
                         value={form.name}
                         onChange={onChange}
-                        placeholder="Tu nombre"
+                        placeholder={t('profileCommon.placeholders.name')}
                       />
                     </FormFieldNew>
 
                     <FormFieldNew>
-                      <Label>Apellido</Label>
+                      <Label>{t('profileCommon.labels.surname')}</Label>
                       <Input
                         name="surname"
                         value={form.surname}
                         onChange={onChange}
-                        placeholder="Tu apellido"
+                        placeholder={t('profileCommon.placeholders.surname')}
                       />
                     </FormFieldNew>
 
                     <FormFieldNew>
-                      <Label>Nickname</Label>
+                      <Label>{t('profileCommon.labels.nickname')}</Label>
                       <Input
                         name="nickname"
                         value={form.nickname}
                         onChange={onChange}
-                        placeholder="Tu nickname público"
+                        placeholder={t('profileCommon.placeholders.nickname')}
                       />
                     </FormFieldNew>
                   </FormGridNew>
@@ -360,33 +362,33 @@ const PerfilClient = () => {
 
               <ProfileCard style={{ marginTop: '16px' }}>
                 <CardHeader>
-                  <CardTitle>Sobre ti</CardTitle>
+                  <CardTitle>{t('profileCommon.sections.about.title')}</CardTitle>
                   <CardSubtitle>
-                    Ayúdanos a encontrar mejores matches según tus gustos.
+                    {t('perfilClient.sections.about.subtitle')}
                   </CardSubtitle>
                 </CardHeader>
                 <CardBody>
                   <FormFieldNew>
-                    <Label>Biografía</Label>
+                    <Label>{t('profileCommon.labels.biography')}</Label>
                     <Textarea
                       name="biography"
                       value={form.biography}
                       onChange={onChange}
-                      placeholder="Cuéntanos algo sobre ti, qué buscas, etc."
+                      placeholder={t('perfilClient.placeholders.biography')}
                       rows={4}
                     />
                   </FormFieldNew>
 
                   <FormFieldNew>
-                    <Label>Intereses</Label>
+                    <Label>{t('profileCommon.labels.interests')}</Label>
                     <Input
                       name="interests"
                       value={form.interests}
                       onChange={onChange}
-                      placeholder="cine, música, viajes…"
+                      placeholder={t('perfilClient.placeholders.interests')}
                     />
                     <Hint>
-                      Separa los intereses con comas. Los usamos para sugerir mejores modelos.
+                      {t('perfilClient.hints.interests')}
                     </Hint>
                   </FormFieldNew>
                 </CardBody>
@@ -396,7 +398,7 @@ const PerfilClient = () => {
                     onClick={handleSave}
                     disabled={saving}
                   >
-                    {saving ? 'Guardando…' : 'Guardar cambios'}
+                    {saving ? t('profileCommon.actions.saving') : t('profileCommon.actions.saveChanges')}
                   </ProfilePrimaryButton>
                 </CardFooter>
               </ProfileCard>
@@ -406,16 +408,16 @@ const PerfilClient = () => {
             <ProfileColSide>
               <MediaCard>
                 <CardHeader>
-                  <CardTitle>Foto de perfil</CardTitle>
+                  <CardTitle>{t('profileCommon.sections.profilePhoto.title')}</CardTitle>
                   <CardSubtitle>
-                    Esta imagen se muestra a las modelos durante el videochat.
+                    {t('perfilClient.sections.profilePhoto.subtitle')}
                   </CardSubtitle>
                 </CardHeader>
                 <CardBody>
                   {docs.urlPic ? (
                     <>
                       <PhotoPreview>
-                        <PhotoImg src={docs.urlPic} alt="Foto de perfil actual" />
+                        <PhotoImg src={docs.urlPic} alt={t('profileCommon.alt.currentProfilePhoto')} />
                       </PhotoPreview>
                       {currentFileName && (
                         <FileNameWrapper>
@@ -426,7 +428,7 @@ const PerfilClient = () => {
                       )}
                     </>
                   ) : (
-                    <PhotoEmpty>— Sin foto —</PhotoEmpty>
+                    <PhotoEmpty>{t('profileCommon.empty.noPhoto')}</PhotoEmpty>
                   )}
 
                   <PhotoActions>
@@ -441,7 +443,7 @@ const PerfilClient = () => {
                       type="button"
                       onClick={() => picInputRef.current && picInputRef.current.click()}
                     >
-                      Seleccionar archivo
+                      {t('profileCommon.actions.selectFile')}
                     </ProfileSecondaryButton>
 
                     <ProfilePrimaryButton
@@ -449,7 +451,7 @@ const PerfilClient = () => {
                       onClick={uploadPhoto}
                       disabled={!picFile || uploading}
                     >
-                      {uploading ? 'Subiendo…' : 'Subir foto'}
+                      {uploading ? t('profileCommon.actions.uploading') : t('profileCommon.actions.uploadPhoto')}
                     </ProfilePrimaryButton>
 
                     {docs.urlPic && (
@@ -458,20 +460,20 @@ const PerfilClient = () => {
                         onClick={deletePhoto}
                         disabled={deleting}
                       >
-                        {deleting ? 'Eliminando…' : 'Eliminar foto'}
+                        {deleting ? t('profileCommon.actions.deleting') : t('profileCommon.actions.deletePhoto')}
                       </ProfileDangerOutlineButton>
                     )}
                   </PhotoActions>
 
                   <Hint>
-                    Formato recomendado JPG/PNG. Se recortará automáticamente para verse bien en móvil.
+                    {t('perfilClient.hints.photoFormat')}
                   </Hint>
                 </CardBody>
               </MediaCard>
 
               <SecurityCard style={{ marginTop: '16px' }}>
                 <CardHeader>
-                  <CardTitle>Seguridad y cuenta</CardTitle>
+                  <CardTitle>{t('profileCommon.sections.security.title')}</CardTitle>
                 </CardHeader>
                 <CardBody>
                   <SecurityActions>
@@ -479,17 +481,17 @@ const PerfilClient = () => {
                       type="button"
                       onClick={() => history.push('/change-password')}
                     >
-                      Cambiar contraseña
+                      {t('profileCommon.actions.changePassword')}
                     </ProfileSecondaryButton>
                     <ProfileDangerOutlineButton
                       type="button"
                       onClick={onUnsubscribe}
                     >
-                      Darme de baja
+                      {t('modals.unsubscribe.title')}
                     </ProfileDangerOutlineButton>
                   </SecurityActions>
                   <Hint>
-                    Si te das de baja, no podrás acceder al historial de chats y tu cuenta quedará cerrada según la política vigente de la plataforma.
+                    {t('modals.unsubscribe.warning')}
                   </Hint>
                 </CardBody>
               </SecurityCard>

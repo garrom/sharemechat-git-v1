@@ -51,15 +51,188 @@
     "other": "Other",
     "exit": "Exit",
     "back": "Back",
+    "hangup": "Hang up",
+    "fullscreen": "Fullscreen",
+    "sendMessage": "Send message",
     "networkError": "Network error",
     "actions": {
-      "addToFavorites": "Add to favorites"
+      "addToFavorites": "Add to favorites",
+      "search": "Search"
     },
     "cookies": {
       "configure": "Cookie settings",
       "acceptAll": "Accept all cookies",
       "continueWithoutAccepting": "Continue without accepting",
       "bannerText": "By clicking “Accept all cookies”, you agree to cookies being stored on your device to improve site navigation, analyze site usage, and support our marketing efforts. For more information, see our Cookie Policy."
+    }
+  },
+  "profileCommon": {
+    "accountTitle": "Account",
+    "loading": {
+      "default": "Loading..."
+    },
+    "status": {
+      "active": "Active account"
+    },
+    "labels": {
+      "status": "Status",
+      "email": "Email",
+      "name": "Name",
+      "surname": "Surname",
+      "nickname": "Nickname",
+      "biography": "Biography",
+      "interests": "Interests"
+    },
+    "placeholders": {
+      "name": "Your name",
+      "surname": "Your surname",
+      "nickname": "Your public nickname"
+    },
+    "sections": {
+      "basicData": {
+        "title": "Basic details"
+      },
+      "about": {
+        "title": "About you"
+      },
+      "profilePhoto": {
+        "title": "Profile photo"
+      },
+      "security": {
+        "title": "Security and account"
+      }
+    },
+    "actions": {
+      "saveChanges": "Save changes",
+      "saving": "Saving...",
+      "selectFile": "Select file",
+      "uploading": "Uploading...",
+      "deleting": "Deleting...",
+      "uploadPhoto": "Upload photo",
+      "deletePhoto": "Delete photo",
+      "changePassword": "Change password"
+    },
+    "confirm": {
+      "deletePhoto": "Delete your profile photo?"
+    },
+    "success": {
+      "saved": "Details saved successfully.",
+      "unsubscribed": "Account deleted.",
+      "photoUploaded": "Photo uploaded successfully.",
+      "photoDeleted": "Photo deleted."
+    },
+    "errors": {
+      "loadProfile": "Could not load the profile",
+      "save": "Could not save",
+      "unsubscribe": "Could not complete the account deletion.",
+      "uploadPhoto": "Could not upload the photo",
+      "deletePhoto": "Could not delete the photo"
+    },
+    "empty": {
+      "value": "—",
+      "noPhoto": "— No photo —"
+    },
+    "alt": {
+      "profilePhoto": "Profile photo",
+      "currentProfilePhoto": "Current profile photo"
+    }
+  },
+  "perfilClient": {
+    "displayName": "Your profile",
+    "role": "Client",
+    "header": {
+      "subtitle": "Manage your personal details and the photo models will see."
+    },
+    "sections": {
+      "basicData": {
+        "subtitle": "These details are not shown to other users except for your nickname."
+      },
+      "about": {
+        "subtitle": "Help us find better matches based on your preferences."
+      },
+      "profilePhoto": {
+        "subtitle": "This image is shown to models during videochat."
+      }
+    },
+    "placeholders": {
+      "biography": "Tell us something about yourself, what you are looking for, etc.",
+      "interests": "movies, music, travel..."
+    },
+    "hints": {
+      "interests": "Separate interests with commas. We use them to suggest better models.",
+      "photoFormat": "Recommended format JPG/PNG. It will be cropped automatically to look good on mobile."
+    }
+  },
+  "perfilModel": {
+    "displayName": "Your model profile",
+    "role": "Model",
+    "header": {
+      "subtitle": "Complete your details and upload a photo and an introduction video to attract more clients."
+    },
+    "sections": {
+      "basicData": {
+        "subtitle": "These details are not shown to clients except for your nickname."
+      },
+      "about": {
+        "subtitle": "Tell us about your style, what you offer, and what you enjoy doing in sessions."
+      },
+      "profilePhoto": {
+        "subtitle": "This image is used as the cover of your model profile."
+      },
+      "introVideo": {
+        "title": "Introduction video",
+        "subtitle": "A short video helps you stand out and increase client conversion."
+      }
+    },
+    "placeholders": {
+      "biography": "Tell us about yourself and your style",
+      "interests": "gaming, cosplay, dancing..."
+    },
+    "actions": {
+      "uploadVideo": "Upload video",
+      "deleteVideo": "Delete video"
+    },
+    "confirm": {
+      "deleteIntroVideo": "Delete your introduction video?"
+    },
+    "empty": {
+      "notUploaded": "— Not uploaded —"
+    },
+    "hints": {
+      "interests": "Separate interests with commas. We use them to suggest better clients.",
+      "acceptContractForPhoto": "You must accept the new contract version to modify your photo.",
+      "photoFormat": "Recommended format JPG/PNG.",
+      "acceptContractForVideo": "You must accept the new contract version to modify your video.",
+      "videoFormat": "Recommended format MP4. Keep the size reasonable for fast upload."
+    },
+    "contract": {
+      "title": "Updated model contract",
+      "subtitle": "A new contract version has been published. You must accept it to keep managing your profile photo and video.",
+      "currentVersion": "Current version:",
+      "confirmAccept": "The model contract has been updated. You must accept the new version to keep managing your model profile.\n\nDo you want to accept it now?",
+      "actions": {
+        "viewContract": "View contract",
+        "accepting": "Accepting...",
+        "acceptNewVersion": "Accept new version"
+      },
+      "success": {
+        "accepted": "Model contract accepted successfully."
+      },
+      "errors": {
+        "accept": "Could not accept the contract",
+        "acceptBeforeUpload": "You must accept the new model contract version before uploading files.",
+        "acceptBeforeEditFiles": "You must accept the new model contract version before modifying files."
+      }
+    },
+    "media": {
+      "success": {
+        "fileUploaded": "File uploaded successfully.",
+        "videoDeleted": "Video deleted."
+      },
+      "errors": {
+        "uploadFile": "Could not upload the file",
+        "deleteFile": "Could not delete"
+      }
     }
   },
   "modals": {
@@ -297,8 +470,121 @@
       "viewProfile": "View profile",
       "profile": "Profile"
     },
+    "favoriteAlerts": {
+      "title": "Favorites",
+      "modelAlreadyFavorite": "This model is already in your favorites."
+    },
     "favorites": {
-      "inCallLocked": "In call: the list is locked until you hang up."
+      "inCallLocked": "In call: the list is locked until you hang up.",
+      "selectFavorite": "Select a favorite to open the conversation here.",
+      "pendingInvitationMessage": "invited you to become mutual favorites. Accept to enable chat.",
+      "acceptInvitation": "Accept invitation",
+      "rejectInvitation": "Reject invitation",
+      "invitationSent": "Invitation sent. Waiting for a response from {{name}}.",
+      "chatEnabledWhenAccepted": "Chat will be enabled when they accept your invitation.",
+      "balanceLabel": "Balance:",
+      "messagePlaceholder": "Type a message…",
+      "incomingCall": "{{name}} is calling you…",
+      "noMessagesYet": "There are no messages yet. Send the first one!",
+      "chatInactive": "This chat is not active.",
+      "backToList": "Back to list",
+      "startVideoChat": "Start VideoChat",
+      "pendingInvitationMobile": "{{name}} invited you to become mutual favorites. Accept to enable chat.",
+      "call": {
+        "activateCamera": "Activate camera",
+        "acceptedRequired": "You both must be accepted favorites to call",
+        "activateCameraHint": "Activate your camera",
+        "selectContactFirst": "Select a contact to call",
+        "callUser": "Call {{name}}",
+        "defaultUser": "User",
+        "call": "Call",
+        "startVideoCallHint": "Press the button to start a video call",
+        "callingRinging": "Calling {{name}}… (ringing)",
+        "connecting": "Connecting…",
+        "remote": "Remote",
+        "startCallHint": "Press the button to start a call",
+        "callingUser": "Calling {{name}}…"
+      }
+    },
+    "videoChatRandomCliente": {
+      "promoTeaserTitle": "{{name}} · teaser",
+      "actions": {
+        "activateCamera": "Activate camera",
+        "viewTeaser": "View teaser",
+        "search": "Search",
+        "stopSearch": "Stop search",
+        "fullscreen": "Fullscreen",
+        "hangup": "Hang up",
+        "sendMessage": "Send message",
+        "sendGift": "Send gift"
+      },
+      "hints": {
+        "activateCamera": "activate camera to start videochat",
+        "search": "Press “Search” to start."
+      },
+      "loading": {
+        "promoVideos": "Loading model videos…",
+        "searchingModel": "Searching for an available model…"
+      },
+      "empty": {
+        "promoVideos": "No promotional videos are available at the moment."
+      },
+      "placeholders": {
+        "message": "Type a message…"
+      },
+      "errors": {
+        "loadPromoVideos": "Error loading model videos"
+      }
+    },
+    "videoChatFavoritosCliente": {
+      "actions": {
+        "accept": "Accept",
+        "reject": "Reject",
+        "activateCamera": "Activate camera",
+        "activateCameraHint": "Activate your camera",
+        "call": "Call",
+        "hangup": "Hang up",
+        "fullscreen": "Fullscreen",
+        "sendGift": "Send gift",
+        "backToList": "Back to list",
+        "startVideoChat": "Start VideoChat"
+      },
+      "hints": {
+        "activateCamera": "activate camera to start videochat",
+        "startVideoCall": "press button to start video call",
+        "startCall": "press button to start call"
+      },
+      "labels": {
+        "remote": "Remote",
+        "userDefault": "User",
+        "userLowerDefault": "user"
+      },
+      "call": {
+        "acceptedFavoritesRequired": "You both must be accepted favorites to call",
+        "selectContact": "Select a contact to call",
+        "callName": "Call {{name}}",
+        "ringing": "Calling {{name}}… (ringing)",
+        "calling": "Calling {{name}}…",
+        "incoming": "{{name}} is calling you…",
+        "connecting": "Connecting…"
+      },
+      "invitation": {
+        "pendingMessage": "{{name}} invited you to favorites. Accept to enable chat.",
+        "sentMessage": "Invitation sent. Waiting for a response from {{name}}.",
+        "sentHint": "Chat will be enabled when they accept your invitation."
+      },
+      "loading": {
+        "history": "Loading history…"
+      },
+      "empty": {
+        "selectFavorite": "Select a favorite to open the conversation here.",
+        "noMessages": "There are no messages yet. Send the first one!",
+        "chatInactive": "This chat is not active.",
+        "chatInactiveShort": "Chat inactive"
+      },
+      "placeholders": {
+        "message": "Type a message…"
+      }
     }
   },
   "dashboardModel": {
@@ -326,8 +612,102 @@
       "viewProfile": "View profile",
       "profile": "Profile"
     },
+    "favoriteAlerts": {
+      "title": "Favorites",
+      "clientAlreadyFavorite": "This client is already in your favorites."
+    },
+    "payout": {
+      "sessionExpiredTitle": "Session",
+      "sessionExpiredMessage": "Your session has expired. Sign in again.",
+      "requestTitle": "Withdrawal request",
+      "requestMessage": "Enter the amount you want to withdraw:",
+      "invalidAmountTitle": "Invalid amount",
+      "invalidAmountMessage": "Enter a valid amount greater than 0.",
+      "insufficientBalanceTitle": "Insufficient balance",
+      "insufficientBalanceMessage": "You do not have enough balance to complete this withdrawal.",
+      "minimumAmountTitle": "Amount below minimum",
+      "minimumAmountMessage": "The minimum withdrawal amount is {{amount}} EUR.",
+      "successTitle": "Request sent",
+      "successMessage": "Your withdrawal request has been submitted successfully.",
+      "errorTitle": "Error",
+      "errorMessage": "The withdrawal request could not be completed."
+    },
     "favorites": {
-      "inCallLocked": "In call: the list is locked until you hang up."
+      "inCallLocked": "In call: the list is locked until you hang up.",
+      "selectFavorite": "Select a favorite to open the conversation here.",
+      "pendingInvitationMessage": "invited you to become mutual favorites. Accept to enable chat.",
+      "acceptInvitation": "Accept invitation",
+      "rejectInvitation": "Reject invitation",
+      "invitationSent": "Invitation sent. Waiting for a response from {{name}}.",
+      "chatEnabledWhenAccepted": "Chat will be enabled when they accept your invitation.",
+      "balanceLabel": "Balance:",
+      "messagePlaceholder": "Type a message…",
+      "incomingCall": "{{name}} is calling you…",
+      "noMessagesYet": "There are no messages yet. Send the first one!",
+      "chatInactive": "This chat is not active.",
+      "backToList": "Back to list",
+      "startVideoChat": "Start VideoChat",
+      "pendingInvitationMobile": "{{name}} invited you to become mutual favorites. Accept to enable chat.",
+      "call": {
+        "activateCamera": "Activate camera",
+        "acceptedRequired": "You both must be accepted favorites to call",
+        "activateCameraHint": "Activate your camera",
+        "selectContactFirst": "Select a contact to call",
+        "callUser": "Call {{name}}",
+        "defaultUser": "User",
+        "call": "Call",
+        "startVideoCallHint": "Press the button to start a video call",
+        "callingRinging": "Calling {{name}}… (ringing)",
+        "connecting": "Connecting…",
+        "remote": "Remote",
+        "startCallHint": "Press the button to start a call",
+        "callingUser": "Calling {{name}}…"
+      }
+    },
+    "videoChatFavoritosModelo": {
+      "actions": {
+        "acceptInvitation": "Accept invitation",
+        "rejectInvitation": "Reject invitation",
+        "fullscreenButton": "Full Screen"
+      },
+      "invitation": {
+        "pendingMutualSuffix": "invited you to become mutual favorites. Accept to enable chat."
+      }
+    },
+    "videoChatRandomModelo": {
+      "actions": {
+        "activateCamera": "Activate camera",
+        "stopSearch": "Stop search"
+      },
+      "hints": {
+        "activateCamera": "activate camera to start videochat",
+        "search": "Press “Search” to start."
+      },
+      "labels": {
+        "clientDefault": "Client",
+        "balance": "Balance:"
+      },
+      "loading": {
+        "searchingClient": "Searching for an available client…"
+      },
+      "placeholders": {
+        "message": "Type a message…"
+      },
+      "stats": {
+        "progressTitle": "Progress toward the next tier",
+        "progressSubtitle": "Based on your billed minutes (30 days).",
+        "noTierData": "No tier data is available to calculate progress.",
+        "currentMinutes30d": "Current minutes (30d):",
+        "yourSituation": "Your situation",
+        "currentMinutes": "Current minutes:",
+        "detectedTier": "Detected tier:",
+        "nextGoal": "Next goal",
+        "nextTier": "Next tier:",
+        "requirement": "Requirement:",
+        "remaining": "Remaining:",
+        "maxTier": "You are already at the highest tier (or no next tier is configured).",
+        "minutesShort": "min"
+      }
     }
   },
   "dashboardUserClient": {
@@ -384,6 +764,34 @@
       "firstPayment": "Error processing the payment.",
       "noServerConnection": "No connection to the server. Press \"Search\" again.",
       "next": "Could not request NEXT."
+    },
+    "videoChatRandomUser": {
+      "promoTeaserTitle": "{{name}} · teaser",
+      "actions": {
+        "activateCamera": "Activate camera",
+        "addToFavoritesPremium": "Add to favorites (requires premium)",
+        "search": "Search",
+        "stopSearch": "Stop search",
+        "fullscreen": "Fullscreen",
+        "hangup": "Hang up"
+      },
+      "hints": {
+        "activateCamera": "activate camera to start videochat",
+        "search": "Press “Search” to start."
+      },
+      "loading": {
+        "promoVideos": "Loading model videos…",
+        "searchingModel": "Searching for an available model…"
+      },
+      "empty": {
+        "promoVideos": "No promotional videos are available at the moment."
+      },
+      "status": {
+        "default": "You are trying ShareMeChat videochat."
+      },
+      "errors": {
+        "loadPromoVideos": "Error loading model videos"
+      }
     }
   },
   "dashboardUserModel": {

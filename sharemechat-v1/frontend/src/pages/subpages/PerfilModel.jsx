@@ -4,6 +4,7 @@ import { useHistory } from 'react-router-dom';
 import { useAppModals } from '../../components/useAppModals';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
+import i18n from '../../i18n';
 
 import {
   StyledContainer,
@@ -66,6 +67,7 @@ const DOCS_GET_URL = '/models/documents/me';
 const DOCS_UPLOAD_URL = '/models/documents';
 
 const PerfilModel = () => {
+  const t = (key, options) => i18n.t(key, options);
   const history = useHistory();
   const { alert, openUnsubscribeModal } = useAppModals();
   const { user: sessionUser, loading: sessionLoading } = useSession();
@@ -181,7 +183,7 @@ const PerfilModel = () => {
           loadContractStatus(),
         ]);
       } catch (e) {
-        setError(e?.message || 'No se pudo cargar el perfil');
+        setError(e?.message || t('profileCommon.errors.loadProfile'));
       } finally {
         setLoading(false);
       }
@@ -217,9 +219,9 @@ const PerfilModel = () => {
         body: JSON.stringify(payload),
       });
 
-      setMsg('Datos guardados correctamente.');
+      setMsg(t('profileCommon.success.saved'));
     } catch (e) {
-      setError(e?.message || 'No se pudo guardar');
+      setError(e?.message || t('profileCommon.errors.save'));
     } finally {
       setSaving(false);
     }
@@ -237,8 +239,8 @@ const PerfilModel = () => {
       });
 
       await alert({
-        title: 'Cuenta',
-        message: 'Cuenta dada de baja.',
+        title: t('profileCommon.accountTitle'),
+        message: t('profileCommon.success.unsubscribed'),
         variant: 'success',
         size: 'sm',
       });
@@ -246,8 +248,8 @@ const PerfilModel = () => {
       history.push('/login');
     } catch (e) {
       await alert({
-        title: 'Cuenta',
-        message: e?.message || 'No se pudo completar la baja.',
+        title: t('profileCommon.accountTitle'),
+        message: e?.message || t('profileCommon.errors.unsubscribe'),
         variant: 'danger',
         size: 'sm',
       });
@@ -258,7 +260,7 @@ const PerfilModel = () => {
     const url = contractInfo?.currentUrl;
 
     const confirmed = window.confirm(
-      'Se ha actualizado el contrato de modelo. Debes aceptar la nueva versión para seguir gestionando tu perfil de modelo.\n\n¿Deseas aceptarlo ahora?'
+      t('perfilModel.contract.confirmAccept')
     );
 
     if (!confirmed) return;
@@ -273,9 +275,9 @@ const PerfilModel = () => {
       });
 
       await loadContractStatus();
-      setMsg('Contrato de modelo aceptado correctamente.');
+      setMsg(t('perfilModel.contract.success.accepted'));
     } catch (e) {
-      setError(e?.message || 'No se pudo aceptar el contrato');
+      setError(e?.message || t('perfilModel.contract.errors.accept'));
       if (url) {
         // El contrato se puede abrir igualmente
         window.open(url, '_blank', 'noopener,noreferrer');
@@ -289,7 +291,7 @@ const PerfilModel = () => {
     if (!fileObj) return;
 
     if (contractInfo?.needsReaccept) {
-      setError('Debes aceptar la nueva versión del contrato de modelo antes de subir archivos.');
+      setError(t('perfilModel.contract.errors.acceptBeforeUpload'));
       return;
     }
 
@@ -320,9 +322,9 @@ const PerfilModel = () => {
         setVideoKey((k) => k + 1);
       }
 
-      setMsg('Archivo subido correctamente.');
+      setMsg(t('perfilModel.media.success.fileUploaded'));
     } catch (e) {
-      setError(e?.message || 'No se pudo subir el archivo');
+      setError(e?.message || t('perfilModel.media.errors.uploadFile'));
 
       // Si backend devuelve mensaje de contrato, refrescamos estado para actualizar UX
       if ((e?.message || '').toLowerCase().includes('contrato')) {
@@ -337,11 +339,11 @@ const PerfilModel = () => {
     if (!docs.urlPic) return;
 
     if (contractInfo?.needsReaccept) {
-      setError('Debes aceptar la nueva versión del contrato de modelo antes de modificar archivos.');
+      setError(t('perfilModel.contract.errors.acceptBeforeEditFiles'));
       return;
     }
 
-    if (!window.confirm('¿Eliminar tu foto de perfil?')) return;
+    if (!window.confirm(t('profileCommon.confirm.deletePhoto'))) return;
 
     setDeletingPic(true);
     setError('');
@@ -355,9 +357,9 @@ const PerfilModel = () => {
       setDocs((d) => ({ ...d, urlPic: null }));
       setPicFile(null);
       setPicKey((k) => k + 1);
-      setMsg('Foto eliminada.');
+      setMsg(t('profileCommon.success.photoDeleted'));
     } catch (e) {
-      setError(e?.message || 'No se pudo eliminar');
+      setError(e?.message || t('perfilModel.media.errors.deleteFile'));
       if ((e?.message || '').toLowerCase().includes('contrato')) {
         loadContractStatus();
       }
@@ -370,11 +372,11 @@ const PerfilModel = () => {
     if (!docs.urlVideo) return;
 
     if (contractInfo?.needsReaccept) {
-      setError('Debes aceptar la nueva versión del contrato de modelo antes de modificar archivos.');
+      setError(t('perfilModel.contract.errors.acceptBeforeEditFiles'));
       return;
     }
 
-    if (!window.confirm('¿Eliminar tu vídeo de presentación?')) return;
+    if (!window.confirm(t('perfilModel.confirm.deleteIntroVideo'))) return;
 
     setDeletingVideo(true);
     setError('');
@@ -388,9 +390,9 @@ const PerfilModel = () => {
       setDocs((d) => ({ ...d, urlVideo: null }));
       setVideoFile(null);
       setVideoKey((k) => k + 1);
-      setMsg('Vídeo eliminado.');
+      setMsg(t('perfilModel.media.success.videoDeleted'));
     } catch (e) {
-      setError(e?.message || 'No se pudo eliminar');
+      setError(e?.message || t('perfilModel.media.errors.deleteFile'));
       if ((e?.message || '').toLowerCase().includes('contrato')) {
         loadContractStatus();
       }
@@ -399,7 +401,7 @@ const PerfilModel = () => {
     }
   };
 
-  const displayName = form.nickname || form.name || form.email || 'Tu perfil de modelo';
+  const displayName = form.nickname || form.name || form.email || t('perfilModel.displayName');
 
   const currentPicName = (() => {
     if (!docs.urlPic) return '';
@@ -423,7 +425,7 @@ const PerfilModel = () => {
         <StyledBrand href="/" aria-label="SharemeChat" />
         <div>
           <NavButton type="button" onClick={() => history.goBack()}>
-            Volver
+            {t('common.back')}
           </NavButton>
         </div>
       </StyledNavbar>
@@ -434,7 +436,7 @@ const PerfilModel = () => {
           <ProfileHeaderAvatar>
             <Avatar>
               {docs.urlPic && (
-                <AvatarImg src={docs.urlPic} alt="Foto de perfil" />
+                <AvatarImg src={docs.urlPic} alt={t('profileCommon.alt.profilePhoto')} />
               )}
             </Avatar>
           </ProfileHeaderAvatar>
@@ -442,19 +444,19 @@ const PerfilModel = () => {
           <ProfileHeaderInfo>
             <ProfileHeaderTitleRow>
               <ProfileHeaderName>{displayName}</ProfileHeaderName>
-              <ChipRole>Modelo</ChipRole>
+              <ChipRole>{t('perfilModel.role')}</ChipRole>
             </ProfileHeaderTitleRow>
             <ProfileHeaderSubtitle>
-              Completa tus datos y sube una foto y un vídeo de presentación para atraer más clientes.
+              {t('perfilModel.header.subtitle')}
             </ProfileHeaderSubtitle>
             <ProfileHeaderMeta>
               <MetaItem>
-                <MetaLabel>Estado</MetaLabel>
-                <MetaValueOk>Cuenta activa</MetaValueOk>
+                <MetaLabel>{t('profileCommon.labels.status')}</MetaLabel>
+                <MetaValueOk>{t('profileCommon.status.active')}</MetaValueOk>
               </MetaItem>
               <MetaItem>
-                <MetaLabel>Email</MetaLabel>
-                <MetaValue>{form.email || '—'}</MetaValue>
+                <MetaLabel>{t('profileCommon.labels.email')}</MetaLabel>
+                <MetaValue>{form.email || t('profileCommon.empty.value')}</MetaValue>
               </MetaItem>
             </ProfileHeaderMeta>
           </ProfileHeaderInfo>
@@ -464,15 +466,15 @@ const PerfilModel = () => {
         {!loading && contractBlocked && (
           <ProfileCard style={{ marginTop: '16px', border: '1px solid rgba(255, 160, 0, 0.35)' }}>
             <CardHeader>
-              <CardTitle>Contrato de modelo actualizado</CardTitle>
+              <CardTitle>{t('perfilModel.contract.title')}</CardTitle>
               <CardSubtitle>
-                Se ha publicado una nueva versión del contrato. Debes aceptarla para seguir gestionando tu foto y vídeo de perfil.
+                {t('perfilModel.contract.subtitle')}
               </CardSubtitle>
             </CardHeader>
             <CardBody>
               {contractInfo?.currentVersion && (
                 <Hint>
-                  Versión vigente: <strong>{contractInfo.currentVersion}</strong>
+                  {t('perfilModel.contract.currentVersion')} <strong>{contractInfo.currentVersion}</strong>
                 </Hint>
               )}
 
@@ -482,7 +484,7 @@ const PerfilModel = () => {
                     type="button"
                     onClick={() => window.open(contractInfo.currentUrl, '_blank', 'noopener,noreferrer')}
                   >
-                    Ver contrato
+                    {t('perfilModel.contract.actions.viewContract')}
                   </ProfileSecondaryButton>
                 )}
 
@@ -491,7 +493,7 @@ const PerfilModel = () => {
                   onClick={handleAcceptNewContract}
                   disabled={contractAccepting || contractLoading}
                 >
-                  {contractAccepting ? 'Aceptando…' : 'Aceptar nueva versión'}
+                  {contractAccepting ? t('perfilModel.contract.actions.accepting') : t('perfilModel.contract.actions.acceptNewVersion')}
                 </ProfilePrimaryButton>
               </div>
             </CardBody>
@@ -499,7 +501,7 @@ const PerfilModel = () => {
         )}
 
         {/* Mensajes de estado */}
-        {loading && <p>Cargando…</p>}
+        {loading && <p>{t('profileCommon.loading.default')}</p>}
         {error && <Message type="error">{error}</Message>}
         {msg && <Message type="ok">{msg}</Message>}
 
@@ -509,15 +511,15 @@ const PerfilModel = () => {
             <ProfileColMain>
               <ProfileCard>
                 <CardHeader>
-                  <CardTitle>Datos básicos</CardTitle>
+                  <CardTitle>{t('profileCommon.sections.basicData.title')}</CardTitle>
                   <CardSubtitle>
-                    Estos datos no se muestran a los clientes salvo tu nickname.
+                    {t('perfilModel.sections.basicData.subtitle')}
                   </CardSubtitle>
                 </CardHeader>
                 <CardBody>
                   <FormGridNew>
                     <FormFieldNew>
-                      <Label>Email</Label>
+                      <Label>{t('profileCommon.labels.email')}</Label>
                       <Input
                         type="email"
                         value={form.email}
@@ -526,32 +528,32 @@ const PerfilModel = () => {
                     </FormFieldNew>
 
                     <FormFieldNew>
-                      <Label>Nombre</Label>
+                      <Label>{t('profileCommon.labels.name')}</Label>
                       <Input
                         name="name"
                         value={form.name}
                         onChange={onChange}
-                        placeholder="Tu nombre"
+                        placeholder={t('profileCommon.placeholders.name')}
                       />
                     </FormFieldNew>
 
                     <FormFieldNew>
-                      <Label>Apellido</Label>
+                      <Label>{t('profileCommon.labels.surname')}</Label>
                       <Input
                         name="surname"
                         value={form.surname}
                         onChange={onChange}
-                        placeholder="Tu apellido"
+                        placeholder={t('profileCommon.placeholders.surname')}
                       />
                     </FormFieldNew>
 
                     <FormFieldNew>
-                      <Label>Nickname</Label>
+                      <Label>{t('profileCommon.labels.nickname')}</Label>
                       <Input
                         name="nickname"
                         value={form.nickname}
                         onChange={onChange}
-                        placeholder="Tu nickname público"
+                        placeholder={t('profileCommon.placeholders.nickname')}
                       />
                     </FormFieldNew>
                   </FormGridNew>
@@ -560,33 +562,33 @@ const PerfilModel = () => {
 
               <ProfileCard style={{ marginTop: '16px' }}>
                 <CardHeader>
-                  <CardTitle>Sobre ti</CardTitle>
+                  <CardTitle>{t('profileCommon.sections.about.title')}</CardTitle>
                   <CardSubtitle>
-                    Cuéntanos tu estilo, qué ofreces y qué te gusta hacer en las sesiones.
+                    {t('perfilModel.sections.about.subtitle')}
                   </CardSubtitle>
                 </CardHeader>
                 <CardBody>
                   <FormFieldNew>
-                    <Label>Biografía</Label>
+                    <Label>{t('profileCommon.labels.biography')}</Label>
                     <Textarea
                       name="biography"
                       value={form.biography}
                       onChange={onChange}
-                      placeholder="Cuéntanos sobre ti y tu estilo"
+                      placeholder={t('perfilModel.placeholders.biography')}
                       rows={4}
                     />
                   </FormFieldNew>
 
                   <FormFieldNew>
-                    <Label>Intereses</Label>
+                    <Label>{t('profileCommon.labels.interests')}</Label>
                     <Input
                       name="interests"
                       value={form.interests}
                       onChange={onChange}
-                      placeholder="gaming, cosplay, baile…"
+                      placeholder={t('perfilModel.placeholders.interests')}
                     />
                     <Hint>
-                      Separa los intereses con comas. Los usamos para sugerir mejores clientes.
+                      {t('perfilModel.hints.interests')}
                     </Hint>
                   </FormFieldNew>
                 </CardBody>
@@ -596,7 +598,7 @@ const PerfilModel = () => {
                     onClick={handleSave}
                     disabled={saving}
                   >
-                    {saving ? 'Guardando…' : 'Guardar cambios'}
+                    {saving ? t('profileCommon.actions.saving') : t('profileCommon.actions.saveChanges')}
                   </ProfilePrimaryButton>
                 </CardFooter>
               </ProfileCard>
@@ -607,16 +609,16 @@ const PerfilModel = () => {
               {/* FOTO DE PERFIL */}
               <MediaCard>
                 <CardHeader>
-                  <CardTitle>Foto de perfil</CardTitle>
+                  <CardTitle>{t('profileCommon.sections.profilePhoto.title')}</CardTitle>
                   <CardSubtitle>
-                    Esta imagen se usa como portada de tu perfil de modelo.
+                    {t('perfilModel.sections.profilePhoto.subtitle')}
                   </CardSubtitle>
                 </CardHeader>
                 <CardBody>
                   {docs.urlPic ? (
                     <>
                       <PhotoPreview>
-                        <PhotoImg src={docs.urlPic} alt="Foto de perfil actual" />
+                        <PhotoImg src={docs.urlPic} alt={t('profileCommon.alt.currentProfilePhoto')} />
                       </PhotoPreview>
                       {currentPicName && (
                         <FileNameWrapper>
@@ -627,7 +629,7 @@ const PerfilModel = () => {
                       )}
                     </>
                   ) : (
-                    <PhotoEmpty>— No subido —</PhotoEmpty>
+                    <PhotoEmpty>{t('perfilModel.empty.notUploaded')}</PhotoEmpty>
                   )}
 
                   <PhotoActions>
@@ -645,7 +647,7 @@ const PerfilModel = () => {
                       onClick={() => picInputRef.current && picInputRef.current.click()}
                       disabled={contractBlocked}
                     >
-                      Seleccionar archivo
+                      {t('profileCommon.actions.selectFile')}
                     </ProfileSecondaryButton>
 
                     <ProfilePrimaryButton
@@ -653,7 +655,7 @@ const PerfilModel = () => {
                       onClick={() => uploadSingle('pic', picFile)}
                       disabled={contractBlocked || !picFile || uploadingField === 'pic'}
                     >
-                      {uploadingField === 'pic' ? 'Subiendo…' : 'Subir foto'}
+                      {uploadingField === 'pic' ? t('profileCommon.actions.uploading') : t('profileCommon.actions.uploadPhoto')}
                     </ProfilePrimaryButton>
 
                     {docs.urlPic && (
@@ -662,15 +664,15 @@ const PerfilModel = () => {
                         onClick={deletePhoto}
                         disabled={contractBlocked || deletingPic}
                       >
-                        {deletingPic ? 'Eliminando…' : 'Eliminar foto'}
+                        {deletingPic ? t('profileCommon.actions.deleting') : t('profileCommon.actions.deletePhoto')}
                       </ProfileDangerOutlineButton>
                     )}
                   </PhotoActions>
 
                   <Hint>
                     {contractBlocked
-                      ? 'Debes aceptar la nueva versión del contrato para modificar tu foto.'
-                      : 'Formato recomendado JPG/PNG.'}
+                      ? t('perfilModel.hints.acceptContractForPhoto')
+                      : t('perfilModel.hints.photoFormat')}
                   </Hint>
                 </CardBody>
               </MediaCard>
@@ -678,9 +680,9 @@ const PerfilModel = () => {
               {/* VÍDEO DE PRESENTACIÓN */}
               <MediaCard style={{ marginTop: '16px' }}>
                 <CardHeader>
-                  <CardTitle>Vídeo de presentación</CardTitle>
+                  <CardTitle>{t('perfilModel.sections.introVideo.title')}</CardTitle>
                   <CardSubtitle>
-                    Un breve vídeo te ayuda a destacar y aumentar la conversión de clientes.
+                    {t('perfilModel.sections.introVideo.subtitle')}
                   </CardSubtitle>
                 </CardHeader>
                 <CardBody>
@@ -696,7 +698,7 @@ const PerfilModel = () => {
                       )}
                     </>
                   ) : (
-                    <PhotoEmpty>— No subido —</PhotoEmpty>
+                    <PhotoEmpty>{t('perfilModel.empty.notUploaded')}</PhotoEmpty>
                   )}
 
                   <PhotoActions>
@@ -714,7 +716,7 @@ const PerfilModel = () => {
                       onClick={() => videoInputRef.current && videoInputRef.current.click()}
                       disabled={contractBlocked}
                     >
-                      Seleccionar archivo
+                      {t('profileCommon.actions.selectFile')}
                     </ProfileSecondaryButton>
 
                     <ProfilePrimaryButton
@@ -722,7 +724,7 @@ const PerfilModel = () => {
                       onClick={() => uploadSingle('video', videoFile)}
                       disabled={contractBlocked || !videoFile || uploadingField === 'video'}
                     >
-                      {uploadingField === 'video' ? 'Subiendo…' : 'Subir vídeo'}
+                      {uploadingField === 'video' ? t('profileCommon.actions.uploading') : t('perfilModel.actions.uploadVideo')}
                     </ProfilePrimaryButton>
 
                     {docs.urlVideo && (
@@ -731,15 +733,15 @@ const PerfilModel = () => {
                         onClick={deleteVideo}
                         disabled={contractBlocked || deletingVideo}
                       >
-                        {deletingVideo ? 'Eliminando…' : 'Eliminar vídeo'}
+                        {deletingVideo ? t('profileCommon.actions.deleting') : t('perfilModel.actions.deleteVideo')}
                       </ProfileDangerOutlineButton>
                     )}
                   </PhotoActions>
 
                   <Hint>
                     {contractBlocked
-                      ? 'Debes aceptar la nueva versión del contrato para modificar tu vídeo.'
-                      : 'Formato recomendado MP4. Tamaño razonable para carga rápida.'}
+                      ? t('perfilModel.hints.acceptContractForVideo')
+                      : t('perfilModel.hints.videoFormat')}
                   </Hint>
                 </CardBody>
               </MediaCard>
@@ -747,7 +749,7 @@ const PerfilModel = () => {
               {/* SEGURIDAD Y CUENTA */}
               <SecurityCard style={{ marginTop: '16px' }}>
                 <CardHeader>
-                  <CardTitle>Seguridad y cuenta</CardTitle>
+                  <CardTitle>{t('profileCommon.sections.security.title')}</CardTitle>
                 </CardHeader>
                 <CardBody>
                   <SecurityActions>
@@ -755,17 +757,17 @@ const PerfilModel = () => {
                       type="button"
                       onClick={() => history.push('/change-password')}
                     >
-                      Cambiar contraseña
+                      {t('profileCommon.actions.changePassword')}
                     </ProfileSecondaryButton>
                     <ProfileDangerOutlineButton
                       type="button"
                       onClick={onUnsubscribe}
                     >
-                      Darme de baja
+                      {t('modals.unsubscribe.title')}
                     </ProfileDangerOutlineButton>
                   </SecurityActions>
                   <Hint>
-                    Si te das de baja, no podrás acceder al historial de chats y tu cuenta quedará cerrada según la política vigente de la plataforma.
+                    {t('modals.unsubscribe.warning')}
                   </Hint>
                 </CardBody>
               </SecurityCard>

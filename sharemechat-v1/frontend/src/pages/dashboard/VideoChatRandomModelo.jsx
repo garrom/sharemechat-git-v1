@@ -1,4 +1,5 @@
 import React from 'react';
+import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -53,8 +54,9 @@ import {
   BtnBlock,
 } from '../../styles/ButtonStyles';
 
-
 export default function VideoChatRandomModelo(props) {
+  const t = (key, options) => i18n.t(key, options);
+
   const {
     cameraActive,
     handleActivateCamera,
@@ -123,21 +125,20 @@ export default function VideoChatRandomModelo(props) {
     return { billed, hasTiers: true, currentTier, nextTier, remaining, pct };
   }, [modelStatsSummary, modelStatsTiers]);
 
-
-
   return (
     <StyledCenterVideochat>
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
-        {/* PANE IZQUIERDO (LOCAL / CTA) */}
         <StyledPane data-side="left">
           {!isMobile && (
             !cameraActive ? (
               <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
-                  <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
+                  <ButtonActivarCam onClick={handleActivateCamera}>
+                    {t('dashboardModel.videoChatRandomModelo.actions.activateCamera')}
+                  </ButtonActivarCam>
                   <StyledHelperLine style={{color:'#fff',justifyContent:'center'}}>
                     <FontAwesomeIcon icon={faVideo} />
-                    activar cámara para iniciar videochat
+                    {t('dashboardModel.videoChatRandomModelo.hints.activateCamera')}
                   </StyledHelperLine>
                 </div>
               </div>
@@ -147,56 +148,57 @@ export default function VideoChatRandomModelo(props) {
           )}
         </StyledPane>
 
-        {/* PANE DERECHO (REMOTO + CONTROLES) */}
         <StyledPane data-side="right" style={{position:'relative'}}>
           {!cameraActive ? (
             <>
               <StyledStatsPrecallCard>
                 <div style={{display:'flex',flexDirection:'column',gap:8}}>
                   <div style={{fontWeight:900,fontSize:16,color:'#fff',letterSpacing:'.2px'}}>
-                    Progreso hacia el siguiente tier
+                    {t('dashboardModel.videoChatRandomModelo.stats.progressTitle')}
                   </div>
                   <div style={{fontSize:14,color:'rgba(255,255,255,.85)'}}>
-                    Basado en tus minutos facturados (30 días).
+                    {t('dashboardModel.videoChatRandomModelo.stats.progressSubtitle')}
                   </div>
                 </div>
 
                 <StyledTierProgressCard>
                   {!tierProgress.hasTiers ? (
                     <StyledStatsInline>
-                      <div>No hay datos de tiers disponibles para calcular el progreso.</div>
-                      <div>Minutos actuales (30d): <b>{Number(modelStatsSummary?.billedMinutes30d || 0)}</b></div>
+                      <div>{t('dashboardModel.videoChatRandomModelo.stats.noTierData')}</div>
+                      <div>
+                        {t('dashboardModel.videoChatRandomModelo.stats.currentMinutes30d')} <b>{Number(modelStatsSummary?.billedMinutes30d || 0)}</b>
+                      </div>
                     </StyledStatsInline>
                   ) : (
                     <>
                       <StyledTierProgressRow>
                         <StyledTierKpiCol>
-                          <StyledTierKpiTitle>Tu situación</StyledTierKpiTitle>
+                          <StyledTierKpiTitle>{t('dashboardModel.videoChatRandomModelo.stats.yourSituation')}</StyledTierKpiTitle>
                           <StyledTierKpiLine>
-                            Minutos actuales: <b>{tierProgress.billed}</b>
+                            {t('dashboardModel.videoChatRandomModelo.stats.currentMinutes')} <b>{tierProgress.billed}</b>
                           </StyledTierKpiLine>
                           <StyledTierKpiLine>
-                            Tier detectado: <b>{tierProgress.currentTier?.name || modelStatsSummary?.tierName || '—'}</b>
+                            {t('dashboardModel.videoChatRandomModelo.stats.detectedTier')} <b>{tierProgress.currentTier?.name || modelStatsSummary?.tierName || '—'}</b>
                           </StyledTierKpiLine>
                         </StyledTierKpiCol>
 
                         <StyledTierKpiCol>
-                          <StyledTierKpiTitle>Siguiente objetivo</StyledTierKpiTitle>
+                          <StyledTierKpiTitle>{t('dashboardModel.videoChatRandomModelo.stats.nextGoal')}</StyledTierKpiTitle>
                           {tierProgress.nextTier ? (
                             <>
                               <StyledTierKpiLine>
-                                Siguiente tier: <b>{tierProgress.nextTier?.name || '—'}</b>
+                                {t('dashboardModel.videoChatRandomModelo.stats.nextTier')} <b>{tierProgress.nextTier?.name || '—'}</b>
                               </StyledTierKpiLine>
                               <StyledTierKpiLine>
-                                Requisito: <b>{Number(tierProgress.nextTier?.minBilledMinutes || 0)}</b> min
+                                {t('dashboardModel.videoChatRandomModelo.stats.requirement')} <b>{Number(tierProgress.nextTier?.minBilledMinutes || 0)}</b> {t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}
                               </StyledTierKpiLine>
                               <StyledTierKpiLine>
-                                Te faltan: <b>{tierProgress.remaining}</b> min
+                                {t('dashboardModel.videoChatRandomModelo.stats.remaining')} <b>{tierProgress.remaining}</b> {t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}
                               </StyledTierKpiLine>
                             </>
                           ) : (
                             <StyledTierKpiLine>
-                              Ya estás en el tier máximo (o no hay siguiente tier configurado).
+                              {t('dashboardModel.videoChatRandomModelo.stats.maxTier')}
                             </StyledTierKpiLine>
                           )}
                         </StyledTierKpiCol>
@@ -208,9 +210,9 @@ export default function VideoChatRandomModelo(props) {
                         </StyledTierBarTrack>
 
                         <StyledTierBarLegend>
-                          <span>{tierProgress.billed} min</span>
+                          <span>{tierProgress.billed} {t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}</span>
                           <span>
-                            {tierProgress.nextTier ? `${Number(tierProgress.nextTier?.minBilledMinutes || 0)} min` : '—'}
+                            {tierProgress.nextTier ? `${Number(tierProgress.nextTier?.minBilledMinutes || 0)} ${t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}` : '—'}
                           </span>
                         </StyledTierBarLegend>
                       </StyledTierBarWrap>
@@ -219,14 +221,15 @@ export default function VideoChatRandomModelo(props) {
                 </StyledTierProgressCard>
               </StyledStatsPrecallCard>
 
-
               {isMobile && (
                 <StyledPreCallCenter style={{position:'absolute',top:'70%',left:0,right:0,transform:'translateY(-50%)'}}>
                   <div>
-                    <ButtonActivarCamMobile onClick={handleActivateCamera}>Activar cámara</ButtonActivarCamMobile>
+                    <ButtonActivarCamMobile onClick={handleActivateCamera}>
+                      {t('dashboardModel.videoChatRandomModelo.actions.activateCamera')}
+                    </ButtonActivarCamMobile>
                     <StyledHelperLine style={{color:'#fff'}}>
                       <FontAwesomeIcon icon={faVideo} />
-                      activar cámara para iniciar videochat
+                      {t('dashboardModel.videoChatRandomModelo.hints.activateCamera')}
                     </StyledHelperLine>
                   </div>
                 </StyledPreCallCenter>
@@ -234,26 +237,25 @@ export default function VideoChatRandomModelo(props) {
             </>
           ) : (
             <>
-              {/* CONTROLES BUSCAR / BUSCANDO (sin remoto) */}
               {!remoteStream && (
                 <StyledRandomSearchControls>
                   <StyledRandomSearchCol>
                     {!searching ? (
                       <>
-                        <ButtonBuscar onClick={handleStartMatch}>Buscar</ButtonBuscar>
-                        <StyledSearchHint>Pulsa “Buscar” para empezar.</StyledSearchHint>
+                        <ButtonBuscar onClick={handleStartMatch}>{t('common.actions.search')}</ButtonBuscar>
+                        <StyledSearchHint>{t('dashboardModel.videoChatRandomModelo.hints.search')}</StyledSearchHint>
                       </>
                     ) : (
                       <>
-                        <StyledSearchHint>Buscando cliente disponible…</StyledSearchHint>
+                        <StyledSearchHint>{t('dashboardModel.videoChatRandomModelo.loading.searchingClient')}</StyledSearchHint>
                         <div style={{marginTop:8,display:'flex',justifyContent:'center'}}>
                           <BtnHangup
                             onClick={stopAll}
-                            title="Detener búsqueda"
-                            aria-label="Detener búsqueda"
+                            title={t('dashboardModel.videoChatRandomModelo.actions.stopSearch')}
+                            aria-label={t('dashboardModel.videoChatRandomModelo.actions.stopSearch')}
                             style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
-                            onMouseEnter={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#dc3545';}}
-                            onMouseLeave={(e)=>{e.currentTarget.style.background='#dc3545';e.currentTarget.style.color='#fff';}}
+                            onMouseEnter={(e) => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#dc3545'; }}
+                            onMouseLeave={(e) => { e.currentTarget.style.background='#dc3545'; e.currentTarget.style.color='#fff'; }}
                           >
                             <FontAwesomeIcon icon={faPhoneSlash} />
                           </BtnHangup>
@@ -264,7 +266,6 @@ export default function VideoChatRandomModelo(props) {
                 </StyledRandomSearchControls>
               )}
 
-              {/* DESKTOP: REMOTO + CARD */}
               {remoteStream && !isMobile && (
                 <StyledCallCardDesktop>
                   <StyledVideoArea style={{height:'calc(100vh - 180px)',maxHeight:'calc(100vh - 180px)'}}>
@@ -274,38 +275,37 @@ export default function VideoChatRandomModelo(props) {
                           <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
                           <div style={{display:'flex',flexDirection:'column',lineHeight:1.15}}>
                             <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                              <span>{clientNickname || 'Cliente'}</span>
+                              <span>{clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}</span>
 
                               <button
                                 type="button"
-                                onClick={()=>toggleFullscreen(remoteVideoWrapRef.current)}
-                                title="Pantalla completa"
+                                onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
+                                title={t('common.fullscreen')}
                                 style={{padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
                               >
-                                Pantalla completa
+                                {t('common.fullscreen')}
                               </button>
                             </div>
 
                             <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
                               {clientSaldoLoading ? (
-                                <span>Saldo: …</span>
+                                <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} …</span>
                               ) : Number.isFinite(Number(clientSaldo)) ? (
-                                <span>Saldo: €{Number(clientSaldo).toFixed(2)}</span>
+                                <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} €{Number(clientSaldo).toFixed(2)}</span>
                               ) : (
-                                <span>Saldo: —</span>
+                                <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} —</span>
                               )}
                             </div>
                           </div>
                         </div>
                       </StyledVideoTitle>
 
-
                       <video
                         ref={remoteVideoRef}
                         style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
                         autoPlay
                         playsInline
-                        onDoubleClick={()=>toggleFullscreen(remoteVideoWrapRef.current)}
+                        onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                       />
 
                       {cameraActive && (
@@ -314,41 +314,40 @@ export default function VideoChatRandomModelo(props) {
                         </div>
                       )}
 
-                      {/* CONTROLES (CENTRADOS) + BLOQUEAR (DERECHA) */}
                       {cameraActive && (
                         <div style={{position:'absolute',left:16,right:16,bottom:16,zIndex:9}}>
                           <div style={{position:'relative',height:44}}>
                             <div style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
                               <BtnHangup
                                 onClick={stopAll}
-                                title="Colgar"
-                                aria-label="Colgar"
+                                title={t('common.hangup')}
+                                aria-label={t('common.hangup')}
                                 style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
-                                onMouseEnter={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#dc3545';}}
-                                onMouseLeave={(e)=>{e.currentTarget.style.background='#dc3545';e.currentTarget.style.color='#fff';}}
+                                onMouseEnter={(e) => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#dc3545'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background='#dc3545'; e.currentTarget.style.color='#fff'; }}
                               >
                                 <FontAwesomeIcon icon={faPhoneSlash} />
                               </BtnHangup>
 
                               <ButtonNext
-                                onClick={()=>handleNext && handleNext()}
+                                onClick={() => handleNext && handleNext()}
                                 disabled={!!nextDisabled}
                                 aria-disabled={!!nextDisabled}
                                 style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)',opacity:nextDisabled?0.55:1,cursor:nextDisabled?'not-allowed':'pointer'}}
-                                onMouseEnter={(e)=>{if(nextDisabled)return;e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                                onMouseLeave={(e)=>{if(nextDisabled)return;e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                                onMouseEnter={(e) => { if (nextDisabled) return; e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
+                                onMouseLeave={(e) => { if (nextDisabled) return; e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
                               >
                                 <FontAwesomeIcon icon={faForward} />
                               </ButtonNext>
 
                               {currentClientId && (
                                 <ButtonAddFavorite
-                                  aria-label="Añadir a favoritos"
+                                  aria-label={t('common.actions.addToFavorites')}
                                   onClick={handleAddFavorite}
-                                  title="Añadir a favoritos"
+                                  title={t('common.actions.addToFavorites')}
                                   style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                                  onMouseEnter={(e)=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                                  onMouseLeave={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                                  onMouseEnter={(e) => { e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
+                                  onMouseLeave={(e) => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
                                 >
                                   <FontAwesomeIcon icon={faUserPlus} />
                                 </ButtonAddFavorite>
@@ -358,15 +357,21 @@ export default function VideoChatRandomModelo(props) {
                             <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end',gap:8}}>
                               <BtnBlock
                                 type="button"
-                                onClick={()=>handleReportPeer && handleReportPeer()}
-                                aria-label="Reportar"
-                                title="Reportar"
+                                onClick={() => handleReportPeer && handleReportPeer()}
+                                aria-label={t('modals.report.title')}
+                                title={t('modals.report.title')}
                                 style={{width:44,height:44}}
                               >
                                 <FontAwesomeIcon icon={faFlag} />
                               </BtnBlock>
 
-                              <BtnBlock type="button" onClick={()=>handleBlockPeer&&handleBlockPeer()} aria-label="Bloquear" title="Bloquear" style={{width:44,height:44}}>
+                              <BtnBlock
+                                type="button"
+                                onClick={() => handleBlockPeer && handleBlockPeer()}
+                                aria-label={t('modals.block.title')}
+                                title={t('modals.block.title')}
+                                style={{width:44,height:44}}
+                              >
                                 <FontAwesomeIcon icon={faBan} />
                               </BtnBlock>
                             </div>
@@ -403,19 +408,23 @@ export default function VideoChatRandomModelo(props) {
                     <StyledChatInput
                       type="text"
                       value={chatInput}
-                      onChange={(e)=>setChatInput(e.target.value)}
-                      placeholder="Escribe un mensaje…"
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder={t('dashboardModel.videoChatRandomModelo.placeholders.message')}
                       autoComplete="off"
-                      onKeyDown={(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();}}}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          sendChatMessage();
+                        }
+                      }}
                     />
-                    <BtnSend type="button" onClick={sendChatMessage} aria-label="Enviar mensaje">
+                    <BtnSend type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')}>
                       <FontAwesomeIcon icon={faPaperPlane} />
                     </BtnSend>
                   </StyledCallFooterDesktop>
                 </StyledCallCardDesktop>
               )}
 
-              {/* MÓVIL: REMOTO + CHAT OVERLAY + PIP + CONTROLES */}
               {remoteStream && isMobile && (
                 <StyledVideoArea>
                   <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',overflow:'hidden',background:'#000'}}>
@@ -423,15 +432,15 @@ export default function VideoChatRandomModelo(props) {
                       <div style={{display:'flex',alignItems:'center',gap:10}}>
                         <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
                         <div style={{display:'flex',flexDirection:'column',lineHeight:1.15}}>
-                          <div>{clientNickname || 'Cliente'}</div>
+                          <div>{clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}</div>
 
                           <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
                             {clientSaldoLoading ? (
-                              <span>Saldo: …</span>
+                              <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} …</span>
                             ) : Number.isFinite(Number(clientSaldo)) ? (
-                              <span>Saldo: €{Number(clientSaldo).toFixed(2)}</span>
+                              <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} €{Number(clientSaldo).toFixed(2)}</span>
                             ) : (
-                              <span>Saldo: —</span>
+                              <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} —</span>
                             )}
                           </div>
                         </div>
@@ -443,7 +452,7 @@ export default function VideoChatRandomModelo(props) {
                       style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
                       autoPlay
                       playsInline
-                      onDoubleClick={()=>toggleFullscreen(remoteVideoWrapRef.current)}
+                      onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                     />
 
                     {cameraActive && (
@@ -452,34 +461,33 @@ export default function VideoChatRandomModelo(props) {
                       </StyledLocalVideo>
                     )}
 
-                    {/* CONTROLES MÓVIL (CENTRADOS) + BLOQUEAR (DERECHA) */}
                     {cameraActive && (
                       <div style={{position:'absolute',left:12,right:12,bottom:'72px',zIndex:8}}>
                         <div style={{position:'relative',height:44}}>
                           <div style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:'12px'}}>
-                            <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
+                            <BtnHangup onClick={stopAll} title={t('common.hangup')} aria-label={t('common.hangup')}>
                               <FontAwesomeIcon icon={faPhoneSlash} />
                             </BtnHangup>
 
                             <ButtonNext
-                              onClick={()=>handleNext && handleNext()}
+                              onClick={() => handleNext && handleNext()}
                               disabled={!!nextDisabled}
                               aria-disabled={!!nextDisabled}
                               style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)',opacity:nextDisabled?0.55:1,cursor:nextDisabled?'not-allowed':'pointer'}}
-                              onMouseEnter={(e)=>{if(nextDisabled)return;e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                              onMouseLeave={(e)=>{if(nextDisabled)return;e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                              onMouseEnter={(e) => { if (nextDisabled) return; e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
+                              onMouseLeave={(e) => { if (nextDisabled) return; e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
                             >
                               <FontAwesomeIcon icon={faForward} />
                             </ButtonNext>
 
                             {currentClientId && (
                               <ButtonAddFavorite
-                                aria-label="Añadir a favoritos"
+                                aria-label={t('common.actions.addToFavorites')}
                                 onClick={handleAddFavorite}
-                                title="Añadir a favoritos"
+                                title={t('common.actions.addToFavorites')}
                                 style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                                onMouseEnter={(e)=>{e.currentTarget.style.background='#000';e.currentTarget.style.color='#fff';}}
-                                onMouseLeave={(e)=>{e.currentTarget.style.background='#fff';e.currentTarget.style.color='#000';}}
+                                onMouseEnter={(e) => { e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
+                                onMouseLeave={(e) => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
                               >
                                 <FontAwesomeIcon icon={faUserPlus} />
                               </ButtonAddFavorite>
@@ -489,15 +497,21 @@ export default function VideoChatRandomModelo(props) {
                           <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end',gap:8}}>
                             <BtnBlock
                               type="button"
-                              onClick={()=>handleReportPeer && handleReportPeer()}
-                              aria-label="Reportar"
-                              title="Reportar"
+                              onClick={() => handleReportPeer && handleReportPeer()}
+                              aria-label={t('modals.report.title')}
+                              title={t('modals.report.title')}
                               style={{width:44,height:44}}
                             >
                               <FontAwesomeIcon icon={faFlag} />
                             </BtnBlock>
 
-                            <BtnBlock type="button" onClick={()=>handleBlockPeer&&handleBlockPeer()} aria-label="Bloquear" title="Bloquear" style={{width:44,height:44}}>
+                            <BtnBlock
+                              type="button"
+                              onClick={() => handleBlockPeer && handleBlockPeer()}
+                              aria-label={t('modals.block.title')}
+                              title={t('modals.block.title')}
+                              style={{width:44,height:44}}
+                            >
                               <FontAwesomeIcon icon={faBan} />
                             </BtnBlock>
                           </div>
@@ -534,7 +548,6 @@ export default function VideoChatRandomModelo(props) {
           )}
         </StyledPane>
 
-        {/* LOCAL DESKTOP: PRE-CALL GRANDE */}
         {!isMobile && cameraActive && !remoteStream && (
           <StyledLocalVideoDesktop data-has-remote="false">
             <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
@@ -542,18 +555,22 @@ export default function VideoChatRandomModelo(props) {
         )}
       </StyledSplit2>
 
-      {/* DOCK CHAT SOLO MÓVIL EN LLAMADA */}
       {remoteStream && isMobile && (
         <StyledChatDock>
           <StyledChatInput
             type="text"
             value={chatInput}
-            onChange={(e)=>setChatInput(e.target.value)}
-            placeholder="Escribe un mensaje…"
+            onChange={(e) => setChatInput(e.target.value)}
+            placeholder={t('dashboardModel.videoChatRandomModelo.placeholders.message')}
             autoComplete="off"
-            onKeyDown={(e)=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChatMessage();}}}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+              }
+            }}
           />
-          <BtnSend type="button" onClick={sendChatMessage} aria-label="Enviar mensaje">
+          <BtnSend type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')}>
             <FontAwesomeIcon icon={faPaperPlane} />
           </BtnSend>
         </StyledChatDock>

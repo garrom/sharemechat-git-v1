@@ -1362,8 +1362,8 @@ const DashboardModel = () => {
 
     if (!sessionUser?.id) {
       await alert({
-        title: 'Sesión',
-        message: 'Sesión expirada. Inicia sesión de nuevo.',
+        title: i18n.t('dashboardModel.payout.sessionExpiredTitle'),
+        message: i18n.t('dashboardModel.payout.sessionExpiredMessage'),
         variant: 'warning',
       });
       return;
@@ -1371,8 +1371,8 @@ const DashboardModel = () => {
 
     // 1) Abrimos nuestro modal propio para pedir el importe
     const result = await openPayoutModal({
-      title: 'Solicitud de retiro',
-      message: 'Introduce la cantidad que deseas retirar:',
+      title: i18n.t('dashboardModel.payout.requestTitle'),
+      message: i18n.t('dashboardModel.payout.requestMessage'),
       initialAmount: 50,
     });
 
@@ -1382,8 +1382,8 @@ const DashboardModel = () => {
     const amount = Number(result.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       await alert({
-        title: 'Importe no válido',
-        message: 'Introduce un importe válido mayor que 0.',
+        title: i18n.t('dashboardModel.payout.invalidAmountTitle'),
+        message: i18n.t('dashboardModel.payout.invalidAmountMessage'),
         variant: 'warning',
       });
       return;
@@ -1408,29 +1408,69 @@ const DashboardModel = () => {
         ? await payoutRes.json().catch(() => null)
         : null;
 
-      const payoutMessage = payoutData?.message || (!payoutData ? await payoutRes.text() : '');
+      const payoutText = payoutData ? '' : await payoutRes.text().catch(() => '');
+      const payoutStatus = Number(payoutData?.status) || payoutRes.status;
+      const payoutCode = typeof payoutData?.code === 'string' ? payoutData.code : '';
+      const payoutError = typeof payoutData?.error === 'string' ? payoutData.error : '';
+      const payoutMessage = typeof payoutData?.message === 'string' ? payoutData.message : payoutText;
+      const normalizePayoutSignal = (value) => String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .toLowerCase();
 
       if (!payoutRes.ok) {
-        const insufficientBalance =
-          payoutRes.status === 400 &&
-          String(payoutMessage || '').toLowerCase().includes('saldo insuficiente');
+        const normalizedCode = normalizePayoutSignal(payoutCode);
+        const normalizedError = normalizePayoutSignal(payoutError);
+        const normalizedMessage = normalizePayoutSignal(payoutMessage);
+        let payoutIssue = null;
 
-        if (insufficientBalance) {
+        if (payoutStatus === 400) {
+          if (normalizedCode === 'insufficient_balance') {
+            payoutIssue = 'insufficient_balance';
+          } else if (normalizedCode === 'minimum_amount' || normalizedCode === 'payout_minimum_amount') {
+            payoutIssue = 'minimum_amount';
+          } else if (normalizedError === 'insufficient_balance') {
+            payoutIssue = 'insufficient_balance';
+          } else if (normalizedError === 'minimum_amount' || normalizedError === 'payout_minimum_amount') {
+            payoutIssue = 'minimum_amount';
+          } else if (normalizedMessage.includes('saldo insuficiente')) {
+            payoutIssue = 'insufficient_balance';
+          } else if (
+            normalizedMessage.includes('retiro minimo') ||
+            normalizedMessage.includes('importe minimo') ||
+            normalizedMessage.includes('monto minimo')
+          ) {
+            payoutIssue = 'minimum_amount';
+          }
+        }
+
+        if (payoutIssue === 'insufficient_balance') {
           await alert({
-            title: 'Saldo insuficiente',
-            message: 'No tienes saldo suficiente para realizar este retiro.',
+            title: i18n.t('dashboardModel.payout.insufficientBalanceTitle'),
+            message: i18n.t('dashboardModel.payout.insufficientBalanceMessage'),
             variant: 'warning',
             size: 'sm',
           });
           return;
         }
 
-        throw new Error(payoutMessage || `HTTP ${payoutRes.status}`);
+        if (payoutIssue === 'minimum_amount') {
+          await alert({
+            title: i18n.t('dashboardModel.payout.minimumAmountTitle'),
+            message: i18n.t('dashboardModel.payout.minimumAmountMessage', { amount: 50 }),
+            variant: 'warning',
+            size: 'sm',
+          });
+          return;
+        }
+
+        throw new Error(payoutMessage || `HTTP ${payoutStatus}`);
       }
 
       await alert({
-        title: 'Solicitud enviada',
-        message: 'Tu solicitud de retiro se ha registrado correctamente.',
+        title: i18n.t('dashboardModel.payout.successTitle'),
+        message: i18n.t('dashboardModel.payout.successMessage'),
         variant: 'success',
       });
 
@@ -1441,10 +1481,9 @@ const DashboardModel = () => {
     } catch (e) {
       console.error(e);
 
-      const msg = e?.message || 'Error al solicitar retiro.';
       await alert({
-        title: 'Error',
-        message: msg,
+        title: i18n.t('dashboardModel.payout.errorTitle'),
+        message: i18n.t('dashboardModel.payout.errorMessage'),
         variant: 'danger',
       });
 
@@ -1625,15 +1664,18 @@ const DashboardModel = () => {
           method: 'POST',
         });
       } catch (e) {
-        // Conflicto -> ya existe
-        if (
+        const msg = String(e?.message || '');
+        const code = String(e?.code || e?.error || e?.data?.code || e?.data?.error || '').toLowerCase();
+        const isAlreadyFavorite =
           e?.status === 409 ||
-          String(e?.message || '').includes('409')
-        ) {
+          msg.toLowerCase() === 'already_favorites' ||
+          code === 'already_favorites';
+
+        if (isAlreadyFavorite) {
           await alert({
             variant: 'info',
-            title: 'Favoritos',
-            message: 'Este cliente ya está en tus favoritos.',
+            title: i18n.t('dashboardModel.favoriteAlerts.title'),
+            message: i18n.t('dashboardModel.favoriteAlerts.clientAlreadyFavorite'),
           });
           return;
         }

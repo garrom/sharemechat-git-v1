@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import BlurredPreview from '../../components/BlurredPreview';
 import {
@@ -60,6 +61,8 @@ import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
 
 export default function VideoChatRandomCliente(props) {
+  const t = (key, options) => i18n.t(key, options);
+
   const {
     isMobile,
     cameraActive,
@@ -111,7 +114,7 @@ export default function VideoChatRandomCliente(props) {
 
       const mapped = (Array.isArray(data) ? data : []).map(item => ({
         id: item.modelId,
-        title: `${item.modelName} · teaser`,
+        title: t('dashboardClient.videoChatRandomCliente.promoTeaserTitle', { name: item.modelName }),
         modelName: item.modelName,
         thumb: item.avatarUrl || '/img/avatarChica.png',
         src: item.videoUrl,
@@ -121,7 +124,7 @@ export default function VideoChatRandomCliente(props) {
       setPromoVideos(mapped);
       if (mapped.length > 0) setCurrentPromoIndex(0);
     } catch (e) {
-      setPromoError(e?.message || 'Error cargando vídeos de modelos');
+      setPromoError(e?.message || t('dashboardClient.videoChatRandomCliente.errors.loadPromoVideos'));
     } finally {
       setPromoLoading(false);
     }
@@ -180,10 +183,10 @@ export default function VideoChatRandomCliente(props) {
             !cameraActive ? (
               <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
-                  <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
+                  <ButtonActivarCam onClick={handleActivateCamera}>{t('dashboardClient.videoChatRandomCliente.actions.activateCamera')}</ButtonActivarCam>
                   <StyledHelperLine style={{color:'#fff',justifyContent:'center'}}>
                     <FontAwesomeIcon icon={faVideo} />
-                    activar cámara para iniciar videochat
+                    {t('dashboardClient.videoChatRandomCliente.hints.activateCamera')}
                   </StyledHelperLine>
                 </div>
               </div>
@@ -203,7 +206,7 @@ export default function VideoChatRandomCliente(props) {
             <>
               {promoLoading && promoVideos.length === 0 && (
                 <div style={{color:'#e9ecef',padding:'8px 12px',fontSize:'0.9rem'}}>
-                  Cargando vídeos de modelos…
+                  {t('dashboardClient.videoChatRandomCliente.loading.promoVideos')}
                 </div>
               )}
 
@@ -220,8 +223,8 @@ export default function VideoChatRandomCliente(props) {
                       <button
                         type="button"
                         onClick={goPrevCard}
-                        aria-label="Modelo anterior"
-                        title="Modelo anterior"
+                        aria-label={t('home.hero.prevAria')}
+                        title={t('home.hero.prevAria')}
                         style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}
                       >
                         <FontAwesomeIcon icon={faChevronLeft} />
@@ -230,7 +233,7 @@ export default function VideoChatRandomCliente(props) {
                       <StyledTeaserMediaButton
                         type="button"
                         onClick={() => handleOpenPromo(currentPromoIndex)}
-                        title={currentPromo.title || 'Ver teaser'}
+                        title={currentPromo.title || t('dashboardClient.videoChatRandomCliente.actions.viewTeaser')}
                         style={{width:'100%',height:'100%'}}
                       >
                         <BlurredPreview
@@ -251,8 +254,8 @@ export default function VideoChatRandomCliente(props) {
                         <ButtonAddFavorite
                           type="button"
                           onClick={() => currentPromo && handleAddFavorite(currentPromo.id)}
-                          aria-label="Añadir a favoritos"
-                          title="Añadir a favoritos"
+                          aria-label={t('common.actions.addToFavorites')}
+                          title={t('common.actions.addToFavorites')}
                           style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
                           onMouseEnter={(e) => {
                             e.currentTarget.style.background = '#000';
@@ -270,8 +273,8 @@ export default function VideoChatRandomCliente(props) {
                       <button
                         type="button"
                         onClick={goNextCard}
-                        aria-label="Siguiente modelo"
-                        title="Siguiente modelo"
+                        aria-label={t('home.hero.nextAria')}
+                        title={t('home.hero.nextAria')}
                         style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}
                       >
                         <FontAwesomeIcon icon={faChevronRight} />
@@ -283,7 +286,7 @@ export default function VideoChatRandomCliente(props) {
 
               {!promoLoading && !promoError && promoVideos.length === 0 && (
                 <div style={{color:'#e9ecef',padding:'8px 12px',fontSize:'0.9rem'}}>
-                  No hay vídeos promocionales disponibles por el momento.
+                  {t('dashboardClient.videoChatRandomCliente.empty.promoVideos')}
                 </div>
               )}
 
@@ -291,11 +294,11 @@ export default function VideoChatRandomCliente(props) {
                 <StyledPreCallCenter style={{position:'absolute',top:'70%',left:0,right:0,transform:'translateY(-50%)'}}>
                   <div>
                     <ButtonActivarCamMobile onClick={handleActivateCamera}>
-                      Activar cámara
+                      {t('dashboardClient.videoChatRandomCliente.actions.activateCamera')}
                     </ButtonActivarCamMobile>
                     <StyledHelperLine style={{color:'#fff'}}>
                       <FontAwesomeIcon icon={faVideo} />
-                      activar cámara para iniciar videochat
+                      {t('dashboardClient.videoChatRandomCliente.hints.activateCamera')}
                     </StyledHelperLine>
                   </div>
                 </StyledPreCallCenter>
@@ -309,17 +312,17 @@ export default function VideoChatRandomCliente(props) {
                   <StyledRandomSearchCol>
                     {!searching ? (
                       <>
-                        <ButtonBuscar onClick={handleStartMatch}>Buscar</ButtonBuscar>
-                        <StyledSearchHint>Pulsa “Buscar” para empezar.</StyledSearchHint>
+                        <ButtonBuscar onClick={handleStartMatch}>{t('dashboardClient.videoChatRandomCliente.actions.search')}</ButtonBuscar>
+                        <StyledSearchHint>{t('dashboardClient.videoChatRandomCliente.hints.search')}</StyledSearchHint>
                       </>
                     ) : (
                       <>
-                        <StyledSearchHint>Buscando modelo disponible…</StyledSearchHint>
+                        <StyledSearchHint>{t('dashboardClient.videoChatRandomCliente.loading.searchingModel')}</StyledSearchHint>
                         <div style={{marginTop:8,display:'flex',justifyContent:'center'}}>
                           <BtnHangup
                             onClick={stopAll}
-                            title="Detener búsqueda"
-                            aria-label="Detener búsqueda"
+                            title={t('dashboardClient.videoChatRandomCliente.actions.stopSearch')}
+                            aria-label={t('dashboardClient.videoChatRandomCliente.actions.stopSearch')}
                             style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
                             onMouseEnter={(e) => {
                               e.currentTarget.style.background = '#fff';
@@ -349,14 +352,14 @@ export default function VideoChatRandomCliente(props) {
                     >
                       <StyledVideoTitle>
                         <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
-                        {modelNickname || 'Modelo'}
+                        {modelNickname || t('dashboardUserClient.report.displayName')}
                         <button
                           type="button"
                           onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                          title="Pantalla completa"
+                          title={t('dashboardClient.videoChatRandomCliente.actions.fullscreen')}
                           style={{marginLeft:8,padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
                         >
-                          Pantalla completa
+                          {t('dashboardClient.videoChatRandomCliente.actions.fullscreen')}
                         </button>
                       </StyledVideoTitle>
 
@@ -389,8 +392,8 @@ export default function VideoChatRandomCliente(props) {
                             <div style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
                               <BtnHangup
                                 onClick={stopAll}
-                                title="Colgar"
-                                aria-label="Colgar"
+                                title={t('dashboardClient.videoChatRandomCliente.actions.hangup')}
+                                aria-label={t('dashboardClient.videoChatRandomCliente.actions.hangup')}
                                 style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
                                 onMouseEnter={(e) => {
                                   e.currentTarget.style.background = '#fff';
@@ -426,9 +429,9 @@ export default function VideoChatRandomCliente(props) {
                                   </ButtonNext>
 
                                   <ButtonAddFavorite
-                                    aria-label="Añadir a favoritos"
+                                    aria-label={t('common.actions.addToFavorites')}
                                     onClick={() => handleAddFavorite && handleAddFavorite()}
-                                    title="Añadir a favoritos"
+                                    title={t('common.actions.addToFavorites')}
                                     style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
                                     onMouseEnter={(e) => {
                                       e.currentTarget.style.background = '#000';
@@ -450,8 +453,8 @@ export default function VideoChatRandomCliente(props) {
                                 <BtnBlock
                                   type="button"
                                   onClick={() => handleReportPeer && handleReportPeer()}
-                                  aria-label="Reportar"
-                                  title="Reportar abuso"
+                                  aria-label={t('dashboardUserClient.report.title')}
+                                  title={t('modals.report.title')}
                                   style={{width:44,height:44}}
                                 >
                                   <FontAwesomeIcon icon={faFlag} />
@@ -460,8 +463,8 @@ export default function VideoChatRandomCliente(props) {
                                 <BtnBlock
                                   type="button"
                                   onClick={() => handleBlockPeer && handleBlockPeer()}
-                                  aria-label="Bloquear"
-                                  title="Bloquear"
+                                  aria-label={t('modals.block.title')}
+                                  title={t('modals.block.title')}
                                   style={{width:44,height:44}}
                                 >
                                   <FontAwesomeIcon icon={faBan} />
@@ -504,7 +507,7 @@ export default function VideoChatRandomCliente(props) {
                       type="text"
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
-                      placeholder="Escribe un mensaje…"
+                      placeholder={t('dashboardClient.videoChatRandomCliente.placeholders.message')}
                       autoComplete="off"
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !e.shiftKey) {
@@ -513,15 +516,15 @@ export default function VideoChatRandomCliente(props) {
                         }
                       }}
                     />
-                    <BtnSend type="button" onClick={sendChatMessage} aria-label="Enviar mensaje">
+                    <BtnSend type="button" onClick={sendChatMessage} aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')} title={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}>
                       <FontAwesomeIcon icon={faPaperPlane} />
                     </BtnSend>
 
                     <ButtonRegalo
                       type="button"
                       onClick={() => setShowGifts(s => !s)}
-                      title="Enviar regalo"
-                      aria-label="Enviar regalo"
+                      title={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}
+                      aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}
                     >
                       <FontAwesomeIcon icon={faGift} />
                     </ButtonRegalo>
@@ -552,7 +555,7 @@ export default function VideoChatRandomCliente(props) {
                   >
                     <StyledVideoTitle>
                       <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
-                      {modelNickname || 'Modelo'}
+                      {modelNickname || t('dashboardUserClient.report.displayName')}
                     </StyledVideoTitle>
 
                     <video
@@ -582,7 +585,7 @@ export default function VideoChatRandomCliente(props) {
                       <div style={{position:'absolute',left:12,right:12,bottom:'72px',zIndex:8}}>
                         <div style={{position:'relative',height:44}}>
                           <div style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:'12px'}}>
-                            <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
+                            <BtnHangup onClick={stopAll} title={t('dashboardClient.videoChatRandomCliente.actions.hangup')} aria-label={t('dashboardClient.videoChatRandomCliente.actions.hangup')}>
                               <FontAwesomeIcon icon={faPhoneSlash} />
                             </BtnHangup>
 
@@ -607,6 +610,8 @@ export default function VideoChatRandomCliente(props) {
 
                             <ButtonAddFavorite
                               onClick={() => handleAddFavorite && handleAddFavorite()}
+                              aria-label={t('common.actions.addToFavorites')}
+                              title={t('common.actions.addToFavorites')}
                               style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.background = '#000';
@@ -625,8 +630,8 @@ export default function VideoChatRandomCliente(props) {
                             <BtnBlock
                               type="button"
                               onClick={() => handleReportPeer && handleReportPeer()}
-                              aria-label="Reportar"
-                              title="Reportar abuso"
+                              aria-label={t('dashboardUserClient.report.title')}
+                              title={t('modals.report.title')}
                               style={{width:44,height:44}}
                             >
                               <FontAwesomeIcon icon={faFlag} />
@@ -635,8 +640,8 @@ export default function VideoChatRandomCliente(props) {
                             <BtnBlock
                               type="button"
                               onClick={() => handleBlockPeer && handleBlockPeer()}
-                              aria-label="Bloquear"
-                              title="Bloquear"
+                              aria-label={t('modals.block.title')}
+                              title={t('modals.block.title')}
                               style={{width:44,height:44}}
                             >
                               <FontAwesomeIcon icon={faBan} />
@@ -698,7 +703,7 @@ export default function VideoChatRandomCliente(props) {
             type="text"
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Escribe un mensaje…"
+            placeholder={t('dashboardClient.videoChatRandomCliente.placeholders.message')}
             autoComplete="off"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
@@ -708,15 +713,15 @@ export default function VideoChatRandomCliente(props) {
             }}
           />
 
-          <BtnSend type="button" onClick={sendChatMessage} aria-label="Enviar mensaje">
+          <BtnSend type="button" onClick={sendChatMessage} aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')} title={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}>
             <FontAwesomeIcon icon={faPaperPlane} />
           </BtnSend>
 
           <ButtonRegalo
             type="button"
             onClick={() => setShowGifts(s => !s)}
-            title="Enviar regalo"
-            aria-label="Enviar regalo"
+            title={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}
+            aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}
           >
             <FontAwesomeIcon icon={faGift} />
           </ButtonRegalo>

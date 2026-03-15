@@ -1598,13 +1598,17 @@ const DashboardClient = () => {
       setFavReload(x => x + 1);
     } catch (e) {
       const msg = String(e?.message || '');
+      const code = String(e?.code || e?.error || e?.data?.code || e?.data?.error || '').toLowerCase();
+      const isAlreadyFavorite =
+        e?.status === 409 ||
+        msg.toLowerCase() === 'already_favorites' ||
+        code === 'already_favorites';
 
-      // Mantener UX equivalente al 409 anterior (cuando ya es favorito)
-      if (msg.includes('"status":409') || msg.includes('HTTP 409')) {
+      if (isAlreadyFavorite) {
         await alert({
           variant: 'info',
-          title: 'Favoritos',
-          message: 'Esta modelo ya está en tus favoritos.',
+          title: i18n.t('dashboardClient.favoriteAlerts.title'),
+          message: i18n.t('dashboardClient.favoriteAlerts.modelAlreadyFavorite'),
         });
         return;
       }

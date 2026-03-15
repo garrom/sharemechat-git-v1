@@ -1,5 +1,6 @@
 // src/pages/dashboard/VideoChatFavoritosCliente.jsx
 import React,{useEffect,useRef} from 'react';
+import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
@@ -15,6 +16,8 @@ import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,But
 } from '../../styles/ButtonStyles';
 
 export default function VideoChatFavoritosCliente(props){
+  const t = (key, options) => i18n.t(key, options);
+
   const {
       isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,setCtxUser,setCtxPos,centerChatPeerId,
       centerChatPeerName,centerMessages,centerLoading,centerListRef,chatEndRef,centerInput,setCenterInput,
@@ -30,17 +33,17 @@ export default function VideoChatFavoritosCliente(props){
         <StyledFavoritesColumns>
           <StyledCenterPanel>
             {!centerChatPeerId?(
-              <div style={{color:'#adb5bd',textAlign:'center'}}>Selecciona un favorito para abrir la conversación aquí.</div>
+              <div style={{color:'#adb5bd',textAlign:'center'}}>{t('dashboardClient.videoChatFavoritosCliente.empty.selectFavorite')}</div>
             ):(
               <>
                 <StyledCenterBody>
                   {isPendingPanel&&(
                     <div style={{flex:1,minHeight:0,display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid #333',borderRadius:8,padding:16,background:'rgba(0,0,0,0.2)'}}>
                       <div style={{textAlign:'center'}}>
-                        <p style={{color:'#fff',marginBottom:16}}>{centerChatPeerName} te ha invitado a favoritos. Acepta para habilitar el chat.</p>
+                        <p style={{color:'#fff',marginBottom:16}}>{t('dashboardClient.videoChatFavoritosCliente.invitation.pendingMessage', { name: centerChatPeerName })}</p>
                         <div style={{display:'flex',gap:12,justifyContent:'center'}}>
-                          <ButtonAceptar onClick={acceptInvitation}>Aceptar</ButtonAceptar>
-                          <ButtonRechazar onClick={rejectInvitation} style={{backgroundColor:'#dc3545'}}>Rechazar</ButtonRechazar>
+                          <ButtonAceptar onClick={acceptInvitation}>{t('dashboardClient.videoChatFavoritosCliente.actions.accept')}</ButtonAceptar>
+                          <ButtonRechazar onClick={rejectInvitation} style={{backgroundColor:'#dc3545'}}>{t('dashboardClient.videoChatFavoritosCliente.actions.reject')}</ButtonRechazar>
                         </div>
                       </div>
                     </div>
@@ -49,8 +52,8 @@ export default function VideoChatFavoritosCliente(props){
                   {isSentPanel&&(
                     <div style={{flex:1,minHeight:0,display:'flex',alignItems:'center',justifyContent:'center',border:'1px solid #333',borderRadius:8,padding:16,background:'rgba(0,0,0,0.2)'}}>
                       <div style={{textAlign:'center',color:'#e9ecef'}}>
-                        <p style={{marginBottom:8}}>Invitación enviada. Esperando respuesta de <strong>{centerChatPeerName}</strong>.</p>
-                        <p style={{fontSize:12,color:'#adb5bd'}}>El chat se habilitará cuando acepte tu invitación.</p>
+                        <p style={{marginBottom:8}}>{t('dashboardClient.videoChatFavoritosCliente.invitation.sentMessage', { name: centerChatPeerName })}</p>
+                        <p style={{fontSize:12,color:'#adb5bd'}}>{t('dashboardClient.videoChatFavoritosCliente.invitation.sentHint')}</p>
                       </div>
                     </div>
                   )}
@@ -65,11 +68,11 @@ export default function VideoChatFavoritosCliente(props){
                             <ButtonActivarCam
                               onClick={handleCallActivateCamera}
                               disabled={callStatus==='idle'?!allowChat:false}
-                              title={callStatus==='idle'?(allowChat?'Activa tu cámara':'Debéis ser favoritos aceptados para poder llamar'):'Activa tu cámara'}
-                            >Activar cámara</ButtonActivarCam>
+                              title={callStatus==='idle'?(allowChat?t('dashboardClient.videoChatFavoritosCliente.actions.activateCameraHint'):t('dashboardClient.videoChatFavoritosCliente.call.acceptedFavoritesRequired')):t('dashboardClient.videoChatFavoritosCliente.actions.activateCameraHint')}
+                            >{t('dashboardClient.videoChatFavoritosCliente.actions.activateCamera')}</ButtonActivarCam>
                             <StyledHelperLine style={{color:'#000'}}>
                               <FontAwesomeIcon icon={faVideo}/>
-                              activar cámara para iniciar videochat
+                              {t('dashboardClient.videoChatFavoritosCliente.hints.activateCamera')}
                             </StyledHelperLine>
                           </div>
                         )}
@@ -79,12 +82,12 @@ export default function VideoChatFavoritosCliente(props){
                             <BtnRoundVideo
                               onClick={handleCallInvite}
                               disabled={!allowChat||!callPeerId}
-                              title={!allowChat?'Debéis ser favoritos aceptados para poder llamar':(!callPeerId?'Selecciona un contacto para llamar':`Llamar a ${callPeerName||callPeerId}`)}
-                              aria-label="Llamar"
+                              title={!allowChat?t('dashboardClient.videoChatFavoritosCliente.call.acceptedFavoritesRequired'):(!callPeerId?t('dashboardClient.videoChatFavoritosCliente.call.selectContact'):t('dashboardClient.videoChatFavoritosCliente.call.callName', { name: callPeerName||callPeerId }))}
+                              aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
                             ><FontAwesomeIcon icon={faVideo}/></BtnRoundVideo>
                             <StyledHelperLine style={{color:'#000'}}>
                               <FontAwesomeIcon icon={faVideo}/>
-                              pulsar botón para iniciar videollamada
+                              {t('dashboardClient.videoChatFavoritosCliente.hints.startVideoCall')}
                             </StyledHelperLine>
                           </div>
                         )}
@@ -93,10 +96,10 @@ export default function VideoChatFavoritosCliente(props){
                           <div style={{display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',gap:8,marginTop:8}}>
                             <div style={{color:'#fff',textAlign:'center'}}>
                               {callStatus==='ringing'
-                                ? `Llamando a ${callPeerName||'Usuario'}… (sonando)`
-                                : 'Conectando…'}
+                                ? t('dashboardClient.videoChatFavoritosCliente.call.ringing', { name: callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.userDefault') })
+                                : t('dashboardClient.videoChatFavoritosCliente.call.connecting')}
                             </div>
-                            <BtnHangup onClick={()=>handleCallEnd(false)} title="Colgar" aria-label="Colgar">
+                            <BtnHangup onClick={()=>handleCallEnd(false)} title={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')}>
                               <FontAwesomeIcon icon={faPhoneSlash}/>
                             </BtnHangup>
                           </div>
@@ -109,13 +112,13 @@ export default function VideoChatFavoritosCliente(props){
                             <StyledRemoteVideo ref={callRemoteWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'12px',overflow:'hidden',background:'#000'}}>
                               <StyledVideoTitle>
                                 <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChica.png'} alt=""/>
-                                {callPeerName||'Remoto'}
+                                {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
                                 <button
                                   type="button"
                                   onClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
-                                  title="Pantalla completa"
+                                  title={t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}
                                   style={{marginLeft:8,padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
-                                >Full Screen</button>
+                                >{t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}</button>
                               </StyledVideoTitle>
 
                               <video
@@ -137,7 +140,7 @@ export default function VideoChatFavoritosCliente(props){
                               </StyledLocalVideo>
 
                               <div style={{position:'absolute',left:0,right:0,bottom:16,display:'flex',justifyContent:'center',zIndex:10}}>
-                                <BtnHangup onClick={()=>handleCallEnd(false)} title="Colgar" aria-label="Colgar">
+                                <BtnHangup onClick={()=>handleCallEnd(false)} title={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')}>
                                   <FontAwesomeIcon icon={faPhoneSlash}/>
                                 </BtnHangup>
                               </div>
@@ -180,14 +183,14 @@ export default function VideoChatFavoritosCliente(props){
                                 type="text"
                                 value={centerInput}
                                 onChange={e=>setCenterInput(e.target.value)}
-                                placeholder="Escribe un mensaje…"
+                                placeholder={t('dashboardClient.videoChatFavoritosCliente.placeholders.message')}
                                 autoComplete="off"
                                 onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCenterMessage();}}}
                                 onFocus={()=>setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50)}
 
                               />
 
-                              <ButtonRegalo type="button" onClick={()=>setShowCenterGifts(s=>!s)} title="Enviar regalo" aria-label="Enviar regalo">
+                              <ButtonRegalo type="button" onClick={()=>setShowCenterGifts(s=>!s)} title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}>
                                 <FontAwesomeIcon icon={faGift}/>
                               </ButtonRegalo>
                               {showCenterGifts&&(
@@ -224,10 +227,10 @@ export default function VideoChatFavoritosCliente(props){
                   {!isPendingPanel&&!isSentPanel&&contactMode!=='call'&&(
                     <StyledChatWhatsApp>
                       <StyledChatScroller ref={centerListRef} data-bg="whatsapp">
-                        {centerLoading&&<div style={{color:'#adb5bd'}}>Cargando historial…</div>}
+                        {centerLoading&&<div style={{color:'#adb5bd'}}>{t('dashboardClient.videoChatFavoritosCliente.loading.history')}</div>}
                         {!centerLoading&&centerMessages.length===0&&(
                           <div style={{color:'#adb5bd'}}>
-                            {allowChat?'No hay mensajes todavía. ¡Escribe el primero!':'Este chat no está activo.'}
+                            {allowChat?t('dashboardClient.videoChatFavoritosCliente.empty.noMessages'):t('dashboardClient.videoChatFavoritosCliente.empty.chatInactive')}
                           </div>
                         )}
                         {centerMessages.map(m=>{
@@ -259,16 +262,16 @@ export default function VideoChatFavoritosCliente(props){
                         <StyledChatInput
                           value={centerInput}
                           onChange={e=>setCenterInput(e.target.value)}
-                          placeholder={allowChat?'Escribe un mensaje…':'Chat inactivo'}
+                          placeholder={allowChat?t('dashboardClient.videoChatFavoritosCliente.placeholders.message'):t('dashboardClient.videoChatFavoritosCliente.empty.chatInactiveShort')}
                           onKeyDown={e=>{if(e.key==='Enter'&&allowChat)sendCenterMessage();}}
                           disabled={!allowChat}
                           onFocus={()=>{setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50);}}
                         />
                         <ButtonRegalo
                           onClick={()=>setShowCenterGifts(s=>!s)}
-                          title="Enviar regalo"
+                        title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
                           disabled={!allowChat}
-                          aria-label="Enviar regalo"
+                        aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
 
                         >
                           <FontAwesomeIcon icon={faGift}/>
@@ -276,8 +279,8 @@ export default function VideoChatFavoritosCliente(props){
                         <ButtonLlamar
                           onClick={enterCallMode}
                           disabled={!centerChatPeerId||!allowChat}
-                          title="Llamar"
-                          aria-label="Llamar"
+                          title={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
+                          aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
                           style={{marginRight:16, marginLeft:4,width:40,height:40,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center'}}
                         >
                           <FontAwesomeIcon icon={faVideo}/>
@@ -326,13 +329,13 @@ export default function VideoChatFavoritosCliente(props){
           <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
             {contactMode!=='call'&&(
               <StyledMobile3ColBar>
-                <ButtonVolver type="button" onClick={backToList} aria-label="Volver a la lista" title="Volver">
+                <ButtonVolver type="button" onClick={backToList} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.backToList')} title={t('common.back')}>
                   <FontAwesomeIcon icon={faArrowLeft}/>
                 </ButtonVolver>
                 <StyledTopCenter>
                   {allowChat&&(
                     <ButtonLlamar onClick={enterCallMode} title="Llamar" aria-label="Llamar">
-                      Iniciar VideoChat
+                      {t('dashboardClient.videoChatFavoritosCliente.actions.startVideoChat')}
                     </ButtonLlamar>
                   )}
                 </StyledTopCenter>
@@ -351,10 +354,10 @@ export default function VideoChatFavoritosCliente(props){
                         title={callStatus==='idle'
                           ?(allowChat?'Activa tu cámara':'Debéis ser favoritos aceptados para poder llamar')
                           :'Activa tu cámara'}
-                      >Activar cámara</ButtonActivarCamMobile>
+                      >{t('dashboardClient.videoChatFavoritosCliente.actions.activateCamera')}</ButtonActivarCamMobile>
                       <StyledHelperLine>
                         <FontAwesomeIcon icon={faVideo}/>
-                        activar cámara para iniciar videochat
+                        {t('dashboardClient.videoChatFavoritosCliente.hints.activateCamera')}
                       </StyledHelperLine>
                     </div>
                   </StyledPreCallCenter>
@@ -363,8 +366,8 @@ export default function VideoChatFavoritosCliente(props){
                 {!callCameraActive&&callStatus==='incoming'&&(
                   <StyledPreCallCenter>
                     <div style={{display:'flex',gap:10,justifyContent:'center'}}>
-                      <ButtonAceptar onClick={handleCallAccept}>Aceptar</ButtonAceptar>
-                      <ButtonRechazar onClick={handleCallReject}>Rechazar</ButtonRechazar>
+                      <ButtonAceptar onClick={handleCallAccept}>{t('dashboardClient.videoChatFavoritosCliente.actions.accept')}</ButtonAceptar>
+                      <ButtonRechazar onClick={handleCallReject}>{t('dashboardClient.videoChatFavoritosCliente.actions.reject')}</ButtonRechazar>
                     </div>
                   </StyledPreCallCenter>
                 )}
@@ -376,15 +379,15 @@ export default function VideoChatFavoritosCliente(props){
                         onClick={handleCallInvite}
                         disabled={!allowChat||!callPeerId}
                         title={!allowChat
-                          ?'Debéis ser favoritos aceptados para poder llamar'
-                          :(!callPeerId?'Selecciona un contacto para llamar':`Llamar a ${callPeerName||callPeerId}`)}
-                        aria-label="Llamar"
+                          ?t('dashboardClient.videoChatFavoritosCliente.call.acceptedFavoritesRequired')
+                          :(!callPeerId?t('dashboardClient.videoChatFavoritosCliente.call.selectContact'):t('dashboardClient.videoChatFavoritosCliente.call.callName', { name: callPeerName||callPeerId }))}
+                        aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
                       >
                         <FontAwesomeIcon icon={faVideo}/>
                       </BtnRoundVideo>
                       <StyledHelperLine style={{marginTop:4}}>
                         <FontAwesomeIcon icon={faVideo}/>
-                        pulsar botón para iniciar llamada
+                        {t('dashboardClient.videoChatFavoritosCliente.hints.startCall')}
                       </StyledHelperLine>
                     </div>
                   </StyledBottomActionsMobile>
@@ -398,7 +401,7 @@ export default function VideoChatFavoritosCliente(props){
                   <StyledRemoteVideo ref={callRemoteWrapRef}>
                     <StyledVideoTitle>
                       <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChico.png'} alt=""/>
-                      {callPeerName||'Remoto'}
+                      {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
                     </StyledVideoTitle>
                     <video ref={callRemoteVideoRef} autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover'}}/>
                   </StyledRemoteVideo>
@@ -409,7 +412,7 @@ export default function VideoChatFavoritosCliente(props){
 
                   {callStatus==='in-call'&&(
                     <StyledFloatingHangup>
-                      <BtnHangup onClick={()=>handleCallEnd(false)} title="Colgar" aria-label="Colgar">
+                      <BtnHangup onClick={()=>handleCallEnd(false)} title={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')}>
                         <FontAwesomeIcon icon={faPhoneSlash}/>
                       </BtnHangup>
                     </StyledFloatingHangup>
@@ -451,15 +454,15 @@ export default function VideoChatFavoritosCliente(props){
                     type="text"
                     value={centerInput}
                     onChange={e=>setCenterInput(e.target.value)}
-                    placeholder="Escribe un mensaje…"
+                    placeholder={t('dashboardClient.videoChatFavoritosCliente.placeholders.message')}
                     autoComplete="off"
                     onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCenterMessage();}}}
                     onFocus={()=>setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50)}
                   />
                   <ButtonRegalo
-                    title="Enviar regalo"
+                    title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
                     onClick={()=>setShowCenterGifts(s=>!s)}
-                    aria-label="Enviar regalo"
+                    aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
                   >
                     <FontAwesomeIcon icon={faGift}/>
                   </ButtonRegalo>

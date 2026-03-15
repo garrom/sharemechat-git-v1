@@ -51,15 +51,188 @@
     "other": "Otro",
     "exit": "Salir",
     "back": "Volver",
+    "hangup": "Colgar",
+    "fullscreen": "Pantalla completa",
+    "sendMessage": "Enviar mensaje",
     "networkError": "Error de red",
     "actions": {
-      "addToFavorites": "Añadir a favoritos"
+      "addToFavorites": "Añadir a favoritos",
+      "search": "Buscar"
     },
     "cookies": {
       "configure": "Configuración de cookies",
       "acceptAll": "Aceptar todas las cookies",
       "continueWithoutAccepting": "Continuar sin aceptar",
       "bannerText": "Al hacer clic en “Aceptar todas las cookies”, usted acepta que las cookies se guarden en su dispositivo para mejorar la navegación del sitio, analizar el uso del mismo y colaborar con nuestros estudios para marketing. Para más información, consulta nuestra Política de cookies."
+    }
+  },
+  "profileCommon": {
+    "accountTitle": "Cuenta",
+    "loading": {
+      "default": "Cargando..."
+    },
+    "status": {
+      "active": "Cuenta activa"
+    },
+    "labels": {
+      "status": "Estado",
+      "email": "Email",
+      "name": "Nombre",
+      "surname": "Apellido",
+      "nickname": "Nickname",
+      "biography": "Biografía",
+      "interests": "Intereses"
+    },
+    "placeholders": {
+      "name": "Tu nombre",
+      "surname": "Tu apellido",
+      "nickname": "Tu nickname público"
+    },
+    "sections": {
+      "basicData": {
+        "title": "Datos básicos"
+      },
+      "about": {
+        "title": "Sobre ti"
+      },
+      "profilePhoto": {
+        "title": "Foto de perfil"
+      },
+      "security": {
+        "title": "Seguridad y cuenta"
+      }
+    },
+    "actions": {
+      "saveChanges": "Guardar cambios",
+      "saving": "Guardando...",
+      "selectFile": "Seleccionar archivo",
+      "uploading": "Subiendo...",
+      "deleting": "Eliminando...",
+      "uploadPhoto": "Subir foto",
+      "deletePhoto": "Eliminar foto",
+      "changePassword": "Cambiar contraseña"
+    },
+    "confirm": {
+      "deletePhoto": "¿Eliminar tu foto de perfil?"
+    },
+    "success": {
+      "saved": "Datos guardados correctamente.",
+      "unsubscribed": "Cuenta dada de baja.",
+      "photoUploaded": "Foto subida correctamente.",
+      "photoDeleted": "Foto eliminada."
+    },
+    "errors": {
+      "loadProfile": "No se pudo cargar el perfil",
+      "save": "No se pudo guardar",
+      "unsubscribe": "No se pudo completar la baja.",
+      "uploadPhoto": "No se pudo subir la foto",
+      "deletePhoto": "No se pudo eliminar la foto"
+    },
+    "empty": {
+      "value": "—",
+      "noPhoto": "— Sin foto —"
+    },
+    "alt": {
+      "profilePhoto": "Foto de perfil",
+      "currentProfilePhoto": "Foto de perfil actual"
+    }
+  },
+  "perfilClient": {
+    "displayName": "Tu perfil",
+    "role": "Cliente",
+    "header": {
+      "subtitle": "Gestiona tus datos personales y la foto que verán las modelos."
+    },
+    "sections": {
+      "basicData": {
+        "subtitle": "Estos datos no se muestran a otros usuarios salvo tu nickname."
+      },
+      "about": {
+        "subtitle": "Ayúdanos a encontrar mejores matches según tus gustos."
+      },
+      "profilePhoto": {
+        "subtitle": "Esta imagen se muestra a las modelos durante el videochat."
+      }
+    },
+    "placeholders": {
+      "biography": "Cuéntanos algo sobre ti, qué buscas, etc.",
+      "interests": "cine, música, viajes..."
+    },
+    "hints": {
+      "interests": "Separa los intereses con comas. Los usamos para sugerir mejores modelos.",
+      "photoFormat": "Formato recomendado JPG/PNG. Se recortará automáticamente para verse bien en móvil."
+    }
+  },
+  "perfilModel": {
+    "displayName": "Tu perfil de modelo",
+    "role": "Modelo",
+    "header": {
+      "subtitle": "Completa tus datos y sube una foto y un vídeo de presentación para atraer más clientes."
+    },
+    "sections": {
+      "basicData": {
+        "subtitle": "Estos datos no se muestran a los clientes salvo tu nickname."
+      },
+      "about": {
+        "subtitle": "Cuéntanos tu estilo, qué ofreces y qué te gusta hacer en las sesiones."
+      },
+      "profilePhoto": {
+        "subtitle": "Esta imagen se usa como portada de tu perfil de modelo."
+      },
+      "introVideo": {
+        "title": "Vídeo de presentación",
+        "subtitle": "Un breve vídeo te ayuda a destacar y aumentar la conversión de clientes."
+      }
+    },
+    "placeholders": {
+      "biography": "Cuéntanos sobre ti y tu estilo",
+      "interests": "gaming, cosplay, baile..."
+    },
+    "actions": {
+      "uploadVideo": "Subir vídeo",
+      "deleteVideo": "Eliminar vídeo"
+    },
+    "confirm": {
+      "deleteIntroVideo": "¿Eliminar tu vídeo de presentación?"
+    },
+    "empty": {
+      "notUploaded": "— No subido —"
+    },
+    "hints": {
+      "interests": "Separa los intereses con comas. Los usamos para sugerir mejores clientes.",
+      "acceptContractForPhoto": "Debes aceptar la nueva versión del contrato para modificar tu foto.",
+      "photoFormat": "Formato recomendado JPG/PNG.",
+      "acceptContractForVideo": "Debes aceptar la nueva versión del contrato para modificar tu vídeo.",
+      "videoFormat": "Formato recomendado MP4. Tamaño razonable para carga rápida."
+    },
+    "contract": {
+      "title": "Contrato de modelo actualizado",
+      "subtitle": "Se ha publicado una nueva versión del contrato. Debes aceptarla para seguir gestionando tu foto y vídeo de perfil.",
+      "currentVersion": "Versión vigente:",
+      "confirmAccept": "Se ha actualizado el contrato de modelo. Debes aceptar la nueva versión para seguir gestionando tu perfil de modelo.\n\n¿Deseas aceptarlo ahora?",
+      "actions": {
+        "viewContract": "Ver contrato",
+        "accepting": "Aceptando...",
+        "acceptNewVersion": "Aceptar nueva versión"
+      },
+      "success": {
+        "accepted": "Contrato de modelo aceptado correctamente."
+      },
+      "errors": {
+        "accept": "No se pudo aceptar el contrato",
+        "acceptBeforeUpload": "Debes aceptar la nueva versión del contrato de modelo antes de subir archivos.",
+        "acceptBeforeEditFiles": "Debes aceptar la nueva versión del contrato de modelo antes de modificar archivos."
+      }
+    },
+    "media": {
+      "success": {
+        "fileUploaded": "Archivo subido correctamente.",
+        "videoDeleted": "Vídeo eliminado."
+      },
+      "errors": {
+        "uploadFile": "No se pudo subir el archivo",
+        "deleteFile": "No se pudo eliminar"
+      }
     }
   },
   "modals": {
@@ -297,8 +470,121 @@
       "viewProfile": "Ver perfil",
       "profile": "Perfil"
     },
+    "favoriteAlerts": {
+      "title": "Favoritos",
+      "modelAlreadyFavorite": "Esta modelo ya está en tus favoritos."
+    },
     "favorites": {
-      "inCallLocked": "En llamada: la lista se bloquea hasta colgar."
+      "inCallLocked": "En llamada: la lista se bloquea hasta colgar.",
+      "selectFavorite": "Selecciona un favorito para abrir la conversación aquí.",
+      "pendingInvitationMessage": "te ha invitado a ser favoritos mutuos. Acepta para habilitar el chat.",
+      "acceptInvitation": "Aceptar invitación",
+      "rejectInvitation": "Rechazar invitación",
+      "invitationSent": "Invitación enviada. Esperando respuesta de {{name}}.",
+      "chatEnabledWhenAccepted": "El chat se habilitará cuando acepte tu invitación.",
+      "balanceLabel": "Saldo:",
+      "messagePlaceholder": "Escribe un mensaje…",
+      "incomingCall": "Te está llamando {{name}}…",
+      "noMessagesYet": "No hay mensajes todavía. ¡Escribe el primero!",
+      "chatInactive": "Este chat no está activo.",
+      "backToList": "Volver a la lista",
+      "startVideoChat": "Iniciar VideoChat",
+      "pendingInvitationMobile": "{{name}} te ha invitado a ser favoritos mutuos. Acepta para habilitar el chat.",
+      "call": {
+        "activateCamera": "Activar cámara",
+        "acceptedRequired": "Debéis ser favoritos aceptados para poder llamar",
+        "activateCameraHint": "Activa tu cámara",
+        "selectContactFirst": "Selecciona un contacto para llamar",
+        "callUser": "Llamar a {{name}}",
+        "defaultUser": "Usuario",
+        "call": "Llamar",
+        "startVideoCallHint": "Pulsar botón para iniciar videollamada",
+        "callingRinging": "Llamando a {{name}}… (sonando)",
+        "connecting": "Conectando…",
+        "remote": "Remoto",
+        "startCallHint": "Pulsar botón para iniciar llamada",
+        "callingUser": "Llamando a {{name}}…"
+      }
+    },
+    "videoChatRandomCliente": {
+      "promoTeaserTitle": "{{name}} · teaser",
+      "actions": {
+        "activateCamera": "Activar cámara",
+        "viewTeaser": "Ver teaser",
+        "search": "Buscar",
+        "stopSearch": "Detener búsqueda",
+        "fullscreen": "Pantalla completa",
+        "hangup": "Colgar",
+        "sendMessage": "Enviar mensaje",
+        "sendGift": "Enviar regalo"
+      },
+      "hints": {
+        "activateCamera": "activar cámara para iniciar videochat",
+        "search": "Pulsa “Buscar” para empezar."
+      },
+      "loading": {
+        "promoVideos": "Cargando vídeos de modelos…",
+        "searchingModel": "Buscando modelo disponible…"
+      },
+      "empty": {
+        "promoVideos": "No hay vídeos promocionales disponibles por el momento."
+      },
+      "placeholders": {
+        "message": "Escribe un mensaje…"
+      },
+      "errors": {
+        "loadPromoVideos": "Error cargando vídeos de modelos"
+      }
+    },
+    "videoChatFavoritosCliente": {
+      "actions": {
+        "accept": "Aceptar",
+        "reject": "Rechazar",
+        "activateCamera": "Activar cámara",
+        "activateCameraHint": "Activa tu cámara",
+        "call": "Llamar",
+        "hangup": "Colgar",
+        "fullscreen": "Pantalla completa",
+        "sendGift": "Enviar regalo",
+        "backToList": "Volver a la lista",
+        "startVideoChat": "Iniciar VideoChat"
+      },
+      "hints": {
+        "activateCamera": "activar cámara para iniciar videochat",
+        "startVideoCall": "pulsar botón para iniciar videollamada",
+        "startCall": "pulsar botón para iniciar llamada"
+      },
+      "labels": {
+        "remote": "Remoto",
+        "userDefault": "Usuario",
+        "userLowerDefault": "usuario"
+      },
+      "call": {
+        "acceptedFavoritesRequired": "Debéis ser favoritos aceptados para poder llamar",
+        "selectContact": "Selecciona un contacto para llamar",
+        "callName": "Llamar a {{name}}",
+        "ringing": "Llamando a {{name}}… (sonando)",
+        "calling": "Llamando a {{name}}…",
+        "incoming": "Te está llamando {{name}}…",
+        "connecting": "Conectando…"
+      },
+      "invitation": {
+        "pendingMessage": "{{name}} te ha invitado a favoritos. Acepta para habilitar el chat.",
+        "sentMessage": "Invitación enviada. Esperando respuesta de {{name}}.",
+        "sentHint": "El chat se habilitará cuando acepte tu invitación."
+      },
+      "loading": {
+        "history": "Cargando historial…"
+      },
+      "empty": {
+        "selectFavorite": "Selecciona un favorito para abrir la conversación aquí.",
+        "noMessages": "No hay mensajes todavía. ¡Escribe el primero!",
+        "chatInactive": "Este chat no está activo.",
+        "chatInactiveShort": "Chat inactivo"
+      },
+      "placeholders": {
+        "message": "Escribe un mensaje…"
+      }
     }
   },
   "dashboardModel": {
@@ -326,8 +612,102 @@
       "viewProfile": "Ver perfil",
       "profile": "Perfil"
     },
+    "favoriteAlerts": {
+      "title": "Favoritos",
+      "clientAlreadyFavorite": "Este cliente ya está en tus favoritos."
+    },
+    "payout": {
+      "sessionExpiredTitle": "Sesión",
+      "sessionExpiredMessage": "Sesión expirada. Inicia sesión de nuevo.",
+      "requestTitle": "Solicitud de retiro",
+      "requestMessage": "Introduce la cantidad que deseas retirar:",
+      "invalidAmountTitle": "Importe no válido",
+      "invalidAmountMessage": "Introduce un importe válido mayor que 0.",
+      "insufficientBalanceTitle": "Saldo insuficiente",
+      "insufficientBalanceMessage": "No tienes saldo suficiente para realizar este retiro.",
+      "minimumAmountTitle": "Importe inferior al mínimo",
+      "minimumAmountMessage": "El importe mínimo de retiro es de {{amount}} EUR.",
+      "successTitle": "Solicitud enviada",
+      "successMessage": "Tu solicitud de retiro se ha registrado correctamente.",
+      "errorTitle": "Error",
+      "errorMessage": "No se pudo solicitar el retiro."
+    },
     "favorites": {
-      "inCallLocked": "En llamada: la lista se bloquea hasta colgar."
+      "inCallLocked": "En llamada: la lista se bloquea hasta colgar.",
+      "selectFavorite": "Selecciona un favorito para abrir la conversación aquí.",
+      "pendingInvitationMessage": "te ha invitado a ser favoritos mutuos. Acepta para habilitar el chat.",
+      "acceptInvitation": "Aceptar invitación",
+      "rejectInvitation": "Rechazar invitación",
+      "invitationSent": "Invitación enviada. Esperando respuesta de {{name}}.",
+      "chatEnabledWhenAccepted": "El chat se habilitará cuando acepte tu invitación.",
+      "balanceLabel": "Saldo:",
+      "messagePlaceholder": "Escribe un mensaje…",
+      "incomingCall": "Te está llamando {{name}}…",
+      "noMessagesYet": "No hay mensajes todavía. ¡Escribe el primero!",
+      "chatInactive": "Este chat no está activo.",
+      "backToList": "Volver a la lista",
+      "startVideoChat": "Iniciar VideoChat",
+      "pendingInvitationMobile": "{{name}} te ha invitado a ser favoritos mutuos. Acepta para habilitar el chat.",
+      "call": {
+        "activateCamera": "Activar cámara",
+        "acceptedRequired": "Debéis ser favoritos aceptados para poder llamar",
+        "activateCameraHint": "Activa tu cámara",
+        "selectContactFirst": "Selecciona un contacto para llamar",
+        "callUser": "Llamar a {{name}}",
+        "defaultUser": "Usuario",
+        "call": "Llamar",
+        "startVideoCallHint": "Pulsar botón para iniciar videollamada",
+        "callingRinging": "Llamando a {{name}}… (sonando)",
+        "connecting": "Conectando…",
+        "remote": "Remoto",
+        "startCallHint": "Pulsar botón para iniciar llamada",
+        "callingUser": "Llamando a {{name}}…"
+      }
+    },
+    "videoChatFavoritosModelo": {
+      "actions": {
+        "acceptInvitation": "Aceptar invitaci?n",
+        "rejectInvitation": "Rechazar invitaci?n",
+        "fullscreenButton": "Full Screen"
+      },
+      "invitation": {
+        "pendingMutualSuffix": "te ha invitado a ser favoritos mutuos. Acepta para habilitar el chat."
+      }
+    },
+    "videoChatRandomModelo": {
+      "actions": {
+        "activateCamera": "Activar cámara",
+        "stopSearch": "Detener búsqueda"
+      },
+      "hints": {
+        "activateCamera": "activar cámara para iniciar videochat",
+        "search": "Pulsa “Buscar” para empezar."
+      },
+      "labels": {
+        "clientDefault": "Cliente",
+        "balance": "Saldo:"
+      },
+      "loading": {
+        "searchingClient": "Buscando cliente disponible…"
+      },
+      "placeholders": {
+        "message": "Escribe un mensaje…"
+      },
+      "stats": {
+        "progressTitle": "Progreso hacia el siguiente tier",
+        "progressSubtitle": "Basado en tus minutos facturados (30 d?as).",
+        "noTierData": "No hay datos de tiers disponibles para calcular el progreso.",
+        "currentMinutes30d": "Minutos actuales (30d):",
+        "yourSituation": "Tu situaci?n",
+        "currentMinutes": "Minutos actuales:",
+        "detectedTier": "Tier detectado:",
+        "nextGoal": "Siguiente objetivo",
+        "nextTier": "Siguiente tier:",
+        "requirement": "Requisito:",
+        "remaining": "Te faltan:",
+        "maxTier": "Ya est?s en el tier m?ximo (o no hay siguiente tier configurado).",
+        "minutesShort": "min"
+      }
     }
   },
   "dashboardUserClient": {
@@ -384,6 +764,34 @@
       "firstPayment": "Error al procesar el pago.",
       "noServerConnection": "No hay conexión con el servidor. Pulsa \"Buscar\" de nuevo.",
       "next": "No se pudo solicitar NEXT."
+    },
+    "videoChatRandomUser": {
+      "promoTeaserTitle": "{{name}} · teaser",
+      "actions": {
+        "activateCamera": "Activar cámara",
+        "addToFavoritesPremium": "Añadir a favoritos (requiere premium)",
+        "search": "Buscar",
+        "stopSearch": "Detener búsqueda",
+        "fullscreen": "Pantalla completa",
+        "hangup": "Colgar"
+      },
+      "hints": {
+        "activateCamera": "activar cámara para iniciar videochat",
+        "search": "Pulsa “Buscar” para empezar."
+      },
+      "loading": {
+        "promoVideos": "Cargando vídeos de modelos…",
+        "searchingModel": "Buscando modelo disponible…"
+      },
+      "empty": {
+        "promoVideos": "No hay vídeos promocionales disponibles por el momento."
+      },
+      "status": {
+        "default": "Estás probando el videochat de ShareMeChat."
+      },
+      "errors": {
+        "loadPromoVideos": "Error cargando vídeos de modelos"
+      }
     }
   },
   "dashboardUserModel": {

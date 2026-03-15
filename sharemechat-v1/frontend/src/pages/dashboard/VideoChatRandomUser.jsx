@@ -1,5 +1,6 @@
 // src/pages/dashboard/VideoChatRandomUser.jsx
 import React, { useEffect, useState } from 'react';
+import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { TEASERS_PAGE_SIZE, TEASERS_PAGE_DEFAULT } from '../../config/appConfig';
 import {
@@ -47,6 +48,8 @@ import PromoVideoLightbox from '../../components/PromoVideoLightbox';
 import BlurredPreview from '../../components/BlurredPreview';
 
 export default function VideoChatRandomUser(props) {
+  const t = (key, options) => i18n.t(key, options);
+
   const {
     isMobile,
     cameraActive,
@@ -87,13 +90,13 @@ export default function VideoChatRandomUser(props) {
 
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error(txt || 'Error cargando vídeos de modelos');
+        throw new Error(txt || t('dashboardUserClient.videoChatRandomUser.errors.loadPromoVideos'));
       }
 
       const data = await res.json();
       const mapped = (Array.isArray(data) ? data : []).map((item) => ({
         id: item.modelId,
-        title: `${item.modelName} · teaser`,
+        title: t('dashboardUserClient.videoChatRandomUser.promoTeaserTitle', { name: item.modelName }),
         modelName: item.modelName,
         thumb: item.avatarUrl || '/img/avatarChica.png',
         src: item.videoUrl,
@@ -103,7 +106,7 @@ export default function VideoChatRandomUser(props) {
       setPromoVideos(mapped);
       if (mapped.length > 0) setCurrentPromoIndex(0);
     } catch (e) {
-      setPromoError(e?.message || 'Error cargando vídeos de modelos');
+      setPromoError(e?.message || t('dashboardUserClient.videoChatRandomUser.errors.loadPromoVideos'));
       setPromoVideos([]);
     } finally {
       setPromoLoading(false);
@@ -166,9 +169,9 @@ export default function VideoChatRandomUser(props) {
             !cameraActive ? (
               <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}>
                 <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
-                  <ButtonActivarCam onClick={handleActivateCamera}>Activar cámara</ButtonActivarCam>
+                  <ButtonActivarCam onClick={handleActivateCamera}>{t('dashboardUserClient.videoChatRandomUser.actions.activateCamera')}</ButtonActivarCam>
                   <StyledHelperLine style={{color:'#fff',justifyContent:'center'}}>
-                    <FontAwesomeIcon icon={faVideo} />activar cámara para iniciar videochat
+                    <FontAwesomeIcon icon={faVideo} />{t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
                   </StyledHelperLine>
                 </div>
               </div>
@@ -184,7 +187,7 @@ export default function VideoChatRandomUser(props) {
             <>
               {promoLoading && (
                 <div style={{color:'#e9ecef',padding:'8px 12px',fontSize:'0.9rem'}}>
-                  Cargando vídeos de modelos…
+                  {t('dashboardUserClient.videoChatRandomUser.loading.promoVideos')}
                 </div>
               )}
               {promoError && (
@@ -200,8 +203,8 @@ export default function VideoChatRandomUser(props) {
                       <button
                         type="button"
                         onClick={goPrevCard}
-                        aria-label="Modelo anterior"
-                        title="Modelo anterior"
+                        aria-label={t('home.hero.prevAria')}
+                        title={t('home.hero.prevAria')}
                         style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}
                       >
                         <FontAwesomeIcon icon={faChevronLeft} />
@@ -219,8 +222,8 @@ export default function VideoChatRandomUser(props) {
                         <ButtonAddFavorite
                           type="button"
                           onClick={() => openPurchaseModal && openPurchaseModal({ context:'user-favorite', modelId: currentPromo?.id })}
-                          aria-label="Añadir a favoritos"
-                          title="Añadir a favoritos (requiere premium)"
+                          aria-label={t('common.actions.addToFavorites')}
+                          title={t('dashboardUserClient.videoChatRandomUser.actions.addToFavoritesPremium')}
                           style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
                           onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
                           onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
@@ -232,8 +235,8 @@ export default function VideoChatRandomUser(props) {
                       <button
                         type="button"
                         onClick={goNextCard}
-                        aria-label="Siguiente modelo"
-                        title="Siguiente modelo"
+                        aria-label={t('home.hero.nextAria')}
+                        title={t('home.hero.nextAria')}
                         style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}
                       >
                         <FontAwesomeIcon icon={faChevronRight} />
@@ -245,16 +248,16 @@ export default function VideoChatRandomUser(props) {
 
               {!promoLoading && !promoError && promoVideos.length === 0 && (
                 <div style={{color:'#e9ecef',padding:'8px 12px',fontSize:'0.9rem'}}>
-                  No hay vídeos promocionales disponibles por el momento.
+                  {t('dashboardUserClient.videoChatRandomUser.empty.promoVideos')}
                 </div>
               )}
 
               {isMobile && (
                 <StyledPreCallCenter style={{position:'absolute',top:'70%',left:0,right:0,transform:'translateY(-50%)'}}>
                   <div>
-                    <ButtonActivarCamMobile onClick={handleActivateCamera}>Activar cámara</ButtonActivarCamMobile>
+                    <ButtonActivarCamMobile onClick={handleActivateCamera}>{t('dashboardUserClient.videoChatRandomUser.actions.activateCamera')}</ButtonActivarCamMobile>
                     <StyledHelperLine style={{color:'#fff'}}>
-                      <FontAwesomeIcon icon={faVideo} />activar cámara para iniciar videochat
+                      <FontAwesomeIcon icon={faVideo} />{t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
                     </StyledHelperLine>
                   </div>
                 </StyledPreCallCenter>
@@ -267,17 +270,17 @@ export default function VideoChatRandomUser(props) {
                   <StyledRandomSearchCol>
                     {!searching ? (
                       <>
-                        <ButtonBuscar onClick={handleStartMatch}>Buscar</ButtonBuscar>
-                        <StyledSearchHint>Pulsa “Buscar” para empezar.</StyledSearchHint>
+                        <ButtonBuscar onClick={handleStartMatch}>{t('dashboardUserClient.videoChatRandomUser.actions.search')}</ButtonBuscar>
+                        <StyledSearchHint>{t('dashboardUserClient.videoChatRandomUser.hints.search')}</StyledSearchHint>
                       </>
                     ) : (
                       <>
-                        <StyledSearchHint>Buscando modelo disponible…</StyledSearchHint>
+                        <StyledSearchHint>{t('dashboardUserClient.videoChatRandomUser.loading.searchingModel')}</StyledSearchHint>
                         <div style={{marginTop:8,display:'flex',justifyContent:'center'}}>
                           <BtnHangup
                             onClick={stopAll}
-                            title="Detener búsqueda"
-                            aria-label="Detener búsqueda"
+                            title={t('dashboardUserClient.videoChatRandomUser.actions.stopSearch')}
+                            aria-label={t('dashboardUserClient.videoChatRandomUser.actions.stopSearch')}
                             style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
                             onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#dc3545'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = '#dc3545'; e.currentTarget.style.color = '#fff'; }}
@@ -300,14 +303,14 @@ export default function VideoChatRandomUser(props) {
                     >
                       <StyledVideoTitle>
                         <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
-                        {modelNickname || 'Modelo'}
+                        {modelNickname || t('dashboardUserClient.report.displayName')}
                         <button
                           type="button"
                           onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                          title="Pantalla completa"
+                          title={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}
                           style={{marginLeft:8,padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
                         >
-                          Pantalla completa
+                          {t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}
                         </button>
                       </StyledVideoTitle>
 
@@ -335,8 +338,8 @@ export default function VideoChatRandomUser(props) {
                         <div style={{position:'absolute',bottom:16,left:'50%',transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:8,zIndex:9}}>
                           <BtnHangup
                             onClick={stopAll}
-                            title="Colgar"
-                            aria-label="Colgar"
+                            title={t('dashboardUserClient.videoChatRandomUser.actions.hangup')}
+                            aria-label={t('dashboardUserClient.videoChatRandomUser.actions.hangup')}
                             style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
                             onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#dc3545'; }}
                             onMouseLeave={(e) => { e.currentTarget.style.background = '#dc3545'; e.currentTarget.style.color = '#fff'; }}
@@ -356,9 +359,9 @@ export default function VideoChatRandomUser(props) {
                               </ButtonNext>
 
                               <ButtonAddFavorite
-                                aria-label="Añadir a favoritos"
+                                aria-label={t('common.actions.addToFavorites')}
                                 onClick={() => openPurchaseModal && openPurchaseModal({ context:'user-favorite', modelId: null })}
-                                title="Añadir a favoritos (requiere premium)"
+                                title={t('dashboardUserClient.videoChatRandomUser.actions.addToFavoritesPremium')}
                                 style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
@@ -370,8 +373,8 @@ export default function VideoChatRandomUser(props) {
                               <button
                                 type="button"
                                 onClick={onReportClick}
-                                title="Reportar abuso"
-                                aria-label="Reportar abuso"
+                                title={t('modals.report.title')}
+                                aria-label={t('modals.report.title')}
                                 style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#111',color:'#fff',border:'1px solid rgba(255,255,255,0.35)',cursor:'pointer'}}
                                 onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#111'; }}
                                 onMouseLeave={(e) => { e.currentTarget.style.background = '#111'; e.currentTarget.style.color = '#fff'; }}
@@ -386,7 +389,7 @@ export default function VideoChatRandomUser(props) {
                   </StyledVideoArea>
 
                   <StyledCallFooterDesktop style={{maxWidth:960,margin:'8px auto 0',width:'100%',padding:'0 8px',textAlign:'center',fontSize:14,color:'#adb5bd'}}>
-                    {statusText || 'Estás probando el videochat de ShareMeChat.'}
+                    {statusText || t('dashboardUserClient.videoChatRandomUser.status.default')}
                   </StyledCallFooterDesktop>
                 </StyledCallCardDesktop>
               )}
@@ -396,7 +399,7 @@ export default function VideoChatRandomUser(props) {
                   <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',borderRadius:'0px',overflow:'hidden',background:'#000'}}>
                     <StyledVideoTitle>
                       <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
-                      {modelNickname || 'Modelo'}
+                      {modelNickname || t('dashboardUserClient.report.displayName')}
                     </StyledVideoTitle>
 
                     <video
@@ -415,7 +418,7 @@ export default function VideoChatRandomUser(props) {
 
                     {cameraActive && (
                       <div style={{position:'absolute',left:0,right:0,bottom:'72px',zIndex:8,display:'flex',justifyContent:'center',alignItems:'center',gap:'12px'}}>
-                        <BtnHangup onClick={stopAll} title="Colgar" aria-label="Colgar">
+                        <BtnHangup onClick={stopAll} title={t('dashboardUserClient.videoChatRandomUser.actions.hangup')} aria-label={t('dashboardUserClient.videoChatRandomUser.actions.hangup')}>
                           <FontAwesomeIcon icon={faPhoneSlash} />
                         </BtnHangup>
 
@@ -432,7 +435,8 @@ export default function VideoChatRandomUser(props) {
 
                             <ButtonAddFavorite
                               onClick={() => openPurchaseModal && openPurchaseModal({ context:'user-favorite', modelId: null })}
-                              title="Añadir a favoritos (requiere premium)"
+                              title={t('dashboardUserClient.videoChatRandomUser.actions.addToFavoritesPremium')}
+                              aria-label={t('common.actions.addToFavorites')}
                               style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
                               onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
                               onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
@@ -444,8 +448,8 @@ export default function VideoChatRandomUser(props) {
                             <button
                               type="button"
                               onClick={onReportClick}
-                              title="Reportar abuso"
-                              aria-label="Reportar abuso"
+                              title={t('modals.report.title')}
+                              aria-label={t('modals.report.title')}
                               style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#111',color:'#fff',border:'1px solid rgba(255,255,255,0.35)',cursor:'pointer'}}
                               onTouchStart={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#111'; }}
                               onTouchEnd={(e) => { e.currentTarget.style.background = '#111'; e.currentTarget.style.color = '#fff'; }}
