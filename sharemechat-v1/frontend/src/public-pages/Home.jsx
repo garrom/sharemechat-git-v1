@@ -20,12 +20,12 @@ import {
 import {
   StyledNavbar,
   StyledBrand,
+  StyledNavTab,
   MobileBottomNav,
   BottomNavButton,
   HamburgerButton,
   MobileMenu
 } from '../styles/NavbarStyles';
-import { StyledNavTab } from '../styles/pages-styles/VideochatStyles';
 import { NavButton, ButtonActivarCam, ButtonActivarCamMobile } from '../styles/ButtonStyles';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGem, faChevronLeft, faChevronRight, faBars } from '@fortawesome/free-solid-svg-icons';

@@ -11,12 +11,12 @@ import {
   StyledContainer,
   StyledMainContent,
   GlobalBlack,
-  StyledNavTab,
 } from '../../styles/pages-styles/VideochatStyles';
 import {
   StyledNavbar,
   StyledBrand,
   NavText,
+  StyledNavTab,
   HamburgerButton,
   MobileMenu,
 } from '../../styles/NavbarStyles';

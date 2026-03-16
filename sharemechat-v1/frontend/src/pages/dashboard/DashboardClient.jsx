@@ -9,27 +9,23 @@ import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSignOutAlt, faUser, faHeart, faVideo, faFilm, faBars, faArrowLeft,faGem } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
   StyledLocalVideo,StyledRemoteVideo,
-  StyledChatContainer,StyledNavGroup,StyledNavAvatar,
+  StyledChatContainer,StyledNavGroup,
   StyledTopActions,StyledVideoTitle,StyledTitleAvatar,
   StyledChatDock,StyledChatList,StyledChatMessageRow,
   StyledChatBubble,StyledChatControls,StyledChatInput,
   StyledGiftsPanel,StyledGiftGrid,
   StyledGiftIcon,StyledIconBtn,StyledSelectableRow,
-  StyledNavTab,StyledVideoArea,StyledSplit2,
+  StyledVideoArea,StyledSplit2,
   StyledPane,StyledThumbsGrid, StyledCenterPanel,
   StyledCenterBody,StyledChatScroller, StyledCenterVideochat,
   StyledFavoritesShell,StyledFavoritesColumns,GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
-import {
-  StyledNavbar, StyledBrand,NavText, SaldoText,
-  HamburgerButton, MobileMenu, MobileBottomNav, BottomNavButton
-} from '../../styles/NavbarStyles';
-import LocaleSwitcher from '../../components/LocaleSwitcher';
+import NavbarClient from '../../components/navbar/NavbarClient';
 import {
   ButtonActivarCam,ButtonBuscarModelo,
   ButtonBuscarCliente,ButtonNext,
@@ -88,7 +84,6 @@ const DashboardClient = () => {
   const [targetPeerName, setTargetPeerName] = useState('');
   // Modo del panel de contacto (chat o llamada)
   const [contactMode, setContactMode] = useState(null); // 'chat' | 'call' | null
-  const [menuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   // ====== CALLING (1-a-1) ======
   const [callCameraActive, setCallCameraActive] = useState(false);
@@ -2186,45 +2181,38 @@ const DashboardClient = () => {
       : (Number(selectedFav?.id) === Number(callPeerId) && isAcceptedForCall);
 
   const displayName = sessionUser?.nickname || sessionUser?.name || sessionUser?.email || "Cliente";
+  const balanceTextDesktop = loadingSaldo
+    ? i18n.t('dashboardClient.balance.loading')
+    : saldoError
+      ? i18n.t('dashboardClient.balance.unavailable')
+      : `${i18n.t('dashboardClient.balance.label')} ${fmtEUR(saldo)}`;
+
+  const balanceTextMobile = loadingSaldo
+    ? i18n.t('dashboardClient.balance.loading')
+    : saldoError
+      ? i18n.t('dashboardClient.balance.unavailable')
+      : `${i18n.t('dashboardClient.balance.label')} ${fmtEUR(saldo)}`;
+
 
   return(
     <StyledContainer>
       <GlobalBlack/>
       {/* ========= INICIO NAVBAR  ======== */}
-      <StyledNavbar style={{padding:'0 24px'}}>
-        <div style={{display:'flex',alignItems:'center'}}>
-          <StyledBrand href="#" aria-label="SharemeChat" onClick={handleLogoClick}/>
-          <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-            <StyledNavTab type="button" data-active={activeTab==='videochat'} aria-pressed={activeTab==='videochat'} onClick={handleGoVideochat} title={i18n.t('dashboardClient.nav.videochat')}>{i18n.t('dashboardClient.nav.videochat')}</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='favoritos'} aria-pressed={activeTab==='favoritos'} onClick={handleGoFavorites} title={i18n.t('dashboardClient.nav.favorites')}>{i18n.t('dashboardClient.nav.favorites')}</StyledNavTab>
-            <StyledNavTab type="button" data-active={activeTab==='blog'} aria-pressed={activeTab==='blog'} onClick={handleGoBlog} title={i18n.t('dashboardClient.nav.blog')}>{i18n.t('dashboardClient.nav.blog')}</StyledNavTab>
-          </div>
-        </div>
-        <div className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
-          <NavText className="me-3">{displayName}</NavText>
-          <SaldoText className="me-3">{loadingSaldo ? i18n.t('dashboardClient.balance.loading') : saldoError ? i18n.t('dashboardClient.balance.unavailable') : `${i18n.t('dashboardClient.balance.label')} ${fmtEUR(saldo)}`}</SaldoText>
-
-          <LocaleSwitcher />
-
-          <NavButton type="button" onClick={handleAddBalance}><FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/><span>{i18n.t('dashboardClient.actions.buy')}</span></NavButton>
-          <NavButton type="button" onClick={handleLogout} title={i18n.t('dashboardClient.actions.logoutTitle')}><FontAwesomeIcon icon={faSignOutAlt}/><span>{i18n.t('dashboardClient.actions.logout')}</span></NavButton>
-          <StyledNavAvatar src={profilePic || '/img/avatarChico.png'} alt="avatar" title={i18n.t('dashboardClient.actions.viewProfile')} onClick={handleProfile}/>
-        </div>
-        <HamburgerButton onClick={()=>setMenuOpen(!menuOpen)} aria-label={i18n.t('dashboardClient.nav.openMenu')} title={i18n.t('dashboardClient.nav.menu')}><FontAwesomeIcon icon={faBars}/></HamburgerButton>
-        <MobileMenu className={!menuOpen&&'hidden'}>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}}>
-            <NavText>{displayName}</NavText>
-            <SaldoText>{loadingSaldo ? i18n.t('dashboardClient.balance.loading') : saldoError ? i18n.t('dashboardClient.balance.unavailable') : `${i18n.t('dashboardClient.balance.label')} ${fmtEUR(saldo)}`}</SaldoText>
-          </div>
-
-          <LocaleSwitcher onAfterChange={()=>setMenuOpen(false)} />
-
-          <NavButton onClick={()=>{handleProfile();setMenuOpen(false);}}><FontAwesomeIcon icon={faUser}/><StyledIconWrapper>{i18n.t('dashboardClient.actions.profile')}</StyledIconWrapper></NavButton>
-          <NavButton onClick={()=>{handleAddBalance();setMenuOpen(false);}}><FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/><span>{i18n.t('dashboardClient.actions.buy')}</span></NavButton>
-          <NavButton onClick={()=>{handleLogout();setMenuOpen(false);}}><FontAwesomeIcon icon={faSignOutAlt}/><StyledIconWrapper>{i18n.t('dashboardClient.actions.logout')}</StyledIconWrapper></NavButton>
-
-        </MobileMenu>
-      </StyledNavbar>
+      <NavbarClient
+        activeTab={activeTab}
+        displayName={displayName}
+        balanceTextDesktop={balanceTextDesktop}
+        balanceTextMobile={balanceTextMobile}
+        avatarUrl={profilePic}
+        showBottomNav={!inCall}
+        onBrandClick={handleLogoClick}
+        onGoVideochat={handleGoVideochat}
+        onGoFavorites={handleGoFavorites}
+        onGoBlog={handleGoBlog}
+        onProfile={handleProfile}
+        onBuy={handleAddBalance}
+        onLogout={handleLogout}
+      />
       {/* ========= FIN NAVBAR  ======== */}
 
       {/* ========= INICIO MAIN  ======== */}
@@ -2390,13 +2378,6 @@ const DashboardClient = () => {
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
 
-      {!inCall && (
-        <MobileBottomNav>
-          <BottomNavButton active={activeTab==='videochat'} onClick={handleGoVideochat}><span>{i18n.t('dashboardClient.nav.videochat')}</span></BottomNavButton>
-          <BottomNavButton active={activeTab==='favoritos'} onClick={handleGoFavorites}><span>{i18n.t('dashboardClient.nav.favorites')}</span></BottomNavButton>
-          <BottomNavButton active={activeTab==='blog'} onClick={handleGoBlog}><span>{i18n.t('dashboardClient.nav.blog')}</span></BottomNavButton>
-        </MobileBottomNav>
-      )}
 
     </StyledContainer>
   );

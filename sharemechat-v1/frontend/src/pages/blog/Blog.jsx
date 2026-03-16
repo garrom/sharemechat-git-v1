@@ -5,12 +5,12 @@ import { GlobalBlack } from '../../styles/public-styles/HomeStyles';
 import {
   StyledNavbar,
   StyledBrand,
+  StyledNavTab,
   MobileBottomNav,
   BottomNavButton,
   HamburgerButton,
   MobileMenu
 } from '../../styles/NavbarStyles';
-import { StyledNavTab } from '../../styles/pages-styles/VideochatStyles';
 import { NavButton } from '../../styles/ButtonStyles';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faGem } from '@fortawesome/free-solid-svg-icons';

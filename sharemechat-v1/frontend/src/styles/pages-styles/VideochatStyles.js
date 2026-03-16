@@ -117,65 +117,6 @@ export const StyledNavGroup = styled.div`
   gap: 10px;
 `;
 
-export const StyledNavAvatar = styled.img`
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 1px solid rgba(255, 255, 255, 0.45);
-  box-shadow: 0 0 0 2px rgba(0,0,0,0.05);
-  cursor: pointer;
-`;
-
-export const StyledNavTab = styled.button`
-  appearance: none;
-  background: transparent;
-  border: none;
-  padding: 4px 0 10px;
-  margin: 0 14px;
-  cursor: pointer;
-
-  /* Tipografía estilo Azar: grande y muy gruesa */
-  font-family: var(--font-nav);
-  font-size: 1rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  text-transform: none;
-
-  color: #9ca3af; /* gris para inactivo */
-  position: relative;
-  white-space: nowrap;
-  line-height: 1;
-
-  /* subrayado grueso SOLO cuando está activo */
-  &::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: 3px;
-    border-radius: 999px;
-    background: transparent;
-  }
-
-  &[data-active="true"] {
-    color: #f9fafb; /* blanco fuerte para activo */
-  }
-
-  &[data-active="true"]::after {
-    background: #f9fafb; /* subrayado blanco grueso */
-  }
-
-  &:hover {
-    color: #e5e7eb;
-  }
-
-  @media (max-width: 768px) {
-    display: none !important;
-  }
-`;
-
 
 
 /* --------------------------------
