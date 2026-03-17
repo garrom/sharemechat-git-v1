@@ -302,6 +302,22 @@ export default function VideoChatRandomModelo(props) {
 
                       <video
                         ref={remoteVideoRef}
+                        onLoadedMetadata={(e) => {
+                          const el = e.currentTarget;
+                          console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                        }}
+                        onCanPlay={(e) => {
+                          const el = e.currentTarget;
+                          console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoCanPlay readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                        }}
+                        onPlaying={(e) => {
+                          const el = e.currentTarget;
+                          console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                        }}
+                        onError={(e) => {
+                          const el = e.currentTarget;
+                          console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
+                        }}
                         style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
                         autoPlay
                         playsInline
@@ -449,6 +465,22 @@ export default function VideoChatRandomModelo(props) {
 
                     <video
                       ref={remoteVideoRef}
+                      onLoadedMetadata={(e) => {
+                        const el = e.currentTarget;
+                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                      }}
+                      onCanPlay={(e) => {
+                        const el = e.currentTarget;
+                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoCanPlay readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                      }}
+                      onPlaying={(e) => {
+                        const el = e.currentTarget;
+                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                      }}
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
+                      }}
                       style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
                       autoPlay
                       playsInline

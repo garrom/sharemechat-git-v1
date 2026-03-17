@@ -52,21 +52,18 @@ export const SessionProvider = ({ children }) => {
       setLoading(false);
       return data || null;
     } catch (e) {
-      const msg = String(e?.message || '');
+      const status = Number(e?.status);
 
-      if (msg.includes('401')) {
+      if (status === 401 || status === 403) {
         setUser(null);
-      } else {
-        // Si es error temporal, mantenemos el user anterior
+        setLoading(false);
+        return null;
       }
 
       setLoading(false);
+      setError(e);
 
-      if (!msg.includes('401')) {
-        setError(e);
-      }
-
-      return msg.includes('401') ? null : user;
+      return user;
     }
   };
 

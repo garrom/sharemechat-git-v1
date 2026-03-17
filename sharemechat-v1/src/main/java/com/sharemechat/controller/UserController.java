@@ -4,7 +4,7 @@ import com.sharemechat.config.IpConfig;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.*;
 import com.sharemechat.entity.ClientDocument;
-import com.sharemechat.entity.LoginResponse;
+import com.sharemechat.service.CountryAccessService;
 import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ClientDocumentRepository;
@@ -13,11 +13,9 @@ import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -30,77 +28,43 @@ public class UserController {
     private final UserRepository userRepository;
     private final ModelDocumentRepository modelDocumentRepository;
     private final ClientDocumentRepository clientDocumentRepository;
+    private final CountryAccessService countryAccessService;
 
     public UserController(UserService userService,
                           UserRepository userRepository,
                           ModelDocumentRepository modelDocumentRepository,
-                          ClientDocumentRepository clientDocumentRepository) {
+                          ClientDocumentRepository clientDocumentRepository,
+                          CountryAccessService countryAccessService) {
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
         this.clientDocumentRepository = clientDocumentRepository;
         this.userRepository = userRepository;
+        this.countryAccessService = countryAccessService;
     }
+
 
     @PostMapping("/register/client")
     public ResponseEntity<UserDTO> registerClient(@RequestBody @Valid UserClientRegisterDTO registerDTO,
                                                   HttpServletRequest request) {
-        String ip = IpConfig.getClientIp(request); // <-- capturamos IP
+        countryAccessService.assertAllowed(request);
 
-        // Captura idioma del navegador (HTTP). Ej: "es-ES,es;q=0.9,en;q=0.8"
+        String ip = IpConfig.getClientIp(request);
         String acceptLanguage = request.getHeader("Accept-Language");
-
-        // País detectado (industrial): primero por headers del edge (CloudFront/Cloudflare/etc),
-        // y si no existe, lo dejamos null (tu UserService ya lo soporta).
-        String countryDetected = request.getHeader("CloudFront-Viewer-Country");
-        if (countryDetected == null || countryDetected.isBlank()) {
-            countryDetected = request.getHeader("CF-IPCountry");
-        }
-        if (countryDetected == null || countryDetected.isBlank()) {
-            countryDetected = request.getHeader("X-AppEngine-Country");
-        }
-        if (countryDetected == null || countryDetected.isBlank()) {
-            countryDetected = request.getHeader("X-Country-Code");
-        }
-        if (countryDetected != null && !countryDetected.isBlank()) {
-            countryDetected = countryDetected.trim().toUpperCase(Locale.ROOT);
-            if (countryDetected.length() != 2) {
-                countryDetected = null;
-            }
-        } else {
-            countryDetected = null;
-        }
+        String countryDetected = countryAccessService.resolveViewerCountry(request);
 
         UserDTO createdUser = userService.registerClient(registerDTO, ip, acceptLanguage, countryDetected);
         return ResponseEntity.ok(createdUser);
     }
 
+
     @PostMapping("/register/model")
     public ResponseEntity<UserDTO> registerModel(@RequestBody @Valid UserModelRegisterDTO registerDTO,
                                                  HttpServletRequest request) {
+        countryAccessService.assertAllowed(request);
+
         String ip = IpConfig.getClientIp(request);
-
         String acceptLanguage = request.getHeader("Accept-Language");
-
-        // País detectado (industrial): primero por headers del edge (CloudFront/Cloudflare/etc),
-        // y si no existe, lo dejamos null (tu UserService ya lo soporta).
-        String countryDetected = request.getHeader("CloudFront-Viewer-Country");
-        if (countryDetected == null || countryDetected.isBlank()) {
-            countryDetected = request.getHeader("CF-IPCountry");
-        }
-        if (countryDetected == null || countryDetected.isBlank()) {
-            countryDetected = request.getHeader("X-AppEngine-Country");
-        }
-        if (countryDetected == null || countryDetected.isBlank()) {
-            countryDetected = request.getHeader("X-Country-Code");
-        }
-        if (countryDetected != null && !countryDetected.isBlank()) {
-            countryDetected = countryDetected.trim().toUpperCase(Locale.ROOT);
-            if (countryDetected.length() != 2) {
-                countryDetected = null;
-            }
-        } else {
-            countryDetected = null;
-        }
+        String countryDetected = countryAccessService.resolveViewerCountry(request);
 
         UserDTO createdUser = userService.registerModel(registerDTO, ip, acceptLanguage, countryDetected);
         return ResponseEntity.ok(createdUser);

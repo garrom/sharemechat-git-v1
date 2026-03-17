@@ -4,8 +4,10 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.UserLoginDTO;
 import com.sharemechat.entity.RefreshToken;
 import com.sharemechat.entity.User;
+import com.sharemechat.exception.CountryBlockedException;
 import com.sharemechat.repository.RefreshTokenRepository;
 import com.sharemechat.security.JwtUtil;
+import com.sharemechat.service.CountryAccessService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.config.IpConfig;
 import com.sharemechat.service.ApiRateLimitService;
@@ -29,6 +31,7 @@ public class AuthController {
     private final UserService userService;
     private final RefreshTokenRepository refreshRepo;
     private final ApiRateLimitService rateLimitService;
+    private final CountryAccessService countryAccessService;
 
 
     @Value("${auth.cookieDomain}")
@@ -41,12 +44,14 @@ public class AuthController {
             JwtUtil jwtUtil,
             UserService userService,
             RefreshTokenRepository refreshRepo,
-            ApiRateLimitService rateLimitService
+            ApiRateLimitService rateLimitService,
+            CountryAccessService countryAccessService
     ) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
         this.refreshRepo = refreshRepo;
         this.rateLimitService = rateLimitService;
+        this.countryAccessService = countryAccessService;
     }
 
     // =========================================================
@@ -61,6 +66,7 @@ public class AuthController {
     ) {
 
         rateLimitService.checkLoginEmail(dto.getEmail());
+        countryAccessService.assertAllowed(req);
 
         User u = userService.authenticateAndLoadUser(dto);
 
@@ -117,6 +123,15 @@ public class AuthController {
         }
 
         rateLimitService.checkRefreshUser(stored.getUserId());
+
+        try {
+            countryAccessService.assertAllowed(req);
+        } catch (CountryBlockedException ex) {
+            refreshRepo.deleteByUserId(stored.getUserId());
+            deleteCookie(res, "access_token");
+            deleteCookie(res, "refresh_token");
+            throw ex;
+        }
 
         User u = userService.findById(stored.getUserId());
 

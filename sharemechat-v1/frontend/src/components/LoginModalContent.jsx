@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useHistory } from 'react-router-dom';
 import i18n from '../i18n';
+import { apiFetch } from '../config/http';
 import RegisterClientModalContent from './RegisterClientModalContent';
 import RegisterModelModalContent from './RegisterModelModalContent';
 import { useSession } from '../components/SessionProvider';
@@ -36,17 +37,6 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
     }
   };
 
-  const readErrorMessage = async (res) => {
-    if (res.status === 401) return i18n.t('auth.login.errors.invalidCredentials');
-    if (res.status === 403) return i18n.t('auth.login.errors.accessDenied');
-    if (res.status === 404) return i18n.t('auth.login.errors.serviceUnavailable');
-    try {
-      const data = await res.json();
-      if (data?.message) return data.message;
-    } catch {}
-    return i18n.t('auth.login.errors.generic');
-  };
-
   const validate = () => {
     const fe = { email: '', password: '' };
     if (!email.trim()) fe.email = i18n.t('auth.login.validation.emailRequired');
@@ -65,17 +55,11 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/auth/login', {
+      await apiFetch('/auth/login', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       });
-
-      if (!response.ok) {
-        const msg = await readErrorMessage(response);
-        throw new Error(msg);
-      }
 
       setStatus(i18n.t('auth.login.status.successRedirecting'));
 
@@ -94,9 +78,23 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
       } else {
         safeNavigate('/');
       }
+
       if (onLoginSuccess) onLoginSuccess();
     } catch (err) {
-      setError(err.message || i18n.t('auth.login.errors.generic'));
+      const backendMessage = err?.data?.message;
+      const status = Number(err?.status);
+
+      if (backendMessage) {
+        setError(backendMessage);
+      } else if (status === 401) {
+        setError(i18n.t('auth.login.errors.invalidCredentials'));
+      } else if (status === 403) {
+        setError(i18n.t('auth.login.errors.accessDenied'));
+      } else if (status === 404) {
+        setError(i18n.t('auth.login.errors.serviceUnavailable'));
+      } else {
+        setError(err?.message || i18n.t('auth.login.errors.generic'));
+      }
     } finally {
       setLoading(false);
     }

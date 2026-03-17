@@ -100,6 +100,7 @@ public class StreamService {
     @Transactional
     public StreamRecord startSession(Long clientId, Long modelId, String streamType) {
         String normalizedStreamType = normalizeStreamType(streamType);
+        long traceTs = System.currentTimeMillis();
         // Si ya hay sesión activa para este par, reusar (idempotencia)
         Optional<StreamRecord> existing = streamRecordRepository
                 .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId);
@@ -111,6 +112,18 @@ public class StreamService {
                 sr = streamRecordRepository.save(sr);
             }
             log.info("startSession: ya existe sesión activa id={} para client={}, model={}", sr.getId(), clientId, modelId);
+            log.info(
+                    "[RANDOM_TRACE_SESSION] ts={} action=startSession clientId={} modelId={} streamType={} reuseExisting={} streamRecordId={} startTime={} confirmedAt={} willSetActiveSession={}",
+                    traceTs,
+                    clientId,
+                    modelId,
+                    normalizedStreamType,
+                    true,
+                    sr.getId(),
+                    sr.getStartTime(),
+                    sr.getConfirmedAt(),
+                    true
+            );
             statusService.setBusy(modelId);
             statusService.setActiveSession(clientId, modelId, sr.getId());
             return sr;
@@ -155,6 +168,18 @@ public class StreamService {
         StreamRecord saved = streamRecordRepository.save(sr);
         recordStreamEvent(saved.getId(), Constants.StreamEventTypes.CREATED, null, null);
         log.info("startSession: creada sesión id={} (client={}, model={}) confirmedAt=NULL", saved.getId(), clientId, modelId);
+        log.info(
+                "[RANDOM_TRACE_SESSION] ts={} action=startSession clientId={} modelId={} streamType={} reuseExisting={} streamRecordId={} startTime={} confirmedAt={} willSetActiveSession={}",
+                traceTs,
+                clientId,
+                modelId,
+                normalizedStreamType,
+                false,
+                saved.getId(),
+                saved.getStartTime(),
+                saved.getConfirmedAt(),
+                true
+        );
 
         // Estado y lookup rápido (Redis)
         statusService.setBusy(modelId);
@@ -169,17 +194,7 @@ public class StreamService {
      */
     @Transactional
     public void confirmActiveSession(Long clientId, Long modelId) {
-
-        // LOG: entrada + thread
-        log.debug(
-                "confirmActiveSession ENTER client={} model={} thread={}",
-                clientId,
-                modelId,
-                Thread.currentThread().getName()
-        );
-
-        // LOG: stacktrace (activar solo si lo necesitas)
-        // new Exception("confirmActiveSession trace").printStackTrace();
+        long traceTs = System.currentTimeMillis();
 
         Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
 
@@ -194,16 +209,56 @@ public class StreamService {
         }
 
         if (session == null) {
+            log.info(
+                    "[RANDOM_TRACE_CONFIRM] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} startTime={} confirmedAtPrev={} endTime={} updated={} result={}",
+                    traceTs,
+                    clientId,
+                    modelId,
+                    sessionIdHint,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    "no-session"
+            );
             log.warn("confirmActiveSession EXIT (no-session) client={} model={} hint={}", clientId, modelId, sessionIdHint);
             return;
         }
         if (session.getEndTime() != null) {
+            log.info(
+                    "[RANDOM_TRACE_CONFIRM] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} startTime={} confirmedAtPrev={} endTime={} updated={} result={}",
+                    traceTs,
+                    clientId,
+                    modelId,
+                    sessionIdHint,
+                    session.getId(),
+                    session.getStartTime(),
+                    session.getConfirmedAt(),
+                    session.getEndTime(),
+                    0,
+                    "already-ended"
+            );
             log.warn("confirmActiveSession EXIT (already-ended) sessionId={} client={} model={}", session.getId(), clientId, modelId);
             return;
         }
 
+        LocalDateTime confirmedAtPrev = session.getConfirmedAt();
         LocalDateTime now = LocalDateTime.now();
         int updated = streamRecordRepository.confirmIfNotConfirmed(session.getId(), now);
+        log.info(
+                "[RANDOM_TRACE_CONFIRM] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} startTime={} confirmedAtPrev={} endTime={} updated={} result={}",
+                traceTs,
+                clientId,
+                modelId,
+                sessionIdHint,
+                session.getId(),
+                session.getStartTime(),
+                confirmedAtPrev,
+                session.getEndTime(),
+                updated,
+                updated == 0 ? "already-confirmed" : "confirmed"
+        );
         if (updated == 0) {
             return;
         }
@@ -280,6 +335,7 @@ public class StreamService {
     public void endSession(Long clientId, Long modelId, String endReason) {
 
         final BigDecimal RATE_PER_MINUTE = billing.getRatePerMinute(); // p.ej. 1.00
+        long traceTs = System.currentTimeMillis();
 
         // 1) Buscar la sesión activa (pista en cache y fallback a DB)
         Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
@@ -295,6 +351,19 @@ public class StreamService {
         }
 
         if (session == null) {
+            log.info(
+                    "[RANDOM_TRACE_END] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} confirmedAt={} endTimePrev={} seconds={} noCharge={} endReason={}",
+                    traceTs,
+                    clientId,
+                    modelId,
+                    sessionIdHint,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    endReason
+            );
             log.info("endSession: no hay sesión activa para client={}, model={}", clientId, modelId);
             return; // idempotente
         }
@@ -308,6 +377,19 @@ public class StreamService {
 
         try {
             if (session.getEndTime() != null) {
+                log.info(
+                        "[RANDOM_TRACE_END] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} confirmedAt={} endTimePrev={} seconds={} noCharge={} endReason={}",
+                        traceTs,
+                        clientId,
+                        modelId,
+                        sessionIdHint,
+                        session.getId(),
+                        session.getConfirmedAt(),
+                        session.getEndTime(),
+                        null,
+                        null,
+                        endReason
+                );
                 log.info("endSession: sesión {} ya estaba cerrada", session.getId());
                 return; // idempotente
             }
@@ -336,6 +418,19 @@ public class StreamService {
                 streamRecordRepository.save(session);
                 recordEndEvents(session.getId(), endReason);
                 postEndStatusCleanup(clientId, modelId);
+                log.info(
+                        "[RANDOM_TRACE_END] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} confirmedAt={} endTimePrev={} seconds={} noCharge={} endReason={}",
+                        traceTs,
+                        clientId,
+                        modelId,
+                        sessionIdHint,
+                        session.getId(),
+                        session.getConfirmedAt(),
+                        null,
+                        secondsSoFar,
+                        true,
+                        endReason
+                );
                 log.info(
                         "endSession: sin cargos (stream no confirmado, duración={}s).",
                         secondsSoFar
@@ -398,6 +493,19 @@ public class StreamService {
                 streamRecordRepository.save(session);
                 recordEndEvents(session.getId(), endReason);
                 postEndStatusCleanup(clientId, modelId);
+                log.info(
+                        "[RANDOM_TRACE_END] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} confirmedAt={} endTimePrev={} seconds={} noCharge={} endReason={}",
+                        traceTs,
+                        clientId,
+                        modelId,
+                        sessionIdHint,
+                        session.getId(),
+                        session.getConfirmedAt(),
+                        null,
+                        seconds,
+                        true,
+                        endReason
+                );
                 log.info("endSession: sin cargos (0 s). Finalizado únicamente el registro de stream.");
                 return;
             }
@@ -540,6 +648,19 @@ public class StreamService {
             session.setEndTime(endTime);
             streamRecordRepository.save(session);
             recordEndEvents(session.getId(), endReason);
+            log.info(
+                    "[RANDOM_TRACE_END] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} confirmedAt={} endTimePrev={} seconds={} noCharge={} endReason={}",
+                    traceTs,
+                    clientId,
+                    modelId,
+                    sessionIdHint,
+                    session.getId(),
+                    session.getConfirmedAt(),
+                    null,
+                    seconds,
+                    false,
+                    endReason
+            );
             log.info("endSession: cerrada sesión id={} (client={}, model={})", session.getId(), clientId, modelId);
 
             // 12) Limpieza de estado
@@ -572,6 +693,7 @@ public class StreamService {
      */
     @Transactional(readOnly = true)
     public boolean endIfBelowThreshold(Long clientId, Long modelId) {
+        long traceTs = System.currentTimeMillis();
 
         // 1) localizar sesión activa
         Long sessionIdHint = statusService.getActiveSession(clientId, modelId).orElse(null);
@@ -585,12 +707,55 @@ public class StreamService {
                     .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId)
                     .orElse(null);
         }
-        if (session == null) return false;
-        if (session.getEndTime() != null) return false;
+        if (session == null) {
+            log.info(
+                    "[RANDOM_TRACE_THRESHOLD] ts={} clientId={} modelId={} sessionId={} confirmedAt={} seconds={} costSoFar={} ledgerSaldo={} remaining={} below={}",
+                    traceTs,
+                    clientId,
+                    modelId,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false
+            );
+            return false;
+        }
+        if (session.getEndTime() != null) {
+            log.info(
+                    "[RANDOM_TRACE_THRESHOLD] ts={} clientId={} modelId={} sessionId={} confirmedAt={} seconds={} costSoFar={} ledgerSaldo={} remaining={} below={}",
+                    traceTs,
+                    clientId,
+                    modelId,
+                    session.getId(),
+                    session.getConfirmedAt(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    false
+            );
+            return false;
+        }
 
         // ⚠️ CLAVE INDUSTRIAL:
         // Si no está confirmada, NO hay consumo real
         if (session.getConfirmedAt() == null) {
+            log.info(
+                    "[RANDOM_TRACE_THRESHOLD] ts={} clientId={} modelId={} sessionId={} confirmedAt={} seconds={} costSoFar={} ledgerSaldo={} remaining={} below={}",
+                    traceTs,
+                    clientId,
+                    modelId,
+                    session.getId(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false
+            );
             return false;
         }
 
@@ -624,6 +789,20 @@ public class StreamService {
                     billing.getCutoffThresholdEur()
             );
         }
+
+        log.info(
+                "[RANDOM_TRACE_THRESHOLD] ts={} clientId={} modelId={} sessionId={} confirmedAt={} seconds={} costSoFar={} ledgerSaldo={} remaining={} below={}",
+                traceTs,
+                clientId,
+                modelId,
+                session.getId(),
+                session.getConfirmedAt(),
+                seconds,
+                costSoFar,
+                ledgerSaldo,
+                remaining,
+                below
+        );
 
         return below;
     }

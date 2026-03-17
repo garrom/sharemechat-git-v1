@@ -365,8 +365,22 @@ export default function VideoChatRandomCliente(props) {
 
                       <video
                         ref={remoteVideoRef}
+                        onLoadedMetadata={(e) => {
+                          const el = e.currentTarget;
+                          console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                        }}
+                        onCanPlay={(e) => {
+                          const el = e.currentTarget;
+                          console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoCanPlay readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                        }}
                         onPlaying={() => {
+                          const el = remoteVideoRef?.current;
+                          console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
                           if (matchGraceRef) matchGraceRef.current = false;
+                        }}
+                        onError={(e) => {
+                          const el = e.currentTarget;
+                          console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
                         }}
                         style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
                         autoPlay
@@ -560,8 +574,22 @@ export default function VideoChatRandomCliente(props) {
 
                     <video
                       ref={remoteVideoRef}
+                      onLoadedMetadata={(e) => {
+                        const el = e.currentTarget;
+                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                      }}
+                      onCanPlay={(e) => {
+                        const el = e.currentTarget;
+                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoCanPlay readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                      }}
                       onPlaying={() => {
+                        const el = remoteVideoRef?.current;
+                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
                         if (matchGraceRef) matchGraceRef.current = false;
+                      }}
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
                       }}
                       style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
                       autoPlay

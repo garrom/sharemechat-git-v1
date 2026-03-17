@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import i18n from '../i18n';
+import { apiFetch } from '../config/http';
 import { getResolvedLocale } from '../i18n/localeUtils';
 import { Form as RegForm, Title, Input, Button, LinkButton, Error as ErrorText, Field, FieldError, CheckRow, CheckInput, CheckText } from '../styles/public-styles/RegisterClientModelStyles';
 import { useAppModals } from './useAppModals';
@@ -57,30 +58,22 @@ const RegisterClientModalContent = ({ onClose, onBack }) => {
 
     setLoading(true);
     try {
-      const response = await fetch('/api/users/register/client', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(registerData) });
-      if (!response.ok) {
-        let errorMessage = `Error en el registro: ${response.status} ${response.statusText}`;
-        try {
-          const responseText = await response.text();
-          try {
-            const err = JSON.parse(responseText);
-            errorMessage = err.message || err.error || responseText || errorMessage;
-          } catch {
-            errorMessage = responseText || errorMessage;
-          }
-        } catch {}
-        throw new Error(errorMessage);
-      }
+      await apiFetch('/users/register/client', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(registerData)
+      });
+
       await alert({
         title: i18n.t('auth.registerClient.success.title'),
         message: i18n.t('auth.registerClient.success.message'),
         variant: 'success',
         size: 'sm',
       });
-      if (onClose) onClose();
 
+      if (onClose) onClose();
     } catch (err) {
-      setError(err.message || i18n.t('common.networkError'));
+      setError(err?.data?.message || err?.message || i18n.t('common.networkError'));
     } finally {
       setLoading(false);
     }

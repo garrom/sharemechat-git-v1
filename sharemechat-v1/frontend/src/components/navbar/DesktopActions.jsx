@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt,faBan } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -76,7 +76,10 @@ const DesktopActions = ({
       </NavButton>
 
       {showAvatar ? (
-        <div style={{ position: 'relative', display: 'inline-block' }}>
+        <div
+          style={{ position: 'relative', display: 'inline-block' }}
+          className={!onAvatarClick ? 'disabled-avatar-wrap' : undefined}
+        >
           <StyledNavAvatar
             src={avatarUrl || avatarFallback}
             alt="avatar"
@@ -85,13 +88,13 @@ const DesktopActions = ({
             style={
               onAvatarClick
                 ? undefined
-                : { opacity: 0.45, cursor: 'not-allowed' }
+                : { opacity: 0.55, cursor: 'not-allowed' }
             }
           />
 
           {!onAvatarClick && (
-            <FontAwesomeIcon
-              icon={faBan}
+            <span
+              className="disabled-avatar-ban"
               style={{
                 position: 'absolute',
                 top: -4,
@@ -101,8 +104,22 @@ const DesktopActions = ({
                 background: '#020617',
                 borderRadius: '50%',
                 padding: '2px',
+                lineHeight: 1,
+                opacity: 0,
+                pointerEvents: 'none',
+                transition: 'opacity .15s ease',
               }}
-            />
+            >
+              <FontAwesomeIcon icon={faBan} />
+            </span>
+          )}
+
+          {!onAvatarClick && (
+            <style>{`
+              .disabled-avatar-wrap:hover .disabled-avatar-ban {
+                opacity: 1;
+              }
+            `}</style>
           )}
         </div>
       ) : null}

@@ -104,6 +104,8 @@ public class MatchingHandlerSupport {
         final String roleSnap = (sid != null) ? state.getRoles().get(sid) : null;
         final Long uidSnap = (sid != null) ? state.getSessionUserIds().get(sid) : null;
         final WebSocketSession peerSnap = (sid != null) ? state.getPairs().get(sid) : null;
+        final Long peerUidSnap = (peerSnap != null) ? state.getSessionUserIds().get(peerSnap.getId()) : null;
+        final boolean hadPair = peerSnap != null;
 
         log.debug(
                 "[WS][match][CLOSE] sid={} code={} reason='{}' open={} role={} uid={} peerSid={}",
@@ -114,6 +116,19 @@ public class MatchingHandlerSupport {
                 roleSnap,
                 uidSnap,
                 peerSnap != null ? peerSnap.getId() : null
+        );
+        log.warn(
+                "[RANDOM_TRACE_WS_CLOSE] ts={} sid={} uid={} role={} peerSid={} peerUid={} closeCode={} closeReason={} hadPair={} willCallEndStream={}",
+                System.currentTimeMillis(),
+                sid,
+                uidSnap,
+                roleSnap,
+                peerSnap != null ? peerSnap.getId() : null,
+                peerUidSnap,
+                status != null ? status.getCode() : null,
+                status != null ? status.getReason() : null,
+                hadPair,
+                hadPair
         );
 
         String role = state.getRoles().remove(sid);
@@ -172,12 +187,32 @@ public class MatchingHandlerSupport {
             String type = json.getString("type");
 
             if ("ping".equals(type)) {
+                Long me = state.getSessionUserIds().get(session.getId());
+                String role = state.getRoles().get(session.getId());
+                WebSocketSession peer = state.getPairs().get(session.getId());
+                Long peerUid = peer != null ? state.getSessionUserIds().get(peer.getId()) : null;
+                String peerRole = peer != null ? state.getRoles().get(peer.getId()) : null;
+                boolean resolvesBillablePair =
+                        ("client".equals(role) && "model".equals(peerRole))
+                                || ("model".equals(role) && "client".equals(peerRole));
+                log.warn(
+                        "[RANDOM_TRACE_WS_PING] ts={} sid={} uid={} role={} peerSid={} peerUid={} hasPair={} peerRole={} resolvesClientModel={} willConfirm={} willCheckCutoff={}",
+                        System.currentTimeMillis(),
+                        session.getId(),
+                        me,
+                        role,
+                        peer != null ? peer.getId() : null,
+                        peerUid,
+                        peer != null,
+                        peerRole,
+                        resolvesBillablePair,
+                        resolvesBillablePair,
+                        resolvesBillablePair
+                );
                 confirmIfBillablePair(session);
                 checkCutoffAndMaybeEnd(session);
                 handleTrialPingAndMaybeEnd(session);
 
-                Long me = state.getSessionUserIds().get(session.getId());
-                String role = state.getRoles().get(session.getId());
                 if (me != null && "model".equals(role)) {
                     try {
                         statusService.heartbeat(me);
@@ -319,6 +354,38 @@ public class MatchingHandlerSupport {
             if (state.getPairs().containsKey(session.getId())) {
                 WebSocketSession peer = state.getPairs().get(session.getId());
                 if (peer != null && peer.isOpen()) {
+                    if ("signal".equals(type)) {
+                        Long fromUid = state.getSessionUserIds().get(session.getId());
+                        Long toUid = state.getSessionUserIds().get(peer.getId());
+                        JSONObject signal = json.optJSONObject("signal");
+                        String signalType = "unknown";
+                        boolean candidateEmpty = false;
+                        if (signal != null) {
+                            if (signal.has("type")) {
+                                signalType = String.valueOf(signal.opt("type"));
+                            } else if (signal.has("candidate")) {
+                                signalType = "candidate";
+                                String candidateValue = null;
+                                Object candidateObj = signal.opt("candidate");
+                                if (candidateObj instanceof JSONObject candidateJson) {
+                                    candidateValue = candidateJson.optString("candidate", null);
+                                } else if (candidateObj != null) {
+                                    candidateValue = String.valueOf(candidateObj);
+                                }
+                                candidateEmpty = candidateValue == null || candidateValue.isBlank();
+                            }
+                        }
+                        log.warn(
+                                "[RANDOM_TRACE_SIGNAL] ts={} fromSid={} toSid={} fromUid={} toUid={} signalType={} candidateEmpty={}",
+                                System.currentTimeMillis(),
+                                session.getId(),
+                                peer.getId(),
+                                fromUid,
+                                toUid,
+                                signalType,
+                                candidateEmpty
+                        );
+                    }
                     try {
                         peer.sendMessage(message);
                     } catch (Exception ignore) {}
@@ -1079,6 +1146,17 @@ public class MatchingHandlerSupport {
                     streamRecordId != null ? streamRecordId.toString() : "null",
                     languageReasonCode
             );
+            log.warn(
+                    "[RANDOM_TRACE_MATCH] ts={} sid={} peerSid={} myUserId={} peerUserId={} peerRole={} streamRecordId={} reasonCode={}",
+                    System.currentTimeMillis(),
+                    session.getId(),
+                    peerSessionId,
+                    myUserId,
+                    peerUserId,
+                    peerRole,
+                    streamRecordId,
+                    languageReasonCode
+            );
 
             session.sendMessage(new TextMessage(msg));
 
@@ -1384,15 +1462,60 @@ public class MatchingHandlerSupport {
     private void confirmIfBillablePair(WebSocketSession session) {
         try {
             WebSocketSession peer = state.getPairs().get(session.getId());
-            if (peer == null) return;
+            if (peer == null) {
+                log.warn(
+                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
+                        System.currentTimeMillis(),
+                        session.getId(),
+                        state.getRoles().get(session.getId()),
+                        null,
+                        state.getSessionUserIds().get(session.getId()),
+                        null,
+                        null,
+                        null,
+                        null,
+                        false
+                );
+                return;
+            }
 
             String myRole = state.getRoles().get(session.getId());
             String peerRole = state.getRoles().get(peer.getId());
-            if (myRole == null || peerRole == null) return;
+            if (myRole == null || peerRole == null) {
+                log.warn(
+                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
+                        System.currentTimeMillis(),
+                        session.getId(),
+                        myRole,
+                        peerRole,
+                        state.getSessionUserIds().get(session.getId()),
+                        state.getSessionUserIds().get(peer.getId()),
+                        null,
+                        null,
+                        null,
+                        false
+                );
+                return;
+            }
 
             Long myUserId = state.getSessionUserIds().get(session.getId());
             Long peerUserId = state.getSessionUserIds().get(peer.getId());
-            if (myUserId == null || peerUserId == null) return;
+            if (myUserId == null || peerUserId == null) {
+                log.warn(
+                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
+                        System.currentTimeMillis(),
+                        session.getId(),
+                        myRole,
+                        peerRole,
+                        myUserId,
+                        peerUserId,
+                        null,
+                        null,
+                        null,
+                        false
+                );
+                return;
+            }
 
             Long clientId;
             Long modelId;
@@ -1404,14 +1527,53 @@ public class MatchingHandlerSupport {
                 clientId = peerUserId;
                 modelId = myUserId;
             } else {
+                log.warn(
+                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
+                        System.currentTimeMillis(),
+                        session.getId(),
+                        myRole,
+                        peerRole,
+                        myUserId,
+                        peerUserId,
+                        null,
+                        null,
+                        null,
+                        false
+                );
                 return;
             }
 
             User clientUser = userRepository.findById(clientId).orElse(null);
             if (clientUser == null || !Constants.Roles.CLIENT.equals(clientUser.getRole())) {
+                log.warn(
+                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
+                        System.currentTimeMillis(),
+                        session.getId(),
+                        myRole,
+                        peerRole,
+                        myUserId,
+                        peerUserId,
+                        clientId,
+                        modelId,
+                        clientUser != null ? clientUser.getRole() : null,
+                        false
+                );
                 return;
             }
 
+            log.warn(
+                    "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
+                    System.currentTimeMillis(),
+                    session.getId(),
+                    myRole,
+                    peerRole,
+                    myUserId,
+                    peerUserId,
+                    clientId,
+                    modelId,
+                    clientUser.getRole(),
+                    true
+            );
             streamService.confirmActiveSession(clientId, modelId);
 
         } catch (Exception ignore) {}

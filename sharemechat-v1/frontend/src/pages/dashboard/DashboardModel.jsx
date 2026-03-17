@@ -440,8 +440,16 @@ const DashboardModel = () => {
 
   useEffect(() => {
     if (remoteVideoRef.current && remoteStream) {
+      const tracks = remoteStream.getTracks ? remoteStream.getTracks() : [];
+      const trackSummary = tracks.map((t) => `${t.kind}:${t.id}`).join(',');
+      console.log(
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=bindRemoteVideo streamId=${remoteStream.id || 'null'} trackCount=${tracks.length} tracks=${trackSummary} assignSrcObject=true`
+      );
       remoteVideoRef.current.srcObject = remoteStream;
     } else if (remoteVideoRef.current) {
+      console.log(
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=bindRemoteVideo streamId=null trackCount=0 tracks= assignSrcObject=false clearSrcObject=true`
+      );
       remoteVideoRef.current.srcObject = null;
     }
   }, [remoteStream]);
@@ -1163,15 +1171,26 @@ const DashboardModel = () => {
 
 
   const handleActivateCamera = async () => {
+    console.log(
+      `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=activateCamera start=true`
+    );
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
         audio: true,
       });
+      const tracks = stream.getTracks ? stream.getTracks() : [];
+      const trackSummary = tracks.map((t) => `${t.kind}:${t.id}`).join(',');
+      console.log(
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=activateCamera success=true trackCount=${tracks.length} tracks=${trackSummary}`
+      );
       localStream.current = stream;
       setCameraActive(true);
       setError('');
     } catch (err) {
+      console.warn(
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=activateCamera success=false message=${err?.message || 'unknown'}`
+      );
       console.error('Error al acceder a la cámara:', err);
       setError('No se pudo acceder a la cámara.');
     }

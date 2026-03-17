@@ -75,6 +75,11 @@ export function createMatchSocketEngine(adapter) {
   }
 
   function cleanupPeerAndRemote() {
+    const rs = getRemoteStream?.();
+    const remoteTrackCount = rs ? rs.getTracks().length : 0;
+    console.log(
+      `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=cleanupPeerAndRemote hasPeer=${!!peerRef.current} willDestroyPeer=${!!peerRef.current} hasRemoteStream=${!!rs} remoteTrackCount=${remoteTrackCount}`
+    );
     try {
       if (peerRef.current) {
         peerRef.current.destroy();
@@ -83,7 +88,6 @@ export function createMatchSocketEngine(adapter) {
     } catch {}
 
     try {
-      const rs = getRemoteStream?.();
       if (rs) rs.getTracks().forEach((t) => t.stop());
     } catch {}
 
@@ -135,6 +139,11 @@ export function createMatchSocketEngine(adapter) {
   }
 
   function createPeerAndWire() {
+    const localTrackCount = localStreamRef.current?.getTracks?.().length || 0;
+    const iceServerCount = Array.isArray(adapter.peerConfig?.iceServers) ? adapter.peerConfig.iceServers.length : 0;
+    console.log(
+      `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=createPeer initiator=${!!initiator} hasLocalStream=${!!localStreamRef.current} localTrackCount=${localTrackCount} hasPeerConfig=${!!adapter.peerConfig} iceServerCount=${iceServerCount}`
+    );
     const p = new Peer({
       initiator: !!initiator,
       trickle: true,
@@ -145,11 +154,23 @@ export function createMatchSocketEngine(adapter) {
     });
 
     p.on('signal', (signal) => {
+      const signalType = signal?.type || (signal?.candidate ? 'candidate' : 'unknown');
+      const candidateEmpty = signalType === 'candidate'
+        ? (signal?.candidate?.candidate === '' || signal?.candidate === '')
+        : false;
+      console.log(
+        `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} signalType=${signalType} candidateEmpty=${candidateEmpty}`
+      );
       if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
       safeSend({ type: 'signal', signal });
     });
 
     p.on('stream', (stream) => {
+      const tracks = Array.isArray(stream?.getTracks?.()) ? stream.getTracks() : [];
+      const trackSummary = tracks.map((t) => `${t.kind}:${t.id}`).join(',');
+      console.log(
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerStream streamId=${stream?.id || 'null'} trackCount=${tracks.length} tracks=${trackSummary} willSetRemoteStream=true willSendPing=true`
+      );
       setRemoteStream(stream);
 
       // “ACK operativo” por media real: ping extra (tu model ya lo hace; en client no estorba)
@@ -157,15 +178,44 @@ export function createMatchSocketEngine(adapter) {
     });
 
     p.on('error', (err) => {
+      console.warn(
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerError message=${err?.message || 'unknown'}`
+      );
       setError('Error en la conexión WebRTC: ' + (err?.message || 'unknown'));
       setSearching(false);
     });
+
+    if (p?._pc && typeof p._pc.addEventListener === 'function') {
+      p._pc.addEventListener('iceconnectionstatechange', () => {
+        console.log(
+          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState iceConnectionState=${p._pc?.iceConnectionState || 'unknown'}`
+        );
+      });
+      p._pc.addEventListener('connectionstatechange', () => {
+        console.log(
+          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState connectionState=${p._pc?.connectionState || 'unknown'}`
+        );
+      });
+      p._pc.addEventListener('icegatheringstatechange', () => {
+        console.log(
+          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState iceGatheringState=${p._pc?.iceGatheringState || 'unknown'}`
+        );
+      });
+      p._pc.addEventListener('signalingstatechange', () => {
+        console.log(
+          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState signalingState=${p._pc?.signalingState || 'unknown'}`
+        );
+      });
+    }
 
     peerRef.current = p;
   }
 
   function onWsOpen() {
     clearPing();
+    console.log(
+      `[RANDOM_TRACE_WS] ts=${Date.now()} role=${role} action=wsOpen socketOpen=true willSendPing=true willSendSetRole=true willStartMatchOnOpen=${!!adapter.startMatchOnOpen}`
+    );
 
     // Ping inmediato para acelerar confirmación
     safeSend({ type: 'ping' });
@@ -202,6 +252,9 @@ export function createMatchSocketEngine(adapter) {
     if (handleNextControl(data)) return;
 
     if (data.type === 'match') {
+      console.log(
+        `[RANDOM_TRACE_WS] ts=${Date.now()} role=${role} action=match peerUserId=${data?.peerUserId ?? 'null'} peerRole=${data?.peerRole || 'null'} streamRecordId=${data?.streamRecordId ?? 'null'} willSendPing=true willCleanupPeer=true willCreatePeer=true`
+      );
       // Señal de “grace” solo en client (si aplica)
       if (role === 'client' && adapter.onMatchGrace) {
         adapter.onMatchGrace(getIsMobile?.());
@@ -227,6 +280,13 @@ export function createMatchSocketEngine(adapter) {
     }
 
     if (data.type === 'signal') {
+      const signalType = data?.signal?.type || (data?.signal?.candidate ? 'candidate' : 'unknown');
+      const candidateEmpty = signalType === 'candidate'
+        ? ((data?.signal?.candidate?.candidate || data?.signal?.candidate || '') === '')
+        : false;
+      console.log(
+        `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} action=signalReceived signalType=${signalType} candidateEmpty=${candidateEmpty} hasPeer=${!!peerRef.current}`
+      );
       if (peerRef.current) {
         try { peerRef.current.signal(data.signal); } catch {}
       }
