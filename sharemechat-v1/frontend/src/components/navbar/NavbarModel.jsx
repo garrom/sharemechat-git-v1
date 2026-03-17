@@ -3,7 +3,6 @@ import {
   faChartLine,
   faGem,
   faUser,
-  faSignOutAlt,
 } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import { SaldoText } from '../../styles/NavbarStyles';
@@ -16,10 +15,10 @@ import MobileBottomNav from './MobileBottomNav';
 const NavbarModel = ({
   activeTab,
   displayName,
-  queueText,
-  balanceTextDesktop,
-  balanceTextMobile,
-  avatarUrl,
+  queueText = null,
+  balanceTextDesktop = null,
+  balanceTextMobile = null,
+  avatarUrl = null,
   showBottomNav,
   onBrandClick,
   onGoVideochat,
@@ -29,6 +28,16 @@ const NavbarModel = ({
   onProfile,
   onWithdraw,
   onLogout,
+  showLocaleSwitcher = true,
+  showBalance = true,
+  showQueue = true,
+  showAvatar = true,
+  profileDisabled = false,
+  videochatDisabled = false,
+  favoritesDisabled = false,
+  blogDisabled = false,
+  statsDisabled = false,
+  withdrawDisabled = false,
 }) => {
   const videochatLabel = i18n.t('dashboardModel.nav.videochat');
   const favoritesLabel = i18n.t('dashboardModel.nav.favorites');
@@ -43,21 +52,25 @@ const NavbarModel = ({
       onGoVideochat={onGoVideochat}
       onGoFavorites={onGoFavorites}
       onGoBlog={onGoBlog}
+      videochatDisabled={videochatDisabled}
+      favoritesDisabled={favoritesDisabled}
+      blogDisabled={blogDisabled}
     />
   );
 
   const desktopRight = (
     <DesktopActions
       displayName={displayName}
-      queueText={queueText}
-      balanceText={balanceTextDesktop}
-      showLocaleSwitcher={true}
+      queueText={showQueue ? queueText : null}
+      balanceText={showBalance ? balanceTextDesktop : null}
+      showLocaleSwitcher={showLocaleSwitcher}
       primaryAction={{
         label: i18n.t('dashboardModel.actions.stats'),
         title: i18n.t('dashboardModel.actions.stats'),
         onClick: onGoStats,
         icon: faChartLine,
         iconStyle: { color: '#22c55e', fontSize: '1rem' },
+        disabled: statsDisabled,
       }}
       secondaryAction={{
         label: i18n.t('dashboardModel.actions.withdraw'),
@@ -65,6 +78,7 @@ const NavbarModel = ({
         onClick: onWithdraw,
         icon: faGem,
         iconStyle: { color: '#f97316', fontSize: '1rem' },
+        disabled: withdrawDisabled,
       }}
       logoutLabel={i18n.t('dashboardModel.actions.logout')}
       logoutTitle={i18n.t('dashboardModel.actions.logoutTitle')}
@@ -72,7 +86,8 @@ const NavbarModel = ({
       avatarUrl={avatarUrl}
       avatarFallback="/img/avatarChica.png"
       avatarTitle={i18n.t('dashboardModel.actions.viewProfile')}
-      onAvatarClick={onProfile}
+      onAvatarClick={profileDisabled ? undefined : onProfile}
+      showAvatar={showAvatar}
     />
   );
 
@@ -81,37 +96,18 @@ const NavbarModel = ({
       menuOpen={menuOpen}
       closeMenu={closeMenu}
       displayName={displayName}
-      queueText={queueText}
-      balanceText={balanceTextMobile}
-      topRightContent={<SaldoText>{balanceTextMobile}</SaldoText>}
-      showLocaleSwitcher={true}
-      tabs={[
-        {
-          key: 'videochat',
-          label: videochatLabel,
-          active: activeTab === 'videochat',
-          onClick: onGoVideochat,
-        },
-        {
-          key: 'favoritos',
-          label: favoritesLabel,
-          active: activeTab === 'favoritos',
-          onClick: onGoFavorites,
-        },
-        {
-          key: 'blog',
-          label: blogLabel,
-          active: activeTab === 'blog',
-          onClick: onGoBlog,
-        },
-      ]}
+      queueText={showQueue ? queueText : null}
+      balanceText={showBalance ? balanceTextMobile : null}
+      topRightContent={showBalance ? <SaldoText>{balanceTextMobile}</SaldoText> : null}
+      showLocaleSwitcher={showLocaleSwitcher}
       items={[
         {
           key: 'profile',
           icon: faUser,
           label: i18n.t('dashboardModel.actions.profile'),
-          onClick: onProfile,
+          onClick: onProfile || (() => {}),
           useIconWrapper: true,
+          disabled: profileDisabled,
         },
         {
           key: 'stats',
@@ -121,6 +117,7 @@ const NavbarModel = ({
           title: i18n.t('dashboardModel.actions.stats'),
           onClick: onGoStats,
           useIconWrapper: false,
+          disabled: statsDisabled,
         },
         {
           key: 'withdraw',
@@ -130,10 +127,10 @@ const NavbarModel = ({
           title: i18n.t('dashboardModel.actions.withdraw'),
           onClick: onWithdraw,
           useIconWrapper: false,
+          disabled: withdrawDisabled,
         },
         {
           key: 'logout',
-          icon: faSignOutAlt,
           label: i18n.t('dashboardModel.actions.logout'),
           title: i18n.t('dashboardModel.actions.logoutTitle'),
           onClick: onLogout,
@@ -152,6 +149,9 @@ const NavbarModel = ({
       onGoVideochat={onGoVideochat}
       onGoFavorites={onGoFavorites}
       onGoBlog={onGoBlog}
+      videochatDisabled={videochatDisabled}
+      favoritesDisabled={favoritesDisabled}
+      blogDisabled={blogDisabled}
       visible={showBottomNav}
     />
   );

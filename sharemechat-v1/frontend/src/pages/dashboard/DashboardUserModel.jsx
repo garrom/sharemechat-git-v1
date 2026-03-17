@@ -2,32 +2,19 @@
 import React, { useEffect, useState } from 'react';
 import i18n from '../../i18n';
 import { useHistory } from 'react-router-dom';
-
+import NavbarModel from '../../components/navbar/NavbarModel';
 // Layout base (mismo que DashboardUserClient)
 import {
   StyledContainer,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
-
-// Navbar unificada
-import {
-  StyledNavbar,
-  StyledBrand,
-  NavText,
-  HamburgerButton,
-  MobileMenu,
-} from '../../styles/NavbarStyles';
-
-import { ProfilePrimaryButton, NavButton } from '../../styles/ButtonStyles';
-
-// Estilos de tarjetas ya existentes (perfil) + nuevos
+import { ProfilePrimaryButton } from '../../styles/ButtonStyles';
 import {
   Hint,
   CenteredMain,
   OnboardingCard,
 } from '../../styles/subpages/PerfilClientModelStyle';
-
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
 
@@ -39,7 +26,6 @@ const DashboardUserModel = () => {
 
   const [userName, setUserName] = useState('');
   const [info, setInfo] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
 
   // ===== CONTRATO LEGAL (modelo) =====
   const [contractCurrent, setContractCurrent] = useState(null);
@@ -177,6 +163,11 @@ const DashboardUserModel = () => {
     }
   };
 
+  const handleProfile = () => {
+    history.push('/perfil-model');
+  };
+
+
   const handleLogout = async () => {
     try {
       await apiFetch('/auth/logout', { method: 'POST' });
@@ -222,6 +213,7 @@ const DashboardUserModel = () => {
   const displayName = userName || t('dashboardUserModel.user.defaultName');
   const mustAcceptContract = contractAccepted === false;
   const canAcceptContract = openedContract && confirmChecked && !accepting;
+  const disabledNoop = () => {};
 
   const mainButtonLabel =
     kycMode === 'VERIFF'
@@ -254,67 +246,35 @@ const DashboardUserModel = () => {
     <StyledContainer>
       <GlobalBlack />
 
-      {/* NAVBAR unificada */}
-      <StyledNavbar>
-        <StyledBrand
-          href="#"
-          aria-label="SharemeChat"
-          onClick={(e) => e.preventDefault()}
-        />
-
-        {/* Desktop */}
-        <div
-          className="desktop-only"
-          style={{ display: 'flex', gap: 12, alignItems: 'center', marginLeft: 'auto' }}
-        >
-          <NavText className="me-3">{displayName}</NavText>
-
-          <NavButton
-            type="button"
-            onClick={handleLogout}
-            title={t('dashboardUserModel.actions.logoutTitle')}
-          >
-            {t('dashboardUserModel.actions.logout')}
-          </NavButton>
-        </div>
-
-        {/* Móvil: hamburguesa */}
-        <HamburgerButton
-          onClick={() => setMenuOpen((open) => !open)}
-          aria-label={t('dashboardUserModel.nav.openMenu')}
-          title={t('dashboardUserModel.nav.menu')}
-        >
-          ☰
-        </HamburgerButton>
-
-        <MobileMenu className={!menuOpen && 'hidden'}>
-          <NavText style={{ marginBottom: 8 }}>
-            {t('dashboardUserModel.greeting.hello', { name: displayName })}
-          </NavText>
-
-          <NavButton
-            type="button"
-            onClick={async () => {
-              await handleUploadDocs();
-              setMenuOpen(false);
-            }}
-            disabled={mustAcceptContract || routingKyc}
-            title={mustAcceptContract ? t('dashboardUserModel.contract.mustAcceptFirst') : undefined}
-          >
-            {routingKyc ? t('dashboardUserModel.kyc.actions.openingShort') : mobileButtonLabel}
-          </NavButton>
-
-          <NavButton
-            type="button"
-            onClick={() => {
-              handleLogout();
-              setMenuOpen(false);
-            }}
-          >
-            {t('dashboardUserModel.actions.logout')}
-          </NavButton>
-        </MobileMenu>
-      </StyledNavbar>
+      {/* ========= INICIO NAVBAR  ======== */}
+      <NavbarModel
+        activeTab="videochat"
+        displayName={displayName}
+        queueText={null}
+        balanceTextDesktop={null}
+        balanceTextMobile={null}
+        avatarUrl={null}
+        showBottomNav={true}
+        onBrandClick={(e) => e.preventDefault()}
+        onGoVideochat={disabledNoop}
+        onGoFavorites={disabledNoop}
+        onGoBlog={disabledNoop}
+        onGoStats={disabledNoop}
+        onProfile={() => {}}
+        profileDisabled={true}
+        onWithdraw={disabledNoop}
+        onLogout={handleLogout}
+        showLocaleSwitcher={false}
+        showBalance={false}
+        showQueue={false}
+        showAvatar={true}
+        videochatDisabled={true}
+        favoritesDisabled={true}
+        blogDisabled={true}
+        statsDisabled={true}
+        withdrawDisabled={true}
+      />
+      {/* ========= FIN NAVBAR  ======== */}
 
       {/* MAIN: tarjeta centrada de verificación */}
       <StyledMainContent data-tab="onboarding">

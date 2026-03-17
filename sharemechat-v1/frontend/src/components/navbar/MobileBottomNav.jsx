@@ -12,21 +12,39 @@ const MobileBottomNav = ({
   onGoVideochat,
   onGoFavorites,
   onGoBlog,
+  videochatDisabled = false,
+  favoritesDisabled = false,
+  blogDisabled = false,
   visible = true,
 }) => {
   if (!visible) return null;
 
   return (
     <StyledMobileBottomNav>
-      <BottomNavButton active={activeTab === 'videochat'} onClick={onGoVideochat}>
+      <BottomNavButton
+        active={activeTab === 'videochat'}
+        onClick={onGoVideochat}
+        disabled={videochatDisabled}
+        style={videochatDisabled ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+      >
         <span>{videochatLabel}</span>
       </BottomNavButton>
 
-      <BottomNavButton active={activeTab === 'favoritos'} onClick={onGoFavorites}>
+      <BottomNavButton
+        active={activeTab === 'favoritos'}
+        onClick={onGoFavorites}
+        disabled={favoritesDisabled}
+        style={favoritesDisabled ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+      >
         <span>{favoritesLabel}</span>
       </BottomNavButton>
 
-      <BottomNavButton active={activeTab === 'blog'} onClick={onGoBlog}>
+      <BottomNavButton
+        active={activeTab === 'blog'}
+        onClick={onGoBlog}
+        disabled={blogDisabled}
+        style={blogDisabled ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
+      >
         <span>{blogLabel}</span>
       </BottomNavButton>
     </StyledMobileBottomNav>

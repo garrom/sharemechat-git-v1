@@ -9,6 +9,9 @@ const DesktopTabs = ({
   onGoVideochat,
   onGoFavorites,
   onGoBlog,
+  videochatDisabled = false,
+  favoritesDisabled = false,
+  blogDisabled = false,
 }) => {
   return (
     <div
@@ -21,6 +24,8 @@ const DesktopTabs = ({
         aria-pressed={activeTab === 'videochat'}
         onClick={onGoVideochat}
         title={videochatLabel}
+        disabled={videochatDisabled}
+        style={videochatDisabled ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
       >
         {videochatLabel}
       </StyledNavTab>
@@ -31,6 +36,8 @@ const DesktopTabs = ({
         aria-pressed={activeTab === 'favoritos'}
         onClick={onGoFavorites}
         title={favoritesLabel}
+        disabled={favoritesDisabled}
+        style={favoritesDisabled ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
       >
         {favoritesLabel}
       </StyledNavTab>
@@ -41,6 +48,8 @@ const DesktopTabs = ({
         aria-pressed={activeTab === 'blog'}
         onClick={onGoBlog}
         title={blogLabel}
+        disabled={blogDisabled}
+        style={blogDisabled ? { opacity: 0.45, cursor: 'not-allowed' } : undefined}
       >
         {blogLabel}
       </StyledNavTab>

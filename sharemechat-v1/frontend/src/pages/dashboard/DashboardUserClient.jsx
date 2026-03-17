@@ -1,6 +1,7 @@
 // src/pages/dashboard/DashboardUserClient.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import i18n from '../../i18n';
+import NavbarClient from '../../components/navbar/NavbarClient';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import { useAppModals } from '../../components/useAppModals';
@@ -12,17 +13,9 @@ import {
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
-import {
-  StyledNavbar,
-  StyledBrand,
-  NavText,
-  StyledNavTab,
-  HamburgerButton,
-  MobileMenu,
-} from '../../styles/NavbarStyles';
-import { NavButton } from '../../styles/ButtonStyles';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGem, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
+
+
+
 import BlogContent from '../blog/BlogContent';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
@@ -43,7 +36,6 @@ const DashboardUserClient = () => {
   const [remoteStream, setRemoteStream] = useState(null);
   const [error, setError] = useState('');
   const [statusText, setStatusText] = useState('');
-  const [menuOpen, setMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('videochat');
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [loadingFirstPayment, setLoadingFirstPayment] = useState(false);
@@ -249,6 +241,12 @@ const DashboardUserClient = () => {
     setCameraActive(false);
     setCurrentModelId(null);
   };
+
+
+  const handleProfile = () => {
+    history.push('/perfil-client');
+  };
+
 
   const handleLogout = async () => {
     stopAll();
@@ -599,89 +597,31 @@ const DashboardUserClient = () => {
     <StyledContainer>
       <GlobalBlack />
 
-      <StyledNavbar>
-        <div style={{display:'flex',alignItems:'center'}}>
-          <StyledBrand href="#" aria-label="SharemeChat" onClick={(e) => e.preventDefault()} />
-          <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-            <StyledNavTab
-              type="button"
-              data-active={activeTab === 'videochat'}
-              aria-pressed={activeTab === 'videochat'}
-              onClick={handleGoVideochat}
-              title={t('dashboardUserClient.nav.videochat')}
-            >
-              {t('dashboardUserClient.nav.videochat')}
-            </StyledNavTab>
-            <StyledNavTab
-              type="button"
-              data-active={activeTab === 'favoritos'}
-              aria-pressed={activeTab === 'favoritos'}
-              onClick={handleGoFavorites}
-              title={t('dashboardUserClient.nav.favorites')}
-            >
-              {t('dashboardUserClient.nav.favorites')}
-            </StyledNavTab>
-            <StyledNavTab
-              type="button"
-              data-active={activeTab === 'blog'}
-              aria-pressed={activeTab === 'blog'}
-              onClick={handleGoBlog}
-              title={t('dashboardUserClient.nav.blog')}
-            >
-              {t('dashboardUserClient.nav.blog')}
-            </StyledNavTab>
-          </div>
-        </div>
-
-        <div className="desktop-only" data-nav-group style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
-          <NavText className="me-3">{displayName}</NavText>
-
-          <NavButton type="button" onClick={handleFirstPayment} disabled={loadingFirstPayment}>
-            <FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}} />
-            <span>{loadingFirstPayment ? t('dashboardUserClient.actions.processing') : t('dashboardUserClient.actions.goPremium')}</span>
-          </NavButton>
-
-          <NavButton type="button" onClick={handleLogout} title={t('dashboardUserClient.actions.logoutTitle')}>
-            <FontAwesomeIcon icon={faSignOutAlt} />
-            <span>{t('dashboardUserClient.actions.logout')}</span>
-          </NavButton>
-        </div>
-
-        <HamburgerButton
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label={t('dashboardUserClient.nav.openMenu')}
-          title={t('dashboardUserClient.nav.menu')}
-        >
-          ☰
-        </HamburgerButton>
-
-        <MobileMenu className={!menuOpen && 'hidden'}>
-          <NavText style={{marginBottom:8}}>
-            {t('dashboardUserClient.greeting.hello', { name: displayName })}
-          </NavText>
-
-          <NavButton
-            type="button"
-            onClick={() => {
-              handleFirstPayment();
-              setMenuOpen(false);
-            }}
-            disabled={loadingFirstPayment}
-          >
-            {loadingFirstPayment ? t('dashboardUserClient.actions.processing') : t('dashboardUserClient.actions.goPremium')}
-          </NavButton>
-
-          <NavButton
-            type="button"
-            onClick={() => {
-              handleLogout();
-              setMenuOpen(false);
-            }}
-          >
-            {t('dashboardUserClient.actions.logout')}
-          </NavButton>
-        </MobileMenu>
-      </StyledNavbar>
+      {/* ========= INICIO NAVBAR  ======== */}
+      <NavbarClient
+        activeTab={activeTab}
+        displayName={displayName}
+        balanceTextDesktop={null}
+        balanceTextMobile={null}
+        avatarUrl={null}
+        showBottomNav={true}
+        onBrandClick={(e) => e.preventDefault()}
+        onGoVideochat={handleGoVideochat}
+        onGoFavorites={handleGoFavorites}
+        onGoBlog={handleGoBlog}
+        profileDisabled={true}
+        onBuy={handleFirstPayment}
+        onLogout={handleLogout}
+        buyLabel={t('dashboardUserClient.actions.goPremium')}
+        showLocaleSwitcher={false}
+        showBalance={false}
+        showAvatar={true}
+        videochatDisabled={false}
+        favoritesDisabled={true}
+        blogDisabled={true}
+        buyDisabled={loadingFirstPayment}
+      />
+      {/* ========= FIN NAVBAR  ======== */}
 
       <StyledMainContent data-tab={activeTab}>
         {activeTab === 'videochat' && (

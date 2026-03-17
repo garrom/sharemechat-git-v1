@@ -1,6 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
+import { faSignOutAlt,faBan } from '@fortawesome/free-solid-svg-icons';
 import {
   NavText,
   SaldoText,
@@ -13,17 +13,18 @@ import LocaleSwitcher from '../LocaleSwitcher';
 const DesktopActions = ({
   displayName,
   queueText = null,
-  balanceText,
+  balanceText = null,
   showLocaleSwitcher = true,
   primaryAction = null,
   secondaryAction = null,
   logoutLabel,
   logoutTitle,
   onLogout,
-  avatarUrl,
-  avatarFallback,
+  avatarUrl = null,
+  avatarFallback = null,
   avatarTitle,
   onAvatarClick,
+  showAvatar = true,
   wrapperClassName = 'desktop-only',
   useNavGroupAttr = true,
 }) => {
@@ -37,7 +38,7 @@ const DesktopActions = ({
 
       <NavText className="me-3">{displayName}</NavText>
 
-      <SaldoText className="me-3">{balanceText}</SaldoText>
+      {balanceText ? <SaldoText className="me-3">{balanceText}</SaldoText> : null}
 
       {showLocaleSwitcher ? <LocaleSwitcher /> : null}
 
@@ -46,8 +47,11 @@ const DesktopActions = ({
           type="button"
           onClick={primaryAction.onClick}
           title={primaryAction.title}
+          disabled={primaryAction.disabled}
         >
-          {primaryAction.icon ? <FontAwesomeIcon icon={primaryAction.icon} style={primaryAction.iconStyle} /> : null}
+          {primaryAction.icon ? (
+            <FontAwesomeIcon icon={primaryAction.icon} style={primaryAction.iconStyle} />
+          ) : null}
           <span>{primaryAction.label}</span>
         </NavButton>
       ) : null}
@@ -57,8 +61,11 @@ const DesktopActions = ({
           type="button"
           onClick={secondaryAction.onClick}
           title={secondaryAction.title}
+          disabled={secondaryAction.disabled}
         >
-          {secondaryAction.icon ? <FontAwesomeIcon icon={secondaryAction.icon} style={secondaryAction.iconStyle} /> : null}
+          {secondaryAction.icon ? (
+            <FontAwesomeIcon icon={secondaryAction.icon} style={secondaryAction.iconStyle} />
+          ) : null}
           <span>{secondaryAction.label}</span>
         </NavButton>
       ) : null}
@@ -68,12 +75,37 @@ const DesktopActions = ({
         <span>{logoutLabel}</span>
       </NavButton>
 
-      <StyledNavAvatar
-        src={avatarUrl || avatarFallback}
-        alt="avatar"
-        title={avatarTitle}
-        onClick={onAvatarClick}
-      />
+      {showAvatar ? (
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          <StyledNavAvatar
+            src={avatarUrl || avatarFallback}
+            alt="avatar"
+            title={avatarTitle}
+            onClick={onAvatarClick}
+            style={
+              onAvatarClick
+                ? undefined
+                : { opacity: 0.45, cursor: 'not-allowed' }
+            }
+          />
+
+          {!onAvatarClick && (
+            <FontAwesomeIcon
+              icon={faBan}
+              style={{
+                position: 'absolute',
+                top: -4,
+                right: -4,
+                fontSize: '0.75rem',
+                color: '#ef4444',
+                background: '#020617',
+                borderRadius: '50%',
+                padding: '2px',
+              }}
+            />
+          )}
+        </div>
+      ) : null}
     </div>
   );
 };

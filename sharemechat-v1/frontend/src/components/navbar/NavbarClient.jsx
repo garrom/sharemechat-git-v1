@@ -1,5 +1,5 @@
 import React from 'react';
-import { faGem, faUser, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
+import { faGem, faUser } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import NavbarBase from './NavbarBase';
 import DesktopTabs from './DesktopTabs';
@@ -10,9 +10,9 @@ import MobileBottomNav from './MobileBottomNav';
 const NavbarClient = ({
   activeTab,
   displayName,
-  balanceTextDesktop,
-  balanceTextMobile,
-  avatarUrl,
+  balanceTextDesktop = null,
+  balanceTextMobile = null,
+  avatarUrl = null,
   showBottomNav,
   onBrandClick,
   onGoVideochat,
@@ -21,10 +21,21 @@ const NavbarClient = ({
   onProfile,
   onBuy,
   onLogout,
+  buyLabel = null,
+  showLocaleSwitcher = true,
+  showBalance = true,
+  showAvatar = true,
+  profileDisabled = false,
+  videochatDisabled = false,
+  favoritesDisabled = false,
+  blogDisabled = false,
+  buyDisabled = false,
 }) => {
   const videochatLabel = i18n.t('dashboardClient.nav.videochat');
   const favoritesLabel = i18n.t('dashboardClient.nav.favorites');
   const blogLabel = i18n.t('dashboardClient.nav.blog');
+
+  const effectiveBuyLabel = buyLabel || i18n.t('dashboardClient.actions.buy');
 
   const desktopLeft = (
     <DesktopTabs
@@ -35,19 +46,23 @@ const NavbarClient = ({
       onGoVideochat={onGoVideochat}
       onGoFavorites={onGoFavorites}
       onGoBlog={onGoBlog}
+      videochatDisabled={videochatDisabled}
+      favoritesDisabled={favoritesDisabled}
+      blogDisabled={blogDisabled}
     />
   );
 
   const desktopRight = (
     <DesktopActions
       displayName={displayName}
-      balanceText={balanceTextDesktop}
-      showLocaleSwitcher={true}
+      balanceText={showBalance ? balanceTextDesktop : null}
+      showLocaleSwitcher={showLocaleSwitcher}
       primaryAction={{
-        label: i18n.t('dashboardClient.actions.buy'),
+        label: effectiveBuyLabel,
         onClick: onBuy,
         icon: faGem,
         iconStyle: { color: '#22c55e', fontSize: '1rem' },
+        disabled: buyDisabled,
       }}
       logoutLabel={i18n.t('dashboardClient.actions.logout')}
       logoutTitle={i18n.t('dashboardClient.actions.logoutTitle')}
@@ -55,7 +70,8 @@ const NavbarClient = ({
       avatarUrl={avatarUrl}
       avatarFallback="/img/avatarChico.png"
       avatarTitle={i18n.t('dashboardClient.actions.viewProfile')}
-      onAvatarClick={onProfile}
+      onAvatarClick={profileDisabled ? undefined : onProfile}
+      showAvatar={showAvatar}
     />
   );
 
@@ -64,49 +80,29 @@ const NavbarClient = ({
       menuOpen={menuOpen}
       closeMenu={closeMenu}
       displayName={displayName}
-      balanceText={balanceTextMobile}
-      showLocaleSwitcher={true}
-      tabs={[
-        {
-          key: 'videochat',
-          label: videochatLabel,
-          active: activeTab === 'videochat',
-          onClick: onGoVideochat,
-        },
-        {
-          key: 'favoritos',
-          label: favoritesLabel,
-          active: activeTab === 'favoritos',
-          onClick: onGoFavorites,
-        },
-        {
-          key: 'blog',
-          label: blogLabel,
-          active: activeTab === 'blog',
-          onClick: onGoBlog,
-        },
-      ]}
+      balanceText={showBalance ? balanceTextMobile : null}
+      showLocaleSwitcher={showLocaleSwitcher}
       items={[
         {
           key: 'profile',
           icon: faUser,
           label: i18n.t('dashboardClient.actions.profile'),
-          onClick: onProfile,
+          onClick: onProfile || (() => {}),
           useIconWrapper: true,
+          disabled: profileDisabled,
         },
         {
           key: 'buy',
           icon: faGem,
           iconStyle: { color: '#22c55e', fontSize: '1rem' },
-          label: i18n.t('dashboardClient.actions.buy'),
+          label: effectiveBuyLabel,
           onClick: onBuy,
           useIconWrapper: false,
+          disabled: buyDisabled,
         },
         {
           key: 'logout',
-          icon: faSignOutAlt,
           label: i18n.t('dashboardClient.actions.logout'),
-          title: i18n.t('dashboardClient.actions.logoutTitle'),
           onClick: onLogout,
           useIconWrapper: true,
         },
@@ -123,6 +119,9 @@ const NavbarClient = ({
       onGoVideochat={onGoVideochat}
       onGoFavorites={onGoFavorites}
       onGoBlog={onGoBlog}
+      videochatDisabled={videochatDisabled}
+      favoritesDisabled={favoritesDisabled}
+      blogDisabled={blogDisabled}
       visible={showBottomNav}
     />
   );
