@@ -134,6 +134,7 @@ const DashboardClient = () => {
   const peerIdRef = useRef(null);
   const lastSentRef = useRef({ text: null, at: 0 });
   const matchGraceRef = useRef(false);
+  const mediaReadySentRef = useRef(false);
   const activePeerRef = useRef({ id: null, name: '' });
   const matchEngineRef = useRef(null);
   const msgEngineRef = useRef(null);
@@ -228,6 +229,7 @@ const DashboardClient = () => {
 
       // Meta por rol: currentModelId
       onMatchMeta: (data) => {
+        mediaReadySentRef.current = false;
         try {
           if (data.peerRole === 'model' && Number.isFinite(Number(data.peerUserId))) {
             setCurrentModelId(Number(data.peerUserId));
@@ -1142,6 +1144,14 @@ const DashboardClient = () => {
       socketRef.current.send(JSON.stringify(message));
       setMessages(prev => [...prev, { from: 'me', text: message.message }]);
       setChatInput('');
+    }
+  };
+
+  const sendRandomMediaReady = () => {
+    if (mediaReadySentRef.current) return;
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'media-ready' }));
+      mediaReadySentRef.current = true;
     }
   };
 
@@ -2243,6 +2253,7 @@ const DashboardClient = () => {
             remoteStream={remoteStream}
             localVideoRef={localVideoRef}
             remoteVideoRef={remoteVideoRef}
+            sendRandomMediaReady={sendRandomMediaReady}
             vcListRef={vcListRef}
             messages={messages}
             modelNickname={modelNickname}

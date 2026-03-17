@@ -75,6 +75,7 @@ export default function VideoChatRandomModelo(props) {
     clientAvatar,
     clientNickname,
     remoteVideoRef,
+    sendRandomMediaReady,
     toggleFullscreen,
     handleStartMatch,
     chatInput,
@@ -313,6 +314,7 @@ export default function VideoChatRandomModelo(props) {
                         onPlaying={(e) => {
                           const el = e.currentTarget;
                           console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                          sendRandomMediaReady?.();
                         }}
                         onError={(e) => {
                           const el = e.currentTarget;
@@ -476,6 +478,7 @@ export default function VideoChatRandomModelo(props) {
                       onPlaying={(e) => {
                         const el = e.currentTarget;
                         console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                        sendRandomMediaReady?.();
                       }}
                       onError={(e) => {
                         const el = e.currentTarget;

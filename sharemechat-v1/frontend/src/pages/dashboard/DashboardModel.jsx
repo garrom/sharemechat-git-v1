@@ -161,6 +161,7 @@ const DashboardModel = () => {
   const msgEngineRef = useRef(null);
   const lastSentRef = useRef({ text: null, at: 0 });
   const cameraActiveRef = useRef(false);
+  const mediaReadySentRef = useRef(false);
 
 
   const isEcho = (incoming) => {
@@ -231,6 +232,7 @@ const DashboardModel = () => {
 
       // Model: meta por rol (streamRecordId, currentClientId, clientBalance)
       onMatchMeta: (data) => {
+        mediaReadySentRef.current = false;
         // streamRecordId
         try {
           const sid = data?.streamRecordId;
@@ -1265,6 +1267,14 @@ const DashboardModel = () => {
       socketRef.current.send(JSON.stringify(message));
       setMessages((prev) => [...prev, { from: 'me', text: message.message }]);
       setChatInput('');
+    }
+  };
+
+  const sendRandomMediaReady = () => {
+    if (mediaReadySentRef.current) return;
+    if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+      socketRef.current.send(JSON.stringify({ type: 'media-ready' }));
+      mediaReadySentRef.current = true;
     }
   };
 
@@ -2409,6 +2419,7 @@ const DashboardModel = () => {
             clientAvatar={clientAvatar}
             clientNickname={clientNickname}
             remoteVideoRef={remoteVideoRef}
+            sendRandomMediaReady={sendRandomMediaReady}
             toggleFullscreen={toggleFullscreen}
             handleStartMatch={handleStartMatch}
             chatInput={chatInput}

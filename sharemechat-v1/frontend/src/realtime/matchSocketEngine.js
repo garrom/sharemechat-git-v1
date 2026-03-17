@@ -139,6 +139,8 @@ export function createMatchSocketEngine(adapter) {
   }
 
   function createPeerAndWire() {
+    let peerConnected = false;
+    let streamReceived = false;
     const localTrackCount = localStreamRef.current?.getTracks?.().length || 0;
     const iceServerCount = Array.isArray(adapter.peerConfig?.iceServers) ? adapter.peerConfig.iceServers.length : 0;
     console.log(
@@ -166,15 +168,23 @@ export function createMatchSocketEngine(adapter) {
     });
 
     p.on('stream', (stream) => {
+      streamReceived = true;
       const tracks = Array.isArray(stream?.getTracks?.()) ? stream.getTracks() : [];
       const trackSummary = tracks.map((t) => `${t.kind}:${t.id}`).join(',');
       console.log(
-        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerStream streamId=${stream?.id || 'null'} trackCount=${tracks.length} tracks=${trackSummary} willSetRemoteStream=true willSendPing=true`
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerStream streamId=${stream?.id || 'null'} trackCount=${tracks.length} tracks=${trackSummary} peerConnected=${peerConnected} streamReceived=${streamReceived} willSetRemoteStream=true willSendPing=true`
       );
       setRemoteStream(stream);
 
       // “ACK operativo” por media real: ping extra (tu model ya lo hace; en client no estorba)
       try { safeSend({ type: 'ping' }); } catch {}
+    });
+
+    p.on('connect', () => {
+      peerConnected = true;
+      console.log(
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerConnect peerConnected=${peerConnected} streamReceived=${streamReceived}`
+      );
     });
 
     p.on('error', (err) => {

@@ -138,6 +138,9 @@ public class MatchingHandlerSupport {
         state.getSessionLang().remove(sid);
         state.getSessionCountry().remove(sid);
         state.getSessionBucketKey().remove(sid);
+        state.getClientMediaReadyBySid().remove(sid);
+        state.getModelMediaReadyBySid().remove(sid);
+        state.getConfirmedPairs().remove(sid);
 
         if ("model".equals(role)) {
             removeFromAllBuckets(session, "model");
@@ -209,7 +212,7 @@ public class MatchingHandlerSupport {
                         resolvesBillablePair,
                         resolvesBillablePair
                 );
-                confirmIfBillablePair(session);
+
                 checkCutoffAndMaybeEnd(session);
                 handleTrialPingAndMaybeEnd(session);
 
@@ -291,6 +294,11 @@ public class MatchingHandlerSupport {
 
             if ("next".equals(type)) {
                 handleNext(session);
+                return;
+            }
+
+            if ("media-ready".equals(type)) {
+                handleMediaReady(session, state);
                 return;
             }
 
@@ -738,6 +746,12 @@ public class MatchingHandlerSupport {
 
             state.getPairs().put(client.getId(), best);
             state.getPairs().put(best.getId(), client);
+            state.getClientMediaReadyBySid().remove(client.getId());
+            state.getClientMediaReadyBySid().remove(best.getId());
+            state.getModelMediaReadyBySid().remove(client.getId());
+            state.getModelMediaReadyBySid().remove(best.getId());
+            state.getConfirmedPairs().remove(client.getId());
+            state.getConfirmedPairs().remove(best.getId());
 
             long now = System.currentTimeMillis();
             state.getLastMatchAt().put(client.getId(), now);
@@ -827,6 +841,12 @@ public class MatchingHandlerSupport {
 
                 state.getPairs().put(model.getId(), client);
                 state.getPairs().put(client.getId(), model);
+                state.getClientMediaReadyBySid().remove(model.getId());
+                state.getClientMediaReadyBySid().remove(client.getId());
+                state.getModelMediaReadyBySid().remove(model.getId());
+                state.getModelMediaReadyBySid().remove(client.getId());
+                state.getConfirmedPairs().remove(model.getId());
+                state.getConfirmedPairs().remove(client.getId());
 
                 long now = System.currentTimeMillis();
                 state.getLastMatchAt().put(model.getId(), now);
@@ -900,6 +920,12 @@ public class MatchingHandlerSupport {
             WebSocketSession peer = state.getPairs().remove(session.getId());
             if (peer != null) {
                 state.getPairs().remove(peer.getId());
+                state.getClientMediaReadyBySid().remove(session.getId());
+                state.getClientMediaReadyBySid().remove(peer.getId());
+                state.getModelMediaReadyBySid().remove(session.getId());
+                state.getModelMediaReadyBySid().remove(peer.getId());
+                state.getConfirmedPairs().remove(session.getId());
+                state.getConfirmedPairs().remove(peer.getId());
 
                 Long myId = state.getSessionUserIds().get(session.getId());
                 Long peerId = state.getSessionUserIds().get(peer.getId());
@@ -1459,123 +1485,55 @@ public class MatchingHandlerSupport {
         return count;
     }
 
-    private void confirmIfBillablePair(WebSocketSession session) {
+
+    private void handleMediaReady(WebSocketSession session, MatchingRuntimeState state) {
         try {
-            WebSocketSession peer = state.getPairs().get(session.getId());
-            if (peer == null) {
-                log.warn(
-                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
-                        System.currentTimeMillis(),
-                        session.getId(),
-                        state.getRoles().get(session.getId()),
-                        null,
-                        state.getSessionUserIds().get(session.getId()),
-                        null,
-                        null,
-                        null,
-                        null,
-                        false
-                );
+            String sid = session.getId();
+            String role = state.getRoles().get(sid);
+            WebSocketSession peer = state.getPairs().get(sid);
+            Long userId = state.getSessionUserIds().get(sid);
+            if (role == null || peer == null || userId == null) return;
+
+            String peerSid = peer.getId();
+            Long peerUserId = state.getSessionUserIds().get(peerSid);
+            if (peerUserId == null) return;
+
+            if ("client".equals(role)) {
+                state.getClientMediaReadyBySid().put(sid, true);
+            } else if ("model".equals(role)) {
+                state.getModelMediaReadyBySid().put(sid, true);
+            } else {
                 return;
             }
 
-            String myRole = state.getRoles().get(session.getId());
-            String peerRole = state.getRoles().get(peer.getId());
-            if (myRole == null || peerRole == null) {
-                log.warn(
-                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
-                        System.currentTimeMillis(),
-                        session.getId(),
-                        myRole,
-                        peerRole,
-                        state.getSessionUserIds().get(session.getId()),
-                        state.getSessionUserIds().get(peer.getId()),
-                        null,
-                        null,
-                        null,
-                        false
-                );
-                return;
-            }
+            boolean clientReady =
+                    "client".equals(role)
+                            ? Boolean.TRUE.equals(state.getClientMediaReadyBySid().get(sid))
+                            : Boolean.TRUE.equals(state.getClientMediaReadyBySid().get(peerSid));
 
-            Long myUserId = state.getSessionUserIds().get(session.getId());
-            Long peerUserId = state.getSessionUserIds().get(peer.getId());
-            if (myUserId == null || peerUserId == null) {
-                log.warn(
-                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
-                        System.currentTimeMillis(),
-                        session.getId(),
-                        myRole,
-                        peerRole,
-                        myUserId,
-                        peerUserId,
-                        null,
-                        null,
-                        null,
-                        false
-                );
-                return;
-            }
+            boolean modelReady =
+                    "model".equals(role)
+                            ? Boolean.TRUE.equals(state.getModelMediaReadyBySid().get(sid))
+                            : Boolean.TRUE.equals(state.getModelMediaReadyBySid().get(peerSid));
+
+            if (!clientReady || !modelReady) return;
+            if (state.getConfirmedPairs().contains(sid) || state.getConfirmedPairs().contains(peerSid)) return;
+
+            state.getConfirmedPairs().add(sid);
+            state.getConfirmedPairs().add(peerSid);
 
             Long clientId;
             Long modelId;
 
-            if ("client".equals(myRole) && "model".equals(peerRole)) {
-                clientId = myUserId;
+            if ("client".equals(role)) {
+                clientId = userId;
                 modelId = peerUserId;
-            } else if ("model".equals(myRole) && "client".equals(peerRole)) {
-                clientId = peerUserId;
-                modelId = myUserId;
             } else {
-                log.warn(
-                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
-                        System.currentTimeMillis(),
-                        session.getId(),
-                        myRole,
-                        peerRole,
-                        myUserId,
-                        peerUserId,
-                        null,
-                        null,
-                        null,
-                        false
-                );
-                return;
+                clientId = peerUserId;
+                modelId = userId;
             }
 
-            User clientUser = userRepository.findById(clientId).orElse(null);
-            if (clientUser == null || !Constants.Roles.CLIENT.equals(clientUser.getRole())) {
-                log.warn(
-                        "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
-                        System.currentTimeMillis(),
-                        session.getId(),
-                        myRole,
-                        peerRole,
-                        myUserId,
-                        peerUserId,
-                        clientId,
-                        modelId,
-                        clientUser != null ? clientUser.getRole() : null,
-                        false
-                );
-                return;
-            }
-
-            log.warn(
-                    "[RANDOM_TRACE_CONFIRM] ts={} sid={} myRole={} peerRole={} myUserId={} peerUserId={} clientId={} modelId={} realClientRole={} willConfirm={}",
-                    System.currentTimeMillis(),
-                    session.getId(),
-                    myRole,
-                    peerRole,
-                    myUserId,
-                    peerUserId,
-                    clientId,
-                    modelId,
-                    clientUser.getRole(),
-                    true
-            );
             streamService.confirmActiveSession(clientId, modelId);
-
         } catch (Exception ignore) {}
     }
 

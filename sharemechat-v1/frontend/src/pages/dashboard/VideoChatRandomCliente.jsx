@@ -94,6 +94,7 @@ export default function VideoChatRandomCliente(props) {
     handleActivateCamera,
     handleBlockPeer,
     matchGraceRef,
+    sendRandomMediaReady,
     nextDisabled,
     handleReportPeer
   } = props;
@@ -376,6 +377,7 @@ export default function VideoChatRandomCliente(props) {
                         onPlaying={() => {
                           const el = remoteVideoRef?.current;
                           console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                          sendRandomMediaReady?.();
                           if (matchGraceRef) matchGraceRef.current = false;
                         }}
                         onError={(e) => {
@@ -585,6 +587,7 @@ export default function VideoChatRandomCliente(props) {
                       onPlaying={() => {
                         const el = remoteVideoRef?.current;
                         console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                        sendRandomMediaReady?.();
                         if (matchGraceRef) matchGraceRef.current = false;
                       }}
                       onError={(e) => {
