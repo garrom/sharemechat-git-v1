@@ -5,6 +5,8 @@ import {
   SaldoText,
   QueueText,
   MobileMenu as StyledMobileMenu,
+  MobileMenuTabs,
+  MobileMenuTabButton,
 } from '../../styles/NavbarStyles';
 import { StyledIconWrapper } from '../../styles/pages-styles/VideochatStyles';
 import { NavButton } from '../../styles/ButtonStyles';
@@ -18,10 +20,30 @@ const MobileMenu = ({
   balanceText,
   showLocaleSwitcher = true,
   topRightContent = null,
+  tabs = [],
   items = [],
 }) => {
   return (
     <StyledMobileMenu className={!menuOpen ? 'hidden' : ''}>
+      {tabs.length > 0 ? (
+        <MobileMenuTabs>
+          {tabs.map((tab) => (
+            <MobileMenuTabButton
+              key={tab.key}
+              type="button"
+              $active={tab.active}
+              onClick={() => {
+                tab.onClick();
+                closeMenu();
+              }}
+              title={tab.label}
+            >
+              {tab.label}
+            </MobileMenuTabButton>
+          ))}
+        </MobileMenuTabs>
+      ) : null}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         {queueText ? <QueueText className="me-3">{queueText}</QueueText> : null}
         <NavText>{displayName}</NavText>

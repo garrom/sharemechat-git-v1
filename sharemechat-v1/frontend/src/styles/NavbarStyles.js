@@ -1,35 +1,32 @@
 import styled from 'styled-components';
 import { colors, radius, space, shadow } from './core/tokens';
 
+const NAV_COLLAPSE_BP = '1360px';
+
 // === NAVBAR PRINCIPAL ===
 export const StyledNavbar = styled.nav`
   display: flex;
   justify-content: space-between;
   align-items: center;
-
-  /* Desktop: navbar más alto */
   height: var(--navbar-height-desktop);
-
   padding: 0 ${space.lg};
-  background:${colors.blacksolid};
+  background: ${colors.blacksolid};
   backdrop-filter: blur(8px);
   box-shadow: ${shadow.card};
   position: sticky;
   top: 0;
   z-index: 1000;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: ${space.sm};
 
-  @media (max-width: 1024px) {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
+  & > * {
+    flex-shrink: 0;
+    min-width: 0;
+  }
 
-    /* Móvil: volvemos a la altura base */
+  @media (max-width: ${NAV_COLLAPSE_BP}) {
     height: var(--navbar-height);
     padding: 0 ${space.md};
-    position: sticky;
-
 
     .desktop-only,
     [data-nav-group] {
@@ -49,6 +46,7 @@ export const StyledBrand = styled.a`
   height: 64px;
   background: url('/img/SharemeChat_white.svg') no-repeat center / contain;
   text-indent: -9999px;
+  flex: 0 0 auto;
 
   @media (max-width: 640px) {
     width: 180px;
@@ -56,28 +54,25 @@ export const StyledBrand = styled.a`
   }
 `;
 
-//=== StyledContainer ===
+// === StyledContainer ===
 export const StyledContainer = styled.div`
   min-height: 100vh;
-  display: flex;           /* <- NUEVO */
-  flex-direction: column;  /* <- NUEVO */
+  display: flex;
+  flex-direction: column;
   background: #0f0f0f;
   color: #e0e0e0;
 `;
-
 
 // === TEXTO ===
 export const NavText = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   padding-block: 9px;
   padding-inline: 18px;
   border-radius: ${radius.pill};
   border: 1px solid rgba(148, 163, 184, 0.45);
   background: #020617;
-
   font-family: var(--font-nav);
   font-size: 0.95rem;
   font-weight: 700;
@@ -97,7 +92,6 @@ export const NavText = styled.span`
   }
 `;
 
-
 export const QueueText = styled.span`
   color: #6c757d;
   font-size: 0.9rem;
@@ -108,18 +102,15 @@ export const QueueText = styled.span`
   }
 `;
 
-
 export const SaldoText = styled.span`
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
   padding-block: 9px;
   padding-inline: 18px;
   border-radius: ${radius.pill};
   border: 1px solid rgba(148, 163, 184, 0.45);
   background: #020617;
-
   font-family: var(--font-nav);
   font-size: 0.95rem;
   font-weight: 700;
@@ -158,14 +149,12 @@ export const LocaleButton = styled.button`
   padding: 6px 10px;
   min-width: 42px;
   cursor: pointer;
-
   font-family: var(--font-nav);
   font-size: 0.82rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   line-height: 1;
-
   transition: background-color .15s ease, color .15s ease, opacity .15s ease;
 
   &:hover:not(:disabled) {
@@ -178,7 +167,6 @@ export const LocaleButton = styled.button`
   }
 `;
 
-
 // === HAMBURGUESA ===
 export const HamburgerButton = styled.button`
   display: none;
@@ -189,13 +177,12 @@ export const HamburgerButton = styled.button`
   cursor: pointer;
   padding: 8px;
   border-radius: ${radius.md};
+  flex: 0 0 auto;
 
-  @media (max-width: 1024px) {
+  @media (max-width: ${NAV_COLLAPSE_BP}) {
     display: flex;
     align-items: center;
     justify-content: center;
-
-    /* se alinea verticalmente dentro del navbar y se empuja a la derecha */
     position: static;
     margin-left: auto;
   }
@@ -215,10 +202,20 @@ export const MobileMenu = styled.div`
   z-index: 999;
   box-shadow: ${shadow.card};
 
-  &.hidden { display: none; }
+  &.hidden {
+    display: none;
+  }
 `;
 
-// === BOTTOM NAV MÓVIL (3 BOTONES) ===
+export const MobileMenuTabs = styled.div`
+  display: none !important;
+`;
+
+export const MobileMenuTabButton = styled.button`
+  display: none !important;
+`;
+
+// === BOTTOM NAV MÓVIL / TABLET COLAPSADO (3 BOTONES) ===
 export const MobileBottomNav = styled.div`
   position: fixed;
   bottom: 0;
@@ -231,7 +228,7 @@ export const MobileBottomNav = styled.div`
   padding: 0;
   z-index: 1000;
 
-  @media (max-width: 768px) {
+  @media (max-width: ${NAV_COLLAPSE_BP}) {
     display: flex;
     justify-content: space-around;
     align-items: center;
@@ -243,21 +240,16 @@ export const BottomNavButton = styled.button`
   background: transparent;
   border: none;
   border-bottom: 3px solid ${props => (props.active ? '#f97316' : 'transparent')};
-
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-
   padding: 10px 4px;
-
-  /* Misma tipografía que tabs de desktop */
   font-family: var(--font-nav);
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: none;
-
   color: ${props => (props.active ? colors.white : 'rgba(255,255,255,0.65)')};
   cursor: pointer;
 
@@ -283,13 +275,11 @@ export const StyledNavTab = styled.button`
   padding: 4px 0 10px;
   margin: 0 14px;
   cursor: pointer;
-
   font-family: var(--font-nav);
   font-size: 1rem;
   font-weight: 800;
   letter-spacing: 0.01em;
   text-transform: none;
-
   color: #9ca3af;
   position: relative;
   white-space: nowrap;
@@ -318,7 +308,7 @@ export const StyledNavTab = styled.button`
     color: #e5e7eb;
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: ${NAV_COLLAPSE_BP}) {
     display: none !important;
   }
 `;

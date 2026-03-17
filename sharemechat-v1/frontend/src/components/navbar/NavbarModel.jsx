@@ -1,5 +1,10 @@
 import React from 'react';
-import { faChartLine, faGem, faUser } from '@fortawesome/free-solid-svg-icons';
+import {
+  faChartLine,
+  faGem,
+  faUser,
+  faSignOutAlt,
+} from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import { SaldoText } from '../../styles/NavbarStyles';
 import NavbarBase from './NavbarBase';
@@ -80,6 +85,26 @@ const NavbarModel = ({
       balanceText={balanceTextMobile}
       topRightContent={<SaldoText>{balanceTextMobile}</SaldoText>}
       showLocaleSwitcher={true}
+      tabs={[
+        {
+          key: 'videochat',
+          label: videochatLabel,
+          active: activeTab === 'videochat',
+          onClick: onGoVideochat,
+        },
+        {
+          key: 'favoritos',
+          label: favoritesLabel,
+          active: activeTab === 'favoritos',
+          onClick: onGoFavorites,
+        },
+        {
+          key: 'blog',
+          label: blogLabel,
+          active: activeTab === 'blog',
+          onClick: onGoBlog,
+        },
+      ]}
       items={[
         {
           key: 'profile',
@@ -108,6 +133,7 @@ const NavbarModel = ({
         },
         {
           key: 'logout',
+          icon: faSignOutAlt,
           label: i18n.t('dashboardModel.actions.logout'),
           title: i18n.t('dashboardModel.actions.logoutTitle'),
           onClick: onLogout,

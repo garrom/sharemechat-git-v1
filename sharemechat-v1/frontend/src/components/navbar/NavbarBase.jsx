@@ -29,8 +29,8 @@ const NavbarBase = ({
 
   return (
     <>
-      <StyledNavbar style={{ padding: '0 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center' }}>
+      <StyledNavbar>
+        <div style={{ display: 'flex', alignItems: 'center', minWidth: 0 }}>
           <StyledBrand
             href="#"
             aria-label={brandAriaLabel}

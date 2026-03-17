@@ -1,5 +1,5 @@
 import React from 'react';
-import { faGem, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faGem, faUser, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import NavbarBase from './NavbarBase';
 import DesktopTabs from './DesktopTabs';
@@ -66,6 +66,26 @@ const NavbarClient = ({
       displayName={displayName}
       balanceText={balanceTextMobile}
       showLocaleSwitcher={true}
+      tabs={[
+        {
+          key: 'videochat',
+          label: videochatLabel,
+          active: activeTab === 'videochat',
+          onClick: onGoVideochat,
+        },
+        {
+          key: 'favoritos',
+          label: favoritesLabel,
+          active: activeTab === 'favoritos',
+          onClick: onGoFavorites,
+        },
+        {
+          key: 'blog',
+          label: blogLabel,
+          active: activeTab === 'blog',
+          onClick: onGoBlog,
+        },
+      ]}
       items={[
         {
           key: 'profile',
@@ -84,7 +104,9 @@ const NavbarClient = ({
         },
         {
           key: 'logout',
+          icon: faSignOutAlt,
           label: i18n.t('dashboardClient.actions.logout'),
+          title: i18n.t('dashboardClient.actions.logoutTitle'),
           onClick: onLogout,
           useIconWrapper: true,
         },
