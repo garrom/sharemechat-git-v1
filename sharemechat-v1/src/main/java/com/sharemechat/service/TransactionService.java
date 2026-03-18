@@ -432,7 +432,14 @@ public class TransactionService {
 
     @Transactional
     public Gift processGift(Long clientId, Long modelId, Long giftId, Long streamIdOrNull) {
-        log.info("processGift: start clientId={} modelId={} giftId={} streamIdOrNull={}", clientId, modelId, giftId, streamIdOrNull);
+        return processGiftInternal(clientId, modelId, giftId, streamIdOrNull, true);
+    }
+
+
+    private Gift processGiftInternal(Long clientId, Long modelId, Long giftId, Long streamIdOrNull, boolean enableRandomFallback) {
+        log.info("processGift: start clientId={} modelId={} giftId={} streamIdOrNull={} enableRandomFallback={}",
+                clientId, modelId, giftId, streamIdOrNull, enableRandomFallback);
+
         lockUsersInOrder(clientId, modelId);
 
         User clientUser = userRepository.findById(clientId)
@@ -493,9 +500,28 @@ public class TransactionService {
                 giftId, share, modelEarning, platformEarning);
 
         StreamRecord stream = null;
+
         if (streamIdOrNull != null) {
             stream = streamRecordRepository.findById(streamIdOrNull).orElse(null);
+        } else if (enableRandomFallback) {
+            log.info("processGift: streamIdOrNull is null, activating RANDOM DB fallback clientId={} modelId={}", clientId, modelId);
+            stream = streamRecordRepository
+                    .findTopByClient_IdAndModel_IdAndStreamTypeAndConfirmedAtIsNotNullAndEndTimeIsNullOrderByStartTimeDesc(
+                            clientId,
+                            modelId,
+                            Constants.StreamTypes.RANDOM
+                    )
+                    .orElse(null);
+
+            if (stream != null) {
+                log.info("processGift: RANDOM DB fallback found streamId={} clientId={} modelId={}",
+                        stream.getId(), clientId, modelId);
+            } else {
+                log.info("processGift: RANDOM DB fallback found no active confirmed stream clientId={} modelId={}",
+                        clientId, modelId);
+            }
         }
+
         log.info("processGift: resolved stream streamIdOrNull={} foundStreamId={}",
                 streamIdOrNull, stream != null ? stream.getId() : null);
 
@@ -574,6 +600,7 @@ public class TransactionService {
 
         log.info("processGift: success clientId={} modelId={} giftId={} finalClientBalance={} finalModelBalance={}",
                 clientId, modelId, giftId, newClientBalance, newModelBalance);
+
         return gift;
     }
 

@@ -15,6 +15,7 @@ public interface StreamRecordRepository extends JpaRepository<StreamRecord, Long
 
     // Sesión activa (sin end_time) por par cliente-modelo, la más reciente
     Optional<StreamRecord> findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(Long clientId, Long modelId);
+    Optional<StreamRecord> findTopByClient_IdAndModel_IdAndStreamTypeAndConfirmedAtIsNotNullAndEndTimeIsNullOrderByStartTimeDesc(Long clientId, Long modelId, String streamType);
 
     // (opcionales, útiles para diagnósticos)
     List<StreamRecord> findByClient_IdAndEndTimeIsNull(Long clientId);
