@@ -160,9 +160,11 @@ export function createMatchSocketEngine(adapter) {
       const candidateEmpty = signalType === 'candidate'
         ? (signal?.candidate?.candidate === '' || signal?.candidate === '')
         : false;
-      console.log(
-        `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} signalType=${signalType} candidateEmpty=${candidateEmpty}`
-      );
+      if (signalType !== 'candidate') {
+        console.log(
+          `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} signalType=${signalType} candidateEmpty=${candidateEmpty}`
+        );
+      }
       if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
       safeSend({ type: 'signal', signal });
     });
@@ -294,9 +296,11 @@ export function createMatchSocketEngine(adapter) {
       const candidateEmpty = signalType === 'candidate'
         ? ((data?.signal?.candidate?.candidate || data?.signal?.candidate || '') === '')
         : false;
-      console.log(
-        `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} action=signalReceived signalType=${signalType} candidateEmpty=${candidateEmpty} hasPeer=${!!peerRef.current}`
-      );
+      if (signalType !== 'candidate') {
+        console.log(
+          `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} action=signalReceived signalType=${signalType} candidateEmpty=${candidateEmpty} hasPeer=${!!peerRef.current}`
+        );
+      }
       if (peerRef.current) {
         try { peerRef.current.signal(data.signal); } catch {}
       }

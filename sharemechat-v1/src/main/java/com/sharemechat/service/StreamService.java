@@ -708,35 +708,9 @@ public class StreamService {
                     .orElse(null);
         }
         if (session == null) {
-            log.info(
-                    "[RANDOM_TRACE_THRESHOLD] ts={} clientId={} modelId={} sessionId={} confirmedAt={} seconds={} costSoFar={} ledgerSaldo={} remaining={} below={}",
-                    traceTs,
-                    clientId,
-                    modelId,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    false
-            );
             return false;
         }
         if (session.getEndTime() != null) {
-            log.info(
-                    "[RANDOM_TRACE_THRESHOLD] ts={} clientId={} modelId={} sessionId={} confirmedAt={} seconds={} costSoFar={} ledgerSaldo={} remaining={} below={}",
-                    traceTs,
-                    clientId,
-                    modelId,
-                    session.getId(),
-                    session.getConfirmedAt(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    false
-            );
             return false;
         }
 
@@ -790,19 +764,25 @@ public class StreamService {
             );
         }
 
-        log.info(
-                "[RANDOM_TRACE_THRESHOLD] ts={} clientId={} modelId={} sessionId={} confirmedAt={} seconds={} costSoFar={} ledgerSaldo={} remaining={} below={}",
-                traceTs,
-                clientId,
-                modelId,
-                session.getId(),
-                session.getConfirmedAt(),
-                seconds,
-                costSoFar,
-                ledgerSaldo,
-                remaining,
-                below
-        );
+        if (below
+                || session.getId() == null
+                || costSoFar == null
+                || ledgerSaldo == null
+                || remaining == null) {
+            log.info(
+                    "[RANDOM_TRACE_THRESHOLD] ts={} clientId={} modelId={} sessionId={} confirmedAt={} seconds={} costSoFar={} ledgerSaldo={} remaining={} below={}",
+                    traceTs,
+                    clientId,
+                    modelId,
+                    session.getId(),
+                    session.getConfirmedAt(),
+                    seconds,
+                    costSoFar,
+                    ledgerSaldo,
+                    remaining,
+                    below
+            );
+        }
 
         return below;
     }

@@ -195,23 +195,25 @@ public class MatchingHandlerSupport {
                 WebSocketSession peer = state.getPairs().get(session.getId());
                 Long peerUid = peer != null ? state.getSessionUserIds().get(peer.getId()) : null;
                 String peerRole = peer != null ? state.getRoles().get(peer.getId()) : null;
-                boolean resolvesBillablePair =
-                        ("client".equals(role) && "model".equals(peerRole))
-                                || ("model".equals(role) && "client".equals(peerRole));
-                log.warn(
-                        "[RANDOM_TRACE_WS_PING] ts={} sid={} uid={} role={} peerSid={} peerUid={} hasPair={} peerRole={} resolvesClientModel={} willConfirm={} willCheckCutoff={}",
-                        System.currentTimeMillis(),
-                        session.getId(),
-                        me,
-                        role,
-                        peer != null ? peer.getId() : null,
-                        peerUid,
-                        peer != null,
-                        peerRole,
-                        resolvesBillablePair,
-                        resolvesBillablePair,
-                        resolvesBillablePair
-                );
+                boolean willHeartbeat = me != null && "model".equals(role);
+                boolean willTrialCheck = peer != null;
+                boolean willCutoffCheck = peer != null;
+                if (role == null || (peer != null && peerRole == null)) {
+                    log.warn(
+                            "[RANDOM_TRACE_WS_PING] ts={} sid={} uid={} role={} peerSid={} peerUid={} hasPair={} peerRole={} willHeartbeat={} willTrialCheck={} willCutoffCheck={}",
+                            System.currentTimeMillis(),
+                            session.getId(),
+                            me,
+                            role,
+                            peer != null ? peer.getId() : null,
+                            peerUid,
+                            peer != null,
+                            peerRole,
+                            willHeartbeat,
+                            willTrialCheck,
+                            willCutoffCheck
+                    );
+                }
 
                 checkCutoffAndMaybeEnd(session);
                 handleTrialPingAndMaybeEnd(session);
@@ -383,16 +385,18 @@ public class MatchingHandlerSupport {
                                 candidateEmpty = candidateValue == null || candidateValue.isBlank();
                             }
                         }
-                        log.warn(
-                                "[RANDOM_TRACE_SIGNAL] ts={} fromSid={} toSid={} fromUid={} toUid={} signalType={} candidateEmpty={}",
-                                System.currentTimeMillis(),
-                                session.getId(),
-                                peer.getId(),
-                                fromUid,
-                                toUid,
-                                signalType,
-                                candidateEmpty
-                        );
+                        if (!"candidate".equals(signalType) || candidateEmpty || signal == null || "unknown".equals(signalType)) {
+                            log.warn(
+                                    "[RANDOM_TRACE_SIGNAL] ts={} fromSid={} toSid={} fromUid={} toUid={} signalType={} candidateEmpty={}",
+                                    System.currentTimeMillis(),
+                                    session.getId(),
+                                    peer.getId(),
+                                    fromUid,
+                                    toUid,
+                                    signalType,
+                                    candidateEmpty
+                            );
+                        }
                     }
                     try {
                         peer.sendMessage(message);
