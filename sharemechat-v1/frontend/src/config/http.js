@@ -2,6 +2,8 @@ import { buildApiUrl } from './api';
 import { getStoredLocale, getBrowserLocale } from '../i18n/localeUtils';
 import { FALLBACK_LOCALE } from '../i18n/localeConfig';
 
+let refreshPromise = null;
+
 const isJsonResponse = (res) =>
   (res.headers.get('content-type') || '').includes('application/json');
 
@@ -28,7 +30,31 @@ const getPreferredLocaleHeader = () => {
   return FALLBACK_LOCALE;
 };
 
-export const apiFetch = async (path, { headers = {}, ...options } = {}) => {
+const shouldSkipRefresh = (path) =>
+  typeof path === 'string' && path.startsWith('/auth/');
+
+const refreshSession = async () => {
+  if (!refreshPromise) {
+    refreshPromise = fetch(buildApiUrl('/auth/refresh'), {
+      method: 'POST',
+      credentials: 'include'
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw buildApiError({ status: res.status, message: `HTTP ${res.status}` });
+        }
+        return res;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+};
+
+export const apiFetch = async (path, options = {}) => {
+  const { headers = {}, _retry = false, ...restOptions } = options;
 
   const finalHeaders = { ...headers };
 
@@ -36,11 +62,32 @@ export const apiFetch = async (path, { headers = {}, ...options } = {}) => {
     finalHeaders['Accept-Language'] = getPreferredLocaleHeader();
   }
 
-  const res = await fetch(buildApiUrl(path), {
+  const requestOptions = {
     credentials: 'include',
-    ...options,
+    ...restOptions,
     headers: finalHeaders
-  });
+  };
+
+  let res;
+
+  try {
+    res = await fetch(buildApiUrl(path), requestOptions);
+  } catch (err) {
+    throw err;
+  }
+
+  if ((res.status === 401 || res.status === 403) && !_retry && !shouldSkipRefresh(path)) {
+    try {
+      await refreshSession();
+      return apiFetch(path, {
+        ...restOptions,
+        headers,
+        _retry: true
+      });
+    } catch (refreshError) {
+      // Dejamos caer el error original para preservar el flujo actual de logout.
+    }
+  }
 
   if (!res.ok) {
 

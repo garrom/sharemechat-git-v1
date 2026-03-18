@@ -56,6 +56,7 @@ export const SessionProvider = ({ children }) => {
 
       if (status === 401 || status === 403) {
         setUser(null);
+        window.dispatchEvent(new Event('auth:logout'));
         setLoading(false);
         return null;
       }

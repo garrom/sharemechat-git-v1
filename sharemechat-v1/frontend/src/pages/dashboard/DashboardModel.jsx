@@ -162,6 +162,8 @@ const DashboardModel = () => {
   const lastSentRef = useRef({ text: null, at: 0 });
   const cameraActiveRef = useRef(false);
   const mediaReadySentRef = useRef(false);
+  const stopAllRef = useRef(() => {});
+  const closeMsgSocketRef = useRef(() => {});
 
 
   const isEcho = (incoming) => {
@@ -854,7 +856,6 @@ const DashboardModel = () => {
     msgEngineRef.current?.open();
   };
 
-
   const handleMsgSocketMessageModel = (ev) => {
     try {
       const data = JSON.parse(ev.data);
@@ -1153,6 +1154,27 @@ const DashboardModel = () => {
   useEffect(() => {
      openMsgSocket();
      return () => closeMsgSocket();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      stopAllRef.current();
+      closeMsgSocketRef.current();
+    };
+
+    window.addEventListener('auth:logout', handleAuthLogout);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleAuthLogout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopAllRef.current();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -1559,6 +1581,11 @@ const DashboardModel = () => {
     // CALLING
     try { handleCallEnd(true); } catch {}
   };
+
+  useEffect(() => {
+    stopAllRef.current = stopAll;
+    closeMsgSocketRef.current = closeMsgSocket;
+  }, [stopAll, closeMsgSocket]);
 
 
   const streamingActivo = !!remoteStream;

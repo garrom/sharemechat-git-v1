@@ -139,6 +139,8 @@ const DashboardClient = () => {
   const matchEngineRef = useRef(null);
   const msgEngineRef = useRef(null);
   const cameraActiveRef = useRef(false);
+  const stopAllRef = useRef(() => {});
+  const closeMsgSocketRef = useRef(() => {});
 
 
   const isEcho = (incoming) => {
@@ -725,10 +727,30 @@ const DashboardClient = () => {
     msgEngineRef.current?.open();
   };
 
-
   useEffect(() => {
       openMsgSocket();
       return () => closeMsgSocket();
+  }, []);
+
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      stopAllRef.current();
+      closeMsgSocketRef.current();
+    };
+
+    window.addEventListener('auth:logout', handleAuthLogout);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleAuthLogout);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      stopAllRef.current();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
 
@@ -1202,6 +1224,11 @@ const DashboardClient = () => {
     // CALLING
     try { handleCallEnd(true); } catch {}
   };
+
+  useEffect(() => {
+    stopAllRef.current = stopAll;
+    closeMsgSocketRef.current = closeMsgSocket;
+  }, [stopAll, closeMsgSocket]);
 
 
   const handleAddBalance = async () => {

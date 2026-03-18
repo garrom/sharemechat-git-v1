@@ -55,6 +55,7 @@ const DashboardUserClient = () => {
   const localStreamRef = useRef(null);
   const peerRef = useRef(null);
   const pingIntervalRef = useRef(null);
+  const stopAllRef = useRef(() => {});
 
 
   // ======= Responsive (móvil) =======
@@ -242,6 +243,24 @@ const DashboardUserClient = () => {
     setCurrentModelId(null);
   };
 
+  useEffect(() => {
+    stopAllRef.current = stopAll;
+  }, [stopAll]);
+
+  useEffect(() => {
+    const handleAuthLogout = () => {
+      stopAllRef.current();
+    };
+
+    window.addEventListener('auth:logout', handleAuthLogout);
+
+    return () => {
+      window.removeEventListener('auth:logout', handleAuthLogout);
+      stopAllRef.current();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
 
   const handleProfile = () => {
     history.push('/perfil-client');
@@ -258,13 +277,19 @@ const DashboardUserClient = () => {
     history.push('/');
   };
 
-  const handleGoVideochat = () => setActiveTab('videochat');
+  const handleGoVideochat = () => {
+    stopAll();
+    setActiveTab('videochat');
+  };
 
   const handleGoFavorites = async () => {
     await openPurchaseModal({ context: 'user-favorites' });
   };
 
-  const handleGoBlog = () => setActiveTab('blog');
+  const handleGoBlog = () => {
+    stopAll();
+    setActiveTab('blog');
+  };
 
   // ======= Primer pago -> hacerme CLIENT (COOKIE AUTH) =======
   const handleFirstPayment = async () => {
