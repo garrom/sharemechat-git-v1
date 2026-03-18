@@ -190,10 +190,24 @@ export function createMatchSocketEngine(adapter) {
     });
 
     p.on('error', (err) => {
+      const rawMessage = String(err?.message || '');
+      const normalizedMessage = rawMessage.toLowerCase();
+
+      const isExpectedPeerClose =
+        normalizedMessage.includes('user-initiated abort') ||
+        normalizedMessage.includes('close called');
+
+      if (isExpectedPeerClose) {
+        console.log(
+          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerCloseExpected message=${rawMessage || 'unknown'}`
+        );
+        return;
+      }
+
       console.warn(
-        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerError message=${err?.message || 'unknown'}`
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerError message=${rawMessage || 'unknown'}`
       );
-      setError('Error en la conexión WebRTC: ' + (err?.message || 'unknown'));
+      setError('No se pudo establecer la conexión. Inténtalo de nuevo.');
       setSearching(false);
     });
 
@@ -363,7 +377,6 @@ export function createMatchSocketEngine(adapter) {
   }
 
   function onWsError() {
-    setError('Error WebSocket');
     setSearching(false);
   }
 

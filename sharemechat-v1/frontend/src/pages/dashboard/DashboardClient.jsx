@@ -789,7 +789,7 @@ const DashboardClient = () => {
       console.warn(
         `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=activateCamera success=false message=${err?.message || 'unknown'}`
       );
-      setError('Error al activar la cámara: ' + err.message);
+      setError('No se pudo activar la cámara. Revisa los permisos e inténtalo de nuevo.');
       console.error(err);
     }
   };
@@ -1146,12 +1146,12 @@ const DashboardClient = () => {
       } catch (e) {
         console.error('Error enviando NEXT:', e);
         setNexting(false);
-        setError('Error: no se pudo solicitar NEXT.');
+        setError('No se pudo pasar a la siguiente persona. Inténtalo de nuevo.');
         return;
       }
     } else {
       setNexting(false);
-      setError('Error: No hay conexión con el servidor.');
+      setError('No se pudo conectar. Inténtalo de nuevo.');
       return;
     }
 
@@ -1876,7 +1876,7 @@ const DashboardClient = () => {
       console.log('[CALL][cam:on] success tracks=', stream.getTracks().length);
     } catch (err) {
       console.error('[CALL][cam:on] error', err);
-      setCallError('Error al activar la cámara: ' + err.message);
+      setCallError('No se pudo activar la cámara. Revisa los permisos e inténtalo de nuevo.');
       setCallCameraActive(false);
       setCallStatus('idle');
     }
@@ -2077,7 +2077,7 @@ const DashboardClient = () => {
 
     p.on('error', (err) => {
       //console.error('[CALL][peer:error][Client]', err);
-      setCallError('Error en la conexión WebRTC: ' + err.message);
+      setCallError('No se pudo establecer la llamada. Inténtalo de nuevo.');
     });
 
     p.on('close', () => {

@@ -1259,7 +1259,7 @@ const DashboardModel = () => {
     if (nexting) return;
 
     if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      setError('Error: No hay conexión con el servidor.');
+      setError('No se pudo conectar. Inténtalo de nuevo.');
       return;
     }
 
@@ -1274,7 +1274,7 @@ const DashboardModel = () => {
     } catch (e) {
       console.error('[MODEL][NEXT] send error', e);
       setNexting(false);
-      setError('No se pudo solicitar el siguiente cliente.');
+      setError('No se pudo pasar a la siguiente persona. Inténtalo de nuevo.');
       return;
     }
 
@@ -2012,7 +2012,7 @@ const DashboardModel = () => {
       console.log('[CALL][cam:on][Model] success tracks=', stream.getTracks().length);
     } catch (err) {
       console.error('[CALL][cam:on][Model] error', err);
-      setCallError('Error al activar la cámara: ' + err.message);
+      setCallError('No se pudo activar la cámara. Revisa los permisos e inténtalo de nuevo.');
       setCallCameraActive(false);
       setCallStatus('idle');
     }
@@ -2221,7 +2221,7 @@ const DashboardModel = () => {
 
     p.on('error', (err) => {
       //console.error('[CALL][peer:error][Model]', err);
-      setCallError('Error en la conexión WebRTC: ' + err.message);
+      setCallError('No se pudo establecer la llamada. Inténtalo de nuevo.');
     });
 
     p.on('close', () => {

@@ -196,7 +196,7 @@ const DashboardUserClient = () => {
       }
     } catch (err) {
       console.error('Error al activar la cámara (USER):', err);
-      setError(`${t('dashboardUserClient.errors.cameraActivate')} ${err.message}`);
+      setError(t('dashboardUserClient.errors.cameraActivate'));
       setCameraActive(false);
       localStreamRef.current = null;
     }
@@ -381,7 +381,6 @@ const DashboardUserClient = () => {
 
     s.onerror = (e) => {
       console.error('[USER][WS] ERROR', e);
-      setError(t('dashboardUserClient.errors.websocket'));
       setSearching(false);
     };
 
@@ -456,7 +455,7 @@ const DashboardUserClient = () => {
 
         peer.on('error', (err) => {
           console.error('[USER][Peer] error:', err);
-          setError(`${t('dashboardUserClient.errors.webrtc')} ${err.message}`);
+          setError(t('dashboardUserClient.errors.webrtc'));
           setSearching(false);
         });
 
@@ -492,6 +491,7 @@ const DashboardUserClient = () => {
       if (data.type === 'peer-disconnected') {
         console.log('[USER][WS] peer-disconnected', data);
         const reason = data.reason || '';
+        setError('');
 
         try {
           if (peerRef.current) peerRef.current.destroy();
