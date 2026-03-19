@@ -306,12 +306,13 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>7. Moderation, Enforcement, and Content Removal</h3>
                 <p style={Paragraph}>
-                  SharemeChat may use automated signals, technical checks, and human
-                  review to operate the service, enforce rules, and protect users.
-                  We may remove or restrict content, hide profiles, interrupt live
-                  sessions, limit features, require additional verification, or take
-                  other reasonable enforcement action where necessary for safety,
-                  compliance, fraud prevention, or operational integrity.
+                  SharemeChat may use automated signals, technical checks, user
+                  reports, and human review to operate the service, enforce rules,
+                  and protect users. We may interrupt live sessions, limit
+                  features, block interactions, restrict account access or
+                  availability, request additional verification where applicable,
+                  or take other reasonable enforcement action where necessary for
+                  safety, compliance, fraud prevention, or operational integrity.
                 </p>
               </div>
 
@@ -383,7 +384,32 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>12. User Content</h3>
+                <h3 style={SectionTitle}>12. Logs, Technical Records, and Internal Evidence</h3>
+                <p style={Paragraph}>
+                  SharemeChat may retain and use technical records, internal
+                  records, moderation records, payment-related records, audit
+                  trails, and other operational records relating to sessions,
+                  account activity, reports, restrictions, and transactions to
+                  operate the service, protect users, investigate incidents,
+                  review disputes, detect fraud, enforce rules, and support
+                  compliance, accounting integrity, and other legitimate
+                  operational purposes.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>13. No Recording or Reuse of Private Sessions</h3>
+                <p style={Paragraph}>
+                  Users may not record, capture, reproduce, distribute,
+                  broadcast, or otherwise reuse private live sessions or private
+                  interactions without authorization. Violations may result in
+                  moderation or enforcement action, including feature
+                  restrictions, suspension, or removal from the service.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>14. User Content</h3>
                 <p style={Paragraph}>
                   If you upload or send content, you retain ownership of your content,
                   but you grant SharemeChat a limited license to host, store, display,
@@ -393,7 +419,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>13. Intellectual Property</h3>
+                <h3 style={SectionTitle}>15. Intellectual Property</h3>
                 <p style={Paragraph}>
                   The platform, including its software, branding, design, and related
                   assets, belongs to SharemeChat and its licensors. Users receive a
@@ -403,7 +429,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>14. Privacy and Cookies</h3>
+                <h3 style={SectionTitle}>16. Privacy and Cookies</h3>
                 <p style={Paragraph}>
                   The way we collect and process personal data is described in our{' '}
                   <span
@@ -427,7 +453,19 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>15. Technical Factors and Availability</h3>
+                <h3 style={SectionTitle}>17. Unused or Remaining Balance</h3>
+                <p style={Paragraph}>
+                  Access to the service may be restricted, suspended, or
+                  terminated even if unused balance remains on the account.
+                  Unused balance does not guarantee an automatic refund, and any
+                  remaining balance may be reviewed case by case, including
+                  where fraud, payment disputes, technical issues, voluntary
+                  account closure, or account restrictions are involved.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>18. Technical Factors and Availability</h3>
                 <p style={Paragraph}>
                   Session quality depends on network conditions, devices, browsers,
                   local connectivity, and third-party infrastructure. We do not
@@ -438,7 +476,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>16. Disclaimer of Warranties</h3>
+                <h3 style={SectionTitle}>19. Disclaimer of Warranties</h3>
                 <p style={Paragraph}>
                   The service is provided on an "as is" and "as available" basis,
                   without warranties of any kind, to the maximum extent permitted by law.
@@ -446,7 +484,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>17. Limitation of Liability</h3>
+                <h3 style={SectionTitle}>20. Limitation of Liability</h3>
                 <p style={Paragraph}>
                   To the maximum extent permitted by law, SharemeChat is not liable
                   for indirect, incidental, special, consequential, or punitive
@@ -455,7 +493,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>18. Suspension and Termination</h3>
+                <h3 style={SectionTitle}>21. Suspension and Termination</h3>
                 <p style={Paragraph}>
                   We may suspend or terminate accounts immediately in cases involving
                   rule violations, suspected fraud, abuse, security concerns, or
@@ -465,7 +503,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>19. Governing Law</h3>
+                <h3 style={SectionTitle}>22. Governing Law</h3>
                 <p style={Paragraph}>
                   These terms are governed by the laws of Estonia. Any dispute related
                   to the service will be subject to the jurisdiction of the competent
@@ -474,7 +512,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>20. Contact, Safety, and Security</h3>
+                <h3 style={SectionTitle}>23. Contact, Safety, and Security</h3>
                 <p style={Paragraph}>
                   For legal or support questions, you may contact SharemeChat at
                   contact@sharemechat.com or support@sharemechat.com. Safety or
