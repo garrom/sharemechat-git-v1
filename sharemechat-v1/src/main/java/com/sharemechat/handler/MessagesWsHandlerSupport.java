@@ -304,6 +304,7 @@ public class MessagesWsHandlerSupport {
 
         if ("call:accept".equals(type)) {
             Long with = json.has("with") ? json.optLong("with", 0L) : null;
+            String reason = json.has("reason") ? json.optString("reason", null) : null;
 
             log.info("[CALL_ACCEPT_IN] me={} sid={} with={} inRinging={} currentCallMe={} currentCallWith={}",
                     me, session.getId(), with, state.getRinging().contains(me), inCallWith(me), (with != null ? inCallWith(with) : null));
@@ -427,14 +428,28 @@ public class MessagesWsHandlerSupport {
 
         if ("call:reject".equals(type)) {
             Long with = json.has("with") ? json.optLong("with", 0L) : null;
-            log.info("[CALL_REJECT_IN] me={} sid={} with={} wasRinging={}", me, session.getId(), with, state.getRinging().contains(me));
+            String reason = json.has("reason") ? json.optString("reason", null) : null;
+
+            log.info("[CALL_REJECT_IN] me={} sid={} with={} reason={} wasRinging={}", me, session.getId(), with, reason, state.getRinging().contains(me));
+
             if (with == null || with <= 0L) {
                 safeSend(session, new JSONObject().put("type", "call:error").put("message", "Par inválido").toString());
                 return;
             }
+
             if (state.getRinging().remove(me)) {
-                broadcastToUser(me, new JSONObject().put("type", "call:rejected").put("by", me).toString());
-                broadcastToUser(with, new JSONObject().put("type", "call:rejected").put("by", me).toString());
+                JSONObject rejected = new JSONObject()
+                        .put("type", "call:rejected")
+                        .put("by", me);
+
+                if (reason != null && !reason.isBlank()) {
+                    rejected.put("reason", reason);
+                }
+
+                String payload = rejected.toString();
+
+                // Solo avisamos al emisor de la llamada
+                broadcastToUser(with, payload);
             } else {
                 safeSend(session, new JSONObject().put("type", "call:error").put("message", "No estabas en RINGING").toString());
             }

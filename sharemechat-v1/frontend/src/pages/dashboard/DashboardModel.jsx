@@ -142,6 +142,7 @@ const DashboardModel = () => {
   const msgReconnectRef = useRef(null);
   const centerSeenIdsRef = useRef(new Set());
   const modelCenterListRef = useRef(null);
+  const activeTabRef = useRef(activeTab);
 
   const history = useHistory();
   const localVideoRef = useRef(null);
@@ -190,6 +191,11 @@ const DashboardModel = () => {
   useEffect(() => {
     cameraActiveRef.current = cameraActive;
   }, [cameraActive]);
+
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
 
   useEffect(() => {
@@ -928,6 +934,34 @@ const DashboardModel = () => {
 
         console.log('[CALL][incoming][Model] from=', id, 'name=', name);
 
+        if (activeTabRef.current !== 'videochat' && activeTabRef.current !== 'favoritos') {
+          try {
+            if (msgSocketRef.current?.readyState === WebSocket.OPEN && Number.isFinite(id) && id > 0) {
+              msgSocketRef.current.send(JSON.stringify({
+                type: 'call:reject',
+                with: id,
+                reason: 'unavailable'
+              }));
+            }
+          } catch (e) {
+            console.error('[CALL][incoming:auto-reject][Model] error', e);
+          }
+
+          (async () => {
+            try {
+              await alert({
+                title: 'Llamada entrante',
+                message: `${name} te ha intentado llamar. Para recibir llamadas, entra en Favoritos o Videochat.`,
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('[CALL][incoming:auto-reject][Model][modal] error', e);
+            }
+          })();
+
+          return;
+        }
+
         callTargetLockedRef.current = true;
 
         setActivePeer(id, name, 'call', null);
@@ -1027,7 +1061,9 @@ const DashboardModel = () => {
           try {
             await alert({
               title: 'Llamada rechazada',
-              message: 'El cliente ha rechazado tu llamada.',
+              message: data.reason === 'unavailable'
+                ? 'La otra persona no está disponible en este momento.'
+                : 'El cliente ha rechazado tu llamada.',
               variant: 'info',
             });
           } catch (e) {

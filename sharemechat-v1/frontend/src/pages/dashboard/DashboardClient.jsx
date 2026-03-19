@@ -121,6 +121,7 @@ const DashboardClient = () => {
 
   const msgSocketRef = useRef(null);
   const centerListRef = useRef(null);
+  const activeTabRef = useRef(activeTab);
   const [wsReady, setWsReady] = useState(false);
   const [centerChatPeerId, setCenterChatPeerId] = useState(null);
   const [centerChatPeerName, setCenterChatPeerName] = useState('');
@@ -166,6 +167,11 @@ const DashboardClient = () => {
   useEffect(() => {
     cameraActiveRef.current = cameraActive;
   }, [cameraActive]);
+
+
+  useEffect(() => {
+    activeTabRef.current = activeTab;
+  }, [activeTab]);
 
 
   useEffect(() => {
@@ -912,6 +918,34 @@ const DashboardClient = () => {
 
         console.log('[CALL][incoming][Client] from=', id, 'name=', name);
 
+        if (activeTabRef.current !== 'videochat' && activeTabRef.current !== 'favoritos') {
+          try {
+            if (msgSocketRef.current?.readyState === WebSocket.OPEN && Number.isFinite(id) && id > 0) {
+              msgSocketRef.current.send(JSON.stringify({
+                type: 'call:reject',
+                with: id,
+                reason: 'unavailable'
+              }));
+            }
+          } catch (e) {
+            console.error('[CALL][incoming:auto-reject][Client] error', e);
+          }
+
+          (async () => {
+            try {
+              await alert({
+                title: 'Llamada entrante',
+                message: `${name} te ha intentado llamar. Para recibir llamadas, entra en Favoritos o Videochat.`,
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('[CALL][incoming:auto-reject][Client][modal] error', e);
+            }
+          })();
+
+          return;
+        }
+
         callTargetLockedRef.current = true;
 
         setActivePeer(id, name, 'call', null);
@@ -1014,7 +1048,9 @@ const DashboardClient = () => {
           try {
             await alert({
               title: 'Llamada rechazada',
-              message: 'La otra persona ha rechazado tu llamada.',
+              message: data.reason === 'unavailable'
+                ? 'La otra persona no está disponible en este momento.'
+                : 'La otra persona ha rechazado tu llamada.',
               variant: 'info',
             });
           } catch (e) {
