@@ -227,91 +227,163 @@ export default function Legal() {
 
               <p style={DocIntro}>
                 These Terms of Service govern your access to and use of SharemeChat,
-                including the website, the mobile web experience, and related services.
-                By creating an account, accessing, or using the service, you agree to
-                these terms.
+                including the website, the mobile web experience, and related
+                services. By creating an account, accessing, or using the service,
+                you agree to these terms.
               </p>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>1. Eligibility</h3>
+                <h3 style={SectionTitle}>1. Operator and Scope</h3>
+                <p style={Paragraph}>
+                  SharemeChat is operated by Shareme Technologies OÜ. These terms
+                  apply to the SharemeChat website, mobile web experience, user
+                  accounts, premium features, live sessions, messaging features, and
+                  related support or safety processes made available through the
+                  platform.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>2. Eligibility and Age Verification</h3>
                 <p style={Paragraph}>
                   SharemeChat is intended exclusively for adults aged 18 or older.
                   We may request age or identity verification when necessary to
-                  protect the platform, users, and compliance obligations.
+                  protect the platform, users, and compliance obligations. Access
+                  or use by minors is strictly prohibited.
                 </p>
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>2. Account Registration</h3>
+                <h3 style={SectionTitle}>3. Accounts and Access</h3>
                 <p style={Paragraph}>
                   You must provide accurate information and keep your account
                   credentials secure. You may not create accounts in bulk, use bots,
-                  or attempt to bypass access controls or platform safeguards.
+                  impersonate others, share accounts, or attempt to bypass access
+                  controls, platform safeguards, or eligibility restrictions.
                 </p>
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>3. Description of the Service</h3>
+                <h3 style={SectionTitle}>4. Nature of the Service</h3>
                 <p style={Paragraph}>
-                  SharemeChat is a premium 1-to-1 video chat platform. Users may be
-                  matched randomly with available models and may also interact with
-                  profiles they have added to favorites. Some features may vary
-                  depending on the device or browser used.
+                  SharemeChat is a premium 1-to-1 video chat platform for adult
+                  users. Users may be matched randomly with available participants
+                  and may also interact with profiles they have added to favorites.
+                  Features, pricing models, session availability, and user
+                  experience may vary depending on the device, browser, region, or
+                  operational state of the service.
                 </p>
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>4. Acceptable Use</h3>
+                <h3 style={SectionTitle}>5. User Conduct and Prohibited Conduct</h3>
                 <p style={Paragraph}>
-                  Your use of the service must comply with the platform rules and
-                  community standards. Violations may lead to session termination,
-                  temporary suspension, or permanent account bans.
-                </p>
-              </div>
-
-              <div style={Section}>
-                <h3 style={SectionTitle}>5. Face Visibility Requirement</h3>
-                <p style={Paragraph}>
-                  During live sessions, users may be required to keep their face
-                  clearly visible on camera. Repeated failure to comply may result in
-                  restrictions, interrupted sessions, or suspension.
-                </p>
-              </div>
-
-              <div style={Section}>
-                <h3 style={SectionTitle}>6. Payments and Credits</h3>
-                <p style={Paragraph}>
-                  The service may use prepaid credits to access paid features and live
-                  sessions. Credits are typically consumed based on session duration.
-                  Prices, packages, and availability may change over time.
-                </p>
-              </div>
-
-              <div style={Section}>
-                <h3 style={SectionTitle}>7. Technical Factors</h3>
-                <p style={Paragraph}>
-                  Session quality depends on network conditions, devices, browsers,
-                  and third-party infrastructure. We do not guarantee uninterrupted or
-                  error-free availability of the service at all times.
-                </p>
-              </div>
-
-              <div style={Section}>
-                <h3 style={SectionTitle}>8. Prohibited Conduct</h3>
-                <p style={Paragraph}>
-                  The following behaviors are strictly prohibited:
+                  Your use of the service must comply with the platform rules,
+                  community standards, and applicable law. The following behaviors
+                  are strictly prohibited:
                 </p>
                 <ul style={List}>
-                  <li>Harassment, threats, hate speech, or extortion.</li>
-                  <li>Illegal activity or any content involving minors.</li>
-                  <li>Fraud, impersonation, phishing, or abuse of promotions.</li>
+                  <li>Harassment, threats, hate speech, coercion, or extortion.</li>
+                  <li>Illegal activity or any content involving minors. Any attempt to involve, depict, solicit, promote, or normalize minors in any context is strictly prohibited and may be reported to competent authorities.</li>
+                  <li>Fraud, impersonation, phishing, scams, or abuse of promotions.</li>
                   <li>Explicit sexual content or conduct forbidden by platform rules.</li>
                   <li>Attempts to bypass moderation, controls, or security systems.</li>
+                  <li>Use of the service in a misleading, abusive, or commercially unauthorized way.</li>
                 </ul>
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>9. User Content</h3>
+                <h3 style={SectionTitle}>6. Live Camera and Session Rules</h3>
+                <p style={Paragraph}>
+                  During live sessions, users may be required to keep their face
+                  clearly visible on camera and to comply with platform rules for
+                  live interaction. We may interrupt or limit sessions where camera
+                  use, behavior, displayed material, or session conduct creates a
+                  safety, compliance, moderation, or technical concern.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>7. Moderation, Enforcement, and Content Removal</h3>
+                <p style={Paragraph}>
+                  SharemeChat may use automated signals, technical checks, and human
+                  review to operate the service, enforce rules, and protect users.
+                  We may remove or restrict content, hide profiles, interrupt live
+                  sessions, limit features, require additional verification, or take
+                  other reasonable enforcement action where necessary for safety,
+                  compliance, fraud prevention, or operational integrity.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>8. Reports, Safety, and Review</h3>
+                <p style={Paragraph}>
+                  Users may report abuse, misconduct, or safety concerns through
+                  in-platform tools or available support channels. Reports may be
+                  reviewed using technical records and internal moderation processes.
+                  Depending on the circumstances, outcomes may include warnings,
+                  session termination, feature restrictions, account suspension, or
+                  permanent removal from the service.
+                </p>
+                <p style={{ ...Paragraph, marginTop: '10px' }}>
+                  A user who believes that a moderation or account restriction
+                  decision was made in error may contact support to request review.
+                  Any such review remains at SharemeChat&apos;s discretion and does not
+                  create an obligation to reverse or modify the measure.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>9. Payments, Prepaid Balance, and Premium Features</h3>
+                <p style={Paragraph}>
+                  Certain premium features may require prepaid balance, credits, or
+                  similar stored value within your account. Account balance is
+                  credited after the applicable payment has been successfully
+                  confirmed by the relevant payment provider or payment flow used by
+                  the platform. Prices,
+                  packages, and feature availability may change over time.
+                </p>
+                <p style={{ ...Paragraph, marginTop: '10px' }}>
+                  Premium usage, including live sessions and certain premium events,
+                  may consume prepaid balance. Consumption in live sessions may be
+                  calculated according to the applicable duration of the session and
+                  the technical records of the service. Sessions that do not become
+                  properly established or confirmed may end without charge. We may
+                  prevent the start or continuation of premium features where the
+                  available balance is insufficient.
+                </p>
+                <p style={{ ...Paragraph, marginTop: '10px' }}>
+                  The sending of virtual gifts consumes balance immediately according
+                  to the stated value of the selected gift.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>10. Refunds</h3>
+                <p style={Paragraph}>
+                  Refunds are not automatic and are reviewed on a case-by-case basis.
+                  We may grant refunds or account adjustments in cases involving
+                  technical errors, incorrect charges, or other verifiable incidents
+                  affecting premium usage. Where appropriate, a refund may be
+                  provided as an account balance adjustment, credit, or other
+                  internal correction applied to the service account.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>11. Payment Disputes, Fraud, and Chargebacks</h3>
+                <p style={Paragraph}>
+                  We may investigate misuse, fraud, payment irregularities, payment
+                  disputes, or chargebacks relating to the service. During review,
+                  we may suspend or restrict accounts, limit access to premium
+                  features, delay account changes, or adjust balances, credits, or
+                  access to premium features that were improperly credited, obtained,
+                  or retained in connection with the relevant activity.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>12. User Content</h3>
                 <p style={Paragraph}>
                   If you upload or send content, you retain ownership of your content,
                   but you grant SharemeChat a limited license to host, store, display,
@@ -321,7 +393,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>10. Intellectual Property</h3>
+                <h3 style={SectionTitle}>13. Intellectual Property</h3>
                 <p style={Paragraph}>
                   The platform, including its software, branding, design, and related
                   assets, belongs to SharemeChat and its licensors. Users receive a
@@ -331,7 +403,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>11. Privacy</h3>
+                <h3 style={SectionTitle}>14. Privacy and Cookies</h3>
                 <p style={Paragraph}>
                   The way we collect and process personal data is described in our{' '}
                   <span
@@ -355,15 +427,26 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>12. Disclaimer of Warranties</h3>
+                <h3 style={SectionTitle}>15. Technical Factors and Availability</h3>
                 <p style={Paragraph}>
-                  The service is provided on an “as is” and “as available” basis,
+                  Session quality depends on network conditions, devices, browsers,
+                  local connectivity, and third-party infrastructure. We do not
+                  guarantee uninterrupted or error-free availability of the service
+                  at all times, and some features may be unavailable, delayed, or
+                  limited in certain circumstances.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>16. Disclaimer of Warranties</h3>
+                <p style={Paragraph}>
+                  The service is provided on an "as is" and "as available" basis,
                   without warranties of any kind, to the maximum extent permitted by law.
                 </p>
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>13. Limitation of Liability</h3>
+                <h3 style={SectionTitle}>17. Limitation of Liability</h3>
                 <p style={Paragraph}>
                   To the maximum extent permitted by law, SharemeChat is not liable
                   for indirect, incidental, special, consequential, or punitive
@@ -372,7 +455,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>14. Suspension and Termination</h3>
+                <h3 style={SectionTitle}>18. Suspension and Termination</h3>
                 <p style={Paragraph}>
                   We may suspend or terminate accounts immediately in cases involving
                   rule violations, suspected fraud, abuse, security concerns, or
@@ -382,7 +465,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>15. Governing Law</h3>
+                <h3 style={SectionTitle}>19. Governing Law</h3>
                 <p style={Paragraph}>
                   These terms are governed by the laws of Estonia. Any dispute related
                   to the service will be subject to the jurisdiction of the competent
@@ -391,10 +474,12 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>16. Contact</h3>
+                <h3 style={SectionTitle}>20. Contact, Safety, and Security</h3>
                 <p style={Paragraph}>
                   For legal or support questions, you may contact SharemeChat at
-                  contact@sharemechat.com or support@sharemechat.com.
+                  contact@sharemechat.com or support@sharemechat.com. Safety or
+                  security concerns should be reported through available in-platform
+                  tools or the appropriate support contact.
                 </p>
               </div>
             </>

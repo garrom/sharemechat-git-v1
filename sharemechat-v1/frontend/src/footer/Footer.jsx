@@ -57,9 +57,9 @@ export default function Footer() {
               onClick={() => setOpen(v => !v)}
               aria-expanded={open ? 'true' : 'false'}
               aria-controls="footer-more-panel"
-              title={open ? 'Ocultar' : 'Ver más'}
+              title={open ? 'Hide' : 'More'}
             >
-              <span>Más</span>
+              <span>More</span>
               <ChevronIcon open={open} />
             </MoreToggleBtn>
           </MoreInline>
@@ -70,7 +70,7 @@ export default function Footer() {
           <a href="/faq">FAQ</a>
           <span className="separator">|</span>
 
-          <a href="/safety">Seguridad</a>
+          <a href="/safety">Safety</a>
           <span className="separator">|</span>
 
           <a href="/community-guidelines">Rules</a>
@@ -79,7 +79,7 @@ export default function Footer() {
           <a href="/legal">Legal</a>
           <span className="separator">|</span>
 
-          <a href="/cookies-settings">Config</a>
+          <a href="/cookies-settings">Cookie Settings</a>
         </LinksRow>
 
         <LegalDesktopOnly>
@@ -101,7 +101,7 @@ export default function Footer() {
               <a href="/faq">FAQ</a>
               <span className="separator">|</span>
 
-              <a href="/safety">Seguridad</a>
+              <a href="/safety">Safety</a>
               <span className="separator">|</span>
 
               <a href="/community-guidelines">Rules</a>
@@ -110,7 +110,7 @@ export default function Footer() {
               <a href="/legal">Legal</a>
               <span className="separator">|</span>
 
-              <a href="/cookies-settings">Config</a>
+              <a href="/cookies-settings">Cookie Settings</a>
             </LinksRowMobile>
 
             <LegalText>
