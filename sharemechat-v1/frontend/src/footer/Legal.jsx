@@ -139,7 +139,15 @@ export default function Legal() {
     const params = new URLSearchParams(location.search);
     const nextTab = params.get('tab');
 
-    if (nextTab === 'privacy' || nextTab === 'cookies' || nextTab === 'terms') {
+    if (
+      nextTab === 'privacy' ||
+      nextTab === 'cookies' ||
+      nextTab === 'terms' ||
+      nextTab === 'refunds' ||
+      nextTab === 'contact' ||
+      nextTab === 'complaints' ||
+      nextTab === 'appeals'
+    ) {
       setTab(nextTab);
     }
   }, [location.search]);
@@ -228,6 +236,51 @@ export default function Legal() {
             >
               Cookie Policy
             </button>
+
+            <button
+              type="button"
+              style={tabStyle('refunds')}
+              onClick={() => setTab('refunds')}
+              onMouseEnter={() => setHoveredTab('refunds')}
+              onMouseLeave={() => setHoveredTab(null)}
+              aria-pressed={tab === 'refunds'}
+            >
+              Refund Policy
+            </button>
+
+            <button
+              type="button"
+              style={tabStyle('contact')}
+              onClick={() => setTab('contact')}
+              onMouseEnter={() => setHoveredTab('contact')}
+              onMouseLeave={() => setHoveredTab(null)}
+              aria-pressed={tab === 'contact'}
+            >
+              Contact Us
+            </button>
+
+            <button
+              type="button"
+              style={tabStyle('complaints')}
+              onClick={() => setTab('complaints')}
+              onMouseEnter={() => setHoveredTab('complaints')}
+              onMouseLeave={() => setHoveredTab(null)}
+              aria-pressed={tab === 'complaints'}
+            >
+              Complaints Policy
+            </button>
+
+            <button
+              type="button"
+              style={tabStyle('appeals')}
+              onClick={() => setTab('appeals')}
+              onMouseEnter={() => setHoveredTab('appeals')}
+              onMouseLeave={() => setHoveredTab(null)}
+              aria-pressed={tab === 'appeals'}
+            >
+              Appeals & Takedown
+            </button>
+
           </div>
         </div>
 
@@ -717,6 +770,209 @@ export default function Legal() {
                   We may update this Cookie Policy to reflect changes in platform
                   functionality, third-party integrations, or legal requirements. The
                   current version published on the site will always be the applicable one.
+                </p>
+              </div>
+            </>
+          )}
+
+          {tab === 'refunds' && (
+            <>
+              <h2 style={DocTitle}>Refund Policy</h2>
+
+              <p style={DocIntro}>
+                This Refund Policy explains how refund requests are handled for SharemeChat.
+                Refunds are not automatic and are reviewed on a case-by-case basis.
+              </p>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>1. When Refunds May Be Considered</h3>
+                <p style={Paragraph}>
+                  We may consider a refund or account adjustment in cases such as verified
+                  technical errors, duplicate charges, incorrect billing, or other
+                  verifiable incidents that materially affected premium usage.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>2. How to Request a Refund</h3>
+                <p style={Paragraph}>
+                  To request a review, please email us at <strong>contact@sharemechat.com </strong>
+                  and include: the email on your account, the date/time of the issue,
+                  the amount, and any relevant details or screenshots. If available, include
+                  the transaction reference shown in your payment confirmation.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>3. Review Timeline</h3>
+                <p style={Paragraph}>
+                  We aim to review and respond within <strong>7 business days</strong>.
+                  Additional time may be required in complex cases or where payment disputes
+                  or chargebacks are involved.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>4. Outcomes</h3>
+                <p style={Paragraph}>
+                  Outcomes may include a refund, an account balance adjustment, a credit,
+                  or a denial where the request cannot be substantiated or where premium usage
+                  was delivered as intended.
+                </p>
+              </div>
+            </>
+          )}
+
+          {tab === 'contact' && (
+            <>
+              <h2 style={DocTitle}>Contact Us</h2>
+
+              <p style={DocIntro}>
+                If you need help, have a complaint, or want to request a review of a moderation
+                decision, you can contact us using the details below.
+              </p>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>Support and General Inquiries</h3>
+                <p style={Paragraph}>
+                  Email: <strong>contact@sharemechat.com</strong>
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>Complaints and Policy Requests</h3>
+                <p style={Paragraph}>
+                  If you wish to submit a complaint or request content review/takedown, please
+                  email <strong>contact@sharemechat.com</strong> with as much detail as possible
+                  (account email, date/time, screenshots, and any relevant context).
+                </p>
+              </div>
+            </>
+          )}
+
+          {tab === 'complaints' && (
+            <>
+              <h2 style={DocTitle}>Complaints Policy</h2>
+
+              <p style={DocIntro}>
+                This Complaints Policy explains how users can submit complaints and how
+                SharemeChat reviews and resolves them.
+              </p>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>1. How to Submit a Complaint</h3>
+                <p style={Paragraph}>
+                  Complaints can be submitted by email to <strong>contact@sharemechat.com</strong>.
+                  Please include your account email, a description of the issue, relevant dates,
+                  and any supporting evidence such as screenshots or transaction details.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>2. Review Process</h3>
+                <p style={Paragraph}>
+                  Each complaint is reviewed using available technical records, account activity,
+                  moderation logs, and any information provided by the user. Additional information
+                  may be requested if necessary to complete the review.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>3. Response Time</h3>
+                <p style={Paragraph}>
+                  We aim to acknowledge and respond to complaints within <strong>7 business days</strong>.
+                  More complex cases may require additional time.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>4. Possible Outcomes</h3>
+                <p style={Paragraph}>
+                  Depending on the case, outcomes may include clarification of the situation,
+                  account adjustments, refund review, moderation review, or no action if the
+                  complaint cannot be substantiated.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>5. Escalation</h3>
+                <p style={Paragraph}>
+                  If you are not satisfied with the outcome, you may request a further review
+                  by replying to the same email thread. SharemeChat will perform an additional
+                  internal review where appropriate.
+                </p>
+              </div>
+            </>
+          )}
+
+          {tab === 'appeals' && (
+            <>
+              <h2 style={DocTitle}>Appeals & Takedown Policy</h2>
+
+              <p style={DocIntro}>
+                This policy explains how users or affected parties can request a review
+                of moderation decisions or request the removal of content or material
+                that may violate rights, platform rules, or applicable law.
+              </p>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>1. Appeals</h3>
+                <p style={Paragraph}>
+                  If you believe that a moderation action, restriction, suspension, or
+                  account-related decision was made in error, you may request a review by
+                  emailing <strong>contact@sharemechat.com</strong>. Please include your
+                  account email, a description of the decision being challenged, the
+                  approximate date and time, and any supporting context.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>2. Takedown Requests</h3>
+                <p style={Paragraph}>
+                  If you believe that content, material, or activity on SharemeChat
+                  infringes your rights, violates platform rules, or should otherwise be
+                  reviewed for removal, you may submit a takedown request to
+                  <strong> contact@sharemechat.com</strong>. Please provide sufficient
+                  detail to identify the content or activity, explain the basis of the
+                  request, and include any relevant supporting information.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>3. Review Criteria</h3>
+                <p style={Paragraph}>
+                  SharemeChat may review appeals and takedown requests using available
+                  technical records, account information, moderation records, internal
+                  logs, and the materials submitted with the request. We may request
+                  additional information where necessary.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>4. Response Time</h3>
+                <p style={Paragraph}>
+                  We aim to review and respond within <strong>7 business days</strong>,
+                  although some matters may require additional time depending on
+                  complexity, evidence, or legal considerations.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>5. Possible Outcomes</h3>
+                <p style={Paragraph}>
+                  Outcomes may include confirmation of the original decision, reversal or
+                  modification of a moderation measure, restriction or removal of the
+                  relevant content or activity, a request for more information, or no
+                  action where the request cannot be substantiated.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>6. Further Review</h3>
+                <p style={Paragraph}>
+                  If you are not satisfied with the outcome, you may reply to the same
+                  email thread and request a further internal review. SharemeChat may
+                  carry out an additional review where appropriate.
                 </p>
               </div>
             </>
