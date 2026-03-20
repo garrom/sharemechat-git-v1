@@ -46,7 +46,7 @@ export default function Footer() {
   return (
     <FooterWrap>
       <FooterInner>
-        <BrandTitle>SharemeChat®</BrandTitle>
+        <BrandTitle as="a" href="/" aria-label="Go to Home" title="Home">SharemeChat®</BrandTitle>
 
         <BrandSubRow>
           <BrandSub>Shareme Technologies OÜ</BrandSub>

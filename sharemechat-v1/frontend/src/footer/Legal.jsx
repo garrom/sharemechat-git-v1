@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useHistory, useLocation } from 'react-router-dom';
 import {
   FooterInner,
   LegalText
@@ -130,9 +130,20 @@ const LinkLike = {
 
 export default function Legal() {
   const history = useHistory();
+  const location = useLocation();
   const [tab, setTab] = useState('terms');
   const [hoveredTab, setHoveredTab] = useState(null);
   const [hoveredBack, setHoveredBack] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const nextTab = params.get('tab');
+
+    if (nextTab === 'privacy' || nextTab === 'cookies' || nextTab === 'terms') {
+      setTab(nextTab);
+    }
+  }, [location.search]);
+
 
   const handleBack = () => {
     if (window.history.length > 1) {
