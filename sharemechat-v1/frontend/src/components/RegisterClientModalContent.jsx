@@ -106,7 +106,7 @@ const RegisterClientModalContent = ({ onClose, onBack }) => {
 
       <CheckRow>
         <CheckInput type="checkbox" checked={acceptsTerms} onChange={e => setAcceptsTerms(e.target.checked)} />
-        <CheckText>{i18n.t('auth.registerClient.checks.acceptPrefix')} <a href="/terms" target="_blank" rel="noreferrer">{i18n.t('auth.registerClient.checks.terms')}</a> {i18n.t('auth.registerClient.checks.and')} <a href="/privacy" target="_blank" rel="noreferrer">{i18n.t('auth.registerClient.checks.privacy')}</a></CheckText>
+        <CheckText>{i18n.t('auth.registerClient.checks.acceptPrefix')} <a href="/legal?tab=terms" target="_blank" rel="noreferrer">{i18n.t('auth.registerClient.checks.terms')}</a> {i18n.t('auth.registerClient.checks.and')} <a href="/legal?tab=privacy" target="_blank" rel="noreferrer">{i18n.t('auth.registerClient.checks.privacy')}</a></CheckText>
       </CheckRow>
 
       <Button type="button" disabled={loading} onClick={handleRegister}>{loading ? i18n.t('auth.registerClient.actions.loading') : i18n.t('auth.registerClient.actions.submit')}</Button>

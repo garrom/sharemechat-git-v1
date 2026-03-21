@@ -115,7 +115,7 @@ const RegisterModelModalContent = ({ onClose, onBack }) => {
 
       <CheckRow>
         <CheckInput type="checkbox" checked={acceptsTerms} onChange={e => setAcceptsTerms(e.target.checked)} />
-        <CheckText>{i18n.t('auth.registerModel.checks.acceptPrefix')} <a href="/terms" target="_blank" rel="noreferrer">{i18n.t('auth.registerModel.checks.terms')}</a> {i18n.t('auth.registerModel.checks.and')} <a href="/privacy" target="_blank" rel="noreferrer">{i18n.t('auth.registerModel.checks.privacy')}</a></CheckText>
+        <CheckText>{i18n.t('auth.registerModel.checks.acceptPrefix')} <a href="/legal?tab=terms" target="_blank" rel="noreferrer">{i18n.t('auth.registerModel.checks.terms')}</a> {i18n.t('auth.registerModel.checks.and')} <a href="/legal?tab=privacy" target="_blank" rel="noreferrer">{i18n.t('auth.registerModel.checks.privacy')}</a></CheckText>
       </CheckRow>
 
       <Button type="button" disabled={loading} onClick={handleRegister}>{loading ? i18n.t('auth.registerModel.actions.loading') : i18n.t('auth.registerModel.actions.submit')}</Button>

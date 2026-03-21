@@ -461,9 +461,9 @@
       }
     },
     "registerGender": {
-      "title": "Are you male or female?",
-      "male": "I'm Male",
-      "female": "I'm Female"
+      "title": "Join as",
+      "male": "Man",
+      "female": "Woman"
     },
     "registerClient": {
       "title": "Sign up",

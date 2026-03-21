@@ -461,9 +461,9 @@
       }
     },
     "registerGender": {
-      "title": "¿Eres chico o chica?",
-      "male": "Soy Chico",
-      "female": "Soy Chica"
+      "title": "Únete como",
+      "male": "Hombre",
+      "female": "Mujer"
     },
     "registerClient": {
       "title": "Registro",
