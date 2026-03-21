@@ -3,40 +3,55 @@ import { useHistory, useLocation } from 'react-router-dom';
 import i18n from '../../i18n';
 
 import {
-  StyledContainer,
-  StyledNavbar,
-  StyledBrand,
-} from '../../styles/NavbarStyles';
-
-import {
-  NavButton,
-  ProfilePrimaryButton,
-  ProfileSecondaryButton,
-  ProfileDangerOutlineButton,
-} from '../../styles/ButtonStyles';
-
-import {
+  DocumentsShell,
+  DocumentsTopbar,
+  DocumentsTopbarInner,
+  DocumentsBrand,
+  DocumentsTopbarActions,
+  DocumentsUserLabel,
+  DocumentsBackButton,
+  DocumentsPage,
+  DocumentsStack,
+  DocumentOverviewCard,
+  DocumentCard,
+  DocumentCardSoft,
+  CardHeader,
+  CardHeaderTop,
+  CardTitle,
+  CardSubtitle,
+  OverviewIntro,
+  SummaryGrid,
+  SummaryItem,
+  SummaryItemLabel,
+  SummaryItemValue,
+  CardBody,
+  SummaryLabel,
+  SummaryCount,
+  StatusPill,
+  UploadBadge,
   Message,
   FileInput,
   Hint,
   FileNameWrapper,
-  ProfileMain,
-  ProfileCard,
-  SecurityCard,
-  CardHeader,
-  CardTitle,
-  CardSubtitle,
-  CardBody,
-  ProfileGrid,
-  ProfileColMain,
-  ProfileColSide,
+  SelectedFileTag,
+  PreviewPanel,
   PhotoPreview,
   PhotoImg,
   PhotoEmpty,
+  LinkPreviewBox,
   PhotoActions,
-} from '../../styles/subpages/PerfilClientModelStyle';
+  DocumentPrimaryButton,
+  DocumentSecondaryButton,
+  DocumentDangerButton,
+  WorkflowList,
+  WorkflowStep,
+  WorkflowStepTitle,
+  WorkflowStepBody,
+} from '../../styles/pages-styles/ModelDocumentStyles';
+import { useSession } from '../../components/SessionProvider';
 
 const ModelDocuments = () => {
+  const { uiLocale } = useSession();
   const t = (key, options) => i18n.t(key, options);
   const history = useHistory();
   const location = useLocation();
@@ -199,11 +214,10 @@ const ModelDocuments = () => {
   };
 
   const statusStyles =
-    doc.verificationStatus === 'APPROVED'
-      ? { background: '#198754', color: '#fff' }
-      : doc.verificationStatus === 'REJECTED'
-      ? { background: '#dc3545', color: '#fff' }
-      : { background: '#6c757d', color: '#fff' };
+    String(doc.verificationStatus || 'PENDING').toUpperCase();
+
+  const uploadedCount = [doc.urlVerificFront, doc.urlVerificBack, doc.urlVerificDoc].filter(Boolean).length;
+  void uiLocale;
 
   const uploadSingle = async (fieldName, fileObj) => {
     if (!fileObj) return;
@@ -295,7 +309,7 @@ const ModelDocuments = () => {
     if (!url) return <PhotoEmpty>{t('perfilModel.empty.notUploaded')}</PhotoEmpty>;
     const originalName = extractOriginalNameFromUrl(url);
     return (
-      <>
+      <PreviewPanel>
         <PhotoPreview>
           <PhotoImg src={url} alt={t('modelDocuments.alt.document')} />
         </PhotoPreview>
@@ -304,7 +318,7 @@ const ModelDocuments = () => {
             {originalName || t('modelDocuments.actions.openFile')}
           </a>
         </FileNameWrapper>
-      </>
+      </PreviewPanel>
     );
   };
 
@@ -312,11 +326,13 @@ const ModelDocuments = () => {
     if (!url) return <PhotoEmpty>{t('perfilModel.empty.notUploaded')}</PhotoEmpty>;
     const originalName = extractOriginalNameFromUrl(url);
     return (
-      <FileNameWrapper>
-        <a href={url} target="_blank" rel="noreferrer">
-          {originalName || label}
-        </a>
-      </FileNameWrapper>
+      <LinkPreviewBox>
+        <FileNameWrapper>
+          <a href={url} target="_blank" rel="noreferrer">
+            {originalName || label}
+          </a>
+        </FileNameWrapper>
+      </LinkPreviewBox>
     );
   };
 
@@ -324,283 +340,333 @@ const ModelDocuments = () => {
 
   if (isVeriffRoute) {
     return (
-      <StyledContainer>
-        <StyledNavbar>
-          <StyledBrand href="/" aria-label="SharemeChat" />
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ color: '#e9ecef', fontSize: '0.9rem' }}>{displayName}</span>
-            <NavButton
-              type="button"
-              onClick={() => history.push('/dashboard-user-model')}
-            >
-              {t('common.back')}
-            </NavButton>
-          </div>
-        </StyledNavbar>
+      <DocumentsShell>
+        <DocumentsTopbar>
+          <DocumentsTopbarInner>
+            <DocumentsBrand href="/" aria-label="SharemeChat" />
+            <DocumentsTopbarActions>
+              <DocumentsUserLabel>{displayName}</DocumentsUserLabel>
+              <DocumentsBackButton
+                type="button"
+                onClick={() => history.push('/dashboard-user-model')}
+              >
+                {t('common.back')}
+              </DocumentsBackButton>
+            </DocumentsTopbarActions>
+          </DocumentsTopbarInner>
+        </DocumentsTopbar>
 
-        <ProfileMain>
-          <ProfileCard>
-            <CardHeader>
-              <CardTitle>{t('modelDocuments.veriff.title')}</CardTitle>
-              <CardSubtitle>
-                {t('modelDocuments.veriff.subtitle')}
-              </CardSubtitle>
-            </CardHeader>
-            <CardBody>
-              {startingVeriff && <p>{t('modelDocuments.veriff.loading')}</p>}
-              {error && <Message type="error">{error}</Message>}
+        <DocumentsPage>
+          <DocumentsStack>
+            <DocumentCard>
+              <CardHeader>
+                <CardTitle>{t('modelDocuments.veriff.title')}</CardTitle>
+                <CardSubtitle>
+                  {t('modelDocuments.veriff.subtitle')}
+                </CardSubtitle>
+              </CardHeader>
+              <CardBody>
+                {startingVeriff && <p>{t('modelDocuments.veriff.loading')}</p>}
+                {error && <Message type="error">{error}</Message>}
 
-              {!startingVeriff && error && (
-                <div style={{ marginTop: 12 }}>
-                  <ProfilePrimaryButton
-                    type="button"
-                    onClick={startVeriff}
-                  >
-                    {t('modelDocuments.veriff.actions.retry')}
-                  </ProfilePrimaryButton>
-                </div>
-              )}
+                {!startingVeriff && error && (
+                  <PhotoActions>
+                    <DocumentPrimaryButton
+                      type="button"
+                      onClick={startVeriff}
+                    >
+                      {t('modelDocuments.veriff.actions.retry')}
+                    </DocumentPrimaryButton>
+                  </PhotoActions>
+                )}
 
-              <Hint style={{ marginTop: 12 }}>
-                {t('modelDocuments.veriff.hint')}
-              </Hint>
-            </CardBody>
-          </ProfileCard>
-        </ProfileMain>
-      </StyledContainer>
+                <Hint>
+                  {t('modelDocuments.veriff.hint')}
+                </Hint>
+              </CardBody>
+            </DocumentCard>
+          </DocumentsStack>
+        </DocumentsPage>
+      </DocumentsShell>
     );
   }
 
   return (
-    <StyledContainer>
-      <StyledNavbar>
-        <StyledBrand href="/" aria-label="SharemeChat" />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ color: '#e9ecef', fontSize: '0.9rem' }}>{displayName}</span>
-          <NavButton
-            type="button"
-            onClick={() => history.push('/dashboard-user-model')}
-          >
-            {t('common.back')}
-          </NavButton>
-        </div>
-      </StyledNavbar>
+    <DocumentsShell>
+      <DocumentsTopbar>
+        <DocumentsTopbarInner>
+          <DocumentsBrand href="/" aria-label="SharemeChat" />
+          <DocumentsTopbarActions>
+            <DocumentsUserLabel>{displayName}</DocumentsUserLabel>
+            <DocumentsBackButton
+              type="button"
+              onClick={() => history.push('/dashboard-user-model')}
+            >
+              {t('common.back')}
+            </DocumentsBackButton>
+          </DocumentsTopbarActions>
+        </DocumentsTopbarInner>
+      </DocumentsTopbar>
 
-      <ProfileMain>
-        <ProfileCard>
-          <CardHeader>
-            <CardTitle>{t('modelDocuments.title')}</CardTitle>
-            <CardSubtitle>
-              {t('modelDocuments.subtitle')}
-            </CardSubtitle>
-          </CardHeader>
-          <CardBody>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '0.9rem', color: '#cbd5f5' }}>
-                {t('modelDocuments.currentStatus')}
-              </span>
-              <span style={{ ...statusStyles, padding: '4px 10px', borderRadius: 999, fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
-                {getVerificationStatusLabel(doc.verificationStatus)}
-              </span>
-            </div>
+      <DocumentsPage>
+        <DocumentsStack>
+          <DocumentOverviewCard>
+            <CardHeader>
+              <OverviewIntro>
+                <CardTitle>{t('modelDocuments.title')}</CardTitle>
+                <CardSubtitle>
+                  {t('modelDocuments.subtitle')}
+                </CardSubtitle>
+              </OverviewIntro>
+            </CardHeader>
+            <CardBody>
+              <SummaryGrid>
+                <SummaryItem>
+                  <SummaryItemLabel>{t('modelDocuments.currentStatus')}</SummaryItemLabel>
+                  <SummaryItemValue>
+                    <SummaryLabel>{getVerificationStatusLabel(doc.verificationStatus)}</SummaryLabel>
+                    <StatusPill $status={statusStyles}>
+                      {getVerificationStatusLabel(doc.verificationStatus)}
+                    </StatusPill>
+                  </SummaryItemValue>
+                </SummaryItem>
 
-            {loading && <p>{t('profileCommon.loading.default')}</p>}
-            {error && <Message type="error">{error}</Message>}
-            {msg && <Message type="ok">{msg}</Message>}
+                <SummaryItem>
+                  <SummaryItemLabel>{t('modelDocuments.nextSteps.title')}</SummaryItemLabel>
+                  <SummaryItemValue>
+                    <SummaryLabel>
+                      {t('modelDocuments.summary.filesUploaded', { count: uploadedCount, total: 3 })}
+                    </SummaryLabel>
+                    <SummaryCount>
+                      {t('modelDocuments.summary.filesUploadedCompact', { count: uploadedCount, total: 3 })}
+                    </SummaryCount>
+                  </SummaryItemValue>
+                </SummaryItem>
+              </SummaryGrid>
 
-            <Hint>
-              {t('modelDocuments.reviewHint')}
-            </Hint>
-          </CardBody>
-        </ProfileCard>
+              {loading && <p>{t('profileCommon.loading.default')}</p>}
+              {error && <Message type="error">{error}</Message>}
+              {msg && <Message type="ok">{msg}</Message>}
 
-        <ProfileGrid>
-          <ProfileColMain>
-            <ProfileCard style={{ marginTop: '16px' }}>
-              <CardHeader>
+              <Hint>
+                {t('modelDocuments.reviewHint')}
+              </Hint>
+            </CardBody>
+          </DocumentOverviewCard>
+
+          <DocumentCard>
+            <CardHeader>
+              <CardHeaderTop>
                 <CardTitle>{t('modelDocuments.front.title')}</CardTitle>
-                <CardSubtitle>
-                  {t('modelDocuments.front.subtitle')}
-                </CardSubtitle>
-              </CardHeader>
-              <CardBody>
-                {renderImageBlock(doc.urlVerificFront)}
+                <UploadBadge $uploaded={Boolean(doc.urlVerificFront)}>
+                  {doc.urlVerificFront ? t('modelDocuments.summary.uploaded') : t('modelDocuments.status.pending')}
+                </UploadBadge>
+              </CardHeaderTop>
+              <CardSubtitle>
+                {t('modelDocuments.front.subtitle')}
+              </CardSubtitle>
+            </CardHeader>
+            <CardBody>
+              {renderImageBlock(doc.urlVerificFront)}
 
-                <PhotoActions>
-                  <FileInput
-                    id="model-id-front"
-                    key={idFrontKey}
-                    type="file"
-                    accept="image/*"
-                    ref={idFrontInputRef}
-                    onChange={(e) => setIdFrontFile(e.target.files?.[0] || null)}
-                  />
-                  <ProfileSecondaryButton
+              <PhotoActions>
+                <FileInput
+                  id="model-id-front"
+                  key={idFrontKey}
+                  type="file"
+                  accept="image/*"
+                  ref={idFrontInputRef}
+                  onChange={(e) => setIdFrontFile(e.target.files?.[0] || null)}
+                />
+                <DocumentSecondaryButton
+                  type="button"
+                  onClick={() => idFrontInputRef.current && idFrontInputRef.current.click()}
+                >
+                  {t('profileCommon.actions.selectFile')}
+                </DocumentSecondaryButton>
+
+                {idFrontFile && (
+                  <SelectedFileTag>{idFrontFile.name}</SelectedFileTag>
+                )}
+
+                <DocumentPrimaryButton
+                  type="button"
+                  onClick={() => uploadSingle('idFront', idFrontFile)}
+                  disabled={!idFrontFile || busyField === 'idFront'}
+                >
+                  {busyField === 'idFront' ? t('profileCommon.actions.uploading') : t('modelDocuments.front.actions.upload')}
+                </DocumentPrimaryButton>
+
+                {doc.urlVerificFront && (
+                  <DocumentDangerButton
                     type="button"
-                    onClick={() => idFrontInputRef.current && idFrontInputRef.current.click()}
+                    onClick={() => deleteSingle('idFront', t('modelDocuments.front.confirmDelete'))}
+                    disabled={deletingField === 'idFront'}
                   >
-                    {t('profileCommon.actions.selectFile')}
-                  </ProfileSecondaryButton>
+                    {deletingField === 'idFront' ? t('profileCommon.actions.deleting') : t('modelDocuments.front.actions.delete')}
+                  </DocumentDangerButton>
+                )}
+              </PhotoActions>
 
-                  {idFrontFile && (
-                    <FileNameWrapper>
-                      <span>{idFrontFile.name}</span>
-                    </FileNameWrapper>
-                  )}
+              <Hint>{t('modelDocuments.front.hint')}</Hint>
+            </CardBody>
+          </DocumentCard>
 
-                  <ProfilePrimaryButton
-                    type="button"
-                    onClick={() => uploadSingle('idFront', idFrontFile)}
-                    disabled={!idFrontFile || busyField === 'idFront'}
-                  >
-                    {busyField === 'idFront' ? t('profileCommon.actions.uploading') : t('modelDocuments.front.actions.upload')}
-                  </ProfilePrimaryButton>
-
-                  {doc.urlVerificFront && (
-                    <ProfileDangerOutlineButton
-                      type="button"
-                      onClick={() => deleteSingle('idFront', t('modelDocuments.front.confirmDelete'))}
-                      disabled={deletingField === 'idFront'}
-                    >
-                      {deletingField === 'idFront' ? t('profileCommon.actions.deleting') : t('modelDocuments.front.actions.delete')}
-                    </ProfileDangerOutlineButton>
-                  )}
-                </PhotoActions>
-
-                <Hint>{t('modelDocuments.front.hint')}</Hint>
-              </CardBody>
-            </ProfileCard>
-
-            <ProfileCard style={{ marginTop: '16px' }}>
-              <CardHeader>
+          <DocumentCard>
+            <CardHeader>
+              <CardHeaderTop>
                 <CardTitle>{t('modelDocuments.back.title')}</CardTitle>
-                <CardSubtitle>
-                  {t('modelDocuments.back.subtitle')}
-                </CardSubtitle>
-              </CardHeader>
-              <CardBody>
-                {renderImageBlock(doc.urlVerificBack)}
+                <UploadBadge $uploaded={Boolean(doc.urlVerificBack)}>
+                  {doc.urlVerificBack ? t('modelDocuments.summary.uploaded') : t('modelDocuments.status.pending')}
+                </UploadBadge>
+              </CardHeaderTop>
+              <CardSubtitle>
+                {t('modelDocuments.back.subtitle')}
+              </CardSubtitle>
+            </CardHeader>
+            <CardBody>
+              {renderImageBlock(doc.urlVerificBack)}
 
-                <PhotoActions>
-                  <FileInput
-                    id="model-id-back"
-                    key={idBackKey}
-                    type="file"
-                    accept="image/*"
-                    ref={idBackInputRef}
-                    onChange={(e) => setIdBackFile(e.target.files?.[0] || null)}
-                  />
-                  <ProfileSecondaryButton
+              <PhotoActions>
+                <FileInput
+                  id="model-id-back"
+                  key={idBackKey}
+                  type="file"
+                  accept="image/*"
+                  ref={idBackInputRef}
+                  onChange={(e) => setIdBackFile(e.target.files?.[0] || null)}
+                />
+                <DocumentSecondaryButton
+                  type="button"
+                  onClick={() => idBackInputRef.current && idBackInputRef.current.click()}
+                >
+                  {t('profileCommon.actions.selectFile')}
+                </DocumentSecondaryButton>
+
+                {idBackFile && (
+                  <SelectedFileTag>{idBackFile.name}</SelectedFileTag>
+                )}
+
+                <DocumentPrimaryButton
+                  type="button"
+                  onClick={() => uploadSingle('idBack', idBackFile)}
+                  disabled={!idBackFile || busyField === 'idBack'}
+                >
+                  {busyField === 'idBack' ? t('profileCommon.actions.uploading') : t('modelDocuments.back.actions.upload')}
+                </DocumentPrimaryButton>
+
+                {doc.urlVerificBack && (
+                  <DocumentDangerButton
                     type="button"
-                    onClick={() => idBackInputRef.current && idBackInputRef.current.click()}
+                    onClick={() => deleteSingle('idBack', t('modelDocuments.back.confirmDelete'))}
+                    disabled={deletingField === 'idBack'}
                   >
-                    {t('profileCommon.actions.selectFile')}
-                  </ProfileSecondaryButton>
+                    {deletingField === 'idBack' ? t('profileCommon.actions.deleting') : t('modelDocuments.back.actions.delete')}
+                  </DocumentDangerButton>
+                )}
+              </PhotoActions>
 
-                  {idBackFile && (
-                    <FileNameWrapper>
-                      <span>{idBackFile.name}</span>
-                    </FileNameWrapper>
-                  )}
+              <Hint>{t('modelDocuments.back.hint')}</Hint>
+            </CardBody>
+          </DocumentCard>
 
-                  <ProfilePrimaryButton
-                    type="button"
-                    onClick={() => uploadSingle('idBack', idBackFile)}
-                    disabled={!idBackFile || busyField === 'idBack'}
-                  >
-                    {busyField === 'idBack' ? t('profileCommon.actions.uploading') : t('modelDocuments.back.actions.upload')}
-                  </ProfilePrimaryButton>
-
-                  {doc.urlVerificBack && (
-                    <ProfileDangerOutlineButton
-                      type="button"
-                      onClick={() => deleteSingle('idBack', t('modelDocuments.back.confirmDelete'))}
-                      disabled={deletingField === 'idBack'}
-                    >
-                      {deletingField === 'idBack' ? t('profileCommon.actions.deleting') : t('modelDocuments.back.actions.delete')}
-                    </ProfileDangerOutlineButton>
-                  )}
-                </PhotoActions>
-
-                <Hint>{t('modelDocuments.back.hint')}</Hint>
-              </CardBody>
-            </ProfileCard>
-          </ProfileColMain>
-
-          <ProfileColSide>
-            <ProfileCard style={{ marginTop: '16px' }}>
-              <CardHeader>
+          <DocumentCard>
+            <CardHeader>
+              <CardHeaderTop>
                 <CardTitle>{t('modelDocuments.verificationFile.title')}</CardTitle>
-                <CardSubtitle>
-                  {t('modelDocuments.verificationFile.subtitle')}
-                </CardSubtitle>
-              </CardHeader>
-              <CardBody>
-                {renderDocLink(doc.urlVerificDoc, t('modelDocuments.verificationFile.linkLabel'))}
+                <UploadBadge $uploaded={Boolean(doc.urlVerificDoc)}>
+                  {doc.urlVerificDoc ? t('modelDocuments.summary.uploaded') : t('modelDocuments.status.pending')}
+                </UploadBadge>
+              </CardHeaderTop>
+              <CardSubtitle>
+                {t('modelDocuments.verificationFile.subtitle')}
+              </CardSubtitle>
+            </CardHeader>
+            <CardBody>
+              {renderDocLink(doc.urlVerificDoc, t('modelDocuments.verificationFile.linkLabel'))}
 
-                <PhotoActions>
-                  <FileInput
-                    id="model-verific-doc"
-                    key={verifDocKey}
-                    type="file"
-                    accept="image/*,application/pdf"
-                    ref={verifDocInputRef}
-                    onChange={(e) => setVerifDocFile(e.target.files?.[0] || null)}
-                  />
-                  <ProfileSecondaryButton
+              <PhotoActions>
+                <FileInput
+                  id="model-verific-doc"
+                  key={verifDocKey}
+                  type="file"
+                  accept="image/*,application/pdf"
+                  ref={verifDocInputRef}
+                  onChange={(e) => setVerifDocFile(e.target.files?.[0] || null)}
+                />
+                <DocumentSecondaryButton
+                  type="button"
+                  onClick={() => verifDocInputRef.current && verifDocInputRef.current.click()}
+                >
+                  {t('profileCommon.actions.selectFile')}
+                </DocumentSecondaryButton>
+
+                {verifDocFile && (
+                  <SelectedFileTag>{verifDocFile.name}</SelectedFileTag>
+                )}
+
+                <DocumentPrimaryButton
+                  type="button"
+                  onClick={() => uploadSingle('verificDoc', verifDocFile)}
+                  disabled={!verifDocFile || busyField === 'verificDoc'}
+                >
+                  {busyField === 'verificDoc' ? t('profileCommon.actions.uploading') : t('modelDocuments.verificationFile.actions.upload')}
+                </DocumentPrimaryButton>
+
+                {doc.urlVerificDoc && (
+                  <DocumentDangerButton
                     type="button"
-                    onClick={() => verifDocInputRef.current && verifDocInputRef.current.click()}
+                    onClick={() => deleteSingle('verificDoc', t('modelDocuments.verificationFile.confirmDelete'))}
+                    disabled={deletingField === 'verificDoc'}
                   >
-                    {t('profileCommon.actions.selectFile')}
-                  </ProfileSecondaryButton>
+                    {deletingField === 'verificDoc' ? t('profileCommon.actions.deleting') : t('modelDocuments.verificationFile.actions.delete')}
+                  </DocumentDangerButton>
+                )}
+              </PhotoActions>
 
-                  {verifDocFile && (
-                    <FileNameWrapper>
-                      <span>{verifDocFile.name}</span>
-                    </FileNameWrapper>
-                  )}
+              <Hint>
+                {t('modelDocuments.verificationFile.hint')}
+              </Hint>
+            </CardBody>
+          </DocumentCard>
 
-                  <ProfilePrimaryButton
-                    type="button"
-                    onClick={() => uploadSingle('verificDoc', verifDocFile)}
-                    disabled={!verifDocFile || busyField === 'verificDoc'}
-                  >
-                    {busyField === 'verificDoc' ? t('profileCommon.actions.uploading') : t('modelDocuments.verificationFile.actions.upload')}
-                  </ProfilePrimaryButton>
-
-                  {doc.urlVerificDoc && (
-                    <ProfileDangerOutlineButton
-                      type="button"
-                      onClick={() => deleteSingle('verificDoc', t('modelDocuments.verificationFile.confirmDelete'))}
-                      disabled={deletingField === 'verificDoc'}
-                    >
-                      {deletingField === 'verificDoc' ? t('profileCommon.actions.deleting') : t('modelDocuments.verificationFile.actions.delete')}
-                    </ProfileDangerOutlineButton>
-                  )}
-                </PhotoActions>
-
-                <Hint>
-                  {t('modelDocuments.verificationFile.hint')}
-                </Hint>
-              </CardBody>
-            </ProfileCard>
-
-            <SecurityCard style={{ marginTop: '16px' }}>
-              <CardHeader>
-                <CardTitle>{t('modelDocuments.nextSteps.title')}</CardTitle>
-              </CardHeader>
-              <CardBody>
-                <Hint>
-                  {t('modelDocuments.nextSteps.prefix')}{' '}
-                  <strong>{t('modelDocuments.nextSteps.role')}</strong>{' '}
-                  {t('modelDocuments.nextSteps.suffix')}
-                </Hint>
-              </CardBody>
-            </SecurityCard>
-          </ProfileColSide>
-        </ProfileGrid>
-      </ProfileMain>
-    </StyledContainer>
+          <DocumentCardSoft>
+            <CardHeader>
+              <CardTitle>{t('modelDocuments.nextSteps.title')}</CardTitle>
+              <CardSubtitle>
+                {t('modelDocuments.nextSteps.prefix')}{' '}
+                <strong>{t('modelDocuments.nextSteps.role')}</strong>{' '}
+                {t('modelDocuments.nextSteps.suffix')}
+              </CardSubtitle>
+            </CardHeader>
+            <CardBody>
+              <WorkflowList>
+                <WorkflowStep>
+                  <WorkflowStepTitle>{t('modelDocuments.summary.filesUploadedCompact', { count: uploadedCount, total: 3 })}</WorkflowStepTitle>
+                  <WorkflowStepBody>
+                    {t('modelDocuments.reviewHint')}
+                  </WorkflowStepBody>
+                </WorkflowStep>
+                <WorkflowStep>
+                  <WorkflowStepTitle>{t('modelDocuments.currentStatus')}</WorkflowStepTitle>
+                  <WorkflowStepBody>
+                    {getVerificationStatusLabel(doc.verificationStatus)}
+                  </WorkflowStepBody>
+                </WorkflowStep>
+                <WorkflowStep>
+                  <WorkflowStepTitle>{t('modelDocuments.nextSteps.title')}</WorkflowStepTitle>
+                  <WorkflowStepBody>
+                    {t('modelDocuments.nextSteps.prefix')}{' '}
+                    <strong>{t('modelDocuments.nextSteps.role')}</strong>{' '}
+                    {t('modelDocuments.nextSteps.suffix')}
+                  </WorkflowStepBody>
+                </WorkflowStep>
+              </WorkflowList>
+            </CardBody>
+          </DocumentCardSoft>
+        </DocumentsStack>
+      </DocumentsPage>
+    </DocumentsShell>
   );
 };
 

@@ -1066,6 +1066,11 @@
     "subtitle": "Sube las fotos de tu documento y un archivo de verificación para que podamos aprobar tu perfil de modelo.",
     "currentStatus": "Estado actual de la revisión",
     "reviewHint": "Revisa que las fotos estén nítidas y que los datos sean legibles. Nuestro equipo revisará la información lo antes posible.",
+    "summary": {
+      "uploaded": "Subido",
+      "filesUploaded": "{{count}}/{{total}} archivos subidos",
+      "filesUploadedCompact": "{{count}} de {{total}} subidos"
+    },
     "actions": {
       "openFile": "Abrir archivo"
     },
@@ -1107,8 +1112,8 @@
       "hint": "Formatos aceptados: JPG/PNG. Asegúrate de que todos los datos se vean claros.",
       "confirmDelete": "¿Eliminar la imagen frontal del documento?",
       "actions": {
-        "upload": "Subir frontal",
-        "delete": "Eliminar frontal"
+        "upload": "Subir",
+        "delete": "Eliminar"
       }
     },
     "back": {
@@ -1117,8 +1122,8 @@
       "hint": "Formatos aceptados: JPG/PNG. Comprueba que no haya reflejos ni recortes.",
       "confirmDelete": "¿Eliminar la imagen trasera del documento?",
       "actions": {
-        "upload": "Subir trasera",
-        "delete": "Eliminar trasera"
+        "upload": "Subir",
+        "delete": "Eliminar"
       }
     },
     "verificationFile": {
@@ -1128,8 +1133,8 @@
       "hint": "Acepta JPG/PNG o PDF. Asegúrate de que tu rostro y el documento sean claramente visibles.",
       "confirmDelete": "¿Eliminar el archivo de verificación?",
       "actions": {
-        "upload": "Subir archivo",
-        "delete": "Eliminar archivo"
+        "upload": "Subir",
+        "delete": "Eliminar"
       }
     },
     "nextSteps": {

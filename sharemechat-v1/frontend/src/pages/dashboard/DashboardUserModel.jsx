@@ -1,22 +1,48 @@
-// src/pages/dashboard/DashboardUserModel.jsx
 import React, { useEffect, useState } from 'react';
 import i18n from '../../i18n';
 import { useHistory } from 'react-router-dom';
 import NavbarModel from '../../components/navbar/NavbarModel';
-// Layout base (mismo que DashboardUserClient)
 import {
   StyledContainer,
   StyledMainContent,
   GlobalBlack,
 } from '../../styles/pages-styles/VideochatStyles';
-import { ProfilePrimaryButton } from '../../styles/ButtonStyles';
-import {
-  Hint,
-  CenteredMain,
-  OnboardingCard,
-} from '../../styles/subpages/PerfilClientModelStyle';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
+import {
+  DashboardUserModelShell,
+  DashboardUserModelPage,
+  DashboardUserModelStack,
+  DashboardHeroCard,
+  DashboardHeroKicker,
+  DashboardHeroTitle,
+  DashboardHeroLead,
+  DashboardStatusRow,
+  DashboardStatusCard,
+  DashboardStatusLabel,
+  DashboardStatusValue,
+  DashboardStatusText,
+  DashboardStatusPill,
+  DashboardGrid,
+  DashboardPanel,
+  DashboardPanelHeader,
+  DashboardPanelEyebrow,
+  DashboardPanelTitle,
+  DashboardPanelSubtitle,
+  DashboardPanelBody,
+  DashboardHint,
+  DashboardMessage,
+  DashboardLinkBox,
+  DashboardCheckboxRow,
+  DashboardActions,
+  DashboardPrimaryButton,
+  DashboardSecondaryButton,
+  DashboardFooterCard,
+  DashboardFooterList,
+  DashboardFooterItem,
+  DashboardFooterItemTitle,
+  DashboardFooterItemBody,
+} from '../../styles/pages-styles/DashboardUserModelStyles';
 
 const DashboardUserModel = () => {
   const history = useHistory();
@@ -27,17 +53,14 @@ const DashboardUserModel = () => {
   const [userName, setUserName] = useState('');
   const [info, setInfo] = useState('');
 
-  // ===== CONTRATO LEGAL (modelo) =====
   const [contractCurrent, setContractCurrent] = useState(null);
   const [contractAccepted, setContractAccepted] = useState(null);
   const [accepting, setAccepting] = useState(false);
   const [contractErr, setContractErr] = useState('');
 
-  // UX: obligar a abrir el PDF + checkbox antes de permitir "Acepto"
   const [openedContract, setOpenedContract] = useState(false);
   const [confirmChecked, setConfirmChecked] = useState(false);
 
-  // Estado KYC (routing + modo activo)
   const [routingKyc, setRoutingKyc] = useState(false);
   const [kycRouteErr, setKycRouteErr] = useState('');
   const [kycMode, setKycMode] = useState('');
@@ -72,7 +95,6 @@ const DashboardUserModel = () => {
     );
   }, [sessionUser, sessionLoading, history]);
 
-  // Cargar contrato vigente + estado aceptación (auth)
   useEffect(() => {
     if (sessionLoading) return;
     if (!sessionUser) return;
@@ -110,7 +132,6 @@ const DashboardUserModel = () => {
     };
   }, [sessionUser, sessionLoading]);
 
-  // Cargar modo KYC activo (solo informativo para el botón/UX)
   useEffect(() => {
     if (sessionLoading) return;
     if (!sessionUser) return;
@@ -148,7 +169,6 @@ const DashboardUserModel = () => {
       setOpenedContract(true);
       setConfirmChecked(true);
 
-      // Tras aceptar, intentamos cargar el modo KYC activo
       try {
         const entry = await apiFetch('/kyc/config/model-onboarding');
         const mode = String(entry?.activeMode || '').toUpperCase();
@@ -163,11 +183,6 @@ const DashboardUserModel = () => {
     }
   };
 
-  const handleProfile = () => {
-    history.push('/perfil-model');
-  };
-
-
   const handleLogout = async () => {
     try {
       await apiFetch('/auth/logout', { method: 'POST' });
@@ -177,7 +192,6 @@ const DashboardUserModel = () => {
     history.push('/');
   };
 
-  // Decide flujo (MANUAL vs VERIFF) desde backend
   const handleUploadDocs = async () => {
     setRoutingKyc(true);
     setKycRouteErr('');
@@ -214,6 +228,7 @@ const DashboardUserModel = () => {
   const mustAcceptContract = contractAccepted === false;
   const canAcceptContract = openedContract && confirmChecked && !accepting;
   const disabledNoop = () => {};
+  const verificationStatus = String(sessionUser?.verificationStatus || 'PENDING').toUpperCase();
 
   const mainButtonLabel =
     kycMode === 'VERIFF'
@@ -222,21 +237,18 @@ const DashboardUserModel = () => {
       ? t('dashboardUserModel.kyc.actions.uploadDocumentsManual')
       : t('dashboardUserModel.kyc.actions.updateOrUploadDocuments');
 
-  const mobileButtonLabel =
-    kycMode === 'VERIFF'
-      ? t('dashboardUserModel.kyc.actions.goVeriff')
-      : kycMode === 'MANUAL'
-      ? t('dashboardUserModel.kyc.actions.uploadDocumentsShort')
-      : t('dashboardUserModel.kyc.actions.uploadDocumentsShort');
-
   if (sessionLoading) {
     return (
       <StyledContainer>
         <GlobalBlack />
         <StyledMainContent>
-          <div style={{ padding: 16, color: '#fff' }}>
-            {t('dashboardUserModel.loading.session')}
-          </div>
+          <DashboardUserModelShell>
+            <DashboardUserModelPage>
+              <DashboardMessage>
+                {t('dashboardUserModel.loading.session')}
+              </DashboardMessage>
+            </DashboardUserModelPage>
+          </DashboardUserModelShell>
         </StyledMainContent>
       </StyledContainer>
     );
@@ -246,7 +258,6 @@ const DashboardUserModel = () => {
     <StyledContainer>
       <GlobalBlack />
 
-      {/* ========= INICIO NAVBAR  ======== */}
       <NavbarModel
         activeTab="videochat"
         displayName={displayName}
@@ -264,7 +275,7 @@ const DashboardUserModel = () => {
         profileDisabled={true}
         onWithdraw={disabledNoop}
         onLogout={handleLogout}
-        showLocaleSwitcher={false}
+        showLocaleSwitcher={true}
         showBalance={false}
         showQueue={false}
         showAvatar={true}
@@ -274,111 +285,212 @@ const DashboardUserModel = () => {
         statsDisabled={true}
         withdrawDisabled={true}
       />
-      {/* ========= FIN NAVBAR  ======== */}
 
-      {/* MAIN: tarjeta centrada de verificación */}
       <StyledMainContent data-tab="onboarding">
-        <CenteredMain>
-          <OnboardingCard>
-            <h3>{t('dashboardUserModel.title')}</h3>
+        <DashboardUserModelShell>
+          <DashboardUserModelPage>
+            <DashboardUserModelStack>
+              <DashboardHeroCard>
+                <DashboardHeroKicker>{displayName}</DashboardHeroKicker>
+                <DashboardHeroTitle>{t('dashboardUserModel.title')}</DashboardHeroTitle>
+                <DashboardHeroLead>
+                  {t('dashboardUserModel.footerHint.prefix')}{' '}
+                  <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
+                </DashboardHeroLead>
 
-            {info && <Hint style={{ marginTop: 8, color: '#000' }}>{info}</Hint>}
+                <DashboardStatusRow>
+                  <DashboardStatusCard>
+                    <DashboardStatusLabel>{t('dashboardUserModel.info.verificationStatus', { status: '' }).replace(': ', '')}</DashboardStatusLabel>
+                    <DashboardStatusValue>
+                      <DashboardStatusText>{getVerificationStatusLabel(sessionUser?.verificationStatus)}</DashboardStatusText>
+                      <DashboardStatusPill $status={verificationStatus}>
+                        {getVerificationStatusLabel(sessionUser?.verificationStatus)}
+                      </DashboardStatusPill>
+                    </DashboardStatusValue>
+                  </DashboardStatusCard>
 
-            {/* CONTRATO LEGAL (gating UX) */}
-            {contractAccepted === false && (
-              <div style={{ marginTop: 16 }}>
-                <Hint>
-                  {t('dashboardUserModel.contract.mustAcceptMessage')}
-                </Hint>
+                  <DashboardStatusCard>
+                    <DashboardStatusLabel>{t('dashboardUserModel.kyc.activeMethod').replace(':', '')}</DashboardStatusLabel>
+                    <DashboardStatusValue>
+                      <DashboardStatusText>
+                        {kycMode ? getKycModeLabel(kycMode) : t('dashboardUserModel.kyc.notAvailable')}
+                      </DashboardStatusText>
+                      <DashboardStatusPill $status={contractAccepted === true ? 'APPROVED' : 'PENDING'}>
+                        {contractAccepted === true
+                          ? t('dashboardUserModel.contract.actions.accept')
+                          : t('dashboardUserModel.contract.mustAcceptFirst')}
+                      </DashboardStatusPill>
+                    </DashboardStatusValue>
+                  </DashboardStatusCard>
+                </DashboardStatusRow>
+              </DashboardHeroCard>
 
-                {contractCurrent?.url && (
-                  <Hint style={{ marginTop: 8, color: '#000' }}>
-                    <a
-                      href={contractCurrent.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      onClick={() => setOpenedContract(true)}
-                      style={{ color: '#000', textDecoration: 'underline' }}
-                    >
-                      {t('dashboardUserModel.contract.viewPdf')}
-                    </a>
-                  </Hint>
-                )}
-
-                <div style={{ marginTop: 10 }}>
-                  <label style={{ display: 'flex', gap: 10, alignItems: 'center', cursor: 'pointer' }}>
-                    <input
-                      type="checkbox"
-                      checked={confirmChecked}
-                      onChange={(e) => setConfirmChecked(e.target.checked)}
-                    />
-                    <span style={{ color: '#000' }}>
+              <DashboardGrid>
+                <DashboardPanel>
+                  <DashboardPanelHeader>
+                    <DashboardPanelEyebrow>{t('dashboardUserModel.contract.viewPdf')}</DashboardPanelEyebrow>
+                    <DashboardPanelTitle>{t('dashboardUserModel.contract.mustAcceptMessage')}</DashboardPanelTitle>
+                    <DashboardPanelSubtitle>
                       {t('dashboardUserModel.contract.checkbox')}
-                    </span>
-                  </label>
-                </div>
+                    </DashboardPanelSubtitle>
+                  </DashboardPanelHeader>
 
-                <div style={{ marginTop: 12 }}>
-                  <ProfilePrimaryButton
-                    type="button"
-                    onClick={handleAcceptContract}
-                    disabled={!canAcceptContract}
-                    title={
-                      accepting
-                        ? t('dashboardUserModel.contract.actions.accepting')
-                        : !openedContract
-                        ? t('dashboardUserModel.contract.tooltips.openPdfFirst')
-                        : !confirmChecked
-                        ? t('dashboardUserModel.contract.tooltips.checkToContinue')
-                        : t('dashboardUserModel.contract.actions.accept')
-                    }
-                  >
-                    {accepting
-                      ? t('dashboardUserModel.contract.actions.accepting')
-                      : t('dashboardUserModel.contract.actions.accept')}
-                  </ProfilePrimaryButton>
-                </div>
+                  <DashboardPanelBody>
+                    {contractCurrent?.url && (
+                      <DashboardLinkBox>
+                        <a
+                          href={contractCurrent.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={() => setOpenedContract(true)}
+                        >
+                          {t('dashboardUserModel.contract.viewPdf')}
+                        </a>
+                      </DashboardLinkBox>
+                    )}
 
-                {contractErr && <Hint style={{ marginTop: 10 }}>{contractErr}</Hint>}
-              </div>
-            )}
+                    <DashboardCheckboxRow>
+                      <input
+                        type="checkbox"
+                        checked={confirmChecked}
+                        onChange={(e) => setConfirmChecked(e.target.checked)}
+                      />
+                      <span>{t('dashboardUserModel.contract.checkbox')}</span>
+                    </DashboardCheckboxRow>
 
-            {/* Si contractAccepted === null (no pudimos cargar) mostramos aviso */}
-            {contractAccepted === null && contractErr && (
-              <div style={{ marginTop: 16 }}>
-                <Hint>{contractErr}</Hint>
-              </div>
-            )}
+                    {contractAccepted === false && (
+                      <DashboardHint>
+                        {t('dashboardUserModel.contract.mustAcceptMessage')}
+                      </DashboardHint>
+                    )}
 
-            {contractAccepted === true && kycMode && (
-              <Hint style={{ marginTop: 12, color: '#000' }}>
-                {t('dashboardUserModel.kyc.activeMethod')} <strong>{getKycModeLabel(kycMode)}</strong>
-              </Hint>
-            )}
+                    {contractAccepted === true && (
+                      <DashboardMessage>
+                        {t('dashboardUserModel.contract.actions.accept')}
+                      </DashboardMessage>
+                    )}
 
-            <div style={{ marginTop: 16 }}>
-              <ProfilePrimaryButton
-                type="button"
-                onClick={handleUploadDocs}
-                disabled={mustAcceptContract || routingKyc}
-                title={mustAcceptContract ? t('dashboardUserModel.contract.mustAcceptFirst') : undefined}
-              >
-                {routingKyc ? t('dashboardUserModel.kyc.actions.opening') : mainButtonLabel}
-              </ProfilePrimaryButton>
-            </div>
+                    {contractAccepted === null && contractErr && (
+                      <DashboardMessage $type="error">
+                        {contractErr}
+                      </DashboardMessage>
+                    )}
 
-            {kycRouteErr && (
-              <Hint style={{ marginTop: 10 }}>
-                {kycRouteErr}
-              </Hint>
-            )}
+                    {contractErr && contractAccepted !== null && (
+                      <DashboardMessage $type="error">
+                        {contractErr}
+                      </DashboardMessage>
+                    )}
 
-            <Hint style={{ marginTop: 12 }}>
-              {t('dashboardUserModel.footerHint.prefix')}{' '}
-              <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
-            </Hint>
-          </OnboardingCard>
-        </CenteredMain>
+                    <DashboardActions>
+                      <DashboardPrimaryButton
+                        type="button"
+                        onClick={handleAcceptContract}
+                        disabled={!canAcceptContract || contractAccepted === true}
+                        title={
+                          accepting
+                            ? t('dashboardUserModel.contract.actions.accepting')
+                            : !openedContract
+                            ? t('dashboardUserModel.contract.tooltips.openPdfFirst')
+                            : !confirmChecked
+                            ? t('dashboardUserModel.contract.tooltips.checkToContinue')
+                            : t('dashboardUserModel.contract.actions.accept')
+                        }
+                      >
+                        {accepting
+                          ? t('dashboardUserModel.contract.actions.accepting')
+                          : t('dashboardUserModel.contract.actions.accept')}
+                      </DashboardPrimaryButton>
+                    </DashboardActions>
+                  </DashboardPanelBody>
+                </DashboardPanel>
+
+                <DashboardPanel>
+                  <DashboardPanelHeader>
+                    <DashboardPanelEyebrow>{t('dashboardUserModel.kyc.activeMethod')}</DashboardPanelEyebrow>
+                    <DashboardPanelTitle>{mainButtonLabel}</DashboardPanelTitle>
+                    <DashboardPanelSubtitle>
+                      {info || t('dashboardUserModel.contract.mustAcceptMessage')}
+                    </DashboardPanelSubtitle>
+                  </DashboardPanelHeader>
+
+                  <DashboardPanelBody>
+                    {kycMode && (
+                      <DashboardMessage>
+                        {t('dashboardUserModel.kyc.activeMethod')} <strong>{getKycModeLabel(kycMode)}</strong>
+                      </DashboardMessage>
+                    )}
+
+                    <DashboardHint>
+                      {t('dashboardUserModel.footerHint.prefix')}{' '}
+                      <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
+                    </DashboardHint>
+
+                    {kycRouteErr && (
+                      <DashboardMessage $type="error">
+                        {kycRouteErr}
+                      </DashboardMessage>
+                    )}
+
+                    <DashboardActions>
+                      <DashboardPrimaryButton
+                        type="button"
+                        onClick={handleUploadDocs}
+                        disabled={mustAcceptContract || routingKyc}
+                        title={mustAcceptContract ? t('dashboardUserModel.contract.mustAcceptFirst') : undefined}
+                      >
+                        {routingKyc ? t('dashboardUserModel.kyc.actions.opening') : mainButtonLabel}
+                      </DashboardPrimaryButton>
+
+                      {mustAcceptContract && (
+                        <DashboardSecondaryButton
+                          type="button"
+                          disabled
+                          title={t('dashboardUserModel.contract.mustAcceptFirst')}
+                        >
+                          {t('dashboardUserModel.contract.mustAcceptFirst')}
+                        </DashboardSecondaryButton>
+                      )}
+                    </DashboardActions>
+                  </DashboardPanelBody>
+                </DashboardPanel>
+              </DashboardGrid>
+
+              <DashboardFooterCard>
+                <DashboardPanelHeader>
+                  <DashboardPanelTitle>
+                    {t('dashboardUserModel.footerHint.prefix')}{' '}
+                    <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
+                  </DashboardPanelTitle>
+                  <DashboardPanelSubtitle>
+                    {info || t('dashboardUserModel.contract.mustAcceptMessage')}
+                  </DashboardPanelSubtitle>
+                </DashboardPanelHeader>
+
+                <DashboardFooterList>
+                  <DashboardFooterItem>
+                    <DashboardFooterItemTitle>{t('dashboardUserModel.contract.viewPdf')}</DashboardFooterItemTitle>
+                    <DashboardFooterItemBody>
+                      {t('dashboardUserModel.contract.checkbox')}
+                    </DashboardFooterItemBody>
+                  </DashboardFooterItem>
+                  <DashboardFooterItem>
+                    <DashboardFooterItemTitle>{t('dashboardUserModel.kyc.activeMethod').replace(':', '')}</DashboardFooterItemTitle>
+                    <DashboardFooterItemBody>
+                      {kycMode ? getKycModeLabel(kycMode) : t('dashboardUserModel.kyc.notAvailable')}
+                    </DashboardFooterItemBody>
+                  </DashboardFooterItem>
+                  <DashboardFooterItem>
+                    <DashboardFooterItemTitle>{t('dashboardUserModel.info.verificationStatus', { status: '' }).replace(': ', '')}</DashboardFooterItemTitle>
+                    <DashboardFooterItemBody>
+                      {getVerificationStatusLabel(sessionUser?.verificationStatus)}
+                    </DashboardFooterItemBody>
+                  </DashboardFooterItem>
+                </DashboardFooterList>
+              </DashboardFooterCard>
+            </DashboardUserModelStack>
+          </DashboardUserModelPage>
+        </DashboardUserModelShell>
       </StyledMainContent>
     </StyledContainer>
   );
