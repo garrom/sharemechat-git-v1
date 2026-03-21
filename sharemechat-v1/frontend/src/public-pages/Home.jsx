@@ -7,6 +7,45 @@ import useAppModals from '../components/useAppModals';
 import PublicNavbar from '../components/navbar/PublicNavbar';
 import {
   GlobalBlack,
+  HomeCallControl,
+  HomeCallControls,
+  HomeCallFloating,
+  HomeCallTopbar,
+  HomeCallVideo,
+  HomeCallWindow,
+  HomeFeatureList,
+  HomeFeaturePill,
+  HomeHeroSection,
+  HomeLandingSectionPastel,
+  HomeLandingSectionWhite,
+  HomePageStack,
+  HomePanelBar,
+  HomePanelBars,
+  HomePanelChart,
+  HomePanelLarge,
+  HomePanelSmall,
+  HomePanelSmallBody,
+  HomePanelSmallHeader,
+  HomeProfileAvatar,
+  HomeProfileCard,
+  HomeProfileGrid,
+  HomeProfileMeta,
+  HomeSectionBody,
+  HomeSectionEyebrow,
+  HomeSectionInner,
+  HomeSectionInnerReverse,
+  HomeSectionText,
+  HomeSectionTextRight,
+  HomeSectionTitle,
+  HomeSectionVisual,
+  HomeVisualAvatar,
+  HomeVisualCardBottom,
+  HomeVisualCardTop,
+  HomeVisualLine,
+  HomeVisualMainPortrait,
+  HomeVisualMiniCard,
+  HomeVisualShine,
+  HomeVisualStage,
   StyledCenterVideochat,
   StyledSplit2,
   StyledPane,
@@ -142,95 +181,258 @@ export default function Home() {
       showBottomNav={true}
     />
 
-    <StyledCenterVideochat>
+    <HomePageStack>
 
-      <StyledSplit2>
+      <HomeHeroSection>
+        <StyledCenterVideochat>
 
-        <StyledPane data-side="left">
+          <StyledSplit2>
 
-          <HideOnMobile>
-            <HomeHeroText>
-              <h1>{i18n.t('home.hero.title')}</h1>
-              <p>{i18n.t('home.hero.subtitle')}</p>
-              <p>{i18n.t('home.hero.freeTrial')}</p>
+            <StyledPane data-side="left">
 
-              <div style={{marginTop:16,display:'flex',alignItems:'center',justifyContent:'flex-start'}}>
-                <ButtonActivarCam onClick={goRegister}>{i18n.t('home.cta.startVideoChat')}</ButtonActivarCam>
+              <HideOnMobile>
+                <HomeHeroText>
+                  <h1>{i18n.t('home.hero.title')}</h1>
+                  <p>{i18n.t('home.hero.subtitle')}</p>
+                  <p>{i18n.t('home.hero.freeTrial')}</p>
+
+                  <div style={{marginTop:16,display:'flex',alignItems:'center',justifyContent:'flex-start'}}>
+                    <ButtonActivarCam onClick={goRegister}>{i18n.t('home.cta.startVideoChat')}</ButtonActivarCam>
+                  </div>
+
+                </HomeHeroText>
+              </HideOnMobile>
+
+            </StyledPane>
+
+            <StyledPane data-side="right" style={{padding:0}}>
+
+              <div style={{width:'100%',height:'100%'}}>
+
+                <button type="button" className="home-hero-media"
+                  onClick={()=>{if(!heroItem){goLogin();return;}openPublicSignupTeaser();}}
+                  style={{width:'100%',height:'100%',border:'none',padding:0,margin:0,background:'transparent',cursor:'pointer',borderRadius:16,overflow:'hidden',position:'relative'}}>
+
+                  {heroItem?(
+                  <>
+
+                    {slotLabel(heroItem.slotType)&&(
+                      <span style={{position:'absolute',left:10,top:10,zIndex:20,fontSize:'0.72rem',fontWeight:800,padding:'4px 10px',borderRadius:999,background:'rgba(0,0,0,0.65)',color:'#fff',textTransform:'uppercase'}}>
+                        {slotLabel(heroItem.slotType)}
+                      </span>
+                    )}
+
+                    <BlurredPreview
+                      type={heroItem.videoUrl?'video':'img'}
+                      src={heroItem.videoUrl||heroItem.avatarUrl||'/img/avatarChica.png'}
+                      poster={heroItem.avatarUrl||'/img/avatarChica.png'}
+                      muted
+                      autoPlay
+                      loop
+                      playsInline
+                      controls={false}
+                      showVignette
+                      style={{width:'100%',height:'100%'}}
+                    />
+
+                    <StyledHomeMobileOverlay>
+                      <div>
+                        <ButtonActivarCamMobile onClick={goRegister}>
+                          {i18n.t('home.cta.startVideoChat')}
+                        </ButtonActivarCamMobile>
+                      </div>
+                    </StyledHomeMobileOverlay>
+
+                    {canPrev&&(
+                      <button onClick={goPrevCard} aria-label={i18n.t('home.hero.prevAria')}
+                        style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',color:'#fff',fontSize:26,zIndex:30}}>
+                        <FontAwesomeIcon icon={faChevronLeft}/>
+                      </button>
+                    )}
+
+                    {canNext&&(
+                      <button onClick={goNextCard} aria-label={i18n.t('home.hero.nextAria')}
+                        style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',color:'#fff',fontSize:26,zIndex:30}}>
+                        <FontAwesomeIcon icon={faChevronRight}/>
+                      </button>
+                    )}
+
+                  </>
+                  ):(
+                    <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:'#0b1220',color:'#fff',fontWeight:800}}>
+                      {i18n.t('home.hero.loading')}
+                    </div>
+                  )}
+
+                </button>
+
               </div>
 
-            </HomeHeroText>
-          </HideOnMobile>
+            </StyledPane>
 
-        </StyledPane>
+          </StyledSplit2>
+        </StyledCenterVideochat>
+      </HomeHeroSection>
 
-        <StyledPane data-side="right" style={{padding:0}}>
+      <HomeLandingSectionWhite>
+        <HomeSectionInner>
+          <HomeSectionText>
+            <HomeSectionEyebrow>Quick matching</HomeSectionEyebrow>
+            <HomeSectionTitle>Skip the search. Start the spark.</HomeSectionTitle>
+            <HomeSectionBody>
+              Jump into new conversations without digging through endless profiles. The flow is built to make discovery feel immediate, light and easy to follow.
+            </HomeSectionBody>
+            <HomeFeatureList>
+              <HomeFeaturePill>Fast random discovery</HomeFeaturePill>
+              <HomeFeaturePill>Less browsing, more meeting</HomeFeaturePill>
+              <HomeFeaturePill>Instant path into conversation</HomeFeaturePill>
+            </HomeFeatureList>
+          </HomeSectionText>
 
-          <div style={{width:'100%',height:'100%'}}>
+          <HomeSectionVisual>
+            <HomeVisualStage>
+              <HomeVisualMiniCard data-pos="left">
+                <HomeVisualCardTop />
+                <HomeVisualAvatar />
+                <HomeVisualCardBottom>
+                  <HomeVisualLine />
+                  <HomeVisualLine />
+                  <HomeVisualLine />
+                </HomeVisualCardBottom>
+                <HomeVisualShine />
+              </HomeVisualMiniCard>
 
-            <button type="button" className="home-hero-media"
-              onClick={()=>{if(!heroItem){goLogin();return;}openPublicSignupTeaser();}}
-              style={{width:'100%',height:'100%',border:'none',padding:0,margin:0,background:'transparent',cursor:'pointer',borderRadius:16,overflow:'hidden',position:'relative'}}>
+              <HomeVisualMainPortrait>
+                <HomeVisualCardTop />
+                <HomeVisualAvatar />
+                <HomeVisualCardBottom>
+                  <HomeVisualLine />
+                  <HomeVisualLine />
+                  <HomeVisualLine />
+                </HomeVisualCardBottom>
+                <HomeVisualShine />
+              </HomeVisualMainPortrait>
 
-              {heroItem?(
-              <>
+              <HomeVisualMiniCard data-pos="right">
+                <HomeVisualCardTop />
+                <HomeVisualAvatar />
+                <HomeVisualCardBottom>
+                  <HomeVisualLine />
+                  <HomeVisualLine />
+                  <HomeVisualLine />
+                </HomeVisualCardBottom>
+                <HomeVisualShine />
+              </HomeVisualMiniCard>
+            </HomeVisualStage>
+          </HomeSectionVisual>
+        </HomeSectionInner>
+      </HomeLandingSectionWhite>
 
-                {slotLabel(heroItem.slotType)&&(
-                  <span style={{position:'absolute',left:10,top:10,zIndex:20,fontSize:'0.72rem',fontWeight:800,padding:'4px 10px',borderRadius:999,background:'rgba(0,0,0,0.65)',color:'#fff',textTransform:'uppercase'}}>
-                    {slotLabel(heroItem.slotType)}
-                  </span>
-                )}
+      <HomeLandingSectionPastel>
+        <HomeSectionInnerReverse>
+          <HomeSectionVisual>
+            <HomeVisualStage>
+              <HomeCallWindow>
+                <HomeCallTopbar />
+                <HomeCallVideo />
+                <HomeCallFloating />
+                <HomeCallControls>
+                  <HomeCallControl />
+                  <HomeCallControl />
+                  <HomeCallControl />
+                </HomeCallControls>
+                <HomeVisualShine />
+              </HomeCallWindow>
+            </HomeVisualStage>
+          </HomeSectionVisual>
 
-                <BlurredPreview
-                  type={heroItem.videoUrl?'video':'img'}
-                  src={heroItem.videoUrl||heroItem.avatarUrl||'/img/avatarChica.png'}
-                  poster={heroItem.avatarUrl||'/img/avatarChica.png'}
-                  muted
-                  autoPlay
-                  loop
-                  playsInline
-                  controls={false}
-                  showVignette
-                  style={{width:'100%',height:'100%'}}
-                />
+          <HomeSectionTextRight>
+            <HomeSectionEyebrow>Private and protected</HomeSectionEyebrow>
+            <HomeSectionTitle>Confidence built into every chat</HomeSectionTitle>
+            <HomeSectionBody>
+              A stronger sense of privacy changes how people connect. With a calmer environment, clearer control and support from moderation systems, every interaction can feel more secure.
+            </HomeSectionBody>
+            <HomeFeatureList>
+              <HomeFeaturePill>More private by design</HomeFeaturePill>
+              <HomeFeaturePill>Technology-backed trust signals</HomeFeaturePill>
+              <HomeFeaturePill>Cleaner space for real interaction</HomeFeaturePill>
+            </HomeFeatureList>
+          </HomeSectionTextRight>
+        </HomeSectionInnerReverse>
+      </HomeLandingSectionPastel>
 
-                <StyledHomeMobileOverlay>
-                  <div>
-                    <ButtonActivarCamMobile onClick={goRegister}>
-                      {i18n.t('home.cta.startVideoChat')}
-                    </ButtonActivarCamMobile>
-                  </div>
-                </StyledHomeMobileOverlay>
+      <HomeLandingSectionWhite>
+        <HomeSectionInner>
+          <HomeSectionText>
+            <HomeSectionEyebrow>Clear flow</HomeSectionEyebrow>
+            <HomeSectionTitle>Everything feels easier when the interface gets out of the way</HomeSectionTitle>
+            <HomeSectionBody>
+              The experience is shaped to stay direct, readable and comfortable from screen to screen. Less friction means more attention on the moment and less on figuring things out.
+            </HomeSectionBody>
+            <HomeFeatureList>
+              <HomeFeaturePill>Cleaner interactions from start to finish</HomeFeaturePill>
+              <HomeFeaturePill>Simple actions, clear feedback</HomeFeaturePill>
+              <HomeFeaturePill>Made to feel smooth on every device</HomeFeaturePill>
+            </HomeFeatureList>
+          </HomeSectionText>
 
-                {canPrev&&(
-                  <button onClick={goPrevCard} aria-label={i18n.t('home.hero.prevAria')}
-                    style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',color:'#fff',fontSize:26,zIndex:30}}>
-                    <FontAwesomeIcon icon={faChevronLeft}/>
-                  </button>
-                )}
+          <HomeSectionVisual>
+            <HomeVisualStage>
+              <HomePanelLarge>
+                <HomePanelChart />
+                <HomePanelBars>
+                  <HomePanelBar />
+                  <HomePanelBar />
+                  <HomePanelBar />
+                  <HomePanelBar />
+                </HomePanelBars>
+                <HomeVisualShine />
+              </HomePanelLarge>
 
-                {canNext&&(
-                  <button onClick={goNextCard} aria-label={i18n.t('home.hero.nextAria')}
-                    style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',color:'#fff',fontSize:26,zIndex:30}}>
-                    <FontAwesomeIcon icon={faChevronRight}/>
-                  </button>
-                )}
+              <HomePanelSmall>
+                <HomePanelSmallHeader />
+                <HomePanelSmallBody />
+                <HomeVisualShine />
+              </HomePanelSmall>
+            </HomeVisualStage>
+          </HomeSectionVisual>
+        </HomeSectionInner>
+      </HomeLandingSectionWhite>
 
-              </>
-              ):(
-                <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center',background:'#0b1220',color:'#fff',fontWeight:800}}>
-                  {i18n.t('home.hero.loading')}
-                </div>
-              )}
+      <HomeLandingSectionPastel>
+        <HomeSectionInnerReverse>
+          <HomeSectionVisual>
+            <HomeProfileGrid>
+              {[0,1,2,3].map((item)=>(
+                <HomeProfileCard key={item}>
+                  <HomeVisualCardTop />
+                  <HomeProfileAvatar />
+                  <HomeProfileMeta>
+                    <HomeVisualLine />
+                    <HomeVisualLine />
+                  </HomeProfileMeta>
+                  <HomeVisualShine />
+                </HomeProfileCard>
+              ))}
+            </HomeProfileGrid>
+          </HomeSectionVisual>
 
-            </button>
+          <HomeSectionTextRight>
+            <HomeSectionEyebrow>Unexpected chemistry</HomeSectionEyebrow>
+            <HomeSectionTitle>Sometimes the right connection appears when you stop forcing it</HomeSectionTitle>
+            <HomeSectionBody>
+              Not every meaningful conversation starts with a perfect plan. Sometimes it begins with one spontaneous click, one surprise match and the feeling that you want to stay a little longer.
+            </HomeSectionBody>
+            <HomeFeatureList>
+              <HomeFeaturePill>Discovery that feels natural</HomeFeaturePill>
+              <HomeFeaturePill>Unexpected matches with real potential</HomeFeaturePill>
+              <HomeFeaturePill>Room for a genuine spark to happen</HomeFeaturePill>
+            </HomeFeatureList>
+          </HomeSectionTextRight>
+        </HomeSectionInnerReverse>
+      </HomeLandingSectionPastel>
 
-          </div>
-
-        </StyledPane>
-
-      </StyledSplit2>
-
-    </StyledCenterVideochat>
+    </HomePageStack>
 
   </>
   );

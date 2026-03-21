@@ -85,6 +85,476 @@ export const StyledCenterVideochat = styled.div`
   }
 `;
 
+export const HomePageStack = styled.main`
+  width: 100%;
+`;
+
+export const HomeHeroSection = styled.section`
+  position: relative;
+  min-height: calc(100vh - var(--navbar-height-desktop));
+  display: flex;
+  flex-direction: column;
+
+  @supports (min-height: 100dvh) {
+    min-height: calc(100dvh - var(--navbar-height-desktop));
+  }
+
+  @media (max-width: 1360px) {
+    min-height: calc(100vh - var(--navbar-height) - var(--bottom-nav-height));
+
+    @supports (min-height: 100dvh) {
+      min-height: calc(100dvh - var(--navbar-height) - var(--bottom-nav-height));
+    }
+  }
+`;
+
+export const HomeLandingSection = styled.section`
+  min-height: calc(100vh - var(--navbar-height-desktop));
+  width: 100%;
+
+  @supports (min-height: 100dvh) {
+    min-height: calc(100dvh - var(--navbar-height-desktop));
+  }
+
+  @media (max-width: 1360px) {
+    min-height: calc(100vh - var(--navbar-height) - var(--bottom-nav-height));
+
+    @supports (min-height: 100dvh) {
+      min-height: calc(100dvh - var(--navbar-height) - var(--bottom-nav-height));
+    }
+  }
+`;
+
+export const HomeLandingSectionWhite = styled(HomeLandingSection)`
+  background: #ffffff;
+`;
+
+export const HomeLandingSectionPastel = styled(HomeLandingSection)`
+  background: #f7f8f4;
+`;
+
+export const HomeSectionInner = styled.div`
+  width: min(1180px, calc(100% - 48px));
+  min-height: inherit;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  align-items: center;
+  gap: 56px;
+  padding: 72px 0;
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    width: min(100%, calc(100% - 32px));
+    padding: 44px 0;
+  }
+`;
+
+export const HomeSectionInnerReverse = styled(HomeSectionInner)`
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+  }
+`;
+
+export const HomeSectionText = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 500px;
+
+  @media (max-width: 960px) {
+    max-width: none;
+    order: 2;
+  }
+`;
+
+export const HomeSectionTextRight = styled(HomeSectionText)`
+  @media (max-width: 960px) {
+    order: 2;
+  }
+`;
+
+export const HomeSectionVisual = styled.div`
+  position: relative;
+  min-height: 420px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  @media (max-width: 960px) {
+    min-height: 300px;
+    order: 1;
+  }
+`;
+
+export const HomeSectionEyebrow = styled.span`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.05);
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+`;
+
+export const HomeSectionTitle = styled.h2`
+  margin: 0;
+  color: #0f172a;
+  font-size: clamp(2rem, 3.4vw, 3.3rem);
+  line-height: 0.98;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+`;
+
+export const HomeSectionBody = styled.p`
+  margin: 0;
+  color: #475569;
+  font-size: 1.02rem;
+  line-height: 1.7;
+  max-width: 520px;
+`;
+
+export const HomeFeatureList = styled.div`
+  display: grid;
+  gap: 10px;
+  margin-top: 6px;
+`;
+
+export const HomeFeaturePill = styled.div`
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  color: #0f172a;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.06);
+  font-size: 0.92rem;
+  font-weight: 700;
+`;
+
+export const HomeVisualStage = styled.div`
+  position: relative;
+  width: min(100%, 560px);
+  height: 100%;
+  min-height: 420px;
+
+  @media (max-width: 960px) {
+    min-height: 300px;
+  }
+`;
+
+export const HomeVisualCard = styled.div`
+  position: absolute;
+  border-radius: 30px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(248,250,252,0.98) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+`;
+
+export const HomeVisualShine = styled.div`
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at top left, rgba(255,255,255,0.85), transparent 34%),
+    linear-gradient(135deg, rgba(255,255,255,0.34), rgba(255,255,255,0));
+  pointer-events: none;
+`;
+
+export const HomeVisualMainPortrait = styled(HomeVisualCard)`
+  inset: 18px 58px 18px 58px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(244,247,251,0.98) 100%);
+
+  @media (max-width: 960px) {
+    inset: 14px 42px 14px 42px;
+  }
+`;
+
+export const HomeVisualMiniCard = styled(HomeVisualCard)`
+  width: 150px;
+  height: 190px;
+  background:
+    linear-gradient(180deg, rgba(245,247,250,0.98) 0%, rgba(236,242,247,0.98) 100%);
+
+  &[data-pos='left'] {
+    left: 0;
+    bottom: 34px;
+    transform: rotate(-8deg);
+  }
+
+  &[data-pos='right'] {
+    right: 4px;
+    top: 26px;
+    transform: rotate(8deg);
+  }
+
+  @media (max-width: 960px) {
+    width: 110px;
+    height: 146px;
+  }
+`;
+
+export const HomeVisualAvatar = styled.div`
+  position: absolute;
+  left: 50%;
+  top: 52%;
+  width: 48%;
+  aspect-ratio: 3 / 4;
+  transform: translate(-50%, -50%);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255,255,255,0.9) 0 14%, transparent 14.5%),
+    radial-gradient(circle at 50% 62%, rgba(255,255,255,0.8) 0 28%, transparent 28.5%),
+    linear-gradient(180deg, #dbe6ef 0%, #bccddc 100%);
+`;
+
+export const HomeVisualCardTop = styled.div`
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  top: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(226,232,240,0.95), rgba(241,245,249,0.7));
+`;
+
+export const HomeVisualCardBottom = styled.div`
+  position: absolute;
+  left: 22px;
+  right: 22px;
+  bottom: 24px;
+  display: grid;
+  gap: 10px;
+`;
+
+export const HomeVisualLine = styled.div`
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(203, 213, 225, 0.85);
+
+  &:nth-child(2) {
+    width: 78%;
+  }
+
+  &:nth-child(3) {
+    width: 56%;
+  }
+`;
+
+export const HomeCallWindow = styled(HomeVisualCard)`
+  inset: 24px 10px 24px 10px;
+  border-radius: 32px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(244,247,251,0.98) 100%);
+`;
+
+export const HomeCallTopbar = styled.div`
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  right: 18px;
+  height: 46px;
+  border-radius: 18px;
+  background: rgba(241, 245, 249, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+`;
+
+export const HomeCallVideo = styled.div`
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  top: 82px;
+  bottom: 82px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 50% 34%, rgba(255,255,255,0.85) 0 11%, transparent 11.5%),
+    radial-gradient(circle at 50% 67%, rgba(255,255,255,0.7) 0 22%, transparent 22.5%),
+    linear-gradient(180deg, #d8e2ea 0%, #b8c8d8 100%);
+  overflow: hidden;
+`;
+
+export const HomeCallFloating = styled.div`
+  position: absolute;
+  right: 42px;
+  bottom: 106px;
+  width: 124px;
+  height: 154px;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 28%, rgba(255,255,255,0.86) 0 15%, transparent 15.5%),
+    radial-gradient(circle at 50% 66%, rgba(255,255,255,0.76) 0 26%, transparent 26.5%),
+    linear-gradient(180deg, #dbe8f2 0%, #c7d7e5 100%);
+  border: 1px solid rgba(255,255,255,0.5);
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.16);
+
+  @media (max-width: 960px) {
+    width: 96px;
+    height: 120px;
+    right: 30px;
+    bottom: 96px;
+  }
+`;
+
+export const HomeCallControls = styled.div`
+  position: absolute;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 12px;
+`;
+
+export const HomeCallControl = styled.div`
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: rgba(241, 245, 249, 0.96);
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
+`;
+
+export const HomePanelLarge = styled(HomeVisualCard)`
+  inset: 34px 22px 22px 22px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(246,248,251,0.98) 100%);
+`;
+
+export const HomePanelSmall = styled(HomeVisualCard)`
+  width: 200px;
+  height: 160px;
+  right: -6px;
+  bottom: 20px;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(235,241,246,0.98) 100%);
+
+  @media (max-width: 960px) {
+    width: 146px;
+    height: 120px;
+    right: 4px;
+  }
+`;
+
+export const HomePanelChart = styled.div`
+  position: absolute;
+  left: 26px;
+  right: 26px;
+  top: 28px;
+  height: 180px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(236,242,247,0.95) 0%, rgba(226,232,240,0.95) 100%);
+`;
+
+export const HomePanelBars = styled.div`
+  position: absolute;
+  left: 30px;
+  right: 30px;
+  bottom: 30px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+`;
+
+export const HomePanelBar = styled.div`
+  flex: 1;
+  border-radius: 999px 999px 16px 16px;
+  background: linear-gradient(180deg, #c9d6e2 0%, #aebfd1 100%);
+
+  &:nth-child(1) { height: 74px; }
+  &:nth-child(2) { height: 132px; }
+  &:nth-child(3) { height: 102px; }
+  &:nth-child(4) { height: 152px; }
+`;
+
+export const HomePanelSmallHeader = styled.div`
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  top: 16px;
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(203, 213, 225, 0.95);
+`;
+
+export const HomePanelSmallBody = styled.div`
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  top: 48px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(255,255,255,0.84) 0 16%, transparent 16.5%),
+    radial-gradient(circle at 50% 72%, rgba(255,255,255,0.72) 0 24%, transparent 24.5%),
+    linear-gradient(180deg, #d7e3ed 0%, #c3d3e1 100%);
+`;
+
+export const HomeProfileGrid = styled.div`
+  position: relative;
+  width: min(100%, 540px);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+
+  @media (max-width: 960px) {
+    gap: 14px;
+  }
+`;
+
+export const HomeProfileCard = styled.div`
+  position: relative;
+  min-height: 170px;
+  border-radius: 28px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(245,247,250,0.98) 100%);
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.1);
+  overflow: hidden;
+
+  &:nth-child(2),
+  &:nth-child(3) {
+    transform: translateY(22px);
+  }
+
+  @media (max-width: 960px) {
+    min-height: 136px;
+  }
+`;
+
+export const HomeProfileAvatar = styled.div`
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  width: 54%;
+  aspect-ratio: 1 / 1.18;
+  transform: translate(-50%, -50%);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255,255,255,0.86) 0 15%, transparent 15.5%),
+    radial-gradient(circle at 50% 66%, rgba(255,255,255,0.76) 0 26%, transparent 26.5%),
+    linear-gradient(180deg, #dce7ef 0%, #bfd0de 100%);
+`;
+
+export const HomeProfileMeta = styled.div`
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: grid;
+  gap: 8px;
+`;
+
 /* GRID 2 COLUMNAS 50/50 (copiado de StyledSplit2) */
 export const StyledSplit2 = styled.div`
   position: relative;
