@@ -4,7 +4,7 @@ import BlurredPreview from '../components/BlurredPreview';
 import { useLocation } from 'react-router-dom';
 import { useSession } from '../components/SessionProvider';
 import useAppModals from '../components/useAppModals';
-import LocaleSwitcher from '../components/LocaleSwitcher';
+import PublicNavbar from '../components/navbar/PublicNavbar';
 import {
   GlobalBlack,
   StyledCenterVideochat,
@@ -17,25 +17,15 @@ import {
   StyledHomeMobileOverlay,
   HideOnMobile
 } from '../styles/public-styles/HomeStyles';
-import {
-  StyledNavbar,
-  StyledBrand,
-  StyledNavTab,
-  MobileBottomNav,
-  BottomNavButton,
-  HamburgerButton,
-  MobileMenu
-} from '../styles/NavbarStyles';
-import { NavButton, ButtonActivarCam, ButtonActivarCamMobile } from '../styles/ButtonStyles';
+import { ButtonActivarCam, ButtonActivarCamMobile } from '../styles/ButtonStyles';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faGem, faChevronLeft, faChevronRight, faBars } from '@fortawesome/free-solid-svg-icons';
+import { faChevronLeft, faChevronRight } from '@fortawesome/free-solid-svg-icons';
 
 export default function Home() {
 
   const { uiLocale } = useSession();
 
   const [activeTab,setActiveTab]=useState('videochat');
-  const [menuOpen,setMenuOpen]=useState(false);
   const location=useLocation();
   const { openLoginModal,openPublicSignupTeaser }=useAppModals();
 
@@ -140,38 +130,17 @@ export default function Home() {
   <>
     <GlobalBlack/>
 
-    <StyledNavbar style={{paddingLeft:24,paddingRight:24}}>
-
-      <div style={{display:'flex',alignItems:'center'}}>
-        <StyledBrand href="/" aria-label="SharemeChat" onClick={handleLogoClick}/>
-
-        <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:8,marginLeft:16}}>
-          <StyledNavTab data-active={activeTab==='videochat'} onClick={()=>handleTabClick('videochat')}>{i18n.t('home.nav.videochat')}</StyledNavTab>
-          <StyledNavTab data-active={activeTab==='favoritos'} onClick={()=>handleTabClick('favoritos')}>{i18n.t('home.nav.favorites')}</StyledNavTab>
-          <StyledNavTab data-active={activeTab==='blog'} onClick={()=>handleTabClick('blog')}>{i18n.t('home.nav.blog')}</StyledNavTab>
-        </div>
-      </div>
-
-      <div className="desktop-only" style={{display:'flex',alignItems:'center',gap:12,marginLeft:'auto'}}>
-        <LocaleSwitcher/>
-        <NavButton onClick={goRegister}>
-          <FontAwesomeIcon icon={faGem} style={{color:'#22c55e',fontSize:'1rem'}}/>
-          <span>{i18n.t('home.cta.buy')}</span>
-        </NavButton>
-        <NavButton onClick={goLogin}><span>{i18n.t('home.cta.login')}</span></NavButton>
-      </div>
-
-      <HamburgerButton onClick={()=>setMenuOpen(o=>!o)} aria-label={i18n.t('home.nav.openMenuAria')} title={i18n.t('home.nav.menuTitle')}>
-        <FontAwesomeIcon icon={faBars}/>
-      </HamburgerButton>
-
-      <MobileMenu className={!menuOpen&&'hidden'}>
-        <LocaleSwitcher onAfterChange={()=>setMenuOpen(false)}/>
-        <NavButton onClick={()=>{goRegister();setMenuOpen(false);}}>{i18n.t('home.cta.buy')}</NavButton>
-        <NavButton onClick={()=>{goLogin();setMenuOpen(false);}}>{i18n.t('home.cta.login')}</NavButton>
-      </MobileMenu>
-
-    </StyledNavbar>
+    <PublicNavbar
+      activeTab={activeTab}
+      onBrandClick={handleLogoClick}
+      onGoVideochat={() => handleTabClick('videochat')}
+      onGoFavorites={() => handleTabClick('favoritos')}
+      onGoBlog={() => handleTabClick('blog')}
+      onBuy={goRegister}
+      onLogin={goLogin}
+      showLocaleSwitcher={true}
+      showBottomNav={true}
+    />
 
     <StyledCenterVideochat>
 
@@ -260,12 +229,6 @@ export default function Home() {
         </StyledPane>
 
       </StyledSplit2>
-
-      <MobileBottomNav>
-        <BottomNavButton active={activeTab==='videochat'} onClick={()=>handleTabClick('videochat')}><span>{i18n.t('home.nav.videochat')}</span></BottomNavButton>
-        <BottomNavButton active={activeTab==='favoritos'} onClick={()=>handleTabClick('favoritos')}><span>{i18n.t('home.nav.favorites')}</span></BottomNavButton>
-        <BottomNavButton active={activeTab==='blog'} onClick={()=>handleTabClick('blog')}><span>{i18n.t('home.nav.blog')}</span></BottomNavButton>
-      </MobileBottomNav>
 
     </StyledCenterVideochat>
 

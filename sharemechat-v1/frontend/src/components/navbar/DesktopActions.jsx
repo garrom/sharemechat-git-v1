@@ -36,7 +36,7 @@ const DesktopActions = ({
     >
       {queueText ? <QueueText className="me-3">{queueText}</QueueText> : null}
 
-      <NavText className="me-3">{displayName}</NavText>
+      {displayName ? <NavText className="me-3">{displayName}</NavText> : null}
 
       {balanceText ? <SaldoText className="me-3">{balanceText}</SaldoText> : null}
 
@@ -70,10 +70,12 @@ const DesktopActions = ({
         </NavButton>
       ) : null}
 
-      <NavButton type="button" onClick={onLogout} title={logoutTitle}>
-        <FontAwesomeIcon icon={faSignOutAlt} />
-        <span>{logoutLabel}</span>
-      </NavButton>
+      {logoutLabel ? (
+        <NavButton type="button" onClick={onLogout} title={logoutTitle}>
+          <FontAwesomeIcon icon={faSignOutAlt} />
+          <span>{logoutLabel}</span>
+        </NavButton>
+      ) : null}
 
       {showAvatar ? (
         <div

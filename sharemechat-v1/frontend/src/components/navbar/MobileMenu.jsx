@@ -23,6 +23,12 @@ const MobileMenu = ({
   tabs = [],
   items = [],
 }) => {
+  const hasHeader =
+    Boolean(queueText) ||
+    Boolean(displayName) ||
+    Boolean(topRightContent) ||
+    Boolean(balanceText);
+
   return (
     <StyledMobileMenu className={!menuOpen ? 'hidden' : ''}>
       {tabs.length > 0 ? (
@@ -44,11 +50,13 @@ const MobileMenu = ({
         </MobileMenuTabs>
       ) : null}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        {queueText ? <QueueText className="me-3">{queueText}</QueueText> : null}
-        <NavText>{displayName}</NavText>
-        {topRightContent || <SaldoText>{balanceText}</SaldoText>}
-      </div>
+      {hasHeader ? (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+          {queueText ? <QueueText className="me-3">{queueText}</QueueText> : null}
+          {displayName ? <NavText>{displayName}</NavText> : null}
+          {topRightContent || (balanceText ? <SaldoText>{balanceText}</SaldoText> : null)}
+        </div>
+      ) : null}
 
       {showLocaleSwitcher ? (
         <LocaleSwitcher onAfterChange={() => closeMenu()} />
@@ -59,7 +67,9 @@ const MobileMenu = ({
           key={item.key}
           type="button"
           onClick={() => {
-            item.onClick();
+            if (!item.disabled) {
+              item.onClick();
+            }
             closeMenu();
           }}
           title={item.title}
