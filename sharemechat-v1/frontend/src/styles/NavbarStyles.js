@@ -10,9 +10,9 @@ export const StyledNavbar = styled.nav`
   align-items: center;
   height: var(--navbar-height-desktop);
   padding: 0 ${space.lg};
-  background: ${colors.blacksolid};
-  backdrop-filter: blur(8px);
-  box-shadow: ${shadow.card};
+  background: #111418;
+  backdrop-filter: none;
+  box-shadow: none;
   position: sticky;
   top: 0;
   z-index: 1000;
@@ -59,7 +59,7 @@ export const StyledContainer = styled.div`
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: #0f0f0f;
+  background: #111418;
   color: #e0e0e0;
 `;
 

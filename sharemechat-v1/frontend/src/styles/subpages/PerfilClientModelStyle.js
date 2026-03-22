@@ -1,9 +1,36 @@
-// src/styles/subpages/PerfilClientModelStyle.js
 import styled from 'styled-components';
-import { bp, colors, radius, space, shadow } from '../core/tokens';
+import { bp, colors, radius, space } from '../core/tokens';
 import { inputBase, buttonBase } from '../core/mixins';
+import {
+  ProfileDangerOutlineButton,
+  ProfilePrimaryButton,
+  ProfileSecondaryButton,
+} from '../ButtonStyles';
 
-/* ================== LAYOUT PERFIL (CLIENTE / MODELO) ================== */
+const surface = '#ffffff';
+const surfaceMuted = '#f8fafb';
+const pageBg = 'linear-gradient(180deg, #f9fafb 0%, #f3f5f7 100%)';
+const border = '#e6e7ea';
+const borderSoft = '#dde3ea';
+const textMain = '#1f2933';
+const textMuted = '#5b6470';
+const accent = '#354556';
+const accentHover = '#2d3a49';
+const successBg = '#edf6ef';
+const successBorder = '#bfd6c6';
+const successText = '#476755';
+const dangerBg = '#fbf1f1';
+const dangerBorder = '#dbbcbc';
+const dangerText = '#8f5b5b';
+const cardShadow = '0 10px 30px rgba(17, 24, 39, 0.06)';
+
+const profileButtonStyles = `
+  min-height: 42px;
+  box-shadow: none;
+  letter-spacing: 0.05em;
+  font-size: 0.76rem;
+  transition: background-color 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.05s ease;
+`;
 
 export const PageWrap = styled.div`
   max-width: 720px;
@@ -18,24 +45,28 @@ export const PageWrap = styled.div`
 
 export const Title = styled.h2`
   margin: 0 0 ${space.lg};
-  font-weight: 600;
-  color: #fff;
+  font-weight: 700;
+  color: ${textMain};
 `;
 
 export const Message = styled.p`
   margin: ${space.sm} 0;
-  color: ${({ type }) =>
-    type === 'error'
-      ? colors.error
-      : type === 'ok'
-      ? colors.ok
-      : colors.text};
+  padding: 13px 15px;
+  border-radius: 16px;
+  font-size: 0.92rem;
+  line-height: 1.58;
+  background: ${({ type }) => (type === 'error' ? dangerBg : '#eef3f6')};
+  border: 1px solid ${({ type }) => (type === 'error' ? '#e7c7c7' : '#d9e0e7')};
+  color: ${({ type }) => (type === 'error' ? dangerText : '#475668')};
 
   ${({ $muted }) =>
     $muted &&
     `
       margin: 0;
-      color: ${colors.textMuted};
+      background: transparent;
+      border: none;
+      padding: 0;
+      color: ${textMuted};
     `}
 `;
 
@@ -50,8 +81,11 @@ export const FormRow = styled.div`
 `;
 
 export const Label = styled.label`
-  font-size: 0.95rem;
-  color: #e0e0e0;
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #66717d;
 `;
 
 export const Input = styled.input`
@@ -59,24 +93,29 @@ export const Input = styled.input`
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  background: #2a2a2a;
-  border: 1px solid #444;
-  color: #fff;
+  min-height: 48px;
+  background: ${surface};
+  border: 1px solid ${borderSoft};
+  color: ${textMain};
+  border-radius: 14px;
 
   &::placeholder {
-    color: #888;
+    color: #95a0ab;
   }
 
-  /* aspecto de campo no editable (email) */
+  &:focus {
+    border-color: #bcc6d1;
+    box-shadow: 0 0 0 3px rgba(53, 69, 86, 0.08);
+  }
+
   &:read-only,
   &:disabled {
-    background: #1b1b1b;
-    border-color: #333;
-    color: #aaa;
+    background: #f6f8fa;
+    border-color: #e1e6eb;
+    color: #6d7783;
     cursor: default;
   }
 `;
-
 
 export const Textarea = styled.textarea`
   ${inputBase}
@@ -84,26 +123,29 @@ export const Textarea = styled.textarea`
   width: 100%;
   max-width: 100%;
   resize: vertical;
-  min-height: 110px;
-  background: #2a2a2a;
-  border: 1px solid #444;
-  color: #fff;
+  min-height: 126px;
+  background: ${surface};
+  border: 1px solid ${borderSoft};
+  color: ${textMain};
+  border-radius: 16px;
 
   &::placeholder {
-    color: #888;
+    color: #95a0ab;
+  }
+
+  &:focus {
+    border-color: #bcc6d1;
+    box-shadow: 0 0 0 3px rgba(53, 69, 86, 0.08);
   }
 `;
 
-
-/* ================== BOTONES PERFIL (LEGADO, AÚN USADOS EN OTRAS PÁGINAS) ================== */
-
 export const ButtonPrimary = styled.button`
   ${buttonBase}
-  background: ${colors.success};
+  background: ${accent};
   color: ${colors.white};
 
   &:hover {
-    background: ${colors.successHover};
+    background: ${accentHover};
   }
 
   &:disabled {
@@ -114,12 +156,12 @@ export const ButtonPrimary = styled.button`
 
 export const ButtonDangerOutline = styled.button`
   ${buttonBase}
-  border: 1px solid ${colors.danger};
-  background: ${colors.white};
-  color: ${colors.danger};
+  border: 1px solid ${dangerBorder};
+  background: transparent;
+  color: ${dangerText};
 
   &:hover {
-    background: #fff5f5;
+    background: ${dangerBg};
   }
 
   &:disabled {
@@ -135,8 +177,6 @@ export const ButtonRow = styled.div`
   flex-wrap: wrap;
 `;
 
-/* ================== ARCHIVOS (INPUT / LABEL / NOMBRE) ================== */
-
 export const FileInput = styled.input`
   position: absolute;
   left: -9999px;
@@ -146,62 +186,68 @@ export const FileInput = styled.input`
   pointer-events: none;
 `;
 
-// OJO: ya no se usa como “botón” en PerfilClient, solo como helper legacy.
 export const FileLabel = styled.label`
   ${buttonBase}
-  border: 1px solid ${colors.border};
-  background: ${colors.white};
+  border: 1px solid ${border};
+  background: ${surface};
 
   &:hover {
-    background: #fafafa;
+    background: ${surfaceMuted};
   }
 `;
 
 export const FileNameWrapper = styled.div`
   margin-top: ${space.xs};
   font-size: 0.9rem;
-  color: ${colors.textMuted};
+  color: ${textMuted};
   word-break: break-all;
-`;
 
-/* ================== SECCIONES / TARJETAS (LEGADO) ================== */
+  a {
+    color: #3f5a73;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+`;
 
 export const Hr = styled.hr`
   margin: ${space.xl} 0;
   border: 0;
-  border-top: 1px solid ${colors.borderSoft};
+  border-top: 1px solid ${border};
 `;
 
 export const SectionCard = styled.section`
-  border: 1px solid ${colors.borderSoft};
-  border-radius: ${radius.lg};
+  border: 1px solid ${border};
+  border-radius: 22px;
   padding: ${space.lg};
-  box-shadow: ${shadow.card};
-  background: ${colors.white};
-  color: #333;
+  box-shadow: ${cardShadow};
+  background: ${surface};
+  color: ${textMain};
 `;
 
 export const SubSectionCard = styled.section`
-  border-radius: ${radius.lg};
+  border-radius: 18px;
   padding: ${space.md};
-  background: #f8f9fa;
-  border: 1px solid ${colors.borderSoft};
+  background: ${surfaceMuted};
+  border: 1px solid ${border};
 `;
 
 export const SectionTitle = styled.h3`
   margin: 0 0 ${space.md};
-  font-weight: 600;
+  font-weight: 700;
+  color: ${textMain};
 `;
-
-/* ================== IMAGEN / VÍDEO (LEGADO) ================== */
 
 export const Photo = styled.img`
   max-width: 220px;
   width: 100%;
   height: auto;
-  border-radius: ${radius.lg};
+  border-radius: 18px;
   display: block;
-  background: #eee;
+  background: #eef2f5;
 `;
 
 export const PhotoBlock = styled.div`
@@ -209,41 +255,38 @@ export const PhotoBlock = styled.div`
 `;
 
 export const Video = styled.video`
+  width: 100%;
   max-width: 100%;
-  max-height: 300px;
+  max-height: 320px;
   display: block;
-  border-radius: ${radius.lg};
-  background: #000;
+  border-radius: 18px;
+  background: #eef2f5;
+  border: 1px solid ${border};
   margin-bottom: ${space.sm};
 `;
 
-/* ================== TEXTOS AUXILIARES ================== */
-
 export const Hint = styled.p`
   margin-top: ${space.sm};
-  color: ${colors.textMuted};
-  font-size: 0.95rem;
+  color: ${textMuted};
+  font-size: 0.92rem;
+  line-height: 1.66;
 `;
-
-/* ================== BOTÓN VOLVER NAVBAR (LEGADO) ================== */
 
 export const BackButton = styled.button`
   ${buttonBase}
-  border: 1px solid ${colors.white}40;
-  background: transparent;
-  color: ${colors.white};
+  border: 1px solid ${border};
+  background: ${surface};
+  color: ${textMain};
   margin-left: ${space.sm};
 
   &:hover {
-    background: ${colors.white}15;
+    background: ${surfaceMuted};
   }
 
   @media (max-width: ${bp.md}) {
     margin-left: 0;
   }
 `;
-
-/* ================== LAYOUTS REUTILIZABLES (LEGADO, USADO POR OTRAS PÁGINAS) ================== */
 
 export const CenteredMain = styled.main`
   flex: 1;
@@ -257,53 +300,97 @@ export const CenteredMain = styled.main`
   }
 `;
 
-/* Tarjeta de onboarding genérica (para DashboardUserModel) */
 export const OnboardingCard = styled.section`
   width: 100%;
   max-width: 720px;
-  border-radius: ${radius.lg};
+  border-radius: 24px;
   padding: ${space.lg};
   margin: 0 auto;
-  background: ${colors.white};
-  box-shadow: ${shadow.card};
-  color: #333;
+  background: ${surface};
+  box-shadow: ${cardShadow};
+  color: ${textMain};
+
   a {
-    color: #000 !important;
+    color: #3f5a73 !important;
   }
 
   a:visited {
-    color: #000 !important;
+    color: #3f5a73 !important;
   }
-
 `;
-
-/* =====================================================================
- * NUEVO LAYOUT PERFIL (MÁS ANCHO, ESTILO AZAR/COOMEET) PARA PERFILCLIENT
- * ===================================================================== */
 
 export const ProfileMain = styled.main`
   flex: 1;
-  max-width: 1100px;
-  margin: ${space.xl} auto ${space.xl};
-  padding: 0 ${space.lg} ${space.xl};
+  width: min(1180px, calc(100% - 40px));
+  margin: 24px auto 36px;
+  padding: 28px;
+  border-radius: 30px;
+  background: ${pageBg};
+  border: 1px solid ${border};
+  box-shadow: 0 16px 42px rgba(17, 24, 39, 0.08);
 
   @media (max-width: ${bp.md}) {
-    margin-top: ${space.lg};
-    padding: 0 ${space.md} ${space.lg};
+    width: calc(100% - 20px);
+    margin-top: 12px;
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  ${ProfilePrimaryButton} {
+    ${profileButtonStyles}
+    background: ${accent};
+    border-color: ${accent};
+    color: #fff;
+  }
+
+  ${ProfilePrimaryButton}:hover:not(:disabled) {
+    background: ${accentHover};
+    border-color: ${accentHover};
+    color: #fff;
+  }
+
+  ${ProfileSecondaryButton} {
+    ${profileButtonStyles}
+    background: ${surface};
+    border-color: #cfd6dd;
+    color: #304050;
+  }
+
+  ${ProfileSecondaryButton}:hover:not(:disabled) {
+    background: #f3f6f8;
+    border-color: #bcc6d1;
+    color: ${textMain};
+  }
+
+  ${ProfileDangerOutlineButton} {
+    ${profileButtonStyles}
+    background: transparent;
+    border-color: ${dangerBorder};
+    color: ${dangerText};
+  }
+
+  ${ProfileDangerOutlineButton}:hover:not(:disabled) {
+    background: ${dangerBg};
+    border-color: #cfaaaa;
+    color: #844f4f;
   }
 `;
-
-/* CABECERA PERFIL */
 
 export const ProfileHeader = styled.section`
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: ${space.md};
+  gap: 18px;
   align-items: center;
-  margin-bottom: ${space.md};
+  margin-bottom: 18px;
+  padding: 24px;
+  border-radius: 26px;
+  background: ${surface};
+  border: 1px solid ${border};
+  box-shadow: ${cardShadow};
 
   @media (max-width: ${bp.md}) {
     grid-template-columns: minmax(0, 1fr);
+    padding: 18px;
   }
 `;
 
@@ -318,15 +405,16 @@ export const ProfileHeaderAvatar = styled.div`
 `;
 
 export const Avatar = styled.div`
-  width: 86px;
-  height: 86px;
+  width: 88px;
+  height: 88px;
   border-radius: 999px;
   overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: radial-gradient(circle at top, #1f2937, #020617);
-  border: 2px solid rgba(148, 163, 184, 0.5);
+  background: linear-gradient(180deg, #eef2f5 0%, #dde4eb 100%);
+  border: 1px solid #d9e0e7;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 `;
 
 export const AvatarImg = styled.img`
@@ -344,70 +432,76 @@ export const ProfileHeaderTitleRow = styled.div`
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: ${space.xs};
-  margin-bottom: 4px;
+  gap: 8px;
+  margin-bottom: 6px;
 `;
 
 export const ProfileHeaderName = styled.h1`
-  font-size: 1.3rem;
+  font-size: 1.45rem;
   margin: 0;
-  color: #f8f9fa;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: ${textMain};
 `;
 
 export const ChipRole = styled.span`
   border-radius: 999px;
-  padding: 4px 10px;
-  font-size: 0.7rem;
-  font-weight: 600;
+  padding: 6px 11px;
+  font-size: 0.72rem;
+  font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  border: 1px solid rgba(56, 189, 248, 0.4);
-  background: rgba(13, 110, 253, 0.12);
-  color: #4dabff;
+  border: 1px solid #d8dee5;
+  background: ${surfaceMuted};
+  color: #51606f;
 `;
 
 export const ProfileHeaderSubtitle = styled.p`
-  margin: 0;
-  margin-bottom: 8px;
-  font-size: 0.9rem;
-  color: colors.textMuted || '#90949f';
+  margin: 0 0 10px;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: ${textMuted};
 `;
 
 export const ProfileHeaderMeta = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${space.md};
-  font-size: 0.8rem;
+  gap: 12px;
+  font-size: 0.82rem;
 `;
 
 export const MetaItem = styled.span`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  min-width: 140px;
+  border-radius: 16px;
+  border: 1px solid ${border};
+  background: ${surfaceMuted};
 `;
 
 export const MetaLabel = styled.span`
-  color: ${colors.textMuted};
+  color: #6b7683;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 700;
 `;
 
 export const MetaValue = styled.span`
-  color: #e5e7eb;
+  color: #364452;
+  font-weight: 600;
 `;
 
 export const MetaValueOk = styled(MetaValue)`
-  color: #4ade80;
+  color: ${successText};
 `;
-
-/* GRID PRINCIPAL (2 COLUMNAS) */
 
 export const ProfileGrid = styled.section`
   margin-top: ${space.lg};
   display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1.1fr);
-  gap: ${space.lg};
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 18px;
   align-items: flex-start;
 
   @media (max-width: ${bp.md}) {
@@ -417,80 +511,96 @@ export const ProfileGrid = styled.section`
 
 export const ProfileColMain = styled.div`
   min-width: 0;
+  display: grid;
+  gap: 16px;
 `;
 
 export const ProfileColSide = styled.div`
   min-width: 0;
+  display: grid;
+  gap: 16px;
 `;
-
-/* CARDS */
 
 export const ProfileCard = styled.section`
-  background: rgba(15, 23, 42, 0.98);
-  border-radius: ${radius.lg};
-  border: 1px solid ${colors.borderSoft};
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.55);
-  padding: ${space.md} ${space.md} ${space.sm};
-  color: #f8f9fa;
+  background: ${surface};
+  border-radius: 24px;
+  border: 1px solid ${border};
+  box-shadow: ${cardShadow};
+  padding: 22px;
+  color: ${textMain};
+
+  @media (max-width: ${bp.md}) {
+    border-radius: 18px;
+    padding: 18px;
+  }
 `;
 
-
 export const MediaCard = styled(ProfileCard)`
-  background: linear-gradient(135deg, #020617, #0f172a);
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
 `;
 
 export const SecurityCard = styled(ProfileCard)`
-  background: linear-gradient(145deg, #020617, #111827);
+  background: linear-gradient(180deg, #ffffff 0%, #fafbfd 100%);
+`;
+
+export const ContractNoticeCard = styled(ProfileCard)`
+  border-color: #e2d4bf;
+  background: linear-gradient(180deg, #fffdf9 0%, #fffaf2 100%);
 `;
 
 export const CardHeader = styled.header`
-  margin-bottom: ${space.sm};
+  margin-bottom: 16px;
 `;
 
 export const CardTitle = styled.h2`
-  margin: 0 0 4px;
-  font-size: 1rem;
+  margin: 0 0 6px;
+  font-size: 1.06rem;
+  line-height: 1.25;
+  color: ${textMain};
 `;
 
 export const CardSubtitle = styled.p`
   margin: 0;
-  font-size: 0.86rem;
-  color: ${colors.textMuted};
+  font-size: 0.92rem;
+  line-height: 1.62;
+  color: ${textMuted};
 `;
 
 export const CardBody = styled.div`
   margin-top: 4px;
+  display: grid;
+  gap: 14px;
 `;
 
 export const CardFooter = styled.footer`
-  margin-top: ${space.sm};
+  margin-top: 16px;
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
 `;
 
-/* FORM LAYOUT */
 export const FormGridNew = styled.div`
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: ${space.sm};
+  gap: 14px;
   width: 100%;
 `;
 
 export const FormFieldNew = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 `;
-
-/* BLOQUE FOTO PERFIL */
 
 export const PhotoPreview = styled.div`
   width: 100%;
-  max-width: 230px;
+  max-width: 240px;
   border-radius: 18px;
   overflow: hidden;
-  border: 1px solid ${colors.borderSoft};
-  background: radial-gradient(circle at top, #111827, #020617);
+  border: 1px solid ${border};
+  background: linear-gradient(180deg, #eef2f5 0%, #dde4eb 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
 `;
 
 export const PhotoImg = styled.img`
@@ -501,22 +611,34 @@ export const PhotoImg = styled.img`
 `;
 
 export const PhotoEmpty = styled.p`
-  font-size: 0.9rem;
-  color: ${colors.textMuted};
+  margin: 0;
+  padding: 18px 16px;
+  border-radius: 16px;
+  background: ${surfaceMuted};
+  border: 1px dashed #d5dce4;
+  color: #6d7784;
+  font-size: 0.92rem;
+  line-height: 1.55;
 `;
 
 export const PhotoActions = styled.div`
   display: flex;
   flex-wrap: wrap;
-  gap: ${space.xs};
-  margin-top: ${space.xs};
+  gap: 10px;
+  margin-top: 4px;
+  align-items: center;
 `;
 
-/* SEGURIDAD CUENTA */
+export const InlineActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+`;
 
 export const SecurityActions = styled.div`
   display: flex;
   flex-direction: column;
-  gap: ${space.xs};
-  margin-bottom: ${space.xs};
+  gap: 10px;
+  margin-bottom: 4px;
 `;

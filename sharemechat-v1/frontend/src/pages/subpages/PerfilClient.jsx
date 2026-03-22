@@ -360,7 +360,7 @@ const PerfilClient = () => {
                 </CardBody>
               </ProfileCard>
 
-              <ProfileCard style={{ marginTop: '16px' }}>
+              <ProfileCard>
                 <CardHeader>
                   <CardTitle>{t('profileCommon.sections.about.title')}</CardTitle>
                   <CardSubtitle>
@@ -471,7 +471,7 @@ const PerfilClient = () => {
                 </CardBody>
               </MediaCard>
 
-              <SecurityCard style={{ marginTop: '16px' }}>
+              <SecurityCard>
                 <CardHeader>
                   <CardTitle>{t('profileCommon.sections.security.title')}</CardTitle>
                 </CardHeader>

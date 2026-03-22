@@ -49,6 +49,7 @@ import {
   ProfileCard,
   MediaCard,
   SecurityCard,
+  ContractNoticeCard,
   CardHeader,
   CardTitle,
   CardSubtitle,
@@ -60,6 +61,7 @@ import {
   PhotoImg,
   PhotoEmpty,
   PhotoActions,
+  InlineActions,
   SecurityActions,
 } from '../../styles/subpages/PerfilClientModelStyle';
 
@@ -464,7 +466,7 @@ const PerfilModel = () => {
 
         {/* Aviso contrato actualizado (solo cuando aplica) */}
         {!loading && contractBlocked && (
-          <ProfileCard style={{ marginTop: '16px', border: '1px solid rgba(255, 160, 0, 0.35)' }}>
+          <ContractNoticeCard>
             <CardHeader>
               <CardTitle>{t('perfilModel.contract.title')}</CardTitle>
               <CardSubtitle>
@@ -478,7 +480,7 @@ const PerfilModel = () => {
                 </Hint>
               )}
 
-              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+              <InlineActions>
                 {contractInfo?.currentUrl && (
                   <ProfileSecondaryButton
                     type="button"
@@ -495,9 +497,9 @@ const PerfilModel = () => {
                 >
                   {contractAccepting ? t('perfilModel.contract.actions.accepting') : t('perfilModel.contract.actions.acceptNewVersion')}
                 </ProfilePrimaryButton>
-              </div>
+              </InlineActions>
             </CardBody>
-          </ProfileCard>
+          </ContractNoticeCard>
         )}
 
         {/* Mensajes de estado */}
@@ -560,7 +562,7 @@ const PerfilModel = () => {
                 </CardBody>
               </ProfileCard>
 
-              <ProfileCard style={{ marginTop: '16px' }}>
+              <ProfileCard>
                 <CardHeader>
                   <CardTitle>{t('profileCommon.sections.about.title')}</CardTitle>
                   <CardSubtitle>
@@ -678,7 +680,7 @@ const PerfilModel = () => {
               </MediaCard>
 
               {/* VÍDEO DE PRESENTACIÓN */}
-              <MediaCard style={{ marginTop: '16px' }}>
+              <MediaCard>
                 <CardHeader>
                   <CardTitle>{t('perfilModel.sections.introVideo.title')}</CardTitle>
                   <CardSubtitle>
@@ -747,7 +749,7 @@ const PerfilModel = () => {
               </MediaCard>
 
               {/* SEGURIDAD Y CUENTA */}
-              <SecurityCard style={{ marginTop: '16px' }}>
+              <SecurityCard>
                 <CardHeader>
                   <CardTitle>{t('profileCommon.sections.security.title')}</CardTitle>
                 </CardHeader>

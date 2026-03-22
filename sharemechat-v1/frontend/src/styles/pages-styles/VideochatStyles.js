@@ -24,7 +24,7 @@ import { colors } from '../core/tokens'
 export const GlobalBlack = createGlobalStyle`
   :root{
     /* Marca y básicos */
-    --c-black: #000000;
+    --c-black: #111418;
     --c-white: #ffffff;
     --c-bg: #0e0f12;    /* negro suave global (ya no forza fondo global) */
 

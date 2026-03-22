@@ -57,6 +57,7 @@ export const Info = styled.div`
 
 export const Name = styled.span`
   font-weight: 600;
+  color: #1f2933;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis; /* ... si no cabe */

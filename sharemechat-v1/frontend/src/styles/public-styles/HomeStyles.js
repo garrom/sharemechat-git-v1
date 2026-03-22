@@ -5,7 +5,7 @@ import { colors } from '../core/tokens';
 /* TOKENS GLOBALES BÁSICOS (copiados de VideochatStyles) */
 export const GlobalBlack = createGlobalStyle`
   :root{
-    --c-black: #000000;
+    --c-black: #111418;
     --c-white: #ffffff;
     --c-bg: #0e0f12;
 
