@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faSignOutAlt,faBan } from '@fortawesome/free-solid-svg-icons';
 import {
-  NavText,
   SaldoText,
   QueueText,
+  StyledNavActionsRow,
   StyledNavAvatar,
+  StyledNavAvatarWrap,
+  StyledNavIconButton,
 } from '../../styles/NavbarStyles';
 import { NavButton } from '../../styles/ButtonStyles';
 import LocaleSwitcher from '../LocaleSwitcher';
 
 const DesktopActions = ({
-  displayName,
   queueText = null,
   balanceText = null,
   showLocaleSwitcher = true,
@@ -29,14 +30,11 @@ const DesktopActions = ({
   useNavGroupAttr = true,
 }) => {
   return (
-    <div
+    <StyledNavActionsRow
       className={wrapperClassName}
       data-nav-group={useNavGroupAttr ? true : undefined}
-      style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}
     >
       {queueText ? <QueueText className="me-3">{queueText}</QueueText> : null}
-
-      {displayName ? <NavText className="me-3">{displayName}</NavText> : null}
 
       {balanceText ? <SaldoText className="me-3">{balanceText}</SaldoText> : null}
 
@@ -71,15 +69,18 @@ const DesktopActions = ({
       ) : null}
 
       {logoutLabel ? (
-        <NavButton type="button" onClick={onLogout} title={logoutTitle}>
+        <StyledNavIconButton
+          type="button"
+          onClick={onLogout}
+          title={logoutTitle || logoutLabel}
+          aria-label={logoutLabel}
+        >
           <FontAwesomeIcon icon={faSignOutAlt} />
-          <span>{logoutLabel}</span>
-        </NavButton>
+        </StyledNavIconButton>
       ) : null}
 
       {showAvatar ? (
-        <div
-          style={{ position: 'relative', display: 'inline-block' }}
+        <StyledNavAvatarWrap
           className={!onAvatarClick ? 'disabled-avatar-wrap' : undefined}
         >
           <StyledNavAvatar
@@ -123,9 +124,9 @@ const DesktopActions = ({
               }
             `}</style>
           )}
-        </div>
+        </StyledNavAvatarWrap>
       ) : null}
-    </div>
+    </StyledNavActionsRow>
   );
 };
 

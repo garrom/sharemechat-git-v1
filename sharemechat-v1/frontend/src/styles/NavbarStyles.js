@@ -130,6 +130,60 @@ export const SaldoText = styled.span`
   }
 `;
 
+export const StyledNavActionsRow = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-left: auto;
+  min-width: 0;
+  min-height: 40px;
+`;
+
+export const StyledNavAvatarWrap = styled.div`
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+`;
+
+export const StyledNavIconButton = styled.button`
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: ${radius.pill};
+  border: 1px solid rgba(15, 23, 42, 0.9);
+  background: #ffffff;
+  color: #020617;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: transform .05s ease, filter .15s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
+
+  &:hover:not(:disabled) {
+    background: ${colors.backsolid};
+    color: #f9fafb;
+    border-color: transparent;
+  }
+
+  &:active {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+    filter: grayscale(.2);
+  }
+`;
+
 export const LocaleSwitch = styled.div`
   display: inline-flex;
   align-items: center;
@@ -259,8 +313,8 @@ export const BottomNavButton = styled.button`
 `;
 
 export const StyledNavAvatar = styled.img`
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   object-fit: cover;
   border: 1px solid rgba(255, 255, 255, 0.45);

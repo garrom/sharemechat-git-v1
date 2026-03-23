@@ -1,7 +1,6 @@
 import React from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  NavText,
   SaldoText,
   QueueText,
   MobileMenu as StyledMobileMenu,
@@ -15,7 +14,6 @@ import LocaleSwitcher from '../LocaleSwitcher';
 const MobileMenu = ({
   menuOpen,
   closeMenu,
-  displayName,
   queueText = null,
   balanceText,
   showLocaleSwitcher = true,
@@ -25,7 +23,6 @@ const MobileMenu = ({
 }) => {
   const hasHeader =
     Boolean(queueText) ||
-    Boolean(displayName) ||
     Boolean(topRightContent) ||
     Boolean(balanceText);
 
@@ -53,7 +50,6 @@ const MobileMenu = ({
       {hasHeader ? (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           {queueText ? <QueueText className="me-3">{queueText}</QueueText> : null}
-          {displayName ? <NavText>{displayName}</NavText> : null}
           {topRightContent || (balanceText ? <SaldoText>{balanceText}</SaldoText> : null)}
         </div>
       ) : null}
