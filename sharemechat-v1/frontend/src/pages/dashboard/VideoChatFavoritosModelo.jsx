@@ -1,10 +1,9 @@
 import React from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhoneSlash, faVideo } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import {
-  StyledCenter,
   StyledFavoritesShell,
   StyledFavoritesColumns,
   StyledCenterPanel,
@@ -32,6 +31,17 @@ import {
   StyledFloatingHangup,
   StyledCallCardDesktop,
   StyledCallFooterDesktop,
+  StyledCallVideoArea,
+  StyledCallStage,
+  StyledCallTopBar,
+  StyledCallTopMeta,
+  StyledCallTopMetaText,
+  StyledCallTopActions,
+  StyledCallLocalVideo,
+  StyledCallBottomBar,
+  StyledCallBottomInner,
+  StyledCallPrimaryActions,
+  StyledCallComposer,
 } from '../../styles/pages-styles/VideochatStyles';
 import {
   ButtonLlamar,
@@ -42,6 +52,9 @@ import {
   ButtonVolver,
   BtnRoundVideo,
   BtnHangup,
+  BtnCallDanger,
+  BtnCallGhost,
+  BtnSend,
 } from '../../styles/ButtonStyles';
 
 export default function VideoChatFavoritosModelo(props) {
@@ -92,6 +105,43 @@ export default function VideoChatFavoritosModelo(props) {
     callClientSaldo,
     callClientSaldoLoading,
   } = props;
+
+  const renderDesktopCallMessages = () => (
+    centerMessages.map((m) => {
+      let giftData = m.gift;
+      if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+        try {
+          const parts = m.body.slice(2, -2).split(':');
+          giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
+        } catch {}
+      }
+      const isMe = Number(m.senderId) === Number(user?.id);
+      const variant = isMe ? 'peer' : 'me';
+      return (
+        <StyledChatMessageRow key={m.id}>
+          <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
+            {giftData
+              ? giftRenderReady &&
+                (() => {
+                  const src = gifts.find((gg) => Number(gg.id) === Number(giftData.id))?.icon || null;
+                  return src ? <img src={src} alt="" style={{ width: 24, height: 24, verticalAlign: 'middle' }} /> : null;
+                })()
+              : m.body}
+          </StyledChatBubble>
+        </StyledChatMessageRow>
+      );
+    })
+  );
+
+  const renderCallClientBalance = () => (
+    callClientSaldoLoading ? (
+      <span>{t('dashboardModel.favorites.balanceLabel')} ...</span>
+    ) : Number.isFinite(Number(callClientSaldo)) ? (
+      <span>{t('dashboardModel.favorites.balanceLabel')} EUR {Number(callClientSaldo).toFixed(2)}</span>
+    ) : (
+      <span>{t('dashboardModel.favorites.balanceLabel')} -</span>
+    )
+  );
 
   return (
     <>
@@ -191,98 +241,73 @@ export default function VideoChatFavoritosModelo(props) {
 
                         {callStatus === 'in-call' && (
                           <StyledCallCardDesktop>
-                            <StyledVideoArea style={{ height: 'calc(100vh - 220px)', maxHeight: 'calc(100vh - 220px)', position: 'relative' }}>
-                              <StyledRemoteVideo ref={callRemoteWrapRef} style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '12px', overflow: 'hidden', background: '#000' }}>
-                                <StyledVideoTitle>
-                                  <div style={{display:'flex',alignItems:'center',gap:10}}>
-                                    <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
-
-                                    <div style={{display:'flex',flexDirection:'column',lineHeight:1.15,minWidth:0}}>
-                                      <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap',minWidth:0}}>
-                                        <span style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                            <StyledCallVideoArea>
+                              <StyledRemoteVideo ref={callRemoteWrapRef} style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '18px 18px 0 0', overflow: 'hidden', background: '#000' }}>
+                                <StyledCallStage>
+                                  <StyledCallTopBar>
+                                    <StyledCallTopMeta>
+                                      <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
+                                      <div style={{display:'flex',flexDirection:'column',minWidth:0,lineHeight:1.15}}>
+                                        <StyledCallTopMetaText>
                                           {callPeerName || t('dashboardModel.favorites.call.remote')}
-                                        </span>
-
-                                        <button
-                                          type="button"
-                                          onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
-                                          title={t('common.fullscreen')}
-                                          style={{padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
-                                        >
-                                          {t('common.fullscreen')}
-                                        </button>
+                                        </StyledCallTopMetaText>
+                                        <div style={{fontSize:12,opacity:0.9,marginTop:2,color:'rgba(255,255,255,0.82)'}}>
+                                          {renderCallClientBalance()}
+                                        </div>
                                       </div>
+                                    </StyledCallTopMeta>
 
-                                      <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
-                                        {callClientSaldoLoading ? (
-                                          <span>{t('dashboardModel.favorites.balanceLabel')} …</span>
-                                        ) : Number.isFinite(Number(callClientSaldo)) ? (
-                                          <span>{t('dashboardModel.favorites.balanceLabel')} €{Number(callClientSaldo).toFixed(2)}</span>
-                                        ) : (
-                                          <span>{t('dashboardModel.favorites.balanceLabel')} —</span>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </StyledVideoTitle>
+                                    <StyledCallTopActions>
+                                      <BtnCallGhost
+                                        type="button"
+                                        onClick={() => toggleFullscreen(callRemoteWrapRef.current)}
+                                        title={t('common.fullscreen')}
+                                        aria-label={t('common.fullscreen')}
+                                      >
+                                        {t('common.fullscreen')}
+                                      </BtnCallGhost>
+                                    </StyledCallTopActions>
+                                  </StyledCallTopBar>
 
-                                <video
-                                  ref={callRemoteVideoRef}
-                                  style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                                  autoPlay
-                                  playsInline
-                                  onDoubleClick={() => toggleFullscreen(callRemoteWrapRef.current)}
-                                />
-
-                                <StyledLocalVideo>
                                   <video
-                                    ref={callLocalVideoRef}
-                                    muted
+                                    ref={callRemoteVideoRef}
+                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                                     autoPlay
                                     playsInline
-                                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', border: '1px solid rgba(255,255,255,0.25)' }}
+                                    onDoubleClick={() => toggleFullscreen(callRemoteWrapRef.current)}
                                   />
-                                </StyledLocalVideo>
 
-                                <div style={{ position: 'absolute', left: 0, right: 0, bottom: 16, display: 'flex', justifyContent: 'center', zIndex: 10 }}>
-                                  <BtnHangup onClick={() => handleCallEnd(false)} title={t('common.hangup')} aria-label={t('common.hangup')}>
-                                    <FontAwesomeIcon icon={faPhoneSlash} />
-                                  </BtnHangup>
-                                </div>
+                                  <StyledCallLocalVideo>
+                                    <video
+                                      ref={callLocalVideoRef}
+                                      muted
+                                      autoPlay
+                                      playsInline
+                                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                                    />
+                                  </StyledCallLocalVideo>
 
-                                <StyledChatContainer data-wide="true" style={{ maxHeight: '70vh' }}>
-                                  <StyledChatList ref={callListRef}>
-                                    {centerMessages.map((m) => {
-                                      let giftData = m.gift;
-                                      if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-                                        try {
-                                          const parts = m.body.slice(2, -2).split(':');
-                                          giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
-                                        } catch {}
-                                      }
-                                      const isMe = Number(m.senderId) === Number(user?.id);
-                                      const variant = isMe ? 'peer' : 'me';
-                                      return (
-                                        <StyledChatMessageRow key={m.id}>
-                                          <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
-                                            {giftData
-                                              ? giftRenderReady &&
-                                                (() => {
-                                                  const src = gifts.find((gg) => Number(gg.id) === Number(giftData.id))?.icon || null;
-                                                  return src ? <img src={src} alt="" style={{ width: 24, height: 24, verticalAlign: 'middle' }} /> : null;
-                                                })()
-                                              : m.body}
-                                          </StyledChatBubble>
-                                        </StyledChatMessageRow>
-                                      );
-                                    })}
-                                  </StyledChatList>
-                                </StyledChatContainer>
+                                  <StyledCallBottomBar>
+                                    <StyledCallBottomInner>
+                                      <StyledCallPrimaryActions>
+                                        <BtnCallDanger onClick={() => handleCallEnd(false)} title={t('common.hangup')} aria-label={t('common.hangup')}>
+                                          <FontAwesomeIcon icon={faPhoneSlash} />
+                                        </BtnCallDanger>
+                                      </StyledCallPrimaryActions>
+                                    </StyledCallBottomInner>
+                                  </StyledCallBottomBar>
+
+                                  <StyledChatContainer data-wide="true">
+                                    <StyledChatList ref={callListRef}>
+                                      {renderDesktopCallMessages()}
+                                    </StyledChatList>
+                                  </StyledChatContainer>
+                                </StyledCallStage>
                               </StyledRemoteVideo>
-                            </StyledVideoArea>
+                            </StyledCallVideoArea>
 
-                            <StyledCallFooterDesktop style={{margin:'8px 0 0',padding:'0 0px',display:'flex',alignItems:'center',gap:8}}>
-                              <StyledChatDock>
+                            <StyledCallFooterDesktop>
+                              <StyledCallComposer>
                                 <StyledChatInput
                                   type="text"
                                   value={centerInput}
@@ -296,7 +321,10 @@ export default function VideoChatFavoritosModelo(props) {
                                     }
                                   }}
                                 />
-                              </StyledChatDock>
+                                <BtnSend type="button" onClick={sendCenterMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
+                                  <FontAwesomeIcon icon={faPaperPlane} />
+                                </BtnSend>
+                              </StyledCallComposer>
                             </StyledCallFooterDesktop>
                           </StyledCallCardDesktop>
                         )}
@@ -357,7 +385,8 @@ export default function VideoChatFavoritosModelo(props) {
                             onChange={(e) => setCenterInput(e.target.value)}
                             placeholder={allowChat ? t('dashboardModel.favorites.messagePlaceholder') : t('dashboardModel.favorites.chatInactive')}
                             onKeyDown={(e) => {
-                              if (e.key === 'Enter' && allowChat) {
+                              if (e.key === 'Enter' && !e.shiftKey && allowChat) {
+                                e.preventDefault();
                                 sendCenterMessage();
                               }
                             }}
@@ -494,11 +523,11 @@ export default function VideoChatFavoritosModelo(props) {
 
                             <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
                               {callClientSaldoLoading ? (
-                                <span>{t('dashboardModel.favorites.balanceLabel')} …</span>
+                                <span>{t('dashboardModel.favorites.balanceLabel')} ...</span>
                               ) : Number.isFinite(Number(callClientSaldo)) ? (
-                                <span>{t('dashboardModel.favorites.balanceLabel')} €{Number(callClientSaldo).toFixed(2)}</span>
+                                <span>{t('dashboardModel.favorites.balanceLabel')} EUR {Number(callClientSaldo).toFixed(2)}</span>
                               ) : (
-                                <span>{t('dashboardModel.favorites.balanceLabel')} —</span>
+                                <span>{t('dashboardModel.favorites.balanceLabel')} -</span>
                               )}
                             </div>
                           </div>

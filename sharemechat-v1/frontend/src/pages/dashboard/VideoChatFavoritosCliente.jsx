@@ -9,10 +9,12 @@ import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPa
     StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,
     StyledChatList,StyledChatMessageRow,StyledChatBubble,StyledPreCallCenter,StyledHelperLine,
     StyledBottomActionsMobile,StyledMobile3ColBar,StyledTopCenter,StyledConnectedText,StyledFloatingHangup,
-    StyledCallCardDesktop,StyledCallFooterDesktop
+    StyledCallCardDesktop,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
+    StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,StyledCallBottomBar,
+    StyledCallBottomInner,StyledCallPrimaryActions,StyledCallComposer,StyledGiftsPanel,StyledGiftGrid
 } from '../../styles/pages-styles/VideochatStyles';
 import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonRegalo,ButtonActivarCam,
-    ButtonActivarCamMobile,ButtonVolver,ActionButton,BtnRoundVideo,BtnHangup
+    ButtonActivarCamMobile,ButtonVolver,ActionButton,BtnRoundVideo,BtnHangup,BtnCallDanger,BtnCallGhost,BtnSend
 } from '../../styles/ButtonStyles';
 
 export default function VideoChatFavoritosCliente(props){
@@ -26,6 +28,34 @@ export default function VideoChatFavoritosCliente(props){
       callPeerId,callPeerName,callPeerAvatar,callRemoteVideoRef,callLocalVideoRef,callRemoteWrapRef,callListRef,
       handleCallActivateCamera,handleCallInvite,handleCallAccept,handleCallReject,handleCallEnd,toggleFullscreen,
       callError,backToList,user} = props;
+
+  const renderCallMessages = () => (
+    centerMessages.map(m=>{
+      let giftData=m.gift;
+      if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
+        try{
+          const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
+        }catch{}
+      }
+      const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
+      return(
+        <StyledChatMessageRow key={m.id}>
+          {giftData?(
+            giftRenderReady&&(()=>{
+              const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
+              return src?(
+                <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
+                  <img src={src} alt="" style={{width:24,height:24,verticalAlign:'middle'}}/>
+                </StyledChatBubble>
+              ):null;
+            })()
+          ):(
+            <StyledChatBubble $variant={variant}>{m.body}</StyledChatBubble>
+          )}
+        </StyledChatMessageRow>
+      );
+    })
+  );
 
   return(<>
     {!isMobile &&(
@@ -108,77 +138,67 @@ export default function VideoChatFavoritosCliente(props){
 
                       {callStatus==='in-call'&&(
                         <StyledCallCardDesktop>
-                          <StyledVideoArea style={{height:'calc(100vh - 220px)',maxHeight:'calc(100vh - 220px)',position:'relative'}}>
-                            <StyledRemoteVideo ref={callRemoteWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'12px',overflow:'hidden',background:'#000'}}>
-                              <StyledVideoTitle>
-                                <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChica.png'} alt=""/>
-                                {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
-                                <button
-                                  type="button"
-                                  onClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
-                                  title={t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}
-                                  style={{marginLeft:8,padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
-                                >{t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}</button>
-                              </StyledVideoTitle>
+                          <StyledCallVideoArea>
+                            <StyledRemoteVideo ref={callRemoteWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}>
+                              <StyledCallStage>
+                                <StyledCallTopBar>
+                                  <StyledCallTopMeta>
+                                    <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChica.png'} alt=""/>
+                                    <StyledCallTopMetaText>
+                                      {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
+                                    </StyledCallTopMetaText>
+                                  </StyledCallTopMeta>
+                                  <StyledCallTopActions>
+                                    <BtnCallGhost
+                                      type="button"
+                                      onClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
+                                      title={t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}
+                                      aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}
+                                    >
+                                      {t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}
+                                    </BtnCallGhost>
+                                  </StyledCallTopActions>
+                                </StyledCallTopBar>
 
-                              <video
-                                ref={callRemoteVideoRef}
-                                style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
-                                autoPlay
-                                playsInline
-                                onDoubleClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
-                              />
-
-                              <StyledLocalVideo>
                                 <video
-                                  ref={callLocalVideoRef}
-                                  muted
+                                  ref={callRemoteVideoRef}
+                                  style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
                                   autoPlay
                                   playsInline
-                                  style={{width:'100%',height:'100%',objectFit:'cover',display:'block',border:'1px solid rgba(255,255,255,0.25)'}}
+                                  onDoubleClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
                                 />
-                              </StyledLocalVideo>
 
-                              <div style={{position:'absolute',left:0,right:0,bottom:16,display:'flex',justifyContent:'center',zIndex:10}}>
-                                <BtnHangup onClick={()=>handleCallEnd(false)} title={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')}>
-                                  <FontAwesomeIcon icon={faPhoneSlash}/>
-                                </BtnHangup>
-                              </div>
+                                <StyledCallLocalVideo>
+                                  <video
+                                    ref={callLocalVideoRef}
+                                    muted
+                                    autoPlay
+                                    playsInline
+                                    style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
+                                  />
+                                </StyledCallLocalVideo>
 
-                              <StyledChatContainer data-wide="true" style={{maxHeight:'70vh'}}>
-                                <StyledChatList ref={callListRef}>
-                                  {centerMessages.map(m=>{
-                                    let giftData=m.gift;
-                                    if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
-                                      try{
-                                        const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
-                                      }catch{}
-                                    }
-                                    const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
-                                    return(
-                                      <StyledChatMessageRow key={m.id}>
-                                        {giftData?(
-                                          giftRenderReady&&(()=>{
-                                            const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
-                                            return src?(
-                                              <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
-                                                <img src={src} alt="" style={{width:24,height:24,verticalAlign:'middle'}}/>
-                                              </StyledChatBubble>
-                                            ):null;
-                                          })()
-                                        ):(
-                                          <StyledChatBubble $variant={variant}>{m.body}</StyledChatBubble>
-                                        )}
-                                      </StyledChatMessageRow>
-                                    );
-                                  })}
-                                </StyledChatList>
-                              </StyledChatContainer>
+                                <StyledCallBottomBar>
+                                  <StyledCallBottomInner>
+                                    <StyledCallPrimaryActions>
+                                      <BtnCallDanger onClick={()=>handleCallEnd(false)} title={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.hangup')}>
+                                        <FontAwesomeIcon icon={faPhoneSlash}/>
+                                      </BtnCallDanger>
+                                    </StyledCallPrimaryActions>
+                                  </StyledCallBottomInner>
+                                </StyledCallBottomBar>
+
+                                <StyledChatContainer data-wide="true">
+                                  <StyledChatList ref={callListRef}>
+                                    {renderCallMessages()}
+                                  </StyledChatList>
+                                </StyledChatContainer>
+                              </StyledCallStage>
                             </StyledRemoteVideo>
-                          </StyledVideoArea>
+                          </StyledCallVideoArea>
 
-                          <StyledCallFooterDesktop style={{margin:'8px 0 0',padding:'0 0px',display:'flex',alignItems:'center',gap:8}}>
-                            <StyledChatDock>
+                          <StyledCallFooterDesktop>
+                            <StyledCallComposer>
                               <StyledChatInput
                                 type="text"
                                 value={centerInput}
@@ -187,26 +207,30 @@ export default function VideoChatFavoritosCliente(props){
                                 autoComplete="off"
                                 onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendCenterMessage();}}}
                                 onFocus={()=>setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50)}
-
                               />
+
+                              <BtnSend type="button" onClick={sendCenterMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
+                                <FontAwesomeIcon icon={faPaperPlane}/>
+                              </BtnSend>
 
                               <ButtonRegalo type="button" onClick={()=>setShowCenterGifts(s=>!s)} title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}>
                                 <FontAwesomeIcon icon={faGift}/>
                               </ButtonRegalo>
+
                               {showCenterGifts&&(
-                                <div style={{position:'absolute',bottom:44,right:0,background:'rgba(0,0,0,0.85)',padding:10,borderRadius:8,zIndex:10,border:'1px solid #333'}}>
-                                  <div style={{display:'grid',gridTemplateColumns:'repeat(3, 80px)',gap:8,maxHeight:240,overflowY:'auto'}}>
+                                <StyledGiftsPanel>
+                                  <StyledGiftGrid>
                                     {gifts.map(g=>(
-                                      <button key={g.id} onClick={()=>sendGiftMsg(g.id)} style={{background:'transparent',border:'1px solid #555',borderRadius:8,padding:6,cursor:'pointer',color:'#fff'}}>
-                                        <img src={g.icon} alt={g.name} style={{width:32,height:32,display:'block',margin:'0 auto'}}/>
-                                        <div style={{fontSize:12}}>{g.name}</div>
-                                        <div style={{fontSize:12,opacity:.8}}>{fmtEUR(g.cost)}</div>
+                                      <button key={g.id} onClick={()=>sendGiftMsg(g.id)}>
+                                        <img src={g.icon} alt={g.name}/>
+                                        <div>{g.name}</div>
+                                        <div>{fmtEUR(g.cost)}</div>
                                       </button>
                                     ))}
-                                  </div>
-                                </div>
+                                  </StyledGiftGrid>
+                                </StyledGiftsPanel>
                               )}
-                            </StyledChatDock>
+                            </StyledCallComposer>
                           </StyledCallFooterDesktop>
                         </StyledCallCardDesktop>
                       )}
