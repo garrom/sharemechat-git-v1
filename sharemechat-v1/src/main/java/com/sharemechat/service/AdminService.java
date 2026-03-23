@@ -7,7 +7,11 @@ import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.ModelReviewChecklist;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.UserNotFoundException;
-import com.sharemechat.repository.*;
+import com.sharemechat.repository.AdminRepository;
+import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.repository.ModelRepository;
+import com.sharemechat.repository.ModelReviewChecklistRepository;
+import com.sharemechat.repository.UserRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -19,11 +23,52 @@ import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class AdminService {
+
+    private static final String HIDDEN_VALUE = "[HIDDEN]";
+    private static final Map<String, TableViewConfig> TABLE_CONFIG = new LinkedHashMap<>();
+
+    static {
+        register("accounting_anomalies", "id DESC");
+        register("audit_runs", "id DESC");
+        register("balances", "id DESC");
+        register("client_documents", "created_at DESC, user_id DESC");
+        register("clients", "user_id DESC");
+        register("consent_events", "ts DESC, id DESC", Set.of("sig", "ip_hint"));
+        register("favorites_clients", "id DESC");
+        register("favorites_models", "id DESC");
+        register("gifts", "id DESC");
+        register("messages", "id DESC", Set.of("body"));
+        register("model_contract_acceptances", "accepted_at DESC, id DESC");
+        register("model_documents", "COALESCE(created_at, updated_at) DESC, user_id DESC");
+        register("model_earning_tiers", "id DESC");
+        register("model_review_checklist", "updated_at DESC, user_id DESC");
+        register("model_tier_daily_snapshots", "snapshot_date DESC, id DESC");
+        register("moderation_reports", "created_at DESC, id DESC");
+        register("models", "user_id DESC");
+        register("password_reset_tokens", "created_at DESC, id DESC", Set.of("token_hash"));
+        register("payment_sessions", "created_at DESC, id DESC");
+        register("payout_requests", "created_at DESC, id DESC");
+        register("platform_balances", "id DESC");
+        register("platform_transactions", "id DESC");
+        register("stream_records", "id DESC");
+        register("stream_status_events", "created_at DESC, id DESC");
+        register("transactions", "id DESC");
+        register("unsubscribe", "end_date DESC, user_id DESC");
+        register("user_blocks", "created_at DESC, id DESC");
+        register("user_trial_streams", "created_at DESC, id DESC");
+        register(
+                "users",
+                "id DESC",
+                Set.of("password", "biography", "interests", "regist_ip", "risk_reason")
+        );
+    }
 
     private final UserRepository userRepository;
     private final UserService userService;
@@ -32,33 +77,10 @@ public class AdminService {
     private final NamedParameterJdbcTemplate jdbc;
     private final ModelDocumentRepository modelDocumentRepository;
     private final ModelReviewChecklistRepository checklistRepository;
-    private static final Map<String, String> TABLE_ORDER = new HashMap<>();
-    static {
-        // tabla -> columna por la que ordenar DESC
-        TABLE_ORDER.put("users", "id");
-        TABLE_ORDER.put("clients", "user_id");
-        TABLE_ORDER.put("models", "user_id");
-        TABLE_ORDER.put("transactions", "id");
-        TABLE_ORDER.put("balances", "id");
-        TABLE_ORDER.put("platform_transactions", "id");
-        TABLE_ORDER.put("platform_balances", "id");
-        TABLE_ORDER.put("stream_records", "id");
-        TABLE_ORDER.put("favorites_clients", "id");
-        TABLE_ORDER.put("favorites_models", "id");
-        TABLE_ORDER.put("gifts", "id");
-        TABLE_ORDER.put("messages", "id");
-        TABLE_ORDER.put("password_reset_tokens", "created_at");
-        TABLE_ORDER.put("unsubscribe", "end_date");
-        TABLE_ORDER.put("client_documents", "created_at");
-        TABLE_ORDER.put("model_documents", "COALESCE(created_at, updated_at)");
-        TABLE_ORDER.put("consent_events", "ts");
-        TABLE_ORDER.put("model_review_checklist", "updated_at");
-
-    }
 
     public AdminService(UserRepository userRepository, UserService userService,
                         ModelRepository modelRepository, AdminRepository adminRepository,
-                        NamedParameterJdbcTemplate jdbc,ModelDocumentRepository modelDocumentRepository,
+                        NamedParameterJdbcTemplate jdbc, ModelDocumentRepository modelDocumentRepository,
                         ModelReviewChecklistRepository checklistRepository) {
         this.userRepository = userRepository;
         this.userService = userService;
@@ -66,14 +88,9 @@ public class AdminService {
         this.adminRepository = adminRepository;
         this.jdbc = jdbc;
         this.modelDocumentRepository = modelDocumentRepository;
-        this.checklistRepository =checklistRepository;
+        this.checklistRepository = checklistRepository;
     }
 
-    /**
-     * Lista candidatos/modelos usando SOLO verificationStatus.
-     * - Sin filtro: devuelve todos los usuarios con verificationStatus no nulo.
-     * - Con filtro: PENDING | APPROVED | REJECTED.
-     */
     @Transactional(readOnly = true)
     public List<UserDTO> getModels(String verification) {
         List<User> list = (verification == null || verification.isBlank())
@@ -82,14 +99,6 @@ public class AdminService {
         return list.stream().map(userService::mapToDTO).toList();
     }
 
-    /**
-     * Revisión robusta e idempotente:
-     * - APPROVE  -> verification=APPROVED; si role != MODEL => role=MODEL; upsert en models.
-     * - REJECT   -> verification=REJECTED; no toca role.
-     * - PENDING  -> verification=PENDING; no toca role.
-     *
-     * Importante: nunca degradamos roles (si ya es MODEL/CLIENT, se mantiene).
-     */
     @Transactional
     public String reviewModel(Long userId, String action) {
         if (action == null || action.isBlank()) {
@@ -101,9 +110,8 @@ public class AdminService {
 
         final String previousRole = user.getRole();
         final String a = action.toUpperCase();
-        final String currentVerification = user.getVerificationStatus(); // puede ser null
+        final String currentVerification = user.getVerificationStatus();
 
-        // Regla 1: REJECT es terminal. Si ya está REJECTED, no permitimos volver a PENDING/APROVED.
         if (Constants.VerificationStatuses.REJECTED.equals(currentVerification)
                 && ("APPROVE".equals(a) || "PENDING".equals(a))) {
             throw new IllegalStateException("La modelo fue RECHAZADA definitivamente. No puede volver a PENDING ni APPROVED.");
@@ -111,36 +119,27 @@ public class AdminService {
 
         switch (a) {
             case "APPROVE" -> {
-                // Solo aprobamos si no está REJECTED (ya validado arriba)
                 user.setVerificationStatus(Constants.VerificationStatuses.APPROVED);
-
-                // Promoción a MODEL si aún no lo es
                 if (!Constants.Roles.MODEL.equals(user.getRole())) {
                     user.setRole(Constants.Roles.MODEL);
                 }
-
-                // Asegurar registro en tabla models (idempotente)
                 if (!modelRepository.existsById(user.getId())) {
                     Model m = new Model();
-                    m.setUser(user); // @MapsId: user_id = user.id
+                    m.setUser(user);
                     modelRepository.save(m);
                 }
             }
             case "REJECT" -> {
-                // Regla 2: degradar a USER si era MODEL, si ya es USER, se queda igual
                 user.setVerificationStatus(Constants.VerificationStatuses.REJECTED);
                 if (Constants.Roles.MODEL.equals(user.getRole())) {
                     user.setRole(Constants.Roles.USER);
                 }
-
             }
             case "PENDING" -> {
-                // Solo permitimos PENDING si nunca fue REJECTED antes
                 if (Constants.VerificationStatuses.REJECTED.equals(currentVerification)) {
                     throw new IllegalStateException("La modelo fue RECHAZADA definitivamente. No puede volver a PENDING.");
                 }
                 user.setVerificationStatus(Constants.VerificationStatuses.PENDING);
-                // No tocamos el role.
             }
             default -> throw new IllegalArgumentException("Acción no válida: " + action);
         }
@@ -158,16 +157,11 @@ public class AdminService {
         return "€" + v.setScale(2, java.math.RoundingMode.HALF_UP);
     }
 
-    /**
-     * ESTE METODO REALIZA el ranking de las modelos con mayores ingresos
-     * según transacciones tipo STREAM_EARNING, limitado al nº solicitado.
-     * Devuelve lista con email/nickname y cantidad formateada en euros.
-     */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> financeTopModels(int limit) {
-        return adminRepository.topModelsByEarnings(PageRequest.of(0, Math.min(Math.max(limit,1),50)))
+        return adminRepository.topModelsByEarnings(PageRequest.of(0, Math.min(Math.max(limit, 1), 50)))
                 .stream().map(r -> {
-                    Map<String,Object> m = new HashMap<>();
+                    Map<String, Object> m = new HashMap<>();
                     m.put("modelId", ((Number) r[0]).longValue());
                     m.put("email", (String) r[1]);
                     m.put("name", (String) r[2]);
@@ -177,15 +171,11 @@ public class AdminService {
                 }).toList();
     }
 
-    /**
-     * ESTE METODO REALIZA el ranking de clientes según la columna totalPagos
-     * de la tabla clients. Devuelve top N con email/nickname y totalPagos formateado en euros.
-     */
     @Transactional(readOnly = true)
     public List<Map<String, Object>> financeTopClients(int limit) {
-        return adminRepository.topClientsByTotalPagos(PageRequest.of(0, Math.min(Math.max(limit,1),50)))
+        return adminRepository.topClientsByTotalPagos(PageRequest.of(0, Math.min(Math.max(limit, 1), 50)))
                 .stream().map(r -> {
-                    Map<String,Object> m = new HashMap<>();
+                    Map<String, Object> m = new HashMap<>();
                     m.put("clientId", ((Number) r[0]).longValue());
                     m.put("email", (String) r[1]);
                     m.put("name", (String) r[2]);
@@ -195,21 +185,13 @@ public class AdminService {
                 }).toList();
     }
 
-
-    /**
-     * ESTE METODO REALIZA un resumen global de facturación:
-     * - grossBillingEUR: facturación total (STREAM_CHARGE en valor absoluto)
-     * - netProfitEUR: margen neto de la plataforma (STREAM_MARGIN)
-     * - profitPercent: % beneficio neto respecto a facturación bruta
-     * Devuelve todo formateado en euros/porcentaje.
-     */
     @Transactional(readOnly = true)
     public Map<String, String> financeSummary() {
         BigDecimal gross = adminRepository.sumGrossBilling();
-        BigDecimal net   = adminRepository.sumNetProfit();
+        BigDecimal net = adminRepository.sumNetProfit();
 
         if (gross == null) gross = BigDecimal.ZERO;
-        if (net == null)   net   = BigDecimal.ZERO;
+        if (net == null) net = BigDecimal.ZERO;
 
         BigDecimal grossAbs = gross.abs();
 
@@ -225,84 +207,72 @@ public class AdminService {
 
         Map<String, String> s = new HashMap<>();
         s.put("grossBillingEUR", fmtEUR(grossAbs));
-        s.put("netProfitEUR",    fmtEUR(net));
-        s.put("profitPercent",   profitPercentStr);
+        s.put("netProfitEUR", fmtEUR(net));
+        s.put("profitPercent", profitPercentStr);
         return s;
     }
 
-    /**
-     * ESTE METODO permite seleccionar tabla de bbdd y despues
-     * visualizarlo en el frontal
-     */
     @Transactional(readOnly = true)
-    public List<Map<String,Object>> viewTable(String table, int limit) {
+    public List<Map<String, Object>> viewTable(String table, int limit) {
         if (table == null) throw new IllegalArgumentException("Tabla no permitida");
+
         String t = table.trim().toLowerCase();
-        if (!TABLE_ORDER.containsKey(t)) {
+        TableViewConfig config = TABLE_CONFIG.get(t);
+        if (config == null) {
             throw new IllegalArgumentException("Tabla no permitida");
         }
-        int lim = Math.min(Math.max(limit, 1), 100);
-        String orderColOrExpr = TABLE_ORDER.get(t); // puede ser columna o expresión segura whitelisteada
 
-        String sql = "SELECT * FROM " + t + " ORDER BY " + orderColOrExpr + " DESC LIMIT :lim";
+        int lim = Math.min(Math.max(limit, 1), 100);
+        String sql = "SELECT * FROM " + t + " ORDER BY " + config.orderBy() + " LIMIT :lim";
 
         return jdbc.query(sql, new MapSqlParameterSource("lim", lim),
                 (rs, rowNum) -> {
                     var md = rs.getMetaData();
-                    Map<String,Object> row = new LinkedHashMap<>();
+                    Map<String, Object> row = new LinkedHashMap<>();
                     for (int i = 1; i <= md.getColumnCount(); i++) {
-                        row.put(md.getColumnLabel(i), rs.getObject(i));
+                        String column = md.getColumnLabel(i);
+                        Object value = rs.getObject(i);
+                        row.put(column, redactValue(config, column, value));
                     }
                     return row;
                 });
     }
 
-    /**
-     * Obtiene, para un userId, las URLs de los documentos de verificación de la modelo
-     * y el estado del checklist de revisión del admin.
-     */
     @Transactional(readOnly = true)
-    public Map<String,Object> getModelDocsWithChecklist(Long userId) {
-        Map<String,Object> out = new LinkedHashMap<>();
+    public Map<String, Object> getModelDocsWithChecklist(Long userId) {
+        Map<String, Object> out = new LinkedHashMap<>();
         ModelDocument doc = modelDocumentRepository.findById(userId).orElse(null);
         out.put("userId", userId);
         out.put("urlVerificFront", doc != null ? doc.getUrlVerificFront() : null);
-        out.put("urlVerificBack",  doc != null ? doc.getUrlVerificBack()  : null);
-        out.put("urlVerificDoc",   doc != null ? doc.getUrlVerificDoc()   : null);
+        out.put("urlVerificBack", doc != null ? doc.getUrlVerificBack() : null);
+        out.put("urlVerificDoc", doc != null ? doc.getUrlVerificDoc() : null);
 
         ModelReviewChecklist ck = checklistRepository.findById(userId).orElse(null);
-        Map<String,Object> checklist = new LinkedHashMap<>();
-        checklist.put("frontOk",  ck != null && ck.isFrontOk());
-        checklist.put("backOk",   ck != null && ck.isBackOk());
+        Map<String, Object> checklist = new LinkedHashMap<>();
+        checklist.put("frontOk", ck != null && ck.isFrontOk());
+        checklist.put("backOk", ck != null && ck.isBackOk());
         checklist.put("selfieOk", ck != null && ck.isSelfieOk());
         out.put("checklist", checklist);
 
         return out;
     }
 
-    /**
-     * Crea/actualiza (upsert) el checklist de revisión del admin para un userId.
-     * Acepta cambios parciales (frontOk/backOk/selfieOk) e introduce/normaliza valores booleanos.
-     * Idempotente: si no existe la fila, la crea; devuelve el estado consolidado tras guardar.
-     *
-     */
-
     @Transactional
-    public Map<String,Object> updateModelChecklist(Long userId, Long adminId, Boolean frontOk, Boolean backOk, Boolean selfieOk) {
+    public Map<String, Object> updateModelChecklist(Long userId, Long adminId, Boolean frontOk, Boolean backOk, Boolean selfieOk) {
         ModelReviewChecklist ck = checklistRepository.findById(userId).orElseGet(() -> {
             ModelReviewChecklist x = new ModelReviewChecklist();
             x.setUserId(userId);
             return x;
         });
 
-        if (frontOk != null)  ck.setFrontOk(frontOk);
-        if (backOk  != null)  ck.setBackOk(backOk);
-        if (selfieOk!= null)  ck.setSelfieOk(selfieOk);
+        if (frontOk != null) ck.setFrontOk(frontOk);
+        if (backOk != null) ck.setBackOk(backOk);
+        if (selfieOk != null) ck.setSelfieOk(selfieOk);
 
         ck.setLastReviewerId(adminId);
         checklistRepository.save(ck);
 
-        Map<String,Object> resp = new LinkedHashMap<>();
+        Map<String, Object> resp = new LinkedHashMap<>();
         resp.put("userId", userId);
         resp.put("frontOk", ck.isFrontOk());
         resp.put("backOk", ck.isBackOk());
@@ -310,4 +280,37 @@ public class AdminService {
         return resp;
     }
 
+    private static void register(String tableName, String orderBy) {
+        register(tableName, orderBy, Set.of());
+    }
+
+    private static void register(String tableName, String orderBy, Set<String> hiddenColumns) {
+        TABLE_CONFIG.put(tableName, new TableViewConfig(orderBy, normalizeHiddenColumns(hiddenColumns)));
+    }
+
+    private static Set<String> normalizeHiddenColumns(Set<String> hiddenColumns) {
+        Set<String> out = new LinkedHashSet<>();
+        for (String column : hiddenColumns) {
+            if (column != null && !column.isBlank()) {
+                out.add(column.trim().toLowerCase());
+            }
+        }
+        return Set.copyOf(out);
+    }
+
+    private Object redactValue(TableViewConfig config, String column, Object value) {
+        if (config == null || column == null) {
+            return value;
+        }
+        if (config.hiddenColumns().contains(column.trim().toLowerCase())) {
+            return HIDDEN_VALUE;
+        }
+        return value;
+    }
+
+    private record TableViewConfig(
+            String orderBy,
+            Set<String> hiddenColumns
+    ) {
+    }
 }

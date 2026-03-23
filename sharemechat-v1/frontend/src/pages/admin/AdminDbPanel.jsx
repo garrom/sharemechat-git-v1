@@ -22,18 +22,21 @@ const DB_TABLES = [
   'favorites_clients',
   'favorites_models',
   'gifts',
-  'home_featured_models',
   'messages',
+  'model_contract_acceptances',
   'model_documents',
   'model_earning_tiers',
   'model_review_checklist',
   'model_tier_daily_snapshots',
+  'moderation_reports',
   'models',
   'password_reset_tokens',
   'payment_sessions',
+  'payout_requests',
   'platform_balances',
   'platform_transactions',
   'stream_records',
+  'stream_status_events',
   'transactions',
   'unsubscribe',
   'user_blocks',
@@ -53,8 +56,10 @@ const AdminDbPanel = () => {
   const isHiddenDbCell = (tableName, colName) => {
     const t = String(tableName || '').toLowerCase();
     const k = String(colName || '').toLowerCase();
-    if (t === 'users' && (k === 'biography' || k === 'interests')) return true;
+    if (t === 'users' && (k === 'password' || k === 'biography' || k === 'interests' || k === 'regist_ip' || k === 'risk_reason')) return true;
     if (t === 'messages' && k === 'body') return true;
+    if (t === 'password_reset_tokens' && k === 'token_hash') return true;
+    if (t === 'consent_events' && (k === 'sig' || k === 'ip_hint')) return true;
     return false;
   };
 
@@ -88,7 +93,7 @@ const AdminDbPanel = () => {
           <FieldBlock style={{ minWidth: 220 }}>
             <label>Tabla</label>
             <StyledSelect value={dbTable} onChange={(e) => setDbTable(e.target.value)}>
-              <option value="" disabled>Selecciona una tabla…</option>
+              <option value="" disabled>Selecciona una tabla...</option>
               {DB_TABLES.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
