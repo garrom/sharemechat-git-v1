@@ -1,4 +1,3 @@
-// src/pages/dashboard/VideoChatRandomUser.jsx
 import React, { useEffect, useState } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -18,30 +17,50 @@ import {
   StyledSplit2,
   StyledPane,
   StyledVideoArea,
+  StyledPrecallVideoArea,
+  StyledPrecallLocalStage,
   StyledRemoteVideo,
-  StyledVideoTitle,
   StyledTitleAvatar,
   StyledPreCallCenter,
   StyledHelperLine,
   StyledRandomSearchControls,
   StyledRandomSearchCol,
   StyledSearchHint,
-  StyledLocalVideo,
-  StyledLocalVideoDesktop,
+  StyledPaneCenter,
+  StyledPaneCenterStack,
+  StyledStatusText,
   StyledCallCardDesktop,
   StyledCallFooterDesktop,
+  StyledCallVideoArea,
+  StyledCallStage,
+  StyledCallTopBar,
+  StyledCallTopMeta,
+  StyledCallTopMetaText,
+  StyledCallTopActions,
+  StyledCallLocalVideo,
+  StyledCallBottomBar,
+  StyledCallBottomInner,
+  StyledCallPrimaryActions,
+  StyledCallSecondaryActions,
+  StyledCallComposer,
   StyledTeaserCenter,
   StyledTeaserInner,
-  StyledTeaserCard
+  StyledTeaserCard,
+  StyledTeaserMediaButton,
+  StyledTeaserNavSlot,
+  StyledTeaserFavoriteSlot
 } from '../../styles/pages-styles/VideochatStyles';
 
 import {
   ButtonActivarCam,
   ButtonActivarCamMobile,
   ButtonBuscar,
-  ButtonNext,
-  ButtonAddFavorite,
-  BtnHangup
+  BtnCallDanger,
+  BtnCallLight,
+  BtnCallAlert,
+  BtnCallGhost,
+  BtnTeaserPrev,
+  BtnTeaserNext
 } from '../../styles/ButtonStyles';
 
 import PromoVideoLightbox from '../../components/PromoVideoLightbox';
@@ -69,7 +88,7 @@ export default function VideoChatRandomUser(props) {
     modelAvatar,
     handleFavoriteGate,
     openPurchaseModal,
-    handleReportPeer, // ✅ NUEVO
+    handleReportPeer,
   } = props;
 
   const [promoVideos, setPromoVideos] = useState([]);
@@ -148,7 +167,6 @@ export default function VideoChatRandomUser(props) {
         handleFavoriteGate(promoVideo.id);
       }
     } catch {
-      // noop
     }
   };
 
@@ -156,100 +174,143 @@ export default function VideoChatRandomUser(props) {
     try {
       if (typeof handleReportPeer === 'function') handleReportPeer();
     } catch {
-      // noop
     }
   };
+
+  const renderCallTopMeta = () => (
+    <StyledCallTopMeta>
+      <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
+      <StyledCallTopMetaText>
+        {modelNickname || t('dashboardUserClient.report.displayName')}
+      </StyledCallTopMetaText>
+    </StyledCallTopMeta>
+  );
+
+  const renderCallActions = () => (
+    <StyledCallBottomBar>
+      <StyledCallBottomInner>
+        <StyledCallPrimaryActions>
+          <BtnCallDanger
+            onClick={stopAll}
+            title={t('dashboardUserClient.videoChatRandomUser.actions.hangup')}
+            aria-label={t('dashboardUserClient.videoChatRandomUser.actions.hangup')}
+          >
+            <FontAwesomeIcon icon={faPhoneSlash} />
+          </BtnCallDanger>
+
+          <BtnCallLight
+            onClick={handleNext}
+            title={t('home.hero.nextAria')}
+            aria-label={t('home.hero.nextAria')}
+          >
+            <FontAwesomeIcon icon={faForward} />
+          </BtnCallLight>
+
+          <BtnCallLight
+            onClick={() => openPurchaseModal && openPurchaseModal({ context:'user-favorite', modelId: null })}
+            aria-label={t('common.actions.addToFavorites')}
+            title={t('dashboardUserClient.videoChatRandomUser.actions.addToFavoritesPremium')}
+          >
+            <FontAwesomeIcon icon={faUserPlus} />
+          </BtnCallLight>
+        </StyledCallPrimaryActions>
+
+        <StyledCallSecondaryActions>
+          <BtnCallAlert
+            type="button"
+            onClick={onReportClick}
+            title={t('modals.report.title')}
+            aria-label={t('modals.report.title')}
+          >
+            <FontAwesomeIcon icon={faFlag} />
+          </BtnCallAlert>
+        </StyledCallSecondaryActions>
+      </StyledCallBottomInner>
+    </StyledCallBottomBar>
+  );
+
+  const showGlobalStatus = !(remoteStream && !isMobile);
 
   return (
     <StyledCenterVideochat>
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
-        {/* PANE IZQUIERDO (LOCAL / CTA) */}
         <StyledPane data-side="left">
           {!isMobile && (
             !cameraActive ? (
-              <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+              <StyledPaneCenter>
+                <StyledPaneCenterStack>
                   <ButtonActivarCam onClick={handleActivateCamera}>{t('dashboardUserClient.videoChatRandomUser.actions.activateCamera')}</ButtonActivarCam>
                   <StyledHelperLine style={{color:'#fff',justifyContent:'center'}}>
-                    <FontAwesomeIcon icon={faVideo} />{t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
+                    <FontAwesomeIcon icon={faVideo} />
+                    {t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
                   </StyledHelperLine>
-                </div>
-              </div>
+                </StyledPaneCenterStack>
+              </StyledPaneCenter>
             ) : (
-              <StyledVideoArea />
+              !remoteStream && (
+                <StyledPrecallVideoArea>
+                  <StyledPrecallLocalStage>
+                    <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
+                  </StyledPrecallLocalStage>
+                </StyledPrecallVideoArea>
+              )
             )
           )}
         </StyledPane>
 
-        {/* PANE DERECHO (REMOTO + CONTROLES / TEASERS DINÁMICOS) */}
         <StyledPane data-side="right" data-view={!cameraActive ? 'thumbs' : 'call'} style={{position:'relative'}}>
           {!cameraActive ? (
             <>
               {promoLoading && (
-                <div style={{color:'#e9ecef',padding:'8px 12px',fontSize:'0.9rem'}}>
+                <StyledStatusText>
                   {t('dashboardUserClient.videoChatRandomUser.loading.promoVideos')}
-                </div>
+                </StyledStatusText>
               )}
               {promoError && (
-                <div style={{color:'#ffb3b3',padding:'8px 12px',fontSize:'0.9rem'}}>
+                <StyledStatusText $tone="error">
                   {promoError}
-                </div>
+                </StyledStatusText>
               )}
 
               {currentPromo && (
-                <StyledTeaserCenter style={{pointerEvents:'auto'}}>
-                  <StyledTeaserInner style={{width:'100%',maxWidth:'none',height:'100%'}}>
-                    <StyledTeaserCard style={{width:'100%',maxWidth:'none',height:'100%',maxHeight:'none',aspectRatio:'auto',borderRadius:16,overflow:'hidden',background:'#000'}}>
-                      <button
-                        type="button"
-                        onClick={goPrevCard}
-                        aria-label={t('home.hero.prevAria')}
-                        title={t('home.hero.prevAria')}
-                        style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}
-                      >
-                        <FontAwesomeIcon icon={faChevronLeft} />
-                      </button>
+                <StyledTeaserCenter>
+                  <StyledTeaserInner>
+                    <StyledTeaserCard>
+                      <StyledTeaserNavSlot $side="left">
+                        <BtnTeaserPrev type="button" onClick={goPrevCard} aria-label={t('home.hero.prevAria')} title={t('home.hero.prevAria')}>
+                          <FontAwesomeIcon icon={faChevronLeft} />
+                        </BtnTeaserPrev>
+                      </StyledTeaserNavSlot>
 
-                      <BlurredPreview
-                        type="video"
-                        src={currentPromo.src}
-                        poster={currentPromo.thumb}
-                        onClick={() => handleOpenPromo(currentPromoIndex)}
-                        style={{width:'100%',height:'100%'}}
-                      />
+                      <StyledTeaserMediaButton type="button" onClick={() => handleOpenPromo(currentPromoIndex)} title={currentPromo.title || t('dashboardUserClient.videoChatRandomUser.actions.viewTeaser')}>
+                        <BlurredPreview type="video" src={currentPromo.src} poster={currentPromo.thumb} style={{width:'100%',height:'100%'}} />
+                      </StyledTeaserMediaButton>
 
-                      <div style={{position:'absolute',right:12,bottom:12,zIndex:4}}>
-                        <ButtonAddFavorite
+                      <StyledTeaserFavoriteSlot>
+                        <BtnCallLight
                           type="button"
                           onClick={() => openPurchaseModal && openPurchaseModal({ context:'user-favorite', modelId: currentPromo?.id })}
                           aria-label={t('common.actions.addToFavorites')}
                           title={t('dashboardUserClient.videoChatRandomUser.actions.addToFavoritesPremium')}
-                          style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                          onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
-                          onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
                         >
                           <FontAwesomeIcon icon={faUserPlus} />
-                        </ButtonAddFavorite>
-                      </div>
+                        </BtnCallLight>
+                      </StyledTeaserFavoriteSlot>
 
-                      <button
-                        type="button"
-                        onClick={goNextCard}
-                        aria-label={t('home.hero.nextAria')}
-                        title={t('home.hero.nextAria')}
-                        style={{position:'absolute',right:10,top:'50%',transform:'translateY(-50%)',width:44,height:44,border:'none',background:'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#fff',fontSize:26,cursor:'pointer',zIndex:3}}
-                      >
-                        <FontAwesomeIcon icon={faChevronRight} />
-                      </button>
+                      <StyledTeaserNavSlot $side="right">
+                        <BtnTeaserNext type="button" onClick={goNextCard} aria-label={t('home.hero.nextAria')} title={t('home.hero.nextAria')}>
+                          <FontAwesomeIcon icon={faChevronRight} />
+                        </BtnTeaserNext>
+                      </StyledTeaserNavSlot>
                     </StyledTeaserCard>
                   </StyledTeaserInner>
                 </StyledTeaserCenter>
               )}
 
               {!promoLoading && !promoError && promoVideos.length === 0 && (
-                <div style={{color:'#e9ecef',padding:'8px 12px',fontSize:'0.9rem'}}>
+                <StyledStatusText>
                   {t('dashboardUserClient.videoChatRandomUser.empty.promoVideos')}
-                </div>
+                </StyledStatusText>
               )}
 
               {isMobile && (
@@ -257,7 +318,8 @@ export default function VideoChatRandomUser(props) {
                   <div>
                     <ButtonActivarCamMobile onClick={handleActivateCamera}>{t('dashboardUserClient.videoChatRandomUser.actions.activateCamera')}</ButtonActivarCamMobile>
                     <StyledHelperLine style={{color:'#fff'}}>
-                      <FontAwesomeIcon icon={faVideo} />{t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
+                      <FontAwesomeIcon icon={faVideo} />
+                      {t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
                     </StyledHelperLine>
                   </div>
                 </StyledPreCallCenter>
@@ -277,16 +339,9 @@ export default function VideoChatRandomUser(props) {
                       <>
                         <StyledSearchHint>{t('dashboardUserClient.videoChatRandomUser.loading.searchingModel')}</StyledSearchHint>
                         <div style={{marginTop:8,display:'flex',justifyContent:'center'}}>
-                          <BtnHangup
-                            onClick={stopAll}
-                            title={t('dashboardUserClient.videoChatRandomUser.actions.stopSearch')}
-                            aria-label={t('dashboardUserClient.videoChatRandomUser.actions.stopSearch')}
-                            style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#dc3545'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = '#dc3545'; e.currentTarget.style.color = '#fff'; }}
-                          >
+                          <BtnCallDanger onClick={stopAll} title={t('dashboardUserClient.videoChatRandomUser.actions.stopSearch')} aria-label={t('dashboardUserClient.videoChatRandomUser.actions.stopSearch')}>
                             <FontAwesomeIcon icon={faPhoneSlash} />
-                          </BtnHangup>
+                          </BtnCallDanger>
                         </div>
                       </>
                     )}
@@ -296,191 +351,68 @@ export default function VideoChatRandomUser(props) {
 
               {remoteStream && !isMobile && (
                 <StyledCallCardDesktop>
-                  <StyledVideoArea style={{height:'calc(100vh - 180px)',maxHeight:'calc(100vh - 180px)'}}>
-                    <StyledRemoteVideo
-                      ref={remoteVideoWrapRef}
-                      style={{position:'relative',width:'100%',height:'100%',borderRadius:'16px',overflow:'hidden',background:'#000'}}
-                    >
-                      <StyledVideoTitle>
-                        <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
-                        {modelNickname || t('dashboardUserClient.report.displayName')}
-                        <button
-                          type="button"
-                          onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                          title={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}
-                          style={{marginLeft:8,padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
-                        >
-                          {t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}
-                        </button>
-                      </StyledVideoTitle>
+                  <StyledCallVideoArea>
+                    <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}>
+                      <StyledCallStage>
+                        <StyledCallTopBar>
+                          {renderCallTopMeta()}
+                          <StyledCallTopActions>
+                            <BtnCallGhost type="button" onClick={() => toggleFullscreen(remoteVideoWrapRef.current)} title={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')} aria-label={t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}>
+                              {t('dashboardUserClient.videoChatRandomUser.actions.fullscreen')}
+                            </BtnCallGhost>
+                          </StyledCallTopActions>
+                        </StyledCallTopBar>
 
-                      <video
-                        ref={remoteVideoRef}
-                        style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
-                        autoPlay
-                        playsInline
-                        onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                      />
+                        <video ref={remoteVideoRef} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} autoPlay playsInline onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)} />
 
-                      {!isMobile && cameraActive && (
-                        <div style={{position:'absolute',top:0,right:0,width:'24%',maxWidth:260,height:'24%',maxHeight:260,overflow:'hidden',zIndex:8,background:'#000',borderRadius:0}}>
-                          <video
-                            ref={localVideoRef}
-                            muted
-                            autoPlay
-                            playsInline
-                            style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
-                          />
-                        </div>
-                      )}
+                        {cameraActive && (
+                          <StyledCallLocalVideo>
+                            <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
+                          </StyledCallLocalVideo>
+                        )}
 
-                      {!isMobile && cameraActive && (
-                        <div style={{position:'absolute',bottom:16,left:'50%',transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:8,zIndex:9}}>
-                          <BtnHangup
-                            onClick={stopAll}
-                            title={t('dashboardUserClient.videoChatRandomUser.actions.hangup')}
-                            aria-label={t('dashboardUserClient.videoChatRandomUser.actions.hangup')}
-                            style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
-                            onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#dc3545'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background = '#dc3545'; e.currentTarget.style.color = '#fff'; }}
-                          >
-                            <FontAwesomeIcon icon={faPhoneSlash} />
-                          </BtnHangup>
-
-                          {remoteStream && (
-                            <>
-                              <ButtonNext
-                                onClick={handleNext}
-                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
-                              >
-                                <FontAwesomeIcon icon={faForward} />
-                              </ButtonNext>
-
-                              <ButtonAddFavorite
-                                aria-label={t('common.actions.addToFavorites')}
-                                onClick={() => openPurchaseModal && openPurchaseModal({ context:'user-favorite', modelId: null })}
-                                title={t('dashboardUserClient.videoChatRandomUser.actions.addToFavoritesPremium')}
-                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
-                              >
-                                <FontAwesomeIcon icon={faUserPlus} />
-                              </ButtonAddFavorite>
-
-                              {/* ✅ BOTÓN REPORT (solo trial user) */}
-                              <button
-                                type="button"
-                                onClick={onReportClick}
-                                title={t('modals.report.title')}
-                                aria-label={t('modals.report.title')}
-                                style={{width:44,height:44,borderRadius:'999px',display:'flex',alignItems:'center',justifyContent:'center',padding:0,background:'#111',color:'#fff',border:'1px solid rgba(255,255,255,0.35)',cursor:'pointer'}}
-                                onMouseEnter={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#111'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background = '#111'; e.currentTarget.style.color = '#fff'; }}
-                              >
-                                <FontAwesomeIcon icon={faFlag} />
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      )}
+                        {cameraActive && renderCallActions()}
+                      </StyledCallStage>
                     </StyledRemoteVideo>
-                  </StyledVideoArea>
+                  </StyledCallVideoArea>
 
-                  <StyledCallFooterDesktop style={{maxWidth:960,margin:'8px auto 0',width:'100%',padding:'0 8px',textAlign:'center',fontSize:14,color:'#adb5bd'}}>
-                    {statusText || t('dashboardUserClient.videoChatRandomUser.status.default')}
+                  <StyledCallFooterDesktop>
+                    <StyledCallComposer>
+                      <div style={{width:'100%',textAlign:'center',fontSize:14,color:'rgba(255,255,255,0.74)'}}>
+                        {statusText || t('dashboardUserClient.videoChatRandomUser.status.default')}
+                      </div>
+                    </StyledCallComposer>
                   </StyledCallFooterDesktop>
                 </StyledCallCardDesktop>
               )}
 
               {remoteStream && isMobile && (
                 <StyledVideoArea>
-                  <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',borderRadius:'0px',overflow:'hidden',background:'#000'}}>
-                    <StyledVideoTitle>
-                      <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
-                      {modelNickname || t('dashboardUserClient.report.displayName')}
-                    </StyledVideoTitle>
+                  <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',overflow:'hidden',background:'#000'}}>
+                    <StyledCallStage>
+                      <StyledCallTopBar>
+                        {renderCallTopMeta()}
+                      </StyledCallTopBar>
 
-                    <video
-                      ref={remoteVideoRef}
-                      style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
-                      autoPlay
-                      playsInline
-                      onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                    />
+                      <video ref={remoteVideoRef} style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} autoPlay playsInline onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)} />
 
-                    {cameraActive && (
-                      <StyledLocalVideo>
-                        <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
-                      </StyledLocalVideo>
-                    )}
+                      {cameraActive && (
+                        <StyledCallLocalVideo>
+                          <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
+                        </StyledCallLocalVideo>
+                      )}
 
-                    {cameraActive && (
-                      <div style={{position:'absolute',left:0,right:0,bottom:'72px',zIndex:8,display:'flex',justifyContent:'center',alignItems:'center',gap:'12px'}}>
-                        <BtnHangup onClick={stopAll} title={t('dashboardUserClient.videoChatRandomUser.actions.hangup')} aria-label={t('dashboardUserClient.videoChatRandomUser.actions.hangup')}>
-                          <FontAwesomeIcon icon={faPhoneSlash} />
-                        </BtnHangup>
-
-                        {remoteStream && (
-                          <>
-                            <ButtonNext
-                              onClick={handleNext}
-                              style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
-                            >
-                              <FontAwesomeIcon icon={faForward} />
-                            </ButtonNext>
-
-                            <ButtonAddFavorite
-                              onClick={() => openPurchaseModal && openPurchaseModal({ context:'user-favorite', modelId: null })}
-                              title={t('dashboardUserClient.videoChatRandomUser.actions.addToFavoritesPremium')}
-                              aria-label={t('common.actions.addToFavorites')}
-                              style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                              onMouseEnter={(e) => { e.currentTarget.style.background = '#000'; e.currentTarget.style.color = '#fff'; }}
-                              onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#000'; }}
-                            >
-                              <FontAwesomeIcon icon={faUserPlus} />
-                            </ButtonAddFavorite>
-
-                            {/* ✅ BOTÓN REPORT (móvil) */}
-                            <button
-                              type="button"
-                              onClick={onReportClick}
-                              title={t('modals.report.title')}
-                              aria-label={t('modals.report.title')}
-                              style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#111',color:'#fff',border:'1px solid rgba(255,255,255,0.35)',cursor:'pointer'}}
-                              onTouchStart={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#111'; }}
-                              onTouchEnd={(e) => { e.currentTarget.style.background = '#111'; e.currentTarget.style.color = '#fff'; }}
-                            >
-                              <FontAwesomeIcon icon={faFlag} />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    )}
+                      {cameraActive && renderCallActions()}
+                    </StyledCallStage>
                   </StyledRemoteVideo>
                 </StyledVideoArea>
-              )}
-
-              {isMobile && cameraActive && !remoteStream && (
-                <StyledLocalVideo>
-                  <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
-                </StyledLocalVideo>
               )}
             </>
           )}
         </StyledPane>
-
-        {!isMobile && cameraActive && !remoteStream && (
-          <StyledLocalVideoDesktop data-has-remote="false">
-            <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
-          </StyledLocalVideoDesktop>
-        )}
       </StyledSplit2>
 
-      {statusText && <p style={{marginTop:10,color:'#adb5bd',fontSize:14}}>{statusText}</p>}
+      {showGlobalStatus && statusText && <p style={{marginTop:10,color:'#adb5bd',fontSize:14}}>{statusText}</p>}
       {error && <p style={{marginTop:4,color:'red',fontSize:14}}>{error}</p>}
 
       {activePromoIndex != null && (
