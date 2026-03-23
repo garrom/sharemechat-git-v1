@@ -712,6 +712,12 @@ export const StyledPane = styled.section`
     justify-content:stretch;
     overflow:hidden;
   }
+  &[data-side="right"][data-view="precall-stats"]{
+    @media (min-width: 769px) {
+      align-items:center;
+      justify-content:center;
+    }
+  }
 
   /* En móvil */
   @media (max-width: 768px) {

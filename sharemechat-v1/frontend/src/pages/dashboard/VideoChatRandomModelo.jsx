@@ -7,6 +7,8 @@ import {
   StyledSplit2,
   StyledPane,
   StyledVideoArea,
+  StyledPrecallVideoArea,
+  StyledPrecallLocalStage,
   StyledChatContainer,
   StyledChatList,
   StyledChatMessageRow,
@@ -14,23 +16,30 @@ import {
   StyledChatDock,
   StyledChatInput,
   StyledGiftIcon,
-  StyledLocalVideo,
-  StyledLocalVideoDesktop,
   StyledRemoteVideo,
-  StyledVideoTitle,
   StyledTitleAvatar,
+  StyledPaneCenter,
+  StyledPaneCenterStack,
   StyledPreCallCenter,
   StyledHelperLine,
   StyledRandomSearchControls,
   StyledRandomSearchCol,
   StyledSearchHint,
   StyledCallCardDesktop,
+  StyledCallVideoArea,
   StyledCallFooterDesktop,
+  StyledCallStage,
+  StyledCallTopBar,
+  StyledCallTopMeta,
+  StyledCallTopMetaText,
+  StyledCallTopActions,
+  StyledCallLocalVideo,
+  StyledCallBottomBar,
+  StyledCallBottomInner,
+  StyledCallPrimaryActions,
+  StyledCallSecondaryActions,
+  StyledCallComposer,
   StyledStatsPrecallCard,
-  StyledStatsCard,
-  StyledStatsCardLabel,
-  StyledStatsCardValue,
-  StyledStatsPrecallGrid,
   StyledStatsInline,
   StyledTierProgressCard,
   StyledTierProgressRow,
@@ -47,11 +56,11 @@ import {
   ButtonActivarCam,
   ButtonActivarCamMobile,
   ButtonBuscar,
-  ButtonNext,
-  ButtonAddFavorite,
   BtnSend,
-  BtnHangup,
-  BtnBlock,
+  BtnCallDanger,
+  BtnCallLight,
+  BtnCallAlert,
+  BtnCallGhost,
 } from '../../styles/ButtonStyles';
 
 export default function VideoChatRandomModelo(props) {
@@ -97,26 +106,24 @@ export default function VideoChatRandomModelo(props) {
 
     const tiers = Array.isArray(modelStatsTiers) ? modelStatsTiers : [];
     const ordered = [...tiers]
-      .filter((t) => t && (t.active === true || t.active === false))
+      .filter((tier) => tier && (tier.active === true || tier.active === false))
       .sort((a, b) => Number(a?.minBilledMinutes || 0) - Number(b?.minBilledMinutes || 0));
 
     if (!ordered.length) {
       return { billed, hasTiers: false, currentTier: null, nextTier: null, remaining: 0, pct: 0 };
     }
 
-    const byName = ordered.find((t) => String(t?.name || '') === String(modelStatsSummary?.tierName || ''));
+    const byName = ordered.find((tier) => String(tier?.name || '') === String(modelStatsSummary?.tierName || ''));
 
     let byMinutes = null;
-    for (const t of ordered) {
-      if (Number(t?.minBilledMinutes || 0) <= billed) byMinutes = t;
+    for (const tier of ordered) {
+      if (Number(tier?.minBilledMinutes || 0) <= billed) byMinutes = tier;
     }
 
     const currentTier = byName || byMinutes || ordered[0] || null;
     const currentMin = Number(currentTier?.minBilledMinutes || 0);
-
-    const nextTier = ordered.find((t) => Number(t?.minBilledMinutes || 0) > currentMin) || null;
+    const nextTier = ordered.find((tier) => Number(tier?.minBilledMinutes || 0) > currentMin) || null;
     const nextMin = Number(nextTier?.minBilledMinutes || 0);
-
     const remaining = nextTier ? Math.max(0, nextMin - billed) : 0;
 
     const pct = nextTier
@@ -126,14 +133,117 @@ export default function VideoChatRandomModelo(props) {
     return { billed, hasTiers: true, currentTier, nextTier, remaining, pct };
   }, [modelStatsSummary, modelStatsTiers]);
 
+  const renderMessages = () => (
+    messages.map((msg, index) => {
+      const isMe = msg.from === 'me';
+      const variant = isMe ? 'me' : 'peer';
+
+      return (
+        <StyledChatMessageRow key={index}>
+          {msg.gift ? (
+            <StyledChatBubble $variant={variant}>
+              {giftRenderReady &&
+                (() => {
+                  const src = getGiftIcon(msg.gift);
+                  return src ? <StyledGiftIcon src={src} alt="" /> : null;
+                })()}
+            </StyledChatBubble>
+          ) : (
+            <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
+          )}
+        </StyledChatMessageRow>
+      );
+    })
+  );
+
+  const renderClientBalance = () => (
+    clientSaldoLoading ? (
+      <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} ...</span>
+    ) : Number.isFinite(Number(clientSaldo)) ? (
+      <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} EUR {Number(clientSaldo).toFixed(2)}</span>
+    ) : (
+      <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} -</span>
+    )
+  );
+
+  const renderCallActions = () => (
+    <StyledCallBottomBar>
+      <StyledCallBottomInner>
+        <StyledCallPrimaryActions>
+          <BtnCallDanger
+            onClick={stopAll}
+            title={t('common.hangup')}
+            aria-label={t('common.hangup')}
+          >
+            <FontAwesomeIcon icon={faPhoneSlash} />
+          </BtnCallDanger>
+
+          <BtnCallLight
+            onClick={() => handleNext && handleNext()}
+            disabled={!!nextDisabled}
+            aria-disabled={!!nextDisabled}
+            title={t('home.hero.nextAria')}
+            aria-label={t('home.hero.nextAria')}
+          >
+            <FontAwesomeIcon icon={faForward} />
+          </BtnCallLight>
+
+          {currentClientId && (
+            <BtnCallLight
+              onClick={handleAddFavorite}
+              aria-label={t('common.actions.addToFavorites')}
+              title={t('common.actions.addToFavorites')}
+            >
+              <FontAwesomeIcon icon={faUserPlus} />
+            </BtnCallLight>
+          )}
+        </StyledCallPrimaryActions>
+
+        <StyledCallSecondaryActions>
+          <BtnCallAlert
+            type="button"
+            onClick={() => handleReportPeer && handleReportPeer()}
+            aria-label={t('modals.report.title')}
+            title={t('modals.report.title')}
+          >
+            <FontAwesomeIcon icon={faFlag} />
+          </BtnCallAlert>
+
+          <BtnCallAlert
+            type="button"
+            onClick={() => handleBlockPeer && handleBlockPeer()}
+            aria-label={t('modals.block.title')}
+            title={t('modals.block.title')}
+          >
+            <FontAwesomeIcon icon={faBan} />
+          </BtnCallAlert>
+        </StyledCallSecondaryActions>
+      </StyledCallBottomInner>
+    </StyledCallBottomBar>
+  );
+
+  const renderCallTopMeta = () => (
+    <StyledCallTopMeta>
+      <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
+      <div style={{display:'flex',flexDirection:'column',minWidth:0,lineHeight:1.15}}>
+        <StyledCallTopMetaText>
+          {clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}
+        </StyledCallTopMetaText>
+        <div style={{fontSize:12,opacity:0.9,marginTop:2,color:'rgba(255,255,255,0.82)'}}>
+          {renderClientBalance()}
+        </div>
+      </div>
+    </StyledCallTopMeta>
+  );
+
   return (
     <StyledCenterVideochat>
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
         <StyledPane data-side="left">
           {!isMobile && (
             !cameraActive ? (
-              <div style={{width:'100%',height:'100%',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8}}>
+              <StyledPaneCenter>
+                <StyledPaneCenterStack>
                   <ButtonActivarCam onClick={handleActivateCamera}>
                     {t('dashboardModel.videoChatRandomModelo.actions.activateCamera')}
                   </ButtonActivarCam>
@@ -141,15 +251,31 @@ export default function VideoChatRandomModelo(props) {
                     <FontAwesomeIcon icon={faVideo} />
                     {t('dashboardModel.videoChatRandomModelo.hints.activateCamera')}
                   </StyledHelperLine>
-                </div>
-              </div>
+                </StyledPaneCenterStack>
+              </StyledPaneCenter>
             ) : (
-              <StyledVideoArea />
+              !remoteStream && (
+                <StyledPrecallVideoArea>
+                  <StyledPrecallLocalStage>
+                    <video
+                      ref={localVideoRef}
+                      muted
+                      autoPlay
+                      playsInline
+                      style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
+                    />
+                  </StyledPrecallLocalStage>
+                </StyledPrecallVideoArea>
+              )
             )
           )}
         </StyledPane>
 
-        <StyledPane data-side="right" style={{position:'relative'}}>
+        <StyledPane
+          data-side="right"
+          data-view={!cameraActive && !isMobile ? 'precall-stats' : (cameraActive ? 'call' : 'thumbs')}
+          style={{position:'relative'}}
+        >
           {!cameraActive ? (
             <>
               <StyledStatsPrecallCard>
@@ -179,7 +305,7 @@ export default function VideoChatRandomModelo(props) {
                             {t('dashboardModel.videoChatRandomModelo.stats.currentMinutes')} <b>{tierProgress.billed}</b>
                           </StyledTierKpiLine>
                           <StyledTierKpiLine>
-                            {t('dashboardModel.videoChatRandomModelo.stats.detectedTier')} <b>{tierProgress.currentTier?.name || modelStatsSummary?.tierName || '—'}</b>
+                            {t('dashboardModel.videoChatRandomModelo.stats.detectedTier')} <b>{tierProgress.currentTier?.name || modelStatsSummary?.tierName || '-'}</b>
                           </StyledTierKpiLine>
                         </StyledTierKpiCol>
 
@@ -188,7 +314,7 @@ export default function VideoChatRandomModelo(props) {
                           {tierProgress.nextTier ? (
                             <>
                               <StyledTierKpiLine>
-                                {t('dashboardModel.videoChatRandomModelo.stats.nextTier')} <b>{tierProgress.nextTier?.name || '—'}</b>
+                                {t('dashboardModel.videoChatRandomModelo.stats.nextTier')} <b>{tierProgress.nextTier?.name || '-'}</b>
                               </StyledTierKpiLine>
                               <StyledTierKpiLine>
                                 {t('dashboardModel.videoChatRandomModelo.stats.requirement')} <b>{Number(tierProgress.nextTier?.minBilledMinutes || 0)}</b> {t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}
@@ -213,7 +339,7 @@ export default function VideoChatRandomModelo(props) {
                         <StyledTierBarLegend>
                           <span>{tierProgress.billed} {t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}</span>
                           <span>
-                            {tierProgress.nextTier ? `${Number(tierProgress.nextTier?.minBilledMinutes || 0)} ${t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}` : '—'}
+                            {tierProgress.nextTier ? `${Number(tierProgress.nextTier?.minBilledMinutes || 0)} ${t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}` : '-'}
                           </span>
                         </StyledTierBarLegend>
                       </StyledTierBarWrap>
@@ -250,16 +376,13 @@ export default function VideoChatRandomModelo(props) {
                       <>
                         <StyledSearchHint>{t('dashboardModel.videoChatRandomModelo.loading.searchingClient')}</StyledSearchHint>
                         <div style={{marginTop:8,display:'flex',justifyContent:'center'}}>
-                          <BtnHangup
+                          <BtnCallDanger
                             onClick={stopAll}
                             title={t('dashboardModel.videoChatRandomModelo.actions.stopSearch')}
                             aria-label={t('dashboardModel.videoChatRandomModelo.actions.stopSearch')}
-                            style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
-                            onMouseEnter={(e) => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#dc3545'; }}
-                            onMouseLeave={(e) => { e.currentTarget.style.background='#dc3545'; e.currentTarget.style.color='#fff'; }}
                           >
                             <FontAwesomeIcon icon={faPhoneSlash} />
-                          </BtnHangup>
+                          </BtnCallDanger>
                         </div>
                       </>
                     )}
@@ -269,37 +392,107 @@ export default function VideoChatRandomModelo(props) {
 
               {remoteStream && !isMobile && (
                 <StyledCallCardDesktop>
-                  <StyledVideoArea style={{height:'calc(100vh - 180px)',maxHeight:'calc(100vh - 180px)'}}>
-                    <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'12px',overflow:'hidden',background:'#000'}}>
-                      <StyledVideoTitle>
-                        <div style={{display:'flex',alignItems:'center',gap:10}}>
-                          <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
-                          <div style={{display:'flex',flexDirection:'column',lineHeight:1.15}}>
-                            <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap'}}>
-                              <span>{clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}</span>
+                  <StyledCallVideoArea>
+                    <StyledRemoteVideo
+                      ref={remoteVideoWrapRef}
+                      style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}
+                    >
+                      <StyledCallStage>
+                        <StyledCallTopBar>
+                          {renderCallTopMeta()}
+                          <StyledCallTopActions>
+                            <BtnCallGhost
+                              type="button"
+                              onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
+                              title={t('common.fullscreen')}
+                              aria-label={t('common.fullscreen')}
+                            >
+                              {t('common.fullscreen')}
+                            </BtnCallGhost>
+                          </StyledCallTopActions>
+                        </StyledCallTopBar>
 
-                              <button
-                                type="button"
-                                onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                                title={t('common.fullscreen')}
-                                style={{padding:'2px 8px',borderRadius:6,border:'1px solid rgba(255,255,255,0.6)',background:'rgba(0,0,0,0.25)',color:'#fff',cursor:'pointer'}}
-                              >
-                                {t('common.fullscreen')}
-                              </button>
-                            </div>
+                        <video
+                          ref={remoteVideoRef}
+                          onLoadedMetadata={(e) => {
+                            const el = e.currentTarget;
+                            console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                          }}
+                          onCanPlay={(e) => {
+                            const el = e.currentTarget;
+                            console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoCanPlay readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                          }}
+                          onPlaying={(e) => {
+                            const el = e.currentTarget;
+                            console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                            sendRandomMediaReady?.();
+                          }}
+                          onError={(e) => {
+                            const el = e.currentTarget;
+                            console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
+                          }}
+                          style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
+                          autoPlay
+                          playsInline
+                          onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
+                        />
 
-                            <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
-                              {clientSaldoLoading ? (
-                                <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} …</span>
-                              ) : Number.isFinite(Number(clientSaldo)) ? (
-                                <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} €{Number(clientSaldo).toFixed(2)}</span>
-                              ) : (
-                                <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} —</span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </StyledVideoTitle>
+                        {cameraActive && (
+                          <StyledCallLocalVideo>
+                            <video
+                              ref={localVideoRef}
+                              muted
+                              autoPlay
+                              playsInline
+                              style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
+                            />
+                          </StyledCallLocalVideo>
+                        )}
+
+                        {cameraActive && renderCallActions()}
+
+                        <StyledChatContainer data-wide="true">
+                          <StyledChatList ref={vcListRef}>
+                            {renderMessages()}
+                          </StyledChatList>
+                        </StyledChatContainer>
+                      </StyledCallStage>
+                    </StyledRemoteVideo>
+                  </StyledCallVideoArea>
+
+                  <StyledCallFooterDesktop>
+                    <StyledCallComposer>
+                      <StyledChatInput
+                        type="text"
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        placeholder={t('dashboardModel.videoChatRandomModelo.placeholders.message')}
+                        autoComplete="off"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            sendChatMessage();
+                          }
+                        }}
+                      />
+                      <BtnSend type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
+                        <FontAwesomeIcon icon={faPaperPlane} />
+                      </BtnSend>
+                    </StyledCallComposer>
+                  </StyledCallFooterDesktop>
+                </StyledCallCardDesktop>
+              )}
+
+              {remoteStream && isMobile && (
+                <StyledVideoArea>
+                  <StyledRemoteVideo
+                    ref={remoteVideoWrapRef}
+                    style={{position:'relative',width:'100%',overflow:'hidden',background:'#000'}}
+                  >
+                    <StyledCallStage>
+                      <StyledCallTopBar>
+                        {renderCallTopMeta()}
+                      </StyledCallTopBar>
 
                       <video
                         ref={remoteVideoRef}
@@ -327,267 +520,31 @@ export default function VideoChatRandomModelo(props) {
                       />
 
                       {cameraActive && (
-                        <div style={{position:'absolute',top:0,right:0,width:'24%',maxWidth:260,height:'auto',overflow:'hidden',zIndex:8}}>
-                          <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
-                        </div>
+                        <StyledCallLocalVideo>
+                          <video
+                            ref={localVideoRef}
+                            muted
+                            autoPlay
+                            playsInline
+                            style={{width:'100%',objectFit:'cover',display:'block'}}
+                          />
+                        </StyledCallLocalVideo>
                       )}
 
-                      {cameraActive && (
-                        <div style={{position:'absolute',left:16,right:16,bottom:16,zIndex:9}}>
-                          <div style={{position:'relative',height:44}}>
-                            <div style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:8}}>
-                              <BtnHangup
-                                onClick={stopAll}
-                                title={t('common.hangup')}
-                                aria-label={t('common.hangup')}
-                                style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#dc3545',color:'#fff',border:'1px solid rgba(255,255,255,0.4)'}}
-                                onMouseEnter={(e) => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#dc3545'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background='#dc3545'; e.currentTarget.style.color='#fff'; }}
-                              >
-                                <FontAwesomeIcon icon={faPhoneSlash} />
-                              </BtnHangup>
-
-                              <ButtonNext
-                                onClick={() => handleNext && handleNext()}
-                                disabled={!!nextDisabled}
-                                aria-disabled={!!nextDisabled}
-                                style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)',opacity:nextDisabled?0.55:1,cursor:nextDisabled?'not-allowed':'pointer'}}
-                                onMouseEnter={(e) => { if (nextDisabled) return; e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
-                                onMouseLeave={(e) => { if (nextDisabled) return; e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
-                              >
-                                <FontAwesomeIcon icon={faForward} />
-                              </ButtonNext>
-
-                              {currentClientId && (
-                                <ButtonAddFavorite
-                                  aria-label={t('common.actions.addToFavorites')}
-                                  onClick={handleAddFavorite}
-                                  title={t('common.actions.addToFavorites')}
-                                  style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                                  onMouseEnter={(e) => { e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
-                                  onMouseLeave={(e) => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
-                                >
-                                  <FontAwesomeIcon icon={faUserPlus} />
-                                </ButtonAddFavorite>
-                              )}
-                            </div>
-
-                            <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end',gap:8}}>
-                              <BtnBlock
-                                type="button"
-                                onClick={() => handleReportPeer && handleReportPeer()}
-                                aria-label={t('modals.report.title')}
-                                title={t('modals.report.title')}
-                                style={{width:44,height:44}}
-                              >
-                                <FontAwesomeIcon icon={faFlag} />
-                              </BtnBlock>
-
-                              <BtnBlock
-                                type="button"
-                                onClick={() => handleBlockPeer && handleBlockPeer()}
-                                aria-label={t('modals.block.title')}
-                                title={t('modals.block.title')}
-                                style={{width:44,height:44}}
-                              >
-                                <FontAwesomeIcon icon={faBan} />
-                              </BtnBlock>
-                            </div>
-                          </div>
-                        </div>
-                      )}
+                      {cameraActive && renderCallActions()}
 
                       <StyledChatContainer data-wide="true">
                         <StyledChatList ref={vcListRef}>
-                          {messages.map((msg, index) => {
-                            const isMe = msg.from === 'me';
-                            const variant = isMe ? 'me' : 'peer';
-                            return (
-                              <StyledChatMessageRow key={index}>
-                                {msg.gift ? (
-                                  <StyledChatBubble $variant={variant}>
-                                    {giftRenderReady && (() => {
-                                      const src = getGiftIcon(msg.gift);
-                                      return src ? <StyledGiftIcon src={src} alt="" /> : null;
-                                    })()}
-                                  </StyledChatBubble>
-                                ) : (
-                                  <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
-                                )}
-                              </StyledChatMessageRow>
-                            );
-                          })}
+                          {renderMessages()}
                         </StyledChatList>
                       </StyledChatContainer>
-                    </StyledRemoteVideo>
-                  </StyledVideoArea>
-
-                  <StyledCallFooterDesktop style={{margin:'8px 0 0',padding:'0 0px',display:'flex',alignItems:'center',gap:8}}>
-                    <StyledChatInput
-                      type="text"
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      placeholder={t('dashboardModel.videoChatRandomModelo.placeholders.message')}
-                      autoComplete="off"
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          sendChatMessage();
-                        }
-                      }}
-                    />
-                    <BtnSend type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')}>
-                      <FontAwesomeIcon icon={faPaperPlane} />
-                    </BtnSend>
-                  </StyledCallFooterDesktop>
-                </StyledCallCardDesktop>
-              )}
-
-              {remoteStream && isMobile && (
-                <StyledVideoArea>
-                  <StyledRemoteVideo ref={remoteVideoWrapRef} style={{position:'relative',width:'100%',overflow:'hidden',background:'#000'}}>
-                    <StyledVideoTitle>
-                      <div style={{display:'flex',alignItems:'center',gap:10}}>
-                        <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
-                        <div style={{display:'flex',flexDirection:'column',lineHeight:1.15}}>
-                          <div>{clientNickname || t('dashboardModel.videoChatRandomModelo.labels.clientDefault')}</div>
-
-                          <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
-                            {clientSaldoLoading ? (
-                              <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} …</span>
-                            ) : Number.isFinite(Number(clientSaldo)) ? (
-                              <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} €{Number(clientSaldo).toFixed(2)}</span>
-                            ) : (
-                              <span>{t('dashboardModel.videoChatRandomModelo.labels.balance')} —</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </StyledVideoTitle>
-
-                    <video
-                      ref={remoteVideoRef}
-                      onLoadedMetadata={(e) => {
-                        const el = e.currentTarget;
-                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
-                      }}
-                      onCanPlay={(e) => {
-                        const el = e.currentTarget;
-                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoCanPlay readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
-                      }}
-                      onPlaying={(e) => {
-                        const el = e.currentTarget;
-                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
-                        sendRandomMediaReady?.();
-                      }}
-                      onError={(e) => {
-                        const el = e.currentTarget;
-                        console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
-                      }}
-                      style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
-                      autoPlay
-                      playsInline
-                      onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                    />
-
-                    {cameraActive && (
-                      <StyledLocalVideo>
-                        <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',objectFit:'cover',display:'block'}} />
-                      </StyledLocalVideo>
-                    )}
-
-                    {cameraActive && (
-                      <div style={{position:'absolute',left:12,right:12,bottom:'72px',zIndex:8}}>
-                        <div style={{position:'relative',height:44}}>
-                          <div style={{position:'absolute',left:'50%',top:0,transform:'translateX(-50%)',display:'flex',alignItems:'center',justifyContent:'center',gap:'12px'}}>
-                            <BtnHangup onClick={stopAll} title={t('common.hangup')} aria-label={t('common.hangup')}>
-                              <FontAwesomeIcon icon={faPhoneSlash} />
-                            </BtnHangup>
-
-                            <ButtonNext
-                              onClick={() => handleNext && handleNext()}
-                              disabled={!!nextDisabled}
-                              aria-disabled={!!nextDisabled}
-                              style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)',opacity:nextDisabled?0.55:1,cursor:nextDisabled?'not-allowed':'pointer'}}
-                              onMouseEnter={(e) => { if (nextDisabled) return; e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
-                              onMouseLeave={(e) => { if (nextDisabled) return; e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
-                            >
-                              <FontAwesomeIcon icon={faForward} />
-                            </ButtonNext>
-
-                            {currentClientId && (
-                              <ButtonAddFavorite
-                                aria-label={t('common.actions.addToFavorites')}
-                                onClick={handleAddFavorite}
-                                title={t('common.actions.addToFavorites')}
-                                style={{width:44,height:44,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center',background:'#fff',color:'#000',border:'1px solid rgba(255,255,255,0.4)'}}
-                                onMouseEnter={(e) => { e.currentTarget.style.background='#000'; e.currentTarget.style.color='#fff'; }}
-                                onMouseLeave={(e) => { e.currentTarget.style.background='#fff'; e.currentTarget.style.color='#000'; }}
-                              >
-                                <FontAwesomeIcon icon={faUserPlus} />
-                              </ButtonAddFavorite>
-                            )}
-                          </div>
-
-                          <div style={{position:'absolute',right:0,top:0,display:'flex',alignItems:'center',justifyContent:'flex-end',gap:8}}>
-                            <BtnBlock
-                              type="button"
-                              onClick={() => handleReportPeer && handleReportPeer()}
-                              aria-label={t('modals.report.title')}
-                              title={t('modals.report.title')}
-                              style={{width:44,height:44}}
-                            >
-                              <FontAwesomeIcon icon={faFlag} />
-                            </BtnBlock>
-
-                            <BtnBlock
-                              type="button"
-                              onClick={() => handleBlockPeer && handleBlockPeer()}
-                              aria-label={t('modals.block.title')}
-                              title={t('modals.block.title')}
-                              style={{width:44,height:44}}
-                            >
-                              <FontAwesomeIcon icon={faBan} />
-                            </BtnBlock>
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    <StyledChatContainer data-wide="true">
-                      <StyledChatList ref={vcListRef}>
-                        {messages.map((msg, index) => {
-                          const isMe = msg.from === 'me';
-                          const variant = isMe ? 'me' : 'peer';
-                          return (
-                            <StyledChatMessageRow key={index}>
-                              {msg.gift ? (
-                                <StyledChatBubble $variant={variant}>
-                                  {giftRenderReady && (() => {
-                                    const src = getGiftIcon(msg.gift);
-                                    return src ? <StyledGiftIcon src={src} alt="" /> : null;
-                                  })()}
-                                </StyledChatBubble>
-                              ) : (
-                                <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
-                              )}
-                            </StyledChatMessageRow>
-                          );
-                        })}
-                      </StyledChatList>
-                    </StyledChatContainer>
+                    </StyledCallStage>
                   </StyledRemoteVideo>
                 </StyledVideoArea>
               )}
             </>
           )}
         </StyledPane>
-
-        {!isMobile && cameraActive && !remoteStream && (
-          <StyledLocalVideoDesktop data-has-remote="false">
-            <video ref={localVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}} />
-          </StyledLocalVideoDesktop>
-        )}
       </StyledSplit2>
 
       {remoteStream && isMobile && (
@@ -605,7 +562,7 @@ export default function VideoChatRandomModelo(props) {
               }
             }}
           />
-          <BtnSend type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')}>
+          <BtnSend type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
             <FontAwesomeIcon icon={faPaperPlane} />
           </BtnSend>
         </StyledChatDock>
