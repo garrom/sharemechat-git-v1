@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -131,6 +132,30 @@ public class AdminController {
     ) {
         return ResponseEntity.ok(streamService.listActiveStreamsForAdmin(
                 q, minDurationSec, streamType, status, limit
+        ));
+    }
+
+    @GetMapping("/stats/overview")
+    public ResponseEntity<Map<String, Object>> statsOverview() {
+        Map<String, Object> matching = matchingHandler.adminRuntimeSnapshot();
+        Map<String, Object> messages = messagesWsHandler.adminRuntimeSnapshot();
+        Map<String, Object> persisted = streamService.getAdminPersistedStats();
+
+        List<?> waitingModels = asList(matching.get("waitingModels"));
+        List<?> waitingViewers = asList(matching.get("waitingClients"));
+        List<?> randomPairs = asList(matching.get("pairs"));
+        List<?> activeCalls = asList(messages.get("activeCalls"));
+        List<?> ringingUsers = asList(messages.get("ringingUsers"));
+
+        return ResponseEntity.ok(Map.of(
+                "randomWaitingModels", waitingModels.size(),
+                "randomWaitingViewers", waitingViewers.size(),
+                "randomActivePairs", randomPairs.size(),
+                "directRingingUsers", ringingUsers.size(),
+                "directActiveCalls", activeCalls.size(),
+                "persistedRandomConnecting", persisted.getOrDefault("persistedRandomConnecting", 0L),
+                "persistedRandomActive", persisted.getOrDefault("persistedRandomActive", 0L),
+                "persistedCallingActive", persisted.getOrDefault("persistedCallingActive", 0L)
         ));
     }
 
@@ -336,5 +361,12 @@ public class AdminController {
                 "newBalance", newBalance,
                 "description", request.getDescription()
         ));
+    }
+
+    private List<?> asList(Object value) {
+        if (value instanceof List<?> list) {
+            return list;
+        }
+        return new ArrayList<>();
     }
 }

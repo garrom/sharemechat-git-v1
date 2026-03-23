@@ -18,8 +18,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
@@ -895,6 +897,24 @@ public class StreamService {
         detail.setStream(mapStreamRecordToAdminRow(stream, LocalDateTime.now()));
         detail.setEvents(events);
         return detail;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> getAdminPersistedStats() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put(
+                "persistedRandomConnecting",
+                streamRecordRepository.countByEndTimeIsNullAndStreamTypeAndConfirmedAtIsNull(Constants.StreamTypes.RANDOM)
+        );
+        out.put(
+                "persistedRandomActive",
+                streamRecordRepository.countByEndTimeIsNullAndStreamTypeAndConfirmedAtIsNotNull(Constants.StreamTypes.RANDOM)
+        );
+        out.put(
+                "persistedCallingActive",
+                streamRecordRepository.countByEndTimeIsNullAndStreamTypeAndConfirmedAtIsNotNull(Constants.StreamTypes.CALLING)
+        );
+        return out;
     }
 
     @Transactional

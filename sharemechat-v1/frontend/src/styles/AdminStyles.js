@@ -6,6 +6,7 @@ export const StyledContainer = styled.div`
   align-items: center;
   min-height: 100vh;
   background-color: #f0f2f5;
+  color: #1f2937;
   padding: 20px;
 `;
 
@@ -13,6 +14,7 @@ export const StyledTable = styled.table`
   width: 100%;
   max-width: 1200px;
   background-color: #ffffff;
+  color: #1f2937;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   border-collapse: collapse;
@@ -29,8 +31,13 @@ export const StyledTable = styled.table`
     position: sticky;
     top: 0;
     background-color: #f8f9fa;
+    color: #334155;
     font-weight: bold;
     z-index: 1;
+  }
+
+  td {
+    color: #1f2937;
   }
 
   tr:hover {
@@ -107,7 +114,10 @@ export const HeaderBar = styled.div`
   justify-content: space-between;
   align-items: center;
 
-  h2 { margin: 0; }
+  h2 {
+    margin: 0;
+    color: #0f172a;
+  }
 `;
 
 export const TabsBar = styled.div`
@@ -136,6 +146,7 @@ export const SectionTitle = styled.h3`
   width: 100%;
   max-width: 1200px;
   margin: 8px 0 12px;
+  color: #0f172a;
 `;
 
 export const ControlsRow = styled.div`
@@ -153,14 +164,14 @@ export const FieldBlock = styled.div`
     display: block;
     font-size: 12px;
     margin-bottom: 4px;
-    color: #6c757d;
+    color: #475569;
   }
 `;
 
 export const RightInfo = styled.div`
   margin-left: auto;
   font-size: 12px;
-  color: #6c757d;
+  color: #475569;
 `;
 
 export const ScrollBox = styled.div`
@@ -187,10 +198,11 @@ export const StatCard = styled.div`
   border-radius: 10px;
   padding: 16px;
   background: #fff;
+  color: #1f2937;
 
-  .label { font-size: 12px; color: #6c757d; }
-  .value { font-size: 28px; font-weight: 700; }
-  .meta  { font-size: 12px; color: #6c757d; margin-top: 6px; }
+  .label { font-size: 12px; color: #475569; }
+  .value { font-size: 28px; font-weight: 700; color: #0f172a; }
+  .meta  { font-size: 12px; color: #64748b; margin-top: 6px; }
 `;
 
 export const NoteCard = styled.div`
@@ -198,11 +210,11 @@ export const NoteCard = styled.div`
   border-radius: 10px;
   padding: 16px;
   background: ${({ $muted }) => ($muted ? '#fafafa' : '#fff')};
-  color: ${({ $muted }) => ($muted ? '#6c757d' : '#bbb')};
+  color: ${({ $muted }) => ($muted ? '#64748b' : '#475569')};
 
   .label { font-size: 12px; }
-  .value { font-size: 20px; margin-top: 8px; }
-  .meta  { font-size: 14px; margin-top: 8px; }
+  .value { font-size: 20px; margin-top: 8px; color: #0f172a; }
+  .meta  { font-size: 14px; margin-top: 8px; color: inherit; }
 `;
 
 export const FinanceList = styled.ol`
@@ -295,6 +307,7 @@ export const InlinePanel = styled.div`
   border: 1px solid #eee;
   border-radius: 10px;
   background: #fff;
+  color: #1f2937;
   padding: 14px;
 `;
 
@@ -320,6 +333,7 @@ export const SmallBtn = styled.button`
   padding: 8px 12px;
   border: 1px solid #ced4da;
   background: #fff;
+  color: #1f2937;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
@@ -338,6 +352,10 @@ export const Badge = styled.span`
   background: #f1f3f5;
   color: #343a40;
 
+  &[data-variant='active'] { background: #dcfce7; color: #166534; }
+  &[data-variant='connecting'] { background: #dbeafe; color: #1d4ed8; }
+  &[data-variant='closed'] { background: #e5e7eb; color: #475569; }
+  &[data-variant='danger'] { background: #fee2e2; color: #b91c1c; }
   &[data-variant='open'] { background: #fff3cd; color: #856404; }
   &[data-variant='reviewing'] { background: #d1ecf1; color: #0c5460; }
   &[data-variant='resolved'] { background: #d4edda; color: #155724; }
