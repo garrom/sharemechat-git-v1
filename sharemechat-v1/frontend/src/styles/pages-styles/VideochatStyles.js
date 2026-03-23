@@ -312,16 +312,53 @@ export const StyledVideoArea = styled.div`
 
 `;
 
+export const StyledPrecallVideoArea = styled(StyledVideoArea)`
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  max-height: 100%;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    height: 100%;
+    max-height: 100%;
+    padding: 0;
+  }
+`;
+
+export const StyledPrecallLocalStage = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #000;
+`;
+
+export const StyledCallVideoArea = styled(StyledVideoArea)`
+  width: 100%;
+  max-width: none;
+  margin: 0;
+
+  @media (min-width: 769px) {
+    height: calc(100vh - 220px);
+    max-height: calc(100vh - 220px);
+  }
+`;
+
 export const StyledRemoteVideo = styled.div`
   width: 100%;
   height: 100%;
   z-index: 1;
   max-height: 100%;
-  border-radius:0 px;
+  border-radius: 0;
   overflow: hidden;
   @media (min-width: 769px) {
     aspect-ratio: 16 / 9;
-    border-radius:16px;
+    border-radius: 16px;
   }
 
 `;
@@ -366,6 +403,21 @@ export const StyledLocalVideoDesktop = styled.div`
   }
 
 
+`;
+
+export const StyledPaneCenter = styled.div`
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+`;
+
+export const StyledPaneCenterStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 `;
 
 
@@ -485,6 +537,12 @@ export const StyledChatList = styled.div`
     max-height: 450px;
     padding-bottom: 72px;
   }
+`;
+
+export const StyledStatusText = styled.div`
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  color: ${p => (p.$tone === 'error' ? '#ffb3b3' : '#e9ecef')};
 `;
 
 export const StyledChatMessageRow = styled.div`
@@ -609,6 +667,7 @@ export const StyledSplit2 = styled.div`
   gap: ${props => (props['data-mode'] === 'full-remote' ? '0px' : '14px')};
   width: 100%;
   min-height: 0;
+  min-width: 0;
   flex: 1;
 
   @media (max-width: 768px){
@@ -627,6 +686,8 @@ export const StyledPane = styled.section`
   display: flex;
   flex-direction: column;
   height:100%;
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
@@ -765,6 +826,128 @@ export const StyledTeaserMediaButton = styled.button`
   width: 100%;
   height: 100%;
   display: block;
+`;
+
+export const StyledTeaserNavSlot = styled.div`
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 3;
+  ${p => (p.$side === 'left' ? 'left: 10px;' : 'right: 10px;')}
+`;
+
+export const StyledTeaserFavoriteSlot = styled.div`
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 4;
+`;
+
+export const StyledCallStage = styled.div`
+  position: relative;
+  width: 100%;
+  height: 100%;
+`;
+
+export const StyledCallTopBar = styled.div`
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  z-index: 9;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  pointer-events: none;
+`;
+
+export const StyledCallTopMeta = styled.div`
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--c-white);
+  pointer-events: auto;
+`;
+
+export const StyledCallTopMetaText = styled.div`
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  line-height: 1.15;
+`;
+
+export const StyledCallTopActions = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+`;
+
+export const StyledCallLocalVideo = styled.div`
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 24%;
+  max-width: 260px;
+  overflow: hidden;
+  z-index: 8;
+  border-radius: 0;
+  box-shadow: none;
+
+  @media (min-width: 769px) {
+    border-radius: 16px;
+  }
+`;
+
+export const StyledCallBottomBar = styled.div`
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  z-index: 9;
+  pointer-events: none;
+
+  @media (max-width: 768px) {
+    left: 12px;
+    right: 12px;
+    bottom: 72px;
+  }
+`;
+
+export const StyledCallBottomInner = styled.div`
+  position: relative;
+  min-height: 44px;
+`;
+
+export const StyledCallPrimaryActions = styled.div`
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: auto;
+
+  @media (max-width: 768px) {
+    gap: 12px;
+  }
+`;
+
+export const StyledCallSecondaryActions = styled.div`
+  position: absolute;
+  right: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  pointer-events: auto;
 `;
 
 export const StyledPrimaryCta = styled.button`
@@ -959,6 +1142,7 @@ export const StyledCallCardDesktop = styled.div`
   width: 100%;
   max-width: 1040px;
   margin: 0 auto;
+  min-width: 0;
 
   border-radius: 16px;
   border: none;
@@ -969,11 +1153,15 @@ export const StyledCallCardDesktop = styled.div`
 
   /* DESKTOP:*/
   @media (min-width: 769px) {
-    border: none;
-    border-radius: 0;
-    background:transparent;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(16,19,25,0.96) 0%, rgba(10,12,17,0.98) 100%);
     padding: 0;
-    box-shadow: none;
+    box-shadow:
+      0 18px 44px rgba(0,0,0,0.34),
+      0 1px 0 rgba(255,255,255,0.04) inset;
+    backdrop-filter: blur(14px) saturate(130%);
   }
 
   @media (max-width: 768px) {
@@ -991,6 +1179,44 @@ export const StyledCallFooterDesktop = styled.div`
   align-items: center;
   gap: 8px;
   padding-top: 8px;
+
+  @media (min-width: 769px) {
+    position: relative;
+    z-index: 3;
+    width: 100%;
+    padding-top: 0;
+    box-sizing: border-box;
+  }
+`;
+
+export const StyledCallComposer = styled.div`
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+
+  @media (min-width: 769px) {
+    min-height: 64px;
+    padding: 12px 14px 14px;
+    background:
+      linear-gradient(180deg, rgba(20,24,31,0.64) 0%, rgba(11,14,20,0.88) 100%);
+    border-top: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 -1px 0 rgba(255,255,255,0.03) inset;
+    backdrop-filter: blur(16px) saturate(145%);
+
+    & > button {
+      background: rgba(255,255,255,0.10);
+      color: #fff;
+      border-color: rgba(255,255,255,0.14);
+      box-shadow: none;
+    }
+
+    & > button:hover:not(:disabled) {
+      background: rgba(255,255,255,0.18);
+      color: #fff;
+    }
+  }
 `;
 
 export const StyledIncomingCallOverlay = styled.div`

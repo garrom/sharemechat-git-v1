@@ -279,6 +279,30 @@ export const BtnSend = styled(IconButtonBase)`
   width: 36px; height: 36px; min-width: 36px; min-height: 36px; font-size: 14px;
 `;
 
+export const BtnCallDanger = styled(IconButtonBase)`
+  ${variant('#fff', '#dc3545', 'rgba(255,255,255,0.4)', '#bb2d3b', '#fff')}
+  box-shadow: 0 12px 28px rgba(0,0,0,0.28);
+`;
+
+export const BtnCallLight = styled(IconButtonBase)`
+  ${variant('#111', '#ffffff', 'rgba(255,255,255,0.4)', '#111', '#fff')}
+  box-shadow: 0 12px 28px rgba(0,0,0,0.22);
+`;
+
+export const BtnCallAlert = styled(IconButtonBase)`
+  ${variant('#dc3545', '#ffffff', 'rgba(220,53,69,0.65)', '#dc3545', '#ffffff')}
+  box-shadow: 0 12px 28px rgba(0,0,0,0.18);
+`;
+
+export const BtnCallGhost = styled(IconButtonBase)`
+  ${variant('#fff', 'rgba(0,0,0,0.28)', 'rgba(255,255,255,0.55)', 'rgba(0,0,0,0.46)', '#fff')}
+  width: auto;
+  min-width: 44px;
+  padding: 0 12px;
+  border-radius: 999px;
+  backdrop-filter: blur(8px);
+`;
+
 // navegación vídeos promo (‹ › grandes en el lightbox)
 export const BtnPromoNav = styled(IconButtonBase)`
   ${variant('#fff', 'rgba(0,0,0,0.78)', 'rgba(255,255,255,0.7)', 'rgba(255,255,255,0.16)', '#fff')}
@@ -301,23 +325,27 @@ export const BtnPromoNav = styled(IconButtonBase)`
 
 // navegación teasers random en pane derecho (‹ › grandes, fondo transparente, blanco)
 export const BtnTeaserPrev = styled(IconButtonBase)`
-  ${variant('#fff', 'transparent', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0.18)', '#fff')}
-  width: 60px;
-  height: 60px;
-  min-width: 60px;
-  min-height: 60px;
-  font-size: 24px;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.55);
+  ${variant('#fff', 'transparent', 'transparent', 'rgba(255,255,255,0.08)', '#fff')}
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 22px;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.45);
 `;
 
 export const BtnTeaserNext = styled(IconButtonBase)`
-  ${variant('#fff', 'transparent', 'rgba(255,255,255,0.9)', 'rgba(255,255,255,0.18)', '#fff')}
-  width: 60px;
-  height: 60px;
-  min-width: 60px;
-  min-height: 60px;
-  font-size: 24px;
-  box-shadow: 0 10px 26px rgba(0,0,0,0.55);
+  ${variant('#fff', 'transparent', 'transparent', 'rgba(255,255,255,0.08)', '#fff')}
+  width: 48px;
+  height: 48px;
+  min-width: 48px;
+  min-height: 48px;
+  font-size: 22px;
+  box-shadow: none;
+  backdrop-filter: none;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.45);
 `;
 
 // bloquear (acción destructiva / especial)
