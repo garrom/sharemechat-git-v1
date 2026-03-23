@@ -1,14 +1,9 @@
-// ==============================
-// FILE: src/main/java/com/sharemechat/service/ModelContractService.java
-// Robust + backwards-compatible (isAcceptedCurrent alias)
-// ==============================
 package com.sharemechat.service;
 
+import com.sharemechat.dto.ModelContractManifestDTO;
 import com.sharemechat.entity.ModelContractAcceptance;
 import com.sharemechat.repository.ModelContractAcceptanceRepository;
-import jakarta.annotation.PostConstruct;
 import jakarta.transaction.Transactional;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -19,32 +14,22 @@ import java.util.Map;
 public class ModelContractService {
 
     private final ModelContractAcceptanceRepository repo;
+    private final ModelContractManifestService manifestService;
 
-    @Value("${modelContract.version}")
-    private String version;
-
-    @Value("${modelContract.sha256}")
-    private String sha256;
-
-    @Value("${modelContract.url}")
-    private String url;
-
-    public ModelContractService(ModelContractAcceptanceRepository repo) {
+    public ModelContractService(
+            ModelContractAcceptanceRepository repo,
+            ModelContractManifestService manifestService
+    ) {
         this.repo = repo;
-    }
-
-    @PostConstruct
-    void normalizeAndValidate() {
-        version = normalizeRequired(version, "modelContract.version");
-        sha256  = normalizeRequired(sha256, "modelContract.sha256");
-        url     = normalizeRequired(url, "modelContract.url");
+        this.manifestService = manifestService;
     }
 
     public Map<String, String> current() {
+        ModelContractManifestDTO manifest = manifestService.getCurrent();
         return Map.of(
-                "version", version,
-                "sha256", sha256,
-                "url", url
+                "version", manifest.getVersion(),
+                "sha256", manifest.getSha256(),
+                "url", manifest.getUrl()
         );
     }
 
@@ -53,7 +38,8 @@ public class ModelContractService {
      * Método "oficial".
      */
     public boolean isAccepted(Long userId) {
-        return userId != null && repo.existsByUserIdAndContractVersion(userId, version);
+        var manifest = manifestService.getCurrent();
+        return userId != null && repo.existsByUserIdAndContractVersion(userId, manifest.getVersion());
     }
 
     /**
@@ -72,6 +58,11 @@ public class ModelContractService {
 
     @Transactional
     public Map<String, Object> accept(Long userId, String ip, String userAgent) {
+        var manifest = manifestService.getCurrent();
+        String version = manifest.getVersion();
+        String sha256 = manifest.getSha256();
+        String url = manifest.getUrl();
+
         if (userId == null) {
             return Map.of(
                     "ok", false,
@@ -137,12 +128,5 @@ public class ModelContractService {
 
             throw dup;
         }
-    }
-
-    private String normalizeRequired(String s, String keyName) {
-        if (s == null) throw new IllegalStateException("Missing required property: " + keyName);
-        String t = s.trim();
-        if (t.isEmpty()) throw new IllegalStateException("Empty required property: " + keyName);
-        return t;
     }
 }
