@@ -82,7 +82,7 @@ public class TransactionService {
         if (a == null || b == null) throw new IllegalArgumentException("userId nulo");
         long min = Math.min(a, b);
         long max = Math.max(a, b);
-        log.info("processGift: locking wallets minUserId={} maxUserId={}", min, max);
+        log.debug("processGift: locking wallets minUserId={} maxUserId={}", min, max);
         lockUserOrThrow(min);
         if (max != min) lockUserOrThrow(max);
     }
@@ -91,7 +91,7 @@ public class TransactionService {
         BigDecimal balance = balanceRepository.findTopByUserIdOrderByTimestampDescIdDesc(userId)
                 .map(Balance::getBalance)
                 .orElse(BigDecimal.ZERO);
-        log.info("processGift: lastBalanceOf userId={} balance={}", userId, balance);
+        log.debug("processGift: lastBalanceOf userId={} balance={}", userId, balance);
         return balance;
     }
 
@@ -444,14 +444,14 @@ public class TransactionService {
 
         User clientUser = userRepository.findById(clientId)
                 .orElseThrow(() -> new IllegalArgumentException("Cliente no encontrado: " + clientId));
-        log.info("processGift: loaded client userId={} role={}", clientId, clientUser.getRole());
+        log.debug("processGift: loaded client userId={} role={}", clientId, clientUser.getRole());
         if (!Constants.Roles.CLIENT.equals(clientUser.getRole())) {
             throw new IllegalArgumentException("El remitente debe ser CLIENT");
         }
 
         User modelUser = userRepository.findById(modelId)
                 .orElseThrow(() -> new IllegalArgumentException("Modelo no encontrado: " + modelId));
-        log.info("processGift: loaded model userId={} role={}", modelId, modelUser.getRole());
+        log.debug("processGift: loaded model userId={} role={}", modelId, modelUser.getRole());
         if (!Constants.Roles.MODEL.equals(modelUser.getRole())) {
             throw new IllegalArgumentException("El destinatario debe ser MODEL");
         }
@@ -459,16 +459,16 @@ public class TransactionService {
         Gift gift = giftRepository.findById(giftId)
                 .orElseThrow(() -> new IllegalArgumentException("Gift inexistente: " + giftId));
         BigDecimal cost = gift.getCost().setScale(2, RoundingMode.HALF_UP);
-        log.info("processGift: loaded gift id={} name={} cost={}", gift.getId(), gift.getName(), cost);
+        log.debug("processGift: loaded gift id={} name={} cost={}", gift.getId(), gift.getName(), cost);
 
         Client client = clientRepository.findByUser(clientUser)
                 .orElseThrow(() -> new IllegalStateException("Cliente no encontrado para userId=" + clientId));
-        log.info("processGift: loaded client entity userId={} saldoActual={}", clientId, client.getSaldoActual());
+        log.debug("processGift: loaded client entity userId={} saldoActual={}", clientId, client.getSaldoActual());
 
         BigDecimal lastClientBalance = lastBalanceOf(clientId);
 
         BigDecimal clientSaldoCache = client.getSaldoActual() == null ? BigDecimal.ZERO : client.getSaldoActual();
-        log.info("processGift: validating client balances clientId={} ledgerBalance={} saldoCache={}",
+        log.debug("processGift: validating client balances clientId={} ledgerBalance={} saldoCache={}",
                 clientId, lastClientBalance, clientSaldoCache);
         if (clientSaldoCache.compareTo(BigDecimal.ZERO) > 0 && lastClientBalance.compareTo(clientSaldoCache) != 0) {
             throw new IllegalStateException(
@@ -476,7 +476,7 @@ public class TransactionService {
             );
         }
 
-        log.info("processGift: validating funds clientId={} cost={} balance={}", clientId, cost, lastClientBalance);
+        log.debug("processGift: validating funds clientId={} cost={} balance={}", clientId, cost, lastClientBalance);
         if (lastClientBalance.compareTo(cost) < 0) {
             throw new IllegalArgumentException("Saldo insuficiente para enviar el regalo");
         }
@@ -488,7 +488,7 @@ public class TransactionService {
                     m.setUserId(modelId);
                     return m;
                 });
-        log.info("processGift: loaded model entity userId={} saldoActual={} totalIngresos={}",
+        log.debug("processGift: loaded model entity userId={} saldoActual={} totalIngresos={}",
                 modelId, model.getSaldoActual(), model.getTotalIngresos());
 
         BigDecimal lastModelBalance = lastBalanceOf(modelId);
@@ -496,7 +496,7 @@ public class TransactionService {
         BigDecimal share = (giftProperties.getModelShare() != null ? giftProperties.getModelShare() : BigDecimal.ZERO);
         BigDecimal modelEarning = cost.multiply(share).setScale(2, RoundingMode.HALF_UP);
         BigDecimal platformEarning = cost.subtract(modelEarning).setScale(2, RoundingMode.HALF_UP);
-        log.info("processGift: split giftId={} share={} modelEarning={} platformEarning={}",
+        log.debug("processGift: split giftId={} share={} modelEarning={} platformEarning={}",
                 giftId, share, modelEarning, platformEarning);
 
         StreamRecord stream = null;
@@ -504,7 +504,7 @@ public class TransactionService {
         if (streamIdOrNull != null) {
             stream = streamRecordRepository.findById(streamIdOrNull).orElse(null);
         } else if (enableRandomFallback) {
-            log.info("processGift: streamIdOrNull is null, activating RANDOM DB fallback clientId={} modelId={}", clientId, modelId);
+            log.debug("processGift: streamIdOrNull is null, activating RANDOM DB fallback clientId={} modelId={}", clientId, modelId);
             stream = streamRecordRepository
                     .findTopByClient_IdAndModel_IdAndStreamTypeAndConfirmedAtIsNotNullAndEndTimeIsNullOrderByStartTimeDesc(
                             clientId,
@@ -514,10 +514,10 @@ public class TransactionService {
                     .orElse(null);
 
             if (stream != null) {
-                log.info("processGift: RANDOM DB fallback found streamId={} clientId={} modelId={}",
+                log.debug("processGift: RANDOM DB fallback found streamId={} clientId={} modelId={}",
                         stream.getId(), clientId, modelId);
             } else {
-                log.info("processGift: RANDOM DB fallback found no active confirmed stream clientId={} modelId={}",
+                log.debug("processGift: RANDOM DB fallback found no active confirmed stream clientId={} modelId={}",
                         clientId, modelId);
             }
         }
@@ -530,9 +530,10 @@ public class TransactionService {
         txClient.setAmount(cost.negate());
         txClient.setOperationType("GIFT_SEND");
         txClient.setStreamRecord(stream);
+        txClient.setGift(gift);
         txClient.setDescription("Regalo: " + gift.getName());
         Transaction savedTxClient = transactionRepository.save(txClient);
-        log.info("processGift: saved client transaction txId={} amount={} op={}",
+        log.debug("processGift: saved client transaction txId={} amount={} op={}",
                 savedTxClient.getId(), txClient.getAmount(), txClient.getOperationType());
 
         BigDecimal newClientBalance = lastClientBalance.subtract(cost);
@@ -545,20 +546,21 @@ public class TransactionService {
         balClient.setBalance(newClientBalance);
         balClient.setDescription("Regalo enviado: " + gift.getName());
         balanceRepository.save(balClient);
-        log.info("processGift: saved client balance userId={} newBalance={}", clientId, newClientBalance);
+        log.debug("processGift: saved client balance userId={} newBalance={}", clientId, newClientBalance);
 
         client.setSaldoActual(newClientBalance);
         clientRepository.save(client);
-        log.info("processGift: updated client cache userId={} saldoActual={}", clientId, client.getSaldoActual());
+        log.debug("processGift: updated client cache userId={} saldoActual={}", clientId, client.getSaldoActual());
 
         Transaction txModel = new Transaction();
         txModel.setUser(modelUser);
         txModel.setAmount(modelEarning);
         txModel.setOperationType("GIFT_EARNING");
         txModel.setStreamRecord(stream);
+        txModel.setGift(gift);
         txModel.setDescription("Ingreso por regalo: " + gift.getName());
         Transaction savedTxModel = transactionRepository.save(txModel);
-        log.info("processGift: saved model transaction txId={} amount={} op={}",
+        log.debug("processGift: saved model transaction txId={} amount={} op={}",
                 savedTxModel.getId(), txModel.getAmount(), txModel.getOperationType());
 
         BigDecimal newModelBalance = lastModelBalance.add(modelEarning);
@@ -571,13 +573,13 @@ public class TransactionService {
         balModel.setBalance(newModelBalance);
         balModel.setDescription("Ingreso por regalo: " + gift.getName());
         balanceRepository.save(balModel);
-        log.info("processGift: saved model balance userId={} newBalance={}", modelId, newModelBalance);
+        log.debug("processGift: saved model balance userId={} newBalance={}", modelId, newModelBalance);
 
         model.setSaldoActual(newModelBalance);
         BigDecimal totalIngresos = model.getTotalIngresos() == null ? BigDecimal.ZERO : model.getTotalIngresos();
         model.setTotalIngresos(totalIngresos.add(modelEarning));
         modelRepository.save(model);
-        log.info("processGift: updated model cache userId={} saldoActual={} totalIngresos={}",
+        log.debug("processGift: updated model cache userId={} saldoActual={} totalIngresos={}",
                 modelId, model.getSaldoActual(), model.getTotalIngresos());
 
         if (platformEarning.compareTo(BigDecimal.ZERO) > 0) {
@@ -587,7 +589,7 @@ public class TransactionService {
             ptx.setStreamRecord(stream);
             ptx.setDescription("Margen por regalo: " + gift.getName());
             PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
-            log.info("processGift: saved platform transaction txId={} amount={} op={}",
+            log.debug("processGift: saved platform transaction txId={} amount={} op={}",
                     savedPtx.getId(), ptx.getAmount(), ptx.getOperationType());
 
             BigDecimal newPlatformBalance = appendPlatformBalance(
@@ -595,7 +597,7 @@ public class TransactionService {
                     platformEarning,
                     "Margen por regalo: " + gift.getName()
             );
-            log.info("processGift: saved platform balance newBalance={}", newPlatformBalance);
+            log.debug("processGift: saved platform balance newBalance={}", newPlatformBalance);
         }
 
         log.info("processGift: success clientId={} modelId={} giftId={} finalClientBalance={} finalModelBalance={}",
