@@ -11,7 +11,8 @@ import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPa
     StyledBottomActionsMobile,StyledMobile3ColBar,StyledTopCenter,StyledConnectedText,StyledFloatingHangup,
     StyledCallCardDesktop,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,StyledCallBottomBar,
-    StyledCallBottomInner,StyledCallPrimaryActions,StyledCallComposer,StyledGiftsPanel,StyledGiftGrid
+    StyledCallBottomInner,StyledCallPrimaryActions,StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
+    StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions
 } from '../../styles/pages-styles/VideochatStyles';
 import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonRegalo,ButtonActivarCam,
     ButtonActivarCamMobile,ButtonVolver,ActionButton,BtnRoundVideo,BtnHangup,BtnCallDanger,BtnCallGhost,BtnSend
@@ -250,39 +251,41 @@ export default function VideoChatFavoritosCliente(props){
                   {/* Desktop chat normal */}
                   {!isPendingPanel&&!isSentPanel&&contactMode!=='call'&&(
                     <StyledChatWhatsApp>
-                      <StyledChatScroller ref={centerListRef} data-bg="whatsapp">
-                        {centerLoading&&<div style={{color:'#adb5bd'}}>{t('dashboardClient.videoChatFavoritosCliente.loading.history')}</div>}
-                        {!centerLoading&&centerMessages.length===0&&(
-                          <div style={{color:'#adb5bd'}}>
-                            {allowChat?t('dashboardClient.videoChatFavoritosCliente.empty.noMessages'):t('dashboardClient.videoChatFavoritosCliente.empty.chatInactive')}
-                          </div>
-                        )}
-                        {centerMessages.map(m=>{
-                          let giftData=m.gift;
-                          if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
-                            try{
-                              const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
-                            }catch{}
-                          }
-                          const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
-                          return(
-                            <StyledChatMessageRow key={m.id} style={{justifyContent:isMe?'flex-end':'flex-start'}}>
-                              <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
-                                {giftData?(
-                                  giftRenderReady&&(()=>{
-                                    const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
-                                    return src?<img src={src} alt="" style={{width:24,height:24,verticalAlign:'middle'}}/>:null;
-                                  })()
-                                ):(
-                                  m.body
-                                )}
-                              </StyledChatBubble>
-                            </StyledChatMessageRow>
-                          );
-                        })}
+                      <StyledChatScroller ref={centerListRef} data-bg="whatsapp" data-kind="favorites-chat">
+                        <StyledChatMessagesInner>
+                          {centerLoading&&<div style={{color:'#adb5bd'}}>{t('dashboardClient.videoChatFavoritosCliente.loading.history')}</div>}
+                          {!centerLoading&&centerMessages.length===0&&(
+                            <div style={{color:'#adb5bd'}}>
+                              {allowChat?t('dashboardClient.videoChatFavoritosCliente.empty.noMessages'):t('dashboardClient.videoChatFavoritosCliente.empty.chatInactive')}
+                            </div>
+                          )}
+                          {centerMessages.map(m=>{
+                            let giftData=m.gift;
+                            if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
+                              try{
+                                const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
+                              }catch{}
+                            }
+                            const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
+                            return(
+                              <StyledChatMessageRow key={m.id} $side={variant}>
+                                <StyledChatBubble $variant={variant} $column>
+                                  {giftData?(
+                                    giftRenderReady&&(()=>{
+                                      const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
+                                      return src?<img src={src} alt="" style={{width:24,height:24,verticalAlign:'middle'}}/>:null;
+                                    })()
+                                  ):(
+                                    m.body
+                                  )}
+                                </StyledChatBubble>
+                              </StyledChatMessageRow>
+                            );
+                          })}
+                        </StyledChatMessagesInner>
                       </StyledChatScroller>
 
-                      <StyledChatDock>
+                      <StyledChatDockMessageComposer data-kind="favorites-chat">
                         <StyledChatInput
                           value={centerInput}
                           onChange={e=>setCenterInput(e.target.value)}
@@ -291,24 +294,24 @@ export default function VideoChatFavoritosCliente(props){
                           disabled={!allowChat}
                           onFocus={()=>{setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50);}}
                         />
-                        <ButtonRegalo
-                          onClick={()=>setShowCenterGifts(s=>!s)}
-                        title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
-                          disabled={!allowChat}
-                        aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
-
-                        >
-                          <FontAwesomeIcon icon={faGift}/>
-                        </ButtonRegalo>
-                        <ButtonLlamar
-                          onClick={enterCallMode}
-                          disabled={!centerChatPeerId||!allowChat}
-                          title={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
-                          aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
-                          style={{marginRight:16, marginLeft:4,width:40,height:40,borderRadius:'999px',padding:0,display:'flex',alignItems:'center',justifyContent:'center'}}
-                        >
-                          <FontAwesomeIcon icon={faVideo}/>
-                        </ButtonLlamar>
+                        <StyledChatDockActions>
+                          <ButtonRegalo
+                            onClick={()=>setShowCenterGifts(s=>!s)}
+                            title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
+                            disabled={!allowChat}
+                            aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
+                          >
+                            <FontAwesomeIcon icon={faGift}/>
+                          </ButtonRegalo>
+                          <ButtonLlamar
+                            onClick={enterCallMode}
+                            disabled={!centerChatPeerId||!allowChat}
+                            title={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
+                            aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
+                          >
+                            <FontAwesomeIcon icon={faVideo}/>
+                          </ButtonLlamar>
+                        </StyledChatDockActions>
                         {showCenterGifts&&allowChat&&(
                           <div style={{position:'absolute',bottom:44,right:0,background:'rgba(0,0,0,0.85)',padding:10,borderRadius:8,zIndex:10,border:'1px solid #333'}}>
                             <div style={{display:'grid',gridTemplateColumns:'repeat(3, 80px)',gap:8,maxHeight:240,overflowY:'auto'}}>
@@ -322,7 +325,7 @@ export default function VideoChatFavoritosCliente(props){
                             </div>
                           </div>
                         )}
-                      </StyledChatDock>
+                      </StyledChatDockMessageComposer>
                     </StyledChatWhatsApp>
                   )}
                 </StyledCenterBody>
@@ -473,7 +476,7 @@ export default function VideoChatFavoritosCliente(props){
                   </StyledChatContainer>
                 </StyledVideoArea>
 
-                <StyledChatDock style={{display:callStatus==='in-call'?'flex':'none'}}>
+                <StyledChatDock data-surface="call-dark" style={{display:callStatus==='in-call'?'flex':'none'}}>
                   <StyledChatInput
                     type="text"
                     value={centerInput}
@@ -484,6 +487,7 @@ export default function VideoChatFavoritosCliente(props){
                     onFocus={()=>setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50)}
                   />
                   <ButtonRegalo
+                    data-gift-button="true"
                     title={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
                     onClick={()=>setShowCenterGifts(s=>!s)}
                     aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.sendGift')}
@@ -540,39 +544,41 @@ export default function VideoChatFavoritosCliente(props){
 
               {!isPendingPanel&&!isSentPanel&&contactMode!=='call'&&(
                 <StyledChatWhatsApp>
-                  <StyledChatScroller ref={centerListRef} data-bg="whatsapp">
-                    {centerLoading&&<div style={{color:'#adb5bd'}}>Cargando historial…</div>}
-                    {!centerLoading&&centerMessages.length===0&&(
-                      <div style={{color:'#adb5bd'}}>
-                        {allowChat?'No hay mensajes todavía. ¡Escribe el primero!':'Este chat no está activo.'}
-                      </div>
-                    )}
-                    {centerMessages.map(m=>{
-                      let giftData=m.gift;
-                      if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
-                        try{
-                          const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
-                        }catch{}
-                      }
-                      const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
-                      return(
-                        <StyledChatMessageRow key={m.id} style={{justifyContent:isMe?'flex-end':'flex-start'}}>
-                          <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
-                            {giftData?(
-                              giftRenderReady&&(()=>{
-                                const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
-                                return src?<img src={src}alt=""style={{width:24,height:24,verticalAlign:'middle'}}/>:null;
-                              })()
-                            ):(
-                              m.body
-                            )}
-                          </StyledChatBubble>
-                        </StyledChatMessageRow>
-                      );
-                    })}
+                  <StyledChatScroller ref={centerListRef} data-bg="whatsapp" data-kind="favorites-chat">
+                    <StyledChatMessagesInner>
+                      {centerLoading&&<div style={{color:'#adb5bd'}}>Cargando historial…</div>}
+                      {!centerLoading&&centerMessages.length===0&&(
+                        <div style={{color:'#adb5bd'}}>
+                          {allowChat?'No hay mensajes todavía. ¡Escribe el primero!':'Este chat no está activo.'}
+                        </div>
+                      )}
+                      {centerMessages.map(m=>{
+                        let giftData=m.gift;
+                        if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
+                          try{
+                            const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
+                          }catch{}
+                        }
+                        const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
+                        return(
+                          <StyledChatMessageRow key={m.id} $side={variant}>
+                            <StyledChatBubble $variant={variant} $column>
+                              {giftData?(
+                                giftRenderReady&&(()=>{
+                                  const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
+                                  return src?<img src={src}alt=""style={{width:24,height:24,verticalAlign:'middle'}}/>:null;
+                                })()
+                              ):(
+                                m.body
+                              )}
+                            </StyledChatBubble>
+                          </StyledChatMessageRow>
+                        );
+                      })}
+                    </StyledChatMessagesInner>
                   </StyledChatScroller>
 
-                  <StyledChatDock>
+                  <StyledChatDockMessageComposer data-kind="favorites-chat">
                     <StyledChatInput
                       value={centerInput}
                       onChange={e=>setCenterInput(e.target.value)}
@@ -581,14 +587,16 @@ export default function VideoChatFavoritosCliente(props){
                       disabled={!allowChat}
                       onFocus={()=>{setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50);}}
                     />
-                    <ButtonRegalo
-                      onClick={()=>setShowCenterGifts(s=>!s)}
-                      title="Enviar regalo"
-                      disabled={!allowChat}
-                      aria-label="Enviar regalo"
-                    >
-                      <FontAwesomeIcon icon={faGift}/>
-                    </ButtonRegalo>
+                    <StyledChatDockActions>
+                      <ButtonRegalo
+                        onClick={()=>setShowCenterGifts(s=>!s)}
+                        title="Enviar regalo"
+                        disabled={!allowChat}
+                        aria-label="Enviar regalo"
+                      >
+                        <FontAwesomeIcon icon={faGift}/>
+                      </ButtonRegalo>
+                    </StyledChatDockActions>
                     {showCenterGifts&&allowChat&&(
                       <div style={{position:'absolute',bottom:44,right:0,background:'rgba(0,0,0,0.85)',padding:10,borderRadius:8,zIndex:10,border:'1px solid #333'}}>
                         <div style={{display:'grid',gridTemplateColumns:'repeat(3, 80px)',gap:8,maxHeight:240,overflowY:'auto'}}>
@@ -602,7 +610,7 @@ export default function VideoChatFavoritosCliente(props){
                         </div>
                       </div>
                     )}
-                  </StyledChatDock>
+                  </StyledChatDockMessageComposer>
                 </StyledChatWhatsApp>
               )}
             </StyledCenterBody>

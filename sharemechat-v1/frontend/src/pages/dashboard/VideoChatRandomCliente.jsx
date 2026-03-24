@@ -626,7 +626,7 @@ export default function VideoChatRandomCliente(props) {
 
       {/* DOCK CHAT SOLO MÓVIL EN LLAMADA */}
       {remoteStream && isMobile && (
-        <StyledChatDock>
+        <StyledChatDock data-surface="call-dark">
           <StyledChatInput
             type="text"
             value={chatInput}
@@ -641,12 +641,13 @@ export default function VideoChatRandomCliente(props) {
             }}
           />
 
-          <BtnSend type="button" onClick={sendChatMessage} aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')} title={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}>
+          <BtnSend data-send-button="true" type="button" onClick={sendChatMessage} aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')} title={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}>
             <FontAwesomeIcon icon={faPaperPlane} />
           </BtnSend>
 
           <ButtonRegalo
             type="button"
+            data-gift-button="true"
             onClick={() => setShowGifts(s => !s)}
             title={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}
             aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}

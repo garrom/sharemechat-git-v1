@@ -548,7 +548,7 @@ export default function VideoChatRandomModelo(props) {
       </StyledSplit2>
 
       {remoteStream && isMobile && (
-        <StyledChatDock>
+        <StyledChatDock data-surface="call-dark">
           <StyledChatInput
             type="text"
             value={chatInput}
@@ -562,7 +562,7 @@ export default function VideoChatRandomModelo(props) {
               }
             }}
           />
-          <BtnSend type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
+          <BtnSend data-send-button="true" type="button" onClick={sendChatMessage} aria-label={t('common.sendMessage')} title={t('common.sendMessage')}>
             <FontAwesomeIcon icon={faPaperPlane} />
           </BtnSend>
         </StyledChatDock>

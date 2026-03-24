@@ -194,8 +194,11 @@ export const ButtonEnviar = styled(PillButtonBase)`
 
 /* Regalo (dock chat) */
 export const ButtonRegalo = styled(IconButtonBase)`
-  ${variant('#111', '#ffe066', '#fcc419', '#ffd43b')}
+  ${variant('#f8fafc', 'rgba(255,255,255,0.10)', 'rgba(255,255,255,0.14)', 'rgba(255,255,255,0.18)', '#f8fafc')}
   width: 36px; height: 36px; min-width: 36px; min-height: 36px; font-size: 14px;
+  border-color: rgba(255,255,255,0.12);
+  box-shadow: none;
+  backdrop-filter: blur(8px);
 `;
 
 

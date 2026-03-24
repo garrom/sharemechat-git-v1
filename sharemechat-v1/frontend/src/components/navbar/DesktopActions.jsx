@@ -7,7 +7,6 @@ import {
   StyledNavActionsRow,
   StyledNavAvatar,
   StyledNavAvatarWrap,
-  StyledNavIconButton,
 } from '../../styles/NavbarStyles';
 import { NavButton } from '../../styles/ButtonStyles';
 import LocaleSwitcher from '../LocaleSwitcher';
@@ -69,14 +68,15 @@ const DesktopActions = ({
       ) : null}
 
       {logoutLabel ? (
-        <StyledNavIconButton
+        <NavButton
           type="button"
           onClick={onLogout}
           title={logoutTitle || logoutLabel}
           aria-label={logoutLabel}
         >
           <FontAwesomeIcon icon={faSignOutAlt} />
-        </StyledNavIconButton>
+          <span>{logoutLabel}</span>
+        </NavButton>
       ) : null}
 
       {showAvatar ? (

@@ -165,6 +165,12 @@ export const StyledLeftColumn = styled(ColumnBlock)`
   overflow-y: auto;
   border: none;
 
+  &[data-surface="favorites-premium"] {
+    background: linear-gradient(180deg, #f9fafb 0%, #f3f5f7 100%);
+    border: 1px solid #e6e7ea;
+    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+  }
+
   @media (min-width: 769px) and (max-width: 1024px) {
     width: 25%;
   }
@@ -231,6 +237,12 @@ export const StyledRightColumn = styled(ColumnBlock)`
   min-width: 220px;
   padding: 12px;
   overflow-y: auto;
+
+  &[data-surface="favorites-premium"] {
+    background: linear-gradient(180deg, #f9fafb 0%, #f3f5f7 100%);
+    border: 1px solid #e6e7ea;
+    box-shadow: 0 10px 30px rgba(17, 24, 39, 0.06);
+  }
 
   @media (max-width: 1024px) { display: none; }
 
@@ -455,6 +467,13 @@ export const StyledChatDock = styled.div`
   background: var(--c-surface);
   z-index: 100;
 
+  &[data-surface='call-dark'] {
+    background: #111418;
+    border-top: none;
+    box-shadow: none;
+    backdrop-filter: none;
+  }
+
   /* DESKTOP: dock transparente */
   @media (min-width: 769px) {
     background: transparent;
@@ -480,6 +499,49 @@ export const StyledChatDock = styled.div`
       padding-inline: 10px;
       white-space: nowrap;
       flex-shrink: 0;
+    }
+
+    button[data-gift-button='true'] {
+      background: rgba(255,255,255,0.18);
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.22);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.20);
+      backdrop-filter: blur(10px);
+    }
+
+    button[data-gift-button='true']:hover:not(:disabled),
+    button[data-gift-button='true']:focus-visible {
+      background: rgba(255,255,255,0.26);
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.30);
+    }
+
+    button[data-gift-button='true']:active:not(:disabled) {
+      background: rgba(255,255,255,0.22);
+    }
+
+    &[data-surface='call-dark'] button[data-send-button='true'] {
+      background: #000000;
+      color: #ffffff;
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: 0 10px 24px rgba(0,0,0,0.28);
+    }
+
+    &[data-surface='call-dark'] button[data-send-button='true']:hover:not(:disabled),
+    &[data-surface='call-dark'] button[data-send-button='true']:focus-visible {
+      background: #0b0d10;
+      color: #ffffff;
+      border-color: rgba(255,255,255,0.20);
+    }
+
+    &[data-surface='call-dark'] button[data-send-button='true']:active:not(:disabled) {
+      background: #050607;
+    }
+
+    &[data-surface='call-dark'] {
+      background: #111418;
+      border-top: none;
+      box-shadow: none;
     }
   }
 
@@ -514,9 +576,10 @@ export const StyledChatWhatsApp = styled.div`
   flex-direction: column;
   background-color: #ece5dd;
   background-image:
-    radial-gradient(circle at 0 0, rgba(0,0,0,0.03) 0, rgba(0,0,0,0.03) 2px, transparent 2px),
-    radial-gradient(circle at 10px 10px, rgba(0,0,0,0.03) 0, rgba(0,0,0,0.03) 2px, transparent 2px);
-  background-size: 20px 20px;
+    linear-gradient(180deg, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.10) 100%),
+    radial-gradient(circle at 0 0, rgba(0,0,0,0.022) 0, rgba(0,0,0,0.022) 2px, transparent 2px),
+    radial-gradient(circle at 10px 10px, rgba(0,0,0,0.02) 0, rgba(0,0,0,0.02) 2px, transparent 2px);
+  background-size: auto, 20px 20px, 20px 20px;
 `;
 
 
@@ -547,23 +610,33 @@ export const StyledStatusText = styled.div`
 
 export const StyledChatMessageRow = styled.div`
   display: flex;
-  justify-content: flex-start;
-  margin: 6px 0;
+  justify-content: ${p => (p.$side === 'me' ? 'flex-end' : p.$side === 'peer' ? 'flex-start' : 'flex-start')};
+  margin: 8px 0;
 `;
 
 export const StyledChatBubble = styled.span`
   display: inline-block;
-  padding: 6px 10px;
-  border-radius: 10px;
+  padding: 9px 12px;
+  border-radius: 16px;
   max-width: 80%;
-  line-height: 1.4;
+  line-height: 1.5;
   font-family: var(--app-font, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji");
+  font-size: 14px;
+  word-break: break-word;
 
   /* WhatsApp-like */
-  background: ${p => (p.$variant === 'me' ? '#dcf8c6' : '#ffffff')}; /* verde suave / blanco */
-  color: #111;
-  border: none;
-  box-shadow: 0 1px 1px rgba(0,0,0,0.12);
+  background: ${p => (p.$variant === 'me' ? 'rgba(250, 222, 232, 0.94)' : 'rgba(255,255,255,0.96)')};
+  color: ${p => (p.$variant === 'me' ? '#1f2937' : '#111')};
+  border: 1px solid ${p => (p.$variant === 'me' ? 'rgba(232, 183, 198, 0.42)' : 'rgba(15,23,42,0.08)')};
+  box-shadow: 0 8px 22px rgba(0,0,0,0.10);
+  margin-left: ${p => (p.$column && p.$variant === 'me' ? 'clamp(24px, 4vw, 56px)' : '0')};
+  margin-right: ${p => (p.$column && p.$variant === 'peer' ? 'clamp(24px, 4vw, 56px)' : '0')};
+
+  @media (max-width: 768px) {
+    max-width: 88%;
+    margin-left: ${p => (p.$column && p.$variant === 'me' ? '28px' : '0')};
+    margin-right: ${p => (p.$column && p.$variant === 'peer' ? '28px' : '0')};
+  }
 `;
 
 
@@ -579,9 +652,11 @@ export const StyledChatInput = styled.input`
   min-width: 0;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid transparent;
-  border-radius: 6px;
-  padding: 6px 8px;
+  border-radius: 12px;
+  min-height: 40px;
+  padding: 0 12px;
   font-size: 14px;
+  line-height: 1.4;
   outline: none;
 
   &:focus {
@@ -633,6 +708,18 @@ export const StyledGiftIcon = styled.img`
   height: 24px;
   vertical-align: middle;
   margin-left: 6px;
+`;
+
+export const StyledChatMessagesInner = styled.div`
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 12px clamp(14px, 2vw, 24px) 16px;
+  box-sizing: border-box;
+
+  @media (max-width: 768px) {
+    padding: 10px 14px 14px;
+  }
 `;
 
 /* --------------------------------
@@ -1029,10 +1116,20 @@ export const StyledChatScroller = styled.div`
   /* fondo solo cuando se indique explícitamente */
   &[data-bg='whatsapp'] {
     border: none; /* sin borde en modo WhatsApp */
-    background-color: #e5ddd5;
-    background-image:url("data:image/svg+xml,%3Csvg%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cg%20fill%3D%22none%22%20stroke%3D%22%23b2a79a%22%20stroke-width%3D%221.1%22%20stroke-opacity%3D%220.55%22%20stroke-linecap%3D%22round%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M14%2016h22a7%207%200%200%201%207%207v5a7%207%200%200%201-7%207h-7l-6%205v-5h-9a7%207%200%200%201-7-7v-5a7%207%200%200%201%207-7z%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M72%2018c-1.7-2.5-5.1-2.5-6.8%200-1.7-2.5-5.1-2.5-6.8%200-1.8%202.6-0.8%206%202.5%208.6l4.3%203.3%204.3-3.3c3.3-2.6%204.3-6%202.5-8.6z%22/%3E%0A%20%20%20%20%3Crect%20x%3D%2212%22%20y%3D%2256%22%20rx%3D%224%22%20ry%3D%224%22%20width%3D%2220%22%20height%3D%2226%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M15%2059h14M15%2064h9M15%2069h10%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M76%2060l2.5%205.1%205.2%200.8-3.7%203.7%200.9%205.1-4.9-2.6-4.9%202.6%200.9-5.1-3.7-3.7%205.2-0.8z%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2210%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2284%22%20cy%3D%2240%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2212%22%20cy%3D%2242%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2284%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M34%2040c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M56%2050c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M30%2030h0.1M35%2033h0.1M40%2030h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M64%2080h0.1M69%2083h0.1M74%2080h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M4%204l8%208M84%208l8-8%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M8%2084l8%208M80%2088l8-8%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A");
+    background:
+      linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.10) 100%),
+      url("data:image/svg+xml,%3Csvg%20width%3D%2296%22%20height%3D%2296%22%20viewBox%3D%220%200%2096%2096%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%0A%20%20%3Cg%20fill%3D%22none%22%20stroke%3D%22%23b2a79a%22%20stroke-width%3D%221.1%22%20stroke-opacity%3D%220.42%22%20stroke-linecap%3D%22round%22%3E%0A%20%20%20%20%3Cpath%20d%3D%22M14%2016h22a7%207%200%200%201%207%207v5a7%207%200%200%201-7%207h-7l-6%205v-5h-9a7%207%200%200%201-7-7v-5a7%207%200%200%201%207-7z%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M72%2018c-1.7-2.5-5.1-2.5-6.8%200-1.7-2.5-5.1-2.5-6.8%200-1.8%202.6-0.8%206%202.5%208.6l4.3%203.3%204.3-3.3c3.3-2.6%204.3-6%202.5-8.6z%22/%3E%0A%20%20%20%20%3Crect%20x%3D%2212%22%20y%3D%2256%22%20rx%3D%224%22%20ry%3D%224%22%20width%3D%2220%22%20height%3D%2226%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M15%2059h14M15%2064h9M15%2069h10%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M76%2060l2.5%205.1%205.2%200.8-3.7%203.7%200.9%205.1-4.9-2.6-4.9%202.6%200.9-5.1-3.7-3.7%205.2-0.8z%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2210%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2284%22%20cy%3D%2240%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2212%22%20cy%3D%2242%22%20r%3D%222.1%22/%3E%0A%20%20%20%20%3Ccircle%20cx%3D%2248%22%20cy%3D%2284%22%20r%3D%222.4%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M34%2040c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M56%2050c3-2.2%206-2.2%209%200%203%202.2%206%202.2%209%200%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M30%2030h0.1M35%2033h0.1M40%2030h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M64%2080h0.1M69%2083h0.1M74%2080h0.1%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M4%204l8%208M84%208l8-8%22/%3E%0A%20%20%20%20%3Cpath%20d%3D%22M8%2084l8%208M80%2088l8-8%22/%3E%0A%20%20%3C/g%3E%0A%3C/svg%3E%0A");
     background-repeat: repeat;
-    background-size: 120px; /* densidad*/
+    background-color: #e5ddd5;
+    background-size: auto, 120px;
+  }
+
+  &[data-kind='favorites-chat'] {
+    padding-top: 8px;
+
+    @media (max-width: 768px) {
+      padding-top: 4px;
+    }
   }
 
   scrollbar-width: thin;
@@ -1195,6 +1292,13 @@ export const StyledCallFooterDesktop = styled.div`
   }
 `;
 
+export const StyledChatDockActions = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+`;
+
 export const StyledCallComposer = styled.div`
   position: relative;
   display: flex;
@@ -1221,6 +1325,50 @@ export const StyledCallComposer = styled.div`
     & > button:hover:not(:disabled) {
       background: rgba(255,255,255,0.18);
       color: #fff;
+    }
+  }
+`;
+
+export const StyledChatDockMessageComposer = styled(StyledChatDock)`
+  position: relative;
+  min-height: 64px;
+  height: auto;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  background: #111418;
+  backdrop-filter: none;
+  box-sizing: border-box;
+  box-shadow: none;
+
+  @media (min-width: 769px) {
+    justify-content: center;
+  }
+
+  &[data-kind='favorites-chat'] {
+    & > input {
+      background: rgba(255,255,255,0.10);
+      color: #f8fafc;
+      border-color: transparent;
+      box-shadow: none;
+      min-height: 40px;
+    }
+
+    & > input::placeholder {
+      color: rgba(226,232,240,0.72);
+    }
+
+    & > input:focus {
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    & > button,
+    & > div > button {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      min-height: 40px;
+      box-shadow: none;
     }
   }
 `;

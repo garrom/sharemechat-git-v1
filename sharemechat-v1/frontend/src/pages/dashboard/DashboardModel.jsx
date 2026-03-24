@@ -2515,7 +2515,7 @@ const DashboardModel = () => {
           /* === SOLO FAVORITOS USA EL LAYOUT 3 COLUMNAS === */
           <>
             {!isMobile && !showFavoritesFullCall && (
-              <StyledLeftColumn data-rail>
+              <StyledLeftColumn data-rail data-surface="favorites-premium">
                 {callStatus === 'idle' ? (
                   <FavoritesModelList
                     onSelect={handleOpenChatFromFavorites}
@@ -2579,7 +2579,7 @@ const DashboardModel = () => {
               )}
             </StyledCenter>
 
-            {!showFavoritesFullCall && <StyledRightColumn />}
+            {!showFavoritesFullCall && <StyledRightColumn data-surface="favorites-premium" />}
           </>
         )}
       </StyledMainContent>

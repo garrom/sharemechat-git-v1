@@ -2404,7 +2404,7 @@ const DashboardClient = () => {
             ):(
               <>
                 {!isMobile&&(
-                  <StyledLeftColumn data-rail>
+                  <StyledLeftColumn data-rail data-surface="favorites-premium">
                     {callStatus==='idle'?(
                       <FavoritesClientList
                         onSelect={handleOpenChatFromFavorites}
@@ -2463,7 +2463,7 @@ const DashboardClient = () => {
                     user={sessionUser}
                   />
                 </StyledCenter>
-                <StyledRightColumn/>
+                <StyledRightColumn data-surface="favorites-premium"/>
               </>
             )}
           </>
