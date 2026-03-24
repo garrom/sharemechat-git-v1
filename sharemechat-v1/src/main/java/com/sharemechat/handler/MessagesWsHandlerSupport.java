@@ -3,10 +3,12 @@ package com.sharemechat.handler;
 import com.sharemechat.config.BillingProperties;
 import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.entity.Balance;
+import com.sharemechat.entity.Gift;
 import com.sharemechat.entity.StreamRecord;
 import com.sharemechat.exception.TooManyRequestsException;
 import com.sharemechat.repository.BalanceRepository;
 import com.sharemechat.repository.ClientRepository;
+import com.sharemechat.repository.StreamRecordRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.*;
@@ -38,6 +40,7 @@ public class MessagesWsHandlerSupport {
     private final TransactionService transactionService;
     private final StreamService streamService;
     private final ClientRepository clientRepository;
+    private final StreamRecordRepository streamRecordRepository;
     private final BillingProperties billing;
     private final StatusService statusService;
     private final UserBlockService userBlockService;
@@ -53,6 +56,7 @@ public class MessagesWsHandlerSupport {
                                     TransactionService transactionService,
                                     StreamService streamService,
                                     ClientRepository clientRepository,
+                                    StreamRecordRepository streamRecordRepository,
                                     BillingProperties billing,
                                     StatusService statusService,
                                     UserBlockService userBlockService,
@@ -67,6 +71,7 @@ public class MessagesWsHandlerSupport {
         this.transactionService = transactionService;
         this.streamService = streamService;
         this.clientRepository = clientRepository;
+        this.streamRecordRepository = streamRecordRepository;
         this.billing = billing;
         this.statusService = statusService;
         this.userBlockService = userBlockService;
@@ -650,7 +655,24 @@ public class MessagesWsHandlerSupport {
         }
 
         try {
-            com.sharemechat.entity.Gift g = transactionService.processGiftInChat(me, to, giftId);
+            Pair<Long, Long> cm = resolveClientModel(me, to);
+            boolean hasCallingContext = cm != null
+                    && Objects.equals(inCallWith(me), to)
+                    && Objects.equals(inCallWith(to), me);
+
+            Long resolvedCallingStreamId = null;
+            if (hasCallingContext) {
+                resolvedCallingStreamId = resolveCallingGiftStreamId(cm.getLeft(), cm.getRight());
+                log.info("handleMsgGift: calling context confirmed me={} to={} clientId={} modelId={} resolvedStreamId={}",
+                        me, to, cm.getLeft(), cm.getRight(), resolvedCallingStreamId);
+            } else {
+                log.info("handleMsgGift: no calling context me={} to={} peerCurrent={} reverseCurrent={}",
+                        me, to, inCallWith(me), inCallWith(to));
+            }
+
+            Gift g = (resolvedCallingStreamId != null)
+                    ? transactionService.processGift(me, to, giftId, resolvedCallingStreamId)
+                    : transactionService.processGiftInChat(me, to, giftId);
 
             String marker = "[[GIFT:" + g.getId() + ":" + g.getName() + "]]";
             MessageDTO saved = messageService.send(me, to, marker);
@@ -676,6 +698,67 @@ public class MessagesWsHandlerSupport {
         } catch (Exception ex) {
             safeSend(session, new JSONObject().put("type", "msg:error").put("message", ex.getMessage()).toString());
         }
+    }
+
+    private Long resolveCallingGiftStreamId(Long clientId, Long modelId) {
+        if (clientId == null || modelId == null) {
+            return null;
+        }
+
+        try {
+            Long hintedStreamId = statusService.getActiveSession(clientId, modelId).orElse(null);
+            if (hintedStreamId != null) {
+                StreamRecord hinted = streamRecordRepository.findById(hintedStreamId).orElse(null);
+                if (isValidCallingGiftStream(hinted, clientId, modelId)) {
+                    log.info("handleMsgGift: resolved CALLING stream via Redis clientId={} modelId={} streamId={}",
+                            clientId, modelId, hintedStreamId);
+                    return hintedStreamId;
+                }
+                log.info("handleMsgGift: Redis hint invalid for CALLING gift clientId={} modelId={} streamId={}",
+                        clientId, modelId, hintedStreamId);
+            }
+        } catch (Exception ex) {
+            log.warn("handleMsgGift: Redis CALLING stream resolution error clientId={} modelId={} err={}",
+                    clientId, modelId, ex.getMessage());
+        }
+
+        try {
+            StreamRecord dbStream = streamRecordRepository
+                    .findTopByClient_IdAndModel_IdAndStreamTypeAndConfirmedAtIsNotNullAndEndTimeIsNullOrderByStartTimeDesc(
+                            clientId,
+                            modelId,
+                            com.sharemechat.constants.Constants.StreamTypes.CALLING
+                    )
+                    .orElse(null);
+
+            if (isValidCallingGiftStream(dbStream, clientId, modelId)) {
+                log.info("handleMsgGift: resolved CALLING stream via DB clientId={} modelId={} streamId={}",
+                        clientId, modelId, dbStream.getId());
+                return dbStream.getId();
+            }
+        } catch (Exception ex) {
+            log.warn("handleMsgGift: DB CALLING stream resolution error clientId={} modelId={} err={}",
+                    clientId, modelId, ex.getMessage());
+        }
+
+        log.info("handleMsgGift: conservative null CALLING stream clientId={} modelId={}", clientId, modelId);
+        return null;
+    }
+
+    private boolean isValidCallingGiftStream(StreamRecord stream, Long clientId, Long modelId) {
+        if (stream == null || stream.getId() == null) {
+            return false;
+        }
+        if (stream.getEndTime() != null || stream.getConfirmedAt() == null) {
+            return false;
+        }
+        if (!com.sharemechat.constants.Constants.StreamTypes.CALLING.equals(stream.getStreamType())) {
+            return false;
+        }
+
+        Long streamClientId = stream.getClient() != null ? stream.getClient().getId() : null;
+        Long streamModelId = stream.getModel() != null ? stream.getModel().getId() : null;
+        return Objects.equals(streamClientId, clientId) && Objects.equals(streamModelId, modelId);
     }
 
     private void broadcastToUser(Long userId, String json) {
