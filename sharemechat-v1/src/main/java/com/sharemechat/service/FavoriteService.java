@@ -11,7 +11,6 @@ import com.sharemechat.repository.FavoriteModelRepository;
 import com.sharemechat.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.sharemechat.exception.AlreadyFavoritesException;
 import com.sharemechat.exception.InvitationAlreadyPendingException;
 
 import java.util.*;
@@ -45,7 +44,7 @@ public class FavoriteService {
         User model  = requireUser(modelId);  ensureRole(model,  "MODEL");
 
         if (canUsersMessage(clientId, modelId)) {
-            throw new AlreadyFavoritesException();
+            return;
         }
 
         FavoriteModel mine = favoriteModelRepo.findByClientIdAndModelId(clientId, modelId)
@@ -87,7 +86,7 @@ public class FavoriteService {
         User client = requireUser(clientId); ensureRole(client, "CLIENT");
 
         if (canUsersMessage(modelId, clientId)) {
-            throw new AlreadyFavoritesException();
+            return;
         }
 
         FavoriteClient mine = favoriteClientRepo.findByModelIdAndClientId(modelId, clientId)
