@@ -31,7 +31,7 @@ const getPreferredLocaleHeader = () => {
 };
 
 const shouldSkipRefresh = (path) =>
-  typeof path === 'string' && path.startsWith('/auth/');
+  typeof path === 'string' && (path.startsWith('/auth/') || path === '/users/me');
 
 const refreshSession = async () => {
   if (!refreshPromise) {

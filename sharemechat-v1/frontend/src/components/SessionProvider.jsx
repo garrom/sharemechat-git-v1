@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import {
@@ -19,7 +20,25 @@ const SessionContext = createContext({
 
 export const useSession = () => useContext(SessionContext);
 
+const isPublicPath = (pathname) => {
+  if (typeof pathname !== 'string') return false;
+  if (pathname === '/' || pathname === '/login') return true;
+
+  return [
+    '/blog',
+    '/forgot-password',
+    '/unauthorized',
+    '/reset-password',
+    '/legal',
+    '/faq',
+    '/safety',
+    '/community-guidelines',
+    '/cookies-settings'
+  ].some((publicPath) => pathname.startsWith(publicPath));
+};
+
 export const SessionProvider = ({ children }) => {
+  const location = useLocation();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -104,9 +123,16 @@ export const SessionProvider = ({ children }) => {
   };
 
   useEffect(() => {
+    if (isPublicPath(location?.pathname)) {
+      setUser(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     loadMe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [location?.pathname]);
 
   const value = useMemo(() => ({
     user,
