@@ -454,6 +454,7 @@ export const StyledTitleAvatar = styled.img`
 
 export const StyledChatDock = styled.div`
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -584,7 +585,9 @@ export const StyledChatWhatsApp = styled.div`
 
 
 export const StyledChatList = styled.div`
-  max-height: 260px;
+  width: 50%;
+  min-width: 0;
+  max-height: 350px;
   overflow-y: auto;
   margin-bottom: 10px;
 
@@ -651,8 +654,9 @@ export const StyledChatControls = styled.div`
 `;
 
 export const StyledChatInput = styled.input`
-  flex: 1 1 auto;
+  flex: 1 1 0%;
   min-width: 0;
+  width: 0;
   background: rgba(255, 255, 255, 0.9);
   border: 1px solid transparent;
   border-radius: 12px;
@@ -1435,6 +1439,7 @@ export const StyledCallFooterDesktop = styled.div`
   align-items: center;
   gap: 8px;
   padding-top: 8px;
+  min-width: 0;
 
   @media (min-width: 769px) {
     position: relative;
@@ -1458,6 +1463,7 @@ export const StyledCallComposer = styled.div`
   align-items: center;
   gap: 8px;
   width: 100%;
+  min-width: 0;
 
   @media (min-width: 769px) {
     min-height: 64px;
@@ -1484,6 +1490,7 @@ export const StyledCallComposer = styled.div`
 
 export const StyledChatDockMessageComposer = styled(StyledChatDock)`
   position: relative;
+  min-width: 0;
   min-height: 64px;
   height: auto;
   padding: 12px 16px;
