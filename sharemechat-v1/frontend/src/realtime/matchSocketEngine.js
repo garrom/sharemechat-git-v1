@@ -36,6 +36,7 @@ export function createMatchSocketEngine(adapter) {
     isEcho,
     onChatMessage,
     onGiftMessage,
+    onGiftError,
     onNoPeerAvailable,
     onNoBalance,
     onPeerDisconnectedPost,
@@ -339,6 +340,11 @@ export function createMatchSocketEngine(adapter) {
         return;
       }
       // Si no hay handler, lo ignoramos (no invento UI).
+      return;
+    }
+
+    if (data.type === 'gift:error') {
+      try { onGiftError?.(data); } catch {}
       return;
     }
 

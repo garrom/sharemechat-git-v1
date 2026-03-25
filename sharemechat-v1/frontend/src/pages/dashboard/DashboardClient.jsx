@@ -267,6 +267,16 @@ const DashboardClient = () => {
         }
       },
 
+      onGiftError: async (data) => {
+        if (
+          typeof data?.message === 'string' &&
+          data.message.toLowerCase().includes('saldo insuficiente')
+        ) {
+          console.log('[GIFT][random][no-balance] message=', data.message);
+          await handleGiftInsufficientBalance(data.message);
+        }
+      },
+
       // No model available (tu client)
       noPeerAvailableType: 'no-model-available',
       onNoPeerAvailable: () => {
@@ -721,6 +731,24 @@ const DashboardClient = () => {
     }
   };
 
+  const handleGiftInsufficientBalance = async (message) => {
+    try {
+      await alert({
+        title: 'Saldo insuficiente para regalos',
+        message: message || 'No tienes saldo suficiente para enviar este regalo.',
+        variant: 'warning',
+      });
+    } catch (e) {
+      console.error('Error mostrando alerta de saldo insuficiente para regalos:', e);
+    }
+
+    try {
+      await handlePurchaseFromGift();
+    } catch (e) {
+      console.error('Error en handlePurchaseFromGift:', e);
+    }
+  };
+
   const closeMsgSocket = () => {
     try { if (msgSocketRef.current) msgSocketRef.current.close(); } catch {}
     msgSocketRef.current = null;
@@ -901,11 +929,7 @@ const DashboardClient = () => {
         console.log('[GIFT][no-balance] message=', data.message);
 
         (async () => {
-          try {
-            await handleAddBalance();
-          } catch (e) {
-            console.error('Error en handleAddBalance (gift no-balance):', e);
-          }
+          await handleGiftInsufficientBalance(data.message);
         })();
 
         return;
