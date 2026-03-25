@@ -15,6 +15,7 @@ import {
   StyledChatBubble,
   StyledChatDock,
   StyledChatInput,
+  StyledGiftMessage,
   StyledGiftIcon,
   StyledRemoteVideo,
   StyledTitleAvatar,
@@ -141,13 +142,14 @@ export default function VideoChatRandomModelo(props) {
       return (
         <StyledChatMessageRow key={index}>
           {msg.gift ? (
-            <StyledChatBubble $variant={variant}>
+            <StyledGiftMessage>
               {giftRenderReady &&
                 (() => {
                   const src = getGiftIcon(msg.gift);
-                  return src ? <StyledGiftIcon src={src} alt="" /> : null;
+                  const isPremium = typeof src === 'string' && src.toLowerCase().includes('.png');
+                  return src ? <StyledGiftIcon src={src} alt="" $premium={isPremium} /> : null;
                 })()}
-            </StyledChatBubble>
+            </StyledGiftMessage>
           ) : (
             <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
           )}

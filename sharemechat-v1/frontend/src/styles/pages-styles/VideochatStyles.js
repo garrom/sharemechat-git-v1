@@ -611,29 +611,32 @@ export const StyledStatusText = styled.div`
 export const StyledChatMessageRow = styled.div`
   display: flex;
   justify-content: ${p => (p.$side === 'me' ? 'flex-end' : p.$side === 'peer' ? 'flex-start' : 'flex-start')};
-  margin: 8px 0;
+  margin: 10px 0;
 `;
 
 export const StyledChatBubble = styled.span`
   display: inline-block;
-  padding: 9px 12px;
-  border-radius: 16px;
+  padding: 10px 14px;
+  border-radius: 18px;
   max-width: 80%;
-  line-height: 1.5;
+  line-height: 1.58;
   font-family: var(--app-font, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji");
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
   word-break: break-word;
 
   /* WhatsApp-like */
-  background: ${p => (p.$variant === 'me' ? 'rgba(250, 222, 232, 0.94)' : 'rgba(255,255,255,0.96)')};
-  color: ${p => (p.$variant === 'me' ? '#1f2937' : '#111')};
-  border: 1px solid ${p => (p.$variant === 'me' ? 'rgba(232, 183, 198, 0.42)' : 'rgba(15,23,42,0.08)')};
-  box-shadow: 0 8px 22px rgba(0,0,0,0.10);
+  background: ${p => (p.$variant === 'me' ? '#d9fdd3' : 'rgba(255,255,255,0.98)')};
+  color: ${p => (p.$variant === 'me' ? '#183024' : '#111827')};
+  border: 1px solid ${p => (p.$variant === 'me' ? 'rgba(168, 221, 156, 0.95)' : 'rgba(15,23,42,0.08)')};
+  box-shadow: ${p => (p.$variant === 'me' ? '0 10px 24px rgba(164, 213, 153, 0.22)' : '0 8px 22px rgba(0,0,0,0.10)')};
   margin-left: ${p => (p.$column && p.$variant === 'me' ? 'clamp(24px, 4vw, 56px)' : '0')};
   margin-right: ${p => (p.$column && p.$variant === 'peer' ? 'clamp(24px, 4vw, 56px)' : '0')};
 
   @media (max-width: 768px) {
     max-width: 88%;
+    font-size: 14.5px;
     margin-left: ${p => (p.$column && p.$variant === 'me' ? '28px' : '0')};
     margin-right: ${p => (p.$column && p.$variant === 'peer' ? '28px' : '0')};
   }
@@ -676,38 +679,188 @@ export const StyledGiftsPanel = styled.div`
   right: 0;
   bottom: 44px;
   background: var(--c-glass-dark);
-  padding: 10px;
-  border-radius: 8px;
+  width: min(420px, calc(100vw - 24px));
+  max-height: min(68vh, 560px);
+  padding: 14px;
+  border-radius: 16px;
   z-index: 10;
   border: 1px solid var(--c-border-dark);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    right: 0;
+    width: min(100vw - 16px, 420px);
+    max-height: min(60vh, 520px);
+    padding: 12px;
+    border-radius: 14px;
+  }
+`;
+
+export const StyledGiftCatalog = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow-y: auto;
+  max-height: calc(min(68vh, 560px) - 28px);
+  padding-right: 4px;
+
+  @media (max-width: 768px) {
+    max-height: calc(min(60vh, 520px) - 24px);
+  }
+`;
+
+export const StyledGiftSection = styled.section`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+`;
+
+export const StyledGiftSectionTitle = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(255,255,255,0.18), rgba(255,255,255,0));
+  }
 `;
 
 export const StyledGiftGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, 80px);
-  gap: 8px;
-  max-height: 240px;
-  overflow-y: auto;
+  grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: 12px;
 
   button {
-    background: transparent;
-    border: 1px solid #555;
-    border-radius: 8px;
-    padding: 6px;
+    position: relative;
+    min-height: 152px;
+    background: linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+    border: 1px solid rgba(255,255,255,0.14);
+    border-radius: 14px;
+    padding: 10px 10px 12px;
     cursor: pointer;
     color: var(--c-white);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 8px;
+    text-align: left;
+    transition: transform .16s ease, border-color .16s ease, background .16s ease, box-shadow .16s ease;
 
-    img { width: 32px; height: 32px; display: block; margin: 0 auto; }
-    div { font-size: 12px; }
-    div:last-child { opacity: .8; }
+    &:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,0.28);
+      background: linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.05));
+      box-shadow: 0 10px 22px rgba(0, 0, 0, 0.22);
+    }
+
+    .gift-card__badge {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 3px 7px;
+      border-radius: 999px;
+      background: rgba(255, 208, 90, 0.18);
+      border: 1px solid rgba(255, 208, 90, 0.34);
+      color: #ffd46d;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .gift-card__media {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      min-height: 84px;
+      border-radius: 12px;
+      background: radial-gradient(circle at top, rgba(255,255,255,0.16), rgba(255,255,255,0.05));
+      border: 1px solid rgba(255,255,255,0.08);
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .gift-card__media img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      margin: 0;
+    }
+
+    .gift-card__meta {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .gift-card__name {
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.2;
+      color: rgba(255,255,255,0.96);
+      overflow: hidden;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      min-height: 31px;
+    }
+
+    .gift-card__cost {
+      font-size: 12px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.72);
+    }
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+    gap: 10px;
+
+    button {
+      min-height: 144px;
+      padding: 9px 9px 11px;
+    }
   }
 `;
 
+export const StyledGiftMessage = styled.div`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-width: ${p => (p.$premium ? '88px' : '72px')};
+`;
+
 export const StyledGiftIcon = styled.img`
-  width: 24px;
-  height: 24px;
-  vertical-align: middle;
-  margin-left: 6px;
+  width: ${p => (p.$premium ? '88px' : '48px')};
+  height: ${p => (p.$premium ? '88px' : '48px')};
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.18));
+
+  @media (max-width: 768px) {
+    width: ${p => (p.$premium ? '76px' : '44px')};
+    height: ${p => (p.$premium ? '76px' : '44px')};
+  }
 `;
 
 export const StyledChatMessagesInner = styled.div`

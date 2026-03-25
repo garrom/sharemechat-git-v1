@@ -28,6 +28,10 @@ import {
   StyledChatDock,
   StyledChatInput,
   StyledGiftsPanel,
+  StyledGiftCatalog,
+  StyledGiftSection,
+  StyledGiftSectionTitle,
+  StyledGiftMessage,
   StyledGiftGrid,
   StyledGiftIcon,
   StyledRemoteVideo,
@@ -201,13 +205,14 @@ export default function VideoChatRandomCliente(props) {
       return (
         <StyledChatMessageRow key={index}>
           {msg.gift ? (
-            <StyledChatBubble $variant={variant}>
+            <StyledGiftMessage>
               {giftRenderReady &&
                 (() => {
                   const src = getGiftIcon(msg.gift);
-                  return src ? <StyledGiftIcon src={src} alt="" /> : null;
+                  const isPremium = typeof src === 'string' && src.toLowerCase().includes('.png');
+                  return src ? <StyledGiftIcon src={src} alt="" $premium={isPremium} /> : null;
                 })()}
-            </StyledChatBubble>
+            </StyledGiftMessage>
           ) : (
             <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
           )}
@@ -268,6 +273,45 @@ export default function VideoChatRandomCliente(props) {
         </StyledCallSecondaryActions>
       </StyledCallBottomInner>
     </StyledCallBottomBar>
+  );
+
+  const normalizeGiftTier = (gift) =>
+    String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
+
+  const quickGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'QUICK');
+  const premiumGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'PREMIUM');
+
+  const renderGiftSection = (title, items) => {
+    if (!items.length) return null;
+
+    return (
+      <StyledGiftSection>
+        <StyledGiftSectionTitle>{title}</StyledGiftSectionTitle>
+        <StyledGiftGrid>
+          {items.map((g) => (
+            <button key={g.id} type="button" onClick={() => sendGiftMatch(g.id)}>
+              {g.featured === true && <span className="gift-card__badge">Featured</span>}
+              <div className="gift-card__media">
+                <img src={g.icon} alt={g.name} />
+              </div>
+              <div className="gift-card__meta">
+                <div className="gift-card__name">{g.name}</div>
+                <div className="gift-card__cost">{fmtEUR(g.cost)}</div>
+              </div>
+            </button>
+          ))}
+        </StyledGiftGrid>
+      </StyledGiftSection>
+    );
+  };
+
+  const renderGiftPicker = () => (
+    <StyledGiftsPanel>
+      <StyledGiftCatalog>
+        {renderGiftSection('Quick', quickGifts)}
+        {renderGiftSection('Premium', premiumGifts)}
+      </StyledGiftCatalog>
+    </StyledGiftsPanel>
   );
 
   return (
@@ -535,17 +579,7 @@ export default function VideoChatRandomCliente(props) {
                         <FontAwesomeIcon icon={faGift} />
                       </ButtonRegalo>
                       {showGifts && (
-                        <StyledGiftsPanel>
-                          <StyledGiftGrid>
-                            {gifts.map(g => (
-                              <button key={g.id} onClick={() => sendGiftMatch(g.id)}>
-                                <img src={g.icon} alt={g.name} />
-                                <div>{g.name}</div>
-                                <div>{fmtEUR(g.cost)}</div>
-                              </button>
-                            ))}
-                          </StyledGiftGrid>
-                        </StyledGiftsPanel>
+                        renderGiftPicker()
                       )}
                     </StyledCallComposer>
                   </StyledCallFooterDesktop>
@@ -656,17 +690,7 @@ export default function VideoChatRandomCliente(props) {
           </ButtonRegalo>
 
           {showGifts && (
-            <StyledGiftsPanel>
-              <StyledGiftGrid>
-                {gifts.map(g => (
-                  <button key={g.id} onClick={() => sendGiftMatch(g.id)}>
-                    <img src={g.icon} alt={g.name} />
-                    <div>{g.name}</div>
-                    <div>{fmtEUR(g.cost)}</div>
-                  </button>
-                ))}
-              </StyledGiftGrid>
-            </StyledGiftsPanel>
+            renderGiftPicker()
           )}
         </StyledChatDock>
       )}

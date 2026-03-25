@@ -7,12 +7,12 @@ import FavoritesClientList from '../favorites/FavoritesClientList';
 import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPanel,StyledCenterBody,
     StyledChatScroller,StyledChatDock,StyledChatInput,StyledVideoArea,StyledRemoteVideo,StyledVideoTitle,
     StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,
-    StyledChatList,StyledChatMessageRow,StyledChatBubble,StyledPreCallCenter,StyledHelperLine,
+    StyledChatList,StyledChatMessageRow,StyledChatBubble,StyledGiftMessage,StyledGiftIcon,StyledPreCallCenter,StyledHelperLine,
     StyledBottomActionsMobile,StyledMobile3ColBar,StyledTopCenter,StyledConnectedText,StyledFloatingHangup,
     StyledCallCardDesktop,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,StyledCallBottomBar,
     StyledCallBottomInner,StyledCallPrimaryActions,StyledCallComposer,StyledGiftsPanel,StyledGiftGrid,
-    StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions
+    StyledGiftCatalog,StyledGiftSection,StyledGiftSectionTitle,StyledChatMessagesInner,StyledChatDockMessageComposer,StyledChatDockActions
 } from '../../styles/pages-styles/VideochatStyles';
 import { ButtonLlamar,ButtonColgar,ButtonAceptar,ButtonRechazar,ButtonEnviar,ButtonRegalo,ButtonActivarCam,
     ButtonActivarCamMobile,ButtonVolver,ActionButton,BtnRoundVideo,BtnHangup,BtnCallDanger,BtnCallGhost,BtnSend
@@ -30,6 +30,56 @@ export default function VideoChatFavoritosCliente(props){
       handleCallActivateCamera,handleCallInvite,handleCallAccept,handleCallReject,handleCallEnd,toggleFullscreen,
       callError,backToList,user} = props;
 
+  const normalizeGiftTier = (gift) =>
+    String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
+
+  const quickGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'QUICK');
+  const premiumGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'PREMIUM');
+
+  const renderGiftSection = (title, items) => {
+    if (!items.length) return null;
+
+    return (
+      <StyledGiftSection>
+        <StyledGiftSectionTitle>{title}</StyledGiftSectionTitle>
+        <StyledGiftGrid>
+          {items.map(g=>(
+            <button key={g.id} type="button" onClick={()=>sendGiftMsg(g.id)}>
+              {g.featured === true && <span className="gift-card__badge">Featured</span>}
+              <div className="gift-card__media">
+                <img src={g.icon} alt={g.name}/>
+              </div>
+              <div className="gift-card__meta">
+                <div className="gift-card__name">{g.name}</div>
+                <div className="gift-card__cost">{fmtEUR(g.cost)}</div>
+              </div>
+            </button>
+          ))}
+        </StyledGiftGrid>
+      </StyledGiftSection>
+    );
+  };
+
+  const renderGiftPicker = () => (
+    <StyledGiftsPanel>
+      <StyledGiftCatalog>
+        {renderGiftSection('Quick', quickGifts)}
+        {renderGiftSection('Premium', premiumGifts)}
+      </StyledGiftCatalog>
+    </StyledGiftsPanel>
+  );
+
+  const renderGiftVisual = (giftData) => {
+    if (!giftRenderReady) return null;
+    const src = gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
+    const isPremium = typeof src === 'string' && src.toLowerCase().includes('.png');
+    return src ? (
+      <StyledGiftMessage $premium={isPremium}>
+        <StyledGiftIcon src={src} alt="" $premium={isPremium}/>
+      </StyledGiftMessage>
+    ) : null;
+  };
+
   const renderCallMessages = () => (
     centerMessages.map(m=>{
       let giftData=m.gift;
@@ -42,14 +92,7 @@ export default function VideoChatFavoritosCliente(props){
       return(
         <StyledChatMessageRow key={m.id}>
           {giftData?(
-            giftRenderReady&&(()=>{
-              const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
-              return src?(
-                <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
-                  <img src={src} alt="" style={{width:24,height:24,verticalAlign:'middle'}}/>
-                </StyledChatBubble>
-              ):null;
-            })()
+            renderGiftVisual(giftData)
           ):(
             <StyledChatBubble $variant={variant}>{m.body}</StyledChatBubble>
           )}
@@ -219,17 +262,7 @@ export default function VideoChatFavoritosCliente(props){
                               </ButtonRegalo>
 
                               {showCenterGifts&&(
-                                <StyledGiftsPanel>
-                                  <StyledGiftGrid>
-                                    {gifts.map(g=>(
-                                      <button key={g.id} onClick={()=>sendGiftMsg(g.id)}>
-                                        <img src={g.icon} alt={g.name}/>
-                                        <div>{g.name}</div>
-                                        <div>{fmtEUR(g.cost)}</div>
-                                      </button>
-                                    ))}
-                                  </StyledGiftGrid>
-                                </StyledGiftsPanel>
+                                renderGiftPicker()
                               )}
                             </StyledCallComposer>
                           </StyledCallFooterDesktop>
@@ -269,16 +302,13 @@ export default function VideoChatFavoritosCliente(props){
                             const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
                             return(
                               <StyledChatMessageRow key={m.id} $side={variant}>
-                                <StyledChatBubble $variant={variant} $column>
-                                  {giftData?(
-                                    giftRenderReady&&(()=>{
-                                      const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
-                                      return src?<img src={src} alt="" style={{width:24,height:24,verticalAlign:'middle'}}/>:null;
-                                    })()
-                                  ):(
-                                    m.body
-                                  )}
-                                </StyledChatBubble>
+                                {giftData?(
+                                  renderGiftVisual(giftData)
+                                ):(
+                                  <StyledChatBubble $variant={variant} $column>
+                                    {m.body}
+                                  </StyledChatBubble>
+                                )}
                               </StyledChatMessageRow>
                             );
                           })}
@@ -312,19 +342,7 @@ export default function VideoChatFavoritosCliente(props){
                             <FontAwesomeIcon icon={faVideo}/>
                           </ButtonLlamar>
                         </StyledChatDockActions>
-                        {showCenterGifts&&allowChat&&(
-                          <div style={{position:'absolute',bottom:44,right:0,background:'rgba(0,0,0,0.85)',padding:10,borderRadius:8,zIndex:10,border:'1px solid #333'}}>
-                            <div style={{display:'grid',gridTemplateColumns:'repeat(3, 80px)',gap:8,maxHeight:240,overflowY:'auto'}}>
-                              {gifts.map(g=>(
-                                <button key={g.id} onClick={()=>sendGiftMsg(g.id)} style={{background:'transparent',border:'1px solid #555',borderRadius:8,padding:6,cursor:'pointer',color:'#fff'}}>
-                                  <img src={g.icon} alt={g.name} style={{width:32,height:32,display:'block',margin:'0 auto'}}/>
-                                  <div style={{fontSize:12}}>{g.name}</div>
-                                  <div style={{fontSize:12,opacity:.8}}>{fmtEUR(g.cost)}</div>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        {showCenterGifts&&allowChat&&renderGiftPicker()}
                       </StyledChatDockMessageComposer>
                     </StyledChatWhatsApp>
                   )}
@@ -458,14 +476,7 @@ export default function VideoChatFavoritosCliente(props){
                         return(
                           <StyledChatMessageRow key={m.id}>
                             {giftData?(
-                              giftRenderReady&&(()=>{
-                                const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
-                                return src?(
-                                  <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
-                                    <img src={src} alt="" style={{width:24,height:24,verticalAlign:'middle'}}/>
-                                  </StyledChatBubble>
-                                ):null;
-                              })()
+                              renderGiftVisual(giftData)
                             ):(
                               <StyledChatBubble $variant={variant}>{m.body}</StyledChatBubble>
                             )}
@@ -495,19 +506,7 @@ export default function VideoChatFavoritosCliente(props){
                     <FontAwesomeIcon icon={faGift}/>
                   </ButtonRegalo>
 
-                  {showCenterGifts&&(
-                    <div style={{position:'absolute',bottom:44,right:0,background:'rgba(0,0,0,0.85)',padding:10,borderRadius:8,zIndex:10,border:'1px solid #333'}}>
-                      <div style={{display:'grid',gridTemplateColumns:'repeat(3, 80px)',gap:8,maxHeight:240,overflowY:'auto'}}>
-                        {gifts.map(g=>(
-                          <button key={g.id} onClick={()=>sendGiftMsg(g.id)} style={{background:'transparent',border:'1px solid #555',borderRadius:8,padding:6,cursor:'pointer',color:'#fff'}}>
-                            <img src={g.icon} alt={g.name} style={{width:32,height:32,display:'block',margin:'0 auto'}}/>
-                            <div style={{fontSize:12}}>{g.name}</div>
-                            <div style={{fontSize:12,opacity:.8}}>{fmtEUR(g.cost)}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                  {showCenterGifts&&renderGiftPicker()}
                 </StyledChatDock>
 
                 {(callStatus==='connecting'||callStatus==='ringing'||callStatus==='incoming')&&(
@@ -562,16 +561,13 @@ export default function VideoChatFavoritosCliente(props){
                         const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
                         return(
                           <StyledChatMessageRow key={m.id} $side={variant}>
-                            <StyledChatBubble $variant={variant} $column>
-                              {giftData?(
-                                giftRenderReady&&(()=>{
-                                  const src=gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
-                                  return src?<img src={src}alt=""style={{width:24,height:24,verticalAlign:'middle'}}/>:null;
-                                })()
-                              ):(
-                                m.body
-                              )}
-                            </StyledChatBubble>
+                            {giftData?(
+                              renderGiftVisual(giftData)
+                            ):(
+                              <StyledChatBubble $variant={variant} $column>
+                                {m.body}
+                              </StyledChatBubble>
+                            )}
                           </StyledChatMessageRow>
                         );
                       })}
@@ -597,19 +593,7 @@ export default function VideoChatFavoritosCliente(props){
                         <FontAwesomeIcon icon={faGift}/>
                       </ButtonRegalo>
                     </StyledChatDockActions>
-                    {showCenterGifts&&allowChat&&(
-                      <div style={{position:'absolute',bottom:44,right:0,background:'rgba(0,0,0,0.85)',padding:10,borderRadius:8,zIndex:10,border:'1px solid #333'}}>
-                        <div style={{display:'grid',gridTemplateColumns:'repeat(3, 80px)',gap:8,maxHeight:240,overflowY:'auto'}}>
-                          {gifts.map(g=>(
-                            <button key={g.id} onClick={()=>sendGiftMsg(g.id)} style={{background:'transparent',border:'1px solid #555',borderRadius:8,padding:6,cursor:'pointer',color:'#fff'}}>
-                              <img src={g.icon} alt={g.name} style={{width:32,height:32,display:'block',margin:'0 auto'}}/>
-                              <div style={{fontSize:12}}>{g.name}</div>
-                              <div style={{fontSize:12,opacity:.8}}>{fmtEUR(g.cost)}</div>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {showCenterGifts&&allowChat&&renderGiftPicker()}
                   </StyledChatDockMessageComposer>
                 </StyledChatWhatsApp>
               )}

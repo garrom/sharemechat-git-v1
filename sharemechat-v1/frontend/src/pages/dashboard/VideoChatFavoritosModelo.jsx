@@ -22,6 +22,8 @@ import {
   StyledChatList,
   StyledChatMessageRow,
   StyledChatBubble,
+  StyledGiftMessage,
+  StyledGiftIcon,
   StyledPreCallCenter,
   StyledHelperLine,
   StyledBottomActionsMobile,
@@ -122,19 +124,26 @@ export default function VideoChatFavoritosModelo(props) {
       const variant = isMe ? 'peer' : 'me';
       return (
         <StyledChatMessageRow key={m.id}>
-          <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
-            {giftData
-              ? giftRenderReady &&
-                (() => {
-                  const src = gifts.find((gg) => Number(gg.id) === Number(giftData.id))?.icon || null;
-                  return src ? <img src={src} alt="" style={{ width: 24, height: 24, verticalAlign: 'middle' }} /> : null;
-                })()
-              : m.body}
-          </StyledChatBubble>
+          {giftData ? renderGiftVisual(giftData) : (
+            <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
+              {m.body}
+            </StyledChatBubble>
+          )}
         </StyledChatMessageRow>
       );
     })
   );
+
+  const renderGiftVisual = (giftData) => {
+    if (!giftRenderReady) return null;
+    const src = gifts.find((gg) => Number(gg.id) === Number(giftData.id))?.icon || null;
+    const isPremium = typeof src === 'string' && src.toLowerCase().includes('.png');
+    return src ? (
+      <StyledGiftMessage $premium={isPremium}>
+        <StyledGiftIcon src={src} alt="" $premium={isPremium} />
+      </StyledGiftMessage>
+    ) : null;
+  };
 
   const renderCallClientBalance = () => (
     callClientSaldoLoading ? (
@@ -369,15 +378,13 @@ export default function VideoChatFavoritosModelo(props) {
                               const variant = isMe ? 'me' : 'peer';
                               return (
                                 <StyledChatMessageRow key={m.id} $side={variant}>
-                                  <StyledChatBubble $variant={variant} $column>
-                                    {giftData
-                                      ? giftRenderReady &&
-                                        (() => {
-                                          const src = gifts.find((gg) => Number(gg.id) === Number(giftData.id))?.icon || null;
-                                          return src ? <img src={src} alt="" style={{ width: 24, height: 24, verticalAlign: 'middle' }} /> : null;
-                                        })()
-                                      : m.body}
-                                  </StyledChatBubble>
+                                  {giftData
+                                    ? renderGiftVisual(giftData)
+                                    : (
+                                      <StyledChatBubble $variant={variant} $column>
+                                        {m.body}
+                                      </StyledChatBubble>
+                                    )}
                                 </StyledChatMessageRow>
                               );
                             })}
@@ -568,15 +575,11 @@ export default function VideoChatFavoritosModelo(props) {
                           const variant = isMe ? 'peer' : 'me';
                           return (
                             <StyledChatMessageRow key={m.id}>
-                              <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
-                                {giftData
-                                  ? giftRenderReady &&
-                                    (() => {
-                                      const src = gifts.find((gg) => Number(gg.id) === Number(giftData.id))?.icon || null;
-                                      return src ? <img src={src} alt="" style={{ width: 24, height: 24, verticalAlign: 'middle' }} /> : null;
-                                    })()
-                                  : m.body}
-                              </StyledChatBubble>
+                              {giftData ? renderGiftVisual(giftData) : (
+                                <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
+                                  {m.body}
+                                </StyledChatBubble>
+                              )}
                             </StyledChatMessageRow>
                           );
                         })}
@@ -659,15 +662,13 @@ export default function VideoChatFavoritosModelo(props) {
                           const variant = isMe ? 'me' : 'peer';
                           return (
                             <StyledChatMessageRow key={m.id} $side={variant}>
-                              <StyledChatBubble $variant={variant} $column>
-                                {giftData
-                                  ? giftRenderReady &&
-                                    (() => {
-                                      const src = gifts.find((gg) => Number(gg.id) === Number(giftData.id))?.icon || null;
-                                      return src ? <img src={src} alt="" style={{ width: 24, height: 24, verticalAlign: 'middle' }} /> : null;
-                                    })()
-                                  : m.body}
-                              </StyledChatBubble>
+                              {giftData
+                                ? renderGiftVisual(giftData)
+                                : (
+                                  <StyledChatBubble $variant={variant} $column>
+                                    {m.body}
+                                  </StyledChatBubble>
+                                )}
                             </StyledChatMessageRow>
                           );
                         })}
