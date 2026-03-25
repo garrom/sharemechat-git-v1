@@ -1,10 +1,8 @@
 package com.sharemechat.controller;
 
-import com.sharemechat.entity.Gift;
-import com.sharemechat.repository.GiftRepository;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import com.sharemechat.dto.GiftPublicDTO;
+import com.sharemechat.service.GiftService;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -12,14 +10,14 @@ import java.util.List;
 @RequestMapping("/api/gifts")
 public class GiftController {
 
-    private final GiftRepository giftRepository;
+    private final GiftService giftService;
 
-    public GiftController(GiftRepository giftRepository) {
-        this.giftRepository = giftRepository;
+    public GiftController(GiftService giftService) {
+        this.giftService = giftService;
     }
 
     @GetMapping
-    public List<Gift> getAllGifts() {
-        return giftRepository.findAll();
+    public List<GiftPublicDTO> getAllGifts() {
+        return giftService.getPublicGifts();
     }
 }
