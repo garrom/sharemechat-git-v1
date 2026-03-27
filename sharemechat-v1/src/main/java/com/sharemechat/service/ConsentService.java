@@ -5,6 +5,8 @@ import com.sharemechat.consent.IpPrivacyUtil;
 import com.sharemechat.entity.ConsentEvent;
 import com.sharemechat.repository.ConsentEventRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
@@ -17,6 +19,8 @@ import java.util.Map;
 
 @Service
 public class ConsentService {
+
+    private static final Logger log = LoggerFactory.getLogger(ConsentService.class);
 
     private final ConsentEventRepository repository;
     private final HmacSigner hmacSigner;
@@ -33,12 +37,14 @@ public class ConsentService {
         ConsentEvent e = baseFrom(request, consentId, path);
         e.setEventType("age_gate_accept");
         e.setVersion(null);
+        e.setUserId(null);
         e.setSig(sign(e));
 
         repository.insertIdempotent(
                 e.getEventType(),
                 e.getVersion(),
                 e.getConsentId(),
+                e.getUserId(),
                 e.getUserAgent(),
                 e.getIpHint(),
                 e.getPath(),
@@ -50,17 +56,51 @@ public class ConsentService {
         ConsentEvent e = baseFrom(request, consentId, path);
         e.setEventType("terms_accept");
         e.setVersion(StringUtils.hasText(version) ? version : currentTermsVersion);
+        e.setUserId(null);
         e.setSig(sign(e));
 
         repository.insertIdempotent(
                 e.getEventType(),
                 e.getVersion(),
                 e.getConsentId(),
+                e.getUserId(),
                 e.getUserAgent(),
                 e.getIpHint(),
                 e.getPath(),
                 e.getSig()
         );
+    }
+
+    public boolean hasGuestAgeGate(String consentId) {
+        if (!StringUtils.hasText(consentId)) {
+            return false;
+        }
+        return repository.existsByConsentIdAndEventType(clamp(consentId, 64), "age_gate_accept");
+    }
+
+    public void recordGuestConsentLink(HttpServletRequest request, String consentId, Long userId, String eventType, String path) {
+        if (!StringUtils.hasText(consentId) || userId == null) {
+            return;
+        }
+
+        ConsentEvent e = baseFrom(request, consentId, path);
+        e.setEventType(clamp(eventType, 32));
+        e.setVersion(null);
+        e.setUserId(userId);
+        e.setSig(sign(e));
+
+        repository.insertIdempotent(
+                e.getEventType(),
+                e.getVersion(),
+                e.getConsentId(),
+                e.getUserId(),
+                e.getUserAgent(),
+                e.getIpHint(),
+                e.getPath(),
+                e.getSig()
+        );
+
+        log.info("AGE_GATE_LINK eventType={} consentId={} userId={}", e.getEventType(), e.getConsentId(), userId);
     }
 
     private ConsentEvent baseFrom(HttpServletRequest request, String consentId, String path) {
@@ -87,6 +127,7 @@ public class ConsentService {
         canonical.put("eventType", n(e.getEventType()));
         canonical.put("version",   n(e.getVersion()));
         canonical.put("consentId", n(e.getConsentId()));
+        canonical.put("userId",    e.getUserId() == null ? "" : String.valueOf(e.getUserId()));
         canonical.put("ipHint",    n(e.getIpHint()));
         canonical.put("path",      n(e.getPath()));
         canonical.put("userAgent", n(e.getUserAgent()));

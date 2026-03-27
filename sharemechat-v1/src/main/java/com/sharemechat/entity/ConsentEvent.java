@@ -20,6 +20,9 @@ public class ConsentEvent {
     @Column(name = "consent_id", nullable = false, length = 64)
     private String consentId; // UUID anónimo del cliente
 
+    @Column(name = "user_id")
+    private Long userId;
+
     @Column(name = "ts", nullable = false)
     private Instant ts;       // timestamp del evento
 
@@ -48,6 +51,9 @@ public class ConsentEvent {
 
     public String getConsentId() { return consentId; }
     public void setConsentId(String consentId) { this.consentId = consentId; }
+
+    public Long getUserId() { return userId; }
+    public void setUserId(Long userId) { this.userId = userId; }
 
     public Instant getTs() { return ts; }
     public void setTs(Instant ts) { this.ts = ts; }

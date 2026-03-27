@@ -50,6 +50,13 @@ const Small = styled.small`
   display:block;color:#9ca3af;font-size:0.78rem;margin-top:4px;
 `;
 
+const ErrorText = styled.p`
+  margin:10px 0 0;
+  color:#fecaca;
+  font-size:0.84rem;
+  line-height:1.4;
+`;
+
 const ButtonRow = styled.div`
   display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:18px;
 `;
@@ -70,21 +77,24 @@ const Button = styled.button`
 const AgeGateModal = ({ onAccepted }) => {
   const [checked,setChecked] = useState(false);
   const [busy,setBusy] = useState(false);
+  const [error,setError] = useState('');
 
   const handleContinue = async () => {
     if (!checked || busy) return;
     setBusy(true);
+    setError('');
     try {
       ensureConsentId();
-      await logAgeGateAccept();
+      const ageLogged = await logAgeGateAccept();
+      if (!ageLogged) {
+        throw new Error('No se pudo registrar la aceptación +18. Inténtalo de nuevo.');
+      }
       await logTermsAccept();
       setLocalAgeOk();
       setLocalTermsOk();
       onAccepted && onAccepted();
-    } catch (_) {
-      setLocalAgeOk();
-      setLocalTermsOk();
-      onAccepted && onAccepted();
+    } catch (e) {
+      setError(e?.message || 'No se pudo registrar la aceptación +18. Inténtalo de nuevo.');
     } finally {
       setBusy(false);
     }
@@ -105,6 +115,7 @@ const AgeGateModal = ({ onAccepted }) => {
           <span>Confirmo que tengo 18 años o más y que acepto los Términos y Condiciones y la Política de Privacidad de SharemeChat.</span>
         </CheckboxRow>
         <Small>Registraremos esta aceptación de forma anónima para cumplir con la normativa aplicable sobre contenidos para adultos.</Small>
+        {error && <ErrorText role="alert">{error}</ErrorText>}
         <ButtonRow>
           <Button type="button" onClick={()=>window.history.back()} disabled={busy}>Salir</Button>
           <Button type="button" variant="primary" onClick={handleContinue} disabled={!checked || busy}>{busy ? 'Guardando…' : 'Soy mayor de 18 y acepto'}</Button>

@@ -10,11 +10,14 @@ import com.sharemechat.entity.User;
 import com.sharemechat.repository.ClientDocumentRepository;
 import com.sharemechat.repository.ModelDocumentRepository;
 import com.sharemechat.repository.UserRepository;
+import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.UserService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -29,23 +32,30 @@ public class UserController {
     private final ModelDocumentRepository modelDocumentRepository;
     private final ClientDocumentRepository clientDocumentRepository;
     private final CountryAccessService countryAccessService;
+    private final ConsentService consentService;
 
     public UserController(UserService userService,
                           UserRepository userRepository,
                           ModelDocumentRepository modelDocumentRepository,
                           ClientDocumentRepository clientDocumentRepository,
-                          CountryAccessService countryAccessService) {
+                          CountryAccessService countryAccessService,
+                          ConsentService consentService) {
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
         this.clientDocumentRepository = clientDocumentRepository;
         this.userRepository = userRepository;
         this.countryAccessService = countryAccessService;
+        this.consentService = consentService;
     }
 
 
     @PostMapping("/register/client")
-    public ResponseEntity<UserDTO> registerClient(@RequestBody @Valid UserClientRegisterDTO registerDTO,
-                                                  HttpServletRequest request) {
+    public ResponseEntity<?> registerClient(@RequestBody @Valid UserClientRegisterDTO registerDTO,
+                                           HttpServletRequest request) {
+        String consentId = readConsentIdCookie(request);
+        if (!consentService.hasGuestAgeGate(consentId)) {
+            return ResponseEntity.status(403).body("Debes confirmar antes que eres mayor de 18 años");
+        }
         countryAccessService.assertAllowed(request);
 
         String ip = IpConfig.getClientIp(request);
@@ -53,13 +63,24 @@ public class UserController {
         String countryDetected = countryAccessService.resolveViewerCountry(request);
 
         UserDTO createdUser = userService.registerClient(registerDTO, ip, acceptLanguage, countryDetected);
+        consentService.recordGuestConsentLink(
+                request,
+                consentId,
+                createdUser != null ? createdUser.getId() : null,
+                "age_gate_link_register_client",
+                "/api/users/register/client"
+        );
         return ResponseEntity.ok(createdUser);
     }
 
 
     @PostMapping("/register/model")
-    public ResponseEntity<UserDTO> registerModel(@RequestBody @Valid UserModelRegisterDTO registerDTO,
-                                                 HttpServletRequest request) {
+    public ResponseEntity<?> registerModel(@RequestBody @Valid UserModelRegisterDTO registerDTO,
+                                          HttpServletRequest request) {
+        String consentId = readConsentIdCookie(request);
+        if (!consentService.hasGuestAgeGate(consentId)) {
+            return ResponseEntity.status(403).body("Debes confirmar antes que eres mayor de 18 años");
+        }
         countryAccessService.assertAllowed(request);
 
         String ip = IpConfig.getClientIp(request);
@@ -67,6 +88,13 @@ public class UserController {
         String countryDetected = countryAccessService.resolveViewerCountry(request);
 
         UserDTO createdUser = userService.registerModel(registerDTO, ip, acceptLanguage, countryDetected);
+        consentService.recordGuestConsentLink(
+                request,
+                consentId,
+                createdUser != null ? createdUser.getId() : null,
+                "age_gate_link_register_model",
+                "/api/users/register/model"
+        );
         return ResponseEntity.ok(createdUser);
     }
 
@@ -203,6 +231,16 @@ public class UserController {
         }
 
         return ResponseEntity.ok(Collections.singletonMap("profilePic", url));
+    }
+
+    private static String readConsentIdCookie(HttpServletRequest request) {
+        if (request == null || request.getCookies() == null) return null;
+        for (Cookie c : request.getCookies()) {
+            if ("consent_id".equals(c.getName()) && StringUtils.hasText(c.getValue())) {
+                return c.getValue();
+            }
+        }
+        return null;
     }
 
 }

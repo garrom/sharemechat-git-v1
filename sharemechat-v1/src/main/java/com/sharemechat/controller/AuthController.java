@@ -11,12 +11,15 @@ import com.sharemechat.service.CountryAccessService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.config.IpConfig;
 import com.sharemechat.service.ApiRateLimitService;
+import com.sharemechat.service.ConsentService;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.util.StringUtils;
 
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
@@ -32,6 +35,7 @@ public class AuthController {
     private final RefreshTokenRepository refreshRepo;
     private final ApiRateLimitService rateLimitService;
     private final CountryAccessService countryAccessService;
+    private final ConsentService consentService;
 
 
     @Value("${auth.cookieDomain}")
@@ -45,13 +49,15 @@ public class AuthController {
             UserService userService,
             RefreshTokenRepository refreshRepo,
             ApiRateLimitService rateLimitService,
-            CountryAccessService countryAccessService
+            CountryAccessService countryAccessService,
+            ConsentService consentService
     ) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
         this.refreshRepo = refreshRepo;
         this.rateLimitService = rateLimitService;
         this.countryAccessService = countryAccessService;
+        this.consentService = consentService;
     }
 
     // =========================================================
@@ -64,6 +70,10 @@ public class AuthController {
             HttpServletRequest req,
             HttpServletResponse res
     ) {
+        String consentId = readConsentIdCookie(req);
+        if (!consentService.hasGuestAgeGate(consentId)) {
+            return ResponseEntity.status(403).body("Debes confirmar antes que eres mayor de 18 años");
+        }
 
         rateLimitService.checkLoginEmail(dto.getEmail());
         countryAccessService.assertAllowed(req);
@@ -90,6 +100,7 @@ public class AuthController {
 
         setAccessCookie(res, access, 15 * 60);
         setRefreshCookie(res, refreshRaw, 14 * 24 * 3600);
+        consentService.recordGuestConsentLink(req, consentId, u.getId(), "age_gate_link_login", "/api/auth/login");
 
         return ResponseEntity.ok().build();
     }
@@ -263,5 +274,15 @@ public class AuthController {
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    private static String readConsentIdCookie(HttpServletRequest request) {
+        if (request == null || request.getCookies() == null) return null;
+        for (Cookie c : request.getCookies()) {
+            if ("consent_id".equals(c.getName()) && StringUtils.hasText(c.getValue())) {
+                return c.getValue();
+            }
+        }
+        return null;
     }
 }

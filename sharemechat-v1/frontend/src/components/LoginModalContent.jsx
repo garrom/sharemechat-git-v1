@@ -8,7 +8,7 @@ import { useSession } from '../components/SessionProvider';
 import {
   StyledForm, StyledInput, StyledButton, StyledLinkButton,
   StyledError, Status, Field, FieldError, FormTitle,
-  CloseBtn as LoginCloseBtn, TabsRow, TabButton
+  CloseBtn as LoginCloseBtn, TabsRow, TabButton, RegisterGenderRow
 } from '../styles/public-styles/LoginStyles';
 
 import Roles from '../constants/Roles';
@@ -102,9 +102,10 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
 
   const isLoginTab = view === 'login';
   const isRegisterTab = view !== 'login';
+  const isRegisterGenderView = view === 'register-gender';
 
   return (
-    <StyledForm onSubmit={view === 'login' ? handleLogin : undefined} noValidate>
+    <StyledForm $wide={isRegisterGenderView} onSubmit={view === 'login' ? handleLogin : undefined} noValidate>
       {onClose && (
         <LoginCloseBtn type="button" onClick={onClose} aria-label={i18n.t('common.close')} title={i18n.t('common.close')}>
           <FontAwesomeIcon icon={faXmark} />
@@ -178,13 +179,15 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
         <>
           <FormTitle>{i18n.t('auth.registerGender.title')}</FormTitle>
 
-          <StyledButton type="button" onClick={() => setView('register-client')}>
-            {i18n.t('auth.registerGender.male')}
-          </StyledButton>
+          <RegisterGenderRow>
+            <StyledButton type="button" onClick={() => setView('register-client')}>
+              {i18n.t('auth.registerGender.male')}
+            </StyledButton>
 
-          <StyledButton type="button" onClick={() => setView('register-model')}>
-            {i18n.t('auth.registerGender.female')}
-          </StyledButton>
+            <StyledButton type="button" onClick={() => setView('register-model')}>
+              {i18n.t('auth.registerGender.female')}
+            </StyledButton>
+          </RegisterGenderRow>
         </>
       )}
 

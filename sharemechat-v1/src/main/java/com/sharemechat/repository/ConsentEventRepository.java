@@ -10,13 +10,15 @@ public interface ConsentEventRepository extends JpaRepository<ConsentEvent, Long
 
     long deleteByTsBefore(java.time.Instant threshold);
 
+    boolean existsByConsentIdAndEventType(String consentId, String eventType);
+
     @Modifying
     @Transactional
     @Query(value = """
     INSERT INTO consent_events
-      (event_type, version, consent_id, user_agent, ip_hint, path, sig)
+      (event_type, version, consent_id, user_id, user_agent, ip_hint, path, sig)
     VALUES
-      (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+      (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
     ON DUPLICATE KEY UPDATE
       id = id
     """, nativeQuery = true)
@@ -24,6 +26,7 @@ public interface ConsentEventRepository extends JpaRepository<ConsentEvent, Long
             String eventType,
             String version,
             String consentId,
+            Long userId,
             String userAgent,
             String ipHint,
             String path,

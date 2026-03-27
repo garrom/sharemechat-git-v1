@@ -5,6 +5,7 @@ import i18n from '../i18n';
 import { useModal } from './ModalProvider';
 import LoginModalContent from './LoginModalContent';
 import PublicSignupTeaserModal from './PublicSignupTeaserModal';
+import { TERMS_VERSION, isLocalAgeOk } from '../consent/consentClient';
 
 /**
  * Tipos de contexto para el modal de compra:
@@ -713,6 +714,11 @@ export const useAppModals = () => {
   }, [openModal, closeModal]);
 
   const openLoginModal = useCallback(() => {
+    if (!isLocalAgeOk(TERMS_VERSION)) {
+      if (location.pathname !== '/') history.push('/');
+      return;
+    }
+
     const cameFromLoginRoute = location.pathname === '/login';
 
     const handleClose = () => {
@@ -733,6 +739,11 @@ export const useAppModals = () => {
   }, [openModal, closeModal, history, location.pathname]);
 
   const openPublicSignupTeaser = useCallback(() => {
+    if (!isLocalAgeOk(TERMS_VERSION)) {
+      if (location.pathname !== '/') history.push('/');
+      return;
+    }
+
     openModal({
       title: '',
       variant: 'info',

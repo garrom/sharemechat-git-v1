@@ -39,9 +39,31 @@ export const setLocalTermsOk = (version = TERMS_VERSION) => {
   localStorage.setItem(termsKey(version), 'true');
 };
 export const isLocalAgeOk = (version = TERMS_VERSION) =>
-  localStorage.getItem(ageKey(version)) === 'true';
+  safeLocalRead(ageKey(version)) === 'true';
 export const isLocalTermsOk = (version = TERMS_VERSION) =>
-  localStorage.getItem(termsKey(version)) === 'true';
+  safeLocalRead(termsKey(version)) === 'true';
+
+export const clearLocalAgeOk = (version = TERMS_VERSION) => {
+  safeLocalRemove(ageKey(version));
+};
+
+export const clearLocalTermsOk = (version = TERMS_VERSION) => {
+  safeLocalRemove(termsKey(version));
+};
+
+const safeLocalRead = (key) => {
+  try {
+    return localStorage.getItem(key);
+  } catch (_) {
+    return null;
+  }
+};
+
+const safeLocalRemove = (key) => {
+  try {
+    localStorage.removeItem(key);
+  } catch (_) {}
+};
 
 const postBeacon = (url, bodyObj) => {
   const body = JSON.stringify(bodyObj || {});

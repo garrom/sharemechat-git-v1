@@ -18,8 +18,8 @@ export const StyledContainer = styled.div`
 export const StyledForm = styled.form`
   position: relative;
   width: 100%;
-  max-width: 520px;
-  padding: 28px 28px;
+  max-width: ${p => p.$wide ? '820px' : '520px'};
+  padding: ${p => p.$wide ? '38px 44px 34px' : '28px 28px'};
   border-radius: 24px;
   background: ${colors.backsolid || '#020617'};
   border: 1px solid #0b1120;
@@ -33,10 +33,11 @@ export const StyledForm = styled.form`
   gap: 14px; /* mismo espacio entre todos los elementos del form */
 
   @media (max-width: ${bp.md}) {
-    max-width: 92%;
-    padding: 24px 20px;
+    max-width: ${p => p.$wide ? '100%' : '92%'};
+    padding: ${p => p.$wide ? '26px 16px 24px' : '24px 20px'};
     border-radius: 20px;
   }
+
 `;
 
 export const FormTitle = styled.h2`
@@ -243,5 +244,14 @@ export const CloseBtn = styled.button`
   }
 `;
 
+export const RegisterGenderRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  width: 100%;
 
+  @media (max-width: ${bp.md}) {
+    grid-template-columns: 1fr;
+  }
+`;
 
