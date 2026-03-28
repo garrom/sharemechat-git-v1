@@ -126,15 +126,22 @@ export const HeroContainer = styled.div`
   background: #0b0f14;
 `;
 
+
 export const HeroBackground = styled.div`
   position: absolute;
   inset: 0;
-  background-image: url('https://assets.test.sharemechat.com/home/hero/hero_main_v1.webp');
+  background-image: url('https://assets.test.sharemechat.com/home/hero/hero_desktop_v1.webp');
   background-size: cover;
-  background-position: center right;
+  background-position: center center;
   background-repeat: no-repeat;
   filter: brightness(0.93) contrast(1.06) saturate(1.02);
   animation: ${slowZoom} 14s ease-in-out infinite alternate;
+
+  @media (max-width: 780px) {
+    background-image: url('https://assets.test.sharemechat.com/home/hero/hero_mobile_v1.webp');
+    background-size: cover;
+    background-position: 60% center;
+  }
 `;
 
 
