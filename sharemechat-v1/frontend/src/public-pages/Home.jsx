@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import { useSession } from '../components/SessionProvider';
 import useAppModals from '../components/useAppModals';
 import PublicNavbar from '../components/navbar/PublicNavbar';
+import i18n from '../i18n';
 
 import {
   GlobalBlack,
@@ -125,30 +126,28 @@ export default function Home() {
             <HeroCopy>
 
               <HeroEyebrow>
-                Private 1-to-1 connection
+                {i18n.t('home.hero.eyebrow')}
               </HeroEyebrow>
 
               <HeroTitle>
-                VideoChat con <span>modelos reales</span>
+                {i18n.t('home.hero.titlePrefix')} <span>{i18n.t('home.hero.titleAccent')}</span>
               </HeroTitle>
 
               <HeroSubtitle>
-                Conecta al instante en una experiencia 1 a 1, privada,
-                cuidada y diseñada para transmitir confianza desde el primer segundo.
+                {i18n.t('home.hero.subtitle')}
               </HeroSubtitle>
 
               <HeroMeta>
-                Visual premium, atmósfera nocturna y una hero basada en imagen propia generada con IA,
-                pensada para reforzar marca, conversión y diferenciación.
+                {i18n.t('home.hero.meta')}
               </HeroMeta>
 
               <HeroCtaRow>
                 <HeroPrimaryCta onClick={goRegister}>
-                  Iniciar Video Chat
+                  {i18n.t('home.hero.actions.start')}
                 </HeroPrimaryCta>
 
                 <HeroSecondaryCta onClick={goHowItWorks}>
-                  Ver cómo funciona
+                  {i18n.t('home.hero.actions.howItWorks')}
                 </HeroSecondaryCta>
               </HeroCtaRow>
 

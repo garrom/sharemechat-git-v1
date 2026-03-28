@@ -32,8 +32,15 @@
       "startVideoChat": "Iniciar Video Chat"
     },
     "hero": {
-      "title": "VideoChat con modelos",
-      "subtitle": "Conecta al instante con modelos reales, en vivo, en una experiencia 1 a 1 inspirada en plataformas como Coomeet, pero con la tecnología y control total de SharemeChat.",
+      "eyebrow": "Private 1-to-1 connection",
+      "titlePrefix": "VideoChat con",
+      "titleAccent": "modelos reales",
+      "subtitle": "Conecta al instante en una experiencia 1 a 1, privada y cuidada, diseñada para generar confianza desde el primer segundo.",
+      "meta": "Personas reales, conversaciones reales y un entorno pensado para que todo fluya sin distracciones.",
+      "actions": {
+        "start": "Iniciar Video Chat",
+        "howItWorks": "Ver cómo funciona"
+      },
       "freeTrial": "Regístrate y pruébalo GRATIS.",
       "loading": "Cargando modelos…",
       "prevAria": "Modelo anterior",
