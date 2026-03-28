@@ -1,5 +1,5 @@
 // src/styles/public-styles/HomeStyles.js
-import styled, { createGlobalStyle } from 'styled-components';
+import styled, { createGlobalStyle, keyframes } from 'styled-components';
 import { colors } from '../core/tokens';
 
 /* TOKENS GLOBALES BÁSICOS (copiados de VideochatStyles) */
@@ -61,6 +61,15 @@ export const GlobalBlack = createGlobalStyle`
   }
 `;
 
+const slowZoom = keyframes`
+  0% {
+    transform: scale(1);
+  }
+  100% {
+    transform: scale(1.05);
+  }
+`;
+
 /* CONTENEDOR CENTRAL TIPO VIDEOCHAT (copiado de StyledCenterVideochat) */
 export const StyledCenterVideochat = styled.div`
   background: transparent;
@@ -107,6 +116,150 @@ export const HomeHeroSection = styled.section`
     }
   }
 `;
+
+export const HeroContainer = styled.div`
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #0b0f14;
+`;
+
+export const HeroBackground = styled.div`
+  position: absolute;
+  inset: 0;
+  background-image: url('https://assets.test.sharemechat.com/home/hero/hero_main_v1.webp');
+  background-size: cover;
+  background-position: center right;
+  background-repeat: no-repeat;
+  filter: brightness(0.93) contrast(1.06) saturate(1.02);
+  animation: ${slowZoom} 14s ease-in-out infinite alternate;
+`;
+
+
+export const HeroOverlay = styled.div`
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      to right,
+      rgba(4, 5, 9, 0.92) 0%,
+      rgba(4, 5, 9, 0.80) 28%,
+      rgba(4, 5, 9, 0.48) 50%,
+      rgba(4, 5, 9, 0.14) 70%,
+      rgba(4, 5, 9, 0.10) 100%
+    ),
+    linear-gradient(
+      to top,
+      rgba(4, 5, 9, 0.36) 0%,
+      rgba(4, 5, 9, 0.04) 35%,
+      rgba(4, 5, 9, 0.08) 100%
+    );
+`;
+
+
+export const HeroContent = styled.div`
+  position: relative;
+  z-index: 2;
+  width: min(620px, 100%);
+  min-height: calc(100vh - var(--navbar-height-desktop));
+  display: flex;
+  align-items: center;
+  padding: 52px 56px;
+  @media (max-width: 768px) {
+    align-items: flex-end;
+    padding: 34px 24px;
+    min-height: 760px;
+  }
+`;
+
+
+export const HeroCopy = styled.div`
+  max-width: 520px;
+`;
+
+
+export const HeroEyebrow = styled.div`
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  &::before {
+    content: "";
+    width: 34px;
+    height: 1px;
+    background: linear-gradient(90deg, rgba(234,29,29,0.95), rgba(234,29,29,0.08));
+  }
+`;
+
+
+export const HeroTitle = styled.h1`
+  margin: 0 0 18px;
+  font-size: clamp(42px, 6vw, 74px);
+  line-height: 0.95;
+  letter-spacing: -0.05em;
+  font-weight: 800;
+  span {
+    color: #ea1d1d;
+  }
+`;
+
+
+export const HeroSubtitle = styled.p`
+  margin: 0 0 16px;
+
+  color: rgba(255, 255, 255, 0.82);
+  font-size: clamp(17px, 2vw, 21px);
+  line-height: 1.55;
+`;
+
+
+export const HeroCtaRow = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+`;
+
+
+export const HeroSecondaryCta = styled.button`
+  min-height: 54px;
+  padding: 0 24px;
+
+  border-radius: 999px;
+
+  font-weight: 800;
+  font-size: 15px;
+
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+
+  border: 1px solid rgba(255, 255, 255, 0.12);
+
+  cursor: pointer;
+
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+`;
+
+
+export const HeroMeta = styled.p`
+  margin: 0 0 30px;
+
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 15px;
+  line-height: 1.5;
+`;
+
 
 export const HomeLandingSection = styled.section`
   min-height: calc(100vh - var(--navbar-height-desktop));
@@ -837,6 +990,26 @@ export const StyledHomeMobileOverlay = styled.div`
     }
   }
 `;
+
+
+export const HeroPrimaryCta = styled.button`
+  min-height: 54px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: none;
+  font-weight: 800;
+  font-size: 15px;
+  color: #0b1020;
+  background: #ffffff;
+  box-shadow: 0 14px 34px rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+  transition: transform 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
+`;
+
 
 /* OCULTAR HERO IZQUIERDO EN MÓVIL */
 export const HideOnMobile = styled.div`

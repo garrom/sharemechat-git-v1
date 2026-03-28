@@ -348,6 +348,50 @@
       }
     }
   },
+  "consent": {
+    "ageGate": {
+      "badge": "18+ Solo adultos",
+      "title": "Acceso restringido a adultos",
+      "subtitle": "SharemeChat es una plataforma de citas y videochat 1 a 1 reservada exclusivamente para personas adultas. Debes confirmar tu elegibilidad antes de continuar.",
+      "zeroTolerance": {
+        "title": "Tolerancia cero con menores",
+        "body": "Si eres menor de 18 años, no puedes acceder, registrarte ni usar SharemeChat. No se permite mostrar, compartir, solicitar ni implicar a menores en fotos, vídeos, transmisiones o cualquier otra interacción."
+      },
+      "conditionsTitle": "Al continuar, confirmas que:",
+      "conditions": {
+        "age": "Tienes 18 años o más y eres mayor de edad según las leyes aplicables en tu país.",
+        "noMinorAccess": "No permitirás que menores usen tu dispositivo, tu cuenta o el acceso a la plataforma.",
+        "cameraAdults": "Cualquier persona que aparezca contigo en cámara o en contenido compartido también es adulta.",
+        "enforcement": "SharemeChat puede suspender o bloquear permanentemente cuentas ante sospechas razonables o incumplimientos graves relacionados con menores."
+      },
+      "report": {
+        "prefix": "Si sospechas de un menor o de contenido que involucre menores, sal de inmediato de la sesión y contacta con",
+        "email": "contact@sharemechat.com",
+        "suffix": "."
+      },
+      "links": {
+        "terms": "Ver Términos",
+        "privacy": "Ver Privacidad",
+        "cookies": "Ver Cookies"
+      },
+      "checkbox": {
+        "prefix": "Confirmo que tengo 18 años o más, que he revisado los",
+        "terms": "Términos del Servicio",
+        "and": "y la",
+        "privacy": "Política de Privacidad",
+        "suffix": "y que no permitiré que menores usen SharemeChat."
+      },
+      "auditNote": "Esta confirmación se registra con fines de seguridad, compliance y auditoría interna. Versión legal mostrada: {{version}}.",
+      "actions": {
+        "exit": "Salir",
+        "saving": "Registrando confirmación...",
+        "accept": "Tengo 18 años o más y continuar"
+      },
+      "errors": {
+        "recordFailed": "No se pudo registrar la confirmación +18. Inténtalo de nuevo."
+      }
+    }
+  },
   "auth": {
     "tabs": {
       "login": "Login",
