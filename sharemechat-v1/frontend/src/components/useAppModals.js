@@ -713,12 +713,12 @@ export const useAppModals = () => {
     });
   }, [openModal, closeModal]);
 
-  const openLoginModal = useCallback(() => {
+  const openLoginModal = useCallback((options = {}) => {
     if (!isLocalAgeOk(TERMS_VERSION)) {
-      if (location.pathname !== '/') history.push('/');
       return;
     }
 
+    const { initialView = 'login' } = options;
     const cameFromLoginRoute = location.pathname === '/login';
 
     const handleClose = () => {
@@ -733,14 +733,20 @@ export const useAppModals = () => {
       bodyKind: 'default',
       hideChrome: true,
       onClose: handleClose,
-      content: <LoginModalContent onClose={handleClose} onLoginSuccess={closeModal} />,
+      content: (
+        <LoginModalContent
+          initialView={initialView}
+          onClose={handleClose}
+          onLoginSuccess={closeModal}
+        />
+      ),
       actions: [],
     }).then(() => {});
   }, [openModal, closeModal, history, location.pathname]);
 
+
   const openPublicSignupTeaser = useCallback(() => {
     if (!isLocalAgeOk(TERMS_VERSION)) {
-      if (location.pathname !== '/') history.push('/');
       return;
     }
 
@@ -752,19 +758,20 @@ export const useAppModals = () => {
       hideChrome: true,
       onClose: () => {
         closeModal();
-        openLoginModal();
+        openLoginModal({ initialView: 'register-gender' });
       },
       content: (
         <PublicSignupTeaserModal
           onClose={() => {
             closeModal();
-            openLoginModal();
+            openLoginModal({ initialView: 'register-gender' });
           }}
         />
       ),
       actions: [],
     }).then(() => {});
   }, [openModal, closeModal, openLoginModal]);
+
 
   return {
     alert,

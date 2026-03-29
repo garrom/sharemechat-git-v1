@@ -3,7 +3,13 @@ import AgeGateModal from './AgeGateModal';
 import { TERMS_VERSION, isLocalAgeOk } from './consentClient';
 
 const GuestConsentGate = ({ children }) => {
-  const [resolved, setResolved] = useState(false);
+  const [resolved, setResolved] = useState(() => {
+    try {
+      return isLocalAgeOk(TERMS_VERSION);
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     try {

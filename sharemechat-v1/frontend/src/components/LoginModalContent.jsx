@@ -16,9 +16,9 @@ import UserTypes from '../constants/UserTypes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
 
-const LoginModalContent = ({ onClose, onLoginSuccess }) => {
+const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) => {
 
-  const [view, setView] = useState('login');
+  const [view, setView] = useState(initialView);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -28,6 +28,9 @@ const LoginModalContent = ({ onClose, onLoginSuccess }) => {
   const history = useHistory();
   const { refresh, user } = useSession();
 
+  useEffect(() => {
+    setView(initialView);
+  }, [initialView]);
 
   const safeNavigate = (path) => {
     if (history && typeof history.push === 'function') {
