@@ -126,6 +126,8 @@ public class StreamService {
                     sr.getConfirmedAt(),
                     true
             );
+            log.info("stream_started streamType={} streamRecordId={} clientUserId={} modelUserId={}",
+                    normalizedStreamType, sr.getId(), clientId, modelId);
             statusService.setBusy(modelId);
             statusService.setActiveSession(clientId, modelId, sr.getId());
             return sr;
@@ -182,6 +184,8 @@ public class StreamService {
                 saved.getConfirmedAt(),
                 true
         );
+        log.info("stream_started streamType={} streamRecordId={} clientUserId={} modelUserId={}",
+                normalizedStreamType, saved.getId(), clientId, modelId);
 
         // Estado y lookup rápido (Redis)
         statusService.setBusy(modelId);
@@ -273,6 +277,12 @@ public class StreamService {
                 clientId,
                 modelId
         );
+        log.info("stream_confirmed streamRecordId={} clientUserId={} modelUserId={} confirmedAt={} streamType={}",
+                session.getId(),
+                clientId,
+                modelId,
+                now,
+                normalizeStreamType(session.getStreamType()));
     }
 
 
@@ -370,6 +380,14 @@ public class StreamService {
             return; // idempotente
         }
 
+        log.info("stream_end_begin streamRecordId={} clientUserId={} modelUserId={} reason_raw={} streamType={} confirmed_present={}",
+                session.getId(),
+                clientId,
+                modelId,
+                endReason,
+                normalizeStreamType(session.getStreamType()),
+                session.getConfirmedAt() != null);
+
         // 2) Lock por sesión para evitar dobles cierres concurrentes
         ReentrantLock lock = sessionLocks.computeIfAbsent(session.getId(), k -> new ReentrantLock());
         if (!lock.tryLock()) {
@@ -437,6 +455,13 @@ public class StreamService {
                         "endSession: sin cargos (stream no confirmado, duración={}s).",
                         secondsSoFar
                 );
+                log.info("stream_ended streamRecordId={} clientUserId={} modelUserId={} reason_raw={} endTime={} streamType={}",
+                        session.getId(),
+                        clientId,
+                        modelId,
+                        endReason,
+                        endTime,
+                        normalizeStreamType(session.getStreamType()));
                 return;
             }
 
@@ -664,6 +689,13 @@ public class StreamService {
                     endReason
             );
             log.info("endSession: cerrada sesión id={} (client={}, model={})", session.getId(), clientId, modelId);
+            log.info("stream_ended streamRecordId={} clientUserId={} modelUserId={} reason_raw={} endTime={} streamType={}",
+                    session.getId(),
+                    clientId,
+                    modelId,
+                    endReason,
+                    endTime,
+                    normalizeStreamType(session.getStreamType()));
 
             // 12) Limpieza de estado
             postEndStatusCleanup(clientId, modelId);

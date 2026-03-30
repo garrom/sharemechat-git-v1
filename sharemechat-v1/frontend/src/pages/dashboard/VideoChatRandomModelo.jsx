@@ -134,22 +134,60 @@ export default function VideoChatRandomModelo(props) {
     return { billed, hasTiers: true, currentTier, nextTier, remaining, pct };
   }, [modelStatsSummary, modelStatsTiers]);
 
+  const normalizeGift = (gift) => {
+    if (!gift) return null;
+
+    const giftId = Number(gift.giftId ?? gift.id);
+    if (!Number.isFinite(giftId) || giftId <= 0) return null;
+
+    return {
+      id: giftId,
+      giftId,
+      code: gift.code ?? null,
+      name: gift.name || '',
+      icon: gift.icon || null,
+      cost: gift.cost ?? null,
+      tier: String(gift.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK',
+      featured: gift.featured ?? null,
+    };
+  };
+
+  const getGiftRenderData = (gift) => {
+    const normalized = normalizeGift(gift);
+    if (!normalized) return null;
+
+    const fallbackIcon =
+      !normalized.icon && giftRenderReady && typeof getGiftIcon === 'function'
+        ? getGiftIcon(normalized)
+        : null;
+    return {
+      ...normalized,
+      icon: normalized.icon || fallbackIcon || null,
+      isPremium: normalized.tier === 'PREMIUM',
+    };
+  };
+
+  const renderGiftMessage = (gift) => {
+    const renderData = getGiftRenderData(gift);
+    if (!renderData?.icon) return null;
+
+    return (
+      <StyledGiftMessage $premium={renderData.isPremium}>
+        <StyledGiftIcon src={renderData.icon} alt={renderData.name || ''} $premium={renderData.isPremium} />
+      </StyledGiftMessage>
+    );
+  };
+
   const renderMessages = () => (
     messages.map((msg, index) => {
       const isMe = msg.from === 'me';
       const variant = isMe ? 'me' : 'peer';
+      const giftData = getGiftRenderData(msg.gift);
 
       return (
-        <StyledChatMessageRow key={index}>
-          {msg.gift ? (
-            <StyledGiftMessage>
-              {giftRenderReady &&
-                (() => {
-                  const src = getGiftIcon(msg.gift);
-                  const isPremium = typeof src === 'string' && src.toLowerCase().includes('.png');
-                  return src ? <StyledGiftIcon src={src} alt="" $premium={isPremium} /> : null;
-                })()}
-            </StyledGiftMessage>
+        <StyledChatMessageRow key={msg.id || index}>
+          {giftData ? (
+            renderGiftMessage(giftData)
           ) : (
             <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
           )}

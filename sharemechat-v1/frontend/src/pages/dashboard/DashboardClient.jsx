@@ -156,10 +156,14 @@ const DashboardClient = () => {
     new Intl.NumberFormat(getResolvedLocale(i18n), { style: 'currency', currency: 'EUR' })
       .format(Number(v || 0));
 
-  // Devuelve el icono del regalo estrictamente desde el catálogo
+
   const getGiftIcon = (gift) => {
     if (!gift) return null;
-    const found = gifts.find(gg => Number(gg.id) === Number(gift.id));
+
+    if (gift.icon) return gift.icon;
+
+    const lookupId = Number(gift.giftId ?? gift.id);
+    const found = gifts.find(gg => Number(gg.id) === lookupId);
     return found?.icon || null;
   };
 
@@ -259,7 +263,26 @@ const DashboardClient = () => {
       // Gift (igual que tú)
       onGiftMessage: (data) => {
         const mine = Number(data.fromUserId) === Number(sessionUser?.id);
-        setMessages((p) => [...p, { from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
+
+        setMessages((p) => [
+          ...p,
+          {
+            from: mine ? 'me' : 'peer',
+            text: '',
+            gift: data.gift
+              ? {
+                  giftId: Number(data.gift.giftId ?? data.gift.id),
+                  id: Number(data.gift.giftId ?? data.gift.id),
+                  code: data.gift.code ?? null,
+                  name: data.gift.name ?? '',
+                  icon: data.gift.icon ?? null,
+                  cost: data.gift.cost ?? null,
+                  tier: data.gift.tier ?? null,
+                  featured: data.gift.featured ?? null,
+                }
+              : null,
+          }
+        ]);
 
         if (mine && data.newBalance != null) {
           const nb = Number.parseFloat(String(data.newBalance));
@@ -651,21 +674,46 @@ const DashboardClient = () => {
         if (Number(targetPeerId) !== expectedPeer) return;
         if (activeTab !== 'favoritos') return;
 
-        const normalized = (data || []).map(raw => ({
-          id: raw.id,
-          senderId: Number(raw.senderId ?? raw.sender_id),
-          recipientId: Number(raw.recipientId ?? raw.recipient_id),
-          body: raw.body,
-          createdAt: raw.createdAt ?? raw.created_at,
-          readAt: raw.readAt ?? raw.read_at ?? null,
-        }));
+        const normalized = (data || []).map(raw => {
+          const m = {
+            id: raw.id,
+            senderId: Number(raw.senderId ?? raw.sender_id),
+            recipientId: Number(raw.recipientId ?? raw.recipient_id),
+            body: raw.body,
+            createdAt: raw.createdAt ?? raw.created_at,
+            readAt: raw.readAt ?? raw.read_at ?? null,
+            gift: raw.gift
+              ? {
+                  giftId: Number(raw.gift.giftId ?? raw.gift.id),
+                  id: Number(raw.gift.giftId ?? raw.gift.id),
+                  code: raw.gift.code ?? null,
+                  name: raw.gift.name ?? '',
+                  icon: raw.gift.icon ?? null,
+                  cost: raw.gift.cost ?? null,
+                  tier: raw.gift.tier ?? null,
+                  featured: raw.gift.featured ?? null,
+                }
+              : null,
+          };
 
-        // detectar marcadores de regalo en historial (SIMÉTRICO al Model)
-        normalized.forEach(m => {
-          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-            const parts = m.body.slice(2, -2).split(':'); // GIFT:id:name
-            if (parts.length >= 3) m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
+          if (!m.gift && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+            try {
+              const parts = m.body.slice(2, -2).split(':');
+              if (parts.length >= 3 && parts[0] === 'GIFT') {
+                m.gift = {
+                  giftId: Number(parts[1]),
+                  id: Number(parts[1]),
+                  name: parts.slice(2).join(':'),
+                  icon: null,
+                  cost: null,
+                  tier: null,
+                  featured: null,
+                };
+              }
+            } catch {}
           }
+
+          return m;
         });
 
         centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
@@ -869,13 +917,27 @@ const DashboardClient = () => {
         if (mid && centerSeenIdsRef.current.has(mid)) return;
         if (mid) centerSeenIdsRef.current.add(mid);
 
-        setCenterMessages(prev => [...prev, {
-          id: mid || `${Date.now()}`,
-          senderId: from,
-          recipientId: to,
-          body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
-          gift: { id: data.gift.id, name: data.gift.name }
-        }]);
+        const normalizedGift = {
+          giftId: Number(data.gift.giftId ?? data.gift.id),
+          id: Number(data.gift.giftId ?? data.gift.id),
+          code: data.gift.code ?? null,
+          name: data.gift.name ?? '',
+          icon: data.gift.icon ?? null,
+          cost: data.gift.cost ?? null,
+          tier: data.gift.tier ?? null,
+          featured: data.gift.featured ?? null,
+        };
+
+        setCenterMessages(prev => [
+          ...prev,
+          {
+            id: mid || `${Date.now()}`,
+            senderId: from,
+            recipientId: to,
+            body: `[[GIFT:${normalizedGift.giftId}:${normalizedGift.name}]]`,
+            gift: normalizedGift,
+          }
+        ]);
 
         queueMicrotask(() => {
           const el = centerListRef.current;
@@ -888,11 +950,19 @@ const DashboardClient = () => {
       if (data.type === 'msg:new' && data.message) {
         const m = normMsg(data.message);
 
-        if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
+        if (!m.gift && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
           try {
             const parts = m.body.slice(2, -2).split(':');
             if (parts.length >= 3 && parts[0] === 'GIFT') {
-              m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
+              m.gift = {
+                giftId: Number(parts[1]),
+                id: Number(parts[1]),
+                name: parts.slice(2).join(':'),
+                icon: null,
+                cost: null,
+                tier: null,
+                featured: null,
+              };
             }
           } catch {}
         }
@@ -1764,6 +1834,18 @@ const DashboardClient = () => {
     body: raw.body,
     createdAt: raw.createdAt ?? raw.created_at,
     readAt: raw.readAt ?? raw.read_at ?? null,
+    gift: raw.gift
+      ? {
+          giftId: Number(raw.gift.giftId ?? raw.gift.id),
+          id: Number(raw.gift.giftId ?? raw.gift.id),
+          code: raw.gift.code ?? null,
+          name: raw.gift.name ?? '',
+          icon: raw.gift.icon ?? null,
+          cost: raw.gift.cost ?? null,
+          tier: raw.gift.tier ?? null,
+          featured: raw.gift.featured ?? null,
+        }
+      : null,
   });
 
 

@@ -69,31 +69,84 @@ export default function VideoChatFavoritosCliente(props){
     </StyledGiftsPanel>
   );
 
-  const renderGiftVisual = (giftData) => {
+  const normalizeGiftMessage = (message) => {
+    if (!message) return null;
+
+    if (message.gift) {
+      return {
+        giftId: Number(message.gift.giftId ?? message.gift.id),
+        id: Number(message.gift.giftId ?? message.gift.id),
+        code: message.gift.code ?? null,
+        name: message.gift.name ?? '',
+        icon: message.gift.icon ?? null,
+        cost: message.gift.cost ?? null,
+        tier: message.gift.tier ?? null,
+        featured: message.gift.featured ?? null,
+      };
+    }
+
+    if (
+      typeof message.body === 'string' &&
+      message.body.startsWith('[[GIFT:') &&
+      message.body.endsWith(']]')
+    ) {
+      try {
+        const parts = message.body.slice(2, -2).split(':');
+        if (parts.length >= 3 && parts[0] === 'GIFT') {
+          return {
+            giftId: Number(parts[1]),
+            id: Number(parts[1]),
+            name: parts.slice(2).join(':'),
+            icon: null,
+            cost: null,
+            tier: null,
+            featured: null,
+          };
+        }
+      } catch {}
+    }
+
+    return null;
+  };
+
+  const getGiftVisualSrc = (giftData) => {
+    if (!giftData) return null;
+
+    if (giftData.icon) return giftData.icon;
     if (!giftRenderReady) return null;
-    const src = gifts.find(gg=>Number(gg.id)===Number(giftData.id))?.icon||null;
-    const isPremium = typeof src === 'string' && src.toLowerCase().includes('.png');
+
+    const lookupId = Number(giftData.giftId ?? giftData.id);
+    const found = gifts.find(gg => Number(gg.id) === lookupId);
+    return found?.icon || null;
+  };
+
+  const renderGiftVisual = (giftData) => {
+    if (!giftData) return null;
+
+    const src = getGiftVisualSrc(giftData);
+    const tier = String(giftData.tier || '').toUpperCase();
+    const isPremium = tier
+      ? tier === 'PREMIUM'
+      : (typeof src === 'string' && src.toLowerCase().includes('.png'));
+
     return src ? (
       <StyledGiftMessage $premium={isPremium}>
-        <StyledGiftIcon src={src} alt="" $premium={isPremium}/>
+        <StyledGiftIcon src={src} alt={giftData.name || ''} $premium={isPremium}/>
       </StyledGiftMessage>
     ) : null;
   };
 
   const renderCallMessages = () => (
-    centerMessages.map(m=>{
-      let giftData=m.gift;
-      if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
-        try{
-          const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
-        }catch{}
-      }
-      const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
-      return(
+    centerMessages.map(m => {
+      const giftData = normalizeGiftMessage(m);
+      const isMe = Number(m.senderId) === Number(user?.id);
+      const variant = isMe ? 'me' : 'peer';
+
+      return (
         <StyledChatMessageRow key={m.id}>
-          {giftData?(
+          {giftData ? (
             renderGiftVisual(giftData)
-          ):(
+          ) : (
             <StyledChatBubble $variant={variant}>{m.body}</StyledChatBubble>
           )}
         </StyledChatMessageRow>
@@ -292,19 +345,16 @@ export default function VideoChatFavoritosCliente(props){
                               {allowChat?t('dashboardClient.videoChatFavoritosCliente.empty.noMessages'):t('dashboardClient.videoChatFavoritosCliente.empty.chatInactive')}
                             </div>
                           )}
-                          {centerMessages.map(m=>{
-                            let giftData=m.gift;
-                            if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
-                              try{
-                                const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
-                              }catch{}
-                            }
-                            const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
-                            return(
+                          {centerMessages.map(m => {
+                            const giftData = normalizeGiftMessage(m);
+                            const isMe = Number(m.senderId) === Number(user?.id);
+                            const variant = isMe ? 'me' : 'peer';
+
+                            return (
                               <StyledChatMessageRow key={m.id} $side={variant}>
-                                {giftData?(
+                                {giftData ? (
                                   renderGiftVisual(giftData)
-                                ):(
+                                ) : (
                                   <StyledChatBubble $variant={variant} $column>
                                     {m.body}
                                   </StyledChatBubble>
@@ -465,19 +515,16 @@ export default function VideoChatFavoritosCliente(props){
 
                   <StyledChatContainer data-wide="true">
                     <StyledChatList ref={callListRef}>
-                      {centerMessages.map(m=>{
-                        let giftData=m.gift;
-                        if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
-                          try{
-                            const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
-                          }catch{}
-                        }
-                        const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
-                        return(
+                      {centerMessages.map(m => {
+                        const giftData = normalizeGiftMessage(m);
+                        const isMe = Number(m.senderId) === Number(user?.id);
+                        const variant = isMe ? 'me' : 'peer';
+
+                        return (
                           <StyledChatMessageRow key={m.id}>
-                            {giftData?(
+                            {giftData ? (
                               renderGiftVisual(giftData)
-                            ):(
+                            ) : (
                               <StyledChatBubble $variant={variant}>{m.body}</StyledChatBubble>
                             )}
                           </StyledChatMessageRow>
@@ -551,19 +598,16 @@ export default function VideoChatFavoritosCliente(props){
                           {allowChat?'No hay mensajes todavía. ¡Escribe el primero!':'Este chat no está activo.'}
                         </div>
                       )}
-                      {centerMessages.map(m=>{
-                        let giftData=m.gift;
-                        if(!giftData&&typeof m.body==='string'&&m.body.startsWith('[[GIFT:')&&m.body.endsWith(']]')){
-                          try{
-                            const parts=m.body.slice(2,-2).split(':');giftData={id:Number(parts[1]),name:parts.slice(2).join(':')};
-                          }catch{}
-                        }
-                        const isMe=Number(m.senderId)===Number(user?.id);const variant=isMe?'me':'peer';
-                        return(
+                      {centerMessages.map(m => {
+                        const giftData = normalizeGiftMessage(m);
+                        const isMe = Number(m.senderId) === Number(user?.id);
+                        const variant = isMe ? 'me' : 'peer';
+
+                        return (
                           <StyledChatMessageRow key={m.id} $side={variant}>
-                            {giftData?(
+                            {giftData ? (
                               renderGiftVisual(giftData)
-                            ):(
+                            ) : (
                               <StyledChatBubble $variant={variant} $column>
                                 {m.body}
                               </StyledChatBubble>

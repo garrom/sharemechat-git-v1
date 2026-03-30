@@ -135,7 +135,7 @@ export default function VideoChatRandomCliente(props) {
     try {
       const data = await apiFetch('/models/teasers?page=0&size=20');
 
-      const mapped = (Array.isArray(data) ? data : []).map(item => ({
+      const mapped = (Array.isArray(data) ? data : []).map((item) => ({
         id: item.modelId,
         title: t('dashboardClient.videoChatRandomCliente.promoTeaserTitle', { name: item.modelName }),
         modelName: item.modelName,
@@ -170,21 +170,21 @@ export default function VideoChatRandomCliente(props) {
   };
 
   const handlePrevPromo = () => {
-    setActivePromoIndex(idx => (idx > 0 ? idx - 1 : idx));
+    setActivePromoIndex((idx) => (idx > 0 ? idx - 1 : idx));
   };
 
   const handleNextPromo = () => {
-    setActivePromoIndex(idx => (idx < promoVideos.length - 1 ? idx + 1 : idx));
+    setActivePromoIndex((idx) => (idx < promoVideos.length - 1 ? idx + 1 : idx));
   };
 
   const goPrevCard = () => {
     if (promoVideos.length === 0) return;
-    setCurrentPromoIndex(idx => (idx > 0 ? idx - 1 : promoVideos.length - 1));
+    setCurrentPromoIndex((idx) => (idx > 0 ? idx - 1 : promoVideos.length - 1));
   };
 
   const goNextCard = () => {
     if (promoVideos.length === 0) return;
-    setCurrentPromoIndex(idx => (idx < promoVideos.length - 1 ? idx + 1 : 0));
+    setCurrentPromoIndex((idx) => (idx < promoVideos.length - 1 ? idx + 1 : 0));
   };
 
   const currentPromo =
@@ -197,29 +197,76 @@ export default function VideoChatRandomCliente(props) {
     }
   };
 
-  const renderMessages = () => (
+  const normalizeGiftTier = (gift) =>
+    String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
+
+  const normalizeMessageGift = (gift) => {
+    if (!gift) return null;
+
+    const giftId = Number(gift.giftId ?? gift.id);
+    const safeId = Number.isFinite(giftId) ? giftId : null;
+
+    return {
+      id: safeId,
+      giftId: safeId,
+      code: gift.code ?? null,
+      name: gift.name ?? '',
+      icon: gift.icon ?? null,
+      cost: gift.cost ?? null,
+      tier: gift.tier ?? null,
+      featured: gift.featured ?? null,
+    };
+  };
+
+  const resolveGiftVisual = (gift) => {
+    const normalized = normalizeMessageGift(gift);
+    if (!normalized) return null;
+
+    const directIcon = normalized.icon || null;
+    const fallbackIcon =
+      !directIcon && giftRenderReady && typeof getGiftIcon === 'function'
+        ? getGiftIcon(normalized)
+        : null;
+    const src = directIcon || fallbackIcon || null;
+
+    const tier = normalizeGiftTier(normalized);
+    const isPremium = tier === 'PREMIUM';
+
+    return {
+      ...normalized,
+      icon: src,
+      tier,
+      isPremium,
+    };
+  };
+
+  const renderGiftVisual = (gift) => {
+    const visual = resolveGiftVisual(gift);
+    if (!visual?.icon) return null;
+
+    return (
+      <StyledGiftMessage $premium={visual.isPremium}>
+        <StyledGiftIcon src={visual.icon} alt={visual.name || ''} $premium={visual.isPremium} />
+      </StyledGiftMessage>
+    );
+  };
+
+  const renderMessages = () =>
     messages.map((msg, index) => {
       const isMe = msg.from === 'me';
       const variant = isMe ? 'me' : 'peer';
+      const giftVisual = msg.gift ? renderGiftVisual(msg.gift) : null;
 
       return (
-        <StyledChatMessageRow key={index}>
-          {msg.gift ? (
-            <StyledGiftMessage>
-              {giftRenderReady &&
-                (() => {
-                  const src = getGiftIcon(msg.gift);
-                  const isPremium = typeof src === 'string' && src.toLowerCase().includes('.png');
-                  return src ? <StyledGiftIcon src={src} alt="" $premium={isPremium} /> : null;
-                })()}
-            </StyledGiftMessage>
+        <StyledChatMessageRow key={msg.id || index}>
+          {giftVisual ? (
+            giftVisual
           ) : (
             <StyledChatBubble $variant={variant}>{msg.text}</StyledChatBubble>
           )}
         </StyledChatMessageRow>
       );
-    })
-  );
+    });
 
   const renderCallActions = () => (
     <StyledCallBottomBar>
@@ -275,9 +322,6 @@ export default function VideoChatRandomCliente(props) {
     </StyledCallBottomBar>
   );
 
-  const normalizeGiftTier = (gift) =>
-    String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
-
   const quickGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'QUICK');
   const premiumGifts = gifts.filter((gift) => normalizeGiftTier(gift) === 'PREMIUM');
 
@@ -317,14 +361,15 @@ export default function VideoChatRandomCliente(props) {
   return (
     <StyledCenterVideochat>
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
-        {/* PANE IZQUIERDO (LOCAL / CTA) */}
         <StyledPane data-side="left">
-          {!isMobile && (
-            !cameraActive ? (
+          {!isMobile &&
+            (!cameraActive ? (
               <StyledPaneCenter>
                 <StyledPaneCenterStack>
-                  <ButtonActivarCam onClick={handleActivateCamera}>{t('dashboardClient.videoChatRandomCliente.actions.activateCamera')}</ButtonActivarCam>
-                  <StyledHelperLine style={{color:'#fff',justifyContent:'center'}}>
+                  <ButtonActivarCam onClick={handleActivateCamera}>
+                    {t('dashboardClient.videoChatRandomCliente.actions.activateCamera')}
+                  </ButtonActivarCam>
+                  <StyledHelperLine style={{ color: '#fff', justifyContent: 'center' }}>
                     <FontAwesomeIcon icon={faVideo} />
                     {t('dashboardClient.videoChatRandomCliente.hints.activateCamera')}
                   </StyledHelperLine>
@@ -339,20 +384,18 @@ export default function VideoChatRandomCliente(props) {
                       muted
                       autoPlay
                       playsInline
-                      style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                     />
                   </StyledPrecallLocalStage>
                 </StyledPrecallVideoArea>
               )
-            )
-          )}
+            ))}
         </StyledPane>
 
-        {/* PANE DERECHO (REMOTO + CONTROLES / TEASERS) */}
         <StyledPane
           data-side="right"
           data-view={cameraActive ? 'call' : 'thumbs'}
-          style={{position:'relative'}}
+          style={{ position: 'relative' }}
         >
           {!cameraActive ? (
             <>
@@ -396,7 +439,7 @@ export default function VideoChatRandomCliente(props) {
                           playsInline={true}
                           controls={false}
                           showVignette={true}
-                          style={{width:'100%',height:'100%'}}
+                          style={{ width: '100%', height: '100%' }}
                         />
                       </StyledTeaserMediaButton>
 
@@ -433,12 +476,14 @@ export default function VideoChatRandomCliente(props) {
               )}
 
               {isMobile && (
-                <StyledPreCallCenter style={{position:'absolute',top:'70%',left:0,right:0,transform:'translateY(-50%)'}}>
+                <StyledPreCallCenter
+                  style={{ position: 'absolute', top: '70%', left: 0, right: 0, transform: 'translateY(-50%)' }}
+                >
                   <div>
                     <ButtonActivarCamMobile onClick={handleActivateCamera}>
                       {t('dashboardClient.videoChatRandomCliente.actions.activateCamera')}
                     </ButtonActivarCamMobile>
-                    <StyledHelperLine style={{color:'#fff'}}>
+                    <StyledHelperLine style={{ color: '#fff' }}>
                       <FontAwesomeIcon icon={faVideo} />
                       {t('dashboardClient.videoChatRandomCliente.hints.activateCamera')}
                     </StyledHelperLine>
@@ -448,19 +493,24 @@ export default function VideoChatRandomCliente(props) {
             </>
           ) : (
             <>
-              {/* CONTROLES BUSCAR / BUSCANDO (SIN REMOTO) */}
               {!remoteStream && (
                 <StyledRandomSearchControls>
                   <StyledRandomSearchCol>
                     {!searching ? (
                       <>
-                        <ButtonBuscar onClick={handleStartMatch}>{t('dashboardClient.videoChatRandomCliente.actions.search')}</ButtonBuscar>
-                        <StyledSearchHint>{t('dashboardClient.videoChatRandomCliente.hints.search')}</StyledSearchHint>
+                        <ButtonBuscar onClick={handleStartMatch}>
+                          {t('dashboardClient.videoChatRandomCliente.actions.search')}
+                        </ButtonBuscar>
+                        <StyledSearchHint>
+                          {t('dashboardClient.videoChatRandomCliente.hints.search')}
+                        </StyledSearchHint>
                       </>
                     ) : (
                       <>
-                        <StyledSearchHint>{t('dashboardClient.videoChatRandomCliente.loading.searchingModel')}</StyledSearchHint>
-                        <div style={{marginTop:8,display:'flex',justifyContent:'center'}}>
+                        <StyledSearchHint>
+                          {t('dashboardClient.videoChatRandomCliente.loading.searchingModel')}
+                        </StyledSearchHint>
+                        <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
                           <BtnCallDanger
                             onClick={stopAll}
                             title={t('dashboardClient.videoChatRandomCliente.actions.stopSearch')}
@@ -475,13 +525,12 @@ export default function VideoChatRandomCliente(props) {
                 </StyledRandomSearchControls>
               )}
 
-              {/* DESKTOP: REMOTO + CARD */}
               {remoteStream && !isMobile && (
                 <StyledCallCardDesktop>
                   <StyledCallVideoArea>
                     <StyledRemoteVideo
                       ref={remoteVideoWrapRef}
-                      style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}
+                      style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '18px 18px 0 0', overflow: 'hidden', background: '#000' }}
                     >
                       <StyledCallStage>
                         <StyledCallTopBar>
@@ -523,7 +572,7 @@ export default function VideoChatRandomCliente(props) {
                             const el = e.currentTarget;
                             console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
                           }}
-                          style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           autoPlay
                           playsInline
                           onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
@@ -536,7 +585,7 @@ export default function VideoChatRandomCliente(props) {
                               muted
                               autoPlay
                               playsInline
-                              style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                             />
                           </StyledCallLocalVideo>
                         )}
@@ -567,31 +616,33 @@ export default function VideoChatRandomCliente(props) {
                           }
                         }}
                       />
-                      <BtnSend type="button" onClick={sendChatMessage} aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')} title={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}>
+                      <BtnSend
+                        type="button"
+                        onClick={sendChatMessage}
+                        aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}
+                        title={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}
+                      >
                         <FontAwesomeIcon icon={faPaperPlane} />
                       </BtnSend>
                       <ButtonRegalo
                         type="button"
-                        onClick={() => setShowGifts(s => !s)}
+                        onClick={() => setShowGifts((s) => !s)}
                         title={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}
                         aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}
                       >
                         <FontAwesomeIcon icon={faGift} />
                       </ButtonRegalo>
-                      {showGifts && (
-                        renderGiftPicker()
-                      )}
+                      {showGifts && renderGiftPicker()}
                     </StyledCallComposer>
                   </StyledCallFooterDesktop>
                 </StyledCallCardDesktop>
               )}
 
-              {/* MÓVIL: REMOTO + CHAT OVERLAY + PIP + CONTROLES */}
               {remoteStream && isMobile && (
                 <StyledVideoArea>
                   <StyledRemoteVideo
                     ref={remoteVideoWrapRef}
-                    style={{position:'relative',width:'100%',overflow:'hidden',background:'#000'}}
+                    style={{ position: 'relative', width: '100%', overflow: 'hidden', background: '#000' }}
                   >
                     <StyledCallStage>
                       <StyledCallTopBar>
@@ -603,51 +654,51 @@ export default function VideoChatRandomCliente(props) {
                         </StyledCallTopMeta>
                       </StyledCallTopBar>
 
-                    <video
-                      ref={remoteVideoRef}
-                      onLoadedMetadata={(e) => {
-                        const el = e.currentTarget;
-                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
-                      }}
-                      onCanPlay={(e) => {
-                        const el = e.currentTarget;
-                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoCanPlay readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
-                      }}
-                      onPlaying={() => {
-                        const el = remoteVideoRef?.current;
-                        console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
-                        sendRandomMediaReady?.();
-                        if (matchGraceRef) matchGraceRef.current = false;
-                      }}
-                      onError={(e) => {
-                        const el = e.currentTarget;
-                        console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
-                      }}
-                      style={{width:'100%',height:'100%',objectFit:'cover',display:'block'}}
-                      autoPlay
-                      playsInline
-                      onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
-                    />
+                      <video
+                        ref={remoteVideoRef}
+                        onLoadedMetadata={(e) => {
+                          const el = e.currentTarget;
+                          console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                        }}
+                        onCanPlay={(e) => {
+                          const el = e.currentTarget;
+                          console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoCanPlay readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                        }}
+                        onPlaying={() => {
+                          const el = remoteVideoRef?.current;
+                          console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
+                          sendRandomMediaReady?.();
+                          if (matchGraceRef) matchGraceRef.current = false;
+                        }}
+                        onError={(e) => {
+                          const el = e.currentTarget;
+                          console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
+                        }}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                        autoPlay
+                        playsInline
+                        onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
+                      />
 
-                    {cameraActive && (
-                      <StyledCallLocalVideo>
-                        <video
-                          ref={localVideoRef}
-                          muted
-                          autoPlay
-                          playsInline
-                          style={{width:'100%',objectFit:'cover',display:'block'}}
-                        />
-                      </StyledCallLocalVideo>
-                    )}
+                      {cameraActive && (
+                        <StyledCallLocalVideo>
+                          <video
+                            ref={localVideoRef}
+                            muted
+                            autoPlay
+                            playsInline
+                            style={{ width: '100%', objectFit: 'cover', display: 'block' }}
+                          />
+                        </StyledCallLocalVideo>
+                      )}
 
-                    {cameraActive && renderCallActions()}
+                      {cameraActive && renderCallActions()}
 
-                    <StyledChatContainer data-wide="true">
-                      <StyledChatList ref={vcListRef}>
-                        {renderMessages()}
-                      </StyledChatList>
-                    </StyledChatContainer>
+                      <StyledChatContainer data-wide="true">
+                        <StyledChatList ref={vcListRef}>
+                          {renderMessages()}
+                        </StyledChatList>
+                      </StyledChatContainer>
                     </StyledCallStage>
                   </StyledRemoteVideo>
                 </StyledVideoArea>
@@ -655,10 +706,8 @@ export default function VideoChatRandomCliente(props) {
             </>
           )}
         </StyledPane>
-
       </StyledSplit2>
 
-      {/* DOCK CHAT SOLO MÓVIL EN LLAMADA */}
       {remoteStream && isMobile && (
         <StyledChatDock data-surface="call-dark">
           <StyledChatInput
@@ -675,27 +724,31 @@ export default function VideoChatRandomCliente(props) {
             }}
           />
 
-          <BtnSend data-send-button="true" type="button" onClick={sendChatMessage} aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')} title={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}>
+          <BtnSend
+            data-send-button="true"
+            type="button"
+            onClick={sendChatMessage}
+            aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}
+            title={t('dashboardClient.videoChatRandomCliente.actions.sendMessage')}
+          >
             <FontAwesomeIcon icon={faPaperPlane} />
           </BtnSend>
 
           <ButtonRegalo
             type="button"
             data-gift-button="true"
-            onClick={() => setShowGifts(s => !s)}
+            onClick={() => setShowGifts((s) => !s)}
             title={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}
             aria-label={t('dashboardClient.videoChatRandomCliente.actions.sendGift')}
           >
             <FontAwesomeIcon icon={faGift} />
           </ButtonRegalo>
 
-          {showGifts && (
-            renderGiftPicker()
-          )}
+          {showGifts && renderGiftPicker()}
         </StyledChatDock>
       )}
 
-      {error && <p style={{color:'red',marginTop:'10px'}}>{error}</p>}
+      {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
 
       {activePromoIndex != null && (
         <PromoVideoLightbox

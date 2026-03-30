@@ -130,6 +130,14 @@ public class MatchingHandlerSupport {
                 hadPair,
                 hadPair
         );
+        log.warn("random_ws_closed actorUserId={} peerUserId={} role={} localSid={} peerSid={} reason_raw={} hadPair={}",
+                uidSnap,
+                peerUidSnap,
+                roleSnap,
+                sid,
+                peerSnap != null ? peerSnap.getId() : null,
+                (status != null && status.getReason() != null) ? status.getReason() : "ws_closed",
+                hadPair);
 
         String role = state.getRoles().remove(sid);
         state.getSessionsById().remove(sid);
@@ -944,6 +952,13 @@ public class MatchingHandlerSupport {
                         peerId,
                         peerRole
                 );
+                log.warn("random_end_request actorUserId={} peerUserId={} role={} localSid={} peerSid={} reason_raw={}",
+                        myId,
+                        peerId,
+                        myRole,
+                        session.getId(),
+                        peer.getId(),
+                        "NEXT");
 
                 endStreamIfPairKnown(
                         session.getId(), myId, myRole,
@@ -979,6 +994,10 @@ public class MatchingHandlerSupport {
             return;
         }
         String senderRole = state.getRoles().get(session.getId());
+        log.warn("gift_random_in actorUserId={} role={} localSid={}",
+                senderId,
+                senderRole,
+                session.getId());
         if (!"client".equals(senderRole)) {
             safeSend(session, "{\"type\":\"gift:error\",\"message\":\"Solo un CLIENT puede enviar regalos\"}");
             return;
@@ -1007,12 +1026,26 @@ public class MatchingHandlerSupport {
         try {
             streamId = statusService.getActiveSession(senderId, peerUserId).orElse(null);
         } catch (Exception ignore) {}
+        log.warn("gift_random_validate_ok actorUserId={} peerUserId={} role={} peerRole={} localSid={} peerSid={} giftId={} streamRecordId={}",
+                senderId,
+                peerUserId,
+                senderRole,
+                peerRole,
+                session.getId(),
+                peer.getId(),
+                giftId,
+                streamId);
 
         try {
             com.sharemechat.entity.Gift g = transactionService.processGift(senderId, peerUserId, giftId, streamId);
 
-            String marker = "[[GIFT:" + g.getId() + ":" + g.getName() + "]]";
-            MessageDTO saved = messageService.send(senderId, peerUserId, marker);
+            MessageDTO saved = messageService.sendGift(senderId, peerUserId, g);
+            log.warn("gift_random_emit actorUserId={} peerUserId={} giftId={} messageId={} streamRecordId={}",
+                    senderId,
+                    peerUserId,
+                    g.getId(),
+                    saved.id(),
+                    streamId);
 
             messagesWsHandler.broadcastNew(saved);
 
@@ -1025,12 +1058,7 @@ public class MatchingHandlerSupport {
                     .put("type", "gift")
                     .put("fromUserId", senderId)
                     .put("toUserId", peerUserId)
-                    .put("gift", new JSONObject()
-                            .put("id", g.getId())
-                            .put("name", g.getName())
-                            .put("icon", g.getIcon())
-                            .put("cost", g.getCost().toPlainString())
-                    )
+                    .put("gift", toGiftJson(saved.gift()))
                     .put("newBalance", newBal.toPlainString());
 
             String payload = out.toString();
@@ -1176,17 +1204,15 @@ public class MatchingHandlerSupport {
                     streamRecordId != null ? streamRecordId.toString() : "null",
                     languageReasonCode
             );
-            log.warn(
-                    "[RANDOM_TRACE_MATCH] ts={} sid={} peerSid={} myUserId={} peerUserId={} peerRole={} streamRecordId={} reasonCode={}",
-                    System.currentTimeMillis(),
-                    session.getId(),
-                    peerSessionId,
+            log.warn("random_match_emit actorUserId={} peerUserId={} role={} peerRole={} localSid={} peerSid={} streamRecordId={} reason_raw={}",
                     myUserId,
                     peerUserId,
+                    state.getRoles().get(session.getId()),
                     peerRole,
+                    session.getId(),
+                    peerSessionId,
                     streamRecordId,
-                    languageReasonCode
-            );
+                    languageReasonCode);
 
             session.sendMessage(new TextMessage(msg));
 
@@ -1298,6 +1324,22 @@ public class MatchingHandlerSupport {
             return "non-json";
         }
     }
+
+    private Object toGiftJson(MessageDTO.GiftSnapshotDTO gift) {
+        if (gift == null) return JSONObject.NULL;
+
+        JSONObject json = new JSONObject();
+        json.put("giftId", gift.giftId());
+        json.put("code", gift.code());
+        json.put("name", gift.name());
+        json.put("icon", gift.icon());
+        json.put("cost", gift.cost() != null ? gift.cost().toPlainString() : JSONObject.NULL);
+        json.put("tier", gift.tier());
+        json.put("featured", gift.featured() != null ? gift.featured() : JSONObject.NULL);
+
+        return json;
+    }
+
 
     private boolean checkCutoffAndMaybeEnd(WebSocketSession session) {
         WebSocketSession peer = state.getPairs().get(session.getId());

@@ -183,8 +183,76 @@ const DashboardModel = () => {
 
   const getGiftIcon = (gift) => {
     if (!gift) return null;
-    const found = gifts.find(gg => Number(gg.id) === Number(gift.id));
+
+    if (typeof gift.icon === 'string' && gift.icon.trim()) {
+      return gift.icon;
+    }
+
+    const giftId = Number(gift.giftId ?? gift.id);
+    if (!Number.isFinite(giftId) || giftId <= 0) return null;
+
+    const found = gifts.find(gg => Number(gg.id) === giftId);
     return found?.icon || null;
+  };
+
+
+  const normalizeGiftFromPayload = (gift) => {
+    if (!gift) return null;
+
+    const giftId = Number(gift.giftId ?? gift.id);
+    if (!Number.isFinite(giftId) || giftId <= 0) return null;
+
+    const costValue = gift.cost;
+    const parsedCost =
+      costValue === null || costValue === undefined || costValue === ''
+        ? null
+        : Number(costValue);
+
+    return {
+      giftId,
+      id: giftId,
+      code: gift.code ?? null,
+      name: gift.name ?? '',
+      icon: gift.icon ?? null,
+      cost: Number.isFinite(parsedCost) ? parsedCost : null,
+      tier: gift.tier ?? null,
+      featured: typeof gift.featured === 'boolean' ? gift.featured : null,
+    };
+  };
+
+
+  const buildLegacyGiftFromBody = (body) => {
+    if (typeof body !== 'string') return null;
+    if (!body.startsWith('[[GIFT:') || !body.endsWith(']]')) return null;
+
+    try {
+      const parts = body.slice(2, -2).split(':');
+      if (parts.length < 3 || parts[0] !== 'GIFT') return null;
+
+      const giftId = Number(parts[1]);
+      if (!Number.isFinite(giftId) || giftId <= 0) return null;
+
+      const catalogGift = gifts.find(gg => Number(gg.id) === giftId);
+
+      return {
+        giftId,
+        id: giftId,
+        code: catalogGift?.code ?? null,
+        name: catalogGift?.name ?? parts.slice(2).join(':'),
+        icon: catalogGift?.icon ?? null,
+        cost: catalogGift?.cost != null ? Number(catalogGift.cost) : null,
+        tier: catalogGift?.tier ?? null,
+        featured: typeof catalogGift?.featured === 'boolean' ? catalogGift.featured : null,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const resolveGiftMessage = (raw) => {
+    const structuredGift = normalizeGiftFromPayload(raw?.gift);
+    if (structuredGift) return structuredGift;
+    return buildLegacyGiftFromBody(raw?.body);
   };
 
 
@@ -285,7 +353,16 @@ const DashboardModel = () => {
 
       onGiftMessage: (data) => {
         const mine = Number(data.fromUserId) === Number(sessionUser?.id);
-        setMessages((prev) => [...prev, { from: mine ? 'me' : 'peer', text: '', gift: { id: data.gift.id, name: data.gift.name } }]);
+        const gift = normalizeGiftFromPayload(data.gift);
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            from: mine ? 'me' : 'peer',
+            text: '',
+            gift,
+          },
+        ]);
       },
 
       // Model: no-client-available
@@ -664,14 +741,11 @@ const DashboardModel = () => {
   }, []);
 
 
-  // carga historial del chat central al cambiar peer (FUENTE DE VERDAD: targetPeerId)
   useEffect(() => {
     const peer = Number(targetPeerId);
     if (!peer || activeTab !== 'favoritos') return;
-
     if (!sessionUser?.id) return;
 
-    // Guard contra carreras: si cambias rápido de contacto, no pintamos históricos viejos
     const expectedPeer = peer;
     let canceled = false;
 
@@ -680,27 +754,11 @@ const DashboardModel = () => {
       try {
         const data = await apiFetch(`/messages/with/${expectedPeer}`);
 
-        // Si mientras tanto cambió el target o se salió de Favoritos, abortamos
         if (canceled) return;
         if (Number(targetPeerId) !== expectedPeer) return;
         if (activeTab !== 'favoritos') return;
 
-        const normalized = (data || []).map(raw => ({
-          id: raw.id,
-          senderId: Number(raw.senderId ?? raw.sender_id),
-          recipientId: Number(raw.recipientId ?? raw.recipient_id),
-          body: raw.body,
-          createdAt: raw.createdAt ?? raw.created_at,
-          readAt: raw.readAt ?? raw.read_at ?? null,
-        }));
-
-        // detectar marcadores de regalo en historial
-        normalized.forEach(m => {
-          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-            const parts = m.body.slice(2, -2).split(':'); // GIFT:id:name
-            if (parts.length >= 3) m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
-          }
-        });
+        const normalized = (data || []).map(raw => normMsg(raw));
 
         centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
         setCenterMessages(normalized.reverse());
@@ -726,7 +784,7 @@ const DashboardModel = () => {
     return () => {
       canceled = true;
     };
-  }, [targetPeerId, activeTab]);
+  }, [targetPeerId, activeTab, sessionUser?.id]);
 
 
 
@@ -847,6 +905,7 @@ const DashboardModel = () => {
     body: raw.body,
     createdAt: raw.createdAt ?? raw.created_at,
     readAt: raw.readAt ?? raw.read_at ?? null,
+    gift: resolveGiftMessage(raw),
   });
 
 
@@ -869,11 +928,6 @@ const DashboardModel = () => {
       // ==== MENSAJERÍA EXISTENTE ====
       if (data.type === 'msg:new' && data.message) {
         const m = normMsg(data.message);
-
-        if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-          const parts = m.body.slice(2, -2).split(':');
-          if (parts.length >= 3) m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':') };
-        }
 
         const me = Number(meIdRef.current);
         const peer = Number(activePeerRef.current?.id);
@@ -903,10 +957,12 @@ const DashboardModel = () => {
 
         const item = {
           id: data.messageId || `${Date.now()}`,
-          senderId: data.from,
-          recipientId: data.to,
-          body: `[[GIFT:${data.gift.id}:${data.gift.name}]]`,
-          gift: { id: data.gift.id, name: data.gift.name }
+          senderId: Number(data.from),
+          recipientId: Number(data.to),
+          body: `[[GIFT:${data.gift.giftId ?? data.gift.id}:${data.gift.name}]]`,
+          gift: normalizeGiftFromPayload(data.gift),
+          createdAt: data.createdAt ?? new Date().toISOString(),
+          readAt: null,
         };
 
         const belongsToThisChat =
@@ -1170,7 +1226,6 @@ const DashboardModel = () => {
         return;
       }
 
-      // ==== CALL SALDO (1-a-1) ====
       if (data.type === 'call:saldo') {
         const v = data?.clientBalance;
 
@@ -1916,43 +1971,33 @@ const DashboardModel = () => {
       return;
     }
 
-    // IMPORTANTE:
-    // Aquí NO volvemos a fijar openChatWith.
-    // La fuente de verdad es targetPeerId, y el effect de compatibilidad lo reflejará.
     setActiveTab('favoritos');
     setCenterChatPeerName(displayName || 'Usuario');
     setCenterMessages([]);
+    centerSeenIdsRef.current = new Set();
 
     openMsgSocket();
 
     try {
       const data = await apiFetch(`/messages/with/${peer}`);
-      if (data) {
-        const normalized = (data || []).map(raw => ({
-          id: raw.id,
-          senderId: Number(raw.senderId ?? raw.sender_id),
-          recipientId: Number(raw.recipientId ?? raw.recipient_id),
-          body: raw.body,
-          createdAt: raw.createdAt ?? raw.created_at,
-          readAt: raw.readAt ?? raw.read_at ?? null,
-        }));
+      const normalized = (data || []).map(raw => normMsg(raw));
 
-        // detectar regalos en historial
-        normalized.forEach(m => {
-          if (typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-            const parts = m.body.slice(2, -2).split(':');
-            if (parts.length >= 3) m.gift = { id: Number(parts[1]), name: parts.slice(2).join(':'), icon: '🎁' };
-          }
-        });
+      centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
+      setCenterMessages(normalized.reverse());
 
-        setCenterMessages(normalized.reverse());
+      try {
+        await apiFetch(`/messages/with/${peer}/read`, { method: 'POST' });
+      } catch {}
 
-        try {
-          await apiFetch(`/messages/with/${peer}/read`, { method: 'POST' });
-        } catch {}
-      }
+      queueMicrotask(() => {
+        const el = modelCenterListRef?.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
     } catch (e) {
       console.warn('Historial chat error:', e?.message);
+      setCenterMessages([]);
+    } finally {
+      setCenterLoading(false);
     }
   };
 
@@ -2001,7 +2046,9 @@ const DashboardModel = () => {
       const name = selectedFav.nickname || 'Usuario';
       setSelectedFav(prev => prev ? ({ ...prev, invited: 'accepted' }) : prev);
       setFavReload(x => x + 1);
-      setOpenChatWith(selectedFav.id);
+
+      setActivePeer(selectedFav.id, name, 'chat', selectedFav);
+      openChatWithPeer(selectedFav.id, name);
     } catch (e) {
       alert(e.message || 'No se pudo aceptar la invitación');
     }

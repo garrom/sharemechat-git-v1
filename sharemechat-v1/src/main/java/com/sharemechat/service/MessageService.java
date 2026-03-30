@@ -2,15 +2,19 @@ package com.sharemechat.service;
 
 import com.sharemechat.dto.ConversationSummaryDTO;
 import com.sharemechat.dto.MessageDTO;
+import com.sharemechat.entity.Gift;
 import com.sharemechat.entity.Message;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.MessageRepository;
 import com.sharemechat.repository.UserRepository;
-import org.springframework.data.domain.Sort;
+import org.json.JSONObject;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -38,8 +42,6 @@ public class MessageService {
     }
 
     public boolean canMessage(Long senderId, Long recipientId) {
-        // Solo si el destinatario está en favoritos del remitente.
-        // Cliente -> Modelo  ||  Modelo -> Cliente (simétrico)
         User sender = userRepository.findById(senderId).orElse(null);
         User recipient = userRepository.findById(recipientId).orElse(null);
         if (sender == null || recipient == null) return false;
@@ -60,25 +62,35 @@ public class MessageService {
 
     @Transactional
     public MessageDTO send(Long senderId, Long recipientId, String body) {
+        return sendInternal(senderId, recipientId, body, null);
+    }
+
+    @Transactional
+    public MessageDTO sendGift(Long senderId, Long recipientId, Gift gift) {
+        if (gift == null || gift.getId() == null) {
+            throw new IllegalArgumentException("Gift inválido para persistir mensaje");
+        }
+        String marker = "[[GIFT:" + gift.getId() + ":" + gift.getName() + "]]";
+        return sendInternal(senderId, recipientId, marker, toGiftSnapshot(gift));
+    }
+
+    private MessageDTO sendInternal(Long senderId, Long recipientId, String body, MessageDTO.GiftSnapshotDTO giftSnapshot) {
         if (body == null) body = "";
         body = body.strip();
         if (body.isEmpty()) throw new IllegalArgumentException("Mensaje vacío");
         if (body.length() > 1000) body = body.substring(0, 1000);
 
-        // 1) Regla existente (favoritos / lo que tengas en canMessage)
         boolean allowed = canMessage(senderId, recipientId);
 
-        // 2) NUEVO: permitir si el par está en streaming activo
         if (!allowed) {
-            // Cargamos roles para ordenar (clientId, modelId)
-            var sender    = userRepository.findById(senderId).orElseThrow();
+            var sender = userRepository.findById(senderId).orElseThrow();
             var recipient = userRepository.findById(recipientId).orElseThrow();
 
             boolean inActiveStream = false;
             if ("CLIENT".equals(sender.getRole()) && "MODEL".equals(recipient.getRole())) {
-                inActiveStream = streamService.isPairActive(senderId, recipientId);    // (client, model)
+                inActiveStream = streamService.isPairActive(senderId, recipientId);
             } else if ("MODEL".equals(sender.getRole()) && "CLIENT".equals(recipient.getRole())) {
-                inActiveStream = streamService.isPairActive(recipientId, senderId);    // (client, model)
+                inActiveStream = streamService.isPairActive(recipientId, senderId);
             }
 
             allowed = inActiveStream;
@@ -88,33 +100,24 @@ public class MessageService {
             throw new IllegalStateException("No autorizado para enviar mensajes a este usuario");
         }
 
-        // 3) Persistencia estándar
         Message m = new Message();
         m.setSenderId(senderId);
         m.setRecipientId(recipientId);
         m.setConversationKey(convKey(senderId, recipientId));
         m.setBody(body);
         m.setCreatedAt(LocalDateTime.now());
+        m.setMeta(giftSnapshot != null ? buildGiftMetaJson(giftSnapshot) : null);
         messageRepository.save(m);
 
-        return new MessageDTO(
-                m.getId(),
-                m.getSenderId(),
-                m.getRecipientId(),
-                m.getBody(),
-                m.getCreatedAt(),
-                m.getReadAt()
-        );
+        return toDto(m);
     }
-
 
     @Transactional(readOnly = true)
     public List<MessageDTO> history(Long me, Long withUser, Long beforeId) {
         var page = PageRequest.of(0, HISTORY_PAGE);
-        // Simple: paginar por createdAt desc (para MVP)
         List<Message> list = messageRepository.findBetween(me, withUser, page);
         return list.stream()
-                .map(m -> new MessageDTO(m.getId(), m.getSenderId(), m.getRecipientId(), m.getBody(), m.getCreatedAt(), m.getReadAt()))
+                .map(this::toDto)
                 .toList();
     }
 
@@ -123,12 +126,9 @@ public class MessageService {
         return messageRepository.markRead(me, withUser);
     }
 
-    // Carga los 200 mensajes más recientes y calcula las conversaciones y no leídos por usuario.
     @Transactional(readOnly = true)
     public List<ConversationSummaryDTO> conversations(Long me) {
-        // Cargar los 200 mensajes más recientes (por fecha/id descendente)
-        var page = PageRequest.of(0, 200,
-                Sort.by(Sort.Direction.DESC, "createdAt", "id"));
+        var page = PageRequest.of(0, 200, Sort.by(Sort.Direction.DESC, "createdAt", "id"));
         List<Message> recent = messageRepository.findAll(page).getContent();
 
         Map<String, List<Message>> byConv = new HashMap<>();
@@ -149,10 +149,95 @@ public class MessageService {
                     .filter(m -> Objects.equals(m.getRecipientId(), me) && m.getReadAt() == null)
                     .count();
 
-            out.add(new ConversationSummaryDTO(key, me, peer, last.getBody(), last.getCreatedAt(), unread));
+            out.add(new ConversationSummaryDTO(key, me, peer, buildConversationLastBody(last), last.getCreatedAt(), unread));
         }
         out.sort(Comparator.comparing(ConversationSummaryDTO::lastAt).reversed());
         return out;
     }
 
+    private String buildConversationLastBody(Message message) {
+        MessageDTO.GiftSnapshotDTO gift = parseGiftMeta(message.getMeta());
+        if (gift != null) {
+            String giftName = gift.name() != null ? gift.name().strip() : "";
+            return giftName.isEmpty() ? "Gift" : "Gift: " + giftName;
+        }
+        return message.getBody();
+    }
+
+    private MessageDTO toDto(Message m) {
+        return new MessageDTO(
+                m.getId(),
+                m.getSenderId(),
+                m.getRecipientId(),
+                m.getBody(),
+                m.getCreatedAt(),
+                m.getReadAt(),
+                parseGiftMeta(m.getMeta())
+        );
+    }
+
+    private MessageDTO.GiftSnapshotDTO toGiftSnapshot(Gift gift) {
+        BigDecimal cost = gift.getCost() != null
+                ? gift.getCost().setScale(2, RoundingMode.HALF_UP)
+                : null;
+        return new MessageDTO.GiftSnapshotDTO(
+                gift.getId(),
+                gift.getCode(),
+                gift.getName(),
+                gift.getIcon(),
+                cost,
+                gift.getTier(),
+                gift.getFeatured()
+        );
+    }
+
+    private String buildGiftMetaJson(MessageDTO.GiftSnapshotDTO giftSnapshot) {
+        return new JSONObject()
+                .put("type", "gift")
+                .put("giftId", giftSnapshot.giftId())
+                .put("code", nullable(giftSnapshot.code()))
+                .put("name", nullable(giftSnapshot.name()))
+                .put("icon", nullable(giftSnapshot.icon()))
+                .put("cost", giftSnapshot.cost() != null ? giftSnapshot.cost().toPlainString() : JSONObject.NULL)
+                .put("tier", nullable(giftSnapshot.tier()))
+                .put("featured", giftSnapshot.featured() != null ? giftSnapshot.featured() : JSONObject.NULL)
+                .toString();
+    }
+
+    private MessageDTO.GiftSnapshotDTO parseGiftMeta(String metaJson) {
+        if (metaJson == null || metaJson.isBlank()) return null;
+        try {
+            JSONObject meta = new JSONObject(metaJson);
+            if (!"gift".equalsIgnoreCase(meta.optString("type", ""))) return null;
+
+            Long giftId = meta.has("giftId") && !meta.isNull("giftId") ? meta.getLong("giftId") : null;
+            String code = meta.isNull("code") ? null : meta.optString("code", null);
+            String name = meta.isNull("name") ? null : meta.optString("name", null);
+            String icon = meta.isNull("icon") ? null : meta.optString("icon", null);
+            String tier = meta.isNull("tier") ? null : meta.optString("tier", null);
+            Boolean featured = meta.isNull("featured") ? null : meta.getBoolean("featured");
+            String costRaw = meta.isNull("cost") ? null : meta.optString("cost", null);
+            BigDecimal cost = (costRaw == null || costRaw.isBlank()) ? null : new BigDecimal(costRaw);
+
+            if (giftId == null || name == null || icon == null || tier == null || cost == null) {
+                return null;
+            }
+
+            return new MessageDTO.GiftSnapshotDTO(
+                    giftId,
+                    code,
+                    name,
+                    icon,
+                    cost,
+                    tier,
+                    featured
+            );
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
+    private Object nullable(String value) {
+        return value != null ? value : JSONObject.NULL;
+    }
 }

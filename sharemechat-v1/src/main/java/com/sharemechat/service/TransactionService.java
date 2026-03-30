@@ -432,12 +432,42 @@ public class TransactionService {
 
     @Transactional
     public Gift processGift(Long clientId, Long modelId, Long giftId, Long streamIdOrNull) {
-        return processGiftInternal(clientId, modelId, giftId, streamIdOrNull, true);
+        Gift gift = resolveSendableGift(giftId);
+        if (gift.getCost().compareTo(BigDecimal.ZERO) == 0) {
+            log.info("processGift: free item send actorUserId={} peerUserId={} giftId={} streamRecordId={}",
+                    clientId, modelId, giftId, streamIdOrNull);
+            return gift;
+        }
+        return processGiftInternal(clientId, modelId, gift, streamIdOrNull, true);
     }
 
+    private Gift resolveSendableGift(Long giftId) {
+        Gift gift = giftRepository.findByIdAndActiveTrue(giftId)
+                .orElseThrow(() -> {
+                    boolean exists = giftRepository.existsById(giftId);
+                    return new IllegalArgumentException(exists
+                            ? "Gift no enviable: inactive id=" + giftId
+                            : "Gift inexistente: " + giftId);
+                });
 
-    private Gift processGiftInternal(Long clientId, Long modelId, Long giftId, Long streamIdOrNull, boolean enableRandomFallback) {
+        BigDecimal rawCost = gift.getCost();
+        if (rawCost == null) {
+            throw new IllegalArgumentException("Gift no enviable: cost nulo id=" + giftId);
+        }
+
+        BigDecimal cost = rawCost.setScale(2, RoundingMode.HALF_UP);
+        if (cost.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("Gift no enviable: cost invalido id=" + giftId);
+        }
+        gift.setCost(cost);
+        return gift;
+    }
+
+    private Gift processGiftInternal(Long clientId, Long modelId, Gift gift, Long streamIdOrNull, boolean enableRandomFallback) {
+        Long giftId = gift.getId();
         log.info("processGift: start clientId={} modelId={} giftId={} streamIdOrNull={} enableRandomFallback={}",
+                clientId, modelId, giftId, streamIdOrNull, enableRandomFallback);
+        log.info("gift_tx_begin actorUserId={} peerUserId={} giftId={} streamRecordId={} enableRandomFallback={}",
                 clientId, modelId, giftId, streamIdOrNull, enableRandomFallback);
 
         lockUsersInOrder(clientId, modelId);
@@ -456,9 +486,7 @@ public class TransactionService {
             throw new IllegalArgumentException("El destinatario debe ser MODEL");
         }
 
-        Gift gift = giftRepository.findById(giftId)
-                .orElseThrow(() -> new IllegalArgumentException("Gift inexistente: " + giftId));
-        BigDecimal cost = gift.getCost().setScale(2, RoundingMode.HALF_UP);
+        BigDecimal cost = gift.getCost();
         log.debug("processGift: loaded gift id={} name={} cost={}", gift.getId(), gift.getName(), cost);
 
         Client client = clientRepository.findByUser(clientUser)
@@ -602,6 +630,15 @@ public class TransactionService {
 
         log.info("processGift: success clientId={} modelId={} giftId={} finalClientBalance={} finalModelBalance={}",
                 clientId, modelId, giftId, newClientBalance, newModelBalance);
+        log.info("gift_tx_committed actorUserId={} peerUserId={} giftId={} streamRecordId={} senderTransactionId={} recipientTransactionId={} senderBalanceAfter={} recipientBalanceAfter={}",
+                clientId,
+                modelId,
+                giftId,
+                stream != null ? stream.getId() : null,
+                savedTxClient.getId(),
+                savedTxModel.getId(),
+                newClientBalance,
+                newModelBalance);
 
         return gift;
     }

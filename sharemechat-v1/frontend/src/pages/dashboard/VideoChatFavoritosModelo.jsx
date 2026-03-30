@@ -111,21 +111,89 @@ export default function VideoChatFavoritosModelo(props) {
     callClientSaldoLoading,
   } = props;
 
+  const normalizeGiftFromMessage = (giftData) => {
+    if (!giftData) return null;
+
+    const giftId = Number(giftData.giftId ?? giftData.id);
+    if (!Number.isFinite(giftId) || giftId <= 0) return null;
+
+    return {
+      giftId,
+      id: giftId,
+      code: giftData.code ?? null,
+      name: giftData.name ?? '',
+      icon: giftData.icon ?? null,
+      cost: giftData.cost ?? null,
+      tier: giftData.tier ?? null,
+      featured: typeof giftData.featured === 'boolean' ? giftData.featured : null,
+    };
+  };
+
+  const buildLegacyGiftFromBody = (body) => {
+    if (typeof body !== 'string') return null;
+    if (!body.startsWith('[[GIFT:') || !body.endsWith(']]')) return null;
+
+    try {
+      const parts = body.slice(2, -2).split(':');
+      if (parts.length < 3 || parts[0] !== 'GIFT') return null;
+
+      const giftId = Number(parts[1]);
+      if (!Number.isFinite(giftId) || giftId <= 0) return null;
+
+      const catalogGift = gifts.find((gg) => Number(gg.id) === giftId);
+
+      return {
+        giftId,
+        id: giftId,
+        code: catalogGift?.code ?? null,
+        name: catalogGift?.name ?? parts.slice(2).join(':'),
+        icon: catalogGift?.icon ?? null,
+        cost: catalogGift?.cost ?? null,
+        tier: catalogGift?.tier ?? null,
+        featured: typeof catalogGift?.featured === 'boolean' ? catalogGift.featured : null,
+      };
+    } catch {
+      return null;
+    }
+  };
+
+  const resolveGiftData = (message) => {
+    const structuredGift = normalizeGiftFromMessage(message?.gift);
+    if (structuredGift) return structuredGift;
+    return buildLegacyGiftFromBody(message?.body);
+  };
+
+  const renderGiftVisual = (giftData) => {
+    const normalizedGift = normalizeGiftFromMessage(giftData);
+    if (!normalizedGift) return null;
+
+    const fallbackIcon =
+      !normalizedGift.icon && giftRenderReady
+        ? gifts.find((gg) => Number(gg.id) === Number(normalizedGift.id))?.icon || null
+        : null;
+    const src = normalizedGift.icon || fallbackIcon || null;
+    const tier = String(normalizedGift.tier || '').toUpperCase();
+    const isPremium = tier === 'PREMIUM';
+
+    return src ? (
+      <StyledGiftMessage $premium={isPremium}>
+        <StyledGiftIcon src={src} alt="" $premium={isPremium} />
+      </StyledGiftMessage>
+    ) : null;
+  };
+
   const renderDesktopCallMessages = () => (
     centerMessages.map((m) => {
-      let giftData = m.gift;
-      if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-        try {
-          const parts = m.body.slice(2, -2).split(':');
-          giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
-        } catch {}
-      }
+      const giftData = resolveGiftData(m);
       const isMe = Number(m.senderId) === Number(user?.id);
       const variant = isMe ? 'peer' : 'me';
+
       return (
         <StyledChatMessageRow key={m.id}>
-          {giftData ? renderGiftVisual(giftData) : (
-            <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
+          {giftData ? (
+            renderGiftVisual(giftData)
+          ) : (
+            <StyledChatBubble $variant={variant} style={{ margin: '0 6px' }}>
               {m.body}
             </StyledChatBubble>
           )}
@@ -133,17 +201,6 @@ export default function VideoChatFavoritosModelo(props) {
       );
     })
   );
-
-  const renderGiftVisual = (giftData) => {
-    if (!giftRenderReady) return null;
-    const src = gifts.find((gg) => Number(gg.id) === Number(giftData.id))?.icon || null;
-    const isPremium = typeof src === 'string' && src.toLowerCase().includes('.png');
-    return src ? (
-      <StyledGiftMessage $premium={isPremium}>
-        <StyledGiftIcon src={src} alt="" $premium={isPremium} />
-      </StyledGiftMessage>
-    ) : null;
-  };
 
   const renderCallClientBalance = () => (
     callClientSaldoLoading ? (
@@ -162,7 +219,7 @@ export default function VideoChatFavoritosModelo(props) {
           <StyledFavoritesColumns>
             <StyledCenterPanel>
               {!openChatWith ? (
-                <div style={{ color: '#adb5bd', textAlign:'center' }}>
+                <div style={{ color: '#adb5bd', textAlign: 'center' }}>
                   {t('dashboardModel.favorites.selectFavorite')}
                 </div>
               ) : (
@@ -200,12 +257,12 @@ export default function VideoChatFavoritosModelo(props) {
                     )}
 
                     {!isPendingPanel && !isSentPanel && contactMode === 'call' && (
-                      <div style={{flex:1,minHeight:0,display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center'}}>
+                      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                         {callError && <p style={{ color: 'orange', marginTop: 6 }}>[CALL] {callError}</p>}
 
-                        <StyledTopActions style={{gap:8,display:'flex',justifyContent:'center',alignItems:'center',flexDirection:'column'}}>
+                        <StyledTopActions style={{ gap: 8, display: 'flex', justifyContent: 'center', alignItems: 'center', flexDirection: 'column' }}>
                           {!callCameraActive && callStatus !== 'incoming' && (
-                            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6, marginTop:8 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 }}>
                               <ButtonActivarCam
                                 onClick={handleCallActivateCamera}
                                 disabled={callStatus === 'idle' ? !allowChat : false}
@@ -213,7 +270,7 @@ export default function VideoChatFavoritosModelo(props) {
                               >
                                 {t('dashboardModel.favorites.call.activateCamera')}
                               </ButtonActivarCam>
-                              <StyledHelperLine style={{ color:'#000' }}>
+                              <StyledHelperLine style={{ color: '#000' }}>
                                 <FontAwesomeIcon icon={faVideo} />
                                 {t('dashboardModel.favorites.call.activateCameraHint')}
                               </StyledHelperLine>
@@ -221,7 +278,7 @@ export default function VideoChatFavoritosModelo(props) {
                           )}
 
                           {callCameraActive && callStatus !== 'in-call' && callStatus !== 'ringing' && callStatus !== 'connecting' && (
-                            <div style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:6, marginTop:8 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 8 }}>
                               <BtnRoundVideo
                                 onClick={handleCallInvite}
                                 disabled={!allowChat || !callPeerId}
@@ -230,7 +287,7 @@ export default function VideoChatFavoritosModelo(props) {
                               >
                                 <FontAwesomeIcon icon={faVideo} />
                               </BtnRoundVideo>
-                              <StyledHelperLine style={{ color:'#000' }}>
+                              <StyledHelperLine style={{ color: '#000' }}>
                                 <FontAwesomeIcon icon={faVideo} />
                                 {t('dashboardModel.favorites.call.startVideoCallHint')}
                               </StyledHelperLine>
@@ -238,8 +295,8 @@ export default function VideoChatFavoritosModelo(props) {
                           )}
 
                           {(callStatus === 'ringing' || callStatus === 'connecting') && (
-                            <div style={{display:'flex',flexDirection:'column',justifyContent:'center',alignItems:'center',gap:8,marginTop:8}}>
-                              <div style={{color:'#fff',textAlign:'center'}}>
+                            <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                              <div style={{ color: '#fff', textAlign: 'center' }}>
                                 {callStatus === 'ringing'
                                   ? t('dashboardModel.favorites.call.callingRinging', { name: callPeerName || t('dashboardModel.favorites.call.defaultUser') })
                                   : t('dashboardModel.favorites.call.connecting')}
@@ -259,11 +316,11 @@ export default function VideoChatFavoritosModelo(props) {
                                   <StyledCallTopBar>
                                     <StyledCallTopMeta>
                                       <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
-                                      <div style={{display:'flex',flexDirection:'column',minWidth:0,lineHeight:1.15}}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, lineHeight: 1.15 }}>
                                         <StyledCallTopMetaText>
                                           {callPeerName || t('dashboardModel.favorites.call.remote')}
                                         </StyledCallTopMetaText>
-                                        <div style={{fontSize:12,opacity:0.9,marginTop:2,color:'rgba(255,255,255,0.82)'}}>
+                                        <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2, color: 'rgba(255,255,255,0.82)' }}>
                                           {renderCallClientBalance()}
                                         </div>
                                       </div>
@@ -342,13 +399,13 @@ export default function VideoChatFavoritosModelo(props) {
                         )}
 
                         {callStatus === 'incoming' && (
-                          <div style={{marginTop:12,padding:12,border:'1px solid #333',borderRadius:8,background:'rgba(0,0,0,0.35)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',alignSelf:'center'}}>
-                            <div style={{ color:'#fff', marginBottom:8, textAlign:'center' }}>
+                          <div style={{ marginTop: 12, padding: 12, border: '1px solid #333', borderRadius: 8, background: 'rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', alignSelf: 'center' }}>
+                            <div style={{ color: '#fff', marginBottom: 8, textAlign: 'center' }}>
                               {t('dashboardModel.favorites.incomingCall', { name: callPeerName || t('dashboardModel.favorites.call.defaultUser') })}
                             </div>
-                            <div style={{ display:'flex', gap:10, justifyContent:'center', alignItems:'center' }}>
+                            <div style={{ display: 'flex', gap: 10, justifyContent: 'center', alignItems: 'center' }}>
                               <ButtonAceptar onClick={handleCallAccept}>{t('dashboardModel.favorites.acceptInvitation')}</ButtonAceptar>
-                              <ButtonRechazar onClick={handleCallReject} style={{ backgroundColor:'#dc3545' }}>
+                              <ButtonRechazar onClick={handleCallReject} style={{ backgroundColor: '#dc3545' }}>
                                 {t('dashboardModel.favorites.rejectInvitation')}
                               </ButtonRechazar>
                             </div>
@@ -367,24 +424,19 @@ export default function VideoChatFavoritosModelo(props) {
                               </div>
                             )}
                             {centerMessages.map((m) => {
-                              let giftData = m.gift;
-                              if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-                                try {
-                                  const parts = m.body.slice(2, -2).split(':');
-                                  giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
-                                } catch {}
-                              }
+                              const giftData = resolveGiftData(m);
                               const isMe = Number(m.senderId) === Number(user?.id);
                               const variant = isMe ? 'me' : 'peer';
+
                               return (
                                 <StyledChatMessageRow key={m.id} $side={variant}>
-                                  {giftData
-                                    ? renderGiftVisual(giftData)
-                                    : (
-                                      <StyledChatBubble $variant={variant} $column>
-                                        {m.body}
-                                      </StyledChatBubble>
-                                    )}
+                                  {giftData ? (
+                                    renderGiftVisual(giftData)
+                                  ) : (
+                                    <StyledChatBubble $variant={variant} $column>
+                                      {m.body}
+                                    </StyledChatBubble>
+                                  )}
                                 </StyledChatMessageRow>
                               );
                             })}
@@ -525,15 +577,15 @@ export default function VideoChatFavoritosModelo(props) {
                   <StyledVideoArea style={{ display: callStatus === 'in-call' ? 'block' : 'none', position: 'relative' }}>
                     <StyledRemoteVideo ref={callRemoteWrapRef}>
                       <StyledVideoTitle>
-                        <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                           <StyledTitleAvatar src={callPeerAvatar || '/img/avatarChico.png'} alt="" />
 
-                          <div style={{display:'flex',flexDirection:'column',lineHeight:1.15,minWidth:0}}>
-                            <div style={{whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, minWidth: 0 }}>
+                            <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {callPeerName || t('dashboardModel.favorites.call.remote')}
                             </div>
 
-                            <div style={{fontSize:12,opacity:0.9,marginTop:2}}>
+                            <div style={{ fontSize: 12, opacity: 0.9, marginTop: 2 }}>
                               {callClientSaldoLoading ? (
                                 <span>{t('dashboardModel.favorites.balanceLabel')} ...</span>
                               ) : Number.isFinite(Number(callClientSaldo)) ? (
@@ -564,19 +616,16 @@ export default function VideoChatFavoritosModelo(props) {
                     <StyledChatContainer data-wide="true">
                       <StyledChatList ref={callListRef}>
                         {centerMessages.map((m) => {
-                          let giftData = m.gift;
-                          if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-                            try {
-                              const parts = m.body.slice(2, -2).split(':');
-                              giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
-                            } catch {}
-                          }
+                          const giftData = resolveGiftData(m);
                           const isMe = Number(m.senderId) === Number(user?.id);
                           const variant = isMe ? 'peer' : 'me';
+
                           return (
                             <StyledChatMessageRow key={m.id}>
-                              {giftData ? renderGiftVisual(giftData) : (
-                                <StyledChatBubble $variant={variant} style={{margin:'0 6px'}}>
+                              {giftData ? (
+                                renderGiftVisual(giftData)
+                              ) : (
+                                <StyledChatBubble $variant={variant} style={{ margin: '0 6px' }}>
                                   {m.body}
                                 </StyledChatBubble>
                               )}
@@ -651,24 +700,19 @@ export default function VideoChatFavoritosModelo(props) {
                           </div>
                         )}
                         {centerMessages.map((m) => {
-                          let giftData = m.gift;
-                          if (!giftData && typeof m.body === 'string' && m.body.startsWith('[[GIFT:') && m.body.endsWith(']]')) {
-                            try {
-                              const parts = m.body.slice(2, -2).split(':');
-                              giftData = { id: Number(parts[1]), name: parts.slice(2).join(':') };
-                            } catch {}
-                          }
+                          const giftData = resolveGiftData(m);
                           const isMe = Number(m.senderId) === Number(user?.id);
                           const variant = isMe ? 'me' : 'peer';
+
                           return (
                             <StyledChatMessageRow key={m.id} $side={variant}>
-                              {giftData
-                                ? renderGiftVisual(giftData)
-                                : (
-                                  <StyledChatBubble $variant={variant} $column>
-                                    {m.body}
-                                  </StyledChatBubble>
-                                )}
+                              {giftData ? (
+                                renderGiftVisual(giftData)
+                              ) : (
+                                <StyledChatBubble $variant={variant} $column>
+                                  {m.body}
+                                </StyledChatBubble>
+                              )}
                             </StyledChatMessageRow>
                           );
                         })}
@@ -687,7 +731,7 @@ export default function VideoChatFavoritosModelo(props) {
                           }
                         }}
                         disabled={!allowChat}
-                        onFocus={() => { setTimeout(() => modelCenterListRef.current?.scrollIntoView({block:'end'}), 50); }}
+                        onFocus={() => { setTimeout(() => modelCenterListRef.current?.scrollIntoView({ block: 'end' }), 50); }}
                       />
                     </StyledChatDockMessageComposer>
                   </StyledChatWhatsApp>

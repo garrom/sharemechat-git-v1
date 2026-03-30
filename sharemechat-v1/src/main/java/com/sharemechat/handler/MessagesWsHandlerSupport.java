@@ -313,6 +313,11 @@ public class MessagesWsHandlerSupport {
 
             log.info("[CALL_ACCEPT_IN] me={} sid={} with={} inRinging={} currentCallMe={} currentCallWith={}",
                     me, session.getId(), with, state.getRinging().contains(me), inCallWith(me), (with != null ? inCallWith(with) : null));
+            log.warn("call_accept_in actorUserId={} peerUserId={} localSid={} reason_raw={}",
+                    me,
+                    with,
+                    session.getId(),
+                    (reason != null ? reason : "none"));
 
             if (with == null || with <= 0L) {
                 safeSend(session, new JSONObject().put("type", "call:error").put("message", "Par inválido").toString());
@@ -364,6 +369,12 @@ public class MessagesWsHandlerSupport {
             try {
                 startedSession = streamService.startSession(clientId, modelId, com.sharemechat.constants.Constants.StreamTypes.CALLING);
                 streamService.confirmActiveSession(clientId, modelId);
+                log.warn("call_started clientUserId={} modelUserId={} actorUserId={} peerUserId={} streamRecordId={}",
+                        clientId,
+                        modelId,
+                        me,
+                        with,
+                        startedSession != null ? startedSession.getId() : null);
 
             } catch (Exception ex) {
                 clearRinging(me);
@@ -605,6 +616,13 @@ public class MessagesWsHandlerSupport {
             if (toRaw != null) to = Long.valueOf(toRaw);
         } catch (Exception ignore) {}
         long giftId = json.optLong("giftId", 0L);
+        String actorRole = userRepository.findById(me).map(u -> u.getRole()).orElse(null);
+        log.warn("gift_msg_in actorUserId={} peerUserId={} role={} localSid={} giftId={}",
+                me,
+                to,
+                actorRole,
+                session.getId(),
+                giftId);
 
         if (to == null || to <= 0L) {
             safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Destinatario inválido\"}");
@@ -669,25 +687,34 @@ public class MessagesWsHandlerSupport {
                 log.info("handleMsgGift: no calling context me={} to={} peerCurrent={} reverseCurrent={}",
                         me, to, inCallWith(me), inCallWith(to));
             }
+            String peerRole = userRepository.findById(to).map(u -> u.getRole()).orElse(null);
+            log.warn("gift_msg_validate_ok actorUserId={} peerUserId={} role={} peerRole={} giftId={} streamRecordId={} callContext={}",
+                    me,
+                    to,
+                    actorRole,
+                    peerRole,
+                    giftId,
+                    resolvedCallingStreamId,
+                    hasCallingContext);
 
             Gift g = (resolvedCallingStreamId != null)
                     ? transactionService.processGift(me, to, giftId, resolvedCallingStreamId)
                     : transactionService.processGiftInChat(me, to, giftId);
 
-            String marker = "[[GIFT:" + g.getId() + ":" + g.getName() + "]]";
-            MessageDTO saved = messageService.send(me, to, marker);
+            MessageDTO saved = messageService.sendGift(me, to, g);
+            log.warn("gift_msg_emit actorUserId={} peerUserId={} giftId={} messageId={} streamRecordId={}",
+                    me,
+                    to,
+                    g.getId(),
+                    saved.id(),
+                    resolvedCallingStreamId);
 
             JSONObject live = new JSONObject()
                     .put("type", "msg:gift")
                     .put("messageId", saved.id())
                     .put("from", me)
                     .put("to", to)
-                    .put("gift", new JSONObject()
-                            .put("id", g.getId())
-                            .put("name", g.getName())
-                            .put("icon", g.getIcon())
-                            .put("cost", g.getCost().toPlainString())
-                    );
+                    .put("gift", toGiftJson(saved.gift()));
 
             String payload = live.toString();
             broadcastToUser(me, payload);
@@ -902,14 +929,34 @@ public class MessagesWsHandlerSupport {
     }
 
     private JSONObject toJson(MessageDTO m) {
-        return new JSONObject()
+        JSONObject json = new JSONObject()
                 .put("id", m.id())
                 .put("senderId", m.senderId())
                 .put("recipientId", m.recipientId())
                 .put("body", m.body())
                 .put("createdAt", String.valueOf(m.createdAt()))
                 .put("readAt", m.readAt() == null ? JSONObject.NULL : String.valueOf(m.readAt()));
+        if (m.gift() != null) {
+            json.put("gift", toGiftJson(m.gift()));
+        }
+        return json;
     }
+
+    private Object toGiftJson(MessageDTO.GiftSnapshotDTO gift) {
+        if (gift == null) return JSONObject.NULL;
+
+        JSONObject json = new JSONObject();
+        json.put("giftId", gift.giftId());
+        json.put("code", gift.code());
+        json.put("name", gift.name());
+        json.put("icon", gift.icon());
+        json.put("cost", gift.cost() != null ? gift.cost().toPlainString() : JSONObject.NULL);
+        json.put("tier", gift.tier());
+        json.put("featured", gift.featured() != null ? gift.featured() : JSONObject.NULL);
+
+        return json;
+    }
+
 
     public boolean isUserOnline(Long userId) {
         var set = state.getSessions().get(userId);
@@ -1004,6 +1051,17 @@ public class MessagesWsHandlerSupport {
         if (cm != null) {
             Long clientId = cm.getLeft();
             Long modelId = cm.getRight();
+            Long streamRecordId = null;
+            try {
+                streamRecordId = statusService.getActiveSession(clientId, modelId).orElse(null);
+            } catch (Exception ignore) {}
+            log.warn("call_end_begin clientUserId={} modelUserId={} actorUserId={} peerUserId={} streamRecordId={} reason_raw={}",
+                    clientId,
+                    modelId,
+                    a,
+                    b,
+                    streamRecordId,
+                    reason);
 
             try {
                 streamService.endSession(clientId, modelId, reason);
