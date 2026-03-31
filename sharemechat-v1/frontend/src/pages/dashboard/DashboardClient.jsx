@@ -597,24 +597,35 @@ const DashboardClient = () => {
       return;
     }
 
-    // 1) Prioridad: chat central -> favorito seleccionado -> sin target
-    if (centerChatPeerId) {
-      const id = Number(centerChatPeerId);
-      const name = centerChatPeerName || 'Usuario';
-      setCallPeerId(id);
-      callPeerIdRef.current = id;
-      setCallPeerName(name);
-      console.log('[CALL][Client] target <- Favorites chat:', id, name);
-    } else if (selectedFav?.id) {
-      const id = Number(selectedFav.id);
+    const targetId = Number(targetPeerId) || null;
+    const legacyVisualId = Number(centerChatPeerId) || null;
+
+    if (targetId) {
+      const id = targetId;
       const name =
-        selectedFav?.nickname || selectedFav?.name || selectedFav?.email || 'Usuario';
+        targetPeerName ||
+        activePeerRef.current?.name ||
+        centerChatPeerName ||
+        selectedFav?.nickname ||
+        selectedFav?.name ||
+        selectedFav?.email ||
+        'Usuario';
       setCallPeerId(id);
       callPeerIdRef.current = id;
       setCallPeerName(name);
-      console.log('[CALL][Client] target <- Selected favorite:', id, name);
+      console.log('[CALL][Client] target <- targetPeerId:', id, name);
+    } else if (legacyVisualId) {
+      const id = legacyVisualId;
+      const name =
+        centerChatPeerName ||
+        targetPeerName ||
+        activePeerRef.current?.name ||
+        'Usuario';
+      setCallPeerId(id);
+      callPeerIdRef.current = id;
+      setCallPeerName(name);
+      console.log('[CALL][Client] target <- centerChatPeerId fallback:', id, name);
     } else {
-      // 2) Sin target: deshabilita el botón de llamar
       setCallPeerId(null);
       callPeerIdRef.current = null;
       setCallPeerName('');
@@ -622,6 +633,8 @@ const DashboardClient = () => {
     }
   }, [
     callStatus,
+    targetPeerId,
+    targetPeerName,
     centerChatPeerId,
     centerChatPeerName,
     selectedFav?.id,
@@ -1925,18 +1938,19 @@ const DashboardClient = () => {
     const body = String(centerInput || '').trim();
     if (!body) return;
     const interactionTo = Number(interaction?.actionTarget?.messageToUserId) || null;
-    // Prioridad: autoridad (ref) -> centerChatPeerId -> targetPeerId
-    const legacyTo =
-      Number(activePeerRef.current?.id) ||
-      Number(centerChatPeerId) ||
-      Number(targetPeerId);
+    const refTo = Number(activePeerRef.current?.id) || null;
+    const targetTo = Number(targetPeerId) || null;
+    const legacyVisualTo = Number(centerChatPeerId) || null;
+    const legacyTo = refTo || targetTo || legacyVisualTo;
     const finalTo = interactionTo || legacyTo;
 
-    console.log('[ActiveInteraction][Client][sendCenterMessage]', {
+    console.log('[PEER_AUTHORITY][Client][sendCenterMessage]', {
       interactionTo,
-      legacyTo,
+      refTo,
+      targetTo,
+      legacyVisualTo,
       finalTo,
-      source: interactionTo ? 'interaction' : 'legacy'
+      source: interactionTo ? 'interaction' : refTo ? 'activePeerRef' : targetTo ? 'targetPeerId' : 'centerChatPeerId'
     });
 
     if (!Number.isFinite(finalTo) || finalTo <= 0) {
@@ -2065,18 +2079,20 @@ const DashboardClient = () => {
 
   const sendGiftMsg = (giftId) => {
     const interactionTo = Number(interaction?.actionTarget?.giftToUserId) || null;
-    const legacyTo =
-      Number(activePeerRef.current?.id) ||
-      Number(targetPeerId) ||
-      Number(centerChatPeerId);
+    const refTo = Number(activePeerRef.current?.id) || null;
+    const targetTo = Number(targetPeerId) || null;
+    const legacyVisualTo = Number(centerChatPeerId) || null;
+    const legacyTo = refTo || targetTo || legacyVisualTo;
     const finalTo = interactionTo || legacyTo;
 
-    console.log('[ActiveInteraction][Client][sendGiftMsg]', {
+    console.log('[PEER_AUTHORITY][Client][sendGiftMsg]', {
       giftId,
       interactionTo,
-      legacyTo,
+      refTo,
+      targetTo,
+      legacyVisualTo,
       finalTo,
-      source: interactionTo ? 'interaction' : 'legacy'
+      source: interactionTo ? 'interaction' : refTo ? 'activePeerRef' : targetTo ? 'targetPeerId' : 'centerChatPeerId'
     });
 
     if (!Number.isFinite(finalTo) || finalTo <= 0) {
@@ -2139,13 +2155,15 @@ const DashboardClient = () => {
       setCallError('Llamadas bloqueadas: la relación no está aceptada.');
       return;
     }
-    // Prioridad: ref -> state -> chat central -> favorito seleccionado
+    // Prioridad operativa: ref viva -> state call -> target React -> espejo visual final
     const toId =
-      Number(callPeerIdRef.current ?? callPeerId ?? centerChatPeerId ?? selectedFav?.id);
+      Number(callPeerIdRef.current ?? callPeerId ?? targetPeerId ?? centerChatPeerId);
     let toName = '';
     if (Number.isFinite(toId) && toId > 0) {
       toName =
         callPeerName ||
+        targetPeerName ||
+        activePeerRef.current?.name ||
         centerChatPeerName ||
         selectedFav?.nickname ||
         selectedFav?.name ||
@@ -2463,6 +2481,7 @@ const DashboardClient = () => {
 
   // Id activo en lista = el objetivo seleccionado
   const selectedContactId = Number(targetPeerId) || null;
+  const hasCallTarget = Number(targetPeerId) > 0;
 
   //---FLAG DE RENDERIZADO--//
   const invited   = String(selectedFav?.invited || '').toLowerCase();
@@ -2582,6 +2601,7 @@ const DashboardClient = () => {
                 handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                 favReload={favReload}
                 selectedContactId={selectedContactId}
+                hasCallTarget={hasCallTarget}
                 centerChatPeerId={centerChatPeerId}
                 centerChatPeerName={centerChatPeerName}
                 centerMessages={centerMessages}

@@ -22,7 +22,7 @@ export default function VideoChatFavoritosCliente(props){
   const t = (key, options) => i18n.t(key, options);
 
   const {
-      isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,setCtxUser,setCtxPos,centerChatPeerId,
+      isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,
       centerChatPeerName,centerMessages,centerLoading,centerListRef,chatEndRef,centerInput,setCenterInput,
       sendCenterMessage,allowChat,isPendingPanel,isSentPanel,acceptInvitation,rejectInvitation,gifts,giftRenderReady,
       fmtEUR,showCenterGifts,setShowCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
@@ -383,7 +383,7 @@ export default function VideoChatFavoritosCliente(props){
                           </ButtonRegalo>
                           <ButtonLlamar
                             onClick={enterCallMode}
-                            disabled={!centerChatPeerId||!allowChat}
+                            disabled={!hasCallTarget||!allowChat}
                             title={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
                             aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}
                           >

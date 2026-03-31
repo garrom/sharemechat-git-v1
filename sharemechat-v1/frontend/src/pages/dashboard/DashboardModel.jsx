@@ -698,24 +698,35 @@ const DashboardModel = () => {
       console.log('[CALL][effect] target-from-favorites skipped (locked) [Model]');
       return;
     }
-    // 1) Prioridad: chat central -> favorito seleccionado -> sin target
-    if (openChatWith) {
-      const id = Number(openChatWith);
-      const name = centerChatPeerName || 'Usuario';
-      setCallPeerId(id);
-      callPeerIdRef.current = id; // REF
-      setCallPeerName(name);
-      console.log('[CALL][Model] target <- Favorites chat:', id, name);
-    } else if (selectedFav?.id) {
-      const id = Number(selectedFav.id);
+    const targetId = Number(targetPeerId) || null;
+    const legacyVisualId = Number(openChatWith) || null;
+
+    if (targetId) {
+      const id = targetId;
       const name =
-        selectedFav?.nickname || selectedFav?.name || selectedFav?.email || 'Usuario';
+        targetPeerName ||
+        activePeerRef.current?.name ||
+        centerChatPeerName ||
+        selectedFav?.nickname ||
+        selectedFav?.name ||
+        selectedFav?.email ||
+        'Usuario';
       setCallPeerId(id);
       callPeerIdRef.current = id; // REF
       setCallPeerName(name);
-      console.log('[CALL][Model] target <- Selected favorite:', id, name);
+      console.log('[CALL][Model] target <- targetPeerId:', id, name);
+    } else if (legacyVisualId) {
+      const id = legacyVisualId;
+      const name =
+        centerChatPeerName ||
+        targetPeerName ||
+        activePeerRef.current?.name ||
+        'Usuario';
+      setCallPeerId(id);
+      callPeerIdRef.current = id; // REF
+      setCallPeerName(name);
+      console.log('[CALL][Model] target <- openChatWith fallback:', id, name);
     } else {
-      // 2) Sin target: deshabilita el botón de llamar
       setCallPeerId(null);
       callPeerIdRef.current = null; // REF
       setCallPeerName('');
@@ -723,6 +734,8 @@ const DashboardModel = () => {
     }
   }, [
     callStatus,
+    targetPeerId,
+    targetPeerName,
     openChatWith,
     centerChatPeerName,
     selectedFav?.id,
@@ -2063,18 +2076,19 @@ const DashboardModel = () => {
     if (!body) return;
     const interactionTo = Number(interaction?.actionTarget?.messageToUserId) || null;
 
-    // Prioridad: autoridad (ref) -> openChatWith -> targetPeerId
-    const legacyTo =
-      Number(activePeerRef.current?.id) ||
-      Number(openChatWith) ||
-      Number(targetPeerId);
+    const refTo = Number(activePeerRef.current?.id) || null;
+    const targetTo = Number(targetPeerId) || null;
+    const legacyVisualTo = Number(openChatWith) || null;
+    const legacyTo = refTo || targetTo || legacyVisualTo;
     const finalTo = interactionTo || legacyTo;
 
-    console.log('[ActiveInteraction][Model][sendCenterMessage]', {
+    console.log('[PEER_AUTHORITY][Model][sendCenterMessage]', {
       interactionTo,
-      legacyTo,
+      refTo,
+      targetTo,
+      legacyVisualTo,
       finalTo,
-      source: interactionTo ? 'interaction' : 'legacy'
+      source: interactionTo ? 'interaction' : refTo ? 'activePeerRef' : targetTo ? 'targetPeerId' : 'openChatWith'
     });
 
     if (!Number.isFinite(finalTo) || finalTo <= 0) {
@@ -2187,16 +2201,16 @@ const DashboardModel = () => {
       return;
     }
 
-    let toId = null;
-    let toName = '';
-
-    if (openChatWith) {
-      toId = Number(openChatWith);
-      toName = centerChatPeerName || 'Usuario';
-    } else if (selectedFav?.id) {
-      toId = Number(selectedFav.id);
-      toName = selectedFav?.nickname || selectedFav?.name || selectedFav?.email || 'Usuario';
-    }
+    const toId = Number(callPeerIdRef.current ?? callPeerId ?? targetPeerId ?? openChatWith);
+    const toName =
+      callPeerName ||
+      targetPeerName ||
+      activePeerRef.current?.name ||
+      centerChatPeerName ||
+      selectedFav?.nickname ||
+      selectedFav?.name ||
+      selectedFav?.email ||
+      'Usuario';
 
     if (!Number.isFinite(toId) || toId <= 0) {
       setCallError('Abre un chat de Favoritos para elegir a quién llamar.');
@@ -2517,6 +2531,7 @@ const DashboardModel = () => {
 
   // Id activo en lista = el objetivo seleccionado
   const selectedContactId = Number(targetPeerId) || null;
+  const hasCallTarget = Number(targetPeerId) > 0;
 
   //---FLAG DE RENDERIZADO---//
   const invited   = String(selectedFav?.invited || '').toLowerCase();
@@ -2687,6 +2702,7 @@ const DashboardModel = () => {
                   handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                   favReload={favReload}
                   selectedContactId={selectedContactId}
+                  hasCallTarget={hasCallTarget}
                   setTargetPeerId={setTargetPeerId}
                   setTargetPeerName={setTargetPeerName}
                   setSelectedFav={setSelectedFav}

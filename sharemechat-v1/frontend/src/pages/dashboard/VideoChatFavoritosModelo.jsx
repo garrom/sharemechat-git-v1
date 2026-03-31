@@ -104,6 +104,7 @@ export default function VideoChatFavoritosModelo(props) {
     handleOpenChatFromFavorites,
     favReload,
     selectedContactId,
+    hasCallTarget,
     setTargetPeerId,
     setTargetPeerName,
     setSelectedFav,
@@ -459,7 +460,7 @@ export default function VideoChatFavoritosModelo(props) {
                           <StyledChatDockActions>
                             <ButtonLlamar
                               onClick={enterCallMode}
-                              disabled={!openChatWith || !allowChat}
+                              disabled={!hasCallTarget || !allowChat}
                               title={t('dashboardModel.favorites.call.call')}
                               aria-label={t('dashboardModel.favorites.call.call')}
                             >
