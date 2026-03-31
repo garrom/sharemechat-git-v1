@@ -43,6 +43,7 @@ import { useSession } from '../../components/SessionProvider';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
+import useActiveInteraction from '../../domain/useActiveInteraction';
 
 const DashboardClient = () => {
 
@@ -57,6 +58,11 @@ const DashboardClient = () => {
   } = useAppModals();
   const { inCall, setInCall } = useCallUi();
   const { user: sessionUser, updateUiLocale } = useSession();
+  const {
+    interaction,
+    activateFavoritesChat,
+    clearInteraction
+  } = useActiveInteraction();
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
@@ -176,6 +182,59 @@ const DashboardClient = () => {
   useEffect(() => {
     activeTabRef.current = activeTab;
   }, [activeTab]);
+
+
+  useEffect(() => {
+    const selectedConversation = Number(targetPeerId) > 0
+      ? {
+          peerId: Number(targetPeerId),
+          displayName: targetPeerName || selectedFav?.nickname || selectedFav?.name || selectedFav?.email || null,
+          avatarUrl: selectedFav?.avatarUrl || null,
+          status: selectedFav?.status || null,
+          invited: selectedFav?.invited || null,
+        }
+      : null;
+
+    if (!selectedConversation) {
+      clearInteraction();
+      return;
+    }
+
+    const peerMeta = {
+      userId: selectedConversation.peerId,
+      displayName: selectedConversation.displayName,
+      avatarUrl: selectedConversation.avatarUrl,
+    };
+
+    const favoriteRelation = {
+      status: selectedConversation.status,
+      invited: selectedConversation.invited,
+    };
+
+    activateFavoritesChat(peerMeta, favoriteRelation, {
+      source: 'favorites'
+    });
+
+    console.log('[ActiveInteraction] synced favorites chat', {
+      peerId: peerMeta.userId
+    });
+  }, [
+    targetPeerId,
+    targetPeerName,
+    selectedFav?.nickname,
+    selectedFav?.name,
+    selectedFav?.email,
+    selectedFav?.avatarUrl,
+    selectedFav?.status,
+    selectedFav?.invited,
+    activateFavoritesChat,
+    clearInteraction
+  ]);
+
+
+  useEffect(() => {
+    console.log('[ActiveInteraction] current state', interaction);
+  }, [interaction]);
 
 
   useEffect(() => {
@@ -834,6 +893,13 @@ const DashboardClient = () => {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+
+  useEffect(() => {
+    return () => {
+      clearInteraction();
+    };
+  }, [clearInteraction]);
 
 
   // === Fullscreen helper (genérico) ===
