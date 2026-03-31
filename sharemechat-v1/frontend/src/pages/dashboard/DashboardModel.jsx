@@ -2531,6 +2531,7 @@ const DashboardModel = () => {
 
   // Id activo en lista = el objetivo seleccionado
   const selectedContactId = Number(targetPeerId) || null;
+  const hasActiveDetail = Number(targetPeerId) > 0;
   const hasCallTarget = Number(targetPeerId) > 0;
 
   //---FLAG DE RENDERIZADO---//
@@ -2702,6 +2703,7 @@ const DashboardModel = () => {
                   handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                   favReload={favReload}
                   selectedContactId={selectedContactId}
+                  hasActiveDetail={hasActiveDetail}
                   hasCallTarget={hasCallTarget}
                   backToList={backToList}
                   handleCallAccept={handleCallAccept}

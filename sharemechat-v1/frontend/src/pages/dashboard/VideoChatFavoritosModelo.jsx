@@ -104,6 +104,7 @@ export default function VideoChatFavoritosModelo(props) {
     handleOpenChatFromFavorites,
     favReload,
     selectedContactId,
+    hasActiveDetail,
     hasCallTarget,
     backToList,
     callClientSaldo,
@@ -217,7 +218,7 @@ export default function VideoChatFavoritosModelo(props) {
         <StyledFavoritesShell>
           <StyledFavoritesColumns>
             <StyledCenterPanel>
-              {!openChatWith ? (
+              {!hasActiveDetail ? (
                 <div style={{ color: '#adb5bd', textAlign: 'center' }}>
                   {t('dashboardModel.favorites.selectFavorite')}
                 </div>
@@ -478,7 +479,7 @@ export default function VideoChatFavoritosModelo(props) {
 
       {isMobile && (
         <>
-          {!openChatWith && (
+          {!hasActiveDetail && (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
               <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                 <FavoritesModelList
@@ -490,7 +491,7 @@ export default function VideoChatFavoritosModelo(props) {
             </div>
           )}
 
-          {openChatWith && (
+          {hasActiveDetail && (
             <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
               {contactMode !== 'call' && (
                 <StyledMobile3ColBar>
