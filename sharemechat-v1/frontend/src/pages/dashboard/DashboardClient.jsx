@@ -2563,119 +2563,67 @@ const DashboardClient = () => {
         ):(
           /* === SOLO FAVORITOS USA EL LAYOUT 3 COLUMNAS === */
           <>
-            {showFavoritesFullCall?(
-              <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
-                <VideoChatFavoritosCliente
-                  isMobile={isMobile}
-                  handleOpenChatFromFavorites={handleOpenChatFromFavorites}
-                  favReload={favReload}
-                  selectedContactId={selectedContactId}
-                  centerChatPeerId={centerChatPeerId}
-                  centerChatPeerName={centerChatPeerName}
-                  centerMessages={centerMessages}
-                  centerLoading={centerLoading}
-                  centerListRef={centerListRef}
-                  chatEndRef={chatEndRef}
-                  centerInput={centerInput}
-                  setCenterInput={setCenterInput}
-                  sendCenterMessage={sendCenterMessage}
-                  allowChat={allowChat}
-                  isPendingPanel={isPendingPanel}
-                  isSentPanel={isSentPanel}
-                  acceptInvitation={acceptInvitation}
-                  rejectInvitation={rejectInvitation}
-                  gifts={gifts}
-                  giftRenderReady={giftRenderReady}
-                  fmtEUR={fmtEUR}
-                  showCenterGifts={showCenterGifts}
-                  setShowCenterGifts={setShowCenterGifts}
-                  sendGiftMsg={sendGiftMsg}
-                  contactMode={contactMode}
-                  enterCallMode={enterCallMode}
-                  callStatus={callStatus}
-                  callCameraActive={callCameraActive}
-                  callPeerId={callPeerId}
-                  callPeerName={callPeerName}
-                  callPeerAvatar={callPeerAvatar}
-                  callRemoteVideoRef={callRemoteVideoRef}
-                  callLocalVideoRef={callLocalVideoRef}
-                  callRemoteWrapRef={callRemoteWrapRef}
-                  callListRef={callListRef}
-                  handleCallActivateCamera={handleCallActivateCamera}
-                  handleCallInvite={handleCallInvite}
-                  handleCallAccept={handleCallAccept}
-                  handleCallReject={handleCallReject}
-                  handleCallEnd={handleCallEnd}
-                  toggleFullscreen={toggleFullscreen}
-                  backToList={backToList}
-                  user={sessionUser}
-                />
-              </StyledCenter>
-            ):(
-              <>
-                {!isMobile&&(
-                  <StyledLeftColumn data-rail data-surface="favorites-premium">
-                    {callStatus==='idle'?(
-                      <FavoritesClientList
-                        onSelect={handleOpenChatFromFavorites}
-                        reloadTrigger={favReload}
-                        selectedId={selectedContactId}
-                      />
-                    ):(
-                      <div style={{padding:8,color:'#adb5bd'}}>{i18n.t('dashboardClient.favorites.inCallLocked')}</div>
-                    )}
-                  </StyledLeftColumn>
-                )}
-                <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
-                  <VideoChatFavoritosCliente
-                    isMobile={isMobile}
-                    handleOpenChatFromFavorites={handleOpenChatFromFavorites}
-                    favReload={favReload}
-                    selectedContactId={selectedContactId}
-                    centerChatPeerId={centerChatPeerId}
-                    centerChatPeerName={centerChatPeerName}
-                    centerMessages={centerMessages}
-                    centerLoading={centerLoading}
-                    centerListRef={centerListRef}
-                    chatEndRef={chatEndRef}
-                    centerInput={centerInput}
-                    setCenterInput={setCenterInput}
-                    sendCenterMessage={sendCenterMessage}
-                    allowChat={allowChat}
-                    isPendingPanel={isPendingPanel}
-                    isSentPanel={isSentPanel}
-                    acceptInvitation={acceptInvitation}
-                    rejectInvitation={rejectInvitation}
-                    gifts={gifts}
-                    giftRenderReady={giftRenderReady}
-                    fmtEUR={fmtEUR}
-                    showCenterGifts={showCenterGifts}
-                    setShowCenterGifts={setShowCenterGifts}
-                    sendGiftMsg={sendGiftMsg}
-                    contactMode={contactMode}
-                    enterCallMode={enterCallMode}
-                    callStatus={callStatus}
-                    callCameraActive={callCameraActive}
-                    callPeerId={callPeerId}
-                    callPeerName={callPeerName}
-                    callPeerAvatar={callPeerAvatar}
-                    callRemoteVideoRef={callRemoteVideoRef}
-                    callLocalVideoRef={callLocalVideoRef}
-                    callRemoteWrapRef={callRemoteWrapRef}
-                    callListRef={callListRef}
-                    handleCallActivateCamera={handleCallActivateCamera}
-                    handleCallInvite={handleCallInvite}
-                    handleCallAccept={handleCallAccept}
-                    handleCallReject={handleCallReject}
-                    handleCallEnd={handleCallEnd}
-                    toggleFullscreen={toggleFullscreen}
-                    backToList={backToList}
-                    user={sessionUser}
+            {!isMobile && !showFavoritesFullCall && (
+              <StyledLeftColumn data-rail data-surface="favorites-premium">
+                {callStatus==='idle'?(
+                  <FavoritesClientList
+                    onSelect={handleOpenChatFromFavorites}
+                    reloadTrigger={favReload}
+                    selectedId={selectedContactId}
                   />
-                </StyledCenter>
-                <StyledRightColumn data-surface="favorites-premium"/>
-              </>
+                ):(
+                  <div style={{padding:8,color:'#adb5bd'}}>{i18n.t('dashboardClient.favorites.inCallLocked')}</div>
+                )}
+              </StyledLeftColumn>
             )}
+            <StyledCenter data-mode={contactMode==='call'?'call':undefined}>
+              <VideoChatFavoritosCliente
+                isMobile={isMobile}
+                handleOpenChatFromFavorites={handleOpenChatFromFavorites}
+                favReload={favReload}
+                selectedContactId={selectedContactId}
+                centerChatPeerId={centerChatPeerId}
+                centerChatPeerName={centerChatPeerName}
+                centerMessages={centerMessages}
+                centerLoading={centerLoading}
+                centerListRef={centerListRef}
+                chatEndRef={chatEndRef}
+                centerInput={centerInput}
+                setCenterInput={setCenterInput}
+                sendCenterMessage={sendCenterMessage}
+                allowChat={allowChat}
+                isPendingPanel={isPendingPanel}
+                isSentPanel={isSentPanel}
+                acceptInvitation={acceptInvitation}
+                rejectInvitation={rejectInvitation}
+                gifts={gifts}
+                giftRenderReady={giftRenderReady}
+                fmtEUR={fmtEUR}
+                showCenterGifts={showCenterGifts}
+                setShowCenterGifts={setShowCenterGifts}
+                sendGiftMsg={sendGiftMsg}
+                contactMode={contactMode}
+                enterCallMode={enterCallMode}
+                callStatus={callStatus}
+                callCameraActive={callCameraActive}
+                callPeerId={callPeerId}
+                callPeerName={callPeerName}
+                callPeerAvatar={callPeerAvatar}
+                callRemoteVideoRef={callRemoteVideoRef}
+                callLocalVideoRef={callLocalVideoRef}
+                callRemoteWrapRef={callRemoteWrapRef}
+                callListRef={callListRef}
+                handleCallActivateCamera={handleCallActivateCamera}
+                handleCallInvite={handleCallInvite}
+                handleCallAccept={handleCallAccept}
+                handleCallReject={handleCallReject}
+                handleCallEnd={handleCallEnd}
+                toggleFullscreen={toggleFullscreen}
+                backToList={backToList}
+                user={sessionUser}
+              />
+            </StyledCenter>
+            {!showFavoritesFullCall && <StyledRightColumn data-surface="favorites-premium"/>}
           </>
         )}
       </StyledMainContent>
