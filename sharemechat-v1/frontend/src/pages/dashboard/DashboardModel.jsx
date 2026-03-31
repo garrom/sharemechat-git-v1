@@ -1732,8 +1732,17 @@ const DashboardModel = () => {
     setClientSaldo(null);
     setClientSaldoLoading(false);
     setShowMsgPanel(false);
+    activePeerRef.current = { id: null, name: '' };
+    setTargetPeerId(null);
+    setTargetPeerName('');
+    setSelectedFav(null);
+    setContactMode(null);
     setOpenChatWith(null);
+    setCenterChatPeerName('');
+    setCenterMessages([]);
+    setCenterInput('');
     setSearching(false);
+    console.log('[FAVORITES_CONTEXT][Model][stopAll] cleared');
 
     // CALLING
     try { handleCallEnd(true); } catch {}
@@ -2071,25 +2080,36 @@ const DashboardModel = () => {
   const sendCenterMessage = () => {
     const body = String(centerInput || '').trim();
     if (!body) return;
+    const interactionTo = Number(interaction?.actionTarget?.messageToUserId) || null;
 
     // Prioridad: autoridad (ref) -> openChatWith -> targetPeerId
-    const to =
+    const legacyTo =
       Number(activePeerRef.current?.id) ||
       Number(openChatWith) ||
       Number(targetPeerId);
+    const finalTo = interactionTo || legacyTo;
 
-    if (!Number.isFinite(to) || to <= 0) {
+    console.log('[ActiveInteraction][Model][sendCenterMessage]', {
+      interactionTo,
+      legacyTo,
+      finalTo,
+      source: interactionTo ? 'interaction' : 'legacy'
+    });
+
+    if (!Number.isFinite(finalTo) || finalTo <= 0) {
       console.warn('[sendCenterMessage][Model] destinatario inválido', {
+        interactionTo,
         activePeer: activePeerRef.current,
         openChatWith,
-        targetPeerId
+        targetPeerId,
+        finalTo
       });
       return;
     }
 
     const s = msgSocketRef.current;
     if (s && s.readyState === WebSocket.OPEN) {
-      const payload = { type: 'msg:send', to, body };
+      const payload = { type: 'msg:send', to: finalTo, body };
       try {
         s.send(JSON.stringify(payload));
         setCenterInput('');
@@ -2110,7 +2130,7 @@ const DashboardModel = () => {
       await apiFetch(`/favorites/accept/${selectedFav.id}`, { method: 'POST' });
 
       const name = selectedFav.nickname || 'Usuario';
-      setSelectedFav(prev => prev ? ({ ...prev, invited: 'accepted' }) : prev);
+      setSelectedFav(prev => prev ? ({ ...prev, invited: 'accepted', status: 'active' }) : prev);
       setFavReload(x => x + 1);
 
       setActivePeer(selectedFav.id, name, 'chat', selectedFav);

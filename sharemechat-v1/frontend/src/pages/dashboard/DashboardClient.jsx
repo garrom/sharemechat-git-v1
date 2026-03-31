@@ -1410,12 +1410,18 @@ const DashboardClient = () => {
     setMessages([]);
 
     // FAVORITOS
+    activePeerRef.current = { id: null, name: '' };
+    setTargetPeerId(null);
+    setTargetPeerName('');
+    setSelectedFav(null);
+    setContactMode(null);
     setCenterChatPeerId(null);
     setCenterChatPeerName('');
     setCenterMessages([]);
     setCenterInput('');
     setShowGifts(false);
     setShowCenterGifts(false);
+    console.log('[FAVORITES_CONTEXT][Client][stopAll] cleared');
 
     // CALLING
     try { handleCallEnd(true); } catch {}
@@ -1918,23 +1924,34 @@ const DashboardClient = () => {
   const sendCenterMessage = () => {
     const body = String(centerInput || '').trim();
     if (!body) return;
+    const interactionTo = Number(interaction?.actionTarget?.messageToUserId) || null;
     // Prioridad: autoridad (ref) -> centerChatPeerId -> targetPeerId
-    const to =
+    const legacyTo =
       Number(activePeerRef.current?.id) ||
       Number(centerChatPeerId) ||
       Number(targetPeerId);
+    const finalTo = interactionTo || legacyTo;
 
-    if (!Number.isFinite(to) || to <= 0) {
+    console.log('[ActiveInteraction][Client][sendCenterMessage]', {
+      interactionTo,
+      legacyTo,
+      finalTo,
+      source: interactionTo ? 'interaction' : 'legacy'
+    });
+
+    if (!Number.isFinite(finalTo) || finalTo <= 0) {
       console.warn('[sendCenterMessage][Client] destinatario inválido', {
+        interactionTo,
         activePeer: activePeerRef.current,
         centerChatPeerId,
         targetPeerId,
+        finalTo,
       });
       return;
     }
     const s = msgSocketRef.current;
     if (s && s.readyState === WebSocket.OPEN) {
-      const payload = { type: 'msg:send', to, body };
+      const payload = { type: 'msg:send', to: finalTo, body };
       try {
         s.send(JSON.stringify(payload));
         setCenterInput('');
@@ -2017,7 +2034,7 @@ const DashboardClient = () => {
       await apiFetch(`/favorites/accept/${selectedFav.id}`, { method: 'POST' });
 
       const name = selectedFav.nickname || 'Usuario';
-      setSelectedFav(prev => prev ? { ...prev, invited: 'accepted' } : prev);
+      setSelectedFav(prev => prev ? { ...prev, invited: 'accepted', status: 'active' } : prev);
       setFavReload(x => x + 1);
       openChatWith(selectedFav.id, name);
     } catch (e) {
@@ -2047,14 +2064,35 @@ const DashboardClient = () => {
 
 
   const sendGiftMsg = (giftId) => {
-    const to =
+    const interactionTo = Number(interaction?.actionTarget?.giftToUserId) || null;
+    const legacyTo =
       Number(activePeerRef.current?.id) ||
       Number(targetPeerId) ||
       Number(centerChatPeerId);
-    if (!Number.isFinite(to) || to <= 0) return;
+    const finalTo = interactionTo || legacyTo;
+
+    console.log('[ActiveInteraction][Client][sendGiftMsg]', {
+      giftId,
+      interactionTo,
+      legacyTo,
+      finalTo,
+      source: interactionTo ? 'interaction' : 'legacy'
+    });
+
+    if (!Number.isFinite(finalTo) || finalTo <= 0) {
+      console.warn('[sendGiftMsg][Client] destinatario inválido', {
+        giftId,
+        interactionTo,
+        activePeer: activePeerRef.current,
+        targetPeerId,
+        centerChatPeerId,
+        finalTo,
+      });
+      return;
+    }
     if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) return;
 
-    msgSocketRef.current.send(JSON.stringify({ type:'msg:gift', to, giftId }));
+    msgSocketRef.current.send(JSON.stringify({ type:'msg:gift', to: finalTo, giftId }));
     setShowCenterGifts(false);
   };
 
