@@ -125,9 +125,7 @@ export default function VideoChatFavoritosCliente(props){
 
     const src = getGiftVisualSrc(giftData);
     const tier = String(giftData.tier || '').toUpperCase();
-    const isPremium = tier
-      ? tier === 'PREMIUM'
-      : (typeof src === 'string' && src.toLowerCase().includes('.png'));
+    const isPremium = tier === 'PREMIUM';
 
     return src ? (
       <StyledGiftMessage $premium={isPremium}>
