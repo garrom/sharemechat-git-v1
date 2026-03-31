@@ -805,6 +805,8 @@ const DashboardModel = () => {
     if (!peer || activeTab !== 'favoritos') return;
     if (!sessionUser?.id) return;
 
+    console.log('[HISTORY_OWNER][Model] load via effect', { peer });
+
     const expectedPeer = peer;
     let canceled = false;
 
@@ -2052,28 +2054,7 @@ const DashboardModel = () => {
     centerSeenIdsRef.current = new Set();
 
     openMsgSocket();
-
-    try {
-      const data = await apiFetch(`/messages/with/${peer}`);
-      const normalized = (data || []).map(raw => normMsg(raw));
-
-      centerSeenIdsRef.current = new Set((normalized || []).map(m => m.id));
-      setCenterMessages(normalized.reverse());
-
-      try {
-        await apiFetch(`/messages/with/${peer}/read`, { method: 'POST' });
-      } catch {}
-
-      queueMicrotask(() => {
-        const el = modelCenterListRef?.current;
-        if (el) el.scrollTop = el.scrollHeight;
-      });
-    } catch (e) {
-      console.warn('Historial chat error:', e?.message);
-      setCenterMessages([]);
-    } finally {
-      setCenterLoading(false);
-    }
+    console.log('[HISTORY_OWNER][Model] openChatWithPeer delegated', { peer });
   };
 
 
@@ -2129,12 +2110,18 @@ const DashboardModel = () => {
     try {
       await apiFetch(`/favorites/accept/${selectedFav.id}`, { method: 'POST' });
 
-      const name = selectedFav.nickname || 'Usuario';
+      const nextFav = selectedFav
+        ? { ...selectedFav, invited: 'accepted', status: 'active' }
+        : selectedFav;
+      const name = nextFav?.nickname || 'Usuario';
       setSelectedFav(prev => prev ? ({ ...prev, invited: 'accepted', status: 'active' }) : prev);
       setFavReload(x => x + 1);
+      setShowMsgPanel(false);
+      setTimeout(() => setShowMsgPanel(true), 0);
 
-      setActivePeer(selectedFav.id, name, 'chat', selectedFav);
-      openChatWithPeer(selectedFav.id, name);
+      setActivePeer(nextFav?.id, name, 'chat', nextFav);
+      openChatWithPeer(nextFav?.id, name);
+      console.log('[INVITATION_ACCEPT][Model] local favorite synced', { peerId: nextFav?.id });
     } catch (e) {
       alert(e.message || 'No se pudo aceptar la invitación');
     }
