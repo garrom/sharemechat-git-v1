@@ -105,9 +105,7 @@ export default function VideoChatFavoritosModelo(props) {
     favReload,
     selectedContactId,
     hasCallTarget,
-    setTargetPeerId,
-    setTargetPeerName,
-    setSelectedFav,
+    backToList,
     callClientSaldo,
     callClientSaldoLoading,
   } = props;
@@ -498,12 +496,7 @@ export default function VideoChatFavoritosModelo(props) {
                 <StyledMobile3ColBar>
                   <ButtonVolver
                     type="button"
-                    onClick={() => {
-                      setTargetPeerId(null);
-                      setTargetPeerName('');
-                      setSelectedFav(null);
-                      setContactMode('chat');
-                    }}
+                    onClick={backToList}
                     aria-label={t('dashboardModel.favorites.backToList')}
                     title={t('common.back')}
                   >

@@ -2703,9 +2703,7 @@ const DashboardModel = () => {
                   favReload={favReload}
                   selectedContactId={selectedContactId}
                   hasCallTarget={hasCallTarget}
-                  setTargetPeerId={setTargetPeerId}
-                  setTargetPeerName={setTargetPeerName}
-                  setSelectedFav={setSelectedFav}
+                  backToList={backToList}
                   handleCallAccept={handleCallAccept}
                   handleCallReject={handleCallReject}
                   callClientSaldo={callClientSaldo}

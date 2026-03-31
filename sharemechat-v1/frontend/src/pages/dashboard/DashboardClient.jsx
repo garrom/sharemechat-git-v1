@@ -2482,6 +2482,7 @@ const DashboardClient = () => {
   // Id activo en lista = el objetivo seleccionado
   const selectedContactId = Number(targetPeerId) || null;
   const hasCallTarget = Number(targetPeerId) > 0;
+  const hasActiveDetail = Number(targetPeerId) > 0;
 
   //---FLAG DE RENDERIZADO--//
   const invited   = String(selectedFav?.invited || '').toLowerCase();
@@ -2601,6 +2602,7 @@ const DashboardClient = () => {
                 handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                 favReload={favReload}
                 selectedContactId={selectedContactId}
+                hasActiveDetail={hasActiveDetail}
                 hasCallTarget={hasCallTarget}
                 centerChatPeerId={centerChatPeerId}
                 centerChatPeerName={centerChatPeerName}

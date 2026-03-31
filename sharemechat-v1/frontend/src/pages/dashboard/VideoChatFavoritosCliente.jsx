@@ -22,7 +22,7 @@ export default function VideoChatFavoritosCliente(props){
   const t = (key, options) => i18n.t(key, options);
 
   const {
-      isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,
+      isMobile,handleOpenChatFromFavorites,favReload,selectedContactId,hasActiveDetail,hasCallTarget,setCtxUser,setCtxPos,centerChatPeerId,
       centerChatPeerName,centerMessages,centerLoading,centerListRef,chatEndRef,centerInput,setCenterInput,
       sendCenterMessage,allowChat,isPendingPanel,isSentPanel,acceptInvitation,rejectInvitation,gifts,giftRenderReady,
       fmtEUR,showCenterGifts,setShowCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
@@ -157,7 +157,7 @@ export default function VideoChatFavoritosCliente(props){
       <StyledFavoritesShell>
         <StyledFavoritesColumns>
           <StyledCenterPanel>
-            {!centerChatPeerId?(
+            {!hasActiveDetail?(
               <div style={{color:'#adb5bd',textAlign:'center'}}>{t('dashboardClient.videoChatFavoritosCliente.empty.selectFavorite')}</div>
             ):(
               <>
@@ -405,7 +405,7 @@ export default function VideoChatFavoritosCliente(props){
     {/* === Móvil Favoritos ALL (SIN TOCAR) === */}
     {isMobile&&(
       <>
-        {!centerChatPeerId&&(
+        {!hasActiveDetail&&(
           <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
             <div style={{flex:1,minHeight:0,overflowY:'auto'}}>
               <FavoritesClientList
@@ -418,7 +418,7 @@ export default function VideoChatFavoritosCliente(props){
           </div>
         )}
 
-        {centerChatPeerId&&(
+        {hasActiveDetail&&(
           <div style={{display:'flex',flexDirection:'column',flex:1,minHeight:0}}>
             {contactMode!=='call'&&(
               <StyledMobile3ColBar>
