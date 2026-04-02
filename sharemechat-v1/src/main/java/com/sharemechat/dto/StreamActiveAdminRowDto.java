@@ -14,6 +14,7 @@ public class StreamActiveAdminRowDto {
     private String modelNickname;
     private LocalDateTime startTime;
     private LocalDateTime confirmedAt;
+    private LocalDateTime billableStart;
     private LocalDateTime endTime;
     private Long durationSeconds;
     private String statusDerivado;
@@ -100,6 +101,14 @@ public class StreamActiveAdminRowDto {
 
     public void setConfirmedAt(LocalDateTime confirmedAt) {
         this.confirmedAt = confirmedAt;
+    }
+
+    public LocalDateTime getBillableStart() {
+        return billableStart;
+    }
+
+    public void setBillableStart(LocalDateTime billableStart) {
+        this.billableStart = billableStart;
     }
 
     public LocalDateTime getEndTime() {

@@ -82,6 +82,13 @@ public class StreamService {
         this.streamStatusEventRepository = streamStatusEventRepository;
     }
 
+    private LocalDateTime resolveEffectiveBillableStart(StreamRecord session) {
+        if (session == null) {
+            return null;
+        }
+        return session.getBillableStart() != null ? session.getBillableStart() : session.getConfirmedAt();
+    }
+
     /**
      * Inicia una sesión de streaming en el instante del match.
      * Crea StreamRecord(start_time=now, end_time=NULL) y marca a la modelo como BUSY.
@@ -166,6 +173,7 @@ public class StreamService {
         sr.setModel(model);
         sr.setStartTime(LocalDateTime.now());
         sr.setConfirmedAt(null);
+        sr.setBillableStart(null);
         sr.setStreamType(normalizedStreamType);
         sr.setEndTime(null);
 
@@ -270,6 +278,7 @@ public class StreamService {
         }
 
         recordStreamEvent(session.getId(), Constants.StreamEventTypes.CONFIRMED, null, null);
+        recordStreamEvent(session.getId(), Constants.StreamEventTypes.BILLING_STARTED, null, null);
 
         log.info(
                 "confirmActiveSession: confirmada sesión id={} (client={}, model={})",
@@ -322,9 +331,14 @@ public class StreamService {
             return;
         }
 
-        session.setConfirmedAt(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        session.setConfirmedAt(now);
+        if (session.getBillableStart() == null) {
+            session.setBillableStart(now);
+        }
         streamRecordRepository.save(session);
         recordStreamEvent(session.getId(), Constants.StreamEventTypes.CONFIRMED, null, null);
+        recordStreamEvent(session.getId(), Constants.StreamEventTypes.BILLING_STARTED, null, null);
 
         log.info("ackMedia: confirmada sesión id={} por userId={} (client={}, model={})",
                 session.getId(), userId, clientId, modelId);
@@ -985,7 +999,7 @@ public class StreamService {
         if (streamId == null || eventType == null || eventType.isBlank()) {
             return;
         }
-        if (Constants.StreamEventTypes.CONFIRMED.equals(eventType)
+        if (isUniqueStreamEventType(eventType)
                 && streamStatusEventRepository.existsByStreamRecordIdAndEventType(streamId, eventType)) {
             return;
         }
@@ -995,11 +1009,16 @@ public class StreamService {
         event.setEventType(eventType);
         event.setReason(normalizeReason(reason));
         event.setMetadata(normalizeMetadata(metadataJsonOrNull));
-        if (Constants.StreamEventTypes.CONFIRMED.equals(eventType)) {
+        if (isUniqueStreamEventType(eventType)) {
             streamStatusEventRepository.saveAndFlush(event);
         } else {
             streamStatusEventRepository.save(event);
         }
+    }
+
+    private boolean isUniqueStreamEventType(String eventType) {
+        return Constants.StreamEventTypes.CONFIRMED.equals(eventType)
+                || Constants.StreamEventTypes.BILLING_STARTED.equals(eventType);
     }
 
     private StreamActiveAdminRowDto mapStreamRecordToAdminRow(StreamRecord sr, LocalDateTime now) {
@@ -1014,6 +1033,7 @@ public class StreamService {
         dto.setModelNickname(sr.getModel() != null ? sr.getModel().getNickname() : null);
         dto.setStartTime(sr.getStartTime());
         dto.setConfirmedAt(sr.getConfirmedAt());
+        dto.setBillableStart(sr.getBillableStart());
         dto.setEndTime(sr.getEndTime());
 
         LocalDateTime durationUntil = sr.getEndTime() != null ? sr.getEndTime() : now;

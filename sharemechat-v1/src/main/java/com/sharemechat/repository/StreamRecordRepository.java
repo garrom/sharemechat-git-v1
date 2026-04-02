@@ -15,6 +15,7 @@ public interface StreamRecordRepository extends JpaRepository<StreamRecord, Long
 
     // Sesión activa (sin end_time) por par cliente-modelo, la más reciente
     Optional<StreamRecord> findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(Long clientId, Long modelId);
+    Optional<StreamRecord> findTopByClient_IdAndModel_IdAndStreamTypeAndEndTimeIsNullOrderByStartTimeDesc(Long clientId, Long modelId, String streamType);
     Optional<StreamRecord> findTopByClient_IdAndModel_IdAndStreamTypeAndConfirmedAtIsNotNullAndEndTimeIsNullOrderByStartTimeDesc(Long clientId, Long modelId, String streamType);
 
     // (opcionales, útiles para diagnósticos)
@@ -70,7 +71,8 @@ public interface StreamRecordRepository extends JpaRepository<StreamRecord, Long
     @Modifying
     @Query("""
        UPDATE StreamRecord sr
-          SET sr.confirmedAt = :now
+          SET sr.confirmedAt = :now,
+              sr.billableStart = COALESCE(sr.billableStart, :now)
         WHERE sr.id = :streamId
           AND sr.endTime IS NULL
           AND sr.confirmedAt IS NULL

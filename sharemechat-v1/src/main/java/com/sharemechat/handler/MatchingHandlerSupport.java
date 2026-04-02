@@ -148,6 +148,7 @@ public class MatchingHandlerSupport {
         state.getSessionBucketKey().remove(sid);
         state.getClientMediaReadyBySid().remove(sid);
         state.getModelMediaReadyBySid().remove(sid);
+        clearTechMediaReadyMarkers(sid, null);
         state.getConfirmedPairs().remove(sid);
 
         if ("model".equals(role)) {
@@ -160,6 +161,7 @@ public class MatchingHandlerSupport {
         WebSocketSession peer = state.getPairs().remove(sid);
         if (peer != null) {
             state.getPairs().remove(peer.getId());
+            clearTechMediaReadyMarkers(sid, peer.getId());
 
             Long myId = userId;
             Long peerId = state.getSessionUserIds().get(peer.getId());
@@ -309,6 +311,11 @@ public class MatchingHandlerSupport {
 
             if ("media-ready".equals(type)) {
                 handleMediaReady(session, state);
+                return;
+            }
+
+            if ("tech-media-ready".equals(type)) {
+                handleTechMediaReady(session, state);
                 return;
             }
 
@@ -762,6 +769,7 @@ public class MatchingHandlerSupport {
             state.getClientMediaReadyBySid().remove(best.getId());
             state.getModelMediaReadyBySid().remove(client.getId());
             state.getModelMediaReadyBySid().remove(best.getId());
+            clearTechMediaReadyMarkers(client.getId(), best.getId());
             state.getConfirmedPairs().remove(client.getId());
             state.getConfirmedPairs().remove(best.getId());
 
@@ -857,6 +865,7 @@ public class MatchingHandlerSupport {
                 state.getClientMediaReadyBySid().remove(client.getId());
                 state.getModelMediaReadyBySid().remove(model.getId());
                 state.getModelMediaReadyBySid().remove(client.getId());
+                clearTechMediaReadyMarkers(model.getId(), client.getId());
                 state.getConfirmedPairs().remove(model.getId());
                 state.getConfirmedPairs().remove(client.getId());
 
@@ -936,6 +945,7 @@ public class MatchingHandlerSupport {
                 state.getClientMediaReadyBySid().remove(peer.getId());
                 state.getModelMediaReadyBySid().remove(session.getId());
                 state.getModelMediaReadyBySid().remove(peer.getId());
+                clearTechMediaReadyMarkers(session.getId(), peer.getId());
                 state.getConfirmedPairs().remove(session.getId());
                 state.getConfirmedPairs().remove(peer.getId());
 
@@ -1391,6 +1401,7 @@ public class MatchingHandlerSupport {
 
         state.getPairs().remove(session.getId());
         state.getPairs().remove(peer.getId());
+        clearTechMediaReadyMarkers(session.getId(), peer.getId());
 
         try {
             streamService.endSessionAsync(clientId, modelId, "low-balance");
@@ -1446,6 +1457,7 @@ public class MatchingHandlerSupport {
 
             state.getPairs().remove(viewerSession.getId());
             state.getPairs().remove(modelSession.getId());
+            clearTechMediaReadyMarkers(viewerSession.getId(), modelSession.getId());
 
         } catch (Exception ex) {
             System.out.println("handleTrialPingAndMaybeEnd error: " + ex.getMessage());
@@ -1541,8 +1553,17 @@ public class MatchingHandlerSupport {
             if (role == null || peer == null || userId == null) return;
 
             String peerSid = peer.getId();
+            WebSocketSession reciprocalPeer = state.getPairs().get(peerSid);
             Long peerUserId = state.getSessionUserIds().get(peerSid);
-            if (peerUserId == null) return;
+            if (peerUserId == null || reciprocalPeer == null || !sid.equals(reciprocalPeer.getId())) {
+                log.warn("random_media_ready_legacy_ignored actorUserId={} peerUserId={} role={} localSid={} peerSid={} reason=pair_mismatch",
+                        userId,
+                        peerUserId,
+                        role,
+                        sid,
+                        peerSid);
+                return;
+            }
 
             if ("client".equals(role)) {
                 state.getClientMediaReadyBySid().put(sid, true);
@@ -1562,8 +1583,74 @@ public class MatchingHandlerSupport {
                             ? Boolean.TRUE.equals(state.getModelMediaReadyBySid().get(sid))
                             : Boolean.TRUE.equals(state.getModelMediaReadyBySid().get(peerSid));
 
-            if (!clientReady || !modelReady) return;
-            if (state.getConfirmedPairs().contains(sid) || state.getConfirmedPairs().contains(peerSid)) return;
+            log.warn("random_media_ready_legacy actorUserId={} peerUserId={} role={} localSid={} peerSid={} bothReady={} confirmAuthority=tech-media-ready",
+                    userId,
+                    peerUserId,
+                    role,
+                    sid,
+                    peerSid,
+                    clientReady && modelReady);
+        } catch (Exception ignore) {}
+    }
+
+    private void handleTechMediaReady(WebSocketSession session, MatchingRuntimeState state) {
+        try {
+            String sid = session.getId();
+            String role = state.getRoles().get(sid);
+            WebSocketSession peer = state.getPairs().get(sid);
+            Long userId = state.getSessionUserIds().get(sid);
+            if (role == null || peer == null || userId == null) return;
+
+            String peerSid = peer.getId();
+            WebSocketSession reciprocalPeer = state.getPairs().get(peerSid);
+            Long peerUserId = state.getSessionUserIds().get(peerSid);
+            if (peerUserId == null || reciprocalPeer == null || !sid.equals(reciprocalPeer.getId())) {
+                log.warn("random_tech_media_ready_ignored actorUserId={} peerUserId={} role={} localSid={} peerSid={} reason=pair_mismatch",
+                        userId,
+                        peerUserId,
+                        role,
+                        sid,
+                        peerSid);
+                return;
+            }
+
+            if ("client".equals(role)) {
+                state.getClientTechMediaReadyBySid().put(sid, true);
+            } else if ("model".equals(role)) {
+                state.getModelTechMediaReadyBySid().put(sid, true);
+            } else {
+                return;
+            }
+
+            boolean clientReady =
+                    "client".equals(role)
+                            ? Boolean.TRUE.equals(state.getClientTechMediaReadyBySid().get(sid))
+                            : Boolean.TRUE.equals(state.getClientTechMediaReadyBySid().get(peerSid));
+
+            boolean modelReady =
+                    "model".equals(role)
+                            ? Boolean.TRUE.equals(state.getModelTechMediaReadyBySid().get(sid))
+                            : Boolean.TRUE.equals(state.getModelTechMediaReadyBySid().get(peerSid));
+
+            if (!clientReady || !modelReady) {
+                log.warn("random_tech_media_ready actorUserId={} peerUserId={} role={} localSid={} peerSid={} bothReady=false",
+                        userId,
+                        peerUserId,
+                        role,
+                        sid,
+                        peerSid);
+                return;
+            }
+
+            if (state.getConfirmedPairs().contains(sid) || state.getConfirmedPairs().contains(peerSid)) {
+                log.warn("random_tech_media_ready_ignored actorUserId={} peerUserId={} role={} localSid={} peerSid={} reason=already_confirmed",
+                        userId,
+                        peerUserId,
+                        role,
+                        sid,
+                        peerSid);
+                return;
+            }
 
             state.getConfirmedPairs().add(sid);
             state.getConfirmedPairs().add(peerSid);
@@ -1579,8 +1666,38 @@ public class MatchingHandlerSupport {
                 modelId = userId;
             }
 
+            log.warn("random_tech_media_ready actorUserId={} peerUserId={} role={} localSid={} peerSid={} bothReady={}",
+                    userId,
+                    peerUserId,
+                    role,
+                    sid,
+                    peerSid,
+                    true);
+            log.warn("random_tech_media_ready_confirm actorUserId={} peerUserId={} clientUserId={} modelUserId={} localSid={} peerSid={}",
+                    userId,
+                    peerUserId,
+                    clientId,
+                    modelId,
+                    sid,
+                    peerSid);
+
             streamService.confirmActiveSession(clientId, modelId);
-        } catch (Exception ignore) {}
+        } catch (Exception ex) {
+            log.warn("random_tech_media_ready_error sid={} err={}",
+                    session != null ? session.getId() : null,
+                    ex.getMessage());
+        }
+    }
+
+    private void clearTechMediaReadyMarkers(String sidA, String sidB) {
+        if (sidA != null) {
+            state.getClientTechMediaReadyBySid().remove(sidA);
+            state.getModelTechMediaReadyBySid().remove(sidA);
+        }
+        if (sidB != null) {
+            state.getClientTechMediaReadyBySid().remove(sidB);
+            state.getModelTechMediaReadyBySid().remove(sidB);
+        }
     }
 
     private boolean canMatch(Long userAId, Long userBId) {
@@ -1634,6 +1751,7 @@ public class MatchingHandlerSupport {
         if (modelSid != null) {
             state.getPairs().remove(modelSid);
         }
+        clearTechMediaReadyMarkers(clientSid, modelSid);
 
         String safeReason = (reason == null || reason.isBlank()) ? "admin-kill" : reason;
         String payload = "{\"type\":\"peer-disconnected\",\"reason\":\"" + safeReason + "\"}";

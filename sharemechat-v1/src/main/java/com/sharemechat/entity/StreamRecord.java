@@ -27,6 +27,9 @@ public class StreamRecord {
     @Column(name = "confirmed_at")
     private LocalDateTime confirmedAt;
 
+    @Column(name = "billable_start")
+    private LocalDateTime billableStart;
+
     @Column(name = "stream_type", nullable = false)
     private String streamType;
 
@@ -53,6 +56,9 @@ public class StreamRecord {
 
     public LocalDateTime getConfirmedAt() { return confirmedAt; }
     public void setConfirmedAt(LocalDateTime confirmedAt) { this.confirmedAt = confirmedAt; }
+
+    public LocalDateTime getBillableStart() { return billableStart; }
+    public void setBillableStart(LocalDateTime billableStart) { this.billableStart = billableStart; }
 
     public String getStreamType() { return streamType; }
     public void setStreamType(String streamType) { this.streamType = streamType; }

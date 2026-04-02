@@ -25,6 +25,8 @@ public class MatchingRuntimeState {
     private final Map<String, String> sessionBucketKey = new ConcurrentHashMap<>();
     private final Map<String, Boolean> clientMediaReadyBySid = new ConcurrentHashMap<>();
     private final Map<String, Boolean> modelMediaReadyBySid = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> clientTechMediaReadyBySid = new ConcurrentHashMap<>();
+    private final Map<String, Boolean> modelTechMediaReadyBySid = new ConcurrentHashMap<>();
     private final Set<String> confirmedPairs = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
     public Map<String, Queue<WebSocketSession>> getWaitingModelsByBucket() {
@@ -81,6 +83,14 @@ public class MatchingRuntimeState {
 
     public Map<String, Boolean> getModelMediaReadyBySid() {
         return modelMediaReadyBySid;
+    }
+
+    public Map<String, Boolean> getClientTechMediaReadyBySid() {
+        return clientTechMediaReadyBySid;
+    }
+
+    public Map<String, Boolean> getModelTechMediaReadyBySid() {
+        return modelTechMediaReadyBySid;
     }
 
     public Set<String> getConfirmedPairs() {

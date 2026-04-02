@@ -368,7 +368,6 @@ public class MessagesWsHandlerSupport {
             StreamRecord startedSession;
             try {
                 startedSession = streamService.startSession(clientId, modelId, com.sharemechat.constants.Constants.StreamTypes.CALLING);
-                streamService.confirmActiveSession(clientId, modelId);
                 log.warn("call_started clientUserId={} modelUserId={} actorUserId={} peerUserId={} streamRecordId={}",
                         clientId,
                         modelId,
@@ -403,6 +402,17 @@ public class MessagesWsHandlerSupport {
                     .put("clientId", clientId)
                     .put("modelId", modelId)
                     .put("streamRecordId", (startedSession != null && startedSession.getId() != null) ? startedSession.getId() : JSONObject.NULL);
+
+            if (startedSession != null && startedSession.getId() != null) {
+                clearCallTechMediaReady(startedSession.getId());
+            }
+
+            log.warn("call_accept_legacy actorUserId={} peerUserId={} clientUserId={} modelUserId={} streamRecordId={} confirmAuthority=call:tech-media-ready",
+                    me,
+                    with,
+                    clientId,
+                    modelId,
+                    startedSession != null ? startedSession.getId() : null);
 
             broadcastToUser(me, accepted.toString());
             broadcastToUser(with, accepted.toString());
@@ -439,6 +449,11 @@ public class MessagesWsHandlerSupport {
                         (current == null ? "no_activeCall" : "mismatch_with"));
                 return;
             }
+            return;
+        }
+
+        if ("call:tech-media-ready".equals(type)) {
+            handleCallTechMediaReady(session, json, me);
             return;
         }
 
@@ -561,16 +576,11 @@ public class MessagesWsHandlerSupport {
             Long clientId = cm.getLeft();
             Long modelId = cm.getRight();
 
-            try {
-                streamService.confirmActiveSession(clientId, modelId);
-            } catch (Exception ex) {
-                log.warn("call:ping confirm error clientId={} modelId={} err={}", clientId, modelId, ex.getMessage());
-                safeSend(session, new JSONObject()
-                        .put("type", "call:ended")
-                        .put("reason", "not-active")
-                        .toString());
-                return;
-            }
+            log.warn("call_ping_legacy actorUserId={} peerUserId={} clientUserId={} modelUserId={} confirmAuthority=call:tech-media-ready",
+                    me,
+                    peer,
+                    clientId,
+                    modelId);
 
             try {
                 BigDecimal bal = getCurrentBalanceOrZero(clientId);
@@ -587,10 +597,16 @@ public class MessagesWsHandlerSupport {
             try {
                 boolean closed = streamService.endIfBelowThreshold(clientId, modelId);
                 if (closed) {
+                    Long activeStreamRecordId = resolveActiveCallingStreamId(clientId, modelId);
                     streamService.endSessionAsync(clientId, modelId, "low-balance");
                     broadcastToUser(me, new JSONObject().put("type", "call:ended").put("reason", "low-balance").toString());
                     broadcastToUser(peer, new JSONObject().put("type", "call:ended").put("reason", "low-balance").toString());
+                    clearCallTechMediaReady(activeStreamRecordId);
                     clearActiveCall(me, peer);
+                    clearRinging(me);
+                    clearRinging(peer);
+                    state.getActiveCallOwners().remove(me);
+                    state.getActiveCallOwners().remove(peer);
                 }
             } catch (Exception ex) {
                 log.warn("call:ping cutoff error clientId={} modelId={} err={}", clientId, modelId, ex.getMessage());
@@ -1012,6 +1028,154 @@ public class MessagesWsHandlerSupport {
         if (userId != null) state.getRinging().remove(userId);
     }
 
+    private void markCallTechMediaReady(Long streamRecordId, Long userId) {
+        if (streamRecordId == null || userId == null) return;
+        state.getCallTechMediaReadyUsersByStreamId()
+                .computeIfAbsent(streamRecordId, k -> java.util.concurrent.ConcurrentHashMap.newKeySet())
+                .add(userId);
+    }
+
+    private void clearCallTechMediaReady(Long streamRecordId) {
+        if (streamRecordId == null) return;
+        state.getCallTechMediaReadyUsersByStreamId().remove(streamRecordId);
+    }
+
+    private Long resolveActiveCallingStreamId(Long clientId, Long modelId) {
+        if (clientId == null || modelId == null) return null;
+
+        try {
+            Long hintedStreamId = statusService.getActiveSession(clientId, modelId).orElse(null);
+            if (hintedStreamId != null) {
+                StreamRecord hinted = streamRecordRepository.findById(hintedStreamId).orElse(null);
+                if (hinted != null
+                        && hinted.getEndTime() == null
+                        && Objects.equals(hinted.getStreamType(), com.sharemechat.constants.Constants.StreamTypes.CALLING)
+                        && hinted.getClient() != null
+                        && hinted.getModel() != null
+                        && Objects.equals(hinted.getClient().getId(), clientId)
+                        && Objects.equals(hinted.getModel().getId(), modelId)) {
+                    return hintedStreamId;
+                }
+            }
+        } catch (Exception ignore) {}
+
+        try {
+            StreamRecord dbStream = streamRecordRepository
+                    .findTopByClient_IdAndModel_IdAndStreamTypeAndEndTimeIsNullOrderByStartTimeDesc(
+                            clientId,
+                            modelId,
+                            com.sharemechat.constants.Constants.StreamTypes.CALLING
+                    )
+                    .orElse(null);
+            if (dbStream != null
+                    && dbStream.getEndTime() == null
+                    && Objects.equals(dbStream.getStreamType(), com.sharemechat.constants.Constants.StreamTypes.CALLING)
+                    && dbStream.getClient() != null
+                    && dbStream.getModel() != null
+                    && Objects.equals(dbStream.getClient().getId(), clientId)
+                    && Objects.equals(dbStream.getModel().getId(), modelId)) {
+                return dbStream.getId();
+            }
+        } catch (Exception ignore) {}
+
+        return null;
+    }
+
+    private boolean areBothCallSidesTechMediaReady(Long streamRecordId, Long a, Long b) {
+        if (streamRecordId == null || a == null || b == null) return false;
+        Set<Long> readyUsers = state.getCallTechMediaReadyUsersByStreamId().get(streamRecordId);
+        return readyUsers != null && readyUsers.contains(a) && readyUsers.contains(b);
+    }
+
+    private void handleCallTechMediaReady(WebSocketSession session, JSONObject json, Long me) {
+        Long with = json.has("with") ? json.optLong("with", 0L) : null;
+        Long streamRecordId = json.has("streamRecordId") ? json.optLong("streamRecordId", 0L) : null;
+
+        if (me == null || with == null || with <= 0L || streamRecordId == null || streamRecordId <= 0L) {
+            log.warn("call_tech_media_ready_ignored actorUserId={} peerUserId={} streamRecordId={} reason=invalid_payload localSid={}",
+                    me, with, streamRecordId, session != null ? session.getId() : null);
+            return;
+        }
+
+        Long currentPeer = inCallWith(me);
+        Long reversePeer = inCallWith(with);
+        if (!Objects.equals(currentPeer, with) || !Objects.equals(reversePeer, me)) {
+            log.warn("call_tech_media_ready_ignored actorUserId={} peerUserId={} streamRecordId={} reason=active_call_mismatch currentPeer={} reversePeer={} localSid={}",
+                    me, with, streamRecordId, currentPeer, reversePeer, session != null ? session.getId() : null);
+            return;
+        }
+
+        Pair<Long, Long> cm = resolveClientModel(me, with);
+        if (cm == null) {
+            log.warn("call_tech_media_ready_ignored actorUserId={} peerUserId={} streamRecordId={} reason=invalid_pair localSid={}",
+                    me, with, streamRecordId, session != null ? session.getId() : null);
+            return;
+        }
+
+        Long clientId = cm.getLeft();
+        Long modelId = cm.getRight();
+        Long activeStreamRecordId = resolveActiveCallingStreamId(clientId, modelId);
+        if (!Objects.equals(activeStreamRecordId, streamRecordId)) {
+            log.warn("call_tech_media_ready_ignored actorUserId={} peerUserId={} streamRecordId={} reason=active_stream_mismatch activeStreamRecordId={} localSid={}",
+                    me, with, streamRecordId, activeStreamRecordId, session != null ? session.getId() : null);
+            return;
+        }
+
+        StreamRecord activeStream = streamRecordRepository.findById(streamRecordId).orElse(null);
+        if (activeStream == null
+                || activeStream.getEndTime() != null
+                || !Objects.equals(activeStream.getStreamType(), com.sharemechat.constants.Constants.StreamTypes.CALLING)
+                || activeStream.getClient() == null
+                || activeStream.getModel() == null
+                || !Objects.equals(activeStream.getClient().getId(), clientId)
+                || !Objects.equals(activeStream.getModel().getId(), modelId)) {
+            log.warn("call_tech_media_ready_ignored actorUserId={} peerUserId={} streamRecordId={} reason=stream_record_mismatch localSid={}",
+                    me, with, streamRecordId, session != null ? session.getId() : null);
+            return;
+        }
+
+        if (activeStream.getConfirmedAt() != null) {
+            log.warn("call_tech_media_ready_ignored actorUserId={} peerUserId={} clientUserId={} modelUserId={} streamRecordId={} reason=already_confirmed localSid={}",
+                    me,
+                    with,
+                    clientId,
+                    modelId,
+                    streamRecordId,
+                    session != null ? session.getId() : null);
+            return;
+        }
+
+        markCallTechMediaReady(streamRecordId, me);
+        boolean bothReady = areBothCallSidesTechMediaReady(streamRecordId, me, with);
+        if (!bothReady) {
+            log.warn("call_tech_media_ready_wait actorUserId={} peerUserId={} clientUserId={} modelUserId={} streamRecordId={} localSid={}",
+                    me,
+                    with,
+                    clientId,
+                    modelId,
+                    streamRecordId,
+                    session != null ? session.getId() : null);
+            return;
+        }
+
+        log.warn("call_tech_media_ready actorUserId={} peerUserId={} clientUserId={} modelUserId={} streamRecordId={} bothReady={} localSid={}",
+                me,
+                with,
+                clientId,
+                modelId,
+                streamRecordId,
+                bothReady,
+                session != null ? session.getId() : null);
+        log.warn("call_tech_media_ready_confirm actorUserId={} peerUserId={} clientUserId={} modelUserId={} streamRecordId={} localSid={}",
+                me,
+                with,
+                clientId,
+                modelId,
+                streamRecordId,
+                session != null ? session.getId() : null);
+        streamService.confirmActiveSession(clientId, modelId);
+    }
+
     private Pair<Long, Long> resolveClientModel(Long a, Long b) {
         if (a == null || b == null) return null;
         var ua = userRepository.findById(a).orElse(null);
@@ -1051,10 +1215,7 @@ public class MessagesWsHandlerSupport {
         if (cm != null) {
             Long clientId = cm.getLeft();
             Long modelId = cm.getRight();
-            Long streamRecordId = null;
-            try {
-                streamRecordId = statusService.getActiveSession(clientId, modelId).orElse(null);
-            } catch (Exception ignore) {}
+            Long streamRecordId = resolveActiveCallingStreamId(clientId, modelId);
             log.warn("call_end_begin clientUserId={} modelUserId={} actorUserId={} peerUserId={} streamRecordId={} reason_raw={}",
                     clientId,
                     modelId,
@@ -1068,7 +1229,9 @@ public class MessagesWsHandlerSupport {
             } catch (Exception ex) {
                 log.warn("endCallAndSession endSession error clientId={} modelId={} err={}",
                         clientId, modelId, ex.getMessage());
+                return;
             }
+            clearCallTechMediaReady(streamRecordId);
 
             boolean modelStillOnline = state.getSessions().getOrDefault(modelId, java.util.Set.of()).size() > 0;
             if (modelStillOnline) statusService.setAvailable(modelId);
@@ -1092,8 +1255,14 @@ public class MessagesWsHandlerSupport {
         String safeReason = (reason == null || reason.isBlank()) ? "admin-kill" : reason;
         log.info("adminKillCallPair clientId={} modelId={} reason={}", clientId, modelId, safeReason);
 
+        Long streamRecordId = null;
+        try {
+            streamRecordId = statusService.getActiveSession(clientId, modelId).orElse(null);
+        } catch (Exception ignore) {}
+
         broadcastToUser(clientId, new JSONObject().put("type", "call:ended").put("reason", safeReason).toString());
         broadcastToUser(modelId, new JSONObject().put("type", "call:ended").put("reason", safeReason).toString());
+        clearCallTechMediaReady(streamRecordId);
 
         clearActiveCall(clientId, modelId);
         clearRinging(clientId);

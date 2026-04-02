@@ -110,6 +110,7 @@ public class BalanceLedgerAuditRepository {
         private final Long modelUserId;
         private final LocalDateTime startTime;
         private final LocalDateTime confirmedAt;
+        private final LocalDateTime billableStart;
         private final LocalDateTime endTime;
 
         public StreamLifecycleRow(
@@ -118,6 +119,7 @@ public class BalanceLedgerAuditRepository {
                 Long modelUserId,
                 LocalDateTime startTime,
                 LocalDateTime confirmedAt,
+                LocalDateTime billableStart,
                 LocalDateTime endTime
         ) {
             this.streamRecordId = streamRecordId;
@@ -125,6 +127,7 @@ public class BalanceLedgerAuditRepository {
             this.modelUserId = modelUserId;
             this.startTime = startTime;
             this.confirmedAt = confirmedAt;
+            this.billableStart = billableStart;
             this.endTime = endTime;
         }
 
@@ -146,6 +149,10 @@ public class BalanceLedgerAuditRepository {
 
         public LocalDateTime getConfirmedAt() {
             return confirmedAt;
+        }
+
+        public LocalDateTime getBillableStart() {
+            return billableStart;
         }
 
         public LocalDateTime getEndTime() {
@@ -394,6 +401,7 @@ public class BalanceLedgerAuditRepository {
               sr.model_id,
               sr.start_time,
               sr.confirmed_at,
+              sr.billable_start,
               sr.end_time
             FROM stream_records sr
             WHERE sr.stream_type IN ('RANDOM', 'CALLING')
@@ -654,7 +662,8 @@ public class BalanceLedgerAuditRepository {
             Long modelId = r[2] != null ? ((Number) r[2]).longValue() : null;
             LocalDateTime startTime = toLocalDateTime(r[3]);
             LocalDateTime confirmedAt = toLocalDateTime(r[4]);
-            LocalDateTime endTime = toLocalDateTime(r[5]);
+            LocalDateTime billableStart = toLocalDateTime(r[5]);
+            LocalDateTime endTime = toLocalDateTime(r[6]);
 
             out.add(new StreamLifecycleRow(
                     streamId,
@@ -662,6 +671,7 @@ public class BalanceLedgerAuditRepository {
                     modelId,
                     startTime,
                     confirmedAt,
+                    billableStart,
                     endTime
             ));
         }

@@ -1,5 +1,5 @@
 // DashboardClient.jsx
-import React, { useState, useRef, useEffect,useLayoutEffect  } from 'react';
+import React, { useState, useRef, useEffect,useLayoutEffect, useCallback } from 'react';
 import i18n from '../../i18n';
 import { getResolvedLocale } from '../../i18n/localeUtils';
 import { useHistory } from 'react-router-dom';
@@ -44,6 +44,7 @@ import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
 import useActiveInteraction from '../../domain/useActiveInteraction';
+import { attachMediaObserver, createIdleMediaState, createMediaStateSnapshot, resetMediaObserver } from '../../utils/mediaState';
 
 const DashboardClient = () => {
 
@@ -67,6 +68,8 @@ const DashboardClient = () => {
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
   const [remoteStream, setRemoteStream] = useState(null);
+  const [randomLocalMediaState, setRandomLocalMediaState] = useState(() => createIdleMediaState('random:idle'));
+  const [randomRemoteMediaState, setRandomRemoteMediaState] = useState(() => createIdleMediaState('random:remote-idle'));
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
@@ -97,9 +100,11 @@ const DashboardClient = () => {
   const [callPeerId, setCallPeerId] = useState(null);
   const [callPeerName, setCallPeerName] = useState('');
   const [callRemoteStream, setCallRemoteStream] = useState(null);
+  const [callLocalMediaState, setCallLocalMediaState] = useState(() => createIdleMediaState('call:idle'));
+  const [callRemoteMediaState, setCallRemoteMediaState] = useState(() => createIdleMediaState('call:remote-idle'));
   const [callError, setCallError] = useState('');
   const [callRole, setCallRole] = useState(null); // 'caller' | 'callee'
-  const [, setCallStreamRecordId] = useState(null);
+  const [callStreamRecordId, setCallStreamRecordId] = useState(null);
   const [callPeerAvatar, setCallPeerAvatar] = useState('');
   const callLocalVideoRef = useRef(null);
   const callRemoteVideoRef = useRef(null);
@@ -142,12 +147,50 @@ const DashboardClient = () => {
   const lastSentRef = useRef({ text: null, at: 0 });
   const matchGraceRef = useRef(false);
   const mediaReadySentRef = useRef(false);
+  const randomTechMediaReadySentRef = useRef(false);
+  const callTechMediaReadySentRef = useRef(false);
   const activePeerRef = useRef({ id: null, name: '' });
   const matchEngineRef = useRef(null);
   const msgEngineRef = useRef(null);
   const cameraActiveRef = useRef(false);
   const stopAllRef = useRef(() => {});
   const closeMsgSocketRef = useRef(() => {});
+  const randomLocalMediaCleanupRef = useRef(() => {});
+  const randomRemoteMediaCleanupRef = useRef(() => {});
+  const callLocalMediaCleanupRef = useRef(() => {});
+  const callRemoteMediaCleanupRef = useRef(() => {});
+
+  const resetRandomTechMediaReadySignal = useCallback(() => {
+    randomTechMediaReadySentRef.current = false;
+  }, []);
+
+  const resetCallTechMediaReadySignal = useCallback(() => {
+    callTechMediaReadySentRef.current = false;
+  }, []);
+
+  const sendRandomTechMediaReady = useCallback(() => {
+    if (randomTechMediaReadySentRef.current) return;
+    if (socketRef.current?.readyState !== WebSocket.OPEN) return;
+    socketRef.current.send(JSON.stringify({ type: 'tech-media-ready' }));
+    randomTechMediaReadySentRef.current = true;
+  }, []);
+
+  const sendCallTechMediaReady = useCallback(() => {
+    const streamId = Number(callStreamRecordIdRef.current);
+    const withUserId = Number(callPeerIdRef.current);
+
+    if (callTechMediaReadySentRef.current) return;
+    if (msgSocketRef.current?.readyState !== WebSocket.OPEN) return;
+    if (!Number.isFinite(streamId) || streamId <= 0) return;
+    if (!Number.isFinite(withUserId) || withUserId <= 0) return;
+
+    msgSocketRef.current.send(JSON.stringify({
+      type: 'call:tech-media-ready',
+      with: withUserId,
+      streamRecordId: streamId,
+    }));
+    callTechMediaReadySentRef.current = true;
+  }, []);
 
 
   const isEcho = (incoming) => {
@@ -161,7 +204,6 @@ const DashboardClient = () => {
   const fmtEUR = (v) =>
     new Intl.NumberFormat(getResolvedLocale(i18n), { style: 'currency', currency: 'EUR' })
       .format(Number(v || 0));
-
 
   const getGiftIcon = (gift) => {
     if (!gift) return null;
@@ -301,6 +343,7 @@ const DashboardClient = () => {
       // Meta por rol: currentModelId
       onMatchMeta: (data) => {
         mediaReadySentRef.current = false;
+        resetRandomTechMediaReadySignal();
         try {
           if (data.peerRole === 'model' && Number.isFinite(Number(data.peerUserId))) {
             setCurrentModelId(Number(data.peerUserId));
@@ -376,6 +419,7 @@ const DashboardClient = () => {
       // Peer disconnected (tu client)
       onPeerDisconnectedPost: async (data) => {
         const reason = data.reason || '';
+        resetRandomTechMediaReadySignal();
 
         setCurrentModelId(null);
         setRemoteStream(null);
@@ -549,6 +593,30 @@ const DashboardClient = () => {
     }
   }, [remoteStream]);
 
+  useEffect(() => {
+    if (remoteStream) {
+      setRandomRemoteMediaState(createMediaStateSnapshot(remoteStream, {
+        status: 'received',
+        lastReason: 'peer:stream',
+      }));
+      attachMediaObserver(remoteStream, setRandomRemoteMediaState, randomRemoteMediaCleanupRef, 'peer:stream');
+      return () => resetMediaObserver(randomRemoteMediaCleanupRef);
+    }
+
+    resetMediaObserver(randomRemoteMediaCleanupRef);
+    setRandomRemoteMediaState((prev) => (
+      prev.status === 'lost'
+        ? prev
+        : createMediaStateSnapshot(null, { status: 'idle', lastReason: 'remote:cleared' })
+    ));
+  }, [remoteStream]);
+
+  useEffect(() => {
+    if (!remoteStream || !currentModelId) {
+      resetRandomTechMediaReadySignal();
+    }
+  }, [remoteStream, currentModelId, resetRandomTechMediaReadySignal]);
+
   // CALLING: enlazar local stream a su video
   useEffect(() => {
     if (callLocalVideoRef.current && callLocalStreamRef.current) {
@@ -566,6 +634,73 @@ const DashboardClient = () => {
       callRemoteVideoRef.current.srcObject = null;
     }
   }, [callRemoteStream]);
+
+  useEffect(() => {
+    if (callRemoteStream) {
+      setCallRemoteMediaState(createMediaStateSnapshot(callRemoteStream, {
+        status: 'received',
+        lastReason: 'call:peer-stream',
+      }));
+      attachMediaObserver(callRemoteStream, setCallRemoteMediaState, callRemoteMediaCleanupRef, 'call:peer-stream');
+      return () => resetMediaObserver(callRemoteMediaCleanupRef);
+    }
+
+    resetMediaObserver(callRemoteMediaCleanupRef);
+    setCallRemoteMediaState((prev) => (
+      prev.status === 'lost'
+        ? prev
+        : createMediaStateSnapshot(null, { status: 'idle', lastReason: 'call:remote-cleared' })
+    ));
+  }, [callRemoteStream]);
+
+  useEffect(() => {
+    if (callStatus === 'idle') {
+      resetCallTechMediaReadySignal();
+    }
+  }, [callStatus, resetCallTechMediaReadySignal]);
+
+  useEffect(() => {
+    resetCallTechMediaReadySignal();
+  }, [callPeerId, callStreamRecordId, resetCallTechMediaReadySignal]);
+
+  useEffect(() => {
+    if (randomLocalMediaState.status !== 'live') return;
+    if (randomRemoteMediaState.status !== 'live') return;
+    if (!Number.isFinite(Number(currentModelId)) || Number(currentModelId) <= 0) return;
+    if (socketRef.current?.readyState !== WebSocket.OPEN) return;
+    if (randomTechMediaReadySentRef.current) return;
+    sendRandomTechMediaReady();
+  }, [
+    currentModelId,
+    randomLocalMediaState.status,
+    randomRemoteMediaState.status,
+    sendRandomTechMediaReady,
+  ]);
+
+  useEffect(() => {
+    if (callLocalMediaState.status !== 'live') return;
+    if (callRemoteMediaState.status !== 'live') return;
+    if (!Number.isFinite(Number(callPeerId)) || Number(callPeerId) <= 0) return;
+    if (msgSocketRef.current?.readyState !== WebSocket.OPEN) return;
+    if (!Number.isFinite(Number(callStreamRecordId)) || Number(callStreamRecordId) <= 0) return;
+    if (callStatus !== 'connecting' && callStatus !== 'in-call') return;
+    if (callTechMediaReadySentRef.current) return;
+    sendCallTechMediaReady();
+  }, [
+    callPeerId,
+    callLocalMediaState.status,
+    callRemoteMediaState.status,
+    callStreamRecordId,
+    callStatus,
+    sendCallTechMediaReady,
+  ]);
+
+  useEffect(() => () => {
+    resetMediaObserver(randomLocalMediaCleanupRef);
+    resetMediaObserver(randomRemoteMediaCleanupRef);
+    resetMediaObserver(callLocalMediaCleanupRef);
+    resetMediaObserver(callRemoteMediaCleanupRef);
+  }, []);
 
   useEffect(() => {
     const el = centerListRef.current;
@@ -840,7 +975,7 @@ const DashboardClient = () => {
   }, [remoteStream, callStatus, setInCall]);
 
 
-  const clearMsgTimers = () => {
+  const clearMsgTimers = useCallback(() => {
     if (msgPingRef.current) {
       clearInterval(msgPingRef.current);
       msgPingRef.current = null;
@@ -849,7 +984,7 @@ const DashboardClient = () => {
       clearTimeout(msgReconnectRef.current);
       msgReconnectRef.current = null;
     }
-  };
+  }, []);
 
   const handleGiftInsufficientBalance = async (message) => {
     try {
@@ -869,12 +1004,12 @@ const DashboardClient = () => {
     }
   };
 
-  const closeMsgSocket = () => {
+  const closeMsgSocket = useCallback(() => {
     try { if (msgSocketRef.current) msgSocketRef.current.close(); } catch {}
     msgSocketRef.current = null;
     setWsReady(false);
     clearMsgTimers();
-  };
+  }, [clearMsgTimers]);
 
 
   const openMsgSocket = () => {
@@ -884,7 +1019,7 @@ const DashboardClient = () => {
   useEffect(() => {
       openMsgSocket();
       return () => closeMsgSocket();
-  }, []);
+  }, [closeMsgSocket]);
 
   useEffect(() => {
     const handleAuthLogout = () => {
@@ -934,6 +1069,11 @@ const DashboardClient = () => {
     console.log(
       `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=activateCamera start=true`
     );
+    resetMediaObserver(randomLocalMediaCleanupRef);
+    setRandomLocalMediaState(createMediaStateSnapshot(null, {
+      status: 'requesting',
+      lastReason: 'getUserMedia:start',
+    }));
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -945,12 +1085,21 @@ const DashboardClient = () => {
         `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=activateCamera success=true trackCount=${tracks.length} tracks=${trackSummary}`
       );
       localStream.current = stream;
+      setRandomLocalMediaState(createMediaStateSnapshot(stream, {
+        status: 'obtained',
+        lastReason: 'getUserMedia:success',
+      }));
+      attachMediaObserver(stream, setRandomLocalMediaState, randomLocalMediaCleanupRef, 'getUserMedia:success');
       setCameraActive(true);
     } catch (err) {
       console.warn(
         `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=activateCamera success=false message=${err?.message || 'unknown'}`
       );
       setError('No se pudo activar la cámara. Revisa los permisos e inténtalo de nuevo.');
+      setRandomLocalMediaState(createMediaStateSnapshot(null, {
+        status: 'lost',
+        lastReason: 'getUserMedia:error',
+      }));
       console.error(err);
     }
   };
@@ -1163,6 +1312,7 @@ const DashboardClient = () => {
           cleanupCall('ended');
           return;
         }
+        resetCallTechMediaReadySignal();
         setCallStreamRecordId(acceptedStreamRecordId);
         callStreamRecordIdRef.current = acceptedStreamRecordId;
 
@@ -1351,6 +1501,7 @@ const DashboardClient = () => {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       try {
         setNexting(true);
+        resetRandomTechMediaReadySignal();
         socketRef.current.send(JSON.stringify({ type: 'next' }));
       } catch (e) {
         console.error('Error enviando NEXT:', e);
@@ -1402,11 +1553,25 @@ const DashboardClient = () => {
       pingIntervalRef.current = null;
     }
 
+    // CALLING primero para hacer el teardown más determinista antes de limpiar random/favoritos
+    try { handleCallEnd(true); } catch {}
+    resetRandomTechMediaReadySignal();
+
     // RANDOM
     if (localStream.current) {
+      setRandomLocalMediaState(createMediaStateSnapshot(localStream.current, {
+        status: 'lost',
+        lastReason: 'random:stopAll',
+      }));
       localStream.current.getTracks().forEach(track => track.stop());
       localStream.current = null;
+    } else {
+      setRandomLocalMediaState(createMediaStateSnapshot(null, {
+        status: 'idle',
+        lastReason: 'random:stopAll-idle',
+      }));
     }
+    resetMediaObserver(randomLocalMediaCleanupRef);
     if (peerRef.current) {
       try { peerRef.current.destroy(); } catch {}
       peerRef.current = null;
@@ -1418,6 +1583,18 @@ const DashboardClient = () => {
     setCurrentModelId(null);
     setCameraActive(false);
     setSearching(false);
+    if (remoteStream) {
+      setRandomRemoteMediaState(createMediaStateSnapshot(remoteStream, {
+        status: 'lost',
+        lastReason: 'random:stopAll',
+      }));
+    } else {
+      setRandomRemoteMediaState(createMediaStateSnapshot(null, {
+        status: 'idle',
+        lastReason: 'random:remote-stopAll-idle',
+      }));
+    }
+    resetMediaObserver(randomRemoteMediaCleanupRef);
     setRemoteStream(null);
     setError('');
     setMessages([]);
@@ -1435,15 +1612,10 @@ const DashboardClient = () => {
     setShowGifts(false);
     setShowCenterGifts(false);
     console.log('[FAVORITES_CONTEXT][Client][stopAll] cleared');
-
-    // CALLING
-    try { handleCallEnd(true); } catch {}
   };
 
-  useEffect(() => {
-    stopAllRef.current = stopAll;
-    closeMsgSocketRef.current = closeMsgSocket;
-  }, [stopAll, closeMsgSocket]);
+  stopAllRef.current = stopAll;
+  closeMsgSocketRef.current = closeMsgSocket;
 
 
   const handleAddBalance = async () => {
@@ -2116,10 +2288,19 @@ const DashboardClient = () => {
   //Activar cámara (Calling)
   const handleCallActivateCamera = async () => {
     console.log('[CALL][cam:on] requesting user media');
+    resetMediaObserver(callLocalMediaCleanupRef);
+    setCallLocalMediaState(createMediaStateSnapshot(null, {
+      status: 'requesting',
+      lastReason: 'call:getUserMedia:start',
+    }));
 
     //SOLO bloqueamos si se intenta iniciar llamada desde idle (caller)
     if (callStatus === 'idle' && !callAllowed) {
       setCallError('No puedes activar la cámara: la relación aún no está aceptada.');
+      setCallLocalMediaState(createMediaStateSnapshot(null, {
+        status: 'idle',
+        lastReason: 'call:getUserMedia:blocked',
+      }));
       return;
     }
     try {
@@ -2128,6 +2309,11 @@ const DashboardClient = () => {
         audio: true
       });
       callLocalStreamRef.current = stream;
+      setCallLocalMediaState(createMediaStateSnapshot(stream, {
+        status: 'obtained',
+        lastReason: 'call:getUserMedia:success',
+      }));
+      attachMediaObserver(stream, setCallLocalMediaState, callLocalMediaCleanupRef, 'call:getUserMedia:success');
       setCallCameraActive(true);
       setCallStatus('camera-ready');
       setCallError('');
@@ -2139,6 +2325,10 @@ const DashboardClient = () => {
     } catch (err) {
       console.error('[CALL][cam:on] error', err);
       setCallError('No se pudo activar la cámara. Revisa los permisos e inténtalo de nuevo.');
+      setCallLocalMediaState(createMediaStateSnapshot(null, {
+        status: 'lost',
+        lastReason: 'call:getUserMedia:error',
+      }));
       setCallCameraActive(false);
       setCallStatus('idle');
     }
@@ -2353,8 +2543,9 @@ const DashboardClient = () => {
 
 
   //Limpieza integral de llamada
-  const cleanupCall = (reason = 'cleanup') => {
+  const cleanupCall = useCallback((reason = 'cleanup') => {
     console.log('[CALL][cleanup] reason=', reason);
+    resetCallTechMediaReadySignal();
 
     // 1) timers
     if (callPingRef.current) {
@@ -2374,9 +2565,19 @@ const DashboardClient = () => {
 
     // 3) remote stream + DOM video (evitar “frame congelado”)
     if (callRemoteStream) {
+      setCallRemoteMediaState(createMediaStateSnapshot(callRemoteStream, {
+        status: 'lost',
+        lastReason: `call:cleanup:${reason}`,
+      }));
       try { callRemoteStream.getTracks().forEach(t => t.stop()); } catch {}
       setCallRemoteStream(null);
+    } else {
+      setCallRemoteMediaState(createMediaStateSnapshot(null, {
+        status: 'idle',
+        lastReason: `call:cleanup:${reason}:remote-idle`,
+      }));
     }
+    resetMediaObserver(callRemoteMediaCleanupRef);
     if (callRemoteVideoRef?.current) {
       try {
         callRemoteVideoRef.current.srcObject = null;
@@ -2387,10 +2588,22 @@ const DashboardClient = () => {
       } catch {}
     }
 
-    // 4) local stream (solo si cierre total)
+    // 4) local observer siempre; el stream local solo se destruye en cierre total
+    resetMediaObserver(callLocalMediaCleanupRef);
+
+    // 4.1) local stream (solo si cierre total)
     if (reason === 'forced-end' || reason === 'ended' || reason === 'canceled') {
       if (callLocalStreamRef.current) {
+        setCallLocalMediaState(createMediaStateSnapshot(callLocalStreamRef.current, {
+          status: 'lost',
+          lastReason: `call:cleanup:${reason}`,
+        }));
         try { callLocalStreamRef.current.getTracks().forEach(t => t.stop()); } catch {}
+      } else {
+        setCallLocalMediaState(createMediaStateSnapshot(null, {
+          status: 'idle',
+          lastReason: `call:cleanup:${reason}:local-idle`,
+        }));
       }
       callLocalStreamRef.current = null;
       setCallCameraActive(false);
@@ -2420,7 +2633,7 @@ const DashboardClient = () => {
       callTargetLockedRef.current = false;
       console.log('[CALL][lock] cleanup -> unlock');
     }
-  };
+  }, [callRemoteStream, resetCallTechMediaReadySignal]);
 
 
   // [CALL] Selección directa desde la lista de favoritos (pestaña Calling): no abre chat, solo fija destino

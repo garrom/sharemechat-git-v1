@@ -58,6 +58,7 @@ public class Constants {
     public static class StreamEventTypes {
         public static final String CREATED = "CREATED";
         public static final String CONFIRMED = "CONFIRMED";
+        public static final String BILLING_STARTED = "BILLING_STARTED";
         public static final String ENDED = "ENDED";
         public static final String CUT_LOW_BALANCE = "CUT_LOW_BALANCE";
         public static final String DISCONNECT = "DISCONNECT";

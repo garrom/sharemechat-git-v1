@@ -14,6 +14,7 @@ public class MessagesRuntimeState {
     private final Map<String, Long> sessionUserIds = new ConcurrentHashMap<>();
     private final Map<Long, String> activeCallOwners = new ConcurrentHashMap<>();
     private final Map<Long, Long> activeCalls = new ConcurrentHashMap<>();
+    private final Map<Long, Set<Long>> callTechMediaReadyUsersByStreamId = new ConcurrentHashMap<>();
     private final Set<Long> ringing = ConcurrentHashMap.newKeySet();
 
     public Map<Long, Set<WebSocketSession>> getSessions() {
@@ -30,6 +31,10 @@ public class MessagesRuntimeState {
 
     public Map<Long, Long> getActiveCalls() {
         return activeCalls;
+    }
+
+    public Map<Long, Set<Long>> getCallTechMediaReadyUsersByStreamId() {
+        return callTechMediaReadyUsersByStreamId;
     }
 
     public Set<Long> getRinging() {
