@@ -4,6 +4,7 @@ import com.sharemechat.dto.FavoriteListItemDTO;
 import com.sharemechat.entity.User;
 import com.sharemechat.handler.MessagesWsHandler;
 import com.sharemechat.repository.UserRepository;
+import com.sharemechat.service.ConsentEnforcementService;
 import com.sharemechat.service.FavoriteService;
 import com.sharemechat.service.StatusService;
 import com.sharemechat.service.StreamService;
@@ -30,24 +31,28 @@ public class FavoritesController {
     private final StatusService statusService;
     private final StreamService streamService;
     private final UserBlockService userBlockService;
+    private final ConsentEnforcementService consentEnforcementService;
 
     public FavoritesController(FavoriteService favoriteService,
                                UserRepository userRepository,
                                MessagesWsHandler messagesWsHandler,
                                StatusService statusService,
                                StreamService streamService,
-                               UserBlockService userBlockService) {
+                               UserBlockService userBlockService,
+                               ConsentEnforcementService consentEnforcementService) {
         this.favoriteService = favoriteService;
         this.userRepository = userRepository;
         this.messagesWsHandler = messagesWsHandler;
         this.statusService = statusService;
         this.streamService = streamService;
         this.userBlockService = userBlockService;
+        this.consentEnforcementService = consentEnforcementService;
     }
 
     // ===== CLIENT -> MODELS =====
     @PostMapping("/models/{modelId}")
     public ResponseEntity<Void> addModel(Authentication auth, @PathVariable Long modelId) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "POST /api/favorites/models/{modelId}");
         Long clientId = currentUserId(auth);
         favoriteService.addModelToClientFavorites(clientId, modelId);
         return ResponseEntity.noContent().build();
@@ -55,6 +60,7 @@ public class FavoritesController {
 
     @DeleteMapping("/models/{modelId}")
     public ResponseEntity<Void> removeModel(Authentication auth, @PathVariable Long modelId) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "DELETE /api/favorites/models/{modelId}");
         Long clientId = currentUserId(auth);
         favoriteService.removeModelFromClientFavorites(clientId, modelId);
         return ResponseEntity.noContent().build();
@@ -63,6 +69,7 @@ public class FavoritesController {
     // ===== MODEL -> CLIENTS =====
     @PostMapping("/clients/{clientId}")
     public ResponseEntity<Void> addClient(Authentication auth, @PathVariable Long clientId) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "POST /api/favorites/clients/{clientId}");
         Long modelId = currentUserId(auth);
         favoriteService.addClientToModelFavorites(modelId, clientId);
         return ResponseEntity.noContent().build();
@@ -70,6 +77,7 @@ public class FavoritesController {
 
     @DeleteMapping("/clients/{clientId}")
     public ResponseEntity<Void> removeClient(Authentication auth, @PathVariable Long clientId) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "DELETE /api/favorites/clients/{clientId}");
         Long modelId = currentUserId(auth);
         favoriteService.removeClientFromModelFavorites(modelId, clientId);
         return ResponseEntity.noContent().build();
@@ -77,6 +85,7 @@ public class FavoritesController {
 
     @GetMapping("/models/meta")
     public ResponseEntity<List<FavoriteListItemDTO>> listModelsMeta(Authentication auth) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "GET /api/favorites/models/meta");
         Long clientId = currentUserId(auth);
 
         List<FavoriteListItemDTO> base = favoriteService.listClientFavoritesMeta(clientId);
@@ -128,6 +137,7 @@ public class FavoritesController {
 
     @GetMapping("/clients/meta")
     public ResponseEntity<List<FavoriteListItemDTO>> listClientsMeta(Authentication auth) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "GET /api/favorites/clients/meta");
         Long modelId = currentUserId(auth);
 
         List<FavoriteListItemDTO> base = favoriteService.listModelFavoritesMeta(modelId);
@@ -182,12 +192,14 @@ public class FavoritesController {
     // ===== Aceptar / Rechazar invitación =====
     @PostMapping("/accept/{peerId}")
     public ResponseEntity<Void> accept(Authentication auth, @PathVariable Long peerId) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "POST /api/favorites/accept/{peerId}");
         favoriteService.acceptInvitation(currentUserId(auth), peerId);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/reject/{peerId}")
     public ResponseEntity<Void> reject(Authentication auth, @PathVariable Long peerId) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "POST /api/favorites/reject/{peerId}");
         favoriteService.rejectInvitation(currentUserId(auth), peerId);
         return ResponseEntity.noContent().build();
     }

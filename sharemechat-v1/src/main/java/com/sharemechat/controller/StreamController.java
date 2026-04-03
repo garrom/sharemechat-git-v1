@@ -1,6 +1,7 @@
 package com.sharemechat.controller;
 
 import com.sharemechat.security.JwtUtil;
+import com.sharemechat.service.ConsentEnforcementService;
 import com.sharemechat.service.StreamService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
@@ -12,10 +13,12 @@ public class StreamController {
 
     private final StreamService streamService;
     private final JwtUtil jwtUtil;
+    private final ConsentEnforcementService consentEnforcementService;
 
-    public StreamController(StreamService streamService, JwtUtil jwtUtil) {
+    public StreamController(StreamService streamService, JwtUtil jwtUtil, ConsentEnforcementService consentEnforcementService) {
         this.streamService = streamService;
         this.jwtUtil = jwtUtil;
+        this.consentEnforcementService = consentEnforcementService;
     }
 
     /**
@@ -39,6 +42,7 @@ public class StreamController {
         }
 
         Long userId = jwtUtil.extractUserId(token);
+        consentEnforcementService.assertUserCompliant(userId, "POST /api/streams/{streamRecordId}/ack-media");
         streamService.ackMedia(streamRecordId, userId);
 
         return ResponseEntity.ok().build();

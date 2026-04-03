@@ -4,6 +4,7 @@ import com.sharemechat.dto.ConversationSummaryDTO;
 import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
+import com.sharemechat.service.ConsentEnforcementService;
 import com.sharemechat.service.MessageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -17,10 +18,14 @@ public class MessagesController {
 
     private final MessageService messageService;
     private final UserRepository userRepository;
+    private final ConsentEnforcementService consentEnforcementService;
 
-    public MessagesController(MessageService messageService, UserRepository userRepository) {
+    public MessagesController(MessageService messageService,
+                              UserRepository userRepository,
+                              ConsentEnforcementService consentEnforcementService) {
         this.messageService = messageService;
         this.userRepository = userRepository;
+        this.consentEnforcementService = consentEnforcementService;
     }
 
     private Long uid(Authentication auth) {
@@ -31,6 +36,7 @@ public class MessagesController {
 
     @GetMapping("/conversations")
     public ResponseEntity<List<ConversationSummaryDTO>> conversations(Authentication auth) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "GET /api/messages/conversations");
         Long me = uid(auth);
         return ResponseEntity.ok(messageService.conversations(me));
     }
@@ -38,12 +44,14 @@ public class MessagesController {
     @GetMapping("/with/{userId}")
     public ResponseEntity<List<MessageDTO>> history(Authentication auth, @PathVariable Long userId,
                                                     @RequestParam(value="beforeId", required=false) Long beforeId) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "GET /api/messages/with/{userId}");
         Long me = uid(auth);
         return ResponseEntity.ok(messageService.history(me, userId, beforeId));
     }
 
     @PostMapping("/to/{userId}")
     public ResponseEntity<MessageDTO> send(Authentication auth, @PathVariable Long userId, @RequestBody Body body) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "POST /api/messages/to/{userId}");
         Long me = uid(auth);
         MessageDTO dto = messageService.send(me, userId, body.body());
         return ResponseEntity.ok(dto);
@@ -51,6 +59,7 @@ public class MessagesController {
 
     @PostMapping("/with/{userId}/read")
     public ResponseEntity<Integer> markRead(Authentication auth, @PathVariable Long userId) {
+        consentEnforcementService.assertAuthenticatedUserCompliant(auth, "POST /api/messages/with/{userId}/read");
         Long me = uid(auth);
         return ResponseEntity.ok(messageService.markRead(me, userId));
     }

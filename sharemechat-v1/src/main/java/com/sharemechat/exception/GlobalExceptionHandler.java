@@ -54,6 +54,31 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
+    @ExceptionHandler(ConsentRequiredException.class)
+    public ResponseEntity<ConsentRequiredApiError> handleConsentRequired(ConsentRequiredException ex, HttpServletRequest req) {
+        String path = req != null ? req.getRequestURI() : null;
+        String reasonCode = ex.getConsentState() != null ? ex.getConsentState().reasonCode() : "missing_terms";
+        String requiredTermsVersion = ex.getConsentState() != null ? ex.getConsentState().requiredTermsVersion() : null;
+
+        log.warn("Consentimiento requerido: userId={} endpoint={} reason={} path={}",
+                ex.getUserId(),
+                ex.getEndpointKey(),
+                reasonCode,
+                path);
+
+        ConsentRequiredApiError body = new ConsentRequiredApiError(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                "Consentimiento obligatorio pendiente",
+                path,
+                "AGE_GATE_REQUIRED",
+                requiredTermsVersion,
+                reasonCode
+        );
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
     @ExceptionHandler(CountryBlockedException.class)
     public ResponseEntity<ApiError> handleCountryBlocked(CountryBlockedException ex, HttpServletRequest req) {
         log.warn("Acceso bloqueado por país: {}", ex.getMessage());
