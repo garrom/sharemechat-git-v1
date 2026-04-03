@@ -2,6 +2,7 @@ package com.sharemechat.controller;
 
 import com.sharemechat.config.IpConfig;
 import com.sharemechat.constants.Constants;
+import com.sharemechat.consent.ConsentState;
 import com.sharemechat.dto.*;
 import com.sharemechat.entity.ClientDocument;
 import com.sharemechat.service.CountryAccessService;
@@ -10,6 +11,7 @@ import com.sharemechat.entity.User;
 import com.sharemechat.repository.ClientDocumentRepository;
 import com.sharemechat.repository.ModelDocumentRepository;
 import com.sharemechat.repository.UserRepository;
+import com.sharemechat.service.AgeGatePolicyService;
 import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.Cookie;
@@ -27,25 +29,30 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/users")
 public class UserController {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(UserController.class);
+
     private final UserService userService;
     private final UserRepository userRepository;
     private final ModelDocumentRepository modelDocumentRepository;
     private final ClientDocumentRepository clientDocumentRepository;
     private final CountryAccessService countryAccessService;
     private final ConsentService consentService;
+    private final AgeGatePolicyService ageGatePolicyService;
 
     public UserController(UserService userService,
                           UserRepository userRepository,
                           ModelDocumentRepository modelDocumentRepository,
                           ClientDocumentRepository clientDocumentRepository,
                           CountryAccessService countryAccessService,
-                          ConsentService consentService) {
+                          ConsentService consentService,
+                          AgeGatePolicyService ageGatePolicyService) {
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
         this.clientDocumentRepository = clientDocumentRepository;
         this.userRepository = userRepository;
         this.countryAccessService = countryAccessService;
         this.consentService = consentService;
+        this.ageGatePolicyService = ageGatePolicyService;
     }
 
 
@@ -127,11 +134,15 @@ public class UserController {
     @GetMapping("/me")
     public ResponseEntity<UserDTO> getCurrentUser(Authentication authentication) {
         // Imprimir el email para depuración
-        System.out.println("Buscando usuario con email: " + authentication.getName());
-
         User user = userService.findByEmail(authentication.getName());
         if (user == null) {
             return ResponseEntity.status(404).body(null);
+        }
+        ConsentState consentState = ageGatePolicyService.resolve(user);
+        if (!consentState.compliant()) {
+            log.info("[CONSENT][NON_COMPLIANT] userId={} endpoint=/api/users/me reason={}",
+                    user.getId(),
+                    consentState.reasonCode());
         }
 
         UserDTO userDTO = userService.mapToDTO(user);

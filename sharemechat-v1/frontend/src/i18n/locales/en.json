@@ -71,6 +71,36 @@
       "acceptAll": "Accept all cookies",
       "continueWithoutAccepting": "Continue without accepting",
       "bannerText": "By clicking “Accept all cookies”, you agree to cookies being stored on your device to improve site navigation, analyze site usage, and support our marketing efforts. For more information, see our Cookie Policy."
+    },
+    "auth": {
+      "title": "Session",
+      "notAuthenticated": "Not authenticated",
+      "sessionExpired": "Session expired. Sign in again."
+    },
+    "errors": {
+      "title": "Error",
+      "connectionFailedRetry": "Could not connect. Please try again.",
+      "connectionSetupFailedRetry": "Could not establish the connection. Please try again."
+    },
+    "media": {
+      "cameraRequired": "Activate the camera first.",
+      "cameraRequiredForCall": "Activate the camera first to call.",
+      "noActiveCamera": "There is no active camera.",
+      "cameraActivationFailed": "Could not activate the camera. Check permissions and try again.",
+      "cameraAccessFailed": "Could not access the camera."
+    },
+    "chat": {
+      "errors": {
+        "sendFailed": "The message could not be sent. Try again.",
+        "disconnected": "Message chat disconnected. Reopen the panel.",
+        "socketNotConnected": "The message chat is not connected.",
+        "invalidRecipient": "Could not determine the correct recipient.",
+        "selfChatForbidden": "You cannot chat with yourself."
+      },
+      "placeholders": {
+        "message": "Type a message…",
+        "inactive": "Chat inactive"
+      }
     }
   },
   "profileCommon": {

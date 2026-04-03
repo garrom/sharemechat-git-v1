@@ -45,6 +45,7 @@ import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
 import useActiveInteraction from '../../domain/useActiveInteraction';
 import { attachMediaObserver, createIdleMediaState, createMediaStateSnapshot, resetMediaObserver } from '../../utils/mediaState';
+import AuthenticatedConsentModal from '../../consent/AuthenticatedConsentModal';
 
 const DashboardClient = () => {
 
@@ -58,7 +59,7 @@ const DashboardClient = () => {
     openNextWaitModal
   } = useAppModals();
   const { inCall, setInCall } = useCallUi();
-  const { user: sessionUser, updateUiLocale } = useSession();
+  const { user: sessionUser, updateUiLocale, refresh } = useSession();
   const {
     interaction,
     activateFavoritesChat,
@@ -159,6 +160,18 @@ const DashboardClient = () => {
   const randomRemoteMediaCleanupRef = useRef(() => {});
   const callLocalMediaCleanupRef = useRef(() => {});
   const callRemoteMediaCleanupRef = useRef(() => {});
+  const consentRequired = !!sessionUser?.consentRequired;
+  const consentVersion = sessionUser?.requiredTermsVersion || 'v1';
+  const sensitiveEnabled = !!sessionUser && !consentRequired;
+
+  const guardSensitiveAction = useCallback((options = {}) => {
+    if (sensitiveEnabled) return false;
+
+    const message = options.message || 'Debes aceptar el consentimiento obligatorio antes de usar esta funcionalidad.';
+    if (typeof options.setError === 'function') options.setError(message);
+    if (typeof options.alertUser === 'function') options.alertUser(message);
+    return true;
+  }, [sensitiveEnabled]);
 
   const resetRandomTechMediaReadySignal = useCallback(() => {
     randomTechMediaReadySentRef.current = false;
@@ -1013,13 +1026,18 @@ const DashboardClient = () => {
 
 
   const openMsgSocket = () => {
+    if (guardSensitiveAction()) return;
     msgEngineRef.current?.open();
   };
 
   useEffect(() => {
+      if (!sensitiveEnabled) {
+        closeMsgSocket();
+        return undefined;
+      }
       openMsgSocket();
       return () => closeMsgSocket();
-  }, [closeMsgSocket]);
+  }, [closeMsgSocket, sensitiveEnabled]);
 
   useEffect(() => {
     const handleAuthLogout = () => {
@@ -1066,6 +1084,7 @@ const DashboardClient = () => {
 
 
   const handleActivateCamera = async () => {
+    if (guardSensitiveAction({ setError })) return;
     console.log(
       `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=activateCamera start=true`
     );
@@ -1121,6 +1140,7 @@ const DashboardClient = () => {
 
 
   const handleStartMatch = () => {
+    if (guardSensitiveAction({ setError })) return;
     matchEngineRef.current?.start();
   };
 
@@ -1495,6 +1515,7 @@ const DashboardClient = () => {
 
 
   const handleNext = () => {
+    if (guardSensitiveAction({ setError })) return;
     // Guard: si estamos ya en transición de NEXT, no spameamos
     if (nexting) return;
 
@@ -1519,6 +1540,7 @@ const DashboardClient = () => {
 
 
   const sendChatMessage = () => {
+    if (guardSensitiveAction({ setError })) return;
     if (chatInput.trim() === '') return;
     const message = { type: 'chat', message: chatInput.trim() };
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -1530,6 +1552,7 @@ const DashboardClient = () => {
   };
 
   const sendRandomMediaReady = () => {
+    if (guardSensitiveAction()) return;
     if (mediaReadySentRef.current) return;
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ type: 'media-ready' }));
@@ -1945,6 +1968,7 @@ const DashboardClient = () => {
 
   // Cambiar a modo llamada sobre el target actual
   const enterCallMode = () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     if (!Number(targetPeerId)) {
       setCallError('Selecciona un contacto primero.');
       return;
@@ -1970,6 +1994,7 @@ const DashboardClient = () => {
 
 
   const handleAddFavorite = async (explicitModelId) => {
+    if (guardSensitiveAction()) return;
     const modelId = explicitModelId || currentModelId;
 
     if (!modelId) {
@@ -2062,6 +2087,7 @@ const DashboardClient = () => {
 
 
   const openChatWith = (peerId, displayName) => {
+    if (guardSensitiveAction()) return;
     const peer = Number(peerId);
 
     if (streamingActivo) {
@@ -2107,6 +2133,7 @@ const DashboardClient = () => {
 
 
   const sendCenterMessage = () => {
+    if (guardSensitiveAction()) return;
     const body = String(centerInput || '').trim();
     if (!body) return;
     const interactionTo = Number(interaction?.actionTarget?.messageToUserId) || null;
@@ -2152,6 +2179,7 @@ const DashboardClient = () => {
 
 
   const setActivePeer = (peerId, peerName, mode, favUser = null) => {
+    if (guardSensitiveAction()) return;
     const id = Number(peerId);
     const name = peerName || 'Usuario';
     if (!Number.isFinite(id) || id <= 0) {
@@ -2187,6 +2215,7 @@ const DashboardClient = () => {
 
 
   const handleOpenChatFromFavorites = (favUser) => {
+    if (guardSensitiveAction()) return;
     const name =
       favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
 
@@ -2215,6 +2244,7 @@ const DashboardClient = () => {
 
 
   const acceptInvitation = async () => {
+    if (guardSensitiveAction()) return;
     if (!selectedFav?.id) return;
     try {
       await apiFetch(`/favorites/accept/${selectedFav.id}`, { method: 'POST' });
@@ -2230,6 +2260,7 @@ const DashboardClient = () => {
 
 
   const rejectInvitation = async () => {
+    if (guardSensitiveAction()) return;
     if (!selectedFav?.id) return;
     try {
       await apiFetch(`/favorites/reject/${selectedFav.id}`, { method: 'POST' });
@@ -2243,6 +2274,7 @@ const DashboardClient = () => {
 
 
   const sendGiftMatch=(giftId)=>{
+      if (guardSensitiveAction()) return;
       if(!socketRef.current||socketRef.current.readyState!==WebSocket.OPEN) return;
       socketRef.current.send(JSON.stringify({type:'gift',giftId}));
       setShowGifts(false);
@@ -2250,6 +2282,7 @@ const DashboardClient = () => {
 
 
   const sendGiftMsg = (giftId) => {
+    if (guardSensitiveAction()) return;
     const interactionTo = Number(interaction?.actionTarget?.giftToUserId) || null;
     const refTo = Number(activePeerRef.current?.id) || null;
     const targetTo = Number(targetPeerId) || null;
@@ -2287,6 +2320,7 @@ const DashboardClient = () => {
 
   //Activar cámara (Calling)
   const handleCallActivateCamera = async () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     console.log('[CALL][cam:on] requesting user media');
     resetMediaObserver(callLocalMediaCleanupRef);
     setCallLocalMediaState(createMediaStateSnapshot(null, {
@@ -2337,6 +2371,7 @@ const DashboardClient = () => {
 
   // Enviar invitación (FIX: no usar 'openChatWith' como ID)
   const handleCallInvite = () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     if (!callCameraActive || !callLocalStreamRef.current) {
       setCallError('Primero activa la cámara para llamar.');
       return;
@@ -2398,6 +2433,7 @@ const DashboardClient = () => {
 
   //Aceptar invitación
   const handleCallAccept = async () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     if (!callPeerIdRef.current) return;
     if (!callCameraActive || !callLocalStreamRef.current) {
       await handleCallActivateCamera();
@@ -2427,6 +2463,7 @@ const DashboardClient = () => {
 
   //Rechazar invitación
   const handleCallReject = () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     if (!callPeerId) return;
     if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) {
       setCallError('El chat de mensajes no está conectado.');
@@ -2732,6 +2769,11 @@ const DashboardClient = () => {
   return(
     <StyledContainer>
       <GlobalBlack/>
+      <AuthenticatedConsentModal
+        open={consentRequired}
+        requiredTermsVersion={consentVersion}
+        refreshSession={refresh}
+      />
       {/* ========= INICIO NAVBAR  ======== */}
       <NavbarClient
         activeTab={activeTab}

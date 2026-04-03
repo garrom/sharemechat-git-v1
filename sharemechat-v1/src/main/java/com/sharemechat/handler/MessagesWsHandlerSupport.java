@@ -1,6 +1,7 @@
 package com.sharemechat.handler;
 
 import com.sharemechat.config.BillingProperties;
+import com.sharemechat.consent.ConsentState;
 import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.entity.Balance;
 import com.sharemechat.entity.Gift;
@@ -11,6 +12,7 @@ import com.sharemechat.repository.ClientRepository;
 import com.sharemechat.repository.StreamRecordRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
+import com.sharemechat.service.AgeGatePolicyService;
 import com.sharemechat.service.*;
 import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONObject;
@@ -47,6 +49,7 @@ public class MessagesWsHandlerSupport {
     private final BalanceRepository balanceRepository;
     private final StreamLockService streamLockService;
     private final ApiRateLimitService apiRateLimitService;
+    private final AgeGatePolicyService ageGatePolicyService;
 
     public MessagesWsHandlerSupport(MessagesRuntimeState state,
                                     JwtUtil jwtUtil,
@@ -62,7 +65,8 @@ public class MessagesWsHandlerSupport {
                                     UserBlockService userBlockService,
                                     BalanceRepository balanceRepository,
                                     StreamLockService streamLockService,
-                                    ApiRateLimitService apiRateLimitService) {
+                                    ApiRateLimitService apiRateLimitService,
+                                    AgeGatePolicyService ageGatePolicyService) {
         this.state = state;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
@@ -78,6 +82,7 @@ public class MessagesWsHandlerSupport {
         this.balanceRepository = balanceRepository;
         this.streamLockService = streamLockService;
         this.apiRateLimitService = apiRateLimitService;
+        this.ageGatePolicyService = ageGatePolicyService;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -87,6 +92,7 @@ public class MessagesWsHandlerSupport {
             return;
         }
         log.info("WS /messages conectado: session={} userId={}", session.getId(), userId);
+        logConsentObservation(userId, "/messages");
         state.getSessionUserIds().put(session.getId(), userId);
         state.getSessions().computeIfAbsent(userId, k -> java.util.concurrent.ConcurrentHashMap.newKeySet()).add(session);
 
@@ -870,6 +876,21 @@ public class MessagesWsHandlerSupport {
                     ex.getMessage()
             );
             return null;
+        }
+    }
+
+    private void logConsentObservation(Long userId, String endpoint) {
+        if (userId == null) return;
+
+        var user = userRepository.findById(userId).orElse(null);
+        if (user == null) return;
+
+        ConsentState consentState = ageGatePolicyService.resolve(user);
+        if (!consentState.compliant()) {
+            log.info("[CONSENT][NON_COMPLIANT] userId={} endpoint={} reason={}",
+                    userId,
+                    endpoint,
+                    consentState.reasonCode());
         }
     }
 

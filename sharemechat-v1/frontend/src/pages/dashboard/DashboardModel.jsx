@@ -47,6 +47,7 @@ import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
 import useActiveInteraction from '../../domain/useActiveInteraction';
 import Estadistica from './Estadistica';
 import { attachMediaObserver, createIdleMediaState, createMediaStateSnapshot, resetMediaObserver } from '../../utils/mediaState';
+import AuthenticatedConsentModal from '../../consent/AuthenticatedConsentModal';
 
 
 const DashboardModel = () => {
@@ -60,7 +61,7 @@ const DashboardModel = () => {
     openNextWaitModal
   } = useAppModals();
 
-  const { user: sessionUser, updateUiLocale } = useSession();
+  const { user: sessionUser, updateUiLocale, refresh } = useSession();
   const { inCall, setInCall } = useCallUi();
   const {
     interaction,
@@ -182,6 +183,18 @@ const DashboardModel = () => {
   const randomRemoteMediaCleanupRef = useRef(() => {});
   const callLocalMediaCleanupRef = useRef(() => {});
   const callRemoteMediaCleanupRef = useRef(() => {});
+  const consentRequired = !!sessionUser?.consentRequired;
+  const consentVersion = sessionUser?.requiredTermsVersion || 'v1';
+  const sensitiveEnabled = !!sessionUser && !consentRequired;
+
+  const guardSensitiveAction = useCallback((options = {}) => {
+    if (sensitiveEnabled) return false;
+
+    const message = options.message || 'Debes aceptar el consentimiento obligatorio antes de usar esta funcionalidad.';
+    if (typeof options.setError === 'function') options.setError(message);
+    if (typeof options.alertUser === 'function') options.alertUser(message);
+    return true;
+  }, [sensitiveEnabled]);
 
   const resetRandomTechMediaReadySignal = useCallback(() => {
     randomTechMediaReadySentRef.current = false;
@@ -1127,6 +1140,7 @@ const DashboardModel = () => {
 
 
   const openMsgSocket = () => {
+    if (guardSensitiveAction()) return;
     msgEngineRef.current?.open();
   };
 
@@ -1453,10 +1467,14 @@ const DashboardModel = () => {
 
 
   useEffect(() => {
+     if (!sensitiveEnabled) {
+       closeMsgSocket();
+       return undefined;
+     }
      openMsgSocket();
      return () => closeMsgSocket();
      // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [closeMsgSocket]);
+  }, [closeMsgSocket, sensitiveEnabled]);
 
   useEffect(() => {
     const handleAuthLogout = () => {
@@ -1503,6 +1521,7 @@ const DashboardModel = () => {
 
 
   const handleActivateCamera = async () => {
+    if (guardSensitiveAction({ setError })) return;
     console.log(
       `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=activateCamera start=true`
     );
@@ -1568,6 +1587,7 @@ const DashboardModel = () => {
 
 
   const handleStartMatch = () => {
+    if (guardSensitiveAction({ setError })) return;
 
     setActiveStreamRecordId(null);
     activeStreamRecordIdRef.current = null;
@@ -1577,6 +1597,7 @@ const DashboardModel = () => {
 
 
   const handleNext = () => {
+    if (guardSensitiveAction({ setError })) return;
     // Guard local (doble click rápido)
     if (nexting) return;
 
@@ -1605,6 +1626,7 @@ const DashboardModel = () => {
 
 
   const sendChatMessage = () => {
+    if (guardSensitiveAction({ setError })) return;
     if (chatInput.trim() === '') return;
     const message = { type: 'chat', message: chatInput.trim() };
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -1616,6 +1638,7 @@ const DashboardModel = () => {
   };
 
   const sendRandomMediaReady = () => {
+    if (guardSensitiveAction()) return;
     if (mediaReadySentRef.current) return;
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       socketRef.current.send(JSON.stringify({ type: 'media-ready' }));
@@ -2012,6 +2035,7 @@ const DashboardModel = () => {
 
   // Cambiar a modo llamada sobre el target actual
   const enterCallMode = () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     if (!Number(targetPeerId)) {
       setCallError('Selecciona un contacto primero.');
       return;
@@ -2041,6 +2065,7 @@ const DashboardModel = () => {
 
 
   const handleAddFavorite = async () => {
+    if (guardSensitiveAction()) return;
     if (!currentClientId) {
       await alert({
         variant: 'warning',
@@ -2155,6 +2180,7 @@ const DashboardModel = () => {
 
 
   const setActivePeer = (peerId, peerName, mode, favUser = null) => {
+    if (guardSensitiveAction()) return;
     const id = Number(peerId);
     const name = peerName || 'Usuario';
 
@@ -2190,6 +2216,7 @@ const DashboardModel = () => {
 
 
   const handleOpenChatFromFavorites = (favUser) => {
+    if (guardSensitiveAction()) return;
     const peer = Number(favUser?.id ?? favUser?.userId);
     const name =
       favUser?.nickname || favUser?.name || favUser?.email || 'Usuario';
@@ -2221,6 +2248,7 @@ const DashboardModel = () => {
 
 
   const openChatWithPeer = async (peerId, displayName) => {
+    if (guardSensitiveAction()) return;
     const peer = Number(peerId);
 
     if (streamingActivo) {
@@ -2244,6 +2272,7 @@ const DashboardModel = () => {
 
 
   const sendCenterMessage = () => {
+    if (guardSensitiveAction()) return;
     const body = String(centerInput || '').trim();
     if (!body) return;
     const interactionTo = Number(interaction?.actionTarget?.messageToUserId) || null;
@@ -2291,6 +2320,7 @@ const DashboardModel = () => {
 
 
   const acceptInvitation = async () => {
+    if (guardSensitiveAction()) return;
     if (!selectedFav?.id) return;
 
     try {
@@ -2315,6 +2345,7 @@ const DashboardModel = () => {
 
 
   const rejectInvitation = async () => {
+    if (guardSensitiveAction()) return;
     if (!selectedFav?.id) return;
 
     try {
@@ -2330,6 +2361,7 @@ const DashboardModel = () => {
 
   //Activar cámara para Calling
   const handleCallActivateCamera = async () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     console.log('[CALL][cam:on][Model] requesting user media');
     resetMediaObserver(callLocalMediaCleanupRef);
     setCallLocalMediaState(createMediaStateSnapshot(null, {
@@ -2381,6 +2413,7 @@ const DashboardModel = () => {
 
   //Enviar invitación (modelo llama)
   const handleCallInvite = () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     if (!callCameraActive || !callLocalStreamRef.current) {
       setCallError('Primero activa la cámara para llamar.');
       return;
@@ -2447,6 +2480,7 @@ const DashboardModel = () => {
 
   //Aceptar invitación (modelo responde)
   const handleCallAccept = async () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     if (!callPeerIdRef.current) return;
     if (!callCameraActive || !callLocalStreamRef.current) {
       await handleCallActivateCamera();
@@ -2476,6 +2510,7 @@ const DashboardModel = () => {
 
   //Rechazar invitación
   const handleCallReject = () => {
+    if (guardSensitiveAction({ setError: setCallError })) return;
     if (!callPeerId) return;
     if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) {
       setCallError('El chat de mensajes no está conectado.');
@@ -2789,6 +2824,11 @@ const DashboardModel = () => {
   return (
     <StyledContainer>
       <GlobalBlack />
+      <AuthenticatedConsentModal
+        open={consentRequired}
+        requiredTermsVersion={consentVersion}
+        refreshSession={refresh}
+      />
       {/* ========= INICIO NAVBAR  ======== */}
       <NavbarModel
         activeTab={activeTab}

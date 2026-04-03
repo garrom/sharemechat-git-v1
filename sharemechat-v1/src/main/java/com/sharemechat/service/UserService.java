@@ -1,6 +1,7 @@
 package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
+import com.sharemechat.consent.ConsentState;
 import com.sharemechat.dto.*;
 import com.sharemechat.entity.LoginResponse;
 import com.sharemechat.entity.Unsubscribe;
@@ -37,6 +38,7 @@ public class UserService {
     private final ModelDocumentRepository modelDocumentRepository;
     private final UserLanguageRepository userLanguageRepository;
     private final EmailService emailService;
+    private final AgeGatePolicyService ageGatePolicyService;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
@@ -48,7 +50,8 @@ public class UserService {
                        ClientDocumentRepository clientDocumentRepository,
                        ModelDocumentRepository modelDocumentRepository,
                        UserLanguageRepository userLanguageRepository,
-                       EmailService emailService) {
+                       EmailService emailService,
+                       AgeGatePolicyService ageGatePolicyService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -58,6 +61,7 @@ public class UserService {
         this.modelDocumentRepository = modelDocumentRepository;
         this.userLanguageRepository = userLanguageRepository;
         this.emailService = emailService;
+        this.ageGatePolicyService = ageGatePolicyService;
     }
 
     @Transactional
@@ -624,6 +628,14 @@ public class UserService {
         dto.setRiskReason(user.getRiskReason());
         dto.setRiskUpdatedAt(user.getRiskUpdatedAt());
         dto.setRiskUpdatedBy(user.getRiskUpdatedBy());
+
+        ConsentState consentState = ageGatePolicyService.resolve(user);
+        dto.setConsentCompliant(consentState.compliant());
+        dto.setConsentRequired(consentState.consentRequired());
+        dto.setMissingAdultConfirmation(consentState.missingAdultConfirmation());
+        dto.setMissingTermsAcceptance(consentState.missingTermsAcceptance());
+        dto.setOutdatedTerms(consentState.outdatedTerms());
+        dto.setRequiredTermsVersion(consentState.requiredTermsVersion());
 
         return dto;
     }

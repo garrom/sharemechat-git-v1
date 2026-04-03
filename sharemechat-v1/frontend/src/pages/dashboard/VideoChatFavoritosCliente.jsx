@@ -620,7 +620,7 @@ export default function VideoChatFavoritosCliente(props){
                     <StyledChatInput
                       value={centerInput}
                       onChange={e=>setCenterInput(e.target.value)}
-                      placeholder={allowChat?'Escribe un mensaje…':'Chat inactivo'}
+                      placeholder={allowChat ? t('common.chat.placeholders.message') : t('common.chat.placeholders.inactive')}
                       onKeyDown={e=>{if(e.key==='Enter'&&allowChat)sendCenterMessage();}}
                       disabled={!allowChat}
                       onFocus={()=>{setTimeout(()=>chatEndRef.current?.scrollIntoView({block:'end'}),50);}}

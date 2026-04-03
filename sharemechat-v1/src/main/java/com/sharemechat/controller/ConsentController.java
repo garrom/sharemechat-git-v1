@@ -1,9 +1,13 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.dto.ConsentAcceptRequest;
 import com.sharemechat.service.ConsentService;
+import com.sharemechat.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,9 +18,11 @@ import java.util.Map;
 public class ConsentController {
 
     private final ConsentService consentService;
+    private final UserService userService;
 
-    public ConsentController(ConsentService consentService) {
+    public ConsentController(ConsentService consentService, UserService userService) {
         this.consentService = consentService;
+        this.userService = userService;
     }
 
     // Body opcional: { "path": "/ruta/donde/acepta" }
@@ -39,6 +45,19 @@ public class ConsentController {
         String path = bodyPath(body, request);
         consentService.recordTerms(request, consentId, path, version);
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/accept")
+    public ResponseEntity<Void> accept(@Valid @RequestBody ConsentAcceptRequest body,
+                                       Authentication authentication,
+                                       HttpServletRequest request) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        Long userId = userService.findByEmail(authentication.getName()).getId();
+        consentService.acceptAccountConsent(request, userId, body);
+        return ResponseEntity.ok().build();
     }
 
     private static String readConsentIdCookie(HttpServletRequest request) {

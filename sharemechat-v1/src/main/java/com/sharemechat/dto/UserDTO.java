@@ -26,6 +26,12 @@ public class UserDTO {
     private String riskReason;
     private LocalDateTime riskUpdatedAt;
     private Long riskUpdatedBy;
+    private Boolean consentCompliant;
+    private Boolean consentRequired;
+    private Boolean missingAdultConfirmation;
+    private Boolean missingTermsAcceptance;
+    private Boolean outdatedTerms;
+    private String requiredTermsVersion;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -86,4 +92,22 @@ public class UserDTO {
 
     public Long getRiskUpdatedBy() { return riskUpdatedBy; }
     public void setRiskUpdatedBy(Long riskUpdatedBy) { this.riskUpdatedBy = riskUpdatedBy; }
+
+    public Boolean getConsentCompliant() { return consentCompliant; }
+    public void setConsentCompliant(Boolean consentCompliant) { this.consentCompliant = consentCompliant; }
+
+    public Boolean getConsentRequired() { return consentRequired; }
+    public void setConsentRequired(Boolean consentRequired) { this.consentRequired = consentRequired; }
+
+    public Boolean getMissingAdultConfirmation() { return missingAdultConfirmation; }
+    public void setMissingAdultConfirmation(Boolean missingAdultConfirmation) { this.missingAdultConfirmation = missingAdultConfirmation; }
+
+    public Boolean getMissingTermsAcceptance() { return missingTermsAcceptance; }
+    public void setMissingTermsAcceptance(Boolean missingTermsAcceptance) { this.missingTermsAcceptance = missingTermsAcceptance; }
+
+    public Boolean getOutdatedTerms() { return outdatedTerms; }
+    public void setOutdatedTerms(Boolean outdatedTerms) { this.outdatedTerms = outdatedTerms; }
+
+    public String getRequiredTermsVersion() { return requiredTermsVersion; }
+    public void setRequiredTermsVersion(String requiredTermsVersion) { this.requiredTermsVersion = requiredTermsVersion; }
 }

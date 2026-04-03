@@ -17,7 +17,7 @@ public class ConsentEvent {
     @Column(name = "version", length = 20)
     private String version;   // 'v1', etc. (null para age_gate si no aplica)
 
-    @Column(name = "consent_id", nullable = false, length = 64)
+    @Column(name = "consent_id", length = 64)
     private String consentId; // UUID anónimo del cliente
 
     @Column(name = "user_id")

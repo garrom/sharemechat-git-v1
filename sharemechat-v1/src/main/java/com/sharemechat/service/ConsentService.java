@@ -2,18 +2,21 @@ package com.sharemechat.service;
 
 import com.sharemechat.consent.HmacSigner;
 import com.sharemechat.consent.IpPrivacyUtil;
+import com.sharemechat.dto.ConsentAcceptRequest;
 import com.sharemechat.entity.ConsentEvent;
+import com.sharemechat.entity.User;
 import com.sharemechat.repository.ConsentEventRepository;
+import com.sharemechat.repository.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -24,13 +27,15 @@ public class ConsentService {
 
     private final ConsentEventRepository repository;
     private final HmacSigner hmacSigner;
+    private final UserRepository userRepository;
 
     @Value("${terms.version:v1}")
     private String currentTermsVersion;
 
-    public ConsentService(ConsentEventRepository repository, HmacSigner hmacSigner) {
+    public ConsentService(ConsentEventRepository repository, HmacSigner hmacSigner, UserRepository userRepository) {
         this.repository = repository;
         this.hmacSigner = hmacSigner;
+        this.userRepository = userRepository;
     }
 
     public void recordAgeGate(HttpServletRequest request, String consentId, String path) {
@@ -103,6 +108,37 @@ public class ConsentService {
         log.info("AGE_GATE_LINK eventType={} consentId={} userId={}", e.getEventType(), e.getConsentId(), userId);
     }
 
+    @Transactional
+    public void acceptAccountConsent(HttpServletRequest request, Long userId, ConsentAcceptRequest body) {
+        if (userId == null) {
+            throw new IllegalArgumentException("Usuario no autenticado");
+        }
+        if (body == null || !Boolean.TRUE.equals(body.getConfirmAdult()) || !Boolean.TRUE.equals(body.getAcceptTerms())) {
+            throw new IllegalArgumentException("Debes confirmar mayoría de edad y aceptar los términos");
+        }
+        if (!StringUtils.hasText(body.getTermsVersion())) {
+            throw new IllegalArgumentException("La versión de términos es obligatoria");
+        }
+
+        String requestedTermsVersion = clamp(body.getTermsVersion(), 20);
+        if (!currentTermsVersion.equals(requestedTermsVersion)) {
+            throw new IllegalArgumentException("La versión de términos no coincide con la vigente");
+        }
+
+        User user = userRepository.findByIdForUpdate(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        user.setConfirAdult(true);
+        user.setAcceptTerm(LocalDateTime.now());
+        user.setTermVersion(currentTermsVersion);
+        userRepository.save(user);
+
+        String path = request != null ? request.getRequestURI() : "/api/consent/accept";
+
+        recordAccountConsentEvent(request, userId, "age_gate_accept", currentTermsVersion, path);
+        recordAccountConsentEvent(request, userId, "terms_accept", currentTermsVersion, path);
+    }
+
     private ConsentEvent baseFrom(HttpServletRequest request, String consentId, String path) {
         ConsentEvent e = new ConsentEvent();
         e.setConsentId(StringUtils.hasText(consentId) ? clamp(consentId, 64) : "unknown");
@@ -111,6 +147,20 @@ public class ConsentService {
         e.setPath(clamp(path, 1024));
         e.setTs(Instant.now());
         return e;
+    }
+
+    private void recordAccountConsentEvent(HttpServletRequest request,
+                                           Long userId,
+                                           String eventType,
+                                           String version,
+                                           String path) {
+        ConsentEvent e = baseFrom(request, null, path);
+        e.setEventType(eventType);
+        e.setVersion(version);
+        e.setUserId(userId);
+        e.setConsentId(null);
+        e.setSig(sign(e));
+        repository.save(e);
     }
 
     private static String clamp(String s, int max) {

@@ -1,6 +1,7 @@
 // src/realtime/matchSocketEngine.js
 import Peer from 'simple-peer';
 import { NEXT_WAIT_MODAL_MIN_MS, NEXT_WAIT_MODAL_MAX_MS } from '../config/appConfig';
+import i18n from '../i18n';
 /**
  * Motor común para WS de matching + WebRTC signaling.
  */
@@ -208,7 +209,7 @@ export function createMatchSocketEngine(adapter) {
       console.warn(
         `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerError message=${rawMessage || 'unknown'}`
       );
-      setError('No se pudo establecer la conexión. Inténtalo de nuevo.');
+      setError(i18n.t('common.errors.connectionSetupFailedRetry'));
       setSearching(false);
     });
 
@@ -411,7 +412,7 @@ export function createMatchSocketEngine(adapter) {
 
   function start() {
     if (!adapter.cameraActiveGetter?.() || !localStreamRef.current) {
-      setError('Primero activa la cámara.');
+      setError(i18n.t('common.media.cameraRequired'));
       return;
     }
 
@@ -422,7 +423,7 @@ export function createMatchSocketEngine(adapter) {
     // la sesión viva es la del SessionProvider (/users/me).
     const me = (typeof getSessionUser === 'function') ? getSessionUser() : null;
     if (!me) {
-      setError('Sesión expirada. Inicia sesión de nuevo.');
+      setError(i18n.t('common.auth.sessionExpired'));
       setSearching(false);
       return;
     }

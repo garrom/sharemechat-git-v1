@@ -25,6 +25,7 @@ import StatusBadge from '../../components/StatusBadge';
 import { useAppModals } from '../../components/useAppModals';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
+import i18n from '../../i18n';
 
 function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, hasUnread = false, menuOpen = false }) {
   const placeholder = '/img/avatarChico.png';
@@ -155,7 +156,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
 
   const handleUnblock = useCallback(async (user) => {
     if (!sessionUser && !sessionLoading) {
-      await alert({ title: 'Sesión', message: 'No autenticado', variant: 'warning', size: 'sm' });
+      await alert({ title: i18n.t('common.auth.title'), message: i18n.t('common.auth.notAuthenticated'), variant: 'warning', size: 'sm' });
       return;
     }
     if (!user?.id) return;
@@ -381,7 +382,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
 
   const handleBlock = useCallback(async (user) => {
     if (!sessionUser && !sessionLoading) {
-      await alert({ title: 'Sesión', message: 'No autenticado', variant: 'warning', size: 'sm' });
+      await alert({ title: i18n.t('common.auth.title'), message: i18n.t('common.auth.notAuthenticated'), variant: 'warning', size: 'sm' });
       return;
     }
     if (!user?.id) return;
@@ -419,7 +420,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
 
   const handleReport = useCallback(async (user) => {
     if (!sessionUser && !sessionLoading) {
-      await alert({ title: 'Sesión', message: 'No autenticado', variant: 'warning', size: 'sm' });
+      await alert({ title: i18n.t('common.auth.title'), message: i18n.t('common.auth.notAuthenticated'), variant: 'warning', size: 'sm' });
       return;
     }
     if (!user?.id) return;

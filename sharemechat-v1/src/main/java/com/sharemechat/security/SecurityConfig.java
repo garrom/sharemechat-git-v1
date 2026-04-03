@@ -55,6 +55,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/streams/*/ack-media").hasAnyRole("CLIENT", "MODEL")
 
                         // Consent
+                        .requestMatchers(HttpMethod.POST, "/api/consent/accept").authenticated()
                         .requestMatchers("/api/consent/**").permitAll()
 
                         // USERS

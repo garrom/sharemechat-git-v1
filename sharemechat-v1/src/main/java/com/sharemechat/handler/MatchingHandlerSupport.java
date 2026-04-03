@@ -1,12 +1,14 @@
 package com.sharemechat.handler;
 
 import com.sharemechat.constants.Constants;
+import com.sharemechat.consent.ConsentState;
 import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.entity.Balance;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.BalanceRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
+import com.sharemechat.service.AgeGatePolicyService;
 import com.sharemechat.service.*;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -47,6 +49,7 @@ public class MatchingHandlerSupport {
     private final Duration streamLockTtl = Duration.ofSeconds(15);
     private final NextRateLimitService nextRateLimitService;
     private final UserLanguageService userLanguageService;
+    private final AgeGatePolicyService ageGatePolicyService;
 
     public MatchingHandlerSupport(MatchingRuntimeState state,
                                   JwtUtil jwtUtil,
@@ -63,6 +66,7 @@ public class MatchingHandlerSupport {
                                   StreamLockService streamLockService,
                                   NextRateLimitService nextRateLimitService,
                                   UserLanguageService userLanguageService,
+                                  AgeGatePolicyService ageGatePolicyService,
                                   @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.state = state;
         this.jwtUtil = jwtUtil;
@@ -80,6 +84,7 @@ public class MatchingHandlerSupport {
         this.streamLockService = streamLockService;
         this.nextRateLimitService = nextRateLimitService;
         this.userLanguageService = userLanguageService;
+        this.ageGatePolicyService = ageGatePolicyService;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -94,6 +99,7 @@ public class MatchingHandlerSupport {
             session.close(CloseStatus.BAD_DATA);
             return;
         }
+        logConsentObservation(userId, "/match");
         state.getSessionsById().put(session.getId(), session);
         state.getSessionUserIds().put(session.getId(), userId);
     }
@@ -1250,6 +1256,21 @@ public class MatchingHandlerSupport {
             return jwtUtil.extractUserId(token);
         } catch (Exception ex) {
             return null;
+        }
+    }
+
+    private void logConsentObservation(Long userId, String endpoint) {
+        if (userId == null) return;
+
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return;
+
+        ConsentState consentState = ageGatePolicyService.resolve(user);
+        if (!consentState.compliant()) {
+            log.info("[CONSENT][NON_COMPLIANT] userId={} endpoint={} reason={}",
+                    userId,
+                    endpoint,
+                    consentState.reasonCode());
         }
     }
 
