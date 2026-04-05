@@ -15,7 +15,11 @@ import {
   StyledInput,
 } from '../../styles/AdminStyles';
 
-const AdminFinancePanel = ({ canRefund = false }) => {
+const AdminFinancePanel = ({
+  canRefund = false,
+  showSummary = true,
+  showRefunds = true,
+}) => {
   const [topModels, setTopModels] = useState([]);
   const [topClients, setTopClients] = useState([]);
   const [financeSummary, setFinanceSummary] = useState(null);
@@ -43,7 +47,7 @@ const AdminFinancePanel = ({ canRefund = false }) => {
       setTopClients(Array.isArray(clients) ? clients : []);
       setFinanceSummary(summary || null);
     } catch (e) {
-      setFinanceError(e.message || 'Error al cargar análisis financieros');
+      setFinanceError(e.message || 'Error al cargar analisis financieros');
     } finally {
       setFinanceLoading(false);
     }
@@ -63,12 +67,12 @@ const AdminFinancePanel = ({ canRefund = false }) => {
     const amount = Number(refundAmount);
 
     if (!userId || userId <= 0) {
-      setRefundError('User ID inválido');
+      setRefundError('User ID invalido');
       return;
     }
 
     if (!amount || amount <= 0) {
-      setRefundError('Amount inválido');
+      setRefundError('Amount invalido');
       return;
     }
 
@@ -90,7 +94,7 @@ const AdminFinancePanel = ({ canRefund = false }) => {
       });
 
       setRefundSuccess(
-        `Refund aplicado correctamente. User #${result.userId} · Amount ${result.amount} · New balance ${result.newBalance}`
+        `Refund aplicado correctamente. User #${result.userId} - Amount ${result.amount} - New balance ${result.newBalance}`
       );
 
       setRefundUserId('');
@@ -105,9 +109,15 @@ const AdminFinancePanel = ({ canRefund = false }) => {
     }
   };
 
+  const sectionTitle = showSummary && showRefunds
+    ? 'Finance Ops'
+    : showSummary
+      ? 'Finanzas'
+      : 'Ajustes financieros';
+
   return (
     <div>
-      <SectionTitle>Finance Ops</SectionTitle>
+      <SectionTitle>{sectionTitle}</SectionTitle>
       {financeError && <StyledError>{financeError}</StyledError>}
 
       <div style={{ marginBottom: 16 }}>
@@ -116,62 +126,66 @@ const AdminFinancePanel = ({ canRefund = false }) => {
         </SmallBtn>
       </div>
 
-      <CardsGrid>
-        <StatCard>
-          <div className="label">Ganancias brutas</div>
-          <div className="value">{financeLoading ? '…' : financeSummary?.grossBillingEUR ?? '—'}</div>
-          <div className="meta">Facturación total antes de reparto a modelos.</div>
-        </StatCard>
+      {showSummary && (
+        <>
+          <CardsGrid>
+            <StatCard>
+              <div className="label">Ganancias brutas</div>
+              <div className="value">{financeLoading ? '...' : financeSummary?.grossBillingEUR ?? '-'}</div>
+              <div className="meta">Facturacion total antes de reparto a modelos.</div>
+            </StatCard>
 
-        <StatCard>
-          <div className="label">Ganancias netas plataforma</div>
-          <div className="value">{financeLoading ? '…' : financeSummary?.netProfitEUR ?? '—'}</div>
-          <div className="meta">Margen neto acumulado de la plataforma.</div>
-        </StatCard>
+            <StatCard>
+              <div className="label">Ganancias netas plataforma</div>
+              <div className="value">{financeLoading ? '...' : financeSummary?.netProfitEUR ?? '-'}</div>
+              <div className="meta">Margen neto acumulado de la plataforma.</div>
+            </StatCard>
 
-        <StatCard>
-          <div className="label">% beneficio / facturación</div>
-          <div className="value">{financeLoading ? '…' : financeSummary?.profitPercent ?? '—'}</div>
-          <div className="meta">Ratio neto sobre bruto.</div>
-        </StatCard>
-      </CardsGrid>
+            <StatCard>
+              <div className="label">% beneficio / facturacion</div>
+              <div className="value">{financeLoading ? '...' : financeSummary?.profitPercent ?? '-'}</div>
+              <div className="meta">Ratio neto sobre bruto.</div>
+            </StatCard>
+          </CardsGrid>
 
-      <div style={{ marginTop: 16 }}>
-        <CardsGrid>
-          <StatCard>
-            <div className="label">Top 10 modelos por ingresos</div>
-            <FinanceList>
-              {(financeLoading ? [] : topModels).map((item, index) => (
-                <FinanceItem key={index}>
-                  {item.nickname || item.name || item.email || `Modelo #${item.modelId}`} — <strong>{item.totalEarningsEUR}</strong>
-                </FinanceItem>
-              ))}
-              {!financeLoading && topModels.length === 0 && <div>Sin datos.</div>}
-            </FinanceList>
-          </StatCard>
+          <div style={{ marginTop: 16 }}>
+            <CardsGrid>
+              <StatCard>
+                <div className="label">Top 10 modelos por ingresos</div>
+                <FinanceList>
+                  {(financeLoading ? [] : topModels).map((item, index) => (
+                    <FinanceItem key={index}>
+                      {item.nickname || item.name || item.email || `Modelo #${item.modelId}`} - <strong>{item.totalEarningsEUR}</strong>
+                    </FinanceItem>
+                  ))}
+                  {!financeLoading && topModels.length === 0 && <div>Sin datos.</div>}
+                </FinanceList>
+              </StatCard>
 
-          <StatCard>
-            <div className="label">Top 10 clientes por pagos</div>
-            <FinanceList>
-              {(financeLoading ? [] : topClients).map((item, index) => (
-                <FinanceItem key={index}>
-                  {item.nickname || item.name || item.email || `Cliente #${item.clientId}`} — <strong>{item.totalPagosEUR}</strong>
-                </FinanceItem>
-              ))}
-              {!financeLoading && topClients.length === 0 && <div>Sin datos.</div>}
-            </FinanceList>
-          </StatCard>
-        </CardsGrid>
-      </div>
+              <StatCard>
+                <div className="label">Top 10 clientes por pagos</div>
+                <FinanceList>
+                  {(financeLoading ? [] : topClients).map((item, index) => (
+                    <FinanceItem key={index}>
+                      {item.nickname || item.name || item.email || `Cliente #${item.clientId}`} - <strong>{item.totalPagosEUR}</strong>
+                    </FinanceItem>
+                  ))}
+                  {!financeLoading && topClients.length === 0 && <div>Sin datos.</div>}
+                </FinanceList>
+              </StatCard>
+            </CardsGrid>
+          </div>
+        </>
+      )}
 
-      {canRefund && (
+      {showRefunds && canRefund && (
         <div style={{ marginTop: 18, width: '100%', maxWidth: 1200 }}>
           <InlinePanel>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>Refund manual</div>
                 <div style={{ fontSize: 13, color: '#6c757d', marginTop: 4 }}>
-                  Devuelve saldo directamente a un CLIENT mediante una operación ledger manual.
+                  Devuelve saldo directamente a un CLIENT mediante una operacion ledger manual.
                 </div>
               </div>
             </div>
@@ -189,7 +203,7 @@ const AdminFinancePanel = ({ canRefund = false }) => {
               </FieldBlock>
 
               <FieldBlock>
-                <label>Amount (€)</label>
+                <label>Amount (EUR)</label>
                 <StyledInput
                   type="number"
                   min="0.01"
@@ -208,7 +222,7 @@ const AdminFinancePanel = ({ canRefund = false }) => {
                 style={{ maxWidth: '100%' }}
                 value={refundReason}
                 onChange={(e) => setRefundReason(e.target.value)}
-                placeholder="Ej: Compensación manual por incidencia en stream"
+                placeholder="Ej: Compensacion manual por incidencia en stream"
               />
             </FieldBlock>
 
@@ -254,7 +268,7 @@ const AdminFinancePanel = ({ canRefund = false }) => {
               <br />
               - Solo aplica a usuarios con rol CLIENT.
               <br />
-              - No modifica transacciones previas; crea una nueva transacción ledger de tipo MANUAL_REFUND.
+              - No modifica transacciones previas; crea una nueva transaccion ledger de tipo MANUAL_REFUND.
               <br />
               - No incrementa totalPagos; solo devuelve saldo disponible.
             </div>

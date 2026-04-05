@@ -9,6 +9,7 @@ import com.sharemechat.handler.MessagesWsHandler;
 import com.sharemechat.entity.User;
 import com.sharemechat.handler.MatchingHandler;
 import com.sharemechat.service.AdminService;
+import com.sharemechat.service.BackofficeAccessService;
 import com.sharemechat.service.KycProviderConfigService;
 import com.sharemechat.service.ModerationReportService;
 import com.sharemechat.service.StreamService;
@@ -34,6 +35,7 @@ public class AdminController {
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
     private final AdminService adminService;
+    private final BackofficeAccessService backofficeAccessService;
     private final UserService userService;
     private final KycProviderConfigService kycProviderConfigService;
     private final ModerationReportService moderationReportService;
@@ -47,6 +49,7 @@ public class AdminController {
 
     public AdminController(
             AdminService adminService,
+            BackofficeAccessService backofficeAccessService,
             UserService userService,
             KycProviderConfigService kycProviderConfigService,
             ModerationReportService moderationReportService,
@@ -57,6 +60,7 @@ public class AdminController {
             TransactionService transactionService
     ) {
         this.adminService = adminService;
+        this.backofficeAccessService = backofficeAccessService;
         this.userService = userService;
         this.kycProviderConfigService = kycProviderConfigService;
         this.moderationReportService = moderationReportService;
@@ -113,6 +117,11 @@ public class AdminController {
             @RequestParam(defaultValue = "10") int limit
     ) {
         return ResponseEntity.ok(adminService.viewTable(table, limit));
+    }
+
+    @GetMapping("/administration/backoffice-users")
+    public ResponseEntity<BackofficeAccessService.BackofficeAdminOverview> backofficeUsers() {
+        return ResponseEntity.ok(adminServiceBackofficeOverview());
     }
 
     // GET /api/admin/model-docs/{userId}
@@ -368,5 +377,9 @@ public class AdminController {
             return list;
         }
         return new ArrayList<>();
+    }
+
+    private BackofficeAccessService.BackofficeAdminOverview adminServiceBackofficeOverview() {
+        return backofficeAccessService.listAdminOverview();
     }
 }

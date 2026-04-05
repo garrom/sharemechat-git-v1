@@ -18,6 +18,18 @@ import {
 } from '../../styles/AdminStyles';
 
 const FINAL_ACTIONS = new Set(['WARNING', 'SUSPEND', 'BAN']);
+const ACTION_HELP = {
+  NONE: 'Sin accion sancionadora. Util para cerrar o documentar el caso sin escalar.',
+  WARNING: 'Advertencia al usuario. Senala conducta indebida sin suspender acceso.',
+  SUSPEND: 'Suspension operativa. Debe usarse cuando la incidencia requiere bloqueo temporal.',
+  BAN: 'Bloqueo definitivo. Reservado a casos graves o reincidentes.',
+};
+const STATUS_HELP = {
+  OPEN: 'Caso recien creado y pendiente de triage.',
+  REVIEWING: 'Caso en analisis por soporte o administracion.',
+  RESOLVED: 'Caso cerrado con decision final.',
+  REJECTED: 'Caso descartado por falta de base o por duplicidad.',
+};
 
 const AdminModerationPanel = ({ canReview = false }) => {
   const [modStatus, setModStatus] = useState('ALL');
@@ -129,11 +141,15 @@ const AdminModerationPanel = ({ canReview = false }) => {
 
   return (
     <div>
-      <SectionTitle>Moderacion (Reports)</SectionTitle>
+      <SectionTitle>Moderacion</SectionTitle>
+
+      <div style={{ fontSize: 12, color: '#52607a', lineHeight: 1.55, marginBottom: 8, maxWidth: 980 }}>
+        Vista operativa de reports internos. Permite filtrar incidencias, revisar detalle y documentar una decision administrativa con mejor contexto para soporte y control interno.
+      </div>
 
       <ControlsRow>
         <FieldBlock>
-          <label>Status</label>
+          <label>Estado</label>
           <StyledSelect value={modStatus} onChange={(e) => setModStatus(e.target.value)}>
             <option value="ALL">Todos</option>
             <option value="OPEN">OPEN</option>
@@ -144,15 +160,15 @@ const AdminModerationPanel = ({ canReview = false }) => {
         </FieldBlock>
 
         <RightInfo>
-          <StyledButton onClick={loadModerationReports} disabled={modLoading}>
+          <SmallBtn type="button" onClick={loadModerationReports} disabled={modLoading}>
             {modLoading ? 'Cargando...' : 'Refrescar'}
-          </StyledButton>
+          </SmallBtn>
         </RightInfo>
       </ControlsRow>
 
       {modError && <StyledError>{modError}</StyledError>}
 
-      <DbLayout style={{ height: '75vh' }}>
+      <DbLayout style={{ height: '72vh' }}>
         <DbTableWrap style={{ marginTop: 0 }}>
           <StyledTable>
             <thead>
@@ -160,7 +176,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
                 <th>ID</th>
                 <th>Creado</th>
                 <th>Tipo</th>
-                <th>Status</th>
+                <th>Estado</th>
                 <th>Accion</th>
                 <th>AutoBlock</th>
                 <th>Reporter</th>
@@ -178,7 +194,14 @@ const AdminModerationPanel = ({ canReview = false }) => {
                   <td>{fmtTs(report.createdAt)}</td>
                   <td><Badge>{report.reportType || '-'}</Badge></td>
                   <td><Badge data-variant={String(report.status || '').toLowerCase()}>{report.status || '-'}</Badge></td>
-                  <td>{report.adminAction || '-'}</td>
+                  <td>
+                    <strong>{report.adminAction || '-'}</strong>
+                    {report.adminAction && report.adminAction !== 'NONE' && (
+                      <div style={{ fontSize: 10, color: '#74819a', marginTop: 3 }}>
+                        Accion registrada
+                      </div>
+                    )}
+                  </td>
                   <td>{report.autoBlocked ? 'Si' : 'No'}</td>
                   <td>{report.reporterUserId ?? '-'}</td>
                   <td>{report.reportedUserId ?? '-'}</td>
@@ -206,7 +229,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
           </StyledTable>
         </DbTableWrap>
 
-        <div style={{ marginTop: 10, width: '100%', maxWidth: 1200 }}>
+        <div style={{ marginTop: 8, width: '100%', maxWidth: 1200 }}>
           <InlinePanel>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ fontWeight: 700 }}>
@@ -230,14 +253,18 @@ const AdminModerationPanel = ({ canReview = false }) => {
             {modSelectedId && (
               <>
                 {!canReview && (
-                  <div style={{ marginTop: 10, fontSize: 13, color: '#6c757d' }}>
-                    Modo solo lectura para SUPPORT. La review sancionadora queda reservada a ADMIN.
+                  <div style={{ marginTop: 8, fontSize: 12, color: '#6c757d' }}>
+                    Modo solo lectura para SUPPORT. La revision sancionadora queda reservada a ADMIN.
                   </div>
                 )}
 
+                <div style={{ marginTop: 8, fontSize: 11, color: '#52607a', lineHeight: 1.55 }}>
+                  Usa REVIEWING mientras el caso sigue abierto. Las acciones WARNING, SUSPEND y BAN fuerzan cierre en RESOLVED.
+                </div>
+
                 <PanelRow>
                   <FieldBlock>
-                    <label>Admin action</label>
+                    <label>Accion administrativa</label>
                     {canReview ? (
                       <StyledSelect
                         value={modReviewAction}
@@ -251,10 +278,13 @@ const AdminModerationPanel = ({ canReview = false }) => {
                     ) : (
                       <div>{modReviewAction || 'NONE'}</div>
                     )}
+                    <div style={{ marginTop: 6, fontSize: 11, color: '#74819a', maxWidth: 280, lineHeight: 1.5 }}>
+                      {ACTION_HELP[modReviewAction] || ACTION_HELP.NONE}
+                    </div>
                   </FieldBlock>
 
                   <FieldBlock>
-                    <label>Status</label>
+                    <label>Estado del caso</label>
                     {canReview ? (
                       <StyledSelect
                         value={isFinalAction ? 'RESOLVED' : modReviewStatus}
@@ -269,16 +299,19 @@ const AdminModerationPanel = ({ canReview = false }) => {
                     ) : (
                       <div>{isFinalAction ? 'RESOLVED' : modReviewStatus}</div>
                     )}
+                    <div style={{ marginTop: 6, fontSize: 11, color: '#74819a', maxWidth: 280, lineHeight: 1.5 }}>
+                      {STATUS_HELP[isFinalAction ? 'RESOLVED' : modReviewStatus] || STATUS_HELP.REVIEWING}
+                    </div>
                   </FieldBlock>
                 </PanelRow>
 
                 <FieldBlock style={{ marginTop: 10 }}>
-                  <label>Resolution notes</label>
+                  <label>Notas internas de resolucion</label>
                   {canReview ? (
                     <TextArea
                       value={modReviewNotes}
                       onChange={(e) => setModReviewNotes(e.target.value)}
-                      placeholder="Notas internas de resolucion (opcional)..."
+                      placeholder="Resume criterio, evidencia y motivo de la decision..."
                     />
                   ) : (
                     <div style={{ whiteSpace: 'pre-wrap', minHeight: 72 }}>

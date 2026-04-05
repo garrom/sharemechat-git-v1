@@ -1,13 +1,17 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  CardsGrid,
   CheckBox,
   ControlsRow,
   DocGrid,
   DocLink,
   FieldBlock,
+  InlinePanel,
   RightInfo,
   ScrollBox,
   SectionTitle,
+  SmallBtn,
+  StatCard,
   StyledButton,
   StyledError,
   StyledSelect,
@@ -151,12 +155,12 @@ const AdminModelsPanel = ({
       const res = await fetch('/api/kyc/config/model-onboarding', {
         credentials: 'include',
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error cargando configuraciÃ³n KYC');
+      if (!res.ok) throw new Error((await res.text()) || 'Error cargando configuracion KYC');
       const data = await res.json();
       setKycCfg(data || null);
       setKycModeDraft((data?.activeMode || 'VERIFF').toUpperCase());
     } catch (e) {
-      setKycCfgError(e.message || 'Error cargando configuraciÃ³n KYC');
+      setKycCfgError(e.message || 'Error cargando configuracion KYC');
       setKycCfg(null);
     } finally {
       setKycCfgLoading(false);
@@ -192,7 +196,7 @@ const AdminModelsPanel = ({
 
     if (action === 'REJECT') {
       const ok = window.confirm(
-        'Â¿Quiere realmente rechazar la verificaciÃ³n de la modelo?\nEsta acciÃ³n es permanente.'
+        'Quieres rechazar la verificacion de esta modelo?\nEsta accion se considera definitiva en el flujo actual.'
       );
       if (!ok) return;
     }
@@ -202,7 +206,7 @@ const AdminModelsPanel = ({
         method: 'POST',
         credentials: 'include',
       });
-      if (!response.ok) throw new Error((await response.text()) || 'Error al actualizar verificaciÃ³n');
+      if (!response.ok) throw new Error((await response.text()) || 'Error al actualizar verificacion');
       const message = await response.text();
       alert(message || 'Estado actualizado');
       fetchUsers();
@@ -241,6 +245,17 @@ const AdminModelsPanel = ({
     () => filteredUsers.slice(0, Number(pageSize)),
     [filteredUsers, pageSize]
   );
+
+  const statusSummary = useMemo(() => {
+    const summary = { total: users.length, pending: 0, approved: 0, rejected: 0 };
+    users.forEach((user) => {
+      const status = String(user?.verificationStatus || 'PENDING').toUpperCase();
+      if (status === 'APPROVED') summary.approved += 1;
+      else if (status === 'REJECTED') summary.rejected += 1;
+      else summary.pending += 1;
+    });
+    return summary;
+  }, [users]);
 
   const renderChecklistCell = (user) => {
     const checks = checksByUser[user.id] || {};
@@ -292,28 +307,52 @@ const AdminModelsPanel = ({
 
   return (
     <>
-      <SectionTitle>GestiÃ³n de Modelos</SectionTitle>
+      <SectionTitle>Modelos</SectionTitle>
+
+      <div style={{ fontSize: 12, color: '#52607a', lineHeight: 1.55, marginBottom: 8, maxWidth: 980 }}>
+        Vista operativa de onboarding y revision de modelos. Permite filtrar estados, validar documentacion y ejecutar aprobacion o rechazo cuando el flujo actual lo permite.
+      </div>
+
+      <CardsGrid style={{ marginBottom: 10 }}>
+        <StatCard>
+          <div className="label">Total visible</div>
+          <div className="value">{statusSummary.total}</div>
+          <div className="meta">Modelos cargados en la vista.</div>
+        </StatCard>
+        <StatCard>
+          <div className="label">Pendientes</div>
+          <div className="value">{statusSummary.pending}</div>
+          <div className="meta">Requieren validacion o decision.</div>
+        </StatCard>
+        <StatCard>
+          <div className="label">Aprobados</div>
+          <div className="value">{statusSummary.approved}</div>
+          <div className="meta">Ya pasaron a flujo operativo.</div>
+        </StatCard>
+        <StatCard>
+          <div className="label">Rechazados</div>
+          <div className="value">{statusSummary.rejected}</div>
+          <div className="meta">Casos cerrados sin aprobacion.</div>
+        </StatCard>
+      </CardsGrid>
 
       {canReadKycMode && (
-        <div
-          style={{
-            width: '100%',
-            maxWidth: '1200px',
-            background: '#fff',
-            border: '1px solid #eee',
-            borderRadius: '10px',
-            padding: '14px',
-            marginBottom: '12px',
-          }}
-        >
-          <div style={{ fontWeight: 600, marginBottom: 10 }}>
-            ConfiguraciÃ³n KYC Onboarding
+        <InlinePanel style={{ maxWidth: 1200, marginBottom: 12 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 14, color: '#162033' }}>
+                Configuracion KYC de onboarding
+              </div>
+              <div style={{ marginTop: 4, fontSize: 12, color: '#52607a', lineHeight: 1.5, maxWidth: 720 }}>
+                Controla si el alta de modelos sigue el flujo automatico con Veriff o el flujo manual con revision documental.
+              </div>
+            </div>
           </div>
 
           {kycCfgError && <StyledError>{kycCfgError}</StyledError>}
 
           {canChangeKycMode ? (
-            <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 10 }}>
               <FieldBlock>
                 <label>Modo KYC</label>
                 <StyledSelect
@@ -321,31 +360,31 @@ const AdminModelsPanel = ({
                   onChange={(e) => setKycModeDraft(e.target.value)}
                   disabled={kycCfgLoading || kycCfgSaving}
                 >
-                  <option value="VERIFF">VERIFF (automÃ¡tico)</option>
+                  <option value="VERIFF">VERIFF (automatico)</option>
                   <option value="MANUAL">MANUAL (documentos)</option>
                 </StyledSelect>
               </FieldBlock>
 
               <StyledButton onClick={saveKycMode} disabled={kycCfgLoading || kycCfgSaving}>
-                {kycCfgSaving ? 'Guardandoâ€¦' : 'Guardar modo'}
+                {kycCfgSaving ? 'Guardando...' : 'Guardar modo'}
               </StyledButton>
             </div>
           ) : (
-            <div style={{ fontSize: 13, color: '#6c757d' }}>
+            <div style={{ marginTop: 10, fontSize: 12, color: '#6c757d' }}>
               Lectura del modo KYC actual. El cambio global queda reservado a ADMIN.
             </div>
           )}
 
-          <div style={{ marginTop: 10, fontSize: 12, color: '#6c757d' }}>
+          <div style={{ marginTop: 10, fontSize: 12, color: '#6c757d', lineHeight: 1.5 }}>
             <div>
-              <strong>Actual:</strong> {kycCfg?.activeMode || 'â€”'}
+              <strong>Actual:</strong> {kycCfg?.activeMode || '-'}
             </div>
             <div>
-              <strong>manualEnabled:</strong> {String(kycCfg?.manualEnabled ?? 'â€”')} |{' '}
-              <strong>veriffEnabled:</strong> {String(kycCfg?.veriffEnabled ?? 'â€”')}
+              <strong>manualEnabled:</strong> {String(kycCfg?.manualEnabled ?? '-')} |{' '}
+              <strong>veriffEnabled:</strong> {String(kycCfg?.veriffEnabled ?? '-')}
             </div>
           </div>
-        </div>
+        </InlinePanel>
       )}
 
       <ControlsRow>
@@ -371,16 +410,16 @@ const AdminModelsPanel = ({
         </FieldBlock>
 
         <RightInfo>
-          <StyledButton onClick={fetchUsers} disabled={loading}>
+          <SmallBtn type="button" onClick={fetchUsers} disabled={loading}>
             {loading ? 'Actualizando...' : 'Refrescar'}
-          </StyledButton>
+          </SmallBtn>
         </RightInfo>
       </ControlsRow>
 
-      {loading && <div>Cargando...</div>}
+      {loading && <div style={{ fontSize: 12, color: '#52607a' }}>Cargando...</div>}
       {error && <StyledError>{error}</StyledError>}
 
-      <ScrollBox>
+      <ScrollBox style={{ maxHeight: '62vh' }}>
         <StyledTable>
           <thead>
             <tr>
@@ -388,8 +427,8 @@ const AdminModelsPanel = ({
               <th>Email</th>
               <th>Rol</th>
               <th>Tipo</th>
-              <th>Estado de VerificaciÃ³n</th>
-              <th>SuscripciÃ³n</th>
+              <th>Verificacion</th>
+              <th>Cuenta</th>
               <th>Acciones</th>
             </tr>
           </thead>
@@ -400,14 +439,14 @@ const AdminModelsPanel = ({
               if (!user.id) {
                 return (
                   <tr key={user.email || Math.random()}>
-                    <td>â€”</td>
+                    <td>-</td>
                     <td>{user.email}</td>
                     <td>{user.role}</td>
                     <td>{user.userType}</td>
                     <td>{verification}</td>
                     <td>{String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1' ? 'Baja' : 'Alta'}</td>
                     <td>
-                      <span style={{ color: '#dc3545' }}>ID no vÃ¡lido</span>
+                      <span style={{ color: '#dc3545' }}>ID no valido</span>
                     </td>
                   </tr>
                 );
@@ -419,18 +458,24 @@ const AdminModelsPanel = ({
                   <td>{user.email}</td>
                   <td>{user.role}</td>
                   <td>{user.userType}</td>
-                  <td>{verification}</td>
+                  <td>
+                    <strong>{verification}</strong>
+                    {verification === 'PENDING' && (
+                      <div style={{ fontSize: 11, color: '#74819a', marginTop: 4 }}>
+                        Pendiente de validacion y decision.
+                      </div>
+                    )}
+                  </td>
                   <td>{String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1' ? 'Baja' : 'Alta'}</td>
                   <td>
                     {verification === 'PENDING' && canUpdateChecklist && renderChecklistCell(user)}
 
                     {verification === 'PENDING' && canReviewModels && (
-                      <>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
                         <StyledButton
                           onClick={() => handleReview(user.id, 'APPROVE')}
                           disabled={!canApprove(user.id)}
                           title={!canApprove(user.id) ? 'Valida los 3 documentos primero' : 'Aprobar modelo'}
-                          style={{ marginRight: '10px' }}
                         >
                           Aprobar
                         </StyledButton>
@@ -441,12 +486,12 @@ const AdminModelsPanel = ({
                         >
                           Rechazar
                         </StyledButton>
-                      </>
+                      </div>
                     )}
 
                     {verification === 'APPROVED' && canReviewModels && (
                       <StyledButton
-                        style={{ backgroundColor: '#dc3545' }}
+                        style={{ backgroundColor: '#dc3545', marginTop: 6 }}
                         onClick={() => handleReview(user.id, 'REJECT')}
                       >
                         Rechazar

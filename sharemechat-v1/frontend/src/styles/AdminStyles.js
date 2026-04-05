@@ -18,13 +18,14 @@ export const StyledTable = styled.table`
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   border-collapse: collapse;
-  margin-top: 20px;
+  margin-top: 12px;
 
   th, td {
-    padding: 12px;
+    padding: 8px 9px;
     text-align: left;
     border-bottom: 1px solid #dee2e6;
     vertical-align: top;
+    font-size: 12px;
   }
 
   th {
@@ -34,6 +35,7 @@ export const StyledTable = styled.table`
     color: #334155;
     font-weight: bold;
     z-index: 1;
+    font-size: 11px;
   }
 
   td {
@@ -46,12 +48,12 @@ export const StyledTable = styled.table`
 `;
 
 export const StyledButton = styled.button`
-  padding: 8px 16px;
+  padding: 6px 11px;
   background-color: #28a745;
   color: white;
   border: none;
   border-radius: 5px;
-  font-size: 14px;
+  font-size: 12px;
   cursor: pointer;
   transition: background-color 0.2s ease;
 
@@ -80,32 +82,31 @@ export const StyledLinkButton = styled.button`
 
 export const StyledError = styled.p`
   color: #dc3545;
-  margin: 10px 0;
-  font-size: 14px;
+  margin: 8px 0;
+  font-size: 12px;
 `;
 
 export const StyledInput = styled.input`
   width: 100%;
   max-width: 200px;
-  padding: 8px;
+  padding: 6px 8px;
   margin: 0 5px;
   border: 1px solid #ced4da;
   border-radius: 5px;
-  font-size: 14px;
+  font-size: 12px;
 `;
 
 export const StyledSelect = styled.select`
   width: 100%;
   max-width: 220px;
-  padding: 8px;
+  padding: 6px 8px;
   margin: 0;
   border: 1px solid #ced4da;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 12px;
   background: #fff;
 `;
 
-/* ======= Nuevos componentes de layout/estilo ======= */
 export const HeaderBar = styled.div`
   width: 100%;
   max-width: 1200px;
@@ -145,24 +146,25 @@ export const TabButton = styled.button`
 export const SectionTitle = styled.h3`
   width: 100%;
   max-width: 1200px;
-  margin: 8px 0 12px;
+  margin: 4px 0 10px;
   color: #0f172a;
+  font-size: 16px;
 `;
 
 export const ControlsRow = styled.div`
   width: 100%;
   max-width: 1200px;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: flex-end;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   flex-wrap: wrap;
 `;
 
 export const FieldBlock = styled.div`
   label {
     display: block;
-    font-size: 12px;
+    font-size: 10px;
     margin-bottom: 4px;
     color: #475569;
   }
@@ -177,7 +179,7 @@ export const RightInfo = styled.div`
 export const ScrollBox = styled.div`
   width: 100%;
   max-width: 1200px;
-  max-height: 480px;
+  max-height: 560px;
   overflow: auto;
   border: 1px solid #eee;
   border-radius: 6px;
@@ -189,32 +191,32 @@ export const CardsGrid = styled.div`
   max-width: 1200px;
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 8px;
 `;
 
 export const StatCard = styled.div`
   border: 1px solid #eee;
   border-radius: 10px;
-  padding: 16px;
+  padding: 11px;
   background: #fff;
   color: #1f2937;
 
-  .label { font-size: 12px; color: #475569; }
-  .value { font-size: 28px; font-weight: 700; color: #0f172a; }
-  .meta  { font-size: 12px; color: #64748b; margin-top: 6px; }
+  .label { font-size: 11px; color: #475569; }
+  .value { font-size: 22px; font-weight: 700; color: #0f172a; }
+  .meta  { font-size: 12px; color: #64748b; margin-top: 5px; }
 `;
 
 export const NoteCard = styled.div`
   border: ${({ $muted }) => ($muted ? '1px dashed #eee' : '1px solid #f4f4f4')};
   border-radius: 10px;
-  padding: 16px;
+  padding: 11px;
   background: ${({ $muted }) => ($muted ? '#fafafa' : '#fff')};
   color: ${({ $muted }) => ($muted ? '#64748b' : '#475569')};
 
-  .label { font-size: 12px; }
-  .value { font-size: 20px; margin-top: 8px; color: #0f172a; }
-  .meta  { font-size: 14px; margin-top: 8px; color: inherit; }
+  .label { font-size: 11px; }
+  .value { font-size: 17px; margin-top: 5px; color: #0f172a; }
+  .meta  { font-size: 13px; margin-top: 7px; color: inherit; }
 `;
 
 export const FinanceList = styled.ol`
@@ -223,7 +225,8 @@ export const FinanceList = styled.ol`
 `;
 
 export const FinanceItem = styled.li`
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
 `;
 
 export const DbLayout = styled.div`
@@ -272,9 +275,9 @@ export const FloatingBtn = styled.button`
 
 export const DocGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(160px, 1fr));
-  gap: 8px;
-  margin-bottom: 8px;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 6px;
+  margin-bottom: 6px;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
@@ -283,18 +286,19 @@ export const DocGrid = styled.div`
 
 export const DocLink = styled.a`
   display: inline-block;
-  padding: 6px 8px;
+  padding: 5px 7px;
   border: 1px solid #ced4da;
   border-radius: 6px;
   text-decoration: none;
   color: #0d6efd;
   pointer-events: ${({ $disabled }) => ($disabled ? 'none' : 'auto')};
   opacity: ${({ $disabled }) => ($disabled ? 0.5 : 1)};
+  font-size: 12px;
 `;
 
 export const CheckBox = styled.input`
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 `;
 
 export const LogoutButton = styled(StyledButton)`
@@ -308,35 +312,36 @@ export const InlinePanel = styled.div`
   border-radius: 10px;
   background: #fff;
   color: #1f2937;
-  padding: 14px;
+  padding: 10px;
 `;
 
 export const PanelRow = styled.div`
   display: flex;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
   align-items: flex-end;
-  margin-top: 10px;
+  margin-top: 7px;
 `;
 
 export const TextArea = styled.textarea`
   width: 100%;
-  min-height: 90px;
-  padding: 10px 12px;
+  min-height: 74px;
+  padding: 8px 9px;
   border: 1px solid #ced4da;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 12px;
   resize: vertical;
 `;
 
 export const SmallBtn = styled.button`
-  padding: 8px 12px;
+  padding: 6px 9px;
   border: 1px solid #ced4da;
   background: #fff;
   color: #1f2937;
   border-radius: 8px;
   cursor: pointer;
   font-weight: 600;
+  font-size: 11px;
 
   &:hover { background: #f8f9fa; }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -345,9 +350,9 @@ export const SmallBtn = styled.button`
 export const Badge = styled.span`
   display: inline-flex;
   align-items: center;
-  padding: 3px 8px;
+  padding: 2px 6px;
   border-radius: 999px;
-  font-size: 12px;
+  font-size: 10px;
   font-weight: 700;
   background: #f1f3f5;
   color: #343a40;

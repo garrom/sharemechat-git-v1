@@ -8,10 +8,14 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 public class BackofficeAccessService {
@@ -45,6 +49,66 @@ public class BackofficeAccessService {
         }
 
         return new BackofficeAccessProfile(Set.copyOf(roles), Set.copyOf(permissions));
+    }
+
+    public BackofficeAdminOverview listAdminOverview() {
+        List<BackofficeUserAdminRow> baseUsers = jdbcTemplate.query("""
+                select distinct u.id, u.email, u.nickname, u.role
+                from users u
+                left join user_backoffice_roles ubr on ubr.user_id = u.id
+                where upper(coalesce(u.role, '')) = 'ADMIN'
+                   or ubr.user_id is not null
+                order by lower(u.email), u.id
+                """, (rs, rowNum) -> new BackofficeUserAdminRow(
+                rs.getLong("id"),
+                rs.getString("email"),
+                rs.getString("nickname"),
+                normalize(rs.getString("role")),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                false
+        ));
+
+        List<BackofficeUserAdminRow> users = new ArrayList<>();
+
+        for (BackofficeUserAdminRow base : baseUsers) {
+            BackofficeAccessProfile profile = loadProfile(base.userId(), base.productRole());
+            Set<String> roles = profile.roles();
+            Set<String> permissions = profile.permissions();
+            OverrideSummary overrides = loadPermissionOverrides(base.userId());
+
+            users.add(new BackofficeUserAdminRow(
+                    base.userId(),
+                    base.email(),
+                    base.nickname(),
+                    base.productRole(),
+                    roles.stream().sorted().toList(),
+                    permissions.stream().sorted().toList(),
+                    overrides.allowed().stream().sorted().toList(),
+                    overrides.denied().stream().sorted().toList(),
+                    !overrides.allowed().isEmpty() || !overrides.denied().isEmpty()
+            ));
+        }
+
+        users.sort(Comparator.comparing(BackofficeUserAdminRow::email, String.CASE_INSENSITIVE_ORDER));
+
+        long adminCount = users.stream().filter(u -> u.backofficeRoles().contains(BackofficeAuthorities.ROLE_ADMIN)).count();
+        long supportCount = users.stream().filter(u -> u.backofficeRoles().contains(BackofficeAuthorities.ROLE_SUPPORT)).count();
+        long auditCount = users.stream().filter(u -> u.backofficeRoles().contains(BackofficeAuthorities.ROLE_AUDIT)).count();
+        long overrideCount = users.stream().filter(BackofficeUserAdminRow::hasOverrides).count();
+
+        return new BackofficeAdminOverview(
+                users,
+                Map.of(
+                        "totalUsers", users.size(),
+                        "adminUsers", adminCount,
+                        "supportUsers", supportCount,
+                        "auditUsers", auditCount,
+                        "usersWithOverrides", overrideCount
+                )
+        );
     }
 
     private Set<String> loadBackofficeRoles(Long userId) {
@@ -87,15 +151,7 @@ public class BackofficeAccessService {
 
     private void applyOverrides(Long userId, Set<String> permissions) {
         try {
-            List<PermissionOverrideRow> rows = jdbcTemplate.query("""
-                    select upper(p.code) as code, uo.allowed as allowed
-                    from user_permission_overrides uo
-                    join permissions p on p.id = uo.permission_id
-                    where uo.user_id = ?
-                    """, (rs, rowNum) -> new PermissionOverrideRow(
-                    normalize(rs.getString("code")),
-                    rs.getBoolean("allowed")
-            ), userId);
+            List<PermissionOverrideRow> rows = fetchOverrideRows(userId);
 
             for (PermissionOverrideRow row : rows) {
                 if (row.code().isBlank()) {
@@ -110,6 +166,38 @@ public class BackofficeAccessService {
         } catch (DataAccessException ex) {
             log.warn("No se pudieron aplicar overrides de permisos para userId={}: {}", userId, ex.getMessage());
         }
+    }
+
+    private OverrideSummary loadPermissionOverrides(Long userId) {
+        try {
+            List<PermissionOverrideRow> rows = fetchOverrideRows(userId);
+            Set<String> allowed = rows.stream()
+                    .filter(PermissionOverrideRow::allowed)
+                    .map(PermissionOverrideRow::code)
+                    .filter(code -> !code.isBlank())
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            Set<String> denied = rows.stream()
+                    .filter(row -> !row.allowed())
+                    .map(PermissionOverrideRow::code)
+                    .filter(code -> !code.isBlank())
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+            return new OverrideSummary(Set.copyOf(allowed), Set.copyOf(denied));
+        } catch (DataAccessException ex) {
+            log.warn("No se pudieron cargar overrides detallados para userId={}: {}", userId, ex.getMessage());
+            return new OverrideSummary(Set.of(), Set.of());
+        }
+    }
+
+    private List<PermissionOverrideRow> fetchOverrideRows(Long userId) {
+        return jdbcTemplate.query("""
+                select upper(p.code) as code, uo.allowed as allowed
+                from user_permission_overrides uo
+                join permissions p on p.id = uo.permission_id
+                where uo.user_id = ?
+                """, (rs, rowNum) -> new PermissionOverrideRow(
+                normalize(rs.getString("code")),
+                rs.getBoolean("allowed")
+        ), userId);
     }
 
     private Set<String> sanitize(List<String> rawValues) {
@@ -150,6 +238,31 @@ public class BackofficeAccessService {
     public record BackofficeAccessProfile(
             Set<String> roles,
             Set<String> permissions
+    ) {
+    }
+
+    public record BackofficeAdminOverview(
+            List<BackofficeUserAdminRow> users,
+            Map<String, Object> summary
+    ) {
+    }
+
+    public record BackofficeUserAdminRow(
+            Long userId,
+            String email,
+            String nickname,
+            String productRole,
+            List<String> backofficeRoles,
+            List<String> effectivePermissions,
+            List<String> overrideAdditions,
+            List<String> overrideRemovals,
+            boolean hasOverrides
+    ) {
+    }
+
+    private record OverrideSummary(
+            Set<String> allowed,
+            Set<String> denied
     ) {
     }
 
