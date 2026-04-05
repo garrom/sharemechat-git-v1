@@ -47,7 +47,7 @@ public class SecurityConfig {
 
                         // PUBLIC
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/users/register/**", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout").permitAll()
+                        .requestMatchers("/api/users/register/**", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout", "/api/admin/auth/login").permitAll()
                         .requestMatchers("/api/public/home/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/avatars/**").permitAll()
 
@@ -101,8 +101,33 @@ public class SecurityConfig {
                         .requestMatchers("/api/transactions/add-balance").hasRole("CLIENT")
                         .requestMatchers("/api/transactions/**").authenticated()
 
+                        // Backoffice SUPPORT Phase 1 + ADMIN compatibility
+                        .requestMatchers(HttpMethod.GET, "/api/admin/models")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_MODELS_READ_LIST))
+                        .requestMatchers(HttpMethod.POST, "/api/admin/model-checklist/{userId}")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_MODELS_UPDATE_CHECKLIST))
+                        .requestMatchers(HttpMethod.GET, "/api/kyc/config/model-onboarding")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_MODELS_READ_KYC_MODE))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/moderation/reports")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_MODERATION_READ_REPORTS))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/moderation/reports/{id}")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_MODERATION_READ_REPORT_DETAIL))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/streams/active")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_STREAMS_READ_ACTIVE))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/streams/{id}")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_STREAMS_READ_DETAIL))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/stats/overview")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_STATS_READ_OVERVIEW))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/finance/top-models")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_FINANCE_READ_TOP_MODELS))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/finance/top-clients")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_FINANCE_READ_TOP_CLIENTS))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/finance/summary")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_FINANCE_READ_SUMMARY))
+
                         // Admin
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**")
+                        .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN))
 
                         // WS endpoints
                         .requestMatchers("/messages/**").permitAll()
@@ -146,6 +171,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(Arrays.asList(
+                "https://admin.test.sharemechat.com",
                 "https://www.test.sharemechat.com",
                 "https://test.sharemechat.com",
                 "http://localhost:3000"

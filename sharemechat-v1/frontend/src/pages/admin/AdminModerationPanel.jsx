@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Badge,
   ControlsRow,
@@ -19,7 +19,7 @@ import {
 
 const FINAL_ACTIONS = new Set(['WARNING', 'SUSPEND', 'BAN']);
 
-const AdminModerationPanel = () => {
+const AdminModerationPanel = ({ canReview = false }) => {
   const [modStatus, setModStatus] = useState('ALL');
   const [modReports, setModReports] = useState([]);
   const [modLoading, setModLoading] = useState(false);
@@ -55,16 +55,16 @@ const AdminModerationPanel = () => {
     try {
       const res = await fetch(`/api/admin/moderation/reports/${id}`, { credentials: 'include' });
       if (!res.ok) throw new Error((await res.text()) || 'Error cargando reporte');
-      const r = await res.json();
+      const report = await res.json();
 
-      const nextAction = String(r?.adminAction || 'NONE').toUpperCase();
-      const nextStatusRaw = String(r?.status || 'REVIEWING').toUpperCase();
+      const nextAction = String(report?.adminAction || 'NONE').toUpperCase();
+      const nextStatusRaw = String(report?.status || 'REVIEWING').toUpperCase();
       const nextStatus = FINAL_ACTIONS.has(nextAction) ? 'RESOLVED' : nextStatusRaw;
 
-      setModSelectedId(r?.id || null);
+      setModSelectedId(report?.id || null);
       setModReviewAction(nextAction);
       setModReviewStatus(nextStatus);
-      setModReviewNotes(r?.resolutionNotes || '');
+      setModReviewNotes(report?.resolutionNotes || '');
     } catch (e) {
       setModError(e.message || 'Error cargando reporte');
     }
@@ -73,13 +73,14 @@ const AdminModerationPanel = () => {
   const handleReviewActionChange = (value) => {
     const nextAction = String(value || 'NONE').toUpperCase();
     setModReviewAction(nextAction);
-
     if (FINAL_ACTIONS.has(nextAction)) {
       setModReviewStatus('RESOLVED');
     }
   };
 
   const saveModerationReview = async () => {
+    if (!canReview) return;
+
     const id = Number(modSelectedId);
     if (!id) return;
 
@@ -110,14 +111,14 @@ const AdminModerationPanel = () => {
     }
   };
 
-  const fmtTs = (v) => {
-    if (!v) return '-';
+  const fmtTs = (value) => {
+    if (!value) return '-';
     try {
-      const d = new Date(v);
-      if (Number.isNaN(d.getTime())) return String(v);
-      return d.toLocaleString();
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString();
     } catch {
-      return String(v);
+      return String(value);
     }
   };
 
@@ -171,26 +172,26 @@ const AdminModerationPanel = () => {
               </tr>
             </thead>
             <tbody>
-              {modReports.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.id}</td>
-                  <td>{fmtTs(r.createdAt)}</td>
-                  <td><Badge>{r.reportType || '-'}</Badge></td>
-                  <td><Badge data-variant={String(r.status || '').toLowerCase()}>{r.status || '-'}</Badge></td>
-                  <td>{r.adminAction || '-'}</td>
-                  <td>{r.autoBlocked ? 'Si' : 'No'}</td>
-                  <td>{r.reporterUserId ?? '-'}</td>
-                  <td>{r.reportedUserId ?? '-'}</td>
-                  <td>{r.streamRecordId ?? '-'}</td>
-                  <td>{r.reviewedByUserId ?? '-'}</td>
-                  <td>{r.reviewedAt ? fmtTs(r.reviewedAt) : '-'}</td>
+              {modReports.map((report) => (
+                <tr key={report.id}>
+                  <td>{report.id}</td>
+                  <td>{fmtTs(report.createdAt)}</td>
+                  <td><Badge>{report.reportType || '-'}</Badge></td>
+                  <td><Badge data-variant={String(report.status || '').toLowerCase()}>{report.status || '-'}</Badge></td>
+                  <td>{report.adminAction || '-'}</td>
+                  <td>{report.autoBlocked ? 'Si' : 'No'}</td>
+                  <td>{report.reporterUserId ?? '-'}</td>
+                  <td>{report.reportedUserId ?? '-'}</td>
+                  <td>{report.streamRecordId ?? '-'}</td>
+                  <td>{report.reviewedByUserId ?? '-'}</td>
+                  <td>{report.reviewedAt ? fmtTs(report.reviewedAt) : '-'}</td>
                   <td>
                     <SmallBtn
                       type="button"
-                      onClick={() => loadModerationReportById(r.id)}
-                      title="Revisar"
+                      onClick={() => loadModerationReportById(report.id)}
+                      title="Detalle"
                     >
-                      Revisar
+                      Detalle
                     </SmallBtn>
                   </td>
                 </tr>
@@ -209,7 +210,7 @@ const AdminModerationPanel = () => {
           <InlinePanel>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ fontWeight: 700 }}>
-                {modSelectedId ? `Review report #${modSelectedId}` : 'Selecciona un report para revisar'}
+                {modSelectedId ? `Detalle report #${modSelectedId}` : 'Selecciona un report para revisar'}
               </div>
 
               {modSelectedId && (
@@ -217,51 +218,73 @@ const AdminModerationPanel = () => {
                   <SmallBtn type="button" onClick={() => loadModerationReportById(modSelectedId)} disabled={modSaving}>
                     Recargar
                   </SmallBtn>
-                  <StyledButton type="button" onClick={saveModerationReview} disabled={modSaving}>
-                    {modSaving ? 'Guardando...' : 'Guardar'}
-                  </StyledButton>
+                  {canReview && (
+                    <StyledButton type="button" onClick={saveModerationReview} disabled={modSaving}>
+                      {modSaving ? 'Guardando...' : 'Guardar'}
+                    </StyledButton>
+                  )}
                 </div>
               )}
             </div>
 
             {modSelectedId && (
               <>
+                {!canReview && (
+                  <div style={{ marginTop: 10, fontSize: 13, color: '#6c757d' }}>
+                    Modo solo lectura para SUPPORT. La review sancionadora queda reservada a ADMIN.
+                  </div>
+                )}
+
                 <PanelRow>
                   <FieldBlock>
                     <label>Admin action</label>
-                    <StyledSelect
-                      value={modReviewAction}
-                      onChange={(e) => handleReviewActionChange(e.target.value)}
-                    >
-                      <option value="NONE">NONE</option>
-                      <option value="WARNING">WARNING</option>
-                      <option value="SUSPEND">SUSPEND</option>
-                      <option value="BAN">BAN</option>
-                    </StyledSelect>
+                    {canReview ? (
+                      <StyledSelect
+                        value={modReviewAction}
+                        onChange={(e) => handleReviewActionChange(e.target.value)}
+                      >
+                        <option value="NONE">NONE</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="SUSPEND">SUSPEND</option>
+                        <option value="BAN">BAN</option>
+                      </StyledSelect>
+                    ) : (
+                      <div>{modReviewAction || 'NONE'}</div>
+                    )}
                   </FieldBlock>
 
                   <FieldBlock>
                     <label>Status</label>
-                    <StyledSelect
-                      value={isFinalAction ? 'RESOLVED' : modReviewStatus}
-                      onChange={(e) => setModReviewStatus(e.target.value)}
-                      disabled={isFinalAction}
-                    >
-                      {!isFinalAction && <option value="OPEN">OPEN</option>}
-                      {!isFinalAction && <option value="REVIEWING">REVIEWING</option>}
-                      <option value="RESOLVED">RESOLVED</option>
-                      {!isFinalAction && <option value="REJECTED">REJECTED</option>}
-                    </StyledSelect>
+                    {canReview ? (
+                      <StyledSelect
+                        value={isFinalAction ? 'RESOLVED' : modReviewStatus}
+                        onChange={(e) => setModReviewStatus(e.target.value)}
+                        disabled={isFinalAction}
+                      >
+                        {!isFinalAction && <option value="OPEN">OPEN</option>}
+                        {!isFinalAction && <option value="REVIEWING">REVIEWING</option>}
+                        <option value="RESOLVED">RESOLVED</option>
+                        {!isFinalAction && <option value="REJECTED">REJECTED</option>}
+                      </StyledSelect>
+                    ) : (
+                      <div>{isFinalAction ? 'RESOLVED' : modReviewStatus}</div>
+                    )}
                   </FieldBlock>
                 </PanelRow>
 
                 <FieldBlock style={{ marginTop: 10 }}>
                   <label>Resolution notes</label>
-                  <TextArea
-                    value={modReviewNotes}
-                    onChange={(e) => setModReviewNotes(e.target.value)}
-                    placeholder="Notas internas de resolucion (opcional)..."
-                  />
+                  {canReview ? (
+                    <TextArea
+                      value={modReviewNotes}
+                      onChange={(e) => setModReviewNotes(e.target.value)}
+                      placeholder="Notas internas de resolucion (opcional)..."
+                    />
+                  ) : (
+                    <div style={{ whiteSpace: 'pre-wrap', minHeight: 72 }}>
+                      {modReviewNotes || 'Sin notas.'}
+                    </div>
+                  )}
                 </FieldBlock>
               </>
             )}

@@ -1,10 +1,11 @@
 // src/components/RequireRole.jsx
 import React, { useEffect, useRef, useState } from 'react';
 import { Redirect } from 'react-router-dom';
-import Roles from '../constants/Roles';
 import { useSession } from './SessionProvider';
+import { hasBackofficeRole } from '../utils/backofficeAccess';
+import { isAbsoluteUrl, resolveHomeUrl } from '../utils/runtimeSurface';
 
-const RequireRole = ({ role, roles, children }) => {
+const RequireRole = ({ role, roles, backofficeRoles, children }) => {
   const { user, loading, refresh } = useSession();
   const triedRef = useRef(false);
   const [retrying, setRetrying] = useState(false);
@@ -23,16 +24,27 @@ const RequireRole = ({ role, roles, children }) => {
 
   if (loading || retrying) return null;
 
-  if (!user) return <Redirect to="/login" />;
+  if (!user) {
+    if (!triedRef.current) return null;
+    return <Redirect to="/login" />;
+  }
 
   const meRole = user?.role;
 
   const redirectToOwnDashboard = () => {
-    if (meRole === Roles.CLIENT) return <Redirect to="/client" />;
-    if (meRole === Roles.MODEL) return <Redirect to="/model" />;
-    if (meRole === Roles.ADMIN) return <Redirect to="/dashboard-admin" />;
-    return <Redirect to="/" />;
+    const target = resolveHomeUrl(user);
+    if (isAbsoluteUrl(target) && typeof window !== 'undefined') {
+      window.location.replace(target);
+      return null;
+    }
+    return <Redirect to={target} />;
   };
+
+  if (Array.isArray(backofficeRoles) && backofficeRoles.length > 0) {
+    const allowed = backofficeRoles.some((code) => hasBackofficeRole(user, code));
+    if (!allowed) return redirectToOwnDashboard();
+    return children;
+  }
 
   if (Array.isArray(roles) && roles.length > 0) {
     if (!meRole || !roles.includes(meRole)) return redirectToOwnDashboard();

@@ -2,6 +2,7 @@ package com.sharemechat.dto;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public class UserDTO {
 
@@ -32,6 +33,11 @@ public class UserDTO {
     private Boolean missingTermsAcceptance;
     private Boolean outdatedTerms;
     private String requiredTermsVersion;
+    private List<String> backofficeRoles;
+    private List<String> backofficePermissions;
+    private Boolean modelChecklistFrontOk;
+    private Boolean modelChecklistBackOk;
+    private Boolean modelChecklistSelfieOk;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -110,4 +116,19 @@ public class UserDTO {
 
     public String getRequiredTermsVersion() { return requiredTermsVersion; }
     public void setRequiredTermsVersion(String requiredTermsVersion) { this.requiredTermsVersion = requiredTermsVersion; }
+
+    public List<String> getBackofficeRoles() { return backofficeRoles; }
+    public void setBackofficeRoles(List<String> backofficeRoles) { this.backofficeRoles = backofficeRoles; }
+
+    public List<String> getBackofficePermissions() { return backofficePermissions; }
+    public void setBackofficePermissions(List<String> backofficePermissions) { this.backofficePermissions = backofficePermissions; }
+
+    public Boolean getModelChecklistFrontOk() { return modelChecklistFrontOk; }
+    public void setModelChecklistFrontOk(Boolean modelChecklistFrontOk) { this.modelChecklistFrontOk = modelChecklistFrontOk; }
+
+    public Boolean getModelChecklistBackOk() { return modelChecklistBackOk; }
+    public void setModelChecklistBackOk(Boolean modelChecklistBackOk) { this.modelChecklistBackOk = modelChecklistBackOk; }
+
+    public Boolean getModelChecklistSelfieOk() { return modelChecklistSelfieOk; }
+    public void setModelChecklistSelfieOk(Boolean modelChecklistSelfieOk) { this.modelChecklistSelfieOk = modelChecklistSelfieOk; }
 }

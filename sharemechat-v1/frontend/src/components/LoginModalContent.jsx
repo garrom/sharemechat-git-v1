@@ -15,9 +15,10 @@ import Roles from '../constants/Roles';
 import UserTypes from '../constants/UserTypes';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faXmark } from '@fortawesome/free-solid-svg-icons';
+import { canAccessBackoffice } from '../utils/backofficeAccess';
+import { buildAdminAppUrl, isAdminSurface, navigateToUrl, resolveHomeUrl } from '../utils/runtimeSurface';
 
 const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) => {
-
   const [view, setView] = useState(initialView);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -25,27 +26,33 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
   const [fieldErrors, setFieldErrors] = useState({ email: '', password: '' });
   const [status, setStatus] = useState('');
   const [loading, setLoading] = useState(false);
+
   const history = useHistory();
-  const { refresh, user } = useSession();
+  const { refresh } = useSession();
 
   useEffect(() => {
     setView(initialView);
   }, [initialView]);
 
   const safeNavigate = (path) => {
-    if (history && typeof history.push === 'function') {
-      history.push(path);
-    } else {
-      window.location.href = path;
-    }
+    navigateToUrl(path, history);
   };
 
   const validate = () => {
     const fe = { email: '', password: '' };
-    if (!email.trim()) fe.email = i18n.t('auth.login.validation.emailRequired');
-    else if (!/^\S+@\S+\.\S+$/.test(email)) fe.email = i18n.t('auth.login.validation.emailInvalid');
-    if (!password) fe.password = i18n.t('auth.login.validation.passwordRequired');
-    else if (password.length < 8) fe.password = i18n.t('auth.login.validation.passwordMin');
+
+    if (!email.trim()) {
+      fe.email = i18n.t('auth.login.validation.emailRequired');
+    } else if (!/^\S+@\S+\.\S+$/.test(email)) {
+      fe.email = i18n.t('auth.login.validation.emailInvalid');
+    }
+
+    if (!password) {
+      fe.password = i18n.t('auth.login.validation.passwordRequired');
+    } else if (password.length < 8) {
+      fe.password = i18n.t('auth.login.validation.passwordMin');
+    }
+
     setFieldErrors(fe);
     return !fe.email && !fe.password;
   };
@@ -54,11 +61,15 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
     e.preventDefault();
     setError('');
     setStatus('');
+
     if (!validate()) return;
+
     setLoading(true);
 
     try {
-      await apiFetch('/auth/login', {
+      const loginPath = isAdminSurface() ? '/admin/auth/login' : '/auth/login';
+
+      await apiFetch(loginPath, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -68,32 +79,37 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
 
       const u = await refresh();
 
-      if (u?.role === Roles.ADMIN) {
-        safeNavigate('/dashboard-admin');
-      } else if (u?.role === Roles.CLIENT) {
-        safeNavigate('/client');
-      } else if (u?.role === Roles.MODEL) {
-        safeNavigate('/model');
-      } else if (u?.role === Roles.USER) {
-        if (u?.userType === UserTypes.FORM_CLIENT) safeNavigate('/dashboard-user-client');
-        else if (u?.userType === UserTypes.FORM_MODEL) safeNavigate('/dashboard-user-model');
-        else setError(i18n.t('auth.login.errors.invalidUserType'));
-      } else {
-        safeNavigate('/');
+      if (
+        !isAdminSurface()
+        && u?.role === Roles.USER
+        && u?.userType !== UserTypes.FORM_CLIENT
+        && u?.userType !== UserTypes.FORM_MODEL
+        && !canAccessBackoffice(u)
+      ) {
+        setError(i18n.t('auth.login.errors.invalidUserType'));
+        return;
       }
 
-      if (onLoginSuccess) onLoginSuccess();
+      const target = isAdminSurface()
+        ? buildAdminAppUrl('/dashboard-admin')
+        : resolveHomeUrl(u);
+
+      safeNavigate(target);
+
+      if (onLoginSuccess) {
+        onLoginSuccess();
+      }
     } catch (err) {
       const backendMessage = err?.data?.message;
-      const status = Number(err?.status);
+      const statusCode = Number(err?.status);
 
       if (backendMessage) {
         setError(backendMessage);
-      } else if (status === 401) {
+      } else if (statusCode === 401) {
         setError(i18n.t('auth.login.errors.invalidCredentials'));
-      } else if (status === 403) {
+      } else if (statusCode === 403) {
         setError(i18n.t('auth.login.errors.accessDenied'));
-      } else if (status === 404) {
+      } else if (statusCode === 404) {
         setError(i18n.t('auth.login.errors.serviceUnavailable'));
       } else {
         setError(err?.message || i18n.t('auth.login.errors.generic'));
@@ -108,21 +124,44 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
   const isRegisterGenderView = view === 'register-gender';
 
   return (
-    <StyledForm $wide={isRegisterGenderView} onSubmit={view === 'login' ? handleLogin : undefined} noValidate>
+    <StyledForm
+      $wide={isRegisterGenderView}
+      onSubmit={view === 'login' ? handleLogin : undefined}
+      noValidate
+    >
       {onClose && (
-        <LoginCloseBtn type="button" onClick={onClose} aria-label={i18n.t('common.close')} title={i18n.t('common.close')}>
+        <LoginCloseBtn
+          type="button"
+          onClick={onClose}
+          aria-label={i18n.t('common.close')}
+          title={i18n.t('common.close')}
+        >
           <FontAwesomeIcon icon={faXmark} />
         </LoginCloseBtn>
       )}
 
       <TabsRow>
-        <TabButton type="button" data-active={isLoginTab} onClick={() => setView('login')}>{i18n.t('auth.tabs.login')}</TabButton>
-        <TabButton type="button" data-active={isRegisterTab} onClick={() => setView('register-gender')}>{i18n.t('auth.tabs.register')}</TabButton>
+        <TabButton
+          type="button"
+          data-active={isLoginTab}
+          onClick={() => setView('login')}
+        >
+          {i18n.t('auth.tabs.login')}
+        </TabButton>
+
+        <TabButton
+          type="button"
+          data-active={isRegisterTab}
+          onClick={() => setView('register-gender')}
+        >
+          {i18n.t('auth.tabs.register')}
+        </TabButton>
       </TabsRow>
 
       {view === 'login' && (
         <>
           <FormTitle>{i18n.t('auth.login.title')}</FormTitle>
+
           {status && <Status role="status">{status}</Status>}
           {error && <StyledError role="alert">{error}</StyledError>}
 
@@ -132,7 +171,9 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
               value={email}
               onChange={(e) => {
                 setEmail(e.target.value);
-                if (fieldErrors.email) setFieldErrors(f => ({ ...f, email: '' }));
+                if (fieldErrors.email) {
+                  setFieldErrors((f) => ({ ...f, email: '' }));
+                }
               }}
               placeholder={i18n.t('auth.login.placeholders.email')}
               required
@@ -141,7 +182,9 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
               aria-describedby={fieldErrors.email ? 'email-error' : undefined}
               autoComplete="username"
             />
-            {fieldErrors.email && <FieldError id="email-error">{fieldErrors.email}</FieldError>}
+            {fieldErrors.email && (
+              <FieldError id="email-error">{fieldErrors.email}</FieldError>
+            )}
           </Field>
 
           <Field>
@@ -150,7 +193,9 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
               value={password}
               onChange={(e) => {
                 setPassword(e.target.value);
-                if (fieldErrors.password) setFieldErrors(f => ({ ...f, password: '' }));
+                if (fieldErrors.password) {
+                  setFieldErrors((f) => ({ ...f, password: '' }));
+                }
               }}
               placeholder={i18n.t('auth.login.placeholders.password')}
               required
@@ -159,11 +204,15 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
               aria-describedby={fieldErrors.password ? 'password-error' : undefined}
               autoComplete="current-password"
             />
-            {fieldErrors.password && <FieldError id="password-error">{fieldErrors.password}</FieldError>}
+            {fieldErrors.password && (
+              <FieldError id="password-error">{fieldErrors.password}</FieldError>
+            )}
           </Field>
 
           <StyledButton type="submit" disabled={loading}>
-            {loading ? i18n.t('auth.login.actions.loading') : i18n.t('auth.login.actions.submit')}
+            {loading
+              ? i18n.t('auth.login.actions.loading')
+              : i18n.t('auth.login.actions.submit')}
           </StyledButton>
 
           <StyledLinkButton

@@ -22,7 +22,7 @@ const DEFAULT_FILTERS = {
   limit: 200,
 };
 
-const AdminActiveStreamsPanel = () => {
+const AdminActiveStreamsPanel = ({ canKill = false }) => {
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [streams, setStreams] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -36,14 +36,14 @@ const AdminActiveStreamsPanel = () => {
     fetchActiveStreams(DEFAULT_FILTERS);
   }, []);
 
-  const fmtTs = (v) => {
-    if (!v) return '—';
+  const fmtTs = (value) => {
+    if (!value) return '—';
     try {
-      const d = new Date(v);
-      if (Number.isNaN(d.getTime())) return String(v);
-      return d.toLocaleString();
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return date.toLocaleString();
     } catch {
-      return String(v);
+      return String(value);
     }
   };
 
@@ -98,7 +98,6 @@ const AdminActiveStreamsPanel = () => {
   };
 
   const getStatus = (item) => item?.statusDerivado || item?.derivedStatus || item?.status || '—';
-
   const isStuck = (item) => Boolean(item?.stuck);
 
   const buildQuery = (nextFilters) => {
@@ -151,7 +150,7 @@ const AdminActiveStreamsPanel = () => {
   };
 
   const killStream = async (streamId) => {
-    if (!streamId) return;
+    if (!canKill || !streamId) return;
     if (!window.confirm('¿Cortar este stream ahora?')) return;
 
     setError('');
@@ -193,7 +192,7 @@ const AdminActiveStreamsPanel = () => {
     await fetchStreamDetail(streamId);
   };
 
-  const s = selectedDetail?.stream || selectedDetail || null;
+  const streamDetail = selectedDetail?.stream || selectedDetail || null;
   const detailEvents = Array.isArray(selectedDetail?.events) ? selectedDetail.events : [];
 
   return (
@@ -255,6 +254,12 @@ const AdminActiveStreamsPanel = () => {
 
       {error && <StyledError>{error}</StyledError>}
 
+      {!canKill && (
+        <div style={{ marginBottom: 12, fontSize: 13, color: '#6c757d' }}>
+          Modo solo lectura para SUPPORT. El corte de streams queda reservado a ADMIN.
+        </div>
+      )}
+
       <ScrollBox>
         <StyledTable>
           <thead>
@@ -298,7 +303,7 @@ const AdminActiveStreamsPanel = () => {
                     </SmallBtn>
                   </td>
                   <td>
-                    {derivedStatus !== 'closed' && (
+                    {canKill && derivedStatus !== 'closed' && (
                       <SmallBtn type="button" onClick={() => killStream(streamId)}>
                         KILL
                       </SmallBtn>
@@ -350,39 +355,39 @@ const AdminActiveStreamsPanel = () => {
                 <PanelRow>
                   <FieldBlock>
                     <label>Tipo</label>
-                    <div>{s?.streamType || '—'}</div>
+                    <div>{streamDetail?.streamType || '—'}</div>
                   </FieldBlock>
 
                   <FieldBlock>
                     <label>Cliente</label>
-                    <div>{s?.clientId != null ? `#${s.clientId} · ${s?.clientNickname || s?.clientEmail || '—'}` : '—'}</div>
+                    <div>{streamDetail?.clientId != null ? `#${streamDetail.clientId} · ${streamDetail?.clientNickname || streamDetail?.clientEmail || '—'}` : '—'}</div>
                   </FieldBlock>
 
                   <FieldBlock>
                     <label>Modelo</label>
-                    <div>{s?.modelId != null ? `#${s.modelId} · ${s?.modelNickname || s?.modelEmail || '—'}` : '—'}</div>
+                    <div>{streamDetail?.modelId != null ? `#${streamDetail.modelId} · ${streamDetail?.modelNickname || streamDetail?.modelEmail || '—'}` : '—'}</div>
                   </FieldBlock>
                 </PanelRow>
 
                 <PanelRow>
                   <FieldBlock>
                     <label>Inicio</label>
-                    <div>{fmtTs(s?.startTime)}</div>
+                    <div>{fmtTs(streamDetail?.startTime)}</div>
                   </FieldBlock>
 
                   <FieldBlock>
                     <label>Confirmado</label>
-                    <div>{fmtTs(s?.confirmedAt)}</div>
+                    <div>{fmtTs(streamDetail?.confirmedAt)}</div>
                   </FieldBlock>
 
                   <FieldBlock>
                     <label>Fin</label>
-                    <div>{fmtTs(s?.endTime)}</div>
+                    <div>{fmtTs(streamDetail?.endTime)}</div>
                   </FieldBlock>
 
                   <FieldBlock>
                     <label>Duración</label>
-                    <div>{formatDuration(s?.durationSeconds)}</div>
+                    <div>{formatDuration(streamDetail?.durationSeconds)}</div>
                   </FieldBlock>
                 </PanelRow>
 
@@ -390,13 +395,13 @@ const AdminActiveStreamsPanel = () => {
                   <FieldBlock>
                     <label>Status</label>
                     <div>
-                      <Badge data-variant={String(s?.statusDerivado || '—').toLowerCase()}>{s?.statusDerivado || '—'}</Badge>
+                      <Badge data-variant={String(streamDetail?.statusDerivado || '—').toLowerCase()}>{streamDetail?.statusDerivado || '—'}</Badge>
                     </div>
                   </FieldBlock>
 
                   <FieldBlock>
                     <label>Stuck</label>
-                    <div>{s?.stuck ? <Badge data-variant="danger">STUCK</Badge> : 'No'}</div>
+                    <div>{streamDetail?.stuck ? <Badge data-variant="danger">STUCK</Badge> : 'No'}</div>
                   </FieldBlock>
                 </PanelRow>
 

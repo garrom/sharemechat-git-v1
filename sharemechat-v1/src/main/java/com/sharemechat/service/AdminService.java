@@ -96,7 +96,24 @@ public class AdminService {
         List<User> list = (verification == null || verification.isBlank())
                 ? userRepository.findByVerificationStatusIsNotNull()
                 : userRepository.findByVerificationStatus(verification.toUpperCase());
-        return list.stream().map(userService::mapToDTO).toList();
+
+        List<Long> userIds = list.stream()
+                .map(User::getId)
+                .filter(id -> id != null && id > 0)
+                .toList();
+
+        Map<Long, ModelReviewChecklist> checklistByUserId = checklistRepository.findAllById(userIds)
+                .stream()
+                .collect(java.util.stream.Collectors.toMap(ModelReviewChecklist::getUserId, x -> x));
+
+        return list.stream().map(user -> {
+            UserDTO dto = userService.mapToDTO(user);
+            ModelReviewChecklist checklist = checklistByUserId.get(user.getId());
+            dto.setModelChecklistFrontOk(checklist != null && checklist.isFrontOk());
+            dto.setModelChecklistBackOk(checklist != null && checklist.isBackOk());
+            dto.setModelChecklistSelfieOk(checklist != null && checklist.isSelfieOk());
+            return dto;
+        }).toList();
     }
 
     @Transactional

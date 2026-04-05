@@ -14,3 +14,5 @@ export const buildWsUrl = (path, params = {}) => {
   const qs = new URLSearchParams(params).toString();
   return qs ? `${base}${p}?${qs}` : `${base}${p}`;
 };
+
+export default API_BASE;

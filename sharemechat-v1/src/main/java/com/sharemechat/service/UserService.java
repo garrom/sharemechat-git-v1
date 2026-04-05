@@ -39,6 +39,7 @@ public class UserService {
     private final UserLanguageRepository userLanguageRepository;
     private final EmailService emailService;
     private final AgeGatePolicyService ageGatePolicyService;
+    private final BackofficeAccessService backofficeAccessService;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
@@ -51,7 +52,8 @@ public class UserService {
                        ModelDocumentRepository modelDocumentRepository,
                        UserLanguageRepository userLanguageRepository,
                        EmailService emailService,
-                       AgeGatePolicyService ageGatePolicyService) {
+                       AgeGatePolicyService ageGatePolicyService,
+                       BackofficeAccessService backofficeAccessService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -62,6 +64,7 @@ public class UserService {
         this.userLanguageRepository = userLanguageRepository;
         this.emailService = emailService;
         this.ageGatePolicyService = ageGatePolicyService;
+        this.backofficeAccessService = backofficeAccessService;
     }
 
     @Transactional
@@ -636,6 +639,11 @@ public class UserService {
         dto.setMissingTermsAcceptance(consentState.missingTermsAcceptance());
         dto.setOutdatedTerms(consentState.outdatedTerms());
         dto.setRequiredTermsVersion(consentState.requiredTermsVersion());
+
+        BackofficeAccessService.BackofficeAccessProfile profile =
+                backofficeAccessService.loadProfile(user.getId(), user.getRole());
+        dto.setBackofficeRoles(profile.roles().stream().sorted().toList());
+        dto.setBackofficePermissions(profile.permissions().stream().sorted().toList());
 
         return dto;
     }

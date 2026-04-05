@@ -15,7 +15,7 @@ import {
   StyledInput,
 } from '../../styles/AdminStyles';
 
-const AdminFinancePanel = () => {
+const AdminFinancePanel = ({ canRefund = false }) => {
   const [topModels, setTopModels] = useState([]);
   const [topClients, setTopClients] = useState([]);
   const [financeSummary, setFinanceSummary] = useState(null);
@@ -33,15 +33,15 @@ const AdminFinancePanel = () => {
     setFinanceLoading(true);
     setFinanceError('');
     try {
-      const [m, c, s] = await Promise.all([
+      const [models, clients, summary] = await Promise.all([
         apiFetch('/admin/finance/top-models?limit=10'),
         apiFetch('/admin/finance/top-clients?limit=10'),
         apiFetch('/admin/finance/summary'),
       ]);
 
-      setTopModels(Array.isArray(m) ? m : []);
-      setTopClients(Array.isArray(c) ? c : []);
-      setFinanceSummary(s || null);
+      setTopModels(Array.isArray(models) ? models : []);
+      setTopClients(Array.isArray(clients) ? clients : []);
+      setFinanceSummary(summary || null);
     } catch (e) {
       setFinanceError(e.message || 'Error al cargar análisis financieros');
     } finally {
@@ -54,6 +54,8 @@ const AdminFinancePanel = () => {
   }, [loadFinanceData]);
 
   const handleRefund = async () => {
+    if (!canRefund) return;
+
     setRefundError('');
     setRefundSuccess('');
 
@@ -108,6 +110,12 @@ const AdminFinancePanel = () => {
       <SectionTitle>Finance Ops</SectionTitle>
       {financeError && <StyledError>{financeError}</StyledError>}
 
+      <div style={{ marginBottom: 16 }}>
+        <SmallBtn type="button" onClick={loadFinanceData} disabled={financeLoading || refundLoading}>
+          {financeLoading ? 'Actualizando...' : 'Refrescar panel'}
+        </SmallBtn>
+      </div>
+
       <CardsGrid>
         <StatCard>
           <div className="label">Ganancias brutas</div>
@@ -133,9 +141,9 @@ const AdminFinancePanel = () => {
           <StatCard>
             <div className="label">Top 10 modelos por ingresos</div>
             <FinanceList>
-              {(financeLoading ? [] : topModels).map((it, i) => (
-                <FinanceItem key={i}>
-                  {it.nickname || it.name || it.email || `Modelo #${it.modelId}`} — <strong>{it.totalEarningsEUR}</strong>
+              {(financeLoading ? [] : topModels).map((item, index) => (
+                <FinanceItem key={index}>
+                  {item.nickname || item.name || item.email || `Modelo #${item.modelId}`} — <strong>{item.totalEarningsEUR}</strong>
                 </FinanceItem>
               ))}
               {!financeLoading && topModels.length === 0 && <div>Sin datos.</div>}
@@ -145,9 +153,9 @@ const AdminFinancePanel = () => {
           <StatCard>
             <div className="label">Top 10 clientes por pagos</div>
             <FinanceList>
-              {(financeLoading ? [] : topClients).map((it, i) => (
-                <FinanceItem key={i}>
-                  {it.nickname || it.name || it.email || `Cliente #${it.clientId}`} — <strong>{it.totalPagosEUR}</strong>
+              {(financeLoading ? [] : topClients).map((item, index) => (
+                <FinanceItem key={index}>
+                  {item.nickname || item.name || item.email || `Cliente #${item.clientId}`} — <strong>{item.totalPagosEUR}</strong>
                 </FinanceItem>
               ))}
               {!financeLoading && topClients.length === 0 && <div>Sin datos.</div>}
@@ -156,107 +164,103 @@ const AdminFinancePanel = () => {
         </CardsGrid>
       </div>
 
-      <div style={{ marginTop: 18, width: '100%', maxWidth: 1200 }}>
-        <InlinePanel>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: 16 }}>Refund manual</div>
-              <div style={{ fontSize: 13, color: '#6c757d', marginTop: 4 }}>
-                Devuelve saldo directamente a un CLIENT mediante una operación ledger manual.
+      {canRefund && (
+        <div style={{ marginTop: 18, width: '100%', maxWidth: 1200 }}>
+          <InlinePanel>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>Refund manual</div>
+                <div style={{ fontSize: 13, color: '#6c757d', marginTop: 4 }}>
+                  Devuelve saldo directamente a un CLIENT mediante una operación ledger manual.
+                </div>
               </div>
             </div>
 
-            <div>
-              <SmallBtn type="button" onClick={loadFinanceData} disabled={financeLoading || refundLoading}>
-                {financeLoading ? 'Actualizando...' : 'Refrescar panel'}
+            <PanelRow>
+              <FieldBlock>
+                <label>User ID (CLIENT)</label>
+                <StyledInput
+                  type="number"
+                  min="1"
+                  value={refundUserId}
+                  onChange={(e) => setRefundUserId(e.target.value)}
+                  placeholder="Ej: 68"
+                />
+              </FieldBlock>
+
+              <FieldBlock>
+                <label>Amount (€)</label>
+                <StyledInput
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={refundAmount}
+                  onChange={(e) => setRefundAmount(e.target.value)}
+                  placeholder="Ej: 3.00"
+                />
+              </FieldBlock>
+            </PanelRow>
+
+            <FieldBlock style={{ marginTop: 10 }}>
+              <label>Reason</label>
+              <StyledInput
+                type="text"
+                style={{ maxWidth: '100%' }}
+                value={refundReason}
+                onChange={(e) => setRefundReason(e.target.value)}
+                placeholder="Ej: Compensación manual por incidencia en stream"
+              />
+            </FieldBlock>
+
+            {refundError && <StyledError style={{ marginTop: 10 }}>{refundError}</StyledError>}
+
+            {refundSuccess && (
+              <div
+                style={{
+                  marginTop: 10,
+                  padding: '10px 12px',
+                  borderRadius: 8,
+                  background: '#d4edda',
+                  color: '#155724',
+                  fontSize: 14,
+                }}
+              >
+                {refundSuccess}
+              </div>
+            )}
+
+            <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <StyledButton type="button" onClick={handleRefund} disabled={refundLoading}>
+                {refundLoading ? 'Aplicando refund...' : 'Aplicar refund'}
+              </StyledButton>
+
+              <SmallBtn
+                type="button"
+                onClick={() => {
+                  setRefundUserId('');
+                  setRefundAmount('');
+                  setRefundReason('');
+                  setRefundError('');
+                  setRefundSuccess('');
+                }}
+                disabled={refundLoading}
+              >
+                Limpiar
               </SmallBtn>
             </div>
-          </div>
 
-          <PanelRow>
-            <FieldBlock>
-              <label>User ID (CLIENT)</label>
-              <StyledInput
-                type="number"
-                min="1"
-                value={refundUserId}
-                onChange={(e) => setRefundUserId(e.target.value)}
-                placeholder="Ej: 68"
-              />
-            </FieldBlock>
-
-            <FieldBlock>
-              <label>Amount (€)</label>
-              <StyledInput
-                type="number"
-                min="0.01"
-                step="0.01"
-                value={refundAmount}
-                onChange={(e) => setRefundAmount(e.target.value)}
-                placeholder="Ej: 3.00"
-              />
-            </FieldBlock>
-          </PanelRow>
-
-          <FieldBlock style={{ marginTop: 10 }}>
-            <label>Reason</label>
-            <StyledInput
-              type="text"
-              style={{ maxWidth: '100%' }}
-              value={refundReason}
-              onChange={(e) => setRefundReason(e.target.value)}
-              placeholder="Ej: Compensación manual por incidencia en stream"
-            />
-          </FieldBlock>
-
-          {refundError && <StyledError style={{ marginTop: 10 }}>{refundError}</StyledError>}
-
-          {refundSuccess && (
-            <div
-              style={{
-                marginTop: 10,
-                padding: '10px 12px',
-                borderRadius: 8,
-                background: '#d4edda',
-                color: '#155724',
-                fontSize: 14,
-              }}
-            >
-              {refundSuccess}
+            <div style={{ marginTop: 12, fontSize: 12, color: '#6c757d' }}>
+              Notas:
+              <br />
+              - Solo aplica a usuarios con rol CLIENT.
+              <br />
+              - No modifica transacciones previas; crea una nueva transacción ledger de tipo MANUAL_REFUND.
+              <br />
+              - No incrementa totalPagos; solo devuelve saldo disponible.
             </div>
-          )}
-
-          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <StyledButton type="button" onClick={handleRefund} disabled={refundLoading}>
-              {refundLoading ? 'Aplicando refund...' : 'Aplicar refund'}
-            </StyledButton>
-
-            <SmallBtn
-              type="button"
-              onClick={() => {
-                setRefundUserId('');
-                setRefundAmount('');
-                setRefundReason('');
-                setRefundError('');
-                setRefundSuccess('');
-              }}
-              disabled={refundLoading}
-            >
-              Limpiar
-            </SmallBtn>
-          </div>
-
-          <div style={{ marginTop: 12, fontSize: 12, color: '#6c757d' }}>
-            Notas:
-            <br />
-            - Solo aplica a usuarios con rol CLIENT.
-            <br />
-            - No modifica transacciones previas; crea una nueva transacción ledger de tipo MANUAL_REFUND.
-            <br />
-            - No incrementa totalPagos; solo devuelve saldo disponible.
-          </div>
-        </InlinePanel>
-      </div>
+          </InlinePanel>
+        </div>
+      )}
     </div>
   );
 };
