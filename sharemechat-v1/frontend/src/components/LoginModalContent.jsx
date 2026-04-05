@@ -101,10 +101,13 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
       }
     } catch (err) {
       const backendMessage = err?.data?.message;
+      const backendText = typeof err?.text === 'string' && err.text.trim() ? err.text.trim() : '';
       const statusCode = Number(err?.status);
 
       if (backendMessage) {
         setError(backendMessage);
+      } else if (isAdminSurface() && statusCode === 403 && backendText) {
+        setError(backendText);
       } else if (statusCode === 401) {
         setError(i18n.t('auth.login.errors.invalidCredentials'));
       } else if (statusCode === 403) {

@@ -71,7 +71,7 @@ public class AdminAuthController {
                 backofficeAccessService.loadProfile(user.getId(), user.getRole());
 
         if (!hasInternalBackofficeAccess(profile)) {
-            return ResponseEntity.status(403).body("Acceso de backoffice denegado");
+            return ResponseEntity.status(401).body("Acceso de backoffice denegado");
         }
 
         String access = jwtUtil.generateAccessToken(
