@@ -201,6 +201,40 @@ const AdminDataPanel = () => {
     }
   };
 
+  const focusStreamsByValue = async (value) => {
+    if (value == null || value === '') return;
+    setActiveTab('streams');
+    setStreamsQuery(String(value));
+    setStreamsLoading(true);
+    setStreamsError('');
+    try {
+      const params = new URLSearchParams();
+      params.set('q', String(value));
+      if (streamsType) params.set('streamType', streamsType);
+      if (streamsStatus) params.set('status', streamsStatus);
+      params.set('limit', String(streamsLimit));
+
+      const rows = await apiFetch(`/admin/data/streams?${params.toString()}`);
+      const safeRows = Array.isArray(rows) ? rows : [];
+      setStreamsRows(safeRows);
+
+      if (safeRows.length > 0) {
+        const nextId = safeRows[0].id;
+        await loadStreamDetail(nextId);
+      } else {
+        setSelectedStreamId(null);
+        setSelectedStreamDetail(null);
+      }
+    } catch (e) {
+      setStreamsError(e.message || 'Error cargando streams');
+      setStreamsRows([]);
+      setSelectedStreamId(null);
+      setSelectedStreamDetail(null);
+    } finally {
+      setStreamsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'streams' && streamsRows.length === 0 && !streamsLoading) {
       loadStreams();
@@ -306,19 +340,19 @@ const AdminDataPanel = () => {
                     <th>Inicio</th>
                     <th>Confirmado</th>
                     <th>Cierre</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {streamsRows.length === 0 && (
                     <tr>
-                      <td colSpan="8">Sin resultados para los filtros actuales.</td>
+                      <td colSpan="9">Sin resultados para los filtros actuales.</td>
                     </tr>
                   )}
                   {streamsRows.map((row) => (
                     <tr
                       key={row.id}
-                      onClick={() => loadStreamDetail(row.id)}
-                      style={selectedStreamId === row.id ? { background: '#eef4ff', cursor: 'pointer' } : { cursor: 'pointer' }}
+                      style={selectedStreamId === row.id ? { background: '#eef4ff' } : null}
                     >
                       <td>{row.id}</td>
                       <td>{row.stream_type || '-'}</td>
@@ -328,6 +362,23 @@ const AdminDataPanel = () => {
                       <td>{fmtTs(row.start_time)}</td>
                       <td>{fmtTs(row.confirmed_at)}</td>
                       <td>{fmtTs(row.end_time)}</td>
+                      <td>
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                          <SmallBtn type="button" onClick={() => loadStreamDetail(row.id)}>
+                            Ver detalle
+                          </SmallBtn>
+                          {row.client_id ? (
+                            <SmallBtn type="button" onClick={() => focusStreamsByValue(row.client_id)}>
+                              Cliente
+                            </SmallBtn>
+                          ) : null}
+                          {row.model_id ? (
+                            <SmallBtn type="button" onClick={() => focusStreamsByValue(row.model_id)}>
+                              Modelo
+                            </SmallBtn>
+                          ) : null}
+                        </div>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -452,7 +503,7 @@ const AdminDataPanel = () => {
             </StyledButton>
 
             <RightInfo>
-              {paymentsLoading ? 'Buscando datos financieros...' : 'Contexto cruzado de transacciones, pagos, payouts y balances'}
+              {paymentsLoading ? 'Buscando pagos y operaciones...' : 'Contexto cruzado de transacciones, pagos, payouts y balances'}
             </RightInfo>
           </ControlsRow>
 
@@ -479,12 +530,13 @@ const AdminDataPanel = () => {
                     <th>Stream</th>
                     <th>Fecha</th>
                     <th>Descripcion</th>
+                    <th>Acciones</th>
                   </tr>
                 </thead>
                 <tbody>
                   {paymentsData.transactions.length === 0 && (
                     <tr>
-                      <td colSpan="7">Sin transacciones para los filtros actuales.</td>
+                      <td colSpan="8">Sin transacciones para los filtros actuales.</td>
                     </tr>
                   )}
                   {paymentsData.transactions.map((row) => (
@@ -496,6 +548,13 @@ const AdminDataPanel = () => {
                       <td>{row.stream_record_id ?? '-'}</td>
                       <td>{fmtTs(row.timestamp)}</td>
                       <td title={row.description || ''}>{short(row.description, 90)}</td>
+                      <td>
+                        {row.stream_record_id ? (
+                          <SmallBtn type="button" onClick={() => focusStreamsByValue(row.stream_record_id)}>
+                            Ver stream
+                          </SmallBtn>
+                        ) : '-'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -601,7 +660,11 @@ const AdminDataPanel = () => {
                     <tr key={`bal-${row.id}`}>
                       <td>{row.id}</td>
                       <td title={row.user_email || ''}>{row.user_id} - {row.user_nickname || row.user_email || '-'}</td>
-                      <td>{row.transaction_id ?? '-'}</td>
+                      <td>
+                        {row.transaction_id ? (
+                          <span style={{ fontWeight: 700, color: '#0f172a' }}>Tx #{row.transaction_id}</span>
+                        ) : '-'}
+                      </td>
                       <td>{row.operation_type || '-'}</td>
                       <td>{fmtMoney(row.amount)}</td>
                       <td>{fmtMoney(row.balance)}</td>

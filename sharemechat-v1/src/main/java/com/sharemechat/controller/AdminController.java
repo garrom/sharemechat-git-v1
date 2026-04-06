@@ -143,8 +143,47 @@ public class AdminController {
     }
 
     @GetMapping("/administration/backoffice-users")
-    public ResponseEntity<BackofficeAccessService.BackofficeAdminOverview> backofficeUsers() {
+    public ResponseEntity<BackofficeAdministrationDTOs.BackofficeAdminOverview> backofficeUsers() {
         return ResponseEntity.ok(adminServiceBackofficeOverview());
+    }
+
+    @GetMapping("/administration/backoffice-users/{userId}")
+    public ResponseEntity<BackofficeAdministrationDTOs.BackofficeUserDetail> backofficeUserDetail(@PathVariable Long userId) {
+        return ResponseEntity.ok(backofficeAccessService.getUserDetail(userId));
+    }
+
+    @GetMapping("/administration/users/search")
+    public ResponseEntity<List<BackofficeAdministrationDTOs.BackofficeUserLookupItem>> searchBackofficeUsers(
+            @RequestParam String q,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return ResponseEntity.ok(backofficeAccessService.searchExistingUsers(q, limit));
+    }
+
+    @PostMapping("/administration/backoffice-users")
+    public ResponseEntity<BackofficeAdministrationDTOs.BackofficeUserDetail> createBackofficeUser(
+            @RequestBody BackofficeAdministrationDTOs.BackofficeUserUpsertRequest request,
+            Authentication auth
+    ) {
+        return ResponseEntity.ok(backofficeAccessService.createBackofficeAccess(request, currentAdminUserId(auth)));
+    }
+
+    @PutMapping("/administration/backoffice-users/{userId}")
+    public ResponseEntity<BackofficeAdministrationDTOs.BackofficeUserDetail> updateBackofficeUser(
+            @PathVariable Long userId,
+            @RequestBody BackofficeAdministrationDTOs.BackofficeUserUpsertRequest request,
+            Authentication auth
+    ) {
+        return ResponseEntity.ok(backofficeAccessService.updateBackofficeAccess(userId, request, currentAdminUserId(auth)));
+    }
+
+    @PutMapping("/administration/backoffice-users/{userId}/status")
+    public ResponseEntity<BackofficeAdministrationDTOs.BackofficeUserDetail> updateBackofficeUserStatus(
+            @PathVariable Long userId,
+            @RequestBody BackofficeAdministrationDTOs.BackofficeUserStatusUpdateRequest request,
+            Authentication auth
+    ) {
+        return ResponseEntity.ok(backofficeAccessService.updateBackofficeStatus(userId, request, currentAdminUserId(auth)));
     }
 
     // GET /api/admin/model-docs/{userId}
@@ -402,7 +441,15 @@ public class AdminController {
         return new ArrayList<>();
     }
 
-    private BackofficeAccessService.BackofficeAdminOverview adminServiceBackofficeOverview() {
+    private Long currentAdminUserId(Authentication auth) {
+        if (auth == null || auth.getName() == null) {
+            return null;
+        }
+        User user = userService.findByEmail(auth.getName());
+        return user != null ? user.getId() : null;
+    }
+
+    private BackofficeAdministrationDTOs.BackofficeAdminOverview adminServiceBackofficeOverview() {
         return backofficeAccessService.listAdminOverview();
     }
 }
