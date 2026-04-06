@@ -37,7 +37,7 @@ const AuditSessionIntegrityPanel = () => {
         },
         body: JSON.stringify({
           scope: 'SESSION_INTEGRITY',
-          dryRun: true,
+          dryRun: false,
         }),
       });
 
@@ -47,6 +47,7 @@ const AuditSessionIntegrityPanel = () => {
 
       const data = await res.json();
       setAuditResult(data || null);
+      await loadAnomalies();
     } catch (e) {
       setAuditError(e.message || 'Error ejecutando session integrity audit');
     } finally {
@@ -216,7 +217,7 @@ const AuditSessionIntegrityPanel = () => {
         <NoteCard $muted>
           <div className="label">Nota operativa</div>
           <div className="meta">
-            Esta fase solo observa e informa. No modifica streams, no cierra sesiones y no altera la lógica de negocio.
+            Esta ejecucion persiste anomalias SI_ para revision posterior. No modifica streams, no cierra sesiones y no altera la logica de negocio.
           </div>
         </NoteCard>
       </CardsGrid>

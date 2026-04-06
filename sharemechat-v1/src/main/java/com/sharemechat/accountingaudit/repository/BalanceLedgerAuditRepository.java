@@ -432,6 +432,7 @@ public class BalanceLedgerAuditRepository {
               sr.model_id,
               sr.start_time,
               sr.confirmed_at,
+              sr.billable_start,
               sr.end_time
             FROM stream_records sr
             WHERE sr.stream_type IN ('RANDOM', 'CALLING')
@@ -462,6 +463,7 @@ public class BalanceLedgerAuditRepository {
               sr.model_id,
               sr.start_time,
               sr.confirmed_at,
+              sr.billable_start,
               sr.end_time
             FROM stream_records sr
             JOIN stream_status_events sse
@@ -489,6 +491,7 @@ public class BalanceLedgerAuditRepository {
               sr.model_id,
               sr.start_time,
               sr.confirmed_at,
+              sr.billable_start,
               sr.end_time
             FROM stream_records sr
             JOIN stream_status_events sse
@@ -600,6 +603,7 @@ public class BalanceLedgerAuditRepository {
               sr.model_id,
               sr.start_time,
               sr.confirmed_at,
+              sr.billable_start,
               sr.end_time
             FROM stream_records sr
             WHERE sr.stream_type IN ('RANDOM', 'CALLING')
@@ -631,6 +635,7 @@ public class BalanceLedgerAuditRepository {
               sr.model_id,
               sr.start_time,
               sr.confirmed_at,
+              sr.billable_start,
               sr.end_time
             FROM stream_records sr
             WHERE sr.stream_type IN ('RANDOM', 'CALLING')

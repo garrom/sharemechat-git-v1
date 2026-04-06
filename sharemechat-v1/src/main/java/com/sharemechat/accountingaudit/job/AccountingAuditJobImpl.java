@@ -86,6 +86,8 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
 
             if ("SELFTEST".equalsIgnoreCase(run.getScope())) {
                 runSelfTest(run, now);
+            } else if ("SESSION_INTEGRITY".equalsIgnoreCase(run.getScope())) {
+                runSessionIntegrity(run, now);
             } else if ("RUNTIME_HEALTH".equalsIgnoreCase(run.getScope())) {
                 runRuntimeHealth(run, now);
             } else {
@@ -224,6 +226,115 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
             }
             accountingAnomalyRepository.saveAll(anomalies);
             run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
+        }
+    }
+
+    private void runSessionIntegrity(AuditRun run, Instant now) {
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (var row : balanceLedgerAuditRepository.findClosedStreamsWithoutEndedEvent(200)) {
+            createSessionIntegrityAnomaly(
+                    run,
+                    now,
+                    "SI_CLOSED_WITHOUT_ENDED_EVENT",
+                    "WARNING",
+                    row,
+                    "Stream cerrado sin evento ENDED."
+            );
+        }
+
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (var row : balanceLedgerAuditRepository.findConfirmedStreamsWithoutConfirmedEvent(200)) {
+            createSessionIntegrityAnomaly(
+                    run,
+                    now,
+                    "SI_CONFIRMED_WITHOUT_CONFIRMED_EVENT",
+                    "WARNING",
+                    row,
+                    "Stream confirmado sin evento CONFIRMED."
+            );
+        }
+
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (var row : balanceLedgerAuditRepository.findConfirmEventWithoutConfirmedAt(200)) {
+            createSessionIntegrityAnomaly(
+                    run,
+                    now,
+                    "SI_CONFIRM_EVENT_WITHOUT_CONFIRMED_AT",
+                    "ERROR",
+                    row,
+                    "Evento CONFIRMED presente pero confirmed_at ausente."
+            );
+        }
+
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (var row : balanceLedgerAuditRepository.findTerminalEventWithoutEndTime(200)) {
+            createSessionIntegrityAnomaly(
+                    run,
+                    now,
+                    "SI_TERMINAL_EVENT_WITHOUT_END_TIME",
+                    "ERROR",
+                    row,
+                    "Evento terminal presente pero end_time ausente."
+            );
+        }
+
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (var row : balanceLedgerAuditRepository.findInvalidStreamTimestamps(200)) {
+            String description = "Timestamps invalidos en stream. problemCode=" + row.getProblemCode()
+                    + " streamId=" + row.getStreamRecordId()
+                    + " clientId=" + row.getClientUserId()
+                    + " modelId=" + row.getModelUserId();
+            createAnomaly(
+                    run,
+                    now,
+                    "SI_INVALID_STREAM_TIMESTAMPS",
+                    "ERROR",
+                    row.getClientUserId(),
+                    row.getStreamRecordId(),
+                    null,
+                    description
+            );
+        }
+
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (var row : balanceLedgerAuditRepository.findMultipleActiveStreamsSameUser(200)) {
+            String description = "Multiples streams activos para el mismo usuario. userId=" + row.getUserId()
+                    + " role=" + row.getUserRole()
+                    + " activeCount=" + row.getActiveCount();
+            createAnomaly(
+                    run,
+                    now,
+                    "SI_MULTIPLE_ACTIVE_STREAMS_SAME_USER",
+                    "CRITICAL",
+                    row.getUserId(),
+                    null,
+                    null,
+                    description
+            );
+        }
+
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (var row : balanceLedgerAuditRepository.findClosedConfirmedStreamsWithoutStreamCharge(200)) {
+            createSessionIntegrityAnomaly(
+                    run,
+                    now,
+                    "SI_CLOSED_CONFIRMED_WITHOUT_STREAM_CHARGE",
+                    "CRITICAL",
+                    row,
+                    "Stream confirmado y cerrado sin STREAM_CHARGE."
+            );
+        }
+
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        for (var row : balanceLedgerAuditRepository.findClosedConfirmedStreamsWithoutStreamEarning(200)) {
+            createSessionIntegrityAnomaly(
+                    run,
+                    now,
+                    "SI_CLOSED_CONFIRMED_WITHOUT_STREAM_EARNING",
+                    "CRITICAL",
+                    row,
+                    "Stream confirmado y cerrado sin STREAM_EARNING."
+            );
         }
     }
 
@@ -445,6 +556,33 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
 
         accountingAnomalyRepository.save(a);
         run.setAnomaliesCreated(run.getAnomaliesCreated() + 1);
+    }
+
+    private void createSessionIntegrityAnomaly(AuditRun run,
+                                               Instant now,
+                                               String type,
+                                               String severity,
+                                               BalanceLedgerAuditRepository.StreamLifecycleRow row,
+                                               String baseDescription) {
+        String description = baseDescription
+                + " streamId=" + row.getStreamRecordId()
+                + " clientId=" + row.getClientUserId()
+                + " modelId=" + row.getModelUserId()
+                + " startTime=" + row.getStartTime()
+                + " confirmedAt=" + row.getConfirmedAt()
+                + " billableStart=" + row.getBillableStart()
+                + " endTime=" + row.getEndTime();
+
+        createAnomaly(
+                run,
+                now,
+                type,
+                severity,
+                row.getClientUserId(),
+                row.getStreamRecordId(),
+                null,
+                description
+        );
     }
 
     private Long toLong(Object v) {
