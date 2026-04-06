@@ -5,7 +5,7 @@ import { useSession } from '../../components/SessionProvider';
 import AdminActiveStreamsPanel from './AdminActiveStreamsPanel';
 import AdminAdministrationPanel from './AdminAdministrationPanel';
 import AdminAuditPanel from './AdminAuditPanel';
-import AdminDbPanel from './AdminDbPanel';
+import AdminDataPanel from './AdminDataPanel';
 import AdminFinancePanel from './AdminFinancePanel';
 import AdminModelsPanel from './AdminModelsPanel';
 import AdminModerationPanel from './AdminModerationPanel';
@@ -313,9 +313,9 @@ const DashboardAdmin = () => {
       {activeView === 'data' && capabilities.canViewDb && (
         <AdminPage
           title="Datos internos"
-          subtitle="Consulta interna de soporte mientras se construyen vistas mas especializadas."
+          subtitle="Consultas internas operativas para investigacion y una capa raw tecnica reservada a administracion."
         >
-          <AdminDbPanel />
+          <AdminDataPanel />
         </AdminPage>
       )}
 

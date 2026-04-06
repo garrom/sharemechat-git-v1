@@ -119,6 +119,29 @@ public class AdminController {
         return ResponseEntity.ok(adminService.viewTable(table, limit));
     }
 
+    @GetMapping("/data/streams")
+    public ResponseEntity<List<Map<String, Object>>> internalDataStreams(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String streamType,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return ResponseEntity.ok(adminService.queryStreamsForInternalData(q, streamType, status, limit));
+    }
+
+    @GetMapping("/data/payments")
+    public ResponseEntity<Map<String, Object>> internalDataPayments(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) String operationType,
+            @RequestParam(required = false) String paymentStatus,
+            @RequestParam(required = false) String payoutStatus,
+            @RequestParam(required = false) Integer limit
+    ) {
+        return ResponseEntity.ok(adminService.queryPaymentsForInternalData(
+                q, operationType, paymentStatus, payoutStatus, limit
+        ));
+    }
+
     @GetMapping("/administration/backoffice-users")
     public ResponseEntity<BackofficeAccessService.BackofficeAdminOverview> backofficeUsers() {
         return ResponseEntity.ok(adminServiceBackofficeOverview());

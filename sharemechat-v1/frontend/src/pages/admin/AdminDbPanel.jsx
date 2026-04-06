@@ -46,7 +46,7 @@ const DB_TABLES = [
 
 const LIMIT_OPTIONS = [10, 20, 30, 40, 50, 100];
 
-const AdminDbPanel = () => {
+const AdminDbPanel = ({ hideTitle = false }) => {
   const [dbTable, setDbTable] = useState('');
   const [dbLimit, setDbLimit] = useState(10);
   const [dbRows, setDbRows] = useState([]);
@@ -86,7 +86,7 @@ const AdminDbPanel = () => {
 
   return (
     <div>
-      <SectionTitle>Vista BBDD</SectionTitle>
+      {!hideTitle && <SectionTitle>Exploracion tecnica raw</SectionTitle>}
 
       <DbLayout>
         <DbFilters id="dbFilters">

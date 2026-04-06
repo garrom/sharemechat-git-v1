@@ -256,6 +256,109 @@ public class AdminService {
     }
 
     @Transactional(readOnly = true)
+    public List<Map<String, Object>> queryStreamsForInternalData(String q, String streamType, String status, Integer limit) {
+        String normalizedQuery = normalizeQuery(q);
+        Long numericQueryId = tryParseLong(normalizedQuery);
+        String normalizedStreamType = normalizeValue(streamType);
+        String normalizedStatus = normalizeValue(status);
+        int safeLimit = normalizeLimit(limit, 20, 100);
+
+        StringBuilder sql = new StringBuilder("""
+                SELECT
+                  sr.id,
+                  sr.stream_type,
+                  sr.client_id,
+                  c.email AS client_email,
+                  c.nickname AS client_nickname,
+                  sr.model_id,
+                  m.email AS model_email,
+                  m.nickname AS model_nickname,
+                  sr.start_time,
+                  sr.confirmed_at,
+                  sr.billable_start,
+                  sr.end_time,
+                  CASE
+                    WHEN sr.end_time IS NOT NULL THEN 'closed'
+                    WHEN sr.confirmed_at IS NULL THEN 'connecting'
+                    ELSE 'active'
+                  END AS status
+                FROM stream_records sr
+                JOIN users c ON c.id = sr.client_id
+                JOIN users m ON m.id = sr.model_id
+                WHERE 1=1
+                """);
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        if (normalizedQuery != null) {
+            if (numericQueryId != null) {
+                sql.append("""
+                         AND (
+                           sr.id = :numericQueryId
+                           OR sr.client_id = :numericQueryId
+                           OR sr.model_id = :numericQueryId
+                         )
+                        """);
+                params.addValue("numericQueryId", numericQueryId);
+            } else {
+                sql.append("""
+                         AND (
+                           LOWER(c.email) LIKE :queryLike
+                           OR LOWER(c.nickname) LIKE :queryLike
+                           OR LOWER(m.email) LIKE :queryLike
+                           OR LOWER(m.nickname) LIKE :queryLike
+                         )
+                        """);
+                params.addValue("queryLike", "%" + normalizedQuery.toLowerCase() + "%");
+            }
+        }
+
+        if (normalizedStreamType != null) {
+            sql.append(" AND sr.stream_type = :streamType ");
+            params.addValue("streamType", normalizedStreamType.toUpperCase());
+        }
+
+        if (normalizedStatus != null) {
+            sql.append("""
+                     AND (
+                       CASE
+                         WHEN sr.end_time IS NOT NULL THEN 'closed'
+                         WHEN sr.confirmed_at IS NULL THEN 'connecting'
+                         ELSE 'active'
+                       END = :status
+                     )
+                    """);
+            params.addValue("status", normalizedStatus.toLowerCase());
+        }
+
+        sql.append(" ORDER BY sr.id DESC LIMIT :limit ");
+        params.addValue("limit", safeLimit);
+
+        return jdbc.queryForList(sql.toString(), params);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, Object> queryPaymentsForInternalData(String q,
+                                                            String operationType,
+                                                            String paymentStatus,
+                                                            String payoutStatus,
+                                                            Integer limit) {
+        String normalizedQuery = normalizeQuery(q);
+        Long numericQueryId = tryParseLong(normalizedQuery);
+        String normalizedOperationType = normalizeValue(operationType);
+        String normalizedPaymentStatus = normalizeValue(paymentStatus);
+        String normalizedPayoutStatus = normalizeValue(payoutStatus);
+        int safeLimit = normalizeLimit(limit, 20, 100);
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("transactions", queryInternalTransactions(normalizedQuery, numericQueryId, normalizedOperationType, safeLimit));
+        out.put("paymentSessions", queryInternalPaymentSessions(normalizedQuery, numericQueryId, normalizedPaymentStatus, safeLimit));
+        out.put("payoutRequests", queryInternalPayoutRequests(normalizedQuery, numericQueryId, normalizedPayoutStatus, safeLimit));
+        out.put("balances", queryInternalBalances(normalizedQuery, numericQueryId, normalizedOperationType, safeLimit));
+        return out;
+    }
+
+    @Transactional(readOnly = true)
     public Map<String, Object> getModelDocsWithChecklist(Long userId) {
         Map<String, Object> out = new LinkedHashMap<>();
         ModelDocument doc = modelDocumentRepository.findById(userId).orElse(null);
@@ -323,6 +426,258 @@ public class AdminService {
             return HIDDEN_VALUE;
         }
         return value;
+    }
+
+    private List<Map<String, Object>> queryInternalTransactions(String normalizedQuery,
+                                                                Long numericQueryId,
+                                                                String normalizedOperationType,
+                                                                int safeLimit) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT
+                  t.id,
+                  t.user_id,
+                  u.email AS user_email,
+                  u.nickname AS user_nickname,
+                  t.amount,
+                  t.operation_type,
+                  t.stream_record_id,
+                  t.timestamp,
+                  t.description
+                FROM transactions t
+                JOIN users u ON u.id = t.user_id
+                WHERE 1=1
+                """);
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+        appendUserQuery(sql, params, normalizedQuery, numericQueryId, "t.id", "t.user_id", "u.email", "u.nickname");
+
+        if (normalizedOperationType != null) {
+            sql.append(" AND t.operation_type = :operationType ");
+            params.addValue("operationType", normalizedOperationType.toUpperCase());
+        }
+
+        sql.append(" ORDER BY t.id DESC LIMIT :limit ");
+        params.addValue("limit", safeLimit);
+        return jdbc.queryForList(sql.toString(), params);
+    }
+
+    private List<Map<String, Object>> queryInternalPaymentSessions(String normalizedQuery,
+                                                                   Long numericQueryId,
+                                                                   String normalizedPaymentStatus,
+                                                                   int safeLimit) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT
+                  ps.id,
+                  ps.user_id,
+                  u.email AS user_email,
+                  u.nickname AS user_nickname,
+                  ps.pack_id,
+                  ps.amount,
+                  ps.currency,
+                  ps.first_payment,
+                  ps.status,
+                  ps.order_id,
+                  ps.psp_transaction_id,
+                  ps.created_at,
+                  ps.updated_at
+                FROM payment_sessions ps
+                JOIN users u ON u.id = ps.user_id
+                WHERE 1=1
+                """);
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        if (normalizedQuery != null) {
+            if (numericQueryId != null) {
+                sql.append("""
+                         AND (
+                           ps.id = :numericQueryId
+                           OR ps.user_id = :numericQueryId
+                         )
+                        """);
+                params.addValue("numericQueryId", numericQueryId);
+            } else {
+                sql.append("""
+                         AND (
+                           LOWER(u.email) LIKE :queryLike
+                           OR LOWER(u.nickname) LIKE :queryLike
+                           OR LOWER(ps.order_id) LIKE :queryLike
+                           OR LOWER(COALESCE(ps.psp_transaction_id, '')) LIKE :queryLike
+                         )
+                        """);
+                params.addValue("queryLike", "%" + normalizedQuery.toLowerCase() + "%");
+            }
+        }
+
+        if (normalizedPaymentStatus != null) {
+            sql.append(" AND ps.status = :paymentStatus ");
+            params.addValue("paymentStatus", normalizedPaymentStatus.toUpperCase());
+        }
+
+        sql.append(" ORDER BY ps.id DESC LIMIT :limit ");
+        params.addValue("limit", safeLimit);
+        return jdbc.queryForList(sql.toString(), params);
+    }
+
+    private List<Map<String, Object>> queryInternalPayoutRequests(String normalizedQuery,
+                                                                  Long numericQueryId,
+                                                                  String normalizedPayoutStatus,
+                                                                  int safeLimit) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT
+                  pr.id,
+                  pr.model_user_id,
+                  u.email AS model_email,
+                  u.nickname AS model_nickname,
+                  pr.amount,
+                  pr.currency,
+                  pr.status,
+                  pr.reason,
+                  pr.reviewed_by_user_id,
+                  pr.reviewed_at,
+                  pr.created_at,
+                  pr.updated_at
+                FROM payout_requests pr
+                JOIN users u ON u.id = pr.model_user_id
+                WHERE 1=1
+                """);
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        if (normalizedQuery != null) {
+            if (numericQueryId != null) {
+                sql.append("""
+                         AND (
+                           pr.id = :numericQueryId
+                           OR pr.model_user_id = :numericQueryId
+                         )
+                        """);
+                params.addValue("numericQueryId", numericQueryId);
+            } else {
+                sql.append("""
+                         AND (
+                           LOWER(u.email) LIKE :queryLike
+                           OR LOWER(u.nickname) LIKE :queryLike
+                         )
+                        """);
+                params.addValue("queryLike", "%" + normalizedQuery.toLowerCase() + "%");
+            }
+        }
+
+        if (normalizedPayoutStatus != null) {
+            sql.append(" AND pr.status = :payoutStatus ");
+            params.addValue("payoutStatus", normalizedPayoutStatus.toUpperCase());
+        }
+
+        sql.append(" ORDER BY pr.id DESC LIMIT :limit ");
+        params.addValue("limit", safeLimit);
+        return jdbc.queryForList(sql.toString(), params);
+    }
+
+    private List<Map<String, Object>> queryInternalBalances(String normalizedQuery,
+                                                            Long numericQueryId,
+                                                            String normalizedOperationType,
+                                                            int safeLimit) {
+        StringBuilder sql = new StringBuilder("""
+                SELECT
+                  b.id,
+                  b.user_id,
+                  u.email AS user_email,
+                  u.nickname AS user_nickname,
+                  b.transaction_id,
+                  b.operation_type,
+                  b.amount,
+                  b.balance,
+                  b.timestamp,
+                  b.description
+                FROM balances b
+                JOIN users u ON u.id = b.user_id
+                WHERE 1=1
+                """);
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        if (normalizedQuery != null) {
+            if (numericQueryId != null) {
+                sql.append("""
+                         AND (
+                           b.id = :numericQueryId
+                           OR b.user_id = :numericQueryId
+                           OR b.transaction_id = :numericQueryId
+                         )
+                        """);
+                params.addValue("numericQueryId", numericQueryId);
+            } else {
+                sql.append("""
+                         AND (
+                           LOWER(u.email) LIKE :queryLike
+                           OR LOWER(u.nickname) LIKE :queryLike
+                         )
+                        """);
+                params.addValue("queryLike", "%" + normalizedQuery.toLowerCase() + "%");
+            }
+        }
+
+        if (normalizedOperationType != null) {
+            sql.append(" AND b.operation_type = :operationType ");
+            params.addValue("operationType", normalizedOperationType.toUpperCase());
+        }
+
+        sql.append(" ORDER BY b.id DESC LIMIT :limit ");
+        params.addValue("limit", safeLimit);
+        return jdbc.queryForList(sql.toString(), params);
+    }
+
+    private void appendUserQuery(StringBuilder sql,
+                                 MapSqlParameterSource params,
+                                 String normalizedQuery,
+                                 Long numericQueryId,
+                                 String idColumn,
+                                 String userIdColumn,
+                                 String emailColumn,
+                                 String nicknameColumn) {
+        if (normalizedQuery == null) {
+            return;
+        }
+
+        if (numericQueryId != null) {
+            sql.append(" AND (").append(idColumn).append(" = :numericQueryId OR ")
+                    .append(userIdColumn).append(" = :numericQueryId) ");
+            params.addValue("numericQueryId", numericQueryId);
+            return;
+        }
+
+        sql.append(" AND (LOWER(").append(emailColumn).append(") LIKE :queryLike OR LOWER(")
+                .append(nicknameColumn).append(") LIKE :queryLike) ");
+        params.addValue("queryLike", "%" + normalizedQuery.toLowerCase() + "%");
+    }
+
+    private String normalizeQuery(String q) {
+        if (q == null) return null;
+        String trimmed = q.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizeValue(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private Long tryParseLong(String value) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Long.parseLong(value);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
+    private int normalizeLimit(Integer requested, int defaultValue, int maxValue) {
+        if (requested == null || requested < 1) {
+            return defaultValue;
+        }
+        return Math.min(requested, maxValue);
     }
 
     private record TableViewConfig(
