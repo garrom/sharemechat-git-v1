@@ -50,6 +50,7 @@ public class MatchingHandlerSupport {
     private final NextRateLimitService nextRateLimitService;
     private final UserLanguageService userLanguageService;
     private final AgeGatePolicyService ageGatePolicyService;
+    private final ProductAccessGuardService productAccessGuardService;
 
     public MatchingHandlerSupport(MatchingRuntimeState state,
                                   JwtUtil jwtUtil,
@@ -67,6 +68,7 @@ public class MatchingHandlerSupport {
                                   NextRateLimitService nextRateLimitService,
                                   UserLanguageService userLanguageService,
                                   AgeGatePolicyService ageGatePolicyService,
+                                  ProductAccessGuardService productAccessGuardService,
                                   @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.state = state;
         this.jwtUtil = jwtUtil;
@@ -85,6 +87,7 @@ public class MatchingHandlerSupport {
         this.nextRateLimitService = nextRateLimitService;
         this.userLanguageService = userLanguageService;
         this.ageGatePolicyService = ageGatePolicyService;
+        this.productAccessGuardService = productAccessGuardService;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -97,6 +100,17 @@ public class MatchingHandlerSupport {
         );
         if (userId == null) {
             session.close(CloseStatus.BAD_DATA);
+            return;
+        }
+        User user = userRepository.findById(userId).orElse(null);
+        try {
+            productAccessGuardService.requireNotSupport(user);
+        } catch (Exception ex) {
+            safeSend(session, new JSONObject()
+                    .put("type", "forbidden")
+                    .put("message", ex.getMessage())
+                    .toString());
+            session.close(CloseStatus.POLICY_VIOLATION);
             return;
         }
         logConsentObservation(userId, "/match");

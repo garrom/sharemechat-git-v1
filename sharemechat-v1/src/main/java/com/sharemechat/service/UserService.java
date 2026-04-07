@@ -631,6 +631,7 @@ public class UserService {
         dto.setRiskReason(user.getRiskReason());
         dto.setRiskUpdatedAt(user.getRiskUpdatedAt());
         dto.setRiskUpdatedBy(user.getRiskUpdatedBy());
+        dto.setEmailVerifiedAt(user.getEmailVerifiedAt());
 
         ConsentState consentState = ageGatePolicyService.resolve(user);
         dto.setConsentCompliant(consentState.compliant());

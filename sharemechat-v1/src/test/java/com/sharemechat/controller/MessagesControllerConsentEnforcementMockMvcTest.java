@@ -9,6 +9,7 @@ import com.sharemechat.exception.GlobalExceptionHandler;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.ConsentEnforcementService;
 import com.sharemechat.service.MessageService;
+import com.sharemechat.service.ProductAccessGuardService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -39,6 +40,7 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         MessageService messageService = mock(MessageService.class);
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
+        ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
 
         User user = new User();
         user.setId(11L);
@@ -49,7 +51,12 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
         when(messageService.send(11L, 22L, "hola")).thenReturn(dto);
 
-        MessagesController controller = new MessagesController(messageService, userRepository, consentEnforcementService);
+        MessagesController controller = new MessagesController(
+                messageService,
+                userRepository,
+                consentEnforcementService,
+                productAccessGuardService
+        );
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(jsonConverter())
@@ -70,6 +77,7 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         MessageService messageService = mock(MessageService.class);
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
+        ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
 
         doThrow(new ConsentRequiredException(
                 11L,
@@ -77,7 +85,12 @@ class MessagesControllerConsentEnforcementMockMvcTest {
                 new ConsentState(false, false, true, false, "v1")
         )).when(consentEnforcementService).assertAuthenticatedUserCompliant(any(), eq("POST /api/messages/to/{userId}"));
 
-        MessagesController controller = new MessagesController(messageService, userRepository, consentEnforcementService);
+        MessagesController controller = new MessagesController(
+                messageService,
+                userRepository,
+                consentEnforcementService,
+                productAccessGuardService
+        );
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(jsonConverter())
@@ -100,6 +113,7 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         MessageService messageService = mock(MessageService.class);
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
+        ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
 
         doThrow(new ConsentRequiredException(
                 11L,
@@ -107,7 +121,12 @@ class MessagesControllerConsentEnforcementMockMvcTest {
                 new ConsentState(false, false, true, false, "v1")
         )).when(consentEnforcementService).assertAuthenticatedUserCompliant(any(), eq("GET /api/messages/conversations"));
 
-        MessagesController controller = new MessagesController(messageService, userRepository, consentEnforcementService);
+        MessagesController controller = new MessagesController(
+                messageService,
+                userRepository,
+                consentEnforcementService,
+                productAccessGuardService
+        );
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(jsonConverter())
@@ -128,6 +147,7 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         MessageService messageService = mock(MessageService.class);
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
+        ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
 
         User user = new User();
         user.setId(11L);
@@ -136,7 +156,12 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         when(userRepository.findByEmail("alice@example.com")).thenReturn(Optional.of(user));
         when(messageService.history(11L, 22L, null)).thenReturn(List.of());
 
-        MessagesController controller = new MessagesController(messageService, userRepository, consentEnforcementService);
+        MessagesController controller = new MessagesController(
+                messageService,
+                userRepository,
+                consentEnforcementService,
+                productAccessGuardService
+        );
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
                 .setMessageConverters(jsonConverter())

@@ -19,6 +19,7 @@ import {
 import BlogContent from '../blog/BlogContent';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
+import { getApiErrorMessage, isEmailNotVerifiedError } from '../../utils/apiErrors';
 
 const DashboardUserClient = () => {
   const history = useHistory();
@@ -39,6 +40,7 @@ const DashboardUserClient = () => {
   const [activeTab, setActiveTab] = useState('videochat');
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [loadingFirstPayment, setLoadingFirstPayment] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   // Modal de cooldown (sin más trials)
   const [showTrialCooldownModal, setShowTrialCooldownModal] = useState(false);
@@ -291,10 +293,50 @@ const DashboardUserClient = () => {
     setActiveTab('blog');
   };
 
+  const handleResendEmailVerification = async () => {
+    setError('');
+    setStatusText('');
+    setResendingVerification(true);
+    try {
+      const response = await apiFetch('/email-verification/resend', { method: 'POST' });
+      const message = typeof response === 'string' ? response : (response?.message || 'Hemos reenviado el email de validacion.');
+      setStatusText(message);
+      await alert({
+        title: t('dashboardUserClient.actions.goPremium'),
+        message,
+        variant: 'success',
+        size: 'sm',
+      });
+    } catch (e) {
+      const message = getApiErrorMessage(e, 'No se pudo reenviar el email de validacion.');
+      setError(message);
+      await alert({
+        title: t('dashboardUserClient.common.errorTitle'),
+        message,
+        variant: 'danger',
+        size: 'sm',
+      });
+    } finally {
+      setResendingVerification(false);
+    }
+  };
+
   // ======= Primer pago -> hacerme CLIENT (COOKIE AUTH) =======
   const handleFirstPayment = async () => {
     setError('');
     setStatusText('');
+
+    if (!user?.emailVerifiedAt) {
+      const message = 'Debes validar tu email antes de activar la cuenta premium.';
+      setError(message);
+      await alert({
+        title: t('dashboardUserClient.actions.goPremium'),
+        message,
+        variant: 'warning',
+        size: 'sm',
+      });
+      return;
+    }
 
     const result = await openPurchaseModal({ context: 'first-payment-user' });
     if (!result.confirmed || !result.pack) return;
@@ -304,9 +346,8 @@ const DashboardUserClient = () => {
 
     setLoadingFirstPayment(true);
     try {
-      const res = await fetch('/api/transactions/first', {
+      await apiFetch('/transactions/first', {
         method: 'POST',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           amount,
@@ -314,9 +355,6 @@ const DashboardUserClient = () => {
           description: `Primer pago (${pack.minutes} minutos) para activar cuenta premium`,
         }),
       });
-
-      const txt = await res.text();
-      if (!res.ok) throw new Error(txt || t('dashboardUserClient.errors.firstPayment'));
 
       await alert({
         title: t('dashboardUserClient.firstPayment.success.title'),
@@ -327,7 +365,9 @@ const DashboardUserClient = () => {
 
       history.push('/client');
     } catch (e) {
-      const msgErr = e.message || t('dashboardUserClient.errors.firstPayment');
+      const msgErr = isEmailNotVerifiedError(e)
+        ? 'Debes validar tu email antes de activar la cuenta premium.'
+        : getApiErrorMessage(e, t('dashboardUserClient.errors.firstPayment'));
       setError(msgErr);
       await alert({ title: t('dashboardUserClient.common.errorTitle'), message: msgErr, variant: 'danger', size: 'sm' });
     } finally {
@@ -617,6 +657,49 @@ const DashboardUserClient = () => {
   };
 
   const displayName = userName || t('dashboardUserClient.user.defaultName');
+  const emailVerificationNoticeStyle = {
+    margin: '0 0 12px 0',
+    padding: isMobile ? '10px 12px' : '10px 14px',
+    borderRadius: 12,
+    border: '1px solid rgba(214, 174, 92, 0.35)',
+    background: 'rgba(255, 248, 232, 0.96)',
+    color: '#7a4b00',
+    display: 'flex',
+    alignItems: isMobile ? 'stretch' : 'center',
+    justifyContent: 'space-between',
+    gap: isMobile ? 10 : 14,
+    flexDirection: isMobile ? 'column' : 'row',
+    boxShadow: '0 8px 20px rgba(18, 24, 38, 0.05)',
+  };
+  const emailVerificationNoticeTextStyle = {
+    minWidth: 0,
+    display: 'grid',
+    gap: 3,
+  };
+  const emailVerificationNoticeTitleStyle = {
+    fontSize: 13,
+    fontWeight: 700,
+    lineHeight: 1.3,
+  };
+  const emailVerificationNoticeBodyStyle = {
+    fontSize: 12,
+    lineHeight: 1.4,
+    color: 'rgba(122, 75, 0, 0.88)',
+  };
+  const emailVerificationNoticeButtonStyle = {
+    flexShrink: 0,
+    alignSelf: isMobile ? 'flex-start' : 'center',
+    padding: '8px 11px',
+    borderRadius: 9,
+    border: '1px solid rgba(217, 194, 140, 0.9)',
+    background: '#fffdf7',
+    color: '#7a4b00',
+    fontWeight: 700,
+    fontSize: 12,
+    lineHeight: 1.2,
+    cursor: 'pointer',
+    whiteSpace: 'nowrap',
+  };
 
   return (
     <StyledContainer>
@@ -649,6 +732,28 @@ const DashboardUserClient = () => {
       {/* ========= FIN NAVBAR  ======== */}
 
       <StyledMainContent data-tab={activeTab}>
+        {!user?.emailVerifiedAt && (
+          <div style={emailVerificationNoticeStyle}>
+            <div style={emailVerificationNoticeTextStyle}>
+              <div style={emailVerificationNoticeTitleStyle}>Email pendiente de verificacion</div>
+              <div style={emailVerificationNoticeBodyStyle}>
+              Puedes seguir entrando y usar el trial, pero no podrás activar la cuenta premium hasta validar tu email.
+            </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleResendEmailVerification}
+              disabled={resendingVerification}
+              style={{
+                ...emailVerificationNoticeButtonStyle,
+                opacity: resendingVerification ? 0.75 : 1,
+              }}
+            >
+              {resendingVerification ? 'Reenviando...' : 'Reenviar email'}
+            </button>
+          </div>
+        )}
+
         {activeTab === 'videochat' && (
           <VideoChatRandomUser
             isMobile={isMobile}

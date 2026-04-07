@@ -70,6 +70,9 @@ const roleTone = (role) => {
 const emptyForm = {
   userId: null,
   email: '',
+  nickname: '',
+  password: '',
+  active: true,
   roleCodes: [],
   overrideAdditions: [],
   overrideRemovals: [],
@@ -104,6 +107,7 @@ const AdminAdministrationPanel = () => {
   const [formError, setFormError] = useState('');
   const [saving, setSaving] = useState(false);
   const [statusNote, setStatusNote] = useState('');
+  const [resendingUserId, setResendingUserId] = useState(null);
 
   const [lookupQuery, setLookupQuery] = useState('');
   const [lookupLoading, setLookupLoading] = useState(false);
@@ -141,6 +145,9 @@ const AdminAdministrationPanel = () => {
       setForm({
         userId: next?.userId ?? userId,
         email: next?.email || '',
+        nickname: next?.nickname || '',
+        password: '',
+        active: Boolean(next?.accessActive),
         roleCodes: normalizeList(next?.assignedRoles),
         overrideAdditions: normalizeList(next?.overrideAdditions),
         overrideRemovals: normalizeList(next?.overrideRemovals),
@@ -202,10 +209,24 @@ const AdminAdministrationPanel = () => {
     setForm({
       userId: candidate.userId,
       email: candidate.email,
+      nickname: candidate.nickname || '',
+      password: '',
+      active: true,
       roleCodes: [],
       overrideAdditions: [],
       overrideRemovals: [],
       note: '',
+    });
+  };
+
+  const startCreateNewUser = () => {
+    setSelectedUserId(null);
+    setDetail(null);
+    setEditorMode('create');
+    setFormError('');
+    setForm({
+      ...emptyForm,
+      active: true,
     });
   };
 
@@ -258,6 +279,9 @@ const AdminAdministrationPanel = () => {
       const payload = {
         userId: form.userId,
         email: form.email,
+        nickname: form.nickname,
+        password: form.password,
+        active: form.active,
         roleCodes: form.roleCodes,
         overrideAdditions: form.overrideAdditions,
         overrideRemovals: form.overrideRemovals,
@@ -278,6 +302,22 @@ const AdminAdministrationPanel = () => {
       setFormError(e.message || 'No se pudo guardar el acceso backoffice.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const resendVerification = async (userId) => {
+    if (!userId) return;
+    setResendingUserId(userId);
+    setFormError('');
+    try {
+      await apiFetch(`/admin/administration/backoffice-users/${userId}/resend-verification`, { method: 'POST' });
+      await load(userId);
+      setSelectedUserId(userId);
+      await loadDetail(userId);
+    } catch (e) {
+      setFormError(e.message || 'No se pudo reenviar el email de validacion.');
+    } finally {
+      setResendingUserId(null);
     }
   };
 
@@ -321,6 +361,9 @@ const AdminAdministrationPanel = () => {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por email, rol u override"
           />
+          <SmallBtn type="button" onClick={startCreateNewUser}>
+            Nuevo usuario interno
+          </SmallBtn>
           <SmallBtn type="button" onClick={() => load(selectedUserId)} disabled={loading}>
             {loading ? 'Actualizando...' : 'Refrescar'}
           </SmallBtn>
@@ -344,7 +387,7 @@ const AdminAdministrationPanel = () => {
       <InlinePanel style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#162033' }}>Crear acceso backoffice</div>
         <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-          Busca un usuario ya existente por email o userId. No crea cuentas nuevas; solo habilita acceso interno.
+          Puedes crear un usuario interno nuevo desde el boton superior o buscar un usuario ya existente por email o userId para habilitar acceso interno.
         </div>
         <PanelRow>
           <FieldBlock style={{ minWidth: 280, flex: '1 1 320px' }}>
@@ -369,6 +412,7 @@ const AdminAdministrationPanel = () => {
                     <td><strong>{item.email}</strong><div style={{ fontSize: 12, color: '#74819a', marginTop: 4 }}>ID #{item.userId}{item.nickname ? ` - ${item.nickname}` : ''}</div></td>
                     <td><span style={pillStyle()}>{item.productRole || 'N/D'}</span></td>
                     <td>
+                      <span style={pillStyle(item.emailVerifiedAt ? 'active' : 'warning')}>{item.emailVerifiedAt ? 'Email validado' : 'Email pendiente'}</span>
                       {item.hasExplicitConfiguration ? <span style={pillStyle('warning')}>Explicito</span> : null}
                       {item.hasImplicitAdminAccess ? <span style={pillStyle('admin')}>Implicito ADMIN</span> : null}
                       {item.hasEffectiveAccess ? <span style={pillStyle(item.accessActive ? 'active' : 'inactive')}>{item.accessActive ? 'Efectivo' : 'Bloqueado'}</span> : <span style={{ color: '#74819a' }}>Sin acceso</span>}
@@ -407,7 +451,13 @@ const AdminAdministrationPanel = () => {
                 <tr><td colSpan="7" style={{ color: '#74819a' }}>No hay usuarios que coincidan con el filtro actual.</td></tr>
               ) : filteredUsers.map((user) => (
                 <tr key={user.userId} style={selectedUserId === user.userId ? selectedRowStyle : undefined}>
-                  <td><strong>{user.email}</strong><div style={{ fontSize: 12, color: '#74819a', marginTop: 4 }}>ID #{user.userId}{user.nickname ? ` - ${user.nickname}` : ''}</div></td>
+                  <td>
+                    <strong>{user.email}</strong>
+                    <div style={{ fontSize: 12, color: '#74819a', marginTop: 4 }}>ID #{user.userId}{user.nickname ? ` - ${user.nickname}` : ''}</div>
+                    <div style={{ marginTop: 6 }}>
+                      <span style={pillStyle(user.emailVerifiedAt ? 'active' : 'warning')}>{user.emailVerifiedAt ? 'Email validado' : 'Email pendiente'}</span>
+                    </div>
+                  </td>
                   <td><span style={pillStyle()}>{user.productRole || 'N/D'}</span></td>
                   <td>{normalizeList(user.assignedRoles).length > 0 ? user.assignedRoles.map((role) => <span key={role} style={pillStyle(roleTone(role))}>{role}</span>) : <span style={{ color: '#74819a' }}>Sin asignacion</span>}</td>
                   <td>
@@ -424,6 +474,7 @@ const AdminAdministrationPanel = () => {
                       <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); }}>Ver detalle</SmallBtn>
                       <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => selectForEdit(user.userId)}>Editar acceso</SmallBtn>
                       <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); }}>Gestionar estado</SmallBtn>
+                      {!user.emailVerifiedAt ? <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => resendVerification(user.userId)} disabled={resendingUserId === user.userId}>{resendingUserId === user.userId ? 'Reenviando...' : 'Reenviar validacion'}</SmallBtn> : null}
                     </div>
                   </td>
                 </tr>
@@ -461,19 +512,40 @@ const AdminAdministrationPanel = () => {
               <InlinePanel style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>{form.email || detail?.email || selectedSummary?.email || 'Usuario interno'}</div>
                 <div style={{ marginTop: 4, fontSize: 12, color: '#74819a' }}>
-                  User ID #{form.userId || detail?.userId || selectedSummary?.userId} - Rol producto {detail?.productRole || selectedSummary?.productRole || 'N/D'}
+                  {form.userId || detail?.userId || selectedSummary?.userId ? `User ID #${form.userId || detail?.userId || selectedSummary?.userId} - ` : ''}Rol producto {detail?.productRole || selectedSummary?.productRole || 'N/D'}
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <span style={pillStyle(detail?.accessActive ? 'active' : 'inactive')}>{detail?.accessActive ? 'Acceso activo' : 'Acceso inactivo'}</span>
                   {detail?.hasExplicitConfiguration ? <span style={pillStyle('warning')}>Configuracion explicita</span> : null}
                   {detail?.hasImplicitAdminAccess ? <span style={pillStyle('admin')}>Acceso implicito por ADMIN producto</span> : null}
                   {detail?.hasEffectiveAccess ? <span style={pillStyle('active')}>Acceso efectivo</span> : <span style={pillStyle('inactive')}>Sin acceso efectivo</span>}
+                  <span style={pillStyle((detail?.emailVerifiedAt || selectedSummary?.emailVerifiedAt) ? 'active' : 'warning')}>{detail?.emailVerifiedAt || selectedSummary?.emailVerifiedAt ? 'Email validado' : 'Email pendiente'}</span>
                   {detail?.accountStatus ? <span style={pillStyle()}>{detail.accountStatus}</span> : null}
                 </div>
               </InlinePanel>
 
               {showEditor ? (
                 <>
+                  {editorMode === 'create' && !form.userId ? (
+                    <InlinePanel style={{ marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 10 }}>Usuario interno base</div>
+                      <PanelRow>
+                        <FieldBlock style={{ minWidth: 220, flex: '1 1 220px' }}>
+                          <label>Email</label>
+                          <StyledInput value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="usuario@sharemechat.com" />
+                        </FieldBlock>
+                        <FieldBlock style={{ minWidth: 180, flex: '1 1 180px' }}>
+                          <label>Nickname</label>
+                          <StyledInput value={form.nickname} onChange={(e) => setForm((prev) => ({ ...prev, nickname: e.target.value }))} placeholder="alias interno" />
+                        </FieldBlock>
+                      </PanelRow>
+                      <FieldBlock>
+                        <label>Contrasena inicial</label>
+                        <StyledInput type="password" value={form.password} onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))} placeholder="Minimo 10 caracteres, sin espacios" />
+                      </FieldBlock>
+                    </InlinePanel>
+                  ) : null}
+
                   <InlinePanel style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 10 }}>Roles backoffice</div>
                     <div style={{ fontSize: 12, color: '#52607a', marginBottom: 10 }}>Asigna uno o varios roles operativos reales: ADMIN, SUPPORT o AUDIT.</div>
@@ -486,6 +558,12 @@ const AdminAdministrationPanel = () => {
                     <div style={{ fontSize: 12, color: '#334155', marginTop: 12 }}>
                       Guardar configuracion no cambia el estado del acceso. La activacion o desactivacion se gestiona solo con el boton especifico y nota obligatoria.
                     </div>
+                    {editorMode === 'create' ? (
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                        <CheckBox type="checkbox" checked={Boolean(form.active)} onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))} />
+                        <span>Dejar el acceso backoffice activo tras la creacion</span>
+                      </label>
+                    ) : null}
                   </InlinePanel>
 
                   <InlinePanel style={{ marginBottom: 12 }}>
@@ -539,6 +617,7 @@ const AdminAdministrationPanel = () => {
                     {detail?.hasExplicitConfiguration ? <span style={pillStyle('warning')}>Configuracion explicita</span> : <span style={pillStyle()}>Sin configuracion explicita</span>}
                     {detail?.hasImplicitAdminAccess ? <span style={pillStyle('admin')}>Acceso implicito por ADMIN producto</span> : null}
                     {detail?.hasExplicitAccessRow ? <span style={pillStyle()}>Fila explicita de estado</span> : <span style={pillStyle()}>Sin fila explicita de estado</span>}
+                    <span style={pillStyle(detail?.emailVerifiedAt ? 'active' : 'warning')}>{detail?.emailVerifiedAt ? 'Email validado' : 'Email pendiente de validacion'}</span>
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 8 }}>Roles efectivos</div>
@@ -576,6 +655,7 @@ const AdminAdministrationPanel = () => {
                   <PanelRow>
                     <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => setEditorMode('edit')}>Editar acceso</SmallBtn>
                     {detail?.userId ? <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => updateStatus(detail.userId, !detail.accessActive)}>{detail.accessActive ? 'Desactivar acceso' : 'Activar acceso'}</SmallBtn> : null}
+                    {detail?.userId && !detail?.emailVerifiedAt ? <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => resendVerification(detail.userId)} disabled={resendingUserId === detail.userId}>{resendingUserId === detail.userId ? 'Reenviando...' : 'Reenviar validacion'}</SmallBtn> : null}
                   </PanelRow>
                 </>
               )}

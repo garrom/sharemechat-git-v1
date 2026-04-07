@@ -18,6 +18,7 @@ public class Constants {
     public static class UserTypes {
         public static final String FORM_CLIENT = "FORM_CLIENT";
         public static final String FORM_MODEL = "FORM_MODEL";
+        public static final String INTERNAL = "INTERNAL";
 
         private UserTypes() {}
     }

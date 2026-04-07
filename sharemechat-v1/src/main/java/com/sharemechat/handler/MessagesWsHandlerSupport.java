@@ -50,6 +50,7 @@ public class MessagesWsHandlerSupport {
     private final StreamLockService streamLockService;
     private final ApiRateLimitService apiRateLimitService;
     private final AgeGatePolicyService ageGatePolicyService;
+    private final ProductAccessGuardService productAccessGuardService;
 
     public MessagesWsHandlerSupport(MessagesRuntimeState state,
                                     JwtUtil jwtUtil,
@@ -66,7 +67,8 @@ public class MessagesWsHandlerSupport {
                                     BalanceRepository balanceRepository,
                                     StreamLockService streamLockService,
                                     ApiRateLimitService apiRateLimitService,
-                                    AgeGatePolicyService ageGatePolicyService) {
+                                    AgeGatePolicyService ageGatePolicyService,
+                                    ProductAccessGuardService productAccessGuardService) {
         this.state = state;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
@@ -83,12 +85,24 @@ public class MessagesWsHandlerSupport {
         this.streamLockService = streamLockService;
         this.apiRateLimitService = apiRateLimitService;
         this.ageGatePolicyService = ageGatePolicyService;
+        this.productAccessGuardService = productAccessGuardService;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         Long userId = resolveUserId(session);
         if (userId == null) {
             session.close(CloseStatus.BAD_DATA);
+            return;
+        }
+        var user = userRepository.findById(userId).orElse(null);
+        try {
+            productAccessGuardService.requireNotSupport(user);
+        } catch (Exception ex) {
+            safeSend(session, new JSONObject()
+                    .put("type", "forbidden")
+                    .put("message", ex.getMessage())
+                    .toString());
+            session.close(CloseStatus.POLICY_VIOLATION);
             return;
         }
         log.info("WS /messages conectado: session={} userId={}", session.getId(), userId);

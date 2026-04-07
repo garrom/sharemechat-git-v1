@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Redirect } from 'react-router-dom';
-import LoginModalContent from '../../components/LoginModalContent';
+import AdminLoginForm from './AdminLoginForm';
 import { useSession } from '../../components/SessionProvider';
 import { canAccessBackoffice } from '../../utils/backofficeAccess';
 import { resolveHomeUrl } from '../../utils/runtimeSurface';
@@ -44,11 +44,11 @@ const AdminAccessPage = () => {
         <div style={{ textAlign: 'center', marginBottom: 18 }}>
           <div style={{ fontSize: 28, fontWeight: 700, color: '#16324f' }}>SharemeChat Backoffice</div>
           <div style={{ marginTop: 8, color: '#5f6b7a', fontSize: 14 }}>
-            Acceso interno para ADMIN y SUPPORT.
+            Acceso interno para ADMIN, SUPPORT y AUDIT.
           </div>
         </div>
 
-        <LoginModalContent initialView="login" />
+        <AdminLoginForm />
       </div>
     </div>
   );

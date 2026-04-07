@@ -9,6 +9,7 @@ import {
 } from '../../styles/pages-styles/VideochatStyles';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
+import { getApiErrorMessage, isEmailNotVerifiedError } from '../../utils/apiErrors';
 import {
   DashboardUserModelShell,
   DashboardUserModelPage,
@@ -64,6 +65,9 @@ const DashboardUserModel = () => {
   const [routingKyc, setRoutingKyc] = useState(false);
   const [kycRouteErr, setKycRouteErr] = useState('');
   const [kycMode, setKycMode] = useState('');
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const [verificationMessage, setVerificationMessage] = useState('');
+  const [verificationError, setVerificationError] = useState('');
 
   const getVerificationStatusLabel = (status) => {
     const normalizedStatus = String(status || 'PENDING').toUpperCase();
@@ -160,6 +164,11 @@ const DashboardUserModel = () => {
   }, [sessionUser, sessionLoading, contractAccepted]);
 
   const handleAcceptContract = async () => {
+    if (!sessionUser?.emailVerifiedAt) {
+      setVerificationError('Debes validar tu email antes de aceptar el contrato de modelo.');
+      return;
+    }
+
     setAccepting(true);
     setContractErr('');
 
@@ -177,7 +186,11 @@ const DashboardUserModel = () => {
         setKycMode('');
       }
     } catch (e) {
-      setContractErr(t('dashboardUserModel.contract.errors.accept'));
+      if (isEmailNotVerifiedError(e)) {
+        setVerificationError('Debes validar tu email antes de aceptar el contrato de modelo.');
+      } else {
+        setContractErr(getApiErrorMessage(e, t('dashboardUserModel.contract.errors.accept')));
+      }
     } finally {
       setAccepting(false);
     }
@@ -193,6 +206,11 @@ const DashboardUserModel = () => {
   };
 
   const handleUploadDocs = async () => {
+    if (!sessionUser?.emailVerifiedAt) {
+      setVerificationError('Debes validar tu email antes de continuar el onboarding de modelo.');
+      return;
+    }
+
     setRoutingKyc(true);
     setKycRouteErr('');
 
@@ -218,14 +236,33 @@ const DashboardUserModel = () => {
         })
       );
     } catch (e) {
-      setKycRouteErr(t('dashboardUserModel.kyc.errors.load'));
+      if (isEmailNotVerifiedError(e)) {
+        setVerificationError('Debes validar tu email antes de continuar el onboarding de modelo.');
+      } else {
+        setKycRouteErr(getApiErrorMessage(e, t('dashboardUserModel.kyc.errors.load')));
+      }
     } finally {
       setRoutingKyc(false);
     }
   };
 
+  const handleResendVerification = async () => {
+    setVerificationError('');
+    setVerificationMessage('');
+    setResendingVerification(true);
+    try {
+      const response = await apiFetch('/email-verification/resend', { method: 'POST' });
+      setVerificationMessage(response?.message || 'Hemos reenviado el email de validacion.');
+    } catch (e) {
+      setVerificationError(getApiErrorMessage(e, 'No se pudo reenviar el email de validacion.'));
+    } finally {
+      setResendingVerification(false);
+    }
+  };
+
   const displayName = userName || t('dashboardUserModel.user.defaultName');
   const mustAcceptContract = contractAccepted === false;
+  const mustVerifyEmail = !sessionUser?.emailVerifiedAt;
   const canAcceptContract = openedContract && confirmChecked && !accepting;
   const disabledNoop = () => {};
   const verificationStatus = String(sessionUser?.verificationStatus || 'PENDING').toUpperCase();
@@ -297,6 +334,18 @@ const DashboardUserModel = () => {
                   {t('dashboardUserModel.footerHint.prefix')}{' '}
                   <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
                 </DashboardHeroLead>
+
+                {mustVerifyEmail && (
+                  <DashboardMessage $type="error">
+                    Debes validar tu email antes de continuar con el onboarding de modelo.
+                  </DashboardMessage>
+                )}
+                {verificationMessage && (
+                  <DashboardMessage>{verificationMessage}</DashboardMessage>
+                )}
+                {verificationError && (
+                  <DashboardMessage $type="error">{verificationError}</DashboardMessage>
+                )}
 
                 <DashboardStatusRow>
                   <DashboardStatusCard>
@@ -386,10 +435,12 @@ const DashboardUserModel = () => {
                       <DashboardPrimaryButton
                         type="button"
                         onClick={handleAcceptContract}
-                        disabled={!canAcceptContract || contractAccepted === true}
+                        disabled={mustVerifyEmail || !canAcceptContract || contractAccepted === true}
                         title={
                           accepting
                             ? t('dashboardUserModel.contract.actions.accepting')
+                            : mustVerifyEmail
+                            ? 'Debes validar tu email antes de aceptar el contrato'
                             : !openedContract
                             ? t('dashboardUserModel.contract.tooltips.openPdfFirst')
                             : !confirmChecked
@@ -401,6 +452,15 @@ const DashboardUserModel = () => {
                           ? t('dashboardUserModel.contract.actions.accepting')
                           : t('dashboardUserModel.contract.actions.accept')}
                       </DashboardPrimaryButton>
+                      {mustVerifyEmail && (
+                        <DashboardSecondaryButton
+                          type="button"
+                          onClick={handleResendVerification}
+                          disabled={resendingVerification}
+                        >
+                          {resendingVerification ? 'Reenviando...' : 'Reenviar email de validacion'}
+                        </DashboardSecondaryButton>
+                      )}
                     </DashboardActions>
                   </DashboardPanelBody>
                 </DashboardPanel>
@@ -436,11 +496,21 @@ const DashboardUserModel = () => {
                       <DashboardPrimaryButton
                         type="button"
                         onClick={handleUploadDocs}
-                        disabled={mustAcceptContract || routingKyc}
-                        title={mustAcceptContract ? t('dashboardUserModel.contract.mustAcceptFirst') : undefined}
+                        disabled={mustVerifyEmail || mustAcceptContract || routingKyc}
+                        title={mustVerifyEmail ? 'Debes validar tu email antes de continuar' : mustAcceptContract ? t('dashboardUserModel.contract.mustAcceptFirst') : undefined}
                       >
                         {routingKyc ? t('dashboardUserModel.kyc.actions.opening') : mainButtonLabel}
                       </DashboardPrimaryButton>
+
+                      {mustVerifyEmail && (
+                        <DashboardSecondaryButton
+                          type="button"
+                          onClick={handleResendVerification}
+                          disabled={resendingVerification}
+                        >
+                          {resendingVerification ? 'Reenviando...' : 'Reenviar email de validacion'}
+                        </DashboardSecondaryButton>
+                      )}
 
                       {mustAcceptContract && (
                         <DashboardSecondaryButton

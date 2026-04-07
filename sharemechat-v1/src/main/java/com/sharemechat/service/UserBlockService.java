@@ -18,10 +18,14 @@ public class UserBlockService {
 
     private final UserBlockRepository userBlockRepository;
     private final UserRepository userRepository;
+    private final ProductAccessGuardService productAccessGuardService;
 
-    public UserBlockService(UserBlockRepository userBlockRepository, UserRepository userRepository) {
+    public UserBlockService(UserBlockRepository userBlockRepository,
+                            UserRepository userRepository,
+                            ProductAccessGuardService productAccessGuardService) {
         this.userBlockRepository = userBlockRepository;
         this.userRepository = userRepository;
+        this.productAccessGuardService = productAccessGuardService;
     }
 
     /**
@@ -35,7 +39,9 @@ public class UserBlockService {
         }
         String username = auth.getName();
         Optional<User> u = userRepository.findByEmail(username);
-        return u.orElseThrow(() -> new IllegalStateException("Usuario no encontrado para principal=" + username));
+        User user = u.orElseThrow(() -> new IllegalStateException("Usuario no encontrado para principal=" + username));
+        productAccessGuardService.requireNotSupport(user);
+        return user;
     }
 
     @Transactional

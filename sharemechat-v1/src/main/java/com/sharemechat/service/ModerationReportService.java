@@ -27,17 +27,20 @@ public class ModerationReportService {
     private final UserRepository userRepository;
     private final UserBlockService userBlockService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final ProductAccessGuardService productAccessGuardService;
 
     public ModerationReportService(
             ModerationReportRepository moderationReportRepository,
             UserRepository userRepository,
             UserBlockService userBlockService,
-            RefreshTokenRepository refreshTokenRepository
+            RefreshTokenRepository refreshTokenRepository,
+            ProductAccessGuardService productAccessGuardService
     ) {
         this.moderationReportRepository = moderationReportRepository;
         this.userRepository = userRepository;
         this.userBlockService = userBlockService;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.productAccessGuardService = productAccessGuardService;
     }
 
     public User getCurrentUserOrThrow() {
@@ -46,8 +49,10 @@ public class ModerationReportService {
             throw new IllegalStateException("No autenticado");
         }
         String email = auth.getName();
-        return userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new IllegalStateException("Usuario no encontrado para principal=" + email));
+        productAccessGuardService.requireNotSupport(user);
+        return user;
     }
 
     @Transactional

@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -35,13 +36,16 @@ public class BackofficeAccessService {
     private final JdbcTemplate jdbcTemplate;
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
+    private final EmailVerificationService emailVerificationService;
 
     public BackofficeAccessService(JdbcTemplate jdbcTemplate,
                                    UserRepository userRepository,
-                                   ObjectMapper objectMapper) {
+                                   ObjectMapper objectMapper,
+                                   EmailVerificationService emailVerificationService) {
         this.jdbcTemplate = jdbcTemplate;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
+        this.emailVerificationService = emailVerificationService;
     }
 
     public BackofficeAccessProfile loadProfile(Long userId, String productRole) {
@@ -117,6 +121,7 @@ public class BackofficeAccessService {
                 profile.permissions().stream().sorted().toList(),
                 overrides.allowed().stream().sorted().toList(),
                 overrides.denied().stream().sorted().toList(),
+                user.getEmailVerifiedAt(),
                 listAvailableRoles(),
                 listAvailablePermissions(),
                 loadRecentAuditLogs(userId, 12)
@@ -137,7 +142,7 @@ public class BackofficeAccessService {
             users = userRepository.findById(numericQueryId).map(List::of).orElse(List.of());
         } else {
             users = jdbcTemplate.query("""
-                    select u.id, u.email, u.nickname, u.role, u.account_status
+                    select u.id, u.email, u.nickname, u.role, u.account_status, u.email_verified_at
                     from users u
                     where lower(u.email) like ?
                        or lower(coalesce(u.nickname, '')) like ?
@@ -151,6 +156,8 @@ public class BackofficeAccessService {
                         user.setNickname(rs.getString("nickname"));
                         user.setRole(rs.getString("role"));
                         user.setAccountStatus(rs.getString("account_status"));
+                        Timestamp verifiedAt = rs.getTimestamp("email_verified_at");
+                        user.setEmailVerifiedAt(verifiedAt != null ? verifiedAt.toLocalDateTime() : null);
                         return user;
                     },
                     "%" + normalizedQuery + "%",
@@ -175,7 +182,8 @@ public class BackofficeAccessService {
                             implicitAdminAccess,
                             hasEffectiveAccess(profile),
                             isBackofficeAccessActive(user.getId()),
-                            profile.roles().stream().sorted().toList()
+                            profile.roles().stream().sorted().toList(),
+                            user.getEmailVerifiedAt()
                     );
                 })
                 .toList();
@@ -186,14 +194,35 @@ public class BackofficeAccessService {
             BackofficeAdministrationDTOs.BackofficeUserUpsertRequest request,
             Long actorUserId
     ) {
-        User user = resolveUserFromRequest(request);
+        return createBackofficeAccess(request, actorUserId, false);
+    }
+
+    @Transactional
+    public BackofficeAdministrationDTOs.BackofficeUserDetail createBackofficeAccess(
+            BackofficeAdministrationDTOs.BackofficeUserUpsertRequest request,
+            Long actorUserId,
+            boolean createdBaseUser
+    ) {
+        User user = resolveExistingUserFromRequest(request);
         if (user == null) {
             throw new IllegalArgumentException("Usuario no encontrado");
         }
         if (hasExplicitConfiguration(user.getId(), user.getRole())) {
             throw new IllegalArgumentException("El usuario ya tiene configuracion de backoffice");
         }
-        return saveBackofficeAccess(user, request, actorUserId, "CREATE_ACCESS");
+        String action = createdBaseUser ? "CREATE_USER_AND_ACCESS" : "CREATE_ACCESS";
+        BackofficeAdministrationDTOs.BackofficeUserDetail detail = saveBackofficeAccess(user, request, actorUserId, action);
+        if (createdBaseUser) {
+            writeAuditLog(
+                    actorUserId,
+                    user.getId(),
+                    "SEND_EMAIL_VERIFICATION",
+                    "Envio inicial de email de validacion para acceso backoffice",
+                    auditPayload("email", user.getEmail())
+            );
+            return getUserDetail(user.getId());
+        }
+        return detail;
     }
 
     @Transactional
@@ -248,6 +277,35 @@ public class BackofficeAccessService {
         return getUserDetail(userId);
     }
 
+    @Transactional
+    public Map<String, Object> resendBackofficeEmailVerification(Long userId, Long actorUserId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        if (!hasExplicitConfiguration(userId, user.getRole()) && !hasImplicitAdminAccess(user.getRole())) {
+            throw new IllegalArgumentException("El usuario no tiene acceso backoffice configurado");
+        }
+
+        if (user.getEmailVerifiedAt() != null) {
+            throw new IllegalArgumentException("El email del usuario ya esta validado");
+        }
+
+        emailVerificationService.issueBackofficeVerification(user, actorUserId);
+        writeAuditLog(
+                actorUserId,
+                userId,
+                "RESEND_EMAIL_VERIFICATION",
+                "Reenvio de email de validacion para acceso backoffice",
+                auditPayload("email", user.getEmail())
+        );
+
+        return Map.of(
+                "ok", true,
+                "userId", userId,
+                "message", "Email de validacion reenviado correctamente."
+        );
+    }
+
     private BackofficeAdministrationDTOs.BackofficeUserDetail saveBackofficeAccess(
             User user,
             BackofficeAdministrationDTOs.BackofficeUserUpsertRequest request,
@@ -261,16 +319,19 @@ public class BackofficeAccessService {
         validateKnownRoles(normalizedRoles);
         validateKnownPermissions(normalizedAdds, normalizedRemovals);
         validateOverrideOverlap(normalizedAdds, normalizedRemovals);
-        boolean currentActive = loadAccessState(user.getId()).active();
+        boolean currentActive = request != null && request.getActive() != null
+                ? request.getActive()
+                : loadAccessState(user.getId()).active();
         validateNotEmptyIfActive(user, normalizedRoles, currentActive);
         validateNotRemovingLastAdmin(actorUserId, user, currentActive, normalizedRoles);
 
         List<String> previousRoles = loadBackofficeRoles(user.getId()).stream().sorted().toList();
         OverrideSummary previousOverrides = loadPermissionOverrides(user.getId());
-        boolean previousActive = currentActive;
+        boolean previousActive = loadAccessState(user.getId()).active();
 
         replaceAssignedRoles(user.getId(), normalizedRoles);
         replacePermissionOverrides(user.getId(), normalizedAdds, normalizedRemovals);
+        upsertAccessState(user.getId(), currentActive, actorUserId);
 
         writeAuditLog(
                 actorUserId,
@@ -281,7 +342,7 @@ public class BackofficeAccessService {
                         "previousRoles", previousRoles,
                         "nextRoles", normalizedRoles,
                         "previousActive", previousActive,
-                        "nextActive", previousActive,
+                        "nextActive", currentActive,
                         "previousOverrideAdditions", previousOverrides.allowed().stream().sorted().toList(),
                         "previousOverrideRemovals", previousOverrides.denied().stream().sorted().toList(),
                         "nextOverrideAdditions", normalizedAdds,
@@ -320,7 +381,8 @@ public class BackofficeAccessService {
                     profile.permissions().size(),
                     overrides.allowed().stream().sorted().toList(),
                     overrides.denied().stream().sorted().toList(),
-                    !overrides.allowed().isEmpty() || !overrides.denied().isEmpty()
+                    !overrides.allowed().isEmpty() || !overrides.denied().isEmpty(),
+                    loadEmailVerifiedAt(base.userId())
             ));
         }
 
@@ -328,16 +390,16 @@ public class BackofficeAccessService {
         return users;
     }
 
-    private User resolveUserFromRequest(BackofficeAdministrationDTOs.BackofficeUserUpsertRequest request) {
+    public User resolveExistingUserFromRequest(BackofficeAdministrationDTOs.BackofficeUserUpsertRequest request) {
         if (request == null) {
             return null;
         }
         if (request.getUserId() != null) {
             return userRepository.findById(request.getUserId()).orElse(null);
         }
-        String email = request.getEmail();
-        if (email != null && !email.isBlank()) {
-            return userRepository.findByEmail(email.trim()).orElse(null);
+        String email = normalizeEmail(request.getEmail());
+        if (email != null) {
+            return userRepository.findByEmail(email).orElse(null);
         }
         return null;
     }
@@ -912,6 +974,30 @@ public class BackofficeAccessService {
 
     private String normalize(String raw) {
         return raw == null ? "" : raw.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeEmail(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String trimmed = raw.trim().toLowerCase(Locale.ROOT);
+        if (trimmed.isBlank() || containsWhitespace(trimmed)) {
+            return null;
+        }
+        return trimmed;
+    }
+
+    private boolean containsWhitespace(String raw) {
+        if (raw == null) {
+            return false;
+        }
+        return raw.codePoints().anyMatch(cp -> Character.isWhitespace(cp) || Character.isSpaceChar(cp));
+    }
+
+    private LocalDateTime loadEmailVerifiedAt(Long userId) {
+        return userRepository.findById(userId)
+                .map(User::getEmailVerifiedAt)
+                .orElse(null);
     }
 
     private Long tryParseLong(String raw) {

@@ -93,6 +93,9 @@ public class User {
     @Column(name = "risk_updated_by")
     private Long riskUpdatedBy;
 
+    @Column(name = "email_verified_at")
+    private LocalDateTime emailVerifiedAt;
+
     public User() {
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
@@ -180,4 +183,7 @@ public class User {
 
     public Long getRiskUpdatedBy() { return riskUpdatedBy; }
     public void setRiskUpdatedBy(Long riskUpdatedBy) { this.riskUpdatedBy = riskUpdatedBy; }
+
+    public LocalDateTime getEmailVerifiedAt() { return emailVerifiedAt; }
+    public void setEmailVerifiedAt(LocalDateTime emailVerifiedAt) { this.emailVerifiedAt = emailVerifiedAt; }
 }

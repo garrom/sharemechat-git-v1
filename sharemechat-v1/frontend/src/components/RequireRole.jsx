@@ -5,7 +5,14 @@ import { useSession } from './SessionProvider';
 import { hasBackofficeRole } from '../utils/backofficeAccess';
 import { isAbsoluteUrl, resolveHomeUrl } from '../utils/runtimeSurface';
 
-const RequireRole = ({ role, roles, backofficeRoles, children }) => {
+const normalizeUserTypes = (items) => {
+  if (!Array.isArray(items)) return [];
+  return items
+    .map((value) => String(value || '').trim().toUpperCase())
+    .filter(Boolean);
+};
+
+const RequireRole = ({ role, roles, backofficeRoles, allowedUserTypes, children }) => {
   const { user, loading, refresh } = useSession();
   const triedRef = useRef(false);
   const [retrying, setRetrying] = useState(false);
@@ -30,6 +37,8 @@ const RequireRole = ({ role, roles, backofficeRoles, children }) => {
   }
 
   const meRole = user?.role;
+  const meUserType = String(user?.userType || '').trim().toUpperCase();
+  const normalizedAllowedUserTypes = normalizeUserTypes(allowedUserTypes);
 
   const redirectToOwnDashboard = () => {
     const target = resolveHomeUrl(user);
@@ -44,6 +53,10 @@ const RequireRole = ({ role, roles, backofficeRoles, children }) => {
     const allowed = backofficeRoles.some((code) => hasBackofficeRole(user, code));
     if (!allowed) return redirectToOwnDashboard();
     return children;
+  }
+
+  if (normalizedAllowedUserTypes.length > 0 && !normalizedAllowedUserTypes.includes(meUserType)) {
+    return <Redirect to="/unauthorized" />;
   }
 
   if (Array.isArray(roles) && roles.length > 0) {

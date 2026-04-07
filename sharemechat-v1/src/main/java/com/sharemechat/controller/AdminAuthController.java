@@ -2,12 +2,14 @@ package com.sharemechat.controller;
 
 import com.sharemechat.entity.RefreshToken;
 import com.sharemechat.entity.User;
+import com.sharemechat.exception.EmailVerificationRequiredException;
 import com.sharemechat.repository.RefreshTokenRepository;
 import com.sharemechat.security.BackofficeAuthorities;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.ApiRateLimitService;
 import com.sharemechat.service.BackofficeAccessService;
 import com.sharemechat.service.CountryAccessService;
+import com.sharemechat.service.EmailVerificationService;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,6 +35,7 @@ public class AdminAuthController {
     private final ApiRateLimitService rateLimitService;
     private final CountryAccessService countryAccessService;
     private final BackofficeAccessService backofficeAccessService;
+    private final EmailVerificationService emailVerificationService;
 
     @Value("${auth.cookieDomain}")
     private String cookieDomain;
@@ -46,7 +49,8 @@ public class AdminAuthController {
             RefreshTokenRepository refreshRepo,
             ApiRateLimitService rateLimitService,
             CountryAccessService countryAccessService,
-            BackofficeAccessService backofficeAccessService
+            BackofficeAccessService backofficeAccessService,
+            EmailVerificationService emailVerificationService
     ) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
@@ -54,6 +58,7 @@ public class AdminAuthController {
         this.rateLimitService = rateLimitService;
         this.countryAccessService = countryAccessService;
         this.backofficeAccessService = backofficeAccessService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @PostMapping("/login")
@@ -72,6 +77,14 @@ public class AdminAuthController {
 
         if (!hasInternalBackofficeAccess(profile)) {
             return ResponseEntity.status(401).body("Acceso de backoffice denegado");
+        }
+
+        if (!emailVerificationService.isEmailVerified(user)) {
+            throw new EmailVerificationRequiredException(
+                    "Debes validar tu email antes de acceder al backoffice.",
+                    "BACKOFFICE",
+                    "VERIFY_EMAIL"
+            );
         }
 
         String access = jwtUtil.generateAccessToken(
@@ -103,7 +116,8 @@ public class AdminAuthController {
             return false;
         }
         return profile.roles().contains(BackofficeAuthorities.ROLE_ADMIN)
-                || profile.roles().contains(BackofficeAuthorities.ROLE_SUPPORT);
+                || profile.roles().contains(BackofficeAuthorities.ROLE_SUPPORT)
+                || profile.roles().contains(BackofficeAuthorities.ROLE_AUDIT);
     }
 
     private void setAccessCookie(HttpServletResponse res, String value, int seconds) {

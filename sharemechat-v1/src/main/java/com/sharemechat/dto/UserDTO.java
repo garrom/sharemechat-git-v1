@@ -27,6 +27,7 @@ public class UserDTO {
     private String riskReason;
     private LocalDateTime riskUpdatedAt;
     private Long riskUpdatedBy;
+    private LocalDateTime emailVerifiedAt;
     private Boolean consentCompliant;
     private Boolean consentRequired;
     private Boolean missingAdultConfirmation;
@@ -98,6 +99,9 @@ public class UserDTO {
 
     public Long getRiskUpdatedBy() { return riskUpdatedBy; }
     public void setRiskUpdatedBy(Long riskUpdatedBy) { this.riskUpdatedBy = riskUpdatedBy; }
+
+    public LocalDateTime getEmailVerifiedAt() { return emailVerifiedAt; }
+    public void setEmailVerifiedAt(LocalDateTime emailVerifiedAt) { this.emailVerifiedAt = emailVerifiedAt; }
 
     public Boolean getConsentCompliant() { return consentCompliant; }
     public void setConsentCompliant(Boolean consentCompliant) { this.consentCompliant = consentCompliant; }

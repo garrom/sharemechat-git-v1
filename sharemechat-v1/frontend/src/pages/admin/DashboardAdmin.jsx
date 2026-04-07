@@ -16,6 +16,7 @@ import AdminPage from './components/AdminPage';
 import AdminPlaceholderPanel from './components/AdminPlaceholderPanel';
 import {
   canAccessBackoffice,
+  isBackofficeAudit,
   hasBackofficePermission,
   isBackofficeAdmin,
   isBackofficeSupport,
@@ -68,6 +69,7 @@ const DashboardAdmin = () => {
 
   const adminView = isBackofficeAdmin(user);
   const supportView = isBackofficeSupport(user);
+  const auditView = isBackofficeAudit(user);
 
   const capabilities = useMemo(() => ({
     canViewModels: adminView || hasBackofficePermission(user, 'models.read_list'),
@@ -128,7 +130,7 @@ const DashboardAdmin = () => {
   };
 
   const displayName = user?.name || user?.nickname || user?.email || 'Backoffice';
-  const displayRole = adminView ? 'ADMIN' : supportView ? 'SUPPORT' : 'UNKNOWN';
+  const displayRole = adminView ? 'ADMIN' : supportView ? 'SUPPORT' : auditView ? 'AUDIT' : 'UNKNOWN';
 
   const navigationSections = useMemo(() => {
     const sections = [

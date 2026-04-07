@@ -2,6 +2,7 @@ package com.sharemechat.controller;
 
 import com.sharemechat.dto.TransactionRequestDTO;
 import com.sharemechat.entity.User;
+import com.sharemechat.service.ProductAccessGuardService;
 import com.sharemechat.service.TransactionService;
 import com.sharemechat.service.UserService;
 import jakarta.validation.Valid;
@@ -16,10 +17,14 @@ public class TransactionController {
 
     private final TransactionService transactionService;
     private final UserService userService;
+    private final ProductAccessGuardService productAccessGuardService;
 
-    public TransactionController(TransactionService transactionService, UserService userService) {
+    public TransactionController(TransactionService transactionService,
+                                 UserService userService,
+                                 ProductAccessGuardService productAccessGuardService) {
         this.transactionService = transactionService;
         this.userService = userService;
+        this.productAccessGuardService = productAccessGuardService;
     }
 
     // Primer pago cliente siendo USER -> CLIENT (incluye premium, clients, tx, balance)
@@ -27,6 +32,7 @@ public class TransactionController {
     public ResponseEntity<String> processTransaction(@RequestBody @Valid TransactionRequestDTO request,
                                                      Authentication authentication) {
         User user = userService.findByEmail(authentication.getName());
+        productAccessGuardService.requireNotSupport(user);
         transactionService.processFirstTransaction(user.getId(), request);
         return ResponseEntity.ok("Transacción procesada. Usuario promovido a CLIENT y saldo actualizado.");
     }
@@ -37,6 +43,7 @@ public class TransactionController {
     public ResponseEntity<String> addBalance(@RequestBody @Valid TransactionRequestDTO request,
                                              Authentication authentication) {
         User user = userService.findByEmail(authentication.getName());
+        productAccessGuardService.requireNotSupport(user);
         transactionService.addBalance(user.getId(), request);
         return ResponseEntity.ok("Saldo actualizado correctamente.");
     }
@@ -46,6 +53,7 @@ public class TransactionController {
     public ResponseEntity<String> requestPayout(@RequestBody @Valid TransactionRequestDTO request,
                                                 Authentication authentication) {
         User user = userService.findByEmail(authentication.getName());
+        productAccessGuardService.requireNotSupport(user);
         transactionService.requestPayout(user.getId(), request);
         return ResponseEntity.ok("Solicitud de retiro registrada correctamente.");
     }

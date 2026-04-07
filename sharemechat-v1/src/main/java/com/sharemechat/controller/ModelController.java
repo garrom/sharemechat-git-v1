@@ -4,7 +4,9 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.ModelDTO;
 import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
+import com.sharemechat.exception.EmailVerificationRequiredException;
 import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.service.EmailVerificationService;
 import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.ModelService;
 import com.sharemechat.service.ModelStatsService;
@@ -29,6 +31,7 @@ public class ModelController {
     private final StorageService storageService;
     private final ModelStatsService modelStatsService;
     private final ModelContractService modelContractService;
+    private final EmailVerificationService emailVerificationService;
     private static final Logger log = LoggerFactory.getLogger(ModelController.class);
 
     public ModelController(ModelService modelService,
@@ -36,13 +39,15 @@ public class ModelController {
                            ModelDocumentRepository modelDocumentRepository,
                            StorageService storageService,
                            ModelStatsService modelStatsService,
-                           ModelContractService modelContractService) {
+                           ModelContractService modelContractService,
+                           EmailVerificationService emailVerificationService) {
         this.modelService = modelService;
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
         this.storageService = storageService;
         this.modelStatsService = modelStatsService;
         this.modelContractService = modelContractService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     // ==========================
@@ -76,6 +81,17 @@ public class ModelController {
 
     private boolean hasAcceptedContract(Long userId) {
         return modelContractService.isAccepted(userId);
+    }
+
+    private ResponseEntity<?> requireVerifiedOnboardingModel(User user) {
+        if (isOnboardingModel(user) && !emailVerificationService.isEmailVerified(user)) {
+            throw new EmailVerificationRequiredException(
+                    "Debes validar tu email antes de continuar el onboarding de modelo",
+                    "MODEL_ONBOARDING",
+                    "VERIFY_EMAIL"
+            );
+        }
+        return null;
     }
 
     // ==========================
@@ -113,6 +129,11 @@ public class ModelController {
 
         if (!isModelActor(user)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
+        }
+
+        ResponseEntity<?> emailDenied = requireVerifiedOnboardingModel(user);
+        if (emailDenied != null) {
+            return emailDenied;
         }
 
         // ✅ SOLO ONBOARDING necesita contrato
@@ -158,6 +179,11 @@ public class ModelController {
 
         if (!isModelActor(user)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
+        }
+
+        ResponseEntity<?> emailDenied = requireVerifiedOnboardingModel(user);
+        if (emailDenied != null) {
+            return emailDenied;
         }
 
         // ✅ SOLO ONBOARDING necesita contrato
@@ -234,6 +260,11 @@ public class ModelController {
 
         if (!isModelActor(user)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
+        }
+
+        ResponseEntity<?> emailDenied = requireVerifiedOnboardingModel(user);
+        if (emailDenied != null) {
+            return emailDenied;
         }
 
         // ✅ SOLO ONBOARDING necesita contrato

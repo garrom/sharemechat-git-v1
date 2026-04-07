@@ -3,7 +3,9 @@ package com.sharemechat.controller;
 import com.sharemechat.config.IpConfig;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.User;
+import com.sharemechat.exception.EmailVerificationRequiredException;
 import com.sharemechat.repository.ModelContractAcceptanceRepository;
+import com.sharemechat.service.EmailVerificationService;
 import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,15 +24,18 @@ public class ModelContractController {
     private final ModelContractService modelContractService;
     private final UserService userService;
     private final ModelContractAcceptanceRepository acceptanceRepo;
+    private final EmailVerificationService emailVerificationService;
 
     public ModelContractController(
             ModelContractService modelContractService,
             UserService userService,
-            ModelContractAcceptanceRepository acceptanceRepo
+            ModelContractAcceptanceRepository acceptanceRepo,
+            EmailVerificationService emailVerificationService
     ) {
         this.modelContractService = modelContractService;
         this.userService = userService;
         this.acceptanceRepo = acceptanceRepo;
+        this.emailVerificationService = emailVerificationService;
     }
 
     // ==========================
@@ -114,6 +119,14 @@ public class ModelContractController {
 
         if (!isModelContractActor(u)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado para contrato de modelo");
+        }
+
+        if (isOnboardingModel(u) && !emailVerificationService.isEmailVerified(u)) {
+            throw new EmailVerificationRequiredException(
+                    "Debes validar tu email antes de aceptar el contrato de modelo",
+                    "MODEL_ONBOARDING",
+                    "VERIFY_EMAIL"
+            );
         }
 
         String ip = IpConfig.getClientIp(req);

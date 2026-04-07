@@ -25,17 +25,20 @@ public class ModelKycSessionService {
     private final KycWebhookEventRepository kycWebhookEventRepository;
     private final VeriffClient veriffClient;
     private final ModelContractService modelContractService;
+    private final EmailVerificationService emailVerificationService;
 
     public ModelKycSessionService(UserRepository userRepository,
                                   ModelKycSessionRepository modelKycSessionRepository,
                                   KycWebhookEventRepository kycWebhookEventRepository,
                                   VeriffClient veriffClient,
-                                  ModelContractService modelContractService) {
+                                  ModelContractService modelContractService,
+                                  EmailVerificationService emailVerificationService) {
         this.userRepository = userRepository;
         this.modelKycSessionRepository = modelKycSessionRepository;
         this.kycWebhookEventRepository = kycWebhookEventRepository;
         this.veriffClient = veriffClient;
         this.modelContractService = modelContractService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Transactional
@@ -50,6 +53,13 @@ public class ModelKycSessionService {
         if (!isOnboardingModel) {
             throw new IllegalArgumentException("Solo USER + FORM_MODEL puede iniciar KYC");
         }
+
+        emailVerificationService.assertEmailVerified(
+                user,
+                "Debes validar tu email antes de iniciar el KYC de modelo.",
+                "MODEL_ONBOARDING",
+                "VERIFY_EMAIL"
+        );
 
         if (!modelContractService.isAcceptedCurrent(userId)) {
             throw new IllegalArgumentException("Debes aceptar el contrato de modelo antes del KYC");

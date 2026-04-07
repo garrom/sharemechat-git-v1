@@ -54,6 +54,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiError> handleForbidden(ForbiddenException ex, HttpServletRequest req) {
+        log.warn("Forbidden de negocio: {}", ex.getMessage());
+        ApiError body = new ApiError(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                ex.getMessage(),
+                req.getRequestURI()
+        );
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
     @ExceptionHandler(ConsentRequiredException.class)
     public ResponseEntity<ConsentRequiredApiError> handleConsentRequired(ConsentRequiredException ex, HttpServletRequest req) {
         String path = req != null ? req.getRequestURI() : null;
@@ -76,6 +88,21 @@ public class GlobalExceptionHandler {
                 reasonCode
         );
 
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
+    @ExceptionHandler(EmailVerificationRequiredException.class)
+    public ResponseEntity<ApiError> handleEmailVerificationRequired(EmailVerificationRequiredException ex, HttpServletRequest req) {
+        log.warn("Email verification requerida: {}", ex.getMessage());
+        ApiError body = new ApiError(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                ex.getMessage(),
+                req.getRequestURI()
+        );
+        body.setCode(ex.getCode());
+        body.setScope(ex.getScope());
+        body.setNextAction(ex.getNextAction());
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 

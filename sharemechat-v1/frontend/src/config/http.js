@@ -15,8 +15,28 @@ const buildApiError = ({ status, message, data, text }) => {
   if (data && typeof data === 'object') {
     if (data.code !== undefined) err.code = data.code;
     if (data.error !== undefined) err.error = data.error;
+    if (data.scope !== undefined) err.scope = data.scope;
+    if (data.nextAction !== undefined) err.nextAction = data.nextAction;
   }
   return err;
+};
+
+const readErrorPayload = async (res) => {
+  if (isJsonResponse(res)) {
+    const data = await res.json().catch(() => null);
+    return {
+      status: res.status,
+      message: data?.message || `HTTP ${res.status}`,
+      data,
+    };
+  }
+
+  const text = await res.text().catch(() => null);
+  return {
+    status: res.status,
+    message: text || `HTTP ${res.status}`,
+    text,
+  };
 };
 
 const getPreferredLocaleHeader = () => {
@@ -31,7 +51,7 @@ const getPreferredLocaleHeader = () => {
 };
 
 const shouldSkipRefresh = (path) =>
-  typeof path === 'string' && (path.startsWith('/auth/') || path === '/users/me');
+  typeof path === 'string' && (path.startsWith('/auth/') || path.startsWith('/admin/auth/') || path === '/users/me');
 
 const refreshSession = async () => {
   if (!refreshPromise) {
@@ -76,29 +96,28 @@ export const apiFetch = async (path, options = {}) => {
     throw err;
   }
 
+  let previewError = null;
+
   if ((res.status === 401 || res.status === 403) && !_retry && !shouldSkipRefresh(path)) {
-    try {
-      await refreshSession();
-      return apiFetch(path, {
-        ...restOptions,
-        headers,
-        _retry: true
-      });
-    } catch (refreshError) {
-      // Dejamos caer el error original para preservar el flujo actual de logout.
+    previewError = await readErrorPayload(res.clone());
+
+    if (String(previewError?.data?.code || '').toUpperCase() !== 'EMAIL_NOT_VERIFIED') {
+      try {
+        await refreshSession();
+        return apiFetch(path, {
+          ...restOptions,
+          headers,
+          _retry: true
+        });
+      } catch (refreshError) {
+        // Dejamos caer el error original para preservar el flujo actual de logout.
+      }
     }
   }
 
   if (!res.ok) {
-
-    if (isJsonResponse(res)) {
-      const data = await res.json().catch(() => null);
-      const message = data?.message || `HTTP ${res.status}`;
-      throw buildApiError({ status: res.status, message, data });
-    }
-
-    const text = await res.text().catch(() => null);
-    throw buildApiError({ status: res.status, message: text || `HTTP ${res.status}`, text });
+    const finalError = previewError || await readErrorPayload(res);
+    throw buildApiError(finalError);
   }
 
   return isJsonResponse(res)

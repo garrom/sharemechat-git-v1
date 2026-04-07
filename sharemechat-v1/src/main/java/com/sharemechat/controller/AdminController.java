@@ -14,12 +14,14 @@ import com.sharemechat.service.KycProviderConfigService;
 import com.sharemechat.service.ModerationReportService;
 import com.sharemechat.service.StreamService;
 import com.sharemechat.service.TransactionService;
+import com.sharemechat.service.InternalUserProvisioningService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.repository.PayoutRequestRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -36,6 +38,7 @@ public class AdminController {
 
     private final AdminService adminService;
     private final BackofficeAccessService backofficeAccessService;
+    private final InternalUserProvisioningService internalUserProvisioningService;
     private final UserService userService;
     private final KycProviderConfigService kycProviderConfigService;
     private final ModerationReportService moderationReportService;
@@ -50,6 +53,7 @@ public class AdminController {
     public AdminController(
             AdminService adminService,
             BackofficeAccessService backofficeAccessService,
+            InternalUserProvisioningService internalUserProvisioningService,
             UserService userService,
             KycProviderConfigService kycProviderConfigService,
             ModerationReportService moderationReportService,
@@ -61,6 +65,7 @@ public class AdminController {
     ) {
         this.adminService = adminService;
         this.backofficeAccessService = backofficeAccessService;
+        this.internalUserProvisioningService = internalUserProvisioningService;
         this.userService = userService;
         this.kycProviderConfigService = kycProviderConfigService;
         this.moderationReportService = moderationReportService;
@@ -161,11 +166,20 @@ public class AdminController {
     }
 
     @PostMapping("/administration/backoffice-users")
+    @Transactional
     public ResponseEntity<BackofficeAdministrationDTOs.BackofficeUserDetail> createBackofficeUser(
             @RequestBody BackofficeAdministrationDTOs.BackofficeUserUpsertRequest request,
             Authentication auth
     ) {
-        return ResponseEntity.ok(backofficeAccessService.createBackofficeAccess(request, currentAdminUserId(auth)));
+        Long actorUserId = currentAdminUserId(auth);
+        boolean createdBaseUser = false;
+
+        if (backofficeAccessService.resolveExistingUserFromRequest(request) == null) {
+            internalUserProvisioningService.provisionInternalUser(request, actorUserId);
+            createdBaseUser = true;
+        }
+
+        return ResponseEntity.ok(backofficeAccessService.createBackofficeAccess(request, actorUserId, createdBaseUser));
     }
 
     @PutMapping("/administration/backoffice-users/{userId}")
@@ -184,6 +198,14 @@ public class AdminController {
             Authentication auth
     ) {
         return ResponseEntity.ok(backofficeAccessService.updateBackofficeStatus(userId, request, currentAdminUserId(auth)));
+    }
+
+    @PostMapping("/administration/backoffice-users/{userId}/resend-verification")
+    public ResponseEntity<Map<String, Object>> resendBackofficeUserVerification(
+            @PathVariable Long userId,
+            Authentication auth
+    ) {
+        return ResponseEntity.ok(backofficeAccessService.resendBackofficeEmailVerification(userId, currentAdminUserId(auth)));
     }
 
     // GET /api/admin/model-docs/{userId}

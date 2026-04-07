@@ -1,5 +1,6 @@
 package com.sharemechat.dto;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -28,7 +29,8 @@ public final class BackofficeAdministrationDTOs {
             int effectivePermissionsCount,
             List<String> overrideAdditions,
             List<String> overrideRemovals,
-            boolean hasOverrides
+            boolean hasOverrides,
+            LocalDateTime emailVerifiedAt
     ) {
     }
 
@@ -48,6 +50,7 @@ public final class BackofficeAdministrationDTOs {
             List<String> effectivePermissions,
             List<String> overrideAdditions,
             List<String> overrideRemovals,
+            LocalDateTime emailVerifiedAt,
             List<String> availableRoles,
             List<String> availablePermissions,
             List<BackofficeAuditLogItem> recentAuditLogs
@@ -64,7 +67,8 @@ public final class BackofficeAdministrationDTOs {
             boolean hasImplicitAdminAccess,
             boolean hasEffectiveAccess,
             boolean accessActive,
-            List<String> effectiveRoles
+            List<String> effectiveRoles,
+            LocalDateTime emailVerifiedAt
     ) {
     }
 
@@ -82,6 +86,9 @@ public final class BackofficeAdministrationDTOs {
     public static class BackofficeUserUpsertRequest {
         private Long userId;
         private String email;
+        private String nickname;
+        private String password;
+        private Boolean active;
         private List<String> roleCodes;
         private List<String> overrideAdditions;
         private List<String> overrideRemovals;
@@ -101,6 +108,30 @@ public final class BackofficeAdministrationDTOs {
 
         public void setEmail(String email) {
             this.email = email;
+        }
+
+        public String getNickname() {
+            return nickname;
+        }
+
+        public void setNickname(String nickname) {
+            this.nickname = nickname;
+        }
+
+        public String getPassword() {
+            return password;
+        }
+
+        public void setPassword(String password) {
+            this.password = password;
+        }
+
+        public Boolean getActive() {
+            return active;
+        }
+
+        public void setActive(Boolean active) {
+            this.active = active;
         }
 
         public List<String> getRoleCodes() {

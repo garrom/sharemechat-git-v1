@@ -77,11 +77,13 @@ public class AdminService {
     private final NamedParameterJdbcTemplate jdbc;
     private final ModelDocumentRepository modelDocumentRepository;
     private final ModelReviewChecklistRepository checklistRepository;
+    private final EmailVerificationService emailVerificationService;
 
     public AdminService(UserRepository userRepository, UserService userService,
                         ModelRepository modelRepository, AdminRepository adminRepository,
                         NamedParameterJdbcTemplate jdbc, ModelDocumentRepository modelDocumentRepository,
-                        ModelReviewChecklistRepository checklistRepository) {
+                        ModelReviewChecklistRepository checklistRepository,
+                        EmailVerificationService emailVerificationService) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.modelRepository = modelRepository;
@@ -89,6 +91,7 @@ public class AdminService {
         this.jdbc = jdbc;
         this.modelDocumentRepository = modelDocumentRepository;
         this.checklistRepository = checklistRepository;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Transactional(readOnly = true)
@@ -136,6 +139,12 @@ public class AdminService {
 
         switch (a) {
             case "APPROVE" -> {
+                emailVerificationService.assertEmailVerified(
+                        user,
+                        "La modelo debe validar su email antes de ser aprobada.",
+                        "MODEL_APPROVAL",
+                        "VERIFY_EMAIL"
+                );
                 user.setVerificationStatus(Constants.VerificationStatuses.APPROVED);
                 if (!Constants.Roles.MODEL.equals(user.getRole())) {
                     user.setRole(Constants.Roles.MODEL);

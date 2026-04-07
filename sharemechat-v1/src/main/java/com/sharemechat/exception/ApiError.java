@@ -8,6 +8,9 @@ public class ApiError {
   private String error;
   private String message;
   private String path; // opcional: lo rellenamos si tenemos HttpServletRequest
+  private String code;
+  private String scope;
+  private String nextAction;
 
   public ApiError() {}
 
@@ -27,4 +30,10 @@ public class ApiError {
   public void setMessage(String message) { this.message = message; }
   public String getPath() { return path; }
   public void setPath(String path) { this.path = path; }
+  public String getCode() { return code; }
+  public void setCode(String code) { this.code = code; }
+  public String getScope() { return scope; }
+  public void setScope(String scope) { this.scope = scope; }
+  public String getNextAction() { return nextAction; }
+  public void setNextAction(String nextAction) { this.nextAction = nextAction; }
 }

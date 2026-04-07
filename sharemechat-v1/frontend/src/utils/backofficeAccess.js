@@ -33,5 +33,7 @@ export const isBackofficeAdmin = (user) => hasBackofficeRole(user, 'ADMIN');
 
 export const isBackofficeSupport = (user) => hasBackofficeRole(user, 'SUPPORT');
 
+export const isBackofficeAudit = (user) => hasBackofficeRole(user, 'AUDIT');
+
 export const canAccessBackoffice = (user) =>
-  isBackofficeAdmin(user) || isBackofficeSupport(user);
+  isBackofficeAdmin(user) || isBackofficeSupport(user) || isBackofficeAudit(user);

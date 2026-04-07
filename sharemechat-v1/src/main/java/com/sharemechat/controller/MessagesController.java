@@ -6,6 +6,7 @@ import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.ConsentEnforcementService;
 import com.sharemechat.service.MessageService;
+import com.sharemechat.service.ProductAccessGuardService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -19,18 +20,22 @@ public class MessagesController {
     private final MessageService messageService;
     private final UserRepository userRepository;
     private final ConsentEnforcementService consentEnforcementService;
+    private final ProductAccessGuardService productAccessGuardService;
 
     public MessagesController(MessageService messageService,
                               UserRepository userRepository,
-                              ConsentEnforcementService consentEnforcementService) {
+                              ConsentEnforcementService consentEnforcementService,
+                              ProductAccessGuardService productAccessGuardService) {
         this.messageService = messageService;
         this.userRepository = userRepository;
         this.consentEnforcementService = consentEnforcementService;
+        this.productAccessGuardService = productAccessGuardService;
     }
 
     private Long uid(Authentication auth) {
         String email = auth.getName();
         User u = userRepository.findByEmail(email).orElseThrow();
+        productAccessGuardService.requireNotSupport(u);
         return u.getId();
     }
 

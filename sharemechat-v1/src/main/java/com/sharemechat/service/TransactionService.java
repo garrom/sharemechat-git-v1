@@ -39,6 +39,7 @@ public class TransactionService {
 
     private final BillingProperties billing;
     private final GiftProperties giftProperties;
+    private final EmailVerificationService emailVerificationService;
 
     public TransactionService(
             TransactionRepository transactionRepository,
@@ -52,7 +53,8 @@ public class TransactionService {
             PlatformBalanceRepository platformBalanceRepository,
             PayoutRequestRepository payoutRequestRepository,
             BillingProperties billing,
-            GiftProperties giftProperties
+            GiftProperties giftProperties,
+            EmailVerificationService emailVerificationService
     ) {
         this.transactionRepository = transactionRepository;
         this.balanceRepository = balanceRepository;
@@ -66,6 +68,7 @@ public class TransactionService {
         this.payoutRequestRepository = payoutRequestRepository;
         this.billing = billing;
         this.giftProperties = giftProperties;
+        this.emailVerificationService = emailVerificationService;
     }
 
     /**
@@ -135,6 +138,9 @@ public class TransactionService {
         if (!Constants.Roles.USER.equals(user.getRole())) {
             throw new IllegalArgumentException("El usuario ya es CLIENT o MODEL");
         }
+        if (!Constants.UserTypes.FORM_CLIENT.equals(user.getUserType())) {
+            throw new IllegalArgumentException("Solo USER + FORM_CLIENT puede activar premium con primer pago");
+        }
         if (request == null) {
             throw new IllegalArgumentException("Body requerido");
         }
@@ -146,6 +152,13 @@ public class TransactionService {
         if (!"INGRESO".equals(op)) {
             throw new IllegalArgumentException("Para el primer pago, operationType debe ser INGRESO");
         }
+
+        emailVerificationService.assertEmailVerified(
+                user,
+                "Debes validar tu email antes de activar la cuenta premium.",
+                "CLIENT_PREMIUM",
+                "VERIFY_EMAIL"
+        );
 
         BigDecimal lastBalance = lastBalanceOf(userId);
 

@@ -3,7 +3,9 @@ package com.sharemechat.controller;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
+import com.sharemechat.exception.EmailVerificationRequiredException;
 import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.service.EmailVerificationService;
 import com.sharemechat.service.KycProviderConfigService;
 import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.UserService;
@@ -24,17 +26,20 @@ public class ModelKycController {
     private final StorageService storageService;
     private final ModelContractService modelContractService;
     private final KycProviderConfigService kycProviderConfigService;
+    private final EmailVerificationService emailVerificationService;
 
     public ModelKycController(UserService userService,
                               ModelDocumentRepository modelDocumentRepository,
                               StorageService storageService,
                               ModelContractService modelContractService,
-                              KycProviderConfigService kycProviderConfigService) {
+                              KycProviderConfigService kycProviderConfigService,
+                              EmailVerificationService emailVerificationService) {
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
         this.storageService = storageService;
         this.modelContractService = modelContractService;
         this.kycProviderConfigService = kycProviderConfigService;
+        this.emailVerificationService = emailVerificationService;
     }
 
     private ResponseEntity<?> enforceOnboardingModelAndContract(User user) {
@@ -48,6 +53,14 @@ public class ModelKycController {
 
         if (!isOnboardingModel) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("No autorizado");
+        }
+
+        if (!emailVerificationService.isEmailVerified(user)) {
+            throw new EmailVerificationRequiredException(
+                    "Debes validar tu email antes de continuar el onboarding de modelo",
+                    "MODEL_ONBOARDING",
+                    "VERIFY_EMAIL"
+            );
         }
 
         if (!modelContractService.isAcceptedCurrent(user.getId())) {
