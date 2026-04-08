@@ -64,6 +64,7 @@ import {
   InlineActions,
   SecurityActions,
 } from '../../styles/subpages/PerfilClientModelStyle';
+import { SelectedFileTag } from '../../styles/pages-styles/ModelDocumentStyles';
 
 const DOCS_GET_URL = '/models/documents/me';
 const DOCS_UPLOAD_URL = '/models/documents';
@@ -652,6 +653,10 @@ const PerfilModel = () => {
                       {t('profileCommon.actions.selectFile')}
                     </ProfileSecondaryButton>
 
+                    {picFile && (
+                      <SelectedFileTag>{picFile.name}</SelectedFileTag>
+                    )}
+
                     <ProfilePrimaryButton
                       type="button"
                       onClick={() => uploadSingle('pic', picFile)}
@@ -720,6 +725,10 @@ const PerfilModel = () => {
                     >
                       {t('profileCommon.actions.selectFile')}
                     </ProfileSecondaryButton>
+
+                    {videoFile && (
+                      <SelectedFileTag>{videoFile.name}</SelectedFileTag>
+                    )}
 
                     <ProfilePrimaryButton
                       type="button"

@@ -61,6 +61,7 @@ import {
   PhotoActions,
   SecurityActions,
 } from '../../styles/subpages/PerfilClientModelStyle';
+import { SelectedFileTag } from '../../styles/pages-styles/ModelDocumentStyles';
 
 const DOCS_GET_URL = '/clients/documents/me';
 const DOCS_UPLOAD_URL = '/clients/documents';
@@ -445,6 +446,10 @@ const PerfilClient = () => {
                     >
                       {t('profileCommon.actions.selectFile')}
                     </ProfileSecondaryButton>
+
+                    {picFile && (
+                      <SelectedFileTag>{picFile.name}</SelectedFileTag>
+                    )}
 
                     <ProfilePrimaryButton
                       type="button"
