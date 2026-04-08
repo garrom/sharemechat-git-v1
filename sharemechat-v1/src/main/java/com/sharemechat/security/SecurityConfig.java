@@ -126,6 +126,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/admin/finance/summary")
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_FINANCE_READ_SUMMARY))
 
+                        // Product onboarding KYC config (read-only)
+                        .requestMatchers(HttpMethod.GET, "/api/kyc/config/product/model-onboarding").hasRole("USER")
+
                         // Admin
                         .requestMatchers("/api/admin/**")
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN))

@@ -49,6 +49,7 @@ import {
   WorkflowStepBody,
 } from '../../styles/pages-styles/ModelDocumentStyles';
 import { useSession } from '../../components/SessionProvider';
+import { apiFetch } from '../../config/http';
 
 const ModelDocuments = () => {
   const { uiLocale } = useSession();
@@ -57,8 +58,8 @@ const ModelDocuments = () => {
   const location = useLocation();
   const isVeriffRoute = location.pathname === '/model-kyc';
 
-  const DOCS_GET_URL = isVeriffRoute ? '/api/models/kyc/me' : '/api/models/documents/me';
-  const DOCS_UPLOAD_URL = isVeriffRoute ? '/api/models/kyc' : '/api/models/documents';
+  const DOCS_GET_URL = isVeriffRoute ? '/models/kyc/me' : '/models/documents/me';
+  const DOCS_UPLOAD_URL = isVeriffRoute ? '/models/kyc' : '/models/documents';
 
   const [userName, setUserName] = useState('');
 
@@ -101,12 +102,7 @@ const ModelDocuments = () => {
     setError('');
     setMsg('');
     try {
-      const res = await fetch(DOCS_GET_URL, {
-        method: 'GET',
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await apiFetch(DOCS_GET_URL);
       setDoc({
         urlVerificFront: data.urlVerificFront || null,
         urlVerificBack: data.urlVerificBack || null,
@@ -121,27 +117,22 @@ const ModelDocuments = () => {
   };
 
   const ensureContractAccepted = async () => {
-    const res = await fetch('/api/consent/model-contract/status', {
-      method: 'GET',
-      credentials: 'include',
-    });
-
-    if (res.status === 401) {
-      history.push('/');
-      return false;
-    }
-
-    if (res.ok) {
-      const st = await res.json();
+    try {
+      const st = await apiFetch('/consent/model-contract/status');
       if (!st?.accepted) {
         history.push('/dashboard-user-model');
         return false;
       }
       return true;
-    }
+    } catch (e) {
+      if (Number(e?.status) === 401) {
+        history.push('/');
+        return false;
+      }
 
-    history.push('/dashboard-user-model');
-    return false;
+      history.push('/dashboard-user-model');
+      return false;
+    }
   };
 
   const startVeriff = async () => {
@@ -150,16 +141,9 @@ const ModelDocuments = () => {
     setMsg('');
 
     try {
-      const res = await fetch('/api/kyc/veriff/start', {
+      const data = await apiFetch('/kyc/veriff/start', {
         method: 'POST',
-        credentials: 'include',
       });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
-      const data = await res.json();
       const url = data?.verificationUrl;
 
       if (!url) {
@@ -179,15 +163,8 @@ const ModelDocuments = () => {
         const ok = await ensureContractAccepted();
         if (!ok) return;
 
-        const meRes = await fetch('/api/users/me', {
-          method: 'GET',
-          credentials: 'include',
-        });
-
-        if (meRes.ok) {
-          const me = await meRes.json();
-          setUserName(me.nickname || me.name || me.email || '');
-        }
+        const me = await apiFetch('/users/me');
+        setUserName(me.nickname || me.name || me.email || '');
 
         if (isVeriffRoute) {
           await startVeriff();
@@ -228,13 +205,10 @@ const ModelDocuments = () => {
       const fd = new FormData();
       fd.append(fieldName, fileObj);
 
-      const res = await fetch(DOCS_UPLOAD_URL, {
+      const data = await apiFetch(DOCS_UPLOAD_URL, {
         method: 'POST',
-        credentials: 'include',
         body: fd,
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
 
       setDoc({
         urlVerificFront: data.urlVerificFront || null,
@@ -270,11 +244,9 @@ const ModelDocuments = () => {
     setError('');
     setMsg('');
     try {
-      const res = await fetch(`${DOCS_UPLOAD_URL}?field=${encodeURIComponent(fieldName)}`, {
+      await apiFetch(`${DOCS_UPLOAD_URL}?field=${encodeURIComponent(fieldName)}`, {
         method: 'DELETE',
-        credentials: 'include',
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       setDoc((d) => {
         const next = { ...d };

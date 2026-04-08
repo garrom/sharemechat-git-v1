@@ -1033,6 +1033,15 @@
     "common": {
       "errorTitle": "Error"
     },
+    "emailVerification": {
+      "noticeTitle": "Email verification pending",
+      "noticeBody": "You can keep using the trial, but you will not be able to activate the premium account until you verify your email.",
+      "resend": "Resend email",
+      "resending": "Resending...",
+      "resendSuccess": "We have resent the verification email.",
+      "resendError": "The verification email could not be resent.",
+      "premiumRequired": "You must verify your email before activating the premium account."
+    },
     "errors": {
       "loadUser": "Error loading user",
       "cameraActivate": "Error activating the camera:",
@@ -1098,6 +1107,13 @@
     },
     "loading": {
       "session": "Loading session…"
+    },
+    "emailVerification": {
+      "notice": "You must verify your email before continuing the model onboarding.",
+      "resend": "Resend email",
+      "resending": "Resending...",
+      "resendSuccess": "We have resent the verification email.",
+      "resendError": "The verification email could not be resent."
     },
     "contract": {
       "mustAcceptMessage": "Before continuing, you must accept the model legal contract.",

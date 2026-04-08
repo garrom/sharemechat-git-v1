@@ -26,6 +26,7 @@ public class PasswordResetService {
     private final UserRepository userRepository;
     private final PasswordResetTokenRepository tokenRepository;
     private final EmailService emailService;
+    private final EmailCopyRenderer emailCopyRenderer;
 
     @Value("${password-reset.ttl-minutes:30}")
     private int ttlMinutes;
@@ -35,10 +36,12 @@ public class PasswordResetService {
 
     public PasswordResetService(UserRepository userRepository,
                                 PasswordResetTokenRepository tokenRepository,
-                                EmailService emailService) {
+                                EmailService emailService,
+                                EmailCopyRenderer emailCopyRenderer) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.emailService = emailService;
+        this.emailCopyRenderer = emailCopyRenderer;
     }
 
     /**
@@ -79,20 +82,12 @@ public class PasswordResetService {
 
         // Construir link al frontend
         String link = buildFrontendLink(rawToken);
-
-        // Email (logueado por ahora)
-        String subject = "Recuperación de contraseña";
-        String body = """
-                <p>Has solicitado restablecer tu contraseña.</p>
-                <p>Haz clic en el siguiente enlace para continuar:</p>
-                <p><a href="%s">%s</a></p>
-                <p>Este enlace caduca en %d minutos.</p>
-                """.formatted(link, link, ttlMinutes);
+        EmailCopyRenderer.EmailContent content = emailCopyRenderer.renderPasswordReset(user, link, ttlMinutes);
 
         emailService.send(new EmailMessage(
                 user.getEmail(),
-                subject,
-                body,
+                content.subject(),
+                content.body(),
                 EmailMessage.Category.PASSWORD_RESET,
                 EmailMessage.Priority.CRITICAL
         ));
@@ -160,4 +155,5 @@ public class PasswordResetService {
             throw new IllegalStateException("No se pudo calcular SHA-256", e);
         }
     }
+
 }

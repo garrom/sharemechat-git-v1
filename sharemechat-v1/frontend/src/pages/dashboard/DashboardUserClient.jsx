@@ -1,6 +1,7 @@
 // src/pages/dashboard/DashboardUserClient.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import i18n from '../../i18n';
+import styled from 'styled-components';
 import NavbarClient from '../../components/navbar/NavbarClient';
 import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
@@ -20,6 +21,92 @@ import BlogContent from '../blog/BlogContent';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
 import { getApiErrorMessage, isEmailNotVerifiedError } from '../../utils/apiErrors';
+
+const DashboardContentShell = styled.div`
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+`;
+
+const EmailVerificationBanner = styled.aside`
+  position: absolute;
+  top: 18px;
+  right: 22px;
+  z-index: 20;
+  width: min(430px, calc(100% - 44px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(214, 174, 92, 0.34);
+  background: rgba(255, 248, 232, 0.97);
+  box-shadow: 0 10px 24px rgba(18, 24, 38, 0.08);
+  backdrop-filter: blur(10px);
+
+  @media (max-width: 768px) {
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    padding: 9px 10px;
+    border-radius: 12px;
+    gap: 10px;
+    align-items: stretch;
+    flex-direction: column;
+  }
+`;
+
+const EmailVerificationBannerText = styled.div`
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+`;
+
+const EmailVerificationBannerTitle = styled.div`
+  font-size: 12px;
+  line-height: 1.3;
+  font-weight: 700;
+  color: #7a4b00;
+`;
+
+const EmailVerificationBannerBody = styled.div`
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(122, 75, 0, 0.86);
+`;
+
+const EmailVerificationBannerButton = styled.button`
+  flex-shrink: 0;
+  align-self: center;
+  padding: 7px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(214, 174, 92, 0.52);
+  background: rgba(255, 255, 255, 0.72);
+  color: #7a4b00;
+  font-size: 11px;
+  line-height: 1.2;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.08s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.92);
+    border-color: rgba(214, 174, 92, 0.74);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.72;
+    cursor: default;
+  }
+
+  @media (max-width: 768px) {
+    align-self: flex-start;
+  }
+`;
 
 const DashboardUserClient = () => {
   const history = useHistory();
@@ -299,7 +386,9 @@ const DashboardUserClient = () => {
     setResendingVerification(true);
     try {
       const response = await apiFetch('/email-verification/resend', { method: 'POST' });
-      const message = typeof response === 'string' ? response : (response?.message || 'Hemos reenviado el email de validacion.');
+      const message = typeof response === 'string'
+        ? response
+        : (response?.message || t('dashboardUserClient.emailVerification.resendSuccess'));
       setStatusText(message);
       await alert({
         title: t('dashboardUserClient.actions.goPremium'),
@@ -308,7 +397,7 @@ const DashboardUserClient = () => {
         size: 'sm',
       });
     } catch (e) {
-      const message = getApiErrorMessage(e, 'No se pudo reenviar el email de validacion.');
+      const message = getApiErrorMessage(e, t('dashboardUserClient.emailVerification.resendError'));
       setError(message);
       await alert({
         title: t('dashboardUserClient.common.errorTitle'),
@@ -327,7 +416,7 @@ const DashboardUserClient = () => {
     setStatusText('');
 
     if (!user?.emailVerifiedAt) {
-      const message = 'Debes validar tu email antes de activar la cuenta premium.';
+      const message = t('dashboardUserClient.emailVerification.premiumRequired');
       setError(message);
       await alert({
         title: t('dashboardUserClient.actions.goPremium'),
@@ -366,7 +455,7 @@ const DashboardUserClient = () => {
       history.push('/client');
     } catch (e) {
       const msgErr = isEmailNotVerifiedError(e)
-        ? 'Debes validar tu email antes de activar la cuenta premium.'
+        ? t('dashboardUserClient.emailVerification.premiumRequired')
         : getApiErrorMessage(e, t('dashboardUserClient.errors.firstPayment'));
       setError(msgErr);
       await alert({ title: t('dashboardUserClient.common.errorTitle'), message: msgErr, variant: 'danger', size: 'sm' });
@@ -657,50 +746,6 @@ const DashboardUserClient = () => {
   };
 
   const displayName = userName || t('dashboardUserClient.user.defaultName');
-  const emailVerificationNoticeStyle = {
-    margin: '0 0 12px 0',
-    padding: isMobile ? '10px 12px' : '10px 14px',
-    borderRadius: 12,
-    border: '1px solid rgba(214, 174, 92, 0.35)',
-    background: 'rgba(255, 248, 232, 0.96)',
-    color: '#7a4b00',
-    display: 'flex',
-    alignItems: isMobile ? 'stretch' : 'center',
-    justifyContent: 'space-between',
-    gap: isMobile ? 10 : 14,
-    flexDirection: isMobile ? 'column' : 'row',
-    boxShadow: '0 8px 20px rgba(18, 24, 38, 0.05)',
-  };
-  const emailVerificationNoticeTextStyle = {
-    minWidth: 0,
-    display: 'grid',
-    gap: 3,
-  };
-  const emailVerificationNoticeTitleStyle = {
-    fontSize: 13,
-    fontWeight: 700,
-    lineHeight: 1.3,
-  };
-  const emailVerificationNoticeBodyStyle = {
-    fontSize: 12,
-    lineHeight: 1.4,
-    color: 'rgba(122, 75, 0, 0.88)',
-  };
-  const emailVerificationNoticeButtonStyle = {
-    flexShrink: 0,
-    alignSelf: isMobile ? 'flex-start' : 'center',
-    padding: '8px 11px',
-    borderRadius: 9,
-    border: '1px solid rgba(217, 194, 140, 0.9)',
-    background: '#fffdf7',
-    color: '#7a4b00',
-    fontWeight: 700,
-    fontSize: 12,
-    lineHeight: 1.2,
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  };
-
   return (
     <StyledContainer>
       <GlobalBlack />
@@ -731,56 +776,58 @@ const DashboardUserClient = () => {
       />
       {/* ========= FIN NAVBAR  ======== */}
 
-      <StyledMainContent data-tab={activeTab}>
+      <DashboardContentShell>
+        <StyledMainContent data-tab={activeTab}>
+          {activeTab === 'videochat' && (
+            <VideoChatRandomUser
+              isMobile={isMobile}
+              cameraActive={cameraActive}
+              remoteStream={remoteStream}
+              localVideoRef={localVideoRef}
+              remoteVideoRef={remoteVideoRef}
+              searching={searching}
+              stopAll={stopAll}
+              handleStartMatch={handleStartMatch}
+              handleNext={handleNext}
+              toggleFullscreen={toggleFullscreen}
+              remoteVideoWrapRef={remoteVideoWrapRef}
+              handleActivateCamera={handleActivateCamera}
+              statusText={statusText}
+              error={error}
+              openPurchaseModal={openPurchaseModal}
+              handleReportPeer={handleReportPeer}
+            />
+          )}
+
+          {activeTab === 'blog' && (
+            <div style={{flex:1,minWidth:0,minHeight:0}}>
+              <BlogContent mode="private" />
+            </div>
+          )}
+        </StyledMainContent>
+
         {!user?.emailVerifiedAt && (
-          <div style={emailVerificationNoticeStyle}>
-            <div style={emailVerificationNoticeTextStyle}>
-              <div style={emailVerificationNoticeTitleStyle}>Email pendiente de verificacion</div>
-              <div style={emailVerificationNoticeBodyStyle}>
-              Puedes seguir entrando y usar el trial, pero no podrás activar la cuenta premium hasta validar tu email.
-            </div>
-            </div>
-            <button
+          <EmailVerificationBanner aria-live="polite" role="status">
+            <EmailVerificationBannerText>
+              <EmailVerificationBannerTitle>
+                {t('dashboardUserClient.emailVerification.noticeTitle')}
+              </EmailVerificationBannerTitle>
+              <EmailVerificationBannerBody>
+                {t('dashboardUserClient.emailVerification.noticeBody')}
+              </EmailVerificationBannerBody>
+            </EmailVerificationBannerText>
+            <EmailVerificationBannerButton
               type="button"
               onClick={handleResendEmailVerification}
               disabled={resendingVerification}
-              style={{
-                ...emailVerificationNoticeButtonStyle,
-                opacity: resendingVerification ? 0.75 : 1,
-              }}
             >
-              {resendingVerification ? 'Reenviando...' : 'Reenviar email'}
-            </button>
-          </div>
+              {resendingVerification
+                ? t('dashboardUserClient.emailVerification.resending')
+                : t('dashboardUserClient.emailVerification.resend')}
+            </EmailVerificationBannerButton>
+          </EmailVerificationBanner>
         )}
-
-        {activeTab === 'videochat' && (
-          <VideoChatRandomUser
-            isMobile={isMobile}
-            cameraActive={cameraActive}
-            remoteStream={remoteStream}
-            localVideoRef={localVideoRef}
-            remoteVideoRef={remoteVideoRef}
-            searching={searching}
-            stopAll={stopAll}
-            handleStartMatch={handleStartMatch}
-            handleNext={handleNext}
-            toggleFullscreen={toggleFullscreen}
-            remoteVideoWrapRef={remoteVideoWrapRef}
-            handleActivateCamera={handleActivateCamera}
-            statusText={statusText}
-            error={error}
-            openPurchaseModal={openPurchaseModal}
-            handleReportPeer={handleReportPeer}
-          />
-        )}
-
-        {activeTab === 'blog' && (
-          <div style={{flex:1,minWidth:0,minHeight:0}}>
-            <BlogContent mode="private" />
-          </div>
-        )}
-      </StyledMainContent>
+      </DashboardContentShell>
 
       <TrialCooldownModal
         open={showTrialCooldownModal}

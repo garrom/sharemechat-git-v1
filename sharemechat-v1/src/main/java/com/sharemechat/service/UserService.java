@@ -38,6 +38,8 @@ public class UserService {
     private final ModelDocumentRepository modelDocumentRepository;
     private final UserLanguageRepository userLanguageRepository;
     private final EmailService emailService;
+    private final EmailVerificationService emailVerificationService;
+    private final EmailCopyRenderer emailCopyRenderer;
     private final AgeGatePolicyService ageGatePolicyService;
     private final BackofficeAccessService backofficeAccessService;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
@@ -52,6 +54,8 @@ public class UserService {
                        ModelDocumentRepository modelDocumentRepository,
                        UserLanguageRepository userLanguageRepository,
                        EmailService emailService,
+                       EmailVerificationService emailVerificationService,
+                       EmailCopyRenderer emailCopyRenderer,
                        AgeGatePolicyService ageGatePolicyService,
                        BackofficeAccessService backofficeAccessService) {
         this.userRepository = userRepository;
@@ -63,6 +67,8 @@ public class UserService {
         this.modelDocumentRepository = modelDocumentRepository;
         this.userLanguageRepository = userLanguageRepository;
         this.emailService = emailService;
+        this.emailVerificationService = emailVerificationService;
+        this.emailCopyRenderer = emailCopyRenderer;
         this.ageGatePolicyService = ageGatePolicyService;
         this.backofficeAccessService = backofficeAccessService;
     }
@@ -155,6 +161,7 @@ public class UserService {
         User savedUser = userRepository.save(user);
 
         seedPrimaryLanguageIfMissing(savedUser);
+        emailVerificationService.issueProductVerification(savedUser);
 
         try {
             sendWelcomeEmail(savedUser);
@@ -266,6 +273,7 @@ public class UserService {
         User savedUser = userRepository.save(user);
 
         seedPrimaryLanguageIfMissing(savedUser);
+        emailVerificationService.issueProductVerification(savedUser);
 
         try {
             sendWelcomeEmail(savedUser);
@@ -551,20 +559,12 @@ public class UserService {
 
     //EMAIL
     private void sendWelcomeEmail(User user) {
-
-        String subject = "Bienvenido a SharemeChat";
-
-        String body = """
-            <p>Hola %s,</p>
-            <p>Tu cuenta en <b>SharemeChat</b> se ha creado correctamente.</p>
-            <p>Ya puedes acceder a la plataforma.</p>
-            <p>Si no has creado esta cuenta, contacta con soporte.</p>
-            """.formatted(user.getNickname());
+        EmailCopyRenderer.EmailContent content = emailCopyRenderer.renderWelcome(user);
 
         emailService.send(new EmailMessage(
                 user.getEmail(),
-                subject,
-                body,
+                content.subject(),
+                content.body(),
                 EmailMessage.Category.WELCOME,
                 EmailMessage.Priority.BEST_EFFORT
         ));
@@ -573,23 +573,12 @@ public class UserService {
     //EMAIL
     private void sendUnsubscribeEmail(User user) {
 
-        String subject = "Confirmación de baja en SharemeChat";
-
-        String body = """
-            <p>Hola %s,</p>
-
-            <p>Tu cuenta en <b>SharemeChat</b> ha sido dada de baja correctamente.</p>
-
-            <p>Si no has solicitado esta baja o crees que se trata de un error,
-            puedes contactar con nuestro equipo de soporte.</p>
-
-            <p>Gracias por haber utilizado SharemeChat.</p>
-            """.formatted(user.getNickname());
+        EmailCopyRenderer.EmailContent content = emailCopyRenderer.renderUnsubscribe(user);
 
         emailService.send(new EmailMessage(
                 user.getEmail(),
-                subject,
-                body,
+                content.subject(),
+                content.body(),
                 EmailMessage.Category.UNSUBSCRIBE_CONFIRMATION,
                 EmailMessage.Priority.BEST_EFFORT
         ));

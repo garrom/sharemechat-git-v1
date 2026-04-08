@@ -10,7 +10,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
-@ConditionalOnProperty(prefix = "email", name = "provider", havingValue = "smtp", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "email", name = "provider", havingValue = "smtp")
 public class SmtpEmailService implements EmailService {
 
     private static final Logger log = LoggerFactory.getLogger(SmtpEmailService.class);

@@ -27,6 +27,7 @@ public class EmailVerificationService {
     private final EmailVerificationTokenRepository tokenRepository;
     private final UserRepository userRepository;
     private final EmailService emailService;
+    private final EmailCopyRenderer emailCopyRenderer;
 
     @Value("${email-verification.ttl-minutes:1440}")
     private int ttlMinutes;
@@ -39,10 +40,12 @@ public class EmailVerificationService {
 
     public EmailVerificationService(EmailVerificationTokenRepository tokenRepository,
                                     UserRepository userRepository,
-                                    EmailService emailService) {
+                                    EmailService emailService,
+                                    EmailCopyRenderer emailCopyRenderer) {
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
         this.emailService = emailService;
+        this.emailCopyRenderer = emailCopyRenderer;
     }
 
     @Transactional
@@ -82,14 +85,14 @@ public class EmailVerificationService {
         tokenRepository.save(token);
 
         String link = buildFrontendLink(rawToken, context);
-        String subject = buildSubject(user, context);
         String nickname = safeLabel(user.getNickname(), user.getEmail());
-        String body = buildBody(user, context, nickname, link);
+        EmailCopyRenderer.EmailContent content =
+                emailCopyRenderer.renderVerification(user, context, nickname, link, ttlMinutes);
 
         emailService.send(new EmailMessage(
                 user.getEmail(),
-                subject,
-                body,
+                content.subject(),
+                content.body(),
                 EmailMessage.Category.EMAIL_VERIFICATION,
                 EmailMessage.Priority.CRITICAL
         ));
@@ -179,45 +182,4 @@ public class EmailVerificationService {
         return email != null ? email.trim() : "usuario";
     }
 
-    private String buildSubject(User user, String context) {
-        if (CONTEXT_BACKOFFICE.equalsIgnoreCase(context)) {
-            return "Validacion de email para acceso interno";
-        }
-        if ("FORM_MODEL".equalsIgnoreCase(String.valueOf(user.getUserType()))) {
-            return "Valida tu email para continuar el onboarding de modelo";
-        }
-        if ("FORM_CLIENT".equalsIgnoreCase(String.valueOf(user.getUserType()))) {
-            return "Valida tu email para activar funciones premium";
-        }
-        return "Valida tu email en SharemeChat";
-    }
-
-    private String buildBody(User user, String context, String nickname, String link) {
-        if (CONTEXT_BACKOFFICE.equalsIgnoreCase(context)) {
-            return """
-                    <p>Hola %s,</p>
-                    <p>Tu acceso interno a <b>SharemeChat Backoffice</b> ya esta preparado.</p>
-                    <p>Antes de poder entrar, debes validar tu email:</p>
-                    <p><a href="%s">%s</a></p>
-                    <p>Este enlace caduca en %d minutos.</p>
-                    """.formatted(nickname, link, link, ttlMinutes);
-        }
-
-        String lead = "Tu cuenta en <b>SharemeChat</b> necesita validar el email para continuar.";
-        String reason = "Después de validarlo podrás seguir con tu cuenta.";
-
-        if ("FORM_MODEL".equalsIgnoreCase(String.valueOf(user.getUserType()))) {
-            reason = "Después de validarlo podrás continuar con el onboarding de modelo.";
-        } else if ("FORM_CLIENT".equalsIgnoreCase(String.valueOf(user.getUserType()))) {
-            reason = "Después de validarlo podrás activar la cuenta premium y completar el primer pago.";
-        }
-
-        return """
-                <p>Hola %s,</p>
-                <p>%s</p>
-                <p>%s</p>
-                <p><a href="%s">%s</a></p>
-                <p>Este enlace caduca en %d minutos.</p>
-                """.formatted(nickname, lead, reason, link, link, ttlMinutes);
-    }
 }

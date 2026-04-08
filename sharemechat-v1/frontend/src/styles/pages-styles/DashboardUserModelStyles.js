@@ -214,6 +214,32 @@ export const DashboardMessage = styled.div`
   color: ${({ $type }) => ($type === 'error' ? '#8b4d4d' : '#475668')};
 `;
 
+export const DashboardInlineNotice = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid #ead7a6;
+  background: linear-gradient(180deg, #fff7dd 0%, #fff2c4 100%);
+  color: #6f5410;
+
+  @media (max-width: 720px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+`;
+
+export const DashboardInlineNoticeText = styled.p`
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: inherit;
+`;
+
 export const DashboardLinkBox = styled.div`
   padding: 16px 18px;
   border-radius: 18px;

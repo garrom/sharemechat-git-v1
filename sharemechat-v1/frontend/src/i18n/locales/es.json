@@ -1033,6 +1033,15 @@
     "common": {
       "errorTitle": "Error"
     },
+    "emailVerification": {
+      "noticeTitle": "Email pendiente de validación",
+      "noticeBody": "Puedes seguir entrando y usar el trial, pero no podrás activar la cuenta premium hasta validar tu email.",
+      "resend": "Reenviar email",
+      "resending": "Reenviando...",
+      "resendSuccess": "Hemos reenviado el email de validación.",
+      "resendError": "No se pudo reenviar el email de validación.",
+      "premiumRequired": "Debes validar tu email antes de activar la cuenta premium."
+    },
     "errors": {
       "loadUser": "Error cargando usuario",
       "cameraActivate": "Error al activar la cámara:",
@@ -1098,6 +1107,13 @@
     },
     "loading": {
       "session": "Cargando sesión…"
+    },
+    "emailVerification": {
+      "notice": "Debes validar tu email antes de continuar con el onboarding de modelo.",
+      "resend": "Reenviar email",
+      "resending": "Reenviando...",
+      "resendSuccess": "Hemos reenviado el email de validación.",
+      "resendError": "No se pudo reenviar el email de validación."
     },
     "contract": {
       "mustAcceptMessage": "Antes de continuar, debes aceptar el contrato legal de modelo.",

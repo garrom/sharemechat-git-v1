@@ -33,6 +33,8 @@ import {
   DashboardPanelBody,
   DashboardHint,
   DashboardMessage,
+  DashboardInlineNotice,
+  DashboardInlineNoticeText,
   DashboardLinkBox,
   DashboardCheckboxRow,
   DashboardActions,
@@ -145,7 +147,7 @@ const DashboardUserModel = () => {
 
     const loadKycMode = async () => {
       try {
-        const entry = await apiFetch('/kyc/config/model-onboarding');
+        const entry = await apiFetch('/kyc/config/product/model-onboarding');
         if (cancelled) return;
 
         const mode = String(entry?.activeMode || '').toUpperCase();
@@ -165,7 +167,7 @@ const DashboardUserModel = () => {
 
   const handleAcceptContract = async () => {
     if (!sessionUser?.emailVerifiedAt) {
-      setVerificationError('Debes validar tu email antes de aceptar el contrato de modelo.');
+      setVerificationError(t('dashboardUserModel.emailVerification.notice'));
       return;
     }
 
@@ -179,7 +181,7 @@ const DashboardUserModel = () => {
       setConfirmChecked(true);
 
       try {
-        const entry = await apiFetch('/kyc/config/model-onboarding');
+        const entry = await apiFetch('/kyc/config/product/model-onboarding');
         const mode = String(entry?.activeMode || '').toUpperCase();
         setKycMode(mode);
       } catch {
@@ -187,7 +189,7 @@ const DashboardUserModel = () => {
       }
     } catch (e) {
       if (isEmailNotVerifiedError(e)) {
-        setVerificationError('Debes validar tu email antes de aceptar el contrato de modelo.');
+        setVerificationError(t('dashboardUserModel.emailVerification.notice'));
       } else {
         setContractErr(getApiErrorMessage(e, t('dashboardUserModel.contract.errors.accept')));
       }
@@ -207,7 +209,7 @@ const DashboardUserModel = () => {
 
   const handleUploadDocs = async () => {
     if (!sessionUser?.emailVerifiedAt) {
-      setVerificationError('Debes validar tu email antes de continuar el onboarding de modelo.');
+      setVerificationError(t('dashboardUserModel.emailVerification.notice'));
       return;
     }
 
@@ -215,7 +217,7 @@ const DashboardUserModel = () => {
     setKycRouteErr('');
 
     try {
-      const entry = await apiFetch('/kyc/config/model-onboarding');
+      const entry = await apiFetch('/kyc/config/product/model-onboarding');
       const mode = String(entry?.activeMode || '').toUpperCase();
 
       setKycMode(mode);
@@ -237,7 +239,7 @@ const DashboardUserModel = () => {
       );
     } catch (e) {
       if (isEmailNotVerifiedError(e)) {
-        setVerificationError('Debes validar tu email antes de continuar el onboarding de modelo.');
+        setVerificationError(t('dashboardUserModel.emailVerification.notice'));
       } else {
         setKycRouteErr(getApiErrorMessage(e, t('dashboardUserModel.kyc.errors.load')));
       }
@@ -252,9 +254,13 @@ const DashboardUserModel = () => {
     setResendingVerification(true);
     try {
       const response = await apiFetch('/email-verification/resend', { method: 'POST' });
-      setVerificationMessage(response?.message || 'Hemos reenviado el email de validacion.');
+      setVerificationMessage(
+        response?.message || t('dashboardUserModel.emailVerification.resendSuccess')
+      );
     } catch (e) {
-      setVerificationError(getApiErrorMessage(e, 'No se pudo reenviar el email de validacion.'));
+      setVerificationError(
+        getApiErrorMessage(e, t('dashboardUserModel.emailVerification.resendError'))
+      );
     } finally {
       setResendingVerification(false);
     }
@@ -336,9 +342,20 @@ const DashboardUserModel = () => {
                 </DashboardHeroLead>
 
                 {mustVerifyEmail && (
-                  <DashboardMessage $type="error">
-                    Debes validar tu email antes de continuar con el onboarding de modelo.
-                  </DashboardMessage>
+                  <DashboardInlineNotice>
+                    <DashboardInlineNoticeText>
+                      {t('dashboardUserModel.emailVerification.notice')}
+                    </DashboardInlineNoticeText>
+                    <DashboardSecondaryButton
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resendingVerification}
+                    >
+                      {resendingVerification
+                        ? t('dashboardUserModel.emailVerification.resending')
+                        : t('dashboardUserModel.emailVerification.resend')}
+                    </DashboardSecondaryButton>
+                  </DashboardInlineNotice>
                 )}
                 {verificationMessage && (
                   <DashboardMessage>{verificationMessage}</DashboardMessage>
@@ -440,7 +457,7 @@ const DashboardUserModel = () => {
                           accepting
                             ? t('dashboardUserModel.contract.actions.accepting')
                             : mustVerifyEmail
-                            ? 'Debes validar tu email antes de aceptar el contrato'
+                            ? t('dashboardUserModel.emailVerification.notice')
                             : !openedContract
                             ? t('dashboardUserModel.contract.tooltips.openPdfFirst')
                             : !confirmChecked
@@ -452,15 +469,6 @@ const DashboardUserModel = () => {
                           ? t('dashboardUserModel.contract.actions.accepting')
                           : t('dashboardUserModel.contract.actions.accept')}
                       </DashboardPrimaryButton>
-                      {mustVerifyEmail && (
-                        <DashboardSecondaryButton
-                          type="button"
-                          onClick={handleResendVerification}
-                          disabled={resendingVerification}
-                        >
-                          {resendingVerification ? 'Reenviando...' : 'Reenviar email de validacion'}
-                        </DashboardSecondaryButton>
-                      )}
                     </DashboardActions>
                   </DashboardPanelBody>
                 </DashboardPanel>
@@ -497,20 +505,16 @@ const DashboardUserModel = () => {
                         type="button"
                         onClick={handleUploadDocs}
                         disabled={mustVerifyEmail || mustAcceptContract || routingKyc}
-                        title={mustVerifyEmail ? 'Debes validar tu email antes de continuar' : mustAcceptContract ? t('dashboardUserModel.contract.mustAcceptFirst') : undefined}
+                        title={
+                          mustVerifyEmail
+                            ? t('dashboardUserModel.emailVerification.notice')
+                            : mustAcceptContract
+                            ? t('dashboardUserModel.contract.mustAcceptFirst')
+                            : undefined
+                        }
                       >
                         {routingKyc ? t('dashboardUserModel.kyc.actions.opening') : mainButtonLabel}
                       </DashboardPrimaryButton>
-
-                      {mustVerifyEmail && (
-                        <DashboardSecondaryButton
-                          type="button"
-                          onClick={handleResendVerification}
-                          disabled={resendingVerification}
-                        >
-                          {resendingVerification ? 'Reenviando...' : 'Reenviar email de validacion'}
-                        </DashboardSecondaryButton>
-                      )}
 
                       {mustAcceptContract && (
                         <DashboardSecondaryButton
