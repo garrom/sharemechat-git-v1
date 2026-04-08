@@ -156,7 +156,18 @@ public class UserService {
 
         seedPrimaryLanguageIfMissing(savedUser);
 
-        sendWelcomeEmail(savedUser);
+        try {
+            sendWelcomeEmail(savedUser);
+        } catch (Exception ex) {
+            log.warn(
+                    "REGISTER_CLIENT welcome email failed userId={} email={} nickname={} err={}",
+                    savedUser.getId(),
+                    savedUser.getEmail(),
+                    savedUser.getNickname(),
+                    ex.getMessage(),
+                    ex
+            );
+        }
 
         return mapToDTO(savedUser);
     }
@@ -256,7 +267,18 @@ public class UserService {
 
         seedPrimaryLanguageIfMissing(savedUser);
 
-        sendWelcomeEmail(savedUser);
+        try {
+            sendWelcomeEmail(savedUser);
+        } catch (Exception ex) {
+            log.warn(
+                    "REGISTER_MODEL welcome email failed userId={} email={} nickname={} err={}",
+                    savedUser.getId(),
+                    savedUser.getEmail(),
+                    savedUser.getNickname(),
+                    ex.getMessage(),
+                    ex
+            );
+        }
 
         return mapToDTO(savedUser);
     }
@@ -432,8 +454,19 @@ public class UserService {
             }
 
             unsubscribeRepository.save(row);
-
-            sendUnsubscribeEmail(user);
+            try {
+                sendUnsubscribeEmail(user);
+            } catch (Exception ex) {
+                log.warn(
+                        "UNSUBSCRIBE email failed userId={} email={} reason={} ip={} err={}",
+                        userId,
+                        user.getEmail(),
+                        normalize(reason),
+                        ip,
+                        ex.getMessage(),
+                        ex
+                );
+            }
         }
 
         // (Opcional) Si luego integras cierre de WS/colas, hazlo fuera para no mezclar capas aquí.
@@ -528,7 +561,13 @@ public class UserService {
             <p>Si no has creado esta cuenta, contacta con soporte.</p>
             """.formatted(user.getNickname());
 
-        emailService.send(user.getEmail(), subject, body);
+        emailService.send(new EmailMessage(
+                user.getEmail(),
+                subject,
+                body,
+                EmailMessage.Category.WELCOME,
+                EmailMessage.Priority.BEST_EFFORT
+        ));
     }
 
     //EMAIL
@@ -547,7 +586,13 @@ public class UserService {
             <p>Gracias por haber utilizado SharemeChat.</p>
             """.formatted(user.getNickname());
 
-        emailService.send(user.getEmail(), subject, body);
+        emailService.send(new EmailMessage(
+                user.getEmail(),
+                subject,
+                body,
+                EmailMessage.Category.UNSUBSCRIBE_CONFIRMATION,
+                EmailMessage.Priority.BEST_EFFORT
+        ));
     }
 
     private void seedPrimaryLanguageIfMissing(User user) {

@@ -8,15 +8,17 @@ public class LoggingEmailService implements EmailService {
     private static final Logger log = LoggerFactory.getLogger(LoggingEmailService.class);
 
     @Override
-    public void send(String to, String subject, String htmlBody) {
+    public void send(EmailMessage message) {
 
         log.info("""
                 === EMAIL (FAKE) ===
                 To: {}
                 Subject: {}
+                Category: {}
+                Priority: {}
                 Body:
                 {}
                 ====================
-                """, to, subject, htmlBody);
+                """, message.to(), message.subject(), message.category(), message.priority(), message.htmlBody());
     }
 }

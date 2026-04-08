@@ -89,7 +89,13 @@ public class PasswordResetService {
                 <p>Este enlace caduca en %d minutos.</p>
                 """.formatted(link, link, ttlMinutes);
 
-        emailService.send(user.getEmail(), subject, body);
+        emailService.send(new EmailMessage(
+                user.getEmail(),
+                subject,
+                body,
+                EmailMessage.Category.PASSWORD_RESET,
+                EmailMessage.Priority.CRITICAL
+        ));
 
         log.info("Password reset token creado para userId={} expira en {} min", user.getId(), ttlMinutes);
     }

@@ -86,7 +86,13 @@ public class EmailVerificationService {
         String nickname = safeLabel(user.getNickname(), user.getEmail());
         String body = buildBody(user, context, nickname, link);
 
-        emailService.send(user.getEmail(), subject, body);
+        emailService.send(new EmailMessage(
+                user.getEmail(),
+                subject,
+                body,
+                EmailMessage.Category.EMAIL_VERIFICATION,
+                EmailMessage.Priority.CRITICAL
+        ));
     }
 
     @Transactional
