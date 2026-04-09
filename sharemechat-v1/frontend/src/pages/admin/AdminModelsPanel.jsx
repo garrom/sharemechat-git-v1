@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import styled from 'styled-components';
 import {
   CardsGrid,
   CheckBox,
@@ -8,15 +9,30 @@ import {
   FieldBlock,
   InlinePanel,
   RightInfo,
-  ScrollBox,
   SectionTitle,
   SmallBtn,
   StatCard,
   StyledButton,
+  DarkHeaderTable,
+  TableActionGroup,
+  TableDangerButton,
   StyledError,
   StyledSelect,
-  StyledTable,
+  TableSuccessButton,
 } from '../../styles/AdminStyles';
+
+const ModelsTable = styled(DarkHeaderTable)`
+  border: 1px solid #b4beca;
+
+  tbody tr td {
+    background: #fff !important;
+    border-bottom-color: #d6dde5;
+  }
+
+  tbody tr:hover td {
+    background: #f1f4f7 !important;
+  }
+`;
 
 const AdminModelsPanel = ({
   canReadKycMode = false,
@@ -419,8 +435,8 @@ const AdminModelsPanel = ({
       {loading && <div style={{ fontSize: 12, color: '#52607a' }}>Cargando...</div>}
       {error && <StyledError>{error}</StyledError>}
 
-      <ScrollBox style={{ maxHeight: '62vh' }}>
-        <StyledTable>
+      <div style={{ overflowX: 'auto' }}>
+        <ModelsTable style={{ marginTop: 0 }}>
           <thead>
             <tr>
               <th>ID</th>
@@ -471,31 +487,29 @@ const AdminModelsPanel = ({
                     {verification === 'PENDING' && canUpdateChecklist && renderChecklistCell(user)}
 
                     {verification === 'PENDING' && canReviewModels && (
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 6 }}>
-                        <StyledButton
+                      <TableActionGroup>
+                        <TableSuccessButton
                           onClick={() => handleReview(user.id, 'APPROVE')}
                           disabled={!canApprove(user.id)}
                           title={!canApprove(user.id) ? 'Valida los 3 documentos primero' : 'Aprobar modelo'}
                         >
                           Aprobar
-                        </StyledButton>
+                        </TableSuccessButton>
 
-                        <StyledButton
-                          style={{ backgroundColor: '#dc3545' }}
+                        <TableDangerButton
                           onClick={() => handleReview(user.id, 'REJECT')}
                         >
                           Rechazar
-                        </StyledButton>
-                      </div>
+                        </TableDangerButton>
+                      </TableActionGroup>
                     )}
 
                     {verification === 'APPROVED' && canReviewModels && (
-                      <StyledButton
-                        style={{ backgroundColor: '#dc3545', marginTop: 6 }}
-                        onClick={() => handleReview(user.id, 'REJECT')}
-                      >
-                        Rechazar
-                      </StyledButton>
+                      <TableActionGroup>
+                        <TableDangerButton onClick={() => handleReview(user.id, 'REJECT')}>
+                          Rechazar
+                        </TableDangerButton>
+                      </TableActionGroup>
                     )}
 
                     {verification === 'REJECTED' && (
@@ -510,8 +524,8 @@ const AdminModelsPanel = ({
               );
             })}
           </tbody>
-        </StyledTable>
-      </ScrollBox>
+        </ModelsTable>
+      </div>
     </>
   );
 };

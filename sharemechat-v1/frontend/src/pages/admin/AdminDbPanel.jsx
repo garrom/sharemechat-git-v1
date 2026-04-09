@@ -7,9 +7,9 @@ import {
   FloatingBtn,
   RightInfo,
   SectionTitle,
+  DarkHeaderTable,
   StyledError,
   StyledSelect,
-  StyledTable,
 } from '../../styles/AdminStyles';
 
 const DB_TABLES = [
@@ -115,7 +115,7 @@ const AdminDbPanel = ({ hideTitle = false }) => {
         </DbFilters>
 
         <DbTableWrap>
-          <StyledTable>
+          <DarkHeaderTable>
             <thead>
               <tr>
                 {dbRows.length > 0
@@ -142,7 +142,7 @@ const AdminDbPanel = ({ hideTitle = false }) => {
                 </tr>
               ))}
             </tbody>
-          </StyledTable>
+          </DarkHeaderTable>
 
           {dbError && (
             <div style={{ padding: 12 }}>

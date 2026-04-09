@@ -6,13 +6,14 @@ import {
   FieldBlock,
   InlinePanel,
   PanelRow,
-  ScrollBox,
   SmallBtn,
   StatCard,
   StyledButton,
+  DarkHeaderTable,
+  TableActionButton,
+  TableActionGroup,
   StyledError,
   StyledInput,
-  StyledTable,
   TextArea,
 } from '../../styles/AdminStyles';
 
@@ -33,27 +34,27 @@ const FALLBACK_PERMISSIONS = [
 
 const pillStyle = (tone = 'neutral') => {
   const tones = {
-    neutral: { bg: '#eef3fb', color: '#344054', border: '#d7deea' },
-    admin: { bg: '#dce9ff', color: '#0f4aa8', border: '#b8d0fb' },
-    support: { bg: '#e7f7ea', color: '#166534', border: '#c7ebcf' },
-    audit: { bg: '#fff1d6', color: '#9a6700', border: '#f3ddad' },
-    warning: { bg: '#fff1d6', color: '#9a6700', border: '#f3ddad' },
-    add: { bg: '#ddf7e5', color: '#166534', border: '#bfe9ca' },
-    remove: { bg: '#ffe2e0', color: '#b42318', border: '#f4c5c0' },
-    active: { bg: '#ddf7e5', color: '#166534', border: '#bfe9ca' },
-    inactive: { bg: '#ffe2e0', color: '#b42318', border: '#f4c5c0' },
+    neutral: { bg: '#f8fafb', color: '#4b5565', border: '#d5dbe3' },
+    admin: { bg: '#f5f7fa', color: '#37485d', border: '#cfd7e1' },
+    support: { bg: '#f6f8f6', color: '#425647', border: '#d3dad4' },
+    audit: { bg: '#faf9f6', color: '#675b41', border: '#ddd8cb' },
+    warning: { bg: '#faf9f6', color: '#675b41', border: '#ddd8cb' },
+    add: { bg: '#f6f8f6', color: '#425647', border: '#d3dad4' },
+    remove: { bg: '#faf7f7', color: '#714848', border: '#ded2d2' },
+    active: { bg: '#f6f8f6', color: '#425647', border: '#d3dad4' },
+    inactive: { bg: '#faf7f7', color: '#714848', border: '#ded2d2' },
   };
   const resolved = tones[tone] || tones.neutral;
   return {
     display: 'inline-flex',
     alignItems: 'center',
-    padding: '4px 8px',
+    padding: '2px 6px',
     margin: '0 6px 6px 0',
-    borderRadius: 999,
+    borderRadius: 4,
     border: `1px solid ${resolved.border}`,
     background: resolved.bg,
     color: resolved.color,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: 700,
     whiteSpace: 'nowrap',
   };
@@ -82,15 +83,7 @@ const emptyForm = {
 const normalizeList = (items) => Array.isArray(items) ? items : [];
 
 const compactActionBtnStyle = {
-  padding: '4px 7px',
-  fontSize: 10,
-  borderRadius: 8,
-  lineHeight: 1.15,
-};
-
-const selectedRowStyle = {
-  background: '#f5f9ff',
-  boxShadow: 'inset 3px 0 0 #9dbcf5',
+  minWidth: 96,
 };
 
 const AdminAdministrationPanel = () => {
@@ -404,40 +397,41 @@ const AdminAdministrationPanel = () => {
         {lookupError && <StyledError>{lookupError}</StyledError>}
         {lookupResults.length > 0 && (
           <div style={{ overflowX: 'auto', marginTop: 10 }}>
-            <StyledTable style={{ marginTop: 0 }}>
-              <thead><tr><th>Usuario</th><th>Rol producto</th><th>Acceso actual</th><th>Accion</th></tr></thead>
+            <DarkHeaderTable style={{ marginTop: 0 }}>
+              <thead><tr><th>ID</th><th>Mail</th><th>Rol producto</th><th>Acceso</th><th>Accion</th></tr></thead>
               <tbody>
                 {lookupResults.map((item) => (
                   <tr key={item.userId}>
-                    <td><strong>{item.email}</strong><div style={{ fontSize: 12, color: '#74819a', marginTop: 4 }}>ID #{item.userId}{item.nickname ? ` - ${item.nickname}` : ''}</div></td>
+                    <td>{item.userId}</td>
+                    <td>{item.email}</td>
                     <td><span style={pillStyle()}>{item.productRole || 'N/D'}</span></td>
-                    <td>
-                      <span style={pillStyle(item.emailVerifiedAt ? 'active' : 'warning')}>{item.emailVerifiedAt ? 'Email validado' : 'Email pendiente'}</span>
-                      {item.hasExplicitConfiguration ? <span style={pillStyle('warning')}>Explicito</span> : null}
-                      {item.hasImplicitAdminAccess ? <span style={pillStyle('admin')}>Implicito ADMIN</span> : null}
-                      {item.hasEffectiveAccess ? <span style={pillStyle(item.accessActive ? 'active' : 'inactive')}>{item.accessActive ? 'Efectivo' : 'Bloqueado'}</span> : <span style={{ color: '#74819a' }}>Sin acceso</span>}
-                    </td>
+                    <td>{item.hasEffectiveAccess && item.accessActive ? 'Activo' : 'Sin acceso'}</td>
                     <td>
                       {item.hasExplicitConfiguration ? (
-                        <SmallBtn type="button" onClick={() => selectForEdit(item.userId)}>Editar acceso</SmallBtn>
+                        <TableActionButton type="button" onClick={() => selectForEdit(item.userId)}>
+                          Editar acceso
+                        </TableActionButton>
                       ) : (
-                        <SmallBtn type="button" onClick={() => startCreateFromLookup(item)}>{item.hasImplicitAdminAccess ? 'Crear configuracion' : 'Crear acceso'}</SmallBtn>
+                        <TableActionButton type="button" onClick={() => startCreateFromLookup(item)}>
+                          {item.hasImplicitAdminAccess ? 'Crear configuracion' : 'Crear acceso'}
+                        </TableActionButton>
                       )}
                     </td>
                   </tr>
                 ))}
               </tbody>
-            </StyledTable>
+            </DarkHeaderTable>
           </div>
         )}
       </InlinePanel>
 
       <div>
-        <ScrollBox style={{ maxWidth: '100%', maxHeight: '48vh' }}>
-          <StyledTable style={{ maxWidth: '100%', marginTop: 0 }}>
+        <div style={{ maxWidth: '100%', maxHeight: '48vh', overflowX: 'auto' }}>
+          <DarkHeaderTable style={{ maxWidth: '100%', marginTop: 0 }}>
             <thead>
               <tr>
-                <th>Usuario</th>
+                <th>ID</th>
+                <th>Mail</th>
                 <th>Rol producto</th>
                 <th>Roles backoffice</th>
                 <th>Acceso</th>
@@ -448,50 +442,39 @@ const AdminAdministrationPanel = () => {
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
-                <tr><td colSpan="7" style={{ color: '#74819a' }}>No hay usuarios que coincidan con el filtro actual.</td></tr>
+                <tr><td colSpan="8" style={{ color: '#74819a' }}>No hay usuarios que coincidan con el filtro actual.</td></tr>
               ) : filteredUsers.map((user) => (
-                <tr key={user.userId} style={selectedUserId === user.userId ? selectedRowStyle : undefined}>
-                  <td>
-                    <strong>{user.email}</strong>
-                    <div style={{ fontSize: 12, color: '#74819a', marginTop: 4 }}>ID #{user.userId}{user.nickname ? ` - ${user.nickname}` : ''}</div>
-                    <div style={{ marginTop: 6 }}>
-                      <span style={pillStyle(user.emailVerifiedAt ? 'active' : 'warning')}>{user.emailVerifiedAt ? 'Email validado' : 'Email pendiente'}</span>
-                    </div>
-                  </td>
+                <tr key={user.userId} data-selected={selectedUserId === user.userId ? 'true' : undefined}>
+                  <td>{user.userId}</td>
+                  <td>{user.email}</td>
                   <td><span style={pillStyle()}>{user.productRole || 'N/D'}</span></td>
                   <td>{normalizeList(user.assignedRoles).length > 0 ? user.assignedRoles.map((role) => <span key={role} style={pillStyle(roleTone(role))}>{role}</span>) : <span style={{ color: '#74819a' }}>Sin asignacion</span>}</td>
-                  <td>
-                    {user.hasExplicitConfiguration ? <span style={pillStyle('warning')}>Explicito</span> : null}
-                    {user.hasImplicitAdminAccess ? <span style={pillStyle('admin')}>Implicito ADMIN</span> : null}
-                    <span style={pillStyle(user.hasEffectiveAccess ? (user.accessActive ? 'active' : 'inactive') : 'neutral')}>
-                      {user.hasEffectiveAccess ? (user.accessActive ? 'Efectivo' : 'Bloqueado') : 'Sin acceso'}
-                    </span>
-                  </td>
+                  <td>{user.hasEffectiveAccess && user.accessActive ? 'Activo' : 'Sin acceso'}</td>
                   <td>{user.effectivePermissionsCount || 0}</td>
                   <td>{user.hasOverrides ? <span style={pillStyle('warning')}>Si</span> : <span style={{ color: '#74819a' }}>No</span>}</td>
                   <td>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); }}>Ver detalle</SmallBtn>
-                      <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => selectForEdit(user.userId)}>Editar acceso</SmallBtn>
-                      <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); }}>Gestionar estado</SmallBtn>
-                      {!user.emailVerifiedAt ? <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => resendVerification(user.userId)} disabled={resendingUserId === user.userId}>{resendingUserId === user.userId ? 'Reenviando...' : 'Reenviar validacion'}</SmallBtn> : null}
-                    </div>
+                    <TableActionGroup>
+                      <TableActionButton type="button" onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); }}>Ver detalle</TableActionButton>
+                      <TableActionButton type="button" onClick={() => selectForEdit(user.userId)}>Editar acceso</TableActionButton>
+                      <TableActionButton type="button" onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); }}>Gestionar estado</TableActionButton>
+                      {!user.emailVerifiedAt ? <TableActionButton type="button" onClick={() => resendVerification(user.userId)} disabled={resendingUserId === user.userId}>{resendingUserId === user.userId ? 'Reenviando...' : 'Reenviar validacion'}</TableActionButton> : null}
+                    </TableActionGroup>
                   </td>
                 </tr>
               ))}
             </tbody>
-          </StyledTable>
-        </ScrollBox>
+          </DarkHeaderTable>
+        </div>
 
         <div style={{ marginTop: 18 }}>
-          <div style={{ border: '1px solid #d7deea', borderRadius: 14, background: '#f8fbff', padding: '14px 16px', marginBottom: 14 }}>
+          <div style={{ border: '1px solid #c9d1db', borderRadius: 4, background: '#f8fafb', padding: '14px 16px', marginBottom: 14 }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: '#162033' }}>Area de edicion de acceso backoffice</div>
             <div style={{ marginTop: 4, fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
               Usa la tabla superior para seleccionar un usuario y realiza abajo los cambios o la revision de detalle.
             </div>
           </div>
 
-          <div style={{ border: '1px solid #d7deea', borderRadius: 16, background: '#fff', padding: 18, boxShadow: '0 10px 30px rgba(15, 24, 38, 0.04)' }}>
+          <div style={{ border: '1px solid #c9d1db', borderRadius: 4, background: '#fff', padding: 18, boxShadow: 'none' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#162033' }}>
             {editorMode === 'create' ? 'Nuevo acceso backoffice' : showEditor ? 'Editar acceso backoffice' : 'Detalle de acceso'}
           </div>
@@ -512,7 +495,9 @@ const AdminAdministrationPanel = () => {
               <InlinePanel style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>{form.email || detail?.email || selectedSummary?.email || 'Usuario interno'}</div>
                 <div style={{ marginTop: 4, fontSize: 12, color: '#74819a' }}>
-                  {form.userId || detail?.userId || selectedSummary?.userId ? `User ID #${form.userId || detail?.userId || selectedSummary?.userId} - ` : ''}Rol producto {detail?.productRole || selectedSummary?.productRole || 'N/D'}
+                  {form.userId || detail?.userId || selectedSummary?.userId ? `User ID #${form.userId || detail?.userId || selectedSummary?.userId}` : ''}
+                  {form.userId || detail?.userId || selectedSummary?.userId ? ' · ' : ''}
+                  Rol producto {detail?.productRole || selectedSummary?.productRole || 'N/D'}
                 </div>
                 <div style={{ marginTop: 8 }}>
                   <span style={pillStyle(detail?.accessActive ? 'active' : 'inactive')}>{detail?.accessActive ? 'Acceso activo' : 'Acceso inactivo'}</span>
@@ -575,9 +560,9 @@ const AdminAdministrationPanel = () => {
                         <div key={permission} style={{ borderTop: '1px solid #eef2f7', padding: '8px 0' }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: '#162033', marginBottom: 6 }}>{permission}</div>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'inherit')} style={mode === 'inherit' ? { background: '#eef4ff', borderColor: '#9dbcf5' } : null}>Inherit</SmallBtn>
-                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'add')} style={mode === 'add' ? { background: '#e8f7eb', borderColor: '#bfe9ca' } : null}>Grant</SmallBtn>
-                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'remove')} style={mode === 'remove' ? { background: '#ffecec', borderColor: '#f4c5c0' } : null}>Remove</SmallBtn>
+                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'inherit')} style={mode === 'inherit' ? { background: '#e3e9f0', borderColor: '#8c99aa', color: '#18212f' } : null}>Inherit</SmallBtn>
+                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'add')} style={mode === 'add' ? { background: '#eef3ef', borderColor: '#bfcabf', color: '#314536' } : null}>Grant</SmallBtn>
+                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'remove')} style={mode === 'remove' ? { background: '#f7f1f1', borderColor: '#d5c3c3', color: '#6d4444' } : null}>Remove</SmallBtn>
                           </div>
                         </div>
                       );

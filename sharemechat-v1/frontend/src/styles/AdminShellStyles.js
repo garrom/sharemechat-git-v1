@@ -1,23 +1,23 @@
 import styled from 'styled-components';
 
 export const AdminShell = styled.div`
-  --admin-bg: #f3f6fb;
+  --admin-bg: #f4f6f8;
   --admin-surface: #ffffff;
-  --admin-surface-alt: #f8fafc;
-  --admin-border: #d7deea;
-  --admin-border-strong: #c0cad9;
-  --admin-text: #162033;
-  --admin-text-soft: #52607a;
-  --admin-text-muted: #74819a;
-  --admin-sidebar: #101826;
+  --admin-surface-alt: #f8f9fb;
+  --admin-border: #d8dee6;
+  --admin-border-strong: #bcc6d1;
+  --admin-text: #18212f;
+  --admin-text-soft: #556070;
+  --admin-text-muted: #707b8b;
+  --admin-sidebar: #1f2933;
   --admin-sidebar-border: rgba(255, 255, 255, 0.08);
-  --admin-sidebar-text: #dfe7f5;
-  --admin-sidebar-muted: #8c9ab4;
-  --admin-accent: #0f5bd6;
-  --admin-accent-soft: #dce9ff;
-  --admin-success-soft: #ddf7e5;
-  --admin-warning-soft: #fff1d6;
-  --admin-danger-soft: #ffe2e0;
+  --admin-sidebar-text: #d8dee7;
+  --admin-sidebar-muted: #9aa5b5;
+  --admin-accent: #3f4f63;
+  --admin-accent-soft: #e8edf2;
+  --admin-success-soft: #f4f7f4;
+  --admin-warning-soft: #faf8f2;
+  --admin-danger-soft: #f8f4f4;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100vh;
@@ -39,7 +39,7 @@ export const AdminSidebar = styled.aside`
   height: 100vh;
   max-height: 100vh;
   background:
-    linear-gradient(180deg, rgba(15, 91, 214, 0.18) 0%, rgba(15, 24, 38, 0) 28%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0) 26%),
     var(--admin-sidebar);
   color: var(--admin-sidebar-text);
   border-right: 1px solid var(--admin-sidebar-border);
@@ -120,17 +120,18 @@ export const SidebarNavButton = styled.button`
   align-items: flex-start;
   gap: 4px;
   text-align: left;
-  border: 1px solid ${({ $active }) => ($active ? 'rgba(220, 233, 255, 0.32)' : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? 'var(--admin-border-strong)' : 'transparent')};
   border-radius: 12px;
-  background: ${({ $active }) => ($active ? 'rgba(220, 233, 255, 0.12)' : 'transparent')};
-  color: ${({ $active }) => ($active ? '#f8fbff' : 'var(--admin-sidebar-text)')};
+  background: ${({ $active }) => ($active ? '#ffffff' : 'transparent')};
+  color: ${({ $active }) => ($active ? 'var(--admin-text)' : 'var(--admin-sidebar-text)')};
   padding: 9px 10px;
   cursor: pointer;
-  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+  transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
 
   &:hover {
-    background: rgba(220, 233, 255, 0.08);
-    border-color: rgba(220, 233, 255, 0.18);
+    background: ${({ $active }) => ($active ? '#f8fafc' : 'rgba(255, 255, 255, 0.9)')};
+    border-color: ${({ $active }) => ($active ? 'var(--admin-border-strong)' : 'rgba(255, 255, 255, 0.36)')};
+    color: var(--admin-text);
   }
 
   .title {
@@ -141,8 +142,12 @@ export const SidebarNavButton = styled.button`
 
   .meta {
     font-size: 11px;
-    color: ${({ $active }) => ($active ? '#c7d9fb' : 'var(--admin-sidebar-muted)')};
+    color: ${({ $active }) => ($active ? 'var(--admin-text-soft)' : 'var(--admin-sidebar-muted)')};
     line-height: 1.35;
+  }
+
+  &:hover .meta {
+    color: ${({ $active }) => ($active ? 'var(--admin-text-soft)' : '#4f5c6d')};
   }
 
   @media (max-width: 1100px) {
@@ -193,17 +198,17 @@ export const SidebarFooter = styled.div`
 `;
 
 export const SidebarLogoutButton = styled.button`
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
   color: #f8fbff;
-  border-radius: 10px;
+  border-radius: 4px;
   padding: 9px 11px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.08);
   }
 `;
 
@@ -222,7 +227,8 @@ export const AdminTopbar = styled.header`
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 6px 0 12px;
+  padding: 6px 0 14px;
+  border-bottom: 1px solid var(--admin-border);
 `;
 
 export const TopbarTitleBlock = styled.div`
@@ -267,7 +273,7 @@ export const MetaPill = styled.div`
   min-height: 38px;
   padding: 0 11px;
   border: 1px solid var(--admin-border);
-  border-radius: 999px;
+  border-radius: 4px;
   background: var(--admin-surface);
   color: var(--admin-text-soft);
   font-size: 12px;
@@ -288,6 +294,8 @@ export const SectionHeader = styled.div`
   justify-content: space-between;
   gap: 12px;
   margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--admin-border);
 
   .title {
     font-size: 15px;
@@ -312,10 +320,10 @@ export const SectionActions = styled.div`
 `;
 
 export const SurfaceCard = styled.div`
-  border: 1px solid var(--admin-border);
-  border-radius: 14px;
+  border: 1px solid var(--admin-border-strong);
+  border-radius: 4px;
   background: ${({ $muted }) => ($muted ? 'var(--admin-surface-alt)' : 'var(--admin-surface)')};
-  box-shadow: 0 10px 30px rgba(15, 24, 38, 0.04);
+  box-shadow: none;
   padding: ${({ $dense }) => ($dense ? '12px' : '14px')};
 `;
 
@@ -386,17 +394,16 @@ export const QuickActionsGrid = styled.div`
 export const QuickActionButton = styled.button`
   width: 100%;
   text-align: left;
-  border: 1px solid var(--admin-border);
-  border-radius: 14px;
+  border: 1px solid var(--admin-border-strong);
+  border-radius: 4px;
   background: var(--admin-surface);
   padding: 12px 13px 13px;
   cursor: pointer;
-  transition: border-color 0.16s ease, transform 0.16s ease, box-shadow 0.16s ease;
+  transition: border-color 0.16s ease, background 0.16s ease;
 
   &:hover {
     border-color: var(--admin-border-strong);
-    transform: translateY(-1px);
-    box-shadow: 0 10px 24px rgba(15, 24, 38, 0.06);
+    background: var(--admin-surface-alt);
   }
 
   .title {
@@ -422,7 +429,7 @@ export const InlineKpiRow = styled.div`
 export const InlineKpi = styled.div`
   min-width: 126px;
   padding: 9px 11px;
-  border-radius: 12px;
+  border-radius: 4px;
   background: ${({ $tone = 'neutral' }) => {
     if ($tone === 'success') return 'var(--admin-success-soft)';
     if ($tone === 'warning') return 'var(--admin-warning-soft)';

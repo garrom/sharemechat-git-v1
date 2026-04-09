@@ -11,9 +11,10 @@ import {
   SectionTitle,
   SmallBtn,
   StyledButton,
+  DarkHeaderTable,
+  TableActionButton,
   StyledError,
   StyledSelect,
-  StyledTable,
   TextArea,
 } from '../../styles/AdminStyles';
 
@@ -170,7 +171,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
 
       <DbLayout style={{ height: '72vh' }}>
         <DbTableWrap style={{ marginTop: 0 }}>
-          <StyledTable>
+          <DarkHeaderTable style={{ marginTop: 0 }}>
             <thead>
               <tr>
                 <th>ID</th>
@@ -189,19 +190,12 @@ const AdminModerationPanel = ({ canReview = false }) => {
             </thead>
             <tbody>
               {modReports.map((report) => (
-                <tr key={report.id}>
+                <tr key={report.id} data-selected={modSelectedId === report.id ? 'true' : undefined}>
                   <td>{report.id}</td>
                   <td>{fmtTs(report.createdAt)}</td>
                   <td><Badge>{report.reportType || '-'}</Badge></td>
                   <td><Badge data-variant={String(report.status || '').toLowerCase()}>{report.status || '-'}</Badge></td>
-                  <td>
-                    <strong>{report.adminAction || '-'}</strong>
-                    {report.adminAction && report.adminAction !== 'NONE' && (
-                      <div style={{ fontSize: 10, color: '#74819a', marginTop: 3 }}>
-                        Accion registrada
-                      </div>
-                    )}
-                  </td>
+                  <td><strong>{report.adminAction || '-'}</strong></td>
                   <td>{report.autoBlocked ? 'Si' : 'No'}</td>
                   <td>{report.reporterUserId ?? '-'}</td>
                   <td>{report.reportedUserId ?? '-'}</td>
@@ -209,13 +203,13 @@ const AdminModerationPanel = ({ canReview = false }) => {
                   <td>{report.reviewedByUserId ?? '-'}</td>
                   <td>{report.reviewedAt ? fmtTs(report.reviewedAt) : '-'}</td>
                   <td>
-                    <SmallBtn
+                    <TableActionButton
                       type="button"
                       onClick={() => loadModerationReportById(report.id)}
                       title="Detalle"
                     >
                       Detalle
-                    </SmallBtn>
+                    </TableActionButton>
                   </td>
                 </tr>
               ))}
@@ -226,7 +220,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
                 </tr>
               )}
             </tbody>
-          </StyledTable>
+          </DarkHeaderTable>
         </DbTableWrap>
 
         <div style={{ marginTop: 8, width: '100%', maxWidth: 1200 }}>

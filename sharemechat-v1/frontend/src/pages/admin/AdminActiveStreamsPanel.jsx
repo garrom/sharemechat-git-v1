@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
-  StyledTable,
   StyledButton,
+  DarkHeaderTable,
   StyledError,
   StyledSelect,
   StyledInput,
@@ -12,6 +12,8 @@ import {
   InlinePanel,
   PanelRow,
   SmallBtn,
+  TableActionButton,
+  TableDangerButton,
   Badge
 } from '../../styles/AdminStyles';
 
@@ -260,8 +262,8 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
         </div>
       )}
 
-      <ScrollBox>
-        <StyledTable>
+      <div style={{ overflowX: 'auto' }}>
+        <DarkHeaderTable style={{ marginTop: 0 }}>
           <thead>
             <tr>
               <th>ID</th>
@@ -284,7 +286,10 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
               const derivedStatus = getStatus(stream);
 
               return (
-                <tr key={streamId ?? `${client.label}-${model.label}-${stream?.startTime || Math.random()}`}>
+                <tr
+                  key={streamId ?? `${client.label}-${model.label}-${stream?.startTime || Math.random()}`}
+                  data-selected={selectedStreamId === streamId ? 'true' : undefined}
+                >
                   <td>{streamId ?? '—'}</td>
                   <td>{stream?.streamType || '—'}</td>
                   <td>{client.id != null ? `#${client.id} · ${client.label}` : client.label}</td>
@@ -298,15 +303,15 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
                     {isStuck(stream) && <Badge data-variant="danger">STUCK</Badge>}
                   </td>
                   <td>
-                    <SmallBtn type="button" onClick={() => handleOpenDetail(streamId)}>
+                    <TableActionButton type="button" onClick={() => handleOpenDetail(streamId)}>
                       {selectedStreamId === streamId ? 'Cerrar' : 'Detalle'}
-                    </SmallBtn>
+                    </TableActionButton>
                   </td>
                   <td>
                     {canKill && derivedStatus !== 'closed' && (
-                      <SmallBtn type="button" onClick={() => killStream(streamId)}>
+                      <TableDangerButton type="button" onClick={() => killStream(streamId)}>
                         KILL
-                      </SmallBtn>
+                      </TableDangerButton>
                     )}
                   </td>
                 </tr>
@@ -319,8 +324,8 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
               </tr>
             )}
           </tbody>
-        </StyledTable>
-      </ScrollBox>
+        </DarkHeaderTable>
+      </div>
 
       {selectedStreamId && (
         <div style={{ marginTop: 12 }}>
@@ -416,7 +421,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
 
                   {detailEvents.length > 0 && (
                     <ScrollBox style={{ maxHeight: 320 }}>
-                      <StyledTable>
+                      <DarkHeaderTable>
                         <thead>
                           <tr>
                             <th>Fecha</th>
@@ -435,7 +440,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
                             </tr>
                           ))}
                         </tbody>
-                      </StyledTable>
+                      </DarkHeaderTable>
                     </ScrollBox>
                   )}
                 </div>

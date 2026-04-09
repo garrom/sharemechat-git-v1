@@ -8,10 +8,12 @@ import {
   RightInfo,
   SmallBtn,
   StyledButton,
+  DarkHeaderTable,
+  TableActionButton,
+  TableActionGroup,
   StyledError,
   StyledInput,
   StyledSelect,
-  StyledTable,
 } from '../../styles/AdminStyles';
 import AdminDbPanel from './AdminDbPanel';
 
@@ -262,13 +264,13 @@ const AdminDataPanel = () => {
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-        <SmallBtn type="button" onClick={() => setActiveTab('streams')} style={activeTab === 'streams' ? { background: '#e8f0ff', borderColor: '#9dbcf5' } : null}>
+        <SmallBtn type="button" onClick={() => setActiveTab('streams')} style={activeTab === 'streams' ? { background: '#dfe6ee', borderColor: '#8894a5', color: '#18212f' } : null}>
           Streams y sesiones
         </SmallBtn>
-        <SmallBtn type="button" onClick={() => setActiveTab('payments')} style={activeTab === 'payments' ? { background: '#e8f0ff', borderColor: '#9dbcf5' } : null}>
+        <SmallBtn type="button" onClick={() => setActiveTab('payments')} style={activeTab === 'payments' ? { background: '#dfe6ee', borderColor: '#8894a5', color: '#18212f' } : null}>
           Pagos y operaciones
         </SmallBtn>
-        <SmallBtn type="button" onClick={() => setActiveTab('raw')} style={activeTab === 'raw' ? { background: '#e8f0ff', borderColor: '#9dbcf5' } : null}>
+        <SmallBtn type="button" onClick={() => setActiveTab('raw')} style={activeTab === 'raw' ? { background: '#dfe6ee', borderColor: '#8894a5', color: '#18212f' } : null}>
           Exploracion raw
         </SmallBtn>
       </div>
@@ -329,7 +331,7 @@ const AdminDataPanel = () => {
             meta="Vista inicial para investigar streams por usuario, stream concreto o identidad visible."
           >
             <div style={{ overflowX: 'auto' }}>
-              <StyledTable>
+              <DarkHeaderTable>
                 <thead>
                   <tr>
                     <th>Stream</th>
@@ -352,7 +354,7 @@ const AdminDataPanel = () => {
                   {streamsRows.map((row) => (
                     <tr
                       key={row.id}
-                      style={selectedStreamId === row.id ? { background: '#eef4ff' } : null}
+                      data-selected={selectedStreamId === row.id ? 'true' : undefined}
                     >
                       <td>{row.id}</td>
                       <td>{row.stream_type || '-'}</td>
@@ -363,26 +365,26 @@ const AdminDataPanel = () => {
                       <td>{fmtTs(row.confirmed_at)}</td>
                       <td>{fmtTs(row.end_time)}</td>
                       <td>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <SmallBtn type="button" onClick={() => loadStreamDetail(row.id)}>
+                        <TableActionGroup>
+                          <TableActionButton type="button" onClick={() => loadStreamDetail(row.id)}>
                             Ver detalle
-                          </SmallBtn>
+                          </TableActionButton>
                           {row.client_id ? (
-                            <SmallBtn type="button" onClick={() => focusStreamsByValue(row.client_id)}>
+                            <TableActionButton type="button" onClick={() => focusStreamsByValue(row.client_id)}>
                               Cliente
-                            </SmallBtn>
+                            </TableActionButton>
                           ) : null}
                           {row.model_id ? (
-                            <SmallBtn type="button" onClick={() => focusStreamsByValue(row.model_id)}>
+                            <TableActionButton type="button" onClick={() => focusStreamsByValue(row.model_id)}>
                               Modelo
-                            </SmallBtn>
+                            </TableActionButton>
                           ) : null}
-                        </div>
+                        </TableActionGroup>
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </StyledTable>
+              </DarkHeaderTable>
             </div>
           </DataSection>
 
@@ -417,7 +419,7 @@ const AdminDataPanel = () => {
                 </div>
 
                 <div style={{ overflowX: 'auto', marginTop: 10 }}>
-                  <StyledTable>
+                  <DarkHeaderTable>
                     <thead>
                       <tr>
                         <th>Evento</th>
@@ -441,7 +443,7 @@ const AdminDataPanel = () => {
                         </tr>
                       ))}
                     </tbody>
-                  </StyledTable>
+                  </DarkHeaderTable>
                 </div>
               </>
             )}
@@ -520,7 +522,7 @@ const AdminDataPanel = () => {
 
           <DataSection title="Pagos y operaciones" meta="Incluye transacciones, payment sessions, payouts y contexto basico de balances para investigar un caso.">
             <div style={{ overflowX: 'auto' }}>
-              <StyledTable>
+              <DarkHeaderTable>
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -550,21 +552,21 @@ const AdminDataPanel = () => {
                       <td title={row.description || ''}>{short(row.description, 90)}</td>
                       <td>
                         {row.stream_record_id ? (
-                          <SmallBtn type="button" onClick={() => focusStreamsByValue(row.stream_record_id)}>
+                          <TableActionButton type="button" onClick={() => focusStreamsByValue(row.stream_record_id)}>
                             Ver stream
-                          </SmallBtn>
+                          </TableActionButton>
                         ) : '-'}
                       </td>
                     </tr>
                   ))}
                 </tbody>
-              </StyledTable>
+              </DarkHeaderTable>
             </div>
           </DataSection>
 
           <DataSection title="Payment sessions" meta="Contexto de intentos de pago y sesiones PSP relacionadas con el caso investigado.">
             <div style={{ overflowX: 'auto' }}>
-              <StyledTable>
+              <DarkHeaderTable>
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -596,13 +598,13 @@ const AdminDataPanel = () => {
                     </tr>
                   ))}
                 </tbody>
-              </StyledTable>
+              </DarkHeaderTable>
             </div>
           </DataSection>
 
           <DataSection title="Payout requests" meta="Primera vista util para seguir retiros de modelo y su transicion de estado.">
             <div style={{ overflowX: 'auto' }}>
-              <StyledTable>
+              <DarkHeaderTable>
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -632,13 +634,13 @@ const AdminDataPanel = () => {
                     </tr>
                   ))}
                 </tbody>
-              </StyledTable>
+              </DarkHeaderTable>
             </div>
           </DataSection>
 
           <DataSection title="Balances" meta="Contexto basico del ledger para entender saldo y huella de una operacion.">
             <div style={{ overflowX: 'auto' }}>
-              <StyledTable>
+              <DarkHeaderTable>
                 <thead>
                   <tr>
                     <th>ID</th>
@@ -672,7 +674,7 @@ const AdminDataPanel = () => {
                     </tr>
                   ))}
                 </tbody>
-              </StyledTable>
+              </DarkHeaderTable>
             </div>
           </DataSection>
         </>
