@@ -121,8 +121,16 @@ const buildFormState = (source, fallbackUserId = null) => ({
   note: '',
 });
 
+const scrollToRef = (ref) => {
+  if (!ref?.current) return;
+  window.requestAnimationFrame(() => {
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+};
+
 const AdminAdministrationPanel = () => {
   const detailRequestRef = useRef(0);
+  const destinationRef = useRef(null);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -235,6 +243,7 @@ const AdminAdministrationPanel = () => {
     setSelectedUserId(userId);
     setEditorMode('edit');
     setFormError('');
+    scrollToRef(destinationRef);
     if (detail?.userId === userId) {
       setForm(buildFormState(detail, userId));
       setStatusNote('');
@@ -246,6 +255,7 @@ const AdminAdministrationPanel = () => {
     setDetail(null);
     setEditorMode('create');
     setFormError('');
+    scrollToRef(destinationRef);
     setForm({
       userId: candidate.userId,
       email: candidate.email,
@@ -266,6 +276,7 @@ const AdminAdministrationPanel = () => {
     setFormError('');
     setDetailError('');
     setStatusNote('');
+    scrollToRef(destinationRef);
     setForm({
       ...emptyForm,
       active: true,
@@ -519,7 +530,7 @@ const AdminAdministrationPanel = () => {
                   <td>{user.hasOverrides ? <span style={pillStyle('warning')}>Si</span> : <span style={{ color: '#74819a' }}>No</span>}</td>
                   <td>
                     <TableActionGroup>
-                      <TableActionButton type="button" onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); }}>Ver detalle</TableActionButton>
+                      <TableActionButton type="button" onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); scrollToRef(destinationRef); }}>Ver detalle</TableActionButton>
                       <TableActionButton type="button" onClick={() => selectForEdit(user.userId)}>Editar acceso</TableActionButton>
                       {!user.emailVerifiedAt ? <TableActionButton type="button" onClick={() => resendVerification(user.userId)} disabled={resendingUserId === user.userId}>{resendingUserId === user.userId ? 'Reenviando...' : 'Reenviar validacion'}</TableActionButton> : null}
                     </TableActionGroup>
@@ -530,7 +541,7 @@ const AdminAdministrationPanel = () => {
           </DarkHeaderTable>
         </div>
 
-        <div style={{ marginTop: 18 }}>
+        <div ref={destinationRef} style={{ marginTop: 18 }}>
           <div style={{ border: '1px solid #c9d1db', borderRadius: 4, background: '#fff', padding: 18, boxShadow: 'none' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#162033' }}>
             {editorMode === 'create' ? 'Nuevo acceso backoffice' : showEditor ? 'Editar acceso backoffice' : 'Detalle de acceso'}

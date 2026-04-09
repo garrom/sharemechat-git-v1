@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 import { apiFetch } from '../../config/http';
 import {
@@ -112,6 +112,7 @@ const DataSection = ({ title, meta, children }) => (
 );
 
 const AdminDataPanel = () => {
+  const streamDetailRef = useRef(null);
   const [activeTab, setActiveTab] = useState('streams');
 
   const [streamsQuery, setStreamsQuery] = useState('');
@@ -140,7 +141,15 @@ const AdminDataPanel = () => {
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [paymentsError, setPaymentsError] = useState('');
 
-  const loadStreamDetail = async (streamId) => {
+  const scrollToStreamDetail = () => {
+    if (!streamDetailRef.current) return;
+    window.requestAnimationFrame(() => {
+      streamDetailRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
+  const loadStreamDetail = async (streamId, options = {}) => {
+    const shouldScroll = Boolean(options.scroll);
     if (!streamId) return;
     setSelectedStreamId(streamId);
     setStreamDetailLoading(true);
@@ -148,9 +157,15 @@ const AdminDataPanel = () => {
     try {
       const detail = await apiFetch(`/admin/streams/${streamId}?limitEvents=20`);
       setSelectedStreamDetail(detail || null);
+      if (shouldScroll) {
+        scrollToStreamDetail();
+      }
     } catch (e) {
       setStreamDetailError(e.message || 'Error cargando el detalle del stream');
       setSelectedStreamDetail(null);
+      if (shouldScroll) {
+        scrollToStreamDetail();
+      }
     } finally {
       setStreamDetailLoading(false);
     }
@@ -383,7 +398,7 @@ const AdminDataPanel = () => {
                       <td>{fmtTs(row.end_time)}</td>
                       <td>
                         <TableActionGroup>
-                          <TableActionButton type="button" onClick={() => loadStreamDetail(row.id)}>
+                          <TableActionButton type="button" onClick={() => loadStreamDetail(row.id, { scroll: true })}>
                             Ver detalle
                           </TableActionButton>
                           {row.client_id ? (
@@ -405,66 +420,68 @@ const AdminDataPanel = () => {
             </div>
           </DataSection>
 
-          <DataSection
+          <div ref={streamDetailRef}>
+            <DataSection
             title="Detalle del stream"
             meta="Se reutiliza el detalle operativo existente con eventos del stream para no duplicar logica."
-          >
-            {streamDetailError && <StyledError>{streamDetailError}</StyledError>}
-            {streamDetailLoading && <div style={{ color: '#64748b' }}>Cargando detalle...</div>}
-            {!streamDetailLoading && !selectedStreamDetail && (
-              <div style={{ color: '#64748b' }}>Selecciona un stream para ver su contexto y sus eventos.</div>
-            )}
-            {!streamDetailLoading && selectedStreamDetail && (
-              <>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
-                  <InlinePanel>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>Stream</div>
-                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{selectedStreamDetail.stream?.streamId ?? '-'}</div>
-                  </InlinePanel>
-                  <InlinePanel>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>Tipo</div>
-                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{selectedStreamDetail.stream?.streamType ?? '-'}</div>
-                  </InlinePanel>
-                  <InlinePanel>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>Estado</div>
-                    <div style={{ marginTop: 4 }}><Badge data-variant={toneForStreamStatus(selectedStreamDetail.stream?.statusDerivado)}>{selectedStreamDetail.stream?.statusDerivado ?? '-'}</Badge></div>
-                  </InlinePanel>
-                  <InlinePanel>
-                    <div style={{ fontSize: 11, color: '#64748b' }}>Duracion</div>
-                    <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{selectedStreamDetail.stream?.durationSeconds ?? 0}s</div>
-                  </InlinePanel>
-                </div>
+            >
+              {streamDetailError && <StyledError>{streamDetailError}</StyledError>}
+              {streamDetailLoading && <div style={{ color: '#64748b' }}>Cargando detalle...</div>}
+              {!streamDetailLoading && !selectedStreamDetail && (
+                <div style={{ color: '#64748b' }}>Selecciona un stream para ver su contexto y sus eventos.</div>
+              )}
+              {!streamDetailLoading && selectedStreamDetail && (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
+                    <InlinePanel>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>Stream</div>
+                      <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{selectedStreamDetail.stream?.streamId ?? '-'}</div>
+                    </InlinePanel>
+                    <InlinePanel>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>Tipo</div>
+                      <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{selectedStreamDetail.stream?.streamType ?? '-'}</div>
+                    </InlinePanel>
+                    <InlinePanel>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>Estado</div>
+                      <div style={{ marginTop: 4 }}><Badge data-variant={toneForStreamStatus(selectedStreamDetail.stream?.statusDerivado)}>{selectedStreamDetail.stream?.statusDerivado ?? '-'}</Badge></div>
+                    </InlinePanel>
+                    <InlinePanel>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>Duracion</div>
+                      <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{selectedStreamDetail.stream?.durationSeconds ?? 0}s</div>
+                    </InlinePanel>
+                  </div>
 
-                <div style={{ overflowX: 'auto', marginTop: 10 }}>
-                  <DarkHeaderTable>
-                    <thead>
-                      <tr>
-                        <th>Evento</th>
-                        <th>Motivo</th>
-                        <th>Fecha</th>
-                        <th>Metadata</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(selectedStreamDetail.events || []).length === 0 && (
+                  <div style={{ overflowX: 'auto', marginTop: 10 }}>
+                    <DarkHeaderTable>
+                      <thead>
                         <tr>
-                          <td colSpan="4">Sin eventos para este stream.</td>
+                          <th>Evento</th>
+                          <th>Motivo</th>
+                          <th>Fecha</th>
+                          <th>Metadata</th>
                         </tr>
-                      )}
-                      {(selectedStreamDetail.events || []).map((event) => (
-                        <tr key={event.id}>
-                          <td>{event.eventType || '-'}</td>
-                          <td>{event.reason || '-'}</td>
-                          <td>{fmtTs(event.createdAt)}</td>
-                          <td title={event.metadata || ''}>{short(event.metadata, 120)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </DarkHeaderTable>
-                </div>
-              </>
-            )}
-          </DataSection>
+                      </thead>
+                      <tbody>
+                        {(selectedStreamDetail.events || []).length === 0 && (
+                          <tr>
+                            <td colSpan="4">Sin eventos para este stream.</td>
+                          </tr>
+                        )}
+                        {(selectedStreamDetail.events || []).map((event) => (
+                          <tr key={event.id}>
+                            <td>{event.eventType || '-'}</td>
+                            <td>{event.reason || '-'}</td>
+                            <td>{fmtTs(event.createdAt)}</td>
+                            <td title={event.metadata || ''}>{short(event.metadata, 120)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </DarkHeaderTable>
+                  </div>
+                </>
+              )}
+            </DataSection>
+          </div>
         </>
       )}
 

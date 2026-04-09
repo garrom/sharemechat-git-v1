@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Badge,
   ControlsRow,
@@ -33,6 +33,7 @@ const STATUS_HELP = {
 };
 
 const AdminModerationPanel = ({ canReview = false }) => {
+  const destinationRef = useRef(null);
   const [modStatus, setModStatus] = useState('ALL');
   const [modReports, setModReports] = useState([]);
   const [modLoading, setModLoading] = useState(false);
@@ -45,6 +46,13 @@ const AdminModerationPanel = ({ canReview = false }) => {
   const [modReviewNotes, setModReviewNotes] = useState('');
 
   const isFinalAction = FINAL_ACTIONS.has(String(modReviewAction || '').toUpperCase());
+
+  const scrollToDestination = () => {
+    if (!destinationRef.current) return;
+    window.requestAnimationFrame(() => {
+      destinationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   const loadModerationReports = async () => {
     setModLoading(true);
@@ -205,7 +213,10 @@ const AdminModerationPanel = ({ canReview = false }) => {
                   <td>
                     <TableActionButton
                       type="button"
-                      onClick={() => loadModerationReportById(report.id)}
+                      onClick={() => {
+                        scrollToDestination();
+                        loadModerationReportById(report.id);
+                      }}
                       title="Detalle"
                     >
                       Detalle
@@ -223,7 +234,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
           </DarkHeaderTable>
         </DbTableWrap>
 
-        <div style={{ marginTop: 8, width: '100%', maxWidth: 1200 }}>
+        <div ref={destinationRef} style={{ marginTop: 8, width: '100%', maxWidth: 1200 }}>
           <InlinePanel>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ fontWeight: 700 }}>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   StyledButton,
   DarkHeaderTable,
@@ -25,6 +25,7 @@ const DEFAULT_FILTERS = {
 };
 
 const AdminActiveStreamsPanel = ({ canKill = false }) => {
+  const destinationRef = useRef(null);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [streams, setStreams] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,13 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
   const [detailError, setDetailError] = useState('');
   const [selectedStreamId, setSelectedStreamId] = useState(null);
   const [selectedDetail, setSelectedDetail] = useState(null);
+
+  const scrollToDestination = () => {
+    if (!destinationRef.current) return;
+    window.requestAnimationFrame(() => {
+      destinationRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
 
   useEffect(() => {
     fetchActiveStreams(DEFAULT_FILTERS);
@@ -191,6 +199,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
       setDetailError('');
       return;
     }
+    scrollToDestination();
     await fetchStreamDetail(streamId);
   };
 
@@ -328,7 +337,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
       </div>
 
       {selectedStreamId && (
-        <div style={{ marginTop: 12 }}>
+        <div ref={destinationRef} style={{ marginTop: 12 }}>
           <InlinePanel>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ fontWeight: 700 }}>
