@@ -350,7 +350,7 @@ export const SurfaceCard = styled.div`
 
 export const OverviewGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(12, minmax(0, 1fr));
+  grid-template-columns: ${({ $stacked }) => ($stacked ? 'minmax(0, 1fr)' : 'repeat(12, minmax(0, 1fr))')};
   gap: 10px;
 
   @media (max-width: 1180px) {
@@ -363,7 +363,7 @@ export const OverviewGrid = styled.div`
 `;
 
 export const OverviewSpan = styled.div`
-  grid-column: span ${({ $span = 12 }) => $span};
+  grid-column: ${({ $stacked, $span = 12 }) => ($stacked ? '1 / -1' : `span ${$span}`)};
 
   @media (max-width: 1180px) {
     grid-column: span ${({ $spanTablet = 6 }) => $spanTablet};

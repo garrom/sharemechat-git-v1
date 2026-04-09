@@ -151,38 +151,39 @@ const AdminOverviewPanel = ({
     <>
       {error ? <StyledError>{error}</StyledError> : null}
 
-      <MetricGrid>
-        <MetricCard>
-          <div className="label">Streams activos</div>
-          <div className="value">{loading ? '...' : activeStreams}</div>
-          <div className="meta">Random activos y llamadas directas persistidas. Ultima actualizacion: {loadedLabel}.</div>
-        </MetricCard>
+      <div style={{ width: '100%', maxWidth: 860 }}>
+        <MetricGrid>
+          <MetricCard>
+            <div className="label">Streams activos</div>
+            <div className="value">{loading ? '...' : activeStreams}</div>
+            <div className="meta">Random activos y llamadas directas persistidas. Ultima actualizacion: {loadedLabel}.</div>
+          </MetricCard>
 
-        <MetricCard>
-          <div className="label">Onboarding pendiente</div>
-          <div className="value">{loading ? '...' : modelSummary.pending}</div>
-          <div className="meta">Modelos pendientes de revision o todavia no aprobados.</div>
-        </MetricCard>
+          <MetricCard>
+            <div className="label">Onboarding pendiente</div>
+            <div className="value">{loading ? '...' : modelSummary.pending}</div>
+            <div className="meta">Modelos pendientes de revision o todavia no aprobados.</div>
+          </MetricCard>
 
-        <MetricCard>
-          <div className="label">Reports abiertos</div>
-          <div className="value">{loading ? '...' : openReports}</div>
-          <div className="meta">Casos de moderacion en estado OPEN, listos para triage.</div>
-        </MetricCard>
+          <MetricCard>
+            <div className="label">Reports abiertos</div>
+            <div className="value">{loading ? '...' : openReports}</div>
+            <div className="meta">Casos de moderacion en estado OPEN, listos para triage.</div>
+          </MetricCard>
 
-        <MetricCard>
-          <div className="label">Ajustes financieros</div>
-          <div className="value">{capabilities.canRefund ? 'Manual' : 'N/D'}</div>
-          <div className="meta">
-            {capabilities.canRefund
-              ? 'Refund manual disponible en Ajustes financieros.'
-              : 'Todavia no hay endpoint especifico para un contador de refunds recientes.'}
-          </div>
-        </MetricCard>
-      </MetricGrid>
+          <MetricCard>
+            <div className="label">Ajustes financieros</div>
+            <div className="value">{capabilities.canRefund ? 'Manual' : 'N/D'}</div>
+            <div className="meta">
+              {capabilities.canRefund
+                ? 'Refund manual disponible en Ajustes financieros.'
+                : 'Todavia no hay endpoint especifico para un contador de refunds recientes.'}
+            </div>
+          </MetricCard>
+        </MetricGrid>
 
-      <OverviewGrid style={{ marginTop: 16 }}>
-        <OverviewSpan $span={7} $spanTablet={6}>
+        <OverviewGrid $stacked style={{ marginTop: 16 }}>
+        <OverviewSpan $stacked $span={7} $spanTablet={6}>
           <SurfaceCard>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Actividad operativa</div>
             <InlineKpiRow>
@@ -210,7 +211,7 @@ const AdminOverviewPanel = ({
           </SurfaceCard>
         </OverviewSpan>
 
-        <OverviewSpan $span={5} $spanTablet={6}>
+        <OverviewSpan $stacked $span={5} $spanTablet={6}>
           <SurfaceCard>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Accesos rapidos</div>
             <QuickActionsGrid>
@@ -245,7 +246,7 @@ const AdminOverviewPanel = ({
           </SurfaceCard>
         </OverviewSpan>
 
-        <OverviewSpan $span={6} $spanTablet={6}>
+        <OverviewSpan $stacked $span={6} $spanTablet={6}>
           <SurfaceCard>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Pendientes prioritarios</div>
             <div style={{ display: 'grid', gap: 10 }}>
@@ -286,7 +287,7 @@ const AdminOverviewPanel = ({
           </SurfaceCard>
         </OverviewSpan>
 
-        <OverviewSpan $span={6} $spanTablet={6}>
+        <OverviewSpan $stacked $span={6} $spanTablet={6}>
           <SurfaceCard>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Onboarding y estados</div>
             <InlineKpiRow>
@@ -306,7 +307,7 @@ const AdminOverviewPanel = ({
           </SurfaceCard>
         </OverviewSpan>
 
-        <OverviewSpan $span={6} $spanTablet={6}>
+        <OverviewSpan $stacked $span={6} $spanTablet={6}>
           <SurfaceCard>
             <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 14 }}>Resumen economico</div>
             <InlineKpiRow>
@@ -326,14 +327,15 @@ const AdminOverviewPanel = ({
           </SurfaceCard>
         </OverviewSpan>
 
-        <OverviewSpan $span={12} $spanTablet={6}>
+        <OverviewSpan $stacked $span={12} $spanTablet={6}>
           <AdminPlaceholderPanel
             title="Base del nuevo backoffice"
             body="La portada nueva ya agrupa overview, operaciones, modelos, moderacion, finanzas, control interno, datos internos y administracion. Los modulos existentes siguen vivos dentro de esta estructura mientras se redisena su logica interna."
             note="En esta fase no se introduce backend nuevo. Los bloques sin fuente dedicada siguen marcados como transicion o placeholder operativo."
           />
         </OverviewSpan>
-      </OverviewGrid>
+        </OverviewGrid>
+      </div>
     </>
   );
 };
