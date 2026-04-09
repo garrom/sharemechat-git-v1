@@ -151,7 +151,7 @@ const AdminOverviewPanel = ({
     <>
       {error ? <StyledError>{error}</StyledError> : null}
 
-      <div style={{ width: '100%', maxWidth: 860 }}>
+      <div style={{ width: '100%', maxWidth: 1180 }}>
         <MetricGrid>
           <MetricCard>
             <div className="label">Streams activos</div>
