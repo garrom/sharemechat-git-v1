@@ -246,12 +246,6 @@ public class BackofficeAccessService {
             throw new IllegalArgumentException("active es obligatorio");
         }
         String note = safeText(request.getNote());
-        if (note == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "La nota es obligatoria para cambiar el estado del acceso backoffice"
-            );
-        }
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));

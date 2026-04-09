@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import styled from 'styled-components';
 import { apiFetch } from '../../config/http';
 import {
   Badge,
@@ -16,6 +17,22 @@ import {
   StyledSelect,
 } from '../../styles/AdminStyles';
 import AdminDbPanel from './AdminDbPanel';
+
+const PanelTabButton = styled(SmallBtn)`
+  padding: 6px 10px;
+  border: 1px solid ${({ $active }) => ($active ? '#c7d4e2' : '#465568')};
+  background: ${({ $active }) => ($active ? '#eef4fb' : '#334255')};
+  color: ${({ $active }) => ($active ? '#18212f' : '#eef3f8')};
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+
+  &:hover:not(:disabled) {
+    background: ${({ $active }) => ($active ? '#eef4fb' : '#e6eef8')};
+    border-color: ${({ $active }) => ($active ? '#c7d4e2' : '#c1cfde')};
+    color: #18212f;
+  }
+`;
 
 const LIMIT_OPTIONS = [10, 20, 50, 100];
 const STREAM_TYPES = ['', 'RANDOM', 'CALLING'];
@@ -264,15 +281,15 @@ const AdminDataPanel = () => {
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-        <SmallBtn type="button" onClick={() => setActiveTab('streams')} style={activeTab === 'streams' ? { background: '#dfe6ee', borderColor: '#8894a5', color: '#18212f' } : null}>
+        <PanelTabButton type="button" onClick={() => setActiveTab('streams')} $active={activeTab === 'streams'}>
           Streams y sesiones
-        </SmallBtn>
-        <SmallBtn type="button" onClick={() => setActiveTab('payments')} style={activeTab === 'payments' ? { background: '#dfe6ee', borderColor: '#8894a5', color: '#18212f' } : null}>
+        </PanelTabButton>
+        <PanelTabButton type="button" onClick={() => setActiveTab('payments')} $active={activeTab === 'payments'}>
           Pagos y operaciones
-        </SmallBtn>
-        <SmallBtn type="button" onClick={() => setActiveTab('raw')} style={activeTab === 'raw' ? { background: '#dfe6ee', borderColor: '#8894a5', color: '#18212f' } : null}>
+        </PanelTabButton>
+        <PanelTabButton type="button" onClick={() => setActiveTab('raw')} $active={activeTab === 'raw'}>
           Exploracion raw
-        </SmallBtn>
+        </PanelTabButton>
       </div>
 
       {activeTab === 'streams' && (

@@ -42,7 +42,7 @@ const AdminModelsPanel = ({
   canViewSensitiveDocs = false,
 }) => {
   const [users, setUsers] = useState([]);
-  const [statusFilter, setStatusFilter] = useState('ALL');
+  const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [pageSize, setPageSize] = useState(10);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -254,6 +254,14 @@ const AdminModelsPanel = ({
 
   const filteredUsers = useMemo(() => {
     if (statusFilter === 'ALL') return users;
+    if (statusFilter === 'ACTIVE') {
+      return users.filter((user) => {
+        const verification = String(user?.verificationStatus || 'PENDING').toUpperCase();
+        const isUnsubscribed =
+          String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1';
+        return verification === 'APPROVED' && !isUnsubscribed;
+      });
+    }
     return users.filter((user) => (user.verificationStatus || 'PENDING') === statusFilter);
   }, [users, statusFilter]);
 
@@ -408,6 +416,7 @@ const AdminModelsPanel = ({
           <label>Estado</label>
           <StyledSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="ALL">Todos</option>
+            <option value="ACTIVE">Activas</option>
             <option value="PENDING">Pendiente</option>
             <option value="APPROVED">Aprobado</option>
             <option value="REJECTED">Rechazado</option>

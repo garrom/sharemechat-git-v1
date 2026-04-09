@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { apiFetch } from '../../config/http';
 import {
   CardsGrid,
@@ -14,6 +14,7 @@ import {
   TableActionGroup,
   StyledError,
   StyledInput,
+  StyledSelect,
   TextArea,
 } from '../../styles/AdminStyles';
 
@@ -81,16 +82,52 @@ const emptyForm = {
 };
 
 const normalizeList = (items) => Array.isArray(items) ? items : [];
+const normalizeRoleCode = (role) => String(role || '').trim().toUpperCase();
+const normalizeRoleCodes = (items) => normalizeList(items).map(normalizeRoleCode).filter(Boolean);
 
 const compactActionBtnStyle = {
   minWidth: 96,
 };
 
+const permissionModeBtnStyle = (currentMode, buttonMode) => {
+  const isActive = currentMode === buttonMode;
+
+  if (buttonMode === 'inherit') {
+    return isActive
+      ? { background: '#dde7f2', borderColor: '#8fa4ba', color: '#1b2d40' }
+      : { background: '#f7f9fb', borderColor: '#d8e0e8', color: '#99a5b3' };
+  }
+
+  if (buttonMode === 'add') {
+    return isActive
+      ? { background: '#deefe1', borderColor: '#8fb698', color: '#213f28' }
+      : { background: '#f8faf8', borderColor: '#dbe4dc', color: '#9aa89d' };
+  }
+
+  return isActive
+    ? { background: '#f3dfe3', borderColor: '#c99aa2', color: '#5a2c33' }
+    : { background: '#fbf8f8', borderColor: '#e6dcdd', color: '#a78f92' };
+};
+
+const buildFormState = (source, fallbackUserId = null) => ({
+  userId: source?.userId ?? fallbackUserId,
+  email: source?.email || '',
+  nickname: source?.nickname || '',
+  password: '',
+  active: Boolean(source?.accessActive),
+  roleCodes: normalizeRoleCodes(source?.assignedRoles),
+  overrideAdditions: normalizeList(source?.overrideAdditions),
+  overrideRemovals: normalizeList(source?.overrideRemovals),
+  note: '',
+});
+
 const AdminAdministrationPanel = () => {
+  const detailRequestRef = useRef(0);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [accessFilter, setAccessFilter] = useState('ACTIVE');
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
@@ -130,28 +167,28 @@ const AdminAdministrationPanel = () => {
       setEditorMode('view');
       return;
     }
+    const requestId = detailRequestRef.current + 1;
+    detailRequestRef.current = requestId;
     setDetailLoading(true);
     setDetailError('');
     try {
       const next = await apiFetch(`/admin/administration/backoffice-users/${userId}`);
+      if (detailRequestRef.current !== requestId) {
+        return;
+      }
       setDetail(next || null);
-      setForm({
-        userId: next?.userId ?? userId,
-        email: next?.email || '',
-        nickname: next?.nickname || '',
-        password: '',
-        active: Boolean(next?.accessActive),
-        roleCodes: normalizeList(next?.assignedRoles),
-        overrideAdditions: normalizeList(next?.overrideAdditions),
-        overrideRemovals: normalizeList(next?.overrideRemovals),
-        note: '',
-      });
+      setForm(buildFormState(next, userId));
       setStatusNote('');
     } catch (e) {
+      if (detailRequestRef.current !== requestId) {
+        return;
+      }
       setDetail(null);
       setDetailError(e.message || 'No se pudo cargar el detalle del acceso.');
     } finally {
-      setDetailLoading(false);
+      if (detailRequestRef.current === requestId) {
+        setDetailLoading(false);
+      }
     }
   };
 
@@ -170,8 +207,12 @@ const AdminAdministrationPanel = () => {
 
   const filteredUsers = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return users;
     return users.filter((user) => {
+      const hasActiveAccess = Boolean(user.hasEffectiveAccess && user.accessActive);
+      if (accessFilter === 'ACTIVE' && !hasActiveAccess) return false;
+      if (accessFilter === 'INACTIVE' && hasActiveAccess) return false;
+
+      if (!q) return true;
       const haystack = [
         user.email,
         user.nickname,
@@ -183,15 +224,21 @@ const AdminAdministrationPanel = () => {
       ].filter(Boolean).join(' ').toLowerCase();
       return haystack.includes(q);
     });
-  }, [query, users]);
+  }, [query, users, accessFilter]);
 
-  const availableRoles = normalizeList(detail?.availableRoles).length ? normalizeList(detail?.availableRoles) : FALLBACK_ROLES;
+  const availableRoles = normalizeRoleCodes(
+    normalizeList(detail?.availableRoles).length ? normalizeList(detail?.availableRoles) : FALLBACK_ROLES
+  );
   const availablePermissions = normalizeList(detail?.availablePermissions).length ? normalizeList(detail?.availablePermissions) : FALLBACK_PERMISSIONS;
 
   const selectForEdit = (userId) => {
     setSelectedUserId(userId);
     setEditorMode('edit');
     setFormError('');
+    if (detail?.userId === userId) {
+      setForm(buildFormState(detail, userId));
+      setStatusNote('');
+    }
   };
 
   const startCreateFromLookup = (candidate) => {
@@ -205,7 +252,7 @@ const AdminAdministrationPanel = () => {
       nickname: candidate.nickname || '',
       password: '',
       active: true,
-      roleCodes: [],
+      roleCodes: normalizeRoleCodes(candidate.assignedRoles),
       overrideAdditions: [],
       overrideRemovals: [],
       note: '',
@@ -217,6 +264,8 @@ const AdminAdministrationPanel = () => {
     setDetail(null);
     setEditorMode('create');
     setFormError('');
+    setDetailError('');
+    setStatusNote('');
     setForm({
       ...emptyForm,
       active: true,
@@ -317,10 +366,6 @@ const AdminAdministrationPanel = () => {
   const updateStatus = async (userId, active) => {
     setFormError('');
     const note = statusNote.trim();
-    if (!note) {
-      setFormError('La nota es obligatoria para cambiar el estado del acceso backoffice.');
-      return;
-    }
     try {
       const next = await apiFetch(`/admin/administration/backoffice-users/${userId}/status`, {
         method: 'PUT',
@@ -338,6 +383,8 @@ const AdminAdministrationPanel = () => {
 
   const selectedSummary = filteredUsers.find((item) => item.userId === selectedUserId) || null;
   const showEditor = editorMode === 'edit' || editorMode === 'create';
+  const hasFreshDetailForSelectedUser = detail?.userId === selectedUserId;
+  const waitingForEditDetail = editorMode === 'edit' && selectedUserId && !hasFreshDetailForSelectedUser;
 
   return (
     <div>
@@ -354,9 +401,6 @@ const AdminAdministrationPanel = () => {
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Buscar por email, rol u override"
           />
-          <SmallBtn type="button" onClick={startCreateNewUser}>
-            Nuevo usuario interno
-          </SmallBtn>
           <SmallBtn type="button" onClick={() => load(selectedUserId)} disabled={loading}>
             {loading ? 'Actualizando...' : 'Refrescar'}
           </SmallBtn>
@@ -380,9 +424,10 @@ const AdminAdministrationPanel = () => {
       <InlinePanel style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#162033' }}>Crear acceso backoffice</div>
         <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-          Puedes crear un usuario interno nuevo desde el boton superior o buscar un usuario ya existente por email o userId para habilitar acceso interno.
+          Busca primero un usuario ya existente por email o userId para habilitar acceso interno. Si no existe, crea un usuario interno nuevo desde cero.
         </div>
-        <PanelRow>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
+          <PanelRow style={{ marginTop: 0 }}>
           <FieldBlock style={{ minWidth: 280, flex: '1 1 320px' }}>
             <label>Usuario existente</label>
             <StyledInput
@@ -393,7 +438,13 @@ const AdminAdministrationPanel = () => {
             />
           </FieldBlock>
           <SmallBtn type="button" onClick={runLookup} disabled={lookupLoading}>{lookupLoading ? 'Buscando...' : 'Buscar usuario'}</SmallBtn>
-        </PanelRow>
+          </PanelRow>
+          <div style={{ paddingTop: 10, borderTop: '1px solid #e7edf3', display: 'flex', justifyContent: 'flex-start' }}>
+            <SmallBtn type="button" onClick={startCreateNewUser}>
+              Nuevo usuario interno
+            </SmallBtn>
+          </div>
+        </div>
         {lookupError && <StyledError>{lookupError}</StyledError>}
         {lookupResults.length > 0 && (
           <div style={{ overflowX: 'auto', marginTop: 10 }}>
@@ -426,6 +477,16 @@ const AdminAdministrationPanel = () => {
       </InlinePanel>
 
       <div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: 8 }}>
+          <FieldBlock>
+            <label>Acceso</label>
+            <StyledSelect value={accessFilter} onChange={(e) => setAccessFilter(e.target.value)}>
+              <option value="ACTIVE">Activos</option>
+              <option value="ALL">Todos</option>
+              <option value="INACTIVE">Sin acceso</option>
+            </StyledSelect>
+          </FieldBlock>
+        </div>
         <div style={{ maxWidth: '100%', maxHeight: '48vh', overflowX: 'auto' }}>
           <DarkHeaderTable style={{ maxWidth: '100%', marginTop: 0 }}>
             <thead>
@@ -467,13 +528,6 @@ const AdminAdministrationPanel = () => {
         </div>
 
         <div style={{ marginTop: 18 }}>
-          <div style={{ border: '1px solid #c9d1db', borderRadius: 4, background: '#f8fafb', padding: '14px 16px', marginBottom: 14 }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#162033' }}>Area de edicion de acceso backoffice</div>
-            <div style={{ marginTop: 4, fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
-              Usa la tabla superior para seleccionar un usuario y realiza abajo los cambios o la revision de detalle.
-            </div>
-          </div>
-
           <div style={{ border: '1px solid #c9d1db', borderRadius: 4, background: '#fff', padding: 18, boxShadow: 'none' }}>
           <div style={{ fontSize: 18, fontWeight: 700, color: '#162033' }}>
             {editorMode === 'create' ? 'Nuevo acceso backoffice' : showEditor ? 'Editar acceso backoffice' : 'Detalle de acceso'}
@@ -484,13 +538,15 @@ const AdminAdministrationPanel = () => {
 
           {detailError && <StyledError>{detailError}</StyledError>}
           {formError && <StyledError>{formError}</StyledError>}
-          {detailLoading && <div style={{ marginTop: 16, color: '#74819a' }}>Cargando detalle...</div>}
+          {(detailLoading || waitingForEditDetail) && (
+            <div style={{ marginTop: 16, color: '#74819a' }}>Cargando detalle...</div>
+          )}
 
-          {!detailLoading && !showEditor && !detail && (
+          {!detailLoading && !waitingForEditDetail && !showEditor && !detail && (
             <div style={{ marginTop: 16, color: '#52607a', lineHeight: 1.55 }}>Elige un usuario de la tabla o usa la busqueda superior para crear un acceso nuevo.</div>
           )}
 
-          {!detailLoading && (showEditor || detail) && (
+          {!detailLoading && !waitingForEditDetail && (showEditor || detail) && (
             <div style={{ marginTop: 16 }}>
               <InlinePanel style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 13, fontWeight: 700 }}>{form.email || detail?.email || selectedSummary?.email || 'Usuario interno'}</div>
@@ -499,34 +555,34 @@ const AdminAdministrationPanel = () => {
                   {form.userId || detail?.userId || selectedSummary?.userId ? ' · ' : ''}
                   Rol producto {detail?.productRole || selectedSummary?.productRole || 'N/D'}
                 </div>
-                <div style={{ marginTop: 8 }}>
-                  <span style={pillStyle(detail?.accessActive ? 'active' : 'inactive')}>{detail?.accessActive ? 'Acceso activo' : 'Acceso inactivo'}</span>
-                  {detail?.hasExplicitConfiguration ? <span style={pillStyle('warning')}>Configuracion explicita</span> : null}
-                  {detail?.hasImplicitAdminAccess ? <span style={pillStyle('admin')}>Acceso implicito por ADMIN producto</span> : null}
-                  {detail?.hasEffectiveAccess ? <span style={pillStyle('active')}>Acceso efectivo</span> : <span style={pillStyle('inactive')}>Sin acceso efectivo</span>}
-                  <span style={pillStyle((detail?.emailVerifiedAt || selectedSummary?.emailVerifiedAt) ? 'active' : 'warning')}>{detail?.emailVerifiedAt || selectedSummary?.emailVerifiedAt ? 'Email validado' : 'Email pendiente'}</span>
-                  {detail?.accountStatus ? <span style={pillStyle()}>{detail.accountStatus}</span> : null}
+                <div style={{ marginTop: 8, fontSize: 12, color: '#52607a', lineHeight: 1.6 }}>
+                  <div>{detail?.accessActive ? 'Acceso activo' : 'Acceso inactivo'}</div>
+                  <div>{detail?.hasEffectiveAccess ? 'Acceso efectivo' : 'Sin acceso efectivo'}</div>
+                  <div>{detail?.emailVerifiedAt || selectedSummary?.emailVerifiedAt ? 'Email validado' : 'Email pendiente'}</div>
+                  {detail?.hasExplicitConfiguration ? <div>Configuracion explicita</div> : null}
+                  {detail?.hasImplicitAdminAccess ? <div>Acceso implicito por ADMIN producto</div> : null}
+                  {detail?.accountStatus ? <div>{detail.accountStatus}</div> : null}
                 </div>
               </InlinePanel>
 
               {showEditor ? (
                 <>
                   {editorMode === 'create' && !form.userId ? (
-                    <InlinePanel style={{ marginBottom: 12 }}>
+                    <InlinePanel key="create-empty-user" style={{ marginBottom: 12 }}>
                       <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 10 }}>Usuario interno base</div>
                       <PanelRow>
                         <FieldBlock style={{ minWidth: 220, flex: '1 1 220px' }}>
                           <label>Email</label>
-                          <StyledInput value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="usuario@sharemechat.com" />
+                          <StyledInput autoComplete="off" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} placeholder="usuario@sharemechat.com" />
                         </FieldBlock>
                         <FieldBlock style={{ minWidth: 180, flex: '1 1 180px' }}>
                           <label>Nickname</label>
-                          <StyledInput value={form.nickname} onChange={(e) => setForm((prev) => ({ ...prev, nickname: e.target.value }))} placeholder="alias interno" />
+                          <StyledInput autoComplete="off" value={form.nickname} onChange={(e) => setForm((prev) => ({ ...prev, nickname: e.target.value }))} placeholder="alias interno" />
                         </FieldBlock>
                       </PanelRow>
                       <FieldBlock>
                         <label>Contrasena inicial</label>
-                        <StyledInput type="password" value={form.password} onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))} placeholder="Minimo 10 caracteres, sin espacios" />
+                        <StyledInput autoComplete="new-password" type="password" value={form.password} onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))} placeholder="Minimo 10 caracteres, sin espacios" />
                       </FieldBlock>
                     </InlinePanel>
                   ) : null}
@@ -536,12 +592,12 @@ const AdminAdministrationPanel = () => {
                     <div style={{ fontSize: 12, color: '#52607a', marginBottom: 10 }}>Asigna uno o varios roles operativos reales: ADMIN, SUPPORT o AUDIT.</div>
                     {availableRoles.map((role) => (
                       <label key={role} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-                        <CheckBox type="checkbox" checked={form.roleCodes.includes(role)} onChange={() => toggleRole(role)} />
+                        <CheckBox type="checkbox" checked={form.roleCodes.includes(normalizeRoleCode(role))} onChange={() => toggleRole(normalizeRoleCode(role))} />
                         <span style={{ ...pillStyle(roleTone(role)), margin: 0 }}>{role}</span>
                       </label>
                     ))}
                     <div style={{ fontSize: 12, color: '#334155', marginTop: 12 }}>
-                      Guardar configuracion no cambia el estado del acceso. La activacion o desactivacion se gestiona solo con el boton especifico y nota obligatoria.
+                      Guardar configuracion no cambia el estado del acceso. La activacion o desactivacion se gestiona solo con el boton especifico y una nota opcional.
                     </div>
                     {editorMode === 'create' ? (
                       <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
@@ -560,9 +616,9 @@ const AdminAdministrationPanel = () => {
                         <div key={permission} style={{ borderTop: '1px solid #eef2f7', padding: '8px 0' }}>
                           <div style={{ fontSize: 12, fontWeight: 700, color: '#162033', marginBottom: 6 }}>{permission}</div>
                           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'inherit')} style={mode === 'inherit' ? { background: '#e3e9f0', borderColor: '#8c99aa', color: '#18212f' } : null}>Inherit</SmallBtn>
-                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'add')} style={mode === 'add' ? { background: '#eef3ef', borderColor: '#bfcabf', color: '#314536' } : null}>Grant</SmallBtn>
-                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'remove')} style={mode === 'remove' ? { background: '#f7f1f1', borderColor: '#d5c3c3', color: '#6d4444' } : null}>Remove</SmallBtn>
+                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'inherit')} style={permissionModeBtnStyle(mode, 'inherit')}>Inherit</SmallBtn>
+                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'add')} style={permissionModeBtnStyle(mode, 'add')}>Grant</SmallBtn>
+                            <SmallBtn type="button" onClick={() => setPermissionMode(permission, 'remove')} style={permissionModeBtnStyle(mode, 'remove')}>Remove</SmallBtn>
                           </div>
                         </div>
                       );
@@ -577,7 +633,7 @@ const AdminAdministrationPanel = () => {
                   {editorMode !== 'create' ? (
                     <FieldBlock>
                       <label>Nota para activar o desactivar</label>
-                      <TextArea value={statusNote} onChange={(e) => setStatusNote(e.target.value)} placeholder="Obligatoria para cualquier cambio de estado del acceso." />
+                      <TextArea value={statusNote} onChange={(e) => setStatusNote(e.target.value)} placeholder="Opcional para cualquier cambio de estado del acceso." />
                     </FieldBlock>
                   ) : null}
 
@@ -595,30 +651,46 @@ const AdminAdministrationPanel = () => {
                 <>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 8 }}>Roles asignados</div>
-                    {normalizeList(detail?.assignedRoles).length > 0 ? detail.assignedRoles.map((role) => <span key={role} style={pillStyle(roleTone(role))}>{role}</span>) : <span style={{ color: '#74819a' }}>Sin roles asignados explicitamente.</span>}
+                    {normalizeList(detail?.assignedRoles).length > 0 ? (
+                      <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.6 }}>
+                        {detail.assignedRoles.join(', ')}
+                      </div>
+                    ) : <span style={{ color: '#74819a' }}>Sin roles asignados explicitamente.</span>}
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 8 }}>Semantica de acceso</div>
-                    {detail?.hasExplicitConfiguration ? <span style={pillStyle('warning')}>Configuracion explicita</span> : <span style={pillStyle()}>Sin configuracion explicita</span>}
-                    {detail?.hasImplicitAdminAccess ? <span style={pillStyle('admin')}>Acceso implicito por ADMIN producto</span> : null}
-                    {detail?.hasExplicitAccessRow ? <span style={pillStyle()}>Fila explicita de estado</span> : <span style={pillStyle()}>Sin fila explicita de estado</span>}
-                    <span style={pillStyle(detail?.emailVerifiedAt ? 'active' : 'warning')}>{detail?.emailVerifiedAt ? 'Email validado' : 'Email pendiente de validacion'}</span>
+                    <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.6 }}>
+                      <div>{detail?.hasExplicitConfiguration ? 'Configuracion explicita' : 'Sin configuracion explicita'}</div>
+                      {detail?.hasImplicitAdminAccess ? <div>Acceso implicito por ADMIN producto</div> : null}
+                      <div>{detail?.hasExplicitAccessRow ? 'Fila explicita de estado' : 'Sin fila explicita de estado'}</div>
+                      <div>{detail?.emailVerifiedAt ? 'Email validado' : 'Email pendiente de validacion'}</div>
+                    </div>
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 8 }}>Roles efectivos</div>
-                    {normalizeList(detail?.effectiveRoles).length > 0 ? detail.effectiveRoles.map((role) => <span key={role} style={pillStyle(roleTone(role))}>{role}</span>) : <span style={{ color: '#74819a' }}>Sin roles efectivos.</span>}
+                    {normalizeList(detail?.effectiveRoles).length > 0 ? (
+                      <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.6 }}>
+                        {detail.effectiveRoles.join(', ')}
+                      </div>
+                    ) : <span style={{ color: '#74819a' }}>Sin roles efectivos.</span>}
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 8 }}>Overrides manuales</div>
-                    {normalizeList(detail?.overrideAdditions).map((item) => <span key={`add-${item}`} style={pillStyle('add')}>+ {item}</span>)}
-                    {normalizeList(detail?.overrideRemovals).map((item) => <span key={`remove-${item}`} style={pillStyle('remove')}>- {item}</span>)}
-                    {normalizeList(detail?.overrideAdditions).length === 0 && normalizeList(detail?.overrideRemovals).length === 0 ? <span style={{ color: '#74819a' }}>Sin overrides explicitos.</span> : null}
+                    {normalizeList(detail?.overrideAdditions).length > 0 || normalizeList(detail?.overrideRemovals).length > 0 ? (
+                      <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.6 }}>
+                        {normalizeList(detail?.overrideAdditions).map((item) => <div key={`add-${item}`}>+ {item}</div>)}
+                        {normalizeList(detail?.overrideRemovals).map((item) => <div key={`remove-${item}`}>- {item}</div>)}
+                      </div>
+                    ) : <span style={{ color: '#74819a' }}>Sin overrides explicitos.</span>}
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 8 }}>Permisos efectivos</div>
                     <div style={{ maxHeight: 190, overflow: 'auto', paddingRight: 4 }}>
-                      {normalizeList(detail?.effectivePermissions).map((permission) => <span key={permission} style={pillStyle()}>{permission}</span>)}
-                      {normalizeList(detail?.effectivePermissions).length === 0 ? <span style={{ color: '#74819a' }}>Sin permisos efectivos visibles.</span> : null}
+                      {normalizeList(detail?.effectivePermissions).length > 0 ? (
+                        <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.6 }}>
+                          {normalizeList(detail?.effectivePermissions).map((permission) => <div key={permission}>{permission}</div>)}
+                        </div>
+                      ) : <span style={{ color: '#74819a' }}>Sin permisos efectivos visibles.</span>}
                     </div>
                   </div>
                   <div style={{ marginBottom: 12 }}>
@@ -633,15 +705,6 @@ const AdminAdministrationPanel = () => {
                       </InlinePanel>
                     )) : <span style={{ color: '#74819a' }}>Sin cambios administrativos registrados.</span>}
                   </div>
-                  <FieldBlock>
-                    <label>Nota para activar o desactivar</label>
-                    <TextArea value={statusNote} onChange={(e) => setStatusNote(e.target.value)} placeholder="Obligatoria para cualquier cambio de estado del acceso." />
-                  </FieldBlock>
-                  <PanelRow>
-                    <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => setEditorMode('edit')}>Editar acceso</SmallBtn>
-                    {detail?.userId ? <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => updateStatus(detail.userId, !detail.accessActive)}>{detail.accessActive ? 'Desactivar acceso' : 'Activar acceso'}</SmallBtn> : null}
-                    {detail?.userId && !detail?.emailVerifiedAt ? <SmallBtn type="button" style={compactActionBtnStyle} onClick={() => resendVerification(detail.userId)} disabled={resendingUserId === detail.userId}>{resendingUserId === detail.userId ? 'Reenviando...' : 'Reenviar validacion'}</SmallBtn> : null}
-                  </PanelRow>
                 </>
               )}
             </div>

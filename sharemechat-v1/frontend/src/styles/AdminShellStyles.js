@@ -1,7 +1,7 @@
 import styled from 'styled-components';
 
 export const AdminShell = styled.div`
-  --admin-bg: #f4f6f8;
+  --admin-bg: #e9eef3;
   --admin-surface: #ffffff;
   --admin-surface-alt: #f8f9fb;
   --admin-border: #d8dee6;
@@ -120,17 +120,17 @@ export const SidebarNavButton = styled.button`
   align-items: flex-start;
   gap: 4px;
   text-align: left;
-  border: 1px solid ${({ $active }) => ($active ? 'var(--admin-border-strong)' : 'transparent')};
+  border: 1px solid ${({ $active }) => ($active ? '#c7d4e2' : 'transparent')};
   border-radius: 12px;
-  background: ${({ $active }) => ($active ? '#ffffff' : 'transparent')};
+  background: ${({ $active }) => ($active ? '#eef4fb' : 'transparent')};
   color: ${({ $active }) => ($active ? 'var(--admin-text)' : 'var(--admin-sidebar-text)')};
   padding: 9px 10px;
   cursor: pointer;
   transition: background 0.16s ease, border-color 0.16s ease, color 0.16s ease, transform 0.16s ease;
 
   &:hover {
-    background: ${({ $active }) => ($active ? '#f8fafc' : 'rgba(255, 255, 255, 0.9)')};
-    border-color: ${({ $active }) => ($active ? 'var(--admin-border-strong)' : 'rgba(255, 255, 255, 0.36)')};
+    background: ${({ $active }) => ($active ? '#eef4fb' : '#e6eef8')};
+    border-color: ${({ $active }) => ($active ? '#c7d4e2' : '#c1cfde')};
     color: var(--admin-text);
   }
 
