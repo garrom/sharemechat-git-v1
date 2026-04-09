@@ -11,6 +11,7 @@ import {
   SidebarNavButton,
   SidebarSection,
   SidebarSectionLabel,
+  TopbarActionButton,
   TopbarMeta,
   TopbarTitleBlock,
 } from '../../../styles/AdminShellStyles';
@@ -23,6 +24,7 @@ const AdminLayout = ({
   sections = [],
   activeKey,
   onSelect,
+  topbarActions = [],
   footerLabel,
   footerValue,
   onLogout,
@@ -71,6 +73,16 @@ const AdminLayout = ({
         </TopbarTitleBlock>
 
         <TopbarMeta>
+          {topbarActions.map((action) => (
+            <TopbarActionButton
+              key={action.key || action.label}
+              type="button"
+              $active={Boolean(action.active)}
+              onClick={action.onClick}
+            >
+              {action.label}
+            </TopbarActionButton>
+          ))}
           {meta.map((item) => (
             <MetaPill key={item.label}>
               <span>{item.label}</span>

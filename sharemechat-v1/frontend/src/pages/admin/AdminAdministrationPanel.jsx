@@ -375,6 +375,10 @@ const AdminAdministrationPanel = () => {
       await load(userId);
       setSelectedUserId(userId);
       setDetail(next || null);
+      setForm((prev) => ({
+        ...prev,
+        active: Boolean(next?.accessActive),
+      }));
       setStatusNote('');
     } catch (e) {
       setFormError(e.message || 'No se pudo actualizar el estado del acceso.');
@@ -517,7 +521,6 @@ const AdminAdministrationPanel = () => {
                     <TableActionGroup>
                       <TableActionButton type="button" onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); }}>Ver detalle</TableActionButton>
                       <TableActionButton type="button" onClick={() => selectForEdit(user.userId)}>Editar acceso</TableActionButton>
-                      <TableActionButton type="button" onClick={() => { setSelectedUserId(user.userId); setEditorMode('view'); }}>Gestionar estado</TableActionButton>
                       {!user.emailVerifiedAt ? <TableActionButton type="button" onClick={() => resendVerification(user.userId)} disabled={resendingUserId === user.userId}>{resendingUserId === user.userId ? 'Reenviando...' : 'Reenviar validacion'}</TableActionButton> : null}
                     </TableActionGroup>
                   </td>

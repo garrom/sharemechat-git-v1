@@ -266,6 +266,27 @@ export const TopbarMeta = styled.div`
   justify-content: flex-end;
 `;
 
+export const TopbarActionButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid ${({ $active }) => ($active ? 'var(--admin-border-strong)' : 'var(--admin-border)')};
+  border-radius: 4px;
+  background: ${({ $active }) => ($active ? 'var(--admin-accent)' : 'var(--admin-surface)')};
+  color: ${({ $active }) => ($active ? '#f8fbff' : 'var(--admin-text)')};
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: ${({ $active }) => ($active ? '#344255' : 'var(--admin-surface-alt)')};
+    border-color: var(--admin-border-strong);
+  }
+`;
+
 export const MetaPill = styled.div`
   display: inline-flex;
   align-items: center;

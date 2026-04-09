@@ -10,6 +10,7 @@ import AdminFinancePanel from './AdminFinancePanel';
 import AdminModelsPanel from './AdminModelsPanel';
 import AdminModerationPanel from './AdminModerationPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
+import AdminProfilePage from './AdminProfilePage';
 import AdminStatsPanel from './AdminStatsPanel';
 import AdminLayout from './components/AdminLayout';
 import AdminPage from './components/AdminPage';
@@ -59,6 +60,10 @@ const VIEW_COPY = {
   administration: {
     title: 'Administracion',
     subtitle: 'Base preparada para la futura gestion de usuarios internos, roles y permisos.',
+  },
+  profile: {
+    title: 'PerfilBackoffice',
+    subtitle: 'Datos basicos de tu cuenta autenticada y cambio de contrasena propio.',
   },
 };
 
@@ -113,6 +118,7 @@ const DashboardAdmin = () => {
       capabilities.canViewAudit ? 'control' : null,
       capabilities.canViewDb ? 'data' : null,
       capabilities.canViewAdministration ? 'administration' : null,
+      'profile',
     ].filter(Boolean);
 
     if (!allowedViews.includes(activeView)) {
@@ -214,6 +220,14 @@ const DashboardAdmin = () => {
       meta={[
         { label: 'Rol', value: displayRole },
         { label: 'Surface', value: 'BACKOFFICE' },
+      ]}
+      topbarActions={[
+        {
+          key: 'profile',
+          label: 'Perfil',
+          active: activeView === 'profile',
+          onClick: () => setActiveView('profile'),
+        },
       ]}
     >
       {activeView === 'overview' && (
@@ -327,6 +341,15 @@ const DashboardAdmin = () => {
           subtitle="Vista MVP de usuarios con acceso backoffice, roles efectivos, permisos visibles y overrides."
         >
           <AdminAdministrationPanel />
+        </AdminPage>
+      )}
+
+      {activeView === 'profile' && (
+        <AdminPage
+          title="Cuenta del Backoffice"
+          subtitle="Informacion basica de la cuenta autenticada y cambio de contrasena propio."
+        >
+          <AdminProfilePage />
         </AdminPage>
       )}
     </AdminLayout>
