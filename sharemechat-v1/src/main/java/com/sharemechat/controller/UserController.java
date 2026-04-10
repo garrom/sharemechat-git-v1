@@ -107,13 +107,41 @@ public class UserController {
 
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable Long id) {
-        UserDTO user = userService.getUserById(id);
-        return ResponseEntity.ok(user);
+    public ResponseEntity<?> getUserById(@PathVariable Long id, Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        User currentUser = userService.findByEmail(authentication.getName());
+        if (currentUser == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        User targetUser = userService.findById(id);
+        if (currentUser.getId().equals(targetUser.getId())) {
+            return ResponseEntity.ok(userService.mapToDTO(targetUser));
+        }
+
+        return ResponseEntity.ok(userService.mapToPublicUserDTO(targetUser));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id, @RequestBody UserUpdateDTO userUpdateDTO) {
+    public ResponseEntity<UserDTO> updateUser(@PathVariable Long id,
+                                              @RequestBody UserUpdateDTO userUpdateDTO,
+                                              Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).body(null);
+        }
+
+        User currentUser = userService.findByEmail(authentication.getName());
+        if (currentUser == null) {
+            return ResponseEntity.status(401).body(null);
+        }
+
+        if (!currentUser.getId().equals(id)) {
+            return ResponseEntity.status(403).body(null);
+        }
+
         UserDTO updatedUser = userService.updateUser(id, userUpdateDTO);
         return ResponseEntity.ok(updatedUser);
     }

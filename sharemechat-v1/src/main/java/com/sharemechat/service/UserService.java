@@ -683,4 +683,17 @@ public class UserService {
         return dto;
     }
 
+    public PublicUserDTO mapToPublicUserDTO(User user) {
+        PublicUserDTO dto = new PublicUserDTO();
+        dto.setId(user.getId());
+        dto.setNickname(user.getNickname());
+        dto.setName(user.getName());
+        dto.setSurname(user.getSurname());
+        dto.setBiography(user.getBiography());
+        dto.setInterests(user.getInterests());
+        dto.setRole(user.getRole());
+        dto.setVerificationStatus(user.getVerificationStatus());
+        return dto;
+    }
+
 }
