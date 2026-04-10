@@ -1,6 +1,7 @@
 package com.sharemechat.security;
 
 import java.util.Set;
+import java.util.List;
 
 public final class BackofficeAuthorities {
 
@@ -28,6 +29,20 @@ public final class BackofficeAuthorities {
     public static final String PERM_FINANCE_READ_TOP_CLIENTS = "finance.read_top_clients";
 
     public static final Set<String> SUPPORT_PHASE1_PERMISSIONS = Set.of(
+            PERM_MODELS_READ_LIST,
+            PERM_MODELS_READ_KYC_MODE,
+            PERM_MODELS_UPDATE_CHECKLIST,
+            PERM_MODERATION_READ_REPORTS,
+            PERM_MODERATION_READ_REPORT_DETAIL,
+            PERM_STREAMS_READ_ACTIVE,
+            PERM_STREAMS_READ_DETAIL,
+            PERM_STATS_READ_OVERVIEW,
+            PERM_FINANCE_READ_SUMMARY,
+            PERM_FINANCE_READ_TOP_MODELS,
+            PERM_FINANCE_READ_TOP_CLIENTS
+    );
+
+    public static final List<String> OFFICIAL_BACKOFFICE_PERMISSION_CATALOG = List.of(
             PERM_MODELS_READ_LIST,
             PERM_MODELS_READ_KYC_MODE,
             PERM_MODELS_UPDATE_CHECKLIST,

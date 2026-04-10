@@ -7,6 +7,7 @@ import com.sharemechat.dto.BackofficeAdministrationDTOs;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.BackofficeAuthorities;
+import com.sharemechat.security.BackofficePermissionAliases;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
@@ -66,10 +67,6 @@ public class BackofficeAccessService {
             roles.addAll(loadBackofficeRoles(userId));
             permissions.addAll(loadRolePermissions(userId));
             applyOverrides(userId, permissions);
-        }
-
-        if (roles.contains(BackofficeAuthorities.ROLE_ADMIN)) {
-            permissions.addAll(BackofficeAuthorities.SUPPORT_PHASE1_PERMISSIONS);
         }
 
         return new BackofficeAccessProfile(Set.copyOf(roles), Set.copyOf(permissions));
@@ -620,7 +617,7 @@ public class BackofficeAccessService {
     }
 
     private List<PermissionOverrideRow> fetchOverrideRows(Long userId) {
-        return jdbcTemplate.query("""
+        List<PermissionOverrideRow> rawRows = jdbcTemplate.query("""
                 select upper(p.code) as code, uo.allowed as allowed
                 from user_permission_overrides uo
                 join permissions p on p.id = uo.permission_id
@@ -629,6 +626,7 @@ public class BackofficeAccessService {
                 normalize(rs.getString("code")),
                 rs.getBoolean("allowed")
         ), userId);
+        return canonicalizeOverrideRows(rawRows);
     }
 
     private void replaceAssignedRoles(Long userId, List<String> roleCodes) {
@@ -798,19 +796,11 @@ public class BackofficeAccessService {
     }
 
     private List<String> listAvailablePermissions() {
-        try {
-            List<String> rows = jdbcTemplate.queryForList(
-                    "select upper(code) from permissions order by upper(code), id",
-                    String.class
-            );
-            Set<String> sanitized = sanitize(rows);
-            if (!sanitized.isEmpty()) {
-                return sanitized.stream().sorted().toList();
-            }
-        } catch (DataAccessException ex) {
-            log.warn("No se pudo cargar el catalogo de permisos backoffice: {}", ex.getMessage());
-        }
-        return BackofficeAuthorities.SUPPORT_PHASE1_PERMISSIONS.stream().sorted().toList();
+        return BackofficeAuthorities.OFFICIAL_BACKOFFICE_PERMISSION_CATALOG.stream()
+                .map(this::normalize)
+                .filter(code -> !code.isBlank())
+                .sorted()
+                .toList();
     }
 
     private Long findRoleId(String roleCode) {
@@ -933,7 +923,32 @@ public class BackofficeAccessService {
     }
 
     private List<String> normalizePermissionCodes(List<String> permissionCodes) {
-        return sanitize(permissionCodes).stream().sorted().toList();
+        return sanitize(permissionCodes).stream()
+                .map(this::canonicalizeBackofficePermissionCode)
+                .filter(code -> !code.isBlank())
+                .sorted()
+                .toList();
+    }
+
+    private List<PermissionOverrideRow> canonicalizeOverrideRows(List<PermissionOverrideRow> rows) {
+        LinkedHashMap<String, Boolean> resolved = new LinkedHashMap<>();
+        if (rows == null) {
+            return List.of();
+        }
+        for (PermissionOverrideRow row : rows) {
+            String canonicalCode = canonicalizeBackofficePermissionCode(row.code());
+            if (canonicalCode.isBlank()) {
+                continue;
+            }
+            resolved.merge(canonicalCode, row.allowed(), (current, next) -> current && next);
+        }
+        return resolved.entrySet().stream()
+                .map(entry -> new PermissionOverrideRow(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    private String canonicalizeBackofficePermissionCode(String permissionCode) {
+        return BackofficePermissionAliases.canonicalize(permissionCode);
     }
 
     private Map<String, Object> summaryMap(long totalUsers,

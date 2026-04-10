@@ -85,9 +85,11 @@ const DashboardAdmin = () => {
     canViewSensitiveDocs: adminView,
     canViewStats: adminView || hasBackofficePermission(user, 'stats.read_overview'),
     canViewFinance: adminView
-      || hasBackofficePermission(user, 'finance.read_summary')
-      || hasBackofficePermission(user, 'finance.read_top_models')
-      || hasBackofficePermission(user, 'finance.read_top_clients'),
+      || (
+        hasBackofficePermission(user, 'finance.read_summary')
+        && hasBackofficePermission(user, 'finance.read_top_models')
+        && hasBackofficePermission(user, 'finance.read_top_clients')
+      ),
     canRefund: adminView,
     canViewModeration: adminView || hasBackofficePermission(user, 'moderation.read_reports'),
     canReviewModeration: adminView,
