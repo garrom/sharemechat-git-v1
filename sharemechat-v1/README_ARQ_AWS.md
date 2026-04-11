@@ -46,13 +46,14 @@ Verificado en codigo y configuracion del repositorio:
 
 Verificado operativamente en AWS CLI. No versionado como IaC en este repositorio:
 
-- Distribuciones CloudFront activas para publico TEST, admin TEST, assets TEST, assets PROD y landing PROD
+- Distribuciones CloudFront activas para publico TEST, admin TEST, assets TEST, publico AUDIT, admin AUDIT, assets AUDIT, assets PROD y landing PROD
 - Dominios Route53 apuntando a CloudFront o a backend segun el caso
-- Buckets S3 concretos de frontend/admin/assets
-- OAC activos para buckets S3
-- Certificados ACM usados por distribuciones TEST/admin/assets
+- Buckets S3 concretos de frontend/admin/assets para TEST y AUDIT
+- OAC activos para buckets S3 de TEST y AUDIT
+- Certificados ACM usados por distribuciones TEST y AUDIT
 - Cache policies, origin request policies y response headers policies asociadas a las distribuciones
 - Funcion CloudFront `redirect-www-to-root-test` activa en la distribucion publica TEST
+- La distribucion publica AUDIT no tiene CloudFront Function asociada en el default behavior
 
 ## Dominios y superficies
 
@@ -71,6 +72,10 @@ Verificado operativamente en AWS CLI. No versionado como IaC en este repositorio
 - `admin.test.sharemechat.com` -> CloudFront `d3ml1axp2tpmmv.cloudfront.net`
 - `api.test.sharemechat.com` -> A record `63.180.48.12`
 - `assets.test.sharemechat.com` -> CloudFront `d25qzf8rg01we9.cloudfront.net`
+- `audit.sharemechat.com` -> CloudFront `d29esb7rgaknry.cloudfront.net`
+- `admin.audit.sharemechat.com` -> CloudFront `d9f1r48ceuajf.cloudfront.net`
+- `api.audit.sharemechat.com` -> A record `18.184.208.32`
+- `assets.audit.sharemechat.com` -> CloudFront `d1qngef3001u8q.cloudfront.net`
 - `assets.sharemechat.com` -> CloudFront `d99amkbl8rwf7.cloudfront.net`
 - `sharemechat.com` -> CloudFront `dzwmag96rivxf.cloudfront.net`
 - `www.sharemechat.com` -> CloudFront `dzwmag96rivxf.cloudfront.net`
@@ -84,8 +89,15 @@ Superficies activas:
   - dominio `admin.test.sharemechat.com`
 - API TEST:
   - dominio `api.test.sharemechat.com`
+- Producto AUDIT:
+  - dominio principal `audit.sharemechat.com`
+- Backoffice AUDIT:
+  - dominio `admin.audit.sharemechat.com`
+- API AUDIT:
+  - dominio `api.audit.sharemechat.com`
 - Assets:
   - `assets.test.sharemechat.com`
+  - `assets.audit.sharemechat.com`
   - `assets.sharemechat.com`
 
 ## CloudFront
@@ -117,6 +129,30 @@ Distribucion publica TEST `E2Q4VNDDWD5QBU`:
 - OAC frontend:
   - `ENGNDDRO1OGZV`
 
+Distribucion publica AUDIT `E1ILXV7P6ENUV8`:
+
+- alias:
+  - `audit.sharemechat.com`
+- origins:
+  - `api.audit.sharemechat.com`
+  - `sharemechat-frontend-audit.s3.eu-central-1.amazonaws.com`
+- default behavior -> S3 frontend
+- cache behaviors:
+  - `/.well-known/acme-challenge/*` -> `api.audit.sharemechat.com`
+  - `/api/*` -> `api.audit.sharemechat.com`
+  - `/match*` -> `api.audit.sharemechat.com`
+  - `/messages*` -> `api.audit.sharemechat.com`
+  - `/uploads/*` -> `api.audit.sharemechat.com`
+  - `/assets/*` -> `api.audit.sharemechat.com`
+- custom error:
+  - `404 -> /index.html -> 200`
+- function:
+  - no hay `FunctionAssociation` en el default behavior
+- certificate:
+  - `arn:aws:acm:us-east-1:430118829334:certificate/bf74657b-db2f-4227-8a69-28f4052329d2`
+- OAC frontend:
+  - `E9CNPDX4QA0DA`
+
 Distribucion admin TEST `E28YCPVIRB4ASH`:
 
 - alias:
@@ -134,6 +170,24 @@ Distribucion admin TEST `E28YCPVIRB4ASH`:
   - `arn:aws:acm:us-east-1:430118829334:certificate/cd68cecf-a4bf-41dd-a2b9-32525e0ac61f`
 - OAC admin:
   - `E2TS16WJI0T1GG`
+
+Distribucion admin AUDIT `E21IB0VBKYNNBW`:
+
+- alias:
+  - `admin.audit.sharemechat.com`
+- origins:
+  - `sharemechat-admin-audit.s3.eu-central-1.amazonaws.com`
+  - `api.audit.sharemechat.com`
+- default behavior -> S3 admin
+- cache behavior:
+  - `/api/*` -> `api.audit.sharemechat.com`
+- custom errors:
+  - `403 -> /index.html -> 200`
+  - `404 -> /index.html -> 200`
+- certificate:
+  - `arn:aws:acm:us-east-1:430118829334:certificate/bf74657b-db2f-4227-8a69-28f4052329d2`
+- OAC admin:
+  - `E21PRW32UY6Q6K`
 
 Distribucion assets TEST `E1WZ44LRD39ZAO`:
 
@@ -153,6 +207,18 @@ Distribucion assets PROD `E3UAOU6AUNI0CM`:
   - `assets.sharemechat.com`
 - origin:
   - `assets-sharemechat-prod.s3.eu-central-1.amazonaws.com`
+
+Distribucion assets AUDIT `E2NC4TEJAWOI3L`:
+
+- alias:
+  - `assets.audit.sharemechat.com`
+- origin:
+  - `assets-sharemechat-audit.s3.eu-central-1.amazonaws.com`
+- default behavior -> S3 assets
+- certificate:
+  - `arn:aws:acm:us-east-1:430118829334:certificate/bf74657b-db2f-4227-8a69-28f4052329d2`
+- OAC assets:
+  - `E1KC2M03HYWYG7`
 
 Distribucion landing PROD `E2FWNC80D4QDJC`:
 
@@ -187,6 +253,21 @@ CloudFront Function `redirect-www-to-root-test`, verificada operativamente en AW
 - reescribe rutas SPA a `/index.html`
 - contiene logica de allowlist IP comentada/desactivada y un bloque de denegacion por IP activo en el codigo LIVE mostrado por AWS CLI
 
+Comparativa operativa publica TEST vs AUDIT, verificada por AWS CLI:
+
+- TEST publico si tiene `FunctionAssociation` en el default behavior:
+  - `redirect-www-to-root-test`
+- Esa function en TEST reescribe rutas SPA a `/index.html`
+- AUDIT publico no tiene function equivalente asociada al default behavior
+- TEST publico y AUDIT publico solo tienen documentado/confirmado un custom error:
+  - `404 -> /index.html -> 200`
+- Ninguna de las dos distribuciones publicas tiene hoy documentado/confirmado:
+  - `403 -> /index.html -> 200`
+- Implicacion operativa observada en AUDIT:
+  - al refrescar o entrar por deep-link a rutas internas React del producto, CloudFront puede pedir la key al bucket S3 privado y recibir `403 AccessDenied`
+  - al no existir function de reescritura SPA en AUDIT ni fallback `403 -> /index.html -> 200`, el navegador puede terminar viendo XML `AccessDenied`
+- Este patron encaja con una diferencia real de fallback SPA entre TEST publico y AUDIT publico
+
 ## S3
 
 Verificado operativamente en AWS CLI. No versionado como IaC en este repositorio:
@@ -194,8 +275,11 @@ Verificado operativamente en AWS CLI. No versionado como IaC en este repositorio
 Buckets:
 
 - `sharemechat-frontend-test`
+- `sharemechat-frontend-audit`
 - `sharemechat-admin-test`
+- `sharemechat-admin-audit`
 - `assets-sharemechat-test1`
+- `assets-sharemechat-audit`
 - `assets-sharemechat-prod`
 
 Estado operativo de los buckets TEST relevantes:
@@ -207,9 +291,18 @@ Estado operativo de los buckets TEST relevantes:
 
 OAC verificados operativamente:
 
-- `ENGNDDRO1OGZV`
-- `E2TS16WJI0T1GG`
-- `E3GIOGPHBFBHL5`
+- frontend TEST:
+  - `ENGNDDRO1OGZV`
+- frontend AUDIT:
+  - `E9CNPDX4QA0DA`
+- admin TEST:
+  - `E2TS16WJI0T1GG`
+- admin AUDIT:
+  - `E21PRW32UY6Q6K`
+- assets TEST:
+  - `E3GIOGPHBFBHL5`
+- assets AUDIT:
+  - `E1KC2M03HYWYG7`
 
 Configuracion comun OAC:
 
@@ -233,6 +326,8 @@ Verificado operativamente en AWS CLI:
 
 - El frontend publico y el admin enrutan hacia `api.test.sharemechat.com` para trafico backend
 - `api.test.sharemechat.com` esta publicado en DNS como A record `63.180.48.12`
+- En AUDIT, el frontend publico y el admin enrutan hacia `api.audit.sharemechat.com` para trafico backend
+- `api.audit.sharemechat.com` esta publicado en DNS como A record `18.184.208.32`
 
 No versionado como IaC en este repositorio:
 
@@ -355,6 +450,23 @@ Flujo publico TEST:
   - `/.well-known/acme-challenge/*` -> `api.test.sharemechat.com`
 - fallback SPA:
   - `404 -> /index.html -> 200`
+  - adicionalmente existe reescritura previa de rutas SPA por CloudFront Function `redirect-www-to-root-test`
+
+Flujo publico AUDIT:
+
+- navegador -> `audit.sharemechat.com`
+- CloudFront publico AUDIT
+- contenido SPA por defecto desde bucket S3 `sharemechat-frontend-audit`
+- rutas backend:
+  - `/api/*` -> `api.audit.sharemechat.com`
+  - `/match*` -> `api.audit.sharemechat.com`
+  - `/messages*` -> `api.audit.sharemechat.com`
+  - `/uploads/*` -> `api.audit.sharemechat.com`
+  - `/.well-known/acme-challenge/*` -> `api.audit.sharemechat.com`
+- fallback SPA:
+  - `404 -> /index.html -> 200`
+  - no hay CloudFront Function equivalente a `redirect-www-to-root-test` en el default behavior
+  - no hay `403 -> /index.html -> 200` confirmado en la distribucion publica
 
 Flujo admin TEST:
 
@@ -389,7 +501,7 @@ Verificado en codigo y configuracion del repositorio:
 Existe `application-audit.properties` con:
 
 - `spring.application.name=sharemechat-audit`
-- `spring.datasource.url=jdbc:mysql://db1-sharemechat-test-v2.c1gsc6qg4l8y.eu-central-1.rds.amazonaws.com:3306/db1_sharemechat_test`
+- `spring.datasource.url=jdbc:mysql://db1-sharemechat-audit.c1gsc6qg4l8y.eu-central-1.rds.amazonaws.com:3306/db1_sharemechat_audit`
 - `auth.cookieDomain=.audit.sharemechat.com`
 - `jwt.secret=${JWT_SECRET_AUDIT}`
 - `app.frontend.reset-url=https://audit.sharemechat.com/reset-password`
@@ -398,12 +510,17 @@ Existe `application-audit.properties` con:
 
 Interpretacion alineada con el estado actual:
 
-- AUDIT existe hoy a nivel de profile/config parcial en el repositorio
-- AUDIT no aparece desplegado ni aislado completamente en este repositorio
-- el datasource AUDIT sigue apuntando a la base TEST
-- por tanto AUDIT no puede describirse como entorno ya clonado y aislado a nivel de base de datos
-
-No hay evidencia operativa AWS CLI aportada aqui de distribuciones, buckets, Route53 o despliegue activo de `audit.sharemechat.com`.
+- AUDIT existe a nivel de profile/config en el repositorio
+- AUDIT tiene datasource propio a RDS AUDIT en el codigo actual
+- AUDIT si aparece desplegado operativamente en AWS con frontend publico, frontend admin, assets, Route53, certificados y backend DNS propio
+- AUDIT se ha construido como clon estructural de TEST, pero no replica todavia de forma identica toda la logica de fallback SPA en la distribucion publica
+- La diferencia operativa mas relevante observada hoy entre TEST publico y AUDIT publico es:
+  - TEST tiene CloudFront Function de reescritura SPA
+  - AUDIT no tiene function equivalente
+  - ambas publicas solo tienen `404 -> /index.html -> 200`
+  - AUDIT no tiene `403 -> /index.html -> 200` documentado/confirmado
+- Esta combinacion encaja con el sintoma observado en AUDIT:
+  - XML `AccessDenied` al refrescar o abrir rutas internas del frontend producto
 
 ## Conclusion
 
@@ -417,4 +534,8 @@ La arquitectura actual combinada, segun codigo del repositorio y evidencia opera
 - la autenticacion real es JWT en cookies con refresh token persistido
 - los uploads versionados en backend usan storage local/Nginx, no S3
 - la capa AWS de CloudFront, S3, OAC, ACM y Route53 esta verificada operativamente en AWS CLI, pero no esta versionada como IaC en este repositorio
-- AUDIT existe hoy como configuracion parcial y todavia apunta a la base TEST
+- TEST y AUDIT comparten la misma topologia general de CloudFront + S3 + backend + API
+- la diferencia relevante hoy entre TEST publico y AUDIT publico esta en el fallback SPA:
+  - TEST publico combina `404 -> /index.html -> 200` con CloudFront Function de reescritura SPA
+  - AUDIT publico solo tiene `404 -> /index.html -> 200` y no tiene function equivalente confirmada
+  - eso deja a AUDIT mas expuesto a `AccessDenied` al refrescar deep-links React del producto

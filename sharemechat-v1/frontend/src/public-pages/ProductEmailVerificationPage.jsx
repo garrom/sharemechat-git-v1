@@ -34,7 +34,9 @@ const ProductEmailVerificationPage = () => {
           setState({ loading: false, ok: Boolean(response?.ok), message: response?.message || 'Email validado correctamente.' });
         }
       } catch (e) {
-        const message = e?.data?.message || e?.message || 'No se pudo validar el email.';
+        const message = e?.data && typeof e.data.message === 'string' && e.data.message.trim()
+          ? e.data.message
+          : 'No se pudo validar el email. Inténtalo más tarde.';
         if (!cancelled) {
           setState({ loading: false, ok: false, message });
         }

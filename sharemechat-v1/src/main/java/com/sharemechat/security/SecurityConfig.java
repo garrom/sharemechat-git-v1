@@ -178,6 +178,12 @@ public class SecurityConfig {
                 "https://admin.test.sharemechat.com",
                 "https://www.test.sharemechat.com",
                 "https://test.sharemechat.com",
+                "https://www.audit.sharemechat.com",
+                "https://audit.sharemechat.com",
+                "https://admin.audit.sharemechat.com",
+                "https://sharemechat.com",
+                "https://www.sharemechat.com",
+                "https://admin.sharemechat.com",
                 "http://localhost:3000"
         ));
 
