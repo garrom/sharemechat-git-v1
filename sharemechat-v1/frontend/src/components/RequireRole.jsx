@@ -1,5 +1,5 @@
 // src/components/RequireRole.jsx
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { Redirect } from 'react-router-dom';
 import { useSession } from './SessionProvider';
 import { hasBackofficeRole } from '../utils/backofficeAccess';
@@ -13,26 +13,11 @@ const normalizeUserTypes = (items) => {
 };
 
 const RequireRole = ({ role, roles, backofficeRoles, allowedUserTypes, children }) => {
-  const { user, loading, refresh } = useSession();
-  const triedRef = useRef(false);
-  const [retrying, setRetrying] = useState(false);
+  const { user, loading } = useSession();
 
-  useEffect(() => {
-    if (loading) return;
-
-    // Si no hay user, reintentamos 1 vez (por si hubo fallo temporal)
-    if (!user && !triedRef.current) {
-      triedRef.current = true;
-      setRetrying(true);
-      Promise.resolve(refresh())
-        .finally(() => setRetrying(false));
-    }
-  }, [loading, user, refresh]);
-
-  if (loading || retrying) return null;
+  if (loading) return null;
 
   if (!user) {
-    if (!triedRef.current) return null;
     return <Redirect to="/login" />;
   }
 

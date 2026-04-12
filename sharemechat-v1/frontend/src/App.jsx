@@ -23,6 +23,7 @@ import ProductEmailVerificationPage from './public-pages/ProductEmailVerificatio
 import Roles from './constants/Roles';
 import UserTypes from './constants/UserTypes';
 import { ModalProvider } from './components/ModalProvider';
+import EmailNotVerifiedModalBridge from './components/EmailNotVerifiedModalBridge';
 import GuestConsentGate from './consent/GuestConsentGate';
 import { GlobalTypography } from './styles/core/typography';
 import Footer from './footer/Footer';
@@ -59,6 +60,7 @@ function App() {
         <CallUiProvider>
           <ModalProvider>
             <>
+              <EmailNotVerifiedModalBridge />
               <GlobalTypography />
 
               {adminSurface ? (

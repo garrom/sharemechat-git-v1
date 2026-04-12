@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { Redirect } from 'react-router-dom';
 import AdminLoginForm from './AdminLoginForm';
 import { useSession } from '../../components/SessionProvider';
@@ -6,14 +6,7 @@ import { canAccessBackoffice } from '../../utils/backofficeAccess';
 import { resolveHomeUrl } from '../../utils/runtimeSurface';
 
 const AdminAccessPage = () => {
-  const { user, loading, refresh } = useSession();
-  const triedRef = useRef(false);
-
-  useEffect(() => {
-    if (triedRef.current) return;
-    triedRef.current = true;
-    refresh();
-  }, [refresh]);
+  const { user, loading } = useSession();
 
   if (loading) {
     return (

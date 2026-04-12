@@ -48,6 +48,8 @@ import useActiveInteraction from '../../domain/useActiveInteraction';
 import Estadistica from './Estadistica';
 import { attachMediaObserver, createIdleMediaState, createMediaStateSnapshot, resetMediaObserver } from '../../utils/mediaState';
 import AuthenticatedConsentModal from '../../consent/AuthenticatedConsentModal';
+import { isAdminSurface } from '../../utils/runtimeSurface';
+import { canAccessBackoffice } from '../../utils/backofficeAccess';
 
 
 const DashboardModel = () => {
@@ -183,7 +185,8 @@ const DashboardModel = () => {
   const randomRemoteMediaCleanupRef = useRef(() => {});
   const callLocalMediaCleanupRef = useRef(() => {});
   const callRemoteMediaCleanupRef = useRef(() => {});
-  const consentRequired = !!sessionUser?.consentRequired;
+  const bypassProductConsent = isAdminSurface() || canAccessBackoffice(sessionUser);
+  const consentRequired = !bypassProductConsent && !!sessionUser?.consentRequired;
   const consentVersion = sessionUser?.requiredTermsVersion || 'v1';
   const sensitiveEnabled = !!sessionUser && !consentRequired;
 

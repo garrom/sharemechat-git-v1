@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { apiFetch } from '../../config/http';
+import { useModal } from '../../components/ModalProvider';
 import { useSession } from '../../components/SessionProvider';
+import { canAccessBackoffice } from '../../utils/backofficeAccess';
 import { buildAdminAppUrl, navigateToUrl } from '../../utils/runtimeSurface';
 import { getApiErrorMessage, isEmailNotVerifiedError } from '../../utils/apiErrors';
 
@@ -36,11 +38,13 @@ const buttonStyle = {
 
 const AdminLoginForm = () => {
   const history = useHistory();
+  const { openModal, closeModal, alert } = useModal();
   const { refresh } = useSession();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const modalOpenRef = useRef(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -60,13 +64,62 @@ const AdminLoginForm = () => {
         body: JSON.stringify({ email, password }),
       });
 
-      await refresh();
-      navigateToUrl(buildAdminAppUrl('/dashboard-admin'), history);
+      const refreshedUser = await refresh();
+
+      if (refreshedUser && canAccessBackoffice(refreshedUser)) {
+        navigateToUrl(buildAdminAppUrl('/dashboard-admin'), history);
+      } else {
+        setError('No se pudo validar la sesion interna. Intentalo de nuevo.');
+      }
     } catch (err) {
       const statusCode = Number(err?.status);
 
       if (isEmailNotVerifiedError(err)) {
         setError('Debes verificar tu email antes de acceder al backoffice.');
+
+        if (!modalOpenRef.current) {
+          modalOpenRef.current = true;
+
+          openModal({
+            title: 'Email no verificado',
+            variant: 'warning',
+            size: 'sm',
+            onClose: () => closeModal(),
+            content: 'Debes validar tu email antes de acceder al backoffice.',
+            actions: [
+              {
+                label: 'Mas tarde',
+                onClick: () => closeModal(false),
+              },
+              {
+                label: 'Reenviar email',
+                primary: true,
+                onClick: async () => {
+                  try {
+                    await apiFetch('/email-verification/resend', { method: 'POST' });
+                    closeModal(true);
+                    await alert({
+                      title: 'Email reenviado',
+                      message: 'Te hemos reenviado el email de validacion.',
+                      variant: 'success',
+                      size: 'sm',
+                    });
+                  } catch (resendError) {
+                    closeModal(false);
+                    await alert({
+                      title: 'No se pudo reenviar',
+                      message: resendError?.data?.message || 'No se pudo reenviar el email de validacion.',
+                      variant: 'warning',
+                      size: 'sm',
+                    });
+                  }
+                },
+              },
+            ],
+          }).finally(() => {
+            modalOpenRef.current = false;
+          });
+        }
       } else if (statusCode === 401) {
         setError('Credenciales invalidas.');
       } else if (statusCode === 403) {
