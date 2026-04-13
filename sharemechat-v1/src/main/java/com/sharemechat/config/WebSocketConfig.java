@@ -21,7 +21,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        String[] origins = { "https://test.sharemechat.com", "http://localhost:3000" };
+        String[] origins = {
+                "https://test.sharemechat.com",
+                "https://audit.sharemechat.com",
+                "http://localhost:3000"
+        };
 
         registry.addHandler(matchingHandler, "/match")
                 .setAllowedOriginPatterns(origins);

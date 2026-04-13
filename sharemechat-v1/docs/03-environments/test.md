@@ -38,19 +38,30 @@ La activacion efectiva depende de variables de entorno y no queda fijada de form
 - varias rutas y constantes frontend siguen acopladas a este entorno
 - la documentacion previa indicaba que la topologia edge y buckets privados de frontend ya estaban operativos, pero ese detalle se ha saneado aqui
 
-## Estado de activacion de storage privado
+## Storage privado activo
 
-TEST ya esta en paridad de aplicacion con AUDIT para operar uploads privados sobre S3:
+TEST ya opera con proveedor S3 privado para uploads sensibles.
+
+La validacion funcional confirma:
 
 - la abstraccion `StorageService` ya soporta proveedor local y proveedor S3
 - la seleccion de proveedor depende de configuracion por entorno
 - el acceso a contenido privado sigue pasando por `/api/storage/content`
 - la politica de acceso al proxy privado ya esta resuelta en codigo y no depende del entorno
+- la subida de documentos funciona y los objetos se almacenan en el storage privado esperado
 
-Por tanto, a nivel Spring Boot no se observa un bloqueo especifico de TEST distinto del que ya tuvo AUDIT antes de activarse. Si TEST sigue en local, el trabajo pendiente pasa por activacion operativa del entorno, como minimo:
+La activacion real ha requerido en el entorno, como minimo:
 
 - `APP_STORAGE_TYPE=s3`
 - `APP_STORAGE_S3_BUCKET`
 - `APP_STORAGE_S3_REGION`
 
-Y por validar que el host del backend disponga de credenciales AWS resolubles en runtime mediante el mecanismo estandar del proveedor, sin secretos hardcodeados en el codigo ni en properties versionadas.
+Y que el host del backend disponga de credenciales AWS resolubles en runtime mediante el mecanismo estandar del proveedor, sin secretos hardcodeados en el codigo ni en properties versionadas.
+
+El legacy asociado a referencias historicas `/uploads/...` ya ha quedado eliminado en TEST:
+
+- limpieza completa de referencias persistidas antiguas
+- eliminacion del filesystem local legado como fuente activa de estos uploads
+- operacion efectiva del entorno exclusivamente sobre S3 privado y proxy backend
+
+Se mantuvo backup previo del material legado como medida de seguridad operativa.

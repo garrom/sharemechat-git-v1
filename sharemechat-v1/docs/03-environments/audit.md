@@ -35,7 +35,7 @@ Se elimina del corpus principal el detalle de:
 ## Riesgos y dudas
 
 - la documentacion previa detectaba diferencias de fallback SPA entre TEST y AUDIT en la capa edge
-- el codigo versionado de WebSocket sigue mostrando origenes permitidos centrados en TEST y localhost
+- el realtime del entorno depende de Redis como componente operativo adicional al backend HTTP y WebSocket
 - la validacion de uploads privados en AUDIT ya opera sobre S3 privado, pero el mismo nivel de activacion y validacion todavia puede seguir pendiente en otros entornos
 
 Estos puntos deben revisarse cuando se actualice especificamente la documentacion y validacion tecnica del entorno AUDIT.
@@ -66,4 +66,16 @@ La validacion funcional de AUDIT ya ha confirmado:
 - acceso autenticado segun la matriz de roles ya documentada
 - ausencia de dependencia operativa de `/usr/share/nginx/html/uploads`
 
+El legacy asociado a referencias historicas `/uploads/...` ya ha quedado eliminado en AUDIT:
+
+- limpieza completa de referencias persistidas antiguas
+- eliminacion del filesystem local legado como fuente activa de estos uploads
+- operacion efectiva del entorno exclusivamente sobre S3 privado y proxy backend
+
 El error posterior de validacion de fichero ya pertenece a otra linea de trabajo y no a la activacion de infraestructura S3.
+
+## Realtime operativo
+
+AUDIT ya ha validado funcionamiento completo de realtime tras nivelar la publicacion de WebSocket y completar la dependencia de Redis en la maquina del backend.
+
+Para este entorno, Redis debe considerarse dependencia obligatoria del matching y de la coordinacion realtime, con servicio activo en localhost sobre el puerto esperado por la aplicacion.

@@ -15,6 +15,10 @@ Responsabilidades principales:
 - chat embebido del flujo aleatorio
 - coordinación de señalización WebRTC
 
+Dependencia operativa minima:
+
+- Redis como soporte de colas de matching, estado de disponibilidad y coordinacion realtime
+
 ## `/messages`
 
 Responsabilidades principales:
@@ -31,4 +35,4 @@ La evidencia actual del código indica que la confirmación operativa del stream
 
 ## Riesgo técnico documentado
 
-La seguridad WebSocket no descansa en el cierre HTTP de rutas, sino en autenticación y validaciones dentro de los handlers. Además, la configuración versionada de orígenes permitidos para WebSocket sólo refleja test y localhost, aunque otras capas del sistema ya contemplan audit y dominios públicos adicionales.
+La seguridad WebSocket no descansa en el cierre HTTP de rutas, sino en autenticación y validaciones dentro de los handlers. La configuracion versionada de origenes permitidos ya contempla TEST, AUDIT y localhost. La publicacion efectiva de `/match` y `/messages` sigue dependiendo ademas de que la capa publica del entorno enrute esas rutas al backend correcto y no a un fallback HTML.

@@ -27,7 +27,7 @@ Según el código actual del repositorio, el sistema contiene piezas activas o c
 - realtime por WebSocket en `/match` y `/messages`
 - persistencia principal en MySQL
 - estado operativo efímero en Redis
-- uploads locales servidos por Nginx
+- uploads privados servidos por backend y almacenados en storage configurable
 - trazabilidad de streams, mensajes y economía interna
 
 ## Estado funcional del producto

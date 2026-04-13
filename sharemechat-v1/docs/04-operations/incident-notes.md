@@ -95,3 +95,61 @@ Resolucion documentable:
 - una vez corregido ese punto, la subida dejo de fallar por infraestructura S3
 
 El error posterior de validacion de contenido de fichero pertenece a una linea funcional distinta y no reabre la incidencia de storage en AUDIT.
+
+La misma estrategia ya ha quedado activada tambien en TEST sin cambios adicionales en Spring Boot. La validacion de TEST confirma que la aplicacion estaba igualmente preparada a nivel de codigo y que el trabajo restante era operativo, no de implementacion backend.
+
+Como cierre posterior del frente legacy, TEST y AUDIT ya han eliminado tambien:
+
+- referencias persistidas antiguas a `/uploads/...`
+- dependencia operativa del filesystem local legado para estos documentos
+
+Ambos entornos quedan documentados como operativos exclusivamente sobre S3 privado con acceso mediado por backend para este tipo de contenido.
+
+### WebSocket realtime desalineado en AUDIT frente a TEST
+
+Se detecta una incidencia operativa en AUDIT al intentar abrir los canales realtime `wss://audit.sharemechat.com/messages` y `wss://audit.sharemechat.com/match`.
+
+Lo validado hasta ahora apunta a este patron:
+
+- navegador recibe `200 text/html` en lugar de `101 Switching Protocols`
+- cliente y modelo registran fallo de conexion WebSocket
+- Nginx en la EC2 ya expone bloques `location /messages` y `location /match` con `proxy_pass` al backend y cabeceras `Upgrade`
+- una llamada local de comprobacion contra Nginx devuelve `405` con `Allow: GET,CONNECT`, lo que indica que la ruta llega al backend WebSocket y no a una pagina SPA en esa capa
+- Spring Boot registra `Handshake failed due to unexpected HTTP method: HEAD` durante la validacion con `curl -I`, lo que es consistente con handlers WebSocket registrados
+
+La inferencia operativa principal es que la rotura no esta en el frontend ni en la configuracion base de Spring Boot o Nginx de la EC2, sino en una capa publica anterior a la maquina del backend. La hipotesis mas fuerte es desalineacion de routing o behavior para `/messages*` y `/match*` en AUDIT frente a TEST, con caida en origin o fallback HTML equivocado.
+
+Queda ademas una segunda desviacion ya visible en codigo versionado: `WebSocketConfig` solo permite origenes de TEST y localhost. Aunque eso no explica por si solo un `200 text/html`, si la capa edge se corrige sin tocar esa lista, AUDIT podria seguir fallando despues con rechazo de origen.
+
+Correccion minima aplicada en codigo:
+
+- `WebSocketConfig` ya incluye `https://audit.sharemechat.com` junto a TEST y localhost
+
+Con ello, el backend deja de mantener una desalineacion propia de origen permitido. El frente pendiente para cerrar la incidencia queda acotado a la capa publica de AUDIT, donde `/messages*` y `/match*` deben replicar el mismo routing efectivo que TEST hacia backend/Nginx y dejar de devolver HTML.
+
+Resolucion posterior documentable:
+
+- la publicacion de `/messages*` y `/match*` en AUDIT quedo nivelada con TEST
+- WebSocket paso a funcionar correctamente en la capa publica
+- aun asi, seguia sin haber emparejamiento entre cliente y modelo
+- los logs del backend mostraban `Unable to connect to Redis`
+- en la maquina de AUDIT no existia Redis instalado ni servicio escuchando en `127.0.0.1:6379`
+
+La causa raiz real del fallo de matching ya no estaba en WebSocket, sino en la ausencia de Redis en el entorno AUDIT. El backend depende de Redis para:
+
+- colas de matching
+- estado de disponibilidad
+- coordinacion en tiempo real
+
+La resolucion aplicada fue:
+
+- instalacion de Redis en la EC2 de AUDIT
+- habilitacion y arranque del servicio
+- verificacion de escucha local en `127.0.0.1:6379`
+- reinicio posterior del backend
+
+Resultado verificado:
+
+- matching operativo en AUDIT
+- cliente y modelo emparejan
+- flujo realtime completo funcionando en el entorno

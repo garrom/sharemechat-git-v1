@@ -8,7 +8,7 @@ La arquitectura general del proyecto sigue este patrón lógico:
 - realtime por WebSocket en `/match` y `/messages`
 - persistencia principal en MySQL
 - estado operativo y controles efímeros en Redis
-- uploads locales servidos por Nginx
+- uploads privados servidos por backend y almacenados en storage configurable, con S3 privado como estrategia activa
 
 ## Topología lógica
 

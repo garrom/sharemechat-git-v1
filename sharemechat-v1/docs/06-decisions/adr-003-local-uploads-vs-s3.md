@@ -2,7 +2,7 @@
 
 ## Estado
 
-Aceptada e implementada. AUDIT ya opera con esta estrategia; la activacion efectiva en otros entornos sigue pendiente de configuracion y validacion.
+Aceptada e implementada. TEST y AUDIT ya operan con esta estrategia y han cerrado el legacy conocido de `/uploads/...` asociado a estos uploads privados; la activacion efectiva en otros entornos futuros seguiria dependiendo de configuracion y validacion.
 
 ## Contexto
 
@@ -139,5 +139,4 @@ La activacion real requiere completar configuracion por entorno, al menos:
 
 - activar configuracion S3 por entorno donde siga pendiente
 - validar buckets, prefijos y permisos reales
-- definir migracion de referencias antiguas `/uploads/...` si existen documentos historicos relevantes
 - decidir si fases posteriores necesitan URLs firmadas para ciertos flujos de descarga intensiva
