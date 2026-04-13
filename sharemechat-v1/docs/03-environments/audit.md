@@ -74,6 +74,26 @@ El legacy asociado a referencias historicas `/uploads/...` ya ha quedado elimina
 
 El error posterior de validacion de fichero ya pertenece a otra linea de trabajo y no a la activacion de infraestructura S3.
 
+## Límite HTTP de subida
+
+La subida de media grande en AUDIT depende tambien del limite efectivo de la capa HTTP publica y de Nginx.
+
+Con los limites backend actualmente versionados:
+
+- `spring.servlet.multipart.max-file-size=50MB`
+- `spring.servlet.multipart.max-request-size=60MB`
+
+la configuracion operativa de Nginx debe quedar alineada para no rechazar antes de tiempo peticiones multipart validas para backend. El ajuste minimo documentado para este entorno es fijar `client_max_body_size` en `60M`.
+
+En una iteracion posterior se realizo una nivelacion controlada del vhost API de AUDIT respecto a TEST, sin tocar el `nginx.conf` base ni arrastrar bloques legacy no necesarios. Quedaron alineados en ese vhost:
+
+- headers forward relevantes para `/api`, `/match` y `/messages`
+- timeouts largos de `/messages`
+- headers razonables de hardening a nivel server
+- cierre explicito de rutas no previstas con `404`
+
+La comparacion del resto de configuracion Nginx fuera de ese vhost sigue dependiendo de extraer y revisar los ficheros reales de entorno, porque no estan versionados en el repositorio principal.
+
 ## Realtime operativo
 
 AUDIT ya ha validado funcionamiento completo de realtime tras nivelar la publicacion de WebSocket y completar la dependencia de Redis en la maquina del backend.

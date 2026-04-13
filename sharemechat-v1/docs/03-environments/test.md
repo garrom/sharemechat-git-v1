@@ -37,6 +37,7 @@ La activacion efectiva depende de variables de entorno y no queda fijada de form
 - TEST es la principal fuente de verdad funcional del repositorio
 - varias rutas y constantes frontend siguen acopladas a este entorno
 - la documentacion previa indicaba que la topologia edge y buckets privados de frontend ya estaban operativos, pero ese detalle se ha saneado aqui
+- conviene mantener explicitamente alineado el limite HTTP de subida de la capa publica con los limites multipart versionados en backend para evitar divergencias futuras con AUDIT
 
 ## Storage privado activo
 

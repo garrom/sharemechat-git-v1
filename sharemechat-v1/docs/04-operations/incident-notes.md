@@ -153,3 +153,82 @@ Resultado verificado:
 - matching operativo en AUDIT
 - cliente y modelo emparejan
 - flujo realtime completo funcionando en el entorno
+
+### Rechazo 413 en subida de video de perfil en AUDIT
+
+Se detecta una incidencia operativa en AUDIT al subir el video de perfil de modelo mediante `POST /api/models/documents`.
+
+Sintoma observado:
+
+- navegador recibe `413 Content Too Large`
+- la subida de foto de perfil si funciona en el mismo flujo
+- el fichero probado era un MP4 de 24.3 MB, 20 segundos, alta resolucion y bitrate alto
+
+Lo que queda soportado por codigo versionado es:
+
+- `ModelController` acepta `video` dentro de `/api/models/documents`
+- `StorageService` permite extensiones `mp4` y `webm`
+- `app.storage.max-file-size-bytes=52428800`
+- `spring.servlet.multipart.max-file-size=50MB`
+- `spring.servlet.multipart.max-request-size=60MB`
+
+Con esa evidencia, el fichero probado no deberia ser rechazado por el limite de storage ni por los limites multipart versionados en Spring Boot. La causa queda acotada a una capa HTTP previa al controller.
+
+Diagnostico operativo confirmado:
+
+- en Nginx de AUDIT no existe `client_max_body_size`
+- eso deja activo el limite efectivo por defecto de Nginx
+- el `413` se produce antes de llegar al backend
+
+La correccion minima necesaria para AUDIT es explicita:
+
+- fijar `client_max_body_size 60M` en la configuracion efectiva de Nginx del entorno
+
+El valor `60M` se elige para respetar el `spring.servlet.multipart.max-request-size=60MB` ya versionado en backend y evitar rechazo prematuro en la capa HTTP publica.
+
+El caso no apunta por ahora a una regla funcional de negocio especifica para video de perfil. La siguiente accion correcta es validar y alinear el limite efectivo de subida en la capa publica con los limites ya versionados en backend, y despues decidir una politica explicita de producto para video de perfil.
+
+### Divergencia estructural de Nginx entre TEST y AUDIT
+
+Las incidencias reales ya resueltas en AUDIT confirman que TEST y AUDIT no han estado realmente nivelados en la capa Nginx y publicacion HTTP.
+
+Hechos confirmados por operacion:
+
+- AUDIT sufrio desviaciones reales en routing publico de WebSocket
+- AUDIT sufrio rechazo `413` por limite HTTP de subida no alineado con backend
+- TEST y AUDIT ya quedaron alineados al menos en `client_max_body_size 60M`
+
+Tambien queda confirmado a nivel operativo que TEST mantiene mas configuracion historica de Nginx que AUDIT, incluyendo mas headers, proxy headers, hardening y bloques adicionales. Sin embargo, el repositorio principal no contiene los ficheros reales de Nginx de ambos entornos, por lo que la comparacion exacta por directiva sigue pendiente de inventario controlado fuera del repo.
+
+Con la evidencia disponible, la clasificacion correcta de diferencias queda asi:
+
+- ya causaron incidencia real: routing publico de WebSocket y limite HTTP de subida en AUDIT
+- plausiblemente relevantes, pero no todavia inventariadas con prueba documental en repo: headers de seguridad, proxy headers, timeouts, redirects y otros bloques historicos presentes en TEST
+- no verificables aun como inocuas o necesarias sin extraer antes la configuracion real de ambos entornos
+
+La siguiente accion correcta no es copiar TEST a ciegas sobre AUDIT, sino:
+
+- extraer configuracion real de ambos entornos
+- clasificar diferencias inocuas frente a diferencias funcionales o de hardening
+- nivelar en AUDIT solo lo que tenga impacto demostrado o valor claro de endurecimiento
+
+Resolucion posterior documentable:
+
+- se realizo una nivelacion controlada del vhost API de AUDIT respecto a TEST
+- no se modifico el `nginx.conf` global
+- no se arrastraron bloques legacy de `/uploads` ni `/assets`
+- en `/api` se alinearon `X-Forwarded-Proto`, `Authorization` y la estrategia de `proxy_hide_header`
+- en `/match` y `/messages` se alinearon `Host`, `X-Real-IP`, `X-Forwarded-For` y `X-Forwarded-Proto`
+- en `/messages` se alinearon tambien los timeouts largos
+- a nivel server se anadieron headers razonables de hardening y cierre explicito de rutas no previstas con `404`
+
+La validacion operativa posterior confirmo:
+
+- `nginx -t` correcto
+- recarga correcta
+- raiz del vhost API cerrada con `404`
+- headers de hardening presentes
+- proxy `/api` operativo
+- matching, `/messages` y uploads funcionando
+
+Con ello, la divergencia relevante ya documentada en el vhost API de AUDIT queda resuelta. La deuda residual pasa a ser de trazabilidad y comparacion futura de configuracion real fuera del repo, no de un fallo funcional abierto en ese vhost.
