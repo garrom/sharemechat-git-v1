@@ -106,7 +106,7 @@ public class ClientController {
 
         try {
             // 1) Subir nuevo archivo
-            String keyPrefix = "clients/" + user.getId();
+            String keyPrefix = "clients/" + user.getId() + "/profile";
             String newUrl = storageService.store(pic, keyPrefix);
 
             // 2) Persistir/crear doc y capturar la URL anterior

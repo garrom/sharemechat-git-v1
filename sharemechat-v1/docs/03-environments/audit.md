@@ -1,26 +1,26 @@
 # Entorno AUDIT
 
-## Propósito
+## Proposito
 
-AUDIT se plantea como un entorno aislado para revisión, validación y preparación de auditorías sin interferir con TEST.
+AUDIT se plantea como un entorno aislado para revision, validacion y preparacion de auditorias sin interferir con TEST.
 
-## Aporte útil consolidado del material previo
+## Aporte util consolidado del material previo
 
-La documentación previa permite sostener que AUDIT:
+La documentacion previa permite sostener que AUDIT:
 
-- replica la topología lógica de TEST
-- dispone de superficie pública, superficie admin, backend y assets dedicados
-- tiene profile de aplicación propio
+- replica la topologia logica de TEST
+- dispone de superficie publica, superficie admin, backend y assets dedicados
+- tiene profile de aplicacion propio
 - utiliza base de datos separada
-- se preparó con saneado funcional de datos para evitar arrastrar actividad operativa de TEST
+- se preparo con saneado funcional de datos para evitar arrastrar actividad operativa de TEST
 
 ## Estado documentable
 
-AUDIT debe entenderse como entorno construido y funcional a nivel base, con estos hitos ya absorbidos a nivel lógico:
+AUDIT debe entenderse como entorno construido y funcional a nivel base, con estos hitos ya absorbidos a nivel logico:
 
-- aislamiento de aplicación y datos
+- aislamiento de aplicacion y datos
 - base de datos preparada como entorno limpio
-- despliegue previsto para frontend, backend y validación end-to-end
+- despliegue previsto para frontend, backend y validacion end-to-end
 
 ## Saneado aplicado
 
@@ -29,12 +29,41 @@ Se elimina del corpus principal el detalle de:
 - identificadores de distribuciones y certificados
 - buckets concretos
 - endpoints exactos de base de datos
-- direcciones IP públicas
-- security groups y subnets específicas
+- direcciones IP publicas
+- security groups y subnets especificas
 
 ## Riesgos y dudas
 
-- la documentación previa detectaba diferencias de fallback SPA entre TEST y AUDIT en la capa edge
-- el código versionado de WebSocket sigue mostrando orígenes permitidos centrados en TEST y localhost
+- la documentacion previa detectaba diferencias de fallback SPA entre TEST y AUDIT en la capa edge
+- el codigo versionado de WebSocket sigue mostrando origenes permitidos centrados en TEST y localhost
+- la validacion de uploads privados en AUDIT ya opera sobre S3 privado, pero el mismo nivel de activacion y validacion todavia puede seguir pendiente en otros entornos
 
-Ambos puntos deben revisarse cuando se actualice específicamente la documentación y validación técnica del entorno AUDIT.
+Estos puntos deben revisarse cuando se actualice especificamente la documentacion y validacion tecnica del entorno AUDIT.
+
+## Storage privado activo
+
+AUDIT ya opera con proveedor S3 privado para uploads sensibles sin cambios adicionales de arquitectura en frontend ni en backend.
+
+La activacion funcional ha requerido en el despliegue del backend, como minimo:
+
+- `APP_STORAGE_TYPE=s3`
+- `APP_STORAGE_S3_BUCKET`
+- `APP_STORAGE_S3_REGION`
+
+Configuracion opcional segun el entorno real:
+
+- `APP_STORAGE_S3_KEY_PREFIX`
+- `APP_STORAGE_S3_ENDPOINT`
+- `APP_STORAGE_S3_PATH_STYLE_ACCESS`
+- `APP_STORAGE_S3_SERVER_SIDE_ENCRYPTION`
+
+La aplicacion usa credenciales AWS estandar del host mediante `DefaultCredentialsProvider`, por lo que no necesita secretos hardcodeados en codigo ni en properties versionadas. La validacion operativa de AUDIT confirmo que este punto exige un instance profile operativo en la maquina del backend.
+
+La validacion funcional de AUDIT ya ha confirmado:
+
+- subida correcta de documentos a traves del backend
+- lectura del media solo a traves de `/api/storage/content`
+- acceso autenticado segun la matriz de roles ya documentada
+- ausencia de dependencia operativa de `/usr/share/nginx/html/uploads`
+
+El error posterior de validacion de fichero ya pertenece a otra linea de trabajo y no a la activacion de infraestructura S3.

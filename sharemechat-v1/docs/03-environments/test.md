@@ -1,10 +1,10 @@
 # Entorno TEST
 
-## Propósito
+## Proposito
 
-TEST actúa como entorno principal de trabajo y validación funcional del producto.
+TEST actua como entorno principal de trabajo y validacion funcional del producto.
 
-## Lo que está claramente soportado
+## Lo que esta claramente soportado
 
 - frontend de producto
 - frontend de backoffice
@@ -13,20 +13,27 @@ TEST actúa como entorno principal de trabajo y validación funcional del produc
 - Redis
 - realtime por `/match` y `/messages`
 - assets legales externos
-- uploads locales servidos por backend/Nginx
+- uploads privados servidos por backend
 
-## Configuración versionada relevante
+## Configuracion versionada relevante
 
-El código versionado apunta de forma explícita a dominios de test para:
+El codigo versionado apunta de forma explicita a dominios de test para:
 
-- cookies de autenticación
-- verificación de email
+- cookies de autenticacion
+- verificacion de email
 - reset de password
 - callback KYC
-- separación entre superficie de producto y admin
+- separacion entre superficie de producto y admin
+
+El storage de uploads privados ya es configurable por proveedor:
+
+- local
+- S3 privado
+
+La activacion efectiva depende de variables de entorno y no queda fijada de forma dura en este documento.
 
 ## Observaciones
 
 - TEST es la principal fuente de verdad funcional del repositorio
 - varias rutas y constantes frontend siguen acopladas a este entorno
-- la documentación previa indicaba que la topología edge y buckets privados de frontend ya estaban operativos, pero ese detalle se ha saneado aquí
+- la documentacion previa indicaba que la topologia edge y buckets privados de frontend ya estaban operativos, pero ese detalle se ha saneado aqui

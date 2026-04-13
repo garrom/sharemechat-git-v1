@@ -67,3 +67,31 @@ La restriccion pasa a concentrarse en un unico punto visible de la UI privada:
 - solo se exponen el aviso superior, el reenvio de validacion y el cierre de sesion
 
 Con este cambio, el enforcement deja de depender del flujo de login y se alinea con un patron de bloqueo visual centralizado, mas parecido al gating ya usado en la superficie de producto.
+
+### Fallo de uploads de documentos en AUDIT
+
+Se detecto una incidencia operativa repetible en `audit.sharemechat.com/model-documents`: la subida de documentos de usuario termina en `500` y el backend registra `java.nio.file.AccessDeniedException: /usr/share/nginx/html/uploads`.
+
+El flujo versionado de uploads usa `StorageService` con implementacion `LocalStorageService` por defecto y escribe directamente en `app.storage.local.root`, configurado como `/usr/share/nginx/html/uploads`. En el profile de AUDIT no existe override versionado para cambiar de proveedor ni de ruta.
+
+El problema inmediato no es de frontend ni del controller de modelo, sino del almacenamiento operativo local sobre una ruta del filesystem que en AUDIT no admite escritura para el proceso backend. La incidencia reabre la decision pendiente sobre si mantener uploads locales endurecidos o mover documentos de usuario a una estrategia de storage desacoplada del host.
+
+La recomendacion documentada pasa a ser migrar uploads privados de usuario a storage privado desacoplado del host, con S3 como direccion objetivo y acceso mediado por backend para documentos sensibles.
+
+La base tecnica ya queda implementada en el codigo versionado:
+
+- `StorageService` soporta proveedor local y proveedor S3
+- existe proxy backend para servir contenido privado
+- la subida sigue pasando por backend
+
+Como endurecimiento posterior, el proxy privado `/api/storage/content` deja de admitir acceso anonimo. El media de perfil sigue disponible para usuarios autenticados dentro del flujo funcional del producto, mientras verification y KYC quedan restringidos a propietario o backoffice.
+
+La incidencia operativa deja de ser falta de diseño y pasa a depender de activar correctamente la configuracion S3 por entorno, empezando por AUDIT.
+Resolucion documentable:
+
+- AUDIT ya activa storage S3 privado para uploads sensibles
+- la validacion operativa confirmo que el backend necesitaba credenciales AWS resolubles por el host en runtime
+- el bloqueo real de infraestructura era la ausencia de instance profile operativo en la maquina del backend
+- una vez corregido ese punto, la subida dejo de fallar por infraestructura S3
+
+El error posterior de validacion de contenido de fichero pertenece a una linea funcional distinta y no reabre la incidencia de storage en AUDIT.

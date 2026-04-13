@@ -1,24 +1,24 @@
 # Arquitectura backend
 
-El backend es una aplicación Spring Boot sobre Java 17 que concentra:
+El backend es una aplicacion Spring Boot sobre Java 17 que concentra:
 
-- autenticación y sesión
+- autenticacion y sesion
 - APIs REST de producto
 - APIs de backoffice
-- señalización realtime
-- lógica económica
+- senalizacion realtime
+- logica economica
 - trazabilidad operativa
 
-## Áreas funcionales principales
+## Areas funcionales principales
 
-- autenticación con JWT y refresh token persistido
+- autenticacion con JWT y refresh token persistido
 - usuarios, perfiles y onboarding
 - wallet, gifts, payout y refund
 - mensajes, favoritos y bloqueos
 - streams y su trazabilidad
-- moderación
+- moderacion
 - backoffice y permisos
-- auditoría contable interna
+- auditoria contable interna
 
 ## Persistencia y estado
 
@@ -27,10 +27,14 @@ El backend es una aplicación Spring Boot sobre Java 17 que concentra:
 
 ## Observaciones relevantes
 
-- el storage versionado es local, no S3
-- el backend está preparado para operar detrás de proxy
-- las integraciones de email están mejor asentadas que PSP y KYC externo
+- el storage versionado para uploads privados soporta proveedor local y proveedor S3
+- el backend mantiene el control de acceso a documentos privados mediante proxy propio
+- el proxy de storage exige autenticacion para todo acceso
+- el media funcional de modelos se sirve a owner, CLIENT, MODEL o backoffice; el media funcional de clientes se sirve a owner, MODEL o backoffice
+- verification y KYC quedan limitados a propietario o backoffice
+- el backend esta preparado para operar detras de proxy
+- las integraciones de email estan mejor asentadas que PSP y KYC externo
 
 ## Incertidumbres que se preservan
 
-El código muestra evolución incremental en varias áreas. Hay piezas que parecen operativas y otras transicionales. La documentación debe tratar como parciales, salvo nueva validación, la integración PSP final y la activación plena del proveedor KYC.
+El codigo muestra evolucion incremental en varias areas. Hay piezas que parecen operativas y otras transicionales. La documentacion debe tratar como parciales, salvo nueva validacion, la integracion PSP final y la activacion plena del proveedor KYC.

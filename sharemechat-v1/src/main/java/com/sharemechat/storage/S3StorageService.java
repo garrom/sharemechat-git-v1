@@ -4,16 +4,26 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
+import software.amazon.awssdk.services.s3.model.ServerSideEncryption;
 
 import java.io.IOException;
-import java.nio.file.Files;
+import java.io.InputStream;
+import java.net.URI;
 import java.nio.file.NoSuchFileException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
 import java.util.Objects;
@@ -22,11 +32,26 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Service
-@ConditionalOnProperty(name = "app.storage.type", havingValue = "local", matchIfMissing = true)
-public class LocalStorageService implements StorageService {
+@ConditionalOnProperty(name = "app.storage.type", havingValue = "s3")
+public class S3StorageService implements StorageService {
 
-    @Value("${app.storage.local.root:/usr/share/nginx/html/uploads}")
-    private String root;
+    @Value("${app.storage.s3.bucket:}")
+    private String bucket;
+
+    @Value("${app.storage.s3.region:}")
+    private String region;
+
+    @Value("${app.storage.s3.endpoint:}")
+    private String endpoint;
+
+    @Value("${app.storage.s3.key-prefix:private-uploads}")
+    private String keyPrefixRoot;
+
+    @Value("${app.storage.s3.path-style-access:false}")
+    private boolean pathStyleAccess;
+
+    @Value("${app.storage.s3.server-side-encryption:AES256}")
+    private String serverSideEncryption;
 
     @Value("${app.storage.allowed-extensions:jpg,jpeg,png,webp,gif,mp4,webm,pdf}")
     private String allowedExtensionsCsv;
@@ -38,6 +63,13 @@ public class LocalStorageService implements StorageService {
     private int maxBaseNameLength;
 
     private Set<String> allowedExtensions;
+    private S3Client s3Client;
+
+    private final StorageUrlCodec storageUrlCodec;
+
+    public S3StorageService(StorageUrlCodec storageUrlCodec) {
+        this.storageUrlCodec = storageUrlCodec;
+    }
 
     @jakarta.annotation.PostConstruct
     void init() {
@@ -46,8 +78,33 @@ public class LocalStorageService implements StorageService {
                 .map(String::toLowerCase)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toCollection(LinkedHashSet::new));
+
         if (allowedExtensions.isEmpty()) {
             throw new IllegalStateException("app.storage.allowed-extensions no puede estar vacio");
+        }
+        if (!StringUtils.hasText(bucket)) {
+            throw new IllegalStateException("app.storage.s3.bucket es obligatorio cuando app.storage.type=s3");
+        }
+        if (!StringUtils.hasText(region)) {
+            throw new IllegalStateException("app.storage.s3.region es obligatorio cuando app.storage.type=s3");
+        }
+
+        var builder = S3Client.builder()
+                .region(Region.of(region))
+                .credentialsProvider(DefaultCredentialsProvider.create())
+                .forcePathStyle(pathStyleAccess);
+
+        if (StringUtils.hasText(endpoint)) {
+            builder.endpointOverride(URI.create(endpoint));
+        }
+
+        s3Client = builder.build();
+    }
+
+    @jakarta.annotation.PreDestroy
+    void destroy() {
+        if (s3Client != null) {
+            s3Client.close();
         }
     }
 
@@ -81,75 +138,99 @@ public class LocalStorageService implements StorageService {
         if (base.isBlank()) base = "file";
 
         final String safeName = UUID.randomUUID() + "-" + base + "." + ext;
+        final String key = buildStorageKey(prefix, safeName);
 
-        final Path rootPath = Paths.get(root).toAbsolutePath().normalize();
-        Path dir = rootPath.resolve(prefix).normalize();
-        if (!dir.startsWith(rootPath)) {
-            throw new SecurityException("Ruta fuera del root de storage");
-        }
-        Files.createDirectories(dir);
+        PutObjectRequest.Builder requestBuilder = PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .contentLength(file.getSize())
+                .contentType(resolveContentType(file, ext));
 
-        final Path dest = dir.resolve(safeName).normalize();
-        if (!dest.startsWith(rootPath)) {
-            throw new SecurityException("Ruta fuera del root de storage");
-        }
-
-        try (var in = file.getInputStream()) {
-            Files.copy(in, dest, StandardCopyOption.REPLACE_EXISTING);
+        if (StringUtils.hasText(serverSideEncryption)) {
+            requestBuilder.serverSideEncryption(ServerSideEncryption.fromValue(serverSideEncryption));
         }
 
-        try {
-            Set<PosixFilePermission> perms = PosixFilePermissions.fromString("rw-r--r--");
-            Files.setPosixFilePermissions(dest, perms);
-        } catch (UnsupportedOperationException ignore) {
+        try (InputStream inputStream = file.getInputStream()) {
+            s3Client.putObject(requestBuilder.build(), RequestBody.fromInputStream(inputStream, file.getSize()));
         }
-
-        String cleanPrefix = prefix.replace('\\', '/').replaceAll("^/+", "").replaceAll("/+", "/");
-        return "/uploads/" + (cleanPrefix.isEmpty() ? "" : (cleanPrefix + "/")) + safeName;
+        return storageUrlCodec.buildManagedUrl(key);
     }
 
     @Override
-    public void deleteByPublicUrl(String publicUrl) throws IOException {
-        if (publicUrl == null || publicUrl.isBlank()) return;
+    public void deleteByPublicUrl(String publicUrl) {
+        String key = storageUrlCodec.extractKeyFromManagedUrl(publicUrl);
+        if (!StringUtils.hasText(key)) return;
 
-        final String prefix = "/uploads/";
-        if (!publicUrl.startsWith(prefix)) return;
-
-        String relative = publicUrl.substring(prefix.length());
-        Path rootPath = Paths.get(root).toAbsolutePath().normalize();
-        Path target = rootPath.resolve(relative).normalize();
-
-        if (!target.toAbsolutePath().startsWith(rootPath)) {
-            throw new SecurityException("Ruta fuera del root de storage");
-        }
-
-        try {
-            Files.deleteIfExists(target);
-        } catch (NoSuchFileException ignore) {
-        }
+        s3Client.deleteObject(DeleteObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .build());
     }
 
     @Override
     public StoredFile loadByKey(String storageKey) throws IOException {
-        String relative = sanitizePrefix(storageKey);
-        Path rootPath = Paths.get(root).toAbsolutePath().normalize();
-        Path target = rootPath.resolve(relative).normalize();
+        try {
+            var head = s3Client.headObject(HeadObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(storageKey)
+                    .build());
 
-        if (!target.startsWith(rootPath)) {
-            throw new SecurityException("Ruta fuera del root de storage");
-        }
-        if (!Files.exists(target) || !Files.isReadable(target)) {
-            throw new NoSuchFileException(target.toString());
-        }
+            ResponseInputStream<GetObjectResponse> stream = s3Client.getObject(GetObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(storageKey)
+                    .build());
 
-        String contentType = Files.probeContentType(target);
-        long size = Files.size(target);
-        return new StoredFile(
-                new InputStreamResource(Files.newInputStream(target)),
-                contentType,
-                size,
-                target.getFileName().toString()
-        );
+            return new StoredFile(
+                    new InputStreamResource(stream),
+                    head.contentType(),
+                    head.contentLength(),
+                    fileNameFromKey(storageKey)
+            );
+        } catch (NoSuchKeyException ex) {
+            throw new NoSuchFileException(storageKey);
+        } catch (S3Exception ex) {
+            if (isMissingObject(ex)) {
+                throw new NoSuchFileException(storageKey);
+            }
+            throw new IOException("No se pudo leer el objeto S3", ex);
+        } catch (RuntimeException ex) {
+            throw new IOException("No se pudo leer el objeto S3", ex);
+        }
+    }
+
+    private boolean isMissingObject(S3Exception ex) {
+        if (ex == null) return false;
+        if (ex.statusCode() == 404) return true;
+        if (ex.awsErrorDetails() == null) return false;
+        String code = ex.awsErrorDetails().errorCode();
+        return "NoSuchKey".equals(code) || "NotFound".equals(code);
+    }
+
+    private String buildStorageKey(String prefix, String safeName) {
+        String root = sanitizePrefix(keyPrefixRoot);
+        if (!StringUtils.hasText(root)) {
+            return prefix.isEmpty() ? safeName : prefix + "/" + safeName;
+        }
+        if (!StringUtils.hasText(prefix)) {
+            return root + "/" + safeName;
+        }
+        return root + "/" + prefix + "/" + safeName;
+    }
+
+    private String resolveContentType(MultipartFile file, String ext) {
+        if (StringUtils.hasText(file.getContentType())) {
+            return file.getContentType();
+        }
+        return switch (ext) {
+            case "jpg", "jpeg" -> "image/jpeg";
+            case "png" -> "image/png";
+            case "gif" -> "image/gif";
+            case "webp" -> "image/webp";
+            case "pdf" -> "application/pdf";
+            case "mp4" -> "video/mp4";
+            case "webm" -> "video/webm";
+            default -> "application/octet-stream";
+        };
     }
 
     private String sanitizePrefix(String keyPrefix) {
@@ -161,6 +242,11 @@ public class LocalStorageService implements StorageService {
         if (p.endsWith("/")) p = p.substring(0, p.length() - 1);
         if (p.contains("..")) throw new SecurityException("Prefijo invalido");
         return p;
+    }
+
+    private String fileNameFromKey(String storageKey) {
+        int idx = storageKey.lastIndexOf('/');
+        return idx >= 0 ? storageKey.substring(idx + 1) : storageKey;
     }
 
     private void validateMagicBytes(MultipartFile file, String ext) throws IOException {
