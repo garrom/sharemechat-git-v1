@@ -3,6 +3,10 @@
 - La configuracion versionada esta mas alineada con TEST que con una estrategia plenamente parametrizada por entorno.
 - El frontend mantiene acoplamientos explicitos a dominios de test.
 - Un entorno sin Redis operativo rompe matching y coordinacion realtime aunque el handshake WebSocket ya funcione correctamente.
+- Aunque la fuente de verdad de ICE ya se centraliza en backend, el videochat sigue dependiendo en esta fase transicional de una configuracion TURN/STUN estatica y todavia no de una estrategia propia de relay con credenciales dinamicas. Mientras eso no cambie, el videochat puede seguir degradando a `ICE failed` en escenarios cross-network aunque signaling y WebSocket funcionen.
+- La confirmacion operativa del stream sigue apoyandose en `tech-media-ready` emitido por frontend y no en una verificacion backend mas fuerte de media usable. Si esa senal llega demasiado pronto y la conectividad WebRTC se degrada despues, existe riesgo de confirmar la sesion antes de que el streaming sea realmente estable.
+- El cierre economico de `stream_records` sigue calculando segundos desde `start_time` y no desde `confirmed_at` o `billable_start`. Mientras eso no se corrija, una confirmacion prematura puede trasladar a facturacion tiempo previo a media realmente usable.
+- Cuando se despliegue TURN propio por entorno, una topologia de red mal planteada puede disparar coste operativo de forma no lineal, especialmente si el relay de media depende de NAT gestionado con cobro por tiempo y trafico.
 - El enforcement de consentimiento y compliance no es homogeneo entre REST y WebSocket.
 - Los limites efectivos de subida pueden divergir entre backend y capa publica. Si Nginx o la capa HTTP publica no fijan explicitamente un limite alineado con backend, una peticion multipart valida para Spring Boot puede seguir siendo rechazada con `413` antes de llegar al controller.
 - El repositorio principal no versiona los ficheros reales de Nginx de TEST y AUDIT. Mientras la paridad dependa de comparacion operativa fuera del repo, puede reabrirse deuda de publicacion HTTP sin que el diff exacto quede trazado junto al codigo.

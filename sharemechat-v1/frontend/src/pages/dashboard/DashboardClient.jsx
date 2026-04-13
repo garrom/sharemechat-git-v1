@@ -43,6 +43,7 @@ import { useSession } from '../../components/SessionProvider';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
+import { loadWebRtcPeerConfig } from '../../realtime/webrtcConfig';
 import useActiveInteraction from '../../domain/useActiveInteraction';
 import { attachMediaObserver, createIdleMediaState, createMediaStateSnapshot, resetMediaObserver } from '../../utils/mediaState';
 import AuthenticatedConsentModal from '../../consent/AuthenticatedConsentModal';
@@ -89,6 +90,8 @@ const DashboardClient = () => {
   const [giftRenderReady, setGiftRenderReady] = useState(false);
   const [showGifts,setShowGifts]=useState(false);
   const [showCenterGifts,setShowCenterGifts]=useState(false);
+  const [webrtcPeerConfig, setWebrtcPeerConfig] = useState(null);
+  const [webrtcConfigReady, setWebrtcConfigReady] = useState(false);
   const [profilePic, setProfilePic] = useState(null);
   const [modelNickname, setModelNickname] = useState('Modelo');
   const [modelAvatar, setModelAvatar] = useState('');
@@ -296,6 +299,28 @@ const DashboardClient = () => {
 
 
   useEffect(() => {
+    let active = true;
+
+    loadWebRtcPeerConfig()
+      .then((config) => {
+        if (!active) return;
+        setWebrtcPeerConfig(config);
+        setWebrtcConfigReady(true);
+      })
+      .catch((err) => {
+        console.error('[WEBRTC][config][Client] load failed', err);
+        if (!active) return;
+        setWebrtcPeerConfig(null);
+        setWebrtcConfigReady(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+
+  useEffect(() => {
     // Match engine (Client)
     matchEngineRef.current = createMatchSocketEngine({
       buildWsUrl,
@@ -339,16 +364,7 @@ const DashboardClient = () => {
       pingEveryMs: 15000,
 
       // Client: ICE config (sin inventar: uso EXACTO lo que ya tenías)
-      peerConfig: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-        ],
-      },
+      peerConfig: webrtcPeerConfig,
 
       // Grace como en tu client
       onMatchGrace: (mobile) => {
@@ -480,6 +496,7 @@ const DashboardClient = () => {
       },
     });
   }, [
+    webrtcPeerConfig,
   ]);
 
 
@@ -1144,6 +1161,11 @@ const DashboardClient = () => {
 
   const handleStartMatch = () => {
     if (guardSensitiveAction({ setError })) return;
+    if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
+      console.error('[WEBRTC][config][Client] unavailable for random match');
+      setError(i18n.t('common.errors.connectionSetupFailedRetry'));
+      return;
+    }
     matchEngineRef.current?.start();
   };
 
@@ -2507,6 +2529,11 @@ const DashboardClient = () => {
 
   //Crear Peer y cablear eventos
   const wireCallPeer = (initiator) => {
+    if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
+      console.error('[WEBRTC][config][Client] unavailable for calling peer');
+      setCallError(i18n.t('common.errors.connectionSetupFailedRetry'));
+      return;
+    }
     if (!callLocalStreamRef.current) {
       setCallError('No hay cámara activa.');
       return;
@@ -2521,17 +2548,7 @@ const DashboardClient = () => {
       initiator,
       trickle: true,
       stream: callLocalStreamRef.current,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:global.stun.twilio.com:3478' },
-          {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-        ],
-      },
+      config: webrtcPeerConfig,
     });
     p.on('signal', (signal) => {
       try {

@@ -446,12 +446,34 @@ public class TransactionService {
     @Transactional
     public Gift processGift(Long clientId, Long modelId, Long giftId, Long streamIdOrNull) {
         Gift gift = resolveSendableGift(giftId);
-        if (gift.getCost().compareTo(BigDecimal.ZERO) == 0) {
-            log.info("processGift: free item send actorUserId={} peerUserId={} giftId={} streamRecordId={}",
-                    clientId, modelId, giftId, streamIdOrNull);
-            return gift;
+        if (streamIdOrNull != null) {
+            requireConfirmedGiftStream(clientId, modelId, streamIdOrNull);
         }
         return processGiftInternal(clientId, modelId, gift, streamIdOrNull, true);
+    }
+
+    private StreamRecord requireConfirmedGiftStream(Long clientId, Long modelId, Long streamId) {
+        if (streamId == null || streamId <= 0) {
+            throw new IllegalArgumentException("Sesion invalida para enviar el regalo");
+        }
+
+        StreamRecord stream = streamRecordRepository.findById(streamId)
+                .orElseThrow(() -> new IllegalArgumentException("Sesion no encontrada para enviar el regalo"));
+
+        if (stream.getEndTime() != null) {
+            throw new IllegalArgumentException("La sesion ya no esta activa para enviar regalos");
+        }
+        if (stream.getConfirmedAt() == null) {
+            throw new IllegalArgumentException("No se pueden enviar regalos de pago sin sesion confirmada");
+        }
+
+        Long streamClientId = stream.getClient() != null ? stream.getClient().getId() : null;
+        Long streamModelId = stream.getModel() != null ? stream.getModel().getId() : null;
+        if (!clientId.equals(streamClientId) || !modelId.equals(streamModelId)) {
+            throw new IllegalArgumentException("La sesion no corresponde al par del regalo");
+        }
+
+        return stream;
     }
 
     private Gift resolveSendableGift(Long giftId) {

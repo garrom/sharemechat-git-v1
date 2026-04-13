@@ -44,6 +44,7 @@ import { apiFetch } from '../../config/http';
 import { useSession } from '../../components/SessionProvider';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
+import { loadWebRtcPeerConfig } from '../../realtime/webrtcConfig';
 import useActiveInteraction from '../../domain/useActiveInteraction';
 import Estadistica from './Estadistica';
 import { attachMediaObserver, createIdleMediaState, createMediaStateSnapshot, resetMediaObserver } from '../../utils/mediaState';
@@ -89,6 +90,8 @@ const DashboardModel = () => {
   const [gifts, setGifts] = useState([]);
   const [giftsLoaded, setGiftsLoaded] = useState(false);
   const [giftRenderReady, setGiftRenderReady] = useState(false);
+  const [webrtcPeerConfig, setWebrtcPeerConfig] = useState(null);
+  const [webrtcConfigReady, setWebrtcConfigReady] = useState(false);
   const [searching, setSearching] = useState(false);
   const [profilePic, setProfilePic] = useState(null);
   const [centerMessages, setCenterMessages] = useState([]);
@@ -384,6 +387,28 @@ const DashboardModel = () => {
 
 
   useEffect(() => {
+    let active = true;
+
+    loadWebRtcPeerConfig()
+      .then((config) => {
+        if (!active) return;
+        setWebrtcPeerConfig(config);
+        setWebrtcConfigReady(true);
+      })
+      .catch((err) => {
+        console.error('[WEBRTC][config][Model] load failed', err);
+        if (!active) return;
+        setWebrtcPeerConfig(null);
+        setWebrtcConfigReady(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+
+  useEffect(() => {
     matchEngineRef.current = createMatchSocketEngine({
       buildWsUrl,
       WS_PATHS,
@@ -422,6 +447,7 @@ const DashboardModel = () => {
       useFastPingOnOpen: false,
       pingEveryMs: 15000,
       sendStatsOnPing: true,
+      peerConfig: webrtcPeerConfig,
 
       // Model: meta por rol (streamRecordId, currentClientId, clientBalance)
       onMatchMeta: (data) => {
@@ -540,7 +566,7 @@ const DashboardModel = () => {
         handleMsgSocketMessageModel(ev);
       },
     });
-  }, []);
+  }, [webrtcPeerConfig]);
 
 
   useEffect(() => {
@@ -1591,6 +1617,11 @@ const DashboardModel = () => {
 
   const handleStartMatch = () => {
     if (guardSensitiveAction({ setError })) return;
+    if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
+      console.error('[WEBRTC][config][Model] unavailable for random match');
+      setError(i18n.t('common.errors.connectionSetupFailedRetry'));
+      return;
+    }
 
     setActiveStreamRecordId(null);
     activeStreamRecordIdRef.current = null;
@@ -2554,6 +2585,11 @@ const DashboardModel = () => {
 
   //Crear Peer y cablear eventos
   const wireCallPeer = (initiator) => {
+    if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
+      console.error('[WEBRTC][config][Model] unavailable for calling peer');
+      setCallError(i18n.t('common.errors.connectionSetupFailedRetry'));
+      return;
+    }
     if (!callLocalStreamRef.current) {
       setCallError('No hay cámara activa.');
       return;
@@ -2567,17 +2603,7 @@ const DashboardModel = () => {
       initiator,
       trickle: true,
       stream: callLocalStreamRef.current,
-      config: {
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:global.stun.twilio.com:3478' },
-          {
-            urls: 'turn:openrelay.metered.ca:80',
-            username: 'openrelayproject',
-            credential: 'openrelayproject',
-          },
-        ],
-      },
+      config: webrtcPeerConfig,
     });
 
     p.on('signal', (signal) => {

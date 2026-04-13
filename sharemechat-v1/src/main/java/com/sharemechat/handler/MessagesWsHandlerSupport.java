@@ -719,6 +719,10 @@ public class MessagesWsHandlerSupport {
                 resolvedCallingStreamId = resolveCallingGiftStreamId(cm.getLeft(), cm.getRight());
                 log.info("handleMsgGift: calling context confirmed me={} to={} clientId={} modelId={} resolvedStreamId={}",
                         me, to, cm.getLeft(), cm.getRight(), resolvedCallingStreamId);
+                if (resolvedCallingStreamId == null || resolvedCallingStreamId <= 0) {
+                    safeSend(session, "{\"type\":\"msg:error\",\"message\":\"No hay una sesion confirmada para enviar regalos\"}");
+                    return;
+                }
             } else {
                 log.info("handleMsgGift: no calling context me={} to={} peerCurrent={} reverseCurrent={}",
                         me, to, inCallWith(me), inCallWith(to));
@@ -733,7 +737,7 @@ public class MessagesWsHandlerSupport {
                     resolvedCallingStreamId,
                     hasCallingContext);
 
-            Gift g = (resolvedCallingStreamId != null)
+            Gift g = hasCallingContext
                     ? transactionService.processGift(me, to, giftId, resolvedCallingStreamId)
                     : transactionService.processGiftInChat(me, to, giftId);
 

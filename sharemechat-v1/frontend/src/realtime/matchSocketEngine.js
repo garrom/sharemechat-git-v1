@@ -148,13 +148,21 @@ export function createMatchSocketEngine(adapter) {
     console.log(
       `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=createPeer initiator=${!!initiator} hasLocalStream=${!!localStreamRef.current} localTrackCount=${localTrackCount} hasPeerConfig=${!!adapter.peerConfig} iceServerCount=${iceServerCount}`
     );
+    if (!Array.isArray(adapter.peerConfig?.iceServers) || adapter.peerConfig.iceServers.length === 0) {
+      console.error(
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=createPeerBlocked reason=missingPeerConfig`
+      );
+      setError(i18n.t('common.errors.connectionSetupFailedRetry'));
+      setSearching(false);
+      return;
+    }
     const p = new Peer({
       initiator: !!initiator,
       trickle: true,
       stream: localStreamRef.current,
       // Client usa ICE config custom en tu código; si lo necesitas igual aquí,
       // pásalo por adapter como `peerConfig` (no invento valores).
-      ...(adapter.peerConfig ? { config: adapter.peerConfig } : {}),
+      config: adapter.peerConfig,
     });
 
     p.on('signal', (signal) => {
@@ -413,6 +421,15 @@ export function createMatchSocketEngine(adapter) {
   function start() {
     if (!adapter.cameraActiveGetter?.() || !localStreamRef.current) {
       setError(i18n.t('common.media.cameraRequired'));
+      return;
+    }
+
+    if (!Array.isArray(adapter.peerConfig?.iceServers) || adapter.peerConfig.iceServers.length === 0) {
+      console.error(
+        `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=startBlocked reason=missingPeerConfig`
+      );
+      setError(i18n.t('common.errors.connectionSetupFailedRetry'));
+      setSearching(false);
       return;
     }
 

@@ -232,3 +232,72 @@ La validacion operativa posterior confirmo:
 - matching, `/messages` y uploads funcionando
 
 Con ello, la divergencia relevante ya documentada en el vhost API de AUDIT queda resuelta. La deuda residual pasa a ser de trazabilidad y comparacion futura de configuracion real fuera del repo, no de un fallo funcional abierto en ese vhost.
+
+### Fallo de WebRTC cross-network con ICE failed
+
+Se detecta una incidencia operativa en videochat aleatorio: cliente y modelo llegan a emparejar, completan offer y answer por WebSocket y llegan a recibir `peerStream`, pero la conexion termina degradando a `iceConnectionState=failed`.
+
+Patron observado:
+
+- el problema aparece sobre todo cuando ambos usuarios estan en redes distintas o con IP publica distinta
+- en escenarios mas favorables, como misma red, el comportamiento parece mejor
+- Firefox muestra `ICE failed, your TURN server appears to be broken`
+- el frontend registra offer, answer, `peerStream` remoto y despues `iceConnectionState=failed`
+
+Lo que queda soportado por codigo versionado es:
+
+- la senalizacion WebRTC se coordina por `/match` y `/messages`
+- el frontend usa `simple-peer`
+  - en el estado inicial analizado, la configuracion `iceServers` estaba hardcodeada en frontend y no entregada por backend
+- los puntos activos encontrados usan STUN publico y un TURN publico estatico `turn:openrelay.metered.ca:80` con credenciales igualmente estaticas
+- no existe en backend un servicio versionado que emita credenciales TURN propias del entorno ni configuracion ICE por entorno
+
+La causa raiz probable ya no apunta a signaling ni a regalos, sino a una estrategia de TURN/ICE insuficiente para escenarios cross-network:
+
+- misma red o NAT favorable pueden sobrevivir con candidatos directos
+- cuando el flujo necesita relay de verdad, la dependencia de un TURN publico estatico y no controlado por el proyecto pasa a ser fragil
+- el codigo actual tampoco muestra variantes `turns` o transportes alternativos endurecidos para ese relay
+
+La revision del flujo de regalos no aporta evidencia de que el regalo destruya o renegocie el peer por si mismo. En random, el handler de regalo valida, procesa contabilidad y emite un mensaje WebSocket `gift`; los cierres explicitos de peer documentados siguen ligados a `next`, `low-balance`, `trial-ended` o desconexion.
+
+Como avance posterior de esta linea, la fase transicional de aplicacion ya centraliza la configuracion ICE en backend mediante un endpoint dedicado y elimina los `iceServers` hardcodeados del frontend. Con ello, la fuente de verdad deja de estar repartida por React y pasa a variar por entorno desde backend sin cambiar codigo de interfaz.
+
+El problema cross-network no debe darse por resuelto con ese cambio: la siguiente accion correcta sigue siendo sustituir la dependencia actual de TURN publico estatico por una estrategia controlada por el proyecto y observable por entorno.
+
+### Riesgo de confirmacion y cobro prematuros en random videochat
+
+Se detecta una incidencia tecnica con impacto directo de negocio en el flujo de random videochat.
+
+Patron observado y soportado por codigo:
+
+- cliente y modelo pueden llegar a emparejar y completar signaling
+- el problema real no es necesariamente el gift, sino que la media remota puede no consolidarse de forma usable
+- la confirmacion operativa del stream no se hace hoy por validacion backend de media extremo a extremo, sino cuando ambos frontends emiten `tech-media-ready`
+
+Hallazgos concretos:
+
+- `tech-media-ready` se emite desde frontend cuando el estado local y remoto del track de video queda en `live`
+- esa condicion es mejor que el signaling puro, pero sigue sin exigir de forma explicita `iceConnectionState=connected` o `completed`
+- backend confia en que ambos clientes envien `tech-media-ready` y en ese momento marca `confirmed_at` y `billable_start`
+- el endpoint REST `POST /api/streams/{streamRecordId}/ack-media`, mas alineado con una confirmacion industrial de media conectada, existe pero no se usa en el flujo principal analizado
+
+Impacto de negocio confirmado por codigo:
+
+- si la sesion nunca llega a confirmarse, `endSession` la cierra sin cargos
+- si la sesion se confirma de forma prematura y despues la media se degrada o ICE falla, el cierre economico sigue calculando el cargo final desde `start_time`, no desde `confirmed_at` o `billable_start`
+- ademas, en random los gifts pueden procesarse contra la sesion activa del par aunque esa sesion aun no este confirmada; el flujo de regalo no exige `confirmed_at` para random cuando ya existe `streamId` activo
+
+La siguiente correccion minima correcta ya no es solo de TURN/ICE:
+
+- endurecer el gating de `tech-media-ready`
+- evitar que backend tome esa senal como unica fuente suficiente para confirmar y empezar tramo facturable
+- desacoplar el calculo economico final de `start_time` y llevarlo al inicio facturable real
+- endurecer tambien el gating de gifts en random si el producto no quiere permitir cobro mientras la sesion no tenga media usable
+
+Resolucion posterior aplicada sobre gifts:
+
+- en random ya no se permite procesar regalos de pago si no existe una sesion activa valida para el par
+- en calling ya no se permite degradar a regalo de chat cobrable cuando la llamada no tiene `streamRecordId` confirmado
+- backend valida ademas que cualquier `streamRecordId` usado para cobrar un gift pertenezca al par correcto, siga activo y tenga `confirmed_at` no nulo
+
+Con ello, queda corregido el bug de negocio confirmado en MySQL donde RANDOM y CALLING podian generar `GIFT_SEND`, `GIFT_EARNING` y `GIFT_MARGIN` sin sesion confirmada. La deuda que sigue abierta es distinta: el tramo facturable del stream continua dependiendo de una confirmacion prematura y del calculo final desde `start_time`.

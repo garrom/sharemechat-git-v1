@@ -1056,6 +1056,10 @@ public class MatchingHandlerSupport {
         try {
             streamId = statusService.getActiveSession(senderId, peerUserId).orElse(null);
         } catch (Exception ignore) {}
+        if (streamId == null || streamId <= 0) {
+            safeSend(session, "{\"type\":\"gift:error\",\"message\":\"No hay una sesion confirmada para enviar regalos\"}");
+            return;
+        }
         log.warn("gift_random_validate_ok actorUserId={} peerUserId={} role={} peerRole={} localSid={} peerSid={} giftId={} streamRecordId={}",
                 senderId,
                 peerUserId,

@@ -20,6 +20,7 @@ import {
 import BlogContent from '../blog/BlogContent';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
+import { loadWebRtcPeerConfig } from '../../realtime/webrtcConfig';
 import { getApiErrorMessage, isEmailNotVerifiedError } from '../../utils/apiErrors';
 
 const DashboardContentShell = styled.div`
@@ -128,6 +129,8 @@ const DashboardUserClient = () => {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [loadingFirstPayment, setLoadingFirstPayment] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
+  const [webrtcPeerConfig, setWebrtcPeerConfig] = useState(null);
+  const [webrtcConfigReady, setWebrtcConfigReady] = useState(false);
 
   // Modal de cooldown (sin más trials)
   const [showTrialCooldownModal, setShowTrialCooldownModal] = useState(false);
@@ -157,6 +160,27 @@ const DashboardUserClient = () => {
   }, []);
 
   // ======= Carga de usuario (COOKIE AUTH) =======
+  useEffect(() => {
+    let active = true;
+
+    loadWebRtcPeerConfig()
+      .then((config) => {
+        if (!active) return;
+        setWebrtcPeerConfig(config);
+        setWebrtcConfigReady(true);
+      })
+      .catch((err) => {
+        console.error('[WEBRTC][config][TrialUser] load failed', err);
+        if (!active) return;
+        setWebrtcPeerConfig(null);
+        setWebrtcConfigReady(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   useEffect(() => {
     (async () => {
       try {
@@ -470,6 +494,12 @@ const DashboardUserClient = () => {
     setStatusText('');
     setShowTrialCooldownModal(false);
 
+    if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
+      console.error('[WEBRTC][config][TrialUser] unavailable for random match');
+      setError(t('dashboardUserClient.errors.webrtc'));
+      return;
+    }
+
     if (!cameraActive || !localStreamRef.current) {
       setError(t('dashboardUserClient.errors.activateCameraFirst'));
       return;
@@ -556,16 +586,7 @@ const DashboardUserClient = () => {
           initiator: true,
           trickle: true,
           stream: localStreamRef.current,
-          config: {
-            iceServers: [
-              { urls: 'stun:stun.l.google.com:19302' },
-              {
-                urls: 'turn:openrelay.metered.ca:80',
-                username: 'openrelayproject',
-                credential: 'openrelayproject',
-              },
-            ],
-          },
+          config: webrtcPeerConfig,
         });
 
         peer.on('signal', (signal) => {

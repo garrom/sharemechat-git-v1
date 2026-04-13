@@ -139,6 +139,7 @@ public class SecurityConfig {
                         .requestMatchers("/ws/**").permitAll()
 
                         // REST
+                        .requestMatchers(HttpMethod.GET, "/api/webrtc/config").authenticated()
                         .requestMatchers("/api/messages/**").authenticated()
                         .requestMatchers("/api/reports/**").authenticated()
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
