@@ -183,6 +183,8 @@ const DashboardModel = () => {
   const vcListRef = useRef(null);
   const callListRef = useRef(null);
   const callStatusRef = useRef(callStatus);
+  const webrtcPeerConfigRef = useRef(null);
+  const webrtcConfigReadyRef = useRef(false);
   const msgSocketRef = useRef(null);
   const msgPingRef = useRef(null);
   const msgReconnectRef = useRef(null);
@@ -471,18 +473,30 @@ const DashboardModel = () => {
         if (!active) return;
         setWebrtcPeerConfig(config);
         setWebrtcConfigReady(true);
+        webrtcPeerConfigRef.current = config;
+        webrtcConfigReadyRef.current = true;
       })
       .catch((err) => {
         console.error('[WEBRTC][config][Model] load failed', err);
         if (!active) return;
         setWebrtcPeerConfig(null);
         setWebrtcConfigReady(false);
+        webrtcPeerConfigRef.current = null;
+        webrtcConfigReadyRef.current = false;
       });
 
     return () => {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    webrtcPeerConfigRef.current = webrtcPeerConfig;
+  }, [webrtcPeerConfig]);
+
+  useEffect(() => {
+    webrtcConfigReadyRef.current = webrtcConfigReady;
+  }, [webrtcConfigReady]);
 
 
   useEffect(() => {
@@ -2768,7 +2782,10 @@ const DashboardModel = () => {
 
   //Crear Peer y cablear eventos
   const wireCallPeer = (initiator) => {
-    if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
+    const currentPeerConfig = webrtcPeerConfigRef.current;
+    const currentConfigReady = webrtcConfigReadyRef.current;
+
+    if (!currentConfigReady || !Array.isArray(currentPeerConfig?.iceServers) || currentPeerConfig.iceServers.length === 0) {
       console.error('[WEBRTC][config][Model] unavailable for calling peer');
       setCallError(i18n.t('common.errors.connectionSetupFailedRetry'));
       return;
@@ -2786,7 +2803,7 @@ const DashboardModel = () => {
       initiator,
       trickle: true,
       stream: callLocalStreamRef.current,
-      config: webrtcPeerConfig,
+      config: currentPeerConfig,
     });
 
     p.on('signal', (signal) => {

@@ -500,7 +500,7 @@ export default function VideoChatFavoritosCliente(props){
                   </StyledRemoteVideo>
 
                   <StyledLocalVideo>
-                    <video ref={callLocalVideoRef} muted autoPlay playsInline style={{width:'100%',display:'block',border:'none'}}/>
+                    <video ref={callLocalVideoRef} muted autoPlay playsInline style={{width:'100%',height:'100%',objectFit:'cover',display:'block',border:'none'}}/>
                   </StyledLocalVideo>
 
                   {callStatus==='in-call'&&(

@@ -354,6 +354,7 @@ export const StyledCallVideoArea = styled(StyledVideoArea)`
   width: 100%;
   max-width: none;
   margin: 0;
+  min-height: 0;
 
   @media (min-width: 769px) {
     height: calc(100vh - 220px);
@@ -362,14 +363,15 @@ export const StyledCallVideoArea = styled(StyledVideoArea)`
 `;
 
 export const StyledRemoteVideo = styled.div`
+  position: relative;
   width: 100%;
   height: 100%;
+  min-height: 0;
   z-index: 1;
   max-height: 100%;
   border-radius: 0;
   overflow: hidden;
   @media (min-width: 769px) {
-    aspect-ratio: 16 / 9;
     border-radius: 16px;
   }
 
@@ -585,7 +587,7 @@ export const StyledChatWhatsApp = styled.div`
 
 
 export const StyledChatList = styled.div`
-  width: 50%;
+  width: min(42%, 420px);
   min-width: 0;
   max-height: 350px;
   overflow-y: auto;
@@ -600,6 +602,7 @@ export const StyledChatList = styled.div`
   &::-webkit-scrollbar { width: 0; height: 0; }
 
   @media (max-width: 768px) {
+    width: 50%;
     max-height: 450px;
     padding-bottom: 72px;
   }

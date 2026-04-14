@@ -272,13 +272,23 @@ Avance operativo posterior ya ejecutado en AUDIT:
 - la validacion operativa del propio servidor TURN ya muestra actividad correcta de `ALLOCATE`, `CREATE_PERMISSION` y `CHANNEL_BIND`
 - la ejecucion de esta fase se alinea con el despliegue TURN minimo para AUDIT documentado en ADR-005
 
-Lo que sigue pendiente en esta misma linea ya no es el despliegue minimo del relay, sino su integracion efectiva completa con la aplicacion en AUDIT:
+Validacion posterior ya confirmada en la propia aplicacion:
 
-- cargar la configuracion `AUDIT_WEBRTC_TURN_*` en el backend activo
-- levantar backend con esa configuracion efectiva
-- verificar la salida de `/api/webrtc/config`
-- validar sesion WebRTC real cross-network en navegador
-- confirmar evidencia frontend de selected pair `relay (TURN)`
+- backend AUDIT publicando configuracion ICE por entorno
+- frontend consumiendo esa configuracion desde backend
+- evidencia frontend de `candidateType=relay`
+- evidencia frontend de `ICE selected pair: relay (TURN)`
+- evidencia de `iceConnectionState=connected` y `connectionState=connected`
+
+Validacion funcional end-to-end ya confirmada en AUDIT:
+
+- sesion RANDOM confirmada
+- streaming funcional
+- gifts RANDOM operativos sobre sesion confirmada
+
+Con esta evidencia, la fase minima de TURN en AUDIT queda cerrada a nivel operativo del entorno.
+
+La siguiente etapa natural ya no pertenece a esta incidencia en AUDIT, sino a replicar el mismo patron de forma controlada en TEST sin reabrir la decision de arquitectura ya tomada.
 
 ### Riesgo de confirmacion y cobro prematuros en random videochat
 

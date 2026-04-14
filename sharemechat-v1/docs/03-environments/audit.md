@@ -118,10 +118,22 @@ La evidencia operativa ya obtenida en el propio servidor TURN confirma actividad
 - `CREATE_PERMISSION` procesado con exito
 - `CHANNEL_BIND` procesado con exito
 
-Esta fase no debe darse por cerrada end-to-end todavia. Sigue pendiente completar la integracion efectiva con el backend AUDIT activo y validar WebRTC cross-network real desde la aplicacion:
+La validacion tecnica principal de esta fase ya queda confirmada tambien desde la aplicacion:
 
-- cargar la configuracion `AUDIT_WEBRTC_TURN_*` en el runtime backend efectivo
-- levantar backend AUDIT con esa configuracion operativa
-- verificar `/api/webrtc/config`
-- ejecutar pruebas cross-network reales en navegador
-- confirmar evidencia `ICE selected pair: relay (TURN)` en sesiones de la aplicacion
+- backend AUDIT consumiendo configuracion TURN por entorno
+- `/api/webrtc/config` operativo
+- frontend consumiendo configuracion ICE servida por backend
+- evidencia frontend de `candidateType=relay`
+- evidencia frontend de `ICE selected pair: relay (TURN)`
+- evidencia frontend de `iceConnectionState=connected`
+- evidencia frontend de `connectionState=connected`
+
+La validacion funcional end-to-end de AUDIT ya confirma ademas:
+
+- sesiones RANDOM confirmadas
+- streaming visible
+- gifts RANDOM operativos sobre sesiones confirmadas
+
+Con ello, la fase minima de TURN en AUDIT puede darse por cerrada a nivel operativo del entorno.
+
+El siguiente paso natural no es reabrir arquitectura en AUDIT, sino replicar de forma controlada el mismo patron en TEST manteniendo la misma logica de aplicacion.
