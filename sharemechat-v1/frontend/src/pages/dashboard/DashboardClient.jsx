@@ -43,12 +43,38 @@ import { useSession } from '../../components/SessionProvider';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
+import {
+  attachIceDebugObservers,
+  createSelectedIcePairLogger,
+  getIceSignalLogDetails,
+} from '../../realtime/iceObserver';
 import { loadWebRtcPeerConfig } from '../../realtime/webrtcConfig';
 import useActiveInteraction from '../../domain/useActiveInteraction';
 import { attachMediaObserver, createIdleMediaState, createMediaStateSnapshot, resetMediaObserver } from '../../utils/mediaState';
 import AuthenticatedConsentModal from '../../consent/AuthenticatedConsentModal';
 import { isAdminSurface } from '../../utils/runtimeSurface';
 import { canAccessBackoffice } from '../../utils/backofficeAccess';
+
+const MEDIA_ACK_STABILITY_MS = 1200;
+
+function wireCallingIceObservers({ pc, roleLabel, setConnectionState, setIceConnectionState }) {
+  const logSelectedPair = createSelectedIcePairLogger(`scope=calling role=${roleLabel}`);
+
+  attachIceDebugObservers({
+    pc,
+    logPrefix: `scope=calling role=${roleLabel}`,
+    logSelectedPair,
+    onStateChange: () => {
+      setConnectionState(pc?.connectionState || null);
+      setIceConnectionState(pc?.iceConnectionState || null);
+      console.log(
+        `[ICE_TRACE] ts=${Date.now()} scope=calling role=${roleLabel} event=state iceConnectionState=${pc?.iceConnectionState || 'unknown'} connectionState=${pc?.connectionState || 'unknown'}`
+      );
+    },
+  });
+
+  logSelectedPair(pc);
+}
 
 const DashboardClient = () => {
 
@@ -74,6 +100,8 @@ const DashboardClient = () => {
   const [remoteStream, setRemoteStream] = useState(null);
   const [randomLocalMediaState, setRandomLocalMediaState] = useState(() => createIdleMediaState('random:idle'));
   const [randomRemoteMediaState, setRandomRemoteMediaState] = useState(() => createIdleMediaState('random:remote-idle'));
+  const [randomConnectionState, setRandomConnectionState] = useState(null);
+  const [randomIceConnectionState, setRandomIceConnectionState] = useState(null);
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
@@ -108,6 +136,8 @@ const DashboardClient = () => {
   const [callRemoteStream, setCallRemoteStream] = useState(null);
   const [callLocalMediaState, setCallLocalMediaState] = useState(() => createIdleMediaState('call:idle'));
   const [callRemoteMediaState, setCallRemoteMediaState] = useState(() => createIdleMediaState('call:remote-idle'));
+  const [callConnectionState, setCallConnectionState] = useState(null);
+  const [callIceConnectionState, setCallIceConnectionState] = useState(null);
   const [callError, setCallError] = useState('');
   const [callRole, setCallRole] = useState(null); // 'caller' | 'callee'
   const [callStreamRecordId, setCallStreamRecordId] = useState(null);
@@ -121,6 +151,7 @@ const DashboardClient = () => {
   const callRoleRef = useRef(null);
   const callPeerIdRef = useRef(null);
   const callStreamRecordIdRef = useRef(null);
+  const randomStreamRecordIdRef = useRef(null);
   const callTargetLockedRef = useRef(false);
   const remoteVideoWrapRef = useRef(null);
   const callRemoteWrapRef  = useRef(null);
@@ -155,6 +186,10 @@ const DashboardClient = () => {
   const mediaReadySentRef = useRef(false);
   const randomTechMediaReadySentRef = useRef(false);
   const callTechMediaReadySentRef = useRef(false);
+  const randomMediaAckSentRef = useRef(false);
+  const randomMediaAckTimerRef = useRef(null);
+  const callMediaAckSentRef = useRef(false);
+  const callMediaAckTimerRef = useRef(null);
   const activePeerRef = useRef({ id: null, name: '' });
   const matchEngineRef = useRef(null);
   const msgEngineRef = useRef(null);
@@ -187,6 +222,22 @@ const DashboardClient = () => {
     callTechMediaReadySentRef.current = false;
   }, []);
 
+  const resetRandomMediaAckSignal = useCallback(() => {
+    randomMediaAckSentRef.current = false;
+    if (randomMediaAckTimerRef.current) {
+      clearTimeout(randomMediaAckTimerRef.current);
+      randomMediaAckTimerRef.current = null;
+    }
+  }, []);
+
+  const resetCallMediaAckSignal = useCallback(() => {
+    callMediaAckSentRef.current = false;
+    if (callMediaAckTimerRef.current) {
+      clearTimeout(callMediaAckTimerRef.current);
+      callMediaAckTimerRef.current = null;
+    }
+  }, []);
+
   const sendRandomTechMediaReady = useCallback(() => {
     if (randomTechMediaReadySentRef.current) return;
     if (socketRef.current?.readyState !== WebSocket.OPEN) return;
@@ -209,6 +260,34 @@ const DashboardClient = () => {
       streamRecordId: streamId,
     }));
     callTechMediaReadySentRef.current = true;
+  }, []);
+
+  const sendRandomMediaAck = useCallback(async () => {
+    const streamId = Number(randomStreamRecordIdRef.current);
+    if (randomMediaAckSentRef.current) return;
+    if (!Number.isFinite(streamId) || streamId <= 0) return;
+
+    randomMediaAckSentRef.current = true;
+    try {
+      await apiFetch(`/streams/${streamId}/ack-media`, { method: 'POST' });
+    } catch (err) {
+      randomMediaAckSentRef.current = false;
+      console.error('[RANDOM][ack-media][Client] failed', err);
+    }
+  }, []);
+
+  const sendCallMediaAck = useCallback(async () => {
+    const streamId = Number(callStreamRecordIdRef.current);
+    if (callMediaAckSentRef.current) return;
+    if (!Number.isFinite(streamId) || streamId <= 0) return;
+
+    callMediaAckSentRef.current = true;
+    try {
+      await apiFetch(`/streams/${streamId}/ack-media`, { method: 'POST' });
+    } catch (err) {
+      callMediaAckSentRef.current = false;
+      console.error('[CALL][ack-media][Client] failed', err);
+    }
   }, []);
 
 
@@ -376,6 +455,16 @@ const DashboardClient = () => {
       onMatchMeta: (data) => {
         mediaReadySentRef.current = false;
         resetRandomTechMediaReadySignal();
+        resetRandomMediaAckSignal();
+        setRandomConnectionState(null);
+        setRandomIceConnectionState(null);
+        try {
+          const sid = data?.streamRecordId;
+          const parsed = (sid !== null && sid !== undefined && Number.isFinite(Number(sid))) ? Number(sid) : null;
+          randomStreamRecordIdRef.current = parsed;
+        } catch {
+          randomStreamRecordIdRef.current = null;
+        }
         try {
           if (data.peerRole === 'model' && Number.isFinite(Number(data.peerUserId))) {
             setCurrentModelId(Number(data.peerUserId));
@@ -383,6 +472,11 @@ const DashboardClient = () => {
             setCurrentModelId(null);
           }
         } catch { setCurrentModelId(null); }
+      },
+
+      onPeerStateChange: (peerState) => {
+        setRandomConnectionState(peerState?.connectionState || null);
+        setRandomIceConnectionState(peerState?.iceConnectionState || null);
       },
 
       // Chat (igual que tú)
@@ -647,8 +741,9 @@ const DashboardClient = () => {
   useEffect(() => {
     if (!remoteStream || !currentModelId) {
       resetRandomTechMediaReadySignal();
+      resetRandomMediaAckSignal();
     }
-  }, [remoteStream, currentModelId, resetRandomTechMediaReadySignal]);
+  }, [remoteStream, currentModelId, resetRandomMediaAckSignal, resetRandomTechMediaReadySignal]);
 
   // CALLING: enlazar local stream a su video
   useEffect(() => {
@@ -689,12 +784,14 @@ const DashboardClient = () => {
   useEffect(() => {
     if (callStatus === 'idle') {
       resetCallTechMediaReadySignal();
+      resetCallMediaAckSignal();
     }
-  }, [callStatus, resetCallTechMediaReadySignal]);
+  }, [callStatus, resetCallMediaAckSignal, resetCallTechMediaReadySignal]);
 
   useEffect(() => {
     resetCallTechMediaReadySignal();
-  }, [callPeerId, callStreamRecordId, resetCallTechMediaReadySignal]);
+    resetCallMediaAckSignal();
+  }, [callPeerId, callStreamRecordId, resetCallMediaAckSignal, resetCallTechMediaReadySignal]);
 
   useEffect(() => {
     if (randomLocalMediaState.status !== 'live') return;
@@ -728,11 +825,94 @@ const DashboardClient = () => {
     sendCallTechMediaReady,
   ]);
 
+  useEffect(() => {
+    const usableConnection =
+      randomConnectionState === 'connected'
+      || randomIceConnectionState === 'connected'
+      || randomIceConnectionState === 'completed';
+
+    if (randomLocalMediaState.status !== 'live'
+      || randomRemoteMediaState.status !== 'live'
+      || !usableConnection
+      || !Number.isFinite(Number(randomStreamRecordIdRef.current))
+      || Number(randomStreamRecordIdRef.current) <= 0) {
+      if (randomMediaAckTimerRef.current) {
+        clearTimeout(randomMediaAckTimerRef.current);
+        randomMediaAckTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (randomMediaAckSentRef.current || randomMediaAckTimerRef.current) return;
+
+    randomMediaAckTimerRef.current = setTimeout(() => {
+      randomMediaAckTimerRef.current = null;
+      void sendRandomMediaAck();
+    }, MEDIA_ACK_STABILITY_MS);
+
+    return () => {
+      if (randomMediaAckTimerRef.current) {
+        clearTimeout(randomMediaAckTimerRef.current);
+        randomMediaAckTimerRef.current = null;
+      }
+    };
+  }, [
+    randomConnectionState,
+    randomIceConnectionState,
+    randomLocalMediaState.status,
+    randomRemoteMediaState.status,
+    sendRandomMediaAck,
+  ]);
+
+  useEffect(() => {
+    const usableConnection =
+      callConnectionState === 'connected'
+      || callIceConnectionState === 'connected'
+      || callIceConnectionState === 'completed';
+
+    if (callLocalMediaState.status !== 'live'
+      || callRemoteMediaState.status !== 'live'
+      || !usableConnection
+      || !Number.isFinite(Number(callStreamRecordId))
+      || Number(callStreamRecordId) <= 0
+      || (callStatus !== 'connecting' && callStatus !== 'in-call')) {
+      if (callMediaAckTimerRef.current) {
+        clearTimeout(callMediaAckTimerRef.current);
+        callMediaAckTimerRef.current = null;
+      }
+      return;
+    }
+
+    if (callMediaAckSentRef.current || callMediaAckTimerRef.current) return;
+
+    callMediaAckTimerRef.current = setTimeout(() => {
+      callMediaAckTimerRef.current = null;
+      void sendCallMediaAck();
+    }, MEDIA_ACK_STABILITY_MS);
+
+    return () => {
+      if (callMediaAckTimerRef.current) {
+        clearTimeout(callMediaAckTimerRef.current);
+        callMediaAckTimerRef.current = null;
+      }
+    };
+  }, [
+    callConnectionState,
+    callIceConnectionState,
+    callLocalMediaState.status,
+    callRemoteMediaState.status,
+    callStatus,
+    callStreamRecordId,
+    sendCallMediaAck,
+  ]);
+
   useEffect(() => () => {
     resetMediaObserver(randomLocalMediaCleanupRef);
     resetMediaObserver(randomRemoteMediaCleanupRef);
     resetMediaObserver(callLocalMediaCleanupRef);
     resetMediaObserver(callRemoteMediaCleanupRef);
+    resetRandomMediaAckSignal();
+    resetCallMediaAckSignal();
   }, []);
 
   useEffect(() => {
@@ -1395,7 +1575,13 @@ const DashboardClient = () => {
       }
 
       if (data.type === 'call:signal' && data.signal) {
-        console.log('[CALL][signal:in][Client]', data.signal?.type || (data.signal?.candidate ? 'candidate' : 'unknown'));
+        const details = getIceSignalLogDetails(data.signal);
+        console.log('[CALL][signal:in][Client]', details.signalType);
+        if (details.signalType === 'candidate') {
+          console.log(
+            `[ICE_TRACE] ts=${Date.now()} scope=calling role=client event=signal-in candidateType=${details.candidateType || 'unknown'} protocol=${details.protocol || 'unknown'} candidateEmpty=${details.candidateEmpty}`
+          );
+        }
 
         if (callPeerRef.current) {
           callPeerRef.current.signal(data.signal);
@@ -1604,6 +1790,10 @@ const DashboardClient = () => {
     // CALLING primero para hacer el teardown más determinista antes de limpiar random/favoritos
     try { handleCallEnd(true); } catch {}
     resetRandomTechMediaReadySignal();
+    resetRandomMediaAckSignal();
+    randomStreamRecordIdRef.current = null;
+    setRandomConnectionState(null);
+    setRandomIceConnectionState(null);
 
     // RANDOM
     if (localStream.current) {
@@ -2552,15 +2742,20 @@ const DashboardClient = () => {
     });
     p.on('signal', (signal) => {
       try {
-        const type = signal?.type || (signal?.candidate ? 'candidate' : 'unknown');
-        if (type === 'candidate') {
+        const details = getIceSignalLogDetails(signal);
+        if (details.signalType === 'candidate') {
           const cand = signal?.candidate;
           if (!cand || cand.candidate === '' || cand.candidate == null) return;
         }
         const toId   = Number(callPeerIdRef.current);
         const wsOpen = msgSocketRef.current?.readyState === WebSocket.OPEN;
         const validTo = Number.isFinite(toId) && toId > 0;
-        console.log('[CALL][signal:out][Client]', { type, toId, wsOpen, validTo });
+        console.log('[CALL][signal:out][Client]', { type: details.signalType, toId, wsOpen, validTo });
+        if (details.signalType === 'candidate') {
+          console.log(
+            `[ICE_TRACE] ts=${Date.now()} scope=calling role=client event=signal-out candidateType=${details.candidateType || 'unknown'} protocol=${details.protocol || 'unknown'} candidateEmpty=${details.candidateEmpty}`
+          );
+        }
         if (wsOpen && validTo) {
           msgSocketRef.current.send(JSON.stringify({ type: 'call:signal', to: toId, signal }));
         } else {
@@ -2595,6 +2790,15 @@ const DashboardClient = () => {
       console.log('[CALL][peer:close][Client]');
     });
 
+    if (p?._pc && typeof p._pc.addEventListener === 'function') {
+      wireCallingIceObservers({
+        pc: p._pc,
+        roleLabel: 'client',
+        setConnectionState: setCallConnectionState,
+        setIceConnectionState: setCallIceConnectionState,
+      });
+    }
+
     callPeerRef.current = p;
   };
 
@@ -2603,6 +2807,9 @@ const DashboardClient = () => {
   const cleanupCall = useCallback((reason = 'cleanup') => {
     console.log('[CALL][cleanup] reason=', reason);
     resetCallTechMediaReadySignal();
+    resetCallMediaAckSignal();
+    setCallConnectionState(null);
+    setCallIceConnectionState(null);
 
     // 1) timers
     if (callPingRef.current) {

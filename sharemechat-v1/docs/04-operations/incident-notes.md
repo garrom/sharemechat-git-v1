@@ -301,3 +301,35 @@ Resolucion posterior aplicada sobre gifts:
 - backend valida ademas que cualquier `streamRecordId` usado para cobrar un gift pertenezca al par correcto, siga activo y tenga `confirmed_at` no nulo
 
 Con ello, queda corregido el bug de negocio confirmado en MySQL donde RANDOM y CALLING podian generar `GIFT_SEND`, `GIFT_EARNING` y `GIFT_MARGIN` sin sesion confirmada. La deuda que sigue abierta es distinta: el tramo facturable del stream continua dependiendo de una confirmacion prematura y del calculo final desde `start_time`.
+
+Resolucion posterior aplicada sobre autoridad tecnica de confirmacion:
+
+- `tech-media-ready` deja de confirmar por si solo la sesion en RANDOM y CALLING
+- `ack-media` pasa a ser la autoridad real para confirmar `confirmed_at` y `billable_start`
+- frontend emite `ack-media` solo tras media local y remota en `live`, conexion usable y un margen corto de estabilidad
+- backend exige doble ACK valido de ambos lados sobre el mismo `streamRecordId` antes de confirmar
+
+Con este cambio queda corregida la parte de confirmacion prematura ligada a `tech-media-ready` como autoridad unica. El problema tecnico cross-network no se da por resuelto: la conectividad WebRTC puede seguir fallando mientras la estrategia TURN/ICE siga siendo fragil.
+
+### Diagnostico fino pendiente en regalo random tras match
+
+Se mantiene una incidencia operativa en random donde, tras un periodo de sesion ya emparejada y con streaming visible, el backend registra `gift_random_in` pero deja de llegar a `gift_random_validate_ok`, `processGift` y `gift_random_emit`.
+
+Con la evidencia disponible, el fallo queda acotado a retornos tempranos dentro de `MatchingHandlerSupport.handleGiftInMatch()` antes de completar la validacion del peer y de la sesion activa. La siguiente accion correcta es instrumentacion diagnostica minima en ese metodo para distinguir con logs saneados si el descarte se produce por:
+
+- `senderId` nulo
+- rol emisor distinto de `client`
+- `giftId` invalido
+- peer ausente o no abierto
+- `peerUserId` nulo
+- rol destino distinto de `model`
+- `streamId` ausente o invalido
+
+Diagnostico posterior confirmado:
+
+- el stream RANDOM del par existe y ya estaba confirmado
+- varios gifts consecutivos funcionan correctamente dentro de la misma sesion
+- mas tarde `statusService.getActiveSession(clientId, modelId)` puede devolver `null` aunque el peer siga vivo y no exista `stream_ended` previo
+- el rechazo se produce entonces en `MatchingHandlerSupport.handleGiftInMatch()` con `reasonCode=stream_id_invalid`
+
+La siguiente correccion minima correcta es mantener la resolucion actual via runtime/Redis y, si falla, hacer fallback a base de datos para recuperar el stream RANDOM confirmado y activo mas reciente del par antes de rechazar el regalo.

@@ -1,10 +1,10 @@
 package com.sharemechat.controller;
 
-import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.ConsentEnforcementService;
 import com.sharemechat.service.StreamService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.sharemechat.service.UserService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -12,13 +12,15 @@ import org.springframework.web.bind.annotation.*;
 public class StreamController {
 
     private final StreamService streamService;
-    private final JwtUtil jwtUtil;
     private final ConsentEnforcementService consentEnforcementService;
+    private final UserService userService;
 
-    public StreamController(StreamService streamService, JwtUtil jwtUtil, ConsentEnforcementService consentEnforcementService) {
+    public StreamController(StreamService streamService,
+                            ConsentEnforcementService consentEnforcementService,
+                            UserService userService) {
         this.streamService = streamService;
-        this.jwtUtil = jwtUtil;
         this.consentEnforcementService = consentEnforcementService;
+        this.userService = userService;
     }
 
     /**
@@ -29,21 +31,18 @@ public class StreamController {
      */
     @PostMapping("/{streamRecordId}/ack-media")
     public ResponseEntity<Void> ackMedia(@PathVariable Long streamRecordId,
-                                         HttpServletRequest request) {
-
-        String auth = request.getHeader("Authorization");
-        if (auth == null || !auth.startsWith("Bearer ")) {
+                                         Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
             return ResponseEntity.status(401).build();
         }
 
-        String token = auth.substring(7);
-        if (!jwtUtil.isTokenValid(token)) {
+        var user = userService.findByEmail(authentication.getName());
+        if (user == null) {
             return ResponseEntity.status(401).build();
         }
 
-        Long userId = jwtUtil.extractUserId(token);
-        consentEnforcementService.assertUserCompliant(userId, "POST /api/streams/{streamRecordId}/ack-media");
-        streamService.ackMedia(streamRecordId, userId);
+        consentEnforcementService.assertUserCompliant(user.getId(), "POST /api/streams/{streamRecordId}/ack-media");
+        streamService.ackMedia(streamRecordId, user.getId());
 
         return ResponseEntity.ok().build();
     }

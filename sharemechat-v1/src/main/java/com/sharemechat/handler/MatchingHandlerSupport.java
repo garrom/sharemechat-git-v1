@@ -4,8 +4,10 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.consent.ConsentState;
 import com.sharemechat.dto.MessageDTO;
 import com.sharemechat.entity.Balance;
+import com.sharemechat.entity.StreamRecord;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.BalanceRepository;
+import com.sharemechat.repository.StreamRecordRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.AgeGatePolicyService;
@@ -41,6 +43,7 @@ public class MatchingHandlerSupport {
     private final MessagesWsHandler messagesWsHandler;
     private final TransactionService transactionService;
     private final BalanceRepository balanceRepository;
+    private final StreamRecordRepository streamRecordRepository;
     private final UserTrialService userTrialService;
     private final UserBlockService userBlockService;
     private final SeenService seenService;
@@ -61,6 +64,7 @@ public class MatchingHandlerSupport {
                                   MessagesWsHandler messagesWsHandler,
                                   StatusService statusService,
                                   BalanceRepository balanceRepository,
+                                  StreamRecordRepository streamRecordRepository,
                                   UserTrialService userTrialService,
                                   UserBlockService userBlockService,
                                   SeenService seenService,
@@ -79,6 +83,7 @@ public class MatchingHandlerSupport {
         this.messagesWsHandler = messagesWsHandler;
         this.transactionService = transactionService;
         this.balanceRepository = balanceRepository;
+        this.streamRecordRepository = streamRecordRepository;
         this.userTrialService = userTrialService;
         this.userBlockService = userBlockService;
         this.seenService = seenService;
@@ -1018,36 +1023,60 @@ public class MatchingHandlerSupport {
     }
 
     private void handleGiftInMatch(WebSocketSession session, JSONObject json) {
-        Long senderId = state.getSessionUserIds().get(session.getId());
+        String localSid = session.getId();
+        String senderRole = state.getRoles().get(localSid);
+        long giftId = json.optLong("giftId", 0L);
+        WebSocketSession peer = state.getPairs().get(localSid);
+        String peerSid = peer != null ? peer.getId() : null;
+        Long peerUserId = peerSid != null ? state.getSessionUserIds().get(peerSid) : null;
+        String peerRole = peerSid != null ? state.getRoles().get(peerSid) : null;
+        Long senderId = state.getSessionUserIds().get(localSid);
         if (senderId == null) {
+            log.warn("gift_random_reject actorUserId={} role={} localSid={} peerSid={} peerUserId={} peerRole={} giftId={} streamRecordId={} reasonCode=sender_id_null",
+                    null, senderRole, localSid, peerSid, peerUserId, peerRole, giftId, null);
             safeSend(session, "{\"type\":\"gift:error\",\"message\":\"No autenticado\"}");
             return;
         }
-        String senderRole = state.getRoles().get(session.getId());
         log.warn("gift_random_in actorUserId={} role={} localSid={}",
                 senderId,
                 senderRole,
-                session.getId());
+                localSid);
         if (!"client".equals(senderRole)) {
+            log.warn("gift_random_reject actorUserId={} role={} localSid={} peerSid={} peerUserId={} peerRole={} giftId={} streamRecordId={} reasonCode=sender_role_not_client",
+                    senderId, senderRole, localSid, peerSid, peerUserId, peerRole, giftId, null);
             safeSend(session, "{\"type\":\"gift:error\",\"message\":\"Solo un CLIENT puede enviar regalos\"}");
             return;
         }
 
-        long giftId = json.optLong("giftId", 0L);
         if (giftId <= 0L) {
+            log.warn("gift_random_reject actorUserId={} role={} localSid={} peerSid={} peerUserId={} peerRole={} giftId={} streamRecordId={} reasonCode=gift_id_invalid",
+                    senderId, senderRole, localSid, peerSid, peerUserId, peerRole, giftId, null);
             safeSend(session, "{\"type\":\"gift:error\",\"message\":\"giftId inválido\"}");
             return;
         }
 
-        WebSocketSession peer = state.getPairs().get(session.getId());
-        if (peer == null || !peer.isOpen()) {
+        if (peer == null) {
+            log.warn("gift_random_reject actorUserId={} role={} localSid={} peerSid={} peerUserId={} peerRole={} giftId={} streamRecordId={} reasonCode=peer_null",
+                    senderId, senderRole, localSid, null, null, null, giftId, null);
+            safeSend(session, "{\"type\":\"gift:error\",\"message\":\"No hay destinatario conectado\"}");
+            return;
+        }
+        if (!peer.isOpen()) {
+            log.warn("gift_random_reject actorUserId={} role={} localSid={} peerSid={} peerUserId={} peerRole={} giftId={} streamRecordId={} reasonCode=peer_not_open",
+                    senderId, senderRole, localSid, peerSid, peerUserId, peerRole, giftId, null);
             safeSend(session, "{\"type\":\"gift:error\",\"message\":\"No hay destinatario conectado\"}");
             return;
         }
 
-        Long peerUserId = state.getSessionUserIds().get(peer.getId());
-        String peerRole = state.getRoles().get(peer.getId());
-        if (peerUserId == null || !"model".equals(peerRole)) {
+        if (peerUserId == null) {
+            log.warn("gift_random_reject actorUserId={} role={} localSid={} peerSid={} peerUserId={} peerRole={} giftId={} streamRecordId={} reasonCode=peer_user_id_null",
+                    senderId, senderRole, localSid, peerSid, null, peerRole, giftId, null);
+            safeSend(session, "{\"type\":\"gift:error\",\"message\":\"Destinatario no es MODEL\"}");
+            return;
+        }
+        if (!"model".equals(peerRole)) {
+            log.warn("gift_random_reject actorUserId={} role={} localSid={} peerSid={} peerUserId={} peerRole={} giftId={} streamRecordId={} reasonCode=peer_role_not_model",
+                    senderId, senderRole, localSid, peerSid, peerUserId, peerRole, giftId, null);
             safeSend(session, "{\"type\":\"gift:error\",\"message\":\"Destinatario no es MODEL\"}");
             return;
         }
@@ -1057,6 +1086,22 @@ public class MatchingHandlerSupport {
             streamId = statusService.getActiveSession(senderId, peerUserId).orElse(null);
         } catch (Exception ignore) {}
         if (streamId == null || streamId <= 0) {
+            try {
+                StreamRecord dbStream = streamRecordRepository
+                        .findTopByClient_IdAndModel_IdAndStreamTypeAndConfirmedAtIsNotNullAndEndTimeIsNullOrderByStartTimeDesc(
+                                senderId,
+                                peerUserId,
+                                Constants.StreamTypes.RANDOM
+                        )
+                        .orElse(null);
+                if (dbStream != null) {
+                    streamId = dbStream.getId();
+                }
+            } catch (Exception ignore) {}
+        }
+        if (streamId == null || streamId <= 0) {
+            log.warn("gift_random_reject actorUserId={} role={} localSid={} peerSid={} peerUserId={} peerRole={} giftId={} streamRecordId={} reasonCode=stream_id_invalid",
+                    senderId, senderRole, localSid, peerSid, peerUserId, peerRole, giftId, streamId);
             safeSend(session, "{\"type\":\"gift:error\",\"message\":\"No hay una sesion confirmada para enviar regalos\"}");
             return;
         }
@@ -1065,8 +1110,8 @@ public class MatchingHandlerSupport {
                 peerUserId,
                 senderRole,
                 peerRole,
-                session.getId(),
-                peer.getId(),
+                localSid,
+                peerSid,
                 giftId,
                 streamId);
 
@@ -1681,30 +1726,6 @@ public class MatchingHandlerSupport {
                 return;
             }
 
-            if (state.getConfirmedPairs().contains(sid) || state.getConfirmedPairs().contains(peerSid)) {
-                log.warn("random_tech_media_ready_ignored actorUserId={} peerUserId={} role={} localSid={} peerSid={} reason=already_confirmed",
-                        userId,
-                        peerUserId,
-                        role,
-                        sid,
-                        peerSid);
-                return;
-            }
-
-            state.getConfirmedPairs().add(sid);
-            state.getConfirmedPairs().add(peerSid);
-
-            Long clientId;
-            Long modelId;
-
-            if ("client".equals(role)) {
-                clientId = userId;
-                modelId = peerUserId;
-            } else {
-                clientId = peerUserId;
-                modelId = userId;
-            }
-
             log.warn("random_tech_media_ready actorUserId={} peerUserId={} role={} localSid={} peerSid={} bothReady={}",
                     userId,
                     peerUserId,
@@ -1712,15 +1733,13 @@ public class MatchingHandlerSupport {
                     sid,
                     peerSid,
                     true);
-            log.warn("random_tech_media_ready_confirm actorUserId={} peerUserId={} clientUserId={} modelUserId={} localSid={} peerSid={}",
+            log.warn("random_tech_media_ready_observed actorUserId={} peerUserId={} clientUserId={} modelUserId={} localSid={} peerSid={}",
                     userId,
                     peerUserId,
-                    clientId,
-                    modelId,
+                    "client".equals(role) ? userId : peerUserId,
+                    "client".equals(role) ? peerUserId : userId,
                     sid,
                     peerSid);
-
-            streamService.confirmActiveSession(clientId, modelId);
         } catch (Exception ex) {
             log.warn("random_tech_media_ready_error sid={} err={}",
                     session != null ? session.getId() : null,

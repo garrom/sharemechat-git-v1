@@ -1205,14 +1205,13 @@ public class MessagesWsHandlerSupport {
                 streamRecordId,
                 bothReady,
                 session != null ? session.getId() : null);
-        log.warn("call_tech_media_ready_confirm actorUserId={} peerUserId={} clientUserId={} modelUserId={} streamRecordId={} localSid={}",
+        log.warn("call_tech_media_ready_observed actorUserId={} peerUserId={} clientUserId={} modelUserId={} streamRecordId={} localSid={}",
                 me,
                 with,
                 clientId,
                 modelId,
                 streamRecordId,
                 session != null ? session.getId() : null);
-        streamService.confirmActiveSession(clientId, modelId);
     }
 
     private Pair<Long, Long> resolveClientModel(Long a, Long b) {

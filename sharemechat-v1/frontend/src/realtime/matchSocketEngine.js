@@ -2,6 +2,11 @@
 import Peer from 'simple-peer';
 import { NEXT_WAIT_MODAL_MIN_MS, NEXT_WAIT_MODAL_MAX_MS } from '../config/appConfig';
 import i18n from '../i18n';
+import {
+  attachIceDebugObservers,
+  createSelectedIcePairLogger,
+  getIceSignalLogDetails,
+} from './iceObserver';
 /**
  * Motor común para WS de matching + WebRTC signaling.
  */
@@ -42,6 +47,7 @@ export function createMatchSocketEngine(adapter) {
     onNoBalance,
     onPeerDisconnectedPost,
     onMatchMeta, // (data) => void, para setCurrentModelId / setCurrentClientId / streamRecordId / clientBalance etc.
+    onPeerStateChange,
 
     // Config rol
     role, // 'client' | 'model'
@@ -91,6 +97,15 @@ export function createMatchSocketEngine(adapter) {
 
     try {
       if (rs) rs.getTracks().forEach((t) => t.stop());
+    } catch {}
+
+    try {
+      onPeerStateChange?.({
+        iceConnectionState: null,
+        connectionState: null,
+        iceGatheringState: null,
+        signalingState: null,
+      });
     } catch {}
 
     setRemoteStream(null);
@@ -164,15 +179,28 @@ export function createMatchSocketEngine(adapter) {
       // pásalo por adapter como `peerConfig` (no invento valores).
       config: adapter.peerConfig,
     });
+    const logSelectedPair = createSelectedIcePairLogger(`scope=random role=${role}`);
+
+    const emitPeerState = () => {
+      try {
+        onPeerStateChange?.({
+          iceConnectionState: p._pc?.iceConnectionState || null,
+          connectionState: p._pc?.connectionState || null,
+          iceGatheringState: p._pc?.iceGatheringState || null,
+          signalingState: p._pc?.signalingState || null,
+        });
+      } catch {}
+    };
 
     p.on('signal', (signal) => {
-      const signalType = signal?.type || (signal?.candidate ? 'candidate' : 'unknown');
-      const candidateEmpty = signalType === 'candidate'
-        ? (signal?.candidate?.candidate === '' || signal?.candidate === '')
-        : false;
-      if (signalType !== 'candidate') {
+      const details = getIceSignalLogDetails(signal);
+      if (details.signalType !== 'candidate') {
         console.log(
-          `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} signalType=${signalType} candidateEmpty=${candidateEmpty}`
+          `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} signalType=${details.signalType} candidateEmpty=${details.candidateEmpty}`
+        );
+      } else {
+        console.log(
+          `[ICE_TRACE] ts=${Date.now()} scope=random role=${role} event=signal-out candidateType=${details.candidateType || 'unknown'} protocol=${details.protocol || 'unknown'} candidateEmpty=${details.candidateEmpty}`
         );
       }
       if (signal?.type === 'candidate' && signal?.candidate?.candidate === '') return;
@@ -194,6 +222,8 @@ export function createMatchSocketEngine(adapter) {
 
     p.on('connect', () => {
       peerConnected = true;
+      emitPeerState();
+      logSelectedPair(p._pc);
       console.log(
         `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=peerConnect peerConnected=${peerConnected} streamReceived=${streamReceived}`
       );
@@ -222,29 +252,30 @@ export function createMatchSocketEngine(adapter) {
     });
 
     if (p?._pc && typeof p._pc.addEventListener === 'function') {
-      p._pc.addEventListener('iceconnectionstatechange', () => {
-        console.log(
-          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState iceConnectionState=${p._pc?.iceConnectionState || 'unknown'}`
-        );
-      });
-      p._pc.addEventListener('connectionstatechange', () => {
-        console.log(
-          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState connectionState=${p._pc?.connectionState || 'unknown'}`
-        );
-      });
-      p._pc.addEventListener('icegatheringstatechange', () => {
-        console.log(
-          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState iceGatheringState=${p._pc?.iceGatheringState || 'unknown'}`
-        );
-      });
-      p._pc.addEventListener('signalingstatechange', () => {
-        console.log(
-          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState signalingState=${p._pc?.signalingState || 'unknown'}`
-        );
+      attachIceDebugObservers({
+        pc: p._pc,
+        logPrefix: `scope=random role=${role}`,
+        logSelectedPair,
+        onStateChange: () => {
+          emitPeerState();
+          console.log(
+            `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState iceConnectionState=${p._pc?.iceConnectionState || 'unknown'}`
+          );
+          console.log(
+            `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState connectionState=${p._pc?.connectionState || 'unknown'}`
+          );
+          console.log(
+            `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState iceGatheringState=${p._pc?.iceGatheringState || 'unknown'}`
+          );
+          console.log(
+            `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=${role} action=pcState signalingState=${p._pc?.signalingState || 'unknown'}`
+          );
+        },
       });
     }
 
     peerRef.current = p;
+    emitPeerState();
   }
 
   function onWsOpen() {
@@ -316,13 +347,14 @@ export function createMatchSocketEngine(adapter) {
     }
 
     if (data.type === 'signal') {
-      const signalType = data?.signal?.type || (data?.signal?.candidate ? 'candidate' : 'unknown');
-      const candidateEmpty = signalType === 'candidate'
-        ? ((data?.signal?.candidate?.candidate || data?.signal?.candidate || '') === '')
-        : false;
-      if (signalType !== 'candidate') {
+      const details = getIceSignalLogDetails(data?.signal);
+      if (details.signalType !== 'candidate') {
         console.log(
-          `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} action=signalReceived signalType=${signalType} candidateEmpty=${candidateEmpty} hasPeer=${!!peerRef.current}`
+          `[RANDOM_TRACE_SIGNAL] ts=${Date.now()} role=${role} action=signalReceived signalType=${details.signalType} candidateEmpty=${details.candidateEmpty} hasPeer=${!!peerRef.current}`
+        );
+      } else {
+        console.log(
+          `[ICE_TRACE] ts=${Date.now()} scope=random role=${role} event=signal-in candidateType=${details.candidateType || 'unknown'} protocol=${details.protocol || 'unknown'} candidateEmpty=${details.candidateEmpty} hasPeer=${!!peerRef.current}`
         );
       }
       if (peerRef.current) {

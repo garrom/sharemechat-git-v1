@@ -53,6 +53,7 @@ public class StreamService {
 
     // locks por sesión para evitar dobles cierres concurrentes
     private final ConcurrentHashMap<Long, ReentrantLock> sessionLocks = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Long, java.util.Set<Long>> mediaAckUsersByStreamId = new ConcurrentHashMap<>();
 
     public StreamService(StreamRecordRepository streamRecordRepository,
                          UserRepository userRepository,
@@ -322,25 +323,43 @@ public class StreamService {
 
         if (session.getEndTime() != null) {
             // ya cerrada -> ignorar (idempotencia)
+            clearMediaAck(streamRecordId);
             log.info("ackMedia: sesión {} ya cerrada, ignorando ACK (userId={})", streamRecordId, userId);
             return;
         }
 
         if (session.getConfirmedAt() != null) {
             // ya confirmada -> idempotente
+            clearMediaAck(streamRecordId);
+            return;
+        }
+
+        mediaAckUsersByStreamId
+                .computeIfAbsent(streamRecordId, ignored -> ConcurrentHashMap.newKeySet())
+                .add(userId);
+
+        java.util.Set<Long> ackUsers = mediaAckUsersByStreamId.get(streamRecordId);
+        boolean clientAcked = ackUsers != null && ackUsers.contains(clientId);
+        boolean modelAcked = ackUsers != null && ackUsers.contains(modelId);
+
+        if (!clientAcked || !modelAcked) {
+            log.info("ackMedia: ACK parcial streamRecordId={} userId={} clientAcked={} modelAcked={}",
+                    streamRecordId, userId, clientAcked, modelAcked);
             return;
         }
 
         LocalDateTime now = LocalDateTime.now();
-        session.setConfirmedAt(now);
-        if (session.getBillableStart() == null) {
-            session.setBillableStart(now);
+        int updated = streamRecordRepository.confirmIfNotConfirmed(session.getId(), now);
+        if (updated == 0) {
+            clearMediaAck(streamRecordId);
+            return;
         }
-        streamRecordRepository.save(session);
+
+        clearMediaAck(streamRecordId);
         recordStreamEvent(session.getId(), Constants.StreamEventTypes.CONFIRMED, null, null);
         recordStreamEvent(session.getId(), Constants.StreamEventTypes.BILLING_STARTED, null, null);
 
-        log.info("ackMedia: confirmada sesión id={} por userId={} (client={}, model={})",
+        log.info("ackMedia: confirmada sesión id={} tras doble ACK (lastUserId={} client={} model={})",
                 session.getId(), userId, clientId, modelId);
     }
 
@@ -411,6 +430,7 @@ public class StreamService {
 
         try {
             if (session.getEndTime() != null) {
+                clearMediaAck(session.getId());
                 log.info(
                         "[RANDOM_TRACE_END] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} confirmedAt={} endTimePrev={} seconds={} noCharge={} endReason={}",
                         traceTs,
@@ -450,6 +470,7 @@ public class StreamService {
             if (session.getConfirmedAt() == null) {
                 session.setEndTime(endTime);
                 streamRecordRepository.save(session);
+                clearMediaAck(session.getId());
                 recordEndEvents(session.getId(), endReason);
                 postEndStatusCleanup(clientId, modelId);
                 log.info(
@@ -532,6 +553,7 @@ public class StreamService {
             if (seconds <= 0 || cost.compareTo(BigDecimal.ZERO) <= 0) {
                 session.setEndTime(endTime);
                 streamRecordRepository.save(session);
+                clearMediaAck(session.getId());
                 recordEndEvents(session.getId(), endReason);
                 postEndStatusCleanup(clientId, modelId);
                 log.info(
@@ -688,6 +710,7 @@ public class StreamService {
             // === AHORA SÍ: CERRAR STREAM ===
             session.setEndTime(endTime);
             streamRecordRepository.save(session);
+            clearMediaAck(session.getId());
             recordEndEvents(session.getId(), endReason);
             log.info(
                     "[RANDOM_TRACE_END] ts={} clientId={} modelId={} sessionIdHint={} sessionId={} confirmedAt={} endTimePrev={} seconds={} noCharge={} endReason={}",
@@ -833,6 +856,11 @@ public class StreamService {
         }
 
         return below;
+    }
+
+    private void clearMediaAck(Long streamRecordId) {
+        if (streamRecordId == null) return;
+        mediaAckUsersByStreamId.remove(streamRecordId);
     }
 
 
