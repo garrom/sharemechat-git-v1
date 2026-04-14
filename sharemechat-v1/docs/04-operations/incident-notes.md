@@ -264,6 +264,22 @@ Como avance posterior de esta linea, la fase transicional de aplicacion ya centr
 
 El problema cross-network no debe darse por resuelto con ese cambio: la siguiente accion correcta sigue siendo sustituir la dependencia actual de TURN publico estatico por una estrategia controlada por el proyecto y observable por entorno.
 
+Avance operativo posterior ya ejecutado en AUDIT:
+
+- se ha desplegado una implementacion minima de TURN para el entorno
+- la implementacion se mantiene en una unica instancia
+- no se ha introducido alta disponibilidad en esta fase
+- la validacion operativa del propio servidor TURN ya muestra actividad correcta de `ALLOCATE`, `CREATE_PERMISSION` y `CHANNEL_BIND`
+- la ejecucion de esta fase se alinea con el despliegue TURN minimo para AUDIT documentado en ADR-005
+
+Lo que sigue pendiente en esta misma linea ya no es el despliegue minimo del relay, sino su integracion efectiva completa con la aplicacion en AUDIT:
+
+- cargar la configuracion `AUDIT_WEBRTC_TURN_*` en el backend activo
+- levantar backend con esa configuracion efectiva
+- verificar la salida de `/api/webrtc/config`
+- validar sesion WebRTC real cross-network en navegador
+- confirmar evidencia frontend de selected pair `relay (TURN)`
+
 ### Riesgo de confirmacion y cobro prematuros en random videochat
 
 Se detecta una incidencia tecnica con impacto directo de negocio en el flujo de random videochat.

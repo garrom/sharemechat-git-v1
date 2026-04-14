@@ -21,6 +21,7 @@ AUDIT debe entenderse como entorno construido y funcional a nivel base, con esto
 - aislamiento de aplicacion y datos
 - base de datos preparada como entorno limpio
 - despliegue previsto para frontend, backend y validacion end-to-end
+- despliegue TURN minimo ya implementado a nivel de infraestructura para validacion funcional y diagnostico
 
 ## Saneado aplicado
 
@@ -99,3 +100,28 @@ La comparacion del resto de configuracion Nginx fuera de ese vhost sigue dependi
 AUDIT ya ha validado funcionamiento completo de realtime tras nivelar la publicacion de WebSocket y completar la dependencia de Redis en la maquina del backend.
 
 Para este entorno, Redis debe considerarse dependencia obligatoria del matching y de la coordinacion realtime, con servicio activo en localhost sobre el puerto esperado por la aplicacion.
+
+## TURN minimo operativo
+
+AUDIT ya dispone de una implementacion minima de TURN fuera del repositorio principal, ejecutada como despliegue operativo del entorno y alineada con la estrategia por entorno ya documentada.
+
+El estado documentable de esta fase es:
+
+- una unica instancia TURN para el entorno
+- sin alta disponibilidad
+- orientada a validacion funcional y diagnostico
+- relay publicado sin depender de un camino operativo de media basado en NAT gestionado para esta fase minima
+
+La evidencia operativa ya obtenida en el propio servidor TURN confirma actividad funcional de relay a nivel de protocolo:
+
+- `ALLOCATE` procesado con exito
+- `CREATE_PERMISSION` procesado con exito
+- `CHANNEL_BIND` procesado con exito
+
+Esta fase no debe darse por cerrada end-to-end todavia. Sigue pendiente completar la integracion efectiva con el backend AUDIT activo y validar WebRTC cross-network real desde la aplicacion:
+
+- cargar la configuracion `AUDIT_WEBRTC_TURN_*` en el runtime backend efectivo
+- levantar backend AUDIT con esa configuracion operativa
+- verificar `/api/webrtc/config`
+- ejecutar pruebas cross-network reales en navegador
+- confirmar evidencia `ICE selected pair: relay (TURN)` en sesiones de la aplicacion
