@@ -367,7 +367,7 @@ export default function VideoChatFavoritosModelo(props) {
                                   </StyledCallBottomBar>
 
                                   <StyledChatContainer data-wide="true">
-                                    <StyledChatList ref={callListRef}>
+                                    <StyledChatList ref={callListRef} style={{width:'100%',maxHeight:'40%',overflowY:'auto'}}>
                                       {renderDesktopCallMessages()}
                                     </StyledChatList>
                                   </StyledChatContainer>
@@ -608,8 +608,8 @@ export default function VideoChatFavoritosModelo(props) {
                       </StyledFloatingHangup>
                     )}
 
-                    <StyledChatContainer data-wide="true">
-                      <StyledChatList ref={callListRef}>
+                    <StyledChatContainer data-wide="true" style={{display:'flex',flexDirection:'column',justifyContent:'flex-end',zIndex:5}}>
+                      <StyledChatList ref={callListRef} style={{ width: '100%' }}>
                         {centerMessages.map((m) => {
                           const giftData = resolveGiftData(m);
                           const isMe = Number(m.senderId) === Number(user?.id);
