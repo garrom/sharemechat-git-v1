@@ -288,6 +288,14 @@ Validacion funcional end-to-end ya confirmada en AUDIT:
 
 Con esta evidencia, la fase minima de TURN en AUDIT queda cerrada a nivel operativo del entorno.
 
+Cierre operativo posterior ya validado en el propio entorno:
+
+- el arranque manual ad hoc de coturn deja de formar parte de la operativa normal
+- la ejecucion persistente queda absorbida por un servicio systemd del entorno con arranque automatico al boot
+- el reinicio completo de la maquina confirma recuperacion automatica del servicio en estado `active (running)`
+- la configuracion estable ya no usa el certificado de ejemplo de coturn y queda apoyada en certificado valido del entorno
+- la validacion de cierre se apoya en relay TURN efectivo en navegador, no solo en proceso levantado
+
 La siguiente etapa natural ya no pertenece a esta incidencia en AUDIT, sino a replicar el mismo patron de forma controlada en TEST sin reabrir la decision de arquitectura ya tomada.
 
 ### Riesgo de confirmacion y cobro prematuros en random videochat
@@ -337,6 +345,12 @@ Resolucion posterior aplicada sobre autoridad tecnica de confirmacion:
 
 Con este cambio queda corregida la parte de confirmacion prematura ligada a `tech-media-ready` como autoridad unica. El problema tecnico cross-network no se da por resuelto: la conectividad WebRTC puede seguir fallando mientras la estrategia TURN/ICE siga siendo fragil.
 
+Correccion posterior acotada en CALLING:
+
+- se detecto un false positive todavia posible en llamadas 1 a 1 porque `ack-media` podia salir con `local track live`, `remote track live` y conexion usable aunque el elemento `<video>` remoto real aun no hubiera entrado en reproduccion efectiva
+- la correccion aplicada se limita al frontend de CALLING: el ACK ahora exige ademas `onPlaying` real del `<video ref={callRemoteVideoRef}>`
+- RANDOM no cambia y backend no cambia: `ack-media` sigue siendo la autoridad compartida y `StreamService.ackMedia(...)` mantiene el doble ACK como confirmacion real
+
 ### Diagnostico fino pendiente en regalo random tras match
 
 Se mantiene una incidencia operativa en random donde, tras un periodo de sesion ya emparejada y con streaming visible, el backend registra `gift_random_in` pero deja de llegar a `gift_random_validate_ok`, `processGift` y `gift_random_emit`.
@@ -359,3 +373,151 @@ Diagnostico posterior confirmado:
 - el rechazo se produce entonces en `MatchingHandlerSupport.handleGiftInMatch()` con `reasonCode=stream_id_invalid`
 
 La siguiente correccion minima correcta es mantener la resolucion actual via runtime/Redis y, si falla, hacer fallback a base de datos para recuperar el stream RANDOM confirmado y activo mas reciente del par antes de rechazar el regalo.
+
+### Chat no visible en CALLING mobile
+
+Se detecto una incidencia frontend ya resuelta en el videochat 1 a 1 de favoritos.
+
+Patron observado:
+
+- en mobile, durante CALLING, el video seguia funcionando
+- el chat del overlay no se mostraba visualmente
+- el problema afectaba tanto a cliente como a modelo
+- desktop seguia funcionando correctamente
+- RANDOM seguia funcionando correctamente
+
+La clasificacion correcta del fallo fue de layout responsive y composicion visual, no de backend, signaling ni WebRTC.
+
+La evidencia tecnica revisada en codigo apuntaba a esta composicion en la rama mobile de CALLING:
+
+- chat renderizado dentro de `StyledChatContainer`
+- overlay absoluto sobre el video
+- sin composicion explicita suficiente para garantizar visibilidad del contenido del chat en mobile
+
+La resolucion aplicada se limito al frontend de CALLING favoritos:
+
+- ajuste local del contenedor de chat en mobile para forzar composicion visible
+- uso de layout flex en columna
+- anclaje inferior del contenido del chat
+- z-index explicito para asegurar visibilidad sobre el video
+
+El arreglo se mantuvo acotado a:
+
+- `VideoChatFavoritosCliente.jsx`
+- `VideoChatFavoritosModelo.jsx`
+
+No se modificaron:
+
+- backend
+- TURN
+- signaling
+- logica WebRTC
+- RANDOM
+- desktop
+
+Con ello, el chat en CALLING mobile vuelve a mostrar correctamente:
+
+- texto
+- emojis
+- gifts
+
+### Salto visual del video remoto en Chromium durante fase inicial de media
+
+Se detecta una incidencia frontend reproducible en videochat cuando el flujo ya ha establecido sesion WebRTC, pero el video remoto todavia no ha quedado visualmente listo.
+
+### Pantalla negra en arranque por orden de inicializacion en VideochatStyles
+
+Tras la Fase 2 de limpieza base del stage remoto desktop, la aplicacion podia arrancar con pantalla negra y error `ReferenceError: can't access lexical declaration before initialization` en `VideochatStyles.js`.
+
+La causa fue de inicializacion de modulo en frontend: `StyledDesktopCallChatList` se declaro antes de `StyledChatList`, aunque dependia de ese simbolo mediante `styled(StyledChatList)`.
+
+La correccion aplicada es minima y sin cambio funcional: solo se reordena la declaracion para que `StyledChatList` quede inicializado antes de su extension. No se introducen cambios de comportamiento ni se mezcla este ajuste con la Fase 3.
+
+Patron observado:
+
+- afecta a Chromium en escritorio
+- se ha observado en Chrome y Edge
+- no se reproduce en Firefox
+- no se reproduce en mobile
+- afecta tanto a RANDOM como a CALLING
+- el backend, signaling y la sesion WebRTC terminan funcionando correctamente
+- el problema visible es un encogimiento temporal del contenedor de video remoto durante los primeros segundos antes de reproduccion estable
+
+La evidencia revisada en codigo apunta a una combinacion de fase pre-media y layout:
+
+- el `srcObject` remoto se enlaza cuando existe `remoteStream`
+- las ramas de render de RANDOM y CALLING cambian de layout al detectar `remoteStream` o estado de llamada activa
+- los callbacks de video `onLoadedMetadata`, `onCanPlay` y `onPlaying` llegan despues
+- en Chromium, la fase entre `remoteStream` disponible y video remoto visualmente listo parece mas larga que en Firefox
+
+Puntos concretos del frontend donde se observa este patron:
+
+- `DashboardClient.jsx` y `DashboardModel.jsx` enlazan `remoteStream` a `remoteVideoRef`
+- `VideoChatRandomCliente.jsx` y `VideoChatRandomModelo.jsx` cambian el layout desktop a `full-remote` en cuanto existe `remoteStream`
+- `VideoChatFavoritosCliente.jsx` y `VideoChatFavoritosModelo.jsx` muestran el stage de llamada en escritorio segun estado de llamada, no segun readiness visual del video
+- `VideochatStyles.js` concentra los wrappers comunes del remoto (`StyledCallCardDesktop`, `StyledCallVideoArea`, `StyledRemoteVideo`)
+
+La causa raiz probable queda acotada a que el layout visible depende demasiado pronto de la presencia del stream remoto y no de una fase posterior de readiness visual del elemento `<video>`.
+
+La siguiente correccion correcta debe mantenerse en frontend y quedar desacoplada de WebRTC y signaling:
+
+- reservar area estable para el remoto desde la fase pre-media
+- evitar que la composicion visible dependa de dimensiones intrinsecas todavia no disponibles del `<video>`
+- introducir un estado visual explicito de readiness del video remoto apoyado en eventos del elemento (`loadedmetadata`, `canplay` o `playing`)
+- mantener placeholder o stage estable hasta que el video remoto quede listo para pintar sin reflow perceptible
+
+Estado operativo posterior:
+
+- se llego a probar una primera implementacion frontend basada en placeholder y estado local de readiness del remoto
+- esa variante introdujo una fase visual explicita con fondo negro y texto `Conectando...` hasta `onPlaying`
+- no rompio match, signaling, WebRTC, sesion ni visibilidad final del remoto
+- la mejora se considera parcial y valida como hardening visual no disruptivo
+- aun asi, no resolvio el encogimiento de la card en Chrome desktop, lo que confirma que el problema no era solo de visibilidad del video sino tambien de geometria/layout
+
+Intento posterior de endurecimiento geometrico:
+
+- se probo un ajuste contenido sobre `StyledPane` y `StyledCallCardDesktop` en `VideochatStyles.js`
+- el comportamiento visual cambio, pero el bug no quedo resuelto
+- en esa variante la card tendia a quedar mas pegada arriba
+- la hipotesis de trabajo paso a apuntar menos al pane por si solo y mas al layout `full-remote` basado en grid
+
+Intento estructural posterior ya revertido:
+
+- se probo una variante mas agresiva sobre `StyledSplit2` para que `full-remote` dejara de usar `0fr 1fr` y pasara a una sola columna real
+- en la misma linea se oculto de forma efectiva el pane izquierdo en ese modo
+- esa variante introdujo una regresion mas grave: el remoto dejo de verse correctamente
+- la variante se descarto y se hizo rollback
+- ese cambio no debe considerarse baseline valida ni punto de reentrada
+
+Estado valido actual tras rollback:
+
+- el remoto vuelve a verse
+- RANDOM vuelve a estar funcional a nivel de match, signaling, WebRTC y TURN
+- el placeholder `Conectando...` previo se mantiene como mejora parcial no disruptiva
+- el bug visual original sigue abierto: en desktop RANDOM, durante aproximadamente 2 a 5 segundos previos a la reproduccion remota real, la card o superficie remota puede encogerse en Chrome y luego corregirse sola
+- Firefox desktop sigue comportandose mejor en esa fase transitoria
+
+El problema no debe darse por resuelto todavia. La deuda abierta ya no esta en backend, TURN o signaling, sino en como el frontend separa:
+
+- estado funcional de match o llamada
+- presencia tecnica de `remoteStream`
+- readiness visual real del elemento `<video>`
+- composicion del stage remoto y sus overlays
+
+El roadmap de trabajo posterior queda registrado en `docs/07-roadmap/pending-hardening.md` para evitar reabrir esta incidencia con parches locales no trazables.
+
+Cierre operativo posterior de esta linea de trabajo:
+
+- la linea reciente de cambios sobre RANDOM desktop y stage remoto se cierra y se revierte como base de trabajo
+- el resultado de esa iteracion contamino el comportamiento funcional y la capacidad de validacion del sistema, por lo que deja de considerarse aceptable como baseline
+- se prioriza volver al ultimo estado funcional conocido, aunque reaparezca temporalmente el defecto visual del card remoto encogido
+- no debe considerarse vigente ningun rediseño parcial o wiring temporal asociado a esa iteracion descartada
+- la unica mejora de esa linea que se mantiene como valida es el placeholder previo a `playing`, al no introducir regresion funcional y aportar una fase visual transitoria explicita
+
+Cierre posterior de la variante reciente de integracion en RANDOM desktop:
+
+- el objetivo original seguia siendo acotado: corregir el salto o encogimiento visual temporal del card remoto durante los primeros segundos previos a la reproduccion real del video
+- la regresion observada en la iteracion reciente ya no fue un problema visual acotado, sino una rotura clara del render desktop en frontend con match funcional pero composicion rota, doble pane o doble card visible y ausencia de video util en pantalla
+- queda explicitamente descartado que la causa raiz de esta regresion pertenezca a signaling, matching, TURN o backend; la rotura introducida fue de integracion y render desktop en frontend
+- esta variante queda cerrada como linea fallida y no debe retomarse como base activa de trabajo
+- cualquier reentrada futura en este frente debera partir de una base funcional conocida y exigir validacion incremental mucho mas estricta entre fases para no volver a contaminar el flujo funcional de RANDOM desktop

@@ -1,11 +1,12 @@
 import React, { useRef, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import { useModal } from '../../components/ModalProvider';
 import { useSession } from '../../components/SessionProvider';
 import { canAccessBackoffice } from '../../utils/backofficeAccess';
 import { buildAdminAppUrl, navigateToUrl } from '../../utils/runtimeSurface';
-import { getApiErrorMessage, isEmailNotVerifiedError } from '../../utils/apiErrors';
+import { isEmailNotVerifiedError } from '../../utils/apiErrors';
 
 const fieldStyle = {
   display: 'grid',
@@ -40,6 +41,7 @@ const AdminLoginForm = () => {
   const history = useHistory();
   const { openModal, closeModal, alert } = useModal();
   const { refresh } = useSession();
+  const t = (key, options) => i18n.t(key, options);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -51,7 +53,7 @@ const AdminLoginForm = () => {
     setError('');
 
     if (!email.trim() || !password) {
-      setError('Email y contrasena son obligatorios.');
+      setError(t('admin.auth.validation.requiredFields'));
       return;
     }
 
@@ -69,46 +71,46 @@ const AdminLoginForm = () => {
       if (refreshedUser && canAccessBackoffice(refreshedUser)) {
         navigateToUrl(buildAdminAppUrl('/dashboard-admin'), history);
       } else {
-        setError('No se pudo validar la sesion interna. Intentalo de nuevo.');
+        setError(t('admin.auth.errors.sessionValidation'));
       }
     } catch (err) {
       const statusCode = Number(err?.status);
 
       if (isEmailNotVerifiedError(err)) {
-        setError('Debes verificar tu email antes de acceder al backoffice.');
+        setError(t('admin.auth.errors.emailNotVerified'));
 
         if (!modalOpenRef.current) {
           modalOpenRef.current = true;
 
           openModal({
-            title: 'Email no verificado',
+            title: t('admin.auth.modal.emailNotVerified.title'),
             variant: 'warning',
             size: 'sm',
             onClose: () => closeModal(),
-            content: 'Debes validar tu email antes de acceder al backoffice.',
+            content: t('admin.auth.modal.emailNotVerified.body'),
             actions: [
               {
-                label: 'Mas tarde',
+                label: t('admin.auth.modal.emailNotVerified.actions.later'),
                 onClick: () => closeModal(false),
               },
               {
-                label: 'Reenviar email',
+                label: t('admin.auth.modal.emailNotVerified.actions.resend'),
                 primary: true,
                 onClick: async () => {
                   try {
                     await apiFetch('/email-verification/resend', { method: 'POST' });
                     closeModal(true);
                     await alert({
-                      title: 'Email reenviado',
-                      message: 'Te hemos reenviado el email de validacion.',
+                      title: t('admin.auth.resend.successTitle'),
+                      message: t('admin.auth.resend.successMessage'),
                       variant: 'success',
                       size: 'sm',
                     });
-                  } catch (resendError) {
+                  } catch {
                     closeModal(false);
                     await alert({
-                      title: 'No se pudo reenviar',
-                      message: resendError?.data?.message || 'No se pudo reenviar el email de validacion.',
+                      title: t('admin.auth.resend.errorTitle'),
+                      message: t('admin.auth.resend.errorMessage'),
                       variant: 'warning',
                       size: 'sm',
                     });
@@ -121,11 +123,11 @@ const AdminLoginForm = () => {
           });
         }
       } else if (statusCode === 401) {
-        setError('Credenciales invalidas.');
+        setError(t('admin.auth.errors.invalidCredentials'));
       } else if (statusCode === 403) {
-        setError(getApiErrorMessage(err, 'Acceso interno denegado.'));
+        setError(t('admin.auth.errors.accessDenied'));
       } else {
-        setError(getApiErrorMessage(err, 'No se pudo iniciar sesion.'));
+        setError(t('admin.auth.errors.generic'));
       }
     } finally {
       setLoading(false);
@@ -134,9 +136,9 @@ const AdminLoginForm = () => {
 
   return (
     <form onSubmit={handleSubmit} noValidate style={{ display: 'grid', gap: 14, padding: 22, borderRadius: 16, border: '1px solid #d9e2f2', background: '#fff', boxShadow: '0 12px 30px rgba(15, 24, 38, 0.08)' }}>
-      <div style={{ fontSize: 22, fontWeight: 700, color: '#16324f' }}>Acceso interno</div>
+      <div style={{ fontSize: 22, fontWeight: 700, color: '#16324f' }}>{t('admin.auth.form.title')}</div>
       <div style={{ fontSize: 13, color: '#5f6b7a', lineHeight: 1.55 }}>
-        Introduce tus credenciales de backoffice.
+        {t('admin.auth.form.subtitle')}
       </div>
 
       {error ? (
@@ -146,7 +148,7 @@ const AdminLoginForm = () => {
       ) : null}
 
       <label style={fieldStyle}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#52607a' }}>Email</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#52607a' }}>{t('admin.auth.fields.email')}</span>
         <input
           type="email"
           value={email}
@@ -158,7 +160,7 @@ const AdminLoginForm = () => {
       </label>
 
       <label style={fieldStyle}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: '#52607a' }}>Contrasena</span>
+        <span style={{ fontSize: 12, fontWeight: 700, color: '#52607a' }}>{t('admin.auth.fields.password')}</span>
         <input
           type="password"
           value={password}
@@ -170,7 +172,7 @@ const AdminLoginForm = () => {
       </label>
 
       <button type="submit" disabled={loading} style={{ ...buttonStyle, opacity: loading ? 0.7 : 1 }}>
-        {loading ? 'Accediendo...' : 'Entrar'}
+        {loading ? t('admin.auth.actions.loading') : t('admin.auth.actions.submit')}
       </button>
     </form>
   );

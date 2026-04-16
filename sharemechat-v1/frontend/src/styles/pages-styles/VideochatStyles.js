@@ -377,6 +377,30 @@ export const StyledRemoteVideo = styled.div`
 
 `;
 
+export const StyledRemoteVideoMedia = styled.video`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  opacity: ${p => (p.$ready ? 1 : 0)};
+  transition: opacity 0.18s ease;
+`;
+
+export const StyledRemoteVideoPlaceholder = styled.div`
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+`;
+
 export const StyledLocalVideo = styled.div`
   position: absolute;
   top: 0px;
@@ -959,6 +983,13 @@ export const StyledPane = styled.section`
     justify-content:stretch;
     overflow:hidden;
   }
+  &[data-side="right"][data-view="call"]{
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: hidden;
+    min-width: 0;
+    min-height: 0;
+  }
   &[data-side="right"][data-view="precall-stats"]{
     @media (min-width: 769px) {
       align-items:center;
@@ -1402,10 +1433,12 @@ export const StyledFloatingHangup = styled.div`
 export const StyledCallCardDesktop = styled.div`
   display: flex;
   flex-direction: column;
-  width: 100%;
+  width: min(100%, 1040px);
   max-width: 1040px;
   margin: 0 auto;
+  align-self: center;
   min-width: 0;
+  min-height: 300px;
 
   border-radius: 16px;
   border: none;
@@ -1416,6 +1449,8 @@ export const StyledCallCardDesktop = styled.div`
 
   /* DESKTOP:*/
   @media (min-width: 769px) {
+    width: min(100%, 1040px);
+    align-self: stretch;
     overflow: hidden;
     border: 1px solid rgba(255,255,255,0.08);
     border-radius: 20px;

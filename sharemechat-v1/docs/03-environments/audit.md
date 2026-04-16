@@ -134,6 +134,14 @@ La validacion funcional end-to-end de AUDIT ya confirma ademas:
 - streaming visible
 - gifts RANDOM operativos sobre sesiones confirmadas
 
+La base operativa estable de TURN en AUDIT queda ademas cerrada con estos criterios ya validados:
+
+- el arranque deja de hacerse con comandos manuales ad hoc y pasa a estar gestionado por un servicio persistente de systemd del entorno
+- el servicio queda habilitado para arrancar automaticamente tras reinicio completo de la maquina
+- la validacion operativa posterior al reboot confirma que el servicio vuelve en estado `active (running)` sin intervencion manual
+- la configuracion runtime estable ya no depende del certificado de ejemplo de coturn y usa certificado valido del entorno
+- la validacion final no se limita al proceso levantado: la aplicacion confirma uso real de relay TURN con candidatos `relay`, selected pair `relay (TURN)` y reproduccion remota funcional
+
 Con ello, la fase minima de TURN en AUDIT puede darse por cerrada a nivel operativo del entorno.
 
 El siguiente paso natural no es reabrir arquitectura en AUDIT, sino replicar de forma controlada el mismo patron en TEST manteniendo la misma logica de aplicacion.

@@ -34,6 +34,19 @@ La superficie de admin cubre:
 - las rutas realtime usan `/match` y `/messages`
 - WebRTC en cliente se apoya en `simple-peer`
 
+## I18n de superficies
+
+La estrategia aprobada mantiene un unico motor i18n compartido para `product` y `admin`, reutilizando la infraestructura actual basada en `i18next` y `SessionProvider`.
+
+La separacion entre superficies se resuelve a nivel logico y de recursos, no mediante dos infraestructuras distintas. El objetivo es evitar duplicacion tecnica y, a la vez, no mezclar sin criterio los copys de producto y backoffice.
+
+La primera iteracion de i18n en backoffice se divide en dos subfases de bajo riesgo:
+
+- Fase 1A: shell autenticado, layout y selector visible de idioma dentro del shell
+- Fase 1B: acceso interno, login, verificacion interna de email y selector visible de idioma en acceso y login
+
+Los paneles operativos del backoffice quedan fuera de esta primera iteracion.
+
 ## Flujo de sesion del backoffice
 
 En la superficie admin, el estado de sesion debe tener una unica fuente de verdad en `SessionProvider`.

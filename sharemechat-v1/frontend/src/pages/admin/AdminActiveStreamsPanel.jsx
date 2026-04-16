@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import i18n from '../../i18n';
 import {
   StyledButton,
   DarkHeaderTable,
@@ -25,6 +26,7 @@ const DEFAULT_FILTERS = {
 };
 
 const AdminActiveStreamsPanel = ({ canKill = false }) => {
+  const t = (key, options) => i18n.t(key, options);
   const destinationRef = useRef(null);
   const [filters, setFilters] = useState(DEFAULT_FILTERS);
   const [streams, setStreams] = useState([]);
@@ -44,14 +46,15 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
 
   useEffect(() => {
     fetchActiveStreams(DEFAULT_FILTERS);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fmtTs = (value) => {
-    if (!value) return '—';
+    if (!value) return '-';
     try {
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return String(value);
-      return date.toLocaleString();
+      return date.toLocaleString(i18n.resolvedLanguage || i18n.language);
     } catch {
       return String(value);
     }
@@ -103,11 +106,11 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
       id,
       email,
       nickname,
-      label: nickname || email || (id != null ? `#${id}` : '—'),
+      label: nickname || email || (id != null ? `#${id}` : '-'),
     };
   };
 
-  const getStatus = (item) => item?.statusDerivado || item?.derivedStatus || item?.status || '—';
+  const getStatus = (item) => item?.statusDerivado || item?.derivedStatus || item?.status || '-';
   const isStuck = (item) => Boolean(item?.stuck);
 
   const buildQuery = (nextFilters) => {
@@ -127,11 +130,11 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
       const res = await fetch(`/api/admin/streams/active${query ? `?${query}` : ''}`, {
         credentials: 'include',
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error al cargar streams activos');
+      if (!res.ok) throw new Error((await res.text()) || i18n.t('admin.streams.errors.loadList'));
       const data = await res.json();
       setStreams(Array.isArray(data) ? data : []);
     } catch (e) {
-      setError(e.message || 'Error al cargar streams activos');
+      setError(e.message || i18n.t('admin.streams.errors.loadList'));
       setStreams([]);
     } finally {
       setLoading(false);
@@ -146,12 +149,12 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
       const res = await fetch(`/api/admin/streams/${id}?limitEvents=20`, {
         credentials: 'include',
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error al cargar detalle del stream');
+      if (!res.ok) throw new Error((await res.text()) || i18n.t('admin.streams.errors.loadDetail'));
       const data = await res.json();
       setSelectedDetail(data || null);
       setSelectedStreamId(id);
     } catch (e) {
-      setDetailError(e.message || 'Error al cargar detalle del stream');
+      setDetailError(e.message || i18n.t('admin.streams.errors.loadDetail'));
       setSelectedDetail(null);
       setSelectedStreamId(id);
     } finally {
@@ -161,7 +164,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
 
   const killStream = async (streamId) => {
     if (!canKill || !streamId) return;
-    if (!window.confirm('¿Cortar este stream ahora?')) return;
+    if (!window.confirm(t('admin.streams.confirmKill'))) return;
 
     setError('');
     try {
@@ -171,7 +174,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error al cortar el stream');
+      if (!res.ok) throw new Error((await res.text()) || i18n.t('admin.streams.errors.kill'));
       await fetchActiveStreams(filters);
       if (selectedStreamId === streamId) {
         setSelectedStreamId(null);
@@ -179,7 +182,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
         setDetailError('');
       }
     } catch (e) {
-      setError(e.message || 'Error al cortar el stream');
+      setError(e.message || i18n.t('admin.streams.errors.kill'));
     }
   };
 
@@ -210,17 +213,17 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
     <div style={{ width: '100%', maxWidth: 1200 }}>
       <ControlsRow>
         <FieldBlock>
-          <label>Buscar</label>
+          <label>{t('admin.streams.filters.search')}</label>
           <StyledInput
             type="text"
             value={filters.q}
             onChange={(e) => setFilters((prev) => ({ ...prev, q: e.target.value }))}
-            placeholder="ID, email o nickname"
+            placeholder={t('admin.streams.filters.searchPlaceholder')}
           />
         </FieldBlock>
 
         <FieldBlock>
-          <label>Tipo</label>
+          <label>{t('admin.streams.filters.type')}</label>
           <StyledSelect value={filters.streamType} onChange={(e) => setFilters((prev) => ({ ...prev, streamType: e.target.value }))}>
             <option value="ALL">ALL</option>
             <option value="CALLING">CALLING</option>
@@ -230,7 +233,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
         </FieldBlock>
 
         <FieldBlock>
-          <label>Duración mínima (s)</label>
+          <label>{t('admin.streams.filters.minDuration')}</label>
           <StyledInput
             type="number"
             min="0"
@@ -241,7 +244,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
         </FieldBlock>
 
         <FieldBlock>
-          <label>Límite</label>
+          <label>{t('admin.streams.filters.limit')}</label>
           <StyledSelect value={filters.limit} onChange={(e) => setFilters((prev) => ({ ...prev, limit: Number(e.target.value) }))}>
             <option value={50}>50</option>
             <option value={100}>100</option>
@@ -251,15 +254,17 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
         </FieldBlock>
 
         <StyledButton type="button" onClick={applyFilters} disabled={loading}>
-          {loading ? 'Cargando…' : 'Aplicar'}
+          {loading ? t('admin.streams.actions.loading') : t('admin.streams.actions.apply')}
         </StyledButton>
 
         <SmallBtn type="button" onClick={resetFilters} disabled={loading}>
-          Reset
+          {t('admin.streams.actions.reset')}
         </SmallBtn>
 
         <RightInfo>
-          {loading ? 'Cargando…' : `${streams.length} streams`}
+          {loading
+            ? t('admin.streams.actions.loading')
+            : t('admin.streams.resultsCount', { count: streams.length })}
         </RightInfo>
       </ControlsRow>
 
@@ -267,7 +272,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
 
       {!canKill && (
         <div style={{ marginBottom: 12, fontSize: 13, color: '#6c757d' }}>
-          Modo solo lectura para SUPPORT. El corte de streams queda reservado a ADMIN.
+          {t('admin.streams.readOnlySupport')}
         </div>
       )}
 
@@ -275,13 +280,13 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
         <DarkHeaderTable style={{ marginTop: 0 }}>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Tipo</th>
-              <th>Cliente</th>
-              <th>Modelo</th>
-              <th>Inicio</th>
-              <th>Duración</th>
-              <th>Estado</th>
+              <th>{t('admin.streams.table.id')}</th>
+              <th>{t('admin.streams.table.type')}</th>
+              <th>{t('admin.streams.table.client')}</th>
+              <th>{t('admin.streams.table.model')}</th>
+              <th>{t('admin.streams.table.start')}</th>
+              <th>{t('admin.streams.table.duration')}</th>
+              <th>{t('admin.streams.table.status')}</th>
               <th></th>
               <th></th>
               <th></th>
@@ -299,27 +304,27 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
                   key={streamId ?? `${client.label}-${model.label}-${stream?.startTime || Math.random()}`}
                   data-selected={selectedStreamId === streamId ? 'true' : undefined}
                 >
-                  <td>{streamId ?? '—'}</td>
-                  <td>{stream?.streamType || '—'}</td>
-                  <td>{client.id != null ? `#${client.id} · ${client.label}` : client.label}</td>
-                  <td>{model.id != null ? `#${model.id} · ${model.label}` : model.label}</td>
+                  <td>{streamId ?? '-'}</td>
+                  <td>{stream?.streamType || '-'}</td>
+                  <td>{client.id != null ? `#${client.id} - ${client.label}` : client.label}</td>
+                  <td>{model.id != null ? `#${model.id} - ${model.label}` : model.label}</td>
                   <td>{fmtTs(stream?.startTime)}</td>
                   <td>{formatDuration(stream?.durationSeconds)}</td>
                   <td>
                     <Badge data-variant={String(derivedStatus).toLowerCase()}>{derivedStatus}</Badge>
                   </td>
                   <td>
-                    {isStuck(stream) && <Badge data-variant="danger">STUCK</Badge>}
+                    {isStuck(stream) && <Badge data-variant="danger">{t('admin.streams.table.stuck')}</Badge>}
                   </td>
                   <td>
                     <TableActionButton type="button" onClick={() => handleOpenDetail(streamId)}>
-                      {selectedStreamId === streamId ? 'Cerrar' : 'Detalle'}
+                      {selectedStreamId === streamId ? t('admin.streams.actions.close') : t('admin.streams.actions.detail')}
                     </TableActionButton>
                   </td>
                   <td>
                     {canKill && derivedStatus !== 'closed' && (
                       <TableDangerButton type="button" onClick={() => killStream(streamId)}>
-                        KILL
+                        {t('admin.streams.actions.kill')}
                       </TableDangerButton>
                     )}
                   </td>
@@ -329,7 +334,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
 
             {!loading && streams.length === 0 && (
               <tr>
-                <td colSpan={10} style={{ color: '#6c757d' }}>Sin streams activos.</td>
+                <td colSpan={10} style={{ color: '#6c757d' }}>{t('admin.streams.empty')}</td>
               </tr>
             )}
           </tbody>
@@ -341,12 +346,12 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
           <InlinePanel>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ fontWeight: 700 }}>
-                Detalle stream #{selectedStreamId}
+                {t('admin.streams.detail.title', { id: selectedStreamId })}
               </div>
 
               <div style={{ display: 'flex', gap: 8 }}>
                 <SmallBtn type="button" onClick={() => fetchStreamDetail(selectedStreamId)} disabled={detailLoading}>
-                  {detailLoading ? 'Cargando…' : 'Recargar detalle'}
+                  {detailLoading ? t('admin.streams.actions.loading') : t('admin.streams.actions.reloadDetail')}
                 </SmallBtn>
                 <SmallBtn
                   type="button"
@@ -356,76 +361,76 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
                     setDetailError('');
                   }}
                 >
-                  Cerrar detalle
+                  {t('admin.streams.actions.closeDetail')}
                 </SmallBtn>
               </div>
             </div>
 
             {detailError && <StyledError>{detailError}</StyledError>}
-            {detailLoading && !selectedDetail && <div>Cargando…</div>}
+            {detailLoading && !selectedDetail && <div>{t('admin.streams.actions.loading')}</div>}
 
             {selectedDetail && (
               <>
                 <PanelRow>
                   <FieldBlock>
-                    <label>Tipo</label>
-                    <div>{streamDetail?.streamType || '—'}</div>
+                    <label>{t('admin.streams.detail.type')}</label>
+                    <div>{streamDetail?.streamType || '-'}</div>
                   </FieldBlock>
 
                   <FieldBlock>
-                    <label>Cliente</label>
-                    <div>{streamDetail?.clientId != null ? `#${streamDetail.clientId} · ${streamDetail?.clientNickname || streamDetail?.clientEmail || '—'}` : '—'}</div>
+                    <label>{t('admin.streams.detail.client')}</label>
+                    <div>{streamDetail?.clientId != null ? `#${streamDetail.clientId} - ${streamDetail?.clientNickname || streamDetail?.clientEmail || '-'}` : '-'}</div>
                   </FieldBlock>
 
                   <FieldBlock>
-                    <label>Modelo</label>
-                    <div>{streamDetail?.modelId != null ? `#${streamDetail.modelId} · ${streamDetail?.modelNickname || streamDetail?.modelEmail || '—'}` : '—'}</div>
+                    <label>{t('admin.streams.detail.model')}</label>
+                    <div>{streamDetail?.modelId != null ? `#${streamDetail.modelId} - ${streamDetail?.modelNickname || streamDetail?.modelEmail || '-'}` : '-'}</div>
                   </FieldBlock>
                 </PanelRow>
 
                 <PanelRow>
                   <FieldBlock>
-                    <label>Inicio</label>
+                    <label>{t('admin.streams.detail.start')}</label>
                     <div>{fmtTs(streamDetail?.startTime)}</div>
                   </FieldBlock>
 
                   <FieldBlock>
-                    <label>Confirmado</label>
+                    <label>{t('admin.streams.detail.confirmed')}</label>
                     <div>{fmtTs(streamDetail?.confirmedAt)}</div>
                   </FieldBlock>
 
                   <FieldBlock>
-                    <label>Fin</label>
+                    <label>{t('admin.streams.detail.end')}</label>
                     <div>{fmtTs(streamDetail?.endTime)}</div>
                   </FieldBlock>
 
                   <FieldBlock>
-                    <label>Duración</label>
+                    <label>{t('admin.streams.detail.duration')}</label>
                     <div>{formatDuration(streamDetail?.durationSeconds)}</div>
                   </FieldBlock>
                 </PanelRow>
 
                 <PanelRow>
                   <FieldBlock>
-                    <label>Status</label>
+                    <label>{t('admin.streams.detail.status')}</label>
                     <div>
-                      <Badge data-variant={String(streamDetail?.statusDerivado || '—').toLowerCase()}>{streamDetail?.statusDerivado || '—'}</Badge>
+                      <Badge data-variant={String(streamDetail?.statusDerivado || '-').toLowerCase()}>{streamDetail?.statusDerivado || '-'}</Badge>
                     </div>
                   </FieldBlock>
 
                   <FieldBlock>
-                    <label>Stuck</label>
-                    <div>{streamDetail?.stuck ? <Badge data-variant="danger">STUCK</Badge> : 'No'}</div>
+                    <label>{t('admin.streams.detail.stuck')}</label>
+                    <div>{streamDetail?.stuck ? <Badge data-variant="danger">{t('admin.streams.table.stuck')}</Badge> : t('admin.streams.common.no')}</div>
                   </FieldBlock>
                 </PanelRow>
 
                 <div style={{ marginTop: 14, fontWeight: 700 }}>
-                  Eventos
+                  {t('admin.streams.events.title')}
                 </div>
 
                 <div style={{ marginTop: 8 }}>
                   {detailEvents.length === 0 && !detailLoading && (
-                    <div style={{ color: '#6c757d' }}>Sin eventos.</div>
+                    <div style={{ color: '#6c757d' }}>{t('admin.streams.events.empty')}</div>
                   )}
 
                   {detailEvents.length > 0 && (
@@ -433,19 +438,19 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
                       <DarkHeaderTable>
                         <thead>
                           <tr>
-                            <th>Fecha</th>
-                            <th>Evento</th>
-                            <th>Reason</th>
-                            <th>Metadata</th>
+                            <th>{t('admin.streams.events.table.date')}</th>
+                            <th>{t('admin.streams.events.table.event')}</th>
+                            <th>{t('admin.streams.events.table.reason')}</th>
+                            <th>{t('admin.streams.events.table.metadata')}</th>
                           </tr>
                         </thead>
                         <tbody>
                           {detailEvents.map((event, index) => (
                             <tr key={event?.id ?? `${event?.createdAt}-${event?.eventType}-${index}`}>
                               <td>{fmtTs(event?.createdAt)}</td>
-                              <td>{event?.eventType || '—'}</td>
-                              <td>{event?.reason || '—'}</td>
-                              <td title={event?.metadata ? JSON.stringify(event.metadata) : ''}>{event?.metadata ? short(event.metadata, 140) : '—'}</td>
+                              <td>{event?.eventType || '-'}</td>
+                              <td>{event?.reason || '-'}</td>
+                              <td title={event?.metadata ? JSON.stringify(event.metadata) : ''}>{event?.metadata ? short(event.metadata, 140) : '-'}</td>
                             </tr>
                           ))}
                         </tbody>

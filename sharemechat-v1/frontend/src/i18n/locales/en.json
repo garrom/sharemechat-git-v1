@@ -1240,5 +1240,497 @@
       "role": "Model profile",
       "suffix": "by uploading a profile photo and introduction video from the Profile section."
     }
+  },
+  "admin": {
+    "shell": {
+      "userFallback": "Backoffice",
+      "brand": {
+        "eyebrow": "Internal tooling",
+        "title": "SharemeChat",
+        "subtitle": "Operational backoffice for support, internal control, and operations."
+      },
+      "topbar": {
+        "eyebrow": "SharemeChat Backoffice"
+      },
+      "footer": {
+        "activeSession": "Active session",
+        "logout": "Log out"
+      },
+      "meta": {
+        "role": "Role",
+        "email": "Email",
+        "surface": "Surface",
+        "surfaceValue": "BACKOFFICE",
+        "pending": "PENDING"
+      },
+      "actions": {
+        "profile": "Profile"
+      },
+      "sections": {
+        "primary": {
+          "label": "Primary",
+          "items": {
+            "overview": {
+              "label": "Overview",
+              "meta": "Operational landing view and quick access."
+            },
+            "operations": {
+              "label": "Operations",
+              "meta": "Runtime, live sessions, and realtime activity."
+            }
+          }
+        },
+        "business": {
+          "label": "Business operations",
+          "items": {
+            "models": {
+              "label": "Models",
+              "meta": "Onboarding, verification, and model review."
+            },
+            "moderation": {
+              "label": "Moderation",
+              "meta": "Reports, statuses, and operational decisions."
+            },
+            "finance": {
+              "label": "Finance",
+              "meta": "Financial summary and top-line performance."
+            },
+            "financeAdjustments": {
+              "label": "Financial adjustments",
+              "meta": "Manual refunds and sensitive operations."
+            }
+          }
+        },
+        "control": {
+          "label": "Control and administration",
+          "items": {
+            "control": {
+              "label": "Internal control",
+              "meta": "Audit and consistency checks."
+            },
+            "data": {
+              "label": "Internal data",
+              "meta": "Internal queries and controlled technical access."
+            },
+            "administration": {
+              "label": "Administration",
+              "meta": "Base prepared for users and backoffice permissions."
+            }
+          }
+        }
+      },
+      "views": {
+        "overview": {
+          "title": "Overview",
+          "subtitle": "Operational landing view with general status, visible priorities, and quick access to daily work."
+        },
+        "operations": {
+          "title": "Operations",
+          "subtitle": "Current runtime status and monitoring of active sessions."
+        },
+        "models": {
+          "title": "Models",
+          "subtitle": "Onboarding, verification, and model review under the current operational flow."
+        },
+        "moderation": {
+          "title": "Moderation",
+          "subtitle": "Review of reports and management of open incidents."
+        },
+        "finance": {
+          "title": "Finance",
+          "subtitle": "Main financial summary and aggregated ranking using the current data."
+        },
+        "financeAdjustments": {
+          "title": "Financial adjustments",
+          "subtitle": "Sensitive manual operations. At this stage it is limited to manual refunds."
+        },
+        "control": {
+          "title": "Internal control",
+          "subtitle": "Consistency checks and internal auditing of the current system."
+        },
+        "data": {
+          "title": "Internal data",
+          "subtitle": "Internal support queries and controlled technical access."
+        },
+        "administration": {
+          "title": "Administration",
+          "subtitle": "Foundation prepared for future management of internal users, roles, and permissions."
+        },
+        "profile": {
+          "title": "Backoffice profile",
+          "subtitle": "Basic information about your authenticated account and your own password change."
+        }
+      },
+      "restricted": {
+        "topbarTitle": "Email verification pending",
+        "topbarSubtitle": "Your access remains restricted until you confirm the email of the internal account.",
+        "badge": "Restricted access",
+        "title": "You must verify your email before continuing in the backoffice.",
+        "body": "Until then, you can only resend the verification email or log out.",
+        "pageTitle": "Account pending verification",
+        "pageSubtitle": "The internal interface remains blocked until you confirm the email associated with this account.",
+        "resend": "Resend verification",
+        "resending": "Resending...",
+        "signedInAs": "You signed in as {{displayName}}{{email}}, but the internal account still does not have a verified email.",
+        "recoveryHint": "Once you complete the verification, sign in again to recover normal access to overview, moderation, finance, and the rest of the internal modules.",
+        "success": "We have resent the verification email.",
+        "error": "The verification email could not be resent."
+      }
+    },
+    "auth": {
+      "loading": "Loading internal access...",
+      "pageTitle": "SharemeChat Backoffice",
+      "pageSubtitle": "Internal access for ADMIN, SUPPORT, and AUDIT.",
+      "form": {
+        "title": "Internal access",
+        "subtitle": "Enter your backoffice credentials."
+      },
+      "fields": {
+        "email": "Email",
+        "password": "Password"
+      },
+      "actions": {
+        "submit": "Sign in",
+        "loading": "Signing in..."
+      },
+      "validation": {
+        "requiredFields": "Email and password are required."
+      },
+      "errors": {
+        "invalidCredentials": "Invalid credentials.",
+        "accessDenied": "Internal access denied.",
+        "emailNotVerified": "You must verify your email before accessing the backoffice.",
+        "sessionValidation": "The internal session could not be validated. Please try again.",
+        "generic": "Could not sign in."
+      },
+      "modal": {
+        "emailNotVerified": {
+          "title": "Email not verified",
+          "body": "You must verify your email before accessing the backoffice.",
+          "actions": {
+            "later": "Later",
+            "resend": "Resend email"
+          }
+        }
+      },
+      "resend": {
+        "successTitle": "Email resent",
+        "successMessage": "We have resent the verification email.",
+        "errorTitle": "Could not resend",
+        "errorMessage": "The verification email could not be resent."
+      }
+    },
+    "verification": {
+      "pageTitle": "SharemeChat Backoffice",
+      "pageSubtitle": "Email verification for internal access.",
+      "loading": "Validating link...",
+      "tokenMissing": "The verification token is missing.",
+      "success": "Email verified successfully.",
+      "error": "The email could not be verified. Please try again later.",
+      "backToLogin": "Go to internal login"
+    },
+    "overview": {
+      "errors": {
+        "load": "Could not load the overview."
+      },
+      "loadingSync": "syncing",
+      "metrics": {
+        "activeStreams": {
+          "label": "Active streams",
+          "meta": "Active random sessions and persisted direct calls. Latest update: {{loadedLabel}}."
+        },
+        "pendingOnboarding": {
+          "label": "Pending onboarding",
+          "meta": "Models pending review or not yet approved."
+        },
+        "openReports": {
+          "label": "Open reports",
+          "meta": "Moderation cases in OPEN status, ready for triage."
+        },
+        "financeAdjustments": {
+          "label": "Financial adjustments",
+          "manual": "Manual",
+          "notAvailable": "N/A",
+          "metaEnabled": "Manual refunds are available under Financial adjustments.",
+          "metaDisabled": "There is still no dedicated endpoint for a recent refunds counter."
+        }
+      },
+      "activity": {
+        "title": "Operational activity",
+        "queueModels": "Models in queue",
+        "queueViewers": "Clients in queue",
+        "randomPairs": "Random pairs",
+        "directCalls": "Direct calls",
+        "note": "This landing view reuses data already available in the current panel. It serves as an operational entry point and does not yet replace the detailed modules."
+      },
+      "quickActions": {
+        "title": "Quick access",
+        "operations": {
+          "title": "Realtime operations",
+          "meta": "View runtime activity, active streams, and manual kill actions."
+        },
+        "models": {
+          "title": "Model onboarding",
+          "meta": "Review pending items, documents, and verification statuses."
+        },
+        "moderation": {
+          "title": "Moderation",
+          "meta": "Open reports and continue the review flow."
+        },
+        "finance": {
+          "title": "Finance",
+          "meta": "Check the financial summary and top-line performance."
+        }
+      },
+      "priority": {
+        "title": "Priority items",
+        "pendingModels": {
+          "title": "{{count}} models pending review",
+          "meta": "Onboarding and pending documentation should be reviewed.",
+          "action": "Open Models"
+        },
+        "openReports": {
+          "title": "{{count}} open reports",
+          "meta": "There are incidents pending triage or decision.",
+          "action": "Open Moderation"
+        },
+        "randomQueue": {
+          "title": "Active random queues",
+          "meta": "Models in queue: {{models}} · Clients in queue: {{viewers}}",
+          "action": "Open Operations"
+        },
+        "noPending": {
+          "title": "No visible priority items",
+          "meta": "With the data loaded in this landing view, no relevant queues or pending items were detected."
+        }
+      },
+      "statusSummary": {
+        "title": "Onboarding and statuses",
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected"
+      },
+      "finance": {
+        "title": "Financial summary",
+        "gross": "Gross",
+        "netMargin": "Net margin",
+        "marginPercent": "Margin %"
+      },
+      "placeholder": {
+        "title": "Foundation of the new backoffice",
+        "body": "The new landing view already groups overview, operations, models, moderation, finance, internal control, internal data, and administration. The existing modules remain alive within this structure while their internal logic is redesigned.",
+        "note": "No new backend is introduced at this stage. Blocks without a dedicated source remain marked as transition or operational placeholder."
+      }
+    },
+    "stats": {
+      "title": "Statistics",
+      "updating": "Updating…",
+      "updatedAt": "Updated: {{time}}",
+      "errors": {
+        "load": "Could not load admin statistics."
+      },
+      "cards": {
+        "randomWaitingModels": "Models in random queue",
+        "randomWaitingViewers": "Viewers in random queue",
+        "randomActivePairs": "Active random pairs",
+        "directRingingUsers": "Users ringing",
+        "directActiveCalls": "Active direct calls",
+        "persistedRandomConnecting": "Persisted RANDOM connecting",
+        "persistedRandomActive": "Persisted RANDOM active",
+        "persistedCallingActive": "Persisted CALLING active"
+      },
+      "coverage": {
+        "title": "Coverage",
+        "body": "Random runtime, direct runtime calls, and persisted streams."
+      }
+    },
+    "profile": {
+      "wrapper": {
+        "title": "Backoffice account",
+        "subtitle": "Basic information about your authenticated account and your own password change."
+      },
+      "notAvailable": "Not available",
+      "noEffectiveRoles": "No effective roles",
+      "emailVerifiedYes": "Yes, {{date}}",
+      "emailVerifiedNo": "No",
+      "basicData": {
+        "title": "Basic data"
+      },
+      "fields": {
+        "email": "Email",
+        "nickname": "Nickname",
+        "productRole": "Product role",
+        "backofficeRoles": "Effective backoffice roles",
+        "emailVerified": "Email verified",
+        "accountStatus": "Account status",
+        "uiLanguage": "UI language",
+        "userId": "User ID"
+      },
+      "password": {
+        "title": "Password change",
+        "description": "This change only affects your authenticated Backoffice account and uses the current authenticated user flow.",
+        "fields": {
+          "current": "Current password",
+          "next": "New password",
+          "confirm": "Confirm new password"
+        },
+        "hint": "The new password must be at least 10 characters long and cannot contain spaces.",
+        "actions": {
+          "submit": "Change password",
+          "submitting": "Updating..."
+        },
+        "success": "Password updated successfully.",
+        "errors": {
+          "missingFields": "Complete all three password fields.",
+          "mismatch": "The new password and confirmation do not match.",
+          "minLength": "The new password must be at least 10 characters long.",
+          "noSpaces": "The new password cannot contain spaces.",
+          "update": "Could not update the password."
+        }
+      }
+    },
+    "moderation": {
+      "wrapper": {
+        "title": "Moderation cases",
+        "subtitle": "Review of reports and operational decisions on open incidents."
+      },
+      "title": "Moderation",
+      "intro": "Operational view of internal reports. It lets you filter incidents, review details, and document an administrative decision with better context for support and internal control.",
+      "filters": {
+        "status": "Status",
+        "options": {
+          "ALL": "All",
+          "OPEN": "OPEN",
+          "REVIEWING": "REVIEWING",
+          "RESOLVED": "RESOLVED",
+          "REJECTED": "REJECTED"
+        }
+      },
+      "actions": {
+        "loading": "Loading...",
+        "refresh": "Refresh",
+        "detail": "Detail",
+        "reload": "Reload",
+        "save": "Save",
+        "saving": "Saving..."
+      },
+      "table": {
+        "id": "ID",
+        "created": "Created",
+        "type": "Type",
+        "status": "Status",
+        "action": "Action",
+        "autoBlock": "AutoBlock",
+        "reporter": "Reporter",
+        "reported": "Reported",
+        "stream": "Stream",
+        "reviewedBy": "ReviewedBy",
+        "reviewedAt": "Reviewed"
+      },
+      "empty": "No reports.",
+      "detail": {
+        "selectedTitle": "Report detail #{{id}}",
+        "emptyTitle": "Select a report to review",
+        "adminAction": "Administrative action",
+        "caseStatus": "Case status",
+        "notes": "Internal resolution notes",
+        "notesPlaceholder": "Summarize criteria, evidence, and the reason for the decision...",
+        "noNotes": "No notes."
+      },
+      "readOnlySupport": "Read-only mode for SUPPORT. Sanction actions remain reserved for ADMIN.",
+      "reviewHint": "Use REVIEWING while the case is still open. WARNING, SUSPEND, and BAN force closure in RESOLVED.",
+      "common": {
+        "yes": "Yes",
+        "no": "No"
+      },
+      "actionHelp": {
+        "NONE": "No sanction action. Useful to close or document the case without escalation.",
+        "WARNING": "User warning. Marks improper conduct without suspending access.",
+        "SUSPEND": "Operational suspension. Should be used when the incident requires a temporary block.",
+        "BAN": "Permanent block. Reserved for severe or repeated cases."
+      },
+      "statusHelp": {
+        "OPEN": "Case recently created and pending triage.",
+        "REVIEWING": "Case under analysis by support or administration.",
+        "RESOLVED": "Case closed with a final decision.",
+        "REJECTED": "Case discarded due to lack of basis or duplication."
+      },
+      "errors": {
+        "loadReports": "Error loading reports",
+        "loadReport": "Error loading report",
+        "saveReview": "Error saving review"
+      }
+    },
+    "streams": {
+      "wrapper": {
+        "statsTitle": "Operational summary",
+        "statsSubtitle": "Quick read of the current runtime status and active queues.",
+        "title": "Active sessions",
+        "subtitle": "Operational detail of active streams with inspection and manual kill capability.",
+        "unavailableTitle": "Operations unavailable",
+        "unavailableBody": "Your current profile does not have access to the runtime operational blocks."
+      },
+      "filters": {
+        "search": "Search",
+        "searchPlaceholder": "ID, email, or nickname",
+        "type": "Type",
+        "minDuration": "Minimum duration (s)",
+        "limit": "Limit"
+      },
+      "actions": {
+        "loading": "Loading...",
+        "apply": "Apply",
+        "reset": "Reset",
+        "detail": "Detail",
+        "close": "Close",
+        "kill": "KILL",
+        "reloadDetail": "Reload detail",
+        "closeDetail": "Close detail"
+      },
+      "resultsCount": "{{count}} streams",
+      "readOnlySupport": "Read-only mode for SUPPORT. Stream termination remains reserved for ADMIN.",
+      "confirmKill": "Terminate this stream now?",
+      "table": {
+        "id": "ID",
+        "type": "Type",
+        "client": "Client",
+        "model": "Model",
+        "start": "Start",
+        "duration": "Duration",
+        "status": "Status",
+        "stuck": "STUCK"
+      },
+      "empty": "No active streams.",
+      "detail": {
+        "title": "Stream detail #{{id}}",
+        "type": "Type",
+        "client": "Client",
+        "model": "Model",
+        "start": "Start",
+        "confirmed": "Confirmed",
+        "end": "End",
+        "duration": "Duration",
+        "status": "Status",
+        "stuck": "Stuck"
+      },
+      "events": {
+        "title": "Events",
+        "empty": "No events.",
+        "table": {
+          "date": "Date",
+          "event": "Event",
+          "reason": "Reason",
+          "metadata": "Metadata"
+        }
+      },
+      "common": {
+        "no": "No"
+      },
+      "errors": {
+        "loadList": "Error loading active streams",
+        "loadDetail": "Error loading stream detail",
+        "kill": "Error terminating the stream"
+      }
+    }
   }
 }

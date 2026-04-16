@@ -1,4 +1,5 @@
 import React from 'react';
+import LocaleSwitcher from '../../../components/LocaleSwitcher';
 import {
   AdminMain,
   AdminShell,
@@ -19,13 +20,18 @@ import {
 const AdminLayout = ({
   title,
   subtitle,
-  eyebrow = 'SharemeChat Backoffice',
+  eyebrow = '',
+  brandEyebrow = '',
+  brandTitle = '',
+  brandSubtitle = '',
   meta = [],
   sections = [],
   activeKey,
   onSelect,
   topbarActions = [],
+  showLocaleSwitcher = true,
   footerLabel,
+  footerLogoutLabel,
   footerValue,
   onLogout,
   children,
@@ -33,9 +39,9 @@ const AdminLayout = ({
   <AdminShell>
     <AdminSidebar>
       <SidebarBrand>
-        <div className="eyebrow">Internal Tooling</div>
-        <div className="title">SharemeChat</div>
-        <div className="subtitle">Backoffice operativo para soporte, control interno y operaciones.</div>
+        <div className="eyebrow">{brandEyebrow}</div>
+        <div className="title">{brandTitle}</div>
+        <div className="subtitle">{brandSubtitle}</div>
       </SidebarBrand>
 
       {sections.map((section) => (
@@ -59,7 +65,7 @@ const AdminLayout = ({
         <div className="label">{footerLabel}</div>
         <div className="value">{footerValue}</div>
         <SidebarLogoutButton type="button" onClick={onLogout}>
-          Cerrar sesion
+          {footerLogoutLabel}
         </SidebarLogoutButton>
       </SidebarFooter>
     </AdminSidebar>
@@ -73,6 +79,7 @@ const AdminLayout = ({
         </TopbarTitleBlock>
 
         <TopbarMeta>
+          {showLocaleSwitcher ? <LocaleSwitcher style={{ alignSelf: 'center' }} /> : null}
           {topbarActions.map((action) => (
             <TopbarActionButton
               key={action.key || action.label}

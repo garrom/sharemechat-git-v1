@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import i18n from '../../i18n';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
 import {
@@ -8,13 +9,6 @@ import {
   StyledButton,
   StyledError,
 } from '../../styles/AdminStyles';
-
-const formatDateTime = (value) => {
-  if (!value) return 'No disponible';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value);
-  return date.toLocaleString('es-ES');
-};
 
 const infoValueStyle = {
   fontSize: 13,
@@ -40,6 +34,14 @@ const inputStyle = {
 };
 
 const AdminProfilePage = () => {
+  const t = (key, options) => i18n.t(key, options);
+  const formatDateTime = (value) => {
+    if (!value) return t('admin.profile.notAvailable');
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString(i18n.resolvedLanguage || i18n.language);
+  };
+
   const { user } = useSession();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -58,19 +60,19 @@ const AdminProfilePage = () => {
     setSuccess('');
 
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setError('Completa los tres campos de contrasena.');
+      setError(t('admin.profile.password.errors.missingFields'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      setError('La nueva contrasena y la confirmacion no coinciden.');
+      setError(t('admin.profile.password.errors.mismatch'));
       return;
     }
     if (newPassword.length < 10) {
-      setError('La nueva contrasena debe tener al menos 10 caracteres.');
+      setError(t('admin.profile.password.errors.minLength'));
       return;
     }
     if (/\s/.test(newPassword)) {
-      setError('La nueva contrasena no puede contener espacios.');
+      setError(t('admin.profile.password.errors.noSpaces'));
       return;
     }
 
@@ -84,9 +86,9 @@ const AdminProfilePage = () => {
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-      setSuccess('Contrasena actualizada correctamente.');
+      setSuccess(t('admin.profile.password.success'));
     } catch (e) {
-      setError(e.message || 'No se pudo actualizar la contrasena.');
+      setError(e.message || t('admin.profile.password.errors.update'));
     } finally {
       setSubmitting(false);
     }
@@ -96,56 +98,64 @@ const AdminProfilePage = () => {
     <div style={{ display: 'grid', gap: 12 }}>
       <InlinePanel>
         <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 10 }}>
-          Datos basicos
+          {t('admin.profile.basicData.title')}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 12 }}>
           <FieldBlock>
-            <label>Email</label>
-            <div style={infoValueStyle}>{user?.email || 'No disponible'}</div>
+            <label>{t('admin.profile.fields.email')}</label>
+            <div style={infoValueStyle}>{user?.email || t('admin.profile.notAvailable')}</div>
           </FieldBlock>
           <FieldBlock>
-            <label>Nickname</label>
-            <div style={infoValueStyle}>{user?.nickname || 'No disponible'}</div>
+            <label>{t('admin.profile.fields.nickname')}</label>
+            <div style={infoValueStyle}>{user?.nickname || t('admin.profile.notAvailable')}</div>
           </FieldBlock>
           <FieldBlock>
-            <label>Rol de producto</label>
-            <div style={infoValueStyle}>{user?.role || 'No disponible'}</div>
+            <label>{t('admin.profile.fields.productRole')}</label>
+            <div style={infoValueStyle}>{user?.role || t('admin.profile.notAvailable')}</div>
           </FieldBlock>
           <FieldBlock>
-            <label>Roles backoffice efectivos</label>
-            <div style={infoValueStyle}>{effectiveBackofficeRoles.length > 0 ? effectiveBackofficeRoles.join(', ') : 'Sin roles efectivos'}</div>
+            <label>{t('admin.profile.fields.backofficeRoles')}</label>
+            <div style={infoValueStyle}>
+              {effectiveBackofficeRoles.length > 0
+                ? effectiveBackofficeRoles.join(', ')
+                : t('admin.profile.noEffectiveRoles')}
+            </div>
           </FieldBlock>
           <FieldBlock>
-            <label>Email validado</label>
-            <div style={infoValueStyle}>{user?.emailVerifiedAt ? `Si, ${formatDateTime(user.emailVerifiedAt)}` : 'No'}</div>
+            <label>{t('admin.profile.fields.emailVerified')}</label>
+            <div style={infoValueStyle}>
+              {user?.emailVerifiedAt
+                ? t('admin.profile.emailVerifiedYes', { date: formatDateTime(user.emailVerifiedAt) })
+                : t('admin.profile.emailVerifiedNo')}
+            </div>
           </FieldBlock>
           <FieldBlock>
-            <label>Estado de cuenta</label>
-            <div style={infoValueStyle}>{user?.accountStatus || 'No disponible'}</div>
+            <label>{t('admin.profile.fields.accountStatus')}</label>
+            <div style={infoValueStyle}>{user?.accountStatus || t('admin.profile.notAvailable')}</div>
           </FieldBlock>
           <FieldBlock>
-            <label>Idioma UI</label>
-            <div style={infoValueStyle}>{user?.uiLocale || 'No disponible'}</div>
+            <label>{t('admin.profile.fields.uiLanguage')}</label>
+            <div style={infoValueStyle}>{user?.uiLocale || t('admin.profile.notAvailable')}</div>
           </FieldBlock>
           <FieldBlock>
-            <label>User ID</label>
-            <div style={infoValueStyle}>{user?.id ?? 'No disponible'}</div>
+            <label>{t('admin.profile.fields.userId')}</label>
+            <div style={infoValueStyle}>{user?.id ?? t('admin.profile.notAvailable')}</div>
           </FieldBlock>
         </div>
       </InlinePanel>
 
       <InlinePanel>
         <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 10 }}>
-          Cambio de contrasena
+          {t('admin.profile.password.title')}
         </div>
         <div style={{ fontSize: 12, color: '#52607a', marginBottom: 10, lineHeight: 1.55 }}>
-          Este cambio afecta solo a tu cuenta autenticada de Backoffice y utiliza el flujo actual del usuario autenticado.
+          {t('admin.profile.password.description')}
         </div>
 
         <form onSubmit={handleSubmit}>
           <div style={{ display: 'grid', gap: 12 }}>
             <FieldBlock>
-              <label>Contrasena actual</label>
+              <label>{t('admin.profile.password.fields.current')}</label>
               <input
                 type="password"
                 autoComplete="current-password"
@@ -155,7 +165,7 @@ const AdminProfilePage = () => {
               />
             </FieldBlock>
             <FieldBlock>
-              <label>Nueva contrasena</label>
+              <label>{t('admin.profile.password.fields.next')}</label>
               <input
                 type="password"
                 autoComplete="new-password"
@@ -165,7 +175,7 @@ const AdminProfilePage = () => {
               />
             </FieldBlock>
             <FieldBlock>
-              <label>Confirmar nueva contrasena</label>
+              <label>{t('admin.profile.password.fields.confirm')}</label>
               <input
                 type="password"
                 autoComplete="new-password"
@@ -177,7 +187,7 @@ const AdminProfilePage = () => {
           </div>
 
           <div style={{ marginTop: 10, fontSize: 12, color: '#52607a', lineHeight: 1.55 }}>
-            La nueva contrasena debe tener al menos 10 caracteres y no puede contener espacios.
+            {t('admin.profile.password.hint')}
           </div>
 
           {error ? <StyledError>{error}</StyledError> : null}
@@ -185,7 +195,7 @@ const AdminProfilePage = () => {
 
           <PanelRow>
             <StyledButton type="submit" disabled={submitting}>
-              {submitting ? 'Actualizando...' : 'Cambiar contrasena'}
+              {submitting ? t('admin.profile.password.actions.submitting') : t('admin.profile.password.actions.submit')}
             </StyledButton>
           </PanelRow>
         </form>

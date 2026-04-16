@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useHistory } from 'react-router-dom';
+import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import { useSession } from '../../components/SessionProvider';
 import AdminActiveStreamsPanel from './AdminActiveStreamsPanel';
@@ -24,49 +25,6 @@ import {
 } from '../../utils/backofficeAccess';
 import { navigateToUrl, resolveHomeUrl } from '../../utils/runtimeSurface';
 
-const VIEW_COPY = {
-  overview: {
-    title: 'Overview',
-    subtitle: 'Portada operativa con estado general, prioridades visibles y accesos directos al trabajo diario.',
-  },
-  operations: {
-    title: 'Operaciones',
-    subtitle: 'Estado operativo actual del runtime y seguimiento de sesiones activas.',
-  },
-  models: {
-    title: 'Modelos',
-    subtitle: 'Onboarding, verificacion y revision de modelos con el flujo operativo actual.',
-  },
-  moderation: {
-    title: 'Moderacion',
-    subtitle: 'Revision de reports y gestion de incidencias abiertas.',
-  },
-  finance: {
-    title: 'Finanzas',
-    subtitle: 'Resumen economico principal y ranking agregado reutilizando los datos actuales.',
-  },
-  'finance-adjustments': {
-    title: 'Ajustes financieros',
-    subtitle: 'Operaciones manuales sensibles. En esta fase se limita a refunds manuales.',
-  },
-  control: {
-    title: 'Control interno',
-    subtitle: 'Comprobaciones de consistencia y auditoria interna del sistema actual.',
-  },
-  data: {
-    title: 'Datos internos',
-    subtitle: 'Consultas internas de soporte y acceso tecnico controlado.',
-  },
-  administration: {
-    title: 'Administracion',
-    subtitle: 'Base preparada para la futura gestion de usuarios internos, roles y permisos.',
-  },
-  profile: {
-    title: 'PerfilBackoffice',
-    subtitle: 'Datos basicos de tu cuenta autenticada y cambio de contrasena propio.',
-  },
-};
-
 const actionButtonStyle = {
   padding: '10px 14px',
   borderRadius: 12,
@@ -76,6 +34,7 @@ const actionButtonStyle = {
 
 const DashboardAdmin = () => {
   const { user, loading } = useSession();
+  const t = (key, options) => i18n.t(key, options);
   const [activeView, setActiveView] = useState('overview');
   const [resendingVerification, setResendingVerification] = useState(false);
   const [verificationMessage, setVerificationMessage] = useState('');
@@ -86,6 +45,48 @@ const DashboardAdmin = () => {
   const supportView = isBackofficeSupport(user);
   const auditView = isBackofficeAudit(user);
   const emailVerificationBlocked = !!user && !user?.emailVerifiedAt;
+  const viewCopy = {
+    overview: {
+      title: t('admin.shell.views.overview.title'),
+      subtitle: t('admin.shell.views.overview.subtitle'),
+    },
+    operations: {
+      title: t('admin.shell.views.operations.title'),
+      subtitle: t('admin.shell.views.operations.subtitle'),
+    },
+    models: {
+      title: t('admin.shell.views.models.title'),
+      subtitle: t('admin.shell.views.models.subtitle'),
+    },
+    moderation: {
+      title: t('admin.shell.views.moderation.title'),
+      subtitle: t('admin.shell.views.moderation.subtitle'),
+    },
+    finance: {
+      title: t('admin.shell.views.finance.title'),
+      subtitle: t('admin.shell.views.finance.subtitle'),
+    },
+    'finance-adjustments': {
+      title: t('admin.shell.views.financeAdjustments.title'),
+      subtitle: t('admin.shell.views.financeAdjustments.subtitle'),
+    },
+    control: {
+      title: t('admin.shell.views.control.title'),
+      subtitle: t('admin.shell.views.control.subtitle'),
+    },
+    data: {
+      title: t('admin.shell.views.data.title'),
+      subtitle: t('admin.shell.views.data.subtitle'),
+    },
+    administration: {
+      title: t('admin.shell.views.administration.title'),
+      subtitle: t('admin.shell.views.administration.subtitle'),
+    },
+    profile: {
+      title: t('admin.shell.views.profile.title'),
+      subtitle: t('admin.shell.views.profile.subtitle'),
+    },
+  };
 
   const capabilities = useMemo(() => ({
     canViewModels: adminView || hasBackofficePermission(user, 'models.read_list'),
@@ -157,111 +158,116 @@ const DashboardAdmin = () => {
 
     try {
       await apiFetch('/email-verification/resend', { method: 'POST' });
-      setVerificationMessage('Te hemos reenviado el email de validacion.');
-    } catch (e) {
-      setVerificationError(e?.data?.message || 'No se pudo reenviar el email de validacion.');
+      setVerificationMessage(t('admin.shell.restricted.success'));
+    } catch {
+      setVerificationError(t('admin.shell.restricted.error'));
     } finally {
       setResendingVerification(false);
     }
   };
 
-  const displayName = user?.name || user?.nickname || user?.email || 'Backoffice';
+  const displayName = user?.name || user?.nickname || user?.email || t('admin.shell.userFallback');
   const displayRole = adminView ? 'ADMIN' : supportView ? 'SUPPORT' : auditView ? 'AUDIT' : 'UNKNOWN';
 
   const navigationSections = useMemo(() => {
     const sections = [
       {
-        label: 'Principal',
+        label: t('admin.shell.sections.primary.label'),
         items: [
           {
             key: 'overview',
-            label: 'Overview',
-            meta: 'Portada operativa y accesos rapidos.',
+            label: t('admin.shell.sections.primary.items.overview.label'),
+            meta: t('admin.shell.sections.primary.items.overview.meta'),
           },
           (capabilities.canViewStats || capabilities.canViewStreams) ? {
             key: 'operations',
-            label: 'Operaciones',
-            meta: 'Runtime, sesiones en curso y actividad realtime.',
+            label: t('admin.shell.sections.primary.items.operations.label'),
+            meta: t('admin.shell.sections.primary.items.operations.meta'),
           } : null,
         ].filter(Boolean),
       },
       {
-        label: 'Operacion de negocio',
+        label: t('admin.shell.sections.business.label'),
         items: [
           capabilities.canViewModels ? {
             key: 'models',
-            label: 'Modelos',
-            meta: 'Onboarding, verificacion y revision de modelos.',
+            label: t('admin.shell.sections.business.items.models.label'),
+            meta: t('admin.shell.sections.business.items.models.meta'),
           } : null,
           capabilities.canViewModeration ? {
             key: 'moderation',
-            label: 'Moderacion',
-            meta: 'Reports, estados y decisiones operativas.',
+            label: t('admin.shell.sections.business.items.moderation.label'),
+            meta: t('admin.shell.sections.business.items.moderation.meta'),
           } : null,
           capabilities.canViewFinance ? {
             key: 'finance',
-            label: 'Finanzas',
-            meta: 'Resumen economico y rendimiento principal.',
+            label: t('admin.shell.sections.business.items.finance.label'),
+            meta: t('admin.shell.sections.business.items.finance.meta'),
           } : null,
           capabilities.canRefund ? {
             key: 'finance-adjustments',
-            label: 'Ajustes financieros',
-            meta: 'Refunds manuales y operaciones sensibles.',
+            label: t('admin.shell.sections.business.items.financeAdjustments.label'),
+            meta: t('admin.shell.sections.business.items.financeAdjustments.meta'),
           } : null,
         ].filter(Boolean),
       },
       {
-        label: 'Control y administracion',
+        label: t('admin.shell.sections.control.label'),
         items: [
           capabilities.canViewAudit ? {
             key: 'control',
-            label: 'Control interno',
-            meta: 'Auditoria y comprobaciones de consistencia.',
+            label: t('admin.shell.sections.control.items.control.label'),
+            meta: t('admin.shell.sections.control.items.control.meta'),
           } : null,
           capabilities.canViewDb ? {
             key: 'data',
-            label: 'Datos internos',
-            meta: 'Consultas internas y acceso tecnico controlado.',
+            label: t('admin.shell.sections.control.items.data.label'),
+            meta: t('admin.shell.sections.control.items.data.meta'),
           } : null,
           capabilities.canViewAdministration ? {
             key: 'administration',
-            label: 'Administracion',
-            meta: 'Base preparada para usuarios y permisos de backoffice.',
+            label: t('admin.shell.sections.control.items.administration.label'),
+            meta: t('admin.shell.sections.control.items.administration.meta'),
           } : null,
         ].filter(Boolean),
       },
     ];
 
     return sections.filter((section) => section.items.length > 0);
-  }, [capabilities]);
+  }, [capabilities, t]);
 
-  const currentView = VIEW_COPY[activeView] || VIEW_COPY.overview;
+  const currentView = viewCopy[activeView] || viewCopy.overview;
 
   return (
     <AdminLayout
-      title={emailVerificationBlocked ? 'Validacion de email pendiente' : currentView.title}
-      subtitle={emailVerificationBlocked ? 'Tu acceso queda restringido hasta que confirmes el email de la cuenta interna.' : currentView.subtitle}
+      title={emailVerificationBlocked ? t('admin.shell.restricted.topbarTitle') : currentView.title}
+      subtitle={emailVerificationBlocked ? t('admin.shell.restricted.topbarSubtitle') : currentView.subtitle}
+      eyebrow={t('admin.shell.topbar.eyebrow')}
+      brandEyebrow={t('admin.shell.brand.eyebrow')}
+      brandTitle={t('admin.shell.brand.title')}
+      brandSubtitle={t('admin.shell.brand.subtitle')}
       activeKey={emailVerificationBlocked ? 'verification' : activeView}
       onSelect={setActiveView}
       sections={emailVerificationBlocked ? [] : navigationSections}
-      footerLabel="Sesion activa"
+      footerLabel={t('admin.shell.footer.activeSession')}
+      footerLogoutLabel={t('admin.shell.footer.logout')}
       footerValue={`${displayName} - ${displayRole}`}
       onLogout={handleLogout}
       meta={emailVerificationBlocked
         ? [
-            { label: 'Rol', value: displayRole },
-            { label: 'Email', value: 'PENDIENTE' },
+            { label: t('admin.shell.meta.role'), value: displayRole },
+            { label: t('admin.shell.meta.email'), value: t('admin.shell.meta.pending') },
           ]
         : [
-            { label: 'Rol', value: displayRole },
-            { label: 'Surface', value: 'BACKOFFICE' },
+            { label: t('admin.shell.meta.role'), value: displayRole },
+            { label: t('admin.shell.meta.surface'), value: t('admin.shell.meta.surfaceValue') },
           ]}
       topbarActions={emailVerificationBlocked
         ? []
         : [
             {
               key: 'profile',
-              label: 'Perfil',
+              label: t('admin.shell.actions.profile'),
               active: activeView === 'profile',
               onClick: () => setActiveView('profile'),
             },
@@ -281,19 +287,19 @@ const DashboardAdmin = () => {
             }}
           >
             <div style={{ fontSize: 12, fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Acceso restringido
+              {t('admin.shell.restricted.badge')}
             </div>
             <div style={{ marginTop: 6, fontSize: 22, fontWeight: 700, color: '#4a2b00' }}>
-              Debes validar tu email antes de continuar en el backoffice.
+              {t('admin.shell.restricted.title')}
             </div>
             <div style={{ marginTop: 8, fontSize: 14, lineHeight: 1.6 }}>
-              Hasta entonces solo puedes reenviar la validacion o cerrar sesion.
+              {t('admin.shell.restricted.body')}
             </div>
           </div>
 
           <AdminPage
-            title="Cuenta pendiente de validacion"
-            subtitle="La interfaz interna queda bloqueada hasta que confirmes el email asociado a esta cuenta."
+            title={t('admin.shell.restricted.pageTitle')}
+            subtitle={t('admin.shell.restricted.pageSubtitle')}
             actions={(
               <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                 <button
@@ -309,7 +315,7 @@ const DashboardAdmin = () => {
                     opacity: resendingVerification ? 0.7 : 1,
                   }}
                 >
-                  {resendingVerification ? 'Reenviando...' : 'Reenviar validacion'}
+                  {resendingVerification ? t('admin.shell.restricted.resending') : t('admin.shell.restricted.resend')}
                 </button>
                 <button
                   type="button"
@@ -322,17 +328,20 @@ const DashboardAdmin = () => {
                     cursor: 'pointer',
                   }}
                 >
-                  Cerrar sesion
+                  {t('admin.shell.footer.logout')}
                 </button>
               </div>
             )}
           >
             <div style={{ display: 'grid', gap: 14 }}>
               <div style={{ color: '#40506a', lineHeight: 1.6 }}>
-                Has iniciado sesion como <strong>{displayName}</strong>{user?.email ? ` (${user.email})` : ''}, pero la cuenta interna todavia no tiene el email validado.
+                {t('admin.shell.restricted.signedInAs', {
+                  displayName,
+                  email: user?.email ? ` (${user.email})` : '',
+                })}
               </div>
               <div style={{ color: '#40506a', lineHeight: 1.6 }}>
-                Cuando completes la validacion, vuelve a entrar en el backoffice para recuperar el acceso normal a overview, moderacion, finanzas y el resto de modulos internos.
+                {t('admin.shell.restricted.recoveryHint')}
               </div>
               {verificationMessage ? (
                 <div style={{ padding: '12px 14px', borderRadius: 14, border: '1px solid #bfe9ca', background: '#ecfbf0', color: '#166534', lineHeight: 1.5 }}>
@@ -360,8 +369,8 @@ const DashboardAdmin = () => {
             <>
               {capabilities.canViewStats && (
                 <AdminPage
-                  title="Resumen operativo"
-                  subtitle="Lectura rapida del estado actual del runtime y de las colas activas."
+                  title={t('admin.streams.wrapper.statsTitle')}
+                  subtitle={t('admin.streams.wrapper.statsSubtitle')}
                 >
                   <AdminStatsPanel />
                 </AdminPage>
@@ -370,8 +379,8 @@ const DashboardAdmin = () => {
               {capabilities.canViewStreams && (
                 <AdminPage
                   muted
-                  title="Sesiones activas"
-                  subtitle="Detalle operativo de streams activos con capacidad de inspeccion y corte manual."
+                  title={t('admin.streams.wrapper.title')}
+                  subtitle={t('admin.streams.wrapper.subtitle')}
                 >
                   <AdminActiveStreamsPanel canKill={capabilities.canKillStreams} />
                 </AdminPage>
@@ -379,8 +388,8 @@ const DashboardAdmin = () => {
 
               {!capabilities.canViewStats && !capabilities.canViewStreams && (
                 <AdminPlaceholderPanel
-                  title="Operaciones no disponible"
-                  body="Tu perfil actual no tiene acceso a los bloques operativos de runtime."
+                  title={t('admin.streams.wrapper.unavailableTitle')}
+                  body={t('admin.streams.wrapper.unavailableBody')}
                 />
               )}
             </>
@@ -403,8 +412,8 @@ const DashboardAdmin = () => {
 
           {activeView === 'moderation' && capabilities.canViewModeration && (
             <AdminPage
-              title="Casos de moderacion"
-              subtitle="Revision de reports y decision operativa sobre incidencias abiertas."
+              title={t('admin.moderation.wrapper.title')}
+              subtitle={t('admin.moderation.wrapper.subtitle')}
             >
               <AdminModerationPanel canReview={capabilities.canReviewModeration} />
             </AdminPage>
@@ -465,8 +474,8 @@ const DashboardAdmin = () => {
 
           {activeView === 'profile' && (
             <AdminPage
-              title="Cuenta del Backoffice"
-              subtitle="Informacion basica de la cuenta autenticada y cambio de contrasena propio."
+              title={t('admin.profile.wrapper.title')}
+              subtitle={t('admin.profile.wrapper.subtitle')}
             >
               <AdminProfilePage />
             </AdminPage>

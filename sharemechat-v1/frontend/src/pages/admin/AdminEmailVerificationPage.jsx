@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 
 const cardStyle = {
@@ -13,7 +14,8 @@ const cardStyle = {
 };
 
 const AdminEmailVerificationPage = () => {
-  const [state, setState] = useState({ loading: true, ok: false, message: '' });
+  const t = (key, options) => i18n.t(key, options);
+  const [state, setState] = useState({ loading: true, ok: false, status: 'loading' });
 
   const token = useMemo(() => {
     if (typeof window === 'undefined') return '';
@@ -25,20 +27,23 @@ const AdminEmailVerificationPage = () => {
 
     const run = async () => {
       if (!token) {
-        setState({ loading: false, ok: false, message: 'Falta el token de validacion.' });
+        setState({ loading: false, ok: false, status: 'tokenMissing' });
         return;
       }
+
       try {
         const response = await apiFetch(`/email-verification/confirm?token=${encodeURIComponent(token)}`);
         if (!cancelled) {
-          setState({ loading: false, ok: Boolean(response?.ok), message: response?.message || 'Email validado correctamente.' });
+          const ok = Boolean(response?.ok);
+          setState({
+            loading: false,
+            ok,
+            status: ok ? 'success' : 'error',
+          });
         }
-      } catch (e) {
-        const message = e?.data && typeof e.data.message === 'string' && e.data.message.trim()
-          ? e.data.message
-          : 'No se pudo validar el email. Inténtalo más tarde.';
+      } catch {
         if (!cancelled) {
-          setState({ loading: false, ok: false, message });
+          setState({ loading: false, ok: false, status: 'error' });
         }
       }
     };
@@ -49,12 +54,16 @@ const AdminEmailVerificationPage = () => {
     };
   }, [token]);
 
+  const message = state.loading
+    ? t('admin.verification.loading')
+    : t(`admin.verification.${state.status}`);
+
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: 'linear-gradient(180deg, #eef3ff 0%, #f9fbff 100%)' }}>
       <div style={cardStyle}>
-        <div style={{ fontSize: 28, fontWeight: 700, color: '#16324f' }}>SharemeChat Backoffice</div>
+        <div style={{ fontSize: 28, fontWeight: 700, color: '#16324f' }}>{t('admin.verification.pageTitle')}</div>
         <div style={{ marginTop: 10, color: '#5f6b7a', fontSize: 14, lineHeight: 1.6 }}>
-          Validacion de email para acceso interno.
+          {t('admin.verification.pageSubtitle')}
         </div>
         <div style={{
           marginTop: 18,
@@ -65,11 +74,11 @@ const AdminEmailVerificationPage = () => {
           color: state.ok ? '#166534' : '#b42318',
           lineHeight: 1.55,
         }}>
-          {state.loading ? 'Validando enlace...' : state.message}
+          {message}
         </div>
         <div style={{ marginTop: 18, fontSize: 13 }}>
           <Link to="/login" style={{ color: '#0f4aa8', fontWeight: 700, textDecoration: 'none' }}>
-            Ir al login interno
+            {t('admin.verification.backToLogin')}
           </Link>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import i18n from '../../i18n';
 import {
   Badge,
   ControlsRow,
@@ -19,20 +20,9 @@ import {
 } from '../../styles/AdminStyles';
 
 const FINAL_ACTIONS = new Set(['WARNING', 'SUSPEND', 'BAN']);
-const ACTION_HELP = {
-  NONE: 'Sin accion sancionadora. Util para cerrar o documentar el caso sin escalar.',
-  WARNING: 'Advertencia al usuario. Senala conducta indebida sin suspender acceso.',
-  SUSPEND: 'Suspension operativa. Debe usarse cuando la incidencia requiere bloqueo temporal.',
-  BAN: 'Bloqueo definitivo. Reservado a casos graves o reincidentes.',
-};
-const STATUS_HELP = {
-  OPEN: 'Caso recien creado y pendiente de triage.',
-  REVIEWING: 'Caso en analisis por soporte o administracion.',
-  RESOLVED: 'Caso cerrado con decision final.',
-  REJECTED: 'Caso descartado por falta de base o por duplicidad.',
-};
 
 const AdminModerationPanel = ({ canReview = false }) => {
+  const t = (key, options) => i18n.t(key, options);
   const destinationRef = useRef(null);
   const [modStatus, setModStatus] = useState('ALL');
   const [modReports, setModReports] = useState([]);
@@ -47,6 +37,20 @@ const AdminModerationPanel = ({ canReview = false }) => {
 
   const isFinalAction = FINAL_ACTIONS.has(String(modReviewAction || '').toUpperCase());
 
+  const getActionHelp = (actionCode) => {
+    const normalized = String(actionCode || 'NONE').toUpperCase();
+    return t(`admin.moderation.actionHelp.${normalized}`, {
+      defaultValue: t('admin.moderation.actionHelp.NONE'),
+    });
+  };
+
+  const getStatusHelp = (statusCode) => {
+    const normalized = String(statusCode || 'REVIEWING').toUpperCase();
+    return t(`admin.moderation.statusHelp.${normalized}`, {
+      defaultValue: t('admin.moderation.statusHelp.REVIEWING'),
+    });
+  };
+
   const scrollToDestination = () => {
     if (!destinationRef.current) return;
     window.requestAnimationFrame(() => {
@@ -60,11 +64,11 @@ const AdminModerationPanel = ({ canReview = false }) => {
     try {
       const qs = modStatus === 'ALL' ? '' : `?status=${encodeURIComponent(modStatus)}`;
       const res = await fetch(`/api/admin/moderation/reports${qs}`, { credentials: 'include' });
-      if (!res.ok) throw new Error((await res.text()) || 'Error cargando reports');
+      if (!res.ok) throw new Error((await res.text()) || i18n.t('admin.moderation.errors.loadReports'));
       const data = await res.json();
       setModReports(Array.isArray(data) ? data : []);
     } catch (e) {
-      setModError(e.message || 'Error cargando reports');
+      setModError(e.message || i18n.t('admin.moderation.errors.loadReports'));
       setModReports([]);
     } finally {
       setModLoading(false);
@@ -75,7 +79,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
     if (!id) return;
     try {
       const res = await fetch(`/api/admin/moderation/reports/${id}`, { credentials: 'include' });
-      if (!res.ok) throw new Error((await res.text()) || 'Error cargando reporte');
+      if (!res.ok) throw new Error((await res.text()) || i18n.t('admin.moderation.errors.loadReport'));
       const report = await res.json();
 
       const nextAction = String(report?.adminAction || 'NONE').toUpperCase();
@@ -87,7 +91,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
       setModReviewStatus(nextStatus);
       setModReviewNotes(report?.resolutionNotes || '');
     } catch (e) {
-      setModError(e.message || 'Error cargando reporte');
+      setModError(e.message || i18n.t('admin.moderation.errors.loadReport'));
     }
   };
 
@@ -121,12 +125,12 @@ const AdminModerationPanel = ({ canReview = false }) => {
         }),
       });
 
-      if (!res.ok) throw new Error((await res.text()) || 'Error guardando review');
+      if (!res.ok) throw new Error((await res.text()) || i18n.t('admin.moderation.errors.saveReview'));
 
       await loadModerationReports();
       await loadModerationReportById(id);
     } catch (e) {
-      setModError(e.message || 'Error guardando review');
+      setModError(e.message || i18n.t('admin.moderation.errors.saveReview'));
     } finally {
       setModSaving(false);
     }
@@ -137,7 +141,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
     try {
       const date = new Date(value);
       if (Number.isNaN(date.getTime())) return String(value);
-      return date.toLocaleString();
+      return date.toLocaleString(i18n.resolvedLanguage || i18n.language);
     } catch {
       return String(value);
     }
@@ -150,27 +154,27 @@ const AdminModerationPanel = ({ canReview = false }) => {
 
   return (
     <div>
-      <SectionTitle>Moderacion</SectionTitle>
+      <SectionTitle>{t('admin.moderation.title')}</SectionTitle>
 
       <div style={{ fontSize: 12, color: '#52607a', lineHeight: 1.55, marginBottom: 8, maxWidth: 980 }}>
-        Vista operativa de reports internos. Permite filtrar incidencias, revisar detalle y documentar una decision administrativa con mejor contexto para soporte y control interno.
+        {t('admin.moderation.intro')}
       </div>
 
       <ControlsRow>
         <FieldBlock>
-          <label>Estado</label>
+          <label>{t('admin.moderation.filters.status')}</label>
           <StyledSelect value={modStatus} onChange={(e) => setModStatus(e.target.value)}>
-            <option value="ALL">Todos</option>
-            <option value="OPEN">OPEN</option>
-            <option value="REVIEWING">REVIEWING</option>
-            <option value="RESOLVED">RESOLVED</option>
-            <option value="REJECTED">REJECTED</option>
+            <option value="ALL">{t('admin.moderation.filters.options.ALL')}</option>
+            <option value="OPEN">{t('admin.moderation.filters.options.OPEN')}</option>
+            <option value="REVIEWING">{t('admin.moderation.filters.options.REVIEWING')}</option>
+            <option value="RESOLVED">{t('admin.moderation.filters.options.RESOLVED')}</option>
+            <option value="REJECTED">{t('admin.moderation.filters.options.REJECTED')}</option>
           </StyledSelect>
         </FieldBlock>
 
         <RightInfo>
           <SmallBtn type="button" onClick={loadModerationReports} disabled={modLoading}>
-            {modLoading ? 'Cargando...' : 'Refrescar'}
+            {modLoading ? t('admin.moderation.actions.loading') : t('admin.moderation.actions.refresh')}
           </SmallBtn>
         </RightInfo>
       </ControlsRow>
@@ -182,17 +186,17 @@ const AdminModerationPanel = ({ canReview = false }) => {
           <DarkHeaderTable style={{ marginTop: 0 }}>
             <thead>
               <tr>
-                <th>ID</th>
-                <th>Creado</th>
-                <th>Tipo</th>
-                <th>Estado</th>
-                <th>Accion</th>
-                <th>AutoBlock</th>
-                <th>Reporter</th>
-                <th>Reported</th>
-                <th>Stream</th>
-                <th>ReviewedBy</th>
-                <th>Revisado</th>
+                <th>{t('admin.moderation.table.id')}</th>
+                <th>{t('admin.moderation.table.created')}</th>
+                <th>{t('admin.moderation.table.type')}</th>
+                <th>{t('admin.moderation.table.status')}</th>
+                <th>{t('admin.moderation.table.action')}</th>
+                <th>{t('admin.moderation.table.autoBlock')}</th>
+                <th>{t('admin.moderation.table.reporter')}</th>
+                <th>{t('admin.moderation.table.reported')}</th>
+                <th>{t('admin.moderation.table.stream')}</th>
+                <th>{t('admin.moderation.table.reviewedBy')}</th>
+                <th>{t('admin.moderation.table.reviewedAt')}</th>
                 <th></th>
               </tr>
             </thead>
@@ -204,7 +208,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
                   <td><Badge>{report.reportType || '-'}</Badge></td>
                   <td><Badge data-variant={String(report.status || '').toLowerCase()}>{report.status || '-'}</Badge></td>
                   <td><strong>{report.adminAction || '-'}</strong></td>
-                  <td>{report.autoBlocked ? 'Si' : 'No'}</td>
+                  <td>{report.autoBlocked ? t('admin.moderation.common.yes') : t('admin.moderation.common.no')}</td>
                   <td>{report.reporterUserId ?? '-'}</td>
                   <td>{report.reportedUserId ?? '-'}</td>
                   <td>{report.streamRecordId ?? '-'}</td>
@@ -217,9 +221,9 @@ const AdminModerationPanel = ({ canReview = false }) => {
                         scrollToDestination();
                         loadModerationReportById(report.id);
                       }}
-                      title="Detalle"
+                      title={t('admin.moderation.actions.detail')}
                     >
-                      Detalle
+                      {t('admin.moderation.actions.detail')}
                     </TableActionButton>
                   </td>
                 </tr>
@@ -227,7 +231,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
 
               {!modLoading && modReports.length === 0 && (
                 <tr>
-                  <td colSpan={12} style={{ color: '#6c757d' }}>Sin reports.</td>
+                  <td colSpan={12} style={{ color: '#6c757d' }}>{t('admin.moderation.empty')}</td>
                 </tr>
               )}
             </tbody>
@@ -238,17 +242,19 @@ const AdminModerationPanel = ({ canReview = false }) => {
           <InlinePanel>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div style={{ fontWeight: 700 }}>
-                {modSelectedId ? `Detalle report #${modSelectedId}` : 'Selecciona un report para revisar'}
+                {modSelectedId
+                  ? t('admin.moderation.detail.selectedTitle', { id: modSelectedId })
+                  : t('admin.moderation.detail.emptyTitle')}
               </div>
 
               {modSelectedId && (
                 <div style={{ display: 'flex', gap: 8 }}>
                   <SmallBtn type="button" onClick={() => loadModerationReportById(modSelectedId)} disabled={modSaving}>
-                    Recargar
+                    {t('admin.moderation.actions.reload')}
                   </SmallBtn>
                   {canReview && (
                     <StyledButton type="button" onClick={saveModerationReview} disabled={modSaving}>
-                      {modSaving ? 'Guardando...' : 'Guardar'}
+                      {modSaving ? t('admin.moderation.actions.saving') : t('admin.moderation.actions.save')}
                     </StyledButton>
                   )}
                 </div>
@@ -259,17 +265,17 @@ const AdminModerationPanel = ({ canReview = false }) => {
               <>
                 {!canReview && (
                   <div style={{ marginTop: 8, fontSize: 12, color: '#6c757d' }}>
-                    Modo solo lectura para SUPPORT. La revision sancionadora queda reservada a ADMIN.
+                    {t('admin.moderation.readOnlySupport')}
                   </div>
                 )}
 
                 <div style={{ marginTop: 8, fontSize: 11, color: '#52607a', lineHeight: 1.55 }}>
-                  Usa REVIEWING mientras el caso sigue abierto. Las acciones WARNING, SUSPEND y BAN fuerzan cierre en RESOLVED.
+                  {t('admin.moderation.reviewHint')}
                 </div>
 
                 <PanelRow>
                   <FieldBlock>
-                    <label>Accion administrativa</label>
+                    <label>{t('admin.moderation.detail.adminAction')}</label>
                     {canReview ? (
                       <StyledSelect
                         value={modReviewAction}
@@ -284,12 +290,12 @@ const AdminModerationPanel = ({ canReview = false }) => {
                       <div>{modReviewAction || 'NONE'}</div>
                     )}
                     <div style={{ marginTop: 6, fontSize: 11, color: '#74819a', maxWidth: 280, lineHeight: 1.5 }}>
-                      {ACTION_HELP[modReviewAction] || ACTION_HELP.NONE}
+                      {getActionHelp(modReviewAction)}
                     </div>
                   </FieldBlock>
 
                   <FieldBlock>
-                    <label>Estado del caso</label>
+                    <label>{t('admin.moderation.detail.caseStatus')}</label>
                     {canReview ? (
                       <StyledSelect
                         value={isFinalAction ? 'RESOLVED' : modReviewStatus}
@@ -305,22 +311,22 @@ const AdminModerationPanel = ({ canReview = false }) => {
                       <div>{isFinalAction ? 'RESOLVED' : modReviewStatus}</div>
                     )}
                     <div style={{ marginTop: 6, fontSize: 11, color: '#74819a', maxWidth: 280, lineHeight: 1.5 }}>
-                      {STATUS_HELP[isFinalAction ? 'RESOLVED' : modReviewStatus] || STATUS_HELP.REVIEWING}
+                      {getStatusHelp(isFinalAction ? 'RESOLVED' : modReviewStatus)}
                     </div>
                   </FieldBlock>
                 </PanelRow>
 
                 <FieldBlock style={{ marginTop: 10 }}>
-                  <label>Notas internas de resolucion</label>
+                  <label>{t('admin.moderation.detail.notes')}</label>
                   {canReview ? (
                     <TextArea
                       value={modReviewNotes}
                       onChange={(e) => setModReviewNotes(e.target.value)}
-                      placeholder="Resume criterio, evidencia y motivo de la decision..."
+                      placeholder={t('admin.moderation.detail.notesPlaceholder')}
                     />
                   ) : (
                     <div style={{ whiteSpace: 'pre-wrap', minHeight: 72 }}>
-                      {modReviewNotes || 'Sin notas.'}
+                      {modReviewNotes || t('admin.moderation.detail.noNotes')}
                     </div>
                   )}
                 </FieldBlock>

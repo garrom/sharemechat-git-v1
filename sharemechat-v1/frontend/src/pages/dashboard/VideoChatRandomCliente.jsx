@@ -35,6 +35,8 @@ import {
   StyledGiftGrid,
   StyledGiftIcon,
   StyledRemoteVideo,
+  StyledRemoteVideoMedia,
+  StyledRemoteVideoPlaceholder,
   StyledTitleAvatar,
   StyledPaneCenter,
   StyledPaneCenterStack,
@@ -128,6 +130,16 @@ export default function VideoChatRandomCliente(props) {
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState('');
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
+  const [isDesktopRemoteVideoReady, setIsDesktopRemoteVideoReady] = useState(false);
+
+  useEffect(() => {
+    if (!remoteStream || isMobile || !cameraActive) {
+      setIsDesktopRemoteVideoReady(false);
+      return;
+    }
+
+    setIsDesktopRemoteVideoReady(false);
+  }, [cameraActive, isMobile, remoteStream]);
 
   const fetchTeasers = async () => {
     setPromoLoading(true);
@@ -358,6 +370,28 @@ export default function VideoChatRandomCliente(props) {
     </StyledGiftsPanel>
   );
 
+  const logLocalVideoEvent = (eventName, videoEl) => {
+    const stream = videoEl?.srcObject || null;
+    const tracks = Array.isArray(stream?.getTracks?.()) ? stream.getTracks() : [];
+    const trackSummary = tracks.map((track) => ({
+      kind: track.kind,
+      enabled: track.enabled,
+      muted: track.muted,
+      readyState: track.readyState,
+    }));
+
+    console.log('[RANDOM_TRACE_LOCAL_VIDEO]', {
+      role: 'client',
+      event: eventName,
+      readyState: videoEl?.readyState ?? null,
+      networkState: videoEl?.networkState ?? null,
+      paused: videoEl?.paused ?? null,
+      currentTime: videoEl?.currentTime ?? null,
+      trackCount: tracks.length,
+      tracks: trackSummary,
+    });
+  };
+
   return (
     <StyledCenterVideochat>
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
@@ -384,6 +418,11 @@ export default function VideoChatRandomCliente(props) {
                       muted
                       autoPlay
                       playsInline
+                      onLoadedMetadata={(e) => logLocalVideoEvent('localVideoLoadedMetadata', e.currentTarget)}
+                      onCanPlay={(e) => logLocalVideoEvent('localVideoCanPlay', e.currentTarget)}
+                      onPlaying={(e) => logLocalVideoEvent('localVideoPlaying', e.currentTarget)}
+                      onPause={(e) => logLocalVideoEvent('localVideoPause', e.currentTarget)}
+                      onError={(e) => logLocalVideoEvent('localVideoError', e.currentTarget)}
                       style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                     />
                   </StyledPrecallLocalStage>
@@ -552,8 +591,9 @@ export default function VideoChatRandomCliente(props) {
                           </StyledCallTopActions>
                         </StyledCallTopBar>
 
-                        <video
+                        <StyledRemoteVideoMedia
                           ref={remoteVideoRef}
+                          $ready={isDesktopRemoteVideoReady}
                           onLoadedMetadata={(e) => {
                             const el = e.currentTarget;
                             console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoLoadedMetadata readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
@@ -564,6 +604,7 @@ export default function VideoChatRandomCliente(props) {
                           }}
                           onPlaying={() => {
                             const el = remoteVideoRef?.current;
+                            setIsDesktopRemoteVideoReady(true);
                             console.log(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoPlaying readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} paused=${el?.paused ?? 'null'} currentTime=${el?.currentTime ?? 'null'}`);
                             sendRandomMediaReady?.();
                             if (matchGraceRef) matchGraceRef.current = false;
@@ -572,11 +613,16 @@ export default function VideoChatRandomCliente(props) {
                             const el = e.currentTarget;
                             console.warn(`[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=remoteVideoError readyState=${el?.readyState ?? 'null'} networkState=${el?.networkState ?? 'null'} mediaError=${el?.error?.message || el?.error?.code || 'unknown'}`);
                           }}
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           autoPlay
                           playsInline
                           onDoubleClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                         />
+
+                        {!isDesktopRemoteVideoReady && (
+                          <StyledRemoteVideoPlaceholder>
+                            Conectando...
+                          </StyledRemoteVideoPlaceholder>
+                        )}
 
                         {cameraActive && (
                           <StyledCallLocalVideo>
@@ -585,6 +631,11 @@ export default function VideoChatRandomCliente(props) {
                               muted
                               autoPlay
                               playsInline
+                              onLoadedMetadata={(e) => logLocalVideoEvent('localVideoLoadedMetadata', e.currentTarget)}
+                              onCanPlay={(e) => logLocalVideoEvent('localVideoCanPlay', e.currentTarget)}
+                              onPlaying={(e) => logLocalVideoEvent('localVideoPlaying', e.currentTarget)}
+                              onPause={(e) => logLocalVideoEvent('localVideoPause', e.currentTarget)}
+                              onError={(e) => logLocalVideoEvent('localVideoError', e.currentTarget)}
                               style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                             />
                           </StyledCallLocalVideo>
@@ -687,6 +738,11 @@ export default function VideoChatRandomCliente(props) {
                             muted
                             autoPlay
                             playsInline
+                            onLoadedMetadata={(e) => logLocalVideoEvent('localVideoLoadedMetadata', e.currentTarget)}
+                            onCanPlay={(e) => logLocalVideoEvent('localVideoCanPlay', e.currentTarget)}
+                            onPlaying={(e) => logLocalVideoEvent('localVideoPlaying', e.currentTarget)}
+                            onPause={(e) => logLocalVideoEvent('localVideoPause', e.currentTarget)}
+                            onError={(e) => logLocalVideoEvent('localVideoError', e.currentTarget)}
                             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                           />
                         </StyledCallLocalVideo>
