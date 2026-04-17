@@ -4,6 +4,7 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.User;
 import com.sharemechat.security.BackofficeAuthorities;
 import com.sharemechat.service.BackofficeAccessService;
+import com.sharemechat.service.ModelService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.storage.StorageService;
 import com.sharemechat.storage.StorageUrlCodec;
@@ -34,15 +35,18 @@ public class StorageController {
     private final StorageService storageService;
     private final StorageUrlCodec storageUrlCodec;
     private final UserService userService;
+    private final ModelService modelService;
     private final BackofficeAccessService backofficeAccessService;
 
     public StorageController(StorageService storageService,
                              StorageUrlCodec storageUrlCodec,
                              UserService userService,
+                             ModelService modelService,
                              BackofficeAccessService backofficeAccessService) {
         this.storageService = storageService;
         this.storageUrlCodec = storageUrlCodec;
         this.userService = userService;
+        this.modelService = modelService;
         this.backofficeAccessService = backofficeAccessService;
     }
 
@@ -100,10 +104,18 @@ public class StorageController {
         }
 
         return switch (accessScope.category()) {
+            case MODEL_TEASER -> canReadModelTeaser(user);
             case MODEL_PROFILE -> canReadModelProfile(user);
             case CLIENT_PROFILE -> canReadClientProfile(user);
             case VERIFICATION, UNKNOWN -> false;
         };
+    }
+
+    private boolean canReadModelTeaser(User user) {
+        String role = normalize(user.getRole());
+        return Constants.Roles.USER.equals(role)
+                || Constants.Roles.CLIENT.equals(role)
+                || Constants.Roles.MODEL.equals(role);
     }
 
     private boolean canReadModelProfile(User user) {
@@ -139,6 +151,9 @@ public class StorageController {
         String category = matcher.group(3);
         if ("profile".equals(category)) {
             if ("models".equals(ownerType)) {
+                if (modelService.isAuthorizedTeaserStorageKey(ownerUserId, storageKey)) {
+                    return new AccessScope(AccessCategory.MODEL_TEASER, ownerUserId);
+                }
                 return new AccessScope(AccessCategory.MODEL_PROFILE, ownerUserId);
             }
             if ("clients".equals(ownerType)) {
@@ -173,6 +188,7 @@ public class StorageController {
     }
 
     private enum AccessCategory {
+        MODEL_TEASER,
         MODEL_PROFILE,
         CLIENT_PROFILE,
         VERIFICATION,

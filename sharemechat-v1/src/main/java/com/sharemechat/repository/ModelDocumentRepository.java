@@ -25,6 +25,16 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
            """)
     long countEligibleModelsWithVideo();
 
+    @Query("""
+           select md
+           from ModelDocument md, User u
+           where u.id = md.userId
+             and u.id = :userId
+             and u.role = 'MODEL'
+             and u.verificationStatus = 'APPROVED'
+           """)
+    Optional<ModelDocument> findApprovedModelProfileDocumentByUserId(Long userId);
+
     // Consulta paginada genérica para teasers (orden técnico)
     @Query("""
            select new com.sharemechat.dto.ModelTeaserDTO(

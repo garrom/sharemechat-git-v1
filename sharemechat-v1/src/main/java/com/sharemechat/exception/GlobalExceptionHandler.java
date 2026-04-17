@@ -8,7 +8,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 
+import java.io.IOException;
 import java.util.stream.Collectors;
 
 @ControllerAdvice
@@ -207,8 +209,19 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
+    @ExceptionHandler(AsyncRequestNotUsableException.class)
+    public ResponseEntity<Void> handleAsyncRequestNotUsable(AsyncRequestNotUsableException ex, HttpServletRequest req) {
+        log.debug("Request abortada por el cliente en {}: {}", req.getRequestURI(), ex.getMessage());
+        return ResponseEntity.noContent().build();
+    }
+
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiError> handleOther(Exception ex, HttpServletRequest req) {
+    public ResponseEntity<?> handleOther(Exception ex, HttpServletRequest req) {
+        if (isClientAbortLike(ex)) {
+            log.debug("Request abortada por el cliente en {}: {}", req.getRequestURI(), ex.getMessage());
+            return ResponseEntity.noContent().build();
+        }
+
         log.error("Error no controlado en {}: {}", req.getRequestURI(), ex.getMessage(), ex);
         ApiError body = new ApiError(
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
@@ -217,5 +230,32 @@ public class GlobalExceptionHandler {
                 req.getRequestURI()
         );
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(body);
+    }
+
+    private boolean isClientAbortLike(Throwable ex) {
+        Throwable current = ex;
+        while (current != null) {
+            if (current instanceof AsyncRequestNotUsableException) {
+                return true;
+            }
+            if (current instanceof IOException && hasClientAbortMessage(current.getMessage())) {
+                return true;
+            }
+            String simpleName = current.getClass().getSimpleName();
+            if ("ClientAbortException".equals(simpleName)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    private boolean hasClientAbortMessage(String message) {
+        if (message == null || message.isBlank()) {
+            return false;
+        }
+        String normalized = message.toLowerCase();
+        return normalized.contains("broken pipe")
+                || normalized.contains("connection reset by peer");
     }
 }

@@ -105,6 +105,44 @@ Como cierre posterior del frente legacy, TEST y AUDIT ya han eliminado tambien:
 
 Ambos entornos quedan documentados como operativos exclusivamente sobre S3 privado con acceso mediado por backend para este tipo de contenido.
 
+### Preview negro de teasers en dashboard trial de usuario en AUDIT
+
+Se detecta una incidencia real en `dashboard-user-client` para usuarios trial (`ROLE_USER` + `FORM_CLIENT`) en AUDIT: el card derecho de previews de modelos deja de renderizar el media y el usuario percibe un bloque negro o sin contenido util.
+
+Patron confirmado:
+
+- el frontend carga correctamente la lista de teasers desde `GET /api/models/teasers`
+- el DTO devuelve `avatarUrl` y `videoUrl`
+- `VideoChatRandomUser` intenta renderizar el teaser con `BlurredPreview` sobre un elemento `<video src=...>`
+- las URLs de media apuntan a `/api/storage/content`, es decir, media gestionada y protegida por backend
+- el navegador recibe respuesta HTML en lugar de media reproducible y termina mostrando error de decodificacion o preview negro
+
+Flujo tecnico afectado:
+
+- `DashboardUserClient` monta `VideoChatRandomUser`
+- `VideoChatRandomUser` carga teasers y mapea `avatarUrl` y `videoUrl`
+- `BlurredPreview` intenta abrir ese media como video o poster
+- `StorageController` resuelve la URL protegida y aplica control de acceso por tipo de media
+
+Causa raiz confirmada:
+
+- el backend permite que `ROLE_USER` consulte `GET /api/models/teasers`
+- pero `StorageController` restringe el acceso a `MODEL_PROFILE` a roles `CLIENT` y `MODEL`
+- un usuario trial `USER + FORM_CLIENT` queda por tanto fuera del acceso al media real del teaser aunque la lista de teasers se entregue correctamente
+
+Impacto:
+
+- degradacion visible de UX en onboarding trial
+- perdida del efecto de preview o blur visual en el dashboard trial
+- impacto directo en validaciones de producto y demo PSP del flujo trial
+
+Estado:
+
+- correccion backend acotada ya aplicada en codigo
+- la correccion no abre `MODEL_PROFILE` a `ROLE_USER`: introduce una via separada para teaser promocional exacto de modelo `APPROVED`, validado por `storageKey` normalizado contra `urlPic` y `urlVideo`
+- pendiente de validacion operativa final en entorno para cerrar la incidencia como resuelta
+- no apunta a TURN, signaling ni backend realtime; el problema pertenece al control de acceso del media protegido y a su efecto visible en frontend
+
 ### WebSocket realtime desalineado en AUDIT frente a TEST
 
 Se detecta una incidencia operativa en AUDIT al intentar abrir los canales realtime `wss://audit.sharemechat.com/messages` y `wss://audit.sharemechat.com/match`.

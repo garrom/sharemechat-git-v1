@@ -3,25 +3,32 @@ package com.sharemechat.service;
 import com.sharemechat.dto.ModelDTO;
 import com.sharemechat.dto.ModelTeaserDTO;
 import com.sharemechat.entity.Model;
+import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModelDocumentRepository;
 import com.sharemechat.repository.ModelRepository;
+import com.sharemechat.storage.StorageUrlCodec;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class ModelService {
 
     private final ModelRepository modelRepository;
     private final ModelDocumentRepository modelDocumentRepository;
+    private final StorageUrlCodec storageUrlCodec;
 
     public ModelService(ModelRepository modelRepository,
-                        ModelDocumentRepository modelDocumentRepository) {
+                        ModelDocumentRepository modelDocumentRepository,
+                        StorageUrlCodec storageUrlCodec) {
         this.modelRepository = modelRepository;
         this.modelDocumentRepository = modelDocumentRepository;
+        this.storageUrlCodec = storageUrlCodec;
     }
 
     // ==========================================
@@ -30,6 +37,33 @@ public class ModelService {
     public List<ModelTeaserDTO> listTeasers(int page, int size) {
         PageRequest pageable = PageRequest.of(page, size);
         return modelDocumentRepository.findTeasersPage(pageable);
+    }
+
+    public boolean isAuthorizedTeaserStorageKey(Long ownerUserId, String requestedStorageKey) {
+        if (ownerUserId == null || !StringUtils.hasText(requestedStorageKey)) {
+            return false;
+        }
+
+        return modelDocumentRepository.findApprovedModelProfileDocumentByUserId(ownerUserId)
+                .map(doc -> matchesAuthorizedTeaserStorageKey(doc, requestedStorageKey))
+                .orElse(false);
+    }
+
+    private boolean matchesAuthorizedTeaserStorageKey(ModelDocument doc, String requestedStorageKey) {
+        String normalizedVideoKey = normalizeManagedStorageKey(doc.getUrlVideo());
+        if (Objects.equals(requestedStorageKey, normalizedVideoKey)) {
+            return true;
+        }
+
+        String normalizedPicKey = normalizeManagedStorageKey(doc.getUrlPic());
+        return Objects.equals(requestedStorageKey, normalizedPicKey);
+    }
+
+    private String normalizeManagedStorageKey(String publicUrl) {
+        if (!StringUtils.hasText(publicUrl)) {
+            return null;
+        }
+        return storageUrlCodec.extractKeyFromManagedUrl(publicUrl);
     }
 
     // ==========================================
