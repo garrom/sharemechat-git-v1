@@ -1,0 +1,10 @@
+[Unit]
+Description=Run AUDIT access log normalization every 5 minutes
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+Unit=sharemechat-audit-access-normalizer.service
+
+[Install]
+WantedBy=timers.target

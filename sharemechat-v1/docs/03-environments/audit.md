@@ -41,6 +41,17 @@ Se elimina del corpus principal el detalle de:
 
 Estos puntos deben revisarse cuando se actualice especificamente la documentacion y validacion tecnica del entorno AUDIT.
 
+## Trazabilidad minima de accesos
+
+AUDIT ya dispone de trazabilidad minima operativa de accesos sin cambios adicionales de arquitectura de aplicacion.
+
+El estado documentable de esta mejora queda asi:
+
+- la capa publica registra accesos de las superficies `audit` y `admin.audit`
+- el vhost API/realtime del backend aporta trazabilidad complementaria para `/api`, `/match` y `/messages`
+- la IP real del cliente puede correlacionarse en backend mediante cabeceras reenviadas por la cadena de proxies
+- esta mejora aumenta la observabilidad operativa del entorno, pero no debe leerse como un sistema completo de seguridad, antiabuso o monitorizacion avanzada
+
 ## Storage privado activo
 
 AUDIT ya opera con proveedor S3 privado para uploads sensibles sin cambios adicionales de arquitectura en frontend ni en backend.

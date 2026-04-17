@@ -2,6 +2,53 @@
 
 ## Incidencias o tensiones tecnicas observables desde el material actual
 
+### Trazabilidad minima insuficiente de accesos publicos en AUDIT
+
+Se detecta una carencia operativa relevante para un entorno no productivo expuesto a validacion PSP: el corpus actual no permite afirmar que exista trazabilidad minima, continua y explotable de las IPs que acceden a las superficies publicas de AUDIT y de su admin.
+
+La evidencia disponible en repositorio y documentacion permite sostener solo estos hechos:
+
+- el backend esta preparado para operar detras de proxy
+- Spring Boot opera con `server.forward-headers-strategy=native`
+- el codigo ya consume `X-Forwarded-For` y `X-Real-IP` para extraer IP cliente en varios flujos
+- en AUDIT se alinearon al menos `Host`, `X-Real-IP`, `X-Forwarded-For` y `X-Forwarded-Proto` en `/match` y `/messages`
+- la comparacion completa de configuracion Nginx real sigue fuera del repositorio principal
+- el repositorio principal no contiene configuracion versionada de `access_log` o formato de logs HTTP por host/ruta para las superficies publicas
+
+La trazabilidad efectiva hoy queda fragmentada:
+
+- login de producto y login de backoffice guardan IP y user-agent en `refresh_tokens`
+- password reset guarda IP y user-agent en `password_reset_tokens`
+- consentimiento guarda solo `ip_hint` truncado, no IP completa
+- los logs backend versionados muestran errores y eventos de negocio, pero no existe evidencia de un access log HTTP general por request con host, ruta e IP
+- el backoffice audit log documentado corresponde a cambios de acceso y permisos, no a accesos HTTP entrantes
+
+La limitacion principal no es de parsing de cabeceras en backend, sino de observabilidad perimetral: sin `access_log` efectivo en la capa HTTP publica o sin un logging HTTP equivalente fuera del repo, no puede reconstruirse de forma fiable quien entro a `audit` y a `admin.audit` por host, ruta y momento, especialmente para frontend estatico o visitas anonimas que no alcanzan un flujo backend con persistencia propia.
+
+La salida operativa minima y pragmatica para este caso queda acotada a:
+
+- registrar accesos HTTP en la capa publica que ya sirve o enruta ambas superficies
+- incluir como minimo timestamp, host solicitado, ruta, metodo, status y IP cliente resuelta desde la cadena de proxies
+- mantener esa operativa fuera del corpus principal con documentacion solo a nivel logico
+
+Mientras no se valide esa capa real fuera del repo, la siguiente comprobacion correcta sigue siendo extraer:
+
+- configuracion efectiva de `access_log` del vhost publico de AUDIT
+- formato real de log usado por host y ruta
+- evidencia de si edge/CDN deja logs explotables o si la unica fuente util es Nginx del host publico
+- muestras saneadas de access logs para confirmar que la IP util no se pierde en la cadena de proxies
+
+Resolucion posterior documentable:
+
+- AUDIT ya dispone de logging perimetral activo en la capa publica de las superficies `audit` y `admin.audit`
+- la validacion operativa confirma que ambas superficies generan trazabilidad minima de accesos a nivel perimetral
+- el vhost API/realtime del backend ya aportaba trazabilidad complementaria mediante access log en Nginx
+- para `/api` y para las rutas realtime publicadas por ese vhost, la IP real del cliente queda correlable en backend a traves de cabeceras reenviadas como `X-Forwarded-For`
+- no se han modificado behaviors funcionales, origins, routing de aplicacion, backend ni frontend
+- no se ha introducido hardening adicional; la mejora queda acotada a observabilidad minima operativa
+
+Con ello, la carencia inicial deja de ser ausencia de visibilidad y pasa a un estado mas acotado: AUDIT ya cuenta con trazabilidad minima util para revisiones manuales de accesos, aunque no con un sistema centralizado o avanzado de monitorizacion.
+
 ### Fallback SPA no homogeneo entre entornos
 
 La documentacion previa apuntaba a diferencias entre TEST y AUDIT en la capa edge del frontend publico. La implicacion practica es riesgo de fallo al refrescar rutas internas del producto en AUDIT.
