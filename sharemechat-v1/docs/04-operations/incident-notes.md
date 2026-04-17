@@ -415,6 +415,26 @@ No se modificaron:
 - RANDOM
 - desktop
 
+### Mensajes de saldo insuficiente no alineados con el idioma activo
+
+Se detecta una incidencia funcional de i18n en flujos de compra, gifts y calling: el aviso de saldo insuficiente puede mostrarse en un idioma distinto al activo del usuario o como texto backend sin traducir.
+
+La evidencia versionada apunta a una causa combinada:
+
+- el frontend sigue detectando algunos casos por substring textual como `Saldo insuficiente`
+- hay modales y alerts con textos hardcodeados en componentes de dashboard
+- `apiFetch` y varios componentes siguen propagando `err.data.message`, `err.text` o `err.message` como mensaje final de UI
+- backend REST y WebSocket emiten errores funcionales como texto libre en castellano en lugar de codigos estables de negocio
+
+El problema no es de locale del navegador ni de carga de diccionarios, sino de arquitectura de errores: la UI depende todavia de mensajes raw del backend y de heuristicas por texto.
+
+La direccion correcta de correccion es:
+
+- definir codigos funcionales estables para errores de saldo y regalo
+- mapear esos codigos en frontend con `i18n.t(...)`
+- evitar que la UI dependa del idioma del backend
+- dejar el idioma final como responsabilidad exclusiva del frontend
+
 Con ello, el chat en CALLING mobile vuelve a mostrar correctamente:
 
 - texto

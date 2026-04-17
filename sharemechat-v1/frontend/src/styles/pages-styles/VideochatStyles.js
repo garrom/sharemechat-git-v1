@@ -354,7 +354,7 @@ export const StyledCallVideoArea = styled(StyledVideoArea)`
   width: 100%;
   max-width: none;
   margin: 0;
-  min-height: 0;
+  min-height: 300;
 
   @media (min-width: 769px) {
     height: calc(100vh - 220px);

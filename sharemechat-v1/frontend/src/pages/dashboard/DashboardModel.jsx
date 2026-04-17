@@ -1599,15 +1599,15 @@ const DashboardModel = () => {
 
         if (callRingTimeoutRef.current) clearTimeout(callRingTimeoutRef.current);
 
-        (async () => {
-          try {
-            await alert({
-              title: 'Sin saldo del cliente',
-              message: 'El cliente no tiene saldo suficiente para continuar la llamada.',
-              variant: 'info',
-            });
-          } catch (e) {
-            console.error('Error mostrando modal no-balance (Model):', e);
+          (async () => {
+            try {
+              await alert({
+                title: 'Sin saldo del cliente',
+                message: 'El cliente no tiene saldo suficiente para continuar la llamada.',
+                variant: 'info',
+              });
+            } catch (e) {
+              console.error('Error mostrando modal no-balance (Model):', e);
           }
         })();
 

@@ -1213,15 +1213,15 @@ const DashboardClient = () => {
     }
   }, []);
 
-  const handleGiftInsufficientBalance = async (message) => {
-    try {
-      await alert({
-        title: 'Saldo insuficiente para regalos',
-        message: message || 'No tienes saldo suficiente para enviar este regalo.',
-        variant: 'warning',
-      });
-    } catch (e) {
-      console.error('Error mostrando alerta de saldo insuficiente para regalos:', e);
+    const handleGiftInsufficientBalance = async (message) => {
+      try {
+        await alert({
+          title: 'Saldo insuficiente para regalos',
+          message: message || 'No tienes saldo suficiente para enviar este regalo.',
+          variant: 'warning',
+        });
+      } catch (e) {
+        console.error('Error mostrando alerta de saldo insuficiente para regalos:', e);
     }
 
     try {
