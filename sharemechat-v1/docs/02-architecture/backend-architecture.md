@@ -33,8 +33,11 @@ El backend es una aplicacion Spring Boot sobre Java 17 que concentra:
 - el media funcional de modelos se sirve a owner, CLIENT, MODEL o backoffice; el media funcional de clientes se sirve a owner, MODEL o backoffice
 - verification y KYC quedan limitados a propietario o backoffice
 - el backend esta preparado para operar detras de proxy
+- existe una capa versionada de bloqueo por pais basada en cabeceras reenviadas por proxy/CDN, pero su enforcement actual no es global: el codigo la aplica hoy en registro client/model, login producto, refresh y login admin
 - las integraciones de email estan mejor asentadas que PSP y KYC externo
 
 ## Incertidumbres que se preservan
 
 El codigo muestra evolucion incremental en varias areas. Hay piezas que parecen operativas y otras transicionales. La documentacion debe tratar como parciales, salvo nueva validacion, la integracion PSP final y la activacion plena del proveedor KYC.
+
+La misma cautela aplica al bloqueo por pais: el backend ya resuelve pais de origen desde headers de infraestructura, pero la cobertura sigue siendo parcial entre REST y WebSocket y no debe darse por cerrada como politica global del sistema sin nueva decision e implantacion especifica.

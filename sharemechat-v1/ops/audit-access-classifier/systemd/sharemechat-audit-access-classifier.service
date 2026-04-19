@@ -1,0 +1,13 @@
+[Unit]
+Description=Classify AUDIT access activity from normalized JSONL
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/opt/sharemechat-audit-access-classifier/bin/classify-audit-access.sh --config /etc/sharemechat-audit-access-classifier/config.env
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

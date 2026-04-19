@@ -1,0 +1,2 @@
+{"date":"tmp-audit-access-2026-04-18","ip":"62.60.130.227","classification":"CRITICA","score":210,"requests":2,"distinct_routes":2,"hosts":["audit.sharemechat.com"],"channels":["FRONTEND"],"main_reason":"ua_zgrabx2+xmlrpc_scan","recommended_action":"actuar"}
+{"date":"tmp-audit-access-2026-04-18","ip":"90.175.201.51","classification":"NORMAL","score":0,"requests":2,"distinct_routes":2,"hosts":["admin.audit.sharemechat.com"],"channels":["ADMIN"],"main_reason":"admin_flow_coherente","recommended_action":"ninguna"}

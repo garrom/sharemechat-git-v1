@@ -1,28 +1,27 @@
 # AUDIT Access Normalizer
 
-Componente operativo independiente para normalizar accesos de `AUDIT` fuera de la aplicacion Java.
+Componente operativo externo para convertir logs de acceso reales del entorno `AUDIT` en un JSONL diario canonico. No forma parte de la aplicacion Java ni del frontend.
 
-## Alcance
+## Responsabilidad
 
-- lee logs raw de CloudFront desde S3
-- lee el `access.log` local de Nginx del host
-- genera salida canonica diaria en JSON Lines (`JSONL`)
-- persiste estado minimo para no reprocesar siempre todo
-- se ejecuta como `systemd service + systemd timer`
+- leer logs raw de CloudFront desde S3
+- leer el `access.log` local de Nginx del host
+- normalizar ambos orígenes a un formato comun
+- persistir estado minimo para evitar reprocesado innecesario
+- generar un fichero diario `YYYY-MM-DD.jsonl`
 
-No hace:
+## Entradas
 
-- alertas
-- dashboards
-- base de datos
-- cambios en Java, frontend o routing funcional
+- logs raw de CloudFront del entorno `AUDIT`
+- `access.log` local de Nginx del host de `api.audit.sharemechat.com`
 
-## Estructura operativa propuesta en EC2
+## Salida
 
-- codigo: `/opt/sharemechat-audit-access-normalizer`
-- configuracion: `/etc/sharemechat-audit-access-normalizer/config.env`
-- estado: `/var/lib/sharemechat-audit-access-normalizer`
-- salida JSONL: `/var/log/sharemechat-audit-access-normalizer`
+Ruta operativa en EC2:
+
+- `/var/log/sharemechat-audit-access-normalizer/YYYY-MM-DD.jsonl`
+
+Cada linea representa un evento normalizado en JSON Lines.
 
 ## Formato canonico por evento
 
@@ -38,7 +37,7 @@ Campos minimos:
 - `status`
 - `ua`
 
-Campos opcionales cuando esten disponibles:
+Campos opcionales:
 
 - `query`
 - `referer`
@@ -59,17 +58,17 @@ Campos opcionales cuando esten disponibles:
   - `/match`
   - `/messages`
 
-## Estado minimo persistente
+## Estado persistente
 
 Se guarda en `STATE_ROOT`:
 
 - `state/state.json`
-  - ultimo objeto CloudFront procesado por prefijo
+  - estado de escaneo de las fuentes
   - inode y offset actual del `access.log` de Nginx
 - `state/processed/cloudfront/*.json`
-  - marcador por objeto S3 ya normalizado
+  - marcadores de objetos S3 ya normalizados
 - `state/processed/nginx/*.json`
-  - marcador por tramo ya procesado del `access.log`
+  - marcadores por tramo ya procesado del `access.log`
 
 ## Idempotencia
 
@@ -80,69 +79,50 @@ La idempotencia se apoya en dos mecanismos:
 
 La salida final diaria se reconstruye desde chunks ya normalizados, por lo que una reejecucion no debe duplicar eventos ya confirmados.
 
-Ademas, el fichero diario final queda ordenado por `ts` ascendente.
+## Estructura operativa en EC2
 
-## Limite conocido
+- codigo: `/opt/sharemechat-audit-access-normalizer`
+- configuracion: `/etc/sharemechat-audit-access-normalizer/config.env`
+- estado: `/var/lib/sharemechat-audit-access-normalizer`
+- salida: `/var/log/sharemechat-audit-access-normalizer`
 
-El repositorio no documenta el formato exacto del `access.log` real de Nginx del host. El parser incluido soporta:
+## Ejecucion
 
-- `combined` estandar
-- variante `vhost combined` con `host` como primer campo
+### Manual
 
-Si el formato real del `access.log` del host AUDIT difiere de esos dos patrones, ese dato debe ajustarse durante la instalacion operativa antes de habilitar el timer.
-
-## Instalacion minima en EC2
-
-1. Copiar el componente al host:
-```bash
-sudo mkdir -p /opt/sharemechat-audit-access-normalizer
-sudo rsync -a ops/audit-access-normalizer/ /opt/sharemechat-audit-access-normalizer/
-```
-
-2. Crear configuracion:
-```bash
-sudo mkdir -p /etc/sharemechat-audit-access-normalizer
-sudo cp /opt/sharemechat-audit-access-normalizer/config/config.env.example /etc/sharemechat-audit-access-normalizer/config.env
-sudo chmod 640 /etc/sharemechat-audit-access-normalizer/config.env
-```
-
-3. Crear directorios de trabajo y salida:
-
-```bash
-sudo mkdir -p /var/lib/sharemechat-audit-access-normalizer/state
-sudo mkdir -p /var/lib/sharemechat-audit-access-normalizer/tmp
-sudo mkdir -p /var/lib/sharemechat-audit-access-normalizer/chunks
-sudo mkdir -p /var/log/sharemechat-audit-access-normalizer
-```
-
-4. Instalar units de systemd:
-```bash
-sudo cp /opt/sharemechat-audit-access-normalizer/systemd/sharemechat-audit-access-normalizer.service /etc/systemd/system/
-sudo cp /opt/sharemechat-audit-access-normalizer/systemd/sharemechat-audit-access-normalizer.timer /etc/systemd/system/
-sudo systemctl daemon-reload
-```
-
-5. Validar ejecucion manual:
 ```bash
 sudo /opt/sharemechat-audit-access-normalizer/bin/normalize-audit-access.sh --config /etc/sharemechat-audit-access-normalizer/config.env
 ```
 
-6. Activar automatizacion:
-```bash
-sudo systemctl enable --now sharemechat-audit-access-normalizer.timer
-sudo systemctl list-timers | grep sharemechat-audit-access-normalizer
-```
+### Automatizacion del componente
+
+El repositorio incluye:
+
+- `sharemechat-audit-access-normalizer.service`
+- `sharemechat-audit-access-normalizer.timer`
+
+Su funcion es mantener actualizado el JSONL diario canonico que luego consumen el clasificador y el reporter.
 
 ## Comprobaciones operativas minimas
 
-- existencia de JSONL diarios en `OUTPUT_ROOT`
-- avance de `state/state.json`
-- presencia de marcadores en `state/processed/`
+- existe `/var/log/sharemechat-audit-access-normalizer/YYYY-MM-DD.jsonl`
+- el fichero diario contiene eventos JSONL validos
+- `state/state.json` avanza
+- hay marcadores en `state/processed/`
 - `journalctl -u sharemechat-audit-access-normalizer.service`
 
-## Ejemplo de salida JSONL
+## Limites conocidos
 
-```text
-{"ts":"2026-04-17T20:35:00Z","source":"cloudfront","channel":"FRONTEND","ip":"198.51.100.10","host":"audit.sharemechat.com","method":"GET","route":"/","status":"200","ua":"Mozilla/5.0","raw_source":"s3://sharemechat-cf-logs-audit/cloudfront/audit/example.log.gz"}
-{"ts":"2026-04-17T20:36:12Z","source":"nginx","channel":"API","ip":"198.51.100.10","method":"GET","route":"/api/users/me","status":"200","ua":"Mozilla/5.0","xff":"198.51.100.10, 203.0.113.5","raw_source":"/var/log/nginx/access.log","notes":"host_not_present_in_nginx_access_log"}
-```
+- el repositorio no documenta el formato exacto del `access.log` real de Nginx del host
+- el parser soporta `combined` estandar y una variante `vhost combined`
+- si el formato real del `access.log` difiere, ese dato debe ajustarse en la instalacion operativa
+
+## Relacion con el sistema completo
+
+Este componente es la primera etapa del pipeline de auditoria de accesos:
+
+1. `audit-access-normalizer`
+2. `audit-access-classifier`
+3. `audit-access-reporter`
+
+La vision end-to-end y la operacion diaria completa viven en [ops/audit-access/README.md](/C:/Users/alain/Desktop/ALAIN_Escritorio/INFORMATICA/EMPRENDIMIENTO/sharemechat-git-v1/sharemechat-v1/ops/audit-access/README.md).

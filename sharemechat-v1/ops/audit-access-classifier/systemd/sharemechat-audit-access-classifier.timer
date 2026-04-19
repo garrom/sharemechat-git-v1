@@ -1,0 +1,10 @@
+[Unit]
+Description=Run AUDIT access activity classification every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=sharemechat-audit-access-classifier.service
+
+[Install]
+WantedBy=timers.target
