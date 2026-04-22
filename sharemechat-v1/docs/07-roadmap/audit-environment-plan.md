@@ -34,3 +34,4 @@ La fase minima de TURN en AUDIT queda ya cerrada con estas evidencias consolidad
 
 - replicar de forma controlada el patron ya validado en AUDIT sobre TEST
 - mantener la misma logica de aplicacion y la misma estrategia documental ya fijada por ADR-004 y ADR-005
+- el plan por fases de esa nivelacion vive en `test-levelling-plan.md`

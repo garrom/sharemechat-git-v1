@@ -11,6 +11,7 @@ La prioridad inmediata ya no es abrir nuevos frentes funcionales, sino estabiliz
 - trazabilidad económica y de streams
 - modelo de permisos de backoffice
 - aislamiento conceptual de entornos
+- observabilidad perimetral desacoplada en AUDIT con normalizacion, clasificacion y reporting diarios de accesos
 
 ## Qué sigue en transición
 
@@ -21,3 +22,4 @@ La prioridad inmediata ya no es abrir nuevos frentes funcionales, sino estabiliz
 - contención y consolidación del sistema i18n en producto y backoffice
 - estabilización del contrato funcional de errores entre REST, WebSocket y frontend
 - separación progresiva entre lógica de producto, alerts compartidos y copy de interfaz
+- siguiente frente de `auth-risk` y deteccion de abuso de autenticacion, todavia sin implementacion

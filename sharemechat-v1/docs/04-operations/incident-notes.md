@@ -49,6 +49,28 @@ Resolucion posterior documentable:
 
 Con ello, la carencia inicial deja de ser ausencia de visibilidad y pasa a un estado mas acotado: AUDIT ya cuenta con trazabilidad minima util para revisiones manuales de accesos, aunque no con un sistema centralizado o avanzado de monitorizacion.
 
+### Pipeline desacoplado de auditoria y defensa perimetral en AUDIT
+
+Sobre la base de trazabilidad minima ya resuelta, AUDIT opera ya con una cadena desacoplada de observabilidad y respuesta perimetral fuera de la aplicacion:
+
+- `audit-access-normalizer`
+- `audit-access-classifier`
+- `audit-access-reporter`
+- `audit-access-blocker`
+
+La finalidad operativa de esa cadena queda acotada a:
+
+- deteccion de accesos hostiles
+- clasificacion diaria por señales y scoring determinista
+- reporting operativo
+- auto-defensa perimetral mediante deny list consumida por Nginx
+
+La explotacion diaria ya no es teorica: el sistema ha detectado trafico hostil real de Internet contra AUDIT y se opera de forma desacoplada del backend Java.
+
+La automatizacion diaria trabaja siempre sobre el dia anterior en UTC para evitar mezclar actividad parcial del dia en curso con el resumen operativo.
+
+Como hardening acotado adicional en la capa publica, se ha introducido bloqueo especifico frente a probes hacia `.env` en Nginx. Ese ajuste reduce una familia concreta de ruido hostil sin sustituir la visibilidad general ni el resto del pipeline desacoplado.
+
 ### Fallback SPA no homogeneo entre entornos
 
 La documentacion previa apuntaba a diferencias entre TEST y AUDIT en la capa edge del frontend publico. La implicacion practica es riesgo de fallo al refrescar rutas internas del producto en AUDIT.
@@ -626,3 +648,73 @@ Cierre posterior de la variante reciente de integracion en RANDOM desktop:
 - queda explicitamente descartado que la causa raiz de esta regresion pertenezca a signaling, matching, TURN o backend; la rotura introducida fue de integracion y render desktop en frontend
 - esta variante queda cerrada como linea fallida y no debe retomarse como base activa de trabajo
 - cualquier reentrada futura en este frente debera partir de una base funcional conocida y exigir validacion incremental mucho mas estricta entre fases para no volver a contaminar el flujo funcional de RANDOM desktop
+
+### WebSocket /messages inestable en TEST por AllowedMethods restringidos en CloudFront
+
+Se detecto una incidencia operativa en TEST donde el canal realtime `wss://test.sharemechat.com/messages` no quedaba establecido de forma fiable desde navegador, mientras que en AUDIT el mismo flujo funcionaba correctamente con el mismo codigo de aplicacion.
+
+Contexto TEST vs AUDIT:
+
+- mismo frontend React, mismo backend Spring Boot, misma logica de auth y misma configuracion nginx efectiva sobre `/messages`
+- diferencia real concentrada en la capa edge (CloudFront), no en aplicacion ni en la EC2
+
+Sintomas observados en TEST:
+
+- navegador (Firefox) reportando `no puede establecer una conexion con el servidor en wss://test.sharemechat.com/messages`
+- consola frontend con `WebSocket is closed before the connection is established`
+- consola frontend con `[CALL][cleanup] reason= forced-end` y `[CALL][Client] sin target: abre un chat de Favoritos para elegir destinatario`
+- access log de nginx registrando `GET /messages HTTP/1.1 101` seguido de cierre inmediato con `body_bytes_sent=4`, consistente con trama WebSocket CLOSE inmediata tras el upgrade
+- backend emitiendo `[WS][messages][AUTH_FAIL] sid=... reason=no_token uri=wss://api.test.sharemechat.com/messages` en `MessagesWsHandlerSupport` en los intentos reales propagados por edge CloudFront
+- login REST, `/api/users/me`, `/api/webrtc/config` y resto de endpoints REST respondiendo `200` con normalidad en el mismo ciclo
+
+Estado funcional previo al fix:
+
+- login operativo en TEST
+- API REST operativa en TEST
+- solo `/messages` fallaba en TEST
+- el mismo flujo en AUDIT era estable
+
+Diagnostico:
+
+- nginx de TEST y AUDIT verificados con `nginx -T`: bloques `location /messages` equivalentes, con `proxy_http_version 1.1`, `proxy_set_header Upgrade $http_upgrade`, `proxy_set_header Connection "upgrade"`, `proxy_read_timeout 3600s`, `proxy_send_timeout 3600s`
+- curl WebSocket local contra `127.0.0.1:8080/messages` en ambos entornos devuelve `101 Switching Protocols` con `Sec-WebSocket-Accept` correcto; backend equivalente en ambos
+- OriginRequestPolicy (`Managed-AllViewerExceptHostHeader`), CachePolicy (`Managed-CachingDisabled`), ViewerProtocolPolicy (`https-only`), origin y timeouts identicos en TEST y AUDIT
+- la unica asimetria estructural encontrada estaba en la behavior `/messages*` de CloudFront
+
+Diferencia encontrada entre entornos:
+
+- CloudFront TEST (`E2Q4VNDDWD5QBU`) behavior `/messages*`: `AllowedMethods = [HEAD, GET, OPTIONS]`
+- CloudFront AUDIT (`E1ILXV7P6ENUV8`) behavior `/messages*`: `AllowedMethods = [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]`
+
+AWS documenta que, para que una cache behavior soporte WebSocket de forma fiable, debe declarar el set completo de metodos HTTP. Con el set reducido, CloudFront puede completar el handshake `101` en algunos intentos pero no sostener el transporte ni propagar de forma consistente cabeceras y cookies durante el upgrade. Esto explica tanto los `AUTH_FAIL reason=no_token` del backend (cookie JWT no llega en la fase de handshake) como la percepcion en navegador de conexion cerrada antes de establecerse.
+
+Cambio aplicado:
+
+- entorno: TEST
+- distribucion: `E2Q4VNDDWD5QBU`
+- behavior: `/messages*`
+- `AllowedMethods` actualizado a `[HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]`
+- `CachedMethods` sin cambios (`[HEAD, GET]`)
+- resto de behaviors, origins, policies, functions y Lambda associations sin tocar
+- sin cambios en nginx, backend, frontend, TURN, EC2 ni otros entornos
+- operacion realizada via `aws cloudfront update-distribution` con `If-Match` al `ETag` previo y backup intacto de la configuracion anterior guardado antes de aplicar
+
+Resultado verificado tras propagacion:
+
+- `/messages*` de TEST queda nivelada con AUDIT en `AllowedMethods`
+- WebSocket `/messages` estable desde navegador, sin cierres prematuros tras el `101`
+- desaparecen errores de conexion en consola frontend
+- dejan de producirse entradas `[WS][messages][AUTH_FAIL] reason=no_token` asociadas al trafico real desde edges CloudFront
+- flujo `/messages` funcionalmente equivalente al de AUDIT
+
+Lecciones:
+
+- el sintoma de "WebSocket closed before established" con `101` presente en nginx no implica que nginx o backend sean la causa; puede originarse en la capa CDN aunque el handshake aparezca completado
+- restringir `AllowedMethods` en una behavior que transporta WebSocket rompe el comportamiento aunque el upgrade inicial sea visible en logs
+- la nivelacion entre entornos debe incluir explicitamente la capa CloudFront, no solo nginx y backend
+
+Recomendacion operativa:
+
+- cualquier cache behavior de CloudFront que transporte WebSocket (`/messages*`, `/match*` o futuras rutas realtime) debe declarar `AllowedMethods = [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]` en todos los entornos
+- esta regla aplica a cualquier distribucion nueva que se provisione para el proyecto
+

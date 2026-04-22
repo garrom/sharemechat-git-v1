@@ -65,6 +65,31 @@ Trabajo posterior recomendado
 - mantener `message` como soporte o fallback, pero no como autoridad de idioma de UI
 - planificar esa capa como hardening posterior, no como fix rápido mezclado con copy
 
+### Parte 2B - Auth-risk y abuso de autenticacion
+
+Objetivo:
+
+- abrir el siguiente frente de endurecimiento sobre abuso de autenticacion sin mezclarlo con la defensa perimetral ya desplegada en AUDIT
+
+Alcance inicial recomendado:
+
+- login de producto
+- login admin
+- refresh
+- forgot password y reset password
+
+Criterio:
+
+- detectar patrones anómalos de autenticacion y abuso de credenciales
+- priorizar señales y scoring explicable antes de automatismos agresivos
+- mantener este frente separado del pipeline de access audit perimetral para no mezclar ruido general de Internet con abuso real de autenticacion
+- no reabrir en esta fase la decision de WAF, fail2ban o logica de defensa dentro del backend Java
+
+Secuencia:
+
+- este frente es posterior al nivelado completo de TEST respecto a AUDIT
+- una vez completado el nivelado, la implementacion comenzara en TEST
+
 ### Parte 3 - Frontend producto y backoffice
 
 Subparte A. Producto
