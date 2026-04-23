@@ -718,3 +718,87 @@ Recomendacion operativa:
 - cualquier cache behavior de CloudFront que transporte WebSocket (`/messages*`, `/match*` o futuras rutas realtime) debe declarar `AllowedMethods = [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]` en todos los entornos
 - esta regla aplica a cualquier distribucion nueva que se provisione para el proyecto
 
+### WebRTC roto en TEST por cableado de properties y host TURN apagado
+
+Se detecto una incidencia operativa en TEST donde el signaling WebRTC ya funcionaba correctamente, pero la conexion de media WebRTC nunca quedaba establecida y la UI mostraba `Could not establish the connection. Please try again.`
+
+Contexto TEST vs AUDIT:
+
+- mismo codigo de aplicacion en ambos entornos
+- AUDIT ya habia cerrado la fase minima de TURN propio segun ADR-004 y ADR-005, con evidencia en navegador de `candidateType=relay` y selected pair `relay (TURN)`
+- TEST seguia pendiente de replicar el patron, tal como anticipaban `test-levelling-plan.md` Fase 3 y `known-risks.md`
+
+Sintomas observados en TEST:
+
+- WebSocket `/match` estable con `101 Switching Protocols`
+- consola frontend con `WebRTC: ICE failed, your TURN server appears to be broken`
+- `iceConnectionState=failed`
+- `connectionState=failed`
+- `candidateType=unknown`
+- `protocol=unknown`
+- secuencia `checking` -> `connecting` -> `iceGatheringState: complete` -> `FAILED`
+- sin aparicion de candidatos `relay` en la instrumentacion ya versionada del frontend (`relay (TURN)`, `srflx (STUN)`, `host (direct)`)
+
+Estado funcional previo al fix:
+
+- `/api/webrtc/config` respondia sin incluir la URL TURN propia del entorno
+- las variables de entorno `TEST_WEBRTC_TURN_URL_UDP` y `TEST_WEBRTC_TURN_URL_TCP` estaban presentes en la maquina del backend pero no tenian efecto en Spring
+- en paralelo, la EC2 designada como servidor TURN de TEST (`Server-Test-Sharemechat`, EIP `63.180.48.12`) estaba `stopped` en AWS tras una parada manual previa
+
+Diagnostico:
+
+- inspeccion de `src/main/resources/application.properties` mostro que el bloque `# WebRTC / ICE` del perfil TEST estaba cableado con claves genericas `${WEBRTC_ICE_SERVER_2_URLS:turn:openrelay.metered.ca:80}`, `${WEBRTC_ICE_SERVER_2_USERNAME:openrelayproject}` y `${WEBRTC_ICE_SERVER_2_CREDENTIAL:openrelayproject}`
+- ese cableado no referenciaba `TEST_WEBRTC_TURN_URL_UDP/TCP/TLS` ni `TEST_WEBRTC_TURN_USERNAME/CREDENTIAL`, por lo que las variables del entorno nunca se inyectaban en `WebRtcProperties` ni viajaban al frontend via `/api/webrtc/config`
+- ademas el default residual apuntaba al TURN publico `openrelay.metered.ca:80`, precisamente la dependencia que ADR-004 habia decidido abandonar y que ya habia causado el incidente cross-network previo en AUDIT
+- la verificacion de AWS confirmo que la EC2 TURN de TEST estaba `stopped`, por lo que aunque las URLs hubieran sido correctas tampoco habia proceso coturn escuchando
+- los Security Groups del entorno TEST (`turn-test-sg`) si exponian UDP 3478, TCP 3478 y UDP 49152-65535 abiertos a `0.0.0.0/0`, equivalentes a `turn-audit-sg`, por lo que la accesibilidad de red no era el problema
+
+Diferencia encontrada entre entornos:
+
+- `application-audit.properties` ya tenia el bloque WebRTC parametrizado con `AUDIT_WEBRTC_TURN_URL_UDP`, `AUDIT_WEBRTC_TURN_URL_TCP`, `AUDIT_WEBRTC_TURN_URL_TLS`, `AUDIT_WEBRTC_TURN_USERNAME` y `AUDIT_WEBRTC_TURN_CREDENTIAL`, con defaults vacios y sin fallback a TURN publico
+- `application.properties` (perfil TEST) mantenia un bloque heredado anterior a la estrategia decidida en ADR-004, basado en claves genericas y con fallback a relay publico
+
+Cambio aplicado:
+
+- entorno: TEST
+- fichero: `src/main/resources/application.properties`
+- bloque: `# WebRTC / ICE`
+- claves antiguas `WEBRTC_ICE_SERVER_2_URLS`, `WEBRTC_ICE_SERVER_2_USERNAME`, `WEBRTC_ICE_SERVER_2_CREDENTIAL` sustituidas por:
+  - `app.webrtc.ice-servers[2].urls[0]=${TEST_WEBRTC_TURN_URL_UDP:}`
+  - `app.webrtc.ice-servers[2].urls[1]=${TEST_WEBRTC_TURN_URL_TCP:}`
+  - `app.webrtc.ice-servers[2].urls[2]=${TEST_WEBRTC_TURN_URL_TLS:}`
+  - `app.webrtc.ice-servers[2].username=${TEST_WEBRTC_TURN_USERNAME:}`
+  - `app.webrtc.ice-servers[2].credential=${TEST_WEBRTC_TURN_CREDENTIAL:}`
+- STUN en `ice-servers[0]` e `ice-servers[1]` sin cambios
+- no se modifico el codigo Java (`WebRtcConfigController`, `WebRtcProperties`, DTO), el frontend ni `application-audit.properties`
+- en paralelo se ejecuto la parte operativa del entorno: arranque de la EC2 TURN de TEST y redeploy del backend con las variables `TEST_WEBRTC_TURN_*` pobladas
+
+Resultado verificado tras redeploy y arranque del entorno:
+
+- backend TEST publicando configuracion ICE por entorno via `/api/webrtc/config` con la URL TURN propia del entorno y credenciales del entorno
+- frontend consumiendo esa configuracion sin cambios
+- evidencia frontend de `candidateType=relay`
+- evidencia frontend de `ICE selected pair: relay (TURN)`
+- `iceConnectionState=connected`
+- `connectionState=connected`
+- reproduccion efectiva del video remoto (`remoteVideoPlaying`)
+- backend confirmando `startSession`, `random_match_emit`, `tech-media-ready` en ambos lados y doble `ackMedia` valido sobre el mismo `streamRecordId`
+- flujo de gifts RANDOM operativo sobre sesion confirmada
+- cierre limpio de sesion con `DISCONNECT`
+
+Con ello la fase minima de TURN en TEST queda cerrada a nivel funcional, alineada con el patron ya validado en AUDIT.
+
+Lecciones:
+
+- el problema en TEST no era de arquitectura de aplicacion: ADR-004 y ADR-005 ya estaban implementadas en codigo, y AUDIT ya las operaba correctamente
+- la rotura era combinacion de dos factores de entorno: un cableado de properties heredado que no leia las variables especificas de TEST y una EC2 TURN apagada
+- variables de entorno con prefijo especifico del entorno (`TEST_WEBRTC_TURN_*`, `AUDIT_WEBRTC_TURN_*`) solo sirven si el fichero `application-<profile>.properties` las referencia explicitamente; no basta con pasarlas al proceso
+- un default residual hacia TURN publico en properties puede enmascarar un fallo de cableado durante mucho tiempo al hacer que la aplicacion parezca configurada aunque nunca use el relay propio
+- la paridad entre entornos debe cubrir los tres planos a la vez: codigo de aplicacion, cableado de properties por perfil y estado operativo real de la EC2 TURN
+
+Recomendacion operativa:
+
+- cualquier perfil de entorno que use TURN propio debe parametrizar `ice-servers[2]` con variables especificas del entorno (`<ENV>_WEBRTC_TURN_URL_UDP`, `<ENV>_WEBRTC_TURN_URL_TCP`, `<ENV>_WEBRTC_TURN_URL_TLS`, `<ENV>_WEBRTC_TURN_USERNAME`, `<ENV>_WEBRTC_TURN_CREDENTIAL`), con defaults vacios y sin fallback a relay publico
+- la validacion minima de un entorno nuevo debe incluir: respuesta de `/api/webrtc/config` con URL TURN propia, EC2 TURN en estado `running`, coturn `active (running)` bajo systemd y evidencia en navegador de selected pair `relay (TURN)`
+- esta regla aplica a PRO cuando se provisione, manteniendo el mismo contrato logico ya validado en AUDIT y TEST
+
