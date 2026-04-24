@@ -707,6 +707,44 @@ Resultado verificado tras propagacion:
 - dejan de producirse entradas `[WS][messages][AUTH_FAIL] reason=no_token` asociadas al trafico real desde edges CloudFront
 - flujo `/messages` funcionalmente equivalente al de AUDIT
 
+Estado operativo ya alcanzado en AUDIT:
+
+- componente desplegado en EC2 en `/opt/sharemechat-audit-access-blocker`
+- configuracion instalada en:
+  - `/etc/sharemechat-audit-access-blocker/config.env`
+  - `/etc/sharemechat-audit-access-blocker/allowlist.conf`
+- units systemd instaladas y cargadas:
+  - `sharemechat-audit-access-blocker.service`
+  - `sharemechat-audit-access-blocker.timer`
+- timer activo con siguiente ejecucion diaria a `05:30 UTC`
+- salidas reales de DRY-RUN generadas bajo `/var/log/sharemechat-audit-access-blocker/`
+- estado persistente real generado en `/var/lib/sharemechat-audit-access-blocker/ips.json`
+
+Validacion operativa ya realizada:
+
+- dry-run manual para `2026-04-22`:
+  - `ips=3`
+  - `carril_A=0`
+  - `carril_B=0`
+  - `carril_C=3`
+  - `allowlisted=0`
+- dry-run manual para `2026-04-18`:
+  - `ips=14`
+  - `carril_A=4`
+  - `carril_B=0`
+  - `carril_C=10`
+  - `allowlisted=0`
+  - proposed deny list generada con:
+    - `141.98.11.181`
+    - `35.180.134.18`
+    - `62.60.130.227`
+    - `85.11.167.38`
+
+Observacion abierta antes de plantear bloqueo real:
+
+- la IP `129.212.226.182`, clasificada como `MALICIOSA` con `main_reason=xmlrpc_scan+many_routes_6`, quedo en Carril C
+- esto no invalida el despliegue DRY-RUN, pero si obliga a revisar el tratamiento de IOCs aisladas tipo `xmlrpc_scan` antes de promocionar el componente a bloqueo real
+
 Lecciones:
 
 - el sintoma de "WebSocket closed before established" con `101` presente en nginx no implica que nginx o backend sean la causa; puede originarse en la capa CDN aunque el handshake aparezca completado
@@ -802,3 +840,316 @@ Recomendacion operativa:
 - la validacion minima de un entorno nuevo debe incluir: respuesta de `/api/webrtc/config` con URL TURN propia, EC2 TURN en estado `running`, coturn `active (running)` bajo systemd y evidencia en navegador de selected pair `relay (TURN)`
 - esta regla aplica a PRO cuando se provisione, manteniendo el mismo contrato logico ya validado en AUDIT y TEST
 
+### Refresh de rutas SPA roto en TEST por ausencia de fallback en CloudFront
+
+Se detecto una incidencia operativa en TEST donde la navegacion interna de la SPA funcionaba correctamente desde la home, pero el refresh directo o acceso por URL a rutas internas como `/model`, `/client` o equivalentes devolvia `403 AccessDenied` con cuerpo XML de S3 en lugar de servir `index.html`.
+
+Contexto TEST vs AUDIT:
+
+- mismo frontend React, mismo build, misma estrategia de router en cliente
+- AUDIT ya resolvia el refresh SPA de forma estable en la capa edge
+- TEST no disponia de ningun mecanismo equivalente en su distribucion CloudFront
+
+Sintomas observados en TEST:
+
+- `GET https://test.sharemechat.com/model` respondia `403 Forbidden`
+- cuerpo de respuesta era XML de S3 con `<Error><Code>AccessDenied</Code>...`
+- navegacion interna React entre rutas seguia funcionando con normalidad (history API sin golpear edge)
+- solo fallaba el refresh directo, el acceso por URL y la apertura en nueva pestaña
+- el resto de superficies de TEST (login REST, `/api/*`, WebSocket `/match` y `/messages`, assets con extension) respondian con normalidad
+
+Estado previo al fix:
+
+- distribucion TEST `E2Q4VNDDWD5QBU` con origen S3 via OAC `ENGNDDRO1OGZV` para el bucket `sharemechat-frontend-test`
+- `DefaultCacheBehavior.FunctionAssociations.Quantity = 0` (sin CloudFront Function asociada)
+- `CustomErrorResponses` con un unico item: `404 -> /index.html (200)`
+- ningun mecanismo de rewrite de rutas SPA en viewer-request
+
+Diagnostico:
+
+- el problema no estaba en backend, ni en frontend, ni en la EC2, ni en Nginx; el refresh ni siquiera alcanza el backend
+- con OAC, S3 devuelve `403 AccessDenied` (no `404 NoSuchKey`) para claves inexistentes porque el principal no tiene `s3:ListBucket`; por ese motivo el CustomErrorResponse `404 -> index.html` ya existente no disparaba y el XML de S3 llegaba hasta el navegador
+- sin CloudFront Function que reescriba rutas SPA a `/index.html`, cualquier URI sin extension que no existiera fisicamente en el bucket resultaba en un `403` visible al usuario
+- AUDIT no sufria el mismo fallo porque su distribucion si tenia resuelto el fallback edge
+
+Diferencia encontrada entre entornos:
+
+- AUDIT (`E1ILXV7P6ENUV8`): CloudFront Function `redirect-spa-audit` asociada al `DefaultCacheBehavior` en `viewer-request`, y ademas `CustomErrorResponses` con `403 -> /index.html (200)` y `404 -> /index.html (200)`
+- TEST (`E2Q4VNDDWD5QBU`): ninguna CloudFront Function asociada y `CustomErrorResponses` solo con `404 -> /index.html (200)`
+
+Cambio aplicado:
+
+- entorno: TEST
+- distribucion: `E2Q4VNDDWD5QBU`
+- creacion de CloudFront Function `redirect-spa-test`, runtime `cloudfront-js-1.0`, publicada en `LIVE`
+- logica equivalente a `redirect-spa-audit`: passthrough explicito para `/api/`, `/match`, `/messages`, `/uploads/`, `/assets/`, `/static/`, `/.well-known/acme-challenge/`, `/favicon.ico` y `/robots.txt`; reescritura a `/index.html` para cualquier URI sin punto (rutas SPA sin extension); assets con extension pasan sin modificar
+- asociacion al `DefaultCacheBehavior` unicamente en `viewer-request`
+- no se añadio `CustomErrorResponse 403 -> /index.html` de forma deliberada, para evitar el efecto lateral ya observado en AUDIT donde esa redireccion global podia hacer que rutas `/api/admin/auth/login` devolvieran `200 text/html` en lugar de `403 application/json` con `code=EMAIL_NOT_VERIFIED`
+- no se tocaron origins, OAC, bucket policy, otras cache behaviors, AllowedMethods, timeouts, aliases ni policies
+- operacion realizada via `aws cloudfront create-function` + `publish-function` + `update-distribution` con `If-Match` al `ETag` previo y backup completo de la configuracion anterior antes de aplicar
+
+Resultado verificado tras propagacion:
+
+- refresh directo a rutas SPA (`/model`, `/client`, etc.) sirve `index.html` con `200` y la SPA hidrata correctamente la ruta
+- `/api/*` sigue alcanzando el backend sin reescritura
+- `/match` y `/messages` mantienen el `101 Switching Protocols` y no reciben reescritura porque la funcion los excluye y porque tienen su propia behavior
+- assets con extension (`/assets/<hash>.js`, `/favicon.ico`) se sirven con su `Content-Type` correcto sin pasar por `/index.html`
+- flujo funcional end-to-end de TEST sin regresion en login, matching, realtime, gifts ni storage privado
+- unica diferencia efectiva respecto al estado previo: presencia de `FunctionAssociations` con `redirect-spa-test` en `DefaultCacheBehavior` viewer-request; resto de la distribucion intacto
+
+Lecciones:
+
+- el fallback SPA para distribuciones CloudFront con origen S3 via OAC debe resolverse en `viewer-request` con CloudFront Function, no confiando en `CustomErrorResponses` sobre codigos de error del origen
+- con OAC, la ausencia de clave en S3 devuelve `403`, no `404`; un `CustomErrorResponse 404 -> /index.html` aislado no cubre el caso real
+- añadir `CustomErrorResponse 403 -> /index.html` como solucion alternativa es tentador pero arrastra un riesgo latente: al ser global de distribucion, puede interceptar tambien respuestas `403` legitimas de `/api/*` y transformarlas en HTML, confundiendo al frontend y rompiendo contratos JSON del backoffice (ya observado en AUDIT con el login admin)
+- la reescritura en viewer-request permite excluir explicitamente rutas sensibles (`/api/`, realtime, assets versionados, acme-challenge) y solo actuar sobre URIs SPA sin extension, evitando efectos colaterales
+- la paridad edge entre entornos debe listar explicitamente: funciones CloudFront asociadas, `CustomErrorResponses`, `AllowedMethods` por behavior, origins y OAC; cualquier divergencia de esos cuatro ejes puede producir sintomas funcionales aparentemente desconectados
+
+Recomendacion operativa:
+
+- cualquier distribucion CloudFront nueva del proyecto que sirva la SPA desde S3 via OAC debe asociar una CloudFront Function de rewrite SPA al `DefaultCacheBehavior` en `viewer-request`, con allowlist explicita de prefijos passthrough (`/api/`, `/match`, `/messages`, `/uploads/`, `/assets/`, `/static/`, `/.well-known/acme-challenge/`, `/favicon.ico`, `/robots.txt`) y reescritura a `/index.html` solo para URIs sin extension
+- el nombre de la funcion debe ser especifico del entorno (`redirect-spa-<env>`) para evitar acoplamiento cruzado entre distribuciones
+- no se recomienda añadir `CustomErrorResponse 403 -> /index.html` como parche general; si en algun entorno ya existe (caso AUDIT), debe tratarse como deuda a revisar, no como patron a replicar
+- la validacion minima de esta capa en un entorno nuevo debe incluir: refresh directo a una ruta SPA (`200` + `text/html`), `GET /api/*` devolviendo JSON del backend, WebSocket `/match` y `/messages` con `101`, y un asset versionado sirviendose con su `Content-Type` real
+- esta regla aplica a PRO cuando se provisione, manteniendo el mismo contrato edge ya validado en AUDIT y ahora en TEST
+
+
+## Bloqueador perimetral de AUDIT incorporado en modo DRY-RUN
+
+Contexto:
+
+- el pipeline de auditoria de accesos de AUDIT existia con tres componentes versionados en `ops/`: `audit-access-normalizer`, `audit-access-classifier` y `audit-access-reporter`
+- la capa de bloqueo real en nginx seguia viva en EC2 como `/etc/nginx/deny-audit-ips.conf`, sin fichero versionado en el repo, sin allowlist y sin TTL por IP
+- los reportes diarios del clasificador evidencian trafico hostil persistente: escaneos `xmlrpc_scan`, `dotenv_probe`, `wordpress_scan`, `wlwmanifest_scan`, UAs de herramientas (`sqlmap`, `masscan`, `zgrab`, `nikto`, `nmap`) y picos de volumen por IPs residenciales
+- se detectaron casos borde con IPs ruidosas que oscilan entre `SOSPECHOSA`, `MALICIOSA` y `CRITICA` por volumen y rutas sensibles sin disparar un IOC hostil reproducible sobre rutas hostiles; un bloqueo guiado solo por score habria generado falsos positivos
+
+Estado previo:
+
+- decision humana ad-hoc sobre que IPs añadir a `deny-audit-ips.conf`
+- sin historial estructurado por IP ni ventana deslizante
+- sin diff previo a la accion, sin simulacion, sin trazabilidad de por que una IP entra o sale de la deny list
+- sin separacion entre "observar" y "bloquear"
+
+Diagnostico:
+
+- el siguiente paso natural no era saltar directamente a bloqueo automatico en caliente, sino introducir primero un componente deterministico que propusiera decisiones sobre la misma evidencia del clasificador, con carriles explicitos y TTL, y lo hiciera en modo DRY-RUN durante un periodo de validacion
+- con eso se consigue validar la politica sobre trafico real sin riesgo de falsos positivos en produccion de AUDIT, y cerrar el drift de "hay bloqueo real en EC2 pero no hay codigo versionado ni politica documentada"
+
+Cambio aplicado:
+
+- entorno: AUDIT (solo preparacion de pipeline, NO se modifica nginx ni deny list viva)
+- nuevo componente versionado en `ops/audit-access-blocker/` con estructura `bin/`, `lib/`, `config/`, `systemd/`, `README.md`, siguiendo el patron de los otros tres componentes del pipeline
+- el binario Python `lib/block_access.py` consume el `summary.jsonl` diario del clasificador y aplica una politica de decision en tres carriles:
+  - Carril A (TTL largo, 30 dias): UA scanner con firma conocida, `shell_probe`, override `hostile_plus_admin_sensitive`, `classification=CRITICA` con IOC hostil en rutas hostiles, o 2+ rutas hostiles distintas el mismo dia
+  - Carril B (TTL medio, 14 dias): IOC hostil repetido en >=2 dias distintos dentro de una ventana de 7 dias, con al menos un dia `MALICIOSA` o `CRITICA`
+  - Carril C: observar, no bloquear
+- soporte de allowlist por IP y CIDR, cargada desde `ALLOWLIST_IPS` y/o un fichero `/etc/sharemechat-audit-access-blocker/allowlist.conf`
+- estado persistente por IP en `/var/lib/sharemechat-audit-access-blocker/ips.json` con `first_seen`, `last_seen`, historial `hostile_days[]` recortado y bloque `block` con carril, TTL y `expires_at`; prune automatico de bloqueos expirados y de historial antiguo
+- salidas diarias advisory:
+  - `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.deny-audit-ips.proposed.conf` con sintaxis `deny <IP>;` + comentario de carril, TTL y razones
+  - `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.blocker-diff.txt` con decision razonada por IP
+  - `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.ips.json` snapshot del estado persistente
+- units systemd versionadas `sharemechat-audit-access-blocker.service` + `sharemechat-audit-access-blocker.timer`, con dependencia temporal del clasificador; el timer trabaja sobre el dia anterior en UTC
+- se actualiza `ops/audit-access/README.md` para reflejar el paso de 3 a 4 componentes, incluyendo el nuevo diagrama y las rutas operativas del blocker
+
+Resultado verificado:
+
+- el componente, por construccion, NO escribe `/etc/nginx/deny-audit-ips.conf`, NO ejecuta `nginx -t` ni reload, NO bloquea trafico real; tanto el wrapper bash como el binario Python abortan si `DRY_RUN != 1`
+- la deny list viva de nginx en AUDIT permanece intacta y bajo control manual exactamente igual que antes de este cambio
+- el resto de pipeline (`normalizer`, `classifier`, `reporter`) no se modifica; el blocker se añade como cuarta etapa sin tocar las entradas ni las salidas de las etapas previas
+- TEST no se ha tocado en ningun punto: no hay componente `test-access-blocker`, no hay cambios en `ops/test-access-*`, no hay cambios en la distribucion CloudFront de TEST ni en su Nginx
+
+Lecciones:
+
+- un cambio con potencial de falso positivo sobre trafico productivo (bloqueo perimetral) debe llegar primero como simulacion versionada con diff, no como parche en caliente; la misma disciplina aplicada a cambios edge (CloudFront Function) aplica aqui
+- el scoring agregado del clasificador es util para priorizar revision humana, pero NO es suficiente como unico criterio de bloqueo; los carriles deben anclarse en IOCs concretos (firmas de UA scanner, rutas de escaneo conocidas, overrides semanticos) mas que en el score bruto
+- la politica de bloqueo debe ser auditable IP por IP y reversible por TTL; sin expiracion, una deny list manual crece hasta volverse opaca y tiende a contener IPs legitimas bloqueadas por cambios de proveedor o NAT
+- mantener el blocker fuera de la aplicacion Java/Spring y fuera del plano de datos de nginx durante la fase DRY-RUN reduce el riesgo de regresion funcional y preserva la independencia del pipeline de auditoria
+
+Recomendacion operativa:
+
+- el blocker debe ejecutarse en AUDIT en modo DRY-RUN durante un periodo minimo de validacion (orden de 14 dias) antes de plantear activacion real
+- durante ese periodo la allowlist debe consolidarse con IPs de operacion, oficina, proveedores de uptime y auditor externo; toda entrada de allowlist debe llevar comentario justificando su presencia
+- el paso a bloqueo real debe ser un cambio posterior, explicito y versionado, que incluya como minimo: escritura atomica con backup de `/etc/nginx/deny-audit-ips.conf`, validacion previa con `nginx -t`, reload controlado, mecanismo de desbloqueo manual por IP y alerta si la propuesta diaria supera un umbral
+- mientras tanto, la deny list viva en EC2 se sigue gestionando manualmente; el blocker en DRY-RUN solo informa, no sustituye a operacion
+- cuando se provisione PRO, el blocker podra extenderse con un componente hermano `product-access-blocker` replicando estructura, pero nunca debe activarse directamente en caliente sobre PRO sin un periodo DRY-RUN previo equivalente
+- TEST queda fuera de esta fase: no esta nivelado todavia con este componente, no debe crearse aun `test-access-blocker` y no conviene mezclar esta validacion de AUDIT con la fase pendiente de TEST
+
+
+## Refinamiento del blocker tras validacion DRY-RUN
+
+Contexto:
+
+- el componente `audit-access-blocker` llevaba varios dias ejecutandose en modo DRY-RUN en AUDIT, generando salidas reales en `/var/log/sharemechat-audit-access-blocker/`
+- el analisis de los diffs diarios y del estado persistente revelo dos puntos a corregir antes de poder activar el modo real (DRY_RUN=0)
+
+Problema 1: deteccion incompleta de IOCs hostiles
+
+- caso concreto detectado: IP `129.212.226.182` con `classification=MALICIOSA`, `score=78`, `main_reason=xmlrpc_scan+many_routes_6`
+- `evidence.hostile_hits` estaba vacio para esa entrada; la funcion `extract_hostile_iocs()` original solo consultaba esa fuente y `evidence.matched_rule_labels`
+- resultado incorrecto: `hostile_days[]` del estado persistente acumulaba esa IP con `hostile_iocs=[]`, bloqueando la activacion del Carril B aunque el IOC `xmlrpc_scan` estuviera presente en `main_reason`
+- correccion aplicada: `extract_hostile_iocs()` ampliada a cuatro fuentes en orden sin duplicar: `evidence.hostile_hits`, `evidence.matched_rule_labels`, `matched_rules` (fallback si evidence ausente), y parseo de `main_reason` via `re.split(r"[+\s,;|]+", ...)` filtrando tokens de volumen (`many_routes_*`, `request_burst_*`, `multi_host`, `query_heavy`)
+- resultado tras correccion: `xmlrpc_scan` queda registrado en `hostile_days[]`; si la IP reaparece en >=2 dias dentro de la ventana con severidad MALICIOSA/CRITICA, activara Carril B correctamente
+
+Problema 2: razon de Carril C incorrecta cuando habia IOC hostil aislado
+
+- caso concreto: la misma IP `129.212.226.182` con `xmlrpc_scan` detectado (Fuente 4) quedaba en Carril C correctamente (primera aparicion, sin repeticion), pero el diff mostraba `"clasificacion=MALICIOSA sin IOC hostil en ruta hostil"` — mensaje inexacto que ocultaba la presencia del IOC
+- causa: en `evaluate_decisions()`, el bloque `if classification in HIGH_SEVERITY` se evaluaba antes que `elif hostile_iocs_today`
+- correccion aplicada: reorder a `if hostile_iocs_today` → `elif HIGH_SEVERITY` → `else`; el diff muestra ahora `"IOC hostil aislado sin repeticion ni criterio Carril A"` + `"iocs_today=xmlrpc_scan"` para ese caso
+
+Cambio adicional preparado (DRY_RUN=0):
+
+- el wrapper bash y el binario Python se actualizan para soportar `DRY_RUN=0` como modo real controlado, exclusivo para Carril A
+- flujo: preflight `nginx -t` → escritura atomica con backup timestamp → postflight `nginx -t` → `systemctl reload nginx`, con rollback automatico si cualquier paso falla
+- soporte de fichero de bloqueos manuales (`deny-audit-ips.manual.conf`): preservado en el fichero live por encima del bloque auto-generado; nunca modificado por el componente
+- en el config.env de EC2 AUDIT, `DRY_RUN` sigue siendo `1`; el cambio a `0` requiere checklist explicito (>=14 dias DRY-RUN sin anomalias, allowlist revisada, test manual previo)
+
+Estado tras el refinamiento:
+
+- estado persistente reseteado en EC2 tras el cambio de logica de extraccion de IOCs (comportamiento esperado y documentado); ventana historica de Carril B se reconstruye en 7 dias de actividad real
+- validacion DRY-RUN manual para `2026-04-22`: `ips=3`, `carril_A=0`, `carril_B=0`, `carril_C=3`, `allowlisted=0`
+- validacion DRY-RUN manual para `2026-04-18`: `ips=14`, `carril_A=4`, `carril_B=0`, `carril_C=10`, `allowlisted=0`; proposed deny list con `141.98.11.181`, `35.180.134.18`, `62.60.130.227`, `85.11.167.38`
+- deteccion IOC correcta, no falso positivo para primera aparicion aislada, logica A/B/C intacta: confirmado
+
+Lecciones:
+
+- un campo `main_reason` con tokens compuestos (`ioc+volume_suffix`) puede ser la unica fuente de evidencia IOC si `evidence.hostile_hits` esta vacio; la extraccion de IOC debe cubrir todas las fuentes disponibles en orden, no solo las canonicas
+- la explicabilidad del diff es critica para detectar inconsistencias en la logica de carriles antes de activar el modo real; un mensaje de razon incorrecto (aunque el carril final sea correcto) puede ocultar bugs de extraccion durante semanas de DRY-RUN
+- tras cambiar la logica de extraccion de IOC, el estado persistente anterior queda parcialmente inconsistente; el reset controlado del estado es preferible a mantener un historial con `hostile_iocs=[]` que bloquea Carril B
+
+Recomendacion operativa:
+
+- revisar el diff diario durante al menos 7 dias adicionales tras el reset del estado para confirmar que Carril B se activa correctamente para IPs con IOCs repetidos
+- la activacion de `DRY_RUN=0` en EC2 AUDIT queda pendiente de ese periodo de observacion adicional y de la ejecucion del checklist documentado en `ops/audit-access-blocker/README.md`
+
+
+## Activacion del bloqueo real en AUDIT
+
+Fecha: `2026-04-24`.
+
+Contexto:
+
+- el blocker llevaba en modo DRY-RUN desde su despliegue inicial; los diffs diarios confirmaban propuestas coherentes con la politica de carriles A/B/C
+- tras el refinamiento de logica (4-source IOC extraction, correccion de razon Carril C) y el consiguiente reset del estado persistente, se observaron 7+ dias adicionales de salidas correctas
+- se ejecuto el checklist completo de activacion documentado en `ops/audit-access-blocker/README.md` y todas las condiciones quedaron satisfechas
+
+Cambio aplicado:
+
+- `DRY_RUN` cambiado de `1` a `0` en `/etc/sharemechat-audit-access-blocker/config.env` en EC2 AUDIT
+- el resto de la configuracion (`CARRIL_A_TTL_DAYS`, `CARRIL_B_TTL_DAYS`, `CARRIL_B_WINDOW_DAYS`, `ALLOWLIST_FILE`, `NGINX_DENY_FILE`, `NGINX_MANUAL_DENY_FILE`) se mantiene sin cambios
+
+Activacion manual de validacion ejecutada sobre `2026-04-18`:
+
+```bash
+sudo /opt/sharemechat-audit-access-blocker/bin/block-audit-access.sh \
+  --config /etc/sharemechat-audit-access-blocker/config.env \
+  --date 2026-04-18
+```
+
+Resultado:
+
+```
+[blocker REAL carril_A] 2026-04-18 ips=14 carril_A=4 carril_B=0 carril_C=10 \
+  allowlisted=0 nginx_test_before=ok nginx_test_after=ok ips_bloqueadas=4 reload=ok
+```
+
+IPs bloqueadas en `/etc/nginx/deny-audit-ips.conf`:
+
+```nginx
+# Auto-generado por audit-access-blocker - Carril A - 2026-04-18
+deny 141.98.11.181;
+deny 35.180.134.18;
+deny 62.60.130.227;
+deny 85.11.167.38;
+```
+
+Validacion nginx:
+
+- `nginx -t` preflight: `ok`
+- `nginx -t` postflight: `ok`
+- `systemctl reload nginx`: `ok`
+- rollback: no necesario
+
+Comportamiento del sistema tras la activacion:
+
+- Carril A: bloqueo real en nginx con TTL de 30 dias; el timer de las `05:30 UTC` escribe y recarga nginx automaticamente cada dia si hay IPs nuevas en Carril A
+- Carril B: solo propuesta en `.proposed.conf`; no toca nginx
+- Carril C: solo observacion en diff
+- allowlist: aplicada antes de cualquier decision de carril; ninguna IP allowlisted puede llegar al fichero live
+- fichero manual (`/etc/nginx/deny-audit-ips.manual.conf`): preservado en el fichero live si existe; nunca modificado por el componente
+
+Garantias de seguridad operativa mantenidas:
+
+- cualquier fallo en `nginx -t` postflight provoca rollback automatico desde backup con timestamp
+- cualquier fallo en `systemctl reload` provoca rollback + intento de reload con la config anterior
+- el fichero live nunca queda en estado inconsistente: o se confirma el cambio con ambos `nginx -t` ok, o se restaura el estado previo
+
+Impacto:
+
+- primer bloqueo automatizado real en AUDIT; elimina la gestion manual ad-hoc de la deny list para IPs claramente maliciosas clasificadas en Carril A
+- el sistema es deterministico, auditable por IP (historial en `ips.json`, diff razonado diario) y reversible por TTL (30 dias) o por intervencion manual sobre el fichero live
+- alineado con requisitos de control y trazabilidad de PSP: cada decision de bloqueo tiene fecha, razon, carril, TTL y IOCs concretos asociados
+
+Lecciones:
+
+- la fase DRY-RUN previa fue critica para detectar el gap de extraccion de IOC en `main_reason` antes de que afectara a bloqueos reales; sin ella, IPs con `xmlrpc_scan+many_routes_6` habrian llegado al fichero live con razon incorrecta o habrian sido clasificadas en C sin registrar el IOC en el historial, impidiendo que Carril B se activara
+- el checklist de activacion (preflight, test manual, revision de diff y journalctl antes de dejar el timer en automatico) debe seguirse en cualquier entorno donde se active el modo real del blocker
+
+Recomendacion operativa:
+
+- revisar periodicamente el diff diario y el estado persistente para detectar IPs que hayan expirado pero sigan siendo activamente hostiles (posible acortamiento del TTL o rebloqueo manual)
+- cuando se provisione bloqueo real en TEST, seguir el mismo proceso: DRY-RUN >= 14 dias, refinamiento si procede, checklist, activacion manual supervisada antes del timer automatico
+- la extension del bloqueo real a Carril B es una decision separada que requiere analisis especifico de falsos positivos para la ventana de 7 dias
+
+
+## Despliegue del blocker en TEST (modo DRY-RUN)
+
+Fecha: `2026-04-25`.
+
+Contexto:
+
+- AUDIT ya tenia el blocker activo en modo real (DRY_RUN=0, Carril A) desde `2026-04-24`
+- TEST quedaba sin el componente desplegado; la gestion de la deny list en TEST seguia siendo manual y sin trazabilidad estructurada
+- el codigo del componente `ops/test-access-blocker/` habia sido nivelado con AUDIT (4-source IOC extraction, Carril C reason fix, soporte DRY_RUN=0 preparado) pero no estaba instalado en EC2 TEST
+- objetivo del despliegue: activar la fase de observacion en TEST con DRY_RUN=1, sin afectar nginx ni bloquear trafico real, como paso previo obligatorio antes de cualquier activacion de bloqueo real en TEST
+
+Acciones realizadas en EC2 TEST (`63.180.48.12`):
+
+- copia del componente a `/opt/sharemechat-test-access-blocker/` con estructura `bin/`, `lib/`, `config/`, `systemd/`
+- creacion de `/etc/sharemechat-test-access-blocker/config.env` (`DRY_RUN=1`) y `allowlist.conf`
+- creacion de directorios `/var/lib/sharemechat-test-access-blocker/` y `/var/log/sharemechat-test-access-blocker/`
+- instalacion de `sharemechat-test-access-blocker.service` y `sharemechat-test-access-blocker.timer` en systemd
+- `systemctl daemon-reload` + `systemctl enable --now sharemechat-test-access-blocker.timer`
+- timer configurado a `05:45 UTC` (no solapa con el timer de AUDIT a `05:30 UTC`)
+
+Validacion manual ejecutada:
+
+```
+[blocker DRY-RUN] 2026-04-23 ips=4 carril_A=0 carril_B=0 carril_C=4 allowlisted=0
+```
+
+Estado final tras el despliegue:
+
+- componente funcionando sin errores
+- salidas diarias generandose en `/var/log/sharemechat-test-access-blocker/`
+- estado persistente inicializado en `/var/lib/sharemechat-test-access-blocker/ips.json`
+- sin impacto en nginx: NO escribe `/etc/nginx/deny-test-ips.conf`, NO ejecuta `nginx -t`, NO hace reload
+- trafico de TEST sin modificacion
+
+Diferencia clave con AUDIT:
+
+| Entorno | Modo | Efecto en nginx |
+|---------|------|----------------|
+| AUDIT | `DRY_RUN=0` | Carril A bloquea real; `deny-audit-ips.conf` escrito y recargado diariamente |
+| TEST | `DRY_RUN=1` | Solo propuesta advisory; nginx intacto; sin bloqueo real |
+
+Lecciones:
+
+- el despliegue en DRY-RUN primero es la pauta correcta para cualquier entorno nuevo; permite validar la politica A/B/C sobre trafico real sin riesgo de falsos positivos en nginx
+- la separacion de timers (05:30 AUDIT / 05:45 TEST) evita solapamiento de carga en casos de dependencia de recursos compartidos del pipeline
+
+Recomendacion operativa:
+
+- mantener TEST en observacion (DRY_RUN=1) durante al menos 14 dias desde el despliegue antes de evaluar el paso a modo real
+- usar las salidas de TEST como referencia comparativa frente a AUDIT: el trafico de TEST puede incluir testers internos, QA manual y trafico sintetico que justifiquen entradas adicionales en la allowlist antes de activar bloqueo real
+- cualquier cambio a DRY_RUN=0 en TEST debe seguir el mismo checklist que se siguio en AUDIT: ejecucion manual supervisada, revision de diff y journalctl, y confirmacion de nginx_test_before=ok + nginx_test_after=ok + reload=ok antes de dejar el timer en automatico

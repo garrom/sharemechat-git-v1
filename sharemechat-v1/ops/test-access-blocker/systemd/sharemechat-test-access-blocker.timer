@@ -1,0 +1,14 @@
+[Unit]
+Description=Run TEST access blocker (DRY-RUN) daily after classifier
+
+[Timer]
+# Se ejecuta una vez al dia, despues del flujo diario de clasificacion.
+# Trabaja sobre el dia anterior en UTC (ver README del blocker).
+# Se usa una ventana distinta a la de AUDIT (05:30 UTC) para no solapar
+# cargas entre entornos y aislar journalctl por host.
+OnCalendar=*-*-* 05:45:00 UTC
+Persistent=true
+Unit=sharemechat-test-access-blocker.service
+
+[Install]
+WantedBy=timers.target

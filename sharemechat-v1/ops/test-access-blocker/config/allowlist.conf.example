@@ -1,0 +1,28 @@
+# Allowlist del bloqueador de TEST (dry-run).
+# Una entrada por linea. Se admiten IP (IPv4) o CIDR.
+# Comentarios con '#'. Las IPs aqui listadas NUNCA aparecen en la
+# propuesta de deny list, aunque el clasificador las marque como
+# SOSPECHOSA, MALICIOSA o CRITICA.
+#
+# Formato:
+#   <IP_o_CIDR>    # comentario libre
+#
+# Ejemplos (reemplazar por valores reales antes de desplegar):
+
+# IPs de operacion / QA
+# 203.0.113.10     # oficina central (IP fija)
+# 198.51.100.42    # VPN operaciones
+
+# IPs de testers y entorno de QA manual
+# 198.51.100.60    # tester interno 1
+# 198.51.100.61    # tester interno 2
+
+# Rangos de proveedores de monitorizacion / uptime checks
+# 198.51.100.0/24  # proveedor uptime (CIDR de ejemplo)
+
+# IPs de auditor externo / PSP
+# 192.0.2.55       # auditor PSP (ventana de revision)
+
+# NOTA: en TEST la allowlist tiende a ser mas amplia que en AUDIT,
+# porque hay mas trafico legitimo de pruebas manuales. Aun asi,
+# mantenerla minima y comentada para que siga siendo auditable.

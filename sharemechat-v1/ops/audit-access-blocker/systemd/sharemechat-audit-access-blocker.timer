@@ -1,0 +1,12 @@
+[Unit]
+Description=Run AUDIT access blocker (DRY-RUN) daily after classifier
+
+[Timer]
+# Se ejecuta una vez al dia, despues del flujo diario de clasificacion.
+# Trabaja sobre el dia anterior en UTC (ver README del blocker).
+OnCalendar=*-*-* 05:30:00 UTC
+Persistent=true
+Unit=sharemechat-audit-access-blocker.service
+
+[Install]
+WantedBy=timers.target

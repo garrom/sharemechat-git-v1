@@ -1,0 +1,23 @@
+# Allowlist del bloqueador de AUDIT (dry-run).
+# Una entrada por linea. Se admiten IP (IPv4) o CIDR.
+# Comentarios con '#'. Las IPs aqui listadas NUNCA aparecen en la
+# propuesta de deny list, aunque el clasificador las marque como
+# SOSPECHOSA, MALICIOSA o CRITICA.
+#
+# Formato:
+#   <IP_o_CIDR>    # comentario libre
+#
+# Ejemplos (reemplazar por valores reales en produccion):
+
+# IPs de operacion / oficina
+# 203.0.113.10     # oficina central (IP fija)
+# 198.51.100.42    # VPN operaciones
+
+# Rangos de proveedores de monitorizacion / uptime checks
+# 198.51.100.0/24  # proveedor uptime (CIDR de ejemplo)
+
+# IPs de auditor externo / PSP
+# 192.0.2.55       # auditor PSP (ventana de revision)
+
+# NOTA: mantener esta lista minima y auditada.
+# Una allowlist demasiado amplia anula el valor del bloqueador.

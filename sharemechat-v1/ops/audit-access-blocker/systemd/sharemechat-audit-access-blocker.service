@@ -1,0 +1,16 @@
+[Unit]
+Description=Propose deny list for AUDIT based on classifier summary (DRY-RUN)
+After=network-online.target sharemechat-audit-access-classifier.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+# DRY-RUN ONLY. This unit does NOT reload nginx and does NOT write
+# /etc/nginx/deny-audit-ips.conf. It only produces advisory artifacts
+# under /var/log/sharemechat-audit-access-blocker/.
+ExecStart=/opt/sharemechat-audit-access-blocker/bin/block-audit-access.sh --config /etc/sharemechat-audit-access-blocker/config.env
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

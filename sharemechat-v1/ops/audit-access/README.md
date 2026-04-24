@@ -4,11 +4,12 @@
 
 El sistema de auditoria de accesos de `AUDIT` es un pipeline operativo externo y desacoplado de la aplicacion SharemeChat. Su objetivo es transformar logs reales de acceso en evidencia diaria util para operacion, auditoria PSP y respuesta manual.
 
-El sistema esta compuesto por tres componentes independientes bajo `ops/`:
+El sistema esta compuesto por cuatro componentes independientes bajo `ops/`:
 
 1. `audit-access-normalizer`
 2. `audit-access-classifier`
 3. `audit-access-reporter`
+4. `audit-access-blocker` (bloqueo REAL activo en Carril A)
 
 Ninguno de ellos:
 
@@ -26,6 +27,9 @@ Ninguno de ellos:
 5. El reporter consume el summary diario.
 6. Genera un reporte texto y un reporte JSON.
 7. Opcionalmente envia el reporte por email via SMTP.
+8. El blocker (DRY-RUN) consume el mismo summary diario.
+9. Propone una deny list razonada y mantiene estado persistente por IP.
+10. No toca nginx ni bloquea trafico real en esta fase.
 
 ## Diagrama logico
 
@@ -53,6 +57,19 @@ audit-access-classifier
                                    +--> /var/log/sharemechat-audit-access-reporter/YYYY-MM-DD.report.json
                                    |
                                    +--> SMTP email opcional
+
+audit-access-classifier (summary.jsonl)
+                |
+                v
+audit-access-blocker (DRY-RUN)
+                |
+                +--> /var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.deny-audit-ips.proposed.conf
+                |
+                +--> /var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.blocker-diff.txt
+                |
+                +--> /var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.ips.json
+                |
+                +--> /var/lib/sharemechat-audit-access-blocker/ips.json (estado persistente)
 ```
 
 ## Responsabilidades por componente
@@ -97,6 +114,29 @@ Salidas principales:
 - `/var/log/sharemechat-audit-access-reporter/YYYY-MM-DD.report.txt`
 - `/var/log/sharemechat-audit-access-reporter/YYYY-MM-DD.report.json`
 
+### 4. audit-access-blocker (bloqueo REAL activo en Carril A)
+
+Responsabilidad:
+
+- consumir el summary diario del clasificador
+- aplicar una politica de decision en tres carriles (A, B, C)
+- respetar una allowlist por IP y CIDR
+- mantener estado persistente por IP (historial hostil + bloqueo propuesto)
+- generar una propuesta de deny list, un diff razonado y un snapshot diario del estado
+- **Carril A**: aplicar bloqueo real en nginx con preflight/postflight `nginx -t`, backup con timestamp y rollback automatico en caso de fallo
+- Carril B y Carril C: solo propuesta advisory, sin tocar nginx
+
+Salidas principales:
+
+- `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.deny-audit-ips.proposed.conf`
+- `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.blocker-diff.txt`
+- `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.ips.json`
+- `/var/lib/sharemechat-audit-access-blocker/ips.json` (estado persistente)
+
+Documentacion detallada: [ops/audit-access-blocker/README.md](../audit-access-blocker/README.md).
+
+Nota de refinamiento post-validacion: tras los primeros runs reales en DRY-RUN, el componente fue refinado en dos puntos antes de plantear la activacion real. Primero, la extraccion de IOCs hostiles se extiende a cuatro fuentes (`evidence.hostile_hits`, `evidence.matched_rule_labels`, `matched_rules` como fallback, y parseo de `main_reason` via `re.split`) para cubrir casos como `xmlrpc_scan+many_routes_6` donde el IOC va concatenado al reason de volumen y no aparecia en las fuentes canonicas. Segundo, la explicabilidad del Carril C se corrigio: cuando una IP tiene un IOC hostil presente pero aislado (primera aparicion, sin repeticion suficiente para Carril B), el diff muestra ahora `"IOC hostil aislado sin repeticion ni criterio Carril A"` con el IOC concreto, en lugar del mensaje generico de clasificacion por volumen/sensibles. Ambos cambios son solo de logica interna y no alteran los carriles A/B ni el contrato de salida.
+
 ## Rutas reales en EC2
 
 ### Salidas
@@ -109,6 +149,11 @@ Salidas principales:
 - reporter:
   - `/var/log/sharemechat-audit-access-reporter/YYYY-MM-DD.report.txt`
   - `/var/log/sharemechat-audit-access-reporter/YYYY-MM-DD.report.json`
+- blocker (DRY-RUN):
+  - `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.deny-audit-ips.proposed.conf`
+  - `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.blocker-diff.txt`
+  - `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.ips.json`
+  - estado persistente: `/var/lib/sharemechat-audit-access-blocker/ips.json`
 
 ### Configuracion
 
@@ -116,6 +161,9 @@ Salidas principales:
   - `/etc/sharemechat-audit-access-classifier/config.env`
 - reporter:
   - `/etc/sharemechat-audit-access-reporter/config.env`
+- blocker:
+  - `/etc/sharemechat-audit-access-blocker/config.env`
+  - `/etc/sharemechat-audit-access-blocker/allowlist.conf`
 
 ## Estrategia de fechas
 
@@ -146,6 +194,25 @@ Estado operativo desplegado en EC2:
 - la fecha de trabajo es siempre `yesterday` en UTC
 
 Ademas, el normalizador mantiene su propia automatizacion operativa para producir el JSONL diario canonico que alimenta el resto del sistema.
+
+Estado operativo del blocker perimetral en AUDIT (**modo REAL activo desde 2026-04-24**):
+
+- existe `sharemechat-audit-access-blocker.service`
+- existe `sharemechat-audit-access-blocker.timer`
+- el componente esta instalado en `/opt/sharemechat-audit-access-blocker`
+- la configuracion operativa vive en:
+  - `/etc/sharemechat-audit-access-blocker/config.env` (`DRY_RUN=0`)
+  - `/etc/sharemechat-audit-access-blocker/allowlist.conf`
+- el timer queda activo con ejecucion diaria a `05:30 UTC`
+- genera salidas en:
+  - `/var/log/sharemechat-audit-access-blocker/`
+- mantiene estado persistente en:
+  - `/var/lib/sharemechat-audit-access-blocker/ips.json`
+- **escribe `/etc/nginx/deny-audit-ips.conf`** con IPs de Carril A (bloqueo efectivo)
+- ejecuta `nginx -t` preflight y postflight en cada run con datos de Carril A
+- ejecuta `systemctl reload nginx` si ambos tests pasan
+- **bloquea trafico real** de IPs clasificadas en Carril A con TTL de 30 dias
+- Carril B y Carril C siguen siendo solo propuesta advisory
 
 ## Envio por email
 
@@ -284,6 +351,24 @@ sudo ls -l /var/log/sharemechat-audit-access-classifier/"$DAY".table.txt
 sudo ls -l /var/log/sharemechat-audit-access-classifier/"$DAY".summary.jsonl
 sudo ls -l /var/log/sharemechat-audit-access-reporter/"$DAY".report.txt
 sudo ls -l /var/log/sharemechat-audit-access-reporter/"$DAY".report.json
+```
+
+Estado del blocker en DRY-RUN:
+
+```bash
+sudo systemctl status sharemechat-audit-access-blocker.timer
+sudo systemctl status sharemechat-audit-access-blocker.service
+sudo journalctl -u sharemechat-audit-access-blocker.service -n 100 --no-pager
+```
+
+Revision de salidas del blocker:
+
+```bash
+DAY="$(date -u -d "yesterday" +%F)"
+sudo ls -l /var/log/sharemechat-audit-access-blocker/"$DAY".deny-audit-ips.proposed.conf
+sudo ls -l /var/log/sharemechat-audit-access-blocker/"$DAY".blocker-diff.txt
+sudo ls -l /var/log/sharemechat-audit-access-blocker/"$DAY".ips.json
+sudo ls -l /var/lib/sharemechat-audit-access-blocker/ips.json
 ```
 
 Revision de contenido:

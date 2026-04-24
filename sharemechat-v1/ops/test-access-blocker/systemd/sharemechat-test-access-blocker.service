@@ -1,0 +1,16 @@
+[Unit]
+Description=Propose deny list for TEST based on classifier summary (DRY-RUN)
+After=network-online.target sharemechat-test-access-classifier.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+# DRY-RUN ONLY. This unit does NOT reload nginx and does NOT write
+# /etc/nginx/deny-test-ips.conf. It only produces advisory artifacts
+# under /var/log/sharemechat-test-access-blocker/.
+ExecStart=/opt/sharemechat-test-access-blocker/bin/block-test-access.sh --config /etc/sharemechat-test-access-blocker/config.env
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
