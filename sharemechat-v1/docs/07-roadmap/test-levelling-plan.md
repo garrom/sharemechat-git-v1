@@ -29,30 +29,27 @@ Nivel operativo en TEST respecto a AUDIT:
 
 El orden minimiza riesgo: primero lo que desbloquea validación funcional, después alineación de endurecimiento, después observabilidad, y finalmente limpieza.
 
-### Fase 1 — Arranque persistente del backend en TEST
+### Fase 1 — Arranque persistente del backend en TEST [NO APLICABLE]
 
-Objetivo:
+Objetivo original:
 
-- dejar el backend de TEST como servicio gestionado y reactivo a reinicios del host, al mismo nivel que AUDIT.
+- dejar el backend de TEST como servicio gestionado y reactivo a reinicios del host
 
-Alcance mínimo:
+Estado real:
 
-- definir servicio persistente del entorno equivalente al ya validado en AUDIT
-- habilitar arranque automático en boot
-- validar comportamiento tras reinicio completo de la máquina
+- TEST es un entorno de uso intermitente, con EC2 encendida/apagada manualmente
+- el backend se arranca manualmente cuando se necesita
+- no existe requirement operativo de arranque automatico
 
-Criterios de aceptación:
+Decision:
 
-- el backend vuelve a estado activo sin intervención manual tras reboot
-- el perfil de aplicación activo es el del entorno y no el de AUDIT
-- properties y variables de entorno del host quedan alineadas con la convención ya usada en AUDIT, sin arrastrar valores concretos de otro entorno
+- el arranque persistente mediante systemd NO se aplica en TEST
+- este comportamiento se reserva para entornos always-on como AUDIT o PRO
 
-Rollback:
+Conclusion:
 
-- detener el servicio persistente
-- volver al arranque manual previo hasta rehacer la fase
-
-Riesgo: bajo. No cambia ni la aplicación ni su configuración funcional.
+- esta fase no se considera pendiente ni incompleta
+- se marca como NO APLICABLE por diseno operativo del entorno
 
 ### Fase 2 — Storage privado efectivo sobre S3 en TEST
 
