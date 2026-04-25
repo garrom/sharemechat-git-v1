@@ -15,6 +15,7 @@ La prioridad inmediata ya no es abrir nuevos frentes funcionales, sino estabiliz
 - pipeline perimetral AUDIT completamente operativo en modo automatico: normalizer → classifier (ejecucion diaria previa) → blocker real Carril A (07:30 UTC) → nginx actualizado diariamente sin intervencion manual
 - gobernanza activa del pipeline perimetral: `check_ops_consistency.py` (repo) y `check_ops_runtime.sh` (EC2); runtime check limpio con `errors=0 warnings=0` tras correccion de orden temporal
 - pipeline TEST desplegado en DRY_RUN=1 como entorno de observacion paralelo antes de cualquier activacion de bloqueo real
+- `auth-risk` Fase 1 (modo OBSERVE) y Fase 2 (respuesta progresiva con delay en HIGH y bloqueo temporal por `emailHash` en CRITICAL) implementados sobre login de producto y validados en TEST con tráfico real, manteniendo contrato HTTP uniforme y sin filtración de información
 
 ## Qué sigue en transición
 
@@ -25,4 +26,5 @@ La prioridad inmediata ya no es abrir nuevos frentes funcionales, sino estabiliz
 - contención y consolidación del sistema i18n en producto y backoffice
 - estabilización del contrato funcional de errores entre REST, WebSocket y frontend
 - separación progresiva entre lógica de producto, alerts compartidos y copy de interfaz
-- siguiente frente de `auth-risk` y deteccion de abuso de autenticacion, todavia sin implementacion
+- extensión de `auth-risk` al resto de superficies de autenticación (login admin, refresh, forgot/reset password) y nivelado del frente sobre AUDIT antes de considerarlo cerrado
+- detección low-and-slow sobre la base actual de `auth-risk` y persistencia de logs en archivo cuando el backend deje de ejecutarse de forma manual

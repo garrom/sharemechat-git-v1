@@ -67,28 +67,29 @@ Trabajo posterior recomendado
 
 ### Parte 2B - Auth-risk y abuso de autenticacion
 
-Objetivo:
+Estado actual:
 
-- abrir el siguiente frente de endurecimiento sobre abuso de autenticacion sin mezclarlo con la defensa perimetral ya desplegada en AUDIT
+- Fase 1 (modo OBSERVE) y Fase 2 (respuesta progresiva con delay en HIGH y bloqueo temporal por `emailHash` en CRITICAL) implementadas sobre login de producto y validadas en TEST con tráfico real
+- contrato HTTP del login no se ha visto alterado: bloqueo y credencial incorrecta devuelven respuesta indistinguible
+- detalles técnicos durables documentados en `docs/02-architecture/backend-architecture.md` y operación del control en `docs/04-operations/runbooks.md`; la decisión estructural está recogida en ADR-008
 
-Alcance inicial recomendado:
+Objetivo de las siguientes iteraciones:
 
-- login de producto
-- login admin
-- refresh
-- forgot password y reset password
+- consolidar el frente sin reabrir la base ya validada y sin mezclarlo con la defensa perimetral ya desplegada en AUDIT
 
-Criterio:
+Pendiente posterior, en orden tentativo:
 
-- detectar patrones anómalos de autenticacion y abuso de credenciales
+- nivelado del frente sobre AUDIT antes de considerar cerrado el alcance multi-entorno
+- extensión a login admin, refresh y forgot/reset password reusando el mismo `AuthRiskService` y el mismo namespace Redis con sus propios prefijos lógicos
+- detección low-and-slow apoyada en señales adicionales (ventanas más largas, agregaciones por subred o ASN) sin tocar la lógica actual de niveles
+- persistencia de logs `[AUTH-RISK]` cuando el backend deje de ejecutarse en modo manual: redirección a archivo o `journald` para que la trazabilidad no dependa de la sesión activa
+- revisión del age gate de invitado para evitar que un cliente automatizado se salte la fricción aceptando cualquier UUID arbitrario como `consent_id`
+
+Criterio que se mantiene:
+
 - priorizar señales y scoring explicable antes de automatismos agresivos
 - mantener este frente separado del pipeline de access audit perimetral para no mezclar ruido general de Internet con abuso real de autenticacion
-- no reabrir en esta fase la decision de WAF, fail2ban o logica de defensa dentro del backend Java
-
-Secuencia:
-
-- este frente es posterior al nivelado completo de TEST respecto a AUDIT
-- una vez completado el nivelado, la implementacion comenzara en TEST
+- no reabrir en esta fase la decisión de WAF, fail2ban ni CAPTCHA dentro del backend Java
 
 ### Parte 3 - Frontend producto y backoffice
 
