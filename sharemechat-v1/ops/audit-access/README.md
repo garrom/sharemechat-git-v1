@@ -24,12 +24,14 @@ Ninguno de ellos:
 2. Genera un JSONL diario canonico.
 3. El clasificador consume ese JSONL diario.
 4. Genera una tabla legible y un summary JSONL enriquecido.
-5. El reporter consume el summary diario.
-6. Genera un reporte texto y un reporte JSON.
-7. Opcionalmente envia el reporte por email via SMTP.
-8. El blocker (DRY-RUN) consume el mismo summary diario.
-9. Propone una deny list razonada y mantiene estado persistente por IP.
-10. No toca nginx ni bloquea trafico real en esta fase.
+5. El blocker consume el summary diario del clasificador.
+6. Aplica la politica de carriles A/B/C y actualiza el estado persistente por IP.
+7. En modo REAL controlado (Carril A activo), escribe `/etc/nginx/deny-audit-ips.conf` y recarga nginx.
+8. El reporter consume el mismo summary diario del clasificador.
+9. Genera un reporte texto y un reporte JSON.
+10. Opcionalmente envia el reporte por email via SMTP.
+
+El orden temporal se garantiza mediante la configuracion del timer del blocker, que se ejecuta solo cuando el summary.jsonl del dia anterior ya esta disponible.
 
 ## Diagrama logico
 
@@ -61,7 +63,7 @@ audit-access-classifier
 audit-access-classifier (summary.jsonl)
                 |
                 v
-audit-access-blocker (DRY-RUN)
+audit-access-blocker (REAL Carril A activo)
                 |
                 +--> /var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.deny-audit-ips.proposed.conf
                 |
@@ -149,11 +151,12 @@ Nota de refinamiento post-validacion: tras los primeros runs reales en DRY-RUN, 
 - reporter:
   - `/var/log/sharemechat-audit-access-reporter/YYYY-MM-DD.report.txt`
   - `/var/log/sharemechat-audit-access-reporter/YYYY-MM-DD.report.json`
-- blocker (DRY-RUN):
+- blocker (REAL Carril A activo):
   - `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.deny-audit-ips.proposed.conf`
   - `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.blocker-diff.txt`
   - `/var/log/sharemechat-audit-access-blocker/YYYY-MM-DD.ips.json`
   - estado persistente: `/var/lib/sharemechat-audit-access-blocker/ips.json`
+  - deny list activa en nginx: `/etc/nginx/deny-audit-ips.conf`
 
 ### Configuracion
 
@@ -203,7 +206,7 @@ Estado operativo del blocker perimetral en AUDIT (**modo REAL activo desde 2026-
 - la configuracion operativa vive en:
   - `/etc/sharemechat-audit-access-blocker/config.env` (`DRY_RUN=0`)
   - `/etc/sharemechat-audit-access-blocker/allowlist.conf`
-- el timer queda activo con ejecucion diaria a `05:30 UTC`
+- el timer queda activo con ejecucion diaria a `07:30 UTC` (posterior al classifier, garantizando disponibilidad del `summary.jsonl`)
 - genera salidas en:
   - `/var/log/sharemechat-audit-access-blocker/`
 - mantiene estado persistente en:

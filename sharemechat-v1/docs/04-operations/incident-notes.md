@@ -1153,3 +1153,56 @@ Recomendacion operativa:
 - mantener TEST en observacion (DRY_RUN=1) durante al menos 14 dias desde el despliegue antes de evaluar el paso a modo real
 - usar las salidas de TEST como referencia comparativa frente a AUDIT: el trafico de TEST puede incluir testers internos, QA manual y trafico sintetico que justifiquen entradas adicionales en la allowlist antes de activar bloqueo real
 - cualquier cambio a DRY_RUN=0 en TEST debe seguir el mismo checklist que se siguio en AUDIT: ejecucion manual supervisada, revision de diff y journalctl, y confirmacion de nginx_test_before=ok + nginx_test_after=ok + reload=ok antes de dejar el timer en automatico
+
+
+## Correccion de desalineacion temporal blocker vs classifier en AUDIT
+
+Fecha: `2026-04-25`.
+
+Contexto:
+
+- el blocker de AUDIT llevaba activo en modo real (DRY_RUN=0) desde `2026-04-24`
+- tras el primer run automatico completo del timer, el journal mostraba fallo por ausencia de `summary.jsonl`
+- el pipeline completo parecia operativo pero el blocker no completaba su ejecucion diaria
+
+Problema:
+
+- el blocker fallaba cada dia antes de procesar ninguna IP
+- el error era `summary not found` con la ruta del fichero del dia anterior del classifier
+- el fichero existia en EC2, pero aun no estaba generado en el momento en que arrancaba el blocker
+
+Causa raiz:
+
+- el timer del blocker estaba configurado con `OnCalendar=*-*-* 05:30:00 UTC`
+- el classifier se ejecuta aproximadamente a `07:10 UTC`
+- resultado: el blocker arrancaba ~1h40m antes que el classifier y no encontraba el `summary.jsonl`
+
+Correccion aplicada:
+
+- `OnCalendar=*-*-* 05:30:00 UTC` → `OnCalendar=*-*-* 07:30:00 UTC` en la unit del timer del blocker en EC2 AUDIT
+- `systemctl daemon-reload` + `systemctl restart sharemechat-audit-access-blocker.timer`
+- el nuevo horario deja 20 minutos de margen tras la ejecucion del classifier
+
+Validacion:
+
+- runtime check (`check_ops_runtime.sh audit`) ejecutado tras el cambio: `errors=0 warnings=0`
+- primera ejecucion automatica con el horario corregido: completada correctamente
+- salida del dia verificada: `.deny-audit-ips.proposed.conf`, `.blocker-diff.txt`, `.ips.json` presentes
+- Carril A escribio `/etc/nginx/deny-audit-ips.conf` y ejecuto reload correctamente
+
+Impacto operativo:
+
+- pipeline perimetral AUDIT completamente operativo end-to-end por primera vez en modo automatico real
+- orden garantizado: normalizer → classifier (07:10) → blocker (07:30) → nginx actualizado diariamente
+- el blocker ya no depende de ejecucion manual; el ciclo completo es autonomo bajo systemd
+
+Lecciones:
+
+- un timer bien configurado aisladamente puede ocultar una dependencia temporal con otro componente del pipeline hasta que se active el modo real; en DRY-RUN, el fallo por `summary not found` podia no ser evidente si la ejecucion manual usaba `--date` con ficheros ya existentes
+- la dependencia temporal entre stages del pipeline debe documentarse explicita y operativamente en cada timer, no solo en los READMEs
+- el runtime check es la herramienta correcta para detectar este tipo de problema en modo automatico: una vez corregido el timer, `errors=0 warnings=0` confirma el cierre
+
+Recomendacion operativa:
+
+- cualquier timer de un componente que dependa de un artefacto de un stage previo debe configurarse con al menos 15-20 minutos de margen sobre el horario esperado del componente anterior
+- en TEST el timer del blocker esta configurado a `05:45 UTC`; si el classifier de TEST cambia su horario, debe revisarse si sigue habiendo margen suficiente

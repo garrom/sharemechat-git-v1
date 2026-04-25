@@ -11,7 +11,10 @@ La prioridad inmediata ya no es abrir nuevos frentes funcionales, sino estabiliz
 - trazabilidad económica y de streams
 - modelo de permisos de backoffice
 - aislamiento conceptual de entornos
-- observabilidad perimetral desacoplada en AUDIT con normalizacion, clasificacion y reporting diarios de accesos
+- observabilidad perimetral desacoplada en AUDIT con normalizacion, clasificacion, reporting y bloqueo real diarios de accesos
+- pipeline perimetral AUDIT completamente operativo en modo automatico: normalizer → classifier (ejecucion diaria previa) → blocker real Carril A (07:30 UTC) → nginx actualizado diariamente sin intervencion manual
+- gobernanza activa del pipeline perimetral: `check_ops_consistency.py` (repo) y `check_ops_runtime.sh` (EC2); runtime check limpio con `errors=0 warnings=0` tras correccion de orden temporal
+- pipeline TEST desplegado en DRY_RUN=1 como entorno de observacion paralelo antes de cualquier activacion de bloqueo real
 
 ## Qué sigue en transición
 

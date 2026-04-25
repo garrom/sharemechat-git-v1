@@ -32,7 +32,7 @@ A fecha de hoy este componente ya queda:
 - instalado en systemd con:
   - `sharemechat-audit-access-blocker.service`
   - `sharemechat-audit-access-blocker.timer`
-- activo en **modo REAL controlado (Carril A)**, con ejecucion diaria a `05:30 UTC`
+- activo en **modo REAL controlado (Carril A)**, con ejecucion diaria a `07:30 UTC`
 - generando salidas en `/var/log/sharemechat-audit-access-blocker/`
 - manteniendo estado persistente real en `/var/lib/sharemechat-audit-access-blocker/ips.json`
 - escribiendo `/etc/nginx/deny-audit-ips.conf` con IPs de Carril A (bloqueo efectivo)
@@ -239,7 +239,9 @@ En EC2 se ejecuta diariamente despues del flujo de clasificacion:
 
 Ambas units versionadas en `systemd/`. El timer trabaja sobre el dia anterior en UTC. La service arranca despues de `sharemechat-audit-access-classifier.service`.
 
-En AUDIT este despliegue ya esta instalado y activo en systemd. La ventana operativa programada queda a las `05:30 UTC` y el run sin `--date` trabaja por defecto sobre el dia anterior en UTC.
+En AUDIT este despliegue ya esta instalado y activo en systemd. La ventana operativa programada queda a las `07:30 UTC` y el run sin `--date` trabaja por defecto sobre el dia anterior en UTC.
+
+El horario de `07:30 UTC` garantiza que el clasificador (ejecucion diaria previa) haya completado su ejecucion y el `summary.jsonl` del dia anterior este disponible antes de que arranque el blocker. Sin esta dependencia temporal, el blocker arranca antes que el clasificador y falla por ausencia de `summary.jsonl`.
 
 ## Validacion operativa ya realizada
 
@@ -392,6 +394,23 @@ deny 85.11.167.38;
 4. ✓ Ejecutar una vez manualmente con `DRY_RUN=0` y revisar diff, journalctl y contenido del fichero live
 5. ✓ Confirmar en journalctl que `nginx_test_before=ok`, `nginx_test_after=ok`, `reload=ok`
 6. ✓ Timer automatico activo con `DRY_RUN=0`
+
+## Correccion de orden temporal del pipeline
+
+**Problema detectado:** el blocker se ejecutaba antes que el clasificador, fallando por ausencia de `summary.jsonl`.
+
+**Causa raiz:** el timer estaba configurado con `OnCalendar=*-*-* 05:30:00 UTC`, horario anterior al del clasificador.
+
+**Correccion aplicada:** nuevo horario `OnCalendar=*-*-* 07:30:00 UTC`.
+
+**Orden temporal correcto tras la correccion:**
+
+| Componente | Horario UTC | Dependencia |
+|------------|-------------|-------------|
+| clasificador (ejecucion diaria) | ejecucion diaria previa | JSONL del normalizador |
+| `audit-access-blocker.timer` | 07:30 | `summary.jsonl` del clasificador |
+
+Con esta configuracion, el blocker arranca siempre 20 minutos despues del classifier, garantizando que el artefacto de entrada este disponible. La validacion del runtime check posterior confirmo cero errores y cero warnings con el pipeline end-to-end funcionando en modo real.
 
 ## Pendiente para fases posteriores
 
