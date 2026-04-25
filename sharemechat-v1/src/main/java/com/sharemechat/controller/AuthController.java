@@ -1,25 +1,29 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.config.IpConfig;
+import com.sharemechat.constants.AuthRiskConstants;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.UserLoginDTO;
 import com.sharemechat.entity.RefreshToken;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.CountryBlockedException;
+import com.sharemechat.exception.InvalidCredentialsException;
 import com.sharemechat.repository.RefreshTokenRepository;
 import com.sharemechat.security.JwtUtil;
+import com.sharemechat.service.ApiRateLimitService;
+import com.sharemechat.service.AuthRiskContext;
+import com.sharemechat.service.AuthRiskService;
+import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.CountryAccessService;
 import com.sharemechat.service.UserService;
-import com.sharemechat.config.IpConfig;
-import com.sharemechat.service.ApiRateLimitService;
-import com.sharemechat.service.ConsentService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.*;
 
 import java.security.MessageDigest;
 import java.time.LocalDateTime;
@@ -36,7 +40,7 @@ public class AuthController {
     private final ApiRateLimitService rateLimitService;
     private final CountryAccessService countryAccessService;
     private final ConsentService consentService;
-
+    private final AuthRiskService authRiskService;
 
     @Value("${auth.cookieDomain}")
     private String cookieDomain;
@@ -50,7 +54,8 @@ public class AuthController {
             RefreshTokenRepository refreshRepo,
             ApiRateLimitService rateLimitService,
             CountryAccessService countryAccessService,
-            ConsentService consentService
+            ConsentService consentService,
+            AuthRiskService authRiskService
     ) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
@@ -58,6 +63,7 @@ public class AuthController {
         this.rateLimitService = rateLimitService;
         this.countryAccessService = countryAccessService;
         this.consentService = consentService;
+        this.authRiskService = authRiskService;
     }
 
     // =========================================================
@@ -78,7 +84,29 @@ public class AuthController {
         rateLimitService.checkLoginEmail(dto.getEmail());
         countryAccessService.assertAllowed(req);
 
-        User u = userService.authenticateAndLoadUser(dto);
+        String ip = IpConfig.getClientIp(req);
+        String userAgent = req.getHeader("User-Agent");
+        AuthRiskContext riskCtx = authRiskService.buildContext(
+                ip,
+                userAgent,
+                dto.getEmail(),
+                null,
+                AuthRiskConstants.Channels.PRODUCT
+        );
+        authRiskService.record(AuthRiskConstants.Events.LOGIN_ATTEMPT, riskCtx);
+
+        if (authRiskService.isEmailBlocked(riskCtx)) {
+            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx);
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+
+        User u;
+        try {
+            u = userService.authenticateAndLoadUser(dto);
+        } catch (InvalidCredentialsException ex) {
+            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx);
+            throw ex;
+        }
 
         String access = jwtUtil.generateAccessToken(
                 u.getEmail(),
@@ -93,10 +121,12 @@ public class AuthController {
         rt.setUserId(u.getId());
         rt.setTokenHash(hash);
         rt.setExpiresAt(LocalDateTime.now().plusDays(14));
-        rt.setIpAddress(IpConfig.getClientIp(req));
-        rt.setUserAgent(req.getHeader("User-Agent"));
+        rt.setIpAddress(ip);
+        rt.setUserAgent(userAgent);
 
         refreshRepo.save(rt);
+
+        authRiskService.record(AuthRiskConstants.Events.LOGIN_SUCCESS, riskCtx.withUserId(u.getId()));
 
         setAccessCookie(res, access, 15 * 60);
         setRefreshCookie(res, refreshRaw, 14 * 24 * 3600);
@@ -108,6 +138,7 @@ public class AuthController {
     // =========================================================
     // REFRESH
     // =========================================================
+
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(
             @CookieValue(name = "refresh_token", required = false) String refreshToken,
@@ -191,7 +222,6 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
-
     // =========================================================
     // LOGOUT
     // =========================================================
@@ -221,7 +251,6 @@ public class AuthController {
     // =========================================================
 
     private void setAccessCookie(HttpServletResponse res, String value, int seconds) {
-
         ResponseCookie cookie = ResponseCookie.from("access_token", value)
                 .httpOnly(true)
                 .secure(secureCookies)
@@ -235,7 +264,6 @@ public class AuthController {
     }
 
     private void setRefreshCookie(HttpServletResponse res, String value, int seconds) {
-
         ResponseCookie cookie = ResponseCookie.from("refresh_token", value)
                 .httpOnly(true)
                 .secure(secureCookies)
@@ -248,9 +276,7 @@ public class AuthController {
         res.addHeader("Set-Cookie", cookie.toString());
     }
 
-
     private void deleteCookie(HttpServletResponse res, String name) {
-
         ResponseCookie cookie = ResponseCookie.from(name, "")
                 .httpOnly(true)
                 .secure(secureCookies)
