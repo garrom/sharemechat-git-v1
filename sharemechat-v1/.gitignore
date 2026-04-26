@@ -35,3 +35,5 @@ build/
 ### Outputs temporales del pipeline audit-access (regenerables, no versionar) ###
 tmp-*/
 tmp-*
+### Claude local settings ###
+../.claude/settings.local.json
