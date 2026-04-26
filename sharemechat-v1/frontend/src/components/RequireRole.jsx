@@ -15,7 +15,7 @@ const normalizeUserTypes = (items) => {
 const RequireRole = ({ role, roles, backofficeRoles, allowedUserTypes, children }) => {
   const { user, loading } = useSession();
 
-  if (loading) return null;
+  if (loading && !user) return null;
 
   if (!user) {
     return <Redirect to="/login" />;

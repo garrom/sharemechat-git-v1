@@ -1,5 +1,0 @@
-{"ts":"2026-04-18T10:00:00Z","source":"cloudfront","channel":"FRONTEND","ip":"62.60.130.227","host":"audit.sharemechat.com","method":"GET","route":"/xmlrpc.php","status":"404","ua":"zgrab/0.x"}
-{"ts":"2026-04-18T10:00:10Z","source":"cloudfront","channel":"FRONTEND","ip":"62.60.130.227","host":"audit.sharemechat.com","method":"GET","route":"/wp-includes/test","status":"404","ua":"zgrab/0.x"}
-{"ts":"2026-04-18T10:00:20Z","source":"cloudfront","channel":"FRONTEND","ip":"62.60.130.227","host":"audit.sharemechat.com","method":"GET","route":"/bin/sh","status":"404","ua":"zgrab/0.x"}
-{"ts":"2026-04-18T10:02:00Z","source":"cloudfront","channel":"ADMIN","ip":"90.175.201.51","host":"admin.audit.sharemechat.com","method":"GET","route":"/","status":"200","ua":"Mozilla/5.0"}
-{"ts":"2026-04-18T10:03:00Z","source":"nginx","channel":"ADMIN","ip":"90.175.201.51","host":"admin.audit.sharemechat.com","method":"POST","route":"/api/admin/auth/login","status":"200","ua":"Mozilla/5.0"}

@@ -104,3 +104,9 @@ Si en una fase posterior se decide adoptar CAPTCHA, debería ser dirigido (mostr
 - aparece deuda de persistencia de logs cuando el backend se ejecuta en modo manual: la trazabilidad depende de mantener viva la sesión interactiva
 - aparece deuda residual de detección low-and-slow: ataques deliberadamente lentos pueden permanecer bajo el umbral HIGH/CRITICAL durante el tiempo de vida del TTL corto
 - la propiedad `authrisk.response.enabled` permite rollback inmediato a modo OBSERVE puro sin redeploy de código
+
+## Estado de implementación
+
+- Fase 1 y Fase 2 implementadas y validadas en TEST y AUDIT
+- Namespace por entorno corregido (`AUTHRISK_ENV`)
+- Comportamiento en producción simulada confirmado

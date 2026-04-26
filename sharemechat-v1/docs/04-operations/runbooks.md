@@ -100,6 +100,47 @@ Cuando un usuario reporta que no puede entrar y la sospecha es que está bajo bl
 
 **Regla de saneado específica de este flujo**: en cualquier ticket, runbook complementario o registro escrito derivado del diagnóstico, no plasmar nunca el email real del usuario afectado, el `emailHash` real ni el salt configurado. Para trazabilidad basta referenciar la incidencia por id interno y ventana temporal; los identificadores sensibles se resuelven en la fuente operativa correspondiente y no se duplican aquí.
 
+### Validación operativa en entorno
+
+Tras un despliegue o cambio de configuración relevante de Auth-risk en un entorno, conviene confirmar externamente que el control sigue comportándose como se espera. Las cuatro comprobaciones mínimas se pueden hacer como cliente HTTP externo sin necesidad de tocar el servidor:
+
+1. **Verificar delay activo en `HIGH`.**
+   Ejecutar una serie de fallos consecutivos contra un email válido del entorno, respetando el rate limit IP existente (esperar 60s entre tandas de 5). Medir tiempos de respuesta. Hasta cubrir los umbrales de scoring las latencias se mantienen en el orden de cientos de milisegundos; al cruzar `HIGH`, las latencias deben subir al rango configurado (`authrisk.response.high-delay-min-ms`–`high-delay-max-ms`) de forma claramente perceptible.
+
+2. **Verificar bloqueo en `CRITICAL`.**
+   Continuar la serie hasta provocar `CRITICAL` (combinación típica de `email_fail_5`, `ip_fail_10` y `ip_distinct_emails_5`). Inmediatamente después, intentar login con la **password correcta** del email afectado. La respuesta esperada es `HTTP 401` sin `Set-Cookie`, indistinguible de una credencial incorrecta. Si llegan cookies de sesión, el bloqueo no se está creando o ha expirado.
+
+3. **Identificar short-circuit por latencia.**
+   Si tras un bloqueo activo se sigue intentando el mismo email con password incorrecta, las latencias deben **bajar** respecto al delay de `HIGH`, no subir. Una respuesta rápida (orden de cientos de ms) tras un período de respuestas lentas confirma que el short-circuit `isEmailBlocked` está cortando antes del scoring y antes del delay, conforme al diseño.
+
+4. **Inspeccionar la fuente de logs disponible.**
+   - En **AUDIT**, los logs son persistentes en `journald` y se filtran con:
+     ```
+     sudo journalctl -u sharemechat-audit --since '15 minutes ago' | grep AUTH-RISK
+     ```
+     Comprobar que aparece `env=audit` (no `env=test`) en las líneas, que se observan los niveles esperados (`NORMAL`, `SUSPICIOUS`, `HIGH`, `CRITICAL`) y que existe al menos una línea con `reasons=temporal_block_active` tras provocar bloqueo.
+   - En **TEST**, los logs viven en la terminal interactiva del proceso manual; la observación es posible solo si esa sesión sigue viva. Esta limitación está recogida en `known-risks.md`.
+
+Estas cuatro comprobaciones cubren tanto la capa de detección como la de respuesta. Si alguna falla, contrastar primero con `redis6-cli --scan --pattern 'ar:{env}:login:*'` y confirmar que el namespace y los TTLs son los esperados antes de tocar configuración.
+
+### Limpieza de artefactos temporales del repositorio
+
+El pipeline de auditoría perimetral genera salidas locales (resúmenes, tablas y reportes en `.jsonl`/`.txt`/`.json`) durante pruebas o ejecuciones puntuales fuera del flujo `ops/` ya operativo. Esas salidas son **regenerables**: se obtienen volviendo a ejecutar el pipeline contra los datos de origen. No aportan valor durable, no deben formar parte del repositorio principal y consumen ruido en `git status` cuando se mezclan con cambios reales.
+
+La regla aplicada en el repositorio es:
+
+- ningún directorio o fichero con prefijo `tmp-` se versiona
+- existe regla en `.gitignore` con los patrones `tmp-*/` y `tmp-*` para garantizarlo automáticamente
+- el pipeline operativo y sus salidas estables permanecen en `ops/`, fuera del alcance de esta regla
+
+Si una salida temporal del pipeline necesitara conservarse como evidencia de una decisión o incidencia, el procedimiento correcto es:
+
+1. archivar esa salida como anexo de un documento durable (`docs/04-operations/incident-notes.md` o similar) **resumiendo el contenido**, no copiando el blob completo
+2. nunca dejar el directorio `tmp-*` en el árbol con la intención de "documentar después"
+3. si la salida es sensible (IPs, identificadores reales), aplicar la regla de saneado de gobierno documental antes de archivar
+
+Esta limpieza ya se aplicó al repo y los artefactos `tmp-audit-access-*`, `tmp-audit-classifier-out` y `tmp-audit-reporter-*` que existían en raíz del módulo backend han sido eliminados.
+
 ## Modo de arranque actual del backend en TEST
 
 A día de hoy el backend de TEST se arranca **manualmente** desde una sesión interactiva sobre la instancia, no como servicio gestionado. El comando lógico de arranque es:
@@ -116,7 +157,9 @@ Consecuencias operativas relevantes:
 - al cerrar la terminal o desconectar la sesión, esos logs dejan de ser accesibles
 - la trazabilidad forense de cualquier incidente de autenticación queda condicionada a mantener viva esa sesión interactiva
 
-Mientras el modo de arranque siga siendo manual, los procedimientos de diagnóstico que dependan de logs históricos deben asumir esta limitación. Esta deuda operativa está recogida también en `known-risks.md` como riesgo residual de logs no persistentes y debe consultarse desde allí. La mitigación natural —despliegue como servicio con redirección a archivo— es objeto de iteración futura y no se improvisa caso a caso.
+En **AUDIT**, en cambio, el backend se ejecuta como servicio `sharemechat-audit.service` con `EnvironmentFile=/opt/sharemechat/.env` y los logs persisten en `journald`, lo que elimina esa limitación para ese entorno.
+
+Mientras el modo de arranque de TEST siga siendo manual, los procedimientos de diagnóstico que dependan de logs históricos deben asumir esta limitación. Esta deuda operativa está recogida también en `known-risks.md` como riesgo residual de logs no persistentes y debe consultarse desde allí. La mitigación natural —despliegue como servicio con redirección a archivo o `journald`— es objeto de iteración futura y no se improvisa caso a caso.
 
 ## Regla de saneado
 

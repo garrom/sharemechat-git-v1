@@ -27,7 +27,7 @@ El backend es una aplicacion Spring Boot sobre Java 17 que concentra:
 
 ## Auth-risk: deteccion y respuesta progresiva sobre login
 
-El backend incluye una capa de deteccion de abuso de autenticacion separada del rate limit clasico de `ApiRateLimitService`. Su objetivo no es regular el caudal de peticiones sino observar patrones de fallo, calcular un nivel de riesgo y aplicar una respuesta proporcional sin alterar el contrato HTTP.
+El backend incluye una capa de deteccion de abuso de autenticacion separada del rate limit clasico de `ApiRateLimitService`. La capa esta implementada y validada con trafico real en TEST y AUDIT sobre login de producto. Su objetivo no es regular el caudal de peticiones sino observar patrones de fallo, calcular un nivel de riesgo y aplicar una respuesta proporcional sin alterar el contrato HTTP.
 
 Componentes implicados:
 
@@ -46,18 +46,25 @@ Estado en Redis bajo namespace `ar:{env}:`:
 - sets de IPs distintas por `emailHash` y de `emailHash` distintos por IP, con TTL largo
 - clave de bloqueo temporal por `emailHash` cuando el nivel alcanza CRITICAL, con TTL configurable
 
-Niveles y respuesta:
+### Flujo del login con Auth-risk integrado
 
-- `NORMAL` y `SUSPICIOUS` solo registran log
-- `HIGH` aplica un retardo aleatorio dentro de un rango configurable antes de devolver el error de credenciales
-- `CRITICAL` crea una clave de bloqueo temporal por `emailHash` mediante `SET NX EX`, sin refrescar TTL si ya existe; durante el bloqueo, los siguientes intentos para ese `emailHash` devuelven el mismo 401 que un fallo normal y no contaminan los contadores ni los sets
+1. `LOGIN_ATTEMPT` se registra inmediatamente despues del rate limit clasico y del control de pais. Actualiza los sets `ips:email` y `emails:ip` (no incrementa fallos).
+2. Si `isEmailBlocked(emailHash)` devuelve true (existe la clave de bloqueo en Redis), el flujo entra en **short-circuit**: se emite log `LOGIN_FAILURE` con `reason=temporal_block_active` y se lanza `InvalidCredentialsException` sin contactar con `UserService`. **El short-circuit no contamina contadores ni sets ni aplica delay**, lo que evita extender el bloqueo y degradar UX innecesariamente sobre el `emailHash` ya bloqueado.
+3. Si no hay bloqueo activo, se invoca `userService.authenticateAndLoadUser`:
+   - en exito → `LOGIN_SUCCESS`, scoring sin incrementar contadores, login completa
+   - en fallo → `LOGIN_FAILURE` con incremento de contadores y actualizacion de sets, scoring sobre el estado resultante
+4. Tras el scoring del `LOGIN_FAILURE`, la respuesta progresiva se aplica si la propiedad `authrisk.response.enabled` esta activa:
+   - `HIGH` → retardo aleatorio dentro del rango configurado antes de propagar el 401
+   - `CRITICAL` → creacion del bloqueo temporal con `SET NX EX`; si la creacion fue efectiva, se aplica tambien el retardo; si la clave ya existia, no se refresca TTL ni se aplica retardo adicional
+5. La excepcion se propaga al `GlobalExceptionHandler` exactamente igual que en cualquier credencial invalida: el contrato HTTP devuelto al frontend es indistinguible.
 
-Garantias relevantes:
+### Garantias estructurales
 
-- la respuesta HTTP es identica entre credencial incorrecta y `emailHash` bloqueado: mismo status, mismo mensaje, sin headers adicionales y sin cookies
-- los logs no contienen email plano, password, JWT, refresh token raw ni hash de refresh token; solo `emailHash`, `uaHash`, IP y nivel
-- toda la cadena es fail-open: si Redis no responde o la salt esta vacia, la deteccion queda en no-op y el login funciona como antes
-- la activacion de respuesta progresiva esta gobernada por una propiedad independiente, separable por entorno
+- **Bloqueo solo por `emailHash`**: nunca por IP. Bloquear por IP introduciria impacto desproporcionado sobre redes con NAT corporativo o salida movil agregada y duplicaria lo que ya hace `ApiRateLimitFilter`.
+- **Contrato HTTP uniforme**: credencial incorrecta y `emailHash` bloqueado producen el mismo status, mismo body, sin `Set-Cookie` y sin headers diferenciadores. La unica senal externa observable es la latencia, deliberadamente aleatoria en el rango configurado.
+- **Fail-open absoluto**: si Redis no responde, si la salt no esta definida, o si cualquier excepcion ocurre dentro del scoring, el login funciona como antes. La capa nunca puede convertirse en single point of failure de la autenticacion.
+- **Privacidad operativa**: los logs `[AUTH-RISK]` nunca contienen email plano, password, JWT, refresh token raw ni hash de refresh token; solo `emailHash` y `uaHash` truncados, IP, nivel y razones.
+- **Activacion separable**: la observacion (`authrisk.enabled`) y la respuesta progresiva (`authrisk.response.enabled`) se controlan con propiedades independientes, resolubles por variable de entorno por servidor. El namespace Redis se aisla por entorno con `authrisk.env` (validado actualmente en `ar:test:*` y `ar:audit:*`).
 
 ## Observaciones relevantes
 

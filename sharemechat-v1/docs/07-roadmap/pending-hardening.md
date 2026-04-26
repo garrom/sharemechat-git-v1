@@ -67,11 +67,13 @@ Trabajo posterior recomendado
 
 ### Parte 2B - Auth-risk y abuso de autenticacion
 
-Estado actual:
+Estado actual consolidado (Fase 1 + Fase 2):
 
-- Fase 1 (modo OBSERVE) y Fase 2 (respuesta progresiva con delay en HIGH y bloqueo temporal por `emailHash` en CRITICAL) implementadas sobre login de producto y validadas en TEST con tráfico real
-- contrato HTTP del login no se ha visto alterado: bloqueo y credencial incorrecta devuelven respuesta indistinguible
-- detalles técnicos durables documentados en `docs/02-architecture/backend-architecture.md` y operación del control en `docs/04-operations/runbooks.md`; la decisión estructural está recogida en ADR-008
+- Fase 1 (modo OBSERVE) y Fase 2 (respuesta progresiva con delay en HIGH y bloqueo temporal por `emailHash` en CRITICAL) implementadas sobre login de producto y **validadas con tráfico real en TEST y AUDIT**
+- contrato HTTP del login no se ha visto alterado: bloqueo y credencial incorrecta devuelven respuesta indistinguible (mismo status, mismo body, sin `Set-Cookie`)
+- namespace Redis aislado por entorno (`ar:test:*`, `ar:audit:*`) tras corrección y validación de `AUTHRISK_ENV`
+- logs `[AUTH-RISK]` persistentes en AUDIT vía `journald`; en TEST siguen siendo efímeros mientras el arranque permanezca manual
+- detalles técnicos durables documentados en `docs/02-architecture/backend-architecture.md` y operación del control (activación, validación, diagnóstico, liberación de bloqueo) en `docs/04-operations/runbooks.md`; la decisión estructural está recogida en ADR-008
 
 Objetivo de las siguientes iteraciones:
 

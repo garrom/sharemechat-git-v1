@@ -1,4 +1,0 @@
-date                        | ip            | classification | score | requests | distinct_routes | hosts                       | channels | main_reason            | recommended_action
---------------------------- | ------------- | -------------- | ----- | -------- | --------------- | --------------------------- | -------- | ---------------------- | ------------------
-tmp-audit-access-2026-04-18 | 62.60.130.227 | CRITICA        | 210   | 2        | 2               | audit.sharemechat.com       | FRONTEND | ua_zgrabx2+xmlrpc_scan | actuar            
-tmp-audit-access-2026-04-18 | 90.175.201.51 | NORMAL         | 0     | 2        | 2               | admin.audit.sharemechat.com | ADMIN    | admin_flow_coherente   | ninguna           

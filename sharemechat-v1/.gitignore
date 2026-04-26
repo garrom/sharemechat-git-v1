@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Outputs temporales del pipeline audit-access (regenerables, no versionar) ###
+tmp-*/
+tmp-*
