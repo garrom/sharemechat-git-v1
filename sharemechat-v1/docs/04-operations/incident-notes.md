@@ -1206,3 +1206,61 @@ Recomendacion operativa:
 
 - cualquier timer de un componente que dependa de un artefacto de un stage previo debe configurarse con al menos 15-20 minutos de margen sobre el horario esperado del componente anterior
 - en TEST el timer del blocker esta configurado a `05:45 UTC`; si el classifier de TEST cambia su horario, debe revisarse si sigue habiendo margen suficiente
+
+
+## Cierre prematuro de WebSocket /messages tras login por guard RequireRole
+
+Fecha: `2026-04-26`.
+
+### 1. Resumen
+
+El canal `wss://*.sharemechat.com/messages` se cerraba de forma prematura inmediatamente despues de que el usuario completaba el login y llegaba al dashboard. El comportamiento era reproducible de forma fiable en Firefox. La causa no estaba ni en el backend, ni en la capa edge, ni en el transporte WebSocket, sino en como `RequireRole` reaccionaba al estado de sesion durante una segunda llamada a `loadMe` desencadenada automaticamente por el router.
+
+### 2. Sintoma
+
+- Consola del navegador (Firefox): `WebSocket is closed before the connection is established`
+- Consola del navegador: `[CALL][cleanup] reason= forced-end`
+- El canal `wss://*/messages` intentaba abrirse, se cerraba de inmediato y no volvia a abrirse
+- Login REST y `/api/users/me` respondian siempre `200`; no habia `401` ni `auth:logout`
+- El problema era consistente en Firefox y de aparicion intermitente en Chromium segun velocidad de carga
+
+### 3. Causa raiz
+
+El flujo de login ejecutaba dos llamadas consecutivas a `loadMe` sobre `SessionProvider`:
+
+1. Llamada manual: `await refresh()` dentro de `LoginModalContent` tras `POST /api/auth/login` exitoso
+2. Llamada automatica: `SessionProvider` escucha cambios de `location.pathname` via `useEffect([location?.pathname])`; la navegacion a la ruta del dashboard tras el login disparaba esta segunda llamada
+
+La segunda llamada ejecutaba `setLoading(true)` mientras `user` ya estaba establecido. En ese momento, `RequireRole` evaluaba:
+
+```jsx
+if (loading) return null;  // guard original
+```
+
+Al devolver `null`, React desmontaba el arbol de componentes protegido, incluyendo `DashboardModel`. El efecto de limpieza al desmontar ejecutaba `stopAll()`, que a su vez llamaba a `handleCallEnd(true)` y `closeMsgSocket()`. Esto cerraba el WebSocket `/messages` recien abierto antes de que el handshake se consolidara.
+
+La condicion original no distinguia entre `loading` con sesion ausente (bootstrap inicial legitimo) y `loading` con sesion ya disponible (revalidacion en caliente). Ambos casos terminaban desmontando el dashboard.
+
+### 4. Solucion aplicada
+
+Cambio en `frontend/src/components/RequireRole.jsx`, una linea:
+
+```jsx
+// Antes:
+if (loading) return null;
+
+// Despues:
+if (loading && !user) return null;
+```
+
+Con esta condicion, `RequireRole` solo suspende el render cuando no existe sesion establecida. Si el usuario ya esta autenticado y `loadMe` esta revalidando en segundo plano, el arbol del dashboard permanece montado y el WebSocket `/messages` no recibe la señal de cierre.
+
+No se modifico `SessionProvider`, `DashboardModel`, `msgSocketEngine` ni ningun componente de backend, edge o transporte.
+
+### 5. Resultado
+
+- WebSocket `/messages` queda establemente conectado tras el login en Firefox, Chrome y Edge
+- `[CALL][cleanup] reason= forced-end` deja de aparecer en el flujo normal de entrada al dashboard
+- La segunda llamada a `loadMe` no produce desmontaje visible del dashboard ni interrupciones del canal realtime
+- Build `npm run build` completado sin errores ni advertencias nuevas (advertencias previas preexistentes sin cambio)
+- Validado en `test.sharemechat.com` y `audit.sharemechat.com`
