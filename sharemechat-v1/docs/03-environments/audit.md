@@ -156,3 +156,12 @@ La base operativa estable de TURN en AUDIT queda ademas cerrada con estos criter
 Con ello, la fase minima de TURN en AUDIT puede darse por cerrada a nivel operativo del entorno.
 
 El siguiente paso natural no es reabrir arquitectura en AUDIT, sino replicar de forma controlada el mismo patron en TEST manteniendo la misma logica de aplicacion.
+
+## Product Operational Mode previsto (pendiente de implementación)
+
+Cuando la capa Product Operational Mode esté implementada (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), la intención para AUDIT es:
+
+- modo `OPEN` para preservar validación funcional sobre cuentas existentes
+- registros de cliente y modelo **cerrados server-side**, para evitar creación accidental o externa de cuentas en un entorno destinado a revisión y validación
+
+Hasta entonces, AUDIT se comporta de facto como `OPEN` con registros abiertos.

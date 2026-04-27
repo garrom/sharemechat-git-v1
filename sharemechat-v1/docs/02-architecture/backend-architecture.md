@@ -66,6 +66,28 @@ Estado en Redis bajo namespace `ar:{env}:`:
 - **Privacidad operativa**: los logs `[AUTH-RISK]` nunca contienen email plano, password, JWT, refresh token raw ni hash de refresh token; solo `emailHash` y `uaHash` truncados, IP, nivel y razones.
 - **Activacion separable**: la observacion (`authrisk.enabled`) y la respuesta progresiva (`authrisk.response.enabled`) se controlan con propiedades independientes, resolubles por variable de entorno por servidor. El namespace Redis se aisla por entorno con `authrisk.env` (validado actualmente en `ar:test:*` y `ar:audit:*`).
 
+## Product Operational Mode (diseñado, pendiente de implementación)
+
+El backend prevé una capa transversal de admisión al producto, gobernada por un enum (`OPEN/PRELAUNCH/MAINTENANCE/CLOSED`) y por dos flags independientes de registro (cliente y modelo). Decisión completa en [ADR-009](../06-decisions/adr-009-product-operational-mode.md).
+
+Características estructurales previstas:
+
+- aplicación server-side mediante un filtro REST registrado tras `CookieJwtAuthenticationFilter` y un interceptor de handshake en `/match` y `/messages`
+- regla de decisión centralizada en un único servicio consumido por filtro e interceptor
+- backoffice exento por whitelist explícita de paths admin y por inspección de perfil backoffice resuelto en `Authentication`
+- respuesta de bloqueo basada en HTTP 503 con códigos funcionales estables (`PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED`)
+
+Esta capa **no sustituye** ninguna de las capas existentes:
+
+- los **roles** (`ROLE_*` y `BackofficeAuthorities`) siguen siendo la autoridad de autorización dentro de las superficies admitidas
+- **auth-risk** sigue siendo la capa específica de abuso de credenciales sobre login real
+- el **rate limiting** clásico (`ApiRateLimitFilter` y derivados) sigue regulando caudal por IP y por superficie
+- el **country gate** (`CountryAccessService`) sigue regulando admisión por país en los puntos donde ya aplica
+
+Product Operational Mode regula **admisión global del producto**: decide si dejar pasar al usuario en este momento, antes de que cualquiera de las capas anteriores actúe sobre él. Las cuatro capas son ortogonales y se mantienen separadas para no mezclar fases de negocio (prelaunch, mantenimiento, cierre) con autorización, abuso de credenciales, caudal u origen geográfico.
+
+Estado actual: diseño aprobado y documentado en ADR-009; implementación pendiente. Hasta que se implemente, el comportamiento del backend equivale al modo `OPEN` con registros abiertos.
+
 ## Observaciones relevantes
 
 - el storage versionado para uploads privados soporta proveedor local y proveedor S3

@@ -161,6 +161,51 @@ En **AUDIT**, en cambio, el backend se ejecuta como servicio `sharemechat-audit.
 
 Mientras el modo de arranque de TEST siga siendo manual, los procedimientos de diagnóstico que dependan de logs históricos deben asumir esta limitación. Esta deuda operativa está recogida también en `known-risks.md` como riesgo residual de logs no persistentes y debe consultarse desde allí. La mitigación natural —despliegue como servicio con redirección a archivo o `journald`— es objeto de iteración futura y no se improvisa caso a caso.
 
+## Runbook de Product Operational Mode (procedimiento pendiente hasta implementación)
+
+La capa Product Operational Mode está **diseñada y aprobada** en [ADR-009](../06-decisions/adr-009-product-operational-mode.md) pero **no implementada** todavía. Este runbook documenta el procedimiento operativo previsto para cuando exista, de modo que pueda ejecutarse sin reabrir diseño.
+
+### Cambio de modo
+
+El modo se gobierna por variables de entorno por servidor (modo principal y flags de registro de cliente y modelo). El cambio de modo se considera operativo y requiere:
+
+1. ajustar las variables en el host del backend afectado
+2. reiniciar el backend de forma controlada (mientras no exista hot-reload de propiedades, asumido en la decisión)
+3. validar el comportamiento esperado según la lista de comprobaciones de abajo
+
+El cambio entre `OPEN`, `PRELAUNCH`, `MAINTENANCE` y `CLOSED` debe coordinarse con el frontend solo en cuanto a comunicación al usuario (mensajes "Coming Soon" / "Mantenimiento" se generan automáticamente desde los códigos backend).
+
+### Comprobaciones mínimas tras cambio de modo
+
+1. **Backoffice**:
+   - `POST /api/admin/auth/login` responde 200 y emite cookie admin.
+   - `/api/admin/stats/overview` (o panel similar) responde 200 con cookie admin.
+   - `GET /api/users/me` con cookie admin responde 200 con `backofficeRoles` no vacío.
+2. **Login producto**:
+   - en `OPEN`, responde 200 y emite cookies de producto.
+   - en `PRELAUNCH/MAINTENANCE/CLOSED`, responde 503 con el código esperado (`PRODUCT_UNAVAILABLE` o `PRODUCT_MAINTENANCE`) y sin `Set-Cookie` de sesión nueva.
+3. **Refresh producto** (`POST /api/auth/refresh`):
+   - en cualquier modo restrictivo con cookie de producto previa, responde 503 y devuelve `Set-Cookie` con `Max-Age=0` para `access_token` y `refresh_token`.
+   - con cookie de backoffice, responde 200 sin tocar cookies.
+4. **Registro cliente y modelo**:
+   - con la flag correspondiente a `true` y modo distinto de `CLOSED`, responde 200 y crea la cuenta con su token de verificación.
+   - con la flag a `false` o modo `CLOSED`, responde 503 con `code: REGISTRATION_CLOSED` y `scope` correspondiente.
+5. **WebSocket producto**:
+   - en `OPEN`, handshake `/match` y `/messages` abre con cookie válida.
+   - en cualquier modo restrictivo, handshake responde 503 y la conexión no se abre.
+6. **Email verification y forgot/reset password**:
+   - operativos en cualquier modo.
+7. **Webhooks externos** (`/api/billing/ccbill/notify`, `/api/kyc/veriff/webhook`):
+   - operativos en cualquier modo.
+8. **Logs**:
+   - aparecen entradas con prefijo `[PRODUCT-MODE]` (o el prefijo final que se adopte) por cada bloqueo, sin emails ni passwords.
+
+### Rollback rápido
+
+El rollback canónico es revertir las variables de entorno al modo anterior (`OPEN` por defecto) y reiniciar. Como la decisión vive en variables de entorno y no en código compilado, no requiere redeploy. La capa está diseñada para ser reversible operativamente en cualquier momento.
+
+Estado actual de este runbook: **procedimiento pendiente de implementación efectiva**. Hasta que exista la capa, las comprobaciones anteriores no aplican y el sistema se comporta como `OPEN` con registros abiertos.
+
 ## Regla de saneado
 
 Si un runbook necesita un dato sensible concreto para ejecución operativa, ese dato no debe fijarse en este corpus; debe resolverse desde la fuente operativa correspondiente.

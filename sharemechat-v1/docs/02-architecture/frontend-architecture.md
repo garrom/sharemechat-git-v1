@@ -58,6 +58,23 @@ Reglas verificadas tras la correccion del flujo:
 - la navegacion a `/dashboard-admin` solo debe ocurrir si la revalidacion devuelve un usuario valido con acceso real de backoffice
 - `RequireRole` actua como guard pasivo del estado ya resuelto y no debe relanzar `refresh()` por su cuenta
 
+## Product Operational Mode en frontend (diseñado, pendiente de implementación)
+
+El frontend deberá tratar como estado funcional los códigos emitidos por backend cuando esté activo Product Operational Mode (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)):
+
+- `PRODUCT_UNAVAILABLE` — producto bloqueado por modo `PRELAUNCH` o `CLOSED`. Pantalla de "Coming Soon".
+- `PRODUCT_MAINTENANCE` — producto bloqueado temporalmente por modo `MAINTENANCE`. Pantalla de mantenimiento.
+- `REGISTRATION_CLOSED` — registro deshabilitado para la superficie indicada (`scope` `client` o `model`). Mensaje localizado en el modal de registro.
+
+Reglas estructurales que se mantienen:
+
+- el frontend **solo muestra estado**, no es autoridad de seguridad. El bloqueo real vive en backend.
+- el status HTTP asociado a estos códigos es 503 y **no debe disparar refresh automático** en `apiFetch`.
+- los engines de WebSocket deben tratar el cierre de handshake con código de modo como cierre definitivo, sin reintento.
+- la build de backoffice ignora estos códigos: cualquier redirección a "Coming Soon" o "Mantenimiento" aplica solo al build de producto.
+
+Estado actual: diseñado, pendiente de implementación. Hasta que se implemente, el frontend no necesita conocer estos códigos.
+
 ## Riesgo actual documentable
 
 Las URLs de superficie versionadas en frontend siguen acopladas explicitamente al entorno de test. Eso refuerza la necesidad de que la documentacion por entornos distinga entre topologia objetivo y configuracion realmente versionada.

@@ -66,3 +66,12 @@ El legacy asociado a referencias historicas `/uploads/...` ya ha quedado elimina
 - operacion efectiva del entorno exclusivamente sobre S3 privado y proxy backend
 
 Se mantuvo backup previo del material legado como medida de seguridad operativa.
+
+## Product Operational Mode previsto (pendiente de implementación)
+
+Cuando la capa Product Operational Mode esté implementada (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), la intención para TEST es:
+
+- modo `OPEN` para mantener acceso normal a las cuentas existentes
+- registros de cliente y modelo **cerrados server-side**, para que un acceso directo a `POST /api/users/register/*` desde fuera no cree cuentas aunque alguien conozca la URL
+
+Hasta entonces, TEST se comporta de facto como `OPEN` con registros abiertos.

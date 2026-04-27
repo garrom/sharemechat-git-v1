@@ -8,6 +8,8 @@ El roadmap principal vive en [go-live-roadmap.md](go-live-roadmap.md) y se organ
 
 A día de hoy la fase activa del roadmap es **Fase 0 — Cierre de riesgos pre-PRO**.
 
+Dentro de Fase 0, la pieza activa de diseño y documentación es **Product Operational Mode** (modos `OPEN/PRELAUNCH/MAINTENANCE/CLOSED` y flags de registro independientes), recogida en [ADR-009](../06-decisions/adr-009-product-operational-mode.md). Estado: diseñada, pendiente de implementación. Es prerrequisito de Fase 1.
+
 ## Qué ya existe con consistencia
 
 - producto y backoffice sobre base común

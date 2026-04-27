@@ -19,3 +19,13 @@ Por tanto, este documento se mantiene deliberadamente sobrio:
 ## Política
 
 Cualquier ampliación futura de este documento debe apoyarse en evidencia versionada o en una actualización documental específica del entorno.
+
+## Product Operational Mode previsto (pendiente de implementación)
+
+Cuando Product Operational Mode esté implementado (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), la intención de configuración para PRO es:
+
+- en **Fase 1 — Prelaunch público controlado** del roadmap, modo `PRELAUNCH` con registros de cliente y modelo abiertos. Producto bloqueado server-side y backoffice operativo.
+- al alcanzar **Fase 5 — PRO público limitado**, transición a modo `OPEN` con registros abiertos.
+- modo `MAINTENANCE` reservado para ventanas operativas controladas en cualquier momento posterior.
+
+Hasta que la capa esté implementada, PRO no dispone de gating server-side por modo.

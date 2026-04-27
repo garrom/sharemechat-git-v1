@@ -31,12 +31,12 @@ Alcance:
 - revisar preparación real de `properties` y variables de entorno para PRO (paridad con AUDIT, secretos, dominios, CORS, cookie domain, namespace Redis).
 - cerrar el riesgo económico abierto entre `start_time` y `billable_start` en cierre de `stream_records`.
 - cerrar o proteger los endpoints de simulación económica antes de cualquier circulación de dinero real.
-- definir gating operativo por entorno para registro y login (qué entorno admite registro, qué entorno admite login real, qué entorno bloquea acceso).
+- definir e implantar **Product Operational Mode** como capa server-side única de gating por entorno (modos `OPEN/PRELAUNCH/MAINTENANCE/CLOSED` y flags independientes de registro de cliente y modelo). Decisión registrada en [ADR-009](../06-decisions/adr-009-product-operational-mode.md). Esta capa desbloquea: cierre de registro público en TEST/AUDIT, modo PRELAUNCH en PRO para habilitar Fase 1, y modo MAINTENANCE para operación posterior a GO LIVE.
 - aplicar blacklist por países antes de abrir PRO, con criterio homogéneo entre REST y WebSocket.
 
 Input técnico: `pending-hardening.md` y `test-levelling-plan.md`.
 
-Esta fase debe cerrarse antes de habilitar Fase 1.
+Esta fase debe cerrarse antes de habilitar Fase 1. Específicamente, Product Operational Mode debe estar implementado y validado antes de Fase 1, ya que es lo que permite tener registro abierto y producto cerrado simultáneamente en PRO.
 
 ### Estado detallado
 
@@ -44,7 +44,7 @@ Esta fase debe cerrarse antes de habilitar Fase 1.
 - properties/env de PRO → NO VALIDADO
 - cierre económico stream (`start_time` vs `billable_start`) → PENDIENTE
 - endpoints de simulación económica → NO VALIDADO
-- gating registro/login → NO DEFINIDO
+- Product Operational Mode → DISEÑADO, pendiente de implementación (ADR-009)
 - blacklist por países → PENDIENTE
 
 ---

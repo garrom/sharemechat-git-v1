@@ -50,6 +50,14 @@ Fase 4. Validación por flujos
 - validar desktop y mobile en producto antes de extender limpieza a superficies secundarias
 - dejar backoffice para una validación separada una vez el producto tenga criterio estable
 
+### Parte 1B - Product Operational Mode
+
+Capa server-side de admisión al producto, transversal a auth, roles y rate limit. Diseñada como enum de modo (`OPEN/PRELAUNCH/MAINTENANCE/CLOSED`) más dos flags independientes de registro (cliente y modelo), aplicada por filtro REST tras `CookieJwtAuthenticationFilter` y por interceptor de handshake en `/match` y `/messages`. Decisión completa en [ADR-009](../06-decisions/adr-009-product-operational-mode.md).
+
+Esta entrada es **backlog técnico consumido por Fase 0** del roadmap principal y es **prerrequisito de Fase 1**. Estado: diseñada, pendiente de implementación. No duplicar aquí el contenido de la ADR; cualquier matiz de fondo se discute allí.
+
+No mezclar este frente con i18n ni con auth-risk: el modo decide *si* dejas pasar; auth-risk regula abuso de credenciales sobre login real; i18n decide qué texto mostrar al usuario admitido. Son capas distintas.
+
 ### Parte 2 - Backend
 
 Qué conviene congelar por ahora
