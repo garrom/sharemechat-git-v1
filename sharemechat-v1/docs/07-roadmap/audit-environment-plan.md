@@ -1,5 +1,8 @@
 # Plan del entorno AUDIT
 
+> **Naturaleza de este documento.**
+> Plan histórico y operativo del entorno AUDIT. Se mantiene como referencia del patrón ya validado y como **entorno de validación externa y patrón operativo** previo a PRO. En el roadmap principal ([go-live-roadmap.md](go-live-roadmap.md)) AUDIT es el banco de pruebas natural para validaciones de Fase 3 (PSP CCBill) y para cualquier validación end-to-end previa a apertura PRO.
+
 ## Objetivo
 
 Consolidar AUDIT como entorno aislado, utilizable para validacion tecnica, control interno y preparacion de revisiones externas.

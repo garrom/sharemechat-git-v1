@@ -2,7 +2,11 @@
 
 La lectura consolidada del repositorio y del material previo sitúa a SharemeChat en una fase de MVP industrial avanzado.
 
-La prioridad inmediata ya no es abrir nuevos frentes funcionales, sino estabilizar el producto y ordenar la deuda transversal para que los siguientes cambios no vuelvan a mezclar copy, errores de negocio, realtime y UX en los mismos componentes.
+La fase actual es de **transición hacia GO LIVE controlado**, no únicamente de hardening técnico. La prioridad ya no es solo estabilizar producto y ordenar deuda transversal, sino ejecutar el camino ordenado de fases hacia lanzamiento, captación inicial y monetización real.
+
+El roadmap principal vive en [go-live-roadmap.md](go-live-roadmap.md) y se organiza por fases de negocio. Este documento se mantiene como apunte rápido de estado y de prioridades vivas, y debe leerse contra la fase activa de ese roadmap. El backlog técnico estructural se mantiene aparte en [pending-hardening.md](pending-hardening.md).
+
+A día de hoy la fase activa del roadmap es **Fase 0 — Cierre de riesgos pre-PRO**.
 
 ## Qué ya existe con consistencia
 

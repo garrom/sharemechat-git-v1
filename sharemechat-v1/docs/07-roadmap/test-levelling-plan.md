@@ -1,5 +1,8 @@
 # Plan de nivelación de TEST respecto a AUDIT
 
+> **Naturaleza de este documento.**
+> Plan operativo de nivelación del entorno TEST respecto a AUDIT. Sirve como **input técnico para Fase 0** del roadmap principal ([go-live-roadmap.md](go-live-roadmap.md)) — especialmente para la revisión de paridad de `properties`/env y para el cierre de acoplamientos a TEST — pero **no sustituye al roadmap principal** ni constituye por sí mismo una fase de negocio.
+
 ## Objetivo
 
 Elevar el entorno TEST al mismo nivel operativo que AUDIT sin abrir refactors de aplicación. El backend Spring Boot y el frontend React comparten código fuente con AUDIT y PRO, por lo que la nivelación es casi exclusivamente de infraestructura y operación, con diferencias resueltas por properties y variables de entorno por perfil.

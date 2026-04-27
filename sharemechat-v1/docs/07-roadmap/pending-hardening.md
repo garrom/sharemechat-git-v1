@@ -1,5 +1,12 @@
 # Endurecimiento pendiente
 
+> **Naturaleza de este documento.**
+> Este documento es **backlog técnico estructural**, no roadmap ejecutivo. Recoge deuda observable, líneas de hardening y planes de estabilización por frente, sin orden de negocio.
+>
+> El roadmap principal hacia GO LIVE vive en [go-live-roadmap.md](go-live-roadmap.md) y dicta qué entradas de este backlog se consumen en cada fase y cuándo. Una entrada aquí no implica trabajo inmediato: la prioridad la fija el roadmap.
+>
+> No borrar entradas técnicas que dejen de ser prioritarias por decisión de fase; marcarlas como obsoletas y mantener la trazabilidad.
+
 ## Plan maestro de estabilización progresiva
 
 Objetivo:
