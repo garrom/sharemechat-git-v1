@@ -1,6 +1,8 @@
 package com.sharemechat.security;
 
 import com.sharemechat.service.ApiRateLimitService;
+import com.sharemechat.service.ProductOperationalModeService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -26,15 +28,24 @@ public class SecurityConfig {
     private final JwtUtil jwtUtil;
     private final UserDetailsServiceImpl userDetailsService;
     private final ApiRateLimitService apiRateLimitService;
+    private final ProductOperationalModeService productOperationalModeService;
+
+    @Value("${auth.cookieDomain}")
+    private String cookieDomain;
+
+    @Value("${auth.secureCookies:true}")
+    private boolean secureCookies;
 
     public SecurityConfig(
             JwtUtil jwtUtil,
             UserDetailsServiceImpl userDetailsService,
-            ApiRateLimitService apiRateLimitService
+            ApiRateLimitService apiRateLimitService,
+            ProductOperationalModeService productOperationalModeService
     ) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.apiRateLimitService = apiRateLimitService;
+        this.productOperationalModeService = productOperationalModeService;
     }
 
     @Bean
@@ -158,6 +169,10 @@ public class SecurityConfig {
                 .addFilterBefore(
                         new CookieJwtAuthenticationFilter(jwtUtil, userDetailsService),
                         UsernamePasswordAuthenticationFilter.class
+                )
+                .addFilterAfter(
+                        new ProductOperationalModeFilter(productOperationalModeService, jwtUtil, cookieDomain, secureCookies),
+                        CookieJwtAuthenticationFilter.class
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
