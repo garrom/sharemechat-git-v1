@@ -35,16 +35,20 @@ Responsabilidades principales:
 
 La confirmacion operativa del stream deja de depender directamente de `tech-media-ready` por WebSocket. Ese mensaje se mantiene como senal auxiliar y de observabilidad, pero la autoridad real pasa a ser `POST /api/streams/{streamRecordId}/ack-media`.
 
-En random y calling, frontend emite ahora `ack-media` cuando detecta condiciones tecnicas mas fuertes que el signaling puro:
+Estado: **IMPLEMENTADA y validada en TEST**.
+
+En random y calling, frontend emite `ack-media` cuando detecta condiciones tecnicas mas fuertes que el signaling puro:
 
 - media local en estado `live`
 - media remota en estado `live`
 - `RTCPeerConnection` o ICE en estado conectado usable
-- un margen corto de estabilidad antes de enviar el ACK
+- margen de estabilidad temporal antes de enviar el ACK
 
-Backend no marca `confirmed_at` ni `billable_start` con un ACK individual. La sesion solo queda confirmada cuando recibe doble ACK valido de ambos lados sobre el mismo `streamRecordId`.
+Backend no marca `confirmed_at` ni `billable_start` con un ACK individual. La sesion solo queda confirmada cuando recibe doble ACK valido de ambos lados sobre el mismo `streamRecordId`: cliente y modelo. El backend valida que el usuario que emite el ACK pertenece al stream y no confirma streams cerrados.
 
-La evidencia actual del codigo sigue mostrando una deuda tecnica distinta: el cierre economico de `stream_records` continua calculando el cargo final desde `start_time` y no desde `confirmed_at` o `billable_start`. Aunque la autoridad de confirmacion tecnica ya es mas fuerte, ese tramo economico sigue pendiente de correccion separada.
+`confirmed_at` y `billable_start` se escriben de forma atomica y son iguales por construccion. Si `confirmed_at` queda `NULL`, `endSession` cierra el stream sin cargo.
+
+El cierre economico de `stream_records` usa `billable_start` como inicio facturable, con fallback defensivo a `confirmed_at`. `start_time` se mantiene como instante tecnico de creacion del stream, pero ya no es la referencia de facturacion final. Con ello no se cobra el tiempo previo al establecimiento real de media.
 
 ## Riesgo tecnico documentado
 

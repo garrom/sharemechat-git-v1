@@ -5,7 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 public class CcbillSessionRequestDTO {
 
     @NotBlank
-    private String packId; // ej: "P5", "P15", "P30", "P45"
+    private String packId; // catálogo vigente (ADR-011 / Fase 3A): "P10", "P20", "P40"
 
     public String getPackId() {
         return packId;

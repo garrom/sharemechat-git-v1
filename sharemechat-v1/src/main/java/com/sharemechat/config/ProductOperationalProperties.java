@@ -31,6 +31,7 @@ public class ProductOperationalProperties {
 
     private Access access = new Access();
     private Registration registration = new Registration();
+    private Simulation simulation = new Simulation();
 
     public Access getAccess() {
         return access;
@@ -46,6 +47,14 @@ public class ProductOperationalProperties {
 
     public void setRegistration(Registration registration) {
         this.registration = registration == null ? new Registration() : registration;
+    }
+
+    public Simulation getSimulation() {
+        return simulation;
+    }
+
+    public void setSimulation(Simulation simulation) {
+        this.simulation = simulation == null ? new Simulation() : simulation;
     }
 
     public static class Access {
@@ -118,6 +127,18 @@ public class ProductOperationalProperties {
 
         public void setEnabled(boolean enabled) {
             this.enabled = enabled;
+        }
+    }
+
+    public static class Simulation {
+        private Toggle transactionsDirect = new Toggle(false);
+
+        public Toggle getTransactionsDirect() {
+            return transactionsDirect;
+        }
+
+        public void setTransactionsDirect(Toggle transactionsDirect) {
+            this.transactionsDirect = transactionsDirect == null ? new Toggle(false) : transactionsDirect;
         }
     }
 }

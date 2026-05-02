@@ -684,6 +684,223 @@ public class BalanceLedgerAuditRepository {
         return out;
     }
 
+    // =======================================================================
+    // BFPM Fase 4B-a — auditoría interna de bonus financiado por plataforma.
+    // Ver ADR-012. Las queries siguientes son read-only y comparten EPSILON 0.01
+    // con el resto del job. La detección de huérfanos se basa en la trazabilidad
+    // por descripción estructurada introducida en Fase 4A:
+    //   transactions.description          → "BFPM bonus_grant pack=... order=..."
+    //   platform_transactions.description → "BFPM bonus_funding pack=... order=..."
+    // =======================================================================
+
+    public static class BfpmInvariantRow {
+        private final BigDecimal sumBonusGrant;
+        private final BigDecimal sumBonusFunding;
+        private final BigDecimal delta;
+
+        public BfpmInvariantRow(BigDecimal sumBonusGrant, BigDecimal sumBonusFunding, BigDecimal delta) {
+            this.sumBonusGrant = sumBonusGrant;
+            this.sumBonusFunding = sumBonusFunding;
+            this.delta = delta;
+        }
+
+        public BigDecimal getSumBonusGrant() { return sumBonusGrant; }
+        public BigDecimal getSumBonusFunding() { return sumBonusFunding; }
+        public BigDecimal getDelta() { return delta; }
+    }
+
+    public static class BfpmBonusGrantOrphanRow {
+        private final Long transactionId;
+        private final Long userId;
+        private final BigDecimal amount;
+        private final String description;
+
+        public BfpmBonusGrantOrphanRow(Long transactionId, Long userId, BigDecimal amount, String description) {
+            this.transactionId = transactionId;
+            this.userId = userId;
+            this.amount = amount;
+            this.description = description;
+        }
+
+        public Long getTransactionId() { return transactionId; }
+        public Long getUserId() { return userId; }
+        public BigDecimal getAmount() { return amount; }
+        public String getDescription() { return description; }
+    }
+
+    public static class BfpmBonusFundingOrphanRow {
+        private final Long platformTransactionId;
+        private final BigDecimal amount;
+        private final String description;
+
+        public BfpmBonusFundingOrphanRow(Long platformTransactionId, BigDecimal amount, String description) {
+            this.platformTransactionId = platformTransactionId;
+            this.amount = amount;
+            this.description = description;
+        }
+
+        public Long getPlatformTransactionId() { return platformTransactionId; }
+        public BigDecimal getAmount() { return amount; }
+        public String getDescription() { return description; }
+    }
+
+    public static class TotalPagosMismatchRow {
+        private final Long userId;
+        private final BigDecimal totalPagos;
+        private final BigDecimal sumIngreso;
+        private final BigDecimal delta;
+
+        public TotalPagosMismatchRow(Long userId, BigDecimal totalPagos, BigDecimal sumIngreso, BigDecimal delta) {
+            this.userId = userId;
+            this.totalPagos = totalPagos;
+            this.sumIngreso = sumIngreso;
+            this.delta = delta;
+        }
+
+        public Long getUserId() { return userId; }
+        public BigDecimal getTotalPagos() { return totalPagos; }
+        public BigDecimal getSumIngreso() { return sumIngreso; }
+        public BigDecimal getDelta() { return delta; }
+    }
+
+    /**
+     * Invariante global BFPM:
+     *   Σ amount(transactions, op=BONUS_GRANT) + Σ amount(platform_transactions, op=BONUS_FUNDING) ≈ 0
+     * El delta debe estar dentro del EPSILON (0.01) que usa el resto del job.
+     */
+    @SuppressWarnings("unchecked")
+    public BfpmInvariantRow getBfpmInvariantSummary() {
+        String sql = """
+            SELECT
+              COALESCE((SELECT SUM(amount) FROM transactions          WHERE operation_type='BONUS_GRANT'),   0) AS sum_grant,
+              COALESCE((SELECT SUM(amount) FROM platform_transactions WHERE operation_type='BONUS_FUNDING'), 0) AS sum_funding,
+              ROUND(
+                COALESCE((SELECT SUM(amount) FROM transactions          WHERE operation_type='BONUS_GRANT'),   0)
+                +
+                COALESCE((SELECT SUM(amount) FROM platform_transactions WHERE operation_type='BONUS_FUNDING'), 0)
+              , 2) AS delta
+            """;
+
+        List<Object[]> rows = em.createNativeQuery(sql).getResultList();
+        if (rows.isEmpty()) {
+            return new BfpmInvariantRow(BigDecimal.ZERO, BigDecimal.ZERO, BigDecimal.ZERO);
+        }
+        Object[] r = rows.get(0);
+        BigDecimal sumGrant = (BigDecimal) r[0];
+        BigDecimal sumFunding = (BigDecimal) r[1];
+        BigDecimal delta = (BigDecimal) r[2];
+        return new BfpmInvariantRow(
+                sumGrant != null ? sumGrant : BigDecimal.ZERO,
+                sumFunding != null ? sumFunding : BigDecimal.ZERO,
+                delta != null ? delta : BigDecimal.ZERO
+        );
+    }
+
+    /**
+     * BONUS_GRANT (cliente) sin BONUS_FUNDING (plataforma) emparejado por descripción.
+     * Mecánica de pareja según Fase 4A: la descripción del BONUS_FUNDING coincide con la del
+     * BONUS_GRANT sustituyendo "bonus_grant" por "bonus_funding".
+     */
+    @SuppressWarnings("unchecked")
+    public List<BfpmBonusGrantOrphanRow> findBonusGrantsWithoutFunding(int limit) {
+        String sql = """
+            SELECT t.id, t.user_id, t.amount, t.description
+              FROM transactions t
+              LEFT JOIN platform_transactions p
+                ON p.operation_type = 'BONUS_FUNDING'
+               AND p.description = REPLACE(t.description, 'bonus_grant', 'bonus_funding')
+             WHERE t.operation_type = 'BONUS_GRANT'
+               AND p.id IS NULL
+             ORDER BY t.id DESC
+             LIMIT :limit
+            """;
+
+        List<Object[]> rows = em.createNativeQuery(sql)
+                .setParameter("limit", limit)
+                .getResultList();
+
+        List<BfpmBonusGrantOrphanRow> out = new ArrayList<>(rows.size());
+        for (Object[] r : rows) {
+            Long txId = r[0] != null ? ((Number) r[0]).longValue() : null;
+            Long userId = r[1] != null ? ((Number) r[1]).longValue() : null;
+            BigDecimal amount = (BigDecimal) r[2];
+            String description = r[3] != null ? String.valueOf(r[3]) : null;
+            out.add(new BfpmBonusGrantOrphanRow(txId, userId, amount, description));
+        }
+        return out;
+    }
+
+    /**
+     * BONUS_FUNDING (plataforma) sin BONUS_GRANT (cliente) emparejado por descripción.
+     * Sentido inverso del check anterior.
+     */
+    @SuppressWarnings("unchecked")
+    public List<BfpmBonusFundingOrphanRow> findBonusFundingsWithoutGrant(int limit) {
+        String sql = """
+            SELECT p.id, p.amount, p.description
+              FROM platform_transactions p
+              LEFT JOIN transactions t
+                ON t.operation_type = 'BONUS_GRANT'
+               AND t.description = REPLACE(p.description, 'bonus_funding', 'bonus_grant')
+             WHERE p.operation_type = 'BONUS_FUNDING'
+               AND t.id IS NULL
+             ORDER BY p.id DESC
+             LIMIT :limit
+            """;
+
+        List<Object[]> rows = em.createNativeQuery(sql)
+                .setParameter("limit", limit)
+                .getResultList();
+
+        List<BfpmBonusFundingOrphanRow> out = new ArrayList<>(rows.size());
+        for (Object[] r : rows) {
+            Long ptId = r[0] != null ? ((Number) r[0]).longValue() : null;
+            BigDecimal amount = (BigDecimal) r[1];
+            String description = r[2] != null ? String.valueOf(r[2]) : null;
+            out.add(new BfpmBonusFundingOrphanRow(ptId, amount, description));
+        }
+        return out;
+    }
+
+    /**
+     * clients.total_pagos debe coincidir con Σ amount(transactions, op=INGRESO) por usuario,
+     * con tolerancia EPSILON (0.01). NO debe incluir BONUS_GRANT.
+     */
+    @SuppressWarnings("unchecked")
+    public List<TotalPagosMismatchRow> findClientsTotalPagosVsIngresoMismatch(int limit) {
+        String sql = """
+            SELECT
+              c.user_id,
+              COALESCE(c.total_pagos, 0) AS total_pagos,
+              COALESCE(ing.sum_ingreso, 0) AS sum_ingreso,
+              ROUND(COALESCE(c.total_pagos, 0) - COALESCE(ing.sum_ingreso, 0), 2) AS delta
+              FROM clients c
+              LEFT JOIN (
+                SELECT t.user_id, SUM(t.amount) AS sum_ingreso
+                  FROM transactions t
+                 WHERE t.operation_type = 'INGRESO'
+                 GROUP BY t.user_id
+              ) ing ON ing.user_id = c.user_id
+             WHERE ABS(ROUND(COALESCE(c.total_pagos, 0) - COALESCE(ing.sum_ingreso, 0), 2)) > 0.01
+             ORDER BY ABS(ROUND(COALESCE(c.total_pagos, 0) - COALESCE(ing.sum_ingreso, 0), 2)) DESC
+             LIMIT :limit
+            """;
+
+        List<Object[]> rows = em.createNativeQuery(sql)
+                .setParameter("limit", limit)
+                .getResultList();
+
+        List<TotalPagosMismatchRow> out = new ArrayList<>(rows.size());
+        for (Object[] r : rows) {
+            Long userId = r[0] != null ? ((Number) r[0]).longValue() : null;
+            BigDecimal totalPagos = (BigDecimal) r[1];
+            BigDecimal sumIngreso = (BigDecimal) r[2];
+            BigDecimal delta = (BigDecimal) r[3];
+            out.add(new TotalPagosMismatchRow(userId, totalPagos, sumIngreso, delta));
+        }
+        return out;
+    }
+
     private LocalDateTime toLocalDateTime(Object value) {
         if (value == null) {
             return null;

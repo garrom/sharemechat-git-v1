@@ -67,11 +67,21 @@ El legacy asociado a referencias historicas `/uploads/...` ya ha quedado elimina
 
 Se mantuvo backup previo del material legado como medida de seguridad operativa.
 
-## Product Operational Mode previsto (pendiente de implementación)
+## Product Operational Mode (operativo, alcance parcial)
 
-Cuando la capa Product Operational Mode esté implementada (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), la intención para TEST es:
+La capa Product Operational Mode (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)) está activa en TEST con configuración:
 
-- modo `OPEN` para mantener acceso normal a las cuentas existentes
-- registros de cliente y modelo **cerrados server-side**, para que un acceso directo a `POST /api/users/register/*` desde fuera no cree cuentas aunque alguien conozca la URL
+- `PRODUCT_ACCESS_MODE=OPEN`
+- `PRODUCT_REGISTRATION_CLIENT_ENABLED=false`
+- `PRODUCT_REGISTRATION_MODEL_ENABLED=false`
+- `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED` configurable segun necesidad operativa
 
-Hasta entonces, TEST se comporta de facto como `OPEN` con registros abiertos.
+Resultado verificado con tráfico real:
+
+- las cuentas existentes operan con normalidad (login, matching, sesiones, gifts) sin regresión
+- los endpoints `POST /api/users/register/client` y `POST /api/users/register/model` responden 503 `REGISTRATION_CLOSED` server-side aunque se acceda directamente fuera del frontend
+- TEST puede usar `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=true` para simulación interna controlada
+- con `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`, se validó que `POST /api/transactions/first` y `POST /api/transactions/add-balance` responden 503 `SIMULATION_DISABLED`
+- `POST /api/transactions/payout` no queda afectado por la flag de simulación directa
+
+Detalle operativo y procedimiento en [runbooks.md](../04-operations/runbooks.md).

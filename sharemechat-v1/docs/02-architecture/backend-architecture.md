@@ -25,6 +25,30 @@ El backend es una aplicacion Spring Boot sobre Java 17 que concentra:
 - MySQL como persistencia principal
 - Redis para rate limiting, estado online, locks, seen state y deteccion de abuso de autenticacion
 
+## Streams, confirmacion media y facturacion
+
+La facturacion de streams se apoya en una separacion explicita entre tiempo tecnico y tiempo facturable:
+
+- `start_time`: instante tecnico de creacion del `stream_record` en el match o llamada. No es referencia de facturacion final.
+- `confirmed_at`: instante en que el backend confirma la sesion tras doble ACK media valido.
+- `billable_start`: inicio facturable del stream. Se escribe atomically junto a `confirmed_at` y coincide con el por construccion.
+- `end_time`: instante de cierre de la sesion.
+
+Flujo resumido:
+
+`start_time` -> senalizacion WebRTC -> doble ACK media cliente/modelo -> `confirmed_at`/`billable_start` -> facturacion desde `billable_start` -> `end_time`.
+
+Garantias actuales:
+
+- frontend solo emite `ack-media` tras media local y remota en `live`, conexion WebRTC usable y margen de estabilidad
+- backend exige ACK valido de cliente y modelo del mismo `streamRecordId`
+- backend no confirma streams cerrados
+- sin `confirmed_at` no hay cobro
+- `endSession` calcula los segundos facturables desde `billable_start`, con fallback defensivo a `confirmed_at`
+- `endIfBelowThreshold` calcula el consumo acumulado desde `confirmed_at`, coherente con `billable_start`
+
+Estado: Fase 1 (doble ACK media) y Fase 2 (alineacion de inicio facturable) implementadas y validadas en TEST con datos reales. La validacion confirmo que `seconds_from_billable` puede diferir de `seconds_from_start` y que `STREAM_CHARGE`, `STREAM_EARNING`, `STREAM_MARGIN` y gifts quedan coherentes con el inicio facturable real.
+
 ## Auth-risk: deteccion y respuesta progresiva sobre login
 
 El backend incluye una capa de deteccion de abuso de autenticacion separada del rate limit clasico de `ApiRateLimitService`. La capa esta implementada y validada con trafico real en TEST y AUDIT sobre login de producto. Su objetivo no es regular el caudal de peticiones sino observar patrones de fallo, calcular un nivel de riesgo y aplicar una respuesta proporcional sin alterar el contrato HTTP.
@@ -66,27 +90,51 @@ Estado en Redis bajo namespace `ar:{env}:`:
 - **Privacidad operativa**: los logs `[AUTH-RISK]` nunca contienen email plano, password, JWT, refresh token raw ni hash de refresh token; solo `emailHash` y `uaHash` truncados, IP, nivel y razones.
 - **Activacion separable**: la observacion (`authrisk.enabled`) y la respuesta progresiva (`authrisk.response.enabled`) se controlan con propiedades independientes, resolubles por variable de entorno por servidor. El namespace Redis se aisla por entorno con `authrisk.env` (validado actualmente en `ar:test:*` y `ar:audit:*`).
 
-## Product Operational Mode (diseñado, pendiente de implementación)
+## Product Operational Mode (implementado, alcance parcial)
 
-El backend prevé una capa transversal de admisión al producto, gobernada por un enum (`OPEN/PRELAUNCH/MAINTENANCE/CLOSED`) y por dos flags independientes de registro (cliente y modelo). Decisión completa en [ADR-009](../06-decisions/adr-009-product-operational-mode.md).
+El backend dispone de una capa transversal de admisión al producto, gobernada por un enum (`OPEN/PRELAUNCH/MAINTENANCE/CLOSED`), dos flags independientes de registro (cliente y modelo) y una flag de simulación económica directa. Decisión completa en [ADR-009](../06-decisions/adr-009-product-operational-mode.md).
 
-Características estructurales previstas:
+Componentes en código:
 
-- aplicación server-side mediante un filtro REST registrado tras `CookieJwtAuthenticationFilter` y un interceptor de handshake en `/match` y `/messages`
-- regla de decisión centralizada en un único servicio consumido por filtro e interceptor
-- backoffice exento por whitelist explícita de paths admin y por inspección de perfil backoffice resuelto en `Authentication`
-- respuesta de bloqueo basada en HTTP 503 con códigos funcionales estables (`PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED`)
+- `service/ProductOperationalModeService`: regla de decisión centralizada. Pura, sin I/O. Consume `ProductOperationalProperties`. Expone `decideForRequest(...)` y `decideForWsHandshake(...)`.
+- `security/ProductOperationalModeFilter`: filtro REST `OncePerRequestFilter`, registrado en `SecurityConfig` tras `CookieJwtAuthenticationFilter`. Resuelve la sesión backoffice (mediante `ROLE_ADMIN`, `BO_ROLE_*` y `BO_PERMISSION_*` ya existentes) únicamente para mantener vivo `/api/auth/refresh` de admin durante modos restrictivos. Extrae `userId` desde el JWT en cookie únicamente cuando el modo es restrictivo y la allowlist está poblada.
+- `security/ProductOperationalModeWsInterceptor`: `HandshakeInterceptor`, registrado en `WebSocketConfig` para `/match` y `/messages`. Sin inspección de authorities. Misma extracción optimizada de `userId`.
+- `config/ProductOperationalProperties`: binding de `product.access.mode`, `product.access.allowlist.user-ids`, `product.registration.client.enabled`, `product.registration.model.enabled` y `product.simulation.transactions-direct.enabled`.
+- `constants/ProductOperationalConstants`: códigos (`PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED`, `SIMULATION_DISABLED`), scopes (`product`, `client`, `model`, `transactions-direct`), header `X-Product-Mode`, prefijo de log `[PRODUCT-MODE]`.
 
-Esta capa **no sustituye** ninguna de las capas existentes:
+Aplicación server-side:
+
+- toda decisión de admisión vive en un único servicio; el filtro y el interceptor son consumidores
+- backoffice exento por whitelist explícita de `/api/admin/**` y `/api/admin/auth/login` y, además, por excepción específica en `/api/auth/refresh` cuando la sesión es backoffice
+- respuesta de bloqueo HTTP 503 con cuerpo JSON estable: `{ "code", "scope", "mode", "message" }` y header opcional `X-Product-Mode`
+- en `/api/auth/refresh` bloqueado para una sesión de producto, el filtro borra `access_token` y `refresh_token` poniendo `Max-Age=0`; las cookies de backoffice nunca se tocan
+- la flag de simulación económica directa bloquea `POST /api/transactions/first` y `POST /api/transactions/add-balance` incluso con `PRODUCT_ACCESS_MODE=OPEN`; la allowlist no salta esta flag
+- `POST /api/transactions/payout` queda fuera de la flag de simulación directa
+- `POST /api/billing/ccbill/session` queda clasificado como path de producto y se bloquea en modos restrictivos
+- `POST /api/billing/ccbill/notify` sigue en whitelist permanente
+- todo bloqueo se loguea con prefijo `[PRODUCT-MODE]` y campos `path`, `method`, `mode`, `decision`, `reason`; nunca emails, passwords, tokens ni cookies
+
+Esta capa **no sustituye** ninguna capa existente:
 
 - los **roles** (`ROLE_*` y `BackofficeAuthorities`) siguen siendo la autoridad de autorización dentro de las superficies admitidas
 - **auth-risk** sigue siendo la capa específica de abuso de credenciales sobre login real
 - el **rate limiting** clásico (`ApiRateLimitFilter` y derivados) sigue regulando caudal por IP y por superficie
 - el **country gate** (`CountryAccessService`) sigue regulando admisión por país en los puntos donde ya aplica
 
-Product Operational Mode regula **admisión global del producto**: decide si dejar pasar al usuario en este momento, antes de que cualquiera de las capas anteriores actúe sobre él. Las cuatro capas son ortogonales y se mantienen separadas para no mezclar fases de negocio (prelaunch, mantenimiento, cierre) con autorización, abuso de credenciales, caudal u origen geográfico.
+Las cuatro capas son ortogonales y se mantienen separadas para no mezclar fases de negocio (prelaunch, mantenimiento, cierre) con autorización, abuso de credenciales, caudal u origen geográfico.
 
-Estado actual: diseño aprobado y documentado en ADR-009; implementación pendiente. Hasta que se implemente, el comportamiento del backend equivale al modo `OPEN` con registros abiertos.
+### Alcance validado actualmente
+
+- **cierre de registro server-side** mediante flags independientes (`PRODUCT_REGISTRATION_CLIENT_ENABLED=false` y/o `PRODUCT_REGISTRATION_MODEL_ENABLED=false`), validado con tráfico real en TEST y AUDIT
+- **gobierno de endpoints económicos directos** mediante `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`, validado en TEST con `SIMULATION_DISABLED` para `POST /api/transactions/first` y `POST /api/transactions/add-balance`
+- ausencia de regresión sobre payout, login, matching/realtime, sesiones, gifts ni el resto de flujos no afectados
+
+### Alcance disponible pero no ejercitado
+
+- modos `PRELAUNCH`, `MAINTENANCE` y `CLOSED` aplicados a producto (login, refresh, endpoints REST funcionales, handshake WS): el código está; falta validación operativa
+- allowlist por `userId` dentro de modos restrictivos: implementada; sin ejercitar
+- frontend: tratamiento explícito de `PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED` y `SIMULATION_DISABLED` si aplica a la superficie que invoque esos endpoints
+- limitación consciente: durante modos restrictivos, una sesión backoffice cuyo `access_token` haya expirado puede ser tratada como producto en `/api/auth/refresh` porque `Authentication` no está poblado; el admin podría necesitar re-login en ese estado. No se resuelve en esta iteración.
 
 ## Observaciones relevantes
 

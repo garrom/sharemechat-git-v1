@@ -157,11 +157,24 @@ Con ello, la fase minima de TURN en AUDIT puede darse por cerrada a nivel operat
 
 El siguiente paso natural no es reabrir arquitectura en AUDIT, sino replicar de forma controlada el mismo patron en TEST manteniendo la misma logica de aplicacion.
 
-## Product Operational Mode previsto (pendiente de implementación)
+## Product Operational Mode (operativo, alcance parcial)
 
-Cuando la capa Product Operational Mode esté implementada (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), la intención para AUDIT es:
+La capa Product Operational Mode (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)) está activa en AUDIT con configuración aplicada en `/opt/sharemechat/.env`:
 
-- modo `OPEN` para preservar validación funcional sobre cuentas existentes
-- registros de cliente y modelo **cerrados server-side**, para evitar creación accidental o externa de cuentas en un entorno destinado a revisión y validación
+- `PRODUCT_ACCESS_MODE=OPEN`
+- `PRODUCT_REGISTRATION_CLIENT_ENABLED=false`
+- `PRODUCT_REGISTRATION_MODEL_ENABLED=false`
+- `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`
 
-Hasta entonces, AUDIT se comporta de facto como `OPEN` con registros abiertos.
+Arranque del backend mediante `sharemechat-audit.service` (systemd). Logs `[PRODUCT-MODE]` persistentes en `journald`, verificables con `sudo journalctl -u sharemechat-audit -f`.
+
+Resultado verificado con tráfico real:
+
+- `POST https://audit.sharemechat.com/api/users/register/client` → 503 `REGISTRATION_CLOSED`
+- `POST https://audit.sharemechat.com/api/users/register/model` → 503 `REGISTRATION_CLOSED`
+- login de usuarios existentes opera con normalidad; `AuthRiskService` activo con `env=audit`
+- sin regresión observada sobre matching, sesiones realtime, gifts ni resto de flujos de producto
+
+La simulación económica directa queda cerrada por defecto para evitar acreditación de saldo sin PSP y contaminación de datos de revisión externa. Si se ejercita revisión CCBill en AUDIT, debe hacerse sobre el flujo PSP correspondiente, no mediante endpoints directos de simulación salvo decisión operativa puntual.
+
+Detalle operativo y procedimiento en [runbooks.md](../04-operations/runbooks.md).

@@ -46,7 +46,8 @@ public class ProductOperationalModeService {
         ALLOW,
         BLOCK_PRODUCT_UNAVAILABLE,
         BLOCK_PRODUCT_MAINTENANCE,
-        BLOCK_REGISTRATION_CLOSED
+        BLOCK_REGISTRATION_CLOSED,
+        BLOCK_SIMULATION_DISABLED
     }
 
     public static final class Decision {
@@ -97,6 +98,16 @@ public class ProductOperationalModeService {
                     scope,
                     null,
                     message,
+                    reason);
+        }
+
+        public static Decision blockSimulationDisabled(String reason) {
+            return new Decision(
+                    DecisionType.BLOCK_SIMULATION_DISABLED,
+                    ProductOperationalConstants.CODE_SIMULATION_DISABLED,
+                    ProductOperationalConstants.SCOPE_TRANSACTIONS_DIRECT,
+                    null,
+                    ProductOperationalConstants.MSG_SIMULATION_DISABLED,
                     reason);
         }
 
@@ -168,6 +179,20 @@ public class ProductOperationalModeService {
 
         if (isAlwaysAllowed(safeMethod, safePath)) {
             return Decision.allow("whitelist_path");
+        }
+
+        // Endpoints económicos directos (simulación). Independiente del modo
+        // y de la allowlist: si la flag está a false, se bloquea siempre.
+        // Solo aplica a /first y /add-balance; payout queda fuera.
+        if (isTransactionsFirstPath(safeMethod, safePath)) {
+            if (!props.getSimulation().getTransactionsDirect().isEnabled()) {
+                return Decision.blockSimulationDisabled("transactions_first_disabled");
+            }
+        }
+        if (isTransactionsAddBalancePath(safeMethod, safePath)) {
+            if (!props.getSimulation().getTransactionsDirect().isEnabled()) {
+                return Decision.blockSimulationDisabled("transactions_add_balance_disabled");
+            }
         }
 
         Mode mode = currentMode();
@@ -281,6 +306,14 @@ public class ProductOperationalModeService {
         return "POST".equalsIgnoreCase(method) && path.equals("/api/users/register/model");
     }
 
+    private boolean isTransactionsFirstPath(String method, String path) {
+        return "POST".equalsIgnoreCase(method) && path.equals("/api/transactions/first");
+    }
+
+    private boolean isTransactionsAddBalancePath(String method, String path) {
+        return "POST".equalsIgnoreCase(method) && path.equals("/api/transactions/add-balance");
+    }
+
     /**
      * Paths que se consideran "superficie de producto" y se bloquean en modos
      * restrictivos. La whitelist de {@link #isAlwaysAllowed} se evalúa antes,
@@ -299,6 +332,7 @@ public class ProductOperationalModeService {
         if (path.startsWith("/api/funnyplace/")) return true;
         if (path.equals("/api/webrtc/config")) return true;
         if (path.startsWith("/api/reports/")) return true;
+        if ("POST".equalsIgnoreCase(method) && path.equals("/api/billing/ccbill/session")) return true;
         return false;
     }
 

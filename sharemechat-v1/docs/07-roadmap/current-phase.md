@@ -1,38 +1,110 @@
 # Fase actual
 
-La lectura consolidada del repositorio y del material previo sitúa a SharemeChat en una fase de MVP industrial avanzado.
+## Fase activa general
 
-La fase actual es de **transición hacia GO LIVE controlado**, no únicamente de hardening técnico. La prioridad ya no es solo estabilizar producto y ordenar deuda transversal, sino ejecutar el camino ordenado de fases hacia lanzamiento, captación inicial y monetización real.
+SharemeChat está en **Fase 0 — Cierre de riesgos pre-PRO** del roadmap hacia GO LIVE.
 
-El roadmap principal vive en [go-live-roadmap.md](go-live-roadmap.md) y se organiza por fases de negocio. Este documento se mantiene como apunte rápido de estado y de prioridades vivas, y debe leerse contra la fase activa de ese roadmap. El backlog técnico estructural se mantiene aparte en [pending-hardening.md](pending-hardening.md).
+Objetivo de esta fase:
+cerrar riesgos estructurales antes de abrir PRO, especialmente en economía, acceso por entorno, PSP, KYC, compliance y configuración real por entorno.
 
-A día de hoy la fase activa del roadmap es **Fase 0 — Cierre de riesgos pre-PRO**.
+El roadmap general vive en [go-live-roadmap.md](go-live-roadmap.md).
+El backlog técnico vive en [pending-hardening.md](pending-hardening.md).
+Este documento es el panel corto de estado y prioridad viva.
 
-Dentro de Fase 0, la pieza activa de diseño y documentación es **Product Operational Mode** (modos `OPEN/PRELAUNCH/MAINTENANCE/CLOSED` y flags de registro independientes), recogida en [ADR-009](../06-decisions/adr-009-product-operational-mode.md). Estado: diseñada, pendiente de implementación. Es prerrequisito de Fase 1.
+---
 
-## Qué ya existe con consistencia
+## Frente operativo activo: Gobierno económico pre-PSP
 
-- producto y backoffice sobre base común
-- realtime dividido por dominios
-- trazabilidad económica y de streams
-- modelo de permisos de backoffice
-- aislamiento conceptual de entornos
-- observabilidad perimetral desacoplada en AUDIT con normalizacion, clasificacion, reporting y bloqueo real diarios de accesos
-- pipeline perimetral AUDIT completamente operativo en modo automatico: normalizer → classifier (ejecucion diaria previa) → blocker real Carril A (07:30 UTC) → nginx actualizado diariamente sin intervencion manual
-- gobernanza activa del pipeline perimetral: `check_ops_consistency.py` (repo) y `check_ops_runtime.sh` (EC2); runtime check limpio con `errors=0 warnings=0` tras correccion de orden temporal
-- pipeline TEST desplegado en DRY_RUN=1 como entorno de observacion paralelo antes de cualquier activacion de bloqueo real
-- `auth-risk` Fase 1 (modo OBSERVE) y Fase 2 (respuesta progresiva con delay en HIGH y bloqueo temporal por `emailHash` en CRITICAL) **completadas y validadas con tráfico real en TEST y AUDIT** sobre login de producto, manteniendo contrato HTTP uniforme y sin filtración de información
-- namespace Redis de `auth-risk` aislado correctamente por entorno (`ar:test:*`, `ar:audit:*`) tras corrección y validación de `AUTHRISK_ENV`; logs `[AUTH-RISK]` persistentes en AUDIT vía `journald`
+Objetivo:
+cerrar la base económica interna antes de integrar CCBill real y antes de cualquier circulación de dinero real.
 
-## Qué sigue en transición
+Secuencia actual:
 
-- endurecimiento de compliance entre canales
-- parametrización real por entorno
-- cierre operativo de PSP y KYC externo
-- saneado continuo de documentación e infraestructura
-- contención y consolidación del sistema i18n en producto y backoffice
-- estabilización del contrato funcional de errores entre REST, WebSocket y frontend
-- separación progresiva entre lógica de producto, alerts compartidos y copy de interfaz
-- extensión de `auth-risk` al resto de superficies de autenticación: login admin, refresh y forgot/reset password
-- detección low-and-slow sobre la base actual de `auth-risk` para cubrir ataques deliberadamente lentos por debajo de los umbrales actuales
-- persistencia de logs en archivo o `journald` cuando el backend de TEST deje de ejecutarse de forma manual
+1. **Gobierno por entorno de endpoints económicos directos** — HECHO
+   - `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED` implementado.
+   - `/api/transactions/first` y `/api/transactions/add-balance` gobernados.
+   - Validado en TEST.
+   - AUDIT/PRO deben mantener la flag en `false` salvo decisión explícita.
+
+2. **Corregir inicio facturable de streams** — HECHO
+   - `endSession` calcula desde `billable_start`, con fallback defensivo a `confirmed_at`.
+   - `start_time` queda como instante técnico, no como referencia de cobro final.
+   - Validado en TEST con stream real.
+
+3. **Centralizar packs 10 / 20 / 40 (Fase 3A)** — HECHO
+   - Decisión estructural recogida en [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md).
+   - Catálogo legacy `P5 / P15 / P30 / P45` eliminado del código funcional.
+   - Backend (`CcbillService.resolvePackAmount`) acepta únicamente `P10 / P20 / P40` y rechaza el catálogo legacy con `400 / "PackId no soportado"`.
+   - Frontend (`useAppModals.js`) muestra los tres packs `10 / 20 / 40 EUR` con `minutesGranted` igual a `priceEur` por construcción de Fase 3A.
+   - Validado en TEST:
+     - frontend muestra los packs `10 / 20 / 40`.
+     - endpoints directos (`/api/transactions/first`, `/api/transactions/add-balance`) registran ingresos `10.00 / 20.00 / 40.00` con `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=true` en TEST.
+     - `POST /api/billing/ccbill/session` acepta `P10 / P20 / P40` y crea la `payment_sessions` con `amount` correspondiente.
+     - `POST /api/billing/ccbill/session` rechaza `P5 / P15 / P30 / P45`.
+   - Alcance limitado: `minutesGranted == priceEur`. Cualquier descuento por volumen o bonus exige BFPM.
+
+4. **BFPM Fase 4A** — HECHO
+   - Decisión estructural en [ADR-012](../06-decisions/adr-012-bfpm-platform-funded-bonus.md).
+   - Implementado como bonus EUR financiado por plataforma. El saldo cliente sigue siendo EUR.
+   - Catálogo BFPM vigente:
+     - `P10` → `priceEur=10`, `minutesGranted=10`, sin bonus.
+     - `P20` → `priceEur=20`, `minutesGranted=22`, bonus = 2 EUR.
+     - `P40` → `priceEur=40`, `minutesGranted=44`, bonus = 4 EUR.
+   - Por cada compra con bonus se crean atómicamente:
+     - `Transaction(BONUS_GRANT)` y `Balance(BONUS_GRANT)` en ledger cliente.
+     - `PlatformTransaction(BONUS_FUNDING)` negativo y `PlatformBalance` en ledger plataforma.
+   - Validado en TEST: P10 sin bonus; P20 con `+2/-2`; P40 con `+4/-4`. Invariante `Σ BONUS_GRANT + Σ BONUS_FUNDING = 0` confirmada. `clients.saldo_actual` coincide con último balance. `clients.total_pagos` suma solo `priceEur` (no incluye bonus). Streaming posterior consume saldo aumentado normalmente y no genera nuevos `BONUS_GRANT`/`BONUS_FUNDING`. Gifts y `STREAM_MARGIN` siguen separados y cuadran.
+   - No se han tocado en esta fase: ProductOperationalMode, StreamService, gifts, payout, tiers, auth-risk, KYC ni el webhook `notify`.
+
+5. **BFPM Fase 4B-a — auditoría interna contable** — HECHO
+   - Cuatro checks BFPM nuevos integrados en el job `ACCOUNTING_AUDIT`, scope `DEFAULT`:
+     - `BFPM_INVARIANT_BREACH` (CRITICAL): valida `Σ BONUS_GRANT + Σ BONUS_FUNDING ≈ 0` con `EPSILON = 0.01`.
+     - `BFPM_BONUS_GRANT_WITHOUT_FUNDING` (ERROR): `BONUS_GRANT` sin `BONUS_FUNDING` emparejado por descripción.
+     - `BFPM_BONUS_FUNDING_WITHOUT_GRANT` (ERROR): sentido inverso.
+     - `BFPM_TOTAL_PAGOS_MISMATCH` (WARNING): `clients.total_pagos != Σ Transaction(INGRESO)` con `EPSILON = 0.01`.
+   - Validación TEST con `POST /api/admin/audit/run` (`scope=DEFAULT`, `dryRun=false`):
+     - `audit_run_id=113`, `status=SUCCESS`, `checks_executed=7`, `anomalies_found=0`, `anomalies_created=0`, `execution_ms=316`.
+     - `accounting_anomalies WHERE audit_run_id=113` → vacío.
+     - `accounting_anomalies WHERE anomaly_type LIKE 'BFPM_%'` → vacío.
+     - Invariante global confirmada: `sum_bonus_grant=6.00`, `sum_bonus_funding=-6.00`, `bfpm_invariant=0.00`.
+   - Sin falsos positivos. Sin reporting backoffice todavía. Sin política de refund con bonus.
+   - No se han tocado: ProductOperationalMode, StreamService, gifts, payout, tiers, auth-risk, KYC, webhook `notify`, schema ni migraciones.
+
+6. **BFPM Fase 4B-b — reporting backoffice y política de refund** — SIGUIENTE
+   - Endpoint admin con resumen BFPM (bonus emitido, financiado, número de pares, invariante actual).
+   - Política documental y técnica de refund cuando el saldo cliente incluye bonus consumido o pendiente.
+   - No mezclar con integración CCBill real.
+
+7. **Integración CCBill real y firma webhook** — BLOQUEADO
+   - Pendiente de recibir manual oficial de integración de CCBill.
+   - No implementar firma, contrato definitivo ni validación final por inferencia.
+   - Cuando llegue el manual, se abrirá el frente PSP real.
+
+---
+
+## Ya cerrado con consistencia
+
+- Producto y backoffice sobre base común.
+- Realtime dividido por `/match` y `/messages`.
+- Trazabilidad económica y de streams.
+- Product Operational Mode operativo para cierre de registro y simulación económica directa.
+- Auth-risk Fase 1 y Fase 2 validadas en TEST y AUDIT.
+- Pipeline perimetral AUDIT operativo.
+- Billing de streams con doble ACK media y `billable_start` validado en TEST.
+
+---
+
+## Pendiente vivo fuera del frente activo
+
+Estos puntos siguen pendientes, pero **no son el siguiente paso inmediato** salvo decisión explícita:
+
+- Validar modos restrictivos completos de Product Operational Mode: `PRELAUNCH`, `MAINTENANCE`, `CLOSED`.
+- Tratamiento frontend de códigos `PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED`, `SIMULATION_DISABLED`.
+- Parametrización real de PRO.
+- PSP CCBill real, bloqueado hasta recibir manual oficial.
+- KYC externo end-to-end.
+- Compliance entre REST y WebSocket.
+- i18n producto/backoffice.
+- Contrato funcional de errores REST/WebSocket/frontend.
+- Extender auth-risk a login admin, refresh y forgot/reset password.
+- Persistencia de logs en TEST cuando deje de arrancar manualmente.

@@ -27,13 +27,11 @@ No se documenta por entorno:
 - AUDIT ya aparece contemplado en configuración y en documentación operativa previa
 - PRODUCTION está menos descrito en el código del backend y más presente como superficie pública y de assets
 
-## Product Operational Mode por entorno (intención futura, pendiente de implementación)
+## Product Operational Mode por entorno
 
-Cuando Product Operational Mode esté implementado (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), la intención de configuración por entorno es:
+La capa Product Operational Mode (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)) está implementada en backend con alcance parcial; ver detalle operativo en [runbooks.md](../04-operations/runbooks.md). La intención de configuración por entorno es:
 
-- **TEST y AUDIT**: modo `OPEN` con registros de cliente y modelo cerrados server-side. Las cuentas existentes operan con normalidad; los endpoints públicos de registro responden cierre aunque alguien conozca la URL.
-- **PRO prelaunch**: modo `PRELAUNCH` con registros configurables, en principio abiertos para captación de Fase 1 del roadmap.
+- **TEST y AUDIT**: modo `OPEN` con registros de cliente y modelo cerrados server-side. Las cuentas existentes operan con normalidad; los endpoints públicos de registro responden cierre aunque alguien conozca la URL. **Configuración aplicada y validada con tráfico real**: `PRODUCT_ACCESS_MODE=OPEN`, `PRODUCT_REGISTRATION_CLIENT_ENABLED=false`, `PRODUCT_REGISTRATION_MODEL_ENABLED=false`.
+- **PRO prelaunch**: modo `PRELAUNCH` con registros configurables, en principio abiertos para captación de Fase 1 del roadmap. Pendiente de validación operativa antes de activarse en PRO.
 - **PRO normal**: modo `OPEN` con registros abiertos.
-- **Mantenimiento puntual** en cualquier entorno: modo `MAINTENANCE` activado durante la ventana operativa, con registros según decisión del momento.
-
-Hasta que la implementación se haga efectiva, todos los entornos se comportan como `OPEN` con registros abiertos por defecto.
+- **Mantenimiento puntual** en cualquier entorno: modo `MAINTENANCE` activado durante la ventana operativa, con registros según decisión del momento. Implementado en código pero no ejercitado aún en entornos.

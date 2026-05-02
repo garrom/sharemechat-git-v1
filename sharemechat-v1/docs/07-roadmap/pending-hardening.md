@@ -52,11 +52,59 @@ Fase 4. Validación por flujos
 
 ### Parte 1B - Product Operational Mode
 
-Capa server-side de admisión al producto, transversal a auth, roles y rate limit. Diseñada como enum de modo (`OPEN/PRELAUNCH/MAINTENANCE/CLOSED`) más dos flags independientes de registro (cliente y modelo), aplicada por filtro REST tras `CookieJwtAuthenticationFilter` y por interceptor de handshake en `/match` y `/messages`. Decisión completa en [ADR-009](../06-decisions/adr-009-product-operational-mode.md).
+Capa server-side de admisión al producto, transversal a auth, roles y rate limit. Enum de modo (`OPEN/PRELAUNCH/MAINTENANCE/CLOSED`), dos flags independientes de registro (cliente y modelo) y flag de simulación económica directa, aplicada por filtro REST tras `CookieJwtAuthenticationFilter` y por interceptor de handshake en `/match` y `/messages`. Decisión completa en [ADR-009](../06-decisions/adr-009-product-operational-mode.md).
 
-Esta entrada es **backlog técnico consumido por Fase 0** del roadmap principal y es **prerrequisito de Fase 1**. Estado: diseñada, pendiente de implementación. No duplicar aquí el contenido de la ADR; cualquier matiz de fondo se discute allí.
+Estado: **implementación parcial**. Backend implementado en los tres componentes definidos. **Validado con tráfico real en TEST y AUDIT** para el cierre de registro server-side (`PRODUCT_REGISTRATION_CLIENT_ENABLED=false` y `PRODUCT_REGISTRATION_MODEL_ENABLED=false` con `PRODUCT_ACCESS_MODE=OPEN`) y **validado en TEST** para el gobierno de endpoints económicos directos mediante `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED`. Operativa concreta en [runbooks.md](../04-operations/runbooks.md).
+
+Pendiente dentro del alcance de la propia capa:
+
+- validación operativa de los modos `PRELAUNCH`, `MAINTENANCE` y `CLOSED` aplicados al producto (login, refresh, endpoints REST funcionales, handshake WS)
+- frontend: tratamiento de `PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED` y `SIMULATION_DISABLED` donde aplique
+- ejercicio de la allowlist por userId dentro de un modo restrictivo
+- decisión sobre la limitación consciente del refresh con access_token expirado en sesiones backoffice
+- validación de configuración AUDIT/PRO con `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`
+
+Dependencias externas al Product Operational Mode:
+
+- integración PSP real CCBill
+- verificación de firma del webhook CCBill
+
+Esta entrada es **backlog técnico consumido por Fase 0** del roadmap principal y sigue siendo **prerrequisito de Fase 1**. No duplicar aquí el contenido de la ADR; cualquier matiz de fondo se discute allí.
 
 No mezclar este frente con i18n ni con auth-risk: el modo decide *si* dejas pasar; auth-risk regula abuso de credenciales sobre login real; i18n decide qué texto mostrar al usuario admitido. Son capas distintas.
+
+### Parte 1C-pre - Pricing simplification y BFPM (ADR-011 + ADR-012)
+
+Estado:
+
+- **Fase 3A — packs P10/P20/P40**: implementada con alcance limitado y validada en TEST. Catálogo legacy `P5 / P15 / P30 / P45` eliminado del código funcional. Detalle estructural en [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md).
+- **BFPM Fase 4A — bonus EUR financiado por plataforma**: implementada y validada en TEST. Catálogo vigente: P10 sin bonus, P20 con bonus 2 EUR, P40 con bonus 4 EUR. Asientos contables `BONUS_GRANT` (cliente) y `BONUS_FUNDING` (plataforma). Detalle estructural en [ADR-012](../06-decisions/adr-012-bfpm-platform-funded-bonus.md).
+- **BFPM Fase 4B-a — auditoría interna contable**: implementada y validada en TEST. Cuatro checks BFPM en `ACCOUNTING_AUDIT` scope `DEFAULT`: `BFPM_INVARIANT_BREACH`, `BFPM_BONUS_GRANT_WITHOUT_FUNDING`, `BFPM_BONUS_FUNDING_WITHOUT_GRANT`, `BFPM_TOTAL_PAGOS_MISMATCH`. Sin falsos positivos. Sin cambios en checks existentes ni en schema.
+
+Pendiente:
+
+- **BFPM Fase 4B-b — reporting backoffice y política de refund con bonus**: endpoint admin con resumen BFPM (bonus emitido / financiado / pares); decisión documental y técnica sobre cómo opera `manualRefundToClient` cuando el saldo cliente incluye bonus consumido o pendiente. Es **prerrequisito** previo a la integración PSP real.
+- **Centralización fuerte del catálogo** (BD o endpoint dinámico de packs): no abordada todavía. La duplicidad transitoria frontend/backend queda como deuda técnica aceptada.
+- **CCBill real y firma webhook**: bloqueado hasta recibir el manual oficial.
+
+No duplicar aquí el contenido de las ADRs.
+
+### Parte 1C - Superficies económicas no directas
+
+Estado: **pendiente**. Fase 1/Fase 2 ya cerraron el gobierno de endpoints económicos directos (`/api/transactions/first`, `/api/transactions/add-balance`) y el inicio facturable de streams desde `billable_start`/`confirmed_at`. Queda un frente separado para auditar y endurecer superficies que mueven saldo, ledger o estados económicos fuera de esa flag.
+
+Alcance inicial:
+
+- `POST /api/billing/ccbill/notify`: bloqueante antes de dinero real hasta validar firma, origen/contrato PSP, idempotencia y replay.
+- admin refund.
+- admin payout review.
+- admin stream kill.
+- gifts por WebSocket.
+- stream settlement por WebSocket.
+- trials.
+- unsubscribe/forfeit.
+
+Esta entrada no reabre Product Operational Mode. `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED` solo gobierna `/api/transactions/first` y `/api/transactions/add-balance`; payout, gifts, trials, refunds y webhook PSP son otra familia.
 
 ### Parte 2 - Backend
 

@@ -44,6 +44,11 @@ public class Constants {
         public static final String STREAM_EARNING = "STREAM_EARNING";
         public static final String MANUAL_REFUND = "MANUAL_REFUND";
         public static final String MANUAL_REFUND_EXPENSE = "MANUAL_REFUND_EXPENSE";
+        // BFPM (ADR-012): bonus de minutos financiado por la plataforma.
+        // BONUS_GRANT  → cliente recibe EUR equivalente a los minutos extra concedidos.
+        // BONUS_FUNDING → plataforma asume contablemente el coste del bonus (importe negativo).
+        public static final String BONUS_GRANT = "BONUS_GRANT";
+        public static final String BONUS_FUNDING = "BONUS_FUNDING";
 
         private OperationTypes() {}
     }

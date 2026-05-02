@@ -500,8 +500,11 @@ public class StreamService {
                 return;
             }
 
-            // 4) Duración en segundos (SIN ceil a minutos)
-            long seconds = java.time.Duration.between(session.getStartTime(), endTime).getSeconds();
+            // 4) Duración facturable en segundos (SIN ceil a minutos)
+            LocalDateTime billableStartEffective = resolveEffectiveBillableStart(session);
+            long seconds = billableStartEffective == null
+                    ? 0
+                    : java.time.Duration.between(billableStartEffective, endTime).getSeconds();
             if (seconds < 0) seconds = 0;
 
             // Horas (solo para métricas/estadística)

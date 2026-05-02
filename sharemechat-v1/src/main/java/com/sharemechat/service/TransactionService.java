@@ -205,6 +205,172 @@ public class TransactionService {
         userRepository.save(user);
     }
 
+    /**
+     * BFPM Fase 4A (ADR-012). Acredita una compra de pack con posible bonus financiado por la plataforma.
+     *
+     * Atómico (@Transactional). Realiza, en orden:
+     *  1) INGRESO cliente por priceEur (Transaction + Balance).
+     *  2) BONUS_GRANT cliente por bonusEur (Transaction + Balance), solo si bonusEur > 0.
+     *  3) BONUS_FUNDING plataforma por -bonusEur (PlatformTransaction + PlatformBalance), solo si bonusEur > 0.
+     *  4) clients.saldo_actual = lastBalance + priceEur + bonusEur.
+     *  5) clients.total_pagos += priceEur (NO suma bonusEur).
+     *  6) Si firstPayment, promueve user.role USER -> CLIENT.
+     *
+     * Si bonusEur == 0, equivale a una recarga simple sin asientos de bonus.
+     * Si bonusEur < 0, lanza IllegalStateException (catálogo inconsistente).
+     *
+     * Trazabilidad sin schema: la pareja BONUS_GRANT (cliente) ↔ BONUS_FUNDING (plataforma)
+     * se empareja por la descripción estructurada con pack_id y order_id.
+     *
+     * No reemplaza a processFirstTransaction ni addBalance: aquellos siguen sirviendo
+     * a los endpoints directos /api/transactions/first y /api/transactions/add-balance,
+     * que en BFPM Fase 4A no aplican bonus.
+     */
+    @Transactional
+    public void creditPackWithBonus(Long userId,
+                                    BigDecimal priceEur,
+                                    BigDecimal bonusEur,
+                                    String orderId,
+                                    String packId,
+                                    boolean firstPayment) {
+        if (userId == null) {
+            throw new IllegalArgumentException("userId requerido");
+        }
+        if (priceEur == null || priceEur.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new IllegalArgumentException("priceEur debe ser mayor que cero");
+        }
+        if (bonusEur == null) {
+            throw new IllegalArgumentException("bonusEur requerido (use 0 si no aplica)");
+        }
+        if (bonusEur.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException("Catálogo inconsistente: bonusEur < 0 para pack=" + packId);
+        }
+
+        BigDecimal priceEurScaled = priceEur.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal bonusEurScaled = bonusEur.setScale(2, RoundingMode.HALF_UP);
+
+        User user = lockUserOrThrow(userId);
+
+        if (firstPayment) {
+            if (!Constants.Roles.USER.equals(user.getRole())) {
+                throw new IllegalArgumentException("El usuario ya es CLIENT o MODEL");
+            }
+            if (!Constants.UserTypes.FORM_CLIENT.equals(user.getUserType())) {
+                throw new IllegalArgumentException("Solo USER + FORM_CLIENT puede activar premium con primer pago");
+            }
+            emailVerificationService.assertEmailVerified(
+                    user,
+                    "Debes validar tu email antes de activar la cuenta premium.",
+                    "CLIENT_PREMIUM",
+                    "VERIFY_EMAIL"
+            );
+        } else {
+            if (!Constants.Roles.CLIENT.equals(user.getRole())) {
+                throw new IllegalArgumentException("El usuario debe ser CLIENT para recargar saldo");
+            }
+        }
+
+        BigDecimal lastBalance = lastBalanceOf(userId);
+
+        Optional<Client> existingClientOpt = clientRepository.findByUser(user);
+        if (existingClientOpt.isPresent()) {
+            BigDecimal currentSaldo = existingClientOpt.get().getSaldoActual();
+            if (currentSaldo != null && currentSaldo.compareTo(lastBalance) != 0) {
+                throw new IllegalStateException(
+                        "Inconsistencia: saldo_actual (" + currentSaldo + ") != ultimo balance (" + lastBalance + ")"
+                );
+            }
+        }
+
+        // Descripciones estructuradas para trazabilidad sin schema
+        String safePackId = packId == null ? "" : packId;
+        String safeOrderId = orderId == null ? "" : orderId;
+        String descIngreso = "Recarga via CCBILL pack=" + safePackId + " order=" + safeOrderId;
+        String descBonusGrant = "BFPM bonus_grant pack=" + safePackId + " order=" + safeOrderId;
+        String descBonusFunding = "BFPM bonus_funding pack=" + safePackId + " order=" + safeOrderId;
+
+        // 1) INGRESO cliente
+        BigDecimal balanceAfterIngreso = lastBalance.add(priceEurScaled);
+
+        Transaction txIngreso = new Transaction();
+        txIngreso.setUser(user);
+        txIngreso.setAmount(priceEurScaled);
+        txIngreso.setOperationType("INGRESO");
+        txIngreso.setDescription(descIngreso);
+        Transaction savedTxIngreso = transactionRepository.save(txIngreso);
+
+        Balance balIngreso = new Balance();
+        balIngreso.setUserId(userId);
+        balIngreso.setTransactionId(savedTxIngreso.getId());
+        balIngreso.setOperationType("INGRESO");
+        balIngreso.setAmount(priceEurScaled);
+        balIngreso.setBalance(balanceAfterIngreso);
+        balIngreso.setDescription(descIngreso);
+        balanceRepository.save(balIngreso);
+
+        BigDecimal finalClientBalance = balanceAfterIngreso;
+
+        // 2) BONUS_GRANT cliente y 3) BONUS_FUNDING plataforma — solo si bonus > 0
+        if (bonusEurScaled.compareTo(BigDecimal.ZERO) > 0) {
+            BigDecimal balanceAfterBonus = balanceAfterIngreso.add(bonusEurScaled);
+
+            Transaction txBonus = new Transaction();
+            txBonus.setUser(user);
+            txBonus.setAmount(bonusEurScaled);
+            txBonus.setOperationType(Constants.OperationTypes.BONUS_GRANT);
+            txBonus.setDescription(descBonusGrant);
+            Transaction savedTxBonus = transactionRepository.save(txBonus);
+
+            Balance balBonus = new Balance();
+            balBonus.setUserId(userId);
+            balBonus.setTransactionId(savedTxBonus.getId());
+            balBonus.setOperationType(Constants.OperationTypes.BONUS_GRANT);
+            balBonus.setAmount(bonusEurScaled);
+            balBonus.setBalance(balanceAfterBonus);
+            balBonus.setDescription(descBonusGrant);
+            balanceRepository.save(balBonus);
+
+            finalClientBalance = balanceAfterBonus;
+
+            // Plataforma: PlatformTransaction(BONUS_FUNDING, -bonusEur) + PlatformBalance vía helper
+            BigDecimal bonusEurNegated = bonusEurScaled.negate();
+
+            PlatformTransaction ptx = new PlatformTransaction();
+            ptx.setAmount(bonusEurNegated);
+            ptx.setOperationType(Constants.OperationTypes.BONUS_FUNDING);
+            ptx.setDescription(descBonusFunding);
+            PlatformTransaction savedPtx = platformTransactionRepository.save(ptx);
+
+            appendPlatformBalance(savedPtx.getId(), bonusEurNegated, descBonusFunding);
+
+            log.info("[BFPM] bonus_grant userId={} pack={} order={} priceEur={} bonusEur={} bonusGrantTxId={} bonusFundingPtxId={}",
+                    userId, safePackId, safeOrderId, priceEurScaled, bonusEurScaled,
+                    savedTxBonus.getId(), savedPtx.getId());
+        } else {
+            log.info("[BFPM] no_bonus userId={} pack={} order={} priceEur={}",
+                    userId, safePackId, safeOrderId, priceEurScaled);
+        }
+
+        // 4) clients.saldo_actual y 5) clients.total_pagos += priceEur (NO bonus)
+        Client client = existingClientOpt.orElseGet(() -> {
+            Client c = new Client();
+            c.setUser(user);
+            c.setSaldoActual(BigDecimal.ZERO);
+            c.setTotalPagos(BigDecimal.ZERO);
+            return c;
+        });
+        client.setSaldoActual(finalClientBalance);
+        BigDecimal currentTotalPagos = client.getTotalPagos() == null ? BigDecimal.ZERO : client.getTotalPagos();
+        client.setTotalPagos(currentTotalPagos.add(priceEurScaled));
+        clientRepository.save(client);
+
+        // 6) Promoción USER -> CLIENT solo en firstPayment
+        if (firstPayment) {
+            user.setRole(Constants.Roles.CLIENT);
+            userRepository.save(user);
+        }
+    }
+
     @Transactional
     public void addBalance(Long userId, TransactionRequestDTO request) {
         User user = lockUserOrThrow(userId);

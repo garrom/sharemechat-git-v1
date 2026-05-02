@@ -20,12 +20,15 @@ Por tanto, este documento se mantiene deliberadamente sobrio:
 
 Cualquier ampliación futura de este documento debe apoyarse en evidencia versionada o en una actualización documental específica del entorno.
 
-## Product Operational Mode previsto (pendiente de implementación)
+## Product Operational Mode previsto
 
-Cuando Product Operational Mode esté implementado (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), la intención de configuración para PRO es:
+Product Operational Mode ya existe en backend (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), pero PRO no está documentado aquí como producto completo desplegado.
+
+La intención de configuración para PRO es:
 
 - en **Fase 1 — Prelaunch público controlado** del roadmap, modo `PRELAUNCH` con registros de cliente y modelo abiertos. Producto bloqueado server-side y backoffice operativo.
 - al alcanzar **Fase 5 — PRO público limitado**, transición a modo `OPEN` con registros abiertos.
 - modo `MAINTENANCE` reservado para ventanas operativas controladas en cualquier momento posterior.
+- `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` siempre.
 
-Hasta que la capa esté implementada, PRO no dispone de gating server-side por modo.
+Cualquier acreditación de saldo en PRO debe pasar por PSP validado. Los webhooks CCBill requieren verificación de firma y contrato operativo cerrado antes de circular dinero real.

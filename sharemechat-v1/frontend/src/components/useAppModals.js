@@ -15,43 +15,48 @@ import { TERMS_VERSION, isLocalAgeOk } from '../consent/consentClient';
  *  - 'manual'               → botones de "añadir saldo/minutos"
  */
 
-// === Packs por defecto (TEMPORAL, luego se sacarán de BBDD/backend) ===
+// === Catálogo vigente (ADR-011 + ADR-012 / BFPM Fase 4A). Centralización formal pendiente de fase posterior. ===
+// minutesGranted refleja minutos de servicio reales que recibe el cliente (incluye bonus BFPM si aplica).
+// minutes se mantiene igual a minutesGranted por compatibilidad con el modal existente.
 const DEFAULT_PACKS = [
-  { id: 'P5', minutes: 5, price: 5, currency: 'EUR' },
-  { id: 'P15', minutes: 15, price: 12, currency: 'EUR', recommended: true },
-  { id: 'P30', minutes: 30, price: 27, currency: 'EUR' },
-  { id: 'P45', minutes: 45, price: 40, currency: 'EUR' },
+  { id: 'P10', minutes: 10, minutesGranted: 10, price: 10, currency: 'EUR' },
+  { id: 'P20', minutes: 22, minutesGranted: 22, price: 20, currency: 'EUR', recommended: true },
+  { id: 'P40', minutes: 44, minutesGranted: 44, price: 40, currency: 'EUR' },
 ];
 
 // === Estilos específicos para el modal de compra ===
 const PacksGrid = styled.div`
   display: grid;
-  gap: 10px;
-  margin: 4px 0;
+  gap: 12px;
+  margin: 12px 0 4px 0;
   grid-template-columns: 1fr;
-  @media (min-width: 640px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 `;
 
 const PackCard = styled.button`
+  position: relative;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
+  align-items: stretch;
+  gap: 6px;
   width: 100%;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid #30363d;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid ${(p) => (p.$recommended ? '#ff3a85' : '#30363d')};
   background: #0d1117;
   color: #e6edf3;
   cursor: pointer;
   text-align: left;
+  box-shadow: ${(p) => (p.$recommended ? '0 0 0 1px #ff3a85 inset' : 'none')};
   transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
   &:hover {
     background: #11161d;
-    border-color: #3a3f46;
+    border-color: ${(p) => (p.$recommended ? '#ff3a85' : '#3a3f46')};
     transform: translateY(-1px);
+  }
+  &:focus-visible {
+    outline: 2px solid #ff3a85;
+    outline-offset: 2px;
   }
 `;
 
@@ -63,26 +68,50 @@ const PackHeader = styled.div`
 `;
 
 const PackMinutes = styled.span`
-  font-weight: 600;
-  font-size: 15px;
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: 0.01em;
 `;
 
 const PackPrice = styled.span`
-  font-weight: 600;
+  font-weight: 500;
   font-size: 15px;
+  color: #c9d1d9;
 `;
 
-const PackTag = styled.span`
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
+const HotBadge = styled.span`
+  position: absolute;
+  top: 8px;
+  right: -28px;
+  transform: rotate(35deg);
+  transform-origin: center;
+  background: #ff3a85;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  padding: 2px 30px;
   text-transform: uppercase;
-  letter-spacing: 0.03em;
-  background: #1f6feb22;
-  color: #58a6ff;
+  pointer-events: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+`;
+
+const PurchaseSubtitle = styled.div`
+  font-size: 13px;
+  color: #8b949e;
+  text-align: center;
+  margin: 4px 0 8px 0;
+  line-height: 1.4;
+`;
+
+const SecureFooter = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 12px;
+  color: #8b949e;
 `;
 
 const PackHint = styled.span`
@@ -403,19 +432,30 @@ export const useAppModals = () => {
         bodyKind: 'payout',
         content: (
           <div>
-            <PackHint>{subtitleByContext}</PackHint>
+            <PurchaseSubtitle>{subtitleByContext}</PurchaseSubtitle>
             <PacksGrid>
               {effectivePacks.map((pack) => (
-                <PackCard key={pack.id} type="button" onClick={() => handleSelect(pack)}>
+                <PackCard
+                  key={pack.id}
+                  type="button"
+                  $recommended={!!pack.recommended}
+                  onClick={() => handleSelect(pack)}
+                >
                   <PackHeader>
                     <PackMinutes>{pack.minutes} min</PackMinutes>
                     <PackPrice>{pack.price.toFixed(2)} {pack.currency || currency}</PackPrice>
                   </PackHeader>
-                  {pack.recommended && <PackTag>{i18n.t('modals.purchase.recommended')}</PackTag>}
+                  {pack.recommended && (
+                    <HotBadge>{i18n.t('modals.purchase.hot', { defaultValue: 'HOT' })}</HotBadge>
+                  )}
                   {pack.promoTag && <PackHint>{pack.promoTag}</PackHint>}
                 </PackCard>
               ))}
             </PacksGrid>
+            <SecureFooter>
+              <span aria-hidden="true">🔒</span>
+              <span>{i18n.t('modals.purchase.secure', { defaultValue: 'Pago seguro' })}</span>
+            </SecureFooter>
           </div>
         ),
         actions: [{ label: i18n.t('common.cancel'), primary: false, danger: false, onClick: handleCancel }],

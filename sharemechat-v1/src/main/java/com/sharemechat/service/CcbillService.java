@@ -1,7 +1,7 @@
 package com.sharemechat.service;
 
+import com.sharemechat.config.BillingProperties;
 import com.sharemechat.dto.CcbillInitResponseDTO;
-import com.sharemechat.dto.TransactionRequestDTO;
 import com.sharemechat.entity.PaymentSession;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.PaymentSessionRepository;
@@ -10,9 +10,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -20,11 +20,25 @@ public class CcbillService {
 
     private final PaymentSessionRepository paymentSessionRepository;
     private final TransactionService transactionService;
+    private final BillingProperties billing;
 
     public CcbillService(PaymentSessionRepository paymentSessionRepository,
-                         TransactionService transactionService) {
+                         TransactionService transactionService,
+                         BillingProperties billing) {
         this.paymentSessionRepository = paymentSessionRepository;
         this.transactionService = transactionService;
+        this.billing = billing;
+    }
+
+    /**
+     * Catálogo BFPM Fase 4A (ADR-011 + ADR-012):
+     *  - priceEur: importe efectivamente cobrado al cliente (lo que viaja al PSP).
+     *  - minutesGranted: minutos de servicio que recibe el cliente.
+     *
+     * El bonus en EUR se deriva al ejecutar la compra:
+     *   bonusEur = (minutesGranted * billing.rate-per-minute) - priceEur
+     */
+    private record Pack(String packId, BigDecimal priceEur, BigDecimal minutesGranted) {
     }
 
     /**
@@ -38,14 +52,14 @@ public class CcbillService {
      */
     @Transactional
     public CcbillInitResponseDTO createSessionForPack(User user, String packId, boolean firstPayment) {
-        // 1) Resolver importe del pack (alineado con frontend)
-        BigDecimal amount = resolvePackAmount(packId);
+        // 1) Resolver pack (importe + minutos concedidos)
+        Pack pack = resolvePack(packId);
 
         // 2) Crear PaymentSession en BBDD
         PaymentSession session = new PaymentSession();
         session.setUser(user);
-        session.setPackId(packId);
-        session.setAmount(amount);
+        session.setPackId(pack.packId());
+        session.setAmount(pack.priceEur());
         session.setCurrency("EUR");
         session.setFirstPayment(firstPayment);
         session.setStatus("PENDING");
@@ -63,10 +77,10 @@ public class CcbillService {
         fields.put("clientAccnum", "0000000");
         fields.put("clientSubacc", "0000");
         fields.put("formName", "testForm");
-        fields.put("currencyCode", "978");                 // 978 = EUR
-        fields.put("amount", amount.toPlainString());      // "12.00", "27.00", etc.
-        fields.put("orderId", session.getOrderId());       // identificador único nuestro
-        fields.put("email", user.getEmail());              // opcional
+        fields.put("currencyCode", "978");                         // 978 = EUR
+        fields.put("amount", pack.priceEur().toPlainString());     // "10.00", "20.00", "40.00"
+        fields.put("orderId", session.getOrderId());               // identificador único nuestro
+        fields.put("email", user.getEmail());                      // opcional
 
         dto.setFields(fields);
 
@@ -77,7 +91,8 @@ public class CcbillService {
      * Procesa la notificación de la pasarela:
      *  - Busca la PaymentSession por orderId.
      *  - Si ya no está en PENDING, no hace nada (idempotente).
-     *  - Si el pago está aprobado, registra la recarga vía TransactionService.
+     *  - Si el pago está aprobado, registra la recarga (con bonus si procede) vía
+     *    TransactionService.creditPackWithBonus.
      *  - Actualiza status y pspTransactionId.
      */
     @Transactional
@@ -92,7 +107,6 @@ public class CcbillService {
 
         // Guardar pspTransactionId (protección adicional con UNIQUE)
         if (pspTransactionId != null && !pspTransactionId.isBlank()) {
-            // Si por algún motivo ya existe para otra sesión, capturamos excepción e ignoramos
             try {
                 session.setPspTransactionId(pspTransactionId);
                 // flush más tarde con el save() del final
@@ -111,36 +125,60 @@ public class CcbillService {
         // === Pago aprobado ===
         User user = session.getUser();
 
-        // Construimos un TransactionRequestDTO como los que ya usa TransactionService
-        TransactionRequestDTO dto = new TransactionRequestDTO();
-        dto.setAmount(session.getAmount());
-        dto.setOperationType("INGRESO");
-        dto.setDescription("Recarga via CCBILL pack " + session.getPackId());
+        // BFPM (ADR-012): resolver catálogo y calcular bonus en el momento del cierre.
+        // No se persiste minutesGranted ni bonusEur en payment_sessions (sin cambio de schema).
+        Pack pack = resolvePack(session.getPackId());
+        BigDecimal bonusEur = computeBonusEur(pack);
 
-        // Si es primer pago => processFirstTransaction, si no => addBalance
-        if (session.isFirstPayment()) {
-            transactionService.processFirstTransaction(user.getId(), dto);
-        } else {
-            transactionService.addBalance(user.getId(), dto);
-        }
+        transactionService.creditPackWithBonus(
+                user.getId(),
+                pack.priceEur(),
+                bonusEur,
+                session.getOrderId(),
+                pack.packId(),
+                session.isFirstPayment()
+        );
 
         session.setStatus("SUCCESS");
         paymentSessionRepository.save(session);
     }
 
-    private BigDecimal resolvePackAmount(String packId) {
-        if ("P5".equalsIgnoreCase(packId)) {
-            return BigDecimal.valueOf(5.00);
+    /**
+     * Catálogo vigente (ADR-011 / Fase 3A) extendido con minutesGranted (BFPM Fase 4A).
+     * Mantiene match exacto por packId. Rechaza el catálogo legacy.
+     */
+    private Pack resolvePack(String packId) {
+        if ("P10".equalsIgnoreCase(packId)) {
+            return new Pack("P10", new BigDecimal("10.00"), new BigDecimal("10"));
         }
-        if ("P15".equalsIgnoreCase(packId)) {
-            return BigDecimal.valueOf(12.00);
+        if ("P20".equalsIgnoreCase(packId)) {
+            return new Pack("P20", new BigDecimal("20.00"), new BigDecimal("22"));
         }
-        if ("P30".equalsIgnoreCase(packId)) {
-            return BigDecimal.valueOf(27.00);
-        }
-        if ("P45".equalsIgnoreCase(packId)) {
-            return BigDecimal.valueOf(40.00);
+        if ("P40".equalsIgnoreCase(packId)) {
+            return new Pack("P40", new BigDecimal("40.00"), new BigDecimal("44"));
         }
         throw new IllegalArgumentException("PackId no soportado: " + packId);
+    }
+
+    /**
+     * bonusEur = (minutesGranted * ratePerMinute) - priceEur
+     * Escala 2, HALF_UP. Garantiza >= 0; si el cálculo da negativo, lanza IllegalStateException
+     * (catálogo inconsistente respecto a la tarifa configurada).
+     */
+    private BigDecimal computeBonusEur(Pack pack) {
+        BigDecimal rate = billing.getRatePerMinute();
+        if (rate == null) {
+            throw new IllegalStateException("billing.rate-per-minute no configurado");
+        }
+        BigDecimal expectedEur = pack.minutesGranted().multiply(rate);
+        BigDecimal bonus = expectedEur.subtract(pack.priceEur()).setScale(2, RoundingMode.HALF_UP);
+        if (bonus.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalStateException(
+                    "Catálogo inconsistente: bonusEur < 0 para pack=" + pack.packId()
+                            + " (priceEur=" + pack.priceEur() + ", minutesGranted=" + pack.minutesGranted()
+                            + ", rate=" + rate + ")"
+            );
+        }
+        return bonus;
     }
 }

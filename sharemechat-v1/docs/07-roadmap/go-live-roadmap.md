@@ -29,9 +29,9 @@ Alcance:
 
 - eliminar o acotar acoplamientos del frontend a dominios y configuración de TEST.
 - revisar preparación real de `properties` y variables de entorno para PRO (paridad con AUDIT, secretos, dominios, CORS, cookie domain, namespace Redis).
-- cerrar el riesgo económico abierto entre `start_time` y `billable_start` en cierre de `stream_records`.
+- mantener validada la facturacion de streams basada en doble ACK media y `billable_start` como inicio facturable.
 - cerrar o proteger los endpoints de simulación económica antes de cualquier circulación de dinero real.
-- definir e implantar **Product Operational Mode** como capa server-side única de gating por entorno (modos `OPEN/PRELAUNCH/MAINTENANCE/CLOSED` y flags independientes de registro de cliente y modelo). Decisión registrada en [ADR-009](../06-decisions/adr-009-product-operational-mode.md). Esta capa desbloquea: cierre de registro público en TEST/AUDIT, modo PRELAUNCH en PRO para habilitar Fase 1, y modo MAINTENANCE para operación posterior a GO LIVE.
+- definir e implantar **Product Operational Mode** como capa server-side única de gating por entorno (modos `OPEN/PRELAUNCH/MAINTENANCE/CLOSED`, flags independientes de registro y flag de simulación económica directa). Decisión registrada en [ADR-009](../06-decisions/adr-009-product-operational-mode.md). Esta capa desbloquea: cierre de registro público en TEST/AUDIT, cierre de endpoints directos de simulación donde no proceda, modo PRELAUNCH en PRO para habilitar Fase 1, y modo MAINTENANCE para operación posterior a GO LIVE.
 - aplicar blacklist por países antes de abrir PRO, con criterio homogéneo entre REST y WebSocket.
 
 Input técnico: `pending-hardening.md` y `test-levelling-plan.md`.
@@ -42,9 +42,14 @@ Esta fase debe cerrarse antes de habilitar Fase 1. Específicamente, Product Ope
 
 - acoplamientos a TEST → PARCIAL
 - properties/env de PRO → NO VALIDADO
-- cierre económico stream (`start_time` vs `billable_start`) → PENDIENTE
-- endpoints de simulación económica → NO VALIDADO
-- Product Operational Mode → DISEÑADO, pendiente de implementación (ADR-009)
+- cierre economico stream (`start_time` vs `billable_start`) → IMPLEMENTADO Y VALIDADO EN TEST
+- endpoints de simulación económica directa → GOBERNADOS POR FLAG E IMPLEMENTADOS; validación en TEST completada; AUDIT/PRO deben quedar `false` por defecto antes de dinero real
+- Product Operational Mode → IMPLEMENTACIÓN PARCIAL: cierre de registro validado en TEST/AUDIT; simulación económica directa validada en TEST; modos restrictivos (`PRELAUNCH/MAINTENANCE/CLOSED`) en código pero pendientes de validación. Frontend pendiente. (ADR-009)
+- packs 10/20/40 (Fase 3A) → IMPLEMENTADO Y VALIDADO EN TEST. Backend `CcbillService` acepta `P10/P20/P40` y rechaza el catálogo legacy. Frontend alineado. `minutesGranted == priceEur` en esta fase; BFPM pendiente. (ADR-011)
+- BFPM Fase 4A (bonus EUR financiado por plataforma con `BONUS_GRANT`/`BONUS_FUNDING`) → IMPLEMENTADO Y VALIDADO EN TEST. Catálogo vigente: P10 sin bonus, P20 con +2 EUR, P40 con +4 EUR. Invariante `Σ BONUS_GRANT + Σ BONUS_FUNDING = 0` confirmada. (ADR-012)
+- BFPM Fase 4B-a (auditoría interna contable BFPM) → IMPLEMENTADO Y VALIDADO EN TEST. Cuatro checks (`BFPM_INVARIANT_BREACH`, `BFPM_BONUS_GRANT_WITHOUT_FUNDING`, `BFPM_BONUS_FUNDING_WITHOUT_GRANT`, `BFPM_TOTAL_PAGOS_MISMATCH`) en `ACCOUNTING_AUDIT` scope `DEFAULT`. Run de validación `audit_run_id=113`: `SUCCESS`, `checks_executed=7`, `anomalies_found=0`. (ADR-012)
+- BFPM Fase 4B-b (reporting backoffice + política de refund con bonus) → SIGUIENTE, prerrequisito previo a la integración PSP real.
+- PSP CCBill real y firma webhook → BLOQUEADO hasta recibir manual oficial; sin inferencia.
 - blacklist por países → PENDIENTE
 
 ---
@@ -93,9 +98,11 @@ Alcance:
 
 - **CCBill como PSP prioritario** en esta fase. No se evalúa otro PSP en paralelo.
 - **wallet prepago como único modelo inicial** de monetización (no suscripción, no postpago).
-- webhooks de PSP seguros: verificación de firma, validación de origen, contrato cerrado.
+- webhooks de PSP seguros: verificación de firma, validación de origen/contrato PSP y protección anti-replay.
 - idempotencia de notificaciones y de acreditación de saldo.
-- cierre efectivo de los endpoints de simulación abiertos en fases anteriores.
+- mantener cerrados en PRO los endpoints directos de simulación mediante `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`.
+- mantener `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` en AUDIT/PRO salvo decisión operativa explícita previa al dinero real.
+- auditar y endurecer las superficies económicas no directas antes de operación real: `ccbill/notify`, refund admin, review admin de payouts, kill admin de streams, gifts por WebSocket, settlement de streams por WebSocket, trials y unsubscribe/forfeit.
 - pruebas extremo a extremo en AUDIT y, cuando aplique, en PRO en modo controlado, antes de apertura comercial real.
 
 Nota: PSP figura como integración no cerrada en `integrations-overview.md` y en `known-risks.md`.

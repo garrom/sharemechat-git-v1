@@ -227,6 +227,136 @@ public class AccountingAuditJobImpl implements AccountingAuditJob {
             accountingAnomalyRepository.saveAll(anomalies);
             run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
         }
+
+        // BFPM Fase 4B-a: cuatro checks contables sobre BONUS_GRANT / BONUS_FUNDING.
+        // Lectura-only, mismas convenciones del job (EPSILON, AccountingAnomaly).
+        runBfpmChecks(run, now);
+    }
+
+    /**
+     * BFPM Fase 4B-a — checks contables sobre BONUS_GRANT / BONUS_FUNDING.
+     * No introduce configuración nueva. No filtra por ventana temporal porque los
+     * tipos BONUS_* no existían antes de Fase 4A: cualquier coincidencia es real.
+     *
+     * Tipos de anomalía emitidos:
+     *   - BFPM_INVARIANT_BREACH         (CRITICAL): Σ BONUS_GRANT + Σ BONUS_FUNDING > EPSILON.
+     *   - BFPM_BONUS_GRANT_WITHOUT_FUNDING (ERROR): BONUS_GRANT sin pareja BONUS_FUNDING.
+     *   - BFPM_BONUS_FUNDING_WITHOUT_GRANT (ERROR): BONUS_FUNDING sin pareja BONUS_GRANT.
+     *   - BFPM_TOTAL_PAGOS_MISMATCH     (WARNING): clients.total_pagos != Σ Transaction(INGRESO).
+     */
+    private void runBfpmChecks(AuditRun run, Instant now) {
+        // Check 1: invariante global BFPM
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        BalanceLedgerAuditRepository.BfpmInvariantRow inv =
+                balanceLedgerAuditRepository.getBfpmInvariantSummary();
+        BigDecimal delta = inv.getDelta() != null ? inv.getDelta() : BigDecimal.ZERO;
+
+        if (delta.abs().compareTo(EPSILON) > 0) {
+            run.setAnomaliesFound(run.getAnomaliesFound() + 1);
+            if (!run.isDryRun()) {
+                AccountingAnomaly a = new AccountingAnomaly();
+                a.setAnomalyType("BFPM_INVARIANT_BREACH");
+                a.setSeverity("CRITICAL");
+                a.setExpectedValue(BigDecimal.ZERO);
+                a.setActualValue(delta);
+                a.setDeltaValue(delta);
+                a.setDescription("Invariante BFPM rota. sumBonusGrant=" + inv.getSumBonusGrant()
+                        + " sumBonusFunding=" + inv.getSumBonusFunding()
+                        + " delta=" + delta);
+                a.setStatus("OPEN");
+                a.setDetectedAt(now);
+                a.setCreatedAt(now);
+                a.setAuditRunId(String.valueOf(run.getId()));
+                accountingAnomalyRepository.save(a);
+                run.setAnomaliesCreated(run.getAnomaliesCreated() + 1);
+            }
+        }
+
+        // Check 2: BONUS_GRANT sin BONUS_FUNDING emparejado por descripción
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        List<BalanceLedgerAuditRepository.BfpmBonusGrantOrphanRow> grantOrphans =
+                balanceLedgerAuditRepository.findBonusGrantsWithoutFunding(200);
+        run.setAnomaliesFound(run.getAnomaliesFound() + grantOrphans.size());
+
+        if (!run.isDryRun() && !grantOrphans.isEmpty()) {
+            List<AccountingAnomaly> anomalies = new ArrayList<>(grantOrphans.size());
+            for (var row : grantOrphans) {
+                AccountingAnomaly a = new AccountingAnomaly();
+                a.setAnomalyType("BFPM_BONUS_GRANT_WITHOUT_FUNDING");
+                a.setSeverity("ERROR");
+                a.setUserId(row.getUserId());
+                a.setTransactionId(row.getTransactionId());
+                a.setActualValue(row.getAmount());
+                a.setDescription("BONUS_GRANT sin BONUS_FUNDING emparejado. transaction_id="
+                        + row.getTransactionId() + " amount=" + row.getAmount()
+                        + " desc=" + row.getDescription());
+                a.setStatus("OPEN");
+                a.setDetectedAt(now);
+                a.setCreatedAt(now);
+                a.setAuditRunId(String.valueOf(run.getId()));
+                anomalies.add(a);
+            }
+            accountingAnomalyRepository.saveAll(anomalies);
+            run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
+        }
+
+        // Check 3: BONUS_FUNDING sin BONUS_GRANT emparejado por descripción (sentido inverso)
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        List<BalanceLedgerAuditRepository.BfpmBonusFundingOrphanRow> fundingOrphans =
+                balanceLedgerAuditRepository.findBonusFundingsWithoutGrant(200);
+        run.setAnomaliesFound(run.getAnomaliesFound() + fundingOrphans.size());
+
+        if (!run.isDryRun() && !fundingOrphans.isEmpty()) {
+            List<AccountingAnomaly> anomalies = new ArrayList<>(fundingOrphans.size());
+            for (var row : fundingOrphans) {
+                AccountingAnomaly a = new AccountingAnomaly();
+                a.setAnomalyType("BFPM_BONUS_FUNDING_WITHOUT_GRANT");
+                a.setSeverity("ERROR");
+                a.setPlatformTransactionId(row.getPlatformTransactionId());
+                a.setActualValue(row.getAmount());
+                a.setDescription("BONUS_FUNDING sin BONUS_GRANT emparejado. platform_transaction_id="
+                        + row.getPlatformTransactionId() + " amount=" + row.getAmount()
+                        + " desc=" + row.getDescription());
+                a.setStatus("OPEN");
+                a.setDetectedAt(now);
+                a.setCreatedAt(now);
+                a.setAuditRunId(String.valueOf(run.getId()));
+                anomalies.add(a);
+            }
+            accountingAnomalyRepository.saveAll(anomalies);
+            run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
+        }
+
+        // Check 4: clients.total_pagos vs Σ transactions(op=INGRESO)
+        run.setChecksExecuted(run.getChecksExecuted() + 1);
+        List<BalanceLedgerAuditRepository.TotalPagosMismatchRow> totalPagosMismatches =
+                balanceLedgerAuditRepository.findClientsTotalPagosVsIngresoMismatch(200);
+        run.setAnomaliesFound(run.getAnomaliesFound() + totalPagosMismatches.size());
+
+        if (!run.isDryRun() && !totalPagosMismatches.isEmpty()) {
+            List<AccountingAnomaly> anomalies = new ArrayList<>(totalPagosMismatches.size());
+            for (var row : totalPagosMismatches) {
+                AccountingAnomaly a = new AccountingAnomaly();
+                a.setAnomalyType("BFPM_TOTAL_PAGOS_MISMATCH");
+                a.setSeverity("WARNING");
+                a.setUserId(row.getUserId());
+                a.setExpectedValue(row.getSumIngreso());
+                a.setActualValue(row.getTotalPagos());
+                a.setDeltaValue(row.getDelta());
+                a.setDescription("clients.total_pagos no coincide con SUM(transactions INGRESO). user_id="
+                        + row.getUserId()
+                        + " total_pagos=" + row.getTotalPagos()
+                        + " sum_ingreso=" + row.getSumIngreso()
+                        + " delta=" + row.getDelta());
+                a.setStatus("OPEN");
+                a.setDetectedAt(now);
+                a.setCreatedAt(now);
+                a.setAuditRunId(String.valueOf(run.getId()));
+                anomalies.add(a);
+            }
+            accountingAnomalyRepository.saveAll(anomalies);
+            run.setAnomaliesCreated(run.getAnomaliesCreated() + anomalies.size());
+        }
     }
 
     private void runSessionIntegrity(AuditRun run, Instant now) {

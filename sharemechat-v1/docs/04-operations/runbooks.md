@@ -29,6 +29,39 @@ Los runbooks del repositorio principal deben servir para operar el sistema a niv
 - verificar gifts y su reparto
 - revisar requests de payout o refund si aplican
 
+## Runbook de facturacion de streams con doble ACK media
+
+Estado: **IMPLEMENTADO y validado en TEST**.
+
+### Garantias funcionales
+
+- La confirmacion facturable del stream exige doble ACK media: cliente y modelo del mismo `streamRecordId`.
+- El frontend emite `ack-media` solo tras media local `live`, media remota `live`, conexion WebRTC usable (`connected`/`completed`) y margen de estabilidad temporal.
+- El backend valida que el usuario que emite ACK pertenece al stream.
+- Un ACK individual no confirma la sesion.
+- Un stream cerrado no se confirma despues.
+- Si `confirmed_at` es `NULL`, `endSession` cierra sin cargo.
+- `confirmed_at` y `billable_start` se escriben de forma atomica y coinciden por construccion.
+- `endSession` calcula los segundos facturables desde `billable_start`, con fallback a `confirmed_at`; `start_time` no se usa como inicio facturable final.
+- `endIfBelowThreshold` calcula desde `confirmed_at`, coherente con el inicio facturable real.
+
+### Validacion minima tras cambios relacionados
+
+1. Sesion sin doble ACK: cerrar y confirmar que no hay `STREAM_CHARGE`, `STREAM_EARNING` ni `STREAM_MARGIN`.
+2. Sesion con un solo ACK: cerrar y confirmar que no hay cargo.
+3. Sesion con doble ACK: confirmar que `confirmed_at` y `billable_start` existen y coinciden.
+4. Comparar duracion tecnica y facturable: `seconds_from_billable` puede ser menor que `seconds_from_start`.
+5. Confirmar que `STREAM_CHARGE`, `STREAM_EARNING` y `STREAM_MARGIN` usan segundos facturables.
+6. Confirmar que gifts siguen operando sin cambios y no dependen del ajuste de segundos del stream.
+
+### Resultado validado en TEST
+
+- `seconds_from_billable` distinto de `seconds_from_start` en datos reales.
+- `STREAM_CHARGE` correcto.
+- `STREAM_EARNING` correcto.
+- `STREAM_MARGIN` correcto.
+- gifts no afectados.
+
 ## Runbook de Auth-risk en login producto
 
 ### Activación y desactivación por entorno
@@ -161,50 +194,155 @@ En **AUDIT**, en cambio, el backend se ejecuta como servicio `sharemechat-audit.
 
 Mientras el modo de arranque de TEST siga siendo manual, los procedimientos de diagnóstico que dependan de logs históricos deben asumir esta limitación. Esta deuda operativa está recogida también en `known-risks.md` como riesgo residual de logs no persistentes y debe consultarse desde allí. La mitigación natural —despliegue como servicio con redirección a archivo o `journald`— es objeto de iteración futura y no se improvisa caso a caso.
 
-## Runbook de Product Operational Mode (procedimiento pendiente hasta implementación)
+## Runbook de Product Operational Mode
 
-La capa Product Operational Mode está **diseñada y aprobada** en [ADR-009](../06-decisions/adr-009-product-operational-mode.md) pero **no implementada** todavía. Este runbook documenta el procedimiento operativo previsto para cuando exista, de modo que pueda ejecutarse sin reabrir diseño.
+La capa Product Operational Mode está **implementada en backend con alcance parcial** según [ADR-009](../06-decisions/adr-009-product-operational-mode.md). Validada con tráfico real para el cierre de registro en TEST/AUDIT y para el gobierno de endpoints económicos directos en TEST; los modos restrictivos del producto están en código pero no se han ejercitado end-to-end.
 
-### Cambio de modo
+### Configuración por entorno
 
-El modo se gobierna por variables de entorno por servidor (modo principal y flags de registro de cliente y modelo). El cambio de modo se considera operativo y requiere:
+La capa se gobierna mediante variables de entorno resueltas por las propiedades versionadas:
 
-1. ajustar las variables en el host del backend afectado
-2. reiniciar el backend de forma controlada (mientras no exista hot-reload de propiedades, asumido en la decisión)
-3. validar el comportamiento esperado según la lista de comprobaciones de abajo
+- `PRODUCT_ACCESS_MODE` → `product.access.mode`. Valores admitidos: `OPEN`, `PRELAUNCH`, `MAINTENANCE`, `CLOSED`. Default `OPEN`.
+- `PRODUCT_REGISTRATION_CLIENT_ENABLED` → `product.registration.client.enabled`. Default `true`.
+- `PRODUCT_REGISTRATION_MODEL_ENABLED` → `product.registration.model.enabled`. Default `true`.
+- `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED` → `product.simulation.transactions-direct.enabled`. Default `false`.
+- `PRODUCT_ACCESS_ALLOWLIST_USER_IDS` → `product.access.allowlist.user-ids`. Lista CSV de userIds exentos del gate cuando el modo es restrictivo. Default vacía.
 
-El cambio entre `OPEN`, `PRELAUNCH`, `MAINTENANCE` y `CLOSED` debe coordinarse con el frontend solo en cuanto a comunicación al usuario (mensajes "Coming Soon" / "Mantenimiento" se generan automáticamente desde los códigos backend).
+Defaults seguros: con las variables sin setear, el sistema se comporta exactamente igual que antes de existir la capa.
 
-### Comprobaciones mínimas tras cambio de modo
+El cambio de configuración requiere edición del fichero de entorno del host (`/opt/sharemechat/.env` en AUDIT) y reinicio controlado del backend; mientras no exista hot-reload, no se asume aplicación dinámica.
 
-1. **Backoffice**:
-   - `POST /api/admin/auth/login` responde 200 y emite cookie admin.
-   - `/api/admin/stats/overview` (o panel similar) responde 200 con cookie admin.
-   - `GET /api/users/me` con cookie admin responde 200 con `backofficeRoles` no vacío.
-2. **Login producto**:
-   - en `OPEN`, responde 200 y emite cookies de producto.
-   - en `PRELAUNCH/MAINTENANCE/CLOSED`, responde 503 con el código esperado (`PRODUCT_UNAVAILABLE` o `PRODUCT_MAINTENANCE`) y sin `Set-Cookie` de sesión nueva.
-3. **Refresh producto** (`POST /api/auth/refresh`):
-   - en cualquier modo restrictivo con cookie de producto previa, responde 503 y devuelve `Set-Cookie` con `Max-Age=0` para `access_token` y `refresh_token`.
-   - con cookie de backoffice, responde 200 sin tocar cookies.
-4. **Registro cliente y modelo**:
-   - con la flag correspondiente a `true` y modo distinto de `CLOSED`, responde 200 y crea la cuenta con su token de verificación.
-   - con la flag a `false` o modo `CLOSED`, responde 503 con `code: REGISTRATION_CLOSED` y `scope` correspondiente.
-5. **WebSocket producto**:
-   - en `OPEN`, handshake `/match` y `/messages` abre con cookie válida.
-   - en cualquier modo restrictivo, handshake responde 503 y la conexión no se abre.
-6. **Email verification y forgot/reset password**:
-   - operativos en cualquier modo.
-7. **Webhooks externos** (`/api/billing/ccbill/notify`, `/api/kyc/veriff/webhook`):
-   - operativos en cualquier modo.
-8. **Logs**:
-   - aparecen entradas con prefijo `[PRODUCT-MODE]` (o el prefijo final que se adopte) por cada bloqueo, sin emails ni passwords.
+Matriz operativa por entorno:
 
-### Rollback rápido
+- TEST: `PRODUCT_ACCESS_MODE=OPEN`, registros cliente/modelo cerrados. `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=true` solo cuando se necesite simulación interna; `false` cuando se quiera validar el cierre de simulación directa.
+- AUDIT: `PRODUCT_ACCESS_MODE=OPEN`, registros cliente/modelo cerrados y `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` por defecto.
+- PRO: `PRODUCT_ACCESS_MODE` según fase y `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` siempre.
 
-El rollback canónico es revertir las variables de entorno al modo anterior (`OPEN` por defecto) y reiniciar. Como la decisión vive en variables de entorno y no en código compilado, no requiere redeploy. La capa está diseñada para ser reversible operativamente en cualquier momento.
+### Endpoints afectados por el cierre de registro (alcance validado)
 
-Estado actual de este runbook: **procedimiento pendiente de implementación efectiva**. Hasta que exista la capa, las comprobaciones anteriores no aplican y el sistema se comporta como `OPEN` con registros abiertos.
+Con `PRODUCT_REGISTRATION_CLIENT_ENABLED=false` y/o `PRODUCT_REGISTRATION_MODEL_ENABLED=false`:
+
+- `POST /api/users/register/client` → 503 `REGISTRATION_CLOSED` con `scope: client`
+- `POST /api/users/register/model` → 503 `REGISTRATION_CLOSED` con `scope: model`
+
+El resto de superficie de producto (login, refresh, endpoints autenticados, handshake WS) no se ve afectada cuando `PRODUCT_ACCESS_MODE=OPEN`.
+
+### Endpoints económicos directos / simulación
+
+Con `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`:
+
+- `POST /api/transactions/first` → 503 `SIMULATION_DISABLED` con `scope: transactions-direct`
+- `POST /api/transactions/add-balance` → 503 `SIMULATION_DISABLED` con `scope: transactions-direct`
+- `POST /api/transactions/payout` → no afectado por esta flag
+- `POST /api/billing/ccbill/session` → afectado por modo operativo, no por esta flag
+- `POST /api/billing/ccbill/notify` → whitelist permanente
+
+Esta flag no gobierna payout, gifts, trials, refunds, cierre de streams ni webhook PSP. Esas superficies económicas no directas se tratan como backlog separado de hardening; `POST /api/billing/ccbill/notify` es bloqueante antes de dinero real hasta implementar validación de firma/origen PSP, idempotencia y protección anti-replay.
+
+Respuesta esperada:
+
+```json
+{"code":"SIMULATION_DISABLED","scope":"transactions-direct","message":"La operación solicitada no está disponible en este entorno."}
+```
+
+### Respuesta HTTP de bloqueo
+
+Status: `503 Service Unavailable`.
+Header opcional `X-Product-Mode` cuando aplica un modo (no se emite en `REGISTRATION_CLOSED`).
+Cuerpo JSON estable:
+
+- `PRODUCT_UNAVAILABLE`:
+  ```json
+  {"code":"PRODUCT_UNAVAILABLE","scope":"product","mode":"PRELAUNCH","message":"El producto aún no está disponible."}
+  ```
+- `PRODUCT_MAINTENANCE`:
+  ```json
+  {"code":"PRODUCT_MAINTENANCE","scope":"product","mode":"MAINTENANCE","message":"Mantenimiento en curso. Vuelve a intentarlo en unos minutos."}
+  ```
+- `REGISTRATION_CLOSED`:
+  ```json
+  {"code":"REGISTRATION_CLOSED","scope":"client","message":"El registro de clientes está temporalmente cerrado."}
+  ```
+  (`scope` puede ser `client` o `model`).
+
+En `/api/auth/refresh` bloqueado para sesión de producto, la respuesta incluye `Set-Cookie` con `Max-Age=0` para `access_token` y `refresh_token`. Cookies de backoffice no se tocan.
+
+### Logs
+
+Cada bloqueo emite una línea con prefijo `[PRODUCT-MODE]`. Campos: `path`, `method`, `mode`, `decision` (código), `reason` (razón interna estable). Nunca incluye email, password, token ni cookie.
+
+Ejemplos reales observados:
+
+```
+[PRODUCT-MODE] path=/api/users/register/client method=POST mode=- decision=REGISTRATION_CLOSED reason=client_registration_disabled
+[PRODUCT-MODE] path=/api/users/register/model method=POST mode=- decision=REGISTRATION_CLOSED reason=model_registration_disabled
+[PRODUCT-MODE] path=/api/transactions/first method=POST mode=- decision=SIMULATION_DISABLED reason=transactions_first_disabled
+[PRODUCT-MODE] path=/api/transactions/add-balance method=POST mode=- decision=SIMULATION_DISABLED reason=transactions_add_balance_disabled
+```
+
+En AUDIT se filtran con `journalctl`; en TEST viven en la sesión interactiva del backend manual mientras siga siendo el modo de arranque.
+
+### Validación en entornos TEST y AUDIT
+
+#### TEST
+
+Configuración aplicada:
+
+```
+PRODUCT_ACCESS_MODE=OPEN
+PRODUCT_REGISTRATION_CLIENT_ENABLED=false
+PRODUCT_REGISTRATION_MODEL_ENABLED=false
+PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false
+```
+
+Pruebas realizadas:
+
+1. `POST /api/users/register/client` → **503 Service Unavailable**. Mensaje "El registro de clientes está temporalmente cerrado". Log:
+   ```
+   [PRODUCT-MODE] path=/api/users/register/client method=POST decision=REGISTRATION_CLOSED reason=client_registration_disabled
+   ```
+2. `POST /api/users/register/model` → **503 Service Unavailable**. Mensaje equivalente. Log con `reason=model_registration_disabled`.
+3. **Login de usuario existente** → `LOGIN_SUCCESS` correcto, `AuthRiskService` operativo, sin bloqueo.
+4. **Uso del producto**: matching WebRTC, sesiones, gifts y resto de flujos verificados sin impacto.
+5. Con `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`, `POST /api/transactions/first` y `POST /api/transactions/add-balance` responden 503 `SIMULATION_DISABLED`; `POST /api/transactions/payout` sigue funcionando.
+6. Con `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=true`, los endpoints directos vuelven a operar para uso interno de TEST.
+
+#### AUDIT
+
+Misma configuración base aplicada en `/opt/sharemechat/.env`, con `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` por defecto. Arranque mediante `sharemechat-audit.service` (systemd). Logs verificados con:
+
+```
+sudo journalctl -u sharemechat-audit -f
+```
+
+Pruebas realizadas:
+
+1. `POST https://audit.sharemechat.com/api/users/register/client` → **503 Service Unavailable**. Mensaje correcto en frontend. Log `[PRODUCT-MODE] ... decision=REGISTRATION_CLOSED`.
+2. `POST .../api/users/register/model` → mismo comportamiento.
+3. **Login** → `LOGIN_SUCCESS` correcto. `AuthRisk` activo con `env=audit`.
+
+#### Conclusión
+
+- Comportamiento consistente entre TEST y AUDIT.
+- Bloqueo efectivo server-side, independiente del frontend.
+- Sin regresiones detectadas sobre flujos preexistentes (login, matching, gifts, sesiones).
+
+### Limitaciones actuales / pendiente
+
+Estos puntos están **fuera del alcance validado** en esta iteración. Hasta que se ejerciten en entornos no deben darse por garantizados:
+
+- bloqueo de **login de producto** mediante modo `PRELAUNCH` o `CLOSED` (código presente, validación pendiente)
+- modo **`MAINTENANCE`** completo (bloqueo de producto manteniendo backoffice)
+- comportamiento detallado del **handshake WebSocket** en modos restrictivos más allá del corte por interceptor; el flujo end-to-end con cliente real no se ha probado en estos modos
+- **integración con flujos PSP** durante modos restrictivos (los webhooks `/api/billing/ccbill/notify` y `/api/kyc/veriff/webhook` están en whitelist permanente, pero el cierre completo del circuito económico bajo `MAINTENANCE` o `CLOSED` no se ha ejercitado)
+- **frontend**: tratamiento de los códigos `PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE` y `REGISTRATION_CLOSED` en `apiFetch`, `SessionProvider`, `RequireRole`, modales de registro y engines WS — **pendiente** según [frontend-architecture.md](../02-architecture/frontend-architecture.md). Hoy el frontend recibe el 503 con cuerpo JSON pero no hay UX dedicada por código
+- **frontend**: tratamiento de `SIMULATION_DISABLED` si alguna superficie invoca los endpoints directos en un entorno cerrado
+- **allowlist por userId** dentro de modos restrictivos: implementada; no se ha ejercitado porque ningún modo restrictivo está activo en entornos
+- **caso de access_token expirado en `/api/auth/refresh`**: limitación consciente. Una sesión backoffice cuyo access_token haya expirado puede ser tratada como producto y forzar re-login durante modos restrictivos. No se resuelve en esta iteración.
+
+### Rollback
+
+Reversión inmediata sin redeploy: setear `PRODUCT_ACCESS_MODE=OPEN`, ajustar las flags de registro según la operación requerida y mantener `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` salvo uso interno explícito en TEST; después reiniciar el backend.
 
 ## Regla de saneado
 

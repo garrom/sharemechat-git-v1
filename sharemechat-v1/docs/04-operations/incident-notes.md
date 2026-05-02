@@ -422,10 +422,10 @@ Hallazgos concretos:
 - backend confia en que ambos clientes envien `tech-media-ready` y en ese momento marca `confirmed_at` y `billable_start`
 - el endpoint REST `POST /api/streams/{streamRecordId}/ack-media`, mas alineado con una confirmacion industrial de media conectada, existe pero no se usa en el flujo principal analizado
 
-Impacto de negocio confirmado por codigo:
+Impacto de negocio original confirmado por codigo en ese momento:
 
 - si la sesion nunca llega a confirmarse, `endSession` la cierra sin cargos
-- si la sesion se confirma de forma prematura y despues la media se degrada o ICE falla, el cierre economico sigue calculando el cargo final desde `start_time`, no desde `confirmed_at` o `billable_start`
+- si la sesion se confirmaba de forma prematura y despues la media se degradaba o ICE fallaba, el cierre economico calculaba el cargo final desde `start_time`, no desde `confirmed_at` o `billable_start`
 - ademas, en random los gifts pueden procesarse contra la sesion activa del par aunque esa sesion aun no este confirmada; el flujo de regalo no exige `confirmed_at` para random cuando ya existe `streamId` activo
 
 La siguiente correccion minima correcta ya no es solo de TURN/ICE:
@@ -441,7 +441,7 @@ Resolucion posterior aplicada sobre gifts:
 - en calling ya no se permite degradar a regalo de chat cobrable cuando la llamada no tiene `streamRecordId` confirmado
 - backend valida ademas que cualquier `streamRecordId` usado para cobrar un gift pertenezca al par correcto, siga activo y tenga `confirmed_at` no nulo
 
-Con ello, queda corregido el bug de negocio confirmado en MySQL donde RANDOM y CALLING podian generar `GIFT_SEND`, `GIFT_EARNING` y `GIFT_MARGIN` sin sesion confirmada. La deuda que sigue abierta es distinta: el tramo facturable del stream continua dependiendo de una confirmacion prematura y del calculo final desde `start_time`.
+Con ello, queda corregido el bug de negocio confirmado en MySQL donde RANDOM y CALLING podian generar `GIFT_SEND`, `GIFT_EARNING` y `GIFT_MARGIN` sin sesion confirmada. En ese momento quedaba abierta una deuda distinta: el tramo facturable del stream dependia de una confirmacion prematura y del calculo final desde `start_time`.
 
 Resolucion posterior aplicada sobre autoridad tecnica de confirmacion:
 
@@ -457,6 +457,13 @@ Correccion posterior acotada en CALLING:
 - se detecto un false positive todavia posible en llamadas 1 a 1 porque `ack-media` podia salir con `local track live`, `remote track live` y conexion usable aunque el elemento `<video>` remoto real aun no hubiera entrado en reproduccion efectiva
 - la correccion aplicada se limita al frontend de CALLING: el ACK ahora exige ademas `onPlaying` real del `<video ref={callRemoteVideoRef}>`
 - RANDOM no cambia y backend no cambia: `ack-media` sigue siendo la autoridad compartida y `StreamService.ackMedia(...)` mantiene el doble ACK como confirmacion real
+
+Resolucion posterior aplicada sobre inicio facturable:
+
+- `confirmed_at` y `billable_start` se escriben de forma atomica y coinciden por construccion
+- `endSession` calcula los segundos facturables desde `billable_start`, con fallback defensivo a `confirmed_at`
+- `start_time` queda como instante tecnico del stream y ya no se usa como inicio facturable final
+- validacion en TEST confirmo `STREAM_CHARGE`, `STREAM_EARNING`, `STREAM_MARGIN` y gifts coherentes con el inicio facturable real
 
 ### Diagnostico fino pendiente en regalo random tras match
 
