@@ -91,6 +91,7 @@ Secuencia actual:
 - Auth-risk Fase 1 y Fase 2 validadas en TEST y AUDIT.
 - Pipeline perimetral AUDIT operativo.
 - Billing de streams con doble ACK media y `billable_start` validado en TEST.
+- CMS Fase 1 ([ADR-010](../06-decisions/adr-010-internal-content-cms-ai-assisted-workflow.md)) COMPLETADO en TEST: backend `com.sharemechat.content`, schema MySQL `content_*`, bucket S3 privado `sharemechat-content-private-test` y panel backoffice operativos extremo a extremo. Sin IA, sin publicación pública, sin workflow editorial completo. Detalle en [test.md](../03-environments/test.md).
 
 ---
 
@@ -108,3 +109,4 @@ Estos puntos siguen pendientes, pero **no son el siguiente paso inmediato** salv
 - Contrato funcional de errores REST/WebSocket/frontend.
 - Extender auth-risk a login admin, refresh y forgot/reset password.
 - Persistencia de logs en TEST cuando deje de arrancar manualmente.
+- Siguiente paso CMS: Fase 2 (workflow editorial completo + versiones en `content_article_versions` + eventos en `content_review_events`).

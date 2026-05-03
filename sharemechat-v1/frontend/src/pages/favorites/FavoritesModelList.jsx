@@ -53,7 +53,7 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
       data-disabled={isBlocked ? 'true' : 'false'}
       onClick={() => { if (isBlocked) return; onSelect?.(user); }}
       style={isBlocked ? { opacity: 0.55, filter: 'grayscale(0.25)' } : undefined}
-      title={isBlocked ? (blockedByMe ? 'Usuario bloqueado (lo has bloqueado tú)' : blockedByOther ? 'Te ha bloqueado este usuario' : 'Usuario bloqueado') : undefined}
+      title={isBlocked ? i18n.t('favorites.states.blocked') : undefined}
     >
       <DotWrap>
         <Avatar
@@ -89,8 +89,8 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
       <FavMenuTrigger
         type="button"
         data-open={menuOpen ? 'true' : 'false'}
-        aria-label="Más opciones"
-        title={isMenuDisabled ? (blockedByOther ? 'Acciones no disponibles' : isBlocked ? (blockedByMe ? 'Desbloquear' : 'Usuario bloqueado') : 'No disponible') : 'Más opciones'}
+        aria-label={i18n.t('favorites.menu.moreOptions')}
+        title={isMenuDisabled ? (blockedByOther ? i18n.t('favorites.menu.actionsUnavailable') : isBlocked ? (blockedByMe ? i18n.t('favorites.actions.unblock') : i18n.t('favorites.states.blocked')) : i18n.t('favorites.menu.unavailable')) : i18n.t('favorites.menu.moreOptions')}
         disabled={isMenuDisabled}
         onClick={(e) => {
           e.stopPropagation();
@@ -163,10 +163,10 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
 
     const displayName = user?.nickname || `Usuario #${user.id}`;
     const ok = await confirm({
-      title: 'Desbloquear',
-      message: `¿Quieres desbloquear a ${displayName}?`,
-      okText: 'Desbloquear',
-      cancelText: 'Cancelar',
+      title: i18n.t('favorites.actions.unblock'),
+      message: i18n.t('favorites.alerts.unblockConfirm', { name: displayName }),
+      okText: i18n.t('favorites.actions.unblock'),
+      cancelText: i18n.t('favorites.actions.cancel'),
       variant: 'confirm',
       size: 'sm',
       danger: false,
@@ -188,9 +188,9 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
           : i
       )));
 
-      await alert({ title: 'Desbloquear', message: 'Usuario desbloqueado.', variant: 'success', size: 'sm' });
+      await alert({ title: i18n.t('favorites.actions.unblock'), message: i18n.t('favorites.alerts.unblocked'), variant: 'success', size: 'sm' });
     } catch (e) {
-      await alert({ title: 'Desbloquear', message: e?.message || 'No se pudo desbloquear.', variant: 'danger', size: 'sm' });
+      await alert({ title: i18n.t('favorites.actions.unblock'), message: e?.message || i18n.t('favorites.alerts.unblockFailed'), variant: 'danger', size: 'sm' });
     }
   }, [sessionUser, sessionLoading, alert, confirm]);
 
@@ -374,9 +374,9 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
       await apiFetch(`/favorites/clients/${user.id}`, { method: 'DELETE' });
 
       setItems((prev) => (prev || []).filter((i) => Number(i.id) !== Number(user.id)));
-      await alert({ title: 'Favoritos', message: 'Eliminado de favoritos.', variant: 'success', size: 'sm' });
+      await alert({ title: i18n.t('favorites.alerts.title'), message: i18n.t('favorites.alerts.removed'), variant: 'success', size: 'sm' });
     } catch (e) {
-      await alert({ title: 'Favoritos', message: e?.message || 'No se pudo eliminar de favoritos.', variant: 'danger', size: 'sm' });
+      await alert({ title: i18n.t('favorites.alerts.title'), message: e?.message || i18n.t('favorites.alerts.removeFailed'), variant: 'danger', size: 'sm' });
     }
   }, [alert, openRemoveFavoriteConfirm]);
 
@@ -411,9 +411,9 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
         return next;
       });
 
-      await alert({ title: 'Bloquear', message: 'Usuario bloqueado.', variant: 'success', size: 'sm' });
+      await alert({ title: i18n.t('favorites.actions.block'), message: i18n.t('favorites.alerts.blocked'), variant: 'success', size: 'sm' });
     } catch (e) {
-      await alert({ title: 'Bloquear', message: e?.message || 'No se pudo bloquear.', variant: 'danger', size: 'sm' });
+      await alert({ title: i18n.t('favorites.actions.block'), message: e?.message || i18n.t('favorites.alerts.blockFailed'), variant: 'danger', size: 'sm' });
     }
   }, [sessionUser, sessionLoading, alert, openBlockReasonModal]);
 
@@ -468,7 +468,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
       });
     } catch (e) {
       await alert({
-        title: 'Reportar',
+        title: i18n.t('favorites.actions.report'),
         message: e?.message || 'No se pudo enviar el reporte.',
         variant: 'danger',
         size: 'sm',
@@ -491,21 +491,21 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
           <>
             <FavMenuItem type="button" onClick={async () => { closeMenu(); await handleRemove(u); }}>
               <FavMenuIcon><FontAwesomeIcon icon={faTrash} /></FavMenuIcon>
-              <span>Eliminar</span>
+              <span>{i18n.t('favorites.actions.delete')}</span>
             </FavMenuItem>
 
             <FavMenuDivider />
 
             <FavMenuItem type="button" onClick={async () => { closeMenu(); await handleReport(u); }}>
               <FavMenuIcon><FontAwesomeIcon icon={faFlag} /></FavMenuIcon>
-              <span>Reportar</span>
+              <span>{i18n.t('favorites.actions.report')}</span>
             </FavMenuItem>
 
             <FavMenuDivider />
 
             <FavMenuItem type="button" onClick={async () => { closeMenu(); await handleBlock(u); }}>
               <FavMenuIcon><FontAwesomeIcon icon={faBan} /></FavMenuIcon>
-              <span>Bloquear</span>
+              <span>{i18n.t('favorites.actions.block')}</span>
             </FavMenuItem>
           </>
         )}
@@ -513,7 +513,7 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
         {isBlocked && blockedByMe && (
           <FavMenuItem type="button" onClick={async () => { closeMenu(); await handleUnblock(u); }}>
             <FavMenuIcon><FontAwesomeIcon icon={faUnlock} /></FavMenuIcon>
-            <span>Desbloquear</span>
+            <span>{i18n.t('favorites.actions.unblock')}</span>
           </FavMenuItem>
         )}
 
@@ -535,11 +535,11 @@ export default function FavoritesModelList({ onSelect, reloadTrigger = 0, select
     );
   }, [menu, closeMenu, handleRemove,handleReport,handleBlock, handleUnblock]);
 
-  if (sessionLoading) return <StateRow>Cargando sesión…</StateRow>;
-  if (!sessionUser) return <StateRow>Inicia sesión para ver tus favoritos.</StateRow>;
+  if (sessionLoading) return <StateRow>{i18n.t('favorites.states.loadingSession')}</StateRow>;
+  if (!sessionUser) return <StateRow>{i18n.t('favorites.states.signInToView')}</StateRow>;
 
-  if (loading) return <StateRow>Cargando…</StateRow>;
-  if (!items.length) return <StateRow>No tienes favoritos todavía.</StateRow>;
+  if (loading) return <StateRow>{i18n.t('favorites.states.loading')}</StateRow>;
+  if (!items.length) return <StateRow>{i18n.t('favorites.states.empty')}</StateRow>;
 
   return (
     <>

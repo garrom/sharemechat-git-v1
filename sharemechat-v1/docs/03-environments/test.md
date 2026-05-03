@@ -85,3 +85,50 @@ Resultado verificado con tráfico real:
 - `POST /api/transactions/payout` no queda afectado por la flag de simulación directa
 
 Detalle operativo y procedimiento en [runbooks.md](../04-operations/runbooks.md).
+
+## CMS (Content Management) — Fase 1
+
+CMS interno de SharemeChat (ver [ADR-010](../06-decisions/adr-010-internal-content-cms-ai-assisted-workflow.md)) operativo en TEST en su Fase 1 — esqueleto editorial mínimo, sin IA, sin publicación pública, sin workflow editorial completo.
+
+Backend:
+
+- endpoints `GET/POST/PATCH/DELETE /api/admin/content/articles`, `GET/PUT /api/admin/content/articles/{id}/body`
+- tabla principal: `content_articles`
+- tablas creadas pero sin uso en Fase 1: `content_article_versions`, `content_generation_runs`, `content_review_events`
+- migración Flyway `V20260501__content_phase1_schema.sql`
+
+S3:
+
+- bucket: `sharemechat-content-private-test`
+- región: `eu-central-1`
+- acceso: privado, exclusivamente desde backend; sin CloudFront, sin OAC, sin URLs firmadas
+- key layout: `content/articles/{id}/draft.md`
+- SSE-S3 (AES256) aplicada en cada `PutObjectRequest`
+
+Seguridad:
+
+- permisos backoffice: `CONTENT.VIEW`, `CONTENT.EDIT`, `CONTENT.REVIEW`, `CONTENT.PUBLISH`
+- rol backoffice `EDITOR` creado (sin usuarios reales asignados en Fase 1)
+- acceso al panel cubierto por la regla genérica `/api/admin/**` de `SecurityConfig` (`ROLE_ADMIN` o `BO_ROLE_ADMIN`)
+
+Frontend backoffice:
+
+- panel `Content CMS` accesible desde el dashboard admin con permiso `CONTENT.VIEW` o rol `ADMIN`
+- vista lista paginada con filtros por estado, locale y categoría
+- editor de artículo con metadata (slug, locale, title, category, brief, keywords) y textarea markdown para el cuerpo
+
+Limitaciones Fase 1:
+
+- solo el estado `IDEA` es alcanzable; el resto del workflow (`OUTLINE_READY` → `PUBLISHED` → `RETRACTED`) está modelado en BD pero no operable
+- sin publicación pública; el blog estático en `blog-test.sharemechat.com` no se construye en esta fase
+- sin generación IA ni `content_generation_runs`
+- sin segregación generador↔aprobador ni eventos de revisión
+- sin versionado activo en `content_article_versions`
+
+Validación realizada con tráfico real en TEST:
+
+- creación de artículos en estado `IDEA` correcta (201, persistido en `content_articles`)
+- normalización de keywords aceptando `null`/vacío, lista separada por comas y array JSON; salida canónica como array JSON `["a","b","c"]` con trim, lowercase y dedupe
+- subida de body markdown a S3 `sharemechat-content-private-test` correcta; `body_s3_key` y `body_content_hash` (SHA-256) persistidos en `content_articles`
+- read-back del body desde S3 correcto (round-trip idéntico)
+- borrado solo permitido en estado `IDEA` (409 en cualquier otro)

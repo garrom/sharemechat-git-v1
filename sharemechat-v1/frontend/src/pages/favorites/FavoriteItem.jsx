@@ -1,5 +1,6 @@
 //FavoriteItem.jsx
 import React from 'react';
+import i18n from '../../i18n';
 import {
   ItemCard, Avatar, Info, Name, Meta, Actions, Btn,
 } from '../../styles/pages-styles/FavoritesStyles';
@@ -57,7 +58,7 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
         }}
       />
       <Info>
-        <Name>{user.nickname || user.name || user.email || `Usuario ${user.id}`}</Name>
+        <Name>{user.nickname || user.name || user.email || i18n.t('favorites.states.unknownUser', { id: user.id })}</Name>
         <Meta>
           {user.role || user.userType || ''}
         </Meta>
@@ -69,19 +70,19 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
           type="button"
           onClick={handleChat}
           disabled={user?.blocked}
-          title={user?.blocked ? 'Usuario bloqueado' : 'Chatear'}
+          title={user?.blocked ? i18n.t('favorites.states.blocked') : i18n.t('favorites.actions.chat')}
         >
-          Chatear
+          {i18n.t('favorites.actions.chat')}
         </Btn>
         {onRemove && (
           <Btn
             type="button"
             onClick={(e) => { e.stopPropagation(); if (user?.blocked) return; onRemove(user); }}
             disabled={removing || user?.blocked}
-            aria-label="Quitar de favoritos"
-            title={user?.blocked ? 'Usuario bloqueado' : 'Quitar de favoritos'}
+            aria-label={i18n.t('favorites.actions.remove')}
+            title={user?.blocked ? i18n.t('favorites.states.blocked') : i18n.t('favorites.actions.remove')}
           >
-            {removing ? 'Quitando…' : 'Quitar'}
+            {removing ? i18n.t('favorites.actions.removing') : i18n.t('favorites.actions.removeShort')}
           </Btn>
 
         )}
@@ -94,9 +95,9 @@ const FavoriteItem = ({ user, onClick, onRemove, removing, onChat }) => {
                 new CustomEvent('unblock-user', { detail: { user } })
               );
             }}
-            title="Desbloquear usuario"
+            title={i18n.t('favorites.actions.unblock')}
           >
-            Desbloquear
+            {i18n.t('favorites.actions.unblock')}
           </Btn>
         )}
 

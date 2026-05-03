@@ -13,6 +13,7 @@ import AdminModerationPanel from './AdminModerationPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminProfilePage from './AdminProfilePage';
 import AdminStatsPanel from './AdminStatsPanel';
+import AdminContentPanel from './content/AdminContentPanel';
 import AdminLayout from './components/AdminLayout';
 import AdminPage from './components/AdminPage';
 import AdminPlaceholderPanel from './components/AdminPlaceholderPanel';
@@ -82,6 +83,10 @@ const DashboardAdmin = () => {
       title: t('admin.shell.views.administration.title'),
       subtitle: t('admin.shell.views.administration.subtitle'),
     },
+    content: {
+      title: 'Content CMS',
+      subtitle: 'Gestion editorial de articulos. Fase 1: borrador en backoffice, sin publicacion publica, sin IA, sin workflow completo.',
+    },
     profile: {
       title: t('admin.shell.views.profile.title'),
       subtitle: t('admin.shell.views.profile.subtitle'),
@@ -110,6 +115,7 @@ const DashboardAdmin = () => {
     canViewDb: adminView,
     canViewAudit: adminView,
     canViewAdministration: adminView,
+    canViewContent: adminView || hasBackofficePermission(user, 'CONTENT.VIEW'),
   }), [adminView, user]);
 
   useEffect(() => {
@@ -132,6 +138,7 @@ const DashboardAdmin = () => {
       capabilities.canViewAudit ? 'control' : null,
       capabilities.canViewDb ? 'data' : null,
       capabilities.canViewAdministration ? 'administration' : null,
+      capabilities.canViewContent ? 'content' : null,
       'profile',
     ].filter(Boolean);
 
@@ -228,6 +235,11 @@ const DashboardAdmin = () => {
             key: 'administration',
             label: t('admin.shell.sections.control.items.administration.label'),
             meta: t('admin.shell.sections.control.items.administration.meta'),
+          } : null,
+          capabilities.canViewContent ? {
+            key: 'content',
+            label: 'Content CMS',
+            meta: 'Articulos editoriales (Fase 1)',
           } : null,
         ].filter(Boolean),
       },
@@ -469,6 +481,15 @@ const DashboardAdmin = () => {
               subtitle="Vista MVP de usuarios con acceso backoffice, roles efectivos, permisos visibles y overrides."
             >
               <AdminAdministrationPanel />
+            </AdminPage>
+          )}
+
+          {activeView === 'content' && capabilities.canViewContent && (
+            <AdminPage
+              title="Content CMS"
+              subtitle="Articulos editoriales en backoffice. Fase 1: solo borrador (estado IDEA), sin IA, sin publicacion publica, sin workflow completo."
+            >
+              <AdminContentPanel />
             </AdminPage>
           )}
 

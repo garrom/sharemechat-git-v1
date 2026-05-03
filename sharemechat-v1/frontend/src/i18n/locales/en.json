@@ -385,6 +385,43 @@
       }
     }
   },
+  "favorites": {
+    "alerts": {
+      "title": "Favorites",
+      "removed": "Removed from favorites.",
+      "removeFailed": "Could not remove from favorites.",
+      "blocked": "User blocked.",
+      "unblocked": "User unblocked.",
+      "unblockFailed": "Could not unblock the user.",
+      "unblockConfirm": "Do you want to unblock {{name}}?",
+      "blockFailed": "Could not block."
+    },
+    "states": {
+      "signInToView": "Sign in to see your favorites.",
+      "empty": "You don't have any favorites yet.",
+      "blocked": "Blocked user",
+      "unknownUser": "User {{id}}",
+      "loading": "Loading…",
+      "loadingSession": "Loading session…"
+    },
+    "actions": {
+      "remove": "Remove from favorites",
+      "removeShort": "Remove",
+      "chat": "Chat",
+      "delete": "Delete",
+      "report": "Report",
+      "block": "Block",
+      "unblock": "Unblock",
+      "unblockUser": "Unblock user",
+      "cancel": "Cancel",
+      "removing": "Removing…"
+    },
+    "menu": {
+      "moreOptions": "More options",
+      "actionsUnavailable": "Actions unavailable",
+      "unavailable": "Unavailable"
+    }
+  },
   "consent": {
     "ageGate": {
       "badge": "18+ Adults only",
@@ -632,7 +669,21 @@
     },
     "favoriteAlerts": {
       "title": "Favorites",
-      "modelAlreadyFavorite": "This model is already in your favorites."
+      "modelAlreadyFavorite": "This model is already in your favorites.",
+      "mutualAlready": "You are already mutual favorites.",
+      "requestSentTitle": "Request sent",
+      "requestActivatesOnAccept": "It will activate once the model accepts.",
+      "previouslyRejected": "The model previously declined the invitation.",
+      "requestProcessed": "Request processed.",
+      "requestSentShort": "Request sent.",
+      "cannotIdentifyModel": "Could not identify the current model.",
+      "addFailed": "Could not add to favorites.",
+      "cannotOpenWhileStreaming": "You cannot open the central chat while streaming. Press Stop to switch."
+    },
+    "blockAlerts": {
+      "title": "Block",
+      "cannotIdentifyModel": "Could not identify the current model.",
+      "modelBlocked": "Model blocked."
     },
     "favorites": {
       "inCallLocked": "In call: the list is locked until you hang up.",
@@ -774,7 +825,21 @@
     },
     "favoriteAlerts": {
       "title": "Favorites",
-      "clientAlreadyFavorite": "This client is already in your favorites."
+      "clientAlreadyFavorite": "This client is already in your favorites.",
+      "mutualAlready": "You are already mutual favorites.",
+      "requestSentTitle": "Request sent",
+      "requestActivatesOnAccept": "It will activate once the client accepts.",
+      "previouslyRejected": "The client previously declined the invitation.",
+      "requestProcessed": "Request processed.",
+      "requestSentShort": "Request sent.",
+      "cannotIdentifyClient": "Could not identify the current client.",
+      "addFailed": "Could not add to favorites."
+    },
+    "blockAlerts": {
+      "title": "Block",
+      "cannotIdentifyClient": "Could not identify the current client.",
+      "blockServerFailed": "Could not block on the server.",
+      "clientBlocked": "Client blocked."
     },
     "statistics": {
       "header": {

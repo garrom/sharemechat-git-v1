@@ -324,8 +324,8 @@ export default function VideoChatFavoritosCliente(props){
                         <div style={{marginTop:12,padding:12,border:'1px solid #333',borderRadius:8,background:'rgba(0,0,0,0.35)',display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',alignSelf:'center'}}>
                           <div style={{color:'#fff',marginBottom:8,textAlign:'center'}}>Te está llamando <strong>{callPeerName||'Usuario'}</strong>.</div>
                           <div style={{display:'flex',gap:10,justifyContent:'center',alignItems:'center'}}>
-                            <ButtonAceptar onClick={handleCallAccept}>Aceptar</ButtonAceptar>
-                            <ButtonRechazar onClick={handleCallReject} style={{backgroundColor:'#dc3545'}}>Rechazar</ButtonRechazar>
+                            <ButtonAceptar onClick={handleCallAccept}>{t('dashboardClient.videoChatFavoritosCliente.actions.accept')}</ButtonAceptar>
+                            <ButtonRechazar onClick={handleCallReject} style={{backgroundColor:'#dc3545'}}>{t('dashboardClient.videoChatFavoritosCliente.actions.reject')}</ButtonRechazar>
                           </div>
                         </div>
                       )}
@@ -427,7 +427,7 @@ export default function VideoChatFavoritosCliente(props){
                 </ButtonVolver>
                 <StyledTopCenter>
                   {allowChat&&(
-                    <ButtonLlamar onClick={enterCallMode} title="Llamar" aria-label="Llamar">
+                    <ButtonLlamar onClick={enterCallMode} title={t('dashboardClient.videoChatFavoritosCliente.actions.call')} aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.call')}>
                       {t('dashboardClient.videoChatFavoritosCliente.actions.startVideoChat')}
                     </ButtonLlamar>
                   )}
@@ -570,8 +570,8 @@ export default function VideoChatFavoritosCliente(props){
                   <div style={{textAlign:'center'}}>
                     <p style={{color:'#fff',marginBottom:16}}>{centerChatPeerName} te ha invitado a favoritos. Acepta para habilitar el chat.</p>
                     <div style={{display:'flex',gap:12,justifyContent:'center'}}>
-                      <ButtonAceptar onClick={acceptInvitation}>Aceptar</ButtonAceptar>
-                      <ButtonRechazar onClick={rejectInvitation}>Rechazar</ButtonRechazar>
+                      <ButtonAceptar onClick={acceptInvitation}>{t('dashboardClient.videoChatFavoritosCliente.actions.accept')}</ButtonAceptar>
+                      <ButtonRechazar onClick={rejectInvitation}>{t('dashboardClient.videoChatFavoritosCliente.actions.reject')}</ButtonRechazar>
                     </div>
                   </div>
                 </div>
@@ -590,7 +590,7 @@ export default function VideoChatFavoritosCliente(props){
                 <StyledChatWhatsApp>
                   <StyledChatScroller ref={centerListRef} data-bg="whatsapp" data-kind="favorites-chat">
                     <StyledChatMessagesInner>
-                      {centerLoading&&<div style={{color:'#adb5bd'}}>Cargando historial…</div>}
+                      {centerLoading&&<div style={{color:'#adb5bd'}}>{t('dashboardClient.videoChatFavoritosCliente.loading.history')}</div>}
                       {!centerLoading&&centerMessages.length===0&&(
                         <div style={{color:'#adb5bd'}}>
                           {allowChat?'No hay mensajes todavía. ¡Escribe el primero!':'Este chat no está activo.'}

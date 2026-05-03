@@ -385,6 +385,43 @@
       }
     }
   },
+  "favorites": {
+    "alerts": {
+      "title": "Favoritos",
+      "removed": "Eliminado de favoritos.",
+      "removeFailed": "No se pudo eliminar de favoritos.",
+      "blocked": "Usuario bloqueado.",
+      "unblocked": "Usuario desbloqueado.",
+      "unblockFailed": "No se pudo desbloquear al usuario.",
+      "unblockConfirm": "¿Quieres desbloquear a {{name}}?",
+      "blockFailed": "No se pudo bloquear."
+    },
+    "states": {
+      "signInToView": "Inicia sesión para ver tus favoritos.",
+      "empty": "No tienes favoritos todavía.",
+      "blocked": "Usuario bloqueado",
+      "unknownUser": "Usuario {{id}}",
+      "loading": "Cargando…",
+      "loadingSession": "Cargando sesión…"
+    },
+    "actions": {
+      "remove": "Quitar de favoritos",
+      "removeShort": "Quitar",
+      "chat": "Chatear",
+      "delete": "Eliminar",
+      "report": "Reportar",
+      "block": "Bloquear",
+      "unblock": "Desbloquear",
+      "unblockUser": "Desbloquear usuario",
+      "cancel": "Cancelar",
+      "removing": "Quitando…"
+    },
+    "menu": {
+      "moreOptions": "Más opciones",
+      "actionsUnavailable": "Acciones no disponibles",
+      "unavailable": "No disponible"
+    }
+  },
   "consent": {
     "ageGate": {
       "badge": "18+ Solo adultos",
@@ -632,7 +669,21 @@
     },
     "favoriteAlerts": {
       "title": "Favoritos",
-      "modelAlreadyFavorite": "Esta modelo ya está en tus favoritos."
+      "modelAlreadyFavorite": "Esta modelo ya está en tus favoritos.",
+      "mutualAlready": "Ya estáis en favoritos mutuamente.",
+      "requestSentTitle": "Solicitud enviada",
+      "requestActivatesOnAccept": "Se activará cuando la modelo acepte.",
+      "previouslyRejected": "La modelo rechazó previamente la invitación.",
+      "requestProcessed": "Solicitud procesada.",
+      "requestSentShort": "Solicitud enviada.",
+      "cannotIdentifyModel": "No se pudo identificar a la modelo actual.",
+      "addFailed": "No se pudo añadir a favoritos.",
+      "cannotOpenWhileStreaming": "No puedes abrir el chat central mientras hay streaming. Pulsa Stop si quieres cambiar."
+    },
+    "blockAlerts": {
+      "title": "Bloquear",
+      "cannotIdentifyModel": "No se pudo identificar a la modelo actual.",
+      "modelBlocked": "Modelo bloqueada."
     },
     "favorites": {
       "inCallLocked": "En llamada: la lista se bloquea hasta colgar.",
@@ -774,7 +825,21 @@
     },
     "favoriteAlerts": {
       "title": "Favoritos",
-      "clientAlreadyFavorite": "Este cliente ya está en tus favoritos."
+      "clientAlreadyFavorite": "Este cliente ya está en tus favoritos.",
+      "mutualAlready": "Ya estáis en favoritos mutuamente.",
+      "requestSentTitle": "Solicitud enviada",
+      "requestActivatesOnAccept": "Se activará cuando el cliente acepte.",
+      "previouslyRejected": "El cliente rechazó previamente la invitación.",
+      "requestProcessed": "Solicitud procesada.",
+      "requestSentShort": "Solicitud enviada.",
+      "cannotIdentifyClient": "No se pudo identificar al cliente actual.",
+      "addFailed": "No se pudo añadir a favoritos."
+    },
+    "blockAlerts": {
+      "title": "Bloquear",
+      "cannotIdentifyClient": "No se pudo identificar al cliente actual.",
+      "blockServerFailed": "No se pudo bloquear en el servidor.",
+      "clientBlocked": "Cliente bloqueado."
     },
     "statistics": {
       "header": {

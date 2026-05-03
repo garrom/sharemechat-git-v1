@@ -1943,7 +1943,7 @@ const DashboardModel = () => {
   const handleBlockPeer = async () => {
     const id = Number(currentClientId);
     if (!Number.isFinite(id) || id <= 0) {
-      await alert({ title:'Bloquear', message:'No se pudo identificar al cliente actual.', variant:'warning' });
+      await alert({ title: i18n.t('dashboardModel.blockAlerts.title'), message: i18n.t('dashboardModel.blockAlerts.cannotIdentifyClient'), variant:'warning' });
       return;
     }
 
@@ -1960,7 +1960,7 @@ const DashboardModel = () => {
       await apiFetch(`/blocks/${id}`, { method:'POST', headers:{ 'Content-Type':'application/json' }, body:JSON.stringify({ reason: pick.reason || 'random-block' }) });
 
     } catch (e) {
-      await alert({ title:'Bloquear', message: e?.message || 'No se pudo bloquear en el servidor.', variant:'danger' });
+      await alert({ title: i18n.t('dashboardModel.blockAlerts.title'), message: e?.message || i18n.t('dashboardModel.blockAlerts.blockServerFailed'), variant:'danger' });
       return;
     }
 
@@ -1970,7 +1970,7 @@ const DashboardModel = () => {
       setSearching(false);
     }
 
-    await alert({ title:'Bloquear', message:'Cliente bloqueado.', variant:'success' });
+    await alert({ title: i18n.t('dashboardModel.blockAlerts.title'), message: i18n.t('dashboardModel.blockAlerts.clientBlocked'), variant:'success' });
   };
 
 
@@ -2300,8 +2300,8 @@ const DashboardModel = () => {
     if (!currentClientId) {
       await alert({
         variant: 'warning',
-        title: 'Favoritos',
-        message: 'No se pudo identificar al cliente actual.',
+        title: i18n.t('dashboardModel.favoriteAlerts.title'),
+        message: i18n.t('dashboardModel.favoriteAlerts.cannotIdentifyClient'),
       });
       return;
     }
@@ -2365,34 +2365,34 @@ const DashboardModel = () => {
         if (inv === 'pending') {
           await alert({
             variant: 'success',
-            title: 'Solicitud enviada',
-            message: 'Se activará cuando el cliente acepte.',
+            title: i18n.t('dashboardModel.favoriteAlerts.requestSentTitle'),
+            message: i18n.t('dashboardModel.favoriteAlerts.requestActivatesOnAccept'),
           });
         } else if (inv === 'accepted') {
           await alert({
             variant: 'success',
-            title: 'Favoritos',
-            message: 'Ya estáis en favoritos mutuamente.',
+            title: i18n.t('dashboardModel.favoriteAlerts.title'),
+            message: i18n.t('dashboardModel.favoriteAlerts.mutualAlready'),
           });
         } else if (inv === 'rejected') {
           await alert({
             variant: 'warning',
-            title: 'Favoritos',
-            message: 'El cliente rechazó previamente la invitación.',
+            title: i18n.t('dashboardModel.favoriteAlerts.title'),
+            message: i18n.t('dashboardModel.favoriteAlerts.previouslyRejected'),
           });
         } else {
           await alert({
             variant: 'success',
-            title: 'Favoritos',
-            message: 'Solicitud procesada.',
+            title: i18n.t('dashboardModel.favoriteAlerts.title'),
+            message: i18n.t('dashboardModel.favoriteAlerts.requestProcessed'),
           });
         }
       } catch {
         // fallback si meta falla
         await alert({
           variant: 'success',
-          title: 'Favoritos',
-          message: 'Solicitud enviada.',
+          title: i18n.t('dashboardModel.favoriteAlerts.title'),
+          message: i18n.t('dashboardModel.favoriteAlerts.requestSentShort'),
         });
       }
 
@@ -2404,7 +2404,7 @@ const DashboardModel = () => {
       await alert({
         variant: 'danger',
         title: 'Error',
-        message: e?.message || 'No se pudo añadir a favoritos.',
+        message: e?.message || i18n.t('dashboardModel.favoriteAlerts.addFailed'),
       });
     }
   };

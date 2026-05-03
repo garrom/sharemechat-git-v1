@@ -2109,7 +2109,7 @@ const DashboardClient = () => {
   const handleBlockPeer = async () => {
     const id = Number(currentModelId);
     if (!Number.isFinite(id) || id <= 0) {
-      await alert({ title:'Bloquear', message:'No se pudo identificar a la modelo actual.', variant:'warning' });
+      await alert({ title: i18n.t('dashboardClient.blockAlerts.title'), message: i18n.t('dashboardClient.blockAlerts.cannotIdentifyModel'), variant:'warning' });
       return;
     }
     const displayName = modelNickname || `Usuario #${id}`;
@@ -2126,7 +2126,7 @@ const DashboardClient = () => {
     } else {
       setSearching(false);
     }
-    await alert({ title:'Bloquear', message:'Modelo bloqueada.', variant:'success' });
+    await alert({ title: i18n.t('dashboardClient.blockAlerts.title'), message: i18n.t('dashboardClient.blockAlerts.modelBlocked'), variant:'success' });
   };
 
 
@@ -2229,8 +2229,8 @@ const DashboardClient = () => {
     if (!modelId) {
       await alert({
         variant: 'warning',
-        title: 'Favoritos',
-        message: 'No se pudo identificar a la modelo actual.',
+        title: i18n.t('dashboardClient.favoriteAlerts.title'),
+        message: i18n.t('dashboardClient.favoriteAlerts.cannotIdentifyModel'),
       });
       return;
     }
@@ -2256,33 +2256,33 @@ const DashboardClient = () => {
         if (inv === 'pending') {
           await alert({
             variant: 'success',
-            title: 'Solicitud enviada',
-            message: 'Se activará cuando la modelo acepte.',
+            title: i18n.t('dashboardClient.favoriteAlerts.requestSentTitle'),
+            message: i18n.t('dashboardClient.favoriteAlerts.requestActivatesOnAccept'),
           });
         } else if (inv === 'accepted') {
           await alert({
             variant: 'success',
-            title: 'Favoritos',
-            message: 'Ya estáis en favoritos mutuamente.',
+            title: i18n.t('dashboardClient.favoriteAlerts.title'),
+            message: i18n.t('dashboardClient.favoriteAlerts.mutualAlready'),
           });
         } else if (inv === 'rejected') {
           await alert({
             variant: 'warning',
-            title: 'Favoritos',
-            message: 'La modelo rechazó previamente la invitación.',
+            title: i18n.t('dashboardClient.favoriteAlerts.title'),
+            message: i18n.t('dashboardClient.favoriteAlerts.previouslyRejected'),
           });
         } else {
           await alert({
             variant: 'success',
-            title: 'Favoritos',
-            message: 'Solicitud procesada.',
+            title: i18n.t('dashboardClient.favoriteAlerts.title'),
+            message: i18n.t('dashboardClient.favoriteAlerts.requestProcessed'),
           });
         }
       } catch {
         await alert({
           variant: 'success',
-          title: 'Favoritos',
-          message: 'Solicitud enviada.',
+          title: i18n.t('dashboardClient.favoriteAlerts.title'),
+          message: i18n.t('dashboardClient.favoriteAlerts.requestSentShort'),
         });
       }
 
@@ -2309,7 +2309,7 @@ const DashboardClient = () => {
       await alert({
         variant: 'danger',
         title: 'Error',
-        message: e.message || 'No se pudo añadir a favoritos.',
+        message: e.message || i18n.t('dashboardClient.favoriteAlerts.addFailed'),
       });
     }
   };
@@ -2320,7 +2320,7 @@ const DashboardClient = () => {
     const peer = Number(peerId);
 
     if (streamingActivo) {
-      alert('No puedes abrir el chat central mientras hay streaming. Pulsa Stop si quieres cambiar.');
+      alert(i18n.t('dashboardClient.favoriteAlerts.cannotOpenWhileStreaming'));
       return;
     }
     if (!Number.isFinite(peer) || peer <= 0) {

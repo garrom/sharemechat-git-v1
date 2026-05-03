@@ -8,6 +8,7 @@ public final class BackofficeAuthorities {
     public static final String ROLE_ADMIN = "ADMIN";
     public static final String ROLE_SUPPORT = "SUPPORT";
     public static final String ROLE_AUDIT = "AUDIT";
+    public static final String ROLE_EDITOR = "EDITOR";
 
     public static final String BO_ROLE_PREFIX = "BO_ROLE_";
     public static final String BO_PERMISSION_PREFIX = "BO_PERMISSION_";
@@ -27,6 +28,12 @@ public final class BackofficeAuthorities {
     public static final String PERM_FINANCE_READ_SUMMARY = "finance.read_summary";
     public static final String PERM_FINANCE_READ_TOP_MODELS = "finance.read_top_models";
     public static final String PERM_FINANCE_READ_TOP_CLIENTS = "finance.read_top_clients";
+
+    // Content / CMS (ADR-010, Fase 1)
+    public static final String PERM_CONTENT_VIEW = "CONTENT.VIEW";
+    public static final String PERM_CONTENT_EDIT = "CONTENT.EDIT";
+    public static final String PERM_CONTENT_REVIEW = "CONTENT.REVIEW";
+    public static final String PERM_CONTENT_PUBLISH = "CONTENT.PUBLISH";
 
     public static final Set<String> SUPPORT_PHASE1_PERMISSIONS = Set.of(
             PERM_MODELS_READ_LIST,
@@ -53,7 +60,11 @@ public final class BackofficeAuthorities {
             PERM_STATS_READ_OVERVIEW,
             PERM_FINANCE_READ_SUMMARY,
             PERM_FINANCE_READ_TOP_MODELS,
-            PERM_FINANCE_READ_TOP_CLIENTS
+            PERM_FINANCE_READ_TOP_CLIENTS,
+            PERM_CONTENT_VIEW,
+            PERM_CONTENT_EDIT,
+            PERM_CONTENT_REVIEW,
+            PERM_CONTENT_PUBLISH
     );
 
     private BackofficeAuthorities() {
