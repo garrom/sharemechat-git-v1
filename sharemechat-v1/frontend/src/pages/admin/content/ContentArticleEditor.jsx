@@ -1,6 +1,8 @@
 // src/pages/admin/content/ContentArticleEditor.jsx
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { apiFetch } from '../../../config/http';
+import { useSession } from '../../../components/SessionProvider';
+import { isBackofficeAdmin } from '../../../utils/backofficeAccess';
 import {
   Badge,
   NoteCard,
@@ -20,9 +22,43 @@ import {
   MarkdownArea,
   MetaCard,
   OkBanner,
+  ReadOnlyNotice,
   StatusInline,
   ToolbarRow,
+  TransitionBar,
+  TransitionButton,
+  TransitionLabel,
 } from '../../../styles/pages-styles/AdminContentStyles';
+import ContentArticleHistory from './ContentArticleHistory';
+import ContentArticleAIPanel from './ContentArticleAIPanel';
+
+const EDITABLE_STATES = new Set(['IDEA', 'OUTLINE_READY', 'DRAFT_GENERATED']);
+
+const TRANSITIONS_BY_STATE = {
+  IDEA: [
+    { to: 'OUTLINE_READY', label: 'Marcar outline listo', tone: 'default', input: null },
+    { to: 'DRAFT_GENERATED', label: 'Pasar a borrador', tone: 'default', input: null },
+  ],
+  OUTLINE_READY: [
+    { to: 'DRAFT_GENERATED', label: 'Pasar a borrador', tone: 'default', input: null },
+  ],
+  DRAFT_GENERATED: [
+    { to: 'IN_REVIEW', label: 'Enviar a revisión', tone: 'success', input: null },
+  ],
+  IN_REVIEW: [
+    { to: 'APPROVED', label: 'Aprobar', tone: 'success',
+      input: { name: 'comment', required: false, prompt: 'Comentario (opcional):' } },
+    { to: 'DRAFT_GENERATED', label: 'Rechazar', tone: 'danger',
+      input: { name: 'reason', required: true, prompt: 'Razón del rechazo:' } },
+  ],
+  APPROVED: [
+    { to: 'DRAFT_GENERATED', label: 'Reabrir como borrador', tone: 'default',
+      input: { name: 'reason', required: false, prompt: 'Razón (opcional):' } },
+  ],
+  SCHEDULED: [],
+  PUBLISHED: [],
+  RETRACTED: [],
+};
 
 const initialMeta = {
   slug: '',
@@ -37,10 +73,13 @@ const BODY_MAX_BYTES_HINT = 204800;
 
 const ContentArticleEditor = ({ articleId, onBack }) => {
   const isNew = articleId == null;
+  const { user } = useSession();
+  const isAdmin = isBackofficeAdmin(user);
 
   const [meta, setMeta] = useState(initialMeta);
   const [currentId, setCurrentId] = useState(articleId);
   const [state, setState] = useState(isNew ? null : 'IDEA');
+  const [currentVersionId, setCurrentVersionId] = useState(null);
   const [bodyContentHash, setBodyContentHash] = useState('');
   const [body, setBody] = useState('');
 
@@ -48,8 +87,17 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   const [savingMeta, setSavingMeta] = useState(false);
   const [savingBody, setSavingBody] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [transitioning, setTransitioning] = useState(false);
+  const [historyTick, setHistoryTick] = useState(0);
   const [error, setError] = useState('');
   const [okMessage, setOkMessage] = useState('');
+
+  const stateIsEditable = state ? EDITABLE_STATES.has(state) : true;
+  const fieldsLocked = !!currentId && !stateIsEditable && !isAdmin;
+  const availableTransitions = useMemo(
+    () => (state ? (TRANSITIONS_BY_STATE[state] || []) : []),
+    [state]
+  );
 
   const updateMeta = (key, value) =>
     setMeta((prev) => ({ ...prev, [key]: value }));
@@ -70,6 +118,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       });
       setCurrentId(detail.id);
       setState(detail.state || 'IDEA');
+      setCurrentVersionId(detail.currentVersionId || null);
       setBodyContentHash(detail.bodyContentHash || '');
 
       const bodyText = await apiFetch(`/admin/content/articles/${id}/body`);
@@ -177,6 +226,51 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     }
   };
 
+  const handleTransition = async (transition) => {
+    if (!currentId || transitioning) return;
+    let comment = null;
+    let reason = null;
+    if (transition.input) {
+      // eslint-disable-next-line no-alert
+      const value = window.prompt(transition.input.prompt, '');
+      if (value === null) return; // user cancelled
+      const trimmed = (value || '').trim();
+      if (transition.input.required && !trimmed) {
+        setError(`${transition.input.name} es obligatorio para "${transition.label}".`);
+        return;
+      }
+      if (transition.input.name === 'comment') comment = trimmed || null;
+      if (transition.input.name === 'reason') reason = trimmed || null;
+    }
+    setTransitioning(true);
+    setError('');
+    setOkMessage('');
+    try {
+      const updated = await apiFetch(
+        `/admin/content/articles/${currentId}/transition`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            toState: transition.to,
+            comment,
+            reason,
+          }),
+        }
+      );
+      if (updated?.state) setState(updated.state);
+      if (updated && Object.prototype.hasOwnProperty.call(updated, 'currentVersionId')) {
+        setCurrentVersionId(updated.currentVersionId || null);
+      }
+      setOkMessage(`Estado actualizado a ${updated?.state || transition.to}.`);
+      setHistoryTick((t) => t + 1);
+    } catch (e) {
+      setError(e?.message || 'No se pudo aplicar la transicion');
+    } finally {
+      setTransitioning(false);
+    }
+  };
+
   const canSubmitMetaCreate = isNew && !currentId;
   const canDelete = !!currentId && state === 'IDEA';
   const slugLocaleLocked = !isNew && !!currentId;
@@ -192,14 +286,42 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           <>
             <span>ID: <strong>{currentId}</strong></span>
             <span>Estado: <Badge>{state || '-'}</Badge></span>
+            {currentVersionId ? (
+              <span>versionId: <strong>{currentVersionId}</strong></span>
+            ) : null}
             {bodyContentHash ? (
               <span>hash cuerpo: <HashCode>{bodyContentHash}</HashCode></span>
             ) : null}
+            {isAdmin ? <span>(modo ADMIN)</span> : null}
           </>
         ) : (
           <span>Creando nuevo articulo</span>
         )}
       </StatusInline>
+
+      {currentId && availableTransitions.length > 0 ? (
+        <TransitionBar>
+          <TransitionLabel>Acciones disponibles</TransitionLabel>
+          {availableTransitions.map((t) => (
+            <TransitionButton
+              key={t.to}
+              type="button"
+              $tone={t.tone}
+              disabled={transitioning}
+              onClick={() => handleTransition(t)}
+            >
+              {transitioning ? '...' : t.label}
+            </TransitionButton>
+          ))}
+        </TransitionBar>
+      ) : null}
+
+      {currentId && fieldsLocked ? (
+        <ReadOnlyNotice>
+          Edición bloqueada en estado <strong>{state}</strong>. Para modificar
+          metadata o cuerpo, primero reabre como borrador.
+        </ReadOnlyNotice>
+      ) : null}
 
       {error ? <StyledError>{error}</StyledError> : null}
       {okMessage ? <OkBanner>{okMessage}</OkBanner> : null}
@@ -238,6 +360,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
             <StyledInput
               type="text"
               value={meta.title}
+              disabled={fieldsLocked}
               onChange={(e) => updateMeta('title', e.target.value)}
               placeholder="Titulo del articulo"
             />
@@ -250,6 +373,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
             <StyledInput
               type="text"
               value={meta.category}
+              disabled={fieldsLocked}
               onChange={(e) => updateMeta('category', e.target.value)}
               placeholder="ej: producto, modelos, seguridad"
             />
@@ -259,8 +383,9 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
             <StyledInput
               type="text"
               value={meta.keywords}
+              disabled={fieldsLocked}
               onChange={(e) => updateMeta('keywords', e.target.value)}
-              placeholder='ej: ["chat","video","modelo"]'
+              placeholder="ej: chat, video, modelo"
             />
           </div>
         </EditorRow>
@@ -271,6 +396,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
             <BriefArea
               rows={4}
               value={meta.brief}
+              disabled={fieldsLocked}
               onChange={(e) => updateMeta('brief', e.target.value)}
               placeholder="Resumen interno del articulo"
             />
@@ -283,7 +409,11 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
               {savingMeta ? 'Creando...' : 'Crear articulo'}
             </StyledButton>
           ) : (
-            <StyledButton type="button" onClick={handleSaveMeta} disabled={savingMeta || !currentId}>
+            <StyledButton
+              type="button"
+              onClick={handleSaveMeta}
+              disabled={savingMeta || !currentId || fieldsLocked}
+            >
               {savingMeta ? 'Guardando...' : 'Guardar metadata'}
             </StyledButton>
           )}
@@ -306,11 +436,16 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           <>
             <MarkdownArea
               value={body}
+              disabled={fieldsLocked}
               onChange={(e) => setBody(e.target.value)}
               placeholder={'# Titulo\n\nEscribe el cuerpo en markdown...'}
             />
             <ToolbarRow>
-              <StyledButton type="button" onClick={handleSaveBody} disabled={savingBody}>
+              <StyledButton
+                type="button"
+                onClick={handleSaveBody}
+                disabled={savingBody || fieldsLocked}
+              >
                 {savingBody ? 'Guardando...' : 'Guardar cuerpo'}
               </StyledButton>
               <HelperText>
@@ -320,6 +455,14 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           </>
         )}
       </MetaCard>
+
+      {currentId ? (
+        <ContentArticleAIPanel articleId={currentId} />
+      ) : null}
+
+      {currentId ? (
+        <ContentArticleHistory key={historyTick} articleId={currentId} />
+      ) : null}
     </EditorLayout>
   );
 };

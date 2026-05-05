@@ -5,16 +5,21 @@ import com.sharemechat.content.dto.ArticleCreateRequest;
 import com.sharemechat.content.dto.ArticleDetailDTO;
 import com.sharemechat.content.dto.ArticleSummaryDTO;
 import com.sharemechat.content.dto.ArticleUpdateRequest;
+import com.sharemechat.content.dto.ReviewEventDTO;
+import com.sharemechat.content.dto.TransitionRequest;
+import com.sharemechat.content.dto.VersionDTO;
 import com.sharemechat.content.entity.ContentArticle;
 import com.sharemechat.content.service.ContentArticleService;
 import com.sharemechat.content.service.ContentBodyStorageService;
 import com.sharemechat.entity.User;
+import com.sharemechat.security.BackofficeAuthorities;
 import com.sharemechat.service.UserService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -31,12 +36,15 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.NoSuchFileException;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
- * Endpoints admin del CMS - Fase 1 (ADR-010).
+ * Endpoints admin del CMS - Fase 1 + Fase 2 (ADR-010).
  * Acceso cubierto por la regla generica /api/admin/** de SecurityConfig
- * (ROLE_ADMIN o BO_ROLE_ADMIN).
+ * (ROLE_ADMIN o BO_ROLE_ADMIN). La deteccion de ADMIN se hace inspeccionando
+ * authorities del Authentication para permitir bypass de segregacion y guardia
+ * de edicion en estados no editables.
  */
 @RestController
 @RequestMapping("/api/admin/content")
@@ -97,7 +105,8 @@ public class ContentAdminController {
             Authentication authentication
     ) {
         Long actorUserId = resolveUserId(authentication);
-        return articleService.updateArticleMetadata(articleId, request, actorUserId);
+        boolean isAdmin = isAdmin(authentication);
+        return articleService.updateArticleMetadata(articleId, request, actorUserId, isAdmin);
     }
 
     @DeleteMapping("/articles/{id}")
@@ -133,7 +142,12 @@ public class ContentAdminController {
             @RequestBody(required = false) String markdown,
             Authentication authentication
     ) {
-        articleService.requireExisting(articleId);
+        Long actorUserId = resolveUserId(authentication);
+        boolean isAdmin = isAdmin(authentication);
+
+        // Guardia de estado editable ANTES de tocar S3 (evita objeto huerfano).
+        articleService.requireEditable(articleId, isAdmin);
+
         String safe = markdown == null ? "" : markdown;
         byte[] bytes = safe.getBytes(StandardCharsets.UTF_8);
         long maxBytes = contentProperties.getBodyMaxBytes();
@@ -141,7 +155,6 @@ public class ContentAdminController {
             throw new ResponseStatusException(HttpStatus.PAYLOAD_TOO_LARGE,
                     "Cuerpo excede " + maxBytes + " bytes");
         }
-        Long actorUserId = resolveUserId(authentication);
 
         ContentBodyStorageService.Result uploaded;
         try {
@@ -151,7 +164,8 @@ public class ContentAdminController {
                     "No se pudo subir cuerpo a S3", ex);
         }
         ContentArticle saved = articleService.persistBodyReference(articleId,
-                uploaded.s3Key(), uploaded.contentHash(), actorUserId);
+                uploaded.s3Key(), uploaded.contentHash(), uploaded.byteSize(),
+                actorUserId, isAdmin);
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("articleId", saved.getId());
@@ -159,6 +173,52 @@ public class ContentAdminController {
         response.put("bodyContentHash", saved.getBodyContentHash());
         response.put("byteSize", uploaded.byteSize());
         return response;
+    }
+
+    // ================================================================
+    // Fase 2 — workflow editorial, versiones y eventos
+    // ================================================================
+
+    @PostMapping("/articles/{id}/transition")
+    public ArticleDetailDTO transitionArticle(
+            @PathVariable("id") Long articleId,
+            @RequestBody TransitionRequest request,
+            Authentication authentication
+    ) {
+        Long actorUserId = resolveUserId(authentication);
+        boolean isAdmin = isAdmin(authentication);
+        return articleService.transitionState(articleId, request, actorUserId, isAdmin);
+    }
+
+    @GetMapping("/articles/{id}/versions")
+    public List<VersionDTO> listVersions(@PathVariable("id") Long articleId) {
+        return articleService.listVersions(articleId);
+    }
+
+    @GetMapping(value = "/articles/{id}/versions/{versionNumber}/body",
+                produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> getVersionBody(
+            @PathVariable("id") Long articleId,
+            @PathVariable("versionNumber") Integer versionNumber
+    ) {
+        String body = articleService.loadVersionBody(articleId, versionNumber);
+        return ResponseEntity.ok(body);
+    }
+
+    @GetMapping("/articles/{id}/events")
+    public Map<String, Object> listEvents(
+            @PathVariable("id") Long articleId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size
+    ) {
+        Page<ReviewEventDTO> result = articleService.listEvents(articleId, page, size);
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("items", result.getContent());
+        body.put("page", result.getNumber());
+        body.put("size", result.getSize());
+        body.put("totalElements", result.getTotalElements());
+        body.put("totalPages", result.getTotalPages());
+        return body;
     }
 
     private Long resolveUserId(Authentication authentication) {
@@ -170,5 +230,13 @@ public class ContentAdminController {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Usuario no resuelto");
         }
         return user.getId();
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) return false;
+        String boRoleAdmin = BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN);
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(a -> "ROLE_ADMIN".equals(a) || boRoleAdmin.equals(a));
     }
 }

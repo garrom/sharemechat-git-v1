@@ -38,6 +38,31 @@ public final class ContentConstants {
     public static final String S3_KEY_DRAFT_TEMPLATE = "articles/%d/draft.md";
     public static final String S3_KEY_VERSION_TEMPLATE = "articles/%d/v%d.md";
 
+    // Fase 3A — IA runs (Claude Cowork manual structured)
+    public static final String RUN_TYPE_RESEARCH = "RESEARCH";
+    public static final String RUN_TYPE_OUTLINE = "OUTLINE";
+    public static final String RUN_TYPE_DRAFT = "DRAFT";
+    public static final String RUN_TYPE_REVIEW = "REVIEW";
+    public static final String RUN_TYPE_SEO = "SEO";
+    public static final String RUN_TYPE_FULL_ARTICLE = "FULL_ARTICLE";
+
+    public static final String RUN_STATUS_PENDING = "PENDING";
+    public static final String RUN_STATUS_VALIDATED = "VALIDATED";
+    public static final String RUN_STATUS_REJECTED = "REJECTED";
+    public static final String RUN_STATUS_FAILED = "FAILED";
+
+    public static final String AI_PROVIDER_CLAUDE = "claude";
+    public static final String AI_OUTPUT_SCHEMA_VERSION = "1.0";
+
+    // Layout S3 para runs IA bajo privateKeyPrefix
+    public static final String S3_KEY_RUN_PROMPT_TEMPLATE = "runs/%d/prompt.txt";
+    public static final String S3_KEY_RUN_OUTPUT_RAW_TEMPLATE = "runs/%d/output_raw.md";
+    public static final String S3_KEY_RUN_OUTPUT_VALIDATED_TEMPLATE = "runs/%d/output_validated.json";
+    public static final String S3_KEY_RUN_VALIDATION_ERRORS_TEMPLATE = "runs/%d/validation_errors.json";
+
+    // Convencion de prompt_template_id: "<RUN_TYPE>/v<N>"
+    public static final String PROMPT_TEMPLATE_VERSION = "v1";
+
     // Logging
     public static final String LOG_PREFIX = "[CONTENT]";
 }

@@ -91,7 +91,7 @@ Secuencia actual:
 - Auth-risk Fase 1 y Fase 2 validadas en TEST y AUDIT.
 - Pipeline perimetral AUDIT operativo.
 - Billing de streams con doble ACK media y `billable_start` validado en TEST.
-- CMS Fase 1 ([ADR-010](../06-decisions/adr-010-internal-content-cms-ai-assisted-workflow.md)) COMPLETADO en TEST: backend `com.sharemechat.content`, schema MySQL `content_*`, bucket S3 privado `sharemechat-content-private-test` y panel backoffice operativos extremo a extremo. Sin IA, sin publicación pública, sin workflow editorial completo. Detalle en [test.md](../03-environments/test.md).
+- CMS Fase 2 ([ADR-010](../06-decisions/adr-010-internal-content-cms-ai-assisted-workflow.md)) COMPLETADO en TEST: workflow editorial `IDEA → OUTLINE_READY → DRAFT_GENERATED → IN_REVIEW → APPROVED`, versionado inmutable en `content_article_versions` (snapshots `v{n}.md` en S3 al enviar a revisión), eventos en `content_review_events`, segregación generador↔aprobador con bypass ADMIN, y guardia de edición en estados no editables. Estados `SCHEDULED`/`PUBLISHED`/`RETRACTED` siguen modelados pero no operables hasta Fase 4. Sin IA, sin publicación pública. Detalle en [test.md](../03-environments/test.md).
 
 ---
 
@@ -109,4 +109,4 @@ Estos puntos siguen pendientes, pero **no son el siguiente paso inmediato** salv
 - Contrato funcional de errores REST/WebSocket/frontend.
 - Extender auth-risk a login admin, refresh y forgot/reset password.
 - Persistencia de logs en TEST cuando deje de arrancar manualmente.
-- Siguiente paso CMS: Fase 2 (workflow editorial completo + versiones en `content_article_versions` + eventos en `content_review_events`).
+- Siguiente paso CMS: Fase 3 (IA + generación de contenido) — activa `content_generation_runs`, prompt templates y adaptador `ContentAIProvider` manual estructurado.

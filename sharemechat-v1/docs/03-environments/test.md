@@ -86,49 +86,89 @@ Resultado verificado con tráfico real:
 
 Detalle operativo y procedimiento en [runbooks.md](../04-operations/runbooks.md).
 
-## CMS (Content Management) — Fase 1
+## CMS (Content Management) — Fase 2
 
-CMS interno de SharemeChat (ver [ADR-010](../06-decisions/adr-010-internal-content-cms-ai-assisted-workflow.md)) operativo en TEST en su Fase 1 — esqueleto editorial mínimo, sin IA, sin publicación pública, sin workflow editorial completo.
+CMS interno de SharemeChat (ver [ADR-010](../06-decisions/adr-010-internal-content-cms-ai-assisted-workflow.md)) operativo en TEST en su Fase 2 — workflow editorial, versionado y eventos. Sigue sin IA y sin publicación pública.
+
+Workflow editorial activo:
+
+```text
+IDEA → OUTLINE_READY → DRAFT_GENERATED → IN_REVIEW → APPROVED
+                              ↑                ↓
+                              └────────────────┘  (rechazo o reapertura desde APPROVED)
+```
+
+- estados alcanzables en Fase 2: `IDEA`, `OUTLINE_READY`, `DRAFT_GENERATED`, `IN_REVIEW`, `APPROVED`
+- estados modelados pero **no operables** en Fase 2 (reservados para Fase 4): `SCHEDULED`, `PUBLISHED`, `RETRACTED`
+- edición de metadata y body solo permitida en `IDEA`, `OUTLINE_READY`, `DRAFT_GENERATED`; el resto bloquea con 409
+- ADMIN bypassa segregación generador↔aprobador y guardia de edición, pero **no** salta el workflow ni activa estados de Fase 4
+- reapertura `APPROVED → DRAFT_GENERATED` permitida; al reenviar a revisión se crea una nueva versión
 
 Backend:
 
-- endpoints `GET/POST/PATCH/DELETE /api/admin/content/articles`, `GET/PUT /api/admin/content/articles/{id}/body`
-- tabla principal: `content_articles`
-- tablas creadas pero sin uso en Fase 1: `content_article_versions`, `content_generation_runs`, `content_review_events`
-- migración Flyway `V20260501__content_phase1_schema.sql`
+- endpoints existentes Fase 1: `GET/POST/PATCH/DELETE /api/admin/content/articles`, `GET/PUT /api/admin/content/articles/{id}/body`
+- endpoints nuevos Fase 2:
+  - `POST /api/admin/content/articles/{id}/transition`
+  - `GET  /api/admin/content/articles/{id}/versions`
+  - `GET  /api/admin/content/articles/{id}/versions/{versionNumber}/body`
+  - `GET  /api/admin/content/articles/{id}/events`
+- tablas operativas: `content_articles`, `content_article_versions`, `content_review_events`
+- tabla `content_generation_runs` sigue creada pero sin uso (Fase 3)
+- migración Flyway `V20260501__content_phase1_schema.sql` sin cambios; Fase 2 reutiliza el schema completo
+
+Versionado:
+
+- `content/articles/{id}/draft.md` — borrador mutable, sobreescrito en cada `PUT /body`
+- `content/articles/{id}/v{n}.md` — snapshots inmutables; **se crean exclusivamente** en la transición `DRAFT_GENERATED → IN_REVIEW`
+- `current_version_id` en `content_articles` apunta a la última versión sometida; permanece intacto en aprobación y reapertura
+- al reenviar a revisión tras reapertura se crea v(n+1)
+
+Eventos auditados (`content_review_events`):
+
+- `EDIT_APPLIED` — guardado de metadata o body (`payload_json` con `target` y `fields`/`bytes`)
+- `OUTLINE_APPROVED` — `IDEA → OUTLINE_READY`
+- `DRAFT_REQUESTED` — cualquier transición a `DRAFT_GENERATED` (incluida reapertura desde `APPROVED`)
+- `REVIEW_APPROVED` — `IN_REVIEW → APPROVED`, con `version_id` y `comment` opcional
+- `REVIEW_REJECTED` — `IN_REVIEW → DRAFT_GENERATED`, con `version_id` y `reason`
+- la transición `DRAFT_GENERATED → IN_REVIEW` no genera evento por sí misma; el rastro auditable es la fila nueva en `content_article_versions`
+- `PUBLISHED`, `RETRACTED`, `SCHEDULED` y `DISCLOSURE_OVERRIDE` siguen modelados en el `CHECK` pero no se emiten en Fase 2
 
 S3:
 
 - bucket: `sharemechat-content-private-test`
 - región: `eu-central-1`
 - acceso: privado, exclusivamente desde backend; sin CloudFront, sin OAC, sin URLs firmadas
-- key layout: `content/articles/{id}/draft.md`
-- SSE-S3 (AES256) aplicada en cada `PutObjectRequest`
+- key layout:
+  - `content/articles/{id}/draft.md` (mutable)
+  - `content/articles/{id}/v{n}.md` (inmutables)
+- SSE-S3 (AES256) aplicada en cada `PutObjectRequest`, incluida la copia a versión
 
 Seguridad:
 
-- permisos backoffice: `CONTENT.VIEW`, `CONTENT.EDIT`, `CONTENT.REVIEW`, `CONTENT.PUBLISH`
-- rol backoffice `EDITOR` creado (sin usuarios reales asignados en Fase 1)
-- acceso al panel cubierto por la regla genérica `/api/admin/**` de `SecurityConfig` (`ROLE_ADMIN` o `BO_ROLE_ADMIN`)
+- permisos backoffice usados en Fase 2: `CONTENT.VIEW`, `CONTENT.EDIT`, `CONTENT.REVIEW`
+- `CONTENT.PUBLISH` reservado, sin uso operativo todavía (Fase 4)
+- rol backoffice `EDITOR` creado, sin usuarios reales asignados
+- acceso al panel cubierto por la regla genérica `/api/admin/**` de `SecurityConfig` (`ROLE_ADMIN` o `BO_ROLE_ADMIN`); el flag ADMIN se detecta inspeccionando authorities para aplicar bypass de segregación
 
 Frontend backoffice:
 
-- panel `Content CMS` accesible desde el dashboard admin con permiso `CONTENT.VIEW` o rol `ADMIN`
-- vista lista paginada con filtros por estado, locale y categoría
-- editor de artículo con metadata (slug, locale, title, category, brief, keywords) y textarea markdown para el cuerpo
+- panel `Content CMS` y editor mantienen el layout de Fase 1
+- editor añade barra dinámica de transiciones según estado actual y permisos del usuario
+- inputs de metadata y body se deshabilitan en estados no editables; ADMIN salta la deshabilitación
+- nuevo bloque de historial dentro del editor con dos columnas: versiones (con botón "Ver cuerpo" que carga el markdown inmutable de v{n}) y timeline de eventos
+- placeholder de keywords actualizado a formato natural separado por comas
 
-Limitaciones Fase 1:
+Limitaciones Fase 2 (sin cambios respecto a Fase 1):
 
-- solo el estado `IDEA` es alcanzable; el resto del workflow (`OUTLINE_READY` → `PUBLISHED` → `RETRACTED`) está modelado en BD pero no operable
-- sin publicación pública; el blog estático en `blog-test.sharemechat.com` no se construye en esta fase
-- sin generación IA ni `content_generation_runs`
-- sin segregación generador↔aprobador ni eventos de revisión
-- sin versionado activo en `content_article_versions`
+- sin generación IA ni runs de modelo
+- sin publicación pública; `blog-test.sharemechat.com` no se construye
+- sin programación, sin retirada, sin disclosure override
 
 Validación realizada con tráfico real en TEST:
 
-- creación de artículos en estado `IDEA` correcta (201, persistido en `content_articles`)
-- normalización de keywords aceptando `null`/vacío, lista separada por comas y array JSON; salida canónica como array JSON `["a","b","c"]` con trim, lowercase y dedupe
-- subida de body markdown a S3 `sharemechat-content-private-test` correcta; `body_s3_key` y `body_content_hash` (SHA-256) persistidos en `content_articles`
-- read-back del body desde S3 correcto (round-trip idéntico)
-- borrado solo permitido en estado `IDEA` (409 en cualquier otro)
+- ciclo completo `IDEA → OUTLINE_READY → DRAFT_GENERATED → IN_REVIEW → APPROVED` correcto
+- creación de versión `v1.md` en S3 al someter a revisión, con `body_content_hash` SHA-256 persistido en `content_article_versions` y `current_version_id` actualizado
+- reapertura `APPROVED → DRAFT_GENERATED` y nuevo ciclo hasta `APPROVED` generan `v2.md` con hash distinto
+- bloqueo de edición en estados no editables devuelve 409 con mensaje claro
+- eventos `EDIT_APPLIED`, `OUTLINE_APPROVED`, `DRAFT_REQUESTED`, `REVIEW_APPROVED` y `REVIEW_REJECTED` insertados con `actor_user_id`, `version_id` cuando aplica y `payload_json` legible
+- consistencia BD↔S3 verificada: `body_s3_key` de cada versión apunta a un objeto existente y descargable vía `GET /versions/{n}/body`
