@@ -212,6 +212,21 @@ public class ContentBodyStorageService {
         }
     }
 
+    /**
+     * Carga el output canonico validado de un run (Fase 4A: necesario para
+     * aplicar draft_markdown desde un run VALIDATED al cuerpo del articulo
+     * sin obligar al editor a copiar manualmente desde el JSON).
+     * Devuelve "" si la key no existe en S3.
+     */
+    public String loadRunOutputValidated(Long runId) throws IOException {
+        try {
+            return loadBodyAsString(buildKey(
+                    String.format(ContentConstants.S3_KEY_RUN_OUTPUT_VALIDATED_TEMPLATE, runId)));
+        } catch (NoSuchFileException ex) {
+            return "";
+        }
+    }
+
     private String putRunArtifact(String relativeKey, byte[] bytes, String contentType) throws IOException {
         ensureConfigured();
         if (bytes == null) bytes = new byte[0];

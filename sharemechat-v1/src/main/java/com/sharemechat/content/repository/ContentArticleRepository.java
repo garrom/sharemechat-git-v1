@@ -27,4 +27,18 @@ public interface ContentArticleRepository extends JpaRepository<ContentArticle, 
                                       @Param("locale") String locale,
                                       @Param("category") String category,
                                       Pageable pageable);
+
+    // Fase 4A — vista publica
+    @Query("""
+            select a from ContentArticle a
+            where a.state = 'PUBLISHED'
+              and (:locale is null or a.locale = :locale)
+              and (:category is null or a.category = :category)
+            order by a.publishedAt desc
+            """)
+    Page<ContentArticle> findPublished(@Param("locale") String locale,
+                                       @Param("category") String category,
+                                       Pageable pageable);
+
+    Optional<ContentArticle> findBySlugAndState(String slug, String state);
 }

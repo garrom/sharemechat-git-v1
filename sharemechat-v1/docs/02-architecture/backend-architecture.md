@@ -136,6 +136,18 @@ Las cuatro capas son ortogonales y se mantienen separadas para no mezclar fases 
 - frontend: tratamiento explícito de `PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED` y `SIMULATION_DISABLED` si aplica a la superficie que invoque esos endpoints
 - limitación consciente: durante modos restrictivos, una sesión backoffice cuyo `access_token` haya expirado puede ser tratada como producto en `/api/auth/refresh` porque `Authentication` no está poblado; el admin podría necesitar re-login en ese estado. No se resuelve en esta iteración.
 
+## Jobs programados
+
+El backend ejecuta varios jobs anotados con `@Scheduled` para tareas periódicas. Viven en el paquete `com.sharemechat.jobs` y cubren:
+
+- **RetentionJob**: purga diaria (03:30) de eventos de consentimiento antiguos según `consent.retentionDays` (default 180 días).
+- **MessageRetentionJob**: purga diaria (03:05) de mensajes antiguos y recorte de conversaciones excesivamente largas (`daysToKeep=90`, `perConversationKeep=2000`).
+- **ClientForfeitJob**: ejecución diaria (03:10) del forfeit diferido del saldo de clientes dados de baja cuyo periodo de gracia ha expirado.
+- **HomeFeaturedJob**: refresh cada 15 minutos del listado de modelos destacadas en la home pública (`home_featured_models`).
+- **ModelTierSnapshotJob**: snapshot diario (03:10) del tier de earnings de cada modelo en `model_tier_daily_snapshots`, base para reporting y para auditoría contable BFPM (ver [ADR-012](../06-decisions/adr-012-bfpm-platform-funded-bonus.md)).
+
+Cada job es independiente y su cadencia vive como expresión cron en código. Las propiedades configurables (retención de consent, etc.) se exponen vía `application.properties`.
+
 ## Observaciones relevantes
 
 - el storage versionado para uploads privados soporta proveedor local y proveedor S3

@@ -1,5 +1,7 @@
 // src/pages/blog/BlogContent.jsx
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useHistory } from 'react-router-dom';
+import { apiFetch } from '../../config/http';
 import { NavButton } from '../../styles/ButtonStyles';
 import {
   PageWrap,
@@ -18,14 +20,6 @@ import {
   HeroAsideRow,
   HeroAsideMini,
   HeroAsideMiniLine,
-  FeaturedSection,
-  FeaturedCard,
-  FeaturedContent,
-  FeaturedVisual,
-  FeaturedVisualMain,
-  FeaturedVisualCard,
-  PlaceholderTop,
-  PlaceholderBody,
   ContentGrid,
   MainColumn,
   SectionLabel,
@@ -33,11 +27,8 @@ import {
   ArticleCard,
   ArticleBadge,
   ArticleTitle,
-  FeaturedTitle,
   ArticleMeta,
-  FeaturedMeta,
   ArticleExcerpt,
-  FeaturedExcerpt,
   Sidebar,
   SidebarTitle,
   SidebarText,
@@ -46,13 +37,60 @@ import {
   CTABox,
   CTATitle,
   CTAText,
-  CTAActions
+  CTAActions,
+  EmptyState
 } from '../../styles/pages-styles/BlogStyles';
+
+const fmtDate = (v) => {
+  if (!v) return '';
+  try {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString();
+  } catch {
+    return '';
+  }
+};
+
+const truncate = (text, max = 200) => {
+  if (!text) return '';
+  const t = String(text);
+  return t.length > max ? `${t.slice(0, max).trim()}…` : t;
+};
 
 const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel }) => {
   const isPublic = mode === 'public';
+  const history = useHistory();
   const handleRegisterClient = () => { if (onGoRegisterClient) onGoRegisterClient(); };
   const handleRegisterModel = () => { if (onGoRegisterModel) onGoRegisterModel(); };
+
+  const [articles, setArticles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError('');
+    apiFetch('/public/content/articles?size=20')
+      .then((data) => {
+        if (cancelled) return;
+        setArticles(Array.isArray(data?.items) ? data.items : []);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message || 'No se pudieron cargar los artículos');
+        setArticles([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
+
+  const goToArticle = (slug) => {
+    history.push(`/blog/${slug}`);
+  };
 
   return (
     <PageWrap>
@@ -92,56 +130,34 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
           </HeroAside>
         </HeroSection>
 
-        <FeaturedSection>
-          <FeaturedCard>
-            <FeaturedContent>
-              <ArticleBadge>Featured soon</ArticleBadge>
-              <FeaturedTitle>How one-to-one video chat with models actually works.</FeaturedTitle>
-              <FeaturedMeta>Editorial guide · Quick read · Platform overview</FeaturedMeta>
-              <FeaturedExcerpt>
-                We will break down the full journey from balance top-up to live session start, including how time is measured, what the interface is designed to do and what kind of flow users can realistically expect.
-              </FeaturedExcerpt>
-            </FeaturedContent>
-
-            <FeaturedVisual aria-hidden="true">
-              <FeaturedVisualCard data-pos="left">
-                <PlaceholderTop />
-                <PlaceholderBody />
-              </FeaturedVisualCard>
-              <FeaturedVisualMain>
-                <PlaceholderTop />
-                <PlaceholderBody />
-              </FeaturedVisualMain>
-              <FeaturedVisualCard data-pos="right">
-                <PlaceholderTop />
-                <PlaceholderBody />
-              </FeaturedVisualCard>
-            </FeaturedVisual>
-          </FeaturedCard>
-        </FeaturedSection>
-
         <ContentGrid>
           <MainColumn>
-            <SectionLabel>Latest planned reads</SectionLabel>
-            <ArticlesGrid>
-              <ArticleCard>
-                <ArticleBadge>Coming next</ArticleBadge>
-                <ArticleTitle>Tips for keeping the experience respectful and safe.</ArticleTitle>
-                <ArticleMeta>Users · Best practices</ArticleMeta>
-                <ArticleExcerpt>
-                  We will cover limits, respect, reporting tools and the small habits that help keep live sessions more comfortable for both users and models.
-                </ArticleExcerpt>
-              </ArticleCard>
-
-              <ArticleCard>
-                <ArticleBadge>Coming next</ArticleBadge>
-                <ArticleTitle>Guide for models: how to get started on SharemeChat.</ArticleTitle>
-                <ArticleMeta>Models · First steps</ArticleMeta>
-                <ArticleExcerpt>
-                  From setting up your space and equipment to understanding earnings and stats, this guide will focus on practical steps that matter early on.
-                </ArticleExcerpt>
-              </ArticleCard>
-            </ArticlesGrid>
+            <SectionLabel>Latest articles</SectionLabel>
+            {loading ? (
+              <EmptyState>Cargando artículos…</EmptyState>
+            ) : error ? (
+              <EmptyState>No se pudo cargar el listado: {error}</EmptyState>
+            ) : articles.length === 0 ? (
+              <EmptyState>Aún no hay artículos publicados. Vuelve pronto.</EmptyState>
+            ) : (
+              <ArticlesGrid>
+                {articles.map((a) => (
+                  <ArticleCard
+                    key={a.id}
+                    onClick={() => goToArticle(a.slug)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    {a.category ? <ArticleBadge>{a.category}</ArticleBadge> : null}
+                    <ArticleTitle>{a.title}</ArticleTitle>
+                    <ArticleMeta>
+                      {a.locale ? a.locale.toUpperCase() : ''}
+                      {a.publishedAt ? ` · ${fmtDate(a.publishedAt)}` : ''}
+                    </ArticleMeta>
+                    {a.brief ? <ArticleExcerpt>{truncate(a.brief, 200)}</ArticleExcerpt> : null}
+                  </ArticleCard>
+                ))}
+              </ArticlesGrid>
+            )}
 
             {isPublic && (
               <CTABox>

@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesta.
+Aceptada e implementada (AUDIT y TEST). PRO inicial pendiente.
 
 ## Contexto
 
@@ -118,10 +118,3 @@ Centralizar primero la configuracion ICE reduce deuda inmediata, pero no basta c
 
 - se reduce el uso de credenciales estaticas visibles en frontend
 - la estrategia por entorno deja de descansar en un relay publico ajeno como dependencia estructural
-
-## Pendiente tras esta decision
-
-- definir el contrato backend para entregar configuracion ICE al frontend
-- decidir la operacion concreta del relay por entorno sin documentar detalle sensible en el repo principal
-- revisar los puntos frontend donde hoy se repiten `iceServers`
-- anadir observabilidad suficiente para confirmar uso real de candidatos relay en pruebas cross-network

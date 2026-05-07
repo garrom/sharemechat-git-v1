@@ -9,6 +9,8 @@ import com.sharemechat.content.dto.ReviewEventDTO;
 import com.sharemechat.content.dto.TransitionRequest;
 import com.sharemechat.content.dto.VersionDTO;
 import com.sharemechat.content.entity.ContentArticle;
+import com.sharemechat.content.publishing.ArticlePublicDetailDTO;
+import com.sharemechat.content.publishing.MarkdownRendererService;
 import com.sharemechat.content.service.ContentArticleService;
 import com.sharemechat.content.service.ContentBodyStorageService;
 import com.sharemechat.entity.User;
@@ -54,15 +56,18 @@ public class ContentAdminController {
     private final ContentBodyStorageService bodyStorageService;
     private final ContentProperties contentProperties;
     private final UserService userService;
+    private final MarkdownRendererService markdownRenderer;
 
     public ContentAdminController(ContentArticleService articleService,
                                   ContentBodyStorageService bodyStorageService,
                                   ContentProperties contentProperties,
-                                  UserService userService) {
+                                  UserService userService,
+                                  MarkdownRendererService markdownRenderer) {
         this.articleService = articleService;
         this.bodyStorageService = bodyStorageService;
         this.contentProperties = contentProperties;
         this.userService = userService;
+        this.markdownRenderer = markdownRenderer;
     }
 
     @GetMapping("/articles")
@@ -136,6 +141,45 @@ public class ContentAdminController {
         }
     }
 
+    /**
+     * Preview privada del articulo desde admin (Fase 4A hardening).
+     * - Acceso restringido por la regla generica /api/admin/** de SecurityConfig.
+     * - NO publica, NO cambia estado, NO emite eventos, NO persiste nada.
+     * - Reusa MarkdownRendererService (mismo render+sanitizacion que el blog publico)
+     *   leyendo body_s3_key tal cual, independientemente del state actual.
+     * - Devuelve la misma forma que el endpoint publico para que el frontend
+     *   admin pueda reusar exactamente los estilos del detalle del blog.
+     */
+    @GetMapping("/articles/{id}/preview")
+    public ArticlePublicDetailDTO previewArticle(@PathVariable("id") Long articleId) {
+        ArticleDetailDTO detail = articleService.findById(articleId);
+        String htmlBody = "";
+        if (detail.bodyS3Key() != null && !detail.bodyS3Key().isBlank()) {
+            try {
+                String md = bodyStorageService.loadBodyAsString(detail.bodyS3Key());
+                htmlBody = markdownRenderer.renderMarkdownToSafeHtml(md);
+            } catch (NoSuchFileException ex) {
+                // body S3 ausente; preview con cuerpo vacio
+            } catch (IOException ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                        "No se pudo leer el cuerpo para preview", ex);
+            }
+        }
+        return new ArticlePublicDetailDTO(
+                detail.id(),
+                detail.slug(),
+                detail.locale(),
+                detail.title(),
+                detail.brief(),
+                detail.category(),
+                detail.keywords(),
+                detail.publishedAt(),
+                htmlBody,
+                detail.aiAssisted(),
+                detail.disclosureRequired()
+        );
+    }
+
     @PutMapping(value = "/articles/{id}/body", consumes = MediaType.TEXT_PLAIN_VALUE)
     public Map<String, Object> putArticleBody(
             @PathVariable("id") Long articleId,
@@ -187,6 +231,18 @@ public class ContentAdminController {
     ) {
         Long actorUserId = resolveUserId(authentication);
         boolean isAdmin = isAdmin(authentication);
+
+        // Fase 4A: la transicion a PUBLISHED requiere CONTENT.PUBLISH (o ADMIN
+        // implicitamente, ya que ROLE_ADMIN/BO_ROLE_ADMIN tienen todos los
+        // CONTENT.* asignados via role_permissions).
+        if (request != null && request.getToState() != null) {
+            String toStateNorm = request.getToState().trim().toUpperCase();
+            if ("PUBLISHED".equals(toStateNorm)) {
+                requirePermission(authentication,
+                        com.sharemechat.security.BackofficeAuthorities.PERM_CONTENT_PUBLISH);
+            }
+        }
+
         return articleService.transitionState(articleId, request, actorUserId, isAdmin);
     }
 
@@ -238,5 +294,22 @@ public class ContentAdminController {
         return authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .anyMatch(a -> "ROLE_ADMIN".equals(a) || boRoleAdmin.equals(a));
+    }
+
+    private void requirePermission(Authentication authentication, String permissionCode) {
+        if (authentication == null || authentication.getAuthorities() == null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Permiso requerido: " + permissionCode);
+        }
+        String roleAdmin = "ROLE_ADMIN";
+        String boRoleAdmin = BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN);
+        String permAuthority = BackofficeAuthorities.permissionAuthority(permissionCode);
+        boolean ok = authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(a -> roleAdmin.equals(a) || boRoleAdmin.equals(a) || permAuthority.equals(a));
+        if (!ok) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Permiso requerido: " + permissionCode);
+        }
     }
 }

@@ -19,6 +19,7 @@
 - `user_blocks`
 - `user_languages`
 - `home_featured_models`
+- `moderation_reports` — reportes de abuso entre usuarios para revisión administrativa
 
 ## Streaming y realtime
 

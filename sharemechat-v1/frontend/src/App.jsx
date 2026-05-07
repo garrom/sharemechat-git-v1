@@ -12,6 +12,7 @@ import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
 import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
 import Blog from './pages/blog/Blog';
+import BlogArticleView from './pages/blog/BlogArticleView';
 import ChangePasswordPage from './pages/subpages/ChangePasswordPage';
 import ModelDocuments from './pages/subpages/ModelDocuments';
 import Home from './public-pages/Home';
@@ -85,6 +86,7 @@ function App() {
                     <PublicWithGuestGate exact path="/" component={Home} />
                     <PublicWithGuestGate exact path="/login" component={Home} />
                     <PublicWithGuestGate exact path="/blog" component={Blog} />
+                    <PublicWithGuestGate exact path="/blog/:slug" component={BlogArticleView} />
                     <Route path="/forgot-password" component={ForgotPassword} />
                     <Route path="/unauthorized" component={Unauthorized} />
                     <Route path="/reset-password" component={ResetPassword} />

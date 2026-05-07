@@ -1,7 +1,9 @@
 # ADR-010 — Internal Content CMS with AI-Assisted Workflow (Content Agent v1)
 
 ## Estado 
-Aprobada
+Aprobada.
+
+Implementación viva en TEST: Fases 1 (esqueleto editorial), 2 (workflow editorial + versionado + eventos), 3A (runs IA discretos manual structured), 3B (`FULL_ARTICLE_ORCHESTRATED` como flujo principal, pipeline delegado en seis skills personales versionadas en [`docs/cms/skills/`](../cms/skills/) — ver [ADR-014](adr-014-full-article-orchestrated-pipeline.md), supersede de [ADR-013](adr-013-full-article-run-phase3b.md)) y 4A (publicación pública dinámica vía API JSON consumida por el SPA público + preview privada admin + bloqueo terminal sin bypass ADMIN) completadas. Próximo frente: Fase 4B (publicación estática en S3+CloudFront, sitemap, retracción operativa). Las decisiones estructurales del cuerpo de esta ADR siguen vigentes; los matices operativos por fase se documentan en [test.md](../03-environments/test.md) y [current-phase.md](../07-roadmap/current-phase.md).
 
 ## Contexto
 

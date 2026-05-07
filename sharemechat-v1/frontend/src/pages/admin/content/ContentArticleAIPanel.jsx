@@ -8,6 +8,9 @@ import {
   StyledInput,
 } from '../../../styles/AdminStyles';
 import {
+  AdvancedRunSection,
+  AdvancedToggleButton,
+  AdvancedToggleRow,
   AIPanelColumn,
   AIPanelGrid,
   AIRunTypeBar,
@@ -25,9 +28,14 @@ import {
   ValidationErrorsBox,
 } from '../../../styles/pages-styles/AdminContentStyles';
 
-// FULL_ARTICLE primero: flujo principal recomendado (ADR-013).
-// Los discretos se mantienen para casos avanzados / debugging.
-const RUN_TYPES = ['FULL_ARTICLE', 'RESEARCH', 'OUTLINE', 'DRAFT', 'REVIEW', 'SEO'];
+// ADR-014: FULL_ARTICLE_ORCHESTRATED es el flujo principal recomendado, sustituyendo al
+// antiguo FULL_ARTICLE (ADR-013, superseded). RESEARCH y REVIEW quedan como herramientas
+// avanzadas, ocultas por defecto. OUTLINE / DRAFT / SEO siguen disponibles a nivel backend
+// pero NO se ofrecen como botones aqui; los runs historicos de esos tipos (incluido el
+// antiguo FULL_ARTICLE) siguen apareciendo en la tabla de runs porque la lista se carga
+// desde backend, no del frontend.
+const RUN_TYPE_PRIMARY = 'FULL_ARTICLE_ORCHESTRATED';
+const RUN_TYPES_ADVANCED = ['RESEARCH', 'REVIEW'];
 
 const fmtDate = (v) => {
   if (!v) return '-';
@@ -40,7 +48,9 @@ const fmtDate = (v) => {
   }
 };
 
-const ContentArticleAIPanel = ({ articleId }) => {
+const TERMINAL_STATES_FOR_APPLY = new Set(['PUBLISHED', 'RETRACTED']);
+
+const ContentArticleAIPanel = ({ articleId, articleState, onAiDraftApplied }) => {
   const [runs, setRuns] = useState([]);
   const [activeRun, setActiveRun] = useState(null);
   const [rawOutput, setRawOutput] = useState('');
@@ -50,9 +60,15 @@ const ContentArticleAIPanel = ({ articleId }) => {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [applying, setApplying] = useState(false);
   const [copyHint, setCopyHint] = useState('');
   const [error, setError] = useState('');
   const [okMessage, setOkMessage] = useState('');
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
+  const articleIsTerminal = articleState
+    ? TERMINAL_STATES_FOR_APPLY.has(articleState)
+    : false;
 
   const reload = useCallback(async () => {
     if (!articleId) return;
@@ -109,6 +125,54 @@ const ContentArticleAIPanel = ({ articleId }) => {
       setRawOutput('');
     } catch (e) {
       setError(e?.message || 'No se pudo cargar el run');
+    }
+  };
+
+  const handleApplyDraft = async () => {
+    if (!activeRun?.id || !activeRun?.articleId || applying) return;
+    if (activeRun.status !== 'VALIDATED' || !activeRun.outputValidated) {
+      setError('El run debe estar VALIDATED para aplicar.');
+      return;
+    }
+    if (articleIsTerminal) {
+      setError(`Artículo en estado ${articleState}. Reabre una nueva versión antes de aplicar contenido.`);
+      return;
+    }
+    setApplying(true);
+    setError('');
+    setOkMessage('');
+    try {
+      await apiFetch(
+        `/admin/content/articles/${activeRun.articleId}/runs/${activeRun.id}/apply-draft`,
+        { method: 'POST' }
+      );
+      setOkMessage('Draft aplicado al artículo. El cuerpo se ha rellenado.');
+      if (typeof onAiDraftApplied === 'function') {
+        onAiDraftApplied();
+      }
+      reload();
+    } catch (e) {
+      setError(e?.message || 'No se pudo aplicar el draft al artículo');
+    } finally {
+      setApplying(false);
+    }
+  };
+
+  const handleCopyDraftMarkdown = async () => {
+    if (!activeRun?.id || !activeRun?.articleId) return;
+    try {
+      // El frontend no tiene el JSON canonico; lo pedimos al endpoint de detail,
+      // que ya lo expone via /runs/{runId}. Como atajo de fallback usamos el
+      // prompt para descartar; el copiado real del draft requiere parsear el
+      // output canonico desde server, fuera del alcance de este boton fallback.
+      // Mientras tanto, instruimos al usuario.
+      await navigator.clipboard.writeText(
+        '(Para copiar draft_markdown, abre output_validated.json desde el servidor o usa "Aplicar al artículo".)'
+      );
+      setCopyHint('Aviso copiado: usa "Aplicar al artículo" como vía principal.');
+      setTimeout(() => setCopyHint(''), 3500);
+    } catch {
+      setCopyHint('No se pudo copiar; usa "Aplicar al artículo".');
     }
   };
 
@@ -179,18 +243,43 @@ const ContentArticleAIPanel = ({ articleId }) => {
       </ToolbarRow>
 
       <AIRunTypeBar>
-        <HelperText>Crear run nuevo:</HelperText>
-        {RUN_TYPES.map((rt) => (
-          <AIRunTypeButton
-            key={rt}
-            type="button"
-            disabled={creating}
-            onClick={() => handleCreateRun(rt)}
-          >
-            {rt}
-          </AIRunTypeButton>
-        ))}
+        <HelperText>Generar artículo con IA:</HelperText>
+        <AIRunTypeButton
+          type="button"
+          disabled={creating}
+          onClick={() => handleCreateRun(RUN_TYPE_PRIMARY)}
+        >
+          {creating ? 'Creando…' : 'Generar artículo completo'}
+        </AIRunTypeButton>
       </AIRunTypeBar>
+
+      <AdvancedToggleRow>
+        <AdvancedToggleButton
+          type="button"
+          onClick={() => setShowAdvanced((v) => !v)}
+        >
+          {showAdvanced ? '▾ Ocultar opciones avanzadas' : '▸ Mostrar opciones avanzadas'}
+        </AdvancedToggleButton>
+        <HelperText>
+          Avanzado: runs discretos para casos puntuales o debugging.
+        </HelperText>
+      </AdvancedToggleRow>
+
+      {showAdvanced ? (
+        <AdvancedRunSection>
+          <HelperText>Run discreto:</HelperText>
+          {RUN_TYPES_ADVANCED.map((rt) => (
+            <AIRunTypeButton
+              key={rt}
+              type="button"
+              disabled={creating}
+              onClick={() => handleCreateRun(rt)}
+            >
+              {rt}
+            </AIRunTypeButton>
+          ))}
+        </AdvancedRunSection>
+      ) : null}
 
       {error ? <StyledError>{error}</StyledError> : null}
       {okMessage ? <OkBanner>{okMessage}</OkBanner> : null}
@@ -321,12 +410,38 @@ const ContentArticleAIPanel = ({ articleId }) => {
               ) : null}
 
               {activeRun.status === 'VALIDATED' ? (
-                <NoteCard>
-                  Output validado. Guardado canónico en{' '}
-                  <code style={{ fontSize: 11 }}>output_validated.json</code>. En Fase 3A
-                  el output <strong>no se aplica al artículo</strong>; queda como referencia
-                  auditable.
-                </NoteCard>
+                <>
+                  <ToolbarRow>
+                    <StyledButton
+                      type="button"
+                      onClick={handleApplyDraft}
+                      disabled={applying || articleIsTerminal}
+                    >
+                      {applying ? 'Aplicando…' : 'Aplicar al artículo'}
+                    </StyledButton>
+                    <StyledButton
+                      type="button"
+                      onClick={handleCopyDraftMarkdown}
+                    >
+                      Copiar draft_markdown (fallback)
+                    </StyledButton>
+                    {copyHint ? <HelperText>{copyHint}</HelperText> : null}
+                  </ToolbarRow>
+                  {articleIsTerminal ? (
+                    <NoteCard>
+                      Artículo en estado <strong>{articleState}</strong>. Reabre una nueva
+                      versión antes de aplicar contenido.
+                    </NoteCard>
+                  ) : (
+                    <NoteCard>
+                      Output validado. Guardado canónico en{' '}
+                      <code style={{ fontSize: 11 }}>output_validated.json</code>. Pulsa
+                      <strong> Aplicar al artículo</strong> para volcar{' '}
+                      <code style={{ fontSize: 11 }}>draft_markdown</code> al cuerpo del
+                      artículo. La acción no publica ni cambia estado.
+                    </NoteCard>
+                  )}
+                </>
               ) : null}
             </>
           )}

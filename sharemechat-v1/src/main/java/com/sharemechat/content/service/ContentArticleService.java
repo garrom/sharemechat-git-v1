@@ -78,15 +78,34 @@ public class ContentArticleService {
             ContentConstants.STATE_OUTLINE_READY,
             ContentConstants.STATE_DRAFT_GENERATED);
 
-    /** Estados alcanzables como destino de transicion en Fase 2. */
+    /**
+     * Estados terminales: cuerpo y metadata congelados de forma absoluta.
+     * Ni siquiera ADMIN puede editar aqui (Fase 4A hardening). Para corregir
+     * un articulo terminal hay que reabrirlo via transicion explicita
+     * (PUBLISHED -> DRAFT_GENERATED en Fase 4B; en Fase 4A es estado final).
+     */
+    private static final Set<String> TERMINAL_STATES = Set.of(
+            ContentConstants.STATE_PUBLISHED,
+            ContentConstants.STATE_RETRACTED);
+
+    /**
+     * Estados alcanzables como destino de transicion. Fase 2 cubre IDEA..APPROVED.
+     * Fase 4A activa adicionalmente PUBLISHED como destino solo desde APPROVED.
+     * SCHEDULED y RETRACTED siguen modelados pero no operables.
+     */
     private static final Set<String> PHASE2_REACHABLE_STATES = Set.of(
             ContentConstants.STATE_IDEA,
             ContentConstants.STATE_OUTLINE_READY,
             ContentConstants.STATE_DRAFT_GENERATED,
             ContentConstants.STATE_IN_REVIEW,
-            ContentConstants.STATE_APPROVED);
+            ContentConstants.STATE_APPROVED,
+            ContentConstants.STATE_PUBLISHED);
 
-    /** Mapa de transiciones permitidas en Fase 2. ADMIN no salta este mapa. */
+    /**
+     * Mapa de transiciones permitidas. ADMIN no salta este mapa.
+     * Fase 4A: APPROVED -> PUBLISHED activado. PUBLISHED es estado terminal en
+     * Fase 4A (sin retraccion ni reapertura todavia).
+     */
     private static final Map<String, Set<String>> ALLOWED_TRANSITIONS = Map.of(
             ContentConstants.STATE_IDEA,
                 Set.of(ContentConstants.STATE_OUTLINE_READY, ContentConstants.STATE_DRAFT_GENERATED),
@@ -97,7 +116,7 @@ public class ContentArticleService {
             ContentConstants.STATE_IN_REVIEW,
                 Set.of(ContentConstants.STATE_APPROVED, ContentConstants.STATE_DRAFT_GENERATED),
             ContentConstants.STATE_APPROVED,
-                Set.of(ContentConstants.STATE_DRAFT_GENERATED));
+                Set.of(ContentConstants.STATE_DRAFT_GENERATED, ContentConstants.STATE_PUBLISHED));
 
     private final ContentArticleRepository articleRepo;
     private final ContentArticleVersionRepository versionRepo;
@@ -280,6 +299,12 @@ public class ContentArticleService {
     }
 
     private void assertEditable(ContentArticle article, boolean isAdmin) {
+        // Estados terminales: bloqueo absoluto, ADMIN no bypassa (Fase 4A).
+        if (TERMINAL_STATES.contains(article.getState())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Articulo en estado terminal " + article.getState()
+                            + "; no se admite edicion. Para modificarlo, reabrelo primero.");
+        }
         if (isAdmin) return;
         if (!EDITABLE_STATES.contains(article.getState())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -310,6 +335,55 @@ public class ContentArticleService {
         }
         emitEvent(saved.getId(), null, ContentConstants.EVENT_EDIT_APPLIED, actorUserId, payload);
 
+        return saved;
+    }
+
+    /**
+     * Fase 4A: aplica un draft generado por un run IA validado al articulo.
+     * - Reusa el body ya subido a draft.md (mismo path que PUT /body manual).
+     * - Asegura que el articulo NO esta en estado terminal (PUBLISHED/RETRACTED)
+     *   ni en estado no editable salvo bypass ADMIN para intermedios.
+     * - Marca ai_assisted=true y disclosure_required=true por defecto (ADR-010
+     *   sec 6: cuando ai_assisted=true, disclosure_required=true por defecto;
+     *   el editor puede revertir disclosure manualmente en una accion separada).
+     * - Emite EVENT_EDIT_APPLIED con target="ai_apply" y referencia al run
+     *   (run_id, run_type, applied_fields), reutilizando el evento existente
+     *   en el CHECK del schema (no requiere migracion).
+     * - NO cambia el estado del articulo.
+     */
+    @Transactional
+    public ContentArticle applyAiDraftToArticle(Long articleId,
+                                                String bodyS3Key,
+                                                String bodyContentHash,
+                                                int byteSize,
+                                                Long aiRunId,
+                                                String aiRunType,
+                                                Long actorUserId,
+                                                boolean isAdmin) {
+        ContentArticle article = requireExisting(articleId);
+        assertEditable(article, isAdmin);
+        article.setBodyS3Key(bodyS3Key);
+        article.setBodyContentHash(bodyContentHash);
+        article.setAiAssisted(true);
+        article.setDisclosureRequired(true);
+        article.setUpdatedByUserId(actorUserId);
+        ContentArticle saved = articleRepo.save(article);
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("target", "ai_apply");
+        payload.put("run_id", aiRunId);
+        payload.put("run_type", aiRunType);
+        payload.put("applied_fields",
+                java.util.List.of("body", "ai_assisted", "disclosure_required"));
+        payload.put("bytes", byteSize);
+        if (isAdmin && !EDITABLE_STATES.contains(saved.getState())) {
+            payload.put("adminBypass", true);
+        }
+        emitEvent(saved.getId(), null, ContentConstants.EVENT_EDIT_APPLIED, actorUserId, payload);
+
+        log.info("{} ai draft applied articleId={} runId={} runType={} actor={} bytes={}",
+                ContentConstants.LOG_PREFIX, saved.getId(), aiRunId, aiRunType,
+                actorUserId, byteSize);
         return saved;
     }
 
@@ -500,7 +574,7 @@ public class ContentArticleService {
 
         if (!PHASE2_REACHABLE_STATES.contains(toState)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Estado " + toState + " no operativo en Fase 2");
+                    "Estado " + toState + " no operativo en este momento");
         }
 
         ContentArticle article = articleRepo.findById(articleId)
@@ -560,6 +634,17 @@ public class ContentArticleService {
         else if (ContentConstants.STATE_IDEA.equals(fromState)
                 && ContentConstants.STATE_OUTLINE_READY.equals(toState)) {
             eventType = ContentConstants.EVENT_OUTLINE_APPROVED;
+        }
+        // ----- APPROVED -> PUBLISHED (Fase 4A): publicacion editorial -----
+        // No genera HTML estatico ni S3 publico ni invalidacion CloudFront en
+        // Fase 4A. Solo transiciona el estado, fija published_at y emite evento.
+        // El blog publico lee el body desde S3 privado y lo renderiza por API.
+        else if (ContentConstants.STATE_APPROVED.equals(fromState)
+                && ContentConstants.STATE_PUBLISHED.equals(toState)) {
+            article.setPublishedAt(java.time.Instant.now());
+            eventType = ContentConstants.EVENT_PUBLISHED;
+            eventVersionId = article.getCurrentVersionId();
+            if (comment != null) payload.put("comment", comment);
         }
         // ----- Cualquier transicion a DRAFT_GENERATED no cubierta arriba -----
         // (IDEA -> DRAFT_GENERATED, OUTLINE_READY -> DRAFT_GENERATED, APPROVED -> DRAFT_GENERATED)

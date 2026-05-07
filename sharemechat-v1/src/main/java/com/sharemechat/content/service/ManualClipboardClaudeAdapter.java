@@ -16,6 +16,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 /**
  * Adaptador unico de Fase 3A. No invoca API externa: construye el prompt para
@@ -31,12 +32,24 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
             ContentConstants.RUN_TYPE_DRAFT,
             ContentConstants.RUN_TYPE_REVIEW,
             ContentConstants.RUN_TYPE_SEO,
-            ContentConstants.RUN_TYPE_FULL_ARTICLE);
+            ContentConstants.RUN_TYPE_FULL_ARTICLE_ORCHESTRATED);
 
-    // Mínimos reforzados para FULL_ARTICLE (ADR-013)
-    private static final int FULL_ARTICLE_MIN_SOURCES = 5;
-    private static final int FULL_ARTICLE_MIN_OUTLINE_SECTIONS = 4;
-    private static final int FULL_ARTICLE_MIN_DRAFT_CHARS = 800;
+    // Minimos reforzados para FULL_ARTICLE_ORCHESTRATED (ADR-014).
+    // Mismas cotas que el antiguo FULL_ARTICLE (ADR-013); el flujo orquestado
+    // mantiene los umbrales editoriales aunque cambie como se generan.
+    private static final int FULL_ARTICLE_ORCHESTRATED_MIN_SOURCES = 5;
+    private static final int FULL_ARTICLE_ORCHESTRATED_MIN_OUTLINE_SECTIONS = 4;
+    private static final int FULL_ARTICLE_ORCHESTRATED_MIN_DRAFT_CHARS = 800;
+
+    // Heuristicas de estructura Markdown FULL_ARTICLE_ORCHESTRATED (heredadas de Fase 4A hardening)
+    private static final Pattern MARKDOWN_H2_PATTERN =
+            Pattern.compile("(?m)^## ");
+    private static final Pattern MARKDOWN_PARAGRAPH_BREAK_PATTERN =
+            Pattern.compile("\\n\\s*\\n");
+    private static final Pattern MARKDOWN_HTML_INLINE_PATTERN =
+            Pattern.compile(
+                    "</?\\s*(p|br|strong|em|ul|ol|li|h[1-6]|a|div|span|table|tr|td)\\b",
+                    Pattern.CASE_INSENSITIVE);
 
     /** Whitelist de model_id que el editor puede declarar al pegar output. */
     private static final Set<String> ALLOWED_MODEL_PREFIXES = Set.of(
@@ -279,9 +292,9 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
             }
         }
 
-        // Validacion reforzada para FULL_ARTICLE (ADR-013)
-        if (ContentConstants.RUN_TYPE_FULL_ARTICLE.equals(runType)) {
-            validateFullArticleSpecifics(root, errors);
+        // Validacion reforzada para FULL_ARTICLE_ORCHESTRATED (ADR-014)
+        if (ContentConstants.RUN_TYPE_FULL_ARTICLE_ORCHESTRATED.equals(runType)) {
+            validateFullArticleOrchestratedSpecifics(root, errors);
         }
 
         if (!errors.isEmpty()) {
@@ -306,7 +319,7 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
     }
 
     /**
-     * Validacion reforzada para FULL_ARTICLE (ADR-013):
+     * Validacion reforzada para FULL_ARTICLE_ORCHESTRATED (ADR-014):
      *  - sources_used >= 5
      *  - article_outline >= 4 secciones
      *  - draft_markdown no nulo y >= 800 chars
@@ -316,30 +329,30 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
      *  - self_check_passed = true obligatorio
      * Acumula errores en la lista existente; no rechaza inmediatamente.
      */
-    private void validateFullArticleSpecifics(JsonNode root, List<ValidationErrorDTO> errors) {
+    private void validateFullArticleOrchestratedSpecifics(JsonNode root, List<ValidationErrorDTO> errors) {
         JsonNode sourcesUsed = root.get("sources_used");
         if (sourcesUsed != null && sourcesUsed.isArray()
-                && sourcesUsed.size() < FULL_ARTICLE_MIN_SOURCES) {
+                && sourcesUsed.size() < FULL_ARTICLE_ORCHESTRATED_MIN_SOURCES) {
             errors.add(new ValidationErrorDTO("sources_used",
-                    "FULL_ARTICLE exige al menos " + FULL_ARTICLE_MIN_SOURCES
+                    "FULL_ARTICLE_ORCHESTRATED exige al menos " + FULL_ARTICLE_ORCHESTRATED_MIN_SOURCES
                             + " fuentes (recibidas " + sourcesUsed.size() + ")"));
         }
 
         JsonNode outline = root.get("article_outline");
         if (outline != null && outline.isArray()
-                && outline.size() < FULL_ARTICLE_MIN_OUTLINE_SECTIONS) {
+                && outline.size() < FULL_ARTICLE_ORCHESTRATED_MIN_OUTLINE_SECTIONS) {
             errors.add(new ValidationErrorDTO("article_outline",
-                    "FULL_ARTICLE exige al menos " + FULL_ARTICLE_MIN_OUTLINE_SECTIONS
+                    "FULL_ARTICLE_ORCHESTRATED exige al menos " + FULL_ARTICLE_ORCHESTRATED_MIN_OUTLINE_SECTIONS
                             + " secciones (recibidas " + outline.size() + ")"));
         }
 
         JsonNode draftMarkdown = root.get("draft_markdown");
         if (draftMarkdown == null || draftMarkdown.isNull() || !draftMarkdown.isTextual()
-                || draftMarkdown.asText().length() < FULL_ARTICLE_MIN_DRAFT_CHARS) {
+                || draftMarkdown.asText().length() < FULL_ARTICLE_ORCHESTRATED_MIN_DRAFT_CHARS) {
             int len = (draftMarkdown == null || draftMarkdown.isNull() || !draftMarkdown.isTextual())
                     ? 0 : draftMarkdown.asText().length();
             errors.add(new ValidationErrorDTO("draft_markdown",
-                    "FULL_ARTICLE exige draft_markdown >= " + FULL_ARTICLE_MIN_DRAFT_CHARS
+                    "FULL_ARTICLE_ORCHESTRATED exige draft_markdown >= " + FULL_ARTICLE_ORCHESTRATED_MIN_DRAFT_CHARS
                             + " caracteres (recibidos " + len + ")"));
         }
 
@@ -347,14 +360,14 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
         if (seoTitle == null || seoTitle.isNull() || !seoTitle.isTextual()
                 || seoTitle.asText().isBlank()) {
             errors.add(new ValidationErrorDTO("seo_title",
-                    "FULL_ARTICLE exige seo_title no vacio"));
+                    "FULL_ARTICLE_ORCHESTRATED exige seo_title no vacio"));
         }
 
         JsonNode metaDescription = root.get("meta_description");
         if (metaDescription == null || metaDescription.isNull()
                 || !metaDescription.isTextual() || metaDescription.asText().isBlank()) {
             errors.add(new ValidationErrorDTO("meta_description",
-                    "FULL_ARTICLE exige meta_description no vacia"));
+                    "FULL_ARTICLE_ORCHESTRATED exige meta_description no vacia"));
         }
 
         JsonNode targetKeywords = root.get("target_keywords");
@@ -371,7 +384,7 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
             }
             if (!hasPrimary) {
                 errors.add(new ValidationErrorDTO("target_keywords",
-                        "FULL_ARTICLE exige al menos un keyword con type=primary"));
+                        "FULL_ARTICLE_ORCHESTRATED exige al menos un keyword con type=primary"));
             }
         }
 
@@ -379,7 +392,35 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
         if (selfCheckPassed == null || !selfCheckPassed.isBoolean()
                 || !selfCheckPassed.asBoolean()) {
             errors.add(new ValidationErrorDTO("self_check_passed",
-                    "FULL_ARTICLE exige self_check_passed=true (run atomico)"));
+                    "FULL_ARTICLE_ORCHESTRATED exige self_check_passed=true (run atomico)"));
+        }
+
+        // Heuristicas de estructura Markdown (heredadas del hardening Fase 4A).
+        // Solo se evaluan si draft_markdown existe y tiene la longitud minima; los checks
+        // de existencia/longitud ya han disparado un error si no es el caso.
+        if (draftMarkdown != null && !draftMarkdown.isNull() && draftMarkdown.isTextual()
+                && draftMarkdown.asText().length() >= FULL_ARTICLE_ORCHESTRATED_MIN_DRAFT_CHARS) {
+            String md = draftMarkdown.asText();
+
+            // Check 1: al menos un H2 literal "^## " al inicio de linea
+            if (!MARKDOWN_H2_PATTERN.matcher(md).find()) {
+                errors.add(new ValidationErrorDTO("draft_markdown",
+                        "FULL_ARTICLE_ORCHESTRATED exige al menos un heading H2 literal con sintaxis Markdown"
+                                + " (\"## \" al inicio de linea); el draft parece texto plano"));
+            }
+
+            // Check 2: separacion de parrafos con linea en blanco
+            if (!MARKDOWN_PARAGRAPH_BREAK_PATTERN.matcher(md).find()) {
+                errors.add(new ValidationErrorDTO("draft_markdown",
+                        "FULL_ARTICLE_ORCHESTRATED exige separacion de parrafos con linea en blanco"
+                                + " (doble salto de linea); el draft no la contiene"));
+            }
+
+            // Check 3: prohibir HTML inline obvio
+            if (MARKDOWN_HTML_INLINE_PATTERN.matcher(md).find()) {
+                errors.add(new ValidationErrorDTO("draft_markdown",
+                        "FULL_ARTICLE_ORCHESTRATED prohibe HTML inline en draft_markdown; usa Markdown puro"));
+            }
         }
     }
 }

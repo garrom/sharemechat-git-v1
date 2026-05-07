@@ -51,7 +51,7 @@ Problema de negocio que resuelve:
 - Entorno de desarrollo y validacion funcional continua
 - Arranque manual del backend (no en produccion 24/7 garantizado)
 - Accesible publicamente sin IP fija
-- Registro publico deshabilitado a nivel UI (no a nivel backend)
+- Registro público cerrado server-side mediante Product Operational Mode (ver ADR-009): los endpoints POST /api/users/register/client y POST /api/users/register/model devuelven 503 REGISTRATION_CLOSED cuando los flags PRODUCT_REGISTRATION_CLIENT_ENABLED y PRODUCT_REGISTRATION_MODEL_ENABLED están a false. Adicionalmente, el formulario de registro está oculto en la UI.
 - Logs no persistentes garantizados
 - TURN propio operativo
 
@@ -135,7 +135,6 @@ Pero:
 - Integracion PSP pendiente: bloqueante para monetizacion real
 - Despliegue PRO pendiente: edge, TURN, backend, blocker en DRY-RUN
 - Falta captacion real de modelos y clientes
-- Registro publico deshabilitado solo a nivel UI: backend sigue aceptando registro si se llama directamente al endpoint (deuda de gating real por entorno)
 - i18n incompleto: la UI todavia depende en parte de `err.message` raw del backend; pendiente migracion a codigos funcionales estables mapeados con `i18n.t(...)`
 - Contrato de errores no totalmente estabilizado: REST y WebSocket tienen niveles distintos de codigos vs texto libre
 - Salto visual de `<video>` remoto en Chromium durante fase pre-media (deuda visual no disruptiva)

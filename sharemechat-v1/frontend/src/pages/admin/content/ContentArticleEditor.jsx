@@ -22,6 +22,10 @@ import {
   MarkdownArea,
   MetaCard,
   OkBanner,
+  PreviewBadge,
+  PreviewHeaderBar,
+  PreviewOverlay,
+  PreviewSheet,
   ReadOnlyNotice,
   StatusInline,
   ToolbarRow,
@@ -29,10 +33,31 @@ import {
   TransitionButton,
   TransitionLabel,
 } from '../../../styles/pages-styles/AdminContentStyles';
+import {
+  ArticleBody,
+  ArticleBriefBox,
+  ArticleCategoryPill,
+  ArticleHero,
+  ArticleHeroTitle,
+  ArticleMetaLine,
+} from '../../../styles/pages-styles/BlogStyles';
 import ContentArticleHistory from './ContentArticleHistory';
 import ContentArticleAIPanel from './ContentArticleAIPanel';
 
 const EDITABLE_STATES = new Set(['IDEA', 'OUTLINE_READY', 'DRAFT_GENERATED']);
+// Fase 4A hardening: estados terminales bloquean edicion incluso para ADMIN.
+const TERMINAL_STATES = new Set(['PUBLISHED', 'RETRACTED']);
+
+const fmtDate = (v) => {
+  if (!v) return '';
+  try {
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleDateString();
+  } catch {
+    return '';
+  }
+};
 
 const TRANSITIONS_BY_STATE = {
   IDEA: [
@@ -52,6 +77,8 @@ const TRANSITIONS_BY_STATE = {
       input: { name: 'reason', required: true, prompt: 'Razón del rechazo:' } },
   ],
   APPROVED: [
+    { to: 'PUBLISHED', label: 'Publicar', tone: 'success',
+      input: { name: 'comment', required: false, prompt: 'Comentario de publicación (opcional):' } },
     { to: 'DRAFT_GENERATED', label: 'Reabrir como borrador', tone: 'default',
       input: { name: 'reason', required: false, prompt: 'Razón (opcional):' } },
   ],
@@ -92,8 +119,16 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   const [error, setError] = useState('');
   const [okMessage, setOkMessage] = useState('');
 
+  // Preview privada admin (Fase 4A hardening)
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewArticle, setPreviewArticle] = useState(null);
+  const [previewError, setPreviewError] = useState('');
+
   const stateIsEditable = state ? EDITABLE_STATES.has(state) : true;
-  const fieldsLocked = !!currentId && !stateIsEditable && !isAdmin;
+  const stateIsTerminal = state ? TERMINAL_STATES.has(state) : false;
+  // Fase 4A hardening: terminales bloquean siempre, ADMIN no bypassa.
+  const fieldsLocked = !!currentId && (stateIsTerminal || (!stateIsEditable && !isAdmin));
   const availableTransitions = useMemo(
     () => (state ? (TRANSITIONS_BY_STATE[state] || []) : []),
     [state]
@@ -211,6 +246,28 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     }
   };
 
+  const handleOpenPreview = async () => {
+    if (!currentId) return;
+    setPreviewOpen(true);
+    setPreviewLoading(true);
+    setPreviewError('');
+    setPreviewArticle(null);
+    try {
+      const data = await apiFetch(`/admin/content/articles/${currentId}/preview`);
+      setPreviewArticle(data);
+    } catch (e) {
+      setPreviewError(e?.message || 'No se pudo cargar la vista previa');
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  const handleClosePreview = () => {
+    setPreviewOpen(false);
+    setPreviewArticle(null);
+    setPreviewError('');
+  };
+
   const handleDelete = async () => {
     if (!currentId) return;
     if (!window.confirm('Borrar articulo? Solo se permite si esta en estado IDEA.')) return;
@@ -293,6 +350,9 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
               <span>hash cuerpo: <HashCode>{bodyContentHash}</HashCode></span>
             ) : null}
             {isAdmin ? <span>(modo ADMIN)</span> : null}
+            <StyledButton type="button" onClick={handleOpenPreview}>
+              Vista previa
+            </StyledButton>
           </>
         ) : (
           <span>Creando nuevo articulo</span>
@@ -457,11 +517,65 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       </MetaCard>
 
       {currentId ? (
-        <ContentArticleAIPanel articleId={currentId} />
+        <ContentArticleAIPanel
+          articleId={currentId}
+          articleState={state}
+          onAiDraftApplied={() => {
+            setOkMessage('Draft IA aplicado al artículo. Cuerpo recargado.');
+            loadAll(currentId);
+            setHistoryTick((t) => t + 1);
+          }}
+        />
       ) : null}
 
       {currentId ? (
         <ContentArticleHistory key={historyTick} articleId={currentId} />
+      ) : null}
+
+      {previewOpen ? (
+        <PreviewOverlay onClick={handleClosePreview}>
+          <PreviewSheet onClick={(e) => e.stopPropagation()}>
+            <PreviewHeaderBar>
+              <div>
+                <PreviewBadge>Vista previa privada — no publicada</PreviewBadge>
+              </div>
+              <StyledButton type="button" onClick={handleClosePreview}>
+                Cerrar
+              </StyledButton>
+            </PreviewHeaderBar>
+
+            {previewLoading ? (
+              <NoteCard>Generando preview...</NoteCard>
+            ) : previewError ? (
+              <StyledError>{previewError}</StyledError>
+            ) : !previewArticle ? (
+              <NoteCard>Sin datos.</NoteCard>
+            ) : (
+              <>
+                <ArticleHero>
+                  {previewArticle.category ? (
+                    <ArticleCategoryPill>{previewArticle.category}</ArticleCategoryPill>
+                  ) : null}
+                  <ArticleHeroTitle>{previewArticle.title}</ArticleHeroTitle>
+                  <ArticleMetaLine>
+                    {previewArticle.locale ? previewArticle.locale.toUpperCase() : ''}
+                    {previewArticle.publishedAt
+                      ? ` · ${fmtDate(previewArticle.publishedAt)}`
+                      : ' · sin publicar (preview)'}
+                  </ArticleMetaLine>
+                  {previewArticle.brief ? (
+                    <ArticleBriefBox>{previewArticle.brief}</ArticleBriefBox>
+                  ) : null}
+                </ArticleHero>
+
+                {/* htmlBody ya viene sanitizado por backend (mismo render que el blog publico) */}
+                <ArticleBody
+                  dangerouslySetInnerHTML={{ __html: previewArticle.htmlBody || '' }}
+                />
+              </>
+            )}
+          </PreviewSheet>
+        </PreviewOverlay>
       ) : null}
     </EditorLayout>
   );

@@ -86,35 +86,50 @@ Resultado verificado con tráfico real:
 
 Detalle operativo y procedimiento en [runbooks.md](../04-operations/runbooks.md).
 
-## CMS (Content Management) — Fase 2
+## CMS (Content Management) — Fase 4A
 
-CMS interno de SharemeChat (ver [ADR-010](../06-decisions/adr-010-internal-content-cms-ai-assisted-workflow.md)) operativo en TEST en su Fase 2 — workflow editorial, versionado y eventos. Sigue sin IA y sin publicación pública.
+CMS interno de SharemeChat (ver [ADR-010](../06-decisions/adr-010-internal-content-cms-ai-assisted-workflow.md), [ADR-014](../06-decisions/adr-014-full-article-orchestrated-pipeline.md) y [ADR-013](../06-decisions/adr-013-full-article-run-phase3b.md) superseded) operativo en TEST en su Fase 4A — workflow editorial completo hasta `PUBLISHED`, runs IA Claude Cowork con `FULL_ARTICLE_ORCHESTRATED` como flujo principal (pipeline editorial delegado en seis skills personales versionadas en `docs/cms/skills/`) y publicación pública dinámica vía API JSON consumida por el SPA público. Aún sin generación de HTML estático, sin sitemap, sin retracción operativa.
 
 Workflow editorial activo:
 
 ```text
-IDEA → OUTLINE_READY → DRAFT_GENERATED → IN_REVIEW → APPROVED
-                              ↑                ↓
-                              └────────────────┘  (rechazo o reapertura desde APPROVED)
+IDEA → OUTLINE_READY → DRAFT_GENERATED → IN_REVIEW → APPROVED → PUBLISHED
+                              ↑                ↓        ↓
+                              └────────────────┘────────┘  (rechazo o reapertura)
 ```
 
-- estados alcanzables en Fase 2: `IDEA`, `OUTLINE_READY`, `DRAFT_GENERATED`, `IN_REVIEW`, `APPROVED`
-- estados modelados pero **no operables** en Fase 2 (reservados para Fase 4): `SCHEDULED`, `PUBLISHED`, `RETRACTED`
+- estados alcanzables operativamente: `IDEA`, `OUTLINE_READY`, `DRAFT_GENERATED`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`
+- estados modelados pero **no operables** en Fase 4A (difieren a Fase 4B): `SCHEDULED`, `RETRACTED`
 - edición de metadata y body solo permitida en `IDEA`, `OUTLINE_READY`, `DRAFT_GENERATED`; el resto bloquea con 409
-- ADMIN bypassa segregación generador↔aprobador y guardia de edición, pero **no** salta el workflow ni activa estados de Fase 4
+- estados terminales (`PUBLISHED`, `RETRACTED`): bloqueo absoluto de edición; **ADMIN no bypassa** (Fase 4A hardening). Para corregir, reabrir vía transición explícita
+- ADMIN sigue bypaseando segregación generador↔aprobador y guardia de edición en estados intermedios (`IN_REVIEW`, `APPROVED`)
+- transición `APPROVED → PUBLISHED` exige permiso `CONTENT.PUBLISH` (que ADMIN tiene por defecto vía `role_permissions`)
 - reapertura `APPROVED → DRAFT_GENERATED` permitida; al reenviar a revisión se crea una nueva versión
+- preview privada admin disponible en cualquier estado vía `GET /api/admin/content/articles/{id}/preview` sin alterar el artículo
 
 Backend:
 
-- endpoints existentes Fase 1: `GET/POST/PATCH/DELETE /api/admin/content/articles`, `GET/PUT /api/admin/content/articles/{id}/body`
-- endpoints nuevos Fase 2:
+- endpoints admin Fases 1+2:
+  - `GET/POST/PATCH/DELETE /api/admin/content/articles`
+  - `GET/PUT /api/admin/content/articles/{id}/body`
   - `POST /api/admin/content/articles/{id}/transition`
   - `GET  /api/admin/content/articles/{id}/versions`
   - `GET  /api/admin/content/articles/{id}/versions/{versionNumber}/body`
   - `GET  /api/admin/content/articles/{id}/events`
-- tablas operativas: `content_articles`, `content_article_versions`, `content_review_events`
-- tabla `content_generation_runs` sigue creada pero sin uso (Fase 3)
-- migración Flyway `V20260501__content_phase1_schema.sql` sin cambios; Fase 2 reutiliza el schema completo
+- endpoints admin runs IA (Fase 3A):
+  - `POST /api/admin/content/articles/{id}/runs` (crea run y devuelve prompt expandido)
+  - `POST /api/admin/content/articles/{articleId}/runs/{runId}/output` (ingestión + validación)
+  - `GET  /api/admin/content/articles/{id}/runs`
+  - `GET  /api/admin/content/runs/{runId}`
+- endpoint admin preview privada (Fase 4A hardening):
+  - `GET  /api/admin/content/articles/{id}/preview` — render Markdown→HTML server-side sin publicar; reusa `MarkdownRendererService`
+- endpoints públicos sin auth (Fase 4A):
+  - `GET /api/public/content/articles?locale=&category=&page=&size=` (solo `state=PUBLISHED`)
+  - `GET /api/public/content/articles/{slug}` (solo `state=PUBLISHED`; devuelve `htmlBody` ya sanitizado)
+- runs IA tipos soportados: `FULL_ARTICLE_ORCHESTRATED` (flujo principal recomendado, validación reforzada, pipeline delegado en skills personales `cms-research-seo` → `cms-draft-writer` → `cms-editorial-polish` → `cms-brand-legal-review` → `cms-json-builder`, con `sharemechat-voice` transversal), `RESEARCH`, `OUTLINE`, `DRAFT`, `REVIEW`, `SEO` (todos como herramientas avanzadas). El run type antiguo `FULL_ARTICLE` (ADR-013) ya no se acepta; los runs históricos con ese tipo se conservan como traza auditable
+- tablas operativas: `content_articles`, `content_article_versions`, `content_review_events`, `content_generation_runs`
+- migración Flyway `V20260501__content_phase1_schema.sql` sin cambios; Fases 2/3/4A reutilizan el schema completo
+- dependencias Maven añadidas en Fase 4A: `flexmark-all` (Markdown→HTML) + `jsoup` (sanitización allowlist)
 
 Versionado:
 
@@ -135,7 +150,7 @@ Eventos auditados (`content_review_events`):
 
 S3:
 
-- bucket: `sharemechat-content-private-test`
+- bucket: bucket privado de contenido del entorno TEST
 - región: `eu-central-1`
 - acceso: privado, exclusivamente desde backend; sin CloudFront, sin OAC, sin URLs firmadas
 - key layout:
@@ -145,30 +160,41 @@ S3:
 
 Seguridad:
 
-- permisos backoffice usados en Fase 2: `CONTENT.VIEW`, `CONTENT.EDIT`, `CONTENT.REVIEW`
-- `CONTENT.PUBLISH` reservado, sin uso operativo todavía (Fase 4)
+- permisos backoffice usados: `CONTENT.VIEW`, `CONTENT.EDIT`, `CONTENT.REVIEW`, `CONTENT.PUBLISH`
+- `CONTENT.PUBLISH` activo en Fase 4A: requerido para `APPROVED → PUBLISHED`. ADMIN lo tiene por defecto vía `role_permissions`
 - rol backoffice `EDITOR` creado, sin usuarios reales asignados
-- acceso al panel cubierto por la regla genérica `/api/admin/**` de `SecurityConfig` (`ROLE_ADMIN` o `BO_ROLE_ADMIN`); el flag ADMIN se detecta inspeccionando authorities para aplicar bypass de segregación
+- acceso a `/api/admin/**` cubierto por la regla genérica de `SecurityConfig` (`ROLE_ADMIN` o `BO_ROLE_ADMIN`); el flag ADMIN se detecta inspeccionando authorities
+- `/api/public/content/**` con `permitAll` solo en métodos `GET`
 
 Frontend backoffice:
 
-- panel `Content CMS` y editor mantienen el layout de Fase 1
-- editor añade barra dinámica de transiciones según estado actual y permisos del usuario
-- inputs de metadata y body se deshabilitan en estados no editables; ADMIN salta la deshabilitación
-- nuevo bloque de historial dentro del editor con dos columnas: versiones (con botón "Ver cuerpo" que carga el markdown inmutable de v{n}) y timeline de eventos
-- placeholder de keywords actualizado a formato natural separado por comas
+- panel `Content CMS` y editor mantienen el layout original
+- editor con barra dinámica de transiciones según estado y permisos
+- inputs de metadata y body se deshabilitan en estados no editables; en estados terminales (`PUBLISHED`, `RETRACTED`) **el bloqueo es absoluto, también para ADMIN**
+- bloque de historial con dos columnas: versiones (con botón "Ver cuerpo" que carga el markdown inmutable de v{n}) y timeline de eventos
+- panel "Asistente IA" con un único botón principal "Generar artículo completo" (run type `FULL_ARTICLE_ORCHESTRATED`); `RESEARCH` y `REVIEW` accesibles bajo disclosure "Mostrar opciones avanzadas"; `OUTLINE`/`DRAFT`/`SEO` no se ofrecen como botones aunque el backend los siga aceptando y los runs históricos (incluido el antiguo `FULL_ARTICLE`) se rendericen en la tabla
+- botón "Vista previa" en el editor abre un modal admin que muestra el artículo renderizado con los mismos estilos del blog público, sin publicar ni alterar estado
 
-Limitaciones Fase 2 (sin cambios respecto a Fase 1):
+Frontend público:
 
-- sin generación IA ni runs de modelo
-- sin publicación pública; `blog-test.sharemechat.com` no se construye
-- sin programación, sin retirada, sin disclosure override
+- `/blog`: listado de artículos en `state=PUBLISHED` consumido vía `GET /api/public/content/articles`
+- `/blog/:slug`: detalle de artículo con `htmlBody` sanitizado (allowlist jsoup), inyectado vía `dangerouslySetInnerHTML`. Incluye metadata SEO básica (title, brief, category, fecha) y disclosure IA si `disclosureRequired=true`
+
+Limitaciones Fase 4A:
+
+- sin generación de HTML estático en S3+CloudFront (Fase 4B)
+- sin sitemap, sin robots, sin JSON-LD (Fase 4B)
+- sin transición operativa `PUBLISHED → RETRACTED` ni endpoint compuesto `publish-now` (Fase 4B)
+- sin programación (`SCHEDULED`) ni disclosure override
 
 Validación realizada con tráfico real en TEST:
 
-- ciclo completo `IDEA → OUTLINE_READY → DRAFT_GENERATED → IN_REVIEW → APPROVED` correcto
+- ciclo completo `IDEA → OUTLINE_READY → DRAFT_GENERATED → IN_REVIEW → APPROVED → PUBLISHED` correcto sobre el artículo `id=4`, slug `videochat-seguro-guia`
+- generación IA con `FULL_ARTICLE_ORCHESTRATED` validada, validación reforzada aplicada (≥5 fuentes, ≥4 secciones outline, ≥800 chars draft, `seo_title`/`meta_description` no vacíos, `self_check_passed=true`, heurísticas Markdown literal); el pipeline editorial se ejecutó en Claude Cowork delegando en las seis skills personales descritas en [ADR-014](../06-decisions/adr-014-full-article-orchestrated-pipeline.md)
 - creación de versión `v1.md` en S3 al someter a revisión, con `body_content_hash` SHA-256 persistido en `content_article_versions` y `current_version_id` actualizado
-- reapertura `APPROVED → DRAFT_GENERATED` y nuevo ciclo hasta `APPROVED` generan `v2.md` con hash distinto
-- bloqueo de edición en estados no editables devuelve 409 con mensaje claro
-- eventos `EDIT_APPLIED`, `OUTLINE_APPROVED`, `DRAFT_REQUESTED`, `REVIEW_APPROVED` y `REVIEW_REJECTED` insertados con `actor_user_id`, `version_id` cuando aplica y `payload_json` legible
+- reapertura `APPROVED → DRAFT_GENERATED` y nuevo ciclo generan `v{n+1}.md` con hash distinto
+- transición `APPROVED → PUBLISHED` operativa, `published_at` fijado, evento `PUBLISHED` emitido en `content_review_events`
+- artículo accesible públicamente sin auth en `https://test.sharemechat.com/blog` (listado) y `https://test.sharemechat.com/blog/videochat-seguro-guia` (detalle con HTML sanitizado)
+- preview privada admin disponible en cualquier estado, sin alterar el artículo
+- bloqueo de edición tras `PUBLISHED` confirmado a nivel UI (inputs y botones deshabilitados) y backend (`PUT/PATCH` devuelve 409 incluso para ADMIN)
 - consistencia BD↔S3 verificada: `body_s3_key` de cada versión apunta a un objeto existente y descargable vía `GET /versions/{n}/body`

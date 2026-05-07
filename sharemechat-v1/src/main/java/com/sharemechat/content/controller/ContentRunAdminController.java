@@ -1,6 +1,7 @@
 package com.sharemechat.content.controller;
 
 import com.sharemechat.content.constants.ContentConstants;
+import com.sharemechat.content.dto.ArticleDetailDTO;
 import com.sharemechat.content.dto.CreateRunRequest;
 import com.sharemechat.content.dto.RunDetailDTO;
 import com.sharemechat.content.dto.RunSummaryDTO;
@@ -100,6 +101,23 @@ public class ContentRunAdminController {
         return runService.findById(runId);
     }
 
+    /**
+     * Fase 4A: aplica draft_markdown del output validado del run al cuerpo
+     * del articulo. Requiere CONTENT.EDIT y que el run este VALIDATED.
+     * No publica, no cambia estado, no crea version.
+     */
+    @PostMapping("/articles/{articleId}/runs/{runId}/apply-draft")
+    public ArticleDetailDTO applyDraft(
+            @PathVariable("articleId") Long articleId,
+            @PathVariable("runId") Long runId,
+            Authentication authentication
+    ) {
+        requirePermission(authentication, BackofficeAuthorities.PERM_CONTENT_EDIT);
+        Long actorUserId = resolveUserId(authentication);
+        boolean adminFlag = isAdmin(authentication);
+        return runService.applyValidatedDraftToArticle(articleId, runId, actorUserId, adminFlag);
+    }
+
     private Long resolveUserId(Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "No autenticado");
@@ -125,5 +143,13 @@ public class ContentRunAdminController {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Permiso requerido: " + permissionCode);
         }
+    }
+
+    private boolean isAdmin(Authentication authentication) {
+        if (authentication == null || authentication.getAuthorities() == null) return false;
+        String boRoleAdmin = BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN);
+        return authentication.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .anyMatch(a -> "ROLE_ADMIN".equals(a) || boRoleAdmin.equals(a));
     }
 }

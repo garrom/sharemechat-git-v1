@@ -1,8 +1,10 @@
 package com.sharemechat.content.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sharemechat.content.constants.ContentConstants;
+import com.sharemechat.content.dto.ArticleDetailDTO;
 import com.sharemechat.content.dto.RunDetailDTO;
 import com.sharemechat.content.dto.RunSummaryDTO;
 import com.sharemechat.content.dto.ValidationErrorDTO;
@@ -51,7 +53,7 @@ public class ContentRunService {
             ContentConstants.RUN_TYPE_DRAFT,
             ContentConstants.RUN_TYPE_REVIEW,
             ContentConstants.RUN_TYPE_SEO,
-            ContentConstants.RUN_TYPE_FULL_ARTICLE);
+            ContentConstants.RUN_TYPE_FULL_ARTICLE_ORCHESTRATED);
 
     /** Tope defensivo para output crudo pegado por el editor. */
     private static final int RAW_OUTPUT_MAX_BYTES = 1_048_576; // 1 MiB
@@ -61,17 +63,20 @@ public class ContentRunService {
     private final ContentBodyStorageService bodyStorageService;
     private final ContentAIProvider aiProvider;
     private final ObjectMapper objectMapper;
+    private final ContentArticleService articleService;
 
     public ContentRunService(ContentArticleRepository articleRepo,
                              ContentGenerationRunRepository runRepo,
                              ContentBodyStorageService bodyStorageService,
                              ContentAIProvider aiProvider,
-                             ObjectMapper objectMapper) {
+                             ObjectMapper objectMapper,
+                             ContentArticleService articleService) {
         this.articleRepo = articleRepo;
         this.runRepo = runRepo;
         this.bodyStorageService = bodyStorageService;
         this.aiProvider = aiProvider;
         this.objectMapper = objectMapper;
+        this.articleService = articleService;
     }
 
     @Transactional
@@ -294,6 +299,107 @@ public class ContentRunService {
             }
         }
         return toDetail(run, runType, prompt, errors);
+    }
+
+    /**
+     * Fase 4A: aplica draft_markdown del output validado de un run al cuerpo
+     * del articulo. El operador no necesita copiar el draft manualmente.
+     *
+     * Reglas:
+     *  - run debe pertenecer al articulo indicado
+     *  - run debe estar en status VALIDATED y output_validated=true
+     *  - draft_markdown del output canonico debe existir y no estar en blanco
+     *  - articulo debe ser editable (terminales PUBLISHED/RETRACTED bloquean
+     *    incluso para ADMIN, post-Fase 4A hardening)
+     *  - subida del draft a S3 reusa el mismo path que PUT /body
+     *    (content/articles/{id}/draft.md)
+     *  - aplicacion al articulo emite EVENT_EDIT_APPLIED con target="ai_apply"
+     *    y payload con run_id/run_type para auditoria
+     *  - NO cambia estado, NO publica, NO crea version inmutable
+     */
+    @Transactional
+    public ArticleDetailDTO applyValidatedDraftToArticle(Long articleId,
+                                                         Long runId,
+                                                         Long actorUserId,
+                                                         boolean isAdmin) {
+        if (articleId == null || runId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "articleId y runId requeridos");
+        }
+        ContentGenerationRun run = runRepo.findById(runId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Run no encontrado"));
+        if (!articleId.equals(run.getArticleId())) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Run no pertenece al articulo indicado");
+        }
+        if (!ContentConstants.RUN_STATUS_VALIDATED.equals(run.getStatus())
+                || !run.isOutputValidated()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Run no esta VALIDATED; no se puede aplicar (status="
+                            + run.getStatus() + ")");
+        }
+
+        // Pre-check editable antes de tocar S3 (fail fast, evita huerfanos en draft.md).
+        articleService.requireEditable(articleId, isAdmin);
+
+        // Cargar el output canonico del run desde S3.
+        String validatedJson;
+        try {
+            validatedJson = bodyStorageService.loadRunOutputValidated(runId);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "No se pudo leer output_validated.json del run", ex);
+        }
+        if (validatedJson == null || validatedJson.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "output_validated.json no encontrado en S3 para el run");
+        }
+
+        // Extraer draft_markdown del JSON canonico.
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(validatedJson);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "output_validated.json del run no es JSON parseable", ex);
+        }
+        JsonNode draftNode = root == null ? null : root.get("draft_markdown");
+        if (draftNode == null || draftNode.isNull() || !draftNode.isTextual()
+                || draftNode.asText().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "draft_markdown ausente o vacio en el output validado del run");
+        }
+        String md = draftNode.asText();
+        byte[] mdBytes = md.getBytes(StandardCharsets.UTF_8);
+
+        // Subir como draft.md (mismo path/mecanismo que PUT /body manual).
+        ContentBodyStorageService.Result uploaded;
+        try {
+            uploaded = bodyStorageService.uploadDraftBody(articleId, mdBytes);
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "No se pudo subir draft a S3", ex);
+        }
+
+        String runType = extractRunTypeFromTemplateId(run.getPromptTemplateId());
+
+        // Aplicar al articulo (assertEditable + flags ai_assisted/disclosure +
+        // emite EVENT_EDIT_APPLIED con target="ai_apply" + run_id/run_type).
+        articleService.applyAiDraftToArticle(
+                articleId,
+                uploaded.s3Key(),
+                uploaded.contentHash(),
+                uploaded.byteSize(),
+                runId,
+                runType,
+                actorUserId,
+                isAdmin);
+
+        log.info("{} run draft applied to article runId={} articleId={} runType={} actor={}",
+                ContentConstants.LOG_PREFIX, runId, articleId, runType, actorUserId);
+
+        return articleService.findById(articleId);
     }
 
     private String normalizeRunType(String raw) {

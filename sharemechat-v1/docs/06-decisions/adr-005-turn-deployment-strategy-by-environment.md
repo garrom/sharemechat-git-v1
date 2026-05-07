@@ -2,7 +2,7 @@
 
 ## Estado
 
-Propuesta.
+Aceptada e implementada (AUDIT y TEST). PRO inicial pendiente.
 
 ## Contexto
 

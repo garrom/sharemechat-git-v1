@@ -44,7 +44,10 @@ public final class ContentConstants {
     public static final String RUN_TYPE_DRAFT = "DRAFT";
     public static final String RUN_TYPE_REVIEW = "REVIEW";
     public static final String RUN_TYPE_SEO = "SEO";
-    public static final String RUN_TYPE_FULL_ARTICLE = "FULL_ARTICLE";
+    // Fase 3B/ADR-014 — pipeline editorial orquestado por skills personales de Claude Cowork.
+    // Reemplaza al antiguo RUN_TYPE_FULL_ARTICLE (ADR-013) que ejecutaba el pipeline en un
+    // unico prompt monolitico.
+    public static final String RUN_TYPE_FULL_ARTICLE_ORCHESTRATED = "FULL_ARTICLE_ORCHESTRATED";
 
     public static final String RUN_STATUS_PENDING = "PENDING";
     public static final String RUN_STATUS_VALIDATED = "VALIDATED";

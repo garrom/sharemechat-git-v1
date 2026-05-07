@@ -690,15 +690,15 @@ Diagnostico:
 
 Diferencia encontrada entre entornos:
 
-- CloudFront TEST (`E2Q4VNDDWD5QBU`) behavior `/messages*`: `AllowedMethods = [HEAD, GET, OPTIONS]`
-- CloudFront AUDIT (`E1ILXV7P6ENUV8`) behavior `/messages*`: `AllowedMethods = [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]`
+- CloudFront TEST (distribución pública del entorno TEST) behavior `/messages*`: `AllowedMethods = [HEAD, GET, OPTIONS]`
+- CloudFront AUDIT (distribución pública del entorno AUDIT) behavior `/messages*`: `AllowedMethods = [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]`
 
 AWS documenta que, para que una cache behavior soporte WebSocket de forma fiable, debe declarar el set completo de metodos HTTP. Con el set reducido, CloudFront puede completar el handshake `101` en algunos intentos pero no sostener el transporte ni propagar de forma consistente cabeceras y cookies durante el upgrade. Esto explica tanto los `AUTH_FAIL reason=no_token` del backend (cookie JWT no llega en la fase de handshake) como la percepcion en navegador de conexion cerrada antes de establecerse.
 
 Cambio aplicado:
 
 - entorno: TEST
-- distribucion: `E2Q4VNDDWD5QBU`
+- distribucion: distribución pública del entorno TEST
 - behavior: `/messages*`
 - `AllowedMethods` actualizado a `[HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]`
 - `CachedMethods` sin cambios (`[HEAD, GET]`)
@@ -741,15 +741,11 @@ Validacion operativa ya realizada:
   - `carril_B=0`
   - `carril_C=10`
   - `allowlisted=0`
-  - proposed deny list generada con:
-    - `141.98.11.181`
-    - `35.180.134.18`
-    - `62.60.130.227`
-    - `85.11.167.38`
+  - proposed deny list operativa del pipeline perimetral (4 IPs)
 
 Observacion abierta antes de plantear bloqueo real:
 
-- la IP `129.212.226.182`, clasificada como `MALICIOSA` con `main_reason=xmlrpc_scan+many_routes_6`, quedo en Carril C
+- una IP clasificada como maliciosa por el pipeline perimetral (`MALICIOSA` con `main_reason=xmlrpc_scan+many_routes_6`) quedo en Carril C
 - esto no invalida el despliegue DRY-RUN, pero si obliga a revisar el tratamiento de IOCs aisladas tipo `xmlrpc_scan` antes de promocionar el componente a bloqueo real
 
 Lecciones:
@@ -788,7 +784,7 @@ Estado funcional previo al fix:
 
 - `/api/webrtc/config` respondia sin incluir la URL TURN propia del entorno
 - las variables de entorno `TEST_WEBRTC_TURN_URL_UDP` y `TEST_WEBRTC_TURN_URL_TCP` estaban presentes en la maquina del backend pero no tenian efecto en Spring
-- en paralelo, la EC2 designada como servidor TURN de TEST (`Server-Test-Sharemechat`, EIP `63.180.48.12`) estaba `stopped` en AWS tras una parada manual previa
+- en paralelo, la EC2 designada como servidor TURN de TEST estaba `stopped` en AWS tras una parada manual previa
 
 Diagnostico:
 
@@ -867,7 +863,7 @@ Sintomas observados en TEST:
 
 Estado previo al fix:
 
-- distribucion TEST `E2Q4VNDDWD5QBU` con origen S3 via OAC `ENGNDDRO1OGZV` para el bucket `sharemechat-frontend-test`
+- distribucion TEST distribución pública del entorno TEST con origen S3 via OAC `ENGNDDRO1OGZV` para el bucket `sharemechat-frontend-test`
 - `DefaultCacheBehavior.FunctionAssociations.Quantity = 0` (sin CloudFront Function asociada)
 - `CustomErrorResponses` con un unico item: `404 -> /index.html (200)`
 - ningun mecanismo de rewrite de rutas SPA en viewer-request
@@ -881,13 +877,13 @@ Diagnostico:
 
 Diferencia encontrada entre entornos:
 
-- AUDIT (`E1ILXV7P6ENUV8`): CloudFront Function `redirect-spa-audit` asociada al `DefaultCacheBehavior` en `viewer-request`, y ademas `CustomErrorResponses` con `403 -> /index.html (200)` y `404 -> /index.html (200)`
-- TEST (`E2Q4VNDDWD5QBU`): ninguna CloudFront Function asociada y `CustomErrorResponses` solo con `404 -> /index.html (200)`
+- AUDIT (distribución pública del entorno AUDIT): CloudFront Function `redirect-spa-audit` asociada al `DefaultCacheBehavior` en `viewer-request`, y ademas `CustomErrorResponses` con `403 -> /index.html (200)` y `404 -> /index.html (200)`
+- TEST (distribución pública del entorno TEST): ninguna CloudFront Function asociada y `CustomErrorResponses` solo con `404 -> /index.html (200)`
 
 Cambio aplicado:
 
 - entorno: TEST
-- distribucion: `E2Q4VNDDWD5QBU`
+- distribucion: distribución pública del entorno TEST
 - creacion de CloudFront Function `redirect-spa-test`, runtime `cloudfront-js-1.0`, publicada en `LIVE`
 - logica equivalente a `redirect-spa-audit`: passthrough explicito para `/api/`, `/match`, `/messages`, `/uploads/`, `/assets/`, `/static/`, `/.well-known/acme-challenge/`, `/favicon.ico` y `/robots.txt`; reescritura a `/index.html` para cualquier URI sin punto (rutas SPA sin extension); assets con extension pasan sin modificar
 - asociacion al `DefaultCacheBehavior` unicamente en `viewer-request`
@@ -992,7 +988,7 @@ Contexto:
 
 Problema 1: deteccion incompleta de IOCs hostiles
 
-- caso concreto detectado: IP `129.212.226.182` con `classification=MALICIOSA`, `score=78`, `main_reason=xmlrpc_scan+many_routes_6`
+- caso concreto detectado: una IP clasificada como maliciosa por el pipeline perimetral con `classification=MALICIOSA`, `score=78`, `main_reason=xmlrpc_scan+many_routes_6`
 - `evidence.hostile_hits` estaba vacio para esa entrada; la funcion `extract_hostile_iocs()` original solo consultaba esa fuente y `evidence.matched_rule_labels`
 - resultado incorrecto: `hostile_days[]` del estado persistente acumulaba esa IP con `hostile_iocs=[]`, bloqueando la activacion del Carril B aunque el IOC `xmlrpc_scan` estuviera presente en `main_reason`
 - correccion aplicada: `extract_hostile_iocs()` ampliada a cuatro fuentes en orden sin duplicar: `evidence.hostile_hits`, `evidence.matched_rule_labels`, `matched_rules` (fallback si evidence ausente), y parseo de `main_reason` via `re.split(r"[+\s,;|]+", ...)` filtrando tokens de volumen (`many_routes_*`, `request_burst_*`, `multi_host`, `query_heavy`)
@@ -1000,7 +996,7 @@ Problema 1: deteccion incompleta de IOCs hostiles
 
 Problema 2: razon de Carril C incorrecta cuando habia IOC hostil aislado
 
-- caso concreto: la misma IP `129.212.226.182` con `xmlrpc_scan` detectado (Fuente 4) quedaba en Carril C correctamente (primera aparicion, sin repeticion), pero el diff mostraba `"clasificacion=MALICIOSA sin IOC hostil en ruta hostil"` — mensaje inexacto que ocultaba la presencia del IOC
+- caso concreto: la misma IP clasificada como maliciosa por el pipeline perimetral con `xmlrpc_scan` detectado (Fuente 4) quedaba en Carril C correctamente (primera aparicion, sin repeticion), pero el diff mostraba `"clasificacion=MALICIOSA sin IOC hostil en ruta hostil"` — mensaje inexacto que ocultaba la presencia del IOC
 - causa: en `evaluate_decisions()`, el bloque `if classification in HIGH_SEVERITY` se evaluaba antes que `elif hostile_iocs_today`
 - correccion aplicada: reorder a `if hostile_iocs_today` → `elif HIGH_SEVERITY` → `else`; el diff muestra ahora `"IOC hostil aislado sin repeticion ni criterio Carril A"` + `"iocs_today=xmlrpc_scan"` para ese caso
 
@@ -1015,7 +1011,7 @@ Estado tras el refinamiento:
 
 - estado persistente reseteado en EC2 tras el cambio de logica de extraccion de IOCs (comportamiento esperado y documentado); ventana historica de Carril B se reconstruye en 7 dias de actividad real
 - validacion DRY-RUN manual para `2026-04-22`: `ips=3`, `carril_A=0`, `carril_B=0`, `carril_C=3`, `allowlisted=0`
-- validacion DRY-RUN manual para `2026-04-18`: `ips=14`, `carril_A=4`, `carril_B=0`, `carril_C=10`, `allowlisted=0`; proposed deny list con `141.98.11.181`, `35.180.134.18`, `62.60.130.227`, `85.11.167.38`
+- validacion DRY-RUN manual para `2026-04-18`: `ips=14`, `carril_A=4`, `carril_B=0`, `carril_C=10`, `allowlisted=0`; proposed deny list operativa del pipeline perimetral (4 IPs)
 - deteccion IOC correcta, no falso positivo para primera aparicion aislada, logica A/B/C intacta: confirmado
 
 Lecciones:
@@ -1060,15 +1056,7 @@ Resultado:
   allowlisted=0 nginx_test_before=ok nginx_test_after=ok ips_bloqueadas=4 reload=ok
 ```
 
-IPs bloqueadas en `/etc/nginx/deny-audit-ips.conf`:
-
-```nginx
-# Auto-generado por audit-access-blocker - Carril A - 2026-04-18
-deny 141.98.11.181;
-deny 35.180.134.18;
-deny 62.60.130.227;
-deny 85.11.167.38;
-```
+IPs bloqueadas en `/etc/nginx/deny-audit-ips.conf`: 4 entradas en Carril A (deny list operativa del pipeline perimetral; las IPs concretas viven en la fuente operativa fuera del repo).
 
 Validacion nginx:
 
@@ -1120,7 +1108,7 @@ Contexto:
 - el codigo del componente `ops/test-access-blocker/` habia sido nivelado con AUDIT (4-source IOC extraction, Carril C reason fix, soporte DRY_RUN=0 preparado) pero no estaba instalado en EC2 TEST
 - objetivo del despliegue: activar la fase de observacion en TEST con DRY_RUN=1, sin afectar nginx ni bloquear trafico real, como paso previo obligatorio antes de cualquier activacion de bloqueo real en TEST
 
-Acciones realizadas en EC2 TEST (`63.180.48.12`):
+Acciones realizadas en EC2 TEST:
 
 - copia del componente a `/opt/sharemechat-test-access-blocker/` con estructura `bin/`, `lib/`, `config/`, `systemd/`
 - creacion de `/etc/sharemechat-test-access-blocker/config.env` (`DRY_RUN=1`) y `allowlist.conf`

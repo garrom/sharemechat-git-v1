@@ -392,3 +392,84 @@ export const InlineRow = styled.div`
   flex-wrap: wrap;
   margin-bottom: 8px;
 `;
+
+// ===== Fase 4A hardening — preview modal + disclosure runs avanzados =====
+
+export const PreviewOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(15, 23, 42, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 16px;
+  overflow-y: auto;
+`;
+
+export const PreviewSheet = styled.div`
+  width: 100%;
+  max-width: 920px;
+  background: #f8fafc;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.35);
+  padding: 24px;
+  position: relative;
+`;
+
+export const PreviewHeaderBar = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #e2e8f0;
+`;
+
+export const PreviewBadge = styled.span`
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #fef3c7;
+  color: #92400e;
+`;
+
+export const AdvancedToggleRow = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 6px 0 8px;
+`;
+
+export const AdvancedToggleButton = styled.button`
+  background: none;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 5px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+
+  &:hover { background: #f1f5f9; }
+`;
+
+export const AdvancedRunSection = styled.div`
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  background: #f8fafc;
+  margin-bottom: 12px;
+`;

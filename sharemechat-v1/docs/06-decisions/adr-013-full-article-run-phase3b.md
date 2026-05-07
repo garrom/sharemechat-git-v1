@@ -2,7 +2,27 @@
 
 ## Estado
 
-Aceptada — Fase 3B evolución del CMS interno.
+**Superseded by [ADR-014](adr-014-full-article-orchestrated-pipeline.md).**
+
+El run type `FULL_ARTICLE` con pipeline editorial monolítico inline en un
+único prompt deja de estar soportado. Lo sustituye `FULL_ARTICLE_ORCHESTRATED`,
+que delega el pipeline en seis skills personales versionadas en
+[`docs/cms/skills/`](../cms/skills/). Los runs históricos creados con
+`prompt_template_id="FULL_ARTICLE/v1"` se conservan en
+`content_generation_runs` como traza auditable; solo se prohíben runs
+**nuevos** con ese tipo. Los umbrales de validación reforzada (≥5 sources,
+≥4 secciones outline, ≥800 chars draft, seo_title/meta_description no
+vacíos, target_keywords con type=primary, self_check_passed=true,
+heurísticas Markdown literal) se preservan idénticos en ADR-014.
+
+El cuerpo de esta ADR se mantiene a continuación como traza histórica de
+la decisión inicial.
+
+---
+
+> Histórico (decisión original — Fase 3B):
+>
+> Aceptada — Fase 3B evolución del CMS interno.
 
 - decisión arquitectónica aceptada;
 - implementación inicial activada en TEST sobre la infraestructura ya validada de Fase 3A (`ContentAIProvider`, `ManualClipboardClaudeAdapter`, `ContentRunService`, `ContentRunAdminController`, panel IA en backoffice);
