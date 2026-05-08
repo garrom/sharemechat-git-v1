@@ -85,7 +85,7 @@ const DashboardAdmin = () => {
     },
     content: {
       title: 'Content CMS',
-      subtitle: 'Gestion editorial de articulos. Fase 1: borrador en backoffice, sin publicacion publica, sin IA, sin workflow completo.',
+      subtitle: 'Gestion editorial de articulos. Workflow simplificado (ADR-016): DRAFT → IN_REVIEW → PUBLISHED → RETRACTED. Pipeline IA orquestado (ADR-014) y publicacion publica dinamica (Fase 4A).',
     },
     profile: {
       title: t('admin.shell.views.profile.title'),
