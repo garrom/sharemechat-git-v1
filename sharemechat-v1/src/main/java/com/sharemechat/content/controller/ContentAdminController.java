@@ -174,6 +174,7 @@ public class ContentAdminController {
                 detail.category(),
                 detail.keywords(),
                 detail.publishedAt(),
+                detail.updatedAt(),
                 htmlBody,
                 detail.aiAssisted(),
                 detail.disclosureRequired()
@@ -232,12 +233,13 @@ public class ContentAdminController {
         Long actorUserId = resolveUserId(authentication);
         boolean isAdmin = isAdmin(authentication);
 
-        // Fase 4A: la transicion a PUBLISHED requiere CONTENT.PUBLISH (o ADMIN
-        // implicitamente, ya que ROLE_ADMIN/BO_ROLE_ADMIN tienen todos los
-        // CONTENT.* asignados via role_permissions).
+        // ADR-016: tanto la publicacion (IN_REVIEW -> PUBLISHED) como la
+        // retractacion (PUBLISHED -> RETRACTED) requieren CONTENT.PUBLISH (o
+        // ADMIN implicitamente, ya que ROLE_ADMIN/BO_ROLE_ADMIN tienen todos
+        // los CONTENT.* asignados via role_permissions).
         if (request != null && request.getToState() != null) {
             String toStateNorm = request.getToState().trim().toUpperCase();
-            if ("PUBLISHED".equals(toStateNorm)) {
+            if ("PUBLISHED".equals(toStateNorm) || "RETRACTED".equals(toStateNorm)) {
                 requirePermission(authentication,
                         com.sharemechat.security.BackofficeAuthorities.PERM_CONTENT_PUBLISH);
             }

@@ -44,8 +44,9 @@ import {
 import ContentArticleHistory from './ContentArticleHistory';
 import ContentArticleAIPanel from './ContentArticleAIPanel';
 
-const EDITABLE_STATES = new Set(['IDEA', 'OUTLINE_READY', 'DRAFT_GENERATED']);
-// Fase 4A hardening: estados terminales bloquean edicion incluso para ADMIN.
+// ADR-016: workflow simplificado a cuatro estados.
+const EDITABLE_STATES = new Set(['DRAFT']);
+// PUBLISHED y RETRACTED son terminales: bloquean edicion incluso para ADMIN.
 const TERMINAL_STATES = new Set(['PUBLISHED', 'RETRACTED']);
 
 const fmtDate = (v) => {
@@ -59,31 +60,26 @@ const fmtDate = (v) => {
   }
 };
 
+// ADR-016: cuatro estados operables. DRAFT permite enviar a revision; IN_REVIEW
+// puede devolverse a DRAFT o publicarse; PUBLISHED puede retractarse; RETRACTED
+// es terminal absoluto sin transiciones.
 const TRANSITIONS_BY_STATE = {
-  IDEA: [
-    { to: 'OUTLINE_READY', label: 'Marcar outline listo', tone: 'default', input: null },
-    { to: 'DRAFT_GENERATED', label: 'Pasar a borrador', tone: 'default', input: null },
-  ],
-  OUTLINE_READY: [
-    { to: 'DRAFT_GENERATED', label: 'Pasar a borrador', tone: 'default', input: null },
-  ],
-  DRAFT_GENERATED: [
+  DRAFT: [
     { to: 'IN_REVIEW', label: 'Enviar a revisión', tone: 'success', input: null },
   ],
   IN_REVIEW: [
-    { to: 'APPROVED', label: 'Aprobar', tone: 'success',
-      input: { name: 'comment', required: false, prompt: 'Comentario (opcional):' } },
-    { to: 'DRAFT_GENERATED', label: 'Rechazar', tone: 'danger',
-      input: { name: 'reason', required: true, prompt: 'Razón del rechazo:' } },
-  ],
-  APPROVED: [
+    { to: 'DRAFT', label: 'Devolver a borrador', tone: 'default',
+      input: { name: 'reason', required: false, prompt: 'Razón (opcional):' } },
     { to: 'PUBLISHED', label: 'Publicar', tone: 'success',
       input: { name: 'comment', required: false, prompt: 'Comentario de publicación (opcional):' } },
-    { to: 'DRAFT_GENERATED', label: 'Reabrir como borrador', tone: 'default',
-      input: { name: 'reason', required: false, prompt: 'Razón (opcional):' } },
+  ],
+  PUBLISHED: [
+    { to: 'RETRACTED', label: 'Retractar', tone: 'danger',
+      confirmRequired: true,
+      confirmText: '¿Retirar este artículo? Devolverá 410 Gone a los visitantes y desaparecerá del sitemap. La operación no es reversible desde la UI.',
+      input: { name: 'reason', required: false, prompt: 'Razón de la retractación (opcional):' } },
   ],
   SCHEDULED: [],
-  PUBLISHED: [],
   RETRACTED: [],
 };
 
@@ -105,7 +101,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
 
   const [meta, setMeta] = useState(initialMeta);
   const [currentId, setCurrentId] = useState(articleId);
-  const [state, setState] = useState(isNew ? null : 'IDEA');
+  const [state, setState] = useState(isNew ? null : 'DRAFT');
   const [currentVersionId, setCurrentVersionId] = useState(null);
   const [bodyContentHash, setBodyContentHash] = useState('');
   const [body, setBody] = useState('');
@@ -152,7 +148,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         keywords: detail.keywords || '',
       });
       setCurrentId(detail.id);
-      setState(detail.state || 'IDEA');
+      setState(detail.state || 'DRAFT');
       setCurrentVersionId(detail.currentVersionId || null);
       setBodyContentHash(detail.bodyContentHash || '');
 
@@ -189,7 +185,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         }),
       });
       setCurrentId(created.id);
-      setState(created.state || 'IDEA');
+      setState(created.state || 'DRAFT');
       setOkMessage('Articulo creado. Ahora puedes editar el cuerpo abajo.');
     } catch (e) {
       setError(e?.message || 'No se pudo crear el articulo');
@@ -270,7 +266,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
 
   const handleDelete = async () => {
     if (!currentId) return;
-    if (!window.confirm('Borrar articulo? Solo se permite si esta en estado IDEA.')) return;
+    if (!window.confirm('Borrar articulo? Solo se permite si esta en estado DRAFT.')) return;
     setDeleting(true);
     setError('');
     setOkMessage('');
@@ -285,6 +281,12 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
 
   const handleTransition = async (transition) => {
     if (!currentId || transitioning) return;
+    if (transition.confirmRequired) {
+      const confirmText = transition.confirmText
+        || `¿Confirmar la transición a ${transition.to}? La operación no es reversible desde la UI.`;
+      // eslint-disable-next-line no-alert
+      if (!window.confirm(confirmText)) return;
+    }
     let comment = null;
     let reason = null;
     if (transition.input) {
@@ -329,7 +331,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   };
 
   const canSubmitMetaCreate = isNew && !currentId;
-  const canDelete = !!currentId && state === 'IDEA';
+  const canDelete = !!currentId && state === 'DRAFT';
   const slugLocaleLocked = !isNew && !!currentId;
   const bytesUsed = new Blob([body || '']).size;
 

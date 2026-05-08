@@ -36,22 +36,27 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
  * Servicio CRUD + workflow editorial de articulos.
  *
- * Fase 1: CRUD de metadata + body en estado IDEA.
- * Fase 2: workflow editorial hasta APPROVED (sin SCHEDULED/PUBLISHED/RETRACTED),
- *         versionado al someter a revision, eventos de revision, segregacion
- *         generador<->aprobador con bypass para ADMIN, y guardia de edicion
- *         en estados no editables (IN_REVIEW, APPROVED).
+ * ADR-016 (workflow simplificado): cuatro estados operables
+ *   DRAFT -> IN_REVIEW -> PUBLISHED -> RETRACTED
+ * Mas SCHEDULED conservado en el CHECK BD pero inalcanzable via service
+ * (decision D5, diferida sin fecha).
  *
- * Estados SCHEDULED, PUBLISHED y RETRACTED existen en el schema y constantes
- * pero NO son alcanzables en Fase 2 — se activan en Fase 4 cuando entre el
- * pipeline de publicacion estatica.
+ * Reglas vigentes:
+ *  - DRAFT es el unico estado editable de metadata y body.
+ *  - PUBLISHED y RETRACTED son terminales: bloqueo absoluto, ADMIN no bypassa.
+ *  - DRAFT -> IN_REVIEW crea version inmutable v{n}.md en S3.
+ *  - IN_REVIEW -> PUBLISHED fija published_at = now(). Requiere CONTENT.PUBLISH.
+ *  - PUBLISHED -> RETRACTED fija retracted_at = now(); el body S3 NO se borra
+ *    (tombstone). Requiere CONTENT.PUBLISH.
+ *  - IN_REVIEW -> DRAFT permite devolver a borrador si hay correcciones que
+ *    aplicar antes de publicar.
+ *  - Sin segregacion generador<->aprobador (operacion 1-persona, decision D2).
  */
 @Service
 public class ContentArticleService {
@@ -73,50 +78,46 @@ public class ContentArticleService {
     private static final Set<String> ALLOWED_LOCALES = Set.of(
             ContentConstants.LOCALE_ES, ContentConstants.LOCALE_EN);
 
+    /**
+     * Unico estado editable de metadata y body (ADR-016).
+     * IN_REVIEW, PUBLISHED y RETRACTED bloquean cualquier modificacion.
+     */
     private static final Set<String> EDITABLE_STATES = Set.of(
-            ContentConstants.STATE_IDEA,
-            ContentConstants.STATE_OUTLINE_READY,
-            ContentConstants.STATE_DRAFT_GENERATED);
+            ContentConstants.STATE_DRAFT);
 
     /**
      * Estados terminales: cuerpo y metadata congelados de forma absoluta.
-     * Ni siquiera ADMIN puede editar aqui (Fase 4A hardening). Para corregir
-     * un articulo terminal hay que reabrirlo via transicion explicita
-     * (PUBLISHED -> DRAFT_GENERATED en Fase 4B; en Fase 4A es estado final).
+     * Ni siquiera ADMIN puede editar aqui. Para corregir un articulo
+     * RETRACTED no hay reapertura: se cierra como tombstone y se crea uno
+     * nuevo si fuera necesario (decision D3 del ADR-016).
      */
     private static final Set<String> TERMINAL_STATES = Set.of(
             ContentConstants.STATE_PUBLISHED,
             ContentConstants.STATE_RETRACTED);
 
     /**
-     * Estados alcanzables como destino de transicion. Fase 2 cubre IDEA..APPROVED.
-     * Fase 4A activa adicionalmente PUBLISHED como destino solo desde APPROVED.
-     * SCHEDULED y RETRACTED siguen modelados pero no operables.
+     * Estados alcanzables como destino de transicion (ADR-016). SCHEDULED se
+     * mantiene en el CHECK BD pero NO esta aqui: cualquier intento de llegar
+     * a SCHEDULED responde 409. La operativizacion futura abrira su propio ADR.
      */
-    private static final Set<String> PHASE2_REACHABLE_STATES = Set.of(
-            ContentConstants.STATE_IDEA,
-            ContentConstants.STATE_OUTLINE_READY,
-            ContentConstants.STATE_DRAFT_GENERATED,
+    private static final Set<String> REACHABLE_STATES = Set.of(
+            ContentConstants.STATE_DRAFT,
             ContentConstants.STATE_IN_REVIEW,
-            ContentConstants.STATE_APPROVED,
-            ContentConstants.STATE_PUBLISHED);
+            ContentConstants.STATE_PUBLISHED,
+            ContentConstants.STATE_RETRACTED);
 
     /**
-     * Mapa de transiciones permitidas. ADMIN no salta este mapa.
-     * Fase 4A: APPROVED -> PUBLISHED activado. PUBLISHED es estado terminal en
-     * Fase 4A (sin retraccion ni reapertura todavia).
+     * Mapa de transiciones permitidas (ADR-016). ADMIN no salta este mapa.
+     * Sin segregacion generador<->aprobador (decision D2): cualquier actor
+     * con el permiso adecuado puede ejecutar cualquier transicion.
      */
     private static final Map<String, Set<String>> ALLOWED_TRANSITIONS = Map.of(
-            ContentConstants.STATE_IDEA,
-                Set.of(ContentConstants.STATE_OUTLINE_READY, ContentConstants.STATE_DRAFT_GENERATED),
-            ContentConstants.STATE_OUTLINE_READY,
-                Set.of(ContentConstants.STATE_DRAFT_GENERATED),
-            ContentConstants.STATE_DRAFT_GENERATED,
+            ContentConstants.STATE_DRAFT,
                 Set.of(ContentConstants.STATE_IN_REVIEW),
             ContentConstants.STATE_IN_REVIEW,
-                Set.of(ContentConstants.STATE_APPROVED, ContentConstants.STATE_DRAFT_GENERATED),
-            ContentConstants.STATE_APPROVED,
-                Set.of(ContentConstants.STATE_DRAFT_GENERATED, ContentConstants.STATE_PUBLISHED));
+                Set.of(ContentConstants.STATE_DRAFT, ContentConstants.STATE_PUBLISHED),
+            ContentConstants.STATE_PUBLISHED,
+                Set.of(ContentConstants.STATE_RETRACTED));
 
     private final ContentArticleRepository articleRepo;
     private final ContentArticleVersionRepository versionRepo;
@@ -156,7 +157,7 @@ public class ContentArticleService {
         ContentArticle article = new ContentArticle();
         article.setSlug(slug);
         article.setLocale(locale);
-        article.setState(ContentConstants.STATE_IDEA);
+        article.setState(ContentConstants.STATE_DRAFT);
         article.setTitle(title);
         article.setBrief(brief);
         article.setCategory(category);
@@ -240,9 +241,9 @@ public class ContentArticleService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Articulo no encontrado"));
 
-        if (!ContentConstants.STATE_IDEA.equals(article.getState())) {
+        if (!ContentConstants.STATE_DRAFT.equals(article.getState())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Solo se permite borrar articulos en estado IDEA en Fase 1");
+                    "Solo se permite borrar articulos en estado DRAFT");
         }
         articleRepo.delete(article);
         log.info("{} article deleted id={} actor={}",
@@ -539,25 +540,29 @@ public class ContentArticleService {
     }
 
     // ================================================================
-    // Fase 2 — workflow editorial, versionado y eventos
+    // Workflow editorial (ADR-016): DRAFT -> IN_REVIEW -> PUBLISHED -> RETRACTED
     // ================================================================
 
     /**
-     * Aplica una transicion de estado, valida permisos/segregacion,
-     * crea version cuando corresponda y emite evento de revision.
+     * Aplica una transicion de estado, crea version cuando corresponda y
+     * emite evento de revision.
      *
-     * Reglas:
-     *  - Solo transiciones del mapa ALLOWED_TRANSITIONS son permitidas
-     *    (ADMIN no salta este check; el workflow es invariante).
-     *  - Estado destino debe estar en PHASE2_REACHABLE_STATES; SCHEDULED,
-     *    PUBLISHED y RETRACTED quedan bloqueados hasta Fase 4 incluso
-     *    para ADMIN.
-     *  - DRAFT_GENERATED -> IN_REVIEW: crea nueva fila en versions con
-     *    snapshot inmutable v{n}.md en S3; sin evento (la creacion de la
-     *    version es el rastro auditable por si misma).
-     *  - IN_REVIEW -> APPROVED y IN_REVIEW -> DRAFT_GENERATED (rechazo):
-     *    aplican segregacion generador<->aprobador contra
-     *    current_version.created_by_user_id; ADMIN bypassa.
+     * Reglas (ADR-016):
+     *  - Solo transiciones del mapa ALLOWED_TRANSITIONS son permitidas;
+     *    ADMIN no salta este check.
+     *  - Estado destino debe estar en REACHABLE_STATES. SCHEDULED queda
+     *    inalcanzable aunque siga en el CHECK de BD.
+     *  - DRAFT -> IN_REVIEW: crea nueva fila en content_article_versions con
+     *    snapshot inmutable v{n}.md en S3; sin evento (el rastro auditable
+     *    es la propia fila de version).
+     *  - IN_REVIEW -> PUBLISHED: fija published_at = now(); emite EVENT_PUBLISHED.
+     *  - IN_REVIEW -> DRAFT: devolver a borrador para correcciones; emite
+     *    EVENT_DRAFT_REQUESTED. Sin segregacion.
+     *  - PUBLISHED -> RETRACTED: fija retracted_at = now(); emite EVENT_RETRACTED.
+     *    NO toca S3 (el body queda como tombstone; D3 del ADR-016).
+     *
+     * El permiso CONTENT.PUBLISH para llegar a PUBLISHED o RETRACTED se valida
+     * en el controller (ContentAdminController) antes de invocar este metodo.
      */
     @Transactional
     public ArticleDetailDTO transitionState(Long articleId,
@@ -572,7 +577,7 @@ public class ContentArticleService {
         }
         String toState = req.getToState().trim().toUpperCase(Locale.ROOT);
 
-        if (!PHASE2_REACHABLE_STATES.contains(toState)) {
+        if (!REACHABLE_STATES.contains(toState)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Estado " + toState + " no operativo en este momento");
         }
@@ -595,8 +600,8 @@ public class ContentArticleService {
         Long eventVersionId = null;
         Map<String, Object> payload = new LinkedHashMap<>();
 
-        // ----- DRAFT_GENERATED -> IN_REVIEW: crear nueva version en S3 -----
-        if (ContentConstants.STATE_DRAFT_GENERATED.equals(fromState)
+        // ----- DRAFT -> IN_REVIEW: crear nueva version en S3 -----
+        if (ContentConstants.STATE_DRAFT.equals(fromState)
                 && ContentConstants.STATE_IN_REVIEW.equals(toState)) {
             if (article.getBodyS3Key() == null || article.getBodyS3Key().isBlank()) {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -606,52 +611,33 @@ public class ContentArticleService {
             article.setCurrentVersionId(newVersionId);
             // sin eventType: el rastro es la fila en content_article_versions
         }
-        // ----- IN_REVIEW -> APPROVED -----
+        // ----- IN_REVIEW -> DRAFT: devolver a borrador para correcciones -----
         else if (ContentConstants.STATE_IN_REVIEW.equals(fromState)
-                && ContentConstants.STATE_APPROVED.equals(toState)) {
-            ContentArticleVersion currentVersion = requireCurrentVersion(article);
-            assertSegregation(currentVersion, actorUserId, isAdmin, "aprobar");
-            eventType = ContentConstants.EVENT_REVIEW_APPROVED;
-            eventVersionId = currentVersion.getId();
-            if (comment != null) payload.put("comment", comment);
-            if (isAdmin && Objects.equals(currentVersion.getCreatedByUserId(), actorUserId)) {
-                payload.put("adminBypass", true);
-            }
-        }
-        // ----- IN_REVIEW -> DRAFT_GENERATED: rechazo -----
-        else if (ContentConstants.STATE_IN_REVIEW.equals(fromState)
-                && ContentConstants.STATE_DRAFT_GENERATED.equals(toState)) {
-            ContentArticleVersion currentVersion = requireCurrentVersion(article);
-            assertSegregation(currentVersion, actorUserId, isAdmin, "rechazar");
-            eventType = ContentConstants.EVENT_REVIEW_REJECTED;
-            eventVersionId = currentVersion.getId();
+                && ContentConstants.STATE_DRAFT.equals(toState)) {
+            eventType = ContentConstants.EVENT_DRAFT_REQUESTED;
+            payload.put("from", fromState);
             if (reason != null) payload.put("reason", reason);
-            if (isAdmin && Objects.equals(currentVersion.getCreatedByUserId(), actorUserId)) {
-                payload.put("adminBypass", true);
-            }
         }
-        // ----- IDEA -> OUTLINE_READY -----
-        else if (ContentConstants.STATE_IDEA.equals(fromState)
-                && ContentConstants.STATE_OUTLINE_READY.equals(toState)) {
-            eventType = ContentConstants.EVENT_OUTLINE_APPROVED;
-        }
-        // ----- APPROVED -> PUBLISHED (Fase 4A): publicacion editorial -----
-        // No genera HTML estatico ni S3 publico ni invalidacion CloudFront en
-        // Fase 4A. Solo transiciona el estado, fija published_at y emite evento.
+        // ----- IN_REVIEW -> PUBLISHED: publicacion editorial -----
         // El blog publico lee el body desde S3 privado y lo renderiza por API.
-        else if (ContentConstants.STATE_APPROVED.equals(fromState)
+        // No hay HTML estatico ni invalidacion CloudFront en esta fase.
+        else if (ContentConstants.STATE_IN_REVIEW.equals(fromState)
                 && ContentConstants.STATE_PUBLISHED.equals(toState)) {
             article.setPublishedAt(java.time.Instant.now());
             eventType = ContentConstants.EVENT_PUBLISHED;
             eventVersionId = article.getCurrentVersionId();
             if (comment != null) payload.put("comment", comment);
         }
-        // ----- Cualquier transicion a DRAFT_GENERATED no cubierta arriba -----
-        // (IDEA -> DRAFT_GENERATED, OUTLINE_READY -> DRAFT_GENERATED, APPROVED -> DRAFT_GENERATED)
-        else if (ContentConstants.STATE_DRAFT_GENERATED.equals(toState)) {
-            eventType = ContentConstants.EVENT_DRAFT_REQUESTED;
-            payload.put("from", fromState);
+        // ----- PUBLISHED -> RETRACTED: tombstone publico -----
+        // Fija retracted_at; NO borra body S3 ni versiones. El public controller
+        // devuelve 410 Gone para slugs en RETRACTED.
+        else if (ContentConstants.STATE_PUBLISHED.equals(fromState)
+                && ContentConstants.STATE_RETRACTED.equals(toState)) {
+            article.setRetractedAt(java.time.Instant.now());
+            eventType = ContentConstants.EVENT_RETRACTED;
+            eventVersionId = article.getCurrentVersionId();
             if (reason != null) payload.put("reason", reason);
+            if (comment != null) payload.put("comment", comment);
         }
 
         article.setState(toState);
@@ -733,31 +719,6 @@ public class ContentArticleService {
         version.setCreatedByUserId(actorUserId);
         ContentArticleVersion saved = versionRepo.save(version);
         return saved.getId();
-    }
-
-    private ContentArticleVersion requireCurrentVersion(ContentArticle article) {
-        Long currentVersionId = article.getCurrentVersionId();
-        if (currentVersionId == null) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Articulo sin version vigente; no se puede revisar");
-        }
-        return versionRepo.findById(currentVersionId)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.CONFLICT,
-                        "current_version_id apunta a version inexistente"));
-    }
-
-    private void assertSegregation(ContentArticleVersion version,
-                                   Long actorUserId,
-                                   boolean isAdmin,
-                                   String action) {
-        if (isAdmin) return;
-        if (version == null) return;
-        if (Objects.equals(version.getCreatedByUserId(), actorUserId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Segregacion generador<->aprobador: no puedes " + action
-                            + " tu propia version");
-        }
     }
 
     private void emitEvent(Long articleId,

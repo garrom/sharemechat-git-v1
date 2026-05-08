@@ -7,6 +7,13 @@ import java.time.Instant;
  * htmlBody ya viene renderizado y sanitizado por MarkdownRendererService.
  * El frontend lo inyecta con dangerouslySetInnerHTML; backend garantiza
  * que no contiene scripts ni HTML peligroso.
+ *
+ * Campos SEO (Frente 2):
+ *  - updatedAt sirve como dateModified en JSON-LD Article y como lastmod
+ *    en sitemap.xml. Si fuera null, el frontend cae en publishedAt.
+ *  - seoTitle / metaDescription dedicados aun no existen como columnas en
+ *    content_articles; el frontend deriva seoTitle de title y
+ *    metaDescription de brief mientras no se modele el dominio SEO.
  */
 public record ArticlePublicDetailDTO(
         Long id,
@@ -17,6 +24,7 @@ public record ArticlePublicDetailDTO(
         String category,
         String keywords,
         Instant publishedAt,
+        Instant updatedAt,
         String htmlBody,
         boolean aiAssisted,
         boolean disclosureRequired

@@ -1259,3 +1259,78 @@ No se modifico `SessionProvider`, `DashboardModel`, `msgSocketEngine` ni ningun 
 - La segunda llamada a `loadMe` no produce desmontaje visible del dashboard ni interrupciones del canal realtime
 - Build `npm run build` completado sin errores ni advertencias nuevas (advertencias previas preexistentes sin cambio)
 - Validado en `test.sharemechat.com` y `audit.sharemechat.com`
+
+### Routing /sitemap.xml y /robots.txt en CloudFront TEST
+
+Se intentó el routing edge para los nuevos endpoints SEO del CMS (Frente 2 sobre Fase 4A) en TEST. La parte CloudFront se aplicó con éxito y la distribución alcanzó `Deployed`, pero la validación final reveló que el cambio CloudFront por sí solo no es suficiente: nginx en la EC2 backend (`api-test-backend`, host `api.test.sharemechat.com`) no tiene `location` blocks que hagan `proxy_pass` para `/sitemap.xml` ni `/robots.txt`, devolviendo `404` al edge. CloudFront aplica entonces `CustomErrorResponses 404 -> /index.html (200)` y sirve el shell del SPA con `Content-Type: text/html`, que es peor para los crawlers que el estado pre-fix. Conforme a la regla de rollback ante validación final negativa, se restauró la `DistributionConfig` previa.
+
+Contexto:
+
+- backend Spring Boot ya expone `GET /sitemap.xml` y `GET /robots.txt` desde `SitemapController` (Frente 2), con XML dinámico y robots.txt con directiva `Sitemap:` absoluta resuelta vía `app.public.base-url` (ADR-015)
+- bucket S3 del frontend (`sharemechat-frontend-test`) contiene `frontend/public/robots.txt` heredado de Create React App (`User-agent: *\nDisallow:`) y NO contiene `sitemap.xml`
+- distribución CloudFront pública del entorno TEST con dos origenes: `api-test-backend` (custom origin → `api.test.sharemechat.com`) y `sharemechat-frontend-test.s3.eu-central-1.amazonaws.com-mjoiq0nk37l` (S3 + OAC)
+- `DefaultCacheBehavior` apunta a S3 con la CloudFront Function `redirect-spa-test` asociada en `viewer-request` (ver sección anterior)
+- `CustomErrorResponses` con un único item: `404 -> /index.html (200)`
+
+Síntomas observados pre-fix:
+
+- `GET https://test.sharemechat.com/sitemap.xml` → `403` con cuerpo `<Error><Code>AccessDenied</Code></Error>` y `server: AmazonS3`. El path caía en el `DefaultCacheBehavior`, llegaba a S3 vía OAC, el objeto no existía y S3 devolvía `403` (no `404`, comportamiento conocido con OAC). El `CustomErrorResponse 404` no disparaba.
+- `GET https://test.sharemechat.com/robots.txt` → `200` con el placeholder estático de CRA, sin directiva `Sitemap:`, sin `Disallow: /api`. CloudFront servía el objeto desde S3 (la `redirect-spa-test` tiene `/robots.txt` como passthrough explícito, así que la URI no se reescribe a `/index.html`).
+
+Diagnóstico:
+
+- el SEO mínimo backend está bien implementado y compila correctamente (`mvn -DskipTests compile` → `BUILD SUCCESS`); el problema es de routing de capas
+- existían dos capas que enrutaban estas paths al sitio incorrecto:
+  - capa 1 (CloudFront): `DefaultCacheBehavior` enviaba `/sitemap.xml` y `/robots.txt` al origen S3 en vez de al backend
+  - capa 2 (nginx en EC2): no expone `location /sitemap.xml` ni `location /robots.txt`; cualquier petición que llegue a nginx con esos paths cae en la `location /` por defecto y devuelve `404` sin alcanzar a Spring Boot
+- la asimetría con `/api/*`, `/match*`, `/messages*`, `/uploads/*`, `/assets/*` es estructural: esos cinco paths sí tienen behavior CloudFront a backend Y `location` block en nginx; los nuevos endpoints SEO no tenían ninguno de los dos
+
+Cambio aplicado y propagado en CloudFront:
+
+- entorno: TEST
+- distribución: `E2Q4VNDDWD5QBU` (alias `test.sharemechat.com`, `www.test.sharemechat.com`)
+- backup completo de `DistributionConfig` previo guardado en `.cf-backups/cf-test-E2Q4VNDDWD5QBU-20260507T183511Z.json` con `ETag` previo `EXJPJUCNJGXOM`
+- añadidos dos `CacheBehaviors` con `TargetOriginId=api-test-backend`, `CachePolicyId=4135ea2d-6df8-44a3-9df3-4b5a84be39ad` (`Managed-CachingDisabled`), `OriginRequestPolicyId=b689b0a8-53d0-40ab-baf2-68738e2966ac` (`Managed-AllViewerExceptHostHeader`), `AllowedMethods=[GET, HEAD]`, `CachedMethods=[GET, HEAD]`, `Compress=true`, `ViewerProtocolPolicy=redirect-to-https`, sin `FunctionAssociations` ni `LambdaFunctionAssociations`
+- primera iteración con `PathPattern` literal `sitemap.xml` y `robots.txt` (sin slash inicial, según las indicaciones del runbook): la propagación llegó a `Deployed` pero las peticiones seguían cayendo en el `DefaultCacheBehavior`. La capa edge no estaba matcheando los patrones sin slash en esta distribución
+- segunda iteración con `PathPattern` `/sitemap.xml` y `/robots.txt` (consistente con `/api/*`, `/messages*`, etc.): tras `Deployed`, los patterns SÍ matchean y CloudFront enruta al backend
+- invalidaciones creadas para `/sitemap.xml` y `/robots.txt` en ambas iteraciones
+
+Validación final post-cambio (con la segunda iteración aplicada y propagada):
+
+- `GET /sitemap.xml` → `200` con `content-type: text/html`, `server: AmazonS3`, body = shell SPA (`<title>Sharemechat</title>...`), `x-cache: Error from cloudfront`, `etag` coincidente con el `index.html` del bucket frontend
+- `GET /robots.txt` → idéntica respuesta: `200`, `text/html`, body shell SPA, `Error from cloudfront`
+- interpretación: CloudFront enruta correctamente al backend, el backend (vía nginx) devuelve `404`, y el `CustomErrorResponse 404 -> /index.html (200)` global sirve la SPA desde S3 con código `200`. El comportamiento es funcionalmente peor que el estado pre-fix: un crawler recibe `200 text/html` para `/sitemap.xml`, lo que se interpreta como un sitemap presente pero malformado
+- `api.test.sharemechat.com` no es accesible directamente desde fuera de CloudFront (security group restringido a rangos de edge), por lo que la verificación de la respuesta cruda del origen no fue posible desde el equipo de operación; la inferencia del 404 nginx se basa en los headers del response final (`server: AmazonS3` + `x-cache: Error from cloudfront` + body `index.html`)
+
+Rollback aplicado:
+
+- `aws cloudfront update-distribution --if-match E2YI48EGZDOLVF` con la `DistributionConfig` del backup
+- distribución vuelve a `Deployed` con seis `CacheBehaviors` originales y `ETag=E3586FMDDXN344`
+- estado post-rollback validado: `/sitemap.xml` → `403 application/xml` (S3 AccessDenied, mismo que pre-fix); `/robots.txt` → `200 text/plain` con el placeholder de CRA (`User-agent: *\nDisallow:`), mismo que pre-fix
+- backup permanece en `.cf-backups/` para reaplicar el cambio cuando nginx esté nivelado
+
+Lecciones:
+
+- la nivelación de un endpoint nuevo entre capas (CloudFront → nginx → backend) debe planificarse como tres acciones coordinadas, no como una sola: añadir behavior CloudFront, añadir `location` nginx con `proxy_pass`, deployar la JAR Spring Boot con el controller. Cualquiera de las tres aislada deja al sistema en un estado mixto que puede ser peor que el pre-fix
+- `CustomErrorResponses 404 -> /index.html (200)` es seguro mientras el `404` venga del bucket S3 sobre rutas SPA, pero degrada a "200 con contenido HTML inesperado" cuando el `404` viene del backend sobre rutas no-SPA. Para endpoints públicos no-SPA (sitemap, robots, futuras well-known) habría que evaluar si conviene excluirlos del `CustomErrorResponse` global o si nginx debe garantizar respuestas 2xx/5xx limpias antes
+- los `PathPattern` exactos (`sitemap.xml` vs `/sitemap.xml`) NO son intercambiables en esta distribución a pesar de la documentación AWS; el patrón debe llevar leading slash, consistente con el resto de behaviors del proyecto. Esta observación queda documentada para futuros runbooks operativos
+- el origen `api-test-backend` no es accesible directamente fuera de CloudFront, lo que dificulta validar la capa nginx en aislamiento desde un equipo de oficina; cualquier diagnóstico de routing nginx tiene que pasar por SSH a la EC2 o por un curl con `--resolve` desde un origen autorizado
+
+Recomendación operativa:
+
+- antes de reaplicar el routing CloudFront para `/sitemap.xml` y `/robots.txt` en TEST (y, por extensión, en AUDIT y PRO cuando corresponda), añadir en nginx de la EC2 backend dos `location` blocks que hagan `proxy_pass http://127.0.0.1:8080/<path>;` con las mismas cabeceras `Host`, `X-Real-IP`, `X-Forwarded-For`, `X-Forwarded-Proto` que ya usan `/api/`, `/match`, `/messages`. La pieza CloudFront por sí sola no soluciona el problema; la pieza nginx por sí sola tampoco (CloudFront seguiría enviando a S3). Las dos en conjunto son condición necesaria
+- una vez nginx esté nivelado, repetir exactamente el patrón aplicado en este intento: dos `CacheBehaviors` con `PathPattern=/sitemap.xml` y `/robots.txt`, leading slash, origen `api-test-backend`, mismas policies que `/api/*`, `AllowedMethods=[GET, HEAD]`, `Compress=true`, `ViewerProtocolPolicy=redirect-to-https`, sin function associations, seguidas de invalidación para los dos paths
+- mantener los stubs versionados de las dos iteraciones de `DistributionConfig` en `.cf-backups/` solo hasta que el reaplicado se confirme; pasada esa validación, archivarlos
+- considerar añadir a la guía de provisión de entornos nuevos un checklist de "cuando se introduce un endpoint público no-SPA": (a) controller backend, (b) location nginx, (c) cache behavior CloudFront, (d) invalidación, (e) validación curl desde fuera; los cuatro pasos en orden, validando cada uno antes de avanzar al siguiente
+
+Reaplicación coordinada (2026-05-08):
+
+- Fase 1 (nginx EC2 TEST): aplicada manualmente por el operador. Dos `location = /sitemap.xml { proxy_pass http://localhost:8080; ... }` y `location = /robots.txt { proxy_pass http://localhost:8080; ... }` añadidos al server `api.test.sharemechat.com` en `/etc/nginx/conf.d/api.test.sharemechat.com.conf`, justo antes del `location / { return 404; }` final, replicando el bloque de cabeceras de `location /api/` (con `proxy_hide_header` para CSP/HSTS/etc.). Backup en EC2 conservado como `.bak-seo-20260507`. Validación local en EC2: `curl -k -H "Host: api.test.sharemechat.com" https://127.0.0.1/sitemap.xml` → 200 + XML válido; `curl -k -H "Host: api.test.sharemechat.com" https://127.0.0.1/robots.txt` → 200 + texto plano con la directiva `Sitemap:`.
+- Fase 2 (CloudFront): aplicada vía `aws cloudfront update-distribution` en la distribución TEST, desde `ETag` previo `E3586FMDDXN344` al nuevo `ETag=EW7QESF4JEXSY`. Se añadieron dos `CacheBehaviors` con `PathPattern=/sitemap.xml` y `/robots.txt`, `TargetOriginId=api-test-backend`, `CachePolicyId=4135ea2d-6df8-44a3-9df3-4b5a84be39ad` (Managed-CachingDisabled, mismo que `/api/*`), `OriginRequestPolicyId=b689b0a8-53d0-40ab-baf2-68738e2966ac` (Managed-AllViewerExceptHostHeader), `AllowedMethods=[GET, HEAD]`, `CachedMethods=[GET, HEAD]`, `ViewerProtocolPolicy=redirect-to-https`, `Compress=true`, sin `FunctionAssociations` ni `LambdaFunctionAssociations`. Backup pre-fase2 guardado en `.cf-backups/cf-test-E2Q4VNDDWD5QBU-pre-fase2-20260508T142546Z.json`. Tras `Status=Deployed`, invalidación creada para `/sitemap.xml` y `/robots.txt`.
+- Validación end-to-end:
+  - `GET https://test.sharemechat.com/sitemap.xml` → `HTTP/2 200`, `content-type: application/xml;charset=UTF-8`, `server: nginx/1.28.0`, `cache-control: public, max-age=3600`, body `<urlset>` con la home del blog y los artículos publicados (`pagos-modelos-plataformas`, `videochat-seguro-guia`).
+  - `GET https://test.sharemechat.com/robots.txt` → `HTTP/2 200`, `content-type: text/plain;charset=UTF-8`, `server: nginx/1.28.0`, `cache-control: public, max-age=86400`, body con `User-agent: *`, `Allow: /blog`, `Disallow: /api/`, `Disallow: /admin`, `Disallow: /dashboard`, `Disallow: /login`, `Disallow: /register`, `Sitemap: https://test.sharemechat.com/sitemap.xml`.
+  - Idéntica respuesta con UA `Googlebot/2.1`.
+  - El antiguo `robots.txt` placeholder de Create React App (objeto en S3 frontend) sigue en el bucket pero ya no se sirve por la URL pública de TEST: el behavior `/robots.txt` matchea antes que el default y enruta al backend.
+- Detalle residual conocido (no bloqueante, sin acción inmediata):
+  - `HEAD /sitemap.xml` y `HEAD /robots.txt` devuelven `401`. Causa: `SecurityConfig` permite explícitamente `HttpMethod.GET` para esos paths pero no `HEAD`, por lo que la cadena cae en `.anyRequest().authenticated()`. Los crawlers de buscadores usan `GET` para indexar, así que la indexación no se ve afectada. Pendiente: cuando convenga, sustituir `HttpMethod.GET` por la pareja `(HttpMethod.GET, HttpMethod.HEAD)` en la directiva de SecurityConfig línea 69, o aceptar el comportamiento si se considera intencional (cookie/JWT validation defensiva).

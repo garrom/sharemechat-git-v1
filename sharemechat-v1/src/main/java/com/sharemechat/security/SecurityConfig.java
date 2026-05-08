@@ -64,6 +64,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/public/content/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/avatars/**").permitAll()
 
+                        // SEO layer (Frente 2 sobre CMS Fase 4A): sitemap dinamico
+                        // y robots.txt servidos sin auth para que crawlers los indexen.
+                        // ADR-016 / D9: GET y HEAD ambos permitAll. Sin HEAD, crawlers
+                        // que validan existencia con HEAD reciben 401 espurio.
+                        .requestMatchers(HttpMethod.GET, "/sitemap.xml", "/robots.txt").permitAll()
+                        .requestMatchers(HttpMethod.HEAD, "/sitemap.xml", "/robots.txt").permitAll()
+
                         // STREAMS: ACK media (cliente o modelo)
                         .requestMatchers(HttpMethod.POST, "/api/streams/*/ack-media").hasAnyRole("CLIENT", "MODEL")
 

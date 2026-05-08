@@ -118,3 +118,7 @@ Sin imponer plan, prioridad sugerida por impacto:
 - No he evaluado completamente el alineamiento entre el i18n catalogado en `es.json`/`en.json` (1801 líneas cada uno) y el código que consume las claves; queda fuera del alcance documental.
 - Las propiedades `application.properties` y `application-audit.properties` contienen hostnames completos de RDS (`db1-sharemechat-test-v2....rds.amazonaws.com`, `db1-sharemechat-audit....rds.amazonaws.com`). La regla de saneado del governance se refiere a `docs/`, no a configuración versionada de la app, por lo que no se levanta como OVER-DOC formal; aun así conviene revisar si esos endpoints deberían resolverse vía variable de entorno (`${DB_URL}`) en lugar de literal hardcodeado, especialmente de cara a PRO. Esto pertenece más a un frente de hardening de configuración que a una auditoría documental, y se deja sólo como observación al margen.
 - No he tocado ningún archivo del repo salvo este informe y la creación de `docs/_audit/`.
+
+## Actualizaciones posteriores
+
+- 2026-05-07: La decisión sobre hosts canónicos por entorno (mencionada en "Notas del auditor" sobre PRO) ha sido formalizada en [ADR-015](../06-decisions/adr-015-canonical-domains-per-environment.md).

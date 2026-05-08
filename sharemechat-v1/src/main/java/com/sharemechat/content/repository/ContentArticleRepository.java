@@ -41,4 +41,14 @@ public interface ContentArticleRepository extends JpaRepository<ContentArticle, 
                                        Pageable pageable);
 
     Optional<ContentArticle> findBySlugAndState(String slug, String state);
+
+    // SEO layer — listado completo de PUBLISHED para sitemap.xml.
+    // No paginado deliberadamente: el sitemap simple emite una entrada por
+    // articulo. Cuando se acerquen 50.000 URLs, partir en sitemapindex.
+    java.util.List<ContentArticle> findByStateOrderByPublishedAtDesc(String state);
+
+    // ADR-016: el endpoint publico necesita distinguir 200 / 410 / 404.
+    // Devuelve cualquier articulo cuyo slug coincida (cualquier locale, cualquier
+    // estado). El controller decide la respuesta segun el state.
+    java.util.List<ContentArticle> findBySlugOrderByIdAsc(String slug);
 }

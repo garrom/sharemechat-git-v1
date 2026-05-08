@@ -16,9 +16,10 @@ import {
 } from '../../../styles/AdminStyles';
 import ContentArticleEditor from './ContentArticleEditor';
 
+// ADR-016: workflow simplificado a cuatro estados operables. SCHEDULED queda
+// modelado en BD pero inalcanzable; no se ofrece en el filtro por defecto.
 const STATE_OPTIONS = [
-  'IDEA', 'OUTLINE_READY', 'DRAFT_GENERATED', 'IN_REVIEW',
-  'APPROVED', 'SCHEDULED', 'PUBLISHED', 'RETRACTED',
+  'DRAFT', 'IN_REVIEW', 'PUBLISHED', 'RETRACTED',
 ];
 
 const fmtDate = (v) => {

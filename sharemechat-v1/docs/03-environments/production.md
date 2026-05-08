@@ -7,6 +7,20 @@ La información disponible sugiere que PRODUCTION se usa principalmente para:
 - landing pública
 - publicación de assets compartidos
 
+## Hosts canónicos
+
+Decisión documentada en [ADR-015](../06-decisions/adr-015-canonical-domains-per-environment.md). Resumen para PRO:
+
+- Producto público: `https://sharemechat.com` (apex sin www)
+- Variante con www: `https://www.sharemechat.com` → 301 al apex
+- Backoffice: `https://admin.sharemechat.com`
+- API y realtime: bajo el host del producto, paths `/api/...`, `/messages`, `/match`
+- Blog: subdirectorio `https://sharemechat.com/blog/<slug>`
+- Activos legales: `https://assets.sharemechat.com/legal/...` (compartido con TEST y AUDIT)
+- Cookie domain: `.sharemechat.com`
+
+La política de redirección www → apex se implementa en CloudFront/edge, no en backend.
+
 ## Alcance documentado
 
 El material actual no permite afirmar con la misma solidez que exista en este repositorio una configuración completa de producto y backoffice en producción equivalente a TEST.

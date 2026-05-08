@@ -4,22 +4,19 @@ public final class ContentConstants {
 
     private ContentConstants() {}
 
-    // Estados de articulo (ADR-010, seccion 5)
-    public static final String STATE_IDEA = "IDEA";
-    public static final String STATE_OUTLINE_READY = "OUTLINE_READY";
-    public static final String STATE_DRAFT_GENERATED = "DRAFT_GENERATED";
+    // Estados de articulo (ADR-016: workflow simplificado a 4 estados).
+    // SCHEDULED se conserva en CHECK BD pero es inalcanzable via service
+    // (decision D5 del ADR-016, diferida sin fecha).
+    public static final String STATE_DRAFT = "DRAFT";
     public static final String STATE_IN_REVIEW = "IN_REVIEW";
-    public static final String STATE_APPROVED = "APPROVED";
     public static final String STATE_SCHEDULED = "SCHEDULED";
     public static final String STATE_PUBLISHED = "PUBLISHED";
     public static final String STATE_RETRACTED = "RETRACTED";
 
-    // Tipos de evento de revision
-    public static final String EVENT_OUTLINE_APPROVED = "OUTLINE_APPROVED";
+    // Tipos de evento de revision (ADR-016: OUTLINE_APPROVED, REVIEW_APPROVED
+    // y REVIEW_REJECTED suprimidos junto con los estados intermedios).
     public static final String EVENT_DRAFT_REQUESTED = "DRAFT_REQUESTED";
     public static final String EVENT_EDIT_APPLIED = "EDIT_APPLIED";
-    public static final String EVENT_REVIEW_APPROVED = "REVIEW_APPROVED";
-    public static final String EVENT_REVIEW_REJECTED = "REVIEW_REJECTED";
     public static final String EVENT_PUBLISHED = "PUBLISHED";
     public static final String EVENT_RETRACTED = "RETRACTED";
     public static final String EVENT_SCHEDULED = "SCHEDULED";

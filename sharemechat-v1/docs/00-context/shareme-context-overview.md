@@ -76,6 +76,8 @@ Problema de negocio que resuelve:
 - Publico pero no auto-onboardable: cualquiera puede acceder a la URL, pero no puede crearse cuenta libremente en TEST/AUDIT
 - Las cuentas existentes son las unicas que validan flujo end-to-end fuera de PRO
 
+Convención de dominios canónicos por entorno: ver [ADR-015](../06-decisions/adr-015-canonical-domains-per-environment.md).
+
 ## 5. Seguridad actual
 
 Capa aplicacion:

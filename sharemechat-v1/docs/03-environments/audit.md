@@ -4,6 +4,18 @@
 
 AUDIT se plantea como un entorno aislado para revision, validacion y preparacion de auditorias sin interferir con TEST.
 
+## Hosts canónicos
+
+Decisión documentada en [ADR-015](../06-decisions/adr-015-canonical-domains-per-environment.md). Resumen para AUDIT:
+
+- Producto público: `https://audit.sharemechat.com` (apex sin www)
+- Variante con www: `https://www.audit.sharemechat.com` → 301 al apex
+- Backoffice: `https://admin.audit.sharemechat.com`
+- API y realtime: bajo el host del producto, paths `/api/...`, `/messages`, `/match`
+- Blog: subdirectorio `https://audit.sharemechat.com/blog/<slug>` (operativo solo si en algún momento AUDIT publica blog; hoy AUDIT no es entorno editorial)
+- Activos legales: `https://assets.sharemechat.com/legal/...` (compartido)
+- Cookie domain: `.audit.sharemechat.com`
+
 ## Aporte util consolidado del material previo
 
 La documentacion previa permite sostener que AUDIT:

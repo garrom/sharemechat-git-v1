@@ -487,7 +487,7 @@ const DashboardAdmin = () => {
           {activeView === 'content' && capabilities.canViewContent && (
             <AdminPage
               title="Content CMS"
-              subtitle="Articulos editoriales en backoffice. Fase 1: solo borrador (estado IDEA), sin IA, sin publicacion publica, sin workflow completo."
+              subtitle="Articulos editoriales en backoffice. Workflow simplificado (ADR-016): DRAFT -> IN_REVIEW -> PUBLISHED -> RETRACTED."
             >
               <AdminContentPanel />
             </AdminPage>
