@@ -32,29 +32,6 @@ Registro de deudas detectadas durante operación o auditoría que no son inciden
 
 ## 2026-05-09 — Detectadas durante el cierre de la sesión maratón
 
-### Bug en el comando de deploy del frontend producto: invalidación de CloudFront equivocada
-
-**Origen**: detectado al inventariar las 4 distribuciones de TEST y comparar con el comando manual de deploy.
-
-**Hecho**: el comando documentado para desplegar el frontend producto a TEST es:
-
-```
-aws s3 sync ... s3://sharemechat-frontend-test/ ...
-aws cloudfront create-invalidation --distribution-id E1WZ44LRD39ZAO --paths "/*"
-```
-
-El bucket `sharemechat-frontend-test` lo sirve la distribución **frontend_public** (`E2Q4VNDDWD5QBU`), NO `E1WZ44LRD39ZAO` (que es `assets_canonical`, sirve `assets.test.sharemechat.com` desde un bucket distinto).
-
-**Impacto**: cada deploy del frontend producto está invalidando la cache de la distribución de assets, no la del frontend. La cache del frontend se refresca solo cuando expiran sus TTLs, no por la invalidación. Riesgo de servir versiones desactualizadas del frontend hasta que CloudFront purgue por TTL natural. Bug operativo silencioso, posiblemente activo desde hace tiempo.
-
-**Acción pendiente**:
-1. Corregir el comando de deploy: `--distribution-id E2Q4VNDDWD5QBU` (frontend_public).
-2. Revisar también el comando de deploy del admin TEST (debería invalidar `E28YCPVIRB4ASH`, no otra).
-3. Considerar mover los comandos de deploy a un script versionado en `ops/scripts/` que lea los IDs del mapping local (igual que hace `tunnel-rds.ps1`), para evitar que se vuelvan a confundir manualmente.
-4. Verificar el equivalente para AUDIT y PRO cuando se inventaríen.
-
-**Prioridad**: media-alta. No es crítico hoy porque TEST tiene poco tráfico real, pero el patrón de error está latente para AUDIT y PRO.
-
 ### Distribución assets_legacy (E9K9T7NBNQ1SI) deshabilitada compartiendo bucket con la canónica
 
 **Origen**: snapshot `state-test-2026-05-09-1659.yaml` (v2), sección `cloudfront.distributions`.
@@ -109,6 +86,59 @@ Esto requiere también extender el mapping local con un bloque opcional `web_acl
 
 **Prioridad**: baja. No afecta a tráfico productivo. Cierre de orden operativo.
 
+## 2026-05-09 — Detectadas durante implementación de ADR-018 (blog estático)
+
+### Backend no envía charset=utf-8 en Content-Type de /api/public/content/**
+
+**Origen**: detectado al implementar `ops/scripts/prerender-blog.ps1`. PowerShell 5 `Invoke-RestMethod` corrompía tildes y eñes (`Cómo` → `CÃ³mo`). Verificado con `(Invoke-WebRequest "https://test.sharemechat.com/api/public/content/articles/<slug>").Headers["Content-Type"]` → devuelve `application/json` sin charset.
+
+**Hecho**: las respuestas JSON de los endpoints públicos del blog no especifican `charset=utf-8` en el header `Content-Type`. Solo `application/json` a secas.
+
+**Impacto**: cualquier cliente JSON conservador que respete RFC-2616 antiguo asume ISO-8859-1 cuando no hay charset explícito. Esto rompe tildes en clientes legacy: PowerShell 5, scripts antiguos, integraciones third-party que no anticipen el caso. Hoy mitigamos en el script de pre-render con un helper `Invoke-JsonGetUtf8` que decodifica explícitamente como UTF-8, pero la solución correcta es server-side.
+
+**Acción pendiente**: Spring Boot debería emitir `Content-Type: application/json; charset=UTF-8` explícito en `ContentPublicController` y `SitemapController`. Opciones: anotar `produces = MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8"` o configurar globalmente el `MappingJackson2HttpMessageConverter`.
+
+**Prioridad**: media. Mitigado en el script actual. Hacer cuando se toque el backend.
+
+### Helper Invoke-JsonGetUtf8 sin timeout explícito en prerender-blog.ps1
+
+**Origen**: nota del agente al sustituir `Invoke-RestMethod` por el helper UTF-8.
+
+**Hecho**: el helper `Invoke-JsonGetUtf8` en `ops/scripts/prerender-blog.ps1` usa el timeout default de `Invoke-WebRequest` (100 segundos) en lugar de los 30 segundos que tenía la implementación original con `Invoke-RestMethod`.
+
+**Impacto**: si el backend responde lentamente, el script se queda colgado más tiempo del razonable. No es problema en operación normal, pero si el backend está saturado o el endpoint colgado, el script bloquea el shell durante 100s.
+
+**Acción pendiente**: añadir `-TimeoutSec 30` a la llamada `Invoke-WebRequest` dentro de `Invoke-JsonGetUtf8`.
+
+**Prioridad**: baja. Pulido. Hacer en el próximo cambio al script.
+
+### Coordinación frágil entre deploy-frontend.ps1 y prerender-blog.ps1
+
+**Origen**: detectado durante validación de C2 (ADR-018).
+
+**Hecho**: `deploy-frontend.ps1 <env> product` ejecuta `aws s3 sync --delete` contra `sharemechat-frontend-test/`, lo que **borra cualquier objeto S3 que no esté en el `build/` local**. Como los HTMLs estáticos del blog (`blog/<slug>` y `blog`) NO están en `build/` (los genera el script de pre-render por separado), un deploy del frontend producto borra el blog estático sin previo aviso.
+
+**Impacto**: tras desplegar frontend producto sin regenerar el blog después, las URLs `/blog` y `/blog/<slug>` devuelven `AccessDenied` (S3 con OAC) hasta que se ejecute `prerender-blog.ps1`. En TEST es inocuo porque no hay tráfico real. En PRO sería un incidente de SEO real.
+
+**Acción pendiente**: opciones:
+1. Modificar `deploy-frontend.ps1` para que añada `--exclude "blog/*" --exclude "blog"` cuando `surface=product` (preferida por simplicidad).
+2. Hacer que `deploy-frontend.ps1 <env> product` invoque automáticamente `prerender-blog.ps1 <env>` después del sync.
+3. Documentar como invariante operativa: "después de cada `deploy-frontend.ps1 product` ejecutar siempre `prerender-blog.ps1`".
+
+**Prioridad**: media. Crítica antes de PRO. En TEST es deuda contenida.
+
+### Cache behavior /blog* en CloudFront TEST está como Managed-CachingDisabled
+
+**Origen**: decisión transitoria durante validación de ADR-018 para iterar rápido sin TTL bloqueando.
+
+**Hecho**: el cache behavior `/blog*` creado hoy en `frontend_public` de TEST usa `Managed-CachingDisabled` (CachePolicyId `4135ea2d-6df8-44a3-9df3-4b5a84be39ad`) en lugar de `Managed-CachingOptimized` (`658327ea-f89d-4fab-a63d-7e88639e58f6`).
+
+**Impacto**: cada request a `/blog/*` golpea S3 directamente, sin aprovechar la cache de CloudFront. Funcional pero subóptimo: más coste S3, más latencia. Aceptable mientras se valida la implementación, no aceptable como configuración estable.
+
+**Acción pendiente**: cambiar la cache policy del behavior `/blog*` a `Managed-CachingOptimized`. Los HTMLs ya llevan `Cache-Control: public, max-age=3600` en los objetos S3, así que CloudFront respetará esos TTLs. Actualizar también el snapshot de TEST tras el cambio.
+
+**Prioridad**: media. Hacer pronto en TEST y replicar al desplegar AUDIT/PRO.
+
 ## Deudas cerradas durante 2026-05-09 (referencia histórica, ya resueltas)
 
 ### [CERRADA] Carpetas docs/skills/ y docs/_snapshots/ no registradas en governance
@@ -118,3 +148,11 @@ Esto requiere también extender el mapping local con un bloque opcional `web_acl
 ### [CERRADA] Campo flyway_table_present semánticamente engañoso en schema v1 de state-inventory
 
 **Cerrada en**: commit `18dfe3a` con el bump de la skill `state-inventory` a v1.1. Reemplazado por el objeto `schema_versioning` con campos `flyway_runtime_present`, `manual_migrations_dir` y `last_manual_migration`.
+
+### [CERRADA] Bug en el comando de deploy del frontend producto: invalidación de CloudFront equivocada
+
+**Origen original**: detectado al inventariar las 4 distribuciones de TEST y comparar con el comando manual de deploy. El comando antiguo invalidaba `E1WZ44LRD39ZAO` (assets_canonical) en lugar de `E2Q4VNDDWD5QBU` (frontend_public), por lo que cada deploy del frontend producto NO refrescaba la cache real del frontend.
+
+**Cerrada en**: commit `b1bf559` con el script `ops/scripts/deploy-frontend.ps1`. El nuevo script lee bucket y distribución del mapping local y nunca se vuelve a confundir entre superficies/entornos.
+
+**Pendiente derivado**: cuando se inventaríen AUDIT y PRO, comprobar si los comandos antiguos sufrían el mismo error y ejecutar `deploy-frontend.ps1` también allí.
