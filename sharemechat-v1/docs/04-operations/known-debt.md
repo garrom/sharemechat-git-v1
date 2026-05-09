@@ -127,18 +127,6 @@ Esto requiere también extender el mapping local con un bloque opcional `web_acl
 
 **Prioridad**: media. Crítica antes de PRO. En TEST es deuda contenida.
 
-### Cache behavior /blog* en CloudFront TEST está como Managed-CachingDisabled
-
-**Origen**: decisión transitoria durante validación de ADR-018 para iterar rápido sin TTL bloqueando.
-
-**Hecho**: el cache behavior `/blog*` creado hoy en `frontend_public` de TEST usa `Managed-CachingDisabled` (CachePolicyId `4135ea2d-6df8-44a3-9df3-4b5a84be39ad`) en lugar de `Managed-CachingOptimized` (`658327ea-f89d-4fab-a63d-7e88639e58f6`).
-
-**Impacto**: cada request a `/blog/*` golpea S3 directamente, sin aprovechar la cache de CloudFront. Funcional pero subóptimo: más coste S3, más latencia. Aceptable mientras se valida la implementación, no aceptable como configuración estable.
-
-**Acción pendiente**: cambiar la cache policy del behavior `/blog*` a `Managed-CachingOptimized`. Los HTMLs ya llevan `Cache-Control: public, max-age=3600` en los objetos S3, así que CloudFront respetará esos TTLs. Actualizar también el snapshot de TEST tras el cambio.
-
-**Prioridad**: media. Hacer pronto en TEST y replicar al desplegar AUDIT/PRO.
-
 ## Deudas cerradas durante 2026-05-09 (referencia histórica, ya resueltas)
 
 ### [CERRADA] Carpetas docs/skills/ y docs/_snapshots/ no registradas en governance
@@ -156,3 +144,11 @@ Esto requiere también extender el mapping local con un bloque opcional `web_acl
 **Cerrada en**: commit `b1bf559` con el script `ops/scripts/deploy-frontend.ps1`. El nuevo script lee bucket y distribución del mapping local y nunca se vuelve a confundir entre superficies/entornos.
 
 **Pendiente derivado**: cuando se inventaríen AUDIT y PRO, comprobar si los comandos antiguos sufrían el mismo error y ejecutar `deploy-frontend.ps1` también allí.
+
+### [CERRADA] Cache behavior /blog* en CloudFront TEST con Managed-CachingDisabled
+
+**Origen original**: decisión transitoria durante validación de ADR-018 para iterar rápido sin TTL bloqueando.
+
+**Cerrada en**: 2026-05-09, vía CloudShell (`aws cloudfront update-distribution`). Cache policy del behavior `/blog*` cambiada de `Managed-CachingDisabled` (4135ea2d-6df8-44a3-9df3-4b5a84be39ad) a `Managed-CachingOptimized` (658327ea-f89d-4fab-a63d-7e88639e58f6). El cambio respeta los `Cache-Control` que el script `prerender-blog.ps1` ya pone en los objetos S3 (1h detalles, 10min listado).
+
+**Pendiente derivado**: el snapshot v2 de TEST refleja el estado anterior; al regenerar el siguiente snapshot quedará reflejado el cambio. Replicar el patrón al desplegar AUDIT y PRO.
