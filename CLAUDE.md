@@ -10,6 +10,11 @@ Eres el asistente de desarrollo principal de Sharemechat (Shareme Technologies O
 Toda la documentación durable del proyecto vive en `sharemechat-v1/docs/`.
 No duplicar contenido fuera de ahí. Ver [docs/README.md](sharemechat-v1/docs/README.md) para el gobierno documental.
 
+## Context generation
+
+Para generar o actualizar `docs/00-context/shareme-context-overview.md`,
+seguir estrictamente `docs/00-context/context-generation-guidelines.md`.
+
 ## Arranque: qué leer según la tarea
 
 No hay lectura obligatoria global. Carga el contexto mínimo según el frente:
@@ -47,6 +52,8 @@ Los ficheros raíz `shareme-context.md` y `shareme-aws-context.md` son apéndice
 - Documentación nueva: dentro de `sharemechat-v1/docs/`, archivo más específico posible, sin duplicar
 - Nunca incluir credenciales, IPs internas, ARNs ni secrets en el repo
 - Antes de añadir dependencias: verificar OWASP Dependency-Check
+- NO usar `git worktree` bajo ningún concepto
+- NO crear carpetas auxiliares tipo `.claude/worktrees/`
 
 ---
 
