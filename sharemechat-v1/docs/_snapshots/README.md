@@ -1,0 +1,1 @@
+"# Snapshots de estado`n`nGenerados por la skill state-inventory. Ver docs/skills/state-inventory.md." | Out-File docs\_snapshots\README.md -Encoding utf8
