@@ -100,6 +100,19 @@ git commit -m "Add state snapshot for <entorno> at <fecha>"
 git push
 ```
 
+### Paso 4 bis — Detectar drift contra docs (opcional, recomendado)
+
+Tras commitear el snapshot, conviene ejecutar la skill `state-diff` para detectar drift entre el snapshot recién generado y la prosa narrativa de `docs/03-environments/<entorno>.md`.
+
+Ver `docs/skills/state-diff.md` para el procedimiento completo. En resumen:
+
+1. Abrir Claude Code Desktop en sesión nueva (no reutilizar la del inventariado).
+2. Pegar el prompt de state-diff (ver final del runbook o el propio fichero de la skill).
+3. Aprobar uno a uno los drifts detectados.
+4. Commitear las ediciones aprobadas.
+
+state-diff NO necesita túnel SSH ni backend levantado. Solo lee filesystem local. Es muy rápido.
+
 ### Paso 5 — Cerrar el túnel y limpiar
 
 - En la PowerShell del túnel: pulsar `Ctrl+C`.
