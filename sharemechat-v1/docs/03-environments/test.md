@@ -16,6 +16,54 @@ Decisión documentada en [ADR-015](../06-decisions/adr-015-canonical-domains-per
 - Activos legales: `https://assets.sharemechat.com/legal/...` (compartido)
 - Cookie domain: `.test.sharemechat.com`
 
+## Topología real (capturada por state-inventory)
+
+Vista derivada del snapshot más reciente de TEST. Refleja la topología lógica observada en AWS y en la EC2 backend en el momento de la captura.
+
+### CloudFront — Distribuciones
+
+| logical_name | alias | dominios | status | cache behaviors | función edge |
+|---|---|---|---|---|---|
+| `frontend_public` | Frontend público producto TEST | `test.sharemechat.com`, `www.test.sharemechat.com` | Deployed | 8 | `redirect-spa-test` (viewer-request) |
+| `backoffice_admin` | Backoffice admin TEST | `admin.test.sharemechat.com` | Deployed | 1 | — |
+| `assets_canonical` | Assets TEST canónico | `assets.test.sharemechat.com` | Deployed | 0 | — |
+| `assets_legacy` | Assets TEST legacy (sin alias DNS) | (sin alias) | Deployed | 0 | — |
+
+El recuento de cache behaviors no incluye el default behavior. La distribución `frontend_public` concentra todo el routing edge del producto: SPA estática como default, paths `/api/*`, `/match*`, `/messages*`, `/uploads/*`, `/assets/*`, `/.well-known/acme-challenge/*`, `/sitemap.xml` y `/robots.txt` redirigidos al origen `api-test-backend`, y custom error response `404 → /index.html` (200) para soportar el routing client-side.
+
+### S3 — Buckets
+
+| logical_name | alias | served_by_distribution |
+|---|---|---|
+| `frontend_product` | Bucket SPA producto TEST | `frontend_public` |
+| `frontend_admin` | Bucket SPA admin TEST | `backoffice_admin` |
+| `assets` | Bucket assets TEST | `assets_canonical` (también referenciado por `assets_legacy`) |
+| `content_private` | Bucket Markdown crudo de artículos (privado, no servido por CloudFront) | — |
+| `storage` | Bucket storage TEST (uploads) | — |
+
+Todos los buckets están en `eu-central-1`. `content_private` y `storage` no se exponen vía CloudFront y solo se acceden desde el backend.
+
+### Servicios systemd en la EC2 backend
+
+- `coturn-test.service` — active
+- `nginx.service` — active
+- `redis6.service` — active
+- `sharemechat-test-access-blocker.service` — failed (DRY-RUN según descripción de la unidad)
+- `sharemechat-test-access-classifier.service` — not-found (unidad no instalada)
+- `sharemechat-test-access-normalizer.service` — inactive
+- `sharemechat-test-daily-report.service` — inactive
+
+El JAR del backend (`sharemechat-v1-0.0.1-SNAPSHOT.jar`) está corriendo como proceso `java -jar` arrancado a mano (no como unidad systemd). nginx proxyea `/api/`, `/match`, `/messages`, `/sitemap.xml` y `/robots.txt` a `http://localhost:8080`; cualquier otra ruta retorna `404` directamente desde nginx. `client_max_body_size` configurado a `60M`.
+
+### Notas de topología
+
+- `assets_legacy` es una distribución fantasma: aparece como `Status=Deployed` pero `Enabled=false` en AWS, sin alias DNS, y comparte el bucket `assets` con `assets_canonical`. El esquema v2 del snapshot no expone el flag `enabled`, así que ese matiz solo queda registrado en el campo `notes` del propio snapshot.
+- El bucket `assets` está servido por dos distribuciones distintas (la canónica y la legacy fantasma); cualquier intervención sobre ese bucket debe contemplar el doble origen aunque solo una de las distribuciones esté operativa.
+- Las unidades systemd de la familia `sharemechat-test-access-*` están en estados no-active (failed / not-found / inactive); funcionalmente la cadena de access logging/normalización no está corriendo en TEST en este momento de captura.
+- El backend levantado a mano (sin systemd) implica que un reboot de la EC2 deja el servicio caído hasta intervención manual.
+
+> Datos derivados del snapshot `state-test-2026-05-09-1659.yaml`. La fuente de verdad fáctica es el snapshot; esta sección es derivada por conveniencia narrativa.
+
 ## Lo que esta claramente soportado
 
 - frontend de producto
