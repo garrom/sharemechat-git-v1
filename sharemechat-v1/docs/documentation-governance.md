@@ -94,6 +94,29 @@ Acción:
 - actualizar `docs/07-roadmap/current-phase.md`
 - actualizar `docs/07-roadmap/pending-hardening.md` o `audit-environment-plan.md` si aplica
 
+### Caso 8. Skill operativa nueva o modificada
+Ejemplos:
+- skill que inventaría estado de un entorno
+- skill que detecta drift entre docs y realidad
+- skill que despliega un componente operativo
+
+Acción:
+- ubicar en `docs/skills/<nombre>.md` (o `docs/cms/skills/<nombre>.md` si es skill editorial)
+- documentar versión y procedimiento dentro del propio fichero de la skill
+- si la skill cambia cómo se documenta o se opera el sistema, abrir ADR
+
+### Caso 9. Snapshot de estado del sistema
+Ejemplos:
+- inventariado periódico de un entorno (TEST, AUDIT, PRO)
+- snapshot pre/post cambio para validar diff
+- snapshot tras cierre de un frente
+
+Acción:
+- ubicar en `docs/_snapshots/state-<env>-<YYYY-MM-DD-HHMM>.yaml`
+- generado por skill, NO se edita a mano
+- los snapshots SÍ se versionan en git (la skill aplica saneado lógico de IDs sensibles)
+- la tabla de mapeo lógico↔real vive FUERA del repo (`~/.sharemechat/state-mapping.yaml`)
+
 ## Regla de no duplicidad
 
 No duplicar la misma información en varios documentos si no aporta valor claro.
@@ -144,6 +167,8 @@ Ante cualquier cambio relevante:
 - backoffice -> `docs/05-backoffice/`
 - decisiones de arquitectura -> `docs/06-decisions/`
 - fase actual y planificación -> `docs/07-roadmap/`
+- skills operativas ejecutables por agentes -> `docs/skills/` (o `docs/cms/skills/` si son editoriales)
+- snapshots estructurados de estado del sistema -> `docs/_snapshots/`
 
 ## Regla final
 

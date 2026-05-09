@@ -63,23 +63,5 @@ Coordinar el cambio con un bump de `metadata.schema_version: 2`.
 
 **Prioridad**: baja. Es información, no problema.
 
-### Carpetas docs/skills/ y docs/_snapshots/ no registradas en governance
 
-**Origen**: trabajo de skill state-inventory de 2026-05-09.
-
-**Hecho**: se han introducido dos carpetas nuevas en el repo:
-- `docs/skills/`: aloja skills operativas (no editoriales) ejecutables por agentes.
-- `docs/_snapshots/`: aloja snapshots estructurados de estado generados por state-inventory.
-
-Ninguna está registrada en `documentation-governance.md` ni en el README raíz de docs.
-
-**Impacto**: replicaríamos el problema detectado con `docs/_audit/` (carpeta huérfana sin governance) si no se cierra.
-
-**Acción pendiente**:
-1. Actualizar `documentation-governance.md` añadiendo dos casos nuevos:
-    - "Caso 8 — Skill operativa nueva → docs/skills/<nombre>.md"
-    - "Caso 9 — Snapshot de estado del sistema → docs/_snapshots/state-<env>-<timestamp>.yaml"
-2. Actualizar README raíz incluyendo ambas carpetas en la sección "Cómo navegar".
-
-**Prioridad**: media. Hacer antes de generar más snapshots o crear más skills, para mantener el corpus coherente.
 

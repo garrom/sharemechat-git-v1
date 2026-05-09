@@ -39,6 +39,9 @@ La reorganización actual conserva el conocimiento útil y redistribuye su conte
 - `05-backoffice`: modelo operativo y de permisos del backoffice
 - `06-decisions`: decisiones arquitectónicas registradas
 - `07-roadmap`: fase actual y siguientes frentes
+- `_snapshots`: snapshots YAML estructurados de estado del sistema (generados por skill)
+- `skills`: skills operativas ejecutables por agentes (state-inventory, state-diff, etc.)
+- `cms/skills`: skills del pipeline editorial del CMS
 - `templates`: plantillas para mantener el corpus homogéneo
 
 ## Política de mantenimiento
