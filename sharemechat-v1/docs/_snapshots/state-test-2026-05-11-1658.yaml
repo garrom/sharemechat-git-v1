@@ -1,0 +1,280 @@
+metadata:
+  schema_version: 2
+  environment: test
+  generated_at: "2026-05-11T16:58:02Z"
+  generated_by: state-inventory@v1.1
+  notes: |
+    Snapshot completo. Observaciones operativas:
+    - Distribución CloudFront `assets_legacy` está Deployed pero con Enabled=false (deshabilitada);
+      sin aliases DNS. Comparte origen S3 con `assets_canonical` (mismo bucket `assets`).
+    - Servicio systemd `sharemechat-test-access-blocker` está en estado `failed`.
+    - Servicio systemd `sharemechat-test-access-classifier` aparece como `not-found` en
+      systemctl list-units (LOAD=not-found, ACTIVE=inactive, SUB=dead). Posible unit unmasked/eliminada
+      pero referenciada por algún hook.
+    - Origen target en behaviors CloudFront se traduce a aliases lógicos. Para orígenes API se usa
+      "api-test-backend" (mapping explícito). Para orígenes S3 se usa el `logical_name` del bucket
+      correspondiente en `s3_buckets` cuando el DomainName del origen coincide con un bucket conocido;
+      si no, se prefija con `<raw>:` (no ocurrió en este entorno).
+
+repo:
+  branch: main
+  head_commit: "520b998"
+  head_commit_date: "2026-05-11T17:27:08+02:00"
+  commits_last_24h:
+    - sha: "520b998"
+      message: "feat(blog): Fase 1 cerrada + Sub-pasada 2A — heroImageUrl, callouts, editor admin, blog desde SPA React"
+      date: "2026-05-11T17:27:08+02:00"
+    - sha: "93ca8df"
+      message: "feat(content): Fase 1 Sub-pasada A — heroImageUrl + callouts"
+      date: "2026-05-11T17:26:25+02:00"
+  jar_artifact:
+    name: "sharemechat-v1"
+    version: "0.0.1-SNAPSHOT"
+    expected_filename: "sharemechat-v1-0.0.1-SNAPSHOT.jar"
+  schema_versioning:
+    flyway_runtime_present: false
+    manual_migrations_dir: "src/main/resources/db/manual/"
+    last_manual_migration: "V20260508__content_workflow_simplification.sql"
+  adrs:
+    - id: "ADR-001"
+      file: "adr-001-dual-surface-react.md"
+      status: "Aprobada y en uso."
+    - id: "ADR-002"
+      file: "adr-002-websocket-split-match-messages.md"
+      status: "Aprobada y en uso."
+    - id: "ADR-003"
+      file: "adr-003-local-uploads-vs-s3.md"
+      status: "Aceptada e implementada. TEST y AUDIT ya operan con esta estrategia y han cerrado el legacy conocido de `/uploads/...` asociado a estos uploads privados; la activacion efectiva en otros entornos futuros seguiria dependiendo de configuracion y validacion."
+    - id: "ADR-004"
+      file: "adr-004-turn-ice-strategy-for-cross-network-webrtc.md"
+      status: "Aceptada e implementada (AUDIT y TEST). PRO inicial pendiente."
+    - id: "ADR-005"
+      file: "adr-005-turn-deployment-strategy-by-environment.md"
+      status: "Aceptada e implementada (AUDIT y TEST). PRO inicial pendiente."
+    - id: "ADR-006"
+      file: "adr-006-shared-i18n-strategy-product-backoffice.md"
+      status: "Aprobada y planificada para ejecucion incremental."
+    - id: "ADR-007"
+      file: "adr-007-country-blacklist-phase1-backend-primary.md"
+      status: "Aprobada como decision de diseno para implantacion gradual posterior."
+    - id: "ADR-008"
+      file: "adr-008-auth-risk-progressive-response.md"
+      status: "Aprobada e implementada en backend. Validada en TEST con tráfico real sobre login de producto. Pendiente de extensión al resto de superficies de autenticación y de nivelado sobre AUDIT."
+    - id: "ADR-009"
+      file: "adr-009-product-operational-mode.md"
+      status: "Aprobada. **Implementada en backend con alcance parcial**: el cierre de registro (flags `product.registration.client.enabled` y `product.registration.model.enabled`) está implementado y validado con tráfico real en TEST y AUDIT; la flag de simulación económica directa (`product.simulation.transactions-direct.enabled`) está implementada y validada en TEST. Los modos restrictivos del producto (`PRELAUNCH`, `MAINTENANCE`, `CLOSED`) están implementados a nivel de filtro REST y de interceptor WS pero **no se han validado end-to-end en entornos**, por lo que deben tratarse como capacidad disponible no ejercitada hasta que se prueben."
+    - id: "ADR-010"
+      file: "adr-010-internal-content-cms-ai-assisted-workflow.md"
+      status: "Aprobada (parcialmente superseded por ADR-016 en lo relativo al workflow editorial)."
+    - id: "ADR-011"
+      file: "adr-011-pricing-simplification-and-minimum-threshold.md"
+      status: "Aceptada."
+    - id: "ADR-012"
+      file: "adr-012-bfpm-platform-funded-bonus.md"
+      status: "Aceptada."
+    - id: "ADR-013"
+      file: "adr-013-full-article-run-phase3b.md"
+      status: "**Superseded by [ADR-014](adr-014-full-article-orchestrated-pipeline.md).**"
+    - id: "ADR-014"
+      file: "adr-014-full-article-orchestrated-pipeline.md"
+      status: "Aceptada e implementada (TEST)."
+    - id: "ADR-015"
+      file: "adr-015-canonical-domains-per-environment.md"
+      status: "Aceptada e implementada (TEST y AUDIT). Pendiente despliegue en PRO."
+    - id: "ADR-016"
+      file: "adr-016-content-workflow-simplification-and-retraction.md"
+      status: "Propuesta (pendiente de aprobación del owner)."
+    - id: "ADR-017"
+      file: "adr-017-state-snapshots-and-docs-coexistence.md"
+      status: "Propuesta (pendiente de aprobación del owner)."
+    - id: "ADR-018"
+      file: "adr-018-blog-static-rendering.md"
+      status: "**Superseded por [ADR-019](./adr-019-blog-spa-react.md)** (2026-05-11). Ver sección [Cierre](#cierre) al final de este documento."
+    - id: "ADR-019"
+      file: "adr-019-blog-spa-react.md"
+      status: "Aceptada (2026-05-11)."
+
+cloudfront:
+  distributions:
+    - logical_name: "frontend_public"
+      alias: "Frontend público producto TEST"
+      primary_aliases:
+        - "test.sharemechat.com"
+        - "www.test.sharemechat.com"
+      status: "Deployed"
+      default_behavior:
+        target_origin: "frontend_product"
+        function_associations:
+          - name: "redirect-spa-test"
+            event_type: "viewer-request"
+      cache_behaviors:
+        - path_pattern: "/.well-known/acme-challenge/*"
+          target_origin: "api-test-backend"
+          allowed_methods: ["HEAD", "GET"]
+          cache_policy: "Managed-CachingOptimized"
+        - path_pattern: "/api/*"
+          target_origin: "api-test-backend"
+          allowed_methods: ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+          cache_policy: "Managed-CachingDisabled"
+        - path_pattern: "/match*"
+          target_origin: "api-test-backend"
+          allowed_methods: ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+          cache_policy: "Managed-CachingDisabled"
+        - path_pattern: "/messages*"
+          target_origin: "api-test-backend"
+          allowed_methods: ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+          cache_policy: "Managed-CachingDisabled"
+        - path_pattern: "/uploads/*"
+          target_origin: "api-test-backend"
+          allowed_methods: ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+          cache_policy: "Managed-CachingDisabled"
+        - path_pattern: "/assets/*"
+          target_origin: "api-test-backend"
+          allowed_methods: ["HEAD", "GET"]
+          cache_policy: "Managed-CachingOptimized"
+        - path_pattern: "/sitemap.xml"
+          target_origin: "api-test-backend"
+          allowed_methods: ["HEAD", "GET"]
+          cache_policy: "Managed-CachingDisabled"
+        - path_pattern: "/robots.txt"
+          target_origin: "api-test-backend"
+          allowed_methods: ["HEAD", "GET"]
+          cache_policy: "Managed-CachingDisabled"
+      custom_error_responses:
+        - error_code: 404
+          response_path: "/index.html"
+          response_code: 200
+
+    - logical_name: "backoffice_admin"
+      alias: "Backoffice admin TEST"
+      primary_aliases:
+        - "admin.test.sharemechat.com"
+      status: "Deployed"
+      default_behavior:
+        target_origin: "frontend_admin"
+        function_associations: []
+      cache_behaviors:
+        - path_pattern: "/api/*"
+          target_origin: "api-test-backend"
+          allowed_methods: ["HEAD", "DELETE", "POST", "GET", "OPTIONS", "PUT", "PATCH"]
+          cache_policy: "Managed-CachingDisabled"
+      custom_error_responses:
+        - error_code: 403
+          response_path: "/index.html"
+          response_code: 200
+        - error_code: 404
+          response_path: "/index.html"
+          response_code: 200
+
+    - logical_name: "assets_canonical"
+      alias: "Assets TEST canónico"
+      primary_aliases:
+        - "assets.test.sharemechat.com"
+      status: "Deployed"
+      default_behavior:
+        target_origin: "assets"
+        function_associations: []
+      cache_behaviors: []
+      custom_error_responses: []
+
+    - logical_name: "assets_legacy"
+      alias: "Assets TEST legacy (sin alias DNS)"
+      primary_aliases: []
+      status: "Deployed"
+      default_behavior:
+        target_origin: "assets"
+        function_associations: []
+      cache_behaviors: []
+      custom_error_responses: []
+
+s3:
+  buckets:
+    - logical_name: "frontend_product"
+      name: "sharemechat-frontend-test"
+      alias: "Bucket SPA producto TEST"
+      region: "eu-central-1"
+      served_by_distribution: "frontend_public"
+    - logical_name: "frontend_admin"
+      name: "sharemechat-admin-test"
+      alias: "Bucket SPA admin TEST"
+      region: "eu-central-1"
+      served_by_distribution: "backoffice_admin"
+    - logical_name: "assets"
+      name: "assets-sharemechat-test1"
+      alias: "Bucket assets TEST"
+      region: "eu-central-1"
+      served_by_distribution: "assets_canonical"
+    - logical_name: "content_private"
+      name: "sharemechat-content-private-test"
+      alias: "Bucket Markdown crudo de artículos (privado, no servido por CloudFront)"
+      region: "eu-central-1"
+      served_by_distribution: null
+    - logical_name: "storage"
+      name: "sharemechat-storage-test"
+      alias: "Bucket storage TEST (uploads)"
+      region: "eu-central-1"
+      served_by_distribution: null
+
+ec2_backend:
+  ssh_alias: "test-backend"
+  systemd_services:
+    - name: "coturn-test.service"
+      state: "active"
+    - name: "nginx.service"
+      state: "active"
+    - name: "redis6.service"
+      state: "active"
+    - name: "sharemechat-test-access-blocker.service"
+      state: "failed"
+    - name: "sharemechat-test-access-classifier.service"
+      state: "not-found"
+    - name: "sharemechat-test-access-normalizer.service"
+      state: "inactive"
+    - name: "sharemechat-test-daily-report.service"
+      state: "inactive"
+  jar_running:
+    started_at: "Mon May 11 16:52:02 2026"
+    process_present: true
+  nginx:
+    config_file: "/etc/nginx/conf.d/api.test.sharemechat.com.conf"
+    location_blocks:
+      - path: "/api/"
+        proxy_pass: "http://localhost:8080"
+      - path: "/match"
+        proxy_pass: "http://localhost:8080"
+        action: "websocket upgrade"
+      - path: "/messages"
+        proxy_pass: "http://localhost:8080"
+        action: "websocket upgrade (read/send timeout 3600s)"
+      - path: "= /sitemap.xml"
+        proxy_pass: "http://localhost:8080"
+      - path: "= /robots.txt"
+        proxy_pass: "http://localhost:8080"
+      - path: "/"
+        proxy_pass: "n/a"
+        action: "return 404"
+    client_max_body_size: "60M"
+
+rds_database:
+  endpoint_alias: "rds-test"
+  mysql_version: "8.4.7"
+  schema_name: "db1_sharemechat_test"
+  content_articles:
+    state_check_constraint:
+      - "DRAFT"
+      - "IN_REVIEW"
+      - "PUBLISHED"
+      - "RETRACTED"
+      - "SCHEDULED"
+    state_default: "DRAFT"
+    rows_total: 3
+    rows_by_state:
+      PUBLISHED: 3
+  content_review_events:
+    event_type_check_constraint:
+      - "EDIT_APPLIED"
+      - "DRAFT_REQUESTED"
+      - "PUBLISHED"
+      - "RETRACTED"
+      - "SCHEDULED"
+      - "DISCLOSURE_OVERRIDE"
