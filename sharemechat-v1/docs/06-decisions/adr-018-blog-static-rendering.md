@@ -2,9 +2,9 @@
 
 ## Estado
 
-Propuesta (pendiente de aprobación del owner).
+**Superseded por [ADR-019](./adr-019-blog-spa-react.md)** (2026-05-11). Ver sección [Cierre](#cierre) al final de este documento.
 
-Si se aprueba, **supersede parcialmente** la decisión D7 de [ADR-016](./adr-016-content-workflow-simplification-and-retraction.md), que difería sin fecha la publicación estática del blog ("publicación estática a S3+CloudFront se difiere sin fecha. Razón: volumen actual 4 artículos. Sin justificación de coste o latencia.").
+Histórico: esta ADR fue propuesta y exploración técnica del modelo "HTML estático pre-renderizado" para el blog público. Tras implementación parcial en TEST (script `prerender-blog.ps1`, cache behavior `/blog*` en CloudFront, objetos HTML en bucket frontend) el equipo decidió no continuar y volver a la SPA React. La parte de la decisión que superseded parcialmente la D7 de [ADR-016](./adr-016-content-workflow-simplification-and-retraction.md) (publicación estática diferida sin fecha) queda revertida: D7 sigue aplicando, no hay publicación estática.
 
 ## Contexto
 
@@ -213,3 +213,25 @@ Este ADR **no decide** sobre:
 - `frontend/src/pages/blog/BlogArticleView.jsx` — Componente actual del detalle, dependiente de backend.
 - `src/main/java/com/sharemechat/content/publishing/ContentPublicController.java` — API pública del blog.
 - `ops/scripts/deploy-frontend.ps1` — Script de deploy del frontend producto/admin (referencia de patrón para `prerender-blog.ps1`).
+
+## Cierre
+
+Estado: **Superseded por [ADR-019](./adr-019-blog-spa-react.md)** (2026-05-11).
+
+Razón: tras la exploración técnica, el equipo descubrió que el blog React (`Blog.jsx` + `BlogContent.jsx` + `BlogArticleView.jsx`) ya tenía la dirección visual y la conexión con el CMS. La prerenderización a HTML estático aportaba SEO marginal sobre un client-side rendering moderno (Googlebot ejecuta JS desde 2019) a cambio de:
+
+- Mantener dos implementaciones del look (React + PowerShell).
+- Coordinación frágil entre `deploy-frontend.ps1` y `prerender-blog.ps1` (deuda registrada en `docs/04-operations/known-debt.md`).
+- Cache behavior `/blog*` en CloudFront separado del default.
+- Residuos S3 que requerían sincronización manual.
+
+El coste/beneficio no justificaba la complejidad operativa.
+
+Acciones derivadas de este cierre (Sub-pasada 2A, 2026-05-11):
+
+- Cache behavior `/blog*` eliminado de la distribución frontend público TEST.
+- Objetos HTML residuales borrados del bucket frontend público TEST (listado y dos detalles del prerender).
+- Script `ops/scripts/prerender-blog.ps1` archivado en `ops/scripts/archive/` con cabecera DEPRECATED. No se borra: conservado como referencia histórica (workaround UTF-8 para `Invoke-RestMethod` en PS5, CSS embebido y plantillas PowerShell).
+- Esta ADR queda como referencia histórica de la exploración.
+
+Ver [ADR-019](./adr-019-blog-spa-react.md) para la decisión actual.

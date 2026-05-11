@@ -38,6 +38,7 @@ import {
   ArticleBriefBox,
   ArticleCategoryPill,
   ArticleHero,
+  ArticleHeroImage,
   ArticleHeroTitle,
   ArticleMetaLine,
 } from '../../../styles/pages-styles/BlogStyles';
@@ -90,6 +91,7 @@ const initialMeta = {
   category: '',
   brief: '',
   keywords: '',
+  heroImageUrl: '',
 };
 
 const BODY_MAX_BYTES_HINT = 204800;
@@ -146,6 +148,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         category: detail.category || '',
         brief: detail.brief || '',
         keywords: detail.keywords || '',
+        heroImageUrl: detail.heroImageUrl || '',
       });
       setCurrentId(detail.id);
       setState(detail.state || 'DRAFT');
@@ -182,6 +185,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           brief: meta.brief || null,
           category: meta.category || null,
           keywords: meta.keywords || null,
+          heroImageUrl: meta.heroImageUrl || null,
         }),
       });
       setCurrentId(created.id);
@@ -208,6 +212,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           brief: meta.brief,
           category: meta.category,
           keywords: meta.keywords,
+          heroImageUrl: meta.heroImageUrl,
         }),
       });
       if (updated?.state) setState(updated.state);
@@ -465,6 +470,20 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           </div>
         </EditorRow>
 
+        <EditorRow $cols={1}>
+          <div>
+            <LabelText>Hero image URL</LabelText>
+            <StyledInput
+              type="url"
+              value={meta.heroImageUrl}
+              disabled={fieldsLocked}
+              onChange={(e) => updateMeta('heroImageUrl', e.target.value)}
+              placeholder="https://assets.test.sharemechat.com/blog/<slug>.webp"
+            />
+            <HelperText>URL absoluta de la imagen (4:3) ya subida al bucket de assets. Opcional.</HelperText>
+          </div>
+        </EditorRow>
+
         <ToolbarRow>
           {canSubmitMetaCreate ? (
             <StyledButton type="button" onClick={handleCreate} disabled={savingMeta}>
@@ -565,6 +584,15 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
                       ? ` · ${fmtDate(previewArticle.publishedAt)}`
                       : ' · sin publicar (preview)'}
                   </ArticleMetaLine>
+                  {previewArticle.heroImageUrl ? (
+                    <ArticleHeroImage>
+                      <img
+                        src={previewArticle.heroImageUrl}
+                        alt={previewArticle.title || ''}
+                        loading="lazy"
+                      />
+                    </ArticleHeroImage>
+                  ) : null}
                   {previewArticle.brief ? (
                     <ArticleBriefBox>{previewArticle.brief}</ArticleBriefBox>
                   ) : null}

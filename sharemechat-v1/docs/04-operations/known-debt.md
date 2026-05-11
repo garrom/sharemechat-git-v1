@@ -100,7 +100,7 @@ Esto requiere también extender el mapping local con un bloque opcional `web_acl
 
 **Prioridad**: media. Mitigado en el script actual. Hacer cuando se toque el backend.
 
-### Helper Invoke-JsonGetUtf8 sin timeout explícito en prerender-blog.ps1
+### [CERRADA] Helper Invoke-JsonGetUtf8 sin timeout explícito en prerender-blog.ps1
 
 **Origen**: nota del agente al sustituir `Invoke-RestMethod` por el helper UTF-8.
 
@@ -112,7 +112,9 @@ Esto requiere también extender el mapping local con un bloque opcional `web_acl
 
 **Prioridad**: baja. Pulido. Hacer en el próximo cambio al script.
 
-### Coordinación frágil entre deploy-frontend.ps1 y prerender-blog.ps1
+**Cerrada en**: 2026-05-11 (Sub-pasada 2A.1). El script `prerender-blog.ps1` quedó archivado en `ops/scripts/archive/` tras la decisión de servir el blog desde la SPA React (ver [ADR-019](../06-decisions/adr-019-blog-spa-react.md), supersede a [ADR-018](../06-decisions/adr-018-blog-static-rendering.md)). Esta deuda deja de aplicar al desactivar la generación estática.
+
+### [CERRADA] Coordinación frágil entre deploy-frontend.ps1 y prerender-blog.ps1
 
 **Origen**: detectado durante validación de C2 (ADR-018).
 
@@ -126,6 +128,8 @@ Esto requiere también extender el mapping local con un bloque opcional `web_acl
 3. Documentar como invariante operativa: "después de cada `deploy-frontend.ps1 product` ejecutar siempre `prerender-blog.ps1`".
 
 **Prioridad**: media. Crítica antes de PRO. En TEST es deuda contenida.
+
+**Cerrada en**: 2026-05-11 (Sub-pasada 2A.1). Ya no hay blog estático: `/blog` y `/blog/<slug>` se sirven desde la SPA React. El cache behavior `/blog*` fue eliminado de la distribución frontend público, los objetos HTML residuales fueron borrados del bucket frontend público, y `prerender-blog.ps1` quedó archivado en `ops/scripts/archive/`. Ver [ADR-019](../06-decisions/adr-019-blog-spa-react.md) (supersede a [ADR-018](../06-decisions/adr-018-blog-static-rendering.md)). `deploy-frontend.ps1` deja de tener relación de coordinación con prerender alguno.
 
 ## Deudas cerradas durante 2026-05-09 (referencia histórica, ya resueltas)
 

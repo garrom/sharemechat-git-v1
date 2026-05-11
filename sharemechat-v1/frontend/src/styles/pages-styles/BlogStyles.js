@@ -468,6 +468,24 @@ export const ArticleMetaLine = styled.div`
   margin: 0 0 8px;
 `;
 
+export const ArticleHeroImage = styled.div`
+  margin: 16px 0 8px 0;
+  aspect-ratio: 4 / 3;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #ECEEF3;
+  box-shadow: 0 1px 3px rgba(14, 23, 51, 0.05);
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+`;
+
 export const ArticleBriefBox = styled.p`
   margin: 12px 0 0;
   font-size: 1rem;
