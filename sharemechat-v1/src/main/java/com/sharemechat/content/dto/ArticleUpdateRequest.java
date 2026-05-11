@@ -7,6 +7,7 @@ public class ArticleUpdateRequest {
     private String category;
     private String keywords;
     private Long responsibleEditorUserId;
+    private String heroImageUrl;
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
@@ -24,4 +25,7 @@ public class ArticleUpdateRequest {
     public void setResponsibleEditorUserId(Long responsibleEditorUserId) {
         this.responsibleEditorUserId = responsibleEditorUserId;
     }
+
+    public String getHeroImageUrl() { return heroImageUrl; }
+    public void setHeroImageUrl(String heroImageUrl) { this.heroImageUrl = heroImageUrl; }
 }

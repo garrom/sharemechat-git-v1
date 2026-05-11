@@ -163,6 +163,7 @@ public class ContentArticleService {
         article.setCategory(category);
         article.setKeywords(keywords);
         article.setResponsibleEditorUserId(req.getResponsibleEditorUserId());
+        article.setHeroImageUrl(normalizeHeroImageUrl(req.getHeroImageUrl()));
         article.setAiAssisted(false);
         article.setDisclosureRequired(false);
         article.setCreatedByUserId(actorUserId);
@@ -208,6 +209,10 @@ public class ContentArticleService {
         if (req.getKeywords() != null) {
             article.setKeywords(normalizeKeywords(req.getKeywords()));
             changedFields.add("keywords");
+        }
+        if (req.getHeroImageUrl() != null) {
+            article.setHeroImageUrl(normalizeHeroImageUrl(req.getHeroImageUrl()));
+            changedFields.add("heroImageUrl");
         }
         if (req.getResponsibleEditorUserId() != null) {
             article.setResponsibleEditorUserId(req.getResponsibleEditorUserId());
@@ -426,8 +431,19 @@ public class ContentArticleService {
                 a.getCreatedByUserId(),
                 a.getUpdatedByUserId(),
                 a.getCreatedAt(),
-                a.getUpdatedAt()
+                a.getUpdatedAt(),
+                a.getHeroImageUrl()
         );
+    }
+
+    private String normalizeHeroImageUrl(String value) {
+        if (value == null) return null;
+        String trimmed = value.trim();
+        if (trimmed.isEmpty()) return null;
+        if (trimmed.length() > 500) {
+            trimmed = trimmed.substring(0, 500);
+        }
+        return trimmed;
     }
 
     private String normalizeSlug(String raw) {

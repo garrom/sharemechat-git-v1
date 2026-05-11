@@ -141,7 +141,8 @@ public class ContentPublicController {
                     article.getUpdatedAt(),
                     htmlBody,
                     article.isAiAssisted(),
-                    article.isDisclosureRequired()
+                    article.isDisclosureRequired(),
+                    article.getHeroImageUrl()
             );
             return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
         }
@@ -175,7 +176,8 @@ public class ContentPublicController {
                 a.getBrief(),
                 a.getCategory(),
                 a.getKeywords(),
-                a.getPublishedAt()
+                a.getPublishedAt(),
+                a.getHeroImageUrl()
         );
     }
 

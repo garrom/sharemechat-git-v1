@@ -14,5 +14,6 @@ public record ArticlePublicSummaryDTO(
         String brief,
         String category,
         String keywords,
-        Instant publishedAt
+        Instant publishedAt,
+        String heroImageUrl
 ) {}

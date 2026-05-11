@@ -9,6 +9,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import org.springframework.stereotype.Service;
 
+import java.util.regex.Pattern;
+
 /**
  * Convierte Markdown a HTML seguro para servir publicamente.
  *
@@ -33,6 +35,10 @@ public class MarkdownRendererService {
     private HtmlRenderer renderer;
     private Safelist safelist;
 
+    private static final Pattern CALLOUT_PATTERN = Pattern.compile(
+            "(?ms)^:::callout[ \\t]*\\R(.*?)\\R^:::[ \\t]*$"
+    );
+
     @PostConstruct
     void init() {
         MutableDataSet options = new MutableDataSet();
@@ -48,12 +54,31 @@ public class MarkdownRendererService {
         // pipeline de upload/serving de assets.
         this.safelist = new Safelist()
                 .addTags("h2", "h3", "p", "ul", "ol", "li",
-                         "a", "strong", "em", "code", "pre", "blockquote", "hr", "br")
+                         "a", "strong", "em", "code", "pre", "blockquote", "hr", "br",
+                         "div")
                 .addAttributes("a", "href", "title")
                 .addEnforcedAttribute("a", "rel", "nofollow noopener")
                 .addProtocols("a", "href", "http", "https", "mailto")
                 .addAttributes("code", "class")          // permite class="language-xxx"
-                .addAttributes("pre", "class");
+                .addAttributes("pre", "class")
+                .addAttributes("div", "class");          // permite <div class="callout"> (caveat: cualquier valor de class)
+    }
+
+    /**
+     * Pre-procesa la sintaxis :::callout ... ::: en el Markdown crudo
+     * y la convierte en <div class="callout">...</div> antes de pasarla
+     * a flexmark. Las lineas en blanco son criticas para que flexmark
+     * parsee el contenido como Markdown dentro del div.
+     *
+     * Caveat conocido v1: si la sintaxis aparece dentro de un fenced
+     * code block, tambien se procesa. Limitacion documentada.
+     *
+     * Si falta el cierre :::, el bloque queda literal (no rompe).
+     */
+    private String preprocessCallouts(String markdown) {
+        if (markdown == null || markdown.isEmpty()) return markdown;
+        return CALLOUT_PATTERN.matcher(markdown)
+                .replaceAll("<div class=\"callout\">\n\n$1\n\n</div>");
     }
 
     /**
@@ -64,7 +89,7 @@ public class MarkdownRendererService {
         if (markdown == null || markdown.isBlank()) {
             return "";
         }
-        Node document = parser.parse(markdown);
+        Node document = parser.parse(preprocessCallouts(markdown));
         String rawHtml = renderer.render(document);
         if (rawHtml == null || rawHtml.isEmpty()) {
             return "";

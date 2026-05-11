@@ -74,6 +74,9 @@ public class ContentArticle {
     @Column(name = "updated_at", insertable = false, updatable = false)
     private Instant updatedAt;
 
+    @Column(name = "hero_image_url", length = 500)
+    private String heroImageUrl;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -138,4 +141,7 @@ public class ContentArticle {
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
+
+    public String getHeroImageUrl() { return heroImageUrl; }
+    public void setHeroImageUrl(String heroImageUrl) { this.heroImageUrl = heroImageUrl; }
 }

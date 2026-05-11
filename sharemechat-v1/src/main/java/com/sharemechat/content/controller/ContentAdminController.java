@@ -177,7 +177,8 @@ public class ContentAdminController {
                 detail.updatedAt(),
                 htmlBody,
                 detail.aiAssisted(),
-                detail.disclosureRequired()
+                detail.disclosureRequired(),
+                detail.heroImageUrl()
         );
     }
 

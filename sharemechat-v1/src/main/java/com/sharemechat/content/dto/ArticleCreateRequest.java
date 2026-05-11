@@ -9,6 +9,7 @@ public class ArticleCreateRequest {
     private String category;
     private String keywords;
     private Long responsibleEditorUserId;
+    private String heroImageUrl;
 
     public String getSlug() { return slug; }
     public void setSlug(String slug) { this.slug = slug; }
@@ -32,4 +33,7 @@ public class ArticleCreateRequest {
     public void setResponsibleEditorUserId(Long responsibleEditorUserId) {
         this.responsibleEditorUserId = responsibleEditorUserId;
     }
+
+    public String getHeroImageUrl() { return heroImageUrl; }
+    public void setHeroImageUrl(String heroImageUrl) { this.heroImageUrl = heroImageUrl; }
 }

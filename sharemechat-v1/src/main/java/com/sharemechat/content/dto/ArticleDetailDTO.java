@@ -24,5 +24,6 @@ public record ArticleDetailDTO(
         Long createdByUserId,
         Long updatedByUserId,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String heroImageUrl
 ) {}

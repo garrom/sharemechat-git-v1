@@ -27,5 +27,6 @@ public record ArticlePublicDetailDTO(
         Instant updatedAt,
         String htmlBody,
         boolean aiAssisted,
-        boolean disclosureRequired
+        boolean disclosureRequired,
+        String heroImageUrl
 ) {}
