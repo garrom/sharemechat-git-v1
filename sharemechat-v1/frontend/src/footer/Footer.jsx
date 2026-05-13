@@ -89,7 +89,7 @@ export default function Footer() {
           <br />
           Lõõtsa tn 5, 11415 Tallinn, Harju maakond, Estonia
           <br />
-          contact@sharemechat.com
+          <a href="mailto:contact+web@sharemechat.com" style={{ color: 'inherit', textDecoration: 'underline' }}>contact@sharemechat.com</a>
           <br />
           © {year} SharemeChat®. All rights reserved.
         </LegalDesktopOnly>
@@ -118,7 +118,7 @@ export default function Footer() {
               <br />
               Registry code: 17444422
               <br />
-              contact@sharemechat.com
+              <a href="mailto:contact+web@sharemechat.com" style={{ color: 'inherit', textDecoration: 'underline' }}>contact@sharemechat.com</a>
               <br />
               © {year} SharemeChat®. All rights reserved.
             </LegalText>

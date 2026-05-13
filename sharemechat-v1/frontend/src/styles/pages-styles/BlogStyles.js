@@ -58,9 +58,9 @@ export const HeroKicker = styled.div`
 
 export const HeroTitle = styled.h1`
   margin: 0 0 12px;
-  font-size: clamp(2rem, 4vw, 3.4rem);
-  line-height: 1.02;
-  letter-spacing: -0.04em;
+  font-size: clamp(1.6rem, 2.6vw, 2.4rem);
+  line-height: 1.1;
+  letter-spacing: -0.02em;
   color: #0f172a;
 `;
 
@@ -306,6 +306,25 @@ export const ArticleCard = styled.article`
   border: 1px solid rgba(148, 163, 184, 0.16);
   padding: 22px;
   box-shadow: 0 16px 44px rgba(15, 23, 42, 0.05);
+  display: block;
+  text-decoration: none;
+  color: inherit;
+`;
+
+export const ArticleCardImage = styled.div`
+  margin: -22px -22px 14px -22px;
+  aspect-ratio: 4 / 3;
+  width: calc(100% + 44px);
+  overflow: hidden;
+  border-radius: 24px 24px 0 0;
+  background: #ECEEF3;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
 `;
 
 export const ArticleBadge = styled.span`
@@ -324,8 +343,9 @@ export const ArticleBadge = styled.span`
 
 export const ArticleTitle = styled.h2`
   margin: 0 0 8px;
-  font-size: 1.12rem;
-  line-height: 1.25;
+  font-size: 1.25rem;
+  line-height: 1.3;
+  font-weight: 700;
   color: #0f172a;
 `;
 
@@ -380,6 +400,104 @@ export const SidebarText = styled.p`
   font-size: 0.9rem;
   color: #5f6c7b;
   line-height: 1.68;
+`;
+
+export const SidebarSearchInput = styled.input`
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(255, 255, 255, 0.92);
+  font-size: 0.9rem;
+  color: #1f2937;
+  outline: none;
+  transition: border-color 120ms;
+
+  &:focus {
+    border-color: #4338ca;
+  }
+
+  &::placeholder {
+    color: #94a3b8;
+  }
+`;
+
+export const SidebarCategoryList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+`;
+
+export const SidebarCategoryBlock = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+export const SidebarCategoryHeader = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.9rem;
+  color: ${(p) => (p.$active ? '#4338ca' : '#475569')};
+  font-weight: ${(p) => (p.$active ? 700 : 500)};
+  cursor: pointer;
+  transition: background 120ms, color 120ms;
+
+  &:hover {
+    background: rgba(67, 56, 202, 0.05);
+    color: #4338ca;
+  }
+`;
+
+export const SidebarCategoryName = styled.span`
+  flex: 1;
+`;
+
+export const SidebarCategoryCount = styled.span`
+  font-size: 0.78rem;
+  color: #94a3b8;
+  font-weight: 500;
+`;
+
+export const SidebarCategoryChevron = styled.span`
+  display: inline-block;
+  font-size: 0.7rem;
+  color: #94a3b8;
+  transition: transform 180ms;
+  transform: ${(p) => (p.$expanded ? 'rotate(0deg)' : 'rotate(-90deg)')};
+`;
+
+export const SidebarArticleList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 12px;
+  padding-left: 12px;
+  border-left: 2px solid rgba(148, 163, 184, 0.18);
+  margin-top: 4px;
+  margin-bottom: 6px;
+`;
+
+export const SidebarArticleLink = styled.a`
+  display: block;
+  padding: 6px 10px;
+  font-size: 0.85rem;
+  color: #475569;
+  text-decoration: none;
+  line-height: 1.35;
+  border-radius: 6px;
+  transition: background 120ms, color 120ms;
+
+  &:hover {
+    background: rgba(67, 56, 202, 0.05);
+    color: #4338ca;
+  }
 `;
 
 export const TagPills = styled.div`
@@ -580,6 +698,35 @@ export const ArticleBody = styled.section`
     border-top: 1px solid #e2e8f0;
     margin: 24px 0;
   }
+
+  .callout {
+    margin: 22px 0;
+    padding: 18px 20px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #4338ca;
+    border-radius: 0 12px 12px 0;
+    color: #334155;
+  }
+
+  .callout > h2,
+  .callout > h3 {
+    margin-top: 0;
+    margin-bottom: 8px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #4338ca;
+  }
+
+  .callout > p {
+    margin-bottom: 12px;
+  }
+
+  .callout > p:last-child {
+    margin-bottom: 0;
+  }
 `;
 
 export const ArticleFooterMeta = styled.div`
@@ -593,6 +740,144 @@ export const ArticleFooterMeta = styled.div`
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+`;
+
+export const ShareRow = styled.div`
+  margin: 32px 0;
+  padding: 20px 24px;
+  background: rgba(248, 250, 252, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+`;
+
+export const ShareLabel = styled.div`
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #475569;
+`;
+
+export const ShareButtons = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+`;
+
+export const ShareLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  color: #475569;
+  text-decoration: none;
+  font-size: 0.85rem;
+  font-weight: 700;
+  transition: background 120ms, color 120ms, border-color 120ms;
+
+  &:hover {
+    background: rgba(67, 56, 202, 0.05);
+    border-color: #4338ca;
+    color: #4338ca;
+  }
+`;
+
+export const CopyLinkButton = styled.button`
+  margin-left: 8px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  color: #475569;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms, color 120ms, border-color 120ms;
+
+  &:hover {
+    background: rgba(67, 56, 202, 0.05);
+    border-color: #4338ca;
+    color: #4338ca;
+  }
+`;
+
+export const RelatedSection = styled.section`
+  margin: 48px 0 24px;
+`;
+
+export const RelatedHeading = styled.h2`
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 0 0 16px;
+`;
+
+export const RelatedGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+`;
+
+export const RelatedCard = styled.a`
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: #ffffff;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 16px;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 180ms, box-shadow 180ms, border-color 180ms;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(14, 23, 51, 0.06);
+    border-color: rgba(67, 56, 202, 0.24);
+  }
+`;
+
+export const RelatedCardImage = styled.div`
+  margin: -16px -16px 12px;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  border-radius: 16px 16px 0 0;
+  background: #ECEEF3;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+`;
+
+export const RelatedCardBadge = styled.span`
+  display: inline-block;
+  align-self: flex-start;
+  padding: 4px 10px;
+  background: rgba(67, 56, 202, 0.08);
+  color: #4338ca;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  margin-bottom: 8px;
+`;
+
+export const RelatedCardTitle = styled.h3`
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #1f2937;
+  margin: 0;
 `;
 
 export const BackLink = styled.button`

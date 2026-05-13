@@ -146,7 +146,8 @@ export default function Legal() {
       nextTab === 'refunds' ||
       nextTab === 'contact' ||
       nextTab === 'complaints' ||
-      nextTab === 'appeals'
+      nextTab === 'appeals' ||
+      nextTab === 'ai-disclosure'
     ) {
       setTab(nextTab);
     }
@@ -279,6 +280,17 @@ export default function Legal() {
               aria-pressed={tab === 'appeals'}
             >
               Appeals & Takedown
+            </button>
+
+            <button
+              type="button"
+              style={tabStyle('ai-disclosure')}
+              onClick={() => setTab('ai-disclosure')}
+              onMouseEnter={() => setHoveredTab('ai-disclosure')}
+              onMouseLeave={() => setHoveredTab(null)}
+              aria-pressed={tab === 'ai-disclosure'}
+            >
+              AI-Assisted Content
             </button>
 
           </div>
@@ -579,9 +591,9 @@ export default function Legal() {
                 <h3 style={SectionTitle}>23. Contact, Safety, and Security</h3>
                 <p style={Paragraph}>
                   For legal or support questions, you may contact SharemeChat at
-                  contact@sharemechat.com or support@sharemechat.com. Safety or
-                  security concerns should be reported through available in-platform
-                  tools or the appropriate support contact.
+                  <a href="mailto:contact+legal@sharemechat.com" style={LinkLike}> contact@sharemechat.com</a>.
+                  Safety or security concerns should be reported through available
+                  in-platform tools or the appropriate support contact.
                 </p>
               </div>
             </>
@@ -605,7 +617,7 @@ export default function Legal() {
                   <br />
                   Lõõtsa tn 5, 11415 Tallinn, Harju maakond, Estonia
                   <br />
-                  contact@sharemechat.com
+                  <a href="mailto:contact+legal@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a>
                 </p>
               </div>
 
@@ -662,7 +674,7 @@ export default function Legal() {
                 <p style={Paragraph}>
                   You may request access, rectification, deletion, restriction,
                   objection, or portability of your personal data, subject to
-                  applicable law. Requests may be sent to contact@sharemechat.com.
+                  applicable law. Requests may be sent to <a href="mailto:contact+gdpr@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a>.
                 </p>
               </div>
 
@@ -760,7 +772,7 @@ export default function Legal() {
                   <br />
                   Lõõtsa tn 5, 11415 Tallinn, Harju maakond, Estonia
                   <br />
-                  contact@sharemechat.com
+                  <a href="mailto:contact+legal@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a>
                 </p>
               </div>
 
@@ -796,7 +808,7 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>2. How to Request a Refund</h3>
                 <p style={Paragraph}>
-                  To request a review, please email us at <strong>contact@sharemechat.com </strong>
+                  To request a review, please email us at <strong><a href="mailto:contact+legal@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a> </strong>
                   and include: the email on your account, the date/time of the issue,
                   the amount, and any relevant details or screenshots. If available, include
                   the transaction reference shown in your payment confirmation.
@@ -835,7 +847,7 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>Support and General Inquiries</h3>
                 <p style={Paragraph}>
-                  Email: <strong>contact@sharemechat.com</strong>
+                  Email: <strong><a href="mailto:contact+legal@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a></strong>
                 </p>
               </div>
 
@@ -843,7 +855,7 @@ export default function Legal() {
                 <h3 style={SectionTitle}>Complaints and Policy Requests</h3>
                 <p style={Paragraph}>
                   If you wish to submit a complaint or request content review/takedown, please
-                  email <strong>contact@sharemechat.com</strong> with as much detail as possible
+                  email <strong><a href="mailto:contact+legal@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a></strong> with as much detail as possible
                   (account email, date/time, screenshots, and any relevant context).
                 </p>
               </div>
@@ -862,7 +874,7 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>1. How to Submit a Complaint</h3>
                 <p style={Paragraph}>
-                  Complaints can be submitted by email to <strong>contact@sharemechat.com</strong>.
+                  Complaints can be submitted by email to <strong><a href="mailto:contact+gdpr@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a></strong>.
                   Please include your account email, a description of the issue, relevant dates,
                   and any supporting evidence such as screenshots or transaction details.
                 </p>
@@ -920,7 +932,7 @@ export default function Legal() {
                 <p style={Paragraph}>
                   If you believe that a moderation action, restriction, suspension, or
                   account-related decision was made in error, you may request a review by
-                  emailing <strong>contact@sharemechat.com</strong>. Please include your
+                  emailing <strong><a href="mailto:contact+gdpr@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a></strong>. Please include your
                   account email, a description of the decision being challenged, the
                   approximate date and time, and any supporting context.
                 </p>
@@ -932,7 +944,7 @@ export default function Legal() {
                   If you believe that content, material, or activity on SharemeChat
                   infringes your rights, violates platform rules, or should otherwise be
                   reviewed for removal, you may submit a takedown request to
-                  <strong> contact@sharemechat.com</strong>. Please provide sufficient
+                  <strong> <a href="mailto:contact+gdpr@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a></strong>. Please provide sufficient
                   detail to identify the content or activity, explain the basis of the
                   request, and include any relevant supporting information.
                 </p>
@@ -978,6 +990,62 @@ export default function Legal() {
             </>
           )}
 
+          {tab === 'ai-disclosure' && (
+            <>
+              <h2 style={DocTitle}>AI-Assisted Content</h2>
+
+              <p style={DocIntro}>
+                This policy explains how SharemeChat handles editorial content
+                produced with the assistance of artificial intelligence tools and
+                how that assistance is disclosed to readers.
+              </p>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>1. Scope</h3>
+                <p style={Paragraph}>
+                  SharemeChat publishes editorial articles on its blog. Some of
+                  these articles are produced with the assistance of artificial
+                  intelligence tools, under human supervision, fact-checking, and
+                  editorial review before publication. Articles produced with such
+                  assistance are marked accordingly at the end of the article.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>2. Editorial Oversight</h3>
+                <p style={Paragraph}>
+                  All AI-assisted content is reviewed by the editorial team before
+                  publication. The use of AI tools does not remove SharemeChat&apos;s
+                  responsibility for the accuracy, tone, and compliance of the
+                  content. The platform retains final editorial authority over what
+                  is published.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>3. EU AI Act Transparency</h3>
+                <p style={Paragraph}>
+                  This disclosure responds to transparency obligations under the
+                  EU AI Act applicable to content generated or substantially
+                  assisted by artificial intelligence. The disclosure flag visible
+                  at the end of each affected article confirms that AI tools were
+                  involved in its creation.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>4. Feedback and Corrections</h3>
+                <p style={Paragraph}>
+                  If you identify a factual error, an outdated reference, or any
+                  other issue in an AI-assisted article, please contact us at
+                  <strong> <a href="mailto:contact+legal@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a></strong>. Editorial corrections
+                  are handled through the same internal process as other content
+                  review requests.
+                </p>
+              </div>
+            </>
+          )}
+
           <div style={{ marginTop: '34px' }}>
             <LegalText style={{ color: '#6b7280', opacity: 1 }}>
               Shareme Technologies OÜ
@@ -986,7 +1054,7 @@ export default function Legal() {
               <br />
               Lõõtsa tn 5, 11415 Tallinn, Harju maakond, Estonia
               <br />
-              contact@sharemechat.com
+              <a href="mailto:contact+legal@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a>
             </LegalText>
           </div>
         </div>

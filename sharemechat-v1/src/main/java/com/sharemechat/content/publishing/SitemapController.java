@@ -49,7 +49,8 @@ public class SitemapController {
 
         StringBuilder sb = new StringBuilder(2048);
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        sb.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");
+        sb.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n");
+        sb.append("        xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\">\n");
 
         // Home del blog
         sb.append("  <url>\n");
@@ -75,6 +76,18 @@ public class SitemapController {
             }
             sb.append("    <changefreq>weekly</changefreq>\n");
             sb.append("    <priority>0.7</priority>\n");
+            // Google Image Sitemap: emite <image:image> solo cuando el articulo
+            // tiene heroImageUrl no nula y con esquema http(s). Defensivo ante
+            // URLs basura o relativas que romperian la indexacion.
+            String heroImageUrl = a.getHeroImageUrl();
+            if (heroImageUrl != null && !heroImageUrl.isBlank()
+                    && (heroImageUrl.startsWith("http://") || heroImageUrl.startsWith("https://"))) {
+                sb.append("    <image:image>\n");
+                sb.append("      <image:loc>")
+                        .append(escapeXml(heroImageUrl))
+                        .append("</image:loc>\n");
+                sb.append("    </image:image>\n");
+            }
             sb.append("  </url>\n");
         }
 

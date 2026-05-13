@@ -142,7 +142,7 @@ export default function Safety() {
               <br />
               Lõõtsa tn 5, 11415 Tallinn, Estonia
               <br />
-              contact@sharemechat.com
+              <a href="mailto:contact+web@sharemechat.com" style={{ color: 'inherit', textDecoration: 'underline' }}>contact@sharemechat.com</a>
             </LegalText>
           </div>
 

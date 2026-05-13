@@ -401,7 +401,7 @@ const AgeGateModal = ({ onAccepted }) => {
         <ReportBox>
           <ReportText>
             {i18n.t('consent.ageGate.report.prefix')}{' '}
-            <a href="mailto:contact@sharemechat.com">{i18n.t('consent.ageGate.report.email')}</a>
+            <a href="mailto:contact+web@sharemechat.com">{i18n.t('consent.ageGate.report.email')}</a>
             {i18n.t('consent.ageGate.report.suffix')}
           </ReportText>
         </ReportBox>
