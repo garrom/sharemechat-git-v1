@@ -1,6 +1,7 @@
 package com.sharemechat.content.publishing;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Vista publica del detalle de un articulo (/api/public/content/articles/{slug}).
@@ -14,6 +15,12 @@ import java.time.Instant;
  *  - seoTitle / metaDescription dedicados aun no existen como columnas en
  *    content_articles; el frontend deriva seoTitle de title y
  *    metaDescription de brief mientras no se modele el dominio SEO.
+ *
+ * Fase 4A multilingue (ADR-022):
+ *  - alternates: versiones del mismo articulo en otros locales (vinculadas
+ *    via parent_article_id). El frontend lo consume para <link rel="alternate"
+ *    hreflang="...">, switcher manual y banner sugerente. Garantia: el campo
+ *    nunca es null; si no hay alternates, lista vacia.
  */
 public record ArticlePublicDetailDTO(
         Long id,
@@ -28,5 +35,6 @@ public record ArticlePublicDetailDTO(
         String htmlBody,
         boolean aiAssisted,
         boolean disclosureRequired,
-        String heroImageUrl
+        String heroImageUrl,
+        List<ArticleAlternateDTO> alternates
 ) {}

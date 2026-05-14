@@ -51,4 +51,29 @@ public interface ContentArticleRepository extends JpaRepository<ContentArticle, 
     // Devuelve cualquier articulo cuyo slug coincida (cualquier locale, cualquier
     // estado). El controller decide la respuesta segun el state.
     java.util.List<ContentArticle> findBySlugOrderByIdAsc(String slug);
+
+    // Fase 4A multilingue (ADR-022): dado un articulo (su id y su
+    // parent_article_id) devuelve los demas articulos PUBLISHED del mismo
+    // grupo. La vinculacion se hace via parent_article_id en lugar de un
+    // group_id dedicado (decision operativa post-ADR-022 al verificar que
+    // la columna parent_article_id ya existia sin uso).
+    //
+    // Logica de la consulta:
+    //  - Si el articulo actual es RAIZ (parentArticleId IS NULL): devuelve
+    //    los hijos cuyo parent_article_id sea su propio id.
+    //  - Si el articulo actual es HIJO (parentArticleId != NULL): devuelve
+    //    sus hermanos (mismo parent_article_id) y al padre (id =
+    //    parentArticleId).
+    // En ambos casos excluye el propio articulo y filtra por PUBLISHED.
+    @Query("""
+            select a from ContentArticle a
+            where a.id <> :currentId
+              and a.state = 'PUBLISHED'
+              and (
+                a.parentArticleId = coalesce(:parentId, :currentId)
+                or a.id = :parentId
+              )
+            """)
+    java.util.List<ContentArticle> findAlternates(@Param("currentId") Long currentId,
+                                                  @Param("parentId") Long parentId);
 }

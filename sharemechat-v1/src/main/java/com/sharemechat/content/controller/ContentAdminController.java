@@ -165,6 +165,10 @@ public class ContentAdminController {
                         "No se pudo leer el cuerpo para preview", ex);
             }
         }
+        // Fase 4A multilingue (ADR-022): el record publico exige alternates.
+        // El preview admin no necesita resolver hreflang, asi que pasamos
+        // lista vacia. El frontend admin reusa los estilos del blog publico
+        // y simplemente no pinta los alternates en el preview.
         return new ArticlePublicDetailDTO(
                 detail.id(),
                 detail.slug(),
@@ -178,7 +182,8 @@ public class ContentAdminController {
                 htmlBody,
                 detail.aiAssisted(),
                 detail.disclosureRequired(),
-                detail.heroImageUrl()
+                detail.heroImageUrl(),
+                java.util.Collections.emptyList()
         );
     }
 
