@@ -52,17 +52,24 @@ export const getBrowserLocale = () => {
 };
 
 export const getInitialLocale = () => {
-  const storedLocale = getStoredLocale();
-  if (storedLocale) {
-    return storedLocale;
+  // Fase 4B.3 (ADR-022): la URL es la fuente de verdad estricta del locale
+  // activo. Reglas:
+  //   - /en | /en/*  -> 'en'
+  //   - cualquier otro path -> 'es' (default sin prefijo)
+  // localStorage y navigator.language siguen disponibles via getStoredLocale()
+  // y getBrowserLocale() para uso por sub-fases posteriores (4B.6 / 4F:
+  // banner sugerente, persistencia tras switch manual), pero NO determinan
+  // el locale inicial. Sin esto, un navegador en EN viendo "/" tendria
+  // chrome en EN y URLs sin prefijo /en/, inconsistente con ADR-022.
+  if (typeof window !== 'undefined'
+      && window.location
+      && typeof window.location.pathname === 'string') {
+    const path = window.location.pathname;
+    if (path === '/en' || path.startsWith('/en/')) {
+      return 'en';
+    }
   }
-
-  const browserLocale = getBrowserLocale();
-  if (browserLocale) {
-    return browserLocale;
-  }
-
-  return FALLBACK_LOCALE;
+  return 'es';
 };
 
 export const getResolvedLocale = (i18nInstance) => {

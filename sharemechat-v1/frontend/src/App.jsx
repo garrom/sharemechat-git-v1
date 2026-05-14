@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
-import './i18n';
+import i18n from './i18n';
 import RequireRole from './components/RequireRole';
 import DashboardClient from './pages/dashboard/DashboardClient';
 import DashboardModel from './pages/dashboard/DashboardModel';
@@ -55,8 +55,42 @@ const ExternalRedirect = ({ to }) => {
 function App() {
   const adminSurface = isAdminSurface();
 
+  // Fase 4B.3 (ADR-022): deteccion de locale por prefijo de URL. La URL es
+  // la fuente de verdad estricta tras esta fase. Solo aplica al product
+  // surface; admin se mantiene con basename "/" porque no tiene contenido
+  // multilingue ni necesita exponer rutas bajo /en/.
+  const initialPath = typeof window !== 'undefined' && window.location
+    ? window.location.pathname
+    : '/';
+  const matchesEn = !adminSurface
+    && (initialPath === '/en' || initialPath.startsWith('/en/'));
+  const localeBasename = matchesEn ? '/en' : '/';
+
+  // /en/legal queda fuera del scope multilingue (ADR-022 D9: /legal se
+  // mantiene hardcoded en ingles, sin version bajo /en/). Redirigimos via
+  // location.replace para que el navegador retire el prefijo de la barra
+  // de URL. NO es navegacion SPA porque cruza basenames; el navegador
+  // recarga y vuelve a ejecutar este bloque con path "/legal" -> es.
+  if (matchesEn
+      && (initialPath === '/en/legal' || initialPath.startsWith('/en/legal/'))) {
+    if (typeof window !== 'undefined') {
+      const stripped = initialPath.replace(/^\/en/, '');
+      window.location.replace(stripped + window.location.search + window.location.hash);
+    }
+    return null;
+  }
+
+  // Sincronizar i18n con el locale detectado en la URL antes de renderizar
+  // para evitar flash de chrome en el locale incorrecto. getInitialLocale()
+  // ya es URL-aware tras 4B.3, pero defensivamente comprobamos por si el
+  // lng inicial de i18next se calculo en otro contexto.
+  const expectedLocale = matchesEn ? 'en' : 'es';
+  if (i18n.language !== expectedLocale) {
+    i18n.changeLanguage(expectedLocale);
+  }
+
   return (
-    <Router>
+    <Router basename={localeBasename}>
       <SessionProvider>
         <CallUiProvider>
           <ModalProvider>

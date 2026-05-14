@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useHistory } from 'react-router-dom';
 import { useSession } from '../components/SessionProvider';
 import useAppModals from '../components/useAppModals';
 import PublicNavbar from '../components/navbar/PublicNavbar';
@@ -65,6 +65,11 @@ export default function Home() {
   const { uiLocale } = useSession();
   const [activeTab,setActiveTab]=useState('videochat');
   const location=useLocation();
+  // Fase 4B.3.1: useHistory respeta el basename del Router (4B.3). Bajo
+  // basename "/en", history.push('/blog') navega a "/en/blog" sin que el
+  // componente conozca el locale. Sustituye a window.location.href usado
+  // antes de la introduccion del basename multilingue (ADR-022).
+  const history=useHistory();
   const { openLoginModal }=useAppModals();
   const [loginModalOpened,setLoginModalOpened]=useState(false);
   const quickMatchingRef=useRef(null);
@@ -87,12 +92,12 @@ export default function Home() {
 
   const handleLogoClick=(e)=>{
     e.preventDefault();
-    window.location.href='/';
+    history.push('/');
   };
 
   const handleTabClick=(tab)=>{
     setActiveTab(tab);
-    if(tab==='blog') window.location.href='/blog';
+    if(tab==='blog') history.push('/blog');
     else goLogin();
   };
 
