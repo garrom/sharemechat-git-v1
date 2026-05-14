@@ -1,0 +1,57 @@
+{
+  "hero": {
+    "kicker": "SharemeChat Journal",
+    "title": "Artículos, guías y notas de producto sobre videochat 1 a 1 en directo.",
+    "lead": "Este espacio se está construyendo como una capa editorial práctica para usuarios y modelos que buscan explicaciones claras, mejor contexto y perspectivas útiles sobre la plataforma.",
+    "tagline": "Lecturas concisas, presentación calmada y temas pegados al producto real: privacidad, etiqueta, configuración, pagos, novedades de la plataforma y la evolución de la interacción en directo."
+  },
+  "listing": {
+    "sectionLabel": "Últimos artículos"
+  },
+  "sidebar": {
+    "searchHeading": "Buscar",
+    "searchPlaceholder": "Buscar en el blog...",
+    "searchAriaLabel": "Buscar artículos",
+    "categoriesHeading": "Categorías"
+  },
+  "card": {
+    "readingTimeUnit": "min"
+  },
+  "cta": {
+    "title": "Explora la plataforma mientras la sección editorial sigue creciendo.",
+    "text": "Si quieres entender de forma más directa cómo funciona la experiencia, puedes entrar como usuario o preparar tu perfil como modelo mientras se publican nuevos artículos.",
+    "registerClient": "Crear cuenta de usuario",
+    "registerModel": "Registrarme como modelo"
+  },
+  "detail": {
+    "backToBlog": "← Volver al blog",
+    "publishedPrefix": "Publicado",
+    "shareTitle": "Compártelo",
+    "shareAriaX": "SharemeChat en X",
+    "shareAriaMeta": "SharemeChat en Meta",
+    "shareAriaInstagram": "SharemeChat en Instagram",
+    "shareAriaTiktok": "SharemeChat en TikTok",
+    "copyLink": "Copiar enlace",
+    "copiedFeedback": "✓ Copiado",
+    "relatedTitle": "Quizás te interese",
+    "disclosureText": "Contenido elaborado con asistencia de IA.",
+    "disclosureLinkText": "Más información."
+  },
+  "states": {
+    "loadingListing": "Cargando artículos…",
+    "loadingArticle": "Cargando artículo…",
+    "errorListing": "No se pudo cargar el blog. Vuelve a intentarlo en unos minutos.",
+    "errorArticle": "No se pudo cargar el artículo. Vuelve a intentarlo en unos minutos.",
+    "retracted": "Este artículo ya no está disponible.",
+    "notFound": "Artículo no encontrado.",
+    "empty": "Aún no hay artículos publicados. Vuelve pronto.",
+    "noResults": "No hay artículos que coincidan con la búsqueda."
+  },
+  "meta": {
+    "author": "Equipo SharemeChat",
+    "publisher": "SharemeChat",
+    "titleSuffix": "SharemeChat",
+    "seoTitleFallback": "Artículo",
+    "retractedTitle": "Artículo retirado"
+  }
+}

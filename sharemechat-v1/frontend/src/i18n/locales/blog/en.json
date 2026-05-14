@@ -1,0 +1,57 @@
+{
+  "hero": {
+    "kicker": "SharemeChat Journal",
+    "title": "Articles, guides and product notes on live 1-on-1 video chat.",
+    "lead": "This space is being built as a practical editorial layer for users and models looking for clear explanations, better context, and useful perspectives on the platform.",
+    "tagline": "Concise reads, calm presentation, and topics grounded in the real product: privacy, etiquette, settings, payments, platform updates, and the evolution of live interaction."
+  },
+  "listing": {
+    "sectionLabel": "Latest articles"
+  },
+  "sidebar": {
+    "searchHeading": "Search",
+    "searchPlaceholder": "Search the blog...",
+    "searchAriaLabel": "Search articles",
+    "categoriesHeading": "Categories"
+  },
+  "card": {
+    "readingTimeUnit": "min"
+  },
+  "cta": {
+    "title": "Explore the platform while the editorial section keeps growing.",
+    "text": "If you want a more direct understanding of how the experience works, you can sign up as a user or set up your profile as a model while new articles are being published.",
+    "registerClient": "Create a user account",
+    "registerModel": "Sign up as a model"
+  },
+  "detail": {
+    "backToBlog": "← Back to blog",
+    "publishedPrefix": "Published",
+    "shareTitle": "Share",
+    "shareAriaX": "SharemeChat on X",
+    "shareAriaMeta": "SharemeChat on Meta",
+    "shareAriaInstagram": "SharemeChat on Instagram",
+    "shareAriaTiktok": "SharemeChat on TikTok",
+    "copyLink": "Copy link",
+    "copiedFeedback": "✓ Copied",
+    "relatedTitle": "You may also like",
+    "disclosureText": "AI-assisted content.",
+    "disclosureLinkText": "Learn more."
+  },
+  "states": {
+    "loadingListing": "Loading articles…",
+    "loadingArticle": "Loading article…",
+    "errorListing": "Could not load the blog. Please try again in a few minutes.",
+    "errorArticle": "Could not load the article. Please try again in a few minutes.",
+    "retracted": "This article is no longer available.",
+    "notFound": "Article not found.",
+    "empty": "No articles published yet. Check back soon.",
+    "noResults": "No articles match your search."
+  },
+  "meta": {
+    "author": "SharemeChat Team",
+    "publisher": "SharemeChat",
+    "titleSuffix": "SharemeChat",
+    "seoTitleFallback": "Article",
+    "retractedTitle": "Article retracted"
+  }
+}

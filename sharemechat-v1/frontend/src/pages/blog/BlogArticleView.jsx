@@ -1,6 +1,7 @@
 // src/pages/blog/BlogArticleView.jsx
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useHistory, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../config/http';
 import { GlobalBlack } from '../../styles/public-styles/HomeStyles';
 import PublicNavbar from '../../components/navbar/PublicNavbar';
@@ -138,6 +139,12 @@ export default function BlogArticleView() {
   const { slug } = useParams();
   const history = useHistory();
 
+  // Fase 4B.2 (ADR-022): chrome del detalle internacionalizado via namespace
+  // 'blog' (definido en src/i18n/locales/blog/{es,en}.json en 4B.1).
+  // Usamos claves con prefijo explicito t('blog:xxx') para no depender del
+  // argumento del hook.
+  const { t } = useTranslation();
+
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -183,7 +190,7 @@ export default function BlogArticleView() {
         // Rama genérica: no mostramos e.message al usuario (puede ser
         // HTML del 502 de nginx o stack trace). Mensaje amable.
         console.error('Blog article fetch failed:', e);
-        setError('No se pudo cargar el artículo. Vuelve a intentarlo en unos minutos.');
+        setError(t('blog:states.errorArticle'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -242,7 +249,7 @@ export default function BlogArticleView() {
     if (typeof document === 'undefined') return undefined;
     if (!retracted) return undefined;
     const prevTitle = document.title;
-    document.title = 'Artículo retirado | SharemeChat';
+    document.title = `${t('blog:meta.retractedTitle')} | ${t('blog:meta.titleSuffix')}`;
     upsertMeta('meta[name="robots"]', { name: 'robots', content: 'noindex' });
     return () => {
       document.title = prevTitle;
@@ -266,14 +273,14 @@ export default function BlogArticleView() {
         ? window.location.origin
         : '';
     const articleUrl = `${baseUrl}/blog/${article.slug}`;
-    const seoTitle = article.seoTitle || article.title || 'Artículo';
+    const seoTitle = article.seoTitle || article.title || t('blog:meta.seoTitleFallback');
     const metaDescription =
       article.metaDescription || truncate(article.brief || '', 160);
     const inLanguage = mapLocaleToBcp47(article.locale);
     const ogLocale = mapLocaleToOg(article.locale);
 
     const prevTitle = document.title;
-    document.title = `${seoTitle} | SharemeChat`;
+    document.title = `${seoTitle} | ${t('blog:meta.titleSuffix')}`;
 
     upsertMeta('meta[name="description"]', { name: 'description', content: metaDescription });
     upsertCanonicalLink(articleUrl);
@@ -357,8 +364,8 @@ export default function BlogArticleView() {
     });
 
     // Autoria y publisher (meta tags estandar; tambien dentro del JSON-LD).
-    upsertMeta('meta[name="author"]', { name: 'author', content: 'Equipo SharemeChat' });
-    upsertMeta('meta[name="publisher"]', { name: 'publisher', content: 'SharemeChat' });
+    upsertMeta('meta[name="author"]', { name: 'author', content: t('blog:meta.author') });
+    upsertMeta('meta[name="publisher"]', { name: 'publisher', content: t('blog:meta.publisher') });
 
     // Twitter
     upsertMeta('meta[name="twitter:card"]', {
@@ -388,11 +395,11 @@ export default function BlogArticleView() {
       ...(tagList.length > 0 ? { keywords: tagList.join(', ') } : {}),
       author: {
         '@type': 'Organization',
-        name: 'Equipo SharemeChat',
+        name: t('blog:meta.author'),
       },
       publisher: {
         '@type': 'Organization',
-        name: 'SharemeChat',
+        name: t('blog:meta.publisher'),
         url: baseUrl,
         logo: {
           '@type': 'ImageObject',
@@ -450,16 +457,16 @@ export default function BlogArticleView() {
 
       <PageWrap>
         <PageInner>
-          <BackLink type="button" onClick={goBlog}>← Volver al blog</BackLink>
+          <BackLink type="button" onClick={goBlog}>{t('blog:detail.backToBlog')}</BackLink>
 
           {loading ? (
-            <EmptyState>Cargando artículo…</EmptyState>
+            <EmptyState>{t('blog:states.loadingArticle')}</EmptyState>
           ) : retracted ? (
-            <EmptyState>Este artículo ya no está disponible.</EmptyState>
+            <EmptyState>{t('blog:states.retracted')}</EmptyState>
           ) : error ? (
             <EmptyState>{error}</EmptyState>
           ) : !article ? (
-            <EmptyState>Artículo no encontrado.</EmptyState>
+            <EmptyState>{t('blog:states.notFound')}</EmptyState>
           ) : (
             <>
               <ArticleHero>
@@ -469,8 +476,8 @@ export default function BlogArticleView() {
                 <ArticleHeroTitle>{article.title}</ArticleHeroTitle>
                 <ArticleMetaLine>
                   {article.locale ? article.locale.toUpperCase() : ''}
-                  {article.publishedAt ? ` · Publicado ${fmtDate(article.publishedAt)}` : ''}
-                  {` · ${getReadingMinutes(article.htmlBody || '')} min`}
+                  {article.publishedAt ? ` · ${t('blog:detail.publishedPrefix')} ${fmtDate(article.publishedAt)}` : ''}
+                  {` · ${getReadingMinutes(article.htmlBody || '')} ${t('blog:card.readingTimeUnit')}`}
                 </ArticleMetaLine>
                 {article.heroImageUrl ? (
                   <ArticleHeroImage>
@@ -486,14 +493,14 @@ export default function BlogArticleView() {
               />
 
               <ShareRow>
-                <ShareLabel>Compártelo</ShareLabel>
+                <ShareLabel>{t('blog:detail.shareTitle')}</ShareLabel>
                 <ShareButtons>
-                  <ShareLink href="#" data-network="x" aria-label="SharemeChat en X" target="_blank" rel="noopener noreferrer">𝕏</ShareLink>
-                  <ShareLink href="#" data-network="meta" aria-label="SharemeChat en Meta" target="_blank" rel="noopener noreferrer">f</ShareLink>
-                  <ShareLink href="#" data-network="instagram" aria-label="SharemeChat en Instagram" target="_blank" rel="noopener noreferrer">IG</ShareLink>
-                  <ShareLink href="#" data-network="tiktok" aria-label="SharemeChat en TikTok" target="_blank" rel="noopener noreferrer">TK</ShareLink>
+                  <ShareLink href="#" data-network="x" aria-label={t('blog:detail.shareAriaX')} target="_blank" rel="noopener noreferrer">𝕏</ShareLink>
+                  <ShareLink href="#" data-network="meta" aria-label={t('blog:detail.shareAriaMeta')} target="_blank" rel="noopener noreferrer">f</ShareLink>
+                  <ShareLink href="#" data-network="instagram" aria-label={t('blog:detail.shareAriaInstagram')} target="_blank" rel="noopener noreferrer">IG</ShareLink>
+                  <ShareLink href="#" data-network="tiktok" aria-label={t('blog:detail.shareAriaTiktok')} target="_blank" rel="noopener noreferrer">TK</ShareLink>
                   <CopyLinkButton type="button" onClick={handleCopyLink}>
-                    {copied ? '✓ Copiado' : 'Copiar enlace'}
+                    {copied ? t('blog:detail.copiedFeedback') : t('blog:detail.copyLink')}
                   </CopyLinkButton>
                 </ShareButtons>
               </ShareRow>
@@ -503,7 +510,7 @@ export default function BlogArticleView() {
                 if (picks.length === 0) return null;
                 return (
                   <RelatedSection>
-                    <RelatedHeading>Quizás te interese</RelatedHeading>
+                    <RelatedHeading>{t('blog:detail.relatedTitle')}</RelatedHeading>
                     <RelatedGrid>
                       {picks.map((r) => (
                         <RelatedCard
@@ -533,8 +540,8 @@ export default function BlogArticleView() {
                 ) : null}
                 {article.disclosureRequired ? (
                   <span>
-                    Contenido elaborado con asistencia de IA.{' '}
-                    <Link to="/legal?tab=ai-disclosure">Más información.</Link>
+                    {t('blog:detail.disclosureText')}{' '}
+                    <Link to="/legal?tab=ai-disclosure">{t('blog:detail.disclosureLinkText')}</Link>
                   </span>
                 ) : null}
               </ArticleFooterMeta>

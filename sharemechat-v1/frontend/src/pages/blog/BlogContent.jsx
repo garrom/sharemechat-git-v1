@@ -1,6 +1,7 @@
 // src/pages/blog/BlogContent.jsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../config/http';
 import { NavButton } from '../../styles/ButtonStyles';
 import {
@@ -78,11 +79,29 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
   const handleRegisterClient = () => { if (onGoRegisterClient) onGoRegisterClient(); };
   const handleRegisterModel = () => { if (onGoRegisterModel) onGoRegisterModel(); };
 
+  // Fase 4B.2 (ADR-022): chrome del blog internacionalizado via namespace
+  // 'blog' (definido en src/i18n/locales/blog/{es,en}.json en 4B.1).
+  // Usamos claves con prefijo explicito t('blog:xxx') para no depender del
+  // argumento del hook; useTranslation() sin namespace funciona igual.
+  const { t } = useTranslation();
+
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState(new Set());
+
+  // Debounce 250 ms entre el keystroke (query) y el filtrado real
+  // (debouncedQuery). Evita recalcular el useMemo de filteredArticles
+  // en cada tecla y reduce trabajo en listados grandes. Sub-pasada 3A
+  // (hardening del buscador). Sin libreria externa: setTimeout + cleanup.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 250);
+    return () => clearTimeout(handle);
+  }, [query]);
 
   const toggleCategory = (cat) => {
     setExpandedCategories((prev) => {
@@ -113,13 +132,13 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
   }, [articles]);
 
   const filteredArticles = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = debouncedQuery.trim().toLowerCase();
     if (!q) return articles;
     return articles.filter((a) =>
       (a.title || '').toLowerCase().includes(q) ||
       (a.brief || '').toLowerCase().includes(q)
     );
-  }, [articles, query]);
+  }, [articles, debouncedQuery]);
 
   useEffect(() => {
     let cancelled = false;
@@ -136,7 +155,7 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
         // HTML del 502 de nginx o stack trace tecnico. Mensaje
         // generico amable, cualquiera que sea la causa del fallo.
         console.error('Blog listing fetch failed:', e);
-        setError('No se pudo cargar el blog. Vuelve a intentarlo en unos minutos.');
+        setError(t('blog:states.errorListing'));
         setArticles([]);
       })
       .finally(() => {
@@ -200,7 +219,7 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
       const jsonLd = {
         '@context': 'https://schema.org',
         '@type': 'Blog',
-        name: 'SharemeChat Journal',
+        name: t('blog:hero.kicker'),
         url: blogUrl,
         description,
         inLanguage: 'es-ES',
@@ -255,14 +274,10 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
       <PageInner>
         <HeroSection>
           <HeroContent>
-            <HeroKicker>SharemeChat Journal</HeroKicker>
-            <HeroTitle>Artículos, guías y notas de producto sobre videochat 1 a 1 en directo.</HeroTitle>
-            <HeroLead>
-              Este espacio se está construyendo como una capa editorial práctica para usuarios y modelos que buscan explicaciones claras, mejor contexto y perspectivas útiles sobre la plataforma.
-            </HeroLead>
-            <HeroTagline>
-              Lecturas concisas, presentación calmada y temas pegados al producto real: privacidad, etiqueta, configuración, pagos, novedades de la plataforma y la evolución de la interacción en directo.
-            </HeroTagline>
+            <HeroKicker>{t('blog:hero.kicker')}</HeroKicker>
+            <HeroTitle>{t('blog:hero.title')}</HeroTitle>
+            <HeroLead>{t('blog:hero.lead')}</HeroLead>
+            <HeroTagline>{t('blog:hero.tagline')}</HeroTagline>
           </HeroContent>
 
           <HeroAside aria-hidden="true">
@@ -290,15 +305,15 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
 
         <ContentGrid>
           <MainColumn>
-            <SectionLabel>Últimos artículos</SectionLabel>
+            <SectionLabel>{t('blog:listing.sectionLabel')}</SectionLabel>
             {loading ? (
-              <EmptyState>Cargando artículos…</EmptyState>
+              <EmptyState>{t('blog:states.loadingListing')}</EmptyState>
             ) : error ? (
               <EmptyState>{error}</EmptyState>
             ) : articles.length === 0 ? (
-              <EmptyState>Aún no hay artículos publicados. Vuelve pronto.</EmptyState>
+              <EmptyState>{t('blog:states.empty')}</EmptyState>
             ) : filteredArticles.length === 0 ? (
-              <EmptyState>No hay artículos que coincidan con la búsqueda.</EmptyState>
+              <EmptyState>{t('blog:states.noResults')}</EmptyState>
             ) : (
               <ArticlesGrid>
                 {filteredArticles.map((a) => (
@@ -317,7 +332,7 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
                     <ArticleMeta>
                       {a.locale ? a.locale.toUpperCase() : ''}
                       {a.publishedAt ? ` · ${fmtDate(a.publishedAt)}` : ''}
-                      {` · ${getReadingMinutes(a.brief || '')} min`}
+                      {` · ${getReadingMinutes(a.brief || '')} ${t('blog:card.readingTimeUnit')}`}
                     </ArticleMeta>
                     {a.brief ? <ArticleExcerpt>{truncate(a.brief, 200)}</ArticleExcerpt> : null}
                   </ArticleCard>
@@ -327,31 +342,30 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
 
             {isPublic && (
               <CTABox>
-                <CTATitle>Explora la plataforma mientras la sección editorial sigue creciendo.</CTATitle>
-                <CTAText>
-                  Si quieres entender de forma más directa cómo funciona la experiencia, puedes entrar como usuario o preparar tu perfil como modelo mientras se publican nuevos artículos.
-                </CTAText>
+                <CTATitle>{t('blog:cta.title')}</CTATitle>
+                <CTAText>{t('blog:cta.text')}</CTAText>
                 <CTAActions>
-                  <NavButton type="button" onClick={handleRegisterClient}>Crear cuenta de usuario</NavButton>
-                  <NavButton type="button" onClick={handleRegisterModel}>Registrarme como modelo</NavButton>
+                  <NavButton type="button" onClick={handleRegisterClient}>{t('blog:cta.registerClient')}</NavButton>
+                  <NavButton type="button" onClick={handleRegisterModel}>{t('blog:cta.registerModel')}</NavButton>
                 </CTAActions>
               </CTABox>
             )}
           </MainColumn>
 
           <Sidebar>
-            <SidebarTitle>Buscar</SidebarTitle>
+            <SidebarTitle>{t('blog:sidebar.searchHeading')}</SidebarTitle>
             <SidebarSearchInput
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Buscar en el blog..."
-              aria-label="Buscar artículos"
+              placeholder={t('blog:sidebar.searchPlaceholder')}
+              aria-label={t('blog:sidebar.searchAriaLabel')}
+              maxLength={100}
             />
 
             {categoriesWithArticles.length > 0 ? (
               <>
-                <SidebarTitle style={{ marginTop: 22 }}>Categorías</SidebarTitle>
+                <SidebarTitle style={{ marginTop: 22 }}>{t('blog:sidebar.categoriesHeading')}</SidebarTitle>
                 <SidebarCategoryList>
                   {categoriesWithArticles.map(({ name, articles: catArticles }) => {
                     const isExpanded = expandedCategories.has(name);
