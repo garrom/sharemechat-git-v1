@@ -787,7 +787,7 @@ const DashboardUserClient = () => {
         onBuy={handleFirstPayment}
         onLogout={handleLogout}
         buyLabel={t('dashboardUserClient.actions.goPremium')}
-        showLocaleSwitcher={false}
+        showLocaleSwitcher={true}
         showBalance={false}
         showAvatar={true}
         videochatDisabled={false}

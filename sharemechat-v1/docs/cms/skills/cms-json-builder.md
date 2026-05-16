@@ -15,7 +15,10 @@ INPUTS QUE LEES
 - Las notas de revisión (normalmente `04_review/review_notes.md`).
 
 OUTPUT QUE ESCRIBES
-Un único fichero (normalmente `05_final/final.json`) con un objeto JSON raíz que cumple el schema del CMS de SharemeChat.
+- `05_final/final_es.json` (siempre, raíz: `parent_slug=null`).
+- `05_final/final_en.json` (solo si la fase 4.5 `cms-translate-en` se ejecutó; `parent_slug = suggested_slug` del `final_es.json`).
+
+Cada fichero es un objeto JSON raíz que cumple el schema del CMS de SharemeChat. Cuando la fase 4.5 se ejecuta, se construyen ambos JSON en el mismo run; cuando se salta ("skip translate-en"), solo `final_es.json`.
 
 CAMPOS OBLIGATORIOS DEL JSON (todos siempre presentes; null o [] si no aplica)
 - schema_version (string, "1.0")
@@ -80,10 +83,30 @@ PROHIBIDO
 - Emitir el JSON parcial o con sintaxis inválida.
 
 CUANDO TERMINES
-Confirma brevemente que `05_final/final.json` está escrito y resume en una línea:
+Confirma brevemente que los ficheros JSON están escritos (`05_final/final_es.json` y, si la fase 4.5 se ejecutó, `05_final/final_en.json`) y resume en una línea por fichero:
 - self_check_passed: true | false
 - nº de sources_used
 - nº de secciones en article_outline
 - longitud de draft_markdown en caracteres
 - nº de risk_notes
-  Si self_check_passed=false, lista los motivos.
+- parent_slug (null para ES; valor del SUGGESTED_SLUG_EN para EN)
+
+Si self_check_passed=false en cualquier JSON, lista los motivos.
+
+## Cambios introducidos por ADR-023
+
+A partir de [ADR-023](../../06-decisions/adr-023-bilingual-editorial-pipeline-es-en.md) (pipeline editorial bilingue ES+EN), esta skill cambia su contrato:
+
+- **Output dual** cuando la fase 4.5 (`cms-translate-en`) se ejecuta: emite `final_es.json` y `final_en.json`. Cuando se salta ("skip translate-en"), emite solo `final_es.json`.
+- **Campo nuevo `parent_slug` (string o null)** en el JSON:
+  - `final_es.json` -> `parent_slug = null` (raíz del grupo).
+  - `final_en.json` -> `parent_slug = suggested_slug` del `final_es.json` (debe coincidir LITERALMENTE).
+- **Regla 14**: el campo `language` de cada JSON coincide con el locale del fichero (`"es"` en `final_es.json`, `"en"` en `final_en.json`).
+- **Regla 15**: el `parent_slug` del `final_en.json` debe coincidir literalmente con el `suggested_slug` del `final_es.json`. La skill lee `SUGGESTED_SLUG_EN` del bloque metadata al final de `04_review/reviewed_en.md` y lo usa como `suggested_slug` del `final_en.json`. Por construcción, `parent_slug` del EN = `suggested_slug` del ES.
+- **Self-check ampliado** para validar coherencia entre las dos versiones (cuando ambas existen):
+  - `sources_used`, `article_outline`, `search_intent` y `target_keywords` son **idénticos** entre los dos JSON (campos compartidos: no se traducen).
+  - `language="es"` en `final_es.json`, `language="en"` en `final_en.json`.
+  - `parent_slug` del EN coincide literalmente con `suggested_slug` del ES.
+  - Cada JSON pasa individualmente las validaciones reforzadas (>=5 sources, >=4 outline, draft >=800 chars, seo_title <=60, meta_description <=160, type=primary, self_check_passed=true).
+
+Estas reglas las inyectó el operador directamente en la skill real (Cowork). Este stub se actualiza para mantener sincronía documental.
