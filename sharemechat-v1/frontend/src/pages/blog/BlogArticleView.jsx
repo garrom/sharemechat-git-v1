@@ -143,7 +143,10 @@ export default function BlogArticleView() {
   // 'blog' (definido en src/i18n/locales/blog/{es,en}.json en 4B.1).
   // Usamos claves con prefijo explicito t('blog:xxx') para no depender del
   // argumento del hook.
-  const { t } = useTranslation();
+  // Fase 4B.4 (ADR-022): tambien extraemos la instancia i18n para pasar el
+  // locale activo al backend como ?locale=<lang> en los dos fetches del
+  // componente (detalle por slug + listado para related cards).
+  const { t, i18n } = useTranslation();
 
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -173,7 +176,13 @@ export default function BlogArticleView() {
     setError('');
     setArticle(null);
     setRetracted(false);
-    apiFetch(`/public/content/articles/${encodeURIComponent(slug)}`)
+    // Fase 4B.4 (ADR-022): el detalle se resuelve por (slug, locale). El
+    // backend devuelve 404 si el slug no existe en ese locale, lo cual el
+    // componente ya maneja mostrando t('blog:states.notFound'). El locale
+    // se captura del closure del render (basename estatico de 4B.3); no
+    // se incluye i18n.language en deps.
+    const locale = (i18n && i18n.language) ? i18n.language : 'es';
+    apiFetch(`/public/content/articles/${encodeURIComponent(slug)}?locale=${encodeURIComponent(locale)}`)
       .then((data) => {
         if (cancelled) return;
         setArticle(data);
@@ -196,6 +205,7 @@ export default function BlogArticleView() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   // Fetch del listado completo para calcular related en cliente.
@@ -208,7 +218,13 @@ export default function BlogArticleView() {
       return () => {};
     }
     setRelatedArticles([]);
-    apiFetch('/public/content/articles?size=50')
+    // Fase 4B.4 (ADR-022): related se calcula sobre el listado del mismo
+    // locale del articulo actual. Si el listado en ese locale esta vacio
+    // (ej. EN sin contenido aun), related queda vacio en cliente y el
+    // bloque "Quizas te interese" no se pinta. Mismo razonamiento que el
+    // fetch del detalle: locale capturado en closure, no en deps.
+    const locale = (i18n && i18n.language) ? i18n.language : 'es';
+    apiFetch(`/public/content/articles?size=50&locale=${encodeURIComponent(locale)}`)
       .then((data) => {
         if (cancelled) return;
         const items = Array.isArray(data?.items) ? data.items : [];
@@ -219,6 +235,7 @@ export default function BlogArticleView() {
         setRelatedArticles([]);
       });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug]);
 
   const handleCopyLink = async () => {
@@ -451,7 +468,7 @@ export default function BlogArticleView() {
         onGoBlog={goBlog}
         onBuy={goLogin}
         onLogin={goLogin}
-        showLocaleSwitcher={false}
+        showLocaleSwitcher={true}
         showBottomNav={true}
       />
 

@@ -3,6 +3,18 @@ package com.sharemechat.content.entity;
 import jakarta.persistence.*;
 import java.time.Instant;
 
+/**
+ * Snapshot del articulo logico en una transicion DRAFT->IN_REVIEW
+ * (ADR-025).
+ *
+ * Modelo bilingue: una fila aqui representa la version N del articulo
+ * completo (con TODOS sus locales); el contenido por idioma vive en
+ * {@link ContentArticleTranslationVersion} con N filas por version
+ * (una por locale).
+ *
+ * Esta tabla pierde respecto al modelo previo los campos body_s3_key
+ * y body_content_hash; ahora son per-locale y viven en la tabla hija.
+ */
 @Entity
 @Table(name = "content_article_versions")
 public class ContentArticleVersion {
@@ -17,16 +29,10 @@ public class ContentArticleVersion {
     @Column(name = "version_number", nullable = false)
     private Integer versionNumber;
 
-    @Column(name = "body_s3_key", nullable = false, length = 500)
-    private String bodyS3Key;
-
-    @Column(name = "body_content_hash", nullable = false, length = 64)
-    private String bodyContentHash;
-
     @Column(name = "source_run_id")
     private Long sourceRunId;
 
-    @Column(name = "created_by_user_id")
+    @Column(name = "created_by_user_id", nullable = false)
     private Long createdByUserId;
 
     @Column(name = "created_at", insertable = false, updatable = false)
@@ -40,12 +46,6 @@ public class ContentArticleVersion {
 
     public Integer getVersionNumber() { return versionNumber; }
     public void setVersionNumber(Integer versionNumber) { this.versionNumber = versionNumber; }
-
-    public String getBodyS3Key() { return bodyS3Key; }
-    public void setBodyS3Key(String bodyS3Key) { this.bodyS3Key = bodyS3Key; }
-
-    public String getBodyContentHash() { return bodyContentHash; }
-    public void setBodyContentHash(String bodyContentHash) { this.bodyContentHash = bodyContentHash; }
 
     public Long getSourceRunId() { return sourceRunId; }
     public void setSourceRunId(Long sourceRunId) { this.sourceRunId = sourceRunId; }

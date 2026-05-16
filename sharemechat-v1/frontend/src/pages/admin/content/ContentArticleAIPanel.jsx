@@ -50,10 +50,16 @@ const fmtDate = (v) => {
 
 const TERMINAL_STATES_FOR_APPLY = new Set(['PUBLISHED', 'RETRACTED']);
 
-const ContentArticleAIPanel = ({ articleId, articleState, onAiDraftApplied }) => {
+const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDraftApplied }) => {
+  // ADR-024 (4C.3): flujo bilingue dentro del editor del articulo ES.
+  // Si el articulo es raiz ES, se muestran 2 textareas (JSON ES + JSON EN).
+  // Si el articulo es EN o cualquier otro locale, solo el textarea actual.
+  const isEsRoot = articleLocale === 'es';
+
   const [runs, setRuns] = useState([]);
   const [activeRun, setActiveRun] = useState(null);
   const [rawOutput, setRawOutput] = useState('');
+  const [rawOutputEn, setRawOutputEn] = useState('');
   const [modelId, setModelId] = useState('');
   const [modelVersion, setModelVersion] = useState('');
 
@@ -200,30 +206,78 @@ const ContentArticleAIPanel = ({ articleId, articleState, onAiDraftApplied }) =>
     setSubmitting(true);
     setError('');
     setOkMessage('');
+
+    // ADR-024 (4C.3): si el articulo es raiz ES y el operador pego ademas un
+    // JSON EN, usamos el endpoint bilingue atomico. En cualquier otro caso
+    // (articulo EN, o textarea EN vacio) usamos el endpoint monolingue
+    // existente (ADR-014). La eleccion se decide en cliente y se materializa
+    // en el path del POST.
+    const hasEn = isEsRoot && rawOutputEn.trim().length > 0;
+
     try {
-      const updated = await apiFetch(
-        `/admin/content/articles/${activeRun.articleId}/runs/${activeRun.id}/output`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            rawOutput,
-            modelId: modelId.trim(),
-            modelVersion: modelVersion.trim() || null,
-          }),
+      if (hasEn) {
+        // === RAMA BILINGUE ===
+        const result = await apiFetch(
+          `/admin/content/articles/${activeRun.articleId}/runs/${activeRun.id}/output-bilingual`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rawJsonEs: rawOutput,
+              rawJsonEn: rawOutputEn,
+              modelId: modelId.trim(),
+              modelVersion: modelVersion.trim() || null,
+            }),
+          }
+        );
+        const updatedRun = result?.runDetail;
+        const child = result?.childArticle;
+        if (updatedRun) {
+          setActiveRun(updatedRun);
         }
-      );
-      setActiveRun(updated);
-      if (updated?.status === 'VALIDATED') {
-        setOkMessage('Output validado y guardado.');
-        setRawOutput('');
-      } else if (updated?.status === 'REJECTED') {
-        setOkMessage('');
-        setError(`Output rechazado por validación (${updated?.validationErrors?.length || 0} errores).`);
+        if (result?.bilingual && child) {
+          setOkMessage(
+            `Operación bilingüe completada. Artículo ES actualizado. `
+              + `Artículo hijo EN creado: id=${child.id} slug=${child.slug}.`
+          );
+          setRawOutput('');
+          setRawOutputEn('');
+          // Refresca el cuerpo y la metadata del articulo ES en el editor
+          if (typeof onAiDraftApplied === 'function') {
+            onAiDraftApplied();
+          }
+        } else if (updatedRun?.status === 'REJECTED') {
+          setError(`Output rechazado por validación (${updatedRun?.validationErrors?.length || 0} errores).`);
+        } else {
+          setOkMessage(`Run en estado ${updatedRun?.status || 'desconocido'}.`);
+        }
+        reload();
       } else {
-        setOkMessage(`Run en estado ${updated?.status}.`);
+        // === RAMA MONOLINGUE (ADR-014, intacta) ===
+        const updated = await apiFetch(
+          `/admin/content/articles/${activeRun.articleId}/runs/${activeRun.id}/output`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              rawOutput,
+              modelId: modelId.trim(),
+              modelVersion: modelVersion.trim() || null,
+            }),
+          }
+        );
+        setActiveRun(updated);
+        if (updated?.status === 'VALIDATED') {
+          setOkMessage('Output validado y guardado.');
+          setRawOutput('');
+        } else if (updated?.status === 'REJECTED') {
+          setOkMessage('');
+          setError(`Output rechazado por validación (${updated?.validationErrors?.length || 0} errores).`);
+        } else {
+          setOkMessage(`Run en estado ${updated?.status}.`);
+        }
+        reload();
       }
-      reload();
     } catch (e) {
       setError(e?.message || 'No se pudo enviar el output');
     } finally {
@@ -372,11 +426,40 @@ const ContentArticleAIPanel = ({ articleId, articleState, onAiDraftApplied }) =>
                       onChange={(e) => setModelVersion(e.target.value)}
                     />
                   </InlineRow>
+                  {isEsRoot ? (
+                    <HelperText>
+                      JSON ES (final_es.json) — obligatorio
+                    </HelperText>
+                  ) : null}
                   <RawOutputArea
                     value={rawOutput}
                     onChange={(e) => setRawOutput(e.target.value)}
-                    placeholder='Pega aquí el JSON crudo devuelto por Claude Cowork...'
+                    placeholder={
+                      isEsRoot
+                        ? 'Pega aquí final_es.json (obligatorio)...'
+                        : 'Pega aquí el JSON crudo devuelto por Claude Cowork...'
+                    }
                   />
+
+                  {/* ADR-024 (4C.3): solo en articulos raiz ES se muestra el
+                      segundo textarea para el JSON EN. Si se rellena, dispara
+                      el flujo bilingue atomico (creacion del articulo hijo EN
+                      en la misma operacion). Si se deja vacio, comportamiento
+                      monolingue de ADR-014. */}
+                  {isEsRoot ? (
+                    <>
+                      <HelperText style={{ marginTop: 12 }}>
+                        JSON EN (final_en.json) — opcional. Déjalo vacío si el
+                        run fue monolingüe (sin traducción EN).
+                      </HelperText>
+                      <RawOutputArea
+                        value={rawOutputEn}
+                        onChange={(e) => setRawOutputEn(e.target.value)}
+                        placeholder='Pega aquí final_en.json (opcional). Si lo pegas, se creará automáticamente un artículo hijo EN con parent_article_id apuntando a este.'
+                      />
+                    </>
+                  ) : null}
+
                   <ToolbarRow>
                     <StyledButton
                       type="button"
@@ -386,7 +469,9 @@ const ContentArticleAIPanel = ({ articleId, articleState, onAiDraftApplied }) =>
                       {submitting ? 'Validando...' : 'Validar y guardar'}
                     </StyledButton>
                     <HelperText>
-                      El backend valida el JSON y guarda raw + validated en S3.
+                      {isEsRoot && rawOutputEn.trim().length > 0
+                        ? 'Operación bilingüe atómica: valida ambos JSON, actualiza el cuerpo del artículo ES y crea el artículo hijo EN.'
+                        : 'El backend valida el JSON y guarda raw + validated en S3.'}
                     </HelperText>
                   </ToolbarRow>
                 </>

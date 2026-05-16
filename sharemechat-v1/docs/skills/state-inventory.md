@@ -8,7 +8,17 @@ El snapshot es la fuente de verdad estructurada que después se usa para detecta
 
 ## Versión
 
-Esta skill es `state-inventory@v1.1`. Cambios respecto a v1:
+Esta skill es `state-inventory@v1.2`. Cambios respecto a v1.1:
+
+- Tras introducción de Flyway por [ADR-025](../06-decisions/adr-025-flyway-introduction-and-cms-v2-schema.md), la fuente de verdad de migraciones aplicadas es BD (`flyway_schema_history`), no carpeta del repo.
+- Carpeta de migraciones canónica pasa de `src/main/resources/db/manual/` a `src/main/resources/db/migration/`. Los ficheros pre-Flyway viven archivados en `docs/_archive/db-manual-pre-flyway/` y NO se inventarían.
+- Renombra `repo.schema_versioning.manual_migrations_dir` → `repo.schema_versioning.migrations_dir`.
+- Renombra `repo.schema_versioning.last_manual_migration` → `repo.schema_versioning.last_repo_migration` (último `V*.sql` ordenado lexicográficamente en la carpeta del repo).
+- Añade `repo.schema_versioning.last_applied_flyway_version`: máximo `version` con `success=TRUE` en la tabla `flyway_schema_history` de BD. `null` si la tabla no existe.
+- Cambia la semántica de `flyway_runtime_present`: post-ADR-025 es `true` por defecto (porque Flyway está adoptado); `false` solo en entornos pre-Flyway que no han sido baselined todavía.
+- Bump `metadata.schema_version` de `2` a `3`.
+
+Cambios respecto a v1:
 
 - Itera **todas** las distribuciones CloudFront del entorno (no solo una). Lee la lista del mapping local.
 - Inventaría **todos** los buckets S3 del entorno.
@@ -84,16 +94,16 @@ Un fichero YAML válido en:
 
 docs/_snapshots/state-<environment>-<YYYY-MM-DD-HHMM>.yaml
 
-El fichero sigue el esquema v2 documentado más abajo.
+El fichero sigue el esquema v3 documentado más abajo.
 
-## Esquema del snapshot v2
+## Esquema del snapshot v3
 
 ```yaml
 metadata:
-  schema_version: 2
+  schema_version: 3
   environment: <test|audit|pro>
   generated_at: <ISO 8601 UTC>
-  generated_by: state-inventory@v1.1
+  generated_by: state-inventory@v1.2
   notes: <texto libre opcional>
 
 repo:
@@ -110,8 +120,12 @@ repo:
     expected_filename: <string>
   schema_versioning:
     flyway_runtime_present: <bool>            # ¿hay tabla flyway_schema_history en la BD?
-    manual_migrations_dir: <string>           # carpeta donde se versiona el SQL manual
-    last_manual_migration: <string>           # último fichero aplicado según convención
+                                              # post-ADR-025: true por defecto en entornos baselined;
+                                              # false solo en entornos pre-Flyway no baselined todavia.
+    migrations_dir: <string>                  # carpeta canonica del repo: src/main/resources/db/migration/
+    last_repo_migration: <string>             # ultimo V*.sql ordenado lexicograficamente en la carpeta del repo
+    last_applied_flyway_version: <string|null> # max(version) con success=TRUE en flyway_schema_history;
+                                              # null si la tabla no existe (entorno pre-baseline)
   adrs:
     - id: <ADR-NNN>
       file: <nombre fichero>
@@ -200,9 +214,9 @@ Trabajar desde la raíz del repo.
 - `git log -1 --format='%h|%cI'` → `repo.head_commit` y `repo.head_commit_date`.
 - `git log --since="24 hours ago" --format='%h|%s|%cI'` → `repo.commits_last_24h`.
 - Leer `pom.xml`. Extraer `<artifactId>` y `<version>`. Construir `expected_filename`.
-- `ls src/main/resources/db/manual/V*.sql | sort` → `repo.schema_versioning.last_manual_migration` (último ordenado por nombre).
-- Fijar `repo.schema_versioning.manual_migrations_dir = "src/main/resources/db/manual/"`.
-- (`flyway_runtime_present` se rellena en el Paso 5 al consultar BD.)
+- `ls src/main/resources/db/migration/V*.sql | sort` → `repo.schema_versioning.last_repo_migration` (último fichero ordenado lexicográficamente; tras ADR-025 la carpeta canónica es `db/migration/`, no `db/manual/`).
+- Fijar `repo.schema_versioning.migrations_dir = "src/main/resources/db/migration/"`.
+- (`flyway_runtime_present` y `last_applied_flyway_version` se rellenan en el Paso 6 al consultar BD.)
 - Listar `docs/06-decisions/adr-*.md`. Para cada uno: extraer ID, leer sección `## Estado`, escribir en `adrs`.
 
 ### Paso 3 — Inventariar CloudFront (todas las distribuciones del entorno)
@@ -251,7 +265,8 @@ Validar conectividad: `mysqlsh --sql --host 127.0.0.1 --port 3307 --user admin -
 Queries contra `rds_schema_name`:
 
 - `SELECT VERSION();` → `rds_database.mysql_version`.
-- `SHOW TABLES LIKE 'flyway_schema_history';` → si devuelve fila, `repo.schema_versioning.flyway_runtime_present: true`; si no, `false`.
+- `SHOW TABLES LIKE 'flyway_schema_history';` → si devuelve fila, `repo.schema_versioning.flyway_runtime_present: true`; si no, `false`. **Semántica post-ADR-025**: el valor esperado en TEST/AUDIT/PRO es `true` (Flyway está adoptado). Encontrar `false` indica que el entorno no ha pasado por el procedimiento `flyway baseline` del runbook `cms-v2-flyway-introduction.md`; reportar en `metadata.notes`.
+- Si `flyway_runtime_present: true`, ejecutar `SELECT MAX(version) AS v FROM flyway_schema_history WHERE success = TRUE;` → `repo.schema_versioning.last_applied_flyway_version`. Si la consulta devuelve `NULL` (tabla vacía), guardar `null` con nota: "flyway_schema_history existe pero está vacía". Si `flyway_runtime_present: false`, dejar `last_applied_flyway_version: null` sin nota adicional (esperado en entorno pre-baseline).
 - CHECK constraints de `content_articles.state`:
   ```sql
   SELECT CHECK_CLAUSE FROM INFORMATION_SCHEMA.CHECK_CONSTRAINTS
@@ -321,6 +336,11 @@ Si `aws s3api get-bucket-location --bucket <name>` falla con `NoSuchBucket`, reg
 - El fichero `~/.sharemechat/state-mapping.yaml` NUNCA debe versionarse en git.
 - Los snapshots SÍ se versionan en git (no contienen IDs sensibles tras el saneado).
 
-## Compatibilidad con esquema v1
+## Compatibilidad con esquemas v1 y v2
 
-Los snapshots con `metadata.schema_version: 1` son compatibles solo de lectura. Cualquier nuevo snapshot generado con esta skill emite v2. La skill `state-diff` debe ser capaz de leer ambos.
+Los snapshots con `metadata.schema_version: 1` o `metadata.schema_version: 2` son compatibles solo de lectura. Cualquier nuevo snapshot generado con esta skill emite v3. La skill `state-diff` debe ser capaz de leer los tres.
+
+Diferencias clave que afectan al lector entre versiones:
+
+- v1 → v2: `rds_database.flyway_table_present` (bool plano) se sustituye por el objeto `repo.schema_versioning` con `flyway_runtime_present`, `manual_migrations_dir` y `last_manual_migration`.
+- v2 → v3: dentro de `repo.schema_versioning`, los campos `manual_migrations_dir` y `last_manual_migration` se renombran a `migrations_dir` y `last_repo_migration` (ahora apuntan a `src/main/resources/db/migration/`); se añade `last_applied_flyway_version` leído de BD. Snapshots v2 con `manual_migrations_dir: "src/main/resources/db/manual/"` y `last_manual_migration: "V20260508__..."` siguen siendo lectura válida pero reflejan estado pre-ADR-025; el lector debe entender esto como contexto histórico, no como divergencia real.

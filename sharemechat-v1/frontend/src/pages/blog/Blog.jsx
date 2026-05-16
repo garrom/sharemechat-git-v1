@@ -43,7 +43,7 @@ export default function Blog() {
         onGoBlog={() => handleTabClick('blog')}
         onBuy={goLogin}
         onLogin={goLogin}
-        showLocaleSwitcher={false}
+        showLocaleSwitcher={true}
         showBottomNav={true}
       />
 

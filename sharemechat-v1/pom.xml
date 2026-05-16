@@ -56,6 +56,15 @@
 			<version>8.4.0</version>
 			<scope>runtime</scope>
 		</dependency>
+		<!--FLYWAY (ADR-025) - migracion de schema versionada -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-mysql</artifactId>
+		</dependency>
 		<!--JSON -->
 		<dependency>
 			<groupId>org.json</groupId>

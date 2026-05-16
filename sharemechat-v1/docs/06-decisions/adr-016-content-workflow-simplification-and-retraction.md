@@ -71,7 +71,9 @@ Comportamiento público:
 
 Justificación de `410 Gone`: Google interpreta `410` como señal fuerte de eliminación intencionada y desindexa más rápido que con `404`. El tombstone en BD permite auditoría posterior y, si fuera necesario, reactivación vía operación manual sobre BD (no se expone transición `RETRACTED → DRAFT` en este frente).
 
-### D4 — Migración Flyway consolidada
+### D4 — Migración consolidada
+
+> Nota terminológica (2026-05-16, [ADR-025](./adr-025-flyway-introduction-and-cms-v2-schema.md)): este apartado hablaba originalmente de "migración Flyway". En el momento de su redacción el proyecto no tenía Flyway: la palabra reflejaba la convención visual de naming `V<YYYYMMDD>__...sql` heredada de Flyway, no la herramienta. La aplicación real de esta migración fue manual con `mysql` CLI sobre el bastión RDS. ADR-025 introduce Flyway de verdad; esta migración queda archivada en `docs/_archive/db-manual-pre-flyway/`.
 
 Una única migración `V<YYYYMMDD>__content_workflow_simplification.sql` aplica de forma atómica:
 
@@ -88,12 +90,12 @@ Una única migración `V<YYYYMMDD>__content_workflow_simplification.sql` aplica 
 3. **DELETE de artículos no publicados** en `content_articles`:
     - Se borran todas las filas con `state IN ('IDEA', 'OUTLINE_READY', 'DRAFT_GENERATED', 'IN_REVIEW', 'APPROVED')`. Decisión del owner (2026-05-08): los artículos no publicados son trabajo en curso descartable; no merece la pena mapearlos a la nueva enum.
     - Borrado en cascada de filas relacionadas: `content_article_versions`, `content_review_events`, runs IA en `content_generation_runs` asociados a esos `article_id` (verificar FKs y orden de borrado en la migración).
-    - Borrado de objetos S3 asociados (v{n}.md de los artículos eliminados): **NO se hace en la migración Flyway**. Se documenta como tarea operativa manual posterior, ejecutable con AWS CLI sobre el bucket de cada entorno. El coste de almacenamiento es despreciable y bloquear la migración por una operación de S3 es mal diseño.
+    - Borrado de objetos S3 asociados (v{n}.md de los artículos eliminados): **NO se hace en la migración SQL**. Se documenta como tarea operativa manual posterior, ejecutable con AWS CLI sobre el bucket de cada entorno. El coste de almacenamiento es despreciable y bloquear la migración por una operación de S3 es mal diseño.
     - `PUBLISHED`, `RETRACTED`, `SCHEDULED`: sin cambio.
 
 4. **Sin migración de `content_review_events` por event_type**: las filas que sobrevivan al DELETE (las asociadas a artículos `PUBLISHED`) se mantienen tal cual para auditoría.
 
-La migración es idempotente para entornos donde ya esté aplicada (Flyway lo gestiona) pero **no es reversible**. El rollback requiere restore de BD. Antes de aplicar en TEST, hacer dump SQL de las tablas `content_*` por si fuera necesario revertir.
+La migración **no es reversible**. El rollback requiere restore de BD. Antes de aplicar en TEST, hacer dump SQL de las tablas `content_*` por si fuera necesario revertir. (En el momento de redacción el proyecto no tenía tooling de migración: la aplicación era manual y la idempotencia entre re-ejecuciones quedaba al cuidado del operador. [ADR-025](./adr-025-flyway-introduction-and-cms-v2-schema.md) cierra esa deuda.)
 
 ### D5 — `SCHEDULED` se difiere sin fecha
 
@@ -155,7 +157,7 @@ Aprovechando que este frente toca `SecurityConfig` para ajustar permisos del wor
 
 Una vez aprobado este ADR, el frente se implementa como **Frente 3 — Workflow simplificado y retracción operativa**, con el siguiente alcance:
 
-1. Migración Flyway `V<YYYYMMDD>__content_workflow_simplification.sql` (D4).
+1. Migración `V<YYYYMMDD>__content_workflow_simplification.sql` (D4). Aplicada manualmente en TEST/AUDIT en su momento; archivada en `docs/_archive/db-manual-pre-flyway/` tras ADR-025.
 2. Backend:
     - `ContentConstants.java`: nuevos estados y events.
     - `ContentArticleService.java`: reescritura de `EDITABLE_STATES`, `TERMINAL_STATES`, `PHASE2_REACHABLE_STATES`, `ALLOWED_TRANSITIONS`. Eliminación de `SEGREGATED_TRANSITIONS`.

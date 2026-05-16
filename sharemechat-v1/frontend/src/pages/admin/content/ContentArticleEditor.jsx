@@ -541,6 +541,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         <ContentArticleAIPanel
           articleId={currentId}
           articleState={state}
+          articleLocale={meta.locale}
           onAiDraftApplied={() => {
             setOkMessage('Draft IA aplicado al artículo. Cuerpo recargado.');
             loadAll(currentId);

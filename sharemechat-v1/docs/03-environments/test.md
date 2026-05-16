@@ -203,11 +203,11 @@ Backend:
   - capa nginx: dos `location = /sitemap.xml` y `location = /robots.txt` en `/etc/nginx/conf.d/api.test.sharemechat.com.conf` con `proxy_pass http://localhost:8080` y `proxy_hide_header` para los headers de seguridad emitidos por Spring Boot
   - detalle de la reaplicación coordinada en [incident-notes.md](../04-operations/incident-notes.md) sección "Routing /sitemap.xml y /robots.txt en CloudFront TEST"
 - runs IA tipos soportados: `FULL_ARTICLE_ORCHESTRATED` (flujo principal recomendado, validación reforzada, pipeline delegado en skills personales `cms-research-seo` → `cms-draft-writer` → `cms-editorial-polish` → `cms-brand-legal-review` → `cms-json-builder`, con `sharemechat-voice` transversal), `RESEARCH`, `OUTLINE`, `DRAFT`, `REVIEW`, `SEO` (todos como herramientas avanzadas). El run type antiguo `FULL_ARTICLE` (ADR-013) ya no se acepta; los runs históricos con ese tipo se conservan como traza auditable
-- tablas operativas: `content_articles`, `content_article_versions`, `content_review_events`, `content_generation_runs`
-- migraciones Flyway:
-  - `V20260501__content_phase1_schema.sql` — schema inicial CMS
-  - `V20260508__content_workflow_simplification.sql` (ADR-016) — borra artículos en estados obsoletos (IDEA, OUTLINE_READY, DRAFT_GENERATED, IN_REVIEW, APPROVED) en cascada con sus filas dependientes; reescribe `chk_content_articles_state` y `chk_content_review_events_type`; cambia el `DEFAULT` de `state` a `'DRAFT'`. Los objetos S3 (draft.md, v{n}.md, runs/...) NO se borran; quedan huérfanos para limpieza operativa posterior con AWS CLI
-- dependencias Maven añadidas en Fase 4A: `flexmark-all` (Markdown→HTML) + `jsoup` (sanitización allowlist)
+- tablas operativas (modelo bilingüe post-[ADR-025](../06-decisions/adr-025-flyway-introduction-and-cms-v2-schema.md)): `content_articles`, `content_article_translations`, `content_article_versions`, `content_article_translation_versions`, `content_review_events`, `content_generation_runs`
+- migraciones de schema CMS:
+  - schema vivo en `src/main/resources/db/migration/V2__cms_v2_schema.sql` tras [ADR-025](../06-decisions/adr-025-flyway-introduction-and-cms-v2-schema.md), aplicado por Flyway una vez ejecutado el baseline manual (ver [runbook](../04-operations/runbooks/cms-v2-flyway-introduction.md))
+  - ficheros pre-Flyway archivados en `docs/_archive/db-manual-pre-flyway/` (`V20260501__content_phase1_schema.sql` schema inicial y `V20260508__content_workflow_simplification.sql` [ADR-016](../06-decisions/adr-016-content-workflow-simplification-and-retraction.md) simplificación a cuatro estados). Estos ficheros **no se aplican** sobre ningún entorno actual; son referencia histórica
+- dependencias Maven añadidas en Fase 4A: `flexmark-all` (Markdown→HTML) + `jsoup` (sanitización allowlist). [ADR-025](../06-decisions/adr-025-flyway-introduction-and-cms-v2-schema.md) añade `flyway-core` y `flyway-mysql` para gestión de schema versionada
 
 Versionado:
 

@@ -83,7 +83,10 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
   // 'blog' (definido en src/i18n/locales/blog/{es,en}.json en 4B.1).
   // Usamos claves con prefijo explicito t('blog:xxx') para no depender del
   // argumento del hook; useTranslation() sin namespace funciona igual.
-  const { t } = useTranslation();
+  // Fase 4B.4 (ADR-022): tambien extraemos la instancia i18n para pasar el
+  // locale activo al backend como ?locale=<lang> en cada llamada al CMS
+  // publico. El backend (4A) filtra articulos por (locale, status).
+  const { t, i18n } = useTranslation();
 
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -144,7 +147,13 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
     let cancelled = false;
     setLoading(true);
     setError('');
-    apiFetch('/public/content/articles?size=50')
+    // Fase 4B.4 (ADR-022): pasamos el locale activo al backend. Se captura
+    // dentro del closure del primer render. Bajo el basename estatico de
+    // 4B.3, un cambio de locale solo ocurre por navegacion completa
+    // (page reload), que desmonta y remonta este componente. Por eso
+    // i18n.language NO se incluye en las deps del useEffect.
+    const locale = (i18n && i18n.language) ? i18n.language : 'es';
+    apiFetch(`/public/content/articles?size=50&locale=${encodeURIComponent(locale)}`)
       .then((data) => {
         if (cancelled) return;
         setArticles(Array.isArray(data?.items) ? data.items : []);
@@ -162,6 +171,7 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // SEO del listado /blog. Se dispara con cada cambio de articles (carga

@@ -143,13 +143,24 @@ public class ContentPromptBuilder {
     }
 
     /**
-     * Pipeline orquestado para FULL_ARTICLE_ORCHESTRATED (ADR-014).
+     * Pipeline orquestado para FULL_ARTICLE_ORCHESTRATED (ADR-014 + ADR-023).
      *
-     * El backend NO ejecuta las skills: solo nombra las skills personales que
-     * Claude Cowork debe invocar en orden y declara la estructura del
-     * directorio de trabajo en disco donde Cowork escribe los artefactos
-     * intermedios. La salida del run es el contenido literal de
-     * `05_final/final.json`.
+     * Pipeline bilingue ES+EN: incluye fase 4.5 (cms-translate-en) entre la
+     * fase 4 (cms-brand-legal-review) y la fase 5 (cms-json-builder). La 4.5
+     * se ejecuta POR DEFECTO; opt-out con la marca textual "skip translate-en"
+     * en el mensaje al lanzar el pipeline en Cowork.
+     *
+     * El backend NO ejecuta las skills: solo nombra las skills personales
+     * que Claude Cowork debe invocar en orden, declara la estructura del
+     * directorio de trabajo en disco y describe el output esperado. La
+     * orquestacion concreta de las fases la encapsula la skill
+     * `cms-orchestrator` en Cowork (creada por el operador).
+     *
+     * Output del run: REPORTE ESTRUCTURADO en texto plano (no JSON). Los
+     * ficheros final_es.json y final_en.json (si la 4.5 se ejecuto) quedan
+     * en disco bajo 05_final/ del working_dir. El operador los abre y los
+     * pega manualmente en el admin del CMS uno cada vez, sin cambios en el
+     * endpoint admin.
      *
      * Las skills referenciadas estan versionadas (en stubs) en
      * `docs/cms/skills/` del repositorio.
@@ -158,11 +169,19 @@ public class ContentPromptBuilder {
                                                        ContentAIProvider.PromptContext ctx) {
         sb.append("<full_article_orchestrated_pipeline>\n");
         sb.append("  Este run es FULL_ARTICLE_ORCHESTRATED. Actuas como orquestador\n");
-        sb.append("  editorial: invocas en orden las seis skills personales listadas mas\n");
-        sb.append("  abajo, dejas que cada una escriba sus artefactos en disco bajo el\n");
-        sb.append("  working_dir indicado y, al terminar, emites como output exclusivamente\n");
-        sb.append("  el contenido literal de 05_final/final.json (un unico objeto JSON,\n");
-        sb.append("  sin texto fuera de el).\n");
+        sb.append("  editorial: invocas en orden las skills personales listadas mas abajo,\n");
+        sb.append("  dejas que cada una escriba sus artefactos en disco bajo el working_dir\n");
+        sb.append("  indicado y, al terminar, emites como output un REPORTE ESTRUCTURADO\n");
+        sb.append("  en texto plano (no JSON) con los datos clave del run. Los ficheros\n");
+        sb.append("  final_es.json y final_en.json quedan en disco bajo 05_final/; el\n");
+        sb.append("  operador los abre y los pega manualmente en el admin del CMS, uno\n");
+        sb.append("  cada vez.\n");
+        sb.append("\n");
+        sb.append("  Pipeline bilingue ES+EN (ADR-023): incluye fase 4.5 (cms-translate-en)\n");
+        sb.append("  entre la fase 4 y la 5. La 4.5 se ejecuta POR DEFECTO. Opt-out: si el\n");
+        sb.append("  operador incluye la cadena literal \"skip translate-en\" en su mensaje\n");
+        sb.append("  al lanzar el pipeline, la 4.5 se salta y la 5 emite solo final_es.json\n");
+        sb.append("  (equivalente al pipeline monolingue de ADR-014).\n");
         sb.append("\n");
         sb.append("  Si tus skills personales contienen referencias historicas a un bloque\n");
         sb.append("  <full_article_pipeline> con seis fases inline (ADR-013, ya superseded),\n");
@@ -173,14 +192,24 @@ public class ContentPromptBuilder {
         sb.append("    Orden estricto. No avances a la siguiente skill sin haber escrito\n");
         sb.append("    los artefactos esperados de la actual.\n");
         sb.append("\n");
-        sb.append("    1. cms-research-seo   -> 01_research/  (research.json, sources.md,\n");
-        sb.append("                                            intent.json, outline.json)\n");
-        sb.append("    2. cms-draft-writer   -> 02_draft/     (draft.md)\n");
-        sb.append("    3. cms-editorial-polish -> 03_polish/  (draft.polished.md)\n");
-        sb.append("    4. cms-brand-legal-review -> 04_review/ (risk_notes.json,\n");
-        sb.append("                                             fact_check_notes.json,\n");
-        sb.append("                                             draft.reviewed.md)\n");
-        sb.append("    5. cms-json-builder   -> 05_final/     (final.json)\n");
+        sb.append("    1.   cms-research-seo       -> 01_research/  (research.json,\n");
+        sb.append("                                                  sources.md, intent.json,\n");
+        sb.append("                                                  outline.json)\n");
+        sb.append("    2.   cms-draft-writer       -> 02_draft/     (draft.md)\n");
+        sb.append("    3.   cms-editorial-polish   -> 03_polish/    (draft.polished.md)\n");
+        sb.append("    4.   cms-brand-legal-review -> 04_review/    (risk_notes.json,\n");
+        sb.append("                                                  fact_check_notes.json,\n");
+        sb.append("                                                  draft.reviewed.md)\n");
+        sb.append("    4.5. cms-translate-en       -> 04_review/    (reviewed_en.md con\n");
+        sb.append("                                                  bloque metadata al final:\n");
+        sb.append("                                                  SUGGESTED_SLUG_EN,\n");
+        sb.append("                                                  SUGGESTED_SEO_TITLE_EN,\n");
+        sb.append("                                                  SUGGESTED_META_DESC_EN).\n");
+        sb.append("                                                  Se ejecuta POR DEFECTO\n");
+        sb.append("                                                  salvo \"skip translate-en\".\n");
+        sb.append("    5.   cms-json-builder       -> 05_final/     (final_es.json y, si la\n");
+        sb.append("                                                  fase 4.5 se ejecuto,\n");
+        sb.append("                                                  final_en.json)\n");
         sb.append("\n");
         sb.append("    sharemechat-voice se aplica de forma transversal en cada paso\n");
         sb.append("    (no produce artefactos propios; impone tono, prohibiciones de\n");
@@ -198,7 +227,10 @@ public class ContentPromptBuilder {
         sb.append("      04_review/     (cms-brand-legal-review)\n");
         sb.append("      05_final/      (cms-json-builder)\n");
         sb.append("    Todos los artefactos intermedios (json, md) se escriben en disco;\n");
-        sb.append("    no los embebas en la respuesta final. Solo se emite final.json.\n");
+        sb.append("    no los embebas en la respuesta final. Los ficheros 05_final/final_es.json\n");
+        sb.append("    y (si la 4.5 se ejecuto) 05_final/final_en.json quedan en disco para\n");
+        sb.append("    que el operador los pegue manualmente en el admin del CMS. El output\n");
+        sb.append("    del run es el reporte estructurado descrito en <output_rules>.\n");
         sb.append("  </working_dir>\n");
         sb.append("\n");
         sb.append("  <brief>\n");
@@ -220,19 +252,37 @@ public class ContentPromptBuilder {
         sb.append("  </brief>\n");
         sb.append("\n");
         sb.append("  <output_rules>\n");
-        sb.append("    - el output del run es EXACTAMENTE el contenido de\n");
-        sb.append("      05_final/final.json: un unico objeto JSON valido, sin\n");
-        sb.append("      explicacion previa, sin Markdown alrededor, sin bloque de codigo.\n");
-        sb.append("    - run_type del JSON DEBE ser exactamente \"FULL_ARTICLE_ORCHESTRATED\".\n");
+        sb.append("    - el output del run es un REPORTE ESTRUCTURADO en texto plano (no\n");
+        sb.append("      JSON), emitido por la skill cms-orchestrator de Cowork. El reporte\n");
+        sb.append("      resume: title, slug ES, slug EN (si aplica), ficheros generados,\n");
+        sb.append("      self_check_passed de cada JSON, validaciones clave y proximos\n");
+        sb.append("      pasos para el operador (que JSON pegar primero en el admin).\n");
+        sb.append("    - los ficheros final_es.json y final_en.json quedan en disco bajo\n");
+        sb.append("      05_final/ del working_dir. El operador los abre, copia y pega\n");
+        sb.append("      manualmente al CMS uno cada vez (mismo flujo de import monolingue\n");
+        sb.append("      de ADR-014; el backend no cambia su endpoint).\n");
+        sb.append("    - run_type de cada JSON DEBE ser exactamente \"FULL_ARTICLE_ORCHESTRATED\".\n");
         sb.append("    - schema_version DEBE ser exactamente \"")
                 .append(ContentConstants.AI_OUTPUT_SCHEMA_VERSION).append("\".\n");
-        sb.append("    - el JSON debe pasar la validacion reforzada del backend\n");
-        sb.append("      (>=5 sources, >=4 secciones outline, draft_markdown >=800 chars\n");
-        sb.append("      con sintaxis Markdown literal, seo_title/meta_description no\n");
-        sb.append("      vacios, target_keywords con type=primary, self_check_passed=true).\n");
+        sb.append("    - cada JSON debe pasar la validacion reforzada del backend\n");
+        sb.append("      individualmente:\n");
+        sb.append("        * sources_used >= 5\n");
+        sb.append("        * article_outline >= 4\n");
+        sb.append("        * draft_markdown >= 800 chars\n");
+        sb.append("        * seo_title <= 60 chars (NO null)\n");
+        sb.append("        * meta_description <= 160 chars (NO null)\n");
+        sb.append("        * target_keywords con al menos un type=primary\n");
+        sb.append("        * self_check_passed = true (run atomico, no admite parcial)\n");
+        sb.append("    - final_es.json tiene parent_slug=null (raiz).\n");
+        sb.append("    - final_en.json (si la 4.5 se ejecuto) tiene parent_slug =\n");
+        sb.append("      suggested_slug del final_es.json (debe coincidir LITERALMENTE).\n");
+        sb.append("    - sources_used, article_outline, search_intent y target_keywords\n");
+        sb.append("      deben coincidir entre final_es.json y final_en.json (campos\n");
+        sb.append("      compartidos: no se traducen).\n");
+        sb.append("    - language=\"es\" en final_es.json; language=\"en\" en final_en.json.\n");
         sb.append("    - si una skill no logra cumplir un criterio, corrige antes de\n");
-        sb.append("      emitir; no emitas un final.json con self_check_passed=false\n");
-        sb.append("      salvo que el problema sea irrecuperable en este run.\n");
+        sb.append("      emitir; no emitas un JSON con self_check_passed=false salvo que\n");
+        sb.append("      el problema sea irrecuperable en este run.\n");
         sb.append("  </output_rules>\n");
         sb.append("</full_article_orchestrated_pipeline>\n\n");
     }
