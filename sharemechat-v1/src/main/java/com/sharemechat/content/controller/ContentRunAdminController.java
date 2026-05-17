@@ -26,33 +26,20 @@ import java.util.List;
 /**
  * Endpoints admin para runs IA bajo modelo bilingue ADR-025.
  *
- * --------------------------------------------------------------------
- * PAQUETE 2: ESTADO MIXTO.
+ * Reactivados completamente en paquete 3:
+ *  - POST /articles/{id}/runs                                  crear run
+ *  - POST /articles/{articleId}/runs/{runId}/apply-bilingual   apply atomico
+ *  - GET  /articles/{id}/runs                                  listado de runs
+ *  - GET  /runs/{runId}                                        detalle de un run
  *
- * Reactivados:
- *  - POST /articles/{id}/runs            (createRun)
- *  - POST /articles/{articleId}/runs/{runId}/apply-bilingual  (apply atomico)
- *
- * Eliminados respecto al paquete 1 (formaban parte del flujo viejo
- * padre/hijo y del flujo monolingue):
- *  - POST /articles/{articleId}/runs/{runId}/output            (viejo)
- *  - POST /articles/{articleId}/runs/{runId}/output-bilingual  (viejo)
- *  - POST /articles/{articleId}/runs/{runId}/apply-draft       (viejo)
- *
- * Sigue neutralizado con UnsupportedOperationException (Pendiente paquete 3):
- *  - GET /articles/{id}/runs   (listByArticle)
- *  - GET /runs/{runId}         (getRun)
- *
- * La logica de service para estas dos lecturas SI esta implementada;
- * solo falta reactivar el binding HTTP en paquete 3.
- * --------------------------------------------------------------------
+ * Eliminados respecto al paquete 0 (flujo viejo padre/hijo y monolingue):
+ *  - POST /articles/{articleId}/runs/{runId}/output
+ *  - POST /articles/{articleId}/runs/{runId}/output-bilingual
+ *  - POST /articles/{articleId}/runs/{runId}/apply-draft
  */
 @RestController
 @RequestMapping("/api/admin/content")
 public class ContentRunAdminController {
-
-    private static final String MSG_P3 =
-            "Pendiente paquete 3 — rediseño CMS bilingüe (ADR-025)";
 
     private final ContentRunService runService;
     private final UserService userService;
@@ -61,10 +48,6 @@ public class ContentRunAdminController {
         this.runService = runService;
         this.userService = userService;
     }
-
-    // ================================================================
-    // Reactivados en paquete 2
-    // ================================================================
 
     @PostMapping("/articles/{id}/runs")
     public ResponseEntity<RunDetailDTO> createRun(
@@ -102,16 +85,13 @@ public class ContentRunAdminController {
                 adminFlag);
     }
 
-    // ================================================================
-    // Neutralizado hasta paquete 3
-    // ================================================================
-
     @GetMapping("/articles/{id}/runs")
     public List<RunSummaryDTO> listByArticle(
             @PathVariable("id") Long articleId,
             Authentication authentication
     ) {
-        throw new UnsupportedOperationException(MSG_P3);
+        requirePermission(authentication, BackofficeAuthorities.PERM_CONTENT_VIEW);
+        return runService.listByArticle(articleId);
     }
 
     @GetMapping("/runs/{runId}")
@@ -119,7 +99,8 @@ public class ContentRunAdminController {
             @PathVariable("runId") Long runId,
             Authentication authentication
     ) {
-        throw new UnsupportedOperationException(MSG_P3);
+        requirePermission(authentication, BackofficeAuthorities.PERM_CONTENT_VIEW);
+        return runService.findById(runId);
     }
 
     // ================================================================

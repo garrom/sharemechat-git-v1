@@ -253,8 +253,17 @@ public class ContentArticleService {
     }
 
     /**
-     * Actualiza el body de UNA traduccion (uso desde endpoint PUT body por
-     * locale, paquete 3) o como helper interno. Idempotente.
+     * Actualiza el body de UNA traduccion. Semantica idempotente:
+     * crea la traduccion si no existe todavia (caso: PUT body EN antes de
+     * haber pasado por apply-bilingual). En ese caso la translation nace
+     * con slug y title placeholder vacios (a llenar por apply-bilingual
+     * o por endpoint dedicado en paquete 6).
+     *
+     * NOTA: si la translation no existia y se crea aqui, slug y title
+     * quedan vacios. La transicion DRAFT -> IN_REVIEW exigira que esos
+     * campos esten poblados (junto con seo_title y meta_description),
+     * por lo que el operador deberia complementar la creacion via
+     * apply-bilingual o ediciones posteriores antes de mandar a revision.
      */
     @Transactional
     public ArticleDetailDTO updateTranslationBody(Long articleId,
@@ -268,8 +277,16 @@ public class ContentArticleService {
 
         ContentArticleTranslation tr = translationRepo
                 .findByArticleIdAndLocale(article.getId(), locale)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Traduccion " + locale + " no encontrada para articleId=" + article.getId()));
+                .orElseGet(() -> {
+                    ContentArticleTranslation fresh = new ContentArticleTranslation();
+                    fresh.setArticleId(article.getId());
+                    fresh.setLocale(locale);
+                    // slug y title quedan null; se rellenan al hacer
+                    // apply-bilingual o edicion explicita futura. La
+                    // transicion a IN_REVIEW los exige; mientras sea DRAFT,
+                    // pueden quedar vacios.
+                    return fresh;
+                });
 
         ContentBodyStorageService.Result uploaded;
         try {
