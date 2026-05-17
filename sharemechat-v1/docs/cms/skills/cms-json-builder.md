@@ -15,94 +15,133 @@ INPUTS QUE LEES
 - El artículo traducido en inglés (normalmente `04_review/reviewed_en.md`), si existe.
 
 OUTPUT QUE ESCRIBES
-- Si SOLO existe `04_review/reviewed.md` (ES, sin versión EN): escribir UN fichero `05_final/final_es.json` con la versión española.
-- Si EXISTEN AMBOS `04_review/reviewed.md` (ES) Y `04_review/reviewed_en.md` (EN): escribir DOS ficheros:
-  - `05_final/final_es.json` con la versión española (parent_slug = null).
-  - `05_final/final_en.json` con la versión inglesa (parent_slug apuntando al suggested_slug del ES).
-- NO escribas `final.json` a secas. Siempre con sufijo de locale: `final_es.json` y/o `final_en.json`.
+UN UNICO fichero `05_final/final.json` con estructura schema 2.0 que contiene ambas versiones (ES + EN) en un solo objeto JSON. No se emiten dos ficheros separados; el backend espera un único JSON con `shared` + `locales.{es,en}`.
 
-CAMPOS OBLIGATORIOS DEL JSON (todos siempre presentes; null o [] si no aplica)
-- schema_version (string, "1.0")
-- run_type (string, debe coincidir con el run_type del brief)
-- language (string, locale del brief)
-- research_summary (string, hasta 800 palabras, resumen del research)
-- sources_used (array de objetos con: url, title, publisher, published_at, accessed_at, relevance, key_points)
-- search_intent (uno de: informational | transactional | navigational | commercial)
-- target_keywords (array de objetos {term, type, search_intent_match}). Al menos uno con type="primary".
-- competitor_insights (array de objetos {url, what_they_cover, gap})
-- article_outline (array de objetos {level, heading, objective, supporting_sources, risk_flags})
-- draft_markdown (string con el contenido LITERAL de reviewed.md)
-- seo_title (string ≤60 chars, NO null)
-- meta_description (string ≤160 chars, NO null)
-- suggested_slug (string en kebab-case, NO null)
-- risk_notes (array de objetos {kind, severity, note}). Consolida review_notes.md aquí.
-- fact_check_notes (array de objetos {claim, status, source_index, note}). status ∈ {verified, uncertain, contradicted}.
+ESTRUCTURA DEL JSON (schema 2.0)
+
+```
+{
+  "schema_version": "2.0",
+  "run_type": "FULL_ARTICLE_ORCHESTRATED",
+  "shared": {
+    "hero_image_url": "...",
+    "category": "...",
+    "keywords": [...],
+    "sources_used": [...],
+    "self_check_passed": true,
+    "self_check_failures": []
+  },
+  "locales": {
+    "es": { ...campos per-locale... },
+    "en": { ...campos per-locale... }
+  }
+}
+```
+
+CAMPOS OBLIGATORIOS (todos siempre presentes; null o [] si no aplica)
+
+Nivel raíz:
+- schema_version (string, "2.0")
+- run_type (string, debe coincidir con el run_type del brief; típicamente "FULL_ARTICLE_ORCHESTRATED")
+- shared (objeto)
+- locales (objeto que contiene EXACTAMENTE las claves "es" y "en")
+
+Bloque `shared` (campos locale-invariantes, comunes a ambos idiomas):
+- hero_image_url (string o null; URL absoluta a la imagen 4:3 del artículo)
+- category (string, código canónico no vacío: safety, setup, business, etc.)
+- keywords (array de strings, keywords operativas del operador; opcional, puede ser [])
+- sources_used (array ≥ 5 elementos con: url, title, publisher, published_at, accessed_at, relevance, key_points). Las URLs son las mismas en ambos locales; los `key_points` se mantienen en idioma original ES (no se duplican por locale)
 - self_check_passed (boolean)
 - self_check_failures (array de strings, vacío si self_check_passed=true)
-- parent_slug (string o null). Solo para versiones que NO son la raíz. Apunta al suggested_slug de la versión padre (típicamente la ES). Para la versión raíz (ES): null. Para la versión EN: el suggested_slug del final_es.json.
+
+Bloque `locales.<es|en>` (campos linguísticos por idioma):
+- slug (string kebab-case ≤160 chars, NO null; distinto entre ES y EN)
+- title (string ≤255, NO null)
+- seo_title (string ≤60, NO null no vacío)
+- meta_description (string ≤160, NO null no vacía)
+- draft_markdown (string Markdown literal ≥800 chars, ≥1 H2 con `## `, sin HTML inline)
+- search_intent (uno de: informational | transactional | navigational | commercial)
+- target_keywords (array de objetos {term, type, search_intent_match}; al menos uno con type="primary"; las keywords SEO óptimas difieren entre mercado hispano y anglosajón)
+- competitor_insights (array de objetos {url, what_they_cover, gap}; 3-5 entradas; competidores SERP del mercado correspondiente)
+- article_outline (array ≥4 secciones {level, heading, objective, supporting_sources, risk_flags})
+- research_summary (string, hasta 800 palabras, resumen del research adaptado al idioma)
+- risk_notes (array de objetos {kind, severity, note})
+- fact_check_notes (array de objetos {claim, status, source_index, note}; status ∈ {verified, uncertain, contradicted})
 
 REGLAS DURAS
-1. draft_markdown debe ser el contenido LITERAL de reviewed.md, sin retoques. Ni una coma cambiada.
-2. sources_used debe tener mínimo 5 elementos, derivados de research.md.
-3. article_outline debe tener mínimo 4 secciones.
-4. seo_title NO null y ≤60 caracteres.
-5. meta_description NO null y ≤160 caracteres.
-6. suggested_slug en kebab-case (minúsculas, palabras separadas por `-`, sin acentos ni eñes).
-7. target_keywords debe contener al menos un objeto con type="primary".
-8. search_intent debe ser exactamente uno de los 4 valores permitidos.
-9. risk_notes consolida lo que esté en review_notes.md (transforma cada flag a {kind, severity, note}).
-10. fact_check_notes: una entrada por cada claim numérico o factual detectado en draft_markdown, con status y source_index (índice 1-based al array sources_used).
-11. Antes de copiar reviewed.md a draft_markdown, ELIMINA cualquier bloque de comentario `<!-- TRACE ... -->` y cualquier marcador residual `[source N]` que pudiera haber quedado. El draft_markdown público debe estar limpio de cualquier referencia interna de tracking.
-12. Las entradas del bloque TRACE de reviewed.md se transforman en fact_check_notes del JSON, mapeando cada `claim → source_index` a `{claim, status: "verified", source_index, note: ""}`.
-13. SERIALIZACIÓN JSON CORRECTA: la regla 1 (LITERAL, sin retoques) se aplica al contenido tipográfico, no a la serialización JSON. Al emitir `draft_markdown` como string JSON, escapa correctamente todos los caracteres especiales:
+1. `locales.es.draft_markdown` debe ser el contenido LITERAL de `04_review/reviewed.md`, sin retoques.
+2. `locales.en.draft_markdown` debe ser el contenido LITERAL del cuerpo de `04_review/reviewed_en.md` (sin incluir el bloque de metadatos final SUGGESTED_*_EN, que se consume aparte; ver regla 14).
+3. `shared.sources_used` debe tener mínimo 5 elementos, derivados de `01_research/research.md`. Es un solo array compartido entre ambos locales; las URLs y `key_points` no se duplican.
+4. `locales.<es|en>.article_outline` debe tener mínimo 4 secciones cada uno.
+5. `locales.<es|en>.seo_title` NO null y ≤60 caracteres en cada locale.
+6. `locales.<es|en>.meta_description` NO null y ≤160 caracteres en cada locale.
+7. `locales.<es|en>.slug` en kebab-case (minúsculas, palabras separadas por `-`, sin acentos ni eñes) en cada locale.
+8. `locales.es.slug !== locales.en.slug` (slugs distintos por idioma, ADR-022 D2). Ambos slugs reflejan la keyword SEO óptima del mercado correspondiente, no son traducción literal uno del otro.
+9. `locales.<es|en>.target_keywords` debe contener al menos un objeto con `type="primary"` en cada locale.
+10. `locales.<es|en>.search_intent` debe ser exactamente uno de los 4 valores permitidos en cada locale.
+11. `locales.<es|en>.risk_notes` consolida lo que esté en `review_notes.md`. Para el locale EN, traduce kind/note al inglés manteniendo severity y la equivalencia semántica.
+12. `locales.<es|en>.fact_check_notes`: una entrada por cada claim numérico o factual detectado en el draft del locale correspondiente, con status y source_index (índice 1-based al array `shared.sources_used`, que es común).
+13. Antes de copiar reviewed.md a `locales.es.draft_markdown`, ELIMINA cualquier bloque de comentario `<!-- TRACE ... -->` y cualquier marcador residual `[source N]`. Mismo tratamiento para `reviewed_en.md` → `locales.en.draft_markdown`.
+14. METADATA DEL EN: lee el bloque al final de `04_review/reviewed_en.md` con los campos SUGGESTED_SLUG_EN, SUGGESTED_SEO_TITLE_EN, SUGGESTED_META_DESC_EN. Usa esos valores para poblar `locales.en.slug`, `locales.en.seo_title` y `locales.en.meta_description` respectivamente. El bloque metadata NO se incluye en `locales.en.draft_markdown` (solo el cuerpo del artículo).
+15. SERIALIZACIÓN JSON CORRECTA: la regla "LITERAL, sin retoques" se aplica al contenido tipográfico, no a la serialización JSON. Al emitir cualquier campo string del JSON, escapa correctamente:
   - Toda comilla doble " interior con \"
   - Todo salto de línea con \n
   - Todo retorno de carro con \r
   - Todo tabulador con \t
   - Todo backslash \ con \\
-    Escapar es parte del proceso de serialización, no una modificación del texto. Si el draft viene con comillas dobles rectas " (no debería, ver skill sharemechat-voice), escápalas con \" en el campo draft_markdown del JSON. El JSON resultante debe parsear sin errores con cualquier parser estándar (JSON.parse, jackson, gson, etc.).
-14. SERIALIZACIÓN POR LOCALE: el campo `language` del JSON debe coincidir con el locale del fichero. `final_es.json` → language="es". `final_en.json` → language="en".
-15. PARENT_SLUG: solo el JSON de la versión que NO es la raíz lleva parent_slug poblado. La versión raíz (ES) tiene parent_slug = null. Para la versión EN, lee el campo SUGGESTED_SLUG_EN del bloque de metadatos al final de `04_review/reviewed_en.md` y úsalo como suggested_slug del final_en.json. El parent_slug del final_en.json debe ser el suggested_slug del final_es.json.
+    El JSON resultante debe parsear sin errores con cualquier parser estándar (JSON.parse, jackson, gson, etc.). Si el draft viene con comillas dobles rectas " (no debería, ver skill sharemechat-voice), escápalas con \" en el campo correspondiente del JSON.
 
 VALIDACIÓN ANTES DE EMITIR (self-check)
-Comprueba uno a uno y solo marca self_check_passed=true si TODOS pasan:
-- El JSON parsea correctamente.
-- Todos los campos obligatorios están presentes.
-- sources_used.length >= 5.
-- article_outline.length >= 4.
-- draft_markdown no es null y tiene >=800 caracteres.
-- seo_title no es null y .length <= 60.
-- meta_description no es null y .length <= 160.
-- suggested_slug en kebab-case válido.
-- target_keywords contiene al menos uno con type="primary".
-- search_intent es uno de los 4 valores permitidos.
-- run_type del output coincide con el del brief.
-- draft_markdown contiene al menos 2 H2 literales (líneas que empiezan por "## ").
-- draft_markdown NO contiene HTML inline.
-- Cada `[source N]` mencionado en draft_markdown corresponde a un índice válido en sources_used.
-- draft_markdown NO contiene `<!-- TRACE`, NO contiene `[source N]`, NO contiene `[source `.
-- nº de fact_check_notes ≥ nº de claims numéricos/factuales detectables en el draft.
-- longitud de draft_markdown entre 1100 y 1300 palabras (cuenta palabras, no caracteres).
-- El draft_markdown serializado parsea correctamente como string JSON con un parser estricto (sin comillas dobles internas sin escapar, sin saltos de línea literales).
-- Si existe `reviewed_en.md`: language del final_en.json es "en".
-- Si existe `reviewed_en.md`: parent_slug del final_en.json es el suggested_slug del final_es.json (deben coincidir literalmente).
-- Si existe `reviewed_en.md`: ambos JSON tienen sources_used, article_outline, search_intent, target_keywords idénticos (estos campos son compartidos, no se traducen).
-- Si NO existe `reviewed_en.md`: solo se emite final_es.json. Cero error.
 
-Si CUALQUIER check falla, set self_check_passed=false y enumera el motivo en self_check_failures. Aun así, emite JSON válido.
+Marca `shared.self_check_passed=true` solo si TODOS los siguientes pasan:
+
+Estructura raíz:
+- El JSON parsea correctamente.
+- `schema_version` === "2.0".
+- `run_type` coincide con el run_type del brief.
+- `locales` contiene EXACTAMENTE las claves "es" y "en" (ni más ni menos).
+
+Bloque `shared`:
+- `category` no nula no vacía.
+- `sources_used.length >= 5`; cada URL con scheme http(s) y host válido.
+
+Por cada locale (ES y EN, independientemente):
+- `slug` válido en kebab-case.
+- `title` no nulo no vacío.
+- `seo_title` no nulo no vacío y .length <= 60.
+- `meta_description` no nula no vacía y .length <= 160.
+- `draft_markdown` no nulo, >= 800 caracteres, contiene al menos 1 H2 literal (`## ...`), separa párrafos con línea en blanco, sin HTML inline.
+- `search_intent` ∈ {informational, transactional, navigational, commercial}.
+- `target_keywords` contiene al menos un objeto con `type="primary"`.
+- `article_outline.length >= 4`.
+- `draft_markdown` NO contiene `<!-- TRACE`, NO contiene `[source N]`, NO contiene `[source `.
+- nº de `fact_check_notes` ≥ nº de claims numéricos/factuales detectables en `draft_markdown`.
+- longitud de `draft_markdown` entre 1100 y 1300 palabras.
+- El `draft_markdown` serializado parsea correctamente como string JSON con un parser estricto.
+
+Cross-locale:
+- `locales.es.slug !== locales.en.slug` (bloqueante).
+- nº de H2 en `locales.es.draft_markdown` igual a nº de H2 en `locales.en.draft_markdown` (paridad estructural). Si difiere, NO bloquea pero anota un warning en `shared.self_check_failures` con prefijo `[warn]`.
+
+Si CUALQUIER check bloqueante falla, set `shared.self_check_passed=false` y enumera el motivo en `shared.self_check_failures`. Aun así, emite el JSON válido para que el operador pueda inspeccionarlo.
 
 PROHIBIDO
-- Modificar la prosa de draft_markdown.
-- Inventar fuentes que no estén en research.md.
-- Omitir campos obligatorios (usa null o [] si no aplica, pero presentes siempre).
+- Modificar la prosa de `draft_markdown` en ningún locale.
+- Inventar fuentes que no estén en `01_research/research.md`.
+- Omitir campos obligatorios (usa null o [] si no aplica, pero los nombres deben estar presentes).
 - Emitir texto fuera del JSON.
 - Emitir el JSON parcial o con sintaxis inválida.
+- Emitir dos ficheros JSON separados. El output es UN UNICO `05_final/final.json`.
+- Incluir campos `parent_slug`, `parent_article_id` o equivalentes; el modelo nuevo no los usa.
+- Incluir un campo `language` al nivel raíz; el idioma se infiere de la clave dentro de `locales`.
 
 CUANDO TERMINES
-Confirma brevemente que `05_final/final.json` está escrito y resume en una línea:
-- self_check_passed: true | false
-- nº de sources_used
-- nº de secciones en article_outline
-- longitud de draft_markdown en caracteres
-- nº de risk_notes
-  Si self_check_passed=false, lista los motivos.
+Confirma brevemente que `05_final/final.json` está escrito y resume:
+- shared.self_check_passed: true | false
+- nº de shared.sources_used
+- locales.es: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, nº de risk_notes
+- locales.en: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, nº de risk_notes
+- locales.es.slug !== locales.en.slug: sí/no
+- paridad de H2 entre locales: igual / [N vs M]
+
+Si shared.self_check_passed=false, lista los motivos.

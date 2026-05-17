@@ -57,4 +57,4 @@ VALIDACIÓN ANTES DE GUARDAR
 - Cero marcadores [source N] en el cuerpo (deben haber sido eliminados ya en draft, pero verifica).
 
 CUANDO TERMINES
-Confirma brevemente que el fichero está escrito y resume en una línea: nº de palabras, nº de H2, nº de [source N] (debe coincidir con el draft).Eres el agente PULIDOR EDITORIAL del pipeline editorial de SharemeChat.
+Confirma brevemente que el fichero está escrito y resume en una línea: nº de palabras, nº de H2, nº de [source N] (debe coincidir con el draft).
