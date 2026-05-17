@@ -6,12 +6,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sharemechat.content.constants.ContentConstants;
 import com.sharemechat.content.dto.ValidationErrorDTO;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
@@ -19,29 +20,37 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * Adaptador unico de Fase 3A. No invoca API externa: construye el prompt para
- * que el editor lo despache manualmente en Claude Cowork y valida el JSON
- * pegado de vuelta.
+ * Adaptador unico de la capa IA del CMS. No invoca API externa: construye
+ * el prompt para que el operador lo despache manualmente en Claude Cowork
+ * y valida el JSON pegado de vuelta.
+ *
+ * Post-ADR-025: schema 2.0 bilingue. El JSON tiene estructura
+ *   {
+ *     schema_version, run_type,
+ *     shared: { category, keywords?, sources_used, self_check_passed, ... },
+ *     locales: { es: {...}, en: {...} }
+ *   }
+ *
+ * Solo el run_type FULL_ARTICLE_ORCHESTRATED es operativo en paquete 2.
+ * Los run_type discretos (RESEARCH/OUTLINE/DRAFT/REVIEW/SEO) salen de la
+ * whitelist; un cliente API que intente crearlos recibira 400.
  */
 @Component
 public class ManualClipboardClaudeAdapter implements ContentAIProvider {
 
+    private static final Logger log = LoggerFactory.getLogger(ManualClipboardClaudeAdapter.class);
+
+    /** Solo FULL_ARTICLE_ORCHESTRATED es operativo en el modelo bilingue. */
     private static final Set<String> ALLOWED_RUN_TYPES = Set.of(
-            ContentConstants.RUN_TYPE_RESEARCH,
-            ContentConstants.RUN_TYPE_OUTLINE,
-            ContentConstants.RUN_TYPE_DRAFT,
-            ContentConstants.RUN_TYPE_REVIEW,
-            ContentConstants.RUN_TYPE_SEO,
             ContentConstants.RUN_TYPE_FULL_ARTICLE_ORCHESTRATED);
 
-    // Minimos reforzados para FULL_ARTICLE_ORCHESTRATED (ADR-014).
-    // Mismas cotas que el antiguo FULL_ARTICLE (ADR-013); el flujo orquestado
-    // mantiene los umbrales editoriales aunque cambie como se generan.
-    private static final int FULL_ARTICLE_ORCHESTRATED_MIN_SOURCES = 5;
-    private static final int FULL_ARTICLE_ORCHESTRATED_MIN_OUTLINE_SECTIONS = 4;
-    private static final int FULL_ARTICLE_ORCHESTRATED_MIN_DRAFT_CHARS = 800;
+    // Minimos reforzados por locale (heredados de schema 1.0; el modelo bilingue
+    // los aplica per-locale, no globales como antes).
+    private static final int MIN_SOURCES = 5;
+    private static final int MIN_OUTLINE_SECTIONS = 4;
+    private static final int MIN_DRAFT_CHARS = 800;
 
-    // Heuristicas de estructura Markdown FULL_ARTICLE_ORCHESTRATED (heredadas de Fase 4A hardening)
+    // Heuristicas de estructura Markdown.
     private static final Pattern MARKDOWN_H2_PATTERN =
             Pattern.compile("(?m)^## ");
     private static final Pattern MARKDOWN_PARAGRAPH_BREAK_PATTERN =
@@ -50,6 +59,13 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
             Pattern.compile(
                     "</?\\s*(p|br|strong|em|ul|ol|li|h[1-6]|a|div|span|table|tr|td)\\b",
                     Pattern.CASE_INSENSITIVE);
+
+    private static final Pattern SLUG_PATTERN =
+            Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
+    private static final int SLUG_MAX = 160;
+    private static final int TITLE_MAX = 255;
+    private static final int SEO_TITLE_MAX = 60;
+    private static final int META_DESCRIPTION_MAX = 160;
 
     /** Whitelist de model_id que el editor puede declarar al pegar output. */
     private static final Set<String> ALLOWED_MODEL_PREFIXES = Set.of(
@@ -60,24 +76,27 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
     private static final Set<String> ALLOWED_SEARCH_INTENTS = Set.of(
             "informational", "transactional", "navigational", "commercial");
 
-    private static final List<String> REQUIRED_OUTPUT_FIELDS = List.of(
-            "schema_version",
-            "run_type",
-            "language",
-            "research_summary",
+    /** Locales obligatorios para publicar (ADR-025). */
+    private static final Set<String> MANDATORY_LOCALES = Set.of(
+            ContentConstants.LOCALE_ES, ContentConstants.LOCALE_EN);
+
+    /** Campos obligatorios bajo `shared`. */
+    private static final List<String> SHARED_REQUIRED_FIELDS = List.of(
+            "category",
             "sources_used",
+            "self_check_passed");
+
+    /** Campos obligatorios bajo cada `locales.<lang>`. */
+    private static final List<String> LOCALE_REQUIRED_FIELDS = List.of(
+            "slug",
+            "title",
+            "seo_title",
+            "meta_description",
+            "draft_markdown",
             "search_intent",
             "target_keywords",
             "competitor_insights",
-            "article_outline",
-            "draft_markdown",
-            "seo_title",
-            "meta_description",
-            "suggested_slug",
-            "risk_notes",
-            "fact_check_notes",
-            "self_check_passed",
-            "self_check_failures");
+            "article_outline");
 
     private final ObjectMapper objectMapper;
     private final ContentPromptBuilder promptBuilder;
@@ -155,155 +174,15 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
             return new OutputValidationResult(false, errors, null);
         }
 
-        // Campos obligatorios presentes (aunque sean null o vacios)
-        for (String field : REQUIRED_OUTPUT_FIELDS) {
-            if (!root.has(field)) {
-                errors.add(new ValidationErrorDTO(field, "campo obligatorio ausente"));
-            }
-        }
-
-        // schema_version
-        JsonNode schemaVersion = root.get("schema_version");
-        if (schemaVersion != null && (!schemaVersion.isTextual()
-                || !ContentConstants.AI_OUTPUT_SCHEMA_VERSION.equals(schemaVersion.asText()))) {
-            errors.add(new ValidationErrorDTO("schema_version",
-                    "se esperaba '" + ContentConstants.AI_OUTPUT_SCHEMA_VERSION + "'"));
-        }
-
-        // run_type coincide
-        JsonNode runTypeNode = root.get("run_type");
-        if (runTypeNode != null) {
-            if (!runTypeNode.isTextual() || !runType.equals(runTypeNode.asText())) {
-                errors.add(new ValidationErrorDTO("run_type",
-                        "no coincide con el run creado (esperado " + runType + ")"));
-            }
-        }
-
-        // search_intent enum
-        JsonNode searchIntent = root.get("search_intent");
-        if (searchIntent != null && !searchIntent.isNull()) {
-            if (!searchIntent.isTextual() || !ALLOWED_SEARCH_INTENTS.contains(searchIntent.asText())) {
-                errors.add(new ValidationErrorDTO("search_intent",
-                        "valor no permitido; usa informational/transactional/navigational/commercial"));
-            }
-        }
-
-        // sources_used: array; obligatorio no vacio para RESEARCH y DRAFT
-        JsonNode sourcesUsed = root.get("sources_used");
-        boolean sourcesRequired = ContentConstants.RUN_TYPE_RESEARCH.equals(runType)
-                || ContentConstants.RUN_TYPE_DRAFT.equals(runType);
-        if (sourcesUsed != null) {
-            if (!sourcesUsed.isArray()) {
-                errors.add(new ValidationErrorDTO("sources_used", "debe ser array"));
-            } else {
-                if (sourcesRequired && sourcesUsed.isEmpty()) {
-                    errors.add(new ValidationErrorDTO("sources_used",
-                            "obligatorio no vacio para run_type=" + runType));
-                }
-                for (int i = 0; i < sourcesUsed.size(); i++) {
-                    JsonNode src = sourcesUsed.get(i);
-                    if (!src.isObject()) {
-                        errors.add(new ValidationErrorDTO("sources_used[" + i + "]",
-                                "se esperaba objeto"));
-                        continue;
-                    }
-                    JsonNode urlNode = src.get("url");
-                    if (urlNode == null || !urlNode.isTextual() || urlNode.asText().isBlank()) {
-                        errors.add(new ValidationErrorDTO("sources_used[" + i + "].url",
-                                "url ausente o vacia"));
-                        continue;
-                    }
-                    String url = urlNode.asText();
-                    try {
-                        URI u = new URI(url);
-                        String scheme = u.getScheme();
-                        if (scheme == null
-                                || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-                            errors.add(new ValidationErrorDTO("sources_used[" + i + "].url",
-                                    "scheme debe ser http o https"));
-                        }
-                        if (u.getHost() == null || u.getHost().isBlank()) {
-                            errors.add(new ValidationErrorDTO("sources_used[" + i + "].url",
-                                    "host ausente"));
-                        }
-                    } catch (URISyntaxException ex) {
-                        errors.add(new ValidationErrorDTO("sources_used[" + i + "].url",
-                                "url no parseable"));
-                    }
-                }
-            }
-        }
-
-        // draft_markdown obligatorio para DRAFT
-        JsonNode draftMarkdown = root.get("draft_markdown");
-        if (ContentConstants.RUN_TYPE_DRAFT.equals(runType)) {
-            if (draftMarkdown == null || draftMarkdown.isNull()
-                    || !draftMarkdown.isTextual() || draftMarkdown.asText().isBlank()) {
-                errors.add(new ValidationErrorDTO("draft_markdown",
-                        "obligatorio no vacio para run_type=DRAFT"));
-            }
-        }
-
-        // seo_title <= 60
-        JsonNode seoTitle = root.get("seo_title");
-        if (seoTitle != null && seoTitle.isTextual() && seoTitle.asText().length() > 60) {
-            errors.add(new ValidationErrorDTO("seo_title",
-                    "excede 60 caracteres (" + seoTitle.asText().length() + ")"));
-        }
-
-        // meta_description <= 160
-        JsonNode metaDescription = root.get("meta_description");
-        if (metaDescription != null && metaDescription.isTextual()
-                && metaDescription.asText().length() > 160) {
-            errors.add(new ValidationErrorDTO("meta_description",
-                    "excede 160 caracteres (" + metaDescription.asText().length() + ")"));
-        }
-
-        // self_check_failures debe ser array si presente
-        JsonNode selfCheckFailures = root.get("self_check_failures");
-        if (selfCheckFailures != null && !selfCheckFailures.isNull()
-                && !selfCheckFailures.isArray()) {
-            errors.add(new ValidationErrorDTO("self_check_failures", "debe ser array"));
-        }
-
-        // article_outline debe ser array si presente
-        JsonNode outline = root.get("article_outline");
-        if (outline != null && !outline.isNull() && !outline.isArray()) {
-            errors.add(new ValidationErrorDTO("article_outline", "debe ser array"));
-        }
-
-        // target_keywords debe ser array si presente
-        JsonNode targetKeywords = root.get("target_keywords");
-        if (targetKeywords != null && !targetKeywords.isNull() && !targetKeywords.isArray()) {
-            errors.add(new ValidationErrorDTO("target_keywords", "debe ser array"));
-        }
-
-        // competitor_insights debe ser array si presente
-        JsonNode competitor = root.get("competitor_insights");
-        if (competitor != null && !competitor.isNull() && !competitor.isArray()) {
-            errors.add(new ValidationErrorDTO("competitor_insights", "debe ser array"));
-        }
-
-        // risk_notes / fact_check_notes deben ser arrays si presentes
-        for (String f : Arrays.asList("risk_notes", "fact_check_notes")) {
-            JsonNode n = root.get(f);
-            if (n != null && !n.isNull() && !n.isArray()) {
-                errors.add(new ValidationErrorDTO(f, "debe ser array"));
-            }
-        }
-
-        // Validacion reforzada para FULL_ARTICLE_ORCHESTRATED (ADR-014)
-        if (ContentConstants.RUN_TYPE_FULL_ARTICLE_ORCHESTRATED.equals(runType)) {
-            validateFullArticleOrchestratedSpecifics(root, errors);
-        }
+        validateTopLevel(root, runType, errors);
+        validateSharedSection(root, errors);
+        validateLocalesSection(root, errors);
 
         if (!errors.isEmpty()) {
             return new OutputValidationResult(false, errors, null);
         }
 
-        // Re-serializar canonico (orden estable y sin comentarios extra)
         try {
-            // Reordenar campos clave al frente para consistencia de auditoria
             String canonical = objectMapper.writeValueAsString(root);
             return new OutputValidationResult(true, List.of(), canonical);
         } catch (JsonProcessingException ex) {
@@ -313,114 +192,332 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
         }
     }
 
-    /** Para uso interno y tests; expone iterador de campos requeridos. */
-    public Iterator<String> requiredFields() {
-        return REQUIRED_OUTPUT_FIELDS.iterator();
+    /** Para uso interno y tests: lista campos obligatorios por seccion. */
+    public Iterator<String> requiredSharedFields() {
+        return SHARED_REQUIRED_FIELDS.iterator();
     }
 
-    /**
-     * Validacion reforzada para FULL_ARTICLE_ORCHESTRATED (ADR-014):
-     *  - sources_used >= 5
-     *  - article_outline >= 4 secciones
-     *  - draft_markdown no nulo y >= 800 chars
-     *  - seo_title no nulo, no vacio, <= 60 chars
-     *  - meta_description no nulo, no vacio, <= 160 chars
-     *  - target_keywords con al menos un type=primary
-     *  - self_check_passed = true obligatorio
-     * Acumula errores en la lista existente; no rechaza inmediatamente.
-     */
-    private void validateFullArticleOrchestratedSpecifics(JsonNode root, List<ValidationErrorDTO> errors) {
-        JsonNode sourcesUsed = root.get("sources_used");
-        if (sourcesUsed != null && sourcesUsed.isArray()
-                && sourcesUsed.size() < FULL_ARTICLE_ORCHESTRATED_MIN_SOURCES) {
-            errors.add(new ValidationErrorDTO("sources_used",
-                    "FULL_ARTICLE_ORCHESTRATED exige al menos " + FULL_ARTICLE_ORCHESTRATED_MIN_SOURCES
-                            + " fuentes (recibidas " + sourcesUsed.size() + ")"));
+    public Iterator<String> requiredLocaleFields() {
+        return LOCALE_REQUIRED_FIELDS.iterator();
+    }
+
+    // ================================================================
+    // Validaciones por seccion
+    // ================================================================
+
+    private void validateTopLevel(JsonNode root, String runType, List<ValidationErrorDTO> errors) {
+        JsonNode schemaVersion = root.get("schema_version");
+        if (schemaVersion == null || !schemaVersion.isTextual()
+                || !ContentConstants.AI_OUTPUT_SCHEMA_VERSION.equals(schemaVersion.asText())) {
+            errors.add(new ValidationErrorDTO("schema_version",
+                    "se esperaba '" + ContentConstants.AI_OUTPUT_SCHEMA_VERSION + "'"));
         }
 
-        JsonNode outline = root.get("article_outline");
-        if (outline != null && outline.isArray()
-                && outline.size() < FULL_ARTICLE_ORCHESTRATED_MIN_OUTLINE_SECTIONS) {
-            errors.add(new ValidationErrorDTO("article_outline",
-                    "FULL_ARTICLE_ORCHESTRATED exige al menos " + FULL_ARTICLE_ORCHESTRATED_MIN_OUTLINE_SECTIONS
-                            + " secciones (recibidas " + outline.size() + ")"));
+        JsonNode runTypeNode = root.get("run_type");
+        if (runTypeNode == null || !runTypeNode.isTextual() || !runType.equals(runTypeNode.asText())) {
+            errors.add(new ValidationErrorDTO("run_type",
+                    "no coincide con el run creado (esperado " + runType + ")"));
         }
 
-        JsonNode draftMarkdown = root.get("draft_markdown");
-        if (draftMarkdown == null || draftMarkdown.isNull() || !draftMarkdown.isTextual()
-                || draftMarkdown.asText().length() < FULL_ARTICLE_ORCHESTRATED_MIN_DRAFT_CHARS) {
-            int len = (draftMarkdown == null || draftMarkdown.isNull() || !draftMarkdown.isTextual())
-                    ? 0 : draftMarkdown.asText().length();
-            errors.add(new ValidationErrorDTO("draft_markdown",
-                    "FULL_ARTICLE_ORCHESTRATED exige draft_markdown >= " + FULL_ARTICLE_ORCHESTRATED_MIN_DRAFT_CHARS
-                            + " caracteres (recibidos " + len + ")"));
+        if (!root.has("shared") || !root.get("shared").isObject()) {
+            errors.add(new ValidationErrorDTO("shared", "seccion 'shared' ausente o no es objeto"));
+        }
+        if (!root.has("locales") || !root.get("locales").isObject()) {
+            errors.add(new ValidationErrorDTO("locales", "seccion 'locales' ausente o no es objeto"));
+        }
+    }
+
+    private void validateSharedSection(JsonNode root, List<ValidationErrorDTO> errors) {
+        JsonNode shared = root.get("shared");
+        if (shared == null || !shared.isObject()) return; // ya marcado arriba
+
+        for (String field : SHARED_REQUIRED_FIELDS) {
+            if (!shared.has(field)) {
+                errors.add(new ValidationErrorDTO("shared." + field, "campo obligatorio ausente"));
+            }
         }
 
-        JsonNode seoTitle = root.get("seo_title");
-        if (seoTitle == null || seoTitle.isNull() || !seoTitle.isTextual()
-                || seoTitle.asText().isBlank()) {
-            errors.add(new ValidationErrorDTO("seo_title",
-                    "FULL_ARTICLE_ORCHESTRATED exige seo_title no vacio"));
+        // shared.category no vacia
+        JsonNode category = shared.get("category");
+        if (category != null && (!category.isTextual() || category.asText().isBlank())) {
+            errors.add(new ValidationErrorDTO("shared.category", "no puede estar vacia"));
         }
 
-        JsonNode metaDescription = root.get("meta_description");
-        if (metaDescription == null || metaDescription.isNull()
-                || !metaDescription.isTextual() || metaDescription.asText().isBlank()) {
-            errors.add(new ValidationErrorDTO("meta_description",
-                    "FULL_ARTICLE_ORCHESTRATED exige meta_description no vacia"));
-        }
-
-        JsonNode targetKeywords = root.get("target_keywords");
-        if (targetKeywords != null && targetKeywords.isArray()) {
-            boolean hasPrimary = false;
-            for (JsonNode kw : targetKeywords) {
-                if (kw != null && kw.isObject()) {
-                    JsonNode type = kw.get("type");
-                    if (type != null && type.isTextual() && "primary".equals(type.asText())) {
-                        hasPrimary = true;
-                        break;
-                    }
+        // shared.sources_used array >= 5 con url http(s) valida cada uno
+        JsonNode sources = shared.get("sources_used");
+        if (sources != null) {
+            if (!sources.isArray()) {
+                errors.add(new ValidationErrorDTO("shared.sources_used", "debe ser array"));
+            } else {
+                if (sources.size() < MIN_SOURCES) {
+                    errors.add(new ValidationErrorDTO("shared.sources_used",
+                            "se requieren al menos " + MIN_SOURCES + " fuentes (recibidas "
+                                    + sources.size() + ")"));
+                }
+                for (int i = 0; i < sources.size(); i++) {
+                    validateSourceEntry(sources.get(i), i, errors);
                 }
             }
-            if (!hasPrimary) {
-                errors.add(new ValidationErrorDTO("target_keywords",
-                        "FULL_ARTICLE_ORCHESTRATED exige al menos un keyword con type=primary"));
+        }
+
+        // shared.self_check_passed === true
+        JsonNode selfCheck = shared.get("self_check_passed");
+        if (selfCheck != null && (!selfCheck.isBoolean() || !selfCheck.asBoolean())) {
+            errors.add(new ValidationErrorDTO("shared.self_check_passed",
+                    "debe ser true (run atomico, no admite parcial)"));
+        }
+
+        // self_check_failures opcional pero si presente debe ser array
+        JsonNode failures = shared.get("self_check_failures");
+        if (failures != null && !failures.isNull() && !failures.isArray()) {
+            errors.add(new ValidationErrorDTO("shared.self_check_failures", "debe ser array"));
+        }
+    }
+
+    private void validateSourceEntry(JsonNode src, int index, List<ValidationErrorDTO> errors) {
+        String path = "shared.sources_used[" + index + "]";
+        if (!src.isObject()) {
+            errors.add(new ValidationErrorDTO(path, "se esperaba objeto"));
+            return;
+        }
+        JsonNode urlNode = src.get("url");
+        if (urlNode == null || !urlNode.isTextual() || urlNode.asText().isBlank()) {
+            errors.add(new ValidationErrorDTO(path + ".url", "url ausente o vacia"));
+            return;
+        }
+        String url = urlNode.asText();
+        try {
+            URI u = new URI(url);
+            String scheme = u.getScheme();
+            if (scheme == null
+                    || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+                errors.add(new ValidationErrorDTO(path + ".url", "scheme debe ser http o https"));
+            }
+            if (u.getHost() == null || u.getHost().isBlank()) {
+                errors.add(new ValidationErrorDTO(path + ".url", "host ausente"));
+            }
+        } catch (URISyntaxException ex) {
+            errors.add(new ValidationErrorDTO(path + ".url", "url no parseable"));
+        }
+    }
+
+    private void validateLocalesSection(JsonNode root, List<ValidationErrorDTO> errors) {
+        JsonNode locales = root.get("locales");
+        if (locales == null || !locales.isObject()) return; // ya marcado arriba
+
+        // Debe contener exactamente "es" y "en".
+        for (String required : MANDATORY_LOCALES) {
+            if (!locales.has(required) || !locales.get(required).isObject()) {
+                errors.add(new ValidationErrorDTO("locales." + required,
+                        "locale obligatorio ausente o no es objeto"));
+            }
+        }
+        Iterator<String> fieldNames = locales.fieldNames();
+        while (fieldNames.hasNext()) {
+            String key = fieldNames.next();
+            if (!MANDATORY_LOCALES.contains(key)) {
+                errors.add(new ValidationErrorDTO("locales." + key,
+                        "locale no soportado en paquete 2 (solo 'es' y 'en')"));
             }
         }
 
-        JsonNode selfCheckPassed = root.get("self_check_passed");
-        if (selfCheckPassed == null || !selfCheckPassed.isBoolean()
-                || !selfCheckPassed.asBoolean()) {
-            errors.add(new ValidationErrorDTO("self_check_passed",
-                    "FULL_ARTICLE_ORCHESTRATED exige self_check_passed=true (run atomico)"));
+        // Por locale, validar campos.
+        for (String localeKey : MANDATORY_LOCALES) {
+            JsonNode loc = locales.get(localeKey);
+            if (loc == null || !loc.isObject()) continue; // ya marcado
+            validateLocaleEntry(localeKey, loc, errors);
         }
 
-        // Heuristicas de estructura Markdown (heredadas del hardening Fase 4A).
-        // Solo se evaluan si draft_markdown existe y tiene la longitud minima; los checks
-        // de existencia/longitud ya han disparado un error si no es el caso.
-        if (draftMarkdown != null && !draftMarkdown.isNull() && draftMarkdown.isTextual()
-                && draftMarkdown.asText().length() >= FULL_ARTICLE_ORCHESTRATED_MIN_DRAFT_CHARS) {
-            String md = draftMarkdown.asText();
-
-            // Check 1: al menos un H2 literal "^## " al inicio de linea
-            if (!MARKDOWN_H2_PATTERN.matcher(md).find()) {
-                errors.add(new ValidationErrorDTO("draft_markdown",
-                        "FULL_ARTICLE_ORCHESTRATED exige al menos un heading H2 literal con sintaxis Markdown"
-                                + " (\"## \" al inicio de linea); el draft parece texto plano"));
+        // Cross-locale: slugs deben divergir entre ES y EN (ADR-022 D2).
+        JsonNode es = locales.get(ContentConstants.LOCALE_ES);
+        JsonNode en = locales.get(ContentConstants.LOCALE_EN);
+        if (es != null && es.isObject() && en != null && en.isObject()) {
+            String slugEs = textOrNull(es, "slug");
+            String slugEn = textOrNull(en, "slug");
+            if (slugEs != null && slugEs.equals(slugEn)) {
+                errors.add(new ValidationErrorDTO("locales.en.slug",
+                        "slug ES y EN deben divergir (ADR-022 D2): ambos son '" + slugEs + "'"));
             }
 
-            // Check 2: separacion de parrafos con linea en blanco
-            if (!MARKDOWN_PARAGRAPH_BREAK_PATTERN.matcher(md).find()) {
-                errors.add(new ValidationErrorDTO("draft_markdown",
-                        "FULL_ARTICLE_ORCHESTRATED exige separacion de parrafos con linea en blanco"
-                                + " (doble salto de linea); el draft no la contiene"));
-            }
-
-            // Check 3: prohibir HTML inline obvio
-            if (MARKDOWN_HTML_INLINE_PATTERN.matcher(md).find()) {
-                errors.add(new ValidationErrorDTO("draft_markdown",
-                        "FULL_ARTICLE_ORCHESTRATED prohibe HTML inline en draft_markdown; usa Markdown puro"));
+            // WARN no bloqueante: numero de H2 entre locales (paridad estructural).
+            String draftEs = textOrNull(es, "draft_markdown");
+            String draftEn = textOrNull(en, "draft_markdown");
+            if (draftEs != null && draftEn != null) {
+                int h2Es = countMatches(MARKDOWN_H2_PATTERN, draftEs);
+                int h2En = countMatches(MARKDOWN_H2_PATTERN, draftEn);
+                if (h2Es != h2En) {
+                    log.warn("{} bilingual H2 mismatch: locales.es has {} H2, locales.en has {}; "
+                                    + "no se bloquea pero conviene revisar paridad",
+                            ContentConstants.LOG_PREFIX, h2Es, h2En);
+                }
             }
         }
+    }
+
+    private void validateLocaleEntry(String localeKey, JsonNode loc, List<ValidationErrorDTO> errors) {
+        String pathBase = "locales." + localeKey;
+
+        for (String field : LOCALE_REQUIRED_FIELDS) {
+            if (!loc.has(field)) {
+                errors.add(new ValidationErrorDTO(pathBase + "." + field, "campo obligatorio ausente"));
+            }
+        }
+
+        // slug kebab-case
+        JsonNode slug = loc.get("slug");
+        if (slug != null && !slug.isNull()) {
+            if (!slug.isTextual() || slug.asText().isBlank()) {
+                errors.add(new ValidationErrorDTO(pathBase + ".slug", "slug requerido"));
+            } else {
+                String s = slug.asText();
+                if (s.length() > SLUG_MAX) {
+                    errors.add(new ValidationErrorDTO(pathBase + ".slug",
+                            "excede " + SLUG_MAX + " caracteres"));
+                }
+                if (!SLUG_PATTERN.matcher(s).matches()) {
+                    errors.add(new ValidationErrorDTO(pathBase + ".slug",
+                            "slug invalido: solo minusculas, digitos y guiones (kebab-case)"));
+                }
+            }
+        }
+
+        // title <= 255
+        JsonNode title = loc.get("title");
+        if (title != null && !title.isNull()) {
+            if (!title.isTextual() || title.asText().isBlank()) {
+                errors.add(new ValidationErrorDTO(pathBase + ".title", "title requerido"));
+            } else if (title.asText().length() > TITLE_MAX) {
+                errors.add(new ValidationErrorDTO(pathBase + ".title",
+                        "excede " + TITLE_MAX + " caracteres"));
+            }
+        }
+
+        // seo_title <= 60
+        JsonNode seoTitle = loc.get("seo_title");
+        if (seoTitle != null && !seoTitle.isNull()) {
+            if (!seoTitle.isTextual() || seoTitle.asText().isBlank()) {
+                errors.add(new ValidationErrorDTO(pathBase + ".seo_title", "seo_title requerido no vacio"));
+            } else if (seoTitle.asText().length() > SEO_TITLE_MAX) {
+                errors.add(new ValidationErrorDTO(pathBase + ".seo_title",
+                        "excede " + SEO_TITLE_MAX + " caracteres (" + seoTitle.asText().length() + ")"));
+            }
+        }
+
+        // meta_description <= 160
+        JsonNode metaDesc = loc.get("meta_description");
+        if (metaDesc != null && !metaDesc.isNull()) {
+            if (!metaDesc.isTextual() || metaDesc.asText().isBlank()) {
+                errors.add(new ValidationErrorDTO(pathBase + ".meta_description",
+                        "meta_description requerida no vacia"));
+            } else if (metaDesc.asText().length() > META_DESCRIPTION_MAX) {
+                errors.add(new ValidationErrorDTO(pathBase + ".meta_description",
+                        "excede " + META_DESCRIPTION_MAX + " caracteres ("
+                                + metaDesc.asText().length() + ")"));
+            }
+        }
+
+        // draft_markdown >= 800 + estructura Markdown literal
+        JsonNode draft = loc.get("draft_markdown");
+        if (draft != null && !draft.isNull()) {
+            if (!draft.isTextual() || draft.asText().isBlank()) {
+                errors.add(new ValidationErrorDTO(pathBase + ".draft_markdown",
+                        "draft_markdown requerido no vacio"));
+            } else {
+                String md = draft.asText();
+                if (md.length() < MIN_DRAFT_CHARS) {
+                    errors.add(new ValidationErrorDTO(pathBase + ".draft_markdown",
+                            "se requieren al menos " + MIN_DRAFT_CHARS
+                                    + " caracteres (recibidos " + md.length() + ")"));
+                }
+                if (!MARKDOWN_H2_PATTERN.matcher(md).find()) {
+                    errors.add(new ValidationErrorDTO(pathBase + ".draft_markdown",
+                            "se requiere al menos un H2 literal con sintaxis Markdown"
+                                    + " (\"## \" al inicio de linea)"));
+                }
+                if (!MARKDOWN_PARAGRAPH_BREAK_PATTERN.matcher(md).find()) {
+                    errors.add(new ValidationErrorDTO(pathBase + ".draft_markdown",
+                            "se requiere separacion de parrafos con linea en blanco"
+                                    + " (doble salto de linea)"));
+                }
+                if (MARKDOWN_HTML_INLINE_PATTERN.matcher(md).find()) {
+                    errors.add(new ValidationErrorDTO(pathBase + ".draft_markdown",
+                            "prohibido HTML inline; usa Markdown puro"));
+                }
+            }
+        }
+
+        // search_intent enum
+        JsonNode intent = loc.get("search_intent");
+        if (intent != null && !intent.isNull()) {
+            if (!intent.isTextual() || !ALLOWED_SEARCH_INTENTS.contains(intent.asText())) {
+                errors.add(new ValidationErrorDTO(pathBase + ".search_intent",
+                        "valor no permitido; usa informational/transactional/navigational/commercial"));
+            }
+        }
+
+        // target_keywords array con al menos un type=primary
+        JsonNode keywords = loc.get("target_keywords");
+        if (keywords != null && !keywords.isNull()) {
+            if (!keywords.isArray()) {
+                errors.add(new ValidationErrorDTO(pathBase + ".target_keywords", "debe ser array"));
+            } else {
+                boolean hasPrimary = false;
+                for (JsonNode kw : keywords) {
+                    if (kw != null && kw.isObject()) {
+                        JsonNode type = kw.get("type");
+                        if (type != null && type.isTextual() && "primary".equals(type.asText())) {
+                            hasPrimary = true;
+                            break;
+                        }
+                    }
+                }
+                if (!hasPrimary) {
+                    errors.add(new ValidationErrorDTO(pathBase + ".target_keywords",
+                            "se requiere al menos un keyword con type=primary"));
+                }
+            }
+        }
+
+        // competitor_insights array si presente
+        JsonNode competitor = loc.get("competitor_insights");
+        if (competitor != null && !competitor.isNull() && !competitor.isArray()) {
+            errors.add(new ValidationErrorDTO(pathBase + ".competitor_insights", "debe ser array"));
+        }
+
+        // article_outline array >= 4
+        JsonNode outline = loc.get("article_outline");
+        if (outline != null && !outline.isNull()) {
+            if (!outline.isArray()) {
+                errors.add(new ValidationErrorDTO(pathBase + ".article_outline", "debe ser array"));
+            } else if (outline.size() < MIN_OUTLINE_SECTIONS) {
+                errors.add(new ValidationErrorDTO(pathBase + ".article_outline",
+                        "se requieren al menos " + MIN_OUTLINE_SECTIONS
+                                + " secciones (recibidas " + outline.size() + ")"));
+            }
+        }
+
+        // risk_notes / fact_check_notes son arrays si presentes (opcionales).
+        for (String f : List.of("risk_notes", "fact_check_notes")) {
+            JsonNode n = loc.get(f);
+            if (n != null && !n.isNull() && !n.isArray()) {
+                errors.add(new ValidationErrorDTO(pathBase + "." + f, "debe ser array"));
+            }
+        }
+    }
+
+    private static String textOrNull(JsonNode root, String field) {
+        if (root == null) return null;
+        JsonNode n = root.get(field);
+        if (n == null || n.isNull() || !n.isTextual()) return null;
+        String v = n.asText();
+        return v.isBlank() ? null : v;
+    }
+
+    private static int countMatches(Pattern p, String text) {
+        if (text == null) return 0;
+        int count = 0;
+        java.util.regex.Matcher m = p.matcher(text);
+        while (m.find()) count++;
+        return count;
     }
 }

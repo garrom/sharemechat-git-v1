@@ -24,16 +24,24 @@ import java.nio.file.NoSuchFileException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HexFormat;
+import java.util.Set;
 
 /**
  * Almacena cuerpos editoriales (markdown) en el bucket S3 privado del CMS.
  * Bucket separado del bucket privado de uploads (KYC, perfiles) para
  * aislar blast radius. ADR-010, decision D2.
+ *
+ * Post-ADR-025: el layout S3 es per-locale.
+ *   articles/{id}/{locale}/draft.md
+ *   articles/{id}/{locale}/v{n}.md
  */
 @Service
 public class ContentBodyStorageService {
 
     private static final Logger log = LoggerFactory.getLogger(ContentBodyStorageService.class);
+
+    private static final Set<String> ALLOWED_LOCALES_FOR_S3 = Set.of(
+            ContentConstants.LOCALE_ES, ContentConstants.LOCALE_EN);
 
     private final S3Client s3Client;
     private final ContentS3Config s3Config;
@@ -44,13 +52,17 @@ public class ContentBodyStorageService {
         this.s3Config = s3Config;
     }
 
-    public Result uploadDraftBody(Long articleId, byte[] markdownBytes) throws IOException {
+    /**
+     * Sube el draft de una traduccion. Sobreescribe si existe. Idempotente.
+     */
+    public Result uploadDraftBody(Long articleId, String locale, byte[] markdownBytes) throws IOException {
         ensureConfigured();
         if (articleId == null) {
             throw new IllegalArgumentException("articleId requerido");
         }
+        String safeLocale = requireValidLocale(locale);
         byte[] safeBytes = markdownBytes == null ? new byte[0] : markdownBytes;
-        String key = buildKey(String.format(ContentConstants.S3_KEY_DRAFT_TEMPLATE, articleId));
+        String key = buildKey(String.format(ContentConstants.S3_KEY_DRAFT_TEMPLATE, articleId, safeLocale));
 
         try {
             s3Client.putObject(PutObjectRequest.builder()
@@ -66,8 +78,8 @@ public class ContentBodyStorageService {
         }
 
         String hash = computeContentHash(safeBytes);
-        log.info("{} draft uploaded articleId={} key={} hash={} bytes={}",
-                ContentConstants.LOG_PREFIX, articleId, key, hash, safeBytes.length);
+        log.info("{} draft uploaded articleId={} locale={} key={} hash={} bytes={}",
+                ContentConstants.LOG_PREFIX, articleId, safeLocale, key, hash, safeBytes.length);
         return new Result(key, hash, safeBytes.length);
     }
 
@@ -94,18 +106,20 @@ public class ContentBodyStorageService {
     }
 
     /**
-     * Fija una version inmutable copiando el contenido actual de draft.md a v{n}.md.
-     * Lee bytes y los re-sube (no usa S3 CopyObject) para garantizar contenido exacto
-     * bajo SSE y para poder recalcular el hash en una unica operacion.
-     * Lanza NoSuchFileException si el draft no existe en S3.
+     * Fija una version inmutable per-locale copiando draft.md a v{n}.md
+     * dentro del mismo locale. Re-sube los bytes (no usa CopyObject) para
+     * mantener SSE y recalcular hash en una operacion.
      */
-    public Result copyDraftToVersion(Long articleId, int versionNumber) throws IOException {
+    public Result copyDraftToVersion(Long articleId, String locale, int versionNumber) throws IOException {
         ensureConfigured();
         if (articleId == null || versionNumber < 1) {
             throw new IllegalArgumentException("articleId y versionNumber requeridos");
         }
-        String draftKey = buildKey(String.format(ContentConstants.S3_KEY_DRAFT_TEMPLATE, articleId));
-        String versionKey = buildKey(String.format(ContentConstants.S3_KEY_VERSION_TEMPLATE, articleId, versionNumber));
+        String safeLocale = requireValidLocale(locale);
+        String draftKey = buildKey(String.format(
+                ContentConstants.S3_KEY_DRAFT_TEMPLATE, articleId, safeLocale));
+        String versionKey = buildKey(String.format(
+                ContentConstants.S3_KEY_VERSION_TEMPLATE, articleId, safeLocale, versionNumber));
 
         byte[] bytes;
         try {
@@ -138,26 +152,30 @@ public class ContentBodyStorageService {
         }
 
         String hash = computeContentHash(bytes);
-        log.info("{} version persisted articleId={} versionNumber={} key={} hash={} bytes={}",
-                ContentConstants.LOG_PREFIX, articleId, versionNumber, versionKey, hash, bytes.length);
+        log.info("{} version persisted articleId={} locale={} versionNumber={} key={} hash={} bytes={}",
+                ContentConstants.LOG_PREFIX, articleId, safeLocale, versionNumber, versionKey, hash, bytes.length);
         return new Result(versionKey, hash, bytes.length);
     }
 
     /**
-     * Lee el body de una version inmutable. Devuelve "" si la key no existe en S3.
+     * Lee el body inmutable de una version per-locale. Devuelve "" si la
+     * key no existe en S3.
      */
-    public String loadVersionBody(Long articleId, int versionNumber) throws IOException {
+    public String loadVersionBody(Long articleId, String locale, int versionNumber) throws IOException {
         if (articleId == null || versionNumber < 1) {
             throw new IllegalArgumentException("articleId y versionNumber requeridos");
         }
-        String versionKey = buildKey(String.format(ContentConstants.S3_KEY_VERSION_TEMPLATE, articleId, versionNumber));
+        String safeLocale = requireValidLocale(locale);
+        String versionKey = buildKey(String.format(
+                ContentConstants.S3_KEY_VERSION_TEMPLATE, articleId, safeLocale, versionNumber));
         return loadBodyAsString(versionKey);
     }
 
     // ================================================================
-    // Fase 3A — Artefactos de runs IA (Claude Cowork manual structured)
+    // Artefactos de runs IA (Claude Cowork manual structured).
     // Layout: content/runs/{runId}/[prompt.txt | output_raw.md |
     //         output_validated.json | validation_errors.json]
+    // No depende de locale.
     // ================================================================
 
     /** Sube el prompt expandido inmutable de un run. Devuelve la S3 key absoluta. */
@@ -213,10 +231,8 @@ public class ContentBodyStorageService {
     }
 
     /**
-     * Carga el output canonico validado de un run (Fase 4A: necesario para
-     * aplicar draft_markdown desde un run VALIDATED al cuerpo del articulo
-     * sin obligar al editor a copiar manualmente desde el JSON).
-     * Devuelve "" si la key no existe en S3.
+     * Carga el output canonico validado de un run. Devuelve "" si la key
+     * no existe en S3 (run REJECTED o PENDING).
      */
     public String loadRunOutputValidated(Long runId) throws IOException {
         try {
@@ -271,11 +287,24 @@ public class ContentBodyStorageService {
 
     private void ensureConfigured() {
         if (!s3Config.isConfigured()) {
-            // 503 explicito en lugar de IllegalStateException (que el handler global
-            // mapea a 500). El bucket vacio es estado operativo, no bug del codigo.
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
                     "Content S3 no configurado: app.storage.s3.content.private-bucket vacio");
         }
+    }
+
+    /**
+     * Defensa server-side: rechaza locales no soportados al construir paths S3.
+     * El service caller ya valida; este es el segundo cinturon.
+     */
+    private static String requireValidLocale(String locale) {
+        if (locale == null) {
+            throw new IllegalArgumentException("locale requerido para path S3");
+        }
+        String norm = locale.trim().toLowerCase(java.util.Locale.ROOT);
+        if (!ALLOWED_LOCALES_FOR_S3.contains(norm)) {
+            throw new IllegalArgumentException("locale no soportado para path S3: " + locale);
+        }
+        return norm;
     }
 
     public record Result(String s3Key, String contentHash, int byteSize) {}

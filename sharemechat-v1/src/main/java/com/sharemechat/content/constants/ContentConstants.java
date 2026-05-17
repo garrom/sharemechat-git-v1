@@ -31,9 +31,10 @@ public final class ContentConstants {
     public static final String LOCALE_ES = "es";
     public static final String LOCALE_EN = "en";
 
-    // S3 key layout (debajo de privateKeyPrefix)
-    public static final String S3_KEY_DRAFT_TEMPLATE = "articles/%d/draft.md";
-    public static final String S3_KEY_VERSION_TEMPLATE = "articles/%d/v%d.md";
+    // S3 key layout (debajo de privateKeyPrefix). Post-ADR-025 el path es por locale.
+    // Args: %d=articleId, %s=locale (es|en|...), %d=versionNumber (solo en VERSION_TEMPLATE).
+    public static final String S3_KEY_DRAFT_TEMPLATE = "articles/%d/%s/draft.md";
+    public static final String S3_KEY_VERSION_TEMPLATE = "articles/%d/%s/v%d.md";
 
     // Fase 3A — IA runs (Claude Cowork manual structured)
     public static final String RUN_TYPE_RESEARCH = "RESEARCH";
@@ -52,7 +53,8 @@ public final class ContentConstants {
     public static final String RUN_STATUS_FAILED = "FAILED";
 
     public static final String AI_PROVIDER_CLAUDE = "claude";
-    public static final String AI_OUTPUT_SCHEMA_VERSION = "1.0";
+    // Schema 2.0 (ADR-025): JSON unico bilingue con seccion shared + locales{es,en}.
+    public static final String AI_OUTPUT_SCHEMA_VERSION = "2.0";
 
     // Layout S3 para runs IA bajo privateKeyPrefix
     public static final String S3_KEY_RUN_PROMPT_TEMPLATE = "runs/%d/prompt.txt";

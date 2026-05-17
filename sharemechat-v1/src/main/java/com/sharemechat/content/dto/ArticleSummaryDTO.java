@@ -1,16 +1,21 @@
 package com.sharemechat.content.dto;
 
 import java.time.Instant;
+import java.util.List;
 
+/**
+ * Resumen de un articulo logico para listados admin (ADR-025).
+ *
+ * Campos compartidos del articulo + lista compacta de traducciones
+ * (locale, slug, title, hasBody) para que el admin pueda mostrar el
+ * estado de cada locale sin descargar bodies.
+ */
 public record ArticleSummaryDTO(
         Long id,
-        String slug,
-        String locale,
         String state,
-        String title,
         String category,
-        Long responsibleEditorUserId,
         boolean aiAssisted,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        List<TranslationSummaryDTO> translations
 ) {}
