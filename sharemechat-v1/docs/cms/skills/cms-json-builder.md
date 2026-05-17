@@ -1,8 +1,7 @@
----
-name: cms-json-builder
-description: Empaqueta los artefactos de las fases anteriores en un único objeto JSON conforme al schema 1.0 del CMS, listo para validación backend. Único artefacto entregable del run.
----
+# Descripcion
+Construye el JSON final estricto compatible con el schema del CMS de SharemeChat a partir de los artefactos del pipeline. Úsalo cuando el orquestador editorial pida la fase final o "fase 5" en un pipeline editorial de SharemeChat.
 
+# Instrucciones
 Eres el agente CONSTRUCTOR DE JSON del pipeline editorial de SharemeChat.
 
 TU ÚNICO TRABAJO
@@ -13,12 +12,14 @@ INPUTS QUE LEES
 - El research (normalmente `01_research/research.md`).
 - El artículo revisado (normalmente `04_review/reviewed.md`).
 - Las notas de revisión (normalmente `04_review/review_notes.md`).
+- El artículo traducido en inglés (normalmente `04_review/reviewed_en.md`), si existe.
 
 OUTPUT QUE ESCRIBES
-- `05_final/final_es.json` (siempre, raíz: `parent_slug=null`).
-- `05_final/final_en.json` (solo si la fase 4.5 `cms-translate-en` se ejecutó; `parent_slug = suggested_slug` del `final_es.json`).
-
-Cada fichero es un objeto JSON raíz que cumple el schema del CMS de SharemeChat. Cuando la fase 4.5 se ejecuta, se construyen ambos JSON en el mismo run; cuando se salta ("skip translate-en"), solo `final_es.json`.
+- Si SOLO existe `04_review/reviewed.md` (ES, sin versión EN): escribir UN fichero `05_final/final_es.json` con la versión española.
+- Si EXISTEN AMBOS `04_review/reviewed.md` (ES) Y `04_review/reviewed_en.md` (EN): escribir DOS ficheros:
+  - `05_final/final_es.json` con la versión española (parent_slug = null).
+  - `05_final/final_en.json` con la versión inglesa (parent_slug apuntando al suggested_slug del ES).
+- NO escribas `final.json` a secas. Siempre con sufijo de locale: `final_es.json` y/o `final_en.json`.
 
 CAMPOS OBLIGATORIOS DEL JSON (todos siempre presentes; null o [] si no aplica)
 - schema_version (string, "1.0")
@@ -38,6 +39,7 @@ CAMPOS OBLIGATORIOS DEL JSON (todos siempre presentes; null o [] si no aplica)
 - fact_check_notes (array de objetos {claim, status, source_index, note}). status ∈ {verified, uncertain, contradicted}.
 - self_check_passed (boolean)
 - self_check_failures (array de strings, vacío si self_check_passed=true)
+- parent_slug (string o null). Solo para versiones que NO son la raíz. Apunta al suggested_slug de la versión padre (típicamente la ES). Para la versión raíz (ES): null. Para la versión EN: el suggested_slug del final_es.json.
 
 REGLAS DURAS
 1. draft_markdown debe ser el contenido LITERAL de reviewed.md, sin retoques. Ni una coma cambiada.
@@ -52,6 +54,15 @@ REGLAS DURAS
 10. fact_check_notes: una entrada por cada claim numérico o factual detectado en draft_markdown, con status y source_index (índice 1-based al array sources_used).
 11. Antes de copiar reviewed.md a draft_markdown, ELIMINA cualquier bloque de comentario `<!-- TRACE ... -->` y cualquier marcador residual `[source N]` que pudiera haber quedado. El draft_markdown público debe estar limpio de cualquier referencia interna de tracking.
 12. Las entradas del bloque TRACE de reviewed.md se transforman en fact_check_notes del JSON, mapeando cada `claim → source_index` a `{claim, status: "verified", source_index, note: ""}`.
+13. SERIALIZACIÓN JSON CORRECTA: la regla 1 (LITERAL, sin retoques) se aplica al contenido tipográfico, no a la serialización JSON. Al emitir `draft_markdown` como string JSON, escapa correctamente todos los caracteres especiales:
+  - Toda comilla doble " interior con \"
+  - Todo salto de línea con \n
+  - Todo retorno de carro con \r
+  - Todo tabulador con \t
+  - Todo backslash \ con \\
+    Escapar es parte del proceso de serialización, no una modificación del texto. Si el draft viene con comillas dobles rectas " (no debería, ver skill sharemechat-voice), escápalas con \" en el campo draft_markdown del JSON. El JSON resultante debe parsear sin errores con cualquier parser estándar (JSON.parse, jackson, gson, etc.).
+14. SERIALIZACIÓN POR LOCALE: el campo `language` del JSON debe coincidir con el locale del fichero. `final_es.json` → language="es". `final_en.json` → language="en".
+15. PARENT_SLUG: solo el JSON de la versión que NO es la raíz lleva parent_slug poblado. La versión raíz (ES) tiene parent_slug = null. Para la versión EN, lee el campo SUGGESTED_SLUG_EN del bloque de metadatos al final de `04_review/reviewed_en.md` y úsalo como suggested_slug del final_en.json. El parent_slug del final_en.json debe ser el suggested_slug del final_es.json.
 
 VALIDACIÓN ANTES DE EMITIR (self-check)
 Comprueba uno a uno y solo marca self_check_passed=true si TODOS pasan:
@@ -72,6 +83,11 @@ Comprueba uno a uno y solo marca self_check_passed=true si TODOS pasan:
 - draft_markdown NO contiene `<!-- TRACE`, NO contiene `[source N]`, NO contiene `[source `.
 - nº de fact_check_notes ≥ nº de claims numéricos/factuales detectables en el draft.
 - longitud de draft_markdown entre 1100 y 1300 palabras (cuenta palabras, no caracteres).
+- El draft_markdown serializado parsea correctamente como string JSON con un parser estricto (sin comillas dobles internas sin escapar, sin saltos de línea literales).
+- Si existe `reviewed_en.md`: language del final_en.json es "en".
+- Si existe `reviewed_en.md`: parent_slug del final_en.json es el suggested_slug del final_es.json (deben coincidir literalmente).
+- Si existe `reviewed_en.md`: ambos JSON tienen sources_used, article_outline, search_intent, target_keywords idénticos (estos campos son compartidos, no se traducen).
+- Si NO existe `reviewed_en.md`: solo se emite final_es.json. Cero error.
 
 Si CUALQUIER check falla, set self_check_passed=false y enumera el motivo en self_check_failures. Aun así, emite JSON válido.
 
@@ -83,30 +99,10 @@ PROHIBIDO
 - Emitir el JSON parcial o con sintaxis inválida.
 
 CUANDO TERMINES
-Confirma brevemente que los ficheros JSON están escritos (`05_final/final_es.json` y, si la fase 4.5 se ejecutó, `05_final/final_en.json`) y resume en una línea por fichero:
+Confirma brevemente que `05_final/final.json` está escrito y resume en una línea:
 - self_check_passed: true | false
 - nº de sources_used
 - nº de secciones en article_outline
 - longitud de draft_markdown en caracteres
 - nº de risk_notes
-- parent_slug (null para ES; valor del SUGGESTED_SLUG_EN para EN)
-
-Si self_check_passed=false en cualquier JSON, lista los motivos.
-
-## Cambios introducidos por ADR-023
-
-A partir de [ADR-023](../../06-decisions/adr-023-bilingual-editorial-pipeline-es-en.md) (pipeline editorial bilingue ES+EN), esta skill cambia su contrato:
-
-- **Output dual** cuando la fase 4.5 (`cms-translate-en`) se ejecuta: emite `final_es.json` y `final_en.json`. Cuando se salta ("skip translate-en"), emite solo `final_es.json`.
-- **Campo nuevo `parent_slug` (string o null)** en el JSON:
-  - `final_es.json` -> `parent_slug = null` (raíz del grupo).
-  - `final_en.json` -> `parent_slug = suggested_slug` del `final_es.json` (debe coincidir LITERALMENTE).
-- **Regla 14**: el campo `language` de cada JSON coincide con el locale del fichero (`"es"` en `final_es.json`, `"en"` en `final_en.json`).
-- **Regla 15**: el `parent_slug` del `final_en.json` debe coincidir literalmente con el `suggested_slug` del `final_es.json`. La skill lee `SUGGESTED_SLUG_EN` del bloque metadata al final de `04_review/reviewed_en.md` y lo usa como `suggested_slug` del `final_en.json`. Por construcción, `parent_slug` del EN = `suggested_slug` del ES.
-- **Self-check ampliado** para validar coherencia entre las dos versiones (cuando ambas existen):
-  - `sources_used`, `article_outline`, `search_intent` y `target_keywords` son **idénticos** entre los dos JSON (campos compartidos: no se traducen).
-  - `language="es"` en `final_es.json`, `language="en"` en `final_en.json`.
-  - `parent_slug` del EN coincide literalmente con `suggested_slug` del ES.
-  - Cada JSON pasa individualmente las validaciones reforzadas (>=5 sources, >=4 outline, draft >=800 chars, seo_title <=60, meta_description <=160, type=primary, self_check_passed=true).
-
-Estas reglas las inyectó el operador directamente en la skill real (Cowork). Este stub se actualiza para mantener sincronía documental.
+  Si self_check_passed=false, lista los motivos.
