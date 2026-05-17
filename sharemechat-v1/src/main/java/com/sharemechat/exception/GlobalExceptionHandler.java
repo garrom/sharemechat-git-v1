@@ -9,6 +9,7 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.util.stream.Collectors;
@@ -213,6 +214,35 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Void> handleAsyncRequestNotUsable(AsyncRequestNotUsableException ex, HttpServletRequest req) {
         log.debug("Request abortada por el cliente en {}: {}", req.getRequestURI(), ex.getMessage());
         return ResponseEntity.noContent().build();
+    }
+
+    // Handlers basados en ResponseStatusException: patron Spring estandar
+    // para que un controller indique un codigo HTTP + razon explicitos sin
+    // crear una excepcion de negocio dedicada. Antes de este handler la
+    // excepcion caia al fallback handleOther y se mapeaba a 500 con mensaje
+    // generico, ocultando el codigo HTTP real (p. ej. 400, 404, 409) que el
+    // controller habia indicado. Lo capturamos aqui y respetamos el codigo y
+    // el reason que vienen dentro.
+    //
+    // Politica de logging:
+    //   - 4xx: log.warn (error esperado del cliente, no del servidor).
+    //   - 5xx: log.error (algo se ha roto en el servidor de verdad).
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ApiError> handleResponseStatus(ResponseStatusException ex, HttpServletRequest req) {
+        HttpStatusCode status = ex.getStatusCode();
+        HttpStatus resolved = HttpStatus.resolve(status.value());
+        String reasonPhrase = resolved != null ? resolved.getReasonPhrase() : "Error";
+        String message = ex.getReason() != null ? ex.getReason() : reasonPhrase;
+        String path = req != null ? req.getRequestURI() : null;
+
+        if (status.is5xxServerError()) {
+            log.error("ResponseStatusException 5xx en {}: status={} reason={}", path, status.value(), message, ex);
+        } else {
+            log.warn("ResponseStatusException {}: status={} reason={} path={}", status.value(), status.value(), message, path);
+        }
+
+        ApiError body = new ApiError(status.value(), reasonPhrase, message, path);
+        return ResponseEntity.status(status).body(body);
     }
 
     @ExceptionHandler(Exception.class)
