@@ -11,6 +11,7 @@ import com.sharemechat.content.dto.ArticleUpdateRequest;
 import com.sharemechat.content.dto.ReviewEventDTO;
 import com.sharemechat.content.dto.TransitionRequest;
 import com.sharemechat.content.dto.TranslationDetailDTO;
+import com.sharemechat.content.dto.TranslationMetadataUpdateRequest;
 import com.sharemechat.content.dto.TranslationSummaryDTO;
 import com.sharemechat.content.dto.TranslationVersionSummaryDTO;
 import com.sharemechat.content.dto.VersionDTO;
@@ -322,6 +323,130 @@ public class ContentArticleService {
         log.info("{} translation body updated articleId={} locale={} bytes={} actor={}",
                 ContentConstants.LOG_PREFIX, article.getId(), locale, uploaded.byteSize(), actorUserId);
         return toDetail(article);
+    }
+
+    /**
+     * Actualiza campos linguisticos per-locale de una traduccion existente
+     * (paquete 6.5, ADR-025). Complementa al apply-bilingual: permite
+     * correcciones manuales finas de title, slug, seo_title, meta_description
+     * sin tener que re-ejecutar el pipeline IA.
+     *
+     * Semantica de campos:
+     *  - null o ausente -> no se modifica.
+     *  - string vacio "" -> 400 (para borrar un campo no se usa "").
+     *
+     * Validaciones:
+     *  - title: trim, max TITLE_MAX (255).
+     *  - slug: formato kebab-case, max SLUG_MAX (160), unico dentro del locale.
+     *  - seoTitle: trim, max SEO_TITLE_MAX (60).
+     *  - metaDescription: trim, max META_DESCRIPTION_MAX (160).
+     *
+     * NO crea translations. Si no existe la translation (articleId, locale)
+     * lanza 404; el operador debe poblarla primero via apply-bilingual (caso
+     * EN) o estaba ya creada al crear el articulo (caso ES).
+     */
+    @Transactional
+    public TranslationDetailDTO updateTranslationMetadata(Long articleId,
+                                                          String localeRaw,
+                                                          TranslationMetadataUpdateRequest req,
+                                                          Long actorUserId,
+                                                          boolean isAdmin) {
+        if (articleId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "articleId requerido");
+        }
+        if (req == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request requerida");
+        }
+        if (actorUserId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Actor no resuelto");
+        }
+
+        ContentArticle article = requireExisting(articleId);
+        assertEditable(article, isAdmin);
+        String locale = normalizeLocale(localeRaw);
+
+        ContentArticleTranslation tr = translationRepo
+                .findByArticleIdAndLocale(article.getId(), locale)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Traduccion " + locale + " no encontrada para articleId=" + articleId));
+
+        List<String> changedFields = new java.util.ArrayList<>();
+
+        // title: opcional, "" -> 400 explicito, normalizeText con required=false
+        // ya rechaza la cadena vacia? Comprobamos manualmente: normalizeText con
+        // required=false devuelve null para "" trimeado. Pero queremos un 400
+        // explicito para distinguir "no enviado" (null) de "enviado vacio" ("").
+        if (req.getTitle() != null) {
+            if (req.getTitle().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "title no puede ser vacio; omite el campo para no modificarlo");
+            }
+            String normalizedTitle = normalizeText(req.getTitle(), TITLE_MAX, true, "title");
+            if (!java.util.Objects.equals(normalizedTitle, tr.getTitle())) {
+                tr.setTitle(normalizedTitle);
+                changedFields.add("title");
+            }
+        }
+
+        if (req.getSlug() != null) {
+            if (req.getSlug().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "slug no puede ser vacio; omite el campo para no modificarlo");
+            }
+            String normalizedSlug = normalizeSlug(req.getSlug());
+            if (!java.util.Objects.equals(normalizedSlug, tr.getSlug())) {
+                // Unicidad dentro del locale, excluyendo la translation actual.
+                assertSlugAvailableForLocale(normalizedSlug, locale, tr.getId());
+                tr.setSlug(normalizedSlug);
+                changedFields.add("slug");
+            }
+        }
+
+        if (req.getSeoTitle() != null) {
+            if (req.getSeoTitle().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "seoTitle no puede ser vacio; omite el campo para no modificarlo");
+            }
+            String normalizedSeoTitle = normalizeText(req.getSeoTitle(), SEO_TITLE_MAX, true, "seoTitle");
+            if (!java.util.Objects.equals(normalizedSeoTitle, tr.getSeoTitle())) {
+                tr.setSeoTitle(normalizedSeoTitle);
+                changedFields.add("seoTitle");
+            }
+        }
+
+        if (req.getMetaDescription() != null) {
+            if (req.getMetaDescription().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "metaDescription no puede ser vacio; omite el campo para no modificarlo");
+            }
+            String normalizedMeta = normalizeText(req.getMetaDescription(),
+                    META_DESCRIPTION_MAX, true, "metaDescription");
+            if (!java.util.Objects.equals(normalizedMeta, tr.getMetaDescription())) {
+                tr.setMetaDescription(normalizedMeta);
+                changedFields.add("metaDescription");
+            }
+        }
+
+        // Persistir solo si hubo cambio efectivo. Si la request llego sin
+        // campos a modificar (todos null) o todos coincidian con el valor
+        // actual, devolvemos el estado sin emitir evento ni updated_at nuevo.
+        ContentArticleTranslation savedTr = tr;
+        if (!changedFields.isEmpty()) {
+            savedTr = translationRepo.save(tr);
+            article.setUpdatedByUserId(actorUserId);
+            articleRepo.save(article);
+
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("target", "translation_metadata");
+            payload.put("locale", locale);
+            payload.put("fields", changedFields);
+            emitEvent(article.getId(), null, ContentConstants.EVENT_EDIT_APPLIED, actorUserId, payload);
+
+            log.info("{} translation metadata updated articleId={} locale={} actor={} fields={}",
+                    ContentConstants.LOG_PREFIX, article.getId(), locale, actorUserId, changedFields);
+        }
+
+        return toTranslationDetail(savedTr);
     }
 
     @Transactional

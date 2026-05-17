@@ -6,6 +6,7 @@ import com.sharemechat.content.dto.ArticleSummaryDTO;
 import com.sharemechat.content.dto.ArticleUpdateRequest;
 import com.sharemechat.content.dto.ReviewEventDTO;
 import com.sharemechat.content.dto.TranslationDetailDTO;
+import com.sharemechat.content.dto.TranslationMetadataUpdateRequest;
 import com.sharemechat.content.dto.TranslationPreviewDTO;
 import com.sharemechat.content.dto.TransitionRequest;
 import com.sharemechat.content.dto.VersionDTO;
@@ -55,6 +56,7 @@ import java.util.Map;
  *  - GET  /articles/{id}/translations/{locale}/body      lee body markdown per-locale
  *  - PUT  /articles/{id}/translations/{locale}/body      sobreescribe body markdown per-locale
  *  - GET  /articles/{id}/translations/{locale}/preview   render HTML preview per-locale
+ *  - PATCH /articles/{articleId}/translations/{locale}   edita title/slug/seo/meta per-locale (paquete 6.5)
  *  - GET  /articles/{id}/versions/{n}/translations/{locale}/body
  *                                                  body congelado de version per-locale
  *
@@ -240,6 +242,33 @@ public class ContentAdminController {
                 detail.heroImageUrl(),
                 htmlBody
         );
+    }
+
+    // ================================================================
+    // Metadata linguistica per-locale (paquete 6.5)
+    // ================================================================
+
+    /**
+     * Edita campos linguisticos per-locale: title, slug, seo_title,
+     * meta_description. Complementa al PATCH compartido (que solo toca
+     * campos compartidos del articulo logico) y al apply-bilingual (que
+     * sobreescribe la translation completa desde el JSON IA). Caso de uso:
+     * correccion manual fina sin re-ejecutar el pipeline IA.
+     *
+     * Body es per-locale por otro endpoint dedicado /translations/{locale}/body.
+     */
+    @PatchMapping("/articles/{articleId}/translations/{locale}")
+    public TranslationDetailDTO updateTranslationMetadata(
+            @PathVariable("articleId") Long articleId,
+            @PathVariable("locale") String localeRaw,
+            @RequestBody TranslationMetadataUpdateRequest request,
+            Authentication authentication
+    ) {
+        requirePermission(authentication, BackofficeAuthorities.PERM_CONTENT_EDIT);
+        Long actorUserId = resolveUserId(authentication);
+        boolean adminFlag = isAdmin(authentication);
+        return articleService.updateTranslationMetadata(
+                articleId, localeRaw, request, actorUserId, adminFlag);
     }
 
     // ================================================================
