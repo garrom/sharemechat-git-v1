@@ -11,6 +11,13 @@ import en from './locales/en.json';
 import blogEs from './locales/blog/es.json';
 import blogEn from './locales/blog/en.json';
 
+// Paquete 6 (ADR-025): namespace 'cms' para el admin del CMS bilingue.
+// Solo lo consumen los 4 + 2 componentes bajo
+// `pages/admin/content/`. El bundle EN es hoy copia literal del ES
+// (placeholder editorial; se traducira en un paquete editorial posterior).
+import cmsEs from './locales/cms/es.json';
+import cmsEn from './locales/cms/en.json';
+
 import {
   FALLBACK_LOCALE,
   SUPPORTED_LOCALES
@@ -23,10 +30,10 @@ i18n
   .use(initReactI18next)
   .init({
     resources: {
-      es: { translation: es, blog: blogEs },
-      en: { translation: en, blog: blogEn }
+      es: { translation: es, blog: blogEs, cms: cmsEs },
+      en: { translation: en, blog: blogEn, cms: cmsEn }
     },
-    ns: ['translation', 'blog'],
+    ns: ['translation', 'blog', 'cms'],
     defaultNS: 'translation',
     fallbackNS: 'translation',
     lng: getInitialLocale(),

@@ -1,5 +1,23 @@
 // src/pages/admin/content/ContentArticleAIPanel.jsx
+//
+// Panel IA reescrito para el modelo bilingue (paquete 6, ADR-025).
+//
+// Cambios respecto al modelo viejo (paquete 0, ADR-014 / ADR-024 superseded):
+//  - Un unico textarea para el JSON bilingüe schema 2.0
+//    (`{shared, locales:{es,en}}`), no dos textareas separados ES/EN.
+//  - Un unico boton "Validar y aplicar" que llama a
+//    POST /apply-bilingual atomicamente (validacion + aplicacion en una
+//    sola transaccion server-side).
+//  - Eliminado el flujo viejo de dos pasos: `POST /output`,
+//    `POST /output-bilingual`, `POST /apply-draft`, "Copiar draft markdown".
+//  - i18n preventiva con namespace `cms`.
+//
+// El listado de runs historicos y el render del prompt expandido se
+// conservan: siguen llegando del backend tal cual. Lo unico que cambia es
+// la rama del "submit del JSON".
+
 import React, { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../../config/http';
 import {
   NoteCard,
@@ -28,14 +46,14 @@ import {
   ValidationErrorsBox,
 } from '../../../styles/pages-styles/AdminContentStyles';
 
-// ADR-014: FULL_ARTICLE_ORCHESTRATED es el flujo principal recomendado, sustituyendo al
-// antiguo FULL_ARTICLE (ADR-013, superseded). RESEARCH y REVIEW quedan como herramientas
-// avanzadas, ocultas por defecto. OUTLINE / DRAFT / SEO siguen disponibles a nivel backend
-// pero NO se ofrecen como botones aqui; los runs historicos de esos tipos (incluido el
-// antiguo FULL_ARTICLE) siguen apareciendo en la tabla de runs porque la lista se carga
-// desde backend, no del frontend.
+// ADR-014: FULL_ARTICLE_ORCHESTRATED es el flujo principal. RESEARCH y
+// REVIEW quedan como runs discretos avanzados (debugging).
 const RUN_TYPE_PRIMARY = 'FULL_ARTICLE_ORCHESTRATED';
 const RUN_TYPES_ADVANCED = ['RESEARCH', 'REVIEW'];
+
+const DEFAULT_MODEL_ID = 'claude-opus-4-7';
+
+const TERMINAL_STATES_FOR_APPLY = new Set(['PUBLISHED', 'RETRACTED']);
 
 const fmtDate = (v) => {
   if (!v) return '-';
@@ -48,27 +66,25 @@ const fmtDate = (v) => {
   }
 };
 
-const TERMINAL_STATES_FOR_APPLY = new Set(['PUBLISHED', 'RETRACTED']);
-
-const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDraftApplied }) => {
-  // ADR-024 (4C.3): flujo bilingue dentro del editor del articulo ES.
-  // Si el articulo es raiz ES, se muestran 2 textareas (JSON ES + JSON EN).
-  // Si el articulo es EN o cualquier otro locale, solo el textarea actual.
-  const isEsRoot = articleLocale === 'es';
+const ContentArticleAIPanel = ({
+  articleId,
+  articleState,
+  onBilingualApplied,
+}) => {
+  const { t } = useTranslation('cms');
 
   const [runs, setRuns] = useState([]);
   const [activeRun, setActiveRun] = useState(null);
-  const [rawOutput, setRawOutput] = useState('');
-  const [rawOutputEn, setRawOutputEn] = useState('');
-  const [modelId, setModelId] = useState('');
+  const [rawJson, setRawJson] = useState('');
+  const [modelId, setModelId] = useState(DEFAULT_MODEL_ID);
   const [modelVersion, setModelVersion] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const [applying, setApplying] = useState(false);
   const [copyHint, setCopyHint] = useState('');
   const [error, setError] = useState('');
+  const [validationErrors, setValidationErrors] = useState([]);
   const [okMessage, setOkMessage] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -84,22 +100,27 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
       const list = await apiFetch(`/admin/content/articles/${articleId}/runs`);
       setRuns(Array.isArray(list) ? list : []);
     } catch (e) {
-      setError(e?.message || 'No se pudieron cargar los runs IA');
+      setError(e?.message || t('ai.errLoadRuns', 'No se pudieron cargar los runs IA'));
     } finally {
       setLoading(false);
     }
-  }, [articleId]);
+  }, [articleId, t]);
 
   useEffect(() => {
     reload();
   }, [reload]);
 
+  const resetSubmitState = () => {
+    setError('');
+    setOkMessage('');
+    setValidationErrors([]);
+    setCopyHint('');
+  };
+
   const handleCreateRun = async (runType) => {
     if (!articleId || creating) return;
     setCreating(true);
-    setError('');
-    setOkMessage('');
-    setCopyHint('');
+    resetSubmitState();
     try {
       const created = await apiFetch(`/admin/content/articles/${articleId}/runs`, {
         method: 'POST',
@@ -107,78 +128,28 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
         body: JSON.stringify({ runType }),
       });
       setActiveRun(created);
-      setRawOutput('');
-      setModelId('');
-      setModelVersion('');
+      setRawJson('');
       setOkMessage(
-        `Run ${runType} creado (id=${created?.id}). Copia el prompt, ejecútalo en Claude Cowork y pega el JSON abajo.`
+        t('ai.msgRunCreated',
+          'Run {{runType}} creado (id={{id}}). Copia el prompt, ejecútalo en Claude Cowork y pega el JSON bilingüe abajo.',
+          { runType, id: created?.id })
       );
       reload();
     } catch (e) {
-      setError(e?.message || 'No se pudo crear el run');
+      setError(e?.message || t('ai.errCreateRun', 'No se pudo crear el run'));
     } finally {
       setCreating(false);
     }
   };
 
   const handleOpenRun = async (runId) => {
-    setError('');
-    setOkMessage('');
-    setCopyHint('');
+    resetSubmitState();
     try {
       const detail = await apiFetch(`/admin/content/runs/${runId}`);
       setActiveRun(detail);
-      setRawOutput('');
+      setRawJson('');
     } catch (e) {
-      setError(e?.message || 'No se pudo cargar el run');
-    }
-  };
-
-  const handleApplyDraft = async () => {
-    if (!activeRun?.id || !activeRun?.articleId || applying) return;
-    if (activeRun.status !== 'VALIDATED' || !activeRun.outputValidated) {
-      setError('El run debe estar VALIDATED para aplicar.');
-      return;
-    }
-    if (articleIsTerminal) {
-      setError(`Artículo en estado ${articleState}. Reabre una nueva versión antes de aplicar contenido.`);
-      return;
-    }
-    setApplying(true);
-    setError('');
-    setOkMessage('');
-    try {
-      await apiFetch(
-        `/admin/content/articles/${activeRun.articleId}/runs/${activeRun.id}/apply-draft`,
-        { method: 'POST' }
-      );
-      setOkMessage('Draft aplicado al artículo. El cuerpo se ha rellenado.');
-      if (typeof onAiDraftApplied === 'function') {
-        onAiDraftApplied();
-      }
-      reload();
-    } catch (e) {
-      setError(e?.message || 'No se pudo aplicar el draft al artículo');
-    } finally {
-      setApplying(false);
-    }
-  };
-
-  const handleCopyDraftMarkdown = async () => {
-    if (!activeRun?.id || !activeRun?.articleId) return;
-    try {
-      // El frontend no tiene el JSON canonico; lo pedimos al endpoint de detail,
-      // que ya lo expone via /runs/{runId}. Como atajo de fallback usamos el
-      // prompt para descartar; el copiado real del draft requiere parsear el
-      // output canonico desde server, fuera del alcance de este boton fallback.
-      // Mientras tanto, instruimos al usuario.
-      await navigator.clipboard.writeText(
-        '(Para copiar draft_markdown, abre output_validated.json desde el servidor o usa "Aplicar al artículo".)'
-      );
-      setCopyHint('Aviso copiado: usa "Aplicar al artículo" como vía principal.');
-      setTimeout(() => setCopyHint(''), 3500);
-    } catch {
-      setCopyHint('No se pudo copiar; usa "Aplicar al artículo".');
+      setError(e?.message || t('ai.errLoadRun', 'No se pudo cargar el run'));
     }
   };
 
@@ -186,102 +157,87 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
     if (!activeRun?.prompt) return;
     try {
       await navigator.clipboard.writeText(activeRun.prompt);
-      setCopyHint('Prompt copiado al portapapeles.');
+      setCopyHint(t('ai.msgPromptCopied', 'Prompt copiado al portapapeles.'));
       setTimeout(() => setCopyHint(''), 2500);
     } catch {
-      setCopyHint('Selecciona el texto manualmente y copia (Ctrl/Cmd+C).');
+      setCopyHint(t('ai.errCopyManual', 'Selecciona el texto manualmente y copia (Ctrl/Cmd+C).'));
     }
   };
 
-  const handleSubmitOutput = async () => {
-    if (!activeRun?.id || submitting) return;
+  const handleValidateApply = async () => {
+    if (!activeRun?.id || !activeRun?.articleId || applying) return;
+    if (articleIsTerminal) {
+      setError(t('ai.msgConflict',
+        'Operación rechazada: el artículo está en estado no editable.'));
+      return;
+    }
     if (!modelId.trim()) {
-      setError('Declara el modelId exacto que ejecutó (ej. claude-opus-4-5).');
+      setError(t('ai.errModelId',
+        'Declara el modelId exacto que ejecutó (ej. claude-opus-4-7).'));
       return;
     }
-    if (!rawOutput.trim()) {
-      setError('Pega el output JSON antes de validar.');
+    if (!rawJson.trim()) {
+      setError(t('ai.errRawEmpty', 'Pega el JSON bilingüe antes de validar.'));
       return;
     }
-    setSubmitting(true);
-    setError('');
-    setOkMessage('');
 
-    // ADR-024 (4C.3): si el articulo es raiz ES y el operador pego ademas un
-    // JSON EN, usamos el endpoint bilingue atomico. En cualquier otro caso
-    // (articulo EN, o textarea EN vacio) usamos el endpoint monolingue
-    // existente (ADR-014). La eleccion se decide en cliente y se materializa
-    // en el path del POST.
-    const hasEn = isEsRoot && rawOutputEn.trim().length > 0;
-
+    setApplying(true);
+    resetSubmitState();
     try {
-      if (hasEn) {
-        // === RAMA BILINGUE ===
-        const result = await apiFetch(
-          `/admin/content/articles/${activeRun.articleId}/runs/${activeRun.id}/output-bilingual`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              rawJsonEs: rawOutput,
-              rawJsonEn: rawOutputEn,
-              modelId: modelId.trim(),
-              modelVersion: modelVersion.trim() || null,
-            }),
-          }
-        );
-        const updatedRun = result?.runDetail;
-        const child = result?.childArticle;
-        if (updatedRun) {
-          setActiveRun(updatedRun);
+      const result = await apiFetch(
+        `/admin/content/articles/${activeRun.articleId}/runs/${activeRun.id}/apply-bilingual`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rawJson,
+            modelId: modelId.trim(),
+            modelVersion: modelVersion.trim() || null,
+          }),
         }
-        if (result?.bilingual && child) {
-          setOkMessage(
-            `Operación bilingüe completada. Artículo ES actualizado. `
-              + `Artículo hijo EN creado: id=${child.id} slug=${child.slug}.`
-          );
-          setRawOutput('');
-          setRawOutputEn('');
-          // Refresca el cuerpo y la metadata del articulo ES en el editor
-          if (typeof onAiDraftApplied === 'function') {
-            onAiDraftApplied();
-          }
-        } else if (updatedRun?.status === 'REJECTED') {
-          setError(`Output rechazado por validación (${updatedRun?.validationErrors?.length || 0} errores).`);
-        } else {
-          setOkMessage(`Run en estado ${updatedRun?.status || 'desconocido'}.`);
-        }
-        reload();
+      );
+      // El backend devuelve ApplyBilingualResultDTO con `runDetail` y
+      // `articleDetail`. Si el resultado contiene errores de validacion,
+      // el run viene en estado REJECTED.
+      const updatedRun = result?.runDetail || result?.run || null;
+      if (updatedRun) setActiveRun(updatedRun);
+
+      if (updatedRun && updatedRun.status === 'REJECTED'
+          && Array.isArray(updatedRun.validationErrors)
+          && updatedRun.validationErrors.length > 0) {
+        setValidationErrors(updatedRun.validationErrors);
+        setError(t('ai.msgRejected',
+          'JSON rechazado por validación ({{errors}} errores). Corrige y reintenta.',
+          { errors: updatedRun.validationErrors.length }));
       } else {
-        // === RAMA MONOLINGUE (ADR-014, intacta) ===
-        const updated = await apiFetch(
-          `/admin/content/articles/${activeRun.articleId}/runs/${activeRun.id}/output`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              rawOutput,
-              modelId: modelId.trim(),
-              modelVersion: modelVersion.trim() || null,
-            }),
-          }
-        );
-        setActiveRun(updated);
-        if (updated?.status === 'VALIDATED') {
-          setOkMessage('Output validado y guardado.');
-          setRawOutput('');
-        } else if (updated?.status === 'REJECTED') {
-          setOkMessage('');
-          setError(`Output rechazado por validación (${updated?.validationErrors?.length || 0} errores).`);
-        } else {
-          setOkMessage(`Run en estado ${updated?.status}.`);
+        setOkMessage(t('ai.msgApplied',
+          'Artículo actualizado con la traducción bilingüe. Revisa las pestañas ES y EN.'));
+        // No limpiamos el textarea (operador puede querer ver el JSON
+        // aplicado). Si quiere reintentar, lo edita encima.
+        if (typeof onBilingualApplied === 'function') {
+          onBilingualApplied();
         }
-        reload();
       }
+      reload();
     } catch (e) {
-      setError(e?.message || 'No se pudo enviar el output');
+      // Errores fuera del happy path: 400 con message, 409 estado no
+      // editable, 500 generico. apiFetch lanza con e.message + e.status si
+      // los expone; si vienen validationErrors en el cuerpo, tambien.
+      const message = e?.message || t('ai.errApply', 'No se pudo aplicar el JSON al artículo');
+      const errs = Array.isArray(e?.validationErrors) ? e.validationErrors : null;
+      if (errs && errs.length > 0) {
+        setValidationErrors(errs);
+        setError(t('ai.msgRejected',
+          'JSON rechazado por validación ({{errors}} errores). Corrige y reintenta.',
+          { errors: errs.length }));
+      } else if (e?.status === 409) {
+        setError(t('ai.msgConflict',
+          'Operación rechazada: el artículo está en estado no editable.'));
+      } else {
+        setError(message);
+      }
     } finally {
-      setSubmitting(false);
+      setApplying(false);
     }
   };
 
@@ -290,20 +246,26 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
   return (
     <MetaCard>
       <ToolbarRow style={{ marginTop: 0, marginBottom: 12 }}>
-        <h3 style={{ margin: 0 }}>Asistente IA (Claude Cowork — manual structured)</h3>
+        <h3 style={{ margin: 0 }}>
+          {t('ai.title', 'Asistente IA (Claude Cowork — bilingüe schema 2.0)')}
+        </h3>
         <StyledButton type="button" onClick={reload} disabled={loading}>
-          {loading ? 'Recargando...' : 'Recargar'}
+          {loading
+            ? t('ai.btnReloading', 'Recargando...')
+            : t('ai.btnReload', 'Recargar')}
         </StyledButton>
       </ToolbarRow>
 
       <AIRunTypeBar>
-        <HelperText>Generar artículo con IA:</HelperText>
+        <HelperText>{t('ai.lblGenerate', 'Generar artículo con IA:')}</HelperText>
         <AIRunTypeButton
           type="button"
           disabled={creating}
           onClick={() => handleCreateRun(RUN_TYPE_PRIMARY)}
         >
-          {creating ? 'Creando…' : 'Generar artículo completo'}
+          {creating
+            ? t('ai.btnGenerating', 'Creando…')
+            : t('ai.btnGenerateFull', 'Generar artículo completo')}
         </AIRunTypeButton>
       </AIRunTypeBar>
 
@@ -312,16 +274,19 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
           type="button"
           onClick={() => setShowAdvanced((v) => !v)}
         >
-          {showAdvanced ? '▾ Ocultar opciones avanzadas' : '▸ Mostrar opciones avanzadas'}
+          {showAdvanced
+            ? `▾ ${t('ai.advancedHide', 'Ocultar opciones avanzadas')}`
+            : `▸ ${t('ai.advancedToggle', 'Mostrar opciones avanzadas')}`}
         </AdvancedToggleButton>
         <HelperText>
-          Avanzado: runs discretos para casos puntuales o debugging.
+          {t('ai.advancedHelper',
+            'Avanzado: runs discretos para casos puntuales o debugging.')}
         </HelperText>
       </AdvancedToggleRow>
 
       {showAdvanced ? (
         <AdvancedRunSection>
-          <HelperText>Run discreto:</HelperText>
+          <HelperText>{t('ai.advancedRunLabel', 'Run discreto:')}</HelperText>
           {RUN_TYPES_ADVANCED.map((rt) => (
             <AIRunTypeButton
               key={rt}
@@ -340,18 +305,20 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
 
       <AIPanelGrid>
         <AIPanelColumn>
-          <h4 style={{ marginTop: 0, marginBottom: 10 }}>Runs del artículo</h4>
+          <h4 style={{ marginTop: 0, marginBottom: 10 }}>
+            {t('ai.runsTitle', 'Runs del artículo')}
+          </h4>
           {runs.length === 0 ? (
-            <NoteCard>Sin runs todavía. Crea uno arriba.</NoteCard>
+            <NoteCard>{t('ai.runsEmpty', 'Sin runs todavía. Crea uno arriba.')}</NoteCard>
           ) : (
             <RunListTable>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Tipo</th>
-                  <th>Estado</th>
-                  <th>Modelo</th>
-                  <th>Creado</th>
+                  <th>{t('ai.runsColId', 'ID')}</th>
+                  <th>{t('ai.runsColType', 'Tipo')}</th>
+                  <th>{t('ai.runsColStatus', 'Estado')}</th>
+                  <th>{t('ai.runsColModel', 'Modelo')}</th>
+                  <th>{t('ai.runsColCreated', 'Creado')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -365,7 +332,7 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
                     <td>{r.id}</td>
                     <td><strong>{r.runType || '-'}</strong></td>
                     <td><RunStatusBadge $status={r.status}>{r.status}</RunStatusBadge></td>
-                    <td>{r.modelId || <em style={{ color: '#94a3b8' }}>pendiente</em>}</td>
+                    <td>{r.modelId || <em style={{ color: '#94a3b8' }}>{t('ai.runsColModelPending', 'pendiente')}</em>}</td>
                     <td>{fmtDate(r.createdAt)}</td>
                   </tr>
                 ))}
@@ -375,26 +342,30 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
         </AIPanelColumn>
 
         <AIPanelColumn>
-          <h4 style={{ marginTop: 0, marginBottom: 10 }}>Run seleccionado</h4>
+          <h4 style={{ marginTop: 0, marginBottom: 10 }}>
+            {t('ai.selectedTitle', 'Run seleccionado')}
+          </h4>
           {!activeRun ? (
-            <NoteCard>Selecciona un run de la lista o crea uno nuevo.</NoteCard>
+            <NoteCard>{t('ai.selectedEmpty', 'Selecciona un run de la lista o crea uno nuevo.')}</NoteCard>
           ) : (
             <>
               <InlineRow>
-                <span>id <strong>{activeRun.id}</strong></span>
-                <span>tipo <strong>{activeRun.runType}</strong></span>
+                <span>{t('ai.rowInfoId', 'id {{id}}', { id: activeRun.id })}</span>
+                <span>{t('ai.rowInfoType', 'tipo {{type}}', { type: activeRun.runType })}</span>
                 <RunStatusBadge $status={activeRun.status}>{activeRun.status}</RunStatusBadge>
-                {activeRun.modelId ? <span>model {activeRun.modelId}</span> : null}
+                {activeRun.modelId
+                  ? <span>{t('ai.rowInfoModel', 'model {{model}}', { model: activeRun.modelId })}</span>
+                  : null}
               </InlineRow>
               {activeRun.promptHash ? (
                 <InlineRow>
-                  <HelperText>promptHash:</HelperText>
+                  <HelperText>{t('ai.promptHashLabel', 'promptHash:')}</HelperText>
                   <HashCode>{activeRun.promptHash}</HashCode>
                 </InlineRow>
               ) : null}
               {activeRun.outputHash ? (
                 <InlineRow>
-                  <HelperText>outputHash:</HelperText>
+                  <HelperText>{t('ai.outputHashLabel', 'outputHash:')}</HelperText>
                   <HashCode>{activeRun.outputHash}</HashCode>
                 </InlineRow>
               ) : null}
@@ -402,9 +373,9 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
               {activeRun.prompt ? (
                 <>
                   <InlineRow>
-                    <strong style={{ fontSize: 13 }}>Prompt expandido</strong>
+                    <strong style={{ fontSize: 13 }}>{t('ai.promptExpanded', 'Prompt expandido')}</strong>
                     <StyledButton type="button" onClick={handleCopyPrompt}>
-                      Copiar prompt
+                      {t('ai.btnCopyPrompt', 'Copiar prompt')}
                     </StyledButton>
                     {copyHint ? <HelperText>{copyHint}</HelperText> : null}
                   </InlineRow>
@@ -412,121 +383,78 @@ const ContentArticleAIPanel = ({ articleId, articleState, articleLocale, onAiDra
                 </>
               ) : null}
 
-              {activeRun.status === 'PENDING' ? (
+              {/* Submit del JSON bilingue. Disponible mientras el run no
+                  este aplicado / publicado y el articulo no este en estado
+                  terminal. */}
+              {(activeRun.status === 'PENDING' || activeRun.status === 'REJECTED') ? (
                 <>
-                  <InlineRow>
+                  <InlineRow style={{ marginTop: 16 }}>
                     <StyledInput
-                      placeholder="modelId (ej. claude-opus-4-5)"
+                      placeholder={t('ai.modelIdPlaceholder', 'modelId (ej. claude-opus-4-7)')}
                       value={modelId}
                       onChange={(e) => setModelId(e.target.value)}
                     />
                     <StyledInput
-                      placeholder="modelVersion (opcional)"
+                      placeholder={t('ai.modelVersionPlaceholder', 'modelVersion (opcional)')}
                       value={modelVersion}
                       onChange={(e) => setModelVersion(e.target.value)}
                     />
                   </InlineRow>
-                  {isEsRoot ? (
-                    <HelperText>
-                      JSON ES (final_es.json) — obligatorio
-                    </HelperText>
-                  ) : null}
+
+                  <HelperText style={{ marginTop: 12 }}>
+                    {t('ai.lblJsonBilingual', 'JSON bilingüe (schema 2.0)')}
+                  </HelperText>
                   <RawOutputArea
-                    value={rawOutput}
-                    onChange={(e) => setRawOutput(e.target.value)}
-                    placeholder={
-                      isEsRoot
-                        ? 'Pega aquí final_es.json (obligatorio)...'
-                        : 'Pega aquí el JSON crudo devuelto por Claude Cowork...'
-                    }
+                    value={rawJson}
+                    onChange={(e) => setRawJson(e.target.value)}
+                    placeholder={t('ai.jsonBilingualPlaceholder',
+                      'Pega aquí el JSON completo que te devuelva Cowork. Debe contener las claves shared y locales.es y locales.en.')}
                   />
 
-                  {/* ADR-024 (4C.3): solo en articulos raiz ES se muestra el
-                      segundo textarea para el JSON EN. Si se rellena, dispara
-                      el flujo bilingue atomico (creacion del articulo hijo EN
-                      en la misma operacion). Si se deja vacio, comportamiento
-                      monolingue de ADR-014. */}
-                  {isEsRoot ? (
+                  {validationErrors.length > 0 ? (
                     <>
-                      <HelperText style={{ marginTop: 12 }}>
-                        JSON EN (final_en.json) — opcional. Déjalo vacío si el
-                        run fue monolingüe (sin traducción EN).
-                      </HelperText>
-                      <RawOutputArea
-                        value={rawOutputEn}
-                        onChange={(e) => setRawOutputEn(e.target.value)}
-                        placeholder='Pega aquí final_en.json (opcional). Si lo pegas, se creará automáticamente un artículo hijo EN con parent_article_id apuntando a este.'
-                      />
+                      <strong style={{ fontSize: 13, display: 'block', margin: '8px 0' }}>
+                        {t('ai.validationErrorsTitle', 'Errores de validación')}
+                      </strong>
+                      <ValidationErrorsBox>
+                        {validationErrors.map((er, idx) => (
+                          <div key={idx}>
+                            <strong>{er.field || 'body'}:</strong> {er.message}
+                          </div>
+                        ))}
+                      </ValidationErrorsBox>
                     </>
                   ) : null}
 
                   <ToolbarRow>
                     <StyledButton
                       type="button"
-                      onClick={handleSubmitOutput}
-                      disabled={submitting}
-                    >
-                      {submitting ? 'Validando...' : 'Validar y guardar'}
-                    </StyledButton>
-                    <HelperText>
-                      {isEsRoot && rawOutputEn.trim().length > 0
-                        ? 'Operación bilingüe atómica: valida ambos JSON, actualiza el cuerpo del artículo ES y crea el artículo hijo EN.'
-                        : 'El backend valida el JSON y guarda raw + validated en S3.'}
-                    </HelperText>
-                  </ToolbarRow>
-                </>
-              ) : null}
-
-              {activeRun.status === 'REJECTED'
-                && Array.isArray(activeRun.validationErrors)
-                && activeRun.validationErrors.length > 0 ? (
-                <>
-                  <strong style={{ fontSize: 13, display: 'block', margin: '8px 0' }}>
-                    Errores de validación
-                  </strong>
-                  <ValidationErrorsBox>
-                    {activeRun.validationErrors.map((er, idx) => (
-                      <div key={idx}>
-                        <strong>{er.field || 'body'}:</strong> {er.message}
-                      </div>
-                    ))}
-                  </ValidationErrorsBox>
-                </>
-              ) : null}
-
-              {activeRun.status === 'VALIDATED' ? (
-                <>
-                  <ToolbarRow>
-                    <StyledButton
-                      type="button"
-                      onClick={handleApplyDraft}
+                      onClick={handleValidateApply}
                       disabled={applying || articleIsTerminal}
                     >
-                      {applying ? 'Aplicando…' : 'Aplicar al artículo'}
+                      {applying
+                        ? t('ai.btnValidating', 'Validando y aplicando...')
+                        : t('ai.btnValidateApply', 'Validar y aplicar')}
                     </StyledButton>
-                    <StyledButton
-                      type="button"
-                      onClick={handleCopyDraftMarkdown}
-                    >
-                      Copiar draft_markdown (fallback)
-                    </StyledButton>
-                    {copyHint ? <HelperText>{copyHint}</HelperText> : null}
+                    <HelperText>
+                      {t('ai.applyHelper',
+                        'Operación atómica: el backend valida el JSON contra el schema 2.0, actualiza la traducción ES y la EN, actualiza la metadata compartida, y deja el artículo listo para revisión.')}
+                    </HelperText>
                   </ToolbarRow>
                   {articleIsTerminal ? (
                     <NoteCard>
-                      Artículo en estado <strong>{articleState}</strong>. Reabre una nueva
-                      versión antes de aplicar contenido.
+                      {t('ai.msgConflict',
+                        'Operación rechazada: el artículo está en estado no editable.')}
                     </NoteCard>
-                  ) : (
-                    <NoteCard>
-                      Output validado. Guardado canónico en{' '}
-                      <code style={{ fontSize: 11 }}>output_validated.json</code>. Pulsa
-                      <strong> Aplicar al artículo</strong> para volcar{' '}
-                      <code style={{ fontSize: 11 }}>draft_markdown</code> al cuerpo del
-                      artículo. La acción no publica ni cambia estado.
-                    </NoteCard>
-                  )}
+                  ) : null}
                 </>
+              ) : null}
+
+              {activeRun.status === 'VALIDATED' || activeRun.status === 'APPLIED' ? (
+                <NoteCard>
+                  {t('ai.msgApplied',
+                    'Artículo actualizado con la traducción bilingüe. Revisa las pestañas ES y EN.')}
+                </NoteCard>
               ) : null}
             </>
           )}
