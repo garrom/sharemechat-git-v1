@@ -73,46 +73,62 @@ ATRIBUCIÓN DE FUENTES
 SECCIÓN EN — guía para fase 4.5 (cms-translate-en)
 ================================================================
 
-PENDIENTE — operador lo rellena antes del primer run productivo bilingüe en producción (deuda ADR-025).
+REGISTRO
+- Experienced, plain-spoken, peer-to-peer. Like a senior colleague who's been doing this for years, not a corporate handbook or a LinkedIn thought leader.
+- Always "you" — never "the reader", "users", "people". Direct address.
+- Use "we" when it adds editorial authority ("what we recommend", "in our experience"), not as filler.
+- Sober. No hype, no emojis, no exclamation marks, no decorative bold.
 
-Estructura objetivo (a completar con el mismo nivel de detalle que la sección ES de arriba). Mientras no esté rellena, la fase 4.5 traducirá con voz inestable; los outputs EN tendrán que revisarse caso a caso por el operador.
+RITMO
+- Average sentence length 12-20 words. Mix in short sentences (5-8 words) for emphasis.
+- Avoid paragraphs longer than 5 sentences.
+- One idea per paragraph.
 
-REGISTRO (EN)
-- PENDIENTE: definir el equivalente anglosajón de "cercano pero profesional, como un mentor con experiencia". Probable: "experienced, plain-spoken, peer-to-peer" tipo Stripe Press / Basecamp, no Buzzfeed ni LinkedIn corporate.
-- PENDIENTE: decidir tratamiento del lector ("you" siempre informal, sin "dear reader" ni "folks").
-- PENDIENTE: decidir cuándo usar primera persona del plural ("we recommend", "in our experience"). Por defecto, mismo criterio que en ES: solo cuando aporta autoridad editorial real.
-- Sobrio. Sin hype, sin emojis, sin signos de exclamación, sin negritas decorativas. (Heredado de la sección ES.)
+VOCABULARIO PROPIO (use when it fits naturally, do not force)
+- "your workspace" instead of "your room" or "your area"
+- "your on-camera energy" instead of "your performance" or "your output"
+- "on-camera presence" instead of "professional image"
+- "long-shift comfort" when talking about extended sessions
+- "control over your environment" when talking about privacy or setup
+- "your shift" or "your session" instead of "your stream" or "going live"
+- "live video chat" (full form) on first mention; "video chat" afterwards. Never "videochat" as one word (industry uses two words in EN).
 
-RITMO (EN)
-- PENDIENTE: definir longitud media de frase preferida en inglés (probablemente 12-20 palabras, ligeramente más corto que el ES por las propias convenciones tipográficas del inglés editorial).
-- PENDIENTE: confirmar regla "una idea por párrafo" como heredada.
+DO (examples of sentences that ARE SharemeChat in English)
+- "What we recommend when you're starting out: spend your first few days just watching your space."
+- "Good ambient lighting goes unnoticed; bad lighting is obvious in the first minute."
+- "Your camera is your workplace. Treating it that way changes how you feel every session."
+- "Before buying anything, try what you already have."
+- "Small changes to your space pay off more than expensive gear."
 
-VOCABULARIO PROPIO (EN)
-- PENDIENTE: equivalentes en inglés del vocabulario propio ES. Ejemplos a fijar:
-  * "tu espacio de trabajo" → ¿"your workspace"? ¿"your setup" pese a la prohibición ES?
-  * "tu energía durante la sesión" → ¿"your stamina during the session"? ¿"your on-cam energy"?
-  * "presencia profesional" → ¿"professional presence"? ¿"on-camera presence"?
-  * "comodidad sostenida" → ¿"sustained comfort"? ¿"long-shift comfort"?
-  * "control del entorno" → ¿"environment control"? ¿"setup discipline"?
-  * "tu jornada" / "tu sesión" → ¿"your shift"? ¿"your session"?
-- Mientras la lista no esté cerrada, la fase 4.5 traduce con sentido común y deja nota al final del reviewed_en.md si una decisión léxica relevante necesita validación.
+DON'T (examples of sentences that ARE NOT SharemeChat in English)
+- "In this article, we'll explore..."
+- "It's important to note that..."
+- "In conclusion,..."
+- "Without a doubt, lighting plays a fundamental role..."
+- "Don't miss these essential tips!"
+- "Experts agree that..."
+- "In today's world of video chat..."
+- "At the end of the day,..."
 
-DO (EN) — ejemplos de frases que SÍ son SharemeChat en inglés
-- PENDIENTE: redactar 3-5 ejemplos análogos a los ES. El operador los añade.
+PROHIBIDO
+- Sensationalist or clickbait language.
+- Emojis.
+- Exclamation marks (except in direct third-party quotes).
+- Generic appeals: "dear reader", "folks", "you got this".
+- Sales tone. SharemeChat does not sell in editorial content.
+- Mentioning packs, prices, plans, specific products.
+- Promising 24/7 availability or guaranteed results.
+- Filler transitions: "moreover", "furthermore", "in addition", "on the other hand". Cut them; let the structure do the work.
 
-DON'T (EN) — ejemplos de frases que NO son SharemeChat en inglés
-- PENDIENTE: redactar 3-5 ejemplos. Análogos a las muletillas IA típicas en inglés ("In this article, we'll explore...", "It's important to note that...", "In conclusion...", "Without a doubt...", "In today's world of..."). El operador los añade.
+TIPOGRAFÍA DE COMILLAS
+- Primary level in English: curly double quotes "...". NEVER straight double quotes "...", which are typographically wrong in editorial English and break the JSON serialization downstream.
+- Nested level: curly single quotes '...'.
+- Curly apostrophes in contractions (it's, don't), not straight ones.
+- Em dash — for parenthetical insertions, not a short hyphen.
+- Single exception: inside code blocks (```...```), where straight quotes are required by language syntax.
+- Direct third-party quote: use double curly quotes. Example: "What changed my session was changing the light," says a veteran model.
 
-PROHIBIDO (EN)
-- PENDIENTE: confirmar que la lista de prohibiciones ES se hereda íntegra en EN. Probable: sí (sin hype, sin emojis, sin exclamaciones, sin "dear reader", sin packs/precios/24-7).
-
-TIPOGRAFÍA DE COMILLAS (EN)
-- Primer nivel en inglés: comillas dobles curvas "..." (NO comillas rectas, que rompen la serialización JSON aguas abajo).
-- Segundo nivel anidado: comillas simples curvas '...'.
-- Apóstrofes curvos en contracciones (it's, don't), no rectos.
-- Em dash — para incisos.
-- Excepción única: dentro de bloques de código (```...```), comillas rectas obligatorias por sintaxis del lenguaje.
-
-ATRIBUCIÓN DE FUENTES (EN)
-- Mismo criterio que en la sección ES: máximo 2-3 atribuciones explícitas, el resto desde voz de marca.
-- PENDIENTE: validar fórmulas EN preferidas ("we recommend", "in practice", "what typically works" vs alternativas que el operador prefiera).
+ATRIBUCIÓN DE FUENTES
+- Same criterion as the ES section: at most 2-3 explicit attributions per article, only when the source adds real authority.
+- Preferred phrasings for SharemeChat voice statements (no external citation): "what we recommend", "in practice", "what typically works", "what we see consistently", "what most experienced models do".
+- Avoid "studies show", "research suggests", "data confirms" unless followed by a real, citable source from sources_used.

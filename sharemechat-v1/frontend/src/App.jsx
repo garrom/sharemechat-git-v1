@@ -13,6 +13,7 @@ import PerfilModel from './pages/subpages/PerfilModel';
 import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
 import Blog from './pages/blog/Blog';
 import BlogArticleView from './pages/blog/BlogArticleView';
+import BlogNotFound from './pages/blog/BlogNotFound';
 import ChangePasswordPage from './pages/subpages/ChangePasswordPage';
 import ModelDocuments from './pages/subpages/ModelDocuments';
 import Home from './public-pages/Home';
@@ -55,14 +56,22 @@ const ExternalRedirect = ({ to }) => {
 function App() {
   const adminSurface = isAdminSurface();
 
-  // Fase 4B.3 (ADR-022): deteccion de locale por prefijo de URL. La URL es
-  // la fuente de verdad estricta tras esta fase. Solo aplica al product
-  // surface; admin se mantiene con basename "/" porque no tiene contenido
-  // multilingue ni necesita exponer rutas bajo /en/.
+  // Fase 4B.3 (ADR-022) + paquete 5 (ADR-025): deteccion de locale por
+  // prefijo de URL. La URL es la fuente de verdad estricta.
+  //
+  // Excepcion paquete 5: las rutas del blog (`/blog`, `/blog/{locale}`,
+  // `/blog/{locale}/{slug}`) llevan el locale en el path interno y NO
+  // pasan por el basename `/en` global. Si el path empieza por `/blog`,
+  // basename siempre es `/`, aunque el path empezara casualmente por
+  // `/en/blog/...` (caso de backlinks viejos -> 404 limpio, sin colision
+  // con el detector de basename).
   const initialPath = typeof window !== 'undefined' && window.location
     ? window.location.pathname
     : '/';
+  const isBlogPath = initialPath === '/blog'
+    || initialPath.startsWith('/blog/');
   const matchesEn = !adminSurface
+    && !isBlogPath
     && (initialPath === '/en' || initialPath.startsWith('/en/'));
   const localeBasename = matchesEn ? '/en' : '/';
 
@@ -81,10 +90,25 @@ function App() {
   }
 
   // Sincronizar i18n con el locale detectado en la URL antes de renderizar
-  // para evitar flash de chrome en el locale incorrecto. getInitialLocale()
-  // ya es URL-aware tras 4B.3, pero defensivamente comprobamos por si el
-  // lng inicial de i18next se calculo en otro contexto.
-  const expectedLocale = matchesEn ? 'en' : 'es';
+  // para evitar flash de chrome en el locale incorrecto.
+  //
+  // Reglas:
+  //  - En rutas del blog (`/blog/{locale}/...`), el locale viene del SEGUNDO
+  //    segmento del path. Esto desacopla el chrome del blog del basename
+  //    global del resto del producto (paquete 5).
+  //  - En el resto del producto, sigue valiendo el detector `matchesEn`
+  //    (basename `/en` global).
+  let expectedLocale = matchesEn ? 'en' : 'es';
+  if (isBlogPath) {
+    const parts = initialPath.split('/').filter(Boolean);
+    // ['blog', 'es', 'mi-slug'] -> parts[1] = 'es'
+    if (parts.length >= 2 && (parts[1] === 'es' || parts[1] === 'en')) {
+      expectedLocale = parts[1];
+    } else {
+      // /blog (sin locale) -> default ES; el redirect del Router se encarga.
+      expectedLocale = 'es';
+    }
+  }
   if (i18n.language !== expectedLocale) {
     i18n.changeLanguage(expectedLocale);
   }
@@ -119,8 +143,17 @@ function App() {
                   <Switch>
                     <PublicWithGuestGate exact path="/" component={Home} />
                     <PublicWithGuestGate exact path="/login" component={Home} />
-                    <PublicWithGuestGate exact path="/blog" component={Blog} />
-                    <PublicWithGuestGate exact path="/blog/:slug" component={BlogArticleView} />
+                    {/* Blog publico bilingue (paquete 5, ADR-025): locale en path. */}
+                    {/* /blog sin locale -> redirect a /blog/es (mercado primario). */}
+                    <Route exact path="/blog" render={() => <Redirect to="/blog/es" />} />
+                    <PublicWithGuestGate exact path="/blog/:locale(es|en)" component={Blog} />
+                    <PublicWithGuestGate exact path="/blog/:locale(es|en)/:slug" component={BlogArticleView} />
+                    {/* Catch-all del blog (paquete 5 ext, ADR-025): cualquier */}
+                    {/* `/blog/{algo}` o `/blog/{algo}/{slug}` donde `{algo}` no */}
+                    {/* sea `es` ni `en` cae a la 404 propia del blog en vez */}
+                    {/* del wildcard global `<Redirect to="/unauthorized" />`. */}
+                    {/* Sin `exact`: absorbe cualquier profundidad de path. */}
+                    <Route path="/blog" component={BlogNotFound} />
                     <Route path="/forgot-password" component={ForgotPassword} />
                     <Route path="/unauthorized" component={Unauthorized} />
                     <Route path="/reset-password" component={ResetPassword} />

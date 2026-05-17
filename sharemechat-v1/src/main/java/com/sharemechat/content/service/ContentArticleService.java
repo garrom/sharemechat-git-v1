@@ -14,6 +14,11 @@ import com.sharemechat.content.dto.TranslationDetailDTO;
 import com.sharemechat.content.dto.TranslationSummaryDTO;
 import com.sharemechat.content.dto.TranslationVersionSummaryDTO;
 import com.sharemechat.content.dto.VersionDTO;
+import com.sharemechat.content.publishing.ArticleAlternateDTO;
+import com.sharemechat.content.publishing.ArticlePublicDetailDTO;
+import com.sharemechat.content.publishing.ArticlePublicSummaryDTO;
+import com.sharemechat.content.publishing.MarkdownRendererService;
+import com.sharemechat.config.PublicSiteProperties;
 import com.sharemechat.content.entity.ContentArticle;
 import com.sharemechat.content.entity.ContentArticleTranslation;
 import com.sharemechat.content.entity.ContentArticleTranslationVersion;
@@ -122,6 +127,8 @@ public class ContentArticleService {
     private final ContentArticleTranslationVersionRepository translationVersionRepo;
     private final ContentReviewEventRepository eventRepo;
     private final ContentBodyStorageService bodyStorageService;
+    private final MarkdownRendererService markdownRenderer;
+    private final PublicSiteProperties publicSiteProperties;
     private final ObjectMapper objectMapper;
 
     public ContentArticleService(ContentArticleRepository articleRepo,
@@ -130,6 +137,8 @@ public class ContentArticleService {
                                  ContentArticleTranslationVersionRepository translationVersionRepo,
                                  ContentReviewEventRepository eventRepo,
                                  ContentBodyStorageService bodyStorageService,
+                                 MarkdownRendererService markdownRenderer,
+                                 PublicSiteProperties publicSiteProperties,
                                  ObjectMapper objectMapper) {
         this.articleRepo = articleRepo;
         this.translationRepo = translationRepo;
@@ -137,6 +146,8 @@ public class ContentArticleService {
         this.translationVersionRepo = translationVersionRepo;
         this.eventRepo = eventRepo;
         this.bodyStorageService = bodyStorageService;
+        this.markdownRenderer = markdownRenderer;
+        this.publicSiteProperties = publicSiteProperties;
         this.objectMapper = objectMapper;
     }
 
@@ -935,5 +946,214 @@ public class ContentArticleService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
                     "No se pudo subir body de locale=" + locale + " a S3", ex);
         }
+    }
+
+    // ================================================================
+    // Lecturas publicas (paquete 5 — capa publica del blog)
+    // ================================================================
+
+    /**
+     * Listado publico paginado de articulos PUBLISHED para un locale dado.
+     *
+     * Devuelve solo articulos cuyo `state = PUBLISHED` Y tengan una traduccion
+     * con `locale = ?` Y `body_s3_key` no nulo (descarta articulos publicados
+     * que no tengan body en ese locale; coherencia con la invariante "ambos
+     * locales obligatorios para publicar" del paquete 2).
+     *
+     * Sin filtro por category aplica solo a artículos PUBLISHED.
+     */
+    @Transactional(readOnly = true)
+    public Page<ArticlePublicSummaryDTO> listPublicByLocale(String localeRaw,
+                                                            String category,
+                                                            int page,
+                                                            int size) {
+        String locale = normalizeLocale(localeRaw);
+        int safePage = Math.max(0, page);
+        int safeSize = Math.max(1, Math.min(size, 50));
+        Pageable pageable = PageRequest.of(safePage, safeSize,
+                Sort.by(Sort.Direction.DESC, "publishedAt"));
+
+        Page<ContentArticle> articles;
+        String normalizedCategory = blankToNull(category);
+        if (normalizedCategory == null) {
+            articles = articleRepo.findByState(ContentConstants.STATE_PUBLISHED, pageable);
+        } else {
+            articles = articleRepo.findByStateAndCategory(
+                    ContentConstants.STATE_PUBLISHED, normalizedCategory, pageable);
+        }
+
+        if (articles.isEmpty()) {
+            return new PageImpl<>(Collections.emptyList(), pageable, articles.getTotalElements());
+        }
+
+        // Bulk-load translations del locale solicitado para los articulos de la pagina.
+        List<Long> ids = articles.getContent().stream().map(ContentArticle::getId).toList();
+        List<ContentArticleTranslation> allTrans = translationRepo.findByArticleIdIn(ids);
+        Map<Long, ContentArticleTranslation> trByArticle = new LinkedHashMap<>();
+        for (ContentArticleTranslation t : allTrans) {
+            if (locale.equals(t.getLocale())) {
+                trByArticle.put(t.getArticleId(), t);
+            }
+        }
+
+        // Mapear, descartando los articulos sin traduccion publicada en este locale
+        // (no tiene sentido devolverlos al frontend publico).
+        List<ArticlePublicSummaryDTO> items = articles.getContent().stream()
+                .map(a -> {
+                    ContentArticleTranslation t = trByArticle.get(a.getId());
+                    if (t == null || t.getBodyS3Key() == null || t.getBodyS3Key().isBlank()) {
+                        return null;
+                    }
+                    return new ArticlePublicSummaryDTO(
+                            a.getId(),
+                            t.getSlug(),
+                            t.getLocale(),
+                            t.getTitle(),
+                            a.getBrief(),
+                            a.getCategory(),
+                            a.getKeywords(),
+                            a.getPublishedAt(),
+                            a.getHeroImageUrl(),
+                            a.isAiAssisted(),
+                            a.isDisclosureRequired()
+                    );
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
+
+        return new PageImpl<>(items, pageable, articles.getTotalElements());
+    }
+
+    /**
+     * Detalle publico de un articulo identificado por (slug, locale).
+     *
+     * Reglas:
+     *  - La traduccion (slug, locale) debe existir; si no -> 404.
+     *  - El articulo logico debe estar en PUBLISHED; si no -> 404 (no se
+     *    filtra al publico el estado real de un DRAFT o RETRACTED).
+     *  - El body de esa traduccion se carga de S3, se renderiza Markdown->HTML
+     *    sanitizado y se devuelve en `htmlBody`. Si S3 no tiene el fichero,
+     *    htmlBody queda "".
+     *  - Alternates: por cada OTRA traduccion del mismo articulo que tambien
+     *    este publicada (body presente), se incluye su (locale, slug, url
+     *    absoluta `{base}/blog/{locale}/{slug}`).
+     */
+    @Transactional(readOnly = true)
+    public ArticlePublicDetailDTO findPublicBySlugAndLocale(String slugRaw, String localeRaw) {
+        String locale = normalizeLocale(localeRaw);
+        if (slugRaw == null || slugRaw.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "slug requerido");
+        }
+        String slug = slugRaw.trim().toLowerCase(Locale.ROOT);
+
+        ContentArticleTranslation tr = translationRepo.findBySlugAndLocale(slug, locale)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Articulo no encontrado"));
+
+        ContentArticle article = articleRepo.findById(tr.getArticleId())
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Articulo no encontrado"));
+
+        if (!ContentConstants.STATE_PUBLISHED.equals(article.getState())) {
+            // No exponer el estado real al publico: cualquier estado distinto -> 404.
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Articulo no encontrado");
+        }
+        if (tr.getBodyS3Key() == null || tr.getBodyS3Key().isBlank()) {
+            // Translation existe pero sin body publicado en este locale.
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Articulo no encontrado");
+        }
+
+        // Cargar body de S3 y renderizar a HTML sanitizado.
+        String htmlBody = "";
+        try {
+            String md = bodyStorageService.loadBodyAsString(tr.getBodyS3Key());
+            htmlBody = markdownRenderer.renderMarkdownToSafeHtml(md);
+        } catch (NoSuchFileException ex) {
+            log.warn("{} public detail: bodyS3Key apunta a fichero ausente articleId={} locale={} key={}",
+                    ContentConstants.LOG_PREFIX, article.getId(), locale, tr.getBodyS3Key());
+            htmlBody = "";
+        } catch (IOException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY,
+                    "No se pudo leer el cuerpo del articulo", ex);
+        }
+
+        // Alternates: otras translations del mismo articulo con body publicado.
+        List<ContentArticleTranslation> all = translationRepo.findByArticleId(article.getId());
+        String baseUrl = resolvePublicBaseUrl();
+        List<ArticleAlternateDTO> alternates = all.stream()
+                .filter(other -> !locale.equals(other.getLocale()))
+                .filter(other -> other.getBodyS3Key() != null && !other.getBodyS3Key().isBlank())
+                .map(other -> new ArticleAlternateDTO(
+                        other.getLocale(),
+                        other.getSlug(),
+                        baseUrl + "/blog/" + other.getLocale() + "/" + other.getSlug()))
+                .toList();
+
+        return new ArticlePublicDetailDTO(
+                article.getId(),
+                tr.getSlug(),
+                tr.getLocale(),
+                tr.getTitle(),
+                article.getBrief(),
+                tr.getSeoTitle(),
+                tr.getMetaDescription(),
+                article.getCategory(),
+                article.getKeywords(),
+                article.getPublishedAt(),
+                article.getUpdatedAt(),
+                htmlBody,
+                article.isAiAssisted(),
+                article.isDisclosureRequired(),
+                article.getHeroImageUrl(),
+                alternates
+        );
+    }
+
+    /**
+     * Snapshot crudo del estado publicado para el SitemapController (paquete 5):
+     * todos los articulos PUBLISHED + sus translations con body. El sitemap
+     * itera este resultado y construye las `<url>` con `<xhtml:link>` por
+     * locale alternativo.
+     */
+    @Transactional(readOnly = true)
+    public List<PublishedArticleSnapshot> listPublishedForSitemap() {
+        List<ContentArticle> published =
+                articleRepo.findByStateOrderByPublishedAtDesc(ContentConstants.STATE_PUBLISHED);
+        if (published.isEmpty()) return List.of();
+
+        List<Long> ids = published.stream().map(ContentArticle::getId).toList();
+        List<ContentArticleTranslation> allTrans = translationRepo.findByArticleIdIn(ids);
+        Map<Long, List<ContentArticleTranslation>> trByArticle = new LinkedHashMap<>();
+        for (ContentArticleTranslation t : allTrans) {
+            if (t.getBodyS3Key() == null || t.getBodyS3Key().isBlank()) continue;
+            trByArticle.computeIfAbsent(t.getArticleId(),
+                    k -> new java.util.ArrayList<>()).add(t);
+        }
+
+        return published.stream()
+                .map(a -> {
+                    List<ContentArticleTranslation> trs =
+                            trByArticle.getOrDefault(a.getId(), List.of());
+                    if (trs.isEmpty()) return null;
+                    java.time.Instant lastMod = a.getUpdatedAt() != null
+                            ? a.getUpdatedAt() : a.getPublishedAt();
+                    return new PublishedArticleSnapshot(a.getId(), lastMod, a.getHeroImageUrl(), trs);
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
+    }
+
+    /** Tupla interna para SitemapController. */
+    public record PublishedArticleSnapshot(
+            Long articleId,
+            java.time.Instant lastModified,
+            String heroImageUrl,
+            List<ContentArticleTranslation> translations
+    ) {}
+
+    private String resolvePublicBaseUrl() {
+        String configured = publicSiteProperties == null ? null : publicSiteProperties.getBaseUrl();
+        if (configured != null && !configured.isBlank()) return configured;
+        return "https://test.sharemechat.com";
     }
 }

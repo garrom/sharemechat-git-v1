@@ -43,6 +43,9 @@ import {
   mapLocaleToOg,
   upsertLink,
 } from './seoHelpers';
+import { BlogLocaleContext } from './BlogLocaleContext';
+
+const VALID_LOCALES = ['es', 'en'];
 
 const fmtDate = (v) => {
   if (!v) return '';
@@ -136,17 +139,14 @@ const parseKeywords = (raw) => {
 // viven en ./seoHelpers para reusarlos también desde BlogContent.jsx.
 
 export default function BlogArticleView() {
-  const { slug } = useParams();
+  const { locale: localeFromPath, slug } = useParams();
+  const locale = VALID_LOCALES.includes(localeFromPath) ? localeFromPath : 'es';
   const history = useHistory();
 
-  // Fase 4B.2 (ADR-022): chrome del detalle internacionalizado via namespace
-  // 'blog' (definido en src/i18n/locales/blog/{es,en}.json en 4B.1).
-  // Usamos claves con prefijo explicito t('blog:xxx') para no depender del
-  // argumento del hook.
-  // Fase 4B.4 (ADR-022): tambien extraemos la instancia i18n para pasar el
-  // locale activo al backend como ?locale=<lang> en los dos fetches del
-  // componente (detalle por slug + listado para related cards).
-  const { t, i18n } = useTranslation();
+  // Chrome del detalle internacionalizado via namespace 'blog'.
+  // Paquete 5 (ADR-025): el locale viene del path (`/blog/{locale}/{slug}`),
+  // no de i18n.language. El componente se remonta al navegar entre locales.
+  const { t } = useTranslation();
 
   const [article, setArticle] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -163,7 +163,7 @@ export default function BlogArticleView() {
     if (e) e.preventDefault();
     history.push('/');
   }, [history]);
-  const goBlog = useCallback(() => history.push('/blog'), [history]);
+  const goBlog = useCallback(() => history.push(`/blog/${locale}`), [history, locale]);
 
   useEffect(() => {
     let cancelled = false;
@@ -176,12 +176,9 @@ export default function BlogArticleView() {
     setError('');
     setArticle(null);
     setRetracted(false);
-    // Fase 4B.4 (ADR-022): el detalle se resuelve por (slug, locale). El
-    // backend devuelve 404 si el slug no existe en ese locale, lo cual el
-    // componente ya maneja mostrando t('blog:states.notFound'). El locale
-    // se captura del closure del render (basename estatico de 4B.3); no
-    // se incluye i18n.language en deps.
-    const locale = (i18n && i18n.language) ? i18n.language : 'es';
+    // Paquete 5 (ADR-025): el detalle se resuelve por (slug, locale) ambos
+    // del path. El backend devuelve 404 si la combinacion no existe (el
+    // componente lo maneja mostrando t('blog:states.notFound')).
     apiFetch(`/public/content/articles/${encodeURIComponent(slug)}?locale=${encodeURIComponent(locale)}`)
       .then((data) => {
         if (cancelled) return;
@@ -218,12 +215,8 @@ export default function BlogArticleView() {
       return () => {};
     }
     setRelatedArticles([]);
-    // Fase 4B.4 (ADR-022): related se calcula sobre el listado del mismo
-    // locale del articulo actual. Si el listado en ese locale esta vacio
-    // (ej. EN sin contenido aun), related queda vacio en cliente y el
-    // bloque "Quizas te interese" no se pinta. Mismo razonamiento que el
-    // fetch del detalle: locale capturado en closure, no en deps.
-    const locale = (i18n && i18n.language) ? i18n.language : 'es';
+    // Paquete 5 (ADR-025): related se calcula sobre el listado del MISMO
+    // locale que el articulo actual (no se mezclan locales en related).
     apiFetch(`/public/content/articles?size=50&locale=${encodeURIComponent(locale)}`)
       .then((data) => {
         if (cancelled) return;
@@ -240,7 +233,7 @@ export default function BlogArticleView() {
 
   const handleCopyLink = async () => {
     if (!article || !article.slug) return;
-    const url = `${window.location.origin}/blog/${article.slug}`;
+    const url = `${window.location.origin}/blog/${locale}/${article.slug}`;
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(url);
@@ -289,7 +282,7 @@ export default function BlogArticleView() {
       typeof window !== 'undefined' && window.location && window.location.origin
         ? window.location.origin
         : '';
-    const articleUrl = `${baseUrl}/blog/${article.slug}`;
+    const articleUrl = `${baseUrl}/blog/${article.locale}/${article.slug}`;
     const seoTitle = article.seoTitle || article.title || t('blog:meta.seoTitleFallback');
     const metaDescription =
       article.metaDescription || truncate(article.brief || '', 160);
@@ -302,16 +295,27 @@ export default function BlogArticleView() {
     upsertMeta('meta[name="description"]', { name: 'description', content: metaDescription });
     upsertCanonicalLink(articleUrl);
 
-    // hreflang alternates: hoy solo espanol; x-default apunta a la misma
-    // URL. Cuando existan traducciones reales, anadir mas hreflang con
-    // sus URLs alternas correspondientes.
+    // Paquete 5 (ADR-025): hreflang multilingue real desde article.alternates.
+    // Emitimos el del locale actual + uno por cada alternate publicado +
+    // x-default apuntando al ES si existe (o al locale actual si no).
     upsertLink(
-      'link[rel="alternate"][hreflang="es-ES"]',
-      { rel: 'alternate', hreflang: 'es-ES', href: articleUrl }
+      `link[rel="alternate"][hreflang="${article.locale}"]`,
+      { rel: 'alternate', hreflang: article.locale, href: articleUrl }
     );
+    const alternates = Array.isArray(article.alternates) ? article.alternates : [];
+    alternates.forEach((alt) => {
+      if (!alt || !alt.locale || !alt.url) return;
+      upsertLink(
+        `link[rel="alternate"][hreflang="${alt.locale}"]`,
+        { rel: 'alternate', hreflang: alt.locale, href: alt.url }
+      );
+    });
+    const esAlternate = article.locale === 'es'
+      ? articleUrl
+      : (alternates.find((a) => a.locale === 'es')?.url || articleUrl);
     upsertLink(
       'link[rel="alternate"][hreflang="x-default"]',
-      { rel: 'alternate', hreflang: 'x-default', href: articleUrl }
+      { rel: 'alternate', hreflang: 'x-default', href: esAlternate }
     );
 
     // Open Graph
@@ -456,8 +460,17 @@ export default function BlogArticleView() {
 
   const keywords = parseKeywords(article?.keywords);
 
+  // Paquete 5 (ADR-025): exponer locale actual + alternates al
+  // LocaleSwitcher del navbar para que pueda saltar al slug equivalente
+  // en el otro locale (en vez de tirar al usuario al listado raiz).
+  const localeContextValue = {
+    currentLocale: locale,
+    currentSlug: article?.slug || slug,
+    alternates: Array.isArray(article?.alternates) ? article.alternates : [],
+  };
+
   return (
-    <>
+    <BlogLocaleContext.Provider value={localeContextValue}>
       <GlobalBlack />
 
       <PublicNavbar
@@ -533,7 +546,7 @@ export default function BlogArticleView() {
                         <RelatedCard
                           key={r.id}
                           as={Link}
-                          to={`/blog/${r.slug}`}
+                          to={`/blog/${locale}/${r.slug}`}
                         >
                           {r.heroImageUrl ? (
                             <RelatedCardImage>
@@ -566,6 +579,6 @@ export default function BlogArticleView() {
           )}
         </PageInner>
       </PageWrap>
-    </>
+    </BlogLocaleContext.Provider>
   );
 }

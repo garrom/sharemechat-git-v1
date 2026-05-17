@@ -74,19 +74,21 @@ const getReadingMinutes = (htmlOrText) => {
   return Math.max(1, Math.ceil(words / 225));
 };
 
-const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel }) => {
+const BlogContent = ({
+  mode = 'public',
+  locale = 'es',
+  onGoRegisterClient,
+  onGoRegisterModel,
+}) => {
   const isPublic = mode === 'public';
   const handleRegisterClient = () => { if (onGoRegisterClient) onGoRegisterClient(); };
   const handleRegisterModel = () => { if (onGoRegisterModel) onGoRegisterModel(); };
 
-  // Fase 4B.2 (ADR-022): chrome del blog internacionalizado via namespace
-  // 'blog' (definido en src/i18n/locales/blog/{es,en}.json en 4B.1).
-  // Usamos claves con prefijo explicito t('blog:xxx') para no depender del
-  // argumento del hook; useTranslation() sin namespace funciona igual.
-  // Fase 4B.4 (ADR-022): tambien extraemos la instancia i18n para pasar el
-  // locale activo al backend como ?locale=<lang> en cada llamada al CMS
-  // publico. El backend (4A) filtra articulos por (locale, status).
-  const { t, i18n } = useTranslation();
+  // Chrome del blog internacionalizado via namespace 'blog'.
+  // Paquete 5 (ADR-025): el locale del listado viene del path
+  // (`/blog/{locale}`), pasado como prop por Blog.jsx. No depende de
+  // i18n.language. El backend filtra articulos por (locale, status).
+  const { t } = useTranslation();
 
   const [articles, setArticles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -147,12 +149,9 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
     let cancelled = false;
     setLoading(true);
     setError('');
-    // Fase 4B.4 (ADR-022): pasamos el locale activo al backend. Se captura
-    // dentro del closure del primer render. Bajo el basename estatico de
-    // 4B.3, un cambio de locale solo ocurre por navegacion completa
-    // (page reload), que desmonta y remonta este componente. Por eso
-    // i18n.language NO se incluye en las deps del useEffect.
-    const locale = (i18n && i18n.language) ? i18n.language : 'es';
+    // Paquete 5 (ADR-025): locale viene como prop desde la URL
+    // (`/blog/{locale}`), no de i18n.language. El componente se remonta
+    // al navegar entre /blog/es y /blog/en porque las rutas son distintas.
     apiFetch(`/public/content/articles?size=50&locale=${encodeURIComponent(locale)}`)
       .then((data) => {
         if (cancelled) return;
@@ -185,25 +184,35 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
       return undefined;
     }
     const baseUrl = window.location.origin;
-    const blogUrl = `${baseUrl}/blog`;
+    // Paquete 5 (ADR-025): URLs publicas siempre con locale en path.
+    const blogUrl = `${baseUrl}/blog/${locale}`;
+    const blogUrlEs = `${baseUrl}/blog/es`;
+    const blogUrlEn = `${baseUrl}/blog/en`;
     const prevTitle = document.title;
 
-    const title = 'Blog · SharemeChat — Videochat 1 a 1 en directo';
-    const description =
-      'Artículos, guías y notas de producto sobre videochat 1 a 1 en directo. Privacidad, seguridad, pagos y novedades de la plataforma.';
+    const title = locale === 'en'
+      ? 'Blog · SharemeChat — 1-on-1 live video chat'
+      : 'Blog · SharemeChat — Videochat 1 a 1 en directo';
+    const description = locale === 'en'
+      ? 'Articles, guides and product notes about 1-on-1 live video chat. Privacy, safety, payments and platform updates.'
+      : 'Artículos, guías y notas de producto sobre videochat 1 a 1 en directo. Privacidad, seguridad, pagos y novedades de la plataforma.';
 
     document.title = title;
     upsertMeta('meta[name="description"]', { name: 'description', content: description });
     upsertCanonicalLink(blogUrl);
 
-    // hreflang alternates (mismo patron que el detalle: hoy solo es-ES)
+    // hreflang multilingue (paquete 5): es/en sin region + x-default al ES.
     upsertLink(
-      'link[rel="alternate"][hreflang="es-ES"]',
-      { rel: 'alternate', hreflang: 'es-ES', href: blogUrl }
+      'link[rel="alternate"][hreflang="es"]',
+      { rel: 'alternate', hreflang: 'es', href: blogUrlEs }
+    );
+    upsertLink(
+      'link[rel="alternate"][hreflang="en"]',
+      { rel: 'alternate', hreflang: 'en', href: blogUrlEn }
     );
     upsertLink(
       'link[rel="alternate"][hreflang="x-default"]',
-      { rel: 'alternate', hreflang: 'x-default', href: blogUrl }
+      { rel: 'alternate', hreflang: 'x-default', href: blogUrlEs }
     );
 
     // Open Graph
@@ -212,7 +221,10 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
     upsertMeta('meta[property="og:description"]', { property: 'og:description', content: description });
     upsertMeta('meta[property="og:url"]', { property: 'og:url', content: blogUrl });
     upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: 'SharemeChat' });
-    upsertMeta('meta[property="og:locale"]', { property: 'og:locale', content: 'es_ES' });
+    upsertMeta('meta[property="og:locale"]', {
+      property: 'og:locale',
+      content: locale === 'en' ? 'en_US' : 'es_ES',
+    });
     upsertMeta('meta[property="og:image"]', {
       property: 'og:image',
       content: `${baseUrl}/logo192.png`,
@@ -232,7 +244,7 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
         name: t('blog:hero.kicker'),
         url: blogUrl,
         description,
-        inLanguage: 'es-ES',
+        inLanguage: locale === 'en' ? 'en-US' : 'es-ES',
         publisher: {
           '@type': 'Organization',
           name: 'SharemeChat',
@@ -244,7 +256,7 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
         blogPost: articles.map((a) => ({
           '@type': 'BlogPosting',
           headline: a.title,
-          url: `${baseUrl}/blog/${a.slug}`,
+          url: `${baseUrl}/blog/${locale}/${a.slug}`,
           ...(a.brief ? { description: truncate(a.brief, 160) } : {}),
           ...(a.publishedAt ? { datePublished: a.publishedAt } : {}),
           ...(a.heroImageUrl ? { image: a.heroImageUrl } : {}),
@@ -330,7 +342,7 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
                   <ArticleCard
                     key={a.id}
                     as={Link}
-                    to={`/blog/${a.slug}`}
+                    to={`/blog/${locale}/${a.slug}`}
                   >
                     {a.heroImageUrl ? (
                       <ArticleCardImage>
@@ -397,7 +409,7 @@ const BlogContent = ({ mode = 'public', onGoRegisterClient, onGoRegisterModel })
                               <SidebarArticleLink
                                 key={art.id}
                                 as={Link}
-                                to={`/blog/${art.slug}`}
+                                to={`/blog/${locale}/${art.slug}`}
                               >
                                 {art.title}
                               </SidebarArticleLink>
