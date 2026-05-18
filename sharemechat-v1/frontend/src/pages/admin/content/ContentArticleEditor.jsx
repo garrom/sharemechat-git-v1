@@ -73,6 +73,7 @@ import ContentArticleHistory from './ContentArticleHistory';
 import ContentArticleAIPanel from './ContentArticleAIPanel';
 import BodyLocaleTabs from './components/BodyLocaleTabs';
 import ReviewChecklist from './components/ReviewChecklist';
+import ConfirmModal from './components/ConfirmModal';
 
 // ADR-016: terminales bloquean edicion incluso para ADMIN.
 const TERMINAL_STATES = new Set(['PUBLISHED', 'RETRACTED']);
@@ -130,12 +131,18 @@ const buildTransitionsConfig = (t) => ({
   RETRACTED: [],
 });
 
+// Paquete 7 bloque 1: `responsibleEditorUserId` se conserva en BD y DTOs
+// (la columna sigue existiendo y aceptando valor desde otras vias) pero
+// no se expone como input del editor admin. Mientras solo haya un operador
+// en producción no aporta valor y abrirlo como input numerico aceptaba
+// valores invalidos (IDs inexistentes, negativos). Cuando se decida
+// reintroducirlo, hacerlo como dropdown poblado desde el listado de
+// usuarios backoffice via /api/admin/users, no input numerico libre.
 const initialSharedMeta = {
   category: '',
   brief: '',
   keywords: '',
   heroImageUrl: '',
-  responsibleEditorUserId: '',
 };
 
 const initialCreateMeta = {
@@ -198,6 +205,17 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   const [previewArticle, setPreviewArticle] = useState(null);
   const [previewError, setPreviewError] = useState('');
 
+  // ============================================================
+  // ConfirmModal: estado generico para los 4 casos del editor
+  // (paquete 7 bloque 4).
+  //   - 'discardChanges': cambio de pestana ES|EN con cambios sin guardar.
+  //   - 'deleteArticle': borrar articulo.
+  //   - 'transition': transicion destructive (retract) o con razon/comentario.
+  // Cada uso configura `confirmModal` con sus props y un callback.
+  // ============================================================
+  const [confirmModal, setConfirmModal] = useState(null);
+  const closeConfirmModal = () => setConfirmModal(null);
+
   const stateIsTerminal = state ? TERMINAL_STATES.has(state) : false;
   // Bloqueo de edicion. Mismo criterio que paquete 0:
   //   - terminales: bloquean siempre (ADMIN no bypassa).
@@ -231,9 +249,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       brief: dto.brief || '',
       keywords: dto.keywords || '',
       heroImageUrl: dto.heroImageUrl || '',
-      responsibleEditorUserId: dto.responsibleEditorUserId
-        ? String(dto.responsibleEditorUserId)
-        : '',
     });
   }, []);
 
@@ -309,12 +324,22 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     if (newLocale === activeBodyLocale) return;
     if (bodyDirty || seoDirty) {
       const localeLabel = activeBodyLocale === 'es' ? 'ES' : 'EN';
-      // eslint-disable-next-line no-alert
-      const ok = window.confirm(
-        t('editor.unsavedConfirm',
+      // Paquete 7 bloque 4: usar ConfirmModal en lugar de window.confirm.
+      setConfirmModal({
+        title: t('confirmModal.unsavedTitle', 'Cambios sin guardar'),
+        message: t('editor.unsavedConfirm',
           'Tienes cambios sin guardar en {{locale}}. ¿Descartar?',
-          { locale: localeLabel }));
-      if (!ok) return;
+          { locale: localeLabel }),
+        confirmLabel: t('confirmModal.btnDiscard', 'Descartar cambios'),
+        cancelLabel: t('confirmModal.btnKeep', 'Mantener'),
+        tone: 'danger',
+        onConfirm: () => {
+          setActiveBodyLocale(newLocale);
+          closeConfirmModal();
+        },
+        onCancel: closeConfirmModal,
+      });
+      return;
     }
     setActiveBodyLocale(newLocale);
   };
@@ -340,9 +365,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           category: sharedMeta.category || null,
           keywords: sharedMeta.keywords || null,
           heroImageUrl: sharedMeta.heroImageUrl || null,
-          responsibleEditorUserId: sharedMeta.responsibleEditorUserId
-            ? Number(sharedMeta.responsibleEditorUserId) || null
-            : null,
         }),
       });
       applyArticle(created);
@@ -372,9 +394,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           category: sharedMeta.category,
           keywords: sharedMeta.keywords,
           heroImageUrl: sharedMeta.heroImageUrl,
-          responsibleEditorUserId: sharedMeta.responsibleEditorUserId
-            ? Number(sharedMeta.responsibleEditorUserId) || null
-            : null,
         }),
       });
       applyArticle(updated);
@@ -497,11 +516,8 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   // ============================================================
   // Acciones: delete
   // ============================================================
-  const handleDelete = async () => {
+  const performDelete = async () => {
     if (!currentId) return;
-    // eslint-disable-next-line no-alert
-    if (!window.confirm(t('editor.deleteConfirm',
-        '¿Borrar artículo? Solo se permite si está en estado DRAFT.'))) return;
     setDeleting(true);
     setError('');
     setOkMessage('');
@@ -514,36 +530,38 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     }
   };
 
+  const handleDelete = () => {
+    if (!currentId) return;
+    // Paquete 7 bloque 4: ConfirmModal en lugar de window.confirm.
+    setConfirmModal({
+      title: t('confirmModal.deleteTitle', 'Borrar artículo'),
+      message: t('editor.deleteConfirm',
+        '¿Borrar artículo? Solo se permite si está en estado DRAFT.'),
+      confirmLabel: t('confirmModal.btnDelete', 'Borrar'),
+      cancelLabel: t('confirmModal.btnCancel', 'Cancelar'),
+      tone: 'danger',
+      onConfirm: () => {
+        closeConfirmModal();
+        performDelete();
+      },
+      onCancel: closeConfirmModal,
+    });
+  };
+
   // ============================================================
   // Acciones: transition
   // ============================================================
-  const handleTransition = async (transition) => {
-    if (!currentId || transitioning) return;
-    if (transition.requiresChecklist && !checklistAllPassed) {
-      setError(t('transitions.blockedByChecklist',
-        'El checklist preventivo bloquea el envío a revisión: completa todos los campos para habilitar el botón.'));
-      return;
-    }
-    if (transition.confirmRequired) {
-      const confirmText = transition.confirmText
-        || `¿Confirmar la transición a ${transition.to}? La operación no es reversible desde la UI.`;
-      // eslint-disable-next-line no-alert
-      if (!window.confirm(confirmText)) return;
-    }
-    let comment = null;
-    let reason = null;
-    if (transition.input) {
-      // eslint-disable-next-line no-alert
-      const value = window.prompt(transition.input.prompt, '');
-      if (value === null) return;
-      const trimmed = (value || '').trim();
-      if (transition.input.required && !trimmed) {
-        setError(`${transition.input.name} required for "${transition.label}".`);
-        return;
-      }
-      if (transition.input.name === 'comment') comment = trimmed || null;
-      if (transition.input.name === 'reason') reason = trimmed || null;
-    }
+  // Paquete 7 bloque 4: handleTransition reescrito sin window.confirm ni
+  // window.prompt. El flujo se descompone en tres pasos asincronos
+  // anidados en callbacks del ConfirmModal:
+  //   1. Si la transition exige confirm destructive, abrir ConfirmModal
+  //      tone=danger. Al confirmar, paso 2; al cancelar, abortar.
+  //   2. Si la transition tiene `input` (comment / reason), abrir
+  //      ConfirmModal con inputLabel. Al confirmar, paso 3 con el valor;
+  //      al cancelar, abortar.
+  //   3. POST al backend.
+  // Si no hay confirm ni input, ejecutar paso 3 directamente.
+  const performTransition = async (transition, comment, reason) => {
     setTransitioning(true);
     setError('');
     setOkMessage('');
@@ -569,6 +587,60 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     } finally {
       setTransitioning(false);
     }
+  };
+
+  const askInputThenTransition = (transition) => {
+    if (!transition.input) {
+      performTransition(transition, null, null);
+      return;
+    }
+    setConfirmModal({
+      title: transition.label,
+      message: '',
+      inputLabel: transition.input.prompt,
+      inputPlaceholder: '',
+      inputRequired: !!transition.input.required,
+      confirmLabel: t('confirmModal.btnContinue', 'Continuar'),
+      cancelLabel: t('confirmModal.btnCancel', 'Cancelar'),
+      onConfirm: (value) => {
+        closeConfirmModal();
+        let comment = null;
+        let reason = null;
+        const trimmed = value ? value.trim() : '';
+        if (transition.input.name === 'comment') comment = trimmed || null;
+        if (transition.input.name === 'reason') reason = trimmed || null;
+        performTransition(transition, comment, reason);
+      },
+      onCancel: closeConfirmModal,
+    });
+  };
+
+  const handleTransition = (transition) => {
+    if (!currentId || transitioning) return;
+    if (transition.requiresChecklist && !checklistAllPassed) {
+      setError(t('transitions.blockedByChecklist',
+        'El checklist preventivo bloquea el envío a revisión: completa todos los campos para habilitar el botón.'));
+      return;
+    }
+    if (transition.confirmRequired) {
+      setConfirmModal({
+        title: transition.label,
+        message: transition.confirmText
+          || t('transitions.confirmGeneric',
+              '¿Confirmar la transición a {{to}}? La operación no es reversible desde la UI.',
+              { to: transition.to }),
+        confirmLabel: transition.label,
+        cancelLabel: t('confirmModal.btnCancel', 'Cancelar'),
+        tone: transition.tone === 'danger' ? 'danger' : 'default',
+        onConfirm: () => {
+          closeConfirmModal();
+          askInputThenTransition(transition);
+        },
+        onCancel: closeConfirmModal,
+      });
+      return;
+    }
+    askInputThenTransition(transition);
   };
 
   // ============================================================
@@ -749,19 +821,10 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           </div>
         </EditorRow>
 
-        <EditorRow $cols={1}>
-          <div>
-            <LabelText>{t('editor.fieldResponsibleEditor', 'Editor responsable (userId)')}</LabelText>
-            <StyledInput
-              type="number"
-              value={sharedMeta.responsibleEditorUserId}
-              disabled={fieldsLocked}
-              onChange={(e) => updateShared('responsibleEditorUserId', e.target.value)}
-              placeholder={t('editor.fieldResponsibleEditorPlaceholder',
-                'ID numérico del editor humano responsable')}
-            />
-          </div>
-        </EditorRow>
+        {/* Paquete 7 bloque 1: input de responsibleEditorUserId eliminado
+            del formulario. El backend conserva la columna y el campo en
+            DTOs por si en el futuro se introduce un dropdown poblado desde
+            BD. Mientras solo haya un operador, el campo no aporta valor. */}
 
         <ToolbarRow>
           {canSubmitCreate ? (
@@ -835,6 +898,22 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         <ContentArticleHistory key={historyTick} articleId={currentId} />
       ) : null}
 
+      {/* ConfirmModal generico para los 4 puntos de confirmacion del editor
+          (paquete 7 bloque 4). */}
+      <ConfirmModal
+        isOpen={confirmModal != null}
+        title={confirmModal?.title}
+        message={confirmModal?.message}
+        confirmLabel={confirmModal?.confirmLabel}
+        cancelLabel={confirmModal?.cancelLabel}
+        tone={confirmModal?.tone || 'default'}
+        inputLabel={confirmModal?.inputLabel}
+        inputPlaceholder={confirmModal?.inputPlaceholder}
+        inputRequired={confirmModal?.inputRequired || false}
+        onConfirm={confirmModal?.onConfirm || (() => {})}
+        onCancel={confirmModal?.onCancel || closeConfirmModal}
+      />
+
       {/* Modal preview */}
       {previewOpen ? (
         <PreviewOverlay onClick={handleClosePreview}>
@@ -856,6 +935,34 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
                 {previewArticle.publishedAt
                   ? ` · ${fmtDate(previewArticle.publishedAt)}`
                   : ` · ${t('editor.creating', 'sin publicar (preview)')}`}
+              </div>
+            ) : null}
+
+            {/* Paquete 7 bloque 3: hero image en el preview. Se lee del
+                articleDetail que el editor padre ya tiene cargado, no del
+                endpoint de preview (que sigue devolviendo solo htmlBody).
+                Si la URL falla la carga (404, mixed content, etc.) el
+                onError del <img> nos deja silenciosamente sin imagen y el
+                preview sigue funcionando con solo el body. */}
+            {article?.heroImageUrl ? (
+              <div style={{
+                padding: '0 12px 12px',
+                display: 'flex',
+                justifyContent: 'center',
+              }}>
+                <img
+                  src={article.heroImageUrl}
+                  alt={t('preview.heroAlt', 'Hero image del artículo')}
+                  loading="lazy"
+                  onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                  style={{
+                    maxWidth: '100%',
+                    maxHeight: 280,
+                    objectFit: 'cover',
+                    borderRadius: 8,
+                    border: '1px solid #e2e8f0',
+                  }}
+                />
               </div>
             ) : null}
 

@@ -17,6 +17,17 @@ const buildApiError = ({ status, message, data, text }) => {
     if (data.error !== undefined) err.error = data.error;
     if (data.scope !== undefined) err.scope = data.scope;
     if (data.nextAction !== undefined) err.nextAction = data.nextAction;
+    // Paquete 7 bloque 5: propagar campos estructurados de errores del
+    // backend al objeto Error para que los callers (p. ej. el AIPanel del
+    // CMS) puedan leer la lista detallada sin descenderla a `error.data`.
+    // Retrocompatible: callers que solo lean `error.message` siguen
+    // funcionando porque la propiedad principal del Error no cambia.
+    if (Array.isArray(data.validationErrors)) {
+      err.validationErrors = data.validationErrors;
+    }
+    if (data.context !== undefined) err.context = data.context;
+    if (data.path !== undefined) err.path = data.path;
+    if (data.timestamp !== undefined) err.timestamp = data.timestamp;
   }
   return err;
 };

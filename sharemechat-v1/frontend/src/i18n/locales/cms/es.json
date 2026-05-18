@@ -147,6 +147,7 @@
   "checklist": {
     "title": "Listo para enviar a revisión",
     "subtitle": "El backend exige que todos estos campos estén presentes antes de transitar DRAFT → IN_REVIEW.",
+    "subtitleProgressive": "Sigue el guion editorial. Cuando todos los pasos estén completados, podrás enviar el artículo a revisión.",
     "hero": "Hero image configurada",
     "brief": "Brief presente",
     "bodyEs": "Cuerpo ES presente",
@@ -158,7 +159,31 @@
     "metaDescriptionEs": "Meta description ES",
     "metaDescriptionEn": "Meta description EN",
     "allReady": "Todos los campos completos. Puedes enviar a revisión.",
-    "someMissing": "Faltan {{count}} campo(s) por completar antes de enviar a revisión."
+    "allReadyProgressive": "Todo listo. Pulsa 'Enviar a revisión' para continuar.",
+    "currentStepHint": "Estás en el paso {{step}} de {{total}}.",
+    "someMissing": "Faltan {{count}} campo(s) por completar antes de enviar a revisión.",
+    "hintHero": "Sube la imagen 4:3 al bucket de assets y pega la URL en el bloque \"Metadata compartida\".",
+    "hintBrief": "Resumen interno del artículo. Se edita en el bloque \"Metadata compartida\".",
+    "hintBodyEs": "Pestaña ES: escribe o pega el cuerpo markdown y guarda. Lo más fácil: aplicar JSON bilingüe desde el panel IA.",
+    "hintTitleEs": "Pestaña ES: rellena el campo \"Título\" y pulsa \"Guardar campos SEO\".",
+    "hintSeoTitleEs": "Pestaña ES: rellena \"SEO title\" (máximo 60 caracteres) y pulsa \"Guardar campos SEO\".",
+    "hintMetaDescriptionEs": "Pestaña ES: rellena \"Meta description\" (máximo 160 caracteres) y pulsa \"Guardar campos SEO\".",
+    "hintBodyEn": "Pestaña EN: si no existe, genérala desde el panel IA con un JSON bilingüe, o escribe el cuerpo manualmente y guarda.",
+    "hintTitleEn": "Pestaña EN: rellena \"Título\" y pulsa \"Guardar campos SEO\".",
+    "hintSeoTitleEn": "Pestaña EN: rellena \"SEO title\" (máximo 60 caracteres) y pulsa \"Guardar campos SEO\".",
+    "hintMetaDescriptionEn": "Pestaña EN: rellena \"Meta description\" (máximo 160 caracteres) y pulsa \"Guardar campos SEO\"."
+  },
+  "confirmModal": {
+    "btnConfirm": "Confirmar",
+    "btnCancel": "Cancelar",
+    "btnContinue": "Continuar",
+    "btnDiscard": "Descartar cambios",
+    "btnKeep": "Mantener",
+    "btnDelete": "Borrar",
+    "btnX": "✕",
+    "unsavedTitle": "Cambios sin guardar",
+    "deleteTitle": "Borrar artículo",
+    "errInputRequired": "Este campo es obligatorio para continuar."
   },
   "history": {
     "title": "Historial",
@@ -191,6 +216,7 @@
     "commentPublishPrompt": "Comentario de publicación (opcional):",
     "reasonRetractPrompt": "Razón de la retractación (opcional):",
     "retractConfirm": "¿Retirar este artículo? Devolverá 410 Gone a los visitantes y desaparecerá del sitemap. La operación no es reversible desde la UI.",
+    "confirmGeneric": "¿Confirmar la transición a {{to}}? La operación no es reversible desde la UI.",
     "inProgress": "...",
     "blockedByChecklist": "El checklist preventivo bloquea el envío a revisión: completa todos los campos para habilitar el botón.",
     "stateOk": "Estado actualizado a {{state}}.",
@@ -202,6 +228,7 @@
     "loading": "Generando preview...",
     "empty": "Sin datos.",
     "selectLocale": "Idioma de la preview:",
-    "errLoad": "No se pudo cargar la vista previa"
+    "errLoad": "No se pudo cargar la vista previa",
+    "heroAlt": "Hero image del artículo"
   }
 }

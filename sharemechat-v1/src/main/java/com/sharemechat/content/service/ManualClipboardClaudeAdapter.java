@@ -516,33 +516,37 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
     // Helpers de mensajes de error JSON (paquete 6.7)
     // ================================================================
 
+    /** Constante de codigo de error para parseo JSON; expuesta como `code`
+     * en {@link ValidationErrorDTO} desde paquete 7 (antes iba como prefijo
+     * del message en 6.7). El frontend la lee como `error.validationErrors[0].code`. */
+    private static final String CODE_JSON_PARSE_ERROR = "JSON_PARSE_ERROR";
+
     /**
      * Formatea el error de un {@link JsonParseException} con linea, columna
-     * y fragmento de contexto cuando esten disponibles. El mensaje se
-     * prefija con {@code [JSON_PARSE_ERROR]} para que el frontend pueda
-     * distinguirlo de errores semanticos.
+     * y fragmento de contexto cuando esten disponibles. Devuelve un
+     * {@link ValidationErrorDTO} con:
+     *  - field = "body"
+     *  - code  = "JSON_PARSE_ERROR"
+     *  - context = fragmento ~40 chars alrededor del char offset, con caret
+     *  - message = descripcion legible para el operador, con guia operativa
      *
      * El caso de error mas tipico que vemos en el pipeline editorial es
      * una comilla doble ASCII (U+0022) no escapada dentro de un campo
      * string del JSON; por eso la sugerencia final menciona ese caso.
      */
     private static ValidationErrorDTO formatJsonParseError(JsonParseException ex, String rawJson) {
-        StringBuilder msg = new StringBuilder("[JSON_PARSE_ERROR] ");
+        StringBuilder msg = new StringBuilder();
         JsonLocation loc = ex.getLocation();
         boolean haveLocation = loc != null
                 && (loc.getLineNr() > 0 || loc.getColumnNr() > 0);
+        String context = null;
         if (haveLocation) {
             msg.append("JSON malformado en linea ")
                     .append(loc.getLineNr())
                     .append(" columna ")
                     .append(loc.getColumnNr())
                     .append(". ");
-            String context = extractContext(rawJson, loc.getCharOffset());
-            if (context != null) {
-                msg.append("Contexto: \"")
-                        .append(context)
-                        .append("\". ");
-            }
+            context = extractContext(rawJson, loc.getCharOffset());
         } else {
             msg.append("JSON malformado. ");
         }
@@ -552,12 +556,12 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
         }
         msg.append("Verifica comillas dobles dentro de strings: ")
                 .append("escapalas con \\\" o sustituyelas por curvas tipograficas “…”.");
-        return new ValidationErrorDTO("body", msg.toString());
+        return new ValidationErrorDTO("body", msg.toString(), CODE_JSON_PARSE_ERROR, context);
     }
 
     /** Variante para JsonProcessingException no especifica de parseo. */
     private static ValidationErrorDTO formatJsonProcessingError(JsonProcessingException ex) {
-        StringBuilder msg = new StringBuilder("[JSON_PARSE_ERROR] ");
+        StringBuilder msg = new StringBuilder();
         JsonLocation loc = ex.getLocation();
         if (loc != null && (loc.getLineNr() > 0 || loc.getColumnNr() > 0)) {
             msg.append("JSON malformado en linea ")
@@ -569,7 +573,7 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
             msg.append("JSON malformado. ");
         }
         msg.append("Detalle Jackson: ").append(ex.getMessage());
-        return new ValidationErrorDTO("body", msg.toString());
+        return new ValidationErrorDTO("body", msg.toString(), CODE_JSON_PARSE_ERROR, null);
     }
 
     /**
