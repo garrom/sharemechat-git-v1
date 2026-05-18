@@ -83,13 +83,37 @@ REGLAS DURAS
 12. `locales.<es|en>.fact_check_notes`: una entrada por cada claim numérico o factual detectado en el draft del locale correspondiente, con status y source_index (índice 1-based al array `shared.sources_used`, que es común).
 13. Antes de copiar reviewed.md a `locales.es.draft_markdown`, ELIMINA cualquier bloque de comentario `<!-- TRACE ... -->` y cualquier marcador residual `[source N]`. Mismo tratamiento para `reviewed_en.md` → `locales.en.draft_markdown`.
 14. METADATA DEL EN: lee el bloque al final de `04_review/reviewed_en.md` con los campos SUGGESTED_SLUG_EN, SUGGESTED_SEO_TITLE_EN, SUGGESTED_META_DESC_EN. Usa esos valores para poblar `locales.en.slug`, `locales.en.seo_title` y `locales.en.meta_description` respectivamente. El bloque metadata NO se incluye en `locales.en.draft_markdown` (solo el cuerpo del artículo).
-15. SERIALIZACIÓN JSON CORRECTA: la regla "LITERAL, sin retoques" se aplica al contenido tipográfico, no a la serialización JSON. Al emitir cualquier campo string del JSON, escapa correctamente:
-  - Toda comilla doble " interior con \"
-  - Todo salto de línea con \n
-  - Todo retorno de carro con \r
-  - Todo tabulador con \t
-  - Todo backslash \ con \\
-    El JSON resultante debe parsear sin errores con cualquier parser estándar (JSON.parse, jackson, gson, etc.). Si el draft viene con comillas dobles rectas " (no debería, ver skill sharemechat-voice), escápalas con \" en el campo correspondiente del JSON.
+15. SERIALIZACIÓN JSON CORRECTA: la regla "LITERAL, sin retoques" se aplica al contenido tipográfico, no a la serialización JSON. Construir el JSON correctamente es responsabilidad bloqueante de esta skill. El procedimiento exacto a seguir:
+
+  15.1 NO construir el JSON por concatenación de strings. Construye primero, mentalmente, un objeto literal (estructura de árbol) con todos los campos. Luego serialízalo con un serializador JSON estándar: el equivalente a `JSON.stringify` en JavaScript, `ObjectMapper.writeValueAsString` en Java, `json.dumps` en Python. Estos serializadores escapan automáticamente comillas dobles, saltos de línea, retornos de carro, tabulares y backslashes en cada campo string. Construir por concatenación de strings sin pasar por un serializador casi garantiza JSON inválido cuando hay énfasis estilísticos en los drafts.
+
+  15.2 CAMPOS DE RIESGO ALTO (revisión obligatoria antes de emitir). Cualquiera de estos campos puede contener comillas dobles ASCII (U+0022) sin escapar provenientes de las fases anteriores del pipeline, y DEBE serializarse correctamente sin asumir que están ausentes:
+    - locales.{es,en}.draft_markdown (especialmente énfasis estilísticos tipo "un poco", "a little")
+    - locales.{es,en}.title
+    - locales.{es,en}.seo_title
+    - locales.{es,en}.meta_description
+    - shared.brief (si lo emites)
+    - shared.sources_used[].relevance
+    - shared.sources_used[].key_points[]
+    - locales.{es,en}.competitor_insights[].what_they_cover
+    - locales.{es,en}.competitor_insights[].gap
+    - locales.{es,en}.article_outline[].objective
+    - locales.{es,en}.risk_notes[].note
+    - locales.{es,en}.fact_check_notes[].claim
+
+  15.3 NO ASUMIR COMILLAS TIPOGRÁFICAS CURVAS. Las skills anteriores (cms-draft-writer, cms-editorial-polish) emiten markdown legítimo donde pueden aparecer tanto comillas curvas (U+201C, U+201D) como rectas (U+0022). El builder NO debe asumir que las comillas son siempre curvas. Las rectas son válidas tipográficamente en muchos contextos (énfasis técnico, código, citas anidadas) y entrarán al pipeline. El serializador del paso 15.1 las escapa correctamente; si construyes por concatenación, romperás el JSON.
+
+  15.4 SELF-CHECK FINAL OBLIGATORIO. Antes de emitir, parsea el JSON que acabas de construir con un validador JSON estricto RFC 8259 (equivalente a JSON.parse). Hazlo así:
+    - Intento 1: serializar + parsear. Si parsea limpio, emite.
+    - Si no parsea: identifica la posición del error (línea, columna, fragmento), corrige (lo más típico: una comilla doble interior no escapada en un campo de la lista 15.2), serializa de nuevo, parsea de nuevo.
+    - Intento 2: si tampoco parsea, repite el procedimiento.
+    - Intento 3: si tampoco parsea, NO EMITAS JSON ROTO. En su lugar, emite un bloque informativo con:
+        * lista de los 3 intentos realizados, brevemente,
+        * fragmento del JSON construido que falla parseo,
+        * mensaje explícito "FALLO DE CONSTRUCCIÓN JSON. Pipeline aborta para evitar emitir JSON inválido.",
+        * sugerencia operativa: identificar qué campo de la lista 15.2 contiene el carácter problemático.
+
+  El JSON resultante de un intento exitoso debe parsear sin errores con cualquier parser estándar (JSON.parse, Jackson, gson, json.dumps→loads roundtrip). El campo `shared.self_check_passed=true` SOLO se permite si el self-check del paso 15.4 ha pasado limpio en intento 1, 2 o 3.
 
 VALIDACIÓN ANTES DE EMITIR (self-check)
 

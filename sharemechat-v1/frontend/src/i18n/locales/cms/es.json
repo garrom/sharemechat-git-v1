@@ -137,7 +137,12 @@
     "rowInfoType": "tipo {{type}}",
     "rowInfoModel": "model {{model}}",
     "promptHashLabel": "promptHash:",
-    "outputHashLabel": "outputHash:"
+    "outputHashLabel": "outputHash:",
+    "btnVerifyJson": "Verificar JSON",
+    "msgClientJsonValid": "JSON válido. Listo para aplicar.",
+    "msgClientJsonInvalid": "El JSON tiene un error de formato y no se ha enviado al servidor.",
+    "msgClientJsonHint": "Verifica que las comillas dobles dentro de strings estén escapadas (\\\") o sustitúyelas por comillas tipográficas curvas “…”.",
+    "msgClientJsonEmpty": "Pega el JSON bilingüe antes de verificar."
   },
   "checklist": {
     "title": "Listo para enviar a revisión",

@@ -1,5 +1,6 @@
 package com.sharemechat.content.service;
 
+import com.fasterxml.jackson.core.JsonLocation;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -163,10 +164,16 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
         try {
             root = objectMapper.readTree(trimmed);
         } catch (JsonParseException ex) {
-            errors.add(new ValidationErrorDTO("body", "JSON no parseable: " + ex.getOriginalMessage()));
+            // Paquete 6.7: mensaje de error util. Extraemos linea+columna del
+            // JsonLocation y un fragmento de ~40 chars alrededor del char
+            // offset para que el operador sepa exactamente donde corregir.
+            // El uso mas tipico que provoca este fallo: comilla doble ASCII
+            // U+0022 no escapada dentro de un campo string (p. ej. enfasis
+            // estilistico en draft_markdown). El mensaje guia hacia ese caso.
+            errors.add(formatJsonParseError(ex, trimmed));
             return new OutputValidationResult(false, errors, null);
         } catch (JsonProcessingException ex) {
-            errors.add(new ValidationErrorDTO("body", "JSON no parseable: " + ex.getMessage()));
+            errors.add(formatJsonProcessingError(ex));
             return new OutputValidationResult(false, errors, null);
         }
         if (root == null || !root.isObject()) {
@@ -503,6 +510,94 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
                 errors.add(new ValidationErrorDTO(pathBase + "." + f, "debe ser array"));
             }
         }
+    }
+
+    // ================================================================
+    // Helpers de mensajes de error JSON (paquete 6.7)
+    // ================================================================
+
+    /**
+     * Formatea el error de un {@link JsonParseException} con linea, columna
+     * y fragmento de contexto cuando esten disponibles. El mensaje se
+     * prefija con {@code [JSON_PARSE_ERROR]} para que el frontend pueda
+     * distinguirlo de errores semanticos.
+     *
+     * El caso de error mas tipico que vemos en el pipeline editorial es
+     * una comilla doble ASCII (U+0022) no escapada dentro de un campo
+     * string del JSON; por eso la sugerencia final menciona ese caso.
+     */
+    private static ValidationErrorDTO formatJsonParseError(JsonParseException ex, String rawJson) {
+        StringBuilder msg = new StringBuilder("[JSON_PARSE_ERROR] ");
+        JsonLocation loc = ex.getLocation();
+        boolean haveLocation = loc != null
+                && (loc.getLineNr() > 0 || loc.getColumnNr() > 0);
+        if (haveLocation) {
+            msg.append("JSON malformado en linea ")
+                    .append(loc.getLineNr())
+                    .append(" columna ")
+                    .append(loc.getColumnNr())
+                    .append(". ");
+            String context = extractContext(rawJson, loc.getCharOffset());
+            if (context != null) {
+                msg.append("Contexto: \"")
+                        .append(context)
+                        .append("\". ");
+            }
+        } else {
+            msg.append("JSON malformado. ");
+        }
+        String original = ex.getOriginalMessage();
+        if (original != null && !original.isBlank()) {
+            msg.append("Detalle Jackson: ").append(original.trim()).append(". ");
+        }
+        msg.append("Verifica comillas dobles dentro de strings: ")
+                .append("escapalas con \\\" o sustituyelas por curvas tipograficas “…”.");
+        return new ValidationErrorDTO("body", msg.toString());
+    }
+
+    /** Variante para JsonProcessingException no especifica de parseo. */
+    private static ValidationErrorDTO formatJsonProcessingError(JsonProcessingException ex) {
+        StringBuilder msg = new StringBuilder("[JSON_PARSE_ERROR] ");
+        JsonLocation loc = ex.getLocation();
+        if (loc != null && (loc.getLineNr() > 0 || loc.getColumnNr() > 0)) {
+            msg.append("JSON malformado en linea ")
+                    .append(loc.getLineNr())
+                    .append(" columna ")
+                    .append(loc.getColumnNr())
+                    .append(". ");
+        } else {
+            msg.append("JSON malformado. ");
+        }
+        msg.append("Detalle Jackson: ").append(ex.getMessage());
+        return new ValidationErrorDTO("body", msg.toString());
+    }
+
+    /**
+     * Extrae los ~40 chars alrededor del char offset del error, recortando
+     * los limites del raw para no salirse del array. Reemplaza saltos de
+     * linea por espacios y secuencias \r\n por espacio para que el mensaje
+     * se renderice limpio en la UI. Devuelve null si el offset es invalido.
+     */
+    private static String extractContext(String rawJson, long charOffset) {
+        if (rawJson == null || charOffset < 0) return null;
+        int center = (int) Math.min(charOffset, (long) rawJson.length());
+        int from = Math.max(0, center - 20);
+        int to = Math.min(rawJson.length(), center + 20);
+        if (from >= to) return null;
+        String slice = rawJson.substring(from, to)
+                .replace("\r", " ")
+                .replace("\n", " ")
+                .replace("\t", " ");
+        // Marca posicional con un caret encima del offset original.
+        int relativeCaret = center - from;
+        if (relativeCaret >= 0 && relativeCaret <= slice.length()) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(slice, 0, relativeCaret);
+            sb.append("▸"); // triangulo blanco apuntando a la derecha
+            sb.append(slice, relativeCaret, slice.length());
+            return sb.toString();
+        }
+        return slice;
     }
 
     private static String textOrNull(JsonNode root, String field) {

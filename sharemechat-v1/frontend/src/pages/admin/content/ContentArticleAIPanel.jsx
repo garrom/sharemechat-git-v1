@@ -92,6 +92,52 @@ const ContentArticleAIPanel = ({
     ? TERMINAL_STATES_FOR_APPLY.has(articleState)
     : false;
 
+  // Paquete 6.7 — validacion cliente-side del JSON antes del POST.
+  // Intenta parsear con JSON.parse(); devuelve { ok, error } sin lanzar.
+  // El navegador da posicion del error en el message del SyntaxError
+  // (Chrome: "...at position N"; Firefox: "line X column Y"). No
+  // normalizamos el formato porque depende del navegador; mostramos el
+  // mensaje crudo + el hint operativo, que es lo que el operador necesita.
+  const validateJsonClientSide = (raw) => {
+    if (!raw || !raw.trim()) {
+      return {
+        ok: false,
+        error: t('ai.msgClientJsonEmpty', 'Pega el JSON bilingüe antes de verificar.'),
+        empty: true,
+      };
+    }
+    try {
+      JSON.parse(raw);
+      return { ok: true };
+    } catch (e) {
+      // SyntaxError del navegador. e.message suele incluir posicion.
+      return {
+        ok: false,
+        error: e?.message || 'SyntaxError',
+        empty: false,
+      };
+    }
+  };
+
+  const handleVerifyJson = () => {
+    resetSubmitState();
+    const result = validateJsonClientSide(rawJson);
+    if (result.ok) {
+      setOkMessage(t('ai.msgClientJsonValid', 'JSON válido. Listo para aplicar.'));
+      return;
+    }
+    if (result.empty) {
+      setError(result.error);
+      return;
+    }
+    setError(
+      `${t('ai.msgClientJsonInvalid', 'El JSON tiene un error de formato y no se ha enviado al servidor.')} `
+      + `${result.error}. `
+      + t('ai.msgClientJsonHint',
+          'Verifica que las comillas dobles dentro de strings estén escapadas (\\") o sustitúyelas por comillas tipográficas curvas "…".')
+    );
+  };
+
   const reload = useCallback(async () => {
     if (!articleId) return;
     setLoading(true);
@@ -178,6 +224,21 @@ const ContentArticleAIPanel = ({
     }
     if (!rawJson.trim()) {
       setError(t('ai.errRawEmpty', 'Pega el JSON bilingüe antes de validar.'));
+      return;
+    }
+
+    // Paquete 6.7 — gate cliente-side antes del POST. Si el JSON esta
+    // malformado, NO hacemos viaje HTTP; mostramos el SyntaxError del
+    // navegador (con posicion) y el hint operativo.
+    const clientCheck = validateJsonClientSide(rawJson);
+    if (!clientCheck.ok) {
+      setError(
+        `${t('ai.msgClientJsonInvalid',
+            'El JSON tiene un error de formato y no se ha enviado al servidor.')} `
+        + `${clientCheck.error}. `
+        + t('ai.msgClientJsonHint',
+            'Verifica que las comillas dobles dentro de strings estén escapadas (\\") o sustitúyelas por comillas tipográficas curvas "…".')
+      );
       return;
     }
 
@@ -435,6 +496,14 @@ const ContentArticleAIPanel = ({
                       {applying
                         ? t('ai.btnValidating', 'Validando y aplicando...')
                         : t('ai.btnValidateApply', 'Validar y aplicar')}
+                    </StyledButton>
+                    <StyledButton
+                      type="button"
+                      onClick={handleVerifyJson}
+                      disabled={applying}
+                      style={{ background: '#f1f5f9', color: '#0f172a' }}
+                    >
+                      {t('ai.btnVerifyJson', 'Verificar JSON')}
                     </StyledButton>
                     <HelperText>
                       {t('ai.applyHelper',
