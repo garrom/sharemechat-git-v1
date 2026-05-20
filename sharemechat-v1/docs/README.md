@@ -43,6 +43,7 @@ La reorganización actual conserva el conocimiento útil y redistribuye su conte
 - `skills`: skills operativas ejecutables por agentes (state-inventory, state-diff, etc.)
 - `cms/skills`: skills del pipeline editorial del CMS
 - `templates`: plantillas para mantener el corpus homogéneo
+- `project-log.md`: bitácora cronológica de hitos del proyecto (decisiones cerradas, cierres de fase, hipótesis archivadas). Mantenida por el agente local. Política operativa en `documentation-governance.md`
 
 ## Política de mantenimiento
 

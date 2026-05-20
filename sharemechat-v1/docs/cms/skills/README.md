@@ -53,17 +53,19 @@ publicar" se enforce en el backend.
 | 4 | [`cms-brand-legal-review.md`](cms-brand-legal-review.md) | Revisión brand + legal + DSA/GDPR |
 | 4.5 | [`cms-translate-en.md`](cms-translate-en.md) | Traducción ES→EN (obligatoria, sin opt-out) |
 | 5 | [`cms-json-builder.md`](cms-json-builder.md) | Empaquetado a JSON bilingüe schema 2.0 (`shared` + `locales.es` + `locales.en`) |
+| 5.5 | [`cms-json-validator.md`](cms-json-validator.md) | Validación sintáctica RFC 8259 del JSON empaquetado, hasta 3 intentos de corrección (obligatoria, sin opt-out) |
 | — | [`sharemechat-voice.md`](sharemechat-voice.md) | Voz de marca transversal (secciones ES y EN) |
 
 `cms-orchestrator` y `sharemechat-voice` no tienen un paso numerado propio:
 
-- `cms-orchestrator` encadena las fases 1→5 al recibir el prompt del CMS.
+- `cms-orchestrator` encadena las fases 1→5.5 al recibir el prompt del CMS.
   Lee el prompt expandido emitido por el backend, identifica que es un run
   `FULL_ARTICLE_ORCHESTRATED`, prepara el working directory y ejecuta cada
   skill en orden.
-- `sharemechat-voice` se aplica como guía de estilo en todos los pasos del
-  1 al 5 (incluida la 4.5). Mantiene secciones ES y EN para que la fase 4.5
-  tenga material editorial de referencia al traducir.
+- `sharemechat-voice` se aplica como guía de estilo en los pasos editoriales
+  (1 al 4.5, incluida la 4.5). Mantiene secciones ES y EN para que la fase
+  4.5 tenga material editorial de referencia al traducir. NO se aplica a las
+  fases 5 ni 5.5 (empaquetado mecánico y validación sintáctica técnica).
 
 ## Convenciones de archivo
 

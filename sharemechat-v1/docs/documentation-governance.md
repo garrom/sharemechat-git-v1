@@ -117,6 +117,78 @@ Acción:
 - los snapshots SÍ se versionan en git (la skill aplica saneado lógico de IDs sensibles)
 - la tabla de mapeo lógico↔real vive FUERA del repo (`~/.sharemechat/state-mapping.yaml`)
 
+### Caso 10. Hito del proyecto que merece entrada en bitácora
+Ejemplos:
+- se cierra un ADR estructural
+- se completa un paquete grande de trabajo
+- se archiva una hipótesis con razón explícita
+- el proyecto cambia de rumbo
+- se aprende algo operativo significativo aplicable a futuro
+
+Acción:
+- añadir una entrada al inicio de `docs/project-log.md` siguiendo la **Política operativa de la bitácora** descrita más abajo
+- la entrada se añade en el MISMO commit que el cambio que la motiva
+- ante la duda sobre si el hito merece entrada, preguntar al operador
+
+## Política operativa de la bitácora
+
+La bitácora del proyecto vive en `docs/project-log.md` y es un registro cronológico inverso (más reciente arriba) de los hitos relevantes del proyecto. Su propósito es permitir que cualquier sesión LLM nueva (Claude Code, Claude.ai chat, Cowork con skills) recupere el contexto operativo del proyecto sin tener que reconstruirlo a partir de conversaciones pasadas.
+
+### Quién la mantiene
+
+El agente local (Claude Code u otro agente con acceso al repo) la mantiene de forma automática cuando materializa un cambio que cae en alguna de las cinco categorías de abajo. El humano NO la edita a mano: si una entrada queda incorrecta o necesita matiz, se añade una entrada nueva que la complementa, no se modifica la pasada.
+
+### Cuándo añadir entrada (lista cerrada de 5 categorías)
+
+1. **Decisión estructural cerrada**: se acaba de cerrar un ADR nuevo o se reabre uno existente con cambio de fondo.
+2. **Definición o cierre de fase / paquete grande**: un paquete numerado del rediseño, una fase del roadmap o un frente operativo se da por cerrado.
+3. **Hipótesis archivada con razón explícita**: una alternativa de diseño que se consideró seriamente queda descartada con justificación; conviene dejar constancia para que no vuelva a estudiarse desde cero.
+4. **Cambio de rumbo del proyecto**: una decisión vigente se invierte (ejemplo: política operativa que se revierte) y el rumbo nuevo merece quedar registrado junto al motivo.
+5. **Aprendizaje operativo significativo**: un patrón, una mala práctica detectada o una constatación operativa que será útil para futuros frentes.
+
+### Cuándo NO añadir entrada
+
+- cambios triviales de código (correcciones de typo, formateo, lint)
+- refactors menores sin cambio de comportamiento
+- updates rutinarios de dependencias sin impacto funcional
+- hallazgos exploratorios sin conclusión cerrada
+- ediciones cosméticas de documentación que no cambian decisiones
+- commits puramente de despliegue (mismo código a otro entorno)
+
+### Reglas operativas
+
+- **Regla del mismo commit**: la entrada de bitácora se añade en el MISMO commit que el cambio que la motiva. No se acumulan entradas en un commit posterior; el agente que cierra el cambio cierra también la entrada.
+- **Regla de inserción al inicio**: las entradas nuevas se insertan justo después del separador `---` que cierra la cabecera del fichero. El orden es cronológico inverso estricto (más reciente arriba).
+- **Regla de criterio**: ante la duda sobre si un hito merece entrada, el agente pregunta al operador antes de añadirla. Mejor preguntar de más que inflar la bitácora con ruido.
+- **Regla de inviolabilidad**: las entradas pasadas no se editan, no se reescriben y no se borran. Si una decisión registrada se revierte, se añade una entrada nueva que captura el cambio de rumbo y referencia (por fecha) la entrada que invierte.
+- **Regla de no retroactivo**: la bitácora arranca en el momento de su creación. NO se rellenan entradas históricas para hitos previos; el contenido del repo y los ADRs anteriores ya cubren ese rango.
+
+### Formato fijo de entrada
+
+Cada entrada sigue la plantilla exacta:
+
+```
+## YYYY-MM-DD — Título corto del hito
+
+Párrafo 1: qué pasó y por qué se decidió así.
+
+Párrafo 2 (opcional): qué alternativas se descartaron y por qué.
+```
+
+- El título usa heading `##` (H2) para que las entradas sean navegables vía outline del editor.
+- La fecha va en formato ISO `YYYY-MM-DD` literal.
+- El guion largo `—` separa fecha y título.
+- El título es una frase corta sin punto final.
+
+### Reglas de redacción
+
+- **Brevedad**: 1 párrafo si el hito es directo; 2 si conviene capturar las alternativas descartadas. Nunca más.
+- **Capturar el porqué, no solo el qué**: el valor de la bitácora está en justificar la decisión, no en describir el cambio. Para el "qué" ya están el código y los ADRs.
+- **Lenguaje neutral**: sin emojis, sin lenguaje de marketing, sin signos de exclamación.
+- **Tiempo verbal**: pasado para describir lo que pasó, presente para describir el estado resultante. Sin futuro especulativo.
+- **Sin enlaces**: salvo necesidad inevitable (un ADR concreto cuya referencia es esencial). La bitácora no es un índice, es un registro autosuficiente.
+- **Lenguaje del proyecto**: español, coherente con el resto del corpus interno.
+
 ## Regla de no duplicidad
 
 No duplicar la misma información en varios documentos si no aporta valor claro.
@@ -169,6 +241,7 @@ Ante cualquier cambio relevante:
 - fase actual y planificación -> `docs/07-roadmap/`
 - skills operativas ejecutables por agentes -> `docs/skills/` (o `docs/cms/skills/` si son editoriales)
 - snapshots estructurados de estado del sistema -> `docs/_snapshots/`
+- bitácora cronológica de hitos del proyecto -> `docs/project-log.md`
 
 ## Regla final
 
