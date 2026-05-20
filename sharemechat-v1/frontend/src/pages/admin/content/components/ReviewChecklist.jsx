@@ -1,28 +1,50 @@
 // src/pages/admin/content/components/ReviewChecklist.jsx
 //
-// Checklist preventivo de invariantes necesarias para que el backend acepte
-// la transicion DRAFT -> IN_REVIEW (paquete 6 bloque 7, refinado en paquete 7
-// bloque 2 a guion progresivo).
+// Guion editorial del flujo CMS (paquete 7.5, ADR-025). Reemplaza al
+// checklist plano de invariantes del paquete 7 con un modelo que refleja
+// el flujo real del operador en 5 pasos:
 //
-// Reescritura paquete 7: en lugar de una lista plana con ✓/✗ que pide al
-// operador escanear 10 items en paralelo, el componente ahora muestra un
-// guion editorial:
+//   1. Crear artículo.
+//   2. Generar artículo completo (run IA + Cowork).
+//   3. Validar JSON y revisar vista previa.
+//   4. Enviar a revisión.
+//   5. Publicar.
 //
-//   1. PASOS COMPLETADOS (verde, ✓, atenuados): el operador ve lo ya hecho.
-//   2. PASO ACTUAL (acento azul, destacado): "este es el siguiente paso".
-//      Solo uno a la vez. Mensaje claro de qué hacer.
-//   3. PASOS PENDIENTES (gris claro): aparecen pero sin urgencia visual,
-//      para que el operador anticipe qué viene despues.
+// El componente sigue calculando internamente los 10 invariantes tecnicos
+// del backend (hero, body ES, body EN, title ES, title EN, seo_title ES,
+// seo_title EN, meta_description ES, meta_description EN, brief) y los
+// expone al padre via `onChecklistChange(allChecksPassed: boolean)`. La
+// diferencia con el paquete 7 es que esos 10 ya NO se pintan en pantalla;
+// solo aparecen como warning en el paso 4 si faltan ("red de seguridad"
+// para el operador: el flujo editorial dice 'ya puedes enviar' pero el
+// backend exige que esos 10 campos esten presentes).
 //
-// Cuando todos pasan, se muestra el mensaje final "Todo listo. Pulsa
-// 'Enviar a revisión' para continuar.".
+// Casos terminales:
+//   - article.state === 'PUBLISHED' con flujo completo: mensaje verde de
+//     exito "Artículo publicado. El flujo editorial ha terminado.".
+//   - article.state === 'RETRACTED': mensaje neutro "Artículo retractado.
+//     Estado terminal." sin listar pasos (no hay nada que hacer).
 //
-// El contrato hacia el padre no cambia: `onChecklistChange(allPassed)` se
-// invoca con el estado agregado y el padre lo usa para habilitar el boton
-// "Enviar a revisión" en la barra de transiciones.
+// Heuristica de paso actual (de arriba abajo, primer match gana):
 //
-// Espeja exactamente las verificaciones server-side de
-// ContentArticleService.assertReadyForReview.
+//   - article == null              -> paso 1 actual.
+//   - article != null Y todas las translations completas
+//     (body+title+slug+seoTitle+metaDescription para ES Y EN):
+//       - state DRAFT      -> paso 4 actual.
+//       - state IN_REVIEW  -> paso 5 actual.
+//       - state PUBLISHED  -> todos completados (mensaje exito).
+//       - state RETRACTED  -> terminal especial.
+//   - article != null pero translations incompletas:
+//       - hay run VALIDATED o hay algun body con contenido -> paso 3 actual.
+//       - resto -> paso 2 actual.
+//
+// `runs` es prop opcional. Si no se pasa, la regla "hay run VALIDATED"
+// se evalua como false; en ese caso la heuristica usa solo "hay algun
+// body con contenido" para decidir entre paso 2 y paso 3. Esto es la
+// regla degradada documentada en el prompt del paquete 7.5: en el
+// editor padre actual los runs viven encapsulados dentro del AIPanel
+// y no se elevan al state del padre, asi que `runs` llega null y la
+// heuristica funciona por contenido de translations.
 
 import React, { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -35,144 +57,212 @@ const findTranslation = (article, locale) => {
   return article.translations.find((t) => t && t.locale === locale) || null;
 };
 
-// Orden lógico del flujo editorial. La razón:
-//   - Primero metadata compartida (hero + brief): el operador la configura
-//     manualmente al crear el articulo, antes de generar IA.
-//   - Despues ES completo (cuerpo + SEO): tipicamente lo aporta el JSON
-//     bilingue del AIPanel.
-//   - Despues EN completo: mismo bloque del JSON bilingue.
-//   - Final: todo verde, enviar a revision.
-const STEP_ORDER = [
-  'hero',
-  'brief',
-  'bodyEs',
-  'titleEs',
-  'seoTitleEs',
-  'metaDescriptionEs',
-  'bodyEn',
-  'titleEn',
-  'seoTitleEn',
-  'metaDescriptionEn',
-];
+const isTranslationFullyPopulated = (tr) =>
+  !!tr
+  && isNonEmpty(tr.bodyS3Key)
+  && isNonEmpty(tr.title)
+  && isNonEmpty(tr.slug)
+  && isNonEmpty(tr.seoTitle)
+  && isNonEmpty(tr.metaDescription);
 
-const buildSteps = (article, t) => {
-  if (!article) return STEP_ORDER.map((key) => ({ key, label: '', ok: false }));
+/**
+ * Calcula los 10 invariantes tecnicos que el backend exige antes de
+ * transitar DRAFT -> IN_REVIEW. Espeja exactamente la logica server-side
+ * de ContentArticleService.assertReadyForReview. Se sigue calculando aun
+ * cuando no se pintan en pantalla, porque alimentan `allChecksPassed`.
+ */
+const computeInvariants = (article, t) => {
+  if (!article) {
+    return [];
+  }
   const trEs = findTranslation(article, 'es');
   const trEn = findTranslation(article, 'en');
-
   return [
-    {
-      key: 'hero',
-      label: t('checklist.hero', 'Hero image configurada'),
-      hint: t('checklist.hintHero',
-        'Sube la imagen 4:3 al bucket de assets y pega la URL en el bloque "Metadata compartida".'),
-      ok: isNonEmpty(article.heroImageUrl),
-    },
-    {
-      key: 'brief',
-      label: t('checklist.brief', 'Brief presente'),
-      hint: t('checklist.hintBrief',
-        'Resumen interno del artículo. Se edita en el bloque "Metadata compartida".'),
-      ok: isNonEmpty(article.brief),
-    },
-    {
-      key: 'bodyEs',
-      label: t('checklist.bodyEs', 'Cuerpo ES presente'),
-      hint: t('checklist.hintBodyEs',
-        'Pestaña ES: escribe o pega el cuerpo markdown y guarda. Lo más fácil: aplicar JSON bilingüe desde el panel IA.'),
-      ok: !!trEs && isNonEmpty(trEs.bodyS3Key),
-    },
-    {
-      key: 'titleEs',
-      label: t('checklist.titleEs', 'Título ES'),
-      hint: t('checklist.hintTitleEs',
-        'Pestaña ES: rellena el campo "Título" y pulsa "Guardar campos SEO".'),
-      ok: !!trEs && isNonEmpty(trEs.title),
-    },
-    {
-      key: 'seoTitleEs',
-      label: t('checklist.seoTitleEs', 'SEO title ES'),
-      hint: t('checklist.hintSeoTitleEs',
-        'Pestaña ES: rellena "SEO title" (máximo 60 caracteres) y pulsa "Guardar campos SEO".'),
-      ok: !!trEs && isNonEmpty(trEs.seoTitle),
-    },
-    {
-      key: 'metaDescriptionEs',
+    { key: 'hero', label: t('checklist.hero', 'Hero image configurada'),
+      ok: isNonEmpty(article.heroImageUrl) },
+    { key: 'brief', label: t('checklist.brief', 'Brief presente'),
+      ok: isNonEmpty(article.brief) },
+    { key: 'bodyEs', label: t('checklist.bodyEs', 'Cuerpo ES presente'),
+      ok: !!trEs && isNonEmpty(trEs.bodyS3Key) },
+    { key: 'bodyEn', label: t('checklist.bodyEn', 'Cuerpo EN presente'),
+      ok: !!trEn && isNonEmpty(trEn.bodyS3Key) },
+    { key: 'titleEs', label: t('checklist.titleEs', 'Título ES'),
+      ok: !!trEs && isNonEmpty(trEs.title) },
+    { key: 'titleEn', label: t('checklist.titleEn', 'Título EN'),
+      ok: !!trEn && isNonEmpty(trEn.title) },
+    { key: 'seoTitleEs', label: t('checklist.seoTitleEs', 'SEO title ES'),
+      ok: !!trEs && isNonEmpty(trEs.seoTitle) },
+    { key: 'seoTitleEn', label: t('checklist.seoTitleEn', 'SEO title EN'),
+      ok: !!trEn && isNonEmpty(trEn.seoTitle) },
+    { key: 'metaDescriptionEs',
       label: t('checklist.metaDescriptionEs', 'Meta description ES'),
-      hint: t('checklist.hintMetaDescriptionEs',
-        'Pestaña ES: rellena "Meta description" (máximo 160 caracteres) y pulsa "Guardar campos SEO".'),
-      ok: !!trEs && isNonEmpty(trEs.metaDescription),
-    },
-    {
-      key: 'bodyEn',
-      label: t('checklist.bodyEn', 'Cuerpo EN presente'),
-      hint: t('checklist.hintBodyEn',
-        'Pestaña EN: si no existe, genérala desde el panel IA con un JSON bilingüe, o escribe el cuerpo manualmente y guarda.'),
-      ok: !!trEn && isNonEmpty(trEn.bodyS3Key),
-    },
-    {
-      key: 'titleEn',
-      label: t('checklist.titleEn', 'Título EN'),
-      hint: t('checklist.hintTitleEn',
-        'Pestaña EN: rellena "Título" y pulsa "Guardar campos SEO".'),
-      ok: !!trEn && isNonEmpty(trEn.title),
-    },
-    {
-      key: 'seoTitleEn',
-      label: t('checklist.seoTitleEn', 'SEO title EN'),
-      hint: t('checklist.hintSeoTitleEn',
-        'Pestaña EN: rellena "SEO title" (máximo 60 caracteres) y pulsa "Guardar campos SEO".'),
-      ok: !!trEn && isNonEmpty(trEn.seoTitle),
-    },
-    {
-      key: 'metaDescriptionEn',
+      ok: !!trEs && isNonEmpty(trEs.metaDescription) },
+    { key: 'metaDescriptionEn',
       label: t('checklist.metaDescriptionEn', 'Meta description EN'),
-      hint: t('checklist.hintMetaDescriptionEn',
-        'Pestaña EN: rellena "Meta description" (máximo 160 caracteres) y pulsa "Guardar campos SEO".'),
-      ok: !!trEn && isNonEmpty(trEn.metaDescription),
-    },
+      ok: !!trEn && isNonEmpty(trEn.metaDescription) },
   ];
 };
 
-const ReviewChecklist = ({ article, onChecklistChange }) => {
+/**
+ * Decide el paso editorial actual (indice 0-4) y el estado terminal si
+ * aplica. Sigue la heuristica documentada en la cabecera del fichero.
+ */
+const computeCurrentStep = (article, runs) => {
+  if (!article) return { currentIdx: 0, terminal: null };
+
+  if (article.state === 'RETRACTED') {
+    return { currentIdx: -1, terminal: 'retracted' };
+  }
+
+  const trEs = findTranslation(article, 'es');
+  const trEn = findTranslation(article, 'en');
+  const allTranslationsFull =
+    isTranslationFullyPopulated(trEs) && isTranslationFullyPopulated(trEn);
+
+  if (allTranslationsFull) {
+    if (article.state === 'DRAFT') {
+      return { currentIdx: 3, terminal: null }; // paso 4
+    }
+    if (article.state === 'IN_REVIEW') {
+      return { currentIdx: 4, terminal: null }; // paso 5
+    }
+    if (article.state === 'PUBLISHED') {
+      return { currentIdx: -1, terminal: 'published' };
+    }
+  }
+
+  // Articulo creado pero translations incompletas: paso 2 o 3.
+  const hasValidatedRun = Array.isArray(runs)
+    ? runs.some((r) => r && r.status === 'VALIDATED')
+    : false;
+  const hasAnyBodyContent =
+    (trEs && isNonEmpty(trEs.bodyS3Key))
+    || (trEn && isNonEmpty(trEn.bodyS3Key));
+
+  if (hasValidatedRun || hasAnyBodyContent) {
+    return { currentIdx: 2, terminal: null }; // paso 3
+  }
+  return { currentIdx: 1, terminal: null }; // paso 2
+};
+
+const ReviewChecklist = ({ article, runs = null, onChecklistChange }) => {
   const { t } = useTranslation('cms');
 
-  const steps = useMemo(() => buildSteps(article, t), [article, t]);
+  // 1. Invariantes tecnicos (solo se usan internamente; alimentan
+  //    `allChecksPassed` y el warning del paso 4).
+  const invariants = useMemo(() => computeInvariants(article, t), [article, t]);
+  const allInvariantsOk = invariants.length > 0 && invariants.every((i) => i.ok);
+  const allChecksPassed = allInvariantsOk && article?.state === 'DRAFT';
+  const missingInvariants = invariants.filter((i) => !i.ok);
 
-  const allPassed = steps.every((s) => s.ok);
-  const currentIndex = allPassed
-    ? -1
-    : steps.findIndex((s) => !s.ok); // primer paso no completado
+  // 2. Flujo editorial (lo que se pinta en pantalla).
+  const { currentIdx, terminal } = useMemo(
+    () => computeCurrentStep(article, runs),
+    [article, runs]
+  );
 
+  // 3. Notificar al padre el flag agregado del backend.
   useEffect(() => {
     if (typeof onChecklistChange === 'function') {
-      onChecklistChange(allPassed);
+      onChecklistChange(allChecksPassed);
     }
-  }, [allPassed, onChecklistChange]);
+  }, [allChecksPassed, onChecklistChange]);
 
-  if (!article) return null;
+  // 4. Definicion de los 5 pasos editoriales (i18n preventiva con fallback ES).
+  const editorialSteps = useMemo(() => ([
+    {
+      key: 'create',
+      label: t('checklist.step1Label', 'Crear artículo'),
+      hint: t('checklist.step1Hint',
+        "Rellena slug inicial, título inicial y metadata compartida, luego pulsa 'Crear artículo'."),
+    },
+    {
+      key: 'generate',
+      label: t('checklist.step2Label', 'Generar artículo completo con IA'),
+      hint: t('checklist.step2Hint',
+        "Pulsa 'Generar artículo completo' en el panel Asistente IA, copia el prompt al portapapeles y ejecútalo en Cowork. Espera el JSON bilingüe."),
+    },
+    {
+      key: 'apply',
+      label: t('checklist.step3Label', 'Validar JSON y revisar vista previa'),
+      hint: t('checklist.step3Hint',
+        "Pega el JSON bilingüe en el panel Asistente IA, pulsa 'Validar y aplicar'. Después abre 'Vista previa' para revisar el render."),
+    },
+    {
+      key: 'send',
+      label: t('checklist.step4Label', 'Enviar a revisión'),
+      hint: t('checklist.step4Hint',
+        "Cuando hayas revisado el contenido, pulsa 'Enviar a revisión' arriba para congelar la versión y pasar al flujo de aprobación."),
+    },
+    {
+      key: 'publish',
+      label: t('checklist.step5Label', 'Publicar'),
+      hint: t('checklist.step5Hint',
+        "Pulsa 'Publicar' arriba para hacer visible el artículo en el blog público."),
+    },
+  ]), [t]);
 
+  // ============================================================
+  // Render terminales
+  // ============================================================
+  if (terminal === 'retracted') {
+    return (
+      <MetaCard>
+        <div style={{
+          padding: '12px 16px',
+          borderRadius: 6,
+          fontSize: 14,
+          background: '#f1f5f9',
+          color: '#475569',
+        }}>
+          {t('checklist.terminalRetracted', 'Artículo retractado. Estado terminal.')}
+        </div>
+      </MetaCard>
+    );
+  }
+
+  if (terminal === 'published') {
+    return (
+      <MetaCard>
+        <div style={{
+          padding: '12px 16px',
+          borderRadius: 6,
+          fontSize: 14,
+          background: '#dcfce7',
+          color: '#166534',
+          fontWeight: 600,
+        }}>
+          {t('checklist.terminalPublished',
+            'Artículo publicado. El flujo editorial ha terminado.')}
+        </div>
+      </MetaCard>
+    );
+  }
+
+  // ============================================================
+  // Render guion editorial
+  // ============================================================
   return (
     <MetaCard>
       <h3 style={{ margin: '0 0 4px 0' }}>
-        {t('checklist.title', 'Listo para enviar a revisión')}
+        {t('checklist.flowTitle', 'Flujo editorial')}
       </h3>
       <p style={{ margin: '0 0 12px 0', fontSize: 12, color: '#475569' }}>
-        {t('checklist.subtitleProgressive',
-          'Sigue el guion editorial. Cuando todos los pasos estén completados, podrás enviar el artículo a revisión.')}
+        {t('checklist.flowSubtitle',
+          'Sigue los pasos del flujo editorial del CMS. El paso destacado es el siguiente que toca; los pasos completados aparecen atenuados.')}
       </p>
 
       <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
-        {steps.map((step, idx) => {
-          const status = step.ok
+        {editorialSteps.map((step, idx) => {
+          const status = idx < currentIdx
             ? 'done'
-            : idx === currentIndex
+            : idx === currentIdx
               ? 'current'
               : 'pending';
           const colorByStatus = {
-            done: '#94a3b8',     // gris atenuado para "ya hecho"
-            current: '#1d4ed8',  // azul de acento para "toca ahora"
-            pending: '#cbd5e1',  // gris claro para "vendra despues"
+            done: '#94a3b8',
+            current: '#1d4ed8',
+            pending: '#cbd5e1',
           };
           const iconByStatus = {
             done: '✓',
@@ -228,24 +318,28 @@ const ReviewChecklist = ({ article, onChecklistChange }) => {
         })}
       </ol>
 
-      <div
-        style={{
-          marginTop: 12,
-          padding: '8px 12px',
-          borderRadius: 6,
-          fontSize: 13,
-          background: allPassed ? '#dcfce7' : '#eff6ff',
-          color: allPassed ? '#166534' : '#1e40af',
-          fontWeight: allPassed ? 600 : 400,
-        }}
-      >
-        {allPassed
-          ? t('checklist.allReadyProgressive',
-              "Todo listo. Pulsa 'Enviar a revisión' para continuar.")
-          : t('checklist.currentStepHint',
-              'Estás en el paso {{step}} de {{total}}.',
-              { step: currentIndex + 1, total: steps.length })}
-      </div>
+      {/* Red de seguridad: cuando el operador esta en el paso 4 ("Enviar a
+          revisión") pero el backend exige campos que faltan, mostramos un
+          warning con la lista. El boton "Enviar a revisión" arriba ya se
+          deshabilita via onChecklistChange(false). */}
+      {currentIdx === 3 && !allChecksPassed && missingInvariants.length > 0 ? (
+        <div
+          style={{
+            marginTop: 12,
+            padding: '8px 12px',
+            borderRadius: 6,
+            fontSize: 13,
+            background: '#fef3c7',
+            color: '#92400e',
+          }}
+        >
+          <strong>
+            {t('checklist.invariantsWarning',
+              'Faltan campos por completar antes de enviar a revisión:')}
+          </strong>{' '}
+          {missingInvariants.map((i) => i.label).join(', ')}.
+        </div>
+      ) : null}
     </MetaCard>
   );
 };
