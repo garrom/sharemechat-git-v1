@@ -57,6 +57,12 @@ Los ficheros raíz `shareme-context.md` y `shareme-aws-context.md` son apéndice
 
 ---
 
+## Accesos operativos
+
+Cualquier comando contra infraestructura (AWS CLI, SSH a EC2, túnel RDS, `mysqlsh`) requiere prerrequisitos documentados en [docs/04-operations/access-and-tooling.md](sharemechat-v1/docs/04-operations/access-and-tooling.md). Antes de asumir que no tienes acceso, verifica ese documento y ejecuta el smoke test que contiene.
+
+---
+
 ## Objetivo
 
 **Lanzamiento a producción: 1 de julio de 2026.**

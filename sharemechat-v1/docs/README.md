@@ -35,7 +35,7 @@ La reorganización actual conserva el conocimiento útil y redistribuye su conte
 - `01-business`: producto, modelo de negocio, roles y alcance de compliance
 - `02-architecture`: visión del sistema y arquitectura por capas
 - `03-environments`: visión por entorno y diferencias relevantes
-- `04-operations`: despliegue, runbooks, incidencias y riesgos
+- `04-operations`: despliegue, runbooks, incidencias, riesgos y accesos operativos del equipo
 - `05-backoffice`: modelo operativo y de permisos del backoffice
 - `06-decisions`: decisiones arquitectónicas registradas
 - `07-roadmap`: fase actual y siguientes frentes
