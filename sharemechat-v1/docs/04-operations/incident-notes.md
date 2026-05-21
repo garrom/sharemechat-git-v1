@@ -1412,3 +1412,44 @@ Lecciones:
 - `EnvironmentFile` de systemd recorta automáticamente las comillas dobles externas en los valores del `.env`; cualquier acceso manual desde shell debe sourcear el fichero (`set -a; source /opt/sharemechat/.env; set +a`) en lugar de extraer valores con `grep | cut`, o las comillas se quedan dentro y se rompe la autenticación.
 - el upload de backups a S3 hay que hacerlo desde el equipo del operador (`sharemechat-deployer`), no desde la EC2: el instance profile del backend no tiene permisos sobre el bucket de backups, y dárselos sería innecesario (el backend no necesita escribir en el bucket de backups). Si en el futuro se quiere automatizar el backup desde la propia EC2, se ampliará la policy del role; por ahora el flujo manual basta.
 - aplicar policy IAM nueva a un role debe hacerse desde la consola web por el propietario de la cuenta cuando el usuario operativo (`sharemechat-deployer`) no tiene `iam:*`. El procedimiento exacto se documentó en este turno como referencia para el siguiente paquete (10.A.2 no necesita IAM, pero 10.A.3+ podría requerirlo si se descubre alguna policy que ampliar).
+
+### Fix CloudFront AUDIT 2026-05-21 (paquete 10.A.2)
+
+Cambio operativo aplicado el 2026-05-21 ~15:28 UTC para cerrar los dos bugs latentes confirmados en el pre-flight 10.A.1 (segundo paso del frente 10.A de nivelación AUDIT, replicación pura de cambios ya validados en TEST). Un único `aws cloudfront update-distribution` sobre `E1ILXV7P6ENUV8` aplica los dos fixes simultáneamente: cache policy del behavior `/.well-known/acme-challenge/*` pasa de `Managed-CachingOptimized` (`658327ea-…`) a `Managed-CachingDisabled` (`4135ea2d-…`), y `CustomErrorResponses.Quantity` pasa de `2` a `0` (eliminadas las dos entradas `403 → /index.html (200)` y `404 → /index.html (200)`). Sin tocar nada más de la distribución.
+
+Estado pre-cambio confirmado (ETag `E3UN6WX5RRO2AG`):
+
+- behavior `/.well-known/acme-challenge/*` con `CachePolicyId=658327ea-f89d-4fab-a63d-7e88639e58f6` (`Managed-CachingOptimized`)
+- `CustomErrorResponses.Quantity=2` con `403 → /index.html (200)` y `404 → /index.html (200)`
+- precondición confirmada: `redirect-spa-audit` Function asociada al `viewer-request` del `DefaultCacheBehavior` con `FunctionARN=arn:aws:cloudfront::430118829334:function/redirect-spa-audit`
+
+Validación funcional pre-cambio (refuerza la urgencia del fix 2):
+
+- `curl -is https://audit.sharemechat.com/.well-known/acme-challenge/probe-pre-<rand>` → **`HTTP/2 200` + `index.html` desde S3** (`server: AmazonS3`, `etag: "0f990022da49554a4ec8cc01340c0a4f"`, `x-cache: Error from cloudfront`, `last-modified` del bucket frontend). Confirma que `CustomErrorResponses 404 → /index.html` estaba enmascarando el 404 del backend nginx y que **una renovación HTTP-01 vía CloudFront en AUDIT ahora mismo fallaría** porque Let's Encrypt recibiría 200 HTML del SPA en lugar del token. El cert público `audit.sharemechat.com` vive de ACM (validación DNS automática) y no usa esta ruta, así que el bug no se materializaba en una rotura visible, pero el camino HTTP-01 vía edge quedaba roto silenciosamente.
+- `curl -is https://audit.sharemechat.com/api/public/content/articles/no-existe-pre-<rand>?locale=es` → `HTTP/2 401` desde el backend (`server: nginx/1.28.0`). El backend devuelve 401 porque `/api/public/content/**` no está completamente abierto en el JAR antiguo de AUDIT; `CustomErrorResponses` no intercepta 401 (solo 403/404), así que esta respuesta no estaba enmascarada.
+- `curl -is https://audit.sharemechat.com/ruta-inexistente-pre-<rand>` → `HTTP/2 200` + `index.html` desde S3 con `x-cache: RefreshHit from cloudfront`. Este es comportamiento correcto: la Function `redirect-spa-audit` reescribe URIs sin extensión a `/index.html` para soporte SPA, sin pasar por origen y sin depender de `CustomErrorResponses`.
+
+Cambio aplicado:
+
+- entorno: AUDIT
+- distribución: `E1ILXV7P6ENUV8` (alias `audit.sharemechat.com`)
+- ETag previo: `E3UN6WX5RRO2AG`
+- ETag posterior: `E1F83G8C2ARO7P`
+- comando: `aws cloudfront update-distribution --id E1ILXV7P6ENUV8 --if-match E3UN6WX5RRO2AG --distribution-config file://cf-audit-new.json` (con `DistributionConfig` exportado de `get-distribution-config`, modificados solamente el `CachePolicyId` del behavior acme-challenge y el `CustomErrorResponses` (`Quantity=0` y array `Items` eliminado); JSON re-emitido con UTF-8 sin BOM por compatibilidad con AWS CLI v2 en Windows, mismo patrón operativo del paquete 10.A.0)
+- propagación: distribución pasó de `InProgress` a `Deployed` en **32 s** (mucho más rápido que los 193 s de TEST en 10.A.0; ambos cambios eran exclusivamente metadata del behavior y de `CustomErrorResponses`, sin requerir invalidación de cache edge)
+- backup del `DistributionConfig` previo conservado localmente (no commiteado al repo)
+
+Validación post-cambio:
+
+- API: `aws cloudfront get-distribution-config --id E1ILXV7P6ENUV8 --query "DistributionConfig.CacheBehaviors.Items[?PathPattern=='/.well-known/acme-challenge/*'].CachePolicyId" --output text` → `4135ea2d-6df8-44a3-9df3-4b5a84be39ad`
+- API: `aws cloudfront get-distribution-config --id E1ILXV7P6ENUV8 --query "DistributionConfig.CustomErrorResponses.Quantity" --output text` → `0`
+- curl 1: `curl -is https://audit.sharemechat.com/.well-known/acme-challenge/probe-post-<rand>` → **`HTTP/2 404` desde nginx limpio** (`server: nginx/1.28.0`, body `<html><head><title>404 Not Found</title></head>...`, `x-cache: Error from cloudfront`). Eliminado el enmascaramiento. Si en el futuro AUDIT añadiera el `location /.well-known/acme-challenge/` en nginx (igual que TEST), la renovación HTTP-01 vía CloudFront funcionaría correctamente. Hoy no es necesario porque `audit.sharemechat.com` cubre con ACM y `api.audit.sharemechat.com` se renueva por nginx directo sin pasar por edge.
+- curl 2: `curl -is https://audit.sharemechat.com/api/public/content/articles/no-existe-post-<rand>?locale=es` → `HTTP/2 401` igual que pre. Confirma que el comportamiento `/api/*` del backend no ha cambiado.
+- curl 3: `curl -is https://audit.sharemechat.com/ruta-inexistente-post-<rand>` → `HTTP/2 200` + `index.html` con `x-cache: RefreshHit from cloudfront` igual que pre. **La Function `redirect-spa-audit` sigue gestionando el SPA-fallback correctamente**; eliminar `CustomErrorResponses` no rompe el SPA-routing, exactamente como predecía la lección operativa del hotfix TEST del 2026-05-17.
+
+Lecciones / pendientes:
+
+- el bug 2 (`CustomErrorResponses` enmascarando 404 del backend) **ya se manifestaba** en AUDIT, no era latente: cualquier intento de renovación HTTP-01 a través de CloudFront habría fallado silenciosamente. Anotarlo como dato relevante: cuando se detecta una deuda "no urgente" porque "no se manifiesta todavía", conviene verificar la asunción antes del fix; en este caso la asunción del 2026-05-17 de "no se manifiesta porque AUDIT no tiene endpoints públicos con path variable" era cierta para los endpoints REST, pero no para la ruta `acme-challenge` que sí estaba activa como behavior.
+- en AUDIT no hay `location /.well-known/acme-challenge/` en nginx del backend (`api-audit-backend`), a diferencia de TEST que sí lo tiene en `/etc/nginx/nginx.conf:76`. Esto no es regresión: AUDIT no usa Certbot vía CloudFront actualmente. Se documenta como gap menor: si en el futuro se quisiera usar HTTP-01 vía CloudFront para un cert de `audit.sharemechat.com` (por ejemplo, si se decide salir de ACM), habría que añadir el `location` en nginx primero.
+- la deuda análoga en una distribución PROD futura debe revisarse al crearla: la lección operativa de la regla "exclusivamente CloudFront Function en viewer-request para SPA-fallback, NUNCA `CustomErrorResponses` distribución-level para 403/404 → /index.html" queda explícita y debe estar reflejada en el runbook/ADR de despliegue PROD.
+- el tiempo de propagación tan corto (32 s frente a 193 s del cambio análogo en TEST) sugiere que CloudFront optimiza más agresivamente cambios de metadata puros que no requieren purga de edge. No hay garantía de que esto se repita; el rango razonable a esperar sigue siendo 3-15 min.
