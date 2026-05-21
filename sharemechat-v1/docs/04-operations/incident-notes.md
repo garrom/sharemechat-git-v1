@@ -1334,3 +1334,81 @@ Reaplicación coordinada (2026-05-08):
   - El antiguo `robots.txt` placeholder de Create React App (objeto en S3 frontend) sigue en el bucket pero ya no se sirve por la URL pública de TEST: el behavior `/robots.txt` matchea antes que el default y enruta al backend.
 - Detalle residual conocido (no bloqueante, sin acción inmediata):
   - `HEAD /sitemap.xml` y `HEAD /robots.txt` devuelven `401`. Causa: `SecurityConfig` permite explícitamente `HttpMethod.GET` para esos paths pero no `HEAD`, por lo que la cadena cae en `.anyRequest().authenticated()`. Los crawlers de buscadores usan `GET` para indexar, así que la indexación no se ve afectada. Pendiente: cuando convenga, sustituir `HttpMethod.GET` por la pareja `(HttpMethod.GET, HttpMethod.HEAD)` en la directiva de SecurityConfig línea 69, o aceptar el comportamiento si se considera intencional (cookie/JWT validation defensiva).
+
+### Cierre deuda cache policy /.well-known/acme-challenge/* en CloudFront TEST
+
+Cambio operativo aplicado el 2026-05-20 ~17:42 UTC para cerrar la deuda anotada en [known-debt.md](known-debt.md) desde el 2026-05-09 (paquete 10.A.0, primer paso del frente 10.A de nivelación AUDIT). El behavior `/.well-known/acme-challenge/*` en la distribución CloudFront TEST `E2Q4VNDDWD5QBU` pasa de `Managed-CachingOptimized` (`658327ea-f89d-4fab-a63d-7e88639e58f6`, DefaultTTL=86400s) a `Managed-CachingDisabled` (`4135ea2d-6df8-44a3-9df3-4b5a84be39ad`, TTL=0) para alinearse con el patrón canónico ACME y eliminar el riesgo acotado de que un 404 transitorio o un 5xx en una renovación quede cacheado.
+
+Contexto investigado (fase 1, read-only) antes de aplicar:
+
+- backend Spring Boot: cero referencias a `acme-challenge` o `well-known` en `src/`; no participa
+- nginx en EC2 TEST: `location ^~ /.well-known/acme-challenge/ { root /usr/share/nginx/html; default_type text/plain; try_files $uri =404; }` activo en `/etc/nginx/nginx.conf` (no en el vhost), webroot operativo
+- Certbot: `certbot 2.6.0` instalado, `certbot-renew.timer` diario activo (próxima ejecución periódica al día siguiente del cambio; renovación efectiva real estimada ~2026-05-27 cuando ambos certs entren en ventana de 30 días previa a expiración 2026-06-26)
+- dos certificados Let's Encrypt activos en TEST:
+  - `test.sharemechat.com`: `authenticator=webroot`, `webroot_path=/usr/share/nginx/html`. Dominio detrás de CloudFront; las renovaciones futuras pasan por el behavior corregido en este cambio
+  - `api.test.sharemechat.com`: `authenticator=nginx`. Dominio del origen directo, no pasa por CloudFront, no se ve afectado por el behavior
+- ACM (us-east-1): certificados gestionados por Amazon para los frentes CloudFront (`*.test.sharemechat.com` wildcard y otros), validación DNS automática; sin relación con la deuda
+- validación funcional pre-cambio: `curl -is https://test.sharemechat.com/.well-known/acme-challenge/probe-<rand>` devolvía `HTTP/2 404` desde nginx (`server: nginx/1.28.0`), confirmando que CloudFront proxyea correctamente al origen y la ruta no estaba rota
+
+Cambio aplicado:
+
+- entorno: TEST
+- distribución: `E2Q4VNDDWD5QBU` (alias `test.sharemechat.com`, `www.test.sharemechat.com`)
+- ETag previo: `E2NEU26H0UBU3V`
+- ETag posterior: `E1Z8RZ5B6MIFUG`
+- comando: `aws cloudfront update-distribution --id E2Q4VNDDWD5QBU --if-match E2NEU26H0UBU3V --distribution-config file://cf-test-new.json` (con `DistributionConfig` exportado de `get-distribution-config`, modificado el `CachePolicyId` del behavior `/.well-known/acme-challenge/*`, sin tocar nada más; JSON re-emitido con UTF-8 sin BOM por compatibilidad con AWS CLI v2 en Windows)
+- propagación: distribución pasó de `InProgress` a `Deployed` en ~3 min (193 s polled cada 30 s)
+- backup del `DistributionConfig` previo conservado localmente (no commiteado al repo)
+
+Validación post-cambio:
+
+- `aws cloudfront get-distribution-config --id E2Q4VNDDWD5QBU --query "DistributionConfig.CacheBehaviors.Items[?PathPattern=='/.well-known/acme-challenge/*'].[PathPattern,CachePolicyId]" --output text` → `/.well-known/acme-challenge/*	4135ea2d-6df8-44a3-9df3-4b5a84be39ad` (confirma cache policy aplicada)
+- `curl -is https://test.sharemechat.com/.well-known/acme-challenge/probe-post-<rand>` → `HTTP/2 404`, `server: nginx/1.28.0`, `x-cache: Error from cloudfront`. La petición llega al origen igual que antes; CloudFront no cachea
+- el resto de behaviors (api, match, messages, uploads, assets, sitemap, robots) intactos: el `DistributionConfig` se editó solo en el campo `CachePolicyId` del behavior acme-challenge
+- ningún cambio en nginx, backend, S3, certbot ni en otros entornos
+
+Lecciones / pendientes:
+
+- la deuda análoga en AUDIT (`E1ILXV7P6ENUV8`) y en cualquier distribución PRO futura debe revisarse al inventariar esos entornos: si replican el mismo patrón `Managed-CachingOptimized` en el behavior acme-challenge, aplicar la misma corrección. Esto queda agendado dentro del paquete 10.A.1+ (nivelación AUDIT)
+- el bucket de Certbot en TEST es híbrido (un cert por webroot detrás de CloudFront, otro por nginx directo). El runbook ausente "Renovación de certificados por entorno" sigue siendo deuda documental que se cerrará cuando se aborde explícitamente
+- el cambio en sí es un caso textbook de "cache policy correcta para una ruta dinámica"; no requirió coordinación entre capas porque nginx y backend ya hacían lo correcto. Útil como referencia para validar que el patrón se repite en AUDIT y PRO
+
+### Pre-flight AUDIT 2026-05-21 (paquete 10.A.1)
+
+Inventario y acciones no destructivas previas a la nivelación AUDIT al estado actual de TEST (frente 10.A). Se prepara el terreno para 10.A.2 (corrección CloudFront AUDIT) y 10.A.3 (Flyway baseline + V2 + JAR nuevo + .env ampliado) sin tocar todavía la realidad operativa de AUDIT (backend, schema BD ni CloudFront).
+
+Pre-condiciones confirmadas:
+
+- SSH alias `audit-backend` añadido a `~/.ssh/config` del operador, apuntando a la EC2 AUDIT con la misma clave .pem que `test-backend`. Verificado con `ssh audit-backend "echo ok"`.
+- Mapping local `~/.sharemechat/state-mapping.yaml` actualizado: bloque `audit:` rellenado con las 3 distribuciones CloudFront (`frontend_public=E1ILXV7P6ENUV8`, `backoffice_admin=E21IB0VBKYNNBW`, `assets_canonical=E2NC4TEJAWOI3L`), 6 buckets S3 (los 5 preexistentes más el nuevo `content_private`), `audit-backend` como alias SSH, endpoint RDS real, schema `db1_sharemechat_audit`, y la Function `redirect-spa-audit` ya asociada al `viewer-request` del `DefaultCacheBehavior` de `frontend_public`. Bloque `pro:` intacto.
+- BD AUDIT pre-Flyway confirmado vía `mysql` desde la EC2 AUDIT (acceso resuelto sourceando `/opt/sharemechat/.env` igual que hace systemd; `DB_PASSWORD` viene con comillas dobles en el `.env` y necesita ese tratamiento, no `grep | cut`): MySQL 8.4.7, 43 tablas en `db1_sharemechat_audit`, cero tablas `content_*`, no existe `flyway_schema_history`. Esto coincide con la pre-condición del runbook `cms-v2-flyway-introduction.md`.
+
+Acciones aplicadas:
+
+- **Bucket S3 nuevo `sharemechat-backups`** (multi-env, eu-central-1) para backups operativos del proyecto. Block Public Access total, SSE-S3 AES256 + BucketKey, versionado `Enabled`, lifecycle `expire-90d` (current 90 días, noncurrent 30 días). Convenido prefijo por entorno: `s3://sharemechat-backups/audit/`, `/test/`, `/pro/`.
+- **Backup completo BD AUDIT** generado con `mysqldump --single-transaction --routines --triggers --events --hex-blob --set-gtid-purged=OFF` desde la EC2 AUDIT, comprimido con gzip y subido a `s3://sharemechat-backups/audit/audit-backup-2026-05-20-2119.sql.gz`. Tamaño 128906 bytes. SHA256 `79f84a85f97446f010b64a514ec71f27c7b122f6ced5b4228fbe3ad5b6b491f8`. Integridad verificada (sha256sum coincidente entre EC2 origen y portátil local antes del upload). Upload realizado desde local (`sharemechat-deployer`) porque el instance profile de la EC2 AUDIT no tiene permisos sobre el bucket de backups.
+- **Bucket S3 nuevo `sharemechat-content-private-audit`** (eu-central-1) para el CMS bilingüe del entorno. Replica la configuración del bucket equivalente de TEST: Block Public Access total, SSE-S3 AES256 + BucketKey, sin policy de bucket (acceso por IAM role del instance profile, no por bucket policy), sin CloudFront ni OAC. Bucket queda vacío, listo para recibir el árbol `content/articles/{id}/draft.md` y `v{n}.md` cuando 10.A.3 deje el CMS operativo en AUDIT.
+- **Policy IAM inline `SharemechatContentPrivateAuditRW`** aplicada por el operador al role `sharemechat-ec2-audit-role` desde la consola IAM (el usuario `sharemechat-deployer` no tiene permisos IAM). Réplica literal de la policy `SharemechatContentPrivateTestRW` del role TEST, cambiando `content-private-test` por `content-private-audit`. Cubre `s3:PutObject`, `s3:GetObject`, `s3:DeleteObject` sobre `arn:aws:s3:::sharemechat-content-private-audit/*` y `s3:ListBucket` sobre `arn:aws:s3:::sharemechat-content-private-audit`. El role queda con 3 policies adjuntas: `sharemechat-audit-access-normalizer-s3` (preexistente, pipeline perimetral), `sharemechat-s3-storage-audit-inline` (preexistente, uploads sensibles) y `SharemechatContentPrivateAuditRW` (nueva).
+- **Smoke test de escritura** desde la EC2 AUDIT al bucket nuevo: `aws s3 cp /tmp/probe.txt s3://sharemechat-content-private-audit/test/probe.txt` → `upload OK`; `aws s3 ls` → objeto visible (24 bytes); `aws s3api head-object` confirma `ServerSideEncryption: AES256`; `aws s3 rm` → delete OK. Las 4 actions (`PutObject`, `ListBucket`, `GetObject` implícito en head, `DeleteObject`) funcionan con el instance profile actual.
+- **Snapshot YAML** del estado pre-cambio AUDIT generado en `docs/_snapshots/state-audit-2026-05-21-1503.yaml`. Schema v3. Marcado como generado manualmente fuera del flujo automatizado de la skill `state-inventory` (campos `repo.commits_last_24h` y `repo.adrs` vacíos por no ser relevantes para el pre-flight; los bloques de `content_articles` y `content_review_events` se reportan como `null` porque las tablas no existen todavía en AUDIT, las crea V2 en 10.A.3).
+
+Estado pre-cambio de CloudFront AUDIT (`E1ILXV7P6ENUV8`, ETag `E3UN6WX5RRO2AG`) — bugs latentes confirmados, **se atajan en el paquete 10.A.2**:
+
+- behavior `/.well-known/acme-challenge/*` con `CachePolicyId=658327ea-…` (`Managed-CachingOptimized`). Mismo bug que el corregido en TEST el 2026-05-20. Aplica el mismo fix.
+- `CustomErrorResponses` con dos entradas: `403 → /index.html (200)` y `404 → /index.html (200)`. Mismo bug que el corregido en TEST el 2026-05-17. La Function `redirect-spa-audit` ya está asociada al `DefaultCacheBehavior` en `viewer-request`, así que eliminar ambos `CustomErrorResponses` es seguro siguiendo la misma lección del hotfix TEST.
+- No hay behaviors `/sitemap.xml` ni `/robots.txt` (correcto: AUDIT no es entorno editorial hoy; no se añaden en 10.A.2).
+
+Hallazgos colaterales relevantes para 10.A.3 (no se actúan en 10.A.1):
+
+- **Ruta del JAR en AUDIT**: `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar`, no `/opt/sharemechat/`. El `.env` sí está en `/opt/sharemechat/.env`. El despliegue del JAR nuevo en 10.A.3 debe usar la ruta real, no la que asumía el plan 10.A.plan.
+- **`.env` AUDIT** no tiene las tres keys del CMS bilingüe: `APP_STORAGE_S3_CONTENT_PRIVATE_BUCKET`, `APP_STORAGE_S3_CONTENT_PRIVATE_KEY_PREFIX`, `APP_STORAGE_S3_CONTENT_REGION`. Hay que añadirlas en 10.A.3 antes de reiniciar el backend, apuntando al bucket recién creado en este paquete.
+- **JAR actual en AUDIT** es del 2026-05-02 09:55 UTC (`Implementation-Version: 0.0.1-SNAPSHOT`, Spring Boot 3.5.5). El systemd `sharemechat-audit.service` lleva activo desde el 2026-05-02 10:09 UTC (≥18 días sin reboot). Confirma que AUDIT no ha recibido el JAR desde antes de ADR-025 (2026-05-16) y antes del paquete 8 (2026-05-20).
+- **Certbot en AUDIT** gestiona solo `api.audit.sharemechat.com` (`authenticator=nginx`, expira 2026-07-09 / ~50 días). El dominio público `audit.sharemechat.com` vive de ACM en us-east-1 (validación DNS automática). `systemctl list-timers --all | grep cert` no devuelve nada, así que el mecanismo de renovación automática de este cert Let's Encrypt está sin verificar; no urgente, no bloquea 10.A.1 ni 10.A.3.
+- **Pipeline perimetral AUDIT** (`audit-access-{normalizer,classifier,reporter,blocker}.service`): según el `list-units`, las units están en `inactive dead` (excepto classifier que aparece `not-found`). Es consistente con units `Type=oneshot` arrancadas por timer y vivas sólo durante su ejecución; no es necesariamente un fallo. No se ha verificado el estado de los timers en este pre-flight.
+- **Asimetría observada (sin acción)**: AUDIT tiene bucket `sharemechat-cf-logs-audit` para logs CloudFront; TEST no tiene equivalente versionado. Es asimetría intencional o histórica, no deuda.
+
+Lecciones:
+
+- `EnvironmentFile` de systemd recorta automáticamente las comillas dobles externas en los valores del `.env`; cualquier acceso manual desde shell debe sourcear el fichero (`set -a; source /opt/sharemechat/.env; set +a`) en lugar de extraer valores con `grep | cut`, o las comillas se quedan dentro y se rompe la autenticación.
+- el upload de backups a S3 hay que hacerlo desde el equipo del operador (`sharemechat-deployer`), no desde la EC2: el instance profile del backend no tiene permisos sobre el bucket de backups, y dárselos sería innecesario (el backend no necesita escribir en el bucket de backups). Si en el futuro se quiere automatizar el backup desde la propia EC2, se ampliará la policy del role; por ahora el flujo manual basta.
+- aplicar policy IAM nueva a un role debe hacerse desde la consola web por el propietario de la cuenta cuando el usuario operativo (`sharemechat-deployer`) no tiene `iam:*`. El procedimiento exacto se documentó en este turno como referencia para el siguiente paquete (10.A.2 no necesita IAM, pero 10.A.3+ podría requerirlo si se descubre alguna policy que ampliar).

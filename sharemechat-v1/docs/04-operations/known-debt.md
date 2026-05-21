@@ -4,7 +4,7 @@ Registro de deudas detectadas durante operación o auditoría que no son inciden
 
 ## 2026-05-09 — Detectadas durante primer inventariado de TEST
 
-### Cache policy subóptima para /.well-known/acme-challenge/* en CloudFront TEST
+### [CERRADA] Cache policy subóptima para /.well-known/acme-challenge/* en CloudFront TEST
 
 **Origen**: snapshot `state-test-2026-05-09-1002.yaml`, sección `cloudfront.cache_behaviors`. Persiste en snapshots v2 posteriores.
 
@@ -15,6 +15,8 @@ Registro de deudas detectadas durante operación o auditoría que no son inciden
 **Acción pendiente**: cambiar la cache behavior a `Managed-CachingDisabled` en el próximo cambio CloudFront que toque la distribución `frontend_public`. Validar que también AUDIT y PRO siguen el mismo patrón cuando se inventaríen.
 
 **Prioridad**: baja. Validar también en AUDIT y PRO al hacer la nivelación.
+
+**Cerrada en**: 2026-05-20 (paquete 10.A.0), antes de iniciar la nivelación de AUDIT. Cambio aplicado en CloudFront TEST `E2Q4VNDDWD5QBU` con `aws cloudfront update-distribution` (ETag pre `E2NEU26H0UBU3V`, ETag post `E1Z8RZ5B6MIFUG`). El behavior `/.well-known/acme-challenge/*` pasa de `Managed-CachingOptimized` (`658327ea-…`) a `Managed-CachingDisabled` (`4135ea2d-…`). Distribución alcanzó `Deployed` en ~3 min. Validación post-cambio confirma `Managed-CachingDisabled` aplicado y la ruta sigue sirviendo desde el origen (`api-test-backend`). Detalle en [incident-notes.md](incident-notes.md) sección "Cierre deuda cache policy /.well-known/acme-challenge/* en CloudFront TEST". Pendiente verificar el mismo behavior en AUDIT y PRO al inventariarlos, replicando el cambio si aplica.
 
 ## 2026-05-09 — Detectadas durante segundo inventariado de TEST
 

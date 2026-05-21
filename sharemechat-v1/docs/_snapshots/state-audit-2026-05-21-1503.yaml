@@ -1,0 +1,173 @@
+metadata:
+  schema_version: 3
+  environment: audit
+  generated_at: "2026-05-21T15:03:40Z"
+  generated_by: manual-pre-flight@10.A.1
+  notes: |
+    Snapshot generado a mano durante el paquete 10.A.1 (pre-flight AUDIT) como
+    referencia del estado pre-cambio antes de la nivelacion AUDIT a TEST.
+    Inventaria los dominios cubiertos por el bloque 3 del paquete: repo (local),
+    CloudFront (frontend publico AUDIT y aliases de las otras dos distribuciones),
+    S3 (todos los buckets AUDIT incluido el recien creado content-private-audit),
+    EC2 backend (vhost api.audit + systemd) y RDS MySQL.
+    Saneado: aliases logicos siempre que el mapping los provee.
+    flyway_runtime_present = false confirmado via INFORMATION_SCHEMA en BD AUDIT.
+    Generado fuera del flujo automatizado de la skill state-inventory:
+      - repo.commits_last_24h y repo.adrs no rellenados (no relevantes para el
+        pre-flight; el estado del repo ya esta capturado en los snapshots TEST
+        recientes y en project-log.md).
+      - rds_database.content_articles y rds_database.content_review_events
+        dejados con valores que reflejan ausencia (tablas no existen todavia
+        en AUDIT, lo crea V2 al ejecutar 10.A.3).
+
+repo:
+  branch: main
+  head_commit: c3068ac
+  head_commit_date: "2026-05-20T19:29:52+02:00"
+  commits_last_24h: []
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    expected_filename: sharemechat-v1-0.0.1-SNAPSHOT.jar
+  schema_versioning:
+    flyway_runtime_present: false
+    migrations_dir: "src/main/resources/db/migration/"
+    last_repo_migration: "V2__cms_v2_schema.sql"
+    last_applied_flyway_version: null
+  adrs: []
+
+cloudfront:
+  distributions:
+    - logical_name: frontend_public
+      alias: "Frontend publico producto AUDIT"
+      primary_aliases:
+        - audit.sharemechat.com
+      status: Deployed
+      default_behavior:
+        target_origin: s3_frontend_product
+        function_associations:
+          - name: redirect-spa-audit
+            event_type: viewer-request
+      cache_behaviors:
+        - path_pattern: "/.well-known/acme-challenge/*"
+          target_origin: api-audit-backend
+          allowed_methods: [HEAD, GET]
+          cache_policy: Managed-CachingOptimized
+        - path_pattern: "/api/*"
+          target_origin: api-audit-backend
+          allowed_methods: [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]
+          cache_policy: Managed-CachingDisabled
+        - path_pattern: "/match*"
+          target_origin: api-audit-backend
+          allowed_methods: [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]
+          cache_policy: Managed-CachingDisabled
+        - path_pattern: "/messages*"
+          target_origin: api-audit-backend
+          allowed_methods: [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]
+          cache_policy: Managed-CachingDisabled
+        - path_pattern: "/uploads/*"
+          target_origin: api-audit-backend
+          allowed_methods: [HEAD, DELETE, POST, GET, OPTIONS, PUT, PATCH]
+          cache_policy: Managed-CachingDisabled
+        - path_pattern: "/assets/*"
+          target_origin: api-audit-backend
+          allowed_methods: [HEAD, GET]
+          cache_policy: Managed-CachingOptimized
+      custom_error_responses:
+        - error_code: 403
+          response_path: /index.html
+          response_code: 200
+        - error_code: 404
+          response_path: /index.html
+          response_code: 200
+
+    - logical_name: backoffice_admin
+      alias: "Backoffice admin AUDIT"
+      primary_aliases:
+        - admin.audit.sharemechat.com
+      status: Deployed
+
+    - logical_name: assets_canonical
+      alias: "Assets AUDIT canonico"
+      primary_aliases:
+        - assets.audit.sharemechat.com
+      status: Deployed
+
+s3:
+  buckets:
+    - logical_name: frontend_product
+      name: sharemechat-frontend-audit
+      alias: "Bucket SPA producto AUDIT"
+      region: eu-central-1
+      served_by_distribution: frontend_public
+    - logical_name: frontend_admin
+      name: sharemechat-admin-audit
+      alias: "Bucket SPA admin AUDIT"
+      region: eu-central-1
+      served_by_distribution: backoffice_admin
+    - logical_name: assets
+      name: assets-sharemechat-audit
+      alias: "Bucket assets AUDIT"
+      region: eu-central-1
+      served_by_distribution: assets_canonical
+    - logical_name: storage
+      name: sharemechat-storage-audit
+      alias: "Bucket storage AUDIT (uploads)"
+      region: eu-central-1
+      served_by_distribution: null
+    - logical_name: cf_logs
+      name: sharemechat-cf-logs-audit
+      alias: "Bucket logs CloudFront AUDIT"
+      region: eu-central-1
+      served_by_distribution: null
+    - logical_name: content_private
+      name: sharemechat-content-private-audit
+      alias: "Bucket Markdown crudo de articulos AUDIT (privado, no servido por CloudFront)"
+      region: eu-central-1
+      served_by_distribution: null
+
+ec2_backend:
+  ssh_alias: audit-backend
+  systemd_services:
+    - name: coturn-audit.service
+      state: active
+    - name: nginx.service
+      state: active
+    - name: redis6.service
+      state: active
+    - name: sharemechat-audit.service
+      state: active
+    - name: sharemechat-audit-access-blocker.service
+      state: inactive
+    - name: sharemechat-audit-access-classifier.service
+      state: not-found
+    - name: sharemechat-audit-access-normalizer.service
+      state: inactive
+    - name: sharemechat-audit-daily-report.service
+      state: inactive
+  jar_running:
+    started_at: "Sat May  2 10:09:06 2026"
+    process_present: true
+  nginx:
+    config_file: /etc/nginx/conf.d/api.audit.sharemechat.com.conf
+    location_blocks:
+      - path: "/api/"
+        proxy_pass: "http://localhost:8080"
+      - path: "/match"
+        proxy_pass: "http://localhost:8080"
+        action: "websocket-upgrade"
+      - path: "/messages"
+        proxy_pass: "http://localhost:8080"
+        action: "websocket-upgrade"
+      - path: "/"
+        proxy_pass: "n/a"
+        action: "return 404"
+    client_max_body_size: "60M"
+
+rds_database:
+  endpoint_alias: rds-audit
+  mysql_version: "8.4.7"
+  schema_name: db1_sharemechat_audit
+  total_tables: 43
+  content_articles: null
+  content_review_events: null
