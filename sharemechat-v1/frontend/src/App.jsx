@@ -37,6 +37,7 @@ import Config from './footer/Config';
 import CookieBanner from './components/CookieBanner';
 import { CallUiProvider } from './components/CallUiContext';
 import { SessionProvider } from './components/SessionProvider';
+import MaintenanceProvider from './components/MaintenanceProvider';
 import { buildAdminAppUrl, isAdminSurface } from './utils/runtimeSurface';
 
 const PublicWithGuestGate = ({ component: Component, ...rest }) => (
@@ -118,7 +119,7 @@ function App() {
       <SessionProvider>
         <CallUiProvider>
           <ModalProvider>
-            <>
+            <MaintenanceProvider>
               <EmailNotVerifiedModalBridge />
               <GlobalTypography />
 
@@ -185,7 +186,7 @@ function App() {
                   <CookieBanner />
                 </>
               )}
-            </>
+            </MaintenanceProvider>
           </ModalProvider>
         </CallUiProvider>
       </SessionProvider>

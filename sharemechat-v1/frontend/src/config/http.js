@@ -7,6 +7,32 @@ let refreshPromise = null;
 const isJsonResponse = (res) =>
   (res.headers.get('content-type') || '').includes('application/json');
 
+// Paquete 10.A.3.pre: deteccion de ventana de mantenimiento del backend.
+// Disparado por (a) 502/503/504 directos del backend antes de que CloudFront
+// conmute al origen secundario, o (b) HTML (Content-Type text/html) en una
+// respuesta a una llamada API, que es lo que CloudFront sirve desde el
+// bucket sharemechat-maintenance via failover. Notifica a React por
+// CustomEvent 'sharemechat:maintenance' en window para que
+// MaintenanceProvider monte el overlay bloqueante.
+const isMaintenanceResponse = (res) => {
+  if (!res) return false;
+  if (res.status === 502 || res.status === 503 || res.status === 504) return true;
+  const ct = (res.headers.get('content-type') || '').toLowerCase();
+  if (ct.includes('text/html')) return true;
+  return false;
+};
+
+const notifyMaintenance = (active) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new CustomEvent('sharemechat:maintenance', {
+      detail: { active: !!active }
+    }));
+  } catch {
+    // No bloqueamos el flujo HTTP por un fallo del bus de eventos.
+  }
+};
+
 const buildApiError = ({ status, message, data, text }) => {
   const err = new Error(message || `HTTP ${status}`);
   err.status = status;
@@ -105,6 +131,16 @@ export const apiFetch = async (path, options = {}) => {
     res = await fetch(buildApiUrl(path), requestOptions);
   } catch (err) {
     throw err;
+  }
+
+  // Paquete 10.A.3.pre: si la respuesta indica ventana de mantenimiento
+  // (5xx tipico de gateway o HTML del bucket de failover de CloudFront),
+  // emitir el flag global y propagar como error normal. Sin reintento aqui:
+  // el poll de MaintenanceProvider gestiona la recuperacion.
+  if (isMaintenanceResponse(res)) {
+    notifyMaintenance(true);
+    const payload = await readErrorPayload(res);
+    throw buildApiError(payload);
   }
 
   let previewError = null;
