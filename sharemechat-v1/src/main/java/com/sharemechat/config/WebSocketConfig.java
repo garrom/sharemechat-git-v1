@@ -3,6 +3,7 @@ package com.sharemechat.config;
 import com.sharemechat.handler.MatchingHandler;
 import com.sharemechat.handler.MessagesWsHandler;
 import com.sharemechat.security.ProductOperationalModeWsInterceptor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -15,29 +16,26 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final MatchingHandler matchingHandler;
     private final MessagesWsHandler messagesWsHandler;
     private final ProductOperationalModeWsInterceptor productOperationalModeWsInterceptor;
+    private final String[] allowedOrigins;
 
     public WebSocketConfig(MatchingHandler matchingHandler,
                            MessagesWsHandler messagesWsHandler,
-                           ProductOperationalModeWsInterceptor productOperationalModeWsInterceptor) {
+                           ProductOperationalModeWsInterceptor productOperationalModeWsInterceptor,
+                           @Value("${app.websocket.allowed-origins}") String[] allowedOrigins) {
         this.matchingHandler = matchingHandler;
         this.messagesWsHandler = messagesWsHandler;
         this.productOperationalModeWsInterceptor = productOperationalModeWsInterceptor;
+        this.allowedOrigins = allowedOrigins;
     }
 
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        String[] origins = {
-                "https://test.sharemechat.com",
-                "https://audit.sharemechat.com",
-                "http://localhost:3000"
-        };
-
         registry.addHandler(matchingHandler, "/match")
                 .addInterceptors(productOperationalModeWsInterceptor)
-                .setAllowedOriginPatterns(origins);
+                .setAllowedOriginPatterns(allowedOrigins);
 
         registry.addHandler(messagesWsHandler, "/messages")
                 .addInterceptors(productOperationalModeWsInterceptor)
-                .setAllowedOriginPatterns(origins);
+                .setAllowedOriginPatterns(allowedOrigins);
     }
 }

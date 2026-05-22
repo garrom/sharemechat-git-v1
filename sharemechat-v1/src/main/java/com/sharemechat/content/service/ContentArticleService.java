@@ -1279,6 +1279,10 @@ public class ContentArticleService {
     private String resolvePublicBaseUrl() {
         String configured = publicSiteProperties == null ? null : publicSiteProperties.getBaseUrl();
         if (configured != null && !configured.isBlank()) return configured;
-        return "https://test.sharemechat.com";
+        // Paquete 10.A.5: sin fallback hardcoded. La property
+        // app.public.base-url DEBE estar configurada en el entorno.
+        throw new IllegalStateException(
+                "app.public.base-url is not configured. Set APP_PUBLIC_BASE_URL or"
+                        + " override the property in application-<env>.properties.");
     }
 }

@@ -190,3 +190,45 @@ Resultado verificado con tráfico real:
 La simulación económica directa queda cerrada por defecto para evitar acreditación de saldo sin PSP y contaminación de datos de revisión externa. Si se ejercita revisión CCBill en AUDIT, debe hacerse sobre el flujo PSP correspondiente, no mediante endpoints directos de simulación salvo decisión operativa puntual.
 
 Detalle operativo y procedimiento en [runbooks.md](../04-operations/runbooks.md).
+
+## Schema CMS bilingüe v2 (preparado, sin contenido)
+
+Tras el cierre del frente 10.A (nivelación AUDIT a TEST, paquete 10.A.3), AUDIT cuenta con el mismo schema CMS bilingüe que TEST según [ADR-025](../06-decisions/adr-025-flyway-introduction-and-cms-v2-schema.md):
+
+- Flyway adoptado como herramienta de migración de schema. `flyway_schema_history` con dos filas: baseline `V1` (aplicado manualmente vía SQL, marca el schema preexistente como "ya en versión 1, no apliques V1") y `V2` (aplicado automáticamente por Spring Boot al arrancar, crea las 6 tablas `content_*`).
+- 6 tablas del modelo bilingüe creadas: `content_articles` (artículo lógico, locale-invariante), `content_article_translations` (cara per-idioma, UNIQUE por `(article_id, locale)` y por `(slug, locale)`), `content_article_versions` (snapshot del artículo lógico en una transición `DRAFT → IN_REVIEW`), `content_article_translation_versions` (snapshot per-idioma en esa versión), `content_generation_runs` (runs IA) y `content_review_events` (auditoría editorial).
+- Bucket S3 privado dedicado al CMS: `sharemechat-content-private-audit` (`eu-central-1`, PAB total, SSE-S3 AES256 + BucketKey, sin política de bucket; acceso vía IAM role `sharemechat-ec2-audit-role` con policy inline `SharemechatContentPrivateAuditRW` que cubre `s3:GetObject/PutObject/DeleteObject` sobre objetos y `s3:ListBucket` sobre el bucket).
+- Variables del `.env` del backend AUDIT ampliadas con las tres keys del CMS bilingüe:
+  - `APP_STORAGE_S3_CONTENT_PRIVATE_BUCKET=sharemechat-content-private-audit`
+  - `APP_STORAGE_S3_CONTENT_PRIVATE_KEY_PREFIX=content`
+  - `APP_STORAGE_S3_CONTENT_REGION=eu-central-1`
+
+AUDIT no es entorno editorial: el CMS queda **operativo pero sin contenido cargado**. Las tablas existen vacías. Los endpoints `/api/admin/content/**` (admin) y `/api/public/content/articles*` (público) responden correctamente; `GET /api/public/content/articles?locale=es` devuelve `200 application/json` con lista vacía. Reservado para que cuando se quiera publicar contenido específicamente en AUDIT (revisión externa, validación PSP) la infraestructura ya esté lista sin requerir nuevo paquete.
+
+## CloudFront alineado con TEST (post 10.A.2)
+
+La distribución frontend público AUDIT (`audit.sharemechat.com`) tiene los dos fixes aplicados en el paquete 10.A.2:
+
+- Behavior `/.well-known/acme-challenge/*` con cache policy `Managed-CachingDisabled` (idéntico al patrón canónico ACME post-corrección de TEST en 10.A.0). Hoy AUDIT no usa Certbot vía CloudFront (`audit.sharemechat.com` se cubre con ACM de validación DNS; `api.audit.sharemechat.com` se renueva por nginx directo sin pasar por edge), pero el behavior queda limpio para uso futuro.
+- `CustomErrorResponses` vacío (`Quantity=0`). El SPA-fallback queda gestionado por la CloudFront Function `redirect-spa-audit` asociada al `viewer-request` del `DefaultCacheBehavior`, sin enmascaramiento de 403/404 del backend. Detalle en [incident-notes.md](../04-operations/incident-notes.md) sección "Fix CloudFront AUDIT 2026-05-21 (paquete 10.A.2)".
+
+## Red de seguridad de mantenimiento (overlay SPA, paquete 10.A.3.pre)
+
+El frontend desplegado en AUDIT (build idéntico al de TEST) incluye `MaintenanceProvider` con un overlay full-screen bilingüe que se activa automáticamente cuando el interceptor HTTP detecta 502/503/504 o `Content-Type: text/html` en una respuesta API. El overlay bloquea toda interacción del usuario y monta un poll cada 30 s a `/api/users/me`; cuando el backend vuelve a responder JSON, el overlay desaparece solo.
+
+Ventajas operativas observadas durante el cierre de 10.A.3:
+
+- ventana de mantenimiento del backend AUDIT (parada → JAR nuevo → Flyway baseline + V2 → arranque) **77 segundos totales** (`systemctl stop` a `Started SharemechatV1Application in 29.955 seconds` desde el log)
+- el frontend desplegado antes de parar el backend mostraba la SPA normal con backend arriba, sin overlay falso
+- el bucket `sharemechat-maintenance` con HTML estático en `/audit/index.html` queda como red secundaria preparada (no asignada a ningún OriginGroup en la distribución, por las limitaciones AWS documentadas en el paquete 10.A.3.pre)
+
+## Cierre frente 10.A — Nivelación AUDIT completada
+
+Estado del entorno post-paquete 10.A.3:
+
+- **Backend**: `sharemechat-audit.service` corre el JAR `sharemechat-v1-0.0.1-SNAPSHOT.jar` del **2026-05-22** con todo el código de los paquetes 6-9 del rediseño CMS bilingüe (ADR-022 a ADR-026). JAR antiguo del 2026-05-02 conservado como `sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A3` para rollback rápido durante el periodo de observación.
+- **Backup BD pre-cambio**: `s3://sharemechat-backups/audit/audit-backup-2026-05-20-2119.sql.gz` (SHA256 `79f84a85f97446f010b64a514ec71f27c7b122f6ced5b4228fbe3ad5b6b491f8`).
+- **Backup `.env`**: `/opt/sharemechat/.env.bak.10A3.2026-05-22` en la EC2 AUDIT.
+- **Schema BD**: 50 tablas totales (43 originales no-CMS + 6 `content_*` nuevas + `flyway_schema_history`). MySQL 8.4.7. Hibernate `ddl-auto=validate` pasa sin errores.
+
+El siguiente paso del roadmap natural es PROD: replicar el patrón AUDIT validado, esta vez sin la nivelación incremental (PROD se monta desde cero con Flyway aplicando `V1__baseline.sql` + `V2__cms_v2_schema.sql` en orden, sin baseline manual).

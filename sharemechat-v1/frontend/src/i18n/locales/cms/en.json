@@ -39,7 +39,7 @@
     "fieldBrief": "Brief",
     "fieldBriefPlaceholder": "Internal article summary",
     "fieldHero": "Hero image URL",
-    "fieldHeroPlaceholder": "https://assets.test.sharemechat.com/blog/<slug>.webp",
+    "fieldHeroPlaceholder": "https://assets.sharemechat.com/blog/<slug>.webp",
     "fieldHeroHelper": "Absolute URL of the 4:3 image already uploaded to the assets bucket. Required before sending to review.",
     "fieldResponsibleEditor": "Responsible editor (userId)",
     "fieldResponsibleEditorPlaceholder": "Numeric ID of the responsible human editor",

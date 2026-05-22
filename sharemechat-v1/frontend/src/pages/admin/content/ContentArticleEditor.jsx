@@ -812,7 +812,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
               value={sharedMeta.heroImageUrl}
               disabled={fieldsLocked}
               onChange={(e) => updateShared('heroImageUrl', e.target.value)}
-              placeholder={t('editor.fieldHeroPlaceholder', 'https://assets.test.sharemechat.com/blog/<slug>.webp')}
+              placeholder={t('editor.fieldHeroPlaceholder', 'https://assets.sharemechat.com/blog/<slug>.webp')}
             />
             <HelperText>
               {t('editor.fieldHeroHelper',

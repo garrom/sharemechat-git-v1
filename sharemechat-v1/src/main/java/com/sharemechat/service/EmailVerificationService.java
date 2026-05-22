@@ -32,10 +32,13 @@ public class EmailVerificationService {
     @Value("${email-verification.ttl-minutes:1440}")
     private int ttlMinutes;
 
-    @Value("${app.frontend.verify-email-admin-url:https://admin.test.sharemechat.com/verify-email}")
+    // Paquete 10.A.5: sin default hardcoded. La property DEBE estar definida
+    // en application.properties (base) y overrideada por entorno donde aplique.
+    // Si no, Spring falla el bootstrap con error claro.
+    @Value("${app.frontend.verify-email-admin-url}")
     private String adminVerificationUrlBase;
 
-    @Value("${app.frontend.verify-email-product-url:https://test.sharemechat.com/verify-email}")
+    @Value("${app.frontend.verify-email-product-url}")
     private String productVerificationUrlBase;
 
     public EmailVerificationService(EmailVerificationTokenRepository tokenRepository,

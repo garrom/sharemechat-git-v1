@@ -1488,3 +1488,125 @@ Lecciones / pendientes:
 - **La SPA con interceptor cubre el caso de uso real**: durante ventana de mantenimiento, el usuario carga `/` (S3 directo, no afectado), la SPA arranca y al primer fetch a `/api/*` recibe 502/504/HTML, el interceptor activa el overlay full-screen y bloquea toda interacción. El poll cada 30s detecta recuperación cuando `/api/users/me` vuelve a responder JSON. No requiere ninguna acción manual ni en CloudFront ni en backend.
 - **El bucket maintenance queda como red de seguridad ociosa**. Si en una sesión futura se quiere ofrecer también el HTML estático directo a curls externos (por ejemplo, para health-check de monitorización externo), basta con añadir CloudFront Function y reasignar OriginGroup a los behaviors GET/HEAD; toda la infraestructura ya está montada.
 - Validación visual del operador (parada deliberada del backend para ver el overlay) queda diferida a 10.A.3, donde el backend AUDIT se parará intencionalmente para Flyway + V2 + JAR nuevo y la ventana es natural para ver el overlay en acción tras desplegar el frontend nuevo.
+
+### Nivelación AUDIT cierre: Flyway baseline + V2 + JAR nuevo + .env ampliado 2026-05-22 (paquete 10.A.3)
+
+Cuarto y último paso del frente 10.A. Ventana de mantenimiento del backend AUDIT ejecutada limpiamente, 77 segundos totales de backend abajo. Estado pre-cambio confirmado en el snapshot 10.A.1 (JAR del 2026-05-02, BD pre-Flyway con 43 tablas no-CMS y cero `content_*`, `.env` sin las tres keys del CMS bilingüe). Estado post-cambio: JAR del 2026-05-22 corriendo bajo systemd, schema BD con `flyway_schema_history` + 6 tablas `content_*`, `.env` ampliado.
+
+**Fase 1 — Deploy frontend AUDIT (con backend arriba, red de seguridad activa antes de tocar nada)**:
+
+- Build local con `npm run build:product` desde `frontend/`. Bundle nuevo: `main.12814779.js` (incluye `MaintenanceProvider` del paquete 10.A.3.pre).
+- Deploy con `ops/scripts/deploy-frontend.ps1 audit product -SkipBuild`. Sync a `s3://sharemechat-frontend-audit/` (12.6 MiB), `index.html` con `Cache-Control: no-cache, no-store, must-revalidate` y `Content-Type: text/html; charset=utf-8`. Invalidación CloudFront `I4M2C4WB7HWDDPUNVE8VCKH5M0` sobre `E1ILXV7P6ENUV8` con paths `/*`.
+- Validación con backend arriba: `curl https://audit.sharemechat.com/` → 200 con `index.html` que referencia `main.12814779.js` (igual que el build local). `curl /api/users/me` → 401 limpio. La SPA carga sin overlay falso (correcto).
+- Nota operativa: el script `deploy-frontend.ps1` aborta con exit code 1 si npm escribe warnings por stderr (caso típico: `Browserslist: browsers data is X months old`), debido a `$ErrorActionPreference='Stop'`. Workaround usado: `npm run build:product` manual desde `frontend/`, luego `deploy-frontend.ps1 audit product -SkipBuild`. Deuda candidata a anotar si se repite en futuros despliegues.
+
+**Fase 2 — `.env` ampliado y JAR nuevo subido (backend sigue arriba)**:
+
+- Backup del `.env` actual a `/opt/sharemechat/.env.bak.10A3.2026-05-22` (1299 bytes, igual al original).
+- Append de las tres keys del CMS bilingüe al `.env` (sin comillas dobles, según convención observada para valores simples):
+  - `APP_STORAGE_S3_CONTENT_PRIVATE_BUCKET=sharemechat-content-private-audit`
+  - `APP_STORAGE_S3_CONTENT_PRIVATE_KEY_PREFIX=content`
+  - `APP_STORAGE_S3_CONTENT_REGION=eu-central-1`
+- `scp` del JAR nuevo (106 MB, fecha 2026-05-22 19:31 local, SHA256 `7530b3b48e0bc5913ae9ef1d736c98b5fb72c45d0a3e0ba26fe1b6c346ec89ba`) a `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.new` (20 segundos de transferencia). Checksum remoto idéntico al local. JAR antiguo del 2026-05-02 (82 MB) intacto en su sitio bajo el mismo nombre.
+
+**Fase 3 — Ventana de mantenimiento (77 segundos totales)**:
+
+- 18:31:00 UTC — `SPRING_FLYWAY_ENABLED=false` añadido al `.env` (temporal, override del default `true`).
+- 18:31:00 UTC — `sudo systemctl stop sharemechat-audit.service`. Confirmado `inactive`, sin procesos `java sharemechat`.
+- 18:31:00 UTC — `mv sharemechat-v1-0.0.1-SNAPSHOT.jar sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A3 && mv sharemechat-v1-0.0.1-SNAPSHOT.jar.new sharemechat-v1-0.0.1-SNAPSHOT.jar`. JAR antiguo del 2 mayo conservado como `.bak.10A3` para rollback rápido.
+- 18:31:00 UTC — Baseline manual vía SQL sobre BD AUDIT, ejecutado desde la EC2 con `mysql` y password sourceada del `.env` (mismo patrón que el pre-flight 10.A.1):
+  ```sql
+  CREATE TABLE flyway_schema_history (installed_rank INT NOT NULL, version VARCHAR(50), ...);
+  INSERT INTO flyway_schema_history VALUES (1, '1', '<< Flyway Baseline >>', 'BASELINE', ...);
+  ```
+  Confirmación inmediata: `SELECT installed_rank, version, description, type, success FROM flyway_schema_history` → 1 fila con baseline V1 success=1.
+- 18:31:46 UTC — `SPRING_FLYWAY_ENABLED=false` eliminado del `.env` (vuelve al default `true`).
+- 18:31:46 UTC — `sudo systemctl start sharemechat-audit.service`.
+- 18:31:54 UTC — Flyway detectado `Current version of schema 'db1_sharemechat_audit': 1`, `Migrating schema to version "2 - cms v2 schema"`, `Successfully applied 1 migration to schema, now at version v2 (execution time 00:00.934s)`.
+- 18:31:56 UTC — Hibernate 6.6.26 inicializado, `ddl-auto=validate` pasa sin errores.
+- 18:32:17 UTC — `Started SharemechatV1Application in 29.955 seconds`. Backend operativo.
+
+**Fase 4 — Validación post-cambio**:
+
+- `curl https://audit.sharemechat.com/api/users/me` → `HTTP/2 401`, `server: nginx/1.28.0` (sin body, sin enmascaramiento a HTML).
+- `curl https://audit.sharemechat.com/api/public/content/articles?locale=es` → `HTTP/2 200 application/json` con `cache-control: max-age=300, public`. **El CMS público responde**. Body es lista vacía (sin contenido cargado, esperado).
+- `curl https://audit.sharemechat.com/api/public/content/articles/no-existe?locale=es` → `HTTP/2 404 application/json` desde el backend. Confirma que el fix de `CustomErrorResponses` del paquete 10.A.2 sigue activo: el 404 del backend llega sin transformarse en SPA shell.
+- BD inspeccionada vía `mysql` desde EC2: `flyway_schema_history` tiene 2 filas (V1 baseline success=1, V2 `cms v2 schema` type=SQL success=1). Las 6 tablas `content_*` existen (`content_articles`, `content_article_translations`, `content_article_versions`, `content_article_translation_versions`, `content_generation_runs`, `content_review_events`). Total 50 tablas en `db1_sharemechat_audit`.
+- `ssh audit-backend "aws s3 ls s3://sharemechat-content-private-audit/"` → exit 0 (bucket vacío, sin error). El instance profile con la policy `SharemechatContentPrivateAuditRW` aplicada por el operador en 10.A.1 tiene los permisos correctos.
+
+Rollback preparado pero NO usado:
+
+- JAR antiguo en `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A3`.
+- `.env` backup en `/opt/sharemechat/.env.bak.10A3.2026-05-22`.
+- Dump completo BD pre-cambio (de 10.A.1) en `s3://sharemechat-backups/audit/audit-backup-2026-05-20-2119.sql.gz` con SHA256 verificado.
+- Procedimiento de rollback en el prompt operativo 10.A.3 sección "Ante fallo". No ejercitado porque la ventana cerró limpia.
+
+Lecciones / observaciones:
+
+- **Tiempo de ventana excelente**: 77 segundos de backend abajo (parada → `Started`). El cuello de botella fue Spring Boot bootstrap (30 s), no Flyway (1 s para V2) ni el systemd start (instantáneo). Margen sobrado dentro de cualquier SLA razonable.
+- **Baseline manual con SQL directo funciona limpio**: alternativa más simple que instalar flyway CLI o usar `SPRING_FLYWAY_BASELINE_ON_MIGRATE=true` temporal. Reproducible: el SQL del schema `flyway_schema_history` es bien conocido y estable. Útil como patrón canónico para PROD desde cero (aunque PROD aplicará V1 + V2 normales, no necesita baseline manual).
+- **Warning Flyway no bloqueante**: `Flyway upgrade recommended: MySQL 8.4 is newer than this version of Flyway and support has not been tested. The latest supported version of MySQL is 8.1`. La versión actual de Flyway (managed por Spring Boot 3.5.5) soporta hasta MySQL 8.1; AUDIT corre 8.4.7. La migración funcionó correctamente; el warning es informativo. Anotable como deuda menor si se quiere bumpear Flyway en un paquete futuro, no urgente.
+- **`PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=true` en AUDIT** observado en el `.env` real durante este paquete, mientras [audit.md](../03-environments/audit.md) lo documentaba como `false`. Es desviación intencional probable del operador para alguna validación operativa puntual, no se modifica aquí. Anotable si se quiere reconciliar en una pasada documental futura.
+- **deploy-frontend.ps1 aborta con `$ErrorActionPreference='Stop'` ante warnings npm por stderr**: workaround usado en este paquete = build manual desde `frontend/` + deploy con `-SkipBuild`. Patrón a considerar si se repite: ajustar el script para tolerar warnings npm que no son errores fatales.
+
+### Refactor URLs hardcoded a properties 2026-05-22 (paquete 10.A.5)
+
+Detonante: durante la inspección de 10.A.4 (sync de assets AUDIT ← TEST) se descubrió que `ModelContractManifestService.java` tiene la URL del manifest legal hardcoded en código Java a `https://assets.test.sharemechat.com/legal/model_contract.manifest.json`. AUDIT (y eventualmente PROD) hacían cross-environment fetch al bucket TEST. Se pausó el sync 10.A.4 y se abrió este paquete para refactorizar TODAS las URLs hardcoded de entorno en una sola pasada, antes de que 10.A.4 reanude.
+
+Hallazgos exhaustivos por grep en `sharemechat-v1/src` y `sharemechat-v1/frontend/src`:
+
+- **Backend Java críticos (5 puntos)**:
+  - `service/ModelContractManifestService.java` L13-23: dos URLs hardcoded a `assets.test.sharemechat.com` (manifest + PDF esperado).
+  - `config/WebSocketConfig.java` L29-32: array hardcoded de allowed origins WebSocket.
+  - `security/SecurityConfig.java` L201-212: lista hardcoded de 10 allowed origins CORS.
+  - `content/service/ContentArticleService.java` L1282: fallback hardcoded `"https://test.sharemechat.com"` si `app.public.base-url` no está configurada.
+  - `content/publishing/SitemapController.java` L165: mismo fallback hardcoded.
+- **Backend Java cosméticos (3 puntos)**:
+  - `service/EmailVerificationService.java` L35, L38: `@Value` con default hardcoded a TEST.
+  - `service/PasswordResetService.java` L34: idem.
+- **Frontend React críticos (2 puntos)**:
+  - `utils/runtimeSurface.js` L7-8: constantes `ADMIN_APP_ORIGIN` y `PRODUCT_APP_ORIGIN` hardcoded a TEST. Bug funcional en AUDIT: cualquier navegación cross-surface construía URLs apuntando a TEST.
+  - `styles/public-styles/HomeStyles.js` L133, L141: `background-image: url('https://assets.test.sharemechat.com/home/hero/hero_desktop_v1.webp')` (y variante mobile). Bug visible: la home pública AUDIT cargaba los hero del CDN TEST.
+- **Frontend React cosméticos (3 puntos)**:
+  - `i18n/locales/cms/es.json` L42 + `en.json` L42 + `pages/admin/content/ContentArticleEditor.jsx` L815: placeholder de input con URL TEST.
+- **Fuera de scope (anotado como deuda menor en known-debt)**:
+  - `service/VeriffClientImpl.java` L28: URL mock interna inventada, sin uso productivo.
+
+Cambios aplicados:
+
+- **`application.properties`** (base): añadidas 5 properties nuevas con defaults TEST:
+  - `app.assets.base-url=${APP_ASSETS_BASE_URL:https://assets.test.sharemechat.com}` (uso: `ModelContractManifestService`).
+  - `app.frontend.product-origin` y `app.frontend.admin-origin` (uso futuro; reservadas para cross-surface si el backend necesita construir URLs absolutas a la otra superficie).
+  - `app.cors.allowed-origins=${APP_CORS_ALLOWED_ORIGINS:...}` (CSV con 10 orígenes, cubre TEST+AUDIT+PROD+localhost).
+  - `app.websocket.allowed-origins=${APP_WEBSOCKET_ALLOWED_ORIGINS:...}` (CSV con 3 orígenes: TEST, AUDIT, localhost).
+- **`application-audit.properties`** (override AUDIT): 3 overrides:
+  - `app.assets.base-url=https://assets.audit.sharemechat.com`.
+  - `app.frontend.product-origin=https://audit.sharemechat.com`.
+  - `app.frontend.admin-origin=https://admin.audit.sharemechat.com`.
+  - CORS y WebSocket allowed-origins NO se overridean (la lista del base ya cubre los tres entornos).
+- **`ModelContractManifestService.java`**: refactor constructor con `@Value("${app.assets.base-url}")`, métodos privados `manifestUrl()` y `expectedContractUrl()` construyen las URLs concatenando la property base con `MANIFEST_PATH` y `CONTRACT_PDF_PATH` constantes. Validación funcional intacta (mismo regex de versión y sha256, comparación exacta del URL).
+- **`WebSocketConfig.java`**: inyecta `@Value("${app.websocket.allowed-origins}") String[] allowedOrigins`. Spring convierte CSV → array automáticamente.
+- **`SecurityConfig.java`**: campo `@Value("${app.cors.allowed-origins}") String[] corsAllowedOrigins`, `configuration.setAllowedOrigins(Arrays.asList(corsAllowedOrigins))`.
+- **`ContentArticleService.java` L1282** y **`SitemapController.java` L165**: fallback hardcoded reemplazado por `throw new IllegalStateException("app.public.base-url is not configured...")`. Sin fallback silencioso a TEST.
+- **`EmailVerificationService.java` y `PasswordResetService.java`**: `@Value` sin default. Si la property no está, Spring falla el bootstrap con error claro en vez de silenciosamente usar URL TEST.
+- **Frontend `config/runtimeEnv.js`** (NUEVO, ~50 líneas): mapa `ENV_MAP` con hostnames como llaves y `{product, admin, assets}` por entorno. `resolveOrigins()` detecta el entorno actual por `window.location.hostname` con fallback a TEST. Exporta `PRODUCT_ORIGIN`, `ADMIN_ORIGIN`, `ASSETS_BASE`.
+- **`utils/runtimeSurface.js`**: importa `ADMIN_ORIGIN` y `PRODUCT_ORIGIN` de `runtimeEnv.js`. Constantes `ADMIN_APP_ORIGIN` y `PRODUCT_APP_ORIGIN` ahora se resuelven en runtime.
+- **`styles/public-styles/HomeStyles.js`**: importa `ASSETS_BASE` de `runtimeEnv.js`. Las dos URLs del hero se construyen con `${ASSETS_BASE}/home/hero/hero_*.webp` dentro del template literal de styled-components.
+- **`i18n/locales/cms/{es,en}.json` + `ContentArticleEditor.jsx`**: placeholder cambiado a `https://assets.sharemechat.com/blog/<slug>.webp` (dominio neutro tipo PROD, solo orientativo para el input).
+
+Verificación post-refactor: grep en `src/main/java` y `frontend/src` confirma que las únicas referencias residuales a `assets.test.sharemechat.com`, `test.sharemechat.com` o equivalentes son: (a) el mapa `ENV_MAP` en `runtimeEnv.js` (correcto, es el sitio canónico donde viven los hostnames), (b) un comentario JavaDoc de `PublicSiteProperties.java:25` con un ejemplo. Cero hardcoded funcionales.
+
+Build local: `./mvnw clean package -DskipTests` → BUILD SUCCESS en 22.887 s. JAR generado: `target/sharemechat-v1-0.0.1-SNAPSHOT.jar` (106 MB, 2026-05-22 22:29 local). `npm run build:product` → exit 0. Bundle delta: `main.js` +1 B, `572.chunk.js` −8 B, hash cambios en chunks por las modificaciones. Sin warnings nuevos del compilador (solo los preexistentes del proyecto). El JAR NO se ha desplegado a AUDIT ni a TEST; queda en local listo para deploy en próxima sesión operativa.
+
+Próximos pasos:
+
+- Desplegar el JAR refactorizado a TEST primero (validar con backend arriba), después a AUDIT con una ventana de mantenimiento corta (segundo restart del backend AUDIT desde 10.A.3; el sourcing del `.env` y el bootstrap ya están validados, solo cambia el JAR).
+- Desplegar el frontend nuevo a `sharemechat-frontend-test` y `sharemechat-frontend-audit` con `deploy-frontend.ps1` + invalidación CloudFront.
+- Reanudar el paquete 10.A.4 (sync de assets AUDIT ← TEST) ya con el manifest hardcoded resuelto: el backend AUDIT leerá su propio bucket `assets.audit.sharemechat.com`, no el de TEST. El sync sí tiene impacto funcional ahora.
+
+Lecciones operativas:
+
+- **Acoplamiento profundo descubierto durante inspección de assets**: el grep amplio del paquete 10.A.5 reveló que el problema del manifest no era aislado; había 10 puntos similares en el código entre backend y frontend. Refactorizar todos en una sola pasada (en vez de uno por uno) era la opción correcta para no tener que repetir build+deploy.
+- **Diferencia entre "property con default TEST" y "constante hardcoded TEST"**: las primeras se overridean por entorno y funcionan, las segundas no. El `application-audit.properties` ya cubría las primeras desde antes (cookieDomain, base-url, etc.); las segundas (cinco en backend, dos en frontend) eran las que rompían el aislamiento de entornos.
+- **Frontend con un solo build artifact**: la detección por `window.location.hostname` evita la complejidad de mantener `npm run build:test`, `:audit`, `:pro` separados. El mismo bundle funciona en los tres entornos y AUDIT/PROD se sirven desde sus buckets con el HTML idéntico.
+- **`@Value` sin default**: filosofía adoptada para properties que DEBEN estar configuradas. Spring falla el bootstrap con error claro en lugar de silenciosamente caer a TEST. Más seguro operativamente, especialmente cuando se replique en PROD desde cero.

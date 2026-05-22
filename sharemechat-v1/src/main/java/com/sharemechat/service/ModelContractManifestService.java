@@ -1,6 +1,7 @@
 package com.sharemechat.service;
 
 import com.sharemechat.dto.ModelContractManifestDTO;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -10,8 +11,8 @@ import java.util.regex.Pattern;
 @Service
 public class ModelContractManifestService {
 
-    private static final String MANIFEST_URL =
-            "https://assets.test.sharemechat.com/legal/model_contract.manifest.json";
+    private static final String MANIFEST_PATH = "/legal/model_contract.manifest.json";
+    private static final String CONTRACT_PDF_PATH = "/legal/model_contract.pdf";
 
     private static final Pattern VERSION_PATTERN =
             Pattern.compile("^model_contract_v\\d+_\\d{4}-\\d{2}-\\d{2}$");
@@ -19,14 +20,38 @@ public class ModelContractManifestService {
     private static final Pattern SHA256_PATTERN =
             Pattern.compile("^[A-F0-9]{64}$");
 
-    private static final String EXPECTED_URL =
-            "https://assets.test.sharemechat.com/legal/model_contract.pdf";
-
     private final RestTemplate restTemplate = new RestTemplate();
+
+    private final String assetsBaseUrl;
+
+    public ModelContractManifestService(
+            @Value("${app.assets.base-url}") String assetsBaseUrl
+    ) {
+        // Normalizar quitando barra final si la hubiera (defensa contra typos en .env).
+        this.assetsBaseUrl = assetsBaseUrl.endsWith("/")
+                ? assetsBaseUrl.substring(0, assetsBaseUrl.length() - 1)
+                : assetsBaseUrl;
+    }
+
+    /**
+     * URL absoluta del manifest en el bucket de assets del entorno actual.
+     * Construida en runtime a partir de {@code app.assets.base-url}.
+     */
+    private String manifestUrl() {
+        return assetsBaseUrl + MANIFEST_PATH;
+    }
+
+    /**
+     * URL absoluta del PDF en el bucket de assets del entorno actual.
+     * Construida en runtime a partir de {@code app.assets.base-url}.
+     */
+    private String expectedContractUrl() {
+        return assetsBaseUrl + CONTRACT_PDF_PATH;
+    }
 
     public ModelContractManifestDTO getCurrent() {
         ModelContractManifestDTO manifest = restTemplate.getForObject(
-                MANIFEST_URL,
+                manifestUrl(),
                 ModelContractManifestDTO.class
         );
 
@@ -74,8 +99,10 @@ public class ModelContractManifestService {
     }
 
     private void validateUrl(String url) {
-        if (!EXPECTED_URL.equals(url)) {
-            throw new IllegalStateException("Invalid manifest url: " + url);
+        String expected = expectedContractUrl();
+        if (!expected.equals(url)) {
+            throw new IllegalStateException("Invalid manifest url: " + url
+                    + " (expected " + expected + ")");
         }
     }
 }

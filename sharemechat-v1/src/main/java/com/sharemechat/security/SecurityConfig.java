@@ -194,22 +194,19 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * CORS allowed origins inyectados desde {@code app.cors.allowed-origins}
+     * (CSV). La lista cubre las tres superficies (producto/admin/assets) de
+     * los tres entornos (TEST/AUDIT/PROD) mas localhost. Paquete 10.A.5.
+     */
+    @org.springframework.beans.factory.annotation.Value("${app.cors.allowed-origins}")
+    private String[] corsAllowedOrigins;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(Arrays.asList(
-                "https://admin.test.sharemechat.com",
-                "https://www.test.sharemechat.com",
-                "https://test.sharemechat.com",
-                "https://www.audit.sharemechat.com",
-                "https://audit.sharemechat.com",
-                "https://admin.audit.sharemechat.com",
-                "https://sharemechat.com",
-                "https://www.sharemechat.com",
-                "https://admin.sharemechat.com",
-                "http://localhost:3000"
-        ));
+        configuration.setAllowedOrigins(Arrays.asList(corsAllowedOrigins));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));

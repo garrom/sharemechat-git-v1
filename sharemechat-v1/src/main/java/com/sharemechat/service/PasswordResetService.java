@@ -31,7 +31,9 @@ public class PasswordResetService {
     @Value("${password-reset.ttl-minutes:30}")
     private int ttlMinutes;
 
-    @Value("${app.frontend.reset-url:https://test.sharemechat.com/reset-password}")
+    // Paquete 10.A.5: sin default hardcoded. La property DEBE estar definida
+    // en application.properties (base) y overrideada por entorno donde aplique.
+    @Value("${app.frontend.reset-url}")
     private String resetUrlBase;
 
     public PasswordResetService(UserRepository userRepository,

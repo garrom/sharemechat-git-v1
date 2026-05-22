@@ -1,11 +1,15 @@
 import Roles from '../constants/Roles';
 import UserTypes from '../constants/UserTypes';
 import { canAccessBackoffice } from './backofficeAccess';
+import { ADMIN_ORIGIN, PRODUCT_ORIGIN } from '../config/runtimeEnv';
 
 const SURFACE = String(process.env.REACT_APP_SURFACE || 'product').trim().toLowerCase();
 
-export const ADMIN_APP_ORIGIN = 'https://admin.test.sharemechat.com';
-export const PRODUCT_APP_ORIGIN = 'https://test.sharemechat.com';
+// Paquete 10.A.5: origins resueltos en runtime via window.location.hostname.
+// Antes eran constantes hardcoded a test.sharemechat.com, lo que hacia que
+// la SPA en AUDIT construyera URLs cross-surface apuntando a TEST.
+export const ADMIN_APP_ORIGIN = ADMIN_ORIGIN;
+export const PRODUCT_APP_ORIGIN = PRODUCT_ORIGIN;
 
 const normalizePath = (path) => {
   if (!path || path === '') return '/';

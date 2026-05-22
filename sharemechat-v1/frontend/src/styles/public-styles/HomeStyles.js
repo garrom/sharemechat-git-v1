@@ -1,6 +1,7 @@
 // src/styles/public-styles/HomeStyles.js
 import styled, { createGlobalStyle, keyframes } from 'styled-components';
 import { colors } from '../core/tokens';
+import { ASSETS_BASE } from '../../config/runtimeEnv';
 
 /* TOKENS GLOBALES BÁSICOS (copiados de VideochatStyles) */
 export const GlobalBlack = createGlobalStyle`
@@ -127,10 +128,13 @@ export const HeroContainer = styled.div`
 `;
 
 
+// Paquete 10.A.5: ASSETS_BASE se resuelve en runtime via window.location.hostname
+// para que el hero se cargue del CDN del entorno (assets.test, assets.audit,
+// assets.sharemechat) y no del dominio TEST hardcoded.
 export const HeroBackground = styled.div`
   position: absolute;
   inset: 0;
-  background-image: url('https://assets.test.sharemechat.com/home/hero/hero_desktop_v1.webp');
+  background-image: url('${ASSETS_BASE}/home/hero/hero_desktop_v1.webp');
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
@@ -138,7 +142,7 @@ export const HeroBackground = styled.div`
   animation: ${slowZoom} 14s ease-in-out infinite alternate;
 
   @media (max-width: 780px) {
-    background-image: url('https://assets.test.sharemechat.com/home/hero/hero_mobile_v1.webp');
+    background-image: url('${ASSETS_BASE}/home/hero/hero_mobile_v1.webp');
     background-size: cover;
     background-position: 60% center;
   }
