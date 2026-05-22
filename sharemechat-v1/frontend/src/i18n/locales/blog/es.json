@@ -33,9 +33,7 @@
     "shareAriaTiktok": "SharemeChat en TikTok",
     "copyLink": "Copiar enlace",
     "copiedFeedback": "✓ Copiado",
-    "relatedTitle": "Quizás te interese",
-    "disclosureText": "Contenido elaborado con asistencia de IA.",
-    "disclosureLinkText": "Más información."
+    "relatedTitle": "Quizás te interese"
   },
   "states": {
     "loadingListing": "Cargando artículos…",

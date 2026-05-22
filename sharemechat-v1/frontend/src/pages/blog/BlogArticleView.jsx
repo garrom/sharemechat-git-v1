@@ -568,12 +568,6 @@ export default function BlogArticleView() {
                     {keywords.map((k) => <TagPill key={k}>{k}</TagPill>)}
                   </TagPills>
                 ) : null}
-                {article.disclosureRequired ? (
-                  <span>
-                    {t('blog:detail.disclosureText')}{' '}
-                    <Link to="/legal?tab=ai-disclosure">{t('blog:detail.disclosureLinkText')}</Link>
-                  </span>
-                ) : null}
               </ArticleFooterMeta>
             </>
           )}

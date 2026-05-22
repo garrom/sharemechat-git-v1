@@ -1610,3 +1610,23 @@ Lecciones operativas:
 - **Diferencia entre "property con default TEST" y "constante hardcoded TEST"**: las primeras se overridean por entorno y funcionan, las segundas no. El `application-audit.properties` ya cubría las primeras desde antes (cookieDomain, base-url, etc.); las segundas (cinco en backend, dos en frontend) eran las que rompían el aislamiento de entornos.
 - **Frontend con un solo build artifact**: la detección por `window.location.hostname` evita la complejidad de mantener `npm run build:test`, `:audit`, `:pro` separados. El mismo bundle funciona en los tres entornos y AUDIT/PROD se sirven desde sus buckets con el HTML idéntico.
 - **`@Value` sin default**: filosofía adoptada para properties que DEBEN estar configuradas. Spring falla el bootstrap con error claro en lugar de silenciosamente caer a TEST. Más seguro operativamente, especialmente cuando se replique en PROD desde cero.
+
+### Aviso AI eliminado del detalle del artículo público 2026-05-22 (paquete 10.A.6)
+
+Cambio editorial menor en el frontend del blog público: el footer del detalle de cada artículo mostraba un aviso "Contenido elaborado con asistencia de IA. Más información." (con link a `/legal?tab=ai-disclosure`) cuando el artículo tenía `disclosureRequired=true` en el DTO público. El operador decide que ese aviso no es obligación legal embebida y que su lugar canónico es el Legal Center (pestaña `ai-disclosure` del footer global), no cada artículo.
+
+Cambios aplicados (solo frontend, cero backend):
+
+- **`frontend/src/pages/blog/BlogArticleView.jsx`**: eliminado el bloque condicional `{article.disclosureRequired ? (<span>...</span>) : null}` dentro de `<ArticleFooterMeta>` (líneas 571-576, 6 líneas en total). El campo `article.disclosureRequired` del DTO sigue llegando del backend pero ya no se consume en este componente.
+- **`frontend/src/i18n/locales/blog/es.json`**: eliminadas las claves `disclosureText` ("Contenido elaborado con asistencia de IA.") y `disclosureLinkText` ("Más información.") del bloque `detail`. Sin consumidores residuales (confirmado por grep en todo `frontend/src`).
+- **`frontend/src/i18n/locales/blog/en.json`**: equivalente en inglés (`"AI-assisted content."`, `"Learn more."`).
+
+Lo que NO cambia:
+
+- **Legal Center**: `frontend/src/footer/Legal.jsx` líneas 150, 287-291, 993 (pestaña `ai-disclosure` con su contenido propio) queda intacto. El link desde otros sitios a `/legal?tab=ai-disclosure` sigue funcionando.
+- **Backend**: campo `disclosureRequired` se conserva en `ContentArticle` (entidad), `ArticleDetailDTO` (admin), `ArticlePublicSummaryDTO` y `ArticlePublicDetailDTO`. Útil para trazabilidad editorial (admin sabe qué artículos están marcados como AI-assisted), uso analítico, o reactivación futura.
+- **JSON-LD / SEO**: el aviso nunca apareció en el JSON-LD `Article` que el SPA inyecta en `<head>`, ni en sitemap, ni en feeds. Eliminación visible solo en UI.
+
+Build: `npm run build:product` → exit 0. Bundle delta: `863.chunk.js` −129 B, `572.chunk.js` −8 B. Hash nuevo `main.ff07af3c.js`. Sin warnings nuevos.
+
+Pendiente operativo: cuando el bundle se despliegue a TEST y AUDIT (junto con el del paquete 10.A.5), la SPA deja de mostrar el aviso en el detalle del artículo. Los artículos publicados con `disclosureRequired=true` siguen marcados como tales en BD pero el flag no tiene efecto visible. Si en el futuro se decide reactivar el aviso (o mover su render a otro componente), el `git history` conserva el wording exacto en ES y EN.
