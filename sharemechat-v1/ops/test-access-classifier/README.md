@@ -111,6 +111,30 @@ Para una fecha explicita:
 sudo /opt/sharemechat-test-access-classifier/bin/classify-test-access.sh --config /etc/sharemechat-test-access-classifier/config.env --date 2026-04-23
 ```
 
+## Allowlist operativa (paquete 10.B.4)
+
+Variable `ALLOWLIST_IPS` del `config.env`:
+
+- formato CSV de IPs literales, ej: `ALLOWLIST_IPS=90.175.201.51,203.0.113.42`
+- vacia por defecto (comportamiento del classifier identico al de antes del paquete)
+- propagada al binario Python via `--allowlist-ips`
+
+Alternativa: variable `ALLOWLIST_FILE` apuntando a un fichero con una IP por linea (`#` introduce comentarios). Util para listas largas o mantenidas fuera del `.env`.
+
+Comportamiento (short-circuit):
+
+- toda IP listada en `ALLOWLIST_IPS` queda **excluida del scoring**
+- se clasifica como `NORMAL` con `score=0`, `recommended_action=ninguna`, `main_reason=allowlisted_ip`
+- ninguna regla hostile/sensitive/volume/status/behavior/coherence se aplica
+- las `min_classification` de reglas con floor (ej. shell_probe, sqlmap UA) NO escalan la clasificacion
+- el `features` completo se conserva en el `summary.jsonl` (requests, distinct_routes, ua, etc.) para que la actividad siga siendo auditable retrospectivamente
+
+Caso de uso operativo (motivacion del paquete 10.B.4): el primer email perimetral enviado por el pipeline TEST (paquete 10.B.1) marco como CRITICA la IP del administrador del proyecto (`90.175.201.51`, score 105, main_reason `many_routes_25+request_burst_200`). Esa actividad era validacion manual durante los paquetes 10.A.10 y 10.A.11 fase 1, no un atacante. En TEST el blocker esta en DRY-RUN y no provoca dano, pero la siguiente ejecucion en AUDIT (Carril A real) habria bloqueado al propio operador de su entorno.
+
+Caso de IP dinamica (ISP domestico): si la IP del operador cambia y deja de coincidir con `ALLOWLIST_IPS`, la siguiente ejecucion la clasifica normalmente. El operador actualiza la variable cuando detecta el cambio. No hay sincronizacion automatica.
+
+Caso PROD futuro: cuando el operador trabaje desde IPs variables (movil, cafeteria, VPN), conviene complementar la allowlist con un mecanismo de header HTTP secreto que el normalizer pueda usar para marcar lineas de log como operativas antes de pasarlas al classifier. Ese mecanismo no esta implementado todavia; queda para un paquete posterior si se necesita.
+
 ## Automatizacion
 
 Las units systemd del clasificador (`sharemechat-test-access-classifier.service` y `.timer`) son operativas en EC2 TEST pero no estan versionadas en este directorio del repositorio.

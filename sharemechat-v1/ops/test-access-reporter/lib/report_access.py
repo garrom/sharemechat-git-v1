@@ -113,12 +113,21 @@ def build_report(day: str, rows: List[dict], classifier_output_root: Path, max_f
     findings.sort(key=finding_sort_key)
     findings = findings[:max_findings]
 
+    # Paquete 10.B.4: visibilidad de IPs allowlisted (operador y similares
+    # excluidos del scoring via ALLOWLIST_IPS del config.env del classifier).
+    allowlisted_ips = sorted({
+        str(row.get("ip") or "")
+        for row in rows
+        if (row.get("features") or {}).get("allowlisted") is True
+    })
+
     table_path = classifier_output_root / f"{day}.table.txt"
     summary_path = classifier_output_root / f"{day}.summary.jsonl"
 
     return {
         "date": day,
         "ips_analyzed": len(rows),
+        "allowlisted_ips": allowlisted_ips,
         "classification_counts": {
             "CRITICA": counts.get("CRITICA", 0),
             "MALICIOSA": counts.get("MALICIOSA", 0),
@@ -155,8 +164,17 @@ def finding_sort_key(finding: dict) -> Tuple[int, int, str]:
 def render_text_report(report: dict) -> str:
     lines: List[str] = []
     lines.append(f"TEST access summary - {report['date']}")
+    # Paquete 10.B.2: marca explicita de modo DRY-RUN en el body del email.
+    # Hardcoded para TEST (el reporter de AUDIT, en Carril A real, no lleva
+    # esta linea). Si en el futuro TEST pasa a Carril A (DRY_RUN=0 en el
+    # blocker tras el checklist de 14+ dias documentado en su README), eliminar
+    # esta linea como parte del cambio coordinado.
+    lines.append("Modo: DRY-RUN (advisory; nginx NO se modifica)")
     lines.append("")
     lines.append(f"IPs analizadas: {report['ips_analyzed']}")
+    allowlisted = report.get("allowlisted_ips") or []
+    if allowlisted:
+        lines.append(f"IPs allowlisted: {len(allowlisted)} - {', '.join(allowlisted)}")
     lines.append("")
 
     counts = report["classification_counts"]

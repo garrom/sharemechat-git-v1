@@ -40,6 +40,8 @@ Cuando se ejecuta con `--send-email`:
 - se adjunta `YYYY-MM-DD.report.txt`
 - se adjunta `YYYY-MM-DD.report.json`
 
+Marca DRY-RUN en el body (paquete 10.B.2): inmediatamente bajo el header (`TEST access summary - YYYY-MM-DD`), el `render_text_report` emite la linea literal `Modo: DRY-RUN (advisory; nginx NO se modifica)`. Hardcoded para TEST; el reporter de AUDIT (Carril A real) no la lleva. Cuando TEST pase a Carril A en el futuro, eliminar esta linea como parte del cambio coordinado del blocker.
+
 Configuracion minima:
 
 - `SMTP_HOST`

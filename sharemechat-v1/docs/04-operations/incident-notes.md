@@ -2067,5 +2067,331 @@ Lecciones / observaciones:
 - **AUDIT mantiene 47 segundos de ventana real frente a 0 segundos de TEST** porque AUDIT corre 24/7 con systemd mientras TEST se enciende/apaga manualmente. La página de mantenimiento cubrió el hueco visualmente; no hubo validación de usuarios reales viendo el overlay durante la ventana (es entorno operativo del equipo, no producción).
 - **Deuda IAM extendida**: ambos roles (`sharemechat-ec2-test-role` y `sharemechat-ec2-audit-role`) carecen de `s3:PutObject` sobre `sharemechat-backups`. El bucket de backups multi-env se creó en 10.A.1 pero la policy aplicada en su día (`SharemechatContentPrivateAuditRW`) era sobre `sharemechat-content-private-audit`, no sobre el bucket de backups. Si se quiere automatizar backups periódicos (por cron en EC2, por ejemplo), abrir paquete `10.A.11.bis` o similar para añadir policies de write sobre `sharemechat-backups` a ambos roles. Hasta entonces, el pivot scp + upload local es el patrón operativo.
 
+### Limpieza de ficheros residuales en EC2 TEST y AUDIT 2026-05-23
+
+Tras varias sesiones de despliegue del frente 10.A (paquetes 10.A.0 a 10.A.11), ambas EC2 acumularon ficheros residuales: dumps locales de BD ya superados por los backups oficiales en `s3://sharemechat-backups/`, `.jar.bak` de despliegues anteriores conservados como rollback histórico que el operador decidió descartar, scripts SQL pre-Flyway, ficheros de prueba sueltos, cookies de testing. Limpieza conservadora: borrar lo claro, preservar inciertos.
+
+**TEST — 6 ficheros eliminados (~110 MB)**:
+
+- `/home/ec2-user/backup-pre-flyway-test-20260516-2007.sql` (4.0 MB, 16 may 20:07) — dump local pre-Flyway de 10.A.3, oficial vive en S3.
+- `/home/ec2-user/cookies.txt` (131 B, 17 may) — cookie de prueba operativa residual.
+- `/home/ec2-user/openssl` (0 B, 29 dic 2024) — fichero vacío huérfano antiguo.
+- `/home/ec2-user/test.txt` (24 B, 23 abr) — fichero de prueba.
+- `/home/ec2-user/sharemechat-v1/rename.sql` (3.7 MB, 2 abr) — script SQL pre-Flyway de renombrado de tablas; ya aplicado, schema actual gestionado por Flyway.
+- `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A11` (102 MB, 22 may 20:52) — `.jar.bak` del despliegue brief-per-locale; consigna del operador: descartar todos los rollbacks locales.
+
+**AUDIT — 6 ficheros eliminados (~283 MB)**:
+
+- `/home/ec2-user/V1__baseline.sql` (44 KB, 16 may 18:06) — copia local del baseline aplicado en 10.A.3; vive en BD y en el repo.
+- `/home/ec2-user/audit.txt` (32 B, 11 abr) — fichero de prueba.
+- `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A11-fase2` (102 MB, 22 may 21:35) — `.jar.bak` 10.A.11 fase 2.
+- `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A3` (79 MB, 2 may 09:55) — `.jar.bak` pre-CMS-v2.
+- `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A7` (102 MB, 22 may 18:30) — `.jar.bak` pre-refactor 10.A.5.
+- `/tmp/audit-backup-pre-10A11-fase2-2026-05-23-1611.sql` (0 B, 23 may 16:15) — residuo del primer intento de `mysqldump` que falló por hostname RDS incorrecto en 10.A.11 fase 2; quedó como fichero vacío en `/tmp` porque el operador no había añadido cleanup explícito para el caso de fallo.
+
+**Inciertos preservados (no borrados) para revisión futura**:
+
+- TEST: `/opt/sharemechat/.env.backup-graph` (162 B), `/opt/sharemechat/.env.bak_turn_2026-04-22_191814` (803 B).
+- AUDIT: `/home/ec2-user/turn-audit-credentials.txt` (78 B), `/opt/sharemechat/.env.bak.10A3.2026-05-22` (1.3 KB), `/opt/sharemechat/.env.bak.20260414135121` (746 B).
+
+Total preservado: ~3 KB (despreciable). Razón: los `.env.bak*` son trazas históricas pequeñas que el operador puede querer mantener; `turn-audit-credentials.txt` contiene credenciales TURN en texto plano cuya eliminación amerita decisión explícita futura (mover a `.env`, eliminar definitivamente, o moverlo fuera del repo y de la EC2 a un gestor de secretos).
+
+**Espacio recuperado**:
+
+- TEST: `/` pasó de 3.6 G usado (46% de 8 GB) a 3.5 G usado (44%). Granularidad de `df` redondea a 100 MB; los 114 MB borrados se ven principalmente como reducción del 46% al 44%.
+- AUDIT: `/` pasó de 3.1 G usado (39%) a 2.8 G usado (35%). 283 MB borrados se reflejan claramente.
+- **Total: ~400 MB recuperados**, coherente con el estimado pre-limpieza de ~393 MB.
+
+**Hallazgo lateral durante la verificación**:
+
+Al hacer el check de salud post-limpieza, se observó que el **backend TEST no estaba corriendo** (HTTP 000 en `localhost:8080`, PID 3032 ausente). El log `backend.log` muestra un `Commencing graceful shutdown` a 17:11:09 UTC del 2026-05-23, **antes** del primer comando SSH de esta sesión (17:27 UTC). El backend recibió SIGTERM ordenado del operador entre el fin de la validación 10.A.11 fase 1 (último login real a 17:08:18 UTC) y el inicio de esta sesión de limpieza. No es efecto secundario del borrado: solo se eliminaron `.bak`, el JAR principal sigue intacto. El JAR principal `sharemechat-v1-0.0.1-SNAPSHOT.jar` queda en su sitio (102 MB, SHA256 sin cambios), listo para que el operador lo arranque cuando convenga con el comando documentado en `test.md` (`nohup java -jar … --spring.profiles.active=test &`).
+
+Salud AUDIT post-limpieza: servicio `sharemechat-audit.service` activo, PID 2046455 estable desde 16:21 UTC, `GET localhost:8080/api/public/content/articles?locale=es` responde HTTP 200 en 12 ms. Sin regresión.
+
+**Lecciones / observaciones**:
+
+- **TEST no rearranca automáticamente tras reboot** (sin systemd unit del backend, ver `test.md`). Confirmado en esta sesión: la EC2 lleva uptime 8h41 con el backend caído desde 17:11. Si el operador encendió la EC2 esta mañana y no arrancó el JAR manualmente, TEST estuvo casi todo el día sin backend. Esto no es un problema operativo (TEST no sirve a producción) pero conviene tenerlo en cuenta cuando se planifique automatización: si en algún momento se quiere TEST always-on, añadir una unidad systemd. Mientras tanto, el arranque manual sigue siendo la convención.
+- **Confirmar siempre que el dump remoto se limpia tras fallos**: el `/tmp/audit-backup-pre-10A11-fase2-2026-05-23-1611.sql` vacío quedó por un fallo del `mysqldump` cuando el hostname RDS estaba incorrecto (sesión 10.A.11 fase 2). El script `bash -s` se ejecutaba con `set -e` y abortó tras el fallo del dump, antes de poder limpiar. Si en el futuro se automatizan dumps con `cron`, añadir `trap` para limpiar `/tmp` tanto en éxito como en fallo.
+- **`df -h` redondea a 100 MB**: para borrados que sumen menos de eso, el porcentaje no se mueve. Verificar con `du -sh` sobre rutas específicas si se quiere medir delta fino. En esta sesión la diferencia ~393 MB es lo suficientemente significativa para verse en `df` (TEST 46→44%, AUDIT 39→35%).
+
+### Paquete 10.B.1: plus-addressing por entorno en pipeline perimetral 2026-05-23
+
+Inauguración del frente 10.B (consolidación de observabilidad perimetral TEST). Se etiqueta el destinatario del email diario perimetral por entorno via sub-addressing RFC 5233 (Microsoft 365 lo soporta nativamente; verificado por el operador con pre-flight manual previo a la sesión). Diferencias post-paquete:
+
+- AUDIT: destinatario pasa de `security+report@sharemechat.com` a `security+report-audit@sharemechat.com`.
+- TEST: emails activados (antes el pipeline generaba reportes en disco pero no los enviaba). Destinatario `security+report-test@sharemechat.com`.
+
+Frente operativamente trivial pese a su aparente envergadura: el pipeline TEST ya estaba desplegado en EC2 desde abril (normalizer + classifier + reporter + blocker, units systemd activas, scripts en `/opt/`, configs en `/etc/`), pero faltaban dos cosas para que el envío de email funcionase: las claves SMTP/EMAIL del `config.env` estaban vacías, y el `daily-report.service` invocaba al reporter sin `--send-email`. Ningún script ni unit nueva.
+
+**Cambios aplicados (4 en EC2, 3 en repo)**:
+
+EC2 AUDIT:
+- `/etc/sharemechat-audit-access-reporter/config.env`: línea `EMAIL_TO` de `security+report@…` a `security+report-audit@…`. Backup previo `config.env.bak.10B1.2026-05-23`. Sin reinicio (el script hace `source` del config en cada ejecución).
+
+EC2 TEST:
+- `/etc/sharemechat-test-access-reporter/config.env`: rellenado con los mismos valores SMTP/EMAIL_FROM que AUDIT (mismo tenant Microsoft 365, misma cuenta emisora `operations@sharemechat.com`); destinatario `security+report-test@sharemechat.com`. Transferencia AUDIT → TEST por pipeline `ssh|sed|ssh tee` sin imprimir credenciales en logs locales. Backup previo `config.env.bak.10B1.2026-05-23`.
+- `/etc/systemd/system/sharemechat-test-daily-report.service`: añadido `--send-email` al final del comando del reporter en ExecStart. Backup previo `.service.bak.10B1.2026-05-23`. `sudo systemctl daemon-reload` aplicado. Timer activo, próxima ejecución 2026-05-24 07:10 UTC.
+
+Repo:
+- `ops/audit-access/README.md` sección "Envio por email": destinatario actualizado a `security+report-audit@`, añadido párrafo sobre el patrón plus-addressing por entorno (audit/test/pro futuro) y la línea de estado "sub-addressing activo (validado 2026-05-23)".
+- `ops/test-access/README.md`: sección nueva "Envio por email" (antes no existía) análoga a la de AUDIT, con destinatario `security+report-test@`, nota sobre intermitencia esperada por encendido/apagado manual de TEST, y nota explícita de que el cuerpo no marca DRY-RUN (sub-paquete 10.B.2 opcional).
+- Esta entrada en incident-notes.
+- Entrada en project-log.
+
+**Validaciones manuales ejecutadas durante la sesión**:
+
+- AUDIT: `sudo /opt/sharemechat-audit-access-reporter/bin/report-audit-access.sh --config /etc/sharemechat-audit-access-reporter/config.env --date 2026-05-22 --send-email` → exit 0. Body del reporte: 9 IPs analizadas, 2 CRITICA (`34.244.197.198` dotenv_probe+wordpress_scan score=217, `90.175.201.51` request_burst_500+many_routes_25 score=173), 1 MALICIOSA (`176.65.139.235`), 6 NORMAL. Operador confirma email recibido a `security+report-audit@`.
+- TEST: `sudo /opt/sharemechat-test-access-reporter/bin/report-test-access.sh --config /etc/sharemechat-test-access-reporter/config.env --date 2026-05-22 --send-email` → exit 0. Body del reporte: 2 IPs analizadas, 1 CRITICA (`90.175.201.51` many_routes_25+request_burst_200 score=105), 1 NORMAL. Operador confirma email recibido a `security+report-test@` con subject `TEST access summary - 2026-05-22`.
+
+**Sorpresas operativas**:
+
+- **El pipeline TEST estaba "casi listo, faltaba la traca final"**: era una de las hipótesis del informe de investigación, confirmada al inspeccionar el ExecStart real del `daily-report.service` de TEST y descubrir que faltaba el flag `--send-email`. En AUDIT sí estaba (comparación directa de ambas units). El gap es de abril 2026 (cuando se desplegó el pipeline TEST como espejo de AUDIT), antes del frente brief-per-locale; pasó inadvertido porque el reporter SÍ generaba los ficheros `report.{txt,json}` localmente y la falta de email no levantaba ninguna alarma.
+- **`SMTP_PASSWORD` en texto plano en `config.env`**: necesario para el flujo SMTP-AUTH actual. Apareció en stdout durante el primer `sudo cat` de Fase 1 (output del comando, no fichero del repo). Sanitizado en el reporte de sesión y en toda la documentación. Para futuras automatizaciones convendría mover SMTP_PASSWORD a un mecanismo más seguro (AWS Secrets Manager, systemd-creds), pero queda fuera del alcance del paquete actual.
+- **Tamaño del config TEST post-cambio (548 B) vs AUDIT (547 B)**: 1 byte de diferencia explicado por `-test` vs `-audit` (mismo número de caracteres) más algún whitespace residual. Irrelevante.
+
+**Deuda lateral detectada (NO se cierra en este paquete)**:
+
+- `sharemechat-test-access-blocker.service` está en estado `failed` con error `Classifier summary not found: /var/log/sharemechat-test-access-classifier/2026-05-22.summary.jsonl`. La causa: el timer del blocker está programado a 05:45 UTC pero el classifier solo genera summary cuando se ejecuta el daily-report.service (07:10 UTC). Si TEST está apagado al pasar 05:45 UTC, al reencender la EC2, el catch-up del blocker se ejecuta antes que el del classifier (orden de timers) y falla. No bloquea el envío de email (el daily-report.service es independiente). Si conviene arreglarlo: sub-paquete `10.B.3` (separado, opcional).
+
+- Cuerpo del email TEST NO menciona explícitamente el modo DRY-RUN del blocker. Solo el subject distingue entorno. Si conviene explicitar: sub-paquete `10.B.2` (separado, requiere tocar `ops/test-access-reporter/lib/report_access.py` y redesplegar el `lib/`).
+
+**Estado de la EC2 TEST al cierre**: encendida (uptime 9h28min al inicio de esta sesión, sigue encendida al cerrar). Si el operador quiere apagarla, hacerlo manualmente desde la consola AWS o vía CLI.
+
+Lecciones / observaciones:
+
+- **El "pipeline TEST espejo de AUDIT" estaba al 95% desplegado pero al 0% funcional** en cuanto a email. Patrón aplicable: para frentes que replican un sistema existente, no asumir que estado-desplegado implica estado-funcional. Verificar los outputs finales del pipeline (en este caso: ¿llegó el email? no solo "¿hay reporte en disco?").
+- **Plus-addressing es trivial cuando el tenant lo soporta**. El pre-flight manual del operador antes de la sesión fue clave: confirmó que Microsoft 365 enruta `security+<tag>@sharemechat.com` correctamente sin necesidad de crear aliases adicionales en Exchange Admin Center. Sin ese pre-flight, el frente habría tenido que incluir Bloque C "crear aliases" como contingencia; con la confirmación, ese bloque desapareció.
+- **Pipeline `ssh audit | sed | ssh test tee` para transferir configs entre EC2 sin pasar por filesystem local**: técnica útil cuando el contenido tiene credenciales que no deben quedar ni en logs locales ni en filesystem local. Variante del patrón scp+upload local usado en frentes anteriores, pero aún más limpio porque ningún byte sensible toca la máquina del operador (solo pasa "en tránsito" por el pipe de bash).
+
+### Paquete 10.B.4: allowlist de IPs operativas en classifier 2026-05-23
+
+Cierre del segundo sub-paquete del frente 10.B (consolidación perimetral TEST). Resuelve un riesgo de self-block detectado tras el cierre del 10.B.1: en el primer email enviado por el pipeline TEST se marcó la IP del administrador del proyecto (`90.175.201.51`) como CRITICA score 105 con `main_reason=many_routes_25+request_burst_200`. Esa actividad correspondía a la validación manual del refactor brief-per-locale durante 10.A.10 y 10.A.11 fase 1 (680 requests en AUDIT, 230 en TEST, 60 y 53 rutas distintas respectivamente), no a un atacante. En TEST no causaba daño (blocker en DRY-RUN); en AUDIT (Carril A real desde 2026-04-24) la siguiente validación intensiva del operador habría escrito su propia IP a `/etc/nginx/deny-audit-ips.conf` y le habría dejado fuera de su entorno.
+
+**Estrategia**:
+
+Short-circuit del classifier por allowlist (mecanismo ya existente en el código del Python pero infrautilizado): el `apply_allowlist_rule` original aplicaba un descuento de `-30` puntos, claramente insuficiente para una IP con score natural >=100. Se reescribe `deterministic_assess` para que, si `features.allowlisted=True`, devuelva inmediatamente un Assessment(`NORMAL`, score=0, `main_reason=allowlisted_ip`, `recommended_action=ninguna`) sin aplicar ninguna otra regla. Esto incluye anular las `min_classification` de reglas con floor (shell_probe, sqlmap UA, etc.); el operador no usa esos UAs deliberadamente y, si lo hiciera en pruebas, el contexto lo justifica. El `features` completo se preserva en `summary.jsonl` para auditoría retrospectiva.
+
+**Configuración**:
+
+Variable `ALLOWLIST_IPS` (CSV de IPs literales) en `/etc/sharemechat-{audit,test}-access-classifier/config.env`. Ya existía en el bash wrapper y en el `config.env.example`; no requiere renaming. Valor aplicado en ambos entornos: `ALLOWLIST_IPS=90.175.201.51`.
+
+**Cambios aplicados (4 ficheros código, 4 docs, 6 acciones EC2)**:
+
+Código:
+
+- `ops/audit-access-classifier/lib/classify_access.py` y `ops/test-access-classifier/lib/classify_access.py`: reescrito `deterministic_assess` con short-circuit; eliminado `apply_allowlist_rule` (función ya no se llama). Cambios simétricos en ambos entornos.
+- `ops/audit-access-reporter/lib/report_access.py` y `ops/test-access-reporter/lib/report_access.py`: `build_report` añade campo `allowlisted_ips` (lista ordenada) leyendo `features.allowlisted` del summary; `render_text_report` emite una línea `IPs allowlisted: N - IP1, IP2` justo bajo `IPs analizadas`. Si la lista está vacía, la línea no se emite.
+
+Documentación:
+
+- `ops/audit-access-classifier/README.md` y `ops/test-access-classifier/README.md`: sección nueva "Allowlist operativa (paquete 10.B.4)" con formato, comportamiento short-circuit, casos de uso (validación manual, IP dinámica de ISP doméstico) y referencia al patrón futuro para PROD (header secreto HTTP cuando el operador trabaje desde IPs variables).
+- `ops/audit-access/README.md` y `ops/test-access/README.md`: mención breve a la allowlist en la sección perimetral.
+
+EC2 (3 por entorno):
+
+- AUDIT: `scp` de `classify_access.py` y `report_access.py` actualizados a `/opt/sharemechat-audit-access-{classifier,reporter}/lib/`; modificación de `/etc/sharemechat-audit-access-classifier/config.env` con `ALLOWLIST_IPS=90.175.201.51`. Backups previos en `/tmp/*.bak.10B4.2026-05-23` y `/etc/.../config.env.bak.10B4.2026-05-23`.
+- TEST: mismas 3 acciones espejadas. Backups previos análogos.
+
+Sin `daemon-reload` necesario (los Python lib y los config.env se leen en cada ejecución del wrapper bash).
+
+**Validación**:
+
+- Sintaxis Python: `py_compile` OK sobre los 4 ficheros lib en local y en remoto.
+- AUDIT: `classify-audit-access.sh --date 2026-05-22` muestra a `90.175.201.51` como NORMAL/score=0/`main_reason=allowlisted_ip` con `requests=680` y `distinct_routes=60` preservados. Resto de IPs sin cambio: `34.244.197.198` sigue CRITICA score 217 (atacante real dotenv_probe+wordpress_scan), `176.65.139.235` sigue MALICIOSA score 70 (dotenv_probe).
+- TEST: `classify-test-access.sh --date 2026-05-22` muestra a `90.175.201.51` como NORMAL/score=0/`allowlisted_ip` (antes era CRITICA score 105). Resto de IPs (1 NORMAL adicional) sin cambio.
+- Reporter regenerado en ambos entornos: la nueva línea `IPs allowlisted: 1 - 90.175.201.51` aparece bajo `IPs analizadas` en el body del reporte (.report.txt). El conteo `CRITICA: N` ya no incluye la IP operativa.
+- Validación end-to-end por email diferida al ciclo natural del 24 may 07:10 UTC (no se ejecuta `--send-email` manual en esta sesión; el envío vía SMTP ya fue validado en 10.B.1 y la lógica de envío no cambió en este paquete).
+
+**Sorpresas operativas**:
+
+1. **El soporte de allowlist ya estaba 90% implementado en el código del classifier**. El bash wrapper ya leía `ALLOWLIST_IPS` y la pasaba como `--allowlist-ips`; el Python ya tenía `load_allowlist`, `FeatureSet.allowlisted`, y `apply_allowlist_rule`. El gap era operativo (variable vacía en `config.env`) y de magnitud (-30 puntos insuficiente). Patrón aplicable: cuando se necesite una feature, inspeccionar primero si el código ya la prepara. En este caso, hubo que reescribir la lógica del descuento por un short-circuit, pero no añadir parseo ni framework nuevo.
+
+2. **El `config.env` de TEST tenía 3 IPs en `ALLOWLIST_IPS` antes de tocar nada** (`63.180.48.12,90.175.201.51,90.166.58.225`). Origen desconocido; probablemente IPs operativas antiguas que el operador o un agente anterior añadieron sin documentar. Tras consulta vía AskUserQuestion el operador confirmó que las dos IPs adicionales eran obsoletas y aceptó dejar solo `90.175.201.51`. Backup preservado en `/etc/sharemechat-test-access-classifier/config.env.bak.10B4.2026-05-23` por si en el futuro alguien necesita reconstruir esa lista. Lección: confirmar antes de sobrescribir variables con contenido preexistente, incluso cuando el prompt asume estado vacío.
+
+3. **El descuento -30 original era cosmético**: la rebaja matemática nunca era suficiente para sacar al operador de la categoría MALICIOSA cuando score natural >=60. Era una protección teórica que no funcionaba en la práctica. El short-circuit garantiza el comportamiento independiente del score natural.
+
+**Patrón futuro (no implementado en este paquete)**:
+
+Para PROD futuro, cuando el operador trabaje desde IPs variables (móvil, cafetería, VPN), la allowlist por IP no escalará. La solución natural es un mecanismo de header HTTP secreto: el operador envía un header custom con un token en sus peticiones; el normalizer detecta esas peticiones antes de pasar al classifier y las marca con `allowlisted: true` directamente en el JSONL. Esto desacopla la allowlist de la IP del cliente. Queda como sub-paquete posterior si se necesita.
+
+**Estado de las EC2 al cierre**:
+
+- AUDIT: activa 24/7 con systemd, backend corriendo, classifier y reporter con código nuevo.
+- TEST: encendida durante esta sesión (uptime ~11h40 al cierre). Si el operador quiere apagarla, hacerlo desde consola AWS o vía CLI.
+
+**Frente 10.B al cierre**:
+
+- 10.B.1 (plus-addressing por entorno): CERRADO 2026-05-23.
+- 10.B.4 (allowlist de IPs operativas): CERRADO 2026-05-23 (esta sesión).
+- 10.B.2 (sufijo DRY-RUN en body email TEST): pendiente, opcional.
+- 10.B.3 (reparar test-access-blocker.service failed): pendiente, opcional.
+
+Lecciones / observaciones:
+
+- **El primer email perimetral real del 10.B.1 expuso el riesgo en menos de 24h**: el pipeline funcionaba pero clasificaba al operador como CRITICA. Si no hubiera sido por la inspección del primer email recibido, el operador podría haberse bloqueado a sí mismo en AUDIT en la siguiente validación intensiva. Patrón: cuando se activa un sistema de detección automática, la primera ejecución productiva debe revisarse manualmente para detectar falsos positivos sobre actividad legítima propia.
+- **Reescribir lógica vs ajustar parámetro**: ante un descuento `-30` insuficiente, dos opciones eran subir el valor (`-200`) o reescribir el control (short-circuit). El short-circuit es preferible porque garantiza el comportamiento independientemente del score natural y desacopla la allowlist del scoring; no requiere recalibrar si en el futuro se añaden reglas con weights más altos. Patrón aplicable: cuando un mecanismo de protección tiene magnitud insuficiente, evaluar si conviene escalar el valor o reescribir como decisión booleana antes de la cadena.
+- **Backup obligatorio antes de cualquier `sed -i`**: el caso de las 3 IPs preexistentes en TEST lo confirma. Si no hubiera sacado backup antes de aplicar la sed, la información se habría perdido sin posibilidad de recuperar fácilmente la lista anterior.
+
+### Paquete 10.B.2: sufijo DRY-RUN en body del email TEST 2026-05-23
+
+Tercer sub-paquete del frente 10.B. Añade una marca explícita del modo perimetral DRY-RUN del blocker en el body del email diario de TEST, para evitar que un lector del email confunda "1 CRITICA - actuar" con "el bloqueo ya se aplicó". Cambio mínimo: 1 línea Python funcional + 5 líneas de comentario en `ops/test-access-reporter/lib/report_access.py`. AUDIT (Carril A real desde 2026-04-24) no recibe esta línea.
+
+**Decisión técnica**: hardcoded en TEST (opción A) en lugar de lectura dinámica del config del blocker (opción B). Justificación:
+
+- El cambio `DRY_RUN=1` → `DRY_RUN=0` del blocker TEST requiere un checklist de 4 pasos documentado en `ops/test-access-blocker/config/config.env.example` (validar DRY-RUN 14+ días, consolidar allowlist, preparar `/etc/nginx/deny-test-ips.conf` con include, ejecutar manualmente una vez con DRY_RUN=0). Es una transición rara y consciente; el operador puede coordinar manualmente la eliminación de la línea del reporter en la misma sesión.
+- Coherencia con la segregación existente: el reporter de TEST y el de AUDIT son ficheros distintos (`lib/report_access.py` cada uno) con subject diferente. Hardcoded encaja con esa segregación.
+- Predecibilidad sobre dinamismo: la opción B tendría que cubrir casos de error (fichero del blocker no legible, permisos, parseo) que la A elimina. El precio del dinamismo no compensa el ahorro de coordinación manual en el futuro.
+
+**Línea añadida**:
+
+```
+Modo: DRY-RUN (advisory; nginx NO se modifica)
+```
+
+Ubicación: inmediatamente bajo el header (`TEST access summary - YYYY-MM-DD`), antes de la línea en blanco que separa del bloque "IPs analizadas". Vista previa del email completo post-cambio:
+
+```
+TEST access summary - 2026-05-22
+Modo: DRY-RUN (advisory; nginx NO se modifica)
+
+IPs analizadas: 2
+IPs allowlisted: 1 - 90.175.201.51
+
+CRITICA: 0
+MALICIOSA: 0
+SOSPECHOSA: 0
+NORMAL: 2
+
+Hallazgos principales:
+- sin hallazgos no normales
+
+Fuentes:
+- /var/log/sharemechat-test-access-classifier/2026-05-22.table.txt
+- /var/log/sharemechat-test-access-classifier/2026-05-22.summary.jsonl
+```
+
+La línea es visible en el preview del cliente de email (Outlook/Apple Mail/etc. suelen mostrar las primeras 2-3 líneas en el panel de lista), no enterrada al final del body.
+
+**Cambios aplicados**:
+
+- `ops/test-access-reporter/lib/report_access.py`: nueva llamada `lines.append("Modo: DRY-RUN (advisory; nginx NO se modifica)")` en `render_text_report` justo tras el header. Comentario inline de 5 líneas explica la motivación, el carácter hardcoded y la regla de eliminación cuando TEST pase a Carril A.
+- `ops/test-access/README.md`: sección "Envio por email" actualizada con el formato resultante y referencia al checklist del blocker.
+- `ops/test-access-reporter/README.md`: nota sobre la línea DRY-RUN bajo "Envio por email".
+- EC2 TEST: `scp` del lib actualizado a `/opt/sharemechat-test-access-reporter/lib/report_access.py` (chown root:root, chmod 644). Backup previo en `/tmp/report_access.py.bak.10B2.2026-05-23`. Sin `daemon-reload` (Python lib se relee en cada ejecución del wrapper).
+- AUDIT: **NO tocado**. El `lib/report_access.py` de AUDIT permanece intacto.
+
+**Validación**:
+
+- Sintaxis: `py_compile` OK local y remoto.
+- Diff TEST vs AUDIT reporter post-cambio: confirma que el bloque nuevo (5 comentarios + 1 línea funcional) existe solo en TEST. Strings "AUDIT/TEST access summary" siguen siendo la única otra diferencia esperada.
+- Ejecución manual: `sudo /opt/sharemechat-test-access-reporter/bin/report-test-access.sh --config /etc/sharemechat-test-access-reporter/config.env --date 2026-05-22 --send-email` → exit 0. Body en stdout muestra la línea DRY-RUN en su posición correcta.
+- Operador confirma email recibido a `security+report-test@sharemechat.com` con la línea visible y bien ubicada.
+
+**Estado de las EC2 al cierre**:
+
+- AUDIT: activa 24/7, sin cambios en esta sesión.
+- TEST: encendida (uptime ~12h14 al cierre). Mismo estado que en 10.B.1/10.B.4.
+
+**Frente 10.B al cierre**:
+
+- ✅ 10.B.1 plus-addressing por entorno: CERRADO 2026-05-23.
+- ✅ 10.B.4 allowlist de IPs operativas: CERRADO 2026-05-23.
+- ✅ 10.B.2 sufijo DRY-RUN en body email TEST: CERRADO 2026-05-23 (esta sesión).
+- ⏸️ 10.B.3 reparar `test-access-blocker.service` failed: pendiente, opcional.
+
+Lecciones / observaciones:
+
+- **Hardcoded simple cuando la inversión es rara**: la opción A es el caso típico de "elegir simple porque el caso de inversión está documentado y coordinado". Si en algún momento se acumulan condicionales hardcoded de este tipo (TEST tiene DRY-RUN, TEST tiene canary, TEST tiene...), valdría la pena consolidar en una variable de entorno tipo `REPORT_MODE_TAG` que cada reporter lee. Para una sola condición no merece la pena la abstracción.
+- **Visibilidad en preview de email**: ubicar la línea bajo el header (no al final) hace que sea visible incluso si el operador solo ve la lista de emails sin abrir cada uno. Patrón útil para flags operativos importantes.
+- **Diff TEST vs AUDIT reporter como red de seguridad**: el diff confirma que el cambio quedó aislado en TEST. Esa simetría es valiosa para detectar contaminación accidental (si alguna vez el diff mostrara cambios inesperados en líneas no relacionadas, sería señal de que un cambio mal aplicado se coló a AUDIT).
+
+### Paquete 10.B.3: reparar test-access-blocker failed por race condition 2026-05-23
+
+Cierre del frente 10.B (cuarto y último sub-paquete del día). Resuelve el estado `failed` permanente de `sharemechat-test-access-blocker.service` documentado en 10.B.1: tras un rearranque de TEST, el catch-up del timer del blocker (programado a 05:45 UTC) dispara antes del `daily-report.service` (07:10 UTC, contiene al classifier), buscando un `summary.jsonl` que no existe todavía, y falla con `Classifier summary not found: ...`. La unit queda en `failed` hasta intervención manual con `systemctl reset-failed`.
+
+**Diagnóstico**:
+
+Race condition entre timers con `Persistent=true` al rearrancar la EC2:
+
+- TEST blocker.timer a **05:45 UTC** (genera catch-up al boot).
+- TEST daily-report.timer a **07:10 UTC** (genera catch-up al boot, ejecuta classifier + reporter).
+- Al rearrancar TEST a las 08:52 UTC del 23 may, ambos timers tienen ejecución pendiente. systemd los encola; el blocker se ejecuta primero (orden no determinístico estricto, pero suficientemente reproducible para fallar consistentemente).
+- El blocker busca `summary.jsonl` del 22 may (yesterday en UTC). TEST estaba apagado el 22 may → no hay summary del 22. Fallo legítimo.
+
+**Hallazgo lateral**: las units del blocker en TEST **y AUDIT** declaraban `After=sharemechat-{test,audit}-access-classifier.service`, una unit que **NO existe**. El classifier real vive como sub-paso dentro de `daily-report.service`. systemd ignoraba la dependencia silenciosamente. En operación 24/7 (AUDIT) el problema no se manifiesta porque las horas reales del calendario encajan (classifier 07:10 → blocker 07:30); en un reboot total de AUDIT con catch-up agresivo, podría reproducirse el mismo fallo.
+
+**Estrategia elegida (opción D = A + C)**:
+
+A. **Skip elegante en el blocker** (núcleo del fix):
+   - Modificar `lib/block_access.py` para que cuando el `summary.jsonl` auto-resuelto desde `--date` o `yesterday` no exista, el blocker imprima un mensaje informativo a stdout (capturado por journald) y salga con código 0 en lugar de `raise SystemExit(...)` con código 1.
+   - El skip aplica solo al path auto-resuelto. Si el operador pasa `--input /ruta/explicita.jsonl` que no existe, sigue siendo error (uso manual incorrecto).
+   - **Justificación**: el blocker NO debe quejarse de un estado esperable. Si no hay summary, no es error, es ausencia de datos. La unit queda en `inactive (dead)`, no `failed`. Al siguiente disparo del timer (o al ejecutar manualmente con un día con summary), procesa normalmente.
+   - **Robustez por diseño, no por temporización**: hace irrelevante el orden de los timers.
+
+C. **Corregir dependencia rota en la unit** (limpieza colateral):
+   - Cambiar `After=sharemechat-{test,audit}-access-classifier.service` (fantasma) → `After=sharemechat-{test,audit}-daily-report.service` (unidad real que ejecuta el classifier).
+   - No garantiza orden absoluto en presencia de catch-up agresivo, pero documenta la intención correctamente y permite a systemd ordenar correctamente cuando ambas units están encoladas.
+
+**Por qué no opción B (mover OnCalendar TEST a 07:30 UTC)**:
+
+- No resuelve el catch-up. Cambiar la hora programada no evita que ambos timers acumulados disparen en cadena al boot.
+- El comentario del timer TEST justifica 05:45 con "no solapar con AUDIT a 05:30 UTC", pero AUDIT está realmente a **07:30** (no 05:30). El comentario tiene un error histórico cuya intención original no está clara. Mejor no tocar la hora y dejar que la opción A absorba el race.
+
+**Cambios aplicados**:
+
+Código (2 ficheros del repo, simétricos):
+
+- `ops/test-access-blocker/lib/block_access.py` (línea ~249): `raise SystemExit(...)` reemplazado por `print(...) + sys.exit(0)` con mensaje `Skipped: classifier summary not yet available for {day} (expected at {path}).` + comentario de 8 líneas explicando motivación y aplicación.
+- `ops/audit-access-blocker/lib/block_access.py`: mismo cambio espejo. Comentario adaptado a contexto AUDIT ("tras rearrancar la EC2" en lugar de "tras rearrancar TEST").
+
+Units systemd (2 ficheros del repo, simétricos):
+
+- `ops/test-access-blocker/systemd/sharemechat-test-access-blocker.service`: `After=` corregido a `sharemechat-test-daily-report.service` con comentario explicativo de 6 líneas.
+- `ops/audit-access-blocker/systemd/sharemechat-audit-access-blocker.service`: misma corrección espejo.
+
+Documentación:
+
+- `ops/test-access-blocker/README.md` y `ops/audit-access-blocker/README.md`: sub-sección nueva "Comportamiento si el summary no existe (paquete 10.B.3)" bajo la sección "Entrada", documentando el mensaje, el exit code 0, el estado `inactive (dead)`, la limitación al path auto-resuelto, y la corrección del `After=`.
+
+EC2 (4 acciones, 2 por entorno):
+
+- TEST: `scp` del lib + unit actualizados, backups previos en `/tmp/block_access.py.bak.10B3.2026-05-23` y `/etc/systemd/system/sharemechat-test-access-blocker.service.bak.10B3.2026-05-23`. `daemon-reload` aplicado. `systemctl reset-failed sharemechat-test-access-blocker.service` para limpiar el estado fallido del 08:52 UTC.
+- AUDIT: misma operación espejada. Backup en `/tmp/block_access.py.bak.10B3.2026-05-23` y `/etc/systemd/system/sharemechat-audit-access-blocker.service.bak.10B3.2026-05-23`.
+
+**Validación**:
+
+- TEST caso SKIP (`--date 2026-04-01`, sin summary): exit 0, mensaje `Skipped: classifier summary not yet available for 2026-04-01 (expected at /var/log/sharemechat-test-access-classifier/2026-04-01.summary.jsonl).` ✓.
+- TEST caso NORMAL (`--date 2026-05-22`, con summary): exit 0, log `[blocker DRY-RUN] 2026-05-22 ips=2 carril_A=0 carril_B=0 carril_C=2 allowlisted=0`. Generados `2026-05-22.blocker-diff.txt`, `2026-05-22.deny-test-ips.proposed.conf`, `2026-05-22.ips.json` ✓.
+- TEST estado: `inactive (dead)`, ya no `failed` ✓.
+- AUDIT caso SKIP (`--date 2026-01-01`): exit 0, mensaje skip elegante ✓.
+- AUDIT caso NORMAL (`--date 2026-05-22`): exit 0, log `[blocker REAL carril_A] 2026-05-22 ips=9 carril_A=1 carril_B=1 carril_C=7 allowlisted=0 nginx_test_before=ok nginx_test_after=ok ips_bloqueadas=1 reload=ok`. Carril A real funcionando ✓.
+- AUDIT estado: `inactive (dead)`, sin regresión ✓.
+
+**Sorpresas**:
+
+1. **`AUDIT está en Carril A REAL desde 2026-04-24**` (confirmado por el log `[blocker REAL carril_A] ... ips_bloqueadas=1 reload=ok` al ejecutar manualmente sobre 2026-05-22), pero la **descripción de la unit y el comentario del .service todavía dicen "DRY-RUN ONLY"**. Esa documentación obsoleta vive en `Description=Propose deny list for AUDIT based on classifier summary (DRY-RUN)` línea 2 del .service y en el comentario "DRY-RUN ONLY. This unit does NOT reload nginx..." líneas 10-12. Deuda documental detectada pero NO corregida en este paquete (fuera del alcance acotado de 10.B.3). Si se quiere arreglar, sub-paquete posterior trivial: editar 2 líneas de la unit AUDIT.
+
+2. **El blocker AUDIT en Carril A escribió 1 IP en `/etc/nginx/deny-audit-ips.conf` y recargó nginx durante la validación manual** (`ips_bloqueadas=1, reload=ok`). Eso significa que el blocker se ejecutó dos veces hoy con escritura real (la del timer normal a 07:30 UTC + la validación manual a 21:25 UTC). Ambas terminaron OK y la deny list está actualizada con la IP detectada como Carril A del 22 may. Comportamiento esperado, no es problema, pero conviene notarlo: las validaciones manuales del blocker AUDIT TOCAN nginx real. Para validaciones futuras donde NO se quiera modificar nginx, usar `--input /ruta/inexistente.jsonl` para activar el path de error original (sigue siendo `SystemExit`), o exportar `DRY_RUN=1` para esa invocación.
+
+3. **Los dos `block_access.py` no son perfectamente simétricos**: además de los esperados nombres `audit/test`, AUDIT tiene un docstring más antiguo que omite la documentación de DRY_RUN=0; TEST lo añadió en una iteración posterior. No es problema para este paquete (el cambio del paquete sí es simétrico, son solo los docstrings de cabecera los que difieren) pero conviene unificarlos en algún momento.
+
+**Estado del frente 10.B al cierre**:
+
+- ✅ 10.B.1 plus-addressing por entorno: CERRADO 2026-05-23.
+- ✅ 10.B.4 allowlist de IPs operativas: CERRADO 2026-05-23.
+- ✅ 10.B.2 sufijo DRY-RUN en body email TEST: CERRADO 2026-05-23.
+- ✅ 10.B.3 reparar blocker failed: CERRADO 2026-05-23 (esta sesión).
+
+Los 4 sub-paquetes del frente 10.B cerrados en el mismo día. Frente completo.
+
+**Estado de las EC2 al cierre**: TEST encendida (uptime ~12h al cierre). Si el operador quiere apagarla, hacerlo desde consola AWS o vía CLI. AUDIT siempre encendida 24/7.
+
+Lecciones / observaciones:
+
+- **Robustez por diseño, no por temporización**: el patrón "el componente downstream tolera ausencia de datos upstream" es más robusto que "el componente downstream se asegura de correr después del upstream". El segundo depende de orden temporal; el primero no. Aplicable a otros pipelines del proyecto donde haya dependencias entre fases con timers separados.
+- **Dependencias systemd a unidades fantasma se ignoran silenciosamente**: el `After=sharemechat-*-access-classifier.service` apuntaba a una unit inexistente y systemd no emite ningún error ni warning. Eso hace fácil olvidar que la directiva no aporta nada. Conviene cuando se editan units verificar con `systemctl list-dependencies <unit>` o `systemctl cat <unit-dependida>` que la dependencia existe realmente.
+- **Skip + exit 0 en lugar de raise + exit 1 para casos esperables**: el caso "no hay datos del día anterior" no es un error operativo, es ausencia legítima. El comportamiento por defecto de las herramientas Python (`raise SystemExit` con mensaje y exit code 1) es agresivo para este caso. Patrón aplicable: distinguir "input explícito del operador no existe" (error duro) vs "input auto-resuelto no existe" (skip clean).
+- **El log `[blocker REAL carril_A]` vs `[blocker DRY-RUN]` es una buena señal de auto-documentación**: cualquier operador que mire journalctl sabe inmediatamente en qué modo está el blocker, independientemente de la documentación del .service. Patrón aplicable a otros componentes que tengan modos operativos distintos.
+
 
 

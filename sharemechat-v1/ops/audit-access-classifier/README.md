@@ -109,6 +109,30 @@ Para una fecha explicita:
 sudo /opt/sharemechat-audit-access-classifier/bin/classify-audit-access.sh --config /etc/sharemechat-audit-access-classifier/config.env --date 2026-04-18
 ```
 
+## Allowlist operativa (paquete 10.B.4)
+
+Variable `ALLOWLIST_IPS` del `config.env`:
+
+- formato CSV de IPs literales, ej: `ALLOWLIST_IPS=90.175.201.51,203.0.113.42`
+- vacia por defecto (comportamiento del classifier identico al de antes del paquete)
+- propagada al binario Python via `--allowlist-ips`
+
+Alternativa: variable `ALLOWLIST_FILE` apuntando a un fichero con una IP por linea (`#` introduce comentarios). Util para listas largas o mantenidas fuera del `.env`.
+
+Comportamiento (short-circuit):
+
+- toda IP listada en `ALLOWLIST_IPS` queda **excluida del scoring**
+- se clasifica como `NORMAL` con `score=0`, `recommended_action=ninguna`, `main_reason=allowlisted_ip`
+- ninguna regla hostile/sensitive/volume/status/behavior/coherence se aplica
+- las `min_classification` de reglas con floor (ej. shell_probe, sqlmap UA) NO escalan la clasificacion
+- el `features` completo se conserva en el `summary.jsonl` (requests, distinct_routes, ua, etc.) para que la actividad siga siendo auditable retrospectivamente
+
+Caso de uso operativo (motivacion del paquete 10.B.4): la IP del administrador del proyecto puede provocar score >=100 al validar manualmente el frontend admin durante un despliegue (muchas rutas distintas, racha de peticiones, ratios anomalos de 401/404). Sin allowlist, ese trafico legitimo caeria en CRITICA y, en AUDIT (blocker Carril A real), el operador acabaria bloqueado de su propio entorno.
+
+Caso de IP dinamica (ISP domestico): si la IP del operador cambia y deja de coincidir con `ALLOWLIST_IPS`, la siguiente ejecucion la clasifica normalmente. El operador actualiza la variable cuando detecta el cambio. No hay sincronizacion automatica.
+
+Caso PROD futuro: cuando el operador trabaje desde IPs variables (movil, cafeteria, VPN), conviene complementar la allowlist con un mecanismo de header HTTP secreto que el normalizer pueda usar para marcar lineas de log como operativas antes de pasarlas al classifier. Ese mecanismo no esta implementado todavia; queda para un paquete posterior si se necesita.
+
 ## Automatizacion
 
 El repositorio incluye:

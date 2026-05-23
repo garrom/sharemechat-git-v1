@@ -69,6 +69,18 @@ Del summary se consumen los campos:
 - `evidence.hostile_hits` (IOCs en rutas hostiles)
 - `evidence.matched_rule_labels` (UA scanners, overrides)
 
+### Comportamiento si el summary no existe (paquete 10.B.3)
+
+Si el `summary.jsonl` del dia esperado **no existe** (caso preventivo: AUDIT opera 24/7 y el race condition con catch-up agresivo solo se manifestaria tras un reboot total de la EC2), el blocker hace **skip elegante**:
+
+- imprime a stdout: `Skipped: classifier summary not yet available for YYYY-MM-DD (expected at /var/log/sharemechat-audit-access-classifier/YYYY-MM-DD.summary.jsonl).`
+- sale con codigo 0
+- la unit `sharemechat-audit-access-blocker.service` queda en estado `inactive (dead)`, NO `failed`
+
+El cambio aplica unicamente al path auto-resuelto desde `--date` o desde el default `yesterday`. Si se pasa `--input /ruta/explicita.jsonl` y la ruta no existe, sigue siendo error (uso manual).
+
+Tambien se ha corregido la directiva `After=` de la unit systemd para apuntar a `sharemechat-audit-daily-report.service` (la unidad real que ejecuta el classifier como sub-paso) en lugar de a `sharemechat-audit-access-classifier.service` (que nunca existio como unit independiente).
+
 ## Salida
 
 Ruta operativa en EC2:

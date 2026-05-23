@@ -227,15 +227,24 @@ Cuenta emisora operativa:
 
 - `operations@sharemechat.com`
 
-Alias configurado:
+Destinatario (paquete 10.B.1, plus-addressing por entorno):
 
-- `security+report@sharemechat.com`
+- `security+report-audit@sharemechat.com`
+
+El patron `security+report-<env>@sharemechat.com` se replica en cada entorno:
+
+- AUDIT: `security+report-audit@sharemechat.com`
+- TEST: `security+report-test@sharemechat.com` (ver `ops/test-access/README.md`)
+- PROD (futuro): `security+report-pro@sharemechat.com` cuando se monte
+
+Microsoft 365 enruta cualquier `security+<detail>@sharemechat.com` al buzon `security@sharemechat.com` (sub-addressing RFC 5233 habilitado a nivel tenant; verificado por pre-flight manual del paquete 10.B.1). Permite filtrar en buzon por entorno sin crear aliases adicionales en Exchange Admin Center.
 
 Estado operativo confirmado:
 
 - `SMTP AUTH` habilitado a nivel tenant
 - `Security Defaults` deshabilitado
 - permiso `Send As` configurado correctamente en Exchange Admin Center
+- sub-addressing activo (validado 2026-05-23 con envio real a `security+report-audit@`)
 
 Contenido del email:
 
@@ -246,6 +255,14 @@ Contenido del email:
 - adjuntos:
   - `YYYY-MM-DD.report.txt`
   - `YYYY-MM-DD.report.json`
+
+## Allowlist operativa (paquete 10.B.4)
+
+El classifier admite una lista `ALLOWLIST_IPS` (CSV) o un `ALLOWLIST_FILE` en `/etc/sharemechat-audit-access-classifier/config.env`. Las IPs listadas quedan excluidas del scoring via short-circuit: se clasifican como `NORMAL` con `main_reason=allowlisted_ip` y nunca llegan a CRITICA/MALICIOSA, independientemente de su patron de trafico. El `features` completo se conserva en el `summary.jsonl` para auditoria retrospectiva.
+
+Detalle del comportamiento y motivacion en [ops/audit-access-classifier/README.md](../audit-access-classifier/README.md#allowlist-operativa-paquete-10b4).
+
+El reporter destaca las IPs allowlisted en el body del email con una linea `IPs allowlisted: N - IP1, IP2`. Si la lista esta vacia, esa linea no se emite.
 
 ## Decisiones tecnicas
 

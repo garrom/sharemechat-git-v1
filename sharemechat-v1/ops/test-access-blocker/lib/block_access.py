@@ -246,7 +246,20 @@ def resolve_summary_input(
     day = date_value or (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%d")
     path = Path(classifier_output_root) / f"{day}.summary.jsonl"
     if not path.exists():
-        raise SystemExit(f"Classifier summary not found: {path}")
+        # Paquete 10.B.3: skip elegante en lugar de error. El blocker depende
+        # del summary diario del classifier; si no esta disponible (caso tipico
+        # tras rearrancar TEST con timers en cola por Persistent=true y el
+        # blocker disparando antes que el daily-report), no debe fallar.
+        # Se reporta a stdout (capturado por journald en oneshot services) y
+        # se sale con codigo 0 para que la unit NO quede en estado failed.
+        # La unit volvera a disparar en el siguiente OnCalendar y, si para
+        # entonces el classifier ha generado el summary, procesara normalmente.
+        print(
+            f"Skipped: classifier summary not yet available for {day} "
+            f"(expected at {path}).",
+            flush=True,
+        )
+        sys.exit(0)
     return path, day
 
 

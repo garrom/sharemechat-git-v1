@@ -1,6 +1,15 @@
 [Unit]
 Description=Propose deny list for AUDIT based on classifier summary (DRY-RUN)
-After=network-online.target sharemechat-audit-access-classifier.service
+# El classifier de AUDIT no es una unit independiente: vive como sub-paso
+# dentro de sharemechat-audit-daily-report.service (07:10 UTC). Apuntamos
+# After= a la unit real para que la dependencia ordene correctamente cuando
+# ambas estan encoladas. Patron corregido en paquete 10.B.3 (la referencia
+# anterior a sharemechat-audit-access-classifier.service apuntaba a una unit
+# que nunca existio; systemd ignoraba el After= silenciosamente).
+# Nota: aun corregida la dependencia, el race condition con catch-up agresivo
+# tras un reboot total queda mitigado por el skip elegante del blocker:
+# si el summary del dia esperado no existe, exit 0 con log informativo.
+After=network-online.target sharemechat-audit-daily-report.service
 Wants=network-online.target
 
 [Service]

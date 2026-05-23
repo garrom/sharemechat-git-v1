@@ -1,6 +1,15 @@
 [Unit]
 Description=Propose deny list for TEST based on classifier summary (DRY-RUN)
-After=network-online.target sharemechat-test-access-classifier.service
+# El classifier de TEST no es una unit independiente: vive como sub-paso
+# dentro de sharemechat-test-daily-report.service (07:10 UTC). Apuntamos
+# After= a la unit real para que la dependencia ordene correctamente cuando
+# ambas estan encoladas. Patron corregido en paquete 10.B.3 (la referencia
+# anterior a sharemechat-test-access-classifier.service apuntaba a una unit
+# que nunca existio; systemd ignoraba el After= silenciosamente).
+# Nota: aun corregida la dependencia, el race condition con catch-up agresivo
+# tras rearrancar TEST queda mitigado por el skip elegante del blocker:
+# si el summary del dia esperado no existe, exit 0 con log informativo.
+After=network-online.target sharemechat-test-daily-report.service
 Wants=network-online.target
 
 [Service]

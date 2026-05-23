@@ -368,10 +368,35 @@ def extract_features(group: ActivityGroup, allowlisted: bool) -> FeatureSet:
 
 
 def deterministic_assess(features: FeatureSet) -> Assessment:
+    # Short-circuit por allowlist (paquete 10.B.4): si la IP esta en la lista
+    # operativa (variable ALLOWLIST_IPS del config.env), se la trata como
+    # NORMAL sin aplicar el resto de reglas. Evita que la actividad legitima
+    # del operador (validacion manual del frontend admin, pruebas con muchas
+    # rutas, ratios anomalos de 404/401 durante onboarding, etc.) acabe
+    # marcada como CRITICA y sea propuesta al blocker para Carril A real.
+    # El features completo se conserva en el summary.jsonl para que la
+    # actividad siga siendo auditable; solo el scoring queda neutralizado.
+    if features.allowlisted:
+        matched_rules = [RuleMatch("scoring", "allowlist", 0, "allowlisted_ip")]
+        return Assessment(
+            features=features,
+            score=0,
+            matched_rules=matched_rules,
+            classification=CLASSIFICATION_NORMAL,
+            recommended_action=ACTION_BY_CLASSIFICATION[CLASSIFICATION_NORMAL],
+            main_reason="allowlisted_ip",
+            evidence={
+                "allowlisted": True,
+                "dominant_ua": features.dominant_ua,
+                "requests": features.requests,
+                "distinct_routes": features.distinct_routes,
+                "time_window": {"first_ts": features.first_ts, "last_ts": features.last_ts},
+            },
+        )
+
     score = 0
     matched_rules: List[RuleMatch] = []
     classification_floor = CLASSIFICATION_NORMAL
-    score, matched_rules = apply_allowlist_rule(features, score, matched_rules)
     score, matched_rules, classification_floor = apply_hostile_rules(features, score, matched_rules, classification_floor)
     score, matched_rules = apply_sensitive_rules(features, score, matched_rules)
     score, matched_rules, classification_floor = apply_override_rules(features, score, matched_rules, classification_floor)
@@ -394,13 +419,6 @@ def deterministic_assess(features: FeatureSet) -> Assessment:
         main_reason=main_reason,
         evidence=evidence,
     )
-
-
-def apply_allowlist_rule(features: FeatureSet, score: int, matched_rules: List[RuleMatch]) -> Tuple[int, List[RuleMatch]]:
-    if features.allowlisted:
-        score -= 30
-        matched_rules.append(RuleMatch("scoring", "allowlist", -30, "allowlisted_ip"))
-    return score, matched_rules
 
 
 def apply_hostile_rules(

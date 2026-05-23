@@ -113,12 +113,21 @@ def build_report(day: str, rows: List[dict], classifier_output_root: Path, max_f
     findings.sort(key=finding_sort_key)
     findings = findings[:max_findings]
 
+    # Paquete 10.B.4: visibilidad de IPs allowlisted (operador y similares
+    # excluidos del scoring via ALLOWLIST_IPS del config.env del classifier).
+    allowlisted_ips = sorted({
+        str(row.get("ip") or "")
+        for row in rows
+        if (row.get("features") or {}).get("allowlisted") is True
+    })
+
     table_path = classifier_output_root / f"{day}.table.txt"
     summary_path = classifier_output_root / f"{day}.summary.jsonl"
 
     return {
         "date": day,
         "ips_analyzed": len(rows),
+        "allowlisted_ips": allowlisted_ips,
         "classification_counts": {
             "CRITICA": counts.get("CRITICA", 0),
             "MALICIOSA": counts.get("MALICIOSA", 0),
@@ -157,6 +166,9 @@ def render_text_report(report: dict) -> str:
     lines.append(f"AUDIT access summary - {report['date']}")
     lines.append("")
     lines.append(f"IPs analizadas: {report['ips_analyzed']}")
+    allowlisted = report.get("allowlisted_ips") or []
+    if allowlisted:
+        lines.append(f"IPs allowlisted: {len(allowlisted)} - {', '.join(allowlisted)}")
     lines.append("")
 
     counts = report["classification_counts"]

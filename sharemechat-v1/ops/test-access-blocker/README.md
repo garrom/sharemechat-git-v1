@@ -86,6 +86,19 @@ Del summary se consumen los campos:
 - `evidence.hostile_hits` (IOCs en rutas hostiles)
 - `evidence.matched_rule_labels` (UA scanners, overrides)
 
+### Comportamiento si el summary no existe (paquete 10.B.3)
+
+Si el `summary.jsonl` del dia esperado **no existe** (caso tipico tras rearrancar TEST con timers en cola por `Persistent=true` y el blocker disparando antes que el `daily-report.service` que ejecuta al classifier), el blocker hace **skip elegante**:
+
+- imprime a stdout: `Skipped: classifier summary not yet available for YYYY-MM-DD (expected at /var/log/sharemechat-test-access-classifier/YYYY-MM-DD.summary.jsonl).`
+- sale con codigo 0
+- la unit `sharemechat-test-access-blocker.service` queda en estado `inactive (dead)`, NO `failed`
+- al siguiente disparo natural del timer (o al ejecutar manualmente con `--date <dia-con-summary>`), procesa normalmente
+
+El skip aplica unicamente al path auto-resuelto desde `--date` o desde el default `yesterday`. Si se pasa `--input /ruta/explicita.jsonl` y la ruta no existe, sigue siendo error (`raise SystemExit`): es uso manual y el operador debe saber que esta apuntando a un fichero inexistente.
+
+Tambien se ha corregido la directiva `After=` de la unit systemd para apuntar a `sharemechat-test-daily-report.service` (la unidad real que ejecuta el classifier como sub-paso) en lugar de a `sharemechat-test-access-classifier.service` (que nunca existio como unit independiente; systemd ignoraba la dependencia silenciosamente).
+
 ## Salida
 
 Ruta operativa en EC2 TEST:

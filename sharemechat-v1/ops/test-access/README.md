@@ -189,6 +189,67 @@ Estado operativo en EC2 TEST:
 - timer del blocker `sharemechat-test-access-blocker.timer` activo a `05:45 UTC` (no solapa con el timer de AUDIT a `05:30 UTC`)
 - todas las units son oneshot con dependencia logica del artefacto previo del pipeline
 
+## Envio por email
+
+Activado por el paquete 10.B.1 (2026-05-23). Antes de ese paquete el pipeline TEST generaba `report.txt` y `report.json` en `/var/log/sharemechat-test-access-reporter/` pero el `daily-report.service` invocaba al reporter sin `--send-email` y el `config.env` tenia las claves SMTP/EMAIL vacias. El paquete 10.B.1 cerro ambos gaps usando el mismo tenant Microsoft 365 que AUDIT.
+
+Canal actual:
+
+- SMTP via Microsoft 365
+
+Cuenta emisora operativa (compartida con AUDIT):
+
+- `operations@sharemechat.com`
+
+Destinatario (plus-addressing por entorno):
+
+- `security+report-test@sharemechat.com`
+
+Microsoft 365 enruta cualquier `security+<detail>@sharemechat.com` al buzon `security@sharemechat.com` via sub-addressing RFC 5233. El sufijo `-test` permite filtrar en buzon por entorno sin alias adicional en Exchange Admin Center.
+
+Estado operativo confirmado:
+
+- `SMTP AUTH` habilitado a nivel tenant
+- `Security Defaults` deshabilitado
+- permiso `Send As` configurado correctamente en Exchange Admin Center
+- sub-addressing activo (validado 2026-05-23 con envio real a `security+report-test@`)
+
+Contenido del email:
+
+- subject:
+  - `TEST access summary - YYYY-MM-DD`
+- body:
+  - contenido literal de `YYYY-MM-DD.report.txt`
+- adjuntos:
+  - `YYYY-MM-DD.report.txt`
+  - `YYYY-MM-DD.report.json`
+
+Intermitencia esperada: TEST se enciende y apaga manualmente. Si la EC2 esta apagada a la hora del timer (07:10 UTC), no se envia email ese dia. Al rearrancar TEST, `Persistent=true` en el timer dispara una sola ejecucion catch-up (no N ejecuciones acumuladas, solo la mas reciente). Comportamiento natural y aceptable; no requiere logica adicional.
+
+El cuerpo del email TEST incluye una linea explicita inmediatamente bajo el header indicando el modo DRY-RUN del blocker (paquete 10.B.2, 2026-05-23). Formato:
+
+```
+TEST access summary - YYYY-MM-DD
+Modo: DRY-RUN (advisory; nginx NO se modifica)
+
+IPs analizadas: N
+...
+```
+
+Esta linea es **hardcoded** en `ops/test-access-reporter/lib/report_access.py` (no se lee del config del blocker en runtime). Razon: el cambio del blocker TEST de `DRY_RUN=1` a `DRY_RUN=0` requiere un checklist de 4 pasos documentado en `ops/test-access-blocker/config/config.env.example` (validar DRY-RUN 14+ dias, consolidar allowlist, preparar fichero nginx, ejecucion manual previa). Cuando llegue ese momento, el operador eliminara la linea como parte del cambio coordinado.
+
+El reporter de AUDIT, en Carril A real, NO lleva esta linea.
+
+## Allowlist operativa (paquete 10.B.4)
+
+El classifier admite una lista `ALLOWLIST_IPS` (CSV) o un `ALLOWLIST_FILE` en `/etc/sharemechat-test-access-classifier/config.env`. Las IPs listadas quedan excluidas del scoring via short-circuit: se clasifican como `NORMAL` con `main_reason=allowlisted_ip` y nunca llegan a CRITICA/MALICIOSA, independientemente de su patron de trafico. El `features` completo se conserva en el `summary.jsonl` para auditoria retrospectiva.
+
+Detalle del comportamiento y motivacion en [ops/test-access-classifier/README.md](../test-access-classifier/README.md#allowlist-operativa-paquete-10b4).
+
+El reporter destaca las IPs allowlisted en el body del email con una linea `IPs allowlisted: N - IP1, IP2`. Si la lista esta vacia, esa linea no se emite.
+
+Motivacion concreta: el primer email enviado por el pipeline TEST (paquete 10.B.1) clasifico la IP del operador (`90.175.201.51`) como CRITICA con score 105 por validacion manual intensiva del refactor brief-per-locale. Aunque el blocker TEST esta en DRY-RUN (no bloquea trafico real), la siguiente vez que el operador hiciera validacion en AUDIT (Carril A real) habria quedado bloqueado de su propio entorno. La allowlist evita ese self-block.
+
 ## Diferencias frente a AUDIT
 
 - solo cambian nombres, paths, hostnames, units y ventana horaria del timer del blocker
