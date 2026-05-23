@@ -53,7 +53,7 @@ Todos los buckets están en `eu-central-1`. `content_private` y `storage` no se 
 - `sharemechat-test-access-normalizer.service` — inactive
 - `sharemechat-test-daily-report.service` — inactive
 
-El JAR del backend (`sharemechat-v1-0.0.1-SNAPSHOT.jar`) está corriendo como proceso `java -jar` arrancado a mano (no como unidad systemd). nginx proxyea `/api/`, `/match`, `/messages`, `/sitemap.xml` y `/robots.txt` a `http://localhost:8080`; cualquier otra ruta retorna `404` directamente desde nginx. `client_max_body_size` configurado a `60M`.
+El JAR del backend (`sharemechat-v1-0.0.1-SNAPSHOT.jar`) está corriendo como proceso `java -jar` arrancado a mano (no como unidad systemd). El comando canónico de arranque tras un reboot o un reemplazo de JAR es `nohup java -jar /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar --spring.profiles.active=test > /home/ec2-user/sharemechat-v1/backend.log 2>&1 &`, ejecutado desde una sesión SSH con `/opt/sharemechat/.env` previamente sourceado (`set -a; . /opt/sharemechat/.env; set +a`) para que Spring resuelva `${DB_PASSWORD}` y demás. El perfil `test` se pasa como flag de línea de comando porque el `.env` no incluye `SPRING_PROFILES_ACTIVE`. nginx proxyea `/api/`, `/match`, `/messages`, `/sitemap.xml` y `/robots.txt` a `http://localhost:8080`; cualquier otra ruta retorna `404` directamente desde nginx. `client_max_body_size` configurado a `60M`.
 
 ### Notas de topología
 
@@ -206,6 +206,7 @@ Backend:
 - tablas operativas (modelo bilingüe post-[ADR-025](../06-decisions/adr-025-flyway-introduction-and-cms-v2-schema.md)): `content_articles`, `content_article_translations`, `content_article_versions`, `content_article_translation_versions`, `content_review_events`, `content_generation_runs`
 - migraciones de schema CMS:
   - schema vivo en `src/main/resources/db/migration/V2__cms_v2_schema.sql` tras [ADR-025](../06-decisions/adr-025-flyway-introduction-and-cms-v2-schema.md), aplicado por Flyway una vez ejecutado el baseline manual (ver [runbook](../04-operations/runbooks/cms-v2-flyway-introduction.md))
+  - `V3__brief_per_locale.sql` aplicada en TEST el 2026-05-23 09:11 UTC ([ADR-027](../06-decisions/adr-027-brief-per-locale.md), paquete 10.A.11 fase 1): reubica el campo `brief` de `content_articles` a `content_article_translations` con backfill al locale ES. La columna `content_articles.brief` queda eliminada y `content_article_translations.brief TEXT NULL` queda añadida tras `meta_description`. La aplicación a AUDIT queda para sesión aparte
   - ficheros pre-Flyway archivados en `docs/_archive/db-manual-pre-flyway/` (`V20260501__content_phase1_schema.sql` schema inicial y `V20260508__content_workflow_simplification.sql` [ADR-016](../06-decisions/adr-016-content-workflow-simplification-and-retraction.md) simplificación a cuatro estados). Estos ficheros **no se aplican** sobre ningún entorno actual; son referencia histórica
 - dependencias Maven añadidas en Fase 4A: `flexmark-all` (Markdown→HTML) + `jsoup` (sanitización allowlist). [ADR-025](../06-decisions/adr-025-flyway-introduction-and-cms-v2-schema.md) añade `flyway-core` y `flyway-mysql` para gestión de schema versionada
 

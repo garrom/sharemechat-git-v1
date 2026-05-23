@@ -12,12 +12,17 @@
 //
 // El componente sigue calculando internamente los 10 invariantes tecnicos
 // del backend (hero, body ES, body EN, title ES, title EN, seo_title ES,
-// seo_title EN, meta_description ES, meta_description EN, brief) y los
+// seo_title EN, meta_description ES, meta_description EN, brief ES) y los
 // expone al padre via `onChecklistChange(allChecksPassed: boolean)`. La
 // diferencia con el paquete 7 es que esos 10 ya NO se pintan en pantalla;
 // solo aparecen como warning en el paso 4 si faltan ("red de seguridad"
 // para el operador: el flujo editorial dice 'ya puedes enviar' pero el
 // backend exige que esos 10 campos esten presentes).
+//
+// ADR-027 (10.A.10): brief paso de ser compartido del articulo a ser
+// per-locale en la translation. El invariante `briefEs` exige
+// `trEs.brief` no vacio. EN puede pasar a IN_REVIEW sin brief (lo dice
+// `assertReadyForReview` en backend); no hay invariante `briefEn`.
 //
 // Casos terminales:
 //   - article.state === 'PUBLISHED' con flujo completo: mensaje verde de
@@ -80,8 +85,8 @@ const computeInvariants = (article, t) => {
   return [
     { key: 'hero', label: t('checklist.hero', 'Hero image configurada'),
       ok: isNonEmpty(article.heroImageUrl) },
-    { key: 'brief', label: t('checklist.brief', 'Brief presente'),
-      ok: isNonEmpty(article.brief) },
+    { key: 'briefEs', label: t('checklist.briefEs', 'Brief ES presente'),
+      ok: !!trEs && isNonEmpty(trEs.brief) },
     { key: 'bodyEs', label: t('checklist.bodyEs', 'Cuerpo ES presente'),
       ok: !!trEs && isNonEmpty(trEs.bodyS3Key) },
     { key: 'bodyEn', label: t('checklist.bodyEn', 'Cuerpo EN presente'),

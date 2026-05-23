@@ -1,0 +1,160 @@
+metadata:
+  schema_version: 2
+  environment: test
+  generated_at: "2026-05-23T09:25:00Z"
+  generated_by: manual@10.A.11-phase1
+  notes: |
+    Snapshot manual (no producido por skill state-inventory) tras cierre del
+    paquete 10.A.11 fase 1: despliegue del frente brief-per-locale a TEST.
+
+    Cobertura: solo los dominios que cambiaron en esta sesion (BD schema,
+    JAR del backend, bundle del frontend, estado de Flyway). Los demas
+    dominios (CloudFront distributions, S3 buckets, EC2 metadata) se asumen
+    estables respecto al snapshot anterior `state-test-2026-05-13-1528.yaml`
+    salvo lo apuntado aqui.
+
+    Sanitizado: no incluye hostnames RDS, ARNs, IDs CloudFront, ni IPs
+    publicas. Esos viven en `~/.sharemechat/state-mapping.yaml` del operador
+    y en snapshots producidos por la skill state-inventory.
+
+repo:
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    sha256: a840bec7723428ca3cf57b59b2380e4ece306a4aa795f273d348b4c07faba094
+    size_bytes: 106058409
+    local_build_date: "2026-05-23 (timezone CET)"
+  frontend_bundle:
+    main_hash: main.04724b8b.js
+    admin_chunk_hash: 863.fb6b0ec7.chunk.js
+    surface: product
+    deployed_to: s3://sharemechat-frontend-test/
+  schema_versioning:
+    flyway_runtime_present: true
+    migrations_applied_in_db:
+      - version: 1
+        description: "<< Flyway Baseline >>"
+        type: BASELINE
+        success: true
+        installed_on: "2026-05-16 20:32:18"
+      - version: 2
+        description: "cms v2 schema"
+        type: SQL
+        success: true
+        installed_on: "2026-05-16 20:32:19"
+      - version: 3
+        description: "brief per locale"
+        type: SQL
+        success: true
+        installed_on: "2026-05-23 09:11:35"
+        execution_time_seconds: 0.14
+        adr_reference: ADR-027
+
+rds:
+  flyway_schema_history:
+    version_current: 3
+    rows: 3
+    latest_migration_description: "brief per locale"
+  content_articles:
+    has_brief_column: false
+    note: "Columna brief eliminada por V3 (ADR-027). Datos ES backfilled a content_article_translations."
+  content_article_translations:
+    has_brief_column: true
+    brief_position: "after meta_description"
+    brief_nullable: true
+    populated_es_rows: 2
+    populated_en_rows_post_v3: 1
+    note: |
+      Post-V3 backfill, los 2 rows ES heredaron el brief del padre. Los EN
+      quedan NULL hasta nuevo run del pipeline 10.A.9. El 2026-05-23 10:25 el
+      operador ejecuto un run editorial real y el adapter persistio brief EN
+      en una translation nueva (tr_id=6, 266 chars en ingles).
+
+ec2_backend:
+  hostname_internal: "ip-172-31-29-117.eu-central-1.compute.internal"
+  jar_running:
+    path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+    sha256: a840bec7723428ca3cf57b59b2380e4ece306a4aa795f273d348b4c07faba094
+    pid: 3032
+    started_at: "2026-05-23T09:11:57.883Z"
+    bootstrap_duration_seconds: 30.67
+    spring_profile: test
+    launched_via: "nohup java -jar ... --spring.profiles.active=test"
+  jar_backup:
+    path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A11
+    size_bytes: 106056697
+    note: "JAR pre-refactor 10.A.5/10.A.6/10.A.7. Conservado para rollback."
+  systemd_present_for_app: false
+  startup_pattern: "manual via SSH; backend.log en /home/ec2-user/sharemechat-v1/"
+
+s3:
+  backups:
+    pre_change_backup:
+      key: test/test-backup-pre-10A11-2026-05-23-0902.sql.gz
+      bucket: sharemechat-backups
+      size_bytes: 683481
+      sha256: a7e77b2e85cba75c2a0f5cf01d1db9976ab75ea6b5fae5025599e2355ad5d2cb
+      created_at: "2026-05-23T09:03:19Z"
+  frontend:
+    bucket: sharemechat-frontend-test
+    main_js_deployed: main.04724b8b.js
+    admin_chunk_deployed: 863.fb6b0ec7.chunk.js
+
+cloudfront:
+  invalidation_applied:
+    distribution_alias: frontend_public
+    distribution_id: E2Q4VNDDWD5QBU
+    invalidation_id: I48RBXIIW8TB4G1ZVDI3IIR6F2
+    paths: ["/*"]
+    completed_at: "2026-05-23T~09:11Z"
+
+editorial_validation:
+  pipeline_run_end_to_end:
+    article_id: 3
+    state: PUBLISHED
+    run_id: 4
+    run_status: VALIDATED
+    run_created_at: "2026-05-23 10:25:08"
+    translation_es:
+      tr_id: 5
+      slug: elegir-videochat-seguro
+      brief_length_chars: 284
+    translation_en:
+      tr_id: 6
+      slug: how-to-choose-safe-video-chat
+      brief_length_chars: 266
+      brief_language: english
+    confirms:
+      - "cms-translate-en emite brief en bloque metadata final como SUGGESTED_BRIEF_EN"
+      - "cms-json-builder coloca locales.{es,en}.brief en el JSON 2.0"
+      - "ManualClipboardClaudeAdapter acepta el JSON validando brief en LOCALE_REQUIRED_FIELDS"
+      - "ContentRunService.applyTranslationFromJson persiste el brief en content_article_translations"
+
+known_debt_local_to_session:
+  - id: iam-test-backups-write
+    description: |
+      El role IAM sharemechat-ec2-test-role no tiene s3:PutObject sobre
+      sharemechat-backups. AUDIT si la tiene (desde 10.A.1). En esta sesion
+      se hizo el upload del backup BD via scp + credenciales de usuario IAM
+      del operador. Si surge necesidad de subidas frecuentes desde TEST,
+      replicar la policy de AUDIT.
+    severity: low
+    not_blocking: true
+
+state_unchanged_since_previous_snapshot:
+  reference_snapshot: state-test-2026-05-13-1528.yaml
+  dominions_assumed_stable:
+    - cloudfront distributions (4)
+    - S3 buckets (excepto frontend y backups arriba)
+    - EC2 EBS volumes
+    - nginx config
+    - RDS instance config (solo el schema cambio, no la instancia)
+    - systemd units no-backend (redis6, blocker, classifier, normalizer)
+
+next_steps:
+  - paquete: 10.A.11 fase 2
+    description: "Despliegue brief-per-locale a AUDIT (sesion aparte tras validacion operativa de TEST)"
+    prerequisitos:
+      - "Backup BD AUDIT"
+      - "Pagina de mantenimiento `MaintenanceProvider` activa durante la ventana"
+      - "ventana esperada ~30-40 s neta porque AUDIT usa systemd"

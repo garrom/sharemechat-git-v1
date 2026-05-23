@@ -29,8 +29,12 @@ import java.util.regex.Pattern;
  *   {
  *     schema_version, run_type,
  *     shared: { category, keywords?, sources_used, self_check_passed, ... },
- *     locales: { es: {...}, en: {...} }
+ *     locales: { es: {... brief ...}, en: {... brief ...} }
  *   }
+ *
+ * Post-ADR-027: brief vive dentro de cada locale, NO en shared. Si llega
+ * shared.brief el adaptador lo rechaza con mensaje de schema obsoleto
+ * (defensa frente a runs IA generados con skills pre-10.A.9).
  *
  * Solo el run_type FULL_ARTICLE_ORCHESTRATED es operativo en paquete 2.
  * Los run_type discretos (RESEARCH/OUTLINE/DRAFT/REVIEW/SEO) salen de la
@@ -67,6 +71,7 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
     private static final int TITLE_MAX = 255;
     private static final int SEO_TITLE_MAX = 60;
     private static final int META_DESCRIPTION_MAX = 160;
+    private static final int BRIEF_MAX = 8192;
 
     /** Whitelist de model_id que el editor puede declarar al pegar output. */
     private static final Set<String> ALLOWED_MODEL_PREFIXES = Set.of(
@@ -87,12 +92,13 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
             "sources_used",
             "self_check_passed");
 
-    /** Campos obligatorios bajo cada `locales.<lang>`. */
+    /** Campos obligatorios bajo cada `locales.<lang>` (brief incorporado por ADR-027). */
     private static final List<String> LOCALE_REQUIRED_FIELDS = List.of(
             "slug",
             "title",
             "seo_title",
             "meta_description",
+            "brief",
             "draft_markdown",
             "search_intent",
             "target_keywords",
@@ -279,6 +285,12 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
         if (failures != null && !failures.isNull() && !failures.isArray()) {
             errors.add(new ValidationErrorDTO("shared.self_check_failures", "debe ser array"));
         }
+
+        // ADR-027: brief es per-locale. Rechazar si llega bajo shared (schema obsoleto).
+        if (shared.has("brief")) {
+            errors.add(new ValidationErrorDTO("shared.brief",
+                    "schema obsoleto: brief es per-locale por ADR-027; muevelo a locales.{es,en}.brief"));
+        }
     }
 
     private void validateSourceEntry(JsonNode src, int index, List<ValidationErrorDTO> errors) {
@@ -420,6 +432,19 @@ public class ManualClipboardClaudeAdapter implements ContentAIProvider {
                 errors.add(new ValidationErrorDTO(pathBase + ".meta_description",
                         "excede " + META_DESCRIPTION_MAX + " caracteres ("
                                 + metaDesc.asText().length() + ")"));
+            }
+        }
+
+        // brief <= 8192 (ADR-027: per-locale)
+        JsonNode brief = loc.get("brief");
+        if (brief != null && !brief.isNull()) {
+            if (!brief.isTextual() || brief.asText().isBlank()) {
+                errors.add(new ValidationErrorDTO(pathBase + ".brief",
+                        "brief requerido no vacio"));
+            } else if (brief.asText().length() > BRIEF_MAX) {
+                errors.add(new ValidationErrorDTO(pathBase + ".brief",
+                        "excede " + BRIEF_MAX + " caracteres ("
+                                + brief.asText().length() + ")"));
             }
         }
 

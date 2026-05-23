@@ -10,7 +10,7 @@ import java.util.List;
  * locale del articulo se sirve. Los campos linguisticos (slug, title, brief,
  * seoTitle, metaDescription, htmlBody) son los de ESE locale; los compartidos
  * (heroImageUrl, category, keywords, fechas, aiAssisted, disclosureRequired,
- * id) son del articulo logico.
+ * id) son del articulo logico. Brief reubicado a per-locale por ADR-027.
  *
  * htmlBody ya viene renderizado y sanitizado por MarkdownRendererService.
  * El frontend lo inyecta con dangerouslySetInnerHTML; backend garantiza

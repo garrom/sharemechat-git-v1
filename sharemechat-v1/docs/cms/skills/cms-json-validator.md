@@ -45,7 +45,7 @@ Al diagnosticar errores de parseo, empieza inspeccionando los campos donde más 
 - locales.{es,en}.title
 - locales.{es,en}.seo_title
 - locales.{es,en}.meta_description
-- shared.brief (si está presente)
+- locales.{es,en}.brief (ADR-027: campo per-locale, descriptivo 1-2 frases; énfasis estilísticos posibles)
 - shared.sources_used[].relevance
 - shared.sources_used[].key_points[]
 - locales.{es,en}.competitor_insights[].what_they_cover

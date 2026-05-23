@@ -104,7 +104,7 @@ public class ContentRunService {
                 article.getId(),
                 esTranslation.getSlug(),
                 esTranslation.getTitle(),
-                article.getBrief(),
+                esTranslation.getBrief(),
                 article.getCategory(),
                 article.getKeywords(),
                 article.getHeroImageUrl(),
@@ -394,6 +394,8 @@ public class ContentRunService {
         if (title != null) tr.setTitle(title);
         tr.setSeoTitle(textOrNull(loc, "seo_title"));
         tr.setMetaDescription(textOrNull(loc, "meta_description"));
+        // ADR-027: brief per-locale. El adapter ya valido presencia/longitud (LOCALE_REQUIRED_FIELDS).
+        tr.setBrief(textOrNull(loc, "brief"));
         tr.setBodyS3Key(bodyResult.s3Key());
         tr.setBodyContentHash(bodyResult.contentHash());
         JsonNode targetKeywords = loc.get("target_keywords");

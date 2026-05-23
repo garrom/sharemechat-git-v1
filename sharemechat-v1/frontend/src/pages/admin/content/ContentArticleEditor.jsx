@@ -1,15 +1,21 @@
 // src/pages/admin/content/ContentArticleEditor.jsx
 //
-// Editor del articulo logico bilingue (paquete 6, ADR-025).
+// Editor del articulo logico bilingue (paquete 6, ADR-025; brief reubicado
+// per ADR-027 en 10.A.10).
 //
 // Cambios respecto al modelo viejo (paquete 0):
 //
 //  Metadata compartida (top del editor):
 //   - Eliminados los campos "Título" y "Locale". El titulo es per-locale;
 //     el locale del articulo se hardcodea a "es" al crear.
-//   - Conservados: heroImageUrl, category, keywords, brief,
-//     responsibleEditorUserId.
-//   - PATCH /api/admin/content/articles/{id} con esos 5 campos compartidos.
+//   - Conservados: heroImageUrl, category, keywords, responsibleEditorUserId.
+//   - `brief` ya NO vive aqui (per ADR-027 ahora es per-locale). Se edita
+//     en cada tab de BodyLocaleTabs como parte del PATCH /translations/{locale}.
+//   - Al crear el articulo, `brief` viaja en el payload de creacion
+//     (ArticleCreateRequest sigue aceptandolo en root) y el servicio
+//     lo escribe en la translation ES.
+//   - PATCH /api/admin/content/articles/{id} con los 4 campos compartidos
+//     restantes (sin brief).
 //
 //  Contenido por idioma (BodyLocaleTabs):
 //   - Selector ES|EN encima del editor del body.
@@ -140,17 +146,24 @@ const buildTransitionsConfig = (t) => ({
 // usuarios backoffice via /api/admin/users, no input numerico libre.
 const initialSharedMeta = {
   category: '',
-  brief: '',
   keywords: '',
   heroImageUrl: '',
 };
 
+// brief inicial (ADR-027): se persiste en la translation ES recien creada.
+// Para crear se pasa en root del POST; ArticleCreateRequest lo sigue
+// aceptando alli y el servicio lo escribe en la translation.
 const initialCreateMeta = {
   slug: '',
   title: '',
+  brief: '',
 };
 
-const emptySeoDraft = { title: '', slug: '', seoTitle: '', metaDescription: '' };
+const emptySeoDraft = {
+  title: '', slug: '', seoTitle: '', metaDescription: '', brief: '',
+};
+
+const BRIEF_MAX = 8192;
 
 const ContentArticleEditor = ({ articleId, onBack }) => {
   const { t } = useTranslation('cms');
@@ -246,7 +259,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     setState(dto.state || 'DRAFT');
     setSharedMeta({
       category: dto.category || '',
-      brief: dto.brief || '',
       keywords: dto.keywords || '',
       heroImageUrl: dto.heroImageUrl || '',
     });
@@ -273,7 +285,9 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     setBodyDirty(false);
     setBodyMissing(false);
 
-    // Rellenar el draft SEO desde la translation activa (si existe).
+    // Rellenar el draft SEO desde la translation activa (si existe). Incluye
+    // brief desde ADR-027 (10.A.10): es un campo per-locale mas dentro del
+    // bloque editable de cada traduccion.
     const tr = findTranslation(art, locale);
     if (tr) {
       setSeoDraft({
@@ -281,6 +295,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         slug: tr.slug || '',
         seoTitle: tr.seoTitle || '',
         metaDescription: tr.metaDescription || '',
+        brief: tr.brief || '',
       });
       setSeoDirty(false);
     } else {
@@ -361,7 +376,9 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           // rechaza con 400 cualquier otro valor en createArticle.
           locale: 'es',
           title: createMeta.title,
-          brief: sharedMeta.brief || null,
+          // ADR-027: brief viaja en el payload de creacion y el servicio lo
+          // escribe en la translation ES (no en el articulo padre).
+          brief: createMeta.brief || null,
           category: sharedMeta.category || null,
           keywords: sharedMeta.keywords || null,
           heroImageUrl: sharedMeta.heroImageUrl || null,
@@ -390,7 +407,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          brief: sharedMeta.brief,
           category: sharedMeta.category,
           keywords: sharedMeta.keywords,
           heroImageUrl: sharedMeta.heroImageUrl,
@@ -415,7 +431,8 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     setOkMessage('');
     try {
       // Solo enviamos los campos que difieren del valor actual; el resto
-      // null. El backend ignora null = no cambiar.
+      // null. El backend ignora null = no cambiar. Brief incluido aqui per
+      // ADR-027 (TranslationMetadataUpdateRequest acepta brief desde 10.A.8).
       const tr = findTranslation(article, activeBodyLocale);
       const payload = {};
       if ((seoDraft.title || '') !== (tr?.title || '')) payload.title = seoDraft.title || null;
@@ -423,6 +440,9 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       if ((seoDraft.seoTitle || '') !== (tr?.seoTitle || '')) payload.seoTitle = seoDraft.seoTitle || null;
       if ((seoDraft.metaDescription || '') !== (tr?.metaDescription || '')) {
         payload.metaDescription = seoDraft.metaDescription || null;
+      }
+      if ((seoDraft.brief || '') !== (tr?.brief || '')) {
+        payload.brief = seoDraft.brief || null;
       }
       const result = await apiFetch(
         `/admin/content/articles/${currentId}/translations/${activeBodyLocale}`,
@@ -737,8 +757,10 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       <MetaCard>
         <h3 style={{ margin: '0 0 12px 0' }}>{t('editor.metadataTitle', 'Metadata compartida')}</h3>
 
-        {/* Campos solo de creacion (slug ES + title ES iniciales). Ocultos
-            tras crear el articulo. */}
+        {/* Campos solo de creacion: slug ES + title ES + brief ES iniciales.
+            ADR-027: brief es un campo per-locale, asi que al crear vive con
+            el resto de campos del locale primario, no en la metadata
+            compartida. Ocultos tras crear el articulo. */}
         {canSubmitCreate ? (
           <>
             <EditorRow $cols={2}>
@@ -759,6 +781,31 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
                   onChange={(e) => updateCreate('title', e.target.value)}
                   placeholder={t('editor.fieldInitialTitlePlaceholder', 'Título del artículo en español')}
                 />
+              </div>
+            </EditorRow>
+            <EditorRow $cols={1}>
+              <div>
+                <LabelText>
+                  {t('editor.fieldInitialBrief', 'Brief inicial (ES)')}
+                  <span style={{ color: '#b91c1c', marginLeft: 4 }}>*</span>
+                </LabelText>
+                <BriefArea
+                  rows={4}
+                  value={createMeta.brief}
+                  onChange={(e) => updateCreate('brief', e.target.value)}
+                  placeholder={t('editor.fieldInitialBriefPlaceholder',
+                    'Texto descriptivo de 1-2 frases visible en cards del blog y cabecera del detalle')}
+                />
+                <HelperText style={{
+                  color: createMeta.brief.length > BRIEF_MAX
+                    ? '#b91c1c'
+                    : createMeta.brief.length >= 8000
+                      ? '#b45309'
+                      : '#64748b',
+                }}>
+                  {t('editor.lengthCounter', '{{used}}/{{max}} caracteres',
+                    { used: createMeta.brief.length, max: BRIEF_MAX })}
+                </HelperText>
               </div>
             </EditorRow>
             <HelperText>
@@ -793,19 +840,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
 
         <EditorRow $cols={1}>
           <div>
-            <LabelText>{t('editor.fieldBrief', 'Brief')}</LabelText>
-            <BriefArea
-              rows={4}
-              value={sharedMeta.brief}
-              disabled={fieldsLocked}
-              onChange={(e) => updateShared('brief', e.target.value)}
-              placeholder={t('editor.fieldBriefPlaceholder', 'Resumen interno del artículo')}
-            />
-          </div>
-        </EditorRow>
-
-        <EditorRow $cols={1}>
-          <div>
             <LabelText>{t('editor.fieldHero', 'Hero image URL')}</LabelText>
             <StyledInput
               type="url"
@@ -828,7 +862,23 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
 
         <ToolbarRow>
           {canSubmitCreate ? (
-            <StyledButton type="button" onClick={handleCreate} disabled={savingMeta}>
+            <StyledButton
+              type="button"
+              onClick={handleCreate}
+              disabled={
+                savingMeta
+                || !createMeta.slug.trim()
+                || !createMeta.title.trim()
+                || !createMeta.brief.trim()
+                || createMeta.brief.length > BRIEF_MAX
+              }
+              title={
+                !createMeta.brief.trim()
+                  ? t('editor.briefRequired',
+                      'El brief en ES es obligatorio para enviar a revisión.')
+                  : undefined
+              }
+            >
               {savingMeta
                 ? t('editor.btnCreating', 'Creando...')
                 : t('editor.btnCreate', 'Crear artículo')}

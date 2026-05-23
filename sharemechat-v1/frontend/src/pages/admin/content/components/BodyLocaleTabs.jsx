@@ -45,16 +45,24 @@ import {
   ToolbarRow,
 } from '../../../../styles/pages-styles/AdminContentStyles';
 
-// Limites UI-side (replican backend, paquetes 2 + 6.5):
+// Limites UI-side (replican backend, paquetes 2 + 6.5 + ADR-027):
 //   TITLE_MAX = 255, SLUG_MAX = 160, SEO_TITLE_MAX = 60,
-//   META_DESCRIPTION_MAX = 160. Si el operador excede, mostramos warning
-//   inline; el PATCH del backend es el rechazo definitivo.
+//   META_DESCRIPTION_MAX = 160, BRIEF_MAX = 8192. Si el operador excede,
+//   mostramos warning inline y deshabilitamos "Guardar SEO"; el PATCH del
+//   backend es el rechazo definitivo.
 const LIMITS = {
   title: 255,
   slug: 160,
   seoTitle: 60,
   metaDescription: 160,
+  brief: 8192,
 };
+// ADR-027: brief obligatorio en locale primario ES; opcional en EN.
+const BRIEF_REQUIRED_LOCALE = 'es';
+// Umbral visual de aviso: a partir de aqui el contador del brief cambia
+// a color de warning aunque siga por debajo del maximo. Coherente con el
+// patron usado por el operador para tener margen visible antes del corte.
+const BRIEF_WARN_THRESHOLD = 8000;
 const SLUG_REGEX = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const BODY_MAX_BYTES_HINT = 204800;
 
@@ -222,6 +230,12 @@ const BodyLocaleTabs = ({
   const slugWarn = lengthWarn(draft.slug, LIMITS.slug);
   const seoTitleWarn = lengthWarn(draft.seoTitle, LIMITS.seoTitle);
   const metaDescWarn = lengthWarn(draft.metaDescription, LIMITS.metaDescription);
+  const briefWarn = lengthWarn(draft.brief, LIMITS.brief);
+  const briefRequired = activeLocale === BRIEF_REQUIRED_LOCALE;
+  const briefEmpty = !(draft.brief && draft.brief.trim().length > 0);
+  const briefMissingRequired = briefRequired && briefEmpty;
+  const briefWarnZone = !briefWarn.exceeded
+    && briefWarn.used >= BRIEF_WARN_THRESHOLD;
   const slugFormatInvalid = draft.slug
     ? !SLUG_REGEX.test(draft.slug.trim())
     : false;
@@ -304,6 +318,47 @@ const BodyLocaleTabs = ({
           </HelperText>
         </div>
 
+        {/* Brief per-locale (ADR-027). ES obligatorio para enviar a revision;
+            EN opcional. */}
+        <div style={{ marginTop: 12 }}>
+          <LabelText>
+            {t('editor.fieldBrief', 'Brief')}
+            {briefRequired ? (
+              <span style={{ color: '#b91c1c', marginLeft: 4 }}>*</span>
+            ) : null}
+          </LabelText>
+          <BriefArea
+            rows={4}
+            value={draft.brief || ''}
+            disabled={disabled}
+            onChange={(e) => handleSeoField('brief', e.target.value)}
+            placeholder={t('editor.fieldBriefPlaceholder',
+              'Texto descriptivo de 1-2 frases visible en cards del blog y cabecera del detalle')}
+          />
+          <HelperText style={{
+            color: briefWarn.exceeded || briefMissingRequired
+              ? '#b91c1c'
+              : briefWarnZone
+                ? '#b45309'
+                : '#64748b',
+          }}>
+            {briefMissingRequired
+              ? t('editor.briefRequired',
+                  'El brief en ES es obligatorio para enviar a revisión.')
+              : t('editor.lengthCounter', '{{used}}/{{max}} caracteres',
+                  { used: briefWarn.used, max: briefWarn.max })}
+          </HelperText>
+          {!briefMissingRequired ? (
+            <HelperText style={{ color: '#64748b' }}>
+              {briefRequired
+                ? t('editor.briefHelperEs',
+                    'Visible en cards del listado público y cabecera del detalle. Obligatorio en ES.')
+                : t('editor.briefHelperEn',
+                    'Visible en cards del listado público y cabecera del detalle. Opcional en EN; el pipeline IA lo genera al traducir.')}
+            </HelperText>
+          ) : null}
+        </div>
+
         {seoError ? <StyledError style={{ marginTop: 8 }}>{seoError}</StyledError> : null}
 
         <ToolbarRow>
@@ -313,6 +368,7 @@ const BodyLocaleTabs = ({
             disabled={savingSeo || disabled
               || titleWarn.exceeded || slugWarn.exceeded
               || seoTitleWarn.exceeded || metaDescWarn.exceeded
+              || briefWarn.exceeded || briefMissingRequired
               || slugFormatInvalid}
           >
             {savingSeo

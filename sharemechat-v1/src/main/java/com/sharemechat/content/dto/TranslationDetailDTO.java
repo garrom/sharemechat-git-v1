@@ -3,7 +3,7 @@ package com.sharemechat.content.dto;
 import java.time.Instant;
 
 /**
- * Detalle per-locale de una traduccion del articulo (ADR-025).
+ * Detalle per-locale de una traduccion del articulo (ADR-025, brief incorporado por ADR-027).
  * Subobjeto dentro de ArticleDetailDTO.translations.
  */
 public record TranslationDetailDTO(
@@ -13,6 +13,7 @@ public record TranslationDetailDTO(
         String title,
         String seoTitle,
         String metaDescription,
+        String brief,
         String bodyS3Key,
         String bodyContentHash,
         String targetKeywords,

@@ -45,13 +45,13 @@ public interface ContentAIProvider {
     String resolveTemplateId(String runType);
 
     /**
-     * Contexto de input editorial pasado al prompt (ADR-025, schema 2.0).
+     * Contexto de input editorial pasado al prompt (ADR-025, schema 2.0; brief reubicado por ADR-027).
      *
      * Post-rediseno bilingue: el articulo es logico, no monolingue. El
-     * contexto trae los datos compartidos (category, brief, keywords,
-     * hero_image_url, estado) + los datos del locale base ES (slug ES,
-     * title ES) que el operador fijo al crear. El pipeline IA produce
-     * los datos del locale EN.
+     * contexto trae los datos compartidos (category, keywords, hero_image_url,
+     * estado) + los datos del locale base ES (slug ES, title ES, brief ES) que
+     * el operador fijo al crear. El pipeline IA produce los datos del locale EN
+     * (incluido el brief EN, ADR-027).
      */
     record PromptContext(
             String runType,

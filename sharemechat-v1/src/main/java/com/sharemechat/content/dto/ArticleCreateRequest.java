@@ -1,5 +1,14 @@
 package com.sharemechat.content.dto;
 
+/**
+ * Request del POST /api/admin/content/articles (ADR-025; brief reubicado por ADR-027).
+ *
+ * Crea el articulo logico + su primera traduccion (locale primario indicado por
+ * {@link #locale}, normalmente "es"). Los campos linguisticos (slug, title,
+ * brief) acompanan a la primera traduccion y se persisten en
+ * content_article_translations; los demas (category, keywords, heroImageUrl,
+ * responsibleEditorUserId) son compartidos del articulo logico.
+ */
 public class ArticleCreateRequest {
 
     private String slug;

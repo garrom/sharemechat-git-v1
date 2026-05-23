@@ -37,6 +37,7 @@ Campos COMPARTIDOS (`shared.*` en el JSON final): NO se traducen, se mantienen t
 Campos PER-LOCALE (`locales.en.*` en el JSON final): SÍ se traducen al inglés. Tu output `reviewed_en.md` cubre los que se derivan del cuerpo y la prosa; los demás los compone el cms-json-builder en fase 5 a partir de tu traducción y del review_notes original.
 - Cuerpo del artículo (párrafos, H2, H3, listas, callouts, citas) → cuerpo de `reviewed_en.md`.
 - Metadatos visibles al lector EN (título principal, subtítulos).
+- `brief` (per-locale, ADR-027): traduce al inglés el campo `<brief>...</brief>` del `<editorial_input>` del prompt CMS. Es texto descriptivo de 1-2 frases visible en cards de listado y cabecera del detalle del blog EN; debe sonar natural al lector anglosajón (no traducción literal), respetando la voz editorial EN de sharemechat-voice. Lo emites en el bloque metadata final como `SUGGESTED_BRIEF_EN` (ver más abajo).
 - `research_summary` (per-locale): se traduce/reescribe en inglés adaptado.
 - `competitor_insights` (per-locale): `what_they_cover` y `gap` se traducen; competidores del SERP EN suelen ser distintos a los ES, pero la skill no investiga; traduce con honestidad lo que vino del research ES y deja la adaptación de mercado a la skill 1 si en el futuro hace un research per-locale.
 - `article_outline` (per-locale): `heading` y `objective` se traducen.
@@ -69,15 +70,16 @@ REGLAS DURAS
 
 METADATOS EN AL FINAL DEL FICHERO
 
-Al final del fichero `reviewed_en.md`, después del cuerpo traducido del artículo, añade un bloque literal con tres campos de metadatos para que la fase 5 (cms-json-builder) los lea y los use al poblar `locales.en.{slug, seo_title, meta_description}` del JSON único schema 2.0:
+Al final del fichero `reviewed_en.md`, después del cuerpo traducido del artículo, añade un bloque literal con cuatro campos de metadatos para que la fase 5 (cms-json-builder) los lea y los use al poblar `locales.en.{slug, seo_title, meta_description, brief}` del JSON único schema 2.0:
 
 ---
 SUGGESTED_SLUG_EN: tu-propuesta-de-slug-en-ingles-kebab-case
 SUGGESTED_SEO_TITLE_EN: Tu título SEO en inglés (≤60 chars)
 SUGGESTED_META_DESC_EN: Tu meta description en inglés (≤160 chars)
+SUGGESTED_BRIEF_EN: Tu brief en inglés (≤8192 chars; típicamente 1-2 frases, adaptado al lector anglosajón, no traducción literal del ES)
 ---
 
-Estos tres campos NO son el output final; son el handoff a la fase 5. cms-json-builder los lee, los usa como valores de `locales.en.slug`, `locales.en.seo_title` y `locales.en.meta_description` respectivamente, y NO los incluye en el cuerpo `locales.en.draft_markdown`. El bloque de metadatos queda solo en `reviewed_en.md` para auditoría operativa; no viaja al JSON final como bloque, sus valores sí.
+Estos cuatro campos NO son el output final; son el handoff a la fase 5. cms-json-builder los lee, los usa como valores de `locales.en.slug`, `locales.en.seo_title`, `locales.en.meta_description` y `locales.en.brief` respectivamente, y NO los incluye en el cuerpo `locales.en.draft_markdown`. El bloque de metadatos queda solo en `reviewed_en.md` para auditoría operativa; no viaja al JSON final como bloque, sus valores sí.
 
 Reglas del slug propuesto:
 - Kebab-case, minúsculas, palabras separadas por `-`.
@@ -90,6 +92,12 @@ Reglas de seo_title y meta_description:
 - seo_title: máximo 60 caracteres. Si te pasas, la fase 5 lo recortará y el backend rechazará con 422.
 - meta_description: máximo 160 caracteres. Mismo tratamiento si te pasas.
 
+Reglas de brief EN:
+- Máximo 8192 caracteres (límite duro del backend). Recomendado 1-2 frases, similar en longitud al brief ES.
+- Tono y voz consistentes con la sección EN de `sharemechat-voice` (sobrio, directo, "you", sin hype).
+- Adaptado al mercado anglosajón: no traducción literal palabra por palabra; reformula si la idiomática ES no encaja natural en EN.
+- Las comillas dobles (si aparecen en el brief EN) deben ser curvas "..." obligatoriamente, NO rectas. Las rectas rompen la serialización JSON aguas abajo.
+
 CUANDO TERMINES
 Confirma brevemente que `04_review/reviewed_en.md` está escrito y resume en una línea:
 - Longitud del EN en palabras (debe ser ±10% del ES).
@@ -97,6 +105,7 @@ Confirma brevemente que `04_review/reviewed_en.md` está escrito y resume en una
 - Slug EN sugerido.
 - Título SEO EN sugerido.
 - Meta description EN sugerida.
+- Brief EN sugerido (longitud en caracteres).
 
 PROHIBIDO
 - Modificar hechos del texto original.

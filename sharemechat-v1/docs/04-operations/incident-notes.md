@@ -1630,3 +1630,442 @@ Lo que NO cambia:
 Build: `npm run build:product` → exit 0. Bundle delta: `863.chunk.js` −129 B, `572.chunk.js` −8 B. Hash nuevo `main.ff07af3c.js`. Sin warnings nuevos.
 
 Pendiente operativo: cuando el bundle se despliegue a TEST y AUDIT (junto con el del paquete 10.A.5), la SPA deja de mostrar el aviso en el detalle del artículo. Los artículos publicados con `disclosureRequired=true` siguen marcados como tales en BD pero el flag no tiene efecto visible. Si en el futuro se decide reactivar el aviso (o mover su render a otro componente), el `git history` conserva el wording exacto en ES y EN.
+
+### Despliegue refactor 10.A.5/10.A.6 a AUDIT + sync de assets 2026-05-22 (paquete 10.A.7)
+
+Despliegue completo del refactor de URLs hardcoded (10.A.5) + eliminación del aviso AI del detalle del artículo (10.A.6) sobre AUDIT, generación del manifest específico de AUDIT que el `ModelContractManifestService` refactorizado espera, y reanudación del paquete 10.A.4 (sync de assets TEST → AUDIT) que había quedado pausado tras el descubrimiento de las URLs hardcoded en el manifest. Cinco fases ejecutadas limpiamente con dos pausas de validación visual del operador. Backend AUDIT abajo solo 33 segundos. Frente 10.A cerrado funcionalmente.
+
+**Fase 1 — Manifest + PDF a AUDIT**:
+
+- Descargado el manifest TEST (`s3://assets-sharemechat-test1/legal/model_contract.manifest.json`, 213 bytes): `{version: "model_contract_v4_2026-03-23", sha256: "783A747136951B848649A984A622A8A50E62B3538DDEE369257B2825B9B37B7B", url: "https://assets.test.sharemechat.com/legal/model_contract.pdf"}`.
+- Descargado el PDF (`s3://assets-sharemechat-test1/legal/model_contract.pdf`, 159368 bytes). `sha256sum` del PDF coincide con el campo `sha256` del manifest, regla de validación del `ModelContractManifestService.validateSha256()` y `validateUrl()` respetada.
+- Generado `manifest-audit.json` (211 bytes) localmente cambiando **solo** la URL a `https://assets.audit.sharemechat.com/legal/model_contract.pdf`. Mismo `version`, mismo `sha256`. JSON validado con `node -e "JSON.parse(...)"`.
+- Subidos a AUDIT: `aws s3 cp ... s3://assets-sharemechat-audit/legal/model_contract.pdf --content-type application/pdf` y `aws s3 cp ... s3://assets-sharemechat-audit/legal/model_contract.manifest.json --content-type "application/json; charset=utf-8"`.
+- Validación via CDN: `curl https://assets.audit.sharemechat.com/legal/model_contract.manifest.json` → `HTTP/2 200`, body con URL adaptada. `curl -I .../model_contract.pdf` → `HTTP/2 200 application/pdf`.
+
+**Fase 2 — Frontend bundle (10.A.5 + 10.A.6) a AUDIT**:
+
+- Bundle ya compilado localmente del paquete 10.A.6, hash `main.ff07af3c.js` (incluye `runtimeEnv.js` con detección por hostname + eliminación del aviso AI).
+- `deploy-frontend.ps1 audit product -SkipBuild` (workaround conocido por warnings npm en stderr). Sync a `s3://sharemechat-frontend-audit/`. Invalidación CloudFront `E1ILXV7P6ENUV8` → ID `I7EMTHU57PQ44J0MM6S197KQ47`.
+- Validación intermedia con backend AUDIT aún antiguo (JAR pre-refactor): `curl https://audit.sharemechat.com/` devuelve la SPA con `main.ff07af3c.js` correcto. Sin overlay falso. Confirmación visual del operador OK.
+
+**Fase 3 — Ventana de mantenimiento del backend AUDIT**:
+
+- JAR refactorizado compilado localmente (`target/sharemechat-v1-0.0.1-SNAPSHOT.jar`, 106056697 bytes, SHA256 `4b0679f4a34cb9305a75ee9fd80e67b3e6b053e9658b74a00c87c58178bb5a13`). El hash es distinto al reportado en el commit del paquete 10.A.5 porque Maven incluye timestamps de compilación; lo crítico es que SHA256 local = SHA256 remoto = `4b0679f4...` tras el scp.
+- `scp` a `audit-backend:/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.new` (20 s). SHA256 remoto idéntico al local. JAR previo (de 10.A.3, 106055594 bytes, 22 mayo 18:30) intacto en su nombre original.
+- **21:36:20 UTC — `systemctl stop sharemechat-audit.service`**. Confirmado `inactive`, sin proceso java.
+- **21:36:21 UTC — Rename JARs**: actual → `sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A7`, `.new` → actual. JAR antiguo de 10.A.3 conservado para rollback rápido.
+- **21:36:24 UTC — `systemctl start`**. Bootstrap Spring Boot en marcha.
+- **21:36:53 UTC — `Started SharemechatV1Application in 28.04 seconds`**. Tiempo total backend abajo: **33 segundos** (mejor aún que los 77 s del paquete 10.A.3 porque esta vez Flyway no aplica migración, solo valida).
+- `journalctl` muestra logs limpios: `Successfully validated 3 migrations`, `Current version of schema: 2`, `Schema is up to date. No migration necessary.`, Hibernate 6.6.26 inicializado, `ddl-auto=validate` pasa, HikariPool montado contra MySQL 8.4.7, Tomcat puerto 8080. **Sin errores de placeholder** tipo `Could not resolve placeholder 'app.assets.base-url'`: el refactor 10.A.5 carga las nuevas properties correctamente desde `application-audit.properties` (3 overrides nuevos: `app.assets.base-url=https://assets.audit.sharemechat.com`, `app.frontend.product-origin`, `app.frontend.admin-origin`).
+
+**Fase 4 — Validación funcional post-cambio (test crítico del refactor)**:
+
+- `curl https://audit.sharemechat.com/api/users/me` → `HTTP/2 401 application/json` limpio (sin enmascaramiento HTML).
+- **Test crítico**: `curl https://audit.sharemechat.com/api/consent/model-contract/current` → `HTTP/2 200 application/json` con body `{"sha256":"...","version":"model_contract_v4_2026-03-23","url":"https://assets.audit.sharemechat.com/legal/model_contract.pdf"}`. **El backend AUDIT lee el manifest desde su propio bucket y devuelve la URL del dominio AUDIT**, no la de TEST. Refactor 10.A.5 confirmado funcionando: `ModelContractManifestService` ahora usa `@Value("${app.assets.base-url}")` y construye las URLs dinámicamente por entorno.
+- `curl https://audit.sharemechat.com/api/public/content/articles?locale=es` → `HTTP/2 200 application/json`. CMS público responde sin regresión.
+- Confirmación visual del operador OK.
+
+**Fase 5 — Sync de assets TEST → AUDIT (reanudación del paquete 10.A.4)**:
+
+- Estado pre-sync: TEST 48 objetos / 3,167,760 bytes; AUDIT 4 objetos / 286,843 bytes (los 2 preexistentes + manifest custom + PDF de fase 1).
+- `aws s3 sync s3://assets-sharemechat-test1/ s3://assets-sharemechat-audit/ --delete --exclude "legal/model_contract.manifest.json"`. Sincronizados 44 ficheros nuevos. El `--exclude` preserva el manifest custom de AUDIT (la única excepción real al sync; el PDF sí se sincroniza por compatibilidad pero es bit-a-bit idéntico al ya subido en fase 1).
+- Estado post-sync: TEST 48 objetos / 3,167,760 bytes; AUDIT 48 objetos / **3,167,758 bytes**. Diferencia de **2 bytes** atribuible al manifest custom (las URLs `assets.test.sharemechat.com` y `assets.audit.sharemechat.com` difieren en longitud por 1 char, y la diferencia exacta puede tener ±1 byte por whitespace; el `--exclude` preserva el manifest AUDIT con 211 bytes en lugar del de TEST con 213).
+- Manifest AUDIT verificado post-sync: sigue con `url: "https://assets.audit.sharemechat.com/..."`. El `--exclude` funcionó correctamente.
+- Invalidación CloudFront assets AUDIT (`E2NC4TEJAWOI3L`) con paths `/*` → ID `IC4SXSW31N52ZY47X9OTGJG6TS`.
+- Spot-check 3 ficheros via CDN AUDIT tras la propagación: `home/hero/hero_desktop_v1.webp` (41314 B, `image/webp`), `g/diamante.webp` (73844 B), `blog/elegir-videochat-seguro.webp` (92750 B). Todos `HTTP/2 200` con `x-amz-server-side-encryption: AES256`. Hero del home ahora se carga desde el bucket AUDIT propio (el `runtimeEnv.js` del frontend nuevo construye `${ASSETS_BASE}/home/hero/...` con `ASSETS_BASE=https://assets.audit.sharemechat.com`).
+
+Estado final del frente 10.A:
+
+- **Backend AUDIT**: JAR refactor 10.A.5 del 2026-05-22 22:29 local, SHA256 `4b0679f4a3...`, corriendo desde 21:36:53 UTC con perfil `audit`.
+- **Frontend AUDIT**: bundle `main.ff07af3c.js` con `runtimeEnv.js` + aviso AI eliminado. SPA, navegación cross-surface, y asset URLs ahora 100% por entorno.
+- **Schema BD AUDIT**: Flyway en v2 (sin cambios desde 10.A.3).
+- **Bucket S3 `assets-sharemechat-audit`**: 48 objetos sincronizados desde TEST + manifest custom con URL `assets.audit.sharemechat.com`.
+- **CloudFront**: dos invalidaciones aplicadas en este paquete (frontend `I7EMTHU57PQ44J0MM6S197KQ47`, assets `IC4SXSW31N52ZY47X9OTGJG6TS`).
+- **Backups conservados en EC2 AUDIT**: `sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A7` (JAR pre-refactor, 22 mayo 18:30) y `sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A3` (JAR pre-CMS-v2, 2 mayo).
+- **Backup BD pre-cambio en S3**: `s3://sharemechat-backups/audit/audit-backup-2026-05-20-2119.sql.gz` (de 10.A.1, sigue válido).
+
+Lecciones / observaciones:
+
+- **Segunda ventana de mantenimiento del backend AUDIT consecutiva sin Flyway nueva**: el bootstrap Spring Boot tarda 28 s (vs 30 s del primer arranque post-V2 en 10.A.3). Margen estable. La ventana neta de "backend abajo" baja de 77 s (10.A.3) a 33 s (10.A.7) porque esta vez no hay baseline manual ni aplicación de V2 entre stop y start: solo rename + start.
+- **El refactor 10.A.5 prueba su valor end-to-end aquí**: el mismo JAR corre en TEST devolviendo URL `assets.test.sharemechat.com` y en AUDIT devolviendo URL `assets.audit.sharemechat.com`, sin necesidad de recompilación. El override de la property en `application-audit.properties` es lo único que diferencia el comportamiento por entorno. Cuando se monte PROD, basta con un `application-prod.properties` análogo.
+- **`--exclude` en `aws s3 sync` es la herramienta correcta para preservar deltas intencionales**: el manifest AUDIT debe permanecer con su URL adaptada, no copiarse desde TEST. El operador puede plantear el mismo patrón en futuras sincronizaciones cross-environment donde haya ficheros que deben ser específicos por entorno aunque la mayoría sean idénticos.
+- **Hero del home rotó silenciosamente entre Fase 2 y Fase 5**: durante ~5 minutos, el frontend AUDIT pidió las imágenes hero a `assets.audit.sharemechat.com/home/hero/...` cuando esos ficheros no existían todavía en el bucket AUDIT. Hubo degradación visual transitoria (hero negro o roto) pero no error funcional. Asunción aceptada por el operador. Para PROD será mejor sincronizar los assets ANTES del frontend para evitar este flash visual.
+
+### Paquete 10.A.8: refactor brief per-locale (backend, fase 1 de 4) 2026-05-23
+
+Refactor backend que reubica el campo `brief` desde el artículo lógico (`content_articles.brief`) a la traducción per-locale (`content_article_translations.brief`). Diagnóstico del bug en [ADR-027](../06-decisions/adr-027-brief-per-locale.md): el brief estaba clasificado como compartido por error de catalogación en ADR-025, lo que provocaba que el blog público EN sirviera el brief en español incluso cuando title/SEO/body sí estaban traducidos. Fase 1 de 4 del frente brief-per-locale: solo backend, **sin deploy y sin commit**. Las fases 2 (skills del pipeline), 3 (frontend admin) y 4 (despliegue coordinado con ventana de mantenimiento) se cubrirán en los paquetes 10.A.9, 10.A.10 y 10.A.11 respectivamente.
+
+**Fase 1 — Inspección y plan**:
+
+- Revisión del modelo actual: `content_articles.brief TEXT NULL` (compartido) vs JSON 2.0 emitido por las skills (`shared.brief`). Confirmado el defecto de modelado.
+- Análisis de impacto: 1 migración Flyway, 2 entidades JPA, 6 DTOs, 1 service principal + 2 servicios secundarios, 1 controller, 5 skills externas (no tocadas), 1 frontend (no tocado). ADR + actualización de docs.
+- Decisión de criterios:
+  - **Snapshot brief en versions**: NO (opción A confirmada por operador). Razón: el brief es metadata de presentación editable libremente, no contenido auditable estilo body.
+  - **Validación al pasar a IN_REVIEW**: exigir brief no vacío al menos en el locale primario ES (recomendado, confirmado). EN puede llegar a IN_REVIEW sin brief para no romper flujos donde el pipeline EN aún no se ha ejecutado.
+
+**Fase 2 — Migración Flyway V3**:
+
+- Creado `src/main/resources/db/migration/V3__brief_per_locale.sql`. Tres pasos secuenciales:
+  1. `ALTER TABLE content_article_translations ADD COLUMN brief TEXT NULL AFTER meta_description;`
+  2. `UPDATE content_article_translations t INNER JOIN content_articles a ON a.id = t.article_id SET t.brief = a.brief WHERE t.locale = 'es' AND a.brief IS NOT NULL;` — backfill ES desde brief actual del artículo.
+  3. `ALTER TABLE content_articles DROP COLUMN brief;`
+- **Migración NO aplicada todavía**. La aplicación efectiva contra TEST y AUDIT se hará en el paquete 10.A.11 junto con el despliegue del JAR refactorizado, dentro de la ventana de mantenimiento.
+
+**Fase 3 — Refactor de entidades JPA**:
+
+- `ContentArticle.java`: eliminada propiedad `brief` (campo + `@Column` + getter + setter). JavaDoc actualizado para indicar que brief ahora vive en la translation per ADR-027.
+- `ContentArticleTranslation.java`: añadida propiedad `brief` con `@Column(name = "brief", columnDefinition = "TEXT")`, getter y setter. JavaDoc actualizado.
+
+**Fase 4 — Refactor de DTOs**:
+
+- `ArticleDetailDTO.java` (admin): eliminado campo `brief` de la raíz del record. JavaDoc actualizado.
+- `TranslationDetailDTO.java` (admin, subobjeto per-locale): añadido campo `brief` al record.
+- `ArticleUpdateRequest.java` (admin, PATCH compartido): eliminado campo `brief` + getter/setter. JavaDoc clarifica que brief se edita por el endpoint per-locale.
+- `TranslationMetadataUpdateRequest.java` (admin, PATCH per-locale): añadido campo `brief` + getter/setter. JavaDoc actualizado.
+- `ArticleCreateRequest.java`: mantiene `brief` (acompaña al locale primario al crear); JavaDoc añade nota ADR-027.
+- `ArticlePublicSummaryDTO.java` (público): mantiene `brief` top-level por compatibilidad con frontend público (el contrato JSON no cambia); JavaDoc añade nota ADR-027 sobre la procedencia per-locale.
+- `ArticlePublicDetailDTO.java` (público): mantiene `brief` top-level por compatibilidad; JavaDoc añade nota ADR-027.
+- `TranslationPreviewDTO.java`: ya era per-locale; el campo `brief` se mantiene con su semántica per-locale ahora consistente con el modelo.
+
+**Fase 5 — Refactor de servicios y controller**:
+
+- `ContentArticleService.java`:
+  - JavaDoc class-level (invariantes): actualizada la lista de campos del padre y nota sobre brief per-locale ES como precondición de IN_REVIEW.
+  - `createArticle`: brief se escribe ahora en la translation ES recién creada (`tr.setBrief(brief)`), no en `article.setBrief(...)`.
+  - `updateArticleMetadata` (PATCH compartido): eliminada la rama que actualizaba `article.setBrief(...)`.
+  - `updateTranslationMetadata` (PATCH per-locale): añadida rama que valida y normaliza brief con el mismo trato que title/slug/seo_title (`null` se ignora, vacío dispara 400, no vacío se normaliza con `normalizeText(...)` y `BRIEF_MAX`).
+  - `assertReadyForReview`: eliminado el check `article.getBrief() == null || isBlank()`. Añadido check al final que exige `byLocale.get(LOCALE_ES).getBrief()` no vacío con mensaje `Pendiente para revision: locales.es.brief`.
+  - `toDetail` (mapper admin): eliminado `article.getBrief()` del constructor de `ArticleDetailDTO`.
+  - `toTranslationDetail` (mapper admin): añadido `t.getBrief()` al constructor de `TranslationDetailDTO`.
+  - Mapper de listado público (`listPublicByLocale`): `a.getBrief()` → `t.getBrief()` (lee el brief de la translation del locale solicitado).
+  - Mapper de detalle público (`findPublicBySlugAndLocale`): `article.getBrief()` → `tr.getBrief()`.
+- `ContentRunService.java` línea 107: `article.getBrief()` → `esTranslation.getBrief()` (el contexto del prompt IA lleva el brief ES de la translation).
+- `ContentAIProvider.java` (record `PromptContext`): JavaDoc actualizado; el record sigue teniendo el campo `brief` pero la documentación clarifica que viene del locale ES.
+- `ContentAdminController.java` línea 240: `detail.brief()` → `tr.brief()` en el mapper de `TranslationPreviewDTO`.
+
+**Fase 6 — Build + ADR + documentación**:
+
+- `./mvnw clean package -DskipTests` desde raíz: BUILD SUCCESS, 296 fuentes compiladas, JAR `sharemechat-v1-0.0.1-SNAPSHOT.jar` regenerado en `target/`. **JAR NO desplegado** (el despliegue es 10.A.11).
+- Creado [ADR-027](../06-decisions/adr-027-brief-per-locale.md) (Reubicación de `brief` a per-locale): estado Aceptada, decisión D1-D7 cubriendo schema, snapshots, validación, DTOs, pipeline editorial, frontend admin y despliegue coordinado.
+- Esta entrada en `incident-notes.md`.
+- Entrada en `project-log.md`.
+
+Estado al cierre del paquete 10.A.8:
+
+- **Repositorio**: backend completamente refactorizado y compilando. ADR-027 publicada. Migración Flyway V3 lista pero no aplicada. Nada commiteado todavía (el operador decide cuándo y cómo agrupar el commit del frente brief-per-locale; los cuatro paquetes pueden quedar en una sola serie de commits o en uno consolidado al cierre de 10.A.11).
+- **TEST**: sin cambios. BD en V2, JAR sin refactor, skills sin refactor.
+- **AUDIT**: sin cambios. BD en V2, JAR sin refactor, skills sin refactor.
+- **Skills**: sin tocar; siguen emitiendo `shared.brief` (incompatible con el backend nuevo). El backend nuevo no se desplegará hasta que las skills emitan el formato nuevo (10.A.9) y el frontend admin pueda editarlo per-locale (10.A.10). Hasta entonces, el repo tiene un backend "viable pero aislado" que solo se activa en bloque en 10.A.11.
+
+Lecciones / observaciones:
+
+- **El bug nació en ADR-025 por catalogación apresurada**. Cuando se decidió el modelo bilingüe se separaron campos "compartidos" vs "per-locale" pero `brief` se metió en el bucket equivocado sin discusión. La corrección retrospectiva requiere cuatro paquetes coordinados. Lección para futuras decisiones de schema: cualquier campo lingüístico (texto que un humano lee) debe vivir en la translation aunque parezca "metadata"; los compartidos deben quedar restringidos a identificadores, taxonomías, fechas y flags.
+- **Frente refactor con cuatro fases secuenciales sin posibilidad de despliegue parcial**: el backend refactor 10.A.8 no se puede desplegar sin las skills 10.A.9 (rompe el pipeline) ni sin el frontend admin 10.A.10 (rompe el editor). Los tres tienen que llegar juntos a TEST y a AUDIT en 10.A.11. Riesgo aceptado por el operador.
+- **Build limpio sin errores tras tocar 11 ficheros Java**: confirma que los DTOs son records con constructores generados, así que un cambio en el orden o número de campos hace fallar la compilación de los mappers automáticamente. Útil como red de seguridad: si un mapper hubiera quedado fuera, el build habría fallado en él.
+
+### Paquete 10.A.9: refactor pipeline editorial brief per-locale (fase 2 de 4) 2026-05-23
+
+Segundo paquete del frente brief-per-locale, fase 2 de 4: refactor del pipeline editorial (skills `docs/cms/skills/`) para que el brief viaje per-locale en el JSON 2.0 que el operador pega en `/api/admin/content/articles/{id}/runs/{runId}/apply-bilingual`. Incluye, por confirmación explícita del operador en el punto de control de fase 1, un cambio acotado en `ContentRunService.applyTranslationFromJson` para que el backend persista el brief leído del JSON (sin esa línea el adapter validaría el campo pero el backend lo descartaría, dejando el frente sin cerrar).
+
+**Hallazgo de la fase 1 (inspección) que reformuló el alcance**:
+
+El prompt original asumía que el JSON 2.0 contenía `shared.brief` y que el paquete debía moverlo a `locales.{es,en}.brief`. La inspección desmiente esa asunción: el JSON 2.0 actual **no contiene brief en absoluto**. Verificado cruzando cuatro fuentes independientes: (a) `cms-json-builder.md` no lista brief en su estructura ni en sus campos obligatorios; (b) `ManualClipboardClaudeAdapter.java` no incluye brief en `SHARED_REQUIRED_FIELDS` ni en `LOCALE_REQUIRED_FIELDS`, y `validateSharedSection`/`validateLocaleEntry` no contienen reglas para brief; (c) `ContentRunService.applyTranslationFromJson` no lee brief del JSON (aplica slug, title, seoTitle, metaDescription, body, targetKeywords pero no brief); (d) grep "brief" en `ContentRunService.java` solo encuentra la línea del PromptContext editada en 10.A.8. La única referencia residual a `shared.brief` es `cms-json-validator.md:48` como ejemplo defensivo en la lista de "campos de riesgo alto" para escape de comillas. El cambio en 10.A.9 es por tanto **aditivo** (introducir brief por primera vez en el JSON activo), no de movimiento. El operador confirmó la reformulación en el punto de control.
+
+**Refactor aplicado en 5 fases**:
+
+Fase 2 — Schema JSON 2.0 (cms-json-builder.md):
+- Sección "ESTRUCTURA DEL JSON": comentario añadido `brief introducido per-locale por ADR-027` + nota explícita "Cualquier JSON que coloque brief bajo `shared` será rechazado por el backend como schema obsoleto".
+- Sección "CAMPOS OBLIGATORIOS / Bloque locales.<es|en>": añadida línea `brief (string ≤8192, NO null no vacío; texto descriptivo 1-2 frases visible en cards de listado y cabecera del detalle del blog público; ADR-027). En ES proviene del <editorial_input><brief> del prompt; en EN proviene del bloque metadata final de 04_review/reviewed_en.md (campo SUGGESTED_BRIEF_EN)`.
+- Sección "REGLAS DURAS": ampliada regla 14 para incluir SUGGESTED_BRIEF_EN entre los campos del bloque metadata leído; nueva regla 15 "BRIEF ES" obligando a copia literal del campo del editorial_input.
+- Sección "VALIDACIÓN ANTES DE EMITIR / self-check": añadida verificación `brief no nulo no vacío y .length <= 8192 (ADR-027)`.
+- Sección "CUANDO TERMINES": resumen final reporta también la longitud del brief en caracteres por locale.
+
+Fase 3 — cms-translate-en.md:
+- Sección "Campos PER-LOCALE": añadido bullet de brief con la regla de traducción adaptada al mercado anglosajón y referencia a sharemechat-voice EN.
+- Sección "METADATOS EN AL FINAL DEL FICHERO": el bloque crece de 3 a 4 campos con `SUGGESTED_BRIEF_EN`. Texto actualizado: "cuatro campos de metadatos" en lugar de "tres".
+- Sección "Reglas de seo_title y meta_description": añadido subbloque "Reglas de brief EN" con longitud máxima, tono, adaptación al mercado y obligatoriedad de comillas curvas.
+- Sección "CUANDO TERMINES": resumen final reporta también la longitud del brief EN sugerido.
+
+Fase 3 — cms-json-validator.md:
+- Línea 48 de la sección "CAMPOS DE RIESGO ALTO": cambio referencial de `shared.brief (si está presente)` a `locales.{es,en}.brief (ADR-027: campo per-locale, descriptivo 1-2 frases; énfasis estilísticos posibles)`.
+
+Fase 3 — cms-orchestrator.md:
+- Sección "Validaciones clave" del reporte final: añadidos dos bullets sobre brief no vacío por locale (ES viene del editorial_input; EN viene de la fase 4.5).
+
+Skills NO tocadas: `cms-research-seo`, `cms-draft-writer`, `cms-editorial-polish`, `cms-brand-legal-review`, `sharemechat-voice`. Consumen brief como input contextual pero no lo emiten al JSON; sin cambios estructurales.
+
+Fase 4 — Backend Java:
+- `ManualClipboardClaudeAdapter.java`: añadida constante `BRIEF_MAX = 8192`; `brief` añadido a `LOCALE_REQUIRED_FIELDS` (la lista crece de 9 a 10 campos); `validateLocaleEntry` gana rama de validación de brief con la misma forma que las de `seo_title` y `meta_description` (requerido, no vacío, longitud ≤ 8192); `validateSharedSection` gana rama defensiva: si llega `shared.brief` devuelve error `schema obsoleto: brief es per-locale por ADR-027; muevelo a locales.{es,en}.brief`. JavaDoc class-level actualizado con referencia a ADR-027.
+- `ContentRunService.applyTranslationFromJson`: añadida línea `tr.setBrief(textOrNull(loc, "brief"));` entre meta_description y body, con comentario referenciando ADR-027 y nota de que la presencia/longitud ya fue validada por el adapter. Cambio mínimo (1 línea funcional + 1 de comentario) pero crítico: sin él el adapter validaría el campo pero el servicio lo descartaría al persistir, dejando la translation con `brief=NULL` y haciendo inútil todo el frente.
+- Build local `./mvnw clean package -DskipTests` BUILD SUCCESS en 15 segundos. JAR regenerado en `target/`. **JAR NO desplegado** (el despliegue es 10.A.11).
+
+Fase 5 — Documentación:
+- `docs/06-decisions/adr-027-brief-per-locale.md`: sección D5 reescrita reflejando la realidad (cambio aditivo en lugar de movimiento). Nueva sección "D5.1 Comportamiento defensivo durante la transición". Nueva sección "Schema JSON 2.0: brief per-locale (diff explícito tras 10.A.9)" con bloques JSON antes/después comentados. Actualizada la consecuencia negativa que hablaba de "JSON 2.0 cambia su forma" para reflejar que es aditivo y que la elección es rechazo estricto, no tolerancia al campo legacy.
+- Esta entrada en incident-notes.md.
+- Entrada nueva al inicio de `docs/project-log.md`.
+
+Estado al cierre del paquete 10.A.9:
+
+- **Repositorio**: 4 skills tocadas (`cms-json-builder.md`, `cms-translate-en.md`, `cms-json-validator.md`, `cms-orchestrator.md`); 2 ficheros Java tocados (`ManualClipboardClaudeAdapter.java`, `ContentRunService.java`); ADR-027 ampliado con sección de schema JSON; 1 JAR regenerado sin desplegar. Nada commiteado.
+- **Cowork**: el editor humano debe replicar manualmente los cambios de las 4 skills tocadas en su espacio personal de Claude Cowork **antes** del despliegue 10.A.11. La sincronización Cowork ↔ repo es manual por diseño (ver `docs/cms/skills/README.md`); si el editor olvida ese paso, los runs editoriales tras el despliegue seguirán emitiendo JSON sin brief y serán rechazados por el adapter nuevo.
+- **TEST / AUDIT**: sin cambios. Los entornos siguen corriendo el backend de 10.A.7; las skills viejas en Cowork siguen emitiendo JSON sin brief y el adapter viejo los acepta sin problema. Ningún drift hasta el 10.A.11.
+
+Lecciones / observaciones:
+
+- **Inspección antes de aplicar evita reescritura cosmética del schema**. El prompt asumía un movimiento `shared.brief → locales.{es,en}.brief` y la fase 1 de inspección reveló que el campo no existía en el JSON activo. Si hubiera aplicado el prompt al pie de la letra (buscar `shared.brief` y reubicarlo), no habría encontrado nada y habría producido un cambio incompleto. La regla "punto de control tras inspección" del flujo del operador, materializada como fase 1.5 obligatoria, evitó ese fallo silencioso. Patrón aplicable a futuros refactors: cuando el plan asume un estado del schema, primero verificar el estado real.
+- **El adapter Java ya tenía la disciplina de "campo obligatorio" formalizada en una lista constante**. Añadir un campo nuevo a `LOCALE_REQUIRED_FIELDS` y una rama de validación con la misma forma que las existentes son ~12 líneas; ningún cambio estructural del validador. Confirmación de un buen patrón de diseño: separar la lista de campos obligatorios de las reglas específicas de cada campo permite extender sin reescribir.
+- **El cambio mínimo en `applyTranslationFromJson` (1 línea funcional) tiene un peso operativo desproporcionado al volumen del diff**. Sin esa línea el adapter validaría el contrato pero el servicio descartaría el dato. El operador acertó al ampliar el alcance del paquete cuando se le ofreció la opción en el punto de control; el coste de añadirla en 10.A.9 es trivial vs. el coste de un sub-paquete 10.A.9.bis posterior para corregir el gap.
+- **El número de versión del schema JSON no se incrementa (sigue siendo "2.0") aunque el contrato cambie de forma backward-incompatible**. Decisión consciente justificada porque el cambio es coordinado en una sola ventana de despliegue (10.A.11) y no hay clientes externos al pipeline editorial interno. Una bump a 2.1 o 3.0 obligaría a tocar la constante `AI_OUTPUT_SCHEMA_VERSION` del backend y a versionar las skills explícitamente, complejidad innecesaria para este frente. Se reserva la bump para un cambio más amplio si surge.
+
+### Paquete 10.A.10: refactor frontend admin brief per-locale (fase 3 de 4) 2026-05-23
+
+Tercer paquete del frente brief-per-locale: refactor del editor admin (`ContentArticleEditor.jsx`) para que el input de brief viva dentro de cada tab de locale (junto a title, slug, seo_title, meta_description), no en la sección "Metadata compartida" del top del editor. Implementa el contrato backend cerrado en 10.A.8 y 10.A.9. **Sin deploy y sin commit**. Bundle regenerado para verificación local.
+
+**Hallazgo de la fase 1 que amplió el alcance**:
+
+La inspección reveló **tres bugs heredados de 10.A.8 que el frontend actual ya tiene en main**, no detectados durante el cierre del paquete 10.A.8 porque allí no se compiló el frontend. Ninguno se manifiesta hoy porque TEST y AUDIT corren el backend de 10.A.7 (`ArticleDetailDTO` aún tiene brief en root, `ArticleUpdateRequest` aún acepta brief), pero los tres rompen el editor en cuanto el backend de 10.A.8 llega a un entorno (10.A.11):
+
+1. `ContentArticleEditor.jsx:250` — `applyArticle` leía `dto.brief` del root del `ArticleDetailDTO`. Tras 10.A.8 ese campo ya no existe y la lectura devuelve `undefined`; el textarea de brief quedaba vacío al cargar cualquier artículo existente. Cosmético hasta que el operador intenta editar.
+2. `ContentArticleEditor.jsx:393` — `handleSaveSharedMeta` enviaba `brief: sharedMeta.brief` en el PATCH a `/articles/{id}`. Tras 10.A.8 el `ArticleUpdateRequest` no acepta brief; Jackson lo ignora silenciosamente. El operador ve el banner "Metadata guardada." y cree que el brief quedó persistido, pero el backend lo descarta sin error visible. Regresión funcional silenciosa.
+3. `ReviewChecklist.jsx:83-84` — el invariante `brief` se calculaba con `isNonEmpty(article.brief)`. Tras 10.A.8 siempre vale `undefined` → el check siempre falla → el botón "Enviar a revisión" queda bloqueado permanentemente con warning "Faltan campos: Brief presente". Bloqueo total de la operación editorial.
+
+El operador confirmó en el punto de control de fase 1 que los tres bugs se arreglan en este mismo paquete (en lugar de abrir un 10.A.10.bis). Sin esos fixes, el despliegue 10.A.11 dejaría el admin del CMS roto.
+
+**Refactor aplicado en 6 fases**:
+
+Fase 2 — Editor:
+
+- `ContentArticleEditor.jsx`:
+  - Cabecera JavaDoc-style del componente actualizada con nota sobre ADR-027 (brief ya no en metadata compartida; ahora per-locale).
+  - `initialSharedMeta`: eliminado el campo `brief`.
+  - `initialCreateMeta`: añadido campo `brief: ''` (el brief inicial acompaña a slug + title del locale primario, no a la metadata compartida).
+  - Constante nueva `BRIEF_MAX = 8192` (espeja `BRIEF_MAX` del backend).
+  - `applyArticle`: eliminada la lectura `brief: dto.brief || ''` (bug heredado #1).
+  - `loadActiveBody`: el draft SEO ahora incluye `brief: tr.brief || ''` para que el campo per-locale se pre-cargue al cambiar de tab.
+  - `handleCreate`: el brief inicial se lee de `createMeta.brief` y se envía en el root del POST (donde `ArticleCreateRequest` sigue aceptándolo y el servicio lo escribe en la translation ES tras 10.A.8).
+  - `handleSaveSharedMeta`: eliminado `brief: sharedMeta.brief` del payload PATCH (bug heredado #2).
+  - `handleSaveSeo`: añadida rama de diff para `brief`; si difiere del valor en BD lo incluye en el payload del `PATCH /translations/{locale}` (TranslationMetadataUpdateRequest acepta brief desde 10.A.8).
+  - Sección "Campos solo de creación": añadido nuevo bloque para "Brief inicial (ES)" con `<BriefArea>`, contador de caracteres con umbrales 8000/8192 y asterisco rojo de obligatoriedad. Comentario inline explica que el brief inicial es un campo del locale primario, no de la metadata compartida.
+  - Sección "Metadata compartida": eliminado el bloque del input brief que vivía entre keywords y heroImageUrl.
+  - Botón "Crear artículo": disabled cuando slug/title/brief vacíos o brief > 8192. Tooltip explica que falta el brief obligatorio.
+
+- `BodyLocaleTabs.jsx`:
+  - Constante `LIMITS` ampliada con `brief: 8192`.
+  - Constantes nuevas `BRIEF_REQUIRED_LOCALE = 'es'` y `BRIEF_WARN_THRESHOLD = 8000` para encapsular las dos reglas (ADR-027 D3 + umbral visual).
+  - Cálculo nuevo de `briefWarn`, `briefRequired`, `briefEmpty`, `briefMissingRequired`, `briefWarnZone`.
+  - Render: nuevo bloque `<BriefArea>` con `rows={4}` debajo del de meta_description, con asterisco rojo de obligatoriedad si `activeLocale === 'es'`. Contador con tres niveles de color: gris neutro hasta 8000, amber entre 8000-8192, rojo a partir de 8192 o si está vacío en ES. Helper text contextual distinto para ES (obligatorio) y EN (opcional con nota sobre que el pipeline IA lo genera).
+  - Botón "Guardar campos SEO": disabled añade `briefWarn.exceeded || briefMissingRequired` al conjunto de condiciones bloqueantes.
+
+- `ReviewChecklist.jsx`:
+  - Cabecera JavaDoc-style actualizada con nota sobre ADR-027 y el cambio del invariante `brief` → `briefEs`.
+  - Invariante renombrado: `{ key: 'brief', ok: isNonEmpty(article.brief) }` → `{ key: 'briefEs', ok: !!trEs && isNonEmpty(trEs.brief) }`. La regla refleja exactamente `assertReadyForReview` del backend: brief obligatorio en ES, opcional en EN. No hay invariante `briefEn` (bug heredado #3 corregido).
+
+Fase 3 — i18n:
+
+- `i18n/locales/cms/es.json` + `i18n/locales/cms/en.json`:
+  - `editor.fieldBrief`: mantenido pero placeholder reescrito para reflejar el nuevo propósito ("Texto descriptivo de 1-2 frases visible en cards del blog…" en lugar del vago "Resumen interno del artículo").
+  - Claves nuevas: `editor.briefRequired`, `editor.briefHelperEs`, `editor.briefHelperEn`, `editor.fieldInitialBrief`, `editor.fieldInitialBriefPlaceholder`.
+  - Renombrado: `checklist.brief` → `checklist.briefEs` (texto pasa de "Brief presente" / "Brief present" a "Brief ES presente" / "ES brief present").
+  - Paridad ES/EN verificada vía grep. Sin claves huérfanas en `checklist.brief` ni en `sharedMeta.brief` tras el refactor.
+
+Fase 4 — Tests: el directorio del editor admin no contiene tests unitarios ni de integración. No se introduce deuda nueva; es observación: cualquier verificación pasa por compilación, lint y prueba manual del operador. Anotado aquí para no perder el contexto.
+
+Fase 5 — Build local: `cd frontend && npm run build:product` → exit 0. Hash nuevo del main: `main.04724b8b.js` (anterior `main.ff07af3c.js`). Delta gzipped: +677 B en el chunk del admin (`863.fb6b0ec7.chunk.js`, donde vive el editor code-splitteado), +2 B en main. Sin warnings nuevos; los listados son los preexistentes del proyecto (no-unused-vars en otros componentes, react-hooks/exhaustive-deps en FavoritesXxxList). **Bundle NO desplegado**.
+
+Fase 6 — Documentación: esta sección en incident-notes. Entrada nueva en `project-log.md`. Sin ADR nuevo (el frente vive bajo ADR-027 ya ampliado en 10.A.9). Sin tocar `known-debt.md`, `test.md`, `audit.md`.
+
+Estado al cierre del paquete 10.A.10:
+
+- **Repositorio**: 3 ficheros React tocados (`ContentArticleEditor.jsx`, `BodyLocaleTabs.jsx`, `ReviewChecklist.jsx`), 2 ficheros i18n tocados (`cms/es.json`, `cms/en.json`), 6 claves nuevas, 1 clave renombrada, 1 clave huérfana eliminada. Bundle regenerado en `frontend/build/`. Nada commiteado.
+- **Backend**: sin cambios desde 10.A.9 (JAR sigue en `target/sharemechat-v1-0.0.1-SNAPSHOT.jar` tras el build de 10.A.9, esperando 10.A.11).
+- **Skills CMS**: sin cambios desde 10.A.9.
+- **TEST / AUDIT**: sin cambios. Siguen corriendo el código de 10.A.7. Ningún drift.
+- **Frente brief-per-locale**: 3 de 4 paquetes completados. Solo queda 10.A.11 (despliegue coordinado con ventana de mantenimiento).
+
+Lecciones / observaciones:
+
+- **Compilar el frontend al cerrar cualquier paquete que toque el backend** (regla retroactiva para el flujo): el paquete 10.A.8 cerró backend sin compilar el frontend; eso dejó tres bugs heredados que se descubrieron solo en la inspección de 10.A.10. Para frentes futuros con cambios de schema o DTOs, incluir como "fase 7 opcional" del backend un `cd frontend && npm run build:product` que detectaría usos rotos vía linting/typecheck aunque no hay tests. Aplicabilidad limitada por la ausencia de TypeScript en el frontend (no detecta lecturas de campos inexistentes en objects), pero un linter ESLint con regla "no-undef" sobre propiedades sí podría ayudar; pendiente de evaluar.
+- **El editor admin tiene tres puntos de toque de brief, no uno**: (a) input compartido del top, (b) invariante del checklist, (c) handler PATCH del artículo padre. Un refactor de schema que toque un campo presente en root + per-locale tiene que tocar los tres. El operador documenta esto explícitamente en el ADR-027 para que futuros frentes parecidos sepan dónde mirar.
+- **El asterisco rojo de obligatoriedad ES + helper text diferenciado por locale dentro de `BodyLocaleTabs`** es un patrón nuevo en el editor: hasta ahora todos los campos per-locale tenían el mismo trato (todos requeridos o todos opcionales por igual). Brief introduce la primera asimetría real ES vs EN dentro del componente reusable. La implementación queda local a `BodyLocaleTabs` (la constante `BRIEF_REQUIRED_LOCALE = 'es'`), no se generaliza a "lista de campos requeridos por locale" porque no hay otros candidatos a futuro corto. Si surgen más asimetrías (hipotético: meta_description obligatoria solo en ES pero no en EN), generalizar entonces, no antes.
+- **Bundle delta de +679 B gzipped es proporcional al volumen del cambio**: tres input blocks nuevos, seis claves i18n, una clase de validación. No hay regresiones de tamaño del bundle.
+
+### Paquete 10.A.11 fase 1: despliegue brief-per-locale a TEST 2026-05-23
+
+Despliegue completo del frente brief-per-locale (10.A.8 backend + 10.A.9 skills + 10.A.10 frontend) a TEST. Flyway V3 aplicada limpiamente, JAR y bundle desplegados, end-to-end del pipeline editorial validado con un run real. **Sin ventana de mantenimiento neta** porque al iniciar la sesión TEST estaba encendida con el backend caído (escenario distinto al asumido por el prompt). AUDIT queda intencionalmente sin tocar para una sesión aparte.
+
+**Sorpresas que reformularon el procedimiento de la sesión**:
+
+1. **TEST estaba encendido pero el JAR antiguo no se había lanzado tras el reboot** (uptime 8 min, sin proceso java). El prompt asumía "ENCENDIDO y operativo con la versión actual"; la realidad mostraba EC2 viva pero backend no arrancado. Causa probable: el operador encendió la EC2 sabiendo que el siguiente paso era reemplazar el JAR, así que evitó el bootstrap del JAR antiguo. El operador confirmó "saltar stop, arrancar directamente el JAR nuevo" en el AskUserQuestion, lo que ahorró un arranque innecesario. Patrón aplicable para futuros frentes que toquen backend en TEST: si el operador ha encendido la EC2 expresamente para una sesión de despliegue, probablemente no haya arrancado el backend antiguo — verificar antes de asumir ventana real de stop/start.
+
+2. **TEST no usa systemd**; el backend corre como proceso `java -jar` arrancado a mano (confirmado en `test.md:56`). El prompt incluía `sudo systemctl stop sharemechat-test.service` que habría fallado con "Unit sharemechat-test.service could not be found". Procedimiento corregido en vivo: rename JARs + arranque con `nohup java -jar … --spring.profiles.active=test > backend.log 2>&1 &`.
+
+3. **El role IAM `sharemechat-ec2-test-role` no tiene `s3:PutObject` sobre `sharemechat-backups`** (AccessDenied al intentar subir el dump desde test-backend). AUDIT sí tiene la policy (10.A.1). Pivot: descarga del dump via scp a la máquina local y subida con las credenciales del usuario IAM del operador. Deuda anotada para cierre futuro: replicar `SharemechatContentBackupsRW` (o equivalente) sobre el role TEST cuando convenga. No bloqueante para esta sesión.
+
+**Fase 1 — Pre-flight**:
+
+- SSH a test-backend OK (`ip-172-31-29-117.eu-central-1.compute.internal`, uptime 8 min).
+- JAR local: `target/sharemechat-v1-0.0.1-SNAPSHOT.jar`, SHA256 `a840bec7723428ca3cf57b59b2380e4ece306a4aa795f273d348b4c07faba094`, 106.058.409 bytes, fecha local 2026-05-23 10:47 (zona horaria Madrid).
+- Bundle frontend: `main.04724b8b.js` (de 10.A.10) ya en `frontend/build/`. Reutilizado, no se recompiló.
+- Backup BD: `mysqldump --single-transaction --routines --triggers --events --hex-blob --set-gtid-purged=OFF` ejecutado en test-backend. Resultado: `test-backup-pre-10A11-2026-05-23-0902.sql.gz` (683.481 bytes, SHA256 `a7e77b2e85cba75c2a0f5cf01d1db9976ab75ea6b5fae5025599e2355ad5d2cb`). Subido a `s3://sharemechat-backups/test/test-backup-pre-10A11-2026-05-23-0902.sql.gz` (verified via head-object: ContentLength 683481, LastModified 2026-05-23T09:03:19+00:00).
+- Estado BD pre-cambio: 50 tablas, Flyway v2 (baseline + V2 cms del 2026-05-16). `content_articles.brief` presente; `content_article_translations.brief` ausente. 2 artículos (id=1 PUBLISHED, id=2 IN_REVIEW), 4 translations con body.
+
+**Fase 2 — Deploy bundle frontend (mientras backend caído)**:
+
+- `deploy-frontend.ps1 test product -SkipBuild` ejecutado. Sync de 10 ficheros a `s3://sharemechat-frontend-test/`. El chunk admin antiguo `863.84a34307.chunk.js` eliminado; el nuevo `863.fb6b0ec7.chunk.js` (donde vive `ContentArticleEditor.jsx` refactor 10.A.10) subido. `main.04724b8b.js` subido.
+- Invalidación CloudFront `E2Q4VNDDWD5QBU` con paths `/*` → ID `I48RBXIIW8TB4G1ZVDI3IIR6F2`. Espera de Completed: ~50 segundos.
+- Validación post-invalidation: `curl -s https://test.sharemechat.com/` → HTTP 200, 736 bytes (index.html con script ref a `main.04724b8b.js`).
+- No hay validación intermedia de API porque el backend estaba caído desde antes; el bundle nuevo no requiere backend para servirse.
+
+**Fase 3 — Subir JAR nuevo**:
+
+- `scp` del JAR local a `test-backend:/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.new`.
+- SHA256 remoto idéntico al local (`a840bec7…`). JAR antiguo (May 22 20:52, 106.056.697 bytes) intacto en su nombre original.
+
+**Fase 4 — Rename + arranque del JAR nuevo (sin stop, no había servicio activo)**:
+
+- 09:11:26 UTC — Inicio del comando rename + nohup.
+- Rename: `sharemechat-v1-0.0.1-SNAPSHOT.jar` → `…jar.bak.10A11`; `…jar.new` → `sharemechat-v1-0.0.1-SNAPSHOT.jar`.
+- Arranque: `nohup java -jar …jar --spring.profiles.active=test > /home/ec2-user/sharemechat-v1/backend.log 2>&1 &`. PID 3032.
+- 09:11:35.182 UTC — Flyway conecta a la BD (MySQL 8.4; warning de Flyway "newer than tested" no bloquea).
+- 09:11:35.400 UTC — `Successfully validated 4 migrations`. (Nota: la BD termina con 3 filas en `flyway_schema_history`. Flyway cuenta el baseline + V1 + V2 + V3 = 4 en su validación interna aunque V1 no esté presente como fila al ser marcado por el baseline; comportamiento normal documentado.)
+- 09:11:35.541 UTC — `Migrating schema "db1_sharemechat_test" to version "3 - brief per locale"`.
+- 09:11:35.758 UTC — `Successfully applied 1 migration to schema, now at version v3 (execution time 00:00.136s)`.
+- 09:11:57.883 UTC — `Started SharemechatV1Application in 30.67 seconds`.
+
+Ventana "neta de servicio interrumpido": 0 segundos (no había backend antiguo corriendo). Tiempo total desde rename hasta servicio listo: 31 segundos. Si la EC2 hubiera tenido el backend antiguo corriendo, la ventana habría sido ~33-40 s (5 s stop + 28 s arranque + 0.14 s Flyway V3).
+
+**Fase 5 — Validación**:
+
+- Smoke tests curl:
+  - `GET /api/users/me` → HTTP 401 (content-length 0, sin enmascaramiento HTML).
+  - `GET /api/public/content/articles?locale=es` → HTTP 200 application/json.
+  - `GET /api/public/content/articles?locale=en` → HTTP 200 application/json.
+- Detalle público article 1: ES con brief poblado (271 chars en español); EN con brief NULL (esperado per ADR-027 D5.1 — la migración solo backfilled ES, el EN se rellena con runs nuevos del pipeline).
+- Verificación BD:
+  - `flyway_schema_history`: 3 filas. V3 con execution_time=0.14 s, success=1, installed_on=2026-05-23 09:11:35.
+  - `DESCRIBE content_articles`: columna `brief` **eliminada** ✓.
+  - `DESCRIBE content_article_translations`: columna `brief TEXT NULL` **añadida** ✓, posicionada tras `meta_description` como ADR-027 D1 prescribe.
+  - Briefs: tr_id=1 (article 1 ES) y tr_id=3 (article 2 ES) poblados via backfill (271 y 284 chars); tr_id=2 (article 1 EN) y tr_id=4 (article 2 EN) NULL.
+- Validación visual del operador en navegador incógnito: OK (confirmado via AskUserQuestion).
+- Validación end-to-end del pipeline editorial: el operador ejecutó un run en Cowork con las skills sincronizadas (10.A.9), copió el JSON resultante (con `locales.{es,en}.brief`) y lo pegó en admin TEST. Resultado en BD: artículo nuevo id=3 PUBLISHED, run 4 VALIDATED a 10:25:08. Translations: tr_id=5 (ES) brief 284 chars en español; tr_id=6 (EN) brief 266 chars en inglés. Confirma que skills emiten brief per-locale, adapter Java acepta el JSON, y `applyTranslationFromJson` persiste el brief en la translation EN.
+
+Estado de TEST al cierre del paquete 10.A.11 fase 1:
+
+- **Schema BD**: v3 (baseline + V2 + V3 brief per locale).
+- **JAR backend**: `sharemechat-v1-0.0.1-SNAPSHOT.jar` SHA256 `a840bec7723428ca3cf57b59b2380e4ece306a4aa795f273d348b4c07faba094`, corriendo PID 3032 desde 09:11:57 UTC con perfil `test`.
+- **JAR backup**: `sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A11` (pre-refactor 10.A.7 + 10.A.6 + 10.A.5, May 22 20:52) conservado en `/home/ec2-user/sharemechat-v1/` para rollback.
+- **Bundle frontend**: `main.04724b8b.js` en `s3://sharemechat-frontend-test/` con `863.fb6b0ec7.chunk.js` para el editor admin refactorizado.
+- **Backup BD pre-cambio**: en `s3://sharemechat-backups/test/test-backup-pre-10A11-2026-05-23-0902.sql.gz` (683.481 B).
+- **Skills CMS en Cowork del editor**: sincronizadas con el repo por el operador antes del despliegue (confirmado en el prompt y validado end-to-end con el run del pipeline).
+- **AUDIT**: sin cambios. Sigue corriendo el backend de 10.A.7 (sin V3 ni refactor). Despliegue AUDIT en sesión aparte.
+
+Lecciones / observaciones:
+
+- **El run editorial completo del pipeline nuevo funcionó al primer intento sin errores**, lo que valida tres meses de refactor coordinado (10.A.8 backend + 10.A.9 skills + 10.A.10 frontend) sin necesidad de fixups intermedios. La estrategia "tres paquetes locales sin desplegar, despliegue coordinado en uno solo" probó su valor: el riesgo de drift entre repo y entornos durante un mes fue cero porque todos los paquetes vivieron en local hasta esta sesión.
+- **La ausencia de ventana neta es un efecto secundario afortunado del estado encontrado** (EC2 encendida sin backend), no del diseño del paquete. Para AUDIT no aplicará: AUDIT corre 24/7 como systemd, así que habrá ventana real de ~30-40 segundos. La página de mantenimiento (`MaintenanceProvider` activa, paquete 10.A.3.pre) cubrirá ese hueco.
+- **La deuda IAM del role TEST sobre `sharemechat-backups` quedó pendiente** sin bloquear esta sesión gracias al pivot via scp + upload local. Si surge una sesión TEST que requiera subidas frecuentes a backups (por ejemplo, snapshots periódicos automatizados), conviene replicar la policy de AUDIT antes. Para el flujo manual actual el pivot es aceptable.
+- **El `--spring.profiles.active=test` se pasó explícitamente al `java -jar`** porque test-backend no tiene `SPRING_PROFILES_ACTIVE` en el .env. La invariante "el JAR sabe en qué entorno corre" se mantiene via flag de línea de comando, no via variable. Conviene documentarlo en `test.md` si no está ya (ver D.3).
+
+### Paquete 10.A.11 fase 2: despliegue brief-per-locale a AUDIT + sync assets 2026-05-23
+
+Cierre del frente brief-per-locale: AUDIT nivelado al estado funcional de TEST. JAR fresco recompilado localmente + bundle product + bundle admin desplegados; ventana de mantenimiento real con systemd (47 segundos backend abajo), Flyway V3 aplicada en 190 ms; sync assets TEST → AUDIT ejecutado como no-op (los dos buckets ya estaban perfectamente sincronizados antes del comando). End-to-end del pipeline editorial NO se valida en esta sesión (AUDIT no es entorno editorial activo: tiene 1 artículo pre-migración con brief EN NULL, suficiente para confirmar refactor); la validación end-to-end queda cubierta por la sesión TEST (10.A.11 fase 1) del 2026-05-23 09:11 UTC. **Sin commit todavía**.
+
+**Sorpresas operativas de la sesión**:
+
+1. **Hostname RDS AUDIT no seguía el patrón asumido**: el prompt sugería extender la convención `db1-sharemechat-test-v2.…` reemplazando `test` por `audit`. La realidad: el endpoint AUDIT es `db1-sharemechat-audit.…` (sin sufijo `-v2`). El primer `mysqldump` falló con `Unknown MySQL server host`. Localización del endpoint correcto via grep de `spring.datasource.url` en `application-audit.properties`. Lección: nunca extrapolar endpoints RDS por convención de nombre; siempre leerlos de las properties versionadas o del mapping local.
+
+2. **El role IAM `sharemechat-ec2-audit-role` NO tenía `s3:PutObject` sobre `sharemechat-backups`**, pese a que el prompt asumía "IAM correcto desde 10.A.1". Lo que aplicó el operador en 10.A.1 fue `SharemechatContentPrivateAuditRW` sobre el bucket `sharemechat-content-private-audit`, NO sobre `sharemechat-backups`. Mismo AccessDenied que vimos en TEST en la fase 1. Pivot conocido: descarga del dump a local via scp + upload con credenciales de usuario IAM del operador. Deuda IAM extendida: ahora confirmada en **AUDIT también**, no solo TEST. Ambos roles necesitan policy de write sobre `sharemechat-backups` si en algún momento se automatizan backups; por ahora el pivot manual funciona.
+
+3. **El sync TEST → AUDIT fue no-op**: pre-sync ambos buckets ya tenían los mismos 48 objetos (mismas claves, mismos tamaños, salvo los 2 bytes esperados del manifest legal custom). El prompt asumía que TEST tendría un rename `foto-perfil-videochat.webp → foto-perfil-dating.webp` no propagado a AUDIT y assets nuevos del article 3 creado durante la validación 10.A.11 fase 1, pero ambos cambios ya estaban en AUDIT antes de esta sesión (el operador debió haberlos propagado fuera de banda, o el article 3 de TEST no generó assets nuevos al bucket). El comando `aws s3 sync` se ejecutó por completitud y confirmó "nada que transferir" (output vacío). Documentado como hecho operativo.
+
+4. **`AUDIT tenía 1 artículo + 2 translations` pre-V3** (no 0 como sugería el prompt). El backfill V3 pobló la translation ES con el brief existente (271 chars); la EN queda NULL. Esto NO altera el procedimiento; solo el reporte cuantitativo final.
+
+**Fase 1 — Pre-flight**:
+
+- SSH `audit-backend` OK (`ip-172-31-19-114.eu-central-1.compute.internal`, uptime 37 días 9h, servicio activo 18h).
+- JAR actual remoto: `sharemechat-v1-0.0.1-SNAPSHOT.jar` (106.056.697 B, fecha 2026-05-22 21:35 UTC, SHA256 `4b0679f4a34cb9305a75ee9fd80e67b3e6b053e9658b74a00c87c58178bb5a13` = JAR del 10.A.7).
+- JAR local recompilado con `./mvnw clean package -DskipTests`: BUILD SUCCESS en 15.4 s. Resultado: `sharemechat-v1-0.0.1-SNAPSHOT.jar` 106.058.409 B, SHA256 `a760d8bde8d2e68914ba43b484c4d69d349792426d90cb3fbed23b8d918fff04` (diferente al de TEST en 10.A.11 fase 1 porque Maven incluye timestamps de compilación; el contenido lógico es idéntico).
+- Bundle frontend recompilado:
+  - `npm run build:product` → `main.04724b8b.js` + `863.fb6b0ec7.chunk.js` (mismos hashes que TEST 10.A.11 fase 1; CRA produce hashes determinísticos cuando el código no cambia).
+  - `npm run build:admin` → `main.303de798.js` + `863.cd6c9d0f.chunk.js` (admin surface, primer build de admin desde el refactor de 10.A.10).
+- Backup BD AUDIT: dump `audit-backup-pre-10A11-fase2-2026-05-23-1614.sql.gz` (137.395 B, SHA256 `f5c2f35bd09e58e07db8214081c548f0b8f230bb928dff9071ebf676046381b3`), subido a `s3://sharemechat-backups/audit/audit-backup-pre-10A11-fase2-2026-05-23-1614.sql.gz` a 16:17:02 UTC via pivot scp + upload local (sorpresa #2).
+- Estado BD pre-cambio: 50 tablas, Flyway v2 (baseline + V2 del 2026-05-22 18:31 UTC). `content_articles.brief` presente; `content_article_translations.brief` ausente. 1 artículo, 2 translations (sorpresa #4).
+
+**Fase 2 — Deploy bundles frontend (mientras backend antiguo sigue corriendo)**:
+
+- `deploy-frontend.ps1 audit product -SkipBuild` → sync a `s3://sharemechat-frontend-audit/`, chunk admin antiguo `863.84a34307.chunk.js` eliminado, `main.04724b8b.js` + `863.fb6b0ec7.chunk.js` subidos. Invalidación CloudFront product `E1ILXV7P6ENUV8` con paths `/*` → ID `I921A5JSB1LXKG3EUSS2X96TBE`.
+- Build admin (`npm run build:admin`) sobrescribe `frontend/build/` con surface admin. Hashes: `main.303de798.js`, `863.cd6c9d0f.chunk.js`.
+- `deploy-frontend.ps1 audit admin -SkipBuild` → sync a `s3://sharemechat-admin-audit/`. Invalidación CloudFront admin `E21IB0VBKYNNBW` con paths `/*` → ID `I7B3DMF6VO3XBNDP315HP29BRK`.
+- Validación intermedia (backend AUDIT aún antiguo): `curl https://audit.sharemechat.com/` → HTTP 200 con `main.04724b8b.js`; `curl https://admin.audit.sharemechat.com/` → HTTP 200 con `main.303de798.js`. Backend antiguo no bloquea servir los bundles nuevos (el contrato compartido del backend es aditivo).
+
+**Fase 3 — Subir JAR nuevo a AUDIT**:
+
+- `scp target/sharemechat-v1-0.0.1-SNAPSHOT.jar audit-backend:.../sharemechat-v1-0.0.1-SNAPSHOT.jar.new`.
+- SHA256 remoto idéntico al local: `a760d8bde8d2e68914ba43b484c4d69d349792426d90cb3fbed23b8d918fff04` ✓.
+- JAR antiguo intacto. Tres `.bak` previos: `.bak.10A3` (pre-CMS-v2, 2 mayo), `.bak.10A7` (pre-refactor 10.A.5, 22 mayo 18:30), `.bak.10A11-fase2` (este paquete; se crea en fase 4).
+
+**Fase 4 — Ventana de mantenimiento (systemd)**:
+
+| Timestamp UTC | Evento |
+|---|---|
+| 16:20:21 | `sudo systemctl stop sharemechat-audit.service` |
+| 16:20:27 | Service inactive confirmado |
+| 16:20:37 | Rename JARs + `sudo systemctl start` |
+| 16:20:44.798 | Flyway conecta a BD |
+| 16:20:45.121 | `Migrating schema "db1_sharemechat_audit" to version "3 - brief per locale"` |
+| 16:20:45.369 | `Successfully applied 1 migration to schema, now at version v3 (execution time 00:00.185s)` |
+| 16:21:08.369 | `Started SharemechatV1Application in 31.151 seconds` |
+
+**Ventana total backend abajo: 47 segundos** (16:20:21 → 16:21:08). Margen estable vs 33 s del 10.A.7 (donde no había Flyway aplicando) y vs 77 s del 10.A.3 (donde había baseline manual previo). En este paquete la única operación BD adicional fue V3 (185 ms), por debajo del ruido del bootstrap.
+
+El `MaintenanceProvider` del SPA del paquete 10.A.3.pre cubrió la ventana visualmente para cualquier usuario que navegase: durante los 47 s, los fetch a `/api/*` recibieron 502/503 desde nginx y el SPA mostró el overlay industrial bilingüe. No hubo validación de eso porque no había usuarios reales navegando AUDIT durante el cambio.
+
+**Fase 5 — Validación funcional**:
+
+- Smoke tests curl:
+  - `GET /api/users/me` → HTTP 401 limpio (content-length 0, sin enmascaramiento HTML).
+  - `GET /api/public/content/articles?locale=es` → HTTP 200 application/json.
+  - `GET /api/public/content/articles?locale=en` → HTTP 200 application/json.
+- Verificación BD:
+  - `flyway_schema_history`: 3 filas. V3 con execution_time=0.19 s, success=1, installed_on=2026-05-23 16:20:45.
+  - `DESCRIBE content_articles`: columna `brief` **eliminada** ✓.
+  - `DESCRIBE content_article_translations`: columna `brief TEXT NULL` **añadida** tras `meta_description` ✓.
+  - Translations: tr_id=1 (article 1 ES) brief 271 chars (backfill); tr_id=2 (article 1 EN) brief NULL.
+- Validación visual del operador: OK confirmada via AskUserQuestion.
+- **End-to-end del pipeline NO se ejecuta en esta sesión**: AUDIT no es entorno editorial. La validación end-to-end del pipeline 10.A.9 con run real ya está cerrada por la sesión TEST 10.A.11 fase 1 con article 3 / run 4 / tr 6 (266 chars en inglés).
+
+**Fase 6 — Sync assets TEST → AUDIT**:
+
+- Pre-sync inspección: TEST 48 objetos / 3.167.760 B; AUDIT 48 objetos / 3.167.758 B. Diff por clave + tamaño: **única diferencia**: `legal/model_contract.manifest.json` (213 B TEST vs 211 B AUDIT, los 2 bytes esperados del manifest custom). El resto (47 objetos) ya está perfectamente sincronizado entre los dos buckets.
+- `aws s3 sync s3://assets-sharemechat-test1/ s3://assets-sharemechat-audit/ --delete --exclude "legal/model_contract.manifest.json"` ejecutado. Output: vacío (nada que transferir, nada que eliminar). El comando se confirmó por completitud documental, aunque resultó no-op. AUDIT mantiene 48 objetos / 3.167.758 B post-sync.
+- Manifest legal AUDIT verificado: `assets.audit.sharemechat.com/legal/model_contract.pdf` (URL adaptada del 10.A.7 preservada).
+- Invalidación CloudFront assets AUDIT `E2NC4TEJAWOI3L` con paths `/*` → ID `I4S3NBGRJRA2YYQ24FYKS7LRHK`.
+- Spot-checks via CDN:
+  - `foto-perfil-dating.webp`: HTTP 200, 84.748 B, image/webp ✓ (rename ya propagado a AUDIT antes de esta sesión, fecha 2026-05-23 17:52 local).
+  - `foto-perfil-videochat.webp`: HTTP 403 (nombre viejo no existe; OAC enmascara 404 como 403, lección 10.A.3.pre) ✓.
+  - `home/hero/hero_desktop_v1.webp`: HTTP 200, 41.314 B ✓.
+
+Estado de AUDIT al cierre del paquete 10.A.11 fase 2:
+
+- **Schema BD**: v3 (baseline + V2 + V3 brief per locale).
+- **JAR backend**: `sharemechat-v1-0.0.1-SNAPSHOT.jar` SHA256 `a760d8bde8d2e68914ba43b484c4d69d349792426d90cb3fbed23b8d918fff04` corriendo PID 2046455 desde 16:21:08 UTC con perfil `audit` via systemd `sharemechat-audit.service`.
+- **JAR backups**: `.bak.10A3` (pre-CMS-v2), `.bak.10A7` (pre-refactor 10.A.5), `.bak.10A11-fase2` (pre-refactor brief-per-locale, este paquete, 22 mayo 21:35 UTC).
+- **Bundle frontend product**: `main.04724b8b.js` en `s3://sharemechat-frontend-audit/`.
+- **Bundle frontend admin**: `main.303de798.js` en `s3://sharemechat-admin-audit/`.
+- **Bucket assets**: 48 objetos sincronizados con TEST + manifest legal custom AUDIT preservado.
+- **Backup BD pre-cambio**: `s3://sharemechat-backups/audit/audit-backup-pre-10A11-fase2-2026-05-23-1614.sql.gz` (137.395 B).
+- **AUDIT y TEST funcionalmente paritarios** a nivel de schema, código backend, bundles frontend y skills (las skills viven en el Cowork del operador y son entorno-agnósticas).
+
+Frente 10.A cerrado completamente. Frente brief-per-locale al 4/4 paquetes.
+
+Lecciones / observaciones:
+
+- **El despliegue AUDIT siguió el mismo patrón que TEST sin fricciones**, salvo las dos sorpresas IAM/hostname documentadas como #1 y #2. Esto valida la convergencia funcional alcanzada en el 10.A.7 (TEST y AUDIT compartiendo el mismo JAR + properties por entorno) y reafirma que la inversión en el refactor 10.A.5 (URLs por properties) paga dividendos: el mismo binario funciona en ambos sin recompilación, solo cambian las properties.
+- **El sync TEST → AUDIT como no-op cierra el ciclo operativo del frente 10.A**: el operador había mantenido AUDIT casi al día de TEST entre sesiones (incluyendo el rename `videochat → dating` y posibles correcciones manuales). Llegar a este punto sin nada que sincronizar es la prueba de que la disciplina operativa "mantén AUDIT cercano a TEST" se ha consolidado.
+- **Recompilar el JAR localmente justo antes del despliegue produce un SHA256 distinto al de TEST aunque el código sea idéntico** (Maven incluye timestamps). La verificación de integridad debe hacerse comparando local vs remoto del mismo build (`scp` de un JAR + `sha256sum` antes y después de la copia), no asumiendo que un mismo commit produce el mismo SHA256 en dos compilaciones distintas. Esto es disciplina ya establecida pero conviene reiterarlo cuando se hagan despliegues a distintos entornos con builds separados.
+- **AUDIT mantiene 47 segundos de ventana real frente a 0 segundos de TEST** porque AUDIT corre 24/7 con systemd mientras TEST se enciende/apaga manualmente. La página de mantenimiento cubrió el hueco visualmente; no hubo validación de usuarios reales viendo el overlay durante la ventana (es entorno operativo del equipo, no producción).
+- **Deuda IAM extendida**: ambos roles (`sharemechat-ec2-test-role` y `sharemechat-ec2-audit-role`) carecen de `s3:PutObject` sobre `sharemechat-backups`. El bucket de backups multi-env se creó en 10.A.1 pero la policy aplicada en su día (`SharemechatContentPrivateAuditRW`) era sobre `sharemechat-content-private-audit`, no sobre el bucket de backups. Si se quiere automatizar backups periódicos (por cron en EC2, por ejemplo), abrir paquete `10.A.11.bis` o similar para añadir policies de write sobre `sharemechat-backups` a ambos roles. Hasta entonces, el pivot scp + upload local es el patrón operativo.
+
+
+

@@ -23,7 +23,7 @@ El builder emite UN ÚNICO fichero: `05_final/final.json`. NO pinta el contenido
 
 La sección "CUANDO TERMINES" al final de esta skill define qué información sí se reporta en chat (resumen breve, no contenido del JSON).
 
-ESTRUCTURA DEL JSON (schema 2.0)
+ESTRUCTURA DEL JSON (schema 2.0; brief introducido per-locale por ADR-027)
 
 ```
 {
@@ -38,11 +38,13 @@ ESTRUCTURA DEL JSON (schema 2.0)
     "self_check_failures": []
   },
   "locales": {
-    "es": { ...campos per-locale... },
-    "en": { ...campos per-locale... }
+    "es": { ...campos per-locale, incluido brief... },
+    "en": { ...campos per-locale, incluido brief... }
   }
 }
 ```
+
+Por ADR-027, `brief` es un campo lingüístico per-locale: vive dentro de cada `locales.<es|en>`, NO dentro de `shared`. Cualquier JSON que coloque brief bajo `shared` será rechazado por el backend como schema obsoleto.
 
 CAMPOS OBLIGATORIOS (todos siempre presentes; null o [] si no aplica)
 
@@ -65,6 +67,7 @@ Bloque `locales.<es|en>` (campos linguísticos por idioma):
 - title (string ≤255, NO null)
 - seo_title (string ≤60, NO null no vacío)
 - meta_description (string ≤160, NO null no vacía)
+- brief (string ≤8192, NO null no vacío; texto descriptivo 1-2 frases visible en cards de listado y cabecera del detalle del blog público; ADR-027). En ES proviene del `<editorial_input><brief>` del prompt; en EN proviene del bloque metadata final de `04_review/reviewed_en.md` (campo `SUGGESTED_BRIEF_EN`).
 - draft_markdown (string Markdown literal ≥800 chars, ≥1 H2 con `## `, sin HTML inline)
 - search_intent (uno de: informational | transactional | navigational | commercial)
 - target_keywords (array de objetos {term, type, search_intent_match}; al menos uno con type="primary"; las keywords SEO óptimas difieren entre mercado hispano y anglosajón)
@@ -88,7 +91,9 @@ REGLAS DURAS
 11. `locales.<es|en>.risk_notes` consolida lo que esté en `review_notes.md`. Para el locale EN, traduce kind/note al inglés manteniendo severity y la equivalencia semántica.
 12. `locales.<es|en>.fact_check_notes`: una entrada por cada claim numérico o factual detectado en el draft del locale correspondiente, con status y source_index (índice 1-based al array `shared.sources_used`, que es común).
 13. Antes de copiar reviewed.md a `locales.es.draft_markdown`, ELIMINA cualquier bloque de comentario `<!-- TRACE ... -->` y cualquier marcador residual `[source N]`. Mismo tratamiento para `reviewed_en.md` → `locales.en.draft_markdown`.
-14. METADATA DEL EN: lee el bloque al final de `04_review/reviewed_en.md` con los campos SUGGESTED_SLUG_EN, SUGGESTED_SEO_TITLE_EN, SUGGESTED_META_DESC_EN. Usa esos valores para poblar `locales.en.slug`, `locales.en.seo_title` y `locales.en.meta_description` respectivamente. El bloque metadata NO se incluye en `locales.en.draft_markdown` (solo el cuerpo del artículo).
+14. METADATA DEL EN: lee el bloque al final de `04_review/reviewed_en.md` con los campos SUGGESTED_SLUG_EN, SUGGESTED_SEO_TITLE_EN, SUGGESTED_META_DESC_EN, SUGGESTED_BRIEF_EN. Usa esos valores para poblar `locales.en.slug`, `locales.en.seo_title`, `locales.en.meta_description` y `locales.en.brief` respectivamente. El bloque metadata NO se incluye en `locales.en.draft_markdown` (solo el cuerpo del artículo).
+
+15. BRIEF ES: `locales.es.brief` se copia LITERAL del campo `<brief>...</brief>` dentro de `<editorial_input>` del prompt CMS, sin retoques. Si el prompt no trae brief (caso anómalo), set `locales.es.brief` a string vacío Y anota un fallo en `shared.self_check_failures` con motivo `locales.es.brief: ausente en editorial_input`. El backend rechazará el JSON al validar.
 
 VALIDACIÓN ANTES DE EMITIR (self-check)
 
@@ -108,6 +113,7 @@ Por cada locale (ES y EN, independientemente):
 - `title` no nulo no vacío.
 - `seo_title` no nulo no vacío y .length <= 60.
 - `meta_description` no nula no vacía y .length <= 160.
+- `brief` no nulo no vacío y .length <= 8192 (ADR-027).
 - `draft_markdown` no nulo, >= 800 caracteres, contiene al menos 1 H2 literal (`## ...`), separa párrafos con línea en blanco, sin HTML inline.
 - `search_intent` ∈ {informational, transactional, navigational, commercial}.
 - `target_keywords` contiene al menos un objeto con `type="primary"`.
@@ -142,8 +148,8 @@ CUANDO TERMINES
 Confirma brevemente que `05_final/final.json` está escrito y resume:
 - shared.self_check_passed: true | false
 - nº de shared.sources_used
-- locales.es: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, nº de risk_notes
-- locales.en: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, nº de risk_notes
+- locales.es: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, longitud de brief en caracteres, nº de risk_notes
+- locales.en: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, longitud de brief en caracteres, nº de risk_notes
 - locales.es.slug !== locales.en.slug: sí/no
 - paridad de H2 entre locales: igual / [N vs M]
 

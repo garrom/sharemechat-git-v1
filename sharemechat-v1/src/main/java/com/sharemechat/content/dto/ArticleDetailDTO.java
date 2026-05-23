@@ -4,11 +4,12 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Detalle completo de un articulo logico (ADR-025).
+ * Detalle completo de un articulo logico (ADR-025, brief reubicado por ADR-027).
  *
  * Campos compartidos (locale-invariante) en la raiz.
- * Campos linguisticos (slug, title, body, etc.) en {@link #translations},
- * una entrada por locale presente en BD.
+ * Campos linguisticos (slug, title, body, brief, etc.) en {@link #translations},
+ * una entrada por locale presente en BD. Tras ADR-027 brief ya no esta en la
+ * raiz; vive dentro de cada TranslationDetailDTO.
  *
  * Garantia: translations nunca es null; si el articulo solo tiene ES,
  * translations tendra un elemento. Tras un apply-bilingual exitoso,
@@ -19,7 +20,6 @@ public record ArticleDetailDTO(
         String state,
         String category,
         String keywords,
-        String brief,
         String heroImageUrl,
         boolean aiAssisted,
         boolean disclosureRequired,

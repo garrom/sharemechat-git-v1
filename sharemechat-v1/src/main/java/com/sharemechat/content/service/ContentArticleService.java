@@ -66,7 +66,7 @@ import java.util.regex.Pattern;
  *
  * Invariantes para transicion DRAFT -> IN_REVIEW:
  *  - hero_image_url no vacio en content_articles
- *  - brief no vacio en content_articles
+ *  - brief no vacio AL MENOS en la translation ES (ADR-027)
  *  - translations ES y EN ambas existen con body_s3_key + body_content_hash
  *    + seo_title + meta_description completos
  *
@@ -174,6 +174,7 @@ public class ContentArticleService {
 
         String slug = normalizeSlug(req.getSlug());
         String title = normalizeText(req.getTitle(), TITLE_MAX, true, "title");
+        // ADR-027: brief vive ahora en la translation, no en el padre.
         String brief = normalizeText(req.getBrief(), BRIEF_MAX, false, "brief");
         String category = normalizeText(req.getCategory(), CATEGORY_MAX, false, "category");
         String keywords = normalizeKeywords(req.getKeywords());
@@ -189,7 +190,6 @@ public class ContentArticleService {
         article.setHeroImageUrl(heroImageUrl);
         article.setCategory(category);
         article.setKeywords(keywords);
-        article.setBrief(brief);
         article.setState(ContentConstants.STATE_DRAFT);
         article.setAiAssisted(false);
         article.setDisclosureRequired(false);
@@ -203,6 +203,7 @@ public class ContentArticleService {
         tr.setLocale(locale);
         tr.setSlug(slug);
         tr.setTitle(title);
+        tr.setBrief(brief);
         translationRepo.save(tr);
 
         log.info("{} article created id={} slug_es={} actor={}",
@@ -229,10 +230,8 @@ public class ContentArticleService {
         assertEditable(article, isAdmin);
 
         List<String> changedFields = new java.util.ArrayList<>();
-        if (req.getBrief() != null) {
-            article.setBrief(normalizeText(req.getBrief(), BRIEF_MAX, false, "brief"));
-            changedFields.add("brief");
-        }
+        // ADR-027: brief sale de este endpoint (es per-locale; se edita por
+        // TranslationMetadataUpdateRequest a traves del endpoint /translations/{locale}).
         if (req.getCategory() != null) {
             article.setCategory(normalizeText(req.getCategory(), CATEGORY_MAX, false, "category"));
             changedFields.add("category");
@@ -424,6 +423,19 @@ public class ContentArticleService {
             if (!java.util.Objects.equals(normalizedMeta, tr.getMetaDescription())) {
                 tr.setMetaDescription(normalizedMeta);
                 changedFields.add("metaDescription");
+            }
+        }
+
+        // ADR-027: brief es per-locale.
+        if (req.getBrief() != null) {
+            if (req.getBrief().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "brief no puede ser vacio; omite el campo para no modificarlo");
+            }
+            String normalizedBrief = normalizeText(req.getBrief(), BRIEF_MAX, false, "brief");
+            if (!java.util.Objects.equals(normalizedBrief, tr.getBrief())) {
+                tr.setBrief(normalizedBrief);
+                changedFields.add("brief");
             }
         }
 
@@ -622,10 +634,6 @@ public class ContentArticleService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Pendiente para revision: hero_image_url");
         }
-        if (article.getBrief() == null || article.getBrief().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Pendiente para revision: brief");
-        }
         List<ContentArticleTranslation> translations =
                 translationRepo.findByArticleId(article.getId());
         Map<String, ContentArticleTranslation> byLocale = new LinkedHashMap<>();
@@ -650,6 +658,12 @@ public class ContentArticleService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                         "Pendiente para revision: locales." + required + ".meta_description");
             }
+        }
+        // ADR-027: brief es per-locale; exigir brief no vacio AL MENOS en el locale primario (es).
+        ContentArticleTranslation esTr = byLocale.get(ContentConstants.LOCALE_ES);
+        if (esTr == null || esTr.getBrief() == null || esTr.getBrief().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Pendiente para revision: locales.es.brief");
         }
     }
 
@@ -811,7 +825,6 @@ public class ContentArticleService {
                 article.getState(),
                 article.getCategory(),
                 article.getKeywords(),
-                article.getBrief(),
                 article.getHeroImageUrl(),
                 article.isAiAssisted(),
                 article.isDisclosureRequired(),
@@ -836,6 +849,7 @@ public class ContentArticleService {
                 t.getTitle(),
                 t.getSeoTitle(),
                 t.getMetaDescription(),
+                t.getBrief(),
                 t.getBodyS3Key(),
                 t.getBodyContentHash(),
                 t.getTargetKeywords(),
@@ -1134,7 +1148,7 @@ public class ContentArticleService {
                             t.getSlug(),
                             t.getLocale(),
                             t.getTitle(),
-                            a.getBrief(),
+                            t.getBrief(),
                             a.getCategory(),
                             a.getKeywords(),
                             a.getPublishedAt(),
@@ -1219,7 +1233,7 @@ public class ContentArticleService {
                 tr.getSlug(),
                 tr.getLocale(),
                 tr.getTitle(),
-                article.getBrief(),
+                tr.getBrief(),
                 tr.getSeoTitle(),
                 tr.getMetaDescription(),
                 article.getCategory(),

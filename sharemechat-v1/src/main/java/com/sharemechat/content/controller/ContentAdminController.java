@@ -237,7 +237,7 @@ public class ContentAdminController {
                 tr.locale(),
                 tr.slug(),
                 tr.title(),
-                detail.brief(),
+                tr.brief(),
                 detail.category(),
                 detail.heroImageUrl(),
                 htmlBody

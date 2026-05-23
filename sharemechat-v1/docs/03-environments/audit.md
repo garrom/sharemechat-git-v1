@@ -232,3 +232,30 @@ Estado del entorno post-paquete 10.A.3:
 - **Schema BD**: 50 tablas totales (43 originales no-CMS + 6 `content_*` nuevas + `flyway_schema_history`). MySQL 8.4.7. Hibernate `ddl-auto=validate` pasa sin errores.
 
 El siguiente paso del roadmap natural es PROD: replicar el patrón AUDIT validado, esta vez sin la nivelación incremental (PROD se monta desde cero con Flyway aplicando `V1__baseline.sql` + `V2__cms_v2_schema.sql` en orden, sin baseline manual).
+
+## Refactor URLs hardcoded a properties (paquete 10.A.7, 2026-05-22 21:36 UTC)
+
+Estado post-paquete 10.A.7, segunda ventana de mantenimiento del backend AUDIT (33 segundos):
+
+- **JAR backend**: refactorizado por el paquete 10.A.5 y desplegado a AUDIT en este paquete. Tamaño 106056697 bytes, SHA256 `4b0679f4a34cb9305a75ee9fd80e67b3e6b053e9658b74a00c87c58178bb5a13`, corriendo desde 2026-05-22 21:36:53 UTC. JAR previo (de 10.A.3, sin refactor) conservado como `sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A7` en la EC2.
+- **Properties por entorno**: `application-audit.properties` carga overrides para `app.assets.base-url=https://assets.audit.sharemechat.com`, `app.frontend.product-origin=https://audit.sharemechat.com`, `app.frontend.admin-origin=https://admin.audit.sharemechat.com`. Las properties `app.cors.allowed-origins` y `app.websocket.allowed-origins` no se overridean (la lista del base cubre los tres entornos). Detalle del refactor en [ADR-025 paquetes asociados] e [incident-notes.md](../04-operations/incident-notes.md) sección "Refactor URLs hardcoded a properties 2026-05-22 (paquete 10.A.5)".
+- **Frontend bundle**: `main.ff07af3c.js` con `runtimeEnv.js` (detección de entorno por `window.location.hostname` → `PRODUCT_ORIGIN=https://audit.sharemechat.com`, `ASSETS_BASE=https://assets.audit.sharemechat.com`) y el aviso AI eliminado del detalle del artículo público (paquete 10.A.6, sin función legal: el aviso vive solo en el Legal Center).
+- **Bucket de assets `assets-sharemechat-audit`**: 48 objetos sincronizados desde TEST. El manifest `legal/model_contract.manifest.json` es específico de AUDIT (URL `assets.audit.sharemechat.com/legal/model_contract.pdf`), generado a mano antes del sync y preservado con `--exclude` durante la sincronización. El PDF y el resto de assets son bit-a-bit idénticos a los de TEST.
+- **Validación end-to-end**: `GET https://audit.sharemechat.com/api/consent/model-contract/current` devuelve `{"version":"model_contract_v4_2026-03-23","sha256":"783A7471...","url":"https://assets.audit.sharemechat.com/legal/model_contract.pdf"}`. El backend AUDIT lee el manifest desde su propio bucket sin cross-environment fetch a TEST.
+
+Con esto el frente 10.A queda **completamente cerrado a nivel funcional**: TEST y AUDIT comparten JAR, bundle frontend y schema BD; cada uno consume sus propios assets, expone sus propios dominios y usa sus propias properties por entorno. Diferencias intencionales que permanecen: TEST efímero / AUDIT 24/7 con systemd; AUDIT con pipeline perimetral en Carril A real / TEST en DRY-RUN.
+
+## Refactor brief per-locale (paquete 10.A.11 fase 2, 2026-05-23 16:21 UTC)
+
+Estado post-paquete 10.A.11 fase 2, tercera ventana de mantenimiento del backend AUDIT (47 segundos):
+
+- **JAR backend**: refactor del frente brief-per-locale (paquetes 10.A.8 backend + 10.A.9 pipeline + 10.A.10 frontend admin), recompilado localmente para esta sesión. Tamaño 106058409 bytes, SHA256 `a760d8bde8d2e68914ba43b484c4d69d349792426d90cb3fbed23b8d918fff04`, corriendo desde 2026-05-23 16:21:08 UTC con perfil `audit` via `sharemechat-audit.service`. JAR previo del 10.A.7 conservado como `sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A11-fase2`.
+- **Schema BD**: 50 tablas. `flyway_schema_history` con 3 filas: baseline (2026-05-22 18:31), V2 cms-v2-schema (2026-05-22 18:31), V3 brief-per-locale (2026-05-23 16:20:45, execution_time 0.19 s). `content_articles.brief` eliminada; `content_article_translations.brief TEXT NULL` añadida tras `meta_description`. Backfill V3 pobló la translation ES del único artículo pre-existente con 271 chars; la EN quedó NULL como prescribe [ADR-027](../06-decisions/adr-027-brief-per-locale.md) D5.1.
+- **Backup BD pre-cambio**: `s3://sharemechat-backups/audit/audit-backup-pre-10A11-fase2-2026-05-23-1614.sql.gz` (137395 bytes, SHA256 `f5c2f35bd09e58e07db8214081c548f0b8f230bb928dff9071ebf676046381b3`).
+- **Frontend bundle product**: `main.04724b8b.js` + `863.fb6b0ec7.chunk.js` (con `ContentArticleEditor` refactorizado del paquete 10.A.10 — input brief per-locale en `BodyLocaleTabs`, ReviewChecklist con invariante `briefEs`).
+- **Frontend bundle admin**: `main.303de798.js` + `863.cd6c9d0f.chunk.js` (primer build del surface admin desde el refactor 10.A.10).
+- **Bucket de assets**: sin cambios. Sync TEST → AUDIT ejecutado por completitud documental pero resultó no-op (los dos buckets ya tenían 48 objetos idénticos en clave y tamaño; rename `foto-perfil-videochat.webp → foto-perfil-dating.webp` propagado fuera de banda entre sesiones).
+- **Skills CMS en Cowork del editor**: ya sincronizadas con el repo desde el paquete 10.A.9; aplican a TEST y AUDIT indistintamente porque las skills son entorno-agnósticas.
+- **Validación end-to-end del pipeline editorial**: NO repetida sobre AUDIT (es entorno no editorial). Validación cubierta por la sesión 10.A.11 fase 1 sobre TEST (article 3, run 4 VALIDATED, brief EN persistido con 266 chars en inglés).
+
+Con esto AUDIT alcanza paridad funcional con TEST también en el dimensión brief-per-locale. Frente brief-per-locale cerrado 4/4 paquetes. Diferencias intencionales con TEST documentadas arriba (efímero vs 24/7, pipeline perimetral en distintos modos) permanecen.

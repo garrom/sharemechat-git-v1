@@ -4,12 +4,12 @@ import jakarta.persistence.*;
 import java.time.Instant;
 
 /**
- * Articulo logico, invariante por idioma (ADR-025).
+ * Articulo logico, invariante por idioma (ADR-025, brief reubicado por ADR-027).
  *
- * Modelo bilingue ES+EN: los campos linguisticos (slug, title, body)
+ * Modelo bilingue ES+EN: los campos linguisticos (slug, title, body, brief)
  * viven en {@link ContentArticleTranslation}, una fila por locale.
  * Esta entidad mantiene los campos compartidos: hero, category,
- * keywords-operador, brief, ciclo de vida y autoria.
+ * keywords-operador, ciclo de vida y autoria.
  */
 @Entity
 @Table(name = "content_articles")
@@ -27,9 +27,6 @@ public class ContentArticle {
 
     @Column(name = "keywords", columnDefinition = "JSON")
     private String keywords;
-
-    @Column(name = "brief", columnDefinition = "TEXT")
-    private String brief;
 
     @Column(name = "state", nullable = false, length = 30)
     private String state;
@@ -78,9 +75,6 @@ public class ContentArticle {
 
     public String getKeywords() { return keywords; }
     public void setKeywords(String keywords) { this.keywords = keywords; }
-
-    public String getBrief() { return brief; }
-    public void setBrief(String brief) { this.brief = brief; }
 
     public String getState() { return state; }
     public void setState(String state) { this.state = state; }

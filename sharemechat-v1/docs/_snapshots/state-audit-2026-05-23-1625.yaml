@@ -1,0 +1,225 @@
+metadata:
+  schema_version: 3
+  environment: audit
+  generated_at: "2026-05-23T16:25:00Z"
+  generated_by: manual@10.A.11-fase2
+  notes: |
+    Snapshot manual (no producido por skill state-inventory) tras cierre del
+    paquete 10.A.11 fase 2: despliegue del frente brief-per-locale a AUDIT +
+    sync de assets TEST → AUDIT (no-op por convergencia previa). Cierre
+    completo del frente 10.A y del frente brief-per-locale.
+
+    Cobertura: solo dominios que cambiaron en esta sesion (BD schema, JAR del
+    backend, bundles frontend product y admin, estado de Flyway). Los demas
+    dominios (CloudFront distributions, S3 buckets, EC2 metadata) se asumen
+    estables respecto al snapshot anterior `state-audit-2026-05-22-2145.yaml`
+    salvo lo apuntado aqui.
+
+    Sanitizado: no incluye hostnames RDS, ARNs, IDs CloudFront completos
+    (aunque algunos IDs publicos como las distribuciones se enumeran porque
+    aparecen en logs y comandos operativos), ni IPs publicas. Mapping
+    completo en `~/.sharemechat/state-mapping.yaml` del operador.
+
+repo:
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    sha256: a760d8bde8d2e68914ba43b484c4d69d349792426d90cb3fbed23b8d918fff04
+    size_bytes: 106058409
+    local_build_date: "2026-05-23 18:14 CET (16:14 UTC)"
+    notes: |
+      SHA256 distinto al del JAR equivalente desplegado en TEST 10.A.11 fase 1
+      (a840bec77234…) porque Maven incluye timestamps de compilacion; el
+      contenido logico (mismas clases compiladas) es identico.
+  frontend_bundles:
+    product:
+      main_hash: main.04724b8b.js
+      admin_chunk_hash: 863.fb6b0ec7.chunk.js
+      deployed_to: s3://sharemechat-frontend-audit/
+    admin:
+      main_hash: main.303de798.js
+      admin_chunk_hash: 863.cd6c9d0f.chunk.js
+      deployed_to: s3://sharemechat-admin-audit/
+  schema_versioning:
+    flyway_runtime_present: true
+    migrations_applied_in_db:
+      - version: 1
+        description: "<< Flyway Baseline >>"
+        type: BASELINE
+        success: true
+        installed_on: "2026-05-22 18:31:45"
+      - version: 2
+        description: "cms v2 schema"
+        type: SQL
+        success: true
+        installed_on: "2026-05-22 18:31:55"
+        execution_time_seconds: 0.93
+      - version: 3
+        description: "brief per locale"
+        type: SQL
+        success: true
+        installed_on: "2026-05-23 16:20:45"
+        execution_time_seconds: 0.19
+        adr_reference: ADR-027
+
+rds:
+  flyway_schema_history:
+    version_current: 3
+    rows: 3
+    latest_migration_description: "brief per locale"
+  content_articles:
+    has_brief_column: false
+    note: "Columna brief eliminada por V3 (ADR-027). Datos ES backfilled a content_article_translations."
+  content_article_translations:
+    has_brief_column: true
+    brief_position: "after meta_description"
+    brief_nullable: true
+    populated_es_rows: 1
+    populated_en_rows_post_v3: 0
+    note: |
+      AUDIT tenia 1 articulo + 2 translations pre-V3. Backfill V3 poblo la
+      translation ES con 271 chars. La EN quedo NULL (ADR-027 D5.1). Si en
+      algun momento se quiere brief EN en ese articulo, se aplica via editor
+      admin o re-ejecutando el pipeline 10.A.9 (AUDIT no es entorno
+      editorial activo, asi que probablemente quede en su estado actual).
+
+ec2_backend:
+  hostname_internal: "ip-172-31-19-114.eu-central-1.compute.internal"
+  jar_running:
+    path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+    sha256: a760d8bde8d2e68914ba43b484c4d69d349792426d90cb3fbed23b8d918fff04
+    pid: 2046455
+    started_at: "2026-05-23T16:21:08.369Z"
+    bootstrap_duration_seconds: 31.151
+    spring_profile: audit
+    launched_via: "systemd sharemechat-audit.service"
+  jar_backups_chain:
+    - path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A3
+      size_bytes: 82362648
+      date: "2026-05-02 09:55"
+      describes: "JAR pre-CMS-v2"
+    - path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A7
+      size_bytes: 106055594
+      date: "2026-05-22 18:30"
+      describes: "JAR pre-refactor 10.A.5"
+    - path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.10A11-fase2
+      size_bytes: 106056697
+      date: "2026-05-22 21:35"
+      describes: "JAR pre-refactor brief-per-locale (10.A.7 final)"
+  systemd_present_for_app: true
+  startup_pattern: "systemctl start/stop sharemechat-audit.service"
+  ec2_uptime_at_snapshot: "37 days 9h 15min"
+
+s3:
+  backups:
+    pre_change_backup:
+      key: audit/audit-backup-pre-10A11-fase2-2026-05-23-1614.sql.gz
+      bucket: sharemechat-backups
+      size_bytes: 137395
+      sha256: f5c2f35bd09e58e07db8214081c548f0b8f230bb928dff9071ebf676046381b3
+      created_at: "2026-05-23T16:17:02Z"
+      upload_via: "scp dump a local + aws s3 cp con credenciales usuario IAM (role EC2 no tiene PutObject sobre sharemechat-backups)"
+  frontend_product:
+    bucket: sharemechat-frontend-audit
+    main_js_deployed: main.04724b8b.js
+    admin_chunk_deployed: 863.fb6b0ec7.chunk.js
+  frontend_admin:
+    bucket: sharemechat-admin-audit
+    main_js_deployed: main.303de798.js
+    admin_chunk_deployed: 863.cd6c9d0f.chunk.js
+  assets:
+    bucket: assets-sharemechat-audit
+    object_count: 48
+    total_size_bytes: 3167758
+    note: |
+      Identico a TEST salvo manifest legal custom AUDIT (211 vs 213 B,
+      preservado por --exclude). Sync TEST → AUDIT ejecutado en esta sesion
+      pero resulto no-op porque los dos buckets ya estaban convergentes.
+
+cloudfront:
+  invalidations_applied_in_session:
+    - distribution_alias: frontend_public
+      distribution_id: E1ILXV7P6ENUV8
+      invalidation_id: I921A5JSB1LXKG3EUSS2X96TBE
+      paths: ["/*"]
+    - distribution_alias: backoffice_admin
+      distribution_id: E21IB0VBKYNNBW
+      invalidation_id: I7B3DMF6VO3XBNDP315HP29BRK
+      paths: ["/*"]
+    - distribution_alias: assets_canonical
+      distribution_id: E2NC4TEJAWOI3L
+      invalidation_id: I4S3NBGRJRA2YYQ24FYKS7LRHK
+      paths: ["/*"]
+
+maintenance_window:
+  start_utc: "2026-05-23T16:20:21Z"
+  stop_confirmed_utc: "2026-05-23T16:20:27Z"
+  service_started_cmd_utc: "2026-05-23T16:20:37Z"
+  bootstrap_complete_utc: "2026-05-23T16:21:08Z"
+  total_seconds_backend_down: 47
+  flyway_v3_execution_ms: 185
+  bootstrap_pure_seconds: 31.151
+  maintenance_overlay_active: true
+  overlay_notes: "MaintenanceProvider del SPA cubrio la ventana visualmente; no hubo validacion de usuarios reales viendo el overlay porque AUDIT es entorno operativo del equipo."
+
+editorial_validation_status:
+  pipeline_run_end_to_end_in_session: false
+  rationale: |
+    AUDIT no es entorno editorial activo. La validacion end-to-end del
+    pipeline 10.A.9 con run real ya esta cerrada por la sesion TEST 10.A.11
+    fase 1 (article 3, run 4 VALIDATED, brief EN persistido con 266 chars
+    en ingles). En AUDIT solo se verifica que el schema y el codigo aceptan
+    el contrato nuevo via smoke tests y validacion visual del editor admin.
+  curl_smoke_tests_passed:
+    - "GET /api/users/me -> 401 limpio"
+    - "GET /api/public/content/articles?locale=es -> 200 application/json"
+    - "GET /api/public/content/articles?locale=en -> 200 application/json"
+
+known_debt_local_to_session:
+  - id: iam-test-audit-backups-write
+    description: |
+      Tanto sharemechat-ec2-test-role como sharemechat-ec2-audit-role
+      carecen de s3:PutObject sobre sharemechat-backups. El bucket de
+      backups multi-env se creo en 10.A.1 pero la policy aplicada en su
+      dia (SharemechatContentPrivateAuditRW) era sobre
+      sharemechat-content-private-audit, no sobre el bucket de backups.
+      Hasta hoy, los uploads de backup desde TEST (10.A.11 fase 1) y AUDIT
+      (10.A.11 fase 2) han funcionado via scp+upload local con
+      credenciales de usuario IAM del operador. Si se quiere automatizar
+      backups periodicos en EC2, abrir paquete dedicado para anadir
+      policies de write sobre sharemechat-backups a ambos roles.
+    severity: low
+    not_blocking: true
+    extends: "test entry of same name from state-test-2026-05-23-0925.yaml"
+
+state_unchanged_since_previous_snapshot:
+  reference_snapshot: state-audit-2026-05-22-2145.yaml
+  dominions_assumed_stable:
+    - cloudfront distributions (frontend_public, backoffice_admin, assets_canonical)
+    - S3 buckets (excepto frontend, admin y backups arriba)
+    - EC2 EBS volumes
+    - nginx config
+    - RDS instance config (solo el schema cambio, no la instancia)
+    - audit-access-* pipeline perimetral (Carril A real, sin cambios)
+
+frente_status:
+  brief_per_locale:
+    paquetes_total: 4
+    paquetes_cerrados: 4
+    paquete_actual: 10.A.11-fase2 (CERRADO)
+    breakdown:
+      - 10.A.8: backend (entidades + DTOs + service + V3 + ADR-027) - cerrado 2026-05-23
+      - 10.A.9: pipeline editorial (4 skills + adapter + ContentRunService) - cerrado 2026-05-23
+      - 10.A.10: frontend admin (ContentArticleEditor + BodyLocaleTabs + ReviewChecklist + i18n + 3 bugs heredados) - cerrado 2026-05-23
+      - 10.A.11 fase 1: despliegue TEST - cerrado 2026-05-23
+      - 10.A.11 fase 2: despliegue AUDIT + sync assets - cerrado 2026-05-23 (esta sesion)
+  frente_10A:
+    status: cerrado completamente
+    notes: |
+      AUDIT y TEST funcionalmente paritarios. Diferencias intencionales
+      permanecen: TEST efimero / AUDIT 24/7; AUDIT con pipeline perimetral
+      en Carril A real / TEST en DRY-RUN.
+
+next_steps_natural:
+  - "Commit acumulado del frente brief-per-locale (4 paquetes + despliegue) o subdivision en commits por paquete; decision del operador"
+  - "PROD futuro: cuando se monte (objetivo 2026-07-01) aplicara V1 + V2 + V3 + futuras al bootstrap sin baseline manual"

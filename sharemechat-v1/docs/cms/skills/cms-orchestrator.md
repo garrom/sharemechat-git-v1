@@ -89,6 +89,8 @@ Validaciones clave:
 - nº de H2 en locales.es.draft_markdown vs locales.en.draft_markdown: paridad estructural (warning si difiere)
 - locales.es.target_keywords con al menos un type=primary: sí/no
 - locales.en.target_keywords con al menos un type=primary: sí/no
+- locales.es.brief no vacío (ADR-027; viene del editorial_input ES): sí/no
+- locales.en.brief no vacío (ADR-027; traducido por fase 4.5): sí/no
 
 Riesgos detectados:
 - Resumen de locales.es.risk_notes por kind/severity.
