@@ -1,0 +1,197 @@
+metadata:
+  schema_version: 3
+  environment: audit
+  generated_at: "2026-05-23T22:10:00Z"
+  generated_by: manual@10.B-cierre
+  notes: |
+    Snapshot manual reducido tras cierre del frente 10.B (commit 4100a1b:
+    "Frente 10.B perimetral: plus-addressing + allowlist + DRY-RUN + race
+    condition (sub-paquetes 10.B.1 a 10.B.3)").
+
+    Cobertura: solo dominios que cambiaron en el frente 10.B (pipeline
+    perimetral de access logs en EC2). El frente 10.B NO toco BD ni JAR del
+    backend Java ni bundles frontend ni CloudFront ni S3; esos dominios se
+    asumen estables respecto al snapshot anterior
+    state-audit-2026-05-23-1625.yaml (frente brief-per-locale fase 2)
+    salvo lo apuntado aqui.
+
+    Sanitizado: no incluye hostnames RDS, ARNs, IDs CloudFront, IPs publicas
+    ni credenciales SMTP. Los configs reales con secretos viven solo en EC2
+    AUDIT (no se transcriben aqui aunque se hayan inspeccionado vía SSH).
+
+    Diferencia con TEST: en AUDIT el blocker esta en Carril A real (escribe
+    deny-audit-ips.conf y hace nginx reload), no en DRY-RUN. Esto se refleja
+    en los logs del blocker (ultima ejecucion bloqueo 2 IPs y reload nginx
+    OK).
+
+repo:
+  branch: main
+  head_commit: 4100a1b
+  head_commit_message: |
+    Frente 10.B perimetral: plus-addressing + allowlist + DRY-RUN + race
+    condition (sub-paquetes 10.B.1 a 10.B.3)
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    notes: "Sin cambios respecto a snapshot state-audit-2026-05-23-1625.yaml (SHA256 a760d8bde8d2...). El frente 10.B no toco codigo Java."
+  schema_versioning:
+    flyway_runtime_present: true
+    last_applied_flyway_version: 3
+    note: "Sin cambios respecto al snapshot 1625. V3 brief-per-locale aplicada el 2026-05-23 16:20:45Z y no se ha movido."
+
+ec2_backend:
+  ssh_alias: audit-backend
+  perimetral_pipeline:
+    notes: |
+      Pipeline de access logs en AUDIT. Carril: A REAL (el blocker SI
+      escribe /etc/nginx/conf.d/deny-audit-ips.conf y ejecuta nginx
+      reload). A diferencia de TEST que sigue en DRY-RUN. Esto es
+      decision intencional: AUDIT actua como pre-produccion donde el
+      pipeline esta validado y operando contra trafico real.
+    systemd_services:
+      - name: sharemechat-audit-access-normalizer.service
+        state: inactive (dead) - TriggeredBy timer
+        last_run_utc: "2026-05-23T22:00:44Z"
+        last_status: 0/SUCCESS
+        unit_after: "network-online.target"
+      - name: sharemechat-audit-access-classifier.service
+        state: not-found
+        notes: "No existe como unit systemd propia. Igual que TEST: el classifier se ejecuta en cadena dentro del ExecStart de sharemechat-audit-daily-report.service."
+      - name: sharemechat-audit-access-blocker.service
+        state: inactive (dead) - TriggeredBy timer
+        last_run_utc: "2026-05-23T07:30:42Z"
+        last_status: 0/SUCCESS
+        last_log_summary: "[blocker REAL carril_A] 2026-05-22 ips=9 carril_A=2 carril_B=1 carril_C=6 allowlisted=0 nginx_test_before=ok nginx_test_after=ok ips_bloqueadas=2 reload=ok"
+        unit_after: "network-online.target sharemechat-audit-daily-report.service"
+        notes: |
+          AUDIT NO sufrio el race condition que afecto a TEST. Las dos
+          ultimas ejecuciones del blocker (22-05 y 23-05 ~07:30Z) terminaron
+          OK bloqueando IPs reales y haciendo nginx reload con exito. Esto
+          es coherente con que en AUDIT el daily-report dispara antes
+          (~07:10Z) y el blocker corre 20 min despues; en TEST el daily-
+          report y el blocker disparan al mismo timer y por eso el race
+          fue visible. Aun asi se aplica el mismo fix After= en AUDIT por
+          coherencia operativa y para cerrar la dependencia ignorada
+          silenciosamente por systemd.
+      - name: sharemechat-audit-daily-report.service
+        state: inactive (dead) - TriggeredBy timer
+        last_run_utc: "2026-05-23T07:10:45Z"
+        last_status: 0/SUCCESS
+        last_log_summary: "NORMAL: 6"
+        unit_after: "network-online.target"
+        exec_start: |
+          /bin/bash -lc 'DAY=$(date -u -d "yesterday" +%F);
+            /opt/sharemechat-audit-access-classifier/bin/classify-audit-access.sh
+              --config /etc/sharemechat-audit-access-classifier/config.env --date "$DAY"
+            && /opt/sharemechat-audit-access-reporter/bin/report-audit-access.sh
+              --config /etc/sharemechat-audit-access-reporter/config.env --date "$DAY"
+              --send-email'
+
+    libs_paths_y_fechas:
+      pre_10B_sin_cambios:
+        - path: /opt/sharemechat-audit-access-normalizer/lib/normalize_access.py
+          modified_utc: "2026-04-17T21:41:56Z"
+        - path: /opt/sharemechat-audit-access-normalizer/bin/normalize-audit-access.sh
+          modified_utc: "2026-04-17T21:41:55Z"
+        - path: /opt/sharemechat-audit-access-classifier/bin/classify-audit-access.sh
+          modified_utc: "2026-04-18T12:13:50Z"
+        - path: /opt/sharemechat-audit-access-blocker/bin/block-audit-access.sh
+          modified_utc: "2026-04-24T20:05:52Z"
+        - path: /opt/sharemechat-audit-access-reporter/bin/report-audit-access.sh
+          modified_utc: "2026-04-18T22:31:06Z"
+      modificados_en_10B:
+        - path: /opt/sharemechat-audit-access-classifier/lib/classify_access.py
+          modified_utc: "2026-05-23T20:32:41Z"
+          sub_paquete: "10.B (alineamiento con TEST)"
+        - path: /opt/sharemechat-audit-access-reporter/lib/report_access.py
+          modified_utc: "2026-05-23T20:32:42Z"
+          sub_paquete: "10.B.1 (reporter + plus-addressing)"
+        - path: /opt/sharemechat-audit-access-blocker/lib/block_access.py
+          modified_utc: "2026-05-23T21:25:07Z"
+          sub_paquete: "10.B.3 (race condition fix)"
+
+    configs_modificadas_en_10B:
+      - path: /etc/sharemechat-audit-access-reporter/config.env
+        modified_utc: "2026-05-23T18:19Z"
+        backup_present: config.env.bak.10B1.2026-05-23
+        sub_paquete: "10.B.1"
+        cambios_clave:
+          - "SMTP rellenado: smtp.office365.com:587 STARTTLS, username=operations@sharemechat.com"
+          - "EMAIL_FROM=operations@sharemechat.com"
+          - "EMAIL_TO=security+report-audit@sharemechat.com (plus-addressing por entorno; distinto al de TEST que es report-test@)"
+        nota_seguridad: "El config contiene SMTP_PASSWORD en texto plano (regla de saneado prohibe transcribirlo aqui). Vive solo en /etc/ de EC2 AUDIT con permisos 0640 root:root. Mismo password que TEST porque comparte cuenta operations@."
+      - path: /etc/sharemechat-audit-access-classifier/config.env
+        modified_utc: "2026-05-23T20:32Z"
+        backup_present: config.env.bak.10B4.2026-05-23
+        sub_paquete: "10.B (alineamiento del schema con TEST)"
+        cambios_clave:
+          - 'ALLOWLIST_IPS sigue siendo "90.175.201.51" (NO se ha extendido como en TEST). Diferencia intencional o deuda silenciosa: ver known_debt_local_to_session.'
+
+    configs_sin_cambios_en_10B:
+      - path: /etc/sharemechat-audit-access-normalizer/config.env
+        last_modified_utc: "2026-04-17T22:34Z"
+      - path: /etc/sharemechat-audit-access-blocker/config.env
+        last_modified_utc: "2026-04-24T21:21Z"
+        nota: "Define ALLOWLIST_IPS= (vacio) y ALLOWLIST_FILE=/etc/sharemechat-audit-access-blocker/allowlist.conf. El fichero allowlist.conf solo contiene comentarios template (ninguna IP activa)."
+
+    units_systemd_after_corregido_en_10B:
+      - unit: sharemechat-audit-access-blocker.service
+        before: "After=network-online.target sharemechat-audit-access-classifier.service"
+        after: "After=network-online.target sharemechat-audit-daily-report.service"
+        razon: |
+          Mismo fix que en TEST (sub-paquete 10.B.3). La unit
+          classifier.service NO existe como systemd unit (el classifier
+          se ejecuta dentro de daily-report.service). En AUDIT el race
+          nunca llego a manifestarse porque los timers estan separados
+          ~20 min (daily-report ~07:10Z, blocker ~07:30Z), pero se aplica
+          el mismo fix para cerrar la dependencia ignorada silenciosamente
+          por systemd y para mantener paridad operativa con TEST.
+      - unit: sharemechat-audit-access-blocker.service (comentario en unit file)
+        nota: "El unit file tiene un comentario explicativo del fix: 'After= a la unit real para que la dependencia ordene correctamente cuando que nunca existio; systemd ignoraba el After= silenciosamente)'."
+
+state_unchanged_since_previous_snapshot:
+  reference_snapshot: state-audit-2026-05-23-1625.yaml
+  dominions_assumed_stable:
+    - "repo.jar_artifact (mismo SHA del backend Java; 10.B no toco codigo Java)"
+    - "repo.frontend_bundles (10.B no toco frontend)"
+    - "rds (schema v3 brief-per-locale ya aplicado el 1625, sin cambios despues)"
+    - "cloudfront distributions (3: frontend_public, backoffice_admin, assets_canonical)"
+    - "S3 buckets (frontend, admin, assets, content_private, storage, cf_logs, maintenance)"
+    - "nginx config (10.B reordeno units systemd; deny-audit-ips.conf sigue siendo escrito/recargado por el blocker en Carril A real; la frecuencia y forma del reload no han cambiado)"
+
+frente_status:
+  frente_10B:
+    status: cerrado
+    commit: 4100a1b
+    sub_paquetes:
+      "10.B.1": "Reporter + plus-addressing por entorno (EMAIL_TO=security+report-audit@). Lib report_access.py reescrito; config.env rellenado con SMTP+EMAIL; backup .bak.10B1 conservado. EMAIL_TO de AUDIT diferente al de TEST (segmentacion por entorno)."
+      "10.B.2": "(no detectado cambio especifico aislable en AUDIT; agregado con 10.B.3)"
+      "10.B.3": "Race condition: blocker.service After= corregido (de classifier.service inexistente a daily-report.service real). Lib block_access.py actualizado 21:25:07Z. En AUDIT el fix es preventivo: el race no se habia manifestado en ejecucion porque los timers daily-report y blocker estan separados ~20 min."
+      "10.B.4": "Allowlist NO ampliada en classifier AUDIT (sigue con 1 IP: 90.175.201.51). TEST si la amplio a 3 IPs en el mismo frente. Diferencia intencional probable (AUDIT mas estricto) o deuda silenciosa."
+    pendiente_observacion:
+      - "Verificar primer envio de email del reporter manana (timer del daily-report ~07:10Z UTC) a security+report-audit@sharemechat.com. Confirmar que llega y que el plus-addressing distinto al de TEST se procesa correctamente."
+      - "Confirmar con el operador si la diferencia de ALLOWLIST_IPS entre AUDIT (1 IP) y TEST (3 IPs) es intencional. Si lo es, anotar en docs/03-environments/audit.md. Si es deuda, abrir paquete dedicado para alinear."
+
+known_debt_local_to_session:
+  - id: allowlist-audit-vs-test-divergencia
+    description: |
+      El classifier en TEST tiene ALLOWLIST_IPS con 3 IPs
+      (63.180.48.12, 90.175.201.51, 90.166.58.225) tras el frente 10.B.
+      El classifier en AUDIT sigue con 1 IP (90.175.201.51). Si la
+      ampliacion era para todos los entornos, AUDIT quedo sin alinear.
+      Si AUDIT debe ser mas estricto (allowlist minima) la divergencia
+      es intencional y conviene documentarlo en docs/03-environments/audit.md.
+    severity: low
+    not_blocking: true
+    seguimiento: "Confirmar con operador. Si intencional, documentar; si no, abrir paquete de alineamiento perimetral AUDIT con las 2 IPs faltantes."
+  - id: smtp-password-en-texto-plano
+    description: |
+      El config.env del reporter en TEST y AUDIT contiene SMTP_PASSWORD
+      en texto plano (mismo password en ambos entornos porque comparten
+      la cuenta operations@). Los ficheros tienen permisos 0640 root:root
+      y viven solo en EC2 (no se versionan), pero idealmente deberian
+      moverse a un mecanismo de secretos (SSM Parameter Store con KMS o
+      Secrets Manager) en lugar de fichero plano.
+    severity: low
+    not_blocking: true
+    seguimiento: "Paquete dedicado de hardening de secretos perimetrales cuando se priorice. Coste estimado: bajo (4-6 horas)."

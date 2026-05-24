@@ -1,0 +1,169 @@
+metadata:
+  schema_version: 3
+  environment: test
+  generated_at: "2026-05-23T22:00:00Z"
+  generated_by: manual@10.B-cierre
+  notes: |
+    Snapshot manual reducido tras cierre del frente 10.B (commit 4100a1b:
+    "Frente 10.B perimetral: plus-addressing + allowlist + DRY-RUN + race
+    condition (sub-paquetes 10.B.1 a 10.B.3)").
+
+    Cobertura: solo dominios que cambiaron en el frente 10.B (pipeline
+    perimetral de access logs en EC2: units systemd, scripts lib en /opt,
+    configs en /etc). El frente 10.B NO toco BD ni JAR del backend Java
+    ni bundles frontend ni CloudFront ni S3; esos dominios se asumen
+    estables respecto al snapshot anterior state-test-2026-05-23-0925.yaml
+    (frente brief-per-locale fase 1) salvo lo apuntado aqui.
+
+    Sanitizado: no incluye hostnames RDS, ARNs, IDs CloudFront, IPs publicas
+    ni credenciales SMTP. Los configs reales con secretos viven solo en EC2
+    backend (no se transcriben aqui aunque se hayan inspeccionado vía SSH).
+
+repo:
+  branch: main
+  head_commit: 4100a1b
+  head_commit_message: |
+    Frente 10.B perimetral: plus-addressing + allowlist + DRY-RUN + race
+    condition (sub-paquetes 10.B.1 a 10.B.3)
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    notes: "Sin cambios respecto a snapshot state-test-2026-05-23-0925.yaml (SHA256 a840bec77234...). El frente 10.B no toco codigo Java."
+  schema_versioning:
+    flyway_runtime_present: true
+    last_applied_flyway_version: 3
+    note: "Sin cambios respecto al snapshot 0925. V3 brief-per-locale aplicada el 2026-05-23 09:11:35 y no se ha movido."
+
+ec2_backend:
+  ssh_alias: test-backend
+  perimetral_pipeline:
+    notes: |
+      Pipeline de access logs en TEST. Carril: DRY-RUN (el blocker NO
+      escribe deny-test-ips.conf ni hace nginx reload, solo genera
+      propuesta y diff). A diferencia de AUDIT que esta en Carril A real.
+    systemd_services:
+      - name: sharemechat-test-access-normalizer.service
+        state: inactive (dead) - TriggeredBy timer
+        last_run_utc: "2026-05-23T21:55:20Z"
+        last_status: 0/SUCCESS
+        unit_after: "network-online.target"
+      - name: sharemechat-test-access-classifier.service
+        state: not-found
+        notes: "No existe como unit systemd propia. El classifier se ejecuta en cadena dentro del ExecStart de sharemechat-test-daily-report.service (oneshot: classify-test-access.sh && report-test-access.sh --send-email)."
+      - name: sharemechat-test-access-blocker.service
+        state: inactive (dead) - TriggeredBy timer
+        last_run_utc: "2026-05-23T08:52:24Z"
+        last_status: 1/FAILURE
+        last_failure_reason: "Classifier summary not found: /var/log/sharemechat-test-access-classifier/2026-05-22.summary.jsonl"
+        unit_after: "network-online.target sharemechat-test-daily-report.service"
+        notes: |
+          Ultima ejecucion (08:52:24Z) fallo con el bug previo al fix del
+          frente 10.B. El lib block_access.py se actualizo el 2026-05-23T21:25:32Z
+          (despues de la ultima ejecucion del timer). La proxima ejecucion
+          del timer (~24h despues, manana ~08:52Z) validara el fix en
+          ejecucion real. Si vuelve a fallar con el mismo motivo, abrir
+          incidente.
+      - name: sharemechat-test-daily-report.service
+        state: inactive (dead) - TriggeredBy timer
+        last_run_utc: "2026-05-23T08:52:25Z"
+        last_status: 0/SUCCESS
+        last_log_summary: "MALICIOSA: 0"
+        unit_after: "network-online.target"
+        exec_start: |
+          /bin/bash -lc 'DAY=$(date -u -d "yesterday" +%F);
+            /opt/sharemechat-test-access-classifier/bin/classify-test-access.sh
+              --config /etc/sharemechat-test-access-classifier/config.env --date "$DAY"
+            && /opt/sharemechat-test-access-reporter/bin/report-test-access.sh
+              --config /etc/sharemechat-test-access-reporter/config.env --date "$DAY"
+              --send-email'
+
+    libs_paths_y_fechas:
+      pre_10B_sin_cambios:
+        - path: /opt/sharemechat-test-access-normalizer/lib/normalize_access.py
+          modified_utc: "2026-04-22T09:53:29Z"
+        - path: /opt/sharemechat-test-access-normalizer/bin/normalize-test-access.sh
+          modified_utc: "2026-04-22T09:53:28Z"
+        - path: /opt/sharemechat-test-access-blocker/bin/block-test-access.sh
+          modified_utc: "2026-04-24T21:58:47Z"
+        - path: /opt/sharemechat-test-access-reporter/bin/report-test-access.sh
+          modified_utc: "2026-04-22T11:24:22Z"
+      modificados_en_10B:
+        - path: /opt/sharemechat-test-access-reporter/lib/report_access.py
+          modified_utc: "2026-05-23T21:06:56Z"
+          sub_paquete: "10.B.1 (reporter + plus-addressing)"
+        - path: /opt/sharemechat-test-access-blocker/lib/block_access.py
+          modified_utc: "2026-05-23T21:25:32Z"
+          sub_paquete: "10.B.3 (race condition fix)"
+
+    configs_modificadas_en_10B:
+      - path: /etc/sharemechat-test-access-reporter/config.env
+        modified_utc: "2026-05-23T18:21Z"
+        backup_present: config.env.bak.10B1.2026-05-23
+        sub_paquete: "10.B.1"
+        cambios_clave:
+          - "SMTP rellenado: smtp.office365.com:587 STARTTLS, username=operations@sharemechat.com"
+          - "EMAIL_FROM=operations@sharemechat.com"
+          - "EMAIL_TO=security+report-test@sharemechat.com (plus-addressing por entorno)"
+        nota_seguridad: "El config contiene SMTP_PASSWORD en texto plano (regla de saneado prohibe transcribirlo aqui). Vive solo en /etc/ de EC2 con permisos 0640 root:root."
+      - path: /etc/sharemechat-test-access-classifier/config.env
+        modified_utc: "2026-05-23T20:33Z"
+        backup_present: config.env.bak.10B4.2026-05-23
+        sub_paquete: "10.B.4 (clarificar allowlist en notas del prompt)"
+        cambios_clave:
+          - 'ALLOWLIST_IPS: "90.175.201.51" → "63.180.48.12,90.175.201.51,90.166.58.225"'
+
+    configs_sin_cambios_en_10B:
+      - path: /etc/sharemechat-test-access-normalizer/config.env
+        last_modified_utc: "2026-04-22T09:55Z"
+      - path: /etc/sharemechat-test-access-blocker/config.env
+        last_modified_utc: "2026-04-24T22:02Z"
+        nota: "Define ALLOWLIST_IPS= (vacio) y ALLOWLIST_FILE=/etc/sharemechat-test-access-blocker/allowlist.conf. El fichero allowlist.conf solo contiene comentarios template (ninguna IP activa). TEST aplica allowlist principalmente desde el classifier, no desde el blocker."
+      - path: /etc/sharemechat-test-daily-report/config.env
+        last_modified_utc: pre-10B
+        nota: "Fichero vacio. La orquestacion vive en el ExecStart de la unit."
+
+    units_systemd_after_corregido_en_10B:
+      - unit: sharemechat-test-access-blocker.service
+        before: "After=network-online.target sharemechat-test-access-classifier.service"
+        after: "After=network-online.target sharemechat-test-daily-report.service"
+        razon: |
+          La unit classifier.service NO existe como systemd unit (el classifier
+          se ejecuta dentro del daily-report.service). Systemd ignoraba
+          silenciosamente la dependencia inexistente, lo que producia race
+          condition: el blocker arrancaba antes de que daily-report generase
+          el summary.jsonl, y fallaba con "Classifier summary not found".
+
+state_unchanged_since_previous_snapshot:
+  reference_snapshot: state-test-2026-05-23-0925.yaml
+  dominions_assumed_stable:
+    - "repo.jar_artifact (mismo SHA del backend Java; 10.B no toco codigo Java)"
+    - "repo.frontend_bundle (10.B no toco frontend)"
+    - "rds (schema v3 brief-per-locale ya aplicado el 0925, sin cambios despues)"
+    - "cloudfront distributions (4: frontend_public, backoffice_admin, assets_canonical, assets_legacy)"
+    - "S3 buckets (frontend, admin, assets, content_private, storage, maintenance)"
+    - "nginx config (10.B no escribio deny-test-ips.conf ni recargo nginx; sigue en DRY-RUN)"
+
+frente_status:
+  frente_10B:
+    status: cerrado
+    commit: 4100a1b
+    sub_paquetes:
+      "10.B.1": "Reporter + plus-addressing por entorno (EMAIL_TO=security+report-test@). Lib report_access.py reescrito; config.env rellenado con SMTP+EMAIL; backup .bak.10B1 conservado."
+      "10.B.2": "(no detectado cambio especifico aislable en TEST; agregado con 10.B.3)"
+      "10.B.3": "Race condition: blocker.service After= corregido (de classifier.service inexistente a daily-report.service real). Lib block_access.py actualizado 21:25:32Z. Pendiente validacion en ejecucion real (siguiente disparo del timer ~24h)."
+      "10.B.4": "Allowlist ampliada en classifier (1 IP -> 3 IPs). Mencionada por el operador en el prompt pero el commit del frente 10.B lista solo sub-paquetes 10.B.1 a 10.B.3; 10.B.4 puede ser un ajuste in-line o un sub-paquete documental sin commit aislado. Backup .bak.10B4 conservado."
+    pendiente_observacion:
+      - "Verificar proxima ejecucion del blocker.timer (~24h, manana ~08:52Z UTC) que dispara con el fix de race condition. La ultima ejecucion (2026-05-23T08:52:24Z) fallo con el bug anterior porque el lib se actualizo despues."
+      - "Verificar primer envio de email del reporter manana (timer del daily-report ~07:10Z UTC) a security+report-test@sharemechat.com. Confirmar que llega y que el plus-addressing es procesado correctamente por el proveedor (Office 365)."
+
+known_debt_local_to_session:
+  - id: blocker-fix-no-validado-en-ejecucion
+    description: |
+      El fix de race condition del blocker (After= corregido + lib
+      block_access.py actualizado) NO se ha probado en ejecucion real
+      todavia. La ultima ejecucion del blocker.timer (08:52:24Z) fallo con
+      el bug anterior (el lib se actualizo a las 21:25:32Z, despues). El
+      fix queda confiado al siguiente disparo del timer.
+    severity: low
+    not_blocking: true
+    seguimiento: "Inspeccionar journalctl -u sharemechat-test-access-blocker en proximo snapshot (>24h despues)."
