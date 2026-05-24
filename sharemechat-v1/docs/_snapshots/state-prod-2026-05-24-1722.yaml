@@ -1,0 +1,462 @@
+metadata:
+  schema_version: 3
+  environment: prod
+  generated_at: "2026-05-24T17:22:00Z"
+  generated_by: manual-pre-flight@PRO-1
+  notes: |
+    Snapshot inicial del estado PRO, generado durante PRO-1 (pre-flight del
+    provisioning de produccion). Estado pre-PRO-2 a PRO-10. PRO no esta
+    provisionado todavia: hosted zone Route53 compartida y dos distribuciones
+    CloudFront preexistentes (landing publica y assets), y dos buckets
+    multi-env (backups, maintenance) ya en uso por TEST/AUDIT.
+
+    Cobertura: inventario completo de lo que PRO TIENE HOY antes de ejecutar
+    PRO-2 a PRO-10, mas observaciones de TEST/AUDIT relevantes para la
+    decision de IPs elasticas (Ajuste 2 del plan v2).
+
+    Saneado: aliases logicos siempre que el mapping los provee. Los IDs
+    publicos de CloudFront (visibles en headers HTTP de cualquier curl publico)
+    se mencionan en notas cuando aportan trazabilidad operativa, pero los
+    nombres lógicos son los autoritativos para este snapshot.
+
+    Generado fuera del flujo automatizado de la skill state-inventory:
+      - repo.commits_last_24h y repo.adrs no rellenados (este snapshot no
+        registra estado de repo; el estado vivo del repo esta en project-log.md
+        y en los snapshots TEST/AUDIT recientes).
+      - rds_database vacio porque PRO no tiene RDS todavia.
+
+    Resolucion IAM durante PRO-1: el operador crea user dedicado
+    sharemechat-provisioner con AdministratorAccess (opcion B del plan v2,
+    vida util acotada al frente PRO, desactivacion al cerrar PRO-10).
+    Convencion operativa: --profile sharemechat-provisioner para write
+    (create/update/delete/put/attach/authorize); perfil default
+    (sharemechat-deployer) para read estandar; --profile provisioner tambien
+    para lecturas que el deployer no autoriza (describe-addresses,
+    describe-key-pairs, get-service-quota, etc.).
+
+repo:
+  branch: main
+  head_commit: null
+  head_commit_date: null
+  commits_last_24h: []
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    expected_filename: sharemechat-v1-0.0.1-SNAPSHOT.jar
+    note: "PRO consume el mismo JAR que TEST/AUDIT; no hay variante prod-specific."
+  schema_versioning:
+    flyway_runtime_present: false
+    migrations_dir: "src/main/resources/db/migration/"
+    last_repo_migration: "V3__brief_per_locale.sql"
+    last_applied_flyway_version: null
+    note: "Flyway no se aplica todavia en PRO (no hay RDS). En PRO-8 Flyway aplicara V1+V2+V3 al primer arranque del backend."
+  adrs: []
+
+cloudfront:
+  distributions:
+    - logical_name: landing_legacy_prod
+      alias: "Landing legacy estatica producto PROD (a reasignar en PRO-6)"
+      primary_aliases:
+        - sharemechat.com
+        - www.sharemechat.com
+      status: Deployed
+      enabled: true
+      default_behavior:
+        target_origin: s3_landing_prod
+        allowed_methods: [HEAD, GET]
+        cache_policy: Managed-CachingOptimized
+        function_associations:
+          - name: redirect-www-to-root-prod
+            event_type: viewer-request
+      cache_behaviors: []
+      custom_error_responses: []
+      viewer_certificate:
+        acm_certificate_alias: cert_prod_apex
+        ssl_support_method: sni-only
+        minimum_protocol_version: TLSv1.2_2021
+      reuse_plan: "PRO-6 cambia el origin a s3_frontend_prod y la function a redirect-spa-prod (combinada www->apex + SPA fallback)."
+
+    - logical_name: assets_canonical_prod
+      alias: "Assets canonico PROD (ya operativo)"
+      primary_aliases:
+        - assets.sharemechat.com
+      status: Deployed
+      enabled: true
+      default_behavior:
+        target_origin: s3_assets_prod
+        allowed_methods: [HEAD, GET]
+        cache_policy: Managed-CachingOptimized
+        function_associations: []
+      cache_behaviors: []
+      custom_error_responses: []
+      viewer_certificate:
+        acm_certificate_alias: cert_prod_assets
+        ssl_support_method: sni-only
+        minimum_protocol_version: TLSv1.2_2021
+      reuse_plan: "PRO-6 NO toca esta distribucion. PRO-3 pobla el bucket origen con manifest legal y PDF."
+
+  functions:
+    - logical_name: redirect_www_to_root_prod
+      alias: "Function pre-existente que redirige www->apex en landing_legacy_prod"
+      status: LIVE
+      replacement_plan: "PRO-2 crea redirect-spa-prod combinada (www->apex + SPA fallback). PRO-6 reemplaza la asociacion en landing_legacy_prod."
+
+  pending_distributions:
+    - logical_name: backoffice_admin_prod
+      alias: "Backoffice admin PROD (a crear en PRO-6)"
+      primary_aliases:
+        - admin.sharemechat.com
+      status: not-created
+      depends_on:
+        - "PRO-2 cert ACM admin emitido"
+        - "PRO-3 bucket sharemechat-admin-prod creado + OAC"
+
+s3:
+  buckets:
+    - logical_name: landing_legacy_prod
+      name: sharemechat-landing-prod
+      alias: "Bucket landing estatica PROD legacy (HTML curado pre-SPA)"
+      region: eu-central-1
+      served_by_distribution: landing_legacy_prod
+      object_count: 11
+      object_summary:
+        - apple-touch-icon.png
+        - community-guidelines.html
+        - cookie-settings.html
+        - faq.html
+        - favicon-32x32.png
+        - favicon.ico
+        - index.html
+        - legal.html
+        - robots.txt
+        - safety.html
+        - sitemap.xml
+      last_modified: "2026-03-20"
+      archive_plan: "PRO-6 cambia el origin de la distribucion landing_legacy_prod a sharemechat-frontend-prod. Tras PRO-6 este bucket queda sin servir. Operador descarga snapshot local del contenido HTML curado antes de PRO-6 (ver Refinamientos del plan v2)."
+
+    - logical_name: assets
+      name: assets-sharemechat-prod
+      alias: "Bucket assets canonico PROD (servido por assets_canonical_prod)"
+      region: eu-central-1
+      served_by_distribution: assets_canonical_prod
+      object_count: 3
+      object_summary:
+        - brand/SharemeChat_white.svg
+        - brand/sharemechat-logo.png
+        - healthcheck.txt
+      legal_section_present: false
+      population_plan: "PRO-3 anade legal/model_contract.pdf + legal/model_contract.manifest.json + 2 historicos. PDF bit-a-bit identico al de AUDIT; manifest con url=https://assets.sharemechat.com/legal/model_contract.pdf."
+
+    - logical_name: backups_shared
+      name: sharemechat-backups
+      alias: "Bucket backups multi-env (compartido TEST/AUDIT/PROD)"
+      region: eu-central-1
+      served_by_distribution: null
+      shared_with_envs: [test, audit, prod]
+      note: "PRO usa prefix prod/. La policy IAM SharemechatBackupsProdWrite del rol PRO se anade en PRO-3 (cierra deuda IAM heredada de AUDIT)."
+
+    - logical_name: maintenance_shared
+      name: sharemechat-maintenance
+      alias: "Bucket maintenance multi-env (compartido)"
+      region: eu-central-1
+      served_by_distribution: null
+      shared_with_envs: [test, audit, prod]
+      note: "Bucket policy extendida en PRO-3+PRO-6 para autorizar la distribucion landing_legacy_prod (que tras PRO-6 sirve el SPA producto PROD)."
+
+  pending_buckets:
+    - logical_name: frontend_product
+      planned_name: sharemechat-frontend-prod
+      alias: "Bucket SPA producto PROD"
+      depends_on: "PRO-3"
+    - logical_name: frontend_admin
+      planned_name: sharemechat-admin-prod
+      alias: "Bucket SPA admin PROD"
+      depends_on: "PRO-3"
+    - logical_name: storage
+      planned_name: sharemechat-storage-prod
+      alias: "Bucket storage privado uploads PROD"
+      depends_on: "PRO-3"
+    - logical_name: content_private
+      planned_name: sharemechat-content-private-prod
+      alias: "Bucket CMS markdown crudo PROD (privado, no servido por CloudFront)"
+      depends_on: "PRO-3"
+    - logical_name: cf_logs
+      planned_name: sharemechat-cf-logs-prod
+      alias: "Bucket logs CloudFront PROD"
+      depends_on: "PRO-3"
+
+ec2_backend:
+  state: not-provisioned
+  planned:
+    ssh_alias: pro-backend
+    instance_type: t3.medium
+    ami_pattern: "Amazon Linux 2023 mas reciente disponible al provisionar"
+    subnet: sharemechat-prod-subnet-1a (publica)
+    security_groups:
+      - sharemechat-prod-backend-sg (NUEVO en PRO-5)
+      - sharemechat-prod-turn-relay-sg (NUEVO en PRO-5)
+    iam_instance_profile: sharemechat-ec2-prod-profile (NUEVO en PRO-3)
+    elastic_ip: sharemechat-prod-eip (NUEVO en PRO-5)
+    coturn: integrado en la misma EC2 (Q2 plan v2)
+  depends_on: "PRO-2 + PRO-3 + PRO-4 cerrados; operador entrega secretos PRO-5"
+
+rds_database:
+  state: not-provisioned
+  planned:
+    identifier: db1-sharemechat-prod
+    engine: mysql
+    engine_version: 8.4.7
+    instance_class: db.t3.micro
+    storage_gb: 20
+    storage_type: gp2
+    multi_az: false
+    storage_encrypted: true
+    deletion_protection: true
+    backup_retention_period_days: 7
+    backup_window_utc: "21:00-22:00"
+    maintenance_window_utc: "tue:03:00-tue:04:00"
+    publicly_accessible: false
+    database_logical_name: db1_sharemechat_prod
+    initial_flyway_applies: [V1, V2, V3]
+  depends_on: "PRO-2 cerrado (VPC + subnets) y PRO-3 cerrado (rol IAM)"
+
+vpc:
+  state: not-provisioned
+  planned:
+    name: sharemechat-prod-vpc
+    cidr: "10.10.0.0/16"
+    internet_gateway: sharemechat-prod-igw
+    nat_gateway: null
+    nat_gateway_decision_reason: "Topologia eficiente alineada con AUDIT (verificada en analisis previo): relay TURN sale por IGW directo sin coste NAT. ADR-005 explicitamente advierte del coste NAT."
+    subnets:
+      - logical_name: sharemechat-prod-subnet-1a
+        cidr: "10.10.1.0/24"
+        availability_zone: eu-central-1a
+        map_public_ip_on_launch: true
+        used_by: [ec2_backend, rds_subnet_group]
+      - logical_name: sharemechat-prod-subnet-1b
+        cidr: "10.10.2.0/24"
+        availability_zone: eu-central-1b
+        map_public_ip_on_launch: true
+        used_by: [rds_subnet_group]
+      - logical_name: sharemechat-prod-subnet-1c
+        cidr: "10.10.3.0/24"
+        availability_zone: eu-central-1c
+        map_public_ip_on_launch: true
+        used_by: [rds_subnet_group]
+  depends_on: "PRO-2"
+
+route53:
+  hosted_zone:
+    name: "sharemechat.com."
+    alias: "Hosted Zone canonica multi-env (TEST + AUDIT + PROD)"
+    record_count_total: 31
+    state: existing-shared
+  prod_records:
+    apex:
+      name: sharemechat.com
+      type: A (ALIAS)
+      points_to: landing_legacy_prod (cambiara semantica tras PRO-6 al servir SPA)
+      state: existing
+    www:
+      name: www.sharemechat.com
+      type: A (ALIAS)
+      points_to: landing_legacy_prod
+      state: existing
+    assets:
+      name: assets.sharemechat.com
+      type: A (ALIAS)
+      points_to: assets_canonical_prod
+      state: existing
+  pending_records:
+    - name: admin.sharemechat.com
+      type: A (ALIAS)
+      target: backoffice_admin_prod
+      depends_on: "PRO-6 (creacion distribucion admin)"
+    - name: <acm-validation-cname>
+      type: CNAME
+      purpose: "Validacion ACM admin.sharemechat.com en PRO-2"
+      depends_on: "PRO-2"
+
+acm_certificates:
+  region: us-east-1
+  existing:
+    - logical_name: cert_prod_apex
+      domain_name: sharemechat.com
+      sans: [sharemechat.com, www.sharemechat.com]
+      status: ISSUED
+      not_after: "2027-03-07"
+      used_by: landing_legacy_prod
+    - logical_name: cert_prod_assets
+      domain_name: assets.sharemechat.com
+      sans: [assets.sharemechat.com]
+      status: ISSUED
+      not_after: "2027-02-02"
+      used_by: assets_canonical_prod
+  pending:
+    - logical_name: cert_prod_admin
+      domain_name: admin.sharemechat.com
+      depends_on: "PRO-2"
+      validation_method: DNS
+
+iam:
+  existing_roles:
+    - sharemechat-ec2-audit-role (AUDIT)
+    - sharemechat-ec2-test-role (TEST)
+  pending_for_prod:
+    - logical_name: ec2_prod_role
+      planned_name: sharemechat-ec2-prod-role
+      inline_policies:
+        - SharemechatStorageProdRW
+        - SharemechatContentPrivateProdRW
+        - SharemechatBackupsProdWrite
+      instance_profile: sharemechat-ec2-prod-profile
+      depends_on: "PRO-3"
+  iam_user_in_use:
+    name: sharemechat-deployer
+    purpose: "User actual de la sesion del operador para AWS CLI"
+    observed_permissions:
+      confirmed_present:
+        - sts:GetCallerIdentity
+        - cloudfront:ListDistributions
+        - cloudfront:GetDistributionConfig
+        - cloudfront:ListFunctions
+        - cloudfront:GetFunction
+        - s3:ListAllMyBuckets
+        - s3:ListBucket (sobre buckets del proyecto)
+        - rds:DescribeDBInstances
+        - ec2:DescribeInstances
+        - ec2:DescribeSecurityGroups
+        - ec2:DescribeSubnets
+        - ec2:DescribeInternetGateways
+        - acm:ListCertificates
+        - acm:DescribeCertificate
+        - route53:ListHostedZones
+        - iam:ListRoles
+      confirmed_missing_during_pre_flight:
+        - ec2:CreateKeyPair
+        - ec2:DescribeKeyPairs
+        - ec2:DescribeAddresses
+        - ec2:DescribeRouteTables
+        - ec2:DescribeNatGateways
+        - ec2:DescribeNetworkInterfaces
+        - servicequotas:GetServiceQuota
+        - iam:ListAttachedUserPolicies
+        - iam:ListUserPolicies
+      previsibly_missing_for_PRO_2_to_PRO_10:
+        - ec2:CreateVpc, ec2:CreateSubnet, ec2:CreateInternetGateway, ec2:AttachInternetGateway, ec2:CreateRouteTable, ec2:AssociateRouteTable, ec2:CreateRoute
+        - ec2:CreateSecurityGroup, ec2:AuthorizeSecurityGroupIngress
+        - ec2:RunInstances, ec2:AllocateAddress, ec2:AssociateAddress
+        - rds:CreateDBInstance, rds:CreateDBSubnetGroup, rds:ModifyDBInstance
+        - s3:CreateBucket, s3:PutBucketPolicy, s3:PutBucketEncryption, s3:PutPublicAccessBlock, s3:PutBucketVersioning, s3:PutLifecycleConfiguration, s3:PutObject (en buckets nuevos)
+        - iam:CreateRole, iam:PutRolePolicy, iam:CreateInstanceProfile, iam:AddRoleToInstanceProfile
+        - cloudfront:CreateDistribution, cloudfront:UpdateDistribution, cloudfront:CreateFunction, cloudfront:PublishFunction, cloudfront:CreateOriginAccessControl, cloudfront:CreateInvalidation (sobre distribuciones nuevas)
+        - acm:RequestCertificate
+        - route53:ChangeResourceRecordSets
+
+quotas:
+  note: "Valores reales obtenidos via service-quotas con perfil sharemechat-provisioner durante el cierre PRO-1."
+  verified:
+    - quota_code: L-1216C47A
+      service: ec2
+      name: Running On-Demand Standard (A, C, D, H, I, M, R, T, Z) instances
+      region: eu-central-1
+      value_vcpus: 384.0
+      adjustable: true
+      current_consumption: "2 vCPUs (AUDIT t3.medium running). TEST stopped no cuenta."
+      post_PRO_consumption: "4 vCPUs (+ PROD t3.medium)"
+      verdict: "VERDE (margen 380 vCPUs)"
+    - quota_code: L-7B6409FD
+      service: rds
+      name: DB instances
+      region: eu-central-1
+      value: 40
+      adjustable: true
+      current_consumption: 2 (TEST + AUDIT)
+      post_PRO_consumption: 3
+      verdict: "VERDE (margen 37)"
+    - quota_code: L-0263D0A3
+      service: ec2
+      name: EC2-VPC Elastic IPs
+      region: eu-central-1
+      value: 5
+      adjustable: true
+      current_consumption: "2 EIPs verificadas (eipalloc-039ec5def4a95b898 AUDIT + eipalloc-0248fb7f8bd9995f7 TEST)"
+      post_PRO_consumption: "3 EIPs"
+      verdict: "VERDE (margen 2 sobre limite 5). Si se crearan mas entornos en el futuro, escalar cuota."
+    - quota_code: L-F678F1CE
+      service: vpc
+      name: VPCs per Region
+      region: eu-central-1
+      value: 5
+      adjustable: true
+      current_consumption: "1 default VPC + 1 compartida (vpc-096f6cdfa42ca7ba6) = 2"
+      post_PRO_consumption: "3 (anadiendo sharemechat-prod-vpc)"
+      verdict: "VERDE (margen 2). Si se crearan mas entornos, escalar cuota."
+  unverified_uses_aws_default:
+    - quota_name: CloudFront distributions per account
+      default_value: 200
+      current_consumption: 9
+      post_PRO_consumption: 10
+      verdict: "VERDE (margen >>180). Service-quotas API no expone esta quota directamente; uso default publico AWS."
+    - quota_name: ACM certificates per region (us-east-1)
+      default_value: 2500
+      current_consumption: 8
+      post_PRO_consumption: 9
+      verdict: "VERDE (margen >>2490). Service-quotas API no expone esta quota directamente; uso default publico AWS."
+
+eips_audit_test_verification:
+  note: "Ajuste 2 plan v2: verificar que TEST y AUDIT tienen EIP fija. CERRADO con describe-addresses real (perfil sharemechat-provisioner)."
+  test_ec2:
+    instance_id: i-088341cf8d122920f
+    state: stopped
+    public_ip: 63.180.48.12
+    eip_confirmed: true
+    allocation_id: eipalloc-0248fb7f8bd9995f7
+    tags: null
+  audit_ec2:
+    instance_id: i-0d9149cd8a0e24104
+    state: running
+    public_ip: 18.195.185.25
+    eip_confirmed: true
+    allocation_id: eipalloc-039ec5def4a95b898
+    tags: null
+  conclusion: "Ambas EIPs confirmadas. PROD con EIP fija = alineamiento con TEST/AUDIT (no mejora marginal). El procedimiento PRO-5 sigue sin cambios."
+  minor_debt:
+    description: "Ambas EIPs estan SIN tags. Conviene anadir Tags=[Name, Environment] en una sesion de housekeeping para que aparezcan etiquetadas en consola AWS y en futuros inventarios. Trivial, no bloqueante."
+
+iam_resolution_PRO_1:
+  decision: B
+  user_created: sharemechat-provisioner
+  user_id: AIDAWIJIUPULKW7ILMPB5
+  arn: arn:aws:iam::430118829334:user/sharemechat-provisioner
+  managed_policy_attached: AdministratorAccess
+  scope: "Vida util acotada al frente PRO (PRO-1 a PRO-10). Desactivacion al cerrar PRO-10."
+  cli_profile_convention:
+    read_default: sharemechat-deployer
+    write_explicit: "--profile sharemechat-provisioner"
+    lecturas_que_requieren_provisioner:
+      - ec2:DescribeAddresses
+      - ec2:DescribeKeyPairs
+      - ec2:DescribeRouteTables
+      - ec2:DescribeNatGateways
+      - ec2:DescribeNetworkInterfaces
+      - servicequotas:GetServiceQuota
+      - iam:ListAttachedUserPolicies / ListUserPolicies
+
+provisioned_in_PRO_1:
+  description: "Unico recurso AWS creado durante PRO-1. Todo lo demas se crea en PRO-2 a PRO-10."
+  key_pair:
+    name: ec2-keypair-prod
+    key_pair_id: key-00212146dd1445ca9
+    fingerprint: "b0:d7:ea:bb:16:db:75:a2:3f:d0:71:6e:27:f9:1a:42:81:60:10:7c"
+    key_type: rsa
+    key_format: pem
+    region: eu-central-1
+    tags:
+      Name: ec2-keypair-prod
+      Environment: prod
+      ManagedBy: PRO-1
+    created_at: "2026-05-24T17:30Z (aprox)"
+    pem_handover_to_operator: "Entregado en chat de la sesion PRO-1. Operador persiste en ~/.ssh/ec2-keypair-prod.pem con chmod 0600. Si se pierde, recrear el key pair completo (delete + create)."
+    used_by_planned: "EC2 backend PRO (PRO-5)."
