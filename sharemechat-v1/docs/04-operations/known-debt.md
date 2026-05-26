@@ -149,6 +149,78 @@ Ambos resueltos antes de cualquier transición `PRELAUNCH → OPEN` en PROD.
 
 **Prioridad operativa**: BAJA. No bloquea PRO-8/9/10. No bloquea apertura `PRELAUNCH → OPEN` en PROD. No está en la cola de hardening post-PRO. Esta entrada existe para que cualquier persona que inspeccione el bucket `sharemechat-maintenance` o lea los comentarios "10.A.3.pre" no se confunda sobre lo que está activo y lo que no.
 
+## 2026-05-27 — Refactor config/secrets split (Fase 1-3 + PRO-9) y deudas residuales descubiertas
+
+### Refactor secrets en los 3 entornos — cerrado
+
+Estado: CERRADO el 2026-05-27. Aplicado a TEST, AUDIT y PROD el patrón de separación `config.env` (0644 root:root, no-secret) + `secrets.env` (0600 root:root, secretos) tras incidente de transcripción de `SMTP_PASSWORD` del reporter perimetral AUDIT. Backups `.env.bak.pre-refactor-secrets-2026-05-26` conservados en los 3 entornos. Aprendizaje operativo registrado más abajo; este bloque queda como referencia histórica del cierre, no requiere acción adicional.
+
+### [APRENDIZAJE] Agente transcribió SMTP_PASSWORD del reporter AUDIT al hacer cat /etc/.../config.env
+
+**Origen**: 2026-05-26, durante inspección preparatoria de PRO-9. El agente ejecutó `cat /etc/sharemechat-audit-access-reporter/config.env` para inspeccionar la estructura del reporter, y el output incluyó la línea `SMTP_PASSWORD='<valor>'` literal. El valor de la credencial SMTP de `operations@sharemechat.com` quedó en el historial de chat del operador.
+
+**Hecho**: la credencial SMTP productiva de Microsoft 365 (cuenta `operations@sharemechat.com`) quedó expuesta en chat. La cuenta autoriza envío SMTP autenticado y, dependiendo del scope concedido en M365 admin, otros permisos asociados.
+
+**Mitigación inmediata aplicada** (2026-05-26 - 2026-05-27):
+
+1. El operador rotó `SMTP_PASSWORD` en M365 admin para `operations@sharemechat.com`. La password expuesta quedó invalidada.
+2. La nueva password requirió un segundo paso (login interactivo desde `outlook.office.com` con la cuenta) porque M365 había marcado la rotación como "must change at next sign-in", lo que provocó un error `535 5.7.139 user password has expired` en el primer test del reporter. Tras forzar el cambio interactivo, M365 aceptó la nueva password como definitiva.
+3. Refactor `config.env` + `secrets.env` aplicado al reporter de AUDIT y al equivalente PROD (creado en PRO-9). El nuevo valor se entregó vía mensaje aparte y se inyectó directamente al heredoc SSH sin re-emisión en chat.
+
+**Acción preventiva permanente añadida** a la lección documentada el 2026-05-25 (DB_PASSWORD): al inspeccionar cualquier `*.env`, `*.conf`, `*.properties` que mezcle config con secretos, **filtrar preventivamente las keys de password** antes de mostrar el contenido. Patrón recomendado para el agente:
+
+```
+sudo grep -vE '^(SMTP_PASSWORD|DB_PASSWORD|JWT_SECRET[_A-Z]*|CONSENT_SECRET[_A-Z]*|AUTHRISK_EMAIL_HASH_SALT|EMAIL_GRAPH_CLIENT_SECRET|WEBRTC_TURN_CREDENTIAL|WEBRTC_TURN_USERNAME|REDIS_PASSWORD|MAIL_PASSWORD)=' <fichero>
+```
+
+O `grep -oE '^[A-Z_]+='` cuando solo se necesite la lista de keys sin valores.
+
+**Prioridad**: información (aprendizaje operativo). No es deuda técnica reversible; el refactor config/secrets que lo motivó queda como mitigación estructural. Esta entrada permanece junto a la del 2026-05-25 como lección permanente para futuros frentes.
+
+### Deudas residuales en TEST (asimetrías históricas vs AUDIT/PROD, no resueltas)
+
+Descubiertas durante el refactor 2026-05-27 al inspeccionar TEST. **Ninguna se resolvió** porque excedían el scope del refactor (acordado con el operador: solo separación config/secrets en TEST, no renombrar keys ni instalar systemd unit). Quedan para revisión en frente de hardening pre-go-live cuando se decida si convergir TEST con el patrón AUDIT/PROD o aceptar la divergencia.
+
+**Estado**: ABIERTA en bloque. Prioridad media-baja, no bloquea ningún go-live. TEST es entorno desechable (se enciende/apaga manualmente), por lo que las asimetrías afectan a operación interna no a producción.
+
+1. **`JWT_SECRET` y `CONSENT_SECRET` sin sufijo `_TEST`**.
+   AUDIT y PROD usan `JWT_SECRET_AUDIT`/`JWT_SECRET_PROD` y `CONSENT_SECRET_AUDIT`/`CONSENT_SECRET_PROD`. TEST sigue con `JWT_SECRET=` y `CONSENT_SECRET=` (sin sufijo). `application-test.properties` espera el naming sin sufijo. Renombrar implica coordinar properties + .env y verificar bootstrap. Trivial pero fuera del scope refactor secrets actual.
+
+2. **`WEBRTC_TURN_URL_TLS` no poblado en TEST**.
+   AUDIT y PROD tienen las 3 URLs TURN (UDP/TCP/TLS). TEST solo UDP+TCP. La línea TLS no existe en `/opt/sharemechat/.env` ni en `config.env` tras el refactor. Degradación silenciosa: WebRTC en TEST no usa TLS relay, lo que limita conectividad en NATs simétricos con egress filtrado. Activar TLS en TEST requiere coordinar coturn (cert válido) y `.env`. Documentación previa: deuda 2026-05-25 "Rename de keys WEBRTC_TURN_* en .env de TEST y AUDIT" (que se cerró el 25 sin poblar TLS en TEST porque no estaba inicialmente).
+
+3. **Backend TEST sin systemd unit** (deuda preexistente 2026-05-09, refrescada hoy).
+   TEST se arranca manualmente. Tras el refactor 2026-05-27 se creó `/home/ec2-user/sharemechat-v1/start-test.sh` como wrapper para que el comando manual cargue automáticamente `config.env` + `secrets.env` + active `profile=test`. El operador sigue arrancándolo con `nohup ./start-test.sh ...` o tmux/screen. La creación de unit systemd para TEST sigue siendo deuda independiente para la sesión de hardening.
+
+4. **`MAIL_PASSWORD` y `REDIS_PASSWORD` residuo histórico en TEST**.
+   `application.properties` base (líneas 45 y 88) declara `spring.mail.password=${MAIL_PASSWORD}` y `spring.redis.password=${REDIS_PASSWORD}` sin defaults. AUDIT y PROD no tienen esas keys en su `.env` y arrancan OK porque `JavaMailSender` está dentro de `SmtpEmailService` con `@ConditionalOnProperty(prefix="email", name="provider", havingValue="smtp")`, y los 3 entornos tienen `EMAIL_PROVIDER=graph` (Microsoft Graph). El bean SMTP nunca se instancia. Redis local no exige auth (`requirepass` comentado en `/etc/redis6/redis6.conf` de TEST y presumiblemente en AUDIT/PROD también). **TEST tenía ambas keys en `.env` por residuo histórico**; durante el refactor 2026-05-27 NO se migraron a `secrets.env`; quedan solo en el backup `.env.bak.pre-refactor-secrets-2026-05-26`. Acción opcional futura: eliminar las dos líneas `${MAIL_PASSWORD}` y `${REDIS_PASSWORD}` de `application.properties` base (o ponerles default `:`) para evitar confusión y permitir borrar las keys del backup TEST con seguridad.
+
+5. **Permisos asimétricos de `secrets.env` en TEST vs AUDIT/PROD**.
+   AUDIT/PROD: `root:root 0600` (systemd lee como root antes de hacer drop a `User=ec2-user`). TEST: `ec2-user:ec2-user 0600` (el wrapper `start-test.sh` corre como `ec2-user` sin sudo). Es decisión justificada por la diferencia de mecanismo de arranque (systemd vs manual), no se considera incidente. Si se instala systemd unit para TEST (deuda 3), revertir a `root:root 0600` para uniformidad.
+
+### Deudas residuales en AUDIT pipeline perimetral (textos "DRY-RUN" obsoletos)
+
+Descubiertas durante PRO-9 al inspeccionar el pipeline AUDIT para replicarlo a PROD. AUDIT lleva tiempo en CARRIL-A REAL pero conservó textos "DRY-RUN" en varios sitios. **NO se corrigieron en AUDIT** porque el operador me autorizó solo correcciones documentales en PROD desde el inicio; AUDIT queda como deuda.
+
+**Estado**: ABIERTA. Prioridad BAJA (cosmético/documental). No afecta funcionalidad.
+
+1. **Description del unit `sharemechat-audit-access-blocker.service`**: dice `(DRY-RUN)`. En PROD la descripción equivalente quedó como `(CARRIL-A real)`. Cambiar AUDIT a un texto análogo (`(CARRIL-A real)`) para coherencia.
+2. **Description del unit `sharemechat-audit-access-blocker.timer`**: análogamente dice `(DRY-RUN)`.
+3. **Comentario en `/etc/sharemechat-audit-access-blocker/config.env`**: `# Safety flag. No debe bajarse a 0 en esta fase.` queda obsoleto (el flag ya está en `DRY_RUN=0` desde hace meses). Cambiar a `# Carril A real. DRY_RUN=1 si necesitas reactivar modo observación.` (texto ya aplicado en PROD).
+4. **Cabecera del unit `sharemechat-audit-access-blocker.service`**: comentario `# DRY-RUN ONLY. This unit does NOT reload nginx...` describe comportamiento inverso al real (la unit SÍ recarga nginx). Sustituir por el texto del unit PROD que refleja CARRIL-A real.
+5. **Cabecera de `*.deny-audit-ips.proposed.conf` diarios**: el output advisory generado por el blocker python lleva un header `# Proposed deny list for AUDIT nginx (DRY-RUN). [...] # This file is advisory only. It is NOT loaded by nginx.` La aserción "advisory only" es verdadera (es el fichero advisory diario, no el live), pero "DRY-RUN" en el contexto donde el componente está en CARRIL-A induce confusión. La cadena vive hardcoded en el código Python del blocker (`/opt/sharemechat-audit-access-blocker/lib/block_access.py`). Aplica también al equivalente PROD que se acaba de instalar (el código vino con el clon literal).
+
+Acción consolidada futura: sesión corta de "limpieza documental pipeline perimetral" que corrija (1)-(4) en AUDIT (vía sed sobre los 2 ficheros del unit y el config.env, daemon-reload, sin restart de timers ya que no afecta a ExecStart) y opcionalmente (5) tanto en AUDIT como en PROD (vía sed sobre el código Python del blocker, replicado entre entornos).
+
+### Deudas residuales en pipeline perimetral PROD (logging CloudFront pendiente para el día del switch)
+
+Descubiertas durante PRO-9. PROD nuevo, pero requiere coordinación futura.
+
+**Estado**: ABIERTA. Prioridad media (afecta a la efectividad del pipeline cuando llegue tráfico público).
+
+1. **Distribución `E2FWNC80D4QDJC` (frontend producto PROD / landing actual) tiene logging DESACTIVADO** (`DistributionConfig.Logging.Enabled=false`, Bucket="", Prefix=""). El normalizer perimetral PROD lee `s3://sharemechat-cf-logs-prod/${CF_PREFIX_PRODUCT}` (valor `product/`) pero ese prefix no existe todavía porque ninguna distribución escribe ahí. Cuando se haga el switch público (cambio de origin de `E2FWNC80D4QDJC` a `sharemechat-frontend-prod` + DNS), también hay que **activar logging** de esa distribución apuntando a `Bucket: sharemechat-cf-logs-prod`, `Prefix: product/`. Hasta entonces el normalizer solo procesará logs nginx locales (correcto y suficiente sin tráfico público).
+2. **Asimetría en nombres de prefijos vs AUDIT**: AUDIT usa `cloudfront/audit/` y `cloudfront/admin-audit/`. PROD usa `product/` y `admin/` (decisión 2026-05-27 para coincidir con el prefix que ya configuré en la distribución admin `E3O40LHJ4PC6LE` en PRO-6). Cuando se aborde (1), confirmar que `product/` sigue siendo el prefix elegido o convergir con el patrón AUDIT. Anotado en `config.env` del normalizer PROD (variable `CF_PREFIX_PRODUCT`, renombrada desde `CF_PREFIX_AUDIT` heredado del clon AUDIT).
+
 ## 2026-05-25 — Aprendizaje operativo durante PRO-5
 
 ### [APRENDIZAJE] Agente transcribió DB_PASSWORD productiva en chat pese a prohibición explícita
