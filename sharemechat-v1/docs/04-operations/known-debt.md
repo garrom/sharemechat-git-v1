@@ -2,6 +2,25 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-05-25 — Aprendizaje operativo durante PRO-5
+
+### [APRENDIZAJE] Agente transcribió DB_PASSWORD productiva en chat pese a prohibición explícita
+
+**Origen**: PRO-5 del frente de provisioning PROD (2026-05-25). En el resumen previo a la entrega de los 6 secretos rotables, el agente Claude Code incluyó dentro de una tabla de "secretos a entregar" una columna "Notas" que transcribía el valor literal de la `DB_PASSWORD` recibida en PRO-4. El prompt de PRO-4 había instruido explícitamente: "Documenta SOLO el hecho de que la password se ha recibido en el resumen final de PRO-4, NUNCA el valor". La instrucción aplicaba a todos los outputs documentales del frente, no solo al resumen de PRO-4.
+
+**Hecho**: la password de la cuenta `admin` de la RDS PROD `db1-sharemechat-prod` quedó expuesta en el historial de chat del operador y, potencialmente, en cualquier copia/sincronización de ese historial (sistema de transcripción de la sesión, capturas de pantalla, backups del cliente, etc.). El compromiso de la credencial debe asumirse efectivo desde el momento de la transcripción hasta la rotación.
+
+**Impacto operativo**: el operador rotó la password inmediatamente vía `aws rds modify-db-instance --master-user-password <nuevo> --apply-immediately --profile sharemechat-provisioner`, invalidando la password expuesta antes de que el backend PROD llegase a usarla productivamente (PRO-5 todavía no había arrancado `sharemechat-prod.service`). La rotación inmediata mitigó el incidente sin tiempo de exposición útil. La password nueva se entregó en mensaje aparte al agente con la misma instrucción de no transcripción, que se respetó en el resto de PRO-5.
+
+**Acción preventiva futura**:
+
+- En todos los prompts del frente PRO (y de futuros frentes con entrega de secretos): añadir un párrafo explícito sobre no transcripción de valores de secretos en ningún output documental, no solo en el "resumen final" sino en cualquier mensaje al operador, tabla, código de ejemplo, comentario de comando, mensaje de commit, snapshot YAML o entrada en known-debt/incident-notes. El alcance "documental" incluye **cualquier output del agente que pueda persistirse o transmitirse fuera del flujo de comandos remotos**.
+- En la práctica técnica del agente, antes de emitir cualquier mensaje al operador o crear cualquier fichero versionable, auditar mentalmente contra la lista de secretos conocidos en la sesión. Si aparece un valor literal o fragmento parcial reconocible, sustituir por una referencia opaca antes de emitir.
+- Para escritura de secretos en ficheros remotos (ej. `.env` en EC2), usar técnicas que mantengan el valor fuera de stdout local: heredoc directo a `tee` remoto vía SSH, pipe entre SSH AUDIT y SSH PROD sin pasar por stdout local, `source` remoto sin echo, etc.
+- En el cierre de cada paquete con entrega de secretos, confirmar explícitamente en el resumen final que ningún valor literal aparece, listando solo los nombres de keys recibidos.
+
+**Prioridad**: información (aprendizaje operativo). No es deuda técnica reversible — es proceso. Esta entrada permanece como lección para futuros frentes; no se cierra ni se mueve a `incident-notes.md`.
+
 ## 2026-05-25 — Detectada y resuelta durante refactor properties PRO-5.A
 
 ### [CERRADA] Rename de keys WEBRTC_TURN_* en .env de TEST y AUDIT antes del próximo deploy del JAR
