@@ -50,6 +50,71 @@ Detalle completo del análisis (4 bloques, opciones A-E comparadas, alcance esti
 
 **Prioridad operativa**: BLOQUEANTE del go-live público de PROD. PROD NO se abre al público hasta que esta deuda esté resuelta. PROD puede provisionarse (PRO-6 a PRO-10) con el bug presente porque arrancará en modo `PRELAUNCH` (que mitiga el bypass por ADR-009); el bypass solo se activa al pasar a `OPEN`, que es decisión consciente posterior. La sesión de fix se programa inmediatamente tras el cierre de PRO-10 con prioridad máxima sobre cualquier otra deuda abierta.
 
+### Country Access — migración de blocklist random a allowlist por flujo (cliente vs modelo) + bypass por IP para PSPs
+
+**Origen del hallazgo**: derivado del incidente "PSPs reportan no poder acceder a `audit.sharemechat.com`" (1-2 semanas antes del 2026-05-26). Diagnóstico exhaustivo realizado el 2026-05-26 sobre la configuración actual del `CountryAccessService`. La evidencia operativa directa (logs `journalctl` AUDIT con patrón `"Acceso bloqueado por país"`) ya no está disponible al estar fuera de la ventana de retención consultada, pero la causa probable es la lista actual de países bloqueados.
+
+**Estado**: ABIERTA. Prioridad alta-crítica. Segunda tarea programada en la mini-fase de hardening post-PRO, inmediatamente después del fix del auth bypass producto→backoffice (Opción C ya documentada arriba).
+
+**Diagnóstico**: la configuración actual `country.access.blocked-countries=NL,JP,RO,PL,US,MX,CA,CH,NO,SG` (10 países) fue una **prueba sin criterio de negocio** introducida en algún momento previo y nunca revisada. El operador la descarta explícitamente. La consecuencia operativa probable: PSPs que operan desde alguno de esos países (especialmente US, donde tiene sedes CCBill) ven sus peticiones contra los 5 endpoints cubiertos por el gate devolver 403.
+
+**Alcance actual del filtro** (recordatorio del diagnóstico 2026-05-26):
+
+- Endpoints cubiertos por `CountryAccessService.assertAllowed(req)`:
+  - `POST /api/auth/login`
+  - `POST /api/auth/refresh`
+  - `POST /api/admin/auth/login`
+  - `POST /api/users/register/client`
+  - `POST /api/users/register/model`
+- Endpoints NO cubiertos (a mantener fuera del gate tras el refactor): blog público (`/api/public/blog/**`), home pública (`/api/public/home`), webhooks (`/api/ccbill/**`, `/api/veriff/**`), WebSocket `/ws/**`, lectura de sesión `/api/users/me`, sitemap.
+- Resolución país: headers en orden `CloudFront-Viewer-Country` → `CF-IPCountry` → `X-AppEngine-Country` → `X-Country-Code`. CloudFront ya inyecta `CloudFront-Viewer-Country` automáticamente.
+
+**Diseño técnico decidido** (no se implementa ahora, se documenta como deuda):
+
+1. **Descartar la blocklist actual**. La lista `NL,JP,RO,PL,US,MX,CA,CH,NO,SG` no responde a ningún criterio de negocio y se elimina del refactor.
+2. **Patrón nuevo: allowlist en lugar de blocklist**. Patrón seguro por defecto (`deny all + allow explicit`). Estándar industrial para servicios con compliance regulatoria. Países nuevos no permitidos hasta decisión explícita.
+3. **Dos allowlists separadas por flujo**, alimentadas por properties distintas en `.env` / `application-<env>.properties`:
+   - `country.access.client-registration.allowed-countries`
+   - `country.access.model-registration.allowed-countries`
+   El criterio de negocio: cliente debe tener poder adquisitivo razonable; modelo puede venir de mercados con oferta de modelos profesionales (LATAM, Europa del Este, otros).
+4. **Login y refresh usan la UNIÓN de ambas allowlists**. Justificación: una persona que se registró como modelo desde Colombia debe poder loguearse desde cualquier país aceptado por cualquier flujo. El gate de login solo bloquea países que no están permitidos por NINGÚN flujo.
+5. **Bypass por IP para PSPs (CCBill principalmente, posiblemente otros) y operador**. Lista de IPs en `.env` (key tipo `country.access.bypass-ips=<csv>`) que saltan TODA la validación de país, ortogonal a la allowlist. Aplicado al principio del `assertAllowed()` antes de resolver país: si la IP origen está en la bypass list, retorna sin más.
+6. **Respuesta HTTP uniforme al ser bloqueado: 403 con mensaje genérico** ("Registro no disponible" o equivalente). NO distinguir entre país bloqueado, `PRODUCT_REGISTRATION_*_ENABLED=false`, u otras razones. Motivo OPSEC: un mensaje específico ("tu país no permite cliente pero sí modelo") permite a un atacante elegir VPN o flujo concreto para evadir el control. Internamente sí se logea la razón real para diagnóstico operativo (`log.warn("Country blocked: country=<CC>, flow=<client|model|login>, ip=<...>")`).
+
+**Listas iniciales** (editables en cualquier momento; decisión simple de añadir/quitar países en `application-<env>.properties` o vía override `.env`):
+
+ALLOWLIST CLIENTE (28 países):
+
+```
+ES,PT,FR,IT,DE,NL,BE,LU,AT,IE,SE,DK,FI,NO,CH,GB,US,CA,MX,AR,CL,UY,CR,PA,DO,PR,AU,NZ
+```
+
+ALLOWLIST MODELO (51 países, superconjunto del anterior):
+
+```
+ES,PT,FR,IT,DE,NL,BE,LU,AT,IE,SE,DK,FI,NO,CH,GB,US,CA,MX,AR,CL,UY,CR,PA,DO,PR,AU,NZ,
+CO,VE,PE,BO,EC,PY,BR,GT,HN,SV,NI,CU,RO,PL,HU,CZ,SK,BG,LT,LV,EE,UA,RU
+```
+
+UNIÓN (efectiva para login/refresh): equivalente a la allowlist modelo (51 países), por ser superconjunto del cliente.
+
+**Verificaciones residuales antes o durante la implementación**:
+
+- Identificar las IPs concretas de los PSPs operativos (CCBill al menos; posiblemente otros como Veriff, gateway de email, etc.). El operador puede coordinar con su contacto en cada PSP para obtenerlas formalmente. Documentar la lista resultante fuera del repo (mapping operativo) y referenciarla desde el `.env` per-env.
+- Revisar si `CountryAccessService` tiene caché o resolución lenta en el camino caliente. El refactor debe mantener latencia despreciable; la resolución contra los headers ya es O(1), pero la comprobación contra la allowlist (potencialmente 51 entradas) debe usar `Set<String>` precomputado en bootstrap, no `List.contains()` recalculado en cada request.
+- Asegurar que el frontend NO expone qué país está bloqueado vía mensajes diferenciables ni código de estado distinto. La respuesta 403 debe ser idéntica desde el punto de vista del cliente para todos los casos de bloqueo.
+- Confirmar que los endpoints públicos no sensibles (blog `/api/public/blog/**`, home `/api/public/home`, GET `legal`) NO están sujetos al country gate. El blog público debe ser SEO-accesible globalmente (Googlebot opera desde US, principalmente), y bloquearlo destruiría el posicionamiento. La decisión actual ya los excluye; hay que mantenerlo así explícitamente tras el refactor.
+- Verificar que `CountryBlockedException` no fuga el código de país en el cuerpo de la respuesta (revisar `GlobalExceptionHandler` línea 112+). Solo log interno, nunca al cliente.
+
+**Defensa en profundidad opcional** (sesión posterior, no parte del fix inicial): tras la implementación, considerar añadir geo-restriction a nivel CloudFront para endpoints sensibles, como capa adicional sobre el filtro backend. CloudFront permite GeoRestriction con `allowlist` por distribución; aplicarlo solo si no rompe el caching de la SPA. Evaluación coste/beneficio en sesión dedicada.
+
+**Prioridad operativa**: BLOQUEANTE de apertura de registros públicos en PROD. PROD puede provisionarse y arrancar en `PRELAUNCH` con la blocklist actual (10 países random) sin exponer el problema públicamente, porque `PRELAUNCH` bloquea los endpoints de registro a nivel `ProductOperationalModeService` (`PRODUCT_REGISTRATION_*_ENABLED=false`) antes de llegar al filtro de país. Al pasar a `OPEN`: **ambos fixes (auth bypass producto→backoffice + allowlist countries) deben estar ya aplicados antes de abrir registros**. El orden de la mini-fase de hardening post-PRO es:
+
+1. Fix auth bypass Opción C (whitelist de roles en `AuthController`).
+2. Country access redesign (este documento).
+
+Ambos resueltos antes de cualquier transición `PRELAUNCH → OPEN` en PROD.
+
 ## 2026-05-25 — Aprendizaje operativo durante PRO-5
 
 ### [APRENDIZAJE] Agente transcribió DB_PASSWORD productiva en chat pese a prohibición explícita
