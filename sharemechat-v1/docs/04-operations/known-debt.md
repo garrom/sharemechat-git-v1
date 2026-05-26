@@ -115,6 +115,40 @@ UNIÓN (efectiva para login/refresh): equivalente a la allowlist modelo (51 paí
 
 Ambos resueltos antes de cualquier transición `PRELAUNCH → OPEN` en PROD.
 
+### Patrón maintenance — overlay React funcional + bucket S3 descolgado + comentarios "10.A.3.pre" engañosos
+
+**Origen del hallazgo**: PRO-6/PRO-7 (2026-05-26), durante la inspección de TEST y AUDIT en busca del patrón maintenance a replicar en PROD. La hipótesis inicial era que el HTML del bucket `sharemechat-maintenance/{test,audit}/index.html` se servía vía CloudFront cuando el backend está caído. La inspección exhaustiva demostró que NO es así.
+
+**Estado**: ABIERTA. Prioridad BAJA. No bloquea ningún go-live. Documentado para clarificar el estado actual, no para urgir resolución.
+
+**Estado real (verificado experimentalmente)**:
+
+- **Overlay React `MaintenanceOverlay`** (`frontend/src/components/MaintenanceProvider.jsx`) es el mecanismo realmente activo en los 3 entornos (TEST, AUDIT, PROD desde PRO-7). Detecta 5xx o respuestas con `Content-Type: text/html` en llamadas `/api/*`, monta un overlay bloqueante con branding `SHAREMECHAT` bilingüe EN+ES, y hace polling cada 30 s a `/api/users/me` para retirarlo cuando el backend vuelve. Es client-side puro.
+- El **bundle frontend producto y admin desplegado en PROD** (PRO-7) ya incluye `MaintenanceProvider` integrado en `App.jsx`, por lo que PROD tendrá la misma experiencia maintenance que TEST/AUDIT desde el día uno, sin necesidad de cablear nada en CloudFront.
+- **Bucket `sharemechat-maintenance`** existe con dos objetos: `audit/index.html` y `test/index.html` (ambos 1874 B, idénticos en branding al overlay React). **NO existe `prod/index.html`**. Los HTMLs están **descolgados**: ninguna distribución CloudFront los referencia como Origin, OriginGroup, CustomErrorResponse, behavior path-pattern, ni vía CloudFront Function.
+- **Bucket policy de `sharemechat-maintenance`** autoriza `s3:GetObject` desde las dos distribuciones product (TEST `E2Q4VNDDWD5QBU`, AUDIT `E1ILXV7P6ENUV8`) — permiso residual de un cableado preparado pero nunca activado. No autoriza ni a las distribuciones admin ni a las distribuciones PROD (incluida la admin nueva `E3O40LHJ4PC6LE`). OAC `EKY0V8P96XXWM` (`oac-sharemechat-maintenance`) existe en CloudFront, también residual.
+- **Comentarios en código describiendo un patrón "se complementa con OriginGroup en CloudFront"** (`MaintenanceProvider.jsx` líneas 3-5) y "CloudFront sirve desde el bucket sharemechat-maintenance via failover" (`http.js` líneas 12-15) son **engañosos**: describen la intención del paquete histórico `10.A.3.pre` que nunca se cerró. El sufijo `pre` del nombre sugiere que se quedó como pre-step y no se completó. La parte React funcional del paquete sí se mergeó; la parte CloudFront no.
+- **Verificación experimental concluyente** (`curl -sI https://test.sharemechat.com/api/users/me` con EC2 TEST parado, 2026-05-26): respuesta HTTP `504` con body HTML genérico de CloudFront `<TITLE>ERROR: The request could not be satisfied</TITLE>` (936 B), **no** el HTML del bucket maintenance (1874 B con `<TITLE>SHAREMECHAT — Maintenance</TITLE>`). `x-cache: Error from cloudfront`. Lo que el operador interpretaba visualmente como "HTML servido desde el bucket maintenance" era de hecho el overlay React montado sobre la SPA cargada normalmente desde el bucket frontend; visualmente son idénticos porque comparten el mismo branding por diseño.
+
+**Razonamiento sobre cobertura**:
+
+- El overlay React cubre el **99.99 %** de los casos reales de "backend caído pero usuario quiere usar la app": EC2 stopped, JAR caído, nginx caído, RDS inaccesible. En todos esos casos la SPA carga desde S3 (servicio con 99.99 % de durabilidad/disponibilidad), hace fetch a `/api/*`, recibe 5xx o HTML genérico de CloudFront, y monta el overlay.
+- El cableado CloudFront → bucket maintenance solo cubriría el caso edge de "la SPA misma no se sirve" (bucket frontend caído, S3 region down, distribución CloudFront caída). Probabilidad ínfima en operación normal.
+
+**Cuándo abordarlo (si se aborda algún día)**:
+
+- No prioritario; los registros se abrirán en PROD con el overlay React funcional desde día uno.
+- Si en algún momento se decide cablear el bucket maintenance a CloudFront, la sesión debe abordarse con:
+  - Decisión arquitectónica entre **CER** (`CustomErrorResponses 502/503/504 → /maintenance.html` con `ResponseCode=503`, simple pero local a cada distribución y requiere subir el HTML a cada bucket origin) versus **OriginGroup** (origin primario backend + secundario bucket maintenance, failover automático sobre 502/503/504, centralizado en bucket compartido reutilizable entre entornos).
+  - Decisión sobre **alcance**: cablear solo en PROD; o nivelar también TEST/AUDIT al mismo tiempo para mantener simetría operativa (recomendado para no introducir asimetrías de respuesta entre entornos).
+  - Decisión sobre **path** del HTML maintenance: si se elige OriginGroup, el OriginPath del origin secundario debe inyectar el prefijo `prod/` (y `audit/`, `test/` en sus respectivos cableos) para que el bucket compartido siga sirviendo el HTML correcto por entorno.
+  - Subida del HTML faltante `prod/index.html` al bucket compartido, idéntico en branding a `audit/` y `test/`.
+  - Extensión del bucket policy y del OAC para autorizar las distribuciones PROD adicionales.
+  - ADR formal documentando la decisión (CER vs OriginGroup), la cobertura (caso edge SPA caída) y la convivencia con el overlay React (que sigue siendo la primera línea para todos los demás casos).
+  - Limpieza de los comentarios engañosos en `MaintenanceProvider.jsx` y `http.js` para que reflejen el estado real: o bien describir el cableado nuevo si se hace, o bien reformularlos como "overlay client-side único mecanismo activo, bucket S3 reservado para futura extensión".
+
+**Prioridad operativa**: BAJA. No bloquea PRO-8/9/10. No bloquea apertura `PRELAUNCH → OPEN` en PROD. No está en la cola de hardening post-PRO. Esta entrada existe para que cualquier persona que inspeccione el bucket `sharemechat-maintenance` o lea los comentarios "10.A.3.pre" no se confunda sobre lo que está activo y lo que no.
+
 ## 2026-05-25 — Aprendizaje operativo durante PRO-5
 
 ### [APRENDIZAJE] Agente transcribió DB_PASSWORD productiva en chat pese a prohibición explícita
