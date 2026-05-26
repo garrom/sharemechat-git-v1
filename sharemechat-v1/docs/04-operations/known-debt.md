@@ -2,6 +2,54 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-05-26 — Hallazgo de seguridad durante validación post-PRO-5.A
+
+### Bypass de aislamiento auth producto → backoffice (login admin acepta desde superficie de producto)
+
+**Origen del hallazgo**: descubierto orgánicamente por el operador al validar TEST/AUDIT tras el refactor de properties PRO-5.A. Desde el formulario de login de la superficie pública del producto (`https://audit.sharemechat.com/`), al introducir credenciales de un usuario administrador del backoffice (que debería ser exclusivo de `https://admin.audit.sharemechat.com/`), el login se completa con éxito y el usuario es redirigido al dashboard del backoffice.
+
+**Estado**: ABIERTA. Prioridad máxima dentro del frente de hardening pre-go-live. Primera tarea programada inmediatamente tras el cierre de PRO-10 del frente actual de provisioning PROD.
+
+**Diagnóstico**: regresión por omisión, NO decisión arquitectónica documentada. Análisis exhaustivo en chat de la sesión Claude.ai del 2026-05-26.
+
+- `POST /api/auth/login` (`AuthController.java:73-136`) llama `userService.authenticateAndLoadUser(dto)` que valida solo password y estado de cuenta; **nunca inspecciona `user.getRole()`**. Emite JWT y cookie `access_token` con el rol intacto sea el que sea (USER, CLIENT, MODEL, ADMIN).
+- `POST /api/admin/auth/login` (`AdminAuthController.java:73-76`) sí valida con `hasInternalBackofficeAccess(profile)` que el usuario tenga `ROLE_ADMIN`, `ROLE_SUPPORT` o `ROLE_AUDIT` del backoffice antes de emitir cookie; si no, devuelve 401. **La asimetría entre los dos controllers es el fallo de fondo.**
+- Cookie emitida desde producto tiene `domain=.audit.sharemechat.com` (con punto inicial). Por RFC 6265 §5.1.3, esa cookie es válida automáticamente en `admin.audit.sharemechat.com` sin que el frontend admin tenga que hacer nada. PROD tendrá el mismo comportamiento con `.sharemechat.com`.
+- Frontend producto (`LoginModalContent.jsx:60-101` + `runtimeSurface.js:39-42`) detecta `user.role === 'ADMIN'` tras login OK y redirige proactivamente a `https://admin.audit.sharemechat.com/dashboard-admin`. La SPA admin carga, las cookies cross-domain ya son válidas, dashboard backoffice visible.
+- Historia (`git log --follow`): `AuthController` nació en Sprint 1 como endpoint de login universal antes de existir el concepto de backoffice. `AdminAuthController` se introdujo en commit `42d7085 Admin BackOffice Fase 1.5` ya con la validación `hasInternalBackofficeAccess`. Cuando se añadió `AdminAuthController`, no se cerró el espejo defensivo en `AuthController`. **Es regresión por omisión histórica.**
+
+**Impacto**:
+
+- **Superficie de ataque ampliada para credential stuffing contra cuentas admin**: el atacante puede usar el formulario público (más visible) en lugar del admin (menos visible). ADR-008 Auth-risk cubre `Channels.PRODUCT` pero no `ADMIN`; con el bypass, un atacante de credenciales admin entra por el canal observado pero el bloqueo CRITICAL queda registrado bajo namespace producto, y no está confirmado si afecta también el canal admin (ver verificación pendiente abajo).
+- **Separación "Dual Surface" de ADR-001 rota a nivel auth**. La filosofía dice "superficies distintas con disciplina documental"; la implementación une la sesión.
+- **Posible DoS hacia cuentas admin** vía bloqueo del email en namespace producto: si un atacante provoca CRITICAL repetido en `/api/auth/login` con el email del admin, podría bloquear el login de ese admin también vía `/api/admin/auth/login` si `AuthRiskService.isEmailBlocked` consulta un namespace único sin discriminación de canal. **Verificación pendiente.**
+- **En modo `OPEN`** (estado actual TEST/AUDIT y modo de operación normal previsto para PROD post-COMING-SOON): bypass trivialmente explotable.
+- **En modos `PRELAUNCH`/`MAINTENANCE`/`CLOSED`** (ADR-009): mitigado, porque `ProductOperationalModeService.isProductPath:324` clasifica `/api/auth/login` como path de producto y devuelve 503 antes de llegar al controller. PRO se provisiona y arranca en PRELAUNCH durante COMING SOON, lo que mitiga el bypass durante esa fase.
+
+**Solución propuesta**: **Opción C — whitelist de roles aceptados en `AuthController`**.
+
+Patrón allowlist: `AuthController.login()` declara explícitamente que solo acepta usuarios con `role ∈ {USER, CLIENT, MODEL}`. Cualquier otro rol (incluido `ADMIN` y futuros roles backoffice como `MODERATOR`, `SUPPORT_LIGHT`, `EDITOR` que ya existe en BD) → 401 con mensaje genérico "Credenciales inválidas" (mismo que credencial errónea, para no filtrar oráculo sobre la existencia del admin). Registro `LOGIN_FAILURE` con razón específica `admin_role_blocked_on_product_channel` (o similar) para trazabilidad Auth-risk.
+
+- ~15 líneas en `AuthController.java`, helper trivial.
+- Reusable: pasa por el mismo `BackofficeAccessService` que ya consume `AdminAuthController`.
+- Reversible (revert del PR).
+- Sin coordinación frontend obligatoria. El frontend producto seguirá recibiendo 401 y mostrará "Credenciales inválidas" en lugar del redirect cross-surface obsoleto.
+- Sin migración de cookies ni rotación de sesiones admin activas (la validación opera solo en login, no en JWT existente).
+- Patrón allowlist es más seguro que blocklist frente a evolución del modelo de roles: roles nuevos NO permitidos por defecto hasta decisión explícita.
+
+Detalle completo del análisis (4 bloques, opciones A-E comparadas, alcance estimado, riesgos de regresión) en el chat de la sesión Claude.ai del 2026-05-26.
+
+**Acciones residuales antes o durante el fix**:
+
+- Confirmar comportamiento cross-channel de `AuthRiskService.isEmailBlocked`: si un bloqueo CRITICAL generado por intentos contra `/api/auth/login` (Channels.PRODUCT) bloquea también intentos contra `/api/admin/auth/login`. Esto condiciona la mitigación del DoS hacia cuentas admin.
+- Confirmar ausencia de tests JUnit existentes sobre `AuthController.login()` con usuarios admin. Si existen y esperaban 200 OK, hay que actualizarlos para esperar 401.
+- Confirmar ausencia de otros endpoints que autentiquen sin discriminación de rol: password reset (`/api/auth/password/forgot|reset`), email verification (`/api/email-verification/confirm`), futuros flujos OAuth si se añadieran. Aplicar la misma regla allowlist donde aplique.
+- Confirmar que el `cookieDomain` con dot-leading (`.audit.sharemechat.com`, `.sharemechat.com`) es decisión consciente, no descuido. Verificación: aparece literal en `application.properties` per-env desde varios sprints atrás. Documentar motivo si se encuentra (probable: compartir sesión entre apex y `admin.*` de forma deliberada, lo cual es justamente lo que habilita el bypass).
+
+**Defensa en profundidad opcional para sesión posterior**: Opción E — cookies con domain sin punto (`audit.sharemechat.com` en producto, `admin.audit.sharemechat.com` en admin). Aplicar como segunda capa tras la Opción C ya implementada. Si por error futuro la validación de rol cayera (refactor, flag, bug), las cookies no serían válidas cross-surface. Requiere coordinación frontend.
+
+**Prioridad operativa**: BLOQUEANTE del go-live público de PROD. PROD NO se abre al público hasta que esta deuda esté resuelta. PROD puede provisionarse (PRO-6 a PRO-10) con el bug presente porque arrancará en modo `PRELAUNCH` (que mitiga el bypass por ADR-009); el bypass solo se activa al pasar a `OPEN`, que es decisión consciente posterior. La sesión de fix se programa inmediatamente tras el cierre de PRO-10 con prioridad máxima sobre cualquier otra deuda abierta.
+
 ## 2026-05-25 — Aprendizaje operativo durante PRO-5
 
 ### [APRENDIZAJE] Agente transcribió DB_PASSWORD productiva en chat pese a prohibición explícita
