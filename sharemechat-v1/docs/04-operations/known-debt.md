@@ -149,6 +149,43 @@ Ambos resueltos antes de cualquier transición `PRELAUNCH → OPEN` en PROD.
 
 **Prioridad operativa**: BAJA. No bloquea PRO-8/9/10. No bloquea apertura `PRELAUNCH → OPEN` en PROD. No está en la cola de hardening post-PRO. Esta entrada existe para que cualquier persona que inspeccione el bucket `sharemechat-maintenance` o lea los comentarios "10.A.3.pre" no se confunda sobre lo que está activo y lo que no.
 
+## 2026-05-27 — Cierre Q7 plan v2 PRO (auto-renewal cert TLS coturn AUDIT)
+
+### [CERRADA] Cert TLS coturn AUDIT sin hook deploy — auto-renewal no cableado
+
+**Origen**: Q7 del plan v2 PRO (documentado en PRO-1 como deuda paralela aceptada, planificada para cierre en PRO-10). El cert TLS de `api.audit.sharemechat.com` se renovaba vía `certbot-renew.timer` (cuando estaba activo), pero **no había hook deploy** que sincronizara el cert renovado a `/home/ec2-user/coturn/runtime/` ni reiniciara `coturn-audit.service`. Resultado: tras una renovación de Let's Encrypt, coturn seguía sirviendo el cert viejo cargado en memoria hasta restart manual.
+
+**Estado del cierre (2026-05-27, PRO-10)**: CERRADA. Verificación exhaustiva pre-cambio reveló además que el propio `certbot-renew.timer` estaba **disabled + inactive** en AUDIT (subdeuda implícita en Q7 — el timer ni siquiera estaba lanzando intentos de renovación). PROD ya tenía el patrón cableado correctamente desde PRO-5 (hook + timer activo).
+
+**Acciones aplicadas en AUDIT**:
+
+1. **Hook deploy creado** en `/etc/letsencrypt/renewal-hooks/deploy/sync-coturn.sh` (0755 root:root, 601 B). Es un clon literal del hook PROD `sync-coturn.sh` con dos adaptaciones quirúrgicas:
+   - Lineage: `/etc/letsencrypt/live/api.audit.sharemechat.com` (vs `api.sharemechat.com` en PROD).
+   - Servicio a reiniciar: `coturn-audit.service` (vs `coturn-prod.service` en PROD).
+   - Resto del flujo idéntico: cp `fullchain.pem` + `privkey.pem` a `/home/ec2-user/coturn/runtime/`, chown `ec2-user:ec2-user`, chmod `0600`, `systemctl restart coturn-audit.service`, `logger` con mensaje `[certbot-deploy-hook] cert sincronizado a coturn-audit y servicio reiniciado`.
+   - Sintaxis verificada con `bash -n`.
+
+2. **`certbot-renew.timer` activado**: `systemctl enable certbot-renew.timer && systemctl start certbot-renew.timer`. Confirmado `is-enabled=enabled` y `is-active=active`. Next run inmediato post-activación: `Wed 2026-05-27 23:33:15 UTC` (luego cadencia estándar de certbot, dos veces al día).
+
+3. **Validaciones realizadas**:
+   - `certbot renew --dry-run` → "Congratulations, all simulated renewals succeeded: /etc/letsencrypt/live/api.audit.sharemechat.com/fullchain.pem (success)".
+   - Ejecución manual del hook (`sudo /etc/letsencrypt/renewal-hooks/deploy/sync-coturn.sh`) → exit 0; fingerprints SHA-256 de `runtime/fullchain.pem` y `live/api.audit.sharemechat.com/fullchain.pem` coinciden tras la copia; perms `ec2-user:ec2-user 0600` correctos; `coturn-audit.service` reiniciado (MainPID 1507 → 2250913, ActiveEnterTimestamp 2026-05-27 07:49:56 UTC); `is-active=active`; mensaje del `logger` capturado en journalctl.
+   - Backup pre-cambio del par `fullchain.pem` + `privkey.pem` runtime conservado como `*.bak.pre-PRO-10-20260527T074952Z` en `/home/ec2-user/coturn/runtime/` (recuperable si fuera necesario).
+
+**Estado actual del cert TLS coturn AUDIT**:
+
+- Subject `CN=api.audit.sharemechat.com`, issuer `Let's Encrypt E7`, `notAfter=Jul 9 23:25:59 2026 GMT` (≈43 días vigencia). Let's Encrypt activará renovación automática a partir de mediados de junio (umbral de 30 días); cuando ocurra, el hook copiará el cert nuevo y reiniciará coturn sin intervención del operador.
+
+**Observación complementaria** (no es Q7, pero detectada durante la verificación): el Security Group del puerto TURN-TLS 5349 en AUDIT bloquea conexiones TCP desde IPs externas. Verificación: `timeout 5 bash -c '</dev/tcp/18.195.185.25/5349'` → cerrado/bloqueado desde el equipo del operador; en PROD (3.77.59.1:5349) el equivalente sí responde con cert válido. La validación end-to-end del cert TLS externo en AUDIT, por tanto, no se pudo ejecutar — pero la validación interna (fingerprints + restart + log) demuestra que el hook hace su trabajo correctamente; el bloqueo externo es asimetría de SG independiente de Q7. Anotado como deuda menor abajo.
+
+### Asimetría SG TURN-TLS 5349 entre AUDIT y PROD (deuda menor, detectada durante validación PRO-10)
+
+**Estado**: ABIERTA. Prioridad BAJA.
+
+PROD permite acceso TCP 5349 desde IPs externas (verificado en PRO-8 con `openssl s_client -connect 3.77.59.1:5349` mostrando cert válido). AUDIT lo bloquea (verificado el 2026-05-27 con `timeout 5 bash -c '</dev/tcp/18.195.185.25/5349'` → closed). La asimetría puede deberse a configuración intencional (TURN-TLS de AUDIT no expuesto al público porque AUDIT no recibe tráfico de clientes WebRTC real, solo del equipo interno) o a omisión histórica.
+
+Verificación pendiente para una sesión posterior: comparar inbound rules del SG `sharemechat-audit-turn-relay-sg` con el de PROD `sharemechat-prod-turn-relay-sg`. Si la asimetría es intencional, documentarla en `docs/03-environments/audit.md`. Si no, ajustar el SG AUDIT para que sea simétrico con PROD (regla 0.0.0.0/0 → tcp 5349). Sin urgencia operativa porque AUDIT no atiende tráfico WebRTC público.
+
 ## 2026-05-27 — Refactor config/secrets split (Fase 1-3 + PRO-9) y deudas residuales descubiertas
 
 ### Refactor secrets en los 3 entornos — cerrado

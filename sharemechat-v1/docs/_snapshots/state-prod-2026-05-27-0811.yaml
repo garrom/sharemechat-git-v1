@@ -1,0 +1,417 @@
+metadata:
+  schema_version: 3
+  environment: prod
+  generated_at: "2026-05-27T08:11:47Z"
+  generated_by: manual-cierre-frente@PRO-10
+  notes: |
+    Snapshot de cierre del frente PRO completo (PRO-1 a PRO-10). PROD esta
+    provisionado al 100% en AWS, con backend operativo, BD con esquema Flyway
+    aplicado, pipeline perimetral en CARRIL-A real, distribucion admin
+    CloudFront creada sin DNS publico (Admin Opcion B), y refactor
+    config/secrets aplicado a los 3 entornos.
+
+    Estado operativo: PROD esta APAGADO al cierre (EC2 stopped, RDS stopped)
+    para no incurrir en coste mientras el operador no necesita el entorno.
+    El bundle SPA esta en S3, la distribucion admin existe (sin DNS), y la
+    distribucion landing E2FWNC80D4QDJC sigue sirviendo el landing estatico
+    actual (origen NO cambiado en este frente; cambio planificado para el
+    "dia del switch publico" post-hardening).
+
+    Diferencias notables respecto a AUDIT (asimetrias intencionales o
+    pendientes de nivelar, documentadas en known-debt.md):
+      - Distribucion admin PROD: prefix logging "admin/" (vs
+        "cloudfront/admin-audit/" en AUDIT).
+      - Distribucion producto PROD (E2FWNC80D4QDJC): logging DESACTIVADO
+        (sera activado el dia del switch con prefix "product/").
+      - secrets.env de TEST: ec2-user:ec2-user 0600 (vs root:root 0600 en
+        AUDIT/PROD). Justificado por arranque manual.
+      - Pipeline perimetral PROD: Description= units sin "(DRY-RUN)" (en
+        AUDIT siguen los textos legados; deuda residual).
+      - TLS coturn :5349 expuesto al publico en PROD (SG 0.0.0.0/0) pero
+        bloqueado en AUDIT (verificacion residual sobre intencionalidad
+        pendiente).
+
+repo:
+  branch: main
+  head_commit: 3ff8e1761c945e94459f4cec7a68a1168dfb9d54
+  head_commit_short: 3ff8e17
+  head_commit_msg: "feat(prod): perimetral pipeline PROD in CARRIL-A real (PRO-9) + config/secrets refactor across 3 environments"
+  head_commit_date: "2026-05-26T22:09:00Z"
+  pending_local_changes:
+    - "docs/04-operations/known-debt.md (cierre Q7 + asimetria SG :5349 + deudas residuales TEST/AUDIT)"
+  commits_frente_pro:
+    - f8f2a34: "docs(snapshots): add PRO-1 pre-flight snapshot"
+    - cf7383d: "refactor(properties): clean TEST bias from base properties + add prod profile (PRO-5.A)"
+    - 9c5a1ac: "docs(known-debt): add deferred PRO-5 operational learning entry on DB_PASSWORD transcription"
+    - 5a20673: "docs(known-debt): document auth bypass product→backoffice (deferred to post-PRO frente)"
+    - 6b6de17: "docs(known-debt): document country access redesign (allowlist + dual flow + PSP bypass)"
+    - 7753218: "feat(prod): create CloudFront admin distribution + associate spa function to product distribution (PRO-6/PRO-7)"
+    - 3ff8e17: "feat(prod): perimetral pipeline PROD in CARRIL-A real (PRO-9) + config/secrets refactor across 3 environments"
+    - PENDIENTE: "feat(prod): close frente PRO (PRO-1 to PRO-10)"
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    expected_filename: sharemechat-v1-0.0.1-SNAPSHOT.jar
+    deployed_path_prod: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+  schema_versioning:
+    flyway_runtime_present: true
+    migrations_dir: src/main/resources/db/migration/
+    last_repo_migration: V3__brief_per_locale.sql
+    last_applied_flyway_version: v3
+    flyway_history_success_count: 3
+    note: "Flyway aplicado al primer arranque PROD en PRO-8 (V1 baseline 4078ms, V2 cms_v2_schema 766ms, V3 brief_per_locale 205ms)."
+
+vpc:
+  id: vpc-0f55c445e0125adab
+  cidr: 10.10.0.0/16
+  state: available
+  name_tag: sharemechat-prod-vpc
+  region: eu-central-1
+
+subnets:
+  - id: subnet-0f7e8c87fc49fe5d3
+    az: eu-central-1a
+    cidr: 10.10.1.0/24
+    name_tag: sharemechat-prod-subnet-1a
+    map_public_ip: true
+    notes: "EC2 backend i-0e0a3b5fee271592f vive aqui."
+  - id: subnet-04dac61feda0b876b
+    az: eu-central-1b
+    cidr: 10.10.2.0/24
+    name_tag: sharemechat-prod-subnet-1b
+    map_public_ip: true
+  - id: subnet-0a72c56c4a0978af1
+    az: eu-central-1c
+    cidr: 10.10.3.0/24
+    name_tag: sharemechat-prod-subnet-1c
+    map_public_ip: true
+
+internet_gateway:
+  id: igw-0b311673bd1c58be9
+  attached_to_vpc: vpc-0f55c445e0125adab
+  state: available
+
+route_tables:
+  - id: rtb-0a137d73eaa299563
+    name_tag: sharemechat-prod-rt-public
+    default_route: "0.0.0.0/0 -> igw-0b311673bd1c58be9"
+    associated_subnets: [subnet-0f7e8c87fc49fe5d3, subnet-04dac61feda0b876b, subnet-0a72c56c4a0978af1]
+  - id: rtb-0e9733f32e4fd18af
+    name_tag: null
+    notes: "Main route table (default, no asociaciones explicitas)."
+
+security_groups:
+  - id: sg-01d906bc7ba75cd35
+    name: sharemechat-prod-backend-sg
+    purpose: "Backend EC2 (HTTP 80, HTTPS 443, SSH 22)"
+  - id: sg-0ba00072c789c1b0c
+    name: sharemechat-prod-turn-relay-sg
+    purpose: "coturn TURN/STUN (UDP/TCP 3478, TCP 5349 TURNS, UDP 49152-65535 relay range)"
+  - id: sg-02d4b7cf0268da090
+    name: sharemechat-prod-rds-sg
+    purpose: "RDS 3306 (ingress solo desde backend-sg)"
+
+elastic_ips:
+  - allocation_id: eipalloc-0fcef8cfccdf19f49
+    public_ip: 3.77.59.1
+    associated_instance: i-0e0a3b5fee271592f
+    name_tag: sharemechat-prod-eip
+
+ec2:
+  - instance_id: i-0e0a3b5fee271592f
+    name_tag: sharemechat-prod
+    type: t3.medium
+    ami: ami-0ae5de6628a0e374c
+    ami_description: Amazon Linux 2023 x86_64
+    state: stopped
+    subnet: subnet-0f7e8c87fc49fe5d3
+    az: eu-central-1a
+    private_ip: 10.10.1.205
+    public_ip: 3.77.59.1
+    key_pair: ec2-keypair-prod
+    iam_instance_profile: arn:aws:iam::430118829334:instance-profile/sharemechat-ec2-prod-profile
+    security_groups: [sg-01d906bc7ba75cd35, sg-0ba00072c789c1b0c]
+    systemd_units_enabled:
+      - nginx (active at boot)
+      - coturn-prod (active at boot)
+      - redis6 (active at boot)
+      - certbot-renew.timer (active at boot, next ~23:33 UTC + 12h cadence)
+      - sharemechat-prod.service (enabled, auto-arranca al boot; retries automaticos hasta RDS available)
+      - sharemechat-prod-access-normalizer.timer (every 5 min)
+      - sharemechat-prod-access-blocker.timer (daily 07:30 UTC)
+      - sharemechat-prod-daily-report.timer (daily 07:10 UTC)
+
+rds:
+  - db_identifier: db1-sharemechat-prod
+    status: stopped
+    endpoint: db1-sharemechat-prod.c1gsc6qg4l8y.eu-central-1.rds.amazonaws.com
+    port: 3306
+    engine: mysql
+    engine_version: 8.4.7
+    instance_class: db.t3.micro
+    storage_encrypted: true
+    deletion_protection: true
+    backup_retention_days: 7
+    multi_az: false
+    db_subnet_group: sharemechat-prod-rds-subnet-group
+    security_group: sg-02d4b7cf0268da090
+    schema: db1_sharemechat_prod
+    tables_count: 49
+    collation: utf8mb4_unicode_ci
+    flyway_history_at_close:
+      - {rank: 1, version: 1, description: baseline, success: true, execution_ms: 4078}
+      - {rank: 2, version: 2, description: cms_v2_schema, success: true, execution_ms: 766}
+      - {rank: 3, version: 3, description: brief_per_locale, success: true, execution_ms: 205}
+
+s3_buckets:
+  - name: sharemechat-frontend-prod
+    purpose: "SPA producto bundle"
+    bucket_policy: NOT-present
+    notes: "Policy se anade el dia del switch publico, cuando se cablee como origin de E2FWNC80D4QDJC. Hoy contiene 18 objetos del bundle subido en PRO-7 pero no es origen activo."
+    object_count: 18
+    oac: E1BCUWRUF78XV (oac-sharemechat-frontend-prod)
+  - name: sharemechat-admin-prod
+    purpose: "SPA admin bundle (origin de E3O40LHJ4PC6LE)"
+    bucket_policy: present
+    notes: "Policy creado en PRO-6 autoriza distribucion E3O40LHJ4PC6LE via OAC E218EJKQNPCR1K."
+    object_count: 18
+    oac: E218EJKQNPCR1K (oac-sharemechat-admin-prod)
+  - name: sharemechat-cf-logs-prod
+    purpose: "CloudFront access logs PROD"
+    current_prefixes: ["admin/"]
+    notes: "Prefix 'admin/' usado por distribucion admin nueva. Prefix 'product/' previsto para cuando se active logging de E2FWNC80D4QDJC el dia del switch."
+  - name: sharemechat-backups-prod
+    purpose: "Backups RDS / asset stores"
+    notes: "Provisionado en PRO-3, sin uso operativo todavia."
+  - name: sharemechat-content-private-prod
+    purpose: "Storage privado contenidos (KYC docs, etc.)"
+    notes: "Provisionado en PRO-3 con IAM SharemechatContentPrivateProdRW."
+  - name: assets-sharemechat-prod
+    purpose: "Assets publicos: PDF legal, manifest"
+    populated: true
+    notes: "Manifest legal + PDF model_contract_v4_2026-03-23 poblados en PRO-3."
+
+iam:
+  role:
+    name: sharemechat-ec2-prod-role
+    arn: arn:aws:iam::430118829334:role/sharemechat-ec2-prod-role
+    instance_profile:
+      name: sharemechat-ec2-prod-profile
+      arn: arn:aws:iam::430118829334:instance-profile/sharemechat-ec2-prod-profile
+    inline_policies:
+      - SharemechatBackupsProdWrite          # creado PRO-3
+      - SharemechatContentPrivateProdRW      # creado PRO-3
+      - SharemechatStorageProdRW             # creado PRO-3
+      - sharemechat-prod-access-normalizer-s3 # creado PRO-9 (s3:ListBucket + s3:GetObject sobre sharemechat-cf-logs-prod)
+  users:
+    - name: sharemechat-provisioner
+      purpose: "AdministratorAccess para writes durante frente PRO"
+      usage_window: "Vida util acotada al frente PRO; desactivacion recomendada post-cierre o tras hardening pre-go-live"
+
+cloudfront:
+  distributions:
+    - logical_name: landing_legacy_prod
+      id: E2FWNC80D4QDJC
+      etag_current: E1F83G8C2ARO7P  # post function swap en PRO-6
+      aliases: [sharemechat.com, www.sharemechat.com]
+      status: Deployed
+      origin: s3-sharemechat-landing-prod (sharemechat-landing-prod.s3.eu-central-1.amazonaws.com)
+      function_assoc:
+        viewer_request: arn:aws:cloudfront::430118829334:function/redirect-spa-prod
+      logging_enabled: false
+      notes: "Origen NO modificado en este frente. Sirve el landing estatico actual. Cambio a sharemechat-frontend-prod planificado para el dia del switch publico."
+    - logical_name: assets_canonical_prod
+      id: E3UAOU6AUNI0CM
+      aliases: [assets.sharemechat.com]
+      status: Deployed
+      origin: assets-sharemechat-prod
+      notes: "Sin cambios en este frente. Sirve manifest legal y PDF."
+    - logical_name: admin_prod  # NUEVA en PRO-6
+      id: E3O40LHJ4PC6LE
+      domain_name: d14enb0ydr2y1s.cloudfront.net
+      aliases: [admin.sharemechat.com]
+      dns_active: false  # Admin Opcion B: provision sin DNS
+      status: Deployed
+      origin: s3-admin-prod-origin (sharemechat-admin-prod.s3.eu-central-1.amazonaws.com)
+      oac_id: E218EJKQNPCR1K
+      function_assoc:
+        viewer_request: arn:aws:cloudfront::430118829334:function/redirect-spa-admin-prod
+      cert_arn: arn:aws:acm:us-east-1:430118829334:certificate/645d520c-65b0-488f-b161-29a057f9b7f6
+      logging: {bucket: "sharemechat-cf-logs-prod.s3.amazonaws.com", prefix: "admin/"}
+      cache_behaviors_count: 0  # solo default behavior; /api/* se añade el día del switch
+      custom_error_responses_count: 0
+      origin_groups_count: 0
+      webacl: none
+      price_class: PriceClass_100
+      tags: [Name=sharemechat-prod-admin-cf, Environment=prod, ManagedBy=PRO-6]
+
+  functions:
+    - name: redirect-spa-prod
+      arn: arn:aws:cloudfront::430118829334:function/redirect-spa-prod
+      stage: LIVE
+      purpose: "SPA fallback + www->apex redirect (combinada)"
+      associated_to: [E2FWNC80D4QDJC]
+    - name: redirect-spa-admin-prod
+      arn: arn:aws:cloudfront::430118829334:function/redirect-spa-admin-prod
+      stage: LIVE
+      purpose: "SPA fallback admin (clon literal de redirect-spa-prod sin www->apex)"
+      associated_to: [E3O40LHJ4PC6LE]
+    - name: redirect-www-to-root-prod
+      stage: LIVE
+      purpose: "Antiguo www->apex (legacy, ya no asociado a ninguna distribucion tras PRO-6)"
+      associated_to: []
+
+  origin_access_controls:
+    - id: E1BCUWRUF78XV
+      name: oac-sharemechat-frontend-prod
+      bucket: sharemechat-frontend-prod
+      usage: "Reservado para el dia del switch (E2FWNC80D4QDJC actual no lo usa)"
+    - id: E218EJKQNPCR1K
+      name: oac-sharemechat-admin-prod
+      bucket: sharemechat-admin-prod
+      usage: "Activo: usado por E3O40LHJ4PC6LE"
+    - id: EABTOMN3H4EGK
+      name: oac-assets-sharemechat-prod
+      bucket: assets-sharemechat-prod
+      usage: "Activo: usado por E3UAOU6AUNI0CM"
+    - id: E1QL6VLQ6WI3IK
+      name: sharemechat-landing-prod-oac
+      bucket: sharemechat-landing-prod
+      usage: "Activo: usado por E2FWNC80D4QDJC (landing actual)"
+
+acm_certificates:
+  - alias: cert_prod_admin
+    arn: arn:aws:acm:us-east-1:430118829334:certificate/645d520c-65b0-488f-b161-29a057f9b7f6
+    domain: admin.sharemechat.com
+    sans: [admin.sharemechat.com]
+    issuer: Amazon
+    status: ISSUED
+    not_after: "2026-12-08T00:59:59+01:00"
+    used_by: [E3O40LHJ4PC6LE]
+    notes: "Emitido en PRO-2 con validacion DNS sobre hosted zone sharemechat.com."
+
+letsencrypt_certs:
+  - host: api.sharemechat.com
+    location_on_ec2: /etc/letsencrypt/live/api.sharemechat.com/
+    issuer: "Let's Encrypt"
+    not_after: "2026-08-23T~"  # ~90 dias post-emisión PRO-5
+    served_by:
+      - nginx (HTTPS 443)
+      - coturn-prod (TURNS :5349 via /home/ec2-user/coturn/runtime/{fullchain,privkey}.pem)
+    auto_renewal:
+      timer: certbot-renew.timer (enabled + active)
+      hook: /etc/letsencrypt/renewal-hooks/deploy/sync-coturn.sh (0755 root:root, copia + restart coturn-prod)
+      cableado_en: PRO-5
+  - host: api.audit.sharemechat.com
+    location_on_ec2: /etc/letsencrypt/live/api.audit.sharemechat.com/
+    issuer: "Let's Encrypt E7"
+    not_after: "2026-07-09T23:25:59Z"
+    served_by:
+      - nginx (HTTPS 443)
+      - coturn-audit (TURNS :5349)
+    auto_renewal:
+      timer: certbot-renew.timer (enabled + active desde PRO-10)
+      hook: /etc/letsencrypt/renewal-hooks/deploy/sync-coturn.sh (creado en PRO-10, clon literal del PROD con adaptaciones a api.audit.sharemechat.com + coturn-audit.service)
+      cableado_en: PRO-10
+      next_renewal_window: "~mediados de junio 2026 (umbral 30 dias pre-expiracion LE)"
+
+backend_runtime:
+  jar_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+  systemd_unit: /etc/systemd/system/sharemechat-prod.service
+  unit_enabled: true
+  service_user: ec2-user
+  config_file: /opt/sharemechat/config.env  # 0644 root:root, 23 keys no-secret
+  secrets_file: /opt/sharemechat/secrets.env  # 0600 root:root, 7 keys secret
+  backup_pre_refactor: /opt/sharemechat/.env.bak.pre-refactor-secrets-2026-05-26
+  spring_profile: prod
+  http_port: 8080
+  bootstrap_time_seconds: ~33  # observado en PRO-8 y restart Fase-1 refactor secrets
+
+pipeline_perimetral:
+  mode: CARRIL-A REAL (no DRY-RUN)
+  components:
+    - /opt/sharemechat-prod-access-normalizer
+    - /opt/sharemechat-prod-access-classifier
+    - /opt/sharemechat-prod-access-blocker
+    - /opt/sharemechat-prod-access-reporter
+  configs_dir: /etc/sharemechat-prod-access-{normalizer,classifier,blocker,reporter}/
+  reporter_secrets_file: /etc/sharemechat-prod-access-reporter/secrets.env  # SMTP_PASSWORD rotada 2026-05-26
+  state_dirs: /var/lib/sharemechat-prod-access-{normalizer,classifier,blocker}/
+  log_dirs: /var/log/sharemechat-prod-access-{normalizer,classifier,blocker,reporter}/
+  systemd_timers:
+    - {name: sharemechat-prod-access-normalizer.timer, schedule: "*:0/5", description: "every 5 min"}
+    - {name: sharemechat-prod-daily-report.timer, schedule: "07:10 UTC daily"}
+    - {name: sharemechat-prod-access-blocker.timer, schedule: "07:30 UTC daily"}
+  nginx_integration:
+    deny_file_live: /etc/nginx/deny-prod-ips.conf  # vacio con header al cierre
+    deny_file_manual: /etc/nginx/deny-prod-ips.manual.conf  # vacio
+    include_in_nginx_conf: "lines 36-37 de /etc/nginx/nginx.conf"
+    backup: /etc/nginx/nginx.conf.bak.pre-perimetral-PRO-9
+  iam_policy: sharemechat-prod-access-normalizer-s3 (anadida al role en PRO-9)
+  cf_log_prefixes_consumed:
+    product: "product/"  # vacio hoy (logging E2FWNC80D4QDJC desactivado)
+    admin: "admin/"      # tiene datos desde PRO-6
+  first_cycle_validated_on: "2026-05-26 ~22:16 UTC"
+  blocker_initial_state: "0 IPs en deny-prod-ips.conf (sin trafico hostil clasificado todavia)"
+
+spa_bundles_in_s3:
+  product:
+    bucket: sharemechat-frontend-prod
+    objects: 18
+    sample_etag_index_html: 8f383653846101b9d0c97676dbf7377b
+    cache_control_pattern:
+      index_html: "no-cache"
+      static_hashed: "public, max-age=31536000, immutable"
+  admin:
+    bucket: sharemechat-admin-prod
+    objects: 18
+    sample_etag_index_html: 24c5b4883eea979555338c9d7fd588ed
+    cache_control_pattern: idem producto
+
+secrets_split_refactor:
+  applied_to_envs: [test, audit, prod]
+  pattern:
+    config_env: "0644 root:root (no-secret)"
+    secrets_env: "0600 root:root (secrets)"
+    test_exception: "secrets.env en TEST es ec2-user:ec2-user 0600 por arranque manual (wrapper /home/ec2-user/sharemechat-v1/start-test.sh)"
+  smtp_password_rotation: "operations@sharemechat.com rotada 2026-05-26 tras incidente de transcripcion (aprendizaje en known-debt.md)"
+
+frente_pro_paquetes:
+  PRO-1: "Pre-flight + key pair ec2-keypair-prod + AWS user provisioner + snapshot inicial state-prod-2026-05-24-1722.yaml"
+  PRO-2: "VPC + 3 subnets + IGW + route table + cert ACM admin (us-east-1) + 2 CloudFront Functions (redirect-spa-prod + redirect-spa-admin-prod)"
+  PRO-3: "5 buckets S3 + IAM role/profile + 3 policies + 2 OACs + manifest legal poblado en assets-sharemechat-prod"
+  PRO-4: "RDS db1-sharemechat-prod (MySQL 8.4.7 + StorageEncrypted + DeletionProtection + BackupRetention 7d) + SG RDS + DBSubnetGroup"
+  PRO-5: "2 SGs definitivos + EIP + EC2 t3.medium AL2023 + coturn (build from source) + nginx + certbot + LE cert + systemd + .env + cert TLS auto-renewal hook PROD"
+  PRO-5.A: "Refactor properties Spring Boot (eliminar sesgo TEST, anadir prod profile) + deploy a TEST y AUDIT + validacion live + cierre deuda WEBRTC_TURN_*"
+  PRO-6: "Distribucion CloudFront admin nueva E3O40LHJ4PC6LE (sin DNS) + bucket policy admin-prod + function swap en E2FWNC80D4QDJC (redirect-www-to-root-prod -> redirect-spa-prod)"
+  PRO-7: "Bundle SPA producto + admin compilados y desplegados a S3 con cache-control diferenciado (no-cache vs immutable)"
+  PRO-8: "Primer arranque backend Spring Boot PROD + Flyway V1+V2+V3 applied + 49 tablas + smoke tests 401/200/200 OK"
+  PRO-9: "Pipeline perimetral PROD en CARRIL-A real desde dia 1 + IAM policy normalizer-s3 + Refactor config/secrets 3 entornos + rotacion SMTP_PASSWORD"
+  PRO-10: "Cierre deuda Q7: hook deploy cert TLS coturn AUDIT (clon de PROD) + certbot-renew.timer enabled en AUDIT"
+
+hardening_post_pro_pending:
+  blocking_go_live_open:
+    - fix_auth_bypass_producto_to_backoffice_option_C
+    - country_access_redesign_allowlist_dual_flow
+  low_priority_debts_documented_in_known_debt_md:
+    - "TEST: JWT/CONSENT sin sufijo _TEST"
+    - "TEST: WEBRTC_TURN_URL_TLS no poblado"
+    - "TEST: backend sin systemd unit"
+    - "TEST: MAIL_PASSWORD/REDIS_PASSWORD residuo historico"
+    - "TEST: secrets.env perms asimetricos vs AUDIT/PROD"
+    - "AUDIT pipeline perimetral: 5 sitios con textos 'DRY-RUN' obsoletos"
+    - "PROD: logging E2FWNC80D4QDJC desactivado (activar dia del switch con prefix 'product/')"
+    - "PROD: prefijos CF logs asimetricos con AUDIT (product/ + admin/ vs cloudfront/audit/ + cloudfront/admin-audit/)"
+    - "AUDIT: TCP 5349 bloqueado externamente (asimetria SG con PROD; verificar intencionalidad)"
+    - "Comentarios engañosos 'paquete 10.A.3.pre' en MaintenanceProvider.jsx y http.js sobre OriginGroup CloudFront no cableado"
+    - "Bucket sharemechat-maintenance descolgado con HTMLs preparados sin cableado CF"
+    - "Aprendizajes permanentes: no transcripcion de secretos (DB_PASSWORD 2026-05-25, SMTP_PASSWORD 2026-05-26)"
+
+operational_status_at_close:
+  ec2_prod_state: stopped
+  rds_prod_state: stopped
+  ec2_audit_state: running (24/7)
+  ec2_test_state: running (refactor 2026-05-27, operator may stop after)
+  eip_prod_attached: true (3.77.59.1 conservada via stopped instance)
+  dns_admin_sharemechat_com: NOT_resolvable (Admin Opcion B)
+  go_live_publico: BLOQUEADO hasta resolver hardening post-PRO items 1-2
