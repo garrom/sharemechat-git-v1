@@ -2,6 +2,98 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-05-27 — Cierre auth bypass + deudas detectadas durante el fix
+
+### [CERRADA 2026-05-27] Auth bypass producto → backoffice (entrada original del 2026-05-26)
+
+**Cerrado vía Opción C v2** en commit `<HEAD>` (2026-05-27). El fix v1 (whitelist por `users.role={USER,CLIENT,MODEL}`) era insuficiente — cubría solo el caso `users.role=ADMIN` puro. Durante validación post-deploy del v1 el operador detectó que `users.role=USER + user_backoffice_roles=[SUPPORT]` seguía pasando el check (caso real más común).
+
+**Diseño v2 aplicado**: doble check en `AuthController.login` Y `AuthController.refresh`:
+
+1. **Check 1 (rol primario)**: `users.role` debe pertenecer a `{USER, CLIENT, MODEL}`. Bloquea el caso `users.role=ADMIN` puro.
+2. **Check 2 (roles backoffice)**: `backofficeAccessService.loadProfile(u.getId(), u.getRole()).roles()` debe ser vacío. Bloquea el caso `users.role=USER/CLIENT/MODEL + user_backoffice_roles=[SUPPORT/AUDIT/EDITOR]`.
+
+Respuesta uniforme `InvalidCredentialsException("Credenciales inválidas")` en ambos checks, idéntica a credencial errónea (sin oráculo). `AdminAuthController.login` intacto: sigue siendo el único endpoint válido para autenticar usuarios con acceso backoffice.
+
+**Validación operativa**:
+
+- TEST y AUDIT desplegados con JAR v2 (SHA256 `f3aaf17b67157eadc2ac06746f38d0099409686aebc1d6b457dc1b60ac08f891`).
+- Operador validó en navegador modo incógnito (con `refresh_tokens` purgados en ambos entornos):
+  - `audit.sharemechat.com/api/auth/login` con USER+SUPPORT → HTTP/2 401 (688 ms). Bypass crítico cerrado.
+  - `admin.audit.sharemechat.com/api/admin/auth/login` con el mismo usuario → HTTP 200, admin dashboard intacto.
+- Mismo patrón verificado en TEST antes del deploy a AUDIT.
+
+**`refresh_tokens` purgados post-deploy**:
+
+- TEST: 1147 borrados → 0 vivos.
+- AUDIT: 416 borrados → 0 vivos.
+
+Esto invalida cualquier cookie refresh_token emitida pre-fix, forzando re-login de todos los usuarios. Acción aceptable porque TEST/AUDIT solo tienen al operador y auditores ocasionales.
+
+**PROD pendiente del próximo deploy general**: PROD está apagado (EC2 stopped + RDS stopped). El JAR v2 se aplicará cuando el operador inicie el próximo arranque PROD. El bug no se expone hasta entonces porque PROD arrancará en modo `PRELAUNCH` que bloquea `/api/auth/login` a nivel `ProductOperationalModeService` antes de llegar al controller. Anotación operativa: al subir el v2 a PROD, ejecutar también `DELETE FROM refresh_tokens` (aunque la tabla estará casi vacía, por uniformidad de proceso).
+
+**Vectores residuales** (NO cubiertos por v2, deudas separadas más abajo):
+
+1. EDITOR catalogado en código pero sin operadores activos en BD (ver entrada propia).
+2. Endpoints adicionales que materialicen sesión autenticada con cookie (ver entrada propia).
+
+---
+
+### Rol EDITOR catalogado en código pero NO operativo
+
+**Origen**: detectado durante el análisis forense del fix v2 (2026-05-27). El rol `EDITOR` aparece en:
+
+- `BackofficeAuthorities.java:11` (constante `ROLE_EDITOR = "EDITOR"`).
+- `OFFICIAL_BACKOFFICE_PERMISSION_CATALOG`: 4 permisos `CONTENT.*` asociados al rol.
+- Tabla `backoffice_roles` (catálogo BD).
+
+Pero **NO está incluido en** `AdminAuthController.hasInternalBackofficeAccess` (línea 105-107), que solo acepta ROLE_ADMIN/SUPPORT/AUDIT. Tampoco en `canAccessBackoffice` del frontend (`backofficeAccess.js:38-39`). Un usuario hipotético con `user_backoffice_roles=[EDITOR]` quedaría bloqueado en `/api/admin/auth/login` (401 "Acceso de backoffice denegado") y también en `/api/auth/login` (check 2 del fix v2 — backoffice no vacío → 401).
+
+**Estado**: ABIERTA. Prioridad BAJA. No urgente.
+
+**Verificación operativa** (2026-05-27): query `SELECT COUNT(*) FROM user_backoffice_roles ubr JOIN backoffice_roles br ON br.id=ubr.role_id WHERE UPPER(br.code)='EDITOR' AND ubr.user_id IN (SELECT id FROM users WHERE account_status='ACTIVE');` devolvió:
+
+- TEST: **0 EDITORs activos**.
+- AUDIT: **0 EDITORs activos**.
+
+Por tanto el rol no está operativo hoy y el fix v2 no introduce regresión en usuarios reales. Cuando se decida asignar EDITORs operativamente:
+
+1. Añadir `profile.roles().contains(BackofficeAuthorities.ROLE_EDITOR)` a `AdminAuthController.hasInternalBackofficeAccess`.
+2. Añadir `isBackofficeEditor(user)` a `canAccessBackoffice` en el frontend (`backofficeAccess.js`).
+3. Verificar las rutas admin que deben aceptar EDITOR (probablemente solo las de gestión de contenido, no las administrativas generales).
+4. Tests JUnit cubriendo el nuevo rol.
+
+**Prioridad operativa**: BAJA. El rol existe como catálogo de permisos pero no se usa todavía en flujos reales. Cuando empiece a usarse, activar siguiendo los 4 pasos.
+
+---
+
+### Auditoría sistemática pendiente de endpoints que emiten sesión autenticada con cookie
+
+**Origen**: durante el análisis forense del fix v2 (2026-05-27), se inspeccionaron exhaustivamente todos los puntos del código que emiten cookie de sesión (`grep -n 'ResponseCookie\.from' src/main/java`). El resultado encontró solo 6 ocurrencias en 3 ficheros:
+
+- `AuthController.java` (login, refresh, logout) — **cubierto por fix v2**.
+- `AdminAuthController.java` (login admin) — **validación intacta** (`hasInternalBackofficeAccess`).
+- `ProductOperationalModeFilter.java` — solo borra cookies, no emite sesión.
+
+**No existen** hoy endpoints SSO, magic link, OAuth, ni callbacks de proveedores externos que materialicen cookie de sesión. **El universo de emisión de sesión está cubierto**.
+
+**Sin embargo, esta deuda anota la auditoría preventiva pendiente** sobre endpoints adyacentes que NO emiten cookie de sesión directa hoy pero podrían materializar sesión en el futuro o vía side-effect:
+
+- `POST /api/email-verification/confirm` o equivalente: cuando un usuario verifica su email, ¿se loguea automáticamente? Si sí, ¿valida rol antes de emitir cookie?
+- `POST /api/auth/password/forgot` y `POST /api/auth/password/reset`: el reset de password emite token reset (no es cookie de sesión). Pero al completar reset, si el flujo loguea automáticamente al usuario, debe aplicar el mismo check 1+2 que `AuthController.login`.
+- Cualquier flujo futuro de magic link, OAuth (Google/Apple sign-in), SSO empresarial: aplicar el mismo patrón check 1+2 desde el inicio.
+
+**Estado**: ABIERTA. Prioridad BAJA-MEDIA (preventiva).
+
+**Acción**: sesión separada de auditoría sistemática que recorra:
+
+1. `grep -rn 'ResponseCookie\|setCookie\|addCookie\|JwtUtil\.generate' src/main/java` para encontrar todos los puntos de emisión de cookies/tokens autenticables.
+2. Inspeccionar el flujo de `EmailVerificationService` y `PasswordResetService` (si existen) — verificar si emiten sesión post-validación.
+3. Documentar conclusiones: o bien "no aplica" (no se emite sesión), o "aplicar check 1+2".
+4. Si se decide implementar SSO/OAuth/magic link, incluir el check 1+2 como requisito de diseño desde el RFC.
+
+**Prioridad operativa**: BAJA. No bloquea go-live. Recomendado completar antes de habilitar OAuth o cualquier flujo de auth alternativo.
+
 ## 2026-05-26 — Hallazgo de seguridad durante validación post-PRO-5.A
 
 ### Bypass de aislamiento auth producto → backoffice (login admin acepta desde superficie de producto)

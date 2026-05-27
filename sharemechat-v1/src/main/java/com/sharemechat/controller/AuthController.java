@@ -13,6 +13,7 @@ import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.ApiRateLimitService;
 import com.sharemechat.service.AuthRiskContext;
 import com.sharemechat.service.AuthRiskService;
+import com.sharemechat.service.BackofficeAccessService;
 import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.CountryAccessService;
 import com.sharemechat.service.UserService;
@@ -41,6 +42,7 @@ public class AuthController {
     private final CountryAccessService countryAccessService;
     private final ConsentService consentService;
     private final AuthRiskService authRiskService;
+    private final BackofficeAccessService backofficeAccessService;
 
     @Value("${auth.cookieDomain}")
     private String cookieDomain;
@@ -55,7 +57,8 @@ public class AuthController {
             ApiRateLimitService rateLimitService,
             CountryAccessService countryAccessService,
             ConsentService consentService,
-            AuthRiskService authRiskService
+            AuthRiskService authRiskService,
+            BackofficeAccessService backofficeAccessService
     ) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
@@ -64,6 +67,7 @@ public class AuthController {
         this.countryAccessService = countryAccessService;
         this.consentService = consentService;
         this.authRiskService = authRiskService;
+        this.backofficeAccessService = backofficeAccessService;
     }
 
     // =========================================================
@@ -106,6 +110,30 @@ public class AuthController {
         } catch (InvalidCredentialsException ex) {
             authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx);
             throw ex;
+        }
+
+        // Allowlist en dos dimensiones para el endpoint publico de login.
+        // Backoffice (ADMIN puro o cualquier usuario con roles backoffice asignados via
+        // user_backoffice_roles) DEBE usar /api/admin/auth/login. Respuesta indistinguible
+        // de credencial invalida para no filtrar oraculo (mantiene contrato AuthRiskService).
+        //
+        // 1) Rol primario (columna users.role) debe estar en {USER, CLIENT, MODEL}.
+        String role = u.getRole();
+        if (!Constants.Roles.USER.equals(role)
+                && !Constants.Roles.CLIENT.equals(role)
+                && !Constants.Roles.MODEL.equals(role)) {
+            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx.withUserId(u.getId()));
+            throw new InvalidCredentialsException("Credenciales inválidas");
+        }
+
+        // 2) Defensa adicional: si el usuario tiene CUALQUIER rol backoffice asignado
+        //    (SUPPORT, AUDIT, EDITOR, futuros), debe loguearse via /api/admin/auth/login.
+        //    Cubre el caso users.role=USER/CLIENT/MODEL + user_backoffice_roles=[...].
+        BackofficeAccessService.BackofficeAccessProfile profile =
+                backofficeAccessService.loadProfile(u.getId(), u.getRole());
+        if (!profile.roles().isEmpty()) {
+            authRiskService.record(AuthRiskConstants.Events.LOGIN_FAILURE, riskCtx.withUserId(u.getId()));
+            throw new InvalidCredentialsException("Credenciales inválidas");
         }
 
         String access = jwtUtil.generateAccessToken(
@@ -188,6 +216,23 @@ public class AuthController {
                 Boolean.TRUE.equals(u.getUnsubscribe()) ||
                 !Constants.AccountStatuses.ACTIVE.equals(accountStatus)) {
 
+            refreshRepo.deleteByUserId(stored.getUserId());
+            deleteCookie(res, "access_token");
+            deleteCookie(res, "refresh_token");
+            return ResponseEntity.status(401).build();
+        }
+
+        // Defensa en profundidad simetrica con AuthController.login:
+        // refresh no debe extender sesiones de usuarios cuyo rol primario no este en
+        // {USER, CLIENT, MODEL} ni de usuarios con cualquier rol backoffice asignado.
+        // Esto cierra el vector de cookies refresh_token vivas emitidas pre-fix v2.
+        String refreshRole = u.getRole();
+        boolean primaryRoleAllowed = Constants.Roles.USER.equals(refreshRole)
+                || Constants.Roles.CLIENT.equals(refreshRole)
+                || Constants.Roles.MODEL.equals(refreshRole);
+        BackofficeAccessService.BackofficeAccessProfile refreshProfile =
+                backofficeAccessService.loadProfile(u.getId(), u.getRole());
+        if (!primaryRoleAllowed || !refreshProfile.roles().isEmpty()) {
             refreshRepo.deleteByUserId(stored.getUserId());
             deleteCookie(res, "access_token");
             deleteCookie(res, "refresh_token");
