@@ -63,7 +63,7 @@ public class UserController {
         if (!consentService.hasGuestAgeGate(consentId)) {
             return ResponseEntity.status(403).body("Debes confirmar antes que eres mayor de 18 años");
         }
-        countryAccessService.assertAllowed(request);
+        countryAccessService.assertAllowedForClientRegistration(request);
 
         String ip = IpConfig.getClientIp(request);
         String acceptLanguage = request.getHeader("Accept-Language");
@@ -88,7 +88,7 @@ public class UserController {
         if (!consentService.hasGuestAgeGate(consentId)) {
             return ResponseEntity.status(403).body("Debes confirmar antes que eres mayor de 18 años");
         }
-        countryAccessService.assertAllowed(request);
+        countryAccessService.assertAllowedForModelRegistration(request);
 
         String ip = IpConfig.getClientIp(request);
         String acceptLanguage = request.getHeader("Accept-Language");

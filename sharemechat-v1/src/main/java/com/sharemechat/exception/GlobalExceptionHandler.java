@@ -111,13 +111,27 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(CountryBlockedException.class)
     public ResponseEntity<ApiError> handleCountryBlocked(CountryBlockedException ex, HttpServletRequest req) {
-        log.warn("Acceso bloqueado por país: {}", ex.getMessage());
+        // Log server-side con razón real (path + ex.getMessage() pueden contener
+        // detalle de scope/pais para diagnostico). NO se expone al cliente.
+        log.warn("Acceso bloqueado por pais: path={} reason={}",
+                req != null ? req.getRequestURI() : null,
+                ex.getMessage());
+
+        // Respuesta UNIFORME al cliente: body fijo "REGISTRATION_UNAVAILABLE"
+        // sin path, sin scope, sin pais. Disena el contrato OPSEC del country
+        // gate: todos los flujos bloqueados por pais devuelven la misma respuesta,
+        // un atacante no puede distinguir si fallo client-registration,
+        // model-registration o login/refresh, ni cual fue el pais rechazado.
+        // Justificacion 403 vs 503 vs ProductOperationalMode: divergencia
+        // semantica intencional (geo-restriction permanente vs modo operativo
+        // temporal). Documentada en known-debt.md 2026-05-27.
         ApiError body = new ApiError(
                 HttpStatus.FORBIDDEN.value(),
                 "Forbidden",
-                ex.getMessage(),
-                req.getRequestURI()
+                "Registro no disponible",
+                null
         );
+        body.setCode("REGISTRATION_UNAVAILABLE");
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
