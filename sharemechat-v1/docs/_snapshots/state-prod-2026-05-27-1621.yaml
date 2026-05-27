@@ -1,0 +1,406 @@
+metadata:
+  schema_version: 3
+  environment: prod
+  generated_at: "2026-05-27T16:21:07Z"
+  generated_by: manual-cierre-hardening@hardening-post-PRO-tasks-1-2
+  notes: |
+    Snapshot consolidado tras cierre del frente PRO técnico (PRO-1 a PRO-10)
+    + las 2 tareas críticas bloqueantes del hardening post-PRO:
+      - Fix auth bypass producto -> backoffice (commit 6e25d8a, 2026-05-27)
+      - Country access redesign dual allowlist + bypass IPs (commit 639c4f8, 2026-05-27)
+
+    Estado operativo: PROD sigue APAGADO al cierre (EC2 stopped, RDS stopped).
+    El JAR PRO-5.A actualmente en PROD NO tiene los dos fixes críticos; se
+    aplicarán en el próximo arranque general (operación coordinada: update
+    config.env con las 5 keys nuevas de country access ANTES del scp del JAR
+    v3, restart, DELETE FROM refresh_tokens por uniformidad).
+
+    TEST y AUDIT operan con JAR v3 que incluye ambos fixes. Validados con
+    smoke tests internos + validación manual del operador en navegador.
+
+    Bloqueantes técnicos del go-live público de PROD: CERRADOS. Pendientes
+    operativos documentados en el Bloque 8 de este snapshot.
+
+# ============================================================
+# BLOQUE 1 — Resumen ejecutivo del estado actual
+# ============================================================
+ejecutive_summary:
+  frente_pro_tecnico:
+    state: CLOSED
+    paquetes: PRO-1 to PRO-10
+    cerrado_en: "2026-05-27 commit fc1da22"
+  hardening_post_pro:
+    tarea_1_auth_bypass:
+      state: CLOSED
+      cerrado_en: "2026-05-27 commit 6e25d8a"
+      validado_en: [TEST, AUDIT]
+      pendiente_en: PROD
+    tarea_2_country_access_redesign:
+      state: CLOSED
+      cerrado_en: "2026-05-27 commit 639c4f8"
+      validado_en: [TEST, AUDIT]
+      pendiente_en: PROD
+    bloqueantes_go_live_publico:
+      auth_bypass: RESOLVED
+      country_access: RESOLVED
+      transicion_PRELAUNCH_a_OPEN: TECHNICALLY_UNBLOCKED
+      decision_operativa_pendiente: "operador decide cuando abrir registros"
+  prod_actual:
+    state: stopped
+    jar_running: "PRO-5.A (38e7a80b...) sin los 2 fixes"
+    config_env: "sin las 5 keys de country access redesign"
+    bd_state: "stopped, schema Flyway al dia (V1+V2+V3)"
+    proximo_arranque_general_requiere:
+      - "Update /opt/sharemechat/config.env con 5 keys country access (orden critico: ANTES del JAR)"
+      - "Backup JAR actual + scp JAR v3 (2591315b...)"
+      - "Start RDS + EC2"
+      - "Restart sharemechat-prod.service (auto-arranca al boot, retries hasta RDS available)"
+      - "DELETE FROM refresh_tokens en BD PROD (uniformidad con TEST/AUDIT)"
+
+# ============================================================
+# BLOQUE 2 — Estado AWS PROD (capturas reales actualizadas)
+# ============================================================
+aws_state_prod:
+  ec2:
+    instance_id: i-0e0a3b5fee271592f
+    state: stopped
+    instance_type: t3.medium
+    ami: ami-0ae5de6628a0e374c
+    private_ip: 10.10.1.205
+    public_ip_elastic: 3.77.59.1
+    eip_allocation_id: eipalloc-0fcef8cfccdf19f49
+    eip_associated: true
+    subnet: subnet-0f7e8c87fc49fe5d3 (eu-central-1a)
+    iam_instance_profile: arn:aws:iam::430118829334:instance-profile/sharemechat-ec2-prod-profile
+
+  rds:
+    identifier: db1-sharemechat-prod
+    state: stopped
+    endpoint: db1-sharemechat-prod.c1gsc6qg4l8y.eu-central-1.rds.amazonaws.com
+    engine: mysql 8.4.7
+    instance_class: db.t3.micro
+    storage_encrypted: true
+    deletion_protection: true
+    backup_retention_days: 7
+    schema: db1_sharemechat_prod
+    tables_count: 49
+    flyway_history: "v3 al cierre (baseline + cms_v2_schema + brief_per_locale)"
+
+  s3_buckets:
+    - {name: sharemechat-frontend-prod, content: "bundle SPA producto (18 objs)", bucket_policy: NOT-present, oac: E1BCUWRUF78XV}
+    - {name: sharemechat-admin-prod,    content: "bundle SPA admin (18 objs)",   bucket_policy: present (E3O40LHJ4PC6LE), oac: E218EJKQNPCR1K}
+    - {name: assets-sharemechat-prod,   content: "manifest legal poblado",       used_by: assets distribucion}
+    - {name: sharemechat-cf-logs-prod,  content: "admin/ prefix con datos",      used_by: pipeline perimetral PROD}
+    - {name: sharemechat-storage-prod,  content: "vacio (uploads futuros)"}
+    - {name: sharemechat-content-private-prod, content: "vacio (CMS futuro)"}
+
+  cloudfront_distributions:
+    - logical_name: landing_legacy_prod
+      id: E2FWNC80D4QDJC
+      etag_current: E1F83G8C2ARO7P
+      aliases: [sharemechat.com, www.sharemechat.com]
+      status: Deployed
+      origin: s3-sharemechat-landing-prod
+      function_assoc: redirect-spa-prod (asociada en PRO-6)
+      notes: "Origen NO modificado en hardening. Sigue sirviendo landing actual."
+    - logical_name: assets_canonical_prod
+      id: E3UAOU6AUNI0CM
+      aliases: [assets.sharemechat.com]
+      status: Deployed
+      origin: assets-sharemechat-prod
+    - logical_name: admin_prod
+      id: E3O40LHJ4PC6LE
+      domain_name: d14enb0ydr2y1s.cloudfront.net
+      aliases: [admin.sharemechat.com]
+      dns_active: false  # Admin Opcion B
+      status: Deployed
+      origin: sharemechat-admin-prod (via OAC E218EJKQNPCR1K)
+      cert_arn: arn:aws:acm:us-east-1:430118829334:certificate/645d520c-65b0-488f-b161-29a057f9b7f6
+      function_assoc: redirect-spa-admin-prod
+
+  acm_certificates:
+    cert_admin_prod:
+      arn: arn:aws:acm:us-east-1:430118829334:certificate/645d520c-65b0-488f-b161-29a057f9b7f6
+      domain: admin.sharemechat.com
+      status: ISSUED
+      not_after: "2026-12-08"
+
+# ============================================================
+# BLOQUE 3 — Estado de código (commits relevantes)
+# ============================================================
+git_state:
+  branch: main
+  head_commit: 639c4f8
+  head_commit_msg: "feat(country-access): redesign to dual allowlist (client/model) with PSP bypass IPs"
+  head_commit_date: "2026-05-27T16:11:00Z"
+
+  commits_hardening_critico:
+    - hash: 6e25d8a
+      date: "2026-05-27T~10:00Z"
+      title: "fix(auth): close product→backoffice login bypass via dual-dimension role check (Opción C v2)"
+      affected: [AuthController.java, known-debt.md]
+      jar_resultante_sha: f3aaf17b67157eadc2ac06746f38d0099409686aebc1d6b457dc1b60ac08f891
+    - hash: 639c4f8
+      date: "2026-05-27T~16:10Z"
+      title: "feat(country-access): redesign to dual allowlist (client/model) with PSP bypass IPs"
+      affected: [CountryAccessService.java, application.properties, GlobalExceptionHandler.java, UserController.java, known-debt.md]
+      jar_resultante_sha: 2591315ba1ce10c0a1c871460c0aa8fd185f439b97bd72c5db596eb8f6dde148
+
+  commits_frente_pro:
+    - 3ff8e17: "feat(prod): perimetral pipeline PROD in CARRIL-A real (PRO-9) + config/secrets refactor across 3 environments"
+    - 7753218: "feat(prod): create CloudFront admin distribution + associate spa function to product distribution (PRO-6/PRO-7)"
+    - fc1da22: "feat(prod): close frente PRO (PRO-1 to PRO-10) — backend, RDS, CloudFront, perimetral, certs ready"
+
+  jar_sha_mapping:
+    "38e7a80bd79eb3ece12ee47fc44c582bfaf3ad03dd23b15e98ed4760d342be12":
+      version: "PRO-5.A original"
+      sin_fixes: true
+      currently_running_in: PROD (stopped, sin auth ni country fixes)
+    "f3aaf17b67157eadc2ac06746f38d0099409686aebc1d6b457dc1b60ac08f891":
+      version: "v2"
+      fixes: [auth_bypass]
+      currently_running_in: ninguno  # intermedio, ya superado por v3
+      conservado_como_backup_en: [TEST, AUDIT] (.bak.pre-country-redesign-2026-05-27)
+    "2591315ba1ce10c0a1c871460c0aa8fd185f439b97bd72c5db596eb8f6dde148":
+      version: "v3 (hardening completo)"
+      fixes: [auth_bypass, country_access_redesign]
+      currently_running_in: [TEST, AUDIT]
+      pending_deploy_to: PROD
+
+# ============================================================
+# BLOQUE 4 — Estado de los 3 entornos
+# ============================================================
+environments:
+  test:
+    ec2_id: i-088341cf8d122920f
+    state: running
+    backend_jar_sha: 2591315ba1ce10c0a1c871460c0aa8fd185f439b97bd72c5db596eb8f6dde148  # v3
+    backend_pid: 8250
+    arranque: "manual via /home/ec2-user/sharemechat-v1/start-test.sh + setsid"
+    systemd_unit: ninguno (manual, deuda 2026-05-09)
+    config_env_has_country_keys: true
+    secrets_env_present: true (refactor PRO-9)
+    refresh_tokens_post_hardening: purgado (1147 -> 0)
+    spring_profile: test
+    validated_smoke_tests: [auth_bypass_USER+SUPPORT_blocked, country_gate_ES_CN_RU_XX_OK]
+    validated_by_operator_in_browser: yes
+
+  audit:
+    ec2_id: i-0d9149cd8a0e24104
+    state: running (24/7)
+    backend_jar_sha: 2591315ba1ce10c0a1c871460c0aa8fd185f439b97bd72c5db596eb8f6dde148  # v3
+    backend_pid: 2270635
+    arranque: "systemd sharemechat-audit.service"
+    config_env_has_country_keys: true
+    secrets_env_present: true (refactor PRO-9)
+    refresh_tokens_post_hardening: purgado (416 -> 0)
+    spring_profile: audit
+    pipeline_perimetral: "CARRIL-A real, 3 timers active, deny-audit-ips.conf intacto, nginx -t OK"
+    validated_smoke_tests: [auth_bypass_USER+SUPPORT_blocked, country_gate_ES_CN_RU_XX_OK]
+    validated_by_operator_in_browser: yes
+
+  prod:
+    ec2_id: i-0e0a3b5fee271592f
+    state: stopped
+    backend_jar_sha: 38e7a80bd79eb3ece12ee47fc44c582bfaf3ad03dd23b15e98ed4760d342be12  # PRO-5.A, sin fixes
+    arranque: "systemd sharemechat-prod.service (enabled, auto al boot)"
+    config_env_has_country_keys: false  # !!! pendiente de añadir antes del proximo arranque
+    secrets_env_present: true (refactor PRO-9)
+    refresh_tokens_post_hardening: sin purgar (PROD nunca tuvo refresh_tokens reales todavia)
+    spring_profile: prod
+    rds_state: stopped
+    eip_attached: true (3.77.59.1)
+
+# ============================================================
+# BLOQUE 5 — Backups conservados (no borrar)
+# ============================================================
+backups:
+  test:
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-PRO-5.A": "pre-refactor properties PRO-5.A"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-auth-fix-2026-05-27": "pre-deploy del fix v1 (whitelist single)"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-auth-fix-v2-2026-05-27": "pre-deploy del fix v2 (dual check)"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-country-redesign-2026-05-27": "JAR v2 antes del v3 actual"
+    "/opt/sharemechat/.env.bak.pre-refactor-secrets-2026-05-26": "pre-refactor config/secrets split"
+    "/opt/sharemechat/config.env.bak.pre-country-redesign-2026-05-27": "config.env pre-add de las 5 keys country"
+
+  audit:
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-PRO-5.A": "pre-refactor properties PRO-5.A"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-auth-fix-v2-2026-05-27": "JAR PRO-5.A original pre-deploy fix v2"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-country-redesign-2026-05-27": "JAR v2 (con auth fix) antes del v3 actual"
+    "/opt/sharemechat/.env.bak.pre-refactor-secrets-2026-05-26": "pre-refactor config/secrets split"
+    "/opt/sharemechat/config.env.bak.pre-country-redesign-2026-05-27": "config.env pre-add de las 5 keys country"
+    "/home/ec2-user/coturn/runtime/fullchain.pem.bak.pre-PRO-10-20260527T074952Z": "cert TLS pre-hook deploy PRO-10"
+    "/home/ec2-user/coturn/runtime/privkey.pem.bak.pre-PRO-10-20260527T074952Z": "key TLS pre-hook deploy PRO-10"
+    "/etc/sharemechat-audit-access-reporter/config.env.bak.pre-refactor-secrets-2026-05-26": "reporter config pre-refactor (sin secrets.env split)"
+    "/etc/sharemechat-audit-access-reporter/report-audit-access.sh.bak.pre-refactor-secrets-2026-05-26": "reporter script pre-patch carga secrets.env"
+
+  prod:
+    note: "No hay backups all closure todavia. Cuando se aplique v3 + config.env actualizado en proximo arranque, crear .bak.pre-hardening-deploy-<fecha>."
+
+# ============================================================
+# BLOQUE 6 — Cola hardening post-PRO actualizada
+# ============================================================
+hardening_post_pro_backlog:
+  cerradas:
+    1_auth_bypass_producto_backoffice:
+      status: CLOSED
+      closed_at: 2026-05-27
+      commit: 6e25d8a
+      validation: TEST + AUDIT (USER+SUPPORT blocked, admin via /admin/auth/login OK)
+    2_country_access_redesign:
+      status: CLOSED
+      closed_at: 2026-05-27
+      commit: 639c4f8
+      validation: TEST + AUDIT (ES/RU pass, CN/XX block 403 uniforme, bypass IP OK)
+  pendientes:
+    3_auditoria_sistematica_endpoints_residuales:
+      status: OPEN
+      priority: media (preventiva)
+      scope:
+        - "/api/email-verification/confirm (revisar si emite sesion)"
+        - "/api/auth/password/forgot"
+        - "/api/auth/password/reset"
+        - "Cualquier flujo futuro OAuth / magic link / SSO"
+      acceptance_criteria: "Aplicar check 1+2 (role primary + backoffice roles vacio) o documentar 'no aplica' por escrito"
+      bloqueante_go_live: false
+    4_activar_rol_EDITOR:
+      status: OPEN
+      priority: baja
+      condicion_disparo: "cuando se asignen EDITORs operativos en BD"
+      cambios_requeridos:
+        - "AdminAuthController.hasInternalBackofficeAccess: anadir ROLE_EDITOR"
+        - "frontend backofficeAccess.js canAccessBackoffice: anadir isBackofficeEditor"
+        - "Tests JUnit cubriendo EDITOR"
+      bloqueante_go_live: false
+    5_tests_junit_CountryAccessService:
+      status: OPEN
+      priority: baja
+      cobertura_minima:
+        - "assertAllowedForClientRegistration con pais in/out de allowlist"
+        - "assertAllowedForModelRegistration analogo"
+        - "assertAllowed (union) con pais solo en model-allowlist => allow"
+        - "bypass-ips individual e IP + CIDR"
+        - "block-when-missing=true sin header => deny"
+        - "enabled=false => allow"
+      bloqueante_go_live: false
+    6_coordinacion_PSPs_bypass_ips:
+      status: OPEN
+      priority: media
+      tareas:
+        - "Contactar CCBill para obtener IPs/CIDR oficiales de sus servidores que llaman al backend"
+        - "Posiblemente Veriff, gateway email, otros PSPs"
+        - "Anadir a COUNTRY_ACCESS_BYPASS_IPS de /opt/sharemechat/config.env en TEST/AUDIT/PROD"
+      bloqueante_go_live: false (si PSPs operan desde paises de union; verificar)
+
+# ============================================================
+# BLOQUE 7 — Deudas residuales vivas (no cerradas) en known-debt.md
+# ============================================================
+known_debt_open_items:
+  alta_critica:
+    - "Ninguna. Las 2 deudas alta-critica que estaban abiertas se cerraron hoy (auth bypass + country access)."
+
+  media:
+    - "Patrón maintenance — overlay React funcional + bucket S3 descolgado + comentarios '10.A.3.pre' engañosos (BAJA en realidad, listada aqui por completitud documental)"
+    - "Auditoria sistematica endpoints residuales (password reset, email verification)"
+    - "Coordinacion CCBill/PSPs para bypass IPs"
+    - "PROD: logging E2FWNC80D4QDJC desactivado (activar dia del switch con prefix product/)"
+    - "PROD: prefijos CF logs asimetricos con AUDIT (product/ + admin/ vs cloudfront/audit/ + cloudfront/admin-audit/)"
+    - "Backend no envia charset=utf-8 en Content-Type de /api/public/content/**"
+    - "URL mock hardcoded a TEST en VeriffClientImpl.java (cosmético, solo aplica con mock activo)"
+
+  baja:
+    - "Tests JUnit pendientes sobre CountryAccessService"
+    - "Tests JUnit AuthController.login (auth bypass fix)"
+    - "Activar rol EDITOR cuando se asignen operadores"
+    - "TEST: JWT_SECRET/CONSENT_SECRET sin sufijo _TEST"
+    - "TEST: WEBRTC_TURN_URL_TLS no poblado"
+    - "TEST: backend sin systemd unit (deuda 2026-05-09)"
+    - "TEST: MAIL_PASSWORD/REDIS_PASSWORD residuo historico"
+    - "TEST: secrets.env perms asimetricos vs AUDIT/PROD"
+    - "AUDIT pipeline perimetral: textos 'DRY-RUN' obsoletos en 5 sitios"
+    - "AUDIT: TCP 5349 bloqueado externamente (asimetria SG con PROD; verificar intencionalidad)"
+    - "AdminAdministrationPanel.jsx usa usuario@sharemechat.com como placeholder"
+    - "Sin tests automatizados que verifiquen mapping visible<->tag en mailto"
+    - "/legal hardcoded en ingles sin i18n"
+    - "Blog SPA hardcoded en español sin i18n"
+    - "logo192.png es favicon CRA, no logo de marca dedicado"
+    - "og:image:width/height y twitter:site/creator ausentes"
+    - "Bundle JS sin code-splitting de /blog"
+    - "Helpers de fecha y tiempo de lectura duplicados entre BlogContent.jsx y BlogArticleView.jsx"
+    - "Styled muertos en BlogStyles.js"
+    - "Hardening del buscador del blog (sin maxLength/debounce)"
+    - "Placeholder generico en el buscador del blog"
+    - "URLs reales en iconos de redes sociales del blog (href='#')"
+    - "Limitación SPA para previews sociales sin JS (FB/LinkedIn/WhatsApp)"
+    - "Distribución assets_legacy (E9K9T7NBNQ1SI) deshabilitada compartiendo bucket con la canónica"
+    - "Schema v2 de state-inventory no captura Enabled ni WebACL/WAF de las distribuciones"
+    - "Cadena de servicios sharemechat-test-access-* en estados degradados"
+
+  aprendizajes_permanentes:
+    - "2026-05-25: agente transcribió DB_PASSWORD productiva en chat (rotada, lección documentada)"
+    - "2026-05-26: agente transcribió SMTP_PASSWORD operations@sharemechat.com (rotada, lección documentada, mitigación estructural via refactor config/secrets split)"
+
+# ============================================================
+# BLOQUE 8 — Pasos pendientes operativos antes de PRELAUNCH → OPEN en PROD
+# ============================================================
+go_live_open_remaining_steps:
+  bloqueantes_tecnicos: []  # ya cerrados (auth + country)
+
+  pendientes_operativos_obligatorios:
+    1_aplicar_v3_a_PROD:
+      acciones:
+        - "SSH PROD: backup /opt/sharemechat/config.env -> .bak.pre-hardening-deploy-<fecha>"
+        - "Update config.env con las 5 keys country access (mismos valores que TEST/AUDIT)"
+        - "Backup JAR actual (38e7a80b...) -> .bak.pre-hardening-deploy-<fecha>"
+        - "scp JAR v3 (2591315b...) a /home/ec2-user/sharemechat-v1/"
+        - "aws ec2 start-instances + aws rds start-db-instance (esperar available)"
+        - "systemctl restart sharemechat-prod (auto-arranca al boot, retries hasta RDS)"
+        - "Verify CountryAccessService initialized log con listas correctas"
+        - "DELETE FROM refresh_tokens (uniformidad con TEST/AUDIT)"
+      orden_critico: "config.env ANTES de scp del JAR (si invertido: deny-all)"
+
+    2_DNS_admin:
+      accion: "Crear record A ALIAS admin.sharemechat.com -> d14enb0ydr2y1s.cloudfront.net en Route53 zona sharemechat.com"
+      activacion: "Admin Opcion B -> Admin activado"
+
+    3_switch_origin_E2FWNC80D4QDJC:
+      accion: "Cambiar origin de E2FWNC80D4QDJC desde sharemechat-landing-prod a sharemechat-frontend-prod"
+      pre_requisito: "Anadir bucket policy a sharemechat-frontend-prod autorizando E2FWNC80D4QDJC via OAC E1BCUWRUF78XV"
+      activa: "SPA producto en sharemechat.com (reemplaza landing actual)"
+
+    4_anadir_cache_behavior_api_a_distribuciones:
+      accion: "Anadir cache behavior /api/* en E2FWNC80D4QDJC y E3O40LHJ4PC6LE apuntando a backend EC2 (api.sharemechat.com o equivalente)"
+      pre_requisito: "Decidir hostname publico del backend (probable api.sharemechat.com)"
+      acciones_adicionales:
+        - "Configurar nginx vhost para api.sharemechat.com en EC2 PROD"
+        - "Solicitar/emitir cert ACM en us-east-1 para api.sharemechat.com si se usa CloudFront"
+        - "DNS api.sharemechat.com en Route53"
+
+    5_activar_logging_E2FWNC80D4QDJC:
+      accion: "Activar CloudFront logging para E2FWNC80D4QDJC apuntando a sharemechat-cf-logs-prod con prefix product/"
+      pre_requisito: "consumido por pipeline perimetral PROD ya configurado"
+
+  pendientes_operativos_recomendados:
+    6_coordinar_IPs_PSPs:
+      accion: "Contactar CCBill (y posiblemente Veriff, otros) para IPs operativas oficiales"
+      anadir_a: "COUNTRY_ACCESS_BYPASS_IPS en config.env de TEST/AUDIT/PROD"
+      cuando: "Antes de pasar a OPEN; sin esto, PSPs pueden ser bloqueados por country gate si operan desde paises no listados"
+
+    7_decidir_PRODUCT_ACCESS_MODE_OPEN:
+      accion: "Cambiar PRODUCT_ACCESS_MODE de PRELAUNCH a OPEN en /opt/sharemechat/config.env de PROD"
+      requiere: "Decision operativa del operador. Solo cuando TODO lo anterior esté listo y validado."
+
+  resumen_para_proxima_sesion: |
+    Los 2 bloqueantes tecnicos del go-live publico estan cerrados. PROD esta
+    technically unblocked. Para abrir registros (PRELAUNCH -> OPEN) faltan
+    pasos operativos que NO son fixes de seguridad sino activacion de
+    infraestructura:
+      a) Aplicar v3 + config.env a PROD (paso 1)
+      b) Crear DNS admin (paso 2)
+      c) Switch origin distribucion producto + DNS api (pasos 3 + 4)
+      d) Activar logging E2FWNC80D4QDJC (paso 5, opcional pre-go-live)
+      e) Coordinar IPs PSPs (paso 6, recomendado)
+      f) Decision operativa para PRODUCT_ACCESS_MODE=OPEN (paso 7)
+
+    Estos pasos pueden hacerse en una unica sesion de "go-live day" cuando
+    el operador este listo.
