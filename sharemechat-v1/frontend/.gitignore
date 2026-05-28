@@ -10,6 +10,8 @@
 
 # production
 /build
+# builds por superficie/entorno generados para deploy manual a S3 (PRO-7)
+build-*-prod/
 
 # misc
 .DS_Store

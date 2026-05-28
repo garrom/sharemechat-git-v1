@@ -1,0 +1,17 @@
+# Artefactos AWS temporales (dumps de inspeccion/construccion CloudFront/IAM).
+# Se generan durante sesiones operativas y NO deben versionarse: su info vive
+# en docs/_snapshots/ y es recuperable de AWS. Patrones anclados a la raiz (/).
+/cf-*.json
+/prod-*-payload.json
+/prod-*-result.json
+/prod-*-config*.json
+/prod-*-policy.json
+/*.bin
+# Policies IAM/bucket sueltas generadas en cualquier nivel durante tareas AWS
+# (sin ancla: el residuo tipico aparece tanto en raiz como en sharemechat-v1/).
+*-bucket-policy.json
+*-s3-policy.json
+
+# Configuracion local de Claude Code (no compartir entre maquinas).
+# Antes solo en .git/info/exclude (local); aqui pasa a ignore compartido.
+.claude/
