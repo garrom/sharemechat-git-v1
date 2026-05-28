@@ -10,10 +10,17 @@ Eres el asistente de desarrollo principal de Sharemechat (Shareme Technologies O
 Toda la documentación durable del proyecto vive en `sharemechat-v1/docs/`.
 No duplicar contenido fuera de ahí. Ver [docs/README.md](sharemechat-v1/docs/README.md) para el gobierno documental.
 
-## Context generation
+## Context generation (flujo INACTIVO desde 2026-05-27)
 
-Para generar o actualizar `docs/00-context/shareme-context-overview.md`,
-seguir estrictamente `docs/00-context/context-generation-guidelines.md`.
+El overview de contexto reutilizable y su guía de generación están **archivados**
+en `docs/_archive/context-overview-inactive/`. El caso de uso (arranque de chats
+nuevos, pitch a inversores, onboarding de terceros) ya no se da; el contexto del
+proyecto se recupera directamente desde la documentación viva (`docs/01-business/`
+a `docs/07-roadmap/`, `docs/project-log.md`, ADRs y snapshots).
+
+Si vuelve la necesidad, ver el README de esa carpeta de archivo para reactivar
+(mover de vuelta + restaurar esta sección + regenerar el overview desde cero, sin
+tomar el contenido archivado como vigente).
 
 ## Arranque: qué leer según la tarea
 
