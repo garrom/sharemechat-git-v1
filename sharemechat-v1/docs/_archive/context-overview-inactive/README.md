@@ -1,11 +1,18 @@
-# Overview de contexto reutilizable archivado (flujo inactivo)
+# Contexto reutilizable y apéndices de raíz archivados (flujo inactivo)
 
-Este directorio agrupa el overview de contexto reutilizable del proyecto y su guía de generación, retirados del flujo documental activo el **2026-05-27**.
+Este directorio agrupa el overview de contexto reutilizable del proyecto, su guía de generación, y los dos apéndices de contexto que vivían sueltos en la raíz del repositorio. Todos retirados del flujo documental activo el **2026-05-27**.
 
 ## Ficheros
 
+### Overview de contexto y su guía (archivados en el primer lote del 2026-05-27)
+
 - `shareme-context-overview.md` — narrativa de alto nivel del proyecto, pensada como contexto reutilizable y autosuficiente.
 - `context-generation-guidelines.md` — guía de cómo generar y mantener el overview anterior.
+
+### Apéndices de contexto de la raíz del repo (archivados en el segundo lote del 2026-05-27)
+
+- `shareme-context.md` — era un **stub puntero** (930 bytes) sin contenido propio: solo una tabla que redirigía a `sharemechat-v1/docs/`. Probablemente el predecesor del overview, vaciado a puntero cuando la narrativa se movió a `docs/`. No aporta nada que no esté ya en `docs/README.md` o el `CLAUDE.md` raíz.
+- `shareme-aws-context.md` — inventario de identificadores AWS reales (EC2, RDS, S3, CloudFront, Route53, email). **Desactualizado: fechado 2026-04-21, anterior al frente PRO.** Su sección PROD estaba en blanco cuando ya existe PROD provisionado completo. **NO usar como fuente de IDs: está obsoleto.** El inventario vivo y actualizado de PROD está en `sharemechat-v1/docs/_snapshots/state-prod-2026-05-27-1621.yaml` y en `~/.sharemechat/state-mapping.yaml` (fuera del repo). Se archiva porque contiene IDs reales (excepción consciente a la regla de saneado, justificada por ser apéndice fuera de `docs/`) y porque su caso de uso —consulta rápida de un recurso concreto— ya lo cubren los snapshots.
 
 ## Por qué se archivaron
 

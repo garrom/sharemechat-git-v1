@@ -36,7 +36,7 @@ No hay lectura obligatoria global. Carga el contexto mínimo según el frente:
 | Decisiones pasadas | `docs/06-decisions/` |
 | Prioridades y fase actual | `docs/07-roadmap/current-phase.md` + `pending-hardening.md` |
 
-Los ficheros raíz `shareme-context.md` y `shareme-aws-context.md` son apéndices de inventario (IDs, endpoints AWS) — consultar solo si se necesita identificar un recurso concreto.
+Los antiguos apéndices de raíz `shareme-context.md` (stub puntero) y `shareme-aws-context.md` (inventario de IDs AWS) están **archivados** en `docs/_archive/context-overview-inactive/` desde 2026-05-27. Para identificar un recurso concreto de PROD, usar el snapshot más reciente en `docs/_snapshots/` y el `state-mapping` local (`~/.sharemechat/state-mapping.yaml`), que son la fuente viva y actualizada; `shareme-aws-context.md` quedó obsoleto (pre-frente PRO).
 
 ---
 
