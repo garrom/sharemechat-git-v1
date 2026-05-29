@@ -2,6 +2,30 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-05-29 — Incidente acceso PSP Segpay: country access desactivado (AUDIT+TEST) + fix ORP CloudFront admin
+
+Contexto: Patricia (Segpay) reportó bloqueo de acceso a las superficies de AUDIT. El diagnóstico (ver `project-log.md` 2026-05-29) reveló que el country access redesign del 2026-05-27 bloqueaba la superficie admin para toda conexión no-bypass, por una asimetría de Origin Request Policy en CloudFront. Patricia aclaró que su equipo de compliance está distribuido (UK, Europa, EE.UU., banco) con IPs volátiles y pidió explícitamente acceso sin restricción geográfica.
+
+### [NOTA OPERATIVA] Country access DESACTIVADO temporalmente en AUDIT durante onboarding PSP
+
+AUDIT tiene `COUNTRY_ACCESS_ENABLED=false` desactivado temporalmente durante el período de auditoría PSP (Segpay y otros). Razón: los PSPs tienen equipos de compliance distribuidos en múltiples países (UK, Europa varios, EE.UU., bancos) con IPs volátiles, y solicitan explícitamente acceso sin restricción geográfica. AUDIT es por diseño el entorno de validación/auditoría externa, abierto a auditores de múltiples países; el geo-gating tiene sentido en PROD (producción real con monetización), no aquí durante el onboarding.
+
+REACTIVAR cuando termine la auditoría PSP: poner `COUNTRY_ACCESS_ENABLED=true` en `/opt/sharemechat/config.env` de AUDIT + restart. Las allowlists (CLIENT 28 / MODEL 51) y `COUNTRY_ACCESS_BYPASS_IPS` siguen configuradas e intactas en config.env, listas para reactivación. `COUNTRY_ACCESS_BLOCK_WHEN_MISSING` quedó en `false` tras la mitigación previa del 2026-05-28; al reactivar, decidir si vuelve a `true`. Prioridad: documental + recordatorio operativo.
+
+### [NOTA OPERATIVA] Country access DESACTIVADO en TEST (las allowlists estaban vacías)
+
+Durante la verificación se descubrió que TEST tenía el country gate `enabled=true` con allowlists VACÍAS y sin bypass: el `.env` de TEST nunca definió ninguna clave `COUNTRY_ACCESS_*`, y el código arranca con `enabled=true` por defecto. Efecto: el gate bloqueaba TODA petición (cualquier país resuelto cae fuera de la allowlist vacía; cualquier país no resuelto cae por `block-when-missing=true` por defecto) → 403 → reescrito a HTML por la CustomErrorResponse de la distribución admin → overlay. Se añadió `COUNTRY_ACCESS_ENABLED=false` al `/opt/sharemechat/.env` de TEST (mirror de AUDIT) + restart (el backend de TEST corre como proceso de `ec2-user`, no systemd). Si en el futuro se quiere geo-gating real en TEST, hay que configurar las allowlists y bypass además de poner `enabled=true`.
+
+### [NOTA CRÍTICA go-live PROD] ORP correcto + configurar country access explícitamente
+
+Dos puntos para el go-live de PROD (marcar como paso crítico del paso 4 / Bloque 8 del snapshot go-live):
+
+1. **ORP admin**: cuando se cablee la behavior `/api/*` en la distribución admin PROD (`E3O40LHJ4PC6LE` — hoy SIN behavior `/api/*`), debe usar `Managed-AllViewerExceptHostHeader` (`b689b0a8`) DESDE EL INICIO, NO `admin-api-origin-request-v2` (`f11445e9`). El ORP `f11445e9` no forwardea `CloudFront-Viewer-Country` al backend, lo que combinado con country access activo + `BLOCK_WHEN_MISSING=true` bloqueó el admin de AUDIT y TEST (incidente Segpay 2026-05-28).
+
+2. **Footgun enabled-by-default**: `CountryAccessService` arranca con `enabled=true` por defecto si no se define `COUNTRY_ACCESS_ENABLED`, y con allowlists vacías si no se definen → gate totalmente bloqueante de forma silenciosa (lo que pasó en TEST). En PROD hay que definir EXPLÍCITAMENTE `COUNTRY_ACCESS_ENABLED` y, si está en `true`, poblar allowlists y bypass; de lo contrario el login queda bloqueado para todos. Deuda de código separada a considerar: cambiar el default a `enabled=false`, o fallar el arranque si `enabled=true` con allowlists vacías.
+
+---
+
 ## 2026-05-27 — Cierre auth bypass + deudas detectadas durante el fix
 
 ### [CERRADA 2026-05-27] Auth bypass producto → backoffice (entrada original del 2026-05-26)

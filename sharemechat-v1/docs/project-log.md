@@ -8,6 +8,27 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-05-29 — Incidente acceso PSP Segpay: diagnóstico, fix ORP CloudFront y desactivación de country access en no-prod
+
+Patricia (Segpay, PSP en onboarding) reportó dos síntomas en las superficies de AUDIT: no poder iniciar sesión (producto) y ver el overlay de mantenimiento (admin). El diagnóstico read-only (logs nginx + journal backend + estructura CloudFront + BD) reveló un **bug colateral del country access redesign del 2026-05-27**: las distribuciones admin de AUDIT y TEST usaban un Origin Request Policy (`admin-api-origin-request-v2` / `f11445e9`) que NO forwardea `CloudFront-Viewer-Country` al backend. Combinado con `BLOCK_WHEN_MISSING=true`, toda petición no-bypass resolvía país nulo → 403 → reescrito a `text/html` por la CustomErrorResponse `403→/index.html` de la distribución admin → interpretado como ventana de mantenimiento por `MaintenanceProvider`. En producto el mismo 403 pasaba como JSON (sin CustomErrorResponse), de ahí el síntoma distinto por superficie. El gate, además, aplica a login/refresh/admin-login (scope unión), no solo a registro.
+
+Tres lecciones operativas:
+
+a) **Validar siempre desde fuera del bypass.** Los smoke tests del frente country-access no detectaron el bug porque el operador validaba desde su IP en `BYPASS_IPS`, que salta toda la lógica de país. Regla nueva: cuando se toque auth/country/network, validación obligatoria desde al menos una IP fuera del bypass. El operador adquirirá una VPN durante un mes para construir una matriz de validación multi-país.
+
+b) **El country access tiene sentido en PROD, no en no-prod durante esta fase.** AUDIT es por diseño entorno abierto a auditores externos de múltiples países; los PSPs (Segpay) pidieron explícitamente acceso sin restricción geográfica (compliance distribuido UK/Europa/EE.UU. + banco, IPs volátiles → el bypass por IP no sirve). Decisión (Camino 1): country access DESACTIVADO en AUDIT durante el onboarding PSP, reactivable después; allowlists y bypass se conservan en config.env. Durante la verificación se descubrió además que TEST tenía el gate enabled-by-default con allowlists vacías (bloqueaba todo), así que se desactivó también en TEST.
+
+c) **Las distribuciones CloudFront pueden divergir entre admin y producto con consecuencias graves.** El admin usaba un ORP restrictivo distinto al de producto, sin validación explícita de la diferencia. Para PROD: cuando se cablee la behavior `/api/*` del admin (`E3O40LHJ4PC6LE`), usar `Managed-AllViewerExceptHostHeader` desde el inicio y configurar country access explícitamente (ver `known-debt.md`).
+
+Acciones aplicadas:
+
+- AUDIT: `COUNTRY_ACCESS_ENABLED=false` (temporal, reactivable; allowlists/bypass intactos). La mitigación previa `BLOCK_WHEN_MISSING=false` (2026-05-28) queda obsoleta bajo el gate desactivado.
+- AUDIT admin (`E21IB0VBKYNNBW`) y TEST admin (`E28YCPVIRB4ASH`): ORP de la behavior `/api/*` cambiado a `Managed-AllViewerExceptHostHeader` (`b689b0a8`); corrige la asimetría producto/admin que enmascaró el bug. El fix se validó observando que el backend ya resuelve el país (`country=DE`) tras el cambio.
+- TEST: `COUNTRY_ACCESS_ENABLED=false` añadido al `.env` (las allowlists estaban vacías → gate bloqueante). Requirió encender la EC2 y la RDS de TEST (apagadas) para verificar; el backend de TEST corre como proceso manual de `ec2-user`.
+- Notas en `known-debt.md`: reactivación de country access en AUDIT tras PSP, situación de TEST, y configuración correcta del admin de PROD (ORP + country explícito, footgun enabled-by-default) para el go-live.
+
+PROD no afectado: su distribución admin (`E3O40LHJ4PC6LE`) aún no tiene behavior `/api/*` cableada y el entorno está apagado.
+
 ## 2026-05-27 — Archivado de los apéndices de contexto de la raíz del repo
 
 Continuación de la higiene de contexto: se archivan los dos ficheros de contexto que vivían sueltos en la raíz del repositorio, moviéndolos a `docs/_archive/context-overview-inactive/` (la misma carpeta donde hoy se archivó el overview reutilizable y su guía). `shareme-context.md` era un stub puntero sin contenido propio (solo una tabla redirigiendo a `docs/`), y `shareme-aws-context.md` era un inventario de IDs AWS desactualizado (fechado el 2026-04-21, anterior al frente PRO, con la sección PROD en blanco cuando ya existe PROD provisionado completo). Ambos estaban referenciados solo desde el CLAUDE.md raíz, que se reformuló para apuntar a la fuente viva de IDs: los snapshots de `docs/_snapshots/` y el state-mapping local.
