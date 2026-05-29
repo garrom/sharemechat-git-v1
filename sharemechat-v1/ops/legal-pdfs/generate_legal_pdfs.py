@@ -560,7 +560,7 @@ REFUND_SECTIONS = [
     ]},
     {'title': '3. Review Timeline', 'paras': [
         {'type': 'p', 'text': (
-            'We aim to review and respond within <b>7 business days</b>. '
+            'We aim to review and respond within <b>5 business days</b>. '
             'Additional time may be required in complex cases or where '
             'payment disputes or chargebacks are involved.'
         )},
@@ -663,7 +663,7 @@ COMPLAINTS_SECTIONS = [
     {'title': '3. Response Time', 'paras': [
         {'type': 'p', 'text': (
             'We aim to acknowledge and respond to complaints within '
-            '<b>7 business days</b>. More complex cases may require '
+            '<b>5 business days</b>. More complex cases may require '
             'additional time.'
         )},
     ]},
@@ -724,7 +724,7 @@ APPEALS_SECTIONS = [
     ]},
     {'title': '4. Response Time', 'paras': [
         {'type': 'p', 'text': (
-            'We aim to review and respond within <b>7 business days</b>, '
+            'We aim to review and respond within <b>5 business days</b>, '
             'although some matters may require additional time depending '
             'on complexity, evidence, or legal considerations.'
         )},

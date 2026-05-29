@@ -818,7 +818,7 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>3. Review Timeline</h3>
                 <p style={Paragraph}>
-                  We aim to review and respond within <strong>7 business days</strong>.
+                  We aim to review and respond within <strong>5 business days</strong>.
                   Additional time may be required in complex cases or where payment disputes
                   or chargebacks are involved.
                 </p>
@@ -892,7 +892,7 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>3. Response Time</h3>
                 <p style={Paragraph}>
-                  We aim to acknowledge and respond to complaints within <strong>7 business days</strong>.
+                  We aim to acknowledge and respond to complaints within <strong>5 business days</strong>.
                   More complex cases may require additional time.
                 </p>
               </div>
@@ -963,7 +963,7 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>4. Response Time</h3>
                 <p style={Paragraph}>
-                  We aim to review and respond within <strong>7 business days</strong>,
+                  We aim to review and respond within <strong>5 business days</strong>,
                   although some matters may require additional time depending on
                   complexity, evidence, or legal considerations.
                 </p>

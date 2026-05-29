@@ -8,6 +8,16 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-05-29 — Cambio de plazo "7→5 business days" en políticas legales del SPA + PDFs
+
+Cambio de plazo en políticas legales (Refunds, Complaints, Appeals) de "7 business days" a "5 business days" tras feedback de PSP (Segpay) para alinear con expectativas de respuesta de la industria. Aplicado en SPA (`Legal.jsx`, 3 ocurrencias) y en el generador de PDFs legales (`generate_legal_pdfs.py`, 3 ocurrencias). Build de SPA producto sincronizado a los 3 buckets de frontend (`sharemechat-frontend-test`, `sharemechat-frontend-audit`, `sharemechat-frontend-prod`). Invalidación CloudFront aplicada a las distribuciones de TEST (`E2Q4VNDDWD5QBU`) y AUDIT (`E1ILXV7P6ENUV8`); el cambio es visible en test.sharemechat.com y audit.sharemechat.com.
+
+Matiz PROD: la distribución producto PROD (`E2FWNC80D4QDJC`) sigue sirviendo la landing estática hand-coded desde `sharemechat-landing-prod`, no la React SPA. sharemechat.com NO está afectado por este cambio. El bucket SPA `sharemechat-frontend-prod` queda al día con el nuevo plazo, listo para cuando se conecte el origen de la distribución a este bucket en el go-live. La landing estática (`legal.html`) tiene un texto legal distinto, más corto, sin la frase "X business days" — no requiere cambio.
+
+PDFs legales regenerados localmente (`C:\Users\alain\Downloads\sharemechat_legal_pdfs_segpay\`, 8 ficheros, ~37 KB total) pendientes de entrega consolidada al PSP en próxima comunicación con resto de puntos de due diligence.
+
+Aprendizaje operativo: el plan inicial asumió que PROD sirve SPA estático desde S3 cuando en realidad sirve la landing estática hasta el día del switch (paso 3 del Bloque 8 del snapshot go-live). Para futuros cambios en frontend que toquen PROD antes del go-live, conviene distinguir explícitamente entre 'deploy SPA' en TEST/AUDIT (donde se sirve) y 'actualizar bucket SPA preparado' en PROD (bucket existente pero no cableado a distribución). Detectado por Claude Code durante la ejecución, resuelto vía Opción 1 (sync a bucket sin invalidación).
+
 ## 2026-05-29 — Eliminación de cuentas demo de PSP inactivo en AUDIT + deuda aislamiento multi-PSP
 
 Se eliminaron de AUDIT las cuentas demo+ccbill_* (4 cuentas, 137 filas BD, 5 objetos S3) tras detectar que un PSP con acceso al backoffice de AUDIT podría ver cuentas demo asociadas a otro PSP, exponiendo información comercial cruzada. Mitigación operativa puntual; las cuentas eliminadas eran mockup sin actividad real. El código Java y la documentación interna conservan menciones a CCBill por tratarse de scaffold mockup intercambiable; estas menciones no son visibles para PSPs externos.
