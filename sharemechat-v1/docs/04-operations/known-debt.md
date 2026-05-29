@@ -2,6 +2,23 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-05-29 — Cuentas demo de PSP inactivo eliminadas de AUDIT + deuda aislamiento multi-PSP
+
+Se eliminaron de AUDIT las cuentas `demo+ccbill_*` (4 cuentas, 137 filas BD, 5 objetos S3 con documentos KYC) tras detectar que un PSP con acceso al backoffice de AUDIT podría ver cuentas demo asociadas a otro PSP, exponiendo información comercial cruzada. Las cuentas eliminadas eran mockup sin actividad real (sin transacciones, sesiones, chats ni moderación). Backup SQL local conservado en `/tmp/ccbill-removal-backup-2026-05-29.sql` en la EC2 de AUDIT. El código Java y la documentación interna conservan menciones a CCBill por tratarse de scaffold mockup intercambiable; no son visibles para PSPs externos.
+
+### [DEUDA ARQUITECTURAL — prioridad MEDIA] Aislamiento entre PSPs en backoffice multi-tenant
+
+Hoy un PSP con rol backoffice (AUDIT/SUPPORT) ve TODO el listado de usuarios/modelos/clientes en `admin.audit.sharemechat.com`, incluyendo cuentas demo asociadas a otros PSPs. Cuando AUDIT/PROD reciban múltiples PSPs activos en paralelo con accesos backoffice simultáneos, replantear el modelo de aislamiento. Opciones a evaluar:
+
+- (a) cuentas demo invisibles entre PSPs (filtro por owner/tag en la vista de backoffice);
+- (b) segmentación de la vista del backoffice por tenant/PSP;
+- (c) permisos backoffice más granulares (un AUDIT externo ve solo lo que su PSP necesita validar);
+- (d) tabla aparte de cuentas demo con visibilidad explícita por tenant.
+
+Prioridad **media**: no bloquea hoy (Segpay es el único PSP con acceso backoffice activo tras la eliminación), pero conviene resolver antes de aceptar un segundo PSP en paralelo con acceso simultáneo al backoffice.
+
+---
+
 ## 2026-05-29 — Incidente acceso PSP Segpay: country access desactivado (AUDIT+TEST) + fix ORP CloudFront admin
 
 Contexto: Patricia (Segpay) reportó bloqueo de acceso a las superficies de AUDIT. El diagnóstico (ver `project-log.md` 2026-05-29) reveló que el country access redesign del 2026-05-27 bloqueaba la superficie admin para toda conexión no-bypass, por una asimetría de Origin Request Policy en CloudFront. Patricia aclaró que su equipo de compliance está distribuido (UK, Europa, EE.UU., banco) con IPs volátiles y pidió explícitamente acceso sin restricción geográfica.

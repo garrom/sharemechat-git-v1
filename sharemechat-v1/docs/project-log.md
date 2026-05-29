@@ -8,6 +8,12 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-05-29 — Eliminación de cuentas demo de PSP inactivo en AUDIT + deuda aislamiento multi-PSP
+
+Se eliminaron de AUDIT las cuentas demo+ccbill_* (4 cuentas, 137 filas BD, 5 objetos S3) tras detectar que un PSP con acceso al backoffice de AUDIT podría ver cuentas demo asociadas a otro PSP, exponiendo información comercial cruzada. Mitigación operativa puntual; las cuentas eliminadas eran mockup sin actividad real. El código Java y la documentación interna conservan menciones a CCBill por tratarse de scaffold mockup intercambiable; estas menciones no son visibles para PSPs externos.
+
+Deuda arquitectural pendiente: cuando AUDIT/PROD reciban múltiples PSPs activos en paralelo con accesos backoffice simultáneos, replantear modelo de aislamiento entre PSPs (cuentas demo invisibles entre PSPs, vista filtrada del backoffice por tenant, o segmentación vía permisos backoffice más granulares).
+
 ## 2026-05-29 — Incidente acceso PSP Segpay: diagnóstico, fix ORP CloudFront y desactivación de country access en no-prod
 
 Patricia (Segpay, PSP en onboarding) reportó dos síntomas en las superficies de AUDIT: no poder iniciar sesión (producto) y ver el overlay de mantenimiento (admin). El diagnóstico read-only (logs nginx + journal backend + estructura CloudFront + BD) reveló un **bug colateral del country access redesign del 2026-05-27**: las distribuciones admin de AUDIT y TEST usaban un Origin Request Policy (`admin-api-origin-request-v2` / `f11445e9`) que NO forwardea `CloudFront-Viewer-Country` al backend. Combinado con `BLOCK_WHEN_MISSING=true`, toda petición no-bypass resolvía país nulo → 403 → reescrito a `text/html` por la CustomErrorResponse `403→/index.html` de la distribución admin → interpretado como ventana de mantenimiento por `MaintenanceProvider`. En producto el mismo 403 pasaba como JSON (sin CustomErrorResponse), de ahí el síntoma distinto por superficie. El gate, además, aplica a login/refresh/admin-login (scope unión), no solo a registro.
