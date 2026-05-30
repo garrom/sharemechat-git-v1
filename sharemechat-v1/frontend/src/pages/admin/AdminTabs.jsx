@@ -5,6 +5,7 @@ const AdminTabs = ({
   activeTab,
   setActiveTab,
   canViewModels,
+  canViewAssetModeration,
   canViewStats,
   canViewFinance,
   canViewDb,
@@ -15,6 +16,7 @@ const AdminTabs = ({
   return (
     <TabsBar>
       {canViewModels && <TabButton active={activeTab === 'models'} onClick={() => setActiveTab('models')}>GestiÃ³n Modelos</TabButton>}
+      {canViewAssetModeration && <TabButton active={activeTab === 'asset-moderation'} onClick={() => setActiveTab('asset-moderation')}>ModeraciÃ³n assets</TabButton>}
       {canViewStats && <TabButton active={activeTab === 'stats'} onClick={() => setActiveTab('stats')}>EstadÃ­sticas</TabButton>}
       {canViewFinance && <TabButton active={activeTab === 'finance'} onClick={() => setActiveTab('finance')}>AnÃ¡lisis Financiero</TabButton>}
       {canViewDb && <TabButton active={activeTab === 'db'} onClick={() => setActiveTab('db')}>Vista BBDD</TabButton>}

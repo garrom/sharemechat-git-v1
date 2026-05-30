@@ -40,7 +40,8 @@ public record EmailMessage(
         WELCOME,
         UNSUBSCRIBE_CONFIRMATION,
         EMAIL_VERIFICATION,
-        PASSWORD_RESET
+        PASSWORD_RESET,
+        MODEL_ASSET_REJECTION
     }
 
     public enum Priority {

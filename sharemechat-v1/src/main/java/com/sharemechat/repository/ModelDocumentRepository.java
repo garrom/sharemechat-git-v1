@@ -14,7 +14,7 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
     Optional<ModelDocument> findByUserId(Long userId);
     boolean existsByUserId(Long userId);
 
-    // Cantidad total de modelos aprobadas con video
+    // Cantidad total de modelos aprobadas con video (y assets aprobados)
     @Query("""
            select count(md)
            from ModelDocument md, User u
@@ -22,6 +22,8 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
              and md.urlVideo is not null
              and u.role = 'MODEL'
              and u.verificationStatus = 'APPROVED'
+             and md.picApproved = true
+             and md.videoApproved = true
            """)
     long countEligibleModelsWithVideo();
 
@@ -48,6 +50,8 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
              and md.urlVideo is not null
              and u.role = 'MODEL'
              and u.verificationStatus = 'APPROVED'
+             and md.picApproved = true
+             and md.videoApproved = true
            order by u.id asc
            """)
     List<ModelTeaserDTO> findTeasersPage(Pageable pageable);
@@ -66,6 +70,8 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
              and md.urlVideo is not null
              and u.role = 'MODEL'
              and u.verificationStatus = 'APPROVED'
+             and md.picApproved = true
+             and md.videoApproved = true
            order by m.totalIngresos desc nulls last
            """)
     List<ModelTeaserDTO> findTopByEarnings(Pageable pageable);
@@ -83,6 +89,8 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
              and md.urlVideo is not null
              and u.role = 'MODEL'
              and u.verificationStatus = 'APPROVED'
+             and md.picApproved = true
+             and md.videoApproved = true
            order by u.createdAt desc
            """)
     List<ModelTeaserDTO> findNewestModels(Pageable pageable);
@@ -100,6 +108,8 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
              and md.urlVideo is not null
              and u.role = 'MODEL'
              and u.verificationStatus = 'APPROVED'
+             and md.picApproved = true
+             and md.videoApproved = true
            order by function('RAND')
            """)
     List<ModelTeaserDTO> findRandomModels(Pageable pageable);

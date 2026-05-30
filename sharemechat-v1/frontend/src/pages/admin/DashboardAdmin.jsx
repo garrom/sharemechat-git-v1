@@ -9,6 +9,7 @@ import AdminAuditPanel from './AdminAuditPanel';
 import AdminDataPanel from './AdminDataPanel';
 import AdminFinancePanel from './AdminFinancePanel';
 import AdminModelsPanel from './AdminModelsPanel';
+import AdminAssetModerationPanel from './AdminAssetModerationPanel';
 import AdminModerationPanel from './AdminModerationPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminProfilePage from './AdminProfilePage';
@@ -59,6 +60,10 @@ const DashboardAdmin = () => {
       title: t('admin.shell.views.models.title'),
       subtitle: t('admin.shell.views.models.subtitle'),
     },
+    'asset-moderation': {
+      title: 'Moderación de assets de modelo',
+      subtitle: 'Cola de aprobación de foto y vídeo de perfil del modelo. ADMIN y SUPPORT deciden; AUDIT solo lee.',
+    },
     moderation: {
       title: t('admin.shell.views.moderation.title'),
       subtitle: t('admin.shell.views.moderation.subtitle'),
@@ -100,6 +105,8 @@ const DashboardAdmin = () => {
     canReviewModels: adminView,
     canChangeKycMode: adminView,
     canViewSensitiveDocs: adminView,
+    canViewAssetModeration: adminView || supportView || auditView,
+    canModerateAssets: adminView || supportView,
     canViewStats: adminView || hasBackofficePermission(user, 'stats.read_overview'),
     canViewFinance: adminView
       || (
@@ -132,6 +139,7 @@ const DashboardAdmin = () => {
       'overview',
       capabilities.canViewStats || capabilities.canViewStreams ? 'operations' : null,
       capabilities.canViewModels ? 'models' : null,
+      capabilities.canViewAssetModeration ? 'asset-moderation' : null,
       capabilities.canViewModeration ? 'moderation' : null,
       capabilities.canViewFinance ? 'finance' : null,
       capabilities.canRefund ? 'finance-adjustments' : null,
@@ -200,6 +208,11 @@ const DashboardAdmin = () => {
             key: 'models',
             label: t('admin.shell.sections.business.items.models.label'),
             meta: t('admin.shell.sections.business.items.models.meta'),
+          } : null,
+          capabilities.canViewAssetModeration ? {
+            key: 'asset-moderation',
+            label: 'Moderación assets',
+            meta: 'Cola de aprobación de foto y vídeo de perfil.',
           } : null,
           capabilities.canViewModeration ? {
             key: 'moderation',
@@ -419,6 +432,15 @@ const DashboardAdmin = () => {
                 canChangeKycMode={capabilities.canChangeKycMode}
                 canViewSensitiveDocs={capabilities.canViewSensitiveDocs}
               />
+            </AdminPage>
+          )}
+
+          {activeView === 'asset-moderation' && capabilities.canViewAssetModeration && (
+            <AdminPage
+              title="Moderación de assets de modelo"
+              subtitle="Cola de aprobación de foto y vídeo de perfil del modelo. Cada upload genera una review pendiente; el modelo no es visible al cliente hasta que ambos assets estén aprobados."
+            >
+              <AdminAssetModerationPanel canModerate={capabilities.canModerateAssets} />
             </AdminPage>
           )}
 

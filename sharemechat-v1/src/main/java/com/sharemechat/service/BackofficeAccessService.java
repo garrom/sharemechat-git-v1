@@ -38,15 +38,18 @@ public class BackofficeAccessService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final EmailVerificationService emailVerificationService;
+    private final BackofficeAuditLogService auditLogService;
 
     public BackofficeAccessService(JdbcTemplate jdbcTemplate,
                                    UserRepository userRepository,
                                    ObjectMapper objectMapper,
-                                   EmailVerificationService emailVerificationService) {
+                                   EmailVerificationService emailVerificationService,
+                                   BackofficeAuditLogService auditLogService) {
         this.jdbcTemplate = jdbcTemplate;
         this.userRepository = userRepository;
         this.objectMapper = objectMapper;
         this.emailVerificationService = emailVerificationService;
+        this.auditLogService = auditLogService;
     }
 
     public BackofficeAccessProfile loadProfile(Long userId, String productRole) {
@@ -210,7 +213,7 @@ public class BackofficeAccessService {
         String action = createdBaseUser ? "CREATE_USER_AND_ACCESS" : "CREATE_ACCESS";
         BackofficeAdministrationDTOs.BackofficeUserDetail detail = saveBackofficeAccess(user, request, actorUserId, action);
         if (createdBaseUser) {
-            writeAuditLog(
+            auditLogService.writeAuditLog(
                     actorUserId,
                     user.getId(),
                     "SEND_EMAIL_VERIFICATION",
@@ -253,7 +256,7 @@ public class BackofficeAccessService {
         validateNotRemovingLastAdmin(actorUserId, user, request.getActive(), assignedRoles);
 
         upsertAccessState(userId, request.getActive(), actorUserId);
-        writeAuditLog(
+        auditLogService.writeAuditLog(
                 actorUserId,
                 userId,
                 "UPDATE_STATUS",
@@ -282,7 +285,7 @@ public class BackofficeAccessService {
         }
 
         emailVerificationService.issueBackofficeVerification(user, actorUserId);
-        writeAuditLog(
+        auditLogService.writeAuditLog(
                 actorUserId,
                 userId,
                 "RESEND_EMAIL_VERIFICATION",
@@ -324,7 +327,7 @@ public class BackofficeAccessService {
         replacePermissionOverrides(user.getId(), normalizedAdds, normalizedRemovals);
         upsertAccessState(user.getId(), currentActive, actorUserId);
 
-        writeAuditLog(
+        auditLogService.writeAuditLog(
                 actorUserId,
                 user.getId(),
                 action,
@@ -827,33 +830,8 @@ public class BackofficeAccessService {
         }
     }
 
-    private void writeAuditLog(Long actorUserId, Long targetUserId, String action, String summary, Map<String, Object> payload) {
-        if (!hasBackofficeAuditLogTable()) {
-            return;
-        }
-        String payloadJson = null;
-        try {
-            payloadJson = objectMapper.writeValueAsString(payload);
-        } catch (JsonProcessingException ex) {
-            log.warn("No se pudo serializar el audit payload de backoffice: {}", ex.getMessage());
-        }
-
-        try {
-            jdbcTemplate.update(
-                    "insert into backoffice_access_audit_log (target_user_id, actor_user_id, action, summary, payload_json) values (?, ?, ?, ?, ?)",
-                    targetUserId,
-                    actorUserId,
-                    action,
-                    safeText(summary),
-                    payloadJson
-            );
-        } catch (DataAccessException ex) {
-            log.warn("No se pudo guardar el audit log de backoffice targetUserId={}: {}", targetUserId, ex.getMessage());
-        }
-    }
-
     private List<BackofficeAdministrationDTOs.BackofficeAuditLogItem> loadRecentAuditLogs(Long userId, int limit) {
-        if (!hasBackofficeAuditLogTable()) {
+        if (!auditLogService.hasTable()) {
             return List.of();
         }
         int safeLimit = Math.max(1, Math.min(limit, 25));
@@ -875,15 +853,6 @@ public class BackofficeAccessService {
             ), userId, safeLimit);
         } catch (DataAccessException ex) {
             return List.of();
-        }
-    }
-
-    private boolean hasBackofficeAuditLogTable() {
-        try {
-            jdbcTemplate.query("select id from backoffice_access_audit_log limit 1", rs -> null);
-            return true;
-        } catch (DataAccessException ex) {
-            return false;
         }
     }
 

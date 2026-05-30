@@ -2,6 +2,53 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-05-30 — Deudas y notas documentadas en cierre de Capa 1 moderación assets
+
+### [BUG CONOCIDO Capa 1, resuelto en Capa 2] Foto pendiente visible en matching pool
+
+En Capa 1, el filtro `pic_approved=TRUE AND video_approved=TRUE` se añadió a las 5 queries de listing público (`countEligibleModelsWithVideo`, `findTeasersPage`, `findTopByEarnings`, `findNewestModels`, `findRandomModels`) de `ModelDocumentRepository`, **pero NO al matching pool ni a otras superficies que leen `url_pic`/`url_video` directos desde `ModelDocument`**. Resultado: una modelo con foto recién subida pero aún `PENDING_REVIEW` puede aparecer en el matching emparejada con clientes.
+
+La solución estructural es **Capa 2** (tabla aparte `model_assets` con FK a `users` + concepto "asset principal aprobado"). Las queries del pool en Capa 2 harán JOIN explícito con `model_asset_reviews APPROVED` por asset, evitando todo el atajo de leer URLs directas. Se prioriza Capa 2 sobre parchear Capa 1 porque el modelo de datos cambia de raíz.
+
+### [DEUDA estructural] Asimetría temporal entre revisión documentos KYC y revisión assets
+
+`AdminModelsPanel.jsx` (revisión de documentos de identidad para onboarding del modelo) sigue sin motivo de rechazo, sin email al modelo, sin audit log de la decisión, sin posibilidad de reapertura — patrón heredado. `AdminAssetModerationPanel.jsx` (Capa 1 desplegada) sí tiene motivo (10 + `OTHER`), email bilingüe, audit log, y permisos diferenciados ADMIN+SUPPORT (moderan) vs AUDIT (solo lectura). La asimetría es por priorización (lo de assets era lo que pedían los PSPs en onboarding). Refactor de la pantalla de documentos para alinear con el patrón nuevo queda como deuda en sesión separada.
+
+### [LECCIÓN OPERATIVA] Deploy SPA = dos surfaces separadas
+
+Cualquier feature que toque ficheros bajo `frontend/src/pages/admin/` requiere **dos despliegues independientes**:
+
+- `npm run build:product` (`.env.product` con `REACT_APP_SURFACE=product`) → `sharemechat-frontend-{env}` → distribución del producto (`E2Q4VNDDWD5QBU` test / `E1ILXV7P6ENUV8` audit / `E2FWNC80D4QDJC` prod).
+- `npm run build:admin` (`.env.admin` con `REACT_APP_SURFACE=admin`) → `sharemechat-admin-{env}` → distribución del admin (`E28YCPVIRB4ASH` test / `E21IB0VBKYNNBW` audit / `E3O40LHJ4PC6LE` prod).
+
+Los planes de despliegue tienen que distinguir explícitamente ambas. Durante Capa 1 se olvidó el admin y hubo que reaplicar tras la validación; quedó como gap de proceso. El script `ops/scripts/deploy-frontend.ps1` ya está preparado para esto vía el parámetro `surface`, pero los planes operativos lo perdieron de vista.
+
+### [VERIFICACIÓN pendiente] Detección de idioma en frontend
+
+El operador observó que al cambiar VPN entre países, `audit.sharemechat.com` sigue mostrándose en español. Hipótesis no verificada: la SPA lee `Accept-Language` del navegador (que no cambia con la VPN), no la IP. Pendiente verificar configuración Firefox del propio equipo del operador en sesión separada; si confirma comportamiento correcto, documentar y cerrar; si es bug, sesión separada para diagnóstico. **No afecta** al email de rechazo de assets de Capa 1: lee `user.ui_locale` de BD, no del navegador del moderador.
+
+### [DEUDA tests] Tests JUnit para `ModelAssetReviewService` pendientes
+
+Capa 1 desplegada sin tests unitarios del service nuevo. Tests recomendados:
+
+- `createPendingReview` crea row y baja flag denormalizado en `model_documents`.
+- `approveReview` sube flag y escribe audit log con payload `{resource_type, resource_id, asset_type, asset_url}`.
+- `rejectReview` baja flag, escribe audit log, dispara email (BEST_EFFORT) con motivo bilingüe.
+- Validación de `reasonCode`: dentro del catálogo de 11 valores, `OTHER` exige `reasonText` no vacío.
+- Transiciones bloqueadas: aprobar/rechazar una review en estado `APPROVED` o `REJECTED` lanza `IllegalStateException`.
+
+Pendiente en sesión separada o como parte de Capa 2 si la API queda equivalente.
+
+### [DEUDA scope reducido Capa 1] `findApprovedModelProfileDocumentByUserId` sin filtro flags
+
+La 6ª query de `ModelDocumentRepository` (lookup individual, no listado) no se modificó en Capa 1 — el plan del operador habló literalmente de "5 queries" y se interpretó estricto. La query la usa `ModelService.matchesAuthorizedTeaserStorageKey` para autorizar accesos a `/api/storage/content` (verifica que el `storageKey` solicitado pertenece al perfil aprobado del modelo). Vector residual: un modelo con assets `PENDING_REVIEW` podría tener su storage accesible vía URL exacta si el caller conoce el key. Capa 2 reemplaza esta lógica completa al iterar sobre `model_assets` aprobados, por lo que se resuelve naturalmente. Anotado por trazabilidad.
+
+### [NOTA OPERATIVA go-live PROD] `ALTER TABLE model_documents` con `ALGORITHM=INPLACE`
+
+Cuando se aplique **V5** (próxima migración Capa 2) en PROD con tráfico real, el `ALTER TABLE model_documents DROP COLUMN ...` (`url_pic`, `url_video`, `pic_approved`, `video_approved`) puede ser largo si la tabla tiene muchas filas. Considerar `ALGORITHM=INPLACE` explícito y ventana de mantenimiento si procede. Para AUDIT actual (3 filas) es irrelevante; la advertencia es para PROD futuro.
+
+---
+
 ## 2026-05-29 — Cuentas demo de PSP inactivo eliminadas de AUDIT + deuda aislamiento multi-PSP
 
 Se eliminaron de AUDIT las cuentas `demo+ccbill_*` (4 cuentas, 137 filas BD, 5 objetos S3 con documentos KYC) tras detectar que un PSP con acceso al backoffice de AUDIT podría ver cuentas demo asociadas a otro PSP, exponiendo información comercial cruzada. Las cuentas eliminadas eran mockup sin actividad real (sin transacciones, sesiones, chats ni moderación). Backup SQL local conservado en `/tmp/ccbill-removal-backup-2026-05-29.sql` en la EC2 de AUDIT. El código Java y la documentación interna conservan menciones a CCBill por tratarse de scaffold mockup intercambiable; no son visibles para PSPs externos.

@@ -8,6 +8,23 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-05-30 — Capa 1 moderación de assets de modelo (foto + vídeo) desplegada en AUDIT
+
+Implementación de la primera capa de moderación admin para los assets de perfil del modelo (1 foto + 1 vídeo). Antes los assets subidos por el modelo eran visibles inmediatamente al cliente sin pasar por aprobación; ahora cada upload genera una row `PENDING_REVIEW` en tabla nueva `model_asset_reviews` que ADMIN/SUPPORT pueden aprobar o rechazar. La modelo solo aparece en los listings públicos (teasers, top, newest, random) cuando `users.verification_status=APPROVED` Y ambos assets están aprobados — flags denormalizados `pic_approved`/`video_approved` en `model_documents` mantenidos como invariante por el service.
+
+Stack desplegado en AUDIT:
+
+- Migración Flyway **V4** (tabla `model_asset_reviews` + 2 flags en `model_documents` + grandfather de las 3 modelos ya aprobadas → 6 rows APPROVED auto-aplicadas).
+- Backend: entity + repo con proyección DTO + 5 queries del repo filtradas por flags + service con email rechazo bilingüe (ES/EN, default EN, alineado con `EmailCopyRenderer`) + audit log en cada decisión.
+- Email: nuevo método `renderAssetRejection` en `EmailCopyRenderer` + helper `AssetRejectionReasonCopy` con catálogo bilingüe de 10 motivos + `OTHER`. `BackofficeAuditLogService` extraído como service público para que cualquier flujo de backoffice escriba en `backoffice_access_audit_log` sin acoplarse al service de altas/permisos.
+- Frontend admin: `AdminAssetModerationPanel.jsx` con tabla + modal de rechazo (dropdown 10 motivos + textarea condicional obligatoria para `OTHER`), pestaña en `AdminTabs`, wiring de permisos `canViewAssetModeration` (ADMIN+SUPPORT+AUDIT) y `canModerateAssets` (ADMIN+SUPPORT) en `DashboardAdmin`. i18n para los motivos en `es.json` + `en.json`.
+
+Incidente colateral resuelto durante el deploy: el plan original solo contemplaba el deploy del SPA producto, pero el panel admin vive en un bundle distinto (surface=admin, `npm run build:admin` con `.env.admin`) servido desde otro bucket y otra distribución CloudFront. Hubo que reaplicar build:admin + sync a `sharemechat-admin-audit` + invalidación `E21IB0VBKYNNBW`. Lección documentada en known-debt.
+
+Bug detectado durante la validación que NO se arregla en Capa 1: el filtro por flags `pic_approved`/`video_approved` solo se añadió a las 5 queries del listing público del repo de modelos, pero el matching pool y otras superficies leen `url_pic`/`url_video` directos desde `ModelDocument` sin pasar por los flags. Una modelo con foto recién subida pero aún `PENDING_REVIEW` puede aparecer emparejada con clientes en el matching. La solución estructural es **Capa 2** (multi-asset con tabla aparte `model_assets` y queries que JOIN explícito con `model_asset_reviews APPROVED`); se prioriza Capa 2 sobre parchear Capa 1 porque el modelo de datos cambia de raíz. Anotado en known-debt para trazabilidad.
+
+Validación parcial OK en AUDIT: 6 rows grandfather APPROVED (3 PIC + 3 VIDEO de las 3 modelos demo aprobadas), backend corriendo con JAR SHA `c6002d0e…`, panel admin servido en `admin.audit.sharemechat.com`. La validación manual end-to-end (ver el panel, subir asset, aprobar/rechazar, recibir email) queda como referencia documental — el operador detectó el bug del matching pool antes de cerrar la validación y decidió saltar directamente a Capa 2.
+
 ## 2026-05-29 — Cambio de plazo "7→5 business days" en políticas legales del SPA + PDFs
 
 Cambio de plazo en políticas legales (Refunds, Complaints, Appeals) de "7 business days" a "5 business days" tras feedback de PSP (Segpay) para alinear con expectativas de respuesta de la industria. Aplicado en SPA (`Legal.jsx`, 3 ocurrencias) y en el generador de PDFs legales (`generate_legal_pdfs.py`, 3 ocurrencias). Build de SPA producto sincronizado a los 3 buckets de frontend (`sharemechat-frontend-test`, `sharemechat-frontend-audit`, `sharemechat-frontend-prod`). Invalidación CloudFront aplicada a las distribuciones de TEST (`E2Q4VNDDWD5QBU`) y AUDIT (`E1ILXV7P6ENUV8`); el cambio es visible en test.sharemechat.com y audit.sharemechat.com.

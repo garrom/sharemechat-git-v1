@@ -23,8 +23,21 @@ public class ModelDocument {
     @Column(name = "url_pic", length = 500)
     private String urlPic;
 
+    /**
+     * Flag denormalizado mantenido por {@code ModelAssetReviewService}: TRUE
+     * sólo cuando la última review de la foto está APPROVED. Las queries del
+     * repositorio que listan modelos visibles al cliente filtran por esta
+     * columna para evitar JOIN a {@code model_asset_reviews} en cada listing.
+     */
+    @Column(name = "pic_approved", nullable = false)
+    private boolean picApproved = false;
+
     @Column(name = "url_video", length = 500)
     private String urlVideo;
+
+    /** Análogo a {@link #picApproved} para el vídeo de perfil. */
+    @Column(name = "video_approved", nullable = false)
+    private boolean videoApproved = false;
 
     @Column(name = "url_consent", length = 500)
     private String urlConsent;
@@ -104,6 +117,22 @@ public class ModelDocument {
 
     public void setUrlConsent(String urlConsent) {
         this.urlConsent = urlConsent;
+    }
+
+    public boolean isPicApproved() {
+        return picApproved;
+    }
+
+    public void setPicApproved(boolean picApproved) {
+        this.picApproved = picApproved;
+    }
+
+    public boolean isVideoApproved() {
+        return videoApproved;
+    }
+
+    public void setVideoApproved(boolean videoApproved) {
+        this.videoApproved = videoApproved;
     }
 
     public Instant getCreatedAt() {

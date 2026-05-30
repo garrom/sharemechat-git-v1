@@ -1307,6 +1307,20 @@
     }
   },
   "admin": {
+    "assetModeration": {
+      "reasons": {
+        "LIGHTING": "Insufficient lighting (too dark)",
+        "QUALITY": "Low image/video quality (blurry, pixelated)",
+        "EXPLICIT": "Sexually explicit content (not allowed in profile)",
+        "FACE_NOT_VISIBLE": "Face not visible or partially covered",
+        "IDENTITY_MISMATCH": "Person does not match ID document",
+        "WATERMARK": "Image/video contains watermark from another platform",
+        "THIRD_PARTIES": "Contains other unidentified people",
+        "CONTACT_INFO": "Contains text, URLs, or contact information",
+        "INVALID_FORMAT": "Incorrect format or corrupted file",
+        "OTHER": "Other (please specify)"
+      }
+    },
     "shell": {
       "userFallback": "Backoffice",
       "brand": {

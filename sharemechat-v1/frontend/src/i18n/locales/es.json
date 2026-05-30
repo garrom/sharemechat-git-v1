@@ -1307,6 +1307,20 @@
     }
   },
   "admin": {
+    "assetModeration": {
+      "reasons": {
+        "LIGHTING": "Iluminación insuficiente (demasiado oscuro)",
+        "QUALITY": "Calidad de imagen/vídeo baja (borrosa, pixelada)",
+        "EXPLICIT": "Contenido sexualmente explícito (no permitido en perfil)",
+        "FACE_NOT_VISIBLE": "Cara no visible o parcialmente cubierta",
+        "IDENTITY_MISMATCH": "No es la persona del documento de identidad",
+        "WATERMARK": "Imagen/vídeo con marca de agua de otra plataforma",
+        "THIRD_PARTIES": "Contiene a terceras personas no identificadas",
+        "CONTACT_INFO": "Contiene texto, URLs o información de contacto",
+        "INVALID_FORMAT": "Formato incorrecto o archivo dañado",
+        "OTHER": "Otro (especificar)"
+      }
+    },
     "shell": {
       "userFallback": "Backoffice",
       "brand": {

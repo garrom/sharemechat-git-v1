@@ -7,9 +7,12 @@ import org.springframework.stereotype.Component;
 public class EmailCopyRenderer {
 
     private final EmailLocaleResolver localeResolver;
+    private final AssetRejectionReasonCopy assetRejectionReasonCopy;
 
-    public EmailCopyRenderer(EmailLocaleResolver localeResolver) {
+    public EmailCopyRenderer(EmailLocaleResolver localeResolver,
+                             AssetRejectionReasonCopy assetRejectionReasonCopy) {
         this.localeResolver = localeResolver;
+        this.assetRejectionReasonCopy = assetRejectionReasonCopy;
     }
 
     public EmailContent renderWelcome(User user) {
@@ -177,6 +180,80 @@ public class EmailCopyRenderer {
                 <p><a href="%s">%s</a></p>
                 <p>This link expires in %s.</p>
                 """.formatted(displayName, reason, link, link, expiryText)
+        );
+    }
+
+    /**
+     * Email al modelo cuando un admin/support rechaza su foto o vídeo de
+     * perfil. El motivo se localiza vía
+     * {@link AssetRejectionReasonCopy}; si el moderador adjunta texto
+     * libre (siempre cuando el codigo es {@code OTHER}, opcional para
+     * el resto), se incluye como nota adicional al final.
+     *
+     * @param user        destinatario (su {@code uiLocale} determina el idioma)
+     * @param assetType   {@code "PIC"} o {@code "VIDEO"}
+     * @param reasonCode  uno de los 10 codigos predefinidos + {@code OTHER}
+     * @param reasonText  texto libre del moderador (opcional, salvo OTHER)
+     * @param profileLink URL absoluta al perfil del modelo para resubir contenido
+     */
+    public EmailContent renderAssetRejection(User user,
+                                             String assetType,
+                                             String reasonCode,
+                                             String reasonText,
+                                             String profileLink) {
+        String locale = localeResolver.resolve(user);
+        String displayName = safeLabel(user);
+        String reasonLabel = assetRejectionReasonCopy.getLabel(reasonCode, locale);
+        boolean hasReasonText = reasonText != null && !reasonText.isBlank();
+        String safeProfileLink = (profileLink != null && !profileLink.isBlank()) ? profileLink : "";
+
+        if ("es".equals(locale)) {
+            String assetLabel = "VIDEO".equalsIgnoreCase(assetType) ? "vídeo" : "foto";
+            String moderatorNoteFragment = hasReasonText
+                    ? "<p><b>Detalle del moderador:</b> %s</p>".formatted(reasonText)
+                    : "";
+            String profileLinkFragment = safeProfileLink.isBlank()
+                    ? ""
+                    : "<p>Sube nuevo contenido desde tu perfil: <a href=\"%s\">%s</a></p>"
+                            .formatted(safeProfileLink, safeProfileLink);
+
+            return new EmailContent(
+                    "[SharemeChat] Tu contenido de perfil requiere cambios",
+                    """
+                    <p>Hola %s,</p>
+                    <p>Tu %s de perfil no ha sido aprobada para publicación.</p>
+                    <p><b>Motivo:</b> %s</p>
+                    %s
+                    %s
+                    <p>Cuando tu nueva foto y tu nuevo vídeo estén aprobados, volverás a aparecer en el listado público.</p>
+                    <p>Gracias,<br>El equipo de SharemeChat</p>
+                    """.formatted(displayName, assetLabel, reasonLabel,
+                            moderatorNoteFragment, profileLinkFragment)
+            );
+        }
+
+        // Default: EN
+        String assetLabelEn = "VIDEO".equalsIgnoreCase(assetType) ? "video" : "photo";
+        String moderatorNoteFragmentEn = hasReasonText
+                ? "<p><b>Moderator note:</b> %s</p>".formatted(reasonText)
+                : "";
+        String profileLinkFragmentEn = safeProfileLink.isBlank()
+                ? ""
+                : "<p>Please upload new content from your profile: <a href=\"%s\">%s</a></p>"
+                        .formatted(safeProfileLink, safeProfileLink);
+
+        return new EmailContent(
+                "[SharemeChat] Your profile content requires changes",
+                """
+                <p>Hello %s,</p>
+                <p>Your profile %s has not been approved for publication.</p>
+                <p><b>Reason:</b> %s</p>
+                %s
+                %s
+                <p>Once your new photo and video are approved, you will appear in the public listing again.</p>
+                <p>Thanks,<br>The SharemeChat Team</p>
+                """.formatted(displayName, assetLabelEn, reasonLabel,
+                        moderatorNoteFragmentEn, profileLinkFragmentEn)
         );
     }
 

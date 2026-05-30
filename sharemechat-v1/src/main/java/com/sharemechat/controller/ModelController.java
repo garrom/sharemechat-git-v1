@@ -7,6 +7,7 @@ import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailVerificationRequiredException;
 import com.sharemechat.repository.ModelDocumentRepository;
 import com.sharemechat.service.EmailVerificationService;
+import com.sharemechat.service.ModelAssetReviewService;
 import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.ModelService;
 import com.sharemechat.service.ModelStatsService;
@@ -32,6 +33,7 @@ public class ModelController {
     private final ModelStatsService modelStatsService;
     private final ModelContractService modelContractService;
     private final EmailVerificationService emailVerificationService;
+    private final ModelAssetReviewService modelAssetReviewService;
     private static final Logger log = LoggerFactory.getLogger(ModelController.class);
 
     public ModelController(ModelService modelService,
@@ -40,7 +42,8 @@ public class ModelController {
                            StorageService storageService,
                            ModelStatsService modelStatsService,
                            ModelContractService modelContractService,
-                           EmailVerificationService emailVerificationService) {
+                           EmailVerificationService emailVerificationService,
+                           ModelAssetReviewService modelAssetReviewService) {
         this.modelService = modelService;
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
@@ -48,6 +51,7 @@ public class ModelController {
         this.modelStatsService = modelStatsService;
         this.modelContractService = modelContractService;
         this.emailVerificationService = emailVerificationService;
+        this.modelAssetReviewService = modelAssetReviewService;
     }
 
     // ==========================
@@ -229,6 +233,25 @@ public class ModelController {
 
         modelDocumentRepository.save(doc);
 
+        // Capa 1 moderación de assets: cada upload nuevo de pic/video crea una row
+        // PENDING_REVIEW en model_asset_reviews y baja el flag denormalizado
+        // correspondiente. Hasta que un admin/support apruebe, el modelo
+        // deja de ser visible en los listings al cliente.
+        if (pic != null && !pic.isEmpty()) {
+            modelAssetReviewService.createPendingReview(
+                    user.getId(),
+                    ModelAssetReviewService.ASSET_TYPE_PIC,
+                    doc.getUrlPic()
+            );
+        }
+        if (video != null && !video.isEmpty()) {
+            modelAssetReviewService.createPendingReview(
+                    user.getId(),
+                    ModelAssetReviewService.ASSET_TYPE_VIDEO,
+                    doc.getUrlVideo()
+            );
+        }
+
         if (pic != null && !pic.isEmpty()) {
             try { storageService.deleteByPublicUrl(oldPic); } catch (Exception ignore) {}
         }
@@ -282,8 +305,8 @@ public class ModelController {
             case "idFront" -> { toDelete = doc.getUrlVerificFront(); doc.setUrlVerificFront(null); }
             case "idBack" -> { toDelete = doc.getUrlVerificBack(); doc.setUrlVerificBack(null); }
             case "verificDoc" -> { toDelete = doc.getUrlVerificDoc(); doc.setUrlVerificDoc(null); }
-            case "pic" -> { toDelete = doc.getUrlPic(); doc.setUrlPic(null); }
-            case "video" -> { toDelete = doc.getUrlVideo(); doc.setUrlVideo(null); }
+            case "pic" -> { toDelete = doc.getUrlPic(); doc.setUrlPic(null); doc.setPicApproved(false); }
+            case "video" -> { toDelete = doc.getUrlVideo(); doc.setUrlVideo(null); doc.setVideoApproved(false); }
             default -> { return ResponseEntity.badRequest().body("Campo no soportado: " + field); }
         }
 
