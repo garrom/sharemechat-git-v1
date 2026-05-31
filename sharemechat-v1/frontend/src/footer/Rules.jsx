@@ -105,11 +105,8 @@ export default function Rules() {
   const [isBackHovered, setIsBackHovered] = React.useState(false);
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      history.goBack();
-      return;
-    }
-
+    // history.push('/') respeta el basename del Router: preserva /en bajo inglés
+    // y va a / en español. (Antes goBack() se saltaba el basename y perdía /en.)
     history.push('/');
   };
 

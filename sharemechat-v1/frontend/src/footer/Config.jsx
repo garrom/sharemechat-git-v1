@@ -119,11 +119,8 @@ export default function Config() {
   const history = useHistory();
 
   const back = () => {
-    if (window.history.length > 1) {
-      history.goBack();
-      return;
-    }
-
+    // history.push('/') respeta el basename del Router: preserva /en bajo inglés
+    // y va a / en español. (Antes goBack() se saltaba el basename y perdía /en.)
     history.push('/');
   };
 

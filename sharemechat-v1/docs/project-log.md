@@ -8,6 +8,25 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-05-31 — La navegación interna de producto no preservaba el prefijo /en
+
+**Síntoma reportado por el operador**: un usuario logueado en `/perfil-client` cambia el idioma con el control de la cabecera; la página recarga en `/en/perfil-client` (inglés, correcto), pero al pulsar "Volver" del perfil el idioma vuelve a español porque la URL de destino ya no llevaba el prefijo `/en`.
+
+**Causa raíz**: el basename del Router (`/en` cuando aplica) se fija una vez por carga de página en `App.jsx` a partir de la URL. Las navegaciones que **pasan por React Router** (`<Link>`, `history.push`) heredan ese basename y preservan `/en` automáticamente, pero las que se **saltan el Router** no: `history.goBack()` (nativo, usa la pila del navegador), los `<a href>` absolutos a rutas internas, y `window.location.*` no intencionales. Tras un cambio de idioma (que recarga vía `window.location`), pulsar "Volver" con `history.goBack()` llevaba a la entrada previa del historial, sin `/en` → al recargar, App remonta con basename `/` → español.
+
+**Decisión**: no pelear contra ADR-022. La URL sigue siendo la fuente de verdad del idioma; simplemente se hace que esas navegaciones internas pasen por React Router (`history.push` / `<Link>`), que ya reañade el basename. No se toca el `LocaleSwitcher` (su `window.location` para el switch es intencional) ni el modelo URL-manda.
+
+**Sitios corregidos** (superficie producto):
+
+- Botón "Volver" de los perfiles (`PerfilClient.jsx`, `PerfilModel.jsx`): `history.goBack()` → `history.push('/client')` / `history.push('/model')` (dashboard del rol, determinista).
+- Logos de cabecera de los perfiles: `<a href="/">` → `onClick` con `preventDefault` + `history.push('/')`.
+- `Footer.jsx` (desktop y móvil): anchors internos (FAQ, Safety, Rules, Cookie Settings, marca) → `<Link>`.
+- Botones "atrás" de las páginas legales/info (`Faq.jsx`, `Safety.jsx`, `Rules.jsx`, `Config.jsx`): `history.goBack()` → `history.push('/')`.
+
+**Excepción documentada**: `/legal` es es-only por diseño (App.jsx redirige `/en/legal` → `/legal`). Su enlace en el footer se deja a propósito como anchor absoluto a `/legal`, con comentario en código para que no se "corrija" a `<Link>` por error (bajo `/en` generaría `/en/legal` y forzaría esa redirección con recarga).
+
+**Reconocimiento**: este caso no se detectó al cerrar el frente del modelo URL-manda (commit `696eb6d`); se completa ahora. Desplegado y verificado a nivel de disponibilidad en AUDIT. Deuda de guardarraíl anti-reincidencia abierta en `known-debt.md`.
+
 ## 2026-05-31 — Control de idioma en las páginas de perfil de cliente y modelo
 
 Se añade un control para que el usuario de producto vea y cambie el idioma de la UI desde su propia página de perfil, además del selector del navbar. Alcance: perfil de **cliente** (`PerfilClient.jsx`) y de **modelo** (`PerfilModel.jsx`); el backoffice (`AdminProfilePage`) no se toca (ya mostraba el idioma en solo lectura).

@@ -262,9 +262,13 @@ const PerfilClient = () => {
   return (
     <StyledContainer>
       <StyledNavbar>
-        <StyledBrand href="/" aria-label="SharemeChat" />
+        <StyledBrand
+          href="/"
+          aria-label="SharemeChat"
+          onClick={(e) => { e.preventDefault(); history.push('/'); }}
+        />
         <div>
-          <NavButton type="button" onClick={() => history.goBack()}>
+          <NavButton type="button" onClick={() => history.push('/client')}>
             {t('common.back')}
           </NavButton>
         </div>

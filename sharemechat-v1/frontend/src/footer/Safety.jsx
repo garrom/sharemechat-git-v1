@@ -52,8 +52,9 @@ export default function Safety() {
   const history = useHistory();
 
   const back = () => {
-    if (window.history.length > 1) history.goBack();
-    else history.push('/');
+    // history.push('/') respeta el basename del Router: preserva /en bajo inglés
+    // y va a / en español. (Antes goBack() se saltaba el basename y perdía /en.)
+    history.push('/');
   };
 
   return (

@@ -2,6 +2,20 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-05-31 — Guardarraíl anti-fugas del prefijo de idioma en navegación interna
+
+### [DEUDA mantenibilidad] Evitar que se reintroduzcan fugas del prefijo `/en` en navegación interna
+
+Tras cerrar las fugas conocidas (perfiles "Volver"/logo, footer, botones "atrás" de Faq/Safety/Rules/Config — ver `project-log.md` 2026-05-31), la preservación del prefijo `/en` en producto depende de una **convención implícita**: toda navegación interna debe pasar por React Router (`history.push` / `<Link>`), porque es lo único que hereda el basename del Router. Cualquier `<a href="/ruta-interna">`, `history.goBack()` o `window.location` a una ruta interna multilingüe que se introduzca en el futuro **reintroduce la fuga** de forma silenciosa (solo se nota bajo `/en`, que no es el idioma por defecto de desarrollo).
+
+Pendiente decidir un guardarraíl que haga la regla explícita y automática. Opciones a valorar (prioridad al criterio del proyecto, no urge):
+
+- Regla **ESLint** que prohíba `<a href="/...">` a rutas internas (forzando `<Link>`), y/o que marque `history.goBack()` en superficie producto.
+- Un componente/hook centralizado (`<AppLink>` / `useAppNavigate`) que encapsule la navegación interna locale-safe, de modo que el equipo no dependa de recordar la convención caso a caso.
+- Excepción explícita y documentada para los casos intencionales (Legal es-only, switch de idioma, cross-surface).
+
+No bloquea nada hoy; relevante para que el frente de i18n no se erosione con cambios futuros.
+
 ## 2026-05-30 — Deudas y notas documentadas en cierre de Capa 2 multi-asset + saneo PublicUserDTO + Fase 7/9
 
 ### [LECCIÓN OPERATIVA] Auditar SecurityConfig sistemáticamente por panel admin

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useCallUi } from '../components/CallUiContext';
 import {
   FooterWrap,
@@ -46,7 +47,7 @@ export default function Footer() {
   return (
     <FooterWrap>
       <FooterInner>
-        <BrandTitle as="a" href="/" aria-label="Go to Home" title="Home">SharemeChat®</BrandTitle>
+        <BrandTitle as={Link} to="/" aria-label="Go to Home" title="Home">SharemeChat®</BrandTitle>
 
         <BrandSubRow>
           <BrandSub>Shareme Technologies OÜ</BrandSub>
@@ -67,19 +68,22 @@ export default function Footer() {
 
         <LinksRow>
 
-          <a href="/faq">FAQ</a>
+          <Link to="/faq">FAQ</Link>
           <span className="separator">|</span>
 
-          <a href="/safety">Safety</a>
+          <Link to="/safety">Safety</Link>
           <span className="separator">|</span>
 
-          <a href="/community-guidelines">Rules</a>
+          <Link to="/community-guidelines">Rules</Link>
           <span className="separator">|</span>
 
+          {/* Legal es es-only por diseño: App.jsx redirige /en/legal -> /legal.
+              Se deja como anchor absoluto a /legal a propósito (NO migrar a <Link>:
+              bajo /en generaría /en/legal y forzaría esa redirección con recarga). */}
           <a href="/legal">Legal</a>
           <span className="separator">|</span>
 
-          <a href="/cookies-settings">Cookie Settings</a>
+          <Link to="/cookies-settings">Cookie Settings</Link>
         </LinksRow>
 
         <LegalDesktopOnly>
@@ -98,19 +102,21 @@ export default function Footer() {
           <MobileMoreInner>
             <LinksRowMobile>
 
-              <a href="/faq">FAQ</a>
+              <Link to="/faq">FAQ</Link>
               <span className="separator">|</span>
 
-              <a href="/safety">Safety</a>
+              <Link to="/safety">Safety</Link>
               <span className="separator">|</span>
 
-              <a href="/community-guidelines">Rules</a>
+              <Link to="/community-guidelines">Rules</Link>
               <span className="separator">|</span>
 
+              {/* Legal es es-only por diseño (ver nota en la variante desktop):
+                  anchor absoluto a /legal a propósito, NO migrar a <Link>. */}
               <a href="/legal">Legal</a>
               <span className="separator">|</span>
 
-              <a href="/cookies-settings">Cookie Settings</a>
+              <Link to="/cookies-settings">Cookie Settings</Link>
             </LinksRowMobile>
 
             <LegalText>

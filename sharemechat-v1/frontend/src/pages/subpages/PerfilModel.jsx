@@ -279,9 +279,13 @@ const PerfilModel = () => {
   return (
     <StyledContainer>
       <StyledNavbar>
-        <StyledBrand href="/" aria-label="SharemeChat" />
+        <StyledBrand
+          href="/"
+          aria-label="SharemeChat"
+          onClick={(e) => { e.preventDefault(); history.push('/'); }}
+        />
         <div>
-          <NavButton type="button" onClick={() => history.goBack()}>
+          <NavButton type="button" onClick={() => history.push('/model')}>
             {t('common.back')}
           </NavButton>
         </div>
