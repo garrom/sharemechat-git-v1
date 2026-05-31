@@ -657,7 +657,8 @@ const DashboardClient = () => {
     (async () => {
       try {
         const d = await apiFetch(`/users/${currentModelId}`);
-        const nn = d?.nickname || d?.name || d?.email || 'Modelo';
+        // Capa 2 saneo: solo se lee nickname; name/email del peer ya no se exponen.
+        const nn = d?.nickname || 'Modelo';
         setModelNickname(nn);
       } catch {/* noop */}
     })();
@@ -1019,7 +1020,8 @@ const DashboardClient = () => {
         console.log('[CALL] Resolviendo nombre remoto via /api/users/', id);
         const d = await apiFetch(`/users/${id}`);
 
-        const nn = d?.nickname || d?.name || d?.email || 'Usuario';
+        // Capa 2 saneo: solo se lee nickname; name/email del peer ya no se exponen.
+        const nn = d?.nickname || 'Usuario';
         setCallPeerName(nn);
       } catch {/* noop */}
     })();

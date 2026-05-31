@@ -1,5 +1,5 @@
 // src/pages/subpages/PerfilModel.jsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useAppModals } from '../../components/useAppModals';
 import { useSession } from '../../components/SessionProvider';
@@ -24,10 +24,7 @@ import {
   Label,
   Input,
   Textarea,
-  FileInput,
   Hint,
-  FileNameWrapper,
-  Video,
   ProfileMain,
   ProfileHeader,
   ProfileHeaderAvatar,
@@ -47,7 +44,6 @@ import {
   ProfileColMain,
   ProfileColSide,
   ProfileCard,
-  MediaCard,
   SecurityCard,
   ContractNoticeCard,
   CardHeader,
@@ -57,17 +53,11 @@ import {
   CardFooter,
   FormGridNew,
   FormFieldNew,
-  PhotoPreview,
-  PhotoImg,
-  PhotoEmpty,
-  PhotoActions,
   InlineActions,
   SecurityActions,
 } from '../../styles/subpages/PerfilClientModelStyle';
-import { SelectedFileTag } from '../../styles/pages-styles/ModelDocumentStyles';
 
-const DOCS_GET_URL = '/models/documents/me';
-const DOCS_UPLOAD_URL = '/models/documents';
+import MyAssetsManager from './MyAssetsManager';
 
 const PerfilModel = () => {
   const t = (key, options) => i18n.t(key, options);
@@ -90,14 +80,9 @@ const PerfilModel = () => {
     interests: '',
   });
 
-  const [docs, setDocs] = useState({ urlPic: null, urlVideo: null });
-  const [picFile, setPicFile] = useState(null);
-  const [videoFile, setVideoFile] = useState(null);
-  const [uploadingField, setUploadingField] = useState(null);
-  const [deletingPic, setDeletingPic] = useState(false);
-  const [deletingVideo, setDeletingVideo] = useState(false);
-  const [picKey, setPicKey] = useState(0);
-  const [videoKey, setVideoKey] = useState(0);
+  // Capa 2: avatar del header derivado del asset PIC principal APPROVED.
+  // El MyAssetsManager nos lo entrega vía onAssetsChange en cada refresh.
+  const [headerAvatarUrl, setHeaderAvatarUrl] = useState(null);
 
   // Contrato (solo UX de ROLE_MODEL)
   const [contractLoading, setContractLoading] = useState(false);
@@ -111,22 +96,6 @@ const PerfilModel = () => {
     currentSha256: null,
     currentUrl: null,
   });
-
-  // refs para disparar el click del input oculto
-  const picInputRef = useRef(null);
-  const videoInputRef = useRef(null);
-
-  const loadDocs = async () => {
-    try {
-      const data = await apiFetch(DOCS_GET_URL);
-      setDocs({
-        urlPic: data?.urlPic || null,
-        urlVideo: data?.urlVideo || null,
-      });
-    } catch {
-      // noop
-    }
-  };
 
   const loadContractStatus = async () => {
     setContractLoading(true);
@@ -181,10 +150,7 @@ const PerfilModel = () => {
           interests: data.interests || '',
         });
 
-        await Promise.all([
-          loadDocs(),
-          loadContractStatus(),
-        ]);
+        await loadContractStatus();
       } catch (e) {
         setError(e?.message || t('profileCommon.errors.loadProfile'));
       } finally {
@@ -282,7 +248,6 @@ const PerfilModel = () => {
     } catch (e) {
       setError(e?.message || t('perfilModel.contract.errors.accept'));
       if (url) {
-        // El contrato se puede abrir igualmente
         window.open(url, '_blank', 'noopener,noreferrer');
       }
     } finally {
@@ -290,136 +255,24 @@ const PerfilModel = () => {
     }
   };
 
-  const uploadSingle = async (fieldName, fileObj) => {
-    if (!fileObj) return;
-
-    if (contractInfo?.needsReaccept) {
-      setError(t('perfilModel.contract.errors.acceptBeforeUpload'));
+  // Callback que MyAssetsManager invoca tras cada carga/cambio.
+  // El avatar del header es la URL del asset PIC principal APPROVED.
+  const onAssetsChange = (assets) => {
+    if (!Array.isArray(assets)) {
+      setHeaderAvatarUrl(null);
       return;
     }
-
-    setUploadingField(fieldName);
-    setError('');
-    setMsg('');
-
-    try {
-      const fd = new FormData();
-      fd.append(fieldName, fileObj);
-
-      const data = await apiFetch(DOCS_UPLOAD_URL, {
-        method: 'POST',
-        body: fd,
-      });
-
-      setDocs({
-        urlPic: data?.urlPic || null,
-        urlVideo: data?.urlVideo || null,
-      });
-
-      if (fieldName === 'pic') {
-        setPicFile(null);
-        setPicKey((k) => k + 1);
-      }
-      if (fieldName === 'video') {
-        setVideoFile(null);
-        setVideoKey((k) => k + 1);
-      }
-
-      setMsg(t('perfilModel.media.success.fileUploaded'));
-    } catch (e) {
-      setError(e?.message || t('perfilModel.media.errors.uploadFile'));
-
-      // Si backend devuelve mensaje de contrato, refrescamos estado para actualizar UX
-      if ((e?.message || '').toLowerCase().includes('contrato')) {
-        loadContractStatus();
-      }
-    } finally {
-      setUploadingField(null);
-    }
-  };
-
-  const deletePhoto = async () => {
-    if (!docs.urlPic) return;
-
-    if (contractInfo?.needsReaccept) {
-      setError(t('perfilModel.contract.errors.acceptBeforeEditFiles'));
-      return;
-    }
-
-    if (!window.confirm(t('profileCommon.confirm.deletePhoto'))) return;
-
-    setDeletingPic(true);
-    setError('');
-    setMsg('');
-
-    try {
-      await apiFetch(`${DOCS_UPLOAD_URL}?field=pic`, {
-        method: 'DELETE',
-      });
-
-      setDocs((d) => ({ ...d, urlPic: null }));
-      setPicFile(null);
-      setPicKey((k) => k + 1);
-      setMsg(t('profileCommon.success.photoDeleted'));
-    } catch (e) {
-      setError(e?.message || t('perfilModel.media.errors.deleteFile'));
-      if ((e?.message || '').toLowerCase().includes('contrato')) {
-        loadContractStatus();
-      }
-    } finally {
-      setDeletingPic(false);
-    }
-  };
-
-  const deleteVideo = async () => {
-    if (!docs.urlVideo) return;
-
-    if (contractInfo?.needsReaccept) {
-      setError(t('perfilModel.contract.errors.acceptBeforeEditFiles'));
-      return;
-    }
-
-    if (!window.confirm(t('perfilModel.confirm.deleteIntroVideo'))) return;
-
-    setDeletingVideo(true);
-    setError('');
-    setMsg('');
-
-    try {
-      await apiFetch(`${DOCS_UPLOAD_URL}?field=video`, {
-        method: 'DELETE',
-      });
-
-      setDocs((d) => ({ ...d, urlVideo: null }));
-      setVideoFile(null);
-      setVideoKey((k) => k + 1);
-      setMsg(t('perfilModel.media.success.videoDeleted'));
-    } catch (e) {
-      setError(e?.message || t('perfilModel.media.errors.deleteFile'));
-      if ((e?.message || '').toLowerCase().includes('contrato')) {
-        loadContractStatus();
-      }
-    } finally {
-      setDeletingVideo(false);
-    }
+    const principalPic = assets.find(
+      (a) =>
+        a.assetType === 'PIC'
+        && a.isPrincipal === true
+        && a.isActive === true
+        && a.reviewStatus === 'APPROVED'
+    );
+    setHeaderAvatarUrl(principalPic?.url || null);
   };
 
   const displayName = form.nickname || form.name || form.email || t('perfilModel.displayName');
-
-  const currentPicName = (() => {
-    if (!docs.urlPic) return '';
-    const raw = (docs.urlPic || '').split('?')[0].split('#')[0].split('/').pop() || '';
-    const originalName = raw.replace(/^[0-9a-fA-F-]{36}-/, '');
-    return decodeURIComponent(originalName);
-  })();
-
-  const currentVideoName = (() => {
-    if (!docs.urlVideo) return '';
-    const raw = (docs.urlVideo || '').split('?')[0].split('#')[0].split('/').pop() || '';
-    const originalName = raw.replace(/^[0-9a-fA-F-]{36}-/, '');
-    return decodeURIComponent(originalName);
-  })();
-
   const contractBlocked = contractInfo?.acceptedCurrent === false;
 
   return (
@@ -438,8 +291,8 @@ const PerfilModel = () => {
         <ProfileHeader>
           <ProfileHeaderAvatar>
             <Avatar>
-              {docs.urlPic && (
-                <AvatarImg src={docs.urlPic} alt={t('profileCommon.alt.profilePhoto')} />
+              {headerAvatarUrl && (
+                <AvatarImg src={headerAvatarUrl} alt={t('profileCommon.alt.profilePhoto')} />
               )}
             </Avatar>
           </ProfileHeaderAvatar>
@@ -605,159 +458,16 @@ const PerfilModel = () => {
                   </ProfilePrimaryButton>
                 </CardFooter>
               </ProfileCard>
+
+              {/* GESTOR MULTI-ASSET (Capa 2) — reemplaza las 2 MediaCard antiguas */}
+              <MyAssetsManager
+                contractBlocked={contractBlocked}
+                onAssetsChange={onAssetsChange}
+              />
             </ProfileColMain>
 
-            {/* COLUMNA DERECHA: MULTIMEDIA + SEGURIDAD */}
+            {/* COLUMNA DERECHA: SEGURIDAD Y CUENTA */}
             <ProfileColSide>
-              {/* FOTO DE PERFIL */}
-              <MediaCard>
-                <CardHeader>
-                  <CardTitle>{t('profileCommon.sections.profilePhoto.title')}</CardTitle>
-                  <CardSubtitle>
-                    {t('perfilModel.sections.profilePhoto.subtitle')}
-                  </CardSubtitle>
-                </CardHeader>
-                <CardBody>
-                  {docs.urlPic ? (
-                    <>
-                      <PhotoPreview>
-                        <PhotoImg src={docs.urlPic} alt={t('profileCommon.alt.currentProfilePhoto')} />
-                      </PhotoPreview>
-                      {currentPicName && (
-                        <FileNameWrapper>
-                          <a href={docs.urlPic} target="_blank" rel="noreferrer">
-                            {currentPicName}
-                          </a>
-                        </FileNameWrapper>
-                      )}
-                    </>
-                  ) : (
-                    <PhotoEmpty>{t('perfilModel.empty.notUploaded')}</PhotoEmpty>
-                  )}
-
-                  <PhotoActions>
-                    <FileInput
-                      key={picKey}
-                      id="model-pic"
-                      type="file"
-                      accept="image/*"
-                      ref={picInputRef}
-                      onChange={(e) => setPicFile(e.target.files?.[0] || null)}
-                    />
-
-                    <ProfileSecondaryButton
-                      type="button"
-                      onClick={() => picInputRef.current && picInputRef.current.click()}
-                      disabled={contractBlocked}
-                    >
-                      {t('profileCommon.actions.selectFile')}
-                    </ProfileSecondaryButton>
-
-                    {picFile && (
-                      <SelectedFileTag>{picFile.name}</SelectedFileTag>
-                    )}
-
-                    <ProfilePrimaryButton
-                      type="button"
-                      onClick={() => uploadSingle('pic', picFile)}
-                      disabled={contractBlocked || !picFile || uploadingField === 'pic'}
-                    >
-                      {uploadingField === 'pic' ? t('profileCommon.actions.uploading') : t('profileCommon.actions.uploadPhoto')}
-                    </ProfilePrimaryButton>
-
-                    {docs.urlPic && (
-                      <ProfileDangerOutlineButton
-                        type="button"
-                        onClick={deletePhoto}
-                        disabled={contractBlocked || deletingPic}
-                      >
-                        {deletingPic ? t('profileCommon.actions.deleting') : t('profileCommon.actions.deletePhoto')}
-                      </ProfileDangerOutlineButton>
-                    )}
-                  </PhotoActions>
-
-                  <Hint>
-                    {contractBlocked
-                      ? t('perfilModel.hints.acceptContractForPhoto')
-                      : t('perfilModel.hints.photoFormat')}
-                  </Hint>
-                </CardBody>
-              </MediaCard>
-
-              {/* VÍDEO DE PRESENTACIÓN */}
-              <MediaCard>
-                <CardHeader>
-                  <CardTitle>{t('perfilModel.sections.introVideo.title')}</CardTitle>
-                  <CardSubtitle>
-                    {t('perfilModel.sections.introVideo.subtitle')}
-                  </CardSubtitle>
-                </CardHeader>
-                <CardBody>
-                  {docs.urlVideo ? (
-                    <>
-                      <Video src={docs.urlVideo} controls />
-                      {currentVideoName && (
-                        <FileNameWrapper>
-                          <a href={docs.urlVideo} target="_blank" rel="noreferrer">
-                            {currentVideoName}
-                          </a>
-                        </FileNameWrapper>
-                      )}
-                    </>
-                  ) : (
-                    <PhotoEmpty>{t('perfilModel.empty.notUploaded')}</PhotoEmpty>
-                  )}
-
-                  <PhotoActions>
-                    <FileInput
-                      key={videoKey}
-                      id="model-video"
-                      type="file"
-                      accept="video/*"
-                      ref={videoInputRef}
-                      onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                    />
-
-                    <ProfileSecondaryButton
-                      type="button"
-                      onClick={() => videoInputRef.current && videoInputRef.current.click()}
-                      disabled={contractBlocked}
-                    >
-                      {t('profileCommon.actions.selectFile')}
-                    </ProfileSecondaryButton>
-
-                    {videoFile && (
-                      <SelectedFileTag>{videoFile.name}</SelectedFileTag>
-                    )}
-
-                    <ProfilePrimaryButton
-                      type="button"
-                      onClick={() => uploadSingle('video', videoFile)}
-                      disabled={contractBlocked || !videoFile || uploadingField === 'video'}
-                    >
-                      {uploadingField === 'video' ? t('profileCommon.actions.uploading') : t('perfilModel.actions.uploadVideo')}
-                    </ProfilePrimaryButton>
-
-                    {docs.urlVideo && (
-                      <ProfileDangerOutlineButton
-                        type="button"
-                        onClick={deleteVideo}
-                        disabled={contractBlocked || deletingVideo}
-                      >
-                        {deletingVideo ? t('profileCommon.actions.deleting') : t('perfilModel.actions.deleteVideo')}
-                      </ProfileDangerOutlineButton>
-                    )}
-                  </PhotoActions>
-
-                  <Hint>
-                    {contractBlocked
-                      ? t('perfilModel.hints.acceptContractForVideo')
-                      : t('perfilModel.hints.videoFormat')}
-                  </Hint>
-                </CardBody>
-              </MediaCard>
-
-              {/* SEGURIDAD Y CUENTA */}
               <SecurityCard>
                 <CardHeader>
                   <CardTitle>{t('profileCommon.sections.security.title')}</CardTitle>

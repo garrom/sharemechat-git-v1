@@ -107,6 +107,8 @@ const DashboardAdmin = () => {
     canViewSensitiveDocs: adminView,
     canViewAssetModeration: adminView || supportView || auditView,
     canModerateAssets: adminView || supportView,
+    // Fase 9: rechazo retroactivo de APPROVED es exclusivo de ADMIN
+    canRejectApprovedAssets: adminView,
     canViewStats: adminView || hasBackofficePermission(user, 'stats.read_overview'),
     canViewFinance: adminView
       || (
@@ -440,7 +442,10 @@ const DashboardAdmin = () => {
               title="Moderación de assets de modelo"
               subtitle="Cola de aprobación de foto y vídeo de perfil del modelo. Cada upload genera una review pendiente; el modelo no es visible al cliente hasta que ambos assets estén aprobados."
             >
-              <AdminAssetModerationPanel canModerate={capabilities.canModerateAssets} />
+              <AdminAssetModerationPanel
+                canModerate={capabilities.canModerateAssets}
+                canRejectApproved={capabilities.canRejectApprovedAssets}
+              />
             </AdminPage>
           )}
 

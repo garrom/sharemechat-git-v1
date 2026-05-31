@@ -51,6 +51,16 @@ public class ModerationController {
             BackofficeAuthorities.ROLE_AUDIT
     );
 
+    /**
+     * Capa 2 Fase 9: el rechazo retroactivo de un asset APPROVED es
+     * acción exclusiva de ADMIN. SUPPORT y AUDIT no tienen capacidad
+     * (decisión de negocio: revertir una aprobación previa exige rol
+     * máximo).
+     */
+    private static final Set<String> ROLES_CAN_REJECT_RETROACTIVE = Set.of(
+            BackofficeAuthorities.ROLE_ADMIN
+    );
+
     private final ModelAssetReviewService reviewService;
     private final UserService userService;
     private final BackofficeAccessService backofficeAccessService;
@@ -146,6 +156,35 @@ public class ModerationController {
         }
     }
 
+    /**
+     * Capa 2 Fase 9: rechazo RETROACTIVO de un asset cuya review ya
+     * estaba en APPROVED. Crea una fila nueva REJECTED (sin tocar la
+     * APPROVED histórica), desactiva el asset y auto-rota principal si
+     * procedía. Solo ADMIN (no SUPPORT, no AUDIT).
+     */
+    @PostMapping("/{reviewId}/reject-retroactive")
+    public ResponseEntity<?> rejectRetroactive(@PathVariable Long reviewId,
+                                                @RequestBody ModelAssetRejectRequest request,
+                                                Authentication auth) {
+        Access access = resolveAccess(auth);
+        if (!access.canRejectRetroactive) {
+            return forbidden();
+        }
+        try {
+            ModelAssetReview r = reviewService.rejectApprovedRetroactively(
+                    reviewId,
+                    access.userId,
+                    request != null ? request.reasonCode() : null,
+                    request != null ? request.reasonText() : null
+            );
+            return ResponseEntity.ok(r);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        } catch (IllegalStateException ex) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ex.getMessage());
+        }
+    }
+
     // ============================================================
     // Helpers de autorización
     // ============================================================
@@ -165,6 +204,7 @@ public class ModerationController {
         Set<String> roles = profile.roles();
         out.canModerate = roles.stream().anyMatch(ROLES_CAN_MODERATE::contains);
         out.canRead = roles.stream().anyMatch(ROLES_CAN_READ::contains);
+        out.canRejectRetroactive = roles.stream().anyMatch(ROLES_CAN_REJECT_RETROACTIVE::contains);
         return out;
     }
 
@@ -176,5 +216,6 @@ public class ModerationController {
         Long userId;
         boolean canRead;
         boolean canModerate;
+        boolean canRejectRetroactive;
     }
 }

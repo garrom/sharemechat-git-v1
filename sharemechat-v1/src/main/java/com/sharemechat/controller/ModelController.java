@@ -7,7 +7,6 @@ import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailVerificationRequiredException;
 import com.sharemechat.repository.ModelDocumentRepository;
 import com.sharemechat.service.EmailVerificationService;
-import com.sharemechat.service.ModelAssetReviewService;
 import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.ModelService;
 import com.sharemechat.service.ModelStatsService;
@@ -33,7 +32,6 @@ public class ModelController {
     private final ModelStatsService modelStatsService;
     private final ModelContractService modelContractService;
     private final EmailVerificationService emailVerificationService;
-    private final ModelAssetReviewService modelAssetReviewService;
     private static final Logger log = LoggerFactory.getLogger(ModelController.class);
 
     public ModelController(ModelService modelService,
@@ -42,8 +40,7 @@ public class ModelController {
                            StorageService storageService,
                            ModelStatsService modelStatsService,
                            ModelContractService modelContractService,
-                           EmailVerificationService emailVerificationService,
-                           ModelAssetReviewService modelAssetReviewService) {
+                           EmailVerificationService emailVerificationService) {
         this.modelService = modelService;
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
@@ -51,7 +48,6 @@ public class ModelController {
         this.modelStatsService = modelStatsService;
         this.modelContractService = modelContractService;
         this.emailVerificationService = emailVerificationService;
-        this.modelAssetReviewService = modelAssetReviewService;
     }
 
     // ==========================
@@ -157,8 +153,6 @@ public class ModelController {
             body.put("urlVerificFront", doc.getUrlVerificFront());
             body.put("urlVerificBack", doc.getUrlVerificBack());
             body.put("urlVerificDoc", doc.getUrlVerificDoc());
-            body.put("urlPic", doc.getUrlPic());
-            body.put("urlVideo", doc.getUrlVideo());
             body.put("urlConsent", doc.getUrlConsent());
             body.put("createdAt", doc.getCreatedAt());
             body.put("updatedAt", doc.getUpdatedAt());
@@ -173,8 +167,6 @@ public class ModelController {
             @RequestPart(value = "idFront", required = false) MultipartFile idFront,
             @RequestPart(value = "idBack", required = false) MultipartFile idBack,
             @RequestPart(value = "verificDoc", required = false) MultipartFile verificDoc,
-            @RequestPart(value = "pic", required = false) MultipartFile pic,
-            @RequestPart(value = "video", required = false) MultipartFile video,
             @RequestPart(value = "consent", required = false) MultipartFile consent
     ) throws java.io.IOException {
 
@@ -203,9 +195,10 @@ public class ModelController {
 
         String base = "models/" + user.getId();
 
-        String oldPic = doc.getUrlPic();
-        String oldVideo = doc.getUrlVideo();
-
+        // Capa 2: este endpoint solo maneja KYC docs (idFront/Back/verificDoc/consent).
+        // Los assets de perfil (pic/video) viven ahora en `model_assets` y se
+        // suben vía POST /api/me/assets (ModelAssetController), con su propio
+        // catálogo multi-asset y flujo de review independiente.
         if (idFront != null && !idFront.isEmpty()) {
             String url = storageService.store(idFront, base + "/verification");
             doc.setUrlVerificFront(url);
@@ -218,46 +211,12 @@ public class ModelController {
             String url = storageService.store(verificDoc, base + "/verification");
             doc.setUrlVerificDoc(url);
         }
-        if (pic != null && !pic.isEmpty()) {
-            String url = storageService.store(pic, base + "/profile");
-            doc.setUrlPic(url);
-        }
-        if (video != null && !video.isEmpty()) {
-            String url = storageService.store(video, base + "/profile");
-            doc.setUrlVideo(url);
-        }
         if (consent != null && !consent.isEmpty()) {
             String url = storageService.store(consent, base + "/verification");
             doc.setUrlConsent(url);
         }
 
         modelDocumentRepository.save(doc);
-
-        // Capa 1 moderación de assets: cada upload nuevo de pic/video crea una row
-        // PENDING_REVIEW en model_asset_reviews y baja el flag denormalizado
-        // correspondiente. Hasta que un admin/support apruebe, el modelo
-        // deja de ser visible en los listings al cliente.
-        if (pic != null && !pic.isEmpty()) {
-            modelAssetReviewService.createPendingReview(
-                    user.getId(),
-                    ModelAssetReviewService.ASSET_TYPE_PIC,
-                    doc.getUrlPic()
-            );
-        }
-        if (video != null && !video.isEmpty()) {
-            modelAssetReviewService.createPendingReview(
-                    user.getId(),
-                    ModelAssetReviewService.ASSET_TYPE_VIDEO,
-                    doc.getUrlVideo()
-            );
-        }
-
-        if (pic != null && !pic.isEmpty()) {
-            try { storageService.deleteByPublicUrl(oldPic); } catch (Exception ignore) {}
-        }
-        if (video != null && !video.isEmpty()) {
-            try { storageService.deleteByPublicUrl(oldVideo); } catch (Exception ignore) {}
-        }
 
         var body = new java.util.HashMap<String, Object>();
         body.put("userId", user.getId());
@@ -267,8 +226,6 @@ public class ModelController {
         body.put("urlVerificFront", doc.getUrlVerificFront());
         body.put("urlVerificBack", doc.getUrlVerificBack());
         body.put("urlVerificDoc", doc.getUrlVerificDoc());
-        body.put("urlPic", doc.getUrlPic());
-        body.put("urlVideo", doc.getUrlVideo());
         body.put("urlConsent", doc.getUrlConsent());
         body.put("createdAt", doc.getCreatedAt());
         body.put("updatedAt", doc.getUpdatedAt());
@@ -305,8 +262,6 @@ public class ModelController {
             case "idFront" -> { toDelete = doc.getUrlVerificFront(); doc.setUrlVerificFront(null); }
             case "idBack" -> { toDelete = doc.getUrlVerificBack(); doc.setUrlVerificBack(null); }
             case "verificDoc" -> { toDelete = doc.getUrlVerificDoc(); doc.setUrlVerificDoc(null); }
-            case "pic" -> { toDelete = doc.getUrlPic(); doc.setUrlPic(null); doc.setPicApproved(false); }
-            case "video" -> { toDelete = doc.getUrlVideo(); doc.setUrlVideo(null); doc.setVideoApproved(false); }
             default -> { return ResponseEntity.badRequest().body("Campo no soportado: " + field); }
         }
 

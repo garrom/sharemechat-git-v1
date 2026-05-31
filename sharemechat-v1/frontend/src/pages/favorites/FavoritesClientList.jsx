@@ -2,7 +2,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faTrash, faBan, faUnlock,faFlag } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faTrash, faBan, faUnlock,faFlag, faUser } from '@fortawesome/free-solid-svg-icons';
+import ModelProfileExpanded from '../subpages/ModelProfileExpanded';
 
 import {
   List,
@@ -114,6 +115,19 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   const [unreadMap, setUnreadMap] = useState({});
   const [menu, setMenu] = useState({ open: false, user: null, x: 0, y: 0 });
   const [blockedMap, setBlockedMap] = useState({});
+  // Capa 2 Fase 4: modal "Ver perfil completo" del modelo seleccionado.
+  const [expandedProfile, setExpandedProfile] = useState({ open: false, userId: null, nickname: null });
+  const openExpandedProfile = useCallback((u) => {
+    if (!u?.id) return;
+    setExpandedProfile({
+      open: true,
+      userId: u.id,
+      nickname: u.nickname || null,
+    });
+  }, []);
+  const closeExpandedProfile = useCallback(() => {
+    setExpandedProfile({ open: false, userId: null, nickname: null });
+  }, []);
 
   const { user: sessionUser, loading: sessionLoading } = useSession();
   const { alert, confirm, openBlockReasonModal,openReportAbuseModal, openRemoveFavoriteConfirm } = useAppModals();
@@ -484,6 +498,14 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
       <FavMenu style={{ left: menu.x, top: menu.y }} onClick={(e) => e.stopPropagation()} role="menu">
         {!isBlocked && (
           <>
+            {/* Capa 2 Fase 4: "Ver perfil completo" como primer item del menú */}
+            <FavMenuItem type="button" onClick={() => { closeMenu(); openExpandedProfile(u); }}>
+              <FavMenuIcon><FontAwesomeIcon icon={faUser} /></FavMenuIcon>
+              <span>{i18n.t('favorites.actions.viewProfile')}</span>
+            </FavMenuItem>
+
+            <FavMenuDivider />
+
             <FavMenuItem type="button" onClick={async () => { closeMenu(); await handleRemove(u); }}>
               <FavMenuIcon><FontAwesomeIcon icon={faTrash} /></FavMenuIcon>
               <span>{i18n.t('favorites.actions.delete')}</span>
@@ -514,7 +536,7 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
       </FavMenu>,
       document.body
     );
-  }, [menu, closeMenu, handleRemove, handleReport, handleBlock, handleUnblock]);
+  }, [menu, closeMenu, handleRemove, handleReport, handleBlock, handleUnblock, openExpandedProfile]);
 
   if (sessionLoading) return <StateRow>{i18n.t('favorites.states.loadingSession')}</StateRow>;
   if (!sessionUser) return <StateRow>{i18n.t('favorites.states.signInToView')}</StateRow>;
@@ -549,6 +571,14 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
       </List>
 
       {menuNode}
+
+      {/* Capa 2 Fase 4: modal apilado "Ver perfil completo". */}
+      <ModelProfileExpanded
+        open={expandedProfile.open}
+        userId={expandedProfile.userId}
+        fallbackNickname={expandedProfile.nickname}
+        onClose={closeExpandedProfile}
+      />
     </>
   );
 }

@@ -705,10 +705,13 @@ const DashboardModel = () => {
   useEffect(() => {
     if (!sessionUser?.id) return;
 
+    // Capa 2: el avatar del modelo se sirve desde /users/{id}/avatar, que
+    // resuelve el asset PIC principal aprobado en model_assets. Sustituye
+    // a la lectura Capa 1 de /models/documents/me.urlPic, que ya no existe.
     (async () => {
       try {
-        const d = await apiFetch('/models/documents/me');
-        setProfilePic(d?.urlPic || null);
+        const d = await apiFetch(`/users/${sessionUser.id}/avatar`);
+        setProfilePic(d?.profilePic || null);
       } catch {}
     })();
   }, [sessionUser?.id]);
@@ -723,7 +726,9 @@ const DashboardModel = () => {
     (async () => {
       try {
         const d = await apiFetch(`/users/${currentClientId}`);
-        const nn = d?.nickname || d?.name || d?.email || 'Cliente';
+        // Capa 2 saneo: el endpoint público ya no expone name/email del peer
+        // (eran fallbacks defensivos sobre código muerto: nickname es NOT NULL en BD).
+        const nn = d?.nickname || 'Cliente';
         const role = String(d?.role || '').toUpperCase() || null;
         setClientNickname(nn);
         setCurrentClientRole(role);
@@ -1120,7 +1125,8 @@ const DashboardModel = () => {
       try {
         console.log('[CALL][Model] Resolviendo nombre via /api/users/', id);
         const d = await apiFetch(`/users/${id}`);
-        const nn = d?.nickname || d?.name || d?.email || 'Usuario';
+        // Capa 2 saneo: solo se lee nickname; name/email del peer ya no se exponen.
+        const nn = d?.nickname || 'Usuario';
         setCallPeerName(nn);
 
       } catch {/* noop */}

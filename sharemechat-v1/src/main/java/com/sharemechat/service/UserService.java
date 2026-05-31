@@ -683,17 +683,55 @@ public class UserService {
         return dto;
     }
 
+    /**
+     * Vista pública sanitizada del usuario expuesta a viewers NO
+     * backoffice (USER, CLIENT, MODEL sin rol BO asignado). Elimina
+     * cualquier dato legal/PII del peer. Ver {@link PublicUserDTO}
+     * para el inventario detallado de campos expuestos y excluidos.
+     */
     public PublicUserDTO mapToPublicUserDTO(User user) {
         PublicUserDTO dto = new PublicUserDTO();
         dto.setId(user.getId());
         dto.setNickname(user.getNickname());
-        dto.setName(user.getName());
-        dto.setSurname(user.getSurname());
+        dto.setRole(user.getRole());
         dto.setBiography(user.getBiography());
         dto.setInterests(user.getInterests());
-        dto.setRole(user.getRole());
-        dto.setVerificationStatus(user.getVerificationStatus());
         return dto;
+    }
+
+    /**
+     * Vista completa del usuario expuesta a viewers backoffice
+     * (cualquiera con rol BO: ADMIN, SUPPORT, AUDIT, EDITOR). Incluye
+     * todos los campos del entity {@code User} excepto la {@code password}.
+     * Usada por {@code UserController.getUserById} para servir
+     * gestión y auditoría desde el backoffice.
+     */
+    public BackofficeUserViewDTO mapToBackofficeUserViewDTO(User user) {
+        return new BackofficeUserViewDTO(
+                user.getId(),
+                user.getNickname(),
+                user.getEmail(),
+                user.getRole(),
+                user.getUserType(),
+                user.getName(),
+                user.getSurname(),
+                user.getDateOfBirth(),
+                user.getBiography(),
+                user.getInterests(),
+                user.getVerificationStatus(),
+                user.getIsActive(),
+                user.getUnsubscribe(),
+                user.getUiLocale(),
+                user.getCountryDetected(),
+                user.getAccountStatus(),
+                user.getSuspendedUntil(),
+                user.getRiskReason(),
+                user.getRiskUpdatedAt(),
+                user.getRiskUpdatedBy(),
+                user.getEmailVerifiedAt(),
+                user.getCreatedAt(),
+                user.getUpdatedAt()
+        );
     }
 
 }

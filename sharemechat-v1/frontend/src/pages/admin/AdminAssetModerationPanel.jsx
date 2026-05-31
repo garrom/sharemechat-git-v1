@@ -40,12 +40,14 @@ const STATUS_OPTIONS = [
   { value: 'PENDING_REVIEW', label: 'Pendiente' },
   { value: 'APPROVED', label: 'Aprobado' },
   { value: 'REJECTED', label: 'Rechazado' },
+  { value: 'CANCELLED', label: 'Cancelada por modelo' },
 ];
 
 const STATUS_LABEL = {
   PENDING_REVIEW: 'Pendiente',
   APPROVED: 'Aprobado',
   REJECTED: 'Rechazado',
+  CANCELLED: 'Cancelada por modelo',
 };
 
 const ASSET_LABEL = {
@@ -152,7 +154,7 @@ const RejectionReasonText = styled.div`
 // Componente principal
 // ----------------------------------------------------------------------
 
-const AdminAssetModerationPanel = ({ canModerate = false }) => {
+const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = false }) => {
   const { t } = useTranslation();
 
   const [items, setItems] = useState([]);
@@ -224,9 +226,15 @@ const AdminAssetModerationPanel = ({ canModerate = false }) => {
     }
   };
 
-  const openRejectModal = (row) => {
-    if (!canModerate) return;
-    setRejectTarget({ id: row.id, email: row.email, assetType: row.assetType });
+  const openRejectModal = (row, mode = 'pending') => {
+    // mode: 'pending' (PENDING_REVIEW → REJECTED) o 'retroactive'
+    // (APPROVED → genera fila REJECTED nueva + desactiva asset).
+    if (mode === 'retroactive') {
+      if (!canRejectApproved) return;
+    } else if (!canModerate) {
+      return;
+    }
+    setRejectTarget({ id: row.id, email: row.email, assetType: row.assetType, mode });
     setRejectReasonCode('');
     setRejectReasonText('');
     setRejectError('');
@@ -253,7 +261,10 @@ const AdminAssetModerationPanel = ({ canModerate = false }) => {
     setRejectSubmitting(true);
     setRejectError('');
     try {
-      const res = await fetch(`/api/admin/model-assets/${rejectTarget.id}/reject`, {
+      const endpointPath = rejectTarget.mode === 'retroactive'
+        ? `/api/admin/model-assets/${rejectTarget.id}/reject-retroactive`
+        : `/api/admin/model-assets/${rejectTarget.id}/reject`;
+      const res = await fetch(endpointPath, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -443,7 +454,7 @@ const AdminAssetModerationPanel = ({ canModerate = false }) => {
                           Aprobar
                         </TableSuccessButton>
                         <TableDangerButton
-                          onClick={() => openRejectModal(row)}
+                          onClick={() => openRejectModal(row, 'pending')}
                           title="Rechazar con motivo"
                         >
                           Rechazar
@@ -453,7 +464,17 @@ const AdminAssetModerationPanel = ({ canModerate = false }) => {
                     {isPending && !canModerate && (
                       <span style={{ color: '#6c757d' }}>Solo lectura</span>
                     )}
-                    {!isPending && (
+                    {!isPending && row.status === 'APPROVED' && canRejectApproved && (
+                      <TableActionGroup>
+                        <TableDangerButton
+                          onClick={() => openRejectModal(row, 'retroactive')}
+                          title="Rechazo retroactivo (ADMIN): revierte la aprobación previa. Crea fila REJECTED nueva, desactiva el asset y notifica al modelo."
+                        >
+                          Rechazar (retroactivo)
+                        </TableDangerButton>
+                      </TableActionGroup>
+                    )}
+                    {!isPending && !(row.status === 'APPROVED' && canRejectApproved) && (
                       <span style={{ color: '#9aa3b2' }}>—</span>
                     )}
                   </td>
@@ -467,12 +488,27 @@ const AdminAssetModerationPanel = ({ canModerate = false }) => {
       {rejectTarget && (
         <ModalBackdrop onClick={closeRejectModal}>
           <ModalCard onClick={(e) => e.stopPropagation()}>
-            <ModalTitle>Rechazar asset</ModalTitle>
+            <ModalTitle>
+              {rejectTarget.mode === 'retroactive'
+                ? 'Rechazar asset (retroactivo)'
+                : 'Rechazar asset'}
+            </ModalTitle>
             <ModalSubtitle>
               {ASSET_LABEL[rejectTarget.assetType] || rejectTarget.assetType} del
-              modelo <strong>{rejectTarget.email}</strong>. El modelo recibirá un
-              email con el motivo seleccionado y el asset dejará de ser visible
-              hasta que suba uno nuevo aprobado.
+              modelo <strong>{rejectTarget.email}</strong>.{' '}
+              {rejectTarget.mode === 'retroactive' ? (
+                <>
+                  Esta acción <strong>revierte una aprobación previa</strong>:
+                  la fila APPROVED histórica se conserva, se crea una nueva fila
+                  REJECTED y el asset queda desactivado. El modelo recibirá un
+                  email con el motivo seleccionado.
+                </>
+              ) : (
+                <>
+                  El modelo recibirá un email con el motivo seleccionado y el
+                  asset dejará de ser visible hasta que suba uno nuevo aprobado.
+                </>
+              )}
             </ModalSubtitle>
 
             <FieldBlock style={{ marginBottom: 12 }}>

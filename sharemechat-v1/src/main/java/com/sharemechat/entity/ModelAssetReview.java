@@ -41,6 +41,15 @@ public class ModelAssetReview {
     @Column(name = "asset_url", nullable = false, length = 500)
     private String assetUrl;
 
+    /**
+     * FK al asset concreto (tabla {@code model_assets}) introducida por V5
+     * para Capa 2 (multi-asset). NULL en reviews de Capa 1 que quedaron
+     * huérfanas tras la migración por upload sobrescribiendo el asset
+     * original (su URL antigua ya no existe en {@code model_assets}).
+     */
+    @Column(name = "asset_id")
+    private Long assetId;
+
     /** {@code PENDING_REVIEW} | {@code APPROVED} | {@code REJECTED}. */
     @Column(name = "status", nullable = false, length = 20)
     private String status;
@@ -93,6 +102,9 @@ public class ModelAssetReview {
 
     public String getAssetUrl() { return assetUrl; }
     public void setAssetUrl(String assetUrl) { this.assetUrl = assetUrl; }
+
+    public Long getAssetId() { return assetId; }
+    public void setAssetId(Long assetId) { this.assetId = assetId; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

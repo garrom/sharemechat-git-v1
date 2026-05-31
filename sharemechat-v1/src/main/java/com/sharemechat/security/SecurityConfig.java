@@ -101,6 +101,19 @@ public class SecurityConfig {
                         // Teasers
                         .requestMatchers(HttpMethod.GET, "/api/models/teasers/**").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
 
+                        // ==========================
+                        // MODEL ASSETS - Capa 2 multi-asset
+                        // IMPORTANT: must be BEFORE "/api/models/**" catch-all (linea siguiente del bloque ROLE-SCOPED)
+                        // ==========================
+                        // Galería pública del modelo (vista cliente): cualquier usuario auth
+                        .requestMatchers(HttpMethod.GET, "/api/models/*/assets").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
+                        // Perfil público del modelo (modal "Ver perfil completo" desde favoritos del cliente)
+                        .requestMatchers(HttpMethod.GET, "/api/models/*/public-profile").hasAnyRole("USER", "CLIENT", "MODEL", "ADMIN")
+                        // Endpoints del propio modelo (USER onboarding + MODEL)
+                        .requestMatchers("/api/me/assets/**").hasAnyRole("USER", "MODEL")
+                        .requestMatchers(HttpMethod.GET, "/api/me/assets").hasAnyRole("USER", "MODEL")
+                        .requestMatchers(HttpMethod.POST, "/api/me/assets").hasAnyRole("USER", "MODEL")
+
                         // CLIENTS: documentos
                         .requestMatchers(HttpMethod.GET, "/api/clients/documents/me").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.POST, "/api/clients/documents").hasRole("CLIENT")
@@ -144,6 +157,36 @@ public class SecurityConfig {
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_FINANCE_READ_TOP_CLIENTS))
                         .requestMatchers(HttpMethod.GET, "/api/admin/finance/summary")
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_FINANCE_READ_SUMMARY))
+
+                        // ============================================================
+                        // Capa 2 Fase 9 bugfix: moderación de assets — matchers
+                        // específicos ANTES del catch-all /api/admin/**. Sin esto,
+                        // SUPPORT y AUDIT recibían 403 al leer la cola porque el
+                        // catch-all exigía ROLE_ADMIN. El gating fino del controller
+                        // (canRead / canModerate / canRejectRetroactive) actúa como
+                        // segunda barrera.
+                        //
+                        // IMPORTANTE: el matcher de /reject-retroactive va ANTES
+                        // que el de /reject para mantener orden explícito (Spring
+                        // evalúa en orden de declaración).
+                        // ============================================================
+                        .requestMatchers(HttpMethod.GET, "/api/admin/model-assets/**")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_SUPPORT),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_AUDIT))
+                        .requestMatchers(HttpMethod.POST, "/api/admin/model-assets/*/reject-retroactive")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN))
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/admin/model-assets/*/approve",
+                                "/api/admin/model-assets/*/reject")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_SUPPORT))
 
                         // Product onboarding KYC config (read-only)
                         .requestMatchers(HttpMethod.GET, "/api/kyc/config/product/model-onboarding").hasRole("USER")

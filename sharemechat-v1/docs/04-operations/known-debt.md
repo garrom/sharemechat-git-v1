@@ -2,6 +2,98 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-05-30 — Deudas y notas documentadas en cierre de Capa 2 multi-asset + saneo PublicUserDTO + Fase 7/9
+
+### [LECCIÓN OPERATIVA] Auditar SecurityConfig sistemáticamente por panel admin
+
+Durante el bugfix Fase 9 se descubrió que `/api/admin/model-assets/**` estaba bloqueado para SUPPORT desde Capa 1 (Fase 2 backend, 2026-05-30) sin detectarse. Causa: el catch-all `/api/admin/**` exige `ROLE_ADMIN`, y los endpoints de moderación assets no tenían matcher específico que admitiera `BO_ROLE_SUPPORT` o `BO_ROLE_AUDIT`. La validación del operador con un user ADMIN+SUPPORT simultáneo enmascaró el bug durante 3 deploys.
+
+Patrón a auditar en sesión separada: revisar cada `RequestMapping` de `controller/*.java` con prefijo `/api/admin/`, y confirmar que tiene matcher específico en `SecurityConfig` antes del catch-all si SUPPORT/AUDIT deben poder usarlo. Sospechables: otros paneles del backoffice (AdminAdministrationPanel, AdminFinancePanel, AdminDataPanel, etc.). Si el panel está pensado solo para ADMIN, el catch-all es correcto; si SUPPORT/AUDIT deben tener lectura/operativa, falta matcher.
+
+Prioridad: media-alta. Sin esto, cualquier panel admin nuevo cae al catch-all por defecto y queda silenciosamente bloqueado para SUPPORT/AUDIT.
+
+### [LECCIÓN OPERATIVA] Validar features con TODOS los roles antes de cerrar
+
+Durante 3 deploys de Capa 2/Fase 7/Fase 9, el operador validó el panel de moderación assets como ADMIN. El Bug 1 (SUPPORT bloqueado) no se detectó hasta el cuarto despliegue cuando se hizo prueba dedicada con un user SUPPORT puro. Regla nueva: cualquier feature que afecte a panels backoffice exige validación obligatoria desde un user con SUPPORT puro y otro con AUDIT puro antes de marcar la feature como cerrada. Si la matriz de validación incluye varios roles BO, hacerla siempre desde users separados (no desde un user multi-rol).
+
+### [DEUDA test] Tests JUnit pendientes para servicios y endpoints Capa 2
+
+Sin tests unitarios desplegados para:
+
+- `ModelAssetService`: upload, markPrincipal (validación APPROVED de Fase 9), delete (incluyendo cancel automático de review PENDING), auto-rotación de principal.
+- `ModelAssetReviewService`: createPendingReview, approveReview, rejectReview (con auto-rotación), `rejectApprovedRetroactively` (Fase 9), cancelPendingByAssetId, isModelFullyApproved alineado con queries del pool.
+- `ModelService.getPublicProfile`: validación de disponibilidad (role MODEL + isActive + !unsubscribe + accountStatus ACTIVE + verificationStatus APPROVED), retorno DTO sin name/surname/email/country.
+- `UserController.getUserById`: detección backoffice viewer, retorno `PublicUserDTO` reducido vs `BackofficeUserViewDTO` completo según rol del viewer.
+- Endpoints retroactivo + cola filtrada (`max(id) per asset`) + countByStatus alineado.
+
+Pendiente para sesión dedicada de testing.
+
+### [DEUDA test heredada] `UserControllerConsentMockMvcTest` roto
+
+Test roto desde Fase 2 Capa 1 (deuda heredada del trabajo anterior, no resuelta en esta sesión). El constructor de `UserController` cambió (de `ModelDocumentRepository` a `ModelAssetRepository` en Capa 2) y el test sigue esperando el constructor antiguo. Build se compila con `-Dmaven.test.skip=true`. Adaptar o eliminar pendiente.
+
+### [DEUDA arquitectural] Granularidad fina por rol BO en `BackofficeUserViewDTO`
+
+Hoy ADMIN/SUPPORT/AUDIT/EDITOR ven los mismos datos en el endpoint genérico `/api/users/{id}` cuando son backoffice. Decisión actual: simple y suficiente. Mejora futura: discriminar campos según rol BO (ej. AUDIT no necesita ver `riskReason` ni `suspendedUntil`, EDITOR no necesita ver `email`). Granularidad fina queda como deuda baja hasta que se justifique con un caso de uso real.
+
+### [DEUDA optimización] Cacheo de `viewerIsBackoffice` en sesión Spring Security
+
+`UserController.getUserById` llama a `BackofficeAccessService.loadProfile(viewer)` en cada request. Si este endpoint pasa a hot path (carga masiva de avatares en el cliente, por ejemplo), conviene cachear el flag `isBackoffice` en el `Authentication`/sesión Spring Security para evitar el roundtrip a BD. Hoy no es problema; medir antes de optimizar.
+
+### [DEUDA auditoría amplia] Otros endpoints surface cliente/modelo que devuelven info de terceros
+
+El frente de saneo PublicUserDTO (Fase 5) cubrió solo `/api/users/{id}`. Hay otros endpoints del surface cliente/modelo que pueden estar devolviendo info de OTRO usuario sin auditar (mensajes, favoritos meta, listados públicos). Pendiente: auditoría sistemática del payload de cada endpoint que devuelva datos de terceros, identificando qué campos del User entity expone. Programar junto con tests JUnit del frente Capa 2 — al escribir tests forzados a la lista de campos, los leaks aparecen.
+
+### [DEUDA cosmética] Claves i18n huérfanas en `perfilModel.*` tras refactor Capa 2
+
+Tras eliminar las 2 `MediaCard` de Capa 1 (foto + vídeo individual) en `PerfilModel.jsx`, varias claves quedaron sin consumidor: `perfilModel.sections.profilePhoto.subtitle`, `perfilModel.sections.introVideo.*`, `perfilModel.actions.uploadVideo`, `perfilModel.actions.deleteVideo`, `perfilModel.confirm.deleteIntroVideo`, `perfilModel.media.*`, `perfilModel.hints.acceptContractForPhoto`, `perfilModel.hints.acceptContractForVideo`, `perfilModel.hints.photoFormat`, `perfilModel.hints.videoFormat`, `perfilModel.empty.notUploaded`. Decisión: no se borraron en la sesión para no romper otros consumidores hipotéticos. Limpieza pendiente con un grep cross-referencia.
+
+### [DEUDA codigo muerto] `FavoriteItem.jsx` sin consumidores
+
+`frontend/src/pages/favorites/FavoriteItem.jsx` no se importa desde ningún sitio del frontend. Las listas de favoritos usan `FavListItem` interno de `FavoritesClientList.jsx`/`FavoritesModelList.jsx`. `FavoriteItem.jsx` conserva el helper `resolveProfilePic` con fallbacks legacy (`urlPic`, `documents.urlPic`, etc.) que también son código muerto. Candidato a borrar.
+
+### [DEUDA limpieza BD] Reviews huérfanas residuales en AUDIT
+
+9 filas en `model_asset_reviews` con `asset_id IS NULL` (2 del grandfather V5 + 7 generadas durante validación manual con código pre-Fase 7). Ocultas por el filtro nuevo en la cola admin. Limpieza física puntual sería `DELETE FROM model_asset_reviews WHERE asset_id IS NULL` puntual cuando se quiera base limpia. Sin impacto operativo, no urgente.
+
+### [DEUDA documental] Grep final de referencias legacy `urlPic|urlVideo|picApproved|videoApproved`
+
+Tras la migración Capa 2, las referencias activas en código se han limpiado. Pendiente verificar que no quedan menciones en docs/comentarios/README de los campos eliminados de `model_documents`. Mantener el repo coherente con la realidad post-V5.
+
+### [DEUDA visual opcional] Stat card CANCELLED
+
+`ModelAssetReviewStatsDTO` solo expone `pendingReview/approved/rejected`. El estado `CANCELLED` (Fase 7) no tiene stat card en el header del panel. Si quieres visibilidad permanente del volumen de CANCELLED, ampliar el DTO + un getter en `getStats()` + la 4ª stat card. No bloqueante, solo decisión UX.
+
+### [MEJORA opcional] Distinguir email de rechazo retroactivo vs pre-aprobación
+
+El email al modelo es idéntico para `rejectReview` (pre-aprobación) y `rejectApprovedRetroactively` (Fase 9). Si la UX lo requiere, distinguir el template para que el modelo entienda que se le revierte una aprobación previa. Decisión actual: mismo template para simplicidad. Baja prioridad.
+
+### [MEJORA opcional] Consolidación batch async de emails de rechazo
+
+Si admin rechaza foto Y vídeo del mismo modelo en sesión corta (escenario operativo común), hoy se envían 2 emails separados. Consolidación batch async (debounce por user+sesión) podría enviar un único email "rechazado pic + video" con motivos combinados. Mejora UX baja prioridad.
+
+### [DEUDA cosmética] Warning Flyway MySQL 8.4 sin soporte oficial
+
+Logs de arranque muestran `Flyway upgrade recommended: MySQL 8.4 is newer than this version of Flyway`. Sin impacto funcional (V1..V6 aplicadas OK). Actualizar Flyway en `pom.xml` queda como mantenimiento de dependencias. Baja prioridad.
+
+### [DEUDA arquitectural] Refactor `AdminModelsPanel` (KYC) con patrón Capa 2
+
+`AdminModelsPanel.jsx` (revisión documentos KYC del onboarding del modelo) sigue sin motivo de rechazo, sin email al modelo, sin audit log de la decisión, sin posibilidad de reapertura. El patrón Capa 2 (motivo + email + audit log + cancelado) está validado y reusable. Refactor del panel KYC para alinearlo con el mismo flujo queda como deuda media — se beneficia el operador con consistencia entre las dos pantallas de moderación.
+
+### [NOTA operativa go-live PROD] `ALTER TABLE model_documents/model_assets` con tráfico real
+
+V5 ejecuta `ALTER TABLE model_documents DROP COLUMN url_pic, url_video, pic_approved, video_approved` y crea `model_assets` con índices compuestos. En AUDIT con 3 filas es instantáneo, pero en PROD con tráfico real el ALTER puede ser largo y bloquear. Considerar `ALGORITHM=INPLACE, LOCK=NONE` explícito en el SQL de V5 antes del go-live PROD, o ventana de mantenimiento. Verificar también que la creación de FK e índices de `model_assets` no bloquea writes en `users` durante la migración.
+
+### [MEJORA opcional] Capa 3 multi-asset (más slots)
+
+Si benchmark con competencia post-go-live muestra que 5+2 es restrictivo, ampliar a más slots. Constantes en `ModelAssetService.MAX_ACTIVE_PIC_PER_USER` y `MAX_ACTIVE_VIDEO_PER_USER`. Sin cambio de schema (no hay límite duro en BD). Baja prioridad hasta tener métricas.
+
+### [BUG nuevo detectado en validación final] Selector de idioma UI bloqueado tras login
+
+Operador reporta que una vez autenticado en el SPA producto, el selector de idioma de la UI no permite cambiar idioma. Sin diagnóstico hecho. Investigar en sesión separada cómo está implementado el cambio de idioma (`LocaleSwitcher.jsx`, `useSession`, `i18n/localeUtils.js`), por qué se inmoviliza tras autenticación, y decidir si es bug o comportamiento intencional. Prioridad media.
+
+---
+
 ## 2026-05-30 — Deudas y notas documentadas en cierre de Capa 1 moderación assets
 
 ### [BUG CONOCIDO Capa 1, resuelto en Capa 2] Foto pendiente visible en matching pool

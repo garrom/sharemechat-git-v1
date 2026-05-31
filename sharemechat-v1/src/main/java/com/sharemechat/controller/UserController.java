@@ -5,13 +5,14 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.consent.ConsentState;
 import com.sharemechat.dto.*;
 import com.sharemechat.entity.ClientDocument;
+import com.sharemechat.entity.ModelAsset;
 import com.sharemechat.service.CountryAccessService;
-import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ClientDocumentRepository;
-import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.repository.ModelAssetRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.AgeGatePolicyService;
+import com.sharemechat.service.BackofficeAccessService;
 import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.Cookie;
@@ -33,26 +34,29 @@ public class UserController {
 
     private final UserService userService;
     private final UserRepository userRepository;
-    private final ModelDocumentRepository modelDocumentRepository;
+    private final ModelAssetRepository modelAssetRepository;
     private final ClientDocumentRepository clientDocumentRepository;
     private final CountryAccessService countryAccessService;
     private final ConsentService consentService;
     private final AgeGatePolicyService ageGatePolicyService;
+    private final BackofficeAccessService backofficeAccessService;
 
     public UserController(UserService userService,
                           UserRepository userRepository,
-                          ModelDocumentRepository modelDocumentRepository,
+                          ModelAssetRepository modelAssetRepository,
                           ClientDocumentRepository clientDocumentRepository,
                           CountryAccessService countryAccessService,
                           ConsentService consentService,
-                          AgeGatePolicyService ageGatePolicyService) {
+                          AgeGatePolicyService ageGatePolicyService,
+                          BackofficeAccessService backofficeAccessService) {
         this.userService = userService;
-        this.modelDocumentRepository = modelDocumentRepository;
+        this.modelAssetRepository = modelAssetRepository;
         this.clientDocumentRepository = clientDocumentRepository;
         this.userRepository = userRepository;
         this.countryAccessService = countryAccessService;
         this.consentService = consentService;
         this.ageGatePolicyService = ageGatePolicyService;
+        this.backofficeAccessService = backofficeAccessService;
     }
 
 
@@ -106,6 +110,30 @@ public class UserController {
     }
 
 
+    /**
+     * GET /api/users/{id} — vista de un usuario adaptada a quién pregunta.
+     *
+     * <p>Tres niveles de detalle según el viewer:
+     * <ol>
+     *   <li><b>Self</b> (viewer == target): payload completo
+     *       {@code UserDTO} con todos los datos propios.</li>
+     *   <li><b>Backoffice viewer</b> (cualquier rol BO no vacío:
+     *       ADMIN, SUPPORT, AUDIT, EDITOR): payload completo
+     *       {@code BackofficeUserViewDTO} con todos los campos del
+     *       entity {@code User} salvo la password.</li>
+     *   <li><b>Otro viewer</b> (USER, CLIENT, MODEL sin roles BO):
+     *       payload sanitizado {@code PublicUserDTO} sin datos
+     *       legales/PII (sin name, surname, email, dateOfBirth,
+     *       countryDetected, verificationStatus, etc.).</li>
+     * </ol>
+     *
+     * <p>La detección backoffice se hace consultando
+     * {@code BackofficeAccessService.loadProfile} y verificando si el
+     * set de roles BO del viewer está vacío. Esto cubre tanto el rol
+     * principal ADMIN (que recibe el rol implícito) como los roles
+     * granulares SUPPORT/AUDIT/EDITOR asignados via
+     * {@code user_backoffice_roles}.
+     */
     @GetMapping("/{id}")
     public ResponseEntity<?> getUserById(@PathVariable Long id, Authentication authentication) {
         if (authentication == null || authentication.getName() == null) {
@@ -122,6 +150,13 @@ public class UserController {
             return ResponseEntity.ok(userService.mapToDTO(targetUser));
         }
 
+        BackofficeAccessService.BackofficeAccessProfile viewerProfile =
+                backofficeAccessService.loadProfile(currentUser.getId(), currentUser.getRole());
+        boolean viewerIsBackoffice = viewerProfile != null && !viewerProfile.roles().isEmpty();
+
+        if (viewerIsBackoffice) {
+            return ResponseEntity.ok(userService.mapToBackofficeUserViewDTO(targetUser));
+        }
         return ResponseEntity.ok(userService.mapToPublicUserDTO(targetUser));
     }
 
@@ -235,10 +270,14 @@ public class UserController {
             }
         }
 
-        // Una consulta por tipo para traer urlPic
+        // Avatar del modelo (Capa 2): URL del asset PIC principal aprobado
+        // en model_assets. Se ignora a quien aún no tenga foto aprobada.
         if (!modelIds.isEmpty()) {
-            for (ModelDocument md : modelDocumentRepository.findAllById(modelIds)) {
-                if (md != null) result.put(md.getUserId(), md.getUrlPic());
+            for (Object[] row : modelAssetRepository.findApprovedPrincipalUrlsForUsers(
+                    new ArrayList<>(modelIds), ModelAsset.AssetType.PIC)) {
+                Long uid = ((Number) row[0]).longValue();
+                String url = (String) row[1];
+                result.put(uid, url);
             }
         }
         if (!clientIds.isEmpty()) {
@@ -264,7 +303,7 @@ public class UserController {
         String role = String.valueOf(u.getRole());
 
         if (Constants.Roles.MODEL.equals(role)) {
-            url = modelDocumentRepository.findById(id).map(ModelDocument::getUrlPic).orElse(null);
+            url = modelAssetRepository.findApprovedPrincipalUrl(id, ModelAsset.AssetType.PIC).orElse(null);
         } else if (Constants.Roles.CLIENT.equals(role)) {
             url = clientDocumentRepository.findById(id).map(ClientDocument::getUrlPic).orElse(null);
         }

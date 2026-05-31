@@ -270,6 +270,129 @@
         "uploadFile": "No se pudo subir el archivo",
         "deleteFile": "No se pudo eliminar"
       }
+    },
+    "assetsManager": {
+      "sectionPhotos": {
+        "title": "Mis fotos",
+        "subtitle": "Hasta 5 fotos. La principal aparece primero a los clientes."
+      },
+      "sectionVideos": {
+        "title": "Mis vídeos",
+        "subtitle": "Hasta 2 vídeos. Aparecerán en tu galería pública una vez aprobados."
+      },
+      "slot": {
+        "empty": {
+          "photo": "Subir foto",
+          "video": "Subir vídeo"
+        },
+        "principal": "Principal",
+        "principalTitle": "Es tu archivo principal — el que ven los clientes en primer lugar."
+      },
+      "status": {
+        "approved": "Aprobado",
+        "pending": "Pendiente",
+        "rejected": "Rechazado",
+        "unknown": "Sin revisar"
+      },
+      "limit": {
+        "photoReached": "Has alcanzado el límite de 5 fotos. Elimina alguna primero.",
+        "videoReached": "Has alcanzado el límite de 2 vídeos. Elimina alguno primero."
+      },
+      "menu": {
+        "label": "Acciones",
+        "markPrincipal": "Marcar como principal",
+        "delete": "Eliminar"
+      },
+      "confirm": {
+        "deletePhoto": "¿Eliminar esta foto?",
+        "deleteVideo": "¿Eliminar este vídeo?"
+      },
+      "upload": {
+        "title": {
+          "photo": "Subir nueva foto",
+          "video": "Subir nuevo vídeo"
+        },
+        "preview": {
+          "imageAlt": "Vista previa de la foto seleccionada"
+        },
+        "body": {
+          "notice": "Tu archivo será revisado por el equipo. Recibirás un email con el resultado."
+        },
+        "actions": {
+          "choose": "Seleccionar archivo",
+          "cancel": "Cancelar",
+          "submit": "Subir",
+          "uploading": "Subiendo..."
+        },
+        "errors": {
+          "invalidImageFormat": "Formato no admitido. Usa JPG, PNG o WEBP.",
+          "invalidVideoFormat": "Formato no admitido. Usa MP4.",
+          "tooLargePhoto": "La foto supera el tamaño máximo permitido.",
+          "tooLargeVideo": "El vídeo supera el tamaño máximo permitido.",
+          "uploadFailed": "No se pudo subir el archivo."
+        }
+      },
+      "actions": {
+        "success": {
+          "upload": "Archivo subido. En espera de aprobación.",
+          "markPrincipal": "Archivo marcado como principal.",
+          "delete": "Archivo eliminado."
+        },
+        "errors": {
+          "markPrincipal": "No se pudo marcar como principal.",
+          "delete": "No se pudo eliminar el archivo."
+        }
+      },
+      "rejected": {
+        "label": "Motivo:",
+        "moderatorNote": "Nota del moderador:"
+      },
+      "lightbox": {
+        "open": "Ampliar"
+      },
+      "hints": {
+        "acceptContractFirst": "Debes aceptar la nueva versión del contrato para gestionar tus archivos."
+      },
+      "loading": "Cargando galería...",
+      "loadError": "No se pudieron cargar tus archivos."
+    }
+  },
+  "modelProfileExpanded": {
+    "title": "Perfil de {{name}}",
+    "titleDefault": "Perfil de la modelo",
+    "fallbackNickname": "Modelo",
+    "loading": "Cargando perfil...",
+    "unavailable": "Esta modelo ya no está disponible.",
+    "noPrincipalPhoto": "Sin foto disponible",
+    "labels": {
+      "interests": "Intereses"
+    },
+    "sections": {
+      "photos": "Fotos",
+      "videos": "Vídeos"
+    },
+    "empty": {
+      "photos": "Esta modelo aún no tiene fotos aprobadas.",
+      "videos": "Esta modelo aún no tiene vídeos aprobados."
+    },
+    "alt": {
+      "principalPhoto": "Foto principal de {{name}}",
+      "thumbnailPhoto": "Foto de {{name}}",
+      "expandPhoto": "Ampliar foto",
+      "playVideo": "Reproducir vídeo",
+      "expandedPhoto": "Foto ampliada de {{name}}"
+    },
+    "languages": {
+      "ES": "Español",
+      "EN": "Inglés",
+      "FR": "Francés",
+      "DE": "Alemán",
+      "IT": "Italiano",
+      "PT": "Portugués",
+      "RU": "Ruso",
+      "PL": "Polaco",
+      "NL": "Neerlandés",
+      "RO": "Rumano"
     }
   },
   "modals": {
@@ -414,7 +537,8 @@
       "unblock": "Desbloquear",
       "unblockUser": "Desbloquear usuario",
       "cancel": "Cancelar",
-      "removing": "Quitando…"
+      "removing": "Quitando…",
+      "viewProfile": "Ver perfil completo"
     },
     "menu": {
       "moreOptions": "Más opciones",

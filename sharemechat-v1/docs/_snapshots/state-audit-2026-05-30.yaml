@@ -1,0 +1,304 @@
+metadata:
+  schema_version: 3
+  environment: audit
+  generated_at: "2026-05-30T23:30:00Z"
+  generated_by: manual-cierre-capa-2@multi-asset-feature
+  notes: |
+    Snapshot consolidado de AUDIT tras cierre del frente Capa 2 multi-asset
+    (Fase 2 backend, Fase 3 frontend modelo, Fase 4 frontend cliente, saneo
+    PublicUserDTO, Fase 7 estado CANCELLED, Fase 9 rechazo retroactivo, y
+    bugfix Fase 9 de SecurityConfig + query cola + countByStatus).
+
+    Estado operativo: AUDIT corriendo 24/7 con JAR final post-bugfix
+    (a930800657...). Backend, ambos frontends y migraciones V5+V6
+    desplegadas. Smoke tests automaticos OK. Validacion manual del operador
+    completada para los flujos clave (modelo upload/markPrincipal/delete,
+    cliente perfil expandido, admin aprobar/rechazar/rechazo retroactivo).
+
+    TEST y PROD NO han recibido esta linea de cambios. PROD sigue con el
+    estado del snapshot anterior (state-prod-2026-05-27-1621.yaml). Nivelar
+    TEST queda explicitamente fuera del scope de esta sesion.
+
+# ============================================================
+# BLOQUE 1 — Identidad del entorno
+# ============================================================
+identity:
+  aws_account: 430118829334
+  region: eu-central-1
+  ec2:
+    instance_id: i-0d9149cd8a0e24104
+    type: t3.medium
+    state: running (24/7)
+    private_ip: 172.31.19.114
+    public_ip: 18.195.185.25
+    az: eu-central-1a
+    subnet: subnet-0c26def4988099e1b
+    ssh_alias: audit-backend
+  rds:
+    identifier: db1-sharemechat-audit
+    state: available
+    engine: mysql 8.4.7
+    instance_class: db.t3.micro
+    endpoint: db1-sharemechat-audit.c1gsc6qg4l8y.eu-central-1.rds.amazonaws.com
+    schema: db1_sharemechat_audit
+  cloudfront_distributions:
+    - logical_name: frontend_public
+      id: E1ILXV7P6ENUV8
+      aliases: [audit.sharemechat.com]
+      origin: sharemechat-frontend-audit
+      role: SPA product surface
+    - logical_name: backoffice_admin
+      id: E21IB0VBKYNNBW
+      aliases: [admin.audit.sharemechat.com]
+      origin: sharemechat-admin-audit
+      role: SPA admin surface
+    - logical_name: assets_canonical
+      id: E2NC4TEJAWOI3L
+      aliases: [assets.audit.sharemechat.com]
+      origin: assets-sharemechat-audit
+      role: Imagenes y vıdeos pıblicos via OAC
+  s3_buckets:
+    - {name: sharemechat-frontend-audit,        role: bucket SPA product surface, served_by: frontend_public}
+    - {name: sharemechat-admin-audit,           role: bucket SPA admin surface,   served_by: backoffice_admin}
+    - {name: assets-sharemechat-audit,          role: bucket assets publicos,     served_by: assets_canonical}
+    - {name: sharemechat-storage-audit,         role: bucket uploads privados (KYC + asset originales),     served_by: ninguno (descargas via /api/storage/content)}
+    - {name: sharemechat-content-private-audit, role: bucket Markdown crudo CMS, served_by: ninguno}
+    - {name: sharemechat-cf-logs-audit,         role: bucket logs CloudFront,    served_by: ninguno}
+    - {name: sharemechat-maintenance,           role: bucket failover mantenimiento (multi-env prefix /audit/), served_by: ninguno (origen failover)}
+
+# ============================================================
+# BLOQUE 2 — Estado de la BD
+# ============================================================
+database:
+  flyway:
+    head_version: 6
+    head_description: "model asset review cancelled status"
+    applied_in_session: [V5 (add_model_assets_multi), V6 (model_asset_review_cancelled_status)]
+    validation_log: "Successfully validated 7 migrations (V1..V6 + baseline interna)"
+  tables_relevant:
+    model_documents:
+      total_rows: 3
+      columns_post_v5:
+        - "Solo KYC: url_verific_front, url_verific_back, url_verific_doc, url_consent, timestamps, verification_status, etc."
+        - "DROPped en V5: url_pic, url_video, pic_approved, video_approved"
+    model_assets:
+      total_rows: 6
+      pic_rows: 3
+      video_rows: 3
+      principal_rows: 6
+      active_rows: 6
+      created_in_v5: true
+      grandfather_predicted_in_paso_1b: "3 PIC + 3 VIDEO = 6 (todos principal+active, position=0). Coincide 100% con realidad."
+    model_asset_reviews:
+      total_rows: 15
+      breakdown_by_status_raw:
+        PENDING_REVIEW: 1
+        APPROVED: 12
+        REJECTED: 1
+        CANCELLED: 1
+      orphans_asset_id_null: 9
+      breakdown_filtered_last_per_asset:
+        PENDING_REVIEW: 0
+        APPROVED: 6
+        REJECTED: 0
+        CANCELLED: 0
+      notes: |
+        Las 9 huerfanas (asset_id NULL) son combinacion de:
+          - 2 huerfanas grandfather V5 originales (review historica cuya URL
+            ya no matcheaba con model_documents al aplicar V5)
+          - 7 huerfanas generadas durante validacion manual cuando modelo
+            borro assets que tenian reviews antes del bugfix Fase 9 +
+            posiblemente algunos rechazos retroactivos en assets que
+            posteriormente desaparecieron.
+        Todas estan ocultas por el filtro nuevo "asset_id IS NOT NULL"
+        en la cola admin (BugFix Fase 9). No impactan operativamente.
+        Limpieza fisica puntual queda como deuda en known-debt.md.
+    backoffice_access_audit_log:
+      contains_entries_of_session: true
+      acciones_relevantes: [ASSET_APPROVE, ASSET_REJECT, ASSET_CANCEL, ASSET_REJECT_RETROACTIVE]
+  modelos_demo_visibles:
+    en_pool_real_post_capa_2: 6
+    notes: "Los 6 assets vivos PIC+VIDEO principal+APPROVED en model_assets corresponden a 3 modelos demo con ambos tipos aprobados (incluyendo grandfather V5 + uploads de validacion)."
+
+# ============================================================
+# BLOQUE 3 — Estado del backend
+# ============================================================
+backend:
+  jar:
+    path_on_ec2: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+    sha256: a930800657a1e612bdb5cc29557654c10cf78ca7436c6fdfcbcbc5c825dd9fce
+    size_bytes: 106117137
+    deployed_at: "2026-05-30T23:10:00Z"
+    pid: 2456769
+    contains_features:
+      - Capa 2 multi-asset (entidad ModelAsset, ModelAssetService, controller, repo)
+      - Saneo PublicUserDTO + BackofficeUserViewDTO (deteccion viewer backoffice)
+      - Endpoint publico modelo (/api/models/{id}/public-profile)
+      - Endpoint galeria modelo (/api/models/{id}/assets)
+      - Estado CANCELLED (Fase 7) con auto-cancel review pendiente al borrar asset
+      - Auto-rotacion principal al rechazar (helper compartido Fase 7 + Fase 9)
+      - Rechazo retroactivo solo ADMIN (Fase 9)
+      - markPrincipal exige APPROVED (Fase 9)
+      - Cola admin "ultima review por asset" (BugFix Fase 9)
+      - SecurityConfig matchers especificos /api/admin/model-assets/** (BugFix Fase 9)
+  jar_backups_conservados:
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-PRO-5.A": "JAR PRO-5.A original"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-auth-fix-v2-2026-05-27": "JAR pre auth bypass fix"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-country-redesign-2026-05-27": "JAR v2 pre country redesign"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-asset-moderation-2026-05-30": "JAR pre Capa 1 (asset moderation)"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-capa-2-2026-05-30": "JAR Capa 1 (c6002d0e...) pre-deploy Capa 2"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-fase-7-2026-05-30": "JAR Capa 2 + saneo pre-Fase 7 (223eeb23...)"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-fase-9-2026-05-30": "JAR Fase 7 pre-Fase 9 (947f7265...)"
+    "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-bugfix-fase-9-2026-05-30": "JAR Fase 9 pre-BugFix (f5d0cc80...)"
+  systemd:
+    unit: sharemechat-audit.service
+    user: ec2-user
+    profile: audit
+    java: /usr/lib/jvm/java-17-amazon-corretto.x86_64/bin/java
+    working_dir: /home/ec2-user/sharemechat-v1
+    env_files: [/opt/sharemechat/config.env, /opt/sharemechat/secrets.env]
+  config_state:
+    country_access:
+      enabled: false
+      block_when_missing: false
+      notes: "Desactivado durante PSP onboarding (deuda 2026-05-29). Reactivar cuando se complete onboarding CCBill/Segpay y se confirmen IPs PSPs."
+    product_access:
+      mode: OPEN
+      registration_client: disabled
+      registration_model: disabled
+      notes: "Registros desactivados por convencion AUDIT post-PSP fase."
+    storage:
+      type: s3
+      bucket: sharemechat-storage-audit
+      region: eu-central-1
+      key_prefix: private-uploads
+    webrtc_turn:
+      udp: "turn:18.195.185.25:3478?transport=udp"
+      tcp: "turn:18.195.185.25:3478?transport=tcp"
+      tls: ""
+  flyway_db_backups:
+    "/tmp/audit-backup-pre-v5-2026-05-30.sql": "4 tablas pre-V5 (17,454 B)"
+    "/tmp/audit-backup-pre-v6-2026-05-30.sql": "2 tablas pre-V6 (7,201 B)"
+    "/tmp/audit-backup-pre-fase9-2026-05-30.sql": "3 tablas pre-Fase 9 codigo (10,778 B)"
+    "/tmp/audit-backup-pre-bugfix-fase9-2026-05-30.sql": "2 tablas pre-bugfix Fase 9 codigo (8,926 B)"
+
+# ============================================================
+# BLOQUE 4 — Estado del frontend
+# ============================================================
+frontend:
+  product_surface:
+    bucket: sharemechat-frontend-audit
+    distribution: E1ILXV7P6ENUV8
+    assets:
+      main_js:    {path: "static/js/main.09767365.js",          sha256: "d3131e0359626409a3f8804d0250816f4cb5a994db5cb9fafd481961bbf12e7e"}
+      chunk_406:  {path: "static/js/406.09e5dfd9.chunk.js",     sha256: "f61960d7090acde1179781569f53fae80f87563ca5091a9c7981b0f08ef920ec"}
+      chunk_572:  {path: "static/js/572.673490f3.chunk.js",     sha256: "92287091db3ba9af99eae716f47981d119fde594efdc27716cfca4cafaaadaad"}
+      main_css:   {path: "static/css/main.a4bb417b.css",        sha256: "1362ea7a206a6576736937b6ca0899149f091b94e231571657fbde3b6b4e74b7"}
+    contains_features:
+      - MyAssetsManager.jsx (gestor 5 fotos + 2 vıdeos del modelo)
+      - ModelProfileExpanded.jsx (modal cliente "Ver perfil completo")
+      - FavoritesClientList.jsx con item "Ver perfil completo" en FavMenu
+      - PerfilModel.jsx refactorizado (MediaCard Capa 1 reemplazada por MyAssetsManager)
+      - DashboardModel.jsx avatar via /users/{id}/avatar (Capa 2 endpoint)
+      - 4 frontends sanitizados del fallback muerto `|| d?.name || d?.email`
+  admin_surface:
+    bucket: sharemechat-admin-audit
+    distribution: E21IB0VBKYNNBW
+    assets:
+      main_js:    {path: "static/js/main.8fdc22b3.js",          sha256: "fb6d64fbbc4ba4c33b244db7a6047b5d8c7a7cc614063e7a21d888e32e3e0e6b"}
+      chunk_406:  {path: "static/js/406.8c4b7aa3.chunk.js",     sha256: "efe123ee7ffb18b3f8d9f9761254c7cade5511f243b215762d2103c3564af0bc"}
+      chunk_572:  {path: "static/js/572.11e596ac.chunk.js",     sha256: "7eb6c3d47027364f9ff01454b9ccb31eca603e9d38072b8ad5108c67a2b47a1f"}
+      main_css:   {path: "static/css/main.a4bb417b.css",        sha256: "1362ea7a206a6576736937b6ca0899149f091b94e231571657fbde3b6b4e74b7"}
+    contains_features:
+      - AdminAssetModerationPanel: filtro CANCELLED + boton Rechazar (retroactivo) ADMIN-only
+      - DashboardAdmin capability canRejectApprovedAssets = adminView
+
+# ============================================================
+# BLOQUE 5 — Estado funcional Capa 2 post-deploy
+# ============================================================
+functional_state:
+  capa_2_multi_asset:
+    state: DEPLOYED_AND_VALIDATED
+    deployed_at: "2026-05-30"
+    backend_jar: a930800657...
+    migrations_applied: [V5, V6]
+    flujos_validados_por_operador:
+      - "Modelo sube foto: queda PENDING. Admin aprueba: pasa APPROVED. Modelo visible en pool tras aprobar PIC+VIDEO principales."
+      - "Modelo sube 2a foto: queda PENDING + isPrincipal=false. Foto1 sigue principal."
+      - "Modelo borra asset PENDING: review pasa a CANCELLED, asset hard-delete + S3 cleanup."
+      - "Admin rechaza PENDING: status REJECTED, auto-rotacion si era principal, email al modelo, asset queda no visible."
+      - "Admin rechaza retroactivamente APPROVED (solo ADMIN): nueva fila REJECTED + APPROVED historica preservada + asset is_active=false + auto-rotacion + email."
+      - "SUPPORT entra al panel: lee cola (BugFix Fase 9, antes fallaba 403). NO ve boton Rechazo retroactivo."
+      - "AUDIT entra al panel: solo lectura. NO ve botones."
+      - "Cliente accede a 'Ver perfil completo' desde menu '...' de favorito: modal con nickname/biografia/idiomas + galeria fotos+vıdeos aprobados."
+      - "Modelo no puede marcar PENDING como principal (Fase 9 gate)."
+  saneo_privacidad:
+    state: DEPLOYED
+    publicUserDTO_reducido: [id, nickname, role, biography, interests]
+    backofficeUserViewDTO: "Todos los datos del User excepto password. Resolucion por BackofficeAccessService.loadProfile(viewer)"
+    consumidores_limpiados:
+      - DashboardModel.jsx (linea 728): elimina fallback `|| d?.name || d?.email`
+      - DashboardModel.jsx (linea 1125): idem
+      - DashboardClient.jsx (linea 659): idem
+      - DashboardClient.jsx (linea 1020): idem
+  pool_visibilidad:
+    criterio: "user.role=MODEL AND user.verificationStatus=APPROVED AND existe asset PIC principal+activo+APPROVED AND existe asset VIDEO principal+activo+APPROVED"
+    queries_que_aplican: [countEligibleModelsWithVideo, findTeasersPage, findTopByEarnings, findNewestModels, findRandomModels]
+    isModelFullyApproved_alineada: true (Fase 7 D4)
+  cola_admin:
+    criterio: "ultima review por asset (max(id)) + asset_id NOT NULL"
+    stat_cards_alineadas: true (BugFix Fase 9)
+    huerfanas_ocultas: true (filtro asset_id IS NOT NULL)
+
+# ============================================================
+# BLOQUE 6 — Deudas pendientes (resumen; detalle en known-debt.md)
+# ============================================================
+known_debt_summary:
+  alta:
+    - "Selector idioma UI bloqueado tras login (operador reporto en validacion final; investigar en sesion separada)"
+    - "Auditar SecurityConfig de OTROS paneles admin (descubierto bugfix Fase 9: /api/admin/model-assets/** bloqueado para SUPPORT desde Capa 1 sin detectar)"
+  media:
+    - "Tests JUnit ModelAssetService + ModelAssetReviewService pendientes"
+    - "UserControllerConsentMockMvcTest roto desde Fase 2 Capa 1 (constructor cambiado)"
+    - "AdminModelsPanel KYC con mismo patron motivo/email/audit/cancelado de Capa 2"
+    - "Auditoria amplia endpoints surface cliente/modelo que devuelven info de terceros"
+    - "Granularidad fina por rol BO en BackofficeUserViewDTO (hoy todos los BO ven los mismos datos)"
+  baja:
+    - "FavoriteItem.jsx codigo muerto sin consumidores (candidato a borrar)"
+    - "Claves i18n huerfanas en perfilModel.* tras refactor Capa 2"
+    - "Reviews huerfanas APPROVED grandfather V5 (9 actualmente, ocultas por filtro; limpieza fisica puntual)"
+    - "Grep final referencias urlPic/urlVideo/picApproved/videoApproved en docs/comentarios"
+    - "Warning Flyway MySQL 8.4 (Flyway anterior a soporte oficial, sin impacto funcional)"
+    - "Stat card CANCELLED si se quiere visibilidad permanente"
+    - "Distincion email retroactivo vs pre-aprobacion si UX lo requiere"
+    - "Consolidacion emails rechazo en batch async"
+    - "Capa 3 multi-asset (mas slots) si benchmark con competencia lo justifica"
+    - "ALTER TABLE en PROD go-live con ventana mantenimiento o ALGORITHM=INPLACE"
+    - "Cacheo viewerIsBackoffice en sesion Spring Security si endpoint pasa a hot path"
+
+# ============================================================
+# BLOQUE 7 — Proximos pasos identificados
+# ============================================================
+next_steps:
+  inmediatos:
+    1_investigar_selector_idioma:
+      priority: media
+      scope: "Selector idioma UI bloqueado tras login. Determinar si es bug o intencional, decidir politica."
+      owner: proxima_sesion
+    2_auditoria_security_config_otros_paneles_admin:
+      priority: alta
+      scope: "Revisar sistematicamente que cada panel admin tiene matchers SecurityConfig adecuados por rol. Patron descubierto en bugfix Fase 9 sugiere que otros paneles pueden tener bloqueos no detectados."
+      owner: proxima_sesion
+  diferidos:
+    nivelar_TEST_con_audit:
+      priority: media
+      scope: "Aplicar V5+V6 + JAR Fase 9 + bugfix + ambos frontends a TEST. EXPLICITAMENTE FUERA del scope de esta sesion."
+      condicion_disparo: "Cuando el operador decida promover Capa 2 a TEST para QA externa."
+    nivelar_PROD_con_audit:
+      priority: alta
+      scope: "Aplicar todo a PROD cuando llegue go-live. Requiere ventana de mantenimiento o ALGORITHM=INPLACE para los ALTER de V5 (model_documents DROP columns)."
+      condicion_disparo: "Operador autoriza go-live publico (planificado 1 julio 2026)."
+  observaciones_operativas:
+    - "Los 4 deploys de esta sesion (Capa 2, Fase 7, Fase 9, bugfix Fase 9) tuvieron 0 fallos de Flyway y 0 errores de arranque Spring. El procedimiento (backup BD + backup JAR + scp + sync SPAs + restart + invalidar CF + smoke) es robusto y reproducible."
+    - "La validacion manual del operador detecto 3 bugs Fase 9 que el smoke automatico no podia detectar (BUG 1 SUPPORT bloqueado requiere auth real como SUPPORT; BUG 2 duplicados requiere flujo completo de rechazo retroactivo). Leccion: la validacion con TODOS los roles antes de cerrar feature es obligatoria."
+    - "9 huerfanas residuales en BD AUDIT no son operativamente bloqueantes (ocultas por filtro nuevo). Si en futuro se quiere base limpia, sera DELETE FROM model_asset_reviews WHERE asset_id IS NULL puntual."
