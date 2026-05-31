@@ -15,6 +15,50 @@ Los runbooks del repositorio principal deben servir para operar el sistema a niv
 - validar conexión a `/messages`
 - comprobar uploads y assets legales
 
+## Runbook de rollback de frontend (S3 + CloudFront)
+
+El despliegue de frontend (`ops/scripts/deploy-frontend.ps1`) hace `aws s3 sync --delete` sobre el bucket de la surface, lo que **sobrescribe y borra** el bundle anterior. Los buckets frontend no tienen versionado, por lo que el deploy es irreversible salvo que exista un backup previo. Desde 2026-05-31 el flujo en AUDIT toma un backup antes de cada deploy en un prefijo dedicado del bucket de backups general; este runbook describe cómo revertir desde ahí.
+
+**Convención de recursos** (los IDs concretos se resuelven en `~/.sharemechat/state-mapping.yaml`, no se fijan aquí; ver `access-and-tooling.md`):
+
+| Surface | Bucket frontend (logical) | Distribución (logical) | Prefijo de backup |
+|---|---|---|---|
+| product | `frontend_product` | `frontend_public` | `s3://sharemechat-backups/<env>/frontend/product/` |
+| admin | `frontend_admin` | `backoffice_admin` | `s3://sharemechat-backups/<env>/frontend/admin/` |
+
+**Backup pre-deploy** (lo hace el operador antes de cada `deploy-frontend.ps1`, una surface a la vez). El prefijo es sobrescribible: siempre contiene exactamente un respaldo, el del estado inmediatamente anterior al último deploy. El bucket de backups tiene versionado, así que el estado previo a ese queda como versión noncurrent (~30 d por lifecycle) como red extra:
+
+```
+aws s3 sync s3://<frontend-bucket>/ s3://sharemechat-backups/<env>/frontend/<surface>/ --delete
+```
+
+**Rollback** (restaurar el bundle anterior + reinvalidar). Ejemplo concreto para AUDIT (sustituir bucket/distribución por los de la surface a revertir):
+
+```
+# Producto AUDIT (bucket sharemechat-frontend-audit, distribución E1ILXV7P6ENUV8)
+aws s3 sync s3://sharemechat-backups/audit/frontend/product/ s3://sharemechat-frontend-audit/ --delete
+aws s3 cp s3://sharemechat-frontend-audit/index.html s3://sharemechat-frontend-audit/index.html \
+  --metadata-directive REPLACE \
+  --cache-control "no-cache, no-store, must-revalidate" \
+  --content-type "text/html; charset=utf-8"
+aws cloudfront create-invalidation --distribution-id E1ILXV7P6ENUV8 --paths "/*"
+
+# Admin AUDIT (bucket sharemechat-admin-audit, distribución E21IB0VBKYNNBW)
+aws s3 sync s3://sharemechat-backups/audit/frontend/admin/ s3://sharemechat-admin-audit/ --delete
+aws s3 cp s3://sharemechat-admin-audit/index.html s3://sharemechat-admin-audit/index.html \
+  --metadata-directive REPLACE \
+  --cache-control "no-cache, no-store, must-revalidate" \
+  --content-type "text/html; charset=utf-8"
+aws cloudfront create-invalidation --distribution-id E21IB0VBKYNNBW --paths "/*"
+```
+
+El `aws s3 cp` reaplica el `cache-control` no-cache sobre `index.html` que el deploy le pone (el resto del bundle es immutable por hash). Tras la invalidación, esperar 30-90 s a que CloudFront propague. Validar con el "Runbook de validación tras despliegue".
+
+**Notas**:
+
+- Hoy solo AUDIT tiene este patrón cableado. TEST y PROD están pendientes de nivelación (ver `known-debt.md` 2026-05-31, "[DEUDA operativa] Nivelar a TEST y PROD el patrón de backup de frontend estrenado en AUDIT").
+- Perfil AWS: el despliegue y el rollback usan el perfil por defecto del operador (`sharemechat-deployer`), igual que `deploy-frontend.ps1`. Requiere `s3:GetObject/PutObject/DeleteObject` + `s3:ListBucket` sobre los buckets implicados y `cloudfront:CreateInvalidation` sobre la distribución.
+
 ## Runbook de revisión de onboarding modelo
 
 - verificar modo activo de onboarding

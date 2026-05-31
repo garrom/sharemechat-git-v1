@@ -8,6 +8,7 @@ import {
   normalizeLocale,
   setStoredLocale
 } from '../i18n/localeUtils';
+import { isAdminSurface } from '../utils/runtimeSurface';
 ;
 
 const SessionContext = createContext({
@@ -48,7 +49,26 @@ export const SessionProvider = ({ children }) => {
     const uiLocale = getUserUiLocale(u);
     if (!uiLocale) return;
 
+    // Mantenemos localStorage en sync con la preferencia persistida: alimenta
+    // la cabecera Accept-Language (config/http.js) y "recuerda" la eleccion.
+    // No afecta al idioma MOSTRADO en producto (lo decide la URL).
     setStoredLocale(uiLocale);
+
+    // ADR-022: en la superficie PRODUCTO (y blog) el idioma MOSTRADO lo decide
+    // EXCLUSIVAMENTE la URL (basename `/en` o prefijo de path), resuelto en
+    // App.jsx / i18n init. La preferencia persistida (user.ui_locale) NO debe
+    // pisar ese locale en cada carga autenticada: hacerlo revertia el cambio
+    // de idioma del usuario logueado (regresion introducida en commit 7520029).
+    // La eleccion se sigue PERSISTIENDO al cambiar (LocaleSwitcher -> PUT
+    // /users/me/ui-locale) para que los emails transaccionales sigan en el
+    // idioma correcto; aqui solo evitamos que reimponga el render.
+    //
+    // En BACKOFFICE/ADMIN la URL no transporta locale (no hay basename `/en`),
+    // asi que la preferencia persistida sigue gobernando el render, igual que
+    // hoy: el selector del admin persiste y no se revierte.
+    if (!isAdminSurface()) {
+      return;
+    }
 
     try {
       await i18n.changeLanguage(uiLocale);

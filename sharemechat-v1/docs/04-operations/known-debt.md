@@ -88,9 +88,25 @@ V5 ejecuta `ALTER TABLE model_documents DROP COLUMN url_pic, url_video, pic_appr
 
 Si benchmark con competencia post-go-live muestra que 5+2 es restrictivo, ampliar a más slots. Constantes en `ModelAssetService.MAX_ACTIVE_PIC_PER_USER` y `MAX_ACTIVE_VIDEO_PER_USER`. Sin cambio de schema (no hay límite duro en BD). Baja prioridad hasta tener métricas.
 
-### [BUG nuevo detectado en validación final] Selector de idioma UI bloqueado tras login
+### [CERRADA 2026-05-31] Selector de idioma UI bloqueado tras login
 
-Operador reporta que una vez autenticado en el SPA producto, el selector de idioma de la UI no permite cambiar idioma. Sin diagnóstico hecho. Investigar en sesión separada cómo está implementado el cambio de idioma (`LocaleSwitcher.jsx`, `useSession`, `i18n/localeUtils.js`), por qué se inmoviliza tras autenticación, y decidir si es bug o comportamiento intencional. Prioridad media.
+Resuelta. Era una regresión del commit `7520029` (16 mayo): el `LocaleSwitcher` de producto dejó de persistir la elección en BD, y `SessionProvider.applyLocale` reimponía `user.ui_locale` en cada carga autenticada, pisando el locale de la URL. Fix: en producto/blog la URL manda en el display (`applyLocale` solo toca `i18n` en superficie admin) y el switcher de producto vuelve a persistir vía `PUT /users/me/ui-locale` para los emails. Detalle de resolución movido a `incident-notes.md` (sección "Selector de idioma bloqueado tras login en producto — 2026-05-31"). Despliegue + bitácora en `project-log.md` 2026-05-31.
+
+---
+
+## 2026-05-31 — Patrón de backup de frontend (deuda de nivelación TEST/PROD)
+
+### [DEUDA operativa] Nivelar a TEST y PROD el patrón de backup de frontend estrenado en AUDIT
+
+Durante el despliegue del arreglo del selector de idioma (2026-05-31) se estrenó en AUDIT una red de rollback de frontend que antes no existía: `ops/scripts/deploy-frontend.ps1` hace `aws s3 sync --delete` (irreversible) sobre buckets frontend **sin versionado**, sin backup ni rollback documentado. La mitigación aplicada en AUDIT fue sincronizar el bundle vivo a un prefijo dedicado del bucket de backups general antes de cada deploy: `s3://sharemechat-backups/audit/frontend/{product,admin}/`, sobrescribible (un único respaldo = estado inmediatamente anterior), con red extra heredada del versionado del bucket. Procedimiento de rollback en `runbooks.md` ("Runbook de rollback de frontend (S3 + CloudFront)").
+
+Hoy esto solo existe para AUDIT. **TEST y PROD no tienen ni el backup pre-deploy ni el rollback cableado** en su flujo de despliegue de frontend. Pendiente decidir y nivelar:
+
+- replicar los prefijos `s3://sharemechat-backups/{test,pro}/frontend/{product,admin}/` y el paso de backup pre-sync para esos entornos;
+- o, mejor estructuralmente, integrar el backup pre-deploy como paso opcional dentro de `deploy-frontend.ps1` (parametrizado por entorno/surface, resolviendo el prefijo desde el mapping) para no depender de comandos manuales por entorno;
+- valorar activar versionado en los buckets frontend de cada entorno como red nativa, en lugar del backup-a-prefijo.
+
+Prioridad: a criterio del proyecto. No bloquea hoy (AUDIT cubierto); relevante antes de despliegues frecuentes de frontend en TEST/PROD, y especialmente antes del go-live de PROD.
 
 ---
 

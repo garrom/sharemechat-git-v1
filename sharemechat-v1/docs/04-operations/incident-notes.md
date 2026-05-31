@@ -2373,6 +2373,33 @@ EC2 (4 acciones, 2 por entorno):
 
 2. **El blocker AUDIT en Carril A escribió 1 IP en `/etc/nginx/deny-audit-ips.conf` y recargó nginx durante la validación manual** (`ips_bloqueadas=1, reload=ok`). Eso significa que el blocker se ejecutó dos veces hoy con escritura real (la del timer normal a 07:30 UTC + la validación manual a 21:25 UTC). Ambas terminaron OK y la deny list está actualizada con la IP detectada como Carril A del 22 may. Comportamiento esperado, no es problema, pero conviene notarlo: las validaciones manuales del blocker AUDIT TOCAN nginx real. Para validaciones futuras donde NO se quiera modificar nginx, usar `--input /ruta/inexistente.jsonl` para activar el path de error original (sigue siendo `SystemExit`), o exportar `DRY_RUN=1` para esa invocación.
 
+### Selector de idioma bloqueado tras login en producto — 2026-05-31
+
+Resolución de la deuda abierta el 2026-05-30 ("[BUG nuevo detectado en validación final] Selector de idioma UI bloqueado tras login", movida aquí desde `known-debt.md` al cerrarse). Diagnóstico previo y diseño completos en `project-log.md` 2026-05-31.
+
+**Síntoma**: usuario autenticado en la superficie producto (cliente o modelo) no podía cambiar el idioma ES/EN desde el selector de la UI; el cambio "se disparaba y volvía" al idioma por defecto. Sin sesión (público) y en backoffice/admin funcionaba. Regresión.
+
+**Causa raíz**: dos subsistemas de i18n en conflicto. (1) URL como fuente de verdad del locale mostrado (ADR-022: basename `/en` o su ausencia, resuelto en `App.jsx` e `i18n/index.js`). (2) `SessionProvider.applyLocale`, que reimponía `user.ui_locale` con `i18n.changeLanguage` en cada carga autenticada. Coexistían sin chocar mientras el `LocaleSwitcher` de producto persistía la elección en BD. El commit `7520029` (16 mayo, Paquete 1 rediseño CMS bilingüe) cambió el switcher de producto a navegación por URL **sin** persistir en BD → la BD se quedaba en el valor de registro y `applyLocale` revertía el display tras el reload.
+
+**Fix** (2 ficheros frontend):
+
+- `frontend/src/components/SessionProvider.jsx`: `applyLocale` solo llama a `i18n.changeLanguage` en superficie **admin** (donde la URL no transporta locale). En producto/blog no toca `i18n`: el display lo decide la URL. Sigue haciendo `setStoredLocale` (localStorage para `Accept-Language` y recordar preferencia).
+- `frontend/src/components/LocaleSwitcher.jsx`: la rama de producto vuelve a **persistir** la elección con `await updateUiLocale(locale)` (→ `PUT /users/me/ui-locale`) solo cuando hay sesión, antes de navegar (`switchToLocaleByUrl` hace full reload). Admin y blog sin cambios. Público sin cambios (sin sesión no persiste, solo navega).
+
+**Por qué persistir aunque la URL mande el display**: `user.ui_locale` alimenta el idioma de los emails transaccionales vía `EmailLocaleResolver.resolve(user)` → `EmailCopyRenderer` (bienvenida, baja, reset de contraseña, verificación de email, rechazo de assets de modelo). Si el switcher no persistiera, los emails saldrían en el idioma de registro pese al cambio del usuario.
+
+**Limitación conocida (decisión consciente)**: un usuario logueado que entra a una URL sin prefijo `/en` verá español aunque su `ui_locale` sea inglés; los emails sí salen correctos. Cerrar el matiz (redirección inicial por preferencia) es feature aparte, en tensión con "no revertir una elección explícita" (una URL de producto sin prefijo no distingue "eligió ES" de "entró por defecto").
+
+**Despliegue AUDIT (solo frontend, ambas surfaces)** — backups pre-deploy en `s3://sharemechat-backups/audit/frontend/{product,admin}/` (red de rollback estrenada; ver "Runbook de rollback de frontend" en `runbooks.md`):
+
+- Producto: bucket `sharemechat-frontend-audit`, bundle nuevo `main.adaab50d.js` (anterior `main.09767365.js` en backup), invalidación `IEUV4XWHH3K3CC7QG1RALSEY75` sobre `E1ILXV7P6ENUV8` → Completed.
+- Admin: bucket `sharemechat-admin-audit`, bundle nuevo `main.a566756a.js` (anterior `main.8fdc22b3.js` en backup), invalidación `I8XU4RQB20W3NIS0591RWHWQZI` sobre `E21IB0VBKYNNBW` → Completed.
+- Smoke: `audit.sharemechat.com/` y `admin.audit.sharemechat.com/` → `200` sirviendo los bundles nuevos; `/api/users/me` sin sesión → `401` (esperado). Perfil AWS de despliegue: default (`sharemechat-deployer`), conforme a `deploy-frontend.ps1`. Validación funcional del selector a cargo del operador.
+
+**Observación ajena al cambio**: `www.audit.sharemechat.com` no resolvió DNS (`HTTP 000`) pese a que ADR-015/`audit.md` prevén `301` www→apex. No tocado por este deploy (solo S3 + invalidación de las dos distribuciones); preexistente, anotado por si se revisa aparte.
+
+TEST y PROD no recibieron este frente. Deuda de nivelación del patrón de backup de frontend a TEST/PROD abierta en `known-debt.md` (2026-05-31).
+
 3. **Los dos `block_access.py` no son perfectamente simétricos**: además de los esperados nombres `audit/test`, AUDIT tiene un docstring más antiguo que omite la documentación de DRY_RUN=0; TEST lo añadió en una iteración posterior. No es problema para este paquete (el cambio del paquete sí es simétrico, son solo los docstrings de cabecera los que difieren) pero conviene unificarlos en algún momento.
 
 **Estado del frente 10.B al cierre**:

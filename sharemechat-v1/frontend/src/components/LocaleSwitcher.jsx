@@ -79,7 +79,7 @@ const isOnBlogPath = () => {
 };
 
 const LocaleSwitcher = ({ onAfterChange, style }) => {
-  const { updateUiLocale } = useSession();
+  const { updateUiLocale, user } = useSession();
   const blogCtx = useBlogLocale();
 
   const currentLocale = getResolvedLocale(i18n);
@@ -112,7 +112,21 @@ const LocaleSwitcher = ({ onAfterChange, style }) => {
     }
 
     // Resto del producto: comportamiento historico de basename `/en`.
+    // El idioma MOSTRADO lo decide la URL (ADR-022), pero la eleccion debe
+    // PERSISTIRSE en user.ui_locale para que los emails transaccionales
+    // (EmailLocaleResolver) y futuras entradas usen el idioma correcto.
+    // Persistimos ANTES de navegar (switchToLocaleByUrl hace full reload) y
+    // esperamos el PUT para no cancelarlo. Solo con sesion iniciada: sin
+    // usuario (publico) se mantiene el comportamiento de hoy (solo URL).
     if (!isAdminSurface()) {
+      if (user) {
+        try {
+          await updateUiLocale(locale);
+        } catch (e) {
+          // Persistencia best-effort: no bloquea el cambio visual por URL.
+          console.error('Locale persist error', e);
+        }
+      }
       if (onAfterChange) {
         try { onAfterChange(locale); } catch (e) { /* no-op */ }
       }
