@@ -5,6 +5,7 @@ import { useAppModals } from '../../components/useAppModals';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
 import i18n from '../../i18n';
+import LocaleSwitcher from '../../components/LocaleSwitcher';
 
 import {
   StyledContainer,
@@ -314,6 +315,10 @@ const PerfilModel = () => {
                 <MetaLabel>{t('profileCommon.labels.email')}</MetaLabel>
                 <MetaValue>{form.email || t('profileCommon.empty.value')}</MetaValue>
               </MetaItem>
+              <MetaItem>
+                <MetaLabel>{t('profileCommon.labels.language')}</MetaLabel>
+                <LocaleSwitcher />
+              </MetaItem>
             </ProfileHeaderMeta>
           </ProfileHeaderInfo>
         </ProfileHeader>
@@ -374,15 +379,6 @@ const PerfilModel = () => {
                 </CardHeader>
                 <CardBody>
                   <FormGridNew>
-                    <FormFieldNew>
-                      <Label>{t('profileCommon.labels.email')}</Label>
-                      <Input
-                        type="email"
-                        value={form.email}
-                        readOnly
-                      />
-                    </FormFieldNew>
-
                     <FormFieldNew>
                       <Label>{t('profileCommon.labels.name')}</Label>
                       <Input

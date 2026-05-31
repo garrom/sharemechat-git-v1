@@ -118,7 +118,8 @@
       "surname": "Surname",
       "nickname": "Nickname",
       "biography": "Biography",
-      "interests": "Interests"
+      "interests": "Interests",
+      "language": "Language"
     },
     "placeholders": {
       "name": "Your name",

@@ -8,6 +8,19 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-05-31 — Control de idioma en las páginas de perfil de cliente y modelo
+
+Se añade un control para que el usuario de producto vea y cambie el idioma de la UI desde su propia página de perfil, además del selector del navbar. Alcance: perfil de **cliente** (`PerfilClient.jsx`) y de **modelo** (`PerfilModel.jsx`); el backoffice (`AdminProfilePage`) no se toca (ya mostraba el idioma en solo lectura).
+
+Decisiones tomadas:
+
+- **Control independiente del formulario de datos**: el cambio de idioma se aplica al instante y no depende del botón "Guardar cambios" del formulario principal. Reutiliza el componente `LocaleSwitcher` existente sin modificarlo, por lo que hereda su comportamiento ya correcto (persistencia en BD vía `PUT /users/me/ui-locale` + recarga por URL en producto, coherente con ADR-022).
+- **Ubicación en la cabecera como mini-card**: tras una primera implementación con una card grande en la columna lateral, se movió a un tercer mini-card en la cabecera del perfil, junto a `ESTADO` y `EMAIL` (misma estética etiqueta+valor). El switcher resalta el locale activo, así que se eliminó el subtítulo largo y la línea "Idioma actual: X" por redundantes; la etiqueta del mini-card es `IDIOMA`/`LANGUAGE`.
+- **Mejora colateral**: se eliminó el campo `EMAIL` duplicado del bloque "Datos básicos". El email ya se muestra en su mini-card de cabecera y en ninguno de los dos sitios era editable; el payload de `PUT /users/{id}` no cambia (el email nunca se enviaba).
+- **i18n**: claves nuevas bajo `profileCommon` (`labels.language` y, en la versión inicial, `sections.language.*`, estas últimas eliminadas al pasar al mini-card). ES + EN.
+
+Desplegado y validado a nivel de disponibilidad en AUDIT (producto y admin, ambos `200` con bundles nuevos; invalidaciones CloudFront completadas). Validación funcional manual a cargo del operador. TEST y PROD no reciben este frente.
+
 ## 2026-05-31 — Arreglo del selector de idioma bloqueado tras login (producto) desplegado en AUDIT
 
 Cierre del frente del bloqueo del selector de idioma ES/EN estando autenticado en la superficie producto: un usuario logueado (cliente o modelo) no podía cambiar el idioma de la UI; el cambio "se disparaba y volvía" al idioma por defecto. Sin sesión (público) y en admin funcionaba. Era una **regresión**.
