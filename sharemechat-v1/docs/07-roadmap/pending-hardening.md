@@ -406,3 +406,28 @@ Estado posterior de esta línea:
 - una variante reciente de integración en RANDOM desktop ha quedado descartada por introducir una regresión grave de render desktop sobre un problema original que era solo visual y temporal
 - esa variante no debe reutilizarse como baseline ni como punto de continuación directa
 - cualquier reentrada futura en este frente deberá arrancar desde una base funcional conocida y avanzar con validación incremental estricta entre fases, manteniendo separado el problema visual de cualquier contaminación funcional del flujo
+
+### Parte 4 - Compliance, PSP, verificación y monitorización
+
+Frente **abierto**, marcado como **prioritario** dada la fase actual del proyecto (onboarding PSP activo, régimen adult/streaming asumido) pero **sin fase asignada ni prioridad numérica fija** en el roadmap. El secuenciado lo fija el operador caso por caso. Esta entrada cataloga las líneas de trabajo dentro del frente, no las ordena.
+
+Dirección estructural ya fijada:
+
+- Clasificación adult/streaming, descartada la ruta dating ([ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md)).
+- Arquitectura de verificación de edad e identidad (KYC modelos + estimación facial cliente + secundaria, vía Veriff) ([ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md)).
+- Pipeline de moderación: build control plane, rent clasificadores ([ADR-030](../06-decisions/adr-030-moderation-pipeline-build-vs-rent.md)).
+- Estrategia PSP: redundancia, Segpay vía activa no cerrada ([psp-strategy.md](../01-business/psp-strategy.md)).
+- Estrategia geográfica: beachhead anglófono + oleada UE continental ([geographic-strategy.md](../01-business/geographic-strategy.md)).
+
+Líneas de trabajo abiertas dentro del frente (sin orden impuesto aquí):
+
+- **PSP**: cerrar contrato con Segpay (o alternativa). Implementar integración técnica y validación de firma webhook. Mantener integración CCBill disponible por reactivación.
+- **Verificación de edad e identidad**: automatizar el KYC de modelos (hoy manual). Implementar gate de estimación facial del cliente en la primera recarga, con secundaria por tarjeta/open banking. Garantizar disciplina "pre-pago SFW" en toda la superficie pública.
+- **Moderación con IA**: seleccionar vendor de clasificación visual (Sightengine, Hive como candidatos). Seleccionar vendor de CSAM (Hive, Thorn Safer, PhotoDNA como candidatos). Construir control plane interno (muestreo de frames, cola de revisión humana, hooks auto-corte/baneo, dashboard, attendance log de la modelo, integración moderación de chat, workflow de quejas, reporting al PSP).
+- **Entregables compliance accionables**: declaración 2257 + Records Custodian. Cinco políticas formales que el PSP exige (Content Management, Consumer Age Verification, Complaint & Removal, Model Agreement, Chargeback-Fraud Mitigation). SLA de 5 días hábiles para quejas. Reporting mensual + nil report al PSP. Valoración membresía ASACP. DPIA + base jurídica del flujo biométrico bajo GDPR. Alineación DSA art. 28. Detalle accionable en [compliance-deliverables.md](../01-business/compliance-deliverables.md).
+- **Equipo humano de moderación**: pendiente de plan operativo según volumen real (staff propio o vendor de trust & safety gestionado).
+- **Country-gating real**: futuro ADR específico cuando se cierre la lista concreta de mercados servidos. Reusará el mecanismo de [ADR-007](../06-decisions/adr-007-country-blacklist-phase1-backend-primary.md).
+
+Naturaleza del frente: cada línea avanza a su ritmo y bloquea distintos puntos del roadmap. Algunas son bloqueantes para el go-live público (estimación facial cliente, declaración 2257, políticas formales), otras son endurecimiento continuado post-go-live (capa IA completa, attendance log, equipo trust & safety).
+
+No duplicar aquí el contenido de los ADRs ni de los docs business. Cualquier matiz de fondo se discute allí.

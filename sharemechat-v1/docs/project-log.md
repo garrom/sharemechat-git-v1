@@ -8,6 +8,14 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-02 — Clasificación adult/streaming cerrada y rumbo de PSP redirigido a Segpay
+
+Se cierra la clasificación de negocio: SharemeChat se declara merchant adult/streaming (no dating). La decisión queda formalizada en ADR-028, con tres ADRs hijos que fijan la dirección de los frentes derivados (ADR-029 sobre arquitectura de verificación de edad e identidad vía Veriff, ADR-030 sobre pipeline de moderación con principio build-vs-rent). Esta clasificación abre el cuerpo de compliance accionable que el régimen adult exige (declaración 2257, Records Custodian, cinco políticas formales, reporting periódico al PSP, DPIA biométrico bajo GDPR, alineación DSA art. 28), recogido en `docs/01-business/compliance-deliverables.md`. La justificación de fondo es que las dos redes de tarjeta dominantes (Mastercard AN 5196, Visa VIRP Tier-1) tratan el videochat 1-a-1 de pago con modelos remuneradas como contenido adulto con independencia del MCC declarado, y la regulación reciente de los mercados objetivos (Ofcom enero 2025 sobre UK Online Safety Act, Free Speech Coalition v. Paxton en EE.UU., UE DSA art. 28, Online Safety Act australiano) ha cerrado la ventana de "mercado occidental laxo" que durante un tiempo era hipótesis tentativa.
+
+Cambio de rumbo respecto al supuesto previo: hasta esta sesión el PSP asumido era CCBill como vía única; CCBill quedó silente en onboarding y la vía activa pasó a ser Segpay, sin contrato firmado. El supuesto de PSP único se sustituye por un principio de redundancia (no depender de un único PSP), recogido en `docs/01-business/psp-strategy.md`. La hipótesis de clasificarse como "dating" para evitar el régimen adult se descarta formalmente: incluso bajo MCC 7273 el VIRP es Tier-1 y arrastra los mismos controles, y la recategorización forzada del PSP es probable en cuanto audite el catálogo real. Lo que NO se cierra en esta sesión: contrato Segpay, selección de vendors de IA (Sightengine/Hive y Thorn Safer/PhotoDNA quedan como candidatos en evaluación), lista concreta de países servidos (estrategia geográfica documentada como dirección de trabajo, no como decisión arquitectónica cerrada), y la implementación técnica de cada frente.
+
+---
+
 ## 2026-05-31 — La navegación interna de producto no preservaba el prefijo /en
 
 **Síntoma reportado por el operador**: un usuario logueado en `/perfil-client` cambia el idioma con el control de la cabecera; la página recarga en `/en/perfil-client` (inglés, correcto), pero al pulsar "Volver" del perfil el idioma vuelve a español porque la URL de destino ya no llevaba el prefijo `/en`.

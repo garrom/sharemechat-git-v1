@@ -1,6 +1,6 @@
 # Modelo de negocio
 
-SharemeChat opera como una plataforma de interacción 1:1 entre clientes y modelos.
+SharemeChat opera como una plataforma de videochat 1-a-1 de pago entre clientes y modelos remuneradas. A efectos de pagos y compliance se clasifica como merchant **adult/streaming**, no como dating. La decisión y su justificación viven en [ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md); el alcance operativo de compliance derivado vive en [compliance-scope.md](compliance-scope.md) y [compliance-deliverables.md](compliance-deliverables.md).
 
 ## Núcleo de monetización
 
