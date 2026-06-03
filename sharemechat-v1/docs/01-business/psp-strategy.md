@@ -7,7 +7,7 @@ Este documento describe la dirección de trabajo de SharemeChat respecto a proce
 **Ningún PSP está cerrado contractualmente.**
 
 - **CCBill**: contactado, mantuvo conversaciones de onboarding iniciales y posteriormente dejó de responder. No queda como vía cerrada formalmente; queda como vía silente.
-- **Segpay**: vía activa de onboarding. Comunicación abierta, con due diligence en curso. Sin contrato firmado al cierre de este documento.
+- **Segpay**: vía activa de onboarding, **condicional**. Comunicación abierta, due diligence en curso. Sin contrato firmado al cierre de este documento. La continuidad con Segpay depende de que su equipo de compliance acepte el método de verificación de edad de cliente decidido por el producto (estimación facial vía Veriff + comprobación secundaria solo para casos borderline; ver [ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md)). Si Segpay exige documento de identidad para el 100% de los consumidores, no se continúa con Segpay y se activa el plan B descrito más abajo.
 
 La integración técnica con CCBill existe parcialmente en código (`CcbillService`, `BillingController`, `PaymentSession`, `CcbillNotifyRequestDTO`) por trabajo previo a esta fase. No hay integración técnica con Segpay todavía.
 
@@ -17,11 +17,23 @@ SharemeChat no quiere depender de un único PSP. La dependencia de un PSP único
 
 La dirección de trabajo es:
 
-- Avanzar con Segpay como vía activa.
+- Avanzar con Segpay como vía activa, sabiendo que es condicional al método de verificación de cliente.
 - Mantener disponible la opción de reactivar CCBill o de incorporar un tercer PSP adult-specialist cuando proceda.
 - Diseñar la integración técnica para que el contrato entre la lógica de wallet/recarga y el PSP sea sustituible: el PSP se invoca a través de un servicio que abstrae el proveedor concreto (patrón análogo al `KycProviderConfigService` para verificación).
 
-Este principio queda como dirección, no como implementación cerrada. El frente operativo sigue siendo Segpay; CCBill no se descarta formalmente.
+Este principio queda como dirección, no como implementación cerrada. El frente operativo actual sigue siendo Segpay; CCBill no se descarta formalmente.
+
+## Plan B de PSP
+
+Como contingencia ante el escenario en que Segpay no acepte el método de verificación de cliente decidido en ADR-029, hay que mantener alineado un adquirente adult-specialist alternativo. **Candidatos** identificados (no seleccionados, no contactados formalmente al cierre de este documento):
+
+- **Verotel / Vendo**
+- **RocketGate**
+- **Epoch**
+
+La selección entre estos candidatos (o de un cuarto que aparezca) se hará si y cuando el plan B se active. Mientras tanto, la responsabilidad operativa es mantener la información actualizada (cobertura geográfica de cada uno, condiciones generales conocidas, postura sobre métodos de age assurance) para poder mover rápido si Segpay queda descartado.
+
+El plan B no se activa de forma exploratoria: hacer onboarding paralelo con dos PSPs adult-specialist a la vez añadiría coste y carga de due diligence sin retorno claro mientras la vía Segpay esté abierta. El umbral de activación es una respuesta negativa de Segpay sobre el método de verificación de cliente, o un cierre inesperado de la vía Segpay por otra razón.
 
 ## Requisitos derivados de Segpay (vía activa)
 

@@ -2,7 +2,9 @@
 
 ## Estado
 
-Aceptado como dirección de arquitectura. Los requisitos concretos derivan de una relación con PSP (Segpay) en curso y NO cerrada contractualmente; si las exigencias del PSP cambian, el diseño puede ajustarse en consecuencia.
+Aceptado. Para clientes (consumidores) el método queda **fijado como requisito firme de producto**: estimación facial vía Veriff + comprobación secundaria solo para casos borderline (tarjeta/open banking; documento como último recurso). Queda explícitamente descartado exigir documento de identidad al 100% de los consumidores. Para modelos la dirección (KYC con documento + selfie + liveness vía Veriff) se mantiene como antes.
+
+La relación con el PSP queda **condicionada** a aceptar este método de verificación del cliente: si el PSP final exige documento para todos los consumidores, se cambia de PSP, no de método. Esta condicionalidad y el plan B de PSP viven en [psp-strategy.md](../01-business/psp-strategy.md). La implementación del flujo de cliente sigue PLANIFICADA (ver sección de estado más abajo); lo que cambia respecto a la versión inicial de este ADR es que la dirección de producto deja de estar abierta a alternativa.
 
 ## Contexto
 
@@ -90,6 +92,8 @@ Planificado:
 
 La estimación facial de edad cumple el criterio de "highly effective age assurance" descrito en la guía Ofcom de enero 2025 para UK Online Safety Act, al mismo nivel que la verificación con documento, y es la opción menos invasiva para el cliente (sin documento, sin almacenamiento de PII adicional). Reservar la verificación documental para el cliente al caso último (cuando la facial es borderline y la secundaria por flujo de pago tampoco resuelve) reduce el roce y el almacenamiento de datos sensibles innecesarios.
 
+La fricción del cliente es el segundo criterio decisivo: el cliente es el generador de ingresos del negocio. Exigir documento de identidad al 100% de los consumidores introduce un nivel de roce que se considera inaceptable para un producto de pago recurrente en este vertical, especialmente cuando existe un método legalmente válido (Ofcom) que evita esa fricción para la mayoría de los casos. Por eso esta línea queda como requisito firme de producto y no se reabre por exigencia de PSP: si el PSP exige documento para todos, se cambia de PSP (ver `psp-strategy.md`, plan B).
+
 Para modelos, la verificación con documento + liveness no es opcional: viene impuesta por el PSP adult-specialist y por las redes de tarjeta. Veriff cubre ese flujo y el del cliente con un único proveedor, lo que simplifica la diligencia ante PSP y reguladores.
 
 El requisito de "pre-pago SFW" se desprende del propio diseño regulatorio: el gate se dispara cuando el cliente accede a contenido adulto, y si la plataforma muestra contenido adulto antes del gate el control pierde efecto. Esto obliga a mantener una superficie pública estricta hasta el monedero.
@@ -138,4 +142,6 @@ Trade-off asumido:
 
 Veriff es la elección direccional. Sustitución del proveedor en el futuro es posible sin reabrir esta decisión arquitectónica (el principio "proveedor único que cubra los tres flujos" se mantendría); requeriría un ADR menor de cambio de proveedor.
 
-Los requisitos derivan en parte de la relación con Segpay como PSP candidato. Si Segpay no cierra y el PSP final exige requisitos distintos, el diseño puede ajustarse — pero las líneas estructurales (KYC modelo obligatorio, estimación facial cliente como método de age assurance, pre-pago SFW) son comunes al régimen adult independientemente del PSP concreto.
+El método de verificación de cliente (estimación + secundaria + documento solo como último recurso) queda fijado como requisito de producto. Si el PSP final no acepta este método, se cambia de PSP — no se cambia el método. La condicionalidad de Segpay y el plan B de PSP viven en [psp-strategy.md](../01-business/psp-strategy.md).
+
+Para modelos, los requisitos sí pueden ajustarse marginalmente según las exigencias del PSP final (formato de los records, retención, custodian). Las líneas estructurales (KYC modelo obligatorio con documento + selfie + liveness, pre-pago SFW) son comunes al régimen adult independientemente del PSP concreto y no se reabren.
