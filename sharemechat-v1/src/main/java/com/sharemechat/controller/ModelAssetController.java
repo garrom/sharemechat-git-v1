@@ -7,9 +7,9 @@ import com.sharemechat.entity.ModelAsset;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailVerificationRequiredException;
 import com.sharemechat.exception.UserNotFoundException;
+import com.sharemechat.security.ModelContractGate;
 import com.sharemechat.service.EmailVerificationService;
 import com.sharemechat.service.ModelAssetService;
-import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.ModelService;
 import com.sharemechat.service.UserService;
 import org.slf4j.Logger;
@@ -51,18 +51,18 @@ public class ModelAssetController {
     private final ModelAssetService modelAssetService;
     private final ModelService modelService;
     private final UserService userService;
-    private final ModelContractService modelContractService;
+    private final ModelContractGate modelContractGate;
     private final EmailVerificationService emailVerificationService;
 
     public ModelAssetController(ModelAssetService modelAssetService,
                                 ModelService modelService,
                                 UserService userService,
-                                ModelContractService modelContractService,
+                                ModelContractGate modelContractGate,
                                 EmailVerificationService emailVerificationService) {
         this.modelAssetService = modelAssetService;
         this.modelService = modelService;
         this.userService = userService;
-        this.modelContractService = modelContractService;
+        this.modelContractGate = modelContractGate;
         this.emailVerificationService = emailVerificationService;
     }
 
@@ -228,12 +228,17 @@ public class ModelAssetController {
         return u != null && (Constants.Roles.MODEL.equals(u.getRole()) || isOnboardingModel(u));
     }
 
+    /**
+     * Lote endurecimiento 2026-06-04: el gate de contrato aplica a
+     * cualquier actor modelo (onboarding USER+FORM_MODEL y role=MODEL),
+     * no solo onboarding. Delegado en {@link ModelContractGate}.
+     */
     private boolean mustHaveAcceptedContract(User u) {
-        return isOnboardingModel(u);
+        return modelContractGate.requiresAcceptance(u);
     }
 
     private boolean hasAcceptedContract(Long userId) {
-        return modelContractService.isAccepted(userId);
+        return modelContractGate.hasAcceptedCurrent(userId);
     }
 
     private ResponseEntity<?> requireVerifiedOnboardingModel(User user) {

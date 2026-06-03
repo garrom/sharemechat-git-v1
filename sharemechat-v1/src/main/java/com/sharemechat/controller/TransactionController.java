@@ -2,10 +2,12 @@ package com.sharemechat.controller;
 
 import com.sharemechat.dto.TransactionRequestDTO;
 import com.sharemechat.entity.User;
+import com.sharemechat.security.ModelContractGate;
 import com.sharemechat.service.ProductAccessGuardService;
 import com.sharemechat.service.TransactionService;
 import com.sharemechat.service.UserService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -18,13 +20,16 @@ public class TransactionController {
     private final TransactionService transactionService;
     private final UserService userService;
     private final ProductAccessGuardService productAccessGuardService;
+    private final ModelContractGate modelContractGate;
 
     public TransactionController(TransactionService transactionService,
                                  UserService userService,
-                                 ProductAccessGuardService productAccessGuardService) {
+                                 ProductAccessGuardService productAccessGuardService,
+                                 ModelContractGate modelContractGate) {
         this.transactionService = transactionService;
         this.userService = userService;
         this.productAccessGuardService = productAccessGuardService;
+        this.modelContractGate = modelContractGate;
     }
 
     // Primer pago cliente siendo USER -> CLIENT (incluye premium, clients, tx, balance)
@@ -54,6 +59,15 @@ public class TransactionController {
                                                 Authentication authentication) {
         User user = userService.findByEmail(authentication.getName());
         productAccessGuardService.requireNotSupport(user);
+        // Lote endurecimiento 2026-06-04: la modelo no puede solicitar
+        // payout si no tiene la versión vigente del Model Collaboration
+        // Agreement aceptada. El bloqueo se aplica en el momento de la
+        // SOLICITUD para no acumular requests pendientes de revisión que
+        // luego habría que rechazar por falta de contrato.
+        if (modelContractGate.isBlocked(user)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body("Debes aceptar la versión vigente del contrato de modelo antes de solicitar retiro.");
+        }
         transactionService.requestPayout(user.getId(), request);
         return ResponseEntity.ok("Solicitud de retiro registrada correctamente.");
     }

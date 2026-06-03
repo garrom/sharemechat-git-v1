@@ -6,8 +6,8 @@ import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailVerificationRequiredException;
 import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.security.ModelContractGate;
 import com.sharemechat.service.EmailVerificationService;
-import com.sharemechat.service.ModelContractService;
 import com.sharemechat.service.ModelService;
 import com.sharemechat.service.ModelStatsService;
 import com.sharemechat.service.UserService;
@@ -30,7 +30,7 @@ public class ModelController {
     private final ModelDocumentRepository modelDocumentRepository;
     private final StorageService storageService;
     private final ModelStatsService modelStatsService;
-    private final ModelContractService modelContractService;
+    private final ModelContractGate modelContractGate;
     private final EmailVerificationService emailVerificationService;
     private static final Logger log = LoggerFactory.getLogger(ModelController.class);
 
@@ -39,14 +39,14 @@ public class ModelController {
                            ModelDocumentRepository modelDocumentRepository,
                            StorageService storageService,
                            ModelStatsService modelStatsService,
-                           ModelContractService modelContractService,
+                           ModelContractGate modelContractGate,
                            EmailVerificationService emailVerificationService) {
         this.modelService = modelService;
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
         this.storageService = storageService;
         this.modelStatsService = modelStatsService;
-        this.modelContractService = modelContractService;
+        this.modelContractGate = modelContractGate;
         this.emailVerificationService = emailVerificationService;
     }
 
@@ -74,13 +74,17 @@ public class ModelController {
         return u != null && (Constants.Roles.MODEL.equals(u.getRole()) || isOnboardingModel(u));
     }
 
-    /** ✅ CONTRATO SOLO PARA ONBOARDING (USER+FORM_MODEL). MODEL no se bloquea. */
+    /**
+     * Lote endurecimiento 2026-06-04: el gate de contrato aplica a
+     * cualquier actor modelo (onboarding USER+FORM_MODEL y role=MODEL),
+     * no solo onboarding. Delegado en {@link ModelContractGate}.
+     */
     private boolean mustHaveAcceptedContract(User u) {
-        return isOnboardingModel(u);
+        return modelContractGate.requiresAcceptance(u);
     }
 
     private boolean hasAcceptedContract(Long userId) {
-        return modelContractService.isAccepted(userId);
+        return modelContractGate.hasAcceptedCurrent(userId);
     }
 
     private ResponseEntity<?> requireVerifiedOnboardingModel(User user) {

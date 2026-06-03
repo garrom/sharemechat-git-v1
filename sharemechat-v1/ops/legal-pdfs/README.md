@@ -21,3 +21,11 @@ El backend resuelve la URL del contrato vigente vía `GET /api/consent/model-con
 ## Uso
 
 Revisar las dependencias Python del script antes de ejecutar. Tras regenerar un PDF, subirlo al bucket `assets-sharemechat-<env>/legal/` y actualizar el manifest correspondiente; invalidar la distribución CloudFront de assets si aplica.
+
+## Archivado de versiones publicadas (procedimiento añadido en lote de endurecimiento 2026-06-04)
+
+**Antes** de subir un PDF nuevo al bucket, commitear su copia inmutable en `ops/legal-history/<familia>/<version_id>.pdf` (un único repo, una única fuente de verdad). El nombre del fichero debe coincidir con el `version` que se publica en el manifest. Convención completa y motivación en [`ops/legal-history/README.md`](../legal-history/README.md).
+
+Razón: los buckets de assets no tienen versionado S3 activado y la URL del PDF es fija (`legal/model_contract.pdf`), por lo que cada publicación sobrescribe la anterior. La copia en el repo es la garantía autoritativa de poder reproducir el texto exacto que aceptó una modelo en cualquier versión.
+
+El backend, desde el mismo lote de endurecimiento, descarga el PDF al servir `getCurrent()` y verifica que el sha256 real coincide con el publicado en el manifest. Si no coincide, fail-secure: no sirve la versión y no permite aceptarla. Eso obliga a mantener manifest y PDF coherentes.
