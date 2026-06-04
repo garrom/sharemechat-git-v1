@@ -128,7 +128,7 @@ export default function Rules() {
 
           <h1 style={PageTitle}>Community Guidelines</h1>
 
-          <p style={MetaText}>Effective date: March 2026</p>
+          <p style={MetaText}>Effective date: June 2026</p>
 
           <p style={IntroText}>
             This page forms part of the SharemeChat Terms of Service. These
@@ -159,7 +159,18 @@ export default function Rules() {
           </div>
 
           <div style={Section}>
-            <h3 style={SectionTitle}>2. Respect Your Chat Partner</h3>
+            <h3 style={SectionTitle}>2. No Explicit Content</h3>
+            <p style={Paragraph}>
+              SharemeChat is a non-explicit platform. Explicit sexual content
+              - including nudity and sexual acts - is not allowed anywhere on
+              the platform, including in private one-to-one sessions. Such
+              content is detected by moderation and results in session
+              termination and account enforcement.
+            </p>
+          </div>
+
+          <div style={Section}>
+            <h3 style={SectionTitle}>3. Respect Your Chat Partner</h3>
             <p style={Paragraph}>
               Users must treat others with respect. Offensive language,
               harassment, threats, hate speech, intimidation, or abusive
@@ -168,41 +179,44 @@ export default function Rules() {
           </div>
 
           <div style={Section}>
-            <h3 style={SectionTitle}>3. Face Visibility Requirement</h3>
+            <h3 style={SectionTitle}>4. Face Visibility</h3>
             <p style={Paragraph}>
-              During live sessions, your face should remain clearly visible.
-              Users may not point the camera away from themselves, use
-              freeze-frames, broadcast pre-recorded content, or simulate a live
-              presence in any misleading way.
+              During live sessions, your face should remain clearly visible
+              and you must be the only person on camera. No other person, and
+              no minor, may appear on camera. Users may not point the camera
+              away from themselves, use freeze-frames, broadcast pre-recorded
+              content, or simulate a live presence in any misleading way.
             </p>
           </div>
 
           <div style={Section}>
-            <h3 style={SectionTitle}>4. Public Area Conduct</h3>
+            <h3 style={SectionTitle}>5. Conduct Across the Platform</h3>
             <p style={Paragraph}>
-              In public or non-age-gated areas of the platform, users must
-              remain appropriately presented and comply with all platform safety
-              requirements. Any behavior that is unsafe, deceptive, or clearly
-              inappropriate for a general-access area may lead to enforcement.
+              Across all areas of the platform - public and private - users
+              must comply with the platform&apos;s content standards and safety
+              requirements, including the non-explicit standard above. Any
+              behavior that is unsafe, deceptive, or inappropriate may lead
+              to enforcement.
             </p>
           </div>
 
           <div style={Section}>
-            <h3 style={SectionTitle}>5. Prohibited Behaviour</h3>
+            <h3 style={SectionTitle}>6. Prohibited Behaviour</h3>
             <p style={Paragraph}>
               The following behavior is strictly prohibited:
             </p>
             <ul style={List}>
+              <li>Explicit sexual content, nudity, or sexual acts.</li>
               <li>Harassment, abusive language, or threats.</li>
               <li>Impersonation, scams, or fraudulent conduct.</li>
-              <li>Illegal activity or attempts to involve minors.</li>
+              <li>Illegal activity, or any content involving or attempting to involve minors (which is reported to the competent authorities).</li>
               <li>Attempts to deceive other users or moderators.</li>
               <li>Attempts to bypass platform safeguards or moderation.</li>
             </ul>
           </div>
 
           <div style={Section}>
-            <h3 style={SectionTitle}>6. Reports and Moderation</h3>
+            <h3 style={SectionTitle}>7. Reports and Moderation</h3>
             <p style={Paragraph}>
               SharemeChat may use reports, technical signals, and moderation
               processes to investigate suspected violations. Users are encouraged
@@ -212,7 +226,7 @@ export default function Rules() {
           </div>
 
           <div style={Section}>
-            <h3 style={SectionTitle}>7. Enforcement</h3>
+            <h3 style={SectionTitle}>8. Enforcement</h3>
             <p style={Paragraph}>
               SharemeChat reserves the right to terminate sessions, suspend
               accounts, or permanently ban users who violate these Community

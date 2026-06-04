@@ -121,7 +121,24 @@ export default function Safety() {
             <p style={Text}>
               SharemeChat is strictly intended for adults aged 18 and older.
               Accounts suspected of belonging to minors may be suspended and
-              age verification may be requested when necessary.
+              age verification may be requested when necessary. Any content
+              or activity involving a minor is removed immediately and
+              reported to the competent authorities.
+            </p>
+          </div>
+
+          <div style={Section}>
+            <h2 style={SectionTitle}>Protection from Exploitation and Trafficking</h2>
+            <p style={Text}>
+              SharemeChat does not tolerate human trafficking, sexual
+              exploitation or coercion. All models are independently verified
+              as adults before they can provide services, and during sessions
+              the model must be the only person on camera. The platform
+              monitors for signals consistent with coercion or undisclosed
+              third-party involvement, escalates them to human review, and
+              reports to the competent authorities where warranted. These
+              prevention measures are designed to ensure the platform is not
+              used to promote or facilitate trafficking or abuse.
             </p>
           </div>
 

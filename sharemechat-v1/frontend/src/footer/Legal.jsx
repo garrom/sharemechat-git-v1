@@ -325,7 +325,10 @@ export default function Legal() {
                   SharemeChat is intended exclusively for adults aged 18 or older.
                   We may request age or identity verification when necessary to
                   protect the platform, users, and compliance obligations. Access
-                  or use by minors is strictly prohibited.
+                  or use by minors is strictly prohibited. Before accessing
+                  adult-oriented features, clients are subject to age verification,
+                  performed primarily through facial age estimation (with a
+                  document-based check as a fallback).
                 </p>
               </div>
 
@@ -362,7 +365,7 @@ export default function Legal() {
                   <li>Harassment, threats, hate speech, coercion, or extortion.</li>
                   <li>Illegal activity or any content involving minors. Any attempt to involve, depict, solicit, promote, or normalize minors in any context is strictly prohibited and may be reported to competent authorities.</li>
                   <li>Fraud, impersonation, phishing, scams, or abuse of promotions.</li>
-                  <li>Explicit sexual content or conduct forbidden by platform rules.</li>
+                  <li>Explicit sexual content, including nudity and sexual acts, which is prohibited on the platform, including in private sessions.</li>
                   <li>Attempts to bypass moderation, controls, or security systems.</li>
                   <li>Use of the service in a misleading, abusive, or commercially unauthorized way.</li>
                 </ul>
@@ -372,10 +375,12 @@ export default function Legal() {
                 <h3 style={SectionTitle}>6. Live Camera and Session Rules</h3>
                 <p style={Paragraph}>
                   During live sessions, users may be required to keep their face
-                  clearly visible on camera and to comply with platform rules for
-                  live interaction. We may interrupt or limit sessions where camera
-                  use, behavior, displayed material, or session conduct creates a
-                  safety, compliance, moderation, or technical concern.
+                  clearly visible and to be the only person on camera; no other
+                  person, and no minor, may appear on camera. Users must comply
+                  with platform rules for live interaction. We may interrupt or
+                  limit sessions where camera use, behavior, displayed material,
+                  or session conduct creates a safety, compliance, moderation, or
+                  technical concern.
                 </p>
               </div>
 
@@ -403,10 +408,11 @@ export default function Legal() {
                   permanent removal from the service.
                 </p>
                 <p style={{ ...Paragraph, marginTop: '10px' }}>
-                  A user who believes that a moderation or account restriction
-                  decision was made in error may contact support to request review.
-                  Any such review remains at SharemeChat&apos;s discretion and does not
-                  create an obligation to reverse or modify the measure.
+                  Where a moderation or account restriction decision is taken, the
+                  affected user is informed of the reasons and may contact support
+                  to request a review. Any such review remains at
+                  SharemeChat&apos;s discretion and does not create an obligation
+                  to reverse or modify the measure.
                 </p>
               </div>
 
@@ -583,7 +589,9 @@ export default function Legal() {
                 <p style={Paragraph}>
                   These terms are governed by the laws of Estonia. Any dispute related
                   to the service will be subject to the jurisdiction of the competent
-                  courts located in Tallinn, Estonia.
+                  courts located in Tallinn, Estonia. Where you use the service as a
+                  consumer, you may also benefit from any mandatory consumer-protection
+                  rules of your country of residence.
                 </p>
               </div>
 
@@ -625,9 +633,10 @@ export default function Legal() {
                 <h3 style={SectionTitle}>2. Information We Collect</h3>
                 <p style={Paragraph}>
                   We may collect account data, profile details, verification data for
-                  models, technical information such as IP address, session and cookie
-                  identifiers, access logs, platform usage events, messaging data, and
-                  payment-related records processed through authorized providers.
+                  models, consumer age-verification data, technical information such
+                  as IP address, session and cookie identifiers, access logs, platform
+                  usage events, messaging data, and payment-related records processed
+                  through authorized providers.
                 </p>
               </div>
 
@@ -637,7 +646,11 @@ export default function Legal() {
                   Personal data is processed to provide the service, authenticate
                   users, operate matching and video chat features, prevent abuse and
                   fraud, comply with legal obligations, support users, and improve the
-                  service through internal analytics and operational metrics.
+                  service through internal analytics and operational metrics. Each
+                  purpose relies on an appropriate lawful basis under the GDPR
+                  (performance of the contract, compliance with a legal obligation,
+                  your consent, or our legitimate interests in operating and securing
+                  the service).
                 </p>
               </div>
 
@@ -646,12 +659,34 @@ export default function Legal() {
                 <p style={Paragraph}>
                   We may share data with service providers acting on our behalf,
                   including infrastructure providers, payment processors, corporate
-                  email services, and identity verification providers when applicable.
+                  email services, and identity and age verification providers when
+                  applicable. These providers act as processors under data-processing
+                  agreements.
                 </p>
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>5. International Transfers</h3>
+                <h3 style={SectionTitle}>5. Age Verification and Biometric Data</h3>
+                <p style={Paragraph}>
+                  To comply with applicable age-verification laws and card-network
+                  requirements, the Platform verifies that clients are adults before
+                  they access adult-oriented features. This is done primarily through
+                  facial age estimation provided by a specialist third-party processor
+                  (Veriff), with a document-based check as a fallback for borderline
+                  cases. To the extent that facial-estimation data constitutes
+                  biometric data, it is special-category personal data and is
+                  processed on a clearly identified lawful basis and, where required,
+                  with your explicit consent, under data-minimization and
+                  purpose-limitation principles. The method is privacy-preserving:
+                  the selfie image is not retained, and only the verification result
+                  is recorded. Identity-verification data for models is handled on
+                  the same basis. A Data Protection Impact Assessment has been
+                  carried out for this processing and is kept up to date.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>6. International Transfers</h3>
                 <p style={Paragraph}>
                   If any provider processes personal data outside the European
                   Economic Area, such transfers will be carried out under appropriate
@@ -661,7 +696,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>6. Retention Periods</h3>
+                <h3 style={SectionTitle}>7. Retention Periods</h3>
                 <p style={Paragraph}>
                   Data is kept only for as long as necessary to operate the service,
                   meet legal obligations, respond to disputes or claims, maintain
@@ -670,7 +705,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>7. Your Rights</h3>
+                <h3 style={SectionTitle}>8. Your Rights</h3>
                 <p style={Paragraph}>
                   You may request access, rectification, deletion, restriction,
                   objection, or portability of your personal data, subject to
@@ -679,7 +714,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>8. Security Measures</h3>
+                <h3 style={SectionTitle}>9. Security Measures</h3>
                 <p style={Paragraph}>
                   We use measures such as encrypted connections, secure cookie-based
                   authentication where applicable, anti-abuse systems, activity logs,
@@ -689,7 +724,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>9. Minors</h3>
+                <h3 style={SectionTitle}>10. Minors</h3>
                 <p style={Paragraph}>
                   SharemeChat is strictly intended for adults aged 18 or older. If we
                   detect that a minor has provided personal data, we may remove that
@@ -698,7 +733,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>10. Policy Updates</h3>
+                <h3 style={SectionTitle}>11. Policy Updates</h3>
                 <p style={Paragraph}>
                   We may update this Privacy Policy from time to time to reflect
                   changes in the service, legal requirements, or operational needs.
