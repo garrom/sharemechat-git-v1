@@ -1,0 +1,17 @@
+[Unit]
+Description=SharemeChat TEST Backend
+After=network.target
+
+[Service]
+Type=simple
+User=ec2-user
+WorkingDirectory=/home/ec2-user/sharemechat-v1
+EnvironmentFile=/opt/sharemechat/config.env
+EnvironmentFile=/opt/sharemechat/secrets.env
+ExecStart=/usr/lib/jvm/java-17-amazon-corretto.x86_64/bin/java -Dspring.profiles.active=test -jar /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+SuccessExitStatus=143
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
