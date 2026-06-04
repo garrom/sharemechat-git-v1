@@ -24,11 +24,11 @@ Donde `{version_id}` debe coincidir EXACTAMENTE con el campo `version` que se pu
 model_contract_v\d+_\d{4}-\d{2}-\d{2}
 ```
 
-Ejemplos:
+Ejemplo (al publicar v4.2):
 
-- `ops/legal-history/model_contract/model_contract_v2_2026-03-08.pdf`
-- `ops/legal-history/model_contract/model_contract_v4_2026-03-23.pdf`
-- (al publicar v4.2:) `ops/legal-history/model_contract/model_contract_v42_YYYY-MM-DD.pdf`
+- `ops/legal-history/model_contract/model_contract_v42_YYYY-MM-DD.pdf`
+
+El archivo arranca limpio desde la v4.2 en adelante. Las versiones anteriores (datos fake en los tres entornos) no se rescatan retroactivamente: la reproducibilidad autoritativa de texto via este repo aplica de la v4.2 en adelante.
 
 ## Reglas operativas
 

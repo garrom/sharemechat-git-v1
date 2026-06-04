@@ -3,11 +3,7 @@
 #
 # Convención de archivado: ver ../README.md
 #
-# Estado al cierre del lote de endurecimiento 2026-06-04:
-# La convención queda materializada en el repo pero la carpeta arranca
-# vacía. Las versiones publicadas hasta hoy
-# (model_contract_v2_2026-03-08, model_contract_v4_2026-03-23) viven
-# en los buckets de assets bajo legal/history/ y deben rescatarse a
-# este repo cuando se ejecute la siguiente publicación (v4.2),
-# incluyendo retroactivamente las anteriores para tener histórico
-# completo.
+# La carpeta arranca limpia desde la próxima versión publicada (v4.2)
+# en adelante. Las versiones anteriores (datos fake) no se rescatan: la
+# reproducibilidad autoritativa de texto via este repo aplica de la v4.2
+# en adelante.
