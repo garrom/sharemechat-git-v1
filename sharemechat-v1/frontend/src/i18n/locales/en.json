@@ -1432,6 +1432,37 @@
     }
   },
   "admin": {
+    "finance": {
+      "errors": {
+        "load": "Could not load financial analytics.",
+        "refundApply": "Could not apply the manual refund.",
+        "invalidUserId": "Invalid User ID",
+        "invalidAmount": "Invalid amount",
+        "reasonRequired": "Reason is required"
+      },
+      "empty": "No data.",
+      "cards": {
+        "grossBilling": {
+          "meta": "Total billing before payout to models."
+        },
+        "netProfit": {
+          "meta": "Platform's accumulated net margin."
+        },
+        "profitPercent": {
+          "meta": "Net-to-gross ratio."
+        }
+      },
+      "refund": {
+        "description": "Refunds balance directly to a CLIENT through a manual ledger operation.",
+        "success": "Refund applied successfully. User #{{userId}} - Amount {{amount}} - New balance {{balance}}",
+        "notes": {
+          "title": "Notes:",
+          "appliesClient": "- Applies only to users with the CLIENT role.",
+          "ledgerEntry": "- Does not modify previous transactions; creates a new MANUAL_REFUND ledger transaction.",
+          "balanceOnly": "- Does not increase totalPagos; only returns available balance."
+        }
+      }
+    },
     "assetModeration": {
       "reasons": {
         "LIGHTING": "Insufficient lighting (too dark)",

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import {
   CardsGrid,
@@ -20,6 +21,7 @@ const AdminFinancePanel = ({
   showSummary = true,
   showRefunds = true,
 }) => {
+  const t = (key, options) => i18n.t(key, options);
   const [topModels, setTopModels] = useState([]);
   const [topClients, setTopClients] = useState([]);
   const [financeSummary, setFinanceSummary] = useState(null);
@@ -47,7 +49,7 @@ const AdminFinancePanel = ({
       setTopClients(Array.isArray(clients) ? clients : []);
       setFinanceSummary(summary || null);
     } catch (e) {
-      setFinanceError(e.message || 'Error al cargar analisis financieros');
+      setFinanceError(e.message || t('admin.finance.errors.load'));
     } finally {
       setFinanceLoading(false);
     }
@@ -67,17 +69,17 @@ const AdminFinancePanel = ({
     const amount = Number(refundAmount);
 
     if (!userId || userId <= 0) {
-      setRefundError('User ID invalido');
+      setRefundError(t('admin.finance.errors.invalidUserId'));
       return;
     }
 
     if (!amount || amount <= 0) {
-      setRefundError('Amount invalido');
+      setRefundError(t('admin.finance.errors.invalidAmount'));
       return;
     }
 
     if (!refundReason.trim()) {
-      setRefundError('Reason es obligatoria');
+      setRefundError(t('admin.finance.errors.reasonRequired'));
       return;
     }
 
@@ -94,7 +96,11 @@ const AdminFinancePanel = ({
       });
 
       setRefundSuccess(
-        `Refund aplicado correctamente. User #${result.userId} - Amount ${result.amount} - New balance ${result.newBalance}`
+        t('admin.finance.refund.success', {
+          userId: result.userId,
+          amount: result.amount,
+          balance: result.newBalance,
+        })
       );
 
       setRefundUserId('');
@@ -103,7 +109,7 @@ const AdminFinancePanel = ({
 
       await loadFinanceData();
     } catch (e) {
-      setRefundError(e.message || 'Error aplicando refund manual');
+      setRefundError(e.message || t('admin.finance.errors.refundApply'));
     } finally {
       setRefundLoading(false);
     }
@@ -132,19 +138,19 @@ const AdminFinancePanel = ({
             <StatCard>
               <div className="label">Ganancias brutas</div>
               <div className="value">{financeLoading ? '...' : financeSummary?.grossBillingEUR ?? '-'}</div>
-              <div className="meta">Facturacion total antes de reparto a modelos.</div>
+              <div className="meta">{t('admin.finance.cards.grossBilling.meta')}</div>
             </StatCard>
 
             <StatCard>
               <div className="label">Ganancias netas plataforma</div>
               <div className="value">{financeLoading ? '...' : financeSummary?.netProfitEUR ?? '-'}</div>
-              <div className="meta">Margen neto acumulado de la plataforma.</div>
+              <div className="meta">{t('admin.finance.cards.netProfit.meta')}</div>
             </StatCard>
 
             <StatCard>
               <div className="label">% beneficio / facturacion</div>
               <div className="value">{financeLoading ? '...' : financeSummary?.profitPercent ?? '-'}</div>
-              <div className="meta">Ratio neto sobre bruto.</div>
+              <div className="meta">{t('admin.finance.cards.profitPercent.meta')}</div>
             </StatCard>
           </CardsGrid>
 
@@ -158,7 +164,7 @@ const AdminFinancePanel = ({
                       {item.nickname || item.name || item.email || `Modelo #${item.modelId}`} - <strong>{item.totalEarningsEUR}</strong>
                     </FinanceItem>
                   ))}
-                  {!financeLoading && topModels.length === 0 && <div>Sin datos.</div>}
+                  {!financeLoading && topModels.length === 0 && <div>{t('admin.finance.empty')}</div>}
                 </FinanceList>
               </StatCard>
 
@@ -170,7 +176,7 @@ const AdminFinancePanel = ({
                       {item.nickname || item.name || item.email || `Cliente #${item.clientId}`} - <strong>{item.totalPagosEUR}</strong>
                     </FinanceItem>
                   ))}
-                  {!financeLoading && topClients.length === 0 && <div>Sin datos.</div>}
+                  {!financeLoading && topClients.length === 0 && <div>{t('admin.finance.empty')}</div>}
                 </FinanceList>
               </StatCard>
             </CardsGrid>
@@ -185,7 +191,7 @@ const AdminFinancePanel = ({
               <div>
                 <div style={{ fontWeight: 700, fontSize: 16 }}>Refund manual</div>
                 <div style={{ fontSize: 13, color: '#6c757d', marginTop: 4 }}>
-                  Devuelve saldo directamente a un CLIENT mediante una operacion ledger manual.
+                  {t('admin.finance.refund.description')}
                 </div>
               </div>
             </div>
@@ -264,13 +270,13 @@ const AdminFinancePanel = ({
             </div>
 
             <div style={{ marginTop: 12, fontSize: 12, color: '#6c757d' }}>
-              Notas:
+              {t('admin.finance.refund.notes.title')}
               <br />
-              - Solo aplica a usuarios con rol CLIENT.
+              {t('admin.finance.refund.notes.appliesClient')}
               <br />
-              - No modifica transacciones previas; crea una nueva transaccion ledger de tipo MANUAL_REFUND.
+              {t('admin.finance.refund.notes.ledgerEntry')}
               <br />
-              - No incrementa totalPagos; solo devuelve saldo disponible.
+              {t('admin.finance.refund.notes.balanceOnly')}
             </div>
           </InlinePanel>
         </div>

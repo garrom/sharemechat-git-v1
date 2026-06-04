@@ -1432,6 +1432,37 @@
     }
   },
   "admin": {
+    "finance": {
+      "errors": {
+        "load": "Error al cargar análisis financieros",
+        "refundApply": "Error aplicando refund manual",
+        "invalidUserId": "User ID inválido",
+        "invalidAmount": "Amount inválido",
+        "reasonRequired": "Reason es obligatoria"
+      },
+      "empty": "Sin datos.",
+      "cards": {
+        "grossBilling": {
+          "meta": "Facturación total antes de reparto a modelos."
+        },
+        "netProfit": {
+          "meta": "Margen neto acumulado de la plataforma."
+        },
+        "profitPercent": {
+          "meta": "Ratio neto sobre bruto."
+        }
+      },
+      "refund": {
+        "description": "Devuelve saldo directamente a un CLIENT mediante una operación ledger manual.",
+        "success": "Refund aplicado correctamente. User #{{userId}} - Amount {{amount}} - New balance {{balance}}",
+        "notes": {
+          "title": "Notas:",
+          "appliesClient": "- Solo aplica a usuarios con rol CLIENT.",
+          "ledgerEntry": "- No modifica transacciones previas; crea una nueva transacción ledger de tipo MANUAL_REFUND.",
+          "balanceOnly": "- No incrementa totalPagos; solo devuelve saldo disponible."
+        }
+      }
+    },
     "assetModeration": {
       "reasons": {
         "LIGHTING": "Iluminación insuficiente (demasiado oscuro)",
