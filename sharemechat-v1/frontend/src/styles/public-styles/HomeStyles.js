@@ -444,9 +444,14 @@ export const HomeVisualMainPortrait = styled(HomeVisualCard)`
   }
 `;
 
+// Card apaisado (~16:10) para alojar el mockup de videollamada completo
+// sin recortes. La imagen mini_v2.webp es apaisada (1200x767, ratio
+// ~1.564); manteniendo el card cerca de ese aspect ratio evitamos el
+// crop horizontal que cortaba al personaje del lado derecho con la
+// version anterior 150x190 vertical + object-fit cover.
 export const HomeVisualMiniCard = styled(HomeVisualCard)`
-  width: 150px;
-  height: 190px;
+  width: 210px;
+  height: 135px;
   background:
     linear-gradient(180deg, rgba(245,247,250,0.98) 0%, rgba(236,242,247,0.98) 100%);
 
@@ -457,14 +462,14 @@ export const HomeVisualMiniCard = styled(HomeVisualCard)`
   }
 
   &[data-pos='right'] {
-    right: 4px;
-    top: 26px;
+    right: 6px;
+    bottom: 28px;
     transform: rotate(8deg);
   }
 
   @media (max-width: 960px) {
-    width: 110px;
-    height: 146px;
+    width: 156px;
+    height: 100px;
   }
 `;
 
@@ -502,7 +507,7 @@ export const HomeVisualPhotoMini = styled.img`
   height: 100%;
   display: block;
   object-fit: cover;
-  object-position: center 30%;
+  object-position: center center;
 `;
 
 export const HomeVisualAvatar = styled.div`

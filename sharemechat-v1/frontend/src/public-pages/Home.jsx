@@ -199,7 +199,7 @@ export default function Home() {
 
               <HomeVisualMiniCard data-pos="right">
                 <HomeVisualPhotoMini
-                  src={`${ASSETS_BASE}/home/quick-matching/mini_v1.webp`}
+                  src={`${ASSETS_BASE}/home/quick-matching/mini_v2.webp`}
                   alt={i18n.t('home.quickMatching.imageAltMini')}
                   loading="lazy"
                   decoding="async"
