@@ -2,6 +2,54 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-06-05 — Deudas abiertas tras cierre del frente PRELAUNCH
+
+Tras el cableado de `PRODUCT_ACCESS_MODE=PRELAUNCH` end-to-end (ver `project-log.md` 2026-06-05), quedan cinco frentes abiertos. Ninguno bloquea TEST; los marcados como **REQUISITO PRE-PROD** sí deben cerrarse antes del lanzamiento real.
+
+### [DEUDA mantenibilidad] `LocaleSwitcher` hace `window.location.assign` por restricción del basename del Router v5
+
+`react-router-dom` v5 fija el basename una vez en `App.jsx` a partir de la URL inicial; no es reactivo. Cambiar de ES (basename `/`) a EN (basename `/en`) requiere re-montar el Router, lo que en la práctica equivale a recargar la página. Por eso `LocaleSwitcher.handleChange` termina con `window.location.assign(newPath)` (full reload). Coste: cada cambio de idioma destruye y reconstruye toda la SPA, con un blanco de carga visible antes de que React vuelva a montar la PreLaunchScreen (o cualquier ruta autenticada).
+
+Refactor pendiente, no bloqueante: quitar el basename y pasar el locale como prefijo de path interno (afecta a todos los `<Link>`, todos los `Route` declarados, las reglas de redirect entre superficies, el handler de locale del blog que ya tiene su propio Router context). Alta inversión; solo justificable si en algún momento se prioriza la UX de cambio de idioma. Mientras tanto, la puerta cerrada por defecto de `RequireRole` evita que se vea contenido protegido durante el blanco, así que la regresión visible se limita al propio blanco.
+
+### [DEUDA arquitectural — REQUISITO PRE-PROD] Enriquecer `productAccessMode` y `allowlisted` en TODAS las respuestas `UserDTO` del backend, no solo en `GET /api/users/me`
+
+Hoy esos dos campos los puebla únicamente `UserController.getCurrentUser` después de `userService.mapToDTO(user)`. Cualquier otro endpoint que devuelva `UserDTO` (`PUT /api/users/me/ui-locale`, registros de cliente/modelo, endpoints admin, futuros) los entrega como `null`. El frontend lo parchea con un merge defensivo en `SessionProvider.updateUiLocale` (preserva los campos del `user` previo), pero la solución correcta es backend consistente: cualquier `UserDTO` devuelto debería estar enriquecido. Opciones a valorar:
+
+- Mover el enriquecimiento dentro de `UserService.mapToDTO` (acopla mapToDTO al servicio de modo operacional, pero centraliza la regla y elimina la deuda).
+- Helper `enrichUserDTOWithAccessMode(UserDTO, User)` que cada controller llame explícitamente tras `mapToDTO` (más control, más boilerplate, fácil de olvidar en un controller nuevo).
+
+Prioridad: alta. **Antes de PROD**: si alguien introduce un endpoint nuevo que devuelva `UserDTO` y el frontend deja de usar el merge defensivo, reaparece el flicker de "puerta abierta por momento". El parche frontend funciona hoy pero es frágil.
+
+### [DEUDA crítica — REQUISITO PRE-PROD] Blindaje del script de deploy de frontend con builds secuenciales y smoke tests obligatorios
+
+Durante esta sesión, lanzar `npm run build:product` y `npm run build:admin` en paralelo (los dos comparten la carpeta `build/` que CRA sobreescribe en cada `npm run build:*`) provocó que el segundo build sobreescribiera mientras el primer `aws s3 sync` estaba aún leyendo: el bucket `sharemechat-frontend-test` quedó incompleto (solo assets estáticos, sin js/css/index.html). Detectado y recuperado en la propia sesión. La verificación post-deploy fue solo de API (curl `/api/users/me`) y dio por bueno el deploy hasta que el operador reportó que el frontend no cargaba.
+
+Antes de tocar PROD, el script `ops/scripts/deploy-frontend.ps1` (o su equivalente) debe:
+
+1. **Builds estrictamente secuenciales** producto → sync producto → admin → sync admin, NUNCA en paralelo; el `build/` de CRA no es seguro para concurrencia. Mejor todavía: builds a carpetas separadas (`build-product/`, `build-admin/`) renombrando tras cada `npm run build:*`.
+2. **Smoke test obligatorio post-sync** que valide carga real, NO solo API: `curl https://<dominio>/ → 200 && size > 500 && content-type text/html`; extraer `main.[hash].js` referenciado en index.html con `grep -oE`; confirmar que ese hash existe en `aws s3 ls s3://<bucket>/static/js/`; `curl https://<dominio>/static/js/main.<hash>.js → 200 && size > 0`. **Si cualquier check falla: `exit 1`** (no solo log).
+3. **Smoke test funcional mínimo del modo activo**: si `PRODUCT_ACCESS_MODE=PRELAUNCH`, verificar que `POST /api/auth/login` NO devuelve 503 y `POST /api/models/documents` SÍ devuelve 503. Detecta tanto el bug del gate como un mismatch de config entre EC2 y bundle.
+4. **`rm -rf build/` antes de cada `npm run build:*`** para evitar artefactos colados entre runs.
+
+Prioridad: bloqueante para el primer despliegue a PROD del frente PRELAUNCH (y a futuro para cualquier despliegue de frontend).
+
+### [DEUDA UX opcional] Sustituir el `return null` de carga por un splash/loader con marca
+
+`RequireRole` ahora retorna `null` mientras `loading=true` o `user.productAccessMode` está vacío. El operador ve una pantalla blanca breve (~100-300 ms en condiciones normales) hasta que `/api/users/me` resuelve. Funcionalmente correcto y mucho mejor que el flicker del componente real, pero estéticamente un splash con la marca (mismo fondo oscuro de la PreLaunchScreen, mismo logo, sin texto) eliminaría hasta esa transición.
+
+Implementación trivial: componente `<LoadingSplash/>` reutilizando `HeroContainer` + `HeroOverlay` o un fondo de marca, sustituyendo el `return null`. Riesgo: si el splash queda montado más tiempo del esperado por un fetch lento, da apariencia de app rota. Mitigación: timeout de 5 s tras el cual muestra un mensaje de error suave.
+
+Prioridad: baja, mejora de UX. No bloquea nada.
+
+### [DEUDA operativa — pre-lanzamiento AUDIT/PROD] Subir assets de hero pre-launch a `assets-sharemechat-audit` y `assets-sharemechat-prod`
+
+Los `prelaunch_desktop_v1.webp` y `prelaunch_mobile_v1.webp` solo existen hoy en `s3://assets-sharemechat-test1/prelaunch/hero/`. Cuando AUDIT o PROD pasen a `PRODUCT_ACCESS_MODE=PRELAUNCH`, su `ASSETS_BASE` resolverá a `assets.audit.sharemechat.com` o `assets.sharemechat.com` respectivamente, y la imagen no cargará porque el bucket de destino no la tiene. La PreLaunchScreen se degradaría a fondo negro plano (`#0b0f14` del `HeroContainer` + scrim del `HeroOverlay`) — presentable pero perdiendo el peso de marca.
+
+Procedimiento al activar PRELAUNCH en cada entorno: copiar los dos webp con el mismo path al bucket correspondiente (`s3://assets-sharemechat-audit/prelaunch/hero/prelaunch_{desktop,mobile}_v1.webp`, `s3://assets-sharemechat-prod/prelaunch/hero/prelaunch_{desktop,mobile}_v1.webp`). Sin invalidación CloudFront necesaria (objetos nuevos). Verificar `https://assets.<env>.sharemechat.com/prelaunch/hero/prelaunch_desktop_v1.webp → 200` antes de cambiar `PRODUCT_ACCESS_MODE=PRELAUNCH` del entorno.
+
+Prioridad: bloqueante para activar PRELAUNCH en AUDIT/PROD; no urge hoy porque solo TEST está en PRELAUNCH.
+
 ## 2026-05-31 — Guardarraíl anti-fugas del prefijo de idioma en navegación interna
 
 ### [DEUDA mantenibilidad] Evitar que se reintroduzcan fugas del prefijo `/en` en navegación interna

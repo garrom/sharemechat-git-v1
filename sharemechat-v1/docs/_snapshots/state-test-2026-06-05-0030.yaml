@@ -1,0 +1,268 @@
+metadata:
+  schema_version: 3
+  environment: test
+  generated_at: "2026-06-05T00:30:00Z"
+  generated_by: manual@prelaunch-cierre
+  notes: |
+    Snapshot manual tras el cierre del frente PRELAUNCH (commit d48e022:
+    "feat(prelaunch): wire PRODUCT_ACCESS_MODE=PRELAUNCH end-to-end +
+    harden gate").
+
+    Cobertura: dominios que cambiaron en el frente PRELAUNCH (config.env
+    de TEST, bundles de frontend TEST, assets de hero pre-launch en el
+    bucket de assets TEST, JAR backend TEST). EC2 TEST esta apagada en
+    el momento de generar el snapshot; los detalles on-disk del config.env
+    se documentan desde memoria operativa de la sesion (la sesion edito
+    el config.env via SSH antes del apagado).
+
+    El snapshot no toca AUDIT ni PROD. AUDIT sigue en PRODUCT_ACCESS_MODE
+    OPEN, con su gate operacional desactivado para PSPs. PROD sigue intacto
+    a la espera del lanzamiento; cuando llegue, su reversion a OPEN sera
+    solo cambio de variable de entorno + restart, sin rebuild.
+
+    Sanitizado: no incluye hostnames RDS reales, ARNs, IPs publicas ni
+    credenciales. IDs de CloudFront si se incluyen porque son necesarios
+    para identificar las distribuciones invalidadas en esta sesion y ya
+    aparecen documentados en docs previas del repo.
+
+repo:
+  branch: main
+  head_commit: d48e022
+  head_commit_message: |
+    feat(prelaunch): wire PRODUCT_ACCESS_MODE=PRELAUNCH end-to-end +
+    harden gate
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    sha256_built: "328e565b9a54dfcd13ed7ff3a15c039e121f88185975c3bfd5ef0f90ec43bbff"
+    notes: |
+      JAR construido localmente en la sesion (mvn package -DskipTests).
+      Desplegado a EC2 TEST en /home/ec2-user/sharemechat-v1/ via scp.
+      Backup del JAR previo en
+      /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak.pre-prelaunch-2026-06-04.
+      Cambios respecto al JAR previo: UserDTO + UserController +
+      ProductOperationalModeService (ver commit d48e022).
+  schema_versioning:
+    flyway_runtime_present: true
+    last_applied_flyway_version: 7
+    note: |
+      Sin cambios en este frente. V7 (model_contract_acceptances_restrict_user_fk)
+      ya se habia aplicado en el frente Contract previo (2026-06-04 09:30
+      durante el primer arranque del JAR endurecido). PRELAUNCH no anade
+      ninguna migracion DB.
+
+ec2_backend:
+  ssh_alias: test-backend
+  instance_id: "i-088341cf8d122920f"
+  name_tag: "Server-Test-Sharemechat"
+  instance_type: "t3.medium"
+  state: "stopped"
+  notes: |
+    EC2 TEST apagada por el operador al cierre de la sesion. El JAR
+    nuevo y el config.env aplicado quedan persistidos en el disco
+    EBS. Al proximo arranque, systemd levantara
+    sharemechat-test.service con la config PRELAUNCH ya cableada.
+  systemd_units:
+    - name: sharemechat-test.service
+      versioned_in_repo: true
+      repo_path: "sharemechat-v1/ops/sharemechat-backend/systemd/sharemechat-test.service"
+      notes: |
+        Sin cambios en el unit en este frente. Sigue
+        ExecStart=java -Dspring.profiles.active=test -jar
+        sharemechat-v1-0.0.1-SNAPSHOT.jar, EnvironmentFile partido
+        config.env + secrets.env.
+    - name: coturn-test.service
+      versioned_in_repo: false
+      notes: "Sin cambios."
+  config_env:
+    path_on_ec2: "/opt/sharemechat/config.env"
+    backup_pre_prelaunch: "/opt/sharemechat/config.env.bak.pre-prelaunch-2026-06-04"
+    aplicado_en_sesion:
+      PRODUCT_ACCESS_MODE: "PRELAUNCH"
+      PRODUCT_REGISTRATION_CLIENT_ENABLED: "true"
+      PRODUCT_REGISTRATION_MODEL_ENABLED: "true"
+      PRODUCT_ACCESS_ALLOWLIST_USER_IDS: "30,31"
+    sin_cambios_respecto_al_backup:
+      - PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED
+      - COUNTRY_ACCESS_ENABLED
+      - COUNTRY_ACCESS_BLOCK_WHEN_MISSING
+      - COUNTRY_ACCESS_CLIENT_REGISTRATION_ALLOWED_COUNTRIES
+      - COUNTRY_ACCESS_MODEL_REGISTRATION_ALLOWED_COUNTRIES
+      - COUNTRY_ACCESS_BYPASS_IPS
+      - WEBRTC_TURN_URL_UDP
+      - WEBRTC_TURN_URL_TCP
+      - APP_STORAGE_S3_BUCKET
+      - APP_STORAGE_S3_CONTENT_PRIVATE_BUCKET
+      - APP_STORAGE_S3_KEY_PREFIX
+      - APP_STORAGE_S3_CONTENT_PRIVATE_KEY_PREFIX
+      - APP_STORAGE_S3_REGION
+      - APP_STORAGE_S3_CONTENT_REGION
+      - APP_STORAGE_TYPE
+      - EMAIL_PROVIDER
+      - EMAIL_DEFAULT_FROM
+      - EMAIL_GRAPH_BASE_URL
+      - EMAIL_GRAPH_AUTHORITY_BASE_URL
+      - EMAIL_GRAPH_TENANT_ID
+      - EMAIL_GRAPH_CLIENT_ID
+      - EMAIL_GRAPH_SAVE_TO_SENT_ITEMS
+      - AUTHRISK_ENABLED
+      - AUTHRISK_RESPONSE_ENABLED
+    notes: |
+      Allowlist user-ids 30 y 31 = demo+client1@sharemechat.com (CLIENT)
+      y demo+model1@sharemechat.com (MODEL). Estos dos bypassean el gate
+      PRELAUNCH y ven el producto real para que el operador pueda
+      validar dashboards reales contra el deploy nuevo. Cualquier otro
+      usuario (incluyendo cuentas recien registradas) cae en
+      <PreLaunchScreen/> en la SPA y recibe 503 PRODUCT_UNAVAILABLE en
+      los endpoints sensibles del backend.
+
+rds:
+  identifier: "db1-sharemechat-test-v2"
+  status: "stopped"
+  engine: "mysql"
+  engine_version: "8.4.7"
+  notes: |
+    RDS TEST apagada por el operador. Schema en version 7 (V7 aplicada
+    el 2026-06-04 09:30). PRELAUNCH no anade migracion alguna.
+
+s3_buckets:
+  frontend_product:
+    bucket: "sharemechat-frontend-test"
+    deployed_bundle:
+      main: "main.2d4ce525.js"
+      chunks:
+        - "572.673490f3.chunk.js"
+        - "683.5cd48a21.chunk.js"
+      last_upload_utc: "2026-06-04T22:54:55Z"
+      notes: |
+        Bundle final desplegado en esta sesion. Contiene PreLaunchScreen
+        + RequireRole con la politica "puerta cerrada por defecto" +
+        interceptor http.js con whitelisting de X-Product-Mode
+        PRELAUNCH/CLOSED para no disparar el overlay de mantenimiento.
+        Referencia las URLs de hero pre-launch en
+        ${ASSETS_BASE}/prelaunch/hero/prelaunch_{desktop,mobile}_v1.webp.
+  frontend_admin:
+    bucket: "sharemechat-admin-test"
+    deployed_bundle:
+      main: "main.9cbd93ae.js"
+      chunks:
+        - "142.7858869e.chunk.js"
+        - "572.11e596ac.chunk.js"
+      last_upload_utc: "2026-06-04T20:37:33Z"
+      notes: |
+        Bundle admin desplegado durante la sesion legal+i18n previa.
+        Contiene los cambios del frente legal (Safety/Rules/Legal
+        actualizados) y el refactor i18n del AdminFinancePanel. NO
+        contiene cambios relevantes para PRELAUNCH porque la
+        PreLaunchScreen no se monta en la superficie admin (RequireRole
+        respeta el branch backofficeRoles).
+  assets:
+    bucket: "assets-sharemechat-test1"
+    prelaunch_hero_assets:
+      - path: "prelaunch/hero/prelaunch_desktop_v1.webp"
+        size_bytes: 53308
+        last_upload_utc: "2026-06-05T00:03:09Z"
+        cdn_url: "https://assets.test.sharemechat.com/prelaunch/hero/prelaunch_desktop_v1.webp"
+        verified_http_200: true
+      - path: "prelaunch/hero/prelaunch_mobile_v1.webp"
+        size_bytes: 23466
+        last_upload_utc: "2026-06-05T00:03:11Z"
+        cdn_url: "https://assets.test.sharemechat.com/prelaunch/hero/prelaunch_mobile_v1.webp"
+        verified_http_200: true
+    notes: |
+      Imagen original aportada por el operador (1248x832 WebP, 65 KB).
+      Procesada con Pillow LANCZOS resize a 1920x1280 desktop y
+      780x1170 mobile (recorte vertical centrado), WebP quality 82
+      method 6. Cache-Control: public, max-age=86400.
+
+cloudfront:
+  product:
+    id: "E2Q4VNDDWD5QBU"
+    status: "Deployed"
+    aliases:
+      - "test.sharemechat.com"
+      - "www.test.sharemechat.com"
+    invalidations_in_session:
+      - id: "I22IOSF2AQA5L9U4ADSRXO3D0G"
+        paths: "/*"
+        ts: "2026-06-04T11:19:37Z"
+        notes: "Primer sync product TEST con bundle prelaunch inicial (main.f2b9a1b3.js)."
+      - id: "IAXV252QYVE6QFRE0AA2GQUYN6"
+        paths: "/*"
+        ts: "2026-06-04T13:30:24Z"
+        notes: "Sync con bundle main.f700374b (cambios legales footer)."
+      - id: "IEDVBXU9SKIYNRUCBZ5D0I29JT"
+        paths: "/*"
+        ts: "2026-06-04T13:40:45Z"
+        notes: "Sync con bundle main.fcfe3315 (fix §8 redundancia)."
+      - id: "IN7AX5JBD380JNWF2B0UQD9YK"
+        paths: "/*"
+        ts: "2026-06-04T19:19:37Z"
+        notes: "Tras config PRELAUNCH y restart del backend (bundle main.f700374b)."
+      - id: "ID7T93Z70EYPDSUJEZODFAP39P"
+        paths: "/*"
+        ts: "2026-06-04T19:36:12Z"
+        notes: "Sync rehecho post-incidente del solapamiento product/admin (bundle main.43fb647c)."
+      - id: "IETS5N84F6PDEEPMVQGUNIM0HJ"
+        paths: "/*"
+        ts: "2026-06-04T21:24:25Z"
+        notes: "Sync con pase estetico de PreLaunchScreen (bundle main.b0440f0a)."
+      - id: "I823SQDHKECWYYC4AKT5JOH7NQ"
+        paths: "/*"
+        ts: "2026-06-04T22:54:55Z"
+        notes: "Sync con fix puerta-cerrada-por-defecto (bundle main.2d4ce525, el actual)."
+  admin:
+    id: "E28YCPVIRB4ASH"
+    status: "Deployed"
+    aliases:
+      - "admin.test.sharemechat.com"
+    invalidations_in_session:
+      - id: "IAUY84JOBZOEDMOOGCC9WVAV9E"
+        paths: "/*"
+        ts: "2026-06-04T11:19:39Z"
+      - id: "IBHRIJHIULUVB02O0T07BA2J78"
+        paths: "/*"
+        ts: "2026-06-04T13:30:24Z"
+  assets:
+    id: "(no consultado en la sesion; documentado en state-mapping local)"
+    notes: |
+      El CDN de assets.test.sharemechat.com sirve directamente desde
+      el bucket assets-sharemechat-test1. Los nuevos assets pre-launch
+      no requieren invalidacion: son objetos nuevos sin clave previa
+      cacheada.
+
+verificacion_final:
+  http_carga_real:
+    "GET /": "200 (index.html con main.2d4ce525.js)"
+    "GET /static/js/main.2d4ce525.js": "200 (162807 bytes)"
+  http_gate_operacional:
+    "POST /api/auth/login": "403 (age-gate, no 503 PRELAUNCH gate)"
+    "POST /api/auth/refresh": "401 (no 503)"
+    "POST /api/models/documents": "503 X-Product-Mode=PRELAUNCH (cierre docs)"
+    "GET  /api/clients/me con cookie invalida": "503 X-Product-Mode=PRELAUNCH"
+    "PUT  /api/users/me/ui-locale (sin auth)": "401 (no 503; pasa el gate, requiere auth real)"
+  cdn_assets:
+    "https://assets.test.sharemechat.com/prelaunch/hero/prelaunch_desktop_v1.webp": "200 image/webp 53308"
+    "https://assets.test.sharemechat.com/prelaunch/hero/prelaunch_mobile_v1.webp": "200 image/webp 23466"
+
+entornos_no_tocados:
+  audit:
+    PRODUCT_ACCESS_MODE: "OPEN"
+    PRODUCT_REGISTRATION_CLIENT_ENABLED: "false"
+    PRODUCT_REGISTRATION_MODEL_ENABLED: "false"
+    notes: |
+      AUDIT sigue en modo OPEN para que los PSPs (que estan haciendo
+      due diligence) puedan acceder al producto real. Su gate
+      operacional esta intencionalmente desactivado. Cuando AUDIT
+      pase a PRELAUNCH (decision separada del operador), el cambio
+      es solo PRODUCT_ACCESS_MODE=PRELAUNCH + allowlist + restart;
+      el JAR y bundles del frente PRELAUNCH ya son compatibles
+      (un unico build vale para todos los modos).
+  prod:
+    PRODUCT_ACCESS_MODE: "OPEN (intacto)"
+    notes: |
+      PROD intacto. El bundle producto+admin de PROD esta varios
+      frentes por detras y se actualizara cuando el operador
+      decida el corte para el lanzamiento real. Los assets de
+      hero pre-launch tampoco estan en assets-sharemechat-prod
+      todavia; se subiran cuando PROD pase a PRELAUNCH.
