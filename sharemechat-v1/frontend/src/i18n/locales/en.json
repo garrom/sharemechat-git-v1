@@ -26,6 +26,10 @@
       "openMenuAria": "Open menu",
       "menuTitle": "Menu"
     },
+    "quickMatching": {
+      "imageAltMain": "Couple chatting in a softly lit bar",
+      "imageAltMini": "Mockup of a one-to-one video call showing the player on screen"
+    },
     "cta": {
       "buy": "Buy",
       "login": "Log in",

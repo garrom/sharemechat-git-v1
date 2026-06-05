@@ -26,6 +26,10 @@
       "openMenuAria": "Abrir menú",
       "menuTitle": "Menú"
     },
+    "quickMatching": {
+      "imageAltMain": "Pareja conversando relajadamente en un bar con luz cálida",
+      "imageAltMini": "Mockup de una videollamada uno a uno mostrando el reproductor en pantalla"
+    },
     "cta": {
       "buy": "Comprar",
       "login": "Iniciar sesión",

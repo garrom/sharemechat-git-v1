@@ -468,6 +468,43 @@ export const HomeVisualMiniCard = styled(HomeVisualCard)`
   }
 `;
 
+// Foto real dentro de las tarjetas de la seccion "Quick matching" de la
+// home. Hereda el marco (border-radius, sombra, overflow:hidden) del
+// HomeVisualCard padre. La rotacion de la mini se aplica al CARD, no a la
+// imagen: la foto sale derecha dentro de un marco inclinado +8deg, que es
+// el efecto buscado (mockup ligeramente girado, no foto alabeada).
+//
+// object-position calibrado por composicion:
+//  - Main: center 35% para que la zona superior-central (caras del couple)
+//    quede visible al recortar con object-fit cover en cards mas anchas
+//    que altas.
+//  - Mini: center 30% para mantener visible la parte superior del frame
+//    de videollamada del mockup.
+//
+// La imagen se carga desde el CDN de assets via ASSETS_BASE
+// (assets.{env}.sharemechat.com). Las URLs en runtime:
+//   home/quick-matching/main_v1.webp
+//   home/quick-matching/mini_v1.webp
+export const HomeVisualPhotoMain = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 35%;
+`;
+
+export const HomeVisualPhotoMini = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center 30%;
+`;
+
 export const HomeVisualAvatar = styled.div`
   position: absolute;
   left: 50%;

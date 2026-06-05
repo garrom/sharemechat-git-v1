@@ -4,6 +4,7 @@ import { useSession } from '../components/SessionProvider';
 import useAppModals from '../components/useAppModals';
 import PublicNavbar from '../components/navbar/PublicNavbar';
 import i18n from '../i18n';
+import { ASSETS_BASE } from '../config/runtimeEnv';
 
 import {
   GlobalBlack,
@@ -50,12 +51,12 @@ import {
   HomeSectionTextRight,
   HomeSectionTitle,
   HomeSectionVisual,
-  HomeVisualAvatar,
-  HomeVisualCardBottom,
   HomeVisualCardTop,
   HomeVisualLine,
   HomeVisualMainPortrait,
   HomeVisualMiniCard,
+  HomeVisualPhotoMain,
+  HomeVisualPhotoMini,
   HomeVisualShine,
   HomeVisualStage
 } from '../styles/public-styles/HomeStyles';
@@ -179,36 +180,30 @@ export default function Home() {
 
           <HomeSectionVisual>
             <HomeVisualStage>
-              <HomeVisualMiniCard data-pos="left">
-                <HomeVisualCardTop />
-                <HomeVisualAvatar />
-                <HomeVisualCardBottom>
-                  <HomeVisualLine />
-                  <HomeVisualLine />
-                  <HomeVisualLine />
-                </HomeVisualCardBottom>
-                <HomeVisualShine />
-              </HomeVisualMiniCard>
-
+              {/* Fotos reales reemplazando los placeholders de gradient.
+                  Opcion A del plan 2026-06-05: foto en main + foto en
+                  mini-right (rotada +8deg arriba derecha). La mini-left
+                  se elimina para componer una pieza unica con dos fotos
+                  en lugar de una principal flanqueada por dos miniaturas
+                  ilustrativas. El HomeVisualShine se conserva como
+                  overlay brillante para mantener el sello de marca. */}
               <HomeVisualMainPortrait>
-                <HomeVisualCardTop />
-                <HomeVisualAvatar />
-                <HomeVisualCardBottom>
-                  <HomeVisualLine />
-                  <HomeVisualLine />
-                  <HomeVisualLine />
-                </HomeVisualCardBottom>
+                <HomeVisualPhotoMain
+                  src={`${ASSETS_BASE}/home/quick-matching/main_v1.webp`}
+                  alt={i18n.t('home.quickMatching.imageAltMain')}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <HomeVisualShine />
               </HomeVisualMainPortrait>
 
               <HomeVisualMiniCard data-pos="right">
-                <HomeVisualCardTop />
-                <HomeVisualAvatar />
-                <HomeVisualCardBottom>
-                  <HomeVisualLine />
-                  <HomeVisualLine />
-                  <HomeVisualLine />
-                </HomeVisualCardBottom>
+                <HomeVisualPhotoMini
+                  src={`${ASSETS_BASE}/home/quick-matching/mini_v1.webp`}
+                  alt={i18n.t('home.quickMatching.imageAltMini')}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <HomeVisualShine />
               </HomeVisualMiniCard>
             </HomeVisualStage>
