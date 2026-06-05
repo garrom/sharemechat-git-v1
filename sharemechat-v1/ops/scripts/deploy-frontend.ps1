@@ -1,14 +1,41 @@
 <#
 .SYNOPSIS
-    Despliega un frontend (producto o admin) de SharemeChat al S3+CloudFront del entorno indicado.
+    Despliega un frontend (producto o admin) de SharemeChat al S3+CloudFront del
+    entorno indicado, con blindaje contra los modos de fallo conocidos.
 
 .DESCRIPTION
-    Lee la tabla de mapeo en ~/.sharemechat/state-mapping.yaml, resuelve el bucket S3
-    y la distribución CloudFront correctos según el entorno y la superficie (product/admin),
-    construye el frontend con el script CRA correspondiente, sube al bucket y crea
-    invalidación de cache en la distribución correcta.
+    Lee la tabla de mapeo en ~/.sharemechat/state-mapping.yaml, resuelve bucket S3
+    y distribución CloudFront según entorno+superficie, construye el frontend con
+    el script CRA correspondiente, sube al bucket y crea invalidación de cache.
 
-    Sustituye los comandos manuales de deploy que históricamente confundían IDs.
+    Blindajes (rev 2026-06: post-incidente de bucket vaciado por solapamiento
+    product/admin en deploy paralelo sobre la misma carpeta build/):
+
+      1) Lock file en frontend/.deploy.lock para impedir DOS invocaciones
+         concurrentes que compartan la carpeta build/. Si el lock existe al
+         arrancar, abort con mensaje claro (deja al operador decidir si es
+         huerfano y borrarlo).
+      2) Carpeta de salida del build POR SUPERFICIE (build-product/, build-admin/)
+         via env BUILD_PATH de CRA, limpiada por completo antes de cada build.
+         Cualquier invocacion futura del CRA escribira a su carpeta exclusiva
+         y no podra pisar a una invocacion concurrente.
+      3) Smoke test estatico OBLIGATORIO post-sync, con abort si cualquier check
+         falla: GET https://<alias>/ -> 200 + text/html + tamano razonable;
+         extraer el main.[hash].js referenciado en index.html; confirmar que
+         el hash existe en s3://<bucket>/static/js/ via aws s3 ls; GET del
+         bundle por su URL hashed -> 200 + tamano > 0. Estos checks no dependen
+         de la invalidacion de CloudFront porque van por URL hashed inmutable
+         (CloudFront no las tiene cacheadas si son nuevas).
+      4) Smoke test funcional CONDICIONAL al modo operacional: si el backend
+         no responde (TEST apagado, mantenimiento), se salta con aviso y NO
+         bloquea el deploy. Si el backend responde y la cabecera X-Product-Mode
+         dice PRELAUNCH, verifica que POST /api/auth/login NO devuelva 503
+         (gate de auth abierto en PRELAUNCH) y POST /api/models/documents SI
+         devuelva 503 con X-Product-Mode=PRELAUNCH (cierre de docs).
+
+    Los blindajes son parametrizables por entorno (mismo script vale para TEST,
+    AUDIT y PROD; el comportamiento solo difiere en lo que el modo operacional
+    de cada entorno dicte).
 
 .PARAMETER Environment
     Identificador del entorno: test, audit o pro.
@@ -17,25 +44,33 @@
     Superficie a desplegar: product (frontend público) o admin (backoffice).
 
 .PARAMETER SkipBuild
-    Si se especifica, saltar el paso de build (asume build/ ya existe).
+    Si se especifica, saltar el paso de build (asume build-<surface>/ ya existe).
 
 .PARAMETER DryRun
     Si se especifica, mostrar qué comandos se ejecutarían sin ejecutarlos.
 
+.PARAMETER SkipFunctionalSmoke
+    Si se especifica, saltar el smoke test funcional aunque el backend este
+    accesible. Util en deploys de PROD durante ventanas en las que el modo
+    operacional no es estable.
+
+.PARAMETER BackendProbeTimeoutSec
+    Timeout (segundos) para detectar si el backend esta accesible. Default 5.
+
 .EXAMPLE
     .\deploy-frontend.ps1 test product
 
-    Despliega el frontend producto al entorno TEST, invalidando la distribución correcta
-    (frontend_public según el mapping).
+    Despliega el frontend producto a TEST con todos los blindajes activos.
 
 .EXAMPLE
     .\deploy-frontend.ps1 test admin -DryRun
 
-    Muestra qué comandos se ejecutarían para desplegar el admin a TEST sin ejecutar nada.
+    Muestra qué se ejecutaría para desplegar admin a TEST sin ejecutar nada.
 
 .NOTES
     Requiere:
-      - ~/.sharemechat/state-mapping.yaml con bloque del entorno relleno (cloudfront_distributions y s3_buckets)
+      - ~/.sharemechat/state-mapping.yaml con bloque del entorno relleno
+        (cloudfront_distributions y s3_buckets)
       - aws CLI configurado con permisos s3:PutObject* y cloudfront:CreateInvalidation
       - npm en PATH y carpeta frontend/ con scripts build:product y build:admin
       - powershell-yaml module (se instala on demand si falta)
@@ -55,33 +90,186 @@ param(
     [switch]$SkipBuild,
 
     [Parameter(Mandatory = $false)]
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$SkipFunctionalSmoke,
+
+    [Parameter(Mandatory = $false)]
+    [int]$BackendProbeTimeoutSec = 5
 )
 
 $ErrorActionPreference = 'Stop'
 
 # ---------------------------------------------------------------
-# 1. Resolver rutas y mapping
+# Helpers
 # ---------------------------------------------------------------
-$repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$frontendDir = Join-Path $repoRoot "frontend"
-$buildDir = Join-Path $frontendDir "build"
-$indexHtml = Join-Path $buildDir "index.html"
-$mappingPath = Join-Path $HOME '.sharemechat\state-mapping.yaml'
+
+function Write-Step {
+    param([string]$Number, [string]$Label)
+    Write-Host ""
+    Write-Host "[$Number] $Label" -ForegroundColor Cyan
+}
+
+function Stop-Deploy {
+    param([string]$Message)
+    Write-Host ""
+    Write-Error "DEPLOY ABORT: $Message"
+    exit 1
+}
+
+function Invoke-Native {
+    <#
+    Ejecuta un comando externo (npm, aws, etc) preservando streaming de stdout
+    + stderr, sin que PowerShell aborte por warnings escritos a stderr aunque
+    el comando devuelva exit code 0. Verifica $LASTEXITCODE y aborta el deploy
+    si distinto de 0.
+
+    Necesario porque en Windows PowerShell 5.1 (NO en pwsh 7) cualquier escritura
+    a stderr de un native exe se convierte en NativeCommandError, que con
+    $ErrorActionPreference = 'Stop' termina el script aun cuando el exe haya
+    devuelto 0. Es el caso clasico de CRA volcando warnings ESLint a stderr.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Block,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Label
+    )
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $exit = 0
+    try {
+        & $Block
+        $exit = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $prevEAP
+    }
+    if ($null -eq $exit) { $exit = 0 }
+    if ($exit -ne 0) {
+        Stop-Deploy "$Label fallo con codigo $exit"
+    }
+}
+
+function Get-HttpResponseInfo {
+    <#
+    Devuelve un PSCustomObject con StatusCode, ContentType, ContentLength y
+    Header X-Product-Mode si esta presente. Soporta tanto exitos como errores
+    HTTP (4xx/5xx) sin lanzar excepcion al caller.
+    #>
+    param(
+        [string]$Url,
+        [string]$Method = 'GET',
+        [string]$ContentType = $null,
+        [string]$Body = $null,
+        [int]$TimeoutSec = 10
+    )
+
+    $statusCode = 0
+    $respContentType = $null
+    $contentLength = 0
+    $productMode = $null
+    $reachable = $true
+    $errMsg = $null
+
+    try {
+        $params = @{
+            Uri              = $Url
+            Method           = $Method
+            UseBasicParsing  = $true
+            TimeoutSec       = $TimeoutSec
+            ErrorAction      = 'Stop'
+        }
+        if ($ContentType) { $params.ContentType = $ContentType }
+        if ($Body)        { $params.Body        = $Body }
+
+        $resp = Invoke-WebRequest @params
+
+        $statusCode      = [int]$resp.StatusCode
+        $respContentType = $resp.Headers.'Content-Type'
+        if ($resp.RawContentLength -gt 0) {
+            $contentLength = [int]$resp.RawContentLength
+        } elseif ($resp.Content) {
+            $contentLength = $resp.Content.Length
+        }
+        if ($resp.Headers.'X-Product-Mode') {
+            $productMode = $resp.Headers.'X-Product-Mode'
+        }
+    } catch {
+        $ex = $_.Exception
+        if ($ex.Response) {
+            # Backend respondio con error HTTP (4xx/5xx). Aun asi extraemos
+            # el codigo y los headers para los smoke tests.
+            try {
+                $statusCode = [int]$ex.Response.StatusCode
+            } catch { $statusCode = 0 }
+
+            try { $respContentType = $ex.Response.Headers['Content-Type'] } catch {}
+            try {
+                $cl = $ex.Response.Headers['Content-Length']
+                if ($cl) { $contentLength = [int]$cl }
+            } catch {}
+            try { $productMode = $ex.Response.Headers['X-Product-Mode'] } catch {}
+        } else {
+            # Sin Response = error de red, timeout, DNS, conexion rechazada.
+            $reachable = $false
+            $errMsg    = $ex.Message
+        }
+    }
+
+    return [PSCustomObject]@{
+        Url           = $Url
+        Reachable     = $reachable
+        StatusCode    = $statusCode
+        ContentType   = $respContentType
+        ContentLength = $contentLength
+        ProductMode   = $productMode
+        Error         = $errMsg
+    }
+}
+
+# ---------------------------------------------------------------
+# Pre-flight
+# ---------------------------------------------------------------
+
+Write-Step "0/5" "Pre-flight"
+
+$repoRoot     = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$frontendDir  = Join-Path $repoRoot 'frontend'
+$mappingPath  = Join-Path $HOME '.sharemechat\state-mapping.yaml'
 
 if (-not (Test-Path $mappingPath)) {
-    Write-Host "ERROR: No se encuentra $mappingPath" -ForegroundColor Red
-    exit 1
+    Stop-Deploy "No se encuentra $mappingPath"
 }
 
 if (-not (Test-Path $frontendDir)) {
-    Write-Host "ERROR: No se encuentra carpeta frontend en $frontendDir" -ForegroundColor Red
-    exit 1
+    Stop-Deploy "No se encuentra carpeta frontend en $frontendDir"
 }
 
-# Asegurarse de que powershell-yaml está disponible
+# Carpeta de salida del build EXCLUSIVA por superficie. Evita que dos
+# invocaciones concurrentes (caso historico del incidente) compartan build/.
+# CRA respeta env BUILD_PATH (relativo a la cwd del build).
+$buildDirName = "build-$Surface"
+$buildDir     = Join-Path $frontendDir $buildDirName
+$indexHtml    = Join-Path $buildDir 'index.html'
+
+Write-Host "    repoRoot:    $repoRoot"
+Write-Host "    frontendDir: $frontendDir"
+Write-Host "    buildDir:    $buildDir"
+Write-Host "    mappingPath: $mappingPath"
+
+# Lock file: tercer cinturón contra paralelos. Si dos invocaciones lanzan
+# CRA a la vez, una pierde la pugna por la carpeta. El lock aborta la
+# segunda inmediatamente con mensaje claro.
+$lockFile = Join-Path $frontendDir ".deploy.lock"
+if (Test-Path $lockFile) {
+    $age = (Get-Date) - (Get-Item $lockFile).LastWriteTime
+    Stop-Deploy "Lock file existe en $lockFile (creado hace $([int]$age.TotalSeconds)s). Otra invocacion en curso. Si crees que es huerfano, borra el fichero manualmente."
+}
+
 if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
-    Write-Host "Instalando módulo powershell-yaml..." -ForegroundColor Cyan
+    Write-Host "    Instalando modulo powershell-yaml..."
     Install-Module -Name powershell-yaml -Scope CurrentUser -Force -ErrorAction Stop
 }
 Import-Module powershell-yaml
@@ -89,44 +277,46 @@ Import-Module powershell-yaml
 $mapping = Get-Content $mappingPath -Raw | ConvertFrom-Yaml
 
 if (-not $mapping.environments.$Environment) {
-    Write-Host "ERROR: Entorno '$Environment' no existe en el mapping." -ForegroundColor Red
-    exit 1
+    Stop-Deploy "Entorno '$Environment' no existe en el mapping."
 }
 
 $envBlock = $mapping.environments.$Environment
 
-# ---------------------------------------------------------------
-# 2. Resolver bucket S3 y distribución CloudFront según surface
-# ---------------------------------------------------------------
-# Convención del mapping:
-#   surface=product -> bucket logical_name "frontend_product" servido por distribución "frontend_public"
-#   surface=admin   -> bucket logical_name "frontend_admin"   servido por distribución "backoffice_admin"
-
-$bucketLogicalName = if ($Surface -eq 'product') { 'frontend_product' } else { 'frontend_admin' }
-$distributionLogicalName = if ($Surface -eq 'product') { 'frontend_public' } else { 'backoffice_admin' }
+# Resolver bucket S3 + distribución CloudFront según surface
+$bucketLogicalName       = if ($Surface -eq 'product') { 'frontend_product' } else { 'frontend_admin' }
+$distributionLogicalName = if ($Surface -eq 'product') { 'frontend_public'   } else { 'backoffice_admin' }
 
 $bucketEntry = $envBlock.s3_buckets.$bucketLogicalName
 if (-not $bucketEntry) {
-    Write-Host "ERROR: Bucket '$bucketLogicalName' no encontrado en mapping para '$Environment'." -ForegroundColor Red
-    exit 1
+    Stop-Deploy "Bucket '$bucketLogicalName' no encontrado en mapping para '$Environment'."
 }
 $bucketName = $bucketEntry.name
 
 $distributionEntry = $envBlock.cloudfront_distributions.$distributionLogicalName
 if (-not $distributionEntry) {
-    Write-Host "ERROR: Distribución '$distributionLogicalName' no encontrada en mapping para '$Environment'." -ForegroundColor Red
-    exit 1
+    Stop-Deploy "Distribucion '$distributionLogicalName' no encontrada en mapping para '$Environment'."
 }
 $distributionId = $distributionEntry.id
-
-if ([string]::IsNullOrWhiteSpace($bucketName) -or [string]::IsNullOrWhiteSpace($distributionId)) {
-    Write-Host "ERROR: Mapping incompleto. bucket='$bucketName' dist='$distributionId'" -ForegroundColor Red
-    exit 1
+# En el mapping local, 'alias' es un nombre humano legible y 'domains' es la
+# lista de FQDNs de la distribucion. Tomamos el primero como dominio canonico
+# del entorno para los smoke tests.
+$distributionAlias = $distributionEntry.alias
+$distributionDomains = $distributionEntry.domains
+$primaryDomain = $null
+if ($distributionDomains -and $distributionDomains.Count -gt 0) {
+    $primaryDomain = [string]$distributionDomains[0]
 }
 
-# ---------------------------------------------------------------
-# 3. Resumen de lo que se va a hacer
-# ---------------------------------------------------------------
+if ([string]::IsNullOrWhiteSpace($bucketName) -or [string]::IsNullOrWhiteSpace($distributionId)) {
+    Stop-Deploy "Mapping incompleto. bucket='$bucketName' dist='$distributionId'"
+}
+
+if ([string]::IsNullOrWhiteSpace($primaryDomain)) {
+    Stop-Deploy "Mapping no expone 'domains[0]' para '$distributionLogicalName' en '$Environment'. Necesario para smoke tests."
+}
+
+$baseUrl = "https://$primaryDomain"
+
 $buildScript = if ($Surface -eq 'product') { 'build:product' } else { 'build:admin' }
 
 Write-Host ""
@@ -135,69 +325,223 @@ Write-Host " Deploy frontend $Surface -> $($Environment.ToUpper())" -ForegroundC
 Write-Host "===============================================" -ForegroundColor Green
 Write-Host " Surface:        $Surface"
 Write-Host " Build script:   npm run $buildScript"
+Write-Host " Build out dir:  $buildDirName/ (BUILD_PATH per-surface)"
 Write-Host " Bucket S3:      s3://$bucketName/"
-Write-Host " Distribución:   $distributionId ($($distributionEntry.alias))"
+Write-Host " Distribucion:   $distributionId ($distributionAlias)"
+Write-Host " Dominio canon:  $primaryDomain"
 Write-Host " SkipBuild:      $SkipBuild"
 Write-Host " DryRun:         $DryRun"
+Write-Host " SkipFunctional: $SkipFunctionalSmoke"
 Write-Host ""
 
 if ($DryRun) {
-    Write-Host "[DryRun] No se ejecutará nada. Salida." -ForegroundColor Yellow
+    Write-Host "[DryRun] No se ejecutara nada. Salida." -ForegroundColor Yellow
     exit 0
 }
 
-# ---------------------------------------------------------------
-# 4. Build (si no se ha saltado)
-# ---------------------------------------------------------------
-if (-not $SkipBuild) {
-    Write-Host "[1/3] Construyendo frontend ($buildScript)..." -ForegroundColor Cyan
-    Push-Location $frontendDir
-    try {
-        npm run $buildScript
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "ERROR: build falló con código $LASTEXITCODE" -ForegroundColor Red
-            exit $LASTEXITCODE
+# Crear lock file y registrar handler de limpieza
+New-Item -ItemType File -Path $lockFile -Force | Out-Null
+
+try {
+
+    # -----------------------------------------------------------
+    # [1/5] Build con carpeta exclusiva y limpieza previa
+    # -----------------------------------------------------------
+    Write-Step "1/5" "Build $buildScript -> $buildDirName/"
+
+    if (-not $SkipBuild) {
+        # Limpiar la carpeta de salida para garantizar build desde cero.
+        # rm -rf build-<surface>/ antes de cada npm run build:* (regla 1).
+        if (Test-Path $buildDir) {
+            Write-Host "    Limpiando $buildDir ..."
+            Remove-Item -Recurse -Force $buildDir
         }
+
+        Push-Location $frontendDir
+        try {
+            # CRA respeta BUILD_PATH como carpeta de salida del build.
+            # Lo seteamos relativo a frontendDir para que el build escriba
+            # a build-<surface>/ y no toque la carpeta build/ historica.
+            $env:BUILD_PATH = $buildDirName
+            try {
+                Invoke-Native -Label "npm run $buildScript" -Block {
+                    npm run $buildScript
+                }
+            } finally {
+                Remove-Item Env:\BUILD_PATH -ErrorAction SilentlyContinue
+            }
+        } finally {
+            Pop-Location
+        }
+
+        if (-not (Test-Path $indexHtml)) {
+            Stop-Deploy "Build termino con exito pero no existe $indexHtml. CRA puede haber escrito a otra ruta; revisar variable BUILD_PATH."
+        }
+    } else {
+        Write-Host "    Build saltado (SkipBuild)."
+        if (-not (Test-Path $indexHtml)) {
+            Stop-Deploy "SkipBuild pero no existe $indexHtml en $buildDirName/. Aborta."
+        }
+    }
+
+    Write-Host "    OK - $indexHtml existe."
+
+    # -----------------------------------------------------------
+    # [2/5] Sync a S3 + invalidacion CloudFront
+    # -----------------------------------------------------------
+    Write-Step "2/5" "Sync s3://$bucketName/ + invalidacion $distributionId"
+
+    Invoke-Native -Label "aws s3 sync" -Block {
+        aws s3 sync $buildDir "s3://$bucketName/" --delete --cache-control "public,max-age=31536000,immutable"
+    }
+
+    # index.html con cache-control restrictivo (resto del bundle es inmutable por hash).
+    Invoke-Native -Label "aws s3 cp index.html" -Block {
+        aws s3 cp $indexHtml "s3://$bucketName/index.html" --cache-control "no-cache, no-store, must-revalidate" --content-type "text/html; charset=utf-8"
+    }
+
+    Invoke-Native -Label "aws cloudfront create-invalidation" -Block {
+        aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*"
+    }
+
+    Write-Host "    OK - sync + invalidacion ejecutados."
+
+    # -----------------------------------------------------------
+    # [3/5] Smoke test estatico (ABORT si falla)
+    # -----------------------------------------------------------
+    Write-Step "3/5" "Smoke test estatico ($baseUrl)"
+
+    # 3.1 - Extraer main.[hash].js del index.html local (lo subido es lo mismo
+    # que lo construido; el sync ya ha terminado en exito).
+    $indexContent = Get-Content $indexHtml -Raw
+    if ($indexContent -notmatch '/static/js/main\.([a-f0-9]+)\.js') {
+        Stop-Deploy "No se encuentra main.[hash].js dentro de $indexHtml. El index.html generado por CRA es invalido."
+    }
+    $mainHash    = $matches[1]
+    $mainJsKey   = "static/js/main.$mainHash.js"
+    $mainJsPath  = "/$mainJsKey"
+    Write-Host "    main bundle: $mainJsKey"
+
+    # 3.2 - Confirmar que esa key existe en el bucket (sin caches CloudFront).
+    $s3Listing = $null
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $s3Listing = & aws s3 ls "s3://$bucketName/static/js/" 2>$null
+        $s3ListExit = $LASTEXITCODE
     } finally {
-        Pop-Location
+        $ErrorActionPreference = $prevEAP
     }
-} else {
-    Write-Host "[1/3] Build saltado (SkipBuild)." -ForegroundColor Yellow
-    if (-not (Test-Path $indexHtml)) {
-        Write-Host "ERROR: SkipBuild pero no existe $indexHtml. Aborta." -ForegroundColor Red
-        exit 1
+    if ($s3ListExit -ne 0) {
+        Stop-Deploy "aws s3 ls s3://$bucketName/static/js/ fallo con codigo $s3ListExit"
+    }
+    # aws s3 ls devuelve array de lineas; join para -match contra el contenido
+    # completo en vez de filtrar el array (semantica distinta).
+    $joinedListing = ($s3Listing | Out-String)
+    if ($joinedListing -notmatch [regex]::Escape("main.$mainHash.js")) {
+        Stop-Deploy "main.$mainHash.js NO esta en s3://$bucketName/static/js/. El sync ha terminado en exito pero el bucket no tiene la key esperada."
+    }
+    Write-Host "    OK - main.$mainHash.js esta en bucket"
+
+    # 3.3 - GET / -> 200 + text/html + size razonable.
+    $rootInfo = Get-HttpResponseInfo -Url "$baseUrl/" -TimeoutSec 10
+    if (-not $rootInfo.Reachable) {
+        Stop-Deploy "GET $baseUrl/ no es accesible: $($rootInfo.Error). CloudFront / DNS / red?"
+    }
+    if ($rootInfo.StatusCode -ne 200) {
+        Stop-Deploy "GET $baseUrl/ devolvio HTTP $($rootInfo.StatusCode) (esperado 200)."
+    }
+    if ($rootInfo.ContentType -notmatch 'text/html') {
+        Stop-Deploy "GET $baseUrl/ devolvio Content-Type '$($rootInfo.ContentType)' (esperado text/html)."
+    }
+    if ($rootInfo.ContentLength -lt 500) {
+        Stop-Deploy "GET $baseUrl/ devolvio tamano $($rootInfo.ContentLength) bytes (sospechosamente pequeno; index.html valido suele superar 500)."
+    }
+    Write-Host "    OK - GET $baseUrl/ -> 200 text/html $($rootInfo.ContentLength) bytes"
+
+    # 3.4 - GET del bundle por su URL hashed -> 200 + size > 0.
+    # Como la URL es hashed (inmutable), CloudFront NUNCA la tiene cacheada
+    # antes de este deploy; el fetch va al origen S3 directamente y refleja
+    # lo que acaba de subirse. No depende de la invalidacion en curso.
+    $bundleInfo = Get-HttpResponseInfo -Url "$baseUrl$mainJsPath" -TimeoutSec 10
+    if (-not $bundleInfo.Reachable) {
+        Stop-Deploy "GET $baseUrl$mainJsPath no es accesible: $($bundleInfo.Error)."
+    }
+    if ($bundleInfo.StatusCode -ne 200) {
+        Stop-Deploy "GET $baseUrl$mainJsPath devolvio HTTP $($bundleInfo.StatusCode) (esperado 200)."
+    }
+    if ($bundleInfo.ContentLength -lt 1000) {
+        Stop-Deploy "GET $baseUrl$mainJsPath devolvio tamano $($bundleInfo.ContentLength) bytes (sospechosamente pequeno; bundle CRA suele superar 1KB)."
+    }
+    Write-Host "    OK - GET $baseUrl$mainJsPath -> 200 $($bundleInfo.ContentLength) bytes"
+
+    # -----------------------------------------------------------
+    # [4/5] Smoke test funcional condicional al modo operacional
+    # -----------------------------------------------------------
+    Write-Step "4/5" "Smoke test funcional ($baseUrl/api/...)"
+
+    if ($SkipFunctionalSmoke) {
+        Write-Host "    [skip] -SkipFunctionalSmoke activo." -ForegroundColor Yellow
+    } else {
+        # 4.1 - Sondear backend. Si no responde, saltar sin bloquear.
+        $probe = Get-HttpResponseInfo -Url "$baseUrl/api/users/me" -TimeoutSec $BackendProbeTimeoutSec
+        if (-not $probe.Reachable) {
+            Write-Host "    [skip] backend no accesible (timeout / red): $($probe.Error)." -ForegroundColor Yellow
+            Write-Host "          El deploy NO se bloquea por esto. Si el backend deberia estar arriba, revisalo." -ForegroundColor Yellow
+        } else {
+            Write-Host "    backend reachable: /api/users/me -> HTTP $($probe.StatusCode)"
+
+            # 4.2 - Detectar modo via X-Product-Mode en una ruta protegida.
+            # Una llamada SIN auth a /api/clients/me en OPEN devuelve 401/403
+            # (sin header X-Product-Mode); en PRELAUNCH devuelve 503 con
+            # header X-Product-Mode=PRELAUNCH. Cualquier otra cosa => no
+            # ejecutamos checks de modo.
+            $modeProbe = Get-HttpResponseInfo -Url "$baseUrl/api/clients/me" -TimeoutSec 5
+            $detectedMode = if ($modeProbe.ProductMode) { $modeProbe.ProductMode.ToUpper() } else { 'OPEN-OR-UNKNOWN' }
+            Write-Host "    modo operacional detectado: $detectedMode"
+
+            if ($detectedMode -eq 'PRELAUNCH') {
+                # 4.3 - POST /api/auth/login NO debe devolver 503 (gate de auth abierto en PRELAUNCH).
+                $login = Get-HttpResponseInfo -Url "$baseUrl/api/auth/login" -Method POST -ContentType 'application/json' -Body '{"email":"x","password":"x"}' -TimeoutSec 10
+                if ($login.StatusCode -eq 503) {
+                    Stop-Deploy "Smoke funcional PRELAUNCH: POST /api/auth/login devolvio 503 (gate de login esta cerrado; deberia estar abierto en PRELAUNCH)."
+                }
+                Write-Host "    OK - POST /api/auth/login -> HTTP $($login.StatusCode) (no 503)"
+
+                # 4.4 - POST /api/models/documents debe devolver 503 con X-Product-Mode=PRELAUNCH.
+                $docs = Get-HttpResponseInfo -Url "$baseUrl/api/models/documents" -Method POST -ContentType 'application/json' -Body '{}' -TimeoutSec 10
+                if ($docs.StatusCode -ne 503) {
+                    Stop-Deploy "Smoke funcional PRELAUNCH: POST /api/models/documents devolvio HTTP $($docs.StatusCode) (esperado 503; el cierre de docs no esta aplicado)."
+                }
+                if ($docs.ProductMode -ne 'PRELAUNCH') {
+                    Stop-Deploy "Smoke funcional PRELAUNCH: POST /api/models/documents devolvio 503 pero X-Product-Mode='$($docs.ProductMode)' (esperado PRELAUNCH)."
+                }
+                Write-Host "    OK - POST /api/models/documents -> 503 X-Product-Mode=PRELAUNCH"
+            } else {
+                Write-Host "    Modo no es PRELAUNCH; saltando checks especificos de pre-launch."
+            }
+        }
+    }
+
+    # -----------------------------------------------------------
+    # [5/5] Cierre
+    # -----------------------------------------------------------
+    Write-Step "5/5" "Cierre"
+
+    Write-Host ""
+    Write-Host "===============================================" -ForegroundColor Green
+    Write-Host " Deploy completado." -ForegroundColor Green
+    Write-Host "===============================================" -ForegroundColor Green
+    Write-Host " Entorno:     $Environment"
+    Write-Host " Surface:     $Surface"
+    Write-Host " main bundle: $mainJsKey"
+    Write-Host " URL base:    $baseUrl"
+    Write-Host ""
+    Write-Host " La invalidacion CloudFront tarda 30-90s en propagar." -ForegroundColor Yellow
+    Write-Host ""
+
+} finally {
+    if (Test-Path $lockFile) {
+        Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
     }
 }
-
-# ---------------------------------------------------------------
-# 5. Sync a S3
-# ---------------------------------------------------------------
-Write-Host "[2/3] Sync a s3://$bucketName/ ..." -ForegroundColor Cyan
-aws s3 sync $buildDir "s3://$bucketName/" --delete --cache-control "public,max-age=31536000,immutable"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: aws s3 sync falló con código $LASTEXITCODE" -ForegroundColor Red
-    exit $LASTEXITCODE
-}
-
-# index.html con cache-control restrictivo (el resto del bundle es immutable por hash)
-aws s3 cp $indexHtml "s3://$bucketName/index.html" --cache-control "no-cache, no-store, must-revalidate" --content-type "text/html; charset=utf-8"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: aws s3 cp index.html falló con código $LASTEXITCODE" -ForegroundColor Red
-    exit $LASTEXITCODE
-}
-
-# ---------------------------------------------------------------
-# 6. Invalidar CloudFront (la distribución CORRECTA)
-# ---------------------------------------------------------------
-Write-Host "[3/3] Invalidando CloudFront $distributionId ..." -ForegroundColor Cyan
-aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*"
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "ERROR: invalidación falló con código $LASTEXITCODE" -ForegroundColor Red
-    exit $LASTEXITCODE
-}
-
-Write-Host ""
-Write-Host "===============================================" -ForegroundColor Green
-Write-Host " Deploy completado." -ForegroundColor Green
-Write-Host "===============================================" -ForegroundColor Green
-Write-Host " La invalidación tarda 30-90s en propagarse en CloudFront." -ForegroundColor Yellow

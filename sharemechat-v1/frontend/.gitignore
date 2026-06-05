@@ -12,6 +12,15 @@
 /build
 # builds por superficie/entorno generados para deploy manual a S3 (PRO-7)
 build-*-prod/
+# carpetas de salida del script ops/scripts/deploy-frontend.ps1 (blindaje
+# rev 2026-06: una carpeta por superficie via env BUILD_PATH de CRA, para
+# que builds product y admin no compartan jamas la misma ubicacion)
+/build-product
+/build-admin
+
+# lock file del script de deploy de frontend para impedir invocaciones
+# concurrentes que pisen la misma carpeta de build
+.deploy.lock
 
 # misc
 .DS_Store
