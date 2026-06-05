@@ -136,7 +136,21 @@ export const SessionProvider = ({ children }) => {
       body: JSON.stringify({ uiLocale: normalized })
     });
 
-    setUser(updatedUser || null);
+    // Merge defensivo: el endpoint PUT /users/me/ui-locale devuelve un
+    // UserDTO que puede no estar enriquecido con los campos que solo
+    // poblan GETs concretos (p.ej. productAccessMode + allowlisted del
+    // ADR-009, que solo se cablean en GET /api/users/me). Si hicieramos
+    // `setUser(updatedUser)` plano, esos campos desaparecerian del estado
+    // y la puerta PRELAUNCH de RequireRole los leeria como undefined,
+    // abriendose por un instante hasta el siguiente loadMe(). Resultado
+    // visible: flicker de la pagina real entre PreLaunchScreen y reload
+    // tras cambio de idioma. Mantenemos prev como base y aplicamos por
+    // encima los campos que realmente vienen del PUT.
+    setUser((prev) => {
+      if (!updatedUser) return null;
+      if (!prev) return updatedUser;
+      return { ...prev, ...updatedUser };
+    });
     await applyLocale(updatedUser);
 
     return updatedUser || null;

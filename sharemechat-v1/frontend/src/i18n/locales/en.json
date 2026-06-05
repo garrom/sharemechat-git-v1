@@ -403,6 +403,27 @@
       "body": "Access live video chat with real models. Quick sign-up, no commitment, and free trials.",
       "cta": "I want to sign up"
     },
+    "preLaunch": {
+      "client": {
+        "title": "You're on the list, {{name}}.",
+        "body": "SharemeChat is almost here. We'll email you the moment we go live — your early-access spot is saved."
+      },
+      "model": {
+        "title": "Welcome aboard, {{name}}.",
+        "body": "You're one of our founding models. Verification opens very soon, and we'll email you the moment it does — your spot is saved."
+      },
+      "common": {
+        "logout": "Log out",
+        "menuLabel": "Open menu",
+        "menuTitle": "Menu",
+        "verifyTitle": "Verify your email",
+        "verifyBody": "We sent you a verification link when you registered. If you didn't receive it, you can request a new one.",
+        "verifyResend": "Resend verification email",
+        "verifyResending": "Sending...",
+        "verifyResentOk": "Verification email sent. Check your inbox.",
+        "verifyResentError": "We couldn't send the email. Please try again in a few minutes."
+      }
+    },
     "trialCooldown": {
       "title": "You have used up your free trials",
       "usedAll": "You have already used the 3 available free trials.",

@@ -166,6 +166,17 @@ public class ProductOperationalModeService {
     }
 
     /**
+     * Indica si un userId concreto está en la allowlist de bypass del gate.
+     * Expuesto como API pública para que UserController pueda enviar al
+     * frontend, junto con el modo actual, los dos booleanos que la SPA
+     * necesita para decidir si renderiza la pantalla pre-launch o el
+     * producto real (sin que el frontend tenga que detectar 503s).
+     */
+    public boolean isUserAllowlisted(Long userId) {
+        return isAllowlistedUser(userId);
+    }
+
+    /**
      * @param auth    Authentication actual. El service no lo consume: las
      *                excepciones que dependen de authorities (p. ej. refresh
      *                de admin) son responsabilidad del filtro, que las
@@ -228,6 +239,22 @@ public class ProductOperationalModeService {
                         ? Decision.blockMaintenance("mode_maintenance")
                         : Decision.allow("not_product_path");
             case PRELAUNCH:
+                // En PRELAUNCH login y refresh estan SIEMPRE abiertos.
+                // Razon: el modelo coming-soon es "el usuario se registra,
+                // se loguea, y la SPA le muestra <PreLaunchScreen/> via los
+                // booleanos productAccessMode + allowlisted de /api/users/me".
+                // Si bloquearamos login/refresh aqui, ni siquiera los
+                // usuarios allowlisted podrian autenticarse: al hacer POST
+                // /api/auth/login aun no hay cookie, isAllowlistedUser(null)
+                // devuelve false y el gate cerraria. Ademas, el frontend
+                // MaintenanceProvider interpreta cualquier 5xx como "backend
+                // caido" y muestra overlay full-screen de mantenimiento, lo
+                // que rompe la pantalla pre-launch antes de que pueda
+                // mostrarse. MAINTENANCE y CLOSED si siguen bloqueando
+                // login/refresh: semantica original intacta para esos modos.
+                if (isAuthLoginOrRefreshPath(safeMethod, safePath)) {
+                    return Decision.allow("prelaunch_auth_always_open");
+                }
                 return isProductPath(safeMethod, safePath)
                         ? Decision.blockProductUnavailable(Mode.PRELAUNCH.name(), "mode_prelaunch")
                         : Decision.allow("not_product_path");
@@ -296,6 +323,11 @@ public class ProductOperationalModeService {
         if (path.equals("/api/kyc/veriff/webhook")) return true;
 
         return false;
+    }
+
+    private boolean isAuthLoginOrRefreshPath(String method, String path) {
+        if (!"POST".equalsIgnoreCase(method)) return false;
+        return path.equals("/api/auth/login") || path.equals("/api/auth/refresh");
     }
 
     private boolean isClientRegistrationPath(String method, String path) {

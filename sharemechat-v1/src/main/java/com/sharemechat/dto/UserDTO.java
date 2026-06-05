@@ -40,6 +40,15 @@ public class UserDTO {
     private Boolean modelChecklistBackOk;
     private Boolean modelChecklistSelfieOk;
 
+    // Product Operational Mode (ADR-009) — exposicion al frontend del estado
+    // del gate de admision para que la SPA decida si renderiza la pantalla
+    // pre-launch o el producto real. Se poblan en UserController#getCurrentUser.
+    // productAccessMode: OPEN | PRELAUNCH | MAINTENANCE | CLOSED.
+    // allowlisted: true si el userId actual esta en product.access.allowlist.user-ids
+    // (bypassea el gate aunque el modo sea restrictivo).
+    private String productAccessMode;
+    private Boolean allowlisted;
+
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -135,4 +144,10 @@ public class UserDTO {
 
     public Boolean getModelChecklistSelfieOk() { return modelChecklistSelfieOk; }
     public void setModelChecklistSelfieOk(Boolean modelChecklistSelfieOk) { this.modelChecklistSelfieOk = modelChecklistSelfieOk; }
+
+    public String getProductAccessMode() { return productAccessMode; }
+    public void setProductAccessMode(String productAccessMode) { this.productAccessMode = productAccessMode; }
+
+    public Boolean getAllowlisted() { return allowlisted; }
+    public void setAllowlisted(Boolean allowlisted) { this.allowlisted = allowlisted; }
 }

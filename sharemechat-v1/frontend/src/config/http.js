@@ -14,9 +14,23 @@ const isJsonResponse = (res) =>
 // bucket sharemechat-maintenance via failover. Notifica a React por
 // CustomEvent 'sharemechat:maintenance' en window para que
 // MaintenanceProvider monte el overlay bloqueante.
+//
+// ADR-009 (PRODUCT_ACCESS_MODE): un 503 con header X-Product-Mode
+// PRELAUNCH o CLOSED NO es mantenimiento — es el gate operacional cerrando
+// el producto deliberadamente para usuarios no-allowlisted, y el frontend
+// muestra <PreLaunchScreen/> en RequireRole. Si dispararamos overlay de
+// mantenimiento aqui, taparia esa pantalla. MAINTENANCE explicito si
+// dispara overlay (semantica alineada con el nombre del modo). 502/504 y
+// 503 sin header de modo operacional siguen disparando overlay (es el
+// fallo real de gateway/backend).
 const isMaintenanceResponse = (res) => {
   if (!res) return false;
-  if (res.status === 502 || res.status === 503 || res.status === 504) return true;
+  if (res.status === 502 || res.status === 504) return true;
+  if (res.status === 503) {
+    const productMode = (res.headers.get('x-product-mode') || '').toUpperCase();
+    if (productMode === 'PRELAUNCH' || productMode === 'CLOSED') return false;
+    return true;
+  }
   const ct = (res.headers.get('content-type') || '').toLowerCase();
   if (ct.includes('text/html')) return true;
   return false;

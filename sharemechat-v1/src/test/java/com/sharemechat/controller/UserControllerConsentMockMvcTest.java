@@ -4,11 +4,13 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sharemechat.dto.UserDTO;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ClientDocumentRepository;
-import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.repository.ModelAssetRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.AgeGatePolicyService;
+import com.sharemechat.service.BackofficeAccessService;
 import com.sharemechat.service.ConsentService;
 import com.sharemechat.service.CountryAccessService;
+import com.sharemechat.service.ProductOperationalModeService;
 import com.sharemechat.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -27,11 +29,16 @@ class UserControllerConsentMockMvcTest {
     void getCurrentUserExposesConsentState() throws Exception {
         UserService userService = mock(UserService.class);
         UserRepository userRepository = mock(UserRepository.class);
-        ModelDocumentRepository modelDocumentRepository = mock(ModelDocumentRepository.class);
+        ModelAssetRepository modelAssetRepository = mock(ModelAssetRepository.class);
         ClientDocumentRepository clientDocumentRepository = mock(ClientDocumentRepository.class);
         CountryAccessService countryAccessService = mock(CountryAccessService.class);
         ConsentService consentService = mock(ConsentService.class);
         AgeGatePolicyService ageGatePolicyService = new AgeGatePolicyService("v1");
+        BackofficeAccessService backofficeAccessService = mock(BackofficeAccessService.class);
+        ProductOperationalModeService productOperationalModeService = mock(ProductOperationalModeService.class);
+        when(productOperationalModeService.currentMode())
+                .thenReturn(com.sharemechat.config.ProductOperationalProperties.Mode.OPEN);
+        when(productOperationalModeService.isUserAllowlisted(anyLong())).thenReturn(false);
 
         User user = new User();
         user.setId(10L);
@@ -53,11 +60,13 @@ class UserControllerConsentMockMvcTest {
         UserController controller = new UserController(
                 userService,
                 userRepository,
-                modelDocumentRepository,
+                modelAssetRepository,
                 clientDocumentRepository,
                 countryAccessService,
                 consentService,
-                ageGatePolicyService
+                ageGatePolicyService,
+                backofficeAccessService,
+                productOperationalModeService
         );
 
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)

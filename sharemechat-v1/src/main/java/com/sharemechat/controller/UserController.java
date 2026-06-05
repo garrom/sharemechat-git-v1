@@ -14,6 +14,7 @@ import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.AgeGatePolicyService;
 import com.sharemechat.service.BackofficeAccessService;
 import com.sharemechat.service.ConsentService;
+import com.sharemechat.service.ProductOperationalModeService;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -40,6 +41,7 @@ public class UserController {
     private final ConsentService consentService;
     private final AgeGatePolicyService ageGatePolicyService;
     private final BackofficeAccessService backofficeAccessService;
+    private final ProductOperationalModeService productOperationalModeService;
 
     public UserController(UserService userService,
                           UserRepository userRepository,
@@ -48,7 +50,8 @@ public class UserController {
                           CountryAccessService countryAccessService,
                           ConsentService consentService,
                           AgeGatePolicyService ageGatePolicyService,
-                          BackofficeAccessService backofficeAccessService) {
+                          BackofficeAccessService backofficeAccessService,
+                          ProductOperationalModeService productOperationalModeService) {
         this.userService = userService;
         this.modelAssetRepository = modelAssetRepository;
         this.clientDocumentRepository = clientDocumentRepository;
@@ -57,6 +60,7 @@ public class UserController {
         this.consentService = consentService;
         this.ageGatePolicyService = ageGatePolicyService;
         this.backofficeAccessService = backofficeAccessService;
+        this.productOperationalModeService = productOperationalModeService;
     }
 
 
@@ -209,6 +213,17 @@ public class UserController {
         }
 
         UserDTO userDTO = userService.mapToDTO(user);
+
+        // Product Operational Mode (ADR-009): exponemos al frontend el modo
+        // actual y si este userId esta en la allowlist de bypass. La SPA usa
+        // estos dos campos para decidir si renderiza <PreLaunchScreen/> o el
+        // producto real, sin tener que detectar 503s. El gate REST/WS
+        // permanece intacto en el backend: aunque el frontend rendere mal,
+        // los endpoints sensibles siguen rechazandose para no-allowlisted en
+        // modo restrictivo.
+        userDTO.setProductAccessMode(productOperationalModeService.currentMode().name());
+        userDTO.setAllowlisted(productOperationalModeService.isUserAllowlisted(user.getId()));
+
         return ResponseEntity.ok(userDTO);
     }
 

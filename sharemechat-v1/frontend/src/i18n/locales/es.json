@@ -403,6 +403,27 @@
       "body": "Accede al videochat en vivo con modelos reales. Registro rápido, sin compromisos y con pruebas gratuitas.",
       "cta": "Quiero registrarme"
     },
+    "preLaunch": {
+      "client": {
+        "title": "Ya estás en la lista, {{name}}.",
+        "body": "SharemeChat está a punto de llegar. Te avisamos por email en cuanto abramos — tu acceso anticipado está reservado."
+      },
+      "model": {
+        "title": "Bienvenida, {{name}}.",
+        "body": "Eres una de nuestras modelos fundadoras. La verificación se abre muy pronto y te avisaremos por email en cuanto puedas completarla — tu plaza está reservada."
+      },
+      "common": {
+        "logout": "Cerrar sesión",
+        "menuLabel": "Abrir menú",
+        "menuTitle": "Menú",
+        "verifyTitle": "Verifica tu email",
+        "verifyBody": "Te enviamos un enlace de verificación al registrarte. Si no lo recibiste, puedes pedir uno nuevo.",
+        "verifyResend": "Reenviar email de verificación",
+        "verifyResending": "Enviando...",
+        "verifyResentOk": "Email de verificación enviado. Revisa tu bandeja de entrada.",
+        "verifyResentError": "No pudimos enviar el email. Inténtalo de nuevo en unos minutos."
+      }
+    },
     "trialCooldown": {
       "title": "Has agotado tus pruebas gratuitas",
       "usedAll": "Ya has utilizado las 3 pruebas gratuitas disponibles.",
