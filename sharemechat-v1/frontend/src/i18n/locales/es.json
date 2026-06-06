@@ -27,16 +27,48 @@
       "menuTitle": "Menú"
     },
     "quickMatching": {
+      "eyebrow": "Conexión rápida",
+      "title": "Déjate de búsquedas. Que salte la chispa.",
+      "body": "Entra en conversaciones nuevas sin rebuscar entre perfiles infinitos. Todo está pensado para que descubrir a alguien sea inmediato, ligero y fácil de seguir.",
+      "pills": {
+        "fastDiscovery": "Descubrimiento rápido y aleatorio",
+        "lessBrowsing": "Menos buscar, más conocer",
+        "instantPath": "Camino directo a la conversación"
+      },
       "imageAltMain": "Pareja conversando relajadamente en un bar con luz cálida",
       "imageAltMini": "Mockup de una videollamada uno a uno mostrando el reproductor en pantalla"
     },
     "clearFlow": {
+      "eyebrow": "Todo fluye",
+      "title": "Todo es más fácil cuando la interfaz es sencilla.",
+      "body": "La experiencia está pensada para ser directa, legible y cómoda en cada pantalla. Menos fricción significa más atención en el momento y menos en averiguar cómo funciona todo.",
+      "pills": {
+        "cleanerInteractions": "Interacciones limpias de principio a fin",
+        "simpleActions": "Acciones simples, respuestas claras",
+        "smoothOnAnyDevice": "Pensado para ir fluido en cualquier dispositivo"
+      },
       "imageAltMain": "Persona usando SharemeChat en tres dispositivos: móvil, tablet y portátil"
     },
     "confidence": {
+      "eyebrow": "Privado y protegido",
+      "title": "Confianza en cada conversación",
+      "body": "Sentir que tu privacidad está cuidada cambia la forma de conectar. Con un entorno más tranquilo, un control más claro y el apoyo de sistemas de moderación, cada interacción se siente más segura.",
+      "pills": {
+        "privateByDesign": "Más privado por diseño",
+        "trustSignals": "Confianza respaldada por tecnología",
+        "cleanerSpace": "Un espacio más limpio para interacciones reales"
+      },
       "imageAltMain": "Representación visual de seguridad con un centro cálido que evoca confianza"
     },
     "unexpectedChemistry": {
+      "eyebrow": "Química inesperada",
+      "title": "A veces la conexión adecuada aparece cuando dejas de forzarla.",
+      "body": "No toda conversación que importa empieza con un plan perfecto. A veces nace de un clic espontáneo, un match inesperado y las ganas de quedarte un rato más.",
+      "pills": {
+        "naturalDiscovery": "Un descubrimiento que se siente natural",
+        "realPotential": "Matches inesperados con potencial real",
+        "genuineSpark": "Espacio para que surja una chispa de verdad"
+      },
       "imageAltChica1": "Retrato de una mujer con estilo natural",
       "imageAltChica2": "Retrato de una mujer mirando con calma a la cámara",
       "imageAltChico1": "Retrato de un hombre con expresión amable",
@@ -48,7 +80,7 @@
       "startVideoChat": "Iniciar Video Chat"
     },
     "hero": {
-      "eyebrow": "Private 1-to-1 connection",
+      "eyebrow": "Conexión privada 1 a 1",
       "titlePrefix": "VideoChat con",
       "titleAccent": "modelos reales",
       "subtitle": "Conecta al instante en una experiencia 1 a 1, privada y cuidada, diseñada para generar confianza desde el primer segundo.",

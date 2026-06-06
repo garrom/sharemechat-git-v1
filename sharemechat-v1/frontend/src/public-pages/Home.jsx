@@ -153,15 +153,13 @@ export default function Home() {
       <HomeLandingSectionWhite ref={quickMatchingRef}>
         <HomeSectionInner>
           <HomeSectionText>
-            <HomeSectionEyebrow>Quick matching</HomeSectionEyebrow>
-            <HomeSectionTitle>Skip the search. Start the spark.</HomeSectionTitle>
-            <HomeSectionBody>
-              Jump into new conversations without digging through endless profiles. The flow is built to make discovery feel immediate, light and easy to follow.
-            </HomeSectionBody>
+            <HomeSectionEyebrow>{i18n.t('home.quickMatching.eyebrow')}</HomeSectionEyebrow>
+            <HomeSectionTitle>{i18n.t('home.quickMatching.title')}</HomeSectionTitle>
+            <HomeSectionBody>{i18n.t('home.quickMatching.body')}</HomeSectionBody>
             <HomeFeatureList>
-              <HomeFeaturePill>Fast random discovery</HomeFeaturePill>
-              <HomeFeaturePill>Less browsing, more meeting</HomeFeaturePill>
-              <HomeFeaturePill>Instant path into conversation</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.quickMatching.pills.fastDiscovery')}</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.quickMatching.pills.lessBrowsing')}</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.quickMatching.pills.instantPath')}</HomeFeaturePill>
             </HomeFeatureList>
           </HomeSectionText>
 
@@ -223,15 +221,13 @@ export default function Home() {
           </HomeSectionVisual>
 
           <HomeSectionTextRight>
-            <HomeSectionEyebrow>Private and protected</HomeSectionEyebrow>
-            <HomeSectionTitle>Confidence built into every chat</HomeSectionTitle>
-            <HomeSectionBody>
-              A stronger sense of privacy changes how people connect. With a calmer environment, clearer control and support from moderation systems, every interaction can feel more secure.
-            </HomeSectionBody>
+            <HomeSectionEyebrow>{i18n.t('home.confidence.eyebrow')}</HomeSectionEyebrow>
+            <HomeSectionTitle>{i18n.t('home.confidence.title')}</HomeSectionTitle>
+            <HomeSectionBody>{i18n.t('home.confidence.body')}</HomeSectionBody>
             <HomeFeatureList>
-              <HomeFeaturePill>More private by design</HomeFeaturePill>
-              <HomeFeaturePill>Technology-backed trust signals</HomeFeaturePill>
-              <HomeFeaturePill>Cleaner space for real interaction</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.confidence.pills.privateByDesign')}</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.confidence.pills.trustSignals')}</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.confidence.pills.cleanerSpace')}</HomeFeaturePill>
             </HomeFeatureList>
           </HomeSectionTextRight>
         </HomeSectionInnerReverse>
@@ -240,15 +236,13 @@ export default function Home() {
       <HomeLandingSectionWhite>
         <HomeSectionInner>
           <HomeSectionText>
-            <HomeSectionEyebrow>Clear flow</HomeSectionEyebrow>
-            <HomeSectionTitle>Everything feels easier when the interface gets out of the way</HomeSectionTitle>
-            <HomeSectionBody>
-              The experience is shaped to stay direct, readable and comfortable from screen to screen. Less friction means more attention on the moment and less on figuring things out.
-            </HomeSectionBody>
+            <HomeSectionEyebrow>{i18n.t('home.clearFlow.eyebrow')}</HomeSectionEyebrow>
+            <HomeSectionTitle>{i18n.t('home.clearFlow.title')}</HomeSectionTitle>
+            <HomeSectionBody>{i18n.t('home.clearFlow.body')}</HomeSectionBody>
             <HomeFeatureList>
-              <HomeFeaturePill>Cleaner interactions from start to finish</HomeFeaturePill>
-              <HomeFeaturePill>Simple actions, clear feedback</HomeFeaturePill>
-              <HomeFeaturePill>Made to feel smooth on every device</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.clearFlow.pills.cleanerInteractions')}</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.clearFlow.pills.simpleActions')}</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.clearFlow.pills.smoothOnAnyDevice')}</HomeFeaturePill>
             </HomeFeatureList>
           </HomeSectionText>
 
@@ -333,15 +327,13 @@ export default function Home() {
           </HomeSectionVisual>
 
           <HomeSectionTextRight>
-            <HomeSectionEyebrow>Unexpected chemistry</HomeSectionEyebrow>
-            <HomeSectionTitle>Sometimes the right connection appears when you stop forcing it</HomeSectionTitle>
-            <HomeSectionBody>
-              Not every meaningful conversation starts with a perfect plan. Sometimes it begins with one spontaneous click, one surprise match and the feeling that you want to stay a little longer.
-            </HomeSectionBody>
+            <HomeSectionEyebrow>{i18n.t('home.unexpectedChemistry.eyebrow')}</HomeSectionEyebrow>
+            <HomeSectionTitle>{i18n.t('home.unexpectedChemistry.title')}</HomeSectionTitle>
+            <HomeSectionBody>{i18n.t('home.unexpectedChemistry.body')}</HomeSectionBody>
             <HomeFeatureList>
-              <HomeFeaturePill>Discovery that feels natural</HomeFeaturePill>
-              <HomeFeaturePill>Unexpected matches with real potential</HomeFeaturePill>
-              <HomeFeaturePill>Room for a genuine spark to happen</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.unexpectedChemistry.pills.naturalDiscovery')}</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.unexpectedChemistry.pills.realPotential')}</HomeFeaturePill>
+              <HomeFeaturePill>{i18n.t('home.unexpectedChemistry.pills.genuineSpark')}</HomeFeaturePill>
             </HomeFeatureList>
           </HomeSectionTextRight>
         </HomeSectionInnerReverse>

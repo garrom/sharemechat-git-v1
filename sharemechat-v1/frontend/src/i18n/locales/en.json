@@ -27,16 +27,48 @@
       "menuTitle": "Menu"
     },
     "quickMatching": {
+      "eyebrow": "Quick matching",
+      "title": "Skip the search. Start the spark.",
+      "body": "Jump into new conversations without digging through endless profiles. The flow is built to make discovery feel immediate, light and easy to follow.",
+      "pills": {
+        "fastDiscovery": "Fast random discovery",
+        "lessBrowsing": "Less browsing, more meeting",
+        "instantPath": "Instant path into conversation"
+      },
       "imageAltMain": "Couple chatting in a softly lit bar",
       "imageAltMini": "Mockup of a one-to-one video call showing the player on screen"
     },
     "clearFlow": {
+      "eyebrow": "Clear flow",
+      "title": "Everything feels easier when the interface gets out of the way",
+      "body": "The experience is shaped to stay direct, readable and comfortable from screen to screen. Less friction means more attention on the moment and less on figuring things out.",
+      "pills": {
+        "cleanerInteractions": "Cleaner interactions from start to finish",
+        "simpleActions": "Simple actions, clear feedback",
+        "smoothOnAnyDevice": "Made to feel smooth on every device"
+      },
       "imageAltMain": "Person using SharemeChat across three devices: mobile, tablet and laptop"
     },
     "confidence": {
+      "eyebrow": "Private and protected",
+      "title": "Confidence built into every chat",
+      "body": "A stronger sense of privacy changes how people connect. With a calmer environment, clearer control and support from moderation systems, every interaction can feel more secure.",
+      "pills": {
+        "privateByDesign": "More private by design",
+        "trustSignals": "Technology-backed trust signals",
+        "cleanerSpace": "Cleaner space for real interaction"
+      },
       "imageAltMain": "Visual representation of security with a warm centre that conveys trust"
     },
     "unexpectedChemistry": {
+      "eyebrow": "Unexpected chemistry",
+      "title": "Sometimes the right connection appears when you stop forcing it",
+      "body": "Not every meaningful conversation starts with a perfect plan. Sometimes it begins with one spontaneous click, one surprise match and the feeling that you want to stay a little longer.",
+      "pills": {
+        "naturalDiscovery": "Discovery that feels natural",
+        "realPotential": "Unexpected matches with real potential",
+        "genuineSpark": "Room for a genuine spark to happen"
+      },
       "imageAltChica1": "Portrait of a woman with a natural style",
       "imageAltChica2": "Portrait of a woman looking calmly at the camera",
       "imageAltChico1": "Portrait of a man with a friendly expression",
