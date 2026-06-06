@@ -80,8 +80,8 @@ public class EmailCopyRenderer {
             String safeAlt = imageAlt == null ? "" : imageAlt;
             imageBlock = """
                       <tr>
-                        <td align="center" style="padding: 16px 24px 0 24px;">
-                          <img src="%s" alt="%s" width="600" style="display:block; max-width:100%%; height:auto; border:0; outline:none; text-decoration:none;" />
+                        <td align="left" style="padding: 16px 24px 0 24px;">
+                          <img src="%s" alt="%s" width="360" style="display:block; max-width:360px; height:auto; border:0; outline:none; text-decoration:none;" />
                         </td>
                       </tr>
                     """.formatted(imageUrl, safeAlt);
