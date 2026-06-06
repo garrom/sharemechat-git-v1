@@ -11,6 +11,26 @@ function handler(event) {
         };
     }
 
+    // 301 de las 5 URLs legacy .html (servidas hoy por sharemechat-landing-prod)
+    // a las rutas canonicas del SPA. Preserva SEO juice y backlinks externos
+    // (Segpay docs, indexaciones de Google, etc.) tras el switch del origin.
+    // cookie-settings.html (singular del landing legacy) -> /cookies-settings
+    // (plural en App.jsx del SPA).
+    var legacyRedirects = {
+        '/legal.html':                '/legal',
+        '/faq.html':                  '/faq',
+        '/safety.html':               '/safety',
+        '/community-guidelines.html': '/community-guidelines',
+        '/cookie-settings.html':      '/cookies-settings'
+    };
+    if (legacyRedirects[uri]) {
+        return {
+            statusCode: 301,
+            statusDescription: 'Moved Permanently',
+            headers: { location: { value: legacyRedirects[uri] } }
+        };
+    }
+
     // Dejar pasar backend y assets/rutas estáticas reales
     if (
         uri.startsWith('/api/') ||
