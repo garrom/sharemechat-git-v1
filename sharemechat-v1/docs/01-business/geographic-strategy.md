@@ -2,7 +2,7 @@
 
 Documento de dirección de trabajo, **no finalizada**. Recoge la postura actual sobre qué mercados servir y en qué orden, condicionada por la clasificación adult/streaming ([ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md)) y por el régimen regulatorio de los mercados objetivos.
 
-Pendiente de cerrar mediante ADR específico cuando se implemente el country-gating real (reusará y especializará el mecanismo de [ADR-007](../06-decisions/adr-007-country-blacklist-phase1-backend-primary.md)). Mientras tanto este documento gobierna las decisiones tentativas; el ADR-007 sigue siendo la decisión arquitectónica del mecanismo de bloqueo.
+La lista concreta de países servidos en el go-live PROD se cerró en [ADR-031](../06-decisions/adr-031-country-gating-go-live-prod.md) (cliente: 28 / modelo: 46, con RU/CU/VE/NI/UA excluidos del modelo por sanciones o riesgo operativo). El mecanismo técnico de bloqueo sigue siendo el definido en [ADR-007](../06-decisions/adr-007-country-blacklist-phase1-backend-primary.md). Este documento se mantiene como dirección estratégica de medio plazo (oleadas posteriores, reconsideración de mercados, evolución a granularidad sub-país en US).
 
 ## Postura general
 
@@ -51,7 +51,7 @@ Razón de la oleada 2: poder adquisitivo medio-alto comparable al beachhead, per
 - Estados US con ley aún no servidos.
 - Regiones de bajo ARPU + alto chargeback.
 
-El mecanismo técnico de bloqueo está definido en [ADR-007](../06-decisions/adr-007-country-blacklist-phase1-backend-primary.md). La lista concreta de países servidos y bloqueados es decisión operativa pendiente; se cerrará junto con el ADR futuro de country-gating real.
+El mecanismo técnico de bloqueo está definido en [ADR-007](../06-decisions/adr-007-country-blacklist-phase1-backend-primary.md). La lista concreta de países servidos (cliente 28 / modelo 46) está cerrada en [ADR-031](../06-decisions/adr-031-country-gating-go-live-prod.md).
 
 ## Implicaciones operativas
 
@@ -67,7 +67,7 @@ El mecanismo técnico de bloqueo está definido en [ADR-007](../06-decisions/adr
 - Si algún mercado del beachhead queda fuera por incompatibilidad con la cobertura del PSP final.
 - Cómo se gestiona la rotación de la lista cuando la regulación de un estado/país cambia.
 
-Estas decisiones se cerrarán en el ADR futuro de country-gating real, que reusará el mecanismo de ADR-007.
+La selección concreta del go-live se cerró en [ADR-031](../06-decisions/adr-031-country-gating-go-live-prod.md). Las decisiones pendientes restantes (oleada 2, granularidad estatal US, reincorporación de UA/VE si Segpay confirma payouts) se documentarán como revisiones del propio ADR-031 o como ADRs sucesivos.
 
 ## Idea operativa de fondo
 
@@ -77,5 +77,6 @@ El coste de compliance es casi fijo una vez construido. Lo que mantiene sano el 
 
 - [ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md) — clasificación adult/streaming.
 - [ADR-007](../06-decisions/adr-007-country-blacklist-phase1-backend-primary.md) — mecanismo de bloqueo por país.
+- [ADR-031](../06-decisions/adr-031-country-gating-go-live-prod.md) — listas finales cliente (28) y modelo (46) para go-live PROD.
 - [psp-strategy.md](psp-strategy.md) — PSP y redundancia.
 - [compliance-deliverables.md](compliance-deliverables.md) — entregables que aplican a todos los mercados servidos.
