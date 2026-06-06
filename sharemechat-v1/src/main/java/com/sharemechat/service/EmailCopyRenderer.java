@@ -19,6 +19,20 @@ public class EmailCopyRenderer {
     private static final String BRAND_LOGO_URL =
             "https://assets.sharemechat.com/brand/sharemechat-logo.png";
 
+    /**
+     * Imagen ilustrativa del estado coming-soon (PRELAUNCH). 600x400
+     * JPEG progressive q85, derivado del mismo asset visual del
+     * PreLaunchScreen frontend pero convertido de WebP a JPEG por
+     * compatibilidad con clientes de email (Outlook desktop y otros
+     * fallan al renderizar WebP). Alojada en
+     * assets-sharemechat-prod/email/ (path durable, no afectado por
+     * el sync --delete del bucket frontend-prod). Solo se inserta en
+     * el cuerpo de bienvenida bajo PRELAUNCH; nunca en verificacion
+     * ni en otras plantillas.
+     */
+    private static final String COMING_SOON_IMAGE_URL =
+            "https://assets.sharemechat.com/email/coming-soon_v1.jpg";
+
     private final EmailLocaleResolver localeResolver;
     private final AssetRejectionReasonCopy assetRejectionReasonCopy;
     private final ProductOperationalModeService operationalMode;
@@ -42,6 +56,36 @@ public class EmailCopyRenderer {
      * centrada a pie alineado izquierda.
      */
     private static String wrapWithLogo(String innerHtml) {
+        return wrapWithLogoAndImage(innerHtml, null, null);
+    }
+
+    /**
+     * Variante con imagen ilustrativa colocada entre el cuerpo y el
+     * pie del logo (en este orden vertical: cuerpo / imagen / logo
+     * izquierda). Pensada para la bienvenida coming-soon (PRELAUNCH).
+     *
+     * @param imageUrl  URL absoluta de la imagen ilustrativa (HTTPS).
+     *                  Null o vacio = no se incluye bloque de imagen
+     *                  (equivalente a {@link #wrapWithLogo(String)}).
+     * @param imageAlt  Texto alternativo accesible para la imagen
+     *                  (los clientes de email que bloquean imagenes
+     *                  por defecto lo muestran en su lugar; el cuerpo
+     *                  ya es autosuficiente sin la imagen).
+     */
+    private static String wrapWithLogoAndImage(String innerHtml,
+                                               String imageUrl,
+                                               String imageAlt) {
+        String imageBlock = "";
+        if (imageUrl != null && !imageUrl.isBlank()) {
+            String safeAlt = imageAlt == null ? "" : imageAlt;
+            imageBlock = """
+                      <tr>
+                        <td align="center" style="padding: 16px 24px 0 24px;">
+                          <img src="%s" alt="%s" width="600" style="display:block; max-width:100%%; height:auto; border:0; outline:none; text-decoration:none;" />
+                        </td>
+                      </tr>
+                    """.formatted(imageUrl, safeAlt);
+        }
         return """
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%%" style="background:#ffffff;">
                   <tr>
@@ -49,13 +93,14 @@ public class EmailCopyRenderer {
                 %s
                     </td>
                   </tr>
+                %s
                   <tr>
                     <td align="left" style="padding: 24px;">
                       <img src="%s" width="172" height="18" alt="SharemeChat" style="display:block; max-width:172px; height:auto; border:0; outline:none; text-decoration:none;" />
                     </td>
                   </tr>
                 </table>
-                """.formatted(innerHtml, BRAND_LOGO_URL);
+                """.formatted(innerHtml, imageBlock, BRAND_LOGO_URL);
     }
 
     /**
@@ -92,7 +137,13 @@ public class EmailCopyRenderer {
                       <p>Ya puedes acceder a la plataforma.</p>
                       <p>Si no has creado esta cuenta, contacta con soporte.</p>
                       """.formatted(nickname);
-            return new EmailContent("Bienvenido a SharemeChat", wrapWithLogo(body));
+            // Solo bienvenida PRELAUNCH lleva la imagen coming-soon
+            // (debajo del cuerpo, encima del pie del logo). OPEN no
+            // la lleva.
+            String wrapped = prelaunch
+                    ? wrapWithLogoAndImage(body, COMING_SOON_IMAGE_URL, "SharemeChat - próximamente")
+                    : wrapWithLogo(body);
+            return new EmailContent("Bienvenido a SharemeChat", wrapped);
         }
 
         String body = prelaunch
@@ -108,7 +159,10 @@ public class EmailCopyRenderer {
                   <p>You can now access the platform.</p>
                   <p>If you did not create this account, please contact support.</p>
                   """.formatted(nickname);
-        return new EmailContent("Welcome to SharemeChat", wrapWithLogo(body));
+        String wrappedEn = prelaunch
+                ? wrapWithLogoAndImage(body, COMING_SOON_IMAGE_URL, "SharemeChat - coming soon")
+                : wrapWithLogo(body);
+        return new EmailContent("Welcome to SharemeChat", wrappedEn);
     }
 
     public EmailContent renderUnsubscribe(User user) {
