@@ -557,11 +557,25 @@ export const HomeVisualLine = styled.div`
   }
 `;
 
+// Panel de la seccion "Confidence built into every chat". Tras pasar de
+// alojar la ventana simulada de videollamada (topbar + video + flotante +
+// controles, todo gradients placeholder) a alojar la foto real
+// confidence_v1.webp, la geometria pasa de casi cuadrada (~540x372 con el
+// inset original 24px 10px 24px 10px) a APAISADA/panoramica para que la
+// imagen (ratio ~2.39) entre sin recortes feos. Mismo patron que
+// HomePanelLarge de la seccion "Clear flow".
+//
+// Desktop (stage 560x420): inset 90px 16px -> ~528x240, ratio ~2.20.
+// Mobile (<960px): inset 60px 12px -> ratio mas estrecho aceptable.
 export const HomeCallWindow = styled(HomeVisualCard)`
-  inset: 24px 10px 24px 10px;
+  inset: 90px 16px 90px 16px;
   border-radius: 32px;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(244,247,251,0.98) 100%);
+
+  @media (max-width: 960px) {
+    inset: 60px 12px 60px 12px;
+  }
 `;
 
 export const HomeCallTopbar = styled.div`

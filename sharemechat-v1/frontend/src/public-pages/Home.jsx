@@ -20,11 +20,6 @@ import {
   HeroTitle,
   HeroPrimaryCta,
   HeroSecondaryCta,
-  HomeCallControl,
-  HomeCallControls,
-  HomeCallFloating,
-  HomeCallTopbar,
-  HomeCallVideo,
   HomeCallWindow,
   HomeFeatureList,
   HomeFeaturePill,
@@ -207,15 +202,21 @@ export default function Home() {
         <HomeSectionInnerReverse>
           <HomeSectionVisual>
             <HomeVisualStage>
+              {/* Foto unica (render de seguridad con centro calido)
+                  reemplazando la ventana de videollamada simulada
+                  anterior. Opcion A del plan: una sola imagen en el
+                  panel, sin elementos extra; HomeCallWindow ahora
+                  apaisado para alojar la foto sin recortes feos
+                  (mismo patron que HomePanelLarge de Clear flow).
+                  Se conserva HomeVisualShine para mantener el sello
+                  de marca. */}
               <HomeCallWindow>
-                <HomeCallTopbar />
-                <HomeCallVideo />
-                <HomeCallFloating />
-                <HomeCallControls>
-                  <HomeCallControl />
-                  <HomeCallControl />
-                  <HomeCallControl />
-                </HomeCallControls>
+                <HomeVisualPhotoPanel
+                  src={`${ASSETS_BASE}/home/confidence/confidence_v1.webp`}
+                  alt={i18n.t('home.confidence.imageAltMain')}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <HomeVisualShine />
               </HomeCallWindow>
             </HomeVisualStage>
