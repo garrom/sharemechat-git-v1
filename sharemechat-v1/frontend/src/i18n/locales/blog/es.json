@@ -3,7 +3,8 @@
     "kicker": "SharemeChat Journal",
     "title": "Artículos, guías y notas de producto sobre videochat 1 a 1 en directo.",
     "lead": "Este espacio se está construyendo como una capa editorial práctica para usuarios y modelos que buscan explicaciones claras, mejor contexto y perspectivas útiles sobre la plataforma.",
-    "tagline": "Lecturas concisas, presentación calmada y temas pegados al producto real: privacidad, etiqueta, configuración, pagos, novedades de la plataforma y la evolución de la interacción en directo."
+    "tagline": "Lecturas concisas, presentación calmada y temas pegados al producto real: privacidad, etiqueta, configuración, pagos, novedades de la plataforma y la evolución de la interacción en directo.",
+    "imageAlt": "Imagen editorial del SharemeChat Journal"
   },
   "listing": {
     "sectionLabel": "Últimos artículos"

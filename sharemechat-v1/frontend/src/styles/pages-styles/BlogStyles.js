@@ -24,10 +24,22 @@ export const PageInner = styled.div`
   }
 `;
 
+// Layout via grid-template-areas para que el kicker viva en su propia
+// fila por encima y el aside arranque a la altura del titulo h1 sin
+// alturas en pixeles fragiles. La fila 1 (auto) la marca el kicker; la
+// fila 2 (1fr) la rellenan content y aside, ambos a la misma altura
+// gracias al implicit stretch del grid. El techo del aside coincide
+// asi con el techo del titulo de forma automatica, y responsive
+// colapsa a una columna apilando kicker -> content -> aside.
 export const HeroSection = styled.header`
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
-  gap: 28px;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "kicker  ."
+    "content aside";
+  column-gap: 28px;
+  row-gap: 0;
   align-items: stretch;
   margin-bottom: 34px;
   padding: 36px;
@@ -38,16 +50,24 @@ export const HeroSection = styled.header`
 
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "kicker"
+      "content"
+      "aside";
     padding: 24px;
-    gap: 20px;
+    column-gap: 0;
+    row-gap: 20px;
   }
 `;
 
 export const HeroContent = styled.div`
+  grid-area: content;
   max-width: 720px;
 `;
 
 export const HeroKicker = styled.div`
+  grid-area: kicker;
   font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -78,7 +98,16 @@ export const HeroTagline = styled.p`
   line-height: 1.7;
 `;
 
+// Panel derecho del hero del listado de blog. Pasa de alojar un
+// placeholder estilizado (HeroAsideInner con HeroAsideCard data-large +
+// HeroAsideRow con minis y lineas, todo gradients hardcoded) a alojar
+// una unica imagen real servida desde el CDN de assets via
+// ASSETS_BASE/blog/hero/blog_hero_v1.webp. Mismo patron que usamos en
+// las secciones de la home: marco con border-radius + sombra + overflow
+// hidden recorta la <img> que va dentro con position:absolute inset:0.
+// El background pastel actua como fallback si la imagen no carga.
 export const HeroAside = styled.div`
+  grid-area: aside;
   position: relative;
   min-height: 260px;
   border-radius: 28px;
@@ -86,6 +115,21 @@ export const HeroAside = styled.div`
   border: 1px solid rgba(148, 163, 184, 0.14);
   overflow: hidden;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+`;
+
+// Foto real dentro del HeroAside. Mismo patron que HomeVisualPhotoPanel
+// de las secciones panoramicas de la home: object-fit cover absorbe la
+// diferencia de aspect ratio entre el aside (mas estrecho/alto en
+// pantallas pequenas) y la imagen panoramica (~1.91). object-position
+// parametrizable por prop $position para afinar el encuadre por imagen.
+export const BlogHeroPhoto = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: ${(p) => p.$position || 'center center'};
 `;
 
 export const HeroAsideInner = styled.div`

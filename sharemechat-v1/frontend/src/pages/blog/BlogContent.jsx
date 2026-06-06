@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '../../config/http';
+import { ASSETS_BASE } from '../../config/runtimeEnv';
 import { NavButton } from '../../styles/ButtonStyles';
 import {
   PageWrap,
@@ -14,13 +15,7 @@ import {
   HeroLead,
   HeroTagline,
   HeroAside,
-  HeroAsideInner,
-  HeroAsideCard,
-  HeroAsideCardTop,
-  HeroAsideCardBody,
-  HeroAsideRow,
-  HeroAsideMini,
-  HeroAsideMiniLine,
+  BlogHeroPhoto,
   ContentGrid,
   MainColumn,
   SectionLabel,
@@ -295,33 +290,31 @@ const BlogContent = ({
     <PageWrap>
       <PageInner>
         <HeroSection>
+          {/* Layout via grid-template-areas: el kicker vive en su
+              propia fila (area "kicker") por encima del bloque
+              content+aside, asi el techo del aside se alinea
+              automaticamente con el techo del titulo h1 sin alturas
+              en pixeles. Por eso HeroKicker sale fuera de
+              HeroContent (debe ser hijo directo del grid). */}
+          <HeroKicker>{t('blog:hero.kicker')}</HeroKicker>
+
           <HeroContent>
-            <HeroKicker>{t('blog:hero.kicker')}</HeroKicker>
             <HeroTitle>{t('blog:hero.title')}</HeroTitle>
             <HeroLead>{t('blog:hero.lead')}</HeroLead>
             <HeroTagline>{t('blog:hero.tagline')}</HeroTagline>
           </HeroContent>
 
-          <HeroAside aria-hidden="true">
-            <HeroAsideInner>
-              <HeroAsideCard data-large="true">
-                <HeroAsideCardTop />
-                <HeroAsideCardBody />
-              </HeroAsideCard>
-
-              <HeroAsideRow>
-                <HeroAsideMini>
-                  <HeroAsideMiniLine />
-                  <HeroAsideMiniLine />
-                  <HeroAsideMiniLine />
-                </HeroAsideMini>
-                <HeroAsideMini>
-                  <HeroAsideMiniLine />
-                  <HeroAsideMiniLine />
-                  <HeroAsideMiniLine />
-                </HeroAsideMini>
-              </HeroAsideRow>
-            </HeroAsideInner>
+          {/* Imagen real de cabecera reemplazando los placeholders
+              estilizados anteriores. Una unica imagen con object-fit
+              cover dentro del marco; su techo coincide con el techo
+              del HeroContent por el grid 2x2. */}
+          <HeroAside>
+            <BlogHeroPhoto
+              src={`${ASSETS_BASE}/blog/hero/blog_hero_v1.webp`}
+              alt={t('blog:hero.imageAlt')}
+              loading="lazy"
+              decoding="async"
+            />
           </HeroAside>
         </HeroSection>
 
