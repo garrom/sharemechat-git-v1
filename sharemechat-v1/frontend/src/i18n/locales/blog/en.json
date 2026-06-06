@@ -1,9 +1,9 @@
 {
   "hero": {
     "kicker": "SharemeChat Journal",
-    "title": "Articles, guides and product notes on live 1-on-1 video chat.",
-    "lead": "This space is being built as a practical editorial layer for users and models looking for clear explanations, better context, and useful perspectives on the platform.",
-    "tagline": "Concise reads, calm presentation, and topics grounded in the real product: privacy, etiquette, settings, payments, platform updates, and the evolution of live interaction.",
+    "title": "Articles, guides and notes on live video chat",
+    "lead": "Clear explanations and useful context about the platform, for users and models alike.",
+    "tagline": "Concise reads on what matters: privacy, etiquette, setup, payments and updates.",
     "imageAlt": "Editorial illustration of the SharemeChat Journal"
   },
   "listing": {
