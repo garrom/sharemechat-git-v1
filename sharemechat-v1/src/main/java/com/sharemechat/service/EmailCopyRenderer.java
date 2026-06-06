@@ -32,27 +32,30 @@ public class EmailCopyRenderer {
     }
 
     /**
-     * Envuelve el cuerpo HTML del email con una cabecera con el logo
-     * de marca. Estructura email-safe (tabla con role=presentation,
-     * inline styles, sin CSS externo) compatible con la mayoria de
-     * clientes mainstream (Gmail web/iOS/Android, Outlook desktop/365,
-     * Apple Mail, Yahoo).
+     * Envuelve el cuerpo HTML del email con el logo de marca en el PIE
+     * (alineado a la izquierda, todas las plantillas en ambos modos
+     * PRELAUNCH/OPEN). Estructura email-safe (tabla con
+     * role=presentation, inline styles, sin CSS externo) compatible con
+     * Gmail web/iOS/Android, Outlook desktop/365, Apple Mail, Yahoo.
+     *
+     * Maqueta v2 aprobada 2026-06-06: el logo se movio de cabecera
+     * centrada a pie alineado izquierda.
      */
     private static String wrapWithLogo(String innerHtml) {
         return """
                 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%%" style="background:#ffffff;">
                   <tr>
-                    <td align="center" style="padding: 24px 16px 16px 16px;">
-                      <img src="%s" width="172" height="18" alt="SharemeChat" style="display:block; max-width:172px; height:auto; border:0; outline:none; text-decoration:none;" />
-                    </td>
-                  </tr>
-                  <tr>
-                    <td style="padding: 0 24px 24px 24px; color:#0f172a; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6;">
+                    <td style="padding: 24px 24px 0 24px; color:#0f172a; font-family: Arial, Helvetica, sans-serif; font-size: 14px; line-height: 1.6;">
                 %s
                     </td>
                   </tr>
+                  <tr>
+                    <td align="left" style="padding: 24px;">
+                      <img src="%s" width="172" height="18" alt="SharemeChat" style="display:block; max-width:172px; height:auto; border:0; outline:none; text-decoration:none;" />
+                    </td>
+                  </tr>
                 </table>
-                """.formatted(BRAND_LOGO_URL, innerHtml);
+                """.formatted(innerHtml, BRAND_LOGO_URL);
     }
 
     /**
@@ -198,15 +201,17 @@ public class EmailCopyRenderer {
             }
 
             if (comingSoonCopy) {
-                // Coming-soon ES: subject simple, sin diferenciacion por
-                // userType (en PRELAUNCH no se diferencian funciones
-                // todavia, todos esperan apertura).
+                // Coming-soon ES (maqueta v2 2026-06-06): subject
+                // simple, cuerpo simplificado en 4 parrafos cortos.
+                // Saludo / instruccion / enlace / caducidad. Sin "gracias
+                // por registrarte / disponible en breve / te avisaremos":
+                // ese mensaje queda solo en la bienvenida para no
+                // duplicar y mantener cada email enfocado.
                 return new EmailContent(
                         "Confirma tu email en SharemeChat",
                         wrapWithLogo("""
-                                <p>Hola %s, gracias por registrarte en SharemeChat.</p>
-                                <p>Confirma tu email para completar tu registro.</p>
-                                <p>Estamos ultimando los detalles y la aplicación estará disponible en breve; te avisaremos por email cuando puedas entrar.</p>
+                                <p>Hola %s,</p>
+                                <p>Te has registrado en SharemeChat. Para validar tu cuenta, haz clic en este enlace:</p>
                                 <p><a href="%s">%s</a></p>
                                 <p>El enlace caduca en 24 horas.</p>
                                 """.formatted(displayName, link, link))
@@ -250,12 +255,13 @@ public class EmailCopyRenderer {
         }
 
         if (comingSoonCopy) {
+            // Coming-soon EN (maqueta v2 2026-06-06): subject simple,
+            // cuerpo simplificado en 4 parrafos.
             return new EmailContent(
                     "Confirm your email on SharemeChat",
                     wrapWithLogo("""
-                            <p>Hi %s, thanks for registering with SharemeChat.</p>
-                            <p>Confirm your email to complete your registration.</p>
-                            <p>We're finalizing the details and the app will be available soon; we'll email you when you can get in.</p>
+                            <p>Hi %s,</p>
+                            <p>You've registered with SharemeChat. To validate your account, click this link:</p>
                             <p><a href="%s">%s</a></p>
                             <p>This link expires in 24 hours.</p>
                             """.formatted(displayName, link, link))
