@@ -33,10 +33,9 @@ import {
   HomeLandingSectionWhite,
   HomePageStack,
   HomePanelLarge,
-  HomeProfileAvatar,
   HomeProfileCard,
   HomeProfileGrid,
-  HomeProfileMeta,
+  HomeProfilePhoto,
   HomeSectionBody,
   HomeSectionEyebrow,
   HomeSectionInner,
@@ -45,8 +44,6 @@ import {
   HomeSectionTextRight,
   HomeSectionTitle,
   HomeSectionVisual,
-  HomeVisualCardTop,
-  HomeVisualLine,
   HomeVisualMainPortrait,
   HomeVisualMiniCard,
   HomeVisualPhotoMain,
@@ -280,17 +277,57 @@ export default function Home() {
         <HomeSectionInnerReverse>
           <HomeSectionVisual>
             <HomeProfileGrid>
-              {[0,1,2,3].map((item)=>(
-                <HomeProfileCard key={item}>
-                  <HomeVisualCardTop />
-                  <HomeProfileAvatar />
-                  <HomeProfileMeta>
-                    <HomeVisualLine />
-                    <HomeVisualLine />
-                  </HomeProfileMeta>
-                  <HomeVisualShine />
-                </HomeProfileCard>
-              ))}
+              {/* Grid 2x2 con 4 retratos reales en posicion CRUZADA:
+                  parejas en diagonal (chicas arriba, chicos abajo;
+                  pero cada chica con un chico en diagonal opuesta).
+                  Las cuatro cards son CUADRADAS e IGUALES (sin
+                  desfase translateY del placeholder anterior).
+                  object-position por imagen para que ninguna cara
+                  quede recortada al aplicar object-fit cover sobre
+                  el card cuadrado. */}
+              <HomeProfileCard>
+                <HomeProfilePhoto
+                  src={`${ASSETS_BASE}/home/unexpected-chemistry/chica2_v1.webp`}
+                  alt={i18n.t('home.unexpectedChemistry.imageAltChica2')}
+                  $position="center 35%"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <HomeVisualShine />
+              </HomeProfileCard>
+
+              <HomeProfileCard>
+                <HomeProfilePhoto
+                  src={`${ASSETS_BASE}/home/unexpected-chemistry/chica1_v1.webp`}
+                  alt={i18n.t('home.unexpectedChemistry.imageAltChica1')}
+                  $position="center 35%"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <HomeVisualShine />
+              </HomeProfileCard>
+
+              <HomeProfileCard>
+                <HomeProfilePhoto
+                  src={`${ASSETS_BASE}/home/unexpected-chemistry/chico1_v1.webp`}
+                  alt={i18n.t('home.unexpectedChemistry.imageAltChico1')}
+                  $position="center 35%"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <HomeVisualShine />
+              </HomeProfileCard>
+
+              <HomeProfileCard>
+                <HomeProfilePhoto
+                  src={`${ASSETS_BASE}/home/unexpected-chemistry/chico2_v1.webp`}
+                  alt={i18n.t('home.unexpectedChemistry.imageAltChico2')}
+                  $position="center 25%"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <HomeVisualShine />
+              </HomeProfileCard>
             </HomeProfileGrid>
           </HomeSectionVisual>
 

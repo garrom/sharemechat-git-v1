@@ -33,6 +33,12 @@
     "clearFlow": {
       "imageAltMain": "Persona usando SharemeChat en tres dispositivos: móvil, tablet y portátil"
     },
+    "unexpectedChemistry": {
+      "imageAltChica1": "Retrato de una mujer con estilo natural",
+      "imageAltChica2": "Retrato de una mujer mirando con calma a la cámara",
+      "imageAltChico1": "Retrato de un hombre con expresión amable",
+      "imageAltChico2": "Retrato vertical de un hombre con mirada serena"
+    },
     "cta": {
       "buy": "Comprar",
       "login": "Iniciar sesión",

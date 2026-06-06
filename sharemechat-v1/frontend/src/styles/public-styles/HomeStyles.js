@@ -749,24 +749,40 @@ export const HomeProfileGrid = styled.div`
   }
 `;
 
+// Grid 2x2 de la seccion "Unexpected chemistry". Pasa de cards
+// rectangulares con min-height y un desfase visual (translateY en las
+// celdas 2 y 3) a cards estrictamente CUADRADOS y ALINEADOS, segun el
+// plan de la sesion. El aspect-ratio: 1/1 garantiza celdas iguales en
+// el grid; el min-height: 0 desactiva la altura minima rectangular.
+// Sin transform: las 4 cards quedan alineadas a la misma altura.
 export const HomeProfileCard = styled.div`
   position: relative;
-  min-height: 170px;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
   border-radius: 28px;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(245,247,250,0.98) 100%);
   border: 1px solid rgba(148, 163, 184, 0.16);
   box-shadow: 0 20px 44px rgba(15, 23, 42, 0.1);
   overflow: hidden;
+`;
 
-  &:nth-child(2),
-  &:nth-child(3) {
-    transform: translateY(22px);
-  }
-
-  @media (max-width: 960px) {
-    min-height: 136px;
-  }
+// Foto real dentro del HomeProfileCard cuadrado. object-position se
+// pasa por prop $position porque cada retrato tiene la cara en un
+// sitio distinto (apaisada centrada, vertical alta, casi cuadrada,
+// etc.) y queremos que ninguna cara quede recortada al aplicar
+// object-fit cover sobre el card cuadrado. Valores tipicos:
+//   center 35% para apaisadas con cara en mitad superior
+//   center 25% para verticales con cara cerca de la parte alta
+// El valor exacto se calibra mirando cada foto en vivo.
+export const HomeProfilePhoto = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: ${(p) => p.$position || 'center center'};
 `;
 
 export const HomeProfileAvatar = styled.div`
