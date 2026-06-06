@@ -32,13 +32,7 @@ import {
   HomeLandingSectionPastel,
   HomeLandingSectionWhite,
   HomePageStack,
-  HomePanelBar,
-  HomePanelBars,
-  HomePanelChart,
   HomePanelLarge,
-  HomePanelSmall,
-  HomePanelSmallBody,
-  HomePanelSmallHeader,
   HomeProfileAvatar,
   HomeProfileCard,
   HomeProfileGrid,
@@ -57,6 +51,7 @@ import {
   HomeVisualMiniCard,
   HomeVisualPhotoMain,
   HomeVisualPhotoMini,
+  HomeVisualPhotoPanel,
   HomeVisualShine,
   HomeVisualStage
 } from '../styles/public-styles/HomeStyles';
@@ -261,22 +256,21 @@ export default function Home() {
 
           <HomeSectionVisual>
             <HomeVisualStage>
+              {/* Foto real apaisada con la chica usando la app en 3
+                  dispositivos (movil + tablet + portatil). Opcion A
+                  del plan: una sola foto en el panel grande;
+                  HomePanelSmall flotante y HomePanelChart/HomePanelBars
+                  placeholders se eliminan del JSX para que la pieza
+                  quede limpia. */}
               <HomePanelLarge>
-                <HomePanelChart />
-                <HomePanelBars>
-                  <HomePanelBar />
-                  <HomePanelBar />
-                  <HomePanelBar />
-                  <HomePanelBar />
-                </HomePanelBars>
+                <HomeVisualPhotoPanel
+                  src={`${ASSETS_BASE}/home/clear-flow/clearflow_v1.webp`}
+                  alt={i18n.t('home.clearFlow.imageAltMain')}
+                  loading="lazy"
+                  decoding="async"
+                />
                 <HomeVisualShine />
               </HomePanelLarge>
-
-              <HomePanelSmall>
-                <HomePanelSmallHeader />
-                <HomePanelSmallBody />
-                <HomeVisualShine />
-              </HomePanelSmall>
             </HomeVisualStage>
           </HomeSectionVisual>
         </HomeSectionInner>

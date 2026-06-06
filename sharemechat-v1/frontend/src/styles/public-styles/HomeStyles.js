@@ -629,10 +629,41 @@ export const HomeCallControl = styled.div`
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.08);
 `;
 
+// Panel grande de la seccion "Clear flow". Pasa de proporcion casi
+// cuadrada (la anterior 34x22 inset producia ~470x364 dentro del stage
+// 560x420) a una proporcion APAISADA/panoramica que aloja la foto de
+// los 3 dispositivos (movil, tablet, portatil; ratio ~2.36) sin
+// recortes feos. La imagen clearflow_v1.webp se sirve via
+// ASSETS_BASE/home/clear-flow/clearflow_v1.webp.
+//
+// Geometria desktop (stage 560x420):
+//   inset: 90px 22px 90px 22px -> width 516 x height 240 (ratio ~2.15).
+//   La foto, con object-fit cover, sufre un crop minimo en los bordes
+//   superior/inferior y mantiene los 3 dispositivos integros en
+//   horizontal.
+// Geometria mobile (<960px): inset proporcional manteniendo apaisado.
 export const HomePanelLarge = styled(HomeVisualCard)`
-  inset: 34px 22px 22px 22px;
+  inset: 90px 22px 90px 22px;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(246,248,251,0.98) 100%);
+
+  @media (max-width: 960px) {
+    inset: 60px 16px 60px 16px;
+  }
+`;
+
+// Foto real dentro del HomePanelLarge de la seccion "Clear flow".
+// Misma mecanica que HomeVisualPhotoMain/Mini: cover + object-position
+// neutro porque el aspect ratio del panel ya esta cerca del de la
+// imagen (~2.15 vs ~2.36) y no hay necesidad de focal-point.
+export const HomeVisualPhotoPanel = styled.img`
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  object-position: center center;
 `;
 
 export const HomePanelSmall = styled(HomeVisualCard)`
