@@ -1,30 +1,96 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
   <head>
+
+    <!-- Google Tag Manager -->
+    <!--
+      GTM container replicado de la landing legacy (sharemechat-landing-prod
+      pre-switch) para no perder analitica al pasar el origin de CF al bucket
+      SPA. El container ID GTM-T7BNJP4M aplica a PROD; en TEST/AUDIT este
+      mismo bundle (compartido) tambien lo dispara, lo que ensucia ligeramente
+      la analitica de esos entornos. Aceptado a corto plazo como deuda
+      operativa documentada. Env-gate limpio (solo en PROD) propuesto via
+      runtime-mount en el SPA (ver runtimeEnv.hostname === 'sharemechat.com')
+      como trabajo posterior.
+    -->
+    <script>
+      (function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+      new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+      j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+      'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+      })(window,document,'script','dataLayer','GTM-T7BNJP4M');
+    </script>
+    <!-- End Google Tag Manager -->
+
     <meta charset="utf-8" />
-    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&display=swap">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#000000" />
-    <meta
-      name="description"
-      content="Plataforma de videochat 1 a 1 en directo para conexiones auténticas entre adultos."
-    />
 
-    <title>SharemeChat — Videochat 1 a 1 en directo</title>
+    <!-- SEO core (replica de landing legacy: title/description EN como decision por defecto). -->
+    <title>1-to-1 Video Chat with Verified Models | SharemeChat</title>
+    <meta name="description" content="Live 1-to-1 video chat with verified models. Start with free trial minutes and connect instantly. No subscriptions — pay only for what you use." />
+    <link rel="canonical" href="https://sharemechat.com/" />
+
+    <!-- Favicons de marca (replicados del landing legacy). -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/apple-touch-icon.png" />
+
+    <!-- Tipografia -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&display=swap">
+
+    <!-- Open Graph -->
+    <!--
+      og:image: NO hay raster apto en assets/brand/ para previews sociales
+      (solo SharemeChat_white.svg, que no renderiza en Twitter/Facebook/
+      WhatsApp, y sharemechat-logo.png 172x18 demasiado pequeno). El SVG
+      queda como fallback temporal hasta que se genere una tarjeta raster
+      1200x630 (deuda registrada).
+    -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SharemeChat" />
+    <meta property="og:title" content="1-to-1 Video Chat with Verified Models | SharemeChat" />
+    <meta property="og:description" content="Live 1-to-1 video chat with verified models. Start with free trial minutes and connect instantly. No subscriptions — pay only for what you use." />
+    <meta property="og:url" content="https://sharemechat.com/" />
+    <meta property="og:image" content="https://assets.sharemechat.com/brand/SharemeChat_white.svg" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="1-to-1 Video Chat with Verified Models | SharemeChat" />
+    <meta name="twitter:description" content="Live 1-to-1 video chat with verified models. Start with free trial minutes and connect instantly. No subscriptions — pay only for what you use." />
+    <meta name="twitter:image" content="https://assets.sharemechat.com/brand/SharemeChat_white.svg" />
+
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "SharemeChat",
+      "url": "https://sharemechat.com/",
+      "description": "Live 1-to-1 video chat with verified models. Start with free trial minutes and connect instantly. No subscriptions — pay only for what you use.",
+      "inLanguage": "en",
+      "publisher": {
+        "@type": "Organization",
+        "name": "SharemeChat",
+        "url": "https://sharemechat.com/",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://assets.sharemechat.com/brand/SharemeChat_white.svg"
+        }
+      }
+    }
+    </script>
   </head>
   <body>
+
+    <!-- Google Tag Manager (noscript) -->
+    <noscript>
+      <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-T7BNJP4M"
+              height="0" width="0" style="display:none;visibility:hidden"></iframe>
+    </noscript>
+    <!-- End Google Tag Manager (noscript) -->
+
     <noscript>You need to enable JavaScript to run this app.</noscript>
     <div id="root"></div>
-    <!--
-      This HTML file is a template.
-      If you open it directly in the browser, you will see an empty page.
-
-      You can add webfonts, meta tags, or analytics to this file.
-      The build step will place the bundled scripts into the <body> tag.
-
-      To begin the development, run `npm start` or `yarn start`.
-      To create a production bundle, use `npm run build` or `yarn build`.
-    -->
   </body>
 </html>

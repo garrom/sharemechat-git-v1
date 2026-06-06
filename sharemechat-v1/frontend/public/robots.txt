@@ -1,3 +1,8 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Allow: /
+Disallow: /api/
+Disallow: /uploads/
+Disallow: /static/
+
+Sitemap: https://sharemechat.com/sitemap.xml
