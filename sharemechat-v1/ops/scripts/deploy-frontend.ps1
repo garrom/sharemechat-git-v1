@@ -38,7 +38,8 @@
     de cada entorno dicte).
 
 .PARAMETER Environment
-    Identificador del entorno: test, audit o pro.
+    Identificador del entorno: test, audit o prod. Coincide con el nombre
+    del nodo en environments.<env> del state-mapping.yaml.
 
 .PARAMETER Surface
     Superficie a desplegar: product (frontend público) o admin (backoffice).
@@ -57,6 +58,27 @@
 .PARAMETER BackendProbeTimeoutSec
     Timeout (segundos) para detectar si el backend esta accesible. Default 5.
 
+.PARAMETER StandbyMode
+    Modo "bundle en standby": el bucket destino del sync existe pero AUN NO es
+    el origin vivo de la distribucion CloudFront resuelta por el mapping (caso
+    PROD pre-switch-publico: sharemechat-frontend-prod ya tiene un bundle pero
+    sharemechat.com sigue cableado a la landing legacy).
+
+    Cambios respecto al modo normal:
+      - Smoke estatico: en lugar de GET https://<alias>/... (que iria al origin
+        equivocado), se verifica con aws s3api head-object que index.html y el
+        main.<hash>.js esten en el bucket destino. Sigue siendo OBLIGATORIO y
+        sigue abortando si falla.
+      - Invalidacion CloudFront: SE SALTA. Invalidar una distribucion cuyo
+        origin no es este bucket es ruido (consume cuota sin efecto util sobre
+        el contenido nuevo subido aqui).
+      - Smoke funcional: SE SALTA siempre (no hay dominio publico desde el que
+        sondear el backend a traves de este bundle todavia).
+
+    El resto del blindaje queda intacto: lock, build-<surface>/ aislado,
+    rm -rf previo, abort-on-error. Cuando llegue el dia del switch (origin de
+    CF apunte al bucket SPA), se vuelve al modo normal sin tocar el script.
+
 .EXAMPLE
     .\deploy-frontend.ps1 test product
 
@@ -66,6 +88,13 @@
     .\deploy-frontend.ps1 test admin -DryRun
 
     Muestra qué se ejecutaría para desplegar admin a TEST sin ejecutar nada.
+
+.EXAMPLE
+    .\deploy-frontend.ps1 prod product -StandbyMode
+
+    Despliega el frontend producto a sharemechat-frontend-prod mientras
+    sharemechat.com sigue sirviendo la landing legacy. Smoke estatico contra
+    el bucket directamente (head-object), sin invalidacion CF.
 
 .NOTES
     Requiere:
@@ -79,7 +108,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('test', 'audit', 'pro')]
+    [ValidateSet('test', 'audit', 'prod')]
     [string]$Environment,
 
     [Parameter(Mandatory = $true, Position = 1)]
@@ -96,7 +125,10 @@ param(
     [switch]$SkipFunctionalSmoke,
 
     [Parameter(Mandatory = $false)]
-    [int]$BackendProbeTimeoutSec = 5
+    [int]$BackendProbeTimeoutSec = 5,
+
+    [Parameter(Mandatory = $false)]
+    [switch]$StandbyMode
 )
 
 $ErrorActionPreference = 'Stop'
@@ -387,9 +419,13 @@ try {
     Write-Host "    OK - $indexHtml existe."
 
     # -----------------------------------------------------------
-    # [2/5] Sync a S3 + invalidacion CloudFront
+    # [2/5] Sync a S3 (+ invalidacion CloudFront salvo en StandbyMode)
     # -----------------------------------------------------------
-    Write-Step "2/5" "Sync s3://$bucketName/ + invalidacion $distributionId"
+    if ($StandbyMode) {
+        Write-Step "2/5" "Sync s3://$bucketName/ (StandbyMode: SIN invalidacion CF)"
+    } else {
+        Write-Step "2/5" "Sync s3://$bucketName/ + invalidacion $distributionId"
+    }
 
     Invoke-Native -Label "aws s3 sync" -Block {
         aws s3 sync $buildDir "s3://$bucketName/" --delete --cache-control "public,max-age=31536000,immutable"
@@ -400,16 +436,24 @@ try {
         aws s3 cp $indexHtml "s3://$bucketName/index.html" --cache-control "no-cache, no-store, must-revalidate" --content-type "text/html; charset=utf-8"
     }
 
-    Invoke-Native -Label "aws cloudfront create-invalidation" -Block {
-        aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*"
+    if ($StandbyMode) {
+        Write-Host "    [skip] invalidacion CF saltada (StandbyMode: la dist $distributionId no sirve este bucket todavia)." -ForegroundColor Yellow
+        Write-Host "    OK - sync ejecutado."
+    } else {
+        Invoke-Native -Label "aws cloudfront create-invalidation" -Block {
+            aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*"
+        }
+        Write-Host "    OK - sync + invalidacion ejecutados."
     }
-
-    Write-Host "    OK - sync + invalidacion ejecutados."
 
     # -----------------------------------------------------------
     # [3/5] Smoke test estatico (ABORT si falla)
     # -----------------------------------------------------------
-    Write-Step "3/5" "Smoke test estatico ($baseUrl)"
+    if ($StandbyMode) {
+        Write-Step "3/5" "Smoke test estatico (StandbyMode: head-object directo al bucket)"
+    } else {
+        Write-Step "3/5" "Smoke test estatico ($baseUrl)"
+    }
 
     # 3.1 - Extraer main.[hash].js del index.html local (lo subido es lo mismo
     # que lo construido; el sync ya ha terminado en exito).
@@ -443,44 +487,90 @@ try {
     }
     Write-Host "    OK - main.$mainHash.js esta en bucket"
 
-    # 3.3 - GET / -> 200 + text/html + size razonable.
-    $rootInfo = Get-HttpResponseInfo -Url "$baseUrl/" -TimeoutSec 10
-    if (-not $rootInfo.Reachable) {
-        Stop-Deploy "GET $baseUrl/ no es accesible: $($rootInfo.Error). CloudFront / DNS / red?"
-    }
-    if ($rootInfo.StatusCode -ne 200) {
-        Stop-Deploy "GET $baseUrl/ devolvio HTTP $($rootInfo.StatusCode) (esperado 200)."
-    }
-    if ($rootInfo.ContentType -notmatch 'text/html') {
-        Stop-Deploy "GET $baseUrl/ devolvio Content-Type '$($rootInfo.ContentType)' (esperado text/html)."
-    }
-    if ($rootInfo.ContentLength -lt 500) {
-        Stop-Deploy "GET $baseUrl/ devolvio tamano $($rootInfo.ContentLength) bytes (sospechosamente pequeno; index.html valido suele superar 500)."
-    }
-    Write-Host "    OK - GET $baseUrl/ -> 200 text/html $($rootInfo.ContentLength) bytes"
+    if ($StandbyMode) {
+        # 3.3 (Standby) - head-object index.html en el bucket. Confirma exit 0
+        # + ContentLength razonable. NO hace GET al dominio publico porque ese
+        # dominio sirve OTRO origin (landing legacy) y devolveria datos enga-
+        # nosos. NO depende del CDN.
+        $standbyEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $indexHead = & aws s3api head-object --bucket $bucketName --key "index.html" --output json 2>$null
+            $indexHeadExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $standbyEAP
+        }
+        if ($indexHeadExit -ne 0) {
+            Stop-Deploy "aws s3api head-object s3://$bucketName/index.html fallo con codigo $indexHeadExit (StandbyMode)."
+        }
+        $indexMeta = $indexHead | ConvertFrom-Json
+        if ($indexMeta.ContentLength -lt 500) {
+            Stop-Deploy "index.html en s3://$bucketName/ tiene tamano $($indexMeta.ContentLength) bytes (sospechosamente pequeno; index.html valido suele superar 500)."
+        }
+        if ($indexMeta.ContentType -notmatch 'text/html') {
+            Stop-Deploy "index.html en s3://$bucketName/ tiene Content-Type '$($indexMeta.ContentType)' (esperado text/html)."
+        }
+        Write-Host "    OK - head-object index.html -> $($indexMeta.ContentLength) bytes, $($indexMeta.ContentType)"
 
-    # 3.4 - GET del bundle por su URL hashed -> 200 + size > 0.
-    # Como la URL es hashed (inmutable), CloudFront NUNCA la tiene cacheada
-    # antes de este deploy; el fetch va al origen S3 directamente y refleja
-    # lo que acaba de subirse. No depende de la invalidacion en curso.
-    $bundleInfo = Get-HttpResponseInfo -Url "$baseUrl$mainJsPath" -TimeoutSec 10
-    if (-not $bundleInfo.Reachable) {
-        Stop-Deploy "GET $baseUrl$mainJsPath no es accesible: $($bundleInfo.Error)."
+        # 3.4 (Standby) - head-object main.<hash>.js en el bucket.
+        $bundleEAP = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $bundleHead = & aws s3api head-object --bucket $bucketName --key $mainJsKey --output json 2>$null
+            $bundleHeadExit = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $bundleEAP
+        }
+        if ($bundleHeadExit -ne 0) {
+            Stop-Deploy "aws s3api head-object s3://$bucketName/$mainJsKey fallo con codigo $bundleHeadExit (StandbyMode)."
+        }
+        $bundleMeta = $bundleHead | ConvertFrom-Json
+        if ($bundleMeta.ContentLength -lt 1000) {
+            Stop-Deploy "$mainJsKey en s3://$bucketName/ tiene tamano $($bundleMeta.ContentLength) bytes (sospechosamente pequeno; bundle CRA suele superar 1KB)."
+        }
+        Write-Host "    OK - head-object $mainJsKey -> $($bundleMeta.ContentLength) bytes"
+    } else {
+        # 3.3 - GET / -> 200 + text/html + size razonable.
+        $rootInfo = Get-HttpResponseInfo -Url "$baseUrl/" -TimeoutSec 10
+        if (-not $rootInfo.Reachable) {
+            Stop-Deploy "GET $baseUrl/ no es accesible: $($rootInfo.Error). CloudFront / DNS / red?"
+        }
+        if ($rootInfo.StatusCode -ne 200) {
+            Stop-Deploy "GET $baseUrl/ devolvio HTTP $($rootInfo.StatusCode) (esperado 200)."
+        }
+        if ($rootInfo.ContentType -notmatch 'text/html') {
+            Stop-Deploy "GET $baseUrl/ devolvio Content-Type '$($rootInfo.ContentType)' (esperado text/html)."
+        }
+        if ($rootInfo.ContentLength -lt 500) {
+            Stop-Deploy "GET $baseUrl/ devolvio tamano $($rootInfo.ContentLength) bytes (sospechosamente pequeno; index.html valido suele superar 500)."
+        }
+        Write-Host "    OK - GET $baseUrl/ -> 200 text/html $($rootInfo.ContentLength) bytes"
+
+        # 3.4 - GET del bundle por su URL hashed -> 200 + size > 0.
+        # Como la URL es hashed (inmutable), CloudFront NUNCA la tiene cacheada
+        # antes de este deploy; el fetch va al origen S3 directamente y refleja
+        # lo que acaba de subirse. No depende de la invalidacion en curso.
+        $bundleInfo = Get-HttpResponseInfo -Url "$baseUrl$mainJsPath" -TimeoutSec 10
+        if (-not $bundleInfo.Reachable) {
+            Stop-Deploy "GET $baseUrl$mainJsPath no es accesible: $($bundleInfo.Error)."
+        }
+        if ($bundleInfo.StatusCode -ne 200) {
+            Stop-Deploy "GET $baseUrl$mainJsPath devolvio HTTP $($bundleInfo.StatusCode) (esperado 200)."
+        }
+        if ($bundleInfo.ContentLength -lt 1000) {
+            Stop-Deploy "GET $baseUrl$mainJsPath devolvio tamano $($bundleInfo.ContentLength) bytes (sospechosamente pequeno; bundle CRA suele superar 1KB)."
+        }
+        Write-Host "    OK - GET $baseUrl$mainJsPath -> 200 $($bundleInfo.ContentLength) bytes"
     }
-    if ($bundleInfo.StatusCode -ne 200) {
-        Stop-Deploy "GET $baseUrl$mainJsPath devolvio HTTP $($bundleInfo.StatusCode) (esperado 200)."
-    }
-    if ($bundleInfo.ContentLength -lt 1000) {
-        Stop-Deploy "GET $baseUrl$mainJsPath devolvio tamano $($bundleInfo.ContentLength) bytes (sospechosamente pequeno; bundle CRA suele superar 1KB)."
-    }
-    Write-Host "    OK - GET $baseUrl$mainJsPath -> 200 $($bundleInfo.ContentLength) bytes"
 
     # -----------------------------------------------------------
     # [4/5] Smoke test funcional condicional al modo operacional
     # -----------------------------------------------------------
     Write-Step "4/5" "Smoke test funcional ($baseUrl/api/...)"
 
-    if ($SkipFunctionalSmoke) {
+    if ($StandbyMode) {
+        Write-Host "    [skip] StandbyMode: el bucket recien subido aun no se sirve desde $baseUrl; sondeo backend no aplica." -ForegroundColor Yellow
+    } elseif ($SkipFunctionalSmoke) {
         Write-Host "    [skip] -SkipFunctionalSmoke activo." -ForegroundColor Yellow
     } else {
         # 4.1 - Sondear backend. Si no responde, saltar sin bloquear.
@@ -536,8 +626,15 @@ try {
     Write-Host " Surface:     $Surface"
     Write-Host " main bundle: $mainJsKey"
     Write-Host " URL base:    $baseUrl"
+    if ($StandbyMode) {
+        Write-Host " Modo:        STANDBY (bucket subido; dist CF aun apunta a otro origin)" -ForegroundColor Yellow
+    }
     Write-Host ""
-    Write-Host " La invalidacion CloudFront tarda 30-90s en propagar." -ForegroundColor Yellow
+    if ($StandbyMode) {
+        Write-Host " StandbyMode: SIN invalidacion CF; el bucket esta listo para el switch de origin." -ForegroundColor Yellow
+    } else {
+        Write-Host " La invalidacion CloudFront tarda 30-90s en propagar." -ForegroundColor Yellow
+    }
     Write-Host ""
 
 } finally {
