@@ -2036,5 +2036,31 @@
         "kill": "Error al cortar el stream"
       }
     }
+  },
+  "seo": {
+    "home": {
+      "title": "SharemeChat — Videochat 1 a 1 con modelos verificadas",
+      "description": "Videochat 1 a 1 en directo con modelos verificadas. Pruebas gratuitas y conexión inmediata. Sin suscripciones — pagas solo por lo que usas."
+    },
+    "legal": {
+      "title": "Aviso legal y políticas | SharemeChat",
+      "description": "Términos del servicio, política de privacidad y demás documentos legales de SharemeChat (Shareme Technologies OÜ)."
+    },
+    "faq": {
+      "title": "Preguntas frecuentes | SharemeChat",
+      "description": "Resuelve tus dudas sobre cómo funciona el videochat 1 a 1 de SharemeChat: pruebas gratuitas, pagos, privacidad y seguridad."
+    },
+    "safety": {
+      "title": "Seguridad y privacidad | SharemeChat",
+      "description": "Cómo protegemos a clientes y modelos en SharemeChat: verificación de identidad, moderación, privacidad de datos y reporte de incidentes."
+    },
+    "rules": {
+      "title": "Normas de la comunidad | SharemeChat",
+      "description": "Reglas de uso y conducta en SharemeChat. Qué está permitido, qué no, y qué pasa cuando se incumplen."
+    },
+    "cookies": {
+      "title": "Ajustes de cookies | SharemeChat",
+      "description": "Configura las cookies que SharemeChat utiliza en tu navegador. Esenciales, de rendimiento y de marketing."
+    }
   }
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
+import Seo from '../components/Seo';
 import {
   FooterInner,
   LegalText
@@ -111,7 +112,9 @@ export default function Rules() {
   };
 
   return (
-    <div style={PageWrap}>
+    <>
+      <Seo pageKey="rules" urlPath="/community-guidelines" localeAware />
+      <div style={PageWrap}>
       <FooterInner>
         <div style={HeroBlock}>
           <div style={BackButtonWrap}>
@@ -248,6 +251,7 @@ export default function Rules() {
           </div>
         </div>
       </FooterInner>
-    </div>
+      </div>
+    </>
   );
 }

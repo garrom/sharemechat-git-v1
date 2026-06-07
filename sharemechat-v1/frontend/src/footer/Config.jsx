@@ -1,6 +1,7 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
 import { FooterInner, LegalText } from '../styles/public-styles/FooterStyles';
+import Seo from '../components/Seo';
 
 const PageWrap = {
   background: '#ffffff',
@@ -125,7 +126,9 @@ export default function Config() {
   };
 
   return (
-    <div style={PageWrap}>
+    <>
+      <Seo pageKey="cookies" urlPath="/cookies-settings" localeAware />
+      <div style={PageWrap}>
       <FooterInner>
         <div style={HeroBlock}>
           <button style={BackButton} onClick={back}>
@@ -249,6 +252,7 @@ export default function Config() {
           </div>
         </div>
       </FooterInner>
-    </div>
+      </div>
+    </>
   );
 }

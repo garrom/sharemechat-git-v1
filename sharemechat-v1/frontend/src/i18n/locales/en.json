@@ -2036,5 +2036,31 @@
         "kill": "Error terminating the stream"
       }
     }
+  },
+  "seo": {
+    "home": {
+      "title": "SharemeChat — 1-to-1 Video Chat with Verified Models",
+      "description": "Live 1-to-1 video chat with verified models. Free trial minutes and instant connection. No subscriptions — pay only for what you use."
+    },
+    "legal": {
+      "title": "Legal notice and policies | SharemeChat",
+      "description": "Terms of service, privacy policy and other legal documents of SharemeChat (Shareme Technologies OÜ)."
+    },
+    "faq": {
+      "title": "Frequently asked questions | SharemeChat",
+      "description": "Answers to common questions about SharemeChat's 1-to-1 video chat: free trials, payments, privacy and safety."
+    },
+    "safety": {
+      "title": "Safety and privacy | SharemeChat",
+      "description": "How we protect clients and models on SharemeChat: identity verification, moderation, data privacy and incident reporting."
+    },
+    "rules": {
+      "title": "Community guidelines | SharemeChat",
+      "description": "Use and conduct rules on SharemeChat. What is allowed, what is not, and what happens when rules are broken."
+    },
+    "cookies": {
+      "title": "Cookie settings | SharemeChat",
+      "description": "Configure the cookies SharemeChat uses in your browser. Essential, performance and marketing."
+    }
   }
 }

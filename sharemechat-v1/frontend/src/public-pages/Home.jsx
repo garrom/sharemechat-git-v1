@@ -7,6 +7,7 @@ import i18n from '../i18n';
 import { ASSETS_BASE } from '../config/runtimeEnv';
 
 import { SHOW_PRELAUNCH_OVERLAY } from '../config/featureFlags';
+import Seo from '../components/Seo';
 import {
   GlobalBlack,
   HeroBackground,
@@ -97,6 +98,7 @@ export default function Home() {
 
   return(
   <>
+    <Seo pageKey="home" urlPath="/" localeAware />
     <GlobalBlack/>
 
     <PublicNavbar

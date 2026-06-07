@@ -1,6 +1,7 @@
 import React from 'react';
 import { useHistory } from 'react-router-dom';
 import { FooterInner, LegalText } from '../styles/public-styles/FooterStyles';
+import Seo from '../components/Seo';
 
 const PageWrap = { background: '#ffffff', color: '#1f2937', padding: '44px 0 72px' };
 const HeroBlock = { maxWidth: '920px', margin: '0 auto' };
@@ -155,7 +156,9 @@ export default function Faq() {
   ];
 
   return (
-    <div style={PageWrap}>
+    <>
+      <Seo pageKey="faq" urlPath="/faq" localeAware />
+      <div style={PageWrap}>
       <FooterInner>
 
         <div style={HeroBlock}>
@@ -200,6 +203,7 @@ export default function Faq() {
 
         </div>
       </FooterInner>
-    </div>
+      </div>
+    </>
   );
 }

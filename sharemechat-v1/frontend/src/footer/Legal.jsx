@@ -4,6 +4,7 @@ import {
   FooterInner,
   LegalText
 } from '../styles/public-styles/FooterStyles';
+import Seo from '../components/Seo';
 
 const PageWrap = {
   background: '#ffffff',
@@ -184,7 +185,10 @@ export default function Legal() {
   };
 
   return (
-    <div style={PageWrap}>
+    <>
+      {/* ADR-022 D9: /legal es ES-only por diseno -> sin hreflang. */}
+      <Seo pageKey="legal" urlPath="/legal" localeAware={false} />
+      <div style={PageWrap}>
       <FooterInner>
         <div style={HeroBlock}>
           <button
@@ -1094,6 +1098,7 @@ export default function Legal() {
           </div>
         </div>
       </FooterInner>
-    </div>
+      </div>
+    </>
   );
 }
