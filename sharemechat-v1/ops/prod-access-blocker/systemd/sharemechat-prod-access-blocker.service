@@ -1,0 +1,17 @@
+[Unit]
+Description=Propose and apply deny list for PROD based on classifier summary (CARRIL-A real)
+After=network-online.target sharemechat-prod-access-classifier.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+# CARRIL-A REAL. This unit writes /etc/nginx/deny-prod-ips.conf
+# (only when new IPs need blocking), runs nginx -t pre/post, makes a
+# .bak_<ts> backup before each change, and reloads nginx on success.
+# Advisory artifacts are also written under /var/log/sharemechat-prod-access-blocker/.
+ExecStart=/opt/sharemechat-prod-access-blocker/bin/block-prod-access.sh --config /etc/sharemechat-prod-access-blocker/config.env
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

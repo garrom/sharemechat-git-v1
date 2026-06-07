@@ -1,0 +1,10 @@
+[Unit]
+Description=Run PROD access log normalization every 5 minutes
+
+[Timer]
+OnCalendar=*:0/5
+Persistent=true
+Unit=sharemechat-prod-access-normalizer.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,11 @@
+[Unit]
+Description=Refresh CloudFront origin-facing CIDRs in nginx
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/usr/local/sbin/refresh-cf-origin-facing.sh
+Nice=10

@@ -1,0 +1,13 @@
+[Unit]
+Description=Classify PROD access activity from normalized JSONL
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/opt/sharemechat-prod-access-classifier/bin/classify-prod-access.sh --config /etc/sharemechat-prod-access-classifier/config.env
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

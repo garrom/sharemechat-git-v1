@@ -1,0 +1,13 @@
+[Unit]
+Description=Normalize PROD access logs from CloudFront and Nginx
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+ExecStart=/opt/sharemechat-prod-access-normalizer/bin/normalize-prod-access.sh --config /etc/sharemechat-prod-access-normalizer/config.env
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

@@ -1,0 +1,13 @@
+[Unit]
+Description=Monthly refresh of CloudFront origin-facing CIDRs
+
+[Timer]
+# Primer dia de cada mes a las 03:00 UTC. AWS publica nuevos rangos
+# periodicamente; un refresco mensual es suficiente.
+OnCalendar=*-*-01 03:00:00 UTC
+Persistent=true
+RandomizedDelaySec=30m
+Unit=sharemechat-cf-cidrs-refresh.service
+
+[Install]
+WantedBy=timers.target

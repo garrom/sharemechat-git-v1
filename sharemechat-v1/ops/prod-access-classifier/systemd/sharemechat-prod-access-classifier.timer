@@ -1,0 +1,10 @@
+[Unit]
+Description=Run PROD access activity classification every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=sharemechat-prod-access-classifier.service
+
+[Install]
+WantedBy=timers.target
