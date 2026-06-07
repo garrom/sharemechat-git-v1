@@ -1,0 +1,315 @@
+metadata:
+  schema_version: 3
+  environment: prod
+  generated_at: "2026-06-07T18:00:00Z"
+  generated_by: manual-checkpoint@post-coming-soon-switch
+  notes: |
+    Snapshot consolidado de PROD TRAS el switch del origin publico al
+    SPA coming-soon (FASE 2 ejecutada el 2026-06-07). La distribucion
+    publica E2FWNC80D4QDJC ahora sirve el bucket SPA producto
+    (sharemechat-frontend-prod, bundle main.5ae9c641.js) como
+    DefaultCacheBehavior; la function redirect-spa-prod ha sido
+    publicada a LIVE con los 5 redirects legacy .html -> ruta canonica
+    SPA + bypass /api/* + SPA fallback + www->apex; los 11 HTMLs
+    estaticos del bucket landing legacy (sharemechat-landing-prod) NO
+    se han borrado y siguen disponibles como rollback inmediato.
+
+    Hitos cerrados respecto al snapshot pre-switch (state-prod-2026-06-07.yaml):
+      - FASE 1: commits feat(prelaunch) + chore(i18n) (db4f7ef, 4fc45a5)
+        y deploy del bundle al bucket sharemechat-frontend-prod en
+        modo standby (main.b6c3f312.js -> main.5ae9c641.js).
+      - FASE 2: publish-function DEV->LIVE (function ETag E3UN6WX5RRO2AG)
+        + update-distribution (default landing -> SPA) + invalidacion /*.
+      - Smoke real 7/7 verde: home SPA, 5 estaticas 200, 5 redirects
+        legacy 301, www->apex 301, /api/clients/me 503+PRELAUNCH, POST
+        /api/auth/login 403 (no 503), bundle servido contiene overlay
+        COMING SOON + copy nuevo.
+      - Validacion funcional manual del operador end-to-end: registro
+        cliente + modelo en sharemechat.com -> email de verificacion ->
+        verificacion OK -> PreLaunchScreen con saludo "Bienvenido/a, X."
+        y body terminando en "Gracias por elegirnos!" / "Thank you for
+        choosing us!".
+
+    Lo que NO se cierra en este snapshot:
+      - Deuda SEO: react-helmet por pagina con title/description/og:*
+        dinamicos; og:image raster 1200x630 canonico (hoy SVG); GTM con
+        env-gate por hostname.
+      - Limpieza de los usuarios de prueba cliente+modelo creados durante
+        la validacion manual del switch (4 cuentas, garromtrading+*).
+      - Transicion futura PRELAUNCH -> OPEN: poner SHOW_IN_PROD=false
+        en featureFlags.js + rebuild + redeploy SPA + cambiar
+        PRODUCT_ACCESS_MODE=OPEN en /opt/sharemechat/config.env del
+        backend + restart sharemechat-prod.service.
+
+# ============================================================
+# BLOQUE 1 - Identidad del entorno
+# ============================================================
+identity:
+  aws_account: 430118829334
+  region: eu-central-1
+  ec2:
+    instance_id: i-0e0a3b5fee271592f
+    type: t3.medium
+    state: running (24/7)
+    public_ip: 3.77.59.1  # EIP, A record api.sharemechat.com
+    ssh_alias: pro-backend
+  rds:
+    identifier: db1-sharemechat-prod
+    state: available
+    engine: mysql 8.4.7
+    instance_class: db.t3.micro
+    multi_az: false
+    storage_gb: 20
+    az: eu-central-1a
+    endpoint: db1-sharemechat-prod.c1gsc6qg4l8y.eu-central-1.rds.amazonaws.com
+    schema: db1_sharemechat_prod
+  cloudfront_distributions:
+    - logical_name: frontend_public
+      id: E2FWNC80D4QDJC
+      cf_domain: dzwmag96rivxf.cloudfront.net
+      aliases: [sharemechat.com, www.sharemechat.com]
+      status: Deployed
+      last_modified: "2026-06-07T17:34:53Z"
+      default_target_origin_id: s3-sharemechat-frontend-prod-spa   # CAMBIADO en el switch (antes: s3-sharemechat-landing-prod)
+      origins:
+        - {id: api-prod-backend,                  domain: api.sharemechat.com,                              role: backend API}
+        - {id: s3-sharemechat-landing-prod,       domain: sharemechat-landing-prod.s3.eu-central-1.amazonaws.com,    role: landing legacy retenida como rollback (NO servida desde 2026-06-07)}
+        - {id: s3-sharemechat-frontend-prod-spa,  domain: sharemechat-frontend-prod.s3.eu-central-1.amazonaws.com,   role: SPA producto VIVO desde 2026-06-07}
+      cache_behaviors:
+        - {path: "/api/*", target: api-prod-backend, cache_policy: "CachingDisabled (4135ea2d)", origin_request_policy: "AllViewer (b689b0a8)"}
+      function_associations:
+        - event: viewer-request
+          arn: "arn:aws:cloudfront::430118829334:function/redirect-spa-prod"
+          live_etag: "E3UN6WX5RRO2AG"
+          live_last_modified: "2026-06-07T17:34:02Z"
+          features: ["www->apex", "5 legacy .html redirects", "SPA extensionless->/index.html", "bypass /api/*+/match+/messages+/uploads/*+/assets/*+/static/*"]
+      custom_error_responses_quantity: 0
+      logging_enabled: false
+      role: SPA product surface PRODUCTIVO (switch completado 2026-06-07)
+    - logical_name: backoffice_admin
+      id: E3O40LHJ4PC6LE
+      cf_domain: d14enb0ydr2y1s.cloudfront.net
+      aliases: [admin.sharemechat.com]
+      status: Deployed
+      default_target_origin_id: s3-admin-prod-origin
+      origins:
+        - {id: api-prod-backend,        domain: api.sharemechat.com,                                role: backend API}
+        - {id: s3-admin-prod-origin,    domain: sharemechat-admin-prod.s3.eu-central-1.amazonaws.com, oac: E218EJKQNPCR1K, role: SPA admin}
+      cache_behaviors:
+        - {path: "/api/*", target: api-prod-backend}
+      function_associations:
+        - {event: viewer-request, arn: "arn:aws:cloudfront::430118829334:function/redirect-spa-admin-prod"}
+      role: SPA admin surface (sin cambio en este switch)
+    - logical_name: assets_canonical
+      id: E3UAOU6AUNI0CM
+      cf_domain: d99amkbl8rwf7.cloudfront.net
+      aliases: [assets.sharemechat.com]
+      status: Deployed
+      origin: assets-sharemechat-prod.s3.eu-central-1.amazonaws.com
+      role: Imagenes y videos publicos via OAC (sin cambio)
+  route53:
+    hosted_zone_id: Z054470823PMZQENFZHHZ
+    zone_name: "sharemechat.com."
+    notes: "Sin cambios respecto al snapshot pre-switch. sharemechat.com y www.sharemechat.com siguen apuntando a E2FWNC80D4QDJC (dzwmag96rivxf.cloudfront.net)."
+  s3_buckets:
+    - {name: sharemechat-frontend-prod,        role: bucket SPA product surface VIVO (servido por frontend_public default),     served_by: frontend_public (origin default)}
+    - {name: sharemechat-admin-prod,           role: bucket SPA admin surface, served_by: backoffice_admin}
+    - {name: sharemechat-landing-prod,         role: bucket landing legacy retenido como rollback (NO servido), served_by: frontend_public (origin secundario)}
+    - {name: assets-sharemechat-prod,          role: bucket assets publicos, served_by: assets_canonical}
+    - {name: sharemechat-storage-prod,         role: bucket uploads privados (KYC + assets originales), served_by: ninguno (descargas via /api/storage/content)}
+    - {name: sharemechat-content-private-prod, role: bucket Markdown crudo CMS, served_by: ninguno}
+    - {name: sharemechat-cf-logs-prod,         role: bucket logs CloudFront, served_by: ninguno}
+    - {name: sharemechat-backups,              role: bucket backups (rollback frontend + dumps BD), served_by: ninguno (multi-env)}
+
+# ============================================================
+# BLOQUE 2 - Estado de la BD
+# ============================================================
+database:
+  total_users_at_switch: 1   # admin id=34 (pre-validacion)
+  notes_post_switch_validation: |
+    Durante la validacion funcional manual del switch el operador
+    creo 4 cuentas de prueba (2 cliente + 2 modelo, garromtrading+*)
+    para confirmar el flujo registro -> email verificacion ->
+    PreLaunchScreen con saludo nuevo. Email de verificacion entregado
+    y verificado para los 4. Quedan en BD pendientes de limpieza,
+    similar a la del 2026-06-07 sobre los 6 smoke users del cableado.
+    El admin id=34 (admin+ag@sharemechat.com) NO se toca.
+  rds_snapshots:
+    pre_switch:
+      identifier: db1-sharemechat-prod-preswitch-20260607
+      arn: "arn:aws:rds:eu-central-1:430118829334:snapshot:db1-sharemechat-prod-preswitch-20260607"
+      type: manual
+      status: available
+      role: red de seguridad pre-switch (el switch no toco BD)
+
+# ============================================================
+# BLOQUE 3 - Estado del backend
+# ============================================================
+backend:
+  jar:
+    path_on_ec2: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+    sha256: ec7214bfcfe26d908137dfd2c5117c0bdd57738fac8fe71ca940599a423115fa
+    size_bytes: 106127770
+    deployed_at: "2026-06-07T10:32:00Z"
+    notes: "Sin redeploy en FASE 2. El switch es solo CloudFront + bucket."
+  systemd:
+    unit: sharemechat-prod.service
+    state: active
+    main_pid: 52304   # snapshot pre-switch; sin restart en FASE 2
+  config_state:
+    product_access:
+      mode: PRELAUNCH
+      allowlist_user_ids: []   # vacio -> fail-closed
+      registration_client: enabled
+      registration_model: enabled
+      notes: "Sin cambio en FASE 2. El SPA recien expuesto SIRVE la PreLaunchScreen a usuarios logueados no-allowlistados (todos hoy), y la home anonima muestra la landing publica con el overlay dorado COMING SOON (CAMBIO 1)."
+    country_access:
+      enabled: true
+      block_when_missing: true
+      bypass_ips: ["90.175.201.51/32"]
+    email:
+      sender_address: operations@sharemechat.com
+      sender_display_name: SharemeChat
+
+# ============================================================
+# BLOQUE 4 - Estado del frontend
+# ============================================================
+frontend:
+  product_surface:
+    state: VIVO_PUBLICAMENTE   # cambio en FASE 2 (era TRANSICION)
+    served_today: SPA producto (PreLaunchScreen para logueados no-allowlistados; home anonima con overlay COMING SOON)
+    bucket: sharemechat-frontend-prod
+    distribution: E2FWNC80D4QDJC
+    aliases: [sharemechat.com, www.sharemechat.com]
+    assets:
+      main_js: {path: "static/js/main.5ae9c641.js", size_bytes: 162805, last_modified: "2026-06-07T17:16:09Z"}
+      chunk_66: {path: "static/js/66.c531362f.chunk.js", role: contiene i18n + featureFlag + JSX Home overlay + JSX PreLaunchScreen}
+      chunk_572: {path: "static/js/572.673490f3.chunk.js", role: vendor (sin cambio desde la entrada anterior)}
+    contains_features:
+      - "Overlay 'COMING SOON' / 'Próximamente' dorado en home anonima, posicionado centro-derecha del hero (CAMBIO 1)"
+      - "PreLaunchBackground con imagen reducida (auto 72%/60%/48% + vignette lateral) para que el COMING SOON impreso en la imagen no domine y nuestro texto quede a la izquierda (CAMBIO 2)"
+      - "Copy ES/EN actualizado: 'Bienvenido, {{name}}.' / 'Welcome, {{name}}.' + bodies terminados en 'Gracias por elegirnos!' / 'Thank you for choosing us!'"
+      - "featureFlag SHOW_PRELAUNCH_OVERLAY: true para test/audit/prod (PROD via SHOW_IN_PROD=true)"
+      - "Resto heredado del bundle 80e17ee: paridad SEO/analytics con landing legacy + favicons + sitemap"
+    landing_legacy_retained:
+      bucket: sharemechat-landing-prod
+      role: rollback inmediato (origin secundario en E2FWNC80D4QDJC; NO se borra)
+      object_count: 11
+    feature_flag_toggle:
+      path: frontend/src/config/featureFlags.js
+      const: SHOW_IN_PROD
+      current_value: true
+      flip_when: "Cuando PRODUCT_ACCESS_MODE pase a OPEN: poner false + rebuild + deploy + invalidacion."
+  admin_surface:
+    state: VIVO_PUBLICAMENTE   # sin cambio respecto al snapshot pre-switch
+    bucket: sharemechat-admin-prod
+    distribution: E3O40LHJ4PC6LE
+    aliases: [admin.sharemechat.com]
+    assets:
+      main_js: {path: "static/js/main.c16b646d.js", size_bytes: 162807, last_modified: "2026-06-07T13:27:04Z"}
+
+# ============================================================
+# BLOQUE 5 - Operatividad cerrada y pendiente
+# ============================================================
+operational_state:
+  cerrado_en_esta_fase:
+    coming_soon_switch:
+      state: DONE   # cambio respecto al snapshot pre-switch (era priority: critica)
+      executed_at: "2026-06-07T17:34Z"
+      detail: |
+        Publicada function redirect-spa-prod a LIVE (5 redirects legacy
+        .html + SPA fallback + www->apex + bypass de rutas backend/
+        assets). update-distribution E2FWNC80D4QDJC: DefaultCacheBehavior.
+        TargetOriginId cambiado de s3-sharemechat-landing-prod a
+        s3-sharemechat-frontend-prod-spa. Invalidacion /* (INSYNC). Sin
+        CustomErrorResponses (decision validada en recon: serian
+        globales y enmascararian /api/*). Smoke real 7/7 OK. Bundle
+        servido contiene overlay COMING SOON + copy nuevo. landing
+        legacy retenida en su bucket + en la dist como origin
+        secundario; rollback ~6-10 min disponible via
+        ops/prod-cf-switch/.
+    feature_visual_overlay:
+      state: DONE
+      detail: "Overlay home anonima + PreLaunchBackground reducida, validados visualmente en TEST y en PROD. Commits db4f7ef + 4fc45a5 (FASE 1)."
+    feature_copy_i18n:
+      state: DONE
+      detail: "Saludos cliente/modelo + bodies en ES y EN actualizados. End con 'Gracias por elegirnos!' / 'Thank you for choosing us!'. Validado en TEST y en PROD."
+  pendiente:
+    seo_helmet_y_og_image:
+      priority: alta
+      scope: "Anadir react-helmet por pagina con title/description/og:* dinamicos en SPA; og:image raster 1200x630 canonico (hoy SVG); GTM con env-gate por hostname."
+      condicion_disparo: "Despues del switch, antes de comunicar coming-soon a externos."
+    feature_flag_show_in_prod_off:
+      priority: media
+      scope: "Cuando PRODUCT_ACCESS_MODE pase a OPEN: poner SHOW_IN_PROD=false en frontend/src/config/featureFlags.js, rebuild SPA, deploy a sharemechat-frontend-prod, invalidar /* en E2FWNC80D4QDJC. NO requiere tocar function ni cambiar el DefaultTarget."
+      blocker: ninguno
+    limpieza_users_prueba_post_switch:
+      priority: baja
+      scope: "Borrar las 4 cuentas (2 cliente + 2 modelo, garromtrading+*) creadas durante la validacion manual del switch. Mismo procedimiento que el 2026-06-07: DELETE en transaccion sobre email_verification_tokens + users con CASCADE en user_languages. id=34 (admin) intacto."
+      blocker: ninguno
+    websockets_xff_override:
+      priority: media
+      scope: "Aplicar override XFF a /match y /messages en nginx, o ignorar XFF en IpConfig para conexiones WebSocket."
+      adr_referencia: ADR-032
+    rds_multi_az_o_pitr_verified:
+      priority: media
+      scope: "Considerar MultiAZ para pre-launch publico y verificar PITR window aplicado al snapshot pre-switch."
+
+# ============================================================
+# BLOQUE 6 - Rollback anchor (estado para retroceder si fuera necesario)
+# ============================================================
+rollback_anchor:
+  description: |
+    Si tras el switch hay que volver a la landing legacy, el
+    procedimiento esta documentado en ops/prod-cf-switch/README.md
+    (~6-10 min):
+
+      1) Function: update-function DEVELOPMENT con
+         ops/prod-cf-switch/redirect-spa-prod-LIVE-rollback.js +
+         publish-function (DEV->LIVE). Quita los 5 redirects legacy
+         y deja solo www->apex + SPA fallback.
+      2) Distribution: update-distribution E2FWNC80D4QDJC con
+         DefaultCacheBehavior.TargetOriginId = "s3-sharemechat-landing-prod".
+      3) Invalidacion /*.
+
+    El bucket sharemechat-landing-prod NO se toca durante el switch y
+    queda como rollback inmediato. Los 3 origins de la distribucion
+    siguen presentes (landing y SPA conviven; solo cambia cual sirve
+    por default).
+
+  current_state_post_switch:
+    cf_publica_default_target: s3-sharemechat-frontend-prod-spa
+    cf_publica_function_live_etag: E3UN6WX5RRO2AG
+    cf_publica_dist_last_modified: "2026-06-07T17:34:53Z"
+    spa_bucket_bundle: sharemechat-frontend-prod (main.5ae9c641.js, 2026-06-07T17:16Z)
+    backend_mode: PRELAUNCH (allowlist vacia)
+    rds_snapshot: db1-sharemechat-prod-preswitch-20260607 (available)
+    rollback_artifact: ops/prod-cf-switch/redirect-spa-prod-LIVE-rollback.js (commiteado al repo)
+
+# ============================================================
+# BLOQUE 7 - Smoke real ejecutado (7/7 verde)
+# ============================================================
+verification_smoke:
+  executed_at: "2026-06-07T17:36Z"
+  checks:
+    a_home_spa_servida:
+      result: PASS
+      detail: "GET https://sharemechat.com/ -> 200 text/html 3095 B; bundle referenciado main.5ae9c641.js (SPA nuevo, NO landing legacy)."
+    b_estaticas:
+      result: PASS
+      detail: "/legal /faq /safety /community-guidelines /cookies-settings -> 200 text/html cada uno (function reescribe extensionless -> /index.html, SPA enruta client-side)."
+    c_redirects_legacy:
+      result: PASS
+      detail: "5 redirects .html -> ruta canonica SPA, todos 301 + location correcta. cookie-settings.html (singular legacy) -> /cookies-settings (plural SPA) confirmado."
+    d_www_to_apex:
+      result: PASS
+      detail: "https://www.sharemechat.com/ -> 301 location: https://sharemechat.com/."
+    e_api_intacta:
+      result: PASS
+      detail: "GET /api/clients/me -> 503 + x-product-mode: PRELAUNCH; POST /api/auth/login (dummy) -> 403 (NO 503, auth abierta en PRELAUNCH)."
+    f_bundle_servido_contiene_overlay_y_featureflag:
+      result: PASS
+      detail: "Chunk 66.c531362f.chunk.js descargado desde sharemechat.com: 'COMING' x1, 'www.sharemechat' x2, 'Gracias por elegirnos' x1, 'Thank you for choosing us' x1."
+    g_e2e_funcional_operador:
+      result: PASS
+      detail: "Validacion manual end-to-end: registro cliente + modelo en sharemechat.com -> email de verificacion entregado -> verificacion OK -> PreLaunchScreen con saludo nuevo + body terminado en 'Gracias por elegirnos!' / 'Thank you for choosing us!'."
