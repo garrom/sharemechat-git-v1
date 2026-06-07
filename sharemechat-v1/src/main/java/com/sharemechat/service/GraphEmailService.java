@@ -33,6 +33,27 @@ public class GraphEmailService implements EmailService {
     @Value("${email.default-from:operations@sharemechat.com}")
     private String defaultFrom;
 
+    /**
+     * Direccion visible "From" del correo (RFC 5322 From header). El
+     * "sender" Microsoft Graph (URL path /users/{mailbox}/sendMail)
+     * sigue siendo el mailbox real autenticado (defaultFrom o
+     * message.from()). Pero si esta property tiene valor, el JSON
+     * Graph anade tambien un campo "from" para que el usuario final
+     * vea ESTA direccion como remitente en el cliente de correo. Util
+     * para usar alias tipo no-reply+prod@... mientras el backend se
+     * autentica como operations@. Vacio = usar el sender por defecto.
+     */
+    @Value("${email.sender.address:}")
+    private String senderAddress;
+
+    /**
+     * Display name visible del remitente (p.ej. "SharemeChat"). Solo
+     * aplica cuando email.sender.address esta definido. Sin display
+     * name el cliente de correo mostrara la direccion cruda.
+     */
+    @Value("${email.sender.display-name:}")
+    private String senderDisplayName;
+
     @Value("${email.graph.tenant-id:}")
     private String tenantId;
 
@@ -117,6 +138,22 @@ public class GraphEmailService implements EmailService {
         graphMessage.put("toRecipients", List.of(Map.of(
                 "emailAddress", Map.of("address", message.to())
         )));
+
+        // From override (visible para el destinatario). El sender Graph
+        // (URL /users/{sender}/sendMail) sigue siendo el mailbox real
+        // autenticado; este "from" es solo la cabecera RFC 5322 From.
+        // Microsoft Exchange Online acepta esta sobrescritura si el
+        // mailbox autenticado tiene permisos Send-As sobre la direccion
+        // (incluido el caso de alias plus-addressing tipo
+        // operations+tag@... que son alias tecnicos del mismo mailbox).
+        if (senderAddress != null && !senderAddress.isBlank()) {
+            Map<String, Object> fromEmail = new LinkedHashMap<>();
+            fromEmail.put("address", senderAddress.trim());
+            if (senderDisplayName != null && !senderDisplayName.isBlank()) {
+                fromEmail.put("name", senderDisplayName.trim());
+            }
+            graphMessage.put("from", Map.of("emailAddress", fromEmail));
+        }
 
         if (message.replyTo() != null && !message.replyTo().isBlank()) {
             graphMessage.put("replyTo", List.of(Map.of(
