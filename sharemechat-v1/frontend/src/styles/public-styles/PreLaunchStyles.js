@@ -38,20 +38,47 @@ export const PreLaunchSection = styled.section`
   }
 `;
 
-// Imagen de fondo siguiendo EXACTAMENTE la convencion de HeroBackground.
-// Sin animacion slowZoom (no encaja con una pantalla de espera estatica).
+// Imagen de fondo reducida para que el "COMING SOON" no domine la
+// pantalla ni se solape con HeroCopy (texto + tarjeta verifica-email,
+// ambos en HeroContent, columna izquierda padding 52px/56px). En lugar
+// de cubrir todo (cover) la imagen se sirve a tamaño parcial,
+// centrada a la derecha; el resto del hero es un fondo solido oscuro
+// con viñeta lateral suave para integrar el borde derecho sin que
+// quede rectangular.
+//
+// AJUSTAR AQUI tamaños / posición de la imagen de fondo:
+const PL_BG_FILL_COLOR        = '#0b0f14';        // mismo tono que HeroContainer; rellena lo que la imagen ya no cubre
+const PL_BG_SIZE_DESKTOP      = 'auto 72%';       // alto = 72% del hero, ancho = proporcional (imagen pequeña)
+const PL_BG_POSITION_DESKTOP  = '88% 50%';        // empujada a la derecha, centrada vertical
+const PL_BG_SIZE_TABLET       = 'auto 60%';       // <= 1024 px: aún más pequeña
+const PL_BG_POSITION_TABLET   = '92% 50%';
+const PL_BG_SIZE_MOBILE       = 'auto 48%';       // <= 780 px: imagen pequeña arriba-derecha
+const PL_BG_POSITION_MOBILE   = '50% 18%';        // mobile: arriba centro
+/* ================================================================ */
+
 export const PreLaunchBackground = styled.div`
   position: absolute;
   inset: 0;
-  background-image: url('${ASSETS_BASE}/prelaunch/hero/prelaunch_desktop_v1.webp');
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
+  background-color: ${PL_BG_FILL_COLOR};
+  background-image:
+    radial-gradient(ellipse at 88% 50%, rgba(11,15,20,0) 0%, rgba(11,15,20,0.35) 60%, rgba(11,15,20,0.85) 100%),
+    url('${ASSETS_BASE}/prelaunch/hero/prelaunch_desktop_v1.webp');
+  background-size: 100% 100%, ${PL_BG_SIZE_DESKTOP};
+  background-position: center center, ${PL_BG_POSITION_DESKTOP};
+  background-repeat: no-repeat, no-repeat;
   filter: brightness(0.92) contrast(1.04) saturate(1.0);
 
+  @media (max-width: 1024px) {
+    background-size: 100% 100%, ${PL_BG_SIZE_TABLET};
+    background-position: center center, ${PL_BG_POSITION_TABLET};
+  }
+
   @media (max-width: 780px) {
-    background-image: url('${ASSETS_BASE}/prelaunch/hero/prelaunch_mobile_v1.webp');
-    background-position: 60% center;
+    background-image:
+      linear-gradient(180deg, rgba(11,15,20,0.0) 0%, rgba(11,15,20,0.0) 40%, rgba(11,15,20,0.55) 100%),
+      url('${ASSETS_BASE}/prelaunch/hero/prelaunch_mobile_v1.webp');
+    background-size: 100% 100%, ${PL_BG_SIZE_MOBILE};
+    background-position: center center, ${PL_BG_POSITION_MOBILE};
   }
 `;
 

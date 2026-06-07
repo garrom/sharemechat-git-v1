@@ -6,6 +6,7 @@ import PublicNavbar from '../components/navbar/PublicNavbar';
 import i18n from '../i18n';
 import { ASSETS_BASE } from '../config/runtimeEnv';
 
+import { SHOW_PRELAUNCH_OVERLAY } from '../config/featureFlags';
 import {
   GlobalBlack,
   HeroBackground,
@@ -20,6 +21,9 @@ import {
   HeroTitle,
   HeroPrimaryCta,
   HeroSecondaryCta,
+  HeroComingSoonOverlay,
+  HeroComingSoonWord,
+  HeroComingSoonSub,
   HomeCallWindow,
   HomeFeatureList,
   HomeFeaturePill,
@@ -114,6 +118,14 @@ export default function Home() {
 
           <HeroBackground />
           <HeroOverlay />
+
+          {SHOW_PRELAUNCH_OVERLAY && (
+            <HeroComingSoonOverlay aria-hidden="true">
+              <HeroComingSoonWord>COMING</HeroComingSoonWord>
+              <HeroComingSoonWord>SOON</HeroComingSoonWord>
+              <HeroComingSoonSub>Próximamente</HeroComingSoonSub>
+            </HeroComingSoonOverlay>
+          )}
 
           <HeroContent>
             <HeroCopy>

@@ -127,6 +127,78 @@ export const HeroContainer = styled.div`
   background: #0b0f14;
 `;
 
+/* ================================================================
+ * COMING SOON overlay (home pública anónima, periodo pre-launch).
+ * Se posiciona en la mitad derecha del hero para NO solaparse con
+ * HeroCopy (que vive en HeroContent: width 620px, padding 56px,
+ * alineado a la izquierda del HeroContainer).
+ *
+ * Render desde Home.jsx, condicionado por SHOW_PRELAUNCH_OVERLAY
+ * (config/featureFlags.js).
+ * ================================================================
+ *
+ *   AJUSTAR AQUI tamaños / posición:
+ */
+const CS_FONT_SIZE_DESKTOP   = '6.4rem';       // tamaño COMING / SOON desktop
+const CS_FONT_SIZE_TABLET    = '4.6rem';       // <= 1024 px
+const CS_FONT_SIZE_MOBILE    = '3.4rem';       // <= 768 px
+const CS_SUB_FONT_SIZE       = '0.95rem';      // tamaño "PRÓXIMAMENTE"
+const CS_GOLD                = '#d4af37';      // dorado base
+const CS_GOLD_SOFT           = 'rgba(212,175,55,0.78)';
+const CS_RIGHT_DESKTOP       = '7%';           // posición desde la derecha (desktop)
+const CS_RIGHT_TABLET        = '4%';           // <= 1024 px
+const CS_TOP_DESKTOP         = '50%';          // posición vertical centro (desktop)
+const CS_TOP_MOBILE          = '14%';          // mobile: arriba, HeroCopy ya va abajo
+const CS_LETTER_SPACING      = '0.06em';
+/* ================================================================ */
+
+export const HeroComingSoonOverlay = styled.div`
+  position: absolute;
+  z-index: 3;                              /* sobre HeroBackground + HeroOverlay (z=0/1), bajo HeroContent (z=2 sigue accesible: el bloque no captura input) */
+  top: ${CS_TOP_DESKTOP};
+  right: ${CS_RIGHT_DESKTOP};
+  transform: translateY(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;                    /* no roba clicks a los CTA */
+  font-family: "Playfair Display", "Bodoni 72", Didot, Georgia, serif;
+  line-height: 0.95;
+
+  @media (max-width: 1024px) {
+    right: ${CS_RIGHT_TABLET};
+  }
+  @media (max-width: 768px) {
+    top: ${CS_TOP_MOBILE};
+    right: 50%;
+    transform: translateX(50%);
+  }
+`;
+
+export const HeroComingSoonWord = styled.div`
+  font-size: ${CS_FONT_SIZE_DESKTOP};
+  font-weight: 700;
+  letter-spacing: ${CS_LETTER_SPACING};
+  color: ${CS_GOLD};
+  text-shadow: 0 4px 18px rgba(0,0,0,0.55), 0 1px 0 rgba(0,0,0,0.25);
+
+  @media (max-width: 1024px) {
+    font-size: ${CS_FONT_SIZE_TABLET};
+  }
+  @media (max-width: 768px) {
+    font-size: ${CS_FONT_SIZE_MOBILE};
+  }
+`;
+
+export const HeroComingSoonSub = styled.div`
+  margin-top: 14px;
+  font-size: ${CS_SUB_FONT_SIZE};
+  font-weight: 500;
+  letter-spacing: 0.36em;
+  color: ${CS_GOLD_SOFT};
+  text-transform: uppercase;
+`;
+
 
 // Paquete 10.A.5: ASSETS_BASE se resuelve en runtime via window.location.hostname
 // para que el hero se cargue del CDN del entorno (assets.test, assets.audit,
