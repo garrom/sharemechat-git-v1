@@ -1,0 +1,329 @@
+metadata:
+  schema_version: 3
+  environment: prod
+  generated_at: "2026-06-07T16:30:00Z"
+  generated_by: manual-checkpoint@pre-coming-soon-switch
+  notes: |
+    Checkpoint de PROD antes del switch del origin publico al SPA
+    coming-soon. La distribucion publica E2FWNC80D4QDJC sigue sirviendo
+    el bucket de landing legacy `sharemechat-landing-prod` como
+    DefaultCacheBehavior; el bucket SPA `sharemechat-frontend-prod` ya
+    tiene un bundle preparado (`main.b6c3f312.js`, 2026-06-06) pero NO
+    esta cableado como origin por defecto. Este snapshot es el punto de
+    rollback exacto antes del switch.
+
+    Hitos cerrados desde el snapshot anterior (state-prod-2026-05-27-1621):
+      - Alta del primer admin de backoffice en BD (users id=34,
+        admin+ag@sharemechat.com) y rotacion de password.
+      - Perimetro CDN-aware en nginx + guard anti-CloudFront en el
+        blocker + refresco mensual de CIDRs (ADR-032).
+      - Display-name "SharemeChat" en remitente operations@ (88aa1ad).
+      - Cableado de admin.sharemechat.com: origin api-prod-backend +
+        behavior /api/* en E3O40LHJ4PC6LE; Route53 A/AAAA admin alias
+        a la dist; bundle admin rebuildeado (main.c16b646d.js).
+      - Login backoffice: subtitle reducido a "Acceso interno." sin
+        listar roles (ES+EN, commit 2629d85).
+      - Limpieza de 6 smoke users (ids 27,28,29,30,32,33); solo queda
+        el admin id=34.
+      - Snapshot RDS manual previo a cualquier movimiento del switch:
+        `db1-sharemechat-prod-preswitch-20260607`.
+
+    Lo que NO se cierra en este checkpoint:
+      - Switch del origin publico de la dist E2FWNC80D4QDJC al bucket
+        SPA `sharemechat-frontend-prod` (DefaultCacheBehavior sigue ->
+        s3-sharemechat-landing-prod).
+      - Deuda SEO en el SPA producto: react-helmet por pagina con
+        title/description/og:* dinamicos; og:image raster 1200x630
+        canonico (hoy SVG); GTM con env-gate por hostname.
+
+# ============================================================
+# BLOQUE 1 - Identidad del entorno
+# ============================================================
+identity:
+  aws_account: 430118829334
+  region: eu-central-1
+  ec2:
+    instance_id: i-0e0a3b5fee271592f
+    type: t3.medium
+    state: running (24/7)
+    public_ip: 3.77.59.1  # EIP, A record api.sharemechat.com
+    ssh_alias: pro-backend
+  rds:
+    identifier: db1-sharemechat-prod
+    state: available
+    engine: mysql 8.4.7
+    instance_class: db.t3.micro
+    multi_az: false
+    storage_gb: 20
+    az: eu-central-1a
+    endpoint: db1-sharemechat-prod.c1gsc6qg4l8y.eu-central-1.rds.amazonaws.com
+    schema: db1_sharemechat_prod
+  cloudfront_distributions:
+    - logical_name: frontend_public
+      id: E2FWNC80D4QDJC
+      cf_domain: dzwmag96rivxf.cloudfront.net
+      aliases: [sharemechat.com, www.sharemechat.com]
+      status: Deployed
+      default_target_origin_id: s3-sharemechat-landing-prod   # LANDING LEGACY (switch NO hecho)
+      origins:
+        - {id: api-prod-backend,                  domain: api.sharemechat.com,                              role: backend API}
+        - {id: s3-sharemechat-landing-prod,       domain: sharemechat-landing-prod.s3.eu-central-1.amazonaws.com,    role: landing legacy HTML estatica (vivo hoy)}
+        - {id: s3-sharemechat-frontend-prod-spa,  domain: sharemechat-frontend-prod.s3.eu-central-1.amazonaws.com,   role: SPA producto preparado (no es default todavia)}
+      cache_behaviors:
+        - {path: "/api/*", target: api-prod-backend, cache_policy: "CachingDisabled (4135ea2d)", origin_request_policy: "AllViewer (b689b0a8)"}
+      function_associations:
+        - {event: viewer-request, arn: "arn:aws:cloudfront::430118829334:function/redirect-spa-prod"}
+      logging_enabled: false
+      role: SPA product surface (en transicion landing legacy -> SPA)
+    - logical_name: backoffice_admin
+      id: E3O40LHJ4PC6LE
+      cf_domain: d14enb0ydr2y1s.cloudfront.net
+      aliases: [admin.sharemechat.com]
+      status: Deployed
+      default_target_origin_id: s3-admin-prod-origin
+      origins:
+        - {id: api-prod-backend,        domain: api.sharemechat.com,                                role: backend API}
+        - {id: s3-admin-prod-origin,    domain: sharemechat-admin-prod.s3.eu-central-1.amazonaws.com, oac: E218EJKQNPCR1K, role: SPA admin}
+      cache_behaviors:
+        - {path: "/api/*", target: api-prod-backend, cache_policy: "CachingDisabled (4135ea2d)", origin_request_policy: "AllViewer (b689b0a8)"}
+      function_associations:
+        - {event: viewer-request, arn: "arn:aws:cloudfront::430118829334:function/redirect-spa-admin-prod"}
+      logging:
+        bucket: sharemechat-cf-logs-prod.s3.amazonaws.com
+        prefix: "admin/"
+      viewer_certificate:
+        acm_arn: "arn:aws:acm:us-east-1:430118829334:certificate/645d520c-65b0-488f-b161-29a057f9b7f6"
+        domains: [admin.sharemechat.com]
+        status: ISSUED
+        not_after: "2026-12-08"
+      role: SPA admin surface (accesible publicamente desde 2026-06-07)
+    - logical_name: assets_canonical
+      id: E3UAOU6AUNI0CM
+      cf_domain: d99amkbl8rwf7.cloudfront.net
+      aliases: [assets.sharemechat.com]
+      status: Deployed
+      origin: assets-sharemechat-prod.s3.eu-central-1.amazonaws.com
+      role: Imagenes y videos publicos via OAC
+  route53:
+    hosted_zone_id: Z054470823PMZQENFZHHZ
+    zone_name: "sharemechat.com."
+    record_count: 35
+    relevant_records:
+      - {name: "sharemechat.com.",        type: A,    alias: "dzwmag96rivxf.cloudfront.net.",   target: E2FWNC80D4QDJC}
+      - {name: "www.sharemechat.com.",    type: A,    alias: "dzwmag96rivxf.cloudfront.net.",   target: E2FWNC80D4QDJC}
+      - {name: "admin.sharemechat.com.",  type: A,    alias: "d14enb0ydr2y1s.cloudfront.net.",  target: E3O40LHJ4PC6LE}
+      - {name: "admin.sharemechat.com.",  type: AAAA, alias: "d14enb0ydr2y1s.cloudfront.net.",  target: E3O40LHJ4PC6LE}
+      - {name: "assets.sharemechat.com.", type: A,    alias: "d99amkbl8rwf7.cloudfront.net.",   target: E3UAOU6AUNI0CM}
+      - {name: "api.sharemechat.com.",    type: A,    value: "3.77.59.1",                       target: "EC2 EIP"}
+  s3_buckets:
+    - {name: sharemechat-frontend-prod,        role: bucket SPA product surface (preparado pero NO servido aun como default), served_by: frontend_public (origin secundario)}
+    - {name: sharemechat-admin-prod,           role: bucket SPA admin surface, served_by: backoffice_admin}
+    - {name: sharemechat-landing-prod,         role: bucket landing legacy HTML estatica (vivo hoy en /), served_by: frontend_public (origin default)}
+    - {name: assets-sharemechat-prod,          role: bucket assets publicos, served_by: assets_canonical}
+    - {name: sharemechat-storage-prod,         role: bucket uploads privados (KYC + assets originales), served_by: ninguno (descargas via /api/storage/content); 0 objects}
+    - {name: sharemechat-content-private-prod, role: bucket Markdown crudo CMS, served_by: ninguno; 0 objects}
+    - {name: sharemechat-cf-logs-prod,         role: bucket logs CloudFront (prefix admin/), served_by: ninguno}
+    - {name: sharemechat-backups,              role: bucket backups (rollback frontend + dumps BD), served_by: ninguno (multi-env)}
+
+# ============================================================
+# BLOQUE 2 - Estado de la BD
+# ============================================================
+database:
+  total_users: 1   # solo admin id=34 tras limpieza del 2026-06-07
+  users_breakdown:
+    "34":
+      email: admin+ag@sharemechat.com
+      role: ADMIN
+      user_type: ADMIN
+      account_status: ACTIVE
+      backoffice_role: ADMIN (via user_backoffice_roles)
+      backoffice_access_active: true
+      created_in: "PASO 3 SQL del 2026-06-07"
+      password_rotation: "2026-06-07 (bcrypt $2a$12$)"
+  cleanup_executed_2026_06_07:
+    deleted_users: [27, 28, 29, 30, 32, 33]
+    table_deletions:
+      email_verification_tokens: 6   # DELETE explicito (FK NO ACTION)
+      users: 6                       # DELETE explicito
+      user_languages: 6              # CASCADE automatico
+    rationale: "Smoke-test users del frente de cableado. Sin clients/models/transactions/payments asociados."
+  rds_snapshots:
+    pre_switch:
+      identifier: db1-sharemechat-prod-preswitch-20260607
+      arn: "arn:aws:rds:eu-central-1:430118829334:snapshot:db1-sharemechat-prod-preswitch-20260607"
+      type: manual
+      created_at: "2026-06-07T16:30:00Z"  # approx, status=creating en momento de captura
+      tags: {Reason: preswitch-coming-soon, Date: "2026-06-07"}
+      role: red de seguridad pre-switch (no disruptivo)
+
+# ============================================================
+# BLOQUE 3 - Estado del backend
+# ============================================================
+backend:
+  jar:
+    path_on_ec2: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+    sha256: ec7214bfcfe26d908137dfd2c5117c0bdd57738fac8fe71ca940599a423115fa
+    size_bytes: 106127770
+    deployed_at: "2026-06-07T10:32:00Z"
+    contains_features:
+      - "Email sender display-name 'SharemeChat' sobre operations@sharemechat.com (88aa1ad)"
+      - "Product Operational Mode (ADR-009) con PRELAUNCH activo"
+      - "ProductOperationalModeFilter + ProductOperationalModeWsInterceptor"
+      - "Country access gate con bypass IPs"
+      - "Capa 2 multi-asset, contract gate, manifest hash verify (heredado de AUDIT 2026-05-30 / 06-04)"
+  systemd:
+    unit: sharemechat-prod.service
+    state: active
+    main_pid: 52304
+    user: ec2-user
+    profile: prod
+    java: /usr/lib/jvm/java-17-amazon-corretto.x86_64/bin/java
+    working_dir: /home/ec2-user/sharemechat-v1
+    env_files: [/opt/sharemechat/config.env, /opt/sharemechat/secrets.env]
+  config_state:
+    product_access:
+      mode: PRELAUNCH
+      allowlist_user_ids: []   # vacio -> fail-closed (nadie ve producto, todos van a PreLaunchScreen)
+      registration_client: enabled
+      registration_model: enabled
+      notes: "PRELAUNCH activado con allowlist vacia. /api/auth/login y /api/auth/refresh estan exentos (bypass deliberado en decideForRequest). Endpoints /api/models/**, /api/clients/**, /api/transactions/** devuelven 503 + X-Product-Mode: PRELAUNCH."
+    country_access:
+      enabled: true
+      block_when_missing: true
+      bypass_ips: ["90.175.201.51/32"]
+      client_allowed_countries: 28   # GB,IE,CA,AU,NZ,US,DE,AT,CH,ES,PT,FR,IT,NL,BE,LU,SE,DK,FI,NO,AR,CL,UY,MX,CR,PA,DO,PR
+      model_allowed_countries: 47    # superset que extiende a LATAM, CEE, BR
+    email:
+      sender_address: operations@sharemechat.com
+      sender_display_name: SharemeChat   # 88aa1ad
+      provider: microsoft-graph
+  perimeter:
+    nginx_real_ip:
+      module: ngx_http_realip_module
+      trust_file: /etc/nginx/cloudfront-origin-facing.conf  # 45 CIDRs CLOUDFRONT_ORIGIN_FACING
+      header: X-Forwarded-For
+      recursive: on
+      effect: "$remote_addr = IP real del cliente final cuando viene de CloudFront; peer IP cuando viene directo (WS, scanners)"
+    xff_override_api:
+      location: "/api/"
+      directive: "proxy_set_header X-Forwarded-For $remote_addr;"
+      effect: "Cierra el spoofing del XFF en flujo /api/*; WebSockets /match y /messages NO se modifican (deuda separada)"
+    deny_list:
+      file: /etc/nginx/deny-prod-ips.conf
+      cf_edge_15_158_205_101: removed   # eliminado durante el fix
+      remaining_real_attackers: 9
+    blocker_guard:
+      function: merge_cloudfront_cidrs()
+      effect: "El blocker descarta cualquier IP en rangos CF como skip_allowlisted antes de escribir el deny"
+    cf_cidrs_refresh:
+      timer: sharemechat-cf-cidrs-refresh.timer
+      schedule: "OnCalendar=*-*-01 03:00:00 UTC + RandomizedDelaySec=30m"
+      next_run_observed: "2026-07-01 03:03:47 UTC"
+    snapshot_versionado_en_repo: ops/prod-nginx/, ops/prod-access-blocker/
+
+# ============================================================
+# BLOQUE 4 - Estado del frontend
+# ============================================================
+frontend:
+  product_surface:
+    state: TRANSICION
+    served_today: landing legacy (HTMLs estaticos en sharemechat-landing-prod)
+    landing_legacy:
+      bucket: sharemechat-landing-prod
+      object_count: 11
+      key_pages: [index.html, faq.html, safety.html, community-guidelines.html, cookie-settings.html, legal.html]
+    spa_preparado_no_servido:
+      bucket: sharemechat-frontend-prod
+      distribution_default_target: NO   # E2FWNC80D4QDJC sigue -> s3-sharemechat-landing-prod
+      main_js: {path: "static/js/main.b6c3f312.js", size_bytes: 162807, last_modified: "2026-06-06T19:32:12Z"}
+      ready_for_switch: true
+      switch_action_required: "aws cloudfront update-distribution: cambiar DefaultCacheBehavior.TargetOriginId de s3-sharemechat-landing-prod -> s3-sharemechat-frontend-prod-spa (o equivalente con OAC)"
+  admin_surface:
+    state: VIVO_PUBLICAMENTE   # nuevo desde 2026-06-07
+    bucket: sharemechat-admin-prod
+    distribution: E3O40LHJ4PC6LE
+    aliases: [admin.sharemechat.com]
+    assets:
+      main_js: {path: "static/js/main.c16b646d.js", size_bytes: 162807, last_modified: "2026-06-07T13:27:04Z"}
+    contains_features:
+      - "Backoffice login con subtitle 'Acceso interno.' sin listar roles internos (ES+EN, commit 2629d85)"
+      - "Mismas features heredadas del bundle AUDIT 2026-05-30 (admin panels CMS, asset moderation, etc.)"
+    bundle_swap_history:
+      "2026-05-26": main.303de798.js   # bundle inicial (frente PRO-3)
+      "2026-06-07": main.c16b646d.js   # rebuild tras cambio i18n subtitle
+
+# ============================================================
+# BLOQUE 5 - Operatividad cerrada y pendiente
+# ============================================================
+operational_state:
+  cerrado_desde_anterior_snapshot:
+    backoffice_admin_access:
+      state: DONE
+      detail: |
+        E3O40LHJ4PC6LE recibio origin api-prod-backend + behavior /api/*
+        + record Route53 A/AAAA admin.sharemechat.com alias a CF.
+        Bundle admin reconstruido a main.c16b646d.js. Admin de BD creado
+        (id=34, admin+ag@sharemechat.com) con password rotada. Smoke
+        end-to-end OK (HTTP 200 + cookies access_token/refresh_token).
+    cdn_aware_perimeter:
+      state: DONE
+      adr: ADR-032
+      detail: "real_ip module, XFF override en /api/*, guard anti-CF en blocker, refresh mensual de CIDRs."
+    email_display_name:
+      state: DONE
+      commit: 88aa1ad
+      detail: "operations@sharemechat.com From: SharemeChat <operations@...>"
+    smoke_users_cleanup:
+      state: DONE
+      detail: "ids 27,28,29,30,32,33 borrados en transaccion con cascade controlado. Queda solo id=34."
+  pendiente:
+    coming_soon_switch:
+      priority: critica
+      scope: "Cambiar DefaultCacheBehavior.TargetOriginId de E2FWNC80D4QDJC a s3-sharemechat-frontend-prod-spa para servir la SPA producto (PreLaunchScreen con PRODUCT_ACCESS_MODE=PRELAUNCH) en sharemechat.com / www.sharemechat.com."
+      rollback_point: "Este snapshot. Para rollback: aws cloudfront update-distribution restaurando default a s3-sharemechat-landing-prod."
+      condicion_disparo: "Operador autoriza el switch."
+    seo_helmet_y_og_image:
+      priority: alta
+      scope: "Anadir react-helmet por pagina con title/description/og:* dinamicos en SPA; og:image raster 1200x630 canonico (hoy SVG); GTM con env-gate por hostname."
+      condicion_disparo: "Post-switch, antes de declarar pre-launch comunicable a externos."
+    websockets_xff_override:
+      priority: media
+      scope: "Aplicar la misma sobreescritura XFF a /match y /messages, o ignorar XFF en IpConfig para conexiones WebSocket"
+      adr_referencia: ADR-032
+    rds_multi_az_o_pitr_verified:
+      priority: media
+      scope: "Considerar MultiAZ para pre-launch publico y verificar PITR window aplicado al snapshot pre-switch."
+
+# ============================================================
+# BLOQUE 6 - Punto de rollback exacto
+# ============================================================
+rollback_anchor:
+  description: |
+    Este snapshot define el estado de PROD JUSTO ANTES del switch del
+    origin publico al SPA coming-soon. Si tras el switch hay que
+    revertir, el procedimiento es:
+
+      1. aws cloudfront get-distribution-config --id E2FWNC80D4QDJC > current.json
+      2. Editar el JSON: DefaultCacheBehavior.TargetOriginId =
+         "s3-sharemechat-landing-prod" (recuperar el valor de este snapshot).
+      3. aws --profile sharemechat-provisioner cloudfront update-distribution
+         --id E2FWNC80D4QDJC --if-match <ETag> --distribution-config file://...
+      4. aws cloudfront wait distribution-deployed --id E2FWNC80D4QDJC
+      5. aws --profile sharemechat-provisioner cloudfront create-invalidation
+         --distribution-id E2FWNC80D4QDJC --paths "/*"
+
+    El bucket sharemechat-landing-prod NO se toca durante el switch y
+    queda como rollback inmediato (sus HTMLs siguen ahi, intactos).
+
+    El backend (PRODUCT_ACCESS_MODE=PRELAUNCH con allowlist vacia) NO
+    se toca con el switch: el SPA sirve la PreLaunchScreen para
+    cualquier visitante (allowlist vacia => fail-closed). Cambiar a
+    modo OPEN sigue siendo un cambio de config.env + restart, no
+    requiere rebuild.
+
+  current_state:
+    cf_publica_default_target: s3-sharemechat-landing-prod
+    cf_publica_etag_observed: null  # capturar al hacer get-distribution-config
+    spa_bucket_ready: sharemechat-frontend-prod (main.b6c3f312.js, 2026-06-06)
+    backend_mode: PRELAUNCH (allowlist vacia)
+    rds_snapshot: db1-sharemechat-prod-preswitch-20260607 (creating al momento de captura)
