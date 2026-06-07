@@ -19,7 +19,6 @@ import {
   ShareRow,
   ShareLabel,
   ShareButtons,
-  ShareLink,
   CopyLinkButton,
   RelatedSection,
   RelatedHeading,
@@ -522,13 +521,18 @@ export default function BlogArticleView() {
                 dangerouslySetInnerHTML={{ __html: article.htmlBody || '' }}
               />
 
+              {/*
+                Botones de redes sociales retirados (2026-06-08): los 4
+                ShareLink (X, Meta, Instagram, TikTok) iban a href="#" y
+                no compartian la URL del articulo. Cuando se decida una
+                estrategia social real (Twitter Web Intent, Facebook
+                Sharer, etc.) se reintroducen con URLs validas. Se
+                conserva el boton "Copiar enlace" que SI funciona via
+                navigator.clipboard.writeText().
+              */}
               <ShareRow>
                 <ShareLabel>{t('blog:detail.shareTitle')}</ShareLabel>
                 <ShareButtons>
-                  <ShareLink href="#" data-network="x" aria-label={t('blog:detail.shareAriaX')} target="_blank" rel="noopener noreferrer">𝕏</ShareLink>
-                  <ShareLink href="#" data-network="meta" aria-label={t('blog:detail.shareAriaMeta')} target="_blank" rel="noopener noreferrer">f</ShareLink>
-                  <ShareLink href="#" data-network="instagram" aria-label={t('blog:detail.shareAriaInstagram')} target="_blank" rel="noopener noreferrer">IG</ShareLink>
-                  <ShareLink href="#" data-network="tiktok" aria-label={t('blog:detail.shareAriaTiktok')} target="_blank" rel="noopener noreferrer">TK</ShareLink>
                   <CopyLinkButton type="button" onClick={handleCopyLink}>
                     {copied ? t('blog:detail.copiedFeedback') : t('blog:detail.copyLink')}
                   </CopyLinkButton>

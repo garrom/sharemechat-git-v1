@@ -811,27 +811,10 @@ export const ShareButtons = styled.div`
   flex-wrap: wrap;
 `;
 
-export const ShareLink = styled.a`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #ffffff;
-  border: 1px solid rgba(148, 163, 184, 0.24);
-  color: #475569;
-  text-decoration: none;
-  font-size: 0.85rem;
-  font-weight: 700;
-  transition: background 120ms, color 120ms, border-color 120ms;
-
-  &:hover {
-    background: rgba(67, 56, 202, 0.05);
-    border-color: #4338ca;
-    color: #4338ca;
-  }
-`;
+// ShareLink (styled.a circular para los iconos de redes sociales) retirado
+// el 2026-06-08 junto con los 4 botones X/Meta/Instagram/TikTok en
+// BlogArticleView.jsx, que iban a href="#" y no compartian la URL del
+// articulo. Se reintroducira cuando haya una estrategia social real.
 
 export const CopyLinkButton = styled.button`
   margin-left: 8px;
