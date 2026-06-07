@@ -453,12 +453,12 @@
     },
     "preLaunch": {
       "client": {
-        "title": "Ya estás en la lista, {{name}}.",
-        "body": "SharemeChat está a punto de llegar. Te avisamos por email en cuanto abramos — tu acceso anticipado está reservado."
+        "title": "Bienvenido, {{name}}.",
+        "body": "SharemeChat está a punto de llegar. Te avisaremos por email cuando la plataforma esté abierta. ¡Gracias por elegirnos!"
       },
       "model": {
         "title": "Bienvenida, {{name}}.",
-        "body": "Eres una de nuestras modelos fundadoras. La verificación se abre muy pronto y te avisaremos por email en cuanto puedas completarla — tu plaza está reservada."
+        "body": "Eres una de nuestras modelos fundadoras. La verificación se abre muy pronto y te avisaremos por email en cuanto puedas completarla. ¡Gracias por elegirnos!"
       },
       "common": {
         "logout": "Cerrar sesión",
