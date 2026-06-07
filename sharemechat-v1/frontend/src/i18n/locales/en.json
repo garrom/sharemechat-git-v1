@@ -1684,7 +1684,7 @@
     "auth": {
       "loading": "Loading internal access...",
       "pageTitle": "SharemeChat Backoffice",
-      "pageSubtitle": "Internal access for ADMIN, SUPPORT, and AUDIT.",
+      "pageSubtitle": "Internal access.",
       "form": {
         "title": "Internal access",
         "subtitle": "Enter your backoffice credentials."
