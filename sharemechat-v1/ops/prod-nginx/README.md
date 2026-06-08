@@ -12,7 +12,7 @@ edite aquí y commitee** para mantener paridad.
 
 | Repo | Ruta viva en EC2 PROD | Función |
 |---|---|---|
-| `conf.d/api.sharemechat.com.conf` | `/etc/nginx/conf.d/api.sharemechat.com.conf` | Server `api.sharemechat.com:80,443`. `location /api/`, `/match`, `/messages`, `= /sitemap.xml`, `= /robots.txt`. Incluye CIDRs CF (`include /etc/nginx/cloudfront-origin-facing.conf`) + `real_ip_header X-Forwarded-For` + `real_ip_recursive on`. En `/api/`, `/sitemap.xml` y `/robots.txt` sobrescribe `X-Real-IP` y `X-Forwarded-For` con `$remote_addr` (cierra spoofing). |
+| `conf.d/api.sharemechat.com.conf` | `/etc/nginx/conf.d/api.sharemechat.com.conf` | Server `api.sharemechat.com:80,443`. `location /api/`, `^~ /api/auth/`, `^~ /api/users/register/`, `^~ /api/admin/auth/` (con `limit_req zone=auth burst=20 nodelay`), `/match`, `/messages`, `= /sitemap.xml`, `= /robots.txt`. Incluye CIDRs CF (`include /etc/nginx/cloudfront-origin-facing.conf`) + `real_ip_header X-Forwarded-For` + `real_ip_recursive on`. Define `limit_req_zone $binary_remote_addr zone=auth:10m rate=30r/m;` para los 3 locations abusables (H6 Lote 1). En todos los locations proxypaseados, sobrescribe `X-Real-IP` y `X-Forwarded-For` con `$remote_addr` (cierra spoofing). |
 | `cloudfront-origin-facing.conf` | `/etc/nginx/cloudfront-origin-facing.conf` | CIDRs `CLOUDFRONT_ORIGIN_FACING` publicados por AWS, traducidos a líneas `set_real_ip_from <CIDR>;`. **Regenerado mensualmente por timer** (ver `cf-refresh/`). Snapshot. |
 | `deny-prod-ips.conf` | `/etc/nginx/deny-prod-ips.conf` | Auto-generado por el `prod-access-blocker` (Carril A). Lista actual de IPs baneadas. Snapshot. |
 | `deny-prod-ips.manual.conf` | `/etc/nginx/deny-prod-ips.manual.conf` | Bloqueos manuales del operador (vacío hoy). Preservado por el blocker. Snapshot. |
@@ -35,6 +35,21 @@ edite aquí y commitee** para mantener paridad.
 Ver [ADR-032](../../docs/06-decisions/adr-032-cloudfront-aware-perimeter-real-ip.md)
 para el rediseño del 2026-06-07 (real_ip CDN-aware + sobreescritura XFF +
 limpieza falso positivo + timer mensual).
+
+### 2026-06-08 — `limit_req` por IP en `/api/auth/`, `/api/users/register/`, `/api/admin/auth/` (H6 Lote 1)
+
+Hardening defensivo de la auditoría 2026-06-08 (ver `docs/project-log.md`).
+Añadido `limit_req_zone $binary_remote_addr zone=auth:10m rate=30r/m;` al
+inicio del `.conf` y tres bloques `location ^~` específicos con
+`limit_req zone=auth burst=20 nodelay;` aplicado SOLO a los tres prefijos
+abusables. El `location /api/` genérico queda **SIN** `limit_req` (para
+no estrangular crawlers en `/api/public/content/**` ni otros endpoints
+públicos legítimos). Backup del .conf previo conservado en EC2 como
+`/etc/nginx/conf.d/api.sharemechat.com.conf.bak-h6-20260608-*`.
+
+Validado en PROD: burst `POST /api/auth/login` desde una IP → 429 tras
+agotar burst; `GET /api/public/content/articles?locale=es ×5` → 200 ×5
+sin throttling; `GET /sitemap.xml ×5` → 200 ×5 sin throttling.
 
 ### 2026-06-08 — locations `/sitemap.xml` y `/robots.txt` proxypaseados al backend
 
