@@ -1,5 +1,6 @@
 // frontend/src/pages/admin/audit/AuditSessionIntegrityPanel.jsx
 import React, { useState } from 'react';
+import i18n from '../../../i18n';
 import {
   CardsGrid,
   NoteCard,
@@ -14,6 +15,7 @@ import {
 const ANOM_LIMIT_OPTIONS = [10, 20, 50, 100, 200];
 
 const AuditSessionIntegrityPanel = () => {
+  const t = (key, options) => i18n.t(key, options);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState('');
   const [auditResult, setAuditResult] = useState(null);
@@ -42,14 +44,14 @@ const AuditSessionIntegrityPanel = () => {
       });
 
       if (!res.ok) {
-        throw new Error((await res.text()) || 'Error ejecutando session integrity audit');
+        throw new Error((await res.text()) || t('admin.audit.sessionIntegrity.errors.run'));
       }
 
       const data = await res.json();
       setAuditResult(data || null);
       await loadAnomalies();
     } catch (e) {
-      setAuditError(e.message || 'Error ejecutando session integrity audit');
+      setAuditError(e.message || t('admin.audit.sessionIntegrity.errors.run'));
     } finally {
       setAuditLoading(false);
     }
@@ -68,13 +70,13 @@ const AuditSessionIntegrityPanel = () => {
       );
 
       if (!res.ok) {
-        throw new Error((await res.text()) || 'Error cargando anomalías de session integrity');
+        throw new Error((await res.text()) || t('admin.audit.sessionIntegrity.errors.loadAnomalies'));
       }
 
       const data = await res.json();
       setAnomalies(Array.isArray(data) ? data : []);
     } catch (e) {
-      setAnomError(e.message || 'Error cargando anomalías de session integrity');
+      setAnomError(e.message || t('admin.audit.sessionIntegrity.errors.loadAnomalies'));
       setAnomalies([]);
     } finally {
       setAnomLoading(false);
@@ -104,16 +106,16 @@ const AuditSessionIntegrityPanel = () => {
         <StatCard>
           <div className="label">Session Integrity audit</div>
           <div className="meta">
-            Busca incoherencias del ciclo de vida de streams RANDOM y CALLING:
+            {t('admin.audit.sessionIntegrity.description')}
             <ul style={{ margin: '8px 0 0 18px' }}>
-              <li>Stream cerrado sin evento ENDED</li>
-              <li>Stream confirmado sin evento CONFIRMED</li>
-              <li>Evento CONFIRMED sin confirmed_at</li>
-              <li>Evento terminal sin end_time</li>
-              <li>Timestamps invalidos</li>
-              <li>Multiples streams activos para el mismo usuario</li>
-              <li>Stream confirmado y cerrado sin cargo</li>
-              <li>Stream confirmado y cerrado sin earning</li>
+              <li>{t('admin.audit.sessionIntegrity.checks.closedWithoutEnded')}</li>
+              <li>{t('admin.audit.sessionIntegrity.checks.confirmedWithoutConfirmedEvent')}</li>
+              <li>{t('admin.audit.sessionIntegrity.checks.confirmedWithoutConfirmedAt')}</li>
+              <li>{t('admin.audit.sessionIntegrity.checks.terminalWithoutEndTime')}</li>
+              <li>{t('admin.audit.sessionIntegrity.checks.invalidTimestamps')}</li>
+              <li>{t('admin.audit.sessionIntegrity.checks.multipleActiveStreams')}</li>
+              <li>{t('admin.audit.sessionIntegrity.checks.confirmedClosedWithoutCharge')}</li>
+              <li>{t('admin.audit.sessionIntegrity.checks.confirmedClosedWithoutEarning')}</li>
             </ul>
           </div>
 
@@ -168,7 +170,7 @@ const AuditSessionIntegrityPanel = () => {
             </StyledButton>
 
             <RightInfo>
-              {anomLoading ? 'Consultando anomalías SI_...' : anomalies.length > 0 ? `${anomalies.length} filas` : ''}
+              {anomLoading ? t('admin.audit.sessionIntegrity.anomalies.querying') : anomalies.length > 0 ? t('admin.audit.sessionIntegrity.anomalies.rowsCount', { count: anomalies.length }) : ''}
             </RightInfo>
           </div>
 
@@ -176,7 +178,7 @@ const AuditSessionIntegrityPanel = () => {
 
           <div style={{ marginTop: 12 }}>
             {anomalies.length === 0 && !anomLoading && (
-              <div style={{ opacity: 0.8 }}>Sin anomalías para mostrar.</div>
+              <div style={{ opacity: 0.8 }}>{t('admin.audit.sessionIntegrity.anomalies.empty')}</div>
             )}
 
             {anomalies.length > 0 && (
@@ -217,7 +219,7 @@ const AuditSessionIntegrityPanel = () => {
         <NoteCard $muted>
           <div className="label">Nota operativa</div>
           <div className="meta">
-            Esta ejecucion persiste anomalias SI_ para revision posterior. No modifica streams, no cierra sesiones y no altera la logica de negocio.
+            {t('admin.audit.sessionIntegrity.note')}
           </div>
         </NoteCard>
       </CardsGrid>

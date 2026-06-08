@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import i18n from '../../../i18n';
 import {
   CardsGrid,
   CheckBox,
@@ -41,11 +42,11 @@ const RuntimeHealthAnomaliesTable = ({ anomalies, loading }) => {
   };
 
   if (loading) {
-    return <div>Cargando…</div>;
+    return <div>{i18n.t('admin.audit.runtimeHealth.table.loading')}</div>;
   }
 
   if (!anomalies.length) {
-    return <div style={{ opacity: 0.8 }}>Sin anomalías Runtime Health para mostrar.</div>;
+    return <div style={{ opacity: 0.8 }}>{i18n.t('admin.audit.runtimeHealth.anomalies.empty')}</div>;
   }
 
   return (
@@ -85,6 +86,7 @@ const RuntimeHealthAnomaliesTable = ({ anomalies, loading }) => {
 };
 
 const AuditRuntimeHealthPanel = () => {
+  const t = (key, options) => i18n.t(key, options);
   const [auditDryRun, setAuditDryRun] = useState(true);
   const [auditLoading, setAuditLoading] = useState(false);
   const [auditError, setAuditError] = useState('');
@@ -113,13 +115,13 @@ const AuditRuntimeHealthPanel = () => {
       });
 
       if (!res.ok) {
-        throw new Error((await res.text()) || 'Error ejecutando Runtime Health');
+        throw new Error((await res.text()) || t('admin.audit.runtimeHealth.errors.run'));
       }
 
       const data = await res.json();
       setAuditResult(data || null);
     } catch (e) {
-      setAuditError(e.message || 'Error ejecutando Runtime Health');
+      setAuditError(e.message || t('admin.audit.runtimeHealth.errors.run'));
     } finally {
       setAuditLoading(false);
     }
@@ -135,7 +137,7 @@ const AuditRuntimeHealthPanel = () => {
       });
 
       if (!res.ok) {
-        throw new Error((await res.text()) || 'Error cargando anomalías');
+        throw new Error((await res.text()) || t('admin.audit.runtimeHealth.errors.loadAnomalies'));
       }
 
       const data = await res.json();
@@ -143,7 +145,7 @@ const AuditRuntimeHealthPanel = () => {
       const filtered = rows.filter((a) => RUNTIME_HEALTH_TYPES.includes(a?.anomalyType));
       setAnomalies(filtered);
     } catch (e) {
-      setAnomError(e.message || 'Error cargando anomalías');
+      setAnomError(e.message || t('admin.audit.runtimeHealth.errors.loadAnomalies'));
       setAnomalies([]);
     } finally {
       setAnomLoading(false);
@@ -158,16 +160,16 @@ const AuditRuntimeHealthPanel = () => {
         <StatCard>
           <div className="label">Runtime Health</div>
           <div className="meta">
-            Busca incoherencias entre memoria runtime, Redis y base de datos:
+            {t('admin.audit.runtimeHealth.description')}
             <ul style={{ margin: '8px 0 0 18px' }}>
-              <li>Pair RANDOM activa en memoria sin stream activo en BBDD</li>
-              <li>Call activa en memoria sin stream CALLING activo en BBDD</li>
-              <li>Modelo AVAILABLE pero con trabajo activo</li>
-              <li>Modelo BUSY sin trabajo activo</li>
-              <li>Sesión en cola y a la vez emparejada</li>
-              <li>Ringing colgado</li>
-              <li>Redis session:active sin stream real</li>
-              <li>Locks huérfanos</li>
+              <li>{t('admin.audit.runtimeHealth.checks.activePairWithoutDbStream')}</li>
+              <li>{t('admin.audit.runtimeHealth.checks.activeCallWithoutDbStream')}</li>
+              <li>{t('admin.audit.runtimeHealth.checks.modelAvailableWithActiveWork')}</li>
+              <li>{t('admin.audit.runtimeHealth.checks.modelBusyWithoutActiveWork')}</li>
+              <li>{t('admin.audit.runtimeHealth.checks.queueMemberAlreadyPaired')}</li>
+              <li>{t('admin.audit.runtimeHealth.checks.ringingStale')}</li>
+              <li>{t('admin.audit.runtimeHealth.checks.redisActiveSessionWithoutDbStream')}</li>
+              <li>{t('admin.audit.runtimeHealth.checks.lockWithoutActiveWork')}</li>
             </ul>
           </div>
 
@@ -185,9 +187,9 @@ const AuditRuntimeHealthPanel = () => {
                 type="checkbox"
                 checked={auditDryRun}
                 onChange={(e) => setAuditDryRun(e.target.checked)}
-                title="Dry Run: no persiste anomalías"
+                title={t('admin.audit.runtimeHealth.dryRun.tooltip')}
               />
-              <span style={{ fontSize: 13 }}>Dry Run (no persistir anomalías)</span>
+              <span style={{ fontSize: 13 }}>{t('admin.audit.runtimeHealth.dryRun.label')}</span>
             </div>
 
             <StyledButton onClick={runAudit} disabled={auditLoading}>
@@ -245,7 +247,7 @@ const AuditRuntimeHealthPanel = () => {
             </StyledButton>
 
             <RightInfo>
-              {anomLoading ? 'Consultando /api/admin/audit/anomalies…' : anomalies.length > 0 ? `${anomalies.length} filas` : ''}
+              {anomLoading ? t('admin.audit.runtimeHealth.anomalies.querying') : anomalies.length > 0 ? t('admin.audit.runtimeHealth.anomalies.rowsCount', { count: anomalies.length }) : ''}
             </RightInfo>
           </div>
 
@@ -259,7 +261,7 @@ const AuditRuntimeHealthPanel = () => {
         <NoteCard $muted>
           <div className="label">Operativa recomendada</div>
           <div className="meta">
-            Úsalo para detectar descuadres entre runtime y persistencia. En preproducción, ejecútalo en Dry Run.
+            {t('admin.audit.runtimeHealth.note')}
           </div>
         </NoteCard>
       </CardsGrid>

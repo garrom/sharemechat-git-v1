@@ -8,6 +8,16 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-08 — i18n de los cuatro paneles Audit del backoffice (continuación del frente i18n tras el piloto AdminFinancePanel)
+
+Internacionalización (ES + EN) de los cuatro paneles del grupo Audit del backoffice: `AuditRuntimeHealthPanel`, `AuditSessionIntegrityPanel`, `AuditAccountingPanel` y `AuditIncidentPanel`. Continúa el frente de i18n del backoffice que empezó con `AdminFinancePanel` como piloto; misma metodología (extracción de literales hardcoded del JSX a claves `i18n.t(...)`, replicando estructura en `es.json` y `en.json` en paralelo) y mismo perímetro defensivo (solo strings visibles para el operador del BO; no se tocan claves API, identificadores técnicos, ni nombres de check internos que el backend emite en payloads).
+
+**Estructura de claves elegida**: `admin.audit.<panel>.*` con sub-secciones consistentes entre los cuatro paneles. Cada panel define al menos `description` (cabecera explicativa), `checks` (etiquetas de los chequeos del panel), `dryRun` (toggle y tooltip cuando aplica), `anomalies` (estados de carga y filas vacías) y `errors` (mensajes de fallo de las llamadas a `/api/admin/audit/*`). Las claves de los nombres de check (`txWithoutBalance`, `balanceVsLedger`, `ringingStale`, etc.) son **etiquetas de presentación**, no identificadores; los identificadores que viajan al backend se mantienen literales en el JSX como corresponde.
+
+**Lo que se mantiene fuera del frente**. No se tocan `AdminTabs.jsx` (las labels de las pestañas del backoffice contienen mojibake heredado — caracteres con tildes corruptos en `Gestión`, `Estadísticas`, `Análisis F...`, `Auditoría`, `Moderación`; requiere primero un fix de encoding antes de internacionalizar, ver `known-debt.md`), ni los paneles del grupo Finance (ya cerrados en el piloto), ni los paneles fuera del grupo Audit (Moderation, Stats, etc., que vienen en frentes siguientes con el mismo patrón).
+
+---
+
 ## 2026-06-08 — Eliminación del andamiaje CCBill y bump jsoup (Lote 3 parte segura: H7 + H8 parcial)
 
 Cuarta tanda de mitigaciones de la auditoría defensiva. Cierra H7 (webhook PSP sin firma HMAC) por eliminación completa del andamiaje muerto, y cubre la mitad segura de H8 (bump de jsoup; jjwt NO se toca en este lote por su acoplamiento con el flujo de auth).

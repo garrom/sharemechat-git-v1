@@ -1532,6 +1532,93 @@
         }
       }
     },
+    "audit": {
+      "accounting": {
+        "description": "Revisión determinista basada en ledger:",
+        "checks": {
+          "txWithoutBalance": "Transactions sin Balance",
+          "balanceVsLedger": "Balance vs Ledger (SUM vs último balance)",
+          "platformTxWithoutBalance": "Plataforma: platform_transactions sin platform_balance"
+        },
+        "dryRun": {
+          "tooltip": "Dry Run: no persiste anomalías",
+          "label": "Dry Run (no persistir anomalías)"
+        },
+        "anomalies": {
+          "querying": "Consultando /api/admin/audit/anomalies…",
+          "rowsCount": "{{count}} filas",
+          "empty": "Sin anomalías para mostrar."
+        },
+        "note": "Usa Dry Run en producción para inspección. Cambia a Dry Run = false solo cuando quieras persistir anomalías.",
+        "errors": {
+          "run": "Error ejecutando auditoría",
+          "loadAnomalies": "Error cargando anomalías"
+        }
+      },
+      "runtimeHealth": {
+        "description": "Busca incoherencias entre memoria runtime, Redis y base de datos:",
+        "checks": {
+          "activePairWithoutDbStream": "Pair RANDOM activa en memoria sin stream activo en BBDD",
+          "activeCallWithoutDbStream": "Call activa en memoria sin stream CALLING activo en BBDD",
+          "modelAvailableWithActiveWork": "Modelo AVAILABLE pero con trabajo activo",
+          "modelBusyWithoutActiveWork": "Modelo BUSY sin trabajo activo",
+          "queueMemberAlreadyPaired": "Sesión en cola y a la vez emparejada",
+          "ringingStale": "Ringing colgado",
+          "redisActiveSessionWithoutDbStream": "Redis session:active sin stream real",
+          "lockWithoutActiveWork": "Locks huérfanos"
+        },
+        "dryRun": {
+          "tooltip": "Dry Run: no persiste anomalías",
+          "label": "Dry Run (no persistir anomalías)"
+        },
+        "table": {
+          "loading": "Cargando…"
+        },
+        "anomalies": {
+          "querying": "Consultando /api/admin/audit/anomalies…",
+          "rowsCount": "{{count}} filas",
+          "empty": "Sin anomalías Runtime Health para mostrar."
+        },
+        "note": "Úsalo para detectar descuadres entre runtime y persistencia. En preproducción, ejecútalo en Dry Run.",
+        "errors": {
+          "run": "Error ejecutando Runtime Health",
+          "loadAnomalies": "Error cargando anomalías"
+        }
+      },
+      "sessionIntegrity": {
+        "description": "Busca incoherencias del ciclo de vida de streams RANDOM y CALLING:",
+        "checks": {
+          "closedWithoutEnded": "Stream cerrado sin evento ENDED",
+          "confirmedWithoutConfirmedEvent": "Stream confirmado sin evento CONFIRMED",
+          "confirmedWithoutConfirmedAt": "Evento CONFIRMED sin confirmed_at",
+          "terminalWithoutEndTime": "Evento terminal sin end_time",
+          "invalidTimestamps": "Timestamps inválidos",
+          "multipleActiveStreams": "Múltiples streams activos para el mismo usuario",
+          "confirmedClosedWithoutCharge": "Stream confirmado y cerrado sin cargo",
+          "confirmedClosedWithoutEarning": "Stream confirmado y cerrado sin earning"
+        },
+        "anomalies": {
+          "querying": "Consultando anomalías SI_…",
+          "rowsCount": "{{count}} filas",
+          "empty": "Sin anomalías para mostrar."
+        },
+        "note": "Esta ejecución persiste anomalías SI_ para revisión posterior. No modifica streams, no cierra sesiones y no altera la lógica de negocio.",
+        "errors": {
+          "run": "Error ejecutando session integrity audit",
+          "loadAnomalies": "Error cargando anomalías de session integrity"
+        }
+      },
+      "incident": {
+        "description": "Esta rama queda preparada para una vista operativa de incidentes críticos:",
+        "checks": {
+          "recentSevere": "Últimos incidentes severos",
+          "recentCritical": "Anomalías críticas recientes",
+          "quickSummary": "Resumen rápido para operación",
+          "manualEntry": "Entrada a investigación manual"
+        },
+        "note": "Panel preparado. Pendiente de conectar con una vista priorizada de incidentes y alertas."
+      }
+    },
     "assetModeration": {
       "reasons": {
         "LIGHTING": "Iluminación insuficiente (demasiado oscuro)",

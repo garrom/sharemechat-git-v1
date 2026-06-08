@@ -1,20 +1,22 @@
 // src/pages/admin/audit/AuditIncidentPanel.jsx
 import React from 'react';
+import i18n from '../../../i18n';
 import { CardsGrid, NoteCard, StatCard } from '../../../styles/AdminStyles';
 
 const AuditIncidentPanel = () => {
+  const t = (key, options) => i18n.t(key, options);
   return (
     <div>
       <CardsGrid>
         <StatCard>
           <div className="label">Incidents</div>
           <div className="meta" style={{ marginTop: 10 }}>
-            Esta rama queda preparada para una vista operativa de incidentes críticos:
+            {t('admin.audit.incident.description')}
             <ul style={{ margin: '8px 0 0 18px' }}>
-              <li>Últimos incidentes severos</li>
-              <li>Anomalías críticas recientes</li>
-              <li>Resumen rápido para operación</li>
-              <li>Entrada a investigación manual</li>
+              <li>{t('admin.audit.incident.checks.recentSevere')}</li>
+              <li>{t('admin.audit.incident.checks.recentCritical')}</li>
+              <li>{t('admin.audit.incident.checks.quickSummary')}</li>
+              <li>{t('admin.audit.incident.checks.manualEntry')}</li>
             </ul>
           </div>
         </StatCard>
@@ -22,7 +24,7 @@ const AuditIncidentPanel = () => {
         <NoteCard $muted>
           <div className="label">Estado</div>
           <div className="meta">
-            Panel preparado. Pendiente de conectar con una vista priorizada de incidentes y alertas.
+            {t('admin.audit.incident.note')}
           </div>
         </NoteCard>
       </CardsGrid>

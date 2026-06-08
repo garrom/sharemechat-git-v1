@@ -20,6 +20,10 @@ Cerrada en bitácora 2026-06-08 (Lote 2 parte 1). `filterClasses()` en `Markdown
 
 Cerrada en bitácora 2026-06-08 (Lote 2 parte 1). `preprocessCallouts` neutraliza `</\s*div\s*>` literal en el cuerpo del callout antes de generar el wrapper. Test JUnit `preprocessCalloutWithDivCloseInBodyIsNeutralized`.
 
+### [DEUDA baja — UI backoffice] Mojibake heredado en las labels de `AdminTabs.jsx`
+
+Las labels de las pestañas del backoffice en `frontend/src/pages/admin/AdminTabs.jsx` (líneas ~18–24) contienen caracteres con tildes corruptos (`Gestión`, `Estadísticas`, `Análisis F...`, `Auditoría`, `Moderación`): el fichero está guardado o fue editado con un encoding distinto a UTF-8 en algún punto del histórico y nunca se corrigió. No es un bug funcional (las pestañas funcionan), pero rompe la presentación y bloquea la internacionalización del componente (no tiene sentido pasar a `i18n.t(...)` strings cuyo source ya está corrupto). Fix esperado: reconvertir el fichero a UTF-8 limpio restaurando las tildes correctas y, en el mismo commit o el siguiente, internacionalizar las labels con la convención `admin.tabs.*` siguiendo el frente i18n del backoffice. No tocar las claves de routing/activeTab (`models`, `asset-moderation`, `stats`, `finance`, `audit`, `moderation`) — son identificadores, no labels. Prioridad: baja (cosmético, sin impacto operativo).
+
 ### [DEUDA baja — Lote 3 residual] H8 parcial: bump `jjwt 0.11.5 → 0.12.x`
 
 `jsoup 1.17.2 → 1.18.3` cerrado en bitácora 2026-06-08 (Lote 3). El bump de jjwt queda pendiente porque cambia su API (parser builder + claims accessor) y afecta a `JwtUtil` (cookie auth + refresh + lockout) — requiere sesión dedicada con tests de regresión del flujo auth. Sin CVE crítico abierto hoy. Prioridad: baja.

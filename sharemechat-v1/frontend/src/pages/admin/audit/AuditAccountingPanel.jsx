@@ -1,5 +1,6 @@
 // src/pages/admin/audit/AuditAccountingPanel.jsx
 import React, { useState } from 'react';
+import i18n from '../../../i18n';
 import {
   CardsGrid,
   CheckBox,
@@ -15,6 +16,7 @@ import {
 const ANOM_LIMIT_OPTIONS = [10, 20, 50, 100, 200];
 
 const AuditAccountingPanel = () => {
+  const t = (key, options) => i18n.t(key, options);
   const [auditDryRun, setAuditDryRun] = useState(true);
   const [auditScope, setAuditScope] = useState('DEFAULT');
   const [auditLoading, setAuditLoading] = useState(false);
@@ -39,11 +41,11 @@ const AuditAccountingPanel = () => {
         },
         body: JSON.stringify({ scope: auditScope, dryRun: auditDryRun }),
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error ejecutando auditoría');
+      if (!res.ok) throw new Error((await res.text()) || t('admin.audit.accounting.errors.run'));
       const data = await res.json();
       setAuditResult(data || null);
     } catch (e) {
-      setAuditError(e.message || 'Error ejecutando auditoría');
+      setAuditError(e.message || t('admin.audit.accounting.errors.run'));
     } finally {
       setAuditLoading(false);
     }
@@ -56,11 +58,11 @@ const AuditAccountingPanel = () => {
       const res = await fetch(`/api/admin/audit/anomalies?limit=${encodeURIComponent(anomLimit)}`, {
         credentials: 'include',
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error cargando anomalías');
+      if (!res.ok) throw new Error((await res.text()) || t('admin.audit.accounting.errors.loadAnomalies'));
       const data = await res.json();
       setAnomalies(Array.isArray(data) ? data : []);
     } catch (e) {
-      setAnomError(e.message || 'Error cargando anomalías');
+      setAnomError(e.message || t('admin.audit.accounting.errors.loadAnomalies'));
       setAnomalies([]);
     } finally {
       setAnomLoading(false);
@@ -90,11 +92,11 @@ const AuditAccountingPanel = () => {
         <StatCard>
           <div className="label">Ejecución del audit</div>
           <div className="meta">
-            Revisión determinista basada en ledger:
+            {t('admin.audit.accounting.description')}
             <ul style={{ margin: '8px 0 0 18px' }}>
-              <li>Transactions sin Balance</li>
-              <li>Balance vs Ledger (SUM vs último balance)</li>
-              <li>Plataforma: platform_transactions sin platform_balance</li>
+              <li>{t('admin.audit.accounting.checks.txWithoutBalance')}</li>
+              <li>{t('admin.audit.accounting.checks.balanceVsLedger')}</li>
+              <li>{t('admin.audit.accounting.checks.platformTxWithoutBalance')}</li>
             </ul>
           </div>
 
@@ -112,9 +114,9 @@ const AuditAccountingPanel = () => {
                 type="checkbox"
                 checked={auditDryRun}
                 onChange={(e) => setAuditDryRun(e.target.checked)}
-                title="Dry Run: no persiste anomalías"
+                title={t('admin.audit.accounting.dryRun.tooltip')}
               />
-              <span style={{ fontSize: 13 }}>Dry Run (no persistir anomalías)</span>
+              <span style={{ fontSize: 13 }}>{t('admin.audit.accounting.dryRun.label')}</span>
             </div>
 
             <StyledButton onClick={runAudit} disabled={auditLoading}>
@@ -167,7 +169,7 @@ const AuditAccountingPanel = () => {
             </StyledButton>
 
             <RightInfo>
-              {anomLoading ? 'Consultando /api/admin/audit/anomalies…' : anomalies.length > 0 ? `${anomalies.length} filas` : ''}
+              {anomLoading ? t('admin.audit.accounting.anomalies.querying') : anomalies.length > 0 ? t('admin.audit.accounting.anomalies.rowsCount', { count: anomalies.length }) : ''}
             </RightInfo>
           </div>
 
@@ -175,7 +177,7 @@ const AuditAccountingPanel = () => {
 
           <div style={{ marginTop: 12 }}>
             {anomalies.length === 0 && !anomLoading && (
-              <div style={{ opacity: 0.8 }}>Sin anomalías para mostrar.</div>
+              <div style={{ opacity: 0.8 }}>{t('admin.audit.accounting.anomalies.empty')}</div>
             )}
 
             {anomalies.length > 0 && (
@@ -222,7 +224,7 @@ const AuditAccountingPanel = () => {
         <NoteCard $muted>
           <div className="label">Operativa recomendada</div>
           <div className="meta">
-            Usa Dry Run en producción para inspección. Cambia a Dry Run = false solo cuando quieras persistir anomalías.
+            {t('admin.audit.accounting.note')}
           </div>
         </NoteCard>
       </CardsGrid>

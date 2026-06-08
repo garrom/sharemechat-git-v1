@@ -1532,6 +1532,93 @@
         }
       }
     },
+    "audit": {
+      "accounting": {
+        "description": "Deterministic ledger-based review:",
+        "checks": {
+          "txWithoutBalance": "Transactions without Balance",
+          "balanceVsLedger": "Balance vs Ledger (SUM vs last balance)",
+          "platformTxWithoutBalance": "Platform: platform_transactions without platform_balance"
+        },
+        "dryRun": {
+          "tooltip": "Dry Run: does not persist anomalies",
+          "label": "Dry Run (do not persist anomalies)"
+        },
+        "anomalies": {
+          "querying": "Querying /api/admin/audit/anomalies…",
+          "rowsCount": "{{count}} rows",
+          "empty": "No anomalies to show."
+        },
+        "note": "Use Dry Run in production for inspection. Switch Dry Run = false only when you want to persist anomalies.",
+        "errors": {
+          "run": "Error running the audit",
+          "loadAnomalies": "Error loading anomalies"
+        }
+      },
+      "runtimeHealth": {
+        "description": "Looks for inconsistencies between runtime memory, Redis and the database:",
+        "checks": {
+          "activePairWithoutDbStream": "Active RANDOM pair in memory without an active stream in DB",
+          "activeCallWithoutDbStream": "Active call in memory without an active CALLING stream in DB",
+          "modelAvailableWithActiveWork": "Model AVAILABLE but with active work",
+          "modelBusyWithoutActiveWork": "Model BUSY without active work",
+          "queueMemberAlreadyPaired": "Session queued and paired at the same time",
+          "ringingStale": "Stale ringing",
+          "redisActiveSessionWithoutDbStream": "Redis session:active without a real stream",
+          "lockWithoutActiveWork": "Orphaned locks"
+        },
+        "dryRun": {
+          "tooltip": "Dry Run: does not persist anomalies",
+          "label": "Dry Run (do not persist anomalies)"
+        },
+        "table": {
+          "loading": "Loading…"
+        },
+        "anomalies": {
+          "querying": "Querying /api/admin/audit/anomalies…",
+          "rowsCount": "{{count}} rows",
+          "empty": "No Runtime Health anomalies to show."
+        },
+        "note": "Use it to detect mismatches between runtime and persistence. In pre-production, run it in Dry Run.",
+        "errors": {
+          "run": "Error running Runtime Health",
+          "loadAnomalies": "Error loading anomalies"
+        }
+      },
+      "sessionIntegrity": {
+        "description": "Looks for lifecycle inconsistencies in RANDOM and CALLING streams:",
+        "checks": {
+          "closedWithoutEnded": "Closed stream without an ENDED event",
+          "confirmedWithoutConfirmedEvent": "Confirmed stream without a CONFIRMED event",
+          "confirmedWithoutConfirmedAt": "CONFIRMED event without confirmed_at",
+          "terminalWithoutEndTime": "Terminal event without end_time",
+          "invalidTimestamps": "Invalid timestamps",
+          "multipleActiveStreams": "Multiple active streams for the same user",
+          "confirmedClosedWithoutCharge": "Confirmed and closed stream without a charge",
+          "confirmedClosedWithoutEarning": "Confirmed and closed stream without earning"
+        },
+        "anomalies": {
+          "querying": "Querying SI_ anomalies…",
+          "rowsCount": "{{count}} rows",
+          "empty": "No anomalies to show."
+        },
+        "note": "This run persists SI_ anomalies for later review. It does not modify streams, close sessions, or alter business logic.",
+        "errors": {
+          "run": "Error running the session integrity audit",
+          "loadAnomalies": "Error loading session integrity anomalies"
+        }
+      },
+      "incident": {
+        "description": "This branch is ready for an operational view of critical incidents:",
+        "checks": {
+          "recentSevere": "Latest severe incidents",
+          "recentCritical": "Recent critical anomalies",
+          "quickSummary": "Quick summary for operations",
+          "manualEntry": "Entry point for manual investigation"
+        },
+        "note": "Panel ready. Pending connection to a prioritized view of incidents and alerts."
+      }
+    },
     "assetModeration": {
       "reasons": {
         "LIGHTING": "Insufficient lighting (too dark)",
