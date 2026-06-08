@@ -128,7 +128,26 @@ param(
     [int]$BackendProbeTimeoutSec = 5,
 
     [Parameter(Mandatory = $false)]
-    [switch]$StandbyMode
+    [switch]$StandbyMode,
+
+    # ---- Fase 1 paso 2a: integracion del check de drift ----
+    # Salta el paso [0.5/N] entero. Util para reparaciones conscientes
+    # (revert de un deploy roto, primera puesta a punto del manifest, etc).
+    [Parameter(Mandatory = $false)]
+    [switch]$SkipDriftCheck,
+
+    # En severidad CRITICAL, aborta con codigo de salida 1 sin prompt
+    # interactivo. Pensado para automatizacion futura (CI/cron). En
+    # severidad <= ALERT no afecta.
+    [Parameter(Mandatory = $false)]
+    [switch]$Strict,
+
+    # Permite construir/desplegar con el arbol de CODIGO sucio (cambios
+    # sin commitear) de forma consciente. Sin el flag, el [0.5] avisa
+    # WARN y pide confirmacion [s/n]. En AUDIT se usa con frecuencia
+    # (testing puntual sin commit); en TEST/PROD deberia ser raro.
+    [Parameter(Mandatory = $false)]
+    [switch]$AllowDirtyWorkingTree
 )
 
 $ErrorActionPreference = 'Stop'
@@ -364,10 +383,115 @@ Write-Host " Dominio canon:  $primaryDomain"
 Write-Host " SkipBuild:      $SkipBuild"
 Write-Host " DryRun:         $DryRun"
 Write-Host " SkipFunctional: $SkipFunctionalSmoke"
+Write-Host " SkipDriftCheck: $SkipDriftCheck"
+Write-Host " Strict:         $Strict"
+Write-Host " AllowDirty:     $AllowDirtyWorkingTree"
 Write-Host ""
 
+# ---------------------------------------------------------------
+# [0.5/N] Check de drift pre-deploy (Fase 1 paso 2a)
+# ---------------------------------------------------------------
+# Compara el commit del repo (HEAD) con el backend ya desplegado en el
+# entorno, segun ops/deploy-state/<env>.yaml. Si entre ambos se tocaron
+# ficheros del contrato y el backend esta por detras, severidad
+# CRITICAL: pide confirmacion tipeada ('yes' literal) salvo -Strict
+# (que aborta con exit 1). WARN/ALERT piden [s/n] (default n).
+#
+# El working_tree_clean se calcula EXCLUYENDO ops/deploy-state/*.yaml:
+# esos ficheros los actualiza el paso [5.5/N] del propio deploy y
+# ensuciarian el flag en cada deploy posterior. La exclusion la hace
+# Get-WorkingTreeCleanForCode dentro de check-deploy-drift.ps1.
+#
+# Saltable con -SkipDriftCheck. NO afecta la logica original [1/5]..[5/5].
+
+if (-not $SkipDriftCheck) {
+    Write-Step "0.5/N" "Check de drift pre-deploy (frontend_$Surface vs backend desplegado en $Environment)"
+
+    # Dot-source del check para reusar logica sin duplicar.
+    . (Join-Path $PSScriptRoot 'check-deploy-drift.ps1')
+
+    # HEAD del repo y working_tree_clean en CODIGO (excluye manifest).
+    $candidateFullPrev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $candidateFull  = (& git rev-parse HEAD 2>$null).Trim()
+        $candidateShort = (& git rev-parse --short HEAD 2>$null).Trim()
+    } finally {
+        $ErrorActionPreference = $candidateFullPrev
+    }
+    if (-not $candidateShort) {
+        Stop-Deploy "No se pudo resolver HEAD del repo (git rev-parse). Si es deliberado, usa -SkipDriftCheck."
+    }
+    $wtClean = Get-WorkingTreeCleanForCode
+
+    if (-not $wtClean -and -not $AllowDirtyWorkingTree) {
+        Write-Host "    Working tree de CODIGO SUCIO (cambios sin commitear fuera de ops/deploy-state/)." -ForegroundColor Yellow
+        Write-Host "    Sin -AllowDirtyWorkingTree, el commit que registramos en el manifest no representara" -ForegroundColor Yellow
+        Write-Host "    fielmente lo desplegado. Considera commitear primero, o pasa -AllowDirtyWorkingTree" -ForegroundColor Yellow
+        Write-Host "    (es comun en AUDIT para probar cambios sin commit; en TEST/PROD deberia ser raro)." -ForegroundColor Yellow
+    }
+
+    $candidateClean = if ($AllowDirtyWorkingTree) { $wtClean } else { $wtClean }
+
+    $driftResult = Invoke-DeployCandidateDriftCheck `
+        -Env $Environment `
+        -Surface $Surface `
+        -CandidateCommitShort $candidateShort `
+        -CandidateWorkingTreeClean $candidateClean
+
+    Write-DeployCandidateDriftReport -Result $driftResult
+
+    switch ($driftResult.Severity) {
+        'OK'   { Write-Host "    OK - sin drift detectado. Continuando." -ForegroundColor Green }
+        'INFO' { Write-Host "    INFO - drift menor; sin riesgo de contrato. Continuando." -ForegroundColor Cyan }
+        'WARN' {
+            if ($DryRun) {
+                Write-Host "    [DryRun] severity WARN; en deploy real se pediria confirmacion [s/n]." -ForegroundColor Yellow
+            } else {
+                $ans = Read-Host "Severity WARN. Continuar el deploy? [s/N]"
+                if ($ans -notmatch '^(s|si|y|yes)$') {
+                    Stop-Deploy "Abortado por el operador tras WARN."
+                }
+            }
+        }
+        'ALERT' {
+            if ($Strict) {
+                Stop-Deploy "Severity ALERT en modo -Strict. Aborto sin prompt."
+            } elseif ($DryRun) {
+                Write-Host "    [DryRun] severity ALERT; en deploy real se pediria confirmacion [s/n] (default N)." -ForegroundColor DarkYellow
+            } else {
+                $ans = Read-Host "Severity ALERT (drift sustancial detectado). Continuar el deploy? [s/N]"
+                if ($ans -notmatch '^(s|si|y|yes)$') {
+                    Stop-Deploy "Abortado por el operador tras ALERT."
+                }
+            }
+        }
+        'CRITICAL' {
+            Write-Host ""
+            Write-Host "    *** SEVERITY CRITICAL ***" -ForegroundColor Red
+            Write-Host "    Se han detectado cambios en ficheros del contrato entre el backend" -ForegroundColor Red
+            Write-Host "    desplegado y el commit a desplegar. Si continuas, el frontend nuevo" -ForegroundColor Red
+            Write-Host "    podria leer campos/lecturas del API que el backend no provee, con" -ForegroundColor Red
+            Write-Host "    riesgo de pantallas rotas (como el incidente del 2026-06-08 en AUDIT)." -ForegroundColor Red
+            Write-Host ""
+            if ($Strict) {
+                Stop-Deploy "Severity CRITICAL en modo -Strict. Aborto sin prompt."
+            } elseif ($DryRun) {
+                Write-Host "    [DryRun] severity CRITICAL; en deploy real se exigiria escribir 'yes' literal para continuar." -ForegroundColor Red
+            } else {
+                $ans = Read-Host "Escribe 'yes' literal para continuar"
+                if ($ans -ne 'yes') {
+                    Stop-Deploy "Abortado tras CRITICAL (no se escribio 'yes' literal)."
+                }
+            }
+        }
+        default { Write-Host "    Severidad desconocida: $($driftResult.Severity). Continuando." -ForegroundColor DarkGray }
+    }
+}
+
 if ($DryRun) {
-    Write-Host "[DryRun] No se ejecutara nada. Salida." -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "[DryRun] No se ejecutara nada mas. Salida." -ForegroundColor Yellow
     exit 0
 }
 
@@ -436,12 +560,28 @@ try {
         aws s3 cp $indexHtml "s3://$bucketName/index.html" --cache-control "no-cache, no-store, must-revalidate" --content-type "text/html; charset=utf-8"
     }
 
+    # Capturamos el ID de la invalidacion CloudFront para registrarlo
+    # en el manifest del paso [5.5/N]. En StandbyMode no hay invalidacion.
+    $script:cloudfrontInvalidationId = $null
     if ($StandbyMode) {
         Write-Host "    [skip] invalidacion CF saltada (StandbyMode: la dist $distributionId no sirve este bucket todavia)." -ForegroundColor Yellow
         Write-Host "    OK - sync ejecutado."
     } else {
+        $invOutput = $null
         Invoke-Native -Label "aws cloudfront create-invalidation" -Block {
-            aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*"
+            $script:lastInvalidationOutput = aws cloudfront create-invalidation --distribution-id $distributionId --paths "/*" --output json
+            # Devolver tambien al stdout para mantener el log existente.
+            $script:lastInvalidationOutput
+        }
+        if ($script:lastInvalidationOutput) {
+            try {
+                $joined = ($script:lastInvalidationOutput | Out-String)
+                $script:cloudfrontInvalidationId = ($joined | ConvertFrom-Json).Invalidation.Id
+            } catch {
+                # No es bloqueante: la invalidacion ya se disparo; solo
+                # no se podra registrar el ID en el manifest.
+                $script:cloudfrontInvalidationId = $null
+            }
         }
         Write-Host "    OK - sync + invalidacion ejecutados."
     }
@@ -611,6 +751,66 @@ try {
                 Write-Host "    Modo no es PRELAUNCH; saltando checks especificos de pre-launch."
             }
         }
+    }
+
+    # -----------------------------------------------------------
+    # [5.5/N] Update deploy-state manifest (Fase 1 paso 2a)
+    # -----------------------------------------------------------
+    # Tras smoke OK, registra el estado real desplegado en
+    # ops/deploy-state/<env>.yaml para el surface tocado. SOLO escribe
+    # el fichero; no hace commit (decision D2). Si fallara, NO aborta
+    # el deploy (el deploy ya esta hecho); solo avisa.
+    Write-Step "5.5/N" "Update deploy-state manifest"
+
+    try {
+        # Dot-source defensivo: si el [0.5] se salto con -SkipDriftCheck,
+        # las funciones del helper no estan cargadas todavia.
+        if (-not (Get-Command Update-DeployStateManifest -ErrorAction SilentlyContinue)) {
+            . (Join-Path $PSScriptRoot 'check-deploy-drift.ps1')
+        }
+
+        $headFullPrev = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $headFull  = (& git rev-parse HEAD 2>$null).Trim()
+            $headShort = (& git rev-parse --short HEAD 2>$null).Trim()
+        } finally {
+            $ErrorActionPreference = $headFullPrev
+        }
+
+        $wtCleanNow = Get-WorkingTreeCleanForCode
+        $deployedBy = "$env:USERNAME@$env:COMPUTERNAME"
+
+        # bundle_sha256 desde el fichero local subido (deterministico).
+        $bundleSha = $null
+        $bundleLocal = Join-Path $buildDir $mainJsKey
+        if (Test-Path $bundleLocal) {
+            try {
+                $bundleSha = (Get-FileHash -Algorithm SHA256 -Path $bundleLocal).Hash.ToLower()
+            } catch {
+                $bundleSha = $null
+            }
+        }
+
+        $updateResult = Update-DeployStateManifest `
+            -Env $Environment `
+            -Surface $Surface `
+            -Bundle "main.$mainHash.js" `
+            -BundleSha256 $bundleSha `
+            -GitCommitFull $headFull `
+            -GitCommitShort $headShort `
+            -WorkingTreeClean $wtCleanNow `
+            -DeployedBy $deployedBy `
+            -Bucket $bucketName `
+            -CloudfrontDistribution $distributionId `
+            -CloudfrontInvalidationId $script:cloudfrontInvalidationId
+
+        Write-Host "    OK - manifest actualizado: $($updateResult.ManifestFile)" -ForegroundColor Green
+        Write-Host "         (recordatorio: el commit del manifest lo decides tu; no se hace auto-commit)." -ForegroundColor DarkGray
+    } catch {
+        Write-Host "    WARN - manifest NO actualizado: $($_.Exception.Message)" -ForegroundColor Yellow
+        Write-Host "           El deploy se ha completado correctamente; solo falla el registro del estado." -ForegroundColor Yellow
+        Write-Host "           Revisar manualmente ops/deploy-state/$Environment.yaml." -ForegroundColor Yellow
     }
 
     # -----------------------------------------------------------

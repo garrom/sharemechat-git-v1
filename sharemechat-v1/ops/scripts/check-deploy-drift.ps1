@@ -361,6 +361,357 @@ function Invoke-DeployDriftCheck {
 }
 
 # ---------------------------------------------------------------
+# Helper: Get-WorkingTreeCleanForCode
+#   Devuelve $true si el working tree esta limpio EN CODIGO.
+#   Excluye ops/deploy-state/*.yaml porque esos ficheros los actualiza
+#   el propio paso [5.5/N] del deploy y ensuciarian el flag en cada
+#   deploy posterior. La exclusion se aplica con un regex sobre la
+#   ruta tal como la emite `git status --porcelain` (paths relativos
+#   al repo root con `/`).
+# ---------------------------------------------------------------
+
+function Get-WorkingTreeCleanForCode {
+    [CmdletBinding()]
+    param()
+    $repoRoot = _Resolve-RepoRoot
+    Push-Location $repoRoot
+    try {
+        $prev = $ErrorActionPreference
+        $ErrorActionPreference = 'Continue'
+        try {
+            $porcelain = & git status --porcelain 2>$null
+        } finally {
+            $ErrorActionPreference = $prev
+        }
+        if (-not $porcelain) { return $true }
+        $codeDirty = @()
+        foreach ($line in $porcelain) {
+            # Formato: 'XY path' (X=staged, Y=working tree). path empieza en col 4.
+            if ($line.Length -lt 4) { continue }
+            $p = $line.Substring(3).Trim()
+            # Quitar `prefix -> ` de renombrados
+            if ($p -match ' -> ') { $p = $p -replace '^.* -> ', '' }
+            if ($p -match '^sharemechat-v1/ops/deploy-state/[^/]+\.yaml$') { continue }
+            $codeDirty += $p
+        }
+        return ($codeDirty.Count -eq 0)
+    } finally {
+        Pop-Location
+    }
+}
+
+# ---------------------------------------------------------------
+# Funcion publica: Invoke-DeployCandidateDriftCheck
+#   Compara el commit CANDIDATO a desplegar (HEAD del repo, para el
+#   surface indicado) contra el backend ya desplegado segun el
+#   manifest del entorno. Pensada para que la llame deploy-frontend.ps1
+#   en su paso [0.5/N] pre-deploy.
+# ---------------------------------------------------------------
+
+function Invoke-DeployCandidateDriftCheck {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('audit', 'test', 'prod')]
+        [string]$Env,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('product', 'admin')]
+        [string]$Surface,
+
+        [Parameter(Mandatory = $true)]
+        [string]$CandidateCommitShort,
+
+        [Parameter(Mandatory = $false)]
+        [Nullable[bool]]$CandidateWorkingTreeClean,
+
+        [Parameter(Mandatory = $false)]
+        [string]$ManifestPath
+    )
+
+    _Ensure-Yaml
+    $manifestFile = _Resolve-ManifestPath -Env $Env -Override $ManifestPath
+    $raw = Get-Content $manifestFile -Raw
+    $m = ConvertFrom-Yaml $raw
+
+    # Refrescar origin/main para anotar cuanto va por detras el backend.
+    $fetchOk = $true
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        & git fetch origin main 2>$null | Out-Null
+        if ($LASTEXITCODE -ne 0) { $fetchOk = $false }
+    } finally {
+        $ErrorActionPreference = $prev
+    }
+    $originMain = _Git @('rev-parse', '--short', 'origin/main')
+    if (-not $originMain) { $originMain = _Git @('rev-parse', '--short', 'HEAD') }
+
+    $backendCommit = [string]$m.backend.git_commit_short
+    $backendAge    = _Age-Days $m.backend.deployed_at
+    $backendMethod = [string]$m.backend.verification.method
+    $isLastKnown   = $backendMethod -like 'last_known_*'
+
+    # El OTRO surface frontend del manifest (no el candidato) se anota
+    # solo a titulo informativo en el reporte; no afecta la severidad
+    # del candidato.
+    $otherSurfaceKey = if ($Surface -eq 'product') { 'frontend_admin' } else { 'frontend_product' }
+    $otherCommit = [string]$m.$otherSurfaceKey.git_commit_short
+    $otherAge    = _Age-Days $m.$otherSurfaceKey.deployed_at
+
+    $severity = 'OK'
+    $reasons = New-Object System.Collections.Generic.List[string]
+    $criticalContract = @()
+
+    # 1) Backend == candidato? OK directo.
+    $sameCommit = ($backendCommit -and $CandidateCommitShort -and
+                   ($backendCommit -eq $CandidateCommitShort))
+    if (-not $sameCommit) {
+        $severity = 'INFO'
+        $reasons.Add("backend (${backendCommit}) != candidato a desplegar ($CandidateCommitShort).")
+    }
+
+    # 2) Backend edad > 24h / > 72h
+    if ($null -ne $backendAge) {
+        if ($backendAge -gt 3) {
+            if ($severity -in @('OK','INFO','WARN')) { $severity = 'ALERT' }
+            $reasons.Add("backend desplegado hace ${backendAge}d (>72h).")
+        } elseif ($backendAge -gt 1) {
+            if ($severity -in @('OK','INFO')) { $severity = 'WARN' }
+            $reasons.Add("backend desplegado hace ${backendAge}d (>24h).")
+        }
+    }
+
+    # 3) Working tree del candidato sucio -> WARN
+    if ($null -ne $CandidateWorkingTreeClean -and -not $CandidateWorkingTreeClean) {
+        if ($severity -in @('OK','INFO')) { $severity = 'WARN' }
+        $reasons.Add("working tree del repo SUCIO al construir (cambios de codigo sin commitear).")
+    }
+
+    # 4) Backend por detras del candidato? Si toca contrato -> CRITICAL.
+    if ($backendCommit -and $CandidateCommitShort -and $backendCommit -ne $CandidateCommitShort) {
+        $isAnc = _Is-Ancestor -CommitA $backendCommit -CommitB $CandidateCommitShort
+        if ($isAnc -eq $true) {
+            if ($severity -in @('OK','INFO','WARN')) { $severity = 'ALERT' }
+            $reasons.Add("backend ($backendCommit) esta POR DETRAS del candidato ($CandidateCommitShort).")
+            $touched = _Contract-Files-Touched -From $backendCommit -To $CandidateCommitShort
+            if ($touched.Count -gt 0) {
+                $severity = 'CRITICAL'
+                foreach ($t in $touched) { $criticalContract += @{ surface = "frontend_$Surface"; file = $t } }
+                $reasons.Add("Entre backend y candidato se tocaron ficheros del contrato: $($touched -join ', ').")
+            }
+        } elseif ($isAnc -eq $false) {
+            # Candidato esta por detras o son ramas divergentes.
+            if ($severity -in @('OK','INFO','WARN')) { $severity = 'ALERT' }
+            $reasons.Add("candidato ($CandidateCommitShort) NO contiene el commit del backend ($backendCommit); el deploy regresaria codigo frente al backend actual.")
+        }
+    }
+
+    # 5) Modo last_known del backend -> WARN minimo.
+    if ($isLastKnown) {
+        if ($severity -in @('OK','INFO')) { $severity = 'WARN' }
+        $reasons.Add("backend.verification.method='$backendMethod' (sin verificacion en vivo; dato del backend es la ultima informacion conocida).")
+    }
+
+    # 6) Cuanto va por detras del origin/main el backend (informativo).
+    $behindOriginMain = $null
+    if ($originMain -and $backendCommit) {
+        $cnt = _Git @('rev-list', '--count', "$backendCommit..$originMain")
+        if ($cnt) { $behindOriginMain = [int]$cnt }
+    }
+
+    return [PSCustomObject]@{
+        Env                       = $Env
+        Surface                   = $Surface
+        ManifestFile              = $manifestFile
+        OriginMain                = $originMain
+        FetchOk                   = $fetchOk
+        Severity                  = $severity
+        Reasons                   = $reasons.ToArray()
+        BackendCommit             = $backendCommit
+        BackendAgeDays            = $backendAge
+        BackendIsLastKnown        = $isLastKnown
+        BackendBehindOriginMain   = $behindOriginMain
+        CandidateCommit           = $CandidateCommitShort
+        CandidateWorkingTreeClean = $CandidateWorkingTreeClean
+        OtherSurfaceKey           = $otherSurfaceKey
+        OtherSurfaceCommit        = $otherCommit
+        OtherSurfaceAgeDays       = $otherAge
+        ContractFilesTouched      = $criticalContract
+    }
+}
+
+# ---------------------------------------------------------------
+# Render CLI del reporte CANDIDATO
+# ---------------------------------------------------------------
+
+function Write-DeployCandidateDriftReport {
+    param([Parameter(Mandatory = $true)]$Result)
+    $r = $Result
+    $color = switch ($r.Severity) {
+        'OK'       { 'Green' }
+        'INFO'     { 'Cyan' }
+        'WARN'     { 'Yellow' }
+        'ALERT'    { 'DarkYellow' }
+        'CRITICAL' { 'Red' }
+        default    { 'White' }
+    }
+
+    Write-Host ""
+    Write-Host "=== Drift pre-deploy: $($r.Env.ToUpper()) / frontend_$($r.Surface) ===" -ForegroundColor $color
+    Write-Host "Manifest:       $($r.ManifestFile)"
+    if ($r.FetchOk) {
+        Write-Host "origin/main:    $($r.OriginMain)"
+    } else {
+        Write-Host "origin/main:    $($r.OriginMain) (fetch fallo; usando referencia local)"
+    }
+    Write-Host ""
+
+    $fmt = "{0,-30} {1,-12} {2,-10} {3,-22}"
+    Write-Host ($fmt -f 'surface','commit','age(d)','working-tree') -ForegroundColor DarkGray
+    Write-Host ($fmt -f '-------','------','------','------------') -ForegroundColor DarkGray
+    $bC  = if ($r.BackendCommit) { $r.BackendCommit } else { '-' }
+    $bA  = if ($null -ne $r.BackendAgeDays) { [string]$r.BackendAgeDays } else { '-' }
+    $bWT = if ($r.BackendIsLastKnown) { 'last_known (no live)' } else { '-' }
+    $oC  = if ($r.OtherSurfaceCommit) { $r.OtherSurfaceCommit } else { '-' }
+    $oA  = if ($null -ne $r.OtherSurfaceAgeDays) { [string]$r.OtherSurfaceAgeDays } else { '-' }
+    $cC  = if ($r.CandidateCommit) { $r.CandidateCommit } else { '-' }
+    $cWT = if ($null -eq $r.CandidateWorkingTreeClean) { 'unknown' } elseif ($r.CandidateWorkingTreeClean) { 'clean' } else { 'DIRTY' }
+    Write-Host ($fmt -f 'backend (desplegado)',        $bC, $bA, $bWT)
+    Write-Host ($fmt -f "$($r.OtherSurfaceKey) (desplegado)", $oC, $oA, '-')
+    Write-Host ($fmt -f "frontend_$($r.Surface) (CANDIDATO)", $cC, '-', $cWT)
+
+    if ($null -ne $r.BackendBehindOriginMain) {
+        Write-Host ""
+        Write-Host "Backend esta $($r.BackendBehindOriginMain) commit(s) por detras de origin/main." -ForegroundColor DarkGray
+    }
+
+    Write-Host ""
+    Write-Host "Severity: $($r.Severity)" -ForegroundColor $color
+    if ($r.Reasons -and $r.Reasons.Count -gt 0) {
+        Write-Host "Razones:" -ForegroundColor $color
+        foreach ($reason in $r.Reasons) {
+            Write-Host "  - $reason" -ForegroundColor $color
+        }
+    }
+    if ($r.ContractFilesTouched -and $r.ContractFilesTouched.Count -gt 0) {
+        Write-Host ""
+        Write-Host "Ficheros del contrato tocados entre backend desplegado y candidato:" -ForegroundColor $color
+        foreach ($t in $r.ContractFilesTouched) {
+            Write-Host ("  - [{0}] {1}" -f $t.surface, $t.file) -ForegroundColor $color
+        }
+    }
+    Write-Host ""
+}
+
+# ---------------------------------------------------------------
+# Helper: Update-DeployStateManifest
+#   Actualiza el manifest del entorno para un surface frontend tras
+#   un deploy exitoso. SOLO escribe el fichero; no hace commit. El
+#   operador commitea cuando le va bien (decision D2).
+# ---------------------------------------------------------------
+
+function Update-DeployStateManifest {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('audit', 'test', 'prod')]
+        [string]$Env,
+
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('product', 'admin')]
+        [string]$Surface,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Bundle,
+
+        [Parameter(Mandatory = $false)]
+        [string]$BundleSha256,
+
+        [Parameter(Mandatory = $true)]
+        [string]$GitCommitFull,
+
+        [Parameter(Mandatory = $true)]
+        [string]$GitCommitShort,
+
+        [Parameter(Mandatory = $true)]
+        [bool]$WorkingTreeClean,
+
+        [Parameter(Mandatory = $true)]
+        [string]$DeployedBy,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Bucket,
+
+        [Parameter(Mandatory = $true)]
+        [string]$CloudfrontDistribution,
+
+        [Parameter(Mandatory = $false)]
+        [string]$CloudfrontInvalidationId
+    )
+
+    _Ensure-Yaml
+    $manifestFile = _Resolve-ManifestPath -Env $Env
+    $raw = Get-Content $manifestFile -Raw
+    $m = ConvertFrom-Yaml $raw
+
+    $surfaceKey = "frontend_$Surface"
+    $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+    $m.last_updated_at = $now
+    $m.last_update_by  = $DeployedBy
+    $m.last_update_source = 'deploy-frontend.ps1-fase1-paso2a'
+
+    if (-not $m.$surfaceKey) {
+        throw ("Manifest no contiene bloque {0}: {1}" -f $surfaceKey, $manifestFile)
+    }
+    $m.$surfaceKey.bundle = $Bundle
+    if ($BundleSha256) {
+        $m.$surfaceKey.bundle_sha256 = $BundleSha256
+    } elseif (-not ($m.$surfaceKey.PSObject.Properties.Match('bundle_sha256').Count -gt 0)) {
+        # No habia campo; lo dejamos ausente.
+    }
+    $m.$surfaceKey.git_commit_short = $GitCommitShort
+    $m.$surfaceKey.git_commit = $GitCommitFull
+    $m.$surfaceKey.built_at = $now      # built_at ~ deployed_at en este flujo
+    $m.$surfaceKey.deployed_at = $now
+    $m.$surfaceKey.deployed_by = $DeployedBy
+    $m.$surfaceKey.working_tree_clean = $WorkingTreeClean
+    $m.$surfaceKey.bucket = $Bucket
+    $m.$surfaceKey.cloudfront_distribution = $CloudfrontDistribution
+    $m.$surfaceKey.cloudfront_invalidation_id = $CloudfrontInvalidationId
+
+    # verification: marca el origen del dato.
+    if (-not $m.$surfaceKey.verification) {
+        $m.$surfaceKey.verification = @{}
+    }
+    $m.$surfaceKey.verification.method = "deploy-frontend.ps1-live-build_$now"
+    $m.$surfaceKey.verification.git_commit_provenance = 'recorded_by_deploy_script'
+    $m.$surfaceKey.verification.notes = "Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script."
+
+    # Conservar el resto del fichero. ConvertTo-Yaml puede reordenar
+    # claves; aceptable porque el manifest es legible y autodescriptivo.
+    $newYaml = ConvertTo-Yaml $m
+    # Encabezado para indicar que el fichero esta auto-gestionado.
+    $header = @(
+        "# Manifest de estado de despliegue - entorno $($Env.ToUpper())"
+        "# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1"
+        "# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque"
+        "# correspondiente al surface desplegado tras smoke OK. NO se"
+        "# hace commit automatico: el operador commitea el manifest"
+        "# cuando le conviene (decision D2)."
+        "#"
+    ) -join "`n"
+    Set-Content -Path $manifestFile -Value ($header + "`n" + $newYaml) -Encoding UTF8
+
+    return [PSCustomObject]@{
+        ManifestFile = $manifestFile
+        Surface      = $Surface
+        UpdatedAt    = $now
+    }
+}
+
+# ---------------------------------------------------------------
 # Render CLI (legible cuando se invoca directamente)
 # ---------------------------------------------------------------
 
