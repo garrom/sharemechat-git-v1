@@ -12,7 +12,17 @@ public class UserClientRegisterDTO {
     @Pattern(regexp = "^\\S+$", message = "La contraseña no puede contener espacios")
     private String password;
 
+    // H2 (hardening Lote 1): blindar nickname para que NO acepte ni
+    // payloads largos ni caracteres peligrosos (HTML/JS, control chars,
+    // espacios). Permitimos letras unicode (con tildes y diacriticos),
+    // digitos unicode y los signos . _ - (sin espacios). Rechaza por
+    // construccion < > & " ' y caracteres de control. Cierra el vector
+    // "nickname = <script>...</script>" que llegaba intacto a emails
+    // HTML (EmailCopyRenderer: sink HTML-escape colateral).
     @NotBlank(message = "El nickname es obligatorio")
+    @Size(min = 3, max = 30, message = "El nickname debe tener entre 3 y 30 caracteres")
+    @Pattern(regexp = "^[\\p{L}\\p{N}._-]{3,30}$",
+            message = "El nickname solo puede contener letras, digitos y los signos . _ -")
     private String nickname;
 
     @NotNull(message = "Debes confirmar que eres mayor de edad")

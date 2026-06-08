@@ -85,10 +85,18 @@ public class AuthController {
             return ResponseEntity.status(403).body("Debes confirmar antes que eres mayor de 18 años");
         }
 
+        // H3 (hardening Lote 1): rate-limit por IP ANTES del rate-limit por
+        // email. Sin esto, un atacante con lista de emails reales podia
+        // sostener fallos de login pagando solo el coste de email-lockout
+        // (DoS-via-lockout sobre usuarios legitimos). La IP real viene del
+        // perimetro CDN-aware (ADR-032): X-Forwarded-For = $remote_addr en
+        // nginx, no spoofeable desde fuera. checkLoginIp ya existia en
+        // ApiRateLimitService:92 pero nunca se invocaba.
+        String ip = IpConfig.getClientIp(req);
+        rateLimitService.checkLoginIp(ip);
         rateLimitService.checkLoginEmail(dto.getEmail());
         countryAccessService.assertAllowed(req);
 
-        String ip = IpConfig.getClientIp(req);
         String userAgent = req.getHeader("User-Agent");
         AuthRiskContext riskCtx = authRiskService.buildContext(
                 ip,

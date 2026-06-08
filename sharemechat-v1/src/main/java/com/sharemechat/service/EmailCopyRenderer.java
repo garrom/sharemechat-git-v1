@@ -116,7 +116,8 @@ public class EmailCopyRenderer {
 
     public EmailContent renderWelcome(User user) {
         String locale = localeResolver.resolve(user);
-        String nickname = safeLabel(user);
+        // H2 sink (Lote 1): escapado HTML antes de inyectar en text blocks.
+        String nickname = htmlEscape(safeLabel(user));
         boolean prelaunch = isPrelaunch();
 
         if ("es".equals(locale)) {
@@ -167,7 +168,8 @@ public class EmailCopyRenderer {
 
     public EmailContent renderUnsubscribe(User user) {
         String locale = localeResolver.resolve(user);
-        String nickname = safeLabel(user);
+        // H2 sink (Lote 1): escapado HTML antes de inyectar en text blocks.
+        String nickname = htmlEscape(safeLabel(user));
 
         if ("es".equals(locale)) {
             return new EmailContent(
@@ -229,7 +231,11 @@ public class EmailCopyRenderer {
 
     public EmailContent renderVerification(User user, String context, String nickname, String link, int ttlMinutes) {
         String locale = localeResolver.resolve(user);
-        String displayName = (nickname != null && !nickname.isBlank()) ? nickname : safeLabel(user);
+        // H2 sink (Lote 1): el `nickname` viene de un argumento externo
+        // (call-sites: retry admin, EmailVerificationService); aplicamos
+        // escapado HTML defensivo aunque el llamante pase algo limpio.
+        String displayName = htmlEscape(
+                (nickname != null && !nickname.isBlank()) ? nickname : safeLabel(user));
         String expiryText = formatExpiryText(locale, ttlMinutes);
         String userType = String.valueOf(user != null ? user.getUserType() : "");
         boolean prelaunch = isPrelaunch();
@@ -364,7 +370,8 @@ public class EmailCopyRenderer {
                                              String reasonText,
                                              String profileLink) {
         String locale = localeResolver.resolve(user);
-        String displayName = safeLabel(user);
+        // H2 sink (Lote 1): escapado HTML antes de inyectar en text blocks.
+        String displayName = htmlEscape(safeLabel(user));
         String reasonLabel = assetRejectionReasonCopy.getLabel(reasonCode, locale);
         boolean hasReasonText = reasonText != null && !reasonText.isBlank();
         String safeProfileLink = (profileLink != null && !profileLink.isBlank()) ? profileLink : "";
@@ -424,6 +431,38 @@ public class EmailCopyRenderer {
             return user.getNickname().trim();
         }
         return user != null && user.getEmail() != null ? user.getEmail().trim() : "user";
+    }
+
+    /**
+     * Escapado HTML para fragmentos que se inyectan via .formatted() en
+     * los cuerpos HTML de los emails (nickname, displayName, etc.).
+     * H2 hardening Lote 1 (2026-06-08): aunque la validacion del
+     * registro ya rechaza caracteres peligrosos en nickname nuevos,
+     * existen cuentas previas con nicknames legados sin validar; y los
+     * llamantes externos de renderVerification (TimedSampler, retries
+     * admin, etc.) pueden pasar `nickname` por argumento sin garantia
+     * de saneamiento. Defensa en profundidad: siempre escape antes de
+     * inyectar en HTML.
+     *
+     * Escapado minimo conservador (no es full XSS-strict ni codifica
+     * unicode entero, solo los 5 caracteres que rompen estructura HTML):
+     * &, <, >, ", '.
+     */
+    private String htmlEscape(String s) {
+        if (s == null || s.isEmpty()) return "";
+        StringBuilder sb = new StringBuilder(s.length() + 16);
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            switch (c) {
+                case '&':  sb.append("&amp;");  break;
+                case '<':  sb.append("&lt;");   break;
+                case '>':  sb.append("&gt;");   break;
+                case '"':  sb.append("&quot;"); break;
+                case '\'': sb.append("&#39;");  break;
+                default:   sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     private String formatExpiryText(String locale, int ttlMinutes) {

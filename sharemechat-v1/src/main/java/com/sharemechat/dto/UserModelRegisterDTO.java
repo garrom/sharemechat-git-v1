@@ -19,7 +19,13 @@ public class UserModelRegisterDTO {
     @Past(message = "La fecha de nacimiento debe ser una fecha pasada")
     private LocalDate dateOfBirth;
 
+    // H2 (hardening Lote 1): mismo blindaje que UserClientRegisterDTO.
+    // Letras unicode + digitos + . _ - ; 3..30 chars; sin espacios ni
+    // caracteres peligrosos. Cierra inyeccion HTML en plantillas email.
     @NotBlank(message = "El nickname es obligatorio")
+    @Size(min = 3, max = 30, message = "El nickname debe tener entre 3 y 30 caracteres")
+    @Pattern(regexp = "^[\\p{L}\\p{N}._-]{3,30}$",
+            message = "El nickname solo puede contener letras, digitos y los signos . _ -")
     private String nickname;
 
     @NotNull(message = "Debes confirmar que eres mayor de edad")

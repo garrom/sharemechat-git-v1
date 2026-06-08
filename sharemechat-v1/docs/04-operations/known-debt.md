@@ -2,6 +2,38 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-06-08 — Auditoría defensiva: Lote 2 y Lote 3 pendientes
+
+Tras cerrar el Lote 1 (H3 rate-limit IP en login, H2 validación nickname + escape HTML en `EmailCopyRenderer`, H6 `limit_req` nginx en `/api/auth/`, `/api/users/register/`, `/api/admin/auth/`), quedan abiertas estas mitigaciones de la auditoría. Ver bitácora 2026-06-08 para contexto completo.
+
+### [DEUDA media — Lote 2] H1 Enumeración de email/nickname en `POST /api/users/register/*`
+
+`UserService.registerClient/registerModel` valida duplicados con `userRepository.existsByEmail` / `existsByNickname` y devuelve un error distinguible cuando el email o nickname ya existe (`409 Conflict` o equivalente). Cualquiera puede consultar si un email/nickname está registrado en SharemeChat sin auth. Estándar de la industria (privacidad).
+
+Fix: respuesta uniforme (p.ej. `202 Accepted "si los datos son válidos te enviaremos email"`) y enviar email "ya tienes una cuenta" a la dirección si ya existe (oráculo cierra). Prioridad: media (antes de OPEN público pero sin urgencia operativa).
+
+### [DEUDA media — Lote 2] H4 atributo `class` libre en jsoup Safelist del CMS
+
+`MarkdownRendererService.init()` declara `addAttributes("div","class")`, `addAttributes("code","class")`, `addAttributes("pre","class")` sin restricción de valor. Permite a un autor del CMS introducir `class="cualquier-cosa"` en `<div>`/`<code>`/`<pre>` (esperado: `callout`, `language-*`). Sin CSS reactivo controlado por autor el riesgo residual es bajo, pero abre futuro vector CSS subliminal/data-exfil si en algún momento se cargan estilos por nombre de clase.
+
+Fix: añadir whitelist explícita de valores aceptados (`callout` para `div`, `language-{lang}` para `code/pre`) — patrón regex o validator custom de jsoup. Prioridad: media-baja.
+
+### [DEUDA baja — Lote 2] H5 regex injection en preprocessador `:::callout`
+
+`MarkdownRendererService.preprocessCallouts(markdown)` aplica `Pattern.compile("(?ms)^:::callout[ \\t]*\\R(.*?)\\R^:::[ \\t]*$")` antes de flexmark y reemplaza por `<div class="callout">...</div>`. Si el contenido del bloque contiene `</div>` literal, escapa al wrapper. **jsoup sanitiza después y balancea**, así que el daño residual = HTML mal estructurado, NO XSS de tags ejecutables. Severidad real: baja.
+
+Fix: procesar callouts en AST de flexmark (custom extension) en lugar de pre-regex, o validar `$1` antes del reemplazo. Prioridad: baja.
+
+### [DEUDA baja — Lote 3] H8 bumps de dependencia: `jjwt 0.11.5 → 0.12.x` y `jsoup 1.17.2 → 1.18.x`
+
+Sin CVE crítico abierto al momento de la auditoría (2026-06-08), pero ambas ramas están en mantenimiento y se han publicado sucesores. Conviene subir y ejecutar `mvn org.owasp:dependency-check-maven:check` (el plugin ya está en `pom.xml`, versión 9.0.9) para inventario CVE actualizado de todo el árbol transitivo. Prioridad: baja (sin exposición conocida hoy).
+
+### [DEUDA refactor — Lote 3] Capa PSP-agnóstica para sustituir CCBill por Segpay (u otro PSP adult-specialist)
+
+`BillingController` y el webhook `/api/billing/ccbill/notify` están acoplados al naming CCBill. Segpay queda como candidato activo tras los cambios de la sesión 2026-06-03. Refactorizar a capa abstracta (`PaymentSession`, `WebhookSignatureVerifier`, `PspAdapter`) facilitará el switch sin tocar capas superiores. Prioridad: media (necesario antes de activar Segpay en PROD, no urgente mientras el PSP esté en onboarding).
+
+---
+
 ## 2026-06-05 — Deudas abiertas tras cierre del frente PRELAUNCH
 
 Tras el cableado de `PRODUCT_ACCESS_MODE=PRELAUNCH` end-to-end (ver `project-log.md` 2026-06-05), quedan cinco frentes abiertos. Ninguno bloquea TEST; los marcados como **REQUISITO PRE-PROD** sí deben cerrarse antes del lanzamiento real.
