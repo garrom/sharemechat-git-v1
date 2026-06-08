@@ -318,8 +318,8 @@ public class ProductOperationalModeService {
         // Consent (incluye accept; no se gatea aquí)
         if (path.startsWith("/api/consent/")) return true;
 
-        // Webhooks externos
-        if (path.equals("/api/billing/ccbill/notify")) return true;
+        // Webhooks externos. Sin PSP activo (Lote 3, 2026-06-08); cuando
+        // se active el siguiente PSP, su webhook se anadira aqui.
         if (path.equals("/api/kyc/veriff/webhook")) return true;
 
         return false;
@@ -364,7 +364,8 @@ public class ProductOperationalModeService {
         if (path.startsWith("/api/funnyplace/")) return true;
         if (path.equals("/api/webrtc/config")) return true;
         if (path.startsWith("/api/reports/")) return true;
-        if ("POST".equalsIgnoreCase(method) && path.equals("/api/billing/ccbill/session")) return true;
+        // Sin PSP activo (Lote 3, 2026-06-08); cuando se active, su
+        // prefijo /api/billing/* se anadira aqui como product path.
         return false;
     }
 

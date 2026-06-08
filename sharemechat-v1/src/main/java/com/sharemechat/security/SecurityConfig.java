@@ -121,9 +121,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/clients/documents/**").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.GET, "/api/funnyplace/random").hasRole("CLIENT")
 
-                        // Billing / PSP (CCBill)
-                        .requestMatchers("/api/billing/ccbill/notify").permitAll()
-                        .requestMatchers("/api/billing/ccbill/session").hasAnyRole("USER", "CLIENT")
+                        // Billing / PSP — sin PSP activo (Lote 3, 2026-06-08).
+                        // Cuando se active el siguiente PSP los matchers se
+                        // anaden aqui con verificacion HMAC desde el primer
+                        // commit.
 
                         // KYC (VERIFF)
                         .requestMatchers(HttpMethod.POST, "/api/kyc/veriff/start").hasRole("USER")

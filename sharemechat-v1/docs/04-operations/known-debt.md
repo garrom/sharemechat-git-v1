@@ -20,13 +20,17 @@ Cerrada en bitácora 2026-06-08 (Lote 2 parte 1). `filterClasses()` en `Markdown
 
 Cerrada en bitácora 2026-06-08 (Lote 2 parte 1). `preprocessCallouts` neutraliza `</\s*div\s*>` literal en el cuerpo del callout antes de generar el wrapper. Test JUnit `preprocessCalloutWithDivCloseInBodyIsNeutralized`.
 
-### [DEUDA baja — Lote 3] H8 bumps de dependencia: `jjwt 0.11.5 → 0.12.x` y `jsoup 1.17.2 → 1.18.x`
+### [DEUDA baja — Lote 3 residual] H8 parcial: bump `jjwt 0.11.5 → 0.12.x`
 
-Sin CVE crítico abierto al momento de la auditoría (2026-06-08), pero ambas ramas están en mantenimiento y se han publicado sucesores. Conviene subir y ejecutar `mvn org.owasp:dependency-check-maven:check` (el plugin ya está en `pom.xml`, versión 9.0.9) para inventario CVE actualizado de todo el árbol transitivo. Prioridad: baja (sin exposición conocida hoy).
+`jsoup 1.17.2 → 1.18.3` cerrado en bitácora 2026-06-08 (Lote 3). El bump de jjwt queda pendiente porque cambia su API (parser builder + claims accessor) y afecta a `JwtUtil` (cookie auth + refresh + lockout) — requiere sesión dedicada con tests de regresión del flujo auth. Sin CVE crítico abierto hoy. Prioridad: baja.
 
-### [DEUDA refactor — Lote 3] Capa PSP-agnóstica para sustituir CCBill por Segpay (u otro PSP adult-specialist)
+### [DEUDA tooling — Lote 3 residual] Ejecutar OWASP DependencyCheck con NVD API key
 
-`BillingController` y el webhook `/api/billing/ccbill/notify` están acoplados al naming CCBill. Segpay queda como candidato activo tras los cambios de la sesión 2026-06-03. Refactorizar a capa abstracta (`PaymentSession`, `WebhookSignatureVerifier`, `PspAdapter`) facilitará el switch sin tocar capas superiores. Prioridad: media (necesario antes de activar Segpay en PROD, no urgente mientras el PSP esté en onboarding).
+Intentado en sesión 2026-06-08: plugin `org.owasp:dependency-check-maven:9.0.9` (ya en `pom.xml`) recibe `403/404` de NIST. Causa: política nueva de NIST en 2024 que exige **API key gratuita** (`-Dnvd.api.key`) en las descargas del feed NVD. Pendiente: registrar key en `nvd.nist.gov/developers/request-an-api-key`, almacenarla como variable de entorno (no en repo), reintentar el `mvn org.owasp:dependency-check-maven:check`. No bloquea el lote 3 — el único cambio de dependencia introducido fue el bump de jsoup.
+
+### ~~[DEUDA refactor — Lote 3] Capa PSP-agnóstica para sustituir CCBill por Segpay~~ — **CERRADA 2026-06-08**
+
+Cerrada por eliminación: el andamiaje CCBill (controller + service + 3 DTOs + matchers en `SecurityConfig` y `ProductOperationalModeService`) se elimina por completo en bitácora 2026-06-08 (Lote 3). No se renombra preventivamente: cuando se active el siguiente PSP, se crea controller/service nuevos limpios con HMAC desde el primer commit. La entity `PaymentSession` + repository + tabla `payment_sessions` se conservan (schema ya neutro, columnas `order_id` y `psp_transaction_id`). `TransactionService.creditPackWithBonus(...)` se conserva intencionalmente: lógica de negocio reutilizable; queda sin caller temporal hasta el próximo PSP. Esto cierra también H7 (webhook PSP sin firma HMAC) por desaparición del endpoint vulnerable.
 
 ---
 
