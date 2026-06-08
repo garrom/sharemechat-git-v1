@@ -12,17 +12,13 @@ Tras cerrar el Lote 1 (H3 rate-limit IP en login, H2 validación nickname + esca
 
 Fix: respuesta uniforme (p.ej. `202 Accepted "si los datos son válidos te enviaremos email"`) y enviar email "ya tienes una cuenta" a la dirección si ya existe (oráculo cierra). Prioridad: media (antes de OPEN público pero sin urgencia operativa).
 
-### [DEUDA media — Lote 2] H4 atributo `class` libre en jsoup Safelist del CMS
+### ~~[DEUDA media — Lote 2] H4 atributo `class` libre en jsoup Safelist del CMS~~ — **CERRADA 2026-06-08**
 
-`MarkdownRendererService.init()` declara `addAttributes("div","class")`, `addAttributes("code","class")`, `addAttributes("pre","class")` sin restricción de valor. Permite a un autor del CMS introducir `class="cualquier-cosa"` en `<div>`/`<code>`/`<pre>` (esperado: `callout`, `language-*`). Sin CSS reactivo controlado por autor el riesgo residual es bajo, pero abre futuro vector CSS subliminal/data-exfil si en algún momento se cargan estilos por nombre de clase.
+Cerrada en bitácora 2026-06-08 (Lote 2 parte 1). `filterClasses()` en `MarkdownRendererService` aplica whitelist por (tag, valor) post-`Jsoup.clean`. Tests JUnit `renderDivWithCalloutClassIsPreserved`, `renderDivWithNonWhitelistedClassLosesClass`, `renderCodeBlockLanguageClassIsPreserved`, `renderCodeBlockBogusClassIsStripped`.
 
-Fix: añadir whitelist explícita de valores aceptados (`callout` para `div`, `language-{lang}` para `code/pre`) — patrón regex o validator custom de jsoup. Prioridad: media-baja.
+### ~~[DEUDA baja — Lote 2] H5 regex injection en preprocessador `:::callout`~~ — **CERRADA 2026-06-08**
 
-### [DEUDA baja — Lote 2] H5 regex injection en preprocessador `:::callout`
-
-`MarkdownRendererService.preprocessCallouts(markdown)` aplica `Pattern.compile("(?ms)^:::callout[ \\t]*\\R(.*?)\\R^:::[ \\t]*$")` antes de flexmark y reemplaza por `<div class="callout">...</div>`. Si el contenido del bloque contiene `</div>` literal, escapa al wrapper. **jsoup sanitiza después y balancea**, así que el daño residual = HTML mal estructurado, NO XSS de tags ejecutables. Severidad real: baja.
-
-Fix: procesar callouts en AST de flexmark (custom extension) en lugar de pre-regex, o validar `$1` antes del reemplazo. Prioridad: baja.
+Cerrada en bitácora 2026-06-08 (Lote 2 parte 1). `preprocessCallouts` neutraliza `</\s*div\s*>` literal en el cuerpo del callout antes de generar el wrapper. Test JUnit `preprocessCalloutWithDivCloseInBodyIsNeutralized`.
 
 ### [DEUDA baja — Lote 3] H8 bumps de dependencia: `jjwt 0.11.5 → 0.12.x` y `jsoup 1.17.2 → 1.18.x`
 

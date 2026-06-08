@@ -8,6 +8,22 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-08 — Hardening del saneado Markdown del blog (Lote 2 parte 1: H4 whitelist de `class` + H5 neutralización del cierre del wrapper `:::callout`)
+
+Segunda tanda de mitigaciones de la auditoría defensiva sobre `MarkdownRendererService` (el motor que convierte Markdown del CMS en HTML servido por `/api/public/content/articles/{slug}` al frontend).
+
+**H4 — whitelist de valores para el atributo `class`**. `addAttributes("div", "class")` de jsoup permitía cualquier valor en `<div>`, `<code>` y `<pre>`. jsoup no soporta whitelist de valores nativamente, así que la defensa se hace post-`Jsoup.clean` re-parseando el HTML limpio con `Jsoup.parseBodyFragment`, iterando `getAllElements()` y filtrando `class` por (tag, valor): `<div>` → solo `callout`; `<code>`/`<pre>` → solo `^language-[A-Za-z0-9_+\-]+$`. El resto se elimina; si no quedan clases útiles, se quita el atributo `class` entero. Sin riesgo de tag stripping: el filtro solo toca el atributo. Cero impacto en artículos actuales (los publicados hoy no llevan callouts ni code blocks con lenguaje en cuerpo).
+
+**H5 — neutralización de `</div>` literal en el cuerpo del `:::callout`**. `preprocessCallouts` envolvía el contenido capturado por regex en `<div class="callout">...</div>`. Si el autor escribía `</div>` literal en el cuerpo, cerraba prematuramente el wrapper (riesgo XSS bajo porque jsoup balancea después, pero el HTML quedaba estructurado raro). Fix: dentro del replacement de la regex, ejecutar una segunda regex case-insensitive `</\s*div\s*>` → `&lt;/div&gt;` sobre el cuerpo antes de generar el wrapper. Implementación con `Matcher.replaceAll(MatchResult → String)` + `Matcher.quoteReplacement` para que `$` y `\` del contenido no se interpreten como backrefs. El `:::` dentro del cuerpo NO requiere tratamiento: el regex de cierre exige `^:::[ \t]*$` (línea entera), un `:::` inline no matchea.
+
+**Decisión de diseño H5**. La alternativa era implementar una extensión flexmark (BlockParser + NodeRenderer + factory + tests del custom Node, ~200 líneas para una sintaxis no estándar). Se descartó por desproporción coste-beneficio: la neutralización en regex son 2 líneas, ataca el único vector real (desbalance de wrapper) y no introduce dependencia ni surface de mantenimiento adicional. Si en el futuro se quiere lookup de callouts dentro de fenced code blocks (caveat v1 documentado), entonces sí compensa la extensión.
+
+**Verificación**. Suite JUnit (`MarkdownRendererServiceTest`) ampliada de 12 a 16 tests, todos pasan: `renderDivWithCalloutClassIsPreserved`, `renderDivWithNonWhitelistedClassLosesClass` (anteriormente documentaba el caveat ahora cerrado), `renderCodeBlockLanguageClassIsPreserved`, `renderCodeBlockBogusClassIsStripped`, `preprocessCalloutWithDivCloseInBodyIsNeutralized`. JAR `d5586f0f...` desplegado a TEST (backup `.bak-lote2-md-20260608-094007`); artículos publicados existentes en TEST (`elegir-videochat-seguro` ES, `how-to-choose-safe-video-chat` EN) renderizan idénticos a antes (cero regresión visual; `htmlBody` 7745 y 7456 chars respectivamente, sin clases en el output porque ningún artículo actual usa callouts).
+
+**Lo que no se cierra en este lote**. Resto de Lote 2 (H1 enumeración registro) y Lote 3 (H8 bumps `jjwt`/`jsoup` + OWASP DC, refactor PSP-agnóstico) siguen documentados en `docs/04-operations/known-debt.md`. PROD pendiente del mismo deploy con confirmación del operador.
+
+---
+
 ## 2026-06-08 — Auditoría defensiva: hardening de auth Lote 1 (rate-limit IP en login, validación nickname, escape HTML en plantillas email)
 
 Cierre del primer lote de mitigaciones de la auditoría de seguridad defensiva sobre nuestros propios endpoints. Fase 0 (inventario) confirmó que la única vía de entrada al backend desde IP no-allowlistada es `/api/public/content/**`, `/sitemap.xml`, `/robots.txt`, `/api/users/register/*`, `/api/auth/{login,refresh,logout}`, `/api/email-verification/**`, `/api/consent/**` y webhooks PSP. El **buscador del blog es 100% client-side** (`useMemo` sobre `articles` ya cargados, máximo 50 elementos) → cero superficie de SQLi o XSS reflejado por ese vector. Las queries del CMS público son JPA derived parametrizadas; el `slug` se valida con `^[a-z0-9]+(?:-[a-z0-9]+)*$` antes de tocar BD; el `htmlBody` de los artículos pasa por `MarkdownRendererService` con `Safelist` jsoup explícita sin `<script>`/`<iframe>`/`<svg>`/atributos JS.
