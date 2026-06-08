@@ -804,8 +804,8 @@
         "acceptTerms": "You must accept the terms and conditions."
       },
       "success": {
-        "title": "Registration completed",
-        "message": "Your user account has been created successfully."
+        "title": "Check your inbox",
+        "message": "We've sent you an email to confirm your account. Please check it, and the spam folder if you don't see it."
       }
     },
     "registerModel": {
@@ -836,8 +836,8 @@
         "acceptTerms": "You must accept the terms and conditions."
       },
       "success": {
-        "title": "Registration completed",
-        "message": "Your user account has been created successfully."
+        "title": "Check your inbox",
+        "message": "We've sent you an email to confirm your account. Please check it, and the spam folder if you don't see it."
       }
     }
   },

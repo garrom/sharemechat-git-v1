@@ -804,8 +804,8 @@
         "acceptTerms": "Debes aceptar los términos y condiciones."
       },
       "success": {
-        "title": "Registro completado",
-        "message": "Tu cuenta de usuario se ha creado correctamente."
+        "title": "Revisa tu bandeja de entrada",
+        "message": "Te hemos enviado un email para confirmar tu cuenta. Revísalo y, si no lo ves, mira en la carpeta de spam."
       }
     },
     "registerModel": {
@@ -836,8 +836,8 @@
         "acceptTerms": "Debes aceptar los términos y condiciones."
       },
       "success": {
-        "title": "Registro completado",
-        "message": "Tu cuenta de usuario se ha creado correctamente."
+        "title": "Revisa tu bandeja de entrada",
+        "message": "Te hemos enviado un email para confirmar tu cuenta. Revísalo y, si no lo ves, mira en la carpeta de spam."
       }
     }
   },

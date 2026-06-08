@@ -64,6 +64,28 @@ public class UserController {
     }
 
 
+    /**
+     * H1 hardening Lote 2 (2026-06-08): respuesta uniforme.
+     *
+     * El body devuelto es SIEMPRE el mismo (status 200, mismo JSON)
+     * tanto si el email es nuevo como si ya existe. UserService devuelve
+     * `null` cuando el email ya existia (y aviso enviado al titular del
+     * email existente, best-effort). El caller (frontend) no puede
+     * distinguir ambos casos: muestra "revisa tu email" en cualquier
+     * caso, que es coherente con lo que el usuario debe hacer (revisar
+     * el email recibido, que sera el de verificacion si era nuevo o el
+     * de "ya tienes cuenta" si existia).
+     *
+     * El nickname-ya-existe sigue devolviendo 400 explicito (UX
+     * mantenida; el operador acepto este trade-off porque el nickname
+     * se delata pero no filtra existencia de cuenta).
+     */
+    private static final java.util.Map<String, String> REGISTER_UNIFORM_BODY =
+            java.util.Map.of(
+                    "message",
+                    "Si los datos son correctos, te hemos enviado un email. Revisa tu bandeja de entrada."
+            );
+
     @PostMapping("/register/client")
     public ResponseEntity<?> registerClient(@RequestBody @Valid UserClientRegisterDTO registerDTO,
                                            HttpServletRequest request) {
@@ -85,7 +107,9 @@ public class UserController {
                 "age_gate_link_register_client",
                 "/api/users/register/client"
         );
-        return ResponseEntity.ok(createdUser);
+        // H1 hardening: body uniforme. NO devolver createdUser (filtraria
+        // si se creo o no via id/email/role en el JSON).
+        return ResponseEntity.ok(REGISTER_UNIFORM_BODY);
     }
 
 
@@ -110,7 +134,8 @@ public class UserController {
                 "age_gate_link_register_model",
                 "/api/users/register/model"
         );
-        return ResponseEntity.ok(createdUser);
+        // H1 hardening: body uniforme (ver registerClient).
+        return ResponseEntity.ok(REGISTER_UNIFORM_BODY);
     }
 
 

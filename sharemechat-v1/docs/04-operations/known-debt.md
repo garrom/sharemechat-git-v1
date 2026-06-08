@@ -6,11 +6,11 @@ Registro de deudas detectadas durante operación o auditoría que no son inciden
 
 Tras cerrar el Lote 1 (H3 rate-limit IP en login, H2 validación nickname + escape HTML en `EmailCopyRenderer`, H6 `limit_req` nginx en `/api/auth/`, `/api/users/register/`, `/api/admin/auth/`), quedan abiertas estas mitigaciones de la auditoría. Ver bitácora 2026-06-08 para contexto completo.
 
-### [DEUDA media — Lote 2] H1 Enumeración de email/nickname en `POST /api/users/register/*`
+### ~~[DEUDA media — Lote 2] H1 Enumeración de email en `POST /api/users/register/*`~~ — **CERRADA 2026-06-08**
 
-`UserService.registerClient/registerModel` valida duplicados con `userRepository.existsByEmail` / `existsByNickname` y devuelve un error distinguible cuando el email o nickname ya existe (`409 Conflict` o equivalente). Cualquiera puede consultar si un email/nickname está registrado en SharemeChat sin auth. Estándar de la industria (privacidad).
+Cerrada en bitácora 2026-06-08 (Lote 2 parte 2). `UserService.registerClient/registerModel` reordenado: nickname check primero (mantiene aviso explícito por UX), email check después con respuesta uniforme. Email "ya tienes cuenta" enviado al titular del email existente. Validado en TEST con `diff` vacío entre bodies de los dos caminos.
 
-Fix: respuesta uniforme (p.ej. `202 Accepted "si los datos son válidos te enviaremos email"`) y enviar email "ya tienes una cuenta" a la dirección si ya existe (oráculo cierra). Prioridad: media (antes de OPEN público pero sin urgencia operativa).
+La enumeración del **nickname** se MANTIENE conscientemente: si el nickname está cogido, el backend responde `400` con `"Ese nickname ya existe, debes elegir otro."`. Decisión de UX: pedir al usuario que pruebe otro alias en el momento es preferible a fallar silenciosamente. El nickname no permite enlazar identidades igual que un email, por lo que el riesgo de enumeración es menor.
 
 ### ~~[DEUDA media — Lote 2] H4 atributo `class` libre en jsoup Safelist del CMS~~ — **CERRADA 2026-06-08**
 

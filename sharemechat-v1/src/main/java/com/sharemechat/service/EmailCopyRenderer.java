@@ -166,6 +166,68 @@ public class EmailCopyRenderer {
         return new EmailContent("Welcome to SharemeChat", wrappedEn);
     }
 
+    /**
+     * H1 hardening Lote 2 (2026-06-08): notificacion al email YA
+     * EXISTENTE cuando alguien intenta registrarse de nuevo con esa
+     * direccion. El frontend recibe la misma respuesta de exito que
+     * un alta nueva, asi que el atacante no puede distinguir.
+     *
+     * Copy aprobado por el operador. Locale = uiLocale del usuario
+     * existente (mismo patron que el resto de plantillas). Incluye
+     * enlaces a las paginas publicas de login y de recuperacion de
+     * contrasena (no genera token de reset: el usuario lo solicita
+     * desde la pagina si lo necesita).
+     *
+     * @param existingUser  cuenta YA EXISTENTE con ese email.
+     * @param loginUrl      URL absoluta a la pagina de login del SPA.
+     * @param forgotUrl     URL absoluta a la pagina de "olvide mi password".
+     */
+    public EmailContent renderAccountAlreadyExistsNotice(User existingUser,
+                                                         String loginUrl,
+                                                         String forgotUrl) {
+        String locale = localeResolver.resolve(existingUser);
+        // safeLabel + htmlEscape: defensa en profundidad heredada de Lote 1.
+        String nickname = htmlEscape(safeLabel(existingUser));
+        // Los URLs los pasa el llamante; los escapamos como atributo HTML
+        // por seguridad (aunque vengan controlados por PublicSiteProperties).
+        String safeLogin  = htmlEscape(loginUrl);
+        String safeForgot = htmlEscape(forgotUrl);
+
+        if ("es".equals(locale)) {
+            String body = """
+                    <p>Hola %s:</p>
+
+                    <p>Hemos recibido un intento de registro con esta dirección, pero ya tienes una cuenta en <b>SharemeChat</b> — no necesitas crear otra.</p>
+
+                    <p>Si has sido tú, solo tienes que <a href="%s">iniciar sesión</a>. ¿No recuerdas tu contraseña? Puedes <a href="%s">restablecerla desde aquí</a>.</p>
+
+                    <p>Si no has sido tú, puedes ignorar este mensaje con tranquilidad: tu cuenta sigue segura y no se ha creado ninguna cuenta nueva.</p>
+
+                    <p>— El equipo de SharemeChat</p>
+                    """.formatted(nickname, safeLogin, safeForgot);
+            return new EmailContent(
+                    "¿Has intentado crear una cuenta en SharemeChat?",
+                    wrapWithLogo(body)
+            );
+        }
+
+        String bodyEn = """
+                <p>Hi %s,</p>
+
+                <p>We received a sign-up attempt using this email, but you already have a <b>SharemeChat</b> account — no need to create another one.</p>
+
+                <p>If this was you, just <a href="%s">log in</a>. Forgot your password? You can <a href="%s">reset it from here</a>.</p>
+
+                <p>If this wasn't you, you can safely ignore this email: your account is secure and no new account was created.</p>
+
+                <p>— The SharemeChat team</p>
+                """.formatted(nickname, safeLogin, safeForgot);
+        return new EmailContent(
+                "Did you try to create a SharemeChat account?",
+                wrapWithLogo(bodyEn)
+        );
+    }
+
     public EmailContent renderUnsubscribe(User user) {
         String locale = localeResolver.resolve(user);
         // H2 sink (Lote 1): escapado HTML antes de inyectar en text blocks.
@@ -173,7 +235,7 @@ public class EmailCopyRenderer {
 
         if ("es".equals(locale)) {
             return new EmailContent(
-                    "Confirmacion de baja en SharemeChat",
+                    "Confirmación de baja en SharemeChat",
                     wrapWithLogo("""
                             <p>Hola %s,</p>
 
@@ -208,7 +270,7 @@ public class EmailCopyRenderer {
 
         if ("es".equals(locale)) {
             return new EmailContent(
-                    "Recuperacion de contrasena",
+                    "Recuperación de contraseña",
                     wrapWithLogo("""
                             <p>Has solicitado restablecer tu contraseÃ±a.</p>
                             <p>Haz clic en el siguiente enlace para continuar:</p>
@@ -249,7 +311,7 @@ public class EmailCopyRenderer {
         if ("es".equals(locale)) {
             if (backoffice) {
                 return new EmailContent(
-                        "Validacion de email para acceso interno",
+                        "Validación de email para acceso interno",
                         wrapWithLogo("""
                                 <p>Hola %s,</p>
                                 <p>Tu acceso interno a <b>SharemeChat Backoffice</b> ya esta preparado.</p>

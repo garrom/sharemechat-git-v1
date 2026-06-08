@@ -8,6 +8,26 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-08 — Cierre del oráculo de enumeración de email en registro (Lote 2 parte 2: H1)
+
+Tercera tanda de mitigaciones de la auditoría defensiva. Hasta hoy, `POST /api/users/register/{client,model}` devolvía un error explícito distinguible cuando el email ya existía (`400` con `"El email ya está en uso"`) y otro distinto cuando el nickname ya existía. Cualquiera podía consultar sin auth si una dirección de email pertenece a un usuario registrado en SharemeChat con un POST y leer el JSON de error. Este lote cierra esa enumeración respecto al email, manteniendo el aviso explícito del nickname-cogido por UX (acordado con el operador: el nickname puede delatarse pero NO filtra existencia de cuenta).
+
+**Invariante operativa**. La respuesta HTTP del registro es **idéntica** (mismo status 200, mismo body JSON) entre los dos caminos posibles cuando el nickname está libre: (a) email nuevo + alta normal, (b) email ya existente + aviso al titular del email existente. El body uniforme es `{"message": "Si los datos son correctos, te hemos enviado un email. Revisa tu bandeja de entrada."}`. El controller deja de serializar `UserDTO` (filtraba `id`/`email`/`role`/etc. que distinguirían los dos caminos).
+
+**Reordenamiento del control de duplicados en `UserService`**. Tanto `registerClient` como `registerModel`: nickname primero (`existsByNickname` → `NicknameAlreadyInUseException` con 400 explícito); email después (`existsByEmail` → `sendAccountAlreadyExistsNoticeBestEffort(email)` + `return null`). El método devuelve `null` cuando el email existía; el controller traduce eso a la misma respuesta de éxito que el alta nueva.
+
+**Plantilla nueva `renderAccountAlreadyExistsNotice`** (`EmailCopyRenderer`). Copy ES/EN aprobado por el operador. Asunto ES `"¿Has intentado crear una cuenta en SharemeChat?"`, asunto EN `"Did you try to create a SharemeChat account?"`. Cuerpo HTML con `{nickname}` HTML-escapado (helper `htmlEscape(safeLabel(...))` del Lote 1) y dos enlaces: a la página de login (`/login`) y a la de recuperación de contraseña (`/forgot-password`). URLs absolutas con `PublicSiteProperties.baseUrl` (resuelve `sharemechat.com` en PROD, `test.sharemechat.com` en TEST, etc.). NO se genera token de reset proactivamente — el enlace lleva a la página pública estática donde el usuario lo solicita él mismo si quiere (evita ofrecer al atacante una vía de cambio de password sin verificación adicional). El locale del email = `uiLocale` del usuario existente. La categoría `ACCOUNT_ALREADY_EXISTS_NOTICE` se añade al enum `EmailMessage.Category` para clasificar el envío.
+
+**Best-effort en el envío**. `sendAccountAlreadyExistsNoticeBestEffort` captura cualquier excepción del SMTP y la loguea sin propagarla. Si el envío fallara y se propagase un 500 al caller, el atacante distinguiría el camino "email existe + envío fallido" del camino "email nuevo + flujo OK" — leak por error. El best-effort asegura que ambos caminos retornan 200 incluso ante problemas transitorios del proveedor de email.
+
+**Frontend**. Sin cambios de lógica en `RegisterClientModalContent.jsx` ni `RegisterModelModalContent.jsx` (ya usaban catch genérico). Cambio cosmético del copy de éxito i18n en ES + EN para que sea consistente con que el alta puede no haber ocurrido (camino email-existe): `"Revisa tu bandeja de entrada"` / `"Check your inbox"` + mensaje invitando a revisar la bandeja y la carpeta de spam. El copy antiguo (`"Tu cuenta se ha creado correctamente"`) filtraba que la cuenta SÍ se había creado, lo cual es falso en el camino email-existe.
+
+**Validación en TEST**. JAR `b6489492...` desplegado (backup `.bak-lote2-h1-20260608-122647`); bundle frontend `main.618dfe8b.js`. Tres casos con la MISMA cookie `consent_id` válida (UUID nuevo + POST al age-gate exitoso): (A) email nuevo + nick libre → **200** + body uniforme; (B) email existente `admin+ag@sharemechat.com` + nick libre distinto → **200** + body uniforme **idéntico a (A)** (verificado con `diff`); (C) email nuevo + nick cogido (el de A) → **400** con mensaje `"Ese nickname ya existe, debes elegir otro."`. La verificación end-to-end requirió subir temporalmente los límites de rate-limit (`SECURITY_RATELIMIT_REGISTER_LIMIT` en config y `rate=`/`burst=` en nginx) porque las pruebas iterativas consumieron el quota; restaurados a los defaults inmediatamente después.
+
+**Lo que NO se cierra en este lote**. Sigue abierto el Lote 3 (H8 bumps `jjwt`/`jsoup` + ejecutar OWASP DC, refactor PSP-agnóstico). PROD pendiente del mismo deploy con confirmación del operador.
+
+---
+
 ## 2026-06-08 — Hardening del saneado Markdown del blog (Lote 2 parte 1: H4 whitelist de `class` + H5 neutralización del cierre del wrapper `:::callout`)
 
 Segunda tanda de mitigaciones de la auditoría defensiva sobre `MarkdownRendererService` (el motor que convierte Markdown del CMS en HTML servido por `/api/public/content/articles/{slug}` al frontend).

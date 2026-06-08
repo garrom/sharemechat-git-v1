@@ -42,6 +42,7 @@ public class UserService {
     private final EmailCopyRenderer emailCopyRenderer;
     private final AgeGatePolicyService ageGatePolicyService;
     private final BackofficeAccessService backofficeAccessService;
+    private final com.sharemechat.config.PublicSiteProperties publicSiteProperties;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
@@ -57,7 +58,8 @@ public class UserService {
                        EmailVerificationService emailVerificationService,
                        EmailCopyRenderer emailCopyRenderer,
                        AgeGatePolicyService ageGatePolicyService,
-                       BackofficeAccessService backofficeAccessService) {
+                       BackofficeAccessService backofficeAccessService,
+                       com.sharemechat.config.PublicSiteProperties publicSiteProperties) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -71,6 +73,7 @@ public class UserService {
         this.emailCopyRenderer = emailCopyRenderer;
         this.ageGatePolicyService = ageGatePolicyService;
         this.backofficeAccessService = backofficeAccessService;
+        this.publicSiteProperties = publicSiteProperties;
     }
 
     @Transactional
@@ -98,12 +101,33 @@ public class UserService {
         if (!Boolean.TRUE.equals(registerDTO.getAcceptedTerm())) {
             throw new IllegalArgumentException("Debes aceptar los términos y condiciones");
         }
-        if (userRepository.existsByEmail(email)) {
-            throw new EmailAlreadyInUseException("El email ya está en uso");
-        }
-
+        // H1 hardening Lote 2 (2026-06-08): orden invertido para
+        // eliminar el oraculo de enumeracion de email.
+        //
+        //  1) Si el NICKNAME esta cogido -> error explicito (el nickname
+        //     puede delatarse: es la parte que mantenemos por UX). Se
+        //     filtra ANTES del email para que el camino "email existe"
+        //     no requiera consumir un nick disponible del atacante.
+        //
+        //  2) Si el EMAIL ya existe -> NO se crea cuenta; se envia un
+        //     aviso "ya tienes cuenta" a la direccion existente y el
+        //     metodo devuelve null. El controller traduce eso a la MISMA
+        //     respuesta de exito que el alta nueva.
+        //
+        //  3) Camino normal: crear cuenta + email verificacion + welcome.
+        //
+        // Invariante: la respuesta HTTP del controller debe ser
+        // IDENTICA (mismo status, mismo body) entre (2) y (3).
         if (userRepository.existsByNickname(nickname)) {
             throw new NicknameAlreadyInUseException("Ese nickname ya existe, debes elegir otro.");
+        }
+
+        if (userRepository.existsByEmail(email)) {
+            // Camino "email existe": NO se crea cuenta. Aviso al titular
+            // del email existente + return null (indistinguible para el
+            // caller del camino normal: la respuesta HTTP es la misma).
+            sendAccountAlreadyExistsNoticeBestEffort(email);
+            return null;
         }
 
         User user = new User();
@@ -204,12 +228,16 @@ public class UserService {
             throw new IllegalArgumentException("Debes aceptar los términos y condiciones");
         }
 
-        if (userRepository.existsByEmail(email)) {
-            throw new EmailAlreadyInUseException("El email ya está en uso");
-        }
-
+        // H1 hardening Lote 2 (2026-06-08): orden invertido (ver
+        // comentario en registerClient). Nickname primero, email
+        // despues. Si email existe -> aviso + return null.
         if (userRepository.existsByNickname(nickname)) {
             throw new NicknameAlreadyInUseException("Ese nickname ya existe, debes elegir otro.");
+        }
+
+        if (userRepository.existsByEmail(email)) {
+            sendAccountAlreadyExistsNoticeBestEffort(email);
+            return null;
         }
 
         // --- Mayoría de edad ---
@@ -554,6 +582,57 @@ public class UserService {
                 .anyMatch(cp -> Character.isWhitespace(cp) || Character.isSpaceChar(cp));
         if (hasSpace) {
             throw new IllegalArgumentException("La contraseña no puede contener espacios en blanco.");
+        }
+    }
+
+    /**
+     * H1 hardening Lote 2 (2026-06-08): envia al email YA EXISTENTE un
+     * aviso "ya tienes cuenta" cuando alguien intenta registrarse de
+     * nuevo con esa direccion. Best-effort: si el envio falla, NO se
+     * propaga error al caller, porque eso filtraria por timing/error
+     * la existencia de la cuenta. Se loguea para diagnostico.
+     *
+     * Locale: uiLocale del usuario existente, mismo patron que el
+     * resto de plantillas. URLs: PublicSiteProperties.baseUrl
+     * resuelve el dominio del entorno (sharemechat.com / test... /
+     * audit...).
+     */
+    private void sendAccountAlreadyExistsNoticeBestEffort(String existingEmail) {
+        try {
+            User existing = userRepository.findByEmail(existingEmail).orElse(null);
+            if (existing == null) {
+                // No deberia pasar (existsByEmail ya dio true), pero
+                // defensivo: no propagamos.
+                return;
+            }
+            String base = publicSiteProperties.getBaseUrl();
+            if (base == null || base.isBlank()) {
+                // Sin URL configurada caemos al apex PROD como ultimo
+                // recurso (sigue siendo HTTPS valido y publico).
+                base = "https://sharemechat.com";
+            }
+            String loginUrl  = base + "/login";
+            String forgotUrl = base + "/forgot-password";
+
+            EmailCopyRenderer.EmailContent content =
+                    emailCopyRenderer.renderAccountAlreadyExistsNotice(existing, loginUrl, forgotUrl);
+
+            emailService.send(new EmailMessage(
+                    existing.getEmail(),
+                    content.subject(),
+                    content.body(),
+                    EmailMessage.Category.ACCOUNT_ALREADY_EXISTS_NOTICE,
+                    EmailMessage.Priority.BEST_EFFORT
+            ));
+        } catch (Exception ex) {
+            // Best-effort: NUNCA propagar. Filtrar por excepcion
+            // recuperable al caller permitiria enumerar por timing
+            // o por error 500 distinto.
+            log.warn(
+                    "REGISTER existing-email notice failed (best-effort) err={}",
+                    ex.getMessage(),
+                    ex
+            );
         }
     }
 
