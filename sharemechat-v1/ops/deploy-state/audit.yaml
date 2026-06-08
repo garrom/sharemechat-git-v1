@@ -1,0 +1,84 @@
+# Manifest de estado de despliegue — entorno AUDIT
+# Schema v1. Fase 1 paso 1 (2026-06-09). Auto-gestionado por scripts de
+# despliegue en fases futuras; en esta fase poblado a mano con datos
+# verificados en vivo. NO editar campos sin entender el campo
+# `verification.*` que lo acompana.
+#
+# Convencion:
+#  - git_commit_short: 7 caracteres (formato corto). git_commit (full
+#    40 chars) queda en null hasta Fase 2 (endpoint /api/health/version
+#    + plugin git-commit-id que embebe el SHA completo en el artefacto).
+#  - deployed_at: instante real del cambio en el destino (mtime en EC2
+#    para backend; LastModified de S3 para bundles frontend).
+#  - deployed_by: USERNAME@COMPUTERNAME del operador, o null si no se
+#    pudo registrar (otra sesion).
+
+environment: audit
+schema_version: 1
+last_updated_at: 2026-06-09T07:00:00Z
+last_update_by: alain@LAPTOP
+last_update_source: manual-fase1-paso1
+
+backend:
+  jar_sha256: 7025145b9cf4a55f1ee1c23a1fe6d730f855d58f60d6c80eabdac622b118268a
+  git_commit_short: 1cb43a0
+  git_commit: null
+  built_at: null
+  deployed_at: 2026-06-08T21:15:11Z
+  deployed_by: alain@LAPTOP
+  ec2_alias: audit-backend
+  remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+  systemd_unit: sharemechat-audit.service
+  verification:
+    method: live_ssh_sha256_2026-06-08
+    verified_at: 2026-06-08T21:15:46Z
+    notes: |
+      Backend AUDIT nivelado al JAR de PROD/TEST esta manana tras
+      detectar el drift (backend a930800657... compilado desde commit
+      b54a0be del 30-may; nuevo JAR 7025145b... compilado desde
+      1cb43a0 del 8-jun, Lote 3). Backup .bak-pre-lote3-20260608-211512
+      conservado en EC2. Servicio active tras restart, smoke estatico
+      OK (blog y home 200; /api/users/me 401).
+
+frontend_product:
+  bundle: main.56c27317.js
+  git_commit_short: f65fd49
+  git_commit: null
+  built_at: null
+  deployed_at: 2026-06-08T16:12:06Z
+  deployed_by: null
+  working_tree_clean: false
+  bucket: sharemechat-frontend-audit
+  cloudfront_distribution: E1ILXV7P6ENUV8
+  cloudfront_invalidation_id: null
+  verification:
+    method: s3_lastmodified_observed_2026-06-09
+    git_commit_provenance: inferred_from_lastmodified_and_git_log
+    notes: |
+      Bundle subido por una sesion paralela del operador el 2026-06-08
+      a las 16:12:06 UTC. El commit no se registro en el momento; se
+      infiere f65fd49 por ser el HEAD de origin/main en esa marca de
+      tiempo (`git log --before=2026-06-08T16:12:06Z -1`). Working
+      tree dirty en ese momento (6 ficheros uncommitted del frente
+      i18n admin Audit que termino siendo el commit f82c1cd posterior).
+      La invalidacion CloudFront no se disparo tras el sync; los
+      bundles hashed se sirvieron via URL inmutable.
+
+frontend_admin:
+  bundle: main.c18ac1b2.js
+  git_commit_short: f65fd49
+  git_commit: null
+  built_at: null
+  deployed_at: 2026-06-08T16:13:26Z
+  deployed_by: null
+  working_tree_clean: false
+  bucket: sharemechat-admin-audit
+  cloudfront_distribution: E21IB0VBKYNNBW
+  cloudfront_invalidation_id: null
+  verification:
+    method: s3_lastmodified_observed_2026-06-09
+    git_commit_provenance: inferred_from_lastmodified_and_git_log
+    notes: |
+      Mismo origen que frontend_product: build paralelo en la sesion
+      del 2026-06-08 16:13:26 UTC. Commit inferido por HEAD del
+      momento. Working tree dirty (mismos 6 ficheros pendientes).

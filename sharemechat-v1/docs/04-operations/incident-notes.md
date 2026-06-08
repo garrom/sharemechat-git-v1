@@ -1,5 +1,37 @@
 # Notas de incidencias
 
+## 2026-06-08 — Drift backend↔frontend en AUDIT producto: dashboard MODEL/CLIENT en blanco (solo footer)
+
+### Sintoma reportado por el operador
+
+Al loguearse en `audit.sharemechat.com` con un usuario de role MODEL o CLIENT, el dashboard no renderizaba: solo se veia el footer pegado debajo del header, sin contenido entre ambos. ADMIN seguia accediendo a su panel normalmente. Adicionalmente el operador noto que el overlay "COMING SOON" se mostraba en la home publica anonima de AUDIT (intencional por diseno desde el commit `db4f7ef` del 2026-06-07: `featureFlags.js` resuelve overlay siempre visible en TEST y AUDIT; el ruido era confusion, no regresion).
+
+### Diagnostico
+
+Analisis solo-lectura del estado vivo y del repo permitio establecer:
+
+- Backend AUDIT corriendo el JAR `a930800657...` de fecha `2026-05-30 23:07 UTC` (sha verificado en `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar` via SSH a `audit-backend`).
+- Frontend AUDIT producto sirviendo el bundle `main.56c27317.js` con `LastModified S3 2026-06-08 16:12:06 UTC` en el bucket `sharemechat-frontend-audit`.
+- El bundle del 2026-06-08 lo construyo el operador en una sesion paralela (no en la sesion del agente) que ejecuto `npm run build:product` con el working tree del repo conteniendo seis ficheros uncommitted del frente i18n de paneles admin Audit.
+
+El commit `d48e022 feat(prelaunch): wire PRODUCT_ACCESS_MODE=PRELAUNCH end-to-end + harden gate` introdujo a la vez:
+- backend: `userController.setProductAccessMode(productOperationalModeService.currentMode().name())` en la respuesta de `/api/users/me` (linea 249 de `UserController.java`)
+- frontend: el check defensivo `if (!mode) return null;` en `RequireRole.jsx:97-98`, donde `mode = String(user.productAccessMode || '').toUpperCase()`
+
+El JAR del backend del 30-may fue compilado desde el commit `b54a0be`, anterior a `d48e022`, por lo que `/api/users/me` no incluia el campo `productAccessMode`. El bundle frontend, en cambio, ya incluia la lectura del campo. Para MODEL y CLIENT el resultado fue: `mode === ''` → `RequireRole` retorna `null` → el dashboard no se renderiza. ADMIN evita el problema porque su rama de chequeo es `backofficeRoles` (linea 87 de `RequireRole.jsx`) y sale `return children` antes de evaluar `productAccessMode`.
+
+### Resolucion
+
+Se nivelo el backend de AUDIT al estado actual de `main` (mismo JAR que corre en PROD/TEST), sin tocar configuracion ni infra: `PRODUCT_ACCESS_MODE=OPEN` permanece igual. JAR nuevo desplegado `7025145b9cf4a55f1ee1c23a1fe6d730f855d58f60d6c80eabdac622b118268a` (commit `1cb43a0`), backup `.bak-pre-lote3-20260608-211512` con el sha previo conservado en EC2 para rollback. Restart limpio del servicio systemd (`active`, "Started SharemechatV1Application in 29.989 seconds", sin ERROR ni Exception). Smoke confirmado por el operador.
+
+### Lecciones y preventiva
+
+El incidente se pudo producir porque (a) el deploy del frontend se hizo en una sesion paralela sin trazabilidad cruzada con el backend, (b) no habia mecanismo automatizable para detectar que el JAR desplegado en AUDIT llevaba 9 dias por detras del codigo del que se compilo el frontend, (c) `RequireRole.jsx` falla en silencio (return null) cuando el contrato API esta roto, lo que enmascara el origen del problema (el usuario ve pagina rota sin pista en consola).
+
+La respuesta preventiva acordada empieza con el manifest de despliegue por entorno + check de drift (`ops/deploy-state/{audit,test,prod}.yaml` + `ops/scripts/check-deploy-drift.ps1`), Fase 1 paso 1 entregada el 2026-06-09 (ver `project-log.md`). El check, corrido contra un manifest sintetico que reproduce el estado de AUDIT del 2026-06-08 antes de nivelar, devuelve CRITICAL nombrando explicitamente `RequireRole.jsx`, `UserController.java`, `UserDTO.java` entre los ficheros del contrato tocados — exactamente los tres responsables del fallo. La integracion del check en el script de deploy frontend (que abortara automaticamente si CRITICAL) y la verificacion viva del commit del backend (endpoint `/api/health/version`) quedan pendientes para Fase 2.
+
+---
+
 ## Incidencias o tensiones tecnicas observables desde el material actual
 
 ### Trazabilidad minima insuficiente de accesos publicos en AUDIT
