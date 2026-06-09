@@ -37,24 +37,26 @@ const REASON_CODES = [
   'OTHER',
 ];
 
-const STATUS_OPTIONS = [
-  { value: 'PENDING_REVIEW', label: 'Pendiente' },
-  { value: 'APPROVED', label: 'Aprobado' },
-  { value: 'REJECTED', label: 'Rechazado' },
-  { value: 'CANCELLED', label: 'Cancelada por modelo' },
+const STATUS_OPTION_VALUES = ['PENDING_REVIEW', 'APPROVED', 'REJECTED', 'CANCELLED'];
+
+const getStatusOptions = (tt) => [
+  { value: 'PENDING_REVIEW', label: tt('admin.common.status.pending') },
+  { value: 'APPROVED', label: tt('admin.common.status.approved') },
+  { value: 'REJECTED', label: tt('admin.common.status.rejected') },
+  { value: 'CANCELLED', label: tt('admin.assetModeration.statusLabels.CANCELLED') },
 ];
 
-const STATUS_LABEL = {
-  PENDING_REVIEW: 'Pendiente',
-  APPROVED: 'Aprobado',
-  REJECTED: 'Rechazado',
-  CANCELLED: 'Cancelada por modelo',
-};
+const getStatusLabel = (tt) => ({
+  PENDING_REVIEW: tt('admin.common.status.pending'),
+  APPROVED: tt('admin.common.status.approved'),
+  REJECTED: tt('admin.common.status.rejected'),
+  CANCELLED: tt('admin.assetModeration.statusLabels.CANCELLED'),
+});
 
-const ASSET_LABEL = {
-  PIC: 'Foto',
-  VIDEO: 'Vídeo',
-};
+const getAssetLabel = (tt) => ({
+  PIC: tt('admin.assetModeration.assetTypes.PIC'),
+  VIDEO: tt('admin.assetModeration.assetTypes.VIDEO'),
+});
 
 // ----------------------------------------------------------------------
 // Estilos locales (siguen estética de AdminModelsPanel)
@@ -158,6 +160,9 @@ const RejectionReasonText = styled.div`
 const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = false }) => {
   const { t } = useTranslation();
   const tt = (key, options) => i18n.t(key, options);
+  const STATUS_OPTIONS = useMemo(() => getStatusOptions(tt), [t]);
+  const STATUS_LABEL = useMemo(() => getStatusLabel(tt), [t]);
+  const ASSET_LABEL = useMemo(() => getAssetLabel(tt), [t]);
 
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState({ pendingReview: 0, approved: 0, rejected: 0 });
@@ -338,7 +343,7 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
 
   return (
     <>
-      <SectionTitle>Moderación de assets de modelo</SectionTitle>
+      <SectionTitle>{tt('admin.assetModeration.title')}</SectionTitle>
 
       <div style={{ fontSize: 12, color: '#52607a', lineHeight: 1.55, marginBottom: 8, maxWidth: 980 }}>
         {tt('admin.assetModeration.descriptions.intro')}
@@ -346,17 +351,17 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
 
       <CardsGrid style={{ marginBottom: 10 }}>
         <StatCard>
-          <div className="label">Pendientes</div>
+          <div className="label">{tt('admin.common.stats.pending')}</div>
           <div className="value">{stats.pendingReview}</div>
           <div className="meta">{tt('admin.assetModeration.descriptions.pendingMeta')}</div>
         </StatCard>
         <StatCard>
-          <div className="label">Aprobados</div>
+          <div className="label">{tt('admin.common.stats.approved')}</div>
           <div className="value">{stats.approved}</div>
           <div className="meta">{tt('admin.assetModeration.descriptions.approvedMeta')}</div>
         </StatCard>
         <StatCard>
-          <div className="label">Rechazados</div>
+          <div className="label">{tt('admin.common.stats.rejected')}</div>
           <div className="value">{stats.rejected}</div>
           <div className="meta">{tt('admin.assetModeration.descriptions.rejectedMeta')}</div>
         </StatCard>
@@ -364,7 +369,7 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
 
       <ControlsRow>
         <FieldBlock>
-          <label>Estado</label>
+          <label>{tt('admin.common.columns.status')}</label>
           <StyledSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
             {STATUS_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -373,7 +378,7 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
         </FieldBlock>
 
         <FieldBlock>
-          <label>Resultados</label>
+          <label>{tt('admin.common.labels.results')}</label>
           <StyledSelect value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
             <option value={10}>10</option>
             <option value={20}>20</option>
@@ -385,7 +390,7 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
 
         <RightInfo>
           <SmallBtn type="button" onClick={fetchData} disabled={loading}>
-            {loading ? tt('admin.assetModeration.empty.refreshing') : 'Refrescar'}
+            {loading ? tt('admin.common.status.refreshing') : tt('admin.common.buttons.refresh')}
           </SmallBtn>
         </RightInfo>
       </ControlsRow>
@@ -397,13 +402,13 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
         <QueueTable style={{ marginTop: 0 }}>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Modelo</th>
-              <th>Tipo</th>
-              <th>Preview</th>
-              <th>Subido</th>
-              <th>Estado</th>
-              <th>Acciones</th>
+              <th>{tt('admin.common.columns.id')}</th>
+              <th>{tt('admin.common.columns.model')}</th>
+              <th>{tt('admin.common.columns.type')}</th>
+              <th>{tt('admin.common.columns.preview')}</th>
+              <th>{tt('admin.common.columns.uploaded')}</th>
+              <th>{tt('admin.common.columns.status')}</th>
+              <th>{tt('admin.common.columns.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -450,13 +455,13 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
                           onClick={() => handleApprove(row.id)}
                           title={tt('admin.assetModeration.tooltips.approve')}
                         >
-                          Aprobar
+                          {tt('admin.common.buttons.approve')}
                         </TableSuccessButton>
                         <TableDangerButton
                           onClick={() => openRejectModal(row, 'pending')}
                           title={tt('admin.assetModeration.tooltips.rejectWithReason')}
                         >
-                          Rechazar
+                          {tt('admin.common.buttons.reject')}
                         </TableDangerButton>
                       </TableActionGroup>
                     )}
@@ -469,7 +474,7 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
                           onClick={() => openRejectModal(row, 'retroactive')}
                           title={tt('admin.assetModeration.tooltips.rejectRetroactive')}
                         >
-                          Rechazar (retroactivo)
+                          {tt('admin.assetModeration.buttons.rejectRetroactive')}
                         </TableDangerButton>
                       </TableActionGroup>
                     )}
@@ -500,13 +505,13 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
             </ModalSubtitle>
 
             <FieldBlock style={{ marginBottom: 12 }}>
-              <label>Motivo</label>
+              <label>{tt('admin.assetModeration.fields.reason')}</label>
               <StyledSelect
                 value={rejectReasonCode}
                 onChange={(e) => setRejectReasonCode(e.target.value)}
                 disabled={rejectSubmitting}
               >
-                <option value="">— Selecciona —</option>
+                <option value="">{tt('admin.assetModeration.fields.selectPlaceholder')}</option>
                 {REASON_CODES.map((code) => (
                   <option key={code} value={code}>
                     {reasonLabel(code)}
@@ -517,12 +522,12 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
 
             {rejectReasonCode === 'OTHER' && (
               <FieldBlock style={{ marginBottom: 12 }}>
-                <label>Detalle (obligatorio para "Otro")</label>
+                <label>{tt('admin.assetModeration.fields.detailOther')}</label>
                 <TextArea
                   rows={3}
                   value={rejectReasonText}
                   onChange={(e) => setRejectReasonText(e.target.value)}
-                  placeholder="Explica brevemente el motivo. Aparecerá en el email al modelo."
+                  placeholder={tt('admin.assetModeration.fields.detailPlaceholder')}
                   disabled={rejectSubmitting}
                   maxLength={500}
                 />
@@ -531,12 +536,12 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
 
             {rejectReasonCode && rejectReasonCode !== 'OTHER' && (
               <FieldBlock style={{ marginBottom: 12 }}>
-                <label>Nota adicional (opcional)</label>
+                <label>{tt('admin.assetModeration.fields.extraNote')}</label>
                 <TextArea
                   rows={2}
                   value={rejectReasonText}
                   onChange={(e) => setRejectReasonText(e.target.value)}
-                  placeholder="Comentario interno opcional para el modelo."
+                  placeholder={tt('admin.assetModeration.fields.extraNotePlaceholder')}
                   disabled={rejectSubmitting}
                   maxLength={500}
                 />
@@ -547,13 +552,13 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
 
             <ModalActions>
               <SmallBtn type="button" onClick={closeRejectModal} disabled={rejectSubmitting}>
-                Cancelar
+                {tt('admin.common.buttons.cancel')}
               </SmallBtn>
               <StyledButton
                 onClick={submitReject}
                 disabled={rejectSubmitting || !rejectReasonCode}
               >
-                {rejectSubmitting ? tt('admin.assetModeration.empty.submitting') : 'Confirmar rechazo'}
+                {rejectSubmitting ? tt('admin.common.status.submitting') : tt('admin.assetModeration.buttons.confirmReject')}
               </StyledButton>
             </ModalActions>
           </ModalCard>

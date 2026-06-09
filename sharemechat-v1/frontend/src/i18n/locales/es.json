@@ -1512,13 +1512,24 @@
       "empty": "Sin datos.",
       "cards": {
         "grossBilling": {
-          "meta": "Facturación total antes de reparto a modelos."
+          "meta": "Facturación total antes de reparto a modelos.",
+          "label": "Ganancias brutas"
         },
         "netProfit": {
-          "meta": "Margen neto acumulado de la plataforma."
+          "meta": "Margen neto acumulado de la plataforma.",
+          "label": "Ganancias netas plataforma"
         },
         "profitPercent": {
-          "meta": "Ratio neto sobre bruto."
+          "meta": "Ratio neto sobre bruto.",
+          "label": "% beneficio / facturación"
+        },
+        "topModels": {
+          "label": "Top 10 modelos por ingresos",
+          "fallback": "Modelo #{{id}}"
+        },
+        "topClients": {
+          "label": "Top 10 clientes por pagos",
+          "fallback": "Cliente #{{id}}"
         }
       },
       "refund": {
@@ -1529,7 +1540,26 @@
           "appliesClient": "- Solo aplica a usuarios con rol CLIENT.",
           "ledgerEntry": "- No modifica transacciones previas; crea una nueva transacción ledger de tipo MANUAL_REFUND.",
           "balanceOnly": "- No incrementa totalPagos; solo devuelve saldo disponible."
+        },
+        "title": "Refund manual",
+        "fields": {
+          "userId": "User ID (CLIENT)",
+          "userIdPlaceholder": "Ej: 68",
+          "amount": "Amount (EUR)",
+          "amountPlaceholder": "Ej: 3.00",
+          "reason": "Reason",
+          "reasonPlaceholder": "Ej: Compensación manual por incidencia en stream"
+        },
+        "buttons": {
+          "apply": "Aplicar refund",
+          "applying": "Aplicando refund…",
+          "clear": "Limpiar"
         }
+      },
+      "title": {
+        "full": "Finance Ops",
+        "summary": "Finanzas",
+        "adjustments": "Ajustes financieros"
       }
     },
     "audit": {
@@ -1620,6 +1650,12 @@
       },
       "panel": {
         "title": "Auditoría"
+      },
+      "tabs": {
+        "accounting": "Accounting",
+        "sessionIntegrity": "Integridad de sesión",
+        "runtimeHealth": "Salud del runtime",
+        "incidents": "Incidencias"
       }
     },
     "assetModeration": {
@@ -1670,6 +1706,26 @@
         "ofModel": "del modelo",
         "subtitlePending": "El modelo recibirá un email con el motivo seleccionado y el asset dejará de ser visible hasta que suba uno nuevo aprobado.",
         "subtitleRetroactive": "Esta acción revierte una aprobación previa: la fila APPROVED histórica se conserva, se crea una nueva fila REJECTED y el asset queda desactivado. El modelo recibirá un email con el motivo seleccionado."
+      },
+      "title": "Moderación de assets de modelo",
+      "statusLabels": {
+        "CANCELLED": "Cancelada por modelo"
+      },
+      "assetTypes": {
+        "PIC": "Foto",
+        "VIDEO": "Vídeo"
+      },
+      "buttons": {
+        "rejectRetroactive": "Rechazar (retroactivo)",
+        "confirmReject": "Confirmar rechazo"
+      },
+      "fields": {
+        "reason": "Motivo",
+        "selectPlaceholder": "— Selecciona —",
+        "detailOther": "Detalle (obligatorio para \"Otro\")",
+        "detailPlaceholder": "Explica brevemente el motivo. Aparecerá en el email al modelo.",
+        "extraNote": "Nota adicional (opcional)",
+        "extraNotePlaceholder": "Comentario interno opcional para el modelo."
       }
     },
     "shell": {
@@ -2170,6 +2226,16 @@
         "selectTable": "Elige una tabla para ver datos.",
         "loading": "Cargando…",
         "noData": "Sin datos"
+      },
+      "title": "Exploración técnica raw",
+      "columns": {
+        "table": "Tabla"
+      },
+      "options": {
+        "selectTable": "Selecciona una tabla…"
+      },
+      "filters": {
+        "last": "Últimos"
       }
     },
     "dashboard": {
@@ -2183,10 +2249,12 @@
       },
       "sidebar": {
         "assetModeration": {
-          "meta": "Cola de aprobación de foto y vídeo de perfil."
+          "meta": "Cola de aprobación de foto y vídeo de perfil.",
+          "label": "Moderación assets"
         },
         "content": {
-          "meta": "Artículos editoriales (Fase 1)"
+          "meta": "Artículos editoriales (Fase 1)",
+          "label": "Content CMS"
         }
       },
       "pageSubtitles": {
@@ -2198,6 +2266,14 @@
         "data": "Consultas internas operativas para investigación y una capa raw técnica reservada a administración.",
         "administration": "Vista MVP de usuarios con acceso backoffice, roles efectivos, permisos visibles y overrides.",
         "content": "Artículos editoriales en backoffice. Workflow simplificado (ADR-016): DRAFT → IN_REVIEW → PUBLISHED → RETRACTED."
+      },
+      "pageTitles": {
+        "models": "Onboarding y revisión de modelos",
+        "assetModeration": "Moderación de assets de modelo",
+        "finance": "Resumen financiero",
+        "financeAdjustments": "Ajustes financieros manuales",
+        "administration": "Administración interna",
+        "content": "Content CMS"
       }
     },
     "models": {
@@ -2234,6 +2310,29 @@
         "markAsValidatedTooltip": "Marcar como validado",
         "noPermissionChecklistTooltip": "Sin permiso para actualizar checklist",
         "permanentlyRejected": "Rechazada permanentemente"
+      },
+      "title": "Modelos",
+      "checklist": {
+        "front": "Frontal",
+        "back": "Trasera",
+        "selfie": "Selfie/PDF"
+      },
+      "kyc": {
+        "title": "Configuración KYC de onboarding",
+        "modeLabel": "Modo KYC",
+        "optionVeriff": "VERIFF (automático)",
+        "optionManual": "MANUAL (documentos)",
+        "saveMode": "Guardar modo",
+        "currentLabel": "Actual"
+      },
+      "filters": {
+        "statusActive": "Activas"
+      },
+      "pills": {
+        "subscribed": "Alta",
+        "unsubscribed": "Baja",
+        "invalidId": "ID no válido",
+        "readOnly": "Solo lectura"
       }
     },
     "administration": {
@@ -2276,6 +2375,96 @@
         "noEffectivePermissions": "Sin permisos efectivos visibles.",
         "noAuditLogs": "Sin cambios administrativos registrados.",
         "noSummary": "Sin resumen"
+      },
+      "placeholders": {
+        "searchUsers": "Buscar por email, rol u override",
+        "emailOrUserId": "Email o userId",
+        "email": "usuario@sharemechat.com",
+        "internalAlias": "alias interno",
+        "passwordHint": "Mínimo 10 caracteres, sin espacios",
+        "noteConfig": "Motivo corto del cambio de roles u overrides. Queda guardado en la trazabilidad básica.",
+        "noteStatus": "Opcional para cualquier cambio de estado del acceso."
+      },
+      "stats": {
+        "backofficeDomain": "Dominio backoffice",
+        "explicitConfig": "Configuración explícita",
+        "implicitAccess": "Acceso implícito",
+        "effectiveAccess": "Acceso efectivo",
+        "overrides": "Overrides",
+        "inactive": "Inactivos"
+      },
+      "create": {
+        "title": "Crear acceso backoffice",
+        "existingUser": "Usuario existente"
+      },
+      "buttons": {
+        "searchUser": "Buscar usuario",
+        "searching": "Buscando…",
+        "newInternalUser": "Nuevo usuario interno",
+        "editAccess": "Editar acceso",
+        "createConfig": "Crear configuración",
+        "createAccess": "Crear acceso",
+        "viewDetail": "Ver detalle",
+        "resending": "Reenviando…",
+        "resendValidation": "Reenviar validación",
+        "saveChanges": "Guardar cambios",
+        "activateAccess": "Activar acceso",
+        "deactivateAccess": "Desactivar acceso",
+        "inherit": "Inherit",
+        "grant": "Grant",
+        "remove": "Remove"
+      },
+      "columns": {
+        "mail": "Mail",
+        "productRole": "Rol producto",
+        "access": "Acceso",
+        "action": "Acción",
+        "backofficeRoles": "Roles backoffice",
+        "permissions": "Permisos",
+        "overrides": "Overrides"
+      },
+      "filters": {
+        "accessActive": "Activos"
+      },
+      "pills": {
+        "active": "Activo",
+        "noAccess": "Sin acceso",
+        "notDefined": "N/D",
+        "noAssignment": "Sin asignación",
+        "internalUser": "Usuario interno"
+      },
+      "editor": {
+        "titleCreate": "Nuevo acceso backoffice",
+        "titleEdit": "Editar acceso backoffice",
+        "titleView": "Detalle de acceso",
+        "productRoleLabel": "Rol producto",
+        "accessActive": "Acceso activo",
+        "accessInactive": "Acceso inactivo",
+        "effectiveAccess": "Acceso efectivo",
+        "noEffectiveAccess": "Sin acceso efectivo",
+        "emailValidated": "Email validado",
+        "emailPending": "Email pendiente",
+        "explicitConfig": "Configuración explícita",
+        "implicitAccess": "Acceso implícito por ADMIN producto",
+        "internalUserBase": "Usuario interno base",
+        "nicknameLabel": "Nickname",
+        "initialPasswordLabel": "Contraseña inicial",
+        "backofficeRoles": "Roles backoffice",
+        "permissionOverrides": "Overrides de permisos",
+        "noteConfigLabel": "Nota para guardar configuración",
+        "noteStatusLabel": "Nota para activar o desactivar"
+      },
+      "view": {
+        "assignedRoles": "Roles asignados",
+        "accessSemantics": "Semántica de acceso",
+        "noExplicitConfig": "Sin configuración explícita",
+        "explicitStatusRow": "Fila explícita de estado",
+        "noExplicitStatusRow": "Sin fila explícita de estado",
+        "emailPendingValidation": "Email pendiente de validación",
+        "effectiveRoles": "Roles efectivos",
+        "manualOverrides": "Overrides manuales",
+        "effectivePermissions": "Permisos efectivos",
+        "recentTraceability": "Trazabilidad reciente"
       }
     },
     "data": {
@@ -2308,7 +2497,141 @@
         "paymentSessions": "Sin payment sessions para los filtros actuales.",
         "payoutRequests": "Sin payout requests para los filtros actuales.",
         "balances": "Sin balances para los filtros actuales."
+      },
+      "tabs": {
+        "streams": "Streams y sesiones",
+        "payments": "Pagos y operaciones",
+        "raw": "Exploración raw"
+      },
+      "sectionTitles": {
+        "streamDetail": "Detalle del stream",
+        "payments": "Pagos y operaciones",
+        "paymentSessions": "Payment sessions",
+        "payoutRequests": "Payout requests",
+        "balances": "Balances",
+        "raw": "Exploración técnica raw"
+      },
+      "filters": {
+        "searchStreamsLabel": "Buscar por userId, streamId, email o nickname",
+        "searchStreamsPlaceholder": "Ej: 154, client@email.com o nickname",
+        "searchPaymentsLabel": "Buscar por userId, id, email, nickname u orderId",
+        "searchPaymentsPlaceholder": "Ej: 154, email, nickname u orderId",
+        "limit": "Límite",
+        "operationType": "Operation type",
+        "paymentStatus": "Payment status",
+        "payoutStatus": "Payout status"
+      },
+      "columns": {
+        "stream": "Stream",
+        "client": "Cliente",
+        "start": "Inicio",
+        "confirmed": "Confirmado",
+        "end": "Cierre",
+        "duration": "Duración",
+        "event": "Evento",
+        "reason": "Motivo",
+        "metadata": "Metadata",
+        "description": "Descripción",
+        "pack": "Pack",
+        "order": "Order",
+        "pspTx": "PSP Tx",
+        "createdAt": "Creada",
+        "reviewedBy": "Reviewed by",
+        "tx": "Tx",
+        "balance": "Balance"
+      },
+      "buttons": {
+        "viewDetail": "Ver detalle",
+        "client": "Cliente",
+        "model": "Modelo",
+        "viewStream": "Ver stream"
+      },
+      "stats": {
+        "transactions": "Transacciones",
+        "paymentSessions": "Payment sessions",
+        "payoutRequests": "Payout requests",
+        "balances": "Balances"
+      },
+      "labels": {
+        "txPrefix": "Tx"
       }
+    },
+    "common": {
+      "columns": {
+        "id": "ID",
+        "email": "Email",
+        "status": "Estado",
+        "type": "Tipo",
+        "role": "Rol",
+        "account": "Cuenta",
+        "actions": "Acciones",
+        "uploaded": "Subido",
+        "preview": "Preview",
+        "model": "Modelo",
+        "verification": "Verificación",
+        "user": "Usuario",
+        "amount": "Importe",
+        "date": "Fecha",
+        "notes": "Notas"
+      },
+      "labels": {
+        "results": "Resultados",
+        "total": "Total",
+        "detail": "Detalle",
+        "filters": "Filtros",
+        "all": "Todos",
+        "summary": "Resumen"
+      },
+      "buttons": {
+        "refresh": "Refrescar",
+        "cancel": "Cancelar",
+        "save": "Guardar",
+        "approve": "Aprobar",
+        "reject": "Rechazar",
+        "back": "Volver",
+        "confirm": "Confirmar",
+        "close": "Cerrar",
+        "search": "Buscar",
+        "edit": "Editar",
+        "delete": "Eliminar",
+        "activate": "Activar",
+        "deactivate": "Desactivar",
+        "create": "Crear",
+        "send": "Enviar"
+      },
+      "status": {
+        "loading": "Cargando…",
+        "refreshing": "Actualizando…",
+        "submitting": "Enviando…",
+        "saving": "Guardando…",
+        "pending": "Pendiente",
+        "approved": "Aprobado",
+        "rejected": "Rechazado",
+        "active": "Activa",
+        "inactive": "Inactiva"
+      },
+      "stats": {
+        "pending": "Pendientes",
+        "approved": "Aprobados",
+        "rejected": "Rechazados",
+        "totalVisible": "Total visible"
+      },
+      "generic": {
+        "yes": "Sí",
+        "no": "No",
+        "notAvailable": "N/D",
+        "select": "— Selecciona —"
+      }
+    },
+    "tabs": {
+      "models": "Gestión Modelos",
+      "assetModeration": "Moderación assets",
+      "stats": "Estadísticas",
+      "finance": "Análisis Financiero",
+      "db": "Vista BBDD",
+      "audit": "Auditoría",
+      "moderation": "Moderación",
+      "streams": "Streams activos"
     }
   },
   "seo": {

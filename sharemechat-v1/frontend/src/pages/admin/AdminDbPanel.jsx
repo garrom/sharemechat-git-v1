@@ -88,14 +88,14 @@ const AdminDbPanel = ({ hideTitle = false }) => {
 
   return (
     <div>
-      {!hideTitle && <SectionTitle>Exploracion tecnica raw</SectionTitle>}
+      {!hideTitle && <SectionTitle>{t('admin.db.title')}</SectionTitle>}
 
       <DbLayout>
         <DbFilters id="dbFilters">
           <FieldBlock style={{ minWidth: 220 }}>
-            <label>Tabla</label>
+            <label>{t('admin.db.columns.table')}</label>
             <StyledSelect value={dbTable} onChange={(e) => setDbTable(e.target.value)}>
-              <option value="" disabled>Selecciona una tabla...</option>
+              <option value="" disabled>{t('admin.db.options.selectTable')}</option>
               {DB_TABLES.map((t) => (
                 <option key={t} value={t}>{t}</option>
               ))}
@@ -103,7 +103,7 @@ const AdminDbPanel = ({ hideTitle = false }) => {
           </FieldBlock>
 
           <FieldBlock style={{ minWidth: 120 }}>
-            <label>Últimos</label>
+            <label>{t('admin.db.filters.last')}</label>
             <StyledSelect value={dbLimit} onChange={(e) => setDbLimit(Number(e.target.value))} disabled={!dbTable}>
               {LIMIT_OPTIONS.map((n) => (
                 <option key={n} value={n}>{n}</option>
@@ -160,7 +160,7 @@ const AdminDbPanel = ({ hideTitle = false }) => {
           document.getElementById('dbFilters')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
         }
       >
-        Filtros
+        {t('admin.common.labels.filters')}
       </FloatingBtn>
     </div>
   );

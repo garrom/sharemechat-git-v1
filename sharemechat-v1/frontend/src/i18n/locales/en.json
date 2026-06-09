@@ -1512,13 +1512,24 @@
       "empty": "No data.",
       "cards": {
         "grossBilling": {
-          "meta": "Total billing before payout to models."
+          "meta": "Total billing before payout to models.",
+          "label": "Gross revenue"
         },
         "netProfit": {
-          "meta": "Platform's accumulated net margin."
+          "meta": "Platform's accumulated net margin.",
+          "label": "Platform net profit"
         },
         "profitPercent": {
-          "meta": "Net-to-gross ratio."
+          "meta": "Net-to-gross ratio.",
+          "label": "Profit / revenue %"
+        },
+        "topModels": {
+          "label": "Top 10 models by revenue",
+          "fallback": "Model #{{id}}"
+        },
+        "topClients": {
+          "label": "Top 10 clients by payments",
+          "fallback": "Client #{{id}}"
         }
       },
       "refund": {
@@ -1529,7 +1540,26 @@
           "appliesClient": "- Applies only to users with the CLIENT role.",
           "ledgerEntry": "- Does not modify previous transactions; creates a new MANUAL_REFUND ledger transaction.",
           "balanceOnly": "- Does not increase totalPagos; only returns available balance."
+        },
+        "title": "Manual refund",
+        "fields": {
+          "userId": "User ID (CLIENT)",
+          "userIdPlaceholder": "E.g. 68",
+          "amount": "Amount (EUR)",
+          "amountPlaceholder": "E.g. 3.00",
+          "reason": "Reason",
+          "reasonPlaceholder": "E.g. Manual compensation for stream incident"
+        },
+        "buttons": {
+          "apply": "Apply refund",
+          "applying": "Applying refund…",
+          "clear": "Clear"
         }
+      },
+      "title": {
+        "full": "Finance Ops",
+        "summary": "Finance",
+        "adjustments": "Financial adjustments"
       }
     },
     "audit": {
@@ -1620,6 +1650,12 @@
       },
       "panel": {
         "title": "Audit"
+      },
+      "tabs": {
+        "accounting": "Accounting",
+        "sessionIntegrity": "Session Integrity",
+        "runtimeHealth": "Runtime Health",
+        "incidents": "Incidents"
       }
     },
     "assetModeration": {
@@ -1670,6 +1706,26 @@
         "ofModel": "from model",
         "subtitlePending": "The model will receive an email with the selected reason, and the asset will stop being visible until they upload a new approved one.",
         "subtitleRetroactive": "This action reverses a previous approval: the historical APPROVED row is preserved, a new REJECTED row is created and the asset is deactivated. The model will receive an email with the selected reason."
+      },
+      "title": "Model asset moderation",
+      "statusLabels": {
+        "CANCELLED": "Cancelled by model"
+      },
+      "assetTypes": {
+        "PIC": "Photo",
+        "VIDEO": "Video"
+      },
+      "buttons": {
+        "rejectRetroactive": "Reject (retroactive)",
+        "confirmReject": "Confirm rejection"
+      },
+      "fields": {
+        "reason": "Reason",
+        "selectPlaceholder": "— Select —",
+        "detailOther": "Detail (required for \"Other\")",
+        "detailPlaceholder": "Briefly explain the reason. It will appear in the email to the model.",
+        "extraNote": "Extra note (optional)",
+        "extraNotePlaceholder": "Optional internal comment for the model."
       }
     },
     "shell": {
@@ -2170,6 +2226,16 @@
         "selectTable": "Pick a table to view data.",
         "loading": "Loading…",
         "noData": "No data"
+      },
+      "title": "Raw technical exploration",
+      "columns": {
+        "table": "Table"
+      },
+      "options": {
+        "selectTable": "Select a table…"
+      },
+      "filters": {
+        "last": "Last"
       }
     },
     "dashboard": {
@@ -2183,10 +2249,12 @@
       },
       "sidebar": {
         "assetModeration": {
-          "meta": "Approval queue for profile photo and video."
+          "meta": "Approval queue for profile photo and video.",
+          "label": "Asset moderation"
         },
         "content": {
-          "meta": "Editorial articles (Phase 1)"
+          "meta": "Editorial articles (Phase 1)",
+          "label": "Content CMS"
         }
       },
       "pageSubtitles": {
@@ -2198,6 +2266,14 @@
         "data": "Operational internal queries for investigation and a technical raw layer reserved for administration.",
         "administration": "MVP view of users with backoffice access, effective roles, visible permissions and overrides.",
         "content": "Editorial articles in the backoffice. Simplified workflow (ADR-016): DRAFT → IN_REVIEW → PUBLISHED → RETRACTED."
+      },
+      "pageTitles": {
+        "models": "Model onboarding and review",
+        "assetModeration": "Model asset moderation",
+        "finance": "Financial summary",
+        "financeAdjustments": "Manual financial adjustments",
+        "administration": "Internal administration",
+        "content": "Content CMS"
       }
     },
     "models": {
@@ -2234,6 +2310,29 @@
         "markAsValidatedTooltip": "Mark as validated",
         "noPermissionChecklistTooltip": "No permission to update the checklist",
         "permanentlyRejected": "Permanently rejected"
+      },
+      "title": "Models",
+      "checklist": {
+        "front": "Front",
+        "back": "Back",
+        "selfie": "Selfie/PDF"
+      },
+      "kyc": {
+        "title": "Onboarding KYC configuration",
+        "modeLabel": "KYC mode",
+        "optionVeriff": "VERIFF (automatic)",
+        "optionManual": "MANUAL (documents)",
+        "saveMode": "Save mode",
+        "currentLabel": "Current"
+      },
+      "filters": {
+        "statusActive": "Active"
+      },
+      "pills": {
+        "subscribed": "Active",
+        "unsubscribed": "Unsubscribed",
+        "invalidId": "Invalid ID",
+        "readOnly": "Read only"
       }
     },
     "administration": {
@@ -2276,6 +2375,96 @@
         "noEffectivePermissions": "No visible effective permissions.",
         "noAuditLogs": "No administrative changes recorded.",
         "noSummary": "No summary"
+      },
+      "placeholders": {
+        "searchUsers": "Search by email, role or override",
+        "emailOrUserId": "Email or userId",
+        "email": "user@sharemechat.com",
+        "internalAlias": "internal alias",
+        "passwordHint": "At least 10 characters, no spaces",
+        "noteConfig": "Short reason for the role or override change. Stored in basic traceability.",
+        "noteStatus": "Optional for any access status change."
+      },
+      "stats": {
+        "backofficeDomain": "Backoffice domain",
+        "explicitConfig": "Explicit configuration",
+        "implicitAccess": "Implicit access",
+        "effectiveAccess": "Effective access",
+        "overrides": "Overrides",
+        "inactive": "Inactive"
+      },
+      "create": {
+        "title": "Create backoffice access",
+        "existingUser": "Existing user"
+      },
+      "buttons": {
+        "searchUser": "Search user",
+        "searching": "Searching…",
+        "newInternalUser": "New internal user",
+        "editAccess": "Edit access",
+        "createConfig": "Create configuration",
+        "createAccess": "Create access",
+        "viewDetail": "View detail",
+        "resending": "Resending…",
+        "resendValidation": "Resend validation",
+        "saveChanges": "Save changes",
+        "activateAccess": "Activate access",
+        "deactivateAccess": "Deactivate access",
+        "inherit": "Inherit",
+        "grant": "Grant",
+        "remove": "Remove"
+      },
+      "columns": {
+        "mail": "Mail",
+        "productRole": "Product role",
+        "access": "Access",
+        "action": "Action",
+        "backofficeRoles": "Backoffice roles",
+        "permissions": "Permissions",
+        "overrides": "Overrides"
+      },
+      "filters": {
+        "accessActive": "Active"
+      },
+      "pills": {
+        "active": "Active",
+        "noAccess": "No access",
+        "notDefined": "N/A",
+        "noAssignment": "No assignment",
+        "internalUser": "Internal user"
+      },
+      "editor": {
+        "titleCreate": "New backoffice access",
+        "titleEdit": "Edit backoffice access",
+        "titleView": "Access detail",
+        "productRoleLabel": "Product role",
+        "accessActive": "Active access",
+        "accessInactive": "Inactive access",
+        "effectiveAccess": "Effective access",
+        "noEffectiveAccess": "No effective access",
+        "emailValidated": "Email validated",
+        "emailPending": "Email pending",
+        "explicitConfig": "Explicit configuration",
+        "implicitAccess": "Implicit access via product ADMIN",
+        "internalUserBase": "Internal user base",
+        "nicknameLabel": "Nickname",
+        "initialPasswordLabel": "Initial password",
+        "backofficeRoles": "Backoffice roles",
+        "permissionOverrides": "Permission overrides",
+        "noteConfigLabel": "Note to save configuration",
+        "noteStatusLabel": "Note to activate or deactivate"
+      },
+      "view": {
+        "assignedRoles": "Assigned roles",
+        "accessSemantics": "Access semantics",
+        "noExplicitConfig": "No explicit configuration",
+        "explicitStatusRow": "Explicit status row",
+        "noExplicitStatusRow": "No explicit status row",
+        "emailPendingValidation": "Email pending validation",
+        "effectiveRoles": "Effective roles",
+        "manualOverrides": "Manual overrides",
+        "effectivePermissions": "Effective permissions",
+        "recentTraceability": "Recent traceability"
       }
     },
     "data": {
@@ -2308,7 +2497,141 @@
         "paymentSessions": "No payment sessions for the current filters.",
         "payoutRequests": "No payout requests for the current filters.",
         "balances": "No balances for the current filters."
+      },
+      "tabs": {
+        "streams": "Streams and sessions",
+        "payments": "Payments and operations",
+        "raw": "Raw exploration"
+      },
+      "sectionTitles": {
+        "streamDetail": "Stream detail",
+        "payments": "Payments and operations",
+        "paymentSessions": "Payment sessions",
+        "payoutRequests": "Payout requests",
+        "balances": "Balances",
+        "raw": "Raw technical exploration"
+      },
+      "filters": {
+        "searchStreamsLabel": "Search by userId, streamId, email or nickname",
+        "searchStreamsPlaceholder": "E.g. 154, client@email.com or nickname",
+        "searchPaymentsLabel": "Search by userId, id, email, nickname or orderId",
+        "searchPaymentsPlaceholder": "E.g. 154, email, nickname or orderId",
+        "limit": "Limit",
+        "operationType": "Operation type",
+        "paymentStatus": "Payment status",
+        "payoutStatus": "Payout status"
+      },
+      "columns": {
+        "stream": "Stream",
+        "client": "Client",
+        "start": "Start",
+        "confirmed": "Confirmed",
+        "end": "End",
+        "duration": "Duration",
+        "event": "Event",
+        "reason": "Reason",
+        "metadata": "Metadata",
+        "description": "Description",
+        "pack": "Pack",
+        "order": "Order",
+        "pspTx": "PSP Tx",
+        "createdAt": "Created",
+        "reviewedBy": "Reviewed by",
+        "tx": "Tx",
+        "balance": "Balance"
+      },
+      "buttons": {
+        "viewDetail": "View detail",
+        "client": "Client",
+        "model": "Model",
+        "viewStream": "View stream"
+      },
+      "stats": {
+        "transactions": "Transactions",
+        "paymentSessions": "Payment sessions",
+        "payoutRequests": "Payout requests",
+        "balances": "Balances"
+      },
+      "labels": {
+        "txPrefix": "Tx"
       }
+    },
+    "common": {
+      "columns": {
+        "id": "ID",
+        "email": "Email",
+        "status": "Status",
+        "type": "Type",
+        "role": "Role",
+        "account": "Account",
+        "actions": "Actions",
+        "uploaded": "Uploaded",
+        "preview": "Preview",
+        "model": "Model",
+        "verification": "Verification",
+        "user": "User",
+        "amount": "Amount",
+        "date": "Date",
+        "notes": "Notes"
+      },
+      "labels": {
+        "results": "Results",
+        "total": "Total",
+        "detail": "Detail",
+        "filters": "Filters",
+        "all": "All",
+        "summary": "Summary"
+      },
+      "buttons": {
+        "refresh": "Refresh",
+        "cancel": "Cancel",
+        "save": "Save",
+        "approve": "Approve",
+        "reject": "Reject",
+        "back": "Back",
+        "confirm": "Confirm",
+        "close": "Close",
+        "search": "Search",
+        "edit": "Edit",
+        "delete": "Delete",
+        "activate": "Activate",
+        "deactivate": "Deactivate",
+        "create": "Create",
+        "send": "Send"
+      },
+      "status": {
+        "loading": "Loading…",
+        "refreshing": "Refreshing…",
+        "submitting": "Submitting…",
+        "saving": "Saving…",
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "active": "Active",
+        "inactive": "Inactive"
+      },
+      "stats": {
+        "pending": "Pending",
+        "approved": "Approved",
+        "rejected": "Rejected",
+        "totalVisible": "Total visible"
+      },
+      "generic": {
+        "yes": "Yes",
+        "no": "No",
+        "notAvailable": "N/A",
+        "select": "— Select —"
+      }
+    },
+    "tabs": {
+      "models": "Model Management",
+      "assetModeration": "Asset Moderation",
+      "stats": "Statistics",
+      "finance": "Financial Analysis",
+      "db": "Database View",
+      "audit": "Audit",
+      "moderation": "Moderation",
+      "streams": "Active Streams"
     }
   },
   "seo": {

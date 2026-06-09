@@ -32,9 +32,9 @@ Pendiente de Fase 2, tras CERRAR Fase 1 completa el 2026-06-09 (paso 1 manifest 
 
 Prioridad: media. La Fase 1 cierra el agujero operativo del incidente del 2026-06-08; Fase 2 endurece la verificacion del commit del backend para que deje de depender de un workflow disciplinado por parte del operador.
 
-### [DEUDA baja — UI backoffice] Mojibake heredado en las labels de `AdminTabs.jsx`
+### ~~[DEUDA baja — UI backoffice] Mojibake heredado en las labels de `AdminTabs.jsx`~~ — **CERRADA 2026-06-09**
 
-Las labels de las pestañas del backoffice en `frontend/src/pages/admin/AdminTabs.jsx` (líneas ~18–24) contienen caracteres con tildes corruptos (`Gestión`, `Estadísticas`, `Análisis F...`, `Auditoría`, `Moderación`): el fichero está guardado o fue editado con un encoding distinto a UTF-8 en algún punto del histórico y nunca se corrigió. No es un bug funcional (las pestañas funcionan), pero rompe la presentación y bloquea la internacionalización del componente (no tiene sentido pasar a `i18n.t(...)` strings cuyo source ya está corrupto). Fix esperado: reconvertir el fichero a UTF-8 limpio restaurando las tildes correctas y, en el mismo commit o el siguiente, internacionalizar las labels con la convención `admin.tabs.*` siguiendo el frente i18n del backoffice. No tocar las claves de routing/activeTab (`models`, `asset-moderation`, `stats`, `finance`, `audit`, `moderation`) — son identificadores, no labels. Prioridad: baja (cosmético, sin impacto operativo).
+Cerrada en bitácora 2026-06-09 (segunda pasada de i18n del backoffice). El fichero `frontend/src/pages/admin/AdminTabs.jsx` se reescribió por completo en UTF-8 limpio internacionalizando las 8 pestañas a `admin.tabs.{models, assetModeration, stats, finance, db, audit, moderation, streams}` con los textos correctos en `es.json` y `en.json`. Verificado: cero ocurrencias de mojibake (`Ã³`, `Ã­`, `Ã¡`, etc.) en el fichero, 8 llamadas `t('admin.tabs.*')` activas. Claves de routing (`activeTab === 'models'`, etc.) preservadas como identificadores.
 
 ### [DEUDA baja — Lote 3 residual] H8 parcial: bump `jjwt 0.11.5 → 0.12.x`
 

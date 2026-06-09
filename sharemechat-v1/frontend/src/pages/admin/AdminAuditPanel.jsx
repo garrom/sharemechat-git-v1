@@ -38,7 +38,7 @@ const AdminAuditPanel = () => {
           onClick={() => setActiveAuditTab('accounting')}
           $active={activeAuditTab === 'accounting'}
         >
-          Accounting
+          {t('admin.audit.tabs.accounting')}
         </PanelTabButton>
 
         <PanelTabButton
@@ -46,7 +46,7 @@ const AdminAuditPanel = () => {
           onClick={() => setActiveAuditTab('session-integrity')}
           $active={activeAuditTab === 'session-integrity'}
         >
-          Session Integrity
+          {t('admin.audit.tabs.sessionIntegrity')}
         </PanelTabButton>
 
         <PanelTabButton
@@ -54,7 +54,7 @@ const AdminAuditPanel = () => {
           onClick={() => setActiveAuditTab('runtime-health')}
           $active={activeAuditTab === 'runtime-health'}
         >
-          Runtime Health
+          {t('admin.audit.tabs.runtimeHealth')}
         </PanelTabButton>
 
         <PanelTabButton
@@ -62,7 +62,7 @@ const AdminAuditPanel = () => {
           onClick={() => setActiveAuditTab('incidents')}
           $active={activeAuditTab === 'incidents'}
         >
-          Incidents
+          {t('admin.audit.tabs.incidents')}
         </PanelTabButton>
       </TabsBar>
 

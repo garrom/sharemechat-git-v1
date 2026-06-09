@@ -420,7 +420,7 @@ const AdminActiveStreamsPanel = ({ canKill = false }) => {
 
                   <FieldBlock>
                     <label>{t('admin.streams.detail.stuck')}</label>
-                    <div>{streamDetail?.stuck ? <Badge data-variant="danger">{t('admin.streams.table.stuck')}</Badge> : t('admin.streams.common.no')}</div>
+                    <div>{streamDetail?.stuck ? <Badge data-variant="danger">{t('admin.streams.table.stuck')}</Badge> : t('admin.common.generic.no')}</div>
                   </FieldBlock>
                 </PanelRow>
 

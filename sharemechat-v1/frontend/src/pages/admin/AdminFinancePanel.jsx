@@ -116,10 +116,10 @@ const AdminFinancePanel = ({
   };
 
   const sectionTitle = showSummary && showRefunds
-    ? 'Finance Ops'
+    ? t('admin.finance.title.full')
     : showSummary
-      ? 'Finanzas'
-      : 'Ajustes financieros';
+      ? t('admin.finance.title.summary')
+      : t('admin.finance.title.adjustments');
 
   return (
     <div>
@@ -128,7 +128,7 @@ const AdminFinancePanel = ({
 
       <div style={{ marginBottom: 16 }}>
         <SmallBtn type="button" onClick={loadFinanceData} disabled={financeLoading || refundLoading}>
-          {financeLoading ? 'Actualizando...' : 'Refrescar panel'}
+          {financeLoading ? t('admin.common.status.refreshing') : t('admin.common.buttons.refresh')}
         </SmallBtn>
       </div>
 
@@ -136,19 +136,19 @@ const AdminFinancePanel = ({
         <>
           <CardsGrid>
             <StatCard>
-              <div className="label">Ganancias brutas</div>
+              <div className="label">{t('admin.finance.cards.grossBilling.label')}</div>
               <div className="value">{financeLoading ? '...' : financeSummary?.grossBillingEUR ?? '-'}</div>
               <div className="meta">{t('admin.finance.cards.grossBilling.meta')}</div>
             </StatCard>
 
             <StatCard>
-              <div className="label">Ganancias netas plataforma</div>
+              <div className="label">{t('admin.finance.cards.netProfit.label')}</div>
               <div className="value">{financeLoading ? '...' : financeSummary?.netProfitEUR ?? '-'}</div>
               <div className="meta">{t('admin.finance.cards.netProfit.meta')}</div>
             </StatCard>
 
             <StatCard>
-              <div className="label">% beneficio / facturacion</div>
+              <div className="label">{t('admin.finance.cards.profitPercent.label')}</div>
               <div className="value">{financeLoading ? '...' : financeSummary?.profitPercent ?? '-'}</div>
               <div className="meta">{t('admin.finance.cards.profitPercent.meta')}</div>
             </StatCard>
@@ -157,11 +157,11 @@ const AdminFinancePanel = ({
           <div style={{ marginTop: 16 }}>
             <CardsGrid>
               <StatCard>
-                <div className="label">Top 10 modelos por ingresos</div>
+                <div className="label">{t('admin.finance.cards.topModels.label')}</div>
                 <FinanceList>
                   {(financeLoading ? [] : topModels).map((item, index) => (
                     <FinanceItem key={index}>
-                      {item.nickname || item.name || item.email || `Modelo #${item.modelId}`} - <strong>{item.totalEarningsEUR}</strong>
+                      {item.nickname || item.name || item.email || t('admin.finance.cards.topModels.fallback', { id: item.modelId })} - <strong>{item.totalEarningsEUR}</strong>
                     </FinanceItem>
                   ))}
                   {!financeLoading && topModels.length === 0 && <div>{t('admin.finance.empty')}</div>}
@@ -169,11 +169,11 @@ const AdminFinancePanel = ({
               </StatCard>
 
               <StatCard>
-                <div className="label">Top 10 clientes por pagos</div>
+                <div className="label">{t('admin.finance.cards.topClients.label')}</div>
                 <FinanceList>
                   {(financeLoading ? [] : topClients).map((item, index) => (
                     <FinanceItem key={index}>
-                      {item.nickname || item.name || item.email || `Cliente #${item.clientId}`} - <strong>{item.totalPagosEUR}</strong>
+                      {item.nickname || item.name || item.email || t('admin.finance.cards.topClients.fallback', { id: item.clientId })} - <strong>{item.totalPagosEUR}</strong>
                     </FinanceItem>
                   ))}
                   {!financeLoading && topClients.length === 0 && <div>{t('admin.finance.empty')}</div>}
@@ -189,7 +189,7 @@ const AdminFinancePanel = ({
           <InlinePanel>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
               <div>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>Refund manual</div>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>{t('admin.finance.refund.title')}</div>
                 <div style={{ fontSize: 13, color: '#6c757d', marginTop: 4 }}>
                   {t('admin.finance.refund.description')}
                 </div>
@@ -198,37 +198,37 @@ const AdminFinancePanel = ({
 
             <PanelRow>
               <FieldBlock>
-                <label>User ID (CLIENT)</label>
+                <label>{t('admin.finance.refund.fields.userId')}</label>
                 <StyledInput
                   type="number"
                   min="1"
                   value={refundUserId}
                   onChange={(e) => setRefundUserId(e.target.value)}
-                  placeholder="Ej: 68"
+                  placeholder={t('admin.finance.refund.fields.userIdPlaceholder')}
                 />
               </FieldBlock>
 
               <FieldBlock>
-                <label>Amount (EUR)</label>
+                <label>{t('admin.finance.refund.fields.amount')}</label>
                 <StyledInput
                   type="number"
                   min="0.01"
                   step="0.01"
                   value={refundAmount}
                   onChange={(e) => setRefundAmount(e.target.value)}
-                  placeholder="Ej: 3.00"
+                  placeholder={t('admin.finance.refund.fields.amountPlaceholder')}
                 />
               </FieldBlock>
             </PanelRow>
 
             <FieldBlock style={{ marginTop: 10 }}>
-              <label>Reason</label>
+              <label>{t('admin.finance.refund.fields.reason')}</label>
               <StyledInput
                 type="text"
                 style={{ maxWidth: '100%' }}
                 value={refundReason}
                 onChange={(e) => setRefundReason(e.target.value)}
-                placeholder="Ej: Compensacion manual por incidencia en stream"
+                placeholder={t('admin.finance.refund.fields.reasonPlaceholder')}
               />
             </FieldBlock>
 
@@ -251,7 +251,7 @@ const AdminFinancePanel = ({
 
             <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <StyledButton type="button" onClick={handleRefund} disabled={refundLoading}>
-                {refundLoading ? 'Aplicando refund...' : 'Aplicar refund'}
+                {refundLoading ? t('admin.finance.refund.buttons.applying') : t('admin.finance.refund.buttons.apply')}
               </StyledButton>
 
               <SmallBtn
@@ -265,7 +265,7 @@ const AdminFinancePanel = ({
                 }}
                 disabled={refundLoading}
               >
-                Limpiar
+                {t('admin.finance.refund.buttons.clear')}
               </SmallBtn>
             </div>
 

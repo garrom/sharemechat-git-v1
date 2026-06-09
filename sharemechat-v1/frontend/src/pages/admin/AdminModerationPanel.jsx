@@ -162,9 +162,9 @@ const AdminModerationPanel = ({ canReview = false }) => {
 
       <ControlsRow>
         <FieldBlock>
-          <label>{t('admin.moderation.filters.status')}</label>
+          <label>{t('admin.common.columns.status')}</label>
           <StyledSelect value={modStatus} onChange={(e) => setModStatus(e.target.value)}>
-            <option value="ALL">{t('admin.moderation.filters.options.ALL')}</option>
+            <option value="ALL">{t('admin.common.labels.all')}</option>
             <option value="OPEN">{t('admin.moderation.filters.options.OPEN')}</option>
             <option value="REVIEWING">{t('admin.moderation.filters.options.REVIEWING')}</option>
             <option value="RESOLVED">{t('admin.moderation.filters.options.RESOLVED')}</option>
@@ -174,7 +174,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
 
         <RightInfo>
           <SmallBtn type="button" onClick={loadModerationReports} disabled={modLoading}>
-            {modLoading ? t('admin.moderation.actions.loading') : t('admin.moderation.actions.refresh')}
+            {modLoading ? t('admin.common.status.loading') : t('admin.common.buttons.refresh')}
           </SmallBtn>
         </RightInfo>
       </ControlsRow>
@@ -186,10 +186,10 @@ const AdminModerationPanel = ({ canReview = false }) => {
           <DarkHeaderTable style={{ marginTop: 0 }}>
             <thead>
               <tr>
-                <th>{t('admin.moderation.table.id')}</th>
+                <th>{t('admin.common.columns.id')}</th>
                 <th>{t('admin.moderation.table.created')}</th>
-                <th>{t('admin.moderation.table.type')}</th>
-                <th>{t('admin.moderation.table.status')}</th>
+                <th>{t('admin.common.columns.type')}</th>
+                <th>{t('admin.common.columns.status')}</th>
                 <th>{t('admin.moderation.table.action')}</th>
                 <th>{t('admin.moderation.table.autoBlock')}</th>
                 <th>{t('admin.moderation.table.reporter')}</th>
@@ -208,7 +208,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
                   <td><Badge>{report.reportType || '-'}</Badge></td>
                   <td><Badge data-variant={String(report.status || '').toLowerCase()}>{report.status || '-'}</Badge></td>
                   <td><strong>{report.adminAction || '-'}</strong></td>
-                  <td>{report.autoBlocked ? t('admin.moderation.common.yes') : t('admin.moderation.common.no')}</td>
+                  <td>{report.autoBlocked ? t('admin.common.generic.yes') : t('admin.common.generic.no')}</td>
                   <td>{report.reporterUserId ?? '-'}</td>
                   <td>{report.reportedUserId ?? '-'}</td>
                   <td>{report.streamRecordId ?? '-'}</td>
@@ -221,9 +221,9 @@ const AdminModerationPanel = ({ canReview = false }) => {
                         scrollToDestination();
                         loadModerationReportById(report.id);
                       }}
-                      title={t('admin.moderation.actions.detail')}
+                      title={t('admin.common.labels.detail')}
                     >
-                      {t('admin.moderation.actions.detail')}
+                      {t('admin.common.labels.detail')}
                     </TableActionButton>
                   </td>
                 </tr>
@@ -254,7 +254,7 @@ const AdminModerationPanel = ({ canReview = false }) => {
                   </SmallBtn>
                   {canReview && (
                     <StyledButton type="button" onClick={saveModerationReview} disabled={modSaving}>
-                      {modSaving ? t('admin.moderation.actions.saving') : t('admin.moderation.actions.save')}
+                      {modSaving ? t('admin.common.status.saving') : t('admin.common.buttons.save')}
                     </StyledButton>
                   )}
                 </div>

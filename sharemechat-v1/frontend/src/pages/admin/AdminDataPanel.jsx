@@ -289,23 +289,23 @@ const AdminDataPanel = () => {
   }, [activeTab]);
 
   const paymentCounts = useMemo(() => ([
-    { label: 'Transacciones', value: paymentsData.transactions.length },
-    { label: 'Payment sessions', value: paymentsData.paymentSessions.length },
-    { label: 'Payout requests', value: paymentsData.payoutRequests.length },
-    { label: 'Balances', value: paymentsData.balances.length },
+    { label: t('admin.data.stats.transactions'), value: paymentsData.transactions.length },
+    { label: t('admin.data.stats.paymentSessions'), value: paymentsData.paymentSessions.length },
+    { label: t('admin.data.stats.payoutRequests'), value: paymentsData.payoutRequests.length },
+    { label: t('admin.data.stats.balances'), value: paymentsData.balances.length },
   ]), [paymentsData]);
 
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
         <PanelTabButton type="button" onClick={() => setActiveTab('streams')} $active={activeTab === 'streams'}>
-          Streams y sesiones
+          {t('admin.data.tabs.streams')}
         </PanelTabButton>
         <PanelTabButton type="button" onClick={() => setActiveTab('payments')} $active={activeTab === 'payments'}>
-          Pagos y operaciones
+          {t('admin.data.tabs.payments')}
         </PanelTabButton>
         <PanelTabButton type="button" onClick={() => setActiveTab('raw')} $active={activeTab === 'raw'}>
-          Exploracion raw
+          {t('admin.data.tabs.raw')}
         </PanelTabButton>
       </div>
 
@@ -313,35 +313,35 @@ const AdminDataPanel = () => {
         <>
           <ControlsRow>
             <FieldBlock style={{ minWidth: 240, flex: '1 1 260px' }}>
-              <label>Buscar por userId, streamId, email o nickname</label>
+              <label>{t('admin.data.filters.searchStreamsLabel')}</label>
               <StyledInput
                 value={streamsQuery}
                 onChange={(e) => setStreamsQuery(e.target.value)}
-                placeholder="Ej: 154, client@email.com o nickname"
+                placeholder={t('admin.data.filters.searchStreamsPlaceholder')}
                 style={{ maxWidth: '100%' }}
               />
             </FieldBlock>
 
             <FieldBlock style={{ minWidth: 140 }}>
-              <label>Tipo</label>
+              <label>{t('admin.common.columns.type')}</label>
               <StyledSelect value={streamsType} onChange={(e) => setStreamsType(e.target.value)}>
                 {STREAM_TYPES.map((value) => (
-                  <option key={value || 'all'} value={value}>{value || 'Todos'}</option>
+                  <option key={value || 'all'} value={value}>{value || t('admin.common.labels.all')}</option>
                 ))}
               </StyledSelect>
             </FieldBlock>
 
             <FieldBlock style={{ minWidth: 140 }}>
-              <label>Estado</label>
+              <label>{t('admin.common.columns.status')}</label>
               <StyledSelect value={streamsStatus} onChange={(e) => setStreamsStatus(e.target.value)}>
                 {STREAM_STATUSES.map((value) => (
-                  <option key={value || 'all'} value={value}>{value || 'Todos'}</option>
+                  <option key={value || 'all'} value={value}>{value || t('admin.common.labels.all')}</option>
                 ))}
               </StyledSelect>
             </FieldBlock>
 
             <FieldBlock style={{ minWidth: 110 }}>
-              <label>Limite</label>
+              <label>{t('admin.data.filters.limit')}</label>
               <StyledSelect value={streamsLimit} onChange={(e) => setStreamsLimit(Number(e.target.value))}>
                 {LIMIT_OPTIONS.map((value) => (
                   <option key={value} value={value}>{value}</option>
@@ -350,7 +350,7 @@ const AdminDataPanel = () => {
             </FieldBlock>
 
             <StyledButton type="button" onClick={loadStreams} disabled={streamsLoading}>
-              {streamsLoading ? 'Cargando...' : 'Buscar'}
+              {streamsLoading ? t('admin.common.status.loading') : t('admin.common.buttons.search')}
             </StyledButton>
 
             <RightInfo>
@@ -361,22 +361,22 @@ const AdminDataPanel = () => {
           {streamsError && <StyledError>{streamsError}</StyledError>}
 
           <DataSection
-            title="Resultados"
+            title={t('admin.common.labels.results')}
             meta={t('admin.data.descriptions.streamsResults')}
           >
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
                 <thead>
                   <tr>
-                    <th>Stream</th>
-                    <th>Tipo</th>
-                    <th>Estado</th>
-                    <th>Cliente</th>
-                    <th>Modelo</th>
-                    <th>Inicio</th>
-                    <th>Confirmado</th>
-                    <th>Cierre</th>
-                    <th>Acciones</th>
+                    <th>{t('admin.data.columns.stream')}</th>
+                    <th>{t('admin.common.columns.type')}</th>
+                    <th>{t('admin.common.columns.status')}</th>
+                    <th>{t('admin.data.columns.client')}</th>
+                    <th>{t('admin.common.columns.model')}</th>
+                    <th>{t('admin.data.columns.start')}</th>
+                    <th>{t('admin.data.columns.confirmed')}</th>
+                    <th>{t('admin.data.columns.end')}</th>
+                    <th>{t('admin.common.columns.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -401,16 +401,16 @@ const AdminDataPanel = () => {
                       <td>
                         <TableActionGroup>
                           <TableActionButton type="button" onClick={() => loadStreamDetail(row.id, { scroll: true })}>
-                            Ver detalle
+                            {t('admin.data.buttons.viewDetail')}
                           </TableActionButton>
                           {row.client_id ? (
                             <TableActionButton type="button" onClick={() => focusStreamsByValue(row.client_id)}>
-                              Cliente
+                              {t('admin.data.buttons.client')}
                             </TableActionButton>
                           ) : null}
                           {row.model_id ? (
                             <TableActionButton type="button" onClick={() => focusStreamsByValue(row.model_id)}>
-                              Modelo
+                              {t('admin.data.buttons.model')}
                             </TableActionButton>
                           ) : null}
                         </TableActionGroup>
@@ -424,7 +424,7 @@ const AdminDataPanel = () => {
 
           <div ref={streamDetailRef}>
             <DataSection
-            title="Detalle del stream"
+            title={t('admin.data.sectionTitles.streamDetail')}
             meta={t('admin.data.descriptions.streamDetail')}
             >
               {streamDetailError && <StyledError>{streamDetailError}</StyledError>}
@@ -436,19 +436,19 @@ const AdminDataPanel = () => {
                 <>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8 }}>
                     <InlinePanel>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>Stream</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{t('admin.data.columns.stream')}</div>
                       <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{selectedStreamDetail.stream?.streamId ?? '-'}</div>
                     </InlinePanel>
                     <InlinePanel>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>Tipo</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{t('admin.common.columns.type')}</div>
                       <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{selectedStreamDetail.stream?.streamType ?? '-'}</div>
                     </InlinePanel>
                     <InlinePanel>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>Estado</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{t('admin.common.columns.status')}</div>
                       <div style={{ marginTop: 4 }}><Badge data-variant={toneForStreamStatus(selectedStreamDetail.stream?.statusDerivado)}>{selectedStreamDetail.stream?.statusDerivado ?? '-'}</Badge></div>
                     </InlinePanel>
                     <InlinePanel>
-                      <div style={{ fontSize: 11, color: '#64748b' }}>Duracion</div>
+                      <div style={{ fontSize: 11, color: '#64748b' }}>{t('admin.data.columns.duration')}</div>
                       <div style={{ marginTop: 4, fontSize: 16, fontWeight: 700 }}>{selectedStreamDetail.stream?.durationSeconds ?? 0}s</div>
                     </InlinePanel>
                   </div>
@@ -457,10 +457,10 @@ const AdminDataPanel = () => {
                     <DarkHeaderTable>
                       <thead>
                         <tr>
-                          <th>Evento</th>
-                          <th>Motivo</th>
-                          <th>Fecha</th>
-                          <th>Metadata</th>
+                          <th>{t('admin.data.columns.event')}</th>
+                          <th>{t('admin.data.columns.reason')}</th>
+                          <th>{t('admin.common.columns.date')}</th>
+                          <th>{t('admin.data.columns.metadata')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -491,44 +491,44 @@ const AdminDataPanel = () => {
         <>
           <ControlsRow>
             <FieldBlock style={{ minWidth: 240, flex: '1 1 260px' }}>
-              <label>Buscar por userId, id, email, nickname u orderId</label>
+              <label>{t('admin.data.filters.searchPaymentsLabel')}</label>
               <StyledInput
                 value={paymentsQuery}
                 onChange={(e) => setPaymentsQuery(e.target.value)}
-                placeholder="Ej: 154, email, nickname u orderId"
+                placeholder={t('admin.data.filters.searchPaymentsPlaceholder')}
                 style={{ maxWidth: '100%' }}
               />
             </FieldBlock>
 
             <FieldBlock style={{ minWidth: 160 }}>
-              <label>Operation type</label>
+              <label>{t('admin.data.filters.operationType')}</label>
               <StyledSelect value={paymentsOperationType} onChange={(e) => setPaymentsOperationType(e.target.value)}>
                 {OPERATION_TYPES.map((value) => (
-                  <option key={value || 'all'} value={value}>{value || 'Todos'}</option>
+                  <option key={value || 'all'} value={value}>{value || t('admin.common.labels.all')}</option>
                 ))}
               </StyledSelect>
             </FieldBlock>
 
             <FieldBlock style={{ minWidth: 150 }}>
-              <label>Payment status</label>
+              <label>{t('admin.data.filters.paymentStatus')}</label>
               <StyledSelect value={paymentsStatus} onChange={(e) => setPaymentsStatus(e.target.value)}>
                 {PAYMENT_STATUSES.map((value) => (
-                  <option key={value || 'all'} value={value}>{value || 'Todos'}</option>
+                  <option key={value || 'all'} value={value}>{value || t('admin.common.labels.all')}</option>
                 ))}
               </StyledSelect>
             </FieldBlock>
 
             <FieldBlock style={{ minWidth: 150 }}>
-              <label>Payout status</label>
+              <label>{t('admin.data.filters.payoutStatus')}</label>
               <StyledSelect value={payoutStatus} onChange={(e) => setPayoutStatus(e.target.value)}>
                 {PAYOUT_STATUSES.map((value) => (
-                  <option key={value || 'all'} value={value}>{value || 'Todos'}</option>
+                  <option key={value || 'all'} value={value}>{value || t('admin.common.labels.all')}</option>
                 ))}
               </StyledSelect>
             </FieldBlock>
 
             <FieldBlock style={{ minWidth: 110 }}>
-              <label>Limite</label>
+              <label>{t('admin.data.filters.limit')}</label>
               <StyledSelect value={paymentsLimit} onChange={(e) => setPaymentsLimit(Number(e.target.value))}>
                 {LIMIT_OPTIONS.map((value) => (
                   <option key={value} value={value}>{value}</option>
@@ -537,7 +537,7 @@ const AdminDataPanel = () => {
             </FieldBlock>
 
             <StyledButton type="button" onClick={loadPayments} disabled={paymentsLoading}>
-              {paymentsLoading ? 'Cargando...' : 'Buscar'}
+              {paymentsLoading ? t('admin.common.status.loading') : t('admin.common.buttons.search')}
             </StyledButton>
 
             <RightInfo>
@@ -556,19 +556,19 @@ const AdminDataPanel = () => {
             ))}
           </div>
 
-          <DataSection title="Pagos y operaciones" meta={t('admin.data.descriptions.paymentsSection')}>
+          <DataSection title={t('admin.data.sectionTitles.payments')} meta={t('admin.data.descriptions.paymentsSection')}>
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>User</th>
-                    <th>Tipo</th>
-                    <th>Amount</th>
-                    <th>Stream</th>
-                    <th>Fecha</th>
-                    <th>Descripcion</th>
-                    <th>Acciones</th>
+                    <th>{t('admin.common.columns.id')}</th>
+                    <th>{t('admin.common.columns.user')}</th>
+                    <th>{t('admin.common.columns.type')}</th>
+                    <th>{t('admin.common.columns.amount')}</th>
+                    <th>{t('admin.data.columns.stream')}</th>
+                    <th>{t('admin.common.columns.date')}</th>
+                    <th>{t('admin.data.columns.description')}</th>
+                    <th>{t('admin.common.columns.actions')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -589,7 +589,7 @@ const AdminDataPanel = () => {
                       <td>
                         {row.stream_record_id ? (
                           <TableActionButton type="button" onClick={() => focusStreamsByValue(row.stream_record_id)}>
-                            Ver stream
+                            {t('admin.data.buttons.viewStream')}
                           </TableActionButton>
                         ) : '-'}
                       </td>
@@ -600,19 +600,19 @@ const AdminDataPanel = () => {
             </div>
           </DataSection>
 
-          <DataSection title="Payment sessions" meta={t('admin.data.descriptions.paymentSessions')}>
+          <DataSection title={t('admin.data.sectionTitles.paymentSessions')} meta={t('admin.data.descriptions.paymentSessions')}>
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>User</th>
-                    <th>Pack</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Order</th>
-                    <th>PSP Tx</th>
-                    <th>Creada</th>
+                    <th>{t('admin.common.columns.id')}</th>
+                    <th>{t('admin.common.columns.user')}</th>
+                    <th>{t('admin.data.columns.pack')}</th>
+                    <th>{t('admin.common.columns.amount')}</th>
+                    <th>{t('admin.common.columns.status')}</th>
+                    <th>{t('admin.data.columns.order')}</th>
+                    <th>{t('admin.data.columns.pspTx')}</th>
+                    <th>{t('admin.data.columns.createdAt')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -638,18 +638,18 @@ const AdminDataPanel = () => {
             </div>
           </DataSection>
 
-          <DataSection title="Payout requests" meta={t('admin.data.descriptions.payoutRequests')}>
+          <DataSection title={t('admin.data.sectionTitles.payoutRequests')} meta={t('admin.data.descriptions.payoutRequests')}>
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>Modelo</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                    <th>Reason</th>
-                    <th>Reviewed by</th>
-                    <th>Creada</th>
+                    <th>{t('admin.common.columns.id')}</th>
+                    <th>{t('admin.common.columns.model')}</th>
+                    <th>{t('admin.common.columns.amount')}</th>
+                    <th>{t('admin.common.columns.status')}</th>
+                    <th>{t('admin.data.columns.reason')}</th>
+                    <th>{t('admin.data.columns.reviewedBy')}</th>
+                    <th>{t('admin.data.columns.createdAt')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -674,18 +674,18 @@ const AdminDataPanel = () => {
             </div>
           </DataSection>
 
-          <DataSection title="Balances" meta={t('admin.data.descriptions.balances')}>
+          <DataSection title={t('admin.data.sectionTitles.balances')} meta={t('admin.data.descriptions.balances')}>
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
                 <thead>
                   <tr>
-                    <th>ID</th>
-                    <th>User</th>
-                    <th>Tx</th>
-                    <th>Tipo</th>
-                    <th>Amount</th>
-                    <th>Balance</th>
-                    <th>Fecha</th>
+                    <th>{t('admin.common.columns.id')}</th>
+                    <th>{t('admin.common.columns.user')}</th>
+                    <th>{t('admin.data.columns.tx')}</th>
+                    <th>{t('admin.common.columns.type')}</th>
+                    <th>{t('admin.common.columns.amount')}</th>
+                    <th>{t('admin.data.columns.balance')}</th>
+                    <th>{t('admin.common.columns.date')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -700,7 +700,7 @@ const AdminDataPanel = () => {
                       <td title={row.user_email || ''}>{row.user_id} - {row.user_nickname || row.user_email || '-'}</td>
                       <td>
                         {row.transaction_id ? (
-                          <span style={{ fontWeight: 700, color: '#0f172a' }}>Tx #{row.transaction_id}</span>
+                          <span style={{ fontWeight: 700, color: '#0f172a' }}>{t('admin.data.labels.txPrefix')} #{row.transaction_id}</span>
                         ) : '-'}
                       </td>
                       <td>{row.operation_type || '-'}</td>
@@ -718,7 +718,7 @@ const AdminDataPanel = () => {
 
       {activeTab === 'raw' && (
         <DataSection
-          title="Exploracion tecnica raw"
+          title={t('admin.data.sectionTitles.raw')}
           meta={t('admin.data.descriptions.rawExploration')}
         >
           <AdminDbPanel hideTitle />

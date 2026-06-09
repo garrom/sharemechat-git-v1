@@ -286,9 +286,9 @@ const AdminModelsPanel = ({
     const docs = docsByUser[user.id] || {};
 
     const items = [
-      { label: 'Frontal', fieldKey: 'frontOk', url: docs.urlVerificFront },
-      { label: 'Trasera', fieldKey: 'backOk', url: docs.urlVerificBack },
-      { label: 'Selfie/PDF', fieldKey: 'selfieOk', url: docs.urlVerificDoc },
+      { label: t('admin.models.checklist.front'), fieldKey: 'frontOk', url: docs.urlVerificFront },
+      { label: t('admin.models.checklist.back'), fieldKey: 'backOk', url: docs.urlVerificBack },
+      { label: t('admin.models.checklist.selfie'), fieldKey: 'selfieOk', url: docs.urlVerificDoc },
     ];
 
     return (
@@ -331,7 +331,7 @@ const AdminModelsPanel = ({
 
   return (
     <>
-      <SectionTitle>Modelos</SectionTitle>
+      <SectionTitle>{t('admin.models.title')}</SectionTitle>
 
       <div style={{ fontSize: 12, color: '#52607a', lineHeight: 1.55, marginBottom: 8, maxWidth: 980 }}>
         {t('admin.models.descriptions.panelIntro')}
@@ -339,22 +339,22 @@ const AdminModelsPanel = ({
 
       <CardsGrid style={{ marginBottom: 10 }}>
         <StatCard>
-          <div className="label">Total visible</div>
+          <div className="label">{t('admin.common.stats.totalVisible')}</div>
           <div className="value">{statusSummary.total}</div>
           <div className="meta">{t('admin.models.descriptions.totalMeta')}</div>
         </StatCard>
         <StatCard>
-          <div className="label">Pendientes</div>
+          <div className="label">{t('admin.common.stats.pending')}</div>
           <div className="value">{statusSummary.pending}</div>
           <div className="meta">{t('admin.models.descriptions.pendingMeta')}</div>
         </StatCard>
         <StatCard>
-          <div className="label">Aprobados</div>
+          <div className="label">{t('admin.common.stats.approved')}</div>
           <div className="value">{statusSummary.approved}</div>
           <div className="meta">{t('admin.models.descriptions.approvedMeta')}</div>
         </StatCard>
         <StatCard>
-          <div className="label">Rechazados</div>
+          <div className="label">{t('admin.common.stats.rejected')}</div>
           <div className="value">{statusSummary.rejected}</div>
           <div className="meta">{t('admin.models.descriptions.rejectedMeta')}</div>
         </StatCard>
@@ -365,7 +365,7 @@ const AdminModelsPanel = ({
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 14, color: '#162033' }}>
-                Configuracion KYC de onboarding
+                {t('admin.models.kyc.title')}
               </div>
               <div style={{ marginTop: 4, fontSize: 12, color: '#52607a', lineHeight: 1.5, maxWidth: 720 }}>
                 {t('admin.models.descriptions.kycConfigIntro')}
@@ -378,19 +378,19 @@ const AdminModelsPanel = ({
           {canChangeKycMode ? (
             <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginTop: 10 }}>
               <FieldBlock>
-                <label>Modo KYC</label>
+                <label>{t('admin.models.kyc.modeLabel')}</label>
                 <StyledSelect
                   value={kycModeDraft}
                   onChange={(e) => setKycModeDraft(e.target.value)}
                   disabled={kycCfgLoading || kycCfgSaving}
                 >
-                  <option value="VERIFF">VERIFF (automatico)</option>
-                  <option value="MANUAL">MANUAL (documentos)</option>
+                  <option value="VERIFF">{t('admin.models.kyc.optionVeriff')}</option>
+                  <option value="MANUAL">{t('admin.models.kyc.optionManual')}</option>
                 </StyledSelect>
               </FieldBlock>
 
               <StyledButton onClick={saveKycMode} disabled={kycCfgLoading || kycCfgSaving}>
-                {kycCfgSaving ? 'Guardando...' : 'Guardar modo'}
+                {kycCfgSaving ? t('admin.common.status.saving') : t('admin.models.kyc.saveMode')}
               </StyledButton>
             </div>
           ) : (
@@ -401,7 +401,7 @@ const AdminModelsPanel = ({
 
           <div style={{ marginTop: 10, fontSize: 12, color: '#6c757d', lineHeight: 1.5 }}>
             <div>
-              <strong>Actual:</strong> {kycCfg?.activeMode || '-'}
+              <strong>{t('admin.models.kyc.currentLabel')}:</strong> {kycCfg?.activeMode || '-'}
             </div>
             <div>
               <strong>manualEnabled:</strong> {String(kycCfg?.manualEnabled ?? '-')} |{' '}
@@ -413,18 +413,18 @@ const AdminModelsPanel = ({
 
       <ControlsRow>
         <FieldBlock>
-          <label>Estado</label>
+          <label>{t('admin.common.columns.status')}</label>
           <StyledSelect value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-            <option value="ALL">Todos</option>
-            <option value="ACTIVE">Activas</option>
-            <option value="PENDING">Pendiente</option>
-            <option value="APPROVED">Aprobado</option>
-            <option value="REJECTED">Rechazado</option>
+            <option value="ALL">{t('admin.common.labels.all')}</option>
+            <option value="ACTIVE">{t('admin.models.filters.statusActive')}</option>
+            <option value="PENDING">{t('admin.common.status.pending')}</option>
+            <option value="APPROVED">{t('admin.common.status.approved')}</option>
+            <option value="REJECTED">{t('admin.common.status.rejected')}</option>
           </StyledSelect>
         </FieldBlock>
 
         <FieldBlock>
-          <label>Resultados</label>
+          <label>{t('admin.common.labels.results')}</label>
           <StyledSelect value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}>
             <option value={10}>10</option>
             <option value={20}>20</option>
@@ -436,25 +436,25 @@ const AdminModelsPanel = ({
 
         <RightInfo>
           <SmallBtn type="button" onClick={fetchUsers} disabled={loading}>
-            {loading ? 'Actualizando...' : 'Refrescar'}
+            {loading ? t('admin.common.status.refreshing') : t('admin.common.buttons.refresh')}
           </SmallBtn>
         </RightInfo>
       </ControlsRow>
 
-      {loading && <div style={{ fontSize: 12, color: '#52607a' }}>Cargando...</div>}
+      {loading && <div style={{ fontSize: 12, color: '#52607a' }}>{t('admin.common.status.loading')}</div>}
       {error && <StyledError>{error}</StyledError>}
 
       <div style={{ overflowX: 'auto' }}>
         <ModelsTable style={{ marginTop: 0 }}>
           <thead>
             <tr>
-              <th>ID</th>
-              <th>Email</th>
-              <th>Rol</th>
-              <th>Tipo</th>
-              <th>Verificacion</th>
-              <th>Cuenta</th>
-              <th>Acciones</th>
+              <th>{t('admin.common.columns.id')}</th>
+              <th>{t('admin.common.columns.email')}</th>
+              <th>{t('admin.common.columns.role')}</th>
+              <th>{t('admin.common.columns.type')}</th>
+              <th>{t('admin.common.columns.verification')}</th>
+              <th>{t('admin.common.columns.account')}</th>
+              <th>{t('admin.common.columns.actions')}</th>
             </tr>
           </thead>
           <tbody>
@@ -469,9 +469,9 @@ const AdminModelsPanel = ({
                     <td>{user.role}</td>
                     <td>{user.userType}</td>
                     <td>{verification}</td>
-                    <td>{String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1' ? 'Baja' : 'Alta'}</td>
+                    <td>{String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1' ? t('admin.models.pills.unsubscribed') : t('admin.models.pills.subscribed')}</td>
                     <td>
-                      <span style={{ color: '#dc3545' }}>ID no valido</span>
+                      <span style={{ color: '#dc3545' }}>{t('admin.models.pills.invalidId')}</span>
                     </td>
                   </tr>
                 );
@@ -491,7 +491,7 @@ const AdminModelsPanel = ({
                       </div>
                     )}
                   </td>
-                  <td>{String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1' ? 'Baja' : 'Alta'}</td>
+                  <td>{String(user?.unsubscribe).toLowerCase() === 'true' || String(user?.unsubscribe) === '1' ? t('admin.models.pills.unsubscribed') : t('admin.models.pills.subscribed')}</td>
                   <td>
                     {verification === 'PENDING' && canUpdateChecklist && renderChecklistCell(user)}
 
@@ -502,13 +502,13 @@ const AdminModelsPanel = ({
                           disabled={!canApprove(user.id)}
                           title={!canApprove(user.id) ? t('admin.models.descriptions.approveTooltipDisabled') : t('admin.models.descriptions.approveTooltipEnabled')}
                         >
-                          Aprobar
+                          {t('admin.common.buttons.approve')}
                         </TableSuccessButton>
 
                         <TableDangerButton
                           onClick={() => handleReview(user.id, 'REJECT')}
                         >
-                          Rechazar
+                          {t('admin.common.buttons.reject')}
                         </TableDangerButton>
                       </TableActionGroup>
                     )}
@@ -516,7 +516,7 @@ const AdminModelsPanel = ({
                     {verification === 'APPROVED' && canReviewModels && (
                       <TableActionGroup>
                         <TableDangerButton onClick={() => handleReview(user.id, 'REJECT')}>
-                          Rechazar
+                          {t('admin.common.buttons.reject')}
                         </TableDangerButton>
                       </TableActionGroup>
                     )}
@@ -526,7 +526,7 @@ const AdminModelsPanel = ({
                     )}
 
                     {!canUpdateChecklist && !canReviewModels && verification !== 'REJECTED' && (
-                      <span style={{ color: '#6c757d' }}>Solo lectura</span>
+                      <span style={{ color: '#6c757d' }}>{t('admin.models.pills.readOnly')}</span>
                     )}
                   </td>
                 </tr>

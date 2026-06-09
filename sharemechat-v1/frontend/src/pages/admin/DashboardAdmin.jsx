@@ -61,7 +61,7 @@ const DashboardAdmin = () => {
       subtitle: t('admin.shell.views.models.subtitle'),
     },
     'asset-moderation': {
-      title: 'Moderación de assets de modelo',
+      title: t('admin.dashboard.pageTitles.assetModeration'),
       subtitle: t('admin.dashboard.viewCopy.assetModeration.subtitle'),
     },
     moderation: {
@@ -89,7 +89,7 @@ const DashboardAdmin = () => {
       subtitle: t('admin.shell.views.administration.subtitle'),
     },
     content: {
-      title: 'Content CMS',
+      title: t('admin.dashboard.pageTitles.content'),
       subtitle: t('admin.dashboard.viewCopy.content.subtitle'),
     },
     profile: {
@@ -213,7 +213,7 @@ const DashboardAdmin = () => {
           } : null,
           capabilities.canViewAssetModeration ? {
             key: 'asset-moderation',
-            label: 'Moderación assets',
+            label: t('admin.dashboard.sidebar.assetModeration.label'),
             meta: t('admin.dashboard.sidebar.assetModeration.meta'),
           } : null,
           capabilities.canViewModeration ? {
@@ -253,7 +253,7 @@ const DashboardAdmin = () => {
           } : null,
           capabilities.canViewContent ? {
             key: 'content',
-            label: 'Content CMS',
+            label: t('admin.dashboard.sidebar.content.label'),
             meta: t('admin.dashboard.sidebar.content.meta'),
           } : null,
         ].filter(Boolean),
@@ -424,7 +424,7 @@ const DashboardAdmin = () => {
 
           {activeView === 'models' && capabilities.canViewModels && (
             <AdminPage
-              title="Onboarding y revision de modelos"
+              title={t('admin.dashboard.pageTitles.models')}
               subtitle={t('admin.dashboard.pageSubtitles.models')}
             >
               <AdminModelsPanel
@@ -439,7 +439,7 @@ const DashboardAdmin = () => {
 
           {activeView === 'asset-moderation' && capabilities.canViewAssetModeration && (
             <AdminPage
-              title="Moderación de assets de modelo"
+              title={t('admin.dashboard.pageTitles.assetModeration')}
               subtitle={t('admin.dashboard.pageSubtitles.assetModeration')}
             >
               <AdminAssetModerationPanel
@@ -460,7 +460,7 @@ const DashboardAdmin = () => {
 
           {activeView === 'finance' && capabilities.canViewFinance && (
             <AdminPage
-              title="Resumen financiero"
+              title={t('admin.dashboard.pageTitles.finance')}
               subtitle={t('admin.dashboard.pageSubtitles.finance')}
             >
               <AdminFinancePanel
@@ -473,7 +473,7 @@ const DashboardAdmin = () => {
 
           {activeView === 'finance-adjustments' && capabilities.canRefund && (
             <AdminPage
-              title="Ajustes financieros manuales"
+              title={t('admin.dashboard.pageTitles.financeAdjustments')}
               subtitle={t('admin.dashboard.pageSubtitles.financeAdjustments')}
             >
               <AdminFinancePanel
@@ -486,7 +486,7 @@ const DashboardAdmin = () => {
 
           {activeView === 'control' && capabilities.canViewAudit && (
             <AdminPage
-              title="Control interno"
+              title={t('admin.shell.views.control.title')}
               subtitle={t('admin.dashboard.pageSubtitles.control')}
             >
               <AdminAuditPanel />
@@ -495,7 +495,7 @@ const DashboardAdmin = () => {
 
           {activeView === 'data' && capabilities.canViewDb && (
             <AdminPage
-              title="Datos internos"
+              title={t('admin.shell.views.data.title')}
               subtitle={t('admin.dashboard.pageSubtitles.data')}
             >
               <AdminDataPanel />
@@ -504,7 +504,7 @@ const DashboardAdmin = () => {
 
           {activeView === 'administration' && capabilities.canViewAdministration && (
             <AdminPage
-              title="Administracion interna"
+              title={t('admin.dashboard.pageTitles.administration')}
               subtitle={t('admin.dashboard.pageSubtitles.administration')}
             >
               <AdminAdministrationPanel />
@@ -513,7 +513,7 @@ const DashboardAdmin = () => {
 
           {activeView === 'content' && capabilities.canViewContent && (
             <AdminPage
-              title="Content CMS"
+              title={t('admin.dashboard.pageTitles.content')}
               subtitle={t('admin.dashboard.pageSubtitles.content')}
             >
               <AdminContentPanel />
