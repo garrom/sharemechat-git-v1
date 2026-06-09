@@ -4,7 +4,123 @@
 
 Los runbooks del repositorio principal deben servir para operar el sistema a nivel lógico sin exponer inventario sensible.
 
-## Runbook de validación tras despliegue
+## Runbook de despliegue (frontend con check de drift, backend manual con actualización del manifest)
+
+### Regla de oro
+
+**No se despliega saltándose el check de drift.** El check existe por el incidente del 2026-06-08 (ver `incident-notes.md`, entrada *"Drift backend↔frontend en AUDIT producto: dashboard MODEL/CLIENT en blanco (solo footer)"*): un frontend que esperaba el campo `productAccessMode` se desplegó sobre un backend de 9 días anterior al commit que introdujo ese campo; la consecuencia fue MODEL y CLIENT viendo solo `header + footer` sin contenido entre medio. El check evita que la situación vuelva.
+
+### Deploy de frontend con `ops/scripts/deploy-frontend.ps1`
+
+Flujo de pasos del script (un único orden de operaciones, ramas adicionales documentadas en cada paso):
+
+| Paso | Qué hace |
+|---|---|
+| `[0/5]` Pre-flight | Resuelve repo root, mapping `~/.sharemechat/state-mapping.yaml`, bucket S3 y distribución CloudFront según `(env, surface)`; crea `frontend/.deploy.lock` para impedir invocaciones concurrentes. |
+| `[0.5/N]` Check de drift pre-deploy | Compara el commit que se va a desplegar (HEAD del repo) contra el commit del backend ya desplegado según `ops/deploy-state/<env>.yaml`, considera edad y working tree. Emite severidad (ver tabla más abajo) y pide confirmación o aborta según el caso. Saltable con `-SkipDriftCheck`. |
+| `[1/5]` Build | `npm run build:<surface>` con `BUILD_PATH=build-<surface>/` (carpeta exclusiva por surface). Limpia con `rm -rf` antes para evitar build mixto. |
+| `[2/5]` Sync + invalidación CloudFront | `aws s3 sync --delete` con `cache-control immutable` para el bundle hashed, `aws s3 cp index.html` con `cache-control no-cache`, `aws cloudfront create-invalidation --output json` (captura `Invalidation.Id` para registrarlo en el manifest). En `-StandbyMode` se omite la invalidación. |
+| `[3/5]` Smoke estático | Extrae `main.<hash>.js` del `index.html` local, confirma que la key existe en el bucket, hace `GET https://<alias>/` (200 + `text/html`) y `GET` del bundle hashed por su URL inmutable. En `-StandbyMode` usa `head-object` directo al bucket. |
+| `[4/5]` Smoke funcional | Sondea backend; si responde y `X-Product-Mode=PRELAUNCH`, verifica que `POST /api/auth/login` no devuelva 503 y que `POST /api/models/documents` sí devuelva 503 con la cabecera. Se salta con `-SkipFunctionalSmoke` o si el backend no responde. |
+| `[5.5/N]` Update deploy-state manifest | Tras smoke OK, escribe `ops/deploy-state/<env>.yaml` con el bloque `frontend_<surface>`: `bundle`, `bundle_sha256` (calculado con `Get-FileHash SHA256` sobre el fichero local subido), `git_commit` + `git_commit_short` (HEAD del repo), `built_at` y `deployed_at` (UTC), `working_tree_clean` (excluyendo `ops/deploy-state/*.yaml`), `deployed_by` (`USERNAME@COMPUTERNAME`), `bucket`, `cloudfront_distribution`, `cloudfront_invalidation_id`. **No hace commit del manifest**: el operador commitea cuando le conviene (decisión D2). Si la actualización falla, NO aborta el deploy ya hecho; solo avisa. |
+| `[5/5]` Cierre | Mensaje final con `main.<hash>.js` desplegado y URL base. |
+
+La lógica `[0/5]..[5/5]` original es inviolable: ninguna entrega futura debe alterarla, solo añadir pasos auxiliares con sufijo `.5/N` y comportamiento defensivo.
+
+### Niveles de severidad del check
+
+| Severidad | Qué significa | Qué pasa con el deploy |
+|---|---|---|
+| `OK` | Backend, frontend product y frontend admin están en el mismo commit. | Continúa sin prompt. |
+| `INFO` | Commits distintos, pero todos ≤24 h y working tree limpio. | Continúa sin prompt. |
+| `WARN` | Algún commit >24 h, o working tree dirty, o algún `git_commit_short` nulo (no inferible), o backend con `verification.method` empezando por `last_known_*`. | Humano: `Read-Host [s/N]`. IA: depende del flag (ver siguiente sub-sección). |
+| `ALERT` | Algún commit >72 h, o backend POR DETRÁS de cualquier frontend sin tocar contrato. | Humano: `Read-Host [s/N]`. IA: depende del flag. |
+| `CRITICAL` | Backend POR DETRÁS de algún frontend Y entre los dos commits hay cambios en la lista hardcoded de ficheros del contrato (los DTOs de user, `UserController`, `ProductOperationalModeService`, `RequireRole.jsx`, `SessionProvider.jsx`, `featureFlags.js`). | Humano: exige escribir `'yes'` literal. IA en sesión no interactiva: **aborta SIEMPRE**, con o sin flag. La IA debe PARAR y avisar al operador. |
+
+### Cómo se despliega según quién lo hace
+
+**Operador humano en consola** (terminal real, tty interactivo):
+
+```
+ops/scripts/deploy-frontend.ps1 -Environment <env> -Surface <product|admin>
+```
+
+El script invoca `Read-Host` cuando hace falta confirmación: `[s/N]` en `WARN`/`ALERT` (default `N`), `'yes'` literal en `CRITICAL` (cualquier otra cosa aborta).
+
+**IA en sesión no interactiva** (PowerShell con `[Console]::IsInputRedirected = true`, harness del agente, automation en CI/cron):
+
+```
+ops/scripts/deploy-frontend.ps1 -Environment <env> -Surface <product|admin> -AssumeYesNonCritical
+```
+
+Con `-AssumeYesNonCritical`:
+- El check `[0.5/N]` SIGUE corriendo y SIGUE evaluando la severidad.
+- En `OK`/`INFO`/`WARN`/`ALERT` auto-confirma y continúa sin `Read-Host`.
+- En `CRITICAL` **aborta SIEMPRE** (la IA no puede saltarse el contrato).
+
+**La IA NO debe usar `-SkipDriftCheck` para sortear el prompt** — eso desactiva el check entero y reproduce exactamente el agujero del incidente 2026-06-08. **Ante un `CRITICAL`, la IA debe PARAR y avisar al operador**, no buscar workarounds.
+
+Sin `-AssumeYesNonCritical` y en sesión no interactiva, el script aborta fail-safe ante cualquier severidad `>= WARN` con mensaje claro indicando que se invoque con el flag o desde consola humana.
+
+**Reparación consciente** (revert tras un deploy roto, primera puesta a punto del manifest cuando aún no había estado registrado, etc.):
+
+```
+ops/scripts/deploy-frontend.ps1 -Environment <env> -Surface <surface> -SkipDriftCheck
+```
+
+`-SkipDriftCheck` apaga el `[0.5/N]` entero. Es la vía excepcional; **NO la vía normal**.
+
+### Flags de `deploy-frontend.ps1`
+
+| Flag | Qué hace |
+|---|---|
+| `-DryRun` | Ejecuta `[0/5]` + `[0.5/N]` y termina sin construir ni desplegar nada. Útil para ver la severidad del check antes de comprometerse. |
+| `-Strict` | En `ALERT` o `CRITICAL` aborta con exit 1 sin prompt. Pensado para automation que necesite señal binaria (CI, scheduled jobs). |
+| `-SkipDriftCheck` | Salta el `[0.5/N]` entero. Vía excepcional para reparaciones conscientes. La IA NO debe usar esto. |
+| `-AllowDirtyWorkingTree` | Permite construir con árbol de código sucio (cambios sin commit) de forma consciente. Frecuente en AUDIT para testing puntual; raro en TEST/PROD. |
+| `-AssumeYesNonCritical` | Auto-confirma `WARN`/`ALERT` en host no interactivo. NO permite pasar `CRITICAL` (sigue abortando siempre en no interactivo). Vía normal para IA y automation. |
+| `-StandbyMode` | El bucket destino no es aún el origin vivo de la distribución (caso PROD pre-switch). Smoke estático contra el bucket directamente; sin invalidación CloudFront. |
+| `-SkipFunctionalSmoke` | Salta el smoke funcional aunque el backend esté accesible. Útil en ventanas de mantenimiento. |
+| `-SkipBuild` | Salta el build (asume que `build-<surface>/` ya existe del paso previo). |
+
+### Deploy de backend (manual + actualización del manifest)
+
+El deploy de backend no tiene script orquestador todavía (queda como Fase 2 del frente, `deploy-backend.ps1` opción A). El procedimiento actual:
+
+1. Construir el JAR localmente (`mvn -DskipTests package` desde `sharemechat-v1/`).
+2. `scp` del JAR al EC2 vía alias SSH (`audit-backend`, `test-backend`, `pro-backend`) a `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar`.
+3. Backup del JAR previo en el propio EC2 con sufijo `.bak-<motivo>-<UTC>`.
+4. `chown ec2-user:ec2-user` del JAR nuevo.
+5. `systemctl restart sharemechat-{audit,test,prod}.service`.
+6. Smoke según el entorno (mínimo: `/api/users/me` → 401; home → 200; `/api/clients/me` → 503 + `X-Product-Mode` según modo).
+
+**Inmediatamente después del deploy**, ejecutar:
+
+```
+ops/scripts/update-manifest-backend.ps1 -Environment <env> [-RemoteVerify] [-DryRun]
+```
+
+Lee HEAD del repo, calcula `sha256` del JAR local (o también del remoto vía `ssh + sudo sha256sum` con `-RemoteVerify`), calcula `working_tree_clean` excluyendo `ops/deploy-state/*.yaml`, y actualiza la sección `backend` del manifest. `-DryRun` muestra el diff sin escribir. Sin `-DryRun`, exige confirmación `[s/N]` antes de aplicar.
+
+**Limitación conocida** (la elimina Fase 2 con el endpoint `/api/health/version` + plugin `git-commit-id` en el JAR): este script ASUME que `HEAD` del repo es el commit con el que se construyó el JAR desplegado. Si tras construir el JAR el operador hizo commits adicionales antes de invocar el script, `HEAD` ya no representa el JAR. **Workflow seguro: invocar el script INMEDIATAMENTE tras hacer el deploy, antes de cualquier commit nuevo.** El `-DryRun` ayuda a detectar el error: si el `git_commit_short` que registraría no coincide con el JAR que se subió, no aplicar.
+
+### Manifest `ops/deploy-state/{audit,test,prod}.yaml`
+
+Es el estado real desplegado de cada entorno. Un fichero YAML por entorno, schema v1, con tres bloques: `backend`, `frontend_product`, `frontend_admin`. Cada bloque registra identificador del artefacto (`jar_sha256` o `bundle: main.<hash>.js`), `git_commit_short` y `git_commit`, `deployed_at`, `deployed_by`, `working_tree_clean`, identificadores de infra ya versionados en `docs/` (bucket, distribución CloudFront), e información de verificación (`verification.method`, `verification.notes`). El detalle completo de los campos y la convención de procedencia (`live_ssh_*`, `inferred_from_*`, `last_known_*`, `recorded_by_deploy_script`) está en la cabecera de cada fichero.
+
+**Lo gestionan los scripts; no editar a mano salvo casos justificados** (primera puesta a punto, corrección puntual cuando el script no pudo registrar algo). Si se edita a mano, dejar nota en `verification.notes` explicando por qué.
+
+El manifest se versiona en `git`. El commit del fichero lo decide el operador cuando le conviene (decisión D2, ver `project-log.md` 2026-06-09 Fase 1 paso 1); los scripts solo escriben el fichero, no auto-commitean.
+
+### Inspeccionar el estado a mano sin desplegar
+
+```
+ops/scripts/check-deploy-drift.ps1 -Env <audit|test|prod> [-ManifestPath <ruta>]
+```
+
+Dot-source-able. Carga el manifest del entorno, compara los tres commits entre sí y contra `origin/main`, devuelve severidad + tabla legible sin tocar nada. `-ManifestPath` permite apuntar a un manifest sintético (útil para reproducir escenarios pasados, como el del incidente 2026-06-08). El script nunca falla con exit code distinto de 0 por severidad — solo informa.
+
+
 
 - comprobar disponibilidad de superficie pública
 - comprobar disponibilidad de superficie admin

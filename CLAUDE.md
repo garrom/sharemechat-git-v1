@@ -10,6 +10,18 @@ Eres el asistente de desarrollo principal de Sharemechat (Shareme Technologies O
 Toda la documentación durable del proyecto vive en `sharemechat-v1/docs/`.
 No duplicar contenido fuera de ahí. Ver [docs/README.md](sharemechat-v1/docs/README.md) para el gobierno documental.
 
+## Despliegue (CRÍTICO)
+
+**Regla de oro**: no se despliega saltándose el check de drift. El check existe por el incidente del 2026-06-08 (frontend con `productAccessMode` sobre backend 9 días anterior → MODEL y CLIENT viendo solo header+footer). Procedimiento completo en [`docs/04-operations/runbooks.md`](sharemechat-v1/docs/04-operations/runbooks.md) sección *"Runbook de despliegue"*.
+
+Cómo despliega la IA (sesión no interactiva):
+
+```
+ops/scripts/deploy-frontend.ps1 -Environment <env> -Surface <product|admin> -AssumeYesNonCritical
+```
+
+`-AssumeYesNonCritical` deja correr el check y auto-confirma `WARN`/`ALERT`. En `CRITICAL` el script ABORTA SIEMPRE; **la IA NO debe usar `-SkipDriftCheck` para sortear el prompt**, debe PARAR y avisar al operador. Tras un deploy de backend manual (`scp` + `systemctl restart`), ejecutar `ops/scripts/update-manifest-backend.ps1 -Environment <env>` **inmediatamente** (limitación conocida: asume HEAD = commit del JAR; el script tiene `-DryRun` para inspeccionar el diff antes de aplicar).
+
 ## Context generation (flujo INACTIVO desde 2026-05-27)
 
 El overview de contexto reutilizable y su guía de generación están **archivados**
