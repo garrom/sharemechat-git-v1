@@ -8,6 +8,36 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-09 — Fix puntual del check de drift para sesiones NO interactivas (nuevo flag `-AssumeYesNonCritical`)
+
+Corrige una limitación detectada en el primer deploy real con el frente integrado (commit `3751b63`): el `Read-Host` del paso `[0.5/N]` requiere consola interactiva. En sesiones sin consola (la IA via harness PowerShell con stdin redirigido, automation en CI, scheduled tasks), `Read-Host` aborta con `"Windows PowerShell se encuentra en modo no interactivo"`. En el primer deploy real esto forzó a usar `-SkipDriftCheck` para llegar al `[5.5/N]`, lo que **anula la protección justo para los deploys que ejecuta la IA, que son los que causaron el incidente del 2026-06-08**. Fix puntual que cierra este agujero sin romper el comportamiento interactivo humano ni la lógica existente `[0/5]..[5/5]`.
+
+**Nuevo parámetro: `-AssumeYesNonCritical`** (switch). Semántica exacta:
+- El `[0.5/N]` **SÍ corre y SÍ evalúa la severidad** (no se salta, no como `-SkipDriftCheck`).
+- En severidad `OK`/`INFO`: continúa sin prompt (igual que antes).
+- En severidad `WARN` o `ALERT`: si la sesión es **no interactiva** + `-AssumeYesNonCritical`, auto-confirma y continúa sin `Read-Host`. Si la sesión es interactiva, se mantiene el `Read-Host [s/N]` original (el flag no cambia nada para humanos).
+- En severidad `CRITICAL`: **ABORTA SIEMPRE en no interactivo, con o sin el flag**. Solo un humano interactivo escribiendo `'yes'` literal, o el operador usando `-SkipDriftCheck` conscientemente, puede pasar `CRITICAL`. El flag deliberadamente NO ofrece esa puerta para que la IA nunca pueda auto-saltar el contrato.
+- **Sin el flag y en sesión no interactiva**: el `[0.5]` **aborta limpiamente** ante cualquier severidad `>= WARN` (fail-safe). NO cuelga esperando input, NO continúa a ciegas. Mensaje claro al operador indicando que invoque con `-AssumeYesNonCritical` o desde consola humana.
+
+**Detección "host realmente interactivo"**. Helper privado `Test-DeployIsInteractiveHost` en el cuerpo del `[0.5/N]`. Devuelve `$false` si `[Console]::IsInputRedirected` es `$true` (stdin redirigido por pipe, `< file` o harness IA), o si `[Environment]::UserInteractive` es `$false` (servicio, scheduled task, sesión sin escritorio). Devuelve `$true` solo si ambos chequeos pasan. La función se evalúa una vez y se cachea en `$script:IsInteractive`.
+
+**`-SkipDriftCheck` queda como estaba**, sin cambios: salta el `[0.5/N]` entero. Es la vía excepcional para reparaciones conscientes (revert de un deploy roto, primera puesta a punto del manifest). NO es la vía normal para sesiones no interactivas: para eso está `-AssumeYesNonCritical`, que SÍ ejecuta el check y solo auto-confirma WARN/ALERT.
+
+**Validación previa al commit** (modo `-DryRun` en mi sesión, que `[Console]::IsInputRedirected` reporta como `$true`):
+
+- **Caso (a)** ALERT + `-AssumeYesNonCritical`. Manifest real de AUDIT (backend `1cb43a0`, candidato `3751b63`, no toca contrato). Salida: `Severity ALERT` con razones correctas + `[DryRun + non-interactive + -AssumeYesNonCritical] severity ALERT: el deploy real CONTINUARIA (auto-confirmado).` ✓
+- **Caso (b)** CRITICAL + `-AssumeYesNonCritical`. Manifest sintético con backend `b54a0be` del 30-may (estado pre-incidente). Salida: `Severity CRITICAL` con los 8 ficheros del contrato listados + `[DryRun + non-interactive] severity CRITICAL: el deploy real ABORTARIA SIEMPRE. (Ni -AssumeYesNonCritical permite continuar; solo humano interactivo escribiendo 'yes' o -SkipDriftCheck consciente.)` ✓
+- **Caso (c)** ALERT en no interactivo SIN el flag. Manifest real de AUDIT. Salida: `Severity ALERT` con razones correctas + `[DryRun + non-interactive sin flag] severity ALERT: el deploy real ABORTARIA (fail-safe).` Sin cuelgue, sin continuar a ciegas. ✓
+
+**Comportamiento interactivo humano intacto**. En consola real, `[Console]::IsInputRedirected` es `$false` y `[Environment]::UserInteractive` es `$true`: `Test-DeployIsInteractiveHost` devuelve `$true`, y las tres ramas (`WARN`/`ALERT`/`CRITICAL`) ejecutan el mismo `Read-Host` que antes (`[s/N]` en `WARN`/`ALERT`, `'yes'` literal en `CRITICAL`). Los flags `-Strict`, `-DryRun`, `-SkipDriftCheck`, `-AllowDirtyWorkingTree` mantienen su semántica intacta. La lógica `[0/5]..[5/5]` original no se toca.
+
+**Workflow recomendado por contexto**:
+- Operador humano en consola → invoca normal, responde `[s/N]` / `'yes'`.
+- IA en sesión non-interactive → invoca con `-AssumeYesNonCritical`; el deploy se aborta automáticamente si hay drift de contrato (CRITICAL); pasa fluido en WARN/ALERT (drift menor sin riesgo de contrato).
+- Reparación consciente (revert, primera puesta a punto del manifest) → `-SkipDriftCheck`.
+
+---
+
 ## 2026-06-09 — Cierre de la pasada de prosa del backoffice (i18n: 7 paneles restantes)
 
 Cierra la pasada de **solo prosa** del frente i18n del backoffice. Tras los paneles ya internacionalizados en sesiones previas (`AdminFinancePanel` como piloto y los cuatro paneles `Audit*` en el commit del 2026-06-08), esta entrega cubre los siete componentes restantes: `AdminModelsPanel`, `AdminAdministrationPanel`, `AdminDataPanel`, `AdminAssetModerationPanel`, `DashboardAdmin` (solo subtítulos), `AdminDbPanel` y `AdminAuditPanel` (contenedor). Alcance estrictamente de prosa: descripciones, párrafos de info/instrucciones, mensajes de error/éxito/info, tooltips explicativos largos y listas de checks. **Quedan deliberadamente fuera** botones, etiquetas cortas de campos, encabezados de columna de tabla, placeholders, opciones de select y todo lo que sea estilo. La segunda pasada (etiquetas cortas y botones) se aborda en un frente posterior.

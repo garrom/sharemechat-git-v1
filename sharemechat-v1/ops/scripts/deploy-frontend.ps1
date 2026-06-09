@@ -147,7 +147,24 @@ param(
     # WARN y pide confirmacion [s/n]. En AUDIT se usa con frecuencia
     # (testing puntual sin commit); en TEST/PROD deberia ser raro.
     [Parameter(Mandatory = $false)]
-    [switch]$AllowDirtyWorkingTree
+    [switch]$AllowDirtyWorkingTree,
+
+    # En contextos no interactivos (ej. la IA via harness PowerShell con
+    # stdin redirigido, automation en CI), permite auto-confirmar
+    # severidades WARN y ALERT del [0.5/N] sin Read-Host. CRITICAL
+    # SIEMPRE aborta con o sin este flag: solo un humano interactivo
+    # puede pasar CRITICAL escribiendo 'yes', o el operador puede usar
+    # -SkipDriftCheck conscientemente.
+    #
+    # Sin este flag y en host no interactivo, el [0.5] aborta limpiamente
+    # ante WARN, ALERT o CRITICAL (fail-safe: nunca se cuelga esperando
+    # input ni continua a ciegas).
+    #
+    # Comportamiento interactivo humano (consola real) queda intacto:
+    # WARN/ALERT piden [s/N] y CRITICAL exige 'yes' literal igual que
+    # antes.
+    [Parameter(Mandatory = $false)]
+    [switch]$AssumeYesNonCritical
 )
 
 $ErrorActionPreference = 'Stop'
@@ -441,29 +458,66 @@ if (-not $SkipDriftCheck) {
 
     Write-DeployCandidateDriftReport -Result $driftResult
 
+    # ---- Helper: detecta si el host es REALMENTE interactivo. ----
+    # Criterios (basta con que falle UNO para considerarlo no interactivo):
+    #   - stdin redirigido por el caller (pipe, < file, harness IA).
+    #   - sesion no UserInteractive (servicio, scheduled task).
+    # En no interactivo NO se debe llamar a Read-Host: el comportamiento
+    # depende del flag -AssumeYesNonCritical.
+    function script:Test-DeployIsInteractiveHost {
+        try {
+            if ([Console]::IsInputRedirected) { return $false }
+        } catch { }
+        try {
+            if (-not [Environment]::UserInteractive) { return $false }
+        } catch { }
+        return $true
+    }
+    $script:IsInteractive = script:Test-DeployIsInteractiveHost
+
     switch ($driftResult.Severity) {
         'OK'   { Write-Host "    OK - sin drift detectado. Continuando." -ForegroundColor Green }
         'INFO' { Write-Host "    INFO - drift menor; sin riesgo de contrato. Continuando." -ForegroundColor Cyan }
         'WARN' {
             if ($DryRun) {
-                Write-Host "    [DryRun] severity WARN; en deploy real se pediria confirmacion [s/n]." -ForegroundColor Yellow
-            } else {
+                if ($script:IsInteractive) {
+                    Write-Host "    [DryRun] severity WARN; en deploy real se pediria confirmacion [s/n]." -ForegroundColor Yellow
+                } elseif ($AssumeYesNonCritical) {
+                    Write-Host "    [DryRun + non-interactive + -AssumeYesNonCritical] severity WARN: el deploy real CONTINUARIA (auto-confirmado)." -ForegroundColor Yellow
+                } else {
+                    Write-Host "    [DryRun + non-interactive sin flag] severity WARN: el deploy real ABORTARIA (fail-safe)." -ForegroundColor Yellow
+                }
+            } elseif ($script:IsInteractive) {
                 $ans = Read-Host "Severity WARN. Continuar el deploy? [s/N]"
                 if ($ans -notmatch '^(s|si|y|yes)$') {
                     Stop-Deploy "Abortado por el operador tras WARN."
                 }
+            } elseif ($AssumeYesNonCritical) {
+                Write-Host "    [non-interactive + -AssumeYesNonCritical] severity WARN -> auto-confirmado, continuando." -ForegroundColor Yellow
+            } else {
+                Stop-Deploy "Severity WARN en host NO interactivo y sin -AssumeYesNonCritical. Aborto fail-safe: invoca con -AssumeYesNonCritical para auto-confirmar, o desde consola humana para responder [s/N]."
             }
         }
         'ALERT' {
             if ($Strict) {
                 Stop-Deploy "Severity ALERT en modo -Strict. Aborto sin prompt."
             } elseif ($DryRun) {
-                Write-Host "    [DryRun] severity ALERT; en deploy real se pediria confirmacion [s/n] (default N)." -ForegroundColor DarkYellow
-            } else {
+                if ($script:IsInteractive) {
+                    Write-Host "    [DryRun] severity ALERT; en deploy real se pediria confirmacion [s/n] (default N)." -ForegroundColor DarkYellow
+                } elseif ($AssumeYesNonCritical) {
+                    Write-Host "    [DryRun + non-interactive + -AssumeYesNonCritical] severity ALERT: el deploy real CONTINUARIA (auto-confirmado)." -ForegroundColor DarkYellow
+                } else {
+                    Write-Host "    [DryRun + non-interactive sin flag] severity ALERT: el deploy real ABORTARIA (fail-safe)." -ForegroundColor DarkYellow
+                }
+            } elseif ($script:IsInteractive) {
                 $ans = Read-Host "Severity ALERT (drift sustancial detectado). Continuar el deploy? [s/N]"
                 if ($ans -notmatch '^(s|si|y|yes)$') {
                     Stop-Deploy "Abortado por el operador tras ALERT."
                 }
+            } elseif ($AssumeYesNonCritical) {
+                Write-Host "    [non-interactive + -AssumeYesNonCritical] severity ALERT -> auto-confirmado, continuando." -ForegroundColor DarkYellow
+            } else {
+                Stop-Deploy "Severity ALERT en host NO interactivo y sin -AssumeYesNonCritical. Aborto fail-safe: invoca con -AssumeYesNonCritical para auto-confirmar, o desde consola humana para responder [s/N]."
             }
         }
         'CRITICAL' {
@@ -477,7 +531,18 @@ if (-not $SkipDriftCheck) {
             if ($Strict) {
                 Stop-Deploy "Severity CRITICAL en modo -Strict. Aborto sin prompt."
             } elseif ($DryRun) {
-                Write-Host "    [DryRun] severity CRITICAL; en deploy real se exigiria escribir 'yes' literal para continuar." -ForegroundColor Red
+                if ($script:IsInteractive) {
+                    Write-Host "    [DryRun] severity CRITICAL; en deploy real se exigiria escribir 'yes' literal para continuar." -ForegroundColor Red
+                } else {
+                    # CRITICAL en non-interactive SIEMPRE aborta, con o sin -AssumeYesNonCritical.
+                    Write-Host "    [DryRun + non-interactive] severity CRITICAL: el deploy real ABORTARIA SIEMPRE." -ForegroundColor Red
+                    if ($AssumeYesNonCritical) {
+                        Write-Host "    (Ni -AssumeYesNonCritical permite continuar; solo humano interactivo escribiendo 'yes' o -SkipDriftCheck consciente.)" -ForegroundColor Red
+                    }
+                }
+            } elseif (-not $script:IsInteractive) {
+                # CRITICAL en non-interactive aborta SIEMPRE.
+                Stop-Deploy "Severity CRITICAL en host NO interactivo. CRITICAL nunca se auto-confirma; solo un humano interactivo puede aceptar escribiendo 'yes', o el operador puede usar -SkipDriftCheck conscientemente."
             } else {
                 $ans = Read-Host "Escribe 'yes' literal para continuar"
                 if ($ans -ne 'yes') {
