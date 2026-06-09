@@ -8,6 +8,29 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-09 — Cierre de la Fase 1 del frente de prevención de drift (Fase 1 paso 2b: `update-manifest-backend.ps1`)
+
+Tercer y último paso de la Fase 1 del frente preventivo de drift entre backend y frontend en cada entorno. Tras los pasos 1 (manifest + check) y 2a (integración del check en `deploy-frontend.ps1`), este paso entrega la pieza simétrica para el lado backend en su variante mínima (opción B): un script que solo **actualiza el manifest** tras un deploy manual de backend, sin automatizar el deploy mismo. La opción A (script orquestador del deploy de backend, análogo a `deploy-frontend.ps1`) queda para Fase 2 junto con el endpoint `/api/health/version` + plugin git en el JAR.
+
+**Por qué la opción B cierra Fase 1**. La pieza que faltaba para que el check de drift del frontend tuviera información fresca del backend era un mecanismo para registrar, sin esfuerzo, qué commit + qué JAR quedó desplegado tras un scp + restart manual. El paso 2b da exactamente eso: el operador invoca el script una vez tras hacer el deploy, contesta `s` al prompt, y la sección `backend` del manifest queda al día. Con eso, el siguiente `deploy-frontend.ps1` ya compara contra un dato vivo y no contra inferencias por timeline.
+
+**`ops/scripts/update-manifest-backend.ps1`** (`-Environment <audit|test|prod>` posicional). Dot-sourcea `check-deploy-drift.ps1` para reutilizar `Get-WorkingTreeCleanForCode` y `Update-DeployStateManifestBackend` (helper nuevo añadido al check). Calcula HEAD (`git rev-parse HEAD` corto y largo), working tree limpio en CÓDIGO excluyendo `ops/deploy-state/*.yaml` (misma regla que el paso 2a), y `sha256` del JAR local en `sharemechat-v1/target/sharemechat-v1-0.0.1-SNAPSHOT.jar` (o el path que se pase con `-JarPath`). Con `-RemoteVerify`, abre `ssh -o BatchMode=yes -o ConnectTimeout=10 <alias> "sudo sha256sum <remote_path>"` (el alias y el path los lee del propio manifest) y compara con el local; si los sha difieren, registra el remoto y deja la advertencia en `verification.notes`; si SSH falla (como pasó con TEST el 2026-06-08 por connection timeout), no aborta el script: registra el local y deja la nota explicativa para que el operador lo revise cuando SSH vuelva. `-DryRun` muestra el diff antes/después legible sobre la sección `backend` del manifest sin escribir nada — pensado para que el operador pueda inspeccionar antes de aplicar. Sin `-DryRun`, exige confirmación `[s/N]` antes de escribir. NO hace commit (decisión D2).
+
+**Detalle de PowerShell 5.1 que afectó al diseño**. El parámetro de entorno se llama `-Environment` y no `-Env` porque PowerShell tiene una variable automática `$Env` (provider drive de variables de entorno) que **enmascara cualquier parámetro con ese nombre**: el primer intento de ensayo demostró que `$Env` aparecía vacío en el cuerpo del script aunque el operador lo pasara correctamente. Documentado en el `.PARAMETER` del script.
+
+**Limitación conocida que esta fase NO elimina** (sí lo hará Fase 2). Sin endpoint vivo en el backend que devuelva el commit con el que se construyó el JAR, este script ASUME que HEAD del repo en el momento de invocarlo es el commit con el que se construyó el JAR desplegado. Si tras construir el JAR el operador hizo más commits antes de ejecutar el script, HEAD ya no representa el JAR. Workflow seguro: invocar el script **inmediatamente** tras el deploy real, antes de cualquier commit nuevo. El `-DryRun` ayuda a detectar el error: el ensayo de hoy contra AUDIT mostró que registraría `git_commit_short: eb8c279` (HEAD actual) cuando el JAR es `7025145b...` del commit `1cb43a0` — exactamente lo que el script no debe hacer mientras AUDIT no se vuelva a desplegar. Documentado en cabecera del script y en `known-debt.md`.
+
+**Ensayo `-DryRun` contra AUDIT** (con el manifest del paso 1 intacto). El script lee correctamente el manifest, muestra el sha256 del JAR local (`7025145b...`), HEAD del repo (`eb8c279...`), working tree DIRTY por los cambios uncommitted de esta misma fase, y emite la tabla de diff con las celdas amarillas donde el valor cambiaría. Cierra con `[DryRun] No se escribe el manifest. Salida.` y `git status` confirma que el fichero `audit.yaml` no se tocó.
+
+**Cierre del frente Fase 1**. La preventiva queda cubierta a este nivel:
+- Manifest por entorno con datos verificables (Fase 1 paso 1).
+- Check pre-deploy + actualización automática post-deploy del manifest del frontend (Fase 1 paso 2a).
+- Actualización manual del manifest tras deploy de backend (Fase 1 paso 2b).
+
+Lo que aporta Fase 2 sobre esta base: (a) verificación viva del commit del backend vía endpoint `/api/health/version` + plugin `git-commit-id` en el JAR, que elimina la suposición HEAD = JAR del paso 2b y permite que `update-manifest-backend.ps1` consulte el commit real del backend vivo en lugar de inferirlo; (b) `deploy-backend.ps1` opción A (script orquestador del deploy de backend con `mvn package` + scp + backup + restart + smoke + actualización del manifest todo en uno, en paralelo a `deploy-frontend.ps1`).
+
+---
+
 ## 2026-06-09 — Integración del check de drift en `deploy-frontend.ps1` (Fase 1 paso 2a)
 
 Segundo paso de la preventiva del drift, sobre la pieza autónoma del paso 1 entregada esta misma jornada. Esta fase **modifica únicamente `ops/scripts/deploy-frontend.ps1`** para que cada deploy de frontend (a) valide pre-deploy el drift contra el backend desplegado en el entorno y (b) actualice automáticamente `ops/deploy-state/<env>.yaml` tras el smoke OK. No se crea aún el script de backend (paso 2b); la lógica existente del script `[0/5]..[5/5]` queda **intacta**: los nuevos pasos se insertan como `[0.5/N]` y `[5.5/N]` sin renumerar.

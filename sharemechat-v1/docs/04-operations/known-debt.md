@@ -20,17 +20,17 @@ Cerrada en bitácora 2026-06-08 (Lote 2 parte 1). `filterClasses()` en `Markdown
 
 Cerrada en bitácora 2026-06-08 (Lote 2 parte 1). `preprocessCallouts` neutraliza `</\s*div\s*>` literal en el cuerpo del callout antes de generar el wrapper. Test JUnit `preprocessCalloutWithDivCloseInBodyIsNeutralized`.
 
-### [DEUDA media — Fase 2 preventiva drift] Verificacion viva del commit del backend + deploy-backend.ps1
+### [DEUDA media — Fase 2 preventiva drift] Verificacion viva del commit del backend + deploy-backend.ps1 opcion A
 
-Pendiente de Fase 2, tras cerrar Fase 1 paso 1 (manifest + check) y paso 2a (integracion del check en `deploy-frontend.ps1`) el 2026-06-09. Dos frentes pendientes:
+Pendiente de Fase 2, tras CERRAR Fase 1 completa el 2026-06-09 (paso 1 manifest + check, paso 2a integracion del check en `deploy-frontend.ps1`, paso 2b `update-manifest-backend.ps1` opcion B). Dos frentes pendientes para Fase 2:
 
-1. **Endpoint `/api/health/version` + plugin de git en el JAR**. Anadir `org.codehaus.mojo:exec-maven-plugin` o `pl.project13.maven:git-commit-id-maven-plugin` (decidir cual al implementar) que escriba `META-INF/git.properties` con `git.commit.id`, `git.commit.time` y `git.branch` en el JAR. Crear endpoint Spring sin auth `/api/health/version` que devuelva JSON con esos campos + `product_access_mode` actual. El check de drift dejara de inferir el commit del backend desde la bitacora y lo confirmara contra el endpoint vivo. Los campos `git_commit_short: null` actuales en los manifests se rellenaran con certeza.
+1. **Endpoint `/api/health/version` + plugin de git en el JAR**. Anadir `org.codehaus.mojo:exec-maven-plugin` o `pl.project13.maven:git-commit-id-maven-plugin` (decidir cual al implementar) que escriba `META-INF/git.properties` con `git.commit.id`, `git.commit.time` y `git.branch` en el JAR. Crear endpoint Spring sin auth `/api/health/version` que devuelva JSON con esos campos + `product_access_mode` actual. El check de drift dejara de inferir el commit del backend y lo confirmara contra el endpoint vivo. Esto **elimina la limitacion conocida del paso 2b** (que asume HEAD = JAR del momento del build) porque `update-manifest-backend.ps1` podra consultar el commit real del JAR vivo en lugar de tomar HEAD. Los `git_commit_short: null` actuales en los manifests para `git_commit` (sha largo) se rellenaran con certeza tras cada deploy.
 
-2. **`deploy-backend.ps1` opcion A** (Fase 1 paso 2b, script orquestador analogo a `deploy-frontend.ps1`). Pasos: `[0.5/N] check drift` -> `[1/N] mvn package` -> `[2/N] scp al EC2 via alias` -> `[3/N] backup en EC2 con sufijo .bak-<commit>-<ts>` -> `[4/N] systemctl restart <unit>` -> `[5/N] smoke /api/health/version + sha256` -> `[5.5/N] actualizar manifest`. Mientras tanto el deploy de backend sigue siendo manual (scp + ssh restart) y se actualiza el manifest a mano (no hay update-manifest-backend.ps1 aun).
+2. **`deploy-backend.ps1` opcion A** (script orquestador analogo a `deploy-frontend.ps1`). Pasos: `[0.5/N] check drift` -> `[1/N] mvn package` -> `[2/N] scp al EC2 via alias` -> `[3/N] backup en EC2 con sufijo .bak-<commit>-<ts>` -> `[4/N] systemctl restart <unit>` -> `[5/N] smoke /api/health/version + sha256` -> `[5.5/N] actualizar manifest`. Sustituye al workflow actual de `deploy manual + update-manifest-backend.ps1`; ese workflow B sigue siendo valido como fallback (debug del JAR concreto, situaciones donde el script orquestador no encaje).
 
 **Mantenimiento de la lista de "ficheros del contrato"**. Hoy 8 ficheros hardcodeados en `check-deploy-drift.ps1` (`script:ContractFiles`): `UserDTO`, `PublicUserDTO`, `BackofficeUserViewDTO`, `UserController`, `ProductOperationalModeService`, `RequireRole.jsx`, `SessionProvider.jsx`, `featureFlags.js`. Revisable en cualquier PR que toque endpoints de identidad o gating de sesion.
 
-Prioridad: media. Mientras Fase 2 no se cierre, los manifests siguen reflejando inferencias para el commit del backend (los del frontend ya se actualizan en cada deploy gracias al paso 2a).
+Prioridad: media. La Fase 1 cierra el agujero operativo del incidente del 2026-06-08; Fase 2 endurece la verificacion del commit del backend para que deje de depender de un workflow disciplinado por parte del operador.
 
 ### [DEUDA baja — UI backoffice] Mojibake heredado en las labels de `AdminTabs.jsx`
 

@@ -712,6 +712,98 @@ function Update-DeployStateManifest {
 }
 
 # ---------------------------------------------------------------
+# Helper: Update-DeployStateManifestBackend
+#   Actualiza la seccion `backend` del manifest del entorno tras un
+#   deploy manual del backend (scp + restart). Pensada para invocarse
+#   desde update-manifest-backend.ps1 (Fase 1 paso 2b, opcion B).
+#   SOLO escribe el fichero; no commitea (decision D2).
+# ---------------------------------------------------------------
+
+function Update-DeployStateManifestBackend {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet('audit', 'test', 'prod')]
+        [string]$Env,
+
+        # Permite registrar $null (sin sha disponible) en lugar de fallar.
+        [Parameter(Mandatory = $false)]
+        [AllowNull()][AllowEmptyString()]
+        [string]$JarSha256,
+
+        [Parameter(Mandatory = $true)]
+        [string]$GitCommitFull,
+
+        [Parameter(Mandatory = $true)]
+        [string]$GitCommitShort,
+
+        [Parameter(Mandatory = $true)]
+        [bool]$WorkingTreeClean,
+
+        [Parameter(Mandatory = $true)]
+        [string]$DeployedBy,
+
+        [Parameter(Mandatory = $false)]
+        [string]$VerificationMethod = 'manual_via_update-manifest-backend.ps1',
+
+        [Parameter(Mandatory = $false)]
+        [string]$VerificationNotes
+    )
+
+    _Ensure-Yaml
+    $manifestFile = _Resolve-ManifestPath -Env $Env
+    $raw = Get-Content $manifestFile -Raw
+    $m = ConvertFrom-Yaml $raw
+
+    $now = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+
+    $m.last_updated_at = $now
+    $m.last_update_by  = $DeployedBy
+    $m.last_update_source = 'update-manifest-backend.ps1-fase1-paso2b'
+
+    if (-not $m.backend) {
+        throw ("Manifest no contiene bloque backend: {0}" -f $manifestFile)
+    }
+    $m.backend.jar_sha256       = $JarSha256
+    $m.backend.git_commit_short = $GitCommitShort
+    $m.backend.git_commit       = $GitCommitFull
+    $m.backend.built_at         = $now
+    $m.backend.deployed_at      = $now
+    $m.backend.deployed_by      = $DeployedBy
+    $m.backend.working_tree_clean = $WorkingTreeClean
+
+    if (-not $m.backend.verification) { $m.backend.verification = @{} }
+    $m.backend.verification.method      = $VerificationMethod
+    $m.backend.verification.verified_at = $now
+    if ($VerificationNotes) {
+        $m.backend.verification.notes = $VerificationNotes
+    } else {
+        $m.backend.verification.notes = (
+            "Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) " +
+            "tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD " +
+            "asume = commit con el que se construyo el JAR; sin endpoint /api/health/version " +
+            "(Fase 2) no hay verificacion viva del commit del backend."
+        )
+    }
+
+    $newYaml = ConvertTo-Yaml $m
+    $header = @(
+        "# Manifest de estado de despliegue - entorno $($Env.ToUpper())"
+        "# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1"
+        "# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un"
+        "# deploy manual del backend (scp + restart). NO se hace commit"
+        "# automatico: el operador commitea cuando le conviene (decision D2)."
+        "#"
+    ) -join "`n"
+    Set-Content -Path $manifestFile -Value ($header + "`n" + $newYaml) -Encoding UTF8
+
+    return [PSCustomObject]@{
+        ManifestFile = $manifestFile
+        UpdatedAt    = $now
+    }
+}
+
+# ---------------------------------------------------------------
 # Render CLI (legible cuando se invoca directamente)
 # ---------------------------------------------------------------
 
