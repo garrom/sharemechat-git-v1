@@ -8,6 +8,16 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-09 — Arranque del frente de integración real de Veriff (KYC modelo + verificación de edad cliente)
+
+Se arranca el frente de integración real de Veriff para las dos verificaciones previstas: **MODELO** (verificación documental con documento + selfie) y **CLIENTE** (estimación de edad por biometría, sin documento), cada una con su propia lista de países permitidos (la de cliente más restringida que la de modelo).
+
+Hitos de arranque con el proveedor: **cuenta self-serve creada**, **Mandatory IDV completada**, y **caso 00135669 abierto con sales/compliance** de Veriff para cerrar precios y cumplimiento.
+
+Antes de tocar nada se hizo un **diagnóstico de solo lectura del estado actual de KYC y country gating** (verificado contra código y config viva, no contra docs). Confirmó que el andamiaje Veriff para MODELO ya está cableado (sesión + webhook + mapeo de estados a `users.verification_status`; entidades `model_kyc_sessions`, `kyc_webhook_events`, `kyc_provider_config`; modo `VERIFF`/`MANUAL` en BD), que el cliente Veriff opera hoy en **modo MOCK** (`kyc.veriff.enabled=false` en los tres entornos), y que la **verificación de edad de CLIENTE es terreno nuevo** (solo existe el age-gate auto-declarado). El country gating es allowlist por flujo (cliente/modelo) en ISO 3166-1 alpha-2, leído de `config.env` por entorno: PROD activo (cliente 28 / modelo 46), AUDIT desactivado durante onboarding PSP (cliente 28 / modelo 51).
+
+El diagnóstico destapó **tres deudas**, ahora registradas como bloque en `known-debt.md` (2026-06-09, frente "Integración real de Veriff"): (1) el country gating no se aplica al iniciar la sesión Veriff (`/api/kyc/veriff/start`); (2) la firma HMAC de salida de Veriff no está implementada (`X-HMAC-SIGNATURE: "TODO_SIGN"`); (3) la validación HMAC del webhook entrante está en modo permisivo y con el header desalineado (`X-SIGNATURE` en código vs `X-HMAC-SIGNATURE` de Veriff). Las tres son bloqueantes/relevantes para activar Veriff real y se cerrarán juntas dentro de este frente.
+
 ## 2026-06-09 — Cierre de la segunda pasada de i18n del backoffice + resolución del mojibake de AdminTabs
 
 Cierra la **segunda pasada** de internacionalización del backoffice (etiquetas cortas de interfaz: columnas de tabla, botones, opciones de filtro, headers de sección cortos, pills de estado, placeholders, tarjetas de stats, títulos cortos hardcoded). Complementa la **primera pasada de prosa** (commits del 2026-06-08 `f82c1cd` y del 2026-06-09 `7d96189`) que ya había cubierto las descripciones, párrafos, tooltips y mensajes de error/éxito/info de los mismos paneles. Tras este commit, el backoffice queda 100% internacionalizado en cuanto a texto visible para el operador.

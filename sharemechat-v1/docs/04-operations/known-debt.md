@@ -2,6 +2,34 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-06-09 — Frente "Integración real de Veriff": huecos detectados en el diagnóstico KYC/country gating
+
+Tres huecos destapados por el diagnóstico de solo lectura del 2026-06-09 sobre el estado real de Veriff/KYC y country gating. **Bloque común**: las tres forman parte del frente **"Integración real de Veriff"** que se aborda a continuación; no son deudas a resolver aisladas, se cerrarán **juntas** como parte de ese frente. Sin prioridad asignada todavía.
+
+### [DEUDA — bloque Integración real de Veriff] Country gating no se aplica en el flujo KYC
+
+Hoy `CountryAccessService` solo se invoca en **registro** (`assertAllowedForClientRegistration` / `assertAllowedForModelRegistration`) y en **auth** (`assertAllowed` en login y refresh). El arranque de una sesión Veriff (`KycProviderController` → `POST /api/kyc/veriff/start`) **NO comprueba el país** del solicitante.
+
+Riesgo: con Veriff (sesiones de pago), un usuario que ya haya quedado dentro por la vía de registro/login podría disparar verificaciones desde un país no permitido. Es coste real, no solo lógico.
+
+Acción futura (a planificar con el resto de Veriff, no ahora): aplicar el gating al **inicio de la sesión Veriff**, con **distinción cliente vs modelo** (cada uno tiene su propia lista de países — cliente más restringido que modelo).
+
+### [DEUDA — bloque Integración real de Veriff] Firma HMAC de salida de Veriff no implementada
+
+`VeriffClientImpl` envía la cabecera `X-HMAC-SIGNATURE` con valor literal **`"TODO_SIGN"`** al crear sesiones (`createSession`).
+
+Hoy no impacta porque `kyc.veriff.enabled=false` en los tres entornos (el cliente Veriff opera en modo **MOCK**), pero es **bloqueante para activar Veriff real**.
+
+### [DEUDA — bloque Integración real de Veriff] Validación HMAC del webhook entrante de Veriff en modo permisivo
+
+`ModelKycSessionService.processVeriffWebhook` acepta como válido **cualquier `signatureHeader` no vacío** (comentario en código: *"Fase 1: firma en modo permissive (luego metemos HMAC real)"*). No hay verificación HMAC real del webhook entrante.
+
+Además, el header esperado en código es **`X-SIGNATURE`**, mientras que Veriff usa **`X-HMAC-SIGNATURE`** en su documentación pública: hay que **alinear el nombre del header** al implementar la firma real.
+
+**Bloqueante para activar Veriff real.**
+
+---
+
 ## 2026-06-08 — Auditoría defensiva: Lote 2 y Lote 3 pendientes
 
 Tras cerrar el Lote 1 (H3 rate-limit IP en login, H2 validación nickname + escape HTML en `EmailCopyRenderer`, H6 `limit_req` nginx en `/api/auth/`, `/api/users/register/`, `/api/admin/auth/`), quedan abiertas estas mitigaciones de la auditoría. Ver bitácora 2026-06-08 para contexto completo.
