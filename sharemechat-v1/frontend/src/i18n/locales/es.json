@@ -1617,6 +1617,9 @@
           "manualEntry": "Entrada a investigación manual"
         },
         "note": "Panel preparado. Pendiente de conectar con una vista priorizada de incidentes y alertas."
+      },
+      "panel": {
+        "title": "Auditoría"
       }
     },
     "assetModeration": {
@@ -1631,6 +1634,42 @@
         "CONTACT_INFO": "Contiene texto, URLs o información de contacto",
         "INVALID_FORMAT": "Formato incorrecto o archivo dañado",
         "OTHER": "Otro (especificar)"
+      },
+      "errors": {
+        "loadQueue": "Error cargando cola",
+        "loadStats": "Error cargando stats",
+        "loadData": "Error cargando datos",
+        "approve": "Error aprobando",
+        "reject": "Error rechazando",
+        "reasonRequired": "Selecciona un motivo.",
+        "detailRequiredOther": "Cuando seleccionas \"Otro\", el detalle es obligatorio."
+      },
+      "tooltips": {
+        "openVideo": "Abrir vídeo en nueva pestaña",
+        "openPhoto": "Abrir foto en nueva pestaña",
+        "approve": "Aprobar este asset",
+        "rejectWithReason": "Rechazar con motivo",
+        "rejectRetroactive": "Rechazo retroactivo (ADMIN): revierte la aprobación previa. Crea fila REJECTED nueva, desactiva el asset y notifica al modelo."
+      },
+      "descriptions": {
+        "intro": "Cola de aprobación de foto y vídeo de perfil del modelo. Cada upload nuevo genera una review pendiente; el modelo deja de ser visible al cliente hasta que ambos assets estén aprobados. ADMIN y SUPPORT pueden decidir; AUDIT solo lee.",
+        "pendingMeta": "Reviews en espera de decisión.",
+        "approvedMeta": "Assets validados (histórico completo).",
+        "rejectedMeta": "Assets rechazados (histórico completo)."
+      },
+      "empty": {
+        "loading": "Cargando…",
+        "refreshing": "Actualizando…",
+        "submitting": "Enviando…",
+        "noReviews": "No hay reviews en este estado.",
+        "readOnly": "Solo lectura"
+      },
+      "confirmations": {
+        "modalTitle": "Rechazar asset",
+        "modalTitleRetroactive": "Rechazar asset (retroactivo)",
+        "ofModel": "del modelo",
+        "subtitlePending": "El modelo recibirá un email con el motivo seleccionado y el asset dejará de ser visible hasta que suba uno nuevo aprobado.",
+        "subtitleRetroactive": "Esta acción revierte una aprobación previa: la fila APPROVED histórica se conserva, se crea una nueva fila REJECTED y el asset queda desactivado. El modelo recibirá un email con el motivo seleccionado."
       }
     },
     "shell": {
@@ -2121,6 +2160,154 @@
         "loadList": "Error al cargar streams activos",
         "loadDetail": "Error al cargar detalle del stream",
         "kill": "Error al cortar el stream"
+      }
+    },
+    "db": {
+      "errors": {
+        "queryFailed": "Error al consultar BBDD"
+      },
+      "empty": {
+        "selectTable": "Elige una tabla para ver datos.",
+        "loading": "Cargando…",
+        "noData": "Sin datos"
+      }
+    },
+    "dashboard": {
+      "viewCopy": {
+        "assetModeration": {
+          "subtitle": "Cola de aprobación de foto y vídeo de perfil del modelo. ADMIN y SUPPORT deciden; AUDIT solo lee."
+        },
+        "content": {
+          "subtitle": "Gestión editorial de artículos. Workflow simplificado (ADR-016): DRAFT → IN_REVIEW → PUBLISHED → RETRACTED. Pipeline IA orquestado (ADR-014) y publicación pública dinámica (Fase 4A)."
+        }
+      },
+      "sidebar": {
+        "assetModeration": {
+          "meta": "Cola de aprobación de foto y vídeo de perfil."
+        },
+        "content": {
+          "meta": "Artículos editoriales (Fase 1)"
+        }
+      },
+      "pageSubtitles": {
+        "models": "Bloque actual de trabajo para verificación y seguimiento de modelos. El alcance todavía no cubre una gestión general de usuarios.",
+        "assetModeration": "Cola de aprobación de foto y vídeo de perfil del modelo. Cada upload genera una review pendiente; el modelo no es visible al cliente hasta que ambos assets estén aprobados.",
+        "finance": "Visibilidad principal de facturación, margen y ranking económico.",
+        "financeAdjustments": "Bloque inicial separado para operaciones sensibles. Actualmente se centra en refunds manuales.",
+        "control": "Checks de consistencia, integridad y auditoría interna del sistema.",
+        "data": "Consultas internas operativas para investigación y una capa raw técnica reservada a administración.",
+        "administration": "Vista MVP de usuarios con acceso backoffice, roles efectivos, permisos visibles y overrides.",
+        "content": "Artículos editoriales en backoffice. Workflow simplificado (ADR-016): DRAFT → IN_REVIEW → PUBLISHED → RETRACTED."
+      }
+    },
+    "models": {
+      "errors": {
+        "savingChecklist": "Error guardando checklist",
+        "couldNotSaveCheck": "No se pudo guardar el check",
+        "loadingModels": "Error al cargar modelos",
+        "loadingData": "Error cargando datos",
+        "loadingKycConfig": "Error cargando configuración KYC",
+        "savingKycMode": "Error guardando modo KYC",
+        "updatingVerification": "Error al actualizar verificación",
+        "updatingStatus": "Error actualizando estado"
+      },
+      "success": {
+        "statusUpdated": "Estado actualizado"
+      },
+      "confirmations": {
+        "rejectVerification": "¿Quieres rechazar la verificación de esta modelo?\nEsta acción se considera definitiva en el flujo actual."
+      },
+      "descriptions": {
+        "kycModeChangeNote": "Cambio desde Admin UI a {{mode}}",
+        "panelIntro": "Vista operativa de onboarding y revisión de modelos. Permite filtrar estados, validar documentación y ejecutar aprobación o rechazo cuando el flujo actual lo permite.",
+        "totalMeta": "Modelos cargados en la vista.",
+        "pendingMeta": "Requieren validación o decisión.",
+        "approvedMeta": "Ya pasaron a flujo operativo.",
+        "rejectedMeta": "Casos cerrados sin aprobación.",
+        "kycConfigIntro": "Controla si el alta de modelos sigue el flujo automático con Veriff o el flujo manual con revisión documental.",
+        "kycReadOnlyInfo": "Lectura del modo KYC actual. El cambio global queda reservado a ADMIN.",
+        "pendingRowHint": "Pendiente de validación y decisión.",
+        "approveTooltipDisabled": "Valida los 3 documentos primero",
+        "approveTooltipEnabled": "Aprobar modelo",
+        "openDocumentTooltip": "Abrir documento",
+        "documentNotAvailableTooltip": "No disponible",
+        "markAsValidatedTooltip": "Marcar como validado",
+        "noPermissionChecklistTooltip": "Sin permiso para actualizar checklist",
+        "permanentlyRejected": "Rechazada permanentemente"
+      }
+    },
+    "administration": {
+      "errors": {
+        "loadList": "No se pudo cargar la administración interna.",
+        "loadDetail": "No se pudo cargar el detalle del acceso.",
+        "lookupUser": "No se pudo buscar el usuario.",
+        "saveAccess": "No se pudo guardar el acceso backoffice.",
+        "resendVerification": "No se pudo reenviar el email de validación.",
+        "updateStatus": "No se pudo actualizar el estado del acceso."
+      },
+      "descriptions": {
+        "panelIntro": "Administración interna del acceso backoffice para usuarios ya existentes. Se distingue entre configuración explícita, acceso implícito por rol producto ADMIN y acceso efectivo real. El estado inactivo bloquea la entrada incluso para un ADMIN implícito.",
+        "metaTotalUsers": "Usuarios visibles en este dominio, con acceso explícito o implícito.",
+        "metaExplicitUsers": "Roles, overrides o estado gestionados explícitamente.",
+        "metaImplicitAdmin": "Acceso heredado por rol producto ADMIN.",
+        "metaEffectiveUsers": "Usuarios con roles efectivos reales de backoffice.",
+        "metaAdmin": "Acceso administrativo efectivo.",
+        "metaSupport": "Operativa de soporte/backoffice.",
+        "metaAudit": "Visibilidad de auditoría interna.",
+        "metaOverrides": "Permisos ajustados manualmente.",
+        "metaInactive": "Accesos configurados pero bloqueados.",
+        "createIntro": "Busca primero un usuario ya existente por email o userId para habilitar acceso interno. Si no existe, crea un usuario interno nuevo desde cero.",
+        "editorHelp": "Los roles conceden acceso base. Los overrides añaden o retiran permisos concretos sin tocar el rol.",
+        "viewHelp": "Selecciona un usuario para revisar acceso explícito o implícito, permisos efectivos y trazabilidad.",
+        "rolesHelp": "Asigna uno o varios roles operativos reales: ADMIN, SUPPORT o AUDIT.",
+        "keepActiveAfterCreate": "Dejar el acceso backoffice activo tras la creación",
+        "overridesHelp": "Inherit mantiene el permiso según los roles. Grant lo añade explícitamente. Remove lo bloquea explícitamente."
+      },
+      "warnings": {
+        "saveDoesNotChangeStatus": "Guardar configuración no cambia el estado del acceso. La activación o desactivación se gestiona solo con el botón específico y una nota opcional."
+      },
+      "empty": {
+        "noUsersMatch": "No hay usuarios que coincidan con el filtro actual.",
+        "loadingDetail": "Cargando detalle…",
+        "pickUser": "Elige un usuario de la tabla o usa la búsqueda superior para crear un acceso nuevo.",
+        "noAssignedRoles": "Sin roles asignados explícitamente.",
+        "noEffectiveRoles": "Sin roles efectivos.",
+        "noOverrides": "Sin overrides explícitos.",
+        "noEffectivePermissions": "Sin permisos efectivos visibles.",
+        "noAuditLogs": "Sin cambios administrativos registrados.",
+        "noSummary": "Sin resumen"
+      }
+    },
+    "data": {
+      "errors": {
+        "streamDetailLoad": "Error cargando el detalle del stream",
+        "streamsLoad": "Error cargando streams",
+        "paymentsLoad": "Error cargando transacciones y pagos"
+      },
+      "info": {
+        "searchingStreams": "Buscando streams…",
+        "rowsCount": "{{count}} filas",
+        "loadingDetail": "Cargando detalle…",
+        "selectStreamHint": "Selecciona un stream para ver su contexto y sus eventos.",
+        "searchingPayments": "Buscando pagos y operaciones…",
+        "paymentsCrossContext": "Contexto cruzado de transacciones, pagos, payouts y balances"
+      },
+      "descriptions": {
+        "streamsResults": "Vista inicial para investigar streams por usuario, stream concreto o identidad visible.",
+        "streamDetail": "Se reutiliza el detalle operativo existente con eventos del stream para no duplicar lógica.",
+        "paymentsSection": "Incluye transacciones, payment sessions, payouts y contexto básico de balances para investigar un caso.",
+        "paymentSessions": "Contexto de intentos de pago y sesiones PSP relacionadas con el caso investigado.",
+        "payoutRequests": "Primera vista útil para seguir retiros de modelo y su transición de estado.",
+        "balances": "Contexto básico del ledger para entender saldo y huella de una operación.",
+        "rawExploration": "Subnivel técnico solo para ADMIN. Se mantiene el visor raw actual mientras se amplían las consultas internas guiadas."
+      },
+      "empty": {
+        "streams": "Sin resultados para los filtros actuales.",
+        "streamEvents": "Sin eventos para este stream.",
+        "transactions": "Sin transacciones para los filtros actuales.",
+        "paymentSessions": "Sin payment sessions para los filtros actuales.",
+        "payoutRequests": "Sin payout requests para los filtros actuales.",
+        "balances": "Sin balances para los filtros actuales."
       }
     }
   },

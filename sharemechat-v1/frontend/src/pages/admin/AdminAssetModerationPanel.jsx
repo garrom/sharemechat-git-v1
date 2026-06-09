@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '../../i18n';
 import styled from 'styled-components';
 import {
   CardsGrid,
@@ -156,6 +157,7 @@ const RejectionReasonText = styled.div`
 
 const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = false }) => {
   const { t } = useTranslation();
+  const tt = (key, options) => i18n.t(key, options);
 
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState({ pendingReview: 0, approved: 0, rejected: 0 });
@@ -185,8 +187,8 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
         fetch('/api/admin/model-assets/stats', { credentials: 'include' }),
       ]);
 
-      if (!queueRes.ok) throw new Error((await queueRes.text()) || 'Error cargando cola');
-      if (!statsRes.ok) throw new Error((await statsRes.text()) || 'Error cargando stats');
+      if (!queueRes.ok) throw new Error((await queueRes.text()) || tt('admin.assetModeration.errors.loadQueue'));
+      if (!statsRes.ok) throw new Error((await statsRes.text()) || tt('admin.assetModeration.errors.loadStats'));
 
       const rows = await queueRes.json();
       const s = await statsRes.json();
@@ -198,7 +200,7 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
         rejected: Number(s?.rejected) || 0,
       });
     } catch (err) {
-      setError(err.message || 'Error cargando datos');
+      setError(err.message || tt('admin.assetModeration.errors.loadData'));
     } finally {
       setLoading(false);
     }
@@ -219,10 +221,10 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
         method: 'POST',
         credentials: 'include',
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error aprobando');
+      if (!res.ok) throw new Error((await res.text()) || tt('admin.assetModeration.errors.approve'));
       await fetchData();
     } catch (err) {
-      setError(err.message || 'Error aprobando');
+      setError(err.message || tt('admin.assetModeration.errors.approve'));
     }
   };
 
@@ -251,11 +253,11 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
   const submitReject = async () => {
     if (!rejectTarget) return;
     if (!rejectReasonCode) {
-      setRejectError('Selecciona un motivo.');
+      setRejectError(tt('admin.assetModeration.errors.reasonRequired'));
       return;
     }
     if (rejectReasonCode === 'OTHER' && !rejectReasonText.trim()) {
-      setRejectError('Cuando seleccionas "Otro", el detalle es obligatorio.');
+      setRejectError(tt('admin.assetModeration.errors.detailRequiredOther'));
       return;
     }
     setRejectSubmitting(true);
@@ -273,13 +275,13 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
           reasonText: rejectReasonText.trim() || null,
         }),
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error rechazando');
+      if (!res.ok) throw new Error((await res.text()) || tt('admin.assetModeration.errors.reject'));
       setRejectTarget(null);
       setRejectReasonCode('');
       setRejectReasonText('');
       await fetchData();
     } catch (err) {
-      setRejectError(err.message || 'Error rechazando');
+      setRejectError(err.message || tt('admin.assetModeration.errors.reject'));
     } finally {
       setRejectSubmitting(false);
     }
@@ -307,7 +309,7 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
       <ThumbWrap
         type="button"
         onClick={() => window.open(url, '_blank', 'noopener,noreferrer')}
-        title={isVideo ? 'Abrir vídeo en nueva pestaña' : 'Abrir foto en nueva pestaña'}
+        title={isVideo ? tt('admin.assetModeration.tooltips.openVideo') : tt('admin.assetModeration.tooltips.openPhoto')}
       >
         {isVideo ? (
           // `#t=0.1` fuerza al navegador a renderizar el primer frame visible
@@ -339,27 +341,24 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
       <SectionTitle>Moderación de assets de modelo</SectionTitle>
 
       <div style={{ fontSize: 12, color: '#52607a', lineHeight: 1.55, marginBottom: 8, maxWidth: 980 }}>
-        Cola de aprobación de foto y vídeo de perfil del modelo. Cada upload
-        nuevo genera una review pendiente; el modelo deja de ser visible al
-        cliente hasta que ambos assets estén aprobados. ADMIN y SUPPORT pueden
-        decidir; AUDIT solo lee.
+        {tt('admin.assetModeration.descriptions.intro')}
       </div>
 
       <CardsGrid style={{ marginBottom: 10 }}>
         <StatCard>
           <div className="label">Pendientes</div>
           <div className="value">{stats.pendingReview}</div>
-          <div className="meta">Reviews en espera de decisión.</div>
+          <div className="meta">{tt('admin.assetModeration.descriptions.pendingMeta')}</div>
         </StatCard>
         <StatCard>
           <div className="label">Aprobados</div>
           <div className="value">{stats.approved}</div>
-          <div className="meta">Assets validados (histórico completo).</div>
+          <div className="meta">{tt('admin.assetModeration.descriptions.approvedMeta')}</div>
         </StatCard>
         <StatCard>
           <div className="label">Rechazados</div>
           <div className="value">{stats.rejected}</div>
-          <div className="meta">Assets rechazados (histórico completo).</div>
+          <div className="meta">{tt('admin.assetModeration.descriptions.rejectedMeta')}</div>
         </StatCard>
       </CardsGrid>
 
@@ -386,12 +385,12 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
 
         <RightInfo>
           <SmallBtn type="button" onClick={fetchData} disabled={loading}>
-            {loading ? 'Actualizando...' : 'Refrescar'}
+            {loading ? tt('admin.assetModeration.empty.refreshing') : 'Refrescar'}
           </SmallBtn>
         </RightInfo>
       </ControlsRow>
 
-      {loading && <div style={{ fontSize: 12, color: '#52607a' }}>Cargando...</div>}
+      {loading && <div style={{ fontSize: 12, color: '#52607a' }}>{tt('admin.assetModeration.empty.loading')}</div>}
       {error && <StyledError>{error}</StyledError>}
 
       <div style={{ overflowX: 'auto' }}>
@@ -411,7 +410,7 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
             {displayedItems.length === 0 && !loading && (
               <tr>
                 <td colSpan={7} style={{ textAlign: 'center', color: '#6c757d', padding: 16 }}>
-                  No hay reviews en este estado.
+                  {tt('admin.assetModeration.empty.noReviews')}
                 </td>
               </tr>
             )}
@@ -449,26 +448,26 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
                       <TableActionGroup>
                         <TableSuccessButton
                           onClick={() => handleApprove(row.id)}
-                          title="Aprobar este asset"
+                          title={tt('admin.assetModeration.tooltips.approve')}
                         >
                           Aprobar
                         </TableSuccessButton>
                         <TableDangerButton
                           onClick={() => openRejectModal(row, 'pending')}
-                          title="Rechazar con motivo"
+                          title={tt('admin.assetModeration.tooltips.rejectWithReason')}
                         >
                           Rechazar
                         </TableDangerButton>
                       </TableActionGroup>
                     )}
                     {isPending && !canModerate && (
-                      <span style={{ color: '#6c757d' }}>Solo lectura</span>
+                      <span style={{ color: '#6c757d' }}>{tt('admin.assetModeration.empty.readOnly')}</span>
                     )}
                     {!isPending && row.status === 'APPROVED' && canRejectApproved && (
                       <TableActionGroup>
                         <TableDangerButton
                           onClick={() => openRejectModal(row, 'retroactive')}
-                          title="Rechazo retroactivo (ADMIN): revierte la aprobación previa. Crea fila REJECTED nueva, desactiva el asset y notifica al modelo."
+                          title={tt('admin.assetModeration.tooltips.rejectRetroactive')}
                         >
                           Rechazar (retroactivo)
                         </TableDangerButton>
@@ -490,25 +489,14 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
           <ModalCard onClick={(e) => e.stopPropagation()}>
             <ModalTitle>
               {rejectTarget.mode === 'retroactive'
-                ? 'Rechazar asset (retroactivo)'
-                : 'Rechazar asset'}
+                ? tt('admin.assetModeration.confirmations.modalTitleRetroactive')
+                : tt('admin.assetModeration.confirmations.modalTitle')}
             </ModalTitle>
             <ModalSubtitle>
-              {ASSET_LABEL[rejectTarget.assetType] || rejectTarget.assetType} del
-              modelo <strong>{rejectTarget.email}</strong>.{' '}
-              {rejectTarget.mode === 'retroactive' ? (
-                <>
-                  Esta acción <strong>revierte una aprobación previa</strong>:
-                  la fila APPROVED histórica se conserva, se crea una nueva fila
-                  REJECTED y el asset queda desactivado. El modelo recibirá un
-                  email con el motivo seleccionado.
-                </>
-              ) : (
-                <>
-                  El modelo recibirá un email con el motivo seleccionado y el
-                  asset dejará de ser visible hasta que suba uno nuevo aprobado.
-                </>
-              )}
+              {ASSET_LABEL[rejectTarget.assetType] || rejectTarget.assetType} {tt('admin.assetModeration.confirmations.ofModel')}{' '}<strong>{rejectTarget.email}</strong>.{' '}
+              {rejectTarget.mode === 'retroactive'
+                ? tt('admin.assetModeration.confirmations.subtitleRetroactive')
+                : tt('admin.assetModeration.confirmations.subtitlePending')}
             </ModalSubtitle>
 
             <FieldBlock style={{ marginBottom: 12 }}>
@@ -565,7 +553,7 @@ const AdminAssetModerationPanel = ({ canModerate = false, canRejectApproved = fa
                 onClick={submitReject}
                 disabled={rejectSubmitting || !rejectReasonCode}
               >
-                {rejectSubmitting ? 'Enviando...' : 'Confirmar rechazo'}
+                {rejectSubmitting ? tt('admin.assetModeration.empty.submitting') : 'Confirmar rechazo'}
               </StyledButton>
             </ModalActions>
           </ModalCard>

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
+import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import {
   Badge,
@@ -112,6 +113,7 @@ const DataSection = ({ title, meta, children }) => (
 );
 
 const AdminDataPanel = () => {
+  const t = (key, options) => i18n.t(key, options);
   const streamDetailRef = useRef(null);
   const [activeTab, setActiveTab] = useState('streams');
 
@@ -161,7 +163,7 @@ const AdminDataPanel = () => {
         scrollToStreamDetail();
       }
     } catch (e) {
-      setStreamDetailError(e.message || 'Error cargando el detalle del stream');
+      setStreamDetailError(e.message || t('admin.data.errors.streamDetailLoad'));
       setSelectedStreamDetail(null);
       if (shouldScroll) {
         scrollToStreamDetail();
@@ -195,7 +197,7 @@ const AdminDataPanel = () => {
         setSelectedStreamDetail(null);
       }
     } catch (e) {
-      setStreamsError(e.message || 'Error cargando streams');
+      setStreamsError(e.message || t('admin.data.errors.streamsLoad'));
       setStreamsRows([]);
       setSelectedStreamId(null);
       setSelectedStreamDetail(null);
@@ -223,7 +225,7 @@ const AdminDataPanel = () => {
         balances: Array.isArray(data?.balances) ? data.balances : [],
       });
     } catch (e) {
-      setPaymentsError(e.message || 'Error cargando transacciones y pagos');
+      setPaymentsError(e.message || t('admin.data.errors.paymentsLoad'));
       setPaymentsData({
         transactions: [],
         paymentSessions: [],
@@ -260,7 +262,7 @@ const AdminDataPanel = () => {
         setSelectedStreamDetail(null);
       }
     } catch (e) {
-      setStreamsError(e.message || 'Error cargando streams');
+      setStreamsError(e.message || t('admin.data.errors.streamsLoad'));
       setStreamsRows([]);
       setSelectedStreamId(null);
       setSelectedStreamDetail(null);
@@ -352,7 +354,7 @@ const AdminDataPanel = () => {
             </StyledButton>
 
             <RightInfo>
-              {streamsLoading ? 'Buscando streams...' : `${streamsRows.length} filas`}
+              {streamsLoading ? t('admin.data.info.searchingStreams') : t('admin.data.info.rowsCount', { count: streamsRows.length })}
             </RightInfo>
           </ControlsRow>
 
@@ -360,7 +362,7 @@ const AdminDataPanel = () => {
 
           <DataSection
             title="Resultados"
-            meta="Vista inicial para investigar streams por usuario, stream concreto o identidad visible."
+            meta={t('admin.data.descriptions.streamsResults')}
           >
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
@@ -380,7 +382,7 @@ const AdminDataPanel = () => {
                 <tbody>
                   {streamsRows.length === 0 && (
                     <tr>
-                      <td colSpan="9">Sin resultados para los filtros actuales.</td>
+                      <td colSpan="9">{t('admin.data.empty.streams')}</td>
                     </tr>
                   )}
                   {streamsRows.map((row) => (
@@ -423,12 +425,12 @@ const AdminDataPanel = () => {
           <div ref={streamDetailRef}>
             <DataSection
             title="Detalle del stream"
-            meta="Se reutiliza el detalle operativo existente con eventos del stream para no duplicar logica."
+            meta={t('admin.data.descriptions.streamDetail')}
             >
               {streamDetailError && <StyledError>{streamDetailError}</StyledError>}
-              {streamDetailLoading && <div style={{ color: '#64748b' }}>Cargando detalle...</div>}
+              {streamDetailLoading && <div style={{ color: '#64748b' }}>{t('admin.data.info.loadingDetail')}</div>}
               {!streamDetailLoading && !selectedStreamDetail && (
-                <div style={{ color: '#64748b' }}>Selecciona un stream para ver su contexto y sus eventos.</div>
+                <div style={{ color: '#64748b' }}>{t('admin.data.info.selectStreamHint')}</div>
               )}
               {!streamDetailLoading && selectedStreamDetail && (
                 <>
@@ -464,7 +466,7 @@ const AdminDataPanel = () => {
                       <tbody>
                         {(selectedStreamDetail.events || []).length === 0 && (
                           <tr>
-                            <td colSpan="4">Sin eventos para este stream.</td>
+                            <td colSpan="4">{t('admin.data.empty.streamEvents')}</td>
                           </tr>
                         )}
                         {(selectedStreamDetail.events || []).map((event) => (
@@ -539,7 +541,7 @@ const AdminDataPanel = () => {
             </StyledButton>
 
             <RightInfo>
-              {paymentsLoading ? 'Buscando pagos y operaciones...' : 'Contexto cruzado de transacciones, pagos, payouts y balances'}
+              {paymentsLoading ? t('admin.data.info.searchingPayments') : t('admin.data.info.paymentsCrossContext')}
             </RightInfo>
           </ControlsRow>
 
@@ -554,7 +556,7 @@ const AdminDataPanel = () => {
             ))}
           </div>
 
-          <DataSection title="Pagos y operaciones" meta="Incluye transacciones, payment sessions, payouts y contexto basico de balances para investigar un caso.">
+          <DataSection title="Pagos y operaciones" meta={t('admin.data.descriptions.paymentsSection')}>
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
                 <thead>
@@ -572,7 +574,7 @@ const AdminDataPanel = () => {
                 <tbody>
                   {paymentsData.transactions.length === 0 && (
                     <tr>
-                      <td colSpan="8">Sin transacciones para los filtros actuales.</td>
+                      <td colSpan="8">{t('admin.data.empty.transactions')}</td>
                     </tr>
                   )}
                   {paymentsData.transactions.map((row) => (
@@ -598,7 +600,7 @@ const AdminDataPanel = () => {
             </div>
           </DataSection>
 
-          <DataSection title="Payment sessions" meta="Contexto de intentos de pago y sesiones PSP relacionadas con el caso investigado.">
+          <DataSection title="Payment sessions" meta={t('admin.data.descriptions.paymentSessions')}>
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
                 <thead>
@@ -616,7 +618,7 @@ const AdminDataPanel = () => {
                 <tbody>
                   {paymentsData.paymentSessions.length === 0 && (
                     <tr>
-                      <td colSpan="8">Sin payment sessions para los filtros actuales.</td>
+                      <td colSpan="8">{t('admin.data.empty.paymentSessions')}</td>
                     </tr>
                   )}
                   {paymentsData.paymentSessions.map((row) => (
@@ -636,7 +638,7 @@ const AdminDataPanel = () => {
             </div>
           </DataSection>
 
-          <DataSection title="Payout requests" meta="Primera vista util para seguir retiros de modelo y su transicion de estado.">
+          <DataSection title="Payout requests" meta={t('admin.data.descriptions.payoutRequests')}>
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
                 <thead>
@@ -653,7 +655,7 @@ const AdminDataPanel = () => {
                 <tbody>
                   {paymentsData.payoutRequests.length === 0 && (
                     <tr>
-                      <td colSpan="7">Sin payout requests para los filtros actuales.</td>
+                      <td colSpan="7">{t('admin.data.empty.payoutRequests')}</td>
                     </tr>
                   )}
                   {paymentsData.payoutRequests.map((row) => (
@@ -672,7 +674,7 @@ const AdminDataPanel = () => {
             </div>
           </DataSection>
 
-          <DataSection title="Balances" meta="Contexto basico del ledger para entender saldo y huella de una operacion.">
+          <DataSection title="Balances" meta={t('admin.data.descriptions.balances')}>
             <div style={{ overflowX: 'auto' }}>
               <DarkHeaderTable>
                 <thead>
@@ -689,7 +691,7 @@ const AdminDataPanel = () => {
                 <tbody>
                   {paymentsData.balances.length === 0 && (
                     <tr>
-                      <td colSpan="7">Sin balances para los filtros actuales.</td>
+                      <td colSpan="7">{t('admin.data.empty.balances')}</td>
                     </tr>
                   )}
                   {paymentsData.balances.map((row) => (
@@ -717,7 +719,7 @@ const AdminDataPanel = () => {
       {activeTab === 'raw' && (
         <DataSection
           title="Exploracion tecnica raw"
-          meta="Subnivel tecnico solo para ADMIN. Se mantiene el visor raw actual mientras se amplian las consultas internas guiadas."
+          meta={t('admin.data.descriptions.rawExploration')}
         >
           <AdminDbPanel hideTitle />
         </DataSection>

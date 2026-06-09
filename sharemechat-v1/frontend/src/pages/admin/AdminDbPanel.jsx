@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import i18n from '../../i18n';
 import {
   DbFilters,
   DbLayout,
@@ -47,6 +48,7 @@ const DB_TABLES = [
 const LIMIT_OPTIONS = [10, 20, 30, 40, 50, 100];
 
 const AdminDbPanel = ({ hideTitle = false }) => {
+  const t = (key, options) => i18n.t(key, options);
   const [dbTable, setDbTable] = useState('');
   const [dbLimit, setDbLimit] = useState(10);
   const [dbRows, setDbRows] = useState([]);
@@ -72,11 +74,11 @@ const AdminDbPanel = ({ hideTitle = false }) => {
         const res = await fetch(`/api/admin/db/view?table=${encodeURIComponent(dbTable)}&limit=${dbLimit}`, {
           credentials: 'include',
         });
-        if (!res.ok) throw new Error((await res.text()) || 'Error al consultar BBDD');
+        if (!res.ok) throw new Error((await res.text()) || t('admin.db.errors.queryFailed'));
         const data = await res.json();
         setDbRows(Array.isArray(data) ? data : []);
       } catch (e) {
-        setDbError(e.message || 'Error al consultar BBDD');
+        setDbError(e.message || t('admin.db.errors.queryFailed'));
         setDbRows([]);
       } finally {
         setDbLoading(false);
@@ -110,7 +112,7 @@ const AdminDbPanel = ({ hideTitle = false }) => {
           </FieldBlock>
 
           <RightInfo>
-            {dbTable === '' ? 'Elige una tabla para ver datos.' : dbLoading ? 'Cargando…' : ''}
+            {dbTable === '' ? t('admin.db.empty.selectTable') : dbLoading ? t('admin.db.empty.loading') : ''}
           </RightInfo>
         </DbFilters>
 
@@ -120,7 +122,7 @@ const AdminDbPanel = ({ hideTitle = false }) => {
               <tr>
                 {dbRows.length > 0
                   ? Object.keys(dbRows[0]).map((k) => <th key={k}>{k}</th>)
-                  : <th style={{ textAlign: 'left' }}>Sin datos</th>}
+                  : <th style={{ textAlign: 'left' }}>{t('admin.db.empty.noData')}</th>}
               </tr>
             </thead>
             <tbody>

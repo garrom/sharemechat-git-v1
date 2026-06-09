@@ -62,7 +62,7 @@ const DashboardAdmin = () => {
     },
     'asset-moderation': {
       title: 'Moderación de assets de modelo',
-      subtitle: 'Cola de aprobación de foto y vídeo de perfil del modelo. ADMIN y SUPPORT deciden; AUDIT solo lee.',
+      subtitle: t('admin.dashboard.viewCopy.assetModeration.subtitle'),
     },
     moderation: {
       title: t('admin.shell.views.moderation.title'),
@@ -90,7 +90,7 @@ const DashboardAdmin = () => {
     },
     content: {
       title: 'Content CMS',
-      subtitle: 'Gestion editorial de articulos. Workflow simplificado (ADR-016): DRAFT → IN_REVIEW → PUBLISHED → RETRACTED. Pipeline IA orquestado (ADR-014) y publicacion publica dinamica (Fase 4A).',
+      subtitle: t('admin.dashboard.viewCopy.content.subtitle'),
     },
     profile: {
       title: t('admin.shell.views.profile.title'),
@@ -214,7 +214,7 @@ const DashboardAdmin = () => {
           capabilities.canViewAssetModeration ? {
             key: 'asset-moderation',
             label: 'Moderación assets',
-            meta: 'Cola de aprobación de foto y vídeo de perfil.',
+            meta: t('admin.dashboard.sidebar.assetModeration.meta'),
           } : null,
           capabilities.canViewModeration ? {
             key: 'moderation',
@@ -254,7 +254,7 @@ const DashboardAdmin = () => {
           capabilities.canViewContent ? {
             key: 'content',
             label: 'Content CMS',
-            meta: 'Articulos editoriales (Fase 1)',
+            meta: t('admin.dashboard.sidebar.content.meta'),
           } : null,
         ].filter(Boolean),
       },
@@ -425,7 +425,7 @@ const DashboardAdmin = () => {
           {activeView === 'models' && capabilities.canViewModels && (
             <AdminPage
               title="Onboarding y revision de modelos"
-              subtitle="Bloque actual de trabajo para verificacion y seguimiento de modelos. El alcance todavia no cubre una gestion general de usuarios."
+              subtitle={t('admin.dashboard.pageSubtitles.models')}
             >
               <AdminModelsPanel
                 canReadKycMode={capabilities.canReadKycMode}
@@ -440,7 +440,7 @@ const DashboardAdmin = () => {
           {activeView === 'asset-moderation' && capabilities.canViewAssetModeration && (
             <AdminPage
               title="Moderación de assets de modelo"
-              subtitle="Cola de aprobación de foto y vídeo de perfil del modelo. Cada upload genera una review pendiente; el modelo no es visible al cliente hasta que ambos assets estén aprobados."
+              subtitle={t('admin.dashboard.pageSubtitles.assetModeration')}
             >
               <AdminAssetModerationPanel
                 canModerate={capabilities.canModerateAssets}
@@ -461,7 +461,7 @@ const DashboardAdmin = () => {
           {activeView === 'finance' && capabilities.canViewFinance && (
             <AdminPage
               title="Resumen financiero"
-              subtitle="Visibilidad principal de facturacion, margen y ranking economico."
+              subtitle={t('admin.dashboard.pageSubtitles.finance')}
             >
               <AdminFinancePanel
                 canRefund={false}
@@ -474,7 +474,7 @@ const DashboardAdmin = () => {
           {activeView === 'finance-adjustments' && capabilities.canRefund && (
             <AdminPage
               title="Ajustes financieros manuales"
-              subtitle="Bloque inicial separado para operaciones sensibles. Actualmente se centra en refunds manuales."
+              subtitle={t('admin.dashboard.pageSubtitles.financeAdjustments')}
             >
               <AdminFinancePanel
                 canRefund={capabilities.canRefund}
@@ -487,7 +487,7 @@ const DashboardAdmin = () => {
           {activeView === 'control' && capabilities.canViewAudit && (
             <AdminPage
               title="Control interno"
-              subtitle="Checks de consistencia, integridad y auditoria interna del sistema."
+              subtitle={t('admin.dashboard.pageSubtitles.control')}
             >
               <AdminAuditPanel />
             </AdminPage>
@@ -496,7 +496,7 @@ const DashboardAdmin = () => {
           {activeView === 'data' && capabilities.canViewDb && (
             <AdminPage
               title="Datos internos"
-              subtitle="Consultas internas operativas para investigacion y una capa raw tecnica reservada a administracion."
+              subtitle={t('admin.dashboard.pageSubtitles.data')}
             >
               <AdminDataPanel />
             </AdminPage>
@@ -505,7 +505,7 @@ const DashboardAdmin = () => {
           {activeView === 'administration' && capabilities.canViewAdministration && (
             <AdminPage
               title="Administracion interna"
-              subtitle="Vista MVP de usuarios con acceso backoffice, roles efectivos, permisos visibles y overrides."
+              subtitle={t('admin.dashboard.pageSubtitles.administration')}
             >
               <AdminAdministrationPanel />
             </AdminPage>
@@ -514,7 +514,7 @@ const DashboardAdmin = () => {
           {activeView === 'content' && capabilities.canViewContent && (
             <AdminPage
               title="Content CMS"
-              subtitle="Articulos editoriales en backoffice. Workflow simplificado (ADR-016): DRAFT -> IN_REVIEW -> PUBLISHED -> RETRACTED."
+              subtitle={t('admin.dashboard.pageSubtitles.content')}
             >
               <AdminContentPanel />
             </AdminPage>

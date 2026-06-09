@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import styled from 'styled-components';
+import i18n from '../../i18n';
 import {
   CardsGrid,
   CheckBox,
@@ -41,6 +42,7 @@ const AdminModelsPanel = ({
   canChangeKycMode = false,
   canViewSensitiveDocs = false,
 }) => {
+  const t = (key, options) => i18n.t(key, options);
   const [users, setUsers] = useState([]);
   const [statusFilter, setStatusFilter] = useState('ACTIVE');
   const [pageSize, setPageSize] = useState(10);
@@ -103,7 +105,7 @@ const AdminModelsPanel = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ [field]: value }),
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error guardando checklist');
+      if (!res.ok) throw new Error((await res.text()) || t('admin.models.errors.savingChecklist'));
 
       const data = await res.json();
       setChecksByUser((prev) => ({
@@ -115,7 +117,7 @@ const AdminModelsPanel = ({
         },
       }));
     } catch (e) {
-      alert(e.message || 'No se pudo guardar el check');
+      alert(e.message || t('admin.models.errors.couldNotSaveCheck'));
       setChecksByUser((prev) => ({ ...prev, [userId]: { ...prev[userId], [field]: !value } }));
     } finally {
       setSavingCheckKey(null);
@@ -138,7 +140,7 @@ const AdminModelsPanel = ({
       const response = await fetch('/api/admin/models', {
         credentials: 'include',
       });
-      if (!response.ok) throw new Error((await response.text()) || 'Error al cargar modelos');
+      if (!response.ok) throw new Error((await response.text()) || t('admin.models.errors.loadingModels'));
 
       const data = await response.json();
       const rows = Array.isArray(data) ? data : [];
@@ -156,7 +158,7 @@ const AdminModelsPanel = ({
         return next;
       });
     } catch (err) {
-      setError(err.message || 'Error cargando datos');
+      setError(err.message || t('admin.models.errors.loadingData'));
     } finally {
       setLoading(false);
     }
@@ -171,12 +173,12 @@ const AdminModelsPanel = ({
       const res = await fetch('/api/kyc/config/model-onboarding', {
         credentials: 'include',
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error cargando configuracion KYC');
+      if (!res.ok) throw new Error((await res.text()) || t('admin.models.errors.loadingKycConfig'));
       const data = await res.json();
       setKycCfg(data || null);
       setKycModeDraft((data?.activeMode || 'VERIFF').toUpperCase());
     } catch (e) {
-      setKycCfgError(e.message || 'Error cargando configuracion KYC');
+      setKycCfgError(e.message || t('admin.models.errors.loadingKycConfig'));
       setKycCfg(null);
     } finally {
       setKycCfgLoading(false);
@@ -195,13 +197,13 @@ const AdminModelsPanel = ({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: kycModeDraft,
-          note: `Cambio desde Admin UI a ${kycModeDraft}`,
+          note: t('admin.models.descriptions.kycModeChangeNote', { mode: kycModeDraft }),
         }),
       });
-      if (!res.ok) throw new Error((await res.text()) || 'Error guardando modo KYC');
+      if (!res.ok) throw new Error((await res.text()) || t('admin.models.errors.savingKycMode'));
       await loadKycConfig();
     } catch (e) {
-      setKycCfgError(e.message || 'Error guardando modo KYC');
+      setKycCfgError(e.message || t('admin.models.errors.savingKycMode'));
     } finally {
       setKycCfgSaving(false);
     }
@@ -211,9 +213,7 @@ const AdminModelsPanel = ({
     if (!canReviewModels) return;
 
     if (action === 'REJECT') {
-      const ok = window.confirm(
-        'Quieres rechazar la verificacion de esta modelo?\nEsta accion se considera definitiva en el flujo actual.'
-      );
+      const ok = window.confirm(t('admin.models.confirmations.rejectVerification'));
       if (!ok) return;
     }
 
@@ -222,12 +222,12 @@ const AdminModelsPanel = ({
         method: 'POST',
         credentials: 'include',
       });
-      if (!response.ok) throw new Error((await response.text()) || 'Error al actualizar verificacion');
+      if (!response.ok) throw new Error((await response.text()) || t('admin.models.errors.updatingVerification'));
       const message = await response.text();
-      alert(message || 'Estado actualizado');
+      alert(message || t('admin.models.success.statusUpdated'));
       fetchUsers();
     } catch (err) {
-      setError(err.message || 'Error actualizando estado');
+      setError(err.message || t('admin.models.errors.updatingStatus'));
     }
   };
 
@@ -304,7 +304,7 @@ const AdminModelsPanel = ({
               onClick={(e) => {
                 if (!url) e.preventDefault();
               }}
-              title={url ? 'Abrir documento' : 'No disponible'}
+              title={url ? t('admin.models.descriptions.openDocumentTooltip') : t('admin.models.descriptions.documentNotAvailableTooltip')}
             >
               {label}
             </DocLink>
@@ -320,7 +320,7 @@ const AdminModelsPanel = ({
                 disabled={!canUpdateChecklist || saving}
                 checked={!!checks[fieldKey]}
                 onChange={(e) => updateCheck(user.id, fieldKey, e.target.checked)}
-                title={canUpdateChecklist ? 'Marcar como validado' : 'Sin permiso para actualizar checklist'}
+                title={canUpdateChecklist ? t('admin.models.descriptions.markAsValidatedTooltip') : t('admin.models.descriptions.noPermissionChecklistTooltip')}
               />
             </div>
           );
@@ -334,29 +334,29 @@ const AdminModelsPanel = ({
       <SectionTitle>Modelos</SectionTitle>
 
       <div style={{ fontSize: 12, color: '#52607a', lineHeight: 1.55, marginBottom: 8, maxWidth: 980 }}>
-        Vista operativa de onboarding y revision de modelos. Permite filtrar estados, validar documentacion y ejecutar aprobacion o rechazo cuando el flujo actual lo permite.
+        {t('admin.models.descriptions.panelIntro')}
       </div>
 
       <CardsGrid style={{ marginBottom: 10 }}>
         <StatCard>
           <div className="label">Total visible</div>
           <div className="value">{statusSummary.total}</div>
-          <div className="meta">Modelos cargados en la vista.</div>
+          <div className="meta">{t('admin.models.descriptions.totalMeta')}</div>
         </StatCard>
         <StatCard>
           <div className="label">Pendientes</div>
           <div className="value">{statusSummary.pending}</div>
-          <div className="meta">Requieren validacion o decision.</div>
+          <div className="meta">{t('admin.models.descriptions.pendingMeta')}</div>
         </StatCard>
         <StatCard>
           <div className="label">Aprobados</div>
           <div className="value">{statusSummary.approved}</div>
-          <div className="meta">Ya pasaron a flujo operativo.</div>
+          <div className="meta">{t('admin.models.descriptions.approvedMeta')}</div>
         </StatCard>
         <StatCard>
           <div className="label">Rechazados</div>
           <div className="value">{statusSummary.rejected}</div>
-          <div className="meta">Casos cerrados sin aprobacion.</div>
+          <div className="meta">{t('admin.models.descriptions.rejectedMeta')}</div>
         </StatCard>
       </CardsGrid>
 
@@ -368,7 +368,7 @@ const AdminModelsPanel = ({
                 Configuracion KYC de onboarding
               </div>
               <div style={{ marginTop: 4, fontSize: 12, color: '#52607a', lineHeight: 1.5, maxWidth: 720 }}>
-                Controla si el alta de modelos sigue el flujo automatico con Veriff o el flujo manual con revision documental.
+                {t('admin.models.descriptions.kycConfigIntro')}
               </div>
             </div>
           </div>
@@ -395,7 +395,7 @@ const AdminModelsPanel = ({
             </div>
           ) : (
             <div style={{ marginTop: 10, fontSize: 12, color: '#6c757d' }}>
-              Lectura del modo KYC actual. El cambio global queda reservado a ADMIN.
+              {t('admin.models.descriptions.kycReadOnlyInfo')}
             </div>
           )}
 
@@ -487,7 +487,7 @@ const AdminModelsPanel = ({
                     <strong>{verification}</strong>
                     {verification === 'PENDING' && (
                       <div style={{ fontSize: 11, color: '#74819a', marginTop: 4 }}>
-                        Pendiente de validacion y decision.
+                        {t('admin.models.descriptions.pendingRowHint')}
                       </div>
                     )}
                   </td>
@@ -500,7 +500,7 @@ const AdminModelsPanel = ({
                         <TableSuccessButton
                           onClick={() => handleReview(user.id, 'APPROVE')}
                           disabled={!canApprove(user.id)}
-                          title={!canApprove(user.id) ? 'Valida los 3 documentos primero' : 'Aprobar modelo'}
+                          title={!canApprove(user.id) ? t('admin.models.descriptions.approveTooltipDisabled') : t('admin.models.descriptions.approveTooltipEnabled')}
                         >
                           Aprobar
                         </TableSuccessButton>
@@ -522,7 +522,7 @@ const AdminModelsPanel = ({
                     )}
 
                     {verification === 'REJECTED' && (
-                      <span style={{ color: '#dc3545', fontWeight: 'bold' }}>Rechazada permanentemente</span>
+                      <span style={{ color: '#dc3545', fontWeight: 'bold' }}>{t('admin.models.descriptions.permanentlyRejected')}</span>
                     )}
 
                     {!canUpdateChecklist && !canReviewModels && verification !== 'REJECTED' && (

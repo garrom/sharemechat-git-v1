@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import {
   CardsGrid,
@@ -129,6 +130,7 @@ const scrollToRef = (ref) => {
 };
 
 const AdminAdministrationPanel = () => {
+  const t = (key, options) => i18n.t(key, options);
   const detailRequestRef = useRef(0);
   const destinationRef = useRef(null);
   const [data, setData] = useState(null);
@@ -162,7 +164,7 @@ const AdminAdministrationPanel = () => {
         setSelectedUserId(preferredUserId);
       }
     } catch (e) {
-      setError(e.message || 'No se pudo cargar la administracion interna.');
+      setError(e.message || t('admin.administration.errors.loadList'));
       setData(null);
     } finally {
       setLoading(false);
@@ -192,7 +194,7 @@ const AdminAdministrationPanel = () => {
         return;
       }
       setDetail(null);
-      setDetailError(e.message || 'No se pudo cargar el detalle del acceso.');
+      setDetailError(e.message || t('admin.administration.errors.loadDetail'));
     } finally {
       if (detailRequestRef.current === requestId) {
         setDetailLoading(false);
@@ -295,7 +297,7 @@ const AdminAdministrationPanel = () => {
       const next = await apiFetch(`/admin/administration/users/search?q=${encodeURIComponent(q)}&limit=10`);
       setLookupResults(Array.isArray(next) ? next : []);
     } catch (e) {
-      setLookupError(e.message || 'No se pudo buscar el usuario.');
+      setLookupError(e.message || t('admin.administration.errors.lookupUser'));
       setLookupResults([]);
     } finally {
       setLookupLoading(false);
@@ -352,7 +354,7 @@ const AdminAdministrationPanel = () => {
       setLookupResults([]);
       setLookupQuery('');
     } catch (e) {
-      setFormError(e.message || 'No se pudo guardar el acceso backoffice.');
+      setFormError(e.message || t('admin.administration.errors.saveAccess'));
     } finally {
       setSaving(false);
     }
@@ -368,7 +370,7 @@ const AdminAdministrationPanel = () => {
       setSelectedUserId(userId);
       await loadDetail(userId);
     } catch (e) {
-      setFormError(e.message || 'No se pudo reenviar el email de validacion.');
+      setFormError(e.message || t('admin.administration.errors.resendVerification'));
     } finally {
       setResendingUserId(null);
     }
@@ -392,7 +394,7 @@ const AdminAdministrationPanel = () => {
       }));
       setStatusNote('');
     } catch (e) {
-      setFormError(e.message || 'No se pudo actualizar el estado del acceso.');
+      setFormError(e.message || t('admin.administration.errors.updateStatus'));
     }
   };
 
@@ -405,8 +407,7 @@ const AdminAdministrationPanel = () => {
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
         <div style={{ maxWidth: 820, fontSize: 13, color: '#52607a', lineHeight: 1.55 }}>
-          Administracion interna del acceso backoffice para usuarios ya existentes. Se distingue entre configuracion explicita,
-          acceso implicito por rol producto ADMIN y acceso efectivo real. El estado inactivo bloquea la entrada incluso para un ADMIN implicito.
+          {t('admin.administration.descriptions.panelIntro')}
         </div>
         <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <StyledInput
@@ -425,21 +426,21 @@ const AdminAdministrationPanel = () => {
       {error && <StyledError>{error}</StyledError>}
 
       <CardsGrid style={{ marginBottom: 16 }}>
-        <StatCard><div className="label">Dominio backoffice</div><div className="value">{summary.totalUsers ?? users.length}</div><div className="meta">Usuarios visibles en este dominio, con acceso explicito o implicito.</div></StatCard>
-        <StatCard><div className="label">Configuracion explicita</div><div className="value">{summary.explicitUsers ?? 0}</div><div className="meta">Roles, overrides o estado gestionados explicitamente.</div></StatCard>
-        <StatCard><div className="label">Acceso implicito</div><div className="value">{summary.implicitAdminUsers ?? 0}</div><div className="meta">Acceso heredado por role producto ADMIN.</div></StatCard>
-        <StatCard><div className="label">Acceso efectivo</div><div className="value">{summary.effectiveUsers ?? 0}</div><div className="meta">Usuarios con roles efectivos reales de backoffice.</div></StatCard>
-        <StatCard><div className="label">ADMIN</div><div className="value">{summary.adminUsers ?? 0}</div><div className="meta">Acceso administrativo efectivo.</div></StatCard>
-        <StatCard><div className="label">SUPPORT</div><div className="value">{summary.supportUsers ?? 0}</div><div className="meta">Operativa de soporte/backoffice.</div></StatCard>
-        <StatCard><div className="label">AUDIT</div><div className="value">{summary.auditUsers ?? 0}</div><div className="meta">Visibilidad de auditoria interna.</div></StatCard>
-        <StatCard><div className="label">Overrides</div><div className="value">{summary.usersWithOverrides ?? 0}</div><div className="meta">Permisos ajustados manualmente.</div></StatCard>
-        <StatCard><div className="label">Inactivos</div><div className="value">{summary.inactiveUsers ?? 0}</div><div className="meta">Accesos configurados pero bloqueados.</div></StatCard>
+        <StatCard><div className="label">Dominio backoffice</div><div className="value">{summary.totalUsers ?? users.length}</div><div className="meta">{t('admin.administration.descriptions.metaTotalUsers')}</div></StatCard>
+        <StatCard><div className="label">Configuracion explicita</div><div className="value">{summary.explicitUsers ?? 0}</div><div className="meta">{t('admin.administration.descriptions.metaExplicitUsers')}</div></StatCard>
+        <StatCard><div className="label">Acceso implicito</div><div className="value">{summary.implicitAdminUsers ?? 0}</div><div className="meta">{t('admin.administration.descriptions.metaImplicitAdmin')}</div></StatCard>
+        <StatCard><div className="label">Acceso efectivo</div><div className="value">{summary.effectiveUsers ?? 0}</div><div className="meta">{t('admin.administration.descriptions.metaEffectiveUsers')}</div></StatCard>
+        <StatCard><div className="label">ADMIN</div><div className="value">{summary.adminUsers ?? 0}</div><div className="meta">{t('admin.administration.descriptions.metaAdmin')}</div></StatCard>
+        <StatCard><div className="label">SUPPORT</div><div className="value">{summary.supportUsers ?? 0}</div><div className="meta">{t('admin.administration.descriptions.metaSupport')}</div></StatCard>
+        <StatCard><div className="label">AUDIT</div><div className="value">{summary.auditUsers ?? 0}</div><div className="meta">{t('admin.administration.descriptions.metaAudit')}</div></StatCard>
+        <StatCard><div className="label">Overrides</div><div className="value">{summary.usersWithOverrides ?? 0}</div><div className="meta">{t('admin.administration.descriptions.metaOverrides')}</div></StatCard>
+        <StatCard><div className="label">Inactivos</div><div className="value">{summary.inactiveUsers ?? 0}</div><div className="meta">{t('admin.administration.descriptions.metaInactive')}</div></StatCard>
       </CardsGrid>
 
       <InlinePanel style={{ marginBottom: 16 }}>
         <div style={{ fontSize: 14, fontWeight: 700, color: '#162033' }}>Crear acceso backoffice</div>
         <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>
-          Busca primero un usuario ya existente por email o userId para habilitar acceso interno. Si no existe, crea un usuario interno nuevo desde cero.
+          {t('admin.administration.descriptions.createIntro')}
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 10 }}>
           <PanelRow style={{ marginTop: 0 }}>
@@ -518,7 +519,7 @@ const AdminAdministrationPanel = () => {
             </thead>
             <tbody>
               {filteredUsers.length === 0 ? (
-                <tr><td colSpan="8" style={{ color: '#74819a' }}>No hay usuarios que coincidan con el filtro actual.</td></tr>
+                <tr><td colSpan="8" style={{ color: '#74819a' }}>{t('admin.administration.empty.noUsersMatch')}</td></tr>
               ) : filteredUsers.map((user) => (
                 <tr key={user.userId} data-selected={selectedUserId === user.userId ? 'true' : undefined}>
                   <td>{user.userId}</td>
@@ -547,17 +548,17 @@ const AdminAdministrationPanel = () => {
             {editorMode === 'create' ? 'Nuevo acceso backoffice' : showEditor ? 'Editar acceso backoffice' : 'Detalle de acceso'}
           </div>
           <div style={{ marginTop: 6, fontSize: 13, color: '#52607a', lineHeight: 1.5 }}>
-            {showEditor ? 'Los roles conceden acceso base. Los overrides anaden o retiran permisos concretos sin tocar el rol.' : 'Selecciona un usuario para revisar acceso explicito o implicito, permisos efectivos y trazabilidad.'}
+            {showEditor ? t('admin.administration.descriptions.editorHelp') : t('admin.administration.descriptions.viewHelp')}
           </div>
 
           {detailError && <StyledError>{detailError}</StyledError>}
           {formError && <StyledError>{formError}</StyledError>}
           {(detailLoading || waitingForEditDetail) && (
-            <div style={{ marginTop: 16, color: '#74819a' }}>Cargando detalle...</div>
+            <div style={{ marginTop: 16, color: '#74819a' }}>{t('admin.administration.empty.loadingDetail')}</div>
           )}
 
           {!detailLoading && !waitingForEditDetail && !showEditor && !detail && (
-            <div style={{ marginTop: 16, color: '#52607a', lineHeight: 1.55 }}>Elige un usuario de la tabla o usa la busqueda superior para crear un acceso nuevo.</div>
+            <div style={{ marginTop: 16, color: '#52607a', lineHeight: 1.55 }}>{t('admin.administration.empty.pickUser')}</div>
           )}
 
           {!detailLoading && !waitingForEditDetail && (showEditor || detail) && (
@@ -603,7 +604,7 @@ const AdminAdministrationPanel = () => {
 
                   <InlinePanel style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 10 }}>Roles backoffice</div>
-                    <div style={{ fontSize: 12, color: '#52607a', marginBottom: 10 }}>Asigna uno o varios roles operativos reales: ADMIN, SUPPORT o AUDIT.</div>
+                    <div style={{ fontSize: 12, color: '#52607a', marginBottom: 10 }}>{t('admin.administration.descriptions.rolesHelp')}</div>
                     {availableRoles.map((role) => (
                       <label key={role} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                         <CheckBox type="checkbox" checked={form.roleCodes.includes(normalizeRoleCode(role))} onChange={() => toggleRole(normalizeRoleCode(role))} />
@@ -611,19 +612,19 @@ const AdminAdministrationPanel = () => {
                       </label>
                     ))}
                     <div style={{ fontSize: 12, color: '#334155', marginTop: 12 }}>
-                      Guardar configuracion no cambia el estado del acceso. La activacion o desactivacion se gestiona solo con el boton especifico y una nota opcional.
+                      {t('admin.administration.warnings.saveDoesNotChangeStatus')}
                     </div>
                     {editorMode === 'create' ? (
                       <label style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 12 }}>
                         <CheckBox type="checkbox" checked={Boolean(form.active)} onChange={(e) => setForm((prev) => ({ ...prev, active: e.target.checked }))} />
-                        <span>Dejar el acceso backoffice activo tras la creacion</span>
+                        <span>{t('admin.administration.descriptions.keepActiveAfterCreate')}</span>
                       </label>
                     ) : null}
                   </InlinePanel>
 
                   <InlinePanel style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 10 }}>Overrides de permisos</div>
-                    <div style={{ fontSize: 12, color: '#52607a', marginBottom: 10 }}>Inherit mantiene el permiso segun los roles. Grant lo anade explicitamente. Remove lo bloquea explicitamente.</div>
+                    <div style={{ fontSize: 12, color: '#52607a', marginBottom: 10 }}>{t('admin.administration.descriptions.overridesHelp')}</div>
                     {availablePermissions.map((permission) => {
                       const mode = form.overrideAdditions.includes(permission) ? 'add' : form.overrideRemovals.includes(permission) ? 'remove' : 'inherit';
                       return (
@@ -669,7 +670,7 @@ const AdminAdministrationPanel = () => {
                       <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.6 }}>
                         {detail.assignedRoles.join(', ')}
                       </div>
-                    ) : <span style={{ color: '#74819a' }}>Sin roles asignados explicitamente.</span>}
+                    ) : <span style={{ color: '#74819a' }}>{t('admin.administration.empty.noAssignedRoles')}</span>}
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 8 }}>Semantica de acceso</div>
@@ -686,7 +687,7 @@ const AdminAdministrationPanel = () => {
                       <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.6 }}>
                         {detail.effectiveRoles.join(', ')}
                       </div>
-                    ) : <span style={{ color: '#74819a' }}>Sin roles efectivos.</span>}
+                    ) : <span style={{ color: '#74819a' }}>{t('admin.administration.empty.noEffectiveRoles')}</span>}
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 8 }}>Overrides manuales</div>
@@ -695,7 +696,7 @@ const AdminAdministrationPanel = () => {
                         {normalizeList(detail?.overrideAdditions).map((item) => <div key={`add-${item}`}>+ {item}</div>)}
                         {normalizeList(detail?.overrideRemovals).map((item) => <div key={`remove-${item}`}>- {item}</div>)}
                       </div>
-                    ) : <span style={{ color: '#74819a' }}>Sin overrides explicitos.</span>}
+                    ) : <span style={{ color: '#74819a' }}>{t('admin.administration.empty.noOverrides')}</span>}
                   </div>
                   <div style={{ marginBottom: 12 }}>
                     <div style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#74819a', marginBottom: 8 }}>Permisos efectivos</div>
@@ -704,7 +705,7 @@ const AdminAdministrationPanel = () => {
                         <div style={{ fontSize: 12, color: '#334155', lineHeight: 1.6 }}>
                           {normalizeList(detail?.effectivePermissions).map((permission) => <div key={permission}>{permission}</div>)}
                         </div>
-                      ) : <span style={{ color: '#74819a' }}>Sin permisos efectivos visibles.</span>}
+                      ) : <span style={{ color: '#74819a' }}>{t('admin.administration.empty.noEffectivePermissions')}</span>}
                     </div>
                   </div>
                   <div style={{ marginBottom: 12 }}>
@@ -715,9 +716,9 @@ const AdminAdministrationPanel = () => {
                           <strong style={{ fontSize: 12 }}>{item.action}</strong>
                           <span style={{ fontSize: 11, color: '#74819a' }}>{item.createdAt || ''}</span>
                         </div>
-                        <div style={{ fontSize: 12, color: '#52607a' }}>{item.summary || 'Sin resumen'}</div>
+                        <div style={{ fontSize: 12, color: '#52607a' }}>{item.summary || t('admin.administration.empty.noSummary')}</div>
                       </InlinePanel>
-                    )) : <span style={{ color: '#74819a' }}>Sin cambios administrativos registrados.</span>}
+                    )) : <span style={{ color: '#74819a' }}>{t('admin.administration.empty.noAuditLogs')}</span>}
                   </div>
                 </>
               )}

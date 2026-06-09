@@ -1617,6 +1617,9 @@
           "manualEntry": "Entry point for manual investigation"
         },
         "note": "Panel ready. Pending connection to a prioritized view of incidents and alerts."
+      },
+      "panel": {
+        "title": "Audit"
       }
     },
     "assetModeration": {
@@ -1631,6 +1634,42 @@
         "CONTACT_INFO": "Contains text, URLs, or contact information",
         "INVALID_FORMAT": "Incorrect format or corrupted file",
         "OTHER": "Other (please specify)"
+      },
+      "errors": {
+        "loadQueue": "Error loading queue",
+        "loadStats": "Error loading stats",
+        "loadData": "Error loading data",
+        "approve": "Error approving",
+        "reject": "Error rejecting",
+        "reasonRequired": "Please select a reason.",
+        "detailRequiredOther": "When you select \"Other\", the detail is required."
+      },
+      "tooltips": {
+        "openVideo": "Open video in a new tab",
+        "openPhoto": "Open photo in a new tab",
+        "approve": "Approve this asset",
+        "rejectWithReason": "Reject with a reason",
+        "rejectRetroactive": "Retroactive rejection (ADMIN): reverses the previous approval. Creates a new REJECTED row, deactivates the asset and notifies the model."
+      },
+      "descriptions": {
+        "intro": "Approval queue for the model's profile photo and video. Every new upload creates a pending review; the model stays hidden from clients until both assets are approved. ADMIN and SUPPORT can decide; AUDIT is read-only.",
+        "pendingMeta": "Reviews awaiting a decision.",
+        "approvedMeta": "Validated assets (full history).",
+        "rejectedMeta": "Rejected assets (full history)."
+      },
+      "empty": {
+        "loading": "Loading…",
+        "refreshing": "Refreshing…",
+        "submitting": "Submitting…",
+        "noReviews": "No reviews in this state.",
+        "readOnly": "Read-only"
+      },
+      "confirmations": {
+        "modalTitle": "Reject asset",
+        "modalTitleRetroactive": "Reject asset (retroactive)",
+        "ofModel": "from model",
+        "subtitlePending": "The model will receive an email with the selected reason, and the asset will stop being visible until they upload a new approved one.",
+        "subtitleRetroactive": "This action reverses a previous approval: the historical APPROVED row is preserved, a new REJECTED row is created and the asset is deactivated. The model will receive an email with the selected reason."
       }
     },
     "shell": {
@@ -2121,6 +2160,154 @@
         "loadList": "Error loading active streams",
         "loadDetail": "Error loading stream detail",
         "kill": "Error terminating the stream"
+      }
+    },
+    "db": {
+      "errors": {
+        "queryFailed": "Database query failed"
+      },
+      "empty": {
+        "selectTable": "Pick a table to view data.",
+        "loading": "Loading…",
+        "noData": "No data"
+      }
+    },
+    "dashboard": {
+      "viewCopy": {
+        "assetModeration": {
+          "subtitle": "Approval queue for model profile photo and video. ADMIN and SUPPORT decide; AUDIT is read-only."
+        },
+        "content": {
+          "subtitle": "Editorial article management. Simplified workflow (ADR-016): DRAFT → IN_REVIEW → PUBLISHED → RETRACTED. Orchestrated AI pipeline (ADR-014) and dynamic public publishing (Phase 4A)."
+        }
+      },
+      "sidebar": {
+        "assetModeration": {
+          "meta": "Approval queue for profile photo and video."
+        },
+        "content": {
+          "meta": "Editorial articles (Phase 1)"
+        }
+      },
+      "pageSubtitles": {
+        "models": "Current working block for model verification and follow-up. The scope does not yet cover general user management.",
+        "assetModeration": "Approval queue for the model's profile photo and video. Every upload creates a pending review; the model is not visible to clients until both assets are approved.",
+        "finance": "Primary view of billing, margin and economic ranking.",
+        "financeAdjustments": "Separated initial block for sensitive operations. Currently focused on manual refunds.",
+        "control": "Consistency, integrity and internal audit checks for the system.",
+        "data": "Operational internal queries for investigation and a technical raw layer reserved for administration.",
+        "administration": "MVP view of users with backoffice access, effective roles, visible permissions and overrides.",
+        "content": "Editorial articles in the backoffice. Simplified workflow (ADR-016): DRAFT → IN_REVIEW → PUBLISHED → RETRACTED."
+      }
+    },
+    "models": {
+      "errors": {
+        "savingChecklist": "Failed to save checklist",
+        "couldNotSaveCheck": "Could not save the check",
+        "loadingModels": "Failed to load models",
+        "loadingData": "Failed to load data",
+        "loadingKycConfig": "Failed to load KYC configuration",
+        "savingKycMode": "Failed to save KYC mode",
+        "updatingVerification": "Failed to update verification",
+        "updatingStatus": "Failed to update status"
+      },
+      "success": {
+        "statusUpdated": "Status updated"
+      },
+      "confirmations": {
+        "rejectVerification": "Do you want to reject this model's verification?\nThis action is considered final in the current flow."
+      },
+      "descriptions": {
+        "kycModeChangeNote": "Change from Admin UI to {{mode}}",
+        "panelIntro": "Operational view for model onboarding and review. Filter statuses, validate documentation, and approve or reject when the current flow allows it.",
+        "totalMeta": "Models loaded in the view.",
+        "pendingMeta": "Awaiting validation or a decision.",
+        "approvedMeta": "Already moved into the operational flow.",
+        "rejectedMeta": "Cases closed without approval.",
+        "kycConfigIntro": "Controls whether model onboarding follows the automated Veriff flow or the manual document-review flow.",
+        "kycReadOnlyInfo": "Read-only view of the current KYC mode. Global changes are reserved for ADMIN.",
+        "pendingRowHint": "Awaiting validation and a decision.",
+        "approveTooltipDisabled": "Validate the three documents first",
+        "approveTooltipEnabled": "Approve model",
+        "openDocumentTooltip": "Open document",
+        "documentNotAvailableTooltip": "Not available",
+        "markAsValidatedTooltip": "Mark as validated",
+        "noPermissionChecklistTooltip": "No permission to update the checklist",
+        "permanentlyRejected": "Permanently rejected"
+      }
+    },
+    "administration": {
+      "errors": {
+        "loadList": "Could not load internal administration.",
+        "loadDetail": "Could not load access detail.",
+        "lookupUser": "Could not look up the user.",
+        "saveAccess": "Could not save backoffice access.",
+        "resendVerification": "Could not resend the verification email.",
+        "updateStatus": "Could not update access status."
+      },
+      "descriptions": {
+        "panelIntro": "Internal administration of backoffice access for existing users. We distinguish between explicit configuration, implicit access through the ADMIN product role, and actual effective access. An inactive state blocks entry even for an implicit ADMIN.",
+        "metaTotalUsers": "Users visible in this domain, with explicit or implicit access.",
+        "metaExplicitUsers": "Roles, overrides or state managed explicitly.",
+        "metaImplicitAdmin": "Access inherited from the ADMIN product role.",
+        "metaEffectiveUsers": "Users with actual effective backoffice roles.",
+        "metaAdmin": "Effective administrative access.",
+        "metaSupport": "Support/backoffice operations.",
+        "metaAudit": "Internal audit visibility.",
+        "metaOverrides": "Permissions adjusted manually.",
+        "metaInactive": "Configured but blocked accesses.",
+        "createIntro": "First look up an existing user by email or userId to enable internal access. If none exists, create a new internal user from scratch.",
+        "editorHelp": "Roles grant base access. Overrides add or remove specific permissions without touching the role itself.",
+        "viewHelp": "Select a user to review explicit or implicit access, effective permissions and traceability.",
+        "rolesHelp": "Assign one or more real operational roles: ADMIN, SUPPORT or AUDIT.",
+        "keepActiveAfterCreate": "Leave backoffice access active after creation",
+        "overridesHelp": "Inherit keeps the permission as defined by the roles. Grant adds it explicitly. Remove blocks it explicitly."
+      },
+      "warnings": {
+        "saveDoesNotChangeStatus": "Saving the configuration does not change access status. Activation or deactivation is handled only through the dedicated button and an optional note."
+      },
+      "empty": {
+        "noUsersMatch": "No users match the current filter.",
+        "loadingDetail": "Loading detail…",
+        "pickUser": "Pick a user from the table or use the search above to create a new access.",
+        "noAssignedRoles": "No roles explicitly assigned.",
+        "noEffectiveRoles": "No effective roles.",
+        "noOverrides": "No explicit overrides.",
+        "noEffectivePermissions": "No visible effective permissions.",
+        "noAuditLogs": "No administrative changes recorded.",
+        "noSummary": "No summary"
+      }
+    },
+    "data": {
+      "errors": {
+        "streamDetailLoad": "Failed to load stream detail",
+        "streamsLoad": "Failed to load streams",
+        "paymentsLoad": "Failed to load transactions and payments"
+      },
+      "info": {
+        "searchingStreams": "Searching streams…",
+        "rowsCount": "{{count}} rows",
+        "loadingDetail": "Loading detail…",
+        "selectStreamHint": "Pick a stream to inspect its context and events.",
+        "searchingPayments": "Searching payments and operations…",
+        "paymentsCrossContext": "Cross-context view of transactions, payments, payouts and balances"
+      },
+      "descriptions": {
+        "streamsResults": "Entry view to investigate streams by user, specific stream or visible identity.",
+        "streamDetail": "Reuses the existing operational detail with stream events to avoid duplicating logic.",
+        "paymentsSection": "Covers transactions, payment sessions, payouts and basic balance context for case investigation.",
+        "paymentSessions": "Context of payment attempts and PSP sessions tied to the investigated case.",
+        "payoutRequests": "First useful view to follow MODEL withdrawals and their status transitions.",
+        "balances": "Basic ledger context to understand the balance and footprint of an operation.",
+        "rawExploration": "Technical sub-level reserved for ADMIN. The current raw viewer stays in place while guided internal queries are expanded."
+      },
+      "empty": {
+        "streams": "No results for the current filters.",
+        "streamEvents": "No events for this stream.",
+        "transactions": "No transactions for the current filters.",
+        "paymentSessions": "No payment sessions for the current filters.",
+        "payoutRequests": "No payout requests for the current filters.",
+        "balances": "No balances for the current filters."
       }
     }
   },

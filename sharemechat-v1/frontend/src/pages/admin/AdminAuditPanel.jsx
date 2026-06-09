@@ -1,6 +1,7 @@
 // src/pages/admin/AdminAuditPanel.jsx
 import React, { useState } from 'react';
 import styled from 'styled-components';
+import i18n from '../../i18n';
 import { SectionTitle, TabsBar, SmallBtn } from '../../styles/AdminStyles';
 import AuditAccountingPanel from './audit/AuditAccountingPanel';
 import AuditSessionIntegrityPanel from './audit/AuditSessionIntegrityPanel';
@@ -24,11 +25,12 @@ const PanelTabButton = styled(SmallBtn)`
 `;
 
 const AdminAuditPanel = () => {
+  const t = (key, options) => i18n.t(key, options);
   const [activeAuditTab, setActiveAuditTab] = useState('accounting');
 
   return (
     <div>
-      <SectionTitle>Auditoría</SectionTitle>
+      <SectionTitle>{t('admin.audit.panel.title')}</SectionTitle>
 
       <TabsBar>
         <PanelTabButton

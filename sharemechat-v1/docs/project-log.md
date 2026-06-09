@@ -8,6 +8,33 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-09 — Cierre de la pasada de prosa del backoffice (i18n: 7 paneles restantes)
+
+Cierra la pasada de **solo prosa** del frente i18n del backoffice. Tras los paneles ya internacionalizados en sesiones previas (`AdminFinancePanel` como piloto y los cuatro paneles `Audit*` en el commit del 2026-06-08), esta entrega cubre los siete componentes restantes: `AdminModelsPanel`, `AdminAdministrationPanel`, `AdminDataPanel`, `AdminAssetModerationPanel`, `DashboardAdmin` (solo subtítulos), `AdminDbPanel` y `AdminAuditPanel` (contenedor). Alcance estrictamente de prosa: descripciones, párrafos de info/instrucciones, mensajes de error/éxito/info, tooltips explicativos largos y listas de checks. **Quedan deliberadamente fuera** botones, etiquetas cortas de campos, encabezados de columna de tabla, placeholders, opciones de select y todo lo que sea estilo. La segunda pasada (etiquetas cortas y botones) se aborda en un frente posterior.
+
+**Estructura de claves por panel**, todas bajo el namespace `admin.*` con el patrón ya validado (`import i18n from '../../i18n';` + `const t = (key, options) => i18n.t(key, options);` como primera línea del componente, claves camelCase con punto, interpolación `{{var}}`):
+
+- `admin.audit.panel.title` (1 clave): único literal del contenedor `AdminAuditPanel.jsx`. Encajado en el nodo `admin.audit.*` que ya tenía las cuatro sub-secciones del frente anterior (`accounting`, `runtimeHealth`, `sessionIntegrity`, `incident`), sin romper esa estructura.
+- `admin.db.*` (4 claves: `errors.queryFailed`, `empty.selectTable`, `empty.loading`, `empty.noData`): los únicos mensajes de prosa en `AdminDbPanel.jsx` (el resto del panel es interfaz tabular pura, fuera de alcance).
+- `admin.dashboard.viewCopy.*` + `admin.dashboard.sidebar.*` + `admin.dashboard.pageSubtitles.*` (12 claves): los subtítulos hardcoded del `viewCopy` y de los `AdminPage` por `activeView` en `DashboardAdmin.jsx`, más los `meta` descriptivos de los items del sidebar de navegación.
+- `admin.models.*` (26 claves: `errors.*` ×8, `success.statusUpdated`, `confirmations.rejectVerification`, `descriptions.*` ×16): mensajes de error de los useEffect de carga/guardado, confirmación del rechazo de verificación de modelo, descripciones del intro del panel, metas de StatCards y tooltips de acciones de revisión.
+- `admin.administration.*` (32 claves: `errors.*` ×6, `descriptions.*` ×16, `warnings.saveDoesNotChangeStatus`, `empty.*` ×9): introducción del panel de administración de acceso backoffice, metas de las StatCards (totalUsers, explicitUsers, implicitAdmin, effectiveUsers, admin, support, audit, overrides, inactive), ayudas contextuales del editor (`createIntro`, `editorHelp`, `viewHelp`, `rolesHelp`, `overridesHelp`), advertencia sobre la disociación entre guardar configuración y cambiar estado del acceso, y mensajes de listas vacías.
+- `admin.data.*` (22 claves: `errors.*` ×3, `info.*` ×6, `descriptions.*` ×7, `empty.*` ×6): mensajes de error de las cargas de streams/pagos, info de búsqueda y conteo de filas, descripciones de cada sección (streams, stream detail, payments, payment sessions, payout requests, balances, raw exploration) y listas vacías por subsección.
+- `admin.assetModeration.*` (26 claves añadidas: `errors.*` ×7, `tooltips.*` ×5, `descriptions.*` ×4, `empty.*` ×5, `confirmations.*` ×5): intro del panel, tooltips explicativos largos (especialmente el de rechazo retroactivo), confirmaciones del modal de rechazo (subtítulos pending/retroactive), errores de carga/aprobación/rechazo y mensajes de empty state. Conservado intacto el sub-nodo `admin.assetModeration.reasons` que ya tenía los diez motivos de rechazo del Fase 9 (anterior a este frente).
+
+**Total de claves nuevas**: **123** (1+4+12+26+32+22+26), replicadas en `es.json` y `en.json` con paridad estricta. Tras el merge, paridad ES↔EN verificada: 1402 claves totales en cada locale, 0 huérfanas en ningún sentido. Términos técnicos sin traducir donde corresponde (ADMIN, SUPPORT, AUDIT, EDITOR, KYC, VERIFF, ADR-016, DRAFT, IN_REVIEW, PUBLISHED, RETRACTED, APPROVED, REJECTED, PSP, PDF, etc.).
+
+**Decisiones del nombrado de nodos**. Ningún choque con nodos ya existentes:
+- `admin.audit.*` se extendió con la nueva sub-clave `panel.title` (el resto del nodo, las cuatro sub-secciones, ya estaba del frente anterior).
+- `admin.assetModeration.*` se extendió manteniendo el sub-nodo `reasons` intacto.
+- Los demás namespaces (`admin.db`, `admin.dashboard`, `admin.models`, `admin.administration`, `admin.data`) son nuevos en el namespace `admin.*` sin colisión.
+
+**Validación pre-commit**. Paridad ES↔EN verificada por script (`flatten` de ambos JSON y comparación de sets): 0 huérfanas. Build del frontend admin (`npx env-cmd -f .env.admin react-scripts build`) ejecutado: exit code 0, bundle final `main.9fcd3b39.js` (57.55 kB gzip) + chunk de i18n `35.6bb2d784.chunk.js` (+3.67 kB respecto al chunk anterior por las 123 claves nuevas). Las únicas advertencias del build son `no-unused-vars` ya existentes en ficheros de styles del repositorio, ajenas a este frente.
+
+**Lo que queda fuera y se aborda en otro frente**. (a) Segunda pasada del backoffice: etiquetas cortas, botones, headers de columna, placeholders, opciones de select, labels de tarjetas tipo `Total visible`/`Pendientes`/`Aprobados`. (b) `AdminTabs.jsx` con su mojibake heredado (deuda ya registrada en `known-debt.md` desde el 2026-06-08). (c) Internacionalización de los `title` cortos hardcoded de los `AdminPage` por `activeView` en `DashboardAdmin.jsx` (el operador limitó esta pasada a subtítulos en ese componente).
+
+---
+
 ## 2026-06-09 — Cierre de la Fase 1 del frente de prevención de drift (Fase 1 paso 2b: `update-manifest-backend.ps1`)
 
 Tercer y último paso de la Fase 1 del frente preventivo de drift entre backend y frontend en cada entorno. Tras los pasos 1 (manifest + check) y 2a (integración del check en `deploy-frontend.ps1`), este paso entrega la pieza simétrica para el lado backend en su variante mínima (opción B): un script que solo **actualiza el manifest** tras un deploy manual de backend, sin automatizar el deploy mismo. La opción A (script orquestador del deploy de backend, análogo a `deploy-frontend.ps1`) queda para Fase 2 junto con el endpoint `/api/health/version` + plugin git en el JAR.
