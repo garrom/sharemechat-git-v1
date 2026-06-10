@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -24,13 +25,25 @@ import java.util.List;
  * Solo aparece contenido del blog (rutas publicas /blog/{locale}[/{slug}]).
  * Cache 1h (max-age=3600) acorde a la cadencia editorial de SharemeChat.
  *
- * /robots.txt: sin cambios desde paquete 1.
+ * /robots.txt (ADR-033, 2026-06-10): fail-closed por entorno. Solo el
+ * apex PROD canonico (host exacto `sharemechat.com`, esquema https, sin
+ * puerto custom) recibe el robots indexable. Cualquier otro baseUrl
+ * (TEST, AUDIT, www, host desconocido, vacio, mal formado) responde
+ * `User-agent: * / Disallow: /` sin linea Sitemap. Sustituye al canonical
+ * hardcoded del index.html que hasta hoy reconducia accidentalmente
+ * trafico de no-PROD a PROD. Detalle en ADR-033.
  */
 @RestController
 public class SitemapController {
 
     private static final DateTimeFormatter ISO_DATE = DateTimeFormatter.ISO_LOCAL_DATE;
     private static final long SITEMAP_CACHE_SECONDS = 3600;
+
+    /** Host canonico del apex PROD (ADR-015). Discriminante de robots.txt. */
+    private static final String PROD_APEX_HOST = "sharemechat.com";
+
+    /** Body fail-closed de robots.txt para entornos no indexables. */
+    private static final String ROBOTS_DISALLOW_ALL = "User-agent: *\nDisallow: /\n";
 
     private final ContentArticleService articleService;
     private final PublicSiteProperties siteProperties;
@@ -98,8 +111,15 @@ public class SitemapController {
 
     @GetMapping(value = "/robots.txt", produces = "text/plain; charset=UTF-8")
     public ResponseEntity<String> robots() {
-        String baseUrl = resolveBaseUrl();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/plain; charset=UTF-8"));
+        headers.setCacheControl("public, max-age=86400");
 
+        if (!isProdApex()) {
+            return ResponseEntity.ok().headers(headers).body(ROBOTS_DISALLOW_ALL);
+        }
+
+        String baseUrl = resolveBaseUrl();
         String body = ""
                 + "User-agent: *\n"
                 + "Allow: /blog\n"
@@ -113,10 +133,38 @@ public class SitemapController {
                 + "\n"
                 + "Sitemap: " + baseUrl + "/sitemap.xml\n";
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("text/plain; charset=UTF-8"));
-        headers.setCacheControl("public, max-age=86400");
         return ResponseEntity.ok().headers(headers).body(body);
+    }
+
+    /**
+     * Discriminante de indexabilidad (ADR-033). Devuelve true solo cuando
+     * `app.public.base-url` apunta exactamente al apex PROD canonico
+     * (ADR-015): esquema https, host `sharemechat.com` exacto, sin puerto
+     * custom. Cualquier discrepancia -> false (fail-closed).
+     *
+     * No discrimina por header de host de la peticion: el contrato es
+     * "lo que esta configurado en este profile". Cambiar `app.public.base-url`
+     * sigue siendo la unica forma de hacer indexable un entorno.
+     */
+    private boolean isProdApex() {
+        String configured = siteProperties == null ? null : siteProperties.getBaseUrl();
+        if (configured == null || configured.isBlank()) {
+            return false;
+        }
+        try {
+            URI uri = URI.create(configured);
+            if (!"https".equalsIgnoreCase(uri.getScheme())) {
+                return false;
+            }
+            String host = uri.getHost();
+            if (host == null || !PROD_APEX_HOST.equalsIgnoreCase(host)) {
+                return false;
+            }
+            int port = uri.getPort();
+            return port == -1 || port == 443;
+        } catch (IllegalArgumentException ex) {
+            return false;
+        }
     }
 
     // ================================================================
