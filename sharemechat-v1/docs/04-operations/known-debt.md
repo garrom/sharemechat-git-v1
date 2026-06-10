@@ -1102,7 +1102,7 @@ Reabrir la conversación si Search Console + analítica de tráfico social revel
 
 ## Deudas cerradas durante 2026-05-09 (referencia histórica, ya resueltas)
 
-### [CERRADA] Carpetas docs/skills/ y docs/_snapshots/ no registradas en governance
+### [CERRADA] Carpetas docs/state-inventory-skills/ y docs/_snapshots/ no registradas en governance
 
 **Cerrada en**: commit `09263c7` con la creación de ADR-017 y la actualización de `documentation-governance.md` (Casos 8 y 9) y `docs/README.md`.
 

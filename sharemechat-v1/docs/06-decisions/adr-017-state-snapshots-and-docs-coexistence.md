@@ -18,7 +18,7 @@ Esa mezcla genera dos problemas reales y observados durante 2026-04 y 2026-05:
 - **Drift constante**: los hechos crudos cambian con cada deploy, cada ajuste de nginx o cada migración SQL. La prosa narrativa que los menciona se queda desactualizada y nadie se entera hasta que aparece una incidencia.
 - **Auditorías post-hoc no escalan**: la solución intentada hasta ahora ha sido auditar puntualmente la documentación contra el código (`docs/_audit/doc-vs-code-gap-2026-05-07.md` y similares). Cada auditoría confirma que la documentación está desactualizada — y vuelve a estarlo en una semana.
 
-El 2026-05-09 se introdujo un nuevo sistema de **snapshots estructurados de estado** (skill `state-inventory` en `docs/skills/state-inventory.md`, ficheros YAML en `docs/_snapshots/`). Los snapshots son fuente de verdad fáctica: lista de cache behaviors, lista de estados que admite el `CHECK`, etc. Se generan con un agente que ejecuta comandos reales contra el sistema (AWS CLI, SSH a EC2, MySQL Shell vía túnel) y producen YAML saneado de IDs sensibles.
+El 2026-05-09 se introdujo un nuevo sistema de **snapshots estructurados de estado** (skill `state-inventory` en `docs/state-inventory-skills/state-inventory.md`, ficheros YAML en `docs/_snapshots/`). Los snapshots son fuente de verdad fáctica: lista de cache behaviors, lista de estados que admite el `CHECK`, etc. Se generan con un agente que ejecuta comandos reales contra el sistema (AWS CLI, SSH a EC2, MySQL Shell vía túnel) y producen YAML saneado de IDs sensibles.
 
 Con la introducción de los snapshots aparece una pregunta legítima: **¿son `/docs/` y los snapshots dos formas de hacer lo mismo, o son cosas distintas?** Si son lo mismo, hay que migrar y eliminar redundancia. Si son distintas, hay que dejar claras sus responsabilidades para que la convivencia no genere más confusión que la que resuelve.
 
@@ -77,11 +77,11 @@ docs/
 ├── 07-roadmap/           ← roadmap (sin cambio)
 ├── _audit/               ← auditorías puntuales históricas (deuda: registrar en governance o archivar)
 ├── _snapshots/           ← NUEVO: snapshots YAML de estado por entorno
-├── skills/               ← NUEVO: skills operativas ejecutables por agentes
-├── cms/skills/           ← skills editoriales del CMS (sin cambio)
+├── state-inventory-skills/  ← NUEVO: skills operativas ejecutables por agentes
+├── cms/skills/              ← skills editoriales del CMS (sin cambio)
 └── templates/            ← plantillas 
 
-Las dos carpetas nuevas (`_snapshots/` y `skills/`) deben quedar registradas en `documentation-governance.md` y en el README raíz de `docs/`.
+Las dos carpetas nuevas (`_snapshots/` y `state-inventory-skills/`) deben quedar registradas en `documentation-governance.md` y en el README raíz de `docs/`.
 
 ### D5 — Gobierno actualizado: dos casos nuevos
 
@@ -89,7 +89,7 @@ Las dos carpetas nuevas (`_snapshots/` y `skills/`) deben quedar registradas en 
 
 **Caso 8 — Skill operativa nueva o modificada**
 Ejemplos: skill que inventaría estado, skill que detecta drift, skill que despliega un componente.
-Acción: ubicar en `docs/skills/<nombre>.md` (o `docs/cms/skills/<nombre>.md` si es skill editorial). Documentar versión y procedimiento dentro del propio fichero. Si la skill es estructural (cambia cómo se documenta o se opera el sistema), abrir ADR.
+Acción: ubicar en `docs/state-inventory-skills/<nombre>.md` (o `docs/cms/skills/<nombre>.md` si es skill editorial). Documentar versión y procedimiento dentro del propio fichero. Si la skill es estructural (cambia cómo se documenta o se opera el sistema), abrir ADR.
 
 **Caso 9 — Snapshot de estado del sistema**
 Ejemplos: inventariado periódico de un entorno, snapshot pre/post cambio para validar diff.
@@ -131,7 +131,7 @@ Esta invariante existe desde la primera versión de `state-inventory` y queda el
 
 1. **Aprobación de este ADR** por el owner.
 2. **Registro en governance**: actualizar `documentation-governance.md` con casos 8 y 9 (D5).
-3. **Registro en README raíz**: añadir `_snapshots/` y `skills/` a la sección "Cómo navegar".
+3. **Registro en README raíz**: añadir `_snapshots/` y `state-inventory-skills/` a la sección "Cómo navegar".
 4. **Skill `state-diff` v1**: pendiente de redactar como pieza independiente. ADR-017 NO la diseña en detalle; solo la nombra como pieza necesaria.
 5. **Limpieza progresiva de `docs/`**: comienza cuando `state-diff` esté operativa y proponga ediciones concretas. No se planifica antes.
 6. **Validación**: la primera ejecución de `state-diff` sobre TEST debe producir al menos una propuesta de edición sobre `docs/03-environments/test.md`. Si no produce ninguna, es señal de que la skill no funciona o de que `test.md` ya está totalmente actualizado (poco probable).
@@ -147,8 +147,12 @@ Este ADR **no decide** sobre:
 
 ## Referencias
 
-- `docs/skills/state-inventory.md` — skill v1 que produce los snapshots.
+- `docs/state-inventory-skills/state-inventory.md` — skill v1 que produce los snapshots.
 - `docs/_snapshots/state-test-2026-05-09-*.yaml` — primeros snapshots reales de TEST.
-- `docs/04-operations/known-debt.md` — deudas detectadas por la primera ejecución (incluye registrar `_snapshots/` y `skills/` en governance).
+- `docs/04-operations/known-debt.md` — deudas detectadas por la primera ejecución (incluye registrar `_snapshots/` y `state-inventory-skills/` en governance).
 - `documentation-governance.md` — gobierno documental general (a actualizar tras este ADR).
 - ADR-016 — Workflow editorial simplificado (precedente del patrón "ADR cierra alcance + skills implementan").
+
+## Notas posteriores
+
+- **2026-06-10**: la carpeta `docs/state-inventory-skills/` se llamaba originalmente `skills` (bajo `docs/`) cuando se cerró este ADR. Se renombró para evitar confusión con `docs/cms/skills/` (pipeline editorial) y con `docs/social/skills/` (futura). La decisión arquitectónica de este ADR (snapshots ⨯ narrativa, casos 8 y 9 de governance, autoridad sobre datos crudos) **se mantiene íntegra**; solo cambia el nombre de carpeta. Las menciones en el cuerpo del ADR fueron actualizadas al nombre nuevo para preservar navegabilidad.

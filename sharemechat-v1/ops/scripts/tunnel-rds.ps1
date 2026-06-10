@@ -53,7 +53,7 @@ $ErrorActionPreference = 'Stop'
 $mappingPath = Join-Path $HOME '.sharemechat\state-mapping.yaml'
 if (-not (Test-Path $mappingPath)) {
     Write-Host "ERROR: No se encuentra $mappingPath" -ForegroundColor Red
-    Write-Host "Crea el fichero antes de continuar. Ver docs/skills/state-inventory.md." -ForegroundColor Yellow
+    Write-Host "Crea el fichero antes de continuar. Ver docs/state-inventory-skills/state-inventory.md." -ForegroundColor Yellow
     exit 1
 }
 

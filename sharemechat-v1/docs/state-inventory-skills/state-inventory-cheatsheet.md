@@ -52,7 +52,7 @@ Pegar este prompt (sustituir <env>):
 ------------- INICIO DEL PROMPT -------------
 TAREA — Ejecutar la skill state-inventory contra el entorno test y producir un snapshot YAML del estado real del sistema.
 
-Lee primero la skill: docs/skills/state-inventory.md.
+Lee primero la skill: docs/state-inventory-skills/state-inventory.md.
 
 Reglas:
 - Trabaja desde la raíz del repo. NO worktrees, NO commits, NO push.
@@ -119,7 +119,7 @@ Pegar este prompt (sustituir <env>):
 TAREA — Ejecutar la skill state-diff contra el entorno <env>,
 comparando el snapshot más reciente con docs/03-environments/<env>.md.
 
-Lee primero la skill: docs/skills/state-diff.md.
+Lee primero la skill: docs/state-inventory-skills/state-diff.md.
 
 Reglas:
 - Trabaja desde la raíz del repo. NO worktrees, NO commits, NO push.

@@ -2,7 +2,7 @@
 
 Guía operativa para invocar la skill `state-inventory` y producir un snapshot de un entorno SharemeChat. Pensada para ejecutar el flujo en 5 minutos sin recordar comandos.
 
-Esta guía complementa a `docs/skills/state-inventory.md` (la skill propiamente dicha). Ahí está el procedimiento técnico detallado; aquí está el flujo operativo desde tu máquina Windows.
+Esta guía complementa a `docs/state-inventory-skills/state-inventory.md` (la skill propiamente dicha). Ahí está el procedimiento técnico detallado; aquí está el flujo operativo desde tu máquina Windows.
 
 ## Cuándo invocar este flujo
 
@@ -29,7 +29,7 @@ Host test-backend
     ServerAliveCountMax 10
 ```
 
-4. **Mapping local** en `~/.sharemechat/state-mapping.yaml` con el bloque del entorno relleno (ver `docs/skills/state-inventory.md` para el esquema).
+4. **Mapping local** en `~/.sharemechat/state-mapping.yaml` con el bloque del entorno relleno (ver `docs/state-inventory-skills/state-inventory.md` para el esquema).
 5. **Credencial RDS** persistente en User scope:
 
 ```powershell
@@ -104,7 +104,7 @@ git push
 
 Tras commitear el snapshot, conviene ejecutar la skill `state-diff` para detectar drift entre el snapshot recién generado y la prosa narrativa de `docs/03-environments/<entorno>.md`.
 
-Ver `docs/skills/state-diff.md` para el procedimiento completo. En resumen:
+Ver `docs/state-inventory-skills/state-diff.md` para el procedimiento completo. En resumen:
 
 1. Abrir Claude Code Desktop en sesión nueva (no reutilizar la del inventariado).
 2. Pegar el prompt de state-diff (ver final del runbook o el propio fichero de la skill).
@@ -128,7 +128,7 @@ TAREA — Ejecutar la skill state-inventory contra el entorno <entorno> y produc
 
 CONTEXTO
 
-La skill está en docs/skills/state-inventory.md. Cubre cuatro dominios: repo (local), CloudFront (AWS CLI), EC2 backend (SSH), RDS MySQL (vía túnel SSH abierto en localhost:3307).
+La skill está en docs/state-inventory-skills/state-inventory.md. Cubre cuatro dominios: repo (local), CloudFront (AWS CLI), EC2 backend (SSH), RDS MySQL (vía túnel SSH abierto en localhost:3307).
 
 ENTORNO PRELIMINAR (verificado por el usuario)
 
@@ -142,7 +142,7 @@ ENTORNO PRELIMINAR (verificado por el usuario)
 
 REGLAS GLOBALES
 
-1. Lee primero la skill entera: docs/skills/state-inventory.md.
+1. Lee primero la skill entera: docs/state-inventory-skills/state-inventory.md.
 2. Trabaja desde la raíz del repo. NO crees worktrees, NO cambies de rama.
 3. NO hagas git commit. El usuario revisa y commitea.
 4. NO modifiques ningún fichero del repo salvo el snapshot final.

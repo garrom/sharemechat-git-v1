@@ -14,7 +14,7 @@ Si llegas aquí porque vas a operar contra infraestructura y no estás seguro de
 | EC2 backend de un entorno | SSH con alias `<env>-backend` | Entrada en `~/.ssh/config` | [SSH a EC2](#ssh-a-ec2) |
 | RDS MySQL de un entorno | Túnel SSH abierto por `ops/scripts/tunnel-rds.ps1 <env>` | `ssh`, `powershell-yaml`, mapping local | [Túnel a RDS](#túnel-a-rds) |
 | Cliente MySQL contra el túnel | `mysqlsh` apuntando a `localhost:3307` | `mysqlsh` 8.0+ en PATH, `RDS_PASSWORD` User scope | [Túnel a RDS](#túnel-a-rds) |
-| Mapping lógico↔real de IDs | `~/.sharemechat/state-mapping.yaml` | Fichero fuera del repo, poblado por entorno | [skill state-inventory](../skills/state-inventory.md) |
+| Mapping lógico↔real de IDs | `~/.sharemechat/state-mapping.yaml` | Fichero fuera del repo, poblado por entorno | [skill state-inventory](../state-inventory-skills/state-inventory.md) |
 
 ## AWS CLI
 
@@ -87,7 +87,7 @@ $pwd = [Environment]::GetEnvironmentVariable("RDS_PASSWORD","User")
 mysqlsh --sql --host 127.0.0.1 --port 3307 --user admin --password=$pwd
 ```
 
-**Errores conocidos** del script (puerto ocupado, alias no responde, `powershell-yaml` no instalado): documentados en [state-inventory-runbook.md](../skills/state-inventory-runbook.md) sección "Errores conocidos y resolución".
+**Errores conocidos** del script (puerto ocupado, alias no responde, `powershell-yaml` no instalado): documentados en [state-inventory-runbook.md](../state-inventory-skills/state-inventory-runbook.md) sección "Errores conocidos y resolución".
 
 ## Variables de entorno persistentes
 
@@ -132,8 +132,8 @@ Si alguna línea falla, resolver antes de operar. Para SSH a otros entornos sust
 
 | Pieza | Necesita | Documentación |
 |---|---|---|
-| Skill `state-inventory` (genera snapshot de un entorno) | AWS CLI, SSH al backend del entorno, túnel RDS, `mysqlsh`, mapping, `RDS_PASSWORD` | [state-inventory.md](../skills/state-inventory.md) + [runbook](../skills/state-inventory-runbook.md) |
-| Skill `state-diff` (detecta drift entre snapshot y prosa) | Solo filesystem local | [state-diff.md](../skills/state-diff.md) |
+| Skill `state-inventory` (genera snapshot de un entorno) | AWS CLI, SSH al backend del entorno, túnel RDS, `mysqlsh`, mapping, `RDS_PASSWORD` | [state-inventory.md](../state-inventory-skills/state-inventory.md) + [runbook](../state-inventory-skills/state-inventory-runbook.md) |
+| Skill `state-diff` (detecta drift entre snapshot y prosa) | Solo filesystem local | [state-diff.md](../state-inventory-skills/state-diff.md) |
 | Script `tunnel-rds.ps1` | SSH, mapping, `powershell-yaml` | Docstring del propio script en `ops/scripts/tunnel-rds.ps1` |
 | Script `deploy-frontend.ps1` | AWS CLI con permisos `s3:PutObject*` y `cloudfront:CreateInvalidation`, mapping, npm | Docstring del propio script en `ops/scripts/deploy-frontend.ps1` |
 

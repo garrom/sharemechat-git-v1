@@ -215,7 +215,7 @@ if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
 $mappingPath = Join-Path $HOME '.sharemechat\state-mapping.yaml'
 if (-not (Test-Path $mappingPath)) {
     Write-Host "ERROR: No se encuentra $mappingPath" -ForegroundColor Red
-    Write-Host "Ver docs/skills/state-inventory.md para crear el fichero." -ForegroundColor Yellow
+    Write-Host "Ver docs/state-inventory-skills/state-inventory.md para crear el fichero." -ForegroundColor Yellow
     exit 1
 }
 

@@ -101,7 +101,7 @@ Ejemplos:
 - skill que despliega un componente operativo
 
 Acción:
-- ubicar en `docs/skills/<nombre>.md` (o `docs/cms/skills/<nombre>.md` si es skill editorial)
+- ubicar en `docs/state-inventory-skills/<nombre>.md` (o `docs/cms/skills/<nombre>.md` si es skill editorial)
 - documentar versión y procedimiento dentro del propio fichero de la skill
 - si la skill cambia cómo se documenta o se opera el sistema, abrir ADR
 
@@ -239,7 +239,7 @@ Ante cualquier cambio relevante:
 - backoffice -> `docs/05-backoffice/`
 - decisiones de arquitectura -> `docs/06-decisions/`
 - fase actual y planificación -> `docs/07-roadmap/`
-- skills operativas ejecutables por agentes -> `docs/skills/` (o `docs/cms/skills/` si son editoriales)
+- skills operativas ejecutables por agentes -> `docs/state-inventory-skills/` (o `docs/cms/skills/` si son editoriales)
 - snapshots estructurados de estado del sistema -> `docs/_snapshots/`
 - bitácora cronológica de hitos del proyecto -> `docs/project-log.md`
 

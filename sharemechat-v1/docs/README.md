@@ -40,7 +40,7 @@ La reorganización actual conserva el conocimiento útil y redistribuye su conte
 - `06-decisions`: decisiones arquitectónicas registradas
 - `07-roadmap`: fase actual y siguientes frentes
 - `_snapshots`: snapshots YAML estructurados de estado del sistema (generados por skill)
-- `skills`: skills operativas ejecutables por agentes (state-inventory, state-diff, etc.)
+- `state-inventory-skills`: skills operativas ejecutables por agentes (state-inventory, state-diff, etc.)
 - `cms/skills`: skills del pipeline editorial del CMS
 - `templates`: plantillas para mantener el corpus homogéneo
 - `project-log.md`: bitácora cronológica de hitos del proyecto (decisiones cerradas, cierres de fase, hipótesis archivadas). Mantenida por el agente local. Política operativa en `documentation-governance.md`
