@@ -29,7 +29,10 @@
     <!-- SEO core (replica de landing legacy: title/description EN como decision por defecto). -->
     <title>1-to-1 Video Chat with Verified Models | SharemeChat</title>
     <meta name="description" content="Live 1-to-1 video chat with verified models. Start with free trial minutes and connect instantly. No subscriptions — pay only for what you use." />
-    <link rel="canonical" href="https://sharemechat.com/" />
+    <!-- canonical retirado (ADR-033 + paso 3 del frente SEO 2026-06-10): el canonical
+         hardcoded a la home creaba consolidacion incorrecta en /blog/{slug}, /faq, etc.
+         El canonical correcto por ruta lo emite en runtime el componente Seo.jsx (home +
+         5 paginas de footer) y los helpers de seoHelpers.js (blog listado + detalle). -->
 
     <!-- Favicons de marca (replicados del landing legacy). -->
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
