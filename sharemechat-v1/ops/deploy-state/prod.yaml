@@ -3,27 +3,35 @@
 
 environment: prod
 schema_version: 1
-last_updated_at: 2026-06-09T07:00:00Z
-last_update_by: alain@LAPTOP
-last_update_source: manual-fase1-paso1
+last_updated_at: 2026-06-10T10:31:03Z
+last_update_by: alain@LAPTOP-8UEIKVUT
+last_update_source: manual-edit-equivalent-to-update-manifest-backend.ps1
 
 backend:
-  jar_sha256: 7025145b9cf4a55f1ee1c23a1fe6d730f855d58f60d6c80eabdac622b118268a
-  git_commit_short: 1cb43a0
-  git_commit: null
-  built_at: null
-  deployed_at: 2026-06-08T14:11:23Z
-  deployed_by: alain@LAPTOP
+  jar_sha256: 53e6bfbc302bf5119ce511e8e15b0a098a0ec6c2411fd8cea44a85d7548d09d0
+  git_commit_short: 91092e0
+  git_commit: 91092e0ab7bb2452913522a267790912a1bf9789
+  built_at: 2026-06-10T10:25:02Z
+  deployed_at: 2026-06-10T10:27:16Z
+  deployed_by: alain@LAPTOP-8UEIKVUT
   ec2_alias: pro-backend
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   systemd_unit: sharemechat-prod.service
   verification:
-    method: live_ssh_sha256_2026-06-09
-    verified_at: 2026-06-09T06:30:00Z
+    method: manual_via_update-manifest-backend.ps1+remote-verify
+    verified_at: 2026-06-10T10:31:03Z
     notes: |
-      JAR 7025145b... commit 1cb43a0 desplegado a PROD durante el
-      Lote 3 (project-log 2026-06-08). Sha256 re-confirmado en vivo
-      por SSH a pro-backend.
+      JAR 53e6bfbc... commit 91092e0 (ADR-033 robots fail-closed)
+      desplegado a PROD el 2026-06-10. SSH a pro-backend confirma
+      sha256 local == sha256 remoto. Backup del JAR previo
+      (7025145b... commit 1cb43a0) conservado en EC2 como
+      sharemechat-v1-0.0.1-SNAPSHOT.jar.bak-pre-seo-20260610-102651.
+      Smoke-gate PROD pasado: robots.txt sigue indexable (Allow:/blog +
+      Disallow:/api/... + Sitemap:); sitemap.xml HTTP 200 application/xml
+      (sin cambios, 3018 bytes). Manifest editado a mano por
+      indisponibilidad de Read-Host en PowerShell no interactivo;
+      valores exactos del DryRun de update-manifest-backend.ps1
+      -Environment prod -RemoteVerify.
 
 frontend_product:
   bundle: main.618dfe8b.js
