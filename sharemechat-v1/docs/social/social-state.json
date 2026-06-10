@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.1",
+  "updated_at": "2026-06-10",
+  "platforms": {
+    "x": {
+      "handle": "@shareme_chat",
+      "display_name": "SharemeChat",
+      "created_at": "2026-06-10",
+      "phase": "warmup",
+      "followers": 0,
+      "ratio": { "promo": 0, "aporte": 0 }
+    },
+    "reddit": {
+      "username": "u/sharemechat",
+      "display_name": "SharemeChat",
+      "created_at": "2026-06-10",
+      "phase": "warmup",
+      "comment_karma": 1,
+      "post_karma": 0,
+      "own_subreddit": { "name": "r/SharemeChat", "created": false },
+      "subreddits": [
+        {
+          "name": "r/AskReddit",
+          "rol": "karma",
+          "promo_policy": "none",
+          "min_karma": null,
+          "min_age_days": null,
+          "ratio": { "promo": 0, "aporte": 0 },
+          "last_action_at": null
+        },
+        {
+          "name": "r/CasualConversation",
+          "rol": "karma",
+          "promo_policy": "none",
+          "min_karma": null,
+          "min_age_days": null,
+          "ratio": { "promo": 0, "aporte": 0 },
+          "last_action_at": null
+        }
+      ]
+    }
+  }
+}
