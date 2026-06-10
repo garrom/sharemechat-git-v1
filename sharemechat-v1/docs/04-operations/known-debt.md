@@ -4,7 +4,7 @@ Registro de deudas detectadas durante operación o auditoría que no son inciden
 
 ## 2026-06-09 — Frente "Integración real de Veriff": huecos detectados en el diagnóstico KYC/country gating
 
-Tres huecos destapados por el diagnóstico de solo lectura del 2026-06-09 sobre el estado real de Veriff/KYC y country gating. **Bloque común**: las tres forman parte del frente **"Integración real de Veriff"** que se aborda a continuación; no son deudas a resolver aisladas, se cerrarán **juntas** como parte de ese frente. Sin prioridad asignada todavía.
+Tres huecos destapados por el diagnóstico de solo lectura del 2026-06-09 sobre el estado real de Veriff/KYC y country gating. **Bloque común**: forman parte del frente **"Integración real de Veriff"**. Estado del bloque tras el **paso 1 (2026-06-10)**: las dos deudas de **firma HMAC** (salida y webhook entrante) quedan **CERRADAS**; sigue **abierta** la del **country gating en el flujo KYC**, que es el paso 2 del frente.
 
 ### [DEUDA — bloque Integración real de Veriff] Country gating no se aplica en el flujo KYC
 
@@ -14,19 +14,13 @@ Riesgo: con Veriff (sesiones de pago), un usuario que ya haya quedado dentro por
 
 Acción futura (a planificar con el resto de Veriff, no ahora): aplicar el gating al **inicio de la sesión Veriff**, con **distinción cliente vs modelo** (cada uno tiene su propia lista de países — cliente más restringido que modelo).
 
-### [DEUDA — bloque Integración real de Veriff] Firma HMAC de salida de Veriff no implementada
+### ~~[DEUDA — bloque Integración real de Veriff] Firma HMAC de salida de Veriff no implementada~~ — **CERRADA 2026-06-10**
 
-`VeriffClientImpl` envía la cabecera `X-HMAC-SIGNATURE` con valor literal **`"TODO_SIGN"`** al crear sesiones (`createSession`).
+Cerrada en el paso 1 del frente Veriff (ver `project-log.md` 2026-06-10). `VeriffClientImpl` ya no envía `"TODO_SIGN"`: firma el body crudo de `POST /v1/sessions` con HMAC-SHA256 del shared secret (`kyc.veriff.api-secret`), hex lowercase, en la cabecera `X-HMAC-SIGNATURE` (+ `X-AUTH-CLIENT` con la api-key). Si `enabled=true` y falta el secret, falla con error claro (nunca firma inválida). El modo MOCK (`enabled=false`) se preserva intacto. Utilidad común `com.sharemechat.security.HmacSha256` con tests de vector fijo.
 
-Hoy no impacta porque `kyc.veriff.enabled=false` en los tres entornos (el cliente Veriff opera en modo **MOCK**), pero es **bloqueante para activar Veriff real**.
+### ~~[DEUDA — bloque Integración real de Veriff] Validación HMAC del webhook entrante de Veriff en modo permisivo~~ — **CERRADA 2026-06-10**
 
-### [DEUDA — bloque Integración real de Veriff] Validación HMAC del webhook entrante de Veriff en modo permisivo
-
-`ModelKycSessionService.processVeriffWebhook` acepta como válido **cualquier `signatureHeader` no vacío** (comentario en código: *"Fase 1: firma en modo permissive (luego metemos HMAC real)"*). No hay verificación HMAC real del webhook entrante.
-
-Además, el header esperado en código es **`X-SIGNATURE`**, mientras que Veriff usa **`X-HMAC-SIGNATURE`** en su documentación pública: hay que **alinear el nombre del header** al implementar la firma real.
-
-**Bloqueante para activar Veriff real.**
+Cerrada en el paso 1 del frente Veriff. `ModelKycSessionService.processVeriffWebhook` ahora valida la firma real: HMAC-SHA256 del raw body (recibido como `byte[]` para preservar los bytes exactos) comparado en tiempo constante (`MessageDigest.isEqual`) con la cabecera entrante. Header alineado a **`X-HMAC-SIGNATURE`** (antes `X-SIGNATURE`), sin compatibilidad con el viejo. Si la firma es inválida/ausente: HTTP 401 + persistencia del intento en `kyc_webhook_events` con `signature_valid=false` (auditoría). Idempotencia por `kyc_webhook_events` preservada. Tests de firma válida/inválida/ausente/body alterado.
 
 ---
 

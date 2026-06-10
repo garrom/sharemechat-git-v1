@@ -8,6 +8,20 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-10 — Veriff paso 1: firma HMAC de salida + validación HMAC del webhook entrante
+
+Primer paso de implementación del frente "Integración real de Veriff". Cierra **dos de las tres deudas** del bloque registrado el 2026-06-09 en `known-debt.md` (las dos de HMAC); la tercera (country gating en el flujo KYC) queda para el paso 2. **No se activa Veriff**: `kyc.veriff.enabled` sigue en `false` en `application.properties` y en los tres entornos; el cliente sigue operando en MOCK. **Producto cerrado** tras respuesta de Veriff support: **Document + Selfie IDV en plan Essential** (la verificación de edad de cliente por biometría — Age Estimation — no entra en este paso; no existe aún en código).
+
+**Hueco 1 — firma de salida (`VeriffClientImpl`)**. Se elimina el literal `"TODO_SIGN"`. Al crear sesión real (`POST /v1/sessions`) se firma el body crudo con HMAC-SHA256 del shared secret (`kyc.veriff.api-secret`), salida hex lowercase, en la cabecera `X-HMAC-SIGNATURE` junto a `X-AUTH-CLIENT` (api-key). Si `enabled=true` pero el secret está vacío, falla con `IllegalStateException` claro en lugar de enviar una firma inválida. El camino MOCK (`enabled=false` o sin api-key) se preserva exactamente como estaba.
+
+**Hueco 2 — validación del webhook entrante (`ModelKycSessionService.processVeriffWebhook` + `KycProviderController`)**. La firma se valida de verdad: HMAC-SHA256 del raw body comparado en tiempo constante (`MessageDigest.isEqual`) con la cabecera. El header se alinea a **`X-HMAC-SIGNATURE`** (confirmado por Veriff support; antes el código esperaba `X-SIGNATURE`), sin compatibilidad con el viejo. Si la firma es inválida o ausente: **HTTP 401**, no se procesa el evento, pero se persiste el intento en `kyc_webhook_events` con `signature_valid=false` para auditoría. Idempotencia por `kyc_webhook_events` preservada.
+
+**Preservación del raw body**. El endpoint del webhook pasa a recibir `@RequestBody byte[]` (antes `String`) para hashear los **bytes exactos** que Veriff firmó, evitando cualquier recodificación de charset de Spring antes de validar el HMAC. El servicio reconstruye el JSON con `new String(bytes, UTF_8)` solo para el parseo posterior. Verificado que ningún filtro (`ProductOperationalModeFilter`, `ApiRateLimitFilter`) consume el body antes del controller.
+
+**Utilidad HMAC**. Se crea `com.sharemechat.security.HmacSha256` (estática, genérica: HMAC-SHA256 sobre bytes con secret por parámetro, hex lowercase, verify constant-time). NO se refactoriza `HmacSigner` de consent (está acoplado a `consent.hmacSecret` y mockeado en `ConsentServiceTest`; tocarlo arrastraría el flujo de consent sin necesidad). La utilidad nueva es genérica para que consent pueda adoptarla más adelante sin reescritura.
+
+**Tests**. `HmacSha256Test` (vector fijo conocido `key`/"The quick brown fox…" → hash publicado; verify válida/inválida/ausente/mayúsculas/body-alterado/secret-vacío) y `VeriffClientImplTest` (MOCK con `enabled=false`, MOCK con `enabled=true` sin api-key, y fallo claro con `enabled=true` + api-key + secret vacío). `mvn package` verde: 45 tests, 0 fallos.
+
 ## 2026-06-09 — Arranque del frente de integración real de Veriff (KYC modelo + verificación de edad cliente)
 
 Se arranca el frente de integración real de Veriff para las dos verificaciones previstas: **MODELO** (verificación documental con documento + selfie) y **CLIENTE** (estimación de edad por biometría, sin documento), cada una con su propia lista de países permitidos (la de cliente más restringida que la de modelo).

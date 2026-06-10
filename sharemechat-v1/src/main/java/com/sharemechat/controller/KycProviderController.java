@@ -36,13 +36,20 @@ public class KycProviderController {
         return ResponseEntity.ok(dto);
     }
 
-    // Webhook proveedor (Veriff)
+    // Webhook proveedor (Veriff).
+    // Header de firma: X-HMAC-SIGNATURE (confirmado por soporte Veriff).
+    // Body recibido como byte[] para preservar los bytes crudos exactos que
+    // Veriff firmó (evita que la decodificación de Spring altere el payload
+    // antes de validar el HMAC). Si la firma es inválida/ausente: 401.
     @PostMapping("/veriff/webhook")
     public ResponseEntity<Void> veriffWebhook(
-            @RequestHeader(value = "X-SIGNATURE", required = false) String signature,
-            @RequestBody String rawBody
+            @RequestHeader(value = "X-HMAC-SIGNATURE", required = false) String signature,
+            @RequestBody(required = false) byte[] rawBody
     ) {
-        modelKycSessionService.processVeriffWebhook(rawBody, signature);
+        boolean ok = modelKycSessionService.processVeriffWebhook(rawBody, signature);
+        if (!ok) {
+            return ResponseEntity.status(401).build();
+        }
         return ResponseEntity.ok().build();
     }
 }

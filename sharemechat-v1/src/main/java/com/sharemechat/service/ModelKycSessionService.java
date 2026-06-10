@@ -1,5 +1,6 @@
 package com.sharemechat.service;
 
+import com.sharemechat.config.VeriffProperties;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.KycStartSessionResponseDTO;
 import com.sharemechat.dto.VeriffCreateSessionResult;
@@ -9,10 +10,12 @@ import com.sharemechat.entity.User;
 import com.sharemechat.repository.KycWebhookEventRepository;
 import com.sharemechat.repository.ModelKycSessionRepository;
 import com.sharemechat.repository.UserRepository;
+import com.sharemechat.security.HmacSha256;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 
 @Service
@@ -26,19 +29,22 @@ public class ModelKycSessionService {
     private final VeriffClient veriffClient;
     private final ModelContractService modelContractService;
     private final EmailVerificationService emailVerificationService;
+    private final VeriffProperties veriffProperties;
 
     public ModelKycSessionService(UserRepository userRepository,
                                   ModelKycSessionRepository modelKycSessionRepository,
                                   KycWebhookEventRepository kycWebhookEventRepository,
                                   VeriffClient veriffClient,
                                   ModelContractService modelContractService,
-                                  EmailVerificationService emailVerificationService) {
+                                  EmailVerificationService emailVerificationService,
+                                  VeriffProperties veriffProperties) {
         this.userRepository = userRepository;
         this.modelKycSessionRepository = modelKycSessionRepository;
         this.kycWebhookEventRepository = kycWebhookEventRepository;
         this.veriffClient = veriffClient;
         this.modelContractService = modelContractService;
         this.emailVerificationService = emailVerificationService;
+        this.veriffProperties = veriffProperties;
     }
 
     @Transactional
@@ -89,8 +95,55 @@ public class ModelKycSessionService {
         return dto;
     }
 
+    /**
+     * Procesa el webhook entrante de Veriff.
+     *
+     * Recibe el body CRUDO en bytes (lo preserva tal cual llega para que la
+     * verificación HMAC sea sobre los bytes exactos firmados por Veriff). La
+     * firma entrante (cabecera X-HMAC-SIGNATURE) se valida con HMAC-SHA256 del
+     * raw body usando el shared secret (kyc.veriff.api-secret) y comparación
+     * constant-time.
+     *
+     * @return true si la firma es válida y el evento se procesó; false si la
+     *         firma es inválida/ausente (el controller debe responder 401). En
+     *         ambos casos se persiste una fila en kyc_webhook_events para
+     *         auditoría (signature_valid refleja el resultado real).
+     */
     @Transactional
-    public void processVeriffWebhook(String rawBody, String signatureHeader) {
+    public boolean processVeriffWebhook(byte[] rawBodyBytes, String signatureHeader) {
+        byte[] safeBytes = rawBodyBytes == null ? new byte[0] : rawBodyBytes;
+        String rawBody = new String(safeBytes, StandardCharsets.UTF_8);
+
+        // Validación HMAC real (constant-time) contra el shared secret de Veriff.
+        boolean signatureValid = HmacSha256.verifyHexHmacSha256(
+                veriffProperties.getApiSecret(), safeBytes, signatureHeader);
+
+        // Si la firma no es válida: persistimos el intento para auditoría y
+        // NO procesamos el evento. El controller responderá 401.
+        if (!signatureValid) {
+            KycWebhookEvent rejected = new KycWebhookEvent();
+            rejected.setProvider(PROVIDER_VERIFF);
+            rejected.setPayloadJson(rawBody);
+            rejected.setSignatureValid(false);
+            // Mejor esfuerzo para enriquecer la fila de auditoría (puede fallar
+            // el parseo si el body no es JSON válido; no debe romper el guardado).
+            try {
+                JSONObject j = new JSONObject(rawBody);
+                rejected.setProviderEventId(firstNonBlank(
+                        j.optString("id", null), j.optString("eventId", null), j.optString("event_id", null)));
+                rejected.setProviderSessionId(extractSessionId(j));
+                rejected.setEventType(firstNonBlank(
+                        j.optString("action", null), j.optString("eventType", null), j.optString("type", null)));
+            } catch (Exception ignore) {
+                // body no parseable: dejamos los campos a null
+            }
+            rejected.setProcessed(false);
+            rejected.setProcessedAt(LocalDateTime.now());
+            rejected.setProcessingError("invalid_signature");
+            kycWebhookEventRepository.save(rejected);
+            return false;
+        }
+
         JSONObject json = new JSONObject(rawBody);
 
         String providerEventId = firstNonBlank(
@@ -111,7 +164,7 @@ public class ModelKycSessionService {
         if (providerEventId != null) {
             var existing = kycWebhookEventRepository.findByProviderAndProviderEventId(PROVIDER_VERIFF, providerEventId);
             if (existing.isPresent()) {
-                return;
+                return true;
             }
         }
 
@@ -121,10 +174,7 @@ public class ModelKycSessionService {
         ev.setProviderSessionId(providerSessionId);
         ev.setEventType(eventType);
         ev.setPayloadJson(rawBody);
-
-        // Fase 1: firma en modo permissive (luego metemos HMAC real)
-        boolean signatureValid = (signatureHeader != null && !signatureHeader.isBlank());
-        ev.setSignatureValid(signatureValid);
+        ev.setSignatureValid(true);
 
         try {
             if (providerSessionId == null || providerSessionId.isBlank()) {
@@ -177,6 +227,7 @@ public class ModelKycSessionService {
         }
 
         kycWebhookEventRepository.save(ev);
+        return true;
     }
 
     private String extractSessionId(JSONObject json) {
