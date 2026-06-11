@@ -4,7 +4,7 @@ STATE-INVENTORY + STATE-DIFF — Cheatsheet de pasos manuales
 Procedimiento limpio para generar un snapshot de un entorno
 y detectar drift contra docs.
 
-Sustituir <env> por: test | audit | pro
+Sustituir <env> por: test | audit | prod
 Sustituir <repo> por la ruta absoluta del repo:
 C:\Users\alain\Desktop\ALAIN_Escritorio\INFORMATICA\EMPRENDIMIENTO\sharemechat-git-v1\sharemechat-v1
 

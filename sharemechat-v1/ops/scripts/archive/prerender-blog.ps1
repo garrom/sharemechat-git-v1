@@ -45,7 +45,7 @@ Conservado como referencia historica:
       -Retract <slug>  Elimina s3://<bucket>/blog/<slug> e invalida ese path. Sale.
 
 .PARAMETER Environment
-    Identificador del entorno: test, audit o pro.
+    Identificador del entorno: test, audit o prod.
 
 .PARAMETER DryRun
     Si se especifica, genera HTML en $env:TEMP y no toca AWS.
@@ -90,7 +90,7 @@ Conservado como referencia historica:
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [ValidateSet('test', 'audit', 'pro')]
+    [ValidateSet('test', 'audit', 'prod')]
     [string]$Environment,
 
     [Parameter(Mandatory = $false)]

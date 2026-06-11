@@ -234,7 +234,7 @@ Durante el despliegue del arreglo del selector de idioma (2026-05-31) se estren√
 
 Hoy esto solo existe para AUDIT. **TEST y PROD no tienen ni el backup pre-deploy ni el rollback cableado** en su flujo de despliegue de frontend. Pendiente decidir y nivelar:
 
-- replicar los prefijos `s3://sharemechat-backups/{test,pro}/frontend/{product,admin}/` y el paso de backup pre-sync para esos entornos;
+- replicar los prefijos `s3://sharemechat-backups/{test,prod}/frontend/{product,admin}/` y el paso de backup pre-sync para esos entornos;
 - o, mejor estructuralmente, integrar el backup pre-deploy como paso opcional dentro de `deploy-frontend.ps1` (parametrizado por entorno/surface, resolviendo el prefijo desde el mapping) para no depender de comandos manuales por entorno;
 - valorar activar versionado en los buckets frontend de cada entorno como red nativa, en lugar del backup-a-prefijo.
 

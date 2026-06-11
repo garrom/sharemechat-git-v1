@@ -38,7 +38,7 @@ No usar para auditar código fuente. No usar para tomar acción correctiva sobre
 
 ## Inputs requeridos
 
-- `environment`: identificador del entorno objetivo. Valores válidos: `test`, `audit`, `pro`.
+- `environment`: identificador del entorno objetivo. Valores válidos: `test`, `audit`, `prod`.
 - Tabla de mapeo lógico↔real disponible en `~/.sharemechat/state-mapping.yaml` con bloque del entorno relleno (ver formato esperado más abajo).
 - Túnel SSH a MySQL del entorno abierto en `localhost:3307` antes de invocar la skill.
 
@@ -101,7 +101,7 @@ El fichero sigue el esquema v3 documentado más abajo.
 ```yaml
 metadata:
   schema_version: 3
-  environment: <test|audit|pro>
+  environment: <test|audit|prod>
   generated_at: <ISO 8601 UTC>
   generated_by: state-inventory@v1.2
   notes: <texto libre opcional>

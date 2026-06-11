@@ -20,7 +20,7 @@ Habitualmente se invoca al cerrar un frente técnico o antes de nivelar un entor
 
 ## Inputs requeridos
 
-- `environment`: identificador del entorno (`test`, `audit`, `pro`).
+- `environment`: identificador del entorno (`test`, `audit`, `prod`).
 - `snapshot_path` (opcional): ruta al snapshot YAML. Si no se pasa, la skill busca el más reciente en `docs/_snapshots/state-<env>-*.yaml`.
 - `target_doc` (opcional): ruta al fichero de docs. Por defecto `docs/03-environments/<env>.md`.
 

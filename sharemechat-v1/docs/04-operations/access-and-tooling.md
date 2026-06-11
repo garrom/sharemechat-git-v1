@@ -44,7 +44,7 @@ Host <env>-backend
     ServerAliveCountMax 10
 ```
 
-Donde `<env>` es `test`, `audit` o `pro`. La IP pública y la ruta al `.pem` viven en `~/.ssh/config` del operador, no en el repo.
+Donde `<env>` es `test`, `audit` o `prod`. La IP pública y la ruta al `.pem` viven en `~/.ssh/config` del operador, no en el repo.
 
 **Verificación**:
 
@@ -72,7 +72,7 @@ El script `ops/scripts/tunnel-rds.ps1` automatiza el proceso:
 .\ops\scripts\tunnel-rds.ps1 <env>
 ```
 
-Donde `<env>` es `test`, `audit` o `pro`. El script:
+Donde `<env>` es `test`, `audit` o `prod`. El script:
 
 1. Lee `~/.sharemechat/state-mapping.yaml` para resolver el endpoint RDS y el alias SSH del entorno.
 2. Verifica que el puerto local 3307 está libre y que el alias SSH responde.

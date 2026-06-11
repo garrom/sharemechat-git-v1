@@ -66,7 +66,7 @@ En una PowerShell nueva, desde la raíz del repo:
 .\ops\scripts\tunnel-rds.ps1 <entorno>
 ```
 
-Donde `<entorno>` es `test`, `audit` o `pro`.
+Donde `<entorno>` es `test`, `audit` o `prod`.
 
 El script:
 - Lee `~/.sharemechat/state-mapping.yaml`.
@@ -120,7 +120,7 @@ state-diff NO necesita túnel SSH ni backend levantado. Solo lee filesystem loca
 
 ## Prompt para Claude Code Desktop
 
-Copiar el bloque entero, sustituir las dos apariciones de `<entorno>` por `test`, `audit` o `pro`, y pegarlo como primer mensaje en Claude Code Desktop.
+Copiar el bloque entero, sustituir las dos apariciones de `<entorno>` por `test`, `audit` o `prod`, y pegarlo como primer mensaje en Claude Code Desktop.
 
 ---
 

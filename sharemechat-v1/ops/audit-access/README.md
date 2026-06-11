@@ -235,7 +235,7 @@ El patron `security+report-<env>@sharemechat.com` se replica en cada entorno:
 
 - AUDIT: `security+report-audit@sharemechat.com`
 - TEST: `security+report-test@sharemechat.com` (ver `ops/test-access/README.md`)
-- PROD (futuro): `security+report-pro@sharemechat.com` cuando se monte
+- PROD (futuro): `security+report-prod@sharemechat.com` cuando se monte
 
 Microsoft 365 enruta cualquier `security+<detail>@sharemechat.com` al buzon `security@sharemechat.com` (sub-addressing RFC 5233 habilitado a nivel tenant; verificado por pre-flight manual del paquete 10.B.1). Permite filtrar en buzon por entorno sin crear aliases adicionales en Exchange Admin Center.
 
