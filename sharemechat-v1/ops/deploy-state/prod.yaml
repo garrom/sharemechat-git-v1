@@ -1,14 +1,10 @@
 ﻿# Manifest de estado de despliegue - entorno PROD
-# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
-# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
-# correspondiente al surface desplegado tras smoke OK. NO se
-# hace commit automatico: el operador commitea el manifest
-# cuando le conviene (decision D2).
+# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
+# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
+# deploy manual del backend (scp + restart). NO se hace commit
+# automatico: el operador commitea cuando le conviene (decision D2).
 #
 schema_version: 1
-environment: prod
-last_update_source: deploy-frontend.ps1-fase1-paso2a
-last_update_by: alain@LAPTOP-8UEIKVUT
 frontend_product:
   cloudfront_invalidation_id: I4QHKIDAADI90DZUO7L6QG4L5K
   verification:
@@ -25,33 +21,31 @@ frontend_product:
   working_tree_clean: true
   bucket: sharemechat-frontend-prod
   bundle: main.0733eebf.js
+last_update_source: update-manifest-backend.ps1-fase1-paso2b
+last_update_by: alain@LAPTOP-8UEIKVUT
+environment: prod
 backend:
+  working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: prod-backend
-  deployed_at: 2026-06-10T10:27:16Z
-  jar_sha256: 53e6bfbc302bf5119ce511e8e15b0a098a0ec6c2411fd8cea44a85d7548d09d0
+  deployed_at: 2026-06-11T12:51:37Z
+  jar_sha256: ac457c64ee025a3fa895c61dfe3a4cb324e2a3a1328d0974fc8a37a19decc4f6
   verification:
-    method: manual_via_update-manifest-backend.ps1+remote-verify
-    verified_at: 2026-06-10T10:31:03Z
-    notes: |
-      JAR 53e6bfbc... commit 91092e0 (ADR-033 robots fail-closed)
-      desplegado a PROD el 2026-06-10. SSH a prod-backend confirma
-      sha256 local == sha256 remoto. Backup del JAR previo
-      (7025145b... commit 1cb43a0) conservado en EC2 como
-      sharemechat-v1-0.0.1-SNAPSHOT.jar.bak-pre-seo-20260610-102651.
-      Smoke-gate PROD pasado: robots.txt sigue indexable (Allow:/blog +
-      Disallow:/api/... + Sitemap:); sitemap.xml HTTP 200 application/xml
-      (sin cambios, 3018 bytes). Manifest editado a mano por
-      indisponibilidad de Read-Host en PowerShell no interactivo;
-      valores exactos del DryRun de update-manifest-backend.ps1
-      -Environment prod -RemoteVerify.
-  built_at: 2026-06-10T10:25:02Z
+    method: manual_via_update-manifest-backend.ps1
+    verified_at: 2026-06-11T12:51:37Z
+    notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
+  built_at: 2026-06-11T12:51:37Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-prod.service
-  git_commit: 91092e0ab7bb2452913522a267790912a1bf9789
-  git_commit_short: 91092
-last_updated_at: 2026-06-10T10:43:53Z
+  git_commit: b0fa773c44d6c4d1944d82025de07d3cd7993a8f
+  git_commit_short: b0fa773
+last_updated_at: 2026-06-11T12:51:37Z
 frontend_admin:
+  working_tree_clean: 
+  bucket: sharemechat-admin-prod
+  bundle: main.c16b646d.js
+  built_at: 
+  deployed_at: 2026-06-07T13:27:04Z
   verification:
     method: s3_lastmodified_observed_2026-06-09
     git_commit_provenance: inferred_from_lastmodified_and_git_log
@@ -60,13 +54,8 @@ frontend_admin:
       admin.sharemechat.com en project-log 2026-06-07). HEAD git en
       esa marca = 0cdba7f (docs(adr-032)+ops). Working_tree_clean
       no recuperable.
-  working_tree_clean: 
-  bucket: sharemechat-admin-prod
-  bundle: main.c16b646d.js
-  deployed_at: 2026-06-07T13:27:04Z
   cloudfront_distribution: E3O40LHJ4PC6LE
   cloudfront_invalidation_id: 
-  built_at: 
   deployed_by: 
   git_commit: 
   git_commit_short: 0cdba7f
