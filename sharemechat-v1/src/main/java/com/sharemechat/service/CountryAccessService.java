@@ -109,6 +109,22 @@ public class CountryAccessService {
     }
 
     /**
+     * Usado por POST /api/kyc/veriff/start (inicio de sesión Veriff para
+     * onboarding de modelo). Reusa la allowlist de **modelo** porque el
+     * flujo KYC del modelo es continuación de su registro: ambos comparten
+     * el mismo conjunto de países permitidos.
+     *
+     * NOTA: cuando se cree el endpoint equivalente para CLIENTE (Age
+     * Estimation, vendor aún por decidir), se replicará este mismo patrón
+     * añadiendo {@code assertAllowedForClientKyc} que use {@link #clientAllowed}.
+     * No se añade ese método ahora porque no hay endpoint que lo consuma
+     * (regla de "no introducir API sin caller").
+     */
+    public void assertAllowedForModelKyc(HttpServletRequest request) {
+        assertAllowedInternal(request, modelAllowed, "model_kyc");
+    }
+
+    /**
      * Resolución del país desde headers. Mantenida con la misma semántica
      * que el código previo: orden CloudFront-Viewer-Country → CF-IPCountry →
      * X-AppEngine-Country → X-Country-Code. Expuesta como público porque

@@ -22,6 +22,20 @@ Sesión consolidada que cierra cuatro frentes encadenados en el mismo arco tempo
 
 ---
 
+## 2026-06-10 — Veriff paso 2: country gating aplicado al inicio de la sesión Veriff (cierra el bloque "Integración real de Veriff")
+
+Segundo paso de implementación del frente "Integración real de Veriff". **Cierra la tercera y última deuda** del bloque registrado el 2026-06-09 en `known-debt.md` (gating-en-KYC). Tras este paso el bloque queda **completo**: paso 1 (HMAC salida + HMAC webhook entrante) + paso 2 (gating). **No se activa Veriff**: `kyc.veriff.enabled` sigue en `false`. La activación real (credenciales `kyc.veriff.api-key`/`api-secret` en config.env por entorno + flag a `true`) es el paso 3 del frente, no es deuda.
+
+**Diseño aplicado**. Patrón estricto del `CountryAccessService` ya existente: nuevo método `assertAllowedForModelKyc(HttpServletRequest)` añadido siguiendo el mismo molde que `assertAllowedForClientRegistration` / `assertAllowedForModelRegistration` (delega en `assertAllowedInternal` con la allowlist de modelo y scope `"model_kyc"` para logs server-side). Reusa al 100% la resolución de país (`CloudFront-Viewer-Country` → `CF-IPCountry` → `X-AppEngine-Country` → `X-Country-Code`), el bypass por IP/CIDR, el `block-when-missing` y el flag global `country.access.enabled`. Cero duplicación.
+
+**Por qué reusa la allowlist de modelo (no una nueva)**. El flujo KYC del modelo es continuación de su registro: si un país está permitido para registrar como modelo, debe estarlo para completar el onboarding KYC. Mantener una sola lista por rol evita una asimetría peligrosa (registrarse en un país pero no poder terminar la verificación). El gating del flujo KYC de **cliente** (Age Estimation, cuando exista) se aplicará con `assertAllowedForClientKyc` y la lista de cliente, replicando este mismo patrón.
+
+**Punto de aplicación**. `KycProviderController.startVeriff` (`POST /api/kyc/veriff/start`) recibe ahora `HttpServletRequest` por inyección de parámetro de método e invoca `countryAccessService.assertAllowedForModelKyc(request)` **antes** de crear la sesión Veriff. Si el país no está permitido, lanza `CountryBlockedException` → `GlobalExceptionHandler` la traduce a **HTTP 403** con el mismo body uniforme que registro/login (`REGISTRATION_UNAVAILABLE`, sin path/scope/país para no facilitar fingerprinting). El gate se evalúa antes de cualquier coste real (creación de sesión en Veriff, cuando esté activo).
+
+**Coherencia con AUDIT**. Al respetar `country.access.enabled`, el nuevo punto de gating queda **apagado en AUDIT** (donde el flag está a `false` por onboarding PSP) y **activo en PROD** (donde está a `true`). No se introduce ninguna política por endpoint: el comportamiento es uniforme con registro/login.
+
+**Tests**. `CountryAccessServiceModelKycTest` (6 casos): país permitido pasa; país no permitido lanza `CountryBlockedException`; país ausente con `block-when-missing=true` rechaza; país ausente con `block-when-missing=false` pasa; gate global desactivado deja pasar todo (incluso país denegado); bypass IP por CIDR pasa con país denegado pero **no** pasa para una IP fuera del rango. `mvn package` verde: 74 tests, 0 fallos (10 del paso 1 + 6 nuevos del paso 2 + resto). Modo MOCK del cliente Veriff confirmado intacto (los tests del paso 1 siguen verdes).
+
 ## 2026-06-10 — Veriff paso 1: firma HMAC de salida + validación HMAC del webhook entrante
 
 Primer paso de implementación del frente "Integración real de Veriff". Cierra **dos de las tres deudas** del bloque registrado el 2026-06-09 en `known-debt.md` (las dos de HMAC); la tercera (country gating en el flujo KYC) queda para el paso 2. **No se activa Veriff**: `kyc.veriff.enabled` sigue en `false` en `application.properties` y en los tres entornos; el cliente sigue operando en MOCK. **Producto cerrado** tras respuesta de Veriff support: **Document + Selfie IDV en plan Essential** (la verificación de edad de cliente por biometría — Age Estimation — no entra en este paso; no existe aún en código).

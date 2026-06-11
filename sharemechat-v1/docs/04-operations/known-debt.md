@@ -4,15 +4,11 @@ Registro de deudas detectadas durante operación o auditoría que no son inciden
 
 ## 2026-06-09 — Frente "Integración real de Veriff": huecos detectados en el diagnóstico KYC/country gating
 
-Tres huecos destapados por el diagnóstico de solo lectura del 2026-06-09 sobre el estado real de Veriff/KYC y country gating. **Bloque común**: forman parte del frente **"Integración real de Veriff"**. Estado del bloque tras el **paso 1 (2026-06-10)**: las dos deudas de **firma HMAC** (salida y webhook entrante) quedan **CERRADAS**; sigue **abierta** la del **country gating en el flujo KYC**, que es el paso 2 del frente.
+Tres huecos destapados por el diagnóstico de solo lectura del 2026-06-09 sobre el estado real de Veriff/KYC y country gating. **Bloque común**: forman parte del frente **"Integración real de Veriff"**. Estado del bloque: **paso 1 (2026-06-10)** cerró las dos deudas de **firma HMAC** (salida y webhook entrante); **paso 2 (2026-06-10)** cierra la del **country gating en el flujo KYC**. **Bloque CERRADO**. La activación real de Veriff (`kyc.veriff.enabled=true` + credenciales en config.env por entorno) es el paso 3 — no es deuda registrada aquí sino implementación pendiente del frente.
 
-### [DEUDA — bloque Integración real de Veriff] Country gating no se aplica en el flujo KYC
+### ~~[DEUDA — bloque Integración real de Veriff] Country gating no se aplica en el flujo KYC~~ — **CERRADA 2026-06-10**
 
-Hoy `CountryAccessService` solo se invoca en **registro** (`assertAllowedForClientRegistration` / `assertAllowedForModelRegistration`) y en **auth** (`assertAllowed` en login y refresh). El arranque de una sesión Veriff (`KycProviderController` → `POST /api/kyc/veriff/start`) **NO comprueba el país** del solicitante.
-
-Riesgo: con Veriff (sesiones de pago), un usuario que ya haya quedado dentro por la vía de registro/login podría disparar verificaciones desde un país no permitido. Es coste real, no solo lógico.
-
-Acción futura (a planificar con el resto de Veriff, no ahora): aplicar el gating al **inicio de la sesión Veriff**, con **distinción cliente vs modelo** (cada uno tiene su propia lista de países — cliente más restringido que modelo).
+Cerrada en el paso 2 del frente Veriff (ver `project-log.md` 2026-06-10). Añadido `CountryAccessService.assertAllowedForModelKyc(request)` siguiendo el patrón de los `assertAllowedFor*` ya existentes (reusa la allowlist de **modelo**, la resolución de cabecera CloudFront/CF/AppEngine, el bypass por IP/CIDR y el `block-when-missing`). `KycProviderController.startVeriff` lo invoca antes de crear la sesión Veriff; la `CountryBlockedException` se traduce a HTTP 403 uniforme vía `GlobalExceptionHandler` (mismo contrato OPSEC que registro/login). Respeta el flag global `country.access.enabled`: en AUDIT (apagado por onboarding PSP) tampoco bloquea, en PROD sí. El gating del flujo KYC de **cliente** (Age Estimation, vendor por decidir) se aplicará con el método análogo `assertAllowedForClientKyc` cuando se cree su endpoint — no se introduce ahora por la regla "no añadir API sin caller".
 
 ### ~~[DEUDA — bloque Integración real de Veriff] Firma HMAC de salida de Veriff no implementada~~ — **CERRADA 2026-06-10**
 
