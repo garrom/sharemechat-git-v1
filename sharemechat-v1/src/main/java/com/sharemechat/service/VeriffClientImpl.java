@@ -22,7 +22,8 @@ public class VeriffClientImpl implements VeriffClient {
     }
 
     @Override
-    public VeriffCreateSessionResult createSession(Long userId, String email) {
+    public VeriffCreateSessionResult createSession(Long userId, String email,
+                                                   String givenName, String lastName) {
         // Modo sin coste / sin credenciales: devolvemos mock estable
         if (!props.isEnabled() || props.getApiKey() == null || props.getApiKey().isBlank()) {
             String fakeSessionId = "veriff_mock_" + UUID.randomUUID();
@@ -38,30 +39,17 @@ public class VeriffClientImpl implements VeriffClient {
             return new VeriffCreateSessionResult(fakeSessionId, fakeUrl, vendorData, raw.toString());
         }
 
-        // Real Veriff call (ajustable cuando tengas payload definitivo del proveedor).
-        // El shared secret es obligatorio para firmar el body: si Veriff está
-        // habilitado pero falta el secret, fallamos con un error claro en lugar
-        // de enviar una firma inválida (nunca más "TODO_SIGN").
+        // Real Veriff call. El shared secret es obligatorio para firmar el body:
+        // si Veriff está habilitado pero falta el secret, fallamos con un error
+        // claro en lugar de enviar una firma inválida (nunca más "TODO_SIGN").
         if (props.getApiSecret() == null || props.getApiSecret().isBlank()) {
             throw new IllegalStateException(
                     "kyc.veriff.api-secret es obligatorio cuando kyc.veriff.enabled=true (firma HMAC de salida).");
         }
 
         String vendorData = props.getVendorDataPrefix() + ":" + userId;
-
-        JSONObject payload = new JSONObject()
-                .put("verification", new JSONObject()
-                        .put("callback", props.getCallbackUrl())
-                        .put("person", new JSONObject()
-                                .put("givenName", "")
-                                .put("lastName", "")
-                                .put("idNumber", "")
-                        )
-                        .put("vendorData", vendorData)
-                );
-
-        // Body crudo exacto que se firma y se envía (mismos bytes).
-        String rawBody = payload.toString();
+        String rawBody = buildCreateSessionPayloadJson(
+                props.getCallbackUrl(), vendorData, givenName, lastName);
         byte[] rawBytes = rawBody.getBytes(StandardCharsets.UTF_8);
 
         // Firma HMAC-SHA256 del body con el shared secret, hex lowercase.
@@ -101,5 +89,46 @@ public class VeriffClientImpl implements VeriffClient {
         }
 
         return new VeriffCreateSessionResult(sessionId, url, vendorData, resp.getBody());
+    }
+
+    /**
+     * Construye el body JSON crudo de POST /v1/sessions con campos opcionales
+     * condicionales.
+     *
+     * Política: incluir una clave en {@code verification.person} SOLO si tiene
+     * valor real (no null, no string vacío tras {@code trim}). Veriff rechaza
+     * con 400/1104 si recibe strings vacíos en los campos del {@code person}
+     * (caso real reproducido en TEST el 2026-06-11, paso 4 del frente Veriff;
+     * ver project-log.md). {@code idNumber} se omite siempre: no lo conocemos
+     * antes de la verificación (lo lee Veriff del documento).
+     *
+     * Package-private para permitir test del JSON exacto sin tocar la capa
+     * HTTP. El body devuelto son los mismos bytes que se firmarán con HMAC y
+     * se enviarán: lo que se firma == lo que se manda.
+     */
+    String buildCreateSessionPayloadJson(String callbackUrl, String vendorData,
+                                         String givenName, String lastName) {
+        JSONObject person = new JSONObject();
+        if (hasText(givenName)) {
+            person.put("givenName", givenName.trim());
+        }
+        if (hasText(lastName)) {
+            person.put("lastName", lastName.trim());
+        }
+        // idNumber omitido intencionadamente: lo aporta Veriff al leer el documento.
+
+        JSONObject verification = new JSONObject()
+                .put("callback", callbackUrl)
+                .put("vendorData", vendorData);
+        // Incluimos 'person' solo si tiene al menos un campo (omitir bloque vacío).
+        if (!person.isEmpty()) {
+            verification.put("person", person);
+        }
+
+        return new JSONObject().put("verification", verification).toString();
+    }
+
+    private static boolean hasText(String s) {
+        return s != null && !s.trim().isEmpty();
     }
 }

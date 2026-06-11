@@ -22,6 +22,22 @@ Sesión consolidada que cierra cuatro frentes encadenados en el mismo arco tempo
 
 ---
 
+## 2026-06-11 — Veriff paso 5: fix del payload de createSession (campos opcionales del person condicionales)
+
+Fix puntual descubierto durante la activación end-to-end de Veriff REAL en TEST (paso 4 del frente, sesión 2026-06-11). El smoke del paso 3 con firma falsa había dado HTTP 401 esperado y la cadena edge→origin→Spring→HMAC→persistencia auditoría había quedado 100% verificada (fila `id=1` en `kyc_webhook_events` con `is_signature_valid=0`, `processing_error_message='invalid_signature'`). Login real con `demo+model3@sharemechat.com` (userId=87, USER+FORM_MODEL, contrato aceptado, `verification_status=PENDING`) ejecutó `POST /api/kyc/veriff/start` y el backend devolvió **HTTP 500** por una `HttpClientErrorException$BadRequest: 400 Bad Request` de Veriff con cuerpo `{"status":"fail","code":"1104","message":"Request includes invalid parameters"}`.
+
+**Diagnóstico**. `VeriffClientImpl.createSession` enviaba `verification.person.givenName=""`, `lastName=""`, `idNumber=""` (strings vacíos). El comentario del propio código lo anticipaba: *"Real Veriff call (ajustable cuando tengas payload definitivo del proveedor)"*. Veriff rechaza strings vacíos en esos campos: la doc dice que son opcionales y deben **omitirse del JSON** si no se conocen, no enviarse vacíos. Importante: el 400 ocurre DESPUÉS de que Veriff valida la firma; si la firma fuera mala devolverían 401. Esto valida indirectamente que la firma HMAC de salida (paso 1) está correcta contra la integración real.
+
+**Fix aplicado** (frontera limpia entre transporte HTTP y construcción de payload):
+
+- `VeriffClient.createSession` (interfaz) ahora acepta `givenName` y `lastName` como parámetros opcionales (pueden llegar null/vacíos). `idNumber` NO es parámetro: nunca lo conocemos antes de la verificación, lo lee Veriff del documento.
+- `VeriffClientImpl` separa la construcción del JSON en un método package-private `buildCreateSessionPayloadJson(callbackUrl, vendorData, givenName, lastName)`. Política: incluir una clave en `verification.person` SOLO si tiene valor real (no null, no string vacío tras `trim`). Si `person` queda sin campos, se omite el bloque entero. El resto del cuerpo (`callback`, `vendorData`) se mantiene incondicional. El body devuelto son los mismos bytes que se firman con HMAC y se envían: no hay riesgo de divergencia firma↔body.
+- `ModelKycSessionService.startVeriffSession` pasa `user.getName()` y `user.getSurname()` al cliente (están a mano en el User del registro). El cliente decide si los incluye o no.
+
+**Tests** (`VeriffClientImplTest`, ampliado de 3 a 8): (a) campos presentes → JSON los incluye; (b) null/vacíos/whitespace → la clave no existe en el JSON (verificado con `JSONObject.has(...)`, no con `=null`); (b-mixto) solo uno presente → el otro se omite; (c) idNumber NUNCA aparece; trim de whitespace alrededor. `mvn package` verde: 79 tests, 0 fallos (los 71 anteriores + 5 nuevos del payload). Modo MOCK preservado (test `mockMode_whenDisabled` actualizado a la nueva firma sigue en verde).
+
+**Estado del frente al cierre del paso 5**. Bloque "Integración real de Veriff" sigue cerrado (no introduce deudas nuevas). `kyc.veriff.enabled=false` intacto en el repo; en TEST sigue activado por env var `KYC_VERIFF_ENABLED=true` en `/opt/sharemechat/config.env` (paso 1 del 2026-06-10). AUDIT y PROD NO tocados. JAR `88167f8e…` listo para redeploy a TEST y continuar el paso 4 (sesión Veriff real + forzado de decisión approved/declined desde Station).
+
 ## 2026-06-10 — Veriff paso 2: country gating aplicado al inicio de la sesión Veriff (cierra el bloque "Integración real de Veriff")
 
 Segundo paso de implementación del frente "Integración real de Veriff". **Cierra la tercera y última deuda** del bloque registrado el 2026-06-09 en `known-debt.md` (gating-en-KYC). Tras este paso el bloque queda **completo**: paso 1 (HMAC salida + HMAC webhook entrante) + paso 2 (gating). **No se activa Veriff**: `kyc.veriff.enabled` sigue en `false`. La activación real (credenciales `kyc.veriff.api-key`/`api-secret` en config.env por entorno + flag a `true`) es el paso 3 del frente, no es deuda.

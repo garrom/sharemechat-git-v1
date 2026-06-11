@@ -71,7 +71,12 @@ public class ModelKycSessionService {
             throw new IllegalArgumentException("Debes aceptar el contrato de modelo antes del KYC");
         }
 
-        VeriffCreateSessionResult result = veriffClient.createSession(userId, user.getEmail());
+        // Pasamos givenName/lastName del User si los tenemos en el registro;
+        // VeriffClientImpl los OMITE del JSON cuando vienen vacíos/null
+        // (Veriff rechaza con 400/1104 si recibe strings vacíos). idNumber no
+        // se pasa: nunca lo conocemos antes de la verificación.
+        VeriffCreateSessionResult result = veriffClient.createSession(
+                userId, user.getEmail(), user.getName(), user.getSurname());
 
         ModelKycSession row = new ModelKycSession();
         row.setUserId(userId);
