@@ -32,4 +32,4 @@ Según el código actual del repositorio, el sistema contiene piezas activas o c
 
 ## Estado funcional del producto
 
-La base funcional es amplia y coherente, pero conviven subsistemas maduros con integraciones aún parciales. En especial, la capa de PSP y parte del proveedor KYC muestran señales de transición o cableado incompleto.
+La base funcional es amplia y coherente, pero conviven subsistemas maduros con integraciones aún parciales. En especial, la integración PSP y parte del proveedor KYC muestran señales de transición o cableado incompleto en código (estrategia de PSP en [psp-strategy.md](psp-strategy.md)).

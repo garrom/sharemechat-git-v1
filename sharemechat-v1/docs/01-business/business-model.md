@@ -21,4 +21,4 @@ La trazabilidad económica se apoya en ledger interno y snapshots de balance, lo
 
 ## Madurez observada
 
-La economía interna y la trazabilidad contable parecen más maduras que la integración PSP externa. El repositorio contiene adaptación hacia CCBill, pero el material actual sugiere una integración todavía parcial.
+La economía interna y la trazabilidad contable parecen más maduras que la integración PSP externa. Ningún PSP está cerrado contractualmente: la vía activa de onboarding es Segpay (condicional, con due diligence en curso), mientras que CCBill quedó como vía silente tras conversaciones iniciales. La integración PSP a nivel de código sigue siendo parcial. El detalle de la estrategia vive en [psp-strategy.md](psp-strategy.md).
