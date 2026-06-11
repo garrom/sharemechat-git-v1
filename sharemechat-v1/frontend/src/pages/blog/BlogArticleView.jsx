@@ -41,6 +41,9 @@ import {
   mapLocaleToBcp47,
   mapLocaleToOg,
   upsertLink,
+  DEFAULT_OG_IMAGE,
+  DEFAULT_OG_IMAGE_WIDTH,
+  DEFAULT_OG_IMAGE_HEIGHT,
 } from './seoHelpers';
 import { BlogLocaleContext } from './BlogLocaleContext';
 
@@ -273,7 +276,9 @@ export default function BlogArticleView() {
   //    que el bot entro; ADR-015 garantiza apex unico canonico por entorno).
   //  - SharemeChat no tiene aun seoTitle/metaDescription dedicados a nivel de
   //    columna; usamos title como seoTitle y brief truncado como meta.
-  //  - og:image se omite mientras no exista heroImageUrl en el DTO.
+  //  - og:image: si el articulo trae heroImageUrl propia, se usa esa;
+  //    si no, cae en la card de marca 1200x630 (DEFAULT_OG_IMAGE).
+  //    logo192 SOLO se usa en publisher.logo del JSON-LD.
   useEffect(() => {
     if (!article) return undefined;
 
@@ -325,20 +330,38 @@ export default function BlogArticleView() {
     upsertMeta('meta[property="og:site_name"]', { property: 'og:site_name', content: 'SharemeChat' });
     upsertMeta('meta[property="og:locale"]', { property: 'og:locale', content: ogLocale });
 
-    // og:image / twitter:image condicionales segun heroImageUrl.
+    // og:image / twitter:image:
+    //  - Si el articulo tiene heroImageUrl propia, se usa esa.
+    //  - Si no, cae en la card de marca 1200x630 (no en logo192, que
+    //    es cuadrado y de baja resolucion: las preview cards lo
+    //    recortan o miniaturizan). logo192 sigue siendo correcto SOLO
+    //    en publisher.logo del JSON-LD mas abajo.
+    //  - og:image:width/height solo se emiten cuando usamos la card
+    //    default (dimensiones conocidas: 1200x630). Para la hero del
+    //    articulo no conocemos las dimensiones, los crawlers las
+    //    inferiran al fetchear la imagen.
     const hasHeroImage = !!article.heroImageUrl;
+    const ogImage = hasHeroImage ? article.heroImageUrl : DEFAULT_OG_IMAGE;
+    upsertMeta('meta[property="og:image"]', {
+      property: 'og:image',
+      content: ogImage,
+    });
+    upsertMeta('meta[name="twitter:image"]', {
+      name: 'twitter:image',
+      content: ogImage,
+    });
     if (hasHeroImage) {
-      upsertMeta('meta[property="og:image"]', {
-        property: 'og:image',
-        content: article.heroImageUrl,
-      });
-      upsertMeta('meta[name="twitter:image"]', {
-        name: 'twitter:image',
-        content: article.heroImageUrl,
-      });
+      removeMeta('meta[property="og:image:width"]');
+      removeMeta('meta[property="og:image:height"]');
     } else {
-      removeMeta('meta[property="og:image"]');
-      removeMeta('meta[name="twitter:image"]');
+      upsertMeta('meta[property="og:image:width"]', {
+        property: 'og:image:width',
+        content: DEFAULT_OG_IMAGE_WIDTH,
+      });
+      upsertMeta('meta[property="og:image:height"]', {
+        property: 'og:image:height',
+        content: DEFAULT_OG_IMAGE_HEIGHT,
+      });
     }
 
     // article:* tags (Open Graph para articulos)
@@ -387,10 +410,12 @@ export default function BlogArticleView() {
     upsertMeta('meta[name="author"]', { name: 'author', content: t('blog:meta.author') });
     upsertMeta('meta[name="publisher"]', { name: 'publisher', content: t('blog:meta.publisher') });
 
-    // Twitter
+    // Twitter: siempre summary_large_image, porque siempre hay imagen
+    // 1200x630 disponible (la hero del articulo si existe, o la card
+    // de marca por defecto).
     upsertMeta('meta[name="twitter:card"]', {
       name: 'twitter:card',
-      content: hasHeroImage ? 'summary_large_image' : 'summary',
+      content: 'summary_large_image',
     });
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: seoTitle });
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: metaDescription });
@@ -440,6 +465,8 @@ export default function BlogArticleView() {
       // (og:title, og:description, twitter:title, etc.) se sobreescribe
       // en el siguiente render para evitar parpadeos durante navegacion.
       removeMeta('meta[property="og:image"]');
+      removeMeta('meta[property="og:image:width"]');
+      removeMeta('meta[property="og:image:height"]');
       removeMeta('meta[name="twitter:image"]');
       removeMeta('meta[property="article:published_time"]');
       removeMeta('meta[property="article:modified_time"]');

@@ -100,6 +100,24 @@ export const truncate = (text, max) => {
   return t.slice(0, max - 1).trimEnd() + '…';
 };
 
+// Card raster 1200x630 de marca para previews sociales (og:image,
+// twitter:image). Vive en el bucket assets canonico publico
+// (assets.sharemechat.com/brand/og-default-1200x630.png) y se
+// genero el 2026-06-10 dentro del frente SEO. Compartida por:
+//  - BlogContent (listado /blog/{locale}): siempre la card.
+//  - BlogArticleView (articulo /blog/{locale}/{slug}): fallback
+//    cuando el articulo no trae heroImageUrl propia.
+//  - Seo (paginas estaticas home/footer): ya la usa via su
+//    propia constante DEFAULT_OG_IMAGE en src/components/Seo.jsx.
+// IMPORTANTE: logo192.png (192x192) NO debe usarse como og:image
+// porque las preview cards de FB/X/WhatsApp lo recortan o lo
+// renderizan en miniatura. Su uso correcto es JSON-LD
+// publisher.logo (ImageObject), donde una imagen cuadrada
+// pequena es lo esperado por Google Rich Results.
+export const DEFAULT_OG_IMAGE = 'https://assets.sharemechat.com/brand/og-default-1200x630.png';
+export const DEFAULT_OG_IMAGE_WIDTH = '1200';
+export const DEFAULT_OG_IMAGE_HEIGHT = '630';
+
 // Mapea locale corto (ej. 'es') a etiqueta BCP47 completa
 // (ej. 'es-ES'). Fallback 'es-ES'.
 export const mapLocaleToBcp47 = (locale) => {

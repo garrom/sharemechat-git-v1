@@ -49,6 +49,9 @@ import {
   upsertJsonLd,
   upsertLink,
   truncate,
+  DEFAULT_OG_IMAGE,
+  DEFAULT_OG_IMAGE_WIDTH,
+  DEFAULT_OG_IMAGE_HEIGHT,
 } from './seoHelpers';
 
 const fmtDate = (v) => {
@@ -220,15 +223,30 @@ const BlogContent = ({
       property: 'og:locale',
       content: locale === 'en' ? 'en_US' : 'es_ES',
     });
+    // og:image / og:image:width / og:image:height: card de marca
+    // 1200x630 alojada en assets-sharemechat-prod (no usar logo192.png:
+    // las preview cards de FB/X/WhatsApp lo recortan al ser cuadrado
+    // y de baja resolucion). logo192 sigue siendo correcto SOLO en
+    // publisher.logo del JSON-LD mas abajo.
     upsertMeta('meta[property="og:image"]', {
       property: 'og:image',
-      content: `${baseUrl}/logo192.png`,
+      content: DEFAULT_OG_IMAGE,
+    });
+    upsertMeta('meta[property="og:image:width"]', {
+      property: 'og:image:width',
+      content: DEFAULT_OG_IMAGE_WIDTH,
+    });
+    upsertMeta('meta[property="og:image:height"]', {
+      property: 'og:image:height',
+      content: DEFAULT_OG_IMAGE_HEIGHT,
     });
 
-    // Twitter Card (summary porque el logo no es 1200x630 optimo para large)
-    upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary' });
+    // Twitter Card: con la card 1200x630 ya podemos usar
+    // summary_large_image (preview grande), no summary.
+    upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: title });
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: description });
+    upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: DEFAULT_OG_IMAGE });
 
     // JSON-LD Blog. Solo emitir si hay articulos cargados (evita Blog vacio
     // durante el primer render mientras el fetch resuelve).
