@@ -7,16 +7,16 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: IA67342XC4NTSPB1NOWPWJKLDV
+  cloudfront_invalidation_id: I53FJKMQNS5847QYAFOPATV5MX
   verification:
-    method: deploy-frontend.ps1-live-build_2026-06-11T13:36:31Z
+    method: deploy-frontend.ps1-live-build_2026-06-11T14:32:42Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-06-11T13:36:31Z
-  built_at: 2026-06-11T13:36:31Z
+  deployed_at: 2026-06-11T14:32:42Z
+  built_at: 2026-06-11T14:32:42Z
   bundle_sha256: 2f4470f04f28c1488ccff6fb9cb5d1d1b1f9c5f021014e20a9e2d6ef54a17c2f
-  git_commit_short: eb3afd7
-  git_commit: eb3afd7fa514816d5f892c15e56028508173f45b
+  git_commit_short: ec5e5c2
+  git_commit: ec5e5c2dada38d40ca820a65202f09bbb4f640b1
   cloudfront_distribution: E2FWNC80D4QDJC
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
@@ -40,13 +40,13 @@ backend:
   systemd_unit: sharemechat-prod.service
   git_commit: b0fa773c44d6c4d1944d82025de07d3cd7993a8f
   git_commit_short: b0fa773
-last_updated_at: 2026-06-11T13:36:31Z
+last_updated_at: 2026-06-11T14:32:42Z
 frontend_admin:
   working_tree_clean: 
   bucket: sharemechat-admin-prod
   bundle: main.c16b646d.js
+  built_at: 
   deployed_at: 2026-06-07T13:27:04Z
-  cloudfront_distribution: E3O40LHJ4PC6LE
   verification:
     method: s3_lastmodified_observed_2026-06-09
     git_commit_provenance: inferred_from_lastmodified_and_git_log
@@ -55,7 +55,7 @@ frontend_admin:
       admin.sharemechat.com en project-log 2026-06-07). HEAD git en
       esa marca = 0cdba7f (docs(adr-032)+ops). Working_tree_clean
       no recuperable.
-  built_at: 
+  cloudfront_distribution: E3O40LHJ4PC6LE
   cloudfront_invalidation_id: 
   deployed_by: 
   git_commit: 
