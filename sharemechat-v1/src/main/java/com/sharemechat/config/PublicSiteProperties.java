@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * Mapeo: app.public.base-url -> baseUrl
  *  - TEST  -> https://test.sharemechat.com
  *  - AUDIT -> https://audit.sharemechat.com
- *  - PRO   -> https://sharemechat.com (cuando se monte)
+ *  - PROD  -> https://sharemechat.com (cuando se monte)
  *
  * El valor llega desde application*.properties (con override por
  * APP_PUBLIC_BASE_URL si se quiere forzar en runtime).

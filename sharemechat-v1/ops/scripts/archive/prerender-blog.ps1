@@ -10,7 +10,7 @@ Decision cerrada: ver
   docs/06-decisions/adr-019-blog-spa-react.md
 (ADR-018 esta "Superseded" por esa decision).
 
-Este script NO debe ejecutarse contra TEST/PRO. Si se ejecuta,
+Este script NO debe ejecutarse contra TEST/PROD. Si se ejecuta,
 subira HTML estatico al bucket frontend que CloudFront ya no
 ruteara. Inocuo pero ensucia.
 

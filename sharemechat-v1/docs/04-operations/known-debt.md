@@ -806,7 +806,7 @@ Backups `.env.bak.pre-PRO-5.A` y `*.jar.bak.pre-PRO-5.A` conservados en ambos ho
 1. Confirmar mediante logs/análisis que `assets_legacy` no está sirviendo nada vivo (al estar deshabilitada y sin alias DNS, no debería).
 2. Eliminar la distribución y desasociar el WebACL si no se usa en otra parte.
 3. Una vez eliminada, retirar `assets_legacy` del bloque `cloudfront_distributions` en `~/.sharemechat/state-mapping.yaml`.
-4. Revisar si el patrón "fantasma" se replica en AUDIT y PRO al inventariarlos.
+4. Revisar si el patrón "fantasma" se replica en AUDIT y PROD al inventariarlos.
 
 **Prioridad**: baja. No molesta operativamente. Cierre de orden y posible ahorro de coste residual.
 
