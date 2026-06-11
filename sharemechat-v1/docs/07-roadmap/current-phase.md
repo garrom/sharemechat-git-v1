@@ -5,7 +5,7 @@
 SharemeChat está en **Fase 0 — Cierre de riesgos pre-PRO** del roadmap hacia GO LIVE.
 
 Objetivo de esta fase:
-cerrar riesgos estructurales antes de abrir PRO, especialmente en economía, acceso por entorno, PSP, KYC, compliance y configuración real por entorno.
+cerrar riesgos estructurales antes de abrir PROD, especialmente en economía, acceso por entorno, PSP, KYC, compliance y configuración real por entorno.
 
 El roadmap general vive en [go-live-roadmap.md](go-live-roadmap.md).
 El backlog técnico vive en [pending-hardening.md](pending-hardening.md).
@@ -24,7 +24,7 @@ Secuencia actual:
    - `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED` implementado.
    - `/api/transactions/first` y `/api/transactions/add-balance` gobernados.
    - Validado en TEST.
-   - AUDIT/PRO deben mantener la flag en `false` salvo decisión explícita.
+   - AUDIT/PROD deben mantener la flag en `false` salvo decisión explícita.
 
 2. **Corregir inicio facturable de streams** — HECHO
    - `endSession` calcula desde `billable_start`, con fallback defensivo a `confirmed_at`.
@@ -101,7 +101,7 @@ Estos puntos siguen pendientes, pero **no son el siguiente paso inmediato** salv
 
 - Validar modos restrictivos completos de Product Operational Mode: `PRELAUNCH`, `MAINTENANCE`, `CLOSED`.
 - Tratamiento frontend de códigos `PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED`, `SIMULATION_DISABLED`.
-- Parametrización real de PRO.
+- Parametrización real de PROD.
 - PSP CCBill real, bloqueado hasta recibir manual oficial.
 - KYC externo end-to-end.
 - Compliance entre REST y WebSocket.

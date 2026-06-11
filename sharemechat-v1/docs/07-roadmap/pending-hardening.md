@@ -62,7 +62,7 @@ Pendiente dentro del alcance de la propia capa:
 - frontend: tratamiento de `PRODUCT_UNAVAILABLE`, `PRODUCT_MAINTENANCE`, `REGISTRATION_CLOSED` y `SIMULATION_DISABLED` donde aplique
 - ejercicio de la allowlist por userId dentro de un modo restrictivo
 - decisión sobre la limitación consciente del refresh con access_token expirado en sesiones backoffice
-- validación de configuración AUDIT/PRO con `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`
+- validación de configuración AUDIT/PROD con `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`
 
 Dependencias externas al Product Operational Mode:
 

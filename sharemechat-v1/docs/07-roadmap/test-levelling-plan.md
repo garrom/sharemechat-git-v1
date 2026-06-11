@@ -5,7 +5,7 @@
 
 ## Objetivo
 
-Elevar el entorno TEST al mismo nivel operativo que AUDIT sin abrir refactors de aplicación. El backend Spring Boot y el frontend React comparten código fuente con AUDIT y PRO, por lo que la nivelación es casi exclusivamente de infraestructura y operación, con diferencias resueltas por properties y variables de entorno por perfil.
+Elevar el entorno TEST al mismo nivel operativo que AUDIT sin abrir refactors de aplicación. El backend Spring Boot y el frontend React comparten código fuente con AUDIT y PROD, por lo que la nivelación es casi exclusivamente de infraestructura y operación, con diferencias resueltas por properties y variables de entorno por perfil.
 
 ## Principios
 
@@ -47,7 +47,7 @@ Estado real:
 Decision:
 
 - el arranque persistente mediante systemd NO se aplica en TEST
-- este comportamiento se reserva para entornos always-on como AUDIT o PRO
+- este comportamiento se reserva para entornos always-on como AUDIT o PROD
 
 Conclusion:
 
@@ -173,7 +173,7 @@ Dependencias:
 
 Objetivo:
 
-- cerrar la fase dejando TEST sin legado operativo residual que pueda contaminar decisiones posteriores sobre PRO.
+- cerrar la fase dejando TEST sin legado operativo residual que pueda contaminar decisiones posteriores sobre PROD.
 
 Alcance mínimo:
 
@@ -213,9 +213,9 @@ Criterios de aceptación:
 
 - cambios estructurales de aplicación, realtime o matching
 - refactors de compliance o de contrato de errores
-- creación de infraestructura PRO — pertenece a un frente posterior
+- creación de infraestructura PROD — pertenece a un frente posterior
 
 ## Relación con otros frentes
 
 - esta nivelación no debe mezclarse con los frentes abiertos en `pending-hardening.md`
-- una vez cerrada, sirve como base estable para planificar la creación del entorno PRO replicando el patrón ya validado en AUDIT y confirmado en TEST
+- una vez cerrada, sirve como base estable para planificar la creación del entorno PROD replicando el patrón ya validado en AUDIT y confirmado en TEST

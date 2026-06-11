@@ -14,7 +14,7 @@ Se organiza por fases de negocio, no por frentes técnicos sueltos.
 
 - El sistema está en MVP industrial medio-alto (ver diagnóstico técnico global).
 - El riesgo dominante actual ya no es técnico puro: es **ordenar el camino hacia GO LIVE, captación inicial y monetización real** sin abrir frentes innecesarios.
-- PRO no se abre como producto completo. La apertura es progresiva, controlada y revisable en cada fase.
+- PROD no se abre como producto completo. La apertura es progresiva, controlada y revisable en cada fase.
 - Fecha objetivo de lanzamiento documentada: **1 de julio de 2026**. Las fases siguientes deben caber dentro de ese horizonte; cualquier desvío revisa el calendario, no el orden de fases.
 
 ---
@@ -28,22 +28,22 @@ Objetivo: dejar el sistema en condiciones de poder abrir cualquier superficie p�
 Alcance:
 
 - eliminar o acotar acoplamientos del frontend a dominios y configuración de TEST.
-- revisar preparación real de `properties` y variables de entorno para PRO (paridad con AUDIT, secretos, dominios, CORS, cookie domain, namespace Redis).
+- revisar preparación real de `properties` y variables de entorno para PROD (paridad con AUDIT, secretos, dominios, CORS, cookie domain, namespace Redis).
 - mantener validada la facturacion de streams basada en doble ACK media y `billable_start` como inicio facturable.
 - cerrar o proteger los endpoints de simulación económica antes de cualquier circulación de dinero real.
-- definir e implantar **Product Operational Mode** como capa server-side única de gating por entorno (modos `OPEN/PRELAUNCH/MAINTENANCE/CLOSED`, flags independientes de registro y flag de simulación económica directa). Decisión registrada en [ADR-009](../06-decisions/adr-009-product-operational-mode.md). Esta capa desbloquea: cierre de registro público en TEST/AUDIT, cierre de endpoints directos de simulación donde no proceda, modo PRELAUNCH en PRO para habilitar Fase 1, y modo MAINTENANCE para operación posterior a GO LIVE.
-- aplicar blacklist por países antes de abrir PRO, con criterio homogéneo entre REST y WebSocket.
+- definir e implantar **Product Operational Mode** como capa server-side única de gating por entorno (modos `OPEN/PRELAUNCH/MAINTENANCE/CLOSED`, flags independientes de registro y flag de simulación económica directa). Decisión registrada en [ADR-009](../06-decisions/adr-009-product-operational-mode.md). Esta capa desbloquea: cierre de registro público en TEST/AUDIT, cierre de endpoints directos de simulación donde no proceda, modo PRELAUNCH en PROD para habilitar Fase 1, y modo MAINTENANCE para operación posterior a GO LIVE.
+- aplicar blacklist por países antes de abrir PROD, con criterio homogéneo entre REST y WebSocket.
 
 Input técnico: `pending-hardening.md` y `test-levelling-plan.md`.
 
-Esta fase debe cerrarse antes de habilitar Fase 1. Específicamente, Product Operational Mode debe estar implementado y validado antes de Fase 1, ya que es lo que permite tener registro abierto y producto cerrado simultáneamente en PRO.
+Esta fase debe cerrarse antes de habilitar Fase 1. Específicamente, Product Operational Mode debe estar implementado y validado antes de Fase 1, ya que es lo que permite tener registro abierto y producto cerrado simultáneamente en PROD.
 
 ### Estado detallado
 
 - acoplamientos a TEST → PARCIAL
-- properties/env de PRO → NO VALIDADO
+- properties/env de PROD → NO VALIDADO
 - cierre economico stream (`start_time` vs `billable_start`) → IMPLEMENTADO Y VALIDADO EN TEST
-- endpoints de simulación económica directa → GOBERNADOS POR FLAG E IMPLEMENTADOS; validación en TEST completada; AUDIT/PRO deben quedar `false` por defecto antes de dinero real
+- endpoints de simulación económica directa → GOBERNADOS POR FLAG E IMPLEMENTADOS; validación en TEST completada; AUDIT/PROD deben quedar `false` por defecto antes de dinero real
 - Product Operational Mode → IMPLEMENTACIÓN PARCIAL: cierre de registro validado en TEST/AUDIT; simulación económica directa validada en TEST; modos restrictivos (`PRELAUNCH/MAINTENANCE/CLOSED`) en código pero pendientes de validación. Frontend pendiente. (ADR-009)
 - packs 10/20/40 (Fase 3A) → IMPLEMENTADO Y VALIDADO EN TEST. Backend `CcbillService` acepta `P10/P20/P40` y rechaza el catálogo legacy. Frontend alineado. `minutesGranted == priceEur` en esta fase; BFPM pendiente. (ADR-011)
 - BFPM Fase 4A (bonus EUR financiado por plataforma con `BONUS_GRANT`/`BONUS_FUNDING`) → IMPLEMENTADO Y VALIDADO EN TEST. Catálogo vigente: P10 sin bonus, P20 con +2 EUR, P40 con +4 EUR. Invariante `Σ BONUS_GRANT + Σ BONUS_FUNDING = 0` confirmada. (ADR-012)
@@ -100,20 +100,20 @@ Alcance:
 - **wallet prepago como único modelo inicial** de monetización (no suscripción, no postpago).
 - webhooks de PSP seguros: verificación de firma, validación de origen/contrato PSP y protección anti-replay.
 - idempotencia de notificaciones y de acreditación de saldo.
-- mantener cerrados en PRO los endpoints directos de simulación mediante `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`.
-- mantener `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` en AUDIT/PRO salvo decisión operativa explícita previa al dinero real.
+- mantener cerrados en PROD los endpoints directos de simulación mediante `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false`.
+- mantener `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` en AUDIT/PROD salvo decisión operativa explícita previa al dinero real.
 - auditar y endurecer las superficies económicas no directas antes de operación real: `ccbill/notify`, refund admin, review admin de payouts, kill admin de streams, gifts por WebSocket, settlement de streams por WebSocket, trials y unsubscribe/forfeit.
-- pruebas extremo a extremo en AUDIT y, cuando aplique, en PRO en modo controlado, antes de apertura comercial real.
+- pruebas extremo a extremo en AUDIT y, cuando aplique, en PROD en modo controlado, antes de apertura comercial real.
 
 Nota: PSP figura como integración no cerrada en `integrations-overview.md` y en `known-risks.md`.
 
 ---
 
-## Fase 4 — PRO privado funcional
+## Fase 4 — PROD privado funcional
 
 Estado: NO INICIADA
 
-Objetivo: ejercitar PRO con tráfico real pero acotado, antes de abrir al público.
+Objetivo: ejercitar PROD con tráfico real pero acotado, antes de abrir al público.
 
 Alcance:
 
@@ -124,7 +124,7 @@ Alcance:
 
 ---
 
-## Fase 5 — PRO público limitado
+## Fase 5 — PROD público limitado
 
 Estado: NO INICIADA
 

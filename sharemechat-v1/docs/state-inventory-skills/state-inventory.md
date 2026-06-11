@@ -2,7 +2,7 @@
 
 ## Propósito
 
-Generar un snapshot estructurado del estado real de un entorno de SharemeChat (TEST, AUDIT o PRO), inventariando los siguientes dominios: repositorio local, AWS CloudFront (todas las distribuciones del entorno), AWS S3 (todos los buckets del entorno), EC2 backend (vía SSH) y RDS MySQL (vía túnel SSH).
+Generar un snapshot estructurado del estado real de un entorno de SharemeChat (TEST, AUDIT o PROD), inventariando los siguientes dominios: repositorio local, AWS CloudFront (todas las distribuciones del entorno), AWS S3 (todos los buckets del entorno), EC2 backend (vía SSH) y RDS MySQL (vía túnel SSH).
 
 El snapshot es la fuente de verdad estructurada que después se usa para detectar drift entre la realidad operativa y la documentación en prosa del repositorio.
 
@@ -265,7 +265,7 @@ Validar conectividad: `mysqlsh --sql --host 127.0.0.1 --port 3307 --user admin -
 Queries contra `rds_schema_name`:
 
 - `SELECT VERSION();` → `rds_database.mysql_version`.
-- `SHOW TABLES LIKE 'flyway_schema_history';` → si devuelve fila, `repo.schema_versioning.flyway_runtime_present: true`; si no, `false`. **Semántica post-ADR-025**: el valor esperado en TEST/AUDIT/PRO es `true` (Flyway está adoptado). Encontrar `false` indica que el entorno no ha pasado por el procedimiento `flyway baseline` del runbook `cms-v2-flyway-introduction.md`; reportar en `metadata.notes`.
+- `SHOW TABLES LIKE 'flyway_schema_history';` → si devuelve fila, `repo.schema_versioning.flyway_runtime_present: true`; si no, `false`. **Semántica post-ADR-025**: el valor esperado en TEST/AUDIT/PROD es `true` (Flyway está adoptado). Encontrar `false` indica que el entorno no ha pasado por el procedimiento `flyway baseline` del runbook `cms-v2-flyway-introduction.md`; reportar en `metadata.notes`.
 - Si `flyway_runtime_present: true`, ejecutar `SELECT MAX(version) AS v FROM flyway_schema_history WHERE success = TRUE;` → `repo.schema_versioning.last_applied_flyway_version`. Si la consulta devuelve `NULL` (tabla vacía), guardar `null` con nota: "flyway_schema_history existe pero está vacía". Si `flyway_runtime_present: false`, dejar `last_applied_flyway_version: null` sin nota adicional (esperado en entorno pre-baseline).
 - CHECK constraints de `content_articles.state`:
   ```sql

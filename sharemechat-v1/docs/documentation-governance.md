@@ -107,7 +107,7 @@ Acción:
 
 ### Caso 9. Snapshot de estado del sistema
 Ejemplos:
-- inventariado periódico de un entorno (TEST, AUDIT, PRO)
+- inventariado periódico de un entorno (TEST, AUDIT, PROD)
 - snapshot pre/post cambio para validar diff
 - snapshot tras cierre de un frente
 

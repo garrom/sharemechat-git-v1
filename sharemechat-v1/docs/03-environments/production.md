@@ -9,7 +9,7 @@ La información disponible sugiere que PRODUCTION se usa principalmente para:
 
 ## Hosts canónicos
 
-Decisión documentada en [ADR-015](../06-decisions/adr-015-canonical-domains-per-environment.md). Resumen para PRO:
+Decisión documentada en [ADR-015](../06-decisions/adr-015-canonical-domains-per-environment.md). Resumen para PROD:
 
 - Producto público: `https://sharemechat.com` (apex sin www)
 - Variante con www: `https://www.sharemechat.com` → 301 al apex
@@ -36,13 +36,13 @@ Cualquier ampliación futura de este documento debe apoyarse en evidencia versio
 
 ## Product Operational Mode previsto
 
-Product Operational Mode ya existe en backend (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), pero PRO no está documentado aquí como producto completo desplegado.
+Product Operational Mode ya existe en backend (ver [ADR-009](../06-decisions/adr-009-product-operational-mode.md)), pero PROD no está documentado aquí como producto completo desplegado.
 
-La intención de configuración para PRO es:
+La intención de configuración para PROD es:
 
 - en **Fase 1 — Prelaunch público controlado** del roadmap, modo `PRELAUNCH` con registros de cliente y modelo abiertos. Producto bloqueado server-side y backoffice operativo.
-- al alcanzar **Fase 5 — PRO público limitado**, transición a modo `OPEN` con registros abiertos.
+- al alcanzar **Fase 5 — PROD público limitado**, transición a modo `OPEN` con registros abiertos.
 - modo `MAINTENANCE` reservado para ventanas operativas controladas en cualquier momento posterior.
 - `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` siempre.
 
-Cualquier acreditación de saldo en PRO debe pasar por PSP validado. Los webhooks CCBill requieren verificación de firma y contrato operativo cerrado antes de circular dinero real.
+Cualquier acreditación de saldo en PROD debe pasar por PSP validado. Los webhooks CCBill requieren verificación de firma y contrato operativo cerrado antes de circular dinero real.

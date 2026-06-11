@@ -7,7 +7,7 @@ Esta guía complementa a `docs/state-inventory-skills/state-inventory.md` (la sk
 ## Cuándo invocar este flujo
 
 - Al cerrar un frente técnico que haya tocado configuración de un entorno.
-- Antes de nivelar un entorno con otro (TEST con AUDIT, AUDIT con PRO).
+- Antes de nivelar un entorno con otro (TEST con AUDIT, AUDIT con PROD).
 - Cuando se sospeche que la documentación se ha desincronizado del estado real.
 
 No proactivamente. Tú decides cuándo.
@@ -56,7 +56,7 @@ cd ~/sharemechat-v1 && set -a && source /opt/sharemechat/.env && set +a && java 
 
 Esperar a ver `Started SharemechatV1Application in XX seconds`. Dejar la terminal abierta (el JAR queda en foreground).
 
-AUDIT y PRO no requieren este paso (corren con systemd).
+AUDIT y PROD no requieren este paso (corren con systemd).
 
 ### Paso 2 — Abrir el túnel SSH a MySQL
 

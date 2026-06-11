@@ -47,7 +47,7 @@ directa de `document.head` con `useEffect`, compatible con React 17):
 - **Backend**: `PublicSiteProperties` (`@ConfigurationProperties(prefix =
   "app.public")`) lee `app.public.base-url` desde
   `application*.properties`. TEST default `https://test.sharemechat.com`,
-  AUDIT override `https://audit.sharemechat.com`, PRO ajustará a
+  AUDIT override `https://audit.sharemechat.com`, PROD ajustará a
   `https://sharemechat.com` cuando se monte (`APP_PUBLIC_BASE_URL`).
 - **Frontend**: usa `window.location.origin`, que siempre coincide con el
   host por el que llegó el bot. ADR-015 garantiza apex único canónico por
@@ -72,7 +72,7 @@ En TEST, una vez desplegado:
 - Pegar la URL en LinkedIn / Twitter → verifica que la previsualización
   muestra título y descripción correctos.
 
-Una vez PRO se despliegue, registrar el dominio en Google Search Console y
+Una vez PROD se despliegue, registrar el dominio en Google Search Console y
 enviar `https://sharemechat.com/sitemap.xml` para acelerar la indexación.
 
 ## Limitaciones

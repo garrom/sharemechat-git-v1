@@ -27,7 +27,7 @@ cd ~/sharemechat-v1 && set -a && source /opt/sharemechat/.env && set +a && java 
 Esperar a ver: "Started SharemechatV1Application in XX seconds"
 Dejar la terminal abierta.
 
-(AUDIT y PRO no necesitan este paso — corren con systemd.)
+(AUDIT y PROD no necesitan este paso — corren con systemd.)
 
 
 ----------------------------------------

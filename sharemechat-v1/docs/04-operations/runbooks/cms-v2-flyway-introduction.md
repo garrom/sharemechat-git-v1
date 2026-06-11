@@ -15,7 +15,7 @@ Antes de empezar, confirmar que se cumple todo lo siguiente. Si algo falla, **pa
   - `flyway` CLI **opcional** pero recomendado para los pasos de baseline. Si no se tiene, los comandos `flyway baseline` pueden ejecutarse vía el endpoint `/actuator/flyway` con `flyway.enabled=true` y arranque puntual, pero el flujo más simple es instalar el CLI. Versión sugerida: 10.x (alineada con la dependencia managed por Spring Boot 3.5).
 - Credenciales BD para `admin` accesibles vía variable de entorno o secret manager (no en disco plano).
 - Bucket S3 disponible para subir el dump de backup pre-aplicación.
-- Confirmación operativa de que ningún tráfico productivo está usando los endpoints CMS de TEST o AUDIT en este momento (CMS en TEST y AUDIT es interno; PRO no existe). Esta ventana es **ruptura funcional asumida del CMS**.
+- Confirmación operativa de que ningún tráfico productivo está usando los endpoints CMS de TEST o AUDIT en este momento (CMS en TEST y AUDIT es interno; PROD no existe). Esta ventana es **ruptura funcional asumida del CMS**.
 
 ### Confirmación de inventario antes de actuar
 

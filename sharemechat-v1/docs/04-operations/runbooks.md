@@ -376,7 +376,7 @@ Matriz operativa por entorno:
 
 - TEST: `PRODUCT_ACCESS_MODE=OPEN`, registros cliente/modelo cerrados. `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=true` solo cuando se necesite simulación interna; `false` cuando se quiera validar el cierre de simulación directa.
 - AUDIT: `PRODUCT_ACCESS_MODE=OPEN`, registros cliente/modelo cerrados y `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` por defecto.
-- PRO: `PRODUCT_ACCESS_MODE` según fase y `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` siempre.
+- PROD: `PRODUCT_ACCESS_MODE` según fase y `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` siempre.
 
 ### Endpoints afectados por el cierre de registro (alcance validado)
 
