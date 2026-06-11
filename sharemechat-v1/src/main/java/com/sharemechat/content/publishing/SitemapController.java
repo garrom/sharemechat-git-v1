@@ -22,7 +22,11 @@ import java.util.List;
  * publicado del mismo articulo logico. Patron estandar Google para
  * sitemaps multilingues.
  *
- * Solo aparece contenido del blog (rutas publicas /blog/{locale}[/{slug}]).
+ * Paso 4 SEO (2026-06-11): /sitemap.xml extendido para incluir home y
+ * paginas de footer (/faq, /safety, /community-guidelines,
+ * /cookies-settings, /legal), con alternates ES/EN segun el patron de
+ * basename del SPA producto (ES en raiz, EN bajo `/en`).
+ *
  * Cache 1h (max-age=3600) acorde a la cadencia editorial de SharemeChat.
  *
  * /robots.txt (ADR-033, 2026-06-10): fail-closed por entorno. Solo el
@@ -32,6 +36,13 @@ import java.util.List;
  * `User-agent: * / Disallow: /` sin linea Sitemap. Sustituye al canonical
  * hardcoded del index.html que hasta hoy reconducia accidentalmente
  * trafico de no-PROD a PROD. Detalle en ADR-033.
+ *
+ * Paso 4 SEO (2026-06-11): /sitemap.xml tambien queda gateado por el
+ * mismo discriminante isProdApex() (belt-and-suspenders): solo el apex
+ * PROD canonico sirve el XML; cualquier otro entorno responde 404. El
+ * robots de no-PROD ya impide la indexacion, pero al no exponer ni el
+ * propio sitemap se elimina cualquier ventana donde un crawler curioso
+ * descubra URLs canonicas a traves de un entorno secundario.
  */
 @RestController
 public class SitemapController {
@@ -45,6 +56,23 @@ public class SitemapController {
     /** Body fail-closed de robots.txt para entornos no indexables. */
     private static final String ROBOTS_DISALLOW_ALL = "User-agent: *\nDisallow: /\n";
 
+    /**
+     * Paginas estaticas publicas del SPA producto a incluir en el sitemap,
+     * fuera del blog. Cada path se emite con dos `<url>` (uno por locale)
+     * y alternates hreflang ES/EN apuntando a la variante del otro locale.
+     *
+     * ES vive en raiz (basename "/"), EN bajo "/en" (App.jsx:77
+     * `localeBasename = matchesEn ? '/en' : '/'`). Confirmado contra el
+     * routing real el 2026-06-11.
+     */
+    private static final List<String> STATIC_PUBLIC_PATHS = List.of(
+            "/faq",
+            "/safety",
+            "/community-guidelines",
+            "/cookies-settings",
+            "/legal"
+    );
+
     private final ContentArticleService articleService;
     private final PublicSiteProperties siteProperties;
 
@@ -56,6 +84,12 @@ public class SitemapController {
 
     @GetMapping(value = "/sitemap.xml", produces = "application/xml; charset=UTF-8")
     public ResponseEntity<String> sitemap() {
+        // Paso 4 SEO (2026-06-11): belt-and-suspenders ADR-033. Solo el apex
+        // PROD canonico sirve sitemap; el resto devuelve 404 (no expone URLs).
+        if (!isProdApex()) {
+            return ResponseEntity.notFound().build();
+        }
+
         String baseUrl = resolveBaseUrl();
 
         List<ContentArticleService.PublishedArticleSnapshot> published =
@@ -66,6 +100,26 @@ public class SitemapController {
         sb.append("<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\"\n");
         sb.append("        xmlns:xhtml=\"http://www.w3.org/1999/xhtml\"\n");
         sb.append("        xmlns:image=\"http://www.google.com/schemas/sitemap-image/1.1\">\n");
+
+        // Home apex por locale (ES en raiz, EN bajo /en).
+        List<SitemapAlternate> homeAlternates = List.of(
+                new SitemapAlternate("es", baseUrl + "/"),
+                new SitemapAlternate("en", baseUrl + "/en/")
+        );
+        appendUrl(sb, baseUrl + "/",    null, "weekly", "1.0", null, homeAlternates);
+        appendUrl(sb, baseUrl + "/en/", null, "weekly", "1.0", null, homeAlternates);
+
+        // Paginas estaticas publicas (footer): 5 paths x 2 locales = 10 <url>.
+        for (String path : STATIC_PUBLIC_PATHS) {
+            String esUrl = baseUrl + path;
+            String enUrl = baseUrl + "/en" + path;
+            List<SitemapAlternate> alts = List.of(
+                    new SitemapAlternate("es", esUrl),
+                    new SitemapAlternate("en", enUrl)
+            );
+            appendUrl(sb, esUrl, null, "monthly", "0.5", null, alts);
+            appendUrl(sb, enUrl, null, "monthly", "0.5", null, alts);
+        }
 
         // Home del blog por locale.
         appendUrl(sb, baseUrl + "/blog/es", null, "daily", "0.8", null,
@@ -120,6 +174,10 @@ public class SitemapController {
         }
 
         String baseUrl = resolveBaseUrl();
+        // Disallow por prefijo (no exact match): /dashboard cubre /dashboard-admin,
+        // /dashboard-user-{client,model}; /model cubre /model-documents y /model-kyc;
+        // /perfil cubre /perfil-client y /perfil-model. Confirmado contra App.jsx
+        // el 2026-06-11.
         String body = ""
                 + "User-agent: *\n"
                 + "Allow: /blog\n"
@@ -127,9 +185,17 @@ public class SitemapController {
                 + "\n"
                 + "Disallow: /api/\n"
                 + "Disallow: /admin\n"
+                + "Disallow: /client\n"
+                + "Disallow: /model\n"
                 + "Disallow: /dashboard\n"
                 + "Disallow: /login\n"
                 + "Disallow: /register\n"
+                + "Disallow: /unauthorized\n"
+                + "Disallow: /forgot-password\n"
+                + "Disallow: /reset-password\n"
+                + "Disallow: /verify-email\n"
+                + "Disallow: /change-password\n"
+                + "Disallow: /perfil\n"
                 + "\n"
                 + "Sitemap: " + baseUrl + "/sitemap.xml\n";
 

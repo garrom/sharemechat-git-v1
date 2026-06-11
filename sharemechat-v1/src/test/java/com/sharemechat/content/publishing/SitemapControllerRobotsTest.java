@@ -40,6 +40,32 @@ class SitemapControllerRobotsTest {
     }
 
     @Test
+    void prodApexRobotsListsAllPrivatePrefixDisallows() {
+        // Paso 4 SEO (2026-06-11): el robots de PROD debe negar la indexacion
+        // de TODAS las rutas privadas/de auth del SPA producto. Verificamos
+        // los prefijos resultantes (no exact match):
+        // - /client, /model       -> cubren dashboards y /model-{documents,kyc}
+        // - /dashboard            -> cubre /dashboard-{admin,user-client,user-model}
+        // - /perfil               -> cubre /perfil-{client,model}
+        // - rutas auth concretas  -> forgot/reset/verify/change password, unauthorized
+        ResponseEntity<String> resp = controllerWithBaseUrl("https://sharemechat.com").robots();
+        String body = resp.getBody();
+        assertNotNull(body);
+        for (String prefix : new String[] {
+                "/api/", "/admin", "/client", "/model", "/dashboard",
+                "/login", "/register", "/unauthorized",
+                "/forgot-password", "/reset-password", "/verify-email",
+                "/change-password", "/perfil"
+        }) {
+            assertTrue(body.contains("Disallow: " + prefix + "\n"),
+                    "PROD robots must include 'Disallow: " + prefix + "' for private routes");
+        }
+        // Y no debe haber regresion sobre el Allow del blog.
+        assertTrue(body.contains("Allow: /blog\n"), "PROD robots must keep Allow: /blog");
+        assertTrue(body.contains("Allow: /blog/\n"), "PROD robots must keep Allow: /blog/");
+    }
+
+    @Test
     void prodApexWithTrailingSlashStillIndexable() {
         ResponseEntity<String> resp = controllerWithBaseUrl("https://sharemechat.com/").robots();
         assertTrue(resp.getBody().contains("Sitemap: https://sharemechat.com/sitemap.xml"));
