@@ -27,7 +27,7 @@ frontend_product:
   bundle: main.0733eebf.js
 backend:
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
-  ec2_alias: pro-backend
+  ec2_alias: prod-backend
   deployed_at: 2026-06-10T10:27:16Z
   jar_sha256: 53e6bfbc302bf5119ce511e8e15b0a098a0ec6c2411fd8cea44a85d7548d09d0
   verification:
@@ -35,7 +35,7 @@ backend:
     verified_at: 2026-06-10T10:31:03Z
     notes: |
       JAR 53e6bfbc... commit 91092e0 (ADR-033 robots fail-closed)
-      desplegado a PROD el 2026-06-10. SSH a pro-backend confirma
+      desplegado a PROD el 2026-06-10. SSH a prod-backend confirma
       sha256 local == sha256 remoto. Backup del JAR previo
       (7025145b... commit 1cb43a0) conservado en EC2 como
       sharemechat-v1-0.0.1-SNAPSHOT.jar.bak-pre-seo-20260610-102651.

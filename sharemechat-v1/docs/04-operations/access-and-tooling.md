@@ -58,9 +58,9 @@ Debe devolver `ok`. `BatchMode=yes` evita prompts interactivos (passphrase, host
 
 - **TEST**: la EC2 se enciende y apaga manualmente. Si el alias no responde, la EC2 puede estar parada — verificar en la consola AWS antes de asumir problema de configuración. El backend de TEST corre como proceso de `ec2-user` (no systemd); ver detalle en [test.md](../03-environments/test.md).
 - **AUDIT**: la EC2 está siempre encendida y el backend corre como `sharemechat-audit.service`. El alias debería responder en todo momento.
-- **PROD**: el entorno aún no existe como producto (solo landing). El alias `pro-backend` se documentará cuando se monte la EC2 backend de PROD.
+- **PROD**: el entorno aún no existe como producto (solo landing). El alias `prod-backend` se documentará cuando se monte la EC2 backend de PROD.
 
-Si tu equipo aún no tiene los alias `audit-backend` o `pro-backend` configurados, añadirlos a `~/.ssh/config` antes de operar sobre esos entornos. Los datos para rellenarlos viven en el mapping local.
+Si tu equipo aún no tiene los alias `audit-backend` o `prod-backend` configurados, añadirlos a `~/.ssh/config` antes de operar sobre esos entornos. Los datos para rellenarlos viven en el mapping local.
 
 ## Túnel a RDS
 
@@ -126,7 +126,7 @@ if (Get-Module -ListAvailable -Name powershell-yaml) { "powershell-yaml OK" } el
 
 Salida esperada en orden: versión AWS CLI v2, ARN del usuario IAM, `ok` del SSH a TEST, `True` para el mapping, versión `mysqlsh 8.x`, `RDS_PASSWORD OK`, `powershell-yaml OK`.
 
-Si alguna línea falla, resolver antes de operar. Para SSH a otros entornos sustituir `test-backend` por `audit-backend` o `pro-backend` según convenga.
+Si alguna línea falla, resolver antes de operar. Para SSH a otros entornos sustituir `test-backend` por `audit-backend` o `prod-backend` según convenga.
 
 ## Skills y scripts que dependen de estos accesos
 

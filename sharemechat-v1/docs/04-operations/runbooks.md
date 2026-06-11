@@ -88,7 +88,7 @@ ops/scripts/deploy-frontend.ps1 -Environment <env> -Surface <surface> -SkipDrift
 El deploy de backend no tiene script orquestador todavía (queda como Fase 2 del frente, `deploy-backend.ps1` opción A). El procedimiento actual:
 
 1. Construir el JAR localmente (`mvn -DskipTests package` desde `sharemechat-v1/`).
-2. `scp` del JAR al EC2 vía alias SSH (`audit-backend`, `test-backend`, `pro-backend`) a `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar`.
+2. `scp` del JAR al EC2 vía alias SSH (`audit-backend`, `test-backend`, `prod-backend`) a `/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar`.
 3. Backup del JAR previo en el propio EC2 con sufijo `.bak-<motivo>-<UTC>`.
 4. `chown ec2-user:ec2-user` del JAR nuevo.
 5. `systemctl restart sharemechat-{audit,test,prod}.service`.
