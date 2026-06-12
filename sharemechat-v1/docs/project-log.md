@@ -8,6 +8,29 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-12 — Primer post real en X de `@shareme_chat`: estreno end-to-end del pipeline social-ops
+
+Hito de social-ops: estreno operativo del frente con la **primera publicación real** en X de la cuenta de marca `@shareme_chat`, ejecutada como cierre del ciclo 1 del pipeline social-ops montado el 2026-06-11. Es el primer artefacto que sale del repo hacia el exterior por esta vía, y valida que la cadena Cowork → operador humano → plataforma funciona end-to-end sin atajos. La cuenta de X queda registrada en el ledger `docs/social/social-state.json` con `phase: warmup` intacta y `platforms.x.ratio.aporte` incrementado de `0` a `1`; `updated_at` pasa a `2026-06-12`. **No se toca** el resto del ledger: Reddit sigue en `warmup` sin actividad nueva (`u/sharemechat` con `comment_karma: 1`, `post_karma: 0`), `r/SharemeChat` recién creado sigue sin posts, y los dos subs externos seeded (`r/AskReddit`, `r/CasualConversation`) sin movimiento.
+
+**Ejecución del pipeline en Cowork**. Primera vuelta completa end-to-end de las 6 skills del pipeline más `sharemechat-voice`, encadenadas por `social-orchestrator` desde un único contrato de entrada. Sin intervención manual entre fases: cada skill recibió la salida de la anterior y emitió la suya. Decisión deliberada en esta primera vuelta: **trazabilidad máxima** — se conservó el detalle intermedio de cada fase (gate decision, platform constraints, drafts ES, draft revisado, draft EN, paquete final) para validar el comportamiento real de las skills frente a un caso de producción y dejar referencia para vueltas posteriores.
+
+**Contenido publicado**. Variante `Retouch mismatch` en inglés, ~225 caracteres, post único (no hilo), sin enlaces, sin CTA, sin mención de marca. Tópico: micro-observación derivada del artículo del blog *Cómo elegir una buena foto de perfil* (slug `foto-perfil-videochat`), sin referenciar la URL ni el dominio. Encaja por construcción con la política de la fase `warmup` (aporte, no promo) y con las tres reglas duras que el operador fijó en el contrato del ciclo.
+
+**Comportamiento del pipeline**.
+
+- `social-phase-gate` aprobó la acción sin degradación: cuenta en `warmup`, acción clasificada como **no promocional** (`aporte`), encaja con el ratio 25% global de X aunque en esta vuelta el numerador siga a cero.
+- `social-platform-rules` absorbió las tres reglas duras del operador (no marca, no enlace, no CTA) y las propagó como constraints concretas al redactor.
+- `social-draft-writer` produjo las variantes pedidas obedeciendo las constraints y la voz de marca (variante social de `sharemechat-voice`).
+- `social-brand-legal-review` **pasó en verde sin ediciones**: ninguna fricción con seguridad (18+, sin referencias a menores), legal (DSA/GDPR, sin claims), marca ni ToS de X.
+- `social-translate-en` adaptó la variante elegida al inglés sin literalismo, respetando el límite de X y el tono de la voz.
+- `social-packager` ensambló la salida final lista para publicar y emitió el `ledger_updates` que materializa este commit.
+
+Sin bloqueos, sin desviaciones críticas, sin necesidad de dummy-fix por parte del humano. Es el comportamiento que ADR-034 anticipa para una vuelta limpia.
+
+**Estado del pipeline social al cierre del hito**. X: `@shareme_chat` en `warmup` con `1` aporte y `0` promo; el umbral para `promo-allowed` definido en el README de social-ops es **edad de la cuenta ≥7 días + aportes ≥5**. Cuenta creada el 2026-06-10, por lo que el lado de la edad se cumple a partir del 2026-06-17; el lado de los aportes requiere 4 vueltas más del pipeline antes de poder emitir contenido `promo` en X. Reddit: `u/sharemechat` en `warmup` sin actividad nueva esta vuelta, `r/SharemeChat` operativo pero sin posts, subs externos seeded sin movimiento. El próximo paso natural es **continuar el warmup en X** con vueltas adicionales del pipeline (más variantes en formato aporte, sin promo) hasta desbloquear `promo-allowed`, y en paralelo **calentar `u/sharemechat`** con comentarios en `r/AskReddit` y `r/CasualConversation` antes de plantear el primer post en `r/SharemeChat`.
+
+---
+
 ## 2026-06-12 — Creación oficial de la comunidad `r/SharemeChat` en Reddit (sub propio, +18, marca)
 
 Hito de social-ops: se crea oficialmente la comunidad propia de Reddit, `r/SharemeChat`, prevista como "casa segura" del pipeline social-ops para publicaciones promo cuando la cuenta `u/sharemechat` salga de `warmup`. El sub queda registrado en el ledger `docs/social/social-state.json` (`platforms.reddit.own_subreddit.created: true`, `created_at: "2026-06-12"`, `url: "https://www.reddit.com/r/SharemeChat/"`). El campo `updated_at` del ledger pasa a `2026-06-12`. **No se toca** la fase de la cuenta `u/sharemechat` (sigue en `warmup`, `comment_karma: 1`, `post_karma: 0`): este hito es del sub propio, no de la cuenta operativa.
