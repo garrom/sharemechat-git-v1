@@ -1,6 +1,6 @@
 {
   "schema_version": "0.1",
-  "updated_at": "2026-06-10",
+  "updated_at": "2026-06-12",
   "platforms": {
     "x": {
       "handle": "@shareme_chat",
@@ -17,7 +17,12 @@
       "phase": "warmup",
       "comment_karma": 1,
       "post_karma": 0,
-      "own_subreddit": { "name": "r/SharemeChat", "created": false },
+      "own_subreddit": {
+        "name": "r/SharemeChat",
+        "created": true,
+        "created_at": "2026-06-12",
+        "url": "https://www.reddit.com/r/SharemeChat/"
+      },
       "subreddits": [
         {
           "name": "r/AskReddit",

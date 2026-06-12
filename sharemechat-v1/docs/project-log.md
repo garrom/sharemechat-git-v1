@@ -8,6 +8,29 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-12 — Creación oficial de la comunidad `r/SharemeChat` en Reddit (sub propio, +18, marca)
+
+Hito de social-ops: se crea oficialmente la comunidad propia de Reddit, `r/SharemeChat`, prevista como "casa segura" del pipeline social-ops para publicaciones promo cuando la cuenta `u/sharemechat` salga de `warmup`. El sub queda registrado en el ledger `docs/social/social-state.json` (`platforms.reddit.own_subreddit.created: true`, `created_at: "2026-06-12"`, `url: "https://www.reddit.com/r/SharemeChat/"`). El campo `updated_at` del ledger pasa a `2026-06-12`. **No se toca** la fase de la cuenta `u/sharemechat` (sigue en `warmup`, `comment_karma: 1`, `post_karma: 0`): este hito es del sub propio, no de la cuenta operativa.
+
+**Configuración aplicada en Reddit** (manualmente fuera del repo, registrada aquí para trazabilidad):
+
+- **Tipo de comunidad**: pública.
+- **Clasificación de contenido**: marcada como contenido para adultos (+18) — coherente con ADR-028 (clasificación adult/streaming) y la política `promo_policy` del ledger para el resto de subs externos.
+- **Branding**: avatar derivado del monograma circular de marca y banner cargado a medida (1920×384, generado a partir de los SVG canónicos en `ops/brand-assets/`).
+- **Reglas (5)**:
+  1. 18+ only.
+  2. No explicit visual content.
+  3. No spam / no DMs.
+  4. Respect models and members.
+  5. Zero tolerance for illegal content.
+- **Sidebar**: descripción de marca con tres enlaces a recursos oficiales: `https://sharemechat.com/`, `https://sharemechat.com/blog` y `https://x.com/shareme_chat`.
+
+**Por qué importa para el pipeline**. ADR-034 establece que `r/SharemeChat` es la única comunidad donde el sistema puede emitir `promo` desde el primer momento sin colisionar con `promo_policy` externa — los dos subs externos seeded (`r/AskReddit`, `r/CasualConversation`) son `rol: karma`, `promo_policy: none` durante la fase `warmup` por construcción. Hasta hoy, el ledger marcaba `own_subreddit.created: false`, lo que hacía que el `social-phase-gate` no pudiera proponer publicaciones de marca propias sin que el humano hiciera dummy-fix. Con `created: true` y los assets/reglas/sidebar ya cableados, el pipeline puede planificar un primer ciclo end-to-end sin atajos.
+
+**Estado del pipeline social al cierre del hito**. Reddit: cuenta `u/sharemechat` en `warmup` con karma mínimo (umbral para `building` es edad ≥7d + `comment_karma ≥20`); sub propio `r/SharemeChat` operativo y listo para recibir contenido cuando el gate lo autorice. X: cuenta `@shareme_chat` en `warmup`, `followers: 0` (umbral para `promo-allowed` es edad ≥7d + ≥5 aportes). El próximo paso natural es estrenar el pipeline Cowork con **un ciclo real para X** (contrato → orchestrator → drafts ES+EN → review → packager → publicación humana → persistencia del `social_state_next`). Reddit queda en standby hasta acumular karma manualmente en los dos subs externos seeded.
+
+---
+
 ## 2026-06-11 — Frente social-ops nuevo (Cowork + ledger) + cierre del frente SEO en PROD + brand assets reales + rename `docs/skills`
 
 Sesión consolidada que cierra cuatro frentes encadenados en el mismo arco temporal: nace el sistema de social-ops como gemelo del pipeline editorial, se completa el cierre del frente SEO en PROD que arrancó por la mañana con la auditoría en vivo, se publican los assets de marca rasterizados desde los SVG reales con Poppins, y se renombra la carpeta `docs/skills/` para desambiguarla del namespace que va a ocupar el frente social.
