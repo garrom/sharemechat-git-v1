@@ -2,6 +2,20 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-06-13 — Perimeter pipeline: drift `prod-access-reporter` cerrado, sigue faltando deploy formal
+
+### ~~[DEUDA — perimeter pipeline] `prod-access-reporter` vivía solo en `/opt`, no en repo~~ — **CERRADA 2026-06-13**
+
+Detectado al inspeccionar por qué el email diario de PROD del 2026-06-12 no traía la cabecera VEREDICTO arriba pese a que el classifier nuevo ya estaba desplegado. Cerrada importando `bin/`, `config/config.env.example`, `lib/report_access.py` y `README.md` desde `/opt/sharemechat-prod-access-reporter/` a `sharemechat-v1/ops/prod-access-reporter/` sin cambios funcionales (sha256 idénticos local vs remoto en los 4 ficheros). Excluidos `__pycache__/*.pyc`. Sin secretos: el `config.env` real y el `secrets.env` viven en `/etc/sharemechat-prod-access-reporter/`, fuera de `/opt`. Ver `project-log.md` 2026-06-13.
+
+### [DEUDA — perimeter pipeline] Falta procedimiento formal de deploy para classifier/reporter/normalizer/blocker
+
+Todos los componentes del perimeter pipeline (`prod-access-{normalizer,classifier,reporter,blocker}` y sus equivalentes AUDIT/TEST) se despliegan **manualmente** a `/opt` del EC2 correspondiente: `scp` del fichero del repo, backup del previo a `.bak-<YYYYMMDD>-pre-<motivo>`, y `sudo systemctl daemon-reload` si la unit cambió. Sin script equivalente al `deploy-frontend.ps1` ni al patrón `update-manifest-backend.ps1`. Riesgos: (1) deploy no idempotente (el operador tiene que recordar la receta cada vez); (2) sin manifest de estado equivalente al `deploy-state/{env}.yaml` del backend que rastree qué sha está corriendo en `/opt` vs qué hay en `HEAD`; (3) el frente recién cerrado (import del `prod-access-reporter`) habría sido innecesario si el deploy fuera vía script obligatorio, porque el flujo natural impediría que un componente terminara solo en `/opt` y no en repo.
+
+**Acción pendiente** (no urgente): definir `ops/scripts/deploy-perimeter.ps1` análogo al `deploy-frontend.ps1`, con: drift check vs HEAD, parámetro `-Environment` (prod/audit/test) y `-Component` (classifier/reporter/normalizer/blocker), scp + backup + reload, y escritura del manifest `ops/deploy-state/{env}-perimeter.yaml`. **Prioridad**: media. No bloquea operación porque los componentes están razonablemente estables y los cambios son raros; sí bloquea evitar que vuelva a aparecer este mismo tipo de drift en el futuro.
+
+---
+
 ## 2026-06-13 — Frente "AUDIT weekend scheduler": activación pendiente y limitación aceptada
 
 ### [DEUDA pendiente — frente AUDIT weekend scheduler] Activar `toggle.sh enable` tras avisar a Segpay

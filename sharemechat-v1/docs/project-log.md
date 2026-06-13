@@ -8,6 +8,18 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-13 — Cierre del drift del `prod-access-reporter`: import al repo sin cambios funcionales
+
+Drift detectado durante la verificación del bloque VEREDICTO en el email diario de PROD del 2026-06-12: el operador reportó que el correo no traía la cabecera VEREDICTO arriba pese a que el classifier nuevo (commit `056b7e9`) ya estaba commiteado, pusheado y desplegado en `/opt/sharemechat-prod-access-classifier/`. Inspección en `prod-backend` confirmó tres hechos. (1) El classifier nuevo **sí** está corriendo: el `2026-06-12.table.txt` y `2026-06-12.summary.jsonl` locales arrancan con el bloque VEREDICTO esperado (línea 1: `VEREDICTO: [V] SIN ACCION -- 22 IPs MALICIOSA/CRITICA, sin exito en rutas sensibles; 366 eventos totales; nada que revisar.`). (2) La cabecera que el operador ve en el cuerpo del email la compone un **reporter separado** (`sharemechat-prod-access-reporter`, encadenado tras el classifier por la unit `sharemechat-prod-daily-report.service`); ese reporter genera su propio resumen a partir de las filas y solo cita los `.table.txt`/`.summary.jsonl` como fuentes, sin leer el verdict. (3) Y aquí está el drift: **el componente `prod-access-reporter` vivía únicamente en `/opt` del EC2 de PROD, no estaba versionado en el repo**, mientras que sus equivalentes `audit-access-reporter` y `test-access-reporter` sí lo están.
+
+Este commit cierra el drift importando el componente al repo sin cambios funcionales. Cuatro ficheros copiados byte-perfect desde `/opt/sharemechat-prod-access-reporter/` a `sharemechat-v1/ops/prod-access-reporter/` (mismo molde que los reporters de AUDIT y TEST): `README.md`, `bin/report-prod-access.sh`, `config/config.env.example`, `lib/report_access.py`. Sanity verificado con `sha256sum` local vs remoto: idénticos en los 4. Excluidos del import los `lib/__pycache__/*.pyc` (basura de runtime). No se importan secretos: el `config.env` real y el `secrets.env` viven en `/etc/sharemechat-prod-access-reporter/` (fuera de `/opt`), y el `config.env.example` que sí entra al repo es un template con placeholders vacíos (`SMTP_PASSWORD=` sin valor).
+
+**No se toca `/opt`** en este commit. El estado del EC2 queda igual. El próximo commit (frente que sigue inmediatamente) ya cambiará el reporter para que anteponga el bloque VEREDICTO al cuerpo del email, leyendo el `"type":"verdict"` del `.summary.jsonl` o, si no aparece, cayendo al formato actual sin romper el envío. Dos commits separados deliberadamente: el primero (este) es **import, no funcional**, para que en el blame de cualquier futuro cambio del reporter quede claro que la base es la versión que llevaba meses corriendo en producción; el segundo será el cambio real con su diff acotado.
+
+Coletazo de gobierno doc identificado durante la inspección y registrado como deuda (`known-debt.md`): el perimeter pipeline (classifier/reporter/normalizer/blocker) no tiene un script de deploy formal en `ops/scripts/`. Cada cambio se ha venido haciendo manual (scp + backup `.bak-<fecha>-pre-<motivo>`). Mismo gap que ya estaba pendiente, ahora más visible — no se cierra en este frente pero queda anotado para tratarlo cuando vuelva la prioridad de tooling de despliegue.
+
+---
+
 ## 2026-06-13 — AUDIT weekend scheduler: artefactos creados y validados, schedules en DISABLED hasta OK del operador
 
 Frente nuevo de ahorro operativo: programar el apagado y arranque automáticos del entorno **AUDIT** los fines de semana usando **EventBridge Scheduler**. Objetivo: AUDIT apagado de viernes 22:00 Madrid a lunes 07:20 Madrid; resto de la semana sigue 24/7 como hasta ahora. SOLO AUDIT. TEST y PROD intactos.
