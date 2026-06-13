@@ -61,6 +61,14 @@
     Muestra que cambios se aplicarian a la seccion backend del manifest
     sin escribir el fichero.
 
+.PARAMETER AssumeYesNonCritical
+    Auto-confirma la escritura en hosts NO interactivos (CI, harness IA,
+    scheduled tasks). En host interactivo no cambia nada (sigue habiendo
+    Read-Host). En host no interactivo SIN este flag, el script aborta
+    limpiamente con exit 1 (fail-safe). Misma semantica y nombre que
+    deploy-frontend.ps1; este script no maneja severidad "CRITICAL"
+    porque solo escribe el manifest (no es destructivo).
+
 .EXAMPLE
     .\update-manifest-backend.ps1 -Env audit
 
@@ -99,7 +107,17 @@ param(
     [switch]$RemoteVerify,
 
     [Parameter(Mandatory = $false)]
-    [switch]$DryRun
+    [switch]$DryRun,
+
+    # Auto-confirma la actualizacion en hosts NO interactivos (CI, harness IA,
+    # scheduled tasks). En host interactivo el flag no cambia nada: sigue
+    # mostrandose el Read-Host. En host no interactivo sin este flag, el script
+    # aborta limpiamente (fail-safe). Mismo patron y semantica que
+    # deploy-frontend.ps1. Este script no tiene severidad "CRITICAL"
+    # (es solo un manifest update, no destructivo), asi que solo hay un caso
+    # de confirmacion binaria.
+    [Parameter(Mandatory = $false)]
+    [switch]$AssumeYesNonCritical
 )
 
 $ErrorActionPreference = 'Stop'
@@ -265,13 +283,43 @@ if ($DryRun) {
 }
 
 # ---------------------------------------------------------------
+# Detector "host realmente interactivo" (idem deploy-frontend.ps1).
+# Criterios: stdin redirigido (pipe / < file / harness IA) o sesion no
+# UserInteractive (servicio, scheduled task). Basta con que falle uno.
+#
+# TODO: unificar con el helper homonimo de deploy-frontend.ps1 en un
+# modulo comun reutilizable (p.ej. ops/scripts/_lib/InteractiveHost.psm1).
+# Por ahora se DUPLICA conscientemente (8 lineas) para no introducir un
+# refactor mas grande dentro de esta deuda puntual.
+# ---------------------------------------------------------------
+function script:Test-DeployIsInteractiveHost {
+    try {
+        if ([Console]::IsInputRedirected) { return $false }
+    } catch { }
+    try {
+        if (-not [Environment]::UserInteractive) { return $false }
+    } catch { }
+    return $true
+}
+$script:IsInteractive = script:Test-DeployIsInteractiveHost
+
+# ---------------------------------------------------------------
 # Confirmacion + escritura.
 # ---------------------------------------------------------------
 Write-Host ""
-$ans = Read-Host "Aplicar al manifest? [s/N]"
-if ($ans -notmatch '^(s|si|y|yes)$') {
-    Write-Host "Cancelado por el operador. Manifest sin cambios." -ForegroundColor Yellow
-    exit 0
+if ($script:IsInteractive) {
+    $ans = Read-Host "Aplicar al manifest? [s/N]"
+    if ($ans -notmatch '^(s|si|y|yes)$') {
+        Write-Host "Cancelado por el operador. Manifest sin cambios." -ForegroundColor Yellow
+        exit 0
+    }
+} elseif ($AssumeYesNonCritical) {
+    Write-Host "[non-interactive + -AssumeYesNonCritical] auto-confirmado, aplicando manifest." -ForegroundColor Yellow
+} else {
+    Write-Host "Host NO interactivo y sin -AssumeYesNonCritical." -ForegroundColor Red
+    Write-Host "Aborto fail-safe: invoca con -AssumeYesNonCritical para auto-confirmar," -ForegroundColor Red
+    Write-Host "o desde consola humana para responder [s/N]." -ForegroundColor Red
+    exit 1
 }
 
 $result = Update-DeployStateManifestBackend `
