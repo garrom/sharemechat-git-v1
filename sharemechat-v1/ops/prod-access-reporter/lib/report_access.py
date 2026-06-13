@@ -18,6 +18,17 @@ CLASSIFICATION_ORDER = {
 }
 
 
+# Bloque VEREDICTO emitido por el classifier desde 2026-06-12 (commit 056b7e9):
+# el .summary.jsonl arranca con una linea {"type":"verdict",...}. Si la
+# encontramos, la pintamos arriba del email. Si no, caemos al formato anterior
+# sin romper el envio (classifier antiguo, fichero recortado, parse error, etc).
+VERDICT_BADGES = {
+    "VERDE":    ("\U0001F7E2", "[V]"),  # green circle
+    "AMARILLO": ("\U0001F7E1", "[A]"),  # yellow circle
+    "ROJO":     ("\U0001F534", "[R]"),  # red circle
+}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
@@ -49,8 +60,8 @@ def run_report(args: argparse.Namespace) -> int:
     output_root = Path(args.output_root)
     output_root.mkdir(parents=True, exist_ok=True)
 
-    rows = load_summary_rows(summary_path)
-    report = build_report(day, rows, Path(args.classifier_output_root), args.max_findings)
+    rows, verdict = load_summary_rows(summary_path)
+    report = build_report(day, rows, Path(args.classifier_output_root), args.max_findings, verdict)
 
     text_output = render_text_report(report)
     json_output = json.dumps(report, ensure_ascii=False, indent=2)
@@ -96,18 +107,38 @@ def resolve_summary_input(input_value: Optional[str], date_value: Optional[str],
     return path, day
 
 
-def load_summary_rows(path: Path) -> List[dict]:
+def load_summary_rows(path: Path) -> Tuple[List[dict], Optional[dict]]:
     rows: List[dict] = []
+    verdict: Optional[dict] = None
     with path.open("r", encoding="utf-8") as fh:
         for raw_line in fh:
             line = raw_line.strip()
             if not line:
                 continue
-            rows.append(json.loads(line))
-    return rows
+            try:
+                obj = json.loads(line)
+            except json.JSONDecodeError as exc:
+                sys.stderr.write(f"[report_access] skipping malformed jsonl line: {exc}\n")
+                continue
+            if obj.get("type") == "verdict":
+                verdict = obj
+                continue
+            rows.append(obj)
+    if verdict is None:
+        sys.stderr.write(
+            f"[report_access] no verdict block found in {path.name}; "
+            "falling back to legacy header (probably an old classifier or pre-VEREDICTO day)\n"
+        )
+    return rows, verdict
 
 
-def build_report(day: str, rows: List[dict], classifier_output_root: Path, max_findings: int) -> dict:
+def build_report(
+    day: str,
+    rows: List[dict],
+    classifier_output_root: Path,
+    max_findings: int,
+    verdict: Optional[dict] = None,
+) -> dict:
     counts = Counter(row.get("classification", "UNKNOWN") for row in rows)
     findings = [normalize_finding(row) for row in rows if row.get("classification") in {"CRITICA", "MALICIOSA", "SOSPECHOSA"}]
     findings.sort(key=finding_sort_key)
@@ -126,6 +157,7 @@ def build_report(day: str, rows: List[dict], classifier_output_root: Path, max_f
 
     return {
         "date": day,
+        "verdict": verdict,
         "ips_analyzed": len(rows),
         "allowlisted_ips": allowlisted_ips,
         "classification_counts": {
@@ -161,8 +193,41 @@ def finding_sort_key(finding: dict) -> Tuple[int, int, str]:
     )
 
 
+def render_verdict_block(verdict: dict) -> List[str]:
+    level = str(verdict.get("level") or "").upper()
+    label = str(verdict.get("label") or "").strip()
+    summary = str(verdict.get("summary") or "").strip()
+    reasons = verdict.get("reasons") or []
+    notes = verdict.get("notes") or []
+    emoji, tag = VERDICT_BADGES.get(level, ("⚪", "[?]"))
+    header = f"VEREDICTO: {emoji} {tag} {level or 'UNKNOWN'}"
+    if label:
+        header += f" -- {label}"
+    bar = "=" * 60
+    block: List[str] = [bar, header]
+    if summary:
+        block.append(summary)
+    for reason in reasons:
+        text = str(reason).strip()
+        if text:
+            block.append(f"- {text}")
+    for note in notes:
+        text = str(note).strip()
+        if text:
+            block.append(f"(nota) {text}")
+    block.append(bar)
+    block.append("")
+    return block
+
+
 def render_text_report(report: dict) -> str:
     lines: List[str] = []
+    verdict = report.get("verdict")
+    if verdict:
+        try:
+            lines.extend(render_verdict_block(verdict))
+        except Exception as exc:
+            sys.stderr.write(f"[report_access] failed to render verdict block: {exc}\n")
     lines.append(f"PROD access summary - {report['date']}")
     lines.append("")
     lines.append(f"IPs analizadas: {report['ips_analyzed']}")

@@ -8,6 +8,16 @@ Registro de deudas detectadas durante operación o auditoría que no son inciden
 
 Detectado al inspeccionar por qué el email diario de PROD del 2026-06-12 no traía la cabecera VEREDICTO arriba pese a que el classifier nuevo ya estaba desplegado. Cerrada importando `bin/`, `config/config.env.example`, `lib/report_access.py` y `README.md` desde `/opt/sharemechat-prod-access-reporter/` a `sharemechat-v1/ops/prod-access-reporter/` sin cambios funcionales (sha256 idénticos local vs remoto en los 4 ficheros). Excluidos `__pycache__/*.pyc`. Sin secretos: el `config.env` real y el `secrets.env` viven en `/etc/sharemechat-prod-access-reporter/`, fuera de `/opt`. Ver `project-log.md` 2026-06-13.
 
+### [DEUDA — perimeter pipeline] Portar VEREDICTO a classifiers de AUDIT y TEST + replicar reporter
+
+El bloque VEREDICTO solo lo emite `prod-access-classifier` (commit `056b7e9`). `audit-access-classifier` y `test-access-classifier` siguen con el formato anterior y por tanto sus `.summary.jsonl` no llevan la fila `{"type":"verdict",…}`. El reporter nuevo (con lectura del verdict + fallback, deployado en PROD el 2026-06-13) es ya seguro de replicar a AUDIT y TEST porque siempre cae al formato anterior si no encuentra el verdict, pero hasta que sus classifiers no emitan VEREDICTO el cambio no aporta nada visible al operador. La acción correcta es un frente que (a) replique la lógica `compute_verdict` + `render_verdict_block` + constantes `VERDICT_*` del `prod-access-classifier` a sus pares de AUDIT y TEST, y (b) inmediatamente despliegue el reporter nuevo a `/opt` de los EC2 de AUDIT y TEST.
+
+**Pendientes adicionales detectados durante el deploy del reporter de PROD del 2026-06-13**:
+- AUDIT estaba `stopped` por el scheduler de fin de semana recién activado; cuando vuelva a estar `running` (lunes 07:20 Madrid o cuando se reactive manualmente) hay que decidir si replicar entonces o esperar al frente conjunto AUDIT+TEST.
+- TEST: SSH a `test-backend`/`63.180.48.12` sigue dando `Connection timed out` (deuda preexistente ya anotada en `ops/deploy-state/test.yaml` desde el 2026-06-08). El deploy a TEST está bloqueado por esa deuda; tocar el SSH antes que el VEREDICTO.
+
+**Prioridad**: baja. No bloquea operación; los reportes de AUDIT y TEST siguen funcionando con el formato anterior, y el operador los usa principalmente para PROD.
+
 ### [DEUDA — perimeter pipeline] Falta procedimiento formal de deploy para classifier/reporter/normalizer/blocker
 
 Todos los componentes del perimeter pipeline (`prod-access-{normalizer,classifier,reporter,blocker}` y sus equivalentes AUDIT/TEST) se despliegan **manualmente** a `/opt` del EC2 correspondiente: `scp` del fichero del repo, backup del previo a `.bak-<YYYYMMDD>-pre-<motivo>`, y `sudo systemctl daemon-reload` si la unit cambió. Sin script equivalente al `deploy-frontend.ps1` ni al patrón `update-manifest-backend.ps1`. Riesgos: (1) deploy no idempotente (el operador tiene que recordar la receta cada vez); (2) sin manifest de estado equivalente al `deploy-state/{env}.yaml` del backend que rastree qué sha está corriendo en `/opt` vs qué hay en `HEAD`; (3) el frente recién cerrado (import del `prod-access-reporter`) habría sido innecesario si el deploy fuera vía script obligatorio, porque el flujo natural impediría que un componente terminara solo en `/opt` y no en repo.
