@@ -74,4 +74,50 @@ public class KycProviderController {
         }
         return ResponseEntity.ok().build();
     }
+
+    // =========================================================================
+    // DIDIT — flujo KYC modelo (ADR-035, vendor unico Plan A).
+    // Mismo contrato que /veriff/* pero con las divergencias documentadas en
+    // ModelKycSessionService#processDiditWebhook: replay protection con
+    // X-Timestamp (300s) ANTES de la verificacion HMAC.
+    // =========================================================================
+    @PostMapping("/didit/start")
+    public ResponseEntity<KycStartSessionResponseDTO> startDidit(Authentication authentication,
+                                                                 HttpServletRequest request) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        User user = userService.findByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        // Mismo country gating que Veriff: la allowlist es por flujo (MODELO),
+        // independiente del vendor concreto que firme la sesion.
+        countryAccessService.assertAllowedForModelKyc(request);
+
+        KycStartSessionResponseDTO dto = modelKycSessionService.startDiditSession(user.getId());
+        return ResponseEntity.ok(dto);
+    }
+
+    // Webhook proveedor (Didit) - variante "Standard" de firma:
+    //  - X-Signature: HMAC-SHA256 hex sobre el raw body, usando el
+    //    secret_shared_key del destino webhook (kyc.didit.api-secret).
+    //  - X-Timestamp: Unix epoch seconds. Si difiere del reloj por mas de
+    //    300s, se rechaza ANTES de verificar HMAC (proteccion anti-replay
+    //    nativa de Didit, no existe en Veriff).
+    // Si firma o timestamp son invalidos/ausentes: 401.
+    @PostMapping("/didit/webhook")
+    public ResponseEntity<Void> diditWebhook(
+            @RequestHeader(value = "X-Signature", required = false) String signature,
+            @RequestHeader(value = "X-Timestamp", required = false) String timestamp,
+            @RequestBody(required = false) byte[] rawBody
+    ) {
+        boolean ok = modelKycSessionService.processDiditWebhook(rawBody, signature, timestamp);
+        if (!ok) {
+            return ResponseEntity.status(401).build();
+        }
+        return ResponseEntity.ok().build();
+    }
 }

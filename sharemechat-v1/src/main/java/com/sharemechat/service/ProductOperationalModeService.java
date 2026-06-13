@@ -321,6 +321,10 @@ public class ProductOperationalModeService {
         // Webhooks externos. Sin PSP activo (Lote 3, 2026-06-08); cuando
         // se active el siguiente PSP, su webhook se anadira aqui.
         if (path.equals("/api/kyc/veriff/webhook")) return true;
+        // ADR-035: Didit es vendor unico Plan A para KYC modelo + Age
+        // Estimation cliente. Su webhook debe llegar siempre, igual que el
+        // de Veriff (que queda dormido pero integrado como contingencia).
+        if (path.equals("/api/kyc/didit/webhook")) return true;
 
         return false;
     }

@@ -12,6 +12,10 @@ public class KycProviderConfigService {
 
     public static final String MODE_VERIFF = "VERIFF";
     public static final String MODE_MANUAL = "MANUAL";
+    // ADR-035 (2026-06-13): Didit es vendor unico Plan A. Se SUMA a las
+    // constantes existentes (no sustituye a VERIFF), coherente con que el
+    // frente Veriff queda dormido pero integrado en el repo.
+    public static final String MODE_DIDIT = "DIDIT";
 
     private final KycProviderConfigRepository repo;
 
@@ -40,6 +44,11 @@ public class KycProviderConfigService {
         return c.isEnabled() && MODE_VERIFF.equalsIgnoreCase(safe(c.getActiveMode()));
     }
 
+    public boolean isDiditEnabledForModelOnboarding() {
+        KycProviderConfig c = getOrCreateModelOnboardingConfig();
+        return c.isEnabled() && MODE_DIDIT.equalsIgnoreCase(safe(c.getActiveMode()));
+    }
+
     public String getActiveModeForModelOnboarding() {
         KycProviderConfig c = getOrCreateModelOnboardingConfig();
         return safe(c.getActiveMode()).toUpperCase();
@@ -48,7 +57,7 @@ public class KycProviderConfigService {
     @Transactional
     public KycProviderConfig setModelOnboardingMode(String mode, Long adminUserId, String note) {
         String normalized = safe(mode).toUpperCase();
-        if (!MODE_VERIFF.equals(normalized) && !MODE_MANUAL.equals(normalized)) {
+        if (!MODE_VERIFF.equals(normalized) && !MODE_MANUAL.equals(normalized) && !MODE_DIDIT.equals(normalized)) {
             throw new IllegalArgumentException("Modo KYC no soportado: " + mode);
         }
 

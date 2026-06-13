@@ -28,7 +28,9 @@ class ModelKycSessionServiceMappingTest {
     private static ModelKycSessionService svc() {
         // Construir el service sin dependencias reales: solo se ejercitan los
         // helpers de extracción/mapeo, que no tocan repositorios ni externos.
-        return new ModelKycSessionService(null, null, null, null, null, null, null);
+        // Las dos ultimas posiciones (DiditClient + DiditProperties) se anadieron
+        // en el frente Didit (ADR-035, 2026-06-13).
+        return new ModelKycSessionService(null, null, null, null, null, null, null, null, null);
     }
 
     private static JSONObject decisionPayload(Integer code, String verificationStatus) {

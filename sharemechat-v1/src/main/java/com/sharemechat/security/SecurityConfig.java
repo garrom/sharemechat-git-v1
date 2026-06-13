@@ -130,6 +130,13 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/kyc/veriff/start").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/api/kyc/veriff/webhook").permitAll()
 
+                        // KYC (DIDIT) - ADR-035 vendor unico Plan A. Sin
+                        // wildcard /api/kyc/** intencional: cada endpoint
+                        // se declara explicito para no abrir permitAll por
+                        // descuido sobre un futuro /api/kyc/<algo>.
+                        .requestMatchers(HttpMethod.POST, "/api/kyc/didit/start").hasRole("USER")
+                        .requestMatchers(HttpMethod.POST, "/api/kyc/didit/webhook").permitAll()
+
                         // Transactions
                         .requestMatchers("/api/transactions/payout").hasRole("MODEL")
                         .requestMatchers("/api/transactions/add-balance").hasRole("CLIENT")

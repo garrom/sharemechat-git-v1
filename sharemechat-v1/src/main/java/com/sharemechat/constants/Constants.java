@@ -76,6 +76,9 @@ public class Constants {
     public static class KycModes {
         public static final String VERIFF = "VERIFF";
         public static final String MANUAL = "MANUAL";
+        // ADR-035 (2026-06-13): Didit es vendor unico Plan A. VERIFF queda
+        // dormido pero integrado como contingencia tecnica.
+        public static final String DIDIT = "DIDIT";
 
         private KycModes() {}
     }
