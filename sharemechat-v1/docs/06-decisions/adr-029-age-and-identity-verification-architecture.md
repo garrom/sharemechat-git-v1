@@ -145,3 +145,9 @@ Veriff es la elección direccional. Sustitución del proveedor en el futuro es p
 El método de verificación de cliente (estimación + secundaria + documento solo como último recurso) queda fijado como requisito de producto. Si el PSP final no acepta este método, se cambia de PSP — no se cambia el método. La condicionalidad de Segpay y el plan B de PSP viven en [psp-strategy.md](../01-business/psp-strategy.md).
 
 Para modelos, los requisitos sí pueden ajustarse marginalmente según las exigencias del PSP final (formato de los records, retención, custodian). Las líneas estructurales (KYC modelo obligatorio con documento + selfie + liveness, pre-pago SFW) son comunes al régimen adult independientemente del PSP concreto y no se reabren.
+
+---
+
+## Status update (2026-06-13): SUPERSEDED by [ADR-035](adr-035-age-and-identity-verification-vendor-consolidation-on-didit.md)
+
+Veriff Support confirmó por escrito que **Age Estimation no está disponible en el plan Essential** (~49 USD/mes, self-serve) sino en el plan **Enterprise** (~199 USD/mes, contrato anual, mínimo 1000 verificaciones/mes), incompatible con la restricción presupuestaria de una OÜ pre-ingresos. El método decidido en este ADR (estimación facial + step-up documental para cliente; KYC documental + selfie + liveness obligatorio para modelo; pre-pago SFW como condición de diseño) **se mantiene íntegro**: el cambio es de vendor, no de método. Detalle, planes alternativos y justificación en [ADR-035](adr-035-age-and-identity-verification-vendor-consolidation-on-didit.md). El frente Veriff backend (commits `27796bb`..`53c3036`) queda **dormido pero integrado** en el repositorio como contingencia técnica reactivable.
