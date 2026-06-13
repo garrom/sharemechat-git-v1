@@ -157,6 +157,30 @@ Sesión consolidada que cierra cuatro frentes encadenados en el mismo arco tempo
 
 ---
 
+## 2026-06-13 — Veriff backend VALIDADO end-to-end en TEST (paso 4-bis completo, cierre del frente backend)
+
+Cierre del paso 4-bis del frente Veriff, retomado tras el redeploy del paso 6 (`ce0b4fd`, JAR `87b6b679…`). Backend TEST vivo a 2026-06-13 09:55 UTC (`sharemechat-test.service` active, JAR sha confirmado contra HEAD). Snapshot pre-forzado verificado: sesiones id=11 e id=12 en `PENDING/started`, `kyc_webhook_events` con MAX(id)=5, `users.verification_status` user 87 en PENDING.
+
+**Camino REJECTED (sesión id=11)**. Operador completó el flujo dummy en la `hosted_url` de la sesión `60d90ea3-7211-40fc-be37-ef5e44786749` y forzó decisión `declined` en Station con reason "Suspected document tampering". Veriff entregó el Decision webhook a `https://test.sharemechat.com/api/kyc/veriff/webhook` a las 09:57:03 UTC, firmado con el shared secret real. El backend lo procesó correctamente:
+
+- `kyc_webhook_events` id=6: `provider_event_id=493d5e0e-986c-47ca-bfb5-50425982839a` (attemptId, **no NULL** — extractor del paso 6 funcionando), `provider_event_type=decision_declined` (derivado de `verification.status`), `is_signature_valid=1`, `is_processed=1`, `processing_error_message=NULL`, procesado en <1 s.
+- `model_kyc_sessions` id=11: transición PENDING→**REJECTED** correcta. `provider_status=declined` (literal de `verification.status`, no interpretado), `provider_decision_code=9102` (mapeo por code del paso 6), `provider_decision_reason="Suspected document tampering"`, `decided_at=2026-06-13 09:57:04`, `submitted_at=NULL` (correcto: no se deduce del decision webhook).
+- `users.verification_status` userId=87: PENDING → **REJECTED**.
+
+**Camino APPROVED (sesión id=12)**. Tras validar declined, operador forzó decisión `approved` en la sesión `d993271c-d417-4194-ba5e-536266e0afda`. Veriff entregó el webhook a las 10:04:50 UTC con code 9001:
+
+- `kyc_webhook_events` id=7: `provider_event_id=c69c863e-9b37-4979-a8f2-3f04e1b8ff7d`, `provider_event_type=decision_approved`, `is_signature_valid=1`, `is_processed=1`.
+- `model_kyc_sessions` id=12: transición PENDING→**APPROVED**. `provider_status=approved` literal, `provider_decision_code=9001`, `provider_decision_reason=NULL` (approved no trae reason en sandbox; correcto), `decided_at=2026-06-13 10:04:50`.
+- `users.verification_status` userId=87: **REJECTED → APPROVED** (el último gana, comportamiento esperado del código actual). La sesión id=11 conserva intacta su decisión REJECTED (cada `model_kyc_sessions` mantiene su decisión independiente).
+
+**Detalle observable, no es bug**: `users.updated_at` no avanza al cambiar `verification_status` (la columna mantiene el `2026-06-04` del registro original del usuario). Es del schema previo, ajeno al frente Veriff; el `verification_status` sí cambia correctamente, que es lo que valida la integración.
+
+**Estado del frente Veriff backend al cierre**. Bloque "Integración real de Veriff" cerrado en docs (paso 1 HMAC salida, paso 1 HMAC webhook entrante, paso 2 country gating en KYC). Implementación validada end-to-end contra Veriff sandbox (Test integration): paso 5 (payload de createSession sin campos vacíos) + paso 6 (mapeo del Decision webhook por `verification.code` como autoridad) cerraron los dos huecos del cliente descubiertos en validación real. JAR vivo en TEST: `87b6b67939b138b6603dc123c9fe311eaae526fb0ad11ceb5224e2a967ab4652` (HEAD `ce0b4fd`). `kyc.veriff.enabled=true` en TEST por env var (`config.env`); `false` en repo y en AUDIT/PROD. AUDIT y PROD no tocados durante todo el frente.
+
+**Evidencia de auditoría conservada en BD de TEST**: 7 filas en `kyc_webhook_events` (id=1,2: smokes 401 firma falsa; id=3: declined con código viejo, evidencia del bug del paso 4-bis original; id=4,5: smokes del paso 6; id=6: declined real con código nuevo; id=7: approved real). 4 sesiones en `model_kyc_sessions` (id=9,10 del paso 4-bis original que destapó el bug, id=11 REJECTED real, id=12 APPROVED real).
+
+**Lo que NO se cierra en este frente** y queda para próximos pasos cuando se decida activar Veriff en AUDIT/PROD: (a) habilitar `KYC_VERIFF_*` en `config.env` de los entornos no-TEST; (b) frontend `ModelKycVeriffPage.jsx` ya existe pero no se ha validado end-to-end en navegador con Veriff real (esta validación fue solo backend + Station portal). (c) Limpieza de evidencia en BD TEST cuando se quiera (opcional; útil para futuras regresiones).
+
 ## 2026-06-13 — Veriff paso 6: mapeo del Decision webhook al contrato real de Veriff (verification.code como autoridad)
 
 Fix descubierto en el paso 4-bis (sesión 2026-06-13 forzando "declined" en Station para la sesión id=10): el webhook entrante llegaba con firma válida (`is_signature_valid=1` en `kyc_webhook_events`), pero el mapeo de estados no actualizaba `kyc_status` ni `users.verification_status`. La sesión id=10 quedaba en `provider_status=success`, `kyc_status=PENDING`, `decided_at=NULL`.
