@@ -127,6 +127,41 @@ Sesión consolidada que cierra cuatro frentes encadenados en el mismo arco tempo
 
 ---
 
+## 2026-06-13 — Veriff paso 6: mapeo del Decision webhook al contrato real de Veriff (verification.code como autoridad)
+
+Fix descubierto en el paso 4-bis (sesión 2026-06-13 forzando "declined" en Station para la sesión id=10): el webhook entrante llegaba con firma válida (`is_signature_valid=1` en `kyc_webhook_events`), pero el mapeo de estados no actualizaba `kyc_status` ni `users.verification_status`. La sesión id=10 quedaba en `provider_status=success`, `kyc_status=PENDING`, `decided_at=NULL`.
+
+**Diagnóstico contra el payload real** (capturado en la fila id=3 de `kyc_webhook_events`). El Decision webhook de Veriff tiene esta estructura: `{ status: "success", verification: { code: 9102, status: "declined", id: "<sessionId>", attemptId: "<attemptId>", reason: "Suspected document tampering", reasonCode: 102, ... } }`. Dos confusiones críticas:
+
+- El código viejo leía el `status` **top-level** ("success" = "webhook recibido OK") y lo interpretaba como decisión; el `verification.status` real ("declined") quedaba ignorado.
+- El extractor `extractDecisionCode` devolvía un `String` que iba al matcher de keywords ("declined" / "approved"), pero Veriff envía `verification.code` como **entero numérico** (9001 / 9102 / 9103 / 9104 / 9121 / …), no como string semántica.
+
+Resultado: ningún branch del matcher acertaba; caía al fallback `optString("status")` → leía "success" top-level → `provider_status="success"`, `kyc_status=PENDING`.
+
+**Política de mapeo aplicada** (autoridad: `verification.code` numérico):
+
+| `verification.code` | `kyc_status` interno | Razón |
+|---|---|---|
+| 9001 | APPROVED | Decisión final aprobada |
+| 9102, 9103, 9104 | REJECTED | Decisión final rechazada |
+| 9121 | PENDING (resubmission) | Flujo sigue abierto; el usuario debe reintentar |
+| otros / null | PENDING + log warn | Nunca asumir APPROVED por defecto |
+
+`provider_status` se persiste **literal** desde `verification.status` (sin interpretar): útil para auditoría. `decided_at` se rellena solo cuando el code mapea a decisión final (APPROVED/REJECTED), nunca para RESUBMISSION ni desconocido. `submitted_at` queda en NULL: NO se deduce del decision webhook (eso es del event webhook, integración futura). `users.verification_status` se actualiza solo en decisión final; para RESUBMISSION/desconocido se preserva el PENDING previo del usuario (el flujo sigue abierto).
+
+**Mini-fix de extractores** (event_id / event_type / decision_code / decision_reason). El payload real no tiene `id`/`eventId`/`event_id` top-level ni `eventType`/`action`/`type`. Se reescriben los extractores para:
+
+- `provider_event_id`: prefiere **`verification.attemptId`** (único por intento, sostiene idempotencia). Cae a top-level `id`/`eventId`/`event_id` por compatibilidad con event webhooks futuros. Si todo falla devuelve null aceptado: la fila se persiste igual y la reconciliación se sostiene por `provider_session_id`.
+- `provider_event_type`: usa `eventType`/`action`/`type` top-level si existen; si no, **deriva `"decision_<verification.status>"`** (p. ej. `"decision_declined"`) para distinguir en logs sin inventar contrato.
+- `extractDecisionCode` pasa a devolver `Integer`. Lee `verification.code` con `getInt`; fallback a string numérica por defensa.
+- `extractDecisionReason` lee `verification.reason` (preferido) o `verification.reasonCode` (numérico, lo stringifica).
+
+**Tests** (`ModelKycSessionServiceMappingTest`, **21 nuevos**): code 9001/9102/9103/9104/9121/desconocido/null mapeados correctamente; `extractDecisionCode` lee int / string-numérica / null; `extractProviderStatus` lee `verification.status` literal **NO** el top-level; `extractProviderEventId` prefiere `attemptId`, cae a top-level, devuelve null aceptado; `extractProviderEventType` deriva `decision_<status>` o usa top-level explícito; `extractDecisionReason` lee `reason` y stringifica `reasonCode`. Test final con el **payload REAL exacto** capturado en `kyc_webhook_events` id=3 (declined 9102) verificando el flujo de extracción end-to-end. `mvn package` verde: **100 tests, 0 fallos** (de 79 a 100; +21).
+
+**Estado del frente al cierre del paso 6**. Bloque "Integración real de Veriff" sigue cerrado; este fix es una **regresión descubierta en validación real**, no una deuda nueva. `kyc.veriff.enabled=false` intacto en repo; en TEST sigue activado por env var. AUDIT y PROD NO tocados. JAR `87b6b679…` listo para redeploy a TEST y continuar el paso 4 (esta vez con sesiones Veriff nuevas + decisión forzada en Station debería transitar `model_kyc_sessions.kyc_status` y `users.verification_status` correctamente).
+
+**Limpieza de BD pendiente**: las dos sesiones de id=9 (PENDING todavía) e id=10 (consumida por el webhook declined, sigue en PENDING por el bug) **se conservan** como evidencia del incidente; la sesión id=10 además quedaría bloqueada por idempotencia si Veriff reenviara el mismo `attemptId`. El retest creará dos sesiones nuevas vía `POST /api/kyc/veriff/start` y forzará decisiones sobre ellas.
+
 ## 2026-06-11 — Veriff paso 5: fix del payload de createSession (campos opcionales del person condicionales)
 
 Fix puntual descubierto durante la activación end-to-end de Veriff REAL en TEST (paso 4 del frente, sesión 2026-06-11). El smoke del paso 3 con firma falsa había dado HTTP 401 esperado y la cadena edge→origin→Spring→HMAC→persistencia auditoría había quedado 100% verificada (fila `id=1` en `kyc_webhook_events` con `is_signature_valid=0`, `processing_error_message='invalid_signature'`). Login real con `demo+model3@sharemechat.com` (userId=87, USER+FORM_MODEL, contrato aceptado, `verification_status=PENDING`) ejecutó `POST /api/kyc/veriff/start` y el backend devolvió **HTTP 500** por una `HttpClientErrorException$BadRequest: 400 Bad Request` de Veriff con cuerpo `{"status":"fail","code":"1104","message":"Request includes invalid parameters"}`.
