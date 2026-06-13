@@ -75,7 +75,27 @@ public class User {
     @Column(name = "created_at", nullable = false, updatable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
-    @Column(name = "updated_at", nullable = false, columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
+    // updated_at: gestionado 100% por MySQL via columnDefinition
+    // (DEFAULT CURRENT_TIMESTAMP + ON UPDATE CURRENT_TIMESTAMP).
+    //
+    // insertable=false, updatable=false hace que Hibernate NUNCA incluya esta
+    // columna en INSERTs ni UPDATEs. Sin esto, Hibernate enviaba en cada
+    // UPDATE updated_at=<valor_actual_del_objeto>, y MySQL solo dispara
+    // ON UPDATE CURRENT_TIMESTAMP cuando el SQL NO menciona la columna o
+    // cuando manda un valor distinto al previo. Con el viejo setup el
+    // timestamp se quedaba congelado al valor que dejara el constructor o
+    // el ultimo setUpdatedAt manual; los 3 callers que llamaban setUpdatedAt
+    // a mano (UserService) solo cubrian 3 de las decenas de updates del User
+    // (verification_status, ui_locale, password, account_status, role, etc.).
+    //
+    // Mismo patron usado por KycProviderConfig y ModelKycSession en este
+    // codebase (entidades mas modernas que el resto).
+    //
+    // El setter publico se conserva para no romper compilacion de los 3
+    // callers existentes en UserService; con updatable=false esos calls
+    // pasan a ser no-ops inocuos (Hibernate ignorara el valor).
+    @Column(name = "updated_at", nullable = false, insertable = false, updatable = false,
+            columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
     @Column(name = "account_status", nullable = false)
@@ -98,7 +118,9 @@ public class User {
 
     public User() {
         this.createdAt = LocalDateTime.now();
-        this.updatedAt = LocalDateTime.now();
+        // updatedAt NO se inicializa aqui: la columna esta con
+        // insertable=false (ver anotacion arriba), MySQL le pone el DEFAULT
+        // CURRENT_TIMESTAMP en el INSERT y mantiene el ON UPDATE despues.
         this.riskUpdatedAt = LocalDateTime.now();
         this.accountStatus = Constants.AccountStatuses.ACTIVE;
     }
