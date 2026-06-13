@@ -1,0 +1,23 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AuditEC2StartStopOnly",
+      "Effect": "Allow",
+      "Action": [
+        "ec2:StartInstances",
+        "ec2:StopInstances"
+      ],
+      "Resource": "arn:aws:ec2:eu-central-1:430118829334:instance/i-0d9149cd8a0e24104"
+    },
+    {
+      "Sid": "AuditRDSStartStopOnly",
+      "Effect": "Allow",
+      "Action": [
+        "rds:StartDBInstance",
+        "rds:StopDBInstance"
+      ],
+      "Resource": "arn:aws:rds:eu-central-1:430118829334:db:db1-sharemechat-audit"
+    }
+  ]
+}

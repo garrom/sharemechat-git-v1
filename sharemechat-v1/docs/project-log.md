@@ -8,6 +8,40 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-13 — AUDIT weekend scheduler: artefactos creados y validados, schedules en DISABLED hasta OK del operador
+
+Frente nuevo de ahorro operativo: programar el apagado y arranque automáticos del entorno **AUDIT** los fines de semana usando **EventBridge Scheduler**. Objetivo: AUDIT apagado de viernes 22:00 Madrid a lunes 07:20 Madrid; resto de la semana sigue 24/7 como hasta ahora. SOLO AUDIT. TEST y PROD intactos.
+
+**Decisión de mecanismo: EventBridge Scheduler con targets universales `aws-sdk:*`**, no Instance Scheduler (CloudFormation oficial de AWS). Instance Scheduler trae Lambdas, DynamoDB y CloudWatch logs propios — overhead injustificado para 2 recursos y 4 disparos/semana. Targets universales (`arn:aws:scheduler:::aws-sdk:ec2:stopInstances`, etc.) llaman al SDK directamente desde el servicio Scheduler, sin Lambda intermedia. Coste ~0. Timezone `Europe/Madrid` interpretada por Scheduler, cambio CET ↔ CEST automático.
+
+**Orden de operaciones**. Apagado: EC2 primero (viernes 22:00 Madrid, drena conexiones HTTP/WS antes que la BD), RDS después (viernes 22:20 Madrid). Arranque: RDS primero (lunes 07:00 Madrid, BD lista antes que la app), EC2 después (lunes 07:20 Madrid). `sharemechat-audit.service` está `enabled` en el host → systemd lo arranca solo al boot, sin intervención manual.
+
+**Separación de perfiles AWS y mínimo privilegio**. Dos perfiles distintos por filosofía operativa: `sharemechat-provisioner` (control plane, potente, uso acotado y documentado) y `sharemechat-deployer` (default, runtime, mínimo necesario). El frente requería tres operaciones de control plane:
+1. Crear policy IAM `sharemechat-scheduler-audit-deployer` y attachearla al user deployer (extender el deployer con scope estrecho para que pueda crear/actualizar los schedules del grupo del frente).
+2. Crear rol IAM `sharemechat-scheduler-audit-role` (asumido por `scheduler.amazonaws.com`) con inline policy de start/stop EC2 + RDS sobre ARNs literales.
+3. Mover la ventana de backup RDS AUDIT (`rds:ModifyDBInstance`, no permitido al deployer).
+
+Las tres se hicieron con `AWS_PROFILE=sharemechat-provisioner` (uso puntual, no recurrente). El resto (Scheduler create/update/get + lectura RDS/EC2 + smoke tests + futuras ejecuciones del operador) se hace con el deployer y nada más. **No se hardcodea ningún perfil en los scripts del repo** (`apply.sh`, `toggle.sh`); ambos toman el default del entorno.
+
+**Scope mínimo en la policy IAM del deployer**. `iam:PassRole` acotado al ARN del rol del scheduler **y** con condición `iam:PassedToService=scheduler.amazonaws.com` (aunque deployer llegara a nombrar el rol en otro contexto, solo Scheduler podría recibirlo). `scheduler:Create/Update/Delete/Get` acotados a `schedule-group/sharemechat-audit-weekend` y `schedule/sharemechat-audit-weekend/*`. Las únicas dos acciones que requieren `Resource: *` son `scheduler:ListSchedules` y `scheduler:ListScheduleGroups` (la API del servicio Scheduler no admite filtrado IAM por nombre de grupo en las llamadas de listado); justificado en el README del frente.
+
+**Scope mínimo en la policy del rol del scheduler**. ARNs literales, no comodines ni tag conditions: `ec2:Start/StopInstances` sobre `instance/i-0d9149cd8a0e24104`; `rds:Start/StopDBInstance` sobre `db:db1-sharemechat-audit`. La EC2 AUDIT no lleva `Env=audit` etiquetado y limitar por ARN es trivialmente correcto para este caso.
+
+**Ventana de backup RDS AUDIT movida de `21:33-22:03 UTC` a `02:00-02:30 UTC`** (diaria, formato API de `PreferredBackupWindow`). Motivo: en invierno (CET=UTC+1) el viernes a las 21:20 UTC = 22:20 Madrid se apaga la RDS, **13 minutos antes** del inicio de la ventana de backup actual; el snapshot del viernes no se ejecutaba ese día. Nueva ventana 02:00 UTC: el viernes a esa hora la RDS está encendida (apagado de viernes es 21:20 UTC), por lo que el snapshot del viernes sí corre. Sábado, domingo y lunes 02:00 UTC la RDS sigue apagada (arranca lunes 05:00–06:00 UTC según DST), por lo que esos días no hay snapshot — esperado y coherente con el ahorro. **Lo que NO se tocó**: `BackupRetentionPeriod=1`, `MultiAZ=false`, `DeletionProtection=false`, `PreferredMaintenanceWindow=mon:03:32-mon:04:02`, ni TEST ni PROD.
+
+**Smoke validation end-to-end ejecutada en ventana fuera de horario (2026-06-12 23:31–23:56 UTC = 01:31–01:56 Madrid)**. Cuatro pruebas reales contra los recursos AUDIT en orden, reusando los mismos schedules con `at(…)` puntuales `ENABLED` y vuelta a `cron(…)` `DISABLED` después:
+- *stop EC2*: `running → stopped` en ~30s tras el disparo.
+- *start EC2*: `stopped → running` en ~60s; `sharemechat-audit.service` activo y enabled al boot, sin intervención.
+- *stop RDS*: `available → stopping → stopped` en ~7 min.
+- *start RDS*: `stopped → starting → configuring-enhanced-monitoring → available` en ~6 min.
+- *health check final*: `https://audit.sharemechat.com/actuator/health` devuelve `HTTP 200` tras la reconexión del pool del backend a la BD.
+
+**Estado al cierre del frente**. Los 4 schedules existen en el grupo `sharemechat-audit-weekend`, con cron Europe/Madrid y `State=DISABLED`. No disparan nada. Para activarlos hay que ejecutar `./toggle.sh enable` desde el directorio del frente, decisión que queda en manos del operador hasta avisar a Segpay y a cualquier otro tercero cuyos webhooks o pings puedan fallar mientras AUDIT esté apagado. AUDIT sigue 24/7 hasta ese momento. Artefactos versionados en `sharemechat-v1/ops/aws-scheduler/audit-weekend/` (README, dos JSON de policies — del rol y del deployer — más trust, `schedules.yaml`, `apply.sh` idempotente y `toggle.sh enable|disable|status`).
+
+**Nota explícita de auditoría**. La policy IAM del deployer y el rol IAM del scheduler se crearon manualmente con `AWS_PROFILE=sharemechat-provisioner`; el repo NO contiene credenciales ni hardcodea perfiles. La ventana de backup RDS AUDIT también se modificó con perfil provisioner (uso puntual), sin crear policy permanente al deployer para `rds:ModifyDBInstance`: si en el futuro hace falta volver a tocar la ventana, se repite el patrón provisioner-puntual.
+
+---
+
 ## 2026-06-12 — Cabecera VEREDICTO operativo en el clasificador de accesos de PROD
 
 Adición puramente aditiva al `prod-access-classifier` (Python, cron systemd cada 15 min, encadenado tras el `normalizer`). El clasificador sigue generando exactamente lo mismo de antes (`.summary.jsonl` con una fila por IP + `.table.txt` con tabla tabular); lo nuevo es un **bloque VEREDICTO** al inicio de cada output que resume si el día requiere o no acción del operador. Pensado para que, de un vistazo en el email perimetral, se sepa si toca abrir el reporte completo o ignorarlo.

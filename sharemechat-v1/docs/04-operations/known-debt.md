@@ -2,6 +2,18 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-06-13 — Frente "AUDIT weekend scheduler": activación pendiente y limitación aceptada
+
+### [DEUDA pendiente — frente AUDIT weekend scheduler] Activar `toggle.sh enable` tras avisar a Segpay
+
+Los 4 schedules del grupo `sharemechat-audit-weekend` están creados, validados con smoke tests reales (stop EC2 → start EC2 → stop RDS → start RDS, todos OK), pero quedan en `State=DISABLED`. Para activar el apagado/arranque automático del fin de semana hay que ejecutar `./toggle.sh enable` desde `sharemechat-v1/ops/aws-scheduler/audit-weekend/`. **Antes de activar**: avisar a Segpay (o a cualquier otro tercero cuyos webhooks lleguen mientras AUDIT esté apagado, de viernes 22:00 a lunes 07:20 Madrid) para que sepan que durante el fin de semana el endpoint estará down y planifiquen reintentos o suspensión de tests programados. **Cómo desactivar de emergencia**: `./toggle.sh disable` deja todo `DISABLED` en segundos.
+
+### [Limitación aceptada — frente AUDIT weekend scheduler] Snapshot RDS del lunes no se ejecuta los fines de semana
+
+La ventana de backup RDS AUDIT (`02:00-02:30 UTC`, diaria por API de AWS) cae con la RDS apagada los sábado, domingo y lunes (la RDS arranca lunes 05:00–06:00 UTC según DST). El snapshot automático esos días no corre. En lunes la pérdida es ~5 h respecto al snapshot del viernes anterior, lo cual es aceptable para AUDIT (entorno de validación, no datos críticos). Si en algún momento hace falta snapshot diario garantizado los 7 días, opciones: (a) mantener AUDIT 24/7 (renuncia al ahorro); (b) cambiar la lógica del frente para programar un snapshot manual `at(…)` el viernes antes del apagado y otro al inicio del lunes; (c) `BackupRetentionPeriod=0` y orquestar snapshots manuales con AWS Backup. Decisión actual: aceptar. No es deuda accionable hasta que cambie el criterio.
+
+---
+
 ## 2026-06-09 — Frente "Integración real de Veriff": huecos detectados en el diagnóstico KYC/country gating
 
 Tres huecos destapados por el diagnóstico de solo lectura del 2026-06-09 sobre el estado real de Veriff/KYC y country gating. **Bloque común**: forman parte del frente **"Integración real de Veriff"**. Estado del bloque: **paso 1 (2026-06-10)** cerró las dos deudas de **firma HMAC** (salida y webhook entrante); **paso 2 (2026-06-10)** cierra la del **country gating en el flujo KYC**. **Bloque CERRADO**. La activación real de Veriff (`kyc.veriff.enabled=true` + credenciales en config.env por entorno) es el paso 3 — no es deuda registrada aquí sino implementación pendiente del frente.

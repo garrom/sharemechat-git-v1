@@ -1,0 +1,46 @@
+# Schedules for AUDIT weekend shutdown/startup
+# Group: sharemechat-audit-weekend
+# All cron expressions in Europe/Madrid (auto-DST by EventBridge).
+# Order of operations:
+#   - Shutdown FRI: EC2 first (drain), then RDS.
+#   - Startup MON: RDS first (DB ready), then EC2 (service depends on DB).
+# All schedules MUST start in State: DISABLED. Enable via toggle.sh enable.
+
+schedule_group: sharemechat-audit-weekend
+timezone: Europe/Madrid
+flexible_time_window:
+  mode: "OFF"
+role_arn: arn:aws:iam::430118829334:role/sharemechat-scheduler-audit-role
+
+schedules:
+  - name: audit-weekend-stop-ec2
+    description: "Stop AUDIT EC2 every Friday 22:00 Madrid (drain web/ws)"
+    schedule_expression: "cron(0 22 ? * FRI *)"
+    state: DISABLED
+    target:
+      arn: "arn:aws:scheduler:::aws-sdk:ec2:stopInstances"
+      input: '{"InstanceIds":["i-0d9149cd8a0e24104"]}'
+
+  - name: audit-weekend-stop-rds
+    description: "Stop AUDIT RDS every Friday 22:20 Madrid (after EC2 drained)"
+    schedule_expression: "cron(20 22 ? * FRI *)"
+    state: DISABLED
+    target:
+      arn: "arn:aws:scheduler:::aws-sdk:rds:stopDBInstance"
+      input: '{"DbInstanceIdentifier":"db1-sharemechat-audit"}'
+
+  - name: audit-weekend-start-rds
+    description: "Start AUDIT RDS every Monday 07:00 Madrid (DB ready before app)"
+    schedule_expression: "cron(0 7 ? * MON *)"
+    state: DISABLED
+    target:
+      arn: "arn:aws:scheduler:::aws-sdk:rds:startDBInstance"
+      input: '{"DbInstanceIdentifier":"db1-sharemechat-audit"}'
+
+  - name: audit-weekend-start-ec2
+    description: "Start AUDIT EC2 every Monday 07:20 Madrid (sharemechat-audit.service enabled at boot)"
+    schedule_expression: "cron(20 7 ? * MON *)"
+    state: DISABLED
+    target:
+      arn: "arn:aws:scheduler:::aws-sdk:ec2:startInstances"
+      input: '{"InstanceIds":["i-0d9149cd8a0e24104"]}'
