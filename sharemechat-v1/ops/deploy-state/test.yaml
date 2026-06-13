@@ -11,16 +11,16 @@
 
 environment: test
 schema_version: 1
-last_updated_at: 2026-06-11T22:13:00Z
+last_updated_at: 2026-06-13T00:50:00Z
 last_update_by: alain@LAPTOP-8UEIKVUT
 last_update_source: manual-mirror-of-update-manifest-backend-dryrun
 
 backend:
-  jar_sha256: 88167f8eda72cd368ed16d506a6f7a4dd350be31c8ed721eb357d7dd9fd9a3ce
-  git_commit_short: dc5a233
-  git_commit: dc5a233f79883305230bdf911b9d2ae8d84633bb
-  built_at: 2026-06-11T22:09:00Z
-  deployed_at: 2026-06-11T22:12:11Z
+  jar_sha256: 87b6b67939b138b6603dc123c9fe311eaae526fb0ad11ceb5224e2a967ab4652
+  git_commit_short: ce0b4fd
+  git_commit: ce0b4fdf462b7debedb895c6f8b8bcc10f5d0072
+  built_at: 2026-06-13T00:46:00Z
+  deployed_at: 2026-06-13T00:48:51Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   ec2_alias: test-backend
@@ -28,22 +28,24 @@ backend:
   systemd_unit: sharemechat-test.service
   verification:
     method: manual_via_update-manifest-backend.ps1
-    verified_at: 2026-06-11T22:13:00Z
+    verified_at: 2026-06-13T00:50:00Z
     notes: |
-      JAR 88167f8e... (HEAD dc5a233, paso 5 del frente Veriff: fix payload
-      person fields) construido localmente con `mvn package` (Tests run
-      79/79, 0 failures). Backup del JAR previo (632be9eb...) a
-      .bak-20260611-221124-pre-step5-payload-fix en EC2. Verificado por:
-      (1) sha256 remoto == local 88167f8e...;
-      (2) Started SharemechatV1Application en 30.307 segundos a
-          22:12:11Z sin ERROR/Exception;
-      (3) smoke post-restart del webhook con firma falsa devolvio
-          HTTP 401 (validacion HMAC del paso 1 sigue intacta).
+      JAR 87b6b679... (HEAD ce0b4fd, paso 6 del frente Veriff: fix mapeo
+      del Decision webhook entrante - verification.code como autoridad,
+      verification.status literal, attemptId para idempotencia)
+      construido localmente con `mvn package` (Tests run 100/100, 0
+      failures, +21 nuevos en ModelKycSessionServiceMappingTest). Backup
+      del JAR previo (88167f8e...) a
+      .bak-20260613-004757-pre-step6-webhook-mapping en EC2. Verificado
+      por: (1) sha256 remoto == local 87b6b679...; (2) Started
+      SharemechatV1Application en 28.808 segundos a 00:48:51Z sin
+      ERROR/Exception; (3) smoke post-restart del webhook con firma
+      falsa devolvio HTTP 401 (validacion HMAC del paso 1 sigue
+      intacta). Nota operativa: el primer smoke inmediato dio 502
+      (servicio aun arrancando, JVM ~30s); a los ~50s ya 401.
       NOTA: el helper update-manifest-backend.ps1 requiere consola
       interactiva (Read-Host) y no funciona en sesion no-interactiva;
       este YAML refleja los campos que el script habria escrito.
-      Deuda del flag auto-confirm pendiente (similar al
-      -AssumeYesNonCritical de deploy-frontend.ps1).
 
 frontend_product:
   bundle: main.618dfe8b.js
