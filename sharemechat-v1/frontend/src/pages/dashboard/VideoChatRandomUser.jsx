@@ -84,6 +84,7 @@ export default function VideoChatRandomUser(props) {
     handleActivateCamera,
     statusText,
     error,
+    emailNoticeSlot,
     modelNickname,
     modelAvatar,
     handleFavoriteGate,
@@ -244,6 +245,7 @@ export default function VideoChatRandomUser(props) {
                     <FontAwesomeIcon icon={faVideo} />
                     {t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
                   </StyledHelperLine>
+                  {emailNoticeSlot}
                 </StyledPaneCenterStack>
               </StyledPaneCenter>
             ) : (
@@ -321,6 +323,7 @@ export default function VideoChatRandomUser(props) {
                       <FontAwesomeIcon icon={faVideo} />
                       {t('dashboardUserClient.videoChatRandomUser.hints.activateCamera')}
                     </StyledHelperLine>
+                    {emailNoticeSlot}
                   </div>
                 </StyledPreCallCenter>
               )}

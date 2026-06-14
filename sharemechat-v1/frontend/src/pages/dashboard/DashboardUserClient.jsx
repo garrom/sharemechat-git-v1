@@ -32,11 +32,9 @@ const DashboardContentShell = styled.div`
 `;
 
 const EmailVerificationBanner = styled.aside`
-  position: absolute;
-  top: 18px;
-  right: 22px;
-  z-index: 20;
-  width: min(430px, calc(100% - 44px));
+  width: 100%;
+  max-width: 430px;
+  margin-top: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -49,10 +47,6 @@ const EmailVerificationBanner = styled.aside`
   backdrop-filter: blur(10px);
 
   @media (max-width: 768px) {
-    top: 10px;
-    left: 10px;
-    right: 10px;
-    width: auto;
     padding: 9px 10px;
     border-radius: 12px;
     gap: 10px;
@@ -818,6 +812,27 @@ const DashboardUserClient = () => {
               error={error}
               openPurchaseModal={openPurchaseModal}
               handleReportPeer={handleReportPeer}
+              emailNoticeSlot={!user?.emailVerifiedAt ? (
+                <EmailVerificationBanner aria-live="polite" role="status">
+                  <EmailVerificationBannerText>
+                    <EmailVerificationBannerTitle>
+                      {t('dashboardUserClient.emailVerification.noticeTitle')}
+                    </EmailVerificationBannerTitle>
+                    <EmailVerificationBannerBody>
+                      {t('dashboardUserClient.emailVerification.noticeBody')}
+                    </EmailVerificationBannerBody>
+                  </EmailVerificationBannerText>
+                  <EmailVerificationBannerButton
+                    type="button"
+                    onClick={handleResendEmailVerification}
+                    disabled={resendingVerification}
+                  >
+                    {resendingVerification
+                      ? t('dashboardUserClient.emailVerification.resending')
+                      : t('dashboardUserClient.emailVerification.resend')}
+                  </EmailVerificationBannerButton>
+                </EmailVerificationBanner>
+              ) : null}
             />
           )}
 
@@ -827,28 +842,6 @@ const DashboardUserClient = () => {
             </div>
           )}
         </StyledMainContent>
-
-        {!user?.emailVerifiedAt && (
-          <EmailVerificationBanner aria-live="polite" role="status">
-            <EmailVerificationBannerText>
-              <EmailVerificationBannerTitle>
-                {t('dashboardUserClient.emailVerification.noticeTitle')}
-              </EmailVerificationBannerTitle>
-              <EmailVerificationBannerBody>
-                {t('dashboardUserClient.emailVerification.noticeBody')}
-              </EmailVerificationBannerBody>
-            </EmailVerificationBannerText>
-            <EmailVerificationBannerButton
-              type="button"
-              onClick={handleResendEmailVerification}
-              disabled={resendingVerification}
-            >
-              {resendingVerification
-                ? t('dashboardUserClient.emailVerification.resending')
-                : t('dashboardUserClient.emailVerification.resend')}
-            </EmailVerificationBannerButton>
-          </EmailVerificationBanner>
-        )}
       </DashboardContentShell>
 
       <TrialCooldownModal
