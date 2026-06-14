@@ -7,21 +7,21 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: IDZD3ZIQ8YX5C15YVIJ59YF518
+  cloudfront_invalidation_id: ICR2YJ4KHGS5YSUFSIPGJ9G4RQ
   verification:
-    method: deploy-frontend.ps1-live-build_2026-06-14T21:24:50Z
+    method: deploy-frontend.ps1-live-build_2026-06-14T21:46:03Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-06-14T21:24:50Z
-  built_at: 2026-06-14T21:24:50Z
-  bundle_sha256: e6d5058994862c0303165c4627c6891b1a3116cc1550e33b142309eab03c9ac8
-  git_commit_short: ae1d9cd
-  git_commit: ae1d9cd0bc6ffdcd43b9dcfd4eff2f9849470f0e
+  deployed_at: 2026-06-14T21:46:03Z
+  built_at: 2026-06-14T21:46:03Z
+  bundle_sha256: 16d2e61035186e54ee68e7fbf71f7c39c9c38c47856cb9aa363d44ee0776c53e
+  git_commit_short: 28a50a3
+  git_commit: 28a50a358c108be09d7c287cf9d9c63db78d26de
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-test
-  bundle: main.fb16fbbd.js
+  bundle: main.0f38dd6d.js
 last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
@@ -40,13 +40,13 @@ backend:
   systemd_unit: sharemechat-test.service
   git_commit: 18a5c97baad719a557d7476f6cb174cb40bb81de
   git_commit_short: 18a5c97
-last_updated_at: 2026-06-14T21:24:50Z
+last_updated_at: 2026-06-14T21:46:03Z
 frontend_admin:
   working_tree_clean: 
   bucket: sharemechat-admin-test
   bundle: main.0497fe46.js
-  built_at: 
   deployed_at: 2026-06-05T22:16:16Z
+  cloudfront_distribution: E28YCPVIRB4ASH
   verification:
     method: s3_lastmodified_observed_2026-06-09
     git_commit_provenance: inferred_from_lastmodified_and_git_log
@@ -54,7 +54,7 @@ frontend_admin:
       Bundle admin TEST no actualizado desde 2026-06-05 22:16:16 UTC
       (4 dias de drift). HEAD git en esa marca = f09294a. Operador
       del build desconocido; working_tree_clean no recuperable.
-  cloudfront_distribution: E28YCPVIRB4ASH
+  built_at: 
   cloudfront_invalidation_id: 
   deployed_by: 
   git_commit: 
