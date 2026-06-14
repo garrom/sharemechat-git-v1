@@ -7,6 +7,7 @@ import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
+import EmailNotVerifiedBanner from '../../components/EmailNotVerifiedBanner';
 import VideoChatRandomUser from './VideoChatRandomUser';
 import TrialCooldownModal from '../../components/TrialCooldownModal';
 import {
@@ -21,7 +22,7 @@ import BlogContent from '../blog/BlogContent';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
 import { loadWebRtcPeerConfig } from '../../realtime/webrtcConfig';
-import { getApiErrorMessage, isEmailNotVerifiedError } from '../../utils/apiErrors';
+import { getApiErrorMessage } from '../../utils/apiErrors';
 
 const DashboardContentShell = styled.div`
   position: relative;
@@ -478,9 +479,10 @@ const DashboardUserClient = () => {
 
       history.push('/client');
     } catch (e) {
-      const msgErr = isEmailNotVerifiedError(e)
-        ? t('dashboardUserClient.emailVerification.premiumRequired')
-        : getApiErrorMessage(e, t('dashboardUserClient.errors.firstPayment'));
+      // Email no verificado lo gestiona EmailNotVerifiedModalBridge (modal global
+      // disparado por el bus en apiFetch). Aqui solo manejamos el resto de
+      // errores con el helper generico.
+      const msgErr = getApiErrorMessage(e, t('dashboardUserClient.errors.firstPayment'));
       setError(msgErr);
       await alert({ title: t('dashboardUserClient.common.errorTitle'), message: msgErr, variant: 'danger', size: 'sm' });
     } finally {
@@ -770,6 +772,7 @@ const DashboardUserClient = () => {
   return (
     <StyledContainer>
       <GlobalBlack />
+      <EmailNotVerifiedBanner />
 
       {/* ========= INICIO NAVBAR  ======== */}
       <NavbarClient

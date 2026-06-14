@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import i18n from '../../i18n';
 import { useHistory } from 'react-router-dom';
 import NavbarModel from '../../components/navbar/NavbarModel';
+import EmailNotVerifiedBanner from '../../components/EmailNotVerifiedBanner';
 import {
   StyledContainer,
   StyledMainContent,
@@ -9,7 +10,7 @@ import {
 } from '../../styles/pages-styles/VideochatStyles';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
-import { getApiErrorMessage, isEmailNotVerifiedError } from '../../utils/apiErrors';
+import { getApiErrorMessage } from '../../utils/apiErrors';
 import {
   DashboardUserModelShell,
   DashboardUserModelPage,
@@ -188,11 +189,8 @@ const DashboardUserModel = () => {
         setKycMode('');
       }
     } catch (e) {
-      if (isEmailNotVerifiedError(e)) {
-        setVerificationError(t('dashboardUserModel.emailVerification.notice'));
-      } else {
-        setContractErr(getApiErrorMessage(e, t('dashboardUserModel.contract.errors.accept')));
-      }
+      // Email no verificado lo gestiona EmailNotVerifiedModalBridge globalmente.
+      setContractErr(getApiErrorMessage(e, t('dashboardUserModel.contract.errors.accept')));
     } finally {
       setAccepting(false);
     }
@@ -238,11 +236,8 @@ const DashboardUserModel = () => {
         })
       );
     } catch (e) {
-      if (isEmailNotVerifiedError(e)) {
-        setVerificationError(t('dashboardUserModel.emailVerification.notice'));
-      } else {
-        setKycRouteErr(getApiErrorMessage(e, t('dashboardUserModel.kyc.errors.load')));
-      }
+      // Email no verificado lo gestiona EmailNotVerifiedModalBridge globalmente.
+      setKycRouteErr(getApiErrorMessage(e, t('dashboardUserModel.kyc.errors.load')));
     } finally {
       setRoutingKyc(false);
     }
@@ -300,6 +295,7 @@ const DashboardUserModel = () => {
   return (
     <StyledContainer>
       <GlobalBlack />
+      <EmailNotVerifiedBanner />
 
       <NavbarModel
         activeTab="videochat"

@@ -47,6 +47,27 @@ const notifyMaintenance = (active) => {
   }
 };
 
+// Frente "Email verification gate total" (2026-06-15): bus global para
+// abrir el modal de "verifica tu email" desde cualquier punto de la app
+// cuando el backend responde 403 con code=EMAIL_NOT_VERIFIED. El error
+// se SIGUE PROPAGANDO al caller (no se silencia); este dispatch es solo
+// para que EmailNotVerifiedModalBridge abra el modal sin que cada caller
+// tenga que detectarlo inline.
+const notifyEmailNotVerified = (data) => {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new CustomEvent('email-not-verified', {
+      detail: {
+        scope: data?.scope ?? null,
+        nextAction: data?.nextAction ?? null,
+        path: data?.path ?? null,
+      }
+    }));
+  } catch {
+    // No bloqueamos el flujo HTTP por un fallo del bus de eventos.
+  }
+};
+
 const buildApiError = ({ status, message, data, text }) => {
   const err = new Error(message || `HTTP ${status}`);
   err.status = status;
@@ -173,6 +194,10 @@ export const apiFetch = async (path, options = {}) => {
       } catch (refreshError) {
         // Dejamos caer el error original para preservar el flujo actual de logout.
       }
+    } else {
+      // 403 EMAIL_NOT_VERIFIED: notificar al bus global para que el modal
+      // se abra automaticamente. El error sigue propagandose abajo.
+      notifyEmailNotVerified(previewError?.data);
     }
   }
 

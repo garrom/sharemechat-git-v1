@@ -1500,6 +1500,22 @@
       "suffix": "subiendo foto de perfil y vídeo de presentación desde la sección de Perfil."
     }
   },
+  "emailVerification": {
+    "banner": {
+      "text": "Tu email aún no está verificado.",
+      "cta": "Reenviar email"
+    },
+    "modal": {
+      "title": "Verifica tu email",
+      "body": "Necesitas verificar tu email para continuar. Te hemos enviado un email con un enlace al registrarte. Si no lo encuentras, podemos reenviártelo.",
+      "close": "Cerrar",
+      "resend": {
+        "cta": "Reenviar email",
+        "success": "Email reenviado. Revisa tu bandeja de entrada (también spam).",
+        "error": "No se pudo reenviar. Intenta de nuevo en unos minutos."
+      }
+    }
+  },
   "clientKyc": {
     "title": "Verificación de edad",
     "navTitle": "Verificación de edad",

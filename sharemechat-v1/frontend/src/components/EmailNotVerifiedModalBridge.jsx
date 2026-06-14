@@ -1,70 +1,78 @@
 import React, { useEffect, useRef } from 'react';
-import { useSession } from './SessionProvider';
+import i18n from '../i18n';
 import { useModal } from './ModalProvider';
 import { apiFetch } from '../config/http';
-import { isEmailNotVerifiedError } from '../utils/apiErrors';
 
+const tk = (key) => i18n.t(key);
+
+/**
+ * Bridge global del modal "verifica tu email". Frente "Email verification
+ * gate total" (2026-06-15).
+ *
+ * Escucha el CustomEvent `email-not-verified` emitido por apiFetch cuando
+ * detecta un 403 con code=EMAIL_NOT_VERIFIED. El error sigue propagandose
+ * al caller; este componente solo se encarga de abrir el modal sin que
+ * cada caller tenga que detectar el codigo inline.
+ *
+ * Antes (commit 7e84d02 y previos) leia `error` desde useSession(), pero
+ * ese error nunca se seteaba para 401/403 (SessionProvider los trata como
+ * logout). Resultado: el modal nunca aparecia. Ahora si.
+ */
 const EmailNotVerifiedModalBridge = () => {
-  const { error, loading } = useSession();
   const { openModal, closeModal, alert } = useModal();
-  const shownRef = useRef(false);
   const modalOpenRef = useRef(false);
 
   useEffect(() => {
-    const shouldShow = !loading && isEmailNotVerifiedError(error);
+    const handler = () => {
+      if (modalOpenRef.current) return;
+      modalOpenRef.current = true;
 
-    if (!shouldShow) {
-      shownRef.current = false;
-      return;
-    }
-
-    if (shownRef.current || modalOpenRef.current) {
-      return;
-    }
-
-    shownRef.current = true;
-    modalOpenRef.current = true;
-
-    openModal({
-      title: 'Email no verificado',
-      variant: 'warning',
-      size: 'sm',
-      onClose: () => closeModal(),
-      content: 'Debes validar tu email antes de continuar.',
-      actions: [
-        {
-          label: 'Mas tarde',
-          onClick: () => closeModal(false),
-        },
-        {
-          label: 'Reenviar email',
-          primary: true,
-          onClick: async () => {
-            try {
-              await apiFetch('/email-verification/resend', { method: 'POST' });
-              closeModal(true);
-              await alert({
-                title: 'Email reenviado',
-                message: 'Te hemos reenviado el email de validacion.',
-                variant: 'success',
-                size: 'sm',
-              });
-            } catch (e) {
-              closeModal(false);
-              await alert({
-                title: 'No se pudo reenviar',
-                message: e?.data?.message || 'No se pudo reenviar el email de validacion.',
-                variant: 'warning',
-                size: 'sm',
-              });
-            }
+      openModal({
+        title: tk('emailVerification.modal.title'),
+        variant: 'warning',
+        size: 'sm',
+        onClose: () => closeModal(),
+        content: tk('emailVerification.modal.body'),
+        actions: [
+          {
+            label: tk('emailVerification.modal.close'),
+            onClick: () => closeModal(false),
           },
-        },
-      ],
-    }).finally(() => {
-      modalOpenRef.current = false;
-    });
-  }, [error, loading, openModal, closeModal, alert]);
+          {
+            label: tk('emailVerification.modal.resend.cta'),
+            primary: true,
+            onClick: async () => {
+              try {
+                await apiFetch('/email-verification/resend', { method: 'POST' });
+                closeModal(true);
+                await alert({
+                  title: tk('emailVerification.modal.title'),
+                  message: tk('emailVerification.modal.resend.success'),
+                  variant: 'success',
+                  size: 'sm',
+                });
+              } catch (e) {
+                closeModal(false);
+                await alert({
+                  title: tk('emailVerification.modal.title'),
+                  message: (e && e.data && e.data.message) || tk('emailVerification.modal.resend.error'),
+                  variant: 'warning',
+                  size: 'sm',
+                });
+              }
+            },
+          },
+        ],
+      }).finally(() => {
+        modalOpenRef.current = false;
+      });
+    };
+
+    window.addEventListener('email-not-verified', handler);
+    return () => {
+      window.removeEventListener('email-not-verified', handler);
+    };
+  }, [openModal, closeModal, alert]);
 
   return null;
 };

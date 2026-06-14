@@ -1500,6 +1500,22 @@
       "suffix": "by uploading a profile photo and introduction video from the Profile section."
     }
   },
+  "emailVerification": {
+    "banner": {
+      "text": "Your email is not yet verified.",
+      "cta": "Resend email"
+    },
+    "modal": {
+      "title": "Verify your email",
+      "body": "You need to verify your email to continue. We sent you an email with a link when you signed up. If you can't find it, we can resend it.",
+      "close": "Close",
+      "resend": {
+        "cta": "Resend email",
+        "success": "Email resent. Check your inbox (also spam folder).",
+        "error": "Could not resend. Try again in a few minutes."
+      }
+    }
+  },
   "clientKyc": {
     "title": "Age verification",
     "navTitle": "Age verification",
