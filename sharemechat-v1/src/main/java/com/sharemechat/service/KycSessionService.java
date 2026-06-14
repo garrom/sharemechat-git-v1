@@ -333,6 +333,11 @@ public class KycSessionService {
      * - Usuario NO esta ya APPROVED para client KYC: si lo esta, lanzamos.
      *   La re-verificacion por expiracion se gestiona en otra ruta (no
      *   abordada en este frente).
+     * - Email verificado: alineado con {@link #startDiditModelSession(Long)}
+     *   (cierra deuda P8 registrada en el cierre del frente Didit cliente,
+     *   2026-06-14). El user no puede empezar verificacion biometrica sin
+     *   tener email validado primero, evita malgastar slots Didit con
+     *   cuentas zombies.
      *
      * Idempotencia: si existe una sesion CLIENT en PENDING para el user, se
      * devuelve la existente sin crear una nueva. Evita duplicar sesiones si
@@ -354,6 +359,16 @@ public class KycSessionService {
         if (!isClient) {
             throw new IllegalArgumentException("Solo CLIENT (o USER + FORM_CLIENT) puede iniciar KYC de cliente");
         }
+
+        // Cierre P8 (2026-06-14): alineado con startDiditModelSession, el
+        // KYC del cliente exige email verificado previo. Lanza
+        // EmailVerificationRequiredException -> 403 EMAIL_NOT_VERIFIED.
+        emailVerificationService.assertEmailVerified(
+                user,
+                "Debes validar tu email antes de iniciar la verificacion de edad.",
+                "CLIENT_KYC",
+                "VERIFY_EMAIL"
+        );
 
         if (Constants.VerificationStatuses.APPROVED.equals(user.getClientKycStatus())) {
             throw new IllegalStateException("El usuario ya tiene client_kyc_status=APPROVED; no procede reverificar aqui.");

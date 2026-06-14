@@ -109,6 +109,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
     }
 
+    @ExceptionHandler(ClientKycRequiredException.class)
+    public ResponseEntity<ApiError> handleClientKycRequired(ClientKycRequiredException ex, HttpServletRequest req) {
+        log.warn("Client KYC requerido: path={}", req != null ? req.getRequestURI() : null);
+        ApiError body = new ApiError(
+                HttpStatus.FORBIDDEN.value(),
+                "Forbidden",
+                ex.getMessage(),
+                req != null ? req.getRequestURI() : null
+        );
+        body.setCode(ex.getCode());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(body);
+    }
+
     @ExceptionHandler(CountryBlockedException.class)
     public ResponseEntity<ApiError> handleCountryBlocked(CountryBlockedException ex, HttpServletRequest req) {
         // Log server-side con razón real (path + ex.getMessage() pueden contener

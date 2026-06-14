@@ -40,6 +40,7 @@ public class TransactionService {
     private final BillingProperties billing;
     private final GiftProperties giftProperties;
     private final EmailVerificationService emailVerificationService;
+    private final ClientKycGate clientKycGate;
 
     public TransactionService(
             TransactionRepository transactionRepository,
@@ -54,7 +55,8 @@ public class TransactionService {
             PayoutRequestRepository payoutRequestRepository,
             BillingProperties billing,
             GiftProperties giftProperties,
-            EmailVerificationService emailVerificationService
+            EmailVerificationService emailVerificationService,
+            ClientKycGate clientKycGate
     ) {
         this.transactionRepository = transactionRepository;
         this.balanceRepository = balanceRepository;
@@ -69,6 +71,7 @@ public class TransactionService {
         this.billing = billing;
         this.giftProperties = giftProperties;
         this.emailVerificationService = emailVerificationService;
+        this.clientKycGate = clientKycGate;
     }
 
     /**
@@ -159,6 +162,11 @@ public class TransactionService {
                 "CLIENT_PREMIUM",
                 "VERIFY_EMAIL"
         );
+
+        // Gate KYC cliente (ADR-029/-035): edad verificada con Didit antes
+        // del primer pago. Lanza ClientKycRequiredException -> 403 con
+        // code=CLIENT_KYC_REQUIRED. Orden importa: email primero, luego KYC.
+        clientKycGate.assertClientKycApproved(user);
 
         BigDecimal lastBalance = lastBalanceOf(userId);
 
@@ -378,6 +386,13 @@ public class TransactionService {
         if (!Constants.Roles.CLIENT.equals(user.getRole())) {
             throw new IllegalArgumentException("El usuario debe ser CLIENT");
         }
+
+        // Gate KYC cliente (ADR-029/-035): recarga tambien bloqueada si
+        // client_kyc_status revoca o expira en el futuro. El check se
+        // ejecuta despues del role check para no leakear estado KYC a
+        // usuarios que ni siquiera son CLIENT.
+        clientKycGate.assertClientKycApproved(user);
+
         if (request == null) {
             throw new IllegalArgumentException("Body requerido");
         }

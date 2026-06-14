@@ -734,6 +734,7 @@ public class UserService {
         dto.setBiography(user.getBiography());
         dto.setInterests(user.getInterests());
         dto.setVerificationStatus(user.getVerificationStatus());
+        dto.setClientKycStatus(user.getClientKycStatus());
         dto.setActive(user.getIsActive());
         dto.setUnsubscribe(user.getUnsubscribe());
         dto.setCreatedAt(user.getCreatedAt());

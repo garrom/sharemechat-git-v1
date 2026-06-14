@@ -17,6 +17,12 @@ public class UserDTO {
     private String biography;
     private String interests;
     private String verificationStatus;
+    // V9 (frente integracion Age Verification con pago, 2026-06-15): estado
+    // del KYC de cliente (Age Verification con Didit). Lo consume el frontend
+    // para decidir si gatear los 5 handlers de pago (4 add-balance + 1 first)
+    // antes de llamar al endpoint. NULL = sin verificar, APPROVED = OK,
+    // PENDING/REJECTED = bloqueo.
+    private String clientKycStatus;
     private Boolean active;
     private Boolean unsubscribe;
     private LocalDateTime createdAt;
@@ -81,6 +87,9 @@ public class UserDTO {
 
     public String getVerificationStatus() { return verificationStatus; }
     public void setVerificationStatus(String verificationStatus) { this.verificationStatus = verificationStatus; }
+
+    public String getClientKycStatus() { return clientKycStatus; }
+    public void setClientKycStatus(String clientKycStatus) { this.clientKycStatus = clientKycStatus; }
 
     public Boolean getActive() { return active; }
     public void setActive(Boolean active) { this.active = active; }
