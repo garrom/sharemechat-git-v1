@@ -175,7 +175,14 @@ function App() {
 
                     <Route path="/model-documents" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelDocuments /></RequireRole>)} />
                     <Route path="/model-kyc" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelKycVeriffPage /></RequireRole>)} />
-                    <Route path="/client-kyc" render={() => (<RequireRole role="CLIENT"><ClientKycDiditPage /></RequireRole>)} />
+                    {/* /client-kyc: alineado con el hot-fix backend 8456660. Pre-recarga
+                        el usuario es USER + FORM_CLIENT y aun asi debe poder verificar
+                        edad (ADR-029: age verification ANTES de la primera recarga). Post-
+                        recarga el role escala a CLIENT (caso futuro). Filtrado fino por
+                        user_type para excluir FORM_MODEL/MODEL/ADMIN. Composicion natural
+                        de la API ya soportada por RequireRole (roles + allowedUserTypes),
+                        sin extender el componente. */}
+                    <Route path="/client-kyc" render={() => (<RequireRole roles={[Roles.USER, Roles.CLIENT]} allowedUserTypes={[UserTypes.FORM_CLIENT]}><ClientKycDiditPage /></RequireRole>)} />
 
                     <Route path="/perfil-client" render={() => (<RequireRole role="CLIENT"><PerfilClient /></RequireRole>)} />
                     <Route path="/perfil-model" render={() => (<RequireRole role="MODEL"><PerfilModel /></RequireRole>)} />
