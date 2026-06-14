@@ -8,6 +8,87 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-14 — Frente Email Verification Gate Total + Frente Integración Age Verification con add-balance/first cerrados end-to-end
+
+Cierre conjunto de dos frentes superpuestos sobre el mismo flujo crítico del cliente, completados en una sola jornada con cuatro hot-fixes UX derivados de la validación.
+
+**Resumen funcional**:
+
+- **Frente "Email verification gate total"** (commits `ee5d641` backend + `18a5c97` frontend). `EmailVerifiedFilter` global, `OncePerRequestFilter` registrado tras `ProductOperationalModeFilter` y antes del filtro de autorización: toda request autenticada cuyo `users.email_verified_at IS NULL` recibe `403 {code:"EMAIL_NOT_VERIFIED"}` salvo whitelist mínima (`/api/users/me`, `/api/email-verification/**`, `/api/auth/{login,logout,refresh}`, `/api/auth/password/**`, registro, consent, webhooks Veriff/Didit). Backoffice (`ROLE_ADMIN`, `BO_*`) excluido. Cierra un agujero histórico: hasta hoy `/transactions/{first,add-balance,payout}`, `/models/teasers`, subida de documentos, chat WebRTC, mensajes y prácticamente todo el resto del API no validaban el email del usuario; ahora todos quedan detrás del gate. Reemplaza la verificación puntual `assertEmailVerified` que se había añadido en `startDiditClientSession` durante el frente Didit cliente: el filter pasa a ser la fuente única.
+
+- **Frente "Integración Age Verification con add-balance/first"** (commits `2d885cb` backend + `8b47ab0` frontend). `ClientKycGate` (service ligero con un único `assertClientKycApproved(User)`) + `ClientKycRequiredException` + `GlobalExceptionHandler` que la traduce a `403 {code:"CLIENT_KYC_REQUIRED"}`. Llamado en `TransactionService.processFirstTransaction` y `TransactionService.addBalance`. Frontend: helper `ensureClientKycApproved(user, history, returnPath)` cableado en 4 handlers de `DashboardClient.jsx` (premium cobros y top-ups) + 1 handler de `DashboardUserClient.jsx` (primer pago "Hazte Premium"). Nueva ruta `/client-kyc/processing` con `ClientKycProcessingPage` que hace polling cada 3 s sobre `/api/users/me`, máx. 20 intentos / 60 s; APPROVED → redirige a `sessionStorage.client_kyc_return_url`; REJECTED → mensaje; timeout → mensaje neutro. Handler en `apiFetch` para `403 CLIENT_KYC_REQUIRED` como defensa de último recurso (redirige a `/client-kyc?return=<currentPath>` si algún caller evitó el gate frontend).
+
+- **Hot-fix callback URL Didit del body** (config.env runtime, sin commit). La sesión Didit id=17 evidenció que el campo `callback` del body de `POST /v3/session/` se usa además como URL de redirect del navegador del usuario al terminar el flujo (no solo como webhook server-to-server, contrario a la hipótesis inicial). Operador verificó en consola Didit que existe una sección **Webhooks** a nivel de proyecto separada del workflow ("shareme-test-kyc" → `https://test.sharemechat.com/api/kyc/didit/webhook`, ACTIVO), independiente del `callback` del body. Override aplicado en `/opt/sharemechat/config.env`: `KYC_DIDIT_CALLBACK_URL=https://test.sharemechat.com/client-kyc/processing` (backup `config.env.bak-20260614-194724-pre-callback-url-fix`). Spring relaxed binding mapea a `kyc.didit.callback-url` y gana frente al default de `application-test.properties:28`. Webhooks server-to-server intactos tras el cambio (sesión id=18 confirmó cadena 3 webhooks Approved con firma válida + redirect del navegador a `/client-kyc/processing` correcto).
+
+- **PRELAUNCH desactivado permanentemente en TEST** (config.env runtime, sin commit). `PRODUCT_ACCESS_MODE=PRELAUNCH → OPEN` para permitir flujos end-to-end completos sin allowlist. Backup `config.env.bak-20260614-191228-pre-deactivate-prelaunch`. Smokes post-cambio confirman que endpoints que antes daban `503` con `X-Product-Mode: PRELAUNCH` ahora dan `401` (sin auth) o `200` (con auth) según corresponda.
+
+**Validación end-to-end** ejecutada en flujos dummy reales contra Didit sandbox:
+
+- **Sesión id=17** (`users.id=90 demo+register2`, `provider_session_id=2ad92d54-…`): primer flujo cliente del frente, completado con el bug del callback URL que apuntaba al endpoint del webhook (500 `HttpRequestMethodNotSupportedException: GET` cuando Didit redirigió el navegador desktop al webhook server-to-server). Cadena 3 webhooks (Not Started → In Progress → Approved con `decision`) procesados correctamente sin afectación del 500 cosmético del navegador. `client_kyc_status=APPROVED`, `client_kyc_estimated_age=47.21`, `confidence_score=100.00`. Sirvió como diagnóstico de la causa raíz del callback. Se conserva como evidencia viva del flujo cliente Didit pre-hot-fix.
+
+- **Sesión id=18** (`users.id=95 demo+register3`, `provider_session_id=c7f05073-…`): flujo end-to-end completo POST hot-fix callback. Registro → confirmación email → dashboard → "Hazte Premium" → frontend gate redirige a `/client-kyc` → consent biométrico GDPR → Didit Adaptive (Age Estimation) → callback navegador correcto a `/client-kyc/processing` → polling 1-2 ciclos → APPROVED detectado → redirige al dashboard → segundo "Hazte Premium" → `TransactionService.processFirstTransaction` → `ClientKycGate.assertClientKycApproved()` OK → promoción `USER → CLIENT` con balance inicial 10 € (`transactions.id=8821` + `balances.id=8821`). Validación 100% end-to-end de los dos frentes encadenados.
+
+**Hot-fixes UX derivados de la validación** (cuatro commits encadenados):
+
+- Banner global `EmailNotVerifiedBanner` eliminado (commit `32628d8`). Era un banner amarillo persistente arriba de los 4 dashboards (Client/Model/UserClient/UserModel) introducido en `18a5c97` (paso 2 del frente Email Gate). Duplicaba un aviso preexistente del card del videochat. Decisión: borrar el nuevo, mantener el preexistente.
+
+- Modal global `EmailNotVerifiedModalBridge` + bus de eventos `'email-not-verified'` en `apiFetch` eliminados (commit `ae1d9cd`). El modal flotante (toast arriba a la derecha disparado por `403 EMAIL_NOT_VERIFIED` desde cualquier endpoint) fue percibido como ruido UX. Comportamiento que queda: el error `403 EMAIL_NOT_VERIFIED` se propaga al caller sin acción global; cada componente que falla muestra el error inline donde corresponde. La rama del bus se sustituyó por no-op explícito en la cadena `if/else` de `apiFetch` para mantener la semántica de NO intentar refresh para ese 403. Handler de `403 CLIENT_KYC_REQUIRED` se mantiene intacto (sigue redirigiendo a `/client-kyc`) y helper `isEmailNotVerifiedError` también (lo usa `AdminLoginForm.jsx`).
+
+- Aviso preexistente `EmailVerificationBanner` (styled-component inline en `DashboardUserClient.jsx`, commit histórico `f02e50c`) movido del posicionamiento `position:absolute; top:18px; right:22px; z-index:20` al card del botón "Activar cámara" del videochat (commit `28a50a3`). Implementado como prop `emailNoticeSlot` que `DashboardUserClient` pasa a `VideoChatRandomUser`; este lo renderiza dentro de `StyledPaneCenterStack` (desktop) y del `div` mobile, debajo del `StyledHelperLine` del hint de "Activar cámara". El aviso solo se muestra cuando `!cameraActive` (estado pre-cámara), que es exactamente cuando el card está visible. Styled-component pierde el posicionamiento absoluto y la media query mobile asociada; queda fluido dentro del card con `width:100%; max-width:430px; margin-top:10px`.
+
+- Bug preexistente `VideoChatRandomUser.fetchTeasers` (commit `a08bf07`). El componente llamaba a `GET /api/models/teasers` con `fetch()` nativo + `await res.text()` + `throw new Error(txt)`, lo que metía el cuerpo crudo del 403 (JSON serializado completo) en `e.message` y `{promoError}` lo renderizaba en el card derecho como texto literal. Sustituido por `apiFetch('/models/teasers?…')` que ya parsea correctamente el cuerpo del error y expone `err.code`. Catch ahora discrimina por `e.code === 'EMAIL_NOT_VERIFIED'` → setea `promoEmailGate=true` y renderiza el mensaje neutro "Verifica tu email para ver modelos en directo." (i18n key `dashboardUserClient.videoChatRandomUser.emailVerification.teaserGate` añadida en `es.json` y `en.json`). Bug preexistente del commit `f02e50c` (probablemente sin manifestarse antes porque hasta el frente Email Gate ningún endpoint protegido por `permitAll` devolvía 403 con `code=EMAIL_NOT_VERIFIED`). El gemelo `VideoChatRandomCliente.jsx` (dashboard CLIENT premium) ya usaba `apiFetch` y no requirió cambios.
+
+**Cadena de commits del frente** (cronológicamente):
+
+- `2d885cb` — feat(backend): gate add-balance and first-payment with ClientKycGate
+- `ee5d641` — feat(backend): wire global EmailVerifiedFilter
+- `18a5c97` — feat(frontend): wire email-not-verified modal globally, add persistent banner
+- `8b47ab0` — feat(frontend): gate add-balance and first-payment flows on client kyc, add processing page with polling
+- `e28bc79` — ops(manifest): refresh test frontend_product manifest to 8b47ab0
+- `32628d8` — revert(frontend): remove duplicate email-not-verified banner
+- `a401cf3` — ops(manifest): refresh test frontend_product manifest to 32628d8
+- `ae1d9cd` — revert(frontend): remove email-not-verified modal bridge, keep only inline error
+- `7f931ce` — ops(manifest): refresh test frontend_product manifest to ae1d9cd
+- `28a50a3` — fix(frontend): move email-pending-verification notice into Activar camara card
+- `4b85ed9` — ops(manifest): refresh test frontend_product manifest to 28a50a3
+- `a08bf07` — fix(frontend): handle 403 EMAIL_NOT_VERIFIED in VideoChatRandomUser teaser card with neutral message
+- `4874728` — ops(manifest): refresh test frontend_product manifest to a08bf07
+
+**Cleanup BD mínimo** (criterio: los users 90 y 95 son evidencia viva, no transitoria). Borradas solo 2 filas en `kyc_webhook_events` correspondientes a smokes negativos del paso 3 de ambos frentes: id=26 (`invalid_signature`, 14-jun 18:28:18) e id=30 (`invalid_timestamp`, 14-jun 19:48:38). Backup lógico en EC2 TEST `/home/ec2-user/email-and-age-frente-cleanup-20260614-222253.sql` (1926 bytes, perms 0600 root:root, sha256 `481ed9548230d859fdb73c49c8815149786d50d381521010a50a5a68b38f718d`, 2 INSERTs). Transacción explícita `BEGIN ... COMMIT` confirma 2 filas DELETE. Post-DML: 9 webhooks DIDIT (cadenas válidas de las 3 sesiones), 3 kyc_sessions DIDIT (id=14 MODEL user 87, id=17 CLIENT user 90, id=18 CLIENT user 95), 0 cambios en `users`. La sesión 17 + 18, las cadenas 27-29 y 31-33, y `transactions/balances.id=8821` se conservan. Los users 90 (`client_kyc_status=APPROVED`) y 95 (`role=CLIENT` + `client_kyc_status=APPROVED` + balance 10 €) quedan intactos. Nota operativa: para futuras pruebas crear users nuevos (`demo+register5` etc.) en lugar de reusar 90/95/96.
+
+**Cambios runtime preservados en TEST** (no commiteados al repo):
+
+- `/opt/sharemechat/config.env` → `PRODUCT_ACCESS_MODE=OPEN` (era `PRELAUNCH`).
+- `/opt/sharemechat/config.env` → `KYC_DIDIT_CALLBACK_URL=https://test.sharemechat.com/client-kyc/processing` (override del default `/api/kyc/didit/webhook` que aún vive en `application-test.properties:28`).
+
+**Estado de entornos al cerrar el frente**:
+
+- TEST: HEAD backend `18a5c97`, HEAD frontend `a08bf07` (con manifest `4874728`). Schema v9. BD limpia. PRODUCT_ACCESS_MODE=OPEN. KYC_DIDIT_CALLBACK_URL apunta a `/client-kyc/processing`.
+- AUDIT: intacto. Estaba apagado durante toda la jornada. Al encender, verificar que `PRODUCT_ACCESS_MODE=OPEN` (la corrección del modelo mental sobre PRELAUNCH se aplicó solo a TEST).
+- PROD: intacto. `PRELAUNCH` activo (correcto, solo registro permitido hasta el go-live del 1-jul-2026).
+
+**Deudas registradas tras este frente**:
+
+- P1 (pre-go-live PROD): idempotencia en `processDiditWebhook` debe distinguir caso rechazado-por-firma del caso procesado-OK con la misma `provider_event_id` (caso teórico de retry agresivo de Didit).
+- P2 (sin urgencia): aceptar header `X-Signature-V2` si Didit deprecase la variante Standard.
+- P3 (menor): `state-mapping` local de TEST.
+- P4 (menor): tests de `KycProviderConfigService`.
+- P5 (menor): Flyway 8.x + MySQL 8.4 (warnings de incompatibilidad sin impacto funcional).
+- P6: modo privacidad facial Didit desactivado runtime en consola, pendiente de documentar como decisión.
+- P7: **CERRADA** — extractor `extractDiditAgeEstimation` corregido en hot-fix #4 del frente Didit cliente (commit `59364d5`).
+- P8: **CERRADA** — `assertEmailVerified` reemplazado por `EmailVerifiedFilter` global (commit `ee5d641`); el filter es la nueva fuente única, el check puntual añadido y luego retirado del `startDiditClientSession` no era necesario.
+- P9 NUEVA: `TransactionService` sin tests de cobertura previa; este frente no añade tests sobre él (solo sobre `ClientKycGate`, 6 unit tests verdes).
+- P10 NUEVA: validar `PRODUCT_ACCESS_MODE` de AUDIT al encender la próxima vez (debe estar en `OPEN`, no `PRELAUNCH`); aplicar el mismo cambio que TEST si procede.
+- P11 NUEVA: refactor cliente Didit para separar `kyc.didit.webhook-url` (server-to-server) y `kyc.didit.redirect-url` (callback del body navegador), en lugar de reutilizar `kyc.didit.callback-url` para ambas semánticas. Opción B del diagnóstico del callback, NO aplicada hoy por minimal-change principle.
+
+**Próximos frentes sugeridos (no comprometidos)**:
+
+- Activación Didit en AUDIT y PROD (cuando el operador decida).
+- Frente moderación IA (Sightengine) pendiente.
+- Cierre de deuda P1 antes del go-live PROD del 1-jul-2026.
+
+---
+
 ## 2026-06-14 — VEREDICTO: ampliación de la whitelist de rutas /api públicas + restricción a 200/201
 
 Frente abierto tras el AMARILLO del primer día post-deploy del bloque VEREDICTO: el reporte del 2026-06-13 disparó AMARILLO porque la IP `154.159.237.224` obtuvo `204` en `/api/consent/age-gate` y `/api/consent/terms`, rutas legítimas del consent banner + age gate para visitantes anónimos (`permitAll` en `SecurityConfig.java`). El `204` es la respuesta esperada (registrar consent sin cuerpo) y esas rutas son públicas por diseño — falso positivo claro.
