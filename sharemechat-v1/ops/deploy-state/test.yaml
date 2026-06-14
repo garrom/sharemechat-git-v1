@@ -9,8 +9,8 @@ frontend_product:
   working_tree_clean: false
   bucket: sharemechat-frontend-test
   bundle: main.618dfe8b.js
-  built_at: 
   deployed_at: 2026-06-08T12:27:23Z
+  cloudfront_distribution: E2Q4VNDDWD5QBU
   verification:
     method: s3_lastmodified_observed_2026-06-09
     git_commit_provenance: inferred_from_lastmodified_and_git_log
@@ -20,7 +20,7 @@ frontend_product:
       12:27:23 UTC; HEAD git inferido por `git log --before` = 3bc12b6.
       Working tree dirty en ese momento (6 ficheros uncommitted del
       frente i18n audit panels heredados de sesion paralela).
-  cloudfront_distribution: E2Q4VNDDWD5QBU
+  built_at: 
   cloudfront_invalidation_id: 
   deployed_by: alain@LAPTOP
   git_commit: 
@@ -32,24 +32,24 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-06-14T10:53:40Z
-  jar_sha256: a299d283dcdac6dfc2688bcb5cf7ae7e8c96cb2801c5de6895ae5ee861e9f99d
+  deployed_at: 2026-06-14T11:23:55Z
+  jar_sha256: 67a2be3279e3ccce94c0b8c3b606e5139ce730865538421e8eb0d36f1ff2627c
   verification:
     method: manual_via_update-manifest-backend.ps1
-    verified_at: 2026-06-14T10:53:40Z
+    verified_at: 2026-06-14T11:23:55Z
     notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-06-14T10:53:40Z
+  built_at: 2026-06-14T11:23:55Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 50f477053d5ae22577b1ec7b22347ec2dd6f3cf9
-  git_commit_short: 50f4770
-last_updated_at: 2026-06-14T10:53:40Z
+  git_commit: 70ca63ecf8031e69b303884674b94950bc53996e
+  git_commit_short: 70ca63e
+last_updated_at: 2026-06-14T11:23:55Z
 frontend_admin:
   working_tree_clean: 
   bucket: sharemechat-admin-test
   bundle: main.0497fe46.js
-  built_at: 
   deployed_at: 2026-06-05T22:16:16Z
+  cloudfront_distribution: E28YCPVIRB4ASH
   verification:
     method: s3_lastmodified_observed_2026-06-09
     git_commit_provenance: inferred_from_lastmodified_and_git_log
@@ -57,7 +57,7 @@ frontend_admin:
       Bundle admin TEST no actualizado desde 2026-06-05 22:16:16 UTC
       (4 dias de drift). HEAD git en esa marca = f09294a. Operador
       del build desconocido; working_tree_clean no recuperable.
-  cloudfront_distribution: E28YCPVIRB4ASH
+  built_at: 
   cloudfront_invalidation_id: 
   deployed_by: 
   git_commit: 
