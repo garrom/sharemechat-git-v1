@@ -137,21 +137,36 @@ public class SecurityConfig {
                         // Endpoints simetricos model/client desde V9; webhook
                         // unico compartido.
                         //
-                        // Ambos /start exigen hasRole("USER"), no el role
-                        // final (MODEL / CLIENT). Razon: la verificacion de
-                        // edad del cliente debe ocurrir ANTES de la primera
-                        // recarga del monedero (ADR-029), y el role escala
-                        // USER -> CLIENT precisamente en la primera recarga.
-                        // Si exigieramos hasRole("CLIENT") aqui, el usuario
-                        // quedaria atrapado en huevo-gallina: no puede
-                        // verificar edad sin ser CLIENT, no puede ser CLIENT
-                        // sin recargar, no puede recargar sin verificar edad.
+                        // Modelo: solo USER (onboarding, role MODEL no
+                        // necesita re-verificar). Cliente: USER o CLIENT.
+                        //
+                        // Razon del USER en cliente: la verificacion de edad
+                        // debe ocurrir ANTES de la primera recarga del
+                        // monedero (ADR-029), y el role escala USER -> CLIENT
+                        // precisamente en la primera recarga. Si exigieramos
+                        // solo hasRole("CLIENT") aqui, el usuario quedaria
+                        // atrapado en huevo-gallina (no puede verificar sin
+                        // ser CLIENT, no puede ser CLIENT sin recargar, no
+                        // puede recargar sin verificar).
+                        //
+                        // Razon del CLIENT en cliente: usuarios ya promocionados
+                        // (post-recarga) deben poder re-iniciar la verificacion
+                        // si caduca o si la sesion previa fallo. Sin esto, un
+                        // CLIENT+FORM_CLIENT quedaria bloqueado por matcher
+                        // aunque el KycSessionService.startDiditClientSession
+                        // ya le acepta (caso real detectado el 2026-06-14 con
+                        // demo+trial user id=88, ya promocionado a CLIENT en
+                        // BD por flujos antiguos).
+                        //
                         // La distincion FORM_MODEL vs FORM_CLIENT entre los
                         // dos endpoints la hace KycSessionService validando
                         // user.user_type al iniciar la sesion (rechazo claro
-                        // con IllegalArgumentException si no encaja).
+                        // con IllegalArgumentException si no encaja). Las
+                        // tres capas (matcher Spring, service, Route frontend
+                        // App.jsx /client-kyc) ahora estan alineadas en la
+                        // misma semantica "USER o CLIENT con FORM_CLIENT".
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/model/start").hasRole("USER")
-                        .requestMatchers(HttpMethod.POST, "/api/kyc/didit/client/start").hasRole("USER")
+                        .requestMatchers(HttpMethod.POST, "/api/kyc/didit/client/start").hasAnyRole("USER", "CLIENT")
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/webhook").permitAll()
 
                         // Transactions
