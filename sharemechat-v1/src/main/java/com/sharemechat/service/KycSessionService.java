@@ -323,9 +323,13 @@ public class KycSessionService {
      *
      * Pre-requisitos:
      * - Usuario existe.
-     * - Usuario tiene rol CLIENT (o USER + FORM_CLIENT durante el registro,
-     *   aunque el endpoint hoy se expone como hasRole CLIENT). Mantenemos el
-     *   chequeo en ambos sitios por defensa en profundidad.
+     * - Usuario tiene rol CLIENT (tras la primera recarga) o USER +
+     *   FORM_CLIENT (antes de la primera recarga, que es el caso normal
+     *   porque la verificacion de edad debe ocurrir ANTES de pagar,
+     *   ADR-029). El matcher Spring Security exige hasRole("USER"), y este
+     *   service hace el chequeo fino del user_type='FORM_CLIENT' como
+     *   defensa en profundidad y para diferenciar el endpoint /model/start
+     *   del /client/start.
      * - Usuario NO esta ya APPROVED para client KYC: si lo esta, lanzamos.
      *   La re-verificacion por expiracion se gestiona en otra ruta (no
      *   abordada en este frente).

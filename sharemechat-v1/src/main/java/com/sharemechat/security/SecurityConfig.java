@@ -136,8 +136,22 @@ public class SecurityConfig {
                         // descuido sobre un futuro /api/kyc/<algo>.
                         // Endpoints simetricos model/client desde V9; webhook
                         // unico compartido.
+                        //
+                        // Ambos /start exigen hasRole("USER"), no el role
+                        // final (MODEL / CLIENT). Razon: la verificacion de
+                        // edad del cliente debe ocurrir ANTES de la primera
+                        // recarga del monedero (ADR-029), y el role escala
+                        // USER -> CLIENT precisamente en la primera recarga.
+                        // Si exigieramos hasRole("CLIENT") aqui, el usuario
+                        // quedaria atrapado en huevo-gallina: no puede
+                        // verificar edad sin ser CLIENT, no puede ser CLIENT
+                        // sin recargar, no puede recargar sin verificar edad.
+                        // La distincion FORM_MODEL vs FORM_CLIENT entre los
+                        // dos endpoints la hace KycSessionService validando
+                        // user.user_type al iniciar la sesion (rechazo claro
+                        // con IllegalArgumentException si no encaja).
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/model/start").hasRole("USER")
-                        .requestMatchers(HttpMethod.POST, "/api/kyc/didit/client/start").hasRole("CLIENT")
+                        .requestMatchers(HttpMethod.POST, "/api/kyc/didit/client/start").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/webhook").permitAll()
 
                         // Transactions
