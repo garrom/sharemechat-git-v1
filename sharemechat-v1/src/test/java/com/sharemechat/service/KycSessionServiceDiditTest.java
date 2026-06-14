@@ -91,19 +91,39 @@ class KycSessionServiceDiditTest {
     }
 
     // -------------------- V9 extractDiditAgeEstimation -----------------------
+    // Path real (hot-fix #4 del frente Didit cliente, 2026-06-14): el Adaptive
+    // Workflow guarda los datos de Age Estimation en
+    // decision.liveness_checks[0].{age_estimation, score}, no en
+    // decision.age_estimation (que es el shape de la API Standalone). El path
+    // se confirmo capturando los webhooks 22 y 25 en TEST durante el paso 4-bis.
+
+    private static org.json.JSONObject buildLivenessPayload(Object age, Object score) {
+        org.json.JSONObject lc = new org.json.JSONObject();
+        if (age != null) lc.put("age_estimation", age);
+        if (score != null) lc.put("score", score);
+        return new org.json.JSONObject()
+                .put("decision", new org.json.JSONObject()
+                        .put("liveness_checks", new org.json.JSONArray().put(lc)));
+    }
 
     @Test
-    @DisplayName("extractDiditAgeEstimation con payload completo: persiste age y score")
+    @DisplayName("extractDiditAgeEstimation con payload completo: persiste age y score desde liveness_checks[0]")
     void ageEstimation_fullPayload() {
-        org.json.JSONObject payload = new org.json.JSONObject()
-                .put("decision", new org.json.JSONObject()
-                        .put("age_estimation", new org.json.JSONObject()
-                                .put("age_estimation", 27.33)
-                                .put("score", 92.5)));
+        org.json.JSONObject payload = buildLivenessPayload(27.33, 92.5);
         com.sharemechat.entity.KycSession session = new com.sharemechat.entity.KycSession();
         svc().extractDiditAgeEstimation(payload, session);
         assertEquals(0, new java.math.BigDecimal("27.33").compareTo(session.getEstimatedAgeDecimal()));
         assertEquals(0, new java.math.BigDecimal("92.5").compareTo(session.getConfidenceScore()));
+    }
+
+    @Test
+    @DisplayName("Payload real del webhook id=25 (demo+register2 Approved 2026-06-14): age=44.55, score=100")
+    void ageEstimation_realWebhook25Shape() {
+        org.json.JSONObject payload = buildLivenessPayload(44.55, 100);
+        com.sharemechat.entity.KycSession session = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(payload, session);
+        assertEquals(0, new java.math.BigDecimal("44.55").compareTo(session.getEstimatedAgeDecimal()));
+        assertEquals(0, new java.math.BigDecimal("100").compareTo(session.getConfidenceScore()));
     }
 
     @Test
@@ -117,10 +137,68 @@ class KycSessionServiceDiditTest {
     }
 
     @Test
-    @DisplayName("extractDiditAgeEstimation sin age_estimation dentro de decision -> ambos null")
-    void ageEstimation_noAgeBlock() {
+    @DisplayName("decision sin liveness_checks (array ausente) -> ambos null")
+    void ageEstimation_noLivenessChecksArray() {
         org.json.JSONObject payload = new org.json.JSONObject()
                 .put("decision", new org.json.JSONObject().put("face_matches", new org.json.JSONArray()));
+        com.sharemechat.entity.KycSession session = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(payload, session);
+        assertNull(session.getEstimatedAgeDecimal());
+        assertNull(session.getConfidenceScore());
+    }
+
+    @Test
+    @DisplayName("liveness_checks array vacio -> ambos null")
+    void ageEstimation_emptyLivenessChecks() {
+        org.json.JSONObject payload = new org.json.JSONObject()
+                .put("decision", new org.json.JSONObject()
+                        .put("liveness_checks", new org.json.JSONArray()));
+        com.sharemechat.entity.KycSession session = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(payload, session);
+        assertNull(session.getEstimatedAgeDecimal());
+        assertNull(session.getConfidenceScore());
+    }
+
+    @Test
+    @DisplayName("liveness_checks[0] sin age_estimation -> solo score si esta presente")
+    void ageEstimation_livenessCheckWithoutAge() {
+        org.json.JSONObject lc = new org.json.JSONObject().put("score", 87.5);
+        org.json.JSONObject payload = new org.json.JSONObject()
+                .put("decision", new org.json.JSONObject()
+                        .put("liveness_checks", new org.json.JSONArray().put(lc)));
+        com.sharemechat.entity.KycSession session = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(payload, session);
+        assertNull(session.getEstimatedAgeDecimal());
+        assertEquals(0, new java.math.BigDecimal("87.5").compareTo(session.getConfidenceScore()));
+    }
+
+    @Test
+    @DisplayName("Valores extremos: age=18.0 (gate), age=99.99 (alto), score=0 (limite)")
+    void ageEstimation_edgeValues() {
+        com.sharemechat.entity.KycSession s1 = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(buildLivenessPayload(18.0, 50), s1);
+        assertEquals(0, new java.math.BigDecimal("18.0").compareTo(s1.getEstimatedAgeDecimal()));
+
+        com.sharemechat.entity.KycSession s2 = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(buildLivenessPayload(99.99, 100), s2);
+        assertEquals(0, new java.math.BigDecimal("99.99").compareTo(s2.getEstimatedAgeDecimal()));
+
+        com.sharemechat.entity.KycSession s3 = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(buildLivenessPayload(25.5, 0), s3);
+        assertEquals(0, new java.math.BigDecimal("0").compareTo(s3.getConfidenceScore()));
+    }
+
+    @Test
+    @DisplayName("Regresion: payload con shape antiguo (decision.age_estimation directo) -> ambos null (path obsoleto)")
+    void ageEstimation_oldShapeIgnored() {
+        // El shape pre-hot-fix #4 (decision.age_estimation.{age_estimation,score})
+        // YA no se extrae: confirma que el path migro al nuevo y no hay
+        // doble lectura accidental.
+        org.json.JSONObject payload = new org.json.JSONObject()
+                .put("decision", new org.json.JSONObject()
+                        .put("age_estimation", new org.json.JSONObject()
+                                .put("age_estimation", 27.33)
+                                .put("score", 92.5)));
         com.sharemechat.entity.KycSession session = new com.sharemechat.entity.KycSession();
         svc().extractDiditAgeEstimation(payload, session);
         assertNull(session.getEstimatedAgeDecimal());

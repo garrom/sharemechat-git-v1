@@ -667,30 +667,48 @@ public class KycSessionService {
      * Extrae los datos de Age Estimation del payload Didit y los persiste en
      * la fila kyc_sessions. Mejor esfuerzo: si el path esperado no esta
      * presente, se dejan los campos a null (caso de webhooks intermedios o
-     * de step-up documental ya disparado).
+     * de flujos sin Age Estimation activo).
      *
-     * Paths esperados (a confirmar con payload real en paso 4):
-     *   decision.age_estimation.age_estimation -> estimatedAgeDecimal
-     *   decision.age_estimation.score          -> confidenceScore
+     * Paths reales (confirmados con webhooks 22 y 25 capturados en TEST el
+     * 2026-06-14 durante el paso 4-bis del frente Didit cliente):
+     *   decision.liveness_checks[0].age_estimation -> estimatedAgeDecimal (float)
+     *   decision.liveness_checks[0].score          -> confidenceScore (float, 0..100)
+     *
+     * NOTA IMPORTANTE: el path documentado en la API STANDALONE de Age
+     * Estimation (POST /v3/age-estimation/) es decision.age_estimation con
+     * sub-objeto {age_estimation, score}. ESE shape NO aplica al Adaptive
+     * Workflow (POST /v3/session/ con workflow_id), que es el que usamos
+     * nosotros. En el Adaptive Workflow los datos van anidados dentro de
+     * liveness_checks[0] porque el step Age Estimation se ejecuta como
+     * parte del check de liveness (selfie + estimacion en el mismo paso).
+     *
+     * Cierra deuda P7 registrada en el paso 4 del frente cliente. Sesiones
+     * historicas 15 (demo+trial) y 16 (demo+register2) NO se reparan
+     * retroactivamente: quedan con estimated_age_decimal/confidence_score
+     * NULL como evidencia del bug original.
      *
      * Package-private para tests.
      */
     void extractDiditAgeEstimation(JSONObject json, KycSession session) {
         JSONObject decision = json.optJSONObject("decision");
         if (decision == null) return;
-        JSONObject ageEstimation = decision.optJSONObject("age_estimation");
-        if (ageEstimation == null) return;
 
-        if (ageEstimation.has("age_estimation") && !ageEstimation.isNull("age_estimation")) {
+        org.json.JSONArray livenessChecks = decision.optJSONArray("liveness_checks");
+        if (livenessChecks == null || livenessChecks.isEmpty()) return;
+
+        JSONObject livenessCheck = livenessChecks.optJSONObject(0);
+        if (livenessCheck == null) return;
+
+        if (livenessCheck.has("age_estimation") && !livenessCheck.isNull("age_estimation")) {
             try {
-                session.setEstimatedAgeDecimal(new java.math.BigDecimal(ageEstimation.get("age_estimation").toString()));
+                session.setEstimatedAgeDecimal(new java.math.BigDecimal(livenessCheck.get("age_estimation").toString()));
             } catch (NumberFormatException ignore) {
                 // payload con formato no numerico: dejamos null
             }
         }
-        if (ageEstimation.has("score") && !ageEstimation.isNull("score")) {
+        if (livenessCheck.has("score") && !livenessCheck.isNull("score")) {
             try {
-                session.setConfidenceScore(new java.math.BigDecimal(ageEstimation.get("score").toString()));
+                session.setConfidenceScore(new java.math.BigDecimal(livenessCheck.get("score").toString()));
             } catch (NumberFormatException ignore) {
                 // payload con formato no numerico: dejamos null
             }
