@@ -1,0 +1,16 @@
+-- V8: renombrar tabla model_kyc_sessions a kyc_sessions.
+--
+-- Motivacion (frente Didit cliente, ADR-035): la misma tabla va a alojar
+-- las sesiones de KYC tanto del MODELO (Document+Selfie+Liveness) como
+-- del CLIENTE (Adaptive Age Verification con step-up documental). El
+-- prefijo "model_" deja de ser preciso. Se renombra ANTES de empezar el
+-- frente cliente para no acumular inconsistencias.
+--
+-- Alcance estricto: SOLO el nombre de la tabla. NO se anaden columnas,
+-- NO se modifican tipos, NO se tocan indices ni unique constraints. En
+-- MySQL el RENAME TABLE mueve automaticamente todos los indices, claves
+-- foraneas y constraints asociados con sus nombres historicos
+-- (uk_mks_provider_session, fk_model_kyc_sessions_user, etc.). Esos
+-- nombres se conservan tal cual; limpieza cosmetica queda para mas
+-- adelante si conviene.
+RENAME TABLE model_kyc_sessions TO kyc_sessions;

@@ -23,14 +23,14 @@ import static org.junit.jupiter.api.Assertions.assertNull;
  * capturada en la fila id=3 de {@code kyc_webhook_events} en TEST el
  * 2026-06-13 (verification.{code,status,id,attemptId,reason,reasonCode}).
  */
-class ModelKycSessionServiceMappingTest {
+class KycSessionServiceMappingTest {
 
-    private static ModelKycSessionService svc() {
+    private static KycSessionService svc() {
         // Construir el service sin dependencias reales: solo se ejercitan los
         // helpers de extracción/mapeo, que no tocan repositorios ni externos.
         // Las dos ultimas posiciones (DiditClient + DiditProperties) se anadieron
         // en el frente Didit (ADR-035, 2026-06-13).
-        return new ModelKycSessionService(null, null, null, null, null, null, null, null, null);
+        return new KycSessionService(null, null, null, null, null, null, null, null, null);
     }
 
     private static JSONObject decisionPayload(Integer code, String verificationStatus) {
@@ -239,7 +239,7 @@ class ModelKycSessionServiceMappingTest {
                 + "\"technicalData\":{\"ip\":\"90.175.201.51\"}"
                 + "}";
         JSONObject j = new JSONObject(real);
-        ModelKycSessionService s = svc();
+        KycSessionService s = svc();
 
         assertEquals("dd0b9df7-2a81-440f-8a22-7055de4e82ea", s.extractProviderEventId(j));
         assertEquals("decision_declined", s.extractProviderEventType(j));

@@ -3,7 +3,7 @@ package com.sharemechat.controller;
 import com.sharemechat.dto.KycStartSessionResponseDTO;
 import com.sharemechat.entity.User;
 import com.sharemechat.service.CountryAccessService;
-import com.sharemechat.service.ModelKycSessionService;
+import com.sharemechat.service.KycSessionService;
 import com.sharemechat.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
@@ -14,14 +14,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/kyc")
 public class KycProviderController {
 
-    private final ModelKycSessionService modelKycSessionService;
+    private final KycSessionService kycSessionService;
     private final UserService userService;
     private final CountryAccessService countryAccessService;
 
-    public KycProviderController(ModelKycSessionService modelKycSessionService,
+    public KycProviderController(KycSessionService kycSessionService,
                                  UserService userService,
                                  CountryAccessService countryAccessService) {
-        this.modelKycSessionService = modelKycSessionService;
+        this.kycSessionService = kycSessionService;
         this.userService = userService;
         this.countryAccessService = countryAccessService;
     }
@@ -54,7 +54,7 @@ public class KycProviderController {
         // Lanza CountryBlockedException -> 403 uniforme via GlobalExceptionHandler.
         countryAccessService.assertAllowedForModelKyc(request);
 
-        KycStartSessionResponseDTO dto = modelKycSessionService.startVeriffSession(user.getId());
+        KycStartSessionResponseDTO dto = kycSessionService.startVeriffSession(user.getId());
         return ResponseEntity.ok(dto);
     }
 
@@ -68,7 +68,7 @@ public class KycProviderController {
             @RequestHeader(value = "X-HMAC-SIGNATURE", required = false) String signature,
             @RequestBody(required = false) byte[] rawBody
     ) {
-        boolean ok = modelKycSessionService.processVeriffWebhook(rawBody, signature);
+        boolean ok = kycSessionService.processVeriffWebhook(rawBody, signature);
         if (!ok) {
             return ResponseEntity.status(401).build();
         }
@@ -78,7 +78,7 @@ public class KycProviderController {
     // =========================================================================
     // DIDIT — flujo KYC modelo (ADR-035, vendor unico Plan A).
     // Mismo contrato que /veriff/* pero con las divergencias documentadas en
-    // ModelKycSessionService#processDiditWebhook: replay protection con
+    // KycSessionService#processDiditWebhook: replay protection con
     // X-Timestamp (300s) ANTES de la verificacion HMAC.
     // =========================================================================
     @PostMapping("/didit/start")
@@ -97,7 +97,7 @@ public class KycProviderController {
         // independiente del vendor concreto que firme la sesion.
         countryAccessService.assertAllowedForModelKyc(request);
 
-        KycStartSessionResponseDTO dto = modelKycSessionService.startDiditSession(user.getId());
+        KycStartSessionResponseDTO dto = kycSessionService.startDiditSession(user.getId());
         return ResponseEntity.ok(dto);
     }
 
@@ -114,7 +114,7 @@ public class KycProviderController {
             @RequestHeader(value = "X-Timestamp", required = false) String timestamp,
             @RequestBody(required = false) byte[] rawBody
     ) {
-        boolean ok = modelKycSessionService.processDiditWebhook(rawBody, signature, timestamp);
+        boolean ok = kycSessionService.processDiditWebhook(rawBody, signature, timestamp);
         if (!ok) {
             return ResponseEntity.status(401).build();
         }

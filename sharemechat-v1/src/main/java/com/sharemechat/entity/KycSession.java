@@ -6,12 +6,12 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(
-        name = "model_kyc_sessions",
+        name = "kyc_sessions",
         uniqueConstraints = {
-                @UniqueConstraint(name = "uk_model_kyc_provider_session", columnNames = {"provider", "provider_session_id"})
+                @UniqueConstraint(name = "uk_mks_provider_session", columnNames = {"provider", "provider_session_id"})
         }
 )
-public class ModelKycSession {
+public class KycSession {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

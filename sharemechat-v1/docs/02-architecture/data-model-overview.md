@@ -42,7 +42,7 @@
 - `model_documents`
 - `client_documents`
 - `model_contract_acceptances`
-- `model_kyc_sessions`
+- `kyc_sessions`
 - `kyc_webhook_events`
 - `kyc_provider_configs`
 - `model_review_checklists`

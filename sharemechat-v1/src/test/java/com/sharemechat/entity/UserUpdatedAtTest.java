@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Fix: anotar el campo con {@code insertable=false, updatable=false} para que
  * Hibernate NUNCA incluya esta columna en INSERT/UPDATE; MySQL gestiona ambos
  * timestamps por columnDefinition. Mismo patron que {@code KycProviderConfig}
- * y {@code ModelKycSession}.
+ * y {@code KycSession}.
  *
  * Estos tests blindan el contrato a nivel de campo y de constructor; el
  * comportamiento real de Hibernate sobre BD se verificó manualmente en TEST

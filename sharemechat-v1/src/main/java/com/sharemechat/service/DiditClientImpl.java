@@ -20,7 +20,7 @@ import java.util.UUID;
  * Divergencias clave respecto a {@link VeriffClientImpl}:
  *  - NO se firma el body de salida (Didit autentica solo con header x-api-key).
  *    El equivalente "secret" del flujo (apiSecret) se usa SOLO para verificar
- *    webhooks ENTRANTES en {@link ModelKycSessionService}, no aqui.
+ *    webhooks ENTRANTES en {@link KycSessionService}, no aqui.
  *  - El payload obligatorio lleva {@code workflow_id} (identifica el flujo
  *    en el Workflow Builder de Didit).
  *  - El campo de respuesta es {@code url} (no {@code verification_url}).

@@ -7,10 +7,10 @@ import com.sharemechat.dto.DiditCreateSessionResult;
 import com.sharemechat.dto.KycStartSessionResponseDTO;
 import com.sharemechat.dto.VeriffCreateSessionResult;
 import com.sharemechat.entity.KycWebhookEvent;
-import com.sharemechat.entity.ModelKycSession;
+import com.sharemechat.entity.KycSession;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.KycWebhookEventRepository;
-import com.sharemechat.repository.ModelKycSessionRepository;
+import com.sharemechat.repository.KycSessionRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.HmacSha256;
 import org.json.JSONObject;
@@ -24,9 +24,9 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Service
-public class ModelKycSessionService {
+public class KycSessionService {
 
-    private static final Logger log = LoggerFactory.getLogger(ModelKycSessionService.class);
+    private static final Logger log = LoggerFactory.getLogger(KycSessionService.class);
 
     private static final String PROVIDER_VERIFF = "VERIFF";
     private static final String PROVIDER_DIDIT = "DIDIT";
@@ -40,7 +40,7 @@ public class ModelKycSessionService {
     private static final long DIDIT_TIMESTAMP_TOLERANCE_SECONDS = 300L;
 
     private final UserRepository userRepository;
-    private final ModelKycSessionRepository modelKycSessionRepository;
+    private final KycSessionRepository kycSessionRepository;
     private final KycWebhookEventRepository kycWebhookEventRepository;
     private final VeriffClient veriffClient;
     private final ModelContractService modelContractService;
@@ -49,8 +49,8 @@ public class ModelKycSessionService {
     private final DiditClient diditClient;
     private final DiditProperties diditProperties;
 
-    public ModelKycSessionService(UserRepository userRepository,
-                                  ModelKycSessionRepository modelKycSessionRepository,
+    public KycSessionService(UserRepository userRepository,
+                                  KycSessionRepository kycSessionRepository,
                                   KycWebhookEventRepository kycWebhookEventRepository,
                                   VeriffClient veriffClient,
                                   ModelContractService modelContractService,
@@ -59,7 +59,7 @@ public class ModelKycSessionService {
                                   DiditClient diditClient,
                                   DiditProperties diditProperties) {
         this.userRepository = userRepository;
-        this.modelKycSessionRepository = modelKycSessionRepository;
+        this.kycSessionRepository = kycSessionRepository;
         this.kycWebhookEventRepository = kycWebhookEventRepository;
         this.veriffClient = veriffClient;
         this.modelContractService = modelContractService;
@@ -100,7 +100,7 @@ public class ModelKycSessionService {
         VeriffCreateSessionResult result = veriffClient.createSession(
                 userId, user.getEmail(), user.getName(), user.getSurname());
 
-        ModelKycSession row = new ModelKycSession();
+        KycSession row = new KycSession();
         row.setUserId(userId);
         row.setProvider(PROVIDER_VERIFF);
         row.setProviderSessionId(result.getSessionId());
@@ -109,7 +109,7 @@ public class ModelKycSessionService {
         row.setKycStatus(Constants.VerificationStatuses.PENDING);
         row.setHostedUrl(result.getVerificationUrl());
 
-        modelKycSessionRepository.save(row);
+        kycSessionRepository.save(row);
 
         KycStartSessionResponseDTO dto = new KycStartSessionResponseDTO();
         dto.setUserId(userId);
@@ -196,7 +196,7 @@ public class ModelKycSessionService {
                 throw new IllegalArgumentException("Webhook sin provider_session_id");
             }
 
-            ModelKycSession s = modelKycSessionRepository
+            KycSession s = kycSessionRepository
                     .findByProviderAndProviderSessionId(PROVIDER_VERIFF, providerSessionId)
                     .orElseThrow(() -> new IllegalArgumentException("No existe sesión KYC para provider_session_id=" + providerSessionId));
 
@@ -226,7 +226,7 @@ public class ModelKycSessionService {
             s.setProviderDecisionCode(code == null ? null : String.valueOf(code));
             s.setProviderDecisionReason(extractDecisionReason(json));
 
-            modelKycSessionRepository.save(s);
+            kycSessionRepository.save(s);
 
             // Fuente de verdad interna para gating: solo actualizamos el user
             // si recibimos una decisión final (APPROVED/REJECTED). Para RESUBMISSION
@@ -288,7 +288,7 @@ public class ModelKycSessionService {
         DiditCreateSessionResult result = diditClient.createSession(
                 userId, user.getEmail(), user.getName(), user.getSurname());
 
-        ModelKycSession row = new ModelKycSession();
+        KycSession row = new KycSession();
         row.setUserId(userId);
         row.setProvider(PROVIDER_DIDIT);
         row.setProviderSessionId(result.getSessionId());
@@ -301,7 +301,7 @@ public class ModelKycSessionService {
         row.setKycStatus(Constants.VerificationStatuses.PENDING);
         row.setHostedUrl(result.getVerificationUrl());
 
-        modelKycSessionRepository.save(row);
+        kycSessionRepository.save(row);
 
         KycStartSessionResponseDTO dto = new KycStartSessionResponseDTO();
         dto.setUserId(userId);
@@ -403,7 +403,7 @@ public class ModelKycSessionService {
                 throw new IllegalArgumentException("Webhook sin session_id");
             }
 
-            ModelKycSession s = modelKycSessionRepository
+            KycSession s = kycSessionRepository
                     .findByProviderAndProviderSessionId(PROVIDER_DIDIT, providerSessionId)
                     .orElseThrow(() -> new IllegalArgumentException("No existe sesion KYC para session_id=" + providerSessionId));
 
@@ -431,7 +431,7 @@ public class ModelKycSessionService {
             s.setProviderDecisionCode(diditStatus);
             s.setProviderDecisionReason(null);
 
-            modelKycSessionRepository.save(s);
+            kycSessionRepository.save(s);
 
             // users.verification_status solo se toca en decision final.
             if (Constants.VerificationStatuses.APPROVED.equals(internalStatus)

@@ -88,7 +88,7 @@ public class User {
     // a mano (UserService) solo cubrian 3 de las decenas de updates del User
     // (verification_status, ui_locale, password, account_status, role, etc.).
     //
-    // Mismo patron usado por KycProviderConfig y ModelKycSession en este
+    // Mismo patron usado por KycProviderConfig y KycSession en este
     // codebase (entidades mas modernas que el resto).
     //
     // El setter publico se conserva para no romper compilacion de los 3

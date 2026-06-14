@@ -16,7 +16,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * Tests del mapeo / extraccion / replay protection del webhook entrante de
  * Didit (paso 2 del frente Didit, ADR-035).
  *
- * Paralelo a {@link ModelKycSessionServiceMappingTest} pero para los helpers
+ * Paralelo a {@link KycSessionServiceMappingTest} pero para los helpers
  * Didit (case-sensitive status, event_id, webhook_type, isDiditTimestampFresh).
  * Los helpers son package-private para poder ejercitarlos sin tocar la capa
  * HTTP ni los repositorios.
@@ -26,10 +26,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * "Not Started", "Abandoned", "Expired", "Kyc Expired" (K mayuscula),
  * "Resubmitted", "Awaiting User".
  */
-class ModelKycSessionServiceDiditTest {
+class KycSessionServiceDiditTest {
 
-    private static ModelKycSessionService svc() {
-        return new ModelKycSessionService(null, null, null, null, null, null, null, null, null);
+    private static KycSessionService svc() {
+        return new KycSessionService(null, null, null, null, null, null, null, null, null);
     }
 
     // -------------------- mapInternalStatusFromDiditStatus --------------------
