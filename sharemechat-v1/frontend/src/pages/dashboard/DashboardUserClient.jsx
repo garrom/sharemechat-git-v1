@@ -481,9 +481,6 @@ const DashboardUserClient = () => {
 
       history.push('/client');
     } catch (e) {
-      // Email no verificado lo gestiona EmailNotVerifiedModalBridge (modal global
-      // disparado por el bus en apiFetch). Aqui solo manejamos el resto de
-      // errores con el helper generico.
       const msgErr = getApiErrorMessage(e, t('dashboardUserClient.errors.firstPayment'));
       setError(msgErr);
       await alert({ title: t('dashboardUserClient.common.errorTitle'), message: msgErr, variant: 'danger', size: 'sm' });

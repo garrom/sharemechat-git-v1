@@ -188,7 +188,6 @@ const DashboardUserModel = () => {
         setKycMode('');
       }
     } catch (e) {
-      // Email no verificado lo gestiona EmailNotVerifiedModalBridge globalmente.
       setContractErr(getApiErrorMessage(e, t('dashboardUserModel.contract.errors.accept')));
     } finally {
       setAccepting(false);
@@ -235,7 +234,6 @@ const DashboardUserModel = () => {
         })
       );
     } catch (e) {
-      // Email no verificado lo gestiona EmailNotVerifiedModalBridge globalmente.
       setKycRouteErr(getApiErrorMessage(e, t('dashboardUserModel.kyc.errors.load')));
     } finally {
       setRoutingKyc(false);
