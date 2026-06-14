@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useHistory, useLocation } from 'react-router-dom';
 import i18n from '../../i18n';
 
 import { apiFetch } from '../../config/http';
+import {
+  CLIENT_KYC_RETURN_URL_KEY,
+  CLIENT_KYC_DEFAULT_RETURN_PATH,
+  isInternalReturnPath,
+} from '../../utils/clientKycGate';
 
 import {
   StyledContainer,
@@ -26,11 +31,44 @@ import {
 
 const tk = (key, options) => i18n.t(key, options);
 
+const readReturnPathFromUrl = (search) => {
+  try {
+    const params = new URLSearchParams(search || '');
+    const raw = params.get('return');
+    if (raw && isInternalReturnPath(raw)) return raw;
+  } catch {
+    // Ignoramos parsing inválido; el default se aplica abajo.
+  }
+  return null;
+};
+
 const ClientKycDiditPage = () => {
   const history = useHistory();
+  const location = useLocation();
   const [consentChecked, setConsentChecked] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  // ?return=<path> en URL tiene prioridad. Si valido, se persiste en
+  // sessionStorage para que la pagina /client-kyc/processing (tras
+  // Didit) sepa donde volver. Si no, default /client.
+  useEffect(() => {
+    const fromUrl = readReturnPathFromUrl(location.search);
+    if (fromUrl) {
+      try {
+        if (typeof window !== 'undefined' && window.sessionStorage) {
+          window.sessionStorage.setItem(CLIENT_KYC_RETURN_URL_KEY, fromUrl);
+        }
+      } catch {
+        // sessionStorage no disponible: la pagina /processing tiene fallback.
+      }
+    }
+  }, [location.search]);
+
+  const handleBack = () => {
+    const fromUrl = readReturnPathFromUrl(location.search);
+    history.push(fromUrl || CLIENT_KYC_DEFAULT_RETURN_PATH);
+  };
 
   const handleStart = async () => {
     if (!consentChecked || submitting) return;
@@ -71,7 +109,7 @@ const ClientKycDiditPage = () => {
           <NavText>{tk('clientKyc.navTitle')}</NavText>
           <NavButton
             type="button"
-            onClick={() => history.push('/dashboard-client')}
+            onClick={handleBack}
           >
             {tk('clientKyc.back')}
           </NavButton>

@@ -183,7 +183,34 @@ export const apiFetch = async (path, options = {}) => {
   if ((res.status === 401 || res.status === 403) && !_retry && !shouldSkipRefresh(path)) {
     previewError = await readErrorPayload(res.clone());
 
-    if (String(previewError?.data?.code || '').toUpperCase() !== 'EMAIL_NOT_VERIFIED') {
+    const previewCode = String(previewError?.data?.code || '').toUpperCase();
+
+    if (previewCode === 'EMAIL_NOT_VERIFIED') {
+      // 403 EMAIL_NOT_VERIFIED: notificar al bus global para que el modal
+      // se abra automaticamente. El error sigue propagandose abajo.
+      notifyEmailNotVerified(previewError?.data);
+    } else if (previewCode === 'CLIENT_KYC_REQUIRED') {
+      // 403 CLIENT_KYC_REQUIRED: defensa de ultimo recurso. Normalmente
+      // el gate frontend (ensureClientKycApproved en los handlers de
+      // pago) intercepta antes; si llega un 403 aqui significa que el
+      // user evito el gate (URL directa, etc.). Redireccion directa, NO
+      // bus de eventos: la respuesta al CLIENT_KYC_REQUIRED es siempre
+      // unica (ir a /client-kyc), sin alternativas tipo "mas tarde".
+      // Guarda el path actual como return URL para volver tras Didit.
+      try {
+        if (typeof window !== 'undefined') {
+          const currentPath =
+            (window.location && window.location.pathname ? window.location.pathname : '/client') +
+            (window.location && window.location.search ? window.location.search : '');
+          if (window.sessionStorage) {
+            window.sessionStorage.setItem('client_kyc_return_url', currentPath);
+          }
+          window.location.href = '/client-kyc?return=' + encodeURIComponent(currentPath);
+        }
+      } catch {
+        // Si el redirect falla, el error igualmente se propaga al caller.
+      }
+    } else {
       try {
         await refreshSession();
         return apiFetch(path, {
@@ -194,10 +221,6 @@ export const apiFetch = async (path, options = {}) => {
       } catch (refreshError) {
         // Dejamos caer el error original para preservar el flujo actual de logout.
       }
-    } else {
-      // 403 EMAIL_NOT_VERIFIED: notificar al bus global para que el modal
-      // se abra automaticamente. El error sigue propagandose abajo.
-      notifyEmailNotVerified(previewError?.data);
     }
   }
 

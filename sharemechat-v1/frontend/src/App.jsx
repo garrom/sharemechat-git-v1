@@ -12,6 +12,7 @@ import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
 import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
 import ClientKycDiditPage from './pages/subpages/ClientKycDiditPage';
+import ClientKycProcessingPage from './pages/subpages/ClientKycProcessingPage';
 import Blog from './pages/blog/Blog';
 import BlogArticleView from './pages/blog/BlogArticleView';
 import BlogNotFound from './pages/blog/BlogNotFound';
@@ -182,6 +183,7 @@ function App() {
                         user_type para excluir FORM_MODEL/MODEL/ADMIN. Composicion natural
                         de la API ya soportada por RequireRole (roles + allowedUserTypes),
                         sin extender el componente. */}
+                    <Route path="/client-kyc/processing" render={() => (<RequireRole roles={[Roles.USER, Roles.CLIENT]} allowedUserTypes={[UserTypes.FORM_CLIENT]}><ClientKycProcessingPage /></RequireRole>)} />
                     <Route path="/client-kyc" render={() => (<RequireRole roles={[Roles.USER, Roles.CLIENT]} allowedUserTypes={[UserTypes.FORM_CLIENT]}><ClientKycDiditPage /></RequireRole>)} />
 
                     <Route path="/perfil-client" render={() => (<RequireRole role="CLIENT"><PerfilClient /></RequireRole>)} />

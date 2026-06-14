@@ -8,6 +8,7 @@ import FavoritesClientList from '../favorites/FavoritesClientList';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import EmailNotVerifiedBanner from '../../components/EmailNotVerifiedBanner';
+import { ensureClientKycApproved } from '../../utils/clientKycGate';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -1874,6 +1875,7 @@ const DashboardClient = () => {
 
 
   const handleAddBalance = async () => {
+    if (!ensureClientKycApproved(sessionUser, history, '/client')) return;
     const result = await openPurchaseModal({ context: 'navbar-comprar' });
     if (!result.confirmed || !result.pack) return;
 
@@ -1918,6 +1920,7 @@ const DashboardClient = () => {
 
 
   const handlePurchaseFromRandom = async () => {
+    if (!ensureClientKycApproved(sessionUser, history, '/client')) return;
     const result = await openPurchaseModal({ context: 'random' });
     if (!result.confirmed || !result.pack) return;
 
@@ -1961,6 +1964,7 @@ const DashboardClient = () => {
 
 
   const handlePurchaseFromCalling = async () => {
+    if (!ensureClientKycApproved(sessionUser, history, '/client')) return;
     const result = await openPurchaseModal({ context: 'calling' });
     if (!result.confirmed || !result.pack) return;
 
@@ -2004,6 +2008,7 @@ const DashboardClient = () => {
 
 
   const handlePurchaseFromGift = async () => {
+    if (!ensureClientKycApproved(sessionUser, history, '/client')) return;
     const result = await openPurchaseModal({ context: 'gift' });
     if (!result.confirmed || !result.pack) return;
 

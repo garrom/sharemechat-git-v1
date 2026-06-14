@@ -1530,6 +1530,13 @@
     "errors": {
       "generic": "Could not start the verification. Please try again in a few minutes.",
       "alreadyApproved": "Your verification is already approved; you do not need to repeat it."
+    },
+    "processing": {
+      "title": "Verifying your age...",
+      "subtitle": "Please wait while we process your verification.",
+      "timeout": "Your verification is taking longer than expected. Go back to the dashboard and refresh in a few minutes.",
+      "rejected": "Verification rejected. Contact support.",
+      "back": "Back to dashboard"
     }
   },
   "admin": {
