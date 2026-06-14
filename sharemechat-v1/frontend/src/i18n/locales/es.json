@@ -1335,6 +1335,9 @@
       "status": {
         "default": "Estás probando el videochat de ShareMeChat."
       },
+      "emailVerification": {
+        "teaserGate": "Verifica tu email para ver modelos en directo."
+      },
       "errors": {
         "loadPromoVideos": "Error cargando vídeos de modelos"
       }

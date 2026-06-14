@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { TEASERS_PAGE_SIZE, TEASERS_PAGE_DEFAULT } from '../../config/appConfig';
+import { apiFetch } from '../../config/http';
 import {
   faUserPlus,
   faVideo,
@@ -96,24 +97,17 @@ export default function VideoChatRandomUser(props) {
   const [activePromoIndex, setActivePromoIndex] = useState(null);
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState('');
+  const [promoEmailGate, setPromoEmailGate] = useState(false);
   const [currentPromoIndex, setCurrentPromoIndex] = useState(0);
 
   const fetchTeasers = async () => {
     setPromoLoading(true);
     setPromoError('');
+    setPromoEmailGate(false);
 
     try {
-      const res = await fetch(`/api/models/teasers?page=${TEASERS_PAGE_DEFAULT}&size=${TEASERS_PAGE_SIZE}`, {
-        method: 'GET',
-        credentials: 'include'
-      });
+      const data = await apiFetch(`/models/teasers?page=${TEASERS_PAGE_DEFAULT}&size=${TEASERS_PAGE_SIZE}`);
 
-      if (!res.ok) {
-        const txt = await res.text();
-        throw new Error(txt || t('dashboardUserClient.videoChatRandomUser.errors.loadPromoVideos'));
-      }
-
-      const data = await res.json();
       const mapped = (Array.isArray(data) ? data : []).map((item) => ({
         id: item.modelId,
         title: t('dashboardUserClient.videoChatRandomUser.promoTeaserTitle', { name: item.modelName }),
@@ -126,8 +120,12 @@ export default function VideoChatRandomUser(props) {
       setPromoVideos(mapped);
       if (mapped.length > 0) setCurrentPromoIndex(0);
     } catch (e) {
-      setPromoError(e?.message || t('dashboardUserClient.videoChatRandomUser.errors.loadPromoVideos'));
       setPromoVideos([]);
+      if (String(e?.code || '').toUpperCase() === 'EMAIL_NOT_VERIFIED') {
+        setPromoEmailGate(true);
+      } else {
+        setPromoError(e?.message || t('dashboardUserClient.videoChatRandomUser.errors.loadPromoVideos'));
+      }
     } finally {
       setPromoLoading(false);
     }
@@ -271,6 +269,11 @@ export default function VideoChatRandomUser(props) {
               {promoError && (
                 <StyledStatusText $tone="error">
                   {promoError}
+                </StyledStatusText>
+              )}
+              {promoEmailGate && (
+                <StyledStatusText>
+                  {t('dashboardUserClient.videoChatRandomUser.emailVerification.teaserGate')}
                 </StyledStatusText>
               )}
 
