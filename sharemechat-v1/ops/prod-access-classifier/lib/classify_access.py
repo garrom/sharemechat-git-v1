@@ -821,6 +821,36 @@ VERDICT_KNOWN_PUBLIC_ROUTES = (
     | {"/api/admin/auth/login", "/sitemap.xml", "/robots.txt", "/index.html"}
 )
 
+# Prefijos /api/* publicos (permitAll en SecurityConfig.java del backend).
+# Usar startswith() para capturar cualquier subpath sin enumerarlo. Ampliado
+# el 2026-06-13 tras un falso positivo AMARILLO del 13-jun (la IP
+# 154.159.237.224 obtuvo 204 en /api/consent/age-gate y /api/consent/terms,
+# rutas legitimas del consent banner + age gate de visitantes anonimos).
+VERDICT_KNOWN_PUBLIC_API_PREFIXES: Tuple[str, ...] = (
+    "/api/public/",                 # CMS publico (home, content, ...)
+    "/api/consent/",                # consent banner + age gate (visitantes anonimos)
+    "/api/email-verification/",     # confirm, resend
+    "/api/users/avatars/",          # avatares publicos
+    "/api/users/register/",         # registro client/model y variantes
+    "/api/auth/password/",          # forgot + reset
+    "/api/kyc/veriff/",             # webhook Veriff (POST)
+    "/api/kyc/didit/",              # webhook Didit (POST)
+)
+
+
+def _is_known_public_api_route(route: str) -> bool:
+    """True si la ruta /api/* esta declarada como permitAll en SecurityConfig
+    (verificada manualmente contra el backend). Combina membresia exacta en
+    VERDICT_KNOWN_PUBLIC_ROUTES con coincidencia por prefijo en
+    VERDICT_KNOWN_PUBLIC_API_PREFIXES para no enumerar cada subpath."""
+    base = route.split("?", 1)[0]
+    if base in VERDICT_KNOWN_PUBLIC_ROUTES:
+        return True
+    for prefix in VERDICT_KNOWN_PUBLIC_API_PREFIXES:
+        if base.startswith(prefix):
+            return True
+    return False
+
 # Iconos web top-level que cualquier navegador o cliente movil pide por
 # defecto y que nginx sirve como estaticos. Un 200 aqui es trafico legitimo
 # y NO debe disparar AMARILLO. STATIC_ROUTE_PREFIXES ya cubre /favicon* y
@@ -950,13 +980,20 @@ def compute_verdict(
                 auth_post_per_ip[ip] += 1
 
             # Sondeo /api/* real no-publica-conocida (AMARILLO 2 candidato).
-            if not allowlisted and route.startswith("/api/") and route not in VERDICT_KNOWN_PUBLIC_ROUTES:
+            # Retune 2026-06-13: usar _is_known_public_api_route en lugar de
+            # comparar solo membresia exacta, para reconocer las rutas
+            # permitAll del SecurityConfig que aceptan subpaths (consent/*,
+            # email-verification/*, users/avatars/*, kyc/*/webhook, etc.).
+            # Antes una IP que pidiera /api/consent/age-gate y recibiera 401
+            # se contaba como "sondeo a /api/* no-publica-conocida"; ahora se
+            # reconoce como ruta publica legitima y no se cuenta.
+            if not allowlisted and route.startswith("/api/") and not _is_known_public_api_route(route):
                 # excluir hostile probes ya cubiertos por las reglas del classifier
                 hostile_match = any(p.search(route) for p in VERDICT_RED_ROUTE_PATTERNS)
                 if not hostile_match:
                     api_real_probe_per_ip[ip] += 1
 
-            # AMARILLO 2: 2xx en endpoint /api/* PROTEGIDO (fuga real).
+            # AMARILLO 2: 200/201 en endpoint /api/* PROTEGIDO (fuga real).
             # Retune 2026-06-12: la regla anterior "2xx en ruta no-publica
             # conocida" generaba falsos positivos por el SPA fallback de
             # nginx, que devuelve 200 + index.html para cualquier ruta
@@ -968,14 +1005,16 @@ def compute_verdict(
             # dispara para 2xx en /api/* que no este en /api/public/* ni
             # sea sitemap/robots. Un 200 ahi es fuga real (endpoint
             # protegido devolviendo datos a una IP no-allowlisted).
-            if is_success_2xx and not allowlisted and route.startswith("/api/"):
-                is_public_api = (
-                    route.startswith("/api/public/")
-                    or route in VERDICT_KNOWN_PUBLIC_ROUTES
-                    or route in ("/sitemap.xml", "/robots.txt")
-                )
+            #
+            # Retune 2026-06-13: restringir "exito visible" a status 200 o
+            # 201 (cuerpo o creacion). Un 204 = "registrado sin cuerpo" no
+            # expone datos (el consent banner devuelve 204 a /api/consent/*
+            # y disparaba AMARILLO falso positivo el 13-jun). 202/203/205-208/
+            # 226 tampoco son fuga real desde la perspectiva del atacante.
+            is_visible_success = status_int in (200, 201)
+            if is_visible_success and not allowlisted and route.startswith("/api/"):
                 hostile_match = any(p.search(route) for p in VERDICT_RED_ROUTE_PATTERNS)
-                if not is_public_api and not hostile_match:
+                if not _is_known_public_api_route(route) and not hostile_match:
                     successes_on_unknown_route.append(
                         {"ip": ip, "route": route, "status": status_int}
                     )

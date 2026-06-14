@@ -8,6 +8,32 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-14 — VEREDICTO: ampliación de la whitelist de rutas /api públicas + restricción a 200/201
+
+Frente abierto tras el AMARILLO del primer día post-deploy del bloque VEREDICTO: el reporte del 2026-06-13 disparó AMARILLO porque la IP `154.159.237.224` obtuvo `204` en `/api/consent/age-gate` y `/api/consent/terms`, rutas legítimas del consent banner + age gate para visitantes anónimos (`permitAll` en `SecurityConfig.java`). El `204` es la respuesta esperada (registrar consent sin cuerpo) y esas rutas son públicas por diseño — falso positivo claro.
+
+**Causa raíz**. Dos huecos coincidentes en el classifier:
+1. **Whitelist incompleta**. `VERDICT_KNOWN_PUBLIC_ROUTES` solo enumeraba rutas exactas (heredado de `COHERENT_API_ROUTES`: login, refresh, logout, register/client, register/model, email-verification/resend, users/me). Las rutas `permitAll` con subpaths variables (`/api/consent/*`, `/api/email-verification/*`, `/api/users/avatars/*`, `/api/users/register/*`, `/api/auth/password/*`, `/api/kyc/{veriff,didit}/webhook`) no entraban.
+2. **"Éxito visible" demasiado laxo**. La regla AMARILLO 2 trataba cualquier `2xx` como "éxito real del atacante", incluyendo `204` ("registrado sin cuerpo"), `202`, `205-208`, `226`. Solo `200` (cuerpo) y `201` (creación) son fuga visible desde la perspectiva del atacante.
+
+**Cambios**. Aditivos, sin tocar el scoring por IP ni la lista hostile interna, ni el formato de salida:
+
+- Nueva constante `VERDICT_KNOWN_PUBLIC_API_PREFIXES` con los 8 prefijos `permitAll` del SecurityConfig (auditados manualmente contra `sharemechat-v1/src/main/java/com/sharemechat/security/SecurityConfig.java`).
+- Nuevo helper `_is_known_public_api_route(route)` que combina membresía exacta en `VERDICT_KNOWN_PUBLIC_ROUTES` con coincidencia por prefijo en la nueva constante. Sustituye los chequeos ad-hoc de las dos zonas afectadas:
+  - **Sondeo `/api/*` real no-pública-conocida** (línea ~953): ahora pasa por el helper, así que `/api/consent/*` y demás no se cuentan como rutas raras aunque devuelvan `401/404`.
+  - **AMARILLO 2 (éxito 2xx en `/api/*` protegido)** (línea ~971): ahora exige `status_int in (200, 201)` y usa el helper. Un `204` en `/api/consent/age-gate` queda fuera por dos motivos independientes (whitelisted + no-éxito-visible), defensa en profundidad.
+- **ROJO 1 (éxito en ruta sensible)** se deja intacto: `200-299` sigue siendo "éxito" para `.env`/`actuator`/`wp-admin`/etc., porque un `204` en una ruta sensible es de por sí evento extraño que merece registro.
+
+**Re-ejecución local del classifier modificado contra los últimos 5 días** (eventos crudos del normalizer de PROD del 06-09 al 06-13, baseline poblada con los `.summary.jsonl` del 06-06 al 06-08): 06-09 sigue **AMARILLO** por pico real (21 IPs CRITICA vs media 6.7/día — el motivo legítimo del único AMARILLO de la validación de 5 días); 06-10 **VERDE**; 06-11 **VERDE** con nota informativa de `195.178.110.104` sondeando `/api/*` no-pública-conocida 115×; 06-12 **VERDE**; 06-13 **VERDE** con nota informativa de `34.40.46.229` sondeando 18×. El AMARILLO falso del 13 desaparece y el resto se mantiene como estaba en el ground truth de la bitácora del 2026-06-12.
+
+**Deploy a PROD**. `install -m 0755` sobre `/opt/sharemechat-prod-access-classifier/lib/classify_access.py` (sha256 `158226…`), backup explícito como `.bak-20260614-pre-whitelist-consent` preservando el de la primera versión (`bak-20260612-pre-verdict-block`). `__pycache__/` borrado para forzar bytecode fresco. Smoke real en `/opt` con `classify-prod-access.sh --date 2026-06-13`: regeneró el `.table.txt` y el `.summary.jsonl` del 13 con `VEREDICTO: [V] SIN ACCION` arriba (más la nota informativa de `34.40.46.229`); el `summary.jsonl` mantiene la estructura `{"type":"verdict","level":"VERDE","reasons":[],"notes":[…]}` que el reporter ya sabe leer (commit `a40fc0e`).
+
+**Coherencia con el reporter**. El reporter (commit `a40fc0e` del 2026-06-13) anteponía el bloque VEREDICTO al cuerpo del email leyendo `{"type":"verdict",…}` del `.summary.jsonl`. Como la estructura del verdict no cambia (mismas keys `level/label/summary/reasons/notes/stats/pointers`), el reporter sigue funcionando sin tocarlo. El próximo `daily-report` (domingo 14 jun 07:10 UTC sobre eventos del 13 jun) saldrá con VEREDICTO VERDE en lugar del AMARILLO falso de hoy.
+
+**No se replica a AUDIT ni a TEST** por las razones registradas en el frente del reporter del 2026-06-13: ni `audit-access-classifier` ni `test-access-classifier` emiten verdict (solo `prod-access-classifier` tiene la lógica), AUDIT está `stopped` por el scheduler de fin de semana y TEST sigue con SSH `Connection timed out`. La deuda registrada de "portar VEREDICTO a los classifiers de AUDIT/TEST" sigue abierta y crecerá: cuando llegue el frente conjunto, tocará portar TANTO el bloque VEREDICTO COMO esta extensión de whitelist/200-201.
+
+---
+
 ## 2026-06-14 — Frente Didit modelo cerrado end-to-end en TEST
 
 Cierre del frente de implementación del cliente Didit para el flujo de KYC del MODELO (Document + Selfie + Liveness vía Workflow Builder), trazado en cinco pasos durante 2026-06-13/14: (1) diagnóstico de solo lectura sobre el repo confirmando que no había código Didit; (2) scaffold backend completo del cliente, mapeo de status case-sensitive, replay protection nativa por `X-Timestamp`, cableado de endpoints, properties, Security y modos KYC, con 28 tests nuevos verdes y commit `d0c3539`; (3) redespliegue forzoso del JAR a TEST porque el JAR vivo era del paso 6 Veriff (`ce0b4fd`) y no contenía el scaffold — backup `*.bak-20260613-222203-pre-didit-scaffold`, build local, `scp` + `systemctl restart`, manifest refrescado vía `update-manifest-backend.ps1 -Environment test -AssumeYesNonCritical` (primer uso del flag en backend, confirmado funcional en sesión no interactiva), commit `4948f61`; (4) activación contra sandbox Didit con `KYC_DIDIT_*` en `/opt/sharemechat/config.env` y validación end-to-end con flujo dummy real; (5) limpieza de evidencia BD y cierre formal.

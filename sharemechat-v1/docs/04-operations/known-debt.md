@@ -10,13 +10,17 @@ Detectado al inspeccionar por qué el email diario de PROD del 2026-06-12 no tra
 
 ### [DEUDA — perimeter pipeline] Portar VEREDICTO a classifiers de AUDIT y TEST + replicar reporter
 
-El bloque VEREDICTO solo lo emite `prod-access-classifier` (commit `056b7e9`). `audit-access-classifier` y `test-access-classifier` siguen con el formato anterior y por tanto sus `.summary.jsonl` no llevan la fila `{"type":"verdict",…}`. El reporter nuevo (con lectura del verdict + fallback, deployado en PROD el 2026-06-13) es ya seguro de replicar a AUDIT y TEST porque siempre cae al formato anterior si no encuentra el verdict, pero hasta que sus classifiers no emitan VEREDICTO el cambio no aporta nada visible al operador. La acción correcta es un frente que (a) replique la lógica `compute_verdict` + `render_verdict_block` + constantes `VERDICT_*` del `prod-access-classifier` a sus pares de AUDIT y TEST, y (b) inmediatamente despliegue el reporter nuevo a `/opt` de los EC2 de AUDIT y TEST.
+El bloque VEREDICTO solo lo emite `prod-access-classifier` (commits `056b7e9` y el del 2026-06-14 con la whitelist ampliada). `audit-access-classifier` y `test-access-classifier` siguen con el formato anterior y por tanto sus `.summary.jsonl` no llevan la fila `{"type":"verdict",…}`. El reporter nuevo (con lectura del verdict + fallback, deployado en PROD el 2026-06-13) es ya seguro de replicar a AUDIT y TEST porque siempre cae al formato anterior si no encuentra el verdict, pero hasta que sus classifiers no emitan VEREDICTO el cambio no aporta nada visible al operador. La acción correcta es un frente que (a) replique la lógica `compute_verdict` + `render_verdict_block` + constantes `VERDICT_*` + el helper `_is_known_public_api_route` con su tabla de prefijos del `prod-access-classifier` a sus pares de AUDIT y TEST, y (b) inmediatamente despliegue el reporter nuevo a `/opt` de los EC2 de AUDIT y TEST.
 
 **Pendientes adicionales detectados durante el deploy del reporter de PROD del 2026-06-13**:
 - AUDIT estaba `stopped` por el scheduler de fin de semana recién activado; cuando vuelva a estar `running` (lunes 07:20 Madrid o cuando se reactive manualmente) hay que decidir si replicar entonces o esperar al frente conjunto AUDIT+TEST.
 - TEST: SSH a `test-backend`/`63.180.48.12` sigue dando `Connection timed out` (deuda preexistente ya anotada en `ops/deploy-state/test.yaml` desde el 2026-06-08). El deploy a TEST está bloqueado por esa deuda; tocar el SSH antes que el VEREDICTO.
 
 **Prioridad**: baja. No bloquea operación; los reportes de AUDIT y TEST siguen funcionando con el formato anterior, y el operador los usa principalmente para PROD.
+
+### [DEUDA — perimeter pipeline] Sincronizar `VERDICT_KNOWN_PUBLIC_API_PREFIXES` con cambios en `SecurityConfig.java`
+
+La whitelist de rutas `permitAll` del classifier (`VERDICT_KNOWN_PUBLIC_API_PREFIXES`) se auditó manualmente contra `SecurityConfig.java` el 2026-06-14. No hay mecanismo automático que la mantenga sincronizada: si el backend añade un nuevo prefijo `permitAll` (p.ej. `/api/contact/`, `/api/feedback/`), el classifier disparará AMARILLO falsos positivos hasta que alguien recuerde tocar la constante. **Mitigación temporal**: cuando se modifique `SecurityConfig.java` en una PR, el reviewer debe abrir también el classifier y verificar la whitelist. **Solución durable** (no urgente): generar la lista en build-time desde un test que parsee `SecurityConfig.java` y la exponga como recurso versionado; o invertir la dependencia poniendo la lista en un fichero compartido leído por ambos lados. **Prioridad**: baja.
 
 ### [DEUDA — perimeter pipeline] Falta procedimiento formal de deploy para classifier/reporter/normalizer/blocker
 
