@@ -76,14 +76,17 @@ public class KycProviderController {
     }
 
     // =========================================================================
-    // DIDIT — flujo KYC modelo (ADR-035, vendor unico Plan A).
+    // DIDIT — flujos KYC (ADR-035, vendor unico Plan A).
     // Mismo contrato que /veriff/* pero con las divergencias documentadas en
     // KycSessionService#processDiditWebhook: replay protection con
-    // X-Timestamp (300s) ANTES de la verificacion HMAC.
+    // X-Timestamp (300s) ANTES de la verificacion HMAC. Hay dos endpoints
+    // /start (model y client) por simetria; el webhook es UNICO compartido
+    // entre ambos flujos (la consola Didit configura un solo destino y el
+    // codigo discrimina por workflow_id + session_type).
     // =========================================================================
-    @PostMapping("/didit/start")
-    public ResponseEntity<KycStartSessionResponseDTO> startDidit(Authentication authentication,
-                                                                 HttpServletRequest request) {
+    @PostMapping("/didit/model/start")
+    public ResponseEntity<KycStartSessionResponseDTO> startDiditModel(Authentication authentication,
+                                                                      HttpServletRequest request) {
         if (authentication == null || authentication.getName() == null) {
             return ResponseEntity.status(401).build();
         }
@@ -93,11 +96,31 @@ public class KycProviderController {
             return ResponseEntity.status(401).build();
         }
 
-        // Mismo country gating que Veriff: la allowlist es por flujo (MODELO),
-        // independiente del vendor concreto que firme la sesion.
+        // Country gating del MODELO: la allowlist es por flujo, independiente
+        // del vendor concreto que firme la sesion.
         countryAccessService.assertAllowedForModelKyc(request);
 
-        KycStartSessionResponseDTO dto = kycSessionService.startDiditSession(user.getId());
+        KycStartSessionResponseDTO dto = kycSessionService.startDiditModelSession(user.getId());
+        return ResponseEntity.ok(dto);
+    }
+
+    @PostMapping("/didit/client/start")
+    public ResponseEntity<KycStartSessionResponseDTO> startDiditClient(Authentication authentication,
+                                                                       HttpServletRequest request) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        User user = userService.findByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        // Country gating del CLIENTE: usa la allowlist mas restrictiva (28
+        // paises segun ADR-029, hardening post-PRO 2026-05-27).
+        countryAccessService.assertAllowedForClientKyc(request);
+
+        KycStartSessionResponseDTO dto = kycSessionService.startDiditClientSession(user.getId());
         return ResponseEntity.ok(dto);
     }
 

@@ -134,7 +134,10 @@ public class SecurityConfig {
                         // wildcard /api/kyc/** intencional: cada endpoint
                         // se declara explicito para no abrir permitAll por
                         // descuido sobre un futuro /api/kyc/<algo>.
-                        .requestMatchers(HttpMethod.POST, "/api/kyc/didit/start").hasRole("USER")
+                        // Endpoints simetricos model/client desde V9; webhook
+                        // unico compartido.
+                        .requestMatchers(HttpMethod.POST, "/api/kyc/didit/model/start").hasRole("USER")
+                        .requestMatchers(HttpMethod.POST, "/api/kyc/didit/client/start").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/webhook").permitAll()
 
                         // Transactions

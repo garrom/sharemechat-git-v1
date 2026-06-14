@@ -11,6 +11,7 @@ import AdminAccessPage from './pages/admin/AdminAccessPage';
 import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
 import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
+import ClientKycDiditPage from './pages/subpages/ClientKycDiditPage';
 import Blog from './pages/blog/Blog';
 import BlogArticleView from './pages/blog/BlogArticleView';
 import BlogNotFound from './pages/blog/BlogNotFound';
@@ -174,6 +175,7 @@ function App() {
 
                     <Route path="/model-documents" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelDocuments /></RequireRole>)} />
                     <Route path="/model-kyc" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelKycVeriffPage /></RequireRole>)} />
+                    <Route path="/client-kyc" render={() => (<RequireRole role="CLIENT"><ClientKycDiditPage /></RequireRole>)} />
 
                     <Route path="/perfil-client" render={() => (<RequireRole role="CLIENT"><PerfilClient /></RequireRole>)} />
                     <Route path="/perfil-model" render={() => (<RequireRole role="MODEL"><PerfilModel /></RequireRole>)} />

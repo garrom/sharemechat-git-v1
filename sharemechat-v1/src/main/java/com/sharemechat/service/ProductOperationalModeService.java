@@ -325,6 +325,12 @@ public class ProductOperationalModeService {
         // Estimation cliente. Su webhook debe llegar siempre, igual que el
         // de Veriff (que queda dormido pero integrado como contingencia).
         if (path.equals("/api/kyc/didit/webhook")) return true;
+        // V9 (frente Didit cliente): la verificación del CLIENTE puede
+        // iniciarse en modo PRELAUNCH (es parte del flujo de cliente, no
+        // es admin ni API publica). Coherente con que el endpoint MODEL
+        // tampoco esta bloqueado por modo (es onboarding y como tal pasa
+        // por el filtro normal de roles, no por el gate de modo).
+        if (path.equals("/api/kyc/didit/client/start")) return true;
 
         return false;
     }

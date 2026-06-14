@@ -262,7 +262,7 @@ public class KycSessionService {
     // =========================================================================
 
     @Transactional
-    public KycStartSessionResponseDTO startDiditSession(Long userId) {
+    public KycStartSessionResponseDTO startDiditModelSession(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
 
@@ -286,10 +286,12 @@ public class KycSessionService {
         }
 
         DiditCreateSessionResult result = diditClient.createSession(
-                userId, user.getEmail(), user.getName(), user.getSurname());
+                userId, user.getEmail(), user.getName(), user.getSurname(),
+                diditProperties.getModelWorkflowId());
 
         KycSession row = new KycSession();
         row.setUserId(userId);
+        row.setSessionType(Constants.SessionTypes.MODEL);
         row.setProvider(PROVIDER_DIDIT);
         row.setProviderSessionId(result.getSessionId());
         row.setProviderVendorRef(result.getVendorData());
@@ -300,6 +302,91 @@ public class KycSessionService {
         row.setProviderStatus("Not Started");
         row.setKycStatus(Constants.VerificationStatuses.PENDING);
         row.setHostedUrl(result.getVerificationUrl());
+
+        kycSessionRepository.save(row);
+
+        KycStartSessionResponseDTO dto = new KycStartSessionResponseDTO();
+        dto.setUserId(userId);
+        dto.setProvider(PROVIDER_DIDIT);
+        dto.setProviderSessionId(result.getSessionId());
+        dto.setVerificationUrl(result.getVerificationUrl());
+        dto.setProviderStatus("Not Started");
+        dto.setMappedStatus(Constants.VerificationStatuses.PENDING);
+
+        return dto;
+    }
+
+    /**
+     * Inicia una sesion Didit para el CLIENTE (Age Estimation con step-up
+     * documental). Paralelo a {@link #startDiditModelSession(Long)} pero
+     * dirigido al rol CLIENT.
+     *
+     * Pre-requisitos:
+     * - Usuario existe.
+     * - Usuario tiene rol CLIENT (o USER + FORM_CLIENT durante el registro,
+     *   aunque el endpoint hoy se expone como hasRole CLIENT). Mantenemos el
+     *   chequeo en ambos sitios por defensa en profundidad.
+     * - Usuario NO esta ya APPROVED para client KYC: si lo esta, lanzamos.
+     *   La re-verificacion por expiracion se gestiona en otra ruta (no
+     *   abordada en este frente).
+     *
+     * Idempotencia: si existe una sesion CLIENT en PENDING para el user, se
+     * devuelve la existente sin crear una nueva. Evita duplicar sesiones si
+     * el cliente recarga la pagina del flujo.
+     *
+     * El age_estimation_threshold actual se hardcodea a 25 (challenge age
+     * provisional decidido en ADR-035 §"Acciones inmediatas"). Cuando se
+     * estabilice se moverá a property/config; por ahora documentado como TODO.
+     */
+    @Transactional
+    public KycStartSessionResponseDTO startDiditClientSession(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        boolean isClient = Constants.Roles.CLIENT.equals(user.getRole())
+                || (Constants.Roles.USER.equals(user.getRole())
+                        && Constants.UserTypes.FORM_CLIENT.equals(user.getUserType()));
+
+        if (!isClient) {
+            throw new IllegalArgumentException("Solo CLIENT (o USER + FORM_CLIENT) puede iniciar KYC de cliente");
+        }
+
+        if (Constants.VerificationStatuses.APPROVED.equals(user.getClientKycStatus())) {
+            throw new IllegalStateException("El usuario ya tiene client_kyc_status=APPROVED; no procede reverificar aqui.");
+        }
+
+        // Idempotencia: si hay sesion CLIENT en PENDING, devolverla.
+        var existingPending = kycSessionRepository
+                .findTopByUserIdAndSessionTypeAndKycStatusOrderByIdDesc(
+                        userId, Constants.SessionTypes.CLIENT, Constants.VerificationStatuses.PENDING);
+        if (existingPending.isPresent()) {
+            KycSession s = existingPending.get();
+            KycStartSessionResponseDTO dto = new KycStartSessionResponseDTO();
+            dto.setUserId(userId);
+            dto.setProvider(s.getProvider());
+            dto.setProviderSessionId(s.getProviderSessionId());
+            dto.setVerificationUrl(s.getHostedUrl());
+            dto.setProviderStatus(s.getProviderStatus());
+            dto.setMappedStatus(s.getKycStatus());
+            return dto;
+        }
+
+        DiditCreateSessionResult result = diditClient.createSession(
+                userId, user.getEmail(), user.getName(), user.getSurname(),
+                diditProperties.getClientWorkflowId());
+
+        KycSession row = new KycSession();
+        row.setUserId(userId);
+        row.setSessionType(Constants.SessionTypes.CLIENT);
+        row.setProvider(PROVIDER_DIDIT);
+        row.setProviderSessionId(result.getSessionId());
+        row.setProviderVendorRef(result.getVendorData());
+        row.setProviderStatus("Not Started");
+        row.setKycStatus(Constants.VerificationStatuses.PENDING);
+        row.setHostedUrl(result.getVerificationUrl());
+        // TODO: mover a property kyc.didit.age-estimation-threshold cuando se
+        // estabilice. Hoy hardcoded a 25 conforme ADR-035.
+        row.setAgeEstimationThreshold(25);
 
         kycSessionRepository.save(row);
 
@@ -407,6 +494,16 @@ public class KycSessionService {
                     .findByProviderAndProviderSessionId(PROVIDER_DIDIT, providerSessionId)
                     .orElseThrow(() -> new IllegalArgumentException("No existe sesion KYC para session_id=" + providerSessionId));
 
+            // Sanity check de coherencia workflow_id <-> session_type. Didit
+            // envia el workflow_id top-level en cada webhook; si la fila en
+            // BD dice MODEL pero el payload trae el workflow_id del CLIENTE
+            // (o viceversa), algo va muy mal y mejor rechazar el evento. No
+            // es una barrera de seguridad (la barrera real ya es el HMAC),
+            // pero blinda contra mezclas de destinos webhook mal configurados
+            // en consola.
+            String payloadWorkflowId = json.optString("workflow_id", null);
+            assertWorkflowIdMatchesSessionType(payloadWorkflowId, s.getSessionType(), providerSessionId);
+
             s.setLastWebhookAt(LocalDateTime.now());
             s.setLastProviderEventType(eventType);
 
@@ -420,8 +517,9 @@ public class KycSessionService {
             // decided_at: solo cuando el status mapea a una decision final
             // (APPROVED / REJECTED). PENDING (Resubmitted, In Review, etc.)
             // no fija decided_at.
-            if (Constants.VerificationStatuses.APPROVED.equals(internalStatus)
-                    || Constants.VerificationStatuses.REJECTED.equals(internalStatus)) {
+            boolean isFinalDecision = Constants.VerificationStatuses.APPROVED.equals(internalStatus)
+                    || Constants.VerificationStatuses.REJECTED.equals(internalStatus);
+            if (isFinalDecision) {
                 s.setDecidedAt(LocalDateTime.now());
             }
 
@@ -431,14 +529,36 @@ public class KycSessionService {
             s.setProviderDecisionCode(diditStatus);
             s.setProviderDecisionReason(null);
 
+            // Para CLIENT: extraer datos de Age Estimation del payload y
+            // guardarlos en la fila kyc_sessions. El path exacto del JSON
+            // se valida contra la doc de Didit Adaptive Age Verification en
+            // el siguiente paso del frente (paso 4, cuando llegue el webhook
+            // real). Por ahora extraemos con mejor esfuerzo y dejamos null
+            // si no esta presente: para MODEL siempre seran null (en MODEL
+            // no hay Age Estimation), para CLIENT los rellenara el payload
+            // del workflow Adaptive.
+            if (Constants.SessionTypes.CLIENT.equals(s.getSessionType())) {
+                extractDiditAgeEstimation(json, s);
+            }
+
             kycSessionRepository.save(s);
 
-            // users.verification_status solo se toca en decision final.
-            if (Constants.VerificationStatuses.APPROVED.equals(internalStatus)
-                    || Constants.VerificationStatuses.REJECTED.equals(internalStatus)) {
+            // Actualizar campos del user en decision final segun session_type.
+            // MODEL toca verification_status; CLIENT toca client_kyc_*. No se
+            // mezclan: un mismo user podria tener ambos flujos completados de
+            // forma independiente.
+            if (isFinalDecision) {
                 User u = userRepository.findById(s.getUserId())
                         .orElseThrow(() -> new IllegalArgumentException("Usuario de KYC no encontrado"));
-                u.setVerificationStatus(internalStatus);
+                if (Constants.SessionTypes.CLIENT.equals(s.getSessionType())) {
+                    u.setClientKycStatus(internalStatus);
+                    u.setClientKycDecidedAt(LocalDateTime.now());
+                    if (s.getEstimatedAgeDecimal() != null) {
+                        u.setClientKycEstimatedAge(s.getEstimatedAgeDecimal());
+                    }
+                } else {
+                    u.setVerificationStatus(internalStatus);
+                }
                 userRepository.save(u);
             }
 
@@ -497,6 +617,80 @@ public class KycSessionService {
         rejected.setProcessedAt(LocalDateTime.now());
         rejected.setProcessingError(errorTag);
         kycWebhookEventRepository.save(rejected);
+    }
+
+    /**
+     * Valida que el workflow_id del payload coincida con el session_type de
+     * la fila kyc_sessions. Si el workflow_id del payload no esta poblado
+     * (campo opcional en algunos eventos), se acepta el evento sin barrera.
+     * Si esta poblado pero no matchea ninguno de los dos workflows
+     * configurados, log warn y dejar pasar (puede ser un workflow de otro
+     * proyecto; el HMAC ya garantiza la autenticidad). Si esta poblado y
+     * matchea con el otro workflow distinto al session_type esperado,
+     * lanzar (mismatch fatal: el destino webhook esta mezclando flujos).
+     *
+     * Package-private para tests.
+     */
+    void assertWorkflowIdMatchesSessionType(String payloadWorkflowId, String sessionType, String providerSessionId) {
+        if (payloadWorkflowId == null || payloadWorkflowId.isBlank()) {
+            return;
+        }
+        String modelWf = diditProperties == null ? null : diditProperties.getModelWorkflowId();
+        String clientWf = diditProperties == null ? null : diditProperties.getClientWorkflowId();
+
+        boolean isModelWf = modelWf != null && !modelWf.isBlank() && payloadWorkflowId.equals(modelWf);
+        boolean isClientWf = clientWf != null && !clientWf.isBlank() && payloadWorkflowId.equals(clientWf);
+
+        if (!isModelWf && !isClientWf) {
+            log.warn("Didit webhook con workflow_id desconocido='{}' (session_id={}, session_type={}); se procesa con la session existente sin barrera adicional",
+                    payloadWorkflowId, providerSessionId, sessionType);
+            return;
+        }
+
+        if (isModelWf && !Constants.SessionTypes.MODEL.equals(sessionType)) {
+            throw new IllegalStateException(
+                    "Mismatch workflow_id/session_type: payload=" + payloadWorkflowId
+                            + " (model workflow) pero la sesion " + providerSessionId + " es " + sessionType);
+        }
+        if (isClientWf && !Constants.SessionTypes.CLIENT.equals(sessionType)) {
+            throw new IllegalStateException(
+                    "Mismatch workflow_id/session_type: payload=" + payloadWorkflowId
+                            + " (client workflow) pero la sesion " + providerSessionId + " es " + sessionType);
+        }
+    }
+
+    /**
+     * Extrae los datos de Age Estimation del payload Didit y los persiste en
+     * la fila kyc_sessions. Mejor esfuerzo: si el path esperado no esta
+     * presente, se dejan los campos a null (caso de webhooks intermedios o
+     * de step-up documental ya disparado).
+     *
+     * Paths esperados (a confirmar con payload real en paso 4):
+     *   decision.age_estimation.age_estimation -> estimatedAgeDecimal
+     *   decision.age_estimation.score          -> confidenceScore
+     *
+     * Package-private para tests.
+     */
+    void extractDiditAgeEstimation(JSONObject json, KycSession session) {
+        JSONObject decision = json.optJSONObject("decision");
+        if (decision == null) return;
+        JSONObject ageEstimation = decision.optJSONObject("age_estimation");
+        if (ageEstimation == null) return;
+
+        if (ageEstimation.has("age_estimation") && !ageEstimation.isNull("age_estimation")) {
+            try {
+                session.setEstimatedAgeDecimal(new java.math.BigDecimal(ageEstimation.get("age_estimation").toString()));
+            } catch (NumberFormatException ignore) {
+                // payload con formato no numerico: dejamos null
+            }
+        }
+        if (ageEstimation.has("score") && !ageEstimation.isNull("score")) {
+            try {
+                session.setConfidenceScore(new java.math.BigDecimal(ageEstimation.get("score").toString()));
+            } catch (NumberFormatException ignore) {
+                // payload con formato no numerico: dejamos null
+            }
+        }
     }
 
     // -------------------- DIDIT extractors (package-private para tests) -------

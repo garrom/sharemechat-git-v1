@@ -3,6 +3,7 @@ package com.sharemechat.entity;
 import com.sharemechat.constants.Constants;
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -116,6 +117,19 @@ public class User {
     @Column(name = "email_verified_at")
     private LocalDateTime emailVerifiedAt;
 
+    // V9 (frente Didit cliente, 2026-06-14): estado del KYC del CLIENTE
+    // (Age Estimation). Paralelo a verification_status (que es del MODELO).
+    // NULL para usuarios sin verificacion de cliente todavia. Valores
+    // PENDING/APPROVED/REJECTED (Constants.VerificationStatuses).
+    @Column(name = "client_kyc_status", length = 20)
+    private String clientKycStatus;
+
+    @Column(name = "client_kyc_decided_at")
+    private LocalDateTime clientKycDecidedAt;
+
+    @Column(name = "client_kyc_estimated_age", precision = 5, scale = 2)
+    private BigDecimal clientKycEstimatedAge;
+
     public User() {
         this.createdAt = LocalDateTime.now();
         // updatedAt NO se inicializa aqui: la columna esta con
@@ -208,4 +222,13 @@ public class User {
 
     public LocalDateTime getEmailVerifiedAt() { return emailVerifiedAt; }
     public void setEmailVerifiedAt(LocalDateTime emailVerifiedAt) { this.emailVerifiedAt = emailVerifiedAt; }
+
+    public String getClientKycStatus() { return clientKycStatus; }
+    public void setClientKycStatus(String clientKycStatus) { this.clientKycStatus = clientKycStatus; }
+
+    public LocalDateTime getClientKycDecidedAt() { return clientKycDecidedAt; }
+    public void setClientKycDecidedAt(LocalDateTime clientKycDecidedAt) { this.clientKycDecidedAt = clientKycDecidedAt; }
+
+    public BigDecimal getClientKycEstimatedAge() { return clientKycEstimatedAge; }
+    public void setClientKycEstimatedAge(BigDecimal clientKycEstimatedAge) { this.clientKycEstimatedAge = clientKycEstimatedAge; }
 }

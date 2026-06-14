@@ -10,6 +10,7 @@ import java.time.Instant;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -30,6 +31,100 @@ class KycSessionServiceDiditTest {
 
     private static KycSessionService svc() {
         return new KycSessionService(null, null, null, null, null, null, null, null, null);
+    }
+
+    // -------------------- V9 assertWorkflowIdMatchesSessionType --------------
+
+    private static KycSessionService svcWithProps(String modelWf, String clientWf) {
+        com.sharemechat.config.DiditProperties props = new com.sharemechat.config.DiditProperties();
+        props.setModelWorkflowId(modelWf);
+        props.setClientWorkflowId(clientWf);
+        return new KycSessionService(null, null, null, null, null, null, null, null, props);
+    }
+
+    @Test
+    @DisplayName("workflow_id NULL en payload -> sin barrera (acepta)")
+    void workflowId_null_noBarrier() {
+        KycSessionService s = svcWithProps("wf-model", "wf-client");
+        s.assertWorkflowIdMatchesSessionType(null, Constants.SessionTypes.MODEL, "sess-1");
+        s.assertWorkflowIdMatchesSessionType("", Constants.SessionTypes.CLIENT, "sess-2");
+    }
+
+    @Test
+    @DisplayName("workflow_id desconocido (ni model ni client) -> log warn pero acepta")
+    void workflowId_unknown_acceptsWithWarn() {
+        KycSessionService s = svcWithProps("wf-model", "wf-client");
+        s.assertWorkflowIdMatchesSessionType("wf-other", Constants.SessionTypes.MODEL, "sess-1");
+        s.assertWorkflowIdMatchesSessionType("wf-other", Constants.SessionTypes.CLIENT, "sess-2");
+    }
+
+    @Test
+    @DisplayName("workflow_id de MODEL + session_type MODEL -> OK")
+    void workflowId_model_sessionModel_ok() {
+        KycSessionService s = svcWithProps("wf-model", "wf-client");
+        s.assertWorkflowIdMatchesSessionType("wf-model", Constants.SessionTypes.MODEL, "sess-1");
+    }
+
+    @Test
+    @DisplayName("workflow_id de CLIENT + session_type CLIENT -> OK")
+    void workflowId_client_sessionClient_ok() {
+        KycSessionService s = svcWithProps("wf-model", "wf-client");
+        s.assertWorkflowIdMatchesSessionType("wf-client", Constants.SessionTypes.CLIENT, "sess-1");
+    }
+
+    @Test
+    @DisplayName("workflow_id de MODEL pero session_type CLIENT -> IllegalStateException")
+    void workflowId_modelButSessionClient_throws() {
+        KycSessionService s = svcWithProps("wf-model", "wf-client");
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                s.assertWorkflowIdMatchesSessionType("wf-model", Constants.SessionTypes.CLIENT, "sess-x"));
+        assertTrue(ex.getMessage().toLowerCase().contains("mismatch"));
+    }
+
+    @Test
+    @DisplayName("workflow_id de CLIENT pero session_type MODEL -> IllegalStateException")
+    void workflowId_clientButSessionModel_throws() {
+        KycSessionService s = svcWithProps("wf-model", "wf-client");
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () ->
+                s.assertWorkflowIdMatchesSessionType("wf-client", Constants.SessionTypes.MODEL, "sess-y"));
+        assertTrue(ex.getMessage().toLowerCase().contains("mismatch"));
+    }
+
+    // -------------------- V9 extractDiditAgeEstimation -----------------------
+
+    @Test
+    @DisplayName("extractDiditAgeEstimation con payload completo: persiste age y score")
+    void ageEstimation_fullPayload() {
+        org.json.JSONObject payload = new org.json.JSONObject()
+                .put("decision", new org.json.JSONObject()
+                        .put("age_estimation", new org.json.JSONObject()
+                                .put("age_estimation", 27.33)
+                                .put("score", 92.5)));
+        com.sharemechat.entity.KycSession session = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(payload, session);
+        assertEquals(0, new java.math.BigDecimal("27.33").compareTo(session.getEstimatedAgeDecimal()));
+        assertEquals(0, new java.math.BigDecimal("92.5").compareTo(session.getConfidenceScore()));
+    }
+
+    @Test
+    @DisplayName("extractDiditAgeEstimation sin decision -> ambos null")
+    void ageEstimation_noDecision() {
+        org.json.JSONObject payload = new org.json.JSONObject().put("status", "Approved");
+        com.sharemechat.entity.KycSession session = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(payload, session);
+        assertNull(session.getEstimatedAgeDecimal());
+        assertNull(session.getConfidenceScore());
+    }
+
+    @Test
+    @DisplayName("extractDiditAgeEstimation sin age_estimation dentro de decision -> ambos null")
+    void ageEstimation_noAgeBlock() {
+        org.json.JSONObject payload = new org.json.JSONObject()
+                .put("decision", new org.json.JSONObject().put("face_matches", new org.json.JSONArray()));
+        com.sharemechat.entity.KycSession session = new com.sharemechat.entity.KycSession();
+        svc().extractDiditAgeEstimation(payload, session);
+        assertNull(session.getEstimatedAgeDecimal());
+        assertNull(session.getConfidenceScore());
     }
 
     // -------------------- mapInternalStatusFromDiditStatus --------------------

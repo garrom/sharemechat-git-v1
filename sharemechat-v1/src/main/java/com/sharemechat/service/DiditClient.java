@@ -5,8 +5,13 @@ import com.sharemechat.dto.DiditCreateSessionResult;
 public interface DiditClient {
 
     /**
-     * Crea una sesion Didit para un usuario (flujo KYC de modelo, Document +
-     * Selfie + Liveness via Workflow Builder).
+     * Crea una sesion Didit para un usuario, contra el workflow indicado.
+     *
+     * El parametro {@code workflowId} permite distinguir entre el flujo MODELO
+     * (Document + Selfie + Liveness) y el flujo CLIENTE (Adaptive Age
+     * Verification). El caller resuelve cual usar antes de llamar y le pasa
+     * el id correspondiente leido de {@code DiditProperties.modelWorkflowId}
+     * o {@code DiditProperties.clientWorkflowId}.
      *
      * Los parametros {@code givenName} y {@code lastName} son opcionales: si
      * llegan {@code null} o vacios (tras {@code trim}), la implementacion debe
@@ -18,5 +23,5 @@ public interface DiditClient {
      * NO se acepta idNumber: igual que en Veriff, no lo conocemos antes de la
      * verificacion (lo lee Didit del documento).
      */
-    DiditCreateSessionResult createSession(Long userId, String email, String givenName, String lastName);
+    DiditCreateSessionResult createSession(Long userId, String email, String givenName, String lastName, String workflowId);
 }

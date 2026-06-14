@@ -13,12 +13,19 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * Tests del cliente Didit (paso 2 del frente Didit, ADR-035).
+ * Tests del cliente Didit (paso 2 del frente Didit modelo + V9 frente Didit
+ * cliente, ADR-035).
  *
  * Modo MOCK + construccion del payload de POST /v3/session/. La llamada HTTP
  * real se valida con sandbox/integracion manual cuando lleguen las credenciales.
+ *
+ * V9: createSession acepta workflowId como parametro (uno por flujo: modelo /
+ * cliente). Los tests siguen siendo agnosticos al flujo concreto.
  */
 class DiditClientImplTest {
+
+    private static final String WF_MODEL = "wf-model-uuid";
+    private static final String WF_CLIENT = "wf-client-uuid";
 
     @Test
     @DisplayName("MOCK cuando enabled=false (defaults reales en application.properties)")
@@ -29,7 +36,7 @@ class DiditClientImplTest {
 
         DiditClientImpl client = new DiditClientImpl(props);
         DiditCreateSessionResult result = client.createSession(
-                123L, "modelo@example.com", "Ada", "Lovelace");
+                123L, "modelo@example.com", "Ada", "Lovelace", WF_MODEL);
 
         assertNotNull(result);
         assertNotNull(result.getSessionId());
@@ -46,28 +53,28 @@ class DiditClientImplTest {
         props.setEnabled(true);
         props.setApiKey("");
         props.setApiSecret("whatever");
-        props.setWorkflowId("wf-uuid");
+        props.setModelWorkflowId(WF_MODEL);
 
         DiditClientImpl client = new DiditClientImpl(props);
-        DiditCreateSessionResult result = client.createSession(1L, "a@b.com", null, null);
+        DiditCreateSessionResult result = client.createSession(1L, "a@b.com", null, null, WF_MODEL);
 
         assertTrue(result.getSessionId().startsWith("didit_mock_"));
     }
 
     @Test
-    @DisplayName("enabled=true + api-key presente + workflow-id vacio -> falla con error claro")
-    void realMode_failsWhenWorkflowIdMissing() {
+    @DisplayName("enabled=true + api-key presente + workflowId vacio -> falla con error claro")
+    void realMode_failsWhenWorkflowIdParamMissing() {
         DiditProperties props = new DiditProperties();
         props.setEnabled(true);
         props.setApiKey("some-api-key");
         props.setApiSecret("some-secret");
-        props.setWorkflowId(""); // falta workflow-id obligatorio
+        props.setModelWorkflowId(WF_MODEL);
 
         DiditClientImpl client = new DiditClientImpl(props);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> client.createSession(1L, "a@b.com", "Ada", "Lovelace"));
-        assertTrue(ex.getMessage().toLowerCase().contains("workflow-id"));
+                () -> client.createSession(1L, "a@b.com", "Ada", "Lovelace", ""));
+        assertTrue(ex.getMessage().toLowerCase().contains("workflowid"));
     }
 
     // ----------------------------------------------------------------------
@@ -95,6 +102,22 @@ class DiditClientImplTest {
         assertEquals("wf-uuid-1234", json.getString("workflow_id"));
         assertEquals("smc:42", json.getString("vendor_data"));
         assertEquals("https://test.sharemechat.com/api/kyc/didit/webhook", json.getString("callback"));
+    }
+
+    @Test
+    @DisplayName("V9: workflowId pasado al payload se reflejes en el JSON (flujo modelo)")
+    void payload_workflowIdModel() {
+        String body = payloadBuilderClient().buildCreateSessionPayloadJson(
+                WF_MODEL, "https://t.example/cb", "smc:99", "a@b.com", "Ada", "Lovelace");
+        assertEquals(WF_MODEL, new JSONObject(body).getString("workflow_id"));
+    }
+
+    @Test
+    @DisplayName("V9: workflowId pasado al payload se reflejes en el JSON (flujo cliente)")
+    void payload_workflowIdClient() {
+        String body = payloadBuilderClient().buildCreateSessionPayloadJson(
+                WF_CLIENT, "https://t.example/cb", "smc:99", "a@b.com", "Ada", "Lovelace");
+        assertEquals(WF_CLIENT, new JSONObject(body).getString("workflow_id"));
     }
 
     @Test

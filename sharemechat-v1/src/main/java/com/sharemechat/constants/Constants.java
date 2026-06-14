@@ -83,6 +83,18 @@ public class Constants {
         private KycModes() {}
     }
 
+    public static class SessionTypes {
+        // Tipos de sesion KYC en kyc_sessions.session_type (V9, frente Didit
+        // cliente). MODEL son las sesiones Document+Selfie+Liveness del
+        // modelo; CLIENT son las de Age Estimation del cliente. La columna
+        // tiene DEFAULT 'MODEL', asi que las filas historicas (anteriores
+        // a V9) quedan MODEL automaticamente.
+        public static final String MODEL = "MODEL";
+        public static final String CLIENT = "CLIENT";
+
+        private SessionTypes() {}
+    }
+
     public static class ModerationReportStatuses {
         public static final String OPEN = "OPEN";
         public static final String REVIEWING = "REVIEWING";

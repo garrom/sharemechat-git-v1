@@ -1500,6 +1500,22 @@
       "suffix": "subiendo foto de perfil y vídeo de presentación desde la sección de Perfil."
     }
   },
+  "clientKyc": {
+    "title": "Verificación de edad",
+    "navTitle": "Verificación de edad",
+    "back": "Volver",
+    "intro": "Antes de poder recargar tu monedero necesitamos verificar que eres mayor de edad. La verificación es rápida y se realiza con tu cámara: nuestro proveedor (Didit, certificado en la UE) estima tu edad a partir de una imagen de tu rostro. No se solicita documento de identidad salvo casos límite.",
+    "whyLegal": "Esto se exige por la normativa de protección de menores en los mercados donde operamos (UE DSA Art. 28, Reino Unido OSA, EE. UU. Free Speech Coalition v. Paxton). No es opcional.",
+    "consentTitle": "Consentimiento de tratamiento biométrico",
+    "consentText": "Doy mi consentimiento explícito para que mis datos biométricos faciales (imagen de mi rostro) sean procesados por Didit (encargado del tratamiento, UE) con el único fin de estimar mi edad, conforme al Art. 9.2.a del RGPD. Los datos se almacenan durante 6 meses y luego se eliminan automáticamente. Puedo retirar mi consentimiento en cualquier momento contactando con privacidad@sharemechat.com; en ese caso, mi cuenta perderá la capacidad de recargar y consumir contenido adulto.",
+    "consentReadMore": "Más información en la política de privacidad.",
+    "startButton": "Iniciar verificación",
+    "startingButton": "Iniciando…",
+    "errors": {
+      "generic": "No se pudo iniciar la verificación. Inténtalo de nuevo en unos minutos.",
+      "alreadyApproved": "Tu verificación ya está aprobada; no necesitas repetirla."
+    }
+  },
   "admin": {
     "finance": {
       "errors": {

@@ -41,7 +41,8 @@ public class DiditClientImpl implements DiditClient {
 
     @Override
     public DiditCreateSessionResult createSession(Long userId, String email,
-                                                  String givenName, String lastName) {
+                                                  String givenName, String lastName,
+                                                  String workflowId) {
         // Modo sin coste / sin credenciales: devolvemos mock estable.
         if (!props.isEnabled() || props.getApiKey() == null || props.getApiKey().isBlank()) {
             String fakeSessionId = "didit_mock_" + UUID.randomUUID();
@@ -53,20 +54,24 @@ public class DiditClientImpl implements DiditClient {
                     .put("session_id", fakeSessionId)
                     .put("url", fakeUrl)
                     .put("vendor_data", vendorData)
-                    .put("status", "Not Started");
+                    .put("status", "Not Started")
+                    .put("workflow_id", workflowId == null ? "" : workflowId);
 
             return new DiditCreateSessionResult(fakeSessionId, fakeUrl, vendorData, null, raw.toString());
         }
 
-        // Modo real: workflow_id obligatorio. Sin el, Didit responde 400.
-        if (props.getWorkflowId() == null || props.getWorkflowId().isBlank()) {
+        // Modo real: workflow_id obligatorio (lo decide el caller segun el
+        // flujo). Sin el, Didit responde 400. La validacion de que las
+        // properties del flujo activo esten pobladas es responsabilidad del
+        // caller; aqui solo aseguramos que el parametro recibido no es blank.
+        if (workflowId == null || workflowId.isBlank()) {
             throw new IllegalStateException(
-                    "kyc.didit.workflow-id es obligatorio cuando kyc.didit.enabled=true.");
+                    "workflowId es obligatorio en createSession cuando kyc.didit.enabled=true.");
         }
 
         String vendorData = props.getVendorDataPrefix() + ":" + userId;
         String rawBody = buildCreateSessionPayloadJson(
-                props.getWorkflowId(), props.getCallbackUrl(), vendorData, email, givenName, lastName);
+                workflowId, props.getCallbackUrl(), vendorData, email, givenName, lastName);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

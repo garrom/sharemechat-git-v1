@@ -2,6 +2,7 @@ package com.sharemechat.entity;
 
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -22,6 +23,14 @@ public class KycSession {
 
     @Column(name = "provider", nullable = false, length = 20)
     private String provider;
+
+    // V9 (frente Didit cliente, 2026-06-14): distingue sesiones del MODELO
+    // (Document+Selfie+Liveness) de las del CLIENTE (Age Estimation). En BD
+    // la columna tiene NOT NULL DEFAULT 'MODEL'; las filas historicas que
+    // existian antes de V9 quedaron como MODEL automaticamente. Valores
+    // canonicos en {@link com.sharemechat.constants.Constants.SessionTypes}.
+    @Column(name = "session_type", nullable = false, length = 10)
+    private String sessionType;
 
     @Column(name = "provider_session_id", nullable = false, length = 100)
     private String providerSessionId;
@@ -55,6 +64,18 @@ public class KycSession {
 
     @Column(name = "last_provider_event_type", length = 100)
     private String lastProviderEventType;
+
+    // V9: campos especificos del flujo CLIENTE (Age Estimation). NULL para
+    // sesiones MODEL. Para sesiones CLIENT se rellenan al persistir el
+    // webhook con la decision final de Didit Adaptive Age Verification.
+    @Column(name = "estimated_age_decimal", precision = 5, scale = 2)
+    private BigDecimal estimatedAgeDecimal;
+
+    @Column(name = "confidence_score", precision = 5, scale = 2)
+    private BigDecimal confidenceScore;
+
+    @Column(name = "age_estimation_threshold")
+    private Integer ageEstimationThreshold;
 
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -168,6 +189,38 @@ public class KycSession {
 
     public void setLastProviderEventType(String lastProviderEventType) {
         this.lastProviderEventType = lastProviderEventType;
+    }
+
+    public String getSessionType() {
+        return sessionType;
+    }
+
+    public void setSessionType(String sessionType) {
+        this.sessionType = sessionType;
+    }
+
+    public BigDecimal getEstimatedAgeDecimal() {
+        return estimatedAgeDecimal;
+    }
+
+    public void setEstimatedAgeDecimal(BigDecimal estimatedAgeDecimal) {
+        this.estimatedAgeDecimal = estimatedAgeDecimal;
+    }
+
+    public BigDecimal getConfidenceScore() {
+        return confidenceScore;
+    }
+
+    public void setConfidenceScore(BigDecimal confidenceScore) {
+        this.confidenceScore = confidenceScore;
+    }
+
+    public Integer getAgeEstimationThreshold() {
+        return ageEstimationThreshold;
+    }
+
+    public void setAgeEstimationThreshold(Integer ageEstimationThreshold) {
+        this.ageEstimationThreshold = ageEstimationThreshold;
     }
 
     public LocalDateTime getCreatedAt() {

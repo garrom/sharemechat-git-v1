@@ -109,19 +109,24 @@ public class CountryAccessService {
     }
 
     /**
-     * Usado por POST /api/kyc/veriff/start (inicio de sesión Veriff para
-     * onboarding de modelo). Reusa la allowlist de **modelo** porque el
-     * flujo KYC del modelo es continuación de su registro: ambos comparten
-     * el mismo conjunto de países permitidos.
-     *
-     * NOTA: cuando se cree el endpoint equivalente para CLIENTE (Age
-     * Estimation, vendor aún por decidir), se replicará este mismo patrón
-     * añadiendo {@code assertAllowedForClientKyc} que use {@link #clientAllowed}.
-     * No se añade ese método ahora porque no hay endpoint que lo consuma
-     * (regla de "no introducir API sin caller").
+     * Usado por POST /api/kyc/didit/model/start (inicio de sesión Didit para
+     * onboarding de modelo) y por POST /api/kyc/veriff/start (dormido pero
+     * integrado, ADR-035). Reusa la allowlist de **modelo** porque el flujo
+     * KYC del modelo es continuación de su registro: ambos comparten el
+     * mismo conjunto de países permitidos.
      */
     public void assertAllowedForModelKyc(HttpServletRequest request) {
         assertAllowedInternal(request, modelAllowed, "model_kyc");
+    }
+
+    /**
+     * Usado por POST /api/kyc/didit/client/start (inicio de sesión Didit
+     * Age Estimation para el CLIENTE). Usa la allowlist de **cliente**, mas
+     * restrictiva (28 países) que la de modelo (51 países). Coherente con
+     * que el flujo de cliente es continuación de su registro como cliente.
+     */
+    public void assertAllowedForClientKyc(HttpServletRequest request) {
+        assertAllowedInternal(request, clientAllowed, "client_kyc");
     }
 
     /**

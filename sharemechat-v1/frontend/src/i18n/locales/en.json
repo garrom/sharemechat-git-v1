@@ -1500,6 +1500,22 @@
       "suffix": "by uploading a profile photo and introduction video from the Profile section."
     }
   },
+  "clientKyc": {
+    "title": "Age verification",
+    "navTitle": "Age verification",
+    "back": "Back",
+    "intro": "Before you can top up your wallet we need to verify that you are an adult. The check is quick and uses your camera: our provider (Didit, EU-certified) estimates your age from an image of your face. No ID document is requested unless the result is borderline.",
+    "whyLegal": "This is required by minor-protection regulations in the markets where we operate (EU DSA Art. 28, UK OSA, US Free Speech Coalition v. Paxton). It is not optional.",
+    "consentTitle": "Biometric processing consent",
+    "consentText": "I give my explicit consent for my facial biometric data (an image of my face) to be processed by Didit (data processor, EU) for the sole purpose of estimating my age, under Art. 9.2.a GDPR. The data is stored for 6 months and then automatically deleted. I can withdraw consent at any time by contacting privacidad@sharemechat.com; in that case my account will lose the ability to top up and consume adult content.",
+    "consentReadMore": "More information in the privacy policy.",
+    "startButton": "Start verification",
+    "startingButton": "Starting…",
+    "errors": {
+      "generic": "Could not start the verification. Please try again in a few minutes.",
+      "alreadyApproved": "Your verification is already approved; you do not need to repeat it."
+    }
+  },
   "admin": {
     "finance": {
       "errors": {

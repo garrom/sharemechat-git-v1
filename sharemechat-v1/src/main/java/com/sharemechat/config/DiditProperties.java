@@ -16,11 +16,12 @@ import org.springframework.stereotype.Component;
  *    webhook (scoped por destino, NO igual al api-key). Solo se usa para
  *    VERIFICAR webhooks ENTRANTES via HMAC-SHA256 sobre el raw body. Si
  *    Didit rota la clave del destino, hay que actualizar esta property.
- *  - {@link #workflowId} es nuevo respecto a Veriff: cada flujo (KYC modelo,
- *    Adaptive Age para cliente, etc.) tiene su propio workflow_id en el
- *    Workflow Builder de Didit. Esta property apunta al workflow del flujo
- *    de MODELO (Document+Selfie IDV). El flujo de cliente Age Estimation
- *    tendra su propia property cuando se implemente (frente separado).
+ *  - Workflow ids: cada flujo (KYC modelo, Age Estimation cliente) tiene
+ *    su propio workflow_id en el Workflow Builder de Didit. El destino
+ *    webhook es UNICO compartido entre ambos flujos (shareme-test-kyc),
+ *    asi que el discriminador en el procesamiento del webhook es el
+ *    workflow_id que viene en el payload + el session_type de la fila
+ *    kyc_sessions.
  */
 @Component
 @ConfigurationProperties(prefix = "kyc.didit")
@@ -31,7 +32,8 @@ public class DiditProperties {
     private String apiKey;
     private String apiSecret;
     private String callbackUrl;
-    private String workflowId;
+    private String modelWorkflowId;
+    private String clientWorkflowId;
     private String vendorDataPrefix = "smc";
 
     public boolean isEnabled() {
@@ -74,12 +76,20 @@ public class DiditProperties {
         this.callbackUrl = callbackUrl;
     }
 
-    public String getWorkflowId() {
-        return workflowId;
+    public String getModelWorkflowId() {
+        return modelWorkflowId;
     }
 
-    public void setWorkflowId(String workflowId) {
-        this.workflowId = workflowId;
+    public void setModelWorkflowId(String modelWorkflowId) {
+        this.modelWorkflowId = modelWorkflowId;
+    }
+
+    public String getClientWorkflowId() {
+        return clientWorkflowId;
+    }
+
+    public void setClientWorkflowId(String clientWorkflowId) {
+        this.clientWorkflowId = clientWorkflowId;
     }
 
     public String getVendorDataPrefix() {
