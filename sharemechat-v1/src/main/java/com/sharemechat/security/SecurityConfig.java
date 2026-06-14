@@ -1,5 +1,6 @@
 package com.sharemechat.security;
 
+import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.ApiRateLimitService;
 import com.sharemechat.service.ProductOperationalModeService;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +30,7 @@ public class SecurityConfig {
     private final UserDetailsServiceImpl userDetailsService;
     private final ApiRateLimitService apiRateLimitService;
     private final ProductOperationalModeService productOperationalModeService;
+    private final UserRepository userRepository;
 
     @Value("${auth.cookieDomain}")
     private String cookieDomain;
@@ -40,12 +42,14 @@ public class SecurityConfig {
             JwtUtil jwtUtil,
             UserDetailsServiceImpl userDetailsService,
             ApiRateLimitService apiRateLimitService,
-            ProductOperationalModeService productOperationalModeService
+            ProductOperationalModeService productOperationalModeService,
+            UserRepository userRepository
     ) {
         this.jwtUtil = jwtUtil;
         this.userDetailsService = userDetailsService;
         this.apiRateLimitService = apiRateLimitService;
         this.productOperationalModeService = productOperationalModeService;
+        this.userRepository = userRepository;
     }
 
     @Bean
@@ -264,6 +268,16 @@ public class SecurityConfig {
                 .addFilterAfter(
                         new ProductOperationalModeFilter(productOperationalModeService, jwtUtil, cookieDomain, secureCookies),
                         CookieJwtAuthenticationFilter.class
+                )
+                // Email verification gate total (2026-06-15): bloquea con
+                // 403 EMAIL_NOT_VERIFIED toda request autenticada de un
+                // user con email_verified_at=NULL salvo whitelist minima.
+                // Se registra DESPUES de ProductOperationalModeFilter para
+                // que el modo PRELAUNCH/MAINTENANCE se evalue primero (el
+                // 503 de modo restrictivo predomina sobre el 403 de email).
+                .addFilterAfter(
+                        new EmailVerifiedFilter(userRepository),
+                        ProductOperationalModeFilter.class
                 )
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))

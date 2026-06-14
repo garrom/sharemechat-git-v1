@@ -82,12 +82,7 @@ public class KycSessionService {
             throw new IllegalArgumentException("Solo USER + FORM_MODEL puede iniciar KYC");
         }
 
-        emailVerificationService.assertEmailVerified(
-                user,
-                "Debes validar tu email antes de iniciar el KYC de modelo.",
-                "MODEL_ONBOARDING",
-                "VERIFY_EMAIL"
-        );
+        // Gate de email cubierto por EmailVerifiedFilter (filter global).
 
         if (!modelContractService.isAcceptedCurrent(userId)) {
             throw new IllegalArgumentException("Debes aceptar el contrato de modelo antes del KYC");
@@ -274,12 +269,7 @@ public class KycSessionService {
             throw new IllegalArgumentException("Solo USER + FORM_MODEL puede iniciar KYC");
         }
 
-        emailVerificationService.assertEmailVerified(
-                user,
-                "Debes validar tu email antes de iniciar el KYC de modelo.",
-                "MODEL_ONBOARDING",
-                "VERIFY_EMAIL"
-        );
+        // Gate de email cubierto por EmailVerifiedFilter (filter global).
 
         if (!modelContractService.isAcceptedCurrent(userId)) {
             throw new IllegalArgumentException("Debes aceptar el contrato de modelo antes del KYC");
@@ -360,15 +350,10 @@ public class KycSessionService {
             throw new IllegalArgumentException("Solo CLIENT (o USER + FORM_CLIENT) puede iniciar KYC de cliente");
         }
 
-        // Cierre P8 (2026-06-14): alineado con startDiditModelSession, el
-        // KYC del cliente exige email verificado previo. Lanza
-        // EmailVerificationRequiredException -> 403 EMAIL_NOT_VERIFIED.
-        emailVerificationService.assertEmailVerified(
-                user,
-                "Debes validar tu email antes de iniciar la verificacion de edad.",
-                "CLIENT_KYC",
-                "VERIFY_EMAIL"
-        );
+        // Gate de email cubierto por EmailVerifiedFilter (filter global).
+        // Antes (commit 2d885cb) habia un assertEmailVerified inline aqui
+        // que cerraba la deuda P8; sigue cerrada porque el filter aplica
+        // a TODAS las requests autenticadas, incluido /didit/client/start.
 
         if (Constants.VerificationStatuses.APPROVED.equals(user.getClientKycStatus())) {
             throw new IllegalStateException("El usuario ya tiene client_kyc_status=APPROVED; no procede reverificar aqui.");

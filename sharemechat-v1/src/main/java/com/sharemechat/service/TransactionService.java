@@ -156,16 +156,15 @@ public class TransactionService {
             throw new IllegalArgumentException("Para el primer pago, operationType debe ser INGRESO");
         }
 
-        emailVerificationService.assertEmailVerified(
-                user,
-                "Debes validar tu email antes de activar la cuenta premium.",
-                "CLIENT_PREMIUM",
-                "VERIFY_EMAIL"
-        );
+        // Gate de email: garantizado por EmailVerifiedFilter (frente
+        // "Email verification gate total" 2026-06-15). Antes habia un
+        // assertEmailVerified inline aqui; ahora lo cubre el filter global
+        // para TODOS los endpoints autenticados, no solo /first.
 
         // Gate KYC cliente (ADR-029/-035): edad verificada con Didit antes
         // del primer pago. Lanza ClientKycRequiredException -> 403 con
-        // code=CLIENT_KYC_REQUIRED. Orden importa: email primero, luego KYC.
+        // code=CLIENT_KYC_REQUIRED. Este gate sigue siendo especifico del
+        // flujo de pago, no global.
         clientKycGate.assertClientKycApproved(user);
 
         BigDecimal lastBalance = lastBalanceOf(userId);
@@ -266,12 +265,7 @@ public class TransactionService {
             if (!Constants.UserTypes.FORM_CLIENT.equals(user.getUserType())) {
                 throw new IllegalArgumentException("Solo USER + FORM_CLIENT puede activar premium con primer pago");
             }
-            emailVerificationService.assertEmailVerified(
-                    user,
-                    "Debes validar tu email antes de activar la cuenta premium.",
-                    "CLIENT_PREMIUM",
-                    "VERIFY_EMAIL"
-            );
+            // Gate de email cubierto por EmailVerifiedFilter (filter global).
         } else {
             if (!Constants.Roles.CLIENT.equals(user.getRole())) {
                 throw new IllegalArgumentException("El usuario debe ser CLIENT para recargar saldo");
