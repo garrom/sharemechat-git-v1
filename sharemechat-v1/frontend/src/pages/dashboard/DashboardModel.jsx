@@ -7,7 +7,6 @@ import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
-import EmailNotVerifiedBanner from '../../components/EmailNotVerifiedBanner';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
@@ -3075,7 +3074,6 @@ const DashboardModel = () => {
   return (
     <StyledContainer>
       <GlobalBlack />
-      <EmailNotVerifiedBanner />
       <AuthenticatedConsentModal
         open={consentRequired}
         requiredTermsVersion={consentVersion}

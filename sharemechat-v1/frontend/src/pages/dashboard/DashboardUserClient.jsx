@@ -7,7 +7,6 @@ import { useHistory } from 'react-router-dom';
 import Peer from 'simple-peer';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
-import EmailNotVerifiedBanner from '../../components/EmailNotVerifiedBanner';
 import { ensureClientKycApproved } from '../../utils/clientKycGate';
 import VideoChatRandomUser from './VideoChatRandomUser';
 import TrialCooldownModal from '../../components/TrialCooldownModal';
@@ -775,7 +774,6 @@ const DashboardUserClient = () => {
   return (
     <StyledContainer>
       <GlobalBlack />
-      <EmailNotVerifiedBanner />
 
       {/* ========= INICIO NAVBAR  ======== */}
       <NavbarClient

@@ -7,7 +7,6 @@ import Peer from 'simple-peer';
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
-import EmailNotVerifiedBanner from '../../components/EmailNotVerifiedBanner';
 import { ensureClientKycApproved } from '../../utils/clientKycGate';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -3021,7 +3020,6 @@ const DashboardClient = () => {
   return(
     <StyledContainer>
       <GlobalBlack/>
-      <EmailNotVerifiedBanner />
       <AuthenticatedConsentModal
         open={consentRequired}
         requiredTermsVersion={consentVersion}

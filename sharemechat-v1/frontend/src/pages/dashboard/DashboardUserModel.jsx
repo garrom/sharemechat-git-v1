@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import i18n from '../../i18n';
 import { useHistory } from 'react-router-dom';
 import NavbarModel from '../../components/navbar/NavbarModel';
-import EmailNotVerifiedBanner from '../../components/EmailNotVerifiedBanner';
 import {
   StyledContainer,
   StyledMainContent,
@@ -295,7 +294,6 @@ const DashboardUserModel = () => {
   return (
     <StyledContainer>
       <GlobalBlack />
-      <EmailNotVerifiedBanner />
 
       <NavbarModel
         activeTab="videochat"
