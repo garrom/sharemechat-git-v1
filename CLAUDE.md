@@ -86,3 +86,15 @@ Cualquier comando contra infraestructura (AWS CLI, SSH a EC2, túnel RDS, `mysql
 
 **Lanzamiento a producción: 1 de julio de 2026.**
 Estado y prioridades vivas en `docs/07-roadmap/`.
+
+---
+
+## Convenciones de código y operación
+
+**ONE JAR**. Un único artefacto sirve TEST/AUDIT/PROD; la diferenciación vive en `application-{test,audit,prod}.properties` activadas por `SPRING_PROFILES_ACTIVE`, variables de entorno y flags BD (p. ej. `PRODUCT_ACCESS_MODE`). El binario es idéntico, no el comportamiento: cada entorno puede operar en modo distinto en runtime (p. ej. PROD en `PRELAUNCH` mientras TEST/AUDIT en `OPEN`). No introducir perfiles Maven que produzcan JARs distintos por entorno.
+
+**Higiene de credenciales**. Secrets y passwords nunca por argv ni a disco persistente; si un comando los necesita, vía stdin/heredoc. Tampoco en chat, logs ni historial de shell.
+
+**Estilo de commits**. Sin `Co-Authored-By:`; autoría única del operador. Resto de convenciones en `documentation-governance.md`.
+
+**Vendor-agnostic en el dominio**. El nombre del vendor aparece solo en adapters de cliente HTTP, DTOs de respuesta del vendor y `@ConfigurationProperties` (`kyc.didit.*`, `psp.segpay.*`, etc.). Entidades, tablas, columnas, repositorios, servicios orquestadores y endpoints públicos quedan vendor-agnostic. Los webhook handlers con shape específico por vendor (p. ej. `processVeriffWebhook` / `processDiditWebhook`) son compromiso aceptable, pero el endpoint público que los expone es genérico por dominio (no por vendor).

@@ -8,6 +8,12 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-16 — Formalización de convenciones de código y operación en CLAUDE.md
+
+Cuatro reglas vinculantes (ONE JAR, higiene de credenciales por stdin/heredoc, sin `Co-Authored-By`, vendor-agnostic en el dominio) se documentan como sección compacta al final de `CLAUDE.md` raíz. El onboarding del frente de moderación IA del streaming detectó que estaban operando verbalmente pero no escritas, aunque el código las cumplía ya por construcción (`pom.xml` sin perfiles Maven por entorno; adapters `*Client`/`*Properties` con nombre del vendor frente a entidad `KycSession` y tabla `kyc_sessions` agnósticas). Cambio puramente documental, sin tocar código ni cambiar comportamiento.
+
+---
+
 ## 2026-06-14 — Frente Email Verification Gate Total + Frente Integración Age Verification con add-balance/first cerrados end-to-end
 
 Cierre conjunto de dos frentes superpuestos sobre el mismo flujo crítico del cliente, completados en una sola jornada con cuatro hot-fixes UX derivados de la validación.
