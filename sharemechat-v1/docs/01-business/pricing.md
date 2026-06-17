@@ -19,6 +19,10 @@ El pack mínimo es de 10 €. La fuente de verdad es el **saldo comprado en EUR*
 - Ticket medio-alto: se evitan los micropagos.
 - Decisión de compra simple, alineada con el comportamiento real del usuario en videochat 1:1.
 
+## Primer minuto gratis para el cliente
+
+El primer minuto de cada sesión **no se cobra al cliente**; lo absorbe la plataforma como demo del producto, pagando ese minuto a la modelo a la tarifa reducida del tier. Existe un mecanismo anti-abuso por cliente basado en **packs de slots gratis con cooldown progresivo entre packs** (no un tope diario hard en minutos): en régimen estacionario equivale a ~3 minutos gratis cada 24 h. Detalle completo del mecanismo, tarifas por tier y desglose económico en [sistema-tiers-modelos.md](sistema-tiers-modelos.md), § 5.
+
 ## Histórico
 
 La oferta inicial contemplaba un pack de 5 € que se **eliminó**: un ticket tan bajo dejaba un margen prácticamente nulo o negativo una vez considerados los costes fijos del procesador de pago, y generaba más operaciones pequeñas sin valor estratégico claro antes de tener datos reales de conversión. El detalle de la decisión y de las alternativas descartadas está en [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md). Si en una fase posterior los datos demuestran que un ticket inferior mejora la conversión sin destruir margen, la decisión podrá reabrirse mediante una revisión formal del pricing.
@@ -30,4 +34,5 @@ Este documento describe la estructura de precio de cara al cliente. El análisis
 ## Referencias
 
 - [business-model.md](business-model.md) — modelo de negocio y monetización.
+- [sistema-tiers-modelos.md](sistema-tiers-modelos.md) — sistema de tiers de retribución de modelos, tarifas vigentes y mecánica del primer minuto gratis.
 - [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md) — simplificación de pricing y umbral mínimo de recarga.

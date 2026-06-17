@@ -22,7 +22,9 @@ Hasta que esos valores estén cerrados, la comisión del PSP entra en la fórmul
 
 El reparto entre modelo y plataforma existe a nivel de mecánica en el ledger: el consumo durante una sesión se descompone en `STREAM_CHARGE` (cliente), `STREAM_EARNING` (modelo) y `STREAM_MARGIN` (plataforma), siguiendo las reglas vigentes de tarifa por minuto y *tier* de la modelo (ver [ADR-012](../06-decisions/adr-012-bfpm-platform-funded-bonus.md), sección de modelo contable). El concepto de reparto modelo/plataforma se reconoce expresamente como tal en [business-model.md](business-model.md) y se preserva en [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md).
 
-Sin embargo, **el porcentaje concreto del reparto no está documentado** en este repositorio. Queda como parámetro a definir cuando se formalice la política de payouts (porcentaje base para la modelo, modulación por tier, retenciones, umbrales de payout, calendario de retiros). Mientras tanto, el reparto entra en la fórmula como parámetro abierto.
+El **detalle del sistema de tiers, las tarifas por minuto vigentes, los umbrales de progresión y la mecánica del primer minuto gratis** está documentado en [sistema-tiers-modelos.md](sistema-tiers-modelos.md). Resumen para la fórmula del margen de contribución: la modelo gana `first_minute_earning_per_min` × duración del primer minuto + `next_minutes_earning_per_min` × duración del resto, donde ambas tarifas dependen del tier resuelto por el snapshot diario (`model_tier_daily_snapshots`). En el régimen vigente, el reparto bruto por minuto de los minutos siguientes va del **85% para la plataforma en tier base (5-15)** al **60% en tier alto (9-40)**. Los porcentajes netos del reparto (tras PSP, AWS y costes fijos) siguen pendientes del cierre con Segpay y del resto de variables abiertas en este documento.
+
+La política de payouts a la modelo (umbrales de payout, calendario de retiros, retenciones, formas de pago) **sigue pendiente** de formalización y entra en la fórmula como parámetro abierto.
 
 ## Costes fijos asignables
 
@@ -63,6 +65,7 @@ Hasta entonces, este documento sirve como marco compartido para evitar declarar 
 
 - [business-model.md](business-model.md) — modelo de negocio y monetización.
 - [pricing.md](pricing.md) — estructura de packs.
+- [sistema-tiers-modelos.md](sistema-tiers-modelos.md) — sistema de tiers de retribución de modelos, tarifas por minuto vigentes, snapshot diario, primer minuto gratis para el cliente y desglose plataforma/modelo por tier.
 - [psp-strategy.md](psp-strategy.md) — estrategia de PSP (Segpay como vía activa).
 - [accounting-status.md](accounting-status.md) — categorías de coste contabilizadas.
 - [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md) — simplificación de pricing y umbral mínimo.
