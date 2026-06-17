@@ -8,6 +8,41 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-17 — VEREDICTO: degradar ROJO 1 a nota informativa cuando el canal es FRONTEND/ADMIN (SPA fallback en CDN)
+
+Cierre F1 del frente VEREDICTO tras un ROJO falso positivo en el reporte del 2026-06-16. **Causa raíz**: el clasificador disparó `success_on_sensitive_route` ROJO para 4 IPs del scanner público LeakIX (`l9scan/2.0`, rangos de DigitalOcean) que recibieron `200` en `/server-status` y `/actuator/env` contra `admin.sharemechat.com`. La verificación con `curl` directo a HTTPS contra el dominio real confirmó que la respuesta no es JSON del Actuator de Spring, sino el `index.html` del bundle admin (`<!doctype html><html lang="en">…<title>1-to-1 Vid…`, 3095 B, `Content-Type: text/html`). Es el **SPA fallback de CloudFront**: la distribución `E3O40LHJ4PC6LE` del admin tiene "Custom Error Responses" que mapean `403/404` → `/index.html` con código `200`, exactamente la misma topología que ya conocíamos del `try_files` de nginx pero ejecutada en el edge CDN. Loopback HTTPS desde el origen con `Host: sharemechat.com` devolvió `404 nginx` para esas mismas rutas, confirmando que el backend Spring nunca llegó a verlas — la respuesta `200` se compone en el edge antes de tocar origen. Las 4 IPs nunca tocaron Actuator real porque Actuator real ni siquiera está expuesto en el vhost `api.sharemechat.com`.
+
+**Cambio (F1, aditivo, sin tocar scoring por IP ni patrón hostile)**. En `compute_verdict`, ROJO 1 ahora consulta `event.get("channel")` antes de añadir el hit:
+- Si `channel ∈ {"FRONTEND", "ADMIN"}` → la fila va a un bucket separado `sensitive_on_spa_channel` que se emite como **nota informativa** dentro del bloque VERDE, agrupada por `(ip, channel)` con dedup de rutas y truncado a 5 mostradas. Formato: `<IP> sondeo <rutas> en <CANAL> (SPA fallback en CDN, no es fuga)`.
+- Si `channel == "API"` (o cualquier otro valor reconocido como backend real) → mantiene ROJO con `severity` completa. Mismo `summary` y mismas keys que antes (`rule="success_on_sensitive_route"`, `ip`, `route`, `status`), más un campo nuevo `channel` añadido a la entrada para auditabilidad sin romper el reporter.
+- Si `channel` ausente o vacío → **fail-safe a API**: cuenta como ROJO real (no se silencia un ROJO genuino por dato faltante en el normalizer) y se emite **un único warning a stderr por día** del estilo `[classify_access] event with sensitive route hit has empty channel; fail-safe to API (ROJO). ip=… route=…`. Decisión explícita: la seguridad pesa más que el ruido de logs.
+
+**Nueva constante** `VERDICT_SPA_FALLBACK_CHANNELS = frozenset({"FRONTEND", "ADMIN"})` documentada en el código con la lista de canales y la regla "si en el futuro se enrutase backend real bajo admin/producto, hay que mover ese canal fuera de aquí". Los valores `FRONTEND` y `ADMIN` coinciden con los únicos no nulos que el normalizer emite hoy (`sorted({event["channel"]…})` sobre el `2026-06-16.jsonl` devuelve exactamente `["ADMIN", "FRONTEND"]`).
+
+**Re-ejecución local del classifier modificado contra 8 días (06-09 a 06-16)**, eventos crudos del normalizer + baseline de los `.summary.jsonl` 06-06 al 06-08. **Esperado y obtenido**:
+- 06-09 **AMARILLO** (pico legítimo 21 IPs CRITICA vs media 6.7) — intacto.
+- 06-10/12 **VERDE** — intacto.
+- 06-11/13/14/15 **VERDE + nota** `api_real_probing` — intacto.
+- 06-16 **VERDE + 4 notas** `sensitive_on_spa_channel` con las 4 IPs LeakIX, cada una sondeando `/actuator/env` y `/server-status` en `ADMIN`. Antes del fix, este día daba ROJO; ahora reasons=[] y level=VERDE. Sin warnings de canal ausente en ningún día.
+
+Bloque de notas del 16 generado (formato visible en `.table.txt`, identical al del `.summary.jsonl` con `kind: "sensitive_on_spa_channel"`):
+
+```
+VEREDICTO: [V] SIN ACCION -- 31 IPs MALICIOSA/CRITICA, sin exito en rutas sensibles; 1064 eventos totales; nada que revisar.
+  (nota) 159.65.144.72 sondeo /actuator/env, /server-status en ADMIN (SPA fallback en CDN, no es fuga) [sensitive_on_spa_channel] (ip=159.65.144.72)
+  (nota) 167.172.232.142 sondeo /actuator/env, /server-status en ADMIN (SPA fallback en CDN, no es fuga) [sensitive_on_spa_channel] (ip=167.172.232.142)
+  (nota) 64.225.75.246 sondeo /actuator/env, /server-status en ADMIN (SPA fallback en CDN, no es fuga) [sensitive_on_spa_channel] (ip=64.225.75.246)
+  (nota) 64.226.65.160 sondeo /actuator/env, /server-status en ADMIN (SPA fallback en CDN, no es fuga) [sensitive_on_spa_channel] (ip=64.226.65.160)
+```
+
+**Deploy a PROD**. `install -m 0755` sobre `/opt/sharemechat-prod-access-classifier/lib/classify_access.py` (sha256 `32b6f88e…`), backup explícito como `.bak-20260617-pre-spa-channel-degrade` (versión inmediatamente previa, con whitelist consent pero sin canal). Se conservan los dos backups anteriores (`bak-20260612-pre-verdict-block`, `bak-20260614-pre-whitelist-consent`) para histórico/rollback. `__pycache__/` borrado. Smoke real en `/opt` con `classify-prod-access.sh --date 2026-06-16` regeneró el `.table.txt` y el `.summary.jsonl` con VERDE + 4 notas SPA. El reporter (`a40fc0e`) sigue funcionando sin cambios: la estructura del verdict mantiene las mismas keys públicas (`level`, `label`, `summary`, `reasons`, `notes`, `stats`, `pointers`). El próximo `daily-report` (jueves 18 jun 07:10 UTC sobre eventos del 17) saldrá con la cabecera correcta.
+
+**Por qué no F2/F3/F4**. F2 (`status_int in (200, 201)`) no resolvía este caso porque el SPA fallback devuelve `200` puro. F3 (inferir SPA por `sc-bytes < 10 KB`) habría requerido tocar el normalizer para que extrajera el campo, frente más grande y mismo resultado funcional. F4 (whitelist de IPs de LeakIX) trataba el síntoma, no la causa: mañana es otro scanner. F1 ataca la raíz: el clasificador ya tenía la información que necesitaba (`channel`), solo había que usarla. F3 queda registrada en `known-debt.md` como mejora defensiva futura (defensa en profundidad por si en algún momento el backend real se monta bajo `admin/`).
+
+**Lo que NO se replica**. Mismo régimen que los frentes VEREDICTO anteriores: ni `audit-access-classifier` ni `test-access-classifier` portan VEREDICTO aún; cuando llegue el frente conjunto AUDIT+TEST tocará portar TANTO el bloque VEREDICTO como las dos extensiones del 14 (whitelist consent + 200/201) como esta tercera (degrade por canal). La deuda registrada en `known-debt.md` crece para mantener trazabilidad.
+
+---
+
 ## 2026-06-16 — Cierre del ciclo 2 del pipeline social-ops (segundo aporte en X, `@shareme_chat`)
 
 Segundo post real del pipeline social-ops, primero anclado en un artículo del blog. Alain publica en X la variante "Catalog effect" del ciclo 2 de Cowork, ejecutado contra el artículo `que-es-videochat-1-a-1` que se publicó el mismo día (2026-06-16T20:12:31Z). El ledger `docs/social/social-state.json` queda con `platforms.x.ratio.aporte: 2`, `phase: warmup`, `updated_at: "2026-06-16"`; resto intacto (Reddit en warmup sin actividad nueva del pipeline; el sub propio `r/SharemeChat` creado el 2026-06-12 sigue en standby).

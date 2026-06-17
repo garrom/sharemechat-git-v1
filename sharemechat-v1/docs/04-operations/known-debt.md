@@ -18,6 +18,22 @@ El bloque VEREDICTO solo lo emite `prod-access-classifier` (commits `056b7e9` y 
 
 **Prioridad**: baja. No bloquea operación; los reportes de AUDIT y TEST siguen funcionando con el formato anterior, y el operador los usa principalmente para PROD.
 
+### [DEUDA — perimeter pipeline] El clasificador depende del campo `channel` del normalizer; mantener la distinción API vs SPA estable
+
+A partir del 2026-06-17 (commit del F1, "degradar ROJO 1 a nota cuando canal ∈ FRONTEND/ADMIN"), `compute_verdict` consulta `event.get("channel")` para decidir si un `2xx` en ruta sensible es **fuga real** (channel `API` → Spring backend) o **SPA fallback de CDN** (channel `FRONTEND`/`ADMIN` → S3+CloudFront que mapea `403/404` a `index.html` con código `200`). Hoy esto es seguro porque `admin.sharemechat.com` y `sharemechat.com` solo sirven SPA estática y no hay endpoints `/api/*` reales detrás de esos vhosts.
+
+**Riesgo a vigilar**: si en el futuro se enruta backend real bajo `admin/*` o `producto/*` (p.ej. un BFF, un Lambda@Edge que mapee `/api/*` a Spring, o un cambio de arquitectura del admin a server-side), una ruta sensible servida por canal `ADMIN` dejaría de ser SPA fallback y volvería a ser fuga real, pero el clasificador lo seguiría tratando como nota informativa hasta que alguien actualice `VERDICT_SPA_FALLBACK_CHANNELS`. **Mitigación**: cuando se modifique el routing del admin/producto en una PR (CloudFormation/Terraform del CDN, vhost nuevo de nginx, función Lambda@Edge), el reviewer debe abrir `classify_access.py` y verificar la constante.
+
+**Mecanismo de defensa actual** (no requiere acción si no cambia el routing): el campo `channel` lo emite el normalizer (`sharemechat-prod-access-normalizer`) a partir del hostname y el path. Si el normalizer dejara de emitir `channel` o lo dejara vacío, el classifier hace **fail-safe a API (ROJO)** y emite un warning a stderr — no se silencia un ROJO real por dato faltante. Ese warning aparecería en el `journalctl -u sharemechat-prod-daily-report.service`.
+
+**Prioridad**: baja, contingente a cambios de arquitectura. Anotar en el ADR de cualquier cambio de routing CDN que se haga en el futuro.
+
+### [DEUDA — perimeter pipeline] F3: extraer `sc-bytes` de los logs de CloudFront en el normalizer para defensa en profundidad
+
+Frente al falso positivo del 2026-06-16 (LeakIX recibiendo `200` con HTML del SPA en `/server-status` y `/actuator/env`), se aplicó F1 (degrade por canal) por ser el mínimo cambio aditivo y suficiente. Como defensa en profundidad para el caso hipotético en que el campo `channel` deje de ser fiable o se monte un backend bajo `admin/`, sería razonable extraer `sc-bytes` (bytes enviados por CloudFront en la respuesta) en el `prod-access-normalizer` y exponerlo como `bytes_sent` en el evento. El classifier podría entonces aplicar una regla complementaria: `success_on_sensitive_route` con `bytes_sent < 10 KB` se degrada a nota (probable SPA, no JSON de Actuator real). Coste: tocar el normalizer (otro componente del pipeline), regenerar histórico de eventos para validar umbral, propagar el campo al schema del clasificador. Beneficio: detección robusta independiente del routing.
+
+**Prioridad**: baja. F1 resuelve el problema concreto y no hay arquitectura prevista que invalide la heurística por canal en el roadmap.
+
 ### [DEUDA — perimeter pipeline] Sincronizar `VERDICT_KNOWN_PUBLIC_API_PREFIXES` con cambios en `SecurityConfig.java`
 
 La whitelist de rutas `permitAll` del classifier (`VERDICT_KNOWN_PUBLIC_API_PREFIXES`) se auditó manualmente contra `SecurityConfig.java` el 2026-06-14. No hay mecanismo automático que la mantenga sincronizada: si el backend añade un nuevo prefijo `permitAll` (p.ej. `/api/contact/`, `/api/feedback/`), el classifier disparará AMARILLO falsos positivos hasta que alguien recuerde tocar la constante. **Mitigación temporal**: cuando se modifique `SecurityConfig.java` en una PR, el reviewer debe abrir también el classifier y verificar la whitelist. **Solución durable** (no urgente): generar la lista en build-time desde un test que parsee `SecurityConfig.java` y la exponga como recurso versionado; o invertir la dependencia poniendo la lista en un fichero compartido leído por ambos lados. **Prioridad**: baja.

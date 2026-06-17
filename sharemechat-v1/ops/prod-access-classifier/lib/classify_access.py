@@ -851,6 +851,22 @@ def _is_known_public_api_route(route: str) -> bool:
             return True
     return False
 
+
+# Canales que sirven SPA estatica via CDN. Un 2xx con HTML en una ruta
+# sensible aqui es SPA fallback de CDN (CloudFront "Custom Error
+# Responses" que mapea 403/404 a /index.html con codigo 200) o nginx
+# try_files, NO fuga real. ROJO 1 (success_on_sensitive_route) se
+# degrada a NOTA INFORMATIVA dentro del VEREDICTO VERDE para estos
+# canales. Si la ruta sensible se sirve por channel="API"
+# (api.sharemechat.com -> Spring backend real) el ROJO sigue intacto.
+#
+# Cambio 2026-06-17 tras falso positivo del 16-jun: LeakIX (l9scan/2.0)
+# desde 4 IPs de DigitalOcean recibio 200 en /server-status y
+# /actuator/env contra admin.sharemechat.com (canal ADMIN). curl real
+# confirmo HTML del SPA, no JSON de Actuator. Sin esto, cada vez que un
+# scanner publico golpee admin/producto con rutas hostile -> ROJO falso.
+VERDICT_SPA_FALLBACK_CHANNELS: frozenset = frozenset({"FRONTEND", "ADMIN"})
+
 # Iconos web top-level que cualquier navegador o cliente movil pide por
 # defecto y que nginx sirve como estaticos. Un 200 aqui es trafico legitimo
 # y NO debe disparar AMARILLO. STATIC_ROUTE_PREFIXES ya cubre /favicon* y
@@ -914,7 +930,9 @@ def compute_verdict(
     reasons_yellow: List[dict] = []
 
     # 1) Hechos del dia a partir de events.jsonl.
-    success_on_sensitive: List[dict] = []  # 2xx/3xx en VERDICT_RED_ROUTE_PATTERNS por IP no-allowlisted
+    success_on_sensitive_api: List[dict] = []   # ROJO real: 2xx en sensible con channel=API o ausente (fail-safe)
+    sensitive_on_spa_channel: List[dict] = []   # nota informativa: 2xx en sensible con channel in VERDICT_SPA_FALLBACK_CHANNELS
+    channel_missing_warned = False              # log de canal ausente solo una vez por dia
     auth_login_per_ip: Dict[str, Dict[str, int]] = {}  # ip -> {success, fail}
     auth_post_per_ip: Counter = Counter()
     api_real_probe_per_ip: Counter = Counter()  # IP no-allowlisted sondeando /api/* no-publica-conocida
@@ -957,12 +975,30 @@ def compute_verdict(
             # el atacante haya leido nada. Aceptar 3xx genera falsos positivos
             # ROJOS sobre sondeos benignos. Solo 2xx implica que el recurso
             # se entrego con cuerpo real.
+            #
+            # Retune 2026-06-17 (F1 tras FP del 16-jun): un 2xx en ruta
+            # sensible servida por canal FRONTEND/ADMIN es SPA fallback de
+            # CDN (CloudFront S3 Custom Error Responses) o de nginx
+            # try_files, NO fuga real. Se degrada a NOTA INFORMATIVA dentro
+            # del VERDE. Solo channel=API (Spring backend en api.sharemechat
+            # .com) mantiene ROJO. Si el evento no trae channel: fail-safe,
+            # cuenta como API (que no se silencie un ROJO real por dato
+            # faltante) y se loguea un warning a stderr (una vez por dia).
             if is_success_2xx and not allowlisted:
                 for pattern in VERDICT_RED_ROUTE_PATTERNS:
                     if pattern.search(route):
-                        success_on_sensitive.append(
-                            {"ip": ip, "route": route, "status": status_int}
-                        )
+                        channel = str(event.get("channel") or "").upper()
+                        hit = {"ip": ip, "route": route, "status": status_int, "channel": channel or "UNKNOWN"}
+                        if channel in VERDICT_SPA_FALLBACK_CHANNELS:
+                            sensitive_on_spa_channel.append(hit)
+                        else:
+                            if not channel and not channel_missing_warned:
+                                sys.stderr.write(
+                                    "[classify_access] event with sensitive route hit has empty channel; "
+                                    "fail-safe to API (ROJO). ip=%s route=%s\n" % (ip, route)
+                                )
+                                channel_missing_warned = True
+                            success_on_sensitive_api.append(hit)
                         break
 
             # Auth login (ROJO 2): contadores success/fail por IP.
@@ -1020,13 +1056,16 @@ def compute_verdict(
                     )
 
     # 2) Aplicar reglas ROJO.
-    for hit in success_on_sensitive:
+    # Cambio 2026-06-17 (F1): success_on_sensitive_api solo. Los hits con
+    # channel in VERDICT_SPA_FALLBACK_CHANNELS van a notas, no a ROJO.
+    for hit in success_on_sensitive_api:
         reasons_red.append(
             {
                 "rule": "success_on_sensitive_route",
                 "ip": hit["ip"],
                 "route": hit["route"],
                 "status": hit["status"],
+                "channel": hit.get("channel", "UNKNOWN"),
                 "summary": (
                     f"{hit['ip']} obtuvo {hit['status']} en {hit['route']}"
                 ),
@@ -1144,6 +1183,33 @@ def compute_verdict(
                     ),
                 }
             )
+
+    # Nota informativa (cambio 2026-06-17, F1): 2xx en ruta sensible servida
+    # por canal FRONTEND/ADMIN (SPA fallback de CDN). Degradado de ROJO 1.
+    # Agrupado por (ip, channel) para no inundar cuando un scanner pega
+    # multiples rutas hostile.
+    spa_hits_by_ip_channel: Dict[Tuple[str, str], List[str]] = {}
+    for hit in sensitive_on_spa_channel:
+        key = (hit["ip"], hit["channel"])
+        spa_hits_by_ip_channel.setdefault(key, []).append(hit["route"])
+    for (ip, channel), routes in sorted(spa_hits_by_ip_channel.items()):
+        routes_dedup = sorted(set(routes))
+        shown = routes_dedup[:5]
+        routes_str = ", ".join(shown)
+        if len(routes_dedup) > 5:
+            routes_str += f" (+{len(routes_dedup) - 5} mas)"
+        notes_info.append(
+            {
+                "kind": "sensitive_on_spa_channel",
+                "ip": ip,
+                "channel": channel,
+                "routes": routes_dedup,
+                "count": len(routes_dedup),
+                "summary": (
+                    f"{ip} sondeo {routes_str} en {channel} (SPA fallback en CDN, no es fuga)"
+                ),
+            }
+        )
 
     # 4) Decidir nivel y construir resumen.
     if reasons_red:
