@@ -261,7 +261,7 @@ Para generar el Excel con costes fijos + variables, break-even y evolución mens
 
 Con esos 7 datos genero la Parte 2 (Excel financiero) en el siguiente turno.
 
-> **Actualización 2026-06-17 — Parte 2 cerrada.** El modelo financiero completo (proyección mes a mes para los escenarios pesimista y normal, costes fijos + variables, horizonte de break-even, decisión operativa) está documentado en [`../financiero/modelo-financiero.md`](../financiero/modelo-financiero.md) con su Excel companion [`../financiero/modelo-financiero-sharemechat.xlsx`](../financiero/modelo-financiero-sharemechat.xlsx). Decisión tomada: Alain asume el escenario pesimista como referencia operativa (~€220/mes de gasto personal durante 18-24 meses). La revisión obligatoria sigue siendo en el mes 3 (2026-09-16) comparando KPIs reales del tracking mensual contra el plan.
+> **Actualización 2026-06-17 — Parte 2 cerrada.** El modelo financiero completo (proyección mes a mes para los escenarios pesimista y normal, costes fijos + variables, horizonte de break-even, decisión operativa) está documentado en [`../financiero/modelo-financiero.md`](../financiero/modelo-financiero.md) con su Excel companion [`../financiero/modelo-financiero-sharemechat.xlsx`](../financiero/modelo-financiero-sharemechat.xlsx). Decisión tomada: Alain asume el escenario pesimista como referencia operativa (~€247/mes de gasto personal durante 18-24 meses tras añadir Sightengine como coste fijo). La revisión obligatoria sigue siendo en el mes 3 (2026-09-16) comparando KPIs reales del tracking mensual contra el plan.
 
 ---
 
