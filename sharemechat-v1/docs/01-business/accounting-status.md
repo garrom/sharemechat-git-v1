@@ -37,7 +37,10 @@ Según el último reporte de la plataforma: 0 transacciones sin conciliar, 0 gas
 - Revisar el tratamiento contable de la marca OEPM (¿activo intangible?).
 - Evaluar si conviene canalizar AWS y otros SaaS a través de Wise para que queden trazados en Companio.
 
+Aunque estos gastos no aparecen en la contabilidad oficial de Companio, **sí están modelados como coste operativo** en la proyección financiera de [financiero/modelo-financiero.md](financiero/modelo-financiero.md): AWS (~€120/mes), Companio (~€110/mes) y demás supuestos. Esa proyección sirve de referencia para decidir cuándo formalizar la aportación o préstamo de socio en función del runway personal disponible.
+
 ## Referencias
 
 - [company-profile.md](company-profile.md) — perfil de la sociedad.
 - [business-model.md](business-model.md) — modelo de negocio y monetización.
+- [financiero/modelo-financiero.md](financiero/modelo-financiero.md) — proyección mes a mes con los costes operativos modelados (AWS y Companio dominantes en pre-launch y soft launch).

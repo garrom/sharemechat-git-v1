@@ -52,6 +52,8 @@ Donde:
 
 Mientras dos de estos cuatro términos no estén cerrados, no es posible cerrar el margen de contribución unitario. La fórmula queda registrada como marco para evitar que cada análisis ad hoc reinvente la descomposición.
 
+Una **proyección numérica preliminar** del margen mes a mes y del horizonte de break-even, asumiendo valores estándar del sector adulto para Segpay (10% + €0.30/TX + 1% chargebacks × €25) y los demás supuestos vigentes, está incorporada en [financiero/modelo-financiero.md](financiero/modelo-financiero.md). Esa proyección se sustituirá por cifras cerradas cuando Segpay firme contrato y se formalice la política de payouts, momento en que el documento se actualizará.
+
 ## Estado de este documento
 
 Documento **paramétrico y abierto**. Se completará en dos hitos:
@@ -66,6 +68,7 @@ Hasta entonces, este documento sirve como marco compartido para evitar declarar 
 - [business-model.md](business-model.md) — modelo de negocio y monetización.
 - [pricing.md](pricing.md) — estructura de packs.
 - [sistema-tiers-modelos.md](sistema-tiers-modelos.md) — sistema de tiers de retribución de modelos, tarifas por minuto vigentes, snapshot diario, primer minuto gratis para el cliente y desglose plataforma/modelo por tier.
+- [financiero/modelo-financiero.md](financiero/modelo-financiero.md) — proyección numérica preliminar del margen mes a mes, horizonte de break-even por escenario (pesimista / normal) y triggers de revisión.
 - [psp-strategy.md](psp-strategy.md) — estrategia de PSP (Segpay como vía activa).
 - [accounting-status.md](accounting-status.md) — categorías de coste contabilizadas.
 - [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md) — simplificación de pricing y umbral mínimo.

@@ -220,6 +220,7 @@ Estas métricas no están todavía implementadas en GA4/dashboard — se deben d
 - Pricing del producto: `docs/01-business/pricing.md`
 - Modelo de unit economics general: `docs/01-business/unit-economics.md`
 - Estrategia SEO y proyecciones de tráfico: `docs/01-business/seo/estrategia.md`
+- Modelo financiero (proyección mes a mes con tarifas de tier base 5-15 aplicadas al cálculo de pago a modelos): [`docs/01-business/financiero/modelo-financiero.md`](financiero/modelo-financiero.md) + Excel companion [`docs/01-business/financiero/modelo-financiero-sharemechat.xlsx`](financiero/modelo-financiero-sharemechat.xlsx).
 - Implementación técnica del sistema de tiers (backend Spring Boot):
   - Catálogo de tiers: tabla `model_earning_tiers` en [`src/main/resources/db/migration/V1__baseline.sql`](../../src/main/resources/db/migration/V1__baseline.sql) (campos `name`, `min_billed_minutes`, `first_minute_earning_per_min`, `next_minutes_earning_per_min`, `active`).
   - Snapshot diario por modelo: tabla `model_tier_daily_snapshots` en la misma migración (campos `model_id`, `snapshot_date`, `window_start`, `window_end`, `billed_seconds`, `billed_minutes`, `tier_id`, `tier_name`, las dos tarifas, con UNIQUE `(model_id, snapshot_date)`).
