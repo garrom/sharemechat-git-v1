@@ -80,6 +80,15 @@
     PowerShell 5.1+ (Windows). No requiere modulos externos.
     Referencia ADR-038 (RSS publico sin auth para descubrimiento Reddit).
     Referencia ADR-034 (metodologia social-ops: automatizar el pensar).
+    Referencia ADR-040 (pivote target subs adult-ecosystem, clients + models).
+      - $SubsConfig: 4 subs target adult-ecosystem (CreatorsAdvice, SexWorkerSupport,
+        CamGirlProblems, Fansly_Advice). Los 3 subs casuales anteriores (AskReddit,
+        CasualConversation, Showerthoughts) ahora solo via -SubsOverride.
+      - $TabuKeywords: ampliada con lineas rojas absolutas (menores, no-consent,
+        trafficking, etc.). brand-legal-review hace filtro adicional.
+      - $BoostKeywords: nueva. Threads que mencionan plataformas competencia
+        (coomeet, luckycrush, chaturbate, etc.) suben al top con etiqueta [BOOST].
+        Senalan oportunidades de captacion de modelos.
 #>
 
 [CmdletBinding()]
@@ -100,21 +109,29 @@ $RetryDelayOn429 = 30
 # ---------------------------------------------------------------------------
 
 # Subs target. Cada entrada permite override de filtros por sub.
+# Lista actual: 4 subs adult-ecosystem validados humanamente (ADR-040).
+# Edades recalibradas: los subs adult-creators tienen ritmo mas lento que los
+# casuales (que eran 24h-14d), threads viven mas tiempo en hot.
 $SubsConfig = @(
     [pscustomobject]@{
-        Name         = 'r/AskReddit'
+        Name         = 'r/CreatorsAdvice'
         Feed         = 'hot.rss'
-        MaxAgeHours  = 24
+        MaxAgeHours  = 96
     },
     [pscustomobject]@{
-        Name         = 'r/CasualConversation'
+        Name         = 'r/SexWorkerSupport'
         Feed         = 'hot.rss'
-        MaxAgeHours  = 14 * 24
+        MaxAgeHours  = 168
     },
     [pscustomobject]@{
-        Name         = 'r/Showerthoughts'
+        Name         = 'r/CamGirlProblems'
         Feed         = 'hot.rss'
-        MaxAgeHours  = 14 * 24
+        MaxAgeHours  = 72
+    },
+    [pscustomobject]@{
+        Name         = 'r/Fansly_Advice'
+        Feed         = 'hot.rss'
+        MaxAgeHours  = 168
     }
 )
 
@@ -131,10 +148,35 @@ $UserAgent = 'SharemeChat:warmup-finder:v1 (by /u/sharemechat)'
 
 # Palabras tabu en el TITULO (case-insensitive). Cualquier titulo que
 # contenga alguna se descarta entero.
+#
+# Ampliada en ADR-040 con set adult-ecosystem (lineas rojas absolutas:
+# menores, no-consent, trafficking). brand-legal-review aplica un filtro
+# adicional sobre las variantes redactadas; el script es primera barrera
+# basada solo en el titulo del thread.
+#
+# Nota sobre 'teen': palabra ambigua (puede aparecer en "teen years" no
+# sexual). Se mantiene en la lista por prudencia maxima; si bloquea threads
+# legitimos en uso real, el operador puede afinar via review de logs con
+# -Verbose. La perdida de senal es preferible al riesgo de falso negativo.
 $TabuKeywords = @(
+    # Lineas rojas absolutas (eticas y legales)
+    'underage', 'teen', 'minor', 'child', 'cp',
+    'trafficking', 'snuff', 'rape', 'coercion', 'force',
+    # Politizados / derail (riesgo en sex worker subs y advice)
     'religion', 'politics', 'trump', 'biden', 'israel', 'palestine',
-    'abortion', 'AITA', 'rant', 'hate', 'racist', 'transgender',
+    'abortion', 'AITA', 'rant', 'hate', 'racist',
     'gun', 'shooting', 'war'
+)
+
+# Plataformas competencia que SUBEN la prioridad del thread (case-insensitive
+# como substring del titulo). Threads que matchean cualquiera de estas
+# keywords aparecen al TOP de su sub en la salida markdown, con etiqueta
+# visual ' [BOOST]' tras el titulo. Senalan oportunidades concretas para
+# captacion de modelos insatisfechas con su plataforma actual.
+# Referencia: ADR-040.
+$BoostKeywords = @(
+    'coomeet', 'luckycrush', 'chaturbate', 'stripchat',
+    'bongacams', 'myfreecams', 'jerkmate', 'camsoda', 'flirt4free'
 )
 
 # Marcadores de post administrativo. Coincidencia case-insensitive como
@@ -202,6 +244,21 @@ function Test-BotAuthor {
     foreach ($b in $Bots) {
         if ($clean -ieq $b) { return $true }
         if ($clean.ToLowerInvariant().Contains($b.ToLowerInvariant())) { return $true }
+    }
+    return $false
+}
+
+function Test-BoostKeyword {
+    # Devuelve $true si el titulo contiene alguna BoostKeyword (substring
+    # case-insensitive). Indica que el thread menciona una plataforma
+    # competencia y por tanto sube al top de su sub en la salida.
+    param([string]$Title, [string[]]$Keywords)
+    if ([string]::IsNullOrWhiteSpace($Title)) { return $false }
+    $lower = $Title.ToLowerInvariant()
+    foreach ($k in $Keywords) {
+        if ($lower.Contains($k.ToLowerInvariant())) {
+            return $true
+        }
     }
     return $false
 }
@@ -454,6 +511,8 @@ foreach ($sub in $SubsConfig) {
             continue
         }
 
+        $isBoost = Test-BoostKeyword -Title $title -Keywords $BoostKeywords
+
         $kept += [pscustomobject]@{
             Subreddit       = $subName
             Title           = $title
@@ -461,14 +520,25 @@ foreach ($sub in $SubsConfig) {
             Author          = $author
             PublishedUtc    = $publishedUtc
             AgeFormatted    = Format-Age $age
+            IsBoost         = $isBoost
         }
 
-        if ($kept.Count -ge $MaxPerSub) { break }
+        # NOTA: NO cortamos por MaxPerSub dentro del bucle (a diferencia del
+        # comportamiento pre-ADR-040). Recolectamos TODOS los candidatos que
+        # pasan filtros y luego ordenamos por IsBoost desc + PublishedUtc desc.
+        # El truncado a MaxPerSub se aplica tras el sort, fuera del bucle.
+        # Asi garantizamos que threads con BoostKeyword aparezcan al top aunque
+        # esten mas abajo en el feed RSS.
     }
 
-    $results[$subName] = $kept
-    $totalCandidates += $kept.Count
-    Write-Verbose ("[{0}] candidatos tras filtros: {1}" -f $subName, $kept.Count)
+    # Sort: boost al top, despues por edad ascendente (mas reciente primero).
+    $sorted = @($kept | Sort-Object -Property @{Expression='IsBoost';Descending=$true}, @{Expression='PublishedUtc';Descending=$true})
+    $finalKept = @($sorted | Select-Object -First $MaxPerSub)
+
+    $results[$subName] = $finalKept
+    $totalCandidates += $finalKept.Count
+    $boostCount = @($finalKept | Where-Object { $_.IsBoost }).Count
+    Write-Verbose ("[{0}] candidatos tras filtros: {1} (de los cuales {2} boost)" -f $subName, $finalKept.Count, $boostCount)
 }
 
 
@@ -528,7 +598,9 @@ foreach ($sub in $SubsConfig) {
     }
     $i = 1
     foreach ($c in $list) {
-        [void]$mdLines.Add(('### {0}. {1}' -f $i, $c.Title))
+        $boostTag = ''
+        if ($c.IsBoost) { $boostTag = ' [BOOST]' }
+        [void]$mdLines.Add(('### {0}. {1}{2}' -f $i, $c.Title, $boostTag))
         [void]$mdLines.Add(('- URL: {0}' -f $c.Url))
         [void]$mdLines.Add(('- Edad: {0} (publicado {1:yyyy-MM-ddTHH:mm}Z)' -f $c.AgeFormatted, $c.PublishedUtc))
         [void]$mdLines.Add(('- Autor: /u/{0}' -f ($c.Author -replace '^/u/', '' -replace '^u/', '')))
@@ -561,6 +633,7 @@ if ($OutputJson) {
                 author        = ($_.Author -replace '^/u/', '' -replace '^u/', '')
                 published_utc = $_.PublishedUtc.ToString('yyyy-MM-ddTHH:mm:ssZ')
                 age           = $_.AgeFormatted
+                is_boost      = [bool]$_.IsBoost
             }
         })
     }
