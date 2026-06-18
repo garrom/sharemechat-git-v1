@@ -8,6 +8,33 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-18 — ADR-040: pivote estratégico del target de subs del modo `thread_comment` (clients + models)
+
+Apertura formal de la FASE 2D-2 del frente warmup Reddit. Se publica [ADR-040](06-decisions/adr-040-pivote-target-subs-social-ops.md) como decisión arquitectónica que sustituye la elección tácita de subs target del modo `thread_comment` (originalmente `r/AskReddit`, `r/CasualConversation`, `r/Showerthoughts`) por una lista nueva de 4 subs del ecosistema adulto validada humanamente por el operador.
+
+El ADR introduce dos dimensiones operativas que el pipeline social-ops anterior no diferenciaba: **captación de clientes** (usuarios pagadores) y **captación de modelos** (talento). La lista final cubre ambas con simetría 50/50:
+
+- `r/CreatorsAdvice` (`both`, lean clients).
+- `r/SexWorkerSupport` (`models`).
+- `r/CamGirlProblems` (`models`, prioritario por volumen ~226k visitas/sem).
+- `r/Fansly_Advice` (`models`, slug exacto con guion bajo).
+
+Subs descartados explícitamente: `r/AdultContentCreators` (sub dominado por fotos, no discusión), `r/CamModelCommunity` (banneado por Reddit en 2026-06-18), `r/OnlyFansAdvice` (deferido a FASE 2D-3 cuando la cuenta tenga `karma_total >= 50` + `edad_dias >= 30`).
+
+Decisiones clave que el ADR cierra:
+
+- **Schema bump** del ledger `social-state.json` v0.2 → v0.3 con dos campos nuevos por sub: `rol: "target_brand_fit"` y `target_audience: ["clients"|"models"|"both"]`. Compatibilidad retroactiva: si una entrada no tiene los campos, defaults `"karma"` y `["both"]`.
+- **Sub-tipos del tipo `comment`** en `social-platform-rules`: `comment.warmup_casual` (legacy 250c/3f) y `comment.advice_substantive` (nuevo, 1200c/8-15f).
+- **Política de disclosure diferenciada** en `social-brand-legal-review`: `disclosure.light` (clients) vs `disclosure.explicit` (models). Reglas duras preservadas idénticas (18+, menores, no links en cuerpo).
+- **Boost keywords** en el script de descubrimiento: threads que mencionan plataformas competencia (`coomeet`, `luckycrush`, `chaturbate`, `stripchat`, `bongacams`, `myfreecams`, `jerkmate`, `camsoda`, `flirt4free`) suben al top con etiqueta `[BOOST]` y fuerzan `disclosure.explicit` en variante A cuando el sub incluye `models` en target_audience.
+- **Línea roja confirmada**: no entrar en subs oficiales de plataforma competencia (`r/Coomeet`, `r/LuckyCrush`, etc.).
+
+La arquitectura del modo `thread_comment` de [ADR-039](06-decisions/adr-039-pipeline-social-modo-thread-comment.md) **no cambia**: dos invocaciones del orchestrator con pausa humana, `skip_translation: true` automático, packager actualiza ratio y `commented_threads`. Cambia el target, la voz y los sub-tipos de comentario, no la mecánica.
+
+Resto de la implementación (ledger, script, skills, README) en los commits posteriores de esta sesión (FASE 2D-2). Entrada de cierre con los hashes consolidados al final.
+
+---
+
 ## 2026-06-18 — Hot-fix: Cowork rechaza tags XML/HTML en el `description` del frontmatter de skills
 
 Hot-fix urgente tras intentar sincronizar las skills de FASE 2B-2 (commit `9042712`) a Cowork. Cowork rechazó `social-comment-helper.md` con el error:
