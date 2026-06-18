@@ -124,5 +124,86 @@ public class Constants {
         private ModerationReportTypes() {}
     }
 
+    // ========================================================================
+    // Frente Moderacion IA del streaming (ADR-030 / ADR-036 / ADR-037).
+    // Valores canonicos del dominio stream_moderation_*. Vendor-agnostic:
+    // los nombres de vendor solo aparecen como valores literales en
+    // StreamModerationProvider y en config (moderation.<vendor>.*).
+    // ========================================================================
+
+    public static class StreamModerationProvider {
+        public static final String MOCK = "MOCK";
+        public static final String SIGHTENGINE = "SIGHTENGINE";
+        public static final String HIVE = "HIVE";
+        public static final String REKOGNITION = "REKOGNITION";
+
+        private StreamModerationProvider() {}
+    }
+
+    public static class StreamModerationSessionStatus {
+        public static final String ACTIVE = "ACTIVE";
+        public static final String STOPPED = "STOPPED";
+        public static final String ERROR = "ERROR";
+        public static final String DEGRADED = "DEGRADED";
+
+        private StreamModerationSessionStatus() {}
+    }
+
+    public static class StreamModerationSamplingStrategy {
+        public static final String INTERVAL = "INTERVAL";
+        public static final String EVENT = "EVENT";
+        public static final String HYBRID = "HYBRID";
+
+        private StreamModerationSamplingStrategy() {}
+    }
+
+    public static class StreamModerationEventType {
+        public static final String VERDICT_RECEIVED = "VERDICT_RECEIVED";
+        public static final String VERDICT_TIMEOUT = "VERDICT_TIMEOUT";
+        public static final String VERDICT_ERROR = "VERDICT_ERROR";
+        public static final String WEBHOOK_RECEIVED = "WEBHOOK_RECEIVED";
+
+        private StreamModerationEventType() {}
+    }
+
+    public static class StreamModerationReviewStatus {
+        public static final String PENDING = "PENDING";
+        public static final String IN_REVIEW = "IN_REVIEW";
+        public static final String APPROVED = "APPROVED";
+        public static final String REJECTED = "REJECTED";
+        public static final String CANCELLED = "CANCELLED";
+
+        private StreamModerationReviewStatus() {}
+    }
+
+    public static class StreamModerationSeverity {
+        public static final String GREEN = "GREEN";
+        public static final String AMBER = "AMBER";
+        public static final String RED = "RED";
+        public static final String CRITICAL = "CRITICAL";
+
+        private StreamModerationSeverity() {}
+    }
+
+    public static class StreamModerationCategory {
+        public static final String NUDITY = "NUDITY";
+        public static final String WEAPONS = "WEAPONS";
+        public static final String DRUGS = "DRUGS";
+        public static final String VIOLENCE = "VIOLENCE";
+        public static final String GORE = "GORE";
+        public static final String SELF_HARM = "SELF_HARM";
+        public static final String GAMBLING = "GAMBLING";
+        public static final String OFFENSIVE_SYMBOLS = "OFFENSIVE_SYMBOLS";
+        public static final String MINORS = "MINORS";
+        public static final String OTHER = "OTHER";
+
+        private StreamModerationCategory() {}
+    }
+
+    public static class StreamModerationProviderKeys {
+        public static final String STREAM_VISUAL_MODERATION = "STREAM_VISUAL_MODERATION";
+
+        private StreamModerationProviderKeys() {}
+    }
 
 }
