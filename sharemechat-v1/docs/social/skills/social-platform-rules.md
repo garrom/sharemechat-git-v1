@@ -25,7 +25,7 @@ Segundo paso. Lo invoca `social-orchestrator` despues de `social-phase-gate` y a
 - Hashtags: 1-2 como máximo y relevantes. Nada de spam de hashtags.
 - Tono: más corto y directo que el blog (lo afina `sharemechat-voice`).
 
-### Reddit
+### Reddit — tipo `post` o `thread` (modo `post_propio`)
 - Estructura: titulo claro y sin clickbait (sin enlaces en el titulo) + cuerpo en markdown. El valor va en el cuerpo, nunca en un enlace pelado.
 - Enlaces: Reddit penaliza o banea los acortadores de URL. Usa siempre la URL completa de sharemechat.com, y solo si el gate permitio promo.
 - Flair y NSFW: si el sub exige flair, indicalo; si `nsfw_flag` es true, marca el post como NSFW.
@@ -33,6 +33,28 @@ Segundo paso. Lo invoca `social-orchestrator` despues de `social-phase-gate` y a
 - Megathread: si `megathread_only` es true, el contenido debe ir como comentario DENTRO del hilo de promo del sub, no como post independiente.
 - Formato: usa el markdown de Reddit (parrafos, alguna lista) sin sobreformatear. El tono "marketing" se detecta y se castiga.
 - Una pieza, un sub: nunca publiques el mismo texto en varios subs (cross-posting identico = spam). Si el tema sirve para varios, exige variantes distintas.
+
+### Reddit — tipo `comment` (modo `thread_comment`, ADR-039)
+Cuando el contrato del orchestrator viene con `modo: "thread_comment"`, este agente emite restricciones de tipo `comment` para que el `social-comment-helper` las obedezca al redactar. El tipo `comment` se usa para comentar en threads ajenos de subs target durante warmup, no para post propio.
+
+- Longitud: **max 250 caracteres** por comentario. Reddit deja más, pero los comentarios largos pierden alcance y se sienten editoriales (= marketing). 250 es el techo operativo.
+- Numero de frases: **max 3 frases**. Lo opuesto al tono blog.
+- Tono: casual, conversacional, escrito en EN nativo (los subs target son anglo).
+- Enlace: **prohibido** en este modo. Comentar con link en un sub donde no eres aún un miembro establecido es spam por definición.
+- Flair: no aplica (los comentarios no llevan flair, solo los posts).
+- NSFW: no aplica (los comentarios heredan la marca NSFW del post si la tuviera).
+- Disclosure: **NO requerido** en este modo. No declarar "soy el fundador", "monté X" en cada comentario; sería ridículo y fácilmente detectable como template. La autoria es del usuario u/sharemechat — su perfil ya identifica la cuenta para quien quiera mirar.
+- Marca: prohibido mencionar SharemeChat, packs, modelos verificadas, "1-a-1", ni nada del producto. Comentar al thread, no promo encubierta.
+- CTA: prohibido. Sin "echa un vistazo a", "más info en", etc.
+- Hashtags: no aplica en Reddit.
+- Estilo: anclar en lo concreto (un objeto, un momento, una imagen), primera persona singular, sin filler transitions tipo "furthermore", "moreover".
+
+Reglas adicionales según sub target (orientativas para el `social-comment-helper`):
+- `r/AskReddit`: comentario corto con opinion personal o vivencia concreta.
+- `r/CasualConversation`: anecdota cálida, reflexión sosegada, microhistoria con sentimiento.
+- `r/Showerthoughts`: nostalgia, observación lateral, ángulo inesperado que reformula la premisa del OP.
+
+Si el operador pasa otros subs con `-SubsOverride`, el helper aplica el ángulo del sub que más se parezca o, si no encaja ninguno, "casual neutro".
 
 ## Reglas transversales (ToS / anti-baneo)
 - Nada que implique manipular votos, usar multicuenta o automatizar acciones.

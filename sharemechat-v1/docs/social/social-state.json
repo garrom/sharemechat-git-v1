@@ -1,6 +1,6 @@
 {
-  "schema_version": "0.1",
-  "updated_at": "2026-06-16",
+  "schema_version": "0.2",
+  "updated_at": "2026-06-18",
   "platforms": {
     "x": {
       "handle": "@shareme_chat",
@@ -31,7 +31,8 @@
           "min_karma": null,
           "min_age_days": null,
           "ratio": { "promo": 0, "aporte": 0 },
-          "last_action_at": null
+          "last_action_at": null,
+          "commented_threads": []
         },
         {
           "name": "r/CasualConversation",
@@ -40,7 +41,8 @@
           "min_karma": null,
           "min_age_days": null,
           "ratio": { "promo": 0, "aporte": 0 },
-          "last_action_at": null
+          "last_action_at": null,
+          "commented_threads": []
         }
       ]
     }

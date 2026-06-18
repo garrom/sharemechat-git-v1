@@ -8,6 +8,50 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-18 — FASE 2B-2 del warmup Reddit: modo `thread_comment` en el pipeline social-ops + ADR-039
+
+Cierre de la FASE 2B-2 del frente warmup Reddit. Implementación completa del modo `thread_comment` que añade al pipeline social-ops la capacidad de descubrir threads candidatos a comentar (vía script de FASE 2A) y redactar 2 variantes de comentario por thread, con el formato de output aprobado en FASE 2B-1 (§ 3.B). Cero código del producto tocado; cero credenciales nuevas; cero scripts auxiliares de ledger. La validación end-to-end real con Cowork ejecutando el flujo contra threads vivos queda para FASE 2C (no en esta sesión).
+
+**Archivos creados** (3 nuevos):
+
+- [`docs/social/skills/social-thread-finder.md`](social/skills/social-thread-finder.md) — skill nueva. Ejecuta el script `social-thread-finder.ps1` con el comando exacto `powershell -NoProfile -File ./sharemechat-v1/ops/scripts/social-thread-finder.ps1`, captura stdout y stderr, presenta los candidatos al operador con el envoltorio instructivo literal aprobado, parsea la respuesta con regex `r/(\w+)\s*#\s*(\d+)`, gestiona casos de respuesta (elección / "ninguno me convence" / "prueba con r/X" / ambigüedad) y devuelve la lista estructurada de threads elegidos al orchestrator. Plan B documentado para exit 1, 429 persistente y fallos del script. NO genera borradores, NO toca el ledger.
+- [`docs/social/skills/social-comment-helper.md`](social/skills/social-comment-helper.md) — skill nueva. Para una lista de threads elegidos genera 2 variantes por thread (A recomendada, B alternativa) según la voz "comentarios en threads ajenos" de `sharemechat-voice`, max 250 chars, max 3 frases, sin marca, sin links, sin CTA, sin disclosure. Heurística de título ambiguo (`len(titulo) < 40` Y sin `?`) que pausa para pedir 1-2 líneas del OP sin fetch a Reddit. Output con la estructura fija del § 3.B (URL con flecha, code fences aislados, metadata en inline code, checklist con checkbox markdown, justificación en `<details>` colapsable).
+- [`docs/06-decisions/adr-039-pipeline-social-modo-thread-comment.md`](06-decisions/adr-039-pipeline-social-modo-thread-comment.md) — ADR formal de la decisión arquitectónica. Justifica añadir modo `thread_comment` al orchestrator existente (en vez de un orquestador separado o de extender `social-draft-writer`), reutilizando toda la arquitectura validada (`phase-gate`, `platform-rules`, `brand-legal-review`, `packager`) con ajustes mínimos. Opciones descartadas: orquestador separado (duplica lógica), extender draft-writer (rompe contrato JSON limpio), descubrimiento manual (no escala). Estado: Aceptada 2026-06-18.
+
+**Archivos actualizados** (6 modificados):
+
+- [`docs/social/skills/social-orchestrator.md`](social/skills/social-orchestrator.md) — añadido el discriminador `modo` en el contrato + sub-flujo `thread_comment` con doble invocación separada por pausa humana + manejo de casos específicos (script fallido, título ambiguo, "ninguno me convence" final).
+- [`docs/social/skills/social-platform-rules.md`](social/skills/social-platform-rules.md) — añadido tipo `comment` para Reddit con restricciones específicas (max 250 chars, max 3 frases, sin enlace, sin flair, sin disclosure, tono casual) y ángulos orientativos por sub target.
+- [`docs/social/skills/social-brand-legal-review.md`](social/skills/social-brand-legal-review.md) — sección nueva "Modo: comentario en thread ajeno" con reglas duras preservadas (18+, marca, links, CTA, ToS) y reglas relajadas (sin disclosure, sin claims). Política de regeneración: 1 intento de regeneración por variante bloqueada; si bloquea 2 veces seguidas, presentar lo que pasó.
+- [`docs/social/skills/social-packager.md`](social/skills/social-packager.md) — sección nueva "Modo `thread_comment`" con shape del plan adaptado (una entry por thread con sus 2 variantes), checklist humano sin pasos de ledger (solo acciones del operador en Reddit), y actualización del `social_state_next` incrementando `ratio.aporte` del sub correcto + añadiendo entry a `commented_threads`.
+- [`docs/cms/skills/sharemechat-voice.md`](cms/skills/sharemechat-voice.md) — añadida sección "VARIANTE: comentarios en threads ajenos" con principios de voz (coloquial, first-person singular, anclada en lo concreto, sin filler), variantes por sub target (`r/AskReddit` opinión/vivencia, `r/CasualConversation` anécdota cálida, `r/Showerthoughts` nostalgia/ángulo lateral), ejemplos DO/DON'T para cada sub y prohibiciones transversales.
+- [`docs/social/social-state.json`](social/social-state.json) — schema bump `0.1` → `0.2`. Añadido campo opcional `commented_threads: []` en los 2 subs existentes (`r/AskReddit`, `r/CasualConversation`). NO se incrementa ningún contador en este commit; el primer uso real lo poblará el packager. Compatibilidad retroactiva: si el campo no existe en un sub, tratarlo como array vacío. `updated_at` global pasa a 2026-06-18.
+- [`docs/social/README.md`](social/README.md) — renombrado del flujo histórico a "Flujo: post propio en X / Reddit (modo `post_propio`, ADR-034)". Sección nueva "Flujo: warmup Reddit con descubrimiento + comentario (modo `thread_comment`, ADR-039)" con los 5 pasos detallados (pre-requisitos, paso 1 invocar finder, paso 2 esperar input, paso 3 invocar helper, paso 4 presentar al operador, paso 5 confirmación post-publicación + actualización del ledger). Tabla del pipeline ampliada con los dos sub-flujos y la marca explícita de que `social-translate-en` se SALTA en modo `thread_comment`.
+
+**Decisiones operativas clave registradas** (algunas en ADR-039, algunas en las skills nuevas):
+
+- **2 variantes A/B por thread** (no 1, no 3). A marcada como "recomendada" si la skill tiene opinión clara; si no, A y B sin sufijo (mejor no recomendar que recomendar al azar).
+- **`skip_translation: true` automático** en modo `thread_comment`. Los subs target son anglo; redactar directamente en EN.
+- **Ledger actualizado vía `social-packager` adaptado**, sin script auxiliar nuevo.
+- **Heurística de título ambiguo** sin fetch a Reddit: si `len(titulo) < 40` Y no contiene `?`, pausa para pedir 1-2 líneas del OP al operador.
+- **Checklist humano solo con acciones del operador** en la plataforma externa. La parte de ledger es responsabilidad del packager + orchestrator, no del operador.
+- **Justificación de A vs B en `<details>` colapsable** al final del output. Quien quiera entender por qué A vs B hace click; quien sólo quiere publicar no lo ve.
+- **Sleep 15s + retry on 429** del script (FASE 2A hot-fix) **no cambia** en esta sesión. Si en uso real persiste el 429, se valorará subir a 20s preventivamente en FASE 2B-3.
+
+**Lo que queda para FASE 2C** (no implementación, validación real):
+
+Validación end-to-end con Cowork ejecutando el flujo completo contra threads vivos. Pasos:
+
+1. Sincronizar las 2 skills nuevas a Cowork con `ops/scripts/sync-skills-to-cowork.ps1` (script gestiona prefijo `social-` automáticamente).
+2. Abrir una sesión Cowork nueva, invocar `social-orchestrator` con `modo: "thread_comment"`, sin `threads_elegidos`.
+3. Validar que el thread-finder ejecuta el script, presenta los candidatos con el envoltorio correcto y parsea la respuesta del operador.
+4. Validar que la pausa humana entre las dos invocaciones funciona sin perder estado (el operador relanza el orchestrator con `threads_elegidos` poblados y todo arranca correctamente).
+5. Validar que el comment-helper produce el output con la estructura del § 3.B (code fences aislados, metadata inline, checklist con checkbox, justificación colapsable).
+6. Publicar a mano los comentarios en Reddit, confirmar al chat, validar que el packager actualiza `social-state.json` correctamente (incremento de `ratio.aporte` + entry a `commented_threads`).
+7. Si se detectan bugs operativos, abrir FASE 2B-3 / 2B-4 según corresponda.
+
+---
+
 ## 2026-06-18 — FASE 2A del warmup automatizado de Reddit: script descubridor de threads + ADR-038 (RSS público sin auth)
 
 Cierre de la FASE 2A del frente "warmup automatizado Reddit" (extensión del pipeline social-ops de [ADR-034](06-decisions/adr-034-social-ops-methodology.md)). Solo script + ADR + README operativo en esta sesión; las skills nuevas del pipeline social y los ajustes al orchestrator quedan para la FASE 2B siguiente sesión. Cero código del producto tocado; cero credenciales en el repo.
