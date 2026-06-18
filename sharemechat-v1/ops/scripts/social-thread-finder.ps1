@@ -34,6 +34,13 @@
     para que el operador no se ahogue en candidatos por sesion). Total
     teorico: SubsCount * MaxPerSub (con 3 subs y default 5 = 15).
 
+.PARAMETER SleepSeconds
+    Espera en segundos entre fetches consecutivos. Default 15 (subido
+    desde 8 tras observacion empirica de que Reddit aplica 429
+    persistente incluso a 8s con UA declarado). Si se observa
+    estabilidad a 15s, este valor puede bajar; si Reddit endurece,
+    subir.
+
 .PARAMETER OutputJson
     Si se pasa, ademas del markdown a stdout escribe el resultado tambien
     como JSON estructurado en C:\tmp\thread-candidates.json. Util para
@@ -79,9 +86,14 @@
 param(
     [string]$SubsOverride,
     [int]$MaxPerSub = 5,
+    [int]$SleepSeconds = 15,
     [switch]$OutputJson,
     [switch]$DryRun
 )
+
+# Espera fija en segundos tras un 429 antes del UNICO retry permitido por
+# fetch. Independiente de $SleepSeconds (que es entre fetches distintos).
+$RetryDelayOn429 = 30
 
 # ---------------------------------------------------------------------------
 # CONFIG EN EL HEADER DEL SCRIPT (ADR-038: config inline, no archivo externo)
@@ -111,12 +123,11 @@ $SubsConfig = @(
 # convencion recomendada por Reddit para uso personal de la API.
 $UserAgent = 'SharemeChat:warmup-finder:v1 (by /u/sharemechat)'
 
-# Sleep entre fetches consecutivos. 8s tras observacion empirica: Reddit
-# devuelve 429 muy rapido en peticiones consecutivas anonimas, y una vez
-# en 429 mantiene el throttle varios minutos. 8s es el minimo razonable
-# que ha pasado sin 429 en pruebas con UA declarado. Para 3 subs = 16s
-# totales, asumible. Si Reddit ajusta su limite, escalar este valor.
-$SleepSeconds = 8
+# NOTA sobre $SleepSeconds: ahora es parametro del script (default 15s).
+# Subido desde 8s tras observacion empirica: Reddit aplica 429
+# persistente incluso a 8s con UA declarado. Para 3 subs = 30s totales,
+# asumible para ejecucion humana. La variable se inyecta como
+# [int]$SleepSeconds en el bloque param() arriba.
 
 # Palabras tabu en el TITULO (case-insensitive). Cualquier titulo que
 # contenga alguna se descarta entero.
@@ -222,6 +233,63 @@ function Get-LinkHref {
     return ''
 }
 
+function Invoke-RedditFetch {
+    # Hace un fetch a Reddit con manejo explicito de 429:
+    #   - Si la primera peticion devuelve 429, espera $RetryDelaySeconds
+    #     y reintenta UNA vez.
+    #   - Si el retry vuelve a dar 429, devuelve $null (el caller seguira
+    #     con el siguiente sub).
+    #   - Errores que no son 429 (404, 5xx, timeout, red): retornan $null
+    #     en el primer intento sin retry.
+    #
+    # Devuelve el body como string en exito, o $null en fallo.
+    param(
+        [Parameter(Mandatory = $true)] [string]$Url,
+        [Parameter(Mandatory = $true)] [string]$Sub,
+        [Parameter(Mandatory = $true)] [string]$UA,
+        [int]$RetryDelaySeconds = 30
+    )
+
+    foreach ($attempt in 1, 2) {
+        if ($attempt -eq 2) {
+            Write-Verbose ("[{0}] 429 detected, retry in {1}s..." -f $Sub, $RetryDelaySeconds)
+            Start-Sleep -Seconds $RetryDelaySeconds
+        }
+
+        try {
+            $response = Invoke-WebRequest -Uri $Url -UserAgent $UA `
+                -UseBasicParsing -ErrorAction Stop -TimeoutSec 30
+            if ($attempt -eq 2) {
+                Write-Verbose ("[{0}] retry OK" -f $Sub)
+            }
+            return [string]$response.Content
+        } catch {
+            $code = $null
+            try {
+                if ($_.Exception.Response -and $_.Exception.Response.StatusCode) {
+                    $code = [int]$_.Exception.Response.StatusCode
+                }
+            } catch { }
+
+            if ($code -eq 429) {
+                if ($attempt -eq 1) {
+                    # Salir del catch y dejar que el loop vaya al attempt 2.
+                    continue
+                } else {
+                    Write-Warning ("[{0}] retry tambien 429, skipping" -f $Sub)
+                    return $null
+                }
+            } else {
+                # No-429: abandono inmediato sin retry.
+                Write-Warning ("[{0}] Fetch fallo: {1}" -f $Sub, $_.Exception.Message)
+                return $null
+            }
+        }
+    }
+
+    return $null
+}
+
 
 # ---------------------------------------------------------------------------
 # Override de subs si se pasa por param
@@ -281,24 +349,12 @@ foreach ($sub in $SubsConfig) {
 
     Write-Verbose ("Fetch -> {0}" -f $url)
 
-    # Usamos Invoke-WebRequest -UseBasicParsing para tener acceso al
-    # contenido raw como string. Invoke-RestMethod auto-parsea Atom como
-    # XmlDocument envuelto en PSObject y el cast [xml] del wrapper falla
-    # con error confuso ("entry entry entry..."). Con WebRequest tenemos
-    # control explicito sobre la conversion.
-    $contentString = $null
-    try {
-        $response = Invoke-WebRequest -Uri $url -UserAgent $UserAgent `
-            -UseBasicParsing -ErrorAction Stop -TimeoutSec 30
-        $contentString = [string]$response.Content
-    } catch {
-        Write-Warning ("[{0}] Fetch fallo: {1}" -f $subName, $_.Exception.Message)
-        $results[$subName] = @()
-        continue
-    }
-
+    # Delegamos en el helper Invoke-RedditFetch para tener retry on 429
+    # encapsulado. Cualquier otro error (404, 5xx, timeout, malformado)
+    # se loggea como warning y devuelve $null en el primer intento sin
+    # retry.
+    $contentString = Invoke-RedditFetch -Url $url -Sub $subName -UA $UserAgent -RetryDelaySeconds $RetryDelayOn429
     if ([string]::IsNullOrWhiteSpace($contentString)) {
-        Write-Warning ("[{0}] Respuesta vacia del servidor" -f $subName)
         $results[$subName] = @()
         continue
     }
