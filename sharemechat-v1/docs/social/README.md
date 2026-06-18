@@ -121,3 +121,44 @@ A partir del schema v0.2 (ADR-039), cada entrada en `platforms.reddit.subreddits
 
 ## Relación con el blog
 Mismo patrón que el pipeline editorial (`cms-orchestrator` + agentes), reutiliza `sharemechat-voice` (con secciones específicas para cada modo, incluyendo la "comentarios en threads ajenos" añadida en ADR-039). Diferencia clave: el blog produce un artefacto que se persiste y se renderiza en el producto; social produce un plan que ejecuta un humano fuera del producto.
+
+## Convenciones del frontmatter de las skills sociales
+
+Las skills bajo `docs/social/skills/` usan **formato A** (frontmatter YAML) según el contrato que el script `ops/scripts/sync-skills-to-cowork.ps1` reproduce hacia Cowork:
+
+```yaml
+---
+name: <slug-de-la-skill>
+description: <una sola línea larga, prosa pura>
+---
+
+# <Cuerpo libre con cabeceras markdown>
+```
+
+### Regla operativa de Cowork: cero tags XML/HTML en `description`
+
+Cowork **rechaza el upload de una skill** si el campo `description` del frontmatter YAML contiene tags del tipo `<algo>`, `</algo>`, `<algo/>`. El error operativo que devuelve es:
+
+```
+SKILL.md description cannot contain XML tags
+```
+
+Esto se detectó la primera vez al subir `social-comment-helper` con la descripción "justificación en <details>" (commit `9042712`, FASE 2B-2). Se corrigió en hot-fix posterior reemplazando `<details>` por "bloque colapsable" (prosa equivalente).
+
+Reglas concretas a aplicar al escribir el `description` del frontmatter de cualquier skill social nueva:
+
+- NO usar tags HTML/XML del tipo `<details>`, `<summary>`, `<br>`, `<a>`, etc.
+- NO usar entidades HTML del tipo `&lt;`, `&gt;`, `&amp;`.
+- NO usar brackets angulares sueltos `<` o `>` (aunque no formen un tag).
+- Sustituir por **prosa equivalente**: en lugar de `<details>` decir "bloque colapsable"; en lugar de `<código>` decir "code fence"; etc.
+- El cuerpo de la skill (después del `---` de cierre del frontmatter) **SÍ admite tags HTML/markdown libremente**. La restricción aplica solo al frontmatter.
+
+Antes de hacer commit de una skill nueva o modificada, ejecutar localmente:
+
+```powershell
+head -5 docs/social/skills/<skill>.md | Select-String -Pattern '<[^>]*>|&lt;|&gt;|&amp;'
+```
+
+Si la regex devuelve algún match, la skill será rechazada por Cowork al sincronizar.
+
+Esta regla aplica también a las skills CMS bajo `docs/cms/skills/` cuando usen formato A (frontmatter YAML). Las que usan formato B (`# Descripcion` + `# Instrucciones`) NO tienen frontmatter YAML y por tanto la restricción no aplica al campo description, pero conviene evitar tags angulares en la línea inmediatamente posterior a `# Descripcion` por consistencia.

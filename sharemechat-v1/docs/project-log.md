@@ -8,6 +8,46 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-18 — Hot-fix: Cowork rechaza tags XML/HTML en el `description` del frontmatter de skills
+
+Hot-fix urgente tras intentar sincronizar las skills de FASE 2B-2 (commit `9042712`) a Cowork. Cowork rechazó `social-comment-helper.md` con el error:
+
+> `SKILL.md description cannot contain XML tags`
+
+Causa concreta: la `description` del frontmatter YAML contenía la cadena `"justificación en <details>"` (tag HTML5). El cuerpo de la skill SÍ admite tags HTML/markdown libremente, pero **el campo `description` del frontmatter es estricto**: cero tags XML/HTML, cero entidades (`&lt;`, `&gt;`), cero brackets angulares sueltos. Esta regla no está documentada en `sync-skills-to-cowork.ps1` ni en el corpus previo; es una **regla operativa de Cowork** que solo se descubre al intentar subir.
+
+**Hallazgo de la auditoría preventiva**. Revisión del frontmatter de las 7 skills tocadas en los commits recientes (`dbb5274`, `da6542b`, `9042712`):
+
+- `social-thread-finder.md`: limpia.
+- `social-comment-helper.md`: **contenía `<details>`** → corregido.
+- `social-orchestrator.md`: limpia.
+- `social-platform-rules.md`: limpia.
+- `social-brand-legal-review.md`: limpia.
+- `social-packager.md`: limpia.
+- `sharemechat-voice.md`: usa formato B (`# Descripcion` + `# Instrucciones`, sin frontmatter YAML); la restricción no aplica a su shape.
+
+Solo una skill afectada. Cambio mínimo en el frontmatter, cuerpo intacto.
+
+**Cambio aplicado**. En [`docs/social/skills/social-comment-helper.md`](social/skills/social-comment-helper.md), línea 3 del frontmatter (campo `description`):
+
+- ANTES: `... justificación en <details>) ...`
+- DESPUÉS: `... justificación en bloque colapsable) ...`
+
+También sustituido `§ 3.B` por `párrafo 3.B` para evitar el carácter `§` que algunos parsers YAML estrictos no toleran (precaución defensiva, no exigida por Cowork directamente).
+
+**Documentación de la regla en el corpus**. Añadida sección "Convenciones del frontmatter de las skills sociales" al final de [`docs/social/README.md`](social/README.md) explicando:
+
+- Las skills sociales usan formato A (frontmatter YAML con `name` y `description`).
+- Regla operativa de Cowork: cero tags HTML/XML, cero entidades, cero brackets angulares sueltos en el campo `description`.
+- Lista concreta de sustituciones prosa equivalente (`<details>` → "bloque colapsable", `<código>` → "code fence", etc.).
+- El cuerpo de la skill (después del `---` de cierre) SÍ admite tags libremente.
+- Snippet de regex `head -5 + Select-String -Pattern '<[^>]*>|&lt;|&gt;|&amp;'` para auto-check antes de commit.
+- Aplica también a skills CMS bajo `docs/cms/skills/` que usen formato A.
+
+**Validación post-fix**. `sync-skills-to-cowork.ps1 -WhatIf -ManagedPrefixes "social-"` detecta `social-comment-helper` como `[ACTUALIZADA]` correctamente. El JSON del ledger sigue siendo válido (no se tocó). El frontmatter YAML sigue parseable con regex de inicio/fin.
+
+---
+
 ## 2026-06-18 — FASE 2B-2 del warmup Reddit: modo `thread_comment` en el pipeline social-ops + ADR-039
 
 Cierre de la FASE 2B-2 del frente warmup Reddit. Implementación completa del modo `thread_comment` que añade al pipeline social-ops la capacidad de descubrir threads candidatos a comentar (vía script de FASE 2A) y redactar 2 variantes de comentario por thread, con el formato de output aprobado en FASE 2B-1 (§ 3.B). Cero código del producto tocado; cero credenciales nuevas; cero scripts auxiliares de ledger. La validación end-to-end real con Cowork ejecutando el flujo contra threads vivos queda para FASE 2C (no en esta sesión).

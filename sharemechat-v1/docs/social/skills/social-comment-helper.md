@@ -1,6 +1,6 @@
 ---
 name: social-comment-helper
-description: Skill nueva del pipeline social-ops de SharemeChat (modo thread_comment). Para una lista de threads elegidos por el operador, genera 2 variantes de comentario por thread (A recomendada, B alternativa), respetando voz casual sin marca sin links max 250 chars max 3 frases, anclada en experiencia personal u observación lateral según el sub target. Pasa por social-brand-legal-review antes de presentar. Output con formato fijo del § 3.B (POSTEAR EN URL, code fences, metadata inline, checklist con checkbox, justificación en <details>). Solo se usa cuando el contrato viene con modo=thread_comment y threads_elegidos poblados. ADR-039.
+description: Skill nueva del pipeline social-ops de SharemeChat (modo thread_comment). Para una lista de threads elegidos por el operador, genera 2 variantes de comentario por thread (A recomendada, B alternativa), respetando voz casual sin marca sin links max 250 chars max 3 frases, anclada en experiencia personal u observación lateral según el sub target. Pasa por social-brand-legal-review antes de presentar. Output con formato fijo del párrafo 3.B (POSTEAR EN URL, code fences, metadata inline, checklist con checkbox, justificación en bloque colapsable). Solo se usa cuando el contrato viene con modo=thread_comment y threads_elegidos poblados. ADR-039.
 ---
 
 # social-comment-helper
