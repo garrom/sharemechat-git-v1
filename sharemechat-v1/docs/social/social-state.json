@@ -1,5 +1,5 @@
 {
-  "schema_version": "0.2",
+  "schema_version": "0.3",
   "updated_at": "2026-06-18",
   "platforms": {
     "x": {
@@ -27,22 +27,74 @@
         {
           "name": "r/AskReddit",
           "rol": "karma",
+          "target_audience": ["both"],
           "promo_policy": "none",
           "min_karma": null,
           "min_age_days": null,
           "ratio": { "promo": 0, "aporte": 0 },
           "last_action_at": null,
-          "commented_threads": []
+          "commented_threads": [],
+          "notes": "Legacy, no usar en flujo principal. Accesible solo via -SubsOverride en social-thread-finder.ps1 para experimentacion."
         },
         {
           "name": "r/CasualConversation",
           "rol": "karma",
+          "target_audience": ["both"],
           "promo_policy": "none",
           "min_karma": null,
           "min_age_days": null,
           "ratio": { "promo": 0, "aporte": 0 },
           "last_action_at": null,
-          "commented_threads": []
+          "commented_threads": [],
+          "notes": "Legacy, no usar en flujo principal. Accesible solo via -SubsOverride en social-thread-finder.ps1 para experimentacion."
+        },
+        {
+          "name": "r/CreatorsAdvice",
+          "rol": "target_brand_fit",
+          "target_audience": ["both"],
+          "promo_policy": "none",
+          "min_karma": 50,
+          "min_age_days": 30,
+          "ratio": { "promo": 0, "aporte": 0 },
+          "last_action_at": null,
+          "commented_threads": [],
+          "notes": "Validado humano 2026-06-18. Lean clients pero acepta angulo models. Disclosure light por defecto."
+        },
+        {
+          "name": "r/SexWorkerSupport",
+          "rol": "target_brand_fit",
+          "target_audience": ["models"],
+          "promo_policy": "none",
+          "min_karma": 50,
+          "min_age_days": 30,
+          "ratio": { "promo": 0, "aporte": 0 },
+          "last_action_at": null,
+          "commented_threads": [],
+          "notes": "Validado humano 2026-06-18. Sub pequeno (~633 visitas/sem). Util como fuente de research adicional. Sin auto-referencia primer mes operativo."
+        },
+        {
+          "name": "r/CamGirlProblems",
+          "rol": "target_brand_fit",
+          "target_audience": ["models"],
+          "promo_policy": "none",
+          "min_karma": 50,
+          "min_age_days": 30,
+          "ratio": { "promo": 0, "aporte": 0 },
+          "last_action_at": null,
+          "commented_threads": [],
+          "notes": "Validado humano 2026-06-18. PRIORITARIO (~226k visitas/sem). Threads de problemas operativos = oportunidades para angulo plataforma. Disclosure explicit permitido si el thread menciona BoostKeywords."
+        },
+        {
+          "name": "r/Fansly_Advice",
+          "rol": "target_brand_fit",
+          "target_audience": ["models"],
+          "promo_policy": "none",
+          "min_karma": 100,
+          "min_age_days": 30,
+          "ratio": { "promo": 0, "aporte": 0 },
+          "last_action_at": null,
+          "commented_threads": [],
+          "notes": "Validado humano 2026-06-18. Slug exacto con guion bajo. ~22k visitas/sem. Target competencia directa OF/Fansly. Disclosure light primeros 30 dias."
         }
       ]
     }
