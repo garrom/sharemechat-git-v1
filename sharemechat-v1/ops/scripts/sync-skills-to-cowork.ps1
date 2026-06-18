@@ -44,9 +44,21 @@
     Raiz del repo. Por defecto se deduce del path del script (ops/scripts/.. /..).
 
 .PARAMETER CoworkSkillsDir
-    Carpeta de Cowork donde se cargan las skills. Default detectado en este equipo
-    bajo %APPDATA%\Claude\local-agent-mode-sessions\skills-plugin\... Si Cowork
-    reinstala o cambia los UUIDs intermedios, pasar la nueva ruta como parametro.
+    Carpeta de Cowork donde se cargan las skills. Si no se pasa, el script
+    AUTO-DETECTA la ruta buscando recursivamente bajo
+    %APPDATA%\Claude\local-agent-mode-sessions\skills-plugin\ una carpeta llamada
+    "skills" cuyo padre y abuelo tengan forma de UUID (patron del layout de
+    Cowork: skills-plugin\<UUID1>\<UUID2>\skills).
+
+    Casos del auto-detect:
+      - 0 candidatos validos: aborta con mensaje "Cowork no parece instalado..."
+      - 1 candidato valido: lo usa, loggea con Write-Verbose.
+      - Multiples candidatos validos (sesiones stale): lista todos y aborta
+        pidiendo al operador que pase -CoworkSkillsDir explicito.
+
+    Si se pasa -CoworkSkillsDir manualmente, la ruta se respeta tal cual y el
+    auto-detect NO se ejecuta. La validacion legacy "CoworkSkillsDir no existe"
+    se mantiene como ultima linea de defensa contra rutas manuales invalidas.
 
 .PARAMETER SourceSubdirs
     Subcarpetas del repo que contienen .md de skills. Default: docs/cms/skills y
@@ -85,7 +97,7 @@
 param(
     [string]$RepoRoot,
 
-    [string]$CoworkSkillsDir = 'C:\Users\alain\AppData\Roaming\Claude\local-agent-mode-sessions\skills-plugin\34859fec-5f3d-49cc-b1f4-014cd75575f7\94ce7d72-5747-4a78-9fcf-18c39c3c24ad\skills',
+    [string]$CoworkSkillsDir,
 
     [string[]]$SourceSubdirs = @(
         'docs/cms/skills',
@@ -116,6 +128,83 @@ if (-not $RepoRoot) {
     $RepoRoot = (Resolve-Path -LiteralPath $RepoRoot).Path
 }
 
+# ---------------------------------------------------------------------------
+# Auto-deteccion de CoworkSkillsDir (solo si no se paso explicitamente)
+# ---------------------------------------------------------------------------
+# Cowork instala sus skills bajo:
+#   %APPDATA%\Claude\local-agent-mode-sessions\skills-plugin\<UUID1>\<UUID2>\skills
+# Los dos UUIDs cambian con cada reinstalacion / refresh de Cowork, asi que
+# hardcodear la ruta en el script la rompe periodicamente. Esta logica busca la
+# carpeta automaticamente. Si el operador pasa -CoworkSkillsDir, ese valor toma
+# precedencia y no se ejecuta auto-detect.
+
+if (-not $CoworkSkillsDir) {
+    $base = Join-Path $env:APPDATA 'Claude\local-agent-mode-sessions\skills-plugin'
+
+    if (-not (Test-Path -LiteralPath $base)) {
+        throw @"
+Cowork no parece instalado en este equipo (no existe la ruta base):
+  $base
+
+Si Cowork SI esta instalado, ejecutalo al menos una vez y reintenta.
+Alternativa: pasar la ruta correcta con -CoworkSkillsDir.
+"@
+    }
+
+    Write-Verbose "[Auto-detect] Buscando carpetas 'skills' bajo: $base"
+
+    # Patron UUID v4-ish (8-4-4-4-12 hex), case-insensitive. Cowork no respeta
+    # mayusculas/minusculas en los UUIDs intermedios.
+    $uuidPattern = '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+
+    $candidates = Get-ChildItem -LiteralPath $base -Recurse -Directory -Filter 'skills' -ErrorAction SilentlyContinue
+
+    $valid = @()
+    foreach ($c in $candidates) {
+        # Esperado: $base \ <UUID1> \ <UUID2> \ skills
+        # El relativo respecto a $base debe tener exactamente 3 segmentos.
+        $rel = $c.FullName.Substring($base.Length).TrimStart('\','/')
+        $segs = $rel -split '[\\/]'
+        if ($segs.Count -ne 3) { continue }
+        if ($segs[2] -ne 'skills') { continue }
+        if ($segs[0] -notmatch $uuidPattern) { continue }
+        if ($segs[1] -notmatch $uuidPattern) { continue }
+        $valid += $c.FullName
+    }
+
+    if ($valid.Count -eq 0) {
+        throw @"
+Cowork esta instalado pero no se encontraron carpetas 'skills' con el layout
+esperado (skills-plugin\<UUID1>\<UUID2>\skills) bajo:
+  $base
+
+Causas habituales:
+  - Cowork reinstalo y todavia no se ha lanzado.
+  - La estructura interna de Cowork cambio en una version posterior.
+
+Solucion: pasar la ruta correcta con -CoworkSkillsDir.
+"@
+    }
+
+    if ($valid.Count -gt 1) {
+        $listing = ($valid | ForEach-Object { "  - $_" }) -join "`n"
+        throw @"
+Hay multiples instancias de Cowork detectadas bajo:
+  $base
+
+Candidatos validos:
+$listing
+
+Pasa la ruta correcta con -CoworkSkillsDir para evitar ambiguedad. Las
+instancias stale (sesiones viejas que Cowork no limpio) suelen ser las que
+NO contienen las skills actuales: comprueba el contenido si dudas.
+"@
+    }
+
+    $CoworkSkillsDir = $valid[0]
+    Write-Verbose "[Auto-detect] CoworkSkillsDir: $CoworkSkillsDir"
+}
+
 if (-not (Test-Path -LiteralPath $CoworkSkillsDir)) {
     throw @"
 CoworkSkillsDir no existe: $CoworkSkillsDir
@@ -123,10 +212,10 @@ CoworkSkillsDir no existe: $CoworkSkillsDir
 Causas habituales:
   - Cowork no esta instalado en este equipo.
   - Cowork reinstalo y cambio los UUIDs intermedios.
-  - La ruta default del script quedo obsoleta.
+  - La ruta manual pasada con -CoworkSkillsDir es invalida.
 
-Solucion: pasar la ruta correcta con -CoworkSkillsDir, o editar el default
-en la cabecera del script (parametro CoworkSkillsDir).
+Solucion: omitir -CoworkSkillsDir para que el script auto-detecte, o pasar
+una ruta correcta.
 "@
 }
 

@@ -8,6 +8,42 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-18 — Hot-fix: `sync-skills-to-cowork.ps1` con auto-detección de `CoworkSkillsDir`
+
+Hot-fix del script de sincronización de skills tras detectar que la ruta de Cowork estaba **hardcoded** en el parámetro `CoworkSkillsDir` del script (cabecera, default literal con dos UUIDs concretos). Cowork reinstala / refresca periódicamente y al hacerlo cambia los UUIDs intermedios de la ruta:
+
+```
+%APPDATA%\Claude\local-agent-mode-sessions\skills-plugin\<UUID1>\<UUID2>\skills
+```
+
+Resultado del bug: cada vez que Cowork cambia los UUIDs, el script revienta con `CoworkSkillsDir no existe` y el operador tiene que ir a buscar la ruta nueva a mano para pasársela con `-CoworkSkillsDir`. La FASE 2D-2 + hot-fix posterior (commits `61d78c3..45c26fa`) revelaron este problema operativo al sincronizar las skills nuevas.
+
+**Cambio aplicado en [`ops/scripts/sync-skills-to-cowork.ps1`](../ops/scripts/sync-skills-to-cowork.ps1)**:
+
+1. Default hardcoded del parámetro `CoworkSkillsDir` eliminado. Ahora es `[string]$CoworkSkillsDir` sin valor por defecto (= `$null` si no se pasa).
+2. Bloque nuevo de **auto-detección** insertado entre la resolución de `RepoRoot` y la validación legacy. Lógica:
+   - Si `$CoworkSkillsDir` es null/vacío, construir `$base = $env:APPDATA + '\Claude\local-agent-mode-sessions\skills-plugin'`.
+   - Si `$base` no existe: abortar con mensaje "Cowork no parece instalado..." con instrucción de ejecutarlo al menos una vez o pasar la ruta manualmente.
+   - Si `$base` existe: `Get-ChildItem -Recurse -Directory -Filter 'skills' -ErrorAction SilentlyContinue` para encontrar candidatos.
+   - Filtrar candidatos cuyo path relativo a `$base` tenga exactamente 3 segmentos `<UUID1>/<UUID2>/skills` con los dos primeros matcheando el patrón UUID hex 8-4-4-4-12 (case-insensitive).
+   - 0 candidatos: abortar con mensaje claro sobre causas (Cowork sin lanzar tras reinstalar, layout cambiado en versión posterior) e instrucción de pasar `-CoworkSkillsDir`.
+   - 1 candidato: usarlo, loggear con `Write-Verbose "[Auto-detect] CoworkSkillsDir: <ruta>"`.
+   - Multiples candidatos (sesiones stale de Cowork): listar todos y abortar pidiendo override manual con `-CoworkSkillsDir`, con guía de que las instancias stale suelen ser las que NO contienen las skills actuales.
+3. `-CoworkSkillsDir` se conserva como override manual. Si el operador lo pasa, toma precedencia absoluta y el auto-detect NO se ejecuta. Retrocompatibilidad total.
+4. Bloque legacy de validación `CoworkSkillsDir no existe` se conserva como última línea de defensa para rutas manuales inválidas. Mensaje del throw ligeramente actualizado para mencionar que omitir el parámetro activa el auto-detect.
+5. Docstring de `.PARAMETER CoworkSkillsDir` (cabecera del script) reescrito para documentar el nuevo comportamiento, los tres casos del auto-detect (0/1/N candidatos) y la regla de precedencia del override manual.
+
+**Validaciones post-fix** (ejecutadas localmente):
+
+- Sintaxis del script: OK (parser AST sin errores).
+- Ejecución sin `-CoworkSkillsDir` desde el root del repo: auto-detect resuelve correctamente la ruta vigente de Cowork y procesa las 18 skills (`[SIN CAMBIOS]` para las 18 porque ya estaban sincronizadas tras el commit `45c26fa`).
+- Ejecución con `-CoworkSkillsDir 'C:\ruta\inventada\que\no\existe\skills'`: falla con `CoworkSkillsDir no existe` y exit code 1 (validación legacy preservada).
+- Parámetro `-ManagedPrefixes social-,sharemechat-`: intacto, sigue funcionando como antes.
+
+**Implicación operativa**: a partir de ahora el operador puede ejecutar simplemente `.\ops\scripts\sync-skills-to-cowork.ps1 -ManagedPrefixes social-,sharemechat-` desde el root del repo sin necesidad de pasar `-CoworkSkillsDir`. El script encuentra la ruta vigente de Cowork automáticamente, resistente a reinstalaciones. Si Cowork instala múltiples sesiones (instancias stale), el script lo detecta y exige override manual con instrucción clara.
+
+---
+
 ## 2026-06-18 — Hot-fix: incompatibilidades Cowork tras FASE 2D-2 (frontmatter YAML obligatorio + límite 1024 chars en `description`)
 
 Hot-fix urgente tras intentar sincronizar las skills de FASE 2D-2 (commits `61d78c3..ae11eae`) a Cowork. Cowork rechazó dos uploads con errores distintos:
