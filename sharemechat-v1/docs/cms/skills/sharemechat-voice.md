@@ -1,3 +1,8 @@
+---
+name: sharemechat-voice
+description: Voz transversal de marca SharemeChat. Define registro, lexico, ritmo y prohibiciones para todo contenido que la marca emita. Cubre tres frentes documentados en el cuerpo. Primero, articulos editoriales del CMS del blog (seccion ES para fases 1-4 del pipeline y seccion EN para la fase 4.5 de traduccion). Segundo, comentarios casuales legacy en subs no-target tipo r/AskReddit accesibles solo via -SubsOverride. Tercero, comentarios en subs target adult-ecosystem de ADR-040 con dos sub-variantes segun target_audience: audiencia clients (consumidores potenciales) con disclosure light y angulo experiencia de servicio, y audiencia talento (modelos buscando plataforma) con disclosure explicit permitido y vocabulario operativo del oficio (shift, payout, KYC up front, platform side). Incluye seccion de override de angulo (boost) cuando un thread menciona plataforma competencia con ejemplos DO/DONT por variante. Pasada por social-brand-legal-review antes de emitir cualquier output que use esta voz.
+---
+
 # Descripcion
 Define la voz editorial de SharemeChat: registro, ritmo, vocabulario, ejemplos do/don't. Úsala automáticamente al redactar o pulir cualquier artículo del CMS de SharemeChat.
 

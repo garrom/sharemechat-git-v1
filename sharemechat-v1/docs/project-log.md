@@ -8,6 +8,59 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-18 — Hot-fix: incompatibilidades Cowork tras FASE 2D-2 (frontmatter YAML obligatorio + límite 1024 chars en `description`)
+
+Hot-fix urgente tras intentar sincronizar las skills de FASE 2D-2 (commits `61d78c3..ae11eae`) a Cowork. Cowork rechazó dos uploads con errores distintos:
+
+1. **`sharemechat-voice`** (en `docs/cms/skills/`):
+   > `SKILL.md must start with YAML frontmatter (---)`
+
+   La skill estaba en formato B legacy (sin frontmatter YAML, con secciones `# Descripcion` + `# Instrucciones`) desde antes de la introducción del corpus social. Cowork actual exige frontmatter YAML obligatorio (formato A).
+
+2. **`social-comment-helper`** (en `docs/social/skills/`):
+   > `field 'description' in SKILL.md must be at most 1024 characters`
+
+   El campo `description` del frontmatter había crecido a 1109 chars al añadir en FASE 2D-2 los sub-tipos (`comment.warmup_casual` + `comment.advice_substantive`), el eje `target_audience`, el override por boost, la lista de plataformas competencia y la regla de hot-fix del code fence. Cowork tiene un límite duro de 1024 chars no documentado en el corpus previo.
+
+**Hallazgo de la auditoría preventiva**. Revisión de la longitud del campo `description` en las 7 skills tocadas en sesiones recientes (FASE 2B-2, 2D-2):
+
+| Skill | chars antes | chars después | Estado |
+|---|---|---|---|
+| `social-thread-finder` | 560 | 560 | OK (sin tocar) |
+| `social-comment-helper` | **1109** | **895** | Recortado |
+| `social-orchestrator` | 513 | 513 | OK (sin tocar) |
+| `social-platform-rules` | 368 | 368 | OK (sin tocar) |
+| `social-brand-legal-review` | 396 | 396 | OK (sin tocar) |
+| `social-packager` | 418 | 418 | OK (sin tocar) |
+| `sharemechat-voice` | (formato B, sin description en frontmatter) | **1002** | Frontmatter añadido |
+
+Solo dos skills afectadas. Las demás dentro del límite con margen.
+
+**Cambios aplicados**:
+
+- [`docs/cms/skills/sharemechat-voice.md`](cms/skills/sharemechat-voice.md): añadido bloque frontmatter YAML al inicio del fichero con `name: sharemechat-voice` y `description: <1002 chars>` describiendo los tres frentes de la voz (artículos CMS del blog, comentarios casuales legacy y comentarios en subs target adult-ecosystem de ADR-040). El cuerpo de la skill (secciones `# Descripcion` + `# Instrucciones` legacy + secciones ES, EN y variantes de comentarios) **se conserva íntegro** debajo del segundo `---`. NO se reordena contenido del cuerpo.
+
+- [`docs/social/skills/social-comment-helper.md`](social/skills/social-comment-helper.md): reescrito el campo `description` del frontmatter en prosa telegráfica, condensando de 1109 a 895 chars. Se conserva lo esencial: rol (skill del modo `thread_comment`, ADR-039 + ADR-040), input/output básico, dos sub-tipos con sus límites, eje `target_audience` y política de disclosure, override por boost, regla del hot-fix code fence con auto-verify, pasada por `social-brand-legal-review`. La lista exhaustiva de plataformas competencia (`coomeet`, `luckycrush`, `chaturbate`, `stripchat`, `bongacams`, `myfreecams`, `jerkmate`, `camsoda`, `flirt4free`) se retira del `description` y permanece en el cuerpo de la skill, donde sigue siendo accesible para el agente al consumirla. NO se toca el cuerpo de la skill.
+
+- [`docs/social/README.md`](social/README.md): añadidas dos secciones nuevas a "Convenciones del frontmatter de las skills sociales" (creada en commit `036fec2`):
+  - **"Regla operativa de Cowork: límite duro de 1024 chars en el `description`"**, con el error literal devuelto por Cowork, objetivo recomendado (≤ 900 chars para margen futuro), guía de qué condensar al cuerpo, y snippet PowerShell de auto-check.
+  - **"Regla operativa de Cowork: frontmatter YAML obligatorio (formato A)"**, con el error literal de skills sin frontmatter, instrucciones de migración formato B → A preservando el cuerpo, y nota de que el script `sync-skills-to-cowork.ps1` entendía ambos formatos pero Cowork rechaza el upload sin frontmatter por su lado.
+
+**Validación post-fix**:
+
+- Auto-check de `description` en las 7 skills: todas ≤ 1024 chars (margen mínimo 22 chars en `sharemechat-voice`; resto >100 chars de margen).
+- Frontmatter YAML de `sharemechat-voice`: `---` al inicio, `name` + `description` en líneas 2-3, `---` de cierre. Sin tags HTML/XML, sin entidades, sin caracteres especiales problemáticos.
+- `sync-skills-to-cowork.ps1 -WhatIf -ManagedPrefixes "social-","sharemechat-"`: detecta `sharemechat-voice` y `social-comment-helper` como `[ACTUALIZADA]`, el resto como `[SIN CAMBIOS]`. 0 huérfanas, 0 nuevas.
+
+**Reglas de oro consolidadas para futuras skills** (vivientes en `docs/social/README.md`):
+
+1. Frontmatter YAML obligatorio al inicio del fichero (`---` + `name` + `description` + `---`).
+2. `description` ≤ 1024 chars (objetivo ≤ 900 con margen).
+3. `description` sin tags HTML/XML, sin entidades, sin brackets angulares sueltos (regla previa de commit `036fec2`).
+4. El cuerpo de la skill (después del segundo `---`) admite tags libremente; las restricciones aplican solo al frontmatter.
+
+---
+
 ## 2026-06-18 — FASE 2D-2 cerrada: implementación del pivote target subs (ADR-040) + hot-fix code fence
 
 Cierre operativo de la FASE 2D-2 del frente warmup Reddit. Implementación completa del pivote estratégico de subs target del modo `thread_comment` (de subs casuales a 4 subs adult-ecosystem), schema bump del ledger v0.2 → v0.3 con dos campos nuevos (`rol`, `target_audience`), actualización del script de descubrimiento con `$BoostKeywords` y edades recalibradas, actualización de 4 skills del pipeline social-ops, y hot-fix de la regla del code fence en `social-comment-helper`. Cero código del producto tocado; cero credenciales nuevas; cero scripts auxiliares nuevos.

@@ -215,3 +215,47 @@ head -5 docs/social/skills/<skill>.md | Select-String -Pattern '<[^>]*>|&lt;|&gt
 Si la regex devuelve algún match, la skill será rechazada por Cowork al sincronizar.
 
 Esta regla aplica también a las skills CMS bajo `docs/cms/skills/` cuando usen formato A (frontmatter YAML). Las que usan formato B (`# Descripcion` + `# Instrucciones`) NO tienen frontmatter YAML y por tanto la restricción no aplica al campo description, pero conviene evitar tags angulares en la línea inmediatamente posterior a `# Descripcion` por consistencia.
+
+### Regla operativa de Cowork: límite duro de 1024 chars en el `description`
+
+Cowork **rechaza el upload de una skill** si el campo `description` del frontmatter YAML supera **1024 caracteres**. El error operativo que devuelve es:
+
+```
+field 'description' in SKILL.md must be at most 1024 characters
+```
+
+Esto se detectó al subir `social-comment-helper` tras la expansión de FASE 2D-2 (descripción había crecido a 1109 chars al añadir los sub-tipos, target_audience, boost y hot-fix code fence). Se corrigió en hot-fix posterior condensando a prosa más telegráfica (895 chars).
+
+Reglas concretas a aplicar:
+
+- Objetivo de longitud al escribir el `description`: **<= 900 chars** para tener ~100 de margen ante futuras adiciones.
+- Si la description necesita explicar muchos detalles, **condensar a lo esencial** (rol de la skill, input/output básico, ADR de referencia, prerequisitos) y mover el resto al cuerpo de la skill (sección "Propósito" o equivalente).
+- Antes de commit, validar con:
+
+```powershell
+$line = (Get-Content docs/social/skills/<skill>.md -TotalCount 3)[2]
+if ($line -match '^description:\s*(.*)$') { "$($matches[1].Length) chars" }
+```
+
+Si reporta >1024, la skill será rechazada por Cowork al sincronizar.
+
+### Regla operativa de Cowork: frontmatter YAML obligatorio (formato A)
+
+Cowork actual **exige frontmatter YAML al inicio de cada SKILL.md**. El error operativo que devuelve si falta es:
+
+```
+SKILL.md must start with YAML frontmatter (---)
+```
+
+Las skills del CMS legacy en **formato B** (sin frontmatter YAML, con secciones `# Descripcion` + `# Instrucciones`) deben **migrarse a formato A** si se van a re-subir a Cowork. La migración consiste en añadir al inicio del fichero un bloque:
+
+```yaml
+---
+name: <slug-de-la-skill>
+description: <prosa <= 1024 chars, sin tags HTML/XML, sin entidades>
+---
+```
+
+El cuerpo de la skill (incluido el `# Descripcion` y `# Instrucciones` legacy) **se conserva íntegro** debajo del segundo `---`. El script `sync-skills-to-cowork.ps1` ya entendía ambos formatos para entrada; lo que cambió es que Cowork mismo rechaza el upload sin frontmatter, por lo que el fichero del repo también debe llevarlo.
+
+Esto se detectó al sincronizar `sharemechat-voice` tras los commits de FASE 2D-2 (la skill estaba en formato B desde antes de la introducción del corpus social). Se corrigió añadiendo el frontmatter con `description` de 1002 chars (margen ajustado pero dentro del límite).
