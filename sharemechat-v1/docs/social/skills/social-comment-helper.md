@@ -34,25 +34,32 @@ Esto ocurre en la segunda invocación del orchestrator (la primera invoca `socia
 
 3. `sharemechat-voice` (variante "comentarios en threads ajenos", vive en `docs/cms/skills/sharemechat-voice.md` sección final).
 
-## Heurística de título ambiguo (ajustada en ADR-040)
+## Input batch (ADR-041)
 
-En subs casuales legacy los títulos son cortos y poco informativos (de ahí la heurística original `len(titulo) < 40`). En los subs target adult-ecosystem de ADR-040 los títulos son **largos por convención** (planteamiento del problema en el título): la heurística original generaría demasiados falsos positivos.
+Desde ADR-041 la skill acepta input batch: recibe **la lista completa de threads auto-elegidos** por `social-thread-finder` (hasta 6 threads) y genera 2 variantes por thread **en una sola pasada**, sin pausar para pedir brief al operador. Esto es coherente con el flujo lineal del orchestrator (1 invocación → 1 paquete final).
 
-Heurística ajustada — el título es ambiguo solo si cumple **las tres** condiciones:
+El input ya viene con metadata por thread (`is_boost`, `boost_keyword`, `age_hours`, `subreddit`); la skill consume esos campos para decidir sub-tipo, ángulo y disclosure.
+
+## Heurística de título ambiguo — ángulo prudente automático (ADR-041)
+
+En ADR-040 la heurística pausaba para pedir `op_brief` al operador cuando el título era ambiguo. En ADR-041, con flujo sin pausa humana, la heurística cambia de comportamiento: **se mantiene la detección pero la acción es generar borrador con ángulo prudente automático**, no pausar.
+
+Un título es ambiguo cuando cumple las tres condiciones:
 
 - `len(titulo) < 30` caracteres, **y**
 - el título **no contiene `?`** (no es una pregunta clara), **y**
 - el título **no contiene ninguna keyword del oficio**: `cam`, `model`, `OF`, `OnlyFans`, `Fansly`, `platform`, `payout`, `verification`, `KYC`, `shift`, `creator`, `chargeback`, `cut`, `revenue`, `tax` (comparación case-insensitive como substring).
 
-Si las tres condiciones se cumplen, PAUSAR la redacción de ese thread y emitir al operador:
+Si las tres condiciones se cumplen, **NO pausar**. En su lugar, aplicar ángulo prudente:
 
-```
-El thread "[titulo]" parece ambiguo. Pégame 1-2 líneas del OP para afinar el ángulo antes de redactar. Para el resto de threads sigo adelante.
-```
+- **Vivencia genérica del oficio** sin referencia específica al thread. Ejemplos para audiencia talento: una reflexión sobre el primer mes en cualquier plataforma cam, una observación sobre comodidad sostenida en jornadas largas, una nota sobre la diferencia entre KYC up front y deferido.
+- **Sin afirmaciones específicas** que requieran conocer el OP. No decir "Yo tuve exactamente ese problema" si no se sabe cuál era el problema.
+- **Sin pretender entender el contexto**. Si el comentario se publicara igual con cualquier título de ese sub, está bien; si requiere contexto específico, está mal.
+- **Documentar en la metadata** del output del helper que se usó ángulo prudente (`tono: "vivencia generica del oficio (titulo ambiguo)"`).
 
-Continuar redactando los otros threads en paralelo. Cuando el operador pegue el contexto OP del thread ambiguo, rellenar `op_brief` y reanudar. NO hacer fetch al thread ni a Reddit: el operador es la fuente de la información.
+Si `op_brief` viene ya poblado en el contrato (caso fallback con `.ps1` legacy donde el operador puede pasar `op_brief` explícito), **saltarse la heurística** y proceder con la redacción usando ese brief como contexto. El flujo vigente de ADR-041 nunca pasa `op_brief` (siempre `null`), así que en uso normal este caso es solo el fallback.
 
-Si `op_brief` viene ya poblado en el contrato, **saltarse la heurística** y proceder con la redacción usando ese brief como contexto.
+Nota: la auto-selección de `social-thread-finder` ya **descarta títulos ambiguos sin keywords del oficio** como parte de su heurística. En la práctica, los threads que llegan al helper ya pasaron ese filtro; la heurística del helper es **segunda barrera** para casos límite (títulos justo en la frontera) o para el flujo fallback donde el operador pasa threads manualmente.
 
 ## Reglas de generación
 

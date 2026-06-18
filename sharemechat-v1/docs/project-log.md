@@ -8,6 +8,63 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-18 — FASE 2E: rediseño del pipeline `thread_comment` sin pausa humana + ADR-041
+
+Cierre operativo de la FASE 2E del frente warmup Reddit. Rediseño del modo `thread_comment` del pipeline social-ops para ejecutar todo el flujo en **una sola invocación de Cowork**, sin pausa humana, equivalente operativo de `cms-orchestrator`. Cambia la orquestación; no cambia la voz (ADR-040) ni los principios social-ops (ADR-034).
+
+**Decisión arquitectónica formalizada en [ADR-041](06-decisions/adr-041-social-pipeline-sin-pausa-humana.md)** — supersede parcial de [ADR-039](06-decisions/adr-039-pipeline-social-modo-thread-comment.md). El flujo de dos invocaciones con pausa humana de ADR-039 queda como **fallback** documentado para casos donde Cowork no puede fetch `*.reddit.com`. El script `.ps1` se mantiene íntegro como motor del fallback (sin cambios desde ADR-040).
+
+**Fricciones operativas que motivaron el rediseño** (detectadas en preparación para FASE 2C):
+
+1. El script `.ps1` se ejecuta fuera de Cowork: copy-paste manual del stdout en cada ciclo (~1 min/ciclo).
+2. Re-inyección del ledger entre las dos invocaciones del orchestrator (Cowork sin memoria entre sesiones): más copy-paste manual y riesgo de error.
+3. La elección humana de threads era asimétrica con `cms-orchestrator` (que decide ángulo internamente sin pausar).
+
+**Pre-requisitos operativos que habilitan el nuevo flujo** (validados por el operador en sesiones previas):
+
+- `*.reddit.com` en allowlist de Cowork (Settings → Capacidades → Dominios permitidos adicionales).
+- Carpeta del repo conectada a Cowork (para leer `docs/social/social-state.json` del filesystem).
+
+**Cambios aplicados** (4 skills modificadas, 1 ADR nuevo, README + project-log):
+
+- [`docs/social/skills/social-thread-finder.md`](social/skills/social-thread-finder.md) — **reescritura mayor**. La skill deja de instruir al operador a ejecutar el `.ps1`. Hace fetch RSS nativo desde Cowork de `https://www.reddit.com/r/<sub>/hot.rss` con User-Agent `SharemeChat:warmup-finder:v2 (by /u/sharemechat)`. Aplica los mismos filtros que el `.ps1` (TabuKeywords ampliada con líneas rojas absolutas, AdminMarkers, BotAuthors, edad max por sub desde el ledger) y marca BoostKeywords (`coomeet`, `luckycrush`, `chaturbate`, `stripchat`, `bongacams`, `myfreecams`, `jerkmate`, `camsoda`, `flirt4free`). Auto-selecciona top 2-3 candidatos por sub con heurística documentada: boost > sin boost, fresco > antiguo, excluir títulos sensibles (`blackmail`, `rape`, `scam`, `extortion`, `underage`, `minor`, `abuse`, `suicide`, `self-harm`), excluir títulos ambiguos sin keywords del oficio, max 2 por sub, max 6 total. Devuelve JSON estructurado con `status: "ok"` + `threads_elegidos` + `discovery_summary` (éxito), `status: "fetch_failed"` + `fallback_instruction` (fallo de red) o `status: "no_candidates"` (todo filtrado).
+
+- [`docs/social/skills/social-orchestrator.md`](social/skills/social-orchestrator.md) — modo `thread_comment` reescrito para flujo lineal en una sola invocación. Lee `social-state.json` del filesystem (carpeta del repo conectada). Encadena `phase-gate` → `platform-rules` → `social-thread-finder` (fetch nativo + auto-selección) → `social-comment-helper` (batch) → `social-brand-legal-review` (batch) → `social-packager`. Sin pausa humana. Modo `post_propio` **intacto**. Sección "Manejo de casos" actualizada con los tres status posibles del thread-finder (`fetch_failed`, `no_candidates`, `ok`).
+
+- [`docs/social/skills/social-comment-helper.md`](social/skills/social-comment-helper.md) — input batch (hasta 6 threads en una pasada) y **heurística de título ambiguo modificada**: en lugar de pausar para pedir `op_brief` al operador, aplica **ángulo prudente automático** (vivencia genérica del oficio sin referencia específica al thread). La auto-selección del thread-finder ya descarta la mayoría de títulos ambiguos; la heurística del helper es segunda barrera. El `op_brief` sigue siendo respetado si viene poblado en el contrato (caso fallback con `.ps1`). Hot-fix code fence con auto-verify (ADR-040) preservado.
+
+- [`docs/social/skills/social-packager.md`](social/skills/social-packager.md) — formato del paquete final batch documentado. Encabezado de resumen (`N comentarios generados, M con boost`), cabecera por thread con sub y boost, dos code fences aislados por variante con metadata inline, checklist humano combinado (una línea por thread con `[ ]`), instrucción de confirmación final que cierra el handshake con el orchestrator. `social_state_next` propuesto refleja publicación de todos los threads asumiendo confirmación completa; orchestrator ajusta si confirmación es parcial.
+
+- [`docs/06-decisions/adr-041-social-pipeline-sin-pausa-humana.md`](06-decisions/adr-041-social-pipeline-sin-pausa-humana.md) — **nuevo**. Documenta el rediseño completo, las tres opciones consideradas (mantener ADR-039, unificar en una sesión con pausa, eliminar pausa con auto-selección — la elegida), consecuencias positivas y negativas, relación con ADR-034 / ADR-038 / ADR-039 / ADR-040, fases del frente.
+
+- [`docs/social/README.md`](social/README.md) — sección "Pipeline" actualizada con el sub-flujo vigente ADR-041 (un solo flujo lineal en una tabla compacta) y sub-flujo fallback ADR-039 (con `threads_elegidos` ya poblado por el operador). Sección "Flujo: warmup Reddit" reescrita con el workflow operativo de 4 pasos vigente + bloque de fallback con instrucciones del `.ps1`. Detalle del flujo legacy ADR-039 condensado para solo cubrir el caso fallback.
+
+**Lo que NO cambia**:
+- Script `ops/scripts/social-thread-finder.ps1` íntegro (motor del fallback).
+- Skills `social-phase-gate`, `social-platform-rules`, `social-brand-legal-review` (sin tocar; las reglas siguen valiendo con o sin pausa humana).
+- `sharemechat-voice` y sus variantes (ADR-040).
+- Modo `post_propio` del orchestrator (sin cambios).
+- Schema del ledger v0.3 (sin cambios).
+- Subs target de ADR-040 (sin cambios).
+- Boost, sub-tipos, políticas de disclosure (sin cambios).
+
+**Decisiones operativas clave registradas**:
+
+- **Cero pausa humana en el flujo vigente**. Si el operador quiere control granular sobre threads, ejecuta el `.ps1` y pasa `threads_elegidos` explícito al orchestrator (caso fallback).
+- **Heurística de auto-selección explícita** y documentada en `social-thread-finder.md`. Si se observa empíricamente que selecciona mal, se ajusta editando la skill.
+- **User-Agent `v2`** para el fetch nativo (distingue del `v1` del `.ps1` legacy en logs de Reddit).
+- **Sleep 15s entre fetches** preservado del `.ps1`. Validar empíricamente que Cowork lo respeta.
+- **Fallback explícito al `.ps1`** documentado en el output JSON del thread-finder cuando `status: "fetch_failed"`.
+- **Lectura del ledger desde filesystem** en modo `thread_comment` (Cowork con carpeta repo conectada). Modo `post_propio` sigue inyectando el ledger via prompt (compatibilidad histórica).
+
+**Pendientes**:
+
+- **FASE 2C diferida** (validación end-to-end real con Cowork ejecutando el nuevo flujo contra los 4 subs target). Se ejecuta desde Cowork tras este push.
+- **FASE 2D-3** (incorporar `r/OnlyFansAdvice` cuando la cuenta tenga `karma_total >= 50` + `edad_dias >= 30`). Sin cambios respecto a planificación previa.
+- Si en FASE 2C real se detectan ajustes a la heurística de auto-selección (umbrales, palabras sensibles), se aplican como hot-fix de FASE 2E.
+
+---
+
 ## 2026-06-18 — Hot-fix: `sync-skills-to-cowork.ps1` con auto-detección de `CoworkSkillsDir`
 
 Hot-fix del script de sincronización de skills tras detectar que la ruta de Cowork estaba **hardcoded** en el parámetro `CoworkSkillsDir` del script (cabecera, default literal con dos UUIDs concretos). Cowork reinstala / refresca periódicamente y al hacerlo cambia los UUIDs intermedios de la ruta:

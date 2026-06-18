@@ -1,119 +1,195 @@
 ---
 name: social-thread-finder
-description: Skill nueva del pipeline social-ops de SharemeChat (modo thread_comment). Ejecuta el script local social-thread-finder.ps1, captura su stdout (markdown con candidatos a comentar agrupados por subreddit), lo presenta al operador con un envoltorio explícito de cómo elegir, parsea la respuesta del operador y devuelve la lista estructurada de threads elegidos al orchestrator. NO genera borradores, NO publica, NO toca el ledger. Solo se usa cuando el contrato del social-orchestrator viene con modo=thread_comment y threads_elegidos vacío. ADR-038 + ADR-039.
+description: Skill del pipeline social-ops de SharemeChat (modo thread_comment, ADR-038 + ADR-039 + ADR-041). Hace fetch RSS nativo desde Cowork de https://www.reddit.com/r/SUB/hot.rss por cada sub candidato con User-Agent SharemeChat:warmup-finder:v2. Aplica filtros (TabuKeywords, AdminMarkers, BotAuthors, edad max por sub) y marca BoostKeywords para threads que mencionan plataforma competencia. Auto-selecciona top 2-3 candidatos por sub con heuristica boost > sin boost, fresco > antiguo, max 2 por sub, max 6 total. Excluye titulos sensibles y titulos ambiguos sin keywords del oficio. Devuelve array JSON de threads auto-elegidos compatible con social-comment-helper. Si fetch falla, emite error estructurado con instruccion de fallback al script local social-thread-finder.ps1 (flujo ADR-039 con pausa humana). Mantiene compatibilidad con subs_candidatos del contrato. Las listas concretas de BoostKeywords y de palabras sensibles viven en el cuerpo de la skill.
 ---
 
 # social-thread-finder
 
 ## Propósito
-Primer paso del sub-flujo de descubrimiento del modo `thread_comment`. Ejecuta el script local que descarga los feeds Atom de los subreddits target, presenta los candidatos al operador con instrucciones explícitas de cómo elegir, parsea la elección y devuelve al orchestrator la lista de threads que se llevarán al siguiente paso (`social-comment-helper`).
+Descubre threads candidatos a comentar y **auto-selecciona** los mejores para el siguiente paso del pipeline, en una sola invocación sin pausa humana. Hace fetch RSS nativo desde Cowork, aplica filtros, marca boost y devuelve un array JSON listo para `social-comment-helper`.
+
+Es la primera operación del sub-flujo lineal del modo `thread_comment` definido en [ADR-041](../../06-decisions/adr-041-social-pipeline-sin-pausa-humana.md). Reemplaza la lógica de "ejecuta el `.ps1` local + presenta al operador + parsea elección" del diseño ADR-039 original, que queda como fallback.
 
 ## Cuándo se usa
-Solo cuando el contrato del `social-orchestrator` viene con:
+Cuando el contrato del `social-orchestrator` viene con:
 
 - `modo: "thread_comment"`, y
-- `threads_elegidos: []` (vacío o ausente, lo que significa que el operador aún no ha elegido).
+- `threads_elegidos: []` (vacío o ausente).
 
-Si `threads_elegidos` viene ya poblado por el operador en una segunda invocación del orchestrator, este paso se salta y se va directo a `social-comment-helper`.
+Si el operador pasa `threads_elegidos` ya poblado (caso fallback con `.ps1` legacy), este paso se salta y se va directo a `social-comment-helper`.
 
-NO se ejecuta en el modo `post_propio` (el flujo histórico de post propio en X / Reddit no usa descubrimiento de threads ajenos).
+NO se ejecuta en modo `post_propio` (flujo histórico de post propio en X / Reddit).
 
 ## Entradas
-1. Contrato del orchestrator: `plataforma: "reddit"`, `modo: "thread_comment"`, `subs_candidatos` (opcional; si ausente usa los defaults del script: r/AskReddit, r/CasualConversation, r/Showerthoughts).
-2. Ningún input del ledger en este paso (la decisión de qué subs leer es del operador o de los defaults del script).
+1. Contrato del orchestrator: `plataforma: "reddit"`, `modo: "thread_comment"`, `subs_candidatos` (opcional; si ausente, usa los subs con `rol: "target_brand_fit"` del ledger).
+2. `social-state.json` del filesystem (`docs/social/social-state.json`), inyectado por el orchestrator. La skill lo lee para conocer los `subs_candidatos` por defecto y las edades máximas por sub.
 
-## Comando exacto que ejecuta
+## Pre-requisitos operativos
+- `*.reddit.com` en allowlist de Cowork (Settings → Capacidades → Dominios permitidos adicionales).
+- Carpeta del repo conectada a Cowork (para leer el ledger del filesystem).
 
-Una sola línea desde el directorio de trabajo:
+Si alguno falla, ver § "Fallback al script local".
 
-```
-powershell -NoProfile -File ./sharemechat-v1/ops/scripts/social-thread-finder.ps1
-```
+## Fetch RSS nativo
 
-Si el operador pasó `subs_candidatos` en el contrato, añadir `-SubsOverride "r/X,r/Y"` con la lista separada por coma. Si pasó `max_per_sub`, añadir `-MaxPerSub N`. Si el operador pidió verbose para debugging, añadir `-Verbose`.
+Por cada sub en `subs_candidatos`:
 
-NO añadir `-OutputJson` (no lo necesitamos en este flujo).
+1. Construir URL: `https://www.reddit.com/r/<sub_sin_prefijo>/hot.rss`.
+2. Hacer fetch con headers:
+   - `User-Agent: SharemeChat:warmup-finder:v2 (by /u/sharemechat)`
+   - `Accept: application/atom+xml, application/xml, text/xml`
+3. Si la respuesta es 200, parsear como Atom feed. Si la respuesta es 429, esperar 30 segundos y reintentar UNA vez; si el retry vuelve a 429, marcar el sub como "throttled" y continuar con el siguiente sub.
+4. Si la respuesta es no-200 no-429 (404, 5xx, timeout), marcar el sub como "failed" y continuar.
+5. Entre fetches de subs distintos, esperar **15 segundos** (mitigación de throttling preventiva). En batches pequeños (1-3 subs), aceptable; si Cowork tarda mucho, validar empíricamente y ajustar.
 
-NO añadir `-DryRun` salvo que el operador lo pida explícitamente para inspeccionar feeds crudos.
+User-Agent **versión `v2`** para distinguir de los fetches del `.ps1` legacy (que sigue usando `v1`). Permite a Reddit (y al operador en logs) saber qué cliente está consultando.
 
-El script aplica internamente el hot-fix de FASE 2B-1: sleep 15s entre fetches + retry on 429 con backoff de 30s. No tocar esos parámetros desde aquí.
+## Filtros aplicados a cada entry del feed
 
-## Captura y presentación al operador
+Mismo set de filtros que el script `social-thread-finder.ps1`:
 
-1. Capturar el stdout del script (markdown estricto con las cabeceras `# Candidatos para comentario`, `## r/SUB` y `### N. titulo`).
-2. Capturar también el stderr (warnings de 429, retries, etc.) para diagnóstico si hay problemas.
-3. Si el exit code es 0 (al menos un candidato), emitir al operador en este orden literal:
+### TabuKeywords (descarta el thread completo)
+Coincidencia case-insensitive como substring del título. Cualquier título que contenga alguna se descarta:
 
-```
-Threads candidatos descubiertos (run YYYY-MM-DDTHH:MM UTC). Para elegir, responde con sub y número: "voy con r/AskReddit #4, r/Showerthoughts #1". Si ninguno encaja, di "ninguno me convence" y relanzo el descubrimiento.
+- **Líneas rojas absolutas**: `underage`, `teen`, `minor`, `child`, `cp`, `trafficking`, `snuff`, `rape`, `coercion`, `force`.
+- **Politizados / derail**: `religion`, `politics`, `trump`, `biden`, `israel`, `palestine`, `abortion`, `AITA`, `rant`, `hate`, `racist`, `gun`, `shooting`, `war`.
 
-[aquí va el bloque markdown del script, tal cual, sin reformatear]
-```
+### AdminMarkers (descarta posts administrativos)
+Substring case-insensitive: `Welcome Thread`, `Megathread`, `Daily Discussion`, `Daily Thread`, `Monthly`, `Weekly`, `Mod Post`, `Moderator`, `looking for new moderators`.
 
-Sustituir `YYYY-MM-DDTHH:MM UTC` por el timestamp UTC actual de la presentación.
+### BotAuthors (descarta autores bot)
+Match case-insensitive sobre el autor (limpiando prefijo `/u/`): `AutoModerator`, `Sub_Mentions`, `reddit`.
 
-4. Esperar la respuesta del operador.
+### Edad máxima por sub
+Desde el ledger (`subreddits[].max_age_hours` si existe; si no, usar defaults por sub):
 
-## Parser de la respuesta del operador
+- `r/CreatorsAdvice`: 96h.
+- `r/SexWorkerSupport`: 168h.
+- `r/CamGirlProblems`: 72h.
+- `r/Fansly_Advice`: 168h.
+- Subs no listados: 96h por defecto.
 
-Regex de extracción: `r/(\w+)\s*#\s*(\d+)` aplicada sobre la respuesta del operador. Captura tuplas `(subreddit, numero)`.
+Threads más antiguos que el límite se descartan.
 
-Mapear cada tupla al thread correspondiente del output del script (el número es el ordinal `### N` bajo la cabecera `## r/SUB`). Construir una lista de objetos:
+### Dedup
+Por URL del thread (case-insensitive).
+
+## BoostKeywords (marca, no descarta)
+
+Threads cuyo título contenga alguna de estas plataformas competencia (substring case-insensitive) se marcan con `is_boost: true`:
+
+`coomeet`, `luckycrush`, `chaturbate`, `stripchat`, `bongacams`, `myfreecams`, `jerkmate`, `camsoda`, `flirt4free`.
+
+Se usan en la auto-selección (§ siguiente).
+
+## Heurística de auto-selección (clave de ADR-041)
+
+Tras filtrar y marcar, la skill auto-elige los mejores candidatos con este orden:
+
+1. **Excluir títulos sensibles** (segunda barrera, independiente de TabuKeywords): descartar títulos que matcheen `blackmail`, `rape`, `scam`, `extortion`, `underage`, `minor`, `abuse`, `suicide`, `self-harm` (case-insensitive como substring). Esta lista solapa parcialmente con TabuKeywords pero se aplica también aquí como red de seguridad.
+
+2. **Excluir títulos ambiguos por defecto**: si `len(titulo) < 30` Y el título no contiene ninguna keyword del oficio (`cam`, `model`, `OF`, `OnlyFans`, `Fansly`, `platform`, `payout`, `verification`, `KYC`, `shift`, `creator`), descartar. Sin operador para clarificar el contexto, no merece la pena consumir variante en threads opacos.
+
+3. **Ordenar dentro de cada sub** por dos claves:
+   - **Boost desc** (`is_boost: true` antes que `is_boost: false`).
+   - **Edad asc** (más reciente primero).
+
+4. **Tomar top 2 por sub** (límite por sub).
+
+5. **Limitar total a 6 threads** (3 subs × 2 max). Si más de 3 subs se han pasado en `subs_candidatos`, priorizar boost cross-sub: primero todos los boost (hasta agotar), después los no-boost en orden de aparición.
+
+6. Si la lista final está vacía (todos los candidatos descartados o todos los fetches fallaron), devolver `aborted: true` con motivo claro. El orchestrator no continuará el pipeline.
+
+## Salida al orchestrator (JSON estructurado)
+
+Caso éxito:
 
 ```json
-[
-  {
-    "thread_url": "https://www.reddit.com/r/AskReddit/comments/.../...",
-    "titulo": "What's something that's socially acceptable but you personally find deeply uncomfortable?",
-    "subreddit": "r/AskReddit",
-    "op_brief": null
-  },
-  {
-    "thread_url": "https://www.reddit.com/r/Showerthoughts/comments/.../...",
-    "titulo": "Future generations may never know the thrill of randomly finding cash in the street.",
-    "subreddit": "r/Showerthoughts",
-    "op_brief": null
+{
+  "status": "ok",
+  "threads_elegidos": [
+    {
+      "thread_url": "https://www.reddit.com/r/CamGirlProblems/comments/.../...",
+      "titulo": "Leaving Coomeet, looking for alternatives - what's worked for you?",
+      "subreddit": "r/CamGirlProblems",
+      "is_boost": true,
+      "boost_keyword": "coomeet",
+      "age_hours": 4.3,
+      "op_brief": null
+    },
+    {
+      "thread_url": "https://www.reddit.com/r/CreatorsAdvice/comments/.../...",
+      "titulo": "How to get 85% payout on Fansly (for new joiners)",
+      "subreddit": "r/CreatorsAdvice",
+      "is_boost": false,
+      "boost_keyword": null,
+      "age_hours": 6.1,
+      "op_brief": null
+    }
+  ],
+  "discovery_summary": {
+    "subs_consulted": ["r/CamGirlProblems", "r/CreatorsAdvice", "r/SexWorkerSupport"],
+    "subs_failed": [],
+    "candidates_total_pre_filter": 75,
+    "candidates_after_filter": 22,
+    "boost_count": 3,
+    "auto_selected": 5
   }
-]
+}
 ```
 
-`op_brief` siempre se inicializa a `null` en este paso; lo rellena el operador en el siguiente paso si `social-comment-helper` lo solicita por heurística de título ambiguo.
+`op_brief` siempre `null` en este flujo: para títulos ambiguos `social-comment-helper` aplica **ángulo prudente** automático (ver su documentación), no pide brief al operador.
 
-## Otros casos de respuesta del operador
+Caso fetch falla totalmente:
 
-- **"ninguno me convence"** o frase equivalente: no elegir nada. Volver a invocar el script (con o sin override de subs según contexto). Si es la segunda vez seguida que el operador dice "ninguno me convence", recomendar esperar 10 min antes del siguiente intento (Reddit puede estar throttle o el universo de threads hot está saturado de tema-tabú ese momento).
+```json
+{
+  "status": "fetch_failed",
+  "error": "All subs returned non-200 or fetch was blocked. Possible causes: reddit.com allowlist not active in Cowork, User-Agent blocked by Reddit, or domain change in feed URL.",
+  "fallback_instruction": "Ejecuta el script local ./sharemechat-v1/ops/scripts/social-thread-finder.ps1 desde PowerShell, pega el stdout markdown en una nueva sesion Cowork con modo: thread_comment y threads_elegidos: <lista parseada de tu eleccion> para forzar el flujo legacy de ADR-039.",
+  "subs_failed": ["r/CreatorsAdvice", "r/CamGirlProblems", "r/Fansly_Advice"],
+  "fetch_errors": ["403 Forbidden on r/CreatorsAdvice", "timeout on r/CamGirlProblems", "..."]
+}
+```
 
-- **"más threads de r/X"** o **"prueba con r/Cooking, r/Coffee"** o equivalente: parsear los subs nombrados y relanzar el script con `-SubsOverride "r/Cooking,r/Coffee"`. NO mezclar con los subs por defecto salvo que el operador lo pida explícitamente.
+Caso todos los candidatos descartados:
 
-- **Ambigüedad o respuesta no parseable**: repreguntar al operador con un ejemplo concreto del formato esperado. NO inventar interpretación.
+```json
+{
+  "status": "no_candidates",
+  "reason": "All threads after fetch were filtered out (sensitive titles, ambiguous, or age beyond limit).",
+  "subs_consulted": ["r/CreatorsAdvice", "r/CamGirlProblems"],
+  "candidates_total_pre_filter": 50,
+  "candidates_after_filter": 0,
+  "suggestion": "Wait 30-60 min and retry, or override subs with subs_candidatos in the contract."
+}
+```
 
-## Plan B si el script falla
+En cualquier caso `status != "ok"`, el orchestrator NO continúa con `social-comment-helper`. Emite el mensaje al operador y termina la sesión.
 
-Si el script sale con **exit code 1** (cero candidatos tras filtros) o si stderr contiene errores de red, autenticación, parseo, etc.:
+## Fallback al script local
 
-1. Mostrar al operador el `stderr` completo del script (warnings de 429, errores HTTP por sub, mensajes del fail mode). NO ocultar la información técnica: el operador debe entender qué pasó.
-2. Sugerir esperar **10 minutos** y reintentar. Esto es típico tras un 429 persistente que el retry on 429 no resolvió en el momento. El reintento posterior con Reddit relajado suele funcionar.
-3. Si el operador confirma reintentar, relanzar el script con los mismos parámetros.
-4. Si el operador pide cambiar de subs ("prueba con r/Cooking"), relanzar con `-SubsOverride` ajustado.
-5. Si el operador abandona la sesión, cerrar limpiamente sin invocar las siguientes skills del pipeline (no hay nada que redactar si no hay threads).
+Si Cowork no puede fetch reddit (allowlist desactivada accidentalmente, User-Agent bloqueado, dominio cambiado), el operador puede recuperar el flujo de ADR-039 manualmente:
 
-NO intentar arreglar el script desde aquí. Cualquier bug del script se documenta como issue para el operador (FASE 2B-3+).
+1. Ejecutar en PowerShell local:
+   ```
+   powershell -NoProfile -File ./sharemechat-v1/ops/scripts/social-thread-finder.ps1
+   ```
+2. El script aplica los mismos filtros + boost que esta skill, devuelve markdown con candidatos numerados por sub.
+3. El operador elige threads con la sintaxis `"voy con r/X #N"` y los pasa al orchestrator en `threads_elegidos`.
 
-## Salida al orchestrator
-
-Devuelve la lista de threads elegidos en el formato JSON mostrado arriba. El orchestrator la pasa al siguiente paso (`social-comment-helper`).
-
-Si el operador no eligió ningún thread (`"ninguno me convence"` final), devolver `threads_elegidos: []` y `aborted: true`. El orchestrator NO debe seguir con el resto del pipeline en ese caso.
+El script `.ps1` se mantiene en `ops/scripts/` **sin cambios**. Sigue siendo funcional y compatible.
 
 ## Lo que NO hace
-- No genera borradores de comentario.
+- No genera borradores de comentario (eso es `social-comment-helper`).
 - No publica nada.
 - No toca el ledger `social-state.json`.
-- No fetchea el cuerpo de cada thread (el `op_brief` lo aporta el operador en el siguiente paso si hace falta).
-- No interpreta las reglas del subreddit (eso es responsabilidad de `social-platform-rules` aguas abajo, si aplica).
-- No filtra los candidatos por encima de lo que ya filtró el script (las palabras tabú, los markers admin y los autores bot están en el script; cualquier criterio adicional pasa al criterio del operador, no a esta skill).
+- No fetchea el cuerpo de cada thread (para títulos ambiguos, el comment-helper aplica ángulo prudente, no pide brief).
+- No interpreta las reglas del subreddit (eso es responsabilidad de `social-platform-rules`).
+- No pausa al operador. La selección es automática con heurística documentada.
 
 ## Reglas de oro
-- Presentar siempre el envoltorio instructivo exacto antes del bloque markdown del script. Sin paráfrasis, sin "como podrás ver, hay 15 candidatos..." inline. El operador necesita el bloque limpio.
-- Si la respuesta del operador es ambigua, repreguntar; no inventar.
-- Si el script falla, mostrar el stderr; no sustituirlo por una explicación más bonita.
+- El User-Agent declarado (`SharemeChat:warmup-finder:v2 (by /u/sharemechat)`) es obligatorio. Reddit penaliza fetches con UA genérico.
+- Sleep de 15s entre fetches de subs distintos. No bajar sin validación empírica.
+- La heurística de auto-selección es la fuente de verdad de "qué thread vale la pena comentar". Si la heurística necesita ajustarse, editar este documento y testear; no improvisar en runtime.
+- Si el status no es `"ok"`, mostrar el JSON estructurado al operador tal cual, sin paráfrasis. El operador necesita ver el motivo técnico para decidir si reintenta, hace override de subs o cae al fallback `.ps1`.

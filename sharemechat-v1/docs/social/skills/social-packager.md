@@ -115,6 +115,115 @@ El packager prepara `social_state_next` reflejando la publicación. Concretament
 ### Cuándo se aplica la actualización
 El operador publica los comentarios en Reddit, vuelve al chat y dice algo tipo "publicado A en thread 1, B en thread 2". El orchestrator parsea esa confirmación y le pasa al packager qué variantes se publicaron en qué threads. **NO se persiste el ledger antes de la confirmación**: si el operador no publica o publica solo parcialmente, el ledger no debe reflejar publicaciones inexistentes.
 
+## Modo `thread_comment` con paquete batch (ADR-041)
+
+Cuando el flujo viene del modo `thread_comment` vigente de [ADR-041](../../06-decisions/adr-041-social-pipeline-sin-pausa-humana.md) (sin pausa humana, una sola invocación), el packager recibe **N threads en una sola pasada** y emite un **paquete final batch** con un formato específico orientado a copy-paste eficiente del operador.
+
+### Formato del paquete final batch
+
+Markdown estricto que el orchestrator emite tal cual al operador. El operador debe poder ir thread por thread copiando la variante elegida sin tocar nada más. Estructura literal:
+
+```
+**Borradores listos. N comentarios generados (M con boost).**
+Subs cubiertos: r/A, r/B, r/C. Auto-selección de social-thread-finder con heurística boost > sin boost, fresco > antiguo, max 2/sub max 6 total.
+
+---
+
+## Thread 1 — r/X — boost: coomeet
+
+**POSTEAR EN →** https://www.reddit.com/r/X/comments/...
+
+**Thread original**: "Leaving Coomeet, looking for alternatives - what's worked for you?"
+
+### Opción A — recomendada
+
+​```
+[texto literal del comentario, disclosure explicit con ángulo "alternativa concreta a coomeet"]
+​```
+
+`chars: 612 / 1200 · 9 frases · tono: alternativa concreta · disclosure: explicit · boost: coomeet · sin links`
+
+### Opción B — alternativa
+
+​```
+[texto literal, disclosure light, ángulo experiencia operativa lateral]
+​```
+
+`chars: 540 / 1200 · 8 frases · tono: experiencia operativa lateral · disclosure: light · sin links`
+
+---
+
+## Thread 2 — r/Y — sin boost
+
+**POSTEAR EN →** https://www.reddit.com/r/Y/comments/...
+
+**Thread original**: "[título]"
+
+### Opción A — recomendada
+...
+
+### Opción B — alternativa
+...
+
+---
+
+[...N threads...]
+
+---
+
+## Checklist humano combinado
+
+- [ ] Thread 1 (r/X): abrir → pegar Opción A (o B) → publicar.
+- [ ] Thread 2 (r/Y): abrir → pegar Opción A (o B) → publicar.
+- [ ] [...]
+- [ ] Cuando termines, confirma aquí: "publicado A en thread 1, B en thread 2, ..." (o lo que sea). Aplico social_state_next al ledger.
+
+---
+
+<details>
+<summary>Notas Cowork (justificación de variantes, no necesitas leerlo para publicar)</summary>
+
+- Thread 1 (r/X, boost coomeet): A en disclosure explicit por boost + target_audience models. B en light como contrapunto.
+- Thread 2 (r/Y, sin boost, target_audience clients): ambas en light. A con ángulo experiencia de servicio.
+- [...]
+- Voz: variantes de sharemechat-voice según target_audience por sub.
+- Bloqueos del review (si los hubo): [descripción literal].
+
+</details>
+```
+
+Los caracteres invisibles `​` antes y después de las triple-backticks son zero-width (ZWSP, U+200B) para que el documento de la skill no rompa el render; en el output real son triple-backticks limpios.
+
+### Encabezado de resumen
+
+Primera línea con conteo: `N comentarios generados (M con boost)`. Luego subs cubiertos y una nota sobre la heurística usada. Sirve al operador para ver de un vistazo qué hay sin scrollear todo el paquete.
+
+### Bloques por thread
+
+Cabecera `## Thread N — r/SUB — boost: <keyword>` (o `— sin boost` si no aplica). Después: URL del thread con flecha, título del thread, dos code fences aislados con variantes A/B, metadata en inline code.
+
+La metadata incluye obligatoriamente: `chars`, `frases`, `tono`, `disclosure`, `boost` (si aplica), `sin links`. El campo `disclosure` toma valor `light` o `explicit` según lo decidido por `social-platform-rules` + override boost. Si el helper aplicó ángulo prudente por título ambiguo, el `tono` lo indica: `tono: "vivencia generica del oficio (titulo ambiguo)"`.
+
+### Checklist humano combinado
+
+Una línea por thread con checkbox `[ ]`. La penúltima línea es la instrucción de confirmación que cierra el handshake con el orchestrator (`"publicado A en thread 1, B en thread 2"`). La última línea opcionalmente recuerda que el orchestrator aplica `social_state_next` automáticamente tras la confirmación.
+
+### `social_state_next` propuesto
+
+El packager prepara `social_state_next` reflejando publicación de **todos** los threads del paquete (asumiendo confirmación completa). El orchestrator lo aplica al ledger solo tras la confirmación del operador; si la confirmación es parcial ("publicado A en thread 1, nada en thread 2"), el orchestrator ajusta `social_state_next` excluyendo los threads no publicados antes de persistir.
+
+Estructura idéntica al schema v0.3 del ledger. Incrementos `+1` por publicación confirmada en `subreddits[r/X].ratio.aporte` y entries en `subreddits[r/X].commented_threads`.
+
+### Instrucción final al operador
+
+La línea final del paquete (después del bloque colapsable de notas) es la instrucción literal:
+
+> Cuando termines de publicar, confirma con `publicado A en thread 1, B en thread 2, ...` (o lo que sea). Aplico `social_state_next` al ledger automáticamente. Si no publicaste algún thread, dilo (`no publiqué thread 3`) y lo omito del incremento.
+
+### Diferencia con el modo `thread_comment` legacy (ADR-039)
+
+En ADR-039 el paquete tenía 1-3 threads (los elegidos por el operador en pausa humana), un solo bloque por thread, y el checklist era más simple. En ADR-041 el paquete tiene hasta 6 threads auto-seleccionados, el encabezado de resumen es obligatorio y la metadata incluye el sub-tipo y disclosure resueltos. Ambos formatos siguen el patrón §3.B (code fences aislados, metadata inline, checklist con checkbox, justificación en bloque colapsable) — la diferencia es de escala, no de estructura.
+
 ## Reglas de oro
 - El humano es la fuente de verdad de lo que se publicó: el ledger se guarda tras publicar, nunca antes.
 - Nunca incluyas en el plan algo que el review haya bloqueado.

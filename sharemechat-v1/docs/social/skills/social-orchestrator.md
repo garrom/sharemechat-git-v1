@@ -23,7 +23,9 @@ Punto de entrada del pipeline. Lo lanza el operador (o el script prompt-builder 
    Campos específicos del modo `thread_comment`:
    - `subs_candidatos`: opcional, lista de subs para el finder; si ausente usa defaults del script.
    - `threads_elegidos`: lista de objetos `{thread_url, titulo, subreddit, op_brief}`. Vacía o ausente en la **primera invocación** (descubrimiento); poblada en la **segunda invocación** (redacción).
-2. El `social-state.json` completo. Inyectado en el prompt, porque Cowork no tiene memoria entre sesiones.
+2. El `social-state.json`:
+   - **Modo `post_propio`**: inyectado en el prompt (compatibilidad histórica de ADR-034).
+   - **Modo `thread_comment`** (ADR-041): leído del filesystem en `docs/social/social-state.json`. Cowork necesita la carpeta del repo conectada (pre-requisito operativo). El orchestrator hace `read_file` sobre esa ruta al inicio del flujo y trata el contenido como el ledger inyectado. Si el archivo no está accesible, abortar con instrucción de conectar la carpeta o caer al modo legacy inyectando el ledger en el prompt.
 
 ## Secuencia
 
@@ -39,32 +41,51 @@ Invoca en este orden, encadenando los contratos JSON:
 5. `social-translate-en` -> `drafts_en`. Siempre ES + EN, sin opt-out (como en el pipeline editorial), salvo que `skip_translation: true` venga en el contrato (uso operativo: rara vez en `post_propio`).
 6. `social-packager` -> `plan` + `checklist_humano` + `social_state_next`.
 
-### Sub-flujo `thread_comment` (ADR-039, dos invocaciones)
+### Sub-flujo `thread_comment` (ADR-041, una sola invocación sin pausa humana)
 
-**Primera invocación** (contrato con `threads_elegidos: []` o ausente):
+**Vigente desde ADR-041 (FASE 2E)**. El flujo histórico de ADR-039 con dos invocaciones y pausa humana queda como **fallback** documentado para casos donde Cowork no puede hacer fetch a `*.reddit.com` (allowlist desactivada, User-Agent bloqueado, dominio cambiado). Cuando el operador llega con `threads_elegidos` ya poblado (porque ejecutó el `.ps1` localmente), el orchestrator detecta el caso y aplica el flujo ADR-039 saltando el `social-thread-finder` (que ya no haría falta).
 
-1. `social-phase-gate` -> `gate_decision`. Para `modo: "thread_comment"` el `objetivo` solicitado siempre es tratado como aporte (un comentario en thread ajeno con tono casual no es promocional). El gate verifica que la fase actual lo permita (en `warmup` siempre permitido).
-2. `social-platform-rules` -> `platform_constraints` con `tipo: "comment"` (max 250 chars, sin enlace, sin flair, sin disclosure, tono casual).
-3. `social-thread-finder` -> lista de candidatos presentada al operador + parser de respuesta. Devuelve `threads_elegidos` (lista) o aborta si el operador dice "ninguno me convence" después de reintentar.
-4. **Pausa humana**: el orquestador devuelve `threads_elegidos` al chat. El operador relanza el orchestrator con el nuevo contrato (`threads_elegidos` poblado).
+**Pre-requisitos operativos** del flujo vigente (validados en FASE 2C):
+- `*.reddit.com` en allowlist de Cowork.
+- Carpeta del repo conectada a Cowork (para leer `social-state.json` del filesystem).
 
-**Segunda invocación** (contrato con `threads_elegidos` poblado):
+**Flujo lineal en una invocación**:
 
-1. `social-phase-gate` -> `gate_decision`. Re-evalúa ratio porque cada comentario incrementa `subreddits[r/X].ratio.aporte` del sub correspondiente y la decisión final podría cambiar si entre la primera y la segunda invocación el ledger cambió.
-2. `social-platform-rules` -> `platform_constraints` con `tipo: "comment"`.
-3. `social-comment-helper` -> 2 variantes por thread (A recomendada, B alternativa). Si algún thread tiene título ambiguo y `op_brief` ausente, la skill pausa para pedir al operador 1-2 líneas del OP. Sin fetch a Reddit.
-4. `social-brand-legal-review` -> `review` en modo "comentario en thread ajeno" (reglas relajadas: sin disclosure, sin claims sobre el producto; mantiene 18+, marca, links).
-5. `social-translate-en` se **SALTA** por construcción (`skip_translation: true` forzado en este modo; los subs target son anglo y el helper redacta directamente en EN).
-6. `social-packager` -> `plan` + `checklist_humano` + `social_state_next`. El packager incrementa `subreddits[r/X].ratio.aporte` del sub correcto y añade entry a `subreddits[r/X].commented_threads: [{url, at}]` cuando el operador confirme la publicación.
+1. **Leer ledger**: el orchestrator lee `docs/social/social-state.json` del filesystem del repo conectado a Cowork. NO se inyecta vía prompt como en ADR-039.
+2. `social-phase-gate` -> `gate_decision`. Para `modo: "thread_comment"` el `objetivo` siempre se trata como aporte. Verifica que la fase actual lo permita.
+3. `social-platform-rules` -> `platform_constraints` con `tipo: "comment"`, sub-tipo `comment.advice_substantive` por defecto en subs target de ADR-040 (o `comment.warmup_casual` si el contrato pasa subs legacy).
+4. `social-thread-finder` -> fetch RSS nativo desde Cowork + filtros + marca boost + **auto-selección** según heurística documentada en su skill. Devuelve array de threads_auto_elegidos (max 2/sub, max 6 total). NO presenta candidatos al operador, NO pausa.
+   - Si `status != "ok"` (fetch failed, no candidates), el orchestrator interrumpe el pipeline y devuelve el JSON estructurado al operador con instrucción de fallback al `.ps1` legacy o ajuste de subs.
+5. `social-comment-helper` (batch) -> 2 variantes por thread (A recomendada, B alternativa) sobre los N threads auto-elegidos en una sola pasada. Títulos ambiguos se redactan con **ángulo prudente** automático (vivencia genérica del oficio sin referencia específica al thread); NO se pausa para pedir OP brief.
+6. `social-brand-legal-review` (batch) -> review sobre todos los borradores. Mismas reglas del modo comentario (`disclosure.light` / `disclosure.explicit` según `target_audience` + boost). Bloqueos por variante.
+7. `social-translate-en` se **SALTA** por construcción (`skip_translation: true` automático).
+8. `social-packager` -> paquete final con N bloques (uno por thread), checklist humano combinado, `social_state_next` propuesto. Output con el formato fijo de ADR-041 (encabezado de resumen + bloque por thread + checklist + instrucción de confirmación).
+
+**Output del orchestrator**: el paquete del packager + un resumen breve para el operador. El operador copia-pega los comentarios a Reddit, vuelve al chat y confirma con `"publicado A en thread 1, B en thread 2"` (o equivalente). El orchestrator parsea la confirmación y aplica `social_state_next` al ledger (incrementa `ratio.aporte` del sub correcto + entry a `commented_threads`).
+
+### Sub-flujo `thread_comment` (ADR-039, FALLBACK con dos invocaciones y pausa humana)
+
+Activación del fallback: el operador pasa `threads_elegidos` ya poblado en el contrato (porque ejecutó el `.ps1` localmente tras un fallo de fetch desde Cowork, o porque prefiere control granular sobre la elección de threads).
+
+En ese caso el orchestrator salta `social-thread-finder` (no hace falta porque la elección ya está hecha) y aplica el resto del pipeline en una sola invocación:
+
+1. **Leer ledger** del filesystem.
+2. `social-phase-gate` -> `gate_decision` (re-evalúa ratio con los threads elegidos).
+3. `social-platform-rules` -> `platform_constraints` con `tipo: "comment"`.
+4. `social-comment-helper` (batch) sobre los `threads_elegidos`.
+5. `social-brand-legal-review` (batch).
+6. `social-packager` -> paquete final.
+
+Misma salida que el flujo vigente. Se usa cuando hay que evitar el fetch nativo de Cowork.
 
 ## Manejo de casos
 - Degradación: si el gate degradó el objetivo (por ejemplo promo a aporte), continúa con el permitido y dilo claramente en el resumen al humano.
 - Bloqueo de seguridad: si el review bloquea variantes, no las empaquetes; si bloquea todo, el plan sale con `publicable: false` y sus motivos.
 - Sub sin reglas: si `platform-rules` no encuentra la política del sub en el ledger, para y pide curarla antes de continuar.
 - own_subreddit: si `subreddit` es `own`, el flujo es el mismo, pero el gate ya habrá relajado las comprobaciones externas.
-- Modo `thread_comment` con script de descubrimiento fallido: si `social-thread-finder` sale con exit 1 o todos los subs en 429, no continuar al `social-comment-helper`. Mostrar el stderr al operador y dejar la decisión de reintentar / cambiar subs / abortar al humano. NO inventar candidatos.
-- Modo `thread_comment` con título ambiguo: si `social-comment-helper` pausa para pedir `op_brief` de un thread, el orquestador deja que la pausa ocurra y reanuda cuando el operador pegue el contexto. NO redactar sin contexto si la heurística marcó ambigüedad.
-- Modo `thread_comment` sin threads elegidos por el operador ("ninguno me convence" final): emitir un plan vacío con `publicable: false` y motivo "operador no eligió thread tras descubrimiento". NO incrementar ningún contador del ledger.
+- Modo `thread_comment` con `social-thread-finder` que devuelve `status: "fetch_failed"`: interrumpir el pipeline. Mostrar al operador el JSON estructurado con la instrucción de fallback al `.ps1` legacy. NO intentar redactar sin candidatos.
+- Modo `thread_comment` con `social-thread-finder` que devuelve `status: "no_candidates"`: interrumpir el pipeline. Mostrar el motivo (ej: "all threads filtered out by sensitive title check") y sugerir esperar 30-60 min o pasar `subs_candidatos` distintos. NO redactar.
+- Modo `thread_comment` con título ambiguo en algún thread auto-elegido: el `social-comment-helper` **no pausa** en ADR-041; aplica ángulo prudente automático (vivencia genérica del oficio sin referencia al thread). El orchestrator no tiene nada especial que manejar aquí; el helper lo absorbe en su redacción.
 
 ## Salida
 Devuelve lo que emite `social-packager` (plan, variantes_es, checklist_humano, social_state_next, bloqueos, publicable), precedido de un resumen breve en lenguaje natural para el humano: qué pidió, qué se generó, si hubo degradación o bloqueos, y el recordatorio de guardar `social_state_next` solo tras publicar.

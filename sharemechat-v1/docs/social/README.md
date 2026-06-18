@@ -33,23 +33,28 @@ El orchestrator despacha a dos sub-flujos según el campo `modo` del contrato. E
 | 5 | `social-translate-en` | `review` | `drafts_en` |
 | 6 | `social-packager` | todo + ledger | `plan` + `checklist_humano` + `social_state_next` |
 
-### Sub-flujo `thread_comment` (ADR-039)
-**Primera invocación** (sin `threads_elegidos`):
-| Paso | Skill | Entrada | Salida |
-|---|---|---|---|
-| 1 | `social-phase-gate` | contrato + ledger | `gate_decision` |
-| 2 | `social-platform-rules` | `gate_decision` (tipo `comment`) | `platform_constraints` |
-| 3 | `social-thread-finder` | contrato | lista de candidatos para el operador → **pausa humana** |
+### Sub-flujo `thread_comment` (ADR-041, vigente desde 2026-06-18)
 
-**Segunda invocación** (con `threads_elegidos`):
+Una sola invocación, sin pausa humana. Cowork ejecuta todas las fases en cadena y devuelve un paquete final con N comentarios (hasta 6).
+
 | Paso | Skill | Entrada | Salida |
 |---|---|---|---|
-| 1 | `social-phase-gate` | contrato + ledger | `gate_decision` (re-evalúa ratio) |
-| 2 | `social-platform-rules` | `gate_decision` (tipo `comment`) | `platform_constraints` |
-| 3 | `social-comment-helper` | threads_elegidos + constraints + `sharemechat-voice` (variante "comentarios en threads ajenos") | 2 variantes por thread |
-| 4 | `social-brand-legal-review` | variantes (modo comentario, reglas relajadas) | `review` |
-| — | ~~`social-translate-en`~~ | **SALTADO** (`skip_translation: true` automático en este modo) | — |
-| 5 | `social-packager` | todo + ledger | `plan` + `checklist_humano` (solo acciones del operador) + `social_state_next` (incrementa `aporte` del sub + entry a `commented_threads`) |
+| — | (orchestrator) | lee `social-state.json` del filesystem | ledger inyectado |
+| 1 | `social-phase-gate` | contrato + ledger | `gate_decision` |
+| 2 | `social-platform-rules` | `gate_decision` (tipo `comment`, sub-tipo `advice_substantive` o `warmup_casual`) | `platform_constraints` |
+| 3 | `social-thread-finder` | contrato + ledger | fetch RSS nativo + filtros + boost + **auto-selección** → `threads_auto_elegidos` |
+| 4 | `social-comment-helper` | batch de threads + constraints + `sharemechat-voice` | 2 variantes por thread (ángulo prudente automático en títulos ambiguos) |
+| 5 | `social-brand-legal-review` | variantes batch | `review` con disclosure light/explicit por variante |
+| — | ~~`social-translate-en`~~ | **SALTADO** (`skip_translation: true` automático) | — |
+| 6 | `social-packager` | todo + ledger | paquete final (encabezado de resumen + N bloques + checklist combinado + `social_state_next`) |
+
+Si `social-thread-finder` devuelve `status != "ok"` (fetch falló o 0 candidatos tras filtros), el orchestrator interrumpe el pipeline y emite el JSON estructurado al operador con instrucción de fallback al `.ps1`. NO redacta sin candidatos.
+
+### Sub-flujo `thread_comment` (ADR-039, FALLBACK)
+
+Activación: el operador pasa `threads_elegidos` ya poblado en el contrato (porque ejecutó el `.ps1` local tras un fallo de fetch desde Cowork).
+
+Mismo pipeline que ADR-041 pero saltándose `social-thread-finder`. El orchestrator detecta la presencia de `threads_elegidos` y va directo al `social-comment-helper`.
 
 ## El ledger (`social-state.json`)
 - Vive en `docs/social/social-state.json`.
@@ -72,9 +77,37 @@ Es el flujo histórico del pipeline social. Se usa para publicar un post propio 
 4. Publicas a mano siguiendo el checklist.
 5. Tras publicar, guardas `social_state_next` (ajustando si publicaste otra variante o nada) y actualizas las métricas de la cuenta.
 
-## Flujo: warmup Reddit con descubrimiento + comentario (modo `thread_comment`, ADR-039 + ADR-040)
+## Flujo: warmup Reddit con descubrimiento + comentario (modo `thread_comment`, ADR-039 + ADR-040 + ADR-041)
 
 Se usa para acumular `comment_karma` en `u/sharemechat` comentando en threads ajenos de subs target adult-ecosystem (definidos en [ADR-040](../06-decisions/adr-040-pivote-target-subs-social-ops.md)). NO sirve para post propio (ese es el flujo anterior) ni para publicar en `r/SharemeChat` (eso es post propio en el sub `own`).
+
+### Workflow operativo vigente (ADR-041, sin pausa humana)
+
+Cuatro pasos:
+
+1. **Abre Cowork** en una sesión nueva.
+2. **Lanza el orchestrator** con: `ejecuta social pipeline modo thread_comment en r/CamGirlProblems, r/Fansly_Advice` (o los subs que quieras del ledger).
+3. **Cowork devuelve un paquete final** con hasta 6 comentarios (2 variantes por thread, max 2 threads por sub) en formato §3.B con code fences aislados.
+4. **Copy-paste a Reddit** thread por thread → vuelve al chat y confirma con `publicado A en thread 1, B en thread 2, ...` → Cowork aplica `social_state_next` al ledger automáticamente.
+
+Pre-requisitos operativos (validados en FASE 2C):
+
+- `*.reddit.com` en allowlist de Cowork (Settings → Capacidades → Dominios permitidos adicionales).
+- Carpeta del repo conectada a Cowork (para leer `docs/social/social-state.json` del filesystem).
+
+### Fallback: script local si Cowork no puede fetch Reddit
+
+Si Cowork devuelve `status: "fetch_failed"` (allowlist desactivada accidentalmente, User-Agent bloqueado por Reddit, dominio cambiado), el operador puede recuperar el flujo legacy ejecutando manualmente el script local:
+
+1. Ejecutar en PowerShell local desde el root del repo:
+   ```
+   powershell -NoProfile -File ./sharemechat-v1/ops/scripts/social-thread-finder.ps1
+   ```
+2. El script aplica los mismos filtros + boost que la skill, devuelve markdown con candidatos numerados por sub y etiqueta `[BOOST]`.
+3. Elegir 1-3 threads con la sintaxis `r/X #N` y pasarlos al orchestrator en `threads_elegidos` (formato JSON con `thread_url`, `titulo`, `subreddit`, `op_brief: null`).
+4. El orchestrator detecta `threads_elegidos` ya poblado y aplica el sub-flujo ADR-039 saltándose `social-thread-finder` (mismo pipeline desde el comment-helper en adelante).
+
+El script `.ps1` se mantiene en `ops/scripts/` sin cambios desde ADR-040. Sigue funcional como fallback.
 
 ### Subs target activos (ADR-040)
 
@@ -121,45 +154,21 @@ Selección automática del sub-modo según `target_audience` del sub + `is_boost
 - `target_audience: ["models"]` + no boost → `disclosure.light` por defecto.
 - `target_audience: ["both"]` → ángulo del thread manda.
 
-### Pre-requisitos
+### Detalle del flujo legacy ADR-039 (sólo cuando se cae al fallback)
+
+Si el operador acaba ejecutando el `.ps1` manualmente porque Cowork no puede fetch Reddit, el pipeline se completa así:
+
+1. Operador ejecuta el script local y elige threads con la sintaxis `r/X #N`.
+2. Construye `threads_elegidos` (lista JSON con `thread_url`, `titulo`, `subreddit`, `op_brief: null`).
+3. Lanza `social-orchestrator` con el contrato + `threads_elegidos` poblado. El orchestrator detecta el escenario y aplica el sub-flujo de fallback: `phase-gate` → `platform-rules` → `comment-helper` (batch) → `brand-legal-review` → `packager`. Salta `social-thread-finder` (ya no hace falta).
+4. Cowork devuelve el paquete final con el mismo formato §3.B del flujo vigente.
+5. Operador copy-paste a Reddit y confirma. Cowork aplica `social_state_next` al ledger.
+
+Pre-requisitos para el fallback:
 - Repo clonado en el equipo del operador (path por defecto del script: `./sharemechat-v1/`).
-- PowerShell 5.1+ disponible en el equipo.
-- Cowork con permiso para ejecutar comandos PowerShell desde la sesión.
+- PowerShell 5.1+ disponible.
 
-### Paso 1 — Invocar `social-thread-finder`
-Cowork ejecuta:
-
-```
-powershell -NoProfile -File ./sharemechat-v1/ops/scripts/social-thread-finder.ps1
-```
-
-Captura `stdout` (markdown agrupado por sub) y `stderr` (warnings de 429, retries, etc.). Pega al operador el bloque markdown precedido del envoltorio instructivo literal:
-
-> *"Threads candidatos descubiertos (run YYYY-MM-DDTHH:MM UTC). Para elegir, responde con sub y número: 'voy con r/AskReddit #4, r/Showerthoughts #1'. Si ninguno encaja, di 'ninguno me convence' y relanzo el descubrimiento."*
-
-Si el script sale con exit code 1 (cero candidatos) o stderr con errores, ver "Plan B" en `social-thread-finder.md`. NO inventar candidatos.
-
-### Paso 2 — Esperar input del operador
-Cowork interpreta la respuesta en lenguaje natural con regex `r/(\w+)\s*#\s*(\d+)`:
-- `"voy con r/AskReddit #4, r/Showerthoughts #1"` → 2 threads elegidos. Construir lista de objetos `{thread_url, titulo, subreddit, op_brief}` (con `op_brief: null`) y pasar al Paso 3.
-- `"ninguno me convence"` → relanzar Paso 1 (recomendar esperar 10 min si es el segundo "ninguno" seguido).
-- `"prueba con r/Cooking, r/Coffee"` → relanzar Paso 1 con `-SubsOverride "r/Cooking,r/Coffee"`.
-- Respuesta ambigua → repreguntar con ejemplo concreto. NO inventar interpretación.
-
-### Paso 3 — Invocar `social-comment-helper`
-Cowork relanza `social-orchestrator` con el contrato actualizado (`threads_elegidos` poblado). El sub-flujo de la segunda invocación encadena: `phase-gate` → `platform-rules` (tipo `comment`) → `social-comment-helper` → `social-brand-legal-review` (reglas relajadas modo comentario) → `social-packager`. `social-translate-en` se SALTA por construcción (`skip_translation: true` automático).
-
-`social-comment-helper` aplica la heurística de **título ambiguo**: si `len(titulo) < 40` Y el título no contiene `?`, pausa para pedir al operador 1-2 líneas del OP de ese thread antes de redactar. NO hace fetch a Reddit.
-
-### Paso 4 — Presentar al operador
-Pegar al operador el output del helper **tal cual**: estructura fija del § 3.B (URL con flecha, code fences aislados para cada variante, metadata en inline code, checklist con checkbox `[ ]`, justificación en `<details>` colapsable). NO añadir contexto inline, NO resumir las variantes en prosa antes del bloque, NO mezclar el JSON técnico del packager en el chat.
-
-### Paso 5 — Confirmación post-publicación
-El operador publica los comentarios en su navegador y vuelve al chat con una confirmación tipo `"publicado A en thread 1, B en thread 2"`. Cowork parsea la confirmación y aplica el ledger:
-- Incrementa `platforms.reddit.subreddits[r/X].ratio.aporte` para cada sub donde se posteó.
-- Añade entry a `platforms.reddit.subreddits[r/X].commented_threads: [{url, at}]` (campo nuevo del schema v0.2 del ledger).
-- Actualiza `updated_at` global del ledger.
-- Persiste el ledger en `docs/social/social-state.json` (operación del orchestrator + packager, no del operador).
+La heurística de **título ambiguo** en el helper se mantiene pero ya no pausa (ADR-041): aplica ángulo prudente automático (vivencia genérica del oficio sin referencia específica). El operador no tiene que rellenar `op_brief` manualmente salvo que quiera control granular sobre algún thread, en cuyo caso lo pasa en el `threads_elegidos`.
 
 ## El ledger (`social-state.json`) — schema v0.3
 
