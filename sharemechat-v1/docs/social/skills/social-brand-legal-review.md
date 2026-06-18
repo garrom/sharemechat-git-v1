@@ -67,26 +67,48 @@ Un objeto `review` JSON:
 
 El `veredicto` es uno de: `ok`, `ok-con-ediciones`, `bloqueado`.
 
-## Modo: comentario en thread ajeno (ADR-039)
-Cuando el contrato del orchestrator viene con `modo: "thread_comment"`, el agente aplica un set ajustado de reglas. El propósito sigue siendo el mismo (filtrar seguridad, legal, marca, ToS); lo que cambia es que un **comentario corto en un thread ajeno no es promo encubierta** y por tanto **algunas reglas se relajan**, mientras que las reglas duras se preservan.
+## Modo: comentario en thread ajeno (ADR-039 + ADR-040)
+Cuando el contrato del orchestrator viene con `modo: "thread_comment"`, el agente aplica un set ajustado de reglas. El propósito sigue siendo el mismo (filtrar seguridad, legal, marca, ToS); lo que cambia es la política de disclosure según el sub target y el thread concreto.
 
-### Reglas duras (siguen aplicando idénticas)
+ADR-040 introduce **dos sub-modos de disclosure** que el helper selecciona según el `target_audience` del sub y la marca `IsBoost` del thread. Las reglas duras se preservan idénticas en ambos sub-modos.
+
+### Reglas duras (idénticas en ambos sub-modos)
 - **18+ y menores**: línea roja absoluta. Cualquier comentario que pueda atraer a menores o que sexualice contenido se BLOQUEA sin intentar editarlo. Igual que en modo `post_propio`.
-- **Marca de SharemeChat**: NUNCA mencionar nombre, packs, "1-a-1", modelos verificadas, ni nada del producto en un comentario. Si el draft mete la marca, **bloquear y exigir regeneración con cero mención**.
-- **Links**: prohibidos en comentarios. Si el draft incluye un link (a sharemechat.com, a un artículo del blog, o a cualquier otra cosa), **bloquear** y exigir regeneración sin link.
-- **CTA y promesas**: prohibidos. Sin "echa un vistazo", "te recomiendo X", "deberías probar Y".
+- **Links en el cuerpo**: **prohibidos** en cualquier comentario, en cualquier sub-modo. Regla dura no negociable. Si el draft incluye un link (a sharemechat.com, a un artículo del blog, a cualquier otra cosa), **bloquear** y exigir regeneración sin link. La URL de SharemeChat vive en la bio de `u/sharemechat`; no se replica en cada comentario.
+- **CTA**: prohibido. Sin "echa un vistazo", "te recomiendo X", "deberías probar Y", "join us", "come work with me".
+- **Claims falsos**: prohibidos. Sin promesas de "best pay", "instant payout", "no chargebacks", "100% verified" sin sustento.
 - **ToS de Reddit**: nada que pida votos, multicuenta, contacto fuera de norma o repetición de contenido. Igual que en `post_propio`.
+- **Denigrar competencia**: prohibido. Hablar de Coomeet, LuckyCrush, Chaturbate, StripChat, etc. como "alternativa" honesta es OK; "X sucks, switch to us" no.
 
-### Reglas relajadas en este modo
-- **Disclosure**: **NO requerido**. No exigir frases tipo "soy el fundador" en cada comentario. Decirlo en cada comentario sería ridículo y fácilmente detectable como template; el perfil de la cuenta (u/sharemechat) ya identifica al autor para quien quiera mirar. Si el draft lo introduce de motu propio, **eliminarlo en la edición** (no bloquear por eso solo).
-- **Claims sobre el producto**: no aplican porque no debe haber claims (la marca no se menciona). Si el draft hace una afirmación general no anclada en el producto ("X es mejor que Y"), evaluarla como cualquier opinión personal en Reddit; no es claim regulable.
-- **NSFW flag**: no aplica en comentarios; viene heredado del thread si el OP es NSFW.
+### Sub-modos de disclosure
+
+#### `disclosure.light`
+- **Política**: una línea de contexto sobre la plataforma **DENTRO** del aporte (no como apertura), solo si el thread la pide explícitamente. Sin URL. Sin CTA.
+- **Cuándo aplica**: subs con `target_audience: ["clients"]` siempre. Subs con `target_audience: ["both"]` o `["models"]` cuando el thread no tiene marca `IsBoost`.
+- **Ejemplo OK** (clients): *"Pay-per-minute kills the guilt-watch loop subscriptions create. On the platform side at SharemeChat we see..."*
+- **Ejemplo BLOQUEAR**: *"I'm the founder of SharemeChat. We offer..."* (disclosure en apertura cuando el sub es lean clients = patrón LinkedIn = mod-ban).
+
+#### `disclosure.explicit`
+- **Política**: declarar fundador permitido en apertura del comentario. Sin URL. Sin CTA. Sin claims sobre precio o resultados.
+- **Cuándo aplica**: subs con `target_audience: ["models"]` cuando el thread tiene marca `IsBoost` (helper aplica override automático). Subs con `target_audience: ["both"]` cuando el thread pregunta explícitamente por plataformas alternativas.
+- **Ejemplo OK** (models + boost): *"I run SharemeChat, a 1-a-1 cam platform based in EU. After 6 months operating, what I see consistently is..."*
+- **Ejemplo BLOQUEAR**: *"I run SharemeChat. We pay 80% revenue share, instant payouts, no chargebacks, best platform in EU."* (claims sin sustento = bloqueo dura).
+
+### Selección del sub-modo (orden de prioridad)
+
+1. Si el thread tiene `IsBoost: true` Y el sub incluye `models` en `target_audience` → `disclosure.explicit` (variante A) + `disclosure.light` (variante B).
+2. Si el sub tiene `target_audience: ["clients"]` → `disclosure.light` siempre, ambas variantes.
+3. Si el sub tiene `target_audience: ["models"]` y el thread NO tiene boost → `disclosure.light` por defecto. El helper puede pedir `disclosure.explicit` si el thread pregunta explícitamente por plataformas (decisión del helper, no del review).
+4. Si el sub tiene `target_audience: ["both"]` → ángulo del thread manda; helper decide y review aplica las reglas duras del sub-modo seleccionado.
+
+### Reglas relajadas comunes a ambos sub-modos
 - **Tono editorial / "marketing"**: bloquear si lo detectas. En `post_propio` se intentaba editar; en `comment` es síntoma de que la voz se equivocó de canal y conviene regenerar entero.
+- **NSFW flag**: no aplica en comentarios; viene heredado del thread si el OP es NSFW.
 
 ### Veredicto en este modo
 Mismo formato que el modo `post_propio` (`ok` / `ok-con-ediciones` / `bloqueado`), pero la regla de regeneración del orquestador es:
 - Si una variante está `bloqueada`, el orchestrator pide al `social-comment-helper` regenerar **una vez** esa variante con ángulo distinto.
-- Si la regeneración también se bloquea (= 2 bloqueos seguidos en la misma posición A o B del mismo thread), presentar lo que pasó la review y dejar esa posición vacía con motivo claro en la justificación de `<details>` del output del helper. NO regenerar más.
+- Si la regeneración también se bloquea (= 2 bloqueos seguidos en la misma posición A o B del mismo thread), presentar lo que pasó la review y dejar esa posición vacía con motivo claro en la justificación del bloque colapsable del output del helper. NO regenerar más.
 
 ## Reglas de oro
 - La seguridad de menores y la condición 18+ están por encima de todo: ante cualquier duda, BLOQUEA. Aplica idéntico en los dos modos.

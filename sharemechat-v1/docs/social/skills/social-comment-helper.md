@@ -1,6 +1,6 @@
 ---
 name: social-comment-helper
-description: Skill nueva del pipeline social-ops de SharemeChat (modo thread_comment). Para una lista de threads elegidos por el operador, genera 2 variantes de comentario por thread (A recomendada, B alternativa), respetando voz casual sin marca sin links max 250 chars max 3 frases, anclada en experiencia personal u observación lateral según el sub target. Pasa por social-brand-legal-review antes de presentar. Output con formato fijo del párrafo 3.B (POSTEAR EN URL, code fences, metadata inline, checklist con checkbox, justificación en bloque colapsable). Solo se usa cuando el contrato viene con modo=thread_comment y threads_elegidos poblados. ADR-039.
+description: Skill del pipeline social-ops de SharemeChat (modo thread_comment). Para una lista de threads elegidos por el operador, genera 2 variantes de comentario por thread (A recomendada, B alternativa) respetando el sub-tipo del thread (comment.warmup_casual con 250 chars y 3 frases para subs casuales legacy, comment.advice_substantive con 1200 chars y 8-15 frases para subs target adult-ecosystem). Selecciona angulo y politica de disclosure segun target_audience del sub (clients usa disclosure light, models permite disclosure explicit, both depende del thread). Aplica override por boost cuando el thread menciona plataforma competencia en sub con models. Pasa por social-brand-legal-review antes de presentar. Output con formato fijo del parrafo 3.B (POSTEAR EN URL, code fences triple-backtick aislados, metadata inline, checklist con checkbox, justificacion en bloque colapsable). Auto-verifica que cada variante tiene exactamente 2 ocurrencias de triple-backtick en lineas propias antes de emitir. Solo se usa cuando el contrato viene con modo=thread_comment y threads_elegidos poblados. ADR-039 + ADR-040.
 ---
 
 # social-comment-helper
@@ -34,14 +34,17 @@ Esto ocurre en la segunda invocación del orchestrator (la primera invoca `socia
 
 3. `sharemechat-voice` (variante "comentarios en threads ajenos", vive en `docs/cms/skills/sharemechat-voice.md` sección final).
 
-## Heurística de título ambiguo
+## Heurística de título ambiguo (ajustada en ADR-040)
 
-Antes de redactar para un thread, evaluar:
+En subs casuales legacy los títulos son cortos y poco informativos (de ahí la heurística original `len(titulo) < 40`). En los subs target adult-ecosystem de ADR-040 los títulos son **largos por convención** (planteamiento del problema en el título): la heurística original generaría demasiados falsos positivos.
 
-- `len(titulo) < 40` caracteres, **y**
-- el título **no contiene `?`** (no es una pregunta clara).
+Heurística ajustada — el título es ambiguo solo si cumple **las tres** condiciones:
 
-Si ambas condiciones se cumplen, el título es ambiguo. PAUSAR la redacción de ese thread y emitir al operador:
+- `len(titulo) < 30` caracteres, **y**
+- el título **no contiene `?`** (no es una pregunta clara), **y**
+- el título **no contiene ninguna keyword del oficio**: `cam`, `model`, `OF`, `OnlyFans`, `Fansly`, `platform`, `payout`, `verification`, `KYC`, `shift`, `creator`, `chargeback`, `cut`, `revenue`, `tax` (comparación case-insensitive como substring).
+
+Si las tres condiciones se cumplen, PAUSAR la redacción de ese thread y emitir al operador:
 
 ```
 El thread "[titulo]" parece ambiguo. Pégame 1-2 líneas del OP para afinar el ángulo antes de redactar. Para el resto de threads sigo adelante.
@@ -53,49 +56,107 @@ Si `op_brief` viene ya poblado en el contrato, **saltarse la heurística** y pro
 
 ## Reglas de generación
 
-Para cada thread, generar 2 variantes:
+Para cada thread, generar 2 variantes según el sub-tipo y el `target_audience` que entrega `social-platform-rules`.
 
-1. **Tono y forma** (siempre, todos los subs):
-   - Sin marca de SharemeChat.
-   - Sin links (ni a sharemechat.com, ni a artículos del blog, ni a nada).
-   - Sin CTA.
-   - Sin disclosure (no decir "soy el fundador", "monté X", etc.).
-   - Sin hashtags (Reddit no los usa).
-   - Sin emojis.
-   - Max **250 caracteres** por comentario (no por variante: por cada variante de comentario).
-   - Max **3 frases** por comentario.
-   - Tono casual, conversacional, escrito en EN nativo (los subs target son anglo).
+### Sub-tipos (ADR-040)
 
-2. **Ángulos por sub**:
-   - `r/AskReddit`: opinión personal con tinte de vivencia corta o postura razonada. Engancha en lo concreto, no en abstracciones.
-   - `r/CasualConversation`: anécdota cálida, reflexión sosegada, micro-historia con sentimiento.
-   - `r/Showerthoughts`: nostalgia, observación lateral, ángulo inesperado que reformula la premisa del OP.
-   - Cualquier otro sub que pase por `-SubsOverride`: aplicar el ángulo del sub que más se parezca, o si no encaja ninguno, casual neutro.
+**`comment.warmup_casual`** (subs legacy via `-SubsOverride`):
+- Max **250 caracteres** por comentario, max **3 frases**.
+- Tono casual, conversacional.
+- Voz: `sharemechat-voice` variante "comentarios en threads ajenos (legacy)".
 
-3. **Variantes A vs B**:
-   - **A** es la "recomendada": el ángulo que la skill considera que pega más con el sub y la voz. Marcada en el output como `Opción A — recomendada`.
-   - **B** es alternativa: ángulo disjunto de A (no la misma idea reescrita). Si A es anécdota personal, B es observación lateral; si A es opinión razonada, B es vivencia concreta. Marcada como `Opción B — alternativa`.
-   - Si la skill no tiene opinión clara (ambos ángulos son igual de fuertes), marcar A y B sin recomendación: `Opción A` y `Opción B` sin sufijo. **Mejor no recomendar que recomendar al azar.**
+**`comment.advice_substantive`** (subs target de ADR-040, default):
+- Max **1200 caracteres** por comentario, **8-15 frases**.
+- Tono experimentado, peer-to-peer, anclado en experiencia operativa.
+- Voz: `sharemechat-voice` variante "comentarios para audiencia clients" o "comentarios para audiencia talento" según `target_audience`.
 
-4. **Voz `sharemechat-voice` variante "comentarios en threads ajenos"**:
-   - Coloquial, no editorial. Lo opuesto al tono del blog.
-   - Anclada en lo concreto: un objeto, un momento, una imagen. No abstracciones genéricas.
-   - First-person ("I"), no "we". No corporate.
-   - Sin filler transitions ("furthermore", "in addition", "moreover"). Reddit los detecta como tono LinkedIn.
-   - Sin promesa de respuesta universal ("we all do this"). Habla por ti.
+### Tono y forma transversales (ambos sub-tipos)
+- Sin links en el cuerpo (regla dura, ver `social-brand-legal-review`).
+- Sin CTA.
+- Sin hashtags (Reddit no los usa).
+- Sin emojis.
+- Sin signos de exclamación (salvo en cita textual de un tercero).
+- Primera persona singular (`I`, `my`), no `we`, no `our`.
+- Sin filler transitions (`furthermore`, `in addition`, `moreover`). Reddit los detecta como tono LinkedIn.
+- Sin promesas de respuesta universal (`we all do this`, `everyone does X`).
+
+### Selección de ángulo y disclosure según `target_audience`
+
+| `target_audience` | Ángulo | Disclosure defecto |
+|---|---|---|
+| `["clients"]` | Experiencia de servicio (privacidad, pay-per-minute, sin suscripción, modelos verificadas) | `light` siempre |
+| `["models"]` | Plataforma como sitio para trabajar (KYC up front, control horario, base EU, payments) | `light` por defecto; `explicit` si el thread pregunta plataformas o tiene boost |
+| `["clients", "models"]` o `["both"]` | Ángulo del thread (helper decide por thread) | Ángulo manda; defecto `light` |
+
+### Override por boost (thread con BoostKeyword)
+
+Si el thread tiene `is_boost: true` (el script `social-thread-finder.ps1` lo marca cuando el título menciona `coomeet`, `luckycrush`, `chaturbate`, `stripchat`, `bongacams`, `myfreecams`, `jerkmate`, `camsoda`, `flirt4free`) Y el sub incluye `models` en `target_audience`:
+
+- **Variante A**: ángulo "alternativa concreta a {plataforma}", disclosure **explicit** (declarar fundador permitido en apertura). Honesto sobre lo que SharemeChat ofrece distinto, sin denigrar competencia.
+- **Variante B**: ángulo "experiencia operativa lateral" (no centrada en la comparación), disclosure **light**. Contrapunto que no obliga al lector a comparar.
+
+### Ángulos por sub target (subs de ADR-040)
+
+- `r/CreatorsAdvice` (`both`): valor sobre el oficio (setup, iluminación, comodidad sostenida, on-camera presence). Disclosure light defecto; explicit solo si el thread invita.
+- `r/SexWorkerSupport` (`models`): bienestar profesional (jornada larga, mental health). Disclosure light primer mes operativo.
+- `r/CamGirlProblems` (`models`): operativa + alternativas a plataformas competencia. Disclosure explicit cuando boost; light en threads no-boost.
+- `r/Fansly_Advice` (`models`): operativa creator (taxes, content, mental health). Disclosure light primeros 30 días.
+
+### Ángulos por sub legacy (sub-tipo `comment.warmup_casual`)
+
+Cuando el operador pasa subs legacy via `-SubsOverride`:
+- `r/AskReddit`: opinión personal con vivencia corta o postura razonada.
+- `r/CasualConversation`: anécdota cálida, reflexión sosegada, microhistoria con sentimiento.
+- `r/Showerthoughts`: nostalgia, observación lateral, ángulo inesperado.
+- Otros casuales ad-hoc: ángulo del sub más parecido, o casual neutro.
+
+### Variantes A vs B
+- **A** es la "recomendada": el ángulo que la skill considera que pega más con el sub, la voz y el contexto. Marcada en el output como `Opción A — recomendada`.
+- **B** es alternativa: ángulo disjunto de A. No la misma idea reescrita: si A es anécdota personal, B es observación lateral; si A es opinión razonada, B es vivencia concreta; si A es boost explicit, B es light sin comparación directa. Marcada como `Opción B — alternativa`.
+- Si la skill no tiene opinión clara (ambos ángulos son igual de fuertes), marcar A y B sin recomendación: `Opción A` y `Opción B` sin sufijo. Mejor no recomendar que recomendar al azar.
 
 ## Pasada por `social-brand-legal-review`
 
-Antes de presentar al operador, cada variante pasa por `social-brand-legal-review` en su modo **"comentario en thread ajeno"** (reglas relajadas: sin disclosure required, sin claims sobre el producto, sin mención de marca; mantener las reglas duras de 18+, menores, ToS de Reddit).
+Antes de presentar al operador, cada variante pasa por `social-brand-legal-review` en su modo **"comentario en thread ajeno"** con el sub-modo de disclosure seleccionado (`disclosure.light` o `disclosure.explicit`):
 
+- Reglas duras preservadas: 18+, menores, sin links en cuerpo, sin CTA, sin claims falsos, sin denigrar competencia, ToS de Reddit.
+- Reglas relajadas según sub-modo: ver `social-brand-legal-review.md` sección "Sub-modos de disclosure".
+
+Regeneración:
 - Si la review bloquea una variante, **regenerar UNA vez** esa variante con un ángulo distinto.
-- Si la regeneración también se bloquea (= 2 bloqueos seguidos en la misma posición A o B del mismo thread), **NO regenerar más**: presentar lo que pasó la review y avisar al operador en la justificación de `<details>` que esa posición se quedó vacía con el motivo del bloqueo.
+- Si la regeneración también se bloquea (= 2 bloqueos seguidos en la misma posición A o B del mismo thread), **NO regenerar más**: presentar lo que pasó la review y avisar al operador en la justificación del bloque colapsable que esa posición se quedó vacía con el motivo del bloqueo.
 
-## Output al operador (formato fijo del § 3.B aprobado)
+## Output al operador (formato fijo del párrafo 3.B aprobado)
 
 Markdown estricto. El operador pega esto en la sesión Cowork y debe poder copiar el texto exacto de cada variante con un Cmd+A dentro del code fence sin pillarse nada de alrededor.
 
-Estructura literal:
+### REGLA DURA del code fence (HOT-FIX 2026-06-18, ADR-040)
+
+Cada texto de comentario generado por la skill DEBE estar envuelto en un code fence triple-backtick **aislado**. Es la única forma de que el operador seleccione todo el comentario de golpe sin atrapar metadata ni etiquetas circundantes. La regla literal de implementación es:
+
+Por cada variante, emitir exactamente esta secuencia:
+
+1. Línea "Opción A — recomendada" o "Opción B — alternativa" (o sin sufijo si no hay recomendación clara).
+2. Línea en blanco.
+3. Triple-backtick aislado en su propia línea.
+4. Línea(s) con el texto generado de la IA (el comentario completo). Puede ser una sola línea o multilínea; el contenido va literal, sin marcas internas.
+5. Triple-backtick aislado en su propia línea.
+6. Línea en blanco.
+7. Línea con metadata en INLINE CODE de un solo backtick: `` `chars: X / Y · N frases · tono: ... · sin marca · sin links` ``. El valor de Y depende del sub-tipo (250 para `comment.warmup_casual`, 1200 para `comment.advice_substantive`).
+
+### Auto-verificación obligatoria antes de emitir
+
+Antes de devolver el output, la skill DEBE auto-verificar:
+
+- Cada variante tiene **exactamente 2 ocurrencias de triple-backtick** en líneas propias (apertura y cierre del code fence).
+- Ninguna línea del texto del comentario contiene triple-backtick (rompe el fence).
+- La metadata va en inline code (un solo backtick a cada lado), NO en triple-backtick.
+
+Si el auto-check falla, regenerar el output con la estructura correcta antes de devolver. Output con code fence mal formado es **inválido** y rompe la usabilidad del operador.
+
+### Estructura literal completa
+
+Los caracteres invisibles `​` (zero-width space, U+200B) antes y después de las triple-backticks de las variantes en este documento son **caracteres de escape para que el markdown del documento no se rompa**; en el output real son triple-backticks limpios sin nada delante.
 
 ```
 **Borradores listos. Comentarios en N threads.**
@@ -118,7 +179,7 @@ Si una variante no convence, dime cuál y la rehacemos sin tocar el resto.
 [texto literal del comentario, una sola línea o multilínea según necesidad]
 ​```
 
-`chars: X / 250 · N frases · tono: [descripción corta] · sin marca · sin links`
+`chars: X / Y · N frases · tono: [descripción corta] · sin marca · sin links`
 
 ---
 
@@ -128,7 +189,7 @@ Si una variante no convence, dime cuál y la rehacemos sin tocar el resto.
 [texto literal del comentario]
 ​```
 
-`chars: X / 250 · N frases · tono: [descripción corta] · sin marca · sin links`
+`chars: X / Y · N frases · tono: [descripción corta] · sin marca · sin links`
 
 ---
 
@@ -151,24 +212,62 @@ Si una variante no convence, dime cuál y la rehacemos sin tocar el resto.
 
 - Thread 1: [por qué A vs B, qué tono pega en este sub, cualquier consideración].
 - Thread 2: [idem].
-- Voz: variante "comentarios en threads ajenos" de sharemechat-voice (casual, sin marca, anclada en lo concreto, primera persona, sin filler).
+- Voz: variante de sharemechat-voice aplicada según `target_audience` del sub.
+- Disclosure: light o explicit por variante, según `target_audience` + boost del thread.
 - Bloqueos del review (si los hubo): [descripción literal del motivo de bloqueo de variantes que quedaron sin redactar].
 
 </details>
 ```
 
-(Los caracteres `​` antes y después de las triple-backticks de las variantes son **caracteres invisibles de escape para que este markdown se vea en este documento**; en el output real son triple-backticks limpios sin nada delante.)
+### Ejemplo completo literal (sin placeholders)
+
+Así debe verse el output real de una variante (sub-tipo `comment.warmup_casual`, subs casuales legacy). Los caracteres invisibles `​` se reemplazan por nada en el output real:
+
+```
+### Opción A — recomendada
+
+​```
+My parents made me sit at the table until I cleaned my plate, every meal. It was framed as discipline, but it just taught me to override the signals telling me I was full.
+​```
+
+`chars: 196 / 250 · 3 frases · tono: vivencia concreta · sin marca · sin links`
+```
+
+Para sub-tipo `comment.advice_substantive` (subs target de ADR-040), la metadata reporta `Y = 1200` y la `N frases` está en rango 8-15:
+
+```
+### Opción A — recomendada
+
+​```
+On the platform side at SharemeChat I run, what we see consistently is that creators new to 1-a-1 underestimate how much the camera placement affects perceived presence. [... texto extenso ...]
+​```
+
+`chars: 847 / 1200 · 11 frases · tono: experimentado peer-to-peer · disclosure: light · sin links`
+```
+
+En modo boost (variante A con disclosure.explicit y ángulo "alternativa concreta"), la metadata incluye el marcador `disclosure: explicit · boost: [plataforma]`:
+
+```
+### Opción A — recomendada
+
+​```
+I run SharemeChat, a 1-a-1 cam platform based in EU. After watching the Coomeet model verification flow break payouts for friends last year, what we did differently is [... texto ...]
+​```
+
+`chars: 612 / 1200 · 9 frases · tono: alternativa concreta · disclosure: explicit · boost: coomeet · sin links`
+```
 
 ## Reglas de oro
 - El **texto a postear vive SOLO dentro del code fence triple-backtick**. Nada más. Sin comentarios inline.
 - Una variante por bloque code fence. NUNCA poner A y B en el mismo bloque.
+- **Auto-verify obligatorio antes de emitir**: cada variante debe tener exactamente 2 triple-backticks en líneas propias. Si el auto-check falla, regenerar antes de devolver. Output mal formado es inválido (regla introducida en ADR-040 hot-fix).
 - Metadata bajo cada code fence en `inline code` (con backticks simples), tipográficamente menor.
 - Checklist humano solo con acciones del operador en la plataforma externa. La parte de ledger es responsabilidad del orchestrator + packager, no entra aquí.
-- Justificación dentro de `<details>` colapsable al final. Si no hay nada que justificar (A y B son equivalentes y la review no bloqueó nada), el `<details>` puede tener una nota breve: "Sin observaciones específicas".
+- Justificación dentro de bloque colapsable al final (`<details>` markdown en el cuerpo de la salida; la restricción de no usar tags XML aplica al frontmatter, no al cuerpo). Si no hay nada que justificar (A y B son equivalentes y la review no bloqueó nada), el bloque colapsable puede tener una nota breve: "Sin observaciones específicas".
 
 ## Salida al packager
 
-Además del markdown que se presenta al operador, devolver al `social-packager` la lista estructurada de variantes:
+Además del markdown que se presenta al operador, devolver al `social-packager` la lista estructurada de variantes con metadatos de ADR-040 (sub-tipo, target_audience, is_boost, disclosure_used):
 
 ```json
 {
@@ -177,17 +276,23 @@ Además del markdown que se presenta al operador, devolver al `social-packager` 
   "threads": [
     {
       "thread_url": "...",
-      "subreddit": "r/AskReddit",
+      "subreddit": "r/CamGirlProblems",
+      "sub_tipo": "comment.advice_substantive",
+      "target_audience": ["models"],
+      "is_boost": true,
+      "boost_keyword": "coomeet",
       "variantes": [
-        { "label": "A", "recomendada": true,  "texto": "...", "chars": 196, "frases": 3, "tono": "directo, opinión personal", "bloqueada": false },
-        { "label": "B", "recomendada": false, "texto": "...", "chars": 195, "frases": 3, "tono": "cotidiano con sorna", "bloqueada": false }
+        { "label": "A", "recomendada": true,  "texto": "...", "chars": 612, "frases": 9,  "tono": "alternativa concreta",       "disclosure_used": "explicit", "bloqueada": false },
+        { "label": "B", "recomendada": false, "texto": "...", "chars": 540, "frases": 8,  "tono": "experiencia operativa lateral", "disclosure_used": "light",    "bloqueada": false }
       ]
     }
   ]
 }
 ```
 
-Esto le permite al packager construir `social_state_next` correctamente cuando el operador confirme qué variante publicó en qué thread.
+Para threads no-boost en sub `target_audience: ["clients"]` o legacy, los campos `is_boost` y `boost_keyword` van a `false` / `null` respectivamente, y `disclosure_used` toma `light` por defecto.
+
+Esto le permite al packager construir `social_state_next` correctamente cuando el operador confirme qué variante publicó en qué thread y registrar el contexto (boost, disclosure usado) en `commented_threads`.
 
 ## Lo que NO hace
 - No publica.
