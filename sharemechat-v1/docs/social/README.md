@@ -72,9 +72,54 @@ Es el flujo histórico del pipeline social. Se usa para publicar un post propio 
 4. Publicas a mano siguiendo el checklist.
 5. Tras publicar, guardas `social_state_next` (ajustando si publicaste otra variante o nada) y actualizas las métricas de la cuenta.
 
-## Flujo: warmup Reddit con descubrimiento + comentario (modo `thread_comment`, ADR-039)
+## Flujo: warmup Reddit con descubrimiento + comentario (modo `thread_comment`, ADR-039 + ADR-040)
 
-Se usa para acumular `comment_karma` en `u/sharemechat` comentando en threads ajenos de subs target (`r/AskReddit`, `r/CasualConversation`, `r/Showerthoughts` por defecto; otros vía override). NO sirve para post propio (ese es el flujo anterior) ni para publicar en `r/SharemeChat` (eso es post propio en el sub `own`).
+Se usa para acumular `comment_karma` en `u/sharemechat` comentando en threads ajenos de subs target adult-ecosystem (definidos en [ADR-040](../06-decisions/adr-040-pivote-target-subs-social-ops.md)). NO sirve para post propio (ese es el flujo anterior) ni para publicar en `r/SharemeChat` (eso es post propio en el sub `own`).
+
+### Subs target activos (ADR-040)
+
+| Sub | `target_audience` | Sub-tipo | Disclosure defecto | Volumen aprox |
+|---|---|---|---|---|
+| `r/CreatorsAdvice` | `both` | `comment.advice_substantive` | `light` | medio |
+| `r/SexWorkerSupport` | `models` | `comment.advice_substantive` | `light` (primer mes) | ~633 vis/sem |
+| `r/CamGirlProblems` | `models` | `comment.advice_substantive` | `light` (no-boost) / `explicit` (boost) | ~226k vis/sem (PRIORITARIO) |
+| `r/Fansly_Advice` | `models` | `comment.advice_substantive` | `light` (primeros 30 días) | ~22k vis/sem |
+
+Las dos entradas legacy del ledger (`r/AskReddit`, `r/CasualConversation`) tienen `rol: "karma"` y `target_audience: ["both"]` y **solo son accesibles via `-SubsOverride` en el script** (`powershell -NoProfile -File ./sharemechat-v1/ops/scripts/social-thread-finder.ps1 -SubsOverride "r/AskReddit,r/CasualConversation"`). No se usan en flujo principal desde ADR-040; se conservan para experimentación o reactivación futura.
+
+### Boost: oportunidades de captación de modelos (ADR-040)
+
+El script `social-thread-finder.ps1` define `$BoostKeywords` con plataformas competencia (`coomeet`, `luckycrush`, `chaturbate`, `stripchat`, `bongacams`, `myfreecams`, `jerkmate`, `camsoda`, `flirt4free`).
+
+Comportamiento:
+
+1. **En el descubrimiento**: threads cuyo título matchea cualquier BoostKeyword suben al **top** de su sub en la salida markdown del script, con etiqueta visual `[BOOST]` tras el título. Esto requiere que el sub esté entre los target activos; subs legacy via override también aplican el boost.
+2. **En el helper**: cuando `social-comment-helper` recibe un thread con `is_boost: true` Y el sub incluye `models` en `target_audience`, el helper FUERZA en variante A:
+   - Ángulo "alternativa concreta a {plataforma}".
+   - Disclosure `explicit` (declarar fundador permitido en apertura).
+   - Sin denigrar la plataforma competencia. "X is a fine option for [caso]; what we did differently is..." es OK; "X sucks" no.
+3. **Variante B** mantiene `disclosure.light` como contrapunto, sin centrarse en la comparación directa.
+
+### Sub-tipos del tipo `comment` (ADR-040)
+
+Dos sub-tipos enrutados por el sub target (no por decisión del operador):
+
+- **`comment.warmup_casual`** (legacy): max 250 chars, max 3 frases. Voz casual. Aplicado en subs legacy via `-SubsOverride`.
+- **`comment.advice_substantive`** (nuevo, default para los 4 subs target): max 1200 chars, 8-15 frases. Voz experimentado peer-to-peer con vocabulario operativo del oficio (`shift`, `payout`, `verification flow`, `KYC up front`, `platform side`).
+
+### Política de disclosure diferenciada (ADR-040)
+
+Dos sub-modos en `social-brand-legal-review`. Reglas duras preservadas idénticas en ambos: **18+, menores, sin links en cuerpo, sin CTA, sin claims falsos**.
+
+- **`disclosure.light`**: una línea de contexto sobre la plataforma DENTRO del aporte, no en apertura, solo si el thread la pide. Sin URL.
+- **`disclosure.explicit`**: declarar fundador permitido en apertura ("I run SharemeChat, a 1-a-1 cam platform based in EU..."). Sin URL. Sin CTA. Sin claims sobre precio o resultados.
+
+Selección automática del sub-modo según `target_audience` del sub + `is_boost` del thread:
+
+- `target_audience: ["clients"]` → `disclosure.light` siempre.
+- `target_audience: ["models"]` + `is_boost: true` → `disclosure.explicit` (variante A) + `disclosure.light` (variante B).
+- `target_audience: ["models"]` + no boost → `disclosure.light` por defecto.
+- `target_audience: ["both"]` → ángulo del thread manda.
 
 ### Pre-requisitos
 - Repo clonado en el equipo del operador (path por defecto del script: `./sharemechat-v1/`).
@@ -116,8 +161,16 @@ El operador publica los comentarios en su navegador y vuelve al chat con una con
 - Actualiza `updated_at` global del ledger.
 - Persiste el ledger en `docs/social/social-state.json` (operación del orchestrator + packager, no del operador).
 
-## El ledger (`social-state.json`) — schema v0.2
+## El ledger (`social-state.json`) — schema v0.3
+
 A partir del schema v0.2 (ADR-039), cada entrada en `platforms.reddit.subreddits[]` puede tener un campo opcional `commented_threads: [{url, at}]` que registra los threads en los que se ha comentado desde el pipeline. Compatibilidad retroactiva: si el campo no existe en un sub, se trata como array vacío.
+
+A partir del schema v0.3 (ADR-040), cada entrada añade además dos campos:
+
+- **`rol`** (string): `"karma"` (subs casuales legacy) o `"target_brand_fit"` (subs nuevos donde la marca encaja por contexto). Sustituye el `rol: "karma"` único anterior.
+- **`target_audience`** (array de strings): `["clients"]` | `["models"]` | `["clients", "models"]` o `["both"]`. Determina el ángulo de comentario y la política de disclosure que aplica el `social-comment-helper`.
+
+Compatibilidad retroactiva: si una entrada no tiene `rol` o `target_audience`, defaults aplicables (`"karma"` y `["both"]` respectivamente). Sin migración masiva.
 
 ## Relación con el blog
 Mismo patrón que el pipeline editorial (`cms-orchestrator` + agentes), reutiliza `sharemechat-voice` (con secciones específicas para cada modo, incluyendo la "comentarios en threads ajenos" añadida en ADR-039). Diferencia clave: el blog produce un artefacto que se persiste y se renderiza en el producto; social produce un plan que ejecuta un humano fuera del producto.

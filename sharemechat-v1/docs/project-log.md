@@ -8,6 +8,56 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-18 — FASE 2D-2 cerrada: implementación del pivote target subs (ADR-040) + hot-fix code fence
+
+Cierre operativo de la FASE 2D-2 del frente warmup Reddit. Implementación completa del pivote estratégico de subs target del modo `thread_comment` (de subs casuales a 4 subs adult-ecosystem), schema bump del ledger v0.2 → v0.3 con dos campos nuevos (`rol`, `target_audience`), actualización del script de descubrimiento con `$BoostKeywords` y edades recalibradas, actualización de 4 skills del pipeline social-ops, y hot-fix de la regla del code fence en `social-comment-helper`. Cero código del producto tocado; cero credenciales nuevas; cero scripts auxiliares nuevos.
+
+Decisiones arquitectónicas formalizadas: la ADR-040 sustituye la elección tácita de subs target del modo `thread_comment`. Las dos dimensiones operativas del negocio (captación de clientes + captación de modelos) entran en el pipeline social-ops por primera vez de forma explícita en el ledger. La validación end-to-end real con Cowork contra los 4 subs nuevos (FASE 2C) queda diferida; FASE 2D-3 incorporará `r/OnlyFansAdvice` cuando la cuenta tenga karma >= 50 y >= 30 días.
+
+**5 commits separados** (rollback granular) pusheados a `main`:
+
+| # | Hash | Mensaje | Archivos |
+|---|---|---|---|
+| 1 | `61d78c3` | `docs(social): ADR-040 pivote target subs adult-ecosystem (clients + models)` | `docs/06-decisions/adr-040-pivote-target-subs-social-ops.md` (nuevo) + `docs/project-log.md` (seed) |
+| 2 | `df2a755` | `feat(social): schema bump ledger v0.3 + curacion 4 subs target validados (clients + models)` | `docs/social/social-state.json` |
+| 3 | `210c519` | `feat(social): script thread-finder con 4 subs target + boost keywords competencia + edad recalibrada` | `ops/scripts/social-thread-finder.ps1` |
+| 4 | `232639e` | `feat(social): skills actualizadas con eje target_audience (clients/models) + hot-fix code fence + variantes voz` | `docs/social/skills/social-platform-rules.md` + `docs/social/skills/social-brand-legal-review.md` + `docs/social/skills/social-comment-helper.md` + `docs/cms/skills/sharemechat-voice.md` |
+| 5 | este commit | `docs(social): README + project-log FASE 2D-2 cerrada` | `docs/social/README.md` + `docs/project-log.md` (entrada final) |
+
+**Decisiones operativas clave registradas** (algunas en ADR-040, otras en las skills/script):
+
+- **4 subs target validados humanamente**: `r/CreatorsAdvice` (`both`), `r/SexWorkerSupport` (`models`), `r/CamGirlProblems` (`models`, prioritario), `r/Fansly_Advice` (`models`).
+- **Descartados explícitos**: `r/AdultContentCreators` (sub de fotos, no discusión), `r/CamModelCommunity` (banneado por Reddit en 2026-06-18), `r/OnlyFansAdvice` (deferido a FASE 2D-3 por riesgo mod-ban como alternativa directa a OF).
+- **Línea roja confirmada**: no entrar en subs oficiales de plataforma competencia (`r/Coomeet`, `r/LuckyCrush`, etc.).
+- **Schema bump v0.2 → v0.3** del ledger con dos campos nuevos por sub (`rol: "target_brand_fit"`, `target_audience`). Compatibilidad retroactiva: defaults `"karma"` y `["both"]` si faltan.
+- **Subs legacy preservados** en el ledger (`r/AskReddit`, `r/CasualConversation`) con `rol: "karma"`, accesibles solo via `-SubsOverride` en el script para experimentación.
+- **Sub-tipos del tipo `comment`** en `social-platform-rules`: `comment.warmup_casual` (legacy, 250c/3f) y `comment.advice_substantive` (nuevo, 1200c/8-15f).
+- **Disclosure diferenciado** en `social-brand-legal-review`: `disclosure.light` (clients) y `disclosure.explicit` (models, ángulo apertura fundador). Reglas duras preservadas idénticas (18+, menores, links en cuerpo prohibidos).
+- **BoostKeywords** en el script: threads que mencionan plataformas competencia (`coomeet`, `luckycrush`, `chaturbate`, `stripchat`, `bongacams`, `myfreecams`, `jerkmate`, `camsoda`, `flirt4free`) suben al top con etiqueta `[BOOST]` y fuerzan `disclosure.explicit` en variante A cuando el sub incluye `models`.
+- **Hot-fix code fence** en `social-comment-helper`: regla literal de la estructura del output (line "Opción A" + línea en blanco + triple-backtick aislado + texto + triple-backtick aislado + línea en blanco + metadata en inline code). Auto-verify obligatorio antes de emitir: cada variante debe tener exactamente 2 ocurrencias de triple-backtick en líneas propias.
+- **Heurística de título ambiguo ajustada**: en subs adult-creators los títulos son largos por convención; la heurística pasa de `len(titulo) < 40` a `len(titulo) < 30` AND sin `?` AND sin keywords del oficio (`cam`, `model`, `OnlyFans`, `Fansly`, `platform`, `payout`, `verification`, `KYC`, etc.).
+- **Edades recalibradas** del script por sub: `r/CreatorsAdvice` 96h, `r/SexWorkerSupport` 168h, `r/CamGirlProblems` 72h, `r/Fansly_Advice` 168h. Subs adult-creators tienen ritmo más lento que casuales.
+- **TabuKeywords ampliada** con set adult-ecosystem (líneas rojas absolutas: `underage`, `teen`, `minor`, `child`, `cp`, `trafficking`, `snuff`, `rape`, `coercion`, `force`). `brand-legal-review` aplica filtro adicional sobre el texto generado.
+- **Arquitectura del modo `thread_comment` (ADR-039) NO cambia**: dos invocaciones del orchestrator con pausa humana, `skip_translation: true` automático, packager actualiza ratio y `commented_threads`.
+
+**Validaciones operativas confirmadas en esta sesión**:
+
+- `ConvertFrom-Json` del ledger v0.3: válido. 6 entradas en `subreddits[]` (2 legacy + 4 nuevas).
+- Sintaxis del script `social-thread-finder.ps1`: OK (parser AST).
+- Helper `Test-BoostKeyword`: 5/5 casos sintéticos PASS.
+- Dry-run real contra `r/CreatorsAdvice`: feed con 25 entries, contenido alineado con target (payout, burnout, scammers, etc.).
+- `sync-skills-to-cowork.ps1 -WhatIf -ManagedPrefixes social-`: detecta las 4 skills esperadas como `[ACTUALIZADA]` (sharemechat-voice + social-brand-legal-review + social-comment-helper + social-platform-rules). El resto (`cms-*`, `social-orchestrator`, `social-packager`, `social-phase-gate`, etc.): `[SIN CAMBIOS]`.
+- Frontmatter de las skills nuevas/actualizadas: cero tags HTML/XML en `description` (auto-check pasado).
+- Estructura code fence en `social-comment-helper.md`: 14 triple-backticks en líneas propias, todos balanceados; los internos del ejemplo literal usan ZWSP (`​```` U+200B) como escape para que el render no rompa.
+
+**Lo que NO se ha hecho en esta sesión** (intencionalmente):
+
+- FASE 2C real end-to-end con Cowork contra los 4 subs nuevos. Se ejecuta desde Cowork después del push, no desde el agente.
+- FASE 2D-3 (incorporar `r/OnlyFansAdvice` + revisar DUDOSOS del informe 2D-1.5). Requiere karma >= 50 y edad >= 30 días que la cuenta aún no tiene.
+- Mover entradas legacy del ledger fuera de `subreddits[]`. Se conservan por compatibilidad y para experimentación via `-SubsOverride`.
+
+---
+
 ## 2026-06-18 — ADR-040: pivote estratégico del target de subs del modo `thread_comment` (clients + models)
 
 Apertura formal de la FASE 2D-2 del frente warmup Reddit. Se publica [ADR-040](06-decisions/adr-040-pivote-target-subs-social-ops.md) como decisión arquitectónica que sustituye la elección tácita de subs target del modo `thread_comment` (originalmente `r/AskReddit`, `r/CasualConversation`, `r/Showerthoughts`) por una lista nueva de 4 subs del ecosistema adulto validada humanamente por el operador.
