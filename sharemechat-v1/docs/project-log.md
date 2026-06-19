@@ -8,6 +8,49 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-19 — FASE 2C real: primera publicación end-to-end del pipeline ADR-041 + refutación empírica de mínimos del ledger
+
+Cierre de la **FASE 2C** del frente warmup Reddit. Primera ejecución end-to-end real del pipeline `thread_comment` rediseñado en [ADR-041](06-decisions/adr-041-social-pipeline-sin-pausa-humana.md) (FASE 2E del 2026-06-18). El operador lanzó el orchestrator desde Cowork, recibió el paquete batch con borradores, publicó 2 comentarios variante B en `r/CamGirlProblems` y confirmó al chat. El orchestrator aplicó `social_state_next` al ledger.
+
+**Resultado de la publicación**:
+
+- 2 comentarios variante B publicados en `r/CamGirlProblems`, ambos en threads con boost `stripchat`:
+  - `1u9fo6g` — *"stripchat is there a way to blur the thumbnails"*.
+  - `1u9dmwm` — *"stripchat saying I am already streaming I am not"*.
+- Ambos comentarios **visibles en ventana incógnita** (sin sesión Reddit): AutoMod NO los silenció.
+- Variante elegida: B (`disclosure_used: "light"`) en lugar de la A (`disclosure_used: "explicit"` que el helper forzó por boost). Decisión válida del operador según sensibilidad del thread; el helper ofrece A force explicit + B light precisamente para preservar este margen.
+- Ledger actualizado: `r/CamGirlProblems.ratio.aporte` pasó de `0` a `2`, dos entries en `commented_threads` con `variante`, `disclosure_used`, `is_boost`, `boost_keyword`, `at` UTC, `last_action_at` global, `updated_at` global a `2026-06-19`.
+
+**Hallazgo crítico: refutación empírica de los mínimos `min_karma` y `min_age_days`**:
+
+- Los mínimos del ledger para los 4 subs target de ADR-040 (`r/CreatorsAdvice`, `r/SexWorkerSupport`, `r/CamGirlProblems`: `min_karma=50, min_age_days=30`; `r/Fansly_Advice`: `min_karma=100, min_age_days=30`) eran **estimaciones conservadoras** propuestas en sesión de planificación (FASE 2D-1.5 del 2026-06-18), **sin base empírica**.
+- Antes de lanzar el pipeline hoy, el operador bajó temporalmente `r/CamGirlProblems` a `min_karma=1, min_age_days=7` para que el phase-gate no bloqueara la validación (la cuenta `u/sharemechat` tiene `comment_karma=1` y 9 días de edad).
+- La publicación pasó. AutoMod no silenció ni los comentarios ni la cuenta. Los comentarios siguen visibles en incógnito horas después.
+- **Implicación**: los `50/30` que fijé como mínimo para `r/CamGirlProblems` **eran demasiado conservadores y no reflejaban la realidad operativa del sub**. Los valores `1/7` validados empíricamente quedan como los **vigentes**, no como temporales.
+- **Extensión del hallazgo**: si la estimación para `r/CamGirlProblems` estaba refutada por los datos, **lo más probable es que las estimaciones para los otros 3 subs también lo estén**. Es una deuda explícita que requiere validación caso a caso: publicar primer comentario en cada sub con karma mínimo y observar AutoMod / silencio / shadowban antes de fijar el mínimo operativo del sub.
+
+**Cambios aplicados en este commit**:
+
+- [`docs/social/social-state.json`](social/social-state.json) — el ledger ya reflejaba la publicación (aplicado por el orchestrator tras confirmación). En este commit se actualiza el `notes` de `r/CamGirlProblems` para documentar que los valores `1/7` son **vigentes y validados empíricamente**, no temporales. La nota previa decía "bajados a 1/7 para validar, restaurar a 50/30 tras validación"; la nueva dice "validados empíricamente 2026-06-19 con publicación real de 2 comentarios B; las estimaciones previas 50/30 quedaron refutadas".
+- [`docs/04-operations/known-debt.md`](04-operations/known-debt.md) — añadida entrada **"social-ops: mínimos `min_karma`/`min_age_days` de subs target son estimaciones sin base empírica salvo `r/CamGirlProblems`"** documentando la deuda (los 3 subs restantes), su impacto (bloqueos artificiales del phase-gate hasta validar), la pending action (validar empíricamente al publicar primer comentario en cada uno) y la prioridad (media).
+- [`docs/project-log.md`](project-log.md) — esta entrada.
+
+**Aprendizaje operativo registrado**: estimaciones de umbrales / mínimos / thresholds sin base empírica son deuda técnica desde el momento en que se introducen. En el frente social-ops y en cualquier otro frente futuro, marcar explícitamente los valores que son estimación vs los que son validación, y no asumir que "la estimación conservadora es segura" — puede estar bloqueando la operación sin razón.
+
+**Pendientes derivados** (en `known-debt.md`):
+
+- Validar empíricamente `min_karma` y `min_age_days` de `r/CreatorsAdvice`, `r/SexWorkerSupport`, `r/Fansly_Advice` cuando se publique primer comentario en cada uno.
+- Si los 3 subs pasan con los mínimos actuales de la cuenta (`karma=1+N`, edad 9d+), ajustar el ledger en consecuencia. Si AutoMod silencia, subir el mínimo del sub afectado hasta encontrar el umbral real.
+
+**Validaciones operativas confirmadas en esta sesión**:
+
+- Pipeline ADR-041 funciona end-to-end con publicación real: orchestrator → fetch nativo → auto-selección → comment-helper batch → review → packager → paquete final formato §3.B → copy-paste → confirmación → ledger.
+- Heurística de auto-selección de `social-thread-finder` priorizó correctamente threads con boost (`stripchat` matcheado en ambos títulos elegidos por el operador).
+- Override de boost del helper produjo variante A explicit + variante B light; el operador eligió B en ambos casos por sensibilidad del contexto, decisión preservada en el ledger (`variante: "B"`, `disclosure_used: "light"`).
+- Pre-requisitos operativos de ADR-041 (`*.reddit.com` en allowlist Cowork + carpeta del repo conectada) operaron correctamente sin fricción.
+
+---
+
 ## 2026-06-18 — FASE 2E: rediseño del pipeline `thread_comment` sin pausa humana + ADR-041
 
 Cierre operativo de la FASE 2E del frente warmup Reddit. Rediseño del modo `thread_comment` del pipeline social-ops para ejecutar todo el flujo en **una sola invocación de Cowork**, sin pausa humana, equivalente operativo de `cms-orchestrator`. Cambia la orquestación; no cambia la voz (ADR-040) ni los principios social-ops (ADR-034).

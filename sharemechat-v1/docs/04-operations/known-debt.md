@@ -2,6 +2,36 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-06-19 — Social-ops: mínimos `min_karma`/`min_age_days` de subs target son estimaciones sin base empírica
+
+### [DEUDA — social-ops] Mínimos del ledger refutados empíricamente en 1 de 4 subs, los otros 3 siguen como estimación
+
+Detectado durante la FASE 2C real (primera publicación end-to-end del pipeline ADR-041 en `r/CamGirlProblems` el 2026-06-19). Los mínimos `min_karma` y `min_age_days` definidos en `docs/social/social-state.json` para los 4 subs target de [ADR-040](../06-decisions/adr-040-pivote-target-subs-social-ops.md) eran **estimaciones conservadoras** propuestas en FASE 2D-1.5 sin base empírica:
+
+- `r/CreatorsAdvice`: `min_karma=50, min_age_days=30`.
+- `r/SexWorkerSupport`: `min_karma=50, min_age_days=30`.
+- `r/CamGirlProblems`: `min_karma=50, min_age_days=30` → **refutado 2026-06-19**, ajustado a `1/7`.
+- `r/Fansly_Advice`: `min_karma=100, min_age_days=30`.
+
+La cuenta `u/sharemechat` tenía `comment_karma=1` y `edad_dias=9` el 2026-06-19. El operador bajó temporalmente los mínimos de `r/CamGirlProblems` a `1/7` para que el `social-phase-gate` no bloqueara la validación, lanzó el pipeline y publicó 2 comentarios variante B en threads boost `stripchat`. **AutoMod NO silenció**: ambos comentarios visibles en ventana incógnita. Los mínimos `1/7` quedaron como vigentes para ese sub; los `50/30` originales se eliminan como estimación refutada.
+
+**Impacto**: los otros 3 subs siguen con mínimos que **lo más probable es que estén sobreestimados**. Mientras esos mínimos sigan sin validar, el `social-phase-gate` bloquea publicaciones que probablemente irían sin problema (bloqueos artificiales sin base operativa). Esto frena el ritmo de warmup del lado modelos en los 3 subs no validados.
+
+**Pending action**: validar empíricamente al publicar primer comentario en cada uno de los 3 subs restantes:
+
+1. Bajar el mínimo del sub al nivel actual de la cuenta (`min_karma = comment_karma actual`, `min_age_days = edad_dias actual - 1` para tener margen).
+2. Lanzar pipeline modo `thread_comment` con `subs_candidatos: [r/X]`.
+3. Publicar 1-2 comentarios desde el paquete batch.
+4. Verificar 30 min y 24 h después en ventana incógnita que NO están silenciados / shadowban.
+5. Si pasan: dejar los mínimos al valor que pasó (vigentes y validados, no temporales).
+6. Si AutoMod silencia: subir el mínimo del sub afectado al siguiente umbral razonable (`+10 karma` o `+5 días`) y reintentar tras cumplir.
+
+Documentar el resultado en el campo `notes` de cada entrada del ledger ("validado empíricamente YYYY-MM-DD con karma=X, edad=Y, sin silencio").
+
+**Aprendizaje transversal**: estimaciones de umbrales / mínimos / thresholds sin base empírica son deuda técnica desde el momento en que se introducen. Marcar explícitamente los valores que son estimación vs los que son validación. No asumir que "la estimación conservadora es segura" — puede estar bloqueando la operación sin razón. Aplicable a este frente y a cualquier otro frente futuro donde se fijen umbrales operativos.
+
+**Prioridad**: media. No bloquea seguridad ni introduce riesgo de baneo (los mínimos sobreestimados son conservadores en la dirección segura). Sí bloquea ritmo de warmup en 3 subs hasta validar.
+
 ## 2026-06-13 — Perimeter pipeline: drift `prod-access-reporter` cerrado, sigue faltando deploy formal
 
 ### ~~[DEUDA — perimeter pipeline] `prod-access-reporter` vivía solo en `/opt`, no en repo~~ — **CERRADA 2026-06-13**

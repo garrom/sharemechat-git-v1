@@ -1,6 +1,6 @@
 {
   "schema_version": "0.3",
-  "updated_at": "2026-06-18",
+  "updated_at": "2026-06-19",
   "platforms": {
     "x": {
       "handle": "@shareme_chat",
@@ -77,12 +77,29 @@
           "rol": "target_brand_fit",
           "target_audience": ["models"],
           "promo_policy": "none",
-          "min_karma": 50,
-          "min_age_days": 30,
-          "ratio": { "promo": 0, "aporte": 0 },
-          "last_action_at": null,
-          "commented_threads": [],
-          "notes": "Validado humano 2026-06-18. PRIORITARIO (~226k visitas/sem). Threads de problemas operativos = oportunidades para angulo plataforma. Disclosure explicit permitido si el thread menciona BoostKeywords."
+          "min_karma": 1,
+          "min_age_days": 7,
+          "ratio": { "promo": 0, "aporte": 2 },
+          "last_action_at": "2026-06-18T23:10:13Z",
+          "commented_threads": [
+            {
+              "url": "https://www.reddit.com/r/CamGirlProblems/comments/1u9fo6g/stripchat_is_there_a_way_to_blur_the_thumbnails/",
+              "at": "2026-06-18T23:10:13Z",
+              "variante": "B",
+              "disclosure_used": "light",
+              "is_boost": true,
+              "boost_keyword": "stripchat"
+            },
+            {
+              "url": "https://www.reddit.com/r/CamGirlProblems/comments/1u9dmwm/stripchat_saying_i_am_already_streaming_i_am_not/",
+              "at": "2026-06-18T23:10:13Z",
+              "variante": "B",
+              "disclosure_used": "light",
+              "is_boost": true,
+              "boost_keyword": "stripchat"
+            }
+          ],
+          "notes": "Validado humano 2026-06-18. PRIORITARIO (~226k visitas/sem). Threads de problemas operativos = oportunidades para angulo plataforma. Disclosure explicit permitido si el thread menciona BoostKeywords. min_karma=1 + min_age_days=7 VALIDADOS empiricamente 2026-06-19 con publicacion real de 2 comentarios B en threads boost stripchat: AutoMod NO silencio (ambos visibles en incognito). Las estimaciones previas 50/30 quedaron refutadas; estos son los valores vigentes."
         },
         {
           "name": "r/Fansly_Advice",
