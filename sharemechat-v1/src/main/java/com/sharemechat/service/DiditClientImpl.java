@@ -42,7 +42,7 @@ public class DiditClientImpl implements DiditClient {
     @Override
     public DiditCreateSessionResult createSession(Long userId, String email,
                                                   String givenName, String lastName,
-                                                  String workflowId) {
+                                                  String workflowId, String callbackUrl) {
         // Modo sin coste / sin credenciales: devolvemos mock estable.
         if (!props.isEnabled() || props.getApiKey() == null || props.getApiKey().isBlank()) {
             String fakeSessionId = "didit_mock_" + UUID.randomUUID();
@@ -71,7 +71,7 @@ public class DiditClientImpl implements DiditClient {
 
         String vendorData = props.getVendorDataPrefix() + ":" + userId;
         String rawBody = buildCreateSessionPayloadJson(
-                workflowId, props.getCallbackUrl(), vendorData, email, givenName, lastName);
+                workflowId, callbackUrl, vendorData, email, givenName, lastName);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

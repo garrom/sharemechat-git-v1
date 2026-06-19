@@ -36,7 +36,7 @@ class DiditClientImplTest {
 
         DiditClientImpl client = new DiditClientImpl(props);
         DiditCreateSessionResult result = client.createSession(
-                123L, "modelo@example.com", "Ada", "Lovelace", WF_MODEL);
+                123L, "modelo@example.com", "Ada", "Lovelace", WF_MODEL, "https://t.example/cb");
 
         assertNotNull(result);
         assertNotNull(result.getSessionId());
@@ -56,7 +56,8 @@ class DiditClientImplTest {
         props.setModelWorkflowId(WF_MODEL);
 
         DiditClientImpl client = new DiditClientImpl(props);
-        DiditCreateSessionResult result = client.createSession(1L, "a@b.com", null, null, WF_MODEL);
+        DiditCreateSessionResult result = client.createSession(1L, "a@b.com", null, null, WF_MODEL,
+                "https://t.example/cb");
 
         assertTrue(result.getSessionId().startsWith("didit_mock_"));
     }
@@ -73,8 +74,51 @@ class DiditClientImplTest {
         DiditClientImpl client = new DiditClientImpl(props);
 
         IllegalStateException ex = assertThrows(IllegalStateException.class,
-                () -> client.createSession(1L, "a@b.com", "Ada", "Lovelace", ""));
+                () -> client.createSession(1L, "a@b.com", "Ada", "Lovelace", "", "https://t.example/cb"));
         assertTrue(ex.getMessage().toLowerCase().contains("workflowid"));
+    }
+
+    // ----------------------------------------------------------------------
+    // Callback URL efectivo (paso 2-bis del frente Didit modelo, 2026-06-19):
+    // DiditProperties expone getEffectiveModelCallbackUrl /
+    // getEffectiveClientCallbackUrl con fallback al legacy callbackUrl si la
+    // property especifica esta blank. Cierra deuda P11.
+    // ----------------------------------------------------------------------
+
+    @Test
+    @DisplayName("getEffectiveModelCallbackUrl devuelve la specific cuando esta poblada")
+    void effectiveModel_returnsSpecificWhenPresent() {
+        DiditProperties props = new DiditProperties();
+        props.setCallbackUrl("https://legacy/webhook");
+        props.setModelCallbackUrl("https://example/model-processing");
+        assertEquals("https://example/model-processing", props.getEffectiveModelCallbackUrl());
+    }
+
+    @Test
+    @DisplayName("getEffectiveModelCallbackUrl cae al legacy callbackUrl si modelCallbackUrl blank")
+    void effectiveModel_fallsBackToLegacyWhenBlank() {
+        DiditProperties props = new DiditProperties();
+        props.setCallbackUrl("https://legacy/webhook");
+        props.setModelCallbackUrl("");
+        assertEquals("https://legacy/webhook", props.getEffectiveModelCallbackUrl());
+    }
+
+    @Test
+    @DisplayName("getEffectiveClientCallbackUrl devuelve la specific cuando esta poblada")
+    void effectiveClient_returnsSpecificWhenPresent() {
+        DiditProperties props = new DiditProperties();
+        props.setCallbackUrl("https://legacy/webhook");
+        props.setClientCallbackUrl("https://example/client-processing");
+        assertEquals("https://example/client-processing", props.getEffectiveClientCallbackUrl());
+    }
+
+    @Test
+    @DisplayName("getEffectiveClientCallbackUrl cae al legacy callbackUrl si clientCallbackUrl blank")
+    void effectiveClient_fallsBackToLegacyWhenBlank() {
+        DiditProperties props = new DiditProperties();
+        props.setCallbackUrl("https://legacy/webhook");
+        props.setClientCallbackUrl(null);
+        assertEquals("https://legacy/webhook", props.getEffectiveClientCallbackUrl());
     }
 
     // ----------------------------------------------------------------------

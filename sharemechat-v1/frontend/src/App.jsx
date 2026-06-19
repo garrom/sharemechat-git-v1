@@ -12,6 +12,7 @@ import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
 import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
 import ModelKycDiditPage from './pages/subpages/ModelKycDiditPage';
+import ModelKycDiditProcessingPage from './pages/subpages/ModelKycDiditProcessingPage';
 import ClientKycDiditPage from './pages/subpages/ClientKycDiditPage';
 import ClientKycProcessingPage from './pages/subpages/ClientKycProcessingPage';
 import Blog from './pages/blog/Blog';
@@ -174,6 +175,7 @@ function App() {
                     <Route path="/dashboard-user-model" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><DashboardUserModel /></RequireRole>)} />
 
                     <Route path="/model-documents" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelDocuments /></RequireRole>)} />
+                    <Route path="/model-kyc-didit/processing" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelKycDiditProcessingPage /></RequireRole>)} />
                     <Route path="/model-kyc-didit" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelKycDiditPage /></RequireRole>)} />
                     {/* /model-kyc: placeholder Veriff dormido (frente Veriff archivado, ADR-035 Plan A = Didit). Ruta conservada por compatibilidad historica con la URL antigua; no se referencia desde dashboard activo. */}
                     <Route path="/model-kyc" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelKycVeriffPage /></RequireRole>)} />

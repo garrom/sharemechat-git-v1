@@ -277,7 +277,8 @@ public class KycSessionService {
 
         DiditCreateSessionResult result = diditClient.createSession(
                 userId, user.getEmail(), user.getName(), user.getSurname(),
-                diditProperties.getModelWorkflowId());
+                diditProperties.getModelWorkflowId(),
+                diditProperties.getEffectiveModelCallbackUrl());
 
         KycSession row = new KycSession();
         row.setUserId(userId);
@@ -377,7 +378,8 @@ public class KycSessionService {
 
         DiditCreateSessionResult result = diditClient.createSession(
                 userId, user.getEmail(), user.getName(), user.getSurname(),
-                diditProperties.getClientWorkflowId());
+                diditProperties.getClientWorkflowId(),
+                diditProperties.getEffectiveClientCallbackUrl());
 
         KycSession row = new KycSession();
         row.setUserId(userId);

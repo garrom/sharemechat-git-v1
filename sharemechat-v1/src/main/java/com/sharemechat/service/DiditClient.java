@@ -23,5 +23,6 @@ public interface DiditClient {
      * NO se acepta idNumber: igual que en Veriff, no lo conocemos antes de la
      * verificacion (lo lee Didit del documento).
      */
-    DiditCreateSessionResult createSession(Long userId, String email, String givenName, String lastName, String workflowId);
+    DiditCreateSessionResult createSession(Long userId, String email, String givenName, String lastName,
+                                           String workflowId, String callbackUrl);
 }

@@ -1535,6 +1535,13 @@
     "errors": {
       "generic": "No se pudo iniciar la verificación. Inténtalo de nuevo en unos minutos.",
       "alreadyApproved": "Tu verificación ya está aprobada; no necesitas repetirla."
+    },
+    "processing": {
+      "title": "Verificando tu identidad…",
+      "subtitle": "Espera unos segundos mientras procesamos tu verificación.",
+      "timeout": "La verificación está tardando más de lo normal. Vuelve al dashboard y refresca en unos minutos.",
+      "rejected": "Verificación rechazada. Contacta con soporte.",
+      "back": "Volver al dashboard"
     }
   },
   "clientKyc": {

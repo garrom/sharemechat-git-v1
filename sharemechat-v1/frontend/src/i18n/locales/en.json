@@ -1535,6 +1535,13 @@
     "errors": {
       "generic": "Verification could not be started. Please try again in a few minutes.",
       "alreadyApproved": "Your verification is already approved; no need to repeat it."
+    },
+    "processing": {
+      "title": "Verifying your identity…",
+      "subtitle": "Please wait a few seconds while we process your verification.",
+      "timeout": "Verification is taking longer than usual. Return to the dashboard and refresh in a few minutes.",
+      "rejected": "Verification rejected. Contact support.",
+      "back": "Back to dashboard"
     }
   },
   "clientKyc": {

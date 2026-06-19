@@ -31,7 +31,16 @@ public class DiditProperties {
     private String baseUrl = "https://verification.didit.me";
     private String apiKey;
     private String apiSecret;
+    // callbackUrl: legacy/shared. Si modelCallbackUrl o clientCallbackUrl
+    // estan blank, se usa este como fallback. Cierra deuda P11 (registrada
+    // al cierre del frente Email Gate + Age Verification, 2026-06-14):
+    // antes el callback era unico para ambos flujos, lo que causaba que
+    // tras el flujo modelo el navegador redirigiera a la pagina de
+    // processing del cliente (filtros RequireRole + polling de campo
+    // equivocado). Ahora cada flujo tiene su propio callback.
     private String callbackUrl;
+    private String modelCallbackUrl;
+    private String clientCallbackUrl;
     private String modelWorkflowId;
     private String clientWorkflowId;
     private String vendorDataPrefix = "smc";
@@ -74,6 +83,46 @@ public class DiditProperties {
 
     public void setCallbackUrl(String callbackUrl) {
         this.callbackUrl = callbackUrl;
+    }
+
+    public String getModelCallbackUrl() {
+        return modelCallbackUrl;
+    }
+
+    public void setModelCallbackUrl(String modelCallbackUrl) {
+        this.modelCallbackUrl = modelCallbackUrl;
+    }
+
+    public String getClientCallbackUrl() {
+        return clientCallbackUrl;
+    }
+
+    public void setClientCallbackUrl(String clientCallbackUrl) {
+        this.clientCallbackUrl = clientCallbackUrl;
+    }
+
+    /**
+     * Callback URL efectivo para el flujo MODELO: si modelCallbackUrl esta
+     * poblado, se usa; si no, fallback a callbackUrl (compat). Si ambos
+     * estan blank, devuelve null y el caller decide (omite la clave
+     * "callback" del payload).
+     */
+    public String getEffectiveModelCallbackUrl() {
+        if (modelCallbackUrl != null && !modelCallbackUrl.isBlank()) {
+            return modelCallbackUrl;
+        }
+        return callbackUrl;
+    }
+
+    /**
+     * Callback URL efectivo para el flujo CLIENTE: si clientCallbackUrl esta
+     * poblado, se usa; si no, fallback a callbackUrl (compat).
+     */
+    public String getEffectiveClientCallbackUrl() {
+        if (clientCallbackUrl != null && !clientCallbackUrl.isBlank()) {
+            return clientCallbackUrl;
+        }
+        return callbackUrl;
     }
 
     public String getModelWorkflowId() {
