@@ -17,8 +17,10 @@ No duplicar contenido fuera de ahí. Ver [docs/README.md](sharemechat-v1/docs/RE
 Cómo despliega la IA (sesión no interactiva):
 
 ```
-ops/scripts/deploy-frontend.ps1 -Environment <env> -Surface <product|admin> -AssumeYesNonCritical
+ops/scripts/deploy-frontend.ps1 -Environment <env> [-Surface <product|admin|both>] -AssumeYesNonCritical
 ```
+
+`-Surface` es opcional; sin él, el default es `both` y se despliegan ambas superficies (admin → product) con manifests independientes. Pasar `product` o `admin` explícito solo despliega esa surface. El default `both` previene el olvido recurrente de actualizar el bundle admin tras tocar `AdminModelsPanel.jsx` y similares (incidente del paso 2-bis del frente Didit modelo, 2026-06-19, 15 días de drift).
 
 `-AssumeYesNonCritical` deja correr el check y auto-confirma `WARN`/`ALERT`. En `CRITICAL` el script ABORTA SIEMPRE; **la IA NO debe usar `-SkipDriftCheck` para sortear el prompt**, debe PARAR y avisar al operador. Tras un deploy de backend manual (`scp` + `systemctl restart`), ejecutar `ops/scripts/update-manifest-backend.ps1 -Environment <env>` **inmediatamente** (limitación conocida: asume HEAD = commit del JAR; el script tiene `-DryRun` para inspeccionar el diff antes de aplicar).
 

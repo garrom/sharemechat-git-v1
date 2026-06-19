@@ -111,9 +111,17 @@ param(
     [ValidateSet('test', 'audit', 'prod')]
     [string]$Environment,
 
-    [Parameter(Mandatory = $true, Position = 1)]
-    [ValidateSet('product', 'admin')]
-    [string]$Surface,
+    # -Surface acepta 'product', 'admin' o 'both'. Default 'both': cuando no
+    # se especifica, se despliegan ambas superficies secuencialmente (admin
+    # primero, product despues). Cambio introducido tras el incidente del
+    # paso 2-bis del frente Didit modelo (2026-06-19): se desplego solo
+    # -Surface product y el bundle admin quedo 15 dias detras, mostrando un
+    # AdminModelsPanel obsoleto en backoffice. Default 'both' previene la
+    # reincidencia del olvido. Compatibilidad total: llamadas existentes con
+    # -Surface product o -Surface admin siguen funcionando identico.
+    [Parameter(Mandatory = $false, Position = 1)]
+    [ValidateSet('product', 'admin', 'both')]
+    [string]$Surface = 'both',
 
     [Parameter(Mandatory = $false)]
     [switch]$SkipBuild,
@@ -295,6 +303,58 @@ function Get-HttpResponseInfo {
         ProductMode   = $productMode
         Error         = $errMsg
     }
+}
+
+# ---------------------------------------------------------------
+# Orquestador 'both': dispara el script una vez por surface
+# ---------------------------------------------------------------
+# Cuando -Surface = 'both' (default) NO se ejecuta el cuerpo del script
+# directamente: se re-invoca este mismo script una vez con -Surface admin
+# y otra con -Surface product, propagando todos los demas parametros.
+# Cada subinvocacion hace su propio pre-flight, build, sync, invalidacion
+# y update de manifest, totalmente aislada. Orden admin -> product: si
+# admin falla, se aborta sin tocar product (fail-safe coherente con el
+# patron que ya usa drift check).
+if ($Surface -eq 'both') {
+    Write-Host ""
+    Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host " Deploy frontend BOTH -> $($Environment.ToUpper())" -ForegroundColor Cyan
+    Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host " Surfaces: admin -> product (orden secuencial)"
+    Write-Host ""
+
+    $passThrough = @{ Environment = $Environment }
+    if ($SkipBuild)             { $passThrough['SkipBuild']             = $true }
+    if ($DryRun)                { $passThrough['DryRun']                = $true }
+    if ($SkipFunctionalSmoke)   { $passThrough['SkipFunctionalSmoke']   = $true }
+    if ($PSBoundParameters.ContainsKey('BackendProbeTimeoutSec')) {
+        $passThrough['BackendProbeTimeoutSec'] = $BackendProbeTimeoutSec
+    }
+    if ($StandbyMode)           { $passThrough['StandbyMode']           = $true }
+    if ($SkipDriftCheck)        { $passThrough['SkipDriftCheck']        = $true }
+    if ($Strict)                { $passThrough['Strict']                = $true }
+    if ($AllowDirtyWorkingTree) { $passThrough['AllowDirtyWorkingTree'] = $true }
+    if ($AssumeYesNonCritical)  { $passThrough['AssumeYesNonCritical']  = $true }
+
+    foreach ($s in @('admin', 'product')) {
+        Write-Host ""
+        Write-Host ">>> BOTH iteracion: -Surface $s" -ForegroundColor Cyan
+        Write-Host ""
+        & $PSCommandPath @passThrough -Surface $s
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host ""
+            Write-Host "X - Iteracion -Surface $s fallo con exit code $LASTEXITCODE. Abortando BOTH sin tocar el resto." -ForegroundColor Red
+            exit $LASTEXITCODE
+        }
+    }
+
+    Write-Host ""
+    Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host " Deploy BOTH completado -> $($Environment.ToUpper())" -ForegroundColor Cyan
+    Write-Host "===============================================" -ForegroundColor Cyan
+    Write-Host " Surfaces desplegadas: admin + product"
+    Write-Host ""
+    exit 0
 }
 
 # ---------------------------------------------------------------
