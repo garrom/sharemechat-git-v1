@@ -7,6 +7,7 @@ import com.sharemechat.dto.StreamAdminDetailDto;
 import com.sharemechat.dto.StreamStatusEventDto;
 import com.sharemechat.entity.*;
 import com.sharemechat.repository.*;
+import com.sharemechat.streammoderation.service.StreamModerationSessionService;
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +45,10 @@ public class StreamService {
     private final ModelTierService modelTierService;
     private final TransactionService transactionService;
     private final StreamStatusEventRepository streamStatusEventRepository;
+    // Hook fail-soft hacia el dominio stream_moderation (frente Moderacion IA;
+    // ADR-036 / ADR-037). Direccion unidireccional: stream -> stream_moderation,
+    // nunca al reves dentro de los hooks.
+    private final StreamModerationSessionService streamModerationSessionService;
 
     private static final int ADMIN_ACTIVE_DEFAULT_LIMIT = 200;
     private static final int ADMIN_ACTIVE_MAX_LIMIT = 500;
@@ -67,7 +72,8 @@ public class StreamService {
                          ModelTierService modelTierService,
                          PlatformBalanceRepository platformBalanceRepository,
                          TransactionService transactionService,
-                         StreamStatusEventRepository streamStatusEventRepository) {
+                         StreamStatusEventRepository streamStatusEventRepository,
+                         StreamModerationSessionService streamModerationSessionService) {
         this.streamRecordRepository = streamRecordRepository;
         this.userRepository = userRepository;
         this.statusService = statusService;
@@ -81,6 +87,7 @@ public class StreamService {
         this.platformBalanceRepository = platformBalanceRepository;
         this.transactionService = transactionService;
         this.streamStatusEventRepository = streamStatusEventRepository;
+        this.streamModerationSessionService = streamModerationSessionService;
     }
 
     private LocalDateTime resolveEffectiveBillableStart(StreamRecord session) {
@@ -358,6 +365,16 @@ public class StreamService {
         clearMediaAck(streamRecordId);
         recordStreamEvent(session.getId(), Constants.StreamEventTypes.CONFIRMED, null, null);
         recordStreamEvent(session.getId(), Constants.StreamEventTypes.BILLING_STARTED, null, null);
+
+        // ADR-036/ADR-037: arranca sesion de moderacion del frente nuevo.
+        // Defensa: el fallo del hook NO debe deshacer la confirmacion del stream
+        // (facturacion es prioridad). Catch generoso + WARN log.
+        try {
+            streamModerationSessionService.startForStream(session.getId());
+        } catch (Exception ex) {
+            log.warn("ackMedia: hook stream-moderation startForStream fallo streamRecordId={}: {}",
+                    session.getId(), ex.getMessage());
+        }
 
         log.info("ackMedia: confirmada sesión id={} tras doble ACK (lastUserId={} client={} model={})",
                 session.getId(), userId, clientId, modelId);
@@ -739,6 +756,16 @@ public class StreamService {
 
             // 12) Limpieza de estado
             postEndStatusCleanup(clientId, modelId);
+
+            // ADR-036/ADR-037: cierra sesion de moderacion del frente nuevo.
+            // Misma defensa que el hook de ackMedia.
+            try {
+                streamModerationSessionService.stopForStream(session.getId(),
+                        "STREAM_ENDED" + (endReason != null ? ":" + endReason : ""));
+            } catch (Exception ex) {
+                log.warn("endSession: hook stream-moderation stopForStream fallo streamRecordId={}: {}",
+                        session.getId(), ex.getMessage());
+            }
 
         } finally {
             lock.unlock();
