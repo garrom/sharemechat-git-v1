@@ -2668,12 +2668,81 @@
     "tabs": {
       "models": "Model Management",
       "assetModeration": "Asset Moderation",
+      "streamModeration": "Stream Moderation",
       "stats": "Statistics",
       "finance": "Financial Analysis",
       "db": "Database View",
       "audit": "Audit",
       "moderation": "Moderation",
       "streams": "Active Streams"
+    },
+    "streamModeration": {
+      "title": "Stream moderation",
+      "subtitle": "Human queue, active sessions and AI moderation pipeline configuration",
+      "subTabs": {
+        "queue": "Queue",
+        "sessions": "Sessions",
+        "config": "Configuration"
+      },
+      "stats": {
+        "pending": "Pending",
+        "inReview": "In review",
+        "rejected": "Rejected"
+      },
+      "queue": {
+        "priority": "Priority",
+        "severity": "Severity",
+        "category": "Category",
+        "score": "Score",
+        "streamId": "Stream ID",
+        "frameTimestamp": "Frame",
+        "createdAt": "Created",
+        "actions": {
+          "approve": "Approve",
+          "reject": "Reject"
+        },
+        "filters": {
+          "status": "Status",
+          "severity": "Severity",
+          "category": "Category",
+          "all": "All"
+        }
+      },
+      "modal": {
+        "reject": {
+          "title": "Reject review",
+          "decisionCode": "Decision code",
+          "note": "Note",
+          "killStream": "Kill stream if still active",
+          "cancel": "Cancel",
+          "confirm": "Confirm reject"
+        }
+      },
+      "sessions": {
+        "id": "ID",
+        "streamId": "Stream ID",
+        "provider": "Vendor",
+        "status": "Status",
+        "startedAt": "Started",
+        "framesSubmitted": "Frames",
+        "verdictsReceived": "Verdicts",
+        "degradedSince": "Degraded since"
+      },
+      "config": {
+        "activeMode": "Active mode",
+        "note": "Note",
+        "save": "Save",
+        "modal": {
+          "title": "Change active mode",
+          "warning": "Changing the active mode affects all environments.",
+          "cancel": "Cancel",
+          "confirm": "Confirm change"
+        }
+      },
+      "errors": {
+        "loadFailed": "Failed to load",
+        "actionFailed": "Failed to execute action"
+      }
     }
   },
   "seo": {

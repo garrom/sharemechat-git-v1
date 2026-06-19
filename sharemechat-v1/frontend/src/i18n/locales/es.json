@@ -2668,12 +2668,81 @@
     "tabs": {
       "models": "Gestión Modelos",
       "assetModeration": "Moderación assets",
+      "streamModeration": "Moderación stream",
       "stats": "Estadísticas",
       "finance": "Análisis Financiero",
       "db": "Vista BBDD",
       "audit": "Auditoría",
       "moderation": "Moderación",
       "streams": "Streams activos"
+    },
+    "streamModeration": {
+      "title": "Moderación del streaming",
+      "subtitle": "Cola humana, sesiones activas y configuración del pipeline de moderación IA",
+      "subTabs": {
+        "queue": "Cola",
+        "sessions": "Sesiones",
+        "config": "Configuración"
+      },
+      "stats": {
+        "pending": "Pendientes",
+        "inReview": "En revisión",
+        "rejected": "Rechazadas"
+      },
+      "queue": {
+        "priority": "Prioridad",
+        "severity": "Severidad",
+        "category": "Categoría",
+        "score": "Score",
+        "streamId": "Stream ID",
+        "frameTimestamp": "Frame",
+        "createdAt": "Creado",
+        "actions": {
+          "approve": "Aprobar",
+          "reject": "Rechazar"
+        },
+        "filters": {
+          "status": "Estado",
+          "severity": "Severidad",
+          "category": "Categoría",
+          "all": "Todas"
+        }
+      },
+      "modal": {
+        "reject": {
+          "title": "Rechazar review",
+          "decisionCode": "Código de decisión",
+          "note": "Nota",
+          "killStream": "Cortar stream si sigue activo",
+          "cancel": "Cancelar",
+          "confirm": "Confirmar rechazo"
+        }
+      },
+      "sessions": {
+        "id": "ID",
+        "streamId": "Stream ID",
+        "provider": "Vendor",
+        "status": "Estado",
+        "startedAt": "Inicio",
+        "framesSubmitted": "Frames",
+        "verdictsReceived": "Verdicts",
+        "degradedSince": "Degradada desde"
+      },
+      "config": {
+        "activeMode": "Modo activo",
+        "note": "Nota",
+        "save": "Guardar",
+        "modal": {
+          "title": "Cambiar modo activo",
+          "warning": "Cambiar el modo activo afecta a todos los entornos.",
+          "cancel": "Cancelar",
+          "confirm": "Confirmar cambio"
+        }
+      },
+      "errors": {
+        "loadFailed": "Error al cargar",
+        "actionFailed": "Error al ejecutar la acción"
+      }
     }
   },
   "seo": {

@@ -173,6 +173,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/client/start").hasAnyRole("USER", "CLIENT")
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/webhook").permitAll()
 
+                        // Webhook entrante de moderacion visual del streaming (ADR-036 / ADR-037).
+                        // Firma HMAC se valida en el controller (no en filter chain), patron
+                        // identico a /api/kyc/{veriff,didit}/webhook.
+                        .requestMatchers(HttpMethod.POST, "/api/webhooks/moderation/*").permitAll()
+
                         // Transactions
                         .requestMatchers("/api/transactions/payout").hasRole("MODEL")
                         .requestMatchers("/api/transactions/add-balance").hasRole("CLIENT")
@@ -227,6 +232,34 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST,
                                 "/api/admin/model-assets/*/approve",
                                 "/api/admin/model-assets/*/reject")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_SUPPORT))
+
+                        // ============================================================
+                        // Frente Moderacion IA del streaming (ADR-030 / ADR-036 / ADR-037).
+                        // Matchers especificos ANTES del catch-all /api/admin/** porque
+                        // SUPPORT y AUDIT necesitan leer la cola; el catch-all exige
+                        // ROLE_ADMIN. Calco de la leccion operativa Capa 1 de model-assets.
+                        // Lectura: ADMIN + SUPPORT + AUDIT. Moderacion: ADMIN + SUPPORT.
+                        // Config: ADMIN solo (cambio de active_mode es decision estructural;
+                        // cae al catch-all sin matcher especifico).
+                        // ============================================================
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/admin/stream-moderation/queue",
+                                "/api/admin/stream-moderation/queue/*",
+                                "/api/admin/stream-moderation/stats",
+                                "/api/admin/stream-moderation/sessions",
+                                "/api/admin/stream-moderation/sessions/*")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_SUPPORT),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_AUDIT))
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/admin/stream-moderation/queue/*/approve",
+                                "/api/admin/stream-moderation/queue/*/reject")
                         .hasAnyAuthority(
                                 "ROLE_ADMIN",
                                 BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),

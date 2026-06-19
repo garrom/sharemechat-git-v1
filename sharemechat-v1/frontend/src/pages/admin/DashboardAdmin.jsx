@@ -11,6 +11,7 @@ import AdminFinancePanel from './AdminFinancePanel';
 import AdminModelsPanel from './AdminModelsPanel';
 import AdminAssetModerationPanel from './AdminAssetModerationPanel';
 import AdminModerationPanel from './AdminModerationPanel';
+import AdminStreamModerationPanel from './AdminStreamModerationPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminProfilePage from './AdminProfilePage';
 import AdminStatsPanel from './AdminStatsPanel';
@@ -64,6 +65,10 @@ const DashboardAdmin = () => {
       title: t('admin.dashboard.pageTitles.assetModeration'),
       subtitle: t('admin.dashboard.viewCopy.assetModeration.subtitle'),
     },
+    'stream-moderation': {
+      title: t('admin.streamModeration.title'),
+      subtitle: t('admin.streamModeration.subtitle'),
+    },
     moderation: {
       title: t('admin.shell.views.moderation.title'),
       subtitle: t('admin.shell.views.moderation.subtitle'),
@@ -109,6 +114,14 @@ const DashboardAdmin = () => {
     canModerateAssets: adminView || supportView,
     // Fase 9: rechazo retroactivo de APPROVED es exclusivo de ADMIN
     canRejectApprovedAssets: adminView,
+    // Frente Moderacion IA del streaming (ADR-030 / ADR-036 / ADR-037).
+    // Decision K5: lectura ADMIN + SUPPORT + AUDIT; moderacion ADMIN +
+    // SUPPORT; cambio de config ADMIN solo. Gating fino vive en backend
+    // (segunda barrera del controller); aqui solo se decide visibilidad
+    // del panel + habilitacion de botones.
+    canViewStreamModeration: adminView || supportView || auditView,
+    canModerateStream: adminView || supportView,
+    canChangeStreamModerationConfig: adminView,
     canViewStats: adminView || hasBackofficePermission(user, 'stats.read_overview'),
     canViewFinance: adminView
       || (
@@ -142,6 +155,7 @@ const DashboardAdmin = () => {
       capabilities.canViewStats || capabilities.canViewStreams ? 'operations' : null,
       capabilities.canViewModels ? 'models' : null,
       capabilities.canViewAssetModeration ? 'asset-moderation' : null,
+      capabilities.canViewStreamModeration ? 'stream-moderation' : null,
       capabilities.canViewModeration ? 'moderation' : null,
       capabilities.canViewFinance ? 'finance' : null,
       capabilities.canRefund ? 'finance-adjustments' : null,
@@ -215,6 +229,11 @@ const DashboardAdmin = () => {
             key: 'asset-moderation',
             label: t('admin.dashboard.sidebar.assetModeration.label'),
             meta: t('admin.dashboard.sidebar.assetModeration.meta'),
+          } : null,
+          capabilities.canViewStreamModeration ? {
+            key: 'stream-moderation',
+            label: t('admin.streamModeration.title'),
+            meta: t('admin.streamModeration.subtitle'),
           } : null,
           capabilities.canViewModeration ? {
             key: 'moderation',
@@ -445,6 +464,18 @@ const DashboardAdmin = () => {
               <AdminAssetModerationPanel
                 canModerate={capabilities.canModerateAssets}
                 canRejectApproved={capabilities.canRejectApprovedAssets}
+              />
+            </AdminPage>
+          )}
+
+          {activeView === 'stream-moderation' && capabilities.canViewStreamModeration && (
+            <AdminPage
+              title={t('admin.streamModeration.title')}
+              subtitle={t('admin.streamModeration.subtitle')}
+            >
+              <AdminStreamModerationPanel
+                canModerate={capabilities.canModerateStream}
+                canChangeConfig={capabilities.canChangeStreamModerationConfig}
               />
             </AdminPage>
           )}
