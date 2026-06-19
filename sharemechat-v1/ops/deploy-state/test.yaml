@@ -1,9 +1,8 @@
 ﻿# Manifest de estado de despliegue - entorno TEST
-# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
-# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
-# correspondiente al surface desplegado tras smoke OK. NO se
-# hace commit automatico: el operador commitea el manifest
-# cuando le conviene (decision D2).
+# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
+# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
+# deploy manual del backend (scp + restart). NO se hace commit
+# automatico: el operador commitea cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
@@ -22,31 +21,31 @@ frontend_product:
   working_tree_clean: true
   bucket: sharemechat-frontend-test
   bundle: main.4c2c04ae.js
-last_update_source: deploy-frontend.ps1-fase1-paso2a
+last_update_source: update-manifest-backend.ps1-fase1-paso2b
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-06-19T21:25:53Z
-  jar_sha256: 9c044ba2560ff789d4e0a0acbf5c5f9b1fd56752684a9c49c9c92e2143b84f71
+  deployed_at: 2026-06-19T21:47:09Z
+  jar_sha256: 8dbca5cd5430d6c4f4bffa85ea7a0286a33688713fbd48b961a3800684348245
   verification:
     method: manual_via_update-manifest-backend.ps1
-    verified_at: 2026-06-19T21:25:53Z
+    verified_at: 2026-06-19T21:47:09Z
     notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-06-19T21:25:53Z
+  built_at: 2026-06-19T21:47:09Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 0010f58630db11b5dae6c024460bfbc4a786481b
-  git_commit_short: 0010f58
-last_updated_at: 2026-06-19T21:27:38Z
+  git_commit: 6ee8ee5bf6fe3166c3316d46439eb6be1c1a4986
+  git_commit_short: 6ee8ee5
+last_updated_at: 2026-06-19T21:47:09Z
 frontend_admin:
   working_tree_clean: 
   bucket: sharemechat-admin-test
   bundle: main.0497fe46.js
-  built_at: 
   deployed_at: 2026-06-05T22:16:16Z
+  cloudfront_distribution: E28YCPVIRB4ASH
   verification:
     method: s3_lastmodified_observed_2026-06-09
     git_commit_provenance: inferred_from_lastmodified_and_git_log
@@ -54,7 +53,7 @@ frontend_admin:
       Bundle admin TEST no actualizado desde 2026-06-05 22:16:16 UTC
       (4 dias de drift). HEAD git en esa marca = f09294a. Operador
       del build desconocido; working_tree_clean no recuperable.
-  cloudfront_distribution: E28YCPVIRB4ASH
+  built_at: 
   cloudfront_invalidation_id: 
   deployed_by: 
   git_commit: 
