@@ -80,7 +80,7 @@ const DashboardUserModel = () => {
 
   const getKycModeLabel = (mode) => {
     const normalizedMode = String(mode || '').toUpperCase();
-    if (normalizedMode === 'VERIFF') return t('dashboardUserModel.kyc.modes.veriff');
+    if (normalizedMode === 'DIDIT') return t('dashboardUserModel.kyc.modes.didit');
     if (normalizedMode === 'MANUAL') return t('dashboardUserModel.kyc.modes.manual');
     return normalizedMode || t('dashboardUserModel.kyc.notAvailable');
   };
@@ -223,8 +223,8 @@ const DashboardUserModel = () => {
         return;
       }
 
-      if (mode === 'VERIFF') {
-        history.push('/model-kyc');
+      if (mode === 'DIDIT') {
+        history.push('/model-kyc-didit');
         return;
       }
 
@@ -266,8 +266,8 @@ const DashboardUserModel = () => {
   const verificationStatus = String(sessionUser?.verificationStatus || 'PENDING').toUpperCase();
 
   const mainButtonLabel =
-    kycMode === 'VERIFF'
-      ? t('dashboardUserModel.kyc.actions.goVeriff')
+    kycMode === 'DIDIT'
+      ? t('dashboardUserModel.kyc.actions.goDidit')
       : kycMode === 'MANUAL'
       ? t('dashboardUserModel.kyc.actions.uploadDocumentsManual')
       : t('dashboardUserModel.kyc.actions.updateOrUploadDocuments');

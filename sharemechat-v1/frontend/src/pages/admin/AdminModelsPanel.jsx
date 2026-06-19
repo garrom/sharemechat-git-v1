@@ -53,7 +53,7 @@ const AdminModelsPanel = ({
   const [kycCfgSaving, setKycCfgSaving] = useState(false);
   const [kycCfgError, setKycCfgError] = useState('');
   const [kycCfg, setKycCfg] = useState(null);
-  const [kycModeDraft, setKycModeDraft] = useState('VERIFF');
+  const [kycModeDraft, setKycModeDraft] = useState('DIDIT');
 
   const [docsByUser, setDocsByUser] = useState({});
   const [checksByUser, setChecksByUser] = useState({});
@@ -176,7 +176,7 @@ const AdminModelsPanel = ({
       if (!res.ok) throw new Error((await res.text()) || t('admin.models.errors.loadingKycConfig'));
       const data = await res.json();
       setKycCfg(data || null);
-      setKycModeDraft((data?.activeMode || 'VERIFF').toUpperCase());
+      setKycModeDraft((data?.activeMode || 'DIDIT').toUpperCase());
     } catch (e) {
       setKycCfgError(e.message || t('admin.models.errors.loadingKycConfig'));
       setKycCfg(null);
@@ -384,8 +384,8 @@ const AdminModelsPanel = ({
                   onChange={(e) => setKycModeDraft(e.target.value)}
                   disabled={kycCfgLoading || kycCfgSaving}
                 >
-                  <option value="VERIFF">{t('admin.models.kyc.optionVeriff')}</option>
                   <option value="MANUAL">{t('admin.models.kyc.optionManual')}</option>
+                  <option value="DIDIT">{t('admin.models.kyc.optionDidit')}</option>
                 </StyledSelect>
               </FieldBlock>
 
@@ -405,8 +405,13 @@ const AdminModelsPanel = ({
             </div>
             <div>
               <strong>manualEnabled:</strong> {String(kycCfg?.manualEnabled ?? '-')} |{' '}
-              <strong>veriffEnabled:</strong> {String(kycCfg?.veriffEnabled ?? '-')}
+              <strong>diditEnabled:</strong> {String(kycCfg?.diditEnabled ?? '-')}
             </div>
+            {String(kycCfg?.activeMode || '').toUpperCase() === 'VERIFF' && (
+              <div style={{ marginTop: 6, color: '#b00020' }}>
+                {t('admin.models.kyc.veriffLegacyWarning')}
+              </div>
+            )}
           </div>
         </InlinePanel>
       )}

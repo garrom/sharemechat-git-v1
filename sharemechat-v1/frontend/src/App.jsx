@@ -11,6 +11,7 @@ import AdminAccessPage from './pages/admin/AdminAccessPage';
 import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
 import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
+import ModelKycDiditPage from './pages/subpages/ModelKycDiditPage';
 import ClientKycDiditPage from './pages/subpages/ClientKycDiditPage';
 import ClientKycProcessingPage from './pages/subpages/ClientKycProcessingPage';
 import Blog from './pages/blog/Blog';
@@ -173,6 +174,8 @@ function App() {
                     <Route path="/dashboard-user-model" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><DashboardUserModel /></RequireRole>)} />
 
                     <Route path="/model-documents" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelDocuments /></RequireRole>)} />
+                    <Route path="/model-kyc-didit" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelKycDiditPage /></RequireRole>)} />
+                    {/* /model-kyc: placeholder Veriff dormido (frente Veriff archivado, ADR-035 Plan A = Didit). Ruta conservada por compatibilidad historica con la URL antigua; no se referencia desde dashboard activo. */}
                     <Route path="/model-kyc" render={() => (<RequireRole role="USER" allowedUserTypes={[UserTypes.FORM_MODEL]}><ModelKycVeriffPage /></RequireRole>)} />
                     {/* /client-kyc: alineado con el hot-fix backend 8456660. Pre-recarga
                         el usuario es USER + FORM_CLIENT y aun asi debe poder verificar

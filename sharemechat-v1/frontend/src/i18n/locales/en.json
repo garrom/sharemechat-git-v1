@@ -1400,10 +1400,12 @@
       "notAvailable": "N/A",
       "modes": {
         "veriff": "Veriff",
-        "manual": "Manual"
+        "manual": "Manual",
+        "didit": "Didit"
       },
       "actions": {
         "goVeriff": "Go to Veriff",
+        "goDidit": "Start identity verification",
         "uploadDocumentsManual": "Upload documents (manual)",
         "updateOrUploadDocuments": "Update / Upload documents",
         "uploadDocumentsShort": "Upload documents",
@@ -1517,6 +1519,22 @@
         "success": "Email resent. Check your inbox (also spam folder).",
         "error": "Could not resend. Try again in a few minutes."
       }
+    }
+  },
+  "modelKyc": {
+    "title": "Identity verification",
+    "navTitle": "Identity verification",
+    "back": "Back",
+    "intro": "To complete your sign-up as a model we need to verify your identity and age. The verification uses camera and document: our provider (Didit, EU-certified) reads your ID document and checks it matches your face via a selfie.",
+    "whyLegal": "This is required by minor-protection and adult-content regulations in the markets we operate in (EU DSA, UK OSA, US Free Speech Coalition v. Paxton). It is not optional.",
+    "consentTitle": "Biometric and identity processing consent",
+    "consentText": "I explicitly consent to my ID document and my facial biometric data (image of my face) being processed by Didit (data processor, EU) for the purpose of verifying my identity and age, under Art. 9.2.a GDPR. Data is stored for as long as needed to fulfil applicable legal obligations and then deleted. I may withdraw consent at any time by contacting privacy@sharemechat.com; in that case, I will not be able to complete the model sign-up.",
+    "consentReadMore": "More information in the privacy policy.",
+    "startButton": "Start verification",
+    "startingButton": "Starting…",
+    "errors": {
+      "generic": "Verification could not be started. Please try again in a few minutes.",
+      "alreadyApproved": "Your verification is already approved; no need to repeat it."
     }
   },
   "clientKyc": {
@@ -2364,8 +2382,10 @@
         "modeLabel": "KYC mode",
         "optionVeriff": "VERIFF (automatic)",
         "optionManual": "MANUAL (documents)",
+        "optionDidit": "DIDIT (automatic)",
         "saveMode": "Save mode",
-        "currentLabel": "Current"
+        "currentLabel": "Current",
+        "veriffLegacyWarning": "Legacy VERIFF mode detected in DB. Pick MANUAL or DIDIT and save to migrate."
       },
       "filters": {
         "statusActive": "Active"

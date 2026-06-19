@@ -1400,10 +1400,12 @@
       "notAvailable": "N/D",
       "modes": {
         "veriff": "Veriff",
-        "manual": "Manual"
+        "manual": "Manual",
+        "didit": "Didit"
       },
       "actions": {
         "goVeriff": "Ir a Veriff",
+        "goDidit": "Iniciar verificación de identidad",
         "uploadDocumentsManual": "Subir documentos (manual)",
         "updateOrUploadDocuments": "Actualizar / Subir documentos",
         "uploadDocumentsShort": "Subir documentos",
@@ -1517,6 +1519,22 @@
         "success": "Email reenviado. Revisa tu bandeja de entrada (también spam).",
         "error": "No se pudo reenviar. Intenta de nuevo en unos minutos."
       }
+    }
+  },
+  "modelKyc": {
+    "title": "Verificación de identidad",
+    "navTitle": "Verificación de identidad",
+    "back": "Volver",
+    "intro": "Para completar tu alta como modelo necesitamos verificar tu identidad y mayoría de edad. La verificación se realiza con cámara y documento: nuestro proveedor (Didit, certificado en la UE) lee tu documento de identidad y comprueba que coincide con tu rostro mediante una selfie.",
+    "whyLegal": "Esto se exige por normativa de protección de menores y de control de contenido adulto en los mercados donde operamos (UE DSA, Reino Unido OSA, EE. UU. Free Speech Coalition v. Paxton). No es opcional.",
+    "consentTitle": "Consentimiento de tratamiento biométrico y de identidad",
+    "consentText": "Doy mi consentimiento explícito para que mi documento de identidad y mis datos biométricos faciales (imagen de mi rostro) sean procesados por Didit (encargado del tratamiento, UE) con el fin de verificar mi identidad y mayoría de edad, conforme al Art. 9.2.a del RGPD. Los datos se almacenan durante el periodo necesario para cumplir las obligaciones legales aplicables y luego se eliminan. Puedo retirar mi consentimiento en cualquier momento contactando con privacidad@sharemechat.com; en ese caso, no podré completar el alta como modelo.",
+    "consentReadMore": "Más información en la política de privacidad.",
+    "startButton": "Iniciar verificación",
+    "startingButton": "Iniciando…",
+    "errors": {
+      "generic": "No se pudo iniciar la verificación. Inténtalo de nuevo en unos minutos.",
+      "alreadyApproved": "Tu verificación ya está aprobada; no necesitas repetirla."
     }
   },
   "clientKyc": {
@@ -2364,8 +2382,10 @@
         "modeLabel": "Modo KYC",
         "optionVeriff": "VERIFF (automático)",
         "optionManual": "MANUAL (documentos)",
+        "optionDidit": "DIDIT (automático)",
         "saveMode": "Guardar modo",
-        "currentLabel": "Actual"
+        "currentLabel": "Actual",
+        "veriffLegacyWarning": "Modo VERIFF legacy detectado en BD. Selecciona MANUAL o DIDIT y guarda para migrar."
       },
       "filters": {
         "statusActive": "Activas"
