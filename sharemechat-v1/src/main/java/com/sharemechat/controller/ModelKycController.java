@@ -109,6 +109,7 @@ public class ModelKycController {
         // flags cómodos para frontend
         body.put("manualEnabled", Constants.KycModes.MANUAL.equalsIgnoreCase(activeMode));
         body.put("veriffEnabled", Constants.KycModes.VERIFF.equalsIgnoreCase(activeMode));
+        body.put("diditEnabled", Constants.KycModes.DIDIT.equalsIgnoreCase(activeMode));
 
         return ResponseEntity.ok(body);
     }

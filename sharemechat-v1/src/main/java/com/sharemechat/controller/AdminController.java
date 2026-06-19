@@ -305,7 +305,7 @@ public class AdminController {
         return ResponseEntity.ok(out);
     }
 
-    //  "VERIFF" | "MANUAL",
+    //  "VERIFF" | "MANUAL" | "DIDIT"
     @PostMapping("/kyc/model-onboarding/mode")
     public ResponseEntity<?> setAdminKycModelOnboardingMode(
             @RequestBody Map<String, String> body,

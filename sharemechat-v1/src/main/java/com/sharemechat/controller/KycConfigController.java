@@ -28,12 +28,14 @@ public class KycConfigController {
         String mode = kycProviderConfigService.getActiveModeForModelOnboarding();
         boolean manualEnabled = kycProviderConfigService.isManualEnabledForModelOnboarding();
         boolean veriffEnabled = kycProviderConfigService.isVeriffEnabledForModelOnboarding();
+        boolean diditEnabled = kycProviderConfigService.isDiditEnabledForModelOnboarding();
 
         return ResponseEntity.ok(Map.of(
                 "providerKey", KycProviderConfigService.KEY_MODEL_ONBOARDING,
                 "activeMode", mode,
                 "manualEnabled", manualEnabled,
-                "veriffEnabled", veriffEnabled
+                "veriffEnabled", veriffEnabled,
+                "diditEnabled", diditEnabled
         ));
     }
 
@@ -59,12 +61,14 @@ public class KycConfigController {
         String mode = kycProviderConfigService.getActiveModeForModelOnboarding();
         boolean manualEnabled = kycProviderConfigService.isManualEnabledForModelOnboarding();
         boolean veriffEnabled = kycProviderConfigService.isVeriffEnabledForModelOnboarding();
+        boolean diditEnabled = kycProviderConfigService.isDiditEnabledForModelOnboarding();
 
         return ResponseEntity.ok(Map.of(
                 "providerKey", KycProviderConfigService.KEY_MODEL_ONBOARDING,
                 "activeMode", mode,
                 "manualEnabled", manualEnabled,
-                "veriffEnabled", veriffEnabled
+                "veriffEnabled", veriffEnabled,
+                "diditEnabled", diditEnabled
         ));
     }
 }

@@ -23,11 +23,22 @@ public class KycProviderConfigService {
         this.repo = repo;
     }
 
+    /**
+     * Devuelve la fila de configuracion del onboarding del modelo, creandola
+     * con valores por defecto si aun no existe.
+     *
+     * Default de bootstrap: {@code MODE_DIDIT} (Plan A segun ADR-035, vendor
+     * unico para los tres flujos de verificacion). Solo aplica a nuevos
+     * bootstraps; las filas ya existentes en TEST/AUDIT/PROD conservan su
+     * {@code active_mode} actual (en TEST/AUDIT el modo lo cambia el admin
+     * desde el backoffice y se persiste, asi que este default solo se ve si
+     * alguien borra la fila).
+     */
     public KycProviderConfig getOrCreateModelOnboardingConfig() {
         return repo.findByProviderKey(KEY_MODEL_ONBOARDING).orElseGet(() -> {
             KycProviderConfig c = new KycProviderConfig();
             c.setProviderKey(KEY_MODEL_ONBOARDING);
-            c.setActiveMode(MODE_VERIFF); // default
+            c.setActiveMode(MODE_DIDIT); // default Plan A (ADR-035)
             c.setEnabled(true);
             c.setNote("Auto-created");
             return repo.save(c);
