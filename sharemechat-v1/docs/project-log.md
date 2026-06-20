@@ -8,6 +8,79 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-20 — Sub-frente Gate KYC en videochat trial cerrado end-to-end (mover Age Verification de pre-pago a pre-videochat)
+
+Cierre del sub-frente que mueve el gate Age Verification del cliente del punto histórico (pre-pago en `TransactionService.processFirstTransaction` y `addBalance`) al botón "Activar cámara" del dashboard del cliente (pre-videochat). Compliance gap pre-Segpay/PROD identificado el 2026-06-20 durante el diagnóstico read-only del flujo cliente: usuario USER+FORM_CLIENT con email verificado pero sin Age Verification podía acceder al videochat trial con modelos en vivo (interacción potencialmente sexual) y al sistema de mensajería con favoritos sin verificación de edad — el gate previo solo se disparaba al pagar, llegando demasiado tarde para auditoría regulatoria adult ni para Segpay.
+
+**Decisión arquitectónica clave**: gatear el flujo en el **botón "Activar cámara"** (pre-videochat) en lugar de pre-pago. Es el patrón industrial estándar de las plataformas adult video chat. Una sola verificación por user vale para ambos puntos de entrada (videochat trial gratuito y "Hazte Premium"). La promoción USER→CLIENT sigue ocurriendo solo con primer pago, no con KYC; el sub-frente NO cambia la semántica de roles.
+
+**Implementación dos commits**:
+
+- **Backend (commit `fb8744e`)**. Gate WebSocket en `MatchingHandlerSupport`. Nuevo método package-private `isApprovedClient(userId)` paralelo a `isApprovedActiveModel(userId)` del flujo modelo: valida `user_type=FORM_CLIENT` + `client_kyc_status=APPROVED`, sin discriminar por role (uniforme USER+FORM_CLIENT y CLIENT+FORM_CLIENT). Nuevo método `blockClientSession(session, userId, reasonCode)` paralelo a `blockModelSession`: envía payload `{"type":"client-blocked","reasonCode":...,"clientKycStatus":...}` al frontend, hace `removeFromAllBuckets(session, "client")`, loguea con `[WS][match][CLIENT_BLOCKED]` para auditoría y cierra el WebSocket con `CloseStatus(4030, "CLIENT_KYC_REQUIRED")`. Code 4030 elegido en el rango app-specific RFC 6455 (4000-4999). Gate primario en `set-role` tras mapear `mappedRole="client"` y antes de `moveToBucket`; gate secundario en `start-match` antes de invocar `matchClient(session)` (defensa por si un cliente custom WS se salta `set-role`). Constantes inline `WS_CLOSE_CLIENT_KYC_REQUIRED=4030` y `REASON_CLIENT_KYC_REQUIRED` con comentario para extracción futura a `Constants.WsCloseCodes` si aparecen más codes app-specific. Tests: 171 → 179 (+8) en nueva `MatchingHandlerSupportTest` cubriendo los 6 escenarios solicitados (USER+NULL, CLIENT+NULL, USER+APPROVED, CLIENT+APPROVED, REJECTED, PENDING) más 2 edge cases (`user_type=FORM_MODEL` siempre bloqueado por gate cliente, `userId=null` fail-safe). `ClientKycGate.assertClientKycApproved` en `TransactionService` intacto como defensa secundaria.
+
+- **Frontend (commit `8acab56`)**. Gate primario en `handleActivateCamera` invocando el helper `ensureClientKycApproved(user, history, returnPath)` ya existente (introducido en el frente Email Gate + Age Verification, 14-jun). `DashboardUserClient` (cliente trial USER+FORM_CLIENT) usa `returnPath='/dashboard-user-client'`; `DashboardClient` (cliente premium CLIENT+FORM_CLIENT, cubre CLIENT legacy con `client_kyc=NULL`) usa `returnPath='/client'`. Gate ANTES de pedir `getUserMedia` al navegador para no asustar con el popup de permisos solo para luego rechazarlo. `matchSocketEngine.js` recibe un nuevo callback opcional `onClientKycRequired`; su `onWsClose(event)` ahora acepta el `event` y dispara el callback cuando `event.code === 4030`. `DashboardClient` cablea el callback al `createMatchSocketEngine` pasando una closure que guarda return path en `sessionStorage[client_kyc_return_url]` y redirige a `/client-kyc?return=<encoded>`. `DashboardUserClient.handleStartMatch` ya define su `s.onclose` propio (no usa engine compartido): manejo inline equivalente del `event.code === 4030`. Los gates `ensureClientKycApproved` preexistentes en los 5 handlers de pago (4 en `DashboardClient`, 1 en `DashboardUserClient`) se mantienen sin tocar.
+
+**Defensa en profundidad triple capa** confirmada en validación:
+
+1. **Capa primaria — frontend gate en `handleActivateCamera`**. Detiene al user ANTES de abrir el WebSocket. 100% efectivo en validación E2E: 0 ocurrencias de `CLIENT_BLOCKED` en 146 líneas de log del backend desde el restart.
+2. **Capa secundaria — backend WS gate en `MatchingHandlerSupport.set-role` + `start-match`**. Cierra con close-code 4030 si la primera capa fallara o un cliente WS custom se saltara el frontend.
+3. **Capa terciaria — backend HTTP gate preservado en `TransactionService`**. `clientKycGate.assertClientKycApproved` en `processFirstTransaction` (L168) y `addBalance` (L388) sin tocar. Defensa última si alguien evitara capas 1 y 2.
+
+**Validación end-to-end** con `demo+register` (`users.id=89`, USER+FORM_CLIENT, sin KYC antes del flujo):
+
+1. Login `demo+register` → `/dashboard-user-client`.
+2. Click "Activar cámara" → frontend gate detecta `client_kyc_status=NULL` → `ensureClientKycApproved` guarda `client_kyc_return_url='/dashboard-user-client'` en sessionStorage → redirect a `/client-kyc?return=/dashboard-user-client`.
+3. Consentimiento biométrico GDPR Art. 9.2.a → flujo Didit Adaptive (Age Estimation primaria) en móvil con doc real.
+4. Cadena 3 webhooks `kyc_webhook_events` ids 38, 39, 40 procesados firmados OK (Not Started → In Progress → Approved entre 10:13:19 y 10:17:12 UTC). Webhook 40 actualiza `users.client_kyc_status=APPROVED` y crea sesión `kyc_sessions id=20`.
+5. Callback navegador a `/client-kyc/processing` → polling detecta `clientKycStatus=APPROVED` en pocos segundos → redirect a `/dashboard-user-client` (return path dinámico funcionó).
+6. Click "Activar cámara" otra vez → gate no-op → `getUserMedia` OK → cámara activa.
+7. Click "Buscar" → WebSocket `/match` → `set-role` (gate backend ve `client_kyc_status=APPROVED` y permite) → `start-match` → matching exitoso con `demo+model1` (`users.id=31`, MODEL+verification=APPROVED).
+8. Logs backend: `random_match_emit actorUserId=89 peerUserId=31 role=client peerRole=model`. WebRTC peer establecido vía RANDOM_TRACE_SIGNAL offer+answer. Videochat real OK.
+
+Cero ocurrencias de `CLIENT_BLOCKED` confirman que el gate primario interceptó al user antes de que llegara al WebSocket, sin necesidad de ejercer la capa secundaria.
+
+**Política CLIENT legacy** (decisión arquitectónica registrada): **gate uniforme** (Opción 1 del diagnóstico previo). Los 3 CLIENT legacy (`ids 30, 32, 88`, todos `demo+*`) tienen `client_kyc_status=NULL` y son redirigidos a `/client-kyc` al primer click "Activar cámara". En TEST cero downside (son `demo+`). En AUDIT/PROD pre-go-live: si en go-live no hay clientes reales pre-Didit, opción 1 es aceptable directa; si hay clientes reales pre-Didit, evaluar grace period (opción 3) con email proactivo + ventana de gracia antes del bloqueo duro. Decisión final se toma cuando se active Didit en PROD.
+
+**Workflow Didit no tocado**. La consola `shareme-client-age` (UUID `59af04f3-3bb9-44d1-ae7a-853e41034f0d`), `KycSessionService.startDiditClientSession`, y el webhook handler `processDiditWebhook` permanecen idénticos. El mismo workflow Age Estimation sirve para los dos puntos de entrada (Activar cámara y Hazme Premium) — una sola verificación por user. Las dos callback URLs separadas modelo/cliente del paso 2-bis del frente Didit modelo (commit `6ee8ee5`) siguen activas.
+
+**Cadena de commits del sub-frente**:
+
+- `fb8744e` — feat(matching): gate websocket client matching by client_kyc_status, close with CLIENT_KYC_REQUIRED if not approved
+- `8acab56` — feat(frontend): gate camera activation by client_kyc_status, handle ws close-code 4030 for kyc required
+- Manifest intermedio: el del deploy del paso 2.
+
+**Cleanup BD mínimo**. Cero DELETE. La validación end-to-end con `demo+register` (user 89) no inyectó smokes negativos: las 3 filas `kyc_webhook_events` de hoy (ids 38, 39, 40) son la cadena real Not Started → In Progress → Approved del flujo del user 89. Conservadas íntegras como evidencia viva. `kyc_sessions id=20` (CLIENT, user 89, APPROVED, 10:17:12) también conservada. user 89 queda con `client_kyc_status=APPROVED`. La evidencia previa del proyecto (cadenas DIDIT 14-16, 27-29, 31-33, 35-37; sesiones MODEL/CLIENT ids 14, 17, 18, 19) sigue íntegra. Cero ediciones sobre el resto de users (`87, 88, 90, 95, 96, 97`). Filosofía "no reusar users, BD refleja realidad del negocio" preservada.
+
+**MessagesWsHandler verificado read-only** durante el diagnóstico. Maneja `msg:*` (chat texto entre usuarios con relación aceptada, post-favorito) y `call:*` (llamadas privadas CLIENT↔MODEL fuera del matching aleatorio). El WebSocket `/messages` se abre directamente al login (no requiere matching previo en sentido WS), pero requiere relación "aceptada" para que mensajes/calls lleguen. Para clientes con KYC NUEVO siempre habrán pasado por el gate del matching aleatorio antes de poder favoritear. Riesgo residual solo en CLIENT legacy con relaciones pre-frente Didit (en TEST son los 3 ids 30/32/88 sin relaciones reales). Decisión: NO tocar `/messages` en este sub-frente, apuntar como **deuda P17** a evaluar pre-go-live PROD.
+
+**Deudas registradas al cierre del sub-frente**:
+
+- P1 (BLOQUEANTE pre-go-live PROD): idempotencia en `processDiditWebhook` debe distinguir rechazado-firma de procesado-OK. Sin cerrar.
+- P2 (sin urgencia): aceptar `X-Signature-V2` si Didit deprecase Standard.
+- P10: validar `PRODUCT_ACCESS_MODE` en AUDIT al encender. Sin cerrar.
+- P12: `Legal.jsx` menciona Veriff como sub-procesador biométrico; requiere coordinación legal antes go-live PROD.
+- P15: notificación email al modelo tras decisión admin (APPROVE/REJECT). Sin cerrar.
+- P16 NUEVA: notificaciones email cliente tras eventos de negocio (KYC APPROVED/REJECTED, primer pago, recarga balance). Equivalente conceptual al P15 pero para el cliente; cliente tiene 4 eventos sin email donde modelo solo tiene 2. Importante para UX pre-go-live PROD. Frente aparte.
+- P17 NUEVA: evaluar gate de Age Verification en `/messages` WebSocket pre-go-live PROD. Riesgo residual con CLIENT legacy que tengan relaciones pre-frente Didit (en TEST cero riesgo, los 3 legacy son `demo+` sin relaciones reales). Si en PROD pre-go-live hay clientes reales pre-Didit con favoritos preexistentes, cablear gate también en `MessagesWsHandlerSupport.send-msg` y `call:request`.
+
+**Estado de entornos**:
+
+- TEST: HEAD backend `fb8744e`, HEAD frontend `8acab56`. Schema BD v10. `kyc_provider_config.active_mode=DIDIT`. Config runtime con `KYC_DIDIT_MODEL_CALLBACK_URL` y `KYC_DIDIT_CLIENT_CALLBACK_URL` separadas + `PRODUCT_ACCESS_MODE=OPEN`. BD coherente. Evidencia viva conservada: user 89 (sub-frente actual), user 95 (Email Gate, USER→CLIENT completo), user 97 (Didit modelo, USER→MODEL promocionado), user 90 (Email Gate, USER+KYC APPROVED sin promoción).
+- AUDIT: intacto. P10 sigue pendiente.
+- PROD: intacto. `PRELAUNCH` activo (correcto hasta go-live 1-jul-2026).
+
+**Próximos frentes en cola**:
+
+- Cierre P1 (idempotencia webhook) antes go-live PROD.
+- Cierre P12 (`Legal.jsx`, política de privacidad) coordinado con legal.
+- Activación Didit en AUDIT + verificación P10 al encender.
+- Activación Didit en PROD (cuando el operador decida, con `PRELAUNCH` levantado).
+- Cierre P15 y P16 (notificaciones email tras eventos de negocio modelo y cliente).
+- Cierre P17 (gate `/messages` WebSocket) pre-go-live PROD si aplica.
+- Frente moderación IA Sightengine pendiente (vertical Trust&Safety, ADRs 036/037, paquetes P1.1-P1.3 ya entregados en paralelo a este sub-frente).
+
+---
+
 ## 2026-06-19 — Frente Integración Didit en flujo KYC del modelo cerrado end-to-end
 
 Cierre del frente que asimetría el flujo modelo con el flujo cliente: hasta hoy el cliente tenía `ClientKycDiditPage` cableada a Didit y validada (frente Email Gate + Age Verification, 2026-06-14), pero el modelo seguía aterrizando en `ModelKycVeriffPage`, un placeholder que solo renderizaba "Estás en Veriff" sin invocar ningún endpoint. El frente recablea el flujo modelo a Didit por defecto, cierra cuatro bugs en cascada (uno arquitectónico, dos UX, uno operativo) y deja la pantalla del modelo con tres estados visibles claramente discriminados.
