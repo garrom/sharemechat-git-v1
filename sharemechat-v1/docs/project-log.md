@@ -8,6 +8,70 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-20 — Frente P1 (idempotencia webhook Didit) cerrado: hardening defensivo + 9 tests E2E
+
+Cierre de la deuda **P1** registrada al cierre del frente Didit cliente (2026-06-14) como **bloqueante pre-go-live PROD**. El diagnóstico read-only previo reveló que la idempotencia funcional YA estaba implementada: UNIQUE constraint `(provider, provider_event_id)` en `kyc_webhook_events` desde [V1__baseline.sql:308](sharemechat-v1/src/main/resources/db/migration/V1__baseline.sql:308), check `findByProviderAndProviderEventId` en `processDiditWebhook` antes de procesar, y `@Transactional` con rollback automático en race. La deuda era menos crítica de lo que sugería el nombre. Lo que faltaba era **hardening defensivo + cobertura de tests del flujo end-to-end**.
+
+**Cambios funcionales** (todos en `KycSessionService.processDiditWebhook`, commit `3680f2f`):
+
+- **Cambio 1: catch defensivo `DataIntegrityViolationException`**. Tanto en `persistDiditRejection` (rechazos por firma/timestamp inválidos) como en el `save(ev)` final tras el procesado/error del try-catch principal, el guardado de la fila se envuelve ahora en try/catch específico de la excepción de Spring. Si Didit reenvía un webhook con firma rota cuyo `event_id` ya existe en BD (caso edge real con UNIQUE activa), o si dos webhooks idénticos ganan la carrera del check pre-procesar y ambos llegan al `save`, la excepción se absorbe con log INFO en lugar de propagarse como 500 al cliente. El `@Transactional` del método garantiza que cero side-effects sobre `kyc_sessions`/`users` quedan persistidos del segundo webhook.
+
+- **Cambio 2: hash determinista para `event_id` NULL**. Nuevo helper package-private `deriveSyntheticEventId(rawBody)` que genera SHA-256 hex del raw body con prefijo `synth_` (70 caracteres totales, cabe en `provider_event_id varchar(150)`). En el flujo del handler: si Didit envía un webhook sin `event_id` explícito en el payload (caso raro pero observado en algunos `webhook_types` antiguos según docs.didit.me), se sustituye por el hash sintético antes del check de idempotencia. Así la UNIQUE constraint también aplica a estos eventos. Webhooks reales con `event_id` explícito siguen usándolo intacto. El prefijo `synth_` permite distinguir hashes sintéticos de event_ids reales en queries/auditoría futura (`WHERE provider_event_id LIKE 'synth_%'`).
+
+- **Cambio 3: log WARN transiciones backwards**. Nuevo helper package-private `isBackwardsTransition(prev, new)` detecta cuando una decisión terminal (APPROVED/REJECTED) intenta cambiar a otro estado distinto: APPROVED→REJECTED, APPROVED→PENDING, REJECTED→PENDING, REJECTED→APPROVED. Transiciones desde NULL o PENDING NO se consideran backwards (son legítimas). En `processDiditWebhook`, ANTES de aplicar el nuevo status, si detecta una transición backwards loguea `[KYC] backwards transition detected: session_id=X user_id=Y session_type=Z from=A to=B provider_event_id=W` con datos suficientes para investigación posterior. **NO bloquea la transición**: la política "último-evento-gana" se mantiene (los webhooks de Didit son fuente de verdad). Solo observabilidad para detectar webhooks out-of-order o intentos de revertir decisiones finales.
+
+- **Cambio 4: 9 tests E2E en nueva clase `KycSessionServiceProcessWebhookTest`** (paralela a `KycSessionServiceDiditTest`, que cubre solo los helpers package-private). Con mocks Mockito de `UserRepository`, `KycSessionRepository`, `KycWebhookEventRepository` y `DiditProperties`. Los tests cubren los 9 gaps identificados en el diagnóstico previo: (1) webhook válido APPROVED nuevo → sesión + user actualizados; (2) idempotencia con event_id explícito → 2º webhook no reprocesa; (3) firma HMAC inválida → `persistDiditRejection` con `error="invalid_signature"`, return false; (4) timestamp expirado → idem con `error="invalid_timestamp"`; (5) `session_id` desconocido → persiste error "No existe sesión KYC", return true (200, irrecuperable); (6) payload no parseable como JSON → persiste `error=invalid_payload:...`, return true; (7) `isBackwardsTransition` helper directo cubriendo todos los casos; (8) `event_id=null` → hash sintético con prefijo `synth_` usado como `provider_event_id`, determinismo verificado; (9) race condition simulada → `save(ev)` lanza `DataIntegrityViolationException` → catch defensivo → return true sin propagar 500.
+
+**Lo que NO se modificó**:
+
+- BD: constraint UNIQUE `(provider, provider_event_id)` ya existía desde V1, no hizo falta migración.
+- Política HTTP: 200 a reenvíos procesados, 401 a firma/timestamp inválidos, 200+log a errores irrecuperables. Sin cambios.
+- Refactor `is_signature_valid` + `is_processed` → enum `EventStatus`: pospuesto a frente aparte (no bloqueante para P1). Apuntado como deuda nueva **P18**.
+- Consola Didit, workflows (`shareme-client-age`, `shareme-model-kyc`), webhook server-to-server: cero cambios.
+- `startDiditClientSession`, `startDiditModelSession`, `ClientKycGate`: sin cambios.
+- Frontend: sin cambios (P1 era backend puro).
+
+**Validación**:
+
+- `BUILD SUCCESS` con **188 tests verdes** (+9 desde baseline 179). Sin regresiones en los tests existentes (`KycSessionServiceDiditTest` 32, `KycSessionServiceMappingTest` 21, `MatchingHandlerSupportTest` 8, `DiditClientImplTest` 16, `ClientKycGateTest` 6, `KycProviderConfigServiceTest` 2, resto).
+- Cobertura del flujo principal `processDiditWebhook` ahora completa: era el gap más serio pre-PROD. Los tests previos cubrían helpers package-private (`extractDiditEventId`, `mapInternalStatusFromDiditStatus`, `isDiditTimestampFresh`, `assertWorkflowIdMatchesSessionType`, etc.) pero no el flujo end-to-end del método público.
+- Cero side-effects en BD durante este frente: solo código + tests con mocks.
+
+**Backend NO redesplegado** en este frente. El JAR vivo en TEST sigue siendo `fb8744e` (gate WS del sub-frente videochat de esta mañana); el HEAD del repo es `3680f2f` con el hardening del P1, esperando próximo deploy natural (probable: activación Didit en AUDIT, donde el deploy es obligatorio y el JAR de P1 va incluido).
+
+**Cadena de commits del frente**:
+
+- `3680f2f` — feat(kyc): harden didit webhook idempotency with defensive catch, event_id null hashing, backwards transition logging
+
+**Deudas actualizadas al cierre**:
+
+- P1: **CERRADA** en este frente (hardening + tests + idempotencia funcional confirmada).
+- P2: aceptar `X-Signature-V2` si Didit deprecase Standard. Pendiente sin urgencia.
+- P10: validar `PRODUCT_ACCESS_MODE` en AUDIT al encender. Pendiente.
+- P12: `Legal.jsx` Veriff sub-procesador. Coordinación legal pre-go-live PROD.
+- P15: notificación email modelo tras decisión admin. Pendiente, frente aparte.
+- P16: notificaciones email cliente tras eventos de negocio. Pendiente, frente aparte.
+- P17: gate `/messages` WS pre-go-live PROD (riesgo CLIENT legacy con relaciones pre-frente). Evaluar al go-live.
+- P18 NUEVA: refactor `is_signature_valid` + `is_processed` → enum `EventStatus` (RECEIVED_OK, REJECTED_TIMESTAMP, REJECTED_SIGNATURE, REJECTED_PAYLOAD_PARSE, REJECTED_NO_SESSION, REJECTED_WORKFLOW_MISMATCH, PROCESSED_OK, DUPLICATE_IGNORED). Beneficio: legibilidad y queries explícitas. Coste: 2 migrations (V11 añadir columna + backfill, V12 eliminar booleans) + adaptación de queries/repos/tests. **Calidad, no bloqueante**. Frente aparte si se decide.
+
+**Estado de entornos**:
+
+- TEST: HEAD backend vivo `fb8744e` (gate WS del sub-frente videochat). HEAD código `3680f2f` (P1) en repo sin desplegar — se incluirá en el próximo deploy natural. HEAD frontend `8acab56`. Schema BD v10. `kyc_provider_config.active_mode=DIDIT`. Config runtime con `KYC_DIDIT_MODEL/CLIENT_CALLBACK_URL` separadas + `PRODUCT_ACCESS_MODE=OPEN`. BD coherente.
+- AUDIT: intacto. P10 sigue pendiente.
+- PROD: intacto. `PRELAUNCH` activo (correcto hasta go-live 1-jul-2026).
+
+**Próximos frentes en cola**:
+
+- Activación Didit en AUDIT (incluye deploy backend con el P1 + verificar P10 al encender).
+- Cierre P12 (`Legal.jsx`) coordinado con legal.
+- Cierre P15 + P16 (notificaciones email eventos de negocio modelo y cliente).
+- Cierre P17 (gate `/messages` WS) pre-go-live PROD si aplica.
+- Activación Didit en PROD (cuando el operador decida).
+- Frente moderación IA Sightengine (vertical Trust&Safety, en paralelo, ADRs 036/037 + paquetes P1.1-P1.3 ya entregados).
+- (Opcional, calidad) Cierre P18 refactor enum `EventStatus`.
+
+---
+
 ## 2026-06-20 — Sub-frente Gate KYC en videochat trial cerrado end-to-end (mover Age Verification de pre-pago a pre-videochat)
 
 Cierre del sub-frente que mueve el gate Age Verification del cliente del punto histórico (pre-pago en `TransactionService.processFirstTransaction` y `addBalance`) al botón "Activar cámara" del dashboard del cliente (pre-videochat). Compliance gap pre-Segpay/PROD identificado el 2026-06-20 durante el diagnóstico read-only del flujo cliente: usuario USER+FORM_CLIENT con email verificado pero sin Age Verification podía acceder al videochat trial con modelos en vivo (interacción potencialmente sexual) y al sistema de mensajería con favoritos sin verificación de edad — el gate previo solo se disparaba al pagar, llegando demasiado tarde para auditoría regulatoria adult ni para Segpay.
