@@ -16,10 +16,13 @@ import com.sharemechat.security.HmacSha256;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.time.LocalDateTime;
 
@@ -475,6 +478,17 @@ public class KycSessionService {
         String eventType = extractDiditEventType(json);
         String providerSessionId = extractDiditSessionId(json);
 
+        // Cambio 2 (frente P1 idempotencia, 2026-06-20): si Didit no envia
+        // event_id explicito en el payload (caso raro pero observado en algunos
+        // webhook_types antiguos), derivamos un identificador deterministico
+        // del raw body via SHA-256 con prefijo "synth_". Asi la UNIQUE
+        // constraint (provider, provider_event_id) tambien aplica a estos
+        // eventos y se previenen duplicados. Webhooks reales con event_id
+        // explicito siguen usandolo tal cual.
+        if (providerEventId == null || providerEventId.isBlank()) {
+            providerEventId = deriveSyntheticEventId(rawBody);
+        }
+
         // Idempotencia por (provider=DIDIT, event_id).
         if (providerEventId != null) {
             var existing = kycWebhookEventRepository.findByProviderAndProviderEventId(PROVIDER_DIDIT, providerEventId);
@@ -515,6 +529,19 @@ public class KycSessionService {
 
             String diditStatus = extractDiditStatus(json);
             String internalStatus = mapInternalStatusFromDiditStatus(diditStatus, providerSessionId);
+
+            // Cambio 3 (frente P1 idempotencia, 2026-06-20): observabilidad
+            // de transiciones backwards. Mantiene la politica "ultimo-evento-
+            // gana" (sobreescribe igualmente abajo), solo logguea WARN si
+            // detecta una transicion no-monotonica (ej: APPROVED -> REJECTED,
+            // APPROVED -> PENDING, REJECTED -> PENDING). Util para detectar
+            // webhooks out-of-order o intentos de revertir decisiones finales.
+            String previousInternal = s.getKycStatus();
+            if (isBackwardsTransition(previousInternal, internalStatus)) {
+                log.warn("[KYC] backwards transition detected: session_id={} user_id={} session_type={} from={} to={} provider_event_id={}",
+                        providerSessionId, s.getUserId(), s.getSessionType(),
+                        previousInternal, internalStatus, providerEventId);
+            }
 
             // provider_status: literal case-sensitive de Didit (sin tocar).
             s.setProviderStatus(diditStatus);
@@ -578,7 +605,19 @@ public class KycSessionService {
             ev.setProcessingError(truncate(ex.getMessage(), 500));
         }
 
-        kycWebhookEventRepository.save(ev);
+        // Cambio 1 (frente P1 idempotencia, 2026-06-20): catch defensivo de
+        // DataIntegrityViolationException por si una race condition (dos
+        // webhooks identicos llegan simultaneos, ambos pasan el check de
+        // idempotencia, primero commitea y segundo viola UNIQUE al guardar)
+        // se materializa. El @Transactional del metodo hace rollback de los
+        // s.set*/u.set* del segundo, asi que cero side-effects duplicados;
+        // aqui solo absorbemos la excepcion para no devolver 500 al cliente.
+        try {
+            kycWebhookEventRepository.save(ev);
+        } catch (DataIntegrityViolationException dup) {
+            log.info("[KYC] duplicate webhook ignored (race): provider=DIDIT provider_event_id={}",
+                    providerEventId);
+        }
         return true;
     }
 
@@ -611,9 +650,11 @@ public class KycSessionService {
         rejected.setSignatureValid(false);
         // Mejor esfuerzo para enriquecer la auditoria; si el body no parsea
         // o el rechazo es por timestamp, dejamos los campos opcionales a null.
+        String capturedEventId = null;
         try {
             JSONObject j = new JSONObject(rawBody);
-            rejected.setProviderEventId(extractDiditEventId(j));
+            capturedEventId = extractDiditEventId(j);
+            rejected.setProviderEventId(capturedEventId);
             rejected.setProviderSessionId(extractDiditSessionId(j));
             rejected.setEventType(extractDiditEventType(j));
         } catch (Exception ignore) {
@@ -622,7 +663,72 @@ public class KycSessionService {
         rejected.setProcessed(false);
         rejected.setProcessedAt(LocalDateTime.now());
         rejected.setProcessingError(errorTag);
-        kycWebhookEventRepository.save(rejected);
+        // Cambio 1 (frente P1 idempotencia, 2026-06-20): catch defensivo de
+        // DataIntegrityViolationException. Si Didit reenvia un webhook con
+        // firma rota (mismo event_id ya rechazado en BD), el segundo save
+        // violaria UNIQUE (provider, provider_event_id). Absorber para no
+        // propagar 500 al cliente y mantener el comportamiento estable.
+        try {
+            kycWebhookEventRepository.save(rejected);
+        } catch (DataIntegrityViolationException dup) {
+            log.info("[KYC] duplicate webhook rejection ignored: provider=DIDIT provider_event_id={} errorTag={}",
+                    capturedEventId, errorTag);
+        }
+    }
+
+    /**
+     * Cambio 2 (frente P1 idempotencia, 2026-06-20): cuando Didit envia un
+     * webhook sin {@code event_id} explicito, derivamos un identificador
+     * deterministico del raw body via SHA-256 (hex) con prefijo
+     * {@code synth_}. Asi la UNIQUE constraint
+     * {@code (provider, provider_event_id)} tambien aplica a estos eventos.
+     * Truncado a 150 chars (limite de la columna) — el hash hex de 64 chars
+     * mas el prefijo cabe sin truncar.
+     *
+     * Package-private para test directo.
+     */
+    String deriveSyntheticEventId(String rawBody) {
+        if (rawBody == null) return null;
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest(rawBody.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(64);
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return "synth_" + hex.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            // SHA-256 es estandar en toda JVM; si fallara aqui es problema
+            // serio. Devolvemos null y aceptamos que este evento no
+            // deduplica (es la semantica previa al cambio).
+            log.warn("[KYC] SHA-256 unavailable, synthetic event_id not generated", ex);
+            return null;
+        }
+    }
+
+    /**
+     * Cambio 3 (frente P1 idempotencia, 2026-06-20): detecta transiciones
+     * "backwards" entre estados internos de KYC. Util para observabilidad
+     * (log WARN) cuando Didit envia eventos out-of-order o intentos de
+     * revertir una decision terminal. NO bloquea la transicion: solo
+     * informa. La politica de negocio sigue siendo "ultimo-evento-gana".
+     *
+     * Transicion backwards = desde un estado terminal (APPROVED/REJECTED) a
+     * cualquier otro estado distinto, O desde REJECTED a APPROVED (revert
+     * positivo tambien es sospechoso). Transiciones desde NULL o PENDING
+     * son normales (no son backwards).
+     *
+     * Package-private para test directo.
+     */
+    boolean isBackwardsTransition(String previousInternal, String newInternal) {
+        if (previousInternal == null || previousInternal.isBlank()) return false;
+        if (newInternal == null || newInternal.isBlank()) return false;
+        if (previousInternal.equals(newInternal)) return false;
+        boolean prevTerminal = Constants.VerificationStatuses.APPROVED.equals(previousInternal)
+                || Constants.VerificationStatuses.REJECTED.equals(previousInternal);
+        // Si el anterior NO era terminal, cualquier transicion es legitima
+        // (de PENDING a APPROVED/REJECTED/IN_PROGRESS, etc.).
+        return prevTerminal;
     }
 
     /**
