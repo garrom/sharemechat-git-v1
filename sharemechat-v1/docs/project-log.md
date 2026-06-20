@@ -8,6 +8,21 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-20 — Nivelación TEST a HEAD del megafrente AUDIT (commit `e49a6a1`) + P21 también CERRADA en TEST
+
+Tras el cierre del megafrente AUDIT (entrada inmediatamente debajo) se nivela TEST al mismo HEAD: backend `e49a6a1` desplegado al EC2 TEST (JAR previo `f48d3a1` del sub-frente gate WS videochat respaldado como `*.bak.pre-nivel-megafrente-20260620-222049`). Sorpresa positiva durante el deploy: TEST ya tiene `sharemechat-test.service` systemd unit activa (PID 13426), distinto a lo que registraba [test.md:56](sharemechat-v1/docs/03-environments/test.md:56) sobre arranque manual con `nohup`. El restart vía `systemctl` salió limpio (28.7s startup, sin migrations Flyway porque TEST ya estaba en v10, sin ERROR). Smokes verdes en TEST incluyendo los endpoints nuevos del sub-frente A (`GET /api/kyc/sessions/me/latest` → 401 sin auth) y sub-frente B (`POST /api/admin/review/{id}?action=REPEAT` → 401 sin auth). Frontend BOTH desplegado (`main.6cf34480.js` admin + `main.ee51477a.js` product, mismos bundles que AUDIT), drift severity **OK** en ambos surfaces (3 commits iguales en `e49a6a1`).
+
+Aprovechando el toque a TEST se cierra de forma oportunista la **deuda P21**: `KYC_DIDIT_API_KEY` vivía en `/opt/sharemechat/config.env` desde el frente Didit cliente del 14-jun por desviación histórica del refactor 2026-05-27. Movida atómica a `/opt/sharemechat/secrets.env` con `grep | tee -a` + `sed -i` ejecutados dentro del propio EC2 (cero bytes sensibles tocaron stdout local, técnica consistente con la política [`known-debt.md:782`](sharemechat-v1/docs/04-operations/known-debt.md:782)). Backups `config.env.bak.pre-p21-test-20260620-222434` y `secrets.env.bak.pre-p21-test-20260620-222434` conservados. Verificación: `config.env` count 0, `secrets.env` count 1, perms intactos (`config.env` 644 root:root, `secrets.env` 600 ec2-user:ec2-user — la asimetría de propietario sigue documentada en [`known-debt.md:743`](sharemechat-v1/docs/04-operations/known-debt.md:743) como deuda menor a normalizar si se decide unificar). Restart vía systemctl, 8 `KYC_DIDIT_*` cargadas en `/proc/<PID>/environ` (TEST conserva el `KYC_DIDIT_CALLBACK_URL` legacy frente a las 7 de AUDIT, esperado). Smoke webhook firma falsa devuelve 401, confirmando que la verificación HMAC sigue activa con el `KYC_DIDIT_API_SECRET` cargado desde su nueva ubicación.
+
+**P21 CERRADA en los dos entornos** (AUDIT desde la inyección inicial del megafrente, TEST con esta nivelación). Manifest TEST actualizado a `e49a6a1` en los 3 bloques (backend + frontend_admin + frontend_product) por los propios scripts.
+
+**Estado final entornos tras nivelación**:
+- **TEST**: backend HEAD `e49a6a1`, schema v10, Didit REAL, secrets correctamente repartidos, `PRODUCT_REGISTRATION_*_ENABLED=false`, `PRODUCT_ACCESS_MODE=OPEN`.
+- **AUDIT**: idéntico HEAD `e49a6a1` desde el cierre del megafrente (encima). EC2+RDS quedan pendientes de apagado manual por el operador.
+- **PROD**: intacto.
+
+---
+
 ## 2026-06-20 — Megafrente AUDIT cerrado: Activación Didit + P15 + UX modelo (sub-frente A) + REPEAT (sub-frente B) + runbook didit-setup creado
 
 Cierre del megafrente del día que integra cuatro líneas de trabajo entrelazadas sobre AUDIT, todas validadas E2E con usuarios de prueba reales y un único commit consolidado.
@@ -32,7 +47,7 @@ Cleanup BD AUDIT: **0 DELETE**. 3 users de prueba + 5 kyc_sessions + 17 webhooks
 **Deudas actualizadas**:
 - **P10 CERRADA en AUDIT** (`PRODUCT_ACCESS_MODE=OPEN` ya estaba, no requirió acción).
 - **P15 CERRADA** (3 categorías email tras admin review).
-- **P21 CERRADA en AUDIT** (`KYC_DIDIT_API_KEY` en `secrets.env` correctamente desde el día 1). En TEST sigue en `config.env` por historia, registrada como deuda menor a mover en próxima ventana de mantenimiento.
+- **P21 CERRADA en AUDIT** (`KYC_DIDIT_API_KEY` en `secrets.env` correctamente desde el día 1). En TEST también CERRADA inmediatamente después al nivelar TEST a este HEAD (ver entrada de bitácora justo encima de esta).
 - **P19 PENDIENTE** — drift documental `config.env` vs `.env` (`access-and-tooling.md` aún describe esquema mono-fichero pre-refactor).
 - **P20 PENDIENTE** — `secrets.env` como concepto no documentado en docs estables (solo en `known-debt.md` histórico).
 - **P22 PENDIENTE** — no hay runbook genérico de alta de vendor (cuando llegue Sightengine se puede generalizar `didit-setup.md`).
