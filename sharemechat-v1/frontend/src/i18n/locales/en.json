@@ -1402,7 +1402,13 @@
       "panelTitle": "We're reviewing your profile",
       "panelBody": "We've received all the information we need. The team is carefully looking at your application. As soon as we finish the review, you'll receive an email with the answer.",
       "footerTitle": "What happens next",
-      "footerSubtitle": "We'll email you as soon as the review is complete. In the meantime, you don't need to do anything else."
+      "footerSubtitle": "We'll email you as soon as the review is complete. In the meantime, you don't need to do anything else.",
+      "pillCompactAwaitingReview": "Awaiting review"
+    },
+    "kycInProgress": {
+      "heroTitle": "Verification in progress",
+      "heroLead": "Waiting for the identity provider's resolution. This may take a few minutes.",
+      "refreshAction": "I'm done, refresh"
     },
     "kyc": {
       "activeMethod": "Active KYC method:",
@@ -2367,7 +2373,8 @@
         "statusUpdated": "Status updated"
       },
       "confirmations": {
-        "rejectVerification": "Do you want to reject this model's verification?\nThis action is considered final in the current flow."
+        "rejectVerification": "Do you want to reject this model's verification?\nThis action is considered final in the current flow.",
+        "repeatVerification": "Ask the model to repeat the verification?\nThey'll receive an email to restart the process and the previous verification will be cancelled."
       },
       "descriptions": {
         "kycModeChangeNote": "Change from Admin UI to {{mode}}",
@@ -2382,6 +2389,7 @@
         "approveTooltipDisabled": "Validate the three documents first",
         "approveTooltipEnabled": "Approve model",
         "promoteToModelTooltip": "KYC verification completed. Promote the role to MODEL and activate the account.",
+        "repeatTooltip": "Ask the model to repeat the verification. Cancels the previous session and sends an email.",
         "openDocumentTooltip": "Open document",
         "documentNotAvailableTooltip": "Not available",
         "markAsValidatedTooltip": "Mark as validated",
@@ -2405,7 +2413,8 @@
         "veriffLegacyWarning": "Legacy VERIFF mode detected in DB. Pick MANUAL or DIDIT and save to migrate."
       },
       "actions": {
-        "promoteToModel": "Promote to MODEL"
+        "promoteToModel": "Promote to MODEL",
+        "repeat": "Repeat"
       },
       "filters": {
         "statusActive": "Active"

@@ -1402,7 +1402,13 @@
       "panelTitle": "Estamos revisando tu perfil",
       "panelBody": "Hemos recibido toda la información necesaria. El equipo está estudiando tu solicitud con atención. En cuanto terminemos la revisión, recibirás un email con la respuesta.",
       "footerTitle": "Qué ocurre ahora",
-      "footerSubtitle": "Te avisaremos por email en cuanto la revisión esté terminada. Mientras tanto, no necesitas hacer nada más."
+      "footerSubtitle": "Te avisaremos por email en cuanto la revisión esté terminada. Mientras tanto, no necesitas hacer nada más.",
+      "pillCompactAwaitingReview": "Esperando revisión"
+    },
+    "kycInProgress": {
+      "heroTitle": "Verificación en proceso",
+      "heroLead": "Estamos esperando la resolución del proveedor de identidad. Esto puede tardar unos minutos.",
+      "refreshAction": "He completado, actualizar"
     },
     "kyc": {
       "activeMethod": "Método KYC activo:",
@@ -2367,7 +2373,8 @@
         "statusUpdated": "Estado actualizado"
       },
       "confirmations": {
-        "rejectVerification": "¿Quieres rechazar la verificación de esta modelo?\nEsta acción se considera definitiva en el flujo actual."
+        "rejectVerification": "¿Quieres rechazar la verificación de esta modelo?\nEsta acción se considera definitiva en el flujo actual.",
+        "repeatVerification": "¿Pedir al modelo repetir la verificación?\nSe le enviará un email para reiniciar el proceso y la verificación anterior quedará cancelada."
       },
       "descriptions": {
         "kycModeChangeNote": "Cambio desde Admin UI a {{mode}}",
@@ -2382,6 +2389,7 @@
         "approveTooltipDisabled": "Valida los 3 documentos primero",
         "approveTooltipEnabled": "Aprobar modelo",
         "promoteToModelTooltip": "Verificación KYC completada. Promociona el rol a MODEL y activa la cuenta.",
+        "repeatTooltip": "Pedir al modelo que repita la verificación. Cancela la sesión anterior y envía un email.",
         "openDocumentTooltip": "Abrir documento",
         "documentNotAvailableTooltip": "No disponible",
         "markAsValidatedTooltip": "Marcar como validado",
@@ -2405,7 +2413,8 @@
         "veriffLegacyWarning": "Modo VERIFF legacy detectado en BD. Selecciona MANUAL o DIDIT y guarda para migrar."
       },
       "actions": {
-        "promoteToModel": "Promover a MODEL"
+        "promoteToModel": "Promover a MODEL",
+        "repeat": "Repetir"
       },
       "filters": {
         "statusActive": "Activas"

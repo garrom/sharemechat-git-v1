@@ -18,11 +18,6 @@ import {
   DashboardHeroKicker,
   DashboardHeroTitle,
   DashboardHeroLead,
-  DashboardStatusRow,
-  DashboardStatusCard,
-  DashboardStatusLabel,
-  DashboardStatusValue,
-  DashboardStatusText,
   DashboardStatusPill,
   DashboardGrid,
   DashboardPanel,
@@ -40,12 +35,17 @@ import {
   DashboardActions,
   DashboardPrimaryButton,
   DashboardSecondaryButton,
-  DashboardFooterCard,
-  DashboardFooterList,
-  DashboardFooterItem,
-  DashboardFooterItemTitle,
-  DashboardFooterItemBody,
 } from '../../styles/pages-styles/DashboardUserModelStyles';
+
+// Sub-bucket sub-frente A (2026-06-20): sesion KYC en curso (kyc_status
+// intermedio o terminal sin promocion). Estos kyc_status indican que el
+// modelo ya inicio una sesion Didit y aun no es terminal; el boton
+// "Iniciar verificacion" debe ocultarse para evitar re-intentos.
+// PENDING aqui = sesion creada en BD pero sin webhook terminal todavia
+// (Didit envia "Not Started" -> "In Progress" -> "In Review" antes del
+// terminal "Approved"/"Declined"). Solo APPROVED y REJECTED son terminales
+// desde la vista del backend.
+const KYC_SESSION_IN_PROGRESS_STATUSES = new Set(['PENDING']);
 
 const DashboardUserModel = () => {
   const history = useHistory();
@@ -54,7 +54,6 @@ const DashboardUserModel = () => {
   const t = (key, options) => i18n.t(key, options);
 
   const [userName, setUserName] = useState('');
-  const [info, setInfo] = useState('');
 
   const [contractCurrent, setContractCurrent] = useState(null);
   const [contractAccepted, setContractAccepted] = useState(null);
@@ -71,6 +70,10 @@ const DashboardUserModel = () => {
   const [verificationMessage, setVerificationMessage] = useState('');
   const [verificationError, setVerificationError] = useState('');
 
+  // Sub-frente A: ultima sesion KYC del user (GET /api/kyc/sessions/me/latest).
+  // null = sin sesion. {id, sessionType, kycStatus, providerStatus, ...} = sesion existente.
+  const [latestKycSession, setLatestKycSession] = useState(null);
+
   const getVerificationStatusLabel = (status) => {
     const normalizedStatus = String(status || 'PENDING').toUpperCase();
     if (normalizedStatus === 'APPROVED') return t('dashboardUserModel.info.statuses.approved');
@@ -85,20 +88,27 @@ const DashboardUserModel = () => {
     return normalizedMode || t('dashboardUserModel.kyc.notAvailable');
   };
 
-  // Bucket UI: discrimina tres estados visibles del modelo en onboarding.
-  // - 'pre-verif': verificationStatus NULL/PENDING -> UX original (boton iniciar verificacion).
-  // - 'awaiting-admin': verificationStatus APPROVED + role USER -> verificacion completada, esperando promocion del admin.
-  // - 'promoted': role MODEL -> ya es modelo activo, no deberia ver esta pagina (useEffect redirige a /model).
-  const getModelStateBucket = (verificationStatus, role) => {
+  // Bucket UI: discrimina cuatro estados visibles del modelo en onboarding.
+  // - 'pre-verif': verificationStatus NULL/PENDING + sin sesion KYC en curso -> boton iniciar.
+  // - 'kyc-in-progress': sesion KYC con kyc_status intermedio (PENDING tras crear) -> sin boton.
+  // - 'awaiting-admin': verificationStatus APPROVED + role USER -> esperando promocion admin.
+  // - 'promoted': role MODEL -> ya es modelo activo, useEffect redirige a /model.
+  const getModelStateBucket = (verificationStatus, role, latestSession) => {
     const r = String(role || '').toUpperCase();
     const v = String(verificationStatus || '').toUpperCase();
     if (r === 'MODEL') return 'promoted';
     if (v === 'APPROVED') return 'awaiting-admin';
+    if (latestSession
+        && String(latestSession.sessionType || '').toUpperCase() === 'MODEL'
+        && KYC_SESSION_IN_PROGRESS_STATUSES.has(String(latestSession.kycStatus || '').toUpperCase())) {
+      return 'kyc-in-progress';
+    }
     return 'pre-verif';
   };
 
-  const stateBucket = getModelStateBucket(sessionUser?.verificationStatus, sessionUser?.role);
+  const stateBucket = getModelStateBucket(sessionUser?.verificationStatus, sessionUser?.role, latestKycSession);
   const isAwaitingAdmin = stateBucket === 'awaiting-admin';
+  const isKycInProgress = stateBucket === 'kyc-in-progress';
 
   // Redirect cuando el usuario ya es MODEL. El dashboard de modelo activo
   // vive en /model (App.jsx:171, RequireRole role="MODEL").
@@ -118,11 +128,6 @@ const DashboardUserModel = () => {
     }
 
     setUserName(sessionUser.nickname || sessionUser.name || sessionUser.email || t('dashboardUserModel.user.defaultName'));
-    setInfo(
-      t('dashboardUserModel.info.verificationStatus', {
-        status: getVerificationStatusLabel(sessionUser.verificationStatus),
-      })
-    );
   }, [sessionUser, sessionLoading, history]);
 
   useEffect(() => {
@@ -188,6 +193,32 @@ const DashboardUserModel = () => {
       cancelled = true;
     };
   }, [sessionUser, sessionLoading, contractAccepted]);
+
+  // Sub-frente A: fetch latest kyc session al mount. Si 204 -> latestKycSession=null.
+  // Si 200 -> rellena estado y getModelStateBucket podra evaluar 'kyc-in-progress'.
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (!sessionUser) return;
+
+    let cancelled = false;
+
+    const loadLatestKyc = async () => {
+      try {
+        const entry = await apiFetch('/kyc/sessions/me/latest');
+        if (cancelled) return;
+        setLatestKycSession(entry || null);
+      } catch (e) {
+        if (cancelled) return;
+        setLatestKycSession(null);
+      }
+    };
+
+    loadLatestKyc();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionUser, sessionLoading]);
 
   const handleAcceptContract = async () => {
     if (!sessionUser?.emailVerifiedAt) {
@@ -282,6 +313,13 @@ const DashboardUserModel = () => {
     }
   };
 
+  const handleRefreshAfterKyc = () => {
+    // Re-fetch tanto session (via reload) como latest session. La forma mas
+    // simple y robusta es recargar la pagina: re-evalua sessionUser desde
+    // /api/users/me y latestKycSession desde /api/kyc/sessions/me/latest.
+    window.location.reload();
+  };
+
   const displayName = userName || t('dashboardUserModel.user.defaultName');
   const mustAcceptContract = contractAccepted === false;
   const mustVerifyEmail = !sessionUser?.emailVerifiedAt;
@@ -295,6 +333,41 @@ const DashboardUserModel = () => {
       : kycMode === 'MANUAL'
       ? t('dashboardUserModel.kyc.actions.uploadDocumentsManual')
       : t('dashboardUserModel.kyc.actions.updateOrUploadDocuments');
+
+  const heroTitle = isKycInProgress
+    ? t('dashboardUserModel.kycInProgress.heroTitle')
+    : isAwaitingAdmin
+    ? t('dashboardUserModel.awaitingAdmin.heroTitle')
+    : t('dashboardUserModel.title');
+
+  const heroLead = isKycInProgress
+    ? t('dashboardUserModel.kycInProgress.heroLead')
+    : isAwaitingAdmin
+    ? t('dashboardUserModel.awaitingAdmin.heroLead')
+    : (
+        <>
+          {t('dashboardUserModel.footerHint.prefix')}{' '}
+          <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
+        </>
+      );
+
+  const kycPanelTitle = isKycInProgress
+    ? t('dashboardUserModel.kycInProgress.heroTitle')
+    : isAwaitingAdmin
+    ? t('dashboardUserModel.awaitingAdmin.panelTitle')
+    : mainButtonLabel;
+
+  const kycPanelBody = isKycInProgress
+    ? t('dashboardUserModel.kycInProgress.heroLead')
+    : isAwaitingAdmin
+    ? t('dashboardUserModel.awaitingAdmin.panelBody')
+    : t('dashboardUserModel.info.verificationStatus', {
+        status: getVerificationStatusLabel(sessionUser?.verificationStatus),
+      });
+
+  const verificationPillLabel = isAwaitingAdmin
+    ? t('dashboardUserModel.awaitingAdmin.pillCompactAwaitingReview')
+    : getVerificationStatusLabel(sessionUser?.verificationStatus);
 
   if (sessionLoading) {
     return (
@@ -351,21 +424,8 @@ const DashboardUserModel = () => {
             <DashboardUserModelStack>
               <DashboardHeroCard>
                 <DashboardHeroKicker>{displayName}</DashboardHeroKicker>
-                <DashboardHeroTitle>
-                  {isAwaitingAdmin
-                    ? t('dashboardUserModel.awaitingAdmin.heroTitle')
-                    : t('dashboardUserModel.title')}
-                </DashboardHeroTitle>
-                <DashboardHeroLead>
-                  {isAwaitingAdmin ? (
-                    t('dashboardUserModel.awaitingAdmin.heroLead')
-                  ) : (
-                    <>
-                      {t('dashboardUserModel.footerHint.prefix')}{' '}
-                      <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
-                    </>
-                  )}
-                </DashboardHeroLead>
+                <DashboardHeroTitle>{heroTitle}</DashboardHeroTitle>
+                <DashboardHeroLead>{heroLead}</DashboardHeroLead>
 
                 {mustVerifyEmail && (
                   <DashboardInlineNotice>
@@ -389,32 +449,6 @@ const DashboardUserModel = () => {
                 {verificationError && (
                   <DashboardMessage $type="error">{verificationError}</DashboardMessage>
                 )}
-
-                <DashboardStatusRow>
-                  <DashboardStatusCard>
-                    <DashboardStatusLabel>{t('dashboardUserModel.info.verificationStatus', { status: '' }).replace(': ', '')}</DashboardStatusLabel>
-                    <DashboardStatusValue>
-                      <DashboardStatusText>{getVerificationStatusLabel(sessionUser?.verificationStatus)}</DashboardStatusText>
-                      <DashboardStatusPill $status={verificationStatus}>
-                        {getVerificationStatusLabel(sessionUser?.verificationStatus)}
-                      </DashboardStatusPill>
-                    </DashboardStatusValue>
-                  </DashboardStatusCard>
-
-                  <DashboardStatusCard>
-                    <DashboardStatusLabel>{t('dashboardUserModel.kyc.activeMethod').replace(':', '')}</DashboardStatusLabel>
-                    <DashboardStatusValue>
-                      <DashboardStatusText>
-                        {kycMode ? getKycModeLabel(kycMode) : t('dashboardUserModel.kyc.notAvailable')}
-                      </DashboardStatusText>
-                      <DashboardStatusPill $status={contractAccepted === true ? 'APPROVED' : 'PENDING'}>
-                        {contractAccepted === true
-                          ? t('dashboardUserModel.contract.actions.accept')
-                          : t('dashboardUserModel.contract.mustAcceptFirst')}
-                      </DashboardStatusPill>
-                    </DashboardStatusValue>
-                  </DashboardStatusCard>
-                </DashboardStatusRow>
               </DashboardHeroCard>
 
               <DashboardGrid>
@@ -446,6 +480,7 @@ const DashboardUserModel = () => {
                         type="checkbox"
                         checked={confirmChecked}
                         onChange={(e) => setConfirmChecked(e.target.checked)}
+                        disabled={contractAccepted === true}
                       />
                       <span>{t('dashboardUserModel.contract.checkbox')}</span>
                     </DashboardCheckboxRow>
@@ -462,13 +497,7 @@ const DashboardUserModel = () => {
                       </DashboardMessage>
                     )}
 
-                    {contractAccepted === null && contractErr && (
-                      <DashboardMessage $type="error">
-                        {contractErr}
-                      </DashboardMessage>
-                    )}
-
-                    {contractErr && contractAccepted !== null && (
+                    {contractErr && (
                       <DashboardMessage $type="error">
                         {contractErr}
                       </DashboardMessage>
@@ -504,39 +533,33 @@ const DashboardUserModel = () => {
                     <DashboardPanelEyebrow>
                       {isAwaitingAdmin
                         ? t('dashboardUserModel.awaitingAdmin.panelEyebrow')
-                        : t('dashboardUserModel.kyc.activeMethod')}
+                        : t('dashboardUserModel.kyc.activeMethod').replace(':', '')}
                     </DashboardPanelEyebrow>
-                    <DashboardPanelTitle>
-                      {isAwaitingAdmin
-                        ? t('dashboardUserModel.awaitingAdmin.panelTitle')
-                        : mainButtonLabel}
-                    </DashboardPanelTitle>
-                    <DashboardPanelSubtitle>
-                      {isAwaitingAdmin
-                        ? t('dashboardUserModel.awaitingAdmin.panelBody')
-                        : info || t('dashboardUserModel.contract.mustAcceptMessage')}
-                    </DashboardPanelSubtitle>
+                    <DashboardPanelTitle>{kycPanelTitle}</DashboardPanelTitle>
+                    <DashboardPanelSubtitle>{kycPanelBody}</DashboardPanelSubtitle>
                   </DashboardPanelHeader>
 
-                  {!isAwaitingAdmin && (
-                    <DashboardPanelBody>
-                      {kycMode && (
-                        <DashboardMessage>
-                          {t('dashboardUserModel.kyc.activeMethod')} <strong>{getKycModeLabel(kycMode)}</strong>
-                        </DashboardMessage>
-                      )}
+                  <DashboardPanelBody>
+                    <DashboardMessage>
+                      {t('dashboardUserModel.info.verificationStatus', { status: '' }).replace(': ', '')}{' '}
+                      <DashboardStatusPill $status={isAwaitingAdmin ? 'APPROVED' : verificationStatus}>
+                        {verificationPillLabel}
+                      </DashboardStatusPill>
+                    </DashboardMessage>
 
-                      <DashboardHint>
-                        {t('dashboardUserModel.footerHint.prefix')}{' '}
-                        <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
-                      </DashboardHint>
+                    {kycMode && !isAwaitingAdmin && !isKycInProgress && (
+                      <DashboardMessage>
+                        {t('dashboardUserModel.kyc.activeMethod')} <strong>{getKycModeLabel(kycMode)}</strong>
+                      </DashboardMessage>
+                    )}
 
-                      {kycRouteErr && (
-                        <DashboardMessage $type="error">
-                          {kycRouteErr}
-                        </DashboardMessage>
-                      )}
+                    {kycRouteErr && (
+                      <DashboardMessage $type="error">
+                        {kycRouteErr}
+                      </DashboardMessage>
+                    )}
 
+                    {!isAwaitingAdmin && !isKycInProgress && (
                       <DashboardActions>
                         <DashboardPrimaryButton
                           type="button"
@@ -563,51 +586,21 @@ const DashboardUserModel = () => {
                           </DashboardSecondaryButton>
                         )}
                       </DashboardActions>
-                    </DashboardPanelBody>
-                  )}
+                    )}
+
+                    {isKycInProgress && (
+                      <DashboardActions>
+                        <DashboardSecondaryButton
+                          type="button"
+                          onClick={handleRefreshAfterKyc}
+                        >
+                          {t('dashboardUserModel.kycInProgress.refreshAction')}
+                        </DashboardSecondaryButton>
+                      </DashboardActions>
+                    )}
+                  </DashboardPanelBody>
                 </DashboardPanel>
               </DashboardGrid>
-
-              <DashboardFooterCard>
-                <DashboardPanelHeader>
-                  <DashboardPanelTitle>
-                    {isAwaitingAdmin ? (
-                      t('dashboardUserModel.awaitingAdmin.footerTitle')
-                    ) : (
-                      <>
-                        {t('dashboardUserModel.footerHint.prefix')}{' '}
-                        <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
-                      </>
-                    )}
-                  </DashboardPanelTitle>
-                  <DashboardPanelSubtitle>
-                    {isAwaitingAdmin
-                      ? t('dashboardUserModel.awaitingAdmin.footerSubtitle')
-                      : info || t('dashboardUserModel.contract.mustAcceptMessage')}
-                  </DashboardPanelSubtitle>
-                </DashboardPanelHeader>
-
-                <DashboardFooterList>
-                  <DashboardFooterItem>
-                    <DashboardFooterItemTitle>{t('dashboardUserModel.contract.viewPdf')}</DashboardFooterItemTitle>
-                    <DashboardFooterItemBody>
-                      {t('dashboardUserModel.contract.checkbox')}
-                    </DashboardFooterItemBody>
-                  </DashboardFooterItem>
-                  <DashboardFooterItem>
-                    <DashboardFooterItemTitle>{t('dashboardUserModel.kyc.activeMethod').replace(':', '')}</DashboardFooterItemTitle>
-                    <DashboardFooterItemBody>
-                      {kycMode ? getKycModeLabel(kycMode) : t('dashboardUserModel.kyc.notAvailable')}
-                    </DashboardFooterItemBody>
-                  </DashboardFooterItem>
-                  <DashboardFooterItem>
-                    <DashboardFooterItemTitle>{t('dashboardUserModel.info.verificationStatus', { status: '' }).replace(': ', '')}</DashboardFooterItemTitle>
-                    <DashboardFooterItemBody>
-                      {getVerificationStatusLabel(sessionUser?.verificationStatus)}
-                    </DashboardFooterItemBody>
-                  </DashboardFooterItem>
-                </DashboardFooterList>
-              </DashboardFooterCard>
             </DashboardUserModelStack>
           </DashboardUserModelPage>
         </DashboardUserModelShell>

@@ -172,6 +172,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/model/start").hasRole("USER")
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/client/start").hasAnyRole("USER", "CLIENT")
                         .requestMatchers(HttpMethod.POST, "/api/kyc/didit/webhook").permitAll()
+                        // Sub-frente A (2026-06-20): consulta de la última sesión KYC
+                        // del user autenticado para gate del botón "Iniciar verificación"
+                        // en DashboardUserModel. USER y CLIENT pueden tener sesiones
+                        // (CLIENT por Age Estimation, USER por flujo modelo en curso).
+                        .requestMatchers(HttpMethod.GET, "/api/kyc/sessions/me/latest").hasAnyRole("USER", "CLIENT")
 
                         // Webhook entrante de moderacion visual del streaming (ADR-036 / ADR-037).
                         // Firma HMAC se valida en el controller (no en filter chain), patron

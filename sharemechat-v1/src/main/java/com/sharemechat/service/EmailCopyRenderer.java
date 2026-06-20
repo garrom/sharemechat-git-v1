@@ -488,6 +488,88 @@ public class EmailCopyRenderer {
         );
     }
 
+    /**
+     * Email al modelo tras decisión admin en AdminService.reviewModel
+     * (cierre P15). Tono neutral pero cálido, coherente con el bucket
+     * awaiting-admin documentado en didit-setup.md. action ∈ APPROVE/REJECT/REPEAT.
+     * PENDING NO emite email (estado intermedio).
+     */
+    public EmailContent renderModelReviewDecision(User user, String action) {
+        String locale = localeResolver.resolve(user);
+        String displayName = htmlEscape(safeLabel(user));
+        boolean approve = "APPROVE".equalsIgnoreCase(action);
+        boolean repeat = "REPEAT".equalsIgnoreCase(action);
+
+        if (repeat) {
+            if ("es".equals(locale)) {
+                return new EmailContent(
+                        "Necesitamos repetir tu verificación",
+                        wrapWithLogo("""
+                                <p>Hola %s,</p>
+                                <p>Algo no ha ido bien en la verificación de tu cuenta en <b>SharemeChat</b>. Por favor, inicia sesión y vuelve a iniciar el proceso de verificación de identidad desde tu panel.</p>
+                                <p>Si tienes cualquier duda, contacta con nuestro equipo de soporte y te ayudamos.</p>
+                                <p>Gracias,<br>El equipo de SharemeChat</p>
+                                """.formatted(displayName))
+                );
+            }
+            return new EmailContent(
+                    "We need to repeat your verification",
+                    wrapWithLogo("""
+                            <p>Hello %s,</p>
+                            <p>Something didn't go right with your <b>SharemeChat</b> account verification. Please log in and start the identity verification process again from your dashboard.</p>
+                            <p>If you have any questions, contact our support team and we'll help.</p>
+                            <p>Thanks,<br>The SharemeChat team</p>
+                            """.formatted(displayName))
+            );
+        }
+
+        if (approve) {
+            if ("es".equals(locale)) {
+                return new EmailContent(
+                        "Tu cuenta de modelo ha sido aprobada",
+                        wrapWithLogo("""
+                                <p>Hola %s,</p>
+                                <p>Hemos revisado tu verificación y tu cuenta de modelo en <b>SharemeChat</b> ha sido aprobada.</p>
+                                <p>Ya puedes acceder a tu panel y empezar a operar en la plataforma.</p>
+                                <p>Si tienes cualquier duda, escríbenos y te ayudamos.</p>
+                                <p>Gracias por unirte a SharemeChat,<br>El equipo de SharemeChat</p>
+                                """.formatted(displayName))
+                );
+            }
+            return new EmailContent(
+                    "Your model account has been approved",
+                    wrapWithLogo("""
+                            <p>Hello %s,</p>
+                            <p>We've reviewed your verification and your <b>SharemeChat</b> model account has been approved.</p>
+                            <p>You can now access your dashboard and start operating on the platform.</p>
+                            <p>If you have any questions, get in touch and we'll help.</p>
+                            <p>Thanks for joining SharemeChat,<br>The SharemeChat team</p>
+                            """.formatted(displayName))
+            );
+        }
+
+        if ("es".equals(locale)) {
+            return new EmailContent(
+                    "Tu verificación no ha sido aprobada",
+                    wrapWithLogo("""
+                            <p>Hola %s,</p>
+                            <p>Hemos revisado tu solicitud para operar como modelo en <b>SharemeChat</b> y, tras evaluarla, no ha sido aprobada en esta ocasión.</p>
+                            <p>Si crees que se trata de un error o quieres entender mejor la decisión, contacta con nuestro equipo de soporte y la revisaremos contigo.</p>
+                            <p>Gracias por tu interés,<br>El equipo de SharemeChat</p>
+                            """.formatted(displayName))
+            );
+        }
+        return new EmailContent(
+                "Your verification has not been approved",
+                wrapWithLogo("""
+                        <p>Hello %s,</p>
+                        <p>We've reviewed your application to operate as a model on <b>SharemeChat</b> and, after evaluating it, it has not been approved on this occasion.</p>
+                        <p>If you believe this is a mistake or want to better understand the decision, please contact our support team and we'll review it with you.</p>
+                        <p>Thanks for your interest,<br>The SharemeChat team</p>
+                        """.formatted(displayName))
+        );
+    }
+
     private String safeLabel(User user) {
         if (user != null && user.getNickname() != null && !user.getNickname().isBlank()) {
             return user.getNickname().trim();

@@ -8,6 +8,54 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-20 — Megafrente AUDIT cerrado: Activación Didit + P15 + UX modelo (sub-frente A) + REPEAT (sub-frente B) + runbook didit-setup creado
+
+Cierre del megafrente del día que integra cuatro líneas de trabajo entrelazadas sobre AUDIT, todas validadas E2E con usuarios de prueba reales y un único commit consolidado.
+
+**1. Activación Didit en AUDIT**. Backend HEAD `5419c80` desplegado al EC2 AUDIT desde el JAR base del 8-jun (`1cb43a0`, 12 días de drift). Flyway aplicó automáticamente V8 (`rename model_kyc_sessions to kyc_sessions`) + V9 (`add client_kyc_fields`) + V10 (`add stream_moderation_schema`) en 1.26s al primer arranque. Schema AUDIT pasó V7→V10. 7 env vars `KYC_DIDIT_*` inyectadas siguiendo el esquema dual del refactor 2026-05-27 ([known-debt.md:696-722](sharemechat-v1/docs/04-operations/known-debt.md:696)): 5 no-sensibles en `/opt/sharemechat/config.env` (0644 root:root) y 2 sensibles (`API_KEY`, `API_SECRET`) en `/opt/sharemechat/secrets.env` (0600 root:root). UUIDs de workflows y `KYC_DIDIT_API_KEY` reusados del workspace sandbox compartido con TEST vía pipeline `ssh test-backend | ssh audit-backend tee` (técnica T1 documentada [incident-notes.md:2196](sharemechat-v1/docs/04-operations/incident-notes.md:2196)): cero bytes sensibles tocaron chat, argv local ni filesystem local. `KYC_DIDIT_API_SECRET` AUDIT específico (cada destino webhook genera su propio `secret_shared_key`) inyectado vía heredoc T2 directo a `sudo tee -a` ([known-debt.md:712](sharemechat-v1/docs/04-operations/known-debt.md:712)). Destino webhook `shareme-audit-kyc` creado por el operador en consola Didit, asociado a ambos workflows, suscrito a `status.updated`. `kyc_provider_config` bootstrap a DIDIT automático al arrancar. Manifest backend AUDIT actualizado en dos pasadas con `update-manifest-backend.ps1 -RemoteVerify` (drift check del deploy-frontend abortó CRITICAL la primera vez por manifest stale post-B.3 — lección operativa: ejecutar update-manifest **inmediatamente** tras scp+restart, como dice CLAUDE.md).
+
+**2. P15 cerrada — email modelo tras decisión admin**. `AdminService.reviewModel` ahora envía email best-effort en APPROVE/REJECT/REPEAT (PENDING no emite, estado intermedio). 3 plantillas en `EmailCopyRenderer.renderModelReviewDecision`, ES + EN, tono neutral pero cálido coherente con el copy del bucket awaiting-admin. `EmailMessage.Category` extendida con 3 valores (`MODEL_REVIEW_APPROVED/REJECTED/REPEAT`). Priority `BEST_EFFORT` con try/catch en el caller: si el envío falla, log WARN `[MODEL-REVIEW]` y NO se hace rollback de la decisión persistida.
+
+**3. Sub-frente A — UX dashboard-user-model + corrección bug botón "Iniciar verificación"**. Operador detectó durante validación E2E del modelo: (a) tarjetas mal organizadas (estado verificación + método KYC mezclados arriba con contrato); (b) pill "Aprobado" en bucket awaiting-admin confundía con "ya soy MODEL"; (c) botón "Iniciar verificación" seguía visible si el modelo abandonaba el flujo Didit a medias (`users.verification_status=PENDING` no cambia hasta webhook terminal). Solución: nuevo endpoint `GET /api/kyc/sessions/me/latest` (`KycProviderController` + `LatestKycSessionDTO` + repo `findTopByUserIdOrderByIdDesc` + 5 tests Mockito), consumido por `DashboardUserModel.jsx` al mount. Helper `getModelStateBucket` extendido con sub-bucket `kyc-in-progress` (latest session MODEL con `kyc_status=PENDING` → oculta botón principal + muestra "Verificación en proceso" + botón secundario "He completado, actualizar" que recarga). Pill compacta "Esperando revisión" / "Awaiting review" en bucket awaiting-admin. Layout dashboard reorganizado: hero limpio (sin StatusRow), grid Contrato→KYC en orden lógico, eliminada FooterCard duplicada. Solución backend en lugar de sessionStorage (decisión del operador: Opción C, más limpia y robusta cross-device).
+
+**4. Sub-frente B — REPEAT action en AdminModelsPanel**. Admin puede pedir al modelo que repita la verificación. `AdminService.reviewModel` acepta `action=REPEAT`: reset `verification_status=NULL`, role queda USER, busca la última `kyc_session MODEL` del user (`findTopByUserIdAndSessionTypeOrderByIdDesc` ya existente) y la marca `kyc_status="CANCELLED"`. Throw si user ya promovido a MODEL. Email REPEAT integrado en el mismo bloque best-effort de P15. Frontend `AdminModelsPanel.jsx`: USER+APPROVED ahora muestra `[Promover a MODEL] [Repetir] [Rechazar]`; USER+REJECTED muestra `[Repetir]` (antes "Rechazada permanentemente"); MODEL+APPROVED sin cambios. Confirmación al admin antes del fetch. El frontend del modelo (`DashboardUserModel.jsx`) trata automáticamente `kyc_status=CANCELLED` como terminal (no está en `KYC_SESSION_IN_PROGRESS_STATUSES`), por lo que tras REPEAT el dashboard cae limpio en `pre-verif` y el botón "Iniciar verificación" reaparece — sin cambios adicionales en el frontend modelo.
+
+**Validación E2E completa en AUDIT** (con `PRODUCT_REGISTRATION_MODEL_ENABLED` abierto temporalmente, revertido a `false` al cierre):
+- `users.id=22 demo+trial@sharemechat.com` (FORM_CLIENT, USER, `client_kyc_status=APPROVED`): flujo cliente Didit completo Activar cámara → KYC Age Estimation → APPROVED → matching habilitado.
+- `users.id=28 demo+modeldidit2@sharemechat.com` (FORM_MODEL, **MODEL**, `verification_status=APPROVED`): flujo modelo APPROVED → admin promueve a MODEL → email "Tu cuenta de modelo ha sido aprobada" recibido. Cierre P15 APPROVED validado.
+- `users.id=27 demo+modeldidit1@sharemechat.com` (FORM_MODEL, USER, `verification_status=APPROVED`): flujo modelo APPROVED (kyc_session id=2 PENDING/In Review residual + id=3 CANCELLED del REPEAT del admin + id=5 APPROVED del segundo intento). Admin REPEAT → email "Necesitamos repetir tu verificación" recibido → modelo re-inicia verificación → segundo APPROVED. Cierre P15 REPEAT + sub-frente B ciclo re-entrante validados.
+
+Cleanup BD AUDIT: **0 DELETE**. 3 users de prueba + 5 kyc_sessions + 17 webhooks DIDIT conservados como evidencia viva (criterio "no reusar users" coherente con cierres anteriores).
+
+**Tests**. Baseline 188 (cierre P1) → 198 (+10). +5 en `KycProviderControllerLatestSessionTest` (sub-frente A endpoint), +5 en `AdminServiceReviewModelTest` (P15 APPROVE/REJECT/PENDING/REPEAT + email failure no rollback).
+
+**Deudas actualizadas**:
+- **P10 CERRADA en AUDIT** (`PRODUCT_ACCESS_MODE=OPEN` ya estaba, no requirió acción).
+- **P15 CERRADA** (3 categorías email tras admin review).
+- **P21 CERRADA en AUDIT** (`KYC_DIDIT_API_KEY` en `secrets.env` correctamente desde el día 1). En TEST sigue en `config.env` por historia, registrada como deuda menor a mover en próxima ventana de mantenimiento.
+- **P19 PENDIENTE** — drift documental `config.env` vs `.env` (`access-and-tooling.md` aún describe esquema mono-fichero pre-refactor).
+- **P20 PENDIENTE** — `secrets.env` como concepto no documentado en docs estables (solo en `known-debt.md` histórico).
+- **P22 PENDIENTE** — no hay runbook genérico de alta de vendor (cuando llegue Sightengine se puede generalizar `didit-setup.md`).
+- **P23 PENDIENTE** — no hay backup central de secretos fuera del EC2 (SPOF operativo).
+- **P16 PENDIENTE** — notificaciones email cliente tras eventos negocio (KYC APPROVED/REJECTED, primer pago, recarga). Frente aparte.
+- **P12 PENDIENTE** — Legal.jsx coordinación legal post-Veriff.
+- **P17 PENDIENTE** — gate `/messages` WS.
+- **P2 PENDIENTE** — X-Signature-V2 variante moderna Didit.
+- **P18 PENDIENTE** — refactor enum EventStatus.
+
+**Runbook nuevo**: [`docs/04-operations/runbooks/didit-setup.md`](sharemechat-v1/docs/04-operations/runbooks/didit-setup.md) formaliza el procedimiento de activación Didit por entorno (pre-requisitos, pasos consola Didit, pasos backend con reparto dual config/secrets, verificación post-config con regla anti-transcripción, validación E2E, tabla histórica de activaciones, anexos de variables, desactivación y rollback). Fila AUDIT registrada en la tabla histórica.
+
+**Estado final entornos**:
+- **AUDIT**: backend HEAD desplegado, schema BD V10, modo Didit REAL, `PRODUCT_REGISTRATION_MODEL_ENABLED=false` (revertido al cierre). EC2 + RDS quedan a disposición del operador para apagar manualmente (IAM `sharemechat-deployer` bloquea `ec2:StopInstances` y `rds:StopDBInstance`).
+- **TEST**: backend HEAD `fb8744e` (gate WS sub-frente videochat) sin redeploy hoy. Encendido por el operador durante la sesión para permitir T1 pipe SSH→SSH al inyectar credenciales reusables en AUDIT.
+- **PROD**: intacto, sin tocar. Próxima activación Didit PROD requerirá workspace producción separado + DPA firmado con Didit (regenerar TODOS los IDs/keys; sandbox no se reutiliza).
+
+Cadena commits cerrada hoy: `3680f2f` (P1 hardening, mañana) → `5419c80` (chore test P1 frente) → `d84997d` (deploy-frontend default both, 2026-06-19) → commit final del megafrente AUDIT (este).
+
+Próximos frentes en cola: cierre P16 (notificaciones email cliente), P12 (Legal.jsx), P17 (gate /messages WS), gaps documentales P19-P23 (frente documental aparte), Sightengine (moderación IA del streaming), activación Didit PROD.
+
+---
+
 ## 2026-06-20 — Frente P1 (idempotencia webhook Didit) cerrado: hardening defensivo + 9 tests E2E
 
 Cierre de la deuda **P1** registrada al cierre del frente Didit cliente (2026-06-14) como **bloqueante pre-go-live PROD**. El diagnóstico read-only previo reveló que la idempotencia funcional YA estaba implementada: UNIQUE constraint `(provider, provider_event_id)` en `kyc_webhook_events` desde [V1__baseline.sql:308](sharemechat-v1/src/main/resources/db/migration/V1__baseline.sql:308), check `findByProviderAndProviderEventId` en `processDiditWebhook` antes de procesar, y `@Transactional` con rollback automático en race. La deuda era menos crítica de lo que sugería el nombre. Lo que faltaba era **hardening defensivo + cobertura de tests del flujo end-to-end**.

@@ -18,4 +18,10 @@ public interface KycSessionRepository extends JpaRepository<KycSession, Long> {
 
     Optional<KycSession> findTopByUserIdAndSessionTypeOrderByIdDesc(
             Long userId, String sessionType);
+
+    // Sub-frente A (2026-06-20): última sesión del user sin filtro adicional.
+    // Consumido por GET /api/kyc/sessions/me/latest para gate del botón
+    // "Iniciar verificación" en DashboardUserModel cuando hay sesión en curso
+    // (kyc_status intermedio) pero users.verification_status aún PENDING.
+    Optional<KycSession> findTopByUserIdOrderByIdDesc(Long userId);
 }

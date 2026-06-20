@@ -47,7 +47,10 @@ public record EmailMessage(
         // nuevo con esa direccion. Indistinguible para el remitente
         // del registro respecto al alta normal (mismo status + body),
         // pero el destinatario real recibe este aviso aparte.
-        ACCOUNT_ALREADY_EXISTS_NOTICE
+        ACCOUNT_ALREADY_EXISTS_NOTICE,
+        MODEL_REVIEW_APPROVED,
+        MODEL_REVIEW_REJECTED,
+        MODEL_REVIEW_REPEAT
     }
 
     public enum Priority {

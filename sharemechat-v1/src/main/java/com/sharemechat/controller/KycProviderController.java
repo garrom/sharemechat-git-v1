@@ -1,7 +1,10 @@
 package com.sharemechat.controller;
 
 import com.sharemechat.dto.KycStartSessionResponseDTO;
+import com.sharemechat.dto.LatestKycSessionDTO;
+import com.sharemechat.entity.KycSession;
 import com.sharemechat.entity.User;
+import com.sharemechat.repository.KycSessionRepository;
 import com.sharemechat.service.CountryAccessService;
 import com.sharemechat.service.KycSessionService;
 import com.sharemechat.service.UserService;
@@ -10,6 +13,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Optional;
+
 @RestController
 @RequestMapping("/api/kyc")
 public class KycProviderController {
@@ -17,13 +22,50 @@ public class KycProviderController {
     private final KycSessionService kycSessionService;
     private final UserService userService;
     private final CountryAccessService countryAccessService;
+    private final KycSessionRepository kycSessionRepository;
 
     public KycProviderController(KycSessionService kycSessionService,
                                  UserService userService,
-                                 CountryAccessService countryAccessService) {
+                                 CountryAccessService countryAccessService,
+                                 KycSessionRepository kycSessionRepository) {
         this.kycSessionService = kycSessionService;
         this.userService = userService;
         this.countryAccessService = countryAccessService;
+        this.kycSessionRepository = kycSessionRepository;
+    }
+
+    // Sub-frente A (2026-06-20): consulta de la última sesión KYC del user
+    // autenticado. Consumido por DashboardUserModel para detectar el caso
+    // "sesión Didit en curso pero abandonada antes de status terminal" — el
+    // backend solo actualiza users.verification_status en eventos terminales,
+    // por lo que el frontend sin esto no puede distinguir "nunca empecé"
+    // de "empecé y no terminé". Devuelve 204 si no hay sesión, 401 sin auth.
+    @GetMapping("/sessions/me/latest")
+    public ResponseEntity<LatestKycSessionDTO> latestKycSession(Authentication authentication) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        User user = userService.findByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(401).build();
+        }
+
+        Optional<KycSession> latest = kycSessionRepository.findTopByUserIdOrderByIdDesc(user.getId());
+        if (latest.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+
+        KycSession s = latest.get();
+        return ResponseEntity.ok(new LatestKycSessionDTO(
+                s.getId(),
+                s.getSessionType(),
+                s.getKycStatus(),
+                s.getProviderStatus(),
+                s.getProviderSessionId(),
+                s.getCreatedAt(),
+                s.getUpdatedAt()
+        ));
     }
 
     // Onboarding model inicia sesión Veriff.

@@ -2,16 +2,20 @@ package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.UserDTO;
+import com.sharemechat.entity.KycSession;
 import com.sharemechat.entity.Model;
 import com.sharemechat.entity.ModelDocument;
 import com.sharemechat.entity.ModelReviewChecklist;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.UserNotFoundException;
 import com.sharemechat.repository.AdminRepository;
+import com.sharemechat.repository.KycSessionRepository;
 import com.sharemechat.repository.ModelDocumentRepository;
 import com.sharemechat.repository.ModelRepository;
 import com.sharemechat.repository.ModelReviewChecklistRepository;
 import com.sharemechat.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -31,6 +35,7 @@ import java.util.Set;
 @Service
 public class AdminService {
 
+    private static final Logger log = LoggerFactory.getLogger(AdminService.class);
     private static final String HIDDEN_VALUE = "[HIDDEN]";
     private static final Map<String, TableViewConfig> TABLE_CONFIG = new LinkedHashMap<>();
 
@@ -78,12 +83,18 @@ public class AdminService {
     private final ModelDocumentRepository modelDocumentRepository;
     private final ModelReviewChecklistRepository checklistRepository;
     private final EmailVerificationService emailVerificationService;
+    private final EmailService emailService;
+    private final EmailCopyRenderer emailCopyRenderer;
+    private final KycSessionRepository kycSessionRepository;
 
     public AdminService(UserRepository userRepository, UserService userService,
                         ModelRepository modelRepository, AdminRepository adminRepository,
                         NamedParameterJdbcTemplate jdbc, ModelDocumentRepository modelDocumentRepository,
                         ModelReviewChecklistRepository checklistRepository,
-                        EmailVerificationService emailVerificationService) {
+                        EmailVerificationService emailVerificationService,
+                        EmailService emailService,
+                        EmailCopyRenderer emailCopyRenderer,
+                        KycSessionRepository kycSessionRepository) {
         this.userRepository = userRepository;
         this.userService = userService;
         this.modelRepository = modelRepository;
@@ -92,6 +103,9 @@ public class AdminService {
         this.modelDocumentRepository = modelDocumentRepository;
         this.checklistRepository = checklistRepository;
         this.emailVerificationService = emailVerificationService;
+        this.emailService = emailService;
+        this.emailCopyRenderer = emailCopyRenderer;
+        this.kycSessionRepository = kycSessionRepository;
     }
 
     @Transactional(readOnly = true)
@@ -167,10 +181,55 @@ public class AdminService {
                 }
                 user.setVerificationStatus(Constants.VerificationStatuses.PENDING);
             }
+            case "REPEAT" -> {
+                // Sub-frente B (2026-06-20): permite pedir al modelo que repita
+                // la verificación. Reset verification_status a NULL (estado
+                // inicial), role queda en USER, y la última kyc_session MODEL
+                // del user (si existe) se marca kyc_status=CANCELLED para que
+                // el frontend (sub-bucket kyc-in-progress) deje de gatear el
+                // botón "Iniciar verificación". Permitido desde APPROVED y
+                // REJECTED (la restricción de la línea ~135 no aplica a REPEAT).
+                if (Constants.Roles.MODEL.equals(user.getRole())) {
+                    throw new IllegalStateException("REPEAT no aplicable a usuarios ya promocionados a MODEL.");
+                }
+                user.setVerificationStatus(null);
+                kycSessionRepository.findTopByUserIdAndSessionTypeOrderByIdDesc(
+                                user.getId(), Constants.SessionTypes.MODEL)
+                        .ifPresent(s -> {
+                            s.setKycStatus("CANCELLED");
+                            kycSessionRepository.save(s);
+                        });
+            }
             default -> throw new IllegalArgumentException("Acción no válida: " + action);
         }
 
         userRepository.save(user);
+
+        // P15 + sub-frente B: email best-effort tras decisión admin.
+        // APPROVE/REJECT/REPEAT notifican al modelo. PENDING no (estado
+        // intermedio). Si el envío falla, log WARN y NO se hace rollback
+        // de la decisión.
+        if ("APPROVE".equals(a) || "REJECT".equals(a) || "REPEAT".equals(a)) {
+            try {
+                EmailCopyRenderer.EmailContent content =
+                        emailCopyRenderer.renderModelReviewDecision(user, a);
+                EmailMessage.Category category = switch (a) {
+                    case "APPROVE" -> EmailMessage.Category.MODEL_REVIEW_APPROVED;
+                    case "REJECT" -> EmailMessage.Category.MODEL_REVIEW_REJECTED;
+                    default -> EmailMessage.Category.MODEL_REVIEW_REPEAT;
+                };
+                emailService.send(new EmailMessage(
+                        user.getEmail(),
+                        content.subject(),
+                        content.body(),
+                        category,
+                        EmailMessage.Priority.BEST_EFFORT
+                ));
+            } catch (Exception ex) {
+                log.warn("[MODEL-REVIEW] email send failed userId={} action={} error={}",
+                        user.getId(), a, ex.toString());
+            }
+        }
 
         return "Estado: " + user.getVerificationStatus()
                 + " | Rol previo: " + previousRole

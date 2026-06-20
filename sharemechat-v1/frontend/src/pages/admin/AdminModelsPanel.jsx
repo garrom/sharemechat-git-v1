@@ -217,6 +217,11 @@ const AdminModelsPanel = ({
       if (!ok) return;
     }
 
+    if (action === 'REPEAT') {
+      const ok = window.confirm(t('admin.models.confirmations.repeatVerification'));
+      if (!ok) return;
+    }
+
     try {
       const response = await fetch(`/api/admin/review/${userId}?action=${action}`, {
         method: 'POST',
@@ -526,6 +531,12 @@ const AdminModelsPanel = ({
                         >
                           {t('admin.models.actions.promoteToModel')}
                         </TableSuccessButton>
+                        <SmallBtn
+                          onClick={() => handleReview(user.id, 'REPEAT')}
+                          title={t('admin.models.descriptions.repeatTooltip')}
+                        >
+                          {t('admin.models.actions.repeat')}
+                        </SmallBtn>
                         <TableDangerButton onClick={() => handleReview(user.id, 'REJECT')}>
                           {t('admin.common.buttons.reject')}
                         </TableDangerButton>
@@ -540,7 +551,17 @@ const AdminModelsPanel = ({
                       </TableActionGroup>
                     )}
 
-                    {verification === 'REJECTED' && (
+                    {verification === 'REJECTED' && canReviewModels && (
+                      <TableActionGroup>
+                        <SmallBtn
+                          onClick={() => handleReview(user.id, 'REPEAT')}
+                          title={t('admin.models.descriptions.repeatTooltip')}
+                        >
+                          {t('admin.models.actions.repeat')}
+                        </SmallBtn>
+                      </TableActionGroup>
+                    )}
+                    {verification === 'REJECTED' && !canReviewModels && (
                       <span style={{ color: '#dc3545', fontWeight: 'bold' }}>{t('admin.models.descriptions.permanentlyRejected')}</span>
                     )}
 
