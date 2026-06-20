@@ -292,6 +292,12 @@ const DashboardUserClient = () => {
   const handleActivateCamera = async () => {
     setError('');
     setStatusText('');
+    // Gate Age Verification (sub-frente Didit cliente, 2026-06-20). Si el
+    // user no tiene client_kyc_status=APPROVED, ensureClientKycApproved
+    // guarda return path en sessionStorage y redirige a /client-kyc;
+    // abortamos ANTES de pedir cámara al navegador para no asustar al
+    // usuario con el popup de permisos solo para luego rechazarlo.
+    if (!ensureClientKycApproved(user, history, '/dashboard-user-client')) return;
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: true,
@@ -538,10 +544,21 @@ const DashboardUserClient = () => {
       setSearching(false);
     };
 
-    s.onclose = () => {
-      console.log('[USER][WS] CLOSE');
+    s.onclose = (event) => {
+      console.log('[USER][WS] CLOSE code=', event && event.code, 'reason=', event && event.reason);
       clearPing();
       setSearching(false);
+      // Backend close-code 4030 CLIENT_KYC_REQUIRED (sub-frente Didit
+      // cliente, 2026-06-20). Defensa en profundidad: si el gate frontend
+      // se saltó (race, manipulación) el backend cierra el WS aquí.
+      if (event && event.code === 4030) {
+        try {
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.setItem('client_kyc_return_url', '/dashboard-user-client');
+          }
+        } catch { /* noop */ }
+        history.push('/client-kyc?return=' + encodeURIComponent('/dashboard-user-client'));
+      }
     };
 
     s.onmessage = async (event) => {

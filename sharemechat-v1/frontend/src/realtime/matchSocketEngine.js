@@ -49,6 +49,12 @@ export function createMatchSocketEngine(adapter) {
     onMatchMeta, // (data) => void, para setCurrentModelId / setCurrentClientId / streamRecordId / clientBalance etc.
     onPeerStateChange,
 
+    // Sub-frente Didit cliente (2026-06-20): backend cierra el WS con
+    // close-code 4030 + reason CLIENT_KYC_REQUIRED si el user intenta
+    // matching sin client_kyc_status=APPROVED. El engine notifica via
+    // este callback para que el dashboard redirija a /client-kyc.
+    onClientKycRequired,
+
     // Config rol
     role, // 'client' | 'model'
     getRolePayload, // () => object, p.ej. model: {role, lang, country}
@@ -418,9 +424,15 @@ export function createMatchSocketEngine(adapter) {
     try { adapter.onUnhandled?.(data); } catch {}
   }
 
-  function onWsClose() {
+  function onWsClose(event) {
     clearPing();
     setSearching(false);
+    // Sub-frente Didit cliente (2026-06-20): close-code 4030 indica que
+    // el backend rechazó al cliente por client_kyc_status != APPROVED.
+    // Defensa en profundidad si el gate frontend se saltó (race, manipulación).
+    if (event && event.code === 4030 && typeof onClientKycRequired === 'function') {
+      try { onClientKycRequired(); } catch { /* noop */ }
+    }
   }
 
   function onWsError() {

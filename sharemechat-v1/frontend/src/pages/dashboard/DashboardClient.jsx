@@ -460,6 +460,18 @@ const DashboardClient = () => {
       // Client: ICE config (sin inventar: uso EXACTO lo que ya tenías)
       peerConfig: webrtcPeerConfig,
 
+      // Sub-frente Didit cliente (2026-06-20): backend cierra WS con
+      // close-code 4030 si client_kyc_status != APPROVED. Defensa en
+      // profundidad por si el gate frontend se saltó.
+      onClientKycRequired: () => {
+        try {
+          if (typeof window !== 'undefined' && window.sessionStorage) {
+            window.sessionStorage.setItem('client_kyc_return_url', '/client');
+          }
+        } catch { /* noop */ }
+        history.push('/client-kyc?return=' + encodeURIComponent('/client'));
+      },
+
       // Grace como en tu client
       onMatchGrace: (mobile) => {
         matchGraceRef.current = true;
@@ -1302,6 +1314,11 @@ const DashboardClient = () => {
 
   const handleActivateCamera = async () => {
     if (guardSensitiveAction({ setError })) return;
+    // Gate Age Verification (sub-frente Didit cliente, 2026-06-20). Cubre
+    // el caso CLIENT legacy sin KYC (ids 30, 32, 88 en TEST): client_kyc_status
+    // != APPROVED -> redirect a /client-kyc con returnPath '/client'. Para
+    // CLIENT con KYC APPROVED es no-op.
+    if (!ensureClientKycApproved(sessionUser, history, '/client')) return;
     console.log(
       `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=activateCamera start=true`
     );
