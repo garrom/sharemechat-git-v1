@@ -34,6 +34,13 @@ public class MatchingHandlerSupport {
 
     private static final Logger log = LoggerFactory.getLogger(MatchingHandlerSupport.class);
 
+    // Close-code app-specific (rango 4000-4999 reservado para aplicacion en
+    // RFC 6455). El cliente WebSocket frontend distingue este codigo del
+    // cierre normal y redirige a /client-kyc. Constante inline por ahora;
+    // si aparecen mas codigos app-specific se extrae a Constants.WsCloseCodes.
+    private static final int WS_CLOSE_CLIENT_KYC_REQUIRED = 4030;
+    private static final String REASON_CLIENT_KYC_REQUIRED = "CLIENT_KYC_REQUIRED";
+
     private final MatchingRuntimeState state;
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
@@ -316,6 +323,16 @@ public class MatchingHandlerSupport {
                         statusService.setAvailable(userId);
                     } catch (Exception ignore) {}
                 } else {
+                    // Gate Age Verification del cliente (sub-frente Didit cliente,
+                    // 2026-06-20). Bloquea matching aleatorio si client_kyc_status
+                    // != APPROVED. Aplica uniformemente a USER+FORM_CLIENT (caso
+                    // normal trial) y CLIENT+FORM_CLIENT (caso legacy sin KYC).
+                    // El gate equivalente HTTP en TransactionService.processFirstTransaction
+                    // / addBalance se mantiene como defensa en profundidad.
+                    if (!isApprovedClient(userId)) {
+                        blockClientSession(session, userId, REASON_CLIENT_KYC_REQUIRED);
+                        return;
+                    }
                     moveToBucket(session, "client", state.getSessionBucketKey().get(session.getId()));
                 }
 
@@ -324,8 +341,20 @@ public class MatchingHandlerSupport {
 
             if ("start-match".equals(type)) {
                 String role = state.getRoles().get(session.getId());
-                if ("client".equals(role)) matchClient(session);
-                else if ("model".equals(role)) matchModel(session);
+                if ("client".equals(role)) {
+                    // Defensa en profundidad: si un cliente custom WS se salta
+                    // set-role y va directo a start-match, el segundo gate lo
+                    // bloquea. Cubre tambien el caso de revocacion mid-session
+                    // si el admin REJECT entre set-role y start-match.
+                    Long userId = state.getSessionUserIds().get(session.getId());
+                    if (!isApprovedClient(userId)) {
+                        blockClientSession(session, userId, REASON_CLIENT_KYC_REQUIRED);
+                        return;
+                    }
+                    matchClient(session);
+                } else if ("model".equals(role)) {
+                    matchModel(session);
+                }
                 return;
             }
 
@@ -577,6 +606,33 @@ public class MatchingHandlerSupport {
         }
     }
 
+    /**
+     * Gate Age Verification del cliente (sub-frente Didit cliente, 2026-06-20).
+     * Valida que el usuario tenga {@code user_type=FORM_CLIENT} y
+     * {@code client_kyc_status=APPROVED}. Aplica uniformemente a USER y
+     * CLIENT (no discrimina por role): el CLIENT legacy sin KYC tambien
+     * queda bloqueado.
+     *
+     * Devuelve {@code false} ante cualquier error de BD o user nulo (fail-safe:
+     * en caso de duda, no se permite el match).
+     */
+    // Package-private para test unitario directo desde MatchingHandlerSupportTest.
+    // No se llama desde fuera del paquete handler en codigo de produccion.
+    boolean isApprovedClient(Long userId) {
+        if (userId == null) return false;
+        try {
+            User u = userRepository.findById(userId).orElse(null);
+            if (u == null) return false;
+
+            boolean typeOk = Constants.UserTypes.FORM_CLIENT.equals(String.valueOf(u.getUserType()));
+            boolean kycOk = Constants.VerificationStatuses.APPROVED.equals(String.valueOf(u.getClientKycStatus()));
+
+            return typeOk && kycOk;
+        } catch (Exception ex) {
+            return false;
+        }
+    }
+
     private void blockModelSession(WebSocketSession session, Long userId, String reasonCode) {
         try {
             String v = null;
@@ -602,6 +658,47 @@ public class MatchingHandlerSupport {
 
         try {
             session.close(CloseStatus.POLICY_VIOLATION);
+        } catch (Exception ignore) {}
+    }
+
+    /**
+     * Bloquea la sesion de un cliente (USER o CLIENT con FORM_CLIENT) cuya
+     * Age Verification no esta APPROVED. Patron paralelo a
+     * {@link #blockModelSession(WebSocketSession, Long, String)} pero con:
+     *  - Payload JSON {@code {"type":"client-blocked","reasonCode":...,
+     *    "clientKycStatus":...}} para que el frontend pueda distinguir el
+     *    bloqueo y redirigir a /client-kyc.
+     *  - Close-code app-specific {@code 4030} (rango 4000-4999 reservado
+     *    para aplicacion en RFC 6455). El frontend distingue este codigo
+     *    del cierre normal.
+     */
+    private void blockClientSession(WebSocketSession session, Long userId, String reasonCode) {
+        String currentStatus = null;
+        try {
+            String v = null;
+            try {
+                v = userRepository.findById(userId).map(User::getClientKycStatus).orElse(null);
+            } catch (Exception ignore) {}
+            currentStatus = v;
+
+            String payload = new JSONObject()
+                    .put("type", "client-blocked")
+                    .put("reasonCode", reasonCode)
+                    .put("clientKycStatus", v == null ? JSONObject.NULL : v)
+                    .toString();
+
+            safeSend(session, payload);
+        } catch (Exception ignore) {}
+
+        log.warn("[WS][match][CLIENT_BLOCKED] sid={} userId={} reasonCode={} clientKycStatus={}",
+                session.getId(), userId, reasonCode, currentStatus);
+
+        try {
+            removeFromAllBuckets(session, "client");
+        } catch (Exception ignore) {}
+
+        try {
+            session.close(new CloseStatus(WS_CLOSE_CLIENT_KYC_REQUIRED, REASON_CLIENT_KYC_REQUIRED));
         } catch (Exception ignore) {}
     }
 
