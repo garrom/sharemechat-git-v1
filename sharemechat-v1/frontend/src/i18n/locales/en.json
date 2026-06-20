@@ -1395,6 +1395,15 @@
         "accept": "The acceptance could not be recorded. Please try again."
       }
     },
+    "awaitingAdmin": {
+      "heroTitle": "Verification received",
+      "heroLead": "Thanks for completing your identity verification. Our team is reviewing your profile and will email you as soon as we have the result.",
+      "panelEyebrow": "CURRENT STATUS",
+      "panelTitle": "We're reviewing your profile",
+      "panelBody": "We've received all the information we need. The team is carefully looking at your application. As soon as we finish the review, you'll receive an email with the answer.",
+      "footerTitle": "What happens next",
+      "footerSubtitle": "We'll email you as soon as the review is complete. In the meantime, you don't need to do anything else."
+    },
     "kyc": {
       "activeMethod": "Active KYC method:",
       "notAvailable": "N/A",
@@ -2372,6 +2381,7 @@
         "pendingRowHint": "Awaiting validation and a decision.",
         "approveTooltipDisabled": "Validate the three documents first",
         "approveTooltipEnabled": "Approve model",
+        "promoteToModelTooltip": "KYC verification completed. Promote the role to MODEL and activate the account.",
         "openDocumentTooltip": "Open document",
         "documentNotAvailableTooltip": "Not available",
         "markAsValidatedTooltip": "Mark as validated",
@@ -2393,6 +2403,9 @@
         "saveMode": "Save mode",
         "currentLabel": "Current",
         "veriffLegacyWarning": "Legacy VERIFF mode detected in DB. Pick MANUAL or DIDIT and save to migrate."
+      },
+      "actions": {
+        "promoteToModel": "Promote to MODEL"
       },
       "filters": {
         "statusActive": "Active"

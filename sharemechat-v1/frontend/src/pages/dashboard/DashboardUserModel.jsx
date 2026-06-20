@@ -85,6 +85,30 @@ const DashboardUserModel = () => {
     return normalizedMode || t('dashboardUserModel.kyc.notAvailable');
   };
 
+  // Bucket UI: discrimina tres estados visibles del modelo en onboarding.
+  // - 'pre-verif': verificationStatus NULL/PENDING -> UX original (boton iniciar verificacion).
+  // - 'awaiting-admin': verificationStatus APPROVED + role USER -> verificacion completada, esperando promocion del admin.
+  // - 'promoted': role MODEL -> ya es modelo activo, no deberia ver esta pagina (useEffect redirige a /model).
+  const getModelStateBucket = (verificationStatus, role) => {
+    const r = String(role || '').toUpperCase();
+    const v = String(verificationStatus || '').toUpperCase();
+    if (r === 'MODEL') return 'promoted';
+    if (v === 'APPROVED') return 'awaiting-admin';
+    return 'pre-verif';
+  };
+
+  const stateBucket = getModelStateBucket(sessionUser?.verificationStatus, sessionUser?.role);
+  const isAwaitingAdmin = stateBucket === 'awaiting-admin';
+
+  // Redirect cuando el usuario ya es MODEL. El dashboard de modelo activo
+  // vive en /model (App.jsx:171, RequireRole role="MODEL").
+  useEffect(() => {
+    if (sessionLoading) return;
+    if (stateBucket === 'promoted') {
+      history.push('/model');
+    }
+  }, [stateBucket, sessionLoading, history]);
+
   useEffect(() => {
     if (sessionLoading) return;
 
@@ -327,10 +351,20 @@ const DashboardUserModel = () => {
             <DashboardUserModelStack>
               <DashboardHeroCard>
                 <DashboardHeroKicker>{displayName}</DashboardHeroKicker>
-                <DashboardHeroTitle>{t('dashboardUserModel.title')}</DashboardHeroTitle>
+                <DashboardHeroTitle>
+                  {isAwaitingAdmin
+                    ? t('dashboardUserModel.awaitingAdmin.heroTitle')
+                    : t('dashboardUserModel.title')}
+                </DashboardHeroTitle>
                 <DashboardHeroLead>
-                  {t('dashboardUserModel.footerHint.prefix')}{' '}
-                  <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
+                  {isAwaitingAdmin ? (
+                    t('dashboardUserModel.awaitingAdmin.heroLead')
+                  ) : (
+                    <>
+                      {t('dashboardUserModel.footerHint.prefix')}{' '}
+                      <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
+                    </>
+                  )}
                 </DashboardHeroLead>
 
                 {mustVerifyEmail && (
@@ -467,69 +501,89 @@ const DashboardUserModel = () => {
 
                 <DashboardPanel>
                   <DashboardPanelHeader>
-                    <DashboardPanelEyebrow>{t('dashboardUserModel.kyc.activeMethod')}</DashboardPanelEyebrow>
-                    <DashboardPanelTitle>{mainButtonLabel}</DashboardPanelTitle>
+                    <DashboardPanelEyebrow>
+                      {isAwaitingAdmin
+                        ? t('dashboardUserModel.awaitingAdmin.panelEyebrow')
+                        : t('dashboardUserModel.kyc.activeMethod')}
+                    </DashboardPanelEyebrow>
+                    <DashboardPanelTitle>
+                      {isAwaitingAdmin
+                        ? t('dashboardUserModel.awaitingAdmin.panelTitle')
+                        : mainButtonLabel}
+                    </DashboardPanelTitle>
                     <DashboardPanelSubtitle>
-                      {info || t('dashboardUserModel.contract.mustAcceptMessage')}
+                      {isAwaitingAdmin
+                        ? t('dashboardUserModel.awaitingAdmin.panelBody')
+                        : info || t('dashboardUserModel.contract.mustAcceptMessage')}
                     </DashboardPanelSubtitle>
                   </DashboardPanelHeader>
 
-                  <DashboardPanelBody>
-                    {kycMode && (
-                      <DashboardMessage>
-                        {t('dashboardUserModel.kyc.activeMethod')} <strong>{getKycModeLabel(kycMode)}</strong>
-                      </DashboardMessage>
-                    )}
-
-                    <DashboardHint>
-                      {t('dashboardUserModel.footerHint.prefix')}{' '}
-                      <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
-                    </DashboardHint>
-
-                    {kycRouteErr && (
-                      <DashboardMessage $type="error">
-                        {kycRouteErr}
-                      </DashboardMessage>
-                    )}
-
-                    <DashboardActions>
-                      <DashboardPrimaryButton
-                        type="button"
-                        onClick={handleUploadDocs}
-                        disabled={mustVerifyEmail || mustAcceptContract || routingKyc}
-                        title={
-                          mustVerifyEmail
-                            ? t('dashboardUserModel.emailVerification.notice')
-                            : mustAcceptContract
-                            ? t('dashboardUserModel.contract.mustAcceptFirst')
-                            : undefined
-                        }
-                      >
-                        {routingKyc ? t('dashboardUserModel.kyc.actions.opening') : mainButtonLabel}
-                      </DashboardPrimaryButton>
-
-                      {mustAcceptContract && (
-                        <DashboardSecondaryButton
-                          type="button"
-                          disabled
-                          title={t('dashboardUserModel.contract.mustAcceptFirst')}
-                        >
-                          {t('dashboardUserModel.contract.mustAcceptFirst')}
-                        </DashboardSecondaryButton>
+                  {!isAwaitingAdmin && (
+                    <DashboardPanelBody>
+                      {kycMode && (
+                        <DashboardMessage>
+                          {t('dashboardUserModel.kyc.activeMethod')} <strong>{getKycModeLabel(kycMode)}</strong>
+                        </DashboardMessage>
                       )}
-                    </DashboardActions>
-                  </DashboardPanelBody>
+
+                      <DashboardHint>
+                        {t('dashboardUserModel.footerHint.prefix')}{' '}
+                        <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
+                      </DashboardHint>
+
+                      {kycRouteErr && (
+                        <DashboardMessage $type="error">
+                          {kycRouteErr}
+                        </DashboardMessage>
+                      )}
+
+                      <DashboardActions>
+                        <DashboardPrimaryButton
+                          type="button"
+                          onClick={handleUploadDocs}
+                          disabled={mustVerifyEmail || mustAcceptContract || routingKyc}
+                          title={
+                            mustVerifyEmail
+                              ? t('dashboardUserModel.emailVerification.notice')
+                              : mustAcceptContract
+                              ? t('dashboardUserModel.contract.mustAcceptFirst')
+                              : undefined
+                          }
+                        >
+                          {routingKyc ? t('dashboardUserModel.kyc.actions.opening') : mainButtonLabel}
+                        </DashboardPrimaryButton>
+
+                        {mustAcceptContract && (
+                          <DashboardSecondaryButton
+                            type="button"
+                            disabled
+                            title={t('dashboardUserModel.contract.mustAcceptFirst')}
+                          >
+                            {t('dashboardUserModel.contract.mustAcceptFirst')}
+                          </DashboardSecondaryButton>
+                        )}
+                      </DashboardActions>
+                    </DashboardPanelBody>
+                  )}
                 </DashboardPanel>
               </DashboardGrid>
 
               <DashboardFooterCard>
                 <DashboardPanelHeader>
                   <DashboardPanelTitle>
-                    {t('dashboardUserModel.footerHint.prefix')}{' '}
-                    <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
+                    {isAwaitingAdmin ? (
+                      t('dashboardUserModel.awaitingAdmin.footerTitle')
+                    ) : (
+                      <>
+                        {t('dashboardUserModel.footerHint.prefix')}{' '}
+                        <strong>{t('dashboardUserModel.footerHint.role')}</strong>.
+                      </>
+                    )}
                   </DashboardPanelTitle>
                   <DashboardPanelSubtitle>
-                    {info || t('dashboardUserModel.contract.mustAcceptMessage')}
+                    {isAwaitingAdmin
+                      ? t('dashboardUserModel.awaitingAdmin.footerSubtitle')
+                      : info || t('dashboardUserModel.contract.mustAcceptMessage')}
                   </DashboardPanelSubtitle>
                 </DashboardPanelHeader>
 

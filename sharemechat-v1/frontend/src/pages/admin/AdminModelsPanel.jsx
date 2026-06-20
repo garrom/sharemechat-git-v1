@@ -518,7 +518,21 @@ const AdminModelsPanel = ({
                       </TableActionGroup>
                     )}
 
-                    {verification === 'APPROVED' && canReviewModels && (
+                    {verification === 'APPROVED' && String(user.role || '').toUpperCase() === 'USER' && canReviewModels && (
+                      <TableActionGroup>
+                        <TableSuccessButton
+                          onClick={() => handleReview(user.id, 'APPROVE')}
+                          title={t('admin.models.descriptions.promoteToModelTooltip')}
+                        >
+                          {t('admin.models.actions.promoteToModel')}
+                        </TableSuccessButton>
+                        <TableDangerButton onClick={() => handleReview(user.id, 'REJECT')}>
+                          {t('admin.common.buttons.reject')}
+                        </TableDangerButton>
+                      </TableActionGroup>
+                    )}
+
+                    {verification === 'APPROVED' && String(user.role || '').toUpperCase() === 'MODEL' && canReviewModels && (
                       <TableActionGroup>
                         <TableDangerButton onClick={() => handleReview(user.id, 'REJECT')}>
                           {t('admin.common.buttons.reject')}

@@ -1395,6 +1395,15 @@
         "accept": "No se pudo registrar la aceptación. Inténtalo de nuevo."
       }
     },
+    "awaitingAdmin": {
+      "heroTitle": "Verificación recibida",
+      "heroLead": "Gracias por completar tu verificación de identidad. Nuestro equipo está revisando tu perfil y te enviaremos un email en cuanto tengamos el resultado.",
+      "panelEyebrow": "ESTADO ACTUAL",
+      "panelTitle": "Estamos revisando tu perfil",
+      "panelBody": "Hemos recibido toda la información necesaria. El equipo está estudiando tu solicitud con atención. En cuanto terminemos la revisión, recibirás un email con la respuesta.",
+      "footerTitle": "Qué ocurre ahora",
+      "footerSubtitle": "Te avisaremos por email en cuanto la revisión esté terminada. Mientras tanto, no necesitas hacer nada más."
+    },
     "kyc": {
       "activeMethod": "Método KYC activo:",
       "notAvailable": "N/D",
@@ -2372,6 +2381,7 @@
         "pendingRowHint": "Pendiente de validación y decisión.",
         "approveTooltipDisabled": "Valida los 3 documentos primero",
         "approveTooltipEnabled": "Aprobar modelo",
+        "promoteToModelTooltip": "Verificación KYC completada. Promociona el rol a MODEL y activa la cuenta.",
         "openDocumentTooltip": "Abrir documento",
         "documentNotAvailableTooltip": "No disponible",
         "markAsValidatedTooltip": "Marcar como validado",
@@ -2393,6 +2403,9 @@
         "saveMode": "Guardar modo",
         "currentLabel": "Actual",
         "veriffLegacyWarning": "Modo VERIFF legacy detectado en BD. Selecciona MANUAL o DIDIT y guarda para migrar."
+      },
+      "actions": {
+        "promoteToModel": "Promover a MODEL"
       },
       "filters": {
         "statusActive": "Activas"
