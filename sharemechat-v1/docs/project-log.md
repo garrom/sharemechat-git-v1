@@ -8,6 +8,56 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-23 — Cierre del frente SEO completo (Prompts 1+2+3 del paquete pre-render del blog)
+
+Cierre del frente SEO completo en producción tras una jornada larga (mañana: deploy backend `b0fa773→6cebf90` con Didit MOCK + Prompt 2 del pre-render real con Puppeteer; tarde: Prompt 3 de pulido + hot-fix del script). El blog pasa de servir el shell SPA genérico (3192 bytes idéntico para `/blog/*` por bug previo a la función edge `redirect-spa-prod`, detectado el 2026-06-21) a servir HTML pre-renderizado específico (34–41 KB por URL) con title del artículo, canonical bien formado, hreflang trilingüe ES/EN/x-default, JSON-LD `BlogPosting`+`Blog`+`WebSite`+`Organization`+`BreadcrumbList`, meta Open Graph y Twitter completos (incluyendo `og:image:type`/`alt`, `twitter:site`/`creator`=`@shareme_chat`, `twitter:image:alt`), y `sameAs` corporativo (`https://x.com/shareme_chat`, `https://www.reddit.com/user/sharemechat`) en `Organization`. Las 8 URLs blog del catálogo actual (2 listings `/blog/{es,en}` + 6 artículos `/blog/{es,en}/<slug>` con 3 ES y 3 EN) están verificadas empíricamente con `curl + grep` cumpliendo todos los criterios diseñados. El CER 403→200 (Custom Error Response) en la distribución CloudFront PROD `E2FWNC80D4QDJC` queda activo como red de seguridad para cualquier desincronización futura entre bundle SPA y HTMLs pre-renderizados.
+
+**Sub-frentes por Prompt**:
+
+- **Prompt 1 (commit `c5b4cc9`)**: función edge `redirect-spa-prod.js` reescribe `/blog/*` → `<path>/index.html` en lugar del catch-all `/index.html` que rompía el SEO. CER 403→`/index.html` añadido a la distribución como fallback. Verificación con primera invalidación CF tras ver cache stale (segunda invalidación wildcard requerida).
+
+- **Prompt 2 (commit `6306f7e`)**: pre-render real selectivo con Puppeteer en `ops/scripts/prerender-blog/render.js` (Node 18 + `puppeteer@22.15.0` + headless=true, espera `body[data-blog-hydrated="true"]` con fallback `title!==shellTitle && canonical`, wait imágenes 15s no-aborta). Orquestador `ops/scripts/prerender-blog-prod.ps1` enumera artículos publicados del backend, construye lista de 8 URLs, lanza render, sincroniza a `s3://sharemechat-frontend-prod/blog/` con `Content-Type: text/html` y `Cache-Control: 5min`. Integrado como paso `[4.5/N]` en `deploy-frontend.ps1` para los deploys `prod product` con `Surface in (product,both)` y `not StandbyMode`. Marcador `data-blog-hydrated` añadido a `BlogContent.jsx` (cuando `articles.length > 0` y JSON-LD emitido) y a `BlogArticleView.jsx` (tras hidratación SEO completa). Workaround manual del bug PS5.1 (deuda registrada).
+
+- **Prompt 3 (commits `d79c87c`, `2e2961c`, `f0bd30d`, `9f1c806`)**: pulido SEO sobre el SPA y el shell `index.html`, hot-fix del bug PS5.1, alineación de manifest. Cuatro bloques funcionales (B+C+E+F) + un alineación de estado (J4):
+  - **B**: meta `og:image:type/alt`, `twitter:image:alt`, `twitter:site/creator=@shareme_chat` en `BlogContent.jsx`, `BlogArticleView.jsx`, `Seo.jsx` e `index.html`. En `BlogArticleView`, lógica condicional respeta `hasHeroImage`: con hero propia (webp) se omiten `width/height/type` (desconocidos), con fallback default 1200x630 PNG se emiten completos. Constantes nuevas en `seoHelpers.js`: `DEFAULT_OG_IMAGE_TYPE`, `DEFAULT_OG_IMAGE_ALT_ES/EN`, `TWITTER_HANDLE`.
+  - **C**: JSON-LD `BreadcrumbList` (Home > Blog > Artículo) en `BlogArticleView.jsx` con `upsertJsonLd('blog-breadcrumb', ...)` y cleanup. Solo en detalle, no en listings (por diseño).
+  - **D**: verificación que hreflang bidireccional ya estaba implementado en `BlogArticleView.jsx:304-323` desde el Prompt 2 — emite locale propio + uno por cada `article.alternates` del DTO + `x-default` al ES. Sin cambios.
+  - **E**: `sameAs` en `Organization` JSON-LD del shell `index.html` con handles X y Reddit corporativos.
+  - **F (hot-fix)**: `Invoke-NativeNoAbort` helper añadido a `prerender-blog-prod.ps1` calcando el patrón de `deploy-frontend.ps1:197-229` adaptado al caller con `Stop-Prerender`. Implementación clave: `& $Block | Out-Host` redirige stdout del native al host sin contaminar el retorno de la función. Primera iteración del helper en la propia sesión olvidó el `Out-Host`, causando que `$renderExit` recibiera el array de strings de stdout en vez del entero — corregido en segunda iteración. Cierra la deuda registrada en `backend-and-seo-deploy-2026-06-23.md`.
+  - **J4 (manifest)**: `ops/deploy-state/prod.yaml` actualizado de `bdea318` (HEAD pre-Prompt-3 cuando se ejecutó el deploy) a `f0bd30d` (HEAD post J1+J2+J3 que SÍ contiene los cambios desplegados). `verification.notes` documenta tanto el deploy con working tree sucio como la invalidación adicional `I1HG42Z9NHBVXMOS3HMHQ850O4` de `/blog/*`.
+
+**Aprendizajes operativos del frente**:
+
+- **CRA 5 + react-helmet-async no resuelve el problema de SEO para crawlers sin JS**. Necesitamos pre-render server-side cuando los scrapers son las herramientas que indexan. Puppeteer build-time con 8 URLs es viable porque el catálogo es pequeño y cambia poco; para >50 artículos requeriría incremental SSG o migrar a Next.js (deuda futura no priorizada).
+- **El CER 403→200 es la red de seguridad correcta** cuando combinas S3+OAC+SPA+pre-render. Cubre cualquier ventana entre bundle desplegado y HTMLs pre-renderizados, sin requerir orden estricto. Coste cero, configuración una vez en la distribución.
+- **PowerShell 5.1 con `$ErrorActionPreference='Stop'` es venenoso para scripts que invocan native exes**: la conversión stderr → `NativeCommandError` puede abortar el script aunque el exe devuelva exit 0. El patrón `Invoke-Native` (deploy-frontend.ps1) y `Invoke-NativeNoAbort` (prerender-blog-prod.ps1) son la mitigación canónica. **El `Out-Host` no es opcional** cuando el helper devuelve un valor a la pipeline.
+- **El manifest debe alinearse manualmente a HEAD post-commits cuando el deploy se ejecuta con working tree sucio**, para preservar la garantía "commit del manifest = código realmente desplegado". Patrón ya usado en deploys anteriores; con el flag `-AssumeYesNonCritical` el script continúa pero registra el HEAD del momento del deploy, no del momento del commit-final-del-trio.
+
+**Estado de los entornos al cerrar el frente SEO**:
+
+- **PROD**: bundle frontend producto `main.90c284a1.js` (sha256 `e6cafa61...`) sirviendo SPA. 8 HTMLs blog pre-renderizados en `s3://sharemechat-frontend-prod/blog/` con criterios SEO completos. Función edge `redirect-spa-prod` aplicando reescritura `/blog/*` → `<path>/index.html`. CER 403→`/index.html` 200 activo. Manifest alineado a `f0bd30d`. Backend en `6cebf90` (Didit MOCK desde mañana del 23-jun).
+- **TEST/AUDIT**: sin cambios. El frente SEO se ejecutó únicamente sobre PROD (los entornos no productivos no necesitan SEO real). Los scripts de pre-render son específicos `*-prod.ps1`; si se quiere replicar en TEST/AUDIT se duplicarían sin parametrización.
+
+**Cadena de commits del frente SEO completo (chronological)**:
+
+- Pre-render context inicial → commits previos al 2026-06-10 (frente SEO original con `seoHelpers.js`, `Seo.jsx`, `DEFAULT_OG_IMAGE`).
+- Prompt 1 → `c5b4cc9 ops(seo): CloudFront PROD edge function /blog/* + CER 403->200 (Prompt 1)` (2026-06-23).
+- Prompt 2 → `6306f7e feat(seo): pre-render selectivo del blog en deploy PROD (Prompt 2)` (2026-06-23).
+- Deploy backend + SEO integrado → `c985b45 ops(prod): deploy backend a 6cebf90 (didit MOCK) + manifest` y `bdea318 docs(ops): informe deploy backend + SEO 2026-06-23` (2026-06-23 mañana).
+- Prompt 3 → `d79c87c feat(seo): completar meta og/twitter + BreadcrumbList en SPA blog`, `2e2961c feat(seo): Organization sameAs + og/twitter completos en shell index.html`, `f0bd30d fix(ops): Invoke-NativeNoAbort en prerender-blog-prod.ps1 (PS5.1)`, `9f1c806 chore(deploy): manifest prod frontend_product -> f0bd30d post Prompt 3 SEO` (2026-06-23 tarde, este cierre).
+
+**Próximos pasos del proyecto (fuera del frente SEO)**:
+
+- Borrado del snapshot RDS `pre-deploy-didit-mock-20260623` tras ventana 48–72h desde 20:14:50Z del 23-jun (operador, recordatorio al 26-jun).
+- Validación E2E Didit real en PROD (frente KYC futuro; queda diferida).
+- Activación Sightengine (frente stream-moderation P2, ADR-037).
+- Redacción `deploy-backend.ps1` (deuda Fase 2 deploy automation, registrada en `backend-deploy-automation-search-2026-06-23.md`).
+- Lanzamiento PROD el 2026-07-01 (objetivo de proyecto).
+
+Informe operativo detallado del Prompt 3 en [`docs/04-operations/seo-prompt3-implementation-2026-06-23.md`](04-operations/seo-prompt3-implementation-2026-06-23.md). Informe del deploy mañana del 23-jun en [`docs/04-operations/backend-and-seo-deploy-2026-06-23.md`](04-operations/backend-and-seo-deploy-2026-06-23.md).
+
+---
+
 ## 2026-06-21 — Cierre del Paquete 1 del frente moderación IA del streaming: cimientos validados en TEST
 
 Cierre del Paquete 1 del frente moderación IA del streaming sobre SharemeChat. Entrega los cimientos del control plane vendor-agnostic: schema BD dedicado bajo prefijo `stream_moderation_*`, contrato `ModerationProviderClient` con adapter `MockModerationClient` deterministic GREEN, tabla de decisión por severity (GREEN→no-op, AMBER→queue priority 100, RED→priority 50, CRITICAL→priority 10 + `killStreamAsAdmin`), scheduler de fail-closed-soft cada minuto, hooks quirúrgicos en `StreamService.ackMedia` y `endSession`, 9 endpoints REST admin bajo `/api/admin/stream-moderation/*` con audit log, panel React `AdminStreamModerationPanel` con 3 sub-tabs (Cola/Sesiones/Configuración), webhook stub `/api/webhooks/moderation/{vendor}` con validación HMAC, y suite de 53 tests JUnit nuevos. Todo desplegado en TEST como parte del megafrente AUDIT del 2026-06-20 (commit `e49a6a1`) y validado end-to-end con un stream RANDOM real entre cuenta modelo y cuenta cliente, cierre limpio desde el cliente, fila de sesión de moderación creada y cerrada como STOPPED, cero impacto sobre el path crítico de facturación, cero excepciones nuevas en logs y cero regresión en endpoints existentes. Decisiones estratégicas de fondo zanjadas en [ADR-036](06-decisions/adr-036-moderation-pipeline-architectural-stance.md) (captura cliente-side, cadencia 10-15s configurable, fail-closed-soft, plan de evolución condicional) y [ADR-037](06-decisions/adr-037-moderation-visual-vendor-sightengine.md) (Sightengine como Plan A vendor visual, Hive y AWS Rekognition como contingencias documentadas). La activación real (cambio de `active_mode` BD a SIGHTENGINE + adapter Sightengine + endpoint de frame submission + parser vendor del webhook) queda fuera de scope del Paquete 1 y se aborda en el Paquete 2.
