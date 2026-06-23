@@ -879,6 +879,66 @@ try {
     }
 
     # -----------------------------------------------------------
+    # [4.5/N] Pre-render selectivo del blog (solo PROD + product)
+    # -----------------------------------------------------------
+    # Tras el sync del bundle SPA y los smoke tests, lanza Puppeteer contra
+    # https://sharemechat.com para capturar HTML especifico por path bajo
+    # /blog/* y subirlo al bucket PROD bajo blog/<path>/index.html. Habilita
+    # SEO con title/canonical/hreflang/JSON-LD/internal-links reales por
+    # articulo y listing. Ver
+    # docs/01-business/seo/seo-prerender-implementation-2026-06-21.md.
+    #
+    # Requisitos cumplidos en sesiones previas:
+    #   - Funcion edge redirect-spa-prod reescribe /blog/* -> <path>/index.html
+    #     (ver seo-edge-function-changes-2026-06-21.md).
+    #   - Custom Error Response 403 -> /index.html (200) en la distribucion
+    #     E2FWNC80D4QDJC (cubre el fallback para articulos publicados sin
+    #     HTML pre-renderizado aun).
+    #
+    # Politica de fallos:
+    #   - Si el script de pre-render falla, NO se aborta el deploy. El bundle
+    #     SPA ya esta arriba y operativo; el CER cubre /blog/* sirviendo el
+    #     shell. El siguiente deploy reintenta el pre-render.
+    #   - Tras un pre-render exitoso, invalidar /blog/* en CF para que los
+    #     HTMLs nuevos sean servidos sin cache stale del shell que CF pudo
+    #     haber cacheado durante el smoke estatico.
+    #
+    # Solo se ejecuta en: Environment=prod + Surface=product + no StandbyMode.
+    # AUDIT/TEST tienen robots.txt fail-closed (ADR-033) y no necesitan SEO.
+    if ($Environment -eq 'prod' -and $Surface -eq 'product' -and -not $StandbyMode) {
+        Write-Step "4.5/N" "Pre-render selectivo del blog (Puppeteer -> s3://$bucketName/blog/)"
+
+        $prerenderScript = Join-Path $PSScriptRoot 'prerender-blog-prod.ps1'
+        if (-not (Test-Path $prerenderScript)) {
+            Write-Warning "No existe $prerenderScript. Saltando pre-render."
+        } else {
+            $prerenderExit = 0
+            try {
+                & $prerenderScript -Hostname $baseUrl -Bucket $bucketName -DistributionId $distributionId
+                $prerenderExit = $LASTEXITCODE
+            } catch {
+                Write-Warning "Pre-render lanzo excepcion: $($_.Exception.Message)"
+                $prerenderExit = 99
+            }
+
+            if ($prerenderExit -ne 0) {
+                Write-Host ""
+                Write-Warning "Pre-render fallo con exit code $prerenderExit."
+                Write-Warning "El bundle SPA esta arriba y operativo. El CER (403 -> /index.html 200)"
+                Write-Warning "sirve el shell SPA en /blog/* mientras tanto. El siguiente deploy reintenta."
+                # NO abortamos el deploy: el bundle SPA esta arriba y operativo.
+            } else {
+                Write-Host ""
+                Write-Host "    Pre-render OK. Invalidando /blog/* en CF para servir HTMLs nuevos..."
+                Invoke-Native -Label "aws cloudfront create-invalidation /blog/*" -Block {
+                    aws cloudfront create-invalidation --distribution-id $distributionId --paths "/blog/*" --output json | Out-Null
+                }
+                Write-Host "    OK - /blog/* invalidado en $distributionId."
+            }
+        }
+    }
+
+    # -----------------------------------------------------------
     # [5.5/N] Update deploy-state manifest (Fase 1 paso 2a)
     # -----------------------------------------------------------
     # Tras smoke OK, registra el estado real desplegado en

@@ -1,0 +1,12 @@
+{
+  "name": "sharemechat-prerender-blog",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pre-render selectivo del blog para deploy PROD. Ver docs/01-business/seo/seo-prerender-analysis-2026-06-21.md.",
+  "scripts": {
+    "render": "node render.js"
+  },
+  "dependencies": {
+    "puppeteer": "^22.0.0"
+  }
+}

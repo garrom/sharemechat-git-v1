@@ -457,6 +457,15 @@ export default function BlogArticleView() {
     }
     upsertJsonLd('blog-article', jsonLd);
 
+    // Marcador para el pre-render: senal a Puppeteer de que los meta tags
+    // SEO del articulo (title, canonical, hreflang, OG, twitter, JSON-LD
+    // BlogPosting) ya estan aplicados al DOM. Ver
+    // docs/01-business/seo/seo-prerender-implementation-2026-06-21.md.
+    // Solo se llega aqui si article esta cargado (el useEffect retorna
+    // undefined si article es null), por lo que el marker refleja un
+    // estado terminal renderizable.
+    document.body.setAttribute('data-blog-hydrated', 'true');
+
     return () => {
       // Restaurar el title baseline al desmontar para no contaminar otras
       // paginas del SPA.
@@ -481,6 +490,12 @@ export default function BlogArticleView() {
       document.head
         .querySelectorAll('link[rel="alternate"][hreflang]')
         .forEach((el) => el.parentNode.removeChild(el));
+
+      // Limpiar el marcador de hidratacion del pre-render. Defensivo:
+      // si el usuario navega a otra pagina del SPA tras leer el articulo,
+      // el siguiente componente lo restablecera si es otro pre-render
+      // target (otro listing u otro articulo).
+      document.body.removeAttribute('data-blog-hydrated');
     };
   }, [article]);
 

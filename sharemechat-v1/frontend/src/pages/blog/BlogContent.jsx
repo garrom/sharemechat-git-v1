@@ -277,6 +277,14 @@ const BlogContent = ({
         })),
       };
       upsertJsonLd('blog-listing', jsonLd);
+
+      // Marcador para el pre-render: senal a Puppeteer de que los meta tags
+      // SEO del listado ya estan aplicados al DOM. Ver
+      // docs/01-business/seo/seo-prerender-implementation-2026-06-21.md.
+      // Solo se setea cuando hay articulos cargados (con JSON-LD emitido);
+      // si articles esta vacio, el marker no aparece y el pre-render usa
+      // su fallback o aborta esa URL.
+      document.body.setAttribute('data-blog-hydrated', 'true');
     }
 
     return () => {
@@ -301,6 +309,12 @@ const BlogContent = ({
       // prevTitle se guarda como referencia pero no se restaura para no
       // chocar con el title del proximo componente que aplique SEO.
       void prevTitle;
+
+      // Limpiar el marcador de hidratacion del pre-render. Defensivo: solo
+      // se setea cuando articles.length > 0 (justo encima), pero el cleanup
+      // borra siempre para evitar dejar el atributo residual al desmontar
+      // hacia otra pagina que no es el blog.
+      document.body.removeAttribute('data-blog-hydrated');
     };
   }, [articles]);
 
