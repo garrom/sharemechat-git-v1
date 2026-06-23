@@ -7,21 +7,30 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I80O8DT94CFJJ8Q3FKNIV0GAW1
+  cloudfront_invalidation_id: I8CFP6RGIND3VFCCX9AO3HE8SL
   verification:
-    method: deploy-frontend.ps1-live-build_2026-06-23T20:18:16Z
-    git_commit_provenance: recorded_by_deploy_script
-    notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-06-23T20:18:16Z
-  built_at: 2026-06-23T20:18:16Z
-  bundle_sha256: 765920c37d58d6066d44be0d767574a7f10412a691f041a794d33aefc9235a8c
-  git_commit_short: 6cebf90
-  git_commit: 6cebf90dc178721c9d7513bebb778a41636f9289
+    method: manual_post_deploy_promotion_to_head_2026-06-23T21:05:00Z
+    git_commit_provenance: manually_aligned_to_head_after_commits_J1-J3
+    notes: |
+      Deploy ejecutado a las 20:55:47Z con working tree SUCIO desde HEAD bdea318.
+      Los cambios del Prompt 3 SEO (bloques B+C en SPA, bloque E en index.html,
+      bloque F hot-fix prerender) se commitearon DESPUES del deploy en commits
+      d79c87c (J1), 2e2961c (J2), f0bd30d (J3). El bundle servido (main.90c284a1.js)
+      refleja el estado de codigo en J2 (J3 solo toca ops/script, no entra al
+      bundle JS). Manifest promovido a HEAD f0bd30d para fidelidad historica.
+      Invalidacion adicional /blog/* (no listada): I1HG42Z9NHBVXMOS3HMHQ850O4 a
+      las 20:59:37Z tras re-ejecutar prerender-blog-prod.ps1 standalone con el
+      helper Invoke-NativeNoAbort arreglado. 8/8 URLs blog verificadas.
+  deployed_at: 2026-06-23T20:55:47Z
+  built_at: 2026-06-23T20:55:47Z
+  bundle_sha256: e6cafa61004899734e9b626d80b3bfeaba75ff2a363df80e5f8b7b51020ed9df
+  git_commit_short: f0bd30d
+  git_commit: f0bd30de1db1fd7e68ccd11148b924c986f9d295
   cloudfront_distribution: E2FWNC80D4QDJC
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: false
   bucket: sharemechat-frontend-prod
-  bundle: main.38644768.js
+  bundle: main.90c284a1.js
 last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: prod
@@ -40,13 +49,13 @@ backend:
   systemd_unit: sharemechat-prod.service
   git_commit: 6cebf90dc178721c9d7513bebb778a41636f9289
   git_commit_short: 6cebf90
-last_updated_at: 2026-06-23T20:18:16Z
+last_updated_at: 2026-06-23T20:55:47Z
 frontend_admin:
   working_tree_clean: 
   bucket: sharemechat-admin-prod
   bundle: main.c16b646d.js
-  built_at: 
   deployed_at: 2026-06-07T13:27:04Z
+  cloudfront_distribution: E3O40LHJ4PC6LE
   verification:
     method: s3_lastmodified_observed_2026-06-09
     git_commit_provenance: inferred_from_lastmodified_and_git_log
@@ -55,7 +64,7 @@ frontend_admin:
       admin.sharemechat.com en project-log 2026-06-07). HEAD git en
       esa marca = 0cdba7f (docs(adr-032)+ops). Working_tree_clean
       no recuperable.
-  cloudfront_distribution: E3O40LHJ4PC6LE
+  built_at: 
   cloudfront_invalidation_id: 
   deployed_by: 
   git_commit: 
