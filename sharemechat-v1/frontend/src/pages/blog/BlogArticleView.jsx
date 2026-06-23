@@ -44,6 +44,10 @@ import {
   DEFAULT_OG_IMAGE,
   DEFAULT_OG_IMAGE_WIDTH,
   DEFAULT_OG_IMAGE_HEIGHT,
+  DEFAULT_OG_IMAGE_TYPE,
+  DEFAULT_OG_IMAGE_ALT_ES,
+  DEFAULT_OG_IMAGE_ALT_EN,
+  TWITTER_HANDLE,
 } from './seoHelpers';
 import { BlogLocaleContext } from './BlogLocaleContext';
 
@@ -342,17 +346,36 @@ export default function BlogArticleView() {
     //    inferiran al fetchear la imagen.
     const hasHeroImage = !!article.heroImageUrl;
     const ogImage = hasHeroImage ? article.heroImageUrl : DEFAULT_OG_IMAGE;
+    // alt: cuando hay hero propia, describimos la imagen como tema
+    // del articulo (title); cuando cae en card de marca, texto
+    // generico de marca segun locale.
+    const ogImageAlt = hasHeroImage
+      ? (article.title || seoTitle)
+      : (article.locale === 'en' ? DEFAULT_OG_IMAGE_ALT_EN : DEFAULT_OG_IMAGE_ALT_ES);
     upsertMeta('meta[property="og:image"]', {
       property: 'og:image',
       content: ogImage,
+    });
+    upsertMeta('meta[property="og:image:alt"]', {
+      property: 'og:image:alt',
+      content: ogImageAlt,
     });
     upsertMeta('meta[name="twitter:image"]', {
       name: 'twitter:image',
       content: ogImage,
     });
+    upsertMeta('meta[name="twitter:image:alt"]', {
+      name: 'twitter:image:alt',
+      content: ogImageAlt,
+    });
+    // og:image:width/height/type solo se emiten cuando usamos la card
+    // default (dimensiones y MIME conocidos: 1200x630 PNG). Para la hero
+    // del articulo no conocemos las dimensiones ni el MIME, los crawlers
+    // los inferiran al fetchear la imagen.
     if (hasHeroImage) {
       removeMeta('meta[property="og:image:width"]');
       removeMeta('meta[property="og:image:height"]');
+      removeMeta('meta[property="og:image:type"]');
     } else {
       upsertMeta('meta[property="og:image:width"]', {
         property: 'og:image:width',
@@ -361,6 +384,10 @@ export default function BlogArticleView() {
       upsertMeta('meta[property="og:image:height"]', {
         property: 'og:image:height',
         content: DEFAULT_OG_IMAGE_HEIGHT,
+      });
+      upsertMeta('meta[property="og:image:type"]', {
+        property: 'og:image:type',
+        content: DEFAULT_OG_IMAGE_TYPE,
       });
     }
 
@@ -412,11 +439,14 @@ export default function BlogArticleView() {
 
     // Twitter: siempre summary_large_image, porque siempre hay imagen
     // 1200x630 disponible (la hero del articulo si existe, o la card
-    // de marca por defecto).
+    // de marca por defecto). site/creator = mismo handle corporativo
+    // (no diferenciamos autor del articulo a nivel social).
     upsertMeta('meta[name="twitter:card"]', {
       name: 'twitter:card',
       content: 'summary_large_image',
     });
+    upsertMeta('meta[name="twitter:site"]', { name: 'twitter:site', content: TWITTER_HANDLE });
+    upsertMeta('meta[name="twitter:creator"]', { name: 'twitter:creator', content: TWITTER_HANDLE });
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: seoTitle });
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: metaDescription });
 
@@ -457,6 +487,38 @@ export default function BlogArticleView() {
     }
     upsertJsonLd('blog-article', jsonLd);
 
+    // BreadcrumbList JSON-LD (schema.org). Mejora el sitelinks search
+    // result en Google (muestra Home > Blog > Articulo en SERP) y refuerza
+    // la jerarquia semantica del articulo dentro del sitio. Los nombres
+    // van localizados al locale del articulo (sin i18n keys nuevas para
+    // mantener scope minimo).
+    const blogListingUrl = `${baseUrl}/blog/${article.locale}`;
+    const homeName = article.locale === 'en' ? 'Home' : 'Inicio';
+    upsertJsonLd('blog-breadcrumb', {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: homeName,
+          item: `${baseUrl}/`,
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Blog',
+          item: blogListingUrl,
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: article.title || seoTitle,
+          item: articleUrl,
+        },
+      ],
+    });
+
     // Marcador para el pre-render: senal a Puppeteer de que los meta tags
     // SEO del articulo (title, canonical, hreflang, OG, twitter, JSON-LD
     // BlogPosting) ya estan aplicados al DOM. Ver
@@ -476,7 +538,10 @@ export default function BlogArticleView() {
       removeMeta('meta[property="og:image"]');
       removeMeta('meta[property="og:image:width"]');
       removeMeta('meta[property="og:image:height"]');
+      removeMeta('meta[property="og:image:type"]');
+      removeMeta('meta[property="og:image:alt"]');
       removeMeta('meta[name="twitter:image"]');
+      removeMeta('meta[name="twitter:image:alt"]');
       removeMeta('meta[property="article:published_time"]');
       removeMeta('meta[property="article:modified_time"]');
       removeMeta('meta[property="article:section"]');
@@ -490,6 +555,17 @@ export default function BlogArticleView() {
       document.head
         .querySelectorAll('link[rel="alternate"][hreflang]')
         .forEach((el) => el.parentNode.removeChild(el));
+
+      // Eliminar el JSON-LD BreadcrumbList del articulo previo. El JSON-LD
+      // principal (blog-article) se sobreescribe en el siguiente render
+      // (otro articulo del SPA), pero al desmontar hacia una pagina no-blog
+      // queremos que ambos desaparezcan para no dejar metadata stale.
+      const breadcrumbLd = document.head.querySelector(
+        'script[type="application/ld+json"][data-jsonld-id="blog-breadcrumb"]'
+      );
+      if (breadcrumbLd && breadcrumbLd.parentNode) {
+        breadcrumbLd.parentNode.removeChild(breadcrumbLd);
+      }
 
       // Limpiar el marcador de hidratacion del pre-render. Defensivo:
       // si el usuario navega a otra pagina del SPA tras leer el articulo,

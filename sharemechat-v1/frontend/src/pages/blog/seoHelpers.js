@@ -117,6 +117,13 @@ export const truncate = (text, max) => {
 export const DEFAULT_OG_IMAGE = 'https://assets.sharemechat.com/brand/og-default-1200x630.png';
 export const DEFAULT_OG_IMAGE_WIDTH = '1200';
 export const DEFAULT_OG_IMAGE_HEIGHT = '630';
+export const DEFAULT_OG_IMAGE_TYPE = 'image/png';
+// Texto alt de la card de marca por defecto cuando NO disponemos de
+// hero propia del articulo. Bilingue minimo (es/en) segun locale.
+export const DEFAULT_OG_IMAGE_ALT_ES = 'SharemeChat — Videochat 1 a 1 con modelos verificadas';
+export const DEFAULT_OG_IMAGE_ALT_EN = 'SharemeChat — 1-to-1 video chat with verified models';
+// Handle X corporativo (unico, mismo para site y creator).
+export const TWITTER_HANDLE = '@shareme_chat';
 
 // Mapea locale corto (ej. 'es') a etiqueta BCP47 completa
 // (ej. 'es-ES'). Fallback 'es-ES'.

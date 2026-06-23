@@ -52,6 +52,10 @@ import {
   DEFAULT_OG_IMAGE,
   DEFAULT_OG_IMAGE_WIDTH,
   DEFAULT_OG_IMAGE_HEIGHT,
+  DEFAULT_OG_IMAGE_TYPE,
+  DEFAULT_OG_IMAGE_ALT_ES,
+  DEFAULT_OG_IMAGE_ALT_EN,
+  TWITTER_HANDLE,
 } from './seoHelpers';
 
 const fmtDate = (v) => {
@@ -228,6 +232,7 @@ const BlogContent = ({
     // las preview cards de FB/X/WhatsApp lo recortan al ser cuadrado
     // y de baja resolucion). logo192 sigue siendo correcto SOLO en
     // publisher.logo del JSON-LD mas abajo.
+    const ogImageAlt = locale === 'en' ? DEFAULT_OG_IMAGE_ALT_EN : DEFAULT_OG_IMAGE_ALT_ES;
     upsertMeta('meta[property="og:image"]', {
       property: 'og:image',
       content: DEFAULT_OG_IMAGE,
@@ -240,13 +245,24 @@ const BlogContent = ({
       property: 'og:image:height',
       content: DEFAULT_OG_IMAGE_HEIGHT,
     });
+    upsertMeta('meta[property="og:image:type"]', {
+      property: 'og:image:type',
+      content: DEFAULT_OG_IMAGE_TYPE,
+    });
+    upsertMeta('meta[property="og:image:alt"]', {
+      property: 'og:image:alt',
+      content: ogImageAlt,
+    });
 
     // Twitter Card: con la card 1200x630 ya podemos usar
     // summary_large_image (preview grande), no summary.
     upsertMeta('meta[name="twitter:card"]', { name: 'twitter:card', content: 'summary_large_image' });
+    upsertMeta('meta[name="twitter:site"]', { name: 'twitter:site', content: TWITTER_HANDLE });
+    upsertMeta('meta[name="twitter:creator"]', { name: 'twitter:creator', content: TWITTER_HANDLE });
     upsertMeta('meta[name="twitter:title"]', { name: 'twitter:title', content: title });
     upsertMeta('meta[name="twitter:description"]', { name: 'twitter:description', content: description });
     upsertMeta('meta[name="twitter:image"]', { name: 'twitter:image', content: DEFAULT_OG_IMAGE });
+    upsertMeta('meta[name="twitter:image:alt"]', { name: 'twitter:image:alt', content: ogImageAlt });
 
     // JSON-LD Blog. Solo emitir si hay articulos cargados (evita Blog vacio
     // durante el primer render mientras el fetch resuelve).

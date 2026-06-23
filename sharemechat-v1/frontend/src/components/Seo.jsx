@@ -41,6 +41,11 @@ import { PRODUCT_ORIGIN } from '../config/runtimeEnv';
 // Mientras no exista en TEST/AUDIT, el SVG fallback del index.html
 // sigue siendo el ultimo recurso.
 const DEFAULT_OG_IMAGE = 'https://assets.sharemechat.com/brand/og-default-1200x630.png';
+const DEFAULT_OG_IMAGE_WIDTH = '1200';
+const DEFAULT_OG_IMAGE_HEIGHT = '630';
+const DEFAULT_OG_IMAGE_TYPE = 'image/png';
+// Handle X corporativo (unico, mismo para site y creator).
+const TWITTER_HANDLE = '@shareme_chat';
 
 const buildAbsoluteUrl = (urlPath) => {
   const origin = PRODUCT_ORIGIN
@@ -109,7 +114,11 @@ const Seo = ({ pageKey, urlPath, localeAware = true, image, ogType = 'website' }
         <link rel="alternate" hrefLang="x-default" href={buildLocaleAlternate(urlPath, 'es')} />
       )}
 
-      {/* Open Graph */}
+      {/* Open Graph. Dimensiones/type/alt solo cuando usamos la card
+          default de marca: si el caller pasa una imagen propia via prop
+          `image`, no conocemos sus metadatos y dejamos que el crawler
+          los infiera. alt = title de la pagina (descripcion semantica
+          mas relevante para preview cards y accesibilidad). */}
       <meta property="og:type" content={ogType} />
       <meta property="og:site_name" content="SharemeChat" />
       <meta property="og:title" content={title} />
@@ -117,12 +126,19 @@ const Seo = ({ pageKey, urlPath, localeAware = true, image, ogType = 'website' }
       <meta property="og:url" content={canonical} />
       <meta property="og:locale" content={ogLocale} />
       <meta property="og:image" content={ogImage} />
+      {!image && <meta property="og:image:width" content={DEFAULT_OG_IMAGE_WIDTH} />}
+      {!image && <meta property="og:image:height" content={DEFAULT_OG_IMAGE_HEIGHT} />}
+      {!image && <meta property="og:image:type" content={DEFAULT_OG_IMAGE_TYPE} />}
+      <meta property="og:image:alt" content={title} />
 
-      {/* Twitter Card */}
+      {/* Twitter Card. site/creator = mismo handle corporativo. */}
       <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:site" content={TWITTER_HANDLE} />
+      <meta name="twitter:creator" content={TWITTER_HANDLE} />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
+      <meta name="twitter:image:alt" content={title} />
 
       {/* JSON-LD WebPage (el WebSite global del index.html no se duplica). */}
       <script type="application/ld+json">
