@@ -47,9 +47,20 @@ function handler(event) {
     }
 
     // Reescritura SPA:
-    // si no hay extensión de fichero, servir index.html
+    // - /blog/* (paths con pre-render selectivo): anadir /index.html como sufijo.
+    //   Permite servir HTML especificos por articulo y listing desde
+    //   s3://sharemechat-frontend-prod/blog/<path>/index.html.
+    //   Si el objeto no existe, S3 (OAC) devuelve 403 y la distribucion lo
+    //   convierte a 200 + /index.html (Custom Error Response) -> shell SPA.
+    //   Ver seo-edge-function-analysis-2026-06-21.md.
+    // - Resto de paths sin extension: shell SPA en /index.html como hasta hoy.
     if (!uri.includes('.')) {
-        request.uri = '/index.html';
+        if (uri === '/blog' || uri.startsWith('/blog/')) {
+            var trimmed = uri.replace(/\/$/, '');
+            request.uri = trimmed + '/index.html';
+        } else {
+            request.uri = '/index.html';
+        }
     }
 
     return request;
