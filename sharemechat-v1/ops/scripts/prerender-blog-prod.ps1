@@ -79,6 +79,48 @@ function Stop-Prerender {
     exit $ExitCode
 }
 
+function Invoke-NativeNoAbort {
+    <#
+    Ejecuta un comando externo (node, aws, npm, etc) preservando streaming
+    de stdout + stderr SIN que PowerShell aborte por warnings escritos a
+    stderr aunque el comando devuelva exit code 0. Devuelve el exit code
+    [int] para que el caller decida (no aborta el script).
+
+    Necesario porque en Windows PowerShell 5.1 (NO en pwsh 7) cualquier
+    escritura a stderr de un native exe se convierte en NativeCommandError,
+    que con $ErrorActionPreference = 'Stop' termina el script aun cuando el
+    exe haya devuelto 0. Caso clasico de este script: render.js emite
+    "[WARN] alguna imagen no cargo en 15s" por stderr y exit 0, pero el
+    script PS abortaba con exit 99 antes del check de $LASTEXITCODE.
+
+    Implementacion clave: `& $Block | Out-Host` consume stdout del native
+    enviandolo al host (visible al usuario) PERO sin que entre en la
+    pipeline de retorno de esta funcion. Sin Out-Host, la salida del native
+    se acumula en la pipeline y al hacer `return $exit` el caller recibe
+    el array de strings de stdout en lugar del numero, rompiendo el check
+    `if ($renderExit -ne 0)`. Aprendido el 2026-06-23 tras deploy fallido.
+
+    Replica el helper Invoke-Native de deploy-frontend.ps1 (lineas 197-229)
+    pero sin Stop-Deploy: aqui el caller usa Stop-Prerender, asi devolvemos
+    el exit code y dejamos que el caller decida.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [scriptblock]$Block
+    )
+    $prevEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    $exit = 0
+    try {
+        & $Block | Out-Host
+        $exit = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $prevEAP
+    }
+    if ($null -eq $exit) { $exit = 0 }
+    return [int]$exit
+}
+
 # ---------------------------------------------------------------
 # 1) Verificar node
 # ---------------------------------------------------------------
@@ -175,8 +217,11 @@ Write-Host "      OutDir: $outDir"
 Push-Location $prerenderDir
 $renderExit = 0
 try {
-    & node render.js --config $configPath
-    $renderExit = $LASTEXITCODE
+    # Invoke-NativeNoAbort: evita que PS5.1 aborte el script cuando node
+    # escribe a stderr aunque render.js devuelva exit 0 (bug clasico
+    # NativeCommandError + ErrorActionPreference='Stop'). El exit code
+    # real de render.js se evalua mas abajo.
+    $renderExit = Invoke-NativeNoAbort -Block { & node render.js --config $configPath }
 } finally {
     Pop-Location
 }
