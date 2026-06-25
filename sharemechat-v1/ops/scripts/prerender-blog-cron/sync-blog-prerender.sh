@@ -26,6 +26,17 @@ CF_DIST_ID="E2FWNC80D4QDJC"
 API_BASE="https://sharemechat.com/api/public/content/articles"
 HOSTNAME_BASE="https://sharemechat.com"
 SHELL_TITLE="1-to-1 Video Chat with Verified Models | SharemeChat"
+# Patrones de error de hidratacion del SPA: BlogArticleView.jsx setea este
+# texto via setError(t('blog:states.errorArticle')) cuando el fetch a
+# /api/public/content/articles/{slug} falla durante la primera hidratacion.
+# Puppeteer captura el DOM con el mensaje visible y pasa los checks de size
+# + title (los meta tags si se aplicaron). Esto blinda contra race conditions
+# entre publicacion y disponibilidad de htmlBody en la API/cache del backend.
+# Se incluyen las dos variantes (con/sin tilde) por si la i18n cambia.
+ERROR_PATTERNS=(
+    "No se pudo cargar el articulo"
+    "No se pudo cargar el artículo"
+)
 
 mkdir -p "$LOG_DIR"
 
@@ -128,24 +139,44 @@ else
     exit 1
 fi
 
-# 6. Sanity check: verificar que cada HTML generado NO es el shell SPA
+# 6. Sanity check: verificar que cada HTML generado NO es el shell SPA NI
+#    contiene mensaje de error de hidratacion del SPA.
 log "Verificando HTMLs generados..."
 INVALID=0
 GENERATED=0
+ERROR_HYDRATION=0
 while IFS= read -r html; do
     [ -z "$html" ] && continue
     GENERATED=$((GENERATED + 1))
     SIZE=$(wc -c < "$html")
     TITLE=$(grep -o '<title>[^<]*</title>' "$html" | head -1)
+    # Check 1+2: shell SPA o size insuficiente
     if [ "$SIZE" -lt 10000 ] || echo "$TITLE" | grep -qF "$SHELL_TITLE"; then
         log "SOSPECHOSO: $html size=$SIZE title=$TITLE"
         INVALID=$((INVALID + 1))
+        continue
     fi
+    # Check 3: mensaje de error de hidratacion del SPA. Patron clave del
+    # incidente identificado el 2026-06-25: el HTML tiene title y JSON-LD
+    # correctos, size > 10KB, pero el cuerpo es el mensaje del setError de
+    # BlogArticleView.jsx. SEO/preview pasan, contenido NO.
+    for pat in "${ERROR_PATTERNS[@]}"; do
+        if grep -qF "$pat" "$html"; then
+            log "SOSPECHOSO: $html contiene mensaje de error de hidratacion ('$pat') - SPA fallo en fetch durante render"
+            INVALID=$((INVALID + 1))
+            ERROR_HYDRATION=$((ERROR_HYDRATION + 1))
+            break
+        fi
+    done
 done < <(find "$TMP_OUT" -name 'index.html')
 
-log "HTMLs generados: $GENERATED, sospechosos: $INVALID"
+log "HTMLs generados: $GENERATED, sospechosos: $INVALID (de los cuales $ERROR_HYDRATION con mensaje de error de hidratacion)"
 if [ "$INVALID" -gt 0 ]; then
-    log "ERROR: $INVALID HTML(s) parecen ser shell SPA, no articulos pre-renderizados. Abortando upload."
+    if [ "$ERROR_HYDRATION" -gt 0 ]; then
+        log "ERROR: $ERROR_HYDRATION HTML(s) contienen mensaje de error de hidratacion. SPA no rendero el contenido. Abortando upload sin tocar S3."
+    else
+        log "ERROR: $INVALID HTML(s) parecen ser shell SPA, no articulos pre-renderizados. Abortando upload."
+    fi
     rm -rf "$TMP_OUT"
     exit 1
 fi

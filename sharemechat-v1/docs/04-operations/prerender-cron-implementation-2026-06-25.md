@@ -210,6 +210,76 @@ Este informe, ADR-042, README operativo, copia auditable de los 4 artefactos (sc
 
 ---
 
+## Mejoras post-implementación
+
+### 2026-06-25 (tarde) — Tercer check en sanity validation contra HTMLs con mensaje de error de hidratación
+
+**Síntoma observado**: el operador reportó haber visto un HTML pre-renderizado de `alternativas-omegle-2026` con el cuerpo sustituido por `<div class="sc-eqgsLa kshXaT">No se pudo cargar el articulo. Vuelve a intentarlo en unos minutos.</div>`. Al verificar S3 + CF en el momento de abrir el frente: el HTML actual ya estaba correcto (verificado con `grep -cF` para ambas variantes con/sin tilde = 0 ocurrencias, h2 del cuerpo presentes). Conclusión: el operador vio el HTML malo en un cache previo (probablemente "Probar URL publicada" de GSC que captura HTML en su primer rastreo) o el HTML temporalmente fue re-renderizado durante una pasada y luego sobrescrito por otra. **GATE 1 (regenerar HTML) saltado** porque no había nada que regenerar.
+
+**Diagnóstico del riesgo**: `BlogArticleView.jsx:201` ejecuta `setError(t('blog:states.errorArticle'))` si el fetch a `/api/public/content/articles/{slug}?locale=es` falla en la primera hidratación del SPA. Puppeteer espera el marker `body[data-blog-hydrated="true"]` que se setea **antes** del fetch del cuerpo (en el useEffect de SEO; ver [`BlogArticleView.jsx:467`](../../frontend/src/pages/blog/BlogArticleView.jsx)). Si el fetch falla **después** del marker pero antes de `page.content()`, Puppeteer captura un HTML con:
+- Title del artículo ✅ (los meta tags se aplican antes del fetch).
+- Canonical, hreflang, JSON-LD ✅ (idem).
+- Cuerpo = `<div class="sc-...">No se pudo cargar el articulo...</div>` (el `setError` se reflejó en el DOM antes del snapshot).
+- Size > 10KB ✅ (porque hay shell + meta tags + JSON-LD).
+
+Los 2 checks de sanity originales del cron (`SIZE >= 10000` y `TITLE != SHELL_TITLE`) **no detectan este caso** — el HTML pasa ambos. SEO y previews sociales reciben todos los metadatos correctos, pero usuarios humanos llegando vía Google verían momentáneamente el mensaje de error antes de que el SPA recargue desde la API.
+
+**Causas plausibles del fetch fallido durante el render**:
+- Race condition entre transición a `PUBLISHED` (que setea `published_at = Instant.now()` + commit BD) y la propagación al cache HTTP del backend (`Cache-Control: public, max-age=300`). Si el cron lanza Puppeteer en los primeros segundos tras la publicación, el fetch puede pegar contra un nodo CDN/CloudFront que aún tiene cacheado un 404 del estado anterior.
+- Backend Java cargando o reiniciando momentáneamente durante el render.
+- Slug recién publicado pero con `body_s3_key` no propagado todavía si hubo retraso en el upload a `sharemechat-content-private-prod`.
+
+Cualquiera de estas causas se reproduciría silenciosamente: el HTML malo se sube a S3, se invalida CF, y queda servido hasta la próxima pasada con diff. **Pero no hay próxima pasada con diff porque el HTML existe**. El error queda persistente hasta intervención manual (borrar el HTML del S3).
+
+**Parche aplicado**: tercer check en la sanity validation del bloque 6 del `sync-blog-prerender.sh`.
+
+```bash
+ERROR_PATTERNS=(
+    "No se pudo cargar el articulo"
+    "No se pudo cargar el artículo"
+)
+```
+Constante global cerca del top del script, con ambas variantes (con/sin tilde) por si la i18n cambia.
+
+En el loop de sanity check, tras pasar el check de shell/size, se itera el array:
+```bash
+for pat in "${ERROR_PATTERNS[@]}"; do
+    if grep -qF "$pat" "$html"; then
+        log "SOSPECHOSO: $html contiene mensaje de error de hidratacion ('$pat') - SPA fallo en fetch durante render"
+        INVALID=$((INVALID + 1))
+        ERROR_HYDRATION=$((ERROR_HYDRATION + 1))
+        break
+    fi
+done
+```
+Se introduce contador `ERROR_HYDRATION` separado del `INVALID` genérico para emitir un mensaje de abort diferenciado:
+- Si `ERROR_HYDRATION > 0`: *"ERROR: N HTML(s) contienen mensaje de error de hidratacion. SPA no rendero el contenido. Abortando upload sin tocar S3."*
+- Caso "shell SPA": mantiene el mensaje original.
+
+**Comportamiento ante incidente futuro**:
+1. Render captura HTML con el mensaje de error.
+2. Sanity check tercer chequeo detecta antes de subir a S3.
+3. Script aborta con exit 1. `rm -rf "$TMP_OUT"`.
+4. S3 mantiene el HTML correcto previo (o ausencia, si era artículo nuevo).
+5. CER 403→200 cubre el slug si no estaba.
+6. Siguiente pasada del cron (15 min más tarde) lo detecta como faltante de nuevo y reintenta.
+7. Si el fetch ya funciona (transitorio resuelto), se sube limpio en esa pasada.
+8. Si persiste N pasadas: el operador lo ve en los logs del journal o `/var/log/sharemechat-prerender/`. La deuda **D5** (alarma CWA sobre 3 FAILED consecutivas) cubriría notificación automática.
+
+**Validación del parche**:
+- Test standalone con 3 casos (HTML con error sin tilde, con tilde, y limpio): detección binaria correcta en los 3.
+- Pasada cron post-parche: `Sin diff. Nada que hacer.` (2 s). Cero falsos positivos sobre HTMLs reales en S3.
+- Script en EC2: 7742 → 9393 B (+1651 B coherente con el bloque añadido). Backup en `/opt/sharemechat/prerender-blog/sync-blog-prerender.sh.bak-pre-error-check`.
+
+**Pendiente futuro** (no bloquea, registrado como deuda nueva D6):
+- Investigar la causa raíz del fetch fallido durante el render. Reproducir publicando un slug de prueba y midiendo timing entre `transitionState(PUBLISHED)` + commit BD + invalidación cache backend + primer fetch del SPA. Si se confirma race condition, opciones:
+  - Añadir delay configurable al cron antes de lanzar render para slugs publicados en los últimos N segundos.
+  - Health check post-publish que verifique que `/api/public/content/articles/{slug}` devuelve 200 con `htmlBody` no vacío antes de añadir el slug a la lista de URLs del render.
+  - Aumentar timeout del render.js para reintentos del fetch si detecta `setError` en el DOM.
+- Si NO se reproduce: dejar el parche como mitigación defensiva permanente y cerrar D6.
+
+---
+
 ## Estado final desplegado
 
 **EC2 prod-backend** (i-0e0a3b5fee271592f, t3.medium, eu-central-1a):
@@ -260,6 +330,12 @@ Este informe, ADR-042, README operativo, copia auditable de los 4 artefactos (sc
    - Detectar 3 pasadas FAILED consecutivas como señal de intervención manual.
    - Implementación posible: CloudWatch Logs Subscription Filter sobre `/var/log/sharemechat-prerender/sync-*.log` con pattern `ERROR|FAIL|exit [^0]`, métrica custom, alarma sobre threshold ≥ 3 en 1h.
    - Por ahora, solo el operador inspeccionando logs manualmente puede detectar fallos sostenidos.
+
+6. **Investigar causa raíz del fetch fallido durante el render** (añadida 2026-06-25 tarde).
+   - Origen: incidente de HTML con mensaje "No se pudo cargar el articulo" reportado por el operador. Síntoma no reproducido al abrir el frente (HTML actual correcto), pero el riesgo es real.
+   - Reproducir publicando un slug de prueba y midiendo timing entre `ContentArticleService.transitionState(PUBLISHED)` + commit BD + invalidación cache backend + primer fetch del SPA por Puppeteer.
+   - Opciones si se confirma race condition: (a) delay configurable en el cron para slugs publicados en últimos N segundos; (b) health check post-publish que verifique `/api/public/content/articles/{slug}` devuelve 200 con `htmlBody` no vacío antes de añadir slug a URLs del render; (c) aumentar timeout o reintentos del fetch en render.js si detecta `setError` en el DOM.
+   - Mitigación defensiva ya aplicada: tercer check de sanity rechaza HTMLs con el patrón "No se pudo cargar el articulo" antes de subir a S3.
 
 ### Bugs corregidos durante el frente (registrados aquí para histórico)
 
