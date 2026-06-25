@@ -1,6 +1,6 @@
 {
   "schema_version": "0.3",
-  "updated_at": "2026-06-19",
+  "updated_at": "2026-06-25",
   "platforms": {
     "x": {
       "handle": "@shareme_chat",
@@ -50,7 +50,7 @@
         },
         {
           "name": "r/CreatorsAdvice",
-          "rol": "target_brand_fit",
+          "rol": "blocked",
           "target_audience": ["both"],
           "promo_policy": "none",
           "min_karma": 50,
@@ -58,11 +58,14 @@
           "ratio": { "promo": 0, "aporte": 0 },
           "last_action_at": null,
           "commented_threads": [],
-          "notes": "Validado humano 2026-06-18. Lean clients pero acepta angulo models. Disclosure light por defecto."
+          "blocked_reason": "Operadores de plataforma instant-ban (Regla 2 + Regla 8). Sub solo permite NSFW creators in front of camera.",
+          "blocked_evidence": "https://www.reddit.com/r/CreatorsAdvice/ rules verified by operator 2026-06-25",
+          "blocked_at": "2026-06-25",
+          "notes": "Verificacion humana 2026-06-25 contradice clasificacion previa del 2026-06-18. Regla 2 literal: 'Creators only. This will result in instant ban.'. Regla 8 literal: 'No agencies or managers welcome. Anyone... using this space to covertly promote their services will be banned.'. Regla 4: 'Sin publicidad' (servicios, productos, sitios web, redes sociales). La cuenta u/sharemechat como operador NO debe postear ni comentar en este sub bajo ningun modo de disclosure. El min_karma=50 + min_age_days=30 original del ledger es irrelevante porque las reglas del sub bloquean antes que los minimos."
         },
         {
           "name": "r/SexWorkerSupport",
-          "rol": "target_brand_fit",
+          "rol": "blocked",
           "target_audience": ["models"],
           "promo_policy": "none",
           "min_karma": 50,
@@ -70,17 +73,21 @@
           "ratio": { "promo": 0, "aporte": 0 },
           "last_action_at": null,
           "commented_threads": [],
-          "notes": "Validado humano 2026-06-18. Sub pequeno (~633 visitas/sem). Util como fuente de research adicional. Sin auto-referencia primer mes operativo."
+          "blocked_reason": "Limitado a current/former sex workers (Regla 1). El sub verifica reddit history del autor antes de permitir postear/comentar. La cuenta u/sharemechat fallara la verificacion.",
+          "blocked_evidence": "https://www.reddit.com/r/SexWorkerSupport/ rules verified by operator 2026-06-25",
+          "blocked_at": "2026-06-25",
+          "notes": "Verificacion humana 2026-06-25 contradice clasificacion previa del 2026-06-18. Adicional: Regla 3 ('Crossposting or sharing will earn an insta-ban') cierra aun mas el sub. NO postear."
         },
         {
           "name": "r/CamGirlProblems",
-          "rol": "target_brand_fit",
+          "rol": "karma_only",
           "target_audience": ["models"],
           "promo_policy": "none",
+          "disclosure_policy": "never",
           "min_karma": 1,
           "min_age_days": 7,
-          "ratio": { "promo": 0, "aporte": 2 },
-          "last_action_at": "2026-06-18T23:10:13Z",
+          "ratio": { "promo": 0, "aporte": 4 },
+          "last_action_at": "2026-06-25T16:24:40Z",
           "commented_threads": [
             {
               "url": "https://www.reddit.com/r/CamGirlProblems/comments/1u9fo6g/stripchat_is_there_a_way_to_blur_the_thumbnails/",
@@ -97,13 +104,29 @@
               "disclosure_used": "light",
               "is_boost": true,
               "boost_keyword": "stripchat"
+            },
+            {
+              "url": "https://www.reddit.com/r/CamGirlProblems/comments/1ufe857/unfair_suspension_on_stripchat/",
+              "at": "2026-06-25T16:24:40Z",
+              "variante": "A",
+              "disclosure_used": "explicit",
+              "is_boost": true,
+              "boost_keyword": "stripchat"
+            },
+            {
+              "url": "https://www.reddit.com/r/CamGirlProblems/comments/1ufdeul/at_what_point_can_i_just_accept_this_is_my_career/",
+              "at": "2026-06-25T16:24:40Z",
+              "variante": "B",
+              "disclosure_used": "light",
+              "is_boost": false,
+              "boost_keyword": null
             }
           ],
-          "notes": "Validado humano 2026-06-18. PRIORITARIO (~226k visitas/sem). Threads de problemas operativos = oportunidades para angulo plataforma. Disclosure explicit permitido si el thread menciona BoostKeywords. min_karma=1 + min_age_days=7 VALIDADOS empiricamente 2026-06-19 con publicacion real de 2 comentarios B en threads boost stripchat: AutoMod NO silencio (ambos visibles en incognito). Las estimaciones previas 50/30 quedaron refutadas; estos son los valores vigentes."
+          "notes": "Verificacion humana 2026-06-25: reglas oficiales prohiben mencion de marca propia (Reglas 2/3/4) y prohiben quejas sobre plataformas (Regla 5) y prohiben investigaciones de operadores creando plataforma propia (Regla 6). Solo permite comentarios peer-to-peer sin disclosure: voz de modelo veterana, consejos operativos puros, sin mencion de SharemeChat ni 'platform side I work on', sin links, sin redireccion. Validacion empirica 2026-06-25: 2 comentarios cortos (~500 chars) recortados manualmente del output del pipeline, sin disclosure, dieron +1 y +2 upvotes con 32-68 visualizaciones; mejor performance que los completos del pipeline original. min_karma=1 y min_age_days=7 ratificados como valores definitivos (AutoMod no silencio). Sigue siendo sub prioritario por volumen (215k visitas/sem segun stats panel verificado 2026-06-25) y por audiencia objetivo (modelos cam activas). Util para construir karma silenciosamente. La clasificacion previa target_brand_fit (2026-06-18) queda refutada por las reglas reales del sub."
         },
         {
           "name": "r/Fansly_Advice",
-          "rol": "target_brand_fit",
+          "rol": "blocked",
           "target_audience": ["models"],
           "promo_policy": "none",
           "min_karma": 100,
@@ -111,9 +134,26 @@
           "ratio": { "promo": 0, "aporte": 0 },
           "last_action_at": null,
           "commented_threads": [],
-          "notes": "Validado humano 2026-06-18. Slug exacto con guion bajo. ~22k visitas/sem. Target competencia directa OF/Fansly. Disclosure light primeros 30 dias."
+          "blocked_reason": "Mismo patron creators-only que CreatorsAdvice. Regla 1 limita a Fansly creators in front of camera; Regla 2 prohibe publicidad/networking/promocion.",
+          "blocked_evidence": "https://www.reddit.com/r/Fansly_Advice/ rules verified by operator 2026-06-25",
+          "blocked_at": "2026-06-25",
+          "notes": "Verificacion humana 2026-06-25 contradice clasificacion previa del 2026-06-18. Operador no welcome. Las restricciones del sub bloquean antes que el min_karma=100 original."
         }
       ]
+    }
+  },
+  "backlog": {
+    "social_discovery_2026_06_25": {
+      "description": "Investigacion de subs alternativos para Reddit. 4 subs target del adult-ecosystem confirmados como inviables (3 blocked, 1 karma_only). Se necesita identificar: (A) subs donde operadores de plataforma SI son bienvenidos para exposicion de marca con disclosure; (B) subs con modelos cam activas donde se pueda enviar DMs personalizados a modelos que se quejan de su plataforma actual.",
+      "blocked_by": "Reddit endurecio antibot 2024-2026: HTTP 403 desde Cowork, desde EC2 backend, y desde IP residencial del operador (69 fetches en 23 subs, 100% fail). API JSON publica inaccesible sin OAuth oficial registrado.",
+      "next_actions_pending": [
+        "Opcion A: registrar app OAuth oficial de Reddit (gratis, requiere documentacion como app de research), usar API autenticada con quota limit.",
+        "Opcion B: investigacion manual asistida (operador navega cada sub candidato, transcribe regla mas restrictiva y muestreo de hot, ~45 min de trabajo manual).",
+        "Opcion C: vector C - DMs manuales a modelos activas en r/CamGirlProblems (sub al que ya tenemos acceso) que se quejan de Stripchat/Chaturbate. No requiere subs nuevos."
+      ],
+      "constraints": "Operador descarto cualquier opcion que requiera pagar (Reddit Ads, Reddit Premium, proxies residenciales, herramientas pagas).",
+      "priority": "medium",
+      "created_at": "2026-06-25"
     }
   }
 }

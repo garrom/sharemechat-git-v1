@@ -8,6 +8,43 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-25 — Reglas reales de 4 subs adult-ecosystem verificadas + ledger reescrito
+
+Verificación humana de las reglas oficiales (leídas por el operador desde el navegador con su cuenta) de los 4 subs target del adult-ecosystem que el ledger clasificaba como `target_brand_fit` desde el 2026-06-18. La clasificación previa estaba basada en inferencia + investigación de FASE 2D-1.5; al leer las reglas reales del sub, **3 de los 4 bloquean operadores de plataforma** y el cuarto solo permite participación sin ninguna mención de marca.
+
+**Hallazgos por sub**:
+
+- **r/CreatorsAdvice**: Regla 2 ("Creators only. This will result in instant ban.") + Regla 8 ("No agencies or managers welcome. Anyone... using this space to covertly promote their services will be banned.") + Regla 4 (sin publicidad). La cuenta `u/sharemechat` como operador NO debe postear ni comentar bajo ningún modo de disclosure. Reclasificado `rol: "blocked"`.
+- **r/Fansly_Advice**: Mismo patrón. Regla 1 limita a Fansly creators in front of camera; Regla 2 prohíbe publicidad/networking/promoción. Reclasificado `rol: "blocked"`.
+- **r/SexWorkerSupport**: Aún más estricto. Regla 1 limita a current/former sex workers, y el sub **verifica reddit history del autor** antes de permitir postear. La cuenta `u/sharemechat` fallaría la verificación. Regla 3 ("Crossposting or sharing will earn an insta-ban") cierra aún más. Reclasificado `rol: "blocked"`.
+- **r/CamGirlProblems**: Reglas 2/3/4 prohíben mencionar marca propia (suspensión permanente); Regla 5 prohíbe quejas sobre plataformas; Regla 6 prohíbe investigaciones de operadores creando plataforma propia. Permite participación peer-to-peer sin disclosure ni redirección. Reclasificado `rol: "karma_only"` con campo nuevo `disclosure_policy: "never"`. **Validación empírica del mismo 2026-06-25**: 2 comentarios cortos (~500 chars) sin disclosure dieron +1 y +2 upvotes con 32-68 visualizaciones — mejor performance que los completos del pipeline original. Sigue siendo prioritario por volumen (215k visitas/sem según stats panel) y audiencia objetivo. `min_karma=1` y `min_age_days=7` ratificados como valores definitivos.
+
+**Schema del ledger**: dos cambios aditivos (sin schema bump v0.3→v0.4 explícito, son compatibles retro):
+
+- Nuevo valor de `rol`: `"blocked"` y `"karma_only"` además de los previos `"karma"` y `"target_brand_fit"`. Subs `blocked` traen 3 campos nuevos: `blocked_reason` (texto + cita de reglas), `blocked_evidence` (URL del sub + nota de verificación), `blocked_at` (fecha). Subs `karma_only` traen `disclosure_policy: "never"`.
+- Nuevo top-level `backlog` (hermano de `platforms`) con entrada `social_discovery_2026_06_25`: descripción del gap (vector A operator-friendly + vector B modelos para DM), bloqueador (antibot Reddit 403 universal), 3 next-actions pendientes (OAuth oficial / investigación manual / DMs a r/CamGirlProblems), constraints (nada pago) y prioridad media.
+
+**Intento previo de descubrimiento automatizado fallido**: el operador ejecutó un script PowerShell desde su IP residencial con UA del proyecto, 69 fetches a 23 subs candidatos, **100% HTTP 403**. Reddit endureció antibot 2024-2026: ni Cowork (Anthropic AWS) ni el EC2 backend ni la IP residencial del operador consiguen pasar. La API JSON pública es inaccesible sin OAuth oficial registrado. Documentado como bloqueador del backlog.
+
+**Aprendizaje operativo**: clasificaciones de subs basadas en inferencia + nombre del sub (sin leer reglas reales) son deuda técnica desde el momento en que se introducen. La lección ya estaba en el project-log del 2026-06-19 ("estimaciones de umbrales sin base empírica son deuda técnica") y se confirma de nuevo en otro vector — el rol/target_brand_fit del 2026-06-18 era inferencia, no lectura. La inferencia llevó al operador a publicar 2 comentarios con disclosure light en r/CamGirlProblems el 18-jun que **no incumplieron las reglas por suerte** (variante B sin marca explícita ni mención de SharemeChat por nombre, según ledger), pero la apertura para el override de boost a disclosure explicit del helper hubiera sido suspensión permanente directa según Regla 2 del sub.
+
+**Decisiones operativas del operador en esta sesión**:
+
+1. NO borrar ningún sub del ledger. Mantener registro histórico documentado.
+2. Subs blocked se preservan con la razón documentada para evitar re-evaluarlos cuando aparezcan en sesiones futuras.
+3. r/CamGirlProblems queda como único sub Reddit operativo de la cuenta, en modo karma_only.
+4. Backlog explícito de investigación de subs alternativos creado en el ledger.
+
+**Estado del pipeline social-ops tras esta sesión**:
+
+- **X / @shareme_chat**: sin cambios. 0 followers, ratio promo:0 / aporte:2.
+- **Reddit / u/sharemechat**: comment_karma=1, post_karma=0, fase warmup. Único sub operativo: r/CamGirlProblems (karma_only). 4 comentarios publicados en total (2 del 18-jun + 2 del 25-jun) con ratio.aporte=4.
+- **Backlog activo**: `social_discovery_2026_06_25` (priority medium).
+
+**Cambios commiteados**: `sharemechat-v1/docs/social/social-state.json` + entrada de este project-log.
+
+---
+
 ## 2026-06-25 — Automatización del pre-render del blog vía cron en EC2 prod-backend (ADR-042)
 
 Cierre del gap operativo que dejó el frente SEO del 23-jun: artículos publicados desde el CMS post-deploy quedaban sin HTML pre-renderizado en S3 hasta el siguiente `deploy-frontend.ps1`. Reproducido el 24-jun con `alternativas-omegle-2026` (ES + EN), que servía el shell SPA + mensaje "No se pudo cargar el artículo" en Google Search Console. Implementado cron systemd cada 15 min en el EC2 prod-backend que diffea slugs publicados (API pública `/api/public/content/articles?locale={es,en}`) contra HTMLs presentes en `s3://sharemechat-frontend-prod/blog/`, renderiza con Puppeteer solo los faltantes + los 2 listings, sube a S3 e invalida CloudFront con paths exactos (sin wildcards). Auto-curativo, idempotente, cero código Java, cero migración BD. Decisión arquitectónica zanjada en [ADR-042](06-decisions/adr-042-prerender-cron-on-backend-ec2.md) (G3 sobre G1 hook backend y G2 Lambda; tradeoffs documentados). El SPA cliente funcionalmente no depende del pre-render — el cron es solo para scrapers sin JS (GSC, FB, X, WhatsApp, Reddit, etc.) y para señales SEO iniciales.
