@@ -8,6 +8,62 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-25 — Automatización del pre-render del blog vía cron en EC2 prod-backend (ADR-042)
+
+Cierre del gap operativo que dejó el frente SEO del 23-jun: artículos publicados desde el CMS post-deploy quedaban sin HTML pre-renderizado en S3 hasta el siguiente `deploy-frontend.ps1`. Reproducido el 24-jun con `alternativas-omegle-2026` (ES + EN), que servía el shell SPA + mensaje "No se pudo cargar el artículo" en Google Search Console. Implementado cron systemd cada 15 min en el EC2 prod-backend que diffea slugs publicados (API pública `/api/public/content/articles?locale={es,en}`) contra HTMLs presentes en `s3://sharemechat-frontend-prod/blog/`, renderiza con Puppeteer solo los faltantes + los 2 listings, sube a S3 e invalida CloudFront con paths exactos (sin wildcards). Auto-curativo, idempotente, cero código Java, cero migración BD. Decisión arquitectónica zanjada en [ADR-042](06-decisions/adr-042-prerender-cron-on-backend-ec2.md) (G3 sobre G1 hook backend y G2 Lambda; tradeoffs documentados). El SPA cliente funcionalmente no depende del pre-render — el cron es solo para scrapers sin JS (GSC, FB, X, WhatsApp, Reddit, etc.) y para señales SEO iniciales.
+
+**Frente ejecutado en 6 gates supervisados** (cada uno con OK explícito del operador):
+
+- **GATE 1 — IAM** (commit `<feat-ops-cron>`): policy inline `SharemechatFrontendProdBlogPrerender` añadida al rol `sharemechat-ec2-prod-role` con perfil `sharemechat-provisioner`. 3 statements: `s3:PutObject/DeleteObject/GetObject/HeadObject` sobre `arn:aws:s3:::sharemechat-frontend-prod/blog/*`, `s3:ListBucket` con condition `s3:prefix in [blog/*,blog]`, `cloudfront:CreateInvalidation` sobre `arn:aws:cloudfront::430118829334:distribution/E2FWNC80D4QDJC`. Validación E2E desde el EC2 con instance profile: PutObject/HeadObject/DeleteObject/CreateInvalidation OK sin AccessDenied.
+
+- **GATE 2 — swap + alarma CWA**: 2 GB swap en `/swapfile` (priority -2, persistido en `/etc/fstab`), `vm.swappiness=10` persistido en `/etc/sysctl.d/99-sharemechat-swap.conf`. Alarma CloudWatch `sharemechat-prod-backend-CPUCreditBalance-low` threshold < 100 burst credits sostenidos 15 min (3 períodos × 5 min). Sin `--alarm-actions` (no hay SNS topic; consulta en consola).
+
+- **GATE 3 — Node + Chromium + Puppeteer**: Node 18.20.8 + npm 10.8.2 (`dnf install nodejs npm` en Amazon Linux 2023). Libs sistema Chromium: `alsa-lib`, `at-spi2-atk`, `at-spi2-core`, `atk`, `cups-libs`, `gtk3`, `libdrm`, `libxkbcommon`, `nspr`, `nss`, `xorg-x11-server-Xvfb`, `mesa-libgbm-devel` (este último trae `mesa-libgbm` runtime que provee `libgbm.so.1`, porque `libgbm` como paquete no existe en AL2023). Total ~605 MB en disco (42 MB en `/opt/sharemechat/prerender-blog/` + 563 MB Chromium en `~/.cache/puppeteer/`). Smoke con URL ya pre-renderizada: 18.7 s, HTML 56291 B, title del artículo. Deuda menor anotada: `puppeteer@22.15.0` deprecated por npm (`< 24.15.0 is no longer supported`), bump a `^24.0.0` pendiente.
+
+- **GATE 4 — script + systemd timer**: `sync-blog-prerender.sh` instalado en `/opt/sharemechat/prerender-blog/` (oneshot via systemd, `User=ec2-user`, `Nice=10`, `TimeoutStartSec=600`), `sharemechat-prerender.timer` (`OnUnitActiveSec=15min`, `OnBootSec=5min`, `Persistent=true`), logrotate diario en `/etc/logrotate.d/sharemechat-prerender` (14 días, comprimido), logs en `/var/log/sharemechat-prerender/sync-YYYYMMDD.log`. **Bug cazado intra-gate**: `LOCK_FILE` original en `/var/lock/` (root:root) generaba `Permission denied` al correr como ec2-user. Fix: lock movido a `/var/log/sharemechat-prerender/.lock` (mismo directorio que logs, ownership ec2-user). Contención: stop timer + reset-failed mientras se aplicaba el fix.
+
+- **GATE 5 — testing E2E** (caso real con artículo nuevo): baseline pre-run = 3613 B shell con `x-cache: Error from cloudfront` (CER fallback activo). Primera pasada manual del cron: 43 s wall-clock, 36 s render Puppeteer, 4 URLs renderizadas (2 listings + 2 detalles nuevos `alternativas-omegle-2026` ES y `best-omegle-alternatives-2026` EN), 4 paths exactos invalidados en CF (`/blog/es`, `/blog/en`, `/blog/es/alternativas-omegle-2026`, `/blog/en/best-omegle-alternatives-2026`). Post-run: HTML servido por CF = 41894 B byte-a-byte con S3, title del artículo, `BreadcrumbList` JSON-LD presente, hreflang trilingüe, `x-cache: Miss` (cache nuevo, próximas servirán Hit). Propagación CF <60 s. **Segundo bug cazado**: patrón `grep -c . || echo 0` producía `"0\n0"` cuando input vacío (caso "sin diff"), rompía aritmética con `set -e + pipefail`. La primera pasada no lo expuso (había diff). Fix: helper `count_nonblank()`. Segunda pasada post-fix: 2 s, "Sin diff. Nada que hacer." (idempotencia confirmada). Carga sistema durante test: load avg 0.17, swap 0 B usado, RAM available 2.1 GiB intacta. Timer reactivado al cierre del gate.
+
+- **GATE 6 — cierre**: este informe + ADR-042 + README operativo + 4 artefactos auditables en `ops/scripts/prerender-blog-cron/` (script, systemd units, logrotate, IAM policy JSON). Commits agrupados.
+
+**Aprendizajes operativos del frente**:
+
+- **Bash con `set -euo pipefail` + `grep -c . || echo 0` es una trampa silenciosa**: el patrón funciona en runs con datos pero rompe en el caso vacío. La idempotencia debe testearse explícitamente. El bug habría tardado horas en aparecer en producción (solo se manifiesta cuando no hay diff).
+- **`/var/lock` es root:root en Amazon Linux 2023**: usar `/run/lock/` o un directorio aplicacional para flocks de servicios non-root.
+- **`mesa-libgbm` no es `libgbm` en AL2023**: para Puppeteer en AL2023, instalar `mesa-libgbm-devel` (trae `mesa-libgbm` runtime transitivo).
+- **Invalidaciones CF con paths exactos beats wildcards**: el plan original usaba `/blog/<x>/*` por upload; cambio a path exacto `/blog/<x>` reduce coste y evita invalidar artículos correctos colaterales. Funciona porque la función edge `redirect-spa-prod` reescribe en viewer-request, así que CF cachea por URL del viewer (sin `/index.html`).
+- **Manual `systemctl enable --now` dispara la primera ejecución INMEDIATAMENTE**: si el script tiene bugs latentes (caso GATE 4), el incidente sale el primer segundo. Recomendable: `enable` sin `--now`, ejecutar manualmente la primera para validar, después `start --timer`. Aplicable a futuros frentes con timers nuevos.
+
+**Estado de los entornos al cerrar el frente**:
+
+- **PROD**: EC2 backend i-0e0a3b5fee271592f con cron timer activo cada 15 min. Próxima pasada automática programada en cada `:N7` y `:N2` UTC tras el último arranque del timer. S3 `sharemechat-frontend-prod/blog/` contiene 10 HTMLs (8 originales del Prompt 3 SEO del 23-jun + 2 nuevos `alternativas-omegle-2026` y `best-omegle-alternatives-2026` añadidos por la pasada manual del GATE 5 del 25-jun). CER 403→`/index.html` 200 sigue activo. Backend en `6cebf90` (Didit MOCK desde 23-jun). Frontend product `f0bd30d` (post-Prompt 3 SEO).
+- **TEST/AUDIT**: sin cambios. El cron del 25-jun es exclusivo de PROD (entornos no productivos no necesitan pre-render real).
+
+**Cadena de commits del frente (chronological)**:
+
+- Análisis de viabilidad → `<viability-investigation-25-jun>` (informe `prerender-cron-viability-2026-06-25.md` no commiteado, vivió en chat).
+- Implementación → `<feat-ops-cron-implementation>` (artefactos: script, systemd, logrotate, IAM).
+- Documentación → `<docs-ops-adr-042-and-report>` (ADR-042 + informe + project-log).
+
+**Deudas registradas al cierre** (no bloquean go-live PROD del 2026-07-01):
+
+- **D1 [baja]**: bump `puppeteer@^22.0.0 → ^24.0.0` en `sharemechat-v1/ops/scripts/prerender-blog/package.json`. Afecta cron + deploy-frontend.ps1 paso 4.5/N. Esfuerzo 30 min.
+- **D2 [baja]**: borrar snapshot RDS `pre-deploy-didit-mock-20260623` (creado 23-jun pre-deploy Didit MOCK, plazo 48-72h ya superado con margen).
+- **D3 [baja]**: cron actualmente NO maneja artículos RETRACTED (HTML persiste en S3 tras retracción). Workaround: `aws s3 rm` manual. Iteración futura: reverse-diff S3 ⊄ API.
+- **D4 [baja]**: cron NO detecta cambios de metadata (title, hero, body) sobre artículos PUBLISHED. Workaround: borrar HTML del S3 para forzar re-render. Iteración futura: comparar `updatedAt` API vs `LastModified` S3.
+- **D5 [media]**: alarma CloudWatch sobre logs del cron para detectar 3 pasadas FAILED consecutivas. CWA Logs Subscription Filter + métrica custom + alarma.
+
+**Próximos pasos del proyecto (fuera del frente cron)**:
+
+- Lanzamiento PROD el 2026-07-01 (objetivo de proyecto, intacto).
+- Activación Sightengine (frente stream-moderation P2, ADR-037).
+- Validación E2E Didit real en PROD (frente KYC futuro).
+- Redacción `deploy-backend.ps1` (deuda Fase 2 deploy automation).
+
+Informe operativo detallado en [`docs/04-operations/prerender-cron-implementation-2026-06-25.md`](04-operations/prerender-cron-implementation-2026-06-25.md). Runbook operativo en [`ops/scripts/prerender-blog-cron/README.md`](../ops/scripts/prerender-blog-cron/README.md).
+
+---
+
 ## 2026-06-23 — Cierre del frente SEO completo (Prompts 1+2+3 del paquete pre-render del blog)
 
 Cierre del frente SEO completo en producción tras una jornada larga (mañana: deploy backend `b0fa773→6cebf90` con Didit MOCK + Prompt 2 del pre-render real con Puppeteer; tarde: Prompt 3 de pulido + hot-fix del script). El blog pasa de servir el shell SPA genérico (3192 bytes idéntico para `/blog/*` por bug previo a la función edge `redirect-spa-prod`, detectado el 2026-06-21) a servir HTML pre-renderizado específico (34–41 KB por URL) con title del artículo, canonical bien formado, hreflang trilingüe ES/EN/x-default, JSON-LD `BlogPosting`+`Blog`+`WebSite`+`Organization`+`BreadcrumbList`, meta Open Graph y Twitter completos (incluyendo `og:image:type`/`alt`, `twitter:site`/`creator`=`@shareme_chat`, `twitter:image:alt`), y `sameAs` corporativo (`https://x.com/shareme_chat`, `https://www.reddit.com/user/sharemechat`) en `Organization`. Las 8 URLs blog del catálogo actual (2 listings `/blog/{es,en}` + 6 artículos `/blog/{es,en}/<slug>` con 3 ES y 3 EN) están verificadas empíricamente con `curl + grep` cumpliendo todos los criterios diseñados. El CER 403→200 (Custom Error Response) en la distribución CloudFront PROD `E2FWNC80D4QDJC` queda activo como red de seguridad para cualquier desincronización futura entre bundle SPA y HTMLs pre-renderizados.
