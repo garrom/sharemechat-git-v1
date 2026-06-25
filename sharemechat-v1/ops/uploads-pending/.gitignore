@@ -1,0 +1,6 @@
+# Zona de paso operativa para subidas manuales a S3.
+# Contenido NO va al repo; el directorio existe solo para que el operador
+# copie ficheros desde su escritorio y la IA los procese (resize/upload).
+# Ver flujo en CLAUDE.md / docs/04-operations.
+*
+!.gitignore
