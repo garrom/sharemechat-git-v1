@@ -81,6 +81,54 @@ Tras guardar, Didit genera un `secret_shared_key` único para ese destino. Captu
 
 → Anotar para `KYC_DIDIT_API_SECRET` del paso 3 (a pesar del nombre, esta key es el secret HMAC del destino webhook, no la API key del workspace).
 
+## 2.5 Configuración del workflow por entorno
+
+El workspace Didit puede compartirse entre TEST y AUDIT (sandbox) pero PROD requiere workspace separado. Los workflows pueden tener módulos distintos por entorno según las necesidades de compliance.
+
+### Workflow `shareme-model-kyc`
+
+**Módulos base (los 4, activos en TEST/AUDIT/PROD)**:
+
+- **Verificación de ID** (500 gratis/mes, luego $0.15): OCR + template match + hologramas + portrait integrity.
+- **Prueba de vida** (Passive Liveness iBeta L1, $0.10).
+- **Coincidencia facial** (face match selfie ↔ documento, $0.05).
+- **Análisis de dispositivo e IP** ($0.03).
+
+Coste base por sesión: **$0.00 – $0.33** (gratis dentro del cupo 500/mes, $0.33 después).
+
+**Módulos adicionales recomendados SOLO en PROD**:
+
+- **Validación en base de datos** (variable): valida contra registros oficiales gubernamentales del país emisor del documento (DGT España, etc.). **Crítico para compliance regulatorio adulto-content**. Activar al menos para España.
+- **Verificación NFC** ($0.15): lectura del chip NFC del DNI 4.0 / pasaporte electrónico. Más fiable que OCR. Recomendable para modelos cuyos documentos lo soporten.
+
+**Módulos NO recomendados para SharemeChat**:
+
+- Detección AML, Verificación de dirección: no aplicables (SharemeChat no es fintech, no requiere prueba de domicilio).
+- Verificación de correo: SharemeChat ya tiene email verification propia ([`EmailVerificationService`](../../../src/main/java/com/sharemechat/service/EmailVerificationService.java)).
+
+### Workflow `shareme-client-age`
+
+**Configuración única** (TEST/AUDIT/PROD igual):
+
+- **Age Estimation Adaptive**: IA estima edad por selfie, con step-up a documento si la confidence baja.
+- **Passive Liveness**.
+
+Sin Database Validation ni NFC: el flujo cliente no requiere identificación nominal, solo confirmación de edad ≥ 18.
+
+### Restricciones por país
+
+En PROD restringir la lista de países permitidos del workflow a los mercados objetivo de SharemeChat (verificar con marketing/legal). Documentar la lista final en el ADR del frente PROD cuando se ejecute.
+
+### Workspace separation
+
+| Entorno | Workspace Didit | API Key |
+|---|---|---|
+| TEST | Sandbox compartido | Compartida con AUDIT |
+| AUDIT | Sandbox compartido | Compartida con TEST |
+| PROD | Workspace "Producción" separado | Única PROD |
+
+**DPA firmado con Didit obligatorio antes de aprovisionar el workspace PROD** (contacto `hello@didit.me`).
+
 ## 3. Pasos en backend (operador o agente con SSH al EC2)
 
 ### 3.1 Backup proactivo (recomendado en AUDIT/PROD)
