@@ -1,0 +1,14 @@
+[Unit]
+Description=SharemeChat blog pre-render sync
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=ec2-user
+Group=ec2-user
+WorkingDirectory=/opt/sharemechat/prerender-blog
+ExecStart=/opt/sharemechat/prerender-blog/sync-blog-prerender.sh
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=600
+Nice=10

@@ -1,0 +1,12 @@
+[Unit]
+Description=SharemeChat blog pre-render sync timer (cada 15 min)
+Requires=sharemechat-prerender.service
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
