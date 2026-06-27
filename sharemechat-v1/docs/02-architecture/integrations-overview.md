@@ -25,12 +25,27 @@ La configuracion del entorno de test mantiene `kyc.veriff.enabled=false`. La int
 
 ## Moderacion (vendors de IA)
 
-Pendiente de implementacion. La direccion arquitectonica (control plane propio, clasificadores alquilados) esta en [ADR-030](../06-decisions/adr-030-moderation-pipeline-build-vs-rent.md). Vendors **candidatos en evaluacion**, no seleccionados:
+Estado actualizado tras cierre del Paquete 1 y sub-paquetes P2.1 + P2.2 del frente Moderacion IA del streaming (commits `6cebf90`, `9d2662c`, `3e97839`; ver bitacora `project-log.md`).
 
-- Clasificacion visual (nudity, violencia, etc.): Sightengine, Hive.
-- Deteccion de CSAM: Hive, Thorn Safer, PhotoDNA. **Nunca construir CSAM propio**.
+**Dominio arquitectonico**: [ADR-030](../06-decisions/adr-030-moderation-pipeline-build-vs-rent.md) (build control plane, rent clasificadores), [ADR-036](../06-decisions/adr-036-moderation-pipeline-architectural-stance.md) (captura cliente-side, cadencia configurable, fail-closed-soft), [ADR-037](../06-decisions/adr-037-moderation-visual-vendor-sightengine.md) (Sightengine como Plan A del vendor visual).
 
-La capa de IA aun no esta integrada en codigo. Lo unico operativo a fecha actual son el corte de sesion, el registro de stream records y la moderacion de assets estaticos del catalogo del modelo (cola admin completa con audit log, ya desplegada).
+**Clasificacion visual**: **Sightengine seleccionado** y operativo. Workflow consolidado en dashboard del operador (id `wfl_kVAtM2rkY4uiyMcyPBhUB`). Image API frame-a-frame, sincrono.
+
+- Hive y AWS Rekognition quedan como contingencias documentadas en ADR-037, sin onboarding paralelo.
+- La decision granular de escalado AMBER/RED se delega al `summary.action` del workflow Sightengine, editable desde el dashboard sin redeploy (P2.2).
+- CRITICAL para MINORS (>0.3) y GORE (>0.5) se mantiene en codigo como kill switch innegociable (no delegado al vendor).
+
+**Deteccion de CSAM**: cubierta tacticamente por el modelo `minor` de Sightengine (sintesis `faces[*].attributes.age.minor` -> CRITICAL kill switch). Vendor dedicado (PhotoDNA/Thorn Safer/Hive especifico CSAM) queda como deuda estrategica para evaluar segun volumen (ver `known-debt.md`). **Nunca construir CSAM propio**.
+
+**Estado por entorno**:
+
+- **TEST**: pipeline completo activo. Endpoint `POST /api/streams/{id}/frames` (rol MODEL, multipart JPEG/PNG, cap 5 MB), captura cliente-side en `DashboardModel.jsx` cadencia 15s, executor dedicado `moderationExecutor` (core=20, max=30), evidencia visual en bucket S3 `sharemechat-moderation-evidence-test` (SSE-S3, TTL 30d, IAM scoped, solo severity >= AMBER). `active_mode=SIGHTENGINE`. JAR `c10fa7bb...` desplegado.
+- **AUDIT**: backend del Paquete 1 (`e49a6a1`) con `active_mode=MOCK`. Activacion SIGHTENGINE diferida a sub-paquete posterior.
+- **PROD**: backend del Paquete 1 (`6cebf90`) con `active_mode=MOCK`, modo PRELAUNCH. Activacion SIGHTENGINE diferida a sub-paquete posterior pre-go-live.
+
+**Posicionamiento operativo confirmado** tras P2.2 (alineado con AN 5196 / Visa Rule ID 0003356 / practica CooMeet/LuckyCrush): adult dating 1-a-1 con nudity consensual entre adultos verificados permitido. La politica granular vive en el workflow del dashboard del operador, no en codigo. Refactor de policies publicas (`docs/01-business/`) para alinear lenguaje declarado con la operacion real queda como deuda estrategica.
+
+**Tambien operativo**: corte de sesion, registro de stream records, moderacion de assets estaticos del catalogo del modelo (cola admin completa con audit log, ya desplegada desde antes del Paquete 1).
 
 ## Activos legales
 
