@@ -64,6 +64,7 @@ public class StreamModerationSessionService {
     private final ModerationSamplingProperties samplingProperties;
     private final ModerationFailureProperties failureProperties;
     private final MockModerationClient mockClient;
+    private final SightengineModerationClient sightengineClient;
     private final StreamService streamService;
 
     public StreamModerationSessionService(
@@ -72,12 +73,14 @@ public class StreamModerationSessionService {
             ModerationSamplingProperties samplingProperties,
             ModerationFailureProperties failureProperties,
             MockModerationClient mockClient,
+            @Lazy SightengineModerationClient sightengineClient,
             @Lazy StreamService streamService) {
         this.sessionRepository = sessionRepository;
         this.providerConfigService = providerConfigService;
         this.samplingProperties = samplingProperties;
         this.failureProperties = failureProperties;
         this.mockClient = mockClient;
+        this.sightengineClient = sightengineClient;
         this.streamService = streamService;
     }
 
@@ -224,8 +227,8 @@ public class StreamModerationSessionService {
         switch (mode) {
             case Constants.StreamModerationProvider.MOCK:
                 return mockClient;
-            // case Constants.StreamModerationProvider.SIGHTENGINE:
-            //     return sightengineClient;  // P2
+            case Constants.StreamModerationProvider.SIGHTENGINE:
+                return sightengineClient;
             default:
                 log.warn("[STREAM-MOD] active_mode='{}' no soportado todavia; fallback a MOCK", mode);
                 return mockClient;

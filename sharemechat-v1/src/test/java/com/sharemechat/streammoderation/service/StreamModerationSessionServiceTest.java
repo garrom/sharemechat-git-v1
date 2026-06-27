@@ -43,6 +43,7 @@ class StreamModerationSessionServiceTest {
     private ModerationSamplingProperties samplingProps;
     private ModerationFailureProperties failureProps;
     private MockModerationClient mockClient;
+    private SightengineModerationClient sightengineClient;
     private StreamService streamService;
     private StreamModerationSessionService svc;
 
@@ -56,9 +57,10 @@ class StreamModerationSessionServiceTest {
         failureProps.setDegradedThresholdMinutes(2);
         failureProps.setCutThresholdMinutes(5);
         mockClient = new MockModerationClient();
+        sightengineClient = mock(SightengineModerationClient.class);
         streamService = mock(StreamService.class);
         svc = new StreamModerationSessionService(
-                repo, configService, samplingProps, failureProps, mockClient, streamService);
+                repo, configService, samplingProps, failureProps, mockClient, sightengineClient, streamService);
     }
 
     @Test

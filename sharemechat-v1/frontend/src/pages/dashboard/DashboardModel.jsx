@@ -41,6 +41,7 @@ import VideoChatRandomModelo from './VideoChatRandomModelo';
 import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
 import { buildApiUrl, buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
+import useFrameCapture from '../../utils/useFrameCapture';
 import { useSession } from '../../components/SessionProvider';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
@@ -772,6 +773,14 @@ const DashboardModel = () => {
       localVideoRef.current.srcObject = localStream.current;
     }
   }, [cameraActive,remoteStream]);
+
+  // Frente Moderacion IA P2.1 (DEC-5, DEC-6, DEC-14): captura cliente-side
+  // a 15s con tick 0 inmediato. RANDOM (activeStreamRecordId + localStream
+  // + cameraActive) y CALL (callStreamRecordId + callLocalStreamRef +
+  // callCameraActive) en paralelo. El hook decide internamente si emite
+  // (cleanup automatico cuando el stream se cierra o la sesion se invalida).
+  useFrameCapture(activeStreamRecordId, localStream, cameraActive);
+  useFrameCapture(callStreamRecordId, callLocalStreamRef, callCameraActive);
 
 
   useEffect(() => {
@@ -3224,6 +3233,27 @@ const DashboardModel = () => {
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
 
+      {/* Aviso supervision moderacion IA (DEC-13 P2.1): no colapsable,
+          visible solo cuando hay camara local activa en algun modo. */}
+      {(cameraActive || callCameraActive) && (
+        <div
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            bottom: 6,
+            left: 0,
+            right: 0,
+            textAlign: 'center',
+            fontSize: 11,
+            color: '#adb5bd',
+            pointerEvents: 'none',
+            zIndex: 9000,
+            padding: '0 8px',
+          }}
+        >
+          {i18n.t('dashboardModel.moderationNotice')}
+        </div>
+      )}
 
       {/*FIN CLICK DERECHO */}
     </StyledContainer>

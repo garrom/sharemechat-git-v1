@@ -78,6 +78,11 @@ public class SecurityConfig {
                         // STREAMS: ACK media (cliente o modelo)
                         .requestMatchers(HttpMethod.POST, "/api/streams/*/ack-media").hasAnyRole("CLIENT", "MODEL")
 
+                        // STREAMS: ingest de frames del frente Moderacion IA (P2.1)
+                        // Solo el modelo del stream emite frames; el controller refuerza
+                        // ownership (stream.modelId == auth.userId).
+                        .requestMatchers(HttpMethod.POST, "/api/streams/*/frames").hasRole("MODEL")
+
                         // Consent
                         .requestMatchers(HttpMethod.POST, "/api/consent/accept").authenticated()
                         .requestMatchers("/api/consent/**").permitAll()

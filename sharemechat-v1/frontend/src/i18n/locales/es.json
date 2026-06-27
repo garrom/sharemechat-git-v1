@@ -993,6 +993,7 @@
     }
   },
   "dashboardModel": {
+    "moderationNotice": "Tu sesión está supervisada automáticamente conforme a nuestras políticas de seguridad y términos de servicio",
     "nav": {
       "videochat": "Videochat",
       "favorites": "Favoritos",
