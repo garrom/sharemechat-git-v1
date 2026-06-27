@@ -2,7 +2,9 @@ package com.sharemechat.streammoderation.dto;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -32,6 +34,7 @@ public class SightengineWorkflowResponse {
     private Status status;
     private String requestId;
     private Map<String, Object> rawScoresByModel = new HashMap<>();
+    private Summary summary;
 
     public Status getStatus() {
         return status;
@@ -57,6 +60,14 @@ public class SightengineWorkflowResponse {
         this.rawScoresByModel = rawScoresByModel;
     }
 
+    public Summary getSummary() {
+        return summary;
+    }
+
+    public void setSummary(Summary summary) {
+        this.summary = summary;
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Status {
         private String code;
@@ -67,5 +78,29 @@ public class SightengineWorkflowResponse {
 
         public String getMessage() { return message; }
         public void setMessage(String message) { this.message = message; }
+    }
+
+    /**
+     * Decisión consolidada del workflow Sightengine (P2.2). El operador
+     * configura desde el dashboard qué sub-clases disparan ACCEPT/REJECT
+     * por categoría; el control plane delega la decisión NO-CRITICAL a
+     * este objeto. CRITICAL (MINORS / GORE) se sigue calculando en
+     * código por seguridad.
+     *
+     * <p>{@code action} = {@code "accept"} | {@code "reject"}.
+     * {@code rejectReasons} = lista de tokens textuales por los que
+     * Sightengine disparó el reject; el mapper los traduce a categorías
+     * canónicas internas.
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class Summary {
+        private String action;
+        private List<String> rejectReasons = new ArrayList<>();
+
+        public String getAction() { return action; }
+        public void setAction(String action) { this.action = action; }
+
+        public List<String> getRejectReasons() { return rejectReasons; }
+        public void setRejectReasons(List<String> rejectReasons) { this.rejectReasons = rejectReasons; }
     }
 }

@@ -67,6 +67,16 @@ public class SightengineModerationClient implements ModerationProviderClient {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
+    /**
+     * Modelos visuales del workflow Sightengine cuyo sub-objeto top-level
+     * SE OFRECE al mapper como fuente de scores granulares. El resto de
+     * keys top-level (summary, request, status, media, workflow, faces,
+     * artificial_faces) se procesan en parseResponse fuera de rawScoresByModel.
+     */
+    private static final java.util.Set<String> SIGHTENGINE_VISUAL_MODELS = java.util.Set.of(
+            "nudity", "weapon", "gore", "violence", "self-harm",
+            "offensive", "recreational_drug", "gambling", "minor");
+
     @Autowired
     public SightengineModerationClient(SightengineProperties props,
                                        ModerationCategoryMapper mapper) {
@@ -198,10 +208,41 @@ public class SightengineModerationClient implements ModerationProviderClient {
             if (id != null) r.setRequestId(id.toString());
         }
 
+        // Summary consolidado del workflow (P2.2 delegacion). Sightengine
+        // devuelve summary.action ∈ {"accept","reject"} + summary.reject_reason[].
+        // Cada item del array puede ser un String o un objeto {id, name}.
+        Object summaryObj = root.get("summary");
+        if (summaryObj instanceof Map) {
+            SightengineWorkflowResponse.Summary s = new SightengineWorkflowResponse.Summary();
+            Map<?, ?> sm = (Map<?, ?>) summaryObj;
+            Object action = sm.get("action");
+            if (action != null) s.setAction(action.toString());
+            Object reasons = sm.get("reject_reason");
+            if (reasons instanceof java.util.List) {
+                for (Object item : (java.util.List<?>) reasons) {
+                    if (item == null) continue;
+                    if (item instanceof String) {
+                        s.getRejectReasons().add((String) item);
+                    } else if (item instanceof Map) {
+                        Map<?, ?> rm = (Map<?, ?>) item;
+                        Object name = rm.get("name");
+                        Object id = rm.get("id");
+                        Object pick = name != null ? name : id;
+                        if (pick != null) s.getRejectReasons().add(pick.toString());
+                    }
+                }
+            }
+            r.setSummary(s);
+        }
+
+        // rawScoresByModel acumula SOLO modelos visuales conocidos de Sightengine.
+        // Excluir top-level que NO son modelos (summary, request, status, media,
+        // workflow, faces, artificial_faces) evita falsos WARN del mapper por
+        // sub-claves como summary.reject_prob (cierra deuda P2.1-D9).
         Map<String, Object> scores = new HashMap<>();
         for (Map.Entry<String, Object> e : root.entrySet()) {
             String k = e.getKey();
-            if ("status".equals(k) || "request".equals(k)) continue;
+            if (!SIGHTENGINE_VISUAL_MODELS.contains(k)) continue;
             if (e.getValue() instanceof Map) {
                 scores.put(k, e.getValue());
             }

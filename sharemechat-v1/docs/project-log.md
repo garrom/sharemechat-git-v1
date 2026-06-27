@@ -8,6 +8,47 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-27 — P2.2: delegación de decisión NUDITY a Sightengine `summary.action`
+
+Tras estudio de mercado adult dating (PSPs, comparables, regulación) y revisión del checklist Segpay v2.0 + Mastercard AN 5196 + Visa Rule ID 0003356, el operador confirma el posicionamiento operativo real: **adult dating 1-a-1 con nudity consensual entre adultos verificados permitido**, alineado con CooMeet/LuckyCrush y con los regímenes aplicables. La modelo de moderación cerrada en P2.1 (DEC-1 con umbrales hardcoded por categoría) reflejaba una postura más conservadora de la necesaria. P2.2 mueve la decisión operativa al lugar donde el operador la edita: el dashboard Sightengine.
+
+**Workflow Sightengine** `wfl_kVAtM2rkY4uiyMcyPBhUB` reconfigurado por el operador en el dashboard. Sin cambio de workflow_id ni de credenciales; ajuste granular interno del workflow (sub-clases de cada modelo de NUDITY pasando de REJECT a ACCEPT salvo las operacionalmente relevantes que el operador deja como REJECT). El resto del catálogo (weapon, gore, violence, self-harm, offensive, recreational_drug, gambling, minor) conserva su configuración habitual.
+
+**Cambio técnico** en `ModerationCategoryMapper.buildVerdict`:
+
+1. **Paso 1: bypass CRITICAL** innegociable. MINORS (score > `moderation.thresholds.minors.critical` = 0.3) y GORE (> `moderation.thresholds.gore.critical` = 0.5) escalan a CRITICAL en código, sin pasar por `summary.action`. Esto es seguridad (CSAM, gore explícito), NO política operativa. Retorna `severityOverall=CRITICAL`, `suggestedAction=CUT`.
+2. **Paso 2: delegación a `summary.action`** consolidado del workflow Sightengine:
+   - `accept` → `severityOverall=GREEN`, `suggestedAction=NO_OP`, `categoryVerdicts` vacío (trazabilidad granular vive en `vendorMetadataJson` que sigue persistiendo el response completo en `events.payload_json`).
+   - `reject` → mapear cada token de `summary.reject_reason[]` a categoría canónica interna usando heurísticas (lookup directo / sufijo / prefijo de modelo). `severityOverall=AMBER`, `suggestedAction=ENQUEUE`. Sin distinción RED en P2.2 (la granularidad fina vive en el dashboard, no en código). Si `reject_reason[]` está vacío o no resuelve a ninguna categoría, AMBER sobre `OTHER` como fail-safe.
+   - `null`/desconocido → `GREEN` con log WARN (fail-safe permisivo, postura adult dating).
+
+**Properties obsoletas** tras P2.2: `moderation.thresholds.nudity/violence/weapons/drugs/self-harm/offensive-symbols/gambling.{amber,red}` siguen declaradas en `application.properties` por compatibilidad de binding, pero **ya no se usan**. Solo `moderation.thresholds.minors.critical` y `moderation.thresholds.gore.critical` siguen activos. Limpieza efectiva diferida (deuda menor) para no romper compatibilidad ahora.
+
+**Adapter** (`SightengineModerationClient.parseResponse`): extrae `summary.action` y `summary.reject_reason[]` al nuevo DTO `SightengineWorkflowResponse.Summary` (acepta items como String o como `{id, name}`). Filtra `rawScoresByModel` por lista blanca `SIGHTENGINE_VISUAL_MODELS` (los 9 modelos visuales reales), excluyendo `summary/request/status/media/workflow/faces/artificial_faces` del scan que el mapper hace para localizar score MINORS/GORE. Esto **cierra la deuda P2.1-D9**: las WARN `sub-clase no mapeada model=summary sub=reject_prob` desaparecen porque `summary` ya no entra al scan.
+
+**Ventajas operativas**:
+
+- La política de moderación AMBER/RED es **editable desde el dashboard Sightengine sin redeploy del backend**: el operador ajusta sub-clases REJECT/ACCEPT en el workflow y el sistema lo respeta al siguiente frame.
+- Trazabilidad completa preservada: `events.payload_json` sigue persistiendo el response Sightengine íntegro (scores granulares, summary, reject_reason, workflow eco). Cualquier auditoría posterior recupera la decisión exacta y los scores reales.
+- CRITICAL sigue blindado en código: ni siquiera un fallo de configuración del workflow Sightengine permite que un frame con MINORS > 0.3 o GORE > 0.5 escape al kill switch.
+
+**Validación**:
+
+- `mvn test` BUILD SUCCESS, **317 tests verdes** (313 P2.1 + 4 nuevos P2.2; los obsoletos por umbrales hardcoded reemplazados por escenarios de delegación + bypass + fail-safe).
+- Deploy JAR a TEST sin BeanCreationException. PID 448761, `Started SharemechatV1Application in 31.934 seconds`, `ModerationEvidenceUploader: uploader ready`. Smokes regresión verdes (`GET /` 200, `/api/users/me` 401, webhook SIGHTENGINE 401 webhook_secret_not_configured). `active_mode=SIGHTENGINE` confirmado en BD.
+- Smoke directo contra Sightengine real con misma imagen test: HTTP 200 en 632ms, `summary.action=accept` (workflow del operador acepta imagen JPEG genérica sin contenido), `workflow.id` eco confirma. Adapter desplegado y workflow del operador alineados.
+
+**Tareas externas pendientes** (no en P2.2, sub-paquetes posteriores):
+
+- **Refactor de `docs/01-business/policies/*.md`** (Content Management Policy, Safety Guidelines, Terms and Conditions, Complaint & Removal Policy, Consumer Age Verification Policy, Chargeback & Fraud Mitigation Policy): alinear lenguaje declarado de las policies con la operación real (adult dating 1-a-1 con nudity consensual entre adultos verificados). El refactor queda fuera del scope de P2.2 porque toca documentos de negocio, no código.
+- **Comunicación clarificadora a Patricia Ucros (Segpay)** sobre el posicionamiento real adult dating, alineamiento con CooMeet/LuckyCrush y con Visa Rule ID 0003356 + Mastercard AN 5196.
+- **Workflow de complaints en 5 días hábiles** (Section 2.3 de `compliance-deliverables.md`, hoy PLANIFICADO).
+- **Reporting mensual al Segpay Merchant Portal** (Section 4 de `compliance-deliverables.md`, hoy PLANIFICADO).
+- **Age estimation del consumidor** para USA estados con AVS + UK OSA (Veriff o equivalente — frente Didit cliente ya cubre la base, pero la extensión geográfica es trabajo posterior).
+- Limpieza de `moderation.thresholds.{nudity,violence,weapons,drugs,self-harm,offensive-symbols,gambling}.*` (obsoletas tras P2.2). Cuando se haga, eliminar también los campos correspondientes en `ModerationThresholdsProperties.Category` y `Category` setter no usados.
+
+---
+
 ## 2026-06-27 — Cierre del Paquete 2 sub-paquete P2.1 del frente moderación IA del streaming: vendor real (Sightengine) activo en TEST
 
 P2.1 entrega lo que activa el frente de moderación visual del streaming en producción real, no MOCK. Cierra el bucle entre la captura cliente-side desde el browser del modelo (ADR-036 bloque 1) y el clasificador externo seleccionado (ADR-037, Sightengine como Plan A): nuevo endpoint `POST /api/streams/{id}/frames` (rol MODEL, multipart JPEG/PNG, validación magic bytes + cap 5 MB DEC-7), captura del frame en `DashboardModel.jsx` mediante `<canvas hidden>` + `toBlob('image/jpeg', 0.7)` con cadencia 15s y tick 0 inmediato (DEC-5/DEC-14, RANDOM + CALL DEC-6), adapter `SightengineModerationClient` síncrono real implementando la interface vendor-agnostic del Paquete 1 (`ModerationProviderClient.submitImage`), executor dedicado `moderationExecutor` (core=20, max=30, queue=200, prefix `mod-exec-`) que aísla la moderación del pool default Spring (DEC-4), `ModerationCategoryMapper` que traduce el shape Sightengine al catálogo canónico interno con umbrales por categoría DEC-1, `ModerationEvidenceUploader` async que sube a `sharemechat-moderation-evidence-{env}` solo cuando severity ≥ AMBER (DEC-3), y aviso UI no colapsable bajo el video local "Tu sesión está supervisada automáticamente conforme a nuestras políticas de seguridad y términos de servicio" (DEC-13). El modelo de moderación se ancla en las policies SharemeChat (Content Management Policy v1.1 draft, Safety and Community Guidelines, Terms and Conditions, Complaint & Content Removal Policy, Consumer Age Verification Policy, Chargeback & Fraud Mitigation Policy): el producto es **non-explicit con desnudo/erotica permitidos entre adultos verificados**, por lo que `nudity.sexual_activity/erotica/sexual_display` van a REVISIÓN HUMANA (AMBER>0.5, RED>0.7) y `nudity.{bikini,underwear,cleavage,suggestive*,none}` se descartan sin generar event (NO MODERADA); HARD-BLOCK CRITICAL exclusivo para MINORS (>0.3) y GORE (>0.5) que disparan `triggerAutoCut` (DEC-10: AMBER/RED NUNCA cortan stream). ADR-036 y ADR-037 quedaron cerrados en Paquete 1 y NO se reabren en P2.1; solo se materializan. La activación SIGHTENGINE se acota a TEST en este sub-paquete (DEC-9). AUDIT y PROD siguen con backend del Paquete 1 (`active_mode=MOCK`); su activación es sub-paquete dedicado posterior.
