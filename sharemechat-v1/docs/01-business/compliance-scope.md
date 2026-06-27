@@ -34,7 +34,9 @@ El proyecto ya incluye piezas pensadas para auditoría interna y revisión admin
 
 ## Marco regulatorio adoptado
 
-A efectos de compliance, SharemeChat se clasifica como merchant adult/streaming. La decisión, su justificación y las opciones descartadas viven en [ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md). Esa clasificación condiciona:
+A efectos de compliance, SharemeChat se clasifica como merchant adult/streaming. La decisión, su justificación y las opciones descartadas viven en [ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md). Dentro de esa clasificación regulatoria (MCC adult, régimen normativo adult, PSP adult-specialist), el posicionamiento de producto es **adult dating intimate 1-a-1 entre adultos verificados**, alineado con Mastercard AN 5196 y Visa Rule ID 0003356 y con comparables del vertical (CooMeet, LuckyCrush, Chatspin). Esta clarificación es de descripción del producto y de experiencia de usuario, NO altera la clasificación regulatoria de ADR-028 ni los entregables de compliance derivados (declaración 2257, políticas formales del PSP, reporting mensual + nil report, DPIA biométrico). El detalle del posicionamiento operativo y de las características asociadas (KYC obligatorio Didit para ambas partes, sesiones privadas sin grabación, moderación visual real-time con kill switch para CSAM/gore/no-consentido, complaints 5 business days) vive en [business-model.md](business-model.md).
+
+La clasificación condiciona:
 
 - la arquitectura de verificación de edad e identidad (modelos y clientes), definida en [ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md)
 - la arquitectura del pipeline de moderación, definida en [ADR-030](../06-decisions/adr-030-moderation-pipeline-build-vs-rent.md)

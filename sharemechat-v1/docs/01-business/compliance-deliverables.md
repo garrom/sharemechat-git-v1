@@ -1,6 +1,15 @@
 # Entregables de compliance
 
-> **Nota interna (2026-06-27, post cierre P2.2 del frente moderación IA)**: tras la activación del adapter Sightengine real en TEST con delegación de decisión granular AMBER/RED al workflow del dashboard (commits `9d2662c` y `3e97839`), el operador confirmó el posicionamiento operativo real de SharemeChat: **adult dating 1-a-1 con nudity consensual entre adultos verificados permitido**, alineado con Mastercard AN 5196, Visa Rule ID 0003356 y con la práctica de comparables del vertical (CooMeet, LuckyCrush). El lenguaje declarativo de los cinco entregables de §2 (Content Management Policy, Consumer Age Verification Policy, Complaint & Content Removal Policy, Model Agreement, Chargeback–Fraud Mitigation Policy) está redactado en forma más restrictiva que el posicionamiento real. **Refactor de policies pendiente** como deuda estratégica registrada en `docs/04-operations/known-debt.md` entrada 2026-06-27 punto 1. Coordinación con asesoría legal antes de publicar como ToS efectivos. Bloqueante para cerrar onboarding Segpay y para go-live público. Este documento (`compliance-deliverables.md`) NO se reescribe ahora porque su valor sigue siendo direccional (lista accionable de obligaciones); solo se anota la discrepancia conocida entre lenguaje declarado y operación real.
+> **Nota interna (actualizada 2026-06-27, post Fase 2 del refactor de lenguaje)**: el posicionamiento operativo real de SharemeChat es **adult dating intimate 1-a-1 entre adultos verificados, con nudity consensual permitida**, alineado con Mastercard AN 5196, Visa Rule ID 0003356 y con la práctica de comparables del vertical (CooMeet, LuckyCrush, Chatspin). Dentro del régimen MCC adult/streaming de ADR-028 (cerrado, no se reabre), el matiz "adult dating intimate" describe la experiencia de usuario y la modalidad técnica (1-a-1 privado con KYC obligatorio Didit y moderación visual real-time delegada al workflow Sightengine), no la clasificación regulatoria.
+>
+> Tras el refactor de Fase 2 (commit ver bitácora 2026-06-27), el lenguaje del producto está alineado en tres frentes: (a) `frontend/src/footer/Legal.jsx` (público vivo, 8 tabs); (b) `docs/01-business/business-model.md`, `compliance-scope.md`, `product-overview.md` (docs internos); (c) `ops/legal-pdfs/generate_legal_pdfs.py` (script generador de los 8 PDFs entregables a Segpay).
+>
+> **Lo que sigue pendiente** y por tanto este documento aún NO se reescribe:
+> - El Model Collaboration Agreement vivo (PDF `v4_2026-03-23` firmado por 18 modelos en TEST + cuentas en PROD/AUDIT) sigue con lenguaje del régimen previo. Su refactor exige bump v5, re-aceptación forzada y coordinación legal (sub-paquete R5 con deuda registrada en `known-debt.md` entrada 2026-06-27 puntos R5 / G4).
+> - Las cinco políticas formales que el PSP exige (§2 abajo) siguen como "estado PLANIFICADO" en este documento porque ninguna está aún firmada legalmente; existen como textos en `Legal.jsx` y en los PDFs generables por el script, pero la firma legal definitiva exige revisión por asesoría externa. Bloqueante para cerrar onboarding Segpay y para go-live público.
+> - Tracking de aceptación versionada de policies públicas (deuda G3): cuando `Legal.jsx` se modifique en el futuro, no hay flag forzando re-aceptación de usuarios existentes. Gap regulatorio para go-live PROD.
+>
+> Las tres pendencias viven como deudas estratégicas en `docs/04-operations/known-debt.md` entrada 2026-06-27. Este documento se mantiene direccional (lista accionable de obligaciones de compliance), no se convierte en cuerpo de las policies formales.
 
 Documento accionable que recoge las obligaciones operativas concretas derivadas de la clasificación adult/streaming ([ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md)) y del onboarding con Segpay como PSP en curso (ver [psp-strategy.md](psp-strategy.md)).
 
@@ -49,7 +58,7 @@ Qué cubre:
 - Procedimiento de re-verificación periódica si procede.
 - Almacenamiento de evidencia de verificación.
 
-Base interna existente: ADR-029 (estimación facial vía Veriff + secundaria). Falta producir el documento externo.
+Base interna existente: ADR-029 (estimación facial + secundaria) consolidada en ADR-035 sobre Didit como vendor único KYC. Falta producir el documento externo.
 
 ### 2.3 Complaint & Content Removal Policy
 
@@ -127,7 +136,7 @@ La estimación facial de edad para clientes (ADR-029) procesa datos biométricos
 
 - DPIA del flujo de estimación facial.
 - Base jurídica explícita para el procesamiento biométrico (consentimiento explícito como mínimo; valorar interés legítimo si aplica).
-- Política de privacidad actualizada con detalle del flujo y los proveedores (Veriff).
+- Política de privacidad actualizada con detalle del flujo y los proveedores (Didit como vendor único KYC, ADR-035).
 - Procedimiento de borrado y retención.
 
 ### 6.2 UE DSA (Digital Services Act) art. 28

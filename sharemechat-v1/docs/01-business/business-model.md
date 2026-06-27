@@ -1,6 +1,14 @@
 # Modelo de negocio
 
-SharemeChat opera como una plataforma de videochat 1-a-1 de pago entre clientes y modelos remuneradas. A efectos de pagos y compliance se clasifica como merchant **adult/streaming**, no como dating. La decisión y su justificación viven en [ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md); el alcance operativo de compliance derivado vive en [compliance-scope.md](compliance-scope.md) y [compliance-deliverables.md](compliance-deliverables.md).
+SharemeChat opera como una plataforma de videochat 1-a-1 de pago entre clientes y modelos remuneradas. A efectos de pagos y compliance se clasifica como merchant **adult/streaming** ([ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md), decisión cerrada que no se reabre): MCC adult, régimen normativo adult, PSP adult-specialist (Segpay vía activa). Dentro de esa clasificación regulatoria, el posicionamiento de producto es **adult dating intimate 1-a-1 entre adultos verificados**, no cam adult broadcast público. La diferencia es de descripción del producto y de experiencia de usuario, no de MCC ni de régimen: sigue siendo adult/streaming regulatoriamente, y los entregables de compliance (declaración 2257, políticas formales del PSP, reporting mensual, DPIA biométrico) aplican íntegros. Comparables del posicionamiento adult dating intimate: CooMeet, LuckyCrush, Chatspin. El alcance operativo de compliance derivado vive en [compliance-scope.md](compliance-scope.md) y [compliance-deliverables.md](compliance-deliverables.md).
+
+Características operativas del posicionamiento:
+
+- Sesiones privadas 1-a-1, no broadcast público ni sala multi-cliente.
+- KYC obligatorio para ambas partes vía un proveedor único especializado (identidad y edad). Modelos pasan flujo completo de identidad (documento + selfie + liveness + face match); clientes pasan estimación facial de edad con fallback documental para casos borderline. Las sesiones no arrancan si alguna de las dos partes no ha completado el flujo aplicable a su rol.
+- Contenido adult-themed (incluida nudity consensual) entre adultos verificados en sesión privada 1-a-1 está permitido dentro del marco legal aplicable. Zona pública del producto (landing, blog, superficies de marketing) NO contiene contenido adult-themed, solo descripción del servicio.
+- Moderación visual real-time obligatoria sobre la sesión privada con kill switch automático para categorías de tolerancia cero (CSAM, gore, contenido no consentido aparente, símbolos de odio) y revisión humana asíncrona para casos borderline. Detalle técnico en [ADR-036](../06-decisions/adr-036-moderation-pipeline-architectural-stance.md) y [ADR-037](../06-decisions/adr-037-moderation-visual-vendor-sightengine.md).
+- Sin grabación ni rebroadcast de sesiones privadas.
 
 ## Núcleo de monetización
 

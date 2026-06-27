@@ -56,7 +56,7 @@ El mecanismo técnico de bloqueo está definido en [ADR-007](../06-decisions/adr
 ## Implicaciones operativas
 
 - **PSP**: el PSP adult-specialist seleccionado (Segpay como vía activa, ver [psp-strategy.md](psp-strategy.md)) debe cubrir los mercados servidos. Si la cobertura geográfica del PSP no incluye algún mercado objetivo, el orden de activación se ajusta.
-- **Verificación de edad e identidad**: el flujo Veriff (ver [ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md)) cubre los mercados objetivo. Cuando se active la oleada 2, hay que verificar que la lista de documentos y la cobertura idiomática del flujo soporta los nuevos mercados.
+- **Verificación de edad e identidad**: el flujo Didit (vendor único KYC consolidado en [ADR-035](../06-decisions/adr-035-age-and-identity-verification-vendor-consolidation-on-didit.md), arquitectura original en [ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md)) cubre los mercados objetivo. Cuando se active la oleada 2, hay que verificar que la lista de documentos y la cobertura idiomática del flujo soporta los nuevos mercados.
 - **Localización**: el beachhead anglófono no requiere trabajo adicional de localización. La oleada 2 sí. El backlog de i18n del producto (ver `pending-hardening.md`) se prioriza para los idiomas de la oleada 2 cuando se active.
 - **Reporting al PSP**: se hace agregado, no por mercado.
 

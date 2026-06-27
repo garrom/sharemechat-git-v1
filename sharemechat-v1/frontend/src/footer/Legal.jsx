@@ -326,13 +326,16 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>2. Eligibility and Age Verification</h3>
                 <p style={Paragraph}>
-                  SharemeChat is intended exclusively for adults aged 18 or older.
-                  We may request age or identity verification when necessary to
-                  protect the platform, users, and compliance obligations. Access
-                  or use by minors is strictly prohibited. Before accessing
-                  adult-oriented features, clients are subject to age verification,
-                  performed primarily through facial age estimation (with a
-                  document-based check as a fallback).
+                  SharemeChat is intended exclusively for adults aged 18 or
+                  older. Access or use by minors is strictly prohibited. Before
+                  accessing adult-themed features, both parties to a session
+                  must complete identity verification through our third-party
+                  verification provider: clients undergo age verification
+                  (facial age estimation with a document-based check as a
+                  fallback), and models undergo full identity verification
+                  (document, selfie, liveness, face match). Sessions cannot
+                  start unless both participants have completed the
+                  verification flow applicable to their role.
                 </p>
               </div>
 
@@ -349,12 +352,23 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>4. Nature of the Service</h3>
                 <p style={Paragraph}>
-                  SharemeChat is a premium 1-to-1 video chat platform for adult
-                  users. Users may be matched randomly with available participants
-                  and may also interact with profiles they have added to favorites.
-                  Features, pricing models, session availability, and user
-                  experience may vary depending on the device, browser, region, or
-                  operational state of the service.
+                  SharemeChat is a premium 1-to-1 adult dating platform for
+                  identity-verified adults. The service connects consenting adult
+                  users in private one-to-one video sessions and direct messaging.
+                  SharemeChat is not a broadcast or public streaming service:
+                  sessions are private between the two matched participants and
+                  are not recorded, rebroadcast, or made available to third
+                  parties. Features, pricing models, session availability, and
+                  user experience may vary depending on the device, browser,
+                  region, or operational state of the service.
+                </p>
+                <p style={{ ...Paragraph, marginTop: '10px' }}>
+                  Public areas of the platform (landing pages, blog, marketing
+                  surfaces) contain only descriptive information about the
+                  service and do not display adult-themed material. Adult-themed
+                  interaction takes place exclusively within private sessions
+                  between two age-verified, identity-verified adults who have
+                  consented to participate.
                 </p>
               </div>
 
@@ -362,42 +376,74 @@ export default function Legal() {
                 <h3 style={SectionTitle}>5. User Conduct and Prohibited Conduct</h3>
                 <p style={Paragraph}>
                   Your use of the service must comply with the platform rules,
-                  community standards, and applicable law. The following behaviors
-                  are strictly prohibited:
+                  community standards, and applicable law. Adult-themed
+                  interaction, including nudity, between consenting age-verified
+                  and identity-verified adults in private 1-to-1 sessions is
+                  permitted within the limits set by these terms and applicable
+                  law. The following behaviors are strictly prohibited at all
+                  times, including in private sessions, and will result in
+                  immediate enforcement action:
                 </p>
                 <ul style={List}>
-                  <li>Harassment, threats, hate speech, coercion, or extortion.</li>
-                  <li>Illegal activity or any content involving minors. Any attempt to involve, depict, solicit, promote, or normalize minors in any context is strictly prohibited and may be reported to competent authorities.</li>
-                  <li>Fraud, impersonation, phishing, scams, or abuse of promotions.</li>
-                  <li>Explicit sexual content, including nudity and sexual acts, which is prohibited on the platform, including in private sessions.</li>
-                  <li>Attempts to bypass moderation, controls, or security systems.</li>
-                  <li>Use of the service in a misleading, abusive, or commercially unauthorized way.</li>
+                  <li>Any content involving, depicting, soliciting, promoting, or normalizing minors in any context. Real or implied child sexual abuse material (CSAM) is reported to competent authorities and to specialised hotlines.</li>
+                  <li>Non-consensual content, including recordings, reproductions, or distribution of any person without that person&apos;s clear and informed consent.</li>
+                  <li>Human trafficking, coercion, exploitation, direct solicitation of prostitution, or any commercial sexual service that falls outside the scope of the platform&apos;s consenting adult dating context.</li>
+                  <li>Bestiality, necrophilia, or any sexual content involving non-consenting subjects.</li>
+                  <li>Violence, gore, self-harm, suicide promotion, weapons used in a threatening manner, or content glorifying serious harm.</li>
+                  <li>Hate speech, harassment, threats, extortion, or content promoting discrimination based on protected characteristics. Hate symbols and supremacist material.</li>
+                  <li>Illegal drugs, illegal gambling, fraud, impersonation, phishing, scams, or abuse of promotions.</li>
+                  <li>Recording, capturing, or rebroadcasting a private session or another user&apos;s likeness without authorization.</li>
+                  <li>Attempts to bypass moderation, identity verification, payment controls, or security systems.</li>
+                  <li>Use of the service in a misleading, abusive, or commercially unauthorized way, including running the platform as an outlet for external commercial activity not provided for in these terms.</li>
                 </ul>
               </div>
 
               <div style={Section}>
                 <h3 style={SectionTitle}>6. Live Camera and Session Rules</h3>
                 <p style={Paragraph}>
-                  During live sessions, users may be required to keep their face
-                  clearly visible and to be the only person on camera; no other
-                  person, and no minor, may appear on camera. Users must comply
-                  with platform rules for live interaction. We may interrupt or
-                  limit sessions where camera use, behavior, displayed material,
-                  or session conduct creates a safety, compliance, moderation, or
-                  technical concern.
+                  During live sessions, users must keep their face clearly visible
+                  on initial connection and must be the only person appearing on
+                  camera. No other person, and in particular no minor, may appear
+                  on camera at any time. Sessions are private and exclusive
+                  between the two matched, age-verified participants. Users must
+                  not display content that violates Section 5 of these terms or
+                  applicable law.
+                </p>
+                <p style={{ ...Paragraph, marginTop: '10px' }}>
+                  We may interrupt or terminate a session where camera use,
+                  behavior, displayed material, or session conduct creates a
+                  safety, compliance, moderation, or technical concern, including
+                  but not limited to suspected presence of a minor, suspected
+                  non-consenting third party, or any content listed as prohibited
+                  in Section 5.
                 </p>
               </div>
 
               <div style={Section}>
                 <h3 style={SectionTitle}>7. Moderation, Enforcement, and Content Removal</h3>
                 <p style={Paragraph}>
-                  SharemeChat may use automated signals, technical checks, user
-                  reports, and human review to operate the service, enforce rules,
-                  and protect users. We may interrupt live sessions, limit
-                  features, block interactions, restrict account access or
-                  availability, request additional verification where applicable,
-                  or take other reasonable enforcement action where necessary for
-                  safety, compliance, fraud prevention, or operational integrity.
+                  SharemeChat operates real-time automated moderation on live
+                  sessions, combined with human review for cases that require
+                  context, and a complaints channel for users and third parties.
+                  Automated systems sample session frames during private sessions
+                  and screen them for prohibited content listed in Section 5.
+                  When the automated system identifies content that falls within
+                  the platform&apos;s zero-tolerance categories (in particular
+                  suspected involvement of minors or extreme violence/gore), the
+                  session is terminated automatically and the matter is escalated
+                  to internal review and, where applicable, to competent
+                  authorities.
+                </p>
+                <p style={{ ...Paragraph, marginTop: '10px' }}>
+                  For categories that require human judgement (borderline content,
+                  reports from other users, appeals), a human reviewer assesses
+                  the matter and decides on the appropriate enforcement measure.
+                  Measures may include warnings, session termination, feature
+                  restrictions, account suspension, content removal, identity
+                  re-verification, or permanent removal from the service. We
+                  retain technical records of moderation decisions for audit and
+                  compliance purposes, including periodic reporting to the
+                  payment processor as required by card-network rules.
                 </p>
               </div>
 
@@ -673,18 +719,23 @@ export default function Legal() {
                 <h3 style={SectionTitle}>5. Age Verification and Biometric Data</h3>
                 <p style={Paragraph}>
                   To comply with applicable age-verification laws and card-network
-                  requirements, the Platform verifies that clients are adults before
-                  they access adult-oriented features. This is done primarily through
-                  facial age estimation provided by a specialist third-party processor
-                  (Veriff), with a document-based check as a fallback for borderline
-                  cases. To the extent that facial-estimation data constitutes
-                  biometric data, it is special-category personal data and is
-                  processed on a clearly identified lawful basis and, where required,
-                  with your explicit consent, under data-minimization and
+                  requirements, the Platform verifies that all participants are
+                  adults aged 18 or older before they access adult-themed
+                  features. Verification is performed by a specialist third-party
+                  identity-verification processor and combines facial age
+                  estimation with liveness detection, with a document-based check
+                  available as a fallback for borderline cases. Models go through
+                  a more thorough identity-verification flow including
+                  identity-document review and face match before they can host
+                  sessions on the platform. To the extent that facial-estimation
+                  or face-match data constitutes biometric data, it is
+                  special-category personal data and is processed on a clearly
+                  identified lawful basis and, where required, with your
+                  explicit consent, under data-minimization and
                   purpose-limitation principles. The method is privacy-preserving:
-                  the selfie image is not retained, and only the verification result
-                  is recorded. Identity-verification data for models is handled on
-                  the same basis. A Data Protection Impact Assessment has been
+                  the selfie image is not retained beyond what is required by the
+                  verification flow, and only the verification result is recorded
+                  by the Platform. A Data Protection Impact Assessment has been
                   carried out for this processing and is kept up to date.
                 </p>
               </div>
