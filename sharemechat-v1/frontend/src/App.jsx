@@ -33,6 +33,7 @@ import GuestConsentGate from './consent/GuestConsentGate';
 import { GlobalTypography } from './styles/core/typography';
 import Footer from './footer/Footer';
 import Legal from './footer/Legal';
+import ComplaintForm from './footer/ComplaintForm';
 import Faq from './footer/Faq';
 import Safety from './footer/Safety';
 import Rules from './footer/Rules';
@@ -162,6 +163,7 @@ function App() {
                     <Route path="/reset-password" component={ResetPassword} />
                     <Route path="/verify-email" component={ProductEmailVerificationPage} />
                     <Route path="/legal" component={Legal} />
+                    <Route path="/complaint" component={ComplaintForm} />
                     <Route path="/faq" component={Faq} />
                     <Route path="/safety" component={Safety} />
                     <Route path="/community-guidelines" component={Rules} />

@@ -50,7 +50,11 @@ public record EmailMessage(
         ACCOUNT_ALREADY_EXISTS_NOTICE,
         MODEL_REVIEW_APPROVED,
         MODEL_REVIEW_REJECTED,
-        MODEL_REVIEW_REPEAT
+        MODEL_REVIEW_REPEAT,
+        // Sub-paquete Complaints workflow (Opcion B). DEC-7: ack al denunciante
+        // cuando dio email. DEC-8: alerta interna al admin si categoria grave.
+        COMPLAINT_ACK,
+        COMPLAINT_ADMIN_ALERT
     }
 
     public enum Priority {

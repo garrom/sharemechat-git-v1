@@ -11,6 +11,7 @@ import AdminFinancePanel from './AdminFinancePanel';
 import AdminModelsPanel from './AdminModelsPanel';
 import AdminAssetModerationPanel from './AdminAssetModerationPanel';
 import AdminModerationPanel from './AdminModerationPanel';
+import AdminComplaintsPanel from './AdminComplaintsPanel';
 import AdminStreamModerationPanel from './AdminStreamModerationPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminProfilePage from './AdminProfilePage';
@@ -132,6 +133,8 @@ const DashboardAdmin = () => {
     canRefund: adminView,
     canViewModeration: adminView || hasBackofficePermission(user, 'moderation.read_reports'),
     canReviewModeration: adminView,
+    canViewComplaints: adminView || hasBackofficePermission(user, 'complaints.read_list'),
+    canReviewComplaints: adminView || hasBackofficePermission(user, 'complaints.review'),
     canViewStreams: adminView || hasBackofficePermission(user, 'streams.read_active'),
     canKillStreams: adminView,
     canViewDb: adminView,
@@ -157,6 +160,7 @@ const DashboardAdmin = () => {
       capabilities.canViewAssetModeration ? 'asset-moderation' : null,
       capabilities.canViewStreamModeration ? 'stream-moderation' : null,
       capabilities.canViewModeration ? 'moderation' : null,
+      capabilities.canViewComplaints ? 'complaints' : null,
       capabilities.canViewFinance ? 'finance' : null,
       capabilities.canRefund ? 'finance-adjustments' : null,
       capabilities.canViewAudit ? 'control' : null,
@@ -239,6 +243,11 @@ const DashboardAdmin = () => {
             key: 'moderation',
             label: t('admin.shell.sections.business.items.moderation.label'),
             meta: t('admin.shell.sections.business.items.moderation.meta'),
+          } : null,
+          capabilities.canViewComplaints ? {
+            key: 'complaints',
+            label: t('admin.complaints.title', { defaultValue: 'Complaints' }),
+            meta: t('admin.complaints.subtitle', { defaultValue: 'Public complaints with SLA tracking' }),
           } : null,
           capabilities.canViewFinance ? {
             key: 'finance',
@@ -486,6 +495,15 @@ const DashboardAdmin = () => {
               subtitle={t('admin.moderation.wrapper.subtitle')}
             >
               <AdminModerationPanel canReview={capabilities.canReviewModeration} />
+            </AdminPage>
+          )}
+
+          {activeView === 'complaints' && capabilities.canViewComplaints && (
+            <AdminPage
+              title={t('admin.complaints.title', { defaultValue: 'Complaints' })}
+              subtitle={t('admin.complaints.subtitle', { defaultValue: 'Public complaints with SLA tracking' })}
+            >
+              <AdminComplaintsPanel canReview={capabilities.canReviewComplaints} />
             </AdminPage>
           )}
 

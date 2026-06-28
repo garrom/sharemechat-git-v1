@@ -35,6 +35,9 @@ public class ApiRateLimitService {
     private final int wsPingLimitPerWindow;
     private final Duration wsPingWindow;
 
+    private final int complaintLimitPerWindow;
+    private final Duration complaintWindow;
+
     public ApiRateLimitService(
             StringRedisTemplate redis,
             @Value("${security.ratelimit.login.limit:10}") int loginLimitPerWindow,
@@ -56,7 +59,10 @@ public class ApiRateLimitService {
             @Value("${security.ratelimit.ws.call.window-seconds:60}") int wsCallWindowSeconds,
 
             @Value("${security.ratelimit.ws.ping.limit:30}") int wsPingLimitPerWindow,
-            @Value("${security.ratelimit.ws.ping.window-seconds:10}") int wsPingWindowSeconds
+            @Value("${security.ratelimit.ws.ping.window-seconds:10}") int wsPingWindowSeconds,
+
+            @Value("${security.ratelimit.complaint.limit:5}") int complaintLimitPerWindow,
+            @Value("${security.ratelimit.complaint.window-seconds:3600}") int complaintWindowSeconds
 
     ) {
         this.redis = redis;
@@ -82,6 +88,19 @@ public class ApiRateLimitService {
         this.wsPingLimitPerWindow = wsPingLimitPerWindow;
         this.wsPingWindow = Duration.ofSeconds(wsPingWindowSeconds);
 
+        this.complaintLimitPerWindow = complaintLimitPerWindow;
+        this.complaintWindow = Duration.ofSeconds(complaintWindowSeconds);
+
+    }
+
+    // =========================
+    // COMPLAINTS (sub-paquete Complaints workflow Opcion B)
+    // =========================
+
+    public void checkComplaintIp(String ip) {
+        if (ip == null || ip.isBlank()) return;
+        consumeOrThrow(key("complaint:ip", ip), complaintLimitPerWindow, complaintWindow,
+                "Demasiadas denuncias desde esta IP. Intentalo mas tarde.");
     }
 
     // =========================

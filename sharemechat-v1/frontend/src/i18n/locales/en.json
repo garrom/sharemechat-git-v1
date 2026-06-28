@@ -561,7 +561,6 @@
       "options": {
         "abuse": "Abuse / Inappropriate behavior",
         "harassment": "Harassment / Intimidation",
-        "nudity": "Nudity / Explicit content",
         "fraud": "Fraud / Scam / Impersonation",
         "minor": "Possible minor",
         "other": "Other"
@@ -989,6 +988,46 @@
       },
       "placeholders": {
         "message": "Type a message…"
+      }
+    }
+  },
+  "complaint": {
+    "public": {
+      "title": "Submit a complaint",
+      "intro": "Use this form to report content or behavior that you believe violates our rules or applicable law. We review every complaint within 5 business days. If you provide your email address, we will send you an acknowledgement and the final decision.",
+      "category": "Category",
+      "categoryChoose": "Choose a category",
+      "categories": {
+        "CSAM": "Child sexual abuse material (CSAM)",
+        "NON_CONSENSUAL": "Non-consensual content",
+        "MINOR_AT_RISK": "Possible minor at risk",
+        "HATE_SYMBOLS": "Hate speech / hate symbols",
+        "COPYRIGHT": "Copyright or trademark infringement",
+        "ILLEGAL": "Illegal content",
+        "HARASSMENT": "Harassment / threats",
+        "IMPERSONATION": "Impersonation",
+        "FRAUD": "Fraud / scam",
+        "OTHER": "Other"
+      },
+      "description": "Description",
+      "descriptionPlaceholder": "Describe what happened with as much detail as possible: what you saw, when, in what context…",
+      "descriptionHelp": "Up to 2000 characters. Avoid sharing sensitive personal data beyond what is strictly necessary.",
+      "subjectUrl": "Content URL (optional)",
+      "subjectUrlHelp": "If your complaint refers to a specific page or content, paste its URL here.",
+      "subjectEmail": "Reported user email (optional)",
+      "reporterEmail": "Your email (optional but recommended)",
+      "reporterEmailHelp": "If you provide it, we will send you acknowledgement and the final decision. To remain anonymous, leave it blank.",
+      "reporterName": "Your name (optional)",
+      "submit": "Submit complaint",
+      "submitting": "Submitting…",
+      "successTitle": "Complaint received",
+      "successBody": "We have recorded your complaint with identifier #{{id}}. We will review it within 5 business days. Thank you for helping us keep the platform safe.",
+      "errors": {
+        "categoryRequired": "Please choose a category.",
+        "descriptionRequired": "Description is required.",
+        "badRequest": "Some required fields are missing or invalid.",
+        "tooManyRequests": "You have submitted too many complaints from your connection. Please try again later.",
+        "generic": "We could not submit the complaint. Please try again later."
       }
     }
   },
@@ -2724,7 +2763,55 @@
       "db": "Database View",
       "audit": "Audit",
       "moderation": "Moderation",
+      "complaints": "Complaints",
       "streams": "Active Streams"
+    },
+    "complaints": {
+      "title": "Complaints",
+      "subtitle": "Public channel and SLA tracking (5 business days)",
+      "filters": {
+        "status": "Status",
+        "category": "Category",
+        "reload": "Reload"
+      },
+      "statuses": {
+        "OPEN": "Open",
+        "ACKNOWLEDGED": "Acknowledged",
+        "REVIEWING": "Reviewing",
+        "RESOLVED": "Resolved",
+        "REJECTED": "Rejected",
+        "ESCALATED": "Escalated"
+      },
+      "slaBadges": {
+        "OK": "Within SLA",
+        "NEAR": "Near breach",
+        "BREACH": "Breached"
+      },
+      "actions": {
+        "save": "Save review",
+        "escalate": "Escalate",
+        "close": "Close",
+        "open": "Open"
+      },
+      "labels": {
+        "id": "ID",
+        "category": "Category",
+        "status": "Status",
+        "sla": "SLA",
+        "created": "Created",
+        "expected": "Expected resolution",
+        "reporter": "Reporter",
+        "subjectUserId": "Subject user ID",
+        "subjectStreamId": "Subject stream ID",
+        "subjectEmail": "Subject email",
+        "subjectUrl": "Subject URL",
+        "description": "Description",
+        "auditLog": "Audit log",
+        "review": "Review",
+        "newStatus": "New status",
+        "decisionCode": "Decision code",
+        "notes": "Notes"
+      }
     },
     "streamModeration": {
       "title": "Stream moderation",

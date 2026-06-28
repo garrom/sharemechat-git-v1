@@ -20,6 +20,11 @@ public final class BackofficeAuthorities {
     public static final String PERM_MODERATION_READ_REPORTS = "moderation.read_reports";
     public static final String PERM_MODERATION_READ_REPORT_DETAIL = "moderation.read_report_detail";
 
+    // Complaints workflow (Opcion B, DEC-14): permisos analogos a moderation
+    public static final String PERM_COMPLAINTS_READ_LIST = "complaints.read_list";
+    public static final String PERM_COMPLAINTS_READ_DETAIL = "complaints.read_detail";
+    public static final String PERM_COMPLAINTS_REVIEW = "complaints.review";
+
     public static final String PERM_STREAMS_READ_ACTIVE = "streams.read_active";
     public static final String PERM_STREAMS_READ_DETAIL = "streams.read_detail";
 
@@ -41,6 +46,8 @@ public final class BackofficeAuthorities {
             PERM_MODELS_UPDATE_CHECKLIST,
             PERM_MODERATION_READ_REPORTS,
             PERM_MODERATION_READ_REPORT_DETAIL,
+            PERM_COMPLAINTS_READ_LIST,
+            PERM_COMPLAINTS_READ_DETAIL,
             PERM_STREAMS_READ_ACTIVE,
             PERM_STREAMS_READ_DETAIL,
             PERM_STATS_READ_OVERVIEW,
@@ -55,6 +62,9 @@ public final class BackofficeAuthorities {
             PERM_MODELS_UPDATE_CHECKLIST,
             PERM_MODERATION_READ_REPORTS,
             PERM_MODERATION_READ_REPORT_DETAIL,
+            PERM_COMPLAINTS_READ_LIST,
+            PERM_COMPLAINTS_READ_DETAIL,
+            PERM_COMPLAINTS_REVIEW,
             PERM_STREAMS_READ_ACTIVE,
             PERM_STREAMS_READ_DETAIL,
             PERM_STATS_READ_OVERVIEW,

@@ -116,7 +116,10 @@ public class Constants {
     public static class ModerationReportTypes {
         public static final String ABUSE = "ABUSE";
         public static final String HARASSMENT = "HARASSMENT";
-        public static final String NUDITY = "NUDITY";
+        // NUDITY retirado del set P2P en sub-paquete Complaints workflow (Opcion B,
+        // DEC-3): contradice el posicionamiento adult dating intimate confirmado en
+        // P2.2. Cero filas en BD usaban NUDITY al cierre. Las denuncias publicas
+        // (regulatorias) viven en la tabla complaints (V11), no en moderation_reports.
         public static final String FRAUD = "FRAUD";
         public static final String MINOR = "MINOR";
         public static final String OTHER = "OTHER";
@@ -206,4 +209,67 @@ public class Constants {
         private StreamModerationProviderKeys() {}
     }
 
+    // ========================================================================
+    // Sub-paquete Complaints workflow (Opcion B). Canal publico anonimo de
+    // denuncias regulatorias. Tabla complaints (V11). Vendor-agnostic.
+    // ========================================================================
+
+    public static class ComplaintCategories {
+        public static final String CSAM = "CSAM";
+        public static final String NON_CONSENSUAL = "NON_CONSENSUAL";
+        public static final String MINOR_AT_RISK = "MINOR_AT_RISK";
+        public static final String HATE_SYMBOLS = "HATE_SYMBOLS";
+        public static final String COPYRIGHT = "COPYRIGHT";
+        public static final String ILLEGAL = "ILLEGAL";
+        public static final String HARASSMENT = "HARASSMENT";
+        public static final String IMPERSONATION = "IMPERSONATION";
+        public static final String FRAUD = "FRAUD";
+        public static final String OTHER = "OTHER";
+
+        private ComplaintCategories() {}
+    }
+
+    public static class ComplaintStatuses {
+        public static final String OPEN = "OPEN";
+        public static final String ACKNOWLEDGED = "ACKNOWLEDGED";
+        public static final String REVIEWING = "REVIEWING";
+        public static final String RESOLVED = "RESOLVED";
+        public static final String REJECTED = "REJECTED";
+        public static final String ESCALATED = "ESCALATED";
+
+        private ComplaintStatuses() {}
+    }
+
+    public static class ComplaintChannels {
+        public static final String WEB = "WEB";
+        public static final String EMAIL = "EMAIL";
+        public static final String ADMIN = "ADMIN";
+
+        private ComplaintChannels() {}
+    }
+
+    public static class ComplaintDecisionCodes {
+        public static final String CONTENT_REMOVED = "CONTENT_REMOVED";
+        public static final String USER_SUSPENDED = "USER_SUSPENDED";
+        public static final String USER_BANNED = "USER_BANNED";
+        public static final String NO_ACTION = "NO_ACTION";
+        public static final String INSUFFICIENT_INFO = "INSUFFICIENT_INFO";
+        public static final String ESCALATED_TO_AUTHORITIES = "ESCALATED_TO_AUTHORITIES";
+        public static final String FORWARDED_TO_NCMEC = "FORWARDED_TO_NCMEC";
+
+        private ComplaintDecisionCodes() {}
+    }
+
+    public static class ComplaintAuditActions {
+        public static final String CREATED = "CREATED";
+        public static final String ACK_SENT = "ACK_SENT";
+        public static final String STATUS_CHANGED = "STATUS_CHANGED";
+        public static final String NOTE_ADDED = "NOTE_ADDED";
+        public static final String DECISION = "DECISION";
+        public static final String ESCALATED = "ESCALATED";
+        public static final String EVIDENCE_UPLOADED = "EVIDENCE_UPLOADED";
+        public static final String ADMIN_ALERT_SENT = "ADMIN_ALERT_SENT";
+
+        private ComplaintAuditActions() {}
+    }
 }

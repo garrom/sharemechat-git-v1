@@ -561,7 +561,6 @@
       "options": {
         "abuse": "Abuso / Comportamiento inapropiado",
         "harassment": "Acoso / Intimidación",
-        "nudity": "Desnudez / Contenido explícito",
         "fraud": "Fraude / Estafa / Suplantación",
         "minor": "Posible menor de edad",
         "other": "Otro"
@@ -989,6 +988,46 @@
       },
       "placeholders": {
         "message": "Escribe un mensaje…"
+      }
+    }
+  },
+  "complaint": {
+    "public": {
+      "title": "Presentar una denuncia",
+      "intro": "Este formulario te permite informar de contenido o conductas que crees que infringen nuestras normas o la legislación aplicable. Lo revisaremos en un plazo máximo de 5 días hábiles. Si facilitas tu email, te enviaremos un acuse de recibo y la decisión final.",
+      "category": "Categoría",
+      "categoryChoose": "Selecciona una categoría",
+      "categories": {
+        "CSAM": "Material de abuso sexual infantil (CSAM)",
+        "NON_CONSENSUAL": "Contenido no consentido",
+        "MINOR_AT_RISK": "Posible menor en riesgo",
+        "HATE_SYMBOLS": "Discurso de odio / símbolos de odio",
+        "COPYRIGHT": "Infracción de copyright o marca",
+        "ILLEGAL": "Contenido ilegal",
+        "HARASSMENT": "Acoso / amenazas",
+        "IMPERSONATION": "Suplantación de identidad",
+        "FRAUD": "Fraude / estafa",
+        "OTHER": "Otro"
+      },
+      "description": "Descripción",
+      "descriptionPlaceholder": "Describe lo ocurrido con el mayor detalle posible: qué viste, cuándo, en qué contexto…",
+      "descriptionHelp": "Hasta 2000 caracteres. No incluyas datos personales sensibles que no sean estrictamente necesarios.",
+      "subjectUrl": "URL del contenido (opcional)",
+      "subjectUrlHelp": "Si la denuncia se refiere a una página o contenido concreto, pega aquí su enlace.",
+      "subjectEmail": "Email del usuario denunciado (opcional)",
+      "reporterEmail": "Tu email (opcional pero recomendado)",
+      "reporterEmailHelp": "Si lo facilitas, te enviaremos acuse de recibo y la decisión final. Si prefieres mantener tu denuncia anónima, déjalo en blanco.",
+      "reporterName": "Tu nombre (opcional)",
+      "submit": "Enviar denuncia",
+      "submitting": "Enviando…",
+      "successTitle": "Denuncia recibida",
+      "successBody": "Hemos registrado tu denuncia con el identificador #{{id}}. La revisaremos en un plazo máximo de 5 días hábiles. Gracias por ayudarnos a mantener la plataforma segura.",
+      "errors": {
+        "categoryRequired": "Selecciona una categoría.",
+        "descriptionRequired": "La descripción es obligatoria.",
+        "badRequest": "Faltan datos o no son válidos. Revisa los campos obligatorios.",
+        "tooManyRequests": "Has enviado demasiadas denuncias en poco tiempo desde tu conexión. Inténtalo más tarde.",
+        "generic": "No se pudo enviar la denuncia. Inténtalo de nuevo más tarde."
       }
     }
   },
@@ -2724,7 +2763,55 @@
       "db": "Vista BBDD",
       "audit": "Auditoría",
       "moderation": "Moderación",
+      "complaints": "Denuncias",
       "streams": "Streams activos"
+    },
+    "complaints": {
+      "title": "Denuncias",
+      "subtitle": "Canal público y seguimiento del SLA (5 días hábiles)",
+      "filters": {
+        "status": "Estado",
+        "category": "Categoría",
+        "reload": "Recargar"
+      },
+      "statuses": {
+        "OPEN": "Abierto",
+        "ACKNOWLEDGED": "Acusado",
+        "REVIEWING": "En revisión",
+        "RESOLVED": "Resuelto",
+        "REJECTED": "Rechazado",
+        "ESCALATED": "Escalado"
+      },
+      "slaBadges": {
+        "OK": "Dentro de plazo",
+        "NEAR": "Próximo a vencer",
+        "BREACH": "Plazo incumplido"
+      },
+      "actions": {
+        "save": "Guardar revisión",
+        "escalate": "Escalar",
+        "close": "Cerrar",
+        "open": "Abrir"
+      },
+      "labels": {
+        "id": "ID",
+        "category": "Categoría",
+        "status": "Estado",
+        "sla": "SLA",
+        "created": "Creado",
+        "expected": "Plazo previsto",
+        "reporter": "Denunciante",
+        "subjectUserId": "ID usuario denunciado",
+        "subjectStreamId": "ID stream denunciado",
+        "subjectEmail": "Email denunciado",
+        "subjectUrl": "URL denunciada",
+        "description": "Descripción",
+        "auditLog": "Registro de auditoría",
+        "review": "Revisión",
+        "newStatus": "Nuevo estado",
+        "decisionCode": "Código de decisión",
+        "notes": "Notas"
+      }
     },
     "streamModeration": {
       "title": "Moderación del streaming",

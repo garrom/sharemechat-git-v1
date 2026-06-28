@@ -638,17 +638,6 @@ export const useAppModals = () => {
                   <input
                     type="radio"
                     name="report-type"
-                    onChange={() => { selectedType = 'NUDITY'; }}
-                  />
-                  <ChoiceText>
-                    <ChoiceTitle>{i18n.t('modals.report.options.nudity')}</ChoiceTitle>
-                  </ChoiceText>
-                </ChoiceRow>
-
-                <ChoiceRow>
-                  <input
-                    type="radio"
-                    name="report-type"
                     onChange={() => { selectedType = 'FRAUD'; }}
                   />
                   <ChoiceText>

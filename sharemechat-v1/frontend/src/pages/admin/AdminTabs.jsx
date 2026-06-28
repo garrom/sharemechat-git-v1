@@ -13,6 +13,7 @@ const AdminTabs = ({
   canViewDb,
   canViewAudit,
   canViewModeration,
+  canViewComplaints,
   canViewStreams,
 }) => {
   const t = (key, options) => i18n.t(key, options);
@@ -33,6 +34,7 @@ const AdminTabs = ({
       {canViewDb && <TabButton active={activeTab === 'db'} onClick={() => setActiveTab('db')}>{t('admin.tabs.db')}</TabButton>}
       {canViewAudit && <TabButton active={activeTab === 'audit'} onClick={() => setActiveTab('audit')}>{t('admin.tabs.audit')}</TabButton>}
       {canViewModeration && <TabButton active={activeTab === 'moderation'} onClick={() => setActiveTab('moderation')}>{t('admin.tabs.moderation')}</TabButton>}
+      {canViewComplaints && <TabButton active={activeTab === 'complaints'} onClick={() => setActiveTab('complaints')}>{t('admin.tabs.complaints')}</TabButton>}
       {canViewStreams && <TabButton active={activeTab === 'streams'} onClick={() => setActiveTab('streams')}>{t('admin.tabs.streams')}</TabButton>}
     </TabsBar>
   );

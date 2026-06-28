@@ -291,6 +291,21 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/webrtc/config").authenticated()
                         .requestMatchers("/api/messages/**").authenticated()
                         .requestMatchers("/api/reports/**").authenticated()
+
+                        // Sub-paquete Complaints workflow (Opcion B). Canal publico
+                        // anonimo: POST sin auth + rate limit IP via ApiRateLimitService.
+                        // GET /admin/complaints* protegido con permisos backoffice.
+                        .requestMatchers(HttpMethod.POST, "/api/public/complaints").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/admin/complaints")
+                            .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_COMPLAINTS_READ_LIST))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/complaints/stats")
+                            .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_COMPLAINTS_READ_LIST))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/complaints/{id}")
+                            .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_COMPLAINTS_READ_DETAIL))
+                        .requestMatchers(HttpMethod.POST, "/api/admin/complaints/{id}/review")
+                            .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_COMPLAINTS_REVIEW))
+                        .requestMatchers(HttpMethod.POST, "/api/admin/complaints/{id}/escalate")
+                            .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_COMPLAINTS_REVIEW))
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
 
                         // ROLE-SCOPED APIs (AL FINAL, para no pisar endpoints específicos)

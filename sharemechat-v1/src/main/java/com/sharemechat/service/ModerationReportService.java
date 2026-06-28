@@ -234,7 +234,9 @@ public class ModerationReportService {
         String v = raw.trim().toUpperCase(Locale.ROOT);
 
         return switch (v) {
-            case "ABUSE", "HARASSMENT", "NUDITY", "FRAUD", "MINOR", "OTHER" -> v;
+            // NUDITY retirado del set P2P (Complaints workflow DEC-3): contradice
+            // el posicionamiento adult dating intimate (P2.2). Cero filas en BD.
+            case "ABUSE", "HARASSMENT", "FRAUD", "MINOR", "OTHER" -> v;
             default -> throw new IllegalArgumentException("reportType no válido: " + raw);
         };
     }

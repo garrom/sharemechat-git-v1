@@ -964,9 +964,25 @@ export default function Legal() {
               <div style={Section}>
                 <h3 style={SectionTitle}>1. How to Submit a Complaint</h3>
                 <p style={Paragraph}>
-                  Complaints can be submitted by email to <strong><a href="mailto:contact+gdpr@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a></strong>.
-                  Please include your account email, a description of the issue, relevant dates,
-                  and any supporting evidence such as screenshots or transaction details.
+                  You can submit a complaint through either of the following channels:
+                </p>
+                <ul style={List}>
+                  <li>
+                    <strong>Online form (recommended):</strong>{' '}
+                    <a href="/complaint" style={LinkLike}>submit a complaint online</a>.
+                    This channel routes your complaint through our complaint workflow with
+                    automatic acknowledgement and SLA tracking.
+                  </li>
+                  <li>
+                    <strong>Email:</strong>{' '}
+                    <a href="mailto:safety@sharemechat.com" style={LinkLike}>safety@sharemechat.com</a>.
+                  </li>
+                </ul>
+                <p style={Paragraph}>
+                  Please include a clear description of the issue, the relevant dates,
+                  the URL or user identifier of the content (if applicable), and any
+                  supporting evidence. Providing your email address allows us to send you
+                  an acknowledgement and the final decision on your case.
                 </p>
               </div>
 
