@@ -278,6 +278,21 @@ public class SecurityConfig {
                         // Product onboarding KYC config (read-only)
                         .requestMatchers(HttpMethod.GET, "/api/kyc/config/product/model-onboarding").hasRole("USER")
 
+                        // ============================================================
+                        // Sub-paquete Compliance Dashboard (DEC-CD-4). Matchers ANTES
+                        // del catch-all /api/admin/** porque AUDIT necesita acceso al
+                        // dashboard ejecutivo y al drill-down (gap E opcion b: el rol
+                        // AUDIT existe exactamente para esto). Calco del patron de
+                        // stream-moderation. Acceso a evidence S3 via signed URL
+                        // tambien restringido al permiso, con audit log per-request.
+                        // ============================================================
+                        .requestMatchers(HttpMethod.GET, "/api/admin/compliance/**")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_AUDIT),
+                                BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_COMPLIANCE_DASHBOARD_VIEW))
+
                         // Admin
                         .requestMatchers("/api/admin/**")
                         .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN))

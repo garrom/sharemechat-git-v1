@@ -2764,6 +2764,7 @@
       "audit": "Audit",
       "moderation": "Moderation",
       "complaints": "Complaints",
+      "compliance": "Compliance",
       "streams": "Active Streams"
     },
     "complaints": {
@@ -2811,6 +2812,43 @@
         "newStatus": "New status",
         "decisionCode": "Decision code",
         "notes": "Notes"
+      }
+    },
+    "compliance": {
+      "title": "Compliance",
+      "subtitle": "Executive dashboard + frame-by-frame drill-down + signed URL evidence",
+      "generatedAt": "Generated:",
+      "actions": {
+        "reload": "Reload",
+        "csv": "Download CSV (last 30 days)",
+        "drillDown": "Drill-down",
+        "back": "Back"
+      },
+      "cards": {
+        "last7Days": "Last 7 days",
+        "last30Days": "Last 30 days",
+        "currentMonth": "Current month",
+        "sessions": "Sessions",
+        "frames": "Frames",
+        "degraded": "Degraded",
+        "reviewLatency": "Avg review latency (min)",
+        "reviewsBySeverity": "Reviews by severity (30d)",
+        "complaintsBySla": "Complaints by SLA (30d)",
+        "accountStatusSnapshot": "Account status snapshot (current)"
+      },
+      "timeline": {
+        "title": "Timeline (last 7 days)",
+        "empty": "(no events)"
+      },
+      "evidence": {
+        "load": "View evidence"
+      },
+      "session": {
+        "title": "Session detail",
+        "metadata": "Metadata",
+        "frames": "Frame timeline",
+        "reviews": "Reviews generated",
+        "noReviews": "No reviews (all GREEN)."
       }
     },
     "streamModeration": {

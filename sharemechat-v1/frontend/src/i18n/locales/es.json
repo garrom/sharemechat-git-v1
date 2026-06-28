@@ -2764,6 +2764,7 @@
       "audit": "Auditoría",
       "moderation": "Moderación",
       "complaints": "Denuncias",
+      "compliance": "Compliance",
       "streams": "Streams activos"
     },
     "complaints": {
@@ -2811,6 +2812,43 @@
         "newStatus": "Nuevo estado",
         "decisionCode": "Código de decisión",
         "notes": "Notas"
+      }
+    },
+    "compliance": {
+      "title": "Compliance",
+      "subtitle": "Dashboard ejecutivo + drill-down frame por frame + URL temporal de evidencia",
+      "generatedAt": "Generado:",
+      "actions": {
+        "reload": "Recargar",
+        "csv": "Descargar CSV (últimos 30 días)",
+        "drillDown": "Detalle",
+        "back": "Volver"
+      },
+      "cards": {
+        "last7Days": "Últimos 7 días",
+        "last30Days": "Últimos 30 días",
+        "currentMonth": "Mes en curso",
+        "sessions": "Sesiones",
+        "frames": "Frames",
+        "degraded": "Degradadas",
+        "reviewLatency": "Latencia media review (min)",
+        "reviewsBySeverity": "Reviews por severidad (30d)",
+        "complaintsBySla": "Denuncias por SLA (30d)",
+        "accountStatusSnapshot": "Estado de cuentas (snapshot actual)"
+      },
+      "timeline": {
+        "title": "Línea temporal (últimos 7 días)",
+        "empty": "(sin eventos)"
+      },
+      "evidence": {
+        "load": "Ver evidencia"
+      },
+      "session": {
+        "title": "Detalle de sesión",
+        "metadata": "Metadatos",
+        "frames": "Línea temporal de frames",
+        "reviews": "Reviews generadas",
+        "noReviews": "Sin reviews (todos los frames GREEN)."
       }
     },
     "streamModeration": {

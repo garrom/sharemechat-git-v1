@@ -105,7 +105,9 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
-		<!-- AWS S3 -->
+		<!-- AWS S3 + S3Presigner (presigner viene incluido en el artifact s3).
+		     Usado por ModerationEvidenceUploader (P2.1) y por
+		     ComplianceEvidenceService (sub-paquete Compliance Dashboard). -->
 		<dependency>
 			<groupId>software.amazon.awssdk</groupId>
 			<artifactId>s3</artifactId>

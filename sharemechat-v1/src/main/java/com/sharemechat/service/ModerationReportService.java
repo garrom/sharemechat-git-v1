@@ -28,19 +28,46 @@ public class ModerationReportService {
     private final UserBlockService userBlockService;
     private final RefreshTokenRepository refreshTokenRepository;
     private final ProductAccessGuardService productAccessGuardService;
+    private final BackofficeAuditLogService backofficeAuditLogService;
 
     public ModerationReportService(
             ModerationReportRepository moderationReportRepository,
             UserRepository userRepository,
             UserBlockService userBlockService,
             RefreshTokenRepository refreshTokenRepository,
-            ProductAccessGuardService productAccessGuardService
+            ProductAccessGuardService productAccessGuardService,
+            BackofficeAuditLogService backofficeAuditLogService
     ) {
         this.moderationReportRepository = moderationReportRepository;
         this.userRepository = userRepository;
         this.userBlockService = userBlockService;
         this.refreshTokenRepository = refreshTokenRepository;
         this.productAccessGuardService = productAccessGuardService;
+        this.backofficeAuditLogService = backofficeAuditLogService;
+    }
+
+    /**
+     * Compliance dashboard (DEC-CD-A): emite action USER_ACCOUNT_STATUS_CHANGE
+     * en backoffice_access_audit_log cada vez que se muta accountStatus por
+     * decision enforcement (auto-block + admin review SUSPEND/BAN). Sin
+     * actor: NULL para auto-block del sistema. Best-effort: si el log falla,
+     * la transicion enforcement no se bloquea.
+     */
+    private void logAccountStatusChange(Long targetUserId, Long actorUserId,
+                                         String fromStatus, String toStatus, String reason) {
+        try {
+            java.util.Map<String, Object> payload = new java.util.LinkedHashMap<>();
+            payload.put("fromStatus", fromStatus);
+            payload.put("toStatus", toStatus);
+            payload.put("reason", reason);
+            // target_user_id NOT NULL; aqui SI hay target real (usuario afectado).
+            backofficeAuditLogService.writeAuditLog(actorUserId, targetUserId,
+                    Constants.ComplianceAuditActions.USER_ACCOUNT_STATUS_CHANGE,
+                    "Cambio de accountStatus " + fromStatus + " -> " + toStatus,
+                    payload);
+        } catch (Exception ignore) {
+            // log best-effort; no bloquea enforcement
+        }
     }
 
     public User getCurrentUserOrThrow() {
@@ -126,6 +153,7 @@ public class ModerationReportService {
         if (Constants.ModerationReportTypes.MINOR.equals(reportType)) {
             User reported = userRepository.findById(dto.getReportedUserId()).orElse(null);
             if (reported != null) {
+                String previousStatus = reported.getAccountStatus();
                 reported.setAccountStatus(Constants.AccountStatuses.SUSPENDED);
                 reported.setSuspendedUntil(null);
                 reported.setRiskReason("SYSTEM: Auto-suspend por reporte tipo MINOR");
@@ -134,6 +162,10 @@ public class ModerationReportService {
                 userRepository.save(reported);
 
                 refreshTokenRepository.deleteByUserId(reported.getId());
+
+                logAccountStatusChange(reported.getId(), null,
+                        previousStatus, Constants.AccountStatuses.SUSPENDED,
+                        "SYSTEM: Auto-suspend por reporte tipo MINOR");
 
                 row.setAdminAction(Constants.ModerationAdminActions.SUSPEND);
                 row.setStatus(Constants.ModerationReportStatuses.REVIEWING);
@@ -202,6 +234,7 @@ public class ModerationReportService {
                 .orElseThrow(() -> new IllegalArgumentException("Usuario reportado no existe"));
 
         if (Constants.ModerationAdminActions.SUSPEND.equals(adminAction)) {
+            String previousStatus = reported.getAccountStatus();
             reported.setAccountStatus(Constants.AccountStatuses.SUSPENDED);
             reported.setSuspendedUntil(null);
             reported.setRiskReason(notes);
@@ -209,7 +242,10 @@ public class ModerationReportService {
             reported.setRiskUpdatedBy(adminUserId);
             userRepository.save(reported);
             refreshTokenRepository.deleteByUserId(reported.getId());
+            logAccountStatusChange(reported.getId(), adminUserId,
+                    previousStatus, Constants.AccountStatuses.SUSPENDED, notes);
         } else if (Constants.ModerationAdminActions.BAN.equals(adminAction)) {
+            String previousStatus = reported.getAccountStatus();
             reported.setAccountStatus(Constants.AccountStatuses.BANNED);
             reported.setSuspendedUntil(null);
             reported.setRiskReason(notes);
@@ -217,6 +253,8 @@ public class ModerationReportService {
             reported.setRiskUpdatedBy(adminUserId);
             userRepository.save(reported);
             refreshTokenRepository.deleteByUserId(reported.getId());
+            logAccountStatusChange(reported.getId(), adminUserId,
+                    previousStatus, Constants.AccountStatuses.BANNED, notes);
         }
 
         row.setStatus(newStatus);

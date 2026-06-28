@@ -25,6 +25,10 @@ public final class BackofficeAuthorities {
     public static final String PERM_COMPLAINTS_READ_DETAIL = "complaints.read_detail";
     public static final String PERM_COMPLAINTS_REVIEW = "complaints.review";
 
+    // Compliance dashboard (DEC-CD-4): tab ejecutiva + drill-down + signed URL evidence.
+    // Asignado a ADMIN + AUDIT (gap E opcion b del analisis Fase A).
+    public static final String PERM_COMPLIANCE_DASHBOARD_VIEW = "compliance.dashboard_view";
+
     public static final String PERM_STREAMS_READ_ACTIVE = "streams.read_active";
     public static final String PERM_STREAMS_READ_DETAIL = "streams.read_detail";
 
@@ -74,7 +78,8 @@ public final class BackofficeAuthorities {
             PERM_CONTENT_VIEW,
             PERM_CONTENT_EDIT,
             PERM_CONTENT_REVIEW,
-            PERM_CONTENT_PUBLISH
+            PERM_CONTENT_PUBLISH,
+            PERM_COMPLIANCE_DASHBOARD_VIEW
     );
 
     private BackofficeAuthorities() {

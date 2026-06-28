@@ -12,6 +12,7 @@ import AdminModelsPanel from './AdminModelsPanel';
 import AdminAssetModerationPanel from './AdminAssetModerationPanel';
 import AdminModerationPanel from './AdminModerationPanel';
 import AdminComplaintsPanel from './AdminComplaintsPanel';
+import AdminComplianceDashboardPanel from './AdminComplianceDashboardPanel';
 import AdminStreamModerationPanel from './AdminStreamModerationPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminProfilePage from './AdminProfilePage';
@@ -135,6 +136,7 @@ const DashboardAdmin = () => {
     canReviewModeration: adminView,
     canViewComplaints: adminView || hasBackofficePermission(user, 'complaints.read_list'),
     canReviewComplaints: adminView || hasBackofficePermission(user, 'complaints.review'),
+    canViewCompliance: adminView || auditView || hasBackofficePermission(user, 'compliance.dashboard_view'),
     canViewStreams: adminView || hasBackofficePermission(user, 'streams.read_active'),
     canKillStreams: adminView,
     canViewDb: adminView,
@@ -161,6 +163,7 @@ const DashboardAdmin = () => {
       capabilities.canViewStreamModeration ? 'stream-moderation' : null,
       capabilities.canViewModeration ? 'moderation' : null,
       capabilities.canViewComplaints ? 'complaints' : null,
+      capabilities.canViewCompliance ? 'compliance' : null,
       capabilities.canViewFinance ? 'finance' : null,
       capabilities.canRefund ? 'finance-adjustments' : null,
       capabilities.canViewAudit ? 'control' : null,
@@ -248,6 +251,11 @@ const DashboardAdmin = () => {
             key: 'complaints',
             label: t('admin.complaints.title', { defaultValue: 'Complaints' }),
             meta: t('admin.complaints.subtitle', { defaultValue: 'Public complaints with SLA tracking' }),
+          } : null,
+          capabilities.canViewCompliance ? {
+            key: 'compliance',
+            label: t('admin.compliance.title', { defaultValue: 'Compliance' }),
+            meta: t('admin.compliance.subtitle', { defaultValue: 'Executive dashboard + drill-down + signed URL evidence' }),
           } : null,
           capabilities.canViewFinance ? {
             key: 'finance',
@@ -504,6 +512,15 @@ const DashboardAdmin = () => {
               subtitle={t('admin.complaints.subtitle', { defaultValue: 'Public complaints with SLA tracking' })}
             >
               <AdminComplaintsPanel canReview={capabilities.canReviewComplaints} />
+            </AdminPage>
+          )}
+
+          {activeView === 'compliance' && capabilities.canViewCompliance && (
+            <AdminPage
+              title={t('admin.compliance.title', { defaultValue: 'Compliance' })}
+              subtitle={t('admin.compliance.subtitle', { defaultValue: 'Executive dashboard + drill-down + signed URL evidence' })}
+            >
+              <AdminComplianceDashboardPanel />
             </AdminPage>
           )}
 

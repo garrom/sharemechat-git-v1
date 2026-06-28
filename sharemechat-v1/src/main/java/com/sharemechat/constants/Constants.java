@@ -272,4 +272,20 @@ public class Constants {
 
         private ComplaintAuditActions() {}
     }
+
+    /**
+     * Actions del sub-paquete Compliance Dashboard (DEC-CD-A, DEC-CD-3).
+     * Se persisten en backoffice_access_audit_log para auditoria externa
+     * (Segpay/CCBill) y deteccion de uso indebido del panel.
+     */
+    public static class ComplianceAuditActions {
+        /** Cambio enforcement del estado de cuenta de usuario (SUSPENDED/BANNED/ACTIVE). */
+        public static final String USER_ACCOUNT_STATUS_CHANGE = "USER_ACCOUNT_STATUS_CHANGE";
+        /** Acceso a una imagen evidencia via signed URL temporal. */
+        public static final String COMPLIANCE_EVIDENCE_ACCESS = "COMPLIANCE_EVIDENCE_ACCESS";
+        /** Hit al dashboard ejecutivo (opcional, no se usa hoy; reservado). */
+        public static final String COMPLIANCE_DASHBOARD_VIEW = "COMPLIANCE_DASHBOARD_VIEW";
+
+        private ComplianceAuditActions() {}
+    }
 }

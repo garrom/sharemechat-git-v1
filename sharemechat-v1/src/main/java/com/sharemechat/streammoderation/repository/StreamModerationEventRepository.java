@@ -20,4 +20,11 @@ public interface StreamModerationEventRepository
 
     List<StreamModerationEvent> findByStreamModerationSessionIdOrderByReceivedAtDesc(
             Long streamModerationSessionId);
+
+    /**
+     * Frame timeline para el drill-down del compliance dashboard (Vista B).
+     * Orden asc por id reproduce el orden cronologico de submission.
+     */
+    List<StreamModerationEvent> findByStreamModerationSessionIdOrderByIdAsc(
+            Long streamModerationSessionId);
 }

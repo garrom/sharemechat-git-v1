@@ -20,4 +20,10 @@ public interface StreamModerationReviewRepository
 
     Optional<StreamModerationReview> findByProviderAndProviderEventId(
             String provider, String providerEventId);
+
+    /**
+     * Reviews de una sesion concreta para el drill-down del compliance
+     * dashboard (Vista B). Usa idx_stream_moderation_reviews_session.
+     */
+    List<StreamModerationReview> findByStreamModerationSessionIdOrderByIdAsc(Long sessionId);
 }
