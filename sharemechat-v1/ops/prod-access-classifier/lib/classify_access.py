@@ -939,6 +939,11 @@ def compute_verdict(
     successes_on_unknown_route: List[dict] = []  # 2xx/3xx en ruta no-publica-conocida (y no sensible)
     total_events = 0
     requests_per_ip: Counter = Counter()
+    # P2.a 2026-06-28: distribucion de status por IP para enriquecer el
+    # summary de dos_per_ip. Buckets fijos (2xx, 401, 404, 429, 4xx_otro,
+    # 5xx) para que el operador vea de un vistazo si una IP con 5862
+    # requests obtuvo algun exito (2xx) o solo 401/404 (defensa OK).
+    status_buckets_per_ip: Dict[str, Counter] = {}
 
     with events_path.open("r", encoding="utf-8") as fh:
         for raw_line in fh:
@@ -967,6 +972,27 @@ def compute_verdict(
             is_redirect_3xx = 300 <= status_int <= 399
             is_success = is_success_2xx or is_redirect_3xx
             is_failure_auth = 400 <= status_int <= 499
+
+            # P2.a 2026-06-28: bucket de status por IP para el summary
+            # enriquecido de dos_per_ip. Buckets disjuntos en orden de
+            # comprobacion (401 y 404 sacados aparte por su valor diagnostico).
+            if is_success_2xx:
+                bucket = "2xx"
+            elif status_int == 401:
+                bucket = "401"
+            elif status_int == 404:
+                bucket = "404"
+            elif status_int == 429:
+                bucket = "429"
+            elif is_failure_auth:
+                bucket = "4xx_otro"
+            elif 500 <= status_int <= 599:
+                bucket = "5xx"
+            elif is_redirect_3xx:
+                bucket = "3xx"
+            else:
+                bucket = "otro"
+            status_buckets_per_ip.setdefault(ip, Counter())[bucket] += 1
 
             # ROJO 1: SOLO 2xx en ruta sensible desde IP no-allowlisted.
             # Decision (2026-06-12): aunque el operador menciono "2xx/3xx",
@@ -1117,14 +1143,24 @@ def compute_verdict(
         if ip in allowlisted_ips:
             continue
         if count > VERDICT_DOS_PER_IP:
+            # P2.a 2026-06-28: enriquecer summary con distribucion de status.
+            # Si la IP no tiene ningun 2xx, la defensa aguanto y el operador
+            # lo ve sin abrir el .table.txt. Si tiene 2xx, hay que revisar a
+            # que rutas. Buckets en orden fijo legible; omitimos los con 0.
+            buckets = status_buckets_per_ip.get(ip, Counter())
+            bucket_order = ("2xx", "401", "404", "429", "4xx_otro", "5xx", "3xx", "otro")
+            parts = [f"{buckets[b]}x {b}" for b in bucket_order if buckets.get(b, 0) > 0]
+            dist_str = ", ".join(parts) if parts else "sin status"
             reasons_red.append(
                 {
                     "rule": "dos_per_ip",
                     "ip": ip,
                     "count": count,
                     "threshold": VERDICT_DOS_PER_IP,
+                    "status_distribution": dict(buckets),
                     "summary": (
-                        f"{ip} hizo {count} requests (umbral {VERDICT_DOS_PER_IP})"
+                        f"{ip} hizo {count} requests (umbral {VERDICT_DOS_PER_IP}); "
+                        f"distribucion: {dist_str}"
                     ),
                 }
             )

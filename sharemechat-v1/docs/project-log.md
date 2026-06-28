@@ -8,6 +8,39 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-06-28 — VEREDICTO: enriquecer summary de `dos_per_ip` con distribución de status + bloqueo manual 173.212.230.238
+
+Frente disparado por un ROJO `dos_per_ip` legítimo el 2026-06-27: la IP **173.212.230.238** (Contabo VPS) hizo **5862 requests** sobre PROD en 9 minutos (`04:53–05:01Z`, burst sostenido ~855 req/min) con patrón de scanner Nuclei/masscan (enumeración de paths conocidos: `/zabbix.php`, `/admin/api.php`, `/_debugbar/open`, `/config_dump`, `/ghost/`, `/ignite`, `/nacos/v1/cs/configs`, `/rest/api/2/dashboard`, `/+CSCOE+/logon.html`, `/-/health{,y,liveness,readiness}`, path traversal `/..%252F…etc/passwd`, `/..;/manager/html`, etc.). El ROJO era técnicamente correcto (`5862 > 5000`) pero el summary anterior (`"<IP> hizo X requests (umbral Y)"`) no decía si el atacante había obtenido **éxito** alguno; obligaba a abrir el `.table.txt` para verificarlo.
+
+**Verificación de la defensa (sin acción correctiva, todo aguantó)**. Distribución de status de los 5862 requests de la IP: **4× 200** (los 4 son `/robots.txt` y `/sitemap.xml`, públicos estáticos legítimos), **800× 401** (Spring auth filter bloqueando `/api/*` real), **5056× 404** (nginx rechazando paths inexistentes), **2× 5xx** (dos `GET /api/auth/login` en el mismo segundo `04:55:47Z`). Cero 2xx en rutas sensibles, cero 2xx en `/api/*` protegido. El `limit_req` de nginx no se disparó (0 × 429) porque el burst fue **ancho** (multitud de paths distintos), no **estrecho** sobre `/api/auth/*`. La segunda IP marcada por el VEREDICTO como nota informativa (`129.121.103.98` con 12× sondeo a `/api/v1`/`/api/v2`) recibió 12× 401, también sin éxito.
+
+**Origen de los 2× 5xx (P3 cerrado en este frente)**. `journalctl -u sharemechat-prod.service` en la ventana `04:54:47–04:56:47 UTC` mostró exactamente dos líneas, ambas del `ProductOperationalModeFilter`:
+
+```
+WARN [PRODUCT-MODE] path=/api/auth/login method=GET mode=PRELAUNCH
+     decision=PRODUCT_UNAVAILABLE reason=mode_prelaunch
+```
+
+Es **respuesta deliberada del filtro** que devuelve `503` a peticiones de producto mientras PROD está en `PRELAUNCH`. NO es excepción, NO es upstream timeout, NO es anomalía. `/var/log/nginx/error.log*` sin entradas en esa ventana, confirmando que nginx pasó el request limpio al backend y este lo rechazó por modo. Cero impacto operativo, cero indicador a registrar como deuda funcional.
+
+**Bloqueo manual (P1)**. Aunque el blocker automático (`sharemechat-prod-access-blocker`, Carril A) ya había añadido la IP a `/etc/nginx/deny-prod-ips.conf` a las `07:30:50 UTC` del 28-jun (`reload=ok`, `nginx_test_after=ok`), el Carril A expira por TTL (30 días). Para persistencia indefinida, se añade además a `/etc/nginx/deny-prod-ips.manual.conf` (fichero leído por el `include` en `nginx.conf` línea 37, intocado por el blocker automático). El fichero estaba vacío hasta hoy; este es el primer bloqueo manual del proyecto, así que se aprovecha para fijar el formato de cabecera y de cada entrada (`# YYYY-MM-DD razón corta` + `deny <IP>;`). Backup vacío preservado (`.bak-20260628-pre-first-manual-entry`), `nginx -t` syntax OK pre y post, `systemctl reload nginx` OK, `nginx -T | grep 173.212.230.238` devuelve dos líneas (una del auto, una del manual; nginx acepta la duplicación silenciosamente).
+
+**Cambio funcional en el classifier (P2.a)**. En `compute_verdict`, dentro del loop de eventos, se acumula un `status_buckets_per_ip: Dict[str, Counter]` con buckets disjuntos `2xx`, `401`, `404`, `429`, `4xx_otro`, `5xx`, `3xx`, `otro`. El bucket `401` y `404` se sacan aparte por su valor diagnóstico (auth-block vs route-404). La razón `dos_per_ip` ahora añade dos campos: `status_distribution` (dict completo serializable en el `.summary.jsonl`) y un `summary` enriquecido que pinta solo los buckets con conteo `> 0` en orden fijo legible. El nuevo `summary` del 27-jun queda:
+
+```
+173.212.230.238 hizo 5862 requests (umbral 5000); distribucion: 4x 2xx, 800x 401, 5056x 404, 2x 5xx
+```
+
+**Smoke local sobre los últimos 5 días (06-23 a 06-27)**: el 23-jun VERDE puro, el 24-jun VERDE + 2 notas `sensitive_on_spa_channel` (LeakIX en ADMIN, intactas), el 25-jun VERDE + 2 notas `api_real_probing`, el 26-jun VERDE puro, el 27-jun ROJO con el summary enriquecido. Ningún día cambia de veredicto inesperadamente. **Smoke real en `/opt`** con `classify-prod-access.sh --date 2026-06-27` regenera el `.table.txt` y el `.summary.jsonl` del 27 con la nueva línea VEREDICTO. El reporter (`a40fc0e`) sigue funcionando sin cambios (las keys públicas del verdict no han cambiado; `status_distribution` es un campo nuevo dentro de la entrada de `reasons`, no rompe el contrato).
+
+**Deploy a PROD**. `install -m 0755` sobre `/opt/sharemechat-prod-access-classifier/lib/classify_access.py` (sha256 `12991e61…`), backup explícito como `.bak-20260628-pre-dos-distribution-summary` (4º backup en la cadena, junto a los de las versiones VEREDICTO inicial, whitelist consent y degrade SPA channel). `__pycache__/` borrado. El próximo `daily-report` (lun 29 jun 07:10 UTC sobre eventos del 28) saldrá con la distribución en cuanto haya alguna IP que dispare `dos_per_ip` (o cualquier ROJO que reuse el formato si en el futuro se aplica a otras reglas volumétricas).
+
+**Por qué no degradar dos_per_ip a AMARILLO cuando no hay 2xx en sensibles (P2.b descartada)**. La filosofía del frente VEREDICTO es: ROJO se reserva para acciones del operador, AMARILLO para "revisar", VERDE para "nada que hacer". Una IP con 5862 req en 9 minutos justifica acción aunque no haya éxito porque el patrón es genuinamente accionable (bloqueo proactivo, drenaje de logs, ahorro de CPU). Degradar a AMARILLO retrasaría la respuesta y diluiría la señal del email diario. P2.a (enriquecer la información sin tocar el nivel) es el sweet spot: el operador ve ROJO + distribución en una sola línea y decide en segundos si necesita actuar (este caso: sí, bloqueo manual ya aplicado) o si la defensa aguantó y basta con leer la línea (este caso también: sí, defensa aguantó).
+
+**Lo que NO se replica**. Mismo régimen que los frentes anteriores: ni `audit-access-classifier` ni `test-access-classifier` portan VEREDICTO aún. Cuando llegue el frente conjunto AUDIT+TEST tocará portar **toda** la pila de retunes acumulados desde el 12-jun: bloque VEREDICTO inicial, whitelist consent + 200/201, degrade SPA channel, y ahora distribución de status en `dos_per_ip`. La deuda registrada en `known-debt.md` se mantiene abierta.
+
+---
+
 ## 2026-06-27 — P2.2: delegación de decisión NUDITY a Sightengine `summary.action`
 
 Tras estudio de mercado adult dating (PSPs, comparables, regulación) y revisión del checklist Segpay v2.0 + Mastercard AN 5196 + Visa Rule ID 0003356, el operador confirma el posicionamiento operativo real: **adult dating 1-a-1 con nudity consensual entre adultos verificados permitido**, alineado con CooMeet/LuckyCrush y con los regímenes aplicables. La modelo de moderación cerrada en P2.1 (DEC-1 con umbrales hardcoded por categoría) reflejaba una postura más conservadora de la necesaria. P2.2 mueve la decisión operativa al lugar donde el operador la edita: el dashboard Sightengine.

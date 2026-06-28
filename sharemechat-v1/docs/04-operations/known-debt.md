@@ -2,6 +2,22 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-06-28 — Frente VEREDICTO: deudas tras P2.a (distribución de status) + P1 (bloqueo manual 173.212.230.238)
+
+### [DEUDA — perimeter pipeline] Considerar AWS WAF rate-based rule en CloudFront cuando frecuencia de DoS de IP única sea recurrente
+
+Hoy la defensa contra DoS volumétrico de IP única se compone en dos capas:
+1. **nginx `limit_req`** sobre `/api/auth/*` y `/api/users/register/*` (mitiga abuso estrecho de auth).
+2. **`sharemechat-prod-access-blocker`** que añade IPs en Carril A (criticas) a `/etc/nginx/deny-prod-ips.conf` al día siguiente del incidente, con TTL 30 días.
+
+Lo que NO cubre el setup actual: un atacante que distribuya 5000–10000 requests sobre **muchos paths distintos** (caso `173.212.230.238` el 27-jun: burst ~855 req/min sostenido durante 9 minutos, todos en paths diferentes) no dispara `limit_req` (que solo protege rutas específicas) y solo se bloquea al día siguiente, cuando el atacante ya completó su enumeración. Para protección en tiempo casi real conviene una regla **rate-based en AWS WAFv2** asociada a la distribución CloudFront, que bloquee IPs cuya tasa global supere un umbral (p. ej. 2000 req / 5 min) durante una ventana corta. Coste: ~1 USD/mes por regla base + 0.60 USD/M requests evaluadas; en PROD actual (~6500 eventos/día) sería trivial.
+
+**Acción pendiente** (no urgente, abrir solo si la frecuencia de DoS de IP única supera ~1 incidente/semana sostenido): definir IP set + rate-based rule en WAFv2, asociar a las dos distribuciones CF (admin + producto), test contra tráfico simulado, documentar en `runbooks.md`. **Prioridad**: baja hoy; subir si los emails diarios empiezan a mostrar ROJOs `dos_per_ip` con frecuencia.
+
+### [Nota informativa — perimeter pipeline] Los 2× 5xx del 27-jun NO son anomalía
+
+Diagnosticados en `journalctl -u sharemechat-prod.service` el 28-jun: ambos vienen de `ProductOperationalModeFilter` devolviendo `503` con `decision=PRODUCT_UNAVAILABLE reason=mode_prelaunch`. Comportamiento esperado mientras PROD esté en `PRELAUNCH`. Cuando PROD pase a `OPEN` el filtro dejará de devolver 503 a tráfico legítimo; los scanners seguirán recibiendo 401/404 según el endpoint. **No es deuda, no hay acción**, se documenta aquí para que un futuro grep por "5xx en PROD" tenga el contexto sin tener que reabrir la investigación.
+
 ## 2026-06-27 — Frente moderación IA: deudas estratégicas vivas tras cierre P2.1 + P2.2
 
 ### [DEUDA — moderación streaming + alineación de lenguaje del producto] 10 deudas estratégicas tras cierre de Sightengine live en TEST + Fase 2 refactor
