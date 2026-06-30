@@ -297,6 +297,17 @@ export default function Legal() {
               AI-Assisted Content
             </button>
 
+            <button
+              type="button"
+              style={tabStyle('records-2257')}
+              onClick={() => setTab('records-2257')}
+              onMouseEnter={() => setHoveredTab('records-2257')}
+              onMouseLeave={() => setHoveredTab(null)}
+              aria-pressed={tab === 'records-2257'}
+            >
+              2257 Statement
+            </button>
+
           </div>
         </div>
 
@@ -1147,6 +1158,121 @@ export default function Legal() {
                   <strong> <a href="mailto:contact+legal@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a></strong>. Editorial corrections
                   are handled through the same internal process as other content
                   review requests.
+                </p>
+              </div>
+            </>
+          )}
+
+          {tab === 'records-2257' && (
+            <>
+              <h2 style={DocTitle}>18 U.S.C. &sect; 2257 &mdash; Records-Keeping Statement</h2>
+
+              <p style={DocIntro}>
+                This statement describes the position of SharemeChat (operated by
+                Shareme Technologies O&Uuml;) with respect to the records-keeping
+                requirements of 18 U.S.C. &sect; 2257 and identifies the records
+                that SharemeChat maintains in good faith and pursuant to Card
+                Brand rules.
+              </p>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>1. Nature of the Service</h3>
+                <p style={Paragraph}>
+                  SharemeChat operates a private one-to-one live video service
+                  between two verified consenting adults. Sessions are not
+                  recorded, not broadcast publicly, not archived, and not made
+                  available for later viewing. As stated in our Terms of Service
+                  &sect; 13 (&ldquo;No Recording or Reuse of Private Sessions&rdquo;),
+                  capturing, reproducing, distributing, or otherwise reusing
+                  private sessions is prohibited. Communications between the two
+                  adults are ephemeral and exist only for the duration of the
+                  live session.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>2. Regulatory Position with Respect to 18 U.S.C. &sect; 2257</h3>
+                <p style={Paragraph}>
+                  Section 2257 of Title 18 of the United States Code applies to
+                  producers of visual depictions of actual sexually explicit
+                  conduct that are recorded, stored, or distributed. SharemeChat
+                  is not a producer of such matter within the strict meaning of
+                  Section 2257: SharemeChat does not record, store, archive, or
+                  distribute the visual content exchanged in private one-to-one
+                  sessions. The platform provides ephemeral, real-time
+                  point-to-point video communication only.
+                </p>
+                <p style={Paragraph}>
+                  Notwithstanding the above, and in good faith and in alignment
+                  with Card Brand rules (including Mastercard Announcement
+                  AN&nbsp;5196 and Visa&nbsp;Rule&nbsp;ID&nbsp;0003356),
+                  SharemeChat maintains records that verify the identity and the
+                  adult age of every content provider before any session may
+                  occur.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>3. Records Maintained</h3>
+                <p style={Paragraph}>
+                  Prior to onboarding and the initiation of any live session,
+                  each content provider (model) is required to complete identity
+                  and age verification through Didit, a third-party identity
+                  verification processor. The following records are maintained:
+                </p>
+                <ul style={Paragraph}>
+                  <li>Government-issued identification document verification.</li>
+                  <li>Selfie capture with liveness detection.</li>
+                  <li>Face match between the selfie and the identification document.</li>
+                  <li>Device and IP analysis at the time of verification.</li>
+                  <li>Acceptance trail of the Model Collaboration Agreement,
+                      including timestamp, originating IP address, user agent, and
+                      SHA-256 hash of the executed agreement version.</li>
+                </ul>
+                <p style={Paragraph}>
+                  Verification records are retained for a minimum of seven (7)
+                  years following the last activity of the content provider on
+                  the platform.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>4. Custodian of Records</h3>
+                <p style={Paragraph}>
+                  The Custodian of Records for the verification material described
+                  above is:
+                </p>
+                <p style={Paragraph}>
+                  <strong>Alain Garmendia</strong><br />
+                  Director / Founder<br />
+                  Shareme Technologies O&Uuml;<br />
+                  Estonian Business Registry No. 17444422<br />
+                  L&otilde;&otilde;tsa tn 5, 11415 Tallinn, Estonia<br />
+                  <a href="mailto:contact+legal@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a>
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>5. Lawful Requests for Records</h3>
+                <p style={Paragraph}>
+                  In the event of a valid subpoena or lawful request originating
+                  from competent authorities of the United States, verification
+                  records are made available through a formal request addressed
+                  in writing to the Custodian of Records identified in
+                  Section&nbsp;4. SharemeChat reviews each request for legal
+                  validity, scope, and applicable confidentiality obligations
+                  before responding.
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>6. Updates</h3>
+                <p style={Paragraph}>
+                  This statement may be updated to reflect changes in applicable
+                  rules, in the verification provider, in the records retention
+                  schedule, or in the contact details of the Custodian of
+                  Records. The most recent version is the one published on this
+                  page.
                 </p>
               </div>
             </>

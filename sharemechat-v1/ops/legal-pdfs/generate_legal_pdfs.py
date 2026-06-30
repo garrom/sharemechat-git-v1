@@ -814,12 +814,81 @@ APPEALS_SECTIONS = [
 
 # 7) Safety + Community Guidelines (combinado)
 SAFETY_COMBINED_INTRO = (
-    'This document brings together the SharemeChat policies on user '
-    'safety and the platform community guidelines. Part I covers '
+    'This document is the SharemeChat Content Management Policy. It '
+    'brings together the platform safeguards, the community guidelines '
+    'that all users must follow during live sessions, and the procedures '
+    'that govern how the platform verifies the identity and the adult '
+    'age of every content provider and how written agreements with '
+    'those providers are concluded and preserved. Part I covers '
     'safeguards, moderation, privacy and protection of minors. Part II '
     'defines the operational rules that users must follow during live '
-    'sessions and other interactions on the platform.'
+    'sessions and other interactions on the platform. Part III '
+    'documents the verification and contractual procedures applied to '
+    'content providers.'
 )
+PROVIDER_PART_INTRO = (
+    'This part documents the procedures applied to every content '
+    'provider (model) before onboarding and the contractual framework '
+    'that governs the relationship between SharemeChat and each '
+    'provider. These procedures support compliance with Card Brand '
+    'rules (including Mastercard Announcement AN 5196 and Visa Rule ID '
+    '0003356) and with the records-keeping expectations of the adult '
+    'streaming industry.'
+)
+PROVIDER_SECTIONS = [
+    {'title': 'Age and Identity Verification of Content Providers', 'paras': [
+        {'type': 'p', 'text': (
+            'Every content provider is required to complete identity '
+            'and age verification through Didit, a third-party '
+            'identity verification processor, before onboarding and '
+            'before initiating any live session. No content provider '
+            'is permitted to start live sessions without a successful '
+            'verification outcome.'
+        )},
+        {'type': 'p', 'text': (
+            'The verification procedure includes:'
+        )},
+        {'type': 'ul', 'items': [
+            'Government-issued identification document verification.',
+            'Selfie capture with liveness detection.',
+            'Face match between the selfie and the identification document.',
+            'Device and IP analysis at the time of verification.',
+        ]},
+        {'type': 'p', 'text': (
+            'Verification records are retained for a minimum of seven '
+            '(7) years after the last activity of the content provider '
+            'on the platform.'
+        )},
+    ]},
+    {'title': 'Written Agreements with Content Providers', 'paras': [
+        {'type': 'p', 'text': (
+            'Every content provider electronically signs the Model '
+            'Collaboration Agreement before the first onboarding step '
+            'is completed. The currently active version is '
+            'model_contract_v4_2026-03-23. A SHA-256 hash of the '
+            'signed version is recorded and the acceptance trail '
+            '(timestamp, originating IP address, user agent) is '
+            'preserved in the model_contract_acceptances table.'
+        )},
+        {'type': 'p', 'text': (
+            'The Model Collaboration Agreement prohibits the following '
+            'conduct on the platform:'
+        )},
+        {'type': 'ul', 'items': [
+            'Any illegal activity under the laws applicable to the provider, the platform, or the viewer.',
+            'Any conduct that violates Card Brand standards or payment processor rules.',
+            'Non-consensual content of any kind.',
+            'Any content involving minors.',
+            'Any content produced under coercion, threat, or human trafficking.',
+        ]},
+        {'type': 'p', 'text': (
+            'A sample copy of the Model Collaboration Agreement is '
+            'available upon formal written request addressed to the '
+            'Custodian of Records identified in the 18 U.S.C. § 2257 '
+            'Records-Keeping Statement.'
+        )},
+    ]},
+]
 SAFETY_PART_INTRO = (
     'The safety of our users is extremely important to us. SharemeChat '
     'uses technical safeguards, moderation systems and security policies '
@@ -984,6 +1053,106 @@ CONTACT_SECTIONS = [
 ]
 
 
+# 9) 18 U.S.C. § 2257 Records-Keeping Statement
+RECORDS_2257_INTRO = (
+    'This statement describes the position of SharemeChat (operated by '
+    'Shareme Technologies OÜ) with respect to the records-keeping '
+    'requirements of 18 U.S.C. § 2257 and identifies the records that '
+    'SharemeChat maintains in good faith and pursuant to Card Brand '
+    'rules.'
+)
+RECORDS_2257_SECTIONS = [
+    {'title': '1. Nature of the Service', 'paras': [
+        {'type': 'p', 'text': (
+            'SharemeChat operates a private one-to-one live video '
+            'service between two verified consenting adults. Sessions '
+            'are not recorded, not broadcast publicly, not archived, '
+            'and not made available for later viewing. As stated in '
+            'our Terms of Service §13 ("No Recording or Reuse of '
+            'Private Sessions"), capturing, reproducing, distributing, '
+            'or otherwise reusing private sessions is prohibited. '
+            'Communications between the two adults are ephemeral and '
+            'exist only for the duration of the live session.'
+        )},
+    ]},
+    {'title': '2. Regulatory Position with Respect to 18 U.S.C. § 2257', 'paras': [
+        {'type': 'p', 'text': (
+            'Section 2257 of Title 18 of the United States Code '
+            'applies to producers of visual depictions of actual '
+            'sexually explicit conduct that are recorded, stored, or '
+            'distributed. SharemeChat is not a producer of such matter '
+            'within the strict meaning of Section 2257: SharemeChat '
+            'does not record, store, archive, or distribute the visual '
+            'content exchanged in private one-to-one sessions. The '
+            'platform provides ephemeral, real-time point-to-point '
+            'video communication only.'
+        )},
+        {'type': 'p', 'text': (
+            'Notwithstanding the above, and in good faith and in '
+            'alignment with Card Brand rules (including Mastercard '
+            'Announcement AN 5196 and Visa Rule ID 0003356), '
+            'SharemeChat maintains records that verify the identity '
+            'and the adult age of every content provider before any '
+            'session may occur.'
+        )},
+    ]},
+    {'title': '3. Records Maintained', 'paras': [
+        {'type': 'p', 'text': (
+            'Prior to onboarding and the initiation of any live '
+            'session, each content provider is required to complete '
+            'identity and age verification through Didit, a '
+            'third-party identity verification processor. The '
+            'following records are maintained:'
+        )},
+        {'type': 'ul', 'items': [
+            'Government-issued identification document verification.',
+            'Selfie capture with liveness detection.',
+            'Face match between the selfie and the identification document.',
+            'Device and IP analysis at the time of verification.',
+            'Acceptance trail of the Model Collaboration Agreement, including timestamp, originating IP address, user agent, and SHA-256 hash of the executed agreement version.',
+        ]},
+        {'type': 'p', 'text': (
+            'Verification records are retained for a minimum of seven '
+            '(7) years following the last activity of the content '
+            'provider on the platform.'
+        )},
+    ]},
+    {'title': '4. Custodian of Records', 'paras': [
+        {'type': 'p', 'text': (
+            'The Custodian of Records for the verification material '
+            'described above is:'
+        )},
+        {'type': 'addr', 'text': (
+            'Alain Garmendia<br/>'
+            'Director / Founder<br/>'
+            'Shareme Technologies OÜ<br/>'
+            'Estonian Business Registry No. 17444422<br/>'
+            'Lõõtsa tn 5, 11415 Tallinn, Estonia<br/>'
+            'contact@sharemechat.com'
+        )},
+    ]},
+    {'title': '5. Lawful Requests for Records', 'paras': [
+        {'type': 'p', 'text': (
+            'In the event of a valid subpoena or lawful request '
+            'originating from competent authorities of the United '
+            'States, verification records are made available through a '
+            'formal request addressed in writing to the Custodian of '
+            'Records identified in Section 4. SharemeChat reviews each '
+            'request for legal validity, scope, and applicable '
+            'confidentiality obligations before responding.'
+        )},
+    ]},
+    {'title': '6. Updates', 'paras': [
+        {'type': 'p', 'text': (
+            'This statement may be updated to reflect changes in '
+            'applicable rules, in the verification provider, in the '
+            'records retention schedule, or in the contact details of '
+            'the Custodian of Records. The most recent version is the '
+            'one published on the platform.'
+        )},
+    ]},
+]
+
 # ----------------------------------------------------------------------
 # Generación
 # ----------------------------------------------------------------------
@@ -1006,8 +1175,8 @@ def main():
         ('SharemeChat_Appeals_Policy.pdf',
          'Appeals and Takedown Policy', APPEALS_INTRO, APPEALS_SECTIONS,
          None),
-        ('SharemeChat_Safety_and_Community_Guidelines.pdf',
-         'Safety and Community Guidelines', SAFETY_COMBINED_INTRO, None,
+        ('SharemeChat_Content_Management_Policy.pdf',
+         'Content Management Policy', SAFETY_COMBINED_INTRO, None,
          [
              {'title': 'Part I — Safety & Security',
               'intro': SAFETY_PART_INTRO,
@@ -1015,7 +1184,13 @@ def main():
              {'title': 'Part II — Community Guidelines',
               'intro': COMMUNITY_PART_INTRO,
               'sections': COMMUNITY_SECTIONS},
+             {'title': 'Part III — Content Provider Verification and Agreements',
+              'intro': PROVIDER_PART_INTRO,
+              'sections': PROVIDER_SECTIONS},
          ]),
+        ('SharemeChat_2257_Statement.pdf',
+         '18 U.S.C. § 2257 — Records-Keeping Statement',
+         RECORDS_2257_INTRO, RECORDS_2257_SECTIONS, None),
         ('SharemeChat_Contact_Information.pdf',
          'Contact Information', CONTACT_INTRO, CONTACT_SECTIONS, None),
     ]
