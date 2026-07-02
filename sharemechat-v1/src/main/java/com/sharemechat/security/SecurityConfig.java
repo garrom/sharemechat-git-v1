@@ -323,6 +323,12 @@ public class SecurityConfig {
                             .hasAnyAuthority("ROLE_ADMIN", BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_COMPLAINTS_REVIEW))
                         .requestMatchers("/api/auth/password/forgot", "/api/auth/password/reset").permitAll()
 
+                        // Sub-paquete Chat Soporte LLM Fase B.1 (DEC-CS-7):
+                        // endpoint autenticado disponible para cualquier rol logueado
+                        // (USER / CLIENT / MODEL / ADMIN). El bot NO expone endpoints
+                        // publicos y no requiere PERM backoffice.
+                        .requestMatchers(HttpMethod.POST, "/api/support/**").authenticated()
+
                         // ROLE-SCOPED APIs (AL FINAL, para no pisar endpoints específicos)
                         .requestMatchers("/api/models/**").hasRole("MODEL")
                         .requestMatchers("/api/clients/**").hasRole("CLIENT")

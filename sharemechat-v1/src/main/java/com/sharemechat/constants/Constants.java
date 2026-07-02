@@ -11,6 +11,10 @@ public class Constants {
         public static final String CLIENT = "CLIENT";
         public static final String MODEL = "MODEL";
         public static final String ADMIN = "ADMIN";
+        // Sub-paquete Chat Soporte LLM Fase B.1 (DEC-CS-9): rol especial del
+        // bot conversacional. NO se le concede acceso a endpoints protegidos.
+        // Solo existe como user pasivo en users + como peer favorito.
+        public static final String SUPPORT_BOT = "SUPPORT_BOT";
 
         private Roles() {}
     }
@@ -19,8 +23,35 @@ public class Constants {
         public static final String FORM_CLIENT = "FORM_CLIENT";
         public static final String FORM_MODEL = "FORM_MODEL";
         public static final String INTERNAL = "INTERNAL";
+        public static final String BOT = "BOT";
 
         private UserTypes() {}
+    }
+
+    /**
+     * Sub-paquete Chat Soporte LLM (DEC-CS-3, DEC-CS-11).
+     * Estados de resolucion de una support_conversations.
+     */
+    public static class SupportResolutionStatuses {
+        public static final String OPEN = "OPEN";
+        public static final String RESOLVED = "RESOLVED";
+        public static final String ESCALATED = "ESCALATED";
+        public static final String ABANDONED = "ABANDONED";
+        public static final String RATE_LIMITED = "RATE_LIMITED";
+
+        private SupportResolutionStatuses() {}
+    }
+
+    /**
+     * Sub-paquete Chat Soporte LLM. Sender de una support_messages.
+     */
+    public static class SupportSenderTypes {
+        public static final String USER = "USER";
+        public static final String LLM = "LLM";
+        public static final String HUMAN = "HUMAN";
+        public static final String SYSTEM = "SYSTEM";
+
+        private SupportSenderTypes() {}
     }
 
     public static class VerificationStatuses {
