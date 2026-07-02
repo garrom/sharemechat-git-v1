@@ -2,6 +2,28 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-07-02 — Deudas nuevas detectadas durante construcción BdC del Agente IA de soporte
+
+Bloque de deudas detectadas mientras se construía la base de conocimiento del Agente IA (sub-paquete Chat Soporte LLM Fase B.1 cerrado en commit `39f1fb6`). Al redactar la BdC para los flujos de cliente y modelo emergieron carencias del producto que el Agente IA debe evitar prometer y que el operador debe cerrar antes del go-live PROD o poco después.
+
+**#12 — Delete account endpoint (GDPR art. 17)**. No existe endpoint self-service para que el usuario elimine su cuenta. La baja se procesa manualmente por soporte tras petición. Endpoint esperado por regulación (GDPR art. 17) y por checklist Segpay. **Prioridad media pre-launch PROD**.
+
+**#13 — Endpoints Data Subject Rights (GDPR art. 15/17)**. No hay endpoint self-service para: acceso a datos personales (art. 15), rectificación (art. 16), portabilidad (art. 20). Gestionado manualmente por soporte. **Prioridad media pre-launch PROD**.
+
+**#14 — 2FA / MFA no implementado**. No hay opción de segundo factor en el flujo de login. Esperado industria adult para proteger cuentas modelo con payouts pendientes. **Prioridad media pre-launch PROD**.
+
+**#15 — Job de retención de chat**. El chat de favoritos se persiste indefinidamente en BD. No hay job que purgue mensajes antiguos según política de retención. Coste de almacenamiento crece con el tiempo. **Prioridad baja pre-launch, alta post-launch con volumen**.
+
+**#16 — Aviso de saldo bajo durante streaming**. El cliente no recibe aviso cuando su saldo baja por debajo del equivalente a un minuto durante una sesión activa. La sesión se corta automáticamente sin previa notificación. **Prioridad media pre-launch PROD**.
+
+**#17 — Refresco de contador de saldo durante streaming**. El saldo del cliente no se refresca visualmente en tiempo real durante la sesión de video. El descuento ocurre correctamente en backend pero la UI no lo refleja hasta después de la sesión. **Prioridad baja UX**.
+
+**#18 — Guía de assets para modelo**. No hay guía visible al modelo con requisitos técnicos de fotos y videos que puede subir (formato, tamaño máximo, tipo de contenido aceptado). Modelo prueba y error. **Prioridad media UX**.
+
+**#19 — Nombres de tier obsoletos en UI vs documentación**. Los nombres internos de tier ("5-15", "7-20", "9-40") corresponden a tarifas antiguas y aún se muestran en la UI de estadísticas del modelo. Documentación interna refleja nombres nuevos pero la UI no. **Prioridad baja UX**.
+
+**#20 — UI de transparencia moderación tras kill-switch**. Cuando Sightengine hace kill-switch de una sesión por contenido crítico, no hay UI que explique al usuario afectado qué ha ocurrido. **Prioridad baja UX (funciona técnicamente)**.
+
 ## 2026-06-28 — Frente VEREDICTO: deudas tras P2.a (distribución de status) + P1 (bloqueo manual 173.212.230.238)
 
 ### [DEUDA — perimeter pipeline] Considerar AWS WAF rate-based rule en CloudFront cuando frecuencia de DoS de IP única sea recurrente
