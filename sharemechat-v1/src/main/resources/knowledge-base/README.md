@@ -4,10 +4,10 @@ Base de conocimiento consumida por el `SupportKnowledgeBaseLoader` al arrancar
 el backend. Todos los ficheros `*.md` presentes en este directorio se
 concatenan y se incluyen en el system prompt de cada llamada a Claude.
 
-En construcción iterativa. Ficheros 01-06 cerrados (6/10). Faltan
-`07-privacidad-y-datos.md`, `08-cuenta.md`,
-`09-empresa-y-contacto.md`, `10-preguntas-frecuentes.md` que se
-irán añadiendo en sesiones siguientes.
+Construcción cerrada: **10/10 ficheros temáticos cerrados**. La BdC
+se mantiene viva en el tiempo (correcciones factuales, incorporación
+de FAQs reales, actualización de nuevos flujos), pero el temario
+inicial planificado queda completo.
 
 ## Estructura actual
 
@@ -19,10 +19,10 @@ irán añadiendo en sesiones siguientes.
 - `04-chat-y-favoritos.md` — **cerrado**.
 - `05-pagos-y-saldo.md` — **cerrado**.
 - `06-moderacion-y-seguridad.md` — **cerrado**.
-- `07-privacidad-y-datos.md` — pendiente.
-- `08-cuenta.md` — pendiente.
-- `09-empresa-y-contacto.md` — pendiente.
-- `10-preguntas-frecuentes.md` — pendiente.
+- `07-privacidad-y-datos.md` — **cerrado**.
+- `08-cuenta.md` — **cerrado**.
+- `09-empresa-y-contacto.md` — **cerrado**.
+- `10-preguntas-frecuentes.md` — **cerrado**.
 
 ## Reglas
 
