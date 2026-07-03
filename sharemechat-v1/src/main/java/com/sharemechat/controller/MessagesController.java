@@ -7,6 +7,7 @@ import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.ConsentEnforcementService;
 import com.sharemechat.service.MessageService;
 import com.sharemechat.service.ProductAccessGuardService;
+import com.sharemechat.support.service.SupportBotProvider;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -21,15 +22,18 @@ public class MessagesController {
     private final UserRepository userRepository;
     private final ConsentEnforcementService consentEnforcementService;
     private final ProductAccessGuardService productAccessGuardService;
+    private final SupportBotProvider supportBotProvider;
 
     public MessagesController(MessageService messageService,
                               UserRepository userRepository,
                               ConsentEnforcementService consentEnforcementService,
-                              ProductAccessGuardService productAccessGuardService) {
+                              ProductAccessGuardService productAccessGuardService,
+                              SupportBotProvider supportBotProvider) {
         this.messageService = messageService;
         this.userRepository = userRepository;
         this.consentEnforcementService = consentEnforcementService;
         this.productAccessGuardService = productAccessGuardService;
+        this.supportBotProvider = supportBotProvider;
     }
 
     private Long uid(Authentication auth) {
@@ -58,6 +62,11 @@ public class MessagesController {
     public ResponseEntity<MessageDTO> send(Authentication auth, @PathVariable Long userId, @RequestBody Body body) {
         consentEnforcementService.assertAuthenticatedUserCompliant(auth, "POST /api/messages/to/{userId}");
         Long me = uid(auth);
+        // Guard B.2.1: mensajes al Agente IA no van por P2P; el frontend debe usar /api/support/message.
+        if (supportBotProvider.isSupportBot(userId)) {
+            throw new IllegalArgumentException(
+                    "This user cannot receive P2P messages, use /api/support/message endpoint");
+        }
         MessageDTO dto = messageService.send(me, userId, body.body());
         return ResponseEntity.ok(dto);
     }

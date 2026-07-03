@@ -3,6 +3,7 @@ package com.sharemechat.support.controller;
 import com.sharemechat.config.IpConfig;
 import com.sharemechat.entity.User;
 import com.sharemechat.service.UserService;
+import com.sharemechat.support.dto.SupportMessageDTO;
 import com.sharemechat.support.dto.SupportMessageRequestDTO;
 import com.sharemechat.support.dto.SupportMessageResponseDTO;
 import com.sharemechat.support.entity.SupportConversation;
@@ -10,12 +11,14 @@ import com.sharemechat.support.service.SupportBotService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -44,6 +47,18 @@ public class SupportController {
             SupportMessageResponseDTO out = botService.handleUserMessage(
                     userId, body == null ? null : body.getMessage(), ip);
             return ResponseEntity.ok(out);
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        }
+    }
+
+    @GetMapping("/conversations/{id}/messages")
+    public ResponseEntity<?> getConversationHistory(@PathVariable Long id,
+                                                     Authentication auth) {
+        try {
+            Long userId = requireUserId(auth);
+            List<SupportMessageDTO> history = botService.getConversationHistory(userId, id);
+            return ResponseEntity.ok(history);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
         }

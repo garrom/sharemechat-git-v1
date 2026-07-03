@@ -5,6 +5,7 @@ import com.sharemechat.entity.User;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.support.config.ClaudeApiProperties;
 import com.sharemechat.support.dto.ClaudeApiResponse;
+import com.sharemechat.support.dto.SupportMessageDTO;
 import com.sharemechat.support.dto.SupportMessageResponseDTO;
 import com.sharemechat.support.entity.SupportConversation;
 import com.sharemechat.support.entity.SupportMessage;
@@ -161,6 +162,38 @@ public class SupportBotService {
             out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
             return out;
         }
+    }
+
+    /**
+     * Devuelve el historial completo de mensajes de una conversacion, solo si
+     * pertenece al userId indicado. Ordenado por id ascendente.
+     *
+     * <p>Guard: si la conversacion no existe o no pertenece al user, lanza
+     * IllegalArgumentException (traducido a 400 por GlobalExceptionHandler).
+     * Se prefiere respuesta uniforme sin distinguir "no existe" de "no es tuya"
+     * para no filtrar oraculo de conversation ids.
+     */
+    @Transactional(readOnly = true)
+    public List<SupportMessageDTO> getConversationHistory(Long userId, Long conversationId) {
+        if (userId == null) throw new IllegalArgumentException("userId requerido");
+        if (conversationId == null) throw new IllegalArgumentException("conversationId requerido");
+        SupportConversation conv = conversationRepo.findById(conversationId)
+                .orElseThrow(() -> new IllegalArgumentException("Conversacion no encontrada"));
+        if (!userId.equals(conv.getUserId())) {
+            throw new IllegalArgumentException("Conversacion no encontrada");
+        }
+        List<SupportMessage> rows = messageRepo.findByConversationIdOrderByIdAsc(conversationId);
+        List<SupportMessageDTO> out = new ArrayList<>(rows.size());
+        for (SupportMessage m : rows) {
+            out.add(new SupportMessageDTO(
+                    m.getId(),
+                    m.getConversationId(),
+                    m.getSender(),
+                    m.getContent(),
+                    m.getCreatedAt()
+            ));
+        }
+        return out;
     }
 
     @Transactional

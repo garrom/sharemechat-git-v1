@@ -166,7 +166,8 @@ public class FavoriteService {
                     l.getInvited(),
                     "outbound",
                     null,     // presence lo completa el controller
-                    false     // blocked por defecto (se sobreescribe en controller)
+                    false,    // blocked por defecto (se sobreescribe en controller)
+                    false     // isBot: favoritos humanos por defecto (el bot se inyecta virtualmente en el controller)
             );
         }).toList();
     }
@@ -217,7 +218,8 @@ public class FavoriteService {
                     l.getInvited(),
                     "outbound",
                     presenceOf(l.getClientId()),
-                    false   // blocked por defecto
+                    false,  // blocked por defecto
+                    false   // isBot: favoritos humanos por defecto
             );
         }).toList();
     }

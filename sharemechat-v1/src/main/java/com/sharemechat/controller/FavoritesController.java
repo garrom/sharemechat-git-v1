@@ -1,6 +1,7 @@
 package com.sharemechat.controller;
 
 import com.sharemechat.dto.FavoriteListItemDTO;
+import com.sharemechat.dto.UserSummaryDTO;
 import com.sharemechat.entity.User;
 import com.sharemechat.handler.MessagesWsHandler;
 import com.sharemechat.repository.UserRepository;
@@ -9,11 +10,13 @@ import com.sharemechat.service.FavoriteService;
 import com.sharemechat.service.StatusService;
 import com.sharemechat.service.StreamService;
 import com.sharemechat.service.UserBlockService;
+import com.sharemechat.support.service.SupportBotProvider;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.text.Collator;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -32,6 +35,7 @@ public class FavoritesController {
     private final StreamService streamService;
     private final UserBlockService userBlockService;
     private final ConsentEnforcementService consentEnforcementService;
+    private final SupportBotProvider supportBotProvider;
 
     public FavoritesController(FavoriteService favoriteService,
                                UserRepository userRepository,
@@ -39,7 +43,8 @@ public class FavoritesController {
                                StatusService statusService,
                                StreamService streamService,
                                UserBlockService userBlockService,
-                               ConsentEnforcementService consentEnforcementService) {
+                               ConsentEnforcementService consentEnforcementService,
+                               SupportBotProvider supportBotProvider) {
         this.favoriteService = favoriteService;
         this.userRepository = userRepository;
         this.messagesWsHandler = messagesWsHandler;
@@ -47,6 +52,7 @@ public class FavoritesController {
         this.streamService = streamService;
         this.userBlockService = userBlockService;
         this.consentEnforcementService = consentEnforcementService;
+        this.supportBotProvider = supportBotProvider;
     }
 
     // ===== CLIENT -> MODELS =====
@@ -126,13 +132,21 @@ public class FavoritesController {
                             item.invited(),
                             item.direction(),
                             presence,
-                            blocked
+                            blocked,
+                            false
                     );
                 })
                 .sorted(favoritesComparator())
                 .toList();
 
-        return ResponseEntity.ok(enriched);
+        // Inyeccion virtual del bot Agente IA como primer favorito (DEC-B2-1).
+        // El bot no vive en favorites_clients/favorites_models; se prepend aqui
+        // para que la UI pueda listarlo y abrir el chat con /api/support/message.
+        List<FavoriteListItemDTO> withBot = new ArrayList<>(enriched.size() + 1);
+        withBot.add(buildVirtualBotFavorite());
+        withBot.addAll(enriched);
+
+        return ResponseEntity.ok(withBot);
     }
 
     @GetMapping("/clients/meta")
@@ -180,13 +194,20 @@ public class FavoritesController {
                             item.invited(),
                             item.direction(),
                             presence,
-                            blocked
+                            blocked,
+                            false
                     );
                 })
                 .sorted(favoritesComparator())
                 .toList();
 
-        return ResponseEntity.ok(enriched);
+        // Inyeccion virtual del bot Agente IA como primer favorito (DEC-B2-1).
+        // Mismo trato para MODELs: pueden abrir chat soporte desde su lista.
+        List<FavoriteListItemDTO> withBot = new ArrayList<>(enriched.size() + 1);
+        withBot.add(buildVirtualBotFavorite());
+        withBot.addAll(enriched);
+
+        return ResponseEntity.ok(withBot);
     }
 
     // ===== Aceptar / Rechazar invitación =====
@@ -243,5 +264,23 @@ public class FavoritesController {
             return "";
         }
         return item.user().getNickname().trim();
+    }
+
+    private FavoriteListItemDTO buildVirtualBotFavorite() {
+        UserSummaryDTO botUser = new UserSummaryDTO(
+                supportBotProvider.getSupportBotId(),
+                supportBotProvider.getSupportBotNickname(),
+                "SUPPORT_BOT",
+                "BOT"
+        );
+        return new FavoriteListItemDTO(
+                botUser,
+                "active",
+                "accepted",
+                "outbound",
+                "online",   // el bot esta siempre disponible 24/7
+                false,      // nunca bloqueado
+                true        // isBot
+        );
     }
 }

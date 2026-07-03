@@ -11,6 +11,7 @@ import com.sharemechat.service.FavoriteService;
 import com.sharemechat.service.StatusService;
 import com.sharemechat.service.StreamService;
 import com.sharemechat.service.UserBlockService;
+import com.sharemechat.support.service.SupportBotProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.test.web.servlet.MockMvc;
@@ -38,6 +39,7 @@ class FavoritesControllerConsentEnforcementMockMvcTest {
         StreamService streamService = mock(StreamService.class);
         UserBlockService userBlockService = mock(UserBlockService.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
+        SupportBotProvider supportBotProvider = mock(SupportBotProvider.class);
 
         User user = new User();
         user.setId(15L);
@@ -52,7 +54,8 @@ class FavoritesControllerConsentEnforcementMockMvcTest {
                 statusService,
                 streamService,
                 userBlockService,
-                consentEnforcementService
+                consentEnforcementService,
+                supportBotProvider
         );
 
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -76,6 +79,7 @@ class FavoritesControllerConsentEnforcementMockMvcTest {
         StreamService streamService = mock(StreamService.class);
         UserBlockService userBlockService = mock(UserBlockService.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
+        SupportBotProvider supportBotProvider = mock(SupportBotProvider.class);
 
         doThrow(new ConsentRequiredException(
                 15L,
@@ -90,7 +94,8 @@ class FavoritesControllerConsentEnforcementMockMvcTest {
                 statusService,
                 streamService,
                 userBlockService,
-                consentEnforcementService
+                consentEnforcementService,
+                supportBotProvider
         );
 
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -116,6 +121,7 @@ class FavoritesControllerConsentEnforcementMockMvcTest {
         StreamService streamService = mock(StreamService.class);
         UserBlockService userBlockService = mock(UserBlockService.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
+        SupportBotProvider supportBotProvider = mock(SupportBotProvider.class);
 
         doThrow(new ConsentRequiredException(
                 15L,
@@ -130,7 +136,8 @@ class FavoritesControllerConsentEnforcementMockMvcTest {
                 statusService,
                 streamService,
                 userBlockService,
-                consentEnforcementService
+                consentEnforcementService,
+                supportBotProvider
         );
 
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
@@ -156,6 +163,7 @@ class FavoritesControllerConsentEnforcementMockMvcTest {
         StreamService streamService = mock(StreamService.class);
         UserBlockService userBlockService = mock(UserBlockService.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
+        SupportBotProvider supportBotProvider = mock(SupportBotProvider.class);
 
         User user = new User();
         user.setId(15L);
@@ -171,7 +179,8 @@ class FavoritesControllerConsentEnforcementMockMvcTest {
                 statusService,
                 streamService,
                 userBlockService,
-                consentEnforcementService
+                consentEnforcementService,
+                supportBotProvider
         );
 
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)

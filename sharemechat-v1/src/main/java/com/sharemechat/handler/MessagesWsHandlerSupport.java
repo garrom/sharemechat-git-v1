@@ -14,6 +14,7 @@ import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.AgeGatePolicyService;
 import com.sharemechat.service.*;
+import com.sharemechat.support.service.SupportBotProvider;
 import org.apache.commons.lang3.tuple.Pair;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -51,6 +52,7 @@ public class MessagesWsHandlerSupport {
     private final ApiRateLimitService apiRateLimitService;
     private final AgeGatePolicyService ageGatePolicyService;
     private final ProductAccessGuardService productAccessGuardService;
+    private final SupportBotProvider supportBotProvider;
 
     public MessagesWsHandlerSupport(MessagesRuntimeState state,
                                     JwtUtil jwtUtil,
@@ -68,7 +70,8 @@ public class MessagesWsHandlerSupport {
                                     StreamLockService streamLockService,
                                     ApiRateLimitService apiRateLimitService,
                                     AgeGatePolicyService ageGatePolicyService,
-                                    ProductAccessGuardService productAccessGuardService) {
+                                    ProductAccessGuardService productAccessGuardService,
+                                    SupportBotProvider supportBotProvider) {
         this.state = state;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
@@ -86,6 +89,7 @@ public class MessagesWsHandlerSupport {
         this.apiRateLimitService = apiRateLimitService;
         this.ageGatePolicyService = ageGatePolicyService;
         this.productAccessGuardService = productAccessGuardService;
+        this.supportBotProvider = supportBotProvider;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -190,6 +194,12 @@ public class MessagesWsHandlerSupport {
             }
             if (Objects.equals(me, to)) {
                 safeSend(session, new JSONObject().put("type", "msg:error").put("message", "No puedes enviarte mensajes a ti mismo").toString());
+                return;
+            }
+            // Guard B.2.1: mensajes al Agente IA no van por WS P2P; usar /api/support/message.
+            if (supportBotProvider.isSupportBot(to)) {
+                safeSend(session, new JSONObject().put("type", "msg:error")
+                        .put("message", "This user cannot receive P2P messages, use /api/support/message endpoint").toString());
                 return;
             }
             if (body.isEmpty()) {

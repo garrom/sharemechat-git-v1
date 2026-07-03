@@ -10,6 +10,7 @@ import com.sharemechat.repository.UserRepository;
 import com.sharemechat.service.ConsentEnforcementService;
 import com.sharemechat.service.MessageService;
 import com.sharemechat.service.ProductAccessGuardService;
+import com.sharemechat.support.service.SupportBotProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
@@ -41,6 +42,7 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
         ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
+        SupportBotProvider supportBotProvider = mock(SupportBotProvider.class);
 
         User user = new User();
         user.setId(11L);
@@ -55,7 +57,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
                 messageService,
                 userRepository,
                 consentEnforcementService,
-                productAccessGuardService
+                productAccessGuardService,
+                supportBotProvider
         );
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -78,6 +81,7 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
         ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
+        SupportBotProvider supportBotProvider = mock(SupportBotProvider.class);
 
         doThrow(new ConsentRequiredException(
                 11L,
@@ -89,7 +93,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
                 messageService,
                 userRepository,
                 consentEnforcementService,
-                productAccessGuardService
+                productAccessGuardService,
+                supportBotProvider
         );
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -114,6 +119,7 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
         ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
+        SupportBotProvider supportBotProvider = mock(SupportBotProvider.class);
 
         doThrow(new ConsentRequiredException(
                 11L,
@@ -125,7 +131,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
                 messageService,
                 userRepository,
                 consentEnforcementService,
-                productAccessGuardService
+                productAccessGuardService,
+                supportBotProvider
         );
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())
@@ -148,6 +155,7 @@ class MessagesControllerConsentEnforcementMockMvcTest {
         UserRepository userRepository = mock(UserRepository.class);
         ConsentEnforcementService consentEnforcementService = mock(ConsentEnforcementService.class);
         ProductAccessGuardService productAccessGuardService = mock(ProductAccessGuardService.class);
+        SupportBotProvider supportBotProvider = mock(SupportBotProvider.class);
 
         User user = new User();
         user.setId(11L);
@@ -160,7 +168,8 @@ class MessagesControllerConsentEnforcementMockMvcTest {
                 messageService,
                 userRepository,
                 consentEnforcementService,
-                productAccessGuardService
+                productAccessGuardService,
+                supportBotProvider
         );
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)
                 .setControllerAdvice(new GlobalExceptionHandler())

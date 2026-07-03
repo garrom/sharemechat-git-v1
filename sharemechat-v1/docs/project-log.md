@@ -8,6 +8,53 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-03 — Chat Soporte LLM Fase B.2.1a: backend cerrado y desplegado en TEST
+
+Cierre del bloque backend de la Fase B.2.1 (integración inicial frontend usuario del chat soporte). B.2.1a materializa las piezas backend previas a que el frontend pueda consumirlas: resolución del bot por email, inyección virtual del bot en la lista de favoritos, endpoint de historial de conversación y guards defensivos contra intentos de enviar mensajes P2P al bot. **Frontend queda pendiente** para B.2.1b (siguiente sesión): botón "Soporte" en las 3 navbars, componente `SupportChat.jsx`, hook `useSupportChat`, ruta propia `/support` (decisión #4), banner rate-limit deshabilitado + reset UTC (decisión #5), botón "Hablar con un técnico" siempre visible (decisión #6), traducciones ES/EN.
+
+**Decisiones formalizadas en pre-análisis y aplicadas en esta sesión**:
+- **DEC-B2-1**: bot NO vive en `favorites_clients` ni `favorites_models`. Se inyecta virtualmente al inicio de la lista devuelta por `/api/favorites/models/meta` y `/api/favorites/clients/meta`, con `isBot=true`, `status='active'`, `invited='accepted'`, `presence='online'`. Aplicado a ambos endpoints por decisión #2 (modelos también reciben el bot).
+- **DEC-B2-8**: `SUPPORT_BOT_ID` se resuelve por email desde `support.bot.user-email` (default `bot+support@sharemechat.com`) al arrancar y se cachea en `SupportBotProvider @Service`. Failfast si no existe. En TEST el bot se resuelve a `id=98` (verificado en journal: `[SUPPORT-BOT] provider initialized: id=98 nickname='Soporte SharemeChat'`).
+- **Decisión #7 (rate-limit cap TEST)**: `SUPPORT_RATE_LIMIT_TOKENS_PER_DAY=200000` añadido a `/opt/sharemechat/config.env` **solo en TEST**, para permitir smokes útiles con la BdC completa (~19K tokens/request). AUDIT y PROD siguen con default 50000. Verificado en `/proc/<pid>/environ` del proceso vivo.
+
+**Alcance backend entregado (~250 LOC + tests actualizados)**:
+- `sharemechat-v1/src/main/java/com/sharemechat/support/service/SupportBotProvider.java` **nuevo**: @Service que resuelve el bot por email al arrancar y expone `getSupportBotId()`, `getSupportBotNickname()`, `isSupportBot(userId)`.
+- `sharemechat-v1/src/main/java/com/sharemechat/dto/FavoriteListItemDTO.java`: campo `isBot` añadido (aditivo, retro-compatible con consumidores JSON).
+- `sharemechat-v1/src/main/java/com/sharemechat/service/FavoriteService.java`: 2 `new FavoriteListItemDTO(...)` extendidos con `false` para favoritos humanos.
+- `sharemechat-v1/src/main/java/com/sharemechat/controller/FavoritesController.java`: inyección virtual del bot como primer item en `listModelsMeta` y `listClientsMeta` mediante helper `buildVirtualBotFavorite()`. Ambos endpoints reciben ahora `SupportBotProvider` como dependencia.
+- `sharemechat-v1/src/main/java/com/sharemechat/controller/MessagesController.java`: guard en `POST /api/messages/to/{userId}` que rechaza con `IllegalArgumentException` (→ 400) cuando el destino es el bot, con mensaje literal `"This user cannot receive P2P messages, use /api/support/message endpoint"`.
+- `sharemechat-v1/src/main/java/com/sharemechat/handler/MessagesWsHandlerSupport.java`: guard equivalente en el frame WS `msg:send`, respondiendo con `{"type":"msg:error","message":"..."}` con el mismo texto que la variante REST.
+- `sharemechat-v1/src/main/java/com/sharemechat/support/dto/SupportMessageDTO.java` **nuevo**: DTO histórico (`id`, `conversationId`, `sender`, `content`, `createdAt`) sin exponer tokens ni coste.
+- `sharemechat-v1/src/main/java/com/sharemechat/support/service/SupportBotService.java`: método `getConversationHistory(userId, conversationId)` con guard "solo owner" (respuesta uniforme `"Conversacion no encontrada"` para no filtrar oracle de ids ajenos).
+- `sharemechat-v1/src/main/java/com/sharemechat/support/controller/SupportController.java`: endpoint nuevo `GET /api/support/conversations/{id}/messages` que devuelve `List<SupportMessageDTO>`.
+- Tests actualizados: `FavoritesControllerConsentEnforcementMockMvcTest` (4 constructores) y `MessagesControllerConsentEnforcementMockMvcTest` (4 constructores) reciben ahora `SupportBotProvider mock` como dependencia. Sin nuevos tests unitarios en B.2.1a (cobertura E2E vía smoke HTTP TEST).
+
+**Build + deploy TEST**:
+- `mvn clean test`: **419/419 verdes**.
+- `mvn package -DskipTests`: JAR `sharemechat-v1-0.0.1-SNAPSHOT.jar` (~101 MiB).
+- Backup JAR anterior en `sharemechat-v1-0.0.1-SNAPSHOT.jar.bak-20260703-*`.
+- `scp` + swap + `systemctl restart sharemechat-test.service`. PID nuevo 9950. Arranque limpio en ~29s. Log clave: `[SUPPORT-BOT] provider initialized: id=98 nickname='Soporte SharemeChat'` y `[SUPPORT-KB] loaded 12 markdown files (chars=61327)`.
+- Config `.env` de TEST corregido durante la sesión: la variable de override rate-limit se añadió inicialmente a `/opt/sharemechat/.env` que **no lee systemd**; se movió a `/opt/sharemechat/config.env` (leído por `EnvironmentFile=` de la unit), con backup previo. Sin cambios en AUDIT/PROD.
+
+**Smoke HTTP verificado (login real cliente TEST vía ssh + curl localhost)**:
+- **S1** `GET /api/favorites/models/meta`: HTTP 200, 3 items totales, primer item bot `{user.id=98, nickname='Soporte SharemeChat', role='SUPPORT_BOT', isBot=true, status='active', invited='accepted', presence='online'}`; humanos siguientes con `isBot=false` ✓.
+- **S2** `POST /api/support/message` con "Hola smoke B.2.1a": HTTP 200, `conversationId=4`, respuesta sustantiva del Agente IA, `escalated=false`, `resolutionStatus='OPEN'`, `tokensRemainingToday=30472` (cap 50000 en esta primera pasada antes de fixear el fichero env) ✓ funcionalidad OK, cap incorrecto detectado.
+- **S2b** tras mover override a `config.env` y restart: HTTP 200 mismo `conversationId=4` (misma OPEN reutilizada), `tokensRemainingToday=160758` → **cap 200000 activo** confirmado ✓.
+- **S3** `GET /api/support/conversations/4/messages`: HTTP 200, 4 mensajes (USER/LLM alternando), ordenados asc por id, contenido íntegro ✓.
+- **S3b** `GET /api/support/conversations/99999/messages`: HTTP 400 con `"Conversacion no encontrada"` (conversation ajena al user) ✓ guard "solo owner".
+- **S4** `POST /api/messages/to/98`: HTTP 400 con body `{"message":"This user cannot receive P2P messages, use /api/support/message endpoint","status":400,"error":"Bad Request","path":"/api/messages/to/98"}` ✓ guard REST P2P.
+- Guard WS `msg:send` al bot no se ejercitó E2E en esta sesión (requiere abrir socket autenticado). Cobertura queda en revisión de código; unit test dedicado se puede añadir en B.2.1b si el operador lo pide.
+
+**Cleanup**: conversation `id=4` + sus 4 mensajes borrados; `support_rate_limit_daily user_id=30 usage_date=today` reseteado a 0/0/NULL. TEST queda limpio para B.2.1b. Scratchpad (token + password) borrado al terminar.
+
+**Pendiente B.2.1b (siguiente sesión, frontend)**: navbar Soporte en las 3 variantes (Client/Model/Public según decisión #2), componente `SupportChat.jsx` + hook `useSupportChat` + cliente `supportApi.js`, ruta propia `/support` en `App.jsx` (decisión #4), Public → redirect `/login`, click al bot en lista favoritos → `/support` (no chat P2P), banner rate-limit con input deshabilitado y cuenta atrás hasta UTC midnight (decisión #5), botón "Hablar con un técnico" siempre visible en header del chat (decisión #6), traducciones ES/EN de las claves nuevas del namespace `support` propuestas en el análisis previo.
+
+**Pendiente B.2.2/B.2.3 (aplazado explícito del guion original)**: badge visual del bot en lista favoritos, deshabilitado de acciones destructivas contra el bot (bloquear, reportar, eliminar favorito) tanto en UI como con guards defensivos backend, i18n completo.
+
+**Lo que NO se replica**. Cero cambios en AUDIT/PROD (ni JAR ni env). Cero migraciones Flyway. Cero cambios de código frontend (aplazado a B.2.1b). Cero modificación de ADRs cerrados, `known-debt.md`, `documentation-governance.md`, CLAUDE.md, docs de arquitectura ni BdC.
+
+---
+
 ## 2026-07-02 — Chat Soporte LLM: BdC ficheros 07-10 persistidos (cierre BdC 10/10)
 
 Cierre de la construcción iterativa de la base de conocimiento (BdC) del Agente IA de soporte. Tras los commits `2eac13a` (ficheros 01-03 + comportamiento + deudas #12-#20), `8510042` (ADR-043 formalización pricing vigente) y `3df8a6a` (ficheros 04-06), se persisten los cuatro últimos ficheros temáticos y la BdC queda en **10/10 cerrados**. Sin cambios de código backend, sin deploy: los ficheros nuevos se cargarán en el próximo restart del backend TEST.
