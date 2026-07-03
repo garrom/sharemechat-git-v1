@@ -8,6 +8,24 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-04 — Agente IA comportamiento: alcance dominio + tras escalado + idioma consistente
+
+Actualización del manual interno del Agente IA (`src/main/resources/knowledge-base/00-comportamiento-agente-ia.md`) tras el smoke visual de B.2.1b. Añadidas tres secciones nuevas al final del fichero para corregir dos desviaciones observadas en la primera pasada del chat real: (1) el Agente IA respondía a preguntas fuera del dominio SharemeChat con explicaciones tangenciales de informática general y (2) mezclaba palabras de otros idiomas dentro de una respuesta en español ("¿Hay algo else…"). Sin cambios de código, solo BdC.
+
+**Alcance del cambio**. Fichero `00-comportamiento-agente-ia.md` pasa de 4160 a 8189 chars (+4029). Total BdC cargada en TEST pasa de 61327 a 65297 chars (+3970, verificado en `[SUPPORT-KB] loaded 12 markdown files` del arranque). Tres secciones nuevas al final:
+
+- **"Alcance de tu ayuda: SOLO SharemeChat"**: define dominio permitido (funcionamiento del producto, políticas, precios, canales) vs fuera de dominio (conceptos técnicos generales, competidores, consejos personales/emocionales/médicos/legales/financieros, actualidad, tareas personales ajenas al producto, conocimiento general). Plantilla exacta de rechazo educado con cierre invitando a preguntar sobre SharemeChat. Instrucción explícita de NO explicar el término preguntado ni dar contexto tangencial. Regla para casos ambiguos (SharemeChat + fuera): responder solo la parte SharemeChat. Regla para preguntas sobre el propio Agente IA: brevedad, sin mencionar "Claude" / "Anthropic" / "LLM" / "GPT" / "tokens" / "modelo de lenguaje".
+- **"Comportamiento tras escalado a técnico"**: chat sigue abierto; preguntas dentro dominio se responden normal, fuera dominio se rechazan igual que antes, preguntas sobre estado del escalado se contestan con "El equipo revisará tu conversación lo antes posible. No puedo confirmarte el tiempo exacto de respuesta." NO usar el escalado como excusa para mantener conversación tangencial.
+- **"Idioma consistente"**: detectar idioma en primer mensaje y responder SIEMPRE en ese idioma. Sin mezcla ("algo else", "el user", "el account"). Adaptación solo si el usuario cambia idioma explícitamente en su siguiente mensaje.
+
+**Deploy TEST**. Rebuild + scp + backup + swap JAR + `systemctl restart sharemechat-test.service`. PID nuevo 13989, arranque 30.5s, log `[SUPPORT-KB] loaded 12 markdown files (chars=65297)` confirma MD nuevo en proceso vivo. `[SUPPORT-BOT] provider initialized: id=98`. AUDIT/PROD sin tocar.
+
+**Smoke TEST verificado (login real cliente TEST vía ssh + curl localhost)**. Q1 `¿Qué es el backend?` → HTTP 200, 2.84s, rechazo educado literal según plantilla, sin explicar informática, redirige a SharemeChat. Q2 `¿Puedes ayudarme a escribir un email a mi jefe?` → HTTP 200, 1.45s, rechazo educado categorizando como tarea personal, sin ofrecer ayuda con el email. Q3 (control) `Cómo funciona el matching random?` → HTTP 200, 4.81s, respuesta sustantiva alineada con BdC (FIFO, filtros básicos activa/no bloqueada/no admin, sin priorización por tier/rating/país/hora, 1 EUR/min, favoritos como alternativa). Idioma consistente 100% ES en las tres respuestas, sin mezcla de inglés. Cleanup ejecutado: `support_conversations id=6` + sus 6 mensajes borrados, `support_rate_limit_daily user_id=30` reseteado a 0/0/NULL, scratchpad (password + token) borrado.
+
+**Lo que NO se replica**. Cero cambios de código backend/frontend. Cero migraciones Flyway. Cero cambios en AUDIT/PROD. Cero modificación de ADRs cerrados, `known-debt.md`, `documentation-governance.md`, CLAUDE.md, docs de arquitectura ni otros ficheros de BdC.
+
+---
+
 ## 2026-07-03 — Chat Soporte LLM Fase B.2.1a: backend cerrado y desplegado en TEST
 
 Cierre del bloque backend de la Fase B.2.1 (integración inicial frontend usuario del chat soporte). B.2.1a materializa las piezas backend previas a que el frontend pueda consumirlas: resolución del bot por email, inyección virtual del bot en la lista de favoritos, endpoint de historial de conversación y guards defensivos contra intentos de enviar mensajes P2P al bot. **Frontend queda pendiente** para B.2.1b (siguiente sesión): botón "Soporte" en las 3 navbars, componente `SupportChat.jsx`, hook `useSupportChat`, ruta propia `/support` (decisión #4), banner rate-limit deshabilitado + reset UTC (decisión #5), botón "Hablar con un técnico" siempre visible (decisión #6), traducciones ES/EN.
