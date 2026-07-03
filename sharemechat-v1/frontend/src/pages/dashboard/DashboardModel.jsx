@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react';
 import i18n from '../../i18n';
 import { getResolvedLocale } from '../../i18n/localeUtils';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import { useAppModals } from '../../components/useAppModals';
@@ -39,6 +39,7 @@ import {
 } from '../../styles/ButtonStyles';
 import VideoChatRandomModelo from './VideoChatRandomModelo';
 import VideoChatFavoritosModelo from './VideoChatFavoritosModelo';
+import SupportChat from '../support/SupportChat';
 import { buildApiUrl, buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
 import useFrameCapture from '../../utils/useFrameCapture';
@@ -194,6 +195,12 @@ const DashboardModel = () => {
   const activeTabRef = useRef(activeTab);
 
   const history = useHistory();
+  const location = useLocation();
+  // Flag consumido por FavoritesModelList: cuando se llega al dashboard desde
+  // el icono Soporte del navbar, se auto-selecciona el bot en la lista.
+  const [pendingAutoSelectBot, setPendingAutoSelectBot] = useState(
+    () => !!location?.state?.autoSelectSupportBot
+  );
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
   const socketRef = useRef(null);
@@ -2260,6 +2267,15 @@ const DashboardModel = () => {
   };
 
 
+  const handleGoSupport = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+    stopAll();
+    setPendingAutoSelectBot(true);
+    setActiveTab('favoritos');
+  };
+
+
   const handleGoVideochat = async () => {
     const ok = await confirmarSalidaSesionActiva();
     if (!ok) return;
@@ -3100,6 +3116,7 @@ const DashboardModel = () => {
         onBrandClick={handleLogoClick}
         onGoVideochat={handleGoVideochat}
         onGoFavorites={handleGoFavorites}
+        onGoSupport={handleGoSupport}
         onGoBlog={handleGoBlog}
         onGoStats={handleGoStats}
         onProfile={handleProfile}
@@ -3169,6 +3186,8 @@ const DashboardModel = () => {
                     onSelect={handleOpenChatFromFavorites}
                     reloadTrigger={favReload}
                     selectedId={selectedContactId}
+                    autoSelectBot={pendingAutoSelectBot}
+                    onAutoSelectHandled={() => setPendingAutoSelectBot(false)}
                   />
                 ) : (
                   <div style={{padding:8,color:'#adb5bd'}}>{i18n.t('dashboardModel.favorites.inCallLocked')}</div>
@@ -3177,7 +3196,9 @@ const DashboardModel = () => {
             )}
 
             <StyledCenter data-mode={contactMode === 'call' ? 'call' : undefined}>
-              {activeTab === 'favoritos' && (
+              {activeTab === 'favoritos' && selectedFav?.isBot ? (
+                <SupportChat />
+              ) : activeTab === 'favoritos' && (
                 <VideoChatFavoritosModelo
                   isMobile={isMobile}
                   allowChat={allowChat}

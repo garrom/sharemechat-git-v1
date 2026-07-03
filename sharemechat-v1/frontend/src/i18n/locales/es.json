@@ -2945,5 +2945,34 @@
       "title": "Ajustes de cookies | SharemeChat",
       "description": "Configura las cookies que SharemeChat utiliza en tu navegador. Esenciales, de rendimiento y de marketing."
     }
+  },
+  "support": {
+    "navbar": {
+      "button": "Soporte"
+    },
+    "chat": {
+      "agentName": "Agente IA",
+      "headerBadge": "24/7",
+      "emptyState": "Hola, soy el Agente IA de SharemeChat. ¿En qué puedo ayudarte?",
+      "inputPlaceholder": "Escribe tu mensaje...",
+      "sendButton": "Enviar",
+      "typing": "Agente IA escribiendo..."
+    },
+    "escalate": {
+      "button": "Hablar con un técnico",
+      "modalTitle": "Hablar con un técnico",
+      "reasonPlaceholder": "Explica brevemente el motivo (opcional)...",
+      "confirm": "Confirmar",
+      "cancel": "Cancelar",
+      "success": "Un técnico revisará tu conversación pronto"
+    },
+    "rateLimit": {
+      "warningYellow": "Te quedan {{count}} mensajes hoy",
+      "exceededRed": "El agente IA no está disponible ahora. Volverá a estar disponible en {{hours}} horas."
+    },
+    "errors": {
+      "connectionLost": "Se ha perdido la conexión. Intenta de nuevo.",
+      "generic": "Ha ocurrido un error. Contacta con soporte si persiste."
+    }
   }
 }

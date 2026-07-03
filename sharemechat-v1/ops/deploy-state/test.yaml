@@ -1,27 +1,28 @@
 ﻿# Manifest de estado de despliegue - entorno TEST
-# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
-# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
-# deploy manual del backend (scp + restart). NO se hace commit
-# automatico: el operador commitea cuando le conviene (decision D2).
+# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
+# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
+# correspondiente al surface desplegado tras smoke OK. NO se
+# hace commit automatico: el operador commitea el manifest
+# cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I44Y7TW6IIDPZK5YS41ETPZUXP
+  cloudfront_invalidation_id: ID9KFKUAQRFPURSR22NVZIUYYK
   verification:
-    method: deploy-frontend.ps1-live-build_2026-06-30T19:13:18Z
+    method: deploy-frontend.ps1-live-build_2026-07-03T21:52:32Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-06-30T19:13:18Z
-  built_at: 2026-06-30T19:13:18Z
-  bundle_sha256: db41919e1e04298aa8192996693c2bffb9ecbec9b0c9542d71a1c4575dfbad15
-  git_commit_short: 7903cc0
-  git_commit: 7903cc02d2d6829fe7df12105377bc40409311d6
+  deployed_at: 2026-07-03T21:52:32Z
+  built_at: 2026-07-03T21:52:32Z
+  bundle_sha256: 58f1a5595b1d3a58a98d1527f30b0b77d2c8d9341f09c3738427336d934df417
+  git_commit_short: 49a67eb
+  git_commit: 49a67eb18a5c40a794864977af2ee6707ce386f3
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: false
   bucket: sharemechat-frontend-test
-  bundle: main.ef2f4505.js
-last_update_source: update-manifest-backend.ps1-fase1-paso2b
+  bundle: main.1c27aa48.js
+last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:
@@ -39,7 +40,7 @@ backend:
   systemd_unit: sharemechat-test.service
   git_commit: 88bed4cfd7ddb8afa8e33d79191e5c2007f5353f
   git_commit_short: 88bed4c
-last_updated_at: 2026-07-02T15:32:33Z
+last_updated_at: 2026-07-03T21:52:32Z
 frontend_admin:
   cloudfront_invalidation_id: I9X4F1I3TLTUSBAK9AV9CUQWXM
   verification:

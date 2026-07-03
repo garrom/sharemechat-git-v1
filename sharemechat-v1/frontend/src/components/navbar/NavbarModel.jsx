@@ -3,6 +3,7 @@ import {
   faChartLine,
   faGem,
   faUser,
+  faHeadset,
 } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import { SaldoText } from '../../styles/NavbarStyles';
@@ -23,6 +24,7 @@ const NavbarModel = ({
   onBrandClick,
   onGoVideochat,
   onGoFavorites,
+  onGoSupport,
   onGoBlog,
   onGoStats,
   onProfile,
@@ -35,12 +37,14 @@ const NavbarModel = ({
   profileDisabled = false,
   videochatDisabled = false,
   favoritesDisabled = false,
+  supportDisabled = false,
   blogDisabled = false,
   statsDisabled = false,
   withdrawDisabled = false,
 }) => {
   const videochatLabel = i18n.t('dashboardModel.nav.videochat');
   const favoritesLabel = i18n.t('dashboardModel.nav.favorites');
+  const supportLabel = i18n.t('support.navbar.button');
   const blogLabel = i18n.t('dashboardModel.nav.blog');
 
   const desktopLeft = (
@@ -48,12 +52,15 @@ const NavbarModel = ({
       activeTab={activeTab}
       videochatLabel={videochatLabel}
       favoritesLabel={favoritesLabel}
+      supportLabel={onGoSupport ? supportLabel : null}
       blogLabel={blogLabel}
       onGoVideochat={onGoVideochat}
       onGoFavorites={onGoFavorites}
+      onGoSupport={onGoSupport}
       onGoBlog={onGoBlog}
       videochatDisabled={videochatDisabled}
       favoritesDisabled={favoritesDisabled}
+      supportDisabled={supportDisabled}
       blogDisabled={blogDisabled}
     />
   );
@@ -129,6 +136,16 @@ const NavbarModel = ({
           useIconWrapper: false,
           disabled: withdrawDisabled,
         },
+        ...(onGoSupport
+          ? [{
+              key: 'support',
+              icon: faHeadset,
+              label: supportLabel,
+              onClick: onGoSupport,
+              useIconWrapper: true,
+              disabled: supportDisabled,
+            }]
+          : []),
         {
           key: 'logout',
           label: i18n.t('dashboardModel.actions.logout'),

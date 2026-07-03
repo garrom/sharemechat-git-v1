@@ -106,6 +106,7 @@ export default function Home() {
       onBrandClick={handleLogoClick}
       onGoVideochat={() => handleTabClick('videochat')}
       onGoFavorites={() => handleTabClick('favoritos')}
+      onGoSupport={() => history.push('/login')}
       onGoBlog={() => handleTabClick('blog')}
       onBuy={goRegister}
       onLogin={goLogin}

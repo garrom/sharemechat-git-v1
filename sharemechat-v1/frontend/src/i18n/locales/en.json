@@ -2945,5 +2945,34 @@
       "title": "Cookie settings | SharemeChat",
       "description": "Configure the cookies SharemeChat uses in your browser. Essential, performance and marketing."
     }
+  },
+  "support": {
+    "navbar": {
+      "button": "Support"
+    },
+    "chat": {
+      "agentName": "AI Assistant",
+      "headerBadge": "24/7",
+      "emptyState": "Hi, I'm the SharemeChat AI Assistant. How can I help you?",
+      "inputPlaceholder": "Type your message...",
+      "sendButton": "Send",
+      "typing": "AI Assistant is typing..."
+    },
+    "escalate": {
+      "button": "Talk to a support agent",
+      "modalTitle": "Talk to a support agent",
+      "reasonPlaceholder": "Briefly explain the reason (optional)...",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "success": "A support agent will review your conversation soon"
+    },
+    "rateLimit": {
+      "warningYellow": "You have {{count}} messages left today",
+      "exceededRed": "The AI Assistant is not available right now. It will be available again in {{hours}} hours."
+    },
+    "errors": {
+      "connectionLost": "Connection lost. Please try again.",
+      "generic": "An error occurred. Contact support if it persists."
+    }
   }
 }

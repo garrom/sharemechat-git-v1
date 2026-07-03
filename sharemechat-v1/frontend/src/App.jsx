@@ -194,6 +194,10 @@ function App() {
                     <Route path="/perfil-client" render={() => (<RequireRole role="CLIENT"><PerfilClient /></RequireRole>)} />
                     <Route path="/perfil-model" render={() => (<RequireRole role="MODEL"><PerfilModel /></RequireRole>)} />
                     <Route path="/change-password" render={() => (<RequireRole roles={[Roles.CLIENT, Roles.MODEL, Roles.ADMIN]}><ChangePasswordPage /></RequireRole>)} />
+                    {/* Fallback para bookmarks antiguos: el chat con el
+                        Agente IA vive dentro de /client|/model (panel central
+                        de favoritos). No hay página propia /support. */}
+                    <Route path="/support" render={() => <Redirect to="/client" />} />
 
                     <Redirect to="/unauthorized" />
                   </Switch>

@@ -1,16 +1,21 @@
 import React from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faHeadset } from '@fortawesome/free-solid-svg-icons';
 import { StyledNavTab } from '../../styles/NavbarStyles';
 
 const DesktopTabs = ({
   activeTab,
   videochatLabel,
   favoritesLabel,
+  supportLabel,
   blogLabel,
   onGoVideochat,
   onGoFavorites,
+  onGoSupport,
   onGoBlog,
   videochatDisabled = false,
   favoritesDisabled = false,
+  supportDisabled = false,
   blogDisabled = false,
 }) => {
   return (
@@ -53,6 +58,27 @@ const DesktopTabs = ({
       >
         {blogLabel}
       </StyledNavTab>
+
+      {supportLabel && onGoSupport && (
+        <StyledNavTab
+          type="button"
+          data-active={activeTab === 'support'}
+          aria-pressed={activeTab === 'support'}
+          onClick={onGoSupport}
+          title={supportLabel}
+          aria-label={supportLabel}
+          disabled={supportDisabled}
+          style={{
+            ...(supportDisabled ? { opacity: 0.45, cursor: 'not-allowed' } : {}),
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '6px 10px',
+          }}
+        >
+          <FontAwesomeIcon icon={faHeadset} />
+        </StyledNavTab>
+      )}
     </div>
   );
 };

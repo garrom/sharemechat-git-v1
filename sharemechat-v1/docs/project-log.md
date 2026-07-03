@@ -8,6 +8,49 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-04 — Chat Soporte LLM Fase B.2.1b: frontend chat con Agente IA integrado en /favoritos
+
+Cierre del bloque frontend de la Fase B.2.1 tras validación del smoke visual del operador. B.2.1b entrega la integración del chat con el Agente IA en la surface product (usuario final), reusando el layout del panel central de favoritos existente. Sin cambios de código backend (todo lo backend está en `49a67eb` y `0c0e767`). Deploy TEST frontend product surface confirmado.
+
+**Decisiones arquitecturales aplicadas** (algunas corregidas mid-sesión tras primer smoke visual):
+- **Nombre del bot en UI**: "Agente IA" (ES) / "AI Assistant" (EN), i18n key `support.chat.agentName`. El nickname del bot en BD es `Soporte SharemeChat` pero el frontend prevalece por consistencia con el resto de la surface.
+- **Botón navbar**: icono `faHeadset` (no texto), ubicado **después** del tab "Blog" en desktop. En mobile menu: icono + texto. Aplicable a `NavbarClient`, `NavbarModel` y `PublicNavbar` (misma posición, comportamiento distinto según auth).
+- **UI del chat**: **no hay página propia `/support`**. El chat vive dentro del panel central de `/client` (StyledCenter en DashboardClient) y `/model` (StyledCenter en DashboardModel), en el mismo slot donde se renderiza el chat P2P con favoritos humanos. Click en el bot desde la lista de favoritos o desde el icono navbar no cambia la URL. Se conserva un `Redirect from="/support" to="/client"` en `App.jsx` como fallback para bookmarks antiguos.
+- **Transporte**: REST síncrono contra `POST /api/support/message` y `GET /api/support/conversations/{id}/messages` (B.2.1a). Sin WebSocket para el chat con el bot.
+- **Rate-limit UX**: banner amarillo cuando `messagesRemainingToday ≤ 5` o `tokensRemainingToday ≤ 10000`; banner rojo + input deshabilitado cuando `rateLimited=true`, con cuenta atrás hasta próxima medianoche UTC.
+- **Escalado manual**: botón "Hablar con un técnico" (ES) / "Talk to a support agent" (EN) siempre visible en el header del chat. Modal auto-contenido con textarea opcional para razón (500 chars). Tras confirmar, banner info persistente en el chat.
+- **Persistencia de conversación entre reloads**: `conversationId` cacheado en `localStorage['sharemechat.support.conversationId']`. Al montar el hook, si existe id se hace GET del historial; si el backend rechaza (400 conversation ajena o no encontrada), se limpia el cache y se arranca vacío.
+
+**Alcance frontend entregado (~1100 LOC efectivas)**:
+
+*Ficheros nuevos (4)*:
+- `frontend/src/api/supportApi.js`: cliente REST del sub-paquete (sendMessage / getHistory / escalateManual) usando el helper `apiFetch` para heredar auth cookie + refresh + detección de mantenimiento.
+- `frontend/src/hooks/useSupportChat.js`: hook con state messages / conversationId / loading / sending / error / rateLimitState / resolutionStatus / escalated. Persiste conversationId en localStorage. Serial guard con `useRef` para evitar carreras en carga inicial.
+- `frontend/src/pages/support/SupportChat.jsx`: panel embebido (no página fullscreen, layout `width:100% height:100%` adaptado al padre `StyledCenter`). Header con avatar + nombre + badge 24/7 + botón "Hablar con un técnico". Área mensajes scrollable con auto-scroll + burbujas diferenciadas USER (azul der.) / LLM (gris izq.) / SYSTEM (amarillo centro). Input textarea + botón enviar (Enter envía, Shift+Enter salto de línea). Loading state "Agente IA escribiendo...". Banners rate-limit y escalado exitoso.
+- `frontend/src/pages/support/SupportEscalateModal.jsx`: modal simple auto-contenido con overlay + panel + textarea 500 chars max + botones Cancelar/Confirmar. Focus autoatico al abrir. Escape cierra. Click overlay cierra (excepto cuando busy).
+
+*Ficheros modificados (12)*:
+- `frontend/src/components/navbar/DesktopTabs.jsx`: soporte para tab "Soporte" opcional renderizado tras Blog como StyledNavTab con icono `faHeadset` (no texto) y `title` con el label i18n para tooltip.
+- `frontend/src/components/navbar/NavbarClient.jsx`, `NavbarModel.jsx`, `PublicNavbar.jsx`: prop `onGoSupport`. En desktop pasa `supportLabel` a DesktopTabs. En mobile menu añade item icono + texto antes del logout. NavbarClient/Model llaman a `history.push('/client|/model', {autoSelectSupportBot:true})` implícito vía handler del dashboard; PublicNavbar (no auth) redirect a `/login`.
+- `frontend/src/App.jsx`: eliminado import de página `/support`. Sustituido por `Route path="/support" render={() => <Redirect to="/client" />}` como fallback bookmarks.
+- `frontend/src/pages/dashboard/DashboardClient.jsx` y `DashboardModel.jsx`: import `SupportChat`. `useLocation()` para leer `location.state.autoSelectSupportBot` al mount. State `pendingAutoSelectBot` que se pasa a `FavoritesClientList`/`FavoritesModelList` como prop `autoSelectBot`. Handler `handleGoSupport` (usado por navbar): confirma salida de sesión activa, stopAll, setState pendingAutoSelectBot=true, setActiveTab('favoritos'). Renderizado condicional en `<StyledCenter>`: si `selectedFav?.isBot` → `<SupportChat />`, else → `<VideoChatFavoritos*>` como antes.
+- `frontend/src/pages/favorites/FavoritesClientList.jsx` y `FavoritesModelList.jsx`: mapeo del backend preserva `isBot` en cada item (el bot llega como primer favorito virtual de B.2.1a). `FavListItem` detecta `isBot` y renderiza nombre i18n "Agente IA", icono `faHeadset` naranja en vez de avatar, badge "24/7", oculta el menú de acciones destructivas. Reconciliación con `/blocks` skippea el bot. Filtro `/users/avatars` excluye el bot para no pedir avatar inexistente. Nueva prop `autoSelectBot` + `onAutoSelectHandled`: `useEffect` que al cargar items dispara `onSelect(botItem)` una única vez (guard con `useRef`).
+- `frontend/src/public-pages/Home.jsx`: prop `onGoSupport` en `PublicNavbar` con `history.push('/login')`.
+- `frontend/src/i18n/locales/es.json` y `en.json`: namespace `support` con 17 claves nuevas cada uno (navbar, chat header/empty/input/send/typing, escalate button/modal/reason/confirm/cancel/success, rateLimit warningYellow/exceededRed con placeholders `{{count}}` y `{{hours}}`, errors connectionLost/generic).
+
+*Manifest deploy TEST*:
+- `ops/deploy-state/test.yaml`: actualizado por `deploy-frontend.ps1` con nuevo main bundle (`main.1c27aa48.js` tras la corrección arquitectural).
+
+**Build + deploy frontend TEST**. `npm run build` → 594B CSS, 57.55kB main.js, chunks lazy. Sin errores; solo warnings pre-existentes de `no-unused-vars` en ficheros que no se tocaron esta sesión. Deploy vía `ops/scripts/deploy-frontend.ps1 -Environment test -Surface product -AssumeYesNonCritical`: S3 sync + CloudFront invalidation `I…QR` + smoke funcional (backend reachable /api/users/me 401, modo operacional OPEN-OR-UNKNOWN) + update manifest. Dos deploys realizados en la sesión: el primero con la ruta `/support` como página propia (rechazado en smoke visual), el segundo con la refactorización a panel embebido en `/favoritos`. AUDIT/PROD sin tocar.
+
+**Corrección aplicada durante la sesión**. Primer smoke visual reveló que la ubicación del chat como página `/support` no era la deseada: el operador pidió reintegrarlo en el layout de favoritos existente. Refactorizados en la misma sesión (a) el layout de `SupportChat.jsx` de fullscreen a panel embebido con `height:100% width:100%`, (b) el condicional en `StyledCenter` de ambos dashboards, (c) el navbar botón de texto a icono tras Blog, (d) handlers `handleGoSupport` de `history.push('/support')` a `setActiveTab('favoritos') + setPendingAutoSelectBot(true)`, (e) navegación en `FavoritesClient/ModelList` al bot dentro del flujo normal `onSelect` (el dashboard es quien decide render), (f) ruta `/support` en `App.jsx` de página a `<Redirect to="/client" />` fallback. Smoke visual final del operador validó todos los puntos del checklist (icono navbar, auto-selección, chat en panel central, F5 restaura historial, cancelar modal, escalado, i18n ES/EN).
+
+**Pendiente B.2.2 (siguientes sesiones)**: badge visual más elaborado del bot en lista favoritos (B.2.1b solo aplica icono + nombre), hint `autoSelectSupportBot` propagado post-login desde Home (aplazado: el usuario tras login puede hacer 1 click extra en el icono headset), guards defensivos backend contra bloquear/reportar/eliminar-favorito el bot (deuda backend registrada en el análisis previo, aplazada a B.2.3), badge de mensajes soporte sin leer en la lista de favoritos si el equipo humano responde vía escalado.
+
+**Lo que NO se replica**. Cero cambios de código backend (ambos JAR desplegados en TEST durante la sesión son el mismo commit `49a67eb` con la BdC actualizada tras `0c0e767`). Cero migraciones Flyway. Cero cambios en AUDIT/PROD. Cero modificación de ADRs cerrados, `known-debt.md`, `documentation-governance.md`, CLAUDE.md ni docs de arquitectura. La BdC del Agente IA se toca en el commit `0c0e767` de la misma fecha (bloque distinto).
+
+---
+
 ## 2026-07-04 — Agente IA comportamiento: alcance dominio + tras escalado + idioma consistente
 
 Actualización del manual interno del Agente IA (`src/main/resources/knowledge-base/00-comportamiento-agente-ia.md`) tras el smoke visual de B.2.1b. Añadidas tres secciones nuevas al final del fichero para corregir dos desviaciones observadas en la primera pasada del chat real: (1) el Agente IA respondía a preguntas fuera del dominio SharemeChat con explicaciones tangenciales de informática general y (2) mezclaba palabras de otros idiomas dentro de una respuesta en español ("¿Hay algo else…"). Sin cambios de código, solo BdC.

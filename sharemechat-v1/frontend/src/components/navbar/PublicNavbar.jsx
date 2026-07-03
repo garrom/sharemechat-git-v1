@@ -1,5 +1,5 @@
 import React from 'react';
-import { faGem } from '@fortawesome/free-solid-svg-icons';
+import { faGem, faHeadset } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import NavbarBase from './NavbarBase';
 import DesktopTabs from './DesktopTabs';
@@ -12,6 +12,7 @@ const PublicNavbar = ({
   onBrandClick,
   onGoVideochat,
   onGoFavorites,
+  onGoSupport,
   onGoBlog,
   onBuy,
   onLogin,
@@ -20,6 +21,7 @@ const PublicNavbar = ({
 }) => {
   const videochatLabel = i18n.t('home.nav.videochat');
   const favoritesLabel = i18n.t('home.nav.favorites');
+  const supportLabel = i18n.t('support.navbar.button');
   const blogLabel = i18n.t('home.nav.blog');
 
   const desktopLeft = (
@@ -27,9 +29,11 @@ const PublicNavbar = ({
       activeTab={activeTab}
       videochatLabel={videochatLabel}
       favoritesLabel={favoritesLabel}
+      supportLabel={onGoSupport ? supportLabel : null}
       blogLabel={blogLabel}
       onGoVideochat={onGoVideochat}
       onGoFavorites={onGoFavorites}
+      onGoSupport={onGoSupport}
       onGoBlog={onGoBlog}
     />
   );
@@ -76,6 +80,15 @@ const PublicNavbar = ({
           onClick: onBuy,
           useIconWrapper: false,
         },
+        ...(onGoSupport
+          ? [{
+              key: 'support',
+              icon: faHeadset,
+              label: supportLabel,
+              onClick: onGoSupport,
+              useIconWrapper: true,
+            }]
+          : []),
         {
           key: 'login',
           label: i18n.t('home.cta.login'),

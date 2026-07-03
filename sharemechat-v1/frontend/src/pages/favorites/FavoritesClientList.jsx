@@ -1,8 +1,8 @@
 // src/pages/favorites/FavoritesClientList.jsx
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faTrash, faBan, faUnlock,faFlag, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faTrash, faBan, faUnlock,faFlag, faUser, faHeadset } from '@fortawesome/free-solid-svg-icons';
 import ModelProfileExpanded from '../subpages/ModelProfileExpanded';
 
 import {
@@ -36,14 +36,16 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
     if (avatarUrl && typeof avatarUrl === 'string') setImgSrc(avatarUrl);
   }, [avatarUrl]);
 
+  const isBot = !!user?.isBot;
   const invited = String(user?.invited || '').trim().toLowerCase();
   const presence = String(user?.presence || 'offline').toLowerCase();
   const isBlocked = !!user?.blocked;
   const blockedByMe = !!user?.blockedByMe;
-  const blockedByOther = !!user?.blockedByOther;
 
   // FIX #1: si está bloqueado PERO lo he bloqueado yo, el desplegable debe seguir funcionando (para "Desbloquear")
+  // Bot: el menú de acciones no aplica (no se puede bloquear, reportar ni eliminar; se ocultará entero).
   const isMenuDisabled = invited === 'pending' || invited === 'sent' || (isBlocked && !blockedByMe);
+  const displayName = isBot ? i18n.t('support.chat.agentName') : (user?.nickname || `Usuario #${user?.id}`);
 
   return (
     <ItemCard
@@ -57,12 +59,26 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
       title={isBlocked ? i18n.t('favorites.states.blocked') : undefined}
     >
       <DotWrap>
-        <Avatar
-          src={imgSrc}
-          alt=""
-          $size={28}
-          onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }}
-        />
+        {isBot ? (
+          <div
+            aria-hidden="true"
+            style={{
+              width: 28, height: 28, borderRadius: '50%',
+              background: '#f97316', color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '0.85rem',
+            }}
+          >
+            <FontAwesomeIcon icon={faHeadset} />
+          </div>
+        ) : (
+          <Avatar
+            src={imgSrc}
+            alt=""
+            $size={28}
+            onError={(e) => { e.currentTarget.src = '/img/avatarChica.png'; }}
+          />
+        )}
         <StatusDot
           className={presence === 'busy' ? 'busy' : presence === 'online' ? 'online' : 'offline'}
           aria-label={presence}
@@ -70,16 +86,23 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
       </DotWrap>
 
       <Info>
-        <Name>{user?.nickname || `Usuario #${user?.id}`}</Name>
+        <Name>{displayName}</Name>
       </Info>
 
       <Badges>
-        {!isBlocked && invited !== 'accepted' && (
+        {isBot && (
+          <span style={{
+            fontSize: '0.65rem', fontWeight: 700,
+            padding: '2px 6px', borderRadius: 10,
+            background: '#dcfce7', color: '#166534',
+          }}>{i18n.t('support.chat.headerBadge')}</span>
+        )}
+        {!isBot && !isBlocked && invited !== 'accepted' && (
           <StatusBadge value={invited} title={invited === 'sent' ? 'enviado' : invited} size={16} />
         )}
       </Badges>
 
-      {hasUnread && !isBlocked && (
+      {hasUnread && !isBlocked && !isBot && (
         <div
           style={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: '#0d6efd', marginRight: 6 }}
           aria-label="Tienes mensajes sin leer"
@@ -87,29 +110,32 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
         />
       )}
 
-      <FavMenuTrigger
-        type="button"
-        data-open={menuOpen ? 'true' : 'false'}
-        aria-label={i18n.t('favorites.menu.moreOptions')}
-        title={isMenuDisabled ? i18n.t('favorites.menu.actionsUnavailable') : i18n.t('favorites.menu.moreOptions')}
-        disabled={isMenuDisabled}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (isMenuDisabled) return;
-          const cardEl = e.currentTarget.closest('[data-fav-card]');
-          const rect = cardEl ? cardEl.getBoundingClientRect() : e.currentTarget.getBoundingClientRect();
-          onOpenMenu?.(user, rect);
-        }}
-        style={isMenuDisabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
-      >
-        <FontAwesomeIcon icon={faChevronDown} />
-      </FavMenuTrigger>
+      {!isBot && (
+        <FavMenuTrigger
+          type="button"
+          data-open={menuOpen ? 'true' : 'false'}
+          aria-label={i18n.t('favorites.menu.moreOptions')}
+          title={isMenuDisabled ? i18n.t('favorites.menu.actionsUnavailable') : i18n.t('favorites.menu.moreOptions')}
+          disabled={isMenuDisabled}
+          onClick={(e) => {
+            e.stopPropagation();
+            if (isMenuDisabled) return;
+            const cardEl = e.currentTarget.closest('[data-fav-card]');
+            const rect = cardEl ? cardEl.getBoundingClientRect() : e.currentTarget.getBoundingClientRect();
+            onOpenMenu?.(user, rect);
+          }}
+          style={isMenuDisabled ? { opacity: 0.5, cursor: 'not-allowed' } : undefined}
+        >
+          <FontAwesomeIcon icon={faChevronDown} />
+        </FavMenuTrigger>
+      )}
     </ItemCard>
   );
 }
 
-export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null }) {
+export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selectedId = null, autoSelectBot = false, onAutoSelectHandled = null }) {
   const [items, setItems] = useState([]);
+  const autoSelectDoneRef = useRef(false);
   const [avatarMap, setAvatarMap] = useState({});
   const [loading, setLoading] = useState(false);
   const [unreadMap, setUnreadMap] = useState({});
@@ -256,8 +282,9 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
           const mapped = (data || []).map((d) => {
             const u = d?.user || {};
             const id = u?.id;
-            const blockedByMe = !!blockedMap?.[id];
-            const blockedFromBackend = !!d?.blocked;
+            const isBot = !!d?.isBot;
+            const blockedByMe = !isBot && !!blockedMap?.[id];
+            const blockedFromBackend = !isBot && !!d?.blocked;
             const blocked = blockedFromBackend || blockedByMe;
             const blockedByOther = blocked && !blockedByMe;
 
@@ -269,6 +296,7 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
               blocked,
               blockedByMe,
               blockedByOther,
+              isBot,
             };
           });
 
@@ -289,6 +317,8 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
   // === 3) Reconciliar blocked si llega /blocks después
   useEffect(() => {
     setItems((prev) => (prev || []).map((u) => {
+      // El bot no puede estar bloqueado ni figurar en el mapa de blocks.
+      if (u?.isBot) return u;
       const id = u?.id;
       const blockedByMe = !!blockedMap?.[id];
       const blocked = !!u?.blocked || blockedByMe;
@@ -313,7 +343,10 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
       if (!sessionUser) return;
       if (!items.length) return;
 
-      const ids = items.map((i) => i.id).filter(Boolean);
+      // Excluir el bot: no tiene avatar en el bucket de usuarios y su icono
+      // se resuelve en el propio componente FavListItem (faHeadset).
+      const ids = items.filter((i) => !i.isBot).map((i) => i.id).filter(Boolean);
+      if (!ids.length) return;
       const qs = encodeURIComponent(ids.join(','));
 
       try {
@@ -538,6 +571,19 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
     );
   }, [menu, closeMenu, handleRemove, handleReport, handleBlock, handleUnblock, openExpandedProfile]);
 
+  // Auto-selección del bot al llegar desde la navbar (icono Soporte).
+  // Se dispara UNA sola vez por sesión de mount cuando autoSelectBot=true
+  // y los items ya están cargados con el bot como primer item virtual.
+  useEffect(() => {
+    if (!autoSelectBot || autoSelectDoneRef.current) return;
+    if (!items || items.length === 0) return;
+    const bot = items.find((it) => it?.isBot);
+    if (!bot) return;
+    autoSelectDoneRef.current = true;
+    onSelect?.(bot);
+    if (typeof onAutoSelectHandled === 'function') onAutoSelectHandled();
+  }, [autoSelectBot, items, onSelect, onAutoSelectHandled]);
+
   if (sessionLoading) return <StateRow>{i18n.t('favorites.states.loadingSession')}</StateRow>;
   if (!sessionUser) return <StateRow>{i18n.t('favorites.states.signInToView')}</StateRow>;
 
@@ -557,12 +603,18 @@ export default function FavoritesClientList({ onSelect, reloadTrigger = 0, selec
             menuOpen={menu.open && Number(menu.user?.id) === Number(u.id)}
             onSelect={(user) => {
               if (user?.blocked) return;
-              setUnreadMap((prev) => {
-                if (!prev?.[user.id]) return prev;
-                const next = { ...prev };
-                delete next[user.id];
-                return next;
-              });
+              // El bot se abre en el mismo panel central que un favorito humano.
+              // El dashboard renderiza SupportChatPanel cuando user.isBot=true
+              // en vez del chat P2P. El flag isBot viaja dentro del favUser via
+              // handleOpenChatFromFavorites -> setActivePeer -> selectedFav.
+              if (!user?.isBot) {
+                setUnreadMap((prev) => {
+                  if (!prev?.[user.id]) return prev;
+                  const next = { ...prev };
+                  delete next[user.id];
+                  return next;
+                });
+              }
               onSelect?.(user);
             }}
             onOpenMenu={(user, rect) => openMenuFromRect(user, rect)}
