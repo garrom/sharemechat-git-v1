@@ -95,6 +95,12 @@ public class ContentRunService {
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Articulo no encontrado"));
 
+        // ADR-045 D3: sin primary keyword ES declarada, el pipeline no puede
+        // arrancar porque el prompt (subpasada 2C) la exigira como input
+        // autoritativo. Anticipamos el bloqueo aqui para que el operador vea
+        // el gate antes de correr Cowork y pegar el JSON de vuelta.
+        articleService.assertPrimaryKeywordEsPresent(article.getId());
+
         // Localizar translation ES para inyectar slug_es y title_es en el contexto del prompt.
         ContentArticleTranslation esTranslation = articleService
                 .requireTranslation(article.getId(), ContentConstants.LOCALE_ES);
@@ -238,33 +244,10 @@ public class ContentRunService {
         ContentAIProvider.OutputValidationResult validation =
                 aiProvider.validateOutput(runType, rawJson);
 
-        // 4. Fail path.
+        // 4. Fail path: adapter validation errors.
         if (!validation.valid()) {
-            byte[] errorsBytes;
-            try {
-                errorsBytes = objectMapper.writeValueAsBytes(validation.errors());
-            } catch (JsonProcessingException ex) {
-                errorsBytes = ("[\"no se pudo serializar errores: " + ex.getMessage() + "\"]")
-                        .getBytes(StandardCharsets.UTF_8);
-            }
-            try {
-                bodyStorageService.uploadRunValidationErrors(runId, errorsBytes);
-            } catch (IOException ex) {
-                log.warn("{} no se pudo subir validation_errors.json runId={}: {}",
-                        ContentConstants.LOG_PREFIX, runId, ex.getMessage());
-            }
-            run.setStatus(ContentConstants.RUN_STATUS_REJECTED);
-            run.setOutputValidated(false);
-            run.setOutputS3Key(outputRawKey);
-            run.setOutputHash(outputHash);
-            run.setModelId(modelIdNorm);
-            run.setModelVersion(modelVersionNorm);
-            ContentGenerationRun savedRun = runRepo.save(run);
-            log.info("{} apply-bilingual REJECTED runId={} articleId={} errorCount={}",
-                    ContentConstants.LOG_PREFIX, runId, articleId, validation.errors().size());
-            return new ApplyBilingualResultDTO(
-                    toDetail(savedRun, runType, null, validation.errors()),
-                    null);
+            return emitRejected(run, validation.errors(), outputRawKey, outputHash,
+                    modelIdNorm, modelVersionNorm, runType, runId, articleId);
         }
 
         // 5. Pass path: parse canonical.
@@ -281,6 +264,16 @@ public class ContentRunService {
         JsonNode en = locales.get(ContentConstants.LOCALE_EN);
         String esDraft = es.get("draft_markdown").asText();
         String enDraft = en.get("draft_markdown").asText();
+
+        // 5.pre. ADR-045 D4.1: semantic check de primary keyword mismatch entre
+        // operador e IA. Si el operador declaro primary y la IA propone una
+        // distinta, se rechaza el run con ValidationErrorDTO especifico y
+        // accionable. Se lleva al fail path del adapter para consistencia.
+        List<ValidationErrorDTO> semanticErrors = validatePrimaryKeywordConsistency(articleId, es, en);
+        if (!semanticErrors.isEmpty()) {
+            return emitRejected(run, semanticErrors, outputRawKey, outputHash,
+                    modelIdNorm, modelVersionNorm, runType, runId, articleId);
+        }
 
         // 5a. Upload bodies ES + EN.
         ContentBodyStorageService.Result esBody =
@@ -299,12 +292,12 @@ public class ContentRunService {
 
         // 6. UPSERT translation ES (existe por createArticle).
         ContentArticleTranslation esTr = articleService.requireTranslation(articleId, ContentConstants.LOCALE_ES);
-        applyTranslationFromJson(esTr, es, ContentConstants.LOCALE_ES, esBody, /*allowSlugAssign=*/false);
+        String esPrimarySource = applyTranslationFromJson(esTr, es, ContentConstants.LOCALE_ES, esBody, /*allowSlugAssign=*/false);
         articleService.saveTranslation(esTr);
 
         // 6b. UPSERT translation EN (puede no existir).
         ContentArticleTranslation enTr = articleService.findOrCreateTranslation(articleId, ContentConstants.LOCALE_EN);
-        applyTranslationFromJson(enTr, en, ContentConstants.LOCALE_EN, enBody, /*allowSlugAssign=*/true);
+        String enPrimarySource = applyTranslationFromJson(enTr, en, ContentConstants.LOCALE_EN, enBody, /*allowSlugAssign=*/true);
         articleService.saveTranslation(enTr);
 
         // 6c. UPDATE article (hero/category/keywords solo si BD null).
@@ -355,6 +348,14 @@ public class ContentRunService {
         payload.put("run_id", runId);
         payload.put("locales", List.of(ContentConstants.LOCALE_ES, ContentConstants.LOCALE_EN));
         payload.put("model_id", modelIdNorm);
+        // ADR-045 D4: trazabilidad per-locale de si la primary keyword aplicada
+        // provino del operador (declarada antes del run) o de la IA (ai_derived,
+        // solo permitido en EN cuando el operador la dejo vacia). Se persiste
+        // en payload_json de content_review_events para auditoria.
+        Map<String, String> primarySources = new LinkedHashMap<>();
+        primarySources.put(ContentConstants.LOCALE_ES, esPrimarySource);
+        primarySources.put(ContentConstants.LOCALE_EN, enPrimarySource);
+        payload.put("primary_keyword_sources", primarySources);
         articleService.emitEventPublic(savedArticle.getId(), null,
                 ContentConstants.EVENT_EDIT_APPLIED, actorUserId, payload);
 
@@ -369,12 +370,18 @@ public class ContentRunService {
      * Aplica un nodo locales.<lang> del JSON validado a una traduccion.
      *  - allowSlugAssign=true: usa el slug del JSON (caso EN al crearse por primera vez).
      *  - allowSlugAssign=false: NO toca slug (caso ES, sovereignty del operador).
+     *
+     * ADR-045 D4: {@code target_keywords} se persiste como merge del estado
+     * previo (operador via PATCH) + propuesta IA con las reglas descritas en
+     * {@link #mergeTargetKeywords}. Retorna el origen de la primary aplicada
+     * ("operator" | "ai_derived" | "none") para auditoria en el payload
+     * del evento EDIT_APPLIED.
      */
-    private void applyTranslationFromJson(ContentArticleTranslation tr,
-                                          JsonNode loc,
-                                          String locale,
-                                          ContentBodyStorageService.Result bodyResult,
-                                          boolean allowSlugAssign) {
+    private String applyTranslationFromJson(ContentArticleTranslation tr,
+                                            JsonNode loc,
+                                            String locale,
+                                            ContentBodyStorageService.Result bodyResult,
+                                            boolean allowSlugAssign) {
         if (tr.getArticleId() != null && tr.getLocale() == null) {
             tr.setLocale(locale);
         } else if (tr.getLocale() == null) {
@@ -398,14 +405,199 @@ public class ContentRunService {
         tr.setBrief(textOrNull(loc, "brief"));
         tr.setBodyS3Key(bodyResult.s3Key());
         tr.setBodyContentHash(bodyResult.contentHash());
-        JsonNode targetKeywords = loc.get("target_keywords");
-        if (targetKeywords != null && !targetKeywords.isNull()) {
-            try {
-                tr.setTargetKeywords(objectMapper.writeValueAsString(targetKeywords));
-            } catch (JsonProcessingException ex) {
-                tr.setTargetKeywords(null);
+        // ADR-045 D4: merge target_keywords operador + IA.
+        MergeResult merged = mergeTargetKeywords(
+                tr.getTargetKeywords(), loc.get("target_keywords"));
+        tr.setTargetKeywords(merged.json());
+        return merged.primarySource();
+    }
+
+    /**
+     * Resultado del merge ADR-045 D4 de target_keywords.
+     */
+    private record MergeResult(String json, String primarySource) {}
+
+    /**
+     * Merge operador (previo, ya en BD) + IA (nodo target_keywords del JSON).
+     *
+     * <ul>
+     *   <li>Primary: la del operador prevalece cuando esta declarada; si esta
+     *       vacia, se acepta la propuesta por la IA. Si ambas vacias, no hay
+     *       primary (source="none"; el gate del pipeline exige primary ES,
+     *       pero EN puede estar vacia por ambos lados).</li>
+     *   <li>Secondaries: union case-insensitive con dedup, prioridad operador,
+     *       cap final SECONDARY_KEYWORDS_MAX_ITEMS (5).</li>
+     *   <li>{@code search_intent_match}: preservada de la IA por termino
+     *       (case-insensitive); null si la IA no la aporto.</li>
+     * </ul>
+     *
+     * Precondicion: el mismatch primary-operator vs primary-IA ya se ha
+     * rechazado en {@link #validatePrimaryKeywordConsistency}; aqui se asume
+     * que si ambas primaries existen, son iguales.
+     */
+    private MergeResult mergeTargetKeywords(String operatorJson, JsonNode iaNode) {
+        ContentArticleService.ParsedTargetKeywords op = articleService.parseTargetKeywords(operatorJson);
+        ParsedIAKeywords ia = extractIAKeywords(iaNode);
+
+        String finalPrimary;
+        String primarySource;
+        if (op.primary() != null) {
+            finalPrimary = op.primary();
+            primarySource = "operator";
+        } else if (ia.primary() != null) {
+            finalPrimary = ia.primary();
+            primarySource = "ai_derived";
+        } else {
+            finalPrimary = null;
+            primarySource = "none";
+        }
+
+        LinkedHashMap<String, String> mergedSecs = new LinkedHashMap<>();
+        for (String sec : op.secondaries()) {
+            if (mergedSecs.size() >= 5) break;
+            mergedSecs.putIfAbsent(sec.toLowerCase(Locale.ROOT), sec);
+        }
+        for (String sec : ia.secondaries()) {
+            if (mergedSecs.size() >= 5) break;
+            mergedSecs.putIfAbsent(sec.toLowerCase(Locale.ROOT), sec);
+        }
+
+        com.fasterxml.jackson.databind.node.ArrayNode arr = objectMapper.createArrayNode();
+        if (finalPrimary != null) {
+            arr.add(buildKeywordNode(finalPrimary, "primary", ia.intentByTerm()));
+        }
+        for (String sec : mergedSecs.values()) {
+            arr.add(buildKeywordNode(sec, "secondary", ia.intentByTerm()));
+        }
+        String json;
+        try {
+            json = arr.isEmpty() ? null : objectMapper.writeValueAsString(arr);
+        } catch (JsonProcessingException ex) {
+            json = null;
+        }
+        return new MergeResult(json, primarySource);
+    }
+
+    private com.fasterxml.jackson.databind.node.ObjectNode buildKeywordNode(
+            String term, String type, Map<String, String> iaIntentByTerm) {
+        com.fasterxml.jackson.databind.node.ObjectNode node = objectMapper.createObjectNode();
+        node.put("term", term);
+        node.put("type", type);
+        String intent = iaIntentByTerm.get(term.toLowerCase(Locale.ROOT));
+        if (intent != null) node.put("search_intent_match", intent);
+        else node.putNull("search_intent_match");
+        return node;
+    }
+
+    /**
+     * Resultado defensivo del parseo del array target_keywords propuesto por
+     * la IA en el JSON validado. Nunca lanza excepcion; JSON no-array o
+     * malformado -> primary=null, secondaries=[], intentByTerm={}.
+     */
+    private record ParsedIAKeywords(
+            String primary,
+            List<String> secondaries,
+            Map<String, String> intentByTerm) {}
+
+    private ParsedIAKeywords extractIAKeywords(JsonNode iaNode) {
+        if (iaNode == null || iaNode.isNull() || !iaNode.isArray()) {
+            return new ParsedIAKeywords(null, List.of(), Map.of());
+        }
+        String primary = null;
+        List<String> secondaries = new java.util.ArrayList<>();
+        LinkedHashMap<String, String> intentByTerm = new LinkedHashMap<>();
+        for (JsonNode obj : iaNode) {
+            if (obj == null || !obj.isObject()) continue;
+            JsonNode termNode = obj.get("term");
+            JsonNode typeNode = obj.get("type");
+            JsonNode intentNode = obj.get("search_intent_match");
+            if (termNode == null || !termNode.isTextual() || termNode.asText().isBlank()) continue;
+            if (typeNode == null || !typeNode.isTextual()) continue;
+            String term = termNode.asText();
+            String type = typeNode.asText();
+            if (intentNode != null && intentNode.isTextual()) {
+                intentByTerm.putIfAbsent(term.toLowerCase(Locale.ROOT), intentNode.asText());
+            }
+            if ("primary".equals(type) && primary == null) {
+                primary = term;
+            } else if ("secondary".equals(type)) {
+                secondaries.add(term);
             }
         }
+        return new ParsedIAKeywords(primary, List.copyOf(secondaries), intentByTerm);
+    }
+
+    /**
+     * ADR-045 D4.1: si el operador declaro primary keyword en un locale y la
+     * IA propone una distinta en el mismo locale, se emite ValidationErrorDTO
+     * accionable. El comparativo es case-insensitive porque el operador
+     * puede escribir en mixed case.
+     */
+    private List<ValidationErrorDTO> validatePrimaryKeywordConsistency(
+            Long articleId, JsonNode esNode, JsonNode enNode) {
+        List<ValidationErrorDTO> errors = new java.util.ArrayList<>();
+        errors.addAll(checkPrimaryMismatch(articleId, ContentConstants.LOCALE_ES, esNode));
+        errors.addAll(checkPrimaryMismatch(articleId, ContentConstants.LOCALE_EN, enNode));
+        return errors;
+    }
+
+    private List<ValidationErrorDTO> checkPrimaryMismatch(
+            Long articleId, String locale, JsonNode localeNode) {
+        String operatorPrimary = articleService.findTranslation(articleId, locale)
+                .map(tr -> articleService.parseTargetKeywords(tr.getTargetKeywords()).primary())
+                .orElse(null);
+        if (operatorPrimary == null) return List.of();
+        ParsedIAKeywords ia = extractIAKeywords(localeNode == null ? null : localeNode.get("target_keywords"));
+        if (ia.primary() == null) return List.of();
+        if (operatorPrimary.equalsIgnoreCase(ia.primary())) return List.of();
+        String upperLocale = locale.toUpperCase(Locale.ROOT);
+        String msg = "IA propuso primary keyword '" + ia.primary()
+                + "' pero el operador declaro '" + operatorPrimary
+                + "' en locale " + upperLocale
+                + ". El pipeline debe honrar la keyword del operador.";
+        return List.of(new ValidationErrorDTO("locales." + locale + ".target_keywords", msg));
+    }
+
+    /**
+     * Fail path reutilizable: sube {@code validation_errors.json}, actualiza
+     * el run a REJECTED con outputRaw y modelo declarado, y devuelve el DTO
+     * con errores expuestos en {@code runDetail.errors}. El commit BD ocurre
+     * normal; el operador puede reintentar corrigiendo el JSON.
+     */
+    private ApplyBilingualResultDTO emitRejected(ContentGenerationRun run,
+                                                 List<ValidationErrorDTO> errors,
+                                                 String outputRawKey,
+                                                 String outputHash,
+                                                 String modelIdNorm,
+                                                 String modelVersionNorm,
+                                                 String runType,
+                                                 Long runId,
+                                                 Long articleId) {
+        byte[] errorsBytes;
+        try {
+            errorsBytes = objectMapper.writeValueAsBytes(errors);
+        } catch (JsonProcessingException ex) {
+            errorsBytes = ("[\"no se pudo serializar errores: " + ex.getMessage() + "\"]")
+                    .getBytes(StandardCharsets.UTF_8);
+        }
+        try {
+            bodyStorageService.uploadRunValidationErrors(runId, errorsBytes);
+        } catch (IOException ex) {
+            log.warn("{} no se pudo subir validation_errors.json runId={}: {}",
+                    ContentConstants.LOG_PREFIX, runId, ex.getMessage());
+        }
+        run.setStatus(ContentConstants.RUN_STATUS_REJECTED);
+        run.setOutputValidated(false);
+        run.setOutputS3Key(outputRawKey);
+        run.setOutputHash(outputHash);
+        run.setModelId(modelIdNorm);
+        run.setModelVersion(modelVersionNorm);
+        ContentGenerationRun savedRun = runRepo.save(run);
+        log.info("{} apply-bilingual REJECTED runId={} articleId={} errorCount={}",
+                ContentConstants.LOG_PREFIX, runId, articleId, errors.size());
+        return new ApplyBilingualResultDTO(
+                toDetail(savedRun, runType, null, errors),
+                null);
     }
 
     // ================================================================

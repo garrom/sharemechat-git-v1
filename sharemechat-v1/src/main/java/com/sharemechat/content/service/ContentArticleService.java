@@ -2,6 +2,7 @@ package com.sharemechat.content.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sharemechat.content.constants.ContentConstants;
 import com.sharemechat.content.dto.ArticleCreateRequest;
@@ -90,6 +91,16 @@ public class ContentArticleService {
     private static final int KEYWORD_ITEM_MAX = 80;
     private static final int KEYWORDS_MAX_ITEMS = 50;
     private static final int BRIEF_MAX = 8192;
+    // ADR-045 D2: primary keyword max 120 chars; secondaries cap 5 con max 120 por termino.
+    private static final int PRIMARY_KEYWORD_MAX = 120;
+    private static final int SECONDARY_KEYWORD_ITEM_MAX = 120;
+    private static final int SECONDARY_KEYWORDS_MAX_ITEMS = 5;
+    // Constantes del schema del array JSON target_keywords (compatible con adapter).
+    private static final String TK_TYPE_PRIMARY = "primary";
+    private static final String TK_TYPE_SECONDARY = "secondary";
+    private static final String TK_FIELD_TERM = "term";
+    private static final String TK_FIELD_TYPE = "type";
+    private static final String TK_FIELD_INTENT = "search_intent_match";
     private static final int COMMENT_MAX = 500;
     private static final int EVENT_PAGE_SIZE_DEFAULT = 50;
     private static final int EVENT_PAGE_SIZE_MAX = 200;
@@ -204,6 +215,12 @@ public class ContentArticleService {
         tr.setSlug(slug);
         tr.setTitle(title);
         tr.setBrief(brief);
+        // ADR-045: keywords SEO per-locale al locale primario ES si vienen en la request.
+        String reqPrimary = normalizePrimaryKeyword(req.getPrimaryKeyword());
+        List<String> reqSecondaries = normalizeSecondaryKeywords(req.getSecondaryKeywords());
+        if (reqPrimary != null || !reqSecondaries.isEmpty()) {
+            tr.setTargetKeywords(composeTargetKeywordsJson(reqPrimary, reqSecondaries, null));
+        }
         translationRepo.save(tr);
 
         log.info("{} article created id={} slug_es={} actor={}",
@@ -439,6 +456,36 @@ public class ContentArticleService {
             }
         }
 
+        // ADR-045: keywords SEO per-locale. Si al menos uno de primaryKeyword o
+        // secondaryKeywords se envia, se recompone el JSON target_keywords
+        // preservando search_intent_match de la primary previa cuando el
+        // termino no cambia. Semantica:
+        //  - primaryKeyword=null -> mantener primary actual (parseada del JSON).
+        //  - primaryKeyword=""   -> 400 (coherente con brief/title/slug).
+        //  - secondaryKeywords=null -> mantener secondaries actuales.
+        //  - secondaryKeywords=""   -> reemplazar por lista vacia (permite
+        //    limpiar la lista sin borrar el campo entero).
+        if (req.getPrimaryKeyword() != null || req.getSecondaryKeywords() != null) {
+            if (req.getPrimaryKeyword() != null && req.getPrimaryKeyword().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "primaryKeyword no puede ser vacio; omite el campo para no modificarlo");
+            }
+            ParsedTargetKeywords prev = parseTargetKeywords(tr.getTargetKeywords());
+            String newPrimary = req.getPrimaryKeyword() != null
+                    ? normalizePrimaryKeyword(req.getPrimaryKeyword())
+                    : prev.primary();
+            List<String> newSecondaries = req.getSecondaryKeywords() != null
+                    ? normalizeSecondaryKeywords(req.getSecondaryKeywords())
+                    : prev.secondaries();
+            String composed = (newPrimary == null && newSecondaries.isEmpty())
+                    ? null
+                    : composeTargetKeywordsJson(newPrimary, newSecondaries, tr.getTargetKeywords());
+            if (!java.util.Objects.equals(composed, tr.getTargetKeywords())) {
+                tr.setTargetKeywords(composed);
+                changedFields.add("targetKeywords");
+            }
+        }
+
         // Persistir solo si hubo cambio efectivo. Si la request llego sin
         // campos a modificar (todos null) o todos coincidian con el valor
         // actual, devolvemos el estado sin emitir evento ni updated_at nuevo.
@@ -665,6 +712,36 @@ public class ContentArticleService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Pendiente para revision: locales.es.brief");
         }
+        // ADR-045 D3: primary keyword ES obligatoria para pasar a IN_REVIEW.
+        ParsedTargetKeywords esKeywords = parseTargetKeywords(esTr.getTargetKeywords());
+        if (esKeywords.primary() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Pendiente para revision: locales.es.primary_keyword");
+        }
+    }
+
+    /**
+     * Gate ADR-045 D3 aplicado tambien a la creacion de runs IA
+     * (POST /articles/{id}/runs). Sin primary keyword ES declarada, el
+     * pipeline no puede arrancar porque el prompt (subpasada 2C) la exigira
+     * como input autoritativo. Se anticipa el bloqueo aqui para que el
+     * operador entienda que le falta declarar keywords antes del run, no
+     * despues de haber pegado el JSON de vuelta.
+     */
+    public void assertPrimaryKeywordEsPresent(Long articleId) {
+        if (articleId == null) return;
+        ContentArticleTranslation esTr = translationRepo
+                .findByArticleIdAndLocale(articleId, ContentConstants.LOCALE_ES)
+                .orElse(null);
+        if (esTr == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Pendiente para lanzar run IA: traduccion es no existe");
+        }
+        ParsedTargetKeywords esKeywords = parseTargetKeywords(esTr.getTargetKeywords());
+        if (esKeywords.primary() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Pendiente para lanzar run IA: locales.es.primary_keyword");
+        }
     }
 
     /**
@@ -784,6 +861,15 @@ public class ContentArticleService {
                         "Traduccion " + locale + " no encontrada para articleId=" + articleId));
     }
 
+    /**
+     * Variante que devuelve Optional para callers que necesitan diferenciar
+     * "no existe" de "existe pero sin campos". Introducido por ADR-045 para
+     * el semantic check pre-merge en {@code ContentRunService.applyBilingual}.
+     */
+    public java.util.Optional<ContentArticleTranslation> findTranslation(Long articleId, String locale) {
+        return translationRepo.findByArticleIdAndLocale(articleId, locale);
+    }
+
     public ContentArticleTranslation saveTranslation(ContentArticleTranslation t) {
         return translationRepo.save(t);
     }
@@ -842,6 +928,10 @@ public class ContentArticleService {
     }
 
     private TranslationDetailDTO toTranslationDetail(ContentArticleTranslation t) {
+        // ADR-045: derivar primaryKeyword y secondaryKeywords desde el JSON crudo
+        // de forma defensiva. JSON null/vacio/malformado -> primary=null,
+        // secondaries=[]; nunca lanza excepcion desde este mapper.
+        ParsedTargetKeywords parsed = parseTargetKeywords(t.getTargetKeywords());
         return new TranslationDetailDTO(
                 t.getId(),
                 t.getLocale(),
@@ -853,6 +943,8 @@ public class ContentArticleService {
                 t.getBodyS3Key(),
                 t.getBodyContentHash(),
                 t.getTargetKeywords(),
+                parsed.primary(),
+                parsed.secondaries(),
                 t.getCreatedAt(),
                 t.getUpdatedAt()
         );
@@ -979,6 +1071,164 @@ public class ContentArticleService {
 
     public String normalizeKeywordsPublic(String raw) {
         return normalizeKeywords(raw);
+    }
+
+    // ================================================================
+    // ADR-045 — Keywords SEO per-locale
+    // ================================================================
+
+    /**
+     * Resultado de parsear el JSON {@code target_keywords} de una translation.
+     * Semantica defensiva: siempre no-null; primary es null cuando no hay
+     * type=primary; secondaries es lista inmutable (posiblemente vacia).
+     */
+    public record ParsedTargetKeywords(String primary, List<String> secondaries) {
+        public ParsedTargetKeywords {
+            secondaries = secondaries == null ? List.of() : List.copyOf(secondaries);
+        }
+    }
+
+    /**
+     * Normaliza una primary keyword: trim + max PRIMARY_KEYWORD_MAX chars.
+     * Devuelve null si raw es null, en blanco o queda vacia tras trim.
+     * Lanza 400 si excede longitud.
+     */
+    public String normalizePrimaryKeyword(String raw) {
+        if (raw == null) return null;
+        String trimmed = raw.trim();
+        if (trimmed.isEmpty()) return null;
+        if (trimmed.length() > PRIMARY_KEYWORD_MAX) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "primaryKeyword excede " + PRIMARY_KEYWORD_MAX + " caracteres");
+        }
+        return trimmed;
+    }
+
+    /**
+     * Normaliza el input coma-separado de secondary keywords:
+     *  - split por ",", trim de cada elemento
+     *  - descarta vacios
+     *  - dedup case-insensitive preservando orden y case original del primer aparicion
+     *  - max SECONDARY_KEYWORD_ITEM_MAX chars por termino -> 400 si excede
+     *  - cap SECONDARY_KEYWORDS_MAX_ITEMS elementos: extras se descartan
+     *    silenciosamente conservando los primeros (ADR-045 D2/D4).
+     * Devuelve lista inmutable, posiblemente vacia. Nunca null.
+     */
+    public List<String> normalizeSecondaryKeywords(String csv) {
+        if (csv == null) return List.of();
+        String trimmed = csv.trim();
+        if (trimmed.isEmpty()) return List.of();
+        LinkedHashMap<String, String> byLower = new LinkedHashMap<>();
+        for (String raw : trimmed.split(",")) {
+            String term = raw == null ? "" : raw.trim();
+            if (term.isEmpty()) continue;
+            if (term.length() > SECONDARY_KEYWORD_ITEM_MAX) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "secondaryKeywords: termino excede " + SECONDARY_KEYWORD_ITEM_MAX + " caracteres");
+            }
+            String lower = term.toLowerCase(Locale.ROOT);
+            byLower.putIfAbsent(lower, term);
+            if (byLower.size() >= SECONDARY_KEYWORDS_MAX_ITEMS) break;
+        }
+        return List.copyOf(byLower.values());
+    }
+
+    /**
+     * Compone el JSON array de target_keywords con exactamente 0 o 1
+     * {@code type=primary} y 0..5 {@code type=secondary}, en ese orden.
+     * Preserva {@code search_intent_match} del array previo cuando el
+     * termino no cambia (para primary y para cada secondary con match por
+     * termino case-insensitive). Devuelve null si no hay ningun objeto.
+     */
+    public String composeTargetKeywordsJson(String primary,
+                                            List<String> secondaries,
+                                            String existingJson) {
+        if (secondaries == null) secondaries = List.of();
+        if (primary == null && secondaries.isEmpty()) return null;
+
+        Map<String, String> prevIntentByTerm = new LinkedHashMap<>();
+        JsonNode prevRoot = null;
+        if (existingJson != null && !existingJson.isBlank()) {
+            try {
+                prevRoot = objectMapper.readTree(existingJson);
+            } catch (IOException ex) {
+                prevRoot = null;
+            }
+        }
+        if (prevRoot != null && prevRoot.isArray()) {
+            for (JsonNode obj : prevRoot) {
+                if (obj == null || !obj.isObject()) continue;
+                JsonNode termNode = obj.get(TK_FIELD_TERM);
+                JsonNode intentNode = obj.get(TK_FIELD_INTENT);
+                if (termNode != null && termNode.isTextual() && !termNode.asText().isBlank()) {
+                    String key = termNode.asText().toLowerCase(Locale.ROOT);
+                    String intent = (intentNode != null && intentNode.isTextual())
+                            ? intentNode.asText() : null;
+                    prevIntentByTerm.put(key, intent);
+                }
+            }
+        }
+
+        com.fasterxml.jackson.databind.node.ArrayNode arr = objectMapper.createArrayNode();
+        if (primary != null) {
+            com.fasterxml.jackson.databind.node.ObjectNode node = objectMapper.createObjectNode();
+            node.put(TK_FIELD_TERM, primary);
+            node.put(TK_FIELD_TYPE, TK_TYPE_PRIMARY);
+            String intent = prevIntentByTerm.get(primary.toLowerCase(Locale.ROOT));
+            if (intent != null) node.put(TK_FIELD_INTENT, intent);
+            else node.putNull(TK_FIELD_INTENT);
+            arr.add(node);
+        }
+        for (String sec : secondaries) {
+            com.fasterxml.jackson.databind.node.ObjectNode node = objectMapper.createObjectNode();
+            node.put(TK_FIELD_TERM, sec);
+            node.put(TK_FIELD_TYPE, TK_TYPE_SECONDARY);
+            String intent = prevIntentByTerm.get(sec.toLowerCase(Locale.ROOT));
+            if (intent != null) node.put(TK_FIELD_INTENT, intent);
+            else node.putNull(TK_FIELD_INTENT);
+            arr.add(node);
+        }
+        try {
+            return objectMapper.writeValueAsString(arr);
+        } catch (JsonProcessingException ex) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "no se pudo serializar target_keywords");
+        }
+    }
+
+    /**
+     * Parsea de forma DEFENSIVA el JSON crudo target_keywords y extrae
+     * primary + secondaries. Nunca lanza excepcion aunque el JSON este null,
+     * vacio o malformado; en ese caso primary=null y secondaries=[]. Esto
+     * permite al mapper toTranslationDetail exponer los campos derivados sin
+     * romper en artefactos legacy corruptos.
+     */
+    public ParsedTargetKeywords parseTargetKeywords(String json) {
+        if (json == null || json.isBlank()) return new ParsedTargetKeywords(null, List.of());
+        JsonNode root;
+        try {
+            root = objectMapper.readTree(json);
+        } catch (IOException ex) {
+            return new ParsedTargetKeywords(null, List.of());
+        }
+        if (root == null || !root.isArray()) return new ParsedTargetKeywords(null, List.of());
+        String primary = null;
+        List<String> secondaries = new java.util.ArrayList<>();
+        for (JsonNode obj : root) {
+            if (obj == null || !obj.isObject()) continue;
+            JsonNode termNode = obj.get(TK_FIELD_TERM);
+            JsonNode typeNode = obj.get(TK_FIELD_TYPE);
+            if (termNode == null || !termNode.isTextual() || termNode.asText().isBlank()) continue;
+            if (typeNode == null || !typeNode.isTextual()) continue;
+            String term = termNode.asText();
+            String type = typeNode.asText();
+            if (TK_TYPE_PRIMARY.equals(type) && primary == null) {
+                primary = term;
+            } else if (TK_TYPE_SECONDARY.equals(type)) {
+                secondaries.add(term);
+            }
+        }
+        return new ParsedTargetKeywords(primary, List.copyOf(secondaries));
     }
 
     /**

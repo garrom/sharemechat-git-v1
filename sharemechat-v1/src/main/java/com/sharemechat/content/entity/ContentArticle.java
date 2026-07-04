@@ -25,6 +25,18 @@ public class ContentArticle {
     @Column(name = "category", length = 80)
     private String category;
 
+    /**
+     * @deprecated Sustituido por {@link ContentArticleTranslation#targetKeywords}
+     * per-locale desde ADR-045 (D5). Se mantiene por retro-compatibilidad con
+     * el flujo admin actual (subpasada 2A no toca el frontend); la retirada
+     * real del procesamiento en el service llega con la subpasada 2B junto
+     * con el cambio de UI. Retirada estructural (DROP COLUMN + backfill) en
+     * ADR posterior.
+     *
+     * Nada nuevo debe leer este campo; usar {@code target_keywords}
+     * per-locale como fuente autoritativa de keywords SEO.
+     */
+    @Deprecated
     @Column(name = "keywords", columnDefinition = "JSON")
     private String keywords;
 

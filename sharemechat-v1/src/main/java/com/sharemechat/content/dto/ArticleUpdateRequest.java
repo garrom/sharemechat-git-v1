@@ -17,6 +17,15 @@ package com.sharemechat.content.dto;
 public class ArticleUpdateRequest {
 
     private String category;
+    /**
+     * @deprecated Campo legacy (ADR-045 D5): keywords SEO se editan per-locale
+     * via {@link TranslationMetadataUpdateRequest#getPrimaryKeyword()} y
+     * {@link TranslationMetadataUpdateRequest#getSecondaryKeywords()}. Se
+     * mantiene procesable en 2A por retro-compatibilidad con el frontend
+     * admin actual; la retirada real del procesamiento va en 2B junto con
+     * el cambio de UI. Nada nuevo debe escribir aqui.
+     */
+    @Deprecated
     private String keywords;
     private String heroImageUrl;
     private Long responsibleEditorUserId;
@@ -24,7 +33,11 @@ public class ArticleUpdateRequest {
     public String getCategory() { return category; }
     public void setCategory(String category) { this.category = category; }
 
+    /** @deprecated ver javadoc de {@link #keywords}. */
+    @Deprecated
     public String getKeywords() { return keywords; }
+    /** @deprecated ver javadoc de {@link #keywords}. */
+    @Deprecated
     public void setKeywords(String keywords) { this.keywords = keywords; }
 
     public String getHeroImageUrl() { return heroImageUrl; }

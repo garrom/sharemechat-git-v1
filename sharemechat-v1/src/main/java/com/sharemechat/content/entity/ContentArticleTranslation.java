@@ -54,6 +54,23 @@ public class ContentArticleTranslation {
     @Column(name = "body_content_hash", length = 64)
     private String bodyContentHash;
 
+    /**
+     * Array JSON de objetos {@code {term, type, search_intent_match}} per-locale
+     * con {@code type} en {@code primary|secondary}. Cardinalidad ADR-045 D2:
+     * exactamente 1 objeto con {@code type=primary}; 0..5 con {@code type=secondary}.
+     *
+     * Semantica ADR-045 D1: input operador + enriquecimiento IA via merge.
+     * <ul>
+     *   <li>Operador declara {@code primary} y {@code secondary} desde la UI
+     *       (subpasada 2B) via PATCH per-locale.</li>
+     *   <li>Pipeline IA valida y enriquece con {@code search_intent_match} en
+     *       cada objeto y puede anadir secondaries adicionales dentro del cap.</li>
+     *   <li>{@code applyBilingual} aplica reglas D4: primary del operador es
+     *       autoritativa cuando esta declarada; en EN si el operador la deja
+     *       vacia, se acepta la propuesta por la IA (trazabilidad en
+     *       payload del evento EDIT_APPLIED).</li>
+     * </ul>
+     */
     @Column(name = "target_keywords", columnDefinition = "JSON")
     private String targetKeywords;
 

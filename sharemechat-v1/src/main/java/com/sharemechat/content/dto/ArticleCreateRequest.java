@@ -1,13 +1,19 @@
 package com.sharemechat.content.dto;
 
 /**
- * Request del POST /api/admin/content/articles (ADR-025; brief reubicado por ADR-027).
+ * Request del POST /api/admin/content/articles (ADR-025; brief reubicado por
+ * ADR-027; keywords SEO per-locale por ADR-045).
  *
  * Crea el articulo logico + su primera traduccion (locale primario indicado por
  * {@link #locale}, normalmente "es"). Los campos linguisticos (slug, title,
- * brief) acompanan a la primera traduccion y se persisten en
- * content_article_translations; los demas (category, keywords, heroImageUrl,
- * responsibleEditorUserId) son compartidos del articulo logico.
+ * brief, primaryKeyword, secondaryKeywords) acompanan a la primera traduccion
+ * y se persisten en content_article_translations; los demas (category,
+ * keywords legacy, heroImageUrl, responsibleEditorUserId) son compartidos del
+ * articulo logico.
+ *
+ * Keywords SEO (ADR-045): primaryKeyword y secondaryKeywords se aplican al
+ * locale primario ES; el service los normaliza y compone el JSON
+ * {@code target_keywords} de la primera translation.
  */
 public class ArticleCreateRequest {
 
@@ -19,6 +25,8 @@ public class ArticleCreateRequest {
     private String keywords;
     private Long responsibleEditorUserId;
     private String heroImageUrl;
+    private String primaryKeyword;
+    private String secondaryKeywords;
 
     public String getSlug() { return slug; }
     public void setSlug(String slug) { this.slug = slug; }
@@ -45,4 +53,10 @@ public class ArticleCreateRequest {
 
     public String getHeroImageUrl() { return heroImageUrl; }
     public void setHeroImageUrl(String heroImageUrl) { this.heroImageUrl = heroImageUrl; }
+
+    public String getPrimaryKeyword() { return primaryKeyword; }
+    public void setPrimaryKeyword(String primaryKeyword) { this.primaryKeyword = primaryKeyword; }
+
+    public String getSecondaryKeywords() { return secondaryKeywords; }
+    public void setSecondaryKeywords(String secondaryKeywords) { this.secondaryKeywords = secondaryKeywords; }
 }
