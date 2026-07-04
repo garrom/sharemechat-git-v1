@@ -70,37 +70,11 @@ del producto.
 
 ## Payout de la modelo
 
-Las modelos ganan por dos vías:
-
-1. **Minutos facturados** durante sesiones de videochat, según su tier 
-   actual (véase Onboarding del modelo para detalle de tiers).
-2. **Regalos (gifts) recibidos** de clientes, de los cuales la modelo 
-   recibe el 90% del valor.
-
-Ambos conceptos se acumulan en el balance de la modelo.
-
-### Umbral mínimo de retiro
-
-**100 EUR acumulados** es el umbral mínimo para solicitar retiro. La 
-modelo debe alcanzar ese saldo antes de poder pedir liquidación.
-
-### Solicitud y aprobación
-
-Cuando la modelo alcanza el umbral, puede solicitar retiro desde el 
-dashboard. La solicitud pasa por revisión del equipo de administración, 
-que valida:
-
-- Cumplimiento de requisitos de verificación.
-- Validez de los datos de pago proporcionados.
-- Cualquier revisión aplicable en el momento.
-
-Si todo está en orden, el retiro se aprueba y se procesa. Si algo no 
-cumple, se comunica a la modelo para que corrija.
-
-### Método de pago del retiro
-
-El método principal es Wise (transferencia internacional optimizada). 
-Otros métodos pueden estar disponibles según el país de la modelo.
+Las modelos ganan por minutos facturados según su tier y por regalos 
+recibidos. Los detalles operativos (tarifas por tier, umbral de retiro, 
+método de pago, calendario de solicitud) se comunican a las modelos 
+aprobadas desde su dashboard y no forman parte del contenido público 
+del producto.
 
 ## Facturación
 

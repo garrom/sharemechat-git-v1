@@ -6,13 +6,47 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeadset, faPaperPlane, faUserTie } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faUserTie } from '@fortawesome/free-solid-svg-icons';
+import ReactMarkdown from 'react-markdown';
 import i18n from '../../i18n';
 import useSupportChat from '../../hooks/useSupportChat';
 import SupportEscalateModal from './SupportEscalateModal';
 
 const MAX_INPUT = 4000;
 const WARN_MSGS_THRESHOLD = 5;
+
+// Safety net: la BdC instruye al LLM a NO usar markdown. Si aun así
+// devuelve elementos markdown, este override los neutraliza visualmente
+// y comprime el espaciado. Todos los bloques se rebajan a spans/divs sin
+// margen ni padding; solo <p> conserva 4px inferior para separar párrafos.
+const RESET_STYLE = { margin: 0, padding: 0 };
+
+const MD_COMPONENTS = {
+  h1: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
+  h2: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
+  h3: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
+  h4: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
+  h5: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
+  h6: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
+  strong: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
+  em: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
+  code: ({ node, inline, ...props }) => <span {...props} style={RESET_STYLE} />,
+  ul: ({ node, ...props }) => <div {...props} style={RESET_STYLE} />,
+  ol: ({ node, ...props }) => <div {...props} style={RESET_STYLE} />,
+  li: ({ node, ...props }) => <div {...props} style={RESET_STYLE} />,
+  p: ({ node, ...props }) => (
+    <p {...props} style={{ margin: '0 0 4px 0', padding: 0 }} />
+  ),
+  a: ({ node, ...props }) => (
+    <a
+      {...props}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ color: '#2563eb', textDecoration: 'underline' }}
+    />
+  ),
+  hr: () => null,
+};
 const WARN_TOKENS_THRESHOLD = 10000;
 
 // Cálculo de horas restantes hasta próxima medianoche UTC.
@@ -52,27 +86,12 @@ const headerStyle = {
   marginBottom: 12,
 };
 
-const avatarStyle = {
-  width: 40,
-  height: 40,
-  borderRadius: '50%',
-  background: '#f97316',
-  color: '#fff',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  fontSize: '1.1rem',
+const avatarImgStyle = {
+  width: 72,
+  height: 72,
+  display: 'block',
+  objectFit: 'contain',
   flexShrink: 0,
-};
-
-const badgeStyle = {
-  fontSize: '0.7rem',
-  fontWeight: 700,
-  padding: '2px 8px',
-  borderRadius: 10,
-  background: '#dcfce7',
-  color: '#166534',
-  marginLeft: 8,
 };
 
 const escalateBtnStyle = {
@@ -99,14 +118,22 @@ const messagesAreaStyle = {
   gap: 8,
 };
 
+// Fix bold universal: el body global usa var(--font-nav) = Poppins, y en
+// index.html solo se cargan pesos 600/700/800 (look "Azar"). Cualquier texto
+// con font-weight 400 cae al fallback más cercano disponible (600), y todo
+// el chat se veía semibold. En las burbujas forzamos var(--font-sans)
+// (Inter, que sí carga en 400 regular) y fontWeight 400 explícito para
+// romper la herencia.
 const bubbleBase = {
-  padding: '10px 14px',
+  padding: '8px 12px',
   borderRadius: 12,
   maxWidth: '80%',
   wordBreak: 'break-word',
   whiteSpace: 'pre-wrap',
   fontSize: '0.95rem',
-  lineHeight: 1.4,
+  lineHeight: 1.35,
+  fontFamily: 'var(--font-sans), Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
+  fontWeight: 400,
 };
 
 const userBubble = {
@@ -164,10 +191,8 @@ const textareaStyle = {
   outline: 'none',
 };
 
-const sendBtnStyle = {
-  background: '#f97316',
-  color: '#fff',
-  border: 'none',
+const sendBtnBase = {
+  border: '1px solid #000',
   borderRadius: 8,
   padding: '10px 18px',
   fontSize: '0.95rem',
@@ -177,6 +202,23 @@ const sendBtnStyle = {
   alignItems: 'center',
   gap: 6,
   height: 44,
+  transition: 'background 120ms ease, color 120ms ease',
+};
+
+const sendBtnResolvedStyle = (hover, disabled) => {
+  if (disabled) {
+    return {
+      ...sendBtnBase,
+      background: '#333',
+      color: '#fff',
+      cursor: 'not-allowed',
+      opacity: 0.5,
+    };
+  }
+  if (hover) {
+    return { ...sendBtnBase, background: '#fff', color: '#000' };
+  }
+  return { ...sendBtnBase, background: '#000', color: '#fff' };
 };
 
 const bannerBase = {
@@ -232,6 +274,7 @@ export default function SupportChat() {
 
   const [input, setInput] = useState('');
   const [escalateOpen, setEscalateOpen] = useState(false);
+  const [sendHover, setSendHover] = useState(false);
   const messagesRef = useRef(null);
 
   // Auto-scroll al final cuando llegan mensajes o el LLM está pensando.
@@ -279,16 +322,12 @@ export default function SupportChat() {
   return (
     <div style={containerStyle}>
       <header style={headerStyle}>
-        <div style={avatarStyle} aria-hidden="true">
-          <FontAwesomeIcon icon={faHeadset} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <strong>{i18n.t('support.chat.agentName')}</strong>
-          <span style={{ fontSize: '0.8rem', color: '#6b7280' }}>
-            {i18n.t('support.chat.headerBadge')}
-          </span>
-        </div>
-        <span style={badgeStyle}>{i18n.t('support.chat.headerBadge')}</span>
+        <img
+          src="/img/icono-agente-ia.png"
+          alt=""
+          style={avatarImgStyle}
+        />
+        <strong>{i18n.t('support.chat.agentName')}</strong>
 
         <button
           type="button"
@@ -332,7 +371,18 @@ export default function SupportChat() {
           const style = isUser ? userBubble : (isLlm ? llmBubble : systemBubble);
           return (
             <div key={String(m.id)} style={style}>
-              <div>{m.content}</div>
+              {isLlm ? (
+                <div className="support-md" style={{ margin: 0, padding: 0 }}>
+                  <ReactMarkdown
+                    components={MD_COMPONENTS}
+                    skipHtml
+                  >
+                    {m.content || ''}
+                  </ReactMarkdown>
+                </div>
+              ) : (
+                <div>{m.content}</div>
+              )}
               {m.createdAt && (
                 <div style={timestampStyle}>{formatTime(m.createdAt)}</div>
               )}
@@ -358,8 +408,12 @@ export default function SupportChat() {
         />
         <button
           type="button"
-          style={{ ...sendBtnStyle, opacity: canSend ? 1 : 0.6, cursor: canSend ? 'pointer' : 'not-allowed' }}
+          style={sendBtnResolvedStyle(sendHover, !canSend)}
           onClick={handleSend}
+          onMouseEnter={() => setSendHover(true)}
+          onMouseLeave={() => setSendHover(false)}
+          onFocus={() => setSendHover(true)}
+          onBlur={() => setSendHover(false)}
           disabled={!canSend}
         >
           <FontAwesomeIcon icon={faPaperPlane} />

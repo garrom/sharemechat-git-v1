@@ -37,8 +37,8 @@ Los gifts los envía únicamente el cliente hacia la modelo desde el
 catálogo del chat. Cada gift tiene un precio fijo en euros que se 
 descuenta del saldo del cliente en el momento del envío.
 
-Cuando la modelo recibe un gift, el 90% del valor se acumula a su 
-balance. El 10% restante lo retiene la plataforma como fee de servicio.
+Los gifts se descuentan del saldo del cliente en el momento del envío. 
+La modelo los recibe como parte de sus ingresos por la sesión.
 
 Los gifts quedan visibles en el historial del chat entre las dos 
 partes.

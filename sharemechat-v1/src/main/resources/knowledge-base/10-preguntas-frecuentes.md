@@ -73,16 +73,16 @@ Registro con rol de modelo, aceptación del contrato, verificación KYC
 completa vía Didit, aprobación admin. Ver 03-onboarding-modelo.md.
 
 **¿Cuánto gana una modelo?**
-Depende del tier (basado en minutos facturados últimos 30 días). Los 
-tres tiers ganan por primer minuto y minutos siguientes. Ver 
-03-onboarding-modelo.md.
+Los detalles operativos de payout se comunican a las modelos aprobadas 
+desde su dashboard. No forman parte del contenido público.
 
 **¿Con qué frecuencia se paga?**
-No hay calendario fijo. Se solicita retiro cuando la modelo alcanza 
-el umbral mínimo de 100 EUR.
+No hay calendario fijo. La modelo solicita el retiro cuando desea 
+liquidar el balance acumulado.
 
 **¿Cómo se paga?**
-Método principal: Wise. Otros métodos según país.
+El método concreto se comunica a la modelo en el proceso de solicitud 
+de retiro, dentro de su dashboard.
 
 ## Sobre seguridad y privacidad
 

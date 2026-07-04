@@ -1,6 +1,4 @@
 import React from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faHeadset } from '@fortawesome/free-solid-svg-icons';
 import { StyledNavTab } from '../../styles/NavbarStyles';
 
 const DesktopTabs = ({
@@ -73,10 +71,16 @@ const DesktopTabs = ({
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            padding: '6px 10px',
+            padding: '4px 8px',
           }}
         >
-          <FontAwesomeIcon icon={faHeadset} />
+          <img
+            src="/img/icono-agente-ia.png"
+            alt=""
+            width={72}
+            height={72}
+            style={{ display: 'block' }}
+          />
         </StyledNavTab>
       )}
     </div>

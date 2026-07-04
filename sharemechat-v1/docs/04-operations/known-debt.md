@@ -2,6 +2,10 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-07-04 — Deudas nuevas detectadas durante pulido UX del chat con Agente IA
+
+**#21 — Depuración de respuestas del Agente IA para respetar geografía del producto**. Detectado durante el smoke visual del chat con el Agente IA que las respuestas incluyen instrucciones de navegación que no aplican al contexto real donde está el usuario: (a) cuando el user ya está autenticado y viendo el dashboard, el bot dice "ve al dashboard" para instrucciones sobre acciones que se hacen desde ahí mismo; (b) cuando el saldo del cliente ya está visible en el navbar, el bot lo manda a "perfil" o "cuenta" para consultarlo. Es depuración de contenido de la BdC (`02-onboarding-cliente.md`, `05-pagos-y-saldo.md` y notas Agente IA en varios ficheros): ajustar las plantillas de respuesta para que asuman que el user autenticado está en el dashboard y para que refieran los elementos visibles del navbar (saldo, Comprar) por su nombre real en la UI, no como si el user tuviese que navegar a buscarlos. NO es correctitud del pipeline ni fuga de información, es tono/precisión. **Prioridad baja UX (no bloquea go-live, mejora experiencia post-B.2.1b)**.
+
 ## 2026-07-02 — Deudas nuevas detectadas durante construcción BdC del Agente IA de soporte
 
 Bloque de deudas detectadas mientras se construía la base de conocimiento del Agente IA (sub-paquete Chat Soporte LLM Fase B.1 cerrado en commit `39f1fb6`). Al redactar la BdC para los flujos de cliente y modelo emergieron carencias del producto que el Agente IA debe evitar prometer y que el operador debe cerrar antes del go-live PROD o poco después.

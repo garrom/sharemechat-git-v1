@@ -1,5 +1,5 @@
 import React from 'react';
-import { faGem, faHeadset } from '@fortawesome/free-solid-svg-icons';
+import { faGem } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import NavbarBase from './NavbarBase';
 import DesktopTabs from './DesktopTabs';
@@ -83,7 +83,7 @@ const PublicNavbar = ({
         ...(onGoSupport
           ? [{
               key: 'support',
-              icon: faHeadset,
+              iconImgSrc: '/img/icono-agente-ia.png',
               label: supportLabel,
               onClick: onGoSupport,
               useIconWrapper: true,

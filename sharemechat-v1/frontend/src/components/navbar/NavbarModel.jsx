@@ -3,7 +3,6 @@ import {
   faChartLine,
   faGem,
   faUser,
-  faHeadset,
 } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import { SaldoText } from '../../styles/NavbarStyles';
@@ -139,7 +138,7 @@ const NavbarModel = ({
         ...(onGoSupport
           ? [{
               key: 'support',
-              icon: faHeadset,
+              iconImgSrc: '/img/icono-agente-ia.png',
               label: supportLabel,
               onClick: onGoSupport,
               useIconWrapper: true,

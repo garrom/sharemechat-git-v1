@@ -2,7 +2,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faChevronDown, faTrash, faBan, faUnlock,faFlag, faHeadset } from '@fortawesome/free-solid-svg-icons';
+import { faChevronDown, faTrash, faBan, faUnlock,faFlag } from '@fortawesome/free-solid-svg-icons';
 
 import {
   List,
@@ -60,17 +60,13 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
     >
       <DotWrap>
         {isBot ? (
-          <div
-            aria-hidden="true"
-            style={{
-              width: 28, height: 28, borderRadius: '50%',
-              background: '#f97316', color: '#fff',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.85rem',
-            }}
-          >
-            <FontAwesomeIcon icon={faHeadset} />
-          </div>
+          <img
+            src="/img/icono-agente-ia.png"
+            alt=""
+            width={48}
+            height={48}
+            style={{ display: 'block', objectFit: 'contain' }}
+          />
         ) : (
           <Avatar
             src={imgSrc}

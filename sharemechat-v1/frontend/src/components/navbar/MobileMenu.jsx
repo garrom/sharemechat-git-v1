@@ -71,7 +71,9 @@ const MobileMenu = ({
           title={item.title}
           disabled={item.disabled}
         >
-          {item.icon ? <FontAwesomeIcon icon={item.icon} style={item.iconStyle} /> : null}
+          {item.iconImgSrc
+            ? <img src={item.iconImgSrc} alt="" width={40} height={40} style={{ display: 'block' }} />
+            : (item.icon ? <FontAwesomeIcon icon={item.icon} style={item.iconStyle} /> : null)}
 
           {item.useIconWrapper ? (
             <StyledIconWrapper>{item.label}</StyledIconWrapper>
