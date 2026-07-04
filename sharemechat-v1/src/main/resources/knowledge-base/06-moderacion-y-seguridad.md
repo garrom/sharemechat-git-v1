@@ -2,7 +2,7 @@
 
 ## Verificación previa: KYC obligatorio
 
-Antes de que cualquier interacción pueda ocurrir en la plataforma, 
+Antes de que cualquier interacción REAL pueda ocurrir en la plataforma, 
 ambas partes deben verificarse:
 
 - **Modelos**: verificación completa de identidad y edad vía Didit 
@@ -10,8 +10,13 @@ ambas partes deben verificarse:
 - **Clientes**: verificación de edad vía Didit (age estimation facial 
   con fallback documental si es necesario).
 
-Sin verificación completa no se puede iniciar videochat ni comprar 
-saldo.
+Un usuario nuevo SÍ puede registrarse, activar su cuenta por email e 
+iniciar sesión de login antes de verificarse. Al entrar por primera vez 
+al dashboard ve la interfaz completa, pero las acciones que requieren 
+verificación —activar la cámara para una sesión de videochat y comprar 
+saldo— quedan inhabilitadas hasta que complete el flujo Didit. Al pasar 
+el ratón sobre esas acciones inhabilitadas aparece la indicación de que 
+no están disponibles todavía.
 
 ## Moderación visual en tiempo real
 

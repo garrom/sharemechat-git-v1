@@ -4,7 +4,7 @@ Base de conocimiento consumida por el `SupportKnowledgeBaseLoader` al arrancar
 el backend. Todos los ficheros `*.md` presentes en este directorio se
 concatenan y se incluyen en el system prompt de cada llamada a Claude.
 
-Construcción cerrada: **10/10 ficheros temáticos cerrados**. La BdC
+Construcción cerrada: **13/13 ficheros temáticos cerrados**. La BdC
 se mantiene viva en el tiempo (correcciones factuales, incorporación
 de FAQs reales, actualización de nuevos flujos), pero el temario
 inicial planificado queda completo.
@@ -23,6 +23,9 @@ inicial planificado queda completo.
 - `08-cuenta.md` — **cerrado**.
 - `09-empresa-y-contacto.md` — **cerrado**.
 - `10-preguntas-frecuentes.md` — **cerrado**.
+- `11-ui-reference.md` — **cerrado**. Mapa de la UI real del producto (navbar, tabs, dónde está el saldo, cómo se accede al perfil, ruta de recuperación de contraseña, etc.). El Agente IA lo usa para dar indicaciones precisas en vez de instrucciones abstractas.
+- `12-troubleshooting-modelo.md` — **cerrado**. Problemas técnicos frecuentes del rol MODEL (no llegan clientes al matching, cámara no arranca, sesión se corta, cuenta pendiente de aprobación, ubicación de Estadísticas). SOLO se aplica cuando el usuario tiene role=MODEL. Nunca mencionar saldo, packs, comprar ni recargar.
+- `13-troubleshooting-cliente.md` — **cerrado**. Problemas técnicos frecuentes del rol CLIENT (no salen modelos al matching, cámara no arranca, sesión cortada, email de verificación no llega, compra de saldo falla). SOLO se aplica cuando el usuario tiene role=CLIENT. Nunca mencionar tiers, payout, Wise ni retirar.
 
 ## Reglas
 

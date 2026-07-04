@@ -15,10 +15,11 @@ import SupportEscalateModal from './SupportEscalateModal';
 const MAX_INPUT = 4000;
 const WARN_MSGS_THRESHOLD = 5;
 
-// Safety net: la BdC instruye al LLM a NO usar markdown. Si aun así
-// devuelve elementos markdown, este override los neutraliza visualmente
-// y comprime el espaciado. Todos los bloques se rebajan a spans/divs sin
-// margen ni padding; solo <p> conserva 4px inferior para separar párrafos.
+// Safety net: la BdC instruye al LLM a NO usar markdown y respetar
+// espaciado cero. Si aun así devuelve markdown, cada componente se
+// degrada a span/div/p sin margen ni padding. La regla CSS con !important
+// (styleTag mas abajo) actua como red final por si algun CSS global pisara
+// el inline style.
 const RESET_STYLE = { margin: 0, padding: 0 };
 
 const MD_COMPONENTS = {
@@ -28,15 +29,14 @@ const MD_COMPONENTS = {
   h4: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
   h5: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
   h6: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
-  strong: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
-  em: ({ node, ...props }) => <span {...props} style={RESET_STYLE} />,
-  code: ({ node, inline, ...props }) => <span {...props} style={RESET_STYLE} />,
+  strong: ({ node, ...props }) => <span {...props} />,
+  em: ({ node, ...props }) => <span {...props} />,
+  code: ({ node, inline, ...props }) => <span {...props} />,
   ul: ({ node, ...props }) => <div {...props} style={RESET_STYLE} />,
   ol: ({ node, ...props }) => <div {...props} style={RESET_STYLE} />,
   li: ({ node, ...props }) => <div {...props} style={RESET_STYLE} />,
-  p: ({ node, ...props }) => (
-    <p {...props} style={{ margin: '0 0 4px 0', padding: 0 }} />
-  ),
+  p: ({ node, ...props }) => <p {...props} style={RESET_STYLE} />,
+  br: ({ node, ...props }) => <br {...props} style={{ lineHeight: 1, margin: 0 }} />,
   a: ({ node, ...props }) => (
     <a
       {...props}
@@ -47,6 +47,27 @@ const MD_COMPONENTS = {
   ),
   hr: () => null,
 };
+
+// Safety net final: CSS con !important para evitar que reglas globales
+// (styled-components de Poppins, index.css, etc.) pisen los inline styles
+// del ReactMarkdown. Se inyecta una sola vez como <style> global.
+const SUPPORT_MD_CSS = `
+.support-md,
+.support-md p,
+.support-md div,
+.support-md span,
+.support-md ul,
+.support-md ol,
+.support-md li {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.2 !important;
+}
+.support-md br {
+  line-height: 1 !important;
+  margin: 0 !important;
+}
+`;
 const WARN_TOKENS_THRESHOLD = 10000;
 
 // Cálculo de horas restantes hasta próxima medianoche UTC.
@@ -125,13 +146,13 @@ const messagesAreaStyle = {
 // (Inter, que sí carga en 400 regular) y fontWeight 400 explícito para
 // romper la herencia.
 const bubbleBase = {
-  padding: '8px 12px',
+  padding: '3px 10px',
   borderRadius: 12,
   maxWidth: '80%',
   wordBreak: 'break-word',
   whiteSpace: 'pre-wrap',
   fontSize: '0.95rem',
-  lineHeight: 1.35,
+  lineHeight: 1.2,
   fontFamily: 'var(--font-sans), Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
   fontWeight: 400,
 };
@@ -321,6 +342,7 @@ export default function SupportChat() {
 
   return (
     <div style={containerStyle}>
+      <style>{SUPPORT_MD_CSS}</style>
       <header style={headerStyle}>
         <img
           src="/img/icono-agente-ia.png"
@@ -377,7 +399,24 @@ export default function SupportChat() {
                     components={MD_COMPONENTS}
                     skipHtml
                   >
-                    {m.content || ''}
+                    {/* Espaciado cero absoluto (no confiar en el LLM):
+                        (a) colapsa multiples \n consecutivos en uno solo;
+                        (b) divide por linea, hace trim de cada una, elimina
+                            lineas vacias intermedias (por si el LLM emite
+                            \n\n\n o lineas con solo espacios);
+                        (c) une con hard break markdown ("  \n") para que
+                            react-markdown renderice <br/> DENTRO del mismo
+                            <p>, no como parrafo nuevo.
+                        Junto al MD_COMPONENTS con margin:0 y el CSS con
+                        !important, garantiza que puntos y aparte del LLM
+                        no introducen espaciado visual. */}
+                    {(m.content || '')
+                      .replace(/\n{2,}/g, '\n')
+                      .split('\n')
+                      .map((s) => s.trim())
+                      .filter((s) => s.length > 0)
+                      .join('  \n')
+                      .trim()}
                   </ReactMarkdown>
                 </div>
               ) : (
