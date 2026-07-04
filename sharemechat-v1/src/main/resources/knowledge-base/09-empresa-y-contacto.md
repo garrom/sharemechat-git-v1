@@ -1,102 +1,50 @@
-# Empresa y contacto
+# empresa-y-contacto
 
-## Sobre SharemeChat
+## Ámbito
 
-SharemeChat es un producto de Shareme Technologies OÜ, empresa 
-constituida en Estonia (Unión Europea).
+Se activa cuando el usuario pregunta por la empresa detrás de SharemeChat, cómo contactar con soporte, horario del equipo humano, idiomas de atención, o reporta comunicación sospechosa por canales externos (WhatsApp, SMS, teléfono).
 
-## Datos societarios
+## Rol
 
-- **Razón social**: Shareme Technologies OÜ
-- **Registro mercantil**: Estonian Business Registry code 17444422
-- **Domicilio social**: Lõõtsa tn 5, 11415 Tallinn, Estonia
+El usuario puede ser CLIENT o MODEL. La información de canales y empresa aplica igual a ambos.
 
-## Canales de contacto
+## Hechos operativos
 
-Según el tipo de consulta, existen canales especializados:
+- Titular del producto: Shareme Technologies OÜ. Registro mercantil: Estonian Business Registry code 17444422. Domicilio social: Lõõtsa tn 5, 11415 Tallinn, Estonia.
+- Canal Agente IA (este chat): primer nivel para dudas operativas, cómo funciona el producto, gestión de cuenta. Disponible 24/7.
+- Canal Trust & Safety: safety@sharemechat.com. Para denuncias de contenido ilegal, incidentes de moderación, casos que requieran registro formal.
+- Canal público de denuncias: /complaint en la web, accesible sin sesión. Para terceros o casos graves.
+- Canal GDPR y privacidad: contact+gdpr@sharemechat.com. Para ejercer derechos GDPR (acceso, rectificación, borrado, portabilidad, oposición, limitación).
+- Canal correspondencia formal: contact@sharemechat.com. Para consultas comerciales, legales u oficiales.
+- Horario del equipo humano: europeo, aproximadamente 8:00 a 00:00 CET. Tiempo típico de respuesta a escalados: menos de 1 hora en horario, hasta 4-6 horas fuera.
+- Idiomas del Agente IA: español e inglés con detección automática del idioma del usuario.
+- Idiomas del equipo humano: principalmente español e inglés. Otros idiomas pueden requerir más tiempo.
+- Comunicación oficial de SharemeChat: solo a través de los canales listados y a través del propio producto. SharemeChat NUNCA contacta por llamada telefónica, WhatsApp o SMS. Cualquier comunicación por esos canales que diga ser SharemeChat es suplantación.
+- Reclutamiento: no hay proceso público de reclutamiento en el producto. Vacantes se publican en canales oficiales cuando aplica.
 
-### Soporte general y consultas de usuarios
+## Qué debes hacer
 
-- **Este chat de soporte** (Agente IA): primer nivel para dudas 
-  operativas, cómo funciona el producto, gestión de cuenta.
-- Si el Agente IA no puede resolver, escala a un miembro del equipo.
+- "¿Cómo contacto con soporte?" → depende del tipo: Trust & Safety a safety@sharemechat.com, GDPR a contact+gdpr@sharemechat.com, correspondencia formal a contact@sharemechat.com. Dudas operativas se resuelven aquí.
+- "¿Cuál es vuestro horario?" → equipo humano europeo, aproximadamente 8:00 a 00:00 CET. Este chat 24/7.
+- "¿Cuánto tardáis en responder?" → en horario europeo típicamente menos de 1 hora; fuera de horario, 4-6 horas.
+- "¿Dónde están basados?" → Estonia, Unión Europea. Titular Shareme Technologies OÜ.
+- "Me llamó alguien diciendo que era SharemeChat" o "me contactaron por WhatsApp/SMS" → confirmar rotundamente que SharemeChat NUNCA contacta por esos canales. Es suplantación. Escalar para investigar.
+- "¿Tenéis proceso de reclutamiento?" → no hay proceso público en el producto; las vacantes salen en canales oficiales cuando aplica.
+- "Consulta comercial o de prensa" → derivar a contact@sharemechat.com y escalar internamente.
 
-### Trust & Safety (seguridad de la plataforma)
+## Qué NO debes hacer
 
-- Email: safety@sharemechat.com
-- Canal público de denuncias: /complaint en la web.
+- No inventes números de teléfono, cuentas de WhatsApp ni canales de SMS oficiales.
+- No prometas tiempo de respuesta concreto (menos de 1 hora es un típico observado, no un compromiso).
+- No detalles la estructura interna del equipo (nombres, tamaño, ubicaciones concretas).
+- No des dirección postal alternativa a la de Estonia registrada.
+- No prometas fechas de próximos partnerships, lanzamientos o expansiones.
+- No especules sobre horarios exactos por país fuera de la ventana europea.
 
-Para denuncias de contenido ilegal, incidentes de moderación, casos 
-que requieran registro formal.
+## Cuándo escalar
 
-### Privacidad y protección de datos (GDPR)
-
-- Email: contact+gdpr@sharemechat.com
-
-Para ejercer derechos GDPR (acceso, rectificación, borrado, 
-portabilidad, oposición).
-
-### Correspondencia formal
-
-- Email: contact@sharemechat.com
-
-Para consultas comerciales, legales o correspondencia oficial.
-
-## Horario de atención
-
-**El equipo humano opera en horario europeo**.
-
-Durante horario laboral europeo (aproximadamente 8:00 a 00:00 CET), 
-el tiempo típico de respuesta a escalados es de menos de 1 hora.
-
-Fuera de este horario, la respuesta puede tardar hasta 4-6 horas.
-
-El Agente IA está disponible 24/7 para responder consultas 
-inmediatas sin depender del horario del equipo humano.
-
-## Idiomas
-
-- La interfaz del producto está en español e inglés.
-- El Agente IA responde en el idioma del usuario (detección 
-  automática).
-- El equipo humano atiende principalmente en español e inglés. 
-  Consultas en otros idiomas pueden requerir mayor tiempo de 
-  respuesta.
-
-## Redes sociales y presencia externa
-
-La comunicación oficial de SharemeChat se realiza exclusivamente a 
-través de los canales listados en esta sección y a través del propio 
-producto.
-
-Si recibes comunicación aparentemente de SharemeChat por otros 
-canales (llamadas telefónicas, WhatsApp, SMS), sé cauteloso: puede 
-ser suplantación.
-
----
-
-## Notas para el Agente IA (uso interno)
-
-- **Referir a canales especializados**: si un usuario tiene una duda 
-  que claramente pertenece a un canal específico (GDPR, Trust & 
-  Safety), guía al canal correcto en lugar de intentar resolverlo tú.
-
-- **Horario de escalado**: si el usuario está fuera de horario europeo 
-  y escalas a humano, gestiona expectativa con calidez: "el equipo 
-  responderá lo antes posible, típicamente en unas horas".
-
-- **Suplantación**: si un usuario reporta haber recibido una 
-  comunicación sospechosa que dice ser de SharemeChat pero llega por 
-  canal externo (WhatsApp, teléfono, SMS), CONFIRMAR que SharemeChat 
-  NUNCA contacta por esos canales. Escalar a humano para investigar.
-
-- **Consultas comerciales o de partnership**: escalar a humano. Referir 
-  también a contact@sharemechat.com.
-
-- **Prensa o medios**: escalar a humano. Referir a 
-  contact@sharemechat.com.
-
-- **Empleo**: no hay proceso público de reclutamiento en producto. Si 
-  alguien pregunta por trabajar en SharemeChat, indicar que las 
-  vacantes se publican en los canales oficiales cuando aplica. No 
-  prometer proceso.
+- Reporte de suplantación (WhatsApp, SMS, llamada telefónica) por parte de un tercero.
+- Consulta comercial o partnership propuesto que requiera respuesta oficial.
+- Consulta de prensa o medios.
+- Consulta de compliance de un tercero (auditor, PSP, agencia).
+- Solicitud de respuesta oficial escrita de SharemeChat sobre cualquier materia.

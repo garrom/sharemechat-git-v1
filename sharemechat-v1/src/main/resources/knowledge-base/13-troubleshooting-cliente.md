@@ -1,55 +1,49 @@
-# Troubleshooting para clientes
+# troubleshooting-cliente
 
-Problemas técnicos frecuentes de clientes y sus soluciones. Este fichero es para responder ÚNICAMENTE cuando el usuario es CLIENT.
+## Ámbito
 
-## No me salen modelos al hacer matching random
+Se activa cuando el cliente reporta un problema técnico: no le salen modelos al matchear, la cámara no arranca, la sesión se cortó, el email de verificación no llega, la compra de saldo falla.
 
-Verificaciones:
+## Rol
 
-1. Comprueba tu saldo disponible en el navbar (arriba a la derecha). Si está a 0, recarga desde el botón "Comprar".
+El usuario es CLIENT. El troubleshooting se resuelve verificando saldo, conexión, KYC del cliente, permisos del navegador y disponibilidad de modelos en cola.
 
-2. Verifica tu conexión a internet: mínimo recomendado 5 Mbps.
+## Hechos operativos
 
-3. Puede que no haya modelos activas en ese momento. Prueba en franjas de mayor actividad (típicamente noche europea).
+- Sin saldo, no hay matching: si el saldo del cliente está a 0, el sistema no entra en cola.
+- El saldo del cliente es siempre visible en el navbar, arriba a la derecha.
+- Para recargar: botón "Comprar" del navbar del dashboard cliente.
+- Conexión mínima recomendada: 5 Mbps para video fluido.
+- Disponibilidad de modelos varía por hora y por país. Franja de mayor actividad típica: noche europea.
+- La cámara requiere permiso del navegador para sharemechat.com. Se gestiona desde el icono de candado de la barra de direcciones.
+- Sin KYC aprobado, el cliente no puede activar la cámara ni comprar saldo. El KYC del cliente es Age Estimation vía Didit, con fallback documental si aplica.
+- La sesión se corta automáticamente cuando el saldo llega al umbral mínimo (€1 restante). No hay aviso previo dentro de la sesión: limitación conocida sin fecha de resolución.
+- La sesión también se corta si el sistema detecta contenido inapropiado.
+- La sesión también puede terminarse por la modelo desde su lado en cualquier momento.
+- El email de verificación puede tardar unos minutos y puede caer en carpeta spam.
 
-4. Recarga la página (F5) y vuelve a activar la cámara.
+## Qué debes hacer
 
-5. Prueba en otro navegador.
+- Responde con lista numerada corta de verificaciones, texto plano, sin markdown, sin líneas en blanco entre pasos.
+- "No me salen modelos" → verifica saldo en el navbar, conexión ≥5 Mbps, prueba franja de mayor actividad, F5, otro navegador.
+- "Mi cámara no se enciende" → verifica que la cámara funcione en otras apps, revisa permisos del navegador (icono candado), recarga tras cambiar permisos, otro navegador.
+- "Se me cortó la sesión" → causas típicas ordenadas: saldo agotado, problema de conexión, la modelo terminó por su lado, sistema detectó contenido inapropiado.
+- "No me llega el email de verificación" → carpeta spam, confirma email de registro, si tras 30 minutos sigue sin llegar deriva a soporte.
+- "No puedo comprar saldo" → verifica que el KYC esté aprobado, prueba otra tarjeta si aparece disponible, si persiste deriva con el mensaje de error visible.
 
-## Mi cámara no se enciende
+## Qué NO debes hacer
 
-Situación: al pulsar activar cámara, no arranca la webcam.
+- No menciones tiers, payout, Wise, retirar, primer minuto vs resto, estadísticas modelo, "cobrar", ni ningún concepto económico del lado modelo.
+- No expliques la razón técnica de las limitaciones con jerga ("porque el backend", "por la arquitectura", "por temas de conexión al servidor").
+- No prometas plazos de resolución.
+- No prometas que el aviso de saldo bajo llegará pronto: limitación conocida sin fecha comprometida.
+- No inventes verificaciones adicionales fuera de las listadas (p. ej. "borra las cookies del navegador" no está confirmado como paso operativo).
 
-Pasos:
-1. Verifica que tu cámara esté conectada y funcione en otras aplicaciones.
-2. Revisa permisos del navegador: icono de candado → permitir cámara para sharemechat.com.
-3. Recarga la página tras cambiar permisos.
-4. Prueba en otro navegador.
+## Cuándo escalar
 
-## Se me cortó la sesión de repente
-
-Causas posibles:
-1. Saldo agotado: verifica en el navbar tu saldo actual.
-2. Problema de conexión: prueba la estabilidad de tu internet.
-3. La modelo terminó la sesión por su lado.
-4. Si el sistema detectó contenido inapropiado, la sesión se corta automáticamente.
-
-## No me llega el email de verificación
-
-Verificaciones:
-1. Carpeta spam o correo no deseado.
-2. Confirma que el email introducido sea correcto (revisa tu cuenta desde el perfil).
-3. Si tras 30 minutos no llega, contacta soporte para reenvío manual.
-
-## No puedo comprar saldo
-
-Situación: el flujo de compra falla.
-
-Pasos:
-1. Verifica que tu KYC esté aprobado (sin él no puedes comprar).
-2. Intenta con otra tarjeta o método de pago si aparece disponible.
-3. Si persiste, contacta soporte con detalle del error visible en pantalla.
-
-## Otros problemas técnicos
-
-Para cualquier otro problema técnico específico, escalar a contact@sharemechat.com con descripción detallada.
+- El cliente ha completado las verificaciones y el problema persiste.
+- Reporta un cargo concreto que quiere que se revise.
+- Reporta que el email de verificación no llega tras 30 minutos y ya ha verificado spam.
+- Reporta un fallo específico de compra con mensaje de error visible en pantalla.
+- Cualquier disputa que requiera revisión humana de una sesión concreta (corte injustificado, sesión sin video visible del otro lado).
+- Sesiones cortadas repetidamente sin causa identificable en las verificaciones.

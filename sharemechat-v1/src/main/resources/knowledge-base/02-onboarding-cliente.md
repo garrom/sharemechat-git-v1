@@ -1,144 +1,51 @@
-# Onboarding del cliente
+# onboarding-cliente
 
-## Registro
+## Ámbito
 
-El registro se realiza desde el formulario público en el botón
-"Registrarse" de la landing.
+Se activa cuando el cliente pregunta sobre cómo registrarse, activar su cuenta por email, verificación de edad (KYC), primer login, o cerrar su cuenta.
 
-Datos requeridos:
-- Nickname.
-- Email.
-- Password (mínimo 8 caracteres).
-- Declaración de mayoría de edad (checkbox).
-- Aceptación de Términos y Condiciones + Política de Privacidad
-  (checkbox obligatorio).
+## Rol
 
-No se solicita país en el formulario. El sistema detecta la ubicación
-del usuario automáticamente para aplicar las restricciones geográficas
-que correspondan.
+El usuario es CLIENT. La información es del onboarding cliente: sin fecha de nacimiento en el formulario, KYC = Age Estimation vía Didit, dashboard con acciones bloqueadas hasta KYC aprobado.
 
-Tras enviar el formulario, el usuario recibe un email con un link de
-activación. Debe hacer clic en el link para activar la cuenta y poder
-iniciar sesión.
+## Hechos operativos
 
-## Estado tras primer login
+- Registro desde el botón "Registrarse" de la landing pública.
+- Datos requeridos: nickname, email, password (mínimo 8 caracteres), checkbox "declaro ser mayor de edad", checkbox aceptación Terms + Privacy.
+- No se pide fecha de nacimiento en el formulario cliente. Se detecta en el KYC facial.
+- No se pide país. El sistema detecta la ubicación automáticamente y aplica restricciones geográficas.
+- Tras enviar el formulario, el cliente recibe email con link de activación. Sin activar, no puede login.
+- Primer login post-activación: entra al dashboard con acciones "activar cámara" y "comprar saldo" inhabilitadas hasta completar KYC.
+- Hover sobre acción inhabilitada muestra indicación de que no está disponible todavía.
+- KYC cliente = Age Estimation facial vía Didit, con fallback documental si es necesario.
+- KYC se dispara cuando el cliente intenta activar la cámara o comprar saldo por primera vez. Aparece modal que redirige al flujo Didit.
+- Aprobado: estado APPROVED, sin restricciones.
+- Rechazado: cliente no puede activar cámara ni comprar saldo. Puede reintentar el flujo Didit.
+- Método de pago para packs: en el propio flujo de compra desde el producto (integración Segpay en configuración).
+- Cierre de cuenta: no self-service. Via soporte.
 
-Cuando el cliente accede por primera vez tras activar la cuenta, entra
-al dashboard con acceso limitado. Ve la interfaz completa, pero las
-funcionalidades principales (activar cámara, comprar saldo) están
-inhabilitadas hasta que complete la verificación de edad.
+## Qué debes hacer
 
-Al pasar el ratón sobre las funciones inhabilitadas, aparece una
-indicación de que no están disponibles todavía.
+- "¿Cómo me registro?" → botón "Registrarse" de la landing, formulario con 4 datos y 2 checkboxes, email de activación con link.
+- "No puedo activar la cámara" → verifica que hayas completado el KYC vía Didit. Aparece modal al intentar activar cámara o comprar por primera vez.
+- "No puedo comprar saldo" → mismo motivo típico: KYC pendiente o rechazado.
+- "¿Por qué no me piden fecha de nacimiento?" → la verificación de edad se hace automáticamente en el flujo Didit; no requiere campo manual.
+- "¿Cómo cierro mi cuenta?" → contactar soporte. No hay botón self-service; retenciones regulatorias pueden aplicar sobre KYC y transacciones.
 
-## Verificación de edad (Didit)
+## Qué NO debes hacer
 
-La verificación de edad se activa cuando el cliente intenta hacer una
-acción que la requiere: activar la cámara para una sesión, o comprar
-saldo por primera vez.
+- No menciones tiers, payout, umbral €100, Wise, "retirar", primer minuto vs resto, estadísticas modelo.
+- No prometas botón self-service para cerrar cuenta.
+- No comprometas plazo del email de activación.
+- No especifiques métodos de pago concretos (Segpay se muestra en el propio flujo de compra).
+- No especifiques consecuencias exactas de un chargeback (viven en pagos-y-saldo).
+- No confirmes ni niegues si un email concreto ya tiene cuenta abierta.
 
-En ese momento aparece un modal que redirige al flujo de Didit,
-especialista third-party en verificación de identidad.
+## Cuándo escalar
 
-El flujo del cliente es age estimation facial con fallback documental
-si es necesario, para confirmar mayoría de edad. Tras la verificación,
-el estado del cliente pasa a APPROVED y ya puede usar el producto sin
-restricciones.
-
-Si la verificación no es aprobada, el cliente no puede iniciar sesiones
-de video ni recargar saldo. Puede volver a intentar el flujo Didit.
-
-## Recarga de saldo
-
-Los packs de recarga disponibles son:
-
-- **10 EUR**
-- **20 EUR**
-- **40 EUR**
-
-El sistema no permite compra de minutos sueltos ni cantidades libres:
-solo los tres packs cerrados.
-
-El saldo comprado no vence mientras la cuenta esté activa.
-
-Método de pago: el cliente puede completar la compra desde el flujo
-del producto. En caso de duda sobre métodos concretos disponibles en
-un momento dado, el cliente puede consultarlo desde su cuenta.
-
-## Consumo de saldo
-
-La tarifa para el cliente es siempre **1 EUR por minuto de videochat**,
-independientemente de la modelo con la que se conecte. El precio no
-cambia por tier de modelo, país, hora, ni ninguna otra variable.
-
-El descuento se aplica en tiempo real durante la sesión. El sistema
-está diseñado para que el saldo no pueda quedar en negativo: si el
-saldo llega a cero durante una sesión activa, la sesión se corta
-automáticamente.
-
-Recomendación al cliente: mantener saldo suficiente antes de iniciar
-sesiones largas para evitar cortes inesperados.
-
-## Reembolsos (refunds)
-
-SharemeChat contempla proceso de reembolso caso por caso.
-
-Si el cliente considera que ha habido un problema con un cargo o una
-sesión concreta (por ejemplo, un fallo técnico que impidió el servicio,
-o un cargo que no reconoce), puede contactar con soporte explicando el
-caso.
-
-El equipo revisa la petición y aplica el reembolso si procede. La
-decisión final es del equipo de administración.
-
-Los reembolsos legítimos se procesan a través del mismo método de pago
-del cargo original.
-
-## Chargebacks
-
-SharemeChat toma en serio los chargebacks (disputas iniciadas por el
-cliente ante su banco emisor de tarjeta) porque son señal de problema.
-
-Si tienes un problema con un cargo, la vía recomendada es siempre
-contactar antes con soporte. Un chargeback directo puede resultar en
-acciones adicionales sobre la cuenta.
-
-## Cerrar sesión y cerrar cuenta
-
-Cerrar sesión: opción disponible desde el navbar (botón "Salir").
-
-Cerrar cuenta: el equipo de soporte puede procesar la baja completa
-si el usuario lo solicita. Contactar con soporte para iniciar el
-proceso.
-
----
-
-## Notas para el Agente IA (uso interno)
-
-- Método de pago exacto (Segpay integración): actualmente hay un flujo
-  mockeado en desarrollo. Si un cliente pregunta detalles concretos de
-  método de pago, indicar que la información completa se muestra en el
-  proceso de compra desde el propio producto.
-
-- Aviso de saldo bajo: actualmente el sistema NO avisa al cliente
-  cuando el saldo está a punto de agotarse durante una sesión. Es una
-  limitación conocida. Si un cliente reporta que se cortó su sesión
-  por saldo agotado sin aviso, empatizar y confirmar que el equipo
-  está trabajando en mejorar la experiencia. NO prometer fecha
-  concreta.
-
-- Refresco del contador durante streaming: actualmente el saldo no se
-  actualiza visualmente en tiempo real durante la sesión de video. Es
-  otra limitación conocida. Si preguntan, indicar que el descuento
-  ocurre correctamente aunque no se refleje en pantalla, y que se puede
-  verificar en el dashboard tras la sesión.
-
-- Chargebacks: la política de blacklist tras chargeback está declarada
-  pero no confirmada como automática. Si un cliente pregunta
-  específicamente sobre consecuencias de un chargeback, NO prometer
-  automatismo. Referir al equipo de soporte para casos concretos.
-
-- Cerrar cuenta: no existe todavía endpoint de auto-eliminación en el
-  producto. La baja se procesa manualmente por soporte. Si un cliente
-  pregunta cómo cerrar cuenta desde el producto, indicar que la vía
-  actual es contactar con soporte y no prometer botón self-service.
+- Email de activación no llega tras verificar spam.
+- KYC rechazado tras dos o más intentos con documentación correcta.
+- Cliente pide cerrar cuenta.
+- Cliente reporta un cargo o compra concreta que quiere revisar.
+- Cliente admite tener otra cuenta abierta con el mismo email.
+- Cuenta bloqueada por intentos fallidos que persiste tras unos minutos de espera.

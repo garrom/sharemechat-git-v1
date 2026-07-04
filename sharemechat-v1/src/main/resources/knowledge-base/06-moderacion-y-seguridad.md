@@ -1,202 +1,56 @@
-# Moderación y seguridad
+# moderacion-y-seguridad
 
-## Verificación previa: KYC obligatorio
+## Ámbito
 
-Antes de que cualquier interacción REAL pueda ocurrir en la plataforma, 
-ambas partes deben verificarse:
+Se activa cuando el usuario pregunta sobre KYC como concepto, moderación en tiempo real, reportes entre usuarios, canal público /complaint, apelaciones, acciones sobre cuentas (advertencia, suspensión, baneo), bloqueo entre usuarios, seguridad de la cuenta o privacidad de las sesiones.
 
-- **Modelos**: verificación completa de identidad y edad vía Didit 
-  (documento oficial + selfie + liveness + face match).
-- **Clientes**: verificación de edad vía Didit (age estimation facial 
-  con fallback documental si es necesario).
+## Rol
 
-Un usuario nuevo SÍ puede registrarse, activar su cuenta por email e 
-iniciar sesión de login antes de verificarse. Al entrar por primera vez 
-al dashboard ve la interfaz completa, pero las acciones que requieren 
-verificación —activar la cámara para una sesión de videochat y comprar 
-saldo— quedan inhabilitadas hasta que complete el flujo Didit. Al pasar 
-el ratón sobre esas acciones inhabilitadas aparece la indicación de que 
-no están disponibles todavía.
+El usuario puede ser CLIENT o MODEL. Ambos pueden reportar, ser reportados, ser suspendidos y apelar. Diferencia: solo la modelo pasa por KYC completo Didit; el cliente pasa por Age Estimation. Ambos deben tener KYC aprobado antes de iniciar interacción real.
 
-## Moderación visual en tiempo real
+## Hechos operativos
 
-Durante toda sesión de videochat 1-a-1, el sistema analiza 
-automáticamente el contenido en tiempo real mediante Sightengine, 
-especialista en moderación de contenido visual.
+- KYC obligatorio para ambas partes antes de cualquier interacción real. Modelo: documento oficial + selfie + liveness + face match. Cliente: Age Estimation facial con fallback documental si es necesario.
+- Un usuario puede registrarse, activar la cuenta por email e iniciar sesión antes de completar KYC, pero las acciones que requieren verificación (activar cámara para videochat, comprar saldo) quedan inhabilitadas hasta completar el flujo Didit.
+- Moderación en tiempo real en todo videochat 1-a-1 vía Sightengine.
+- Dos niveles de acción. Nivel crítico (menores de edad, gore, violencia extrema, autolesiones): la sesión se corta automáticamente sin previo aviso + registro para revisión inmediata del equipo. Nivel de revisión humana (nudity ambiguo, contenido sensible): genera evidencia que el equipo revisa manualmente.
+- Contenido consensual entre adultos verificados dentro del marco legal aplicable no dispara bloqueo automático.
+- Reportes P2P entre usuarios (dentro del producto, desde lista de favoritos o durante videochat) con 5 categorías: ABUSE, HARASSMENT, FRAUD, MINOR, OTHER.
+- Canal público de denuncias en la ruta /complaint, accesible sin sesión. Categorías: CSAM, contenido no consentido, menor en riesgo, símbolos de odio, copyright, ilegal, acoso, suplantación, fraude, otro.
+- Compromiso de resolución de /complaint: 5 días hábiles desde la recepción, con acuse de recibo automático si el denunciante deja email.
+- Trust & Safety: safety@sharemechat.com.
+- Acciones sobre cuenta: WARNING (aviso sin restricciones técnicas, registrado para reincidencias), SUSPENDED (bloqueo temporal, no puede login mientras dure), BANNED (bloqueo indefinido, no puede volver a registrarse con la misma identidad). En todos los casos el usuario recibe email con motivo.
+- Apelación: via soporte. Revisión con criterio distinto al que aplicó la sanción. Si acepta, la acción se revierte.
+- Bloqueo P2P entre usuarios: simétrico, cubre chat / videochat 1-a-1 / matching random. Persiste hasta desbloqueo voluntario del que bloqueó.
+- Seguridad cuenta: password mínimo 8 caracteres al registro. Recuperación de password: self-service desde el link "¿Olvidaste tu contraseña?" del login. Cambio de password: desde la sección perfil. Cambio de email: no self-service, via soporte.
+- Privacidad de sesiones: sin grabación, sin broadcast, sin terceros observando (solo cliente y modelo). La moderación analiza pero no crea copia persistente del video; los frames muestreados solo se almacenan como evidencia si disparan revisión.
 
-El sistema tiene dos niveles de acción:
+## Qué debes hacer
 
-### Categorías críticas: corte automático inmediato
+- "¿Se graban las sesiones?" → No. Sin grabación permanente ni broadcast. Solo frames muestreados para moderación, no persistidos salvo que disparen revisión.
+- "¿Cómo denuncio?" → Reporte P2P dentro del producto (5 categorías) para situaciones entre usuarios. Canal público /complaint (10 categorías, sin sesión) para casos graves o denuncias de terceros.
+- "Me han suspendido / baneado injustamente" → confirmar que existe proceso de apelación via soporte; el equipo revisa con criterio distinto al que aplicó la sanción.
+- "¿Qué categorías de reporte hay?" → Reporte interno: ABUSE, HARASSMENT, FRAUD, MINOR, OTHER.
+- "Se me cortó la sesión, ¿por qué?" → primero descartar problema técnico (conexión, cámara). Si el usuario insiste que fue el sistema, empatizar sin acusar. Escalar para revisión del corte específico.
+- "¿Cómo cambio mi contraseña?" → sección perfil. Si olvidada: link "¿Olvidaste tu contraseña?" del login (self-service completo).
+- Cualquier usuario que reporte haber visto un menor o que él/ella mismo sea menor: ESCALADO INMEDIATO.
 
-Si el sistema detecta contenido de tolerancia cero, la sesión se corta 
-automáticamente sin previa notificación. Esto aplica a:
+## Qué NO debes hacer
 
-- Contenido que sugiera presencia de menores de edad.
-- Contenido con gore, violencia extrema o autolesiones.
+- No reveles detalles técnicos de umbrales de moderación ni configuración interna de Sightengine.
+- No expliques por qué se cortó una sesión concreta (no lo sabes; el sistema no comparte contigo el evento).
+- No prometas resultado de una apelación.
+- No inventes categorías de reporte fuera de las listadas.
+- No sugieras que las sesiones se graban ni que hay terceros observando.
+- No comprometas plazos de respuesta a apelaciones (solo el compromiso de 5 días hábiles aplica a /complaint).
+- No detalles el flujo interno de decisión entre WARNING, SUSPENDED y BANNED.
 
-En estos casos, el sistema no da segunda oportunidad: es corte 
-inmediato + registro para revisión inmediata del equipo de moderación.
+## Cuándo escalar
 
-### Categorías con revisión humana
-
-Para el resto de categorías (nudity, contenido sensible ambiguo), el 
-sistema aplica la política operativa configurada por SharemeChat. 
-Contenido dentro del marco legal aplicable entre adultos verificados 
-consensualmente no genera bloqueo automático.
-
-Cuando el sistema detecta contenido ambiguo, se genera evidencia que 
-el equipo de moderación revisa manualmente. Si se detecta violación, 
-se aplican acciones sobre la cuenta responsable.
-
-## Reportes entre usuarios
-
-Cualquier usuario puede reportar a otro usuario si detecta 
-comportamiento inadecuado durante una sesión o en el chat de favoritos.
-
-Las categorías de reporte disponibles son:
-
-- **ABUSE** (abuso)
-- **HARASSMENT** (acoso)
-- **FRAUD** (fraude)
-- **MINOR** (menor de edad aparente)
-- **OTHER** (otro)
-
-Los reportes se envían al equipo de moderación de SharemeChat. El 
-equipo revisa cada reporte y aplica las acciones que correspondan 
-según las políticas del producto (advertencia, suspensión temporal, 
-o baneo permanente).
-
-Si el reporte se rechaza por falta de evidencia suficiente, SharemeChat 
-comunica al reportante que no se ha encontrado evidencia y le anima a 
-volver a reportar si vuelven a ocurrir situaciones similares.
-
-## Canal público de denuncias
-
-Adicionalmente a los reportes internos, SharemeChat mantiene un canal 
-público de denuncias accesible en /complaint desde cualquier navegador, 
-incluso sin cuenta.
-
-El canal público está pensado para:
-
-- Terceras personas que quieran denunciar contenido o comportamiento 
-  visto en la plataforma.
-- Situaciones graves que requieran registro formal.
-- Denuncias que la persona afectada quiera reportar sin abrir sesión.
-
-Categorías del canal público:
-
-- CSAM (contenido de abuso sexual infantil).
-- Contenido no consentido.
-- Menor en riesgo.
-- Símbolos de odio.
-- Copyright.
-- Ilegal.
-- Acoso.
-- Suplantación.
-- Fraude.
-- Otro.
-
-**Compromiso de resolución**: 5 días hábiles desde la recepción, con 
-acuse de recibo automático al denunciante si proporcionó email.
-
-Contacto directo del equipo de Trust & Safety: safety@sharemechat.com
-
-## Acciones sobre la cuenta
-
-Cuando el equipo de moderación detecta violación de políticas, puede 
-aplicar:
-
-- **Advertencia** (WARNING): notificación al usuario sin restricciones 
-  técnicas. Registrada para reincidencias.
-- **Suspensión temporal** (SUSPENDED): la cuenta queda bloqueada 
-  durante un periodo. El usuario no puede login mientras esté 
-  suspendido.
-- **Baneo permanente** (BANNED): la cuenta queda bloqueada de forma 
-  indefinida. El usuario no puede volver a acceder ni registrarse 
-  nuevamente con misma identidad.
-
-En todos los casos el usuario recibe notificación por email cuando se 
-aplica una acción sobre su cuenta, explicando el motivo.
-
-## Apelaciones
-
-Si el usuario considera que una acción sobre su cuenta es injusta o 
-resultado de un error, puede iniciar proceso de apelación contactando 
-con soporte y presentando su caso.
-
-El equipo revisa la apelación con criterio distinto al que aplicó la 
-sanción original. Si la apelación se acepta, la acción se revierte.
-
-## Bloqueo entre usuarios
-
-Un usuario puede bloquear a otro en cualquier momento desde la lista 
-de favoritos o durante videochat.
-
-Efectos del bloqueo:
-
-- El usuario bloqueado no puede iniciar nueva comunicación con quien 
-  le bloqueó (ni chat, ni videochat 1-a-1, ni matching random).
-- Simétrico: quien bloqueó tampoco puede contactar al bloqueado.
-- Persiste hasta que la parte que bloqueó decida desbloquear 
-  voluntariamente.
-
-## Seguridad de la cuenta
-
-- **Password**: mínimo 8 caracteres al registro.
-- **Recuperación**: proceso self-service disponible desde el formulario 
-  de login.
-- **Cambio de password**: disponible desde la sección de perfil.
-- **Cambio de email**: contactar con soporte (no self-service).
-
-## Privacidad durante sesiones
-
-Las sesiones de videochat son privadas y ephemerales:
-
-- No hay grabación de sesiones.
-- No hay broadcast público.
-- No hay terceros observando la conversación (solo cliente + modelo).
-
-La moderación en tiempo real analiza el contenido pero no crea copia 
-persistente del video de la sesión: solo captura frames muestreados 
-para análisis puntual, que se almacenan como evidencia únicamente si 
-disparan revisión.
-
----
-
-## Notas para el Agente IA (uso interno)
-
-- **Corte automático sin aviso previo**: si un usuario reporta que su 
-  sesión se cortó sin previo aviso, primero descartar problema técnico 
-  (conexión, cámara). Si el usuario insiste que fue el sistema, 
-  empatizar sin acusar. Registrar el caso para que el equipo revise 
-  el corte específico. NO revelar detalles técnicos de umbrales de 
-  moderación.
-
-- **Detección de menores**: si un usuario reporta que ha visto un 
-  menor en la plataforma o que él/ella mismo/a es menor, ESCALAR 
-  INMEDIATAMENTE al equipo. Categoría crítica.
-
-- **Diferencia reportar (interno) vs denuncia pública**: los reportes 
-  entre usuarios (categorías ABUSE/HARASSMENT/etc.) son para incidentes 
-  P2P dentro del producto. Las denuncias públicas (/complaint) son 
-  para casos graves o terceros externos. Guiar al usuario al canal 
-  correcto según su situación. Si un usuario logueado tiene una queja 
-  interna, sugerir el flujo interno. Si es CSAM o incidente grave, 
-  sugerir el canal público para trazabilidad formal.
-
-- **Apelaciones**: no prometer resultado. Solo confirmar que se puede 
-  apelar y que el equipo revisa con criterio distinto. Empatizar sin 
-  crear expectativa.
-
-- **Cambio de email**: no self-service todavía. Solo por soporte. Si 
-  un usuario insiste en cambiarlo, escalar a humano.
-
-- **Recuperación password**: proceso self-service disponible. Guiar 
-  al usuario al link "¿Olvidaste tu contraseña?" en el formulario de 
-  login.
-
-- **Preguntas sobre moderación en el chat 1-a-1**: si un usuario 
-  pregunta si el sistema "ve" lo que hace en la sesión, ser honesto: 
-  sí, hay análisis automático de contenido para detectar situaciones 
-  ilegales. No hay grabación permanente. Los frames analizados no se 
-  guardan salvo que disparen revisión.
+- Cualquier mención de menor de edad: ESCALADO INMEDIATO.
+- Reporte con evidencia grave (CSAM, contenido no consentido, menor en riesgo).
+- Usuario quiere que se revise un corte específico de sesión.
+- Cambio de email (no self-service).
+- Apelación de cuenta suspendida o baneada.
+- Usuario reporta sospecha de que su cuenta fue comprometida.
+- Consulta jurídica sobre política de moderación aplicada a su caso.

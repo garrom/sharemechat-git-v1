@@ -1,151 +1,57 @@
-# Chat y favoritos
+# chat-y-favoritos
 
-## Cómo se piden favoritos
+## Ámbito
 
-En el dashboard del cliente, aparecen las modelos disponibles como 
-tarjetas con foto. El cliente puede pulsar el botón de añadir sobre 
-una modelo para enviarle petición de favorito.
+Se activa cuando el usuario pregunta sobre cómo pedir favoritos, chat de texto con favoritos, emojis, gifts, videochat 1-a-1 con favorito, acciones sobre otro usuario (ver perfil, eliminar de favoritos, bloquear, reportar) o notificaciones del sistema.
 
-La modelo recibe la petición en su zona de favoritos, con un icono 
-indicando peticiones pendientes. Puede ver quién le está pidiendo 
-(nickname y perfil público) antes de decidir.
+## Rol
 
-Opciones de la modelo:
+El usuario puede ser CLIENT o MODEL. Los favoritos son bidireccionales y las acciones aplican a ambos. Diferencias: solo el cliente envía gifts, el cliente descubre modelos en el dashboard como tarjetas, la modelo ve peticiones pendientes en su zona favoritos.
 
-- **Aceptar**: ambas partes se ven mutuamente en su lista de favoritos 
-  y pueden interactuar por chat de texto y videochat 1-a-1.
-- **Rechazar**: la petición se descarta silenciosamente. El cliente 
-  no recibe notificación del rechazo.
+## Hechos operativos
 
-Los favoritos son bidireccionales: la modelo también puede iniciar 
-una petición al cliente si lo desea, siguiendo el mismo flujo (cliente 
-recibe petición pendiente y decide).
+- Cliente ve modelos disponibles como tarjetas en el dashboard cliente. Botón añadir sobre la tarjeta envía petición de favorito.
+- Modelo ve peticiones pendientes en su zona favoritos, con icono indicando pendientes. Puede aceptar o rechazar.
+- Aceptar: ambos aparecen en la lista mutua. Chat texto + videochat 1-a-1 posibles.
+- Rechazar: descarte silencioso. El cliente NO recibe notificación del rechazo.
+- Favoritos bidireccionales: la modelo también puede iniciar petición al cliente.
+- Chat entre favoritos: solo texto + emojis + gifts. Sin envío de imágenes ni archivos.
+- Chat persistente en BD. Historial visible al usuario.
+- Emojis: gratuitos e ilimitados. Ambos roles pueden enviarlos desde el input del chat.
+- Gifts: solo cliente → modelo. Precio fijo en catálogo del chat, descuento inmediato del saldo cliente. Visibles en el historial del chat.
+- Videochat 1-a-1 con favorito: iniciable desde el chat por cualquiera de las dos partes. Facturación estándar cliente (1 EUR/min). Cualquiera puede terminar la sesión.
+- Acciones sobre otro usuario (desde lista favoritos o durante videochat): ver perfil completo (datos públicos: nickname, fotos, videos si modelo, biografía; no email ni fecha de nacimiento ni país), eliminar de favoritos, bloquear, reportar.
+- Bloqueo simétrico: ninguno puede contactar al otro por ninguna vía (chat, videochat 1-a-1, matching random). Persiste hasta desbloqueo voluntario de quien bloqueó.
+- Eliminar de favoritos y bloquear son acciones independientes; el usuario puede hacer una, otra o ambas.
+- Reporte P2P con 5 categorías: ABUSE, HARASSMENT, FRAUD, MINOR, OTHER.
+- Si el reporte se rechaza por falta de evidencia, se comunica al reportante y se le anima a volver a reportar si vuelven a ocurrir situaciones similares.
+- Notificaciones email o push por eventos del chat: no hay. Solo indicación visual en la zona favoritos (icono de peticiones pendientes o novedades).
+- Chat histórico tras eliminar de favoritos: se conserva en BD, pero si el par vuelve a hacer match en el futuro, la UI parte de conversación nueva; el chat previo NO se recupera visualmente.
 
-## Chat de texto
+## Qué debes hacer
 
-El chat entre favoritos es solo de texto, con soporte para emojis y 
-regalos (gifts).
+- "¿Cómo pido favorito?" → CLIENT: botón añadir sobre la tarjeta de la modelo en el dashboard. MODEL: análogo desde su vista al cliente.
+- "¿Me avisan si me rechazan como favorito?" → No. El sistema no notifica los rechazos por respeto a la privacidad. Sigue usando matching random para conocer a otras personas.
+- "¿Diferencia entre eliminar y bloquear?" → Eliminar quita al usuario de tu lista de favoritos. Bloquear impide toda comunicación por cualquier vía. Son acciones independientes.
+- "¿Puedo enviar fotos o archivos?" → No. El chat es texto, emojis y gifts.
+- "¿Recibo notificaciones por email?" → No. Solo indicación visual en la zona favoritos.
+- "Si vuelvo a hacer match con alguien que eliminé, ¿se recupera el chat?" → No. Cada match empieza con conversación nueva.
+- "¿Qué categorías de reporte hay?" → ABUSE, HARASSMENT, FRAUD, MINOR, OTHER.
 
-### Emojis
+## Qué NO debes hacer
 
-Los emojis son gratuitos e ilimitados. Se envían desde el input del 
-chat.
+- No especules sobre por qué la otra parte rechazó una petición (no lo sabes).
+- No prometas notificaciones email/push en el roadmap.
+- No prometas envío de imágenes o archivos en el chat.
+- No inventes categorías de reporte fuera de las 5 listadas.
+- No reveles cifras económicas de gifts al cliente (aplica el filtro por rol confidencial).
+- No detalles el algoritmo interno del matching random ni criterios de priorización.
 
-### Regalos (gifts)
+## Cuándo escalar
 
-Los gifts los envía únicamente el cliente hacia la modelo desde el 
-catálogo del chat. Cada gift tiene un precio fijo en euros que se 
-descuenta del saldo del cliente en el momento del envío.
-
-Los gifts se descuentan del saldo del cliente en el momento del envío. 
-La modelo los recibe como parte de sus ingresos por la sesión.
-
-Los gifts quedan visibles en el historial del chat entre las dos 
-partes.
-
-### Envío de imágenes o archivos
-
-Actualmente el chat no permite envío de imágenes ni archivos. Solo 
-texto, emojis y gifts.
-
-## Videochat 1-a-1 con favoritos
-
-Desde el chat con un favorito, cualquiera de las dos partes puede 
-iniciar videochat 1-a-1 directo. La sesión se factura al cliente al 
-precio estándar (1 EUR por minuto), igual que el videochat random.
-
-Cualquiera de las dos partes puede terminar la sesión en cualquier 
-momento.
-
-## Acciones sobre otro usuario
-
-Tanto en la zona favoritos como durante videochat, cada participante 
-tiene acceso a estas acciones sobre el otro:
-
-### Ver perfil completo
-
-Muestra la información pública del otro usuario: nickname, fotos, 
-videos si es modelo, y biografía.
-
-Los datos privados (email, fecha de nacimiento, país) no se exponen.
-
-### Eliminar de favoritos
-
-Elimina al otro usuario de la lista de favoritos. Esta acción es 
-independiente de bloquear.
-
-### Bloquear
-
-Bloquea al otro usuario. El bloqueo impide nueva comunicación entre 
-ambas partes por cualquier vía: chat, videochat 1-a-1 con favorito, o 
-matching random.
-
-El bloqueo persiste hasta que la parte que bloqueó decida desbloquear 
-voluntariamente. Un usuario puede desbloquear cuando quiera desde su 
-lista de bloqueos.
-
-Bloquear no elimina automáticamente al otro usuario de favoritos: son 
-dos acciones distintas que el usuario puede realizar por separado 
-según su intención.
-
-### Reportar
-
-Envía un reporte al equipo de moderación con una de las categorías 
-disponibles:
-
-- **ABUSE** (abuso)
-- **HARASSMENT** (acoso)
-- **FRAUD** (fraude)
-- **MINOR** (menor de edad aparente)
-- **OTHER** (otro)
-
-El equipo revisa cada reporte y aplica las acciones que correspondan 
-según las políticas del producto.
-
-## Notificaciones del sistema
-
-Actualmente el usuario no recibe emails ni notificaciones push del 
-sistema para eventos del chat (nueva petición de favorito, nuevo 
-mensaje recibido, videochat entrante).
-
-La única indicación es un icono visual en la zona de favoritos que 
-señala peticiones pendientes o novedades sin ver.
-
----
-
-## Notas para el Agente IA (uso interno)
-
-- **Envío de emojis por la modelo**: verificado en código que ambos 
-  roles pueden enviar emojis. Si una modelo reporta que no puede 
-  enviar emojis desde su UI, puede ser un problema visual del frontend 
-  (selector no visible). Sugerir intentar copiar directamente un 
-  emoji en el input y confirmar que llega. Registrar el caso para 
-  seguimiento.
-
-- **Envío de imágenes o archivos**: no está en el roadmap explícito. 
-  Si un usuario insiste, explicar que el chat está enfocado en texto y 
-  emojis para mantener la experiencia segura y directa. No prometer 
-  que se añadirá.
-
-- **Rechazo silencioso de favoritos**: si un cliente pregunta si su 
-  petición fue rechazada, NO especular. Indicar que el sistema respeta 
-  la privacidad de la modelo y no notifica los rechazos. Puede seguir 
-  usando matching random para conocer a otras modelos.
-
-- **Notificaciones email/push**: si un usuario pregunta por 
-  notificaciones para no perder actividad, confirmar que actualmente 
-  la indicación es visual dentro del producto. No prometer notificaciones 
-  externas.
-
-- **Bloqueo vs eliminar**: son dos acciones independientes. El usuario 
-  puede eliminar sin bloquear (borra de la lista pero podrían volver a 
-  matchear en el futuro por random), o puede bloquear sin eliminar 
-  (queda en la lista pero no puede comunicar), o hacer ambas por 
-  separado. Si un usuario pregunta la diferencia, explicarla así de 
-  claro.
-
-- **Chat histórico tras eliminar de favoritos**: el chat se conserva 
-  técnicamente en el sistema. Si el usuario vuelve a hacer match en el 
-  futuro (nueva petición aceptada), el chat previo NO se recupera en 
-  la UI: parte de cero. Si un usuario pregunta específicamente, 
-  indicar que cada match empieza con conversación nueva.
+- Modelo reporta que no puede enviar emojis desde su UI (posible bug del selector).
+- Usuario reporta bloqueo que no responde a desbloqueo.
+- Reporte P2P con evidencia grave (categoría MINOR o contenido crítico) que requiere revisión inmediata.
+- Duda sobre estado de una petición de favorito específica (no accesible desde chat).
+- Usuario reporta gift enviado pero no recibido, o descuento de saldo por gift sin confirmación.
+- Cualquier menor de edad mencionado en un reporte P2P: ESCALADO INMEDIATO.

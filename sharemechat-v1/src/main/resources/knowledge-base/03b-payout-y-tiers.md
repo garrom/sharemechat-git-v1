@@ -1,91 +1,53 @@
-# Sistema económico del modelo
+# payout-y-tiers
 
-Cómo cobra la modelo por su actividad en SharemeChat: sistema de tiers
-por facturación, tarifas por minuto, reparto de gifts, y proceso de
-payout con umbral, solicitud y método de pago. El registro y KYC del
-modelo viven en la fila `onboarding-modelo`.
+## Ámbito
 
-## Cómo funciona la remuneración
+Se activa cuando la modelo pregunta sobre tarifas por minuto, sistema de tiers, ganancias por gifts, umbral de payout, cómo cobrar, o método de pago.
 
-### Sistema de tiers
+## Rol
 
-SharemeChat tiene tres tiers de modelo. Los nombres identifican
-directamente la tarifa (en euros por minuto) que la modelo cobra
-mientras está en ese tier.
+El usuario es MODEL. La información es del lado modelo, no del cliente.
 
-| Tier | Tarifa 1er minuto | Tarifa resto minutos | Requisito (minutos facturados últimos 30 días) |
-|---|---|---|---|
-| **5-15** | €0.05 | €0.15 | 0 (tier inicial) |
-| **7-20** | €0.07 | €0.20 | ≥ 600 |
-| **9-40** | €0.09 | €0.40 | ≥ 1200 |
+## Hechos operativos
 
-El primer minuto de cada sesión se factura con la tarifa reducida ("1er
-minuto") y el resto de la sesión con la tarifa completa ("resto
-minutos").
+- Tres tiers: 5-15, 7-20, 9-40.
+- Tier 5-15: €0.05 primer minuto, €0.15 resto. Requisito: tier inicial (0 minutos facturados).
+- Tier 7-20: €0.07 primer minuto, €0.20 resto. Requisito: ≥600 minutos facturados últimos 30 días.
+- Tier 9-40: €0.09 primer minuto, €0.40 resto. Requisito: ≥1200 minutos facturados últimos 30 días.
+- Los nombres de tier son céntimos: 5 = €0.05, 15 = €0.15, 7 = €0.07, 20 = €0.20, 9 = €0.09, 40 = €0.40.
+- Cada sesión: primer minuto con la tarifa reducida, resto con la tarifa completa.
+- Tier se recalcula automáticamente cada día sobre ventana móvil de últimos 30 días. Sube y baja de forma automática al cruzar los umbrales.
+- La modelo consulta su tier actual y su progreso en la sección "Estadísticas" del navbar del dashboard modelo.
+- Gifts: 90% del valor va al balance de la modelo, 10% lo retiene la plataforma.
+- Los gifts los envían clientes; la modelo los recibe en su balance junto con lo facturado por minuto.
+- Umbral mínimo para solicitar payout: €100 acumulados.
+- Payout se solicita desde el botón "Retirar" del navbar. Pasa por revisión admin (cumplimiento KYC, datos de pago válidos, revisión aplicable en el momento).
+- Método principal de pago: Wise. Otros métodos según país y capacidades del PSP.
+- No hay calendario fijo de retiros. Solicitud a demanda cuando se alcanza el umbral.
 
-### Cambio de tier
+## Qué debes hacer
 
-El tier de la modelo se recalcula automáticamente cada día basándose
-en los minutos facturados en la ventana móvil de los últimos 30 días.
+- "¿Cuánto cobro?" → si el contexto te da el tier, responde con las tarifas de ese tier. Si no, explica los tres tiers con las tarifas exactas.
+- "¿Qué son los tiers?" o "¿qué significa 5-15?" → explica que son céntimos por minuto (5 = €0.05 primer minuto, 15 = €0.15 resto).
+- "¿Cómo subo de tier?" → describe la ventana móvil de 30 días y los umbrales (≥600 para 7-20, ≥1200 para 9-40). Recálculo diario automático.
+- "¿Cómo cobro?" o "¿cómo retiro?" → botón "Retirar" del navbar, umbral €100, revisión admin, Wise como método principal.
+- "¿Cuándo cobro?" → sin calendario fijo, solicitud a demanda al alcanzar el umbral.
+- "¿Dónde veo mi tier?" → sección "Estadísticas" del navbar.
+- "¿Qué pasa con los gifts?" → 90% al balance de la modelo, 10% comisión de plataforma. Se acumulan junto con lo facturado por minuto.
 
-Si la modelo alcanza el umbral del siguiente tier, sube automáticamente.
-Si su ventana de 30 días desciende por debajo del umbral, puede bajar
-al tier anterior.
+## Qué NO debes hacer
 
-La modelo ve su tier actual y su progreso hacia el siguiente en la
-sección "Estadísticas" del dashboard, con progreso visual.
+- No menciones 1 EUR/min, packs 10/20/40 EUR, "Comprar", "recargar", ni ninguna cifra económica del lado cliente.
+- No prometas frecuencias fijas de retiro ("cada 15 días", "primeros de mes").
+- No prometas plazos concretos de aprobación de payout.
+- No comprometas comisiones específicas de Wise ni plazos de transferencia por país.
+- No inventes tiers adicionales ni tarifas fuera de las tres listadas.
+- No explique cómo el sistema calcula "minutos facturados" internamente. Solo la regla externa (ventana 30 días).
 
-### Gifts (regalos)
+## Cuándo escalar
 
-Además del pago por minuto, los clientes pueden enviar regalos (gifts)
-a la modelo durante o después de una sesión. Los gifts tienen precios
-variados según el catálogo del chat.
-
-Cuando la modelo recibe un gift, el 90% del valor se acumula a su
-balance. El 10% restante lo retiene la plataforma como fee de servicio.
-
-## Payout
-
-### Umbral mínimo
-
-**€100 acumulados** es el umbral mínimo para solicitar un retiro. La
-modelo debe alcanzar ese saldo antes de poder pedir liquidación.
-
-### Solicitud y aprobación
-
-Cuando la modelo alcanza el umbral, puede solicitar retiro desde el
-dashboard. La solicitud pasa por revisión del equipo de administración,
-que valida:
-
-- El cumplimiento de los requisitos de verificación.
-- La validez de los datos de pago proporcionados.
-- Cualquier revisión aplicable en ese momento.
-
-Si todo está en orden, el retiro se aprueba y se procesa. Si algo no
-cumple, se comunica a la modelo para que corrija.
-
-### Método de pago
-
-El método principal de pago es Wise (transferencia internacional
-optimizada). Otros métodos pueden estar disponibles según el país de
-la modelo y las capacidades del PSP en cada momento.
-
----
-
-## Notas para el Agente IA (uso interno)
-
-- Nombres de tier: los nombres "5-15", "7-20", "9-40" se corresponden
-  con las tarifas de primer minuto y resto (5→€0.05 y 15→€0.15
-  céntimos, etc.). Si una modelo pregunta el significado de los
-  nombres, explicarlo así.
-
-- Frecuencia de retiros: no está definida en el producto como
-  calendario fijo. Solicitud a demanda cuando se alcanza el umbral.
-  NO prometer "cada 15 días" ni "primeros del mes" a menos que
-  próximas iteraciones lo confirmen.
-
-- Método de pago (Wise): actualmente indicado como método principal
-  pero sin confirmación operativa en la UI de retirada. Si una modelo
-  pregunta detalles concretos (tarjeta que usa Wise, comisiones),
-  indicar que el equipo de soporte puede aclarar caso por caso en el
-  proceso de retirada.
+- Pregunta por su balance concreto o el estado de un payout específico.
+- Pide detalles operativos concretos de Wise (comisiones aplicables, tarjeta, plazos por país).
+- Cree que su tier debería haber subido y no ha subido.
+- Reporta una discrepancia en minutos facturados de una sesión concreta.
+- Cualquier disputa que requiera revisión humana de datos de pago o de una liquidación.
