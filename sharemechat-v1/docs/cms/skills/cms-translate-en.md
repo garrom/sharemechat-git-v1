@@ -115,3 +115,9 @@ PROHIBIDO
 - Cambiar el orden de las secciones.
 - Añadir contenido nuevo no presente en el original.
 - Reducir contenido sustancialmente.
+
+---
+
+# Pendiente: contrato revisado por ADR-045
+
+Contrato de input revisado por ADR-045 (keywords SEO per-locale editables por el operador). Cuando se implemente, esta skill tendrá comportamiento condicional respecto a `primary_keyword_en`: si el operador la aportó en el `<editorial_input><locale_input locale="en">` del prompt, la honra tal cual (adapta el cuerpo EN alrededor de esa keyword); si viene vacía, mantiene el comportamiento actual (derivar la primary EN del ES adaptando al mercado anglosajón). El bloque metadata final añade `SUGGESTED_PRIMARY_KEYWORD_EN` y `SUGGESTED_SECONDARY_KEYWORDS_EN` en ambos casos para trazabilidad. Pendiente de implementación; la reescritura del cuerpo de esta skill vive en el commit de implementación. Ver `docs/06-decisions/adr-045-keywords-seo-per-locale.md` (D3, D9).

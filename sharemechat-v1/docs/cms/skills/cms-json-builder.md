@@ -156,3 +156,9 @@ Confirma brevemente que `05_final/final.json` está escrito y resume:
 Si shared.self_check_passed=false, lista los motivos.
 
 El resumen reportado en chat NO incluye el contenido del JSON. El pintado del JSON al operador es responsabilidad del orquestador en su reporte final, tras la fase 5.5. No te adelantes: si pintas aquí, duplicas el contenido y confundes al operador.
+
+---
+
+# Pendiente: contrato revisado por ADR-045
+
+Contrato de input revisado por ADR-045 (keywords SEO per-locale editables por el operador). Cuando se implemente, esta skill emitirá `locales.{es,en}.target_keywords` respetando la primary autoritativa del operador: si el `<editorial_input><locale_input locale="es|en">` del prompt trae `primary_keyword`, el objeto `type="primary"` del array debe llevar exactamente ese `term`. La IA sigue aportando `search_intent_match` y puede añadir secondaries hasta el cap de 5. Pendiente de implementación; la reescritura del cuerpo de esta skill vive en el commit de implementación. Ver `docs/06-decisions/adr-045-keywords-seo-per-locale.md` (D4, D9).

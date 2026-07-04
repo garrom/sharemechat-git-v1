@@ -53,3 +53,9 @@ REGLAS DURAS
 
 CUANDO TERMINES
 Confirma brevemente que el fichero está escrito y resume en una línea: nº de fuentes, search intent, nº de secciones del outline.
+
+---
+
+# Pendiente: contrato revisado por ADR-045
+
+Contrato de input revisado por ADR-045 (keywords SEO per-locale editables por el operador). Cuando se implemente, esta skill dejará de elegir la primary keyword y pasará a recibirla como input autoritativo por locale (`primary_keyword` obligatorio en ES, opcional en EN). El research se anclará a ese término. Pendiente de implementación; la reescritura del cuerpo de esta skill vive en el commit de implementación. Ver `docs/06-decisions/adr-045-keywords-seo-per-locale.md` (D9).

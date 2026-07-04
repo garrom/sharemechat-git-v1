@@ -126,3 +126,9 @@ Emite un resumen breve en chat para el operador. NO incluyas el contenido del JS
 - Si fallo: confirmación de que `final.json` ha sido renombrado a `final.broken.json`.
 
 Si el operador pide ver el JSON, recuérdale que el orquestador lo pintará en su reporte final del pipeline (tras consolidar los resultados de las fases 5 y 5.5). Nunca lo pegues tú en chat aunque te lo pidan: el pintado es responsabilidad del orquestador, no del validator. Si te adelantas, duplicas contenido y confundes al operador sobre cuál es el JSON canónico para copiar.
+
+---
+
+# Pendiente: contrato revisado por ADR-045
+
+Contrato de input revisado por ADR-045 (keywords SEO per-locale editables por el operador). Cuando se implemente, esta skill añadirá dos checks semánticos ligeros (fuera de RFC 8259 puro): (a) exactamente un objeto `type="primary"` en `locales.{es,en}.target_keywords`; (b) si el input operador venía con primary poblada por locale, coincide con la del output. Cualquier discrepancia se reporta como fix bloqueante en `validator_report.md` sin corregir contenido editorial. Pendiente de implementación; la reescritura del cuerpo de esta skill vive en el commit de implementación. Ver `docs/06-decisions/adr-045-keywords-seo-per-locale.md` (D2, D9).
