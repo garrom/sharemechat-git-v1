@@ -116,3 +116,35 @@ Negativas / coste operativo:
   - **1.B**: smokes en TEST validando que la tabla contiene los mismos textos que el JAR (bit-a-bit tras normalizar whitespace).
   - **1.C**: `SupportBotService` deja de consumir el output de `SupportKnowledgeBaseLoader` y pasa a consumir `KnowledgeBaseService.getPromptContent(caseKey)` con concatenación equivalente.
   - **1.D**: eliminación de `resources/knowledge-base/*.md` y del `SupportKnowledgeBaseLoader`, con nueva ADR o extensión de esta.
+
+## Actualización Fase 1.B (2026-07-04)
+
+Aplicada la taxonomía objetivo directamente en el filesystem (opción II del análisis previo, no la opción III híbrida) para que el mapeo `.md` ↔ fila de tabla sea 1:1 desde el primer seed, sin ediciones SQL manuales posteriores. Cambios:
+
+- **Split de `03-onboarding-modelo.md`** en dos ficheros: `03-onboarding-modelo.md` (entrada al sistema: registro, contrato, KYC, aprobación, assets, suspensión/baneo) y `03b-payout-y-tiers.md` (sistema económico: tiers, gifts, payout, umbral, Wise). Suspensión/baneo se mantiene en `onboarding-modelo` por proximidad narrativa MODEL — solapamiento aceptado con `08-cuenta.md` (que trata suspensión en abstracto para BOTH).
+- **Fusión** de `01-producto.md` + `10-preguntas-frecuentes.md` → `producto-general.md` (sin prefijo numérico). El fichero fusionado degrada los headings del FAQ (10) a `##` bajo la jerarquía del producto (01), y absorbe las notas Agente IA de 10 al final. `01-producto.md` y `10-preguntas-frecuentes.md` **eliminados del repo**.
+- **`deriveCaseKey` relajado** en `KnowledgeBaseAdminController` para aceptar dos ramas explícitas de prefijo: `\d+-` (existente) y `\d+[a-z]-` (nueva, permite `03b-`). Implementado con dos ramas explícitas en Java, no regex con opcional. Ficheros sin prefijo numérico (`producto-general.md`) se devuelven tal cual sin extensión.
+- **Map `ROLE_OVERRIDES`** en `KnowledgeBaseAdminController` para forzar `role` en case_keys cuyo nombre no lo revela: `pagos-y-saldo` → `CLIENT`, `payout-y-tiers` → `MODEL`. El resto sigue la lógica por sufijo (`-modelo` → MODEL, `-cliente` → CLIENT, resto → BOTH). Constante estática documentada; ampliable si aparecen futuros case_keys ambiguos.
+- **Log INFO por fila insertada** en `seed-from-jar`: `[KB-ADMIN] seed: inserted case_key=X role=Y source=Z`.
+- Sin cambios en schema (V13 vigente sin V14). Sin cambios en `SupportBotService`, `SupportController` ni frontend. `SupportKnowledgeBaseLoader` sigue leyendo el directorio como blob — el bot en runtime recibe el mismo corpus total, solo reorganizado.
+
+Taxonomía resultante (14 filas que producirá `seed-from-jar`):
+
+| # | case_key | role | Fichero fuente |
+|---|---|---|---|
+| 1 | `comportamiento-agente-ia` | BOTH | `00-comportamiento-agente-ia.md` |
+| 2 | `producto-general` | BOTH | `producto-general.md` |
+| 3 | `onboarding-cliente` | CLIENT | `02-onboarding-cliente.md` |
+| 4 | `onboarding-modelo` | MODEL | `03-onboarding-modelo.md` |
+| 5 | `payout-y-tiers` | MODEL (via override) | `03b-payout-y-tiers.md` |
+| 6 | `chat-y-favoritos` | BOTH | `04-chat-y-favoritos.md` |
+| 7 | `pagos-y-saldo` | CLIENT (via override) | `05-pagos-y-saldo.md` |
+| 8 | `moderacion-y-seguridad` | BOTH | `06-moderacion-y-seguridad.md` |
+| 9 | `privacidad-y-datos` | BOTH | `07-privacidad-y-datos.md` |
+| 10 | `cuenta` | BOTH | `08-cuenta.md` |
+| 11 | `empresa-y-contacto` | BOTH | `09-empresa-y-contacto.md` |
+| 12 | `ui-reference` | BOTH | `11-ui-reference.md` |
+| 13 | `troubleshooting-modelo` | MODEL | `12-troubleshooting-modelo.md` |
+| 14 | `troubleshooting-cliente` | CLIENT | `13-troubleshooting-cliente.md` |
+
+`00-placeholder.md` y `README.md` siguen excluidos del seed.

@@ -163,3 +163,153 @@ fallback documental si es necesario, para confirmar mayoría de edad.
 
 Cualquier intento de acceso por menor de 18 años se bloquea y se
 registra para revisión de moderación.
+
+## Preguntas frecuentes
+
+Respuestas breves a las preguntas más comunes de los usuarios. Para
+información detallada, consultar la sección temática correspondiente
+o el fichero de referencia asociado.
+
+### Sobre el producto
+
+**¿Qué es SharemeChat?**
+Plataforma de citas para adultos verificados con videochat privado
+1-a-1 en tiempo real. Ver secciones anteriores de este mismo fichero.
+
+**¿Es una app o web?**
+Es una web responsiva accesible desde cualquier navegador moderno
+en desktop y móvil.
+
+**¿Necesito descargar algo?**
+No. Solo abrir en el navegador con cámara y micrófono habilitados.
+
+**¿Hay restricciones geográficas?**
+Sí, no está disponible en todos los países. Si no puedes acceder desde
+tu ubicación, verás un mensaje explicativo.
+
+### Sobre la edad
+
+**¿Edad mínima?**
+18 años en todo el mundo. Sin excepciones.
+
+**¿Cómo verifican mi edad?**
+A través de Didit, especialista en verificación de identidad. Ver la
+fila `onboarding-cliente` u `onboarding-modelo` según rol.
+
+### Sobre precios y pagos
+
+**¿Cuánto cuesta?**
+1 EUR por minuto de videochat. Sin cargos ocultos, sin suscripciones.
+Ver la fila `pagos-y-saldo`.
+
+**¿Qué packs de recarga hay?**
+10 EUR, 20 EUR (22 EUR con bonus) y 40 EUR (44 EUR con bonus).
+
+**¿El saldo caduca?**
+No mientras la cuenta esté activa.
+
+**¿Aceptan facturas?**
+No emitimos facturas fiscales por defecto. Contactar con soporte si
+tienes una necesidad específica.
+
+**¿Puedo pedir reembolso?**
+Sí, caso por caso, contactando con soporte.
+
+### Sobre el uso
+
+**¿Puedo probar sin pagar?**
+El registro es gratuito. La verificación de edad también. Para
+sesiones de videochat necesitas saldo cargado.
+
+**¿Cómo funciona el matching random?**
+El sistema te empareja con una modelo disponible en ese momento. Ver
+secciones anteriores de este mismo fichero.
+
+**¿Puedo elegir modelo específica?**
+Solo a través del sistema de favoritos. Si te añades como favorito
+mutuo, puedes iniciar sesión directa. Ver la fila `chat-y-favoritos`.
+
+**¿Se pueden compartir imágenes en el chat?**
+No. El chat es solo texto, emojis y gifts.
+
+### Sobre modelos
+
+**¿Cómo se hace modelo?**
+Registro con rol de modelo, aceptación del contrato, verificación KYC
+completa vía Didit, aprobación admin. Ver la fila `onboarding-modelo`.
+
+**¿Cuánto gana una modelo?**
+Los detalles operativos de payout se comunican a las modelos aprobadas
+desde su dashboard. No forman parte del contenido público.
+
+**¿Con qué frecuencia se paga?**
+No hay calendario fijo. La modelo solicita el retiro cuando desea
+liquidar el balance acumulado.
+
+**¿Cómo se paga?**
+El método concreto se comunica a la modelo en el proceso de solicitud
+de retiro, dentro de su dashboard.
+
+### Sobre seguridad y privacidad
+
+**¿Se graban las sesiones?**
+No. Sin grabación, sin broadcast público.
+
+**¿Quién puede ver el chat?**
+Solo las dos partes de la conversación. No hay terceros.
+
+**¿Cómo denuncio un problema?**
+Desde el producto (reporte P2P) o desde el canal público /complaint.
+Ver la fila `moderacion-y-seguridad`.
+
+**¿Cómo bloqueo a otro usuario?**
+Desde la lista de favoritos o durante videochat. Ver la fila
+`chat-y-favoritos`.
+
+### Sobre la cuenta
+
+**¿Cómo cambio mi contraseña?**
+Desde la sección de perfil.
+
+**¿He olvidado mi contraseña?**
+"¿Olvidaste tu contraseña?" en el formulario de login.
+
+**¿Cómo cambio mi email?**
+Contactar con soporte. No es self-service.
+
+**¿Cómo cierro mi cuenta?**
+Contactar con soporte.
+
+**¿Puedo tener dos cuentas?**
+No. Cuenta única por persona. Cuentas duplicadas pueden violar Terms.
+
+### Sobre contacto
+
+**¿Con quién contacto para X?**
+- Dudas generales: este chat de soporte.
+- Denuncias: safety@sharemechat.com o /complaint.
+- GDPR: contact+gdpr@sharemechat.com.
+- Otros: contact@sharemechat.com.
+
+**¿Cuál es vuestro horario?**
+Ver la fila `empresa-y-contacto`. Este Agente IA está disponible 24/7.
+El equipo humano opera en horario europeo.
+
+---
+
+## Notas para el Agente IA (uso interno)
+
+- Este fichero combina la descripción general del producto y las
+  preguntas frecuentes transversales. Actúa como fallback natural
+  cuando el router determinístico no identifica un caso específico.
+
+- Cuando un usuario pregunta desde la sección FAQ, la respuesta debe
+  ser conversacional (no como FAQ formal), adaptada al usuario y con
+  la profundidad adecuada al tipo de pregunta.
+
+- Si una pregunta no está aquí, buscar en la fila temática
+  correspondiente y responder desde el conocimiento general.
+
+- Si tras responder, el usuario sigue con dudas sobre lo mismo,
+  probablemente necesita algo más específico. Preguntar qué le
+  interesa concretamente antes de repetir información.

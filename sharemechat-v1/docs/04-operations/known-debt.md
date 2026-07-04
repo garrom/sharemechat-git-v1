@@ -1357,7 +1357,7 @@ Reabrir la conversación si Search Console + analítica de tráfico social revel
 
 **Origen**: [ADR-044](../06-decisions/adr-044-knowledge-base-externa.md) externaliza la Base de Conocimiento (BdC) del Agente IA de soporte a la tabla MySQL `support_bot_prompts`, cacheada en memoria vía Caffeine (`KnowledgeBaseService`). El commit de Fase 1.A introduce infraestructura + endpoints admin (`POST /api/admin/knowledge-base/reload` y `.../seed-from-jar`), pero **no elimina** los `.md` del JAR ni conecta el consumo por parte de `SupportBotService`, que sigue leyendo los MDs vía `SupportKnowledgeBaseLoader`.
 
-**Hecho**: la coexistencia entre BdC del JAR y BdC de la tabla es explícita durante Fase 1.A–1.C. Los `.md` bajo `sharemechat-v1/src/main/resources/knowledge-base/` (14 ficheros temáticos + README + placeholder) siguen siendo la fuente activa que consume el bot en runtime hoy.
+**Hecho**: la coexistencia entre BdC del JAR y BdC de la tabla es explícita durante Fase 1.A–1.C. Los `.md` bajo `sharemechat-v1/src/main/resources/knowledge-base/` (13 ficheros temáticos físicos → 14 filas en tabla tras el split de 03 en `onboarding-modelo` + `payout-y-tiers`, aplicado en Fase 1.B) siguen siendo la fuente activa que consume el bot en runtime hoy. La taxonomía objetivo ya vive en el filesystem: cada `.md` mapea 1:1 con una fila que producirá `seed-from-jar`.
 
 **Acción pendiente**:
 

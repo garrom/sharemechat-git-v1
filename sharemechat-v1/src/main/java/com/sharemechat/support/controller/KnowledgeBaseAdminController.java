@@ -24,6 +24,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
+import java.util.Collections;
 
 /**
  * Endpoints admin para operar la Base de Conocimiento externalizada del Agente
@@ -43,6 +45,27 @@ public class KnowledgeBaseAdminController {
 
     private static final String README = "README.md";
     private static final String PLACEHOLDER = "00-placeholder.md";
+
+    /**
+     * Overrides explícitos de {@code role} para case_keys cuyo nombre de
+     * fichero no revela la audiencia (Fase 1.B del refactor ADR-044).
+     *
+     * <p>La lógica por defecto ({@link #deriveRole(String)}) infiere el rol
+     * de sufijos {@code -modelo} / {@code -cliente}. Este map cubre los
+     * casos donde el fichero fuente no lleva sufijo pero el contenido es
+     * específico de un rol.</p>
+     *
+     * <p>Añadir aquí cualquier futuro case_key que necesite forzar rol.
+     * Fase 1.C podría poblar esto vía configuración; hoy es hardcoded
+     * porque son 2 filas y añadir infraestructura sobra.</p>
+     */
+    static final Map<String, String> ROLE_OVERRIDES;
+    static {
+        Map<String, String> m = new HashMap<>();
+        m.put("pagos-y-saldo", "CLIENT");
+        m.put("payout-y-tiers", "MODEL");
+        ROLE_OVERRIDES = Collections.unmodifiableMap(m);
+    }
 
     private final KnowledgeBaseService knowledgeBaseService;
     private final SupportBotPromptRepository repository;
@@ -118,15 +141,18 @@ public class KnowledgeBaseAdminController {
                     failed.add(caseKey);
                     continue;
                 }
+                String role = deriveRole(caseKey);
                 SupportBotPrompt entity = new SupportBotPrompt();
                 entity.setCaseKey(caseKey);
-                entity.setRole(deriveRole(caseKey));
+                entity.setRole(role);
                 entity.setContent(content);
                 entity.setDescription("Seeded from JAR: " + name);
                 entity.setActive(true);
                 entity.setVersion(1);
                 repository.save(entity);
                 inserted.add(caseKey);
+                log.info("[KB-ADMIN] seed: inserted case_key={} role={} source={}",
+                        caseKey, role, name);
             }
         } catch (IOException ex) {
             log.warn("[KB-ADMIN] seed: resolver failure ({})", ex.getClass().getSimpleName());
@@ -157,15 +183,21 @@ public class KnowledgeBaseAdminController {
 
     /**
      * Deriva la clave semántica del nombre de fichero: elimina la extensión
-     * .md y el prefijo numérico opcional ({@code NN-}). Devuelve kebab-case
-     * en minúsculas.
+     * {@code .md} y el prefijo numérico. Devuelve kebab-case en minúsculas.
      *
-     * <p>Ejemplos:
+     * <p>Dos formas de prefijo son aceptadas, en ramas explícitas:
      * <ul>
-     *   <li>{@code "00-comportamiento-agente-ia.md" -> "comportamiento-agente-ia"}</li>
-     *   <li>{@code "12-troubleshooting-modelo.md"  -> "troubleshooting-modelo"}</li>
-     *   <li>{@code "01-producto.md"                -> "producto"}</li>
+     *   <li>Rama 1 — {@code \d+-} (uno o más dígitos + guion). Ej.:
+     *       {@code "12-troubleshooting-modelo.md" -> "troubleshooting-modelo"}.</li>
+     *   <li>Rama 2 — {@code \d+[a-z]-} (uno o más dígitos + una letra
+     *       minúscula + guion). Ej.:
+     *       {@code "03b-payout-y-tiers.md" -> "payout-y-tiers"}. Introducida
+     *       en Fase 1.B del refactor ADR-044 para soportar el split de un
+     *       fichero temático en dos filas sin renumerar el resto.</li>
      * </ul>
+     *
+     * <p>Ficheros sin prefijo (p. ej. {@code "producto-general.md"}) se
+     * devuelven tal cual, sin extensión.</p>
      */
     static String deriveCaseKey(String filename) {
         if (filename == null) return null;
@@ -173,20 +205,38 @@ public class KnowledgeBaseAdminController {
         int dot = base.lastIndexOf('.');
         if (dot > 0) base = base.substring(0, dot);
         base = base.trim().toLowerCase();
+
         int i = 0;
         while (i < base.length() && Character.isDigit(base.charAt(i))) i++;
-        if (i > 0 && i < base.length() && base.charAt(i) == '-') {
-            base = base.substring(i + 1);
+        if (i == 0) {
+            // Sin prefijo numérico: nombre libre.
+            return base;
         }
+
+        // Rama 1: \d+-
+        if (i < base.length() && base.charAt(i) == '-') {
+            return base.substring(i + 1);
+        }
+        // Rama 2: \d+[a-z]-
+        if (i + 1 < base.length()
+                && base.charAt(i) >= 'a' && base.charAt(i) <= 'z'
+                && base.charAt(i + 1) == '-') {
+            return base.substring(i + 2);
+        }
+        // Prefijo raro (p. ej. \d+ sin guion detrás): devolver base como está.
         return base;
     }
 
     /**
-     * Infere la audiencia del prompt desde la {@code case_key}. Sufijo
-     * {@code -modelo} → MODEL, {@code -cliente} → CLIENT, resto → BOTH.
+     * Infere la audiencia del prompt desde la {@code case_key}.
+     *
+     * <p>Precedencia: {@link #ROLE_OVERRIDES} → sufijo {@code -modelo} (MODEL)
+     * → sufijo {@code -cliente} (CLIENT) → BOTH.</p>
      */
     static String deriveRole(String caseKey) {
         if (caseKey == null) return "BOTH";
+        String override = ROLE_OVERRIDES.get(caseKey);
+        if (override != null) return override;
         if (caseKey.endsWith("-modelo")) return "MODEL";
         if (caseKey.endsWith("-cliente")) return "CLIENT";
         return "BOTH";
