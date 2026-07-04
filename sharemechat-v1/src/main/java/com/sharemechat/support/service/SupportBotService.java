@@ -21,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Orquestador del chat soporte (DEC-CS-1..18).
@@ -56,7 +57,8 @@ public class SupportBotService {
     private final SupportConversationRepository conversationRepo;
     private final SupportMessageRepository messageRepo;
     private final SupportRateLimitService rateLimitService;
-    private final SupportKnowledgeBaseLoader kbLoader;
+    private final KnowledgeBaseService kbService;
+    private final SupportBotRouterService router;
     private final ClaudeApiClient claudeClient;
     private final ClaudeApiProperties props;
     private final UserRepository userRepository;
@@ -64,14 +66,16 @@ public class SupportBotService {
     public SupportBotService(SupportConversationRepository conversationRepo,
                               SupportMessageRepository messageRepo,
                               SupportRateLimitService rateLimitService,
-                              SupportKnowledgeBaseLoader kbLoader,
+                              KnowledgeBaseService kbService,
+                              SupportBotRouterService router,
                               ClaudeApiClient claudeClient,
                               ClaudeApiProperties props,
                               UserRepository userRepository) {
         this.conversationRepo = conversationRepo;
         this.messageRepo = messageRepo;
         this.rateLimitService = rateLimitService;
-        this.kbLoader = kbLoader;
+        this.kbService = kbService;
+        this.router = router;
         this.claudeClient = claudeClient;
         this.props = props;
         this.userRepository = userRepository;
@@ -110,7 +114,7 @@ public class SupportBotService {
 
         // 4) LLM call
         try {
-            String systemPrompt = buildSystemPrompt(userId);
+            String systemPrompt = buildSystemPrompt(userId, message);
             List<ClaudeApiClient.HistoryMessage> history = loadHistoryForLlm(conv.getId());
             ClaudeApiResponse resp = claudeClient.callMessages(systemPrompt, history, message);
 
@@ -239,15 +243,34 @@ public class SupportBotService {
         return messageRepo.save(m);
     }
 
-    private String buildSystemPrompt(Long userId) {
+    /**
+     * Construcción del system prompt (Fase 1.C, ADR-044).
+     *
+     * <p>Concatena en orden:
+     * <ol>
+     *   <li>Constitución transversal ({@code comportamiento-agente-ia}).</li>
+     *   <li>Mapa de UI transversal ({@code ui-reference}).</li>
+     *   <li>Contexto del usuario (email, role, verification_status).</li>
+     *   <li>Prompt específico del caso, resuelto por
+     *       {@link SupportBotRouterService#route(User, String)}.</li>
+     * </ol>
+     *
+     * <p>Si {@link KnowledgeBaseService#getPromptContent(String)} devuelve
+     * {@code Optional.empty()} para alguna clave, se loguea WARN y se sigue
+     * con string vacío para esa sección. Sin fallback hardcoded: el operador
+     * verá el WARN en TEST y ejecutará {@code /reload} o
+     * {@code /seed-from-jar} según corresponda.</p>
+     */
+    private String buildSystemPrompt(Long userId, String userMessage) {
         StringBuilder sb = new StringBuilder();
-        sb.append("You are SharemeChat's tier-1 support assistant.\n");
-        sb.append("Reply in the same language the user writes in (Spanish or English).\n");
-        sb.append("Be concise, warm and professional. When you cannot resolve the issue with the ");
-        sb.append("knowledge base below, call the tool escalate_to_human with a short reason.\n");
-        sb.append("Never invent policies, prices or timelines that are not in the knowledge base.\n\n");
 
-        // user context (DEC-CS-6)
+        // 1) Constitución transversal — siempre incluida.
+        appendCase(sb, "comportamiento-agente-ia");
+
+        // 2) Mapa de UI transversal — siempre incluido.
+        appendCase(sb, "ui-reference");
+
+        // 3) Contexto de usuario (DEC-CS-6).
         User u = userRepository.findById(userId).orElse(null);
         if (u != null) {
             sb.append("User context:\n");
@@ -259,8 +282,20 @@ public class SupportBotService {
             sb.append('\n');
         }
 
-        sb.append("Knowledge base:\n").append(kbLoader.getKnowledgeBase());
+        // 4) Prompt específico del caso, según el router determinístico.
+        String caseKey = router.route(u, userMessage);
+        appendCase(sb, caseKey);
+
         return sb.toString();
+    }
+
+    private void appendCase(StringBuilder sb, String caseKey) {
+        Optional<String> content = kbService.getPromptContent(caseKey);
+        if (content.isPresent()) {
+            sb.append(content.get()).append("\n\n");
+        } else {
+            log.warn("[SUPPORT-BOT] KB missing prompt: case_key={}", caseKey);
+        }
     }
 
     private List<ClaudeApiClient.HistoryMessage> loadHistoryForLlm(Long conversationId) {

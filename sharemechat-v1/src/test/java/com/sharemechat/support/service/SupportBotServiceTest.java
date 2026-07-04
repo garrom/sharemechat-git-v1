@@ -28,7 +28,8 @@ class SupportBotServiceTest {
     private SupportConversationRepository convRepo;
     private SupportMessageRepository msgRepo;
     private SupportRateLimitService rateLimit;
-    private SupportKnowledgeBaseLoader kb;
+    private KnowledgeBaseService kbService;
+    private SupportBotRouterService router;
     private ClaudeApiClient claudeClient;
     private ClaudeApiProperties props;
     private UserRepository userRepo;
@@ -39,13 +40,20 @@ class SupportBotServiceTest {
         convRepo = mock(SupportConversationRepository.class);
         msgRepo = mock(SupportMessageRepository.class);
         rateLimit = mock(SupportRateLimitService.class);
-        kb = mock(SupportKnowledgeBaseLoader.class);
+        kbService = mock(KnowledgeBaseService.class);
+        router = mock(SupportBotRouterService.class);
         claudeClient = mock(ClaudeApiClient.class);
         props = mock(ClaudeApiProperties.class);
         userRepo = mock(UserRepository.class);
 
         when(props.getHistoryMessagesWindow()).thenReturn(10);
-        when(kb.getKnowledgeBase()).thenReturn("KB placeholder");
+
+        // Fase 1.C: KB devuelve stub identificable por case_key en cada llamada.
+        when(kbService.getPromptContent(anyString()))
+                .thenAnswer(inv -> Optional.of("KB-STUB[" + inv.getArgument(0) + "]"));
+        // Router determinístico mockeado con salida por defecto: fallback.
+        when(router.route(any(), anyString())).thenReturn("producto-general");
+
         when(convRepo.save(any(SupportConversation.class))).thenAnswer(inv -> {
             SupportConversation c = inv.getArgument(0);
             if (c.getId() == null) {
@@ -72,7 +80,8 @@ class SupportBotServiceTest {
         when(rateLimit.remainingTokens(anyLong())).thenReturn(49500L);
         when(claudeClient.estimateCostMicros(anyInt(), anyInt())).thenReturn(35L);
 
-        svc = new SupportBotService(convRepo, msgRepo, rateLimit, kb, claudeClient, props, userRepo);
+        svc = new SupportBotService(convRepo, msgRepo, rateLimit, kbService, router,
+                claudeClient, props, userRepo);
     }
 
     @Test
@@ -179,13 +188,14 @@ class SupportBotServiceTest {
     }
 
     @Test
-    @DisplayName("system prompt incluye email + role + verification_status del usuario")
-    void systemPromptIncludesUserContext() throws Exception {
+    @DisplayName("system prompt concatena constitucion + ui-reference + userContext + caso ruteado")
+    void systemPromptStructure() throws Exception {
         User u = new User();
         u.setEmail("cliente@example.com");
         u.setRole(Constants.Roles.CLIENT);
         u.setVerificationStatus("APPROVED");
         when(userRepo.findById(7L)).thenReturn(Optional.of(u));
+        when(router.route(eq(u), anyString())).thenReturn("pagos-y-saldo");
 
         ClaudeApiResponse r = new ClaudeApiResponse();
         r.setTextContent("ok");
@@ -194,13 +204,60 @@ class SupportBotServiceTest {
         when(claudeClient.callMessages(anyString(), anyList(), anyString())).thenReturn(r);
 
         ArgumentCaptor<String> sysCap = ArgumentCaptor.forClass(String.class);
-        svc.handleUserMessage(7L, "hola", "1.1.1.1");
+        svc.handleUserMessage(7L, "quiero recargar saldo", "1.1.1.1");
         verify(claudeClient).callMessages(sysCap.capture(), anyList(), anyString());
         String sysPrompt = sysCap.getValue();
+
+        // Bloques transversales siempre incluidos
+        assertTrue(sysPrompt.contains("KB-STUB[comportamiento-agente-ia]"),
+                "system prompt debe incluir la constitución transversal");
+        assertTrue(sysPrompt.contains("KB-STUB[ui-reference]"),
+                "system prompt debe incluir ui-reference transversal");
+        // Contexto de usuario
         assertTrue(sysPrompt.contains("cliente@example.com"));
         assertTrue(sysPrompt.contains("CLIENT"));
         assertTrue(sysPrompt.contains("APPROVED"));
-        assertTrue(sysPrompt.contains("KB placeholder"));
+        // Caso decidido por el router
+        assertTrue(sysPrompt.contains("KB-STUB[pagos-y-saldo]"),
+                "system prompt debe incluir el caso ruteado");
+    }
+
+    @Test
+    @DisplayName("router se invoca con el user y el mensaje del turno actual")
+    void routerCalledWithUserAndMessage() throws Exception {
+        User u = new User();
+        u.setEmail("m@example.com");
+        u.setRole(Constants.Roles.MODEL);
+        when(userRepo.findById(7L)).thenReturn(Optional.of(u));
+
+        ClaudeApiResponse r = new ClaudeApiResponse();
+        r.setTextContent("ok");
+        when(claudeClient.callMessages(anyString(), anyList(), anyString())).thenReturn(r);
+
+        svc.handleUserMessage(7L, "cómo funciona el payout con Wise", "1.1.1.1");
+        verify(router).route(eq(u), eq("cómo funciona el payout con Wise"));
+    }
+
+    @Test
+    @DisplayName("KB missing prompt -> se ejecuta LLM con el resto del system prompt (sin fallback hardcoded)")
+    void kbMissingPromptDoesNotBreakLlmCall() throws Exception {
+        // Devuelve empty para el caso ruteado (simula fila missing en tabla)
+        when(router.route(any(), anyString())).thenReturn("case-inexistente");
+        when(kbService.getPromptContent("case-inexistente")).thenReturn(Optional.empty());
+
+        ClaudeApiResponse r = new ClaudeApiResponse();
+        r.setTextContent("ok");
+        when(claudeClient.callMessages(anyString(), anyList(), anyString())).thenReturn(r);
+
+        SupportMessageResponseDTO out = svc.handleUserMessage(7L, "hola", "1.1.1.1");
+        assertEquals("ok", out.getReply());
+        // Los transversales siguen incluidos aunque el caso falte
+        ArgumentCaptor<String> sysCap = ArgumentCaptor.forClass(String.class);
+        verify(claudeClient).callMessages(sysCap.capture(), anyList(), anyString());
+        String sys = sysCap.getValue();
+        assertTrue(sys.contains("KB-STUB[comportamiento-agente-ia]"));
+        assertTrue(sys.contains("KB-STUB[ui-reference]"));
+        assertFalse(sys.contains("KB-STUB[case-inexistente]"));
     }
 
     @Test
