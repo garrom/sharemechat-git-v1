@@ -31,7 +31,6 @@ import {
   StyledButton,
   StyledError,
   StyledInput,
-  NoteCard,
 } from '../../../../styles/AdminStyles';
 import {
   BriefArea,
@@ -419,15 +418,16 @@ const BodyLocaleSections = ({
       {/* ============ Bloque EN ============ */}
       {enBodyMissing ? (
         <div>
-          <MetaCard>
-            <h4 style={{ margin: '0 0 12px 0' }}>
+          {/* Refactor 2C.3: el heading identifica el bloque y el
+              TranslationBootstrapForm ofrece solo Primary + Secondary
+              keywords (slug/title auto en toggle avanzado). Retirado
+              el NoteCard redundante que decia "la traduccion EN aun no
+              esta instanciada"; el operador ya conoce el flujo. */}
+          <div style={{ marginBottom: 8 }}>
+            <h4 style={{ margin: 0 }}>
               {t('editor.tabsTitle', 'Contenido por idioma')} — EN
             </h4>
-            <NoteCard style={{ marginBottom: 12 }}>
-              {t('editor.translationMissingEnStacked',
-                'La traducción EN aún no está instanciada. Rellena los campos mínimos abajo para crearla; el pipeline IA la completará luego.')}
-            </NoteCard>
-          </MetaCard>
+          </div>
           <TranslationBootstrapForm
             locale="en"
             suggestedSlug={suggestedEnSlug}
