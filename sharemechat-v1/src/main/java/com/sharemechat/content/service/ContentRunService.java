@@ -104,6 +104,16 @@ public class ContentRunService {
         // Localizar translation ES para inyectar slug_es y title_es en el contexto del prompt.
         ContentArticleTranslation esTranslation = articleService
                 .requireTranslation(article.getId(), ContentConstants.LOCALE_ES);
+        // Translation EN puede no existir en DRAFT antes del primer apply-bilingual.
+        // Si no existe, keywordsEn queda como LocaleKeywords.empty() (primary null,
+        // secondaries []); el prompt lo emite como primary_keyword: "" +
+        // secondary_keywords: []; la fase 4.5 derivara la primary EN (ADR-045 D3).
+        ContentArticleTranslation enTranslation = articleService
+                .findTranslation(article.getId(), ContentConstants.LOCALE_EN)
+                .orElse(null);
+
+        ContentAIProvider.LocaleKeywords kwEs = toLocaleKeywords(esTranslation);
+        ContentAIProvider.LocaleKeywords kwEn = toLocaleKeywords(enTranslation);
 
         ContentAIProvider.PromptContext ctx = new ContentAIProvider.PromptContext(
                 runType,
@@ -116,7 +126,9 @@ public class ContentRunService {
                 article.getHeroImageUrl(),
                 article.getState(),
                 article.getCurrentVersionId(),
-                actorUserId);
+                actorUserId,
+                kwEs,
+                kwEn);
 
         String promptText;
         try {
@@ -654,6 +666,21 @@ public class ContentRunService {
     // ================================================================
     // Helpers
     // ================================================================
+
+    /**
+     * Convierte el JSON crudo {@code target_keywords} de una translation en
+     * {@link ContentAIProvider.LocaleKeywords} para inyectar en el prompt (ADR-045
+     * subpasada 2B). Delega el parseo defensivo en
+     * {@code ContentArticleService.parseTargetKeywords} (nunca lanza excepcion).
+     * Translation null (locale EN antes del primer apply) devuelve
+     * {@code LocaleKeywords.empty()}.
+     */
+    private ContentAIProvider.LocaleKeywords toLocaleKeywords(ContentArticleTranslation tr) {
+        if (tr == null) return ContentAIProvider.LocaleKeywords.empty();
+        ContentArticleService.ParsedTargetKeywords parsed =
+                articleService.parseTargetKeywords(tr.getTargetKeywords());
+        return new ContentAIProvider.LocaleKeywords(parsed.primary(), parsed.secondaries());
+    }
 
     private String normalizeRunType(String raw) {
         if (raw == null || raw.isBlank()) {

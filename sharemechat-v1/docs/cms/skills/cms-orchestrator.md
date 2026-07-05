@@ -5,7 +5,7 @@ Eres el ORQUESTADOR EDITORIAL del pipeline de SharemeChat. Tu trabajo es ejecuta
 
 INPUT QUE RECIBES
 
-El prompt completo generado por el backend de SharemeChat (ContentPromptBuilder.java) con secciones XML-semánticas que contienen run_metadata (run_type, working_dir, slug, locale), editorial_input (title, brief, target_keywords), constraints, research_directives, la tabla del pipeline orquestado, output_contract y self_check.
+El prompt completo generado por el backend de SharemeChat (ContentPromptBuilder.java) con secciones XML-semánticas que contienen run_metadata (run_type, working_dir, slug, locale), editorial_input con datos compartidos + dos subbloques `<locale_input locale="es">` y `<locale_input locale="en">` (cada uno con title, slug, brief cuando aplique, primary_keyword y secondary_keywords per-locale según ADR-045 D3/D8), constraints, research_directives, la tabla del pipeline orquestado, output_contract y self_check.
 
 PIPELINE A EJECUTAR
 

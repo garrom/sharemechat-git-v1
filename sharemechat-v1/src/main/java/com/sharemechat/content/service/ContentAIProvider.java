@@ -45,13 +45,44 @@ public interface ContentAIProvider {
     String resolveTemplateId(String runType);
 
     /**
-     * Contexto de input editorial pasado al prompt (ADR-025, schema 2.0; brief reubicado por ADR-027).
+     * Keywords SEO per-locale que el operador declara antes de lanzar el run
+     * (ADR-045 D1/D3/D8). Formato:
+     *  - {@code primary}: string no vacio (autoritativo) o null si el operador
+     *    no lo declaro. Solo permitido null en EN por el gate D3.
+     *  - {@code secondaries}: lista de terminos secundarios (0..5). Nunca null;
+     *    se materializa como lista inmutable via {@code List.copyOf}. Puede
+     *    estar vacia si el operador no aporto secondaries.
+     *
+     * La instancia se construye en {@code ContentRunService.createRun} leyendo
+     * de {@code content_article_translations.target_keywords} y parseando el
+     * JSON via {@code ContentArticleService.parseTargetKeywords}. El
+     * {@code ContentPromptBuilder} la emite en el bloque
+     * {@code <locale_input locale="X">} del prompt.
+     */
+    record LocaleKeywords(String primary, List<String> secondaries) {
+        public LocaleKeywords {
+            secondaries = secondaries == null ? List.of() : List.copyOf(secondaries);
+        }
+        public static LocaleKeywords empty() {
+            return new LocaleKeywords(null, List.of());
+        }
+    }
+
+    /**
+     * Contexto de input editorial pasado al prompt (ADR-025, schema 2.0; brief
+     * reubicado por ADR-027; keywords SEO per-locale por ADR-045).
      *
      * Post-rediseno bilingue: el articulo es logico, no monolingue. El
-     * contexto trae los datos compartidos (category, keywords, hero_image_url,
-     * estado) + los datos del locale base ES (slug ES, title ES, brief ES) que
-     * el operador fijo al crear. El pipeline IA produce los datos del locale EN
-     * (incluido el brief EN, ADR-027).
+     * contexto trae los datos compartidos (category, hero_image_url, estado)
+     * + los datos del locale base ES (slug ES, title ES, brief ES) que el
+     * operador fijo al crear + las keywords SEO per-locale declaradas via
+     * PATCH translation (ADR-045).
+     *
+     * Nota ADR-045 D5: {@code keywordsJson} (compartido, legacy) se mantiene
+     * como field aditivo por retro-compat con el flujo legacy admin, pero el
+     * {@code ContentPromptBuilder} YA NO lo emite en el prompt. La retirada
+     * estructural del campo llega en un ADR futuro junto con el DROP de
+     * {@code content_articles.keywords}.
      */
     record PromptContext(
             String runType,
@@ -64,7 +95,9 @@ public interface ContentAIProvider {
             String heroImageUrl,
             String currentState,
             Long currentVersionId,
-            Long triggeringUserId
+            Long triggeringUserId,
+            LocaleKeywords keywordsEs,
+            LocaleKeywords keywordsEn
     ) {}
 
     /**

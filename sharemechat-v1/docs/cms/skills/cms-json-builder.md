@@ -12,7 +12,10 @@ INPUTS QUE LEES
 - El research (normalmente `01_research/research.md`).
 - El artículo revisado (normalmente `04_review/reviewed.md`).
 - Las notas de revisión (normalmente `04_review/review_notes.md`).
-- El artículo traducido en inglés (normalmente `04_review/reviewed_en.md`), si existe.
+- El artículo traducido en inglés (normalmente `04_review/reviewed_en.md`), con su bloque metadata final (SUGGESTED_SLUG_EN, SUGGESTED_SEO_TITLE_EN, SUGGESTED_META_DESC_EN, SUGGESTED_BRIEF_EN, SUGGESTED_PRIMARY_KEYWORD_EN, SUGGESTED_SECONDARY_KEYWORDS_EN).
+- **El bloque `<editorial_input>` del prompt CMS con dos subbloques `<locale_input locale="es">` y `<locale_input locale="en">`** (ADR-045 D3/D8/D9). De cada uno extraes:
+  - `primary_keyword`: si viene poblado, es AUTORITATIVO en su locale. El array `target_keywords` del output debe contener {term: <mismo valor>, type: "primary"}.
+  - `secondary_keywords`: si aporta términos, se preservan como base del array `target_keywords[type=secondary]` de ese locale.
 
 OUTPUT QUE ESCRIBES
 UN UNICO fichero `05_final/final.json` con estructura schema 2.0 que contiene ambas versiones (ES + EN) en un solo objeto JSON. No se emiten dos ficheros separados; el backend espera un único JSON con `shared` + `locales.{es,en}`.
@@ -23,7 +26,7 @@ El builder emite UN ÚNICO fichero: `05_final/final.json`. NO pinta el contenido
 
 La sección "CUANDO TERMINES" al final de esta skill define qué información sí se reporta en chat (resumen breve, no contenido del JSON).
 
-ESTRUCTURA DEL JSON (schema 2.0; brief introducido per-locale por ADR-027)
+ESTRUCTURA DEL JSON (schema 2.0; brief per-locale ADR-027; target_keywords honra primary del operador ADR-045)
 
 ```
 {
@@ -38,13 +41,15 @@ ESTRUCTURA DEL JSON (schema 2.0; brief introducido per-locale por ADR-027)
     "self_check_failures": []
   },
   "locales": {
-    "es": { ...campos per-locale, incluido brief... },
-    "en": { ...campos per-locale, incluido brief... }
+    "es": { ...campos per-locale, incluido brief y target_keywords... },
+    "en": { ...campos per-locale, incluido brief y target_keywords... }
   }
 }
 ```
 
 Por ADR-027, `brief` es un campo lingüístico per-locale: vive dentro de cada `locales.<es|en>`, NO dentro de `shared`. Cualquier JSON que coloque brief bajo `shared` será rechazado por el backend como schema obsoleto.
+
+Por ADR-045 D4/D8/D9, `target_keywords` es per-locale y refleja el input operador cuando lo hubo. Ver regla 14 y regla 15 abajo.
 
 CAMPOS OBLIGATORIOS (todos siempre presentes; null o [] si no aplica)
 
@@ -57,7 +62,7 @@ Nivel raíz:
 Bloque `shared` (campos locale-invariantes, comunes a ambos idiomas):
 - hero_image_url (string o null; URL absoluta a la imagen 4:3 del artículo)
 - category (string, código canónico no vacío: safety, setup, business, etc.)
-- keywords (array de strings, keywords operativas del operador; opcional, puede ser [])
+- keywords (array de strings, keywords operativas del operador; opcional, puede ser []). Campo legacy (ADR-045 D5): ya no viene del `<editorial_input>` del prompt. Si el research lo trae por otra vía, se puede poblar; si no, deja `[]`.
 - sources_used (array ≥ 5 elementos con: url, title, publisher, published_at, accessed_at, relevance, key_points). Las URLs son las mismas en ambos locales; los `key_points` se mantienen en idioma original ES (no se duplican por locale)
 - self_check_passed (boolean)
 - self_check_failures (array de strings, vacío si self_check_passed=true)
@@ -67,10 +72,10 @@ Bloque `locales.<es|en>` (campos linguísticos por idioma):
 - title (string ≤255, NO null)
 - seo_title (string ≤60, NO null no vacío)
 - meta_description (string ≤160, NO null no vacía)
-- brief (string ≤8192, NO null no vacío; texto descriptivo 1-2 frases visible en cards de listado y cabecera del detalle del blog público; ADR-027). En ES proviene del `<editorial_input><brief>` del prompt; en EN proviene del bloque metadata final de `04_review/reviewed_en.md` (campo `SUGGESTED_BRIEF_EN`).
+- brief (string ≤8192, NO null no vacío; texto descriptivo 1-2 frases visible en cards de listado y cabecera del detalle del blog público; ADR-027). En ES proviene del `<editorial_input>` del prompt (subbloque `<locale_input locale="es"><brief>`); en EN proviene del bloque metadata final de `04_review/reviewed_en.md` (campo `SUGGESTED_BRIEF_EN`).
 - draft_markdown (string Markdown literal ≥800 chars, ≥1 H2 con `## `, sin HTML inline)
 - search_intent (uno de: informational | transactional | navigational | commercial)
-- target_keywords (array de objetos {term, type, search_intent_match}; al menos uno con type="primary"; las keywords SEO óptimas difieren entre mercado hispano y anglosajón)
+- target_keywords (array de objetos {term, type, search_intent_match}; EXACTAMENTE 1 con type="primary", 0..5 con type="secondary"; la primary respeta al operador cuando aplique — ver reglas 14 y 15).
 - competitor_insights (array de objetos {url, what_they_cover, gap}; 3-5 entradas; competidores SERP del mercado correspondiente)
 - article_outline (array ≥4 secciones {level, heading, objective, supporting_sources, risk_flags})
 - research_summary (string, hasta 800 palabras, resumen del research adaptado al idioma)
@@ -86,14 +91,29 @@ REGLAS DURAS
 6. `locales.<es|en>.meta_description` NO null y ≤160 caracteres en cada locale.
 7. `locales.<es|en>.slug` en kebab-case (minúsculas, palabras separadas por `-`, sin acentos ni eñes) en cada locale.
 8. `locales.es.slug !== locales.en.slug` (slugs distintos por idioma, ADR-022 D2). Ambos slugs reflejan la keyword SEO óptima del mercado correspondiente, no son traducción literal uno del otro.
-9. `locales.<es|en>.target_keywords` debe contener al menos un objeto con `type="primary"` en cada locale.
+9. `locales.<es|en>.target_keywords` debe contener EXACTAMENTE 1 objeto con `type="primary"` y 0..5 con `type="secondary"` en cada locale.
 10. `locales.<es|en>.search_intent` debe ser exactamente uno de los 4 valores permitidos en cada locale.
 11. `locales.<es|en>.risk_notes` consolida lo que esté en `review_notes.md`. Para el locale EN, traduce kind/note al inglés manteniendo severity y la equivalencia semántica.
 12. `locales.<es|en>.fact_check_notes`: una entrada por cada claim numérico o factual detectado en el draft del locale correspondiente, con status y source_index (índice 1-based al array `shared.sources_used`, que es común).
 13. Antes de copiar reviewed.md a `locales.es.draft_markdown`, ELIMINA cualquier bloque de comentario `<!-- TRACE ... -->` y cualquier marcador residual `[source N]`. Mismo tratamiento para `reviewed_en.md` → `locales.en.draft_markdown`.
-14. METADATA DEL EN: lee el bloque al final de `04_review/reviewed_en.md` con los campos SUGGESTED_SLUG_EN, SUGGESTED_SEO_TITLE_EN, SUGGESTED_META_DESC_EN, SUGGESTED_BRIEF_EN. Usa esos valores para poblar `locales.en.slug`, `locales.en.seo_title`, `locales.en.meta_description` y `locales.en.brief` respectivamente. El bloque metadata NO se incluye en `locales.en.draft_markdown` (solo el cuerpo del artículo).
+14. METADATA DEL EN: lee el bloque al final de `04_review/reviewed_en.md` con los campos SUGGESTED_SLUG_EN, SUGGESTED_SEO_TITLE_EN, SUGGESTED_META_DESC_EN, SUGGESTED_BRIEF_EN, SUGGESTED_PRIMARY_KEYWORD_EN, SUGGESTED_SECONDARY_KEYWORDS_EN. Usa esos valores para poblar `locales.en.slug`, `locales.en.seo_title`, `locales.en.meta_description`, `locales.en.brief` respectivamente, y para construir `locales.en.target_keywords` (ver regla 16). El bloque metadata NO se incluye en `locales.en.draft_markdown` (solo el cuerpo del artículo).
 
-15. BRIEF ES: `locales.es.brief` se copia LITERAL del campo `<brief>...</brief>` dentro de `<editorial_input>` del prompt CMS, sin retoques. Si el prompt no trae brief (caso anómalo), set `locales.es.brief` a string vacío Y anota un fallo en `shared.self_check_failures` con motivo `locales.es.brief: ausente en editorial_input`. El backend rechazará el JSON al validar.
+15. BRIEF ES: `locales.es.brief` se copia LITERAL del campo `<brief>...</brief>` dentro del subbloque `<locale_input locale="es">` del `<editorial_input>` del prompt CMS, sin retoques. Si el prompt no trae brief (caso anómalo), set `locales.es.brief` a string vacío Y anota un fallo en `shared.self_check_failures` con motivo `locales.es.brief: ausente en editorial_input`. El backend rechazará el JSON al validar.
+
+16. TARGET_KEYWORDS (ADR-045 D4/D8/D9):
+
+   Construcción de `locales.es.target_keywords`:
+   - Lee `<editorial_input><locale_input locale="es"><primary_keyword>` y `<secondary_keywords>` del prompt. La primary ES SIEMPRE viene poblada (gate D3 del backend).
+   - El array final tiene EXACTAMENTE 1 objeto con {term: <primary_keyword ES del prompt>, type: "primary", search_intent_match: <valor asignado por la skill según research>}.
+   - Los objetos type="secondary" contienen los secondaries del operador + los que la skill 1 (cms-research-seo) haya añadido en `01_research/research.md` para completar hasta 5. Priorizar los del operador si superan cap 5.
+   - Cada objeto lleva su `search_intent_match` asignado por la skill; nunca lo aporta el operador.
+
+   Construcción de `locales.en.target_keywords`:
+   - Lee `SUGGESTED_PRIMARY_KEYWORD_EN` y `SUGGESTED_SECONDARY_KEYWORDS_EN` del bloque metadata final de `04_review/reviewed_en.md`. Estos valores ya reflejan la decisión de cms-translate-en (Caso A: operator, Caso B: ai_derived).
+   - El array final tiene EXACTAMENTE 1 objeto con {term: <SUGGESTED_PRIMARY_KEYWORD_EN>, type: "primary", search_intent_match: <valor>}.
+   - Los objetos type="secondary" son los de SUGGESTED_SECONDARY_KEYWORDS_EN.
+
+   Regla dura de coherencia primary (ADR-045 D4): si `<locale_input locale="X"><primary_keyword>` no venía vacío en el prompt, el objeto `type="primary"` de `locales.X.target_keywords` DEBE tener `term` igual a ese valor. NO se admite sustitución por otro término. El backend hace merge D4 al recibir el JSON y rechaza con REJECTED si detecta mismatch. Si por algún motivo no puedes cumplir esta regla en la construcción, anota un fallo en `shared.self_check_failures` con motivo `locales.<X>.target_keywords[primary]: mismatch con input operador`.
 
 VALIDACIÓN ANTES DE EMITIR (self-check)
 
@@ -116,7 +136,8 @@ Por cada locale (ES y EN, independientemente):
 - `brief` no nulo no vacío y .length <= 8192 (ADR-027).
 - `draft_markdown` no nulo, >= 800 caracteres, contiene al menos 1 H2 literal (`## ...`), separa párrafos con línea en blanco, sin HTML inline.
 - `search_intent` ∈ {informational, transactional, navigational, commercial}.
-- `target_keywords` contiene al menos un objeto con `type="primary"`.
+- `target_keywords` contiene EXACTAMENTE 1 objeto con `type="primary"` y 0..5 con `type="secondary"` (ADR-045 D2).
+- Si `<locale_input>[locale].primary_keyword` del prompt no era vacío, el `term` del objeto `type="primary"` del output coincide con ese valor (case-insensitive) (ADR-045 D4).
 - `article_outline.length >= 4`.
 - `draft_markdown` NO contiene `<!-- TRACE`, NO contiene `[source N]`, NO contiene `[source `.
 - nº de `fact_check_notes` ≥ nº de claims numéricos/factuales detectables en `draft_markdown`.
@@ -143,22 +164,17 @@ PROHIBIDO
 - Emitir dos ficheros JSON separados. El output es UN UNICO `05_final/final.json`.
 - Incluir campos `parent_slug`, `parent_article_id` o equivalentes; el modelo nuevo no los usa.
 - Incluir un campo `language` al nivel raíz; el idioma se infiere de la clave dentro de `locales`.
+- Sustituir la primary keyword de un locale cuando el operador la aportó (ADR-045 D4). Debe coincidir literalmente.
 
 CUANDO TERMINES
 Confirma brevemente que `05_final/final.json` está escrito y resume:
 - shared.self_check_passed: true | false
 - nº de shared.sources_used
-- locales.es: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, longitud de brief en caracteres, nº de risk_notes
-- locales.en: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, longitud de brief en caracteres, nº de risk_notes
+- locales.es: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, longitud de brief en caracteres, nº de risk_notes, primary_keyword (valor y si coincide con el input operador)
+- locales.en: slug, nº de secciones en article_outline, longitud de draft_markdown en caracteres, longitud de brief en caracteres, nº de risk_notes, primary_keyword (valor y fuente operator/ai_derived)
 - locales.es.slug !== locales.en.slug: sí/no
 - paridad de H2 entre locales: igual / [N vs M]
 
 Si shared.self_check_passed=false, lista los motivos.
 
 El resumen reportado en chat NO incluye el contenido del JSON. El pintado del JSON al operador es responsabilidad del orquestador en su reporte final, tras la fase 5.5. No te adelantes: si pintas aquí, duplicas el contenido y confundes al operador.
-
----
-
-# Pendiente: contrato revisado por ADR-045
-
-Contrato de input revisado por ADR-045 (keywords SEO per-locale editables por el operador). Cuando se implemente, esta skill emitirá `locales.{es,en}.target_keywords` respetando la primary autoritativa del operador: si el `<editorial_input><locale_input locale="es|en">` del prompt trae `primary_keyword`, el objeto `type="primary"` del array debe llevar exactamente ese `term`. La IA sigue aportando `search_intent_match` y puede añadir secondaries hasta el cap de 5. Pendiente de implementación; la reescritura del cuerpo de esta skill vive en el commit de implementación. Ver `docs/06-decisions/adr-045-keywords-seo-per-locale.md` (D4, D9).

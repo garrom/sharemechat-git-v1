@@ -56,19 +56,45 @@ public class ContentPromptBuilder {
 
     private void appendEditorialInput(StringBuilder sb, ContentAIProvider.PromptContext ctx) {
         sb.append("<editorial_input>\n");
-        sb.append("  Datos compartidos del articulo (todos los locales heredan de aqui):\n");
-        sb.append("    slug_es: ").append(safe(ctx.slugEs())).append('\n');
-        sb.append("    title_es: ").append(safe(ctx.titleEs())).append('\n');
-        sb.append("    category: ").append(safe(ctx.category())).append('\n');
-        sb.append("    brief: ").append(safe(ctx.brief())).append('\n');
-        sb.append("    keywords: ").append(safe(ctx.keywordsJson())).append('\n');
-        sb.append("    hero_image_url: ").append(safe(ctx.heroImageUrl())).append('\n');
-        sb.append("    current_state: ").append(safe(ctx.currentState())).append('\n');
+        sb.append("  Datos compartidos del articulo (heredan ambos locales):\n");
+        sb.append("    category:           ").append(safe(ctx.category())).append('\n');
+        sb.append("    hero_image_url:     ").append(safe(ctx.heroImageUrl())).append('\n');
+        sb.append("    current_state:      ").append(safe(ctx.currentState())).append('\n');
         sb.append("    current_version_id: ").append(safe(ctx.currentVersionId())).append('\n');
-        sb.append("\n");
-        sb.append("  Importante: el slug ES lo fijo el operador al crear el articulo y\n");
-        sb.append("  NO debe cambiar. El slug EN lo decide el pipeline (skill\n");
-        sb.append("  cms-translate-en) y debe ser distinto del ES por SEO.\n");
+        sb.append('\n');
+
+        ContentAIProvider.LocaleKeywords kwEs = ctx.keywordsEs() != null
+                ? ctx.keywordsEs() : ContentAIProvider.LocaleKeywords.empty();
+        sb.append("  <locale_input locale=\"es\">\n");
+        sb.append("    slug:               ").append(safe(ctx.slugEs())).append('\n');
+        sb.append("    title:              ").append(safe(ctx.titleEs())).append('\n');
+        sb.append("    brief:              ").append(safe(ctx.brief())).append('\n');
+        sb.append("    primary_keyword:    ").append(quotedOrEmpty(kwEs.primary())).append('\n');
+        sb.append("    secondary_keywords: ").append(quotedArray(kwEs.secondaries())).append('\n');
+        sb.append("  </locale_input>\n");
+        sb.append('\n');
+
+        ContentAIProvider.LocaleKeywords kwEn = ctx.keywordsEn() != null
+                ? ctx.keywordsEn() : ContentAIProvider.LocaleKeywords.empty();
+        sb.append("  <locale_input locale=\"en\">\n");
+        sb.append("    Nota: en EN los campos primary_keyword y secondary_keywords siguen la\n");
+        sb.append("    politica ADR-045 D3:\n");
+        sb.append("      - Si vienen POBLADOS, la fase 4.5 debe HONRAR esos terminos.\n");
+        sb.append("        NO se puede proponer una primary distinta ni sustituir secondaries.\n");
+        sb.append("      - Si vienen VACIOS, la fase 4.5 los DERIVA del ES adaptandolos al\n");
+        sb.append("        mercado anglosajon (no traduccion literal).\n");
+        sb.append("    primary_keyword:    ").append(quotedOrEmpty(kwEn.primary())).append('\n');
+        sb.append("    secondary_keywords: ").append(quotedArray(kwEn.secondaries())).append('\n');
+        sb.append("  </locale_input>\n");
+        sb.append('\n');
+
+        sb.append("  Reglas duras (el input operador es autoritativo):\n");
+        sb.append("    - El slug ES lo fijo el operador al crear el articulo; NO debe cambiar.\n");
+        sb.append("    - El slug EN lo decide el pipeline (skill cms-translate-en) y debe ser\n");
+        sb.append("      distinto del ES por SEO.\n");
+        sb.append("    - Cada primary_keyword no vacio del input es AUTORITATIVO en su locale.\n");
+        sb.append("      El JSON de salida DEBE contener {term: <mismo valor>, type: 'primary'}\n");
+        sb.append("      en locales.<locale>.target_keywords. Ver <output_contract> y <self_check>.\n");
         sb.append("</editorial_input>\n\n");
     }
 
@@ -183,7 +209,9 @@ public class ContentPromptBuilder {
         sb.append("    title_es:        ").append(safe(ctx.titleEs())).append('\n');
         sb.append("    slug_es:         ").append(safe(ctx.slugEs())).append('\n');
         sb.append("    category:        ").append(safe(ctx.category())).append('\n');
-        sb.append("    keywords:        ").append(safe(ctx.keywordsJson())).append('\n');
+        // ADR-045 D5: keywords compartido legacy retirado del prompt tambien
+        // en este bloque. Las keywords autoritativas viven en <editorial_input>
+        // via <locale_input>[locale].primary_keyword / secondary_keywords.
         sb.append("    hero_image_url:  ").append(safe(ctx.heroImageUrl())).append('\n');
         sb.append("    state:           ").append(safe(ctx.currentState())).append('\n');
         sb.append("    brief:\n");
@@ -239,7 +267,24 @@ public class ContentPromptBuilder {
         sb.append("    - fact_check_notes (array de objetos {claim, status, source_index,\n");
         sb.append("        note}, opcional)\n");
         sb.append("\n");
-        sb.append("  Reglas duras de rechazo (el backend devuelve 422 si fallan):\n");
+        sb.append("  Merge de target_keywords (ADR-045 D4):\n");
+        sb.append("    - Cada locales.<es|en>.target_keywords contiene EXACTAMENTE 1 objeto\n");
+        sb.append("      con type=\"primary\" y 0..5 objetos con type=\"secondary\".\n");
+        sb.append("    - Si el input operador en <editorial_input><locale_input locale=\"X\">\n");
+        sb.append("      trae primary_keyword con valor no vacio, el objeto type=\"primary\"\n");
+        sb.append("      del output.locales.X.target_keywords DEBE tener {term: <mismo valor\n");
+        sb.append("      exacto>}. NO se admite sustitucion por otro termino: el backend hace\n");
+        sb.append("      merge D4 al recibir el JSON y rechaza con REJECTED + mensaje\n");
+        sb.append("      accionable si la primary IA no coincide con la del operador.\n");
+        sb.append("    - Si el input operador viene con primary vacia (solo permitido en EN),\n");
+        sb.append("      el pipeline SI propone una primary (derivada por cms-translate-en\n");
+        sb.append("      del ES adaptando al mercado anglosajon).\n");
+        sb.append("    - Los secondary_keywords del operador se preservan siempre; el pipeline\n");
+        sb.append("      puede AÑADIR mas secondaries hasta un cap final de 5 por locale.\n");
+        sb.append("    - search_intent_match lo aporta SIEMPRE el pipeline (research /\n");
+        sb.append("      enrichment); el operador no lo edita.\n");
+        sb.append('\n');
+        sb.append("  Reglas duras de rechazo (el backend devuelve 422 o REJECTED si fallan):\n");
         sb.append("    - shared.sources_used >= 5 elementos\n");
         sb.append("    - shared.self_check_passed === true\n");
         sb.append("    - locales contiene EXACTAMENTE las claves \"es\" y \"en\" (ni mas ni menos)\n");
@@ -247,6 +292,10 @@ public class ContentPromptBuilder {
         sb.append("    - cada locale cumple: seo_title <=60, meta_description <=160,\n");
         sb.append("      draft_markdown >= 800 chars con sintaxis Markdown literal,\n");
         sb.append("      target_keywords con al menos un type=primary, article_outline >= 4.\n");
+        sb.append("    - Coherencia primary keyword (ADR-045 D4/D8): si\n");
+        sb.append("      <locale_input>[locale].primary_keyword del input no es vacio,\n");
+        sb.append("      output.locales.<locale>.target_keywords contiene un objeto\n");
+        sb.append("      {term: <mismo valor>, type: \"primary\"}. Case-insensitive.\n");
         sb.append("</output_contract>\n\n");
     }
 
@@ -268,6 +317,14 @@ public class ContentPromptBuilder {
         sb.append("        * separa parrafos con linea en blanco\n");
         sb.append("        * NO contiene HTML inline\n");
         sb.append("        * se podria copiar y pegar tal cual al CMS\n");
+        sb.append("    - coherencia keywords (ADR-045 D4/D8):\n");
+        sb.append("        * por cada locale, EXACTAMENTE 1 objeto con type='primary' y\n");
+        sb.append("          0..5 objetos con type='secondary' en target_keywords\n");
+        sb.append("        * si <locale_input>[es].primary_keyword no es vacio,\n");
+        sb.append("          output.locales.es.target_keywords contiene un objeto\n");
+        sb.append("          {term: <mismo valor>, type: 'primary'} (case-insensitive)\n");
+        sb.append("        * idem para <locale_input>[en].primary_keyword cuando venga\n");
+        sb.append("          poblada; si viene vacia la fase 4.5 propone la primary EN\n");
         sb.append("\n");
         sb.append("  Si CUALQUIERA de los puntos anteriores falla, CORRIGE antes de emitir\n");
         sb.append("  el JSON final. Si tras corregir aun detectas problemas no resolubles,\n");
@@ -284,5 +341,34 @@ public class ContentPromptBuilder {
         if (v == null) return "null";
         String s = String.valueOf(v);
         return s.replace('\n', ' ').replace('\r', ' ');
+    }
+
+    /**
+     * Formatea un termino de keyword como {@code "termino"} entre comillas
+     * dobles. Cadena vacia o null se emite como {@code ""} (par de comillas
+     * literales) para que el lector sepa que el campo esta vacio intencionalmente.
+     */
+    private static String quotedOrEmpty(String v) {
+        if (v == null || v.isBlank()) return "\"\"";
+        return "\"" + v.replace("\"", "\\\"").replace('\n', ' ').replace('\r', ' ') + "\"";
+    }
+
+    /**
+     * Formatea una lista de secondaries como array compacto entre corchetes con
+     * cada termino entre comillas dobles: {@code ["a", "b", "c"]}. Lista vacia
+     * o null se emite como {@code []}. Justificacion (D-detalle 2B-3): las
+     * comillas evitan ambiguedad cuando un termino contiene espacios; el shape
+     * compacto encaja con el resto del prompt XML-semantico.
+     */
+    private static String quotedArray(java.util.List<String> items) {
+        if (items == null || items.isEmpty()) return "[]";
+        StringBuilder sb = new StringBuilder(items.size() * 16);
+        sb.append('[');
+        for (int i = 0; i < items.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(quotedOrEmpty(items.get(i)));
+        }
+        sb.append(']');
+        return sb.toString();
     }
 }
