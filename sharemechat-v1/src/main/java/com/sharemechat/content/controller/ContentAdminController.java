@@ -6,6 +6,7 @@ import com.sharemechat.content.dto.ArticleSummaryDTO;
 import com.sharemechat.content.dto.ArticleUpdateRequest;
 import com.sharemechat.content.dto.ReviewEventDTO;
 import com.sharemechat.content.dto.TranslationDetailDTO;
+import com.sharemechat.content.dto.TranslationCreateRequest;
 import com.sharemechat.content.dto.TranslationMetadataUpdateRequest;
 import com.sharemechat.content.dto.TranslationPreviewDTO;
 import com.sharemechat.content.dto.TransitionRequest;
@@ -247,6 +248,27 @@ public class ContentAdminController {
     // ================================================================
     // Metadata linguistica per-locale (paquete 6.5)
     // ================================================================
+
+    /**
+     * Instancia una traduccion en un locale para un articulo existente
+     * (ADR-045 subpasada 2C.0, cierra known-debt #D-8). Requerida antes de
+     * poder editar body ({@code PUT .../body}) o metadata ({@code PATCH
+     * .../translations/{locale}}) sin depender del pipeline IA. Devuelve
+     * 409 CONFLICT si ya existe traduccion para (articleId, locale).
+     */
+    @PostMapping("/articles/{articleId}/translations")
+    public ResponseEntity<TranslationDetailDTO> createTranslation(
+            @PathVariable("articleId") Long articleId,
+            @RequestBody TranslationCreateRequest request,
+            Authentication authentication
+    ) {
+        requirePermission(authentication, BackofficeAuthorities.PERM_CONTENT_EDIT);
+        Long actorUserId = resolveUserId(authentication);
+        boolean adminFlag = isAdmin(authentication);
+        TranslationDetailDTO created = articleService.createTranslation(
+                articleId, request, actorUserId, adminFlag);
+        return ResponseEntity.status(HttpStatus.CREATED).body(created);
+    }
 
     /**
      * Edita campos linguisticos per-locale: title, slug, seo_title,

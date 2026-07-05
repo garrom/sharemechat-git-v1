@@ -12,6 +12,7 @@ import com.sharemechat.content.dto.ArticleUpdateRequest;
 import com.sharemechat.content.dto.ReviewEventDTO;
 import com.sharemechat.content.dto.TransitionRequest;
 import com.sharemechat.content.dto.TranslationDetailDTO;
+import com.sharemechat.content.dto.TranslationCreateRequest;
 import com.sharemechat.content.dto.TranslationMetadataUpdateRequest;
 import com.sharemechat.content.dto.TranslationSummaryDTO;
 import com.sharemechat.content.dto.TranslationVersionSummaryDTO;
@@ -281,17 +282,18 @@ public class ContentArticleService {
     }
 
     /**
-     * Actualiza el body de UNA traduccion. Semantica idempotente:
-     * crea la traduccion si no existe todavia (caso: PUT body EN antes de
-     * haber pasado por apply-bilingual). En ese caso la translation nace
-     * con slug y title placeholder vacios (a llenar por apply-bilingual
-     * o por endpoint dedicado en paquete 6).
+     * Actualiza el body de UNA traduccion. Requiere que la traduccion YA
+     * exista para el (articleId, locale) dado; si no existe lanza 404 con
+     * mensaje accionable indicando el endpoint POST para crearla.
      *
-     * NOTA: si la translation no existia y se crea aqui, slug y title
-     * quedan vacios. La transicion DRAFT -> IN_REVIEW exigira que esos
-     * campos esten poblados (junto con seo_title y meta_description),
-     * por lo que el operador deberia complementar la creacion via
-     * apply-bilingual o ediciones posteriores antes de mandar a revision.
+     * Historia (known-debt #D-8, cerrado por ADR-045 subpasada 2C.0):
+     * hasta 2C.0 este metodo prometia en su javadoc "crear la traduccion
+     * on-demand con slug y title placeholder vacios" (caso PUT body EN
+     * antes del primer apply-bilingual). El schema V2 lo impedia (slug y
+     * title NOT NULL); el save() reventaba con constraint violation y el
+     * cliente veia HTTP 500 opaco. La creacion on-demand se retira: la
+     * translation se crea via POST /admin/content/articles/{id}/translations,
+     * donde el operador provee slug y title obligatorios.
      */
     @Transactional
     public ArticleDetailDTO updateTranslationBody(Long articleId,
@@ -305,16 +307,10 @@ public class ContentArticleService {
 
         ContentArticleTranslation tr = translationRepo
                 .findByArticleIdAndLocale(article.getId(), locale)
-                .orElseGet(() -> {
-                    ContentArticleTranslation fresh = new ContentArticleTranslation();
-                    fresh.setArticleId(article.getId());
-                    fresh.setLocale(locale);
-                    // slug y title quedan null; se rellenan al hacer
-                    // apply-bilingual o edicion explicita futura. La
-                    // transicion a IN_REVIEW los exige; mientras sea DRAFT,
-                    // pueden quedar vacios.
-                    return fresh;
-                });
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Translation locale='" + locale + "' no encontrada para articleId="
+                                + article.getId() + ". Crealo primero con POST"
+                                + " /admin/content/articles/{articleId}/translations."));
 
         ContentBodyStorageService.Result uploaded;
         try {
@@ -339,6 +335,132 @@ public class ContentArticleService {
         log.info("{} translation body updated articleId={} locale={} bytes={} actor={}",
                 ContentConstants.LOG_PREFIX, article.getId(), locale, uploaded.byteSize(), actorUserId);
         return toDetail(article);
+    }
+
+    /**
+     * Instancia una traduccion en un locale para un articulo existente
+     * (ADR-045 subpasada 2C.0, cierra known-debt #D-8). Semantica
+     * idempotente: 409 CONFLICT si ya existe (articleId, locale).
+     *
+     * Campos obligatorios del request: {@code locale}, {@code slug},
+     * {@code title}. Opcionalmente acepta {@code seoTitle},
+     * {@code metaDescription}, {@code brief}, {@code primaryKeyword}
+     * y {@code secondaryKeywords} (coma-separado; normalizado con las
+     * reglas ADR-045 D2: trim, dedup case-insensitive, cap 5, max 120 chars
+     * por termino).
+     *
+     * Persistencia: {@code body_s3_key} y {@code body_content_hash} quedan
+     * NULL (se rellenan con {@code updateTranslationBody} o via
+     * {@code applyBilingual}). {@code target_keywords} queda NULL si no
+     * vinieron primary ni secondaries; JSON canonico si al menos primary
+     * vino (mismo comportamiento que {@code createArticle}).
+     *
+     * Emite evento EDIT_APPLIED con payload {target: "translation_created",
+     * locale, fields}. Aplicable solo mientras el articulo sea editable
+     * ({@code assertEditable}).
+     */
+    @Transactional
+    public TranslationDetailDTO createTranslation(Long articleId,
+                                                  TranslationCreateRequest req,
+                                                  Long actorUserId,
+                                                  boolean isAdmin) {
+        if (articleId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "articleId requerido");
+        }
+        if (req == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request requerida");
+        }
+        if (actorUserId == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Actor no resuelto");
+        }
+
+        ContentArticle article = requireExisting(articleId);
+        assertEditable(article, isAdmin);
+
+        // Obligatorios: locale, slug, title.
+        String locale = normalizeLocale(req.getLocale());
+        String slug = normalizeSlug(req.getSlug());
+        String title = normalizeText(req.getTitle(), TITLE_MAX, true, "title");
+
+        // Idempotencia: 409 CONFLICT si ya existe (articleId, locale).
+        if (translationRepo.findByArticleIdAndLocale(article.getId(), locale).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Ya existe traduccion locale='" + locale + "' para articleId="
+                            + article.getId() + ". Usa PATCH para modificarla.");
+        }
+
+        // Unicidad global de slug por locale (constraint UNIQUE (slug, locale)).
+        assertSlugAvailableForLocale(slug, locale, /*currentTranslationId=*/null);
+
+        // Opcionales: null -> no setea; "" dispara 400 (excepto secondaryKeywords).
+        List<String> changedFields = new java.util.ArrayList<>();
+        changedFields.add("locale");
+        changedFields.add("slug");
+        changedFields.add("title");
+
+        ContentArticleTranslation tr = new ContentArticleTranslation();
+        tr.setArticleId(article.getId());
+        tr.setLocale(locale);
+        tr.setSlug(slug);
+        tr.setTitle(title);
+
+        if (req.getSeoTitle() != null) {
+            if (req.getSeoTitle().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "seoTitle no puede ser vacio; omite el campo para no setearlo");
+            }
+            tr.setSeoTitle(normalizeText(req.getSeoTitle(), SEO_TITLE_MAX, true, "seoTitle"));
+            changedFields.add("seoTitle");
+        }
+        if (req.getMetaDescription() != null) {
+            if (req.getMetaDescription().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "metaDescription no puede ser vacio; omite el campo para no setearlo");
+            }
+            tr.setMetaDescription(normalizeText(req.getMetaDescription(),
+                    META_DESCRIPTION_MAX, true, "metaDescription"));
+            changedFields.add("metaDescription");
+        }
+        if (req.getBrief() != null) {
+            if (req.getBrief().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "brief no puede ser vacio; omite el campo para no setearlo");
+            }
+            tr.setBrief(normalizeText(req.getBrief(), BRIEF_MAX, false, "brief"));
+            changedFields.add("brief");
+        }
+
+        // Keywords ADR-045: si vino primary o secondaries, componer JSON;
+        // sino target_keywords queda null (comportamiento coherente con
+        // createArticle y updateTranslationMetadata).
+        if (req.getPrimaryKeyword() != null || req.getSecondaryKeywords() != null) {
+            if (req.getPrimaryKeyword() != null && req.getPrimaryKeyword().trim().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "primaryKeyword no puede ser vacio; omite el campo para no setearlo");
+            }
+            String primary = normalizePrimaryKeyword(req.getPrimaryKeyword());
+            List<String> secondaries = normalizeSecondaryKeywords(req.getSecondaryKeywords());
+            String composed = composeTargetKeywordsJson(primary, secondaries, null);
+            if (composed != null) {
+                tr.setTargetKeywords(composed);
+                changedFields.add("targetKeywords");
+            }
+        }
+
+        ContentArticleTranslation saved = translationRepo.save(tr);
+
+        article.setUpdatedByUserId(actorUserId);
+        articleRepo.save(article);
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("target", "translation_created");
+        payload.put("locale", locale);
+        payload.put("fields", changedFields);
+        emitEvent(article.getId(), null, ContentConstants.EVENT_EDIT_APPLIED, actorUserId, payload);
+
+        log.info("{} translation created articleId={} locale={} slug={} actor={} fields={}",
+                ContentConstants.LOG_PREFIX, article.getId(), locale, slug, actorUserId, changedFields);
+        return toTranslationDetail(saved);
     }
 
     /**
