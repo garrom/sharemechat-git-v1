@@ -144,9 +144,13 @@ const buildTransitionsConfig = (t) => ({
 // valores invalidos (IDs inexistentes, negativos). Cuando se decida
 // reintroducirlo, hacerlo como dropdown poblado desde el listado de
 // usuarios backoffice via /api/admin/users, no input numerico libre.
+// ADR-045 subpasada 2C.1 (D5): retirado `keywords` compartido del state y
+// del PATCH de metadata. El backend sigue aceptando el campo como legacy
+// (marcado @Deprecated en 2A) y una migracion futura lo eliminara. La UI
+// deja de leerlo y escribirlo; las keywords SEO viven ahora per-locale en
+// BodyLocaleTabs (primary_keyword + secondary_keywords).
 const initialSharedMeta = {
   category: '',
-  keywords: '',
   heroImageUrl: '',
 };
 
@@ -159,8 +163,12 @@ const initialCreateMeta = {
   brief: '',
 };
 
+// ADR-045 subpasada 2C.1: seoDraft gana primaryKeyword y secondaryKeywords.
+// - primaryKeyword: string (obligatorio en ES para el gate D3).
+// - secondaryKeywords: string coma-separado (backend normaliza en 2A).
 const emptySeoDraft = {
   title: '', slug: '', seoTitle: '', metaDescription: '', brief: '',
+  primaryKeyword: '', secondaryKeywords: '',
 };
 
 const BRIEF_MAX = 8192;
@@ -208,6 +216,13 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   const [bodyError, setBodyError] = useState('');
   const [seoError, setSeoError] = useState('');
   const [checklistAllPassed, setChecklistAllPassed] = useState(false);
+
+  // ADR-045 subpasada 2C.1: instanciacion de translation nueva via
+  // POST /admin/content/articles/{id}/translations (endpoint 2C.0).
+  // Se dispara desde BodyLocaleTabs cuando la pestaña esta en un locale
+  // cuya translation aun no existe (tipicamente EN antes del pipeline).
+  const [creatingTranslation, setCreatingTranslation] = useState(false);
+  const [createTranslationError, setCreateTranslationError] = useState('');
 
   // ============================================================
   // Preview modal
@@ -257,9 +272,10 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     setArticle(dto);
     setCurrentId(dto.id);
     setState(dto.state || 'DRAFT');
+    // ADR-045 subpasada 2C.1: no leemos `keywords` compartido (legacy);
+    // solo `category` y `heroImageUrl` que siguen viviendo en el articulo.
     setSharedMeta({
       category: dto.category || '',
-      keywords: dto.keywords || '',
       heroImageUrl: dto.heroImageUrl || '',
     });
   }, []);
@@ -286,16 +302,20 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     setBodyMissing(false);
 
     // Rellenar el draft SEO desde la translation activa (si existe). Incluye
-    // brief desde ADR-027 (10.A.10): es un campo per-locale mas dentro del
-    // bloque editable de cada traduccion.
+    // brief desde ADR-027 (10.A.10) y keywords SEO per-locale desde ADR-045
+    // subpasada 2A/2C.1. secondaryKeywords viene del backend como array y
+    // aqui lo convertimos a string coma-separado para el input plano.
     const tr = findTranslation(art, locale);
     if (tr) {
+      const secArray = Array.isArray(tr.secondaryKeywords) ? tr.secondaryKeywords : [];
       setSeoDraft({
         title: tr.title || '',
         slug: tr.slug || '',
         seoTitle: tr.seoTitle || '',
         metaDescription: tr.metaDescription || '',
         brief: tr.brief || '',
+        primaryKeyword: tr.primaryKeyword || '',
+        secondaryKeywords: secArray.join(', '),
       });
       setSeoDirty(false);
     } else {
@@ -380,7 +400,9 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           // escribe en la translation ES (no en el articulo padre).
           brief: createMeta.brief || null,
           category: sharedMeta.category || null,
-          keywords: sharedMeta.keywords || null,
+          // ADR-045 subpasada 2C.1 (D5): no enviamos `keywords` compartido
+          // (legacy retirado del state). El backend sigue aceptando el campo
+          // como null para compat.
           heroImageUrl: sharedMeta.heroImageUrl || null,
         }),
       });
@@ -406,9 +428,11 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       const updated = await apiFetch(`/admin/content/articles/${currentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        // ADR-045 subpasada 2C.1 (D5): no enviamos `keywords` compartido
+        // (legacy retirado del state). El backend sigue aceptando el campo
+        // pero la UI ya no lo escribe.
         body: JSON.stringify({
           category: sharedMeta.category,
-          keywords: sharedMeta.keywords,
           heroImageUrl: sharedMeta.heroImageUrl,
         }),
       });
@@ -433,7 +457,13 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       // Solo enviamos los campos que difieren del valor actual; el resto
       // null. El backend ignora null = no cambiar. Brief incluido aqui per
       // ADR-027 (TranslationMetadataUpdateRequest acepta brief desde 10.A.8).
+      // Keywords SEO (primary + secondaries) per ADR-045 subpasada 2A (el
+      // service TranslationMetadataUpdateRequest.setPrimaryKeyword /
+      // setSecondaryKeywords normaliza y compone el JSON target_keywords).
       const tr = findTranslation(article, activeBodyLocale);
+      const currentSecondariesCsv = Array.isArray(tr?.secondaryKeywords)
+        ? tr.secondaryKeywords.join(', ')
+        : '';
       const payload = {};
       if ((seoDraft.title || '') !== (tr?.title || '')) payload.title = seoDraft.title || null;
       if ((seoDraft.slug || '') !== (tr?.slug || '')) payload.slug = seoDraft.slug || null;
@@ -443,6 +473,21 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       }
       if ((seoDraft.brief || '') !== (tr?.brief || '')) {
         payload.brief = seoDraft.brief || null;
+      }
+      // ADR-045 D3/D4: primary y secondaries per-locale. El backend acepta:
+      //  - null => no tocar el campo.
+      //  - string vacio '' => 400 (excepto secondaryKeywords que se limpia).
+      // Aqui enviamos '' cuando el operador vacio explicitamente secondaries,
+      // pero para primary enviamos null si vacio y antes tenia valor (que
+      // asi el backend no toca la primary; borrarla no esta soportado en
+      // este PATCH, va con instanciar de nuevo o via apply-bilingual).
+      if ((seoDraft.primaryKeyword || '') !== (tr?.primaryKeyword || '')) {
+        payload.primaryKeyword = seoDraft.primaryKeyword && seoDraft.primaryKeyword.trim()
+          ? seoDraft.primaryKeyword.trim()
+          : null;
+      }
+      if ((seoDraft.secondaryKeywords || '') !== currentSecondariesCsv) {
+        payload.secondaryKeywords = seoDraft.secondaryKeywords || '';
       }
       const result = await apiFetch(
         `/admin/content/articles/${currentId}/translations/${activeBodyLocale}`,
@@ -493,6 +538,41 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       setBodyError(e?.message || t('editor.errSaveBody', 'No se pudo guardar el cuerpo'));
     } finally {
       setSavingBody(false);
+    }
+  };
+
+  // ============================================================
+  // Acciones: instanciar translation (ADR-045 subpasada 2C.1 + 2C.0)
+  // ============================================================
+  const handleCreateTranslation = async ({
+    locale, slug, title, primaryKeyword, secondaryKeywords,
+  }) => {
+    if (!currentId) return;
+    setCreatingTranslation(true);
+    setCreateTranslationError('');
+    setError('');
+    setOkMessage('');
+    try {
+      await apiFetch(`/admin/content/articles/${currentId}/translations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          locale,
+          slug,
+          title,
+          primaryKeyword: primaryKeyword || null,
+          secondaryKeywords: secondaryKeywords || null,
+        }),
+      });
+      await loadArticle(currentId);
+      setOkMessage(t('editor.translationBootstrap.msgCreated',
+        'Traducción EN creada. Continúa rellenando los campos SEO y el body.'));
+    } catch (e) {
+      setCreateTranslationError(
+        e?.message || t('editor.translationBootstrap.errCreate',
+          'No se pudo instanciar la traducción EN'));
+    } finally {
+      setCreatingTranslation(false);
     }
   };
 
@@ -673,6 +753,21 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   const currentVersionId = article?.currentVersionId || null;
   const bodyContentHash = activeTranslation?.bodyContentHash || '';
 
+  // ADR-045 subpasada 2C.1: primary ES presente controla el gate visual
+  // del boton "Generar articulo completo" del panel IA. El backend ya lo
+  // bloquea con 409 (ContentRunService.assertPrimaryKeywordEsPresent en 2A);
+  // el UI lo refleja antes de dejar clicar.
+  const translationEs = findTranslation(article, 'es');
+  const primaryEsPresent = !!(translationEs?.primaryKeyword
+    && translationEs.primaryKeyword.trim().length > 0);
+
+  // Sugerencias pre-relleno para el form de instanciacion de translation EN
+  // (ADR-045 subpasada 2C.1 D-detalle 2C.1-3/4): slug = `${slugEs}-en`,
+  // title = titulo ES. El operador puede editarlos antes de crear; el
+  // pipeline los sobreescribira con SUGGESTED_SLUG_EN/title de fase 4.5.
+  const suggestedEnSlug = translationEs?.slug ? `${translationEs.slug}-en` : '';
+  const suggestedEnTitle = translationEs?.title || '';
+
   // Wrappers que marcan dirty cuando el operador edita.
   const handleBodyChange = (v) => {
     setBody(v);
@@ -815,6 +910,9 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           </>
         ) : null}
 
+        {/* ADR-045 subpasada 2C.1 (D5): input Keywords compartido retirado.
+            Las keywords SEO viven per-locale en las pestañas ES/EN del
+            BodyLocaleTabs (Primary + Secondary por idioma). */}
         <EditorRow $cols={2}>
           <div>
             <LabelText>{t('editor.fieldCategory', 'Categoría')}</LabelText>
@@ -826,19 +924,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
               placeholder={t('editor.fieldCategoryPlaceholder', 'ej: producto, modelos, seguridad')}
             />
           </div>
-          <div>
-            <LabelText>{t('editor.fieldKeywords', 'Keywords')}</LabelText>
-            <StyledInput
-              type="text"
-              value={sharedMeta.keywords}
-              disabled={fieldsLocked}
-              onChange={(e) => updateShared('keywords', e.target.value)}
-              placeholder={t('editor.fieldKeywordsPlaceholder', 'ej: chat, video, modelo')}
-            />
-          </div>
-        </EditorRow>
-
-        <EditorRow $cols={1}>
           <div>
             <LabelText>{t('editor.fieldHero', 'Hero image URL')}</LabelText>
             <StyledInput
@@ -926,6 +1011,13 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
             seoError={seoError}
             missingTranslation={bodyMissing}
             disabled={fieldsLocked}
+            /* ADR-045 subpasada 2C.1 (2C.0 endpoint): flujo de instanciacion
+               de translation nueva desde la propia pestaña. */
+            onCreateTranslation={handleCreateTranslation}
+            suggestedSlug={suggestedEnSlug}
+            suggestedTitle={suggestedEnTitle}
+            creatingTranslation={creatingTranslation}
+            createTranslationError={createTranslationError}
           />
         </MetaCard>
       ) : null}
@@ -935,6 +1027,10 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         <ContentArticleAIPanel
           articleId={currentId}
           articleState={state}
+          /* ADR-045 subpasada 2C.1 (D-detalle 2C.1-6): gate visual del boton
+             "Generar articulo completo" en el panel IA. El backend bloquea
+             con 409 desde 2A; la UI lo refleja para no dejar chocarse. */
+          primaryEsPresent={primaryEsPresent}
           onBilingualApplied={() => {
             setOkMessage(t('ai.msgApplied',
               'Artículo actualizado con la traducción bilingüe. Revisa las pestañas ES y EN.'));

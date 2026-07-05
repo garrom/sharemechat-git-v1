@@ -71,10 +71,14 @@ const isTranslationFullyPopulated = (tr) =>
   && isNonEmpty(tr.metaDescription);
 
 /**
- * Calcula los 10 invariantes tecnicos que el backend exige antes de
- * transitar DRAFT -> IN_REVIEW. Espeja exactamente la logica server-side
- * de ContentArticleService.assertReadyForReview. Se sigue calculando aun
+ * Calcula los invariantes tecnicos que el backend exige antes de transitar
+ * DRAFT -> IN_REVIEW. Espeja exactamente la logica server-side de
+ * ContentArticleService.assertReadyForReview. Se sigue calculando aun
  * cuando no se pintan en pantalla, porque alimentan `allChecksPassed`.
+ *
+ * ADR-045 subpasada 2C.1: `primaryKeywordEs` añadido como invariante
+ * (el backend lo exige desde 2A tanto para IN_REVIEW como para crear
+ * un run IA; el gate D3 del ADR).
  */
 const computeInvariants = (article, t) => {
   if (!article) {
@@ -85,6 +89,9 @@ const computeInvariants = (article, t) => {
   return [
     { key: 'hero', label: t('checklist.hero', 'Hero image configurada'),
       ok: isNonEmpty(article.heroImageUrl) },
+    { key: 'primaryKeywordEs',
+      label: t('checklist.primaryKeywordEs', 'Primary keyword ES presente'),
+      ok: !!trEs && isNonEmpty(trEs.primaryKeyword) },
     { key: 'briefEs', label: t('checklist.briefEs', 'Brief ES presente'),
       ok: !!trEs && isNonEmpty(trEs.brief) },
     { key: 'bodyEs', label: t('checklist.bodyEs', 'Cuerpo ES presente'),
@@ -109,8 +116,26 @@ const computeInvariants = (article, t) => {
 };
 
 /**
- * Decide el paso editorial actual (indice 0-4) y el estado terminal si
- * aplica. Sigue la heuristica documentada en la cabecera del fichero.
+ * Decide el paso editorial actual (indice 0-5) y el estado terminal si
+ * aplica. Sigue la heuristica documentada en la cabecera del fichero,
+ * extendida por ADR-045 subpasada 2C.1 con el paso nuevo "Definir keywords
+ * SEO" insertado entre "Crear artículo" (0) y "Generar artículo completo
+ * con IA" (2).
+ *
+ * Indices de los pasos tras 2C.1:
+ *   0 - Crear artículo
+ *   1 - Definir keywords SEO         (nuevo, ADR-045 2C.1)
+ *   2 - Generar artículo completo con IA
+ *   3 - Validar JSON y revisar vista previa
+ *   4 - Enviar a revisión
+ *   5 - Publicar
+ *
+ * La transicion 0 -> 1 se completa al crear el articulo. La transicion
+ * 1 -> 2 se completa cuando trEs.primaryKeyword no vacio. La transicion
+ * 2 -> 3 se completa cuando hay un run VALIDATED o body en alguna
+ * translation. La transicion 3 -> 4 se completa cuando ambas translations
+ * estan completamente pobladas. Los pasos 4 y 5 dependen del estado del
+ * articulo.
  */
 const computeCurrentStep = (article, runs) => {
   if (!article) return { currentIdx: 0, terminal: null };
@@ -123,20 +148,28 @@ const computeCurrentStep = (article, runs) => {
   const trEn = findTranslation(article, 'en');
   const allTranslationsFull =
     isTranslationFullyPopulated(trEs) && isTranslationFullyPopulated(trEn);
+  const hasPrimaryEs = !!trEs && isNonEmpty(trEs.primaryKeyword);
 
   if (allTranslationsFull) {
     if (article.state === 'DRAFT') {
-      return { currentIdx: 3, terminal: null }; // paso 4
+      return { currentIdx: 4, terminal: null }; // paso "Enviar a revisión"
     }
     if (article.state === 'IN_REVIEW') {
-      return { currentIdx: 4, terminal: null }; // paso 5
+      return { currentIdx: 5, terminal: null }; // paso "Publicar"
     }
     if (article.state === 'PUBLISHED') {
       return { currentIdx: -1, terminal: 'published' };
     }
   }
 
-  // Articulo creado pero translations incompletas: paso 2 o 3.
+  // ADR-045 subpasada 2C.1: paso "Definir keywords SEO" bloquea el pipeline
+  // hasta que la primary ES este declarada. El backend refuerza con 409.
+  if (!hasPrimaryEs) {
+    return { currentIdx: 1, terminal: null }; // paso "Definir keywords SEO"
+  }
+
+  // Articulo creado y con primary ES declarada, pero translations
+  // incompletas: paso "Generar" o "Validar JSON".
   const hasValidatedRun = Array.isArray(runs)
     ? runs.some((r) => r && r.status === 'VALIDATED')
     : false;
@@ -145,9 +178,9 @@ const computeCurrentStep = (article, runs) => {
     || (trEn && isNonEmpty(trEn.bodyS3Key));
 
   if (hasValidatedRun || hasAnyBodyContent) {
-    return { currentIdx: 2, terminal: null }; // paso 3
+    return { currentIdx: 3, terminal: null }; // paso "Validar JSON"
   }
-  return { currentIdx: 1, terminal: null }; // paso 2
+  return { currentIdx: 2, terminal: null }; // paso "Generar con IA"
 };
 
 const ReviewChecklist = ({ article, runs = null, onChecklistChange }) => {
@@ -173,13 +206,21 @@ const ReviewChecklist = ({ article, runs = null, onChecklistChange }) => {
     }
   }, [allChecksPassed, onChecklistChange]);
 
-  // 4. Definicion de los 5 pasos editoriales (i18n preventiva con fallback ES).
+  // 4. Definicion de los 6 pasos editoriales (i18n preventiva con fallback
+  //    ES). ADR-045 subpasada 2C.1 inserta "Definir keywords SEO" como
+  //    paso 2, empujando los demas.
   const editorialSteps = useMemo(() => ([
     {
       key: 'create',
       label: t('checklist.step1Label', 'Crear artículo'),
       hint: t('checklist.step1Hint',
         "Rellena slug inicial, título inicial y metadata compartida, luego pulsa 'Crear artículo'."),
+    },
+    {
+      key: 'keywords',
+      label: t('checklist.stepKeywordsLabel', 'Definir keywords SEO'),
+      hint: t('checklist.stepKeywordsHint',
+        "Rellena Primary keyword ES en la pestaña ES para desbloquear el pipeline IA. Opcionalmente rellena Primary keyword EN si quieres que el pipeline honre un término específico (si la dejas vacía, la IA la derivará del ES)."),
     },
     {
       key: 'generate',
@@ -323,11 +364,12 @@ const ReviewChecklist = ({ article, runs = null, onChecklistChange }) => {
         })}
       </ol>
 
-      {/* Red de seguridad: cuando el operador esta en el paso 4 ("Enviar a
-          revisión") pero el backend exige campos que faltan, mostramos un
-          warning con la lista. El boton "Enviar a revisión" arriba ya se
-          deshabilita via onChecklistChange(false). */}
-      {currentIdx === 3 && !allChecksPassed && missingInvariants.length > 0 ? (
+      {/* Red de seguridad: cuando el operador esta en el paso "Enviar a
+          revisión" (currentIdx=4 tras ADR-045 subpasada 2C.1 que inserto el
+          paso "Definir keywords SEO") pero el backend exige campos que
+          faltan, mostramos un warning con la lista. El boton "Enviar a
+          revisión" arriba ya se deshabilita via onChecklistChange(false). */}
+      {currentIdx === 4 && !allChecksPassed && missingInvariants.length > 0 ? (
         <div
           style={{
             marginTop: 12,

@@ -69,6 +69,12 @@ const fmtDate = (v) => {
 const ContentArticleAIPanel = ({
   articleId,
   articleState,
+  // ADR-045 subpasada 2C.1 (D-detalle 2C.1-6): gate visual del boton
+  // "Generar articulo completo" cuando la primary keyword ES aun no esta
+  // declarada. El backend ya bloquea con 409 desde 2A
+  // (ContentRunService.assertPrimaryKeywordEsPresent); la UI lo refleja
+  // via disabled + tooltip para no dejar chocarse al operador.
+  primaryEsPresent = true,
   onBilingualApplied,
 }) => {
   const { t } = useTranslation('cms');
@@ -321,13 +327,23 @@ const ContentArticleAIPanel = ({
         <HelperText>{t('ai.lblGenerate', 'Generar artículo con IA:')}</HelperText>
         <AIRunTypeButton
           type="button"
-          disabled={creating}
+          disabled={creating || !primaryEsPresent}
           onClick={() => handleCreateRun(RUN_TYPE_PRIMARY)}
+          title={!primaryEsPresent
+            ? t('ai.disabledPrimaryEs',
+                'Rellena Primary keyword ES en la pestaña ES antes de generar.')
+            : undefined}
         >
           {creating
             ? t('ai.btnGenerating', 'Creando…')
             : t('ai.btnGenerateFull', 'Generar artículo completo')}
         </AIRunTypeButton>
+        {!primaryEsPresent ? (
+          <HelperText style={{ color: '#b45309' }}>
+            {t('ai.disabledPrimaryEs',
+              'Rellena Primary keyword ES en la pestaña ES antes de generar.')}
+          </HelperText>
+        ) : null}
       </AIRunTypeBar>
 
       <AdvancedToggleRow>
