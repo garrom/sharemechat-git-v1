@@ -327,12 +327,33 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       });
     } else {
       setSeoDraft(emptySeoDraft);
+      // Fix.A (2026-07-06, informe get-body-html-diagnosis): si la translation
+      // no existe (comun en EN antes del bootstrap 2C.0), NO hacer fetch del
+      // body. El backend responderia 404 pero la distribucion CloudFront lo
+      // convierte a 200+index.html (CustomErrorResponses SPA fallback), lo
+      // que confundia a apiFetch y disparaba MaintenanceOverlay ademas de
+      // meter HTML como body markdown en el editor.
+      setBodyMissing(true);
+      return;
     }
 
-    // Fetch body markdown. 404 => translation aun no existe.
+    // Fetch body markdown. 404 => body aun no persistido en S3.
     try {
       const md = await apiFetch(`/admin/content/articles/${id}/translations/${locale}/body`);
-      setBody(typeof md === 'string' ? md : '');
+      // Fix.C (2026-07-06, informe get-body-html-diagnosis): defense-in-depth
+      // frente al mismo problema del Fix.A cuando la translation SI existe
+      // pero no tiene body S3 todavia (o el objeto S3 fue borrado). En ese
+      // caso el backend responde 404, CloudFront lo convierte a 200+index.html
+      // y el string devuelto es el HTML del bucket admin. Detectamos ese HTML
+      // por su prefijo `<!doctype` (case-insensitive) y lo tratamos como body
+      // missing en vez de meterlo literal como markdown en el textarea.
+      const md_str = typeof md === 'string' ? md : '';
+      if (/^\s*<!doctype\s/i.test(md_str)) {
+        setBodyMissing(true);
+        setBody('');
+      } else {
+        setBody(md_str);
+      }
     } catch (e) {
       if (e && e.status === 404) {
         setBodyMissing(true);

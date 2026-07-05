@@ -34,16 +34,20 @@ const HEALTH_FETCH_TIMEOUT_MS = 5000;
 
 const EVENT_NAME = 'sharemechat:maintenance';
 
-// Considera el backend "vivo" si responde con JSON (cualquier status JSON,
-// incluido 401/403). Solo se considera "caido" si responde 5xx o HTML (que
-// es lo que CloudFront servira desde el origen secundario en failover).
+// Fix.F1 (2026-07-06, informe get-body-html-diagnosis): cerramos la deuda
+// anterior — el helper viejo exigía Content-Type application/json exacto y
+// leía como "caído" cualquier 401 con CT vacío (el backend responde 401 con
+// content-length 0 y sin CT header), lo que dejaba el overlay pegado entre
+// sesiones caducadas y renovadas.
+//
+// Regla positiva y simétrica a isMaintenanceResponse de http.js: el backend
+// está VIVO si respondió cualquier cosa que NO sea 5xx. Un 200, 401, 403,
+// 404 o similar es señal de que el origin API está atendiendo — aunque la
+// respuesta concreta sea un rechazo de negocio o auth.
 const isBackendAlive = (res) => {
   if (!res) return false;
-  if (res.status >= 502 && res.status <= 504) return false;
-  const ct = (res.headers.get('content-type') || '').toLowerCase();
-  if (ct.includes('application/json')) return true;
-  // Cualquier otro caso (HTML, vacio, etc.) lo tratamos como no-vivo.
-  return false;
+  if (res.status >= 500 && res.status < 600) return false;
+  return true;
 };
 
 const pingBackend = async () => {

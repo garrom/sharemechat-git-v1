@@ -23,16 +23,41 @@ const isJsonResponse = (res) =>
 // dispara overlay (semantica alineada con el nombre del modo). 502/504 y
 // 503 sin header de modo operacional siguen disparando overlay (es el
 // fallo real de gateway/backend).
+// Fix.F1 + Fix.F2 unificados (2026-07-06, informe get-body-html-diagnosis):
+// disparamos MaintenanceOverlay SOLO ante señales de infra caída, no ante
+// errores de negocio.
+//
+// Cierra las deudas #F1 (isBackendAlive demasiado estricto sobre Content-Type,
+// dejaba overlay pegado con 401 sin CT) y #F2 (isMaintenanceResponse capturaba
+// cualquier 200 text/html como maintenance, disparando falsos positivos por
+// el CustomErrorResponse SPA fallback de CloudFront: `404 → /index.html 200`
+// convierte 404 legítimos del backend en 200 text/html, y el helper viejo lo
+// leía como "backend caído").
+//
+// Regla positiva: dispara SOLO con status 5xx.
+//   - 502/503/504 (gateway/upstream fail).
+//   - Cualquier otro 5xx, con o sin CT text/html.
+//   - Excepción: 503 con X-Product-Mode PRELAUNCH/CLOSED NO dispara — es un
+//     modo operacional deliberado del producto, no un fallo de infra.
+//
+// Lo que NO dispara maintenance:
+//   - 2xx text/html — puede ser SPA fallback intencionado o un endpoint
+//     mal-configurado; el caller debe tratarlo como "respuesta no válida
+//     para este endpoint" (typical: treat-as-missing).
+//   - 401 / 403 — errores de auth; manejo en refresh/logout (líneas 162+).
+//   - 404 — error de negocio (recurso no existe); el caller lo maneja.
+//   - Timeouts / errores de red — se re-lanzan al caller sin overlay para
+//     no ocultar aborts intencionales (AbortController). Si el operador
+//     pierde conexión de forma sostenida, un 5xx llegará antes o después
+//     y disparará el overlay por el camino normal.
 const isMaintenanceResponse = (res) => {
   if (!res) return false;
-  if (res.status === 502 || res.status === 504) return true;
   if (res.status === 503) {
     const productMode = (res.headers.get('x-product-mode') || '').toUpperCase();
     if (productMode === 'PRELAUNCH' || productMode === 'CLOSED') return false;
     return true;
   }
-  const ct = (res.headers.get('content-type') || '').toLowerCase();
-  if (ct.includes('text/html')) return true;
+  if (res.status >= 500 && res.status < 600) return true;
   return false;
 };
 
