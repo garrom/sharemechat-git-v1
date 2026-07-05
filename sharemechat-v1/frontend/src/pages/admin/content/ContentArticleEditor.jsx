@@ -1,29 +1,31 @@
 // src/pages/admin/content/ContentArticleEditor.jsx
 //
 // Editor del articulo logico bilingue (paquete 6, ADR-025; brief reubicado
-// per ADR-027 en 10.A.10).
+// per ADR-027 en 10.A.10). Refactor 2C.2 (post 2C.1): la vista "Contenido
+// por idioma" pasa de pestañas ES|EN a secciones apiladas (ES arriba, EN
+// debajo). Motivacion: bug UX persistente ligado al click de pestaña; se
+// retira la superficie que causa friccion. Ver informes
+// docs/analysis/2026-07-05-cms-2c1-maintenance-overlay-repro.md y
+// docs/analysis/2026-07-05-cms-2c1-en-tab-overlay-diagnosis.md.
 //
-// Cambios respecto al modelo viejo (paquete 0):
+// Estructura vigente:
 //
 //  Metadata compartida (top del editor):
-//   - Eliminados los campos "Título" y "Locale". El titulo es per-locale;
-//     el locale del articulo se hardcodea a "es" al crear.
-//   - Conservados: heroImageUrl, category, keywords, responsibleEditorUserId.
-//   - `brief` ya NO vive aqui (per ADR-027 ahora es per-locale). Se edita
-//     en cada tab de BodyLocaleTabs como parte del PATCH /translations/{locale}.
-//   - Al crear el articulo, `brief` viaja en el payload de creacion
-//     (ArticleCreateRequest sigue aceptandolo en root) y el servicio
-//     lo escribe en la translation ES.
-//   - PATCH /api/admin/content/articles/{id} con los 4 campos compartidos
-//     restantes (sin brief).
+//   - Campos: heroImageUrl, category. `brief` es per-locale (ADR-027).
+//   - Al crear, `brief` viaja en el payload de creacion y el servicio lo
+//     escribe en la translation ES.
+//   - PATCH /api/admin/content/articles/{id} con los 2 campos compartidos
+//     restantes.
 //
-//  Contenido por idioma (BodyLocaleTabs):
-//   - Selector ES|EN encima del editor del body.
-//   - En cada pestaña: inputs editables para title, slug, seoTitle,
-//     metaDescription (paquete 6.5 PATCH /translations/{locale}) +
-//     textarea del body (PUT /translations/{locale}/body).
-//   - Si la traduccion no existe (caso EN antes de apply-bilingual),
-//     estado vacio con mensaje claro.
+//  Contenido por idioma (BodyLocaleSections):
+//   - Bloque ES arriba y bloque EN debajo, ambos visibles simultaneamente.
+//   - Cada bloque tiene Keywords SEO (Primary + Secondary) + titulo/slug/
+//     seoTitle/metaDescription/brief + boton "Guardar campos SEO ({locale})"
+//     + editor markdown de cuerpo.
+//   - Si la traduccion EN no existe (bodyMissing por 404 del body EN),
+//     el bloque EN muestra TranslationBootstrapForm con slug/title
+//     pre-rellenados. Al instanciar via POST /translations el bloque pasa
+//     al formulario completo.
 //
 //  Checklist preventivo (ReviewChecklist):
 //   - Solo visible en DRAFT. Lista de invariantes para IN_REVIEW.
@@ -32,15 +34,13 @@
 //
 //  Modal de preview:
 //   - Selector ES|EN dentro del modal usando BodyLocaleTabs en modo
-//     `preview`.
-//   - GET /api/admin/content/articles/{id}/translations/{locale}/preview
-//     (antes era `/preview` sin locale).
+//     `preview` (esta vista sigue con tabs porque es de lectura, no de
+//     edicion; la fuente del bug no aplica).
+//   - GET /api/admin/content/articles/{id}/translations/{locale}/preview.
 //
 //  AIPanel:
 //   - Componente reescrito en otro fichero. Se le pasa `onBilingualApplied`
 //     para que recargue el detalle del articulo tras un apply exitoso.
-//
-//  i18n preventiva con namespace `cms` en todo el componente.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -77,12 +77,15 @@ import {
 } from '../../../styles/pages-styles/AdminContentStyles';
 import ContentArticleHistory from './ContentArticleHistory';
 import ContentArticleAIPanel from './ContentArticleAIPanel';
+import BodyLocaleSections from './components/BodyLocaleSections';
 import BodyLocaleTabs from './components/BodyLocaleTabs';
 import ReviewChecklist from './components/ReviewChecklist';
 import ConfirmModal from './components/ConfirmModal';
 
 // ADR-016: terminales bloquean edicion incluso para ADMIN.
 const TERMINAL_STATES = new Set(['PUBLISHED', 'RETRACTED']);
+
+const LOCALES = ['es', 'en'];
 
 const fmtDate = (v) => {
   if (!v) return '';
@@ -139,16 +142,12 @@ const buildTransitionsConfig = (t) => ({
 
 // Paquete 7 bloque 1: `responsibleEditorUserId` se conserva en BD y DTOs
 // (la columna sigue existiendo y aceptando valor desde otras vias) pero
-// no se expone como input del editor admin. Mientras solo haya un operador
-// en producción no aporta valor y abrirlo como input numerico aceptaba
-// valores invalidos (IDs inexistentes, negativos). Cuando se decida
+// no se expone como input del editor admin. Cuando se decida
 // reintroducirlo, hacerlo como dropdown poblado desde el listado de
 // usuarios backoffice via /api/admin/users, no input numerico libre.
 // ADR-045 subpasada 2C.1 (D5): retirado `keywords` compartido del state y
-// del PATCH de metadata. El backend sigue aceptando el campo como legacy
-// (marcado @Deprecated en 2A) y una migracion futura lo eliminara. La UI
-// deja de leerlo y escribirlo; las keywords SEO viven ahora per-locale en
-// BodyLocaleTabs (primary_keyword + secondary_keywords).
+// del PATCH de metadata. Las keywords SEO viven ahora per-locale en
+// BodyLocaleSections (primary_keyword + secondary_keywords).
 const initialSharedMeta = {
   category: '',
   heroImageUrl: '',
@@ -186,46 +185,49 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   const [currentId, setCurrentId] = useState(articleId);
   const [state, setState] = useState(isNew ? null : 'DRAFT');
 
-  // Metadata compartida en edicion (5 campos)
+  // Metadata compartida en edicion
   const [sharedMeta, setSharedMeta] = useState(initialSharedMeta);
   // Campos extra solo en flujo de creacion (slug ES + title ES iniciales)
   const [createMeta, setCreateMeta] = useState(initialCreateMeta);
 
   // ============================================================
-  // Estado del editor por locale (BodyLocaleTabs en modo editable)
+  // Estado del editor por locale (2C.2: doble state, sin activeLocale)
+  // Cada locale tiene: seoDraft + body + errores + dirty flags + missing flag.
   // ============================================================
-  const [activeBodyLocale, setActiveBodyLocale] = useState('es');
-  const [body, setBody] = useState('');
-  const [bodyDirty, setBodyDirty] = useState(false);
-  const [bodyMissing, setBodyMissing] = useState(false); // 404 al fetch body
-  const [seoDraft, setSeoDraft] = useState(emptySeoDraft);
-  const [seoDirty, setSeoDirty] = useState(false);
+  const [esSeoDraft, setEsSeoDraft] = useState(emptySeoDraft);
+  const [enSeoDraft, setEnSeoDraft] = useState(emptySeoDraft);
+  const [esBody, setEsBody] = useState('');
+  const [enBody, setEnBody] = useState('');
+  const [esBodyMissing, setEsBodyMissing] = useState(false);
+  const [enBodyMissing, setEnBodyMissing] = useState(false);
+  const [esBodyError, setEsBodyError] = useState('');
+  const [enBodyError, setEnBodyError] = useState('');
+  const [esSeoError, setEsSeoError] = useState('');
+  const [enSeoError, setEnSeoError] = useState('');
 
   // ============================================================
   // Flags transversales
   // ============================================================
   const [loading, setLoading] = useState(false);
   const [savingMeta, setSavingMeta] = useState(false);
-  const [savingSeo, setSavingSeo] = useState(false);
-  const [savingBody, setSavingBody] = useState(false);
+  const [savingEsSeo, setSavingEsSeo] = useState(false);
+  const [savingEnSeo, setSavingEnSeo] = useState(false);
+  const [savingEsBody, setSavingEsBody] = useState(false);
+  const [savingEnBody, setSavingEnBody] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [transitioning, setTransitioning] = useState(false);
   const [historyTick, setHistoryTick] = useState(0);
   const [error, setError] = useState('');
   const [okMessage, setOkMessage] = useState('');
-  const [bodyError, setBodyError] = useState('');
-  const [seoError, setSeoError] = useState('');
   const [checklistAllPassed, setChecklistAllPassed] = useState(false);
 
   // ADR-045 subpasada 2C.1: instanciacion de translation nueva via
   // POST /admin/content/articles/{id}/translations (endpoint 2C.0).
-  // Se dispara desde BodyLocaleTabs cuando la pestaña esta en un locale
-  // cuya translation aun no existe (tipicamente EN antes del pipeline).
   const [creatingTranslation, setCreatingTranslation] = useState(false);
   const [createTranslationError, setCreateTranslationError] = useState('');
 
   // ============================================================
-  // Preview modal
+  // Preview modal (mantiene tabs — es vista de lectura, no de edicion)
   // ============================================================
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewLocale, setPreviewLocale] = useState('es');
@@ -234,12 +236,11 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   const [previewError, setPreviewError] = useState('');
 
   // ============================================================
-  // ConfirmModal: estado generico para los 4 casos del editor
-  // (paquete 7 bloque 4).
-  //   - 'discardChanges': cambio de pestana ES|EN con cambios sin guardar.
+  // ConfirmModal: estado generico para los 3 casos que quedan del editor
+  // tras 2C.2 (el caso "discardChanges" del cambio de pestaña ya no existe
+  // porque ya no hay pestañas de edicion):
   //   - 'deleteArticle': borrar articulo.
   //   - 'transition': transicion destructive (retract) o con razon/comentario.
-  // Cada uso configura `confirmModal` con sus props y un callback.
   // ============================================================
   const [confirmModal, setConfirmModal] = useState(null);
   const closeConfirmModal = () => setConfirmModal(null);
@@ -272,8 +273,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     setArticle(dto);
     setCurrentId(dto.id);
     setState(dto.state || 'DRAFT');
-    // ADR-045 subpasada 2C.1: no leemos `keywords` compartido (legacy);
-    // solo `category` y `heroImageUrl` que siguen viviendo en el articulo.
     setSharedMeta({
       category: dto.category || '',
       heroImageUrl: dto.heroImageUrl || '',
@@ -294,17 +293,26 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     }
   }, [applyArticle, t]);
 
-  // Cargar body de la traduccion activa. Si 404 -> estado "missing".
-  const loadActiveBody = useCallback(async (id, locale, art) => {
+  // ============================================================
+  // Carga del seoDraft + body de UN locale a partir del article ya cargado.
+  // 2C.2: la llamada anterior "loadActiveBody" queda parametrizada por
+  // locale y se llama para ambos ES y EN al cargar el articulo (y tras
+  // guardar SEO o body para refrescar el locale afectado).
+  // ============================================================
+  const loadLocaleData = useCallback(async (id, locale, art) => {
+    const setSeoDraft = locale === 'es' ? setEsSeoDraft : setEnSeoDraft;
+    const setBody = locale === 'es' ? setEsBody : setEnBody;
+    const setBodyMissing = locale === 'es' ? setEsBodyMissing : setEnBodyMissing;
+    const setBodyError = locale === 'es' ? setEsBodyError : setEnBodyError;
+
     setBodyError('');
     setBody('');
-    setBodyDirty(false);
     setBodyMissing(false);
 
     // Rellenar el draft SEO desde la translation activa (si existe). Incluye
-    // brief desde ADR-027 (10.A.10) y keywords SEO per-locale desde ADR-045
-    // subpasada 2A/2C.1. secondaryKeywords viene del backend como array y
-    // aqui lo convertimos a string coma-separado para el input plano.
+    // brief desde ADR-027 y keywords SEO per-locale desde ADR-045 2A/2C.1.
+    // secondaryKeywords viene del backend como array; aqui lo convertimos a
+    // string coma-separado para el input plano.
     const tr = findTranslation(art, locale);
     if (tr) {
       const secArray = Array.isArray(tr.secondaryKeywords) ? tr.secondaryKeywords : [];
@@ -317,10 +325,8 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         primaryKeyword: tr.primaryKeyword || '',
         secondaryKeywords: secArray.join(', '),
       });
-      setSeoDirty(false);
     } else {
       setSeoDraft(emptySeoDraft);
-      setSeoDirty(false);
     }
 
     // Fetch body markdown. 404 => translation aun no existe.
@@ -328,7 +334,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       const md = await apiFetch(`/admin/content/articles/${id}/translations/${locale}/body`);
       setBody(typeof md === 'string' ? md : '');
     } catch (e) {
-      // apiFetch lanza error con .status segun convencion del proyecto.
       if (e && e.status === 404) {
         setBodyMissing(true);
         setBody('');
@@ -344,40 +349,15 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
     }
   }, [articleId, isNew, loadArticle]);
 
-  // Cuando cambia el articulo cargado o el locale activo, recargamos body+seo.
+  // Cuando cambia el articulo cargado, recargamos body+seo de AMBOS locales.
   useEffect(() => {
     if (currentId && article) {
-      loadActiveBody(currentId, activeBodyLocale, article);
+      LOCALES.forEach((loc) => {
+        loadLocaleData(currentId, loc, article);
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentId, activeBodyLocale, article]);
-
-  // ============================================================
-  // Cambio de pestana ES|EN con guard de cambios sin guardar
-  // ============================================================
-  const handleLocaleChange = (newLocale) => {
-    if (newLocale === activeBodyLocale) return;
-    if (bodyDirty || seoDirty) {
-      const localeLabel = activeBodyLocale === 'es' ? 'ES' : 'EN';
-      // Paquete 7 bloque 4: usar ConfirmModal en lugar de window.confirm.
-      setConfirmModal({
-        title: t('confirmModal.unsavedTitle', 'Cambios sin guardar'),
-        message: t('editor.unsavedConfirm',
-          'Tienes cambios sin guardar en {{locale}}. ¿Descartar?',
-          { locale: localeLabel }),
-        confirmLabel: t('confirmModal.btnDiscard', 'Descartar cambios'),
-        cancelLabel: t('confirmModal.btnKeep', 'Mantener'),
-        tone: 'danger',
-        onConfirm: () => {
-          setActiveBodyLocale(newLocale);
-          closeConfirmModal();
-        },
-        onCancel: closeConfirmModal,
-      });
-      return;
-    }
-    setActiveBodyLocale(newLocale);
-  };
+  }, [currentId, article]);
 
   // ============================================================
   // Acciones: crear
@@ -400,15 +380,12 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           // escribe en la translation ES (no en el articulo padre).
           brief: createMeta.brief || null,
           category: sharedMeta.category || null,
-          // ADR-045 subpasada 2C.1 (D5): no enviamos `keywords` compartido
-          // (legacy retirado del state). El backend sigue aceptando el campo
-          // como null para compat.
           heroImageUrl: sharedMeta.heroImageUrl || null,
         }),
       });
       applyArticle(created);
       setOkMessage(t('editor.msgArticleCreated',
-        'Artículo creado. Continúa rellenando los campos lingüísticos y el body en las pestañas ES/EN.'));
+        'Artículo creado. Continúa rellenando los campos lingüísticos y el body en las secciones ES/EN.'));
     } catch (e) {
       setError(e?.message || t('editor.errCreate', 'No se pudo crear el artículo'));
     } finally {
@@ -428,9 +405,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       const updated = await apiFetch(`/admin/content/articles/${currentId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        // ADR-045 subpasada 2C.1 (D5): no enviamos `keywords` compartido
-        // (legacy retirado del state). El backend sigue aceptando el campo
-        // pero la UI ya no lo escribe.
         body: JSON.stringify({
           category: sharedMeta.category,
           heroImageUrl: sharedMeta.heroImageUrl,
@@ -446,81 +420,80 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   };
 
   // ============================================================
-  // Acciones: PATCH per-locale (paquete 6.5)
+  // Acciones: PATCH per-locale (paquete 6.5) — parametrizado por locale.
   // ============================================================
-  const handleSaveSeo = async () => {
+  const buildSeoPayload = (locale) => {
+    const seoDraft = locale === 'es' ? esSeoDraft : enSeoDraft;
+    const tr = findTranslation(article, locale);
+    const currentSecondariesCsv = Array.isArray(tr?.secondaryKeywords)
+      ? tr.secondaryKeywords.join(', ')
+      : '';
+    const payload = {};
+    if ((seoDraft.title || '') !== (tr?.title || '')) payload.title = seoDraft.title || null;
+    if ((seoDraft.slug || '') !== (tr?.slug || '')) payload.slug = seoDraft.slug || null;
+    if ((seoDraft.seoTitle || '') !== (tr?.seoTitle || '')) payload.seoTitle = seoDraft.seoTitle || null;
+    if ((seoDraft.metaDescription || '') !== (tr?.metaDescription || '')) {
+      payload.metaDescription = seoDraft.metaDescription || null;
+    }
+    if ((seoDraft.brief || '') !== (tr?.brief || '')) {
+      payload.brief = seoDraft.brief || null;
+    }
+    if ((seoDraft.primaryKeyword || '') !== (tr?.primaryKeyword || '')) {
+      payload.primaryKeyword = seoDraft.primaryKeyword && seoDraft.primaryKeyword.trim()
+        ? seoDraft.primaryKeyword.trim()
+        : null;
+    }
+    if ((seoDraft.secondaryKeywords || '') !== currentSecondariesCsv) {
+      payload.secondaryKeywords = seoDraft.secondaryKeywords || '';
+    }
+    return payload;
+  };
+
+  const handleSaveSeo = async (locale) => {
     if (!currentId) return;
-    setSavingSeo(true);
+    const setSaving = locale === 'es' ? setSavingEsSeo : setSavingEnSeo;
+    const setSeoError = locale === 'es' ? setEsSeoError : setEnSeoError;
+    setSaving(true);
     setSeoError('');
     setOkMessage('');
     try {
-      // Solo enviamos los campos que difieren del valor actual; el resto
-      // null. El backend ignora null = no cambiar. Brief incluido aqui per
-      // ADR-027 (TranslationMetadataUpdateRequest acepta brief desde 10.A.8).
-      // Keywords SEO (primary + secondaries) per ADR-045 subpasada 2A (el
-      // service TranslationMetadataUpdateRequest.setPrimaryKeyword /
-      // setSecondaryKeywords normaliza y compone el JSON target_keywords).
-      const tr = findTranslation(article, activeBodyLocale);
-      const currentSecondariesCsv = Array.isArray(tr?.secondaryKeywords)
-        ? tr.secondaryKeywords.join(', ')
-        : '';
-      const payload = {};
-      if ((seoDraft.title || '') !== (tr?.title || '')) payload.title = seoDraft.title || null;
-      if ((seoDraft.slug || '') !== (tr?.slug || '')) payload.slug = seoDraft.slug || null;
-      if ((seoDraft.seoTitle || '') !== (tr?.seoTitle || '')) payload.seoTitle = seoDraft.seoTitle || null;
-      if ((seoDraft.metaDescription || '') !== (tr?.metaDescription || '')) {
-        payload.metaDescription = seoDraft.metaDescription || null;
-      }
-      if ((seoDraft.brief || '') !== (tr?.brief || '')) {
-        payload.brief = seoDraft.brief || null;
-      }
-      // ADR-045 D3/D4: primary y secondaries per-locale. El backend acepta:
-      //  - null => no tocar el campo.
-      //  - string vacio '' => 400 (excepto secondaryKeywords que se limpia).
-      // Aqui enviamos '' cuando el operador vacio explicitamente secondaries,
-      // pero para primary enviamos null si vacio y antes tenia valor (que
-      // asi el backend no toca la primary; borrarla no esta soportado en
-      // este PATCH, va con instanciar de nuevo o via apply-bilingual).
-      if ((seoDraft.primaryKeyword || '') !== (tr?.primaryKeyword || '')) {
-        payload.primaryKeyword = seoDraft.primaryKeyword && seoDraft.primaryKeyword.trim()
-          ? seoDraft.primaryKeyword.trim()
-          : null;
-      }
-      if ((seoDraft.secondaryKeywords || '') !== currentSecondariesCsv) {
-        payload.secondaryKeywords = seoDraft.secondaryKeywords || '';
-      }
-      const result = await apiFetch(
-        `/admin/content/articles/${currentId}/translations/${activeBodyLocale}`,
+      const payload = buildSeoPayload(locale);
+      await apiFetch(
+        `/admin/content/articles/${currentId}/translations/${locale}`,
         {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         }
       );
-      // result es TranslationDetailDTO. Refrescamos el articulo completo
-      // para que el checklist y el resto de la UI reflejen el cambio.
-      void result;
+      // Refrescamos el articulo completo para que el checklist y el resto
+      // de la UI reflejen el cambio en ambos locales.
       await loadArticle(currentId);
-      setSeoDirty(false);
-      setOkMessage(t('editor.msgSeoSaved', 'Campos SEO guardados.'));
+      setOkMessage(t('editor.msgSeoSavedLocale',
+        'Campos SEO ({{locale}}) guardados.',
+        { locale: locale.toUpperCase() }));
     } catch (e) {
       setSeoError(e?.message || t('editor.errSaveSeo', 'No se pudieron guardar los campos SEO'));
     } finally {
-      setSavingSeo(false);
+      setSaving(false);
     }
   };
 
   // ============================================================
-  // Acciones: PUT body per-locale
+  // Acciones: PUT body per-locale — parametrizado por locale.
   // ============================================================
-  const handleSaveBody = async () => {
+  const handleSaveBody = async (locale) => {
     if (!currentId) return;
-    setSavingBody(true);
+    const body = locale === 'es' ? esBody : enBody;
+    const setSaving = locale === 'es' ? setSavingEsBody : setSavingEnBody;
+    const setBodyError = locale === 'es' ? setEsBodyError : setEnBodyError;
+    const setBodyMissing = locale === 'es' ? setEsBodyMissing : setEnBodyMissing;
+    setSaving(true);
     setBodyError('');
     setOkMessage('');
     try {
       const result = await apiFetch(
-        `/admin/content/articles/${currentId}/translations/${activeBodyLocale}/body`,
+        `/admin/content/articles/${currentId}/translations/${locale}/body`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'text/plain' },
@@ -528,16 +501,17 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         }
       );
       const bytes = result?.byteSize ?? '?';
-      setBodyDirty(false);
       setBodyMissing(false);
       // Recargar articulo para refrescar bodyS3Key/bodyContentHash en
       // translations -> permite que el checklist marque body presente.
       await loadArticle(currentId);
-      setOkMessage(t('editor.msgBodySaved', 'Cuerpo guardado ({{bytes}} bytes).', { bytes }));
+      setOkMessage(t('editor.msgBodySavedLocale',
+        'Cuerpo ({{locale}}) guardado ({{bytes}} bytes).',
+        { locale: locale.toUpperCase(), bytes }));
     } catch (e) {
       setBodyError(e?.message || t('editor.errSaveBody', 'No se pudo guardar el cuerpo'));
     } finally {
-      setSavingBody(false);
+      setSaving(false);
     }
   };
 
@@ -582,8 +556,8 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   const handleOpenPreview = async () => {
     if (!currentId) return;
     setPreviewOpen(true);
-    setPreviewLocale(activeBodyLocale);
-    await loadPreview(activeBodyLocale);
+    setPreviewLocale('es');
+    await loadPreview('es');
   };
 
   const loadPreview = async (locale) => {
@@ -649,18 +623,8 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   };
 
   // ============================================================
-  // Acciones: transition
+  // Acciones: transition (idem paquete 7 bloque 4)
   // ============================================================
-  // Paquete 7 bloque 4: handleTransition reescrito sin window.confirm ni
-  // window.prompt. El flujo se descompone en tres pasos asincronos
-  // anidados en callbacks del ConfirmModal:
-  //   1. Si la transition exige confirm destructive, abrir ConfirmModal
-  //      tone=danger. Al confirmar, paso 2; al cancelar, abortar.
-  //   2. Si la transition tiene `input` (comment / reason), abrir
-  //      ConfirmModal con inputLabel. Al confirmar, paso 3 con el valor;
-  //      al cancelar, abortar.
-  //   3. POST al backend.
-  // Si no hay confirm ni input, ejecutar paso 3 directamente.
   const performTransition = async (transition, comment, reason) => {
     setTransitioning(true);
     setError('');
@@ -749,34 +713,23 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
   const canSubmitCreate = isNew && !currentId;
   const canDelete = !!currentId && state === 'DRAFT';
   const isDraft = state === 'DRAFT';
-  const activeTranslation = findTranslation(article, activeBodyLocale);
   const currentVersionId = article?.currentVersionId || null;
-  const bodyContentHash = activeTranslation?.bodyContentHash || '';
+  const translationEs = findTranslation(article, 'es');
+  const translationEn = findTranslation(article, 'en');
+  const bodyContentHashEs = translationEs?.bodyContentHash || '';
 
   // ADR-045 subpasada 2C.1: primary ES presente controla el gate visual
   // del boton "Generar articulo completo" del panel IA. El backend ya lo
   // bloquea con 409 (ContentRunService.assertPrimaryKeywordEsPresent en 2A);
   // el UI lo refleja antes de dejar clicar.
-  const translationEs = findTranslation(article, 'es');
   const primaryEsPresent = !!(translationEs?.primaryKeyword
     && translationEs.primaryKeyword.trim().length > 0);
 
   // Sugerencias pre-relleno para el form de instanciacion de translation EN
   // (ADR-045 subpasada 2C.1 D-detalle 2C.1-3/4): slug = `${slugEs}-en`,
-  // title = titulo ES. El operador puede editarlos antes de crear; el
-  // pipeline los sobreescribira con SUGGESTED_SLUG_EN/title de fase 4.5.
+  // title = titulo ES. El operador puede editarlos antes de crear.
   const suggestedEnSlug = translationEs?.slug ? `${translationEs.slug}-en` : '';
   const suggestedEnTitle = translationEs?.title || '';
-
-  // Wrappers que marcan dirty cuando el operador edita.
-  const handleBodyChange = (v) => {
-    setBody(v);
-    setBodyDirty(true);
-  };
-  const handleSeoDraftChange = (next) => {
-    setSeoDraft(next);
-    setSeoDirty(true);
-  };
 
   return (
     <EditorLayout>
@@ -791,8 +744,8 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
             {currentVersionId ? (
               <span>{t('editor.versionIdLabel', 'versionId:')} <strong>{currentVersionId}</strong></span>
             ) : null}
-            {bodyContentHash ? (
-              <span>{t('editor.bodyHashLabel', 'hash cuerpo:')} <HashCode>{bodyContentHash}</HashCode></span>
+            {bodyContentHashEs ? (
+              <span>{t('editor.bodyHashLabel', 'hash cuerpo:')} <HashCode>{bodyContentHashEs}</HashCode></span>
             ) : null}
             {isAdmin ? <span>{t('editor.adminMode', '(modo ADMIN)')}</span> : null}
             <StyledButton type="button" onClick={handleOpenPreview}>
@@ -852,10 +805,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
       <MetaCard>
         <h3 style={{ margin: '0 0 12px 0' }}>{t('editor.metadataTitle', 'Metadata compartida')}</h3>
 
-        {/* Campos solo de creacion: slug ES + title ES + brief ES iniciales.
-            ADR-027: brief es un campo per-locale, asi que al crear vive con
-            el resto de campos del locale primario, no en la metadata
-            compartida. Ocultos tras crear el articulo. */}
+        {/* Campos solo de creacion: slug ES + title ES + brief ES iniciales. */}
         {canSubmitCreate ? (
           <>
             <EditorRow $cols={2}>
@@ -910,9 +860,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
           </>
         ) : null}
 
-        {/* ADR-045 subpasada 2C.1 (D5): input Keywords compartido retirado.
-            Las keywords SEO viven per-locale en las pestañas ES/EN del
-            BodyLocaleTabs (Primary + Secondary por idioma). */}
         <EditorRow $cols={2}>
           <div>
             <LabelText>{t('editor.fieldCategory', 'Categoría')}</LabelText>
@@ -939,11 +886,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
             </HelperText>
           </div>
         </EditorRow>
-
-        {/* Paquete 7 bloque 1: input de responsibleEditorUserId eliminado
-            del formulario. El backend conserva la columna y el campo en
-            DTOs por si en el futuro se introduce un dropdown poblado desde
-            BD. Mientras solo haya un operador, el campo no aporta valor. */}
 
         <ToolbarRow>
           {canSubmitCreate ? (
@@ -989,35 +931,44 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         </ToolbarRow>
       </MetaCard>
 
-      {/* Contenido por idioma (BodyLocaleTabs editable) */}
+      {/* Contenido por idioma (BodyLocaleSections apilado 2C.2) */}
       {currentId ? (
         <MetaCard>
-          <h3 style={{ margin: '0 0 12px 0' }}>{t('editor.tabsTitle', 'Contenido por idioma')}</h3>
-          <BodyLocaleTabs
-            mode="editable"
-            availableLocales={['es', 'en']}
-            activeLocale={activeBodyLocale}
-            onActiveLocaleChange={handleLocaleChange}
-            translation={activeTranslation}
-            body={body}
-            onBodyChange={handleBodyChange}
-            seoDraft={seoDraft}
-            onSeoFieldsChange={handleSeoDraftChange}
-            onSaveSeo={handleSaveSeo}
-            onSaveBody={handleSaveBody}
-            savingSeo={savingSeo}
-            savingBody={savingBody}
-            bodyError={bodyError}
-            seoError={seoError}
-            missingTranslation={bodyMissing}
-            disabled={fieldsLocked}
-            /* ADR-045 subpasada 2C.1 (2C.0 endpoint): flujo de instanciacion
-               de translation nueva desde la propia pestaña. */
+          <h3 style={{ margin: '0 0 12px 0' }}>{t('editor.sectionsTitle', 'Contenido por idioma (ES + EN)')}</h3>
+          <BodyLocaleSections
+            // ES
+            esTranslation={translationEs}
+            esSeoDraft={esSeoDraft}
+            onEsSeoFieldsChange={setEsSeoDraft}
+            onSaveEsSeo={() => handleSaveSeo('es')}
+            savingEsSeo={savingEsSeo}
+            esSeoError={esSeoError}
+            esBody={esBody}
+            onEsBodyChange={setEsBody}
+            onSaveEsBody={() => handleSaveBody('es')}
+            savingEsBody={savingEsBody}
+            esBodyError={esBodyError}
+            esBodyMissing={esBodyMissing}
+            // EN
+            enTranslation={translationEn}
+            enSeoDraft={enSeoDraft}
+            onEnSeoFieldsChange={setEnSeoDraft}
+            onSaveEnSeo={() => handleSaveSeo('en')}
+            savingEnSeo={savingEnSeo}
+            enSeoError={enSeoError}
+            enBody={enBody}
+            onEnBodyChange={setEnBody}
+            onSaveEnBody={() => handleSaveBody('en')}
+            savingEnBody={savingEnBody}
+            enBodyError={enBodyError}
+            enBodyMissing={enBodyMissing}
+            // Bootstrap EN
             onCreateTranslation={handleCreateTranslation}
-            suggestedSlug={suggestedEnSlug}
-            suggestedTitle={suggestedEnTitle}
+            suggestedEnSlug={suggestedEnSlug}
+            suggestedEnTitle={suggestedEnTitle}
             creatingTranslation={creatingTranslation}
             createTranslationError={createTranslationError}
+            disabled={fieldsLocked}
           />
         </MetaCard>
       ) : null}
@@ -1027,13 +978,10 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         <ContentArticleAIPanel
           articleId={currentId}
           articleState={state}
-          /* ADR-045 subpasada 2C.1 (D-detalle 2C.1-6): gate visual del boton
-             "Generar articulo completo" en el panel IA. El backend bloquea
-             con 409 desde 2A; la UI lo refleja para no dejar chocarse. */
           primaryEsPresent={primaryEsPresent}
           onBilingualApplied={() => {
             setOkMessage(t('ai.msgApplied',
-              'Artículo actualizado con la traducción bilingüe. Revisa las pestañas ES y EN.'));
+              'Artículo actualizado con la traducción bilingüe. Revisa las secciones ES y EN.'));
             loadArticle(currentId);
             setHistoryTick((tick) => tick + 1);
           }}
@@ -1044,8 +992,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         <ContentArticleHistory key={historyTick} articleId={currentId} />
       ) : null}
 
-      {/* ConfirmModal generico para los 4 puntos de confirmacion del editor
-          (paquete 7 bloque 4). */}
+      {/* ConfirmModal generico */}
       <ConfirmModal
         isOpen={confirmModal != null}
         title={confirmModal?.title}
@@ -1060,7 +1007,7 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
         onCancel={confirmModal?.onCancel || closeConfirmModal}
       />
 
-      {/* Modal preview */}
+      {/* Modal preview (mantiene tabs — vista de lectura) */}
       {previewOpen ? (
         <PreviewOverlay onClick={handleClosePreview}>
           <PreviewSheet onClick={(e) => e.stopPropagation()}>
@@ -1084,12 +1031,6 @@ const ContentArticleEditor = ({ articleId, onBack }) => {
               </div>
             ) : null}
 
-            {/* Paquete 7 bloque 3: hero image en el preview. Se lee del
-                articleDetail que el editor padre ya tiene cargado, no del
-                endpoint de preview (que sigue devolviendo solo htmlBody).
-                Si la URL falla la carga (404, mixed content, etc.) el
-                onError del <img> nos deja silenciosamente sin imagen y el
-                preview sigue funcionando con solo el body. */}
             {article?.heroImageUrl ? (
               <div style={{
                 padding: '0 12px 12px',
