@@ -100,10 +100,6 @@ const TranslationBootstrapForm = ({
           onChange={(e) => setPrimaryKeyword(e.target.value)}
           placeholder={t('editor.keywordsSection.primaryPlaceholderEn', 'ej: safe video chat')}
         />
-        <HelperText style={{ color: primaryTooLong ? '#b91c1c' : '#64748b' }}>
-          {t('editor.keywordsSection.primaryHelperEn',
-            'Si la dejas vacía, el pipeline IA la derivará del ES adaptándola al mercado anglosajón.')}
-        </HelperText>
       </div>
 
       <div style={{ marginTop: 12 }}>

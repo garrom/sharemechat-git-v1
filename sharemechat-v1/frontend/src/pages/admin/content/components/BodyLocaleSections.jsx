@@ -70,6 +70,11 @@ const LocaleSection = ({
 }) => {
   const { t } = useTranslation('cms');
 
+  // Refactor 2C.4: el bloque cuerpo (markdown) se colapsa por defecto.
+  // El operador raramente lo toca a mano; el pipeline IA lo llena. Queda
+  // accesible tras clicar el toggle.
+  const [bodyExpanded, setBodyExpanded] = React.useState(false);
+
   const draft = seoDraft || {};
   const titleWarn = lengthWarn(draft.title, LIMITS.title);
   const slugWarn = lengthWarn(draft.slug, LIMITS.slug);
@@ -313,39 +318,65 @@ const LocaleSection = ({
         </ToolbarRow>
       </MetaCard>
 
+      {/* Toggle "Cuerpo (Markdown)" — colapsado por defecto (refactor 2C.4).
+          El operador raramente edita markdown a mano en el flujo habitual
+          (lo llena el pipeline IA). Queda disponible tras clicar el toggle. */}
       <MetaCard>
-        <LabelText>
-          {t('editor.fieldBodyLocale',
-            'Cuerpo ({{locale}}, markdown)',
-            { locale: localeUpper })}
-        </LabelText>
-        <MarkdownArea
-          value={body || ''}
-          disabled={disabled}
-          onChange={(e) => onBodyChange && onBodyChange(e.target.value)}
-          placeholder={t('editor.fieldBodyPlaceholder', '# Título\n\nEscribe el cuerpo en markdown...')}
-        />
-        {bodyError ? <StyledError>{bodyError}</StyledError> : null}
-        <ToolbarRow>
-          <StyledButton
-            type="button"
-            onClick={onSaveBody}
-            disabled={savingBody || disabled}
-          >
-            {savingBody
-              ? t('editor.btnSavingBodyLocale',
-                  'Guardando cuerpo ({{locale}})…',
-                  { locale: localeUpper })
-              : t('editor.btnSaveBodyLocale',
-                  'Guardar cuerpo ({{locale}})',
-                  { locale: localeUpper })}
-          </StyledButton>
-          <HelperText>
-            {t('editor.bodyBytesUsed',
-                '{{used}} bytes / {{max}} bytes máximo (configurable backend)',
-                { used: new Blob([body || '']).size, max: BODY_MAX_BYTES_HINT })}
-          </HelperText>
-        </ToolbarRow>
+        <button
+          type="button"
+          onClick={() => setBodyExpanded((v) => !v)}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            padding: 0,
+            fontSize: 14,
+            fontWeight: 600,
+            color: '#0f172a',
+            cursor: 'pointer',
+            textAlign: 'left',
+            width: '100%',
+          }}
+        >
+          {bodyExpanded
+            ? t('editor.bodySectionHide',
+                '▾ Cuerpo ({{locale}}, markdown)',
+                { locale: localeUpper })
+            : t('editor.bodySectionShow',
+                '▸ Cuerpo ({{locale}}, markdown)',
+                { locale: localeUpper })}
+        </button>
+
+        {bodyExpanded ? (
+          <div style={{ marginTop: 12 }}>
+            <MarkdownArea
+              value={body || ''}
+              disabled={disabled}
+              onChange={(e) => onBodyChange && onBodyChange(e.target.value)}
+              placeholder={t('editor.fieldBodyPlaceholder', '# Título\n\nEscribe el cuerpo en markdown...')}
+            />
+            {bodyError ? <StyledError>{bodyError}</StyledError> : null}
+            <ToolbarRow>
+              <StyledButton
+                type="button"
+                onClick={onSaveBody}
+                disabled={savingBody || disabled}
+              >
+                {savingBody
+                  ? t('editor.btnSavingBodyLocale',
+                      'Guardando cuerpo ({{locale}})…',
+                      { locale: localeUpper })
+                  : t('editor.btnSaveBodyLocale',
+                      'Guardar cuerpo ({{locale}})',
+                      { locale: localeUpper })}
+              </StyledButton>
+              <HelperText>
+                {t('editor.bodyBytesUsed',
+                    '{{used}} bytes / {{max}} bytes máximo (configurable backend)',
+                    { used: new Blob([body || '']).size, max: BODY_MAX_BYTES_HINT })}
+              </HelperText>
+            </ToolbarRow>
+          </div>
+        ) : null}
       </MetaCard>
     </div>
   );
