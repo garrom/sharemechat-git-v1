@@ -29,17 +29,17 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-05T15:54:27Z
-  jar_sha256: d50abd9fc62efc3d647fa1473a42a00add52453cf2b807159a5e44665653425d
+  deployed_at: 2026-07-05T18:27:27Z
+  jar_sha256: d0c2b699fd3ccb518a4cf973ab39be06e5288d64992a019a7f2624c5c3c1b76d
   verification:
-    method: manual_via_update-manifest-backend.ps1+remote-verify
-    verified_at: 2026-07-05T15:54:27Z
-    notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-07-05T15:54:27Z
+    method: manual_edit_post_smoke_2026-07-07_fase-1c-adr-044
+    verified_at: 2026-07-07T13:55:00Z
+    notes: 'Regularizado tras smoke Fase 1.C ADR-044 el 2026-07-07. El manifest previo quedo desactualizado: declaraba sha=d50abd9f (commit dfd60bd, deploy 2026-07-05 15:54Z) pero el JAR real en /home/ec2-user/sharemechat-v1/ tiene mtime 2026-07-05 18:27Z y sha=d0c2b699 (mismo binary que el JAR AUDIT del deploy 2026-07-06 00:31Z, commit 074cb69). Interpretacion: hubo un segundo deploy TEST el 2026-07-05 tarde que no invoco update-manifest-backend.ps1. deployed_at reflejado como mtime del JAR remoto (2026-07-05 18:27Z). deployed_by desconocido con certeza; se mantiene alain@LAPTOP-8UEIKVUT por convencion. built_at deducido igual al deployed_at porque scp preserva mtime del build. Backend fue relanzado el 2026-07-07 09:53:04Z (chown fix de secrets.env, #D-12 CERRADA) usando el MISMO JAR sin rebuild. Limitacion conocida del script update-manifest-backend.ps1: asume HEAD=commit del JAR, por eso se edita a mano.'
+  built_at: 2026-07-05T18:27:27Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: dfd60bd6910bc42c5811a5e387331cb131551216
-  git_commit_short: dfd60bd
+  git_commit: 074cb6928f487fe0e34d10a454e89001aae9ec56
+  git_commit_short: 074cb69
 last_updated_at: 2026-07-05T23:19:31Z
 frontend_admin:
   cloudfront_invalidation_id: I497HD6064XXREMGIYG2KGMW5K
