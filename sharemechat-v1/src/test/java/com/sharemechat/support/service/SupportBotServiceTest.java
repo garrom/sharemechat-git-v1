@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.Pageable;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -72,8 +73,11 @@ class SupportBotServiceTest {
             }
             return m;
         });
-        when(convRepo.findFirstByUserIdAndResolutionStatusOrderByIdDesc(anyLong(), anyString()))
+        when(convRepo.findFirstByUserIdAndResolutionStatusInOrderByIdDesc(anyLong(), anyCollection()))
                 .thenReturn(Optional.empty());
+        // Frente B.3.1: race check post-LLM devuelve 1 (aun sin claim). Los
+        // tests especificos de race override este stub.
+        when(convRepo.touchIfStillUnassigned(anyLong(), any(LocalDateTime.class))).thenReturn(1);
         when(msgRepo.findByConversationIdOrderByIdDesc(anyLong(), any(Pageable.class))).thenReturn(List.of());
         when(userRepo.findById(anyLong())).thenReturn(Optional.empty());
         when(rateLimit.remainingMessages(anyLong())).thenReturn(29);
@@ -258,6 +262,58 @@ class SupportBotServiceTest {
         assertTrue(sys.contains("KB-STUB[comportamiento-agente-ia]"));
         assertTrue(sys.contains("KB-STUB[ui-reference]"));
         assertFalse(sys.contains("KB-STUB[case-inexistente]"));
+    }
+
+    @Test
+    @DisplayName("guard humano: conv con assigned_agent_id NO llama LLM ni cuenta rate-limit, DTO marca humanHandling=true")
+    void humanHandlingGuardShortCircuits() throws Exception {
+        SupportConversation existing = new SupportConversation();
+        existing.setUserId(7L);
+        existing.setResolutionStatus(Constants.SupportResolutionStatuses.HUMAN_HANDLING);
+        existing.setAssignedAgentId(99L);
+        existing.setAssignedProfileId(3L);
+        java.lang.reflect.Field idF = SupportConversation.class.getDeclaredField("id");
+        idF.setAccessible(true);
+        idF.set(existing, 55L);
+        when(convRepo.findFirstByUserIdAndResolutionStatusInOrderByIdDesc(eq(7L), anyCollection()))
+                .thenReturn(Optional.of(existing));
+
+        SupportMessageResponseDTO out = svc.handleUserMessage(7L, "sigo esperando", "1.2.3.4");
+
+        assertNull(out.getReply());
+        assertEquals(Constants.SupportResolutionStatuses.HUMAN_HANDLING, out.getResolutionStatus());
+        assertTrue(out.getHumanHandling());
+        assertFalse(Boolean.TRUE.equals(out.getEscalated()));
+        // El bot no llama al LLM ni al rate-limit registerUsage.
+        verify(claudeClient, never()).callMessages(anyString(), anyList(), anyString());
+        verify(rateLimit, never()).registerUsage(anyLong(), anyInt());
+        verify(rateLimit, never()).shouldRateLimit(anyLong());
+        // Aun asi, el mensaje del user se persiste (el humano tiene que verlo).
+        verify(msgRepo, atLeastOnce()).save(any(SupportMessage.class));
+    }
+
+    @Test
+    @DisplayName("race post-LLM: touchIfStillUnassigned=0 descarta reply, no persiste LLM, no cobra tokens, DTO marca humanHandling=true")
+    void raceLostAfterLlmCall() throws Exception {
+        // El guard temprano NO dispara (conv sin claim al inicio).
+        // El touchIfStillUnassigned devuelve 0 (claim durante LLM call).
+        when(convRepo.touchIfStillUnassigned(anyLong(), any(LocalDateTime.class))).thenReturn(0);
+
+        ClaudeApiResponse r = new ClaudeApiResponse();
+        r.setTextContent("respuesta que va al vacio");
+        r.setTokensInput(300);
+        r.setTokensOutput(80);
+        when(claudeClient.callMessages(anyString(), anyList(), anyString())).thenReturn(r);
+
+        SupportMessageResponseDTO out = svc.handleUserMessage(7L, "hola", "1.1.1.1");
+
+        assertNull(out.getReply());
+        assertEquals(Constants.SupportResolutionStatuses.HUMAN_HANDLING, out.getResolutionStatus());
+        assertTrue(out.getHumanHandling());
+        // Solo se persiste el mensaje USER (1 save), NO el LLM message.
+        verify(msgRepo, times(1)).save(any(SupportMessage.class));
+        // No se cobra rate-limit al user aunque Claude consumio tokens reales.
+        verify(rateLimit, never()).registerUsage(anyLong(), anyInt());
     }
 
     @Test

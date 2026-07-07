@@ -12,4 +12,9 @@ public interface SupportMessageRepository
     List<SupportMessage> findByConversationIdOrderByIdAsc(Long conversationId);
 
     List<SupportMessage> findByConversationIdOrderByIdDesc(Long conversationId, Pageable pageable);
+
+    // Frente B.3.1 (ADR-046): metricas para el listado admin.
+    long countByConversationId(Long conversationId);
+
+    SupportMessage findFirstByConversationIdOrderByIdDesc(Long conversationId);
 }

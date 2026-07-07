@@ -38,6 +38,10 @@ public class Constants {
         public static final String ESCALATED = "ESCALATED";
         public static final String ABANDONED = "ABANDONED";
         public static final String RATE_LIMITED = "RATE_LIMITED";
+        // Frente B.3.1 (ADR-046): un agente humano ha hecho claim sobre la
+        // conversacion escalada. Coexiste con ESCALATED (ESCALATED sin claim,
+        // HUMAN_HANDLING con claim activo). El bot deja de responder.
+        public static final String HUMAN_HANDLING = "HUMAN_HANDLING";
 
         private SupportResolutionStatuses() {}
     }

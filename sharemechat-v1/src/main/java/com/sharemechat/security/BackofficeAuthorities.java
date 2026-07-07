@@ -44,6 +44,14 @@ public final class BackofficeAuthorities {
     public static final String PERM_CONTENT_REVIEW = "CONTENT.REVIEW";
     public static final String PERM_CONTENT_PUBLISH = "CONTENT.PUBLISH";
 
+    // Frente B.3.1 - Panel Soporte Humano (ADR-046).
+    // CHAT_HANDLE: leer conversaciones escaladas, claim, release, message,
+    //              resolve. Se otorga por defecto a ROLE_SUPPORT.
+    // PROFILE_MANAGE: CRUD de identidades de servicio y grants. Opt-in
+    //                 explicito, no viene con ROLE_SUPPORT.
+    public static final String PERM_SUPPORT_CHAT_HANDLE = "support.chat_handle";
+    public static final String PERM_SUPPORT_PROFILE_MANAGE = "support.profile_manage";
+
     public static final Set<String> SUPPORT_PHASE1_PERMISSIONS = Set.of(
             PERM_MODELS_READ_LIST,
             PERM_MODELS_READ_KYC_MODE,
@@ -57,7 +65,10 @@ public final class BackofficeAuthorities {
             PERM_STATS_READ_OVERVIEW,
             PERM_FINANCE_READ_SUMMARY,
             PERM_FINANCE_READ_TOP_MODELS,
-            PERM_FINANCE_READ_TOP_CLIENTS
+            PERM_FINANCE_READ_TOP_CLIENTS,
+            // B.3.1 (ADR-046): ROLE_SUPPORT hereda chat_handle por defecto.
+            // profile_manage NO viene aqui: se otorga explicitamente.
+            PERM_SUPPORT_CHAT_HANDLE
     );
 
     public static final List<String> OFFICIAL_BACKOFFICE_PERMISSION_CATALOG = List.of(
@@ -79,7 +90,9 @@ public final class BackofficeAuthorities {
             PERM_CONTENT_EDIT,
             PERM_CONTENT_REVIEW,
             PERM_CONTENT_PUBLISH,
-            PERM_COMPLIANCE_DASHBOARD_VIEW
+            PERM_COMPLIANCE_DASHBOARD_VIEW,
+            PERM_SUPPORT_CHAT_HANDLE,
+            PERM_SUPPORT_PROFILE_MANAGE
     );
 
     private BackofficeAuthorities() {

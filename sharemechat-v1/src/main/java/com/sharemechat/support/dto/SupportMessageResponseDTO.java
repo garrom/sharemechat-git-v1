@@ -10,6 +10,9 @@ public class SupportMessageResponseDTO {
     private String resolutionStatus;
     private Boolean rateLimited;
     private Boolean escalated;
+    // Frente B.3.1 (ADR-046): true cuando la conversacion tiene claim humano
+    // activo. En ese caso reply=null y el usuario espera respuesta manual.
+    private Boolean humanHandling;
     private String escalationReason;
     private Integer messagesRemainingToday;
     private Long tokensRemainingToday;
@@ -27,6 +30,8 @@ public class SupportMessageResponseDTO {
     public void setRateLimited(Boolean rateLimited) { this.rateLimited = rateLimited; }
     public Boolean getEscalated() { return escalated; }
     public void setEscalated(Boolean escalated) { this.escalated = escalated; }
+    public Boolean getHumanHandling() { return humanHandling; }
+    public void setHumanHandling(Boolean humanHandling) { this.humanHandling = humanHandling; }
     public String getEscalationReason() { return escalationReason; }
     public void setEscalationReason(String escalationReason) { this.escalationReason = escalationReason; }
     public Integer getMessagesRemainingToday() { return messagesRemainingToday; }

@@ -22,19 +22,31 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Orquestador del chat soporte (DEC-CS-1..18).
  *
  * <ol>
- *   <li>Localiza o crea la conversacion OPEN del usuario.</li>
+ *   <li>Localiza o crea la conversacion activa del usuario (OPEN, ESCALATED,
+ *       HUMAN_HANDLING o RATE_LIMITED). Solo RESOLVED y ABANDONED disparan
+ *       conversacion nueva.</li>
  *   <li>Persiste el mensaje del usuario.</li>
+ *   <li><b>Frente B.3.1 (ADR-046):</b> guard humano temprano. Si la conv tiene
+ *       {@code assigned_agent_id != null}, el bot no llama al LLM ni cuenta
+ *       tokens de rate-limit. El DTO devuelto marca {@code humanHandling=true}
+ *       y el frontend cliente renderiza "esperando respuesta del equipo".</li>
  *   <li>Consulta rate limit. Si excedido, marca conversacion RATE_LIMITED,
  *       responde con mensaje canonico, NO llama Claude (DEC-CS-11).</li>
  *   <li>Construye system prompt = base fija + KB + contexto usuario minimo
  *       (email/role/verification_status; DEC-CS-6).</li>
  *   <li>Envia ultimos N=10 mensajes de la conversacion + mensaje actual
  *       al ClaudeApiClient (DEC-CS-14).</li>
+ *   <li><b>Frente B.3.1 (ADR-046):</b> race check post-LLM via
+ *       {@code touchIfStillUnassigned}. Si un admin hizo claim durante la
+ *       llamada Claude, se descarta la respuesta LLM (no se persiste ni se
+ *       cobra rate-limit; los tokens API consumidos se pierden como coste
+ *       asumido del race).</li>
  *   <li>Persiste respuesta LLM. Actualiza contador tokens.</li>
  *   <li>Si el LLM invoco escalate_to_human tool, marca conversacion
  *       ESCALATED con reason (DEC-CS-2, escalado automatico).</li>
@@ -42,6 +54,17 @@ import java.util.Optional;
  */
 @Service
 public class SupportBotService {
+
+    /**
+     * Estados en los que una conversacion sigue viva para el mismo user. Fuera
+     * de esta lista (RESOLVED, ABANDONED) el proximo mensaje abre conv nueva.
+     */
+    static final Set<String> ACTIVE_STATUSES = Set.of(
+            Constants.SupportResolutionStatuses.OPEN,
+            Constants.SupportResolutionStatuses.ESCALATED,
+            Constants.SupportResolutionStatuses.HUMAN_HANDLING,
+            Constants.SupportResolutionStatuses.RATE_LIMITED
+    );
 
     private static final Logger log = LoggerFactory.getLogger(SupportBotService.class);
 
@@ -90,12 +113,27 @@ public class SupportBotService {
             throw new IllegalArgumentException("message demasiado largo (>" + MAX_USER_MESSAGE_LENGTH + ")");
         }
 
-        SupportConversation conv = getOrCreateOpenConversation(userId);
+        SupportConversation conv = getOrCreateActiveConversation(userId);
         persistMessage(conv.getId(), Constants.SupportSenderTypes.USER, message, null, null, null, null, null);
 
         SupportMessageResponseDTO out = new SupportMessageResponseDTO();
         out.setConversationId(conv.getId());
         out.setTimestamp(LocalDateTime.now());
+
+        // Frente B.3.1 (ADR-046): guard humano temprano. Si hay claim activo,
+        // el bot no llama al LLM ni consume rate-limit. Requisito del brief
+        // "rate-limit no cuenta en HUMAN_HANDLING" cumplido por reorden.
+        if (conv.getAssignedAgentId() != null) {
+            log.info("[SUPPORT-BOT] skip LLM userId={} conversationId={} assignedAgentId={} (human handling)",
+                    userId, conv.getId(), conv.getAssignedAgentId());
+            out.setReply(null);
+            out.setResolutionStatus(Constants.SupportResolutionStatuses.HUMAN_HANDLING);
+            out.setHumanHandling(true);
+            out.setEscalated(false);
+            out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
+            out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
+            return out;
+        }
 
         // 3) rate limit check
         if (rateLimitService.shouldRateLimit(userId)) {
@@ -121,6 +159,25 @@ public class SupportBotService {
             long cost = claudeClient.estimateCostMicros(resp.getTokensInput(), resp.getTokensOutput());
             String replyText = resp.getTextContent();
             String finishReason = resp.getFinishReason();
+
+            // Frente B.3.1 (ADR-046): race check final. Si durante la llamada
+            // Claude (5-8s) un admin hizo claim, touchIfStillUnassigned devuelve
+            // 0 y descartamos la respuesta: no persistimos, no cobramos tokens.
+            // Los tokens API ya consumidos se asumen como coste del race.
+            int stillUnassigned = conversationRepo.touchIfStillUnassigned(
+                    conv.getId(), LocalDateTime.now());
+            if (stillUnassigned == 0) {
+                log.info("[SUPPORT-BOT] race lost claim during LLM call, discarding reply " +
+                                "userId={} conversationId={} tokens_in={} tokens_out={}",
+                        userId, conv.getId(), resp.getTokensInput(), resp.getTokensOutput());
+                out.setReply(null);
+                out.setResolutionStatus(Constants.SupportResolutionStatuses.HUMAN_HANDLING);
+                out.setHumanHandling(true);
+                out.setEscalated(false);
+                out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
+                out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
+                return out;
+            }
 
             // 6) persistir LLM message
             SupportMessage llmMsg = persistMessage(conv.getId(), Constants.SupportSenderTypes.LLM,
@@ -202,7 +259,7 @@ public class SupportBotService {
 
     @Transactional
     public SupportConversation escalateManual(Long userId, String reason) {
-        SupportConversation conv = getOrCreateOpenConversation(userId);
+        SupportConversation conv = getOrCreateActiveConversation(userId);
         conv.setResolutionStatus(Constants.SupportResolutionStatuses.ESCALATED);
         conv.setEscalatedAt(LocalDateTime.now());
         conv.setEscalatedByLlm(false);
@@ -217,9 +274,17 @@ public class SupportBotService {
         return conv;
     }
 
-    private SupportConversation getOrCreateOpenConversation(Long userId) {
-        return conversationRepo.findFirstByUserIdAndResolutionStatusOrderByIdDesc(
-                        userId, Constants.SupportResolutionStatuses.OPEN)
+    /**
+     * Devuelve la conversacion activa mas reciente del user, o crea una OPEN
+     * si no hay ninguna en estado activo. "Activa" incluye OPEN, ESCALATED,
+     * HUMAN_HANDLING y RATE_LIMITED (ver {@link #ACTIVE_STATUSES}). Solo
+     * RESOLVED y ABANDONED disparan una conversacion nueva. Requisito del
+     * frente B.3.1 (ADR-046) para no romper la conv escalada bajo claim humano
+     * cuando el user envia otro mensaje.
+     */
+    private SupportConversation getOrCreateActiveConversation(Long userId) {
+        return conversationRepo.findFirstByUserIdAndResolutionStatusInOrderByIdDesc(
+                        userId, ACTIVE_STATUSES)
                 .orElseGet(() -> {
                     SupportConversation nu = new SupportConversation();
                     nu.setUserId(userId);

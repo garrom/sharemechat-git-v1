@@ -40,6 +40,14 @@ public class SupportMessage {
             columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP")
     private LocalDateTime createdAt;
 
+    // Frente B.3.1 (ADR-046): autoria humana. Poblados unicamente cuando
+    // sender='HUMAN'. Para USER/LLM/SYSTEM permanecen NULL.
+    @Column(name = "sent_by_user_id")
+    private Long sentByUserId;
+
+    @Column(name = "sent_by_profile_id")
+    private Long sentByProfileId;
+
     public SupportMessage() {
         this.createdAt = LocalDateTime.now();
     }
@@ -63,4 +71,9 @@ public class SupportMessage {
     public void setLlmFinishReason(String llmFinishReason) { this.llmFinishReason = llmFinishReason; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public Long getSentByUserId() { return sentByUserId; }
+    public void setSentByUserId(Long sentByUserId) { this.sentByUserId = sentByUserId; }
+    public Long getSentByProfileId() { return sentByProfileId; }
+    public void setSentByProfileId(Long sentByProfileId) { this.sentByProfileId = sentByProfileId; }
 }

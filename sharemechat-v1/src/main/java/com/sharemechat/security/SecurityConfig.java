@@ -329,6 +329,41 @@ public class SecurityConfig {
                         // publicos y no requiere PERM backoffice.
                         .requestMatchers(HttpMethod.POST, "/api/support/**").authenticated()
 
+                        // ============================================================
+                        // Frente B.3.1 - Panel Soporte Humano (ADR-046).
+                        // Matchers ANTES del catch-all /api/admin/** porque
+                        // ROLE_SUPPORT necesita atender el chat. Granularidad fina:
+                        // - chat_handle: operaciones sobre conversaciones (ROLE_SUPPORT
+                        //   lo hereda por defecto via SUPPORT_PHASE1_PERMISSIONS).
+                        // - profile_manage: CRUD de profiles y grants (opt-in).
+                        // ADMIN mantiene acceso por matcher explicito ROLE_ADMIN,
+                        // simetrico al patron stream-moderation.
+                        // ============================================================
+                        .requestMatchers("/api/admin/support/profiles/*/grants",
+                                        "/api/admin/support/profiles/*/grants/*")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_SUPPORT_PROFILE_MANAGE))
+                        .requestMatchers(HttpMethod.GET, "/api/admin/support/profiles/mine")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_SUPPORT),
+                                BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_SUPPORT_CHAT_HANDLE))
+                        .requestMatchers("/api/admin/support/profiles",
+                                        "/api/admin/support/profiles/*")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_SUPPORT_PROFILE_MANAGE))
+                        .requestMatchers("/api/admin/support/**")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_SUPPORT),
+                                BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_SUPPORT_CHAT_HANDLE))
+
                         // ROLE-SCOPED APIs (AL FINAL, para no pisar endpoints específicos)
                         .requestMatchers("/api/models/**").hasRole("MODEL")
                         .requestMatchers("/api/clients/**").hasRole("CLIENT")

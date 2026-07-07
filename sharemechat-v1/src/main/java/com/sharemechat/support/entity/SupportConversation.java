@@ -41,6 +41,18 @@ public class SupportConversation {
             columnDefinition = "DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP")
     private LocalDateTime updatedAt;
 
+    // Frente B.3.1 (ADR-046): asignacion humana. Los tres campos siguen la
+    // invariante "todos NULL o todos NOT NULL" enforced por CHECK bi-columna
+    // en BD (chk_support_conv_assign_bicolumn de V15).
+    @Column(name = "assigned_agent_id")
+    private Long assignedAgentId;
+
+    @Column(name = "assigned_at")
+    private LocalDateTime assignedAt;
+
+    @Column(name = "assigned_profile_id")
+    private Long assignedProfileId;
+
     public SupportConversation() {
         this.startedAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
@@ -66,4 +78,11 @@ public class SupportConversation {
     public void setReporterIpHash(String reporterIpHash) { this.reporterIpHash = reporterIpHash; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+
+    public Long getAssignedAgentId() { return assignedAgentId; }
+    public void setAssignedAgentId(Long assignedAgentId) { this.assignedAgentId = assignedAgentId; }
+    public LocalDateTime getAssignedAt() { return assignedAt; }
+    public void setAssignedAt(LocalDateTime assignedAt) { this.assignedAt = assignedAt; }
+    public Long getAssignedProfileId() { return assignedProfileId; }
+    public void setAssignedProfileId(Long assignedProfileId) { this.assignedProfileId = assignedProfileId; }
 }
