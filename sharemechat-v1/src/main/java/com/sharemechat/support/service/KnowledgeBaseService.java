@@ -19,9 +19,11 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * ADR-044: fuente en memoria de la Base de Conocimiento del Agente IA de soporte.
  *
- * <p>Fase 1.A: SupportBotService NO consume aún este service — continúa leyendo los
- * .md del JAR vía SupportKnowledgeBaseLoader. Este componente arranca en paralelo
- * como infraestructura lista para Fase 1.C.</p>
+ * <p>Tras Fase 1.D, este service es la ÚNICA fuente en runtime del contenido de la
+ * BdC. {@code SupportBotService.buildSystemPrompt} obtiene cada bloque por
+ * {@link #getPromptContent(String)}. La BdC del JAR ya no existe: los
+ * {@code .md} bajo {@code resources/knowledge-base/} fueron retirados y el
+ * antiguo {@code SupportKnowledgeBaseLoader} fue eliminado.</p>
  *
  * <p>La caché se hidrata al arrancar (@PostConstruct) y sólo se refresca por
  * llamada explícita a {@link #reload()} desde KnowledgeBaseAdminController. No
@@ -54,10 +56,13 @@ public class KnowledgeBaseService {
             long loaded = loadIntoNewCache();
             log.info("KnowledgeBaseService hydrated at startup: {} active prompts loaded", loaded);
         } catch (Exception e) {
-            // Rollback plan de ADR-044: no propagar la excepción, mantener caché vacía
-            // y permitir que el bot siga usando la BdC del JAR sin degradación.
+            // Post-Fase 1.D: no hay BdC en el JAR como fallback. Si la hidratación
+            // falla, la caché queda vacía y SupportBotService loguea WARN
+            // "[SUPPORT-BOT] KB missing prompt" por cada case_key sin resolver.
+            // El bot sigue respondiendo pero sin BdC efectiva. El operador debe
+            // ejecutar /reload en cuanto detecte el WARN de arranque.
             log.warn("KnowledgeBaseService failed to hydrate at startup ({}). " +
-                    "Continuing with empty cache; support bot keeps using JAR knowledge base.",
+                    "Continuing with empty cache; operator must run /reload once BD is reachable.",
                     e.getClass().getSimpleName());
         }
     }

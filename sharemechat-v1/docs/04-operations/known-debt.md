@@ -1387,21 +1387,16 @@ Reabrir la conversación si Search Console + analítica de tráfico social revel
 
 **Acción pendiente**: paquete de backend posterior. Verificar primero si `ContentPromptBuilder.java` lista las fases explícitamente; si lo hace, añadir la 5.5 de forma aditiva (igual que [ADR-023](../06-decisions/adr-023-bilingual-editorial-pipeline-es-en.md) añadió la 4.5 en su día) sin reorganizar la lógica del método. Si no las lista (caso de que el bloque sea genérico y delegue todo el detalle a la skill orquestadora), no hay nada que tocar.
 
-## 2026-07-04 — Introducida por Fase 1.A del refactor Agente IA (ADR-044)
+## 2026-07-04 — Introducida por Fase 1.A del refactor Agente IA (ADR-044) — CERRADA 2026-07-07
 
-### MDs de `resources/knowledge-base/*.md` pendientes de eliminar del JAR
+### ~~MDs de `resources/knowledge-base/*.md` pendientes de eliminar del JAR~~ — **CERRADA 2026-07-07 (Fase 1.D del refactor Agente IA, ADR-044)**
 
-**Origen**: [ADR-044](../06-decisions/adr-044-knowledge-base-externa.md) externaliza la Base de Conocimiento (BdC) del Agente IA de soporte a la tabla MySQL `support_bot_prompts`, cacheada en memoria vía Caffeine (`KnowledgeBaseService`). El commit de Fase 1.A introduce infraestructura + endpoints admin (`POST /api/admin/knowledge-base/reload` y `.../seed-from-jar`), pero **no elimina** los `.md` del JAR ni conecta el consumo por parte de `SupportBotService`, que sigue leyendo los MDs vía `SupportKnowledgeBaseLoader`.
+**Resolución**: ejecutada la Fase 1.D en el commit correspondiente del 2026-07-07. Borrados los 14 `.md` temáticos del directorio `sharemechat-v1/src/main/resources/knowledge-base/` (se mantienen únicamente `README.md`, actualizado para reflejar el nuevo estado, y `00-placeholder.md` como marcador del directorio). Eliminado el service `com.sharemechat.support.service.SupportKnowledgeBaseLoader` y su test unitario. Actualizado el javadoc de `KnowledgeBaseService` para reflejar que es la única fuente en runtime de la BdC.
 
-**Hecho**: la coexistencia entre BdC del JAR y BdC de la tabla es explícita durante Fase 1.A–1.C. Los `.md` bajo `sharemechat-v1/src/main/resources/knowledge-base/` (13 ficheros temáticos físicos → 14 filas en tabla tras el split de 03 en `onboarding-modelo` + `payout-y-tiers`, aplicado en Fase 1.B) siguen siendo la fuente activa que consume el bot en runtime hoy. La taxonomía objetivo ya vive en el filesystem: cada `.md` mapea 1:1 con una fila que producirá `seed-from-jar`.
+**Estado en runtime**: los tres entornos (TEST, AUDIT, PROD) tienen la tabla `support_bot_prompts` seedeada con 14 filas activas (idénticas en case_keys, con `producto-general` v2 blindado contra cross-role leakage tras el ajuste del smoke Fase 1.C, ver commit `bf18056`). AUDIT y PROD fueron seedeados por SQL directo (INSERT parametrizado desde el working tree HEAD) + restart del backend para hidratar la caché en `@PostConstruct`. TEST fue seedeado previamente con `seed-from-jar` + `UPDATE` sobre `producto-general`.
 
-**Acción pendiente**:
+**Fósil consciente**: `POST /api/admin/knowledge-base/seed-from-jar` queda como endpoint vivo pero inocuo: el classpath ya no tiene `.md` temáticos, así que devuelve `insertedCount=0, excludedCount=2` (README.md + 00-placeholder.md) y no hace daño. Se conserva por compatibilidad y porque su eliminación requeriría también retirar la infra `ClaudeApiProperties.kbDirectory` — trabajo aditivo sin beneficio operativo hoy.
 
-1. **Fase 1.B (siguiente commit)**: aplicar migración V13 en TEST/AUDIT/PROD (deploy backend) y ejecutar `POST /api/admin/knowledge-base/seed-from-jar` en cada entorno para poblar la tabla desde el JAR. Smoke: comparar `SELECT case_key, LENGTH(content) FROM support_bot_prompts` con los `.md` del JAR en tamaño (tras normalizar whitespace).
-2. **Fase 1.C**: cambio de código para que `SupportBotService` deje de consumir el output de `SupportKnowledgeBaseLoader` y pase a consumir `KnowledgeBaseService.getPromptContent(caseKey)` con concatenación equivalente.
-3. **Fase 1.D**: eliminar `resources/knowledge-base/*.md` (todos salvo README.md, que se mantiene como metadocumentación referencial) y borrar `SupportKnowledgeBaseLoader.java`. Ampliar o sustituir esta ADR según necesidad. `POST /api/admin/knowledge-base/seed-from-jar` queda como fósil (o se elimina también en el mismo commit).
-4. Deuda operativa acumulada: en Fase 1.A, cualquier cambio editorial hecho directamente sobre la tabla (INSERT/UPDATE vía SQL) queda invisible hasta ejecutar `POST /api/admin/knowledge-base/reload` en cada entorno. Fase 2 (no comprometida en fecha) introduciría un CRUD admin con invalidación automática de caché; hasta entonces, todo cambio editorial en la BdC externa **debe** documentarse en bitácora.
-
-**Prioridad**: media. No bloquea operación (el bot sigue funcionando con la BdC del JAR sin degradación). Bloqueante antes de considerar cerrado el refactor completo del Agente IA.
+**Deuda operativa residual (no cerrada por Fase 1.D)**: cualquier cambio editorial de la BdC vía SQL directo sigue exigiendo `POST /api/admin/knowledge-base/reload` en cada entorno. Fase 2 (no comprometida en fecha) introduciría un CRUD admin con invalidación automática. Hasta entonces, todo cambio editorial debe documentarse en bitácora.
 
 **Prioridad**: baja. No bloquea operación; solo coherencia entre backend y skills.

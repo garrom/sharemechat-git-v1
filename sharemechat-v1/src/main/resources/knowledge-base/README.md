@@ -1,57 +1,51 @@
 # Knowledge Base — SharemeChat Agente IA de Soporte
 
-Base de conocimiento consumida por el `SupportKnowledgeBaseLoader` al arrancar
-el backend. Todos los ficheros `*.md` presentes en este directorio se
-concatenan y se incluyen en el system prompt de cada llamada a Claude.
+Este directorio quedó **vacío de contenido temático tras Fase 1.D del refactor
+Agente IA** ([ADR-044](../../../../docs/06-decisions/adr-044-knowledge-base-externa.md)).
+La BdC del Agente IA de soporte vive ahora **exclusivamente en MySQL** en la
+tabla `support_bot_prompts`, cacheada en memoria por
+`com.sharemechat.support.service.KnowledgeBaseService` (Caffeine, hidratación
+en `@PostConstruct` + endpoint admin `POST /api/admin/knowledge-base/reload`
+para propagar cambios sin reiniciar).
 
-Estructura vigente tras Fase 1.B del refactor Agente IA (ADR-044): la
-taxonomía objetivo del filesystem coincide 1:1 con las filas que produce
-`POST /api/admin/knowledge-base/seed-from-jar` en la tabla
-`support_bot_prompts`. Un fichero temático = una fila. Fase 1.C consumirá
-esa tabla; Fase 1.D eliminará estos MDs del JAR.
+## Qué queda en este directorio
 
-## Ficheros temáticos (13 físicos → 14 filas en tabla)
+- `README.md` — este fichero, referencia mínima.
+- `00-placeholder.md` — safety net histórico del antiguo
+  `SupportKnowledgeBaseLoader`. El loader fue eliminado en Fase 1.D; el
+  placeholder se mantiene como marcador del directorio y para evitar builds
+  vacíos si en el futuro se reintroduce alguna forma de BdC embebida.
 
-- `00-comportamiento-agente-ia.md` — Constitución del bot (identidad, tono,
-  filtro por rol, malas prácticas, escalado, dominio, idioma). Fila
-  siempre-incluida.
-- `00-placeholder.md` — Redundante con `producto-general.md`, mantenido
-  como safety net del loader del JAR. **Excluido del seed** (no genera fila).
-- `producto-general.md` — Descripción general + FAQ transversal. Fallback
-  del router. Fusiona el antiguo `01-producto.md` + `10-preguntas-frecuentes.md`.
-- `02-onboarding-cliente.md` — Registro cliente + KYC cliente + primer login.
-- `03-onboarding-modelo.md` — Registro modelo + contrato + KYC modelo +
-  aprobación admin + assets + suspensión/baneo. Split del antiguo 03.
-- `03b-payout-y-tiers.md` — Sistema económico modelo (tiers, cambio,
-  gifts, payout, umbral, Wise). Split del antiguo 03.
-- `04-chat-y-favoritos.md` — Favoritos, chat texto, emojis, gifts,
-  bloqueo/reporte, notificaciones.
-- `05-pagos-y-saldo.md` — Modelo económico cliente (packs, consumo,
-  refunds, chargebacks, facturación). El seed fuerza `role='CLIENT'` para
-  esta fila vía map de overrides (el nombre del fichero no lo revela).
-- `06-moderacion-y-seguridad.md` — Moderación IA, reportes, /complaint,
-  apelaciones, acciones cuenta, KYC como concepto.
-- `07-privacidad-y-datos.md` — GDPR, vendors, retención, derechos.
-- `08-cuenta.md` — Login, contraseñas, cambiar email, cerrar cuenta,
-  cambio de rol.
-- `09-empresa-y-contacto.md` — Datos societarios, canales, horarios,
-  suplantación.
-- `11-ui-reference.md` — Mapa UI real (navbar, tabs, dashboards). Fila
-  siempre-incluida en Fase 1.C.
-- `12-troubleshooting-modelo.md` — Problemas técnicos rol MODEL.
-- `13-troubleshooting-cliente.md` — Problemas técnicos rol CLIENT.
+## Qué desapareció en Fase 1.D
 
-## Reglas
+- Los 14 ficheros temáticos (`00-comportamiento-agente-ia.md`,
+  `02-onboarding-cliente.md`, …, `producto-general.md`) que hidrataban
+  antiguamente el `SupportKnowledgeBaseLoader` al arrancar.
+- `com.sharemechat.support.service.SupportKnowledgeBaseLoader` (Java
+  service) y su test.
 
-- No incluir información sensible (credenciales, IPs internas, ARNs).
-- Tono conversacional, no legalista literal.
-- ES + EN admitidos en el mismo fichero (Haiku detecta idioma solo).
-- Cuando un fichero se añade, no requiere cambio de código; se recarga en
-  el siguiente arranque del backend (BdC del JAR) o al ejecutar
-  `POST /api/admin/knowledge-base/reload` (BdC de la tabla, Fase 1.C+).
-- Nombres de fichero admitidos por `deriveCaseKey`: prefijo `\d+-` (como
-  `05-pagos-y-saldo`) o `\d+[a-z]-` (como `03b-payout-y-tiers`). El
-  `case_key` se deriva quitando el prefijo y la extensión `.md`.
-- Sufijos `-modelo` / `-cliente` en el nombre auto-derivan `role='MODEL'`
-  / `role='CLIENT'`. Para case_keys sin sufijo revelador, existe un map
-  de overrides en `KnowledgeBaseAdminController.ROLE_OVERRIDES`.
+## Cómo se hidrata la BdC en un entorno nuevo
+
+Cada entorno con schema Flyway V13 aplicado tiene la tabla
+`support_bot_prompts` (vacía por defecto). Dos vías:
+
+1. **Canónica hasta Fase 1.C**: `POST /api/admin/knowledge-base/seed-from-jar`
+   leía los `.md` del classpath e insertaba una fila por fichero. **Ya no
+   funciona** porque el classpath no tiene `.md` temáticos; el endpoint sigue
+   presente pero devuelve `insertedCount=0`.
+2. **Vigente post Fase 1.D**: seed por SQL directo contra la tabla
+   `support_bot_prompts`. Se ejecutó el 2026-07-07 en los tres entornos
+   (TEST vía UPDATE tras seed-from-jar previo; AUDIT y PROD vía `INSERT INTO`
+   parametrizado desde script Python cargando los `.md` del working tree en
+   el momento del seed). La bitácora del proyecto conserva el script como
+   referencia reejecutable.
+
+## Modelo canónico de la tabla
+
+- 14 filas activas, una por `case_key`.
+- Comportamiento transversal: `comportamiento-agente-ia` + `ui-reference`
+  (siempre incluidas en el system prompt).
+- Router determinista (`SupportBotRouterService`) selecciona 1 case_key
+  adicional según rol + keywords del mensaje. Fallback: `producto-general`.
+- Reglas del router hardcodeadas en el service; `case_key`s deben existir
+  en la tabla o el bot loguea WARN y sigue con string vacío para esa sección.
