@@ -3137,7 +3137,11 @@
       "emptyState": "Hola, soy el Agente IA de SharemeChat. ¿En qué puedo ayudarte?",
       "inputPlaceholder": "Escribe tu mensaje...",
       "sendButton": "Enviar",
-      "typing": "Agente IA escribiendo..."
+      "typing": "Agente IA escribiendo...",
+      "systemAssigned": {
+        "bannerHint": "Un técnico del equipo de soporte está atendiendo tu caso.",
+        "fallback": "Tu caso ha sido asignado al equipo de soporte."
+      }
     },
     "escalate": {
       "button": "Hablar con un técnico",
@@ -3145,7 +3149,8 @@
       "reasonPlaceholder": "Explica brevemente el motivo (opcional)...",
       "confirm": "Confirmar",
       "cancel": "Cancelar",
-      "success": "Un técnico revisará tu conversación pronto"
+      "success": "Un técnico revisará tu conversación pronto",
+      "alreadyHumanHandling": "Un técnico ya está atendiendo tu caso"
     },
     "rateLimit": {
       "warningYellow": "Te quedan {{count}} mensajes hoy",

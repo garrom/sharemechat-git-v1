@@ -6,7 +6,7 @@ import { useSession } from '../../../components/SessionProvider';
 import useConversationPolling from '../../../hooks/useConversationPolling';
 import PillStatus from './components/PillStatus';
 import SupportButton from './components/SupportButton';
-import SupportMessageBubble from './components/SupportMessageBubble';
+import SupportMessageBubble from '../../../components/support/SupportMessageBubble';
 import SupportClaimModal from './components/SupportClaimModal';
 import SupportResolveConfirmModal from './components/SupportResolveConfirmModal';
 

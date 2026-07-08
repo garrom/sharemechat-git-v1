@@ -2,14 +2,26 @@ import React from 'react';
 import styled from 'styled-components';
 import ReactMarkdown from 'react-markdown';
 
-// Frente B.3.2 (ADR-046). Burbuja de mensaje del hilo admin. Variantes:
+// Frente B.3.3 (ADR-046). Burbuja de mensaje compartida entre la surface
+// admin (AdminSupportPanel > Conversations > Detail) y la surface product
+// (SupportChat.jsx del cliente).
+//
+// Variantes por sender:
 // - USER: burbuja gris claro izquierda, avatar inicial del email.
-// - LLM: burbuja azul claro izquierda, emoji robot.
+// - LLM: burbuja azul claro izquierda, emoji robot. Markdown DEGRADADO
+//        (safety net): la BdC del bot instruye texto plano; si el LLM emite
+//        markdown por error, no rompemos la UX. Cada componente se degrada
+//        a span/div sin margen ni padding.
 // - HUMAN: burbuja verde derecha, avatar del sentByProfileDisplayName, firma
-//         pequena "display_name (category)". Markdown CON estilos (NO safety
-//         net como en SupportChat.jsx del cliente): los humanos si formatean.
-// - SYSTEM: banner amarillo centrado italic, sin burbuja, ancho reducido.
-// Reusa react-markdown@8.0.7 ya presente en package.json.
+//        "display_name (category) · ts". Markdown CON estilos: los humanos si
+//        formatean intencionadamente.
+// - SYSTEM: banner amarillo centrado italic, sin avatar. Renderiza `content`
+//        literal (sin markdown) porque el texto viene del backend ya
+//        pre-formateado y localizado.
+//
+// Fix menor B.3.3: `min-width: 120px` para que burbujas de texto corto ("ok")
+// no queden encogidas a 3 caracteres. Preserva `max-width: 72%` para textos
+// largos.
 
 const Row = styled.div`
   display: flex;
@@ -35,6 +47,7 @@ const Avatar = styled.div`
 
 const Bubble = styled.div`
   max-width: 72%;
+  min-width: 120px;
   padding: 10px 14px;
   border-radius: 14px;
   background: ${(p) => p.$bg};
@@ -86,6 +99,48 @@ const PendingTag = styled.span`
   font-size: 0.72rem;
 `;
 
+// Safety net para LLM: degradar toda etiqueta markdown a span/div sin
+// margen ni padding. Preserva contenido, elimina formato visual. La BdC del
+// bot ya prohibe markdown; esto es cinturon + tirantes.
+const LLM_RESET_STYLE = { margin: 0, padding: 0 };
+const LLM_MD_COMPONENTS = {
+  h1: ({ node, ...props }) => <span {...props} style={LLM_RESET_STYLE} />,
+  h2: ({ node, ...props }) => <span {...props} style={LLM_RESET_STYLE} />,
+  h3: ({ node, ...props }) => <span {...props} style={LLM_RESET_STYLE} />,
+  h4: ({ node, ...props }) => <span {...props} style={LLM_RESET_STYLE} />,
+  h5: ({ node, ...props }) => <span {...props} style={LLM_RESET_STYLE} />,
+  h6: ({ node, ...props }) => <span {...props} style={LLM_RESET_STYLE} />,
+  strong: ({ node, ...props }) => <span {...props} />,
+  em: ({ node, ...props }) => <span {...props} />,
+  code: ({ node, inline, ...props }) => <span {...props} />,
+  ul: ({ node, ...props }) => <div {...props} style={LLM_RESET_STYLE} />,
+  ol: ({ node, ...props }) => <div {...props} style={LLM_RESET_STYLE} />,
+  li: ({ node, ...props }) => <div {...props} style={LLM_RESET_STYLE} />,
+  p: ({ node, ...props }) => <p {...props} style={LLM_RESET_STYLE} />,
+  br: ({ node, ...props }) => <br {...props} style={{ lineHeight: 1, margin: 0 }} />,
+  a: ({ node, ...props }) => (
+    <a
+      {...props}
+      target="_blank"
+      rel="noopener noreferrer"
+      style={{ color: '#2563eb', textDecoration: 'underline' }}
+    />
+  ),
+  hr: () => null,
+};
+
+// Preprocess del texto LLM: colapsa multiples \n consecutivos en uno solo,
+// hace trim por linea, une con hard-break markdown ("  \n") para que
+// react-markdown renderice <br/> dentro del mismo <p>. Junto a los
+// components degradados, garantiza espaciado cero visual.
+const preprocessLlmContent = (raw) => (raw || '')
+  .replace(/\n{2,}/g, '\n')
+  .split('\n')
+  .map((s) => s.trim())
+  .filter((s) => s.length > 0)
+  .join('  \n')
+  .trim();
+
 const initialOf = (s) => {
   if (!s) return '?';
   const trimmed = String(s).trim();
@@ -114,7 +169,12 @@ const formatTime = (isoStr) => {
   }
 };
 
-const SupportMessageBubble = ({ message, userEmail, pending = false }) => {
+const SupportMessageBubble = ({
+  message,
+  userEmail,
+  pending = false,
+  agentLabel = 'Agente IA',
+}) => {
   if (!message) return null;
   const sender = message.sender;
   const content = message.content || '';
@@ -150,9 +210,11 @@ const SupportMessageBubble = ({ message, userEmail, pending = false }) => {
           <Avatar $bg="#3b82f6">🤖</Avatar>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <Bubble $bg="#eff6ff" $fg="#1e3a8a" $border="#bfdbfe">
-              <ReactMarkdown>{content}</ReactMarkdown>
+              <ReactMarkdown components={LLM_MD_COMPONENTS} skipHtml>
+                {preprocessLlmContent(content)}
+              </ReactMarkdown>
             </Bubble>
-            <MetaLine $side="left">Agente IA · {ts}</MetaLine>
+            <MetaLine $side="left">{agentLabel} · {ts}</MetaLine>
           </div>
         </Row>
       </div>
@@ -161,6 +223,10 @@ const SupportMessageBubble = ({ message, userEmail, pending = false }) => {
 
   if (sender === 'HUMAN') {
     const profileName = message.sentByProfileDisplayName || 'Soporte';
+    const profileCategory = message.sentByProfileCategory || '';
+    const signature = profileCategory
+      ? `${profileName} (${profileCategory})`
+      : profileName;
     return (
       <div>
         <Row $side="right">
@@ -169,7 +235,7 @@ const SupportMessageBubble = ({ message, userEmail, pending = false }) => {
               <ReactMarkdown>{content}</ReactMarkdown>
             </Bubble>
             <MetaLine $side="right">
-              {profileName} · {ts}
+              {signature} · {ts}
               {pending ? <PendingTag>enviando…</PendingTag> : null}
             </MetaLine>
           </div>

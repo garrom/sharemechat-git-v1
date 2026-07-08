@@ -3137,7 +3137,11 @@
       "emptyState": "Hi, I'm the SharemeChat AI Assistant. How can I help you?",
       "inputPlaceholder": "Type your message...",
       "sendButton": "Send",
-      "typing": "AI Assistant is typing..."
+      "typing": "AI Assistant is typing...",
+      "systemAssigned": {
+        "bannerHint": "A support agent from the team is handling your case.",
+        "fallback": "Your case has been assigned to the support team."
+      }
     },
     "escalate": {
       "button": "Talk to a support agent",
@@ -3145,7 +3149,8 @@
       "reasonPlaceholder": "Briefly explain the reason (optional)...",
       "confirm": "Confirm",
       "cancel": "Cancel",
-      "success": "A support agent will review your conversation soon"
+      "success": "A support agent will review your conversation soon",
+      "alreadyHumanHandling": "A support agent is already handling your case"
     },
     "rateLimit": {
       "warningYellow": "You have {{count}} messages left today",
