@@ -48,7 +48,7 @@ const Avatar = styled.div`
   height: 32px;
   border-radius: 50%;
   background: ${(p) => p.$bg || '#94a3b8'};
-  color: #fff;
+  color: ${(p) => p.$fg || '#fff'};
   font-weight: 700;
   font-size: 13px;
   display: flex;
@@ -279,7 +279,7 @@ const SupportMessageBubble = ({
     return (
       <div>
         <Row $side="left">
-          <Avatar $bg="#94a3b8">{initialOf(peerNickname || 'P')}</Avatar>
+          <Avatar $bg="#e2e8f0" $fg="#475569">{initialOf(peerNickname || 'P')}</Avatar>
           <ColumnWrap $side="left">
             <Bubble $bg="rgba(255,255,255,0.98)" $fg="#111827" $border="rgba(15,23,42,0.08)">
               {content}
