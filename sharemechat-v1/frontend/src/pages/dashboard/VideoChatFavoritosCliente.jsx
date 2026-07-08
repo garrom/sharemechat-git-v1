@@ -140,6 +140,9 @@ export default function VideoChatFavoritosCliente(props){
   // WhatsApp-like (StyledGiftMessage) sin cambio. El fondo beige, la
   // textarea negra, las reactions y el boton regalo del cliente quedan
   // intactos: solo cambia la burbuja de texto.
+  // Fase 1.1: SupportMessageBubble recibe peerNickname / userNickname
+  // para renderizar avatar circular con inicial + timestamp bajo cada
+  // burbuja, igual que las burbujas del chat de soporte.
   const renderChatMessage = (m) => {
     const giftData = normalizeGiftMessage(m);
     const isMe = Number(m.senderId) === Number(user?.id);
@@ -159,6 +162,8 @@ export default function VideoChatFavoritosCliente(props){
           content: m.body,
           createdAt: m.createdAt,
         }}
+        peerNickname={centerChatPeerName || ''}
+        userNickname={user?.nickname || ''}
       />
     );
   };

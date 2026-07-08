@@ -17,10 +17,13 @@ import ReactMarkdown from 'react-markdown';
 //          "displayName (category) · ts". Markdown CON estilos.
 // - SYSTEM: banner amarillo centrado italic, sin avatar. Renderiza content
 //           literal (viene del backend ya localizado y pre-formateado).
-// - P2P_ME: yo en chat P2P cliente-modelo. Derecha, verde WhatsApp, sin
-//           avatar, solo timestamp bajo la burbuja.
-// - P2P_PEER: contraparte en chat P2P. Izquierda, blanco WhatsApp, sin
-//             avatar, solo timestamp bajo la burbuja.
+// - P2P_ME: yo en chat P2P cliente-modelo. Derecha, verde suave (mismo
+//           tono que HUMAN en soporte, unificado en Fase 1.1). Avatar
+//           circular con inicial del propio nickname a la derecha,
+//           timestamp bajo la burbuja.
+// - P2P_PEER: contraparte en chat P2P. Izquierda, blanco. Avatar circular
+//             con inicial del nickname del peer a la izquierda,
+//             timestamp bajo la burbuja.
 
 const Row = styled.div`
   display: flex;
@@ -175,6 +178,8 @@ const SupportMessageBubble = ({
   message,
   pending = false,
   agentLabel = 'Agente IA',
+  peerNickname = '',
+  userNickname = '',
 }) => {
   if (!message) return null;
   const sender = message.sender;
@@ -246,17 +251,17 @@ const SupportMessageBubble = ({
     );
   }
 
-  // Variantes P2P (Fase 1 estilos). Sin avatar (respetamos la convencion
-  // del chat P2P actual que no muestra avatares en el hilo), sin firma
-  // (el nombre del otro ya esta en la lista lateral izquierda de
-  // favoritos), solo timestamp bajo la burbuja. Colores WhatsApp-like
-  // para consistencia con el fondo beige del chat P2P.
+  // Variantes P2P (Fase 1.1 estilos). Avatar circular con inicial +
+  // timestamp bajo la burbuja, sin firma. Colores unificados con las
+  // burbujas del chat de soporte: verde suave (mismo tono que HUMAN)
+  // para P2P_ME, blanco para P2P_PEER. La inicial se obtiene del
+  // nickname que el caller pasa via props (peerNickname / userNickname).
   if (sender === 'P2P_ME') {
     return (
       <div>
         <Row $side="right">
           <ColumnWrap $side="right">
-            <Bubble $bg="#d9fdd3" $fg="#183024" $border="rgba(168, 221, 156, 0.95)">
+            <Bubble $bg="#dcfce7" $fg="#14532d" $border="#86efac">
               {content}
             </Bubble>
             <MetaLine $side="right">
@@ -264,6 +269,7 @@ const SupportMessageBubble = ({
               {pending ? <PendingTag>enviando…</PendingTag> : null}
             </MetaLine>
           </ColumnWrap>
+          <Avatar $bg="#15803d">{initialOf(userNickname || 'Y')}</Avatar>
         </Row>
       </div>
     );
@@ -273,6 +279,7 @@ const SupportMessageBubble = ({
     return (
       <div>
         <Row $side="left">
+          <Avatar $bg="#94a3b8">{initialOf(peerNickname || 'P')}</Avatar>
           <ColumnWrap $side="left">
             <Bubble $bg="rgba(255,255,255,0.98)" $fg="#111827" $border="rgba(15,23,42,0.08)">
               {content}

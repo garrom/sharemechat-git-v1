@@ -210,6 +210,8 @@ export default function VideoChatFavoritosModelo(props) {
           content: m.body,
           createdAt: m.createdAt,
         }}
+        peerNickname={centerChatPeerName || ''}
+        userNickname={user?.nickname || ''}
       />
     );
   };
