@@ -31,6 +31,20 @@ const Row = styled.div`
   justify-content: ${(p) => (p.$side === 'right' ? 'flex-end' : 'flex-start')};
 `;
 
+// Fix bug 3 post-B.3.3: max-width en el wrapper columnar (flex-child del
+// Row), no en Bubble. Antes el max-width vivia en Bubble pero su padre
+// inmediato (este wrapper) se auto-dimensionaba al contenido, asi que
+// 72% de "wrapper corto" quedaba corto y el Bubble no podia crecer aunque
+// el Row tuviera espacio. Con max-width aqui, el limite es respecto al
+// Row (full-width) via flex-basis del wrapper. min-width se preserva en
+// Bubble para el fix previo de texto corto.
+const ColumnWrap = styled.div`
+  display: flex;
+  flex-direction: column;
+  max-width: 80%;
+  align-items: ${(p) => (p.$side === 'right' ? 'flex-end' : 'flex-start')};
+`;
+
 const Avatar = styled.div`
   width: 32px;
   height: 32px;
@@ -46,7 +60,6 @@ const Avatar = styled.div`
 `;
 
 const Bubble = styled.div`
-  max-width: 72%;
   min-width: 120px;
   padding: 10px 14px;
   border-radius: 14px;
@@ -56,6 +69,7 @@ const Bubble = styled.div`
   line-height: 1.4;
   font-size: 0.9rem;
   word-wrap: break-word;
+  overflow-wrap: break-word;
 
   p { margin: 0 0 6px 0; }
   p:last-child { margin-bottom: 0; }
@@ -189,7 +203,7 @@ const SupportMessageBubble = ({
       <div>
         <Row $side="left">
           <Avatar $bg="#94a3b8">{initialOf(userEmail || 'U')}</Avatar>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <ColumnWrap $side="left">
             <Bubble $bg="#f1f5f9" $fg="#0f172a" $border="#e2e8f0">
               <ReactMarkdown>{content}</ReactMarkdown>
             </Bubble>
@@ -197,7 +211,7 @@ const SupportMessageBubble = ({
               {userEmail ? `${userEmail} · ` : ''}{ts}
               {pending ? <PendingTag>enviando…</PendingTag> : null}
             </MetaLine>
-          </div>
+          </ColumnWrap>
         </Row>
       </div>
     );
@@ -208,14 +222,14 @@ const SupportMessageBubble = ({
       <div>
         <Row $side="left">
           <Avatar $bg="#3b82f6">🤖</Avatar>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <ColumnWrap $side="left">
             <Bubble $bg="#eff6ff" $fg="#1e3a8a" $border="#bfdbfe">
               <ReactMarkdown components={LLM_MD_COMPONENTS} skipHtml>
                 {preprocessLlmContent(content)}
               </ReactMarkdown>
             </Bubble>
             <MetaLine $side="left">{agentLabel} · {ts}</MetaLine>
-          </div>
+          </ColumnWrap>
         </Row>
       </div>
     );
@@ -230,7 +244,7 @@ const SupportMessageBubble = ({
     return (
       <div>
         <Row $side="right">
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
+          <ColumnWrap $side="right">
             <Bubble $bg="#dcfce7" $fg="#14532d" $border="#86efac">
               <ReactMarkdown>{content}</ReactMarkdown>
             </Bubble>
@@ -238,7 +252,7 @@ const SupportMessageBubble = ({
               {signature} · {ts}
               {pending ? <PendingTag>enviando…</PendingTag> : null}
             </MetaLine>
-          </div>
+          </ColumnWrap>
           <Avatar $bg="#15803d">{initialOf(profileName)}</Avatar>
         </Row>
       </div>

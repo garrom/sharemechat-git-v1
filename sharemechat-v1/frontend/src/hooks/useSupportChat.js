@@ -92,13 +92,16 @@ export default function useSupportChat() {
         if (token !== loadTokenRef.current) return;
         setMessages(Array.isArray(rows) ? rows : []);
       })
-      .catch((err) => {
+      .catch(() => {
         if (token !== loadTokenRef.current) return;
-        // Si el backend rechaza (400 conversation no encontrada / ajena),
-        // limpiamos el id cacheado para arrancar de cero.
+        // Fix bug 1 post-B.3.3: recuperacion silenciosa. El id cacheado en
+        // LS puede pertenecer a otra sesion (otro user en el mismo navegador,
+        // conversacion resuelta hace mucho, cambio de schema). El 400 del
+        // backend es housekeeping interno, no un error accionable por el
+        // user, y pintarlo como banner rojo tras login rompe la UX. Se
+        // limpia state + LS y se arranca de cero sin mostrar nada al user.
         setMessages([]);
         setConversationId(null);
-        setError(err?.message || 'No se pudo cargar el historial');
       })
       .finally(() => {
         if (token === loadTokenRef.current) setLoading(false);
@@ -189,14 +192,21 @@ export default function useSupportChat() {
       const rows = await supportApi.getHistory(conversationId);
       if (token !== humanPollTokenRef.current) return;
       if (!Array.isArray(rows)) return;
+      // Fix bug 2 post-B.3.3: politica "backend fuente de verdad + preservar
+      // pending". El merge anterior comparaba por id y duplicaba los
+      // mensajes USER porque sendMessage genera un id local `local-<ts>`
+      // (necesario para pintar responsive antes de que el POST resuelva) y
+      // el polling recupera ese mismo mensaje con el id numerico real de BD.
+      // El backend no expone el id BD del user message en la respuesta del
+      // POST /message (solo devuelve messageId del reply LLM), asi que no
+      // se puede reconciliar por id. Solucion: al llegar el polling, el
+      // historial del backend es la fuente de verdad y solo se preservan
+      // los mensajes con pending=true (todavia en vuelo, sin confirmar por
+      // backend). Los locales ya confirmados se descartan del state y
+      // quedan representados por su version BD del polling.
       setMessages((prev) => {
-        const known = new Set();
-        prev.forEach((m) => {
-          if (m && m.id != null) known.add(String(m.id));
-        });
-        const fresh = rows.filter((r) => r && r.id != null && !known.has(String(r.id)));
-        if (fresh.length === 0) return prev;
-        return [...prev, ...fresh];
+        const pendingLocal = prev.filter((m) => m && m.pending === true);
+        return [...rows, ...pendingLocal];
       });
     } catch {
       // Fallo transitorio: se reintenta en el proximo tick del interval.
