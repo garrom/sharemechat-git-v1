@@ -3063,13 +3063,19 @@
         "list": {
           "title": "Users con grant sobre {{profile}}",
           "addGrant": "+ Añadir grant",
-          "emptyNote": "Los grants añadidos en esta sesión aparecen aquí. Los grants antiguos requieren endpoint dedicado (aún no expuesto)."
+          "loading": "Cargando grants…",
+          "empty": "Sin grants todavía. Añade uno para dar acceso a esta identidad."
         },
         "columns": {
-          "userId": "User ID",
+          "user": "Usuario",
           "grantedBy": "Otorgado por",
           "grantedAt": "Otorgado",
+          "active": "Estado",
           "actions": "Acciones"
+        },
+        "state": {
+          "active": "Activo",
+          "inactive": "Revocado"
         },
         "actions": {
           "revoke": "Revocar"

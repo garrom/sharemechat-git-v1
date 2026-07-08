@@ -1,5 +1,8 @@
 package com.sharemechat.support.service;
 
+import com.sharemechat.entity.User;
+import com.sharemechat.repository.UserRepository;
+import com.sharemechat.support.dto.GrantDetailDTO;
 import com.sharemechat.support.entity.BackofficeAgentProfileGrant;
 import com.sharemechat.support.exception.SupportNotFoundException;
 import com.sharemechat.support.repository.BackofficeAgentProfileGrantRepository;
@@ -8,7 +11,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Grants N:N entre users backoffice y profiles. Sin borrado fisico: revoke
@@ -20,12 +28,15 @@ public class BackofficeAgentProfileGrantService {
 
     private final BackofficeAgentProfileGrantRepository grantRepo;
     private final BackofficeAgentProfileRepository profileRepo;
+    private final UserRepository userRepository;
 
     public BackofficeAgentProfileGrantService(
             BackofficeAgentProfileGrantRepository grantRepo,
-            BackofficeAgentProfileRepository profileRepo) {
+            BackofficeAgentProfileRepository profileRepo,
+            UserRepository userRepository) {
         this.grantRepo = grantRepo;
         this.profileRepo = profileRepo;
+        this.userRepository = userRepository;
     }
 
     /**
@@ -80,5 +91,44 @@ public class BackofficeAgentProfileGrantService {
         return grantRepo.findByUserIdAndProfileId(userId, profileId)
                 .map(BackofficeAgentProfileGrant::isActive)
                 .orElse(false);
+    }
+
+    /**
+     * Listado admin de grants de una profile (activos e inactivos), enriquecido
+     * con user_email y granted_by_email para no forzar joins JPA con
+     * {@code FetchType.EAGER}. Dos queries: una a la tabla puente, otra
+     * batch-fetch a users. Sin N+1. Ordenados por {@code granted_at DESC}.
+     * Ver ADR-046 (frente B.3.2, cierre del hueco al no exponer GET grants).
+     */
+    @Transactional(readOnly = true)
+    public List<GrantDetailDTO> listGrantsByProfileDetailed(Long profileId) {
+        List<BackofficeAgentProfileGrant> grants =
+                grantRepo.findAllByProfileIdOrderByGrantedAtDesc(profileId);
+        if (grants.isEmpty()) {
+            return List.of();
+        }
+        Set<Long> ids = new HashSet<>();
+        for (BackofficeAgentProfileGrant g : grants) {
+            if (g.getUserId() != null) ids.add(g.getUserId());
+            if (g.getGrantedBy() != null) ids.add(g.getGrantedBy());
+        }
+        Map<Long, String> emailById = new HashMap<>();
+        for (User u : userRepository.findAllById(ids)) {
+            emailById.put(u.getId(), u.getEmail());
+        }
+        List<GrantDetailDTO> out = new ArrayList<>(grants.size());
+        for (BackofficeAgentProfileGrant g : grants) {
+            GrantDetailDTO dto = new GrantDetailDTO();
+            dto.setUserId(g.getUserId());
+            dto.setUserEmail(emailById.get(g.getUserId()));
+            dto.setGrantedBy(g.getGrantedBy());
+            dto.setGrantedByEmail(g.getGrantedBy() != null
+                    ? emailById.get(g.getGrantedBy())
+                    : null);
+            dto.setGrantedAt(g.getGrantedAt());
+            dto.setActive(g.isActive());
+            out.add(dto);
+        }
+        return out;
     }
 }

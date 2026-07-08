@@ -3063,13 +3063,19 @@
         "list": {
           "title": "Users with grant on {{profile}}",
           "addGrant": "+ Add grant",
-          "emptyNote": "Grants added in this session appear here. Preexisting grants require a dedicated endpoint (not exposed yet)."
+          "loading": "Loading grants…",
+          "empty": "No grants yet. Add one to give access to this identity."
         },
         "columns": {
-          "userId": "User ID",
+          "user": "User",
           "grantedBy": "Granted by",
           "grantedAt": "Granted",
+          "active": "Status",
           "actions": "Actions"
+        },
+        "state": {
+          "active": "Active",
+          "inactive": "Revoked"
         },
         "actions": {
           "revoke": "Revoke"

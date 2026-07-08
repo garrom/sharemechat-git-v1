@@ -159,13 +159,22 @@ const AdminSupportProfilesView = () => {
   useEffect(() => { load(); }, [load]);
 
   const loadGrants = useCallback(async (profileId) => {
-    // No hay endpoint GET dedicado en B.3.1; el detail vive en la vista de
-    // grants dentro del profile. Placeholder: usamos la lista con un query
-    // hipotetico via el endpoint de listado (que no existe todavia).
-    // Estrategia B.3.2: cargar en el frontend haciendo una lectura del backend
-    // cuando se expanda. Hasta que exista GET /profiles/{id}/grants publico,
-    // mostramos placeholder informativo.
-    setExpandedGrants((prev) => ({ ...prev, [profileId]: { loading: false, rows: [], err: '' } }));
+    setExpandedGrants((prev) => ({
+      ...prev,
+      [profileId]: { loading: true, rows: prev[profileId]?.rows || [], err: '' },
+    }));
+    try {
+      const data = await apiFetch(`/admin/support/profiles/${profileId}/grants`);
+      setExpandedGrants((prev) => ({
+        ...prev,
+        [profileId]: { loading: false, rows: Array.isArray(data) ? data : [], err: '' },
+      }));
+    } catch (e) {
+      setExpandedGrants((prev) => ({
+        ...prev,
+        [profileId]: { loading: false, rows: [], err: e?.message || 'Error' },
+      }));
+    }
   }, []);
 
   const toggleActive = useCallback(async (p) => {
@@ -188,14 +197,12 @@ const AdminSupportProfilesView = () => {
       await apiFetch(`/admin/support/profiles/${profileId}/grants/${userId}`, {
         method: 'DELETE',
       });
-      setExpandedGrants((prev) => {
-        const box = prev[profileId] || { rows: [] };
-        return { ...prev, [profileId]: { ...box, rows: box.rows.filter((g) => g.userId !== userId) } };
-      });
+      // Refresh del endpoint para reflejar active=false (soft-delete).
+      await loadGrants(profileId);
     } catch (e) {
       setErr(e?.message || 'Error');
     }
-  }, []);
+  }, [loadGrants]);
 
   const handleExpand = (p) => {
     if (expandedId === p.id) {
@@ -279,29 +286,75 @@ const AdminSupportProfilesView = () => {
                       <InnerTable>
                         <thead>
                           <tr>
-                            <InnerTh>{t('admin.support.grants.columns.userId')}</InnerTh>
+                            <InnerTh>{t('admin.support.grants.columns.user')}</InnerTh>
                             <InnerTh>{t('admin.support.grants.columns.grantedBy')}</InnerTh>
                             <InnerTh>{t('admin.support.grants.columns.grantedAt')}</InnerTh>
+                            <InnerTh>{t('admin.support.grants.columns.active')}</InnerTh>
                             <InnerTh>{t('admin.support.grants.columns.actions')}</InnerTh>
                           </tr>
                         </thead>
                         <tbody>
+                          {expandedGrants[p.id]?.err ? (
+                            <tr>
+                              <InnerTd colSpan={5} style={{ color: '#b91c1c', padding: 10 }}>
+                                {expandedGrants[p.id].err}
+                              </InnerTd>
+                            </tr>
+                          ) : null}
+                          {expandedGrants[p.id]?.loading ? (
+                            <tr>
+                              <InnerTd colSpan={5} style={{ color: '#64748b', textAlign: 'center', padding: 10 }}>
+                                {t('admin.support.grants.list.loading')}
+                              </InnerTd>
+                            </tr>
+                          ) : null}
                           {(expandedGrants[p.id]?.rows || []).map((g) => (
                             <tr key={`${g.userId}-${p.id}`}>
-                              <InnerTd>#{g.userId}</InnerTd>
-                              <InnerTd>{g.grantedBy ? `#${g.grantedBy}` : '—'}</InnerTd>
+                              <InnerTd>
+                                <div>{g.userEmail || `#${g.userId}`}</div>
+                                {g.userEmail
+                                  ? <div style={{ color: '#64748b', fontSize: '0.72rem' }}>#{g.userId}</div>
+                                  : null}
+                              </InnerTd>
+                              <InnerTd>
+                                {g.grantedByEmail
+                                  ? g.grantedByEmail
+                                  : (g.grantedBy ? `#${g.grantedBy}` : '—')}
+                              </InnerTd>
                               <InnerTd>{formatIso(g.grantedAt)}</InnerTd>
                               <InnerTd>
-                                <SupportButton size="sm" variant="danger" onClick={() => revokeGrant(p.id, g.userId)}>
-                                  {t('admin.support.grants.actions.revoke')}
-                                </SupportButton>
+                                <span
+                                  style={{
+                                    display: 'inline-block',
+                                    padding: '2px 8px',
+                                    borderRadius: 999,
+                                    fontSize: '0.7rem',
+                                    fontWeight: 700,
+                                    background: g.active ? '#dcfce7' : '#f3f4f6',
+                                    color: g.active ? '#166534' : '#475569',
+                                    border: '1px solid ' + (g.active ? '#86efac' : '#d1d5db'),
+                                  }}
+                                >
+                                  {g.active
+                                    ? t('admin.support.grants.state.active')
+                                    : t('admin.support.grants.state.inactive')}
+                                </span>
+                              </InnerTd>
+                              <InnerTd>
+                                {g.active ? (
+                                  <SupportButton size="sm" variant="danger" onClick={() => revokeGrant(p.id, g.userId)}>
+                                    {t('admin.support.grants.actions.revoke')}
+                                  </SupportButton>
+                                ) : (
+                                  <span style={{ color: '#64748b', fontSize: '0.75rem' }}>—</span>
+                                )}
                               </InnerTd>
                             </tr>
                           ))}
-                          {(expandedGrants[p.id]?.rows || []).length === 0 ? (
+                          {!expandedGrants[p.id]?.loading && (expandedGrants[p.id]?.rows || []).length === 0 && !expandedGrants[p.id]?.err ? (
                             <tr>
-                              <InnerTd colSpan={4} style={{ color: '#64748b', textAlign: 'center', padding: 10 }}>
-                                {t('admin.support.grants.list.emptyNote')}
+                              <InnerTd colSpan={5} style={{ color: '#64748b', textAlign: 'center', padding: 10 }}>
+                                {t('admin.support.grants.list.empty')}
                               </InnerTd>
                             </tr>
                           ) : null}
@@ -346,14 +399,12 @@ const AdminSupportProfilesView = () => {
         <GrantAddModal
           profileId={grantingFor.id}
           onClose={() => setGrantingFor(null)}
-          onGranted={(g) => {
-            setGrantingFor(null);
+          onGranted={() => {
             const pid = grantingFor.id;
-            setExpandedGrants((prev) => {
-              const box = prev[pid] || { rows: [] };
-              const rows = [...box.rows.filter((r) => r.userId !== g.userId), g];
-              return { ...prev, [pid]: { ...box, rows } };
-            });
+            setGrantingFor(null);
+            // Refresh del endpoint completo tras add: el POST devuelve un objeto
+            // sin user_email; para tener el email hay que releer.
+            loadGrants(pid);
           }}
         />
       ) : null}

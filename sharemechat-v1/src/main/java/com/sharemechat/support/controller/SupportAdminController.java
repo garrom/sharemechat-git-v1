@@ -255,6 +255,17 @@ public class SupportAdminController {
     // Grants
     // ============================================================
 
+    @GetMapping("/profiles/{profileId}/grants")
+    public ResponseEntity<?> listGrants(@PathVariable Long profileId, Authentication auth) {
+        return handled(() -> {
+            requireUserId(auth);
+            if (!profileRepo.existsById(profileId)) {
+                throw new SupportNotFoundException("Profile no encontrada");
+            }
+            return ResponseEntity.ok(grantService.listGrantsByProfileDetailed(profileId));
+        });
+    }
+
     @PostMapping("/profiles/{profileId}/grants")
     public ResponseEntity<?> grant(@PathVariable Long profileId,
                                     @RequestBody GrantCreateRequest body,
