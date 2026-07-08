@@ -3082,15 +3082,20 @@
         },
         "add": {
           "title": "Añadir grant",
-          "subtitle": "Introduce el ID numérico del user backoffice al que quieres otorgar la identidad.",
+          "subtitle": "Introduce el email del user backoffice al que quieres otorgar la identidad.",
           "confirm": "Otorgar"
         },
         "form": {
-          "userIdLabel": "User ID",
-          "userIdPlaceholder": "9",
+          "emailLabel": "Email del user",
+          "emailPlaceholder": "operations+admin@sharemechat.com",
+          "assignSelf": "Asignarme a mí",
+          "searching": "Buscando…",
+          "resolvedInfo": "User id {{userId}} · {{nickname}}",
+          "notFound": "No hay ningún user backoffice con ese email exacto.",
+          "errorSearch": "No se pudo buscar el user. Revisa la conexión o vuelve a intentarlo.",
+          "errorNoMatch": "Selecciona un email válido antes de otorgar el grant.",
           "cancel": "Cancelar",
-          "submitting": "Otorgando…",
-          "errorIdInvalid": "Introduce un User ID numérico válido."
+          "submitting": "Otorgando…"
         }
       },
       "notifications": {}

@@ -619,6 +619,7 @@ const DashboardAdmin = () => {
               <AdminSupportPanel
                 canHandle={capabilities.canViewSupport}
                 canManage={capabilities.canManageSupportProfiles}
+                currentUserEmail={user?.email || ''}
                 onRefreshBadge={refreshSupportBadge}
               />
             </AdminPage>

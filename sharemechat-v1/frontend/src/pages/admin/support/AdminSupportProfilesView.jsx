@@ -132,7 +132,7 @@ const formatIso = (s) => {
   }
 };
 
-const AdminSupportProfilesView = () => {
+const AdminSupportProfilesView = ({ currentUserEmail = '' }) => {
   const t = (key, opts) => i18n.t(key, opts);
   const [profiles, setProfiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -398,6 +398,7 @@ const AdminSupportProfilesView = () => {
       {grantingFor ? (
         <GrantAddModal
           profileId={grantingFor.id}
+          currentUserEmail={currentUserEmail}
           onClose={() => setGrantingFor(null)}
           onGranted={() => {
             const pid = grantingFor.id;

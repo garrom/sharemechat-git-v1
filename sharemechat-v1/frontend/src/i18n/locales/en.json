@@ -3082,15 +3082,20 @@
         },
         "add": {
           "title": "Add grant",
-          "subtitle": "Enter the numeric backoffice user ID to grant this identity to.",
+          "subtitle": "Enter the email of the backoffice user to grant this identity to.",
           "confirm": "Grant"
         },
         "form": {
-          "userIdLabel": "User ID",
-          "userIdPlaceholder": "9",
+          "emailLabel": "User email",
+          "emailPlaceholder": "operations+admin@sharemechat.com",
+          "assignSelf": "Assign to me",
+          "searching": "Searching…",
+          "resolvedInfo": "User id {{userId}} · {{nickname}}",
+          "notFound": "No backoffice user exactly matches that email.",
+          "errorSearch": "Could not run the search. Check your connection and retry.",
+          "errorNoMatch": "Pick a valid email before granting.",
           "cancel": "Cancel",
-          "submitting": "Granting…",
-          "errorIdInvalid": "Enter a valid numeric User ID."
+          "submitting": "Granting…"
         }
       },
       "notifications": {}

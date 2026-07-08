@@ -18,6 +18,7 @@ const Wrap = styled.div`
 const AdminSupportPanel = ({
   canHandle = false,
   canManage = false,
+  currentUserEmail = '',
   onRefreshBadge,
 }) => {
   const t = (key, opts) => i18n.t(key, opts);
@@ -65,7 +66,7 @@ const AdminSupportPanel = ({
       ) : null}
 
       {subTab === 'profiles' && canManage ? (
-        <AdminSupportProfilesView />
+        <AdminSupportProfilesView currentUserEmail={currentUserEmail} />
       ) : null}
     </Wrap>
   );
