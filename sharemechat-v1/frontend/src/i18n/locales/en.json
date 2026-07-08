@@ -1210,6 +1210,9 @@
       "errorMessage": "The withdrawal request could not be completed."
     },
     "favorites": {
+      "actions": {
+        "sendGift": "Send gift"
+      },
       "inCallLocked": "In call: the list is locked until you hang up.",
       "selectFavorite": "Select a favorite to open the conversation here.",
       "pendingInvitationMessage": "invited you to become mutual favorites. Accept to enable chat.",

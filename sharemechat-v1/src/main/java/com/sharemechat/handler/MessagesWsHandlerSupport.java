@@ -9,6 +9,7 @@ import com.sharemechat.entity.StreamRecord;
 import com.sharemechat.exception.TooManyRequestsException;
 import com.sharemechat.repository.BalanceRepository;
 import com.sharemechat.repository.ClientRepository;
+import com.sharemechat.repository.GiftRepository;
 import com.sharemechat.repository.StreamRecordRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
@@ -53,6 +54,7 @@ public class MessagesWsHandlerSupport {
     private final AgeGatePolicyService ageGatePolicyService;
     private final ProductAccessGuardService productAccessGuardService;
     private final SupportBotProvider supportBotProvider;
+    private final GiftRepository giftRepository;
 
     public MessagesWsHandlerSupport(MessagesRuntimeState state,
                                     JwtUtil jwtUtil,
@@ -71,7 +73,8 @@ public class MessagesWsHandlerSupport {
                                     ApiRateLimitService apiRateLimitService,
                                     AgeGatePolicyService ageGatePolicyService,
                                     ProductAccessGuardService productAccessGuardService,
-                                    SupportBotProvider supportBotProvider) {
+                                    SupportBotProvider supportBotProvider,
+                                    GiftRepository giftRepository) {
         this.state = state;
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
@@ -90,6 +93,7 @@ public class MessagesWsHandlerSupport {
         this.ageGatePolicyService = ageGatePolicyService;
         this.productAccessGuardService = productAccessGuardService;
         this.supportBotProvider = supportBotProvider;
+        this.giftRepository = giftRepository;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -699,12 +703,21 @@ public class MessagesWsHandlerSupport {
             safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Usuarios inválidos\"}");
             return;
         }
-        if (!com.sharemechat.constants.Constants.Roles.CLIENT.equals(sender.getRole())) {
-            safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Solo un CLIENT puede enviar regalos\"}");
-            return;
-        }
-        if (!com.sharemechat.constants.Constants.Roles.MODEL.equals(recipient.getRole())) {
-            safeSend(session, "{\"type\":\"msg:error\",\"message\":\"El destinatario debe ser MODEL\"}");
+        // Fase 2 chat P2P: parejas de envio aceptadas:
+        //   (a) CLIENT -> MODEL  : cualquier gift (comportamiento historico).
+        //   (b) MODEL  -> CLIENT : solo FREE_EMOJI (tier=QUICK). Sin charge
+        //                          en el ledger. PAID_GIFT rechazado.
+        // Cualquier otro combo (CLIENT-CLIENT, MODEL-MODEL) rechazado.
+        String senderRole = sender.getRole();
+        String recipientRole = recipient.getRole();
+        final String ROLE_CLIENT = com.sharemechat.constants.Constants.Roles.CLIENT;
+        final String ROLE_MODEL = com.sharemechat.constants.Constants.Roles.MODEL;
+
+        boolean clientToModel = ROLE_CLIENT.equals(senderRole) && ROLE_MODEL.equals(recipientRole);
+        boolean modelToClient = ROLE_MODEL.equals(senderRole) && ROLE_CLIENT.equals(recipientRole);
+
+        if (!clientToModel && !modelToClient) {
+            safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Combinacion de roles no permitida para enviar regalos\"}");
             return;
         }
 
@@ -719,39 +732,63 @@ public class MessagesWsHandlerSupport {
         }
 
         try {
-            Pair<Long, Long> cm = resolveClientModel(me, to);
-            boolean hasCallingContext = cm != null
-                    && Objects.equals(inCallWith(me), to)
-                    && Objects.equals(inCallWith(to), me);
-
+            Gift g;
+            MessageDTO saved;
             Long resolvedCallingStreamId = null;
-            if (hasCallingContext) {
-                resolvedCallingStreamId = resolveCallingGiftStreamId(cm.getLeft(), cm.getRight());
-                log.info("handleMsgGift: calling context confirmed me={} to={} clientId={} modelId={} resolvedStreamId={}",
-                        me, to, cm.getLeft(), cm.getRight(), resolvedCallingStreamId);
-                if (resolvedCallingStreamId == null || resolvedCallingStreamId <= 0) {
-                    safeSend(session, "{\"type\":\"msg:error\",\"message\":\"No hay una sesion confirmada para enviar regalos\"}");
+
+            if (modelToClient) {
+                // Rama nueva Fase 2: modelo envia FREE_EMOJI al cliente.
+                // Sin charge, sin ledger, sin transaccion economica.
+                // Validar tier=QUICK antes de persistir.
+                Gift freeGift = giftRepository.findByIdAndActiveTrue(giftId).orElse(null);
+                if (freeGift == null) {
+                    safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Regalo inexistente o inactivo\"}");
                     return;
                 }
+                if (!"QUICK".equalsIgnoreCase(freeGift.getTier() == null ? "" : freeGift.getTier().trim())) {
+                    log.warn("gift_msg_reject_model_paid actorUserId={} peerUserId={} giftId={} tier={}",
+                            me, to, giftId, freeGift.getTier());
+                    safeSend(session, "{\"type\":\"msg:error\",\"message\":\"Los modelos solo pueden enviar regalos gratuitos\"}");
+                    return;
+                }
+                g = freeGift;
+                log.warn("gift_msg_validate_ok_model_free actorUserId={} peerUserId={} giftId={}",
+                        me, to, giftId);
+                saved = messageService.sendGift(me, to, g);
             } else {
-                log.info("handleMsgGift: no calling context me={} to={} peerCurrent={} reverseCurrent={}",
-                        me, to, inCallWith(me), inCallWith(to));
+                // Rama historica: cliente -> modelo. Charge del ledger normal.
+                Pair<Long, Long> cm = resolveClientModel(me, to);
+                boolean hasCallingContext = cm != null
+                        && Objects.equals(inCallWith(me), to)
+                        && Objects.equals(inCallWith(to), me);
+
+                if (hasCallingContext) {
+                    resolvedCallingStreamId = resolveCallingGiftStreamId(cm.getLeft(), cm.getRight());
+                    log.info("handleMsgGift: calling context confirmed me={} to={} clientId={} modelId={} resolvedStreamId={}",
+                            me, to, cm.getLeft(), cm.getRight(), resolvedCallingStreamId);
+                    if (resolvedCallingStreamId == null || resolvedCallingStreamId <= 0) {
+                        safeSend(session, "{\"type\":\"msg:error\",\"message\":\"No hay una sesion confirmada para enviar regalos\"}");
+                        return;
+                    }
+                } else {
+                    log.info("handleMsgGift: no calling context me={} to={} peerCurrent={} reverseCurrent={}",
+                            me, to, inCallWith(me), inCallWith(to));
+                }
+                log.warn("gift_msg_validate_ok actorUserId={} peerUserId={} role={} peerRole={} giftId={} streamRecordId={} callContext={}",
+                        me,
+                        to,
+                        actorRole,
+                        recipientRole,
+                        giftId,
+                        resolvedCallingStreamId,
+                        hasCallingContext);
+
+                g = hasCallingContext
+                        ? transactionService.processGift(me, to, giftId, resolvedCallingStreamId)
+                        : transactionService.processGiftInChat(me, to, giftId);
+
+                saved = messageService.sendGift(me, to, g);
             }
-            String peerRole = userRepository.findById(to).map(u -> u.getRole()).orElse(null);
-            log.warn("gift_msg_validate_ok actorUserId={} peerUserId={} role={} peerRole={} giftId={} streamRecordId={} callContext={}",
-                    me,
-                    to,
-                    actorRole,
-                    peerRole,
-                    giftId,
-                    resolvedCallingStreamId,
-                    hasCallingContext);
-
-            Gift g = hasCallingContext
-                    ? transactionService.processGift(me, to, giftId, resolvedCallingStreamId)
-                    : transactionService.processGiftInChat(me, to, giftId);
-
-            MessageDTO saved = messageService.sendGift(me, to, g);
             log.warn("gift_msg_emit actorUserId={} peerUserId={} giftId={} messageId={} streamRecordId={}",
                     me,
                     to,

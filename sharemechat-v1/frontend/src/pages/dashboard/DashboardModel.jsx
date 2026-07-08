@@ -119,6 +119,10 @@ const DashboardModel = () => {
   const [gifts, setGifts] = useState([]);
   const [giftsLoaded, setGiftsLoaded] = useState(false);
   const [giftRenderReady, setGiftRenderReady] = useState(false);
+  // Fase 2: picker de regalos en chat P2P del modelo. Toggle desde
+  // <ButtonRegalo> de VideoChatFavoritosModelo. El catalogo `gifts` ya
+  // viene filtrado a FREE_EMOJI para MODEL desde /available.
+  const [showCenterGifts, setShowCenterGifts] = useState(false);
   const [webrtcPeerConfig, setWebrtcPeerConfig] = useState(null);
   const [webrtcConfigReady, setWebrtcConfigReady] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -1031,7 +1035,11 @@ const DashboardModel = () => {
 
   useEffect(()=>{
 
-    apiFetch('/gifts')
+    // Fase 2: catalogo filtrado por rol. Para MODEL, /available devuelve
+    // solo FREE_EMOJI (tier=QUICK); el picker del modelo nunca ve
+    // PAID_GIFT. Segunda linea de defensa en la validacion server-side de
+    // handleMsgGift si un cliente WS bypassease el frontend.
+    apiFetch('/products/emojis/available')
       .then(arr=>{
         setGifts(Array.isArray(arr)?arr:[]);
         setGiftsLoaded(true);
@@ -2580,6 +2588,38 @@ const DashboardModel = () => {
     }
   };
 
+  // Fase 2: envio de FREE_EMOJI del modelo al cliente. Simetrico al helper
+  // del cliente pero sin lógica de charge (la modelo solo puede enviar
+  // gifts gratuitos; el backend lo valida server-side en
+  // MessagesWsHandlerSupport.handleMsgGift rechazando PAID_GIFT). El
+  // catalogo `gifts` cargado desde /available ya viene sin PAID_GIFT para
+  // MODEL, y el picker del modelo solo puede pulsar sobre FREE_EMOJI.
+  const sendGiftMsg = (giftId) => {
+    if (guardSensitiveAction()) return;
+    const interactionTo = Number(interaction?.actionTarget?.giftToUserId) || null;
+    const refTo = Number(activePeerRef.current?.id) || null;
+    const targetTo = Number(targetPeerId) || null;
+    const legacyVisualTo = Number(openChatWith) || null;
+    const legacyTo = refTo || targetTo || legacyVisualTo;
+    const finalTo = interactionTo || legacyTo;
+
+    if (!Number.isFinite(finalTo) || finalTo <= 0) {
+      console.warn('[sendGiftMsg][Model] destinatario invalido', {
+        giftId,
+        interactionTo,
+        activePeer: activePeerRef.current,
+        openChatWith,
+        targetPeerId,
+        finalTo,
+      });
+      return;
+    }
+    if (!msgSocketRef.current || msgSocketRef.current.readyState !== WebSocket.OPEN) return;
+
+    msgSocketRef.current.send(JSON.stringify({ type: 'msg:gift', to: finalTo, giftId }));
+    setShowCenterGifts(false);
+  };
+
 
   const acceptInvitation = async () => {
     if (guardSensitiveAction()) return;
@@ -3233,6 +3273,10 @@ const DashboardModel = () => {
                   user={sessionUser}
                   gifts={gifts}
                   giftRenderReady={giftRenderReady}
+                  showCenterGifts={showCenterGifts}
+                  setShowCenterGifts={setShowCenterGifts}
+                  sendGiftMsg={sendGiftMsg}
+                  fmtEUR={fmtEUR}
                   handleOpenChatFromFavorites={handleOpenChatFromFavorites}
                   favReload={favReload}
                   selectedContactId={selectedContactId}

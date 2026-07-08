@@ -1,7 +1,7 @@
 import React from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import {
@@ -47,9 +47,15 @@ import {
   StyledChatMessagesInner,
   StyledChatDockMessageComposer,
   StyledChatDockActions,
+  StyledGiftsPanel,
+  StyledGiftGrid,
+  StyledGiftCatalog,
+  StyledGiftSection,
+  StyledGiftSectionTitle,
 } from '../../styles/pages-styles/VideochatStyles';
 import {
   ButtonLlamar,
+  ButtonRegalo,
   ButtonAceptar,
   ButtonRechazar,
   ButtonActivarCam,
@@ -109,6 +115,12 @@ export default function VideoChatFavoritosModelo(props) {
     backToList,
     callClientSaldo,
     callClientSaldoLoading,
+    // Fase 2: picker de FREE_EMOJI en chat WhatsApp del modelo.
+    // Solo aplica en la vista chat de favoritos (no en modo call, MVP).
+    showCenterGifts,
+    setShowCenterGifts,
+    sendGiftMsg,
+    fmtEUR,
   } = props;
 
   const normalizeGiftFromMessage = (giftData) => {
@@ -181,6 +193,42 @@ export default function VideoChatFavoritosModelo(props) {
       </StyledGiftMessage>
     ) : null;
   };
+
+  // Fase 2 chat P2P: picker de FREE_EMOJI para el modelo. El catalogo
+  // `gifts` ya viene filtrado desde /available (solo tier=QUICK para MODEL),
+  // pero como cinturon + tirantes agrupamos solo por Quick y no
+  // renderizamos ninguna seccion Premium por si el backend cambia.
+  const normalizeGiftTier = (gift) =>
+    String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
+  const modelQuickGifts = Array.isArray(gifts)
+    ? gifts.filter((g) => normalizeGiftTier(g) === 'QUICK')
+    : [];
+
+  const renderGiftPicker = () => (
+    <StyledGiftsPanel>
+      <StyledGiftCatalog>
+        {modelQuickGifts.length > 0 ? (
+          <StyledGiftSection>
+            <StyledGiftSectionTitle>Quick</StyledGiftSectionTitle>
+            <StyledGiftGrid>
+              {modelQuickGifts.map((g) => (
+                <button key={g.id} type="button" onClick={() => sendGiftMsg && sendGiftMsg(g.id)}>
+                  {g.featured === true && <span className="gift-card__badge">Featured</span>}
+                  <div className="gift-card__media">
+                    <img src={g.icon} alt={g.name} />
+                  </div>
+                  <div className="gift-card__meta">
+                    <div className="gift-card__name">{g.name}</div>
+                    <div className="gift-card__cost">{typeof fmtEUR === 'function' ? fmtEUR(g.cost) : ''}</div>
+                  </div>
+                </button>
+              ))}
+            </StyledGiftGrid>
+          </StyledGiftSection>
+        ) : null}
+      </StyledGiftCatalog>
+    </StyledGiftsPanel>
+  );
 
   // Fase 1 estilos: chat P2P reutiliza SupportMessageBubble con variantes
   // P2P_ME / P2P_PEER. Los mensajes de regalo mantienen su renderizado
@@ -477,6 +525,15 @@ export default function VideoChatFavoritosModelo(props) {
                             disabled={!allowChat}
                           />
                           <StyledChatDockActions>
+                            <ButtonRegalo
+                              type="button"
+                              onClick={() => setShowCenterGifts && setShowCenterGifts((s) => !s)}
+                              disabled={!hasActiveDetail || !allowChat}
+                              title={t('dashboardModel.favorites.actions.sendGift')}
+                              aria-label={t('dashboardModel.favorites.actions.sendGift')}
+                            >
+                              <FontAwesomeIcon icon={faGift} />
+                            </ButtonRegalo>
                             <ButtonLlamar
                               onClick={enterCallMode}
                               disabled={!hasCallTarget || !allowChat}
@@ -486,6 +543,7 @@ export default function VideoChatFavoritosModelo(props) {
                               <FontAwesomeIcon icon={faVideo} />
                             </ButtonLlamar>
                           </StyledChatDockActions>
+                          {showCenterGifts && allowChat && hasActiveDetail && renderGiftPicker()}
                         </StyledChatDockMessageComposer>
                       </StyledChatWhatsApp>
                     )}

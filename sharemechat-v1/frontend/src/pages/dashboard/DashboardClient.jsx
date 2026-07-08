@@ -1095,7 +1095,13 @@ const DashboardClient = () => {
 
 
   useEffect(()=>{
-    apiFetch('/gifts')
+    // Fase 2: catalogo servido ya filtrado por rol del user autenticado
+    // desde /api/products/emojis/available. Para CLIENT devuelve todo el
+    // catalogo activo (FREE_EMOJI + PAID_GIFT). El shape del DTO preserva
+    // el campo `tier` (QUICK / PREMIUM) para retrocompat con el picker,
+    // ademas de exponer `category` (FREE_EMOJI / PAID_GIFT) como nuevo
+    // discriminante canonico.
+    apiFetch('/products/emojis/available')
       .then(arr=>{
         setGifts(Array.isArray(arr)?arr:[]);
         setGiftsLoaded(true);

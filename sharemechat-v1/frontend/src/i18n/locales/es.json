@@ -1210,6 +1210,9 @@
       "errorMessage": "No se pudo solicitar el retiro."
     },
     "favorites": {
+      "actions": {
+        "sendGift": "Enviar regalo"
+      },
       "inCallLocked": "En llamada: la lista se bloquea hasta colgar.",
       "selectFavorite": "Selecciona un favorito para abrir la conversación aquí.",
       "pendingInvitationMessage": "te ha invitado a ser favoritos mutuos. Acepta para habilitar el chat.",
