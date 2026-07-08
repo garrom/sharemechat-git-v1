@@ -369,7 +369,6 @@ const SupportConversationDetailView = ({ conversationId, onBack, onActionRefresh
                 <SupportMessageBubble
                   key={m.id}
                   message={m}
-                  userEmail={conv.userEmail}
                 />
               ))
             )}
@@ -377,7 +376,6 @@ const SupportConversationDetailView = ({ conversationId, onBack, onActionRefresh
               <SupportMessageBubble
                 key={p.id}
                 message={p}
-                userEmail={conv.userEmail}
                 pending
               />
             ))}

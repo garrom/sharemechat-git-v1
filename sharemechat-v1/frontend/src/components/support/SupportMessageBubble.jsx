@@ -2,42 +2,37 @@ import React from 'react';
 import styled from 'styled-components';
 import ReactMarkdown from 'react-markdown';
 
-// Frente B.3.3 (ADR-046). Burbuja de mensaje compartida entre la surface
-// admin (AdminSupportPanel > Conversations > Detail) y la surface product
-// (SupportChat.jsx del cliente).
+// Frente B.3.3 + Fase 1 estilos. Burbuja de mensaje compartida entre:
+// - surface admin (AdminSupportPanel > Conversations > Detail),
+// - surface product > chat de soporte (SupportChat.jsx),
+// - surface product > chat P2P cliente-modelo (VideoChatFavoritosCliente/Modelo).
 //
 // Variantes por sender:
-// - USER: burbuja gris claro izquierda, avatar inicial del email.
-// - LLM: burbuja azul claro izquierda, emoji robot. Markdown DEGRADADO
-//        (safety net): la BdC del bot instruye texto plano; si el LLM emite
-//        markdown por error, no rompemos la UX. Cada componente se degrada
-//        a span/div sin margen ni padding.
-// - HUMAN: burbuja verde derecha, avatar del sentByProfileDisplayName, firma
-//        "display_name (category) · ts". Markdown CON estilos: los humanos si
-//        formatean intencionadamente.
-// - SYSTEM: banner amarillo centrado italic, sin avatar. Renderiza `content`
-//        literal (sin markdown) porque el texto viene del backend ya
-//        pre-formateado y localizado.
-//
-// Fix menor B.3.3: `min-width: 120px` para que burbujas de texto corto ("ok")
-// no queden encogidas a 3 caracteres. Preserva `max-width: 72%` para textos
-// largos.
+// - USER: soporte cliente propio. Izquierda, gris. SIN firma (el user no
+//         se firma a si mismo). Solo timestamp bajo la burbuja.
+// - LLM: soporte bot. Izquierda, azul. Firma "agentLabel · ts". Markdown
+//        DEGRADADO (safety net): la BdC prohibe markdown; si el LLM emite
+//        markdown por error, no rompemos la UX.
+// - HUMAN: soporte admin/humano. Derecha, verde. Firma
+//          "displayName (category) · ts". Markdown CON estilos.
+// - SYSTEM: banner amarillo centrado italic, sin avatar. Renderiza content
+//           literal (viene del backend ya localizado y pre-formateado).
+// - P2P_ME: yo en chat P2P cliente-modelo. Derecha, verde WhatsApp, sin
+//           avatar, solo timestamp bajo la burbuja.
+// - P2P_PEER: contraparte en chat P2P. Izquierda, blanco WhatsApp, sin
+//             avatar, solo timestamp bajo la burbuja.
 
 const Row = styled.div`
   display: flex;
   gap: 10px;
-  margin: 8px 0;
+  margin: 6px 0;
   align-items: flex-end;
   justify-content: ${(p) => (p.$side === 'right' ? 'flex-end' : 'flex-start')};
 `;
 
-// Fix bug 3 post-B.3.3: max-width en el wrapper columnar (flex-child del
-// Row), no en Bubble. Antes el max-width vivia en Bubble pero su padre
-// inmediato (este wrapper) se auto-dimensionaba al contenido, asi que
-// 72% de "wrapper corto" quedaba corto y el Bubble no podia crecer aunque
-// el Row tuviera espacio. Con max-width aqui, el limite es respecto al
-// Row (full-width) via flex-basis del wrapper. min-width se preserva en
-// Bubble para el fix previo de texto corto.
+// max-width en el wrapper columnar (flex-child del Row), no en Bubble.
+// Asi el limite es respecto al Row (full-width) y no al wrapper auto-
+// dimensionado por su contenido.
 const ColumnWrap = styled.div`
   display: flex;
   flex-direction: column;
@@ -113,9 +108,6 @@ const PendingTag = styled.span`
   font-size: 0.72rem;
 `;
 
-// Safety net para LLM: degradar toda etiqueta markdown a span/div sin
-// margen ni padding. Preserva contenido, elimina formato visual. La BdC del
-// bot ya prohibe markdown; esto es cinturon + tirantes.
 const LLM_RESET_STYLE = { margin: 0, padding: 0 };
 const LLM_MD_COMPONENTS = {
   h1: ({ node, ...props }) => <span {...props} style={LLM_RESET_STYLE} />,
@@ -143,10 +135,6 @@ const LLM_MD_COMPONENTS = {
   hr: () => null,
 };
 
-// Preprocess del texto LLM: colapsa multiples \n consecutivos en uno solo,
-// hace trim por linea, une con hard-break markdown ("  \n") para que
-// react-markdown renderice <br/> dentro del mismo <p>. Junto a los
-// components degradados, garantiza espaciado cero visual.
 const preprocessLlmContent = (raw) => (raw || '')
   .replace(/\n{2,}/g, '\n')
   .split('\n')
@@ -185,7 +173,6 @@ const formatTime = (isoStr) => {
 
 const SupportMessageBubble = ({
   message,
-  userEmail,
   pending = false,
   agentLabel = 'Agente IA',
 }) => {
@@ -202,13 +189,13 @@ const SupportMessageBubble = ({
     return (
       <div>
         <Row $side="left">
-          <Avatar $bg="#94a3b8">{initialOf(userEmail || 'U')}</Avatar>
+          <Avatar $bg="#94a3b8">U</Avatar>
           <ColumnWrap $side="left">
             <Bubble $bg="#f1f5f9" $fg="#0f172a" $border="#e2e8f0">
               <ReactMarkdown>{content}</ReactMarkdown>
             </Bubble>
             <MetaLine $side="left">
-              {userEmail ? `${userEmail} · ` : ''}{ts}
+              {ts}
               {pending ? <PendingTag>enviando…</PendingTag> : null}
             </MetaLine>
           </ColumnWrap>
@@ -254,6 +241,44 @@ const SupportMessageBubble = ({
             </MetaLine>
           </ColumnWrap>
           <Avatar $bg="#15803d">{initialOf(profileName)}</Avatar>
+        </Row>
+      </div>
+    );
+  }
+
+  // Variantes P2P (Fase 1 estilos). Sin avatar (respetamos la convencion
+  // del chat P2P actual que no muestra avatares en el hilo), sin firma
+  // (el nombre del otro ya esta en la lista lateral izquierda de
+  // favoritos), solo timestamp bajo la burbuja. Colores WhatsApp-like
+  // para consistencia con el fondo beige del chat P2P.
+  if (sender === 'P2P_ME') {
+    return (
+      <div>
+        <Row $side="right">
+          <ColumnWrap $side="right">
+            <Bubble $bg="#d9fdd3" $fg="#183024" $border="rgba(168, 221, 156, 0.95)">
+              {content}
+            </Bubble>
+            <MetaLine $side="right">
+              {ts}
+              {pending ? <PendingTag>enviando…</PendingTag> : null}
+            </MetaLine>
+          </ColumnWrap>
+        </Row>
+      </div>
+    );
+  }
+
+  if (sender === 'P2P_PEER') {
+    return (
+      <div>
+        <Row $side="left">
+          <ColumnWrap $side="left">
+            <Bubble $bg="rgba(255,255,255,0.98)" $fg="#111827" $border="rgba(15,23,42,0.08)">
+              {content}
+            </Bubble>
+            <MetaLine $side="left">{ts}</MetaLine>
+          </ColumnWrap>
         </Row>
       </div>
     );

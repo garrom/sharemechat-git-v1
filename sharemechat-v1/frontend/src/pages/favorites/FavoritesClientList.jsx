@@ -60,12 +60,15 @@ function FavListItem({ user, avatarUrl, onSelect, onOpenMenu, selected = false, 
     >
       <DotWrap>
         {isBot ? (
+          // Fase 1 estilos: el bot usaba 48x48 mientras el resto usa 28x28,
+          // lo que hacia el ItemCard del bot visiblemente mas alto. Alineado
+          // ahora al mismo 28x28 del avatar normal.
           <img
             src="/img/icono-agente-ia.png"
             alt=""
-            width={48}
-            height={48}
-            style={{ display: 'block', objectFit: 'contain' }}
+            width={28}
+            height={28}
+            style={{ display: 'block', objectFit: 'contain', borderRadius: '50%' }}
           />
         ) : (
           <Avatar

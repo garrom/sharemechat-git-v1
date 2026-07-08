@@ -15,7 +15,6 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faUserTie } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import useSupportChat from '../../hooks/useSupportChat';
-import { useSession } from '../../components/SessionProvider';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import SupportEscalateModal from './SupportEscalateModal';
 
@@ -46,20 +45,24 @@ const containerStyle = {
   minHeight: 0,
 };
 
+// Fase 1 estilos: header adelgazado. Antes 72x72 avatar + padding 12px
+// hacia una banda pesada que ocupaba demasiado alto y robaba espacio al
+// hilo. Ahora avatar 40x40 + padding 6px 12px + gap 10px. Reduccion
+// visible del alto de la banda superior sin perder identidad del bot.
 const headerStyle = {
   display: 'flex',
   alignItems: 'center',
-  gap: 12,
-  padding: '12px 14px',
+  gap: 10,
+  padding: '6px 12px',
   background: '#f9fafb',
   border: '1px solid #e5e7eb',
   borderRadius: 8,
-  marginBottom: 12,
+  marginBottom: 8,
 };
 
 const avatarImgStyle = {
-  width: 72,
-  height: 72,
+  width: 40,
+  height: 40,
   display: 'block',
   objectFit: 'contain',
   flexShrink: 0,
@@ -187,8 +190,6 @@ export default function SupportChat() {
     sendMessage,
     requestEscalation,
   } = useSupportChat();
-  const { user } = useSession();
-  const userEmail = user?.email || '';
 
   const [input, setInput] = useState('');
   const [escalateOpen, setEscalateOpen] = useState(false);
@@ -305,7 +306,6 @@ export default function SupportChat() {
             <SupportMessageBubble
               key={String(m.id)}
               message={rendered}
-              userEmail={userEmail}
               pending={!!m.pending}
               agentLabel={i18n.t('support.chat.agentName')}
             />

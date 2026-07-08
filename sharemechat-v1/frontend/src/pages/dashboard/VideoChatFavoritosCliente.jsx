@@ -4,10 +4,11 @@ import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
+import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPanel,StyledCenterBody,
     StyledChatScroller,StyledChatDock,StyledChatInput,StyledVideoArea,StyledRemoteVideo,StyledVideoTitle,
     StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,
-    StyledChatList,StyledChatMessageRow,StyledChatBubble,StyledGiftMessage,StyledGiftIcon,StyledPreCallCenter,StyledHelperLine,
+    StyledChatList,StyledChatMessageRow,StyledGiftMessage,StyledGiftIcon,StyledPreCallCenter,StyledHelperLine,
     StyledBottomActionsMobile,StyledMobile3ColBar,StyledTopCenter,StyledConnectedText,StyledFloatingHangup,
     StyledCallCardDesktop,StyledCallFooterDesktop,StyledCallVideoArea,StyledCallStage,StyledCallTopBar,
     StyledCallTopMeta,StyledCallTopMetaText,StyledCallTopActions,StyledCallLocalVideo,StyledCallBottomBar,
@@ -134,23 +135,35 @@ export default function VideoChatFavoritosCliente(props){
     ) : null;
   };
 
-  const renderCallMessages = () => (
-    centerMessages.map(m => {
-      const giftData = normalizeGiftMessage(m);
-      const isMe = Number(m.senderId) === Number(user?.id);
-      const variant = isMe ? 'me' : 'peer';
-
+  // Fase 1 estilos: chat P2P reutiliza SupportMessageBubble con variantes
+  // P2P_ME / P2P_PEER. Los mensajes de regalo mantienen su renderizado
+  // WhatsApp-like (StyledGiftMessage) sin cambio. El fondo beige, la
+  // textarea negra, las reactions y el boton regalo del cliente quedan
+  // intactos: solo cambia la burbuja de texto.
+  const renderChatMessage = (m) => {
+    const giftData = normalizeGiftMessage(m);
+    const isMe = Number(m.senderId) === Number(user?.id);
+    if (giftData) {
       return (
-        <StyledChatMessageRow key={m.id}>
-          {giftData ? (
-            renderGiftVisual(giftData)
-          ) : (
-            <StyledChatBubble $variant={variant}>{m.body}</StyledChatBubble>
-          )}
+        <StyledChatMessageRow key={m.id} $side={isMe ? 'me' : 'peer'}>
+          {renderGiftVisual(giftData)}
         </StyledChatMessageRow>
       );
-    })
-  );
+    }
+    return (
+      <SupportMessageBubble
+        key={m.id}
+        message={{
+          id: m.id,
+          sender: isMe ? 'P2P_ME' : 'P2P_PEER',
+          content: m.body,
+          createdAt: m.createdAt,
+        }}
+      />
+    );
+  };
+
+  const renderCallMessages = () => centerMessages.map(renderChatMessage);
 
   return(<>
     {!isMobile &&(
@@ -343,23 +356,7 @@ export default function VideoChatFavoritosCliente(props){
                               {allowChat?t('dashboardClient.videoChatFavoritosCliente.empty.noMessages'):t('dashboardClient.videoChatFavoritosCliente.empty.chatInactive')}
                             </div>
                           )}
-                          {centerMessages.map(m => {
-                            const giftData = normalizeGiftMessage(m);
-                            const isMe = Number(m.senderId) === Number(user?.id);
-                            const variant = isMe ? 'me' : 'peer';
-
-                            return (
-                              <StyledChatMessageRow key={m.id} $side={variant}>
-                                {giftData ? (
-                                  renderGiftVisual(giftData)
-                                ) : (
-                                  <StyledChatBubble $variant={variant} $column>
-                                    {m.body}
-                                  </StyledChatBubble>
-                                )}
-                              </StyledChatMessageRow>
-                            );
-                          })}
+                          {centerMessages.map(renderChatMessage)}
                         </StyledChatMessagesInner>
                       </StyledChatScroller>
 
@@ -513,21 +510,7 @@ export default function VideoChatFavoritosCliente(props){
 
                   <StyledChatContainer data-wide="true" style={{display:'flex',flexDirection:'column',justifyContent:'flex-end',zIndex:5}}>
                     <StyledChatList ref={callListRef} style={{width:'100%'}}>
-                      {centerMessages.map(m => {
-                        const giftData = normalizeGiftMessage(m);
-                        const isMe = Number(m.senderId) === Number(user?.id);
-                        const variant = isMe ? 'me' : 'peer';
-
-                        return (
-                          <StyledChatMessageRow key={m.id}>
-                            {giftData ? (
-                              renderGiftVisual(giftData)
-                            ) : (
-                              <StyledChatBubble $variant={variant}>{m.body}</StyledChatBubble>
-                            )}
-                          </StyledChatMessageRow>
-                        );
-                      })}
+                      {centerMessages.map(renderChatMessage)}
                     </StyledChatList>
                   </StyledChatContainer>
                 </StyledVideoArea>
@@ -596,23 +579,7 @@ export default function VideoChatFavoritosCliente(props){
                           {allowChat?'No hay mensajes todavía. ¡Escribe el primero!':'Este chat no está activo.'}
                         </div>
                       )}
-                      {centerMessages.map(m => {
-                        const giftData = normalizeGiftMessage(m);
-                        const isMe = Number(m.senderId) === Number(user?.id);
-                        const variant = isMe ? 'me' : 'peer';
-
-                        return (
-                          <StyledChatMessageRow key={m.id} $side={variant}>
-                            {giftData ? (
-                              renderGiftVisual(giftData)
-                            ) : (
-                              <StyledChatBubble $variant={variant} $column>
-                                {m.body}
-                              </StyledChatBubble>
-                            )}
-                          </StyledChatMessageRow>
-                        );
-                      })}
+                      {centerMessages.map(renderChatMessage)}
                     </StyledChatMessagesInner>
                   </StyledChatScroller>
 
