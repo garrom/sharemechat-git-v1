@@ -2918,6 +2918,176 @@
         "loadFailed": "Error al cargar",
         "actionFailed": "Error al ejecutar la acción"
       }
+    },
+    "support": {
+      "title": "Soporte",
+      "subtitle": "Conversaciones escaladas e identidades de servicio",
+      "sidebar": {
+        "label": "Soporte",
+        "meta": "Atención humana a chats escalados"
+      },
+      "tabs": {
+        "conversations": "Conversaciones",
+        "profiles": "Identidades"
+      },
+      "common": {
+        "loading": "Cargando…"
+      },
+      "actions": {
+        "reload": "Recargar",
+        "open": "Abrir",
+        "claim": "Tomar esta conversación",
+        "release": "Liberar",
+        "resolve": "Marcar como resuelta",
+        "send": "Enviar"
+      },
+      "filters": {
+        "status": "Estado:",
+        "statusOptions": {
+          "ALL": "Todas",
+          "ESCALATED_UNASSIGNED": "Escaladas sin claim",
+          "HUMAN_HANDLING": "En atención",
+          "RESOLVED": "Resueltas"
+        },
+        "agent": "Agente:",
+        "agentOptions": {
+          "all": "Todos",
+          "me": "Mis casos",
+          "unassigned": "Sin asignar"
+        },
+        "pageSize": "Por página:"
+      },
+      "columns": {
+        "user": "Usuario",
+        "status": "Estado",
+        "agent": "Agente",
+        "lastMessage": "Última actividad",
+        "actions": "Acciones"
+      },
+      "status": {
+        "OPEN": "Abierta",
+        "ESCALATED": "Escalada",
+        "HUMAN_HANDLING": "En atención",
+        "RATE_LIMITED": "Rate-limit",
+        "RESOLVED": "Resuelta",
+        "ABANDONED": "Abandonada"
+      },
+      "list": {
+        "summary": "{{from}}–{{to}} de {{total}}",
+        "msgsCount": "{{count}} msgs",
+        "unassigned": "sin asignar",
+        "empty": "No hay conversaciones que coincidan con los filtros."
+      },
+      "pagination": {
+        "prev": "Anterior",
+        "next": "Siguiente",
+        "pageOf": "Página {{page}} de {{total}}"
+      },
+      "detail": {
+        "back": "← Volver al listado",
+        "empty": "Sin mensajes en esta conversación.",
+        "sending": "Enviando…",
+        "chars": "{{count}}/{{max}}",
+        "inputPlaceholder": "Escribe tu respuesta. Enter envía, Shift+Enter salto de línea.",
+        "attendedBy": "Atendida por {{displayName}} desde {{when}}",
+        "metadata": {
+          "user": "Usuario",
+          "escalatedAt": "Escalada",
+          "reason": "Motivo",
+          "assignedTo": "Asignada a",
+          "msgsCount": "Nº de mensajes"
+        }
+      },
+      "modal": {
+        "claim": {
+          "title": "Tomar conversación",
+          "subtitle": "Elige la identidad con la que firmarás los mensajes al usuario.",
+          "empty": "No tienes ninguna identidad de servicio asignada. Contacta con administración para que te otorgue un grant.",
+          "confirm": "Confirmar y tomar",
+          "cancel": "Cancelar",
+          "submitting": "Reclamando…",
+          "activeConversations": "atendiendo {{count}} casos"
+        },
+        "resolve": {
+          "title": "Marcar como resuelta",
+          "warning": "¿Cerrar la conversación? El usuario tendrá que abrir una nueva para escribirte.",
+          "confirm": "Sí, resolver",
+          "cancel": "Cancelar",
+          "submitting": "Cerrando…"
+        }
+      },
+      "profiles": {
+        "list": {
+          "summary": "{{count}} identidades",
+          "newProfile": "+ Nueva identidad",
+          "empty": "Aún no hay identidades. Crea una nueva para empezar."
+        },
+        "columns": {
+          "name": "Nombre",
+          "category": "Categoría",
+          "active": "Activa",
+          "createdAt": "Creada",
+          "actions": "Acciones"
+        },
+        "state": {
+          "active": "Activa",
+          "inactive": "Inactiva"
+        },
+        "actions": {
+          "edit": "Editar",
+          "viewGrants": "Ver grants",
+          "hideGrants": "Ocultar grants"
+        },
+        "create": {
+          "title": "Nueva identidad de servicio",
+          "subtitle": "Máscara pública con la que un agente firma sus mensajes al usuario.",
+          "confirm": "Crear"
+        },
+        "edit": {
+          "title": "Editar identidad",
+          "subtitle": "Cambia nombre, categoría o estado. El nombre debe ser único global.",
+          "confirm": "Guardar"
+        },
+        "form": {
+          "displayNameLabel": "Nombre público",
+          "displayNamePlaceholder": "Pepito (Soporte técnico)",
+          "categoryLabel": "Categoría (opcional)",
+          "categoryPlaceholder": "TECH, BILLING, GDPR…",
+          "activeLabel": "Activa",
+          "cancel": "Cancelar",
+          "submitting": "Guardando…",
+          "errorNameRequired": "El nombre público es obligatorio."
+        }
+      },
+      "grants": {
+        "list": {
+          "title": "Users con grant sobre {{profile}}",
+          "addGrant": "+ Añadir grant",
+          "emptyNote": "Los grants añadidos en esta sesión aparecen aquí. Los grants antiguos requieren endpoint dedicado (aún no expuesto)."
+        },
+        "columns": {
+          "userId": "User ID",
+          "grantedBy": "Otorgado por",
+          "grantedAt": "Otorgado",
+          "actions": "Acciones"
+        },
+        "actions": {
+          "revoke": "Revocar"
+        },
+        "add": {
+          "title": "Añadir grant",
+          "subtitle": "Introduce el ID numérico del user backoffice al que quieres otorgar la identidad.",
+          "confirm": "Otorgar"
+        },
+        "form": {
+          "userIdLabel": "User ID",
+          "userIdPlaceholder": "9",
+          "cancel": "Cancelar",
+          "submitting": "Otorgando…",
+          "errorIdInvalid": "Introduce un User ID numérico válido."
+        }
+      },
+      "notifications": {}
     }
   },
   "seo": {

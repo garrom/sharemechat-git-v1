@@ -53,9 +53,37 @@ const AdminLayout = ({
               type="button"
               $active={item.key === activeKey}
               onClick={() => onSelect(item.key)}
+              style={item.badge != null && Number(item.badge) > 0
+                ? { position: 'relative' }
+                : undefined}
             >
               <span className="title">{item.label}</span>
               <span className="meta">{item.meta}</span>
+              {/* Frente B.3.2 (ADR-046): badge opcional para escaladas pendientes.
+                  Cambio aditivo: si item.badge no viene o es 0 no se pinta nada. */}
+              {item.badge != null && Number(item.badge) > 0 ? (
+                <span
+                  aria-label={`badge: ${item.badge}`}
+                  style={{
+                    position: 'absolute',
+                    top: 10,
+                    right: 12,
+                    minWidth: 22,
+                    height: 22,
+                    padding: '0 6px',
+                    borderRadius: 999,
+                    background: '#dc2626',
+                    color: '#fff',
+                    fontSize: 11,
+                    fontWeight: 800,
+                    lineHeight: '22px',
+                    textAlign: 'center',
+                    boxShadow: '0 2px 6px rgba(220, 38, 38, 0.35)',
+                  }}
+                >
+                  {Number(item.badge) > 9 ? '9+' : item.badge}
+                </span>
+              ) : null}
             </SidebarNavButton>
           ))}
         </SidebarSection>

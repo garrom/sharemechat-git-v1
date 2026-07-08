@@ -2918,6 +2918,176 @@
         "loadFailed": "Failed to load",
         "actionFailed": "Failed to execute action"
       }
+    },
+    "support": {
+      "title": "Support",
+      "subtitle": "Escalated conversations and service identities",
+      "sidebar": {
+        "label": "Support",
+        "meta": "Human handling of escalated chats"
+      },
+      "tabs": {
+        "conversations": "Conversations",
+        "profiles": "Identities"
+      },
+      "common": {
+        "loading": "Loading…"
+      },
+      "actions": {
+        "reload": "Reload",
+        "open": "Open",
+        "claim": "Take this conversation",
+        "release": "Release",
+        "resolve": "Mark as resolved",
+        "send": "Send"
+      },
+      "filters": {
+        "status": "Status:",
+        "statusOptions": {
+          "ALL": "All",
+          "ESCALATED_UNASSIGNED": "Escalated unassigned",
+          "HUMAN_HANDLING": "Handling",
+          "RESOLVED": "Resolved"
+        },
+        "agent": "Agent:",
+        "agentOptions": {
+          "all": "All",
+          "me": "My cases",
+          "unassigned": "Unassigned"
+        },
+        "pageSize": "Per page:"
+      },
+      "columns": {
+        "user": "User",
+        "status": "Status",
+        "agent": "Agent",
+        "lastMessage": "Last activity",
+        "actions": "Actions"
+      },
+      "status": {
+        "OPEN": "Open",
+        "ESCALATED": "Escalated",
+        "HUMAN_HANDLING": "Handling",
+        "RATE_LIMITED": "Rate-limited",
+        "RESOLVED": "Resolved",
+        "ABANDONED": "Abandoned"
+      },
+      "list": {
+        "summary": "{{from}}–{{to}} of {{total}}",
+        "msgsCount": "{{count}} msgs",
+        "unassigned": "unassigned",
+        "empty": "No conversations match these filters."
+      },
+      "pagination": {
+        "prev": "Previous",
+        "next": "Next",
+        "pageOf": "Page {{page}} of {{total}}"
+      },
+      "detail": {
+        "back": "← Back to list",
+        "empty": "No messages in this conversation.",
+        "sending": "Sending…",
+        "chars": "{{count}}/{{max}}",
+        "inputPlaceholder": "Type your reply. Enter sends, Shift+Enter for line break.",
+        "attendedBy": "Handled by {{displayName}} since {{when}}",
+        "metadata": {
+          "user": "User",
+          "escalatedAt": "Escalated",
+          "reason": "Reason",
+          "assignedTo": "Assigned to",
+          "msgsCount": "Message count"
+        }
+      },
+      "modal": {
+        "claim": {
+          "title": "Take conversation",
+          "subtitle": "Choose the service identity you will sign messages with.",
+          "empty": "You have no service identity assigned. Contact administration to receive a grant.",
+          "confirm": "Confirm and take",
+          "cancel": "Cancel",
+          "submitting": "Claiming…",
+          "activeConversations": "handling {{count}} cases"
+        },
+        "resolve": {
+          "title": "Mark as resolved",
+          "warning": "Close this conversation? The user will need to open a new one to write to you.",
+          "confirm": "Yes, resolve",
+          "cancel": "Cancel",
+          "submitting": "Closing…"
+        }
+      },
+      "profiles": {
+        "list": {
+          "summary": "{{count}} identities",
+          "newProfile": "+ New identity",
+          "empty": "No identities yet. Create one to get started."
+        },
+        "columns": {
+          "name": "Name",
+          "category": "Category",
+          "active": "Active",
+          "createdAt": "Created",
+          "actions": "Actions"
+        },
+        "state": {
+          "active": "Active",
+          "inactive": "Inactive"
+        },
+        "actions": {
+          "edit": "Edit",
+          "viewGrants": "View grants",
+          "hideGrants": "Hide grants"
+        },
+        "create": {
+          "title": "New service identity",
+          "subtitle": "Public mask a support agent uses to sign messages to the user.",
+          "confirm": "Create"
+        },
+        "edit": {
+          "title": "Edit identity",
+          "subtitle": "Change name, category or status. Names must be globally unique.",
+          "confirm": "Save"
+        },
+        "form": {
+          "displayNameLabel": "Public name",
+          "displayNamePlaceholder": "Pepito (Tech support)",
+          "categoryLabel": "Category (optional)",
+          "categoryPlaceholder": "TECH, BILLING, GDPR…",
+          "activeLabel": "Active",
+          "cancel": "Cancel",
+          "submitting": "Saving…",
+          "errorNameRequired": "Public name is required."
+        }
+      },
+      "grants": {
+        "list": {
+          "title": "Users with grant on {{profile}}",
+          "addGrant": "+ Add grant",
+          "emptyNote": "Grants added in this session appear here. Preexisting grants require a dedicated endpoint (not exposed yet)."
+        },
+        "columns": {
+          "userId": "User ID",
+          "grantedBy": "Granted by",
+          "grantedAt": "Granted",
+          "actions": "Actions"
+        },
+        "actions": {
+          "revoke": "Revoke"
+        },
+        "add": {
+          "title": "Add grant",
+          "subtitle": "Enter the numeric backoffice user ID to grant this identity to.",
+          "confirm": "Grant"
+        },
+        "form": {
+          "userIdLabel": "User ID",
+          "userIdPlaceholder": "9",
+          "cancel": "Cancel",
+          "submitting": "Granting…",
+          "errorIdInvalid": "Enter a valid numeric User ID."
+        }
+      },
+      "notifications": {}
     }
   },
   "seo": {

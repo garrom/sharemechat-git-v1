@@ -17,7 +17,9 @@ import AdminStreamModerationPanel from './AdminStreamModerationPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminProfilePage from './AdminProfilePage';
 import AdminStatsPanel from './AdminStatsPanel';
+import AdminSupportPanel from './AdminSupportPanel';
 import AdminContentPanel from './content/AdminContentPanel';
+import useSupportPendingCount from '../../hooks/useSupportPendingCount';
 import AdminLayout from './components/AdminLayout';
 import AdminPage from './components/AdminPage';
 import AdminPlaceholderPanel from './components/AdminPlaceholderPanel';
@@ -99,6 +101,10 @@ const DashboardAdmin = () => {
       title: t('admin.dashboard.pageTitles.content'),
       subtitle: t('admin.dashboard.viewCopy.content.subtitle'),
     },
+    support: {
+      title: t('admin.support.title', { defaultValue: 'Support' }),
+      subtitle: t('admin.support.subtitle', { defaultValue: 'Escalated conversations and service profiles' }),
+    },
     profile: {
       title: t('admin.shell.views.profile.title'),
       subtitle: t('admin.shell.views.profile.subtitle'),
@@ -143,7 +149,19 @@ const DashboardAdmin = () => {
     canViewAudit: adminView,
     canViewAdministration: adminView,
     canViewContent: adminView || hasBackofficePermission(user, 'CONTENT.VIEW'),
-  }), [adminView, user]);
+    // Frente B.3.2 (ADR-046): Panel Soporte Humano.
+    // canViewSupport habilita el item de sidebar + sub-tab Conversaciones.
+    // canManageSupportProfiles habilita el sub-tab Profiles y sus CRUD.
+    canViewSupport: adminView || supportView || hasBackofficePermission(user, 'support.chat_handle'),
+    canManageSupportProfiles: adminView || hasBackofficePermission(user, 'support.profile_manage'),
+  }), [adminView, auditView, supportView, user]);
+
+  // Polling del contador de escaladas para el badge del sidebar (B.3.2).
+  // Deshabilitado si el user no tiene acceso al panel.
+  const { counts: supportCounts, refresh: refreshSupportBadge } = useSupportPendingCount({
+    pollingSec: 25,
+    enabled: !loading && !emailVerificationBlocked && capabilities.canViewSupport,
+  });
 
   useEffect(() => {
     if (loading) return;
@@ -164,6 +182,7 @@ const DashboardAdmin = () => {
       capabilities.canViewModeration ? 'moderation' : null,
       capabilities.canViewComplaints ? 'complaints' : null,
       capabilities.canViewCompliance ? 'compliance' : null,
+      capabilities.canViewSupport ? 'support' : null,
       capabilities.canViewFinance ? 'finance' : null,
       capabilities.canRefund ? 'finance-adjustments' : null,
       capabilities.canViewAudit ? 'control' : null,
@@ -256,6 +275,12 @@ const DashboardAdmin = () => {
             key: 'compliance',
             label: t('admin.compliance.title', { defaultValue: 'Compliance' }),
             meta: t('admin.compliance.subtitle', { defaultValue: 'Executive dashboard + drill-down + signed URL evidence' }),
+          } : null,
+          capabilities.canViewSupport ? {
+            key: 'support',
+            label: t('admin.support.sidebar.label', { defaultValue: 'Support' }),
+            meta: t('admin.support.sidebar.meta', { defaultValue: 'Human handling of escalated chats' }),
+            badge: supportCounts.pendingUnassigned || 0,
           } : null,
           capabilities.canViewFinance ? {
             key: 'finance',
@@ -583,6 +608,19 @@ const DashboardAdmin = () => {
               subtitle={t('admin.dashboard.pageSubtitles.content')}
             >
               <AdminContentPanel />
+            </AdminPage>
+          )}
+
+          {activeView === 'support' && capabilities.canViewSupport && (
+            <AdminPage
+              title={t('admin.support.title', { defaultValue: 'Support' })}
+              subtitle={t('admin.support.subtitle', { defaultValue: 'Escalated conversations and service profiles' })}
+            >
+              <AdminSupportPanel
+                canHandle={capabilities.canViewSupport}
+                canManage={capabilities.canManageSupportProfiles}
+                onRefreshBadge={refreshSupportBadge}
+              />
             </AdminPage>
           )}
 
