@@ -21,6 +21,24 @@ Se introduce una **identidad de servicio** desacoplada del user real:
 - **`support_conversations`** gana `assigned_agent_id` (user real, auditoría), `assigned_at` y `assigned_profile_id` (identidad pública). CHECK constraint bi-columna garantiza `(agent, profile)` NULL o NOT NULL a la vez. El CHECK del `resolution_status` se amplía con `HUMAN_HANDLING`.
 - **`support_messages`** gana `sent_by_user_id` y `sent_by_profile_id`, poblados sólo cuando `sender='HUMAN'`. Cubre trazabilidad "qué persona real firmó cada mensaje bajo qué profile" — necesario para auditoría interna y Segpay, sin exponer al cliente.
 
+### Restricción MySQL 8 · FK con acción referencial + CHECK sobre misma columna
+
+Durante el primer intento de deploy TEST (2026‑07‑08 13:06 UTC) la V15 original falló al añadir el `chk_support_conv_assign_bicolumn` porque MySQL 8.x no permite `CHECK` sobre columnas cuyas FKs tengan acción referencial (`ON DELETE SET NULL`, `CASCADE`, etc.). La acción modifica la columna y MySQL no puede reevaluar el CHECK después. Ver [MySQL Reference Manual · CHECK Constraints](https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html).
+
+Ante el trade‑off:
+
+- **Mantener `ON DELETE SET NULL` y sacrificar el CHECK** → invariante bi‑columna queda como responsabilidad exclusiva del `SupportHumanHandlingService`. Menos defensa en profundidad.
+- **Mantener el CHECK y sacrificar `ON DELETE SET NULL`** → las FKs `fk_support_conv_assigned_agent` y `fk_support_conv_assigned_profile` pasan a `RESTRICT` implícito. Un DELETE físico de un `user` o `backoffice_agent_profile` con conversaciones asignadas será rechazado por MySQL.
+
+Se elige la segunda opción. Razones:
+
+- En este proyecto los users **no se borran físicamente**: GDPR se implementa por anonimización, no por `DELETE`.
+- Las profiles usan **soft delete** (`active=false`), nunca `DELETE`.
+- Por tanto el `RESTRICT` solo actuaría en un escenario operativo excepcional (limpieza manual), donde tener que resolver primero las conversaciones asignadas es un requisito operativo razonable y trazable.
+- El CHECK bi‑columna aporta valor real como defensa en profundidad contra bugs futuros del service, y su coste operativo es cero.
+
+La FK `fk_bap_created_by` (columna `created_by` en `backoffice_agent_profile`) y las FKs `fk_support_msg_sent_by_user` / `fk_support_msg_sent_by_profile` **sí** conservan `ON DELETE SET NULL` porque esas columnas no participan en ningún CHECK.
+
 ### Ciclo de vida
 
 `OPEN → ESCALATED → HUMAN_HANDLING → RESOLVED`. Al hacer claim un admin, la conv pasa a `HUMAN_HANDLING` y el bot deja de responder. Al hacer `release`, vuelve a `ESCALATED` (queda disponible para otro agente). `RESOLVED` mantiene `assigned_agent_id`/`assigned_profile_id` en fila para preservar el histórico (no se limpian).

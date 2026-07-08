@@ -12,6 +12,22 @@
 --   ESCALATED sin claim, o HUMAN_HANDLING con claim activo.
 -- - display_name UNIQUE global (no parcial por active). Renombrar profiles
 --   archivadas ("Pepito (legacy)") si se quiere reusar el nombre.
+--
+-- Restriccion MySQL 8 descubierta durante primer intento de deploy TEST
+-- (2026-07-08 13:06 UTC): una columna con FK con accion referencial
+-- (ON DELETE SET NULL / CASCADE) NO puede aparecer en un CHECK constraint,
+-- porque la accion referencial modifica la columna y MySQL no reevalua CHECKs
+-- tras esos updates. Ver https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html
+--
+-- Decision: se conserva el CHECK bi-columna (defensa en profundidad contra bugs
+-- futuros del service) y se sacrifican los ON DELETE SET NULL en las FKs
+-- assigned_agent_id/assigned_profile_id. Pasan a RESTRICT implicito (default).
+-- Coherente con el proyecto: users no se borran fisicamente (GDPR = anonimizacion,
+-- no DELETE); profiles usan soft delete (active=false). El RESTRICT solo actua
+-- si alguna vez se intentara un DELETE fisico, en cuyo caso el operador debe
+-- resolver primero las conversaciones asignadas manualmente.
+-- Nota: la FK created_by de backoffice_agent_profile SI mantiene ON DELETE
+-- SET NULL porque esa columna NO participa en ningun CHECK.
 
 CREATE TABLE backoffice_agent_profile (
     id            BIGINT       PRIMARY KEY AUTO_INCREMENT,
@@ -52,8 +68,8 @@ ALTER TABLE support_conversations
     ADD CONSTRAINT chk_support_conv_resolution CHECK
         (resolution_status IN ('OPEN','RESOLVED','ESCALATED','ABANDONED','RATE_LIMITED','HUMAN_HANDLING'));
 
--- Columnas de asignacion humana. FK con ON DELETE SET NULL para no romper el
--- historial de la conversacion si un admin o profile se elimina fisicamente.
+-- Columnas de asignacion humana. FKs SIN accion referencial (RESTRICT implicito)
+-- por incompatibilidad con el CHECK bi-columna en MySQL 8 (ver header).
 ALTER TABLE support_conversations
     ADD COLUMN assigned_agent_id   BIGINT   NULL,
     ADD COLUMN assigned_at         DATETIME NULL,
@@ -61,9 +77,9 @@ ALTER TABLE support_conversations
 
 ALTER TABLE support_conversations
     ADD CONSTRAINT fk_support_conv_assigned_agent
-        FOREIGN KEY (assigned_agent_id) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY (assigned_agent_id) REFERENCES users(id),
     ADD CONSTRAINT fk_support_conv_assigned_profile
-        FOREIGN KEY (assigned_profile_id) REFERENCES backoffice_agent_profile(id) ON DELETE SET NULL,
+        FOREIGN KEY (assigned_profile_id) REFERENCES backoffice_agent_profile(id),
     ADD CONSTRAINT chk_support_conv_assign_bicolumn CHECK
         ((assigned_agent_id IS NULL AND assigned_profile_id IS NULL)
          OR (assigned_agent_id IS NOT NULL AND assigned_profile_id IS NOT NULL));
@@ -72,7 +88,10 @@ CREATE INDEX idx_support_conv_assigned_status
     ON support_conversations (assigned_agent_id, resolution_status);
 
 -- Columnas de autoria humana en support_messages. Poblados unicamente cuando
--- sender='HUMAN'. Para sender USER/LLM/SYSTEM permanecen NULL.
+-- sender='HUMAN'. Para sender USER/LLM/SYSTEM permanecen NULL. Estas columnas
+-- NO participan en ningun CHECK, por lo que SI conservan ON DELETE SET NULL
+-- (defensa: si un user o profile se elimina, los mensajes historicos no se
+-- pierden; solo quedan sin firma trazable).
 ALTER TABLE support_messages
     ADD COLUMN sent_by_user_id    BIGINT NULL,
     ADD COLUMN sent_by_profile_id BIGINT NULL;
