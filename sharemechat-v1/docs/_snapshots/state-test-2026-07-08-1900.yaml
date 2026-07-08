@@ -1,0 +1,236 @@
+metadata:
+  schema_version: 3
+  environment: test
+  generated_at: "2026-07-08T18:45:00Z"
+  generated_by: manual@cierre-b32-y-fix-gap-grants
+  notes: |
+    Snapshot manual tras el cierre + deploy TEST de la Fase B.3 del sub-paquete
+    Chat Soporte LLM (Panel Soporte Humano, ADR-046).
+
+    Sub-fases cerradas y desplegadas en TEST en esta ventana:
+      - B.3.1 (backend + migracion V15 + 12 endpoints admin) — commits
+        523daf7 (feat inicial), 287f8c2 (fix V15 sin ON DELETE SET NULL en
+        FKs de assignment por incompatibilidad MySQL 8 con el CHECK
+        bi-columna) y acb290a (regularizacion manifest).
+      - B.3.2 (frontend admin: AdminSupportPanel + hooks + CRUD profiles +
+        i18n admin.support) — commit 794193d.
+      - Fix del hueco de lectura de grants por profile — commit d8d5b90
+        (GET /profiles/{profileId}/grants + consumo en el sub-tab
+        Profiles del panel admin + tests MockMvc).
+
+    Cobertura de este snapshot: bloque de dominios que cambiaron en la
+    sesion — schema de BD TEST (V15 aplicada), JAR backend TEST, bundle
+    admin TEST, manifests deploy-state/test.yaml. AUDIT y PROD NO estan
+    tocados en esta sesion.
+
+    HEAD del repo al generar el snapshot: d8d5b90 (main, working tree
+    clean respecto al codigo funcional; el propio commit del snapshot
+    tocara docs/_snapshots/ y otros documentos, ver commit posterior).
+
+    Sanitizado: no incluye hostnames RDS reales, ARNs, IPs publicas ni
+    credenciales. IDs de CloudFront si se incluyen porque son necesarios
+    para identificar las distribuciones invalidadas en esta sesion y ya
+    aparecen documentados en docs previas del repo.
+
+repo:
+  branch: main
+  head_commit: d8d5b90
+  head_commit_message: |
+    fix(support-bot): GET /profiles/{id}/grants + consumo en admin
+    (cierre hueco B.3.2 - ADR-046)
+  ventana_commits_relevantes:
+    - "d8d5b90 fix(support-bot): GET /profiles/{id}/grants + consumo en admin (cierre hueco B.3.2 - ADR-046)"
+    - "794193d feat(support-bot): AdminSupportPanel + hooks + CRUD profiles (Fase B.3.2 - ADR-046)"
+    - "acb290a chore(deploy): regularizar manifest TEST tras deploy B.3.1"
+    - "287f8c2 fix(support-bot): V15 sin ON DELETE SET NULL en FKs de assignment (MySQL 8 incompatible con CHECK sobre misma columna) - Fase B.3.1"
+    - "523daf7 feat(support-bot): panel soporte humano - backend + migracion (Fase B.3.1 - ADR-046)"
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    sha256_built: "71ccb203910f749ceb29ad4445834b2b496dce57f10b5f35f45e4b1f7be8afaf"
+    built_at_utc: "2026-07-08T16:42:24Z"
+    notes: |
+      JAR construido localmente en la sesion (mvn package -DskipTests).
+      Desplegado a EC2 TEST en /home/ec2-user/sharemechat-v1/ via scp.
+      Backup del JAR previo en
+      /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak-pre-b3.2-20260708-1643.
+      SHA remoto verificado igual al local durante update-manifest-backend.ps1
+      -RemoteVerify.
+  schema_versioning:
+    flyway_runtime_present: true
+    last_applied_flyway_version: 15
+    v15_applied_notes: |
+      Aplicada en segundo intento tras rollback manual del primer intento
+      (V15 original con ON DELETE SET NULL fallo por restriccion MySQL 8:
+      "Column 'assigned_agent_id' cannot be used in a check constraint
+      'chk_support_conv_assign_bicolumn': needed in a foreign key
+      constraint referential action"). Version final commit 287f8c2:
+      FKs fk_support_conv_assigned_agent y fk_support_conv_assigned_profile
+      quedan como RESTRICT implicito, el CHECK bi-columna se conserva.
+      Las FKs fk_bap_created_by y fk_support_msg_sent_by_user /
+      fk_support_msg_sent_by_profile SI conservan ON DELETE SET NULL
+      porque esas columnas no participan en ningun CHECK.
+
+ec2_backend:
+  ssh_alias: test-backend
+  systemd_units:
+    - name: sharemechat-test.service
+      versioned_in_repo: true
+      repo_path: "sharemechat-v1/ops/sharemechat-backend/systemd/sharemechat-test.service"
+      notes: |
+        Sin cambios en el unit en este frente. Arranque en TEST sigue
+        siendo manual via start-test.sh (no via systemctl start) por el
+        matiz historico documentado en la deuda cerrada #D-12 (2026-07-07).
+  jar_running:
+    path_on_ec2: "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar"
+    sha256_running: "71ccb203910f749ceb29ad4445834b2b496dce57f10b5f35f45e4b1f7be8afaf"
+    pid_at_snapshot: 10538
+    started_at_utc: "2026-07-08T16:44:00Z"
+    boot_signals_verificados:
+      - "Flyway: Schema db1_sharemechat_test is up to date. No migration necessary. (V15 ya persistida)"
+      - "[SUPPORT-BOT] provider initialized: id=98 nickname='Soporte SharemeChat'"
+      - "[SUPPORT-KB] KnowledgeBaseService hydrated at startup: 14 active prompts loaded"
+      - "Started SharemechatV1Application in 30.802 seconds"
+  config_env:
+    path_on_ec2: "/opt/sharemechat/config.env"
+    notes: |
+      Sin cambios en config.env en esta sesion. Ningun toggle nuevo
+      requerido por B.3: el bot ya estaba activo (ADR-044 Fase 1.C) y
+      los permisos backoffice nuevos son opt-in via seed en tabla
+      backoffice_permission (no via config.env).
+  secrets_env:
+    path_on_ec2: "/opt/sharemechat/secrets.env"
+    ownership: "ec2-user:ec2-user 0600 (restaurado 2026-07-07 tras deuda #D-12 CERRADA)"
+    notes: "Sin cambios en secrets.env en esta sesion."
+
+rds:
+  identifier: "db1-sharemechat-test-v2"
+  status: "running"
+  engine: "mysql"
+  engine_version: "8.4.7"
+  flyway_schema_version: 15
+  operaciones_sesion:
+    - "Rollback manual V15 fallida (drop tablas parciales + delete flyway_schema_history row) tras primer intento de deploy."
+    - "V15 corregida aplicada limpiamente en segundo arranque del backend (commit 287f8c2)."
+  notes: |
+    Schema en version 15. Cambios estructurales aplicados:
+      + backoffice_agent_profile (nueva)
+      + backoffice_agent_profile_grant (nueva, N:N users<->profiles)
+      + support_conversations: assigned_agent_id, assigned_at,
+        assigned_profile_id, CHECK bi-columna, extension del CHECK de
+        resolution_status con HUMAN_HANDLING.
+      + support_messages: sent_by_user_id, sent_by_profile_id.
+
+s3_buckets:
+  frontend_product:
+    bucket: "sharemechat-frontend-test"
+    deployed_bundle:
+      main: "main.b392ac6d.js"
+      notes: |
+        Sin cambios en la superficie product durante B.3. Bundle
+        product TEST heredado del deploy previo (2026-07-05, entrada
+        del ADR-045 subpasada 2C). B.3 NO toca surface product.
+  frontend_admin:
+    bucket: "sharemechat-admin-test"
+    deployed_bundle:
+      main: "main.bebe34ed.js"
+      last_upload_utc: "2026-07-08T16:45:10Z"
+      bundle_sha256: "b6e4437c599ced73b23bbd03c272a8d193b9f36149ced7dc36e80defbf3da6c8"
+      notes: |
+        Bundle admin desplegado en esta sesion. Contiene el
+        AdminSupportPanel completo (Conversaciones + Profiles) con
+        hooks useSupportPendingCount y useConversationPolling, CRUD
+        de profiles + grants inline, i18n admin.support ES+EN, y el
+        consumo del endpoint GET /profiles/{id}/grants cerrado en el
+        commit d8d5b90.
+
+cloudfront:
+  product:
+    id: "E2Q4VNDDWD5QBU"
+    aliases:
+      - "test.sharemechat.com"
+      - "www.test.sharemechat.com"
+    invalidations_in_session: []
+    notes: "Sin invalidaciones nuevas en esta sesion (no se toca surface product)."
+  admin:
+    id: "E28YCPVIRB4ASH"
+    aliases:
+      - "admin.test.sharemechat.com"
+    invalidations_in_session:
+      - id: "I36TE3CWC292GQEIZELPKABMVW"
+        paths: "/*"
+        ts: "2026-07-08T16:45:07Z"
+        notes: "Sync deploy-frontend.ps1 -Surface admin con bundle main.bebe34ed.js (B.3.2 + cierre hueco B.3.2 en d8d5b90)."
+
+deploy_state_manifests:
+  path: "ops/deploy-state/test.yaml"
+  backend:
+    git_commit: "d8d5b90529ae5b61b5bfd36de6b5fbd3acd27316"
+    git_commit_short: "d8d5b90"
+    jar_sha256: "71ccb203910f749ceb29ad4445834b2b496dce57f10b5f35f45e4b1f7be8afaf"
+    deployed_at_utc: "2026-07-08T16:43:59Z"
+    verification_method: "manual_via_update-manifest-backend.ps1+remote-verify"
+  frontend_admin:
+    git_commit: "d8d5b90529ae5b61b5bfd36de6b5fbd3acd27316"
+    git_commit_short: "d8d5b90"
+    bundle_sha256: "b6e4437c599ced73b23bbd03c272a8d193b9f36149ced7dc36e80defbf3da6c8"
+    bundle: "main.bebe34ed.js"
+    deployed_at_utc: "2026-07-08T16:45:10Z"
+    verification_method: "deploy-frontend.ps1-live-build_2026-07-08T16:45:10Z"
+  frontend_product:
+    git_commit: "6516a128817e06f21be45f630f04964ef91b2c52"
+    git_commit_short: "6516a12"
+    bundle: "main.b392ac6d.js"
+    deployed_at_utc: "2026-07-05T16:43:38Z"
+    verification_method: "deploy-frontend.ps1-live-build_2026-07-05T16:43:38Z"
+    notes: "Sin tocar en esta sesion."
+
+verificacion_final:
+  http_smoke_estatico_admin:
+    "GET https://admin.test.sharemechat.com/": "200 text/html 3613 bytes"
+    "GET https://admin.test.sharemechat.com/static/js/main.bebe34ed.js": "200 179764 bytes"
+  http_smoke_funcional_admin:
+    "GET /api/users/me sin cookie": "401 (esperado; solo comprueba que backend responde)"
+  drift_check_pre_deploy_admin: "OK — sin drift entre origin/main (d8d5b90), backend desplegado (d8d5b90) y frontend_admin candidato (d8d5b90)."
+  smoke_funcional_end_to_end:
+    ejecutado: false
+    notes: |
+      No se ejecuto smoke funcional automatico del panel admin en esta
+      sesion por decision explicita del operador. El operador validara
+      manualmente en el navegador (login admin, sidebar con item
+      Support + badge, sub-tabs Conversaciones y Profiles cargando,
+      expandible de grants por profile poblado tras el fix d8d5b90).
+
+deudas_registradas_en_esta_ventana:
+  - id: "#D-13"
+    titulo: "Job diario de expiracion ESCALATED > 48h"
+    fuente: "docs/04-operations/known-debt.md entrada 2026-07-08"
+    prioridad: "media"
+  - id: "#D-14"
+    titulo: "Browser Notification API para agents conectados al panel admin"
+    fuente: "docs/04-operations/known-debt.md entrada 2026-07-08"
+    prioridad: "media"
+    nota: "Originalmente prevista para B.3.2 segun ADR-046; diferida — no incluida en el alcance final entregado."
+  - id: "#D-15"
+    titulo: "Playbook DPO para GDPR art. 15 sobre conversaciones humanas"
+    fuente: "docs/04-operations/known-debt.md entrada 2026-07-08"
+    prioridad: "media (obligatoria pre-go-live PROD)"
+
+entornos_no_tocados:
+  audit:
+    backend_commit_desplegado: "074cb69 (nivelacion post ADR-045, 2026-07-06)"
+    schema_version: 14
+    notes: |
+      AUDIT NO ha recibido B.3. Ni JAR nuevo ni V15 aplicada. Cuando el
+      operador decida el corte, replicar (a) tunel RDS bastion + mysqlsh
+      para aplicar V15, (b) scp del JAR sha256 71ccb203... + restart,
+      (c) deploy-frontend.ps1 -Environment audit -Surface admin.
+  prod:
+    backend_commit_desplegado: "5cdda0c (hardening coming-soon, 2026-07-06)"
+    schema_version: 14
+    notes: |
+      PROD NO ha recibido B.3. Estado coming-soon con Didit y
+      Sightengine apagados (deudas #D-9, #D-10, #D-11). Replicacion
+      de B.3 a PROD queda supeditada a la decision de corte del
+      operador y coordinada con el resto de frentes en curso
+      (BFPM Fase 4B-b, integracion PSP real).

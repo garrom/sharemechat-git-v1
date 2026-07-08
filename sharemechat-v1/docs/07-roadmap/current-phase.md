@@ -13,7 +13,48 @@ Este documento es el panel corto de estado y prioridad viva.
 
 ---
 
-## Frente operativo activo: Gobierno económico pre-PSP
+## Frentes operativos activos
+
+Dos frentes en curso en paralelo. El Frente 1 (Chat Soporte LLM · Panel humano) es la sub-fase iniciada tras cerrar Fase 1.D del refactor Agente IA (ADR-044) y ejecutada durante las últimas sesiones operativas. El Frente 2 (Gobierno económico pre-PSP) sigue vivo con su siguiente paso identificado (BFPM Fase 4B-b) como prerrequisito de la integración PSP real; no está pausado.
+
+---
+
+## Frente 1: Chat Soporte LLM — Panel humano (ADR-046)
+
+Objetivo:
+cerrar la superficie humana del Agente IA para que las conversaciones escaladas por el bot puedan atenderse por el equipo desde el backoffice admin, sin bloquear al bot en el resto de casos.
+
+Base estructural: [ADR-046](../06-decisions/adr-046-panel-soporte-humano.md), aceptado 2026-07-08. Modelo de identidad de servicio desacoplada del user real (`backoffice_agent_profile` + `backoffice_agent_profile_grant` como N:N), doble columna assignment en `support_conversations` (`assigned_agent_id` auditoría + `assigned_profile_id` pública) con CHECK bi-columna, ciclo de vida ampliado con `HUMAN_HANDLING`, doble guard del bot (temprano + race post-LLM), permisos `PERM_SUPPORT_CHAT_HANDLE` / `PERM_SUPPORT_PROFILE_MANAGE`, 13 endpoints admin bajo `/api/admin/support/`.
+
+Secuencia actual:
+
+1. **Fase B.3.1 — backend + migración V15 + tests** — HECHO
+   - Migración V15 con 2 CREATE TABLE + 6 ALTER TABLE + CHECK bi-columna. Corregida en el mismo día para respetar la restricción MySQL 8 (CHECK sobre columna con FK con acción referencial): las FKs de assignment pasan a `RESTRICT` implícito, el CHECK bi-columna se conserva.
+   - Entidades / repositorios / servicios (`BackofficeAgentProfileService`, `BackofficeAgentProfileGrantService`, `SupportHumanHandlingService`) + `SupportBotService` con doble guard.
+   - `SupportAdminController` con 12 endpoints admin. Permisos `PERM_SUPPORT_CHAT_HANDLE` (baseline `ROLE_SUPPORT`) y `PERM_SUPPORT_PROFILE_MANAGE` (opt-in explícito).
+   - Tests: 519 total repo tras el cierre.
+   - **Desplegado en TEST** con commits `287f8c2` + `acb290a` (JAR `71ccb203…` posterior tras B.3.2). AUDIT y PROD sin tocar. Migración V15 pendiente de replicar a esos dos entornos cuando el operador decida el corte.
+
+2. **Fase B.3.2 — frontend admin: AdminSupportPanel + hooks + CRUD profiles + i18n** — HECHO
+   - Container `AdminSupportPanel` con sub-tabs internas `Conversaciones` / `Profiles` (no rutas separadas) gobernadas por las capabilities `canViewSupport` (⇔ `PERM_SUPPORT_CHAT_HANDLE`) y `canManageSupportProfiles` (⇔ `PERM_SUPPORT_PROFILE_MANAGE`).
+   - Hooks nuevos `useSupportPendingCount` y `useConversationPolling` con guard `document.hidden`. Extensión aditiva de `AdminLayout` con soporte opcional de `badge` en items del sidebar (`9+` a partir de 10).
+   - Vistas: master-detail de conversaciones con filtros/paginación, thread completo con optimistic updates al enviar mensaje, toolbar contextual (claim/release/message/resolve) según status y ownership; tabla CRUD de profiles con expandible inline por fila para grants; modales autocontenidos para create/edit profile, add grant y claim.
+   - i18n admin.support ES+EN con ~60 claves.
+   - **Desplegado en TEST** con commit `794193d` (bundle admin `main.bebe34ed.js`, `b6e4437c…`). AUDIT y PROD sin tocar.
+   - **Hueco detectado en deploy y cerrado el mismo día**: el sub-tab Profiles expandía grants pero el backend no exponía `GET /profiles/{profileId}/grants`. Cerrado en commit `d8d5b90` (endpoint nuevo + batch fetch de emails + 3 tests MockMvc; total repo 526 tests). Desplegado en TEST junto con B.3.2.
+   - **Deuda #D-14 (Browser Notification API)**: originalmente prevista para B.3.2 según ADR-046. Diferida — no incluida en el alcance final entregado.
+
+3. **Fase B.3.3 — surface product (renderizado del switch bot→humano en el cliente)** — PENDIENTE (opcional)
+   - No forma parte del alcance mínimo del frente B.3. El backend ya devuelve `humanHandling:true` cuando la conversación está bajo claim, pero el frontend cliente (`SupportChat.jsx` de la surface product) hoy no rinde de forma diferenciada ese estado ni el mensaje SYSTEM del claim. Ajuste de UX menor; se decidirá si se hace en una sesión propia post-B.3.2.
+
+4. **Replicación de la Fase B.3 a AUDIT y a PROD** — PENDIENTE
+   - Requiere aplicar V15 en RDS AUDIT y RDS PROD (vía túnel bastion + `mysqlsh`) y desplegar el JAR `71ccb203…` + bundle admin `main.bebe34ed.js` en cada entorno. Coordinar con el resto de frentes activos según prioridad del operador.
+
+Deudas registradas (todas en `docs/04-operations/known-debt.md` entrada 2026-07-08 y en ADR-046 sección "Deudas diferidas"): #D-13 job expiración `ESCALATED > 48h`, #D-14 Browser Notification API para agents, #D-15 playbook DPO GDPR art. 15 sobre conversaciones humanas (obligatorio pre-go-live PROD).
+
+---
+
+## Frente 2: Gobierno económico pre-PSP
 
 Objetivo:
 cerrar la base económica interna antes de integrar CCBill real y antes de cualquier circulación de dinero real.

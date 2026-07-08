@@ -2,7 +2,7 @@
 
 ## Estado
 
-Aceptada (2026-07-08). Backend (Fase B.3.1) implementado en el mismo commit.
+Aceptada (2026-07-08). Backend (Fase B.3.1) implementado y desplegado en TEST el 2026-07-08 (commits `523daf7` + `287f8c2` + `acb290a`). Frontend admin (Fase B.3.2) implementado y desplegado en TEST el 2026-07-08 (commit `794193d`), con cierre del hueco `GET /profiles/{profileId}/grants` en el mismo día (commit `d8d5b90`). AUDIT y PROD pendientes de replicar V15 + JAR + bundle admin.
 
 ## Contexto
 
@@ -87,7 +87,10 @@ Ambos se incluyen en `OFFICIAL_BACKOFFICE_PERMISSION_CATALOG`. `ROLE_ADMIN` mant
 | POST | `/profiles` body `{displayName, category}` | PROFILE_MANAGE | 200 · 400 · 409 |
 | PATCH | `/profiles/{id}` body `{displayName?, category?, active?}` | PROFILE_MANAGE | 200 · 400 · 404 · 409 |
 | POST | `/profiles/{profileId}/grants` body `{userId}` | PROFILE_MANAGE | 200 · 400 · 404 |
+| GET | `/profiles/{profileId}/grants` (lista grants + emails, sin N+1) | PROFILE_MANAGE | 200 · 404 |
 | DELETE | `/profiles/{profileId}/grants/{userId}` | PROFILE_MANAGE | 204 · 404 |
+
+> **Nota post-cierre B.3.2**: `GET /profiles/{profileId}/grants` no formaba parte de la tabla original de B.3.1. Detectado como hueco al construir el sub-tab Profiles del panel admin (el expandible de grants necesitaba lectura pero solo existían assign/revoke). Cerrado en commit `d8d5b90` del 2026-07-08 con guard defensivo (404 si la profile no existe) y batch fetch de emails por `UserRepository.findAllById` para evitar N+1.
 
 ### Mensaje SYSTEM al claim
 
@@ -135,7 +138,7 @@ Negativas / coste:
 Ver entrada correspondiente en `docs/04-operations/known-debt.md` (2026-07-08).
 
 - **Job diario de expiración `ESCALATED > 48h`**. Sin agentes conectados, un caso escalado a las 03:00 puede quedarse indefinidamente en `ESCALATED`. Un job debería moverlo a `ABANDONED` (o `EXPIRED` nuevo) con auto-mensaje "tu caso quedó sin atender, por favor vuelve a escribir".
-- **Browser Notification API** para el agente logueado en el panel admin. Alternativa al email descartada por el operador. Es opt-in vía `Notification.permission`, sin infra push server. Se implementará en B.3.2.
+- **Browser Notification API** para el agente logueado en el panel admin. Alternativa al email descartada por el operador. Es opt-in vía `Notification.permission`, sin infra push server. **Diferida más allá de B.3.2**: no incluida en el alcance final entregado del frontend admin; sigue viva como deuda #D-14 en `docs/04-operations/known-debt.md`.
 - **Playbook DPO** para responder a solicitudes GDPR art. 15 ("¿quién me atendió?"): política canónica es devolver `display_name` de la profile, **jamás** el user real. Con B (profiles compartidas) esto es obligatorio, no recomendable. Documento vive en el corpus legal, no en repo.
 - **Retención de conversaciones `RESOLVED`**: sin política definida. Recomendación: 24 meses y luego anonimizar `user_id → NULL` conservando el hilo por métricas. Coordinar con el DPO junto con la deuda de retención del chat de favoritos (#15).
 - **Historial de asignaciones** (transferencias entre agents): B.3.4 opcional. Tabla satélite `support_conversation_assignment_history` para reconstruir línea temporal.
@@ -145,4 +148,8 @@ Ver entrada correspondiente en `docs/04-operations/known-debt.md` (2026-07-08).
 
 - Análisis de coherencia previo: sesión operativa 2026-07-07 (respuesta al operador con 13 puntos + Cambios adicionales al plan).
 - Verificación de contexto factual pre-implementación (7 hallazgos + 2 matices menores): sesión operativa 2026-07-08 previa al commit.
-- Estado runtime tras deploy pendiente: los 3 entornos requieren aplicar V15 y desplegar el JAR. Comandos operativos en el commit message.
+- **Estado runtime tras deploy — actualizado 2026-07-08 tras cierre de B.3.2 y fix del hueco de grants**:
+  - **TEST**: V15 aplicada (commit `287f8c2`), JAR desplegado (`sha256=71ccb203…`, HEAD `d8d5b90`), bundle admin desplegado (`main.bebe34ed.js`, `sha256=b6e4437c…`). Manifest `ops/deploy-state/test.yaml` regularizado. Sin smoke funcional automático; validación manual pendiente por el operador.
+  - **AUDIT**: NO desplegado. Backend en `074cb69` (nivelación post ADR-045, 2026-07-06), schema en V14. Requiere replicar V15 (túnel bastion + `mysqlsh`), scp del JAR y deploy admin.
+  - **PROD**: NO desplegado. Backend en `5cdda0c` (hardening coming-soon, 2026-07-06), schema en V14. Mismos pasos de replicación cuando el operador decida el corte.
+- Snapshot factual de la ventana operativa: `docs/_snapshots/state-test-2026-07-08-1900.yaml`.

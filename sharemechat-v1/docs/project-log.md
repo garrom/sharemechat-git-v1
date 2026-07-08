@@ -8,6 +8,125 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-08 — Chat Soporte LLM Fase B.3.2 (cierre hueco): endpoint GET `/profiles/{id}/grants` + consumo en admin
+
+Cierre del hueco detectado justo tras validar el bundle admin de B.3.2 en TEST: el sub-tab **Profiles** listaba las profiles pero la sección expandible "Grants activos" quedaba vacía porque el backend no exponía la lista de grants por profile. La tabla de endpoints del ADR-046 (B.3.1) tenía únicamente `POST /profiles/{profileId}/grants` (asignar) y `DELETE /profiles/{profileId}/grants/{userId}` (revocar), sin equivalente de lectura. Cerrado en commit `d8d5b90`, mismo día, dentro del alcance de B.3.2 (no requirió migración ni cambio de contrato de otros endpoints).
+
+**Backend — endpoint nuevo**. `SupportAdminController.listGrants(profileId)` bajo `GET /api/admin/support/profiles/{profileId}/grants`, permiso `PERM_SUPPORT_PROFILE_MANAGE` (mismo que el resto del CRUD de profiles), respuestas `200 · 404`. Devuelve `List<GrantDetailDTO>` con `userId`, `userEmail`, `grantedBy`, `grantedByEmail`, `grantedAt`, `active`. Guard defensivo: si `profileRepo.existsById(profileId)` es `false`, se lanza `SupportNotFoundException` (mapeado a 404 por `GlobalExceptionHandler`) para no filtrar la existencia de la profile a un actor sin permiso.
+
+**Backend — servicio**. `BackofficeAgentProfileGrantService.listGrantsByProfileDetailed(profileId)` devuelve el mismo shape. Implementado con **batch fetch** de emails via `UserRepository.findAllById(Collection<Long>)` para evitar N+1: primero se listan los `grants` de la profile, se extraen los `userId` y `grantedBy` únicos, se hace un único `findAllById` y se compone el DTO desde un `Map<Long, String>`. Sin este batch, cada grant provocaría dos SELECT extra a `users`. `userRepository` inyectado como nueva dependencia del service (constructor updated + campo final).
+
+**Backend — tests**. `SupportAdminControllerListGrantsMockMvcTest` con tres casos: (1) `200` con array poblado (grants + emails), (2) `404` cuando la profile no existe, (3) `200` con array vacío cuando la profile existe pero no tiene grants. Standalone MockMvc con `GlobalExceptionHandler`. Total repo: **526 tests** (519 → 526, +3 nuevos + 4 tocados por ajuste del constructor del service en otros tests que ya existían). Todo verde.
+
+**Frontend — consumo del endpoint**. `AdminSupportProfilesView.jsx` sustituye el placeholder previo ("(sin datos, próximamente)") de la sección expandible por una llamada real a `GET /api/admin/support/profiles/{id}/grants` disparada al expandir la fila de una profile. State local `grantsByProfile[profileId]` cachea el resultado hasta que el usuario contrae/expande de nuevo (política sencilla: refetch on expand). Tabla renderizada con columnas Email · Otorgado por · Fecha · Activo · Acciones (revoke), textos vía i18n keys nuevas del namespace `admin.support.profiles.grants.*`.
+
+**Deploy TEST**. Commit `d8d5b90` desplegado en el mismo bloque operativo que la B.3.2 (ver entrada siguiente): backend TEST scp + kill+relaunch canónico (Started en 30.8s, Flyway `Schema up to date` sin V16 nueva porque el cierre es aditivo, KnowledgeBaseService hydrated 14 prompts), `update-manifest-backend.ps1 -Environment test -AssumeYesNonCritical`, `deploy-frontend.ps1 -Environment test -Surface admin -AssumeYesNonCritical`. Manifest TEST final: backend `d8d5b90` / jar_sha256 `71ccb203…`, frontend_admin `d8d5b90` / bundle `main.bebe34ed.js` / bundle_sha256 `b6e4437c…`. AUDIT/PROD sin tocar. Sin smoke funcional automático (el operador validará manualmente en el navegador la carga de grants al expandir una profile en `https://admin.test.sharemechat.com/`).
+
+**Lo que NO se toca**. Ninguna migración Flyway. Ningún cambio en el bot ni en `SupportBotService` / `SupportBotRouterService` / `KnowledgeBaseService`. Ninguna deuda de `known-debt.md` se cierra ni se abre por este cierre de hueco (el propio hueco no llegó a documentarse como deuda porque se cerró el mismo día en que se detectó, dentro de la sesión operativa de B.3.2).
+
+---
+
+## 2026-07-08 — Chat Soporte LLM Fase B.3.2: frontend admin — AdminSupportPanel + hooks + CRUD profiles + i18n
+
+Cierre del bloque frontend admin de la Fase B.3 tras validación del design con el operador (14 decisiones ejecutivas). B.3.2 entrega la superficie admin para atender conversaciones escaladas por el bot: sidebar con badge de pendientes, panel de conversaciones con detalle y acciones (claim/release/message/resolve), gestión de profiles (CRUD) y grants (N:N users↔profiles). Sin cambios de código backend salvo el cierre del hueco descrito en la entrada 2026-07-08 (siguiente). Sin cambios en la surface product (SupportChat del cliente intacto).
+
+**Alcance frontend entregado (~1600 LOC efectivas)** en commit `794193d`:
+
+*Ficheros nuevos (~15)*:
+- `hooks/useSupportPendingCount.js`: hook con polling (`document.hidden` guard) contra `GET /api/admin/support/pending-count`. Devuelve `{ pendingUnassigned, myAssigned, otherAssigned }` con refresh periódico. Sirve al badge del sidebar y a los headers de columna del panel de conversaciones.
+- `hooks/useConversationPolling.js`: hook genérico de polling reutilizable por el detalle de conversación (para refrescar mensajes nuevos si otro agent responde o el user manda un mensaje mientras la vista está abierta). Mismo `document.hidden` guard.
+- `pages/admin/AdminSupportPanel.jsx`: container del frente Support en admin. Renderiza sub-tabs internas **Conversaciones** y **Profiles** en función de las capabilities recibidas por props (`canHandle`, `canManage`), no de rutas. Los tabs se ocultan si el rol no dispone del permiso correspondiente.
+- `pages/admin/support/AdminSupportConversationsView.jsx`: layout master-detail. Lista de conversaciones a la izquierda con filtros (status, assignedAgentId=me|unassigned|<id>, paginación); panel derecho con thread completo, header de conversación y toolbar de acciones. Estado local con optimistic updates al enviar mensaje.
+- `pages/admin/support/AdminSupportProfilesView.jsx`: tabla CRUD de profiles con expandible por fila para grants (grants inline: lista + botón "Añadir grant" con selector de user + botón revoke por grant). La versión inicial del expandible mostraba placeholder por falta de endpoint de lectura de grants; se completa en el commit `d8d5b90` del mismo día (ver entrada siguiente). Modales autocontenidos para crear/editar profile (`AdminSupportProfileModal.jsx`) y para añadir grant (`AdminSupportGrantModal.jsx`).
+- Subcomponentes de detalle de conversación (`AdminSupportConversationDetail.jsx`, `AdminSupportConversationHeader.jsx`, `AdminSupportMessagesList.jsx`, `AdminSupportMessageComposer.jsx`, `AdminSupportClaimModal.jsx`), listado (`AdminSupportConversationList.jsx`, `AdminSupportConversationRow.jsx`, `AdminSupportFilters.jsx`) y utilidades (`AdminSupportBadge.jsx`).
+
+*Ficheros modificados*:
+- `pages/admin/DashboardAdmin.jsx`: cablea las nuevas capabilities `canViewSupport` (⇔ `PERM_SUPPORT_CHAT_HANDLE`) y `canManageSupportProfiles` (⇔ `PERM_SUPPORT_PROFILE_MANAGE`), añade `support` a `viewCopy`/`allowedViews`/`navigationSections`, e inyecta la count de `useSupportPendingCount` como `badge` del item del sidebar.
+- `pages/admin/components/AdminLayout.jsx`: extensión **aditiva** de la prop `navigationSections[i].items[j]` con soporte opcional para `badge`. Cuando `badge != null && Number(badge) > 0`, se renderiza un chip absoluto (top:10 right:12, minWidth:22, redondeado, contraste sobre el item) con formato `Number(badge) > 9 ? '9+' : badge` y `aria-label` accesible. Ninguna sección existente se ve afectada (no envían `badge`).
+- `i18n/locales/es.json` y `en.json`: namespace nuevo `admin.support.*` con ~60 claves entre conversaciones, profiles, grants, filtros, acciones, estados, modales y mensajes de error. Todas las claves ES tienen su equivalente EN. Placeholders `{{count}}`, `{{email}}`, `{{displayName}}`, `{{status}}` respetados.
+
+**Decisiones arquitecturales aplicadas (14 del design B.3.2)**:
+- Sub-tabs internas dentro de un único panel Support, no rutas separadas (`/admin/support?tab=…`).
+- Badge del sidebar consume `pendingUnassigned` únicamente (no `myAssigned`) para que sea señal de trabajo pendiente para cualquier agent, no personal.
+- Polling con `document.hidden` guard: no consumir cuota de red del navegador ni de rate-limit del backend cuando la pestaña admin está en background.
+- Optimistic updates al enviar mensaje (`sender=HUMAN`, `content=<texto>`, `sent_by_user_id/profile_id=<currentAgent/profile>`, `createdAt=<now local>`, `pending=true`). En error, rollback + toast.
+- Modales autocontenidos con overlay + panel + escape/click-overlay para cerrar (patrón de `SupportEscalateModal` reutilizado).
+- Persistencia de conversación seleccionada en URL (`?convId=<id>`) para permitir compartir link entre agents del mismo turno.
+- Selector de profile en el modal de claim: solo profiles con `hasActiveGrant=true` para el `currentUserId` — filtradas por endpoint `GET /profiles/mine`, no client-side (evita ver profiles ajenas).
+- Toolbar de acciones muestra u oculta botones según `resolution_status` de la conversación (claim solo si `assigned_agent_id IS NULL AND status IN (OPEN, ESCALATED)`; release/message/resolve solo si `assigned_agent_id === currentUserId`).
+- Copy funcional en ES/EN paralelo, sin string hardcodeadas en JSX.
+- El sub-tab **Profiles** se oculta si `canManage=false`; el resto del panel sigue accesible con `canHandle=true`.
+- CRUD de profiles con validación de `displayName` client-side (regex neutra) + errores 400/409 del backend surfaceados literales al operador (namespace de errores propio).
+- Grants: lista inline expandible por profile, no modal aparte, para mantener el estado de "qué user está en qué profile" en una única vista.
+- Sin drag & drop, sin bulk actions, sin export CSV: MVP de B.3.2, ampliaciones a B.3.4.
+- Ningún cambio en la surface product (`SupportChat.jsx` intacto). B.3.3 (renderizado del bot switch → humano en el cliente) queda pendiente.
+
+**Build + deploy admin TEST**. `deploy-frontend.ps1 -Environment test -Surface admin -AssumeYesNonCritical`: drift OK (backend `d8d5b90` matches candidato), build `build:admin`, S3 sync + CloudFront invalidation `I36TE3CWC292GQEIZELPKABMVW`, smoke estático 200 en `/` y en bundle, smoke funcional `/api/users/me → 401` (esperado sin cookie), manifest `frontend_admin` regularizado a `d8d5b90` / bundle `main.bebe34ed.js` / `b6e4437c…`. Surface `product` intacta (bundle `main.b392ac6d.js` del 2026-07-05 sin cambios). AUDIT/PROD sin tocar en ningún momento.
+
+**Detección del hueco durante deploy**. Al validar el panel Profiles en la sesión de design final del operador emergió que el expandible de grants por profile devolvía siempre lista vacía porque el backend no expone `GET /profiles/{id}/grants`. Se decidió cerrar el hueco en la misma jornada operativa (commit `d8d5b90`, ver entrada 2026-07-08 anterior) en vez de aplazarlo a B.3.4 para no dejar la UI B.3.2 rota en su feature principal de gestión de profiles.
+
+**Deudas #D-14 (Browser Notification API para agents conectados)**: sigue viva. B.3.2 no la incluye en el alcance final entregado (el operador priorizó CRUD + badge polling sobre notifications push). Ajuste requerido en `known-debt.md`: mantener #D-14 abierta con nota "no implementada en B.3.2; diferida a B.3.4 o sub-sesión propia". Ajuste requerido en ADR-046 sección "Deudas diferidas": la frase "Se implementará en B.3.2" pasa a "Diferida más allá de B.3.2".
+
+**Lo que NO se replica**. Cero cambios en AUDIT/PROD (ni backend ni frontend). Cero migraciones Flyway. Cero cambios en `SupportBotService`, `KnowledgeBaseService`, BdC ni catálogos. Cero cambios en `SupportChat.jsx` de la surface product. La superficie cliente sigue exactamente igual — el switch bot→humano visible al user será tarea de B.3.3.
+
+---
+
+## 2026-07-08 — Chat Soporte LLM Fase B.3.1: backend Panel Soporte Humano — schema V15, entidades, servicios, endpoints admin + deploy TEST (ADR-046)
+
+Cierre del bloque backend de la Fase B.3 tras validación del design con 13 puntos + 7 hallazgos + 2 matices menores. B.3.1 entrega la superficie backend para el soporte humano del Agente IA: identidad de servicio desacoplada del user real (`backoffice_agent_profile`), grants N:N (`backoffice_agent_profile_grant`), asignación de conversaciones con doble columna auditoría/pública (`assigned_agent_id` / `assigned_profile_id`) y CHECK bi-columna, ciclo de vida ampliado con `HUMAN_HANDLING`, doble guard del bot ante claim + race check post-LLM, permisos `PERM_SUPPORT_CHAT_HANDLE` / `PERM_SUPPORT_PROFILE_MANAGE`, 12 endpoints admin bajo `/api/admin/support/`. Sin frontend en este bloque (B.3.2). Sin cambios en el bot conversacional del cliente (B.3.3 opcional). Decisión estructural completa en [ADR-046](../06-decisions/adr-046-panel-soporte-humano.md).
+
+**Sesión operativa**. Tres commits encadenados el mismo día:
+- `523daf7 feat(support-bot): panel soporte humano - backend + migracion (Fase B.3.1 - ADR-046)` — primer commit con V15 original (incluía `ON DELETE SET NULL` en las FKs `fk_support_conv_assigned_agent` / `fk_support_conv_assigned_profile`).
+- `287f8c2 fix(support-bot): V15 sin ON DELETE SET NULL en FKs de assignment (MySQL 8 incompatible con CHECK sobre misma columna) - Fase B.3.1` — fix tras fallo del primer deploy TEST.
+- `acb290a chore(deploy): regularizar manifest TEST tras deploy B.3.1` — regularización de `deploy-state/test.yaml`.
+
+**Incidente Flyway V15 durante primer deploy TEST — MySQL 8 CHECK vs FK con acción referencial**. Primer intento de `mvn package -DskipTests` + scp + kill+relaunch en TEST falló durante `Migrating schema … to version 15`:
+```
+Column 'assigned_agent_id' cannot be used in a check constraint
+'chk_support_conv_assign_bicolumn': needed in a foreign key
+constraint referential action.
+```
+Root cause identificado: MySQL 8.x no permite `CHECK` sobre columnas cuyas FKs tengan acción referencial (`ON DELETE SET NULL`, `CASCADE`), porque la acción modifica la columna y el motor no puede reevaluar el CHECK después. Ver [MySQL Reference Manual · CHECK Constraints](https://dev.mysql.com/doc/refman/8.4/en/create-table-check-constraints.html).
+
+Trade-off resuelto ADR-046 sección "Restricción MySQL 8 · FK con acción referencial + CHECK sobre misma columna":
+- **Descartada**: mantener `ON DELETE SET NULL` y sacrificar el CHECK bi-columna. Reduce defensa en profundidad; delega la invariante `(agent, profile) NULL o NOT NULL a la vez` al `SupportHumanHandlingService` como único garante.
+- **Aplicada**: mantener el CHECK bi-columna y sacrificar `ON DELETE SET NULL` en las dos FKs de assignment. Pasan a `RESTRICT` implícito. Razonamiento: en este proyecto los users no se borran físicamente (GDPR por anonimización, no por `DELETE`), las profiles usan soft delete (`active=false`), y por tanto el `RESTRICT` solo actúa en escenario operativo excepcional (limpieza manual) donde tener que resolver primero las conversaciones asignadas es requisito operativo razonable y trazable.
+
+Las FKs `fk_bap_created_by` (created_by en `backoffice_agent_profile`) y `fk_support_msg_sent_by_user` / `fk_support_msg_sent_by_profile` **sí** conservan `ON DELETE SET NULL` porque esas columnas no participan en ningún CHECK.
+
+**Rollback y re-deploy**. Rollback manual de la BD TEST vía túnel RDS + `mysqlsh` (borrado del `flyway_schema_history` row de V15 fallida + drop de las tablas parcialmente creadas), corrección de V15 (retirado `ON DELETE SET NULL` de las 2 FKs, resto intacto), commit `287f8c2`, build + scp + kill+relaunch canónico. Segundo intento OK: `Migrating schema ... to version 15 - add support human handling schema` sin errores, 6 ALTER TABLE + 2 CREATE TABLE aplicados, backend arrancó limpio, KnowledgeBaseService hydrated 14 prompts, `[SUPPORT-BOT] provider initialized: id=98`. Smoke funcional con creds admin (uso puntual + higiene canónica) validado por el operador.
+
+**Alcance backend entregado (aproximado 3500 LOC efectivas)**:
+- **Migración V15**: `V15__add_support_human_handling_schema.sql` — 2 CREATE TABLE nuevas (`backoffice_agent_profile`, `backoffice_agent_profile_grant`), 6 ALTER TABLE sobre `support_conversations` (+ `assigned_agent_id`, `assigned_at`, `assigned_profile_id`, CHECK bi-columna, extensión del CHECK de `resolution_status` con `HUMAN_HANDLING`) y `support_messages` (+ `sent_by_user_id`, `sent_by_profile_id`), + índices y FKs correspondientes.
+- **Entidades**: `BackofficeAgentProfile`, `BackofficeAgentProfileGrant`, con campos `id`, `displayName UNIQUE`, `active`, `category NULL`, `createdBy`, timestamps.
+- **Repositorios**: `BackofficeAgentProfileRepository`, `BackofficeAgentProfileGrantRepository`.
+- **Servicios**: `BackofficeAgentProfileService` (CRUD + soft delete), `BackofficeAgentProfileGrantService` (assign/revoke + hasActiveGrant), `SupportHumanHandlingService` (getOrCreateActiveConversation ampliado, claim atómico via UPDATE conditional, release, sendHumanMessage, resolve, listConversations con filtros, getConversationDetail, getPendingCount). `SupportBotService` modificado con doble guard: (1) guard temprano tras `getOrCreateActiveConversation` — si `conversation.assigned_agent_id != null` se salta el LLM call entero, se persiste el mensaje user esperando al humano, se responde `{humanHandling:true, reply:null, resolutionStatus:"HUMAN_HANDLING"}`. (2) race check post-LLM con `touchIfStillUnassigned` (`UPDATE ... WHERE assigned_agent_id IS NULL`) — si otro agent hizo claim durante los ~5-8s de la llamada Claude, `rowCount=0` → se descarta la respuesta LLM sin persistir y sin cobrar tokens al user.
+- **Ampliación de "conversación activa"**: `getOrCreateActiveConversation` sustituye a `getOrCreateOpenConversation` y busca por `status IN (OPEN, ESCALATED, HUMAN_HANDLING, RATE_LIMITED)`. Solo `RESOLVED` y `ABANDONED` disparan conversación nueva.
+- **Controller**: `SupportAdminController` con 12 endpoints admin bajo `/api/admin/support/`. Tabla completa en ADR-046. Códigos HTTP normalizados (200/400/403/404/409/204). Nota: durante el deploy de B.3.2 emergió el hueco del endpoint `GET /profiles/{profileId}/grants` — cerrado el mismo día en el commit `d8d5b90` (ver entradas siguientes).
+- **Permisos**: `PERM_SUPPORT_CHAT_HANDLE` (`support.chat_handle`, incluido en `SUPPORT_PHASE1_PERMISSIONS` para `ROLE_SUPPORT` baseline) y `PERM_SUPPORT_PROFILE_MANAGE` (`support.profile_manage`, opt-in explícito). Ambos incluidos en `OFFICIAL_BACKOFFICE_PERMISSION_CATALOG`. `ROLE_ADMIN` mantiene acceso vía matcher explícito.
+- **Mensaje SYSTEM al claim**: al éxito del claim se persiste automáticamente un mensaje `sender='SYSTEM'` con texto ES/EN según `user.uiLocale` ("Tu caso ha sido asignado a {displayName} del equipo de soporte. Te responderá en breve." o su equivalente EN). I18n hardcoded en `SupportHumanHandlingService.buildAssignmentMessage` porque el backend no dispone de `MessageSource` genérico hoy (deuda documentada para migración futura).
+- **Tests**: 519 total repo tras cierre B.3.1 (subida de ~30 tests nuevos entre servicio + controller + migración). Verde.
+
+**Deploy TEST (final)**. Commit `287f8c2` + `acb290a`. JAR `sha256=200d47b1…` (versión pre-fix), luego `sha256=71ccb203…` (versión con B.3.2 tras fix). Backend TEST arrancado limpio (Started en 32s, PID nuevo, 14 prompts KB, `[SUPPORT-BOT] provider initialized: id=98`). AUDIT/PROD sin tocar. La migración V15 debe replicarse a AUDIT y PROD cuando el operador decida el corte (pendiente vivo, ver `current-phase.md`).
+
+**Deudas nuevas registradas en `known-debt.md`**:
+- **#D-13 — Job diario de expiración `ESCALATED > 48h`**. Sin agents conectados, un caso escalado a las 03:00 queda indefinidamente en `ESCALATED`. Falta job que lo mueva a `ABANDONED` (o `EXPIRED` nuevo) con auto-mensaje SYSTEM al user.
+- **#D-14 — Browser Notification API para agents conectados al panel admin**. El operador descartó email como canal. El único señal hoy es el badge del panel, que exige tenerlo abierto. Añadir `Notification.permission` opt-in. Nota ADR-046: originalmente prevista para B.3.2, finalmente diferida.
+- **#D-15 — Playbook DPO para GDPR art. 15 sobre conversaciones humanas**. Política canónica: devolver únicamente `display_name` de la profile, jamás el `user_id` real. Con profiles compartidas por múltiples users reales es obligatorio, no recomendable. Falta el documento formal en el corpus legal.
+
+**Otras deudas diferidas** (no bloqueantes, aplazadas a B.3.4 o post-go-live): retención de conversaciones `RESOLVED` (recomendación 24 meses + anonimizar `user_id → NULL`, coordinar con DPO junto con #15); historial de asignaciones (tabla satélite `support_conversation_assignment_history`); endpoint `transfer` para pasar caso entre agents.
+
+**Alternativas descartadas** (detalle en ADR-046):
+- `backoffice_agent_profile.user_id NULLABLE`: ambigüedad semántica (`NULL` no distingue "huérfana" vs "compartida por diseño"). La tabla puente N:N modela la relación explícitamente.
+- `HUMAN_HANDLING` sustituye a `ESCALATED`: fases distintas. Colapsarlas rompe el badge `pendingUnassigned` y la métrica "tiempo hasta atención".
+- `agent_display_name` duplicado en `support_messages`: introduce desincronización silenciosa si el operador renombra la profile. Estabilidad histórica se garantiza con regla operativa "no reusar display_names".
+- `SupportRateLimitService` recibe `conversation` como parámetro: acoplamiento innecesario. El guard temprano cortocircuita antes del rate-limit por reorden.
+- CRUD de profiles con `PERM_SUPPORT_CHAT_HANDLE`: crear identidades de servicio es decisión de negocio; separado en permiso propio opt-in.
+
+**Lo que NO se toca**. Ninguna modificación del bot conversacional del cliente (`SupportChat.jsx` de la surface product intacto). Ninguna modificación de `KnowledgeBaseService` ni de la BdC. Ninguna modificación de `SupportBotRouterService` ni del rate-limit. AUDIT/PROD sin tocar en ningún momento.
+
+---
+
 ## 2026-07-04 — Chat Soporte LLM: pulido UX del chat con Agente IA (logo, fuente, botón B/N, texto plano, fuga info)
 
 Iteración larga de UX del chat con el Agente IA tras varias pasadas de smoke visual del operador. Convergencia de cinco frentes que se resolvieron en la misma sesión y se agrupan aquí en un único commit por coherencia editorial: (1) refuerzo de la BdC contra fuga de información entre roles, (2) instrucción firme al LLM para responder en texto plano sin markdown, (3) safety net frontend con `react-markdown@8` y `MD_COMPONENTS` que degrada todo elemento markdown a `<span>`/`<div>` sin estilo, (4) botón "Enviar" del chat en blanco y negro con hover invertido, (5) integración correcta del logo del Agente IA (asset PNG del operador) tras iteraciones fallidas por assumption errónea del pipeline de optimización. Sin cambios de código backend salvo los ficheros MD de la BdC.
