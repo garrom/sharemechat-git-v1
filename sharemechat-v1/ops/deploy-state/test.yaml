@@ -40,21 +40,21 @@ backend:
   systemd_unit: sharemechat-test.service
   git_commit: d8d5b90529ae5b61b5bfd36de6b5fbd3acd27316
   git_commit_short: d8d5b90
-last_updated_at: 2026-07-08T16:45:10Z
+last_updated_at: 2026-07-08T18:15:03Z
 frontend_admin:
-  cloudfront_invalidation_id: I36TE3CWC292GQEIZELPKABMVW
+  cloudfront_invalidation_id: ID9KOU90TGZSFUVOP0WB33DWHA
   verification:
-    method: deploy-frontend.ps1-live-build_2026-07-08T16:45:10Z
+    method: deploy-frontend.ps1-live-build_2026-07-08T18:15:03Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-07-08T16:45:10Z
-  built_at: 2026-07-08T16:45:10Z
-  bundle_sha256: b6e4437c599ced73b23bbd03c272a8d193b9f36149ced7dc36e80defbf3da6c8
-  git_commit_short: d8d5b90
-  git_commit: d8d5b90529ae5b61b5bfd36de6b5fbd3acd27316
+  deployed_at: 2026-07-08T18:15:03Z
+  built_at: 2026-07-08T18:15:03Z
+  bundle_sha256: 377ba69d863a6f182431c54122eace67f0d1094c5f12387a79f445b5889258ff
+  git_commit_short: "5e78008"
+  git_commit: 5e78008b8ea75a863e2ee6c1c948539e209aa42b
   cloudfront_distribution: E28YCPVIRB4ASH
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-admin-test
-  bundle: main.bebe34ed.js
+  bundle: main.2a3dd3b2.js
 
