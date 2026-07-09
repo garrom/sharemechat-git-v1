@@ -58,13 +58,11 @@ El link de afiliación **ES la URL del perfil**. No hay dos URLs. La sinergia t�
 
 Cookie de tracking en el navegador visitante persistente 90 días desde el último click con `ref=`. Detalle en [model-profile-strategy.md](model-profile-strategy.md) § 4.
 
-## 7. Táctica de outreach (no estructura de incentivos)
+## 7. Táctica de outreach
 
-Punto ciego identificado en la conversación estratégica del pivote de soft launch: el afiliado más poderoso NO es una empresa externa. Es una modelo top con 5.000-30.000 followers en X. Ese perfil paga literalmente por acceso a plataformas nuevas donde puede ser "la primera" y capturar long-tail SEO de su propio nombre.
+Las modelos con audiencia propia en X, Telegram o Reddit del orden de 5.000-30.000 followers tienen el mayor potencial de tracción como afiliadas. Ese perfil valora acceso temprano a plataformas nuevas donde puede capturar long-tail SEO de su propio nombre.
 
-Consecuencia **táctica, no estructural**: el operador debe dedicar esfuerzo a identificar 3-5 modelos con audiencia propia media y contactarlas de forma prioritaria en el outreach de reclutamiento, porque son la palanca real de tráfico calificado. Es una decisión de **orden de outreach**, no de **estructura de incentivos**.
-
-A esas modelos se les ofrece exactamente lo mismo que a cualquier otra: 30 % revshare lifetime, la misma URL de perfil, los mismos assets sociales, el mismo payout. No hay tier especial, no hay condiciones fundadoras, no hay revshare diferenciado.
+Por eso, el operador dedica esfuerzo prioritario a identificar 3-5 modelos con esas características y contactarlas en la primera oleada de reclutamiento. Reciben las mismas condiciones que cualquier otra afiliada: 30 % revshare lifetime, la misma URL de perfil, los mismos assets sociales, el mismo payout.
 
 ## 8. Referencias
 
