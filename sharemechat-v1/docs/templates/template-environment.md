@@ -1,5 +1,11 @@
 # Entorno: Nombre
 
+> Estado: VIGENTE | TRANSITORIO | HISTÓRICO
+> Fecha: YYYY-MM-DD
+> Vigencia esperada: [descripción o "indefinida"]
+> Reemplaza: [ruta y sección específica, o "N/A"]
+> Ver también: [ADRs y ficheros relacionados]
+
 ## Propósito
 
 Para qué existe este entorno.

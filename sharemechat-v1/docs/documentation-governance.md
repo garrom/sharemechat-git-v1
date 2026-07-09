@@ -243,6 +243,80 @@ Ante cualquier cambio relevante:
 - snapshots estructurados de estado del sistema -> `docs/_snapshots/`
 - bitácora cronológica de hitos del proyecto -> `docs/project-log.md`
 
+## Formatos aceptados en el repo
+
+Convención de formatos para toda la documentación versionada en `docs/` (y por extensión el resto del repo cuando aplique).
+
+### Formato por defecto
+
+- `.md` para toda documentación humano-legible: negocio, arquitectura, entornos, operaciones, ADRs, roadmap, runbooks, plantillas y cualquier texto discursivo del corpus.
+
+### Excepciones justificadas
+
+Los siguientes formatos están permitidos solo para los usos concretos indicados:
+
+- `.yaml` / `.yml`: snapshots estructurados (`docs/_snapshots/`), configuración estructurada de skills, ficheros de estado versionados.
+- `.sql`: migraciones Flyway (`src/main/resources/db/migration/`) y snippets SQL de referencia.
+- `.json`: ledgers operativos (`docs/social/social-state.json`), esquemas y contratos de intercambio.
+- `.ps1` / `.sh`: scripts operativos referenciados desde runbooks.
+
+### Formatos prohibidos
+
+- `.xlsx`, `.xls`, `.ods`: hojas de cálculo. Contenido tabular vive en tablas Markdown.
+- `.docx`, `.doc`, `.odt`: documentos ofimáticos. Prosa vive en Markdown.
+- `.pdf`: documentos binarios. Prosa vive en Markdown.
+- `.pptx`: presentaciones. Diagramas vía Mermaid embebido en Markdown.
+
+### PDFs de entregables legales oficiales
+
+Los PDFs de entregables legales oficiales (registros OEPM, certificados, resoluciones, contratos firmados) **no viven en el repo**. Se conservan fuera del repo entero, en el archivo personal del operador. En el corpus se referencian por su fecha y organismo emisor, no por ruta a fichero binario.
+
+### Imágenes
+
+Solo si son estrictamente necesarias para transmitir información no reducible a texto (screenshots de incidentes, capturas de UI que documentan un bug concreto). Preferir Mermaid o ASCII embebido en Markdown para diagramas y arquitecturas.
+
+## Convención de cabecera de estado
+
+Toda documento de negocio de `docs/01-business/` y toda ADR nueva de `docs/06-decisions/` a partir de esta convención debe abrir con la siguiente cabecera de estado justo debajo del título H1:
+
+```
+> Estado: VIGENTE | TRANSITORIO | HISTÓRICO
+> Fecha: YYYY-MM-DD
+> Vigencia esperada: [descripción o "indefinida"]
+> Reemplaza: [ruta y sección específica, o "N/A"]
+> Ver también: [ADRs y ficheros relacionados]
+```
+
+Semántica de los tres valores:
+
+- **VIGENTE**: refleja el estado actual del proyecto en el momento de la última edición y se espera que siga vigente sin fecha de caducidad prevista. Usado para decisiones estructurales y documentos de negocio estables.
+- **TRANSITORIO**: refleja una fase o estrategia de duración acotada. Contiene el hito o condición esperada de cierre en el campo "Vigencia esperada". Cuando el hito se cumple, el documento se archiva en `_archive/`.
+- **HISTÓRICO**: preservado por trazabilidad de decisión pero superseded por otra fuente. Contiene ruta al documento vigente en el campo "Reemplaza".
+
+Los ADRs anteriores a esta convención mantienen su formato original (encabezado `## Estado` con `Aceptada` / `Rechazada` / `Superseded`) y no requieren adaptación retroactiva. La convención aplica solo a documentos creados o reescritos a partir de la fecha de introducción.
+
+Las plantillas `docs/templates/template-adr.md`, `template-environment.md` y `template-runbook.md` incorporan esta cabecera y son la referencia canónica para el formato.
+
+## Patrón de deprecados centralizados
+
+Cuando una sección de un fichero vigente queda superseded (por un ADR nuevo, por un cambio de estrategia o por dejar de aplicar), no se elimina en silencio ni se deja en el fichero vigente contaminando la lectura. Se sigue este patrón:
+
+1. **Mover el contenido histórico a `docs/_deprecated/registro.md`** bajo un heading nuevo con el formato `## [fichero-origen.md] §"nombre sección"` seguido del texto íntegro retirado.
+2. **En el fichero vigente**, sustituir el contenido retirado por un bloque de referencia:
+
+```
+> ⚠️ SECCIÓN RETIRADA
+> Contenido histórico movido a: _deprecated/registro.md §"[nombre sección]"
+> Motivo: [ADR de referencia u otra razón]
+> Fecha retirada: [YYYY-MM-DD]
+```
+
+3. El bloque de referencia se mantiene en el fichero vigente indefinidamente. Permite a un lector entender que ahí había contenido y saber dónde ver la versión histórica sin tener que consultar git blame.
+
+Este patrón preserva el rastro de decisiones sin duplicar contenido activo y evita que las lecturas del corpus vigente se contaminen con paréntesis históricos sobre lo que ya no aplica.
+
+`docs/_deprecated/registro.md` es un fichero cronológico inverso (entradas más recientes arriba) y no tiene otra política de edición: cada retirada se registra en el mismo commit que la aplica.
+
 ## Regla final
 
 Antes de editar, decidir primero qué tipo de cambio es.

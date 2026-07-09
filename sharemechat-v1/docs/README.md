@@ -1,5 +1,7 @@
 # Documentación Interna de SharemeChat
 
+Formatos aceptados y políticas de contribución: ver `documentation-governance.md`.
+
 Este directorio centraliza la documentación útil y durable del proyecto.
 
 ## Criterio documental
