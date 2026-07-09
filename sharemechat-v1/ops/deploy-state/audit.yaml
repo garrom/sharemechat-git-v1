@@ -7,21 +7,21 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I9XGSH0Q7O3KO23DGON6MLJ77U
+  cloudfront_invalidation_id: I929AZL9KLWG9SUY5PHAURO1T6
   verification:
-    method: deploy-frontend.ps1-live-build_2026-07-06T00:32:37Z
+    method: deploy-frontend.ps1-live-build_2026-07-09T20:42:35Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-07-06T00:32:37Z
-  built_at: 2026-07-06T00:32:37Z
-  bundle_sha256: 757f6f1fe616151aa40438bbd32c7b645f4970e5646c737c6d1ca5be5bed7dde
-  git_commit_short: 074cb69
-  git_commit: 074cb6928f487fe0e34d10a454e89001aae9ec56
+  deployed_at: 2026-07-09T20:42:35Z
+  built_at: 2026-07-09T20:42:35Z
+  bundle_sha256: 4e4974b81b9215aed7eb5e878c1328167d4375bdb3749304d28bedc3de367c78
+  git_commit_short: 3c36fcc
+  git_commit: 3c36fcc944858a30272707ac827197103a61635f
   cloudfront_distribution: E1ILXV7P6ENUV8
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-audit
-  bundle: main.77a52689.js
+  bundle: main.7ef36d6c.js
 last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: audit
@@ -29,32 +29,32 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: audit-backend
-  deployed_at: 2026-07-06T00:31:52Z
-  jar_sha256: d0c2b699fd3ccb518a4cf973ab39be06e5288d64992a019a7f2624c5c3c1b76d
+  deployed_at: 2026-07-09T20:10:00Z
+  jar_sha256: 05d52c29adadebdccc77ee4008b51da40edbe3bdaa3fcbdf23edebbf6ff270cf
   verification:
-    method: manual_via_update-manifest-backend.ps1
-    verified_at: 2026-07-06T00:31:52Z
-    notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-07-06T00:31:52Z
+    method: manual_scp+ssh_sha256_verified
+    verified_at: 2026-07-09T20:10:00Z
+    notes: 'Nivelacion AUDIT 2026-07-09: JAR construido a partir de commit c4f58ce (mismo build que TEST manifest test.yaml jar_sha256 05d52c29). Manifest editado a mano porque HEAD del repo al ejecutar la nivelacion es 3c36fcc (docs pivote posteriores, sin codigo funcional entre c4f58ce y HEAD). update-manifest-backend.ps1 asume HEAD=commit del JAR y no aplica en este caso. SHA verificado local vs remoto con sha256sum.'
+  built_at: 2026-07-09T00:43:00Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-audit.service
-  git_commit: 074cb6928f487fe0e34d10a454e89001aae9ec56
-  git_commit_short: 074cb69
-last_updated_at: 2026-07-06T00:33:29Z
+  git_commit: c4f58cec7369ddbf660aa557328161f336349cc0
+  git_commit_short: c4f58ce
+last_updated_at: 2026-07-09T20:42:35Z
 frontend_admin:
-  cloudfront_invalidation_id: I8LZL9YGCI5246Y0Z6RAR6FRL1
+  cloudfront_invalidation_id: I8NY3KPNE8DF7ZZTC82B9LLHL1
   verification:
-    method: deploy-frontend.ps1-live-build_2026-07-06T00:33:29Z
+    method: deploy-frontend.ps1-live-build_2026-07-09T20:41:33Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-07-06T00:33:29Z
-  built_at: 2026-07-06T00:33:29Z
-  bundle_sha256: 5aee44a586ef8cc0b379ccf5ca74b4fbde181e6edbba7257ca47ac947376a4c8
-  git_commit_short: 074cb69
-  git_commit: 074cb6928f487fe0e34d10a454e89001aae9ec56
+  deployed_at: 2026-07-09T20:41:33Z
+  built_at: 2026-07-09T20:41:33Z
+  bundle_sha256: 85b8d63181a43f7a541eb039c92bca9b1f0c8b9a863efde425381666e5f9c10a
+  git_commit_short: 3c36fcc
+  git_commit: 3c36fcc944858a30272707ac827197103a61635f
   cloudfront_distribution: E21IB0VBKYNNBW
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-admin-audit
-  bundle: main.c9db95ba.js
+  bundle: main.e497623e.js
 

@@ -1,0 +1,310 @@
+metadata:
+  schema_version: 3
+  environment: audit
+  generated_at: "2026-07-09T21:00:00Z"
+  generated_by: manual@nivelacion-audit-paridad-test
+  notes: |
+    Snapshot manual tras la nivelacion completa de AUDIT a paridad
+    funcional con TEST. Cubre todo el diferencial acumulado entre
+    2026-07-06 (074cb69, nivelacion post ADR-045) y 2026-07-09
+    (c4f58ce, Fase 2 chat P2P), mas el fix runtime de CLAUDE_API_KEY
+    aplicado el mismo dia en /opt/sharemechat/secrets.env de AUDIT.
+
+    AUDIT ahora corre con:
+      - backend commit c4f58ce (JAR sha256 05d52c29..., mismo build
+        que TEST).
+      - schema BD en Flyway V15 (support human handling).
+      - Base de Conocimiento del Agente IA con los 3 UPDATE post-smoke
+        de TEST (comportamiento-agente-ia v2, empresa-y-contacto v2,
+        producto-general v3) verificados bit-a-bit por MD5.
+      - CLAUDE_API_KEY presente en secrets.env (linea 18, longitud 108,
+        misma cuenta Anthropic que TEST por decision A del operador).
+      - bundle admin main.e497623e.js (bundle_sha256 85b8d631...) y
+        bundle product main.7ef36d6c.js (bundle_sha256 4e4974b81b...),
+        ambos identicos bit-a-bit a los desplegados en TEST.
+
+    TEST no se toca en esta sesion salvo en modo lectura (SSH + tunel
+    RDS para extraer contents y la linea CLAUDE_API_KEY). PROD queda
+    deliberadamente fuera del alcance: sigue en 5cdda0c con hardening
+    coming-soon (Didit off, Sightengine off, placeholders "disabled" en
+    secrets.env). La replicacion de V15 + JAR B.3 + bundle admin a PROD
+    queda como frente independiente, condicionada a la decision de corte
+    del operador tras el pivote soft launch de ADR-047.
+
+    Sanitizado: no incluye valor de ninguna credencial (JWT secret,
+    consent secret, DB password, CLAUDE_API_KEY, KYC_DIDIT_API_KEY,
+    MODERATION_SIGHTENGINE_*). IDs de CloudFront si aparecen porque son
+    necesarios para identificar las distribuciones invalidadas hoy y ya
+    figuran en docs previas del repo.
+
+    HEAD del repo al generar el snapshot: 3c36fcc (main, working tree
+    con el manifest ops/deploy-state/audit.yaml modificado por el flujo
+    de la sesion; el commit posterior de docs de esta bitacora incluira
+    el snapshot y las actualizaciones documentales asociadas).
+
+repo:
+  branch: main
+  head_commit: 3c36fcc
+  head_commit_message: |
+    docs(business): limpia negacion residual en affiliate-program §7
+    (cierre Fase A del pivote soft launch)
+  ventana_commits_relevantes:
+    - "3c36fcc docs(business): limpia negacion residual en affiliate-program §7 (cierre Fase A)"
+    - "5c9c010 docs(pivote): Fase A del pivote soft launch — ADR-047, ADR-048, ficheros negocio y politica de formatos"
+    - "0c1b66a chore(deploy): regularizar manifests admin+product TEST tras fix avatar peer P2P"
+    - "20572ac fix(chat): avatar peer del chat P2P a gris claro suave con inicial legible"
+    - "b112415 chore(deploy): regularizar manifests backend+admin+product TEST tras Fase 2"
+    - "c4f58ce feat(chat): boton regalo en modelo con filtrado backend por rol + unificar catalogo /available (Fase 2)"
+    - "186f6dd chore(deploy): regularizar manifests admin+product TEST tras Fase 1.1 estilos"
+    - "0e6be4d fix(support-bot): avatar+inicial+timestamp en P2P + unificar verde suave mensajes propios (Fase 1.1)"
+    - "627ba52 chore(deploy): regularizar manifests admin+product TEST tras Fase 1 estilos"
+    - "30850f8 fix(support-bot): mejoras visuales chat P2P y soporte + nickname en firma (Fase 1 estilos)"
+    - "98e7ded chore(deploy): regularizar manifests admin+product TEST tras fixes post-B.3.3"
+    - "b903fd6 fix(support-bot): 3 bugs post-B.3.3"
+    - "2f65b57 chore(deploy): regularizar manifests admin+product TEST tras deploy B.3.3"
+    - "cfb7110 feat(support-bot): B.3.3 chat cliente con estilo unificado + polling HUMAN_HANDLING"
+    - "cb1de39 docs: bitacora + snapshot + current-phase tras cierre B.3.1 + B.3.2 en TEST"
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    sha256_deployed: "05d52c29adadebdccc77ee4008b51da40edbe3bdaa3fcbdf23edebbf6ff270cf"
+    built_from_commit: "c4f58ce"
+    built_at_utc: "2026-07-09T00:43:00Z"
+    notes: |
+      Mismo JAR que corre en TEST (jar_sha256 identico en
+      ops/deploy-state/test.yaml). Reutilizado sin recompilar
+      durante la nivelacion; SHA verificado local vs remoto con
+      sudo sha256sum en el propio EC2 AUDIT.
+  schema_versioning:
+    flyway_runtime_present: true
+    last_applied_flyway_version: 15
+    v15_applied_notes: |
+      Aplicada limpiamente en el primer arranque tras el scp del
+      JAR (2026-07-09 20:10:48 UTC). Flyway log:
+        "Current version of schema db1_sharemechat_audit: 14"
+        "Migrating schema to version 15 - add support human handling schema"
+        "Successfully applied 1 migration, now at version v15
+         (execution time 00:00.754s)"
+      V15 ya venia corregida en el JAR desde el fix 287f8c2
+      (2026-07-08 en TEST); no fue necesario replicar aqui el
+      rollback manual + re-aplicacion que hubo en TEST.
+
+ec2_backend:
+  ssh_alias: audit-backend
+  systemd_units:
+    - name: sharemechat-audit.service
+      versioned_in_repo: false
+      notes: |
+        EnvironmentFile=/opt/sharemechat/config.env
+        EnvironmentFile=/opt/sharemechat/secrets.env
+        ExecStart=/usr/lib/jvm/java-17-amazon-corretto.x86_64/bin/java
+                  -Dspring.profiles.active=audit
+                  -jar /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
+        Sin cambios en el unit durante la sesion.
+  jar_running:
+    path_on_ec2: "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar"
+    sha256_running: "05d52c29adadebdccc77ee4008b51da40edbe3bdaa3fcbdf23edebbf6ff270cf"
+    started_at_utc: "2026-07-09T20:58:14Z"
+    ownership: "ec2-user:ec2-user 0644"
+    backup_previo: "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak-pre-nivelacion-c4f58ce-20260709-200943"
+    boot_signals_verificados_ultimo_arranque:
+      - "[SUPPORT-BOT] provider initialized: id=31 nickname='Soporte SharemeChat'"
+      - "KnowledgeBaseService hydrated at startup: 14 active prompts loaded"
+      - "Started SharemechatV1Application in 30.057 seconds"
+      - "Sin ERROR / Exception / SEVERE / FATAL / CLAUDE 401 / authentication_error en journal post-arranque"
+  config_env:
+    path_on_ec2: "/opt/sharemechat/config.env"
+    ownership: "root:root 0644"
+    size_bytes_actual: 2216
+    notes: |
+      Sin cambios en config.env durante la sesion. Sigue conteniendo
+      los mismos flags per-entorno que traia el 2026-07-01: registro
+      cliente/modelo cerrado (PRODUCT_REGISTRATION_*_ENABLED=false),
+      Product Operational Mode OPEN, country access enabled con la
+      allowlist habitual, KYC_DIDIT_ENABLED, MODERATION_SIGHTENGINE_ENABLED,
+      AUTHRISK_ENABLED, WEBRTC_TURN_URL_*. Valores no incluidos en el
+      snapshot; ver EC2 real para consulta.
+  secrets_env:
+    path_on_ec2: "/opt/sharemechat/secrets.env"
+    ownership: "root:root 0600"
+    size_bytes_pre_fix: 911
+    size_bytes_post_fix: 1035
+    delta_bytes: 124
+    delta_content: "linea CLAUDE_API_KEY=<valor> (15 bytes prefijo + 108 bytes valor + 1 byte newline)"
+    backup_preventivo: "/opt/sharemechat/secrets.env.bak-pre-claude-key-20260709-205739 (911 bytes, root:root 0600)"
+    variables_presentes:
+      - AUTHRISK_EMAIL_HASH_SALT
+      - CLAUDE_API_KEY  # anadida en esta sesion
+      - CONSENT_SECRET_AUDIT
+      - DB_PASSWORD
+      - EMAIL_GRAPH_CLIENT_SECRET
+      - JWT_SECRET_AUDIT
+      - KYC_DIDIT_API_KEY
+      - KYC_DIDIT_API_SECRET
+      - MODERATION_SIGHTENGINE_API_SECRET
+      - WEBRTC_TURN_CREDENTIAL
+      - WEBRTC_TURN_USERNAME
+    notes: |
+      El unico cambio en secrets.env durante la sesion es el
+      append de CLAUDE_API_KEY reutilizando el valor de TEST via
+      pipeline SSH atomico (no expuesto en stdout, no expuesto en
+      chat, no expuesto en argv, no expuesto en history de shell).
+      Diferencia estructural con TEST: AUDIT usa JWT_SECRET_AUDIT
+      y CONSENT_SECRET_AUDIT (sufijo _AUDIT segun application-audit.properties),
+      mientras TEST usa JWT_SECRET y CONSENT_SECRET sin sufijo. Es
+      intencional para aislar secretos entre entornos.
+
+rds:
+  identifier: "db1-sharemechat-audit"
+  status: "available"
+  engine: "mysql"
+  engine_version: "8.4.7"
+  endpoint: "db1-sharemechat-audit.c1gsc6qg4l8y.eu-central-1.rds.amazonaws.com:3306"
+  schema: "db1_sharemechat_audit"
+  flyway_schema_version: 15
+  operaciones_sesion:
+    - "V15 aplicada limpiamente en primer arranque post-scp del JAR (2026-07-09 20:10:48 UTC)."
+    - "CREATE TABLE support_bot_prompts_backup_20260709_audit_nivelacion AS SELECT * FROM support_bot_prompts (14 filas guardadas como backup preventivo)."
+    - "3 UPDATE sobre support_bot_prompts con UNHEX del content extraido de TEST: comportamiento-agente-ia v1->v2 (10508 bytes), empresa-y-contacto v1->v2 (4155 bytes), producto-general v1->v3 (10705 bytes)."
+    - "MD5 post-UPDATE verificado bit-a-bit igual al de TEST para los 3 prompts."
+  notes: |
+    Schema en V15 tras la nivelacion. Cambios estructurales aplicados
+    por V15:
+      + backoffice_agent_profile (tabla nueva)
+      + backoffice_agent_profile_grant (tabla nueva, N:N users<->profiles)
+      + support_conversations: assigned_agent_id, assigned_at,
+        assigned_profile_id, CHECK bi-columna, extension del CHECK de
+        resolution_status con HUMAN_HANDLING.
+      + support_messages: sent_by_user_id, sent_by_profile_id.
+
+s3_buckets:
+  frontend_product:
+    bucket: "sharemechat-frontend-audit"
+    deployed_bundle:
+      main: "main.7ef36d6c.js"
+      bundle_sha256: "4e4974b81b9215aed7eb5e878c1328167d4375bdb3749304d28bedc3de367c78"
+      last_upload_utc: "2026-07-09T20:42:35Z"
+      notes: |
+        Bundle desplegado por deploy-frontend.ps1 -Environment audit
+        -Surface product -AssumeYesNonCritical. bundle_sha256 identico
+        al de TEST product (ops/deploy-state/test.yaml). Los 3 commits
+        del diff entre 20572ac (registrado en TEST) y 3c36fcc (HEAD
+        del deploy AUDIT) son docs sin tocar frontend/: la compilacion
+        es determinista y el bundle coincide.
+  frontend_admin:
+    bucket: "sharemechat-admin-audit"
+    deployed_bundle:
+      main: "main.e497623e.js"
+      bundle_sha256: "85b8d63181a43f7a541eb039c92bca9b1f0c8b9a863efde425381666e5f9c10a"
+      last_upload_utc: "2026-07-09T20:41:33Z"
+      notes: |
+        Bundle desplegado por deploy-frontend.ps1 -Environment audit
+        -Surface admin -AssumeYesNonCritical. bundle_sha256 identico al
+        de TEST admin. Contiene AdminSupportPanel completo (B.3.2),
+        chat cliente B.3.3, Fase 1/1.1 estilos, Fase 2 boton regalo y
+        fix avatar peer del chat P2P.
+
+cloudfront:
+  product:
+    id: "E1ILXV7P6ENUV8"
+    aliases:
+      - "audit.sharemechat.com"
+      - "www.audit.sharemechat.com"
+    invalidations_in_session:
+      - id: "I929AZL9KLWG9SUY5PHAURO1T6"
+        paths: "/*"
+        ts: "2026-07-09T20:42:35Z"
+        notes: "Sync deploy-frontend.ps1 -Surface product con bundle main.7ef36d6c.js."
+  admin:
+    id: "E21IB0VBKYNNBW"
+    aliases:
+      - "admin.audit.sharemechat.com"
+    invalidations_in_session:
+      - id: "I8NY3KPNE8DF7ZZTC82B9LLHL1"
+        paths: "/*"
+        ts: "2026-07-09T20:41:33Z"
+        notes: "Sync deploy-frontend.ps1 -Surface admin con bundle main.e497623e.js."
+
+deploy_state_manifests:
+  path: "ops/deploy-state/audit.yaml"
+  backend:
+    git_commit: "c4f58cec7369ddbf660aa557328161f336349cc0"
+    git_commit_short: "c4f58ce"
+    jar_sha256: "05d52c29adadebdccc77ee4008b51da40edbe3bdaa3fcbdf23edebbf6ff270cf"
+    deployed_at_utc: "2026-07-09T20:10:00Z"
+    verification_method: "manual_scp+ssh_sha256_verified"
+    notes: |
+      Bloque backend editado a mano porque HEAD del repo al ejecutar
+      la nivelacion (3c36fcc) no coincide con el commit del JAR
+      (c4f58ce). ops/scripts/update-manifest-backend.ps1 asume
+      implicitamente HEAD=commit del JAR y no aplica en este caso.
+      Coincidencia bit-a-bit del jar_sha256 con el manifest TEST
+      documentada en verification.notes.
+  frontend_admin:
+    git_commit: "3c36fcc944858a30272707ac827197103a61635f"
+    git_commit_short: "3c36fcc"
+    bundle_sha256: "85b8d63181a43f7a541eb039c92bca9b1f0c8b9a863efde425381666e5f9c10a"
+    bundle: "main.e497623e.js"
+    deployed_at_utc: "2026-07-09T20:41:33Z"
+    verification_method: "deploy-frontend.ps1-live-build_2026-07-09T20:41:33Z"
+  frontend_product:
+    git_commit: "3c36fcc944858a30272707ac827197103a61635f"
+    git_commit_short: "3c36fcc"
+    bundle_sha256: "4e4974b81b9215aed7eb5e878c1328167d4375bdb3749304d28bedc3de367c78"
+    bundle: "main.7ef36d6c.js"
+    deployed_at_utc: "2026-07-09T20:42:35Z"
+    verification_method: "deploy-frontend.ps1-live-build_2026-07-09T20:42:35Z"
+
+verificacion_final:
+  http_smoke_estatico_admin:
+    "GET https://admin.audit.sharemechat.com/": "200 text/html 3613 bytes"
+    "GET https://admin.audit.sharemechat.com/static/js/main.e497623e.js": "200 179763 bytes"
+  http_smoke_estatico_product:
+    "GET https://audit.sharemechat.com/": "200 text/html 3613 bytes"
+    "GET https://audit.sharemechat.com/static/js/main.7ef36d6c.js": "200 179763 bytes"
+  http_smoke_funcional_anonimo:
+    "GET https://audit.sharemechat.com/api/products/emojis/available (sin auth)": "401 (esperado; endpoint autenticado)"
+    "POST https://audit.sharemechat.com/api/support/message (sin auth)": "401 (esperado)"
+    "GET https://audit.sharemechat.com/api/users/me (sin auth)": "401 (esperado)"
+    "POST https://audit.sharemechat.com/api/users/register/client (sin auth, body vacio)": "503 REGISTRATION_CLOSED (confirma PRODUCT_REGISTRATION_CLIENT_ENABLED=false vigente en .env)"
+  drift_check_pre_deploy_admin: "ALERT - backend c4f58ce por detras de candidato 3c36fcc en 5 commits (3 docs + 20572ac fix chat + 0c1b66a chore); ninguno del contrato del drift check, no escala a CRITICAL. Auto-confirmado por -AssumeYesNonCritical."
+  drift_check_pre_deploy_product: "ALERT - misma razon que admin. Auto-confirmado."
+  smoke_funcional_end_to_end_bot:
+    ejecutado: false
+    notes: |
+      El operador valida el chat con el Agente IA desde el navegador
+      con sesion real tras el ultimo restart. La sesion de agente
+      solo confirmo via journal que la peticion previa que devolvia
+      401 authentication_error ya no aparece tras el append de
+      CLAUDE_API_KEY.
+
+deudas_registradas_en_esta_ventana:
+  - id: "ventana-no-atomica-gift-tx"
+    titulo: "TransactionService.processGift + MessageService.sendGift son transacciones separadas @Transactional; ventana teorica donde el ledger queda descontado sin fila persistida en messages si sendGift lanza excepcion tras el commit del ledger."
+    fuente: "docs/04-operations/known-debt.md entrada 2026-07-09"
+    prioridad: "baja"
+    origen_deteccion: "auditoria exhaustiva de codigo del mismo dia (verificacion V6, previa a la nivelacion)."
+  - id: "documentacion-dot-env-ec2"
+    titulo: "config.env y secrets.env del EC2 no estaban documentados en docs/04-operations/access-and-tooling.md como fuente autoritaria de configuracion runtime; los defaults de application-*.properties del repo pueden inducir a confusion sobre el estado real de features por entorno."
+    fuente: "docs/04-operations/access-and-tooling.md seccion nueva anadida en el mismo commit"
+    prioridad: "documental (aplicada en el mismo commit)"
+
+entornos_no_tocados_o_paridad:
+  test:
+    estado: "PARIDAD FUNCIONAL con AUDIT tras la nivelacion. TEST no se toca en escritura durante la sesion salvo en modo lectura (SSH + tunel RDS)."
+    backend_commit_desplegado: "c4f58ce"
+    schema_version: 15
+    bundles_desplegados:
+      product: "main.7ef36d6c.js (bundle_sha256 4e4974b81b...)"
+      admin: "main.e497623e.js (bundle_sha256 85b8d631...)"
+  prod:
+    estado: "SIN TOCAR. Mantiene 5cdda0c del 2026-07-06 con hardening coming-soon (Didit off, Sightengine off, placeholders 'disabled' en secrets.env)."
+    backend_commit_desplegado: "5cdda0c"
+    schema_version: 14
+    diferencial_pendiente_hasta_paridad: |
+      - Aplicar V15 al RDS PROD via tunel bastion + mysqlsh.
+      - Desplegar JAR c4f58ce (sha256 05d52c29...) via scp + systemctl restart.
+      - Desplegar bundles frontend admin (main.e497623e.js) y product (main.7ef36d6c.js).
+      - Verificar que CLAUDE_API_KEY esta poblada en secrets.env de PROD (probablemente ausente por el mismo gap que se detecto hoy en AUDIT); anadirla si no.
+      - Repasar hardening: en PROD kyc.didit.enabled=false y moderation.sightengine.enabled=false estan forzados por application-prod.properties como override, no dependen del .env como AUDIT. Los placeholders "disabled" siguen en secrets.env.
+    condicion_disparo: "Decision de corte del operador tras el pivote soft launch (ADR-047) y la implementacion de la pagina publica de modelo /m/:slug (ADR-048)."

@@ -21,6 +21,8 @@ Dos frentes en curso en paralelo. El Frente 1 (Chat Soporte LLM · Panel humano)
 
 ## Frente 1: Chat Soporte LLM — Panel humano (ADR-046)
 
+Estado: **CERRADO en TEST y AUDIT** al 2026-07-09. Propagación a PROD pendiente y ligada a la decisión de corte del pivote soft launch (ADR-047).
+
 Objetivo:
 cerrar la superficie humana del Agente IA para que las conversaciones escaladas por el bot puedan atenderse por el equipo desde el backoffice admin, sin bloquear al bot en el resto de casos.
 
@@ -31,26 +33,47 @@ Secuencia actual:
 1. **Fase B.3.1 — backend + migración V15 + tests** — HECHO
    - Migración V15 con 2 CREATE TABLE + 6 ALTER TABLE + CHECK bi-columna. Corregida en el mismo día para respetar la restricción MySQL 8 (CHECK sobre columna con FK con acción referencial): las FKs de assignment pasan a `RESTRICT` implícito, el CHECK bi-columna se conserva.
    - Entidades / repositorios / servicios (`BackofficeAgentProfileService`, `BackofficeAgentProfileGrantService`, `SupportHumanHandlingService`) + `SupportBotService` con doble guard.
-   - `SupportAdminController` con 12 endpoints admin. Permisos `PERM_SUPPORT_CHAT_HANDLE` (baseline `ROLE_SUPPORT`) y `PERM_SUPPORT_PROFILE_MANAGE` (opt-in explícito).
-   - Tests: 519 total repo tras el cierre.
-   - **Desplegado en TEST** con commits `287f8c2` + `acb290a` (JAR `71ccb203…` posterior tras B.3.2). AUDIT y PROD sin tocar. Migración V15 pendiente de replicar a esos dos entornos cuando el operador decida el corte.
+   - `SupportAdminController` con 13 endpoints admin (12 originales + `GET /profiles/{profileId}/grants` cerrado en el mismo bloque de B.3.2). Permisos `PERM_SUPPORT_CHAT_HANDLE` (baseline `ROLE_SUPPORT`) y `PERM_SUPPORT_PROFILE_MANAGE` (opt-in explícito).
+   - Tests: 519 → 526 tras cierre del hueco de grants.
+   - **Desplegado en TEST** con commits `287f8c2` + `acb290a` (JAR `71ccb203…` posterior tras B.3.2).
 
 2. **Fase B.3.2 — frontend admin: AdminSupportPanel + hooks + CRUD profiles + i18n** — HECHO
    - Container `AdminSupportPanel` con sub-tabs internas `Conversaciones` / `Profiles` (no rutas separadas) gobernadas por las capabilities `canViewSupport` (⇔ `PERM_SUPPORT_CHAT_HANDLE`) y `canManageSupportProfiles` (⇔ `PERM_SUPPORT_PROFILE_MANAGE`).
    - Hooks nuevos `useSupportPendingCount` y `useConversationPolling` con guard `document.hidden`. Extensión aditiva de `AdminLayout` con soporte opcional de `badge` en items del sidebar (`9+` a partir de 10).
    - Vistas: master-detail de conversaciones con filtros/paginación, thread completo con optimistic updates al enviar mensaje, toolbar contextual (claim/release/message/resolve) según status y ownership; tabla CRUD de profiles con expandible inline por fila para grants; modales autocontenidos para create/edit profile, add grant y claim.
    - i18n admin.support ES+EN con ~60 claves.
-   - **Desplegado en TEST** con commit `794193d` (bundle admin `main.bebe34ed.js`, `b6e4437c…`). AUDIT y PROD sin tocar.
+   - **Desplegado en TEST** con commit `794193d` (bundle admin `main.bebe34ed.js`, `b6e4437c…`).
    - **Hueco detectado en deploy y cerrado el mismo día**: el sub-tab Profiles expandía grants pero el backend no exponía `GET /profiles/{profileId}/grants`. Cerrado en commit `d8d5b90` (endpoint nuevo + batch fetch de emails + 3 tests MockMvc; total repo 526 tests). Desplegado en TEST junto con B.3.2.
    - **Deuda #D-14 (Browser Notification API)**: originalmente prevista para B.3.2 según ADR-046. Diferida — no incluida en el alcance final entregado.
 
-3. **Fase B.3.3 — surface product (renderizado del switch bot→humano en el cliente)** — PENDIENTE (opcional)
-   - No forma parte del alcance mínimo del frente B.3. El backend ya devuelve `humanHandling:true` cuando la conversación está bajo claim, pero el frontend cliente (`SupportChat.jsx` de la surface product) hoy no rinde de forma diferenciada ese estado ni el mensaje SYSTEM del claim. Ajuste de UX menor; se decidirá si se hace en una sesión propia post-B.3.2.
+3. **Fase B.3.3 — surface product (renderizado del switch bot→humano en el cliente)** — HECHO (2026-07-08/09)
+   - Commit `cfb7110` con `SupportChat.jsx` del cliente adaptado: cuando el backend devuelve `humanHandling:true`, la burbuja muestra al peer humano con estilo diferenciado (avatar, inicial, timestamp) y el input pasa a polling contra `HUMAN_HANDLING` para detectar la respuesta del agente. Fix `min-width` de las burbujas incluido.
+   - Tres bugs post-deploy detectados y cerrados el mismo día (`b903fd6`): HTTP 400 inicial en el primer envío, mensajes duplicados por race del polling, ancho de burbuja no coherente en algunos anchos de ventana.
+   - Bundle product `main.4bfba…` → sucesivas iteraciones. Cerrado con `98e7ded` regularizando manifests TEST.
 
-4. **Replicación de la Fase B.3 a AUDIT y a PROD** — PENDIENTE
-   - Requiere aplicar V15 en RDS AUDIT y RDS PROD (vía túnel bastion + `mysqlsh`) y desplegar el JAR `71ccb203…` + bundle admin `main.bebe34ed.js` en cada entorno. Coordinar con el resto de frentes activos según prioridad del operador.
+4. **Frente lateral estilos chat P2P/soporte (Fase 1 + Fase 1.1)** — HECHO (2026-07-08/09)
+   - `30850f8` Fase 1: mejoras visuales de las burbujas del chat P2P y del chat de soporte con el Agente IA, más nickname visible en la firma de mensajes propios.
+   - `0e6be4d` Fase 1.1: avatar del peer + inicial + timestamp con estilo P2P unificado, y unificación del verde suave para los mensajes propios en ambas superficies.
+   - `20572ac` fix del avatar peer a gris claro suave con inicial legible.
+   - Regularización de manifests admin+product TEST en `627ba52`, `186f6dd`, `0c1b66a`.
 
-Deudas registradas (todas en `docs/04-operations/known-debt.md` entrada 2026-07-08 y en ADR-046 sección "Deudas diferidas"): #D-13 job expiración `ESCALATED > 48h`, #D-14 Browser Notification API para agents, #D-15 playbook DPO GDPR art. 15 sobre conversaciones humanas (obligatorio pre-go-live PROD).
+5. **Fase 2 chat P2P: catálogo de emojis filtrado por rol + validación server-side del gift** — HECHO (2026-07-09)
+   - Commit `c4f58ce`: endpoint nuevo `GET /api/products/emojis/available` (`ProductEmojiController`), servicio `EmojiCatalogService.getAvailableForRole(role)` mapeando `tier=QUICK → FREE_EMOJI` y `tier=PREMIUM → PAID_GIFT`. Refuerzo server-side en `MessagesWsHandlerSupport.handleMsgGift`: MODEL→CLIENT solo con FREE_EMOJI, CLIENT-CLIENT y MODEL-MODEL rechazados. Endpoint legacy `GET /api/gifts` sigue vivo por retrocompat con `renderGiftVisual` y `normalizeGiftMessage`.
+   - Bundle admin `main.e497623e.js` (`85b8d631…`) y product `main.7ef36d6c.js` (`4e4974b81b…`). Regularización de manifests TEST en `b112415`.
+
+6. **Replicación de la Fase B.3 (+ Fases 1/1.1/2/avatar) a AUDIT** — HECHO (2026-07-09)
+   - AUDIT nivelado de `074cb69` a `c4f58ce`. JAR reutilizado sin recompilar (mismo `sha256=05d52c29…` que el JAR de TEST). V15 aplicada limpiamente por Flyway en el primer arranque (`execution time 00:00.754s`).
+   - Base de Conocimiento del Agente IA nivelada: 3 UPDATE sobre `support_bot_prompts` (`comportamiento-agente-ia` v1→v2, `empresa-y-contacto` v1→v2, `producto-general` v1→v3) con `content` bit-a-bit igual al de TEST (MD5 verificado). Backup preventivo en tabla `support_bot_prompts_backup_20260709_audit_nivelacion` (14 filas). Restart del backend para forzar re-hidratación del `KnowledgeBaseService`.
+   - Frontend admin bundle `main.e497623e.js` y product bundle `main.7ef36d6c.js` desplegados con `deploy-frontend.ps1 -Environment audit`. Compilación determinista: `bundle_sha256` idéntico al de TEST en ambas superficies.
+   - `CLAUDE_API_KEY` añadida a `/opt/sharemechat/secrets.env` de AUDIT (reutilización de la key de TEST vía pipeline SSH atómico) tras detectar `Claude API 401 authentication_error` en el journal cuando el operador validó el chat con el Agente IA desde el navegador.
+   - Manifest `ops/deploy-state/audit.yaml` regularizado (backend a mano por decoupling entre HEAD del repo y commit del JAR; frontends por el script en su paso `[5.5/N]`).
+   - Detalle completo en `docs/project-log.md` entrada 2026-07-09 "Nivelación AUDIT completa" y en snapshot `docs/_snapshots/state-audit-2026-07-09.yaml`.
+
+7. **Replicación de la Fase B.3 a PROD** — PENDIENTE
+   - Requiere aplicar V15 al RDS PROD vía túnel bastion + `mysqlsh`, desplegar el JAR `05d52c29…` (commit `c4f58ce`) + bundles admin (`main.e497623e.js`) y product (`main.7ef36d6c.js`), y comprobar/populan `CLAUDE_API_KEY` en `/opt/sharemechat/secrets.env` de PROD (probablemente ausente por el mismo gap que aparece en AUDIT).
+   - Coordinar con el estado del pivote soft launch (ADR-047) y con el hardening PROD coming-soon vigente: los overrides `kyc.didit.enabled=false` y `moderation.sightengine.enabled=false` de `application-prod.properties` no se retiran en esta replicación; solo se propaga el frente B.3 + Fases 1/1.1/2/avatar.
+
+Deudas registradas del frente (todas en `docs/04-operations/known-debt.md`): #D-13 job expiración `ESCALATED > 48h`, #D-14 Browser Notification API para agents, #D-15 playbook DPO GDPR art. 15 sobre conversaciones humanas (obligatorio pre-go-live PROD).
 
 ---
 
