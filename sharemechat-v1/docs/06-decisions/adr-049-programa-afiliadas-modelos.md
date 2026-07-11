@@ -296,3 +296,46 @@ Aproximadamente 7-8 subpasadas efectivas (la 8 puede diferirse). El detalle exac
 ---
 
 **Alcance de entorno**: cuando toque implementar las subpasadas, el entorno de trabajo es **solo TEST** de momento. AUDIT y PROD se propagan en una fase posterior condicionada a la decisión de corte del operador tras cerrar el frente en TEST.
+
+## Actualización 2026-07-11 — Ajustes al abrir la Subpasada 1
+
+Al abrir la implementación de la subpasada 1 (schema BD + entidades JPA + repositorios) se cierran tres ajustes al diseño original con luz verde explícita del operador:
+
+### Reubicación del código y de la atribución a la tabla `users`
+
+Las columnas `referral_code_owner`, `referred_by_user_id` y `referred_at` viven en `users`, no en tablas separadas. Consecuencia:
+
+- **Se elimina la tabla `affiliate_codes`** como pieza estructural; el código de la modelo afiliada vive en `users.referral_code_owner VARCHAR(12) UNIQUE NULL`.
+- **La atribución `clients.referrer_model_user_id` propuesta en D5 pasa a `users.referred_by_user_id`** (mismo semántica, mejor localización porque el `USER` no siempre tiene fila en `clients` en el instante del registro).
+- El resto de tablas (`affiliate_link_tokens`, `affiliate_click_events`, `affiliate_commissions`) siguen como estaban planteadas, ancladas a `users.id` de la modelo referidora por FK.
+
+### D11 revisado — cálculo on-demand, sin batch scheduled
+
+El diseño original describía un `MonthlyAffiliateSettlementJob` cron nocturno que transitaba comisiones `ACCRUED → PAYABLE | SKIPPED_NO_ACTIVITY` al cerrar el mes calendario. **Se sustituye por cálculo on-demand**: al procesar el evento `SUCCESS` de la `PaymentSession` del cliente atribuido, la lógica de comisión consulta directamente si la modelo referidora tiene alguna facturación propia en el mes calendario del cobro. Si sí, se crea la fila `affiliate_commissions` con `status='PAYABLE'`. Si no, se salta silenciosamente o se registra con `status='SKIPPED_NO_ACTIVITY'` para trazabilidad, sin batch posterior.
+
+Justificación: un batch que si falla pierde ejecución introduce complejidad operativa (monitoring, reintento, catch-up manual) sin retorno claro en la escala actual del programa. On-demand es determinístico, sin estado externo, y si el query resulta caro en el futuro se cachea con TTL corto sin cambio de diseño.
+
+Consecuencia: la subpasada 5 del trabajo derivado (motor de comisiones) sustituye "Job mensual" por "hook en el service que procesa el SUCCESS de PaymentSession". La subpasada 6 (payout) sigue agregando comisiones `PAYABLE` en un `PayoutRequest` mensual, pero el disparador del agregado es un endpoint admin manual `POST /api/admin/affiliate/settle-month` en lugar de un cron.
+
+### D14 — Índices explícitos en `users`
+
+- `uq_users_referral_code_owner UNIQUE (referral_code_owner)` — garantiza unicidad global del código; dos modelos no pueden tener el mismo `referral_code_owner`.
+- `idx_users_referred_by (referred_by_user_id)` — soporta las consultas "clientes atribuidos a esta modelo" en el panel modelo (D11 original, ahora D11 revisado).
+
+La verificación de "si ya existen antes de crearlos" se cumple por inspección de las 15 migraciones anteriores (V1–V15): ninguna crea columnas ni índices sobre `referral_code_owner` o `referred_by_user_id` en `users`. La V16 los añade por primera vez.
+
+### D15 — GDPR-tracking en `affiliate_click_events`
+
+- **`ip_hash CHAR(16) NULL`** — SHA-256 del par `ip + salt` (salt en property `authrisk.email-hash-salt` reutilizado o similar) truncado a los primeros **16 caracteres hexadecimales** (64 bits). No reversible a la IP original. Suficiente para agregación anti-abuso ("¿este mismo device generó 50 clicks en 1 hora?") sin persistir PII.
+- **`ua_hash CHAR(16) NULL`** — SHA-256 del User-Agent + salt, mismo truncado. Opcional; se puede omitir sin coste operativo si el operador prefiere no persistirlo.
+
+Nunca se guarda IP plana ni User-Agent en claro. Coherente con el patrón de `AuthRiskService` (ADR-008) que ya usa `ip_hash` y `uaHash` en logs.
+
+### Charset del código de afiliación (D7 confirmado con matiz)
+
+El código de afiliación usa **Crockford's Base32 sin caracteres ambiguos**: alfabeto `0123456789ABCDEFGHJKMNPQRSTVWXYZ` (32 caracteres sin `I`, `L`, `O`, `U`). Longitud fija **12 caracteres**. Comentario SQL en la columna + CHECK constraint con regex `^[0-9A-HJKMNPQRSTVWXYZ]{12}$` para bloquear inserciones fuera del charset (MySQL 8.0+ soporta CHECK activo).
+
+### Deudas adicionales abiertas por el ajuste
+
+- **#D-23** — `payment_session_id` en `affiliate_commissions` permite reversos como filas separadas gracias al UNIQUE compuesto `(payment_session_id, status)`, no UNIQUE simple sobre `payment_session_id`. Revisitable si la subpasada 4 detecta casos que no encajan.
+- **#D-24** — la salt para `ip_hash` de `affiliate_click_events` reutiliza `authrisk.email-hash-salt` en fase 1 para minimizar superficie de propiedades. Si el operador quiere separar salts por dominio (autorisk vs affiliate), se abre property nueva en subpasada 3.

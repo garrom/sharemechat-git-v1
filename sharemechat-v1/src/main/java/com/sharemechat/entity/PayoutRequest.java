@@ -42,6 +42,14 @@ public class PayoutRequest {
     @Column(name="updated_at", insertable=false, updatable=false)
     private LocalDateTime updatedAt;
 
+    // ADR-049 Subpasada 1: tipo de payout. STREAM (payout ordinario de
+    // streaming, valor por defecto para todas las filas historicas y para
+    // el flujo actual) o AFFILIATE (payout agregado de comisiones de
+    // afiliacion, generado por el motor de comisiones a partir de
+    // affiliate_commissions PAYABLE del mes).
+    @Column(name="payout_type", nullable=false, length=20)
+    private String payoutType = "STREAM";
+
     public PayoutRequest() {}
 
     public Long getId() { return id; }
@@ -72,4 +80,7 @@ public class PayoutRequest {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public LocalDateTime getUpdatedAt() { return updatedAt; }
+
+    public String getPayoutType() { return payoutType; }
+    public void setPayoutType(String payoutType) { this.payoutType = payoutType; }
 }

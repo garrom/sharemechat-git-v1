@@ -130,6 +130,22 @@ public class User {
     @Column(name = "client_kyc_estimated_age", precision = 5, scale = 2)
     private BigDecimal clientKycEstimatedAge;
 
+    // ADR-049 Subpasada 1: sistema de afiliadas.
+    // - referral_code_owner: codigo publico de afiliacion de la modelo
+    //   (Crockford Base32 sin ambiguos, longitud 12). UNIQUE en BD.
+    //   NULL si el USER no ha activado el programa (o no es MODEL).
+    // - referred_by_user_id: user_id de la modelo referidora si el USER
+    //   llego por afiliacion. Inmutable tras el registro (guard en service).
+    // - referred_at: timestamp del momento de la atribucion.
+    @Column(name = "referral_code_owner", length = 12, unique = true)
+    private String referralCodeOwner;
+
+    @Column(name = "referred_by_user_id")
+    private Long referredByUserId;
+
+    @Column(name = "referred_at")
+    private LocalDateTime referredAt;
+
     public User() {
         this.createdAt = LocalDateTime.now();
         // updatedAt NO se inicializa aqui: la columna esta con
@@ -231,4 +247,13 @@ public class User {
 
     public BigDecimal getClientKycEstimatedAge() { return clientKycEstimatedAge; }
     public void setClientKycEstimatedAge(BigDecimal clientKycEstimatedAge) { this.clientKycEstimatedAge = clientKycEstimatedAge; }
+
+    public String getReferralCodeOwner() { return referralCodeOwner; }
+    public void setReferralCodeOwner(String referralCodeOwner) { this.referralCodeOwner = referralCodeOwner; }
+
+    public Long getReferredByUserId() { return referredByUserId; }
+    public void setReferredByUserId(Long referredByUserId) { this.referredByUserId = referredByUserId; }
+
+    public LocalDateTime getReferredAt() { return referredAt; }
+    public void setReferredAt(LocalDateTime referredAt) { this.referredAt = referredAt; }
 }

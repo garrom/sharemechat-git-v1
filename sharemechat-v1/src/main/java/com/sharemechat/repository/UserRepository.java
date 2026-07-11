@@ -32,4 +32,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT u FROM User u WHERE u.id = :id")
     Optional<User> findByIdForUpdate(@Param("id") Long id);
+
+    // ADR-049 Subpasada 1: consultas del sistema de afiliadas.
+    Optional<User> findByReferralCodeOwner(String referralCodeOwner);
+
+    boolean existsByReferralCodeOwner(String referralCodeOwner);
+
+    List<User> findByReferredByUserId(Long referredByUserId);
+
+    long countByReferredByUserId(Long referredByUserId);
 }
