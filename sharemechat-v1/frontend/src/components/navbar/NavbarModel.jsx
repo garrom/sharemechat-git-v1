@@ -84,6 +84,11 @@ const NavbarModel = ({
         icon: faShareNodes,
         iconStyle: { color: '#0ea5e9', fontSize: '1rem' },
         disabled: affiliateDisabled,
+        // ADR-049 Subpasada 2C fix: coherencia con Stats/Withdraw/Logout.
+        // En desktop el pill Afiliada tambien va icon-only (tooltip nativo +
+        // aria-label lo resuelve DesktopActions). El item mobile del
+        // hamburger conserva su texto (se define abajo).
+        iconOnly: true,
       } : null}
       // Stats / Withdraw / Logout: icon-only con tooltip nativo + aria-label
       // para screen readers (aria-label lo pone DesktopActions cuando iconOnly).

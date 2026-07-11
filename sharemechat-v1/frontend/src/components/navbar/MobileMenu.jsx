@@ -72,7 +72,15 @@ const MobileMenu = ({
           disabled={item.disabled}
         >
           {item.iconImgSrc
-            ? <img src={item.iconImgSrc} alt="" width={40} height={40} style={{ display: 'block' }} />
+            /*
+              Fix Subpasada 2C: reducimos la imagen de 40x40 a 20x20 para
+              igualar la altura visual del item Support al resto de items
+              del menu movil (los FA icons renderizan a ~15-16 px de altura
+              con el font-size del NavButton). Con 40x40 el pill Support
+              crecia unos 25 px mas alto que los demas y rompia la fila
+              vertical. 20x20 mantiene lectura + alinea altura.
+            */
+            ? <img src={item.iconImgSrc} alt="" width={20} height={20} style={{ display: 'block' }} />
             : (item.icon ? <FontAwesomeIcon icon={item.icon} style={item.iconStyle} /> : null)}
 
           {item.useIconWrapper ? (
