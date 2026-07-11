@@ -24,8 +24,19 @@ public class AffiliateLinkToken {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** SHA-256 hex del token plano. UNIQUE. */
-    @Column(name = "token_hash", nullable = false, length = 64, unique = true)
+    /**
+     * SHA-256 hex del token plano. UNIQUE, longitud fija 64 chars hex.
+     *
+     * <p><b>columnDefinition CHAR(64)</b>: la V16 declara CHAR(64) porque
+     * SHA-256 hex tiene longitud fija (siempre 64 chars). Sin este
+     * columnDefinition, Hibernate mapea String con length=64 como VARCHAR(64)
+     * y Spring rompe el arranque con Schema-validation ({@code found char,
+     * but expecting varchar}). Regresion hermana a la de {@code ipHash}/
+     * {@code uaHash} en {@link AffiliateClickEvent}, detectada en el
+     * segundo intento de smoke MySQL de subpasada 2A el 2026-07-11 en TEST.
+     */
+    @Column(name = "token_hash", nullable = false, length = 64, unique = true,
+            columnDefinition = "CHAR(64)")
     private String tokenHash;
 
     /** userId de la modelo referidora asociada al codigo del click original. */
