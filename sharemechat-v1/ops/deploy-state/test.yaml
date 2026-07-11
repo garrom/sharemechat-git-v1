@@ -1,9 +1,8 @@
 ﻿# Manifest de estado de despliegue - entorno TEST
-# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
-# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
-# correspondiente al surface desplegado tras smoke OK. NO se
-# hace commit automatico: el operador commitea el manifest
-# cuando le conviene (decision D2).
+# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
+# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
+# deploy manual del backend (scp + restart). NO se hace commit
+# automatico: el operador commitea cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
@@ -22,25 +21,25 @@ frontend_product:
   working_tree_clean: true
   bucket: sharemechat-frontend-test
   bundle: main.7ef36d6c.js
-last_update_source: deploy-frontend.ps1-fase1-paso2a
+last_update_source: update-manifest-backend.ps1-fase1-paso2b
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-08T22:46:03Z
-  jar_sha256: 05d52c29adadebdccc77ee4008b51da40edbe3bdaa3fcbdf23edebbf6ff270cf
+  deployed_at: 2026-07-11T18:02:21Z
+  jar_sha256: b101c3e25b9cd8da923a9d43fd7718b52554fe79096c680945333cb8b31bcbd3
   verification:
     method: manual_via_update-manifest-backend.ps1+remote-verify
-    verified_at: 2026-07-08T22:46:03Z
+    verified_at: 2026-07-11T18:02:21Z
     notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-07-08T22:46:03Z
+  built_at: 2026-07-11T18:02:21Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: c4f58cec7369ddbf660aa557328161f336349cc0
-  git_commit_short: c4f58ce
-last_updated_at: 2026-07-08T23:02:54Z
+  git_commit: bf4fcd9836dd479008fc8fc3c8c82835b5644d01
+  git_commit_short: bf4fcd9
+last_updated_at: 2026-07-11T18:02:21Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
   verification:
