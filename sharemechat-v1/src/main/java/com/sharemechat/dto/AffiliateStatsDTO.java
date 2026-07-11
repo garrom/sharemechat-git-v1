@@ -1,4 +1,4 @@
-package com.sharemechat.affiliate.dto;
+package com.sharemechat.dto;
 
 /**
  * ADR-049 Subpasada 2A: contadores del panel de la modelo afiliada.

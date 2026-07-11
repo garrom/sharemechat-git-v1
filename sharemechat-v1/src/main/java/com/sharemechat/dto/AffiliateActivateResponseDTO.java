@@ -1,4 +1,4 @@
-package com.sharemechat.affiliate.dto;
+package com.sharemechat.dto;
 
 import java.time.LocalDateTime;
 

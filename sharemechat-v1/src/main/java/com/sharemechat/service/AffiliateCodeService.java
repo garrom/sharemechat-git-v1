@@ -1,4 +1,4 @@
-package com.sharemechat.affiliate.service;
+package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.User;

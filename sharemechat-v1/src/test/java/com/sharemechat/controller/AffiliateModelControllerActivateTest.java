@@ -1,6 +1,6 @@
-package com.sharemechat.affiliate.controller;
+package com.sharemechat.controller;
 
-import com.sharemechat.affiliate.service.AffiliateCodeService;
+import com.sharemechat.service.AffiliateCodeService;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.AffiliateClickEventRepository;

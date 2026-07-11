@@ -1,9 +1,9 @@
-package com.sharemechat.affiliate.controller;
+package com.sharemechat.controller;
 
-import com.sharemechat.affiliate.dto.AffiliateActivateResponseDTO;
-import com.sharemechat.affiliate.dto.AffiliateDashboardDTO;
-import com.sharemechat.affiliate.dto.AffiliateStatsDTO;
-import com.sharemechat.affiliate.service.AffiliateCodeService;
+import com.sharemechat.dto.AffiliateActivateResponseDTO;
+import com.sharemechat.dto.AffiliateDashboardDTO;
+import com.sharemechat.dto.AffiliateStatsDTO;
+import com.sharemechat.service.AffiliateCodeService;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.AffiliateClickEventRepository;
 import com.sharemechat.repository.AffiliateCommissionRepository;

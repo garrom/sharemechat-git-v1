@@ -1,4 +1,4 @@
-package com.sharemechat.affiliate.dto;
+package com.sharemechat.dto;
 
 /**
  * ADR-049 Subpasada 2A: respuesta de {@code GET /api/models/me/affiliate}.
