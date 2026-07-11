@@ -70,7 +70,23 @@ public class AffiliateCommission {
     @Column(name = "commission_amount_cents", nullable = false)
     private Long commissionAmountCents;
 
-    /** Anio*100 + mes calendario del cobro. Ej 202607. */
+    /**
+     * Anio*100 + mes calendario del cobro. Ej 202607 = julio 2026.
+     *
+     * <p><b>Convencion UTC estricta</b>: el mes calendario se calcula en UTC,
+     * NO en zona horaria local del backend ni del emisor del pago. Motivo:
+     * evitar problemas de DST (los saltos de hora primavera/otono generan
+     * off-by-one al cruzar medianoche en pagos limitrofes) y garantizar
+     * consistencia operativa cross-region cuando entren PSP con timestamps
+     * de otras regiones (Wise, Paxum, NOWPayments, PSP tarjeta futuro).
+     *
+     * <p>La subpasada 5 (motor de comisiones on-demand) debe respetar esta
+     * convencion al derivar el periodo desde {@code PaymentSession}. Ejemplo
+     * de query correcto para "modelo activa este mes":
+     * {@code WHERE confirmed_at >= DATE_TRUNC('month', <paidAt> AT UTC)} —
+     * nunca leer la zona del servidor ni {@code CURRENT_TIMESTAMP} sin
+     * ancorarlo a UTC explicitamente.
+     */
     @Column(name = "period_yyyymm", nullable = false)
     private Integer periodYyyymm;
 
