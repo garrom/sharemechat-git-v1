@@ -41,12 +41,24 @@ public class AffiliateClickEvent {
     @Column(name = "client_user_id")
     private Long clientUserId;
 
-    /** SHA-256(ip + salt) truncado a 16 chars hex. NULL si no aplica. */
-    @Column(name = "ip_hash", length = 16)
+    /**
+     * SHA-256(ip + salt) truncado a 16 chars hex. NULL si no aplica.
+     *
+     * <p><b>columnDefinition CHAR(16)</b>: la V16 declara CHAR(16) porque el
+     * hash truncado tiene longitud fija (siempre 16 hex chars). Sin este
+     * columnDefinition, Hibernate mapea String con length=16 como VARCHAR(16)
+     * y Spring rompe el arranque con Schema-validation ({@code found char,
+     * but expecting varchar}). Regresion detectada durante el smoke de la
+     * subpasada 2A el 2026-07-11 en TEST.
+     */
+    @Column(name = "ip_hash", length = 16, columnDefinition = "CHAR(16)")
     private String ipHash;
 
-    /** SHA-256(user_agent + salt) truncado a 16 chars hex. Opcional. */
-    @Column(name = "ua_hash", length = 16)
+    /**
+     * SHA-256(user_agent + salt) truncado a 16 chars hex. Opcional.
+     * Mismo motivo que {@code ipHash} para {@code columnDefinition = "CHAR(16)"}.
+     */
+    @Column(name = "ua_hash", length = 16, columnDefinition = "CHAR(16)")
     private String uaHash;
 
     @Column(name = "created_at", nullable = false, updatable = false,
