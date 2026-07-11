@@ -1037,6 +1037,7 @@
       "videochat": "Videochat",
       "favorites": "Favorites",
       "blog": "Blog",
+      "affiliate": "Affiliate",
       "openMenu": "Open menu",
       "menu": "Menu"
     },
@@ -3163,5 +3164,9 @@
       "connectionLost": "Connection lost. Please try again.",
       "generic": "An error occurred. Contact support if it persists."
     }
+  },
+  "affiliatePlaceholder": {
+    "title": "Affiliate Program",
+    "body": "Coming soon. Here you'll be able to activate your affiliate code, generate your shareable URL and QR, and review the stats of your referrals."
   }
 }

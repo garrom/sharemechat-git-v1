@@ -17,9 +17,11 @@ const DesktopActions = ({
   showLocaleSwitcher = true,
   primaryAction = null,
   secondaryAction = null,
+  tertiaryAction = null,
   logoutLabel,
   logoutTitle,
   onLogout,
+  logoutIconOnly = false,
   avatarUrl = null,
   avatarFallback = null,
   avatarTitle,
@@ -28,6 +30,30 @@ const DesktopActions = ({
   wrapperClassName = 'desktop-only',
   useNavGroupAttr = true,
 }) => {
+  // ADR-049 Subpasada 2C: soporte opt-in para pills "icon-only" en el grupo
+  // derecho del navbar. Cada action expone su propio flag `iconOnly`; cuando
+  // es true, renderizamos solo el icono con padding compacto y anadimos
+  // aria-label + title con la etiqueta como fallback semantico para
+  // screen readers y tooltip nativo del navegador.
+  const renderAction = (action) => {
+    if (!action) return null;
+    const iconOnly = !!action.iconOnly;
+    return (
+      <NavButton
+        type="button"
+        onClick={action.onClick}
+        title={action.title || action.label}
+        aria-label={iconOnly ? action.label : undefined}
+        disabled={action.disabled}
+        style={iconOnly ? { paddingInline: '12px' } : undefined}
+      >
+        {action.icon ? (
+          <FontAwesomeIcon icon={action.icon} style={action.iconStyle} />
+        ) : null}
+        {!iconOnly ? <span>{action.label}</span> : null}
+      </NavButton>
+    );
+  };
   return (
     <StyledNavActionsRow
       className={wrapperClassName}
@@ -39,33 +65,16 @@ const DesktopActions = ({
 
       {showLocaleSwitcher ? <LocaleSwitcher /> : null}
 
-      {primaryAction ? (
-        <NavButton
-          type="button"
-          onClick={primaryAction.onClick}
-          title={primaryAction.title}
-          disabled={primaryAction.disabled}
-        >
-          {primaryAction.icon ? (
-            <FontAwesomeIcon icon={primaryAction.icon} style={primaryAction.iconStyle} />
-          ) : null}
-          <span>{primaryAction.label}</span>
-        </NavButton>
-      ) : null}
+      {/* ADR-049 Subpasada 2C: el pill de Afiliada (tertiaryAction) va PRIMERO
+          del grupo de acciones para destacar la seccion nueva mientras las
+          utilitarias frecuentes (Stats/Withdraw/Logout) quedan icon-only al
+          final. En NavbarClient tertiaryAction es null y el orden clasico se
+          preserva. */}
+      {renderAction(tertiaryAction)}
 
-      {secondaryAction ? (
-        <NavButton
-          type="button"
-          onClick={secondaryAction.onClick}
-          title={secondaryAction.title}
-          disabled={secondaryAction.disabled}
-        >
-          {secondaryAction.icon ? (
-            <FontAwesomeIcon icon={secondaryAction.icon} style={secondaryAction.iconStyle} />
-          ) : null}
-          <span>{secondaryAction.label}</span>
-        </NavButton>
-      ) : null}
+      {renderAction(primaryAction)}
+
+      {renderAction(secondaryAction)}
 
       {logoutLabel ? (
         <NavButton
@@ -73,9 +82,10 @@ const DesktopActions = ({
           onClick={onLogout}
           title={logoutTitle || logoutLabel}
           aria-label={logoutLabel}
+          style={logoutIconOnly ? { paddingInline: '12px' } : undefined}
         >
           <FontAwesomeIcon icon={faSignOutAlt} />
-          <span>{logoutLabel}</span>
+          {!logoutIconOnly ? <span>{logoutLabel}</span> : null}
         </NavButton>
       ) : null}
 

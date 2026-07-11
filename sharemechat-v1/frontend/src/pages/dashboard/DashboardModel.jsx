@@ -3159,6 +3159,7 @@ const DashboardModel = () => {
         onGoSupport={handleGoSupport}
         onGoBlog={handleGoBlog}
         onGoStats={handleGoStats}
+        onGoAffiliate={() => history.push('/perfil-modelo/afiliada')}
         onProfile={handleProfile}
         onWithdraw={handleRequestPayout}
         onLogout={handleLogout}

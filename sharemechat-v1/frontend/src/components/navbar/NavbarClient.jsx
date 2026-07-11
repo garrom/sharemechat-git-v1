@@ -63,16 +63,23 @@ const NavbarClient = ({
       displayName={displayName}
       balanceText={showBalance ? balanceTextDesktop : null}
       showLocaleSwitcher={showLocaleSwitcher}
+      // ADR-049 Subpasada 2C: pill de Comprar / Buy pasa a icon-only para
+      // alinearse con el patron compacto que introdujo NavbarModel. La
+      // etiqueta se preserva via title + aria-label (DesktopActions lo
+      // aplica cuando `iconOnly`).
       primaryAction={{
         label: effectiveBuyLabel,
+        title: effectiveBuyLabel,
         onClick: onBuy,
         icon: faGem,
         iconStyle: { color: '#22c55e', fontSize: '1rem' },
         disabled: buyDisabled,
+        iconOnly: true,
       }}
       logoutLabel={i18n.t('dashboardClient.actions.logout')}
       logoutTitle={i18n.t('dashboardClient.actions.logoutTitle')}
       onLogout={onLogout}
+      logoutIconOnly={true}
       avatarUrl={avatarUrl}
       avatarFallback="/img/avatarChico.png"
       avatarTitle={i18n.t('dashboardClient.actions.viewProfile')}

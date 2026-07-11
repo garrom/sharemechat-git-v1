@@ -10,6 +10,7 @@ import DashboardAdmin from './pages/admin/DashboardAdmin';
 import AdminAccessPage from './pages/admin/AdminAccessPage';
 import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
+import AffiliatePanelModel from './pages/subpages/AffiliatePanelModel';
 import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
 import ModelKycDiditPage from './pages/subpages/ModelKycDiditPage';
 import ModelKycDiditProcessingPage from './pages/subpages/ModelKycDiditProcessingPage';
@@ -193,6 +194,10 @@ function App() {
 
                     <Route path="/perfil-client" render={() => (<RequireRole role="CLIENT"><PerfilClient /></RequireRole>)} />
                     <Route path="/perfil-model" render={() => (<RequireRole role="MODEL"><PerfilModel /></RequireRole>)} />
+                    {/* ADR-049 Subpasada 2C: panel de Afiliadas de la modelo.
+                        Placeholder mientras no llegue la implementacion real
+                        (URL/QR/stats — subpasada 2D). */}
+                    <Route path="/perfil-modelo/afiliada" render={() => (<RequireRole role="MODEL"><AffiliatePanelModel /></RequireRole>)} />
                     <Route path="/change-password" render={() => (<RequireRole roles={[Roles.CLIENT, Roles.MODEL, Roles.ADMIN]}><ChangePasswordPage /></RequireRole>)} />
                     {/* Fallback para bookmarks antiguos: el chat con el
                         Agente IA vive dentro de /client|/model (panel central

@@ -1037,6 +1037,7 @@
       "videochat": "Videochat",
       "favorites": "Favoritos",
       "blog": "Blog",
+      "affiliate": "Afiliada",
       "openMenu": "Abrir menú",
       "menu": "Menú"
     },
@@ -3163,5 +3164,9 @@
       "connectionLost": "Se ha perdido la conexión. Intenta de nuevo.",
       "generic": "Ha ocurrido un error. Contacta con soporte si persiste."
     }
+  },
+  "affiliatePlaceholder": {
+    "title": "Programa de Afiliadas",
+    "body": "Próximamente. Aquí podrás activar tu código de afiliación, generar tu URL y QR compartibles, y consultar las estadísticas de tus referidos."
   }
 }
