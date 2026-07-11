@@ -3165,8 +3165,42 @@
       "generic": "Ha ocurrido un error. Contacta con soporte si persiste."
     }
   },
-  "affiliatePlaceholder": {
+  "affiliate": {
     "title": "Programa de Afiliadas",
-    "body": "Próximamente. Aquí podrás activar tu código de afiliación, generar tu URL y QR compartibles, y consultar las estadísticas de tus referidos."
+    "description": "Gana el 30 % de por vida de los clientes que traigas a SharemeChat. Comparte tu URL o QR con quien quieras.",
+    "reload": "Recargar",
+    "notActivated": {
+      "title": "Aún no has activado el programa",
+      "description": "Activa tu código de afiliación para empezar a compartir tu URL de referido y ganar comisiones.",
+      "button": "Activar programa",
+      "activating": "Activando…",
+      "kycRequired": "Solo puedes activar si tu KYC está aprobado."
+    },
+    "activated": {
+      "urlSection": "Tu URL de referido",
+      "copyButton": "Copiar URL",
+      "copySuccess": "URL copiada ✓",
+      "qrSection": "Tu QR",
+      "qrAlt": "QR con el código {{code}}",
+      "qrDownload": "Descargar QR",
+      "qrError": "No se pudo cargar el QR.",
+      "qrRetry": "Reintentar",
+      "qrHint": "Escanea el QR con la cámara del móvil para abrir tu URL de referido.",
+      "statsSection": "Estadísticas",
+      "statsRealtime": "Las estadísticas se actualizan en tiempo real.",
+      "statsClicks": "Clics totales",
+      "statsClicksMeta": "Visitas registradas en la landing.",
+      "statsUniqueVisitors": "Visitantes únicos",
+      "statsUniqueVisitorsMeta": "Estimación por IP anonimizada.",
+      "statsReferred": "Clientes referidos",
+      "statsReferredMeta": "Registros atribuidos a ti.",
+      "statsCommission": "Comisión acumulada",
+      "statsCommissionMeta": "Ganancias acumuladas por tus referidos."
+    },
+    "errors": {
+      "loading": "No se ha podido cargar el panel. Inténtalo de nuevo.",
+      "qr": "No se pudo cargar el QR.",
+      "generic": "Ha ocurrido un error. Vuelve a intentarlo más tarde."
+    }
   }
 }

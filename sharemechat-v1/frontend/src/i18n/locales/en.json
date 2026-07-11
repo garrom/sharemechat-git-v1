@@ -3165,8 +3165,42 @@
       "generic": "An error occurred. Contact support if it persists."
     }
   },
-  "affiliatePlaceholder": {
+  "affiliate": {
     "title": "Affiliate Program",
-    "body": "Coming soon. Here you'll be able to activate your affiliate code, generate your shareable URL and QR, and review the stats of your referrals."
+    "description": "Earn 30% for life from the clients you bring to SharemeChat. Share your URL or QR with anyone you like.",
+    "reload": "Reload",
+    "notActivated": {
+      "title": "You haven't activated the program yet",
+      "description": "Activate your affiliate code to start sharing your referral URL and earn commissions.",
+      "button": "Activate program",
+      "activating": "Activating…",
+      "kycRequired": "You can only activate if your KYC is approved."
+    },
+    "activated": {
+      "urlSection": "Your referral URL",
+      "copyButton": "Copy URL",
+      "copySuccess": "URL copied ✓",
+      "qrSection": "Your QR",
+      "qrAlt": "QR with code {{code}}",
+      "qrDownload": "Download QR",
+      "qrError": "Could not load QR.",
+      "qrRetry": "Retry",
+      "qrHint": "Scan the QR with your phone camera to open your referral URL.",
+      "statsSection": "Statistics",
+      "statsRealtime": "Stats update in real time.",
+      "statsClicks": "Total clicks",
+      "statsClicksMeta": "Visits recorded on the landing page.",
+      "statsUniqueVisitors": "Unique visitors",
+      "statsUniqueVisitorsMeta": "Estimated by anonymized IP.",
+      "statsReferred": "Referred clients",
+      "statsReferredMeta": "Registrations attributed to you.",
+      "statsCommission": "Accrued commission",
+      "statsCommissionMeta": "Earnings accrued from your referrals."
+    },
+    "errors": {
+      "loading": "Could not load the panel. Please try again.",
+      "qr": "Could not load QR.",
+      "generic": "An error occurred. Please try again later."
+    }
   }
 }

@@ -92,16 +92,29 @@ const messagesAreaStyle = {
   gap: 4,
 };
 
+// Fix Subpasada 2D: layout estructural del input row del chat. Antes el
+// `textarea` con `flex: 1` sin `minWidth: 0` no podia colapsar por debajo
+// de su ancho intrinseco (placeholder + font-metrics) en viewports
+// estrechos, empujando el boton "Enviar" fuera del viewport. El fix
+// root-cause es asegurar que el textarea puede shrink hasta 0
+// (`minWidth: 0`) y que el boton NUNCA se comprime (`flexShrink: 0` +
+// `whiteSpace: 'nowrap'`). Se agrega `width: '100%'` + `boxSizing:
+// border-box` al container para blindar contra padding del padre.
 const inputRowStyle = {
   display: 'flex',
   gap: 8,
   alignItems: 'flex-end',
   paddingTop: 8,
   borderTop: '1px solid #e5e7eb',
+  width: '100%',
+  boxSizing: 'border-box',
+  flexWrap: 'nowrap',
+  minWidth: 0,
 };
 
 const textareaStyle = {
-  flex: 1,
+  flex: '1 1 auto',
+  minWidth: 0,
   minHeight: 44,
   maxHeight: 160,
   padding: '10px 12px',
@@ -112,6 +125,7 @@ const textareaStyle = {
   resize: 'none',
   boxSizing: 'border-box',
   outline: 'none',
+  width: '100%',
 };
 
 const sendBtnBase = {
@@ -126,6 +140,8 @@ const sendBtnBase = {
   gap: 6,
   height: 44,
   transition: 'background 120ms ease, color 120ms ease',
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
 };
 
 const sendBtnResolvedStyle = (hover, disabled) => {
