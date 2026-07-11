@@ -66,6 +66,10 @@ public class SecurityConfig {
                         .requestMatchers("/api/email-verification/confirm").permitAll()
                         .requestMatchers("/api/public/home/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/content/**").permitAll()
+                        // ADR-049 Subpasada 2B: landing publica y magic link del programa de afiliadas.
+                        // POST /click, POST /magic-link, GET /link/consume. Sin auth (endpoints publicos
+                        // llamados desde landing SPA + email links).
+                        .requestMatchers("/api/public/affiliate/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/users/avatars/**").permitAll()
 
                         // SEO layer (Frente 2 sobre CMS Fase 4A): sitemap dinamico

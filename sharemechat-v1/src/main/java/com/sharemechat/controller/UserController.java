@@ -19,6 +19,7 @@ import com.sharemechat.service.UserService;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.util.StringUtils;
@@ -43,6 +44,8 @@ public class UserController {
     private final BackofficeAccessService backofficeAccessService;
     private final ProductOperationalModeService productOperationalModeService;
 
+    private final String affiliateCookieName;
+
     public UserController(UserService userService,
                           UserRepository userRepository,
                           ModelAssetRepository modelAssetRepository,
@@ -51,7 +54,8 @@ public class UserController {
                           ConsentService consentService,
                           AgeGatePolicyService ageGatePolicyService,
                           BackofficeAccessService backofficeAccessService,
-                          ProductOperationalModeService productOperationalModeService) {
+                          ProductOperationalModeService productOperationalModeService,
+                          @Value("${affiliate.cookie.name:sharemechat_affiliate_ref}") String affiliateCookieName) {
         this.userService = userService;
         this.modelAssetRepository = modelAssetRepository;
         this.clientDocumentRepository = clientDocumentRepository;
@@ -61,6 +65,7 @@ public class UserController {
         this.ageGatePolicyService = ageGatePolicyService;
         this.backofficeAccessService = backofficeAccessService;
         this.productOperationalModeService = productOperationalModeService;
+        this.affiliateCookieName = affiliateCookieName;
     }
 
 
@@ -99,7 +104,12 @@ public class UserController {
         String acceptLanguage = request.getHeader("Accept-Language");
         String countryDetected = countryAccessService.resolveViewerCountry(request);
 
-        UserDTO createdUser = userService.registerClient(registerDTO, ip, acceptLanguage, countryDetected);
+        // ADR-049 Subpasada 2B: cookie de referral opcional. Si esta presente,
+        // el registro intenta atribuir al cliente a la modelo referidora.
+        String referralCode = readAffiliateRefCookie(request);
+
+        UserDTO createdUser = userService.registerClient(
+                registerDTO, ip, acceptLanguage, countryDetected, referralCode);
         consentService.recordGuestConsentLink(
                 request,
                 consentId,
@@ -355,6 +365,23 @@ public class UserController {
         if (request == null || request.getCookies() == null) return null;
         for (Cookie c : request.getCookies()) {
             if ("consent_id".equals(c.getName()) && StringUtils.hasText(c.getValue())) {
+                return c.getValue();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * ADR-049 Subpasada 2B: lee la cookie {@code sharemechat_affiliate_ref}
+     * (nombre configurable via property {@code affiliate.cookie.name}) del
+     * request. La cookie contiene el codigo Crockford Base32 12 chars de la
+     * modelo referidora, seteada por {@link AffiliatePublicController}
+     * click / consume.
+     */
+    private String readAffiliateRefCookie(HttpServletRequest request) {
+        if (request == null || request.getCookies() == null) return null;
+        for (Cookie c : request.getCookies()) {
+            if (affiliateCookieName.equals(c.getName()) && StringUtils.hasText(c.getValue())) {
                 return c.getValue();
             }
         }

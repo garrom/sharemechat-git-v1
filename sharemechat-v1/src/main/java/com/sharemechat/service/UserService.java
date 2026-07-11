@@ -43,6 +43,7 @@ public class UserService {
     private final AgeGatePolicyService ageGatePolicyService;
     private final BackofficeAccessService backofficeAccessService;
     private final com.sharemechat.config.PublicSiteProperties publicSiteProperties;
+    private final AffiliateAttributionService affiliateAttributionService;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
@@ -59,7 +60,8 @@ public class UserService {
                        EmailCopyRenderer emailCopyRenderer,
                        AgeGatePolicyService ageGatePolicyService,
                        BackofficeAccessService backofficeAccessService,
-                       com.sharemechat.config.PublicSiteProperties publicSiteProperties) {
+                       com.sharemechat.config.PublicSiteProperties publicSiteProperties,
+                       AffiliateAttributionService affiliateAttributionService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -74,6 +76,7 @@ public class UserService {
         this.ageGatePolicyService = ageGatePolicyService;
         this.backofficeAccessService = backofficeAccessService;
         this.publicSiteProperties = publicSiteProperties;
+        this.affiliateAttributionService = affiliateAttributionService;
     }
 
     @Transactional
@@ -81,6 +84,21 @@ public class UserService {
                                   String registerIp,
                                   String acceptLanguage,
                                   String countryDetected) {
+        return registerClient(registerDTO, registerIp, acceptLanguage, countryDetected, null);
+    }
+
+    /**
+     * ADR-049 Subpasada 2B: variante con codigo de referral opcional
+     * extraido de la cookie {@code sharemechat_affiliate_ref} en el
+     * controller. Se preserva la firma anterior sin referral por
+     * compatibilidad de tests + callers previos.
+     */
+    @Transactional
+    public UserDTO registerClient(@Valid UserClientRegisterDTO registerDTO,
+                                  String registerIp,
+                                  String acceptLanguage,
+                                  String countryDetected,
+                                  String referralCode) {
         // --- Sanitización ---
         final String email    = sanitizeEmail(registerDTO.getEmail());       // sin espacios, minúsculas
         final String nickname = sanitizeNickname(registerDTO.getNickname()); // sin espacios en el string
@@ -198,6 +216,23 @@ public class UserService {
                     ex.getMessage(),
                     ex
             );
+        }
+
+        // ADR-049 Subpasada 2B: si el registro llego con cookie de referral,
+        // intentar atribuir al cliente a la modelo referidora. El flujo interno
+        // (attribution + favorito + evento REGISTERED + bono) es transaccional;
+        // el email de invitacion es best-effort AFTER_COMMIT.
+        // Fallo del pipeline referral NO revierte el registro: log warn y sigue.
+        if (referralCode != null && !referralCode.isBlank()) {
+            try {
+                affiliateAttributionService.attributeOnRegister(savedUser.getId(), referralCode);
+            } catch (com.sharemechat.exception.IllegalReferralOverwriteException ex) {
+                log.warn("REGISTER_CLIENT referral_overwrite_attempt userId={} err={}",
+                        savedUser.getId(), ex.getMessage());
+            } catch (Exception ex) {
+                log.warn("REGISTER_CLIENT referral_pipeline_failed userId={} err={}",
+                        savedUser.getId(), ex.getMessage(), ex);
+            }
         }
 
         return mapToDTO(savedUser);

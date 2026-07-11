@@ -570,6 +570,105 @@ public class EmailCopyRenderer {
         );
     }
 
+    /**
+     * ADR-049 Subpasada 2B: magic link temprano tipo Uber/Airbnb (D12) al
+     * visitante que ha dado su email en la landing publica de una modelo
+     * afiliada. Preserva la atribucion cuando el visitante abre el enlace
+     * en otro dispositivo (movil -> desktop). El visitante NO es un User
+     * del sistema aun; recibimos email y locale directamente sin User.
+     *
+     * <p>Copy pendiente de revision editorial del operador antes de campaña
+     * real: los placeholders son tecnicos. Ver known-debt {@code
+     * #D-affiliate-referral-copy}.
+     */
+    public EmailContent renderReferralMagicLink(String email,
+                                                 String referralCode,
+                                                 String consumeUrl,
+                                                 int ttlHours,
+                                                 String requestedLocale) {
+        String locale = ("es".equalsIgnoreCase(requestedLocale)) ? "es" : "en";
+        String safeCode = htmlEscape(referralCode == null ? "" : referralCode);
+        String safeUrl = htmlEscape(consumeUrl == null ? "" : consumeUrl);
+        String expiryText;
+        if (ttlHours <= 0) {
+            expiryText = "es".equals(locale) ? "unas horas" : "a few hours";
+        } else if (ttlHours == 1) {
+            expiryText = "es".equals(locale) ? "1 hora" : "1 hour";
+        } else if (ttlHours % 24 == 0) {
+            int days = ttlHours / 24;
+            expiryText = "es".equals(locale)
+                    ? (days == 1 ? "24 horas" : days + " dias")
+                    : (days == 1 ? "24 hours" : days + " days");
+        } else {
+            expiryText = "es".equals(locale) ? ttlHours + " horas" : ttlHours + " hours";
+        }
+
+        if ("es".equals(locale)) {
+            return new EmailContent(
+                    "Guarda tu enlace de SharemeChat",
+                    wrapWithLogo("""
+                            <p>Hola,</p>
+                            <p>Has entrado en <b>SharemeChat</b> a traves de una recomendacion (codigo <code>%s</code>).</p>
+                            <p>Guarda este enlace para retomar el registro en cualquier dispositivo:</p>
+                            <p><a href="%s">%s</a></p>
+                            <p>El enlace caduca en %s.</p>
+                            <p>Si no reconoces este correo, ignoralo.</p>
+                            """.formatted(safeCode, safeUrl, safeUrl, expiryText))
+            );
+        }
+        return new EmailContent(
+                "Save your SharemeChat link",
+                wrapWithLogo("""
+                        <p>Hello,</p>
+                        <p>You entered <b>SharemeChat</b> through a referral (code <code>%s</code>).</p>
+                        <p>Save this link to resume signup on any device:</p>
+                        <p><a href="%s">%s</a></p>
+                        <p>This link expires in %s.</p>
+                        <p>If you don't recognize this email, ignore it.</p>
+                        """.formatted(safeCode, safeUrl, safeUrl, expiryText))
+        );
+    }
+
+    /**
+     * ADR-049 Subpasada 2B: email de invitacion al cliente recien registrado
+     * con atribucion a modelo referidora (D6). Se envia inmediatamente
+     * despues del commit de {@code AffiliateAttributionService.attributeOnRegister}
+     * (via TransactionSynchronization AFTER_COMMIT) en best-effort: si
+     * falla, la atribucion NO se revierte.
+     *
+     * <p>Copy pendiente de revision editorial del operador antes de campaña
+     * real: los placeholders son tecnicos. Ver known-debt {@code
+     * #D-affiliate-referral-copy}.
+     */
+    public EmailContent renderReferralInvitation(User client, User modelReferrer) {
+        String locale = localeResolver.resolve(client);
+        String displayName = htmlEscape(safeLabel(client));
+        String modelName = htmlEscape(modelReferrer == null ? "SharemeChat" : safeLabel(modelReferrer));
+
+        if ("es".equals(locale)) {
+            return new EmailContent(
+                    "Bienvenido a SharemeChat: %s te ha invitado".formatted(modelName),
+                    wrapWithLogo("""
+                            <p>Hola %s,</p>
+                            <p>La modelo <b>%s</b> te ha invitado a <b>SharemeChat</b>. Ya te hemos añadido a tus favoritos para que la encuentres facilmente.</p>
+                            <p>Como parte de la invitacion, tu cuenta tiene un saldo de bienvenida disponible. Puedes usarlo con cualquier modelo de la plataforma.</p>
+                            <p>Cuando quieras, entra al producto y explora.</p>
+                            <p>Gracias por unirte,<br>El equipo de SharemeChat</p>
+                            """.formatted(displayName, modelName))
+            );
+        }
+        return new EmailContent(
+                "Welcome to SharemeChat: %s invited you".formatted(modelName),
+                wrapWithLogo("""
+                        <p>Hello %s,</p>
+                        <p>The model <b>%s</b> invited you to <b>SharemeChat</b>. We've already added her to your favorites so you can find her easily.</p>
+                        <p>As part of the invitation, your account has a welcome credit available. You can spend it with any model on the platform.</p>
+                        <p>Whenever you're ready, sign in and explore.</p>
+                        <p>Thanks for joining,<br>The SharemeChat team</p>
+                        """.formatted(displayName, modelName))
+        );
+    }
+
     private String safeLabel(User user) {
         if (user != null && user.getNickname() != null && !user.getNickname().isBlank()) {
             return user.getNickname().trim();

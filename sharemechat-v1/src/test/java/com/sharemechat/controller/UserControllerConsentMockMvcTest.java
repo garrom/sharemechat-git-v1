@@ -66,7 +66,8 @@ class UserControllerConsentMockMvcTest {
                 consentService,
                 ageGatePolicyService,
                 backofficeAccessService,
-                productOperationalModeService
+                productOperationalModeService,
+                "sharemechat_affiliate_ref"
         );
 
         MockMvc mockMvc = MockMvcBuilders.standaloneSetup(controller)

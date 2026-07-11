@@ -54,7 +54,19 @@ public record EmailMessage(
         // Sub-paquete Complaints workflow (Opcion B). DEC-7: ack al denunciante
         // cuando dio email. DEC-8: alerta interna al admin si categoria grave.
         COMPLAINT_ACK,
-        COMPLAINT_ADMIN_ALERT
+        COMPLAINT_ADMIN_ALERT,
+        // ADR-049 Subpasada 2B: programa de afiliadas. Magic link temprano
+        // enviado al visitante que deja email en la landing publica (D12).
+        // Priority CRITICAL: si falla, el flujo del pipeline debe abortar.
+        // Copy en `renderReferralMagicLink` (ES/EN). Copy actual marcada como
+        // known-debt: placeholders tecnicos pendientes de revision editorial.
+        REFERRAL_MAGIC_LINK,
+        // ADR-049 Subpasada 2B: email de invitacion al cliente recien
+        // registrado con atribucion a modelo referidora (D6). Priority
+        // BEST_EFFORT: fallo del envio NO revierte la atribucion en BD.
+        // Copy en `renderReferralInvitation` (ES/EN), tambien pendiente de
+        // revision editorial (mismo item de known-debt).
+        REFERRAL_INVITATION
     }
 
     public enum Priority {

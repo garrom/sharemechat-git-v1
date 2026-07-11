@@ -84,6 +84,13 @@ public class Constants {
         // BONUS_FUNDING → plataforma asume contablemente el coste del bonus (importe negativo).
         public static final String BONUS_GRANT = "BONUS_GRANT";
         public static final String BONUS_FUNDING = "BONUS_FUNDING";
+        // ADR-049 Subpasada 2B: bono de bienvenida referral (D7). Mismo patron
+        // BFPM: REFERRAL_WELCOME_GRANT en el ledger cliente (+10 EUR) y
+        // REFERRAL_WELCOME_FUNDING en el ledger plataforma (-10 EUR). Invariante
+        // Sum(GRANT) + Sum(FUNDING) = 0. Idempotencia por cliente via query
+        // existsByUserIdAndOperationType(clientId, REFERRAL_WELCOME_GRANT).
+        public static final String REFERRAL_WELCOME_GRANT = "REFERRAL_WELCOME_GRANT";
+        public static final String REFERRAL_WELCOME_FUNDING = "REFERRAL_WELCOME_FUNDING";
 
         private OperationTypes() {}
     }

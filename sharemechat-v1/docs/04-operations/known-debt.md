@@ -2,6 +2,10 @@
 
 Registro de deudas detectadas durante operación o auditoría que no son incidencias urgentes pero conviene no perder. Cuando una deuda se cierre, mover su sección a `incident-notes.md` con marca de resolución y eliminar de aquí.
 
+## 2026-07-11 — Deuda abierta en la Subpasada 2B del ADR-049
+
+**#D-23 — Copy REFERRAL_MAGIC_LINK y REFERRAL_INVITATION pendiente de revisión editorial**. La Subpasada 2B del programa de afiliadas introdujo dos claves nuevas del `EmailCopyRenderer` (`renderReferralMagicLink` y `renderReferralInvitation`) con placeholders técnicos ES + EN suficientes para arrancar el pipeline y pasar el smoke en TEST. Los textos NO son editorialmente definitivos; su vocabulario, tono y llamadas a la acción deben ajustarse antes de campaña real de captación. El operador ha aprobado dejarlos como están para no bloquear la subpasada, con la deuda registrada aquí. **Acción pendiente**: revisar copy junto con el material marketing del programa de afiliadas (fase pre-lanzamiento a modelos). Los cambios son puramente textuales; no requieren cambio de firma ni schema. **Prioridad**: media antes del outreach real a modelos (business `affiliate-program.md`).
+
 ## 2026-07-11 — Deudas diferidas al cierre del ADR-049 (Programa de afiliadas)
 
 **#D-18 — Onboarding B2B de entidades externas (blogs, agencias, estudios)**. `../06-decisions/adr-049-programa-afiliadas-modelos.md` declara que solo modelos con KYC APPROVED pueden activar el programa de afiliadas en la fase inicial. Las entidades externas descritas en `../01-business/affiliate-program.md` §3-§6 quedan fuera del alcance. Cuando aparezca demanda concreta se abre frente propio con revisión manual, terms específicos y extensión de `affiliate_codes` (nullable `model_user_id` + `external_affiliate_id`) o tabla independiente. **Prioridad**: baja hasta que el operador tenga interlocutor B2B concreto.
