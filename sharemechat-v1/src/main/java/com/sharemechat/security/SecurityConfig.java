@@ -123,6 +123,19 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/me/assets").hasAnyRole("USER", "MODEL")
                         .requestMatchers(HttpMethod.POST, "/api/me/assets").hasAnyRole("USER", "MODEL")
 
+                        // ============================================================
+                        // ADR-049 Subpasada 2A: sistema de afiliadas (endpoints del
+                        // panel de la modelo). Van ANTES del catch-all /api/models/**
+                        // porque son especificos del rol MODEL con guards internos
+                        // adicionales (KYC APPROVED, cuenta no suspendida) que aplica
+                        // AffiliateCodeService. El GET del panel y del QR estan
+                        // disponibles siempre para MODEL; POST activate lo restringe
+                        // el service.
+                        // ============================================================
+                        .requestMatchers(HttpMethod.POST, "/api/models/me/affiliate/activate").hasRole("MODEL")
+                        .requestMatchers(HttpMethod.GET, "/api/models/me/affiliate").hasRole("MODEL")
+                        .requestMatchers(HttpMethod.GET, "/api/models/me/affiliate/qr.svg").hasRole("MODEL")
+
                         // CLIENTS: documentos
                         .requestMatchers(HttpMethod.GET, "/api/clients/documents/me").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.POST, "/api/clients/documents").hasRole("CLIENT")

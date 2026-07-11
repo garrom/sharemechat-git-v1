@@ -148,6 +148,16 @@
 			<artifactId>caffeine</artifactId>
 			<version>3.1.8</version>
 		</dependency>
+
+		<!-- ADR-049 Subpasada 2A: generacion de codigo QR con emision SVG nativa.
+		     Nayuki qrcodegen expone QrCode.toSvgString(border) que devuelve
+		     un SVG listo, sin renderer custom. Alternativa a ZXing (que devuelve
+		     BitMatrix y obliga a escribir el SVG a mano). Dominio publico. -->
+		<dependency>
+			<groupId>io.nayuki</groupId>
+			<artifactId>qrcodegen</artifactId>
+			<version>1.8.0</version>
+		</dependency>
 	</dependencies>
 
 	<build>
