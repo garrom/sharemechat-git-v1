@@ -485,6 +485,11 @@ const AffiliatePanelModel = () => {
                   <MiniValue>{formatCentsEur(stats.commissionAccruedCents)}</MiniValue>
                   <MiniMeta>{t('affiliate.activated.statsCommissionMeta')}</MiniMeta>
                 </MiniCard>
+                <MiniCard $accent="amber">
+                  <MiniLabel>{t('affiliate.activated.statsCommissionCurrentMonth')}</MiniLabel>
+                  <MiniValue>{formatCentsEur(stats.commissionCurrentMonthCents)}</MiniValue>
+                  <MiniMeta>{t('affiliate.activated.statsCommissionCurrentMonthMeta')}</MiniMeta>
+                </MiniCard>
               </GridCards>
             </Section>
           </>

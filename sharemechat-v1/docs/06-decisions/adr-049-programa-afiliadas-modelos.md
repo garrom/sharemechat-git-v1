@@ -339,3 +339,72 @@ El código de afiliación usa **Crockford's Base32 sin caracteres ambiguos**: al
 
 - **#D-23** — `payment_session_id` en `affiliate_commissions` permite reversos como filas separadas gracias al UNIQUE compuesto `(payment_session_id, status)`, no UNIQUE simple sobre `payment_session_id`. Revisitable si la subpasada 4 detecta casos que no encajan.
 - **#D-24** — la salt para `ip_hash` de `affiliate_click_events` reutiliza `authrisk.email-hash-salt` en fase 1 para minimizar superficie de propiedades. Si el operador quiere separar salts por dominio (autorisk vs affiliate), se abre property nueva en subpasada 3.
+
+## Actualización 2026-07-12 — Cambio semántico del trigger de comisión (D2 revisado) y esquema `source_type`/`source_id`
+
+Al abrir la implementación de la **subpasada 5 (motor de comisiones)** se detecta un desalineamiento crítico entre el trigger propuesto en D2 (`PaymentSession SUCCESS`) y el ciclo económico real del producto en fase soft launch. Se cierra el cambio con luz verde explícita del operador el 2026-07-12.
+
+### Contexto del cambio
+
+El D2 original define la base de comisión como el `amount` de la `PaymentSession` con `status=SUCCESS` — es decir, la comisión se devenga cuando el cliente **recarga saldo** (compra pack). En el momento de escribir el ADR era el modelo natural asumiendo PSP integrado con eventos `SUCCESS/FAILED` como fuente única.
+
+Al implementar la subpasada 5 se constatan dos hechos:
+
+1. **`PaymentSession` no participa hoy en el flujo cliente**. El endpoint `/api/transactions/first` va directo por `TransactionService.processFirstTransaction`, creando solo `Transaction INGRESO` + `Balance`. `PaymentSession` está definida como entidad pero solo la usa `AdminService`. El PSP real (Paxum/NOWPayments/tarjeta) está bloqueado por [ADR-047](adr-047-pivote-soft-launch-cripto-paxum.md) hasta cerrar el pivote soft launch.
+2. **Riesgo cash-flow asimétrico del trigger `SUCCESS`**. Devengar comisión al recargar significa pagar el 30 % sobre dinero que el cliente puede pedir de vuelta si no lo consume (o si el PSP lo retira por chargeback). En vertical adult, plataformas comparables (Chaturbate, Stripchat, Livejasmin) pagan al streamer y a la afiliada **cuando el token se gasta**, no cuando se compra, precisamente por este riesgo.
+
+### D2 revisado — Comisión sobre consumo real (`STREAM_CHARGE`)
+
+**La comisión se devenga en el momento del cobro per-second al cliente atribuido, sobre el importe efectivamente consumido, no sobre el importe recargado.**
+
+Semántica exacta:
+
+- Al crear una `Transaction` con `operation_type = 'STREAM_CHARGE'` en `StreamService` (cargo per-second por streaming al cliente), la lógica de comisión mira `users.referred_by_user_id` del cliente. Si `!= NULL`, calcula `commission_amount = charge_amount × 0.30` y evalúa el umbral D4 en tiempo real.
+- Fuente única: `Transaction STREAM_CHARGE`. **La fila `PaymentSession` no participa** en el trigger en la fase actual. Cuando entre PSP real (NOWPayments cripto es el siguiente frente tras cerrar esta subpasada), `PaymentSession SUCCESS` podrá coexistir como fuente adicional para bonos o eventos distintos, pero **la comisión del cliente por streaming permanece anclada al `STREAM_CHARGE`** por la garantía de cash-flow.
+- La comisión se persiste directamente con `status = PAYABLE` (umbral OK) o `status = SKIPPED_NO_ACTIVITY` (umbral no OK). El estado transitorio `ACCRUED` del diseño original **no se usa en este flujo** — queda reservado para futuras fuentes (`PaymentSession SUCCESS`) con hold retention si se activan.
+
+### Garantía cash-flow
+
+El importe `STREAM_CHARGE` ya es "irrevocable" en el momento del cobro:
+
+- La plataforma ya cobró su parte (el saldo del cliente disminuye).
+- La modelo del streaming ya cobró su `STREAM_EARNING`.
+- El servicio se prestó y no puede des-prestarse.
+
+Un chargeback futuro sobre la recarga original solo puede recuperar **saldo NO consumido**. Lo consumido queda como ingreso definitivo de plataforma y como comisión definitiva de afiliada. Cero clawback contra la modelo referida.
+
+### Coste operativo aceptado
+
+- **Frecuencia de INSERT**: cada `STREAM_CHARGE` genera una fila `affiliate_commissions` si el cliente tiene referrer. Alto volumen si hay muchos streams, pero perfectamente absorbible por el índice `(source_type, source_id, status)` y el hardware actual. La agregación mensual (subpasada 6) suma por modelo y mes; el volumen no afecta al UX del panel modelo.
+- **Ganancia visible de la modelo referida** actualiza tras cada tick per-second, con la latencia natural del backend. Alineado con expectativa "casi en tiempo real" del panel modelo (D11).
+
+### Alternativa descartada — modelo híbrido
+
+Se evaluó un modelo híbrido: `ACCRUED` al `SUCCESS` de `PaymentSession`, `PAYABLE` liberado prorrateado al consumo per-second. Descartado por complejidad (requiere tracking FIFO saldo↔comisión que el ledger actual no soporta sin refactor mayor) y por no aportar garantías adicionales sobre la Opción B en el contexto pre-launch.
+
+### D16 — Esquema genérico `source_type` + `source_id`
+
+Para preservar la flexibilidad de tener múltiples fuentes de comisión en el futuro (streaming per-second, PaymentSession SUCCESS con hold, otras) sin renombrar columnas, la entidad `AffiliateCommission` se extiende con:
+
+- `source_type VARCHAR(30) NOT NULL DEFAULT 'PAYMENT_SESSION'` — discriminador de fuente. Valores actuales: `'STREAM_CHARGE'` (fase actual). Valores futuros previstos: `'PAYMENT_SESSION'`, `'OTHER'`.
+- `source_id BIGINT NOT NULL` — FK lógica al ID de la fuente (`stream_records.id` para `STREAM_CHARGE`, `payment_sessions.id` para `PAYMENT_SESSION`). No FK física porque apunta a distintas tablas según `source_type`; la integridad la garantiza el service.
+- `payment_session_id BIGINT NULL` — pasa a nullable. Se conserva por compatibilidad con futuros hooks `PAYMENT_SESSION`; en filas con `source_type='STREAM_CHARGE'` es `NULL`.
+- Índice `UNIQUE (source_type, source_id, status)` — garantiza idempotencia del `INSERT` y permite dos filas por fuente (una `PAYABLE` + una `REVERSED_CHARGEBACK` cuando corresponda).
+
+Migración: `V18__affiliate_commissions_source_generic.sql` en la subpasada 5. Se elige V18 y no V17 porque V17 ya está tomada por `add_favorite_source.sql` del frente de landing 2E.
+
+### Actualización de la subpasada 5 (trabajo derivado)
+
+La descripción original de la subpasada 5 (línea 278) queda sustituida por:
+
+> **5. Motor de comisiones on-consumption + endpoint chargeback**. `AffiliateCommissionService.accrueForStreamCharge(clientUserId, chargeAmountCents, streamRecordId)` invocado desde `StreamService` tras persistir `Transaction STREAM_CHARGE`. Query `hasOwnActivityThisMonth(referrerModelUserId, periodYyyymm)` para umbral D4. Endpoint `POST /api/admin/affiliate/chargeback { paymentSessionId, refundedAmountCents, reason }` que genera fila `REVERSED_CHARGEBACK` (usable cuando entre PSP tarjeta o vía manual con NOWPayments). Tests: cliente con referrer + umbral OK/KO, cliente sin referrer, chargeback, idempotencia por `(source_type, source_id, status)`.
+
+La subpasada 6 (payout mensual) sigue vigente sin cambios.
+
+### Compatibilidad con `PaymentSession` cuando entre PSP real
+
+Cuando NOWPayments (siguiente frente tras esta subpasada) empiece a generar `PaymentSession SUCCESS` reales:
+
+- El flujo de comisión de streaming **no cambia** — sigue devengándose por `STREAM_CHARGE`.
+- Si en el futuro se decide devengar algún concepto adicional al recargar (por ejemplo, bono por primera compra atribuida a la afiliada), se creará una fuente `source_type='PAYMENT_SESSION_FIRST_TOPUP'` con la lógica correspondiente. La flexibilidad del esquema genérico ya lo soporta sin migración adicional.
+- El endpoint admin de chargeback opera sobre `paymentSessionId`; si el chargeback recupera saldo NO consumido, no genera reverso de comisión (porque no hubo comisión sobre lo no consumido). Si por diseño futuro se decidiera devengar sobre `PaymentSession SUCCESS`, el endpoint ya está listo.

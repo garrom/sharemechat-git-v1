@@ -5,13 +5,25 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 /**
- * ADR-049 Subpasada 1: comision acumulada por evento de pago del cliente
- * atribuido.
+ * ADR-049 Subpasada 1 + Subpasada 5 (revisada 2026-07-12): comision
+ * acumulada por evento de pago o consumo del cliente atribuido.
  *
- * <p>Diseno on-demand (Actualizacion 2026-07-11 del ADR): al procesar el
- * {@code SUCCESS} de la {@link PaymentSession} del cliente atribuido, la
- * logica de comision consulta si la modelo referidora tiene alguna
- * facturacion propia en el mes calendario del cobro:
+ * <p>Fuente genérica (Actualizacion 2026-07-12 del ADR): las filas
+ * discriminan la fuente que dispara la comision con {@code sourceType} +
+ * {@code sourceId}:
+ * <ul>
+ *   <li>{@code sourceType='STREAM_CHARGE'}, {@code sourceId=stream_records.id}
+ *       — flujo actual (D2 revisado). Se acumula sobre el importe
+ *       consumido per-second, no sobre el importe recargado. Garantia
+ *       cash-flow: lo consumido es irrevocable.</li>
+ *   <li>{@code sourceType='PAYMENT_SESSION'}, {@code sourceId=payment_sessions.id}
+ *       — reservado para futuros hooks al SUCCESS de PaymentSession
+ *       (cuando entre PSP real). No usado en fase actual.</li>
+ * </ul>
+ *
+ * <p>Diseno on-demand: al invocar el hook desde el service que persiste
+ * el {@code STREAM_CHARGE}, la logica consulta si la modelo referidora
+ * tiene facturacion propia en el mes calendario UTC del cobro:
  * <ul>
  *   <li>si si, se crea la fila con {@code status='PAYABLE'};</li>
  *   <li>si no, se crea la fila con {@code status='SKIPPED_NO_ACTIVITY'}
@@ -27,16 +39,17 @@ import java.time.LocalDateTime;
  * como INT (ej. 202607 = julio de 2026). Facilita indices y agregacion
  * por mes sin castings.
  *
- * <p>Estados posibles del campo {@code status}: {@code ACCRUED} (devengada
- * pendiente de evaluar umbral), {@code PAYABLE} (evaluada, cobrable),
- * {@code SKIPPED_NO_ACTIVITY} (evaluada, modelo sin actividad propia en el
- * mes), {@code REVERSED_CHARGEBACK} (fila de compensacion negativa por
+ * <p>Estados posibles del campo {@code status}: {@code ACCRUED} (reservado
+ * para futuros flujos con hold; no usado por el trigger STREAM_CHARGE),
+ * {@code PAYABLE} (evaluada, cobrable), {@code SKIPPED_NO_ACTIVITY}
+ * (evaluada, modelo sin actividad propia en el mes),
+ * {@code REVERSED_CHARGEBACK} (fila de compensacion negativa por
  * chargeback/refund), {@code PAID} (pagada via {@code paidViaPayoutRequestId}).
  *
- * <p>Reversos por chargeback: el UNIQUE compuesto {@code (payment_session_id,
- * status)} permite dos filas por sesion de pago (por ejemplo {@code PAYABLE}
- * + {@code REVERSED_CHARGEBACK}), no UNIQUE simple sobre
- * {@code payment_session_id}.
+ * <p>Reversos por chargeback: el UNIQUE compuesto {@code (source_type,
+ * source_id, status)} permite dos filas por fuente (por ejemplo
+ * {@code PAYABLE} + {@code REVERSED_CHARGEBACK}), no UNIQUE simple sobre
+ * la fuente.
  */
 @Entity
 @Table(name = "affiliate_commissions")
@@ -52,8 +65,30 @@ public class AffiliateCommission {
     @Column(name = "referrer_model_user_id", nullable = false)
     private Long referrerModelUserId;
 
-    @Column(name = "payment_session_id", nullable = false)
+    /**
+     * FK a {@code payment_sessions.id}. NULL cuando
+     * {@code sourceType='STREAM_CHARGE'}. Se conserva para compatibilidad
+     * con futuros hooks sobre PaymentSession.
+     */
+    @Column(name = "payment_session_id", nullable = true)
     private Long paymentSessionId;
+
+    /**
+     * Discriminador de fuente. Valores actuales: {@code STREAM_CHARGE}.
+     * Futuros previstos: {@code PAYMENT_SESSION}.
+     */
+    @Column(name = "source_type", nullable = false, length = 30)
+    private String sourceType;
+
+    /**
+     * FK logica al ID de la fuente ({@code stream_records.id} para
+     * {@code STREAM_CHARGE}, {@code payment_sessions.id} para
+     * {@code PAYMENT_SESSION}). No FK fisica porque apunta a distintas
+     * tablas segun {@code sourceType}; la integridad la garantiza el
+     * service.
+     */
+    @Column(name = "source_id", nullable = false)
+    private Long sourceId;
 
     /** Importe cobrado en centesimas de EUR. Base de calculo. */
     @Column(name = "base_amount_cents", nullable = false)
@@ -120,6 +155,12 @@ public class AffiliateCommission {
 
     public Long getPaymentSessionId() { return paymentSessionId; }
     public void setPaymentSessionId(Long paymentSessionId) { this.paymentSessionId = paymentSessionId; }
+
+    public String getSourceType() { return sourceType; }
+    public void setSourceType(String sourceType) { this.sourceType = sourceType; }
+
+    public Long getSourceId() { return sourceId; }
+    public void setSourceId(Long sourceId) { this.sourceId = sourceId; }
 
     public Long getBaseAmountCents() { return baseAmountCents; }
     public void setBaseAmountCents(Long baseAmountCents) { this.baseAmountCents = baseAmountCents; }

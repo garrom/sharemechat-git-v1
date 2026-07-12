@@ -1,5 +1,6 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.AffiliateActivateResponseDTO;
 import com.sharemechat.dto.AffiliateDashboardDTO;
 import com.sharemechat.dto.AffiliateStatsDTO;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -56,9 +58,19 @@ public class AffiliateModelController {
 
     private static final Logger log = LoggerFactory.getLogger(AffiliateModelController.class);
 
-    /** Estados de comision que representan comision viva para el panel. */
+    /**
+     * Estados de comision que representan comision "viva" en el panel:
+     * PAYABLE (aun no pagada, cobrable), PAID (ya pagada) y
+     * REVERSED_CHARGEBACK (importes negativos que netean el total).
+     * ACCRUED se excluye porque en el flujo actual (D2 revisado) no se
+     * usa; queda reservado para futuros hooks con hold retention.
+     * SKIPPED_NO_ACTIVITY se excluye porque representa comision que
+     * NUNCA sera pagada (umbral D4 no cumplido en el mes del cobro).
+     */
     private static final List<String> LIVE_COMMISSION_STATUSES =
-            List.of("ACCRUED", "PAYABLE", "PAID");
+            List.of(Constants.AffiliateCommissionStatus.PAYABLE,
+                    Constants.AffiliateCommissionStatus.PAID,
+                    Constants.AffiliateCommissionStatus.REVERSED_CHARGEBACK);
 
     private static final int QR_BORDER_MODULES = 2;
     private static final CacheControl QR_CACHE =
@@ -185,7 +197,16 @@ public class AffiliateModelController {
         long clientsReferred = userRepository.countByReferredByUserId(modelUserId);
         long commissionAccruedCents = commissionRepository.sumCommissionAmountByReferrerInStatuses(
                 modelUserId, LIVE_COMMISSION_STATUSES);
-        return new AffiliateStatsDTO(clicksTotal, clicksUnique, clientsReferred, commissionAccruedCents);
+        // Comision del mes UTC actual (ADR-049 D11 revisado). El
+        // period_yyyymm se calcula con la convencion UTC estricta que fija
+        // el javadoc de AffiliateCommission.
+        LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+        int currentPeriodYyyymm = nowUtc.getYear() * 100 + nowUtc.getMonthValue();
+        long commissionCurrentMonthCents = commissionRepository
+                .sumCommissionAmountByReferrerAndPeriodInStatuses(
+                        modelUserId, currentPeriodYyyymm, LIVE_COMMISSION_STATUSES);
+        return new AffiliateStatsDTO(clicksTotal, clicksUnique, clientsReferred,
+                commissionAccruedCents, commissionCurrentMonthCents);
     }
 
     private String buildCanonicalUrl(String code) {

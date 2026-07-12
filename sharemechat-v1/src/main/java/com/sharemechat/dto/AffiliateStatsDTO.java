@@ -1,11 +1,12 @@
 package com.sharemechat.dto;
 
 /**
- * ADR-049 Subpasada 2A: contadores del panel de la modelo afiliada.
+ * ADR-049 Subpasada 2A + Subpasada 5 (revisada 2026-07-12): contadores del
+ * panel de la modelo afiliada.
  *
- * <p>En 2A todos los contadores se calculan con queries directas sobre las
- * tablas de la subpasada 1; con el sistema recien lanzado y sin trafico
- * real, todos devuelven 0. La forma del DTO ya soporta datos reales.
+ * <p>Con Subpasada 5 se anaden los desgloses de comision (mes actual UTC vs
+ * lifetime) para el panel D11. El total {@code commissionAccruedCents}
+ * queda como agregado historico neto (suma vivos + reversos).
  *
  * <p>Campos:
  * <ul>
@@ -16,9 +17,12 @@ package com.sharemechat.dto;
  *       {@code ip_hash CHAR(16)} (SHA-256 truncado, D15 GDPR).</li>
  *   <li>{@code clientsReferred} — usuarios con {@code referred_by_user_id}
  *       apuntando a esta modelo.</li>
- *   <li>{@code commissionAccruedCents} — suma de {@code commission_amount_cents}
- *       en estados que representan comision viva (ACCRUED, PAYABLE, PAID);
- *       en centesimas de EUR.</li>
+ *   <li>{@code commissionAccruedCents} — suma neta lifetime de
+ *       {@code commission_amount_cents} en estados vivos (PAYABLE + PAID +
+ *       REVERSED_CHARGEBACK). En centesimas de EUR.</li>
+ *   <li>{@code commissionCurrentMonthCents} — suma neta de comision del
+ *       mes calendario UTC actual (mismo criterio de estados). Refleja lo
+ *       que la modelo esta acumulando en el ciclo actual.</li>
  * </ul>
  */
 public class AffiliateStatsDTO {
@@ -27,19 +31,23 @@ public class AffiliateStatsDTO {
     private final long clicksUniqueVisitors;
     private final long clientsReferred;
     private final long commissionAccruedCents;
+    private final long commissionCurrentMonthCents;
 
     public AffiliateStatsDTO(long clicksTotal,
                              long clicksUniqueVisitors,
                              long clientsReferred,
-                             long commissionAccruedCents) {
+                             long commissionAccruedCents,
+                             long commissionCurrentMonthCents) {
         this.clicksTotal = clicksTotal;
         this.clicksUniqueVisitors = clicksUniqueVisitors;
         this.clientsReferred = clientsReferred;
         this.commissionAccruedCents = commissionAccruedCents;
+        this.commissionCurrentMonthCents = commissionCurrentMonthCents;
     }
 
     public long getClicksTotal() { return clicksTotal; }
     public long getClicksUniqueVisitors() { return clicksUniqueVisitors; }
     public long getClientsReferred() { return clientsReferred; }
     public long getCommissionAccruedCents() { return commissionAccruedCents; }
+    public long getCommissionCurrentMonthCents() { return commissionCurrentMonthCents; }
 }

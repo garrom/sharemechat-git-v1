@@ -193,14 +193,33 @@ class AffiliateEntitiesJpaContractTest {
     }
 
     @Test
-    @DisplayName("AffiliateCommission.paymentSessionId: NOT NULL. El UNIQUE compuesto vive en Flyway V16.")
-    void commission_paymentSessionId_notNull() throws NoSuchFieldException {
+    @DisplayName("AffiliateCommission.paymentSessionId: NULLABLE tras V18 (ADR-049 D16). En filas STREAM_CHARGE es NULL.")
+    void commission_paymentSessionId_nullableAfterV18() throws NoSuchFieldException {
         Field f = AffiliateCommission.class.getDeclaredField("paymentSessionId");
         Column col = f.getAnnotation(Column.class);
         assertEquals("payment_session_id", col.name());
-        assertFalse(col.nullable(),
-                "Toda comision se ancla a una sesion de pago. El UNIQUE compuesto (payment_session_id, status) "
-                        + "para permitir reversos vive en la Flyway V16, no en la anotacion @Column.");
+        assertTrue(col.nullable(),
+                "V18 relaja payment_session_id a nullable para soportar filas con sourceType=STREAM_CHARGE "
+                        + "(D2 revisado 2026-07-12). La FK y el UNIQUE compuesto viven en Flyway V16/V18.");
+    }
+
+    @Test
+    @DisplayName("AffiliateCommission.sourceType: NOT NULL (ADR-049 D16). Discriminador de fuente.")
+    void commission_sourceType_notNull() throws NoSuchFieldException {
+        Field f = AffiliateCommission.class.getDeclaredField("sourceType");
+        Column col = f.getAnnotation(Column.class);
+        assertEquals("source_type", col.name());
+        assertFalse(col.nullable());
+        assertEquals(30, col.length());
+    }
+
+    @Test
+    @DisplayName("AffiliateCommission.sourceId: NOT NULL (ADR-049 D16). FK logica a la fuente.")
+    void commission_sourceId_notNull() throws NoSuchFieldException {
+        Field f = AffiliateCommission.class.getDeclaredField("sourceId");
+        Column col = f.getAnnotation(Column.class);
+        assertEquals("source_id", col.name());
+        assertFalse(col.nullable());
     }
 
     @Test

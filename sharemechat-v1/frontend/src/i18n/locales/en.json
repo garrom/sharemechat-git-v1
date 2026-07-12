@@ -3196,7 +3196,9 @@
       "statsReferred": "Referred clients",
       "statsReferredMeta": "Registrations attributed to you.",
       "statsCommission": "Accrued commission",
-      "statsCommissionMeta": "Earnings accrued from your referrals."
+      "statsCommissionMeta": "Earnings accrued from your referrals.",
+      "statsCommissionCurrentMonth": "This month's commission",
+      "statsCommissionCurrentMonthMeta": "Current cycle (UTC month). Only paid if you bill something of your own this month."
     },
     "errors": {
       "loading": "Could not load the panel. Please try again.",

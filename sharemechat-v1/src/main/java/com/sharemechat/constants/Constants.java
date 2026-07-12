@@ -330,4 +330,39 @@ public class Constants {
 
         private ComplianceAuditActions() {}
     }
+
+    // ========================================================================
+    // Programa de afiliadas de modelos (ADR-049). D2 revisado 2026-07-12:
+    // la comision se acumula al STREAM_CHARGE (consumo per-second), no al
+    // SUCCESS de PaymentSession (recarga). El esquema soporta multiples
+    // fuentes via source_type/source_id.
+    // ========================================================================
+
+    /**
+     * Discriminador de fuente que dispara la comision de afiliada.
+     * Valores usados en fase actual: {@link #STREAM_CHARGE}. Reservados
+     * para futuros hooks: {@link #PAYMENT_SESSION}.
+     */
+    public static class AffiliateCommissionSourceType {
+        public static final String STREAM_CHARGE = "STREAM_CHARGE";
+        public static final String PAYMENT_SESSION = "PAYMENT_SESSION";
+
+        private AffiliateCommissionSourceType() {}
+    }
+
+    /**
+     * Estados posibles de la fila {@code affiliate_commissions}. El flujo
+     * actual (D2 revisado) usa {@link #PAYABLE} / {@link #SKIPPED_NO_ACTIVITY}
+     * directamente sin pasar por {@link #ACCRUED}; este ultimo queda
+     * reservado para futuros flujos con hold retention (PSP tarjeta).
+     */
+    public static class AffiliateCommissionStatus {
+        public static final String ACCRUED = "ACCRUED";
+        public static final String PAYABLE = "PAYABLE";
+        public static final String SKIPPED_NO_ACTIVITY = "SKIPPED_NO_ACTIVITY";
+        public static final String REVERSED_CHARGEBACK = "REVERSED_CHARGEBACK";
+        public static final String PAID = "PAID";
+
+        private AffiliateCommissionStatus() {}
+    }
 }

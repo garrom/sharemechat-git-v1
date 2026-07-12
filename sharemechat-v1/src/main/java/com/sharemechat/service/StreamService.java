@@ -49,6 +49,11 @@ public class StreamService {
     // ADR-036 / ADR-037). Direccion unidireccional: stream -> stream_moderation,
     // nunca al reves dentro de los hooks.
     private final StreamModerationSessionService streamModerationSessionService;
+    // Hook fail-soft hacia el dominio affiliate_commissions (ADR-049 D2
+    // revisado 2026-07-12). Se invoca tras persistir el STREAM_CHARGE del
+    // cliente para acumular la comision de la modelo referidora sobre el
+    // importe consumido. Direccion unidireccional: stream -> affiliate.
+    private final AffiliateCommissionService affiliateCommissionService;
 
     private static final int ADMIN_ACTIVE_DEFAULT_LIMIT = 200;
     private static final int ADMIN_ACTIVE_MAX_LIMIT = 500;
@@ -73,7 +78,8 @@ public class StreamService {
                          PlatformBalanceRepository platformBalanceRepository,
                          TransactionService transactionService,
                          StreamStatusEventRepository streamStatusEventRepository,
-                         StreamModerationSessionService streamModerationSessionService) {
+                         StreamModerationSessionService streamModerationSessionService,
+                         AffiliateCommissionService affiliateCommissionService) {
         this.streamRecordRepository = streamRecordRepository;
         this.userRepository = userRepository;
         this.statusService = statusService;
@@ -88,6 +94,7 @@ public class StreamService {
         this.transactionService = transactionService;
         this.streamStatusEventRepository = streamStatusEventRepository;
         this.streamModerationSessionService = streamModerationSessionService;
+        this.affiliateCommissionService = affiliateCommissionService;
     }
 
     private LocalDateTime resolveEffectiveBillableStart(StreamRecord session) {
@@ -662,6 +669,16 @@ public class StreamService {
                             .add(hoursAsBigDecimal)
             );
             clientRepository.save(clientEntity);
+
+            // ADR-049 Subpasada 5 (D2 revisado 2026-07-12): hook al motor
+            // de comisiones. Si el cliente tiene modelo referidora, acumula
+            // 30% del importe consumido para la referidora. Fail-soft: la
+            // implementacion del service ya envuelve en try/catch para no
+            // romper el ciclo de streaming si el hook falla.
+            affiliateCommissionService.accrueForStreamCharge(
+                    clientId,
+                    cost.movePointRight(2).longValueExact(),
+                    session.getId());
 
             // 10) MODELO
             Transaction txModel = new Transaction();

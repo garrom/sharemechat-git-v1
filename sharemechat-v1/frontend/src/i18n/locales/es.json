@@ -3196,7 +3196,9 @@
       "statsReferred": "Clientes referidos",
       "statsReferredMeta": "Registros atribuidos a ti.",
       "statsCommission": "Comisión acumulada",
-      "statsCommissionMeta": "Ganancias acumuladas por tus referidos."
+      "statsCommissionMeta": "Ganancias acumuladas por tus referidos.",
+      "statsCommissionCurrentMonth": "Comisión este mes",
+      "statsCommissionCurrentMonthMeta": "Ciclo actual (mes UTC). Solo se paga si facturas algo propio este mes."
     },
     "errors": {
       "loading": "No se ha podido cargar el panel. Inténtalo de nuevo.",
