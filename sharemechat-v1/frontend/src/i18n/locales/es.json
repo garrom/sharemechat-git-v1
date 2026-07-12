@@ -1604,14 +1604,15 @@
     }
   },
   "clientKyc": {
-    "title": "Verificación de edad",
+    "title": "Verifica tu edad en 1 minuto",
     "navTitle": "Verificación de edad",
     "back": "Volver",
-    "intro": "Antes de poder recargar tu monedero necesitamos verificar que eres mayor de edad. La verificación es rápida y se realiza con tu cámara: nuestro proveedor (Didit, certificado en la UE) estima tu edad a partir de una imagen de tu rostro. No se solicita documento de identidad salvo casos límite.",
-    "whyLegal": "Esto se exige por la normativa de protección de menores en los mercados donde operamos (UE DSA Art. 28, Reino Unido OSA, EE. UU. Free Speech Coalition v. Paxton). No es opcional.",
+    "intro": "Nuestro proveedor Didit (certificado en la UE) estima tu edad desde tu cámara. Sin subir documento, sin registrarte en otra app.",
+    "whyLegal": "Antes de poder recargar tu monedero necesitamos confirmar que eres mayor de edad. No se solicita documento salvo casos límite. Esto se exige por la normativa de protección de menores en los mercados donde operamos (UE DSA Art. 28, Reino Unido OSA, EE. UU. Free Speech Coalition v. Paxton). No es opcional.",
     "consentTitle": "Consentimiento de tratamiento biométrico",
     "consentText": "Doy mi consentimiento explícito para que mis datos biométricos faciales (imagen de mi rostro) sean procesados por Didit (encargado del tratamiento, UE) con el único fin de estimar mi edad, conforme al Art. 9.2.a del RGPD. Los datos se almacenan durante 6 meses y luego se eliminan automáticamente. Puedo retirar mi consentimiento en cualquier momento contactando con privacidad@sharemechat.com; en ese caso, mi cuenta perderá la capacidad de recargar y consumir contenido adulto.",
     "consentReadMore": "Más información en la política de privacidad.",
+    "consentAcceptLabel": "Acepto el consentimiento biométrico",
     "startButton": "Iniciar verificación",
     "startingButton": "Iniciando…",
     "errors": {
@@ -3167,7 +3168,7 @@
   },
   "affiliate": {
     "title": "Programa de Afiliadas",
-    "description": "Gana el 30 % de por vida de los clientes que traigas a SharemeChat. Comparte tu URL o QR con quien quieras.",
+    "description": "Gana el 30 % de las compras de los clientes que traigas a SharemeChat. Comparte tu URL o QR con quien quieras.",
     "reload": "Recargar",
     "notActivated": {
       "title": "Aún no has activado el programa",

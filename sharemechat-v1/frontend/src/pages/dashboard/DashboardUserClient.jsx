@@ -817,7 +817,7 @@ const DashboardUserClient = () => {
             completos o cuando el usuario lo dismissa. Solo vive aqui
             (DashboardUserClient); al promocionar a role=CLIENT el
             usuario pasa a DashboardClient donde el widget no existe. */}
-        <OnboardingChecklist />
+        <OnboardingChecklist onLoadBalance={handleFirstPayment} />
         <StyledMainContent data-tab={activeTab}>
           {activeTab === 'videochat' && (
             <VideoChatRandomUser

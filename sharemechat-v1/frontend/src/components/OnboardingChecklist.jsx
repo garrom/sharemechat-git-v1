@@ -14,9 +14,14 @@
 //      pago y el redirect.
 //
 // Dismiss: el user puede ocultar el widget con la X arriba. La
-// persistencia guarda el snapshot de pasos completos en el momento
-// del dismiss; si el usuario progresa despues (completa el KYC), el
-// widget vuelve a mostrarse para guiarle al siguiente paso.
+// persistencia usa sessionStorage (no localStorage) para que el
+// widget vuelva a aparecer al abrir el navegador de nuevo — la
+// mayoria de usuarios no sabe limpiar cache y necesitamos un
+// mecanismo de "retomar" natural. Dentro de la misma sesion de
+// navegador respetamos el dismiss (guardando el snapshot de pasos
+// completos en el momento del dismiss); si el usuario progresa
+// despues (completa el KYC), el widget vuelve a mostrarse para
+// guiarle al siguiente paso.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useHistory } from 'react-router-dom';
@@ -154,12 +159,15 @@ const ctaDisabledStyle = {
 };
 
 // ============================================================
-// Utils localStorage (defensivos: incognito puede lanzar en Safari).
+// Utils sessionStorage (defensivos: incognito puede lanzar en Safari).
+// Usamos sessionStorage en vez de localStorage para que el dismiss
+// solo dure la sesion actual del navegador; al abrirlo de nuevo el
+// widget vuelve — la mayoria de usuarios no sabe limpiar cache.
 // ============================================================
 const readDismissedCount = (userId) => {
   if (!userId) return null;
   try {
-    const raw = localStorage.getItem(`${DISMISS_STORAGE_PREFIX}${userId}`);
+    const raw = sessionStorage.getItem(`${DISMISS_STORAGE_PREFIX}${userId}`);
     if (raw == null) return null;
     const n = Number(raw);
     return Number.isFinite(n) ? n : null;
@@ -171,16 +179,16 @@ const readDismissedCount = (userId) => {
 const writeDismissedCount = (userId, count) => {
   if (!userId) return;
   try {
-    localStorage.setItem(`${DISMISS_STORAGE_PREFIX}${userId}`, String(count));
+    sessionStorage.setItem(`${DISMISS_STORAGE_PREFIX}${userId}`, String(count));
   } catch {
-    // localStorage bloqueado (Safari incognito, permisos). Fail silently.
+    // sessionStorage bloqueado (Safari incognito, permisos). Fail silently.
   }
 };
 
 // ============================================================
 // Componente
 // ============================================================
-const OnboardingChecklist = () => {
+const OnboardingChecklist = ({ onLoadBalance = null }) => {
   const t = useCallback((key, options) => i18n.t(key, options), []);
   const history = useHistory();
   const { user } = useSession();
@@ -214,10 +222,19 @@ const OnboardingChecklist = () => {
   }, [history]);
 
   const handleOpenPurchase = useCallback(() => {
-    // openPurchaseModal es promesa; ignoramos el resultado en este
-    // widget (la propia modal gestiona el pago end-to-end).
+    // openPurchaseModal es una promesa que resuelve con el pack
+    // seleccionado, pero NO ejecuta el pago; es responsabilidad del
+    // caller hacer el POST /transactions/first + alert + redirect.
+    // Delegamos al handler del padre (DashboardUserClient.handleFirstPayment)
+    // para no duplicar la logica de primer pago aqui. Fallback: si
+    // el padre no pasa onLoadBalance, abrimos la modal sin cablear
+    // el pago (modo degradado que solo mostrara los packs sin cobrar).
+    if (typeof onLoadBalance === 'function') {
+      onLoadBalance();
+      return;
+    }
     openPurchaseModal({ context: 'manual' });
-  }, [openPurchaseModal]);
+  }, [onLoadBalance, openPurchaseModal]);
 
   // Reglas de visibilidad:
   //  - Si ambos pasos ya estan completos, no hay nada que guiar.

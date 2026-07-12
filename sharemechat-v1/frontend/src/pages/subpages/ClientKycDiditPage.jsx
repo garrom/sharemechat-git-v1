@@ -24,7 +24,6 @@ import {
 import { NavButton } from '../../styles/ButtonStyles';
 
 import {
-  Hint,
   CenteredMain,
   OnboardingCard,
 } from '../../styles/subpages/PerfilClientModelStyle';
@@ -118,26 +117,93 @@ const ClientKycDiditPage = () => {
 
       <StyledMainContent data-tab="client-kyc">
         <CenteredMain>
-          <OnboardingCard>
-            <h3>{tk('clientKyc.title')}</h3>
+          <OnboardingCard style={{ maxWidth: 560 }}>
+            {/* Jerarquia tipografica: titulo grande + gancho, intro
+                breve tamano medio, resto (contexto legal + consent)
+                en letra pequena para no inflar el modal. */}
+            <h2
+              style={{
+                fontSize: '1.5rem',
+                fontWeight: 800,
+                color: '#1e3a8a',
+                margin: 0,
+                lineHeight: 1.2,
+              }}
+            >
+              {tk('clientKyc.title')}
+            </h2>
 
-            <Hint style={{ marginTop: 12, color: '#000' }}>
+            <p
+              style={{
+                fontSize: '0.95rem',
+                lineHeight: 1.55,
+                color: '#1f2933',
+                margin: '10px 0 0',
+              }}
+            >
               {tk('clientKyc.intro')}
-            </Hint>
+            </p>
 
-            <Hint style={{ marginTop: 12, color: '#000' }}>
+            <p
+              style={{
+                fontSize: '0.78rem',
+                lineHeight: 1.5,
+                color: '#6b7683',
+                margin: '10px 0 0',
+              }}
+            >
               {tk('clientKyc.whyLegal')}
-            </Hint>
+            </p>
 
-            <div style={{ marginTop: 24, padding: 12, border: '1px solid #ccc', borderRadius: 6 }}>
-              <strong>{tk('clientKyc.consentTitle')}</strong>
-              <p style={{ marginTop: 8, color: '#000' }}>
+            <div
+              style={{
+                marginTop: 16,
+                padding: '10px 12px',
+                border: '1px solid #dde3ea',
+                borderRadius: 10,
+                background: '#f8fafb',
+              }}
+            >
+              <div
+                style={{
+                  fontSize: '0.85rem',
+                  fontWeight: 700,
+                  color: '#1e3a8a',
+                }}
+              >
+                {tk('clientKyc.consentTitle')}
+              </div>
+              <p
+                style={{
+                  fontSize: '0.78rem',
+                  lineHeight: 1.5,
+                  color: '#4a5563',
+                  margin: '6px 0 0',
+                }}
+              >
                 {tk('clientKyc.consentText')}
               </p>
-              <p style={{ marginTop: 8, color: '#000' }}>
+              <p
+                style={{
+                  fontSize: '0.78rem',
+                  lineHeight: 1.5,
+                  color: '#4a5563',
+                  margin: '6px 0 0',
+                }}
+              >
                 {tk('clientKyc.consentReadMore')}
               </p>
-              <label style={{ display: 'flex', gap: 8, alignItems: 'flex-start', marginTop: 12, color: '#000' }}>
+              <label
+                style={{
+                  display: 'flex',
+                  gap: 8,
+                  alignItems: 'center',
+                  marginTop: 10,
+                  fontSize: '0.82rem',
+                  color: '#1f2933',
+                  cursor: 'pointer',
+                }}
+              >
                 <input
                   type="checkbox"
                   checked={consentChecked}
@@ -145,13 +211,24 @@ const ClientKycDiditPage = () => {
                   aria-describedby="client-kyc-consent-text"
                 />
                 <span id="client-kyc-consent-text">
-                  {tk('clientKyc.consentTitle')}
+                  {tk('clientKyc.consentAcceptLabel')}
                 </span>
               </label>
             </div>
 
             {error ? (
-              <div role="alert" style={{ marginTop: 16, color: '#b00020' }}>
+              <div
+                role="alert"
+                style={{
+                  marginTop: 12,
+                  padding: '8px 10px',
+                  borderRadius: 8,
+                  background: '#fbf1f1',
+                  border: '1px solid #dbbcbc',
+                  color: '#8f5b5b',
+                  fontSize: '0.82rem',
+                }}
+              >
                 {error}
               </div>
             ) : null}
