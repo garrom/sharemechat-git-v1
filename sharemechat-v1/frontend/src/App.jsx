@@ -170,9 +170,16 @@ function App() {
                         es el destino del redirect 302 del backend tras
                         consumir un magic link (?ref=<code>&email_verified=true).
                         Ambas rutas montan el mismo componente; el componente
-                        decide que renderizar segun query params y sesion. */}
-                    <Route path="/i" component={AffiliateLandingPage} />
-                    <Route path="/register/client" component={AffiliateLandingPage} />
+                        decide que renderizar segun query params y sesion.
+
+                        Envuelto en PublicWithGuestGate (mismo patron que
+                        Home/Blog/Login) para que el AgeGateModal se
+                        superponga si el visitante no ha confirmado edad
+                        18+ todavia. Sin este wrapper, openLoginModal hace
+                        return silencioso por el guard isLocalAgeOk y los
+                        botones CTA no responden. */}
+                    <PublicWithGuestGate path="/i" component={AffiliateLandingPage} />
+                    <PublicWithGuestGate path="/register/client" component={AffiliateLandingPage} />
                     <Route path="/legal" component={Legal} />
                     <Route path="/complaint" component={ComplaintForm} />
                     <Route path="/faq" component={Faq} />
