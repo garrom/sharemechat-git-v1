@@ -670,16 +670,6 @@ public class StreamService {
             );
             clientRepository.save(clientEntity);
 
-            // ADR-049 Subpasada 5 (D2 revisado 2026-07-12): hook al motor
-            // de comisiones. Si el cliente tiene modelo referidora, acumula
-            // 30% del importe consumido para la referidora. Fail-soft: la
-            // implementacion del service ya envuelve en try/catch para no
-            // romper el ciclo de streaming si el hook falla.
-            affiliateCommissionService.accrueForStreamCharge(
-                    clientId,
-                    cost.movePointRight(2).longValueExact(),
-                    session.getId());
-
             // 10) MODELO
             Transaction txModel = new Transaction();
             txModel.setUser(modelUser);
@@ -723,6 +713,21 @@ public class StreamService {
                             .add(hoursAsBigDecimal)
             );
             modelRepository.save(modelEntity);
+
+            // ADR-049 Subpasada 5 (D2 revisado 2026-07-12): hook al motor
+            // de comisiones. Ubicacion IMPORTANTE: TIENE que ir despues del
+            // save del STREAM_EARNING de la modelo para que la query D4
+            // (hasOwnActivityThisMonth) vea la ganancia recien creada. Fue
+            // bug 2026-07-12: el hook estaba antes del bloque MODELO y
+            // en self-stream (cliente referrido stremando con su propia
+            // referrer) la query D4 devolvia false porque el STREAM_EARNING
+            // aun no estaba en la persistence unit. Fail-soft: la
+            // implementacion del service ya envuelve en try/catch para no
+            // romper el ciclo de streaming si el hook falla.
+            affiliateCommissionService.accrueForStreamCharge(
+                    clientId,
+                    cost.movePointRight(2).longValueExact(),
+                    session.getId());
 
             // 11) PLATAFORMA
             PlatformTransaction ptx = new PlatformTransaction();
