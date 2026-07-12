@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route, Redirect, useLocation } from 'react-router-dom';
 import i18n from './i18n';
 import RequireRole from './components/RequireRole';
 import DashboardClient from './pages/dashboard/DashboardClient';
@@ -49,6 +49,27 @@ import { buildAdminAppUrl, isAdminSurface } from './utils/runtimeSurface';
 const PublicWithGuestGate = ({ component: Component, ...rest }) => (
   <Route {...rest} render={(props) => (<GuestConsentGate><Component {...props} /></GuestConsentGate>)} />
 );
+
+// ADR-049 Subpasada 2E fix UX: en las rutas de captacion de la landing
+// publica del programa de afiliadas (/i y /register/client) ocultamos el
+// Footer global. El visitante ha llegado con intencion de registrarse y
+// conseguir el bono; los links del footer (FAQ, Safety, Rules, Legal)
+// son links reales de React Router que le sacan del contexto de
+// conversion. Patron estandar de industria en landings de captacion:
+// reducir superficies de escape al maximo hasta que el usuario complete
+// (o abandone conscientemente) la conversion. Los links legales
+// imprescindibles (T&C, Privacidad) siguen accesibles desde el modal de
+// registro que se abre al pulsar el CTA principal.
+const AFFILIATE_LANDING_PATHS = ['/i', '/register/client'];
+const ConditionalFooter = () => {
+  const location = useLocation();
+  const path = location.pathname || '';
+  const isAffiliateLanding = AFFILIATE_LANDING_PATHS.some(
+    (p) => path === p || path.startsWith(`${p}/`)
+  );
+  if (isAffiliateLanding) return null;
+  return <Footer />;
+};
 
 const ExternalRedirect = ({ to }) => {
   React.useEffect(() => {
@@ -224,7 +245,7 @@ function App() {
                     <Redirect to="/unauthorized" />
                   </Switch>
 
-                  <Footer />
+                  <ConditionalFooter />
                   <CookieBanner />
                 </>
               )}

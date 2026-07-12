@@ -30,7 +30,7 @@ import { useHistory, useLocation } from 'react-router-dom';
 import i18n from '../i18n';
 import { useSession } from '../components/SessionProvider';
 import { useAppModals } from '../components/useAppModals';
-import PublicNavbar from '../components/navbar/PublicNavbar';
+import LocaleSwitcher from '../components/LocaleSwitcher';
 import { recordClick, sendMagicLink } from '../api/affiliatePublicApi';
 
 // ============================================================
@@ -52,6 +52,38 @@ const wrapStyle = {
   flexDirection: 'column',
   background: '#111418',
   color: '#e5e7eb',
+};
+
+// ============================================================
+// Header minimalista de la landing de captacion.
+//
+// PublicNavbar completo NO se usa aqui a proposito: sus botones
+// (Videochat / Favoritos / Blog / Support / Comprar / Iniciar sesion)
+// distraen al visitante del CTA principal, y ademas nuestra landing
+// los llamaba sin handlers -> quedaban visualmente enabled pero sin
+// respuesta al click (bug confuso). Patron estandar de industria
+// (Airbnb, Stripe, Uber en sus landings de captacion): navbar
+// reducido a brand + selector de idioma para maximizar focus en la
+// conversion.
+// ============================================================
+const minimalHeaderStyle = {
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  height: 72,
+  padding: '0 24px',
+  background: '#111418',
+  borderBottom: '1px solid rgba(148, 163, 184, 0.1)',
+  flexShrink: 0,
+};
+
+const brandStyle = {
+  display: 'block',
+  width: 220,
+  height: 64,
+  background: "url('/img/SharemeChat_white.svg') no-repeat center / contain",
+  textIndent: -9999,
+  flex: '0 0 auto',
 };
 
 const mainStyle = {
@@ -224,6 +256,28 @@ const invalidCardStyle = {
 };
 
 // ============================================================
+// MinimalHeader: brand clickable a Home + selector de idioma. Sin
+// tabs de navegacion, sin CTA de compra ni login (esos viven ya en
+// la propia landing como botones del hero). Focus maximo en el CTA.
+// ============================================================
+const MinimalHeader = ({ onBrandClick, brandLabel }) => (
+  <header style={minimalHeaderStyle}>
+    <a
+      href="#"
+      style={brandStyle}
+      aria-label={brandLabel}
+      onClick={(e) => {
+        e.preventDefault();
+        if (onBrandClick) onBrandClick(e);
+      }}
+    >
+      {brandLabel}
+    </a>
+    <LocaleSwitcher />
+  </header>
+);
+
+// ============================================================
 // Componente
 // ============================================================
 const AffiliateLandingPage = () => {
@@ -331,7 +385,7 @@ const AffiliateLandingPage = () => {
   if (sessionLoading) {
     return (
       <div style={wrapStyle}>
-        <PublicNavbar />
+        <MinimalHeader onBrandClick={() => history.push('/')} brandLabel={t('affiliateLanding.brandAria', { defaultValue: 'SharemeChat' })} />
         <main style={mainStyle}>
           <div style={heroCardStyle}>
             <p style={{ color: '#94a3b8' }}>{t('common.loading', { defaultValue: 'Cargando…' })}</p>
@@ -345,7 +399,7 @@ const AffiliateLandingPage = () => {
   if (!codeIsValid) {
     return (
       <div style={wrapStyle}>
-        <PublicNavbar />
+        <MinimalHeader onBrandClick={() => history.push('/')} brandLabel={t('affiliateLanding.brandAria', { defaultValue: 'SharemeChat' })} />
         <main style={mainStyle}>
           <div style={invalidCardStyle}>
             <h1 style={titleStyle}>{t('affiliateLanding.invalidCode.title')}</h1>
@@ -389,7 +443,7 @@ const AffiliateLandingPage = () => {
     }
     return (
       <div style={wrapStyle}>
-        <PublicNavbar />
+        <MinimalHeader onBrandClick={() => history.push('/')} brandLabel={t('affiliateLanding.brandAria', { defaultValue: 'SharemeChat' })} />
         <main style={mainStyle}>
           <div style={alreadyLoggedCardStyle}>
             <h1 style={{ ...titleStyle, fontSize: '1.6rem' }}>
@@ -414,7 +468,7 @@ const AffiliateLandingPage = () => {
   // D) Happy path: visitante anonimo con code valido.
   return (
     <div style={wrapStyle}>
-      <PublicNavbar />
+      <MinimalHeader onBrandClick={() => history.push('/')} brandLabel={t('affiliateLanding.brandAria', { defaultValue: 'SharemeChat' })} />
       <main style={mainStyle}>
         {/* Hero card */}
         <div style={heroCardStyle}>
