@@ -10,6 +10,7 @@ import { useCallUi } from '../../components/CallUiContext';
 import { ensureClientKycApproved } from '../../utils/clientKycGate';
 import VideoChatRandomUser from './VideoChatRandomUser';
 import TrialCooldownModal from '../../components/TrialCooldownModal';
+import OnboardingChecklist from '../../components/OnboardingChecklist';
 import {
   StyledContainer,
   StyledMainContent,
@@ -810,6 +811,13 @@ const DashboardUserClient = () => {
       {/* ========= FIN NAVBAR  ======== */}
 
       <DashboardContentShell>
+        {/* ADR-049 Subpasada 2F: widget de onboarding para guiar al
+            cliente por los 2 pasos que faltan (KYC edad + primer pago)
+            hasta acceso pleno. Se auto-oculta cuando ambos pasos estan
+            completos o cuando el usuario lo dismissa. Solo vive aqui
+            (DashboardUserClient); al promocionar a role=CLIENT el
+            usuario pasa a DashboardClient donde el widget no existe. */}
+        <OnboardingChecklist />
         <StyledMainContent data-tab={activeTab}>
           {activeTab === 'videochat' && (
             <VideoChatRandomUser

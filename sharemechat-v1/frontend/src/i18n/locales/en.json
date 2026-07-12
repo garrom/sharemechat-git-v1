@@ -3242,5 +3242,27 @@
         "cta": "Back to admin panel"
       }
     }
+  },
+  "onboardingChecklist": {
+    "title": "Complete your account to get started",
+    "subtitle": "It takes 2 minutes to unlock SharemeChat at 100%.",
+    "dismiss": "Hide",
+    "steps": {
+      "accountCreated": {
+        "label": "Account created",
+        "done": "✓ done"
+      },
+      "verifyAge": {
+        "label": "Verify your age",
+        "description": "Less than 1 minute with our provider Didit.",
+        "cta": "Verify now"
+      },
+      "loadBalance": {
+        "label": "Load your first balance",
+        "description": "Pick the pack you prefer. You can start from €10.",
+        "cta": "Load balance",
+        "blockedHint": "Complete age verification first."
+      }
+    }
   }
 }

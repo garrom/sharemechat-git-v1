@@ -3242,5 +3242,27 @@
         "cta": "Volver al panel admin"
       }
     }
+  },
+  "onboardingChecklist": {
+    "title": "Completa tu cuenta para empezar",
+    "subtitle": "En 2 minutos tienes todo listo para usar SharemeChat al 100 %.",
+    "dismiss": "Ocultar",
+    "steps": {
+      "accountCreated": {
+        "label": "Cuenta creada",
+        "done": "✓ hecho"
+      },
+      "verifyAge": {
+        "label": "Verifica tu edad",
+        "description": "Menos de 1 minuto con nuestro proveedor Didit.",
+        "cta": "Verificar ahora"
+      },
+      "loadBalance": {
+        "label": "Carga tu primer saldo",
+        "description": "Elige el pack que prefieras. Puedes empezar desde 10 €.",
+        "cta": "Cargar saldo",
+        "blockedHint": "Primero completa la verificación de edad."
+      }
+    }
   }
 }
