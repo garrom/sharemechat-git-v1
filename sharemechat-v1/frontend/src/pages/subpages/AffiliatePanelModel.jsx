@@ -153,7 +153,14 @@ const qrActionsColStyle = {
 // Componente
 // ============================================================
 const AffiliatePanelModel = () => {
-  const t = (key, options) => i18n.t(key, options);
+  // Fix Subpasada 2D-fix: `t` envuelta en useCallback con deps [] para
+  // estabilizar su referencia entre renders. La declaracion previa creaba
+  // una nueva funcion en cada render, y como `t` esta en los [deps] de
+  // dos useEffect (dashboard fetch y QR fetch), el efecto se re-ejecutaba
+  // en cada render -> bucle infinito de fetch y setState que saturaba el
+  // pool HTTP/2 del navegador (ERR_INSUFFICIENT_RESOURCES). i18n es un
+  // singleton importado, sin state/prop capturado; deps [] es seguro.
+  const t = useCallback((key, options) => i18n.t(key, options), []);
   const history = useHistory();
   const { user: sessionUser } = useSession();
 
