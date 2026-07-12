@@ -25,6 +25,7 @@ import Home from './public-pages/Home';
 import Unauthorized from './public-pages/Unauthorized';
 import ResetPassword from './public-pages/ResetPassword';
 import ForgotPassword from './public-pages/ForgotPassword';
+import AffiliateLandingPage from './public-pages/AffiliateLandingPage';
 import AdminEmailVerificationPage from './pages/admin/AdminEmailVerificationPage';
 import ProductEmailVerificationPage from './public-pages/ProductEmailVerificationPage';
 import Roles from './constants/Roles';
@@ -163,6 +164,15 @@ function App() {
                     <Route path="/unauthorized" component={Unauthorized} />
                     <Route path="/reset-password" component={ResetPassword} />
                     <Route path="/verify-email" component={ProductEmailVerificationPage} />
+                    {/* ADR-049 Subpasada 2E: landing publica del programa de
+                        afiliadas. /i?ref=<code> es el destino del QR y de la
+                        URL directa que la modelo comparte. /register/client
+                        es el destino del redirect 302 del backend tras
+                        consumir un magic link (?ref=<code>&email_verified=true).
+                        Ambas rutas montan el mismo componente; el componente
+                        decide que renderizar segun query params y sesion. */}
+                    <Route path="/i" component={AffiliateLandingPage} />
+                    <Route path="/register/client" component={AffiliateLandingPage} />
                     <Route path="/legal" component={Legal} />
                     <Route path="/complaint" component={ComplaintForm} />
                     <Route path="/faq" component={Faq} />

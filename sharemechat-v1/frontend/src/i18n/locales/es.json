@@ -3202,5 +3202,45 @@
       "qr": "No se pudo cargar el QR.",
       "generic": "Ha ocurrido un error. Vuelve a intentarlo más tarde."
     }
+  },
+  "affiliateLanding": {
+    "hero": {
+      "eyebrow": "Te han invitado a SharemeChat",
+      "title": "Regístrate y llévate 10 € de bienvenida",
+      "subtitle": "Alguien especial te ha invitado a SharemeChat. Crea tu cuenta y consigue 10 € de saldo para explorar la plataforma con cualquier modelo.",
+      "ctaRegister": "Crear cuenta y conseguir mis 10 €",
+      "ctaLogin": "Ya tengo cuenta · Iniciar sesión"
+    },
+    "magicLink": {
+      "title": "¿Prefieres registrarte más tarde?",
+      "description": "Déjanos tu email y te enviamos el enlace para que continúes desde donde quieras (móvil, tablet u ordenador).",
+      "emailPlaceholder": "tu@email.com",
+      "submit": "Enviarme el enlace",
+      "sending": "Enviando…",
+      "success": "Te hemos enviado un email con el enlace. Revisa tu bandeja de entrada.",
+      "errorRateLimit": "Demasiadas solicitudes desde tu conexión. Inténtalo más tarde.",
+      "errorInvalidEmail": "El formato del email no es válido.",
+      "errorGeneric": "No hemos podido enviar el email. Inténtalo de nuevo en un rato."
+    },
+    "invalidCode": {
+      "title": "Enlace no válido",
+      "message": "El enlace que has abierto no lleva un código de invitación válido. Pide a la persona que te invitó que te comparta el enlace de nuevo.",
+      "cta": "Ir a SharemeChat"
+    },
+    "alreadyLogged": {
+      "title": "Este enlace es para visitantes nuevos",
+      "model": {
+        "message": "Estás dentro como modelo. Este tipo de enlaces sirve para invitar a clientes nuevos a SharemeChat, no para abrirlo tú. Cópialo desde tu panel de Afiliada y compártelo con tu red.",
+        "cta": "Volver a mi panel"
+      },
+      "client": {
+        "message": "Ya tienes cuenta en SharemeChat, por lo que este enlace de invitación no se aplica a tu perfil. Sigue disfrutando de la plataforma con normalidad.",
+        "cta": "Ir al chat"
+      },
+      "admin": {
+        "message": "Este enlace es para visitantes externos que aún no tienen cuenta en SharemeChat.",
+        "cta": "Volver al panel admin"
+      }
+    }
   }
 }

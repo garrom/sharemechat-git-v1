@@ -3202,5 +3202,45 @@
       "qr": "Could not load QR.",
       "generic": "An error occurred. Please try again later."
     }
+  },
+  "affiliateLanding": {
+    "hero": {
+      "eyebrow": "You've been invited to SharemeChat",
+      "title": "Sign up and get €10 welcome credit",
+      "subtitle": "Someone special invited you to SharemeChat. Create your account and get €10 of credit to explore the platform with any model.",
+      "ctaRegister": "Create account and claim my €10",
+      "ctaLogin": "I already have an account · Sign in"
+    },
+    "magicLink": {
+      "title": "Prefer to sign up later?",
+      "description": "Give us your email and we'll send you the link so you can continue from wherever you like (phone, tablet or desktop).",
+      "emailPlaceholder": "you@email.com",
+      "submit": "Send me the link",
+      "sending": "Sending…",
+      "success": "We've sent you an email with the link. Check your inbox.",
+      "errorRateLimit": "Too many requests from your connection. Try again later.",
+      "errorInvalidEmail": "The email format is not valid.",
+      "errorGeneric": "We couldn't send the email. Please try again in a moment."
+    },
+    "invalidCode": {
+      "title": "Invalid link",
+      "message": "The link you opened doesn't include a valid invitation code. Ask the person who invited you to share the link again.",
+      "cta": "Go to SharemeChat"
+    },
+    "alreadyLogged": {
+      "title": "This link is for new visitors",
+      "model": {
+        "message": "You're signed in as a model. This kind of link is meant to invite new clients to SharemeChat, not for you to open. Copy it from your Affiliate panel and share it with your network.",
+        "cta": "Back to my panel"
+      },
+      "client": {
+        "message": "You already have a SharemeChat account, so this invitation link doesn't apply to your profile. Keep enjoying the platform as usual.",
+        "cta": "Go to chat"
+      },
+      "admin": {
+        "message": "This link is for external visitors who don't have a SharemeChat account yet.",
+        "cta": "Back to admin panel"
+      }
+    }
   }
 }
