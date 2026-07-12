@@ -8,6 +8,7 @@ import FavoritesClientList from '../favorites/FavoritesClientList';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import { ensureClientKycApproved } from '../../utils/clientKycGate';
+import { checkPhysicalCamera, stopAllTracks } from '../../utils/virtualCameraGuard';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -1350,6 +1351,39 @@ const DashboardClient = () => {
       console.log(
         `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=activateCamera success=true trackCount=${tracks.length} tracks=${trackSummary}`
       );
+
+      // Anti-fraude camara Fase A (2026-07-13): bloquear virtual cameras
+      // conocidas (OBS, ManyCam, Snap, etc.) antes de exponer la camara al
+      // flujo de streaming. La comprobacion es local y solo mira label del
+      // dispositivo, es evadible renombrando pero corta el 90% de uso casual.
+      const cameraCheck = await checkPhysicalCamera(stream);
+      if (!cameraCheck.allowed) {
+        console.warn(
+          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=client action=activateCamera guard=blocked reason=${cameraCheck.reason} label=${cameraCheck.deviceLabel || 'unknown'} rule=${cameraCheck.matchedRule || 'none'}`
+        );
+        stopAllTracks(stream);
+        localStream.current = null;
+        setRandomLocalMediaState(createMediaStateSnapshot(null, {
+          status: 'lost',
+          lastReason: `guard:${cameraCheck.reason}`,
+        }));
+        setCameraActive(false);
+        const dev = cameraCheck.deviceLabel;
+        const message = cameraCheck.reason === 'no-device-id'
+          ? i18n.t('common.media.virtualCameraBlocked.unknownDevice')
+          : (dev
+              ? i18n.t('common.media.virtualCameraBlocked.message', { device: dev })
+              : i18n.t('common.media.virtualCameraBlocked.genericMessage'));
+        await alert({
+          title: i18n.t('common.media.virtualCameraBlocked.title'),
+          message: `${message}\n\n${i18n.t('common.media.virtualCameraBlocked.guidance')}`,
+          variant: 'danger',
+          size: 'sm',
+        });
+        setError('');
+        return;
+      }
+
       localStream.current = stream;
       setRandomLocalMediaState(createMediaStateSnapshot(stream, {
         status: 'obtained',

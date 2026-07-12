@@ -8,6 +8,7 @@ import Peer from 'simple-peer';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import { ensureClientKycApproved } from '../../utils/clientKycGate';
+import { checkPhysicalCamera, stopAllTracks } from '../../utils/virtualCameraGuard';
 import VideoChatRandomUser from './VideoChatRandomUser';
 import TrialCooldownModal from '../../components/TrialCooldownModal';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
@@ -304,6 +305,33 @@ const DashboardUserClient = () => {
         video: true,
         audio: true,
       });
+
+      // Anti-fraude camara Fase A (2026-07-13): bloquear virtual cameras
+      // conocidas (OBS, ManyCam, Snap, etc.) tambien en trial cliente para
+      // consistencia con DashboardClient y DashboardModel.
+      const cameraCheck = await checkPhysicalCamera(stream);
+      if (!cameraCheck.allowed) {
+        console.warn(
+          `[USER_TRACE_MEDIA] role=user action=activateCamera guard=blocked reason=${cameraCheck.reason} label=${cameraCheck.deviceLabel || 'unknown'} rule=${cameraCheck.matchedRule || 'none'}`
+        );
+        stopAllTracks(stream);
+        localStreamRef.current = null;
+        setCameraActive(false);
+        const dev = cameraCheck.deviceLabel;
+        const message = cameraCheck.reason === 'no-device-id'
+          ? t('common.media.virtualCameraBlocked.unknownDevice')
+          : (dev
+              ? t('common.media.virtualCameraBlocked.message', { device: dev })
+              : t('common.media.virtualCameraBlocked.genericMessage'));
+        await alert({
+          title: t('common.media.virtualCameraBlocked.title'),
+          message: `${message}\n\n${t('common.media.virtualCameraBlocked.guidance')}`,
+          variant: 'danger',
+          size: 'sm',
+        });
+        return;
+      }
+
       localStreamRef.current = stream;
       setCameraActive(true);
       if (localVideoRef.current) {

@@ -7,6 +7,7 @@ import Peer from 'simple-peer';
 import FavoritesModelList from '../favorites/FavoritesModelList';
 import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
+import { checkPhysicalCamera, stopAllTracks } from '../../utils/virtualCameraGuard';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
@@ -1791,6 +1792,38 @@ const DashboardModel = () => {
       console.log(
         `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=activateCamera success=true trackCount=${tracks.length} tracks=${trackSummary}`
       );
+
+      // Anti-fraude camara Fase A (2026-07-13): bloquear virtual cameras
+      // conocidas (OBS, ManyCam, Snap, etc.) para modelo, para que no cobre
+      // por streaming de video pregrabado.
+      const cameraCheck = await checkPhysicalCamera(stream);
+      if (!cameraCheck.allowed) {
+        console.warn(
+          `[RANDOM_TRACE_MEDIA] ts=${Date.now()} role=model action=activateCamera guard=blocked reason=${cameraCheck.reason} label=${cameraCheck.deviceLabel || 'unknown'} rule=${cameraCheck.matchedRule || 'none'}`
+        );
+        stopAllTracks(stream);
+        localStream.current = null;
+        setRandomLocalMediaState(createMediaStateSnapshot(null, {
+          status: 'lost',
+          lastReason: `guard:${cameraCheck.reason}`,
+        }));
+        setCameraActive(false);
+        const dev = cameraCheck.deviceLabel;
+        const message = cameraCheck.reason === 'no-device-id'
+          ? i18n.t('common.media.virtualCameraBlocked.unknownDevice')
+          : (dev
+              ? i18n.t('common.media.virtualCameraBlocked.message', { device: dev })
+              : i18n.t('common.media.virtualCameraBlocked.genericMessage'));
+        await alert({
+          title: i18n.t('common.media.virtualCameraBlocked.title'),
+          message: `${message}\n\n${i18n.t('common.media.virtualCameraBlocked.guidance')}`,
+          variant: 'danger',
+          size: 'sm',
+        });
+        setError('');
+        return;
+      }
+
       localStream.current = stream;
       setRandomLocalMediaState(createMediaStateSnapshot(stream, {
         status: 'obtained',
