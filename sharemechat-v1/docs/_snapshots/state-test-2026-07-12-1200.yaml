@@ -1,0 +1,306 @@
+metadata:
+  schema_version: 3
+  environment: test
+  generated_at: "2026-07-12T12:00:00Z"
+  generated_by: manual@cierre-subpasadas-2a-2d-afiliadas
+  notes: |
+    Snapshot manual tras el cierre + deploy TEST del bloque completo del
+    programa de afiliadas de la modelo (ADR-049 subpasadas 2A a 2D) mas
+    el fix del bucle useEffect en AffiliatePanelModel.jsx.
+
+    Sub-fases cerradas y desplegadas en TEST en esta ventana:
+      - 2A backend (endpoints /activate + /panel + /qr.svg, generador
+        codigo Crockford Base32, QR SVG via nayuki qrcodegen) — commit
+        44e81d5 + fixes hermanos 5717086 (ipHash/uaHash CHAR(16)) y
+        bf4fcd9 (tokenHash CHAR(64)).
+      - Refactor Layered inmediato consolidando 9 ficheros de
+        com.sharemechat.affiliate.* a com.sharemechat.{controller,service,dto}
+        — commit a7b2725.
+      - 2B backend (pipeline atribucion cliente: click/magic-link/consume,
+        AffiliateAttributionService transaccional con favorito auto +
+        REGISTERED + bono BFPM, wiring en UserService.registerClient via
+        cookie sharemechat_affiliate_ref) — commit 70b5a5c + V17 Flyway
+        anadiendo columna favorite_source a favorites_models.
+      - 2C frontend (refactor navbar model: pills a icon-only, nuevo pill
+        Afiliada, opt-in iconOnly en DesktopActions, ruta
+        /perfil-modelo/afiliada con placeholder) — commits 6619660 +
+        06fa58d.
+      - 2D frontend (panel real AffiliatePanelModel: no-activado /
+        activado con URL + copiar + QR blob + descargar + stats, nuevo
+        api/affiliateApi.js, mas fix estructural chat Agente IA movil) —
+        commit 4b56155.
+      - Fix bucle useEffect infinito en AffiliatePanelModel:156 —
+        commit ca74a98 (useCallback envolviendo `t`).
+
+    Cobertura de este snapshot: bloque de dominios que cambiaron en la
+    ventana — codigo backend (2A/2B), schema BD TEST (V17 aplicada), JAR
+    backend TEST, bundle product TEST, manifests deploy-state/test.yaml.
+    AUDIT y PROD NO estan tocados en esta ventana.
+
+    HEAD del repo al generar el snapshot: 6c2f490 (main, working tree
+    clean respecto al codigo funcional; el propio commit del snapshot
+    tocara docs/_snapshots/ y docs/project-log.md, ver commit posterior).
+
+    Sanitizado: no incluye hostnames RDS reales, ARNs, IPs publicas ni
+    credenciales. IDs de CloudFront si se incluyen porque son necesarios
+    para identificar las distribuciones invalidadas en esta sesion y ya
+    aparecen documentados en docs previas del repo.
+
+repo:
+  branch: main
+  head_commit: 6c2f490
+  head_commit_message: |
+    chore(deploy): update test manifest post-fix-usecallback-bucle (ca74a98)
+  ventana_commits_relevantes:
+    - "6c2f490 chore(deploy): update test manifest post-fix-usecallback-bucle (ca74a98)"
+    - "ca74a98 fix(model-panel): AffiliatePanelModel useCallback en t para romper bucle useEffect"
+    - "524035a chore(deploy): update test manifest post-subpasada-2d (4b56155)"
+    - "4b56155 feat(model-panel): panel real de Afiliada + fix chat Agente IA movil"
+    - "0f6a42e chore(deploy): update test manifest post-navbar-fixes (06fa58d)"
+    - "06fa58d fix(model-panel): navbar pequenas correcciones visuales"
+    - "e4bd934 chore(deploy): update test manifest post-subpasada-2c (6619660)"
+    - "6619660 feat(model-panel): refactor navbar y anadir boton Afiliada"
+    - "5d4a21a chore(deploy): update test manifest post-refactor layered (a7b2725)"
+    - "a7b2725 refactor(affiliates): consolidar en layered clasico (Opcion B)"
+    - "e2caab0 chore(deploy): update test manifest post-subpasada-2a-fix"
+    - "bf4fcd9 fix(affiliates): tokenHash JPA columnDefinition CHAR(64) (regresion hermana subpasada 1)"
+    - "5717086 fix(affiliates): ipHash/uaHash JPA columnDefinition CHAR(16) (regresion subpasada 1)"
+    - "44e81d5 feat(affiliates): endpoint activate + panel modelo + QR (subpasada 2A del ADR-049)"
+    - "70b5a5c feat(affiliates): pipeline de atribucion del cliente (subpasada 2B del ADR-049)"
+  jar_artifact:
+    name: sharemechat-v1
+    version: 0.0.1-SNAPSHOT
+    sha256_built: "9200cdd0dc5e42e8cf1cb5dfe1923178620e0f597684c249db3e1df436400c40"
+    built_at_utc: "2026-07-11T18:56:19Z"
+    notes: |
+      JAR construido localmente durante el deploy de la Subpasada 2B
+      (commit 70b5a5c) con mvn package -DskipTests. Sin cambios de
+      backend en 2C/2D/fix-bucle (todo fue frontend), por lo que el
+      JAR desplegado en TEST sigue siendo el mismo desde 2026-07-11.
+      Backup del JAR previo (subpasada 2A + fixes CHAR) en
+      /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar.bak-subpasada-2b-20260711-195834.
+      SHA remoto verificado igual al local via update-manifest-backend.ps1
+      -RemoteVerify en el momento del deploy.
+  schema_versioning:
+    flyway_runtime_present: true
+    last_applied_flyway_version: 17
+    v16_applied_notes: |
+      V16 aplicada durante Subpasada 1 previa (fuera de la ventana de
+      este snapshot). Anade columnas users.referral_code_owner,
+      referred_by_user_id, referred_at + tablas affiliate_link_tokens,
+      affiliate_click_events, affiliate_commissions + columna
+      payout_requests.payout_type. Los fixes 5717086 y bf4fcd9 en la 2A
+      corrigen JPA columnDefinition CHAR sin re-migrar (V16 en BD ya
+      estaba correcta; el problema era Hibernate emitia VARCHAR por
+      default). No hay V16.1 ni rollback.
+    v17_applied_notes: |
+      V17 aplicada limpiamente durante el deploy de la Subpasada 2B
+      (commit 70b5a5c) el 2026-07-11 19:58:45 UTC. Anade columna
+      favorite_source VARCHAR(30) NOT NULL DEFAULT 'MANUAL' a
+      favorites_models, con CHECK IN ('MANUAL','AFFILIATE_INVITATION')
+      + indice idx_fav_models_source. Verificado en information_schema
+      (columna existe) y en flyway_schema_history (success=1).
+
+ec2_backend:
+  ssh_alias: test-backend
+  systemd_units:
+    - name: sharemechat-test.service
+      versioned_in_repo: true
+      repo_path: "sharemechat-v1/ops/sharemechat-backend/systemd/sharemechat-test.service"
+      notes: |
+        Sin cambios en el unit en este frente. Servicio arranca por
+        systemd desde el deploy de la 2B (a diferencia del matiz
+        historico de start-test.sh, ver deuda #D-12 cerrada 2026-07-07).
+  jar_running:
+    path_on_ec2: "/home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar"
+    sha256_running: "9200cdd0dc5e42e8cf1cb5dfe1923178620e0f597684c249db3e1df436400c40"
+    started_at_utc: "2026-07-12T08:53:31Z"
+    boot_signals_verificados:
+      - "Flyway: Successfully applied 1 migration to schema db1_sharemechat_test, now at version v17 (execution time 00:00.283s) — en el deploy previo 2026-07-11 19:58"
+      - "Tomcat started on port 8080 (http) with context path '/'"
+      - "Started SharemechatV1Application in 33.219 seconds (execute en el deploy previo)"
+      - "Sin ERROR / Schema-validation / Exception en journalctl del boot actual"
+  config_env:
+    path_on_ec2: "/opt/sharemechat/config.env"
+    notes: |
+      Sin cambios permanentes en config.env en la ventana. Toggle temporal
+      de PRODUCT_REGISTRATION_CLIENT_ENABLED false->true->false ejecutado
+      dos veces durante los smokes de la Subpasada 2B para abrir el gate
+      de registro cliente durante ~1 minuto y ejecutar el pipeline
+      end-to-end; ambos revertidos al terminar, verificado leyendo
+      /proc/<pid>/environ del proceso Java tras cada revert. Backups
+      preventivos del config.env dejados en /opt/sharemechat/
+      config.env.bak-smoke2b-* (el operador puede purgarlos).
+  secrets_env:
+    path_on_ec2: "/opt/sharemechat/secrets.env"
+    ownership: "root:root 0600 (restaurado 2026-07-07 tras deuda #D-12)"
+    notes: "Sin cambios en secrets.env en esta ventana."
+
+rds:
+  identifier: "db1-sharemechat-test-v2"
+  status: "running"
+  engine: "mysql"
+  engine_version: "8.4.7"
+  flyway_schema_version: 17
+  operaciones_sesion:
+    - "V17 aplicada limpiamente el 2026-07-11 19:58:45 UTC durante el deploy de la Subpasada 2B."
+    - "Durante el smoke 2B: SELECT sobre users id=97 para verificar referral_code_owner=F6F5QAFT3WBT; INSERT manual en affiliate_link_tokens para forjar tokens con plain conocido y poder consumir el endpoint /consume (imposible interceptar el email real enviado a buzon ficticio); ambos smokes registran 2 clientes atribuidos (users id=99 y id=100) con favoritos AFFILIATE_INVITATION + eventos REGISTERED + bono welcome de 10 EUR cada uno."
+  notes: |
+    Schema en version 17. Cambios estructurales aplicados en la ventana:
+      + favorites_models.favorite_source VARCHAR(30) NOT NULL DEFAULT 'MANUAL'
+        con CHECK IN ('MANUAL','AFFILIATE_INVITATION') e indice
+        idx_fav_models_source.
+    Datos de test que quedan en la BD (aceptados por el operador para uso
+    posterior en Subpasada 3):
+      + users id=99 (test-referred-1783800868@sharemechat.com) y id=100
+        (test-referred-1783804642@sharemechat.com), ambos con
+        referred_by_user_id=97 y saldo 10 EUR de bono welcome.
+      + affiliate_click_events ids 1-10 cubriendo CLICK / EMAIL_SUBMITTED /
+        LINK_CONSUMED / REGISTERED de dos iteraciones del smoke.
+      + affiliate_link_tokens ids 1-6 (2 reales sin consumir por buzon
+        ficticio, 2 forjados con plain conocido y consumidos por el
+        smoke, 2 del diagnostico intermedio del turno del bucle).
+      + transactions ids 8846 y 8847 (REFERRAL_WELCOME_GRANT +10 EUR) y
+        platform_transactions ids 4078 y 4079 (REFERRAL_WELCOME_FUNDING
+        -10 EUR). Invariante Sum(GRANT) + Sum(FUNDING) = 0 preservado.
+
+s3_buckets:
+  frontend_product:
+    bucket: "sharemechat-frontend-test"
+    deployed_bundle:
+      main: "main.ed9d9e64.js"
+      last_upload_utc: "2026-07-12T09:47:56Z"
+      notes: |
+        Bundle product TEST desplegado el 2026-07-12 con el fix del bucle
+        useEffect (commit ca74a98). Chunk lazy relevante para el panel
+        afiliada: 577.bdcea991.chunk.js (1.26 MB, contiene
+        AffiliatePanelModel completo). Verificacion binaria post-deploy:
+        sha256 chunk local == sha256 chunk remoto; pattern
+        .useCallback)((e,t)=> aparece 3 veces en el chunk nuevo cuando
+        antes no aparecia (uno de esos tres es el fix de AffiliatePanel).
+  frontend_admin:
+    bucket: "sharemechat-admin-test"
+    deployed_bundle:
+      main: "main.e497623e.js"
+      notes: |
+        Sin cambios en la surface admin en esta ventana. Bundle admin
+        TEST heredado del deploy previo del 2026-07-08 (Fase B.3.2 de
+        soporte humano, ADR-046). Ninguna subpasada de afiliadas ha
+        tocado surface admin todavia; el panel admin de afiliadas
+        queda diferido segun ADR-049 D13.
+
+cloudfront:
+  product:
+    id: "E2Q4VNDDWD5QBU"
+    aliases:
+      - "test.sharemechat.com"
+      - "www.test.sharemechat.com"
+    invalidations_in_session:
+      - id: "IATOPVWAXTM5L079D0EY53FRWL"
+        paths: "/*"
+        ts: "2026-07-08T23:02:54Z"
+        notes: "Deploy product del 2026-07-08 (fuera de la ventana pero heredado)."
+      - id: "IF5F4VZJZPA3CEXMIP3Q77R08J"
+        paths: "/*"
+        ts: "2026-07-11T22:26:21Z"
+        notes: "Deploy 2C (refactor navbar + placeholder afiliada)."
+      - id: "invalidations 2D + fix bucle"
+        paths: "/*"
+        ts: "2026-07-11 y 2026-07-12"
+        notes: "Deploys 4b56155 (2D panel real) y ca74a98 (fix bucle). Ids especificos en el output de deploy-frontend.ps1."
+  admin:
+    id: "E28YCPVIRB4ASH"
+    aliases:
+      - "admin.test.sharemechat.com"
+    invalidations_in_session: []
+    notes: "Sin invalidaciones nuevas en esta ventana (surface admin no tocada)."
+
+deploy_state_manifests:
+  path: "ops/deploy-state/test.yaml"
+  backend:
+    git_commit: "70b5a5c840e1cd88e0b6858a79b48a170d2f8799"
+    git_commit_short: "70b5a5c"
+    jar_sha256: "9200cdd0dc5e42e8cf1cb5dfe1923178620e0f597684c249db3e1df436400c40"
+    deployed_at_utc: "2026-07-11T19:59:45Z"
+    verification_method: "manual_via_update-manifest-backend.ps1+remote-verify"
+    notes: "Sin cambios de backend desde 2B; los commits 2C/2D/fix-bucle son solo frontend."
+  frontend_admin:
+    git_commit: "20572ac336413dd67166c446ac687a7ec0ddce0f"
+    git_commit_short: "20572ac"
+    bundle: "main.e497623e.js"
+    deployed_at_utc: "2026-07-08T23:01:37Z"
+    notes: "Sin tocar en esta ventana."
+  frontend_product:
+    git_commit: "ca74a984c5e6a8efc8bc64006d8034e87988fb14"
+    git_commit_short: "ca74a98"
+    bundle: "main.ed9d9e64.js"
+    deployed_at_utc: "2026-07-12T09:47:56Z"
+    verification_method: "deploy-frontend.ps1-live-build_2026-07-12"
+    notes: "Post-fix del bucle useEffect verificado por el operador desde el navegador."
+
+verificacion_final:
+  http_smoke_estatico_product:
+    "GET https://test.sharemechat.com/": "200 text/html 3613 bytes"
+    "GET https://test.sharemechat.com/static/js/main.ed9d9e64.js": "200 179764 bytes"
+  http_smoke_funcional:
+    "GET /api/models/me/affiliate (sin auth)": "401 (esperado; solo comprueba que backend responde)"
+    "GET /api/config/prelaunch (sin auth)": "401"
+  verificacion_visual_operador: |
+    Panel /perfil-modelo/afiliada abierto por el operador tras el fix del
+    bucle: 2 requests unicos al backend (dashboard + qr.svg), sin
+    ERR_INSUFFICIENT_RESOURCES, sin overlay maintenance, URL de referido
+    visible, QR renderizado correctamente, stats coherentes con la BD
+    del smoke 2B (clicksTotal=2, clicksUniqueVisitors=1,
+    clientsReferred=2, commissionAccruedCents=0). Cierre con OK del
+    operador desde el navegador.
+  smoke_pipeline_end_to_end_2b:
+    ejecutado: true
+    notes: |
+      Ejecutado dos veces (smoke completo + retake) durante el deploy de
+      la 2B. Los 4 pasos verdes: POST /click 204 + cookie 90d, POST
+      /magic-link 204 + token en BD + email enviado por Graph, GET
+      /consume 302 + Location correcto + cookie set + token consumido,
+      POST /register/client 200 + user creado + referred_by_user_id +
+      favorito AFFILIATE_INVITATION + evento REGISTERED + bono welcome
+      +10/-10 EUR con invariante BFPM preservado. Detalle completo en la
+      bitacora (entrada 2026-07-12).
+
+deudas_registradas_en_esta_ventana:
+  - id: "#D-23"
+    titulo: "Copy REFERRAL_MAGIC_LINK y REFERRAL_INVITATION pendiente de revision editorial"
+    fuente: "docs/04-operations/known-debt.md entrada 2026-07-11"
+    prioridad: "media (antes del outreach real a modelos)"
+    nota: |
+      Los templates ES/EN en EmailCopyRenderer.renderReferralMagicLink y
+      renderReferralInvitation son placeholders tecnicos suficientes para
+      pasar el smoke. Necesitan pasada editorial antes de campana.
+  - id: "cosmetico (no registrado como #D)"
+    titulo: "Antipatron `const t = (k,o) => i18n.t(k,o)` inline sin useCallback en 10+ componentes del bundle product"
+    fuente: "aprendizaje operativo bitacora 2026-07-12"
+    prioridad: "baja (no bloqueante mientras no se meta t en [deps] de useEffect)"
+    nota: |
+      Existe en PreLaunchScreen, AdminAccessPage, AdminActiveStreamsPanel,
+      AdminAdministrationPanel, AdminAuditPanel, etc. No causa bucle
+      mientras no se meta t en [deps]. Refactor cosmetico opcional para
+      cerrar el patron uniformemente.
+
+entornos_no_tocados:
+  audit:
+    backend_commit_desplegado: "c4f58ce (nivelacion post B.3, 2026-07-09)"
+    schema_version: 15
+    notes: |
+      AUDIT NO ha recibido nada del bloque afiliadas 2A-2D. Cuando el
+      operador decida el corte, replicar (a) V16 + V17 Flyway en RDS
+      AUDIT via tunel bastion + mysqlsh, (b) scp del JAR
+      sha256 9200cdd0... + restart de sharemechat-audit, (c)
+      deploy-frontend.ps1 -Environment audit -Surface product. El bundle
+      admin AUDIT no requiere update porque el subsistema afiliadas
+      todavia no ha llegado a surface admin.
+  prod:
+    backend_commit_desplegado: "5cdda0c (hardening coming-soon, 2026-07-06)"
+    schema_version: 14
+    notes: |
+      PROD NO ha recibido nada del bloque afiliadas. Estado coming-soon
+      con Didit y Sightengine apagados. Replicacion queda supeditada a
+      la decision de corte del operador tras el pivote soft launch
+      (ADR-047).
