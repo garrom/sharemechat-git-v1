@@ -1634,6 +1634,34 @@
       "back": "Back to dashboard"
     }
   },
+  "liveness": {
+    "title": "Live verification",
+    "subtitle": "Before connecting, we need to check that you are in front of the camera right now.",
+    "prompts": {
+      "BLINK_PROMPT": "When you're ready, press \"Start\" and blink twice looking at the camera.",
+      "TURN_LEFT_PROMPT": "When you're ready, press \"Start\" and slowly turn your head to your left.",
+      "TURN_RIGHT_PROMPT": "When you're ready, press \"Start\" and slowly turn your head to your right.",
+      "SMILE_PROMPT": "When you're ready, press \"Start\" and smile visibly looking at the camera."
+    },
+    "status": {
+      "loading": "Preparing verification…",
+      "ready": "Keep your face centered in the video.",
+      "capturing": "Capturing… hold the gesture.",
+      "verifying": "Verifying…",
+      "passed": "Verification passed!",
+      "failed": "We couldn't verify the gesture."
+    },
+    "actions": {
+      "start": "Start",
+      "retry": "Try again"
+    },
+    "messages": {
+      "attemptOf": "Attempt {{current}} of {{max}}",
+      "cooldown": "You've exceeded the allowed attempts. Please wait a few minutes and try again.",
+      "captureError": "We couldn't capture your camera. Make sure it's active and try again.",
+      "error": "Something went wrong. Please try again."
+    }
+  },
   "admin": {
     "finance": {
       "errors": {
