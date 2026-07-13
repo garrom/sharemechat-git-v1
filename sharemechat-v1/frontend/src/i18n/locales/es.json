@@ -138,7 +138,7 @@
       "cameraAccessFailed": "No se pudo acceder a la cámara.",
       "virtualCameraBlocked": {
         "title": "Cámara virtual detectada",
-        "message": "Hemos detectado que tu cámara actual es una cámara virtual ({device}). Por seguridad y para garantizar interacción real en directo, SharemeChat solo permite el streaming con cámaras físicas.",
+        "message": "Hemos detectado que tu cámara actual es una cámara virtual ({{device}}). Por seguridad y para garantizar interacción real en directo, SharemeChat solo permite el streaming con cámaras físicas.",
         "genericMessage": "Hemos detectado una cámara virtual como fuente de vídeo. Por seguridad y para garantizar interacción real en directo, SharemeChat solo permite el streaming con cámaras físicas.",
         "guidance": "Apaga OBS, ManyCam, Snap Camera o cualquier software similar y selecciona tu webcam física en la configuración del navegador.",
         "unknownDevice": "No hemos podido identificar tu cámara. Asegúrate de conceder permisos y usa tu webcam física, no una cámara virtual."
