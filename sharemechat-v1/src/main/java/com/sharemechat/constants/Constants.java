@@ -365,4 +365,36 @@ public class Constants {
 
         private AffiliateCommissionStatus() {}
     }
+
+    // ========================================================================
+    // Anti-fraude camara Fase B (ADR-050): liveness challenge con SightEngine
+    // face-attributes antes del primer startMatch del dia.
+    // ========================================================================
+
+    /**
+     * ADR-050 D4: tipos de challenge disponibles. Se elige uno random por
+     * intento. Reglas de verify hardcoded en {@code LivenessChallengeService}
+     * con umbrales desde {@code moderation.liveness.thresholds.*}.
+     */
+    public static class LivenessChallengeType {
+        public static final String BLINK = "BLINK";
+        public static final String TURN_LEFT = "TURN_LEFT";
+        public static final String TURN_RIGHT = "TURN_RIGHT";
+        public static final String SMILE = "SMILE";
+
+        private LivenessChallengeType() {}
+    }
+
+    /**
+     * ADR-050 D4/D5: estados de {@code liveness_attempts.status}.
+     * Transicion: PENDING -> PASSED | FAILED | EXPIRED.
+     */
+    public static class LivenessChallengeStatus {
+        public static final String PENDING = "PENDING";
+        public static final String PASSED = "PASSED";
+        public static final String FAILED = "FAILED";
+        public static final String EXPIRED = "EXPIRED";
+
+        private LivenessChallengeStatus() {}
+    }
 }
