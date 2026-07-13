@@ -54,6 +54,11 @@ export function createMatchSocketEngine(adapter) {
     // matching sin client_kyc_status=APPROVED. El engine notifica via
     // este callback para que el dashboard redirija a /client-kyc.
     onClientKycRequired,
+    // ADR-050 Fase B (2026-07-13): backend cierra el WS con close-code
+    // 4031 + reason LIVENESS_REQUIRED si el user no tiene pass vigente.
+    // El engine notifica al dashboard para que abra el modal de
+    // liveness challenge.
+    onLivenessRequired,
 
     // Config rol
     role, // 'client' | 'model'
@@ -432,6 +437,11 @@ export function createMatchSocketEngine(adapter) {
     // Defensa en profundidad si el gate frontend se saltó (race, manipulación).
     if (event && event.code === 4030 && typeof onClientKycRequired === 'function') {
       try { onClientKycRequired(); } catch { /* noop */ }
+    }
+    // ADR-050 Fase B (2026-07-13): close-code 4031 indica que el backend
+    // rechazo el matching porque el user no tiene liveness pass vigente.
+    if (event && event.code === 4031 && typeof onLivenessRequired === 'function') {
+      try { onLivenessRequired(); } catch { /* noop */ }
     }
   }
 

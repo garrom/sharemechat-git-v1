@@ -12,6 +12,8 @@ import { checkPhysicalCamera, stopAllTracks } from '../../utils/virtualCameraGua
 import VideoChatRandomUser from './VideoChatRandomUser';
 import TrialCooldownModal from '../../components/TrialCooldownModal';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
+import LivenessChallengeModal from '../../components/LivenessChallengeModal';
+import { getLivenessStatus } from '../../api/livenessApi';
 import {
   StyledContainer,
   StyledMainContent,
@@ -132,6 +134,10 @@ const DashboardUserClient = () => {
   // Modal de cooldown (sin más trials)
   const [showTrialCooldownModal, setShowTrialCooldownModal] = useState(false);
   const [trialRemainingMs, setTrialRemainingMs] = useState(null);
+
+  // ADR-050 Fase B: modal de liveness challenge. Se abre antes del
+  // startMatch cuando no hay pass vigente, o al recibir close code 4031.
+  const [livenessModalOpen, setLivenessModalOpen] = useState(false);
 
   // Report (Trial): modelo actual (para reportar sin bloquear)
   const [currentModelId, setCurrentModelId] = useState(null);
@@ -519,7 +525,7 @@ const DashboardUserClient = () => {
   };
 
   // ======= WebSocket + WebRTC (trial) =======
-  const handleStartMatch = () => {
+  const handleStartMatch = async () => {
     setError('');
     setStatusText('');
     setShowTrialCooldownModal(false);
@@ -533,6 +539,21 @@ const DashboardUserClient = () => {
     if (!cameraActive || !localStreamRef.current) {
       setError(t('dashboardUserClient.errors.activateCameraFirst'));
       return;
+    }
+
+    // ADR-050 Fase B: gate liveness antes de conectar WS. Si el backend
+    // tiene liveness.enabled=false, status devuelve hasCurrentPass=true
+    // como fallback y el modal ni se abre. Si esta enabled y no hay pass,
+    // abrimos modal; onSuccess reintenta handleStartMatch.
+    try {
+      const status = await getLivenessStatus();
+      if (!status || !status.hasCurrentPass) {
+        setLivenessModalOpen(true);
+        return;
+      }
+    } catch {
+      // Fail-open frontend: si /status falla, seguimos. El guard WS
+      // 4031 aun bloqueara si el backend exige pass.
     }
 
     // WS por cookie-auth: NO token en querystring
@@ -577,6 +598,13 @@ const DashboardUserClient = () => {
       console.log('[USER][WS] CLOSE code=', event && event.code, 'reason=', event && event.reason);
       clearPing();
       setSearching(false);
+      // ADR-050 Fase B: close code 4031 LIVENESS_REQUIRED. El backend
+      // rechaza el matching si el user no tiene pass vigente. Abrimos el
+      // modal; onSuccess reintenta handleStartMatch.
+      if (event && event.code === 4031) {
+        setLivenessModalOpen(true);
+        return;
+      }
       // Backend close-code 4030 CLIENT_KYC_REQUIRED (sub-frente Didit
       // cliente, 2026-06-20). Defensa en profundidad: si el gate frontend
       // se saltó (race, manipulación) el backend cierra el WS aquí.
@@ -909,6 +937,18 @@ const DashboardUserClient = () => {
             /* noop */
           }
         }}
+      />
+
+      <LivenessChallengeModal
+        open={livenessModalOpen}
+        localStream={localStreamRef.current}
+        onSuccess={() => {
+          setLivenessModalOpen(false);
+          // Tras pass, reintentar el flujo desde el principio. El proximo
+          // getLivenessStatus devolvera hasCurrentPass=true.
+          handleStartMatch();
+        }}
+        onCancel={() => setLivenessModalOpen(false)}
       />
     </StyledContainer>
   );

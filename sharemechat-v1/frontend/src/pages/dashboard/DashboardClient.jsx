@@ -9,6 +9,8 @@ import { useAppModals } from '../../components/useAppModals';
 import { useCallUi } from '../../components/CallUiContext';
 import { ensureClientKycApproved } from '../../utils/clientKycGate';
 import { checkPhysicalCamera, stopAllTracks } from '../../utils/virtualCameraGuard';
+import LivenessChallengeModal from '../../components/LivenessChallengeModal';
+import { getLivenessStatus } from '../../api/livenessApi';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -100,6 +102,9 @@ const DashboardClient = () => {
   const [cameraActive, setCameraActive] = useState(false);
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState('');
+  // ADR-050 Fase B: modal liveness. Se abre antes del start o al recibir
+  // close code 4031 del backend.
+  const [livenessModalOpen, setLivenessModalOpen] = useState(false);
   const [remoteStream, setRemoteStream] = useState(null);
   const [randomLocalMediaState, setRandomLocalMediaState] = useState(() => createIdleMediaState('random:idle'));
   const [randomRemoteMediaState, setRandomRemoteMediaState] = useState(() => createIdleMediaState('random:remote-idle'));
@@ -478,6 +483,12 @@ const DashboardClient = () => {
           }
         } catch { /* noop */ }
         history.push('/client-kyc?return=' + encodeURIComponent('/client'));
+      },
+
+      // ADR-050 Fase B: backend cierra WS con close-code 4031 si no hay
+      // pass liveness vigente. Abrimos el modal; onSuccess reintenta start.
+      onLivenessRequired: () => {
+        setLivenessModalOpen(true);
       },
 
       // Grace como en tu client
@@ -1420,12 +1431,24 @@ const DashboardClient = () => {
   };
 
 
-  const handleStartMatch = () => {
+  const handleStartMatch = async () => {
     if (guardSensitiveAction({ setError })) return;
     if (!webrtcConfigReady || !Array.isArray(webrtcPeerConfig?.iceServers) || webrtcPeerConfig.iceServers.length === 0) {
       console.error('[WEBRTC][config][Client] unavailable for random match');
       setError(i18n.t('common.errors.connectionSetupFailedRetry'));
       return;
+    }
+    // ADR-050 Fase B: gate liveness. Si liveness.enabled=false backend
+    // devuelve hasCurrentPass=true por fallback y no interrumpimos el flujo.
+    try {
+      const status = await getLivenessStatus();
+      if (!status || !status.hasCurrentPass) {
+        setLivenessModalOpen(true);
+        return;
+      }
+    } catch {
+      // Fail-open: si /status falla seguimos; el guard WS 4031 aun
+      // bloqueara si el backend exige pass.
     }
     matchEngineRef.current?.start();
   };
@@ -3237,6 +3260,15 @@ const DashboardClient = () => {
       </StyledMainContent>
       {/* ======FIN MAIN ======== */}
 
+      <LivenessChallengeModal
+        open={livenessModalOpen}
+        localStream={localStream.current}
+        onSuccess={() => {
+          setLivenessModalOpen(false);
+          matchEngineRef.current?.start();
+        }}
+        onCancel={() => setLivenessModalOpen(false)}
+      />
 
     </StyledContainer>
   );
