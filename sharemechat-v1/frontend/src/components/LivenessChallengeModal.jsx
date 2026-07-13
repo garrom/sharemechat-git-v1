@@ -97,61 +97,100 @@ function delay(ms, cancelledRef) {
   });
 }
 
+// Estilos inline: tema claro sobrescrito sobre ModalStyles global oscuro.
+// Motivacion (feedback operador 2026-07-13): el tema oscuro del proyecto
+// hacia poco legibles los textos azules en fondo negro. Este modal
+// prefiere gris claro + texto oscuro para mejor UX en el gate previo al
+// match. Aplicado via inline para no romper otros modales del proyecto.
+
+const dialogOverride = {
+  background: '#f3f5f7',
+  color: '#1f2933',
+};
+
+const headerOverride = {
+  background: 'transparent',
+};
+
+const titleOverride = {
+  color: '#1e3a8a',
+  fontSize: 18,
+  fontWeight: 800,
+};
+
+const closeBtnOverride = {
+  color: '#1e3a8a',
+};
+
+const bodyOverride = {
+  background: 'transparent',
+  color: '#1f2933',
+  fontSize: 15,
+};
+
+const footerOverride = {
+  background: 'transparent',
+};
+
 const overlayVideoStyle = {
   width: '100%',
-  maxWidth: 320,
+  maxWidth: 340,
   height: 'auto',
   borderRadius: 12,
-  background: '#111',
+  background: '#dde3ea',
   transform: 'scaleX(-1)', // efecto espejo (mas natural para el user)
   display: 'block',
   margin: '0 auto',
+  border: '1px solid rgba(30, 58, 138, 0.15)',
 };
 
 const promptBox = {
-  fontSize: 15,
+  fontSize: 16,
   fontWeight: 700,
   color: '#1e3a8a',
   textAlign: 'center',
-  margin: '12px 0 6px',
-  lineHeight: 1.35,
+  margin: '14px 0 6px',
+  lineHeight: 1.4,
 };
 
 const subtitleStyle = {
-  fontSize: 12,
-  color: 'rgba(30, 58, 138, 0.75)',
+  fontSize: 14,
+  color: '#4a5563',
   textAlign: 'center',
-  margin: '0 0 8px',
+  margin: '0 0 12px',
+  lineHeight: 1.45,
 };
 
 const countdownStyle = {
-  fontSize: 48,
+  fontSize: 54,
   fontWeight: 800,
   color: '#f97316',
   textAlign: 'center',
-  margin: '10px 0',
+  margin: '12px 0',
   lineHeight: 1,
 };
 
 const statusLine = {
-  fontSize: 13,
-  color: 'rgba(30, 41, 59, 0.85)',
+  fontSize: 15,
+  color: '#1f2933',
   textAlign: 'center',
-  margin: '6px 0 0',
+  margin: '10px 0 0',
+  lineHeight: 1.4,
 };
 
 const errorLine = {
-  fontSize: 12,
-  color: '#8f5b5b',
+  fontSize: 14,
+  color: '#a1273a',
   textAlign: 'center',
-  marginTop: 6,
+  marginTop: 8,
+  lineHeight: 1.4,
 };
 
 const attemptCounter = {
-  fontSize: 11,
-  color: 'rgba(30, 41, 59, 0.6)',
+  fontSize: 13,
+  color: '#5b6470',
   textAlign: 'center',
-  marginTop: 4,
+  marginTop: 6,
 };
 
 export default function LivenessChallengeModal({
@@ -329,13 +368,13 @@ export default function LivenessChallengeModal({
     <>
       <Backdrop />
       <Wrapper>
-        <Dialog data-variant="info" $size="sm">
-          <Header>
-            <Title>{t('liveness.title')}</Title>
-            <CloseBtn onClick={handleClose} aria-label={t('common.close')}>×</CloseBtn>
+        <Dialog data-variant="info" $size="sm" style={dialogOverride}>
+          <Header style={headerOverride}>
+            <Title style={titleOverride}>{t('liveness.title')}</Title>
+            <CloseBtn onClick={handleClose} aria-label={t('common.close')} style={closeBtnOverride}>×</CloseBtn>
           </Header>
 
-          <Body data-kind="default">
+          <Body data-kind="default" style={bodyOverride}>
             <div style={subtitleStyle}>{t('liveness.subtitle')}</div>
 
             <video
@@ -381,14 +420,14 @@ export default function LivenessChallengeModal({
             )}
 
             {phase === PHASE_PASSED && (
-              <div style={{ ...statusLine, color: '#166534', fontWeight: 700 }}>
+              <div style={{ ...statusLine, color: '#0f7c4d', fontWeight: 700 }}>
                 {t('liveness.status.passed')}
               </div>
             )}
 
             {phase === PHASE_FAILED && (
               <>
-                <div style={{ ...statusLine, color: '#8f5b5b', fontWeight: 700 }}>
+                <div style={{ ...statusLine, color: '#a1273a', fontWeight: 700 }}>
                   {t('liveness.status.failed')}
                 </div>
                 <div style={attemptCounter}>
@@ -398,7 +437,7 @@ export default function LivenessChallengeModal({
             )}
 
             {phase === PHASE_COOLDOWN && (
-              <div style={{ ...statusLine, color: '#8f5b5b' }}>{errorMsg || t('liveness.messages.cooldown')}</div>
+              <div style={{ ...statusLine, color: '#a1273a', fontWeight: 600 }}>{errorMsg || t('liveness.messages.cooldown')}</div>
             )}
 
             {phase === PHASE_ERROR && (
@@ -406,7 +445,7 @@ export default function LivenessChallengeModal({
             )}
           </Body>
 
-          <Footer>
+          <Footer style={footerOverride}>
             {phase === PHASE_READY && (
               <>
                 <ModalBtn onClick={handleClose}>{t('common.cancel')}</ModalBtn>
