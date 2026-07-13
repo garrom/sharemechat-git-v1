@@ -51,8 +51,12 @@ class StreamFrameIngestionServiceTest {
         uploader = mock(ModerationEvidenceUploader.class);
         client = mock(ModerationProviderClient.class);
 
+        // ADR-050 Fase C: PresenceCheckProperties con enabled=false por
+        // defecto - los tests existentes no dependen de presence.
+        com.sharemechat.config.PresenceCheckProperties presenceProps =
+                new com.sharemechat.config.PresenceCheckProperties();
         svc = new StreamFrameIngestionService(
-                sessionRepo, sessionService, actionService, reviewRepo, uploader);
+                sessionRepo, sessionService, actionService, reviewRepo, uploader, presenceProps);
 
         activeSession = new StreamModerationSession();
         activeSession.setStreamRecordId(500L);

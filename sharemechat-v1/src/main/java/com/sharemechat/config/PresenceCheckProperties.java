@@ -1,0 +1,42 @@
+package com.sharemechat.config;
+
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+/**
+ * ADR-050 Fase C: configuracion del check de presencia continua durante
+ * streaming (face-analysis + face-presence de SightEngine).
+ *
+ * <p>Mapea {@code moderation.presence.*} declarado en
+ * {@code application.properties}. Reutiliza credenciales SightEngine de
+ * {@link SightengineProperties} (mismo apiUser + apiSecret, endpoint
+ * distinto {@code /1.0/check.json?models=face-analysis,face-presence}).
+ *
+ * <p>Kill-switch por {@link #enabled}: cuando {@code false} el ingestor
+ * salta silencioso el check de presencia (solo moderacion de contenido
+ * sigue activa). En TEST arranca {@code false} para permitir despliegue
+ * sin gastar ops del vendor; el operador activa via env var
+ * {@code MODERATION_PRESENCE_ENABLED=true} tras verificar impacto.
+ */
+@Component
+@ConfigurationProperties(prefix = "moderation.presence")
+public class PresenceCheckProperties {
+
+    private boolean enabled = false;
+
+    /**
+     * ADR-050 Fase C D3: umbral por encima del cual out-of-scene se
+     * considera CRITICAL y dispara auto-cut. Rango [0, 1]. Default 0.5
+     * (calibrable via env var
+     * {@code MODERATION_PRESENCE_OUT_OF_SCENE_CRITICAL}).
+     */
+    private double outOfSceneCritical = 0.5;
+
+    public boolean isEnabled() { return enabled; }
+    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+
+    public double getOutOfSceneCritical() { return outOfSceneCritical; }
+    public void setOutOfSceneCritical(double outOfSceneCritical) {
+        this.outOfSceneCritical = outOfSceneCritical;
+    }
+}

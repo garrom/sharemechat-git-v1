@@ -2,6 +2,7 @@ package com.sharemechat.streammoderation.service;
 
 import com.sharemechat.streammoderation.dto.ModerationFrameSubmission;
 import com.sharemechat.streammoderation.dto.ModerationVerdictResult;
+import com.sharemechat.streammoderation.dto.PresenceCheckResult;
 
 /**
  * Adapter vendor-agnostic del control plane de moderacion visual del
@@ -44,4 +45,23 @@ public interface ModerationProviderClient {
      * al DTO interno agnostico {@link ModerationVerdictResult}.
      */
     ModerationVerdictResult submitImage(ModerationFrameSubmission frame);
+
+    /**
+     * ADR-050 Fase C: check de presencia (face-analysis + face-presence)
+     * sobre el frame. Devuelve {@code null} cuando el adapter no soporta
+     * el modelo (por ejemplo el MOCK, o cuando el operador ha
+     * deshabilitado la presencia por property).
+     *
+     * <p>Se llama en paralelo/tras {@link #submitImage} desde el
+     * {@code StreamFrameIngestionService}; su fallo NO invalida la
+     * moderacion de contenido: si esta llamada lanza excepcion, el
+     * ingestion service la traga y sigue con solo el verdict de
+     * contenido (fail-soft por diseno).
+     *
+     * <p>Default: {@code null} (no soportado). Los adapters que
+     * proveen presence override el metodo.
+     */
+    default PresenceCheckResult checkPresence(byte[] frameBytes) {
+        return null;
+    }
 }

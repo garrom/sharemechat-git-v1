@@ -1,9 +1,11 @@
 package com.sharemechat.streammoderation.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sharemechat.config.SightengineProperties;
 import com.sharemechat.streammoderation.dto.ModerationFrameSubmission;
 import com.sharemechat.streammoderation.dto.ModerationVerdictResult;
+import com.sharemechat.streammoderation.dto.PresenceCheckResult;
 import com.sharemechat.streammoderation.dto.SightengineWorkflowResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -296,5 +298,118 @@ public class SightengineModerationClient implements ModerationProviderClient {
 
     private static boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();
+    }
+
+    /**
+     * ADR-050 Fase C: check de presencia via {@code /1.0/check.json?models=
+     * face-analysis,face-presence}. Devuelve {@link PresenceCheckResult}
+     * normalizado con {@code inScene}, {@code outOfScene},
+     * {@code outOfSceneNatural} y {@code outOfSceneOverlay}.
+     *
+     * <p>Face-presence requiere face-analysis segun error 13987 del vendor;
+     * enviamos ambos modelos y contamos 2 ops por llamada.
+     *
+     * <p>Si el vendor no detecta cara ({@code faces} vacio), devuelve
+     * {@code faceDetected=false} con scores 0.0 (interpretacion neutra
+     * en el caller: no se dispara out-of-scene ni auto-cut por ausencia
+     * de cara).
+     */
+    @Override
+    public PresenceCheckResult checkPresence(byte[] frameBytes) {
+        if (!props.isEnabled()
+                || isBlank(props.getApiUser())
+                || isBlank(props.getApiSecret())) {
+            throw new IllegalStateException("Sightengine credentials missing for presence check");
+        }
+        if (frameBytes == null || frameBytes.length == 0) {
+            throw new IllegalArgumentException("frameBytes empty");
+        }
+
+        long t0 = System.currentTimeMillis();
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("media", new ByteArrayResource(frameBytes) {
+            @Override public String getFilename() { return "frame.jpg"; }
+        });
+        body.add("models", "face-analysis,face-presence");
+        body.add("api_user", props.getApiUser());
+        body.add("api_secret", props.getApiSecret());
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        HttpEntity<MultiValueMap<String, Object>> req = new HttpEntity<>(body, headers);
+
+        String url = props.getBaseUrl() + "/1.0/check.json";
+
+        ResponseEntity<String> resp;
+        try {
+            resp = restTemplate.exchange(url, HttpMethod.POST, req, String.class);
+        } catch (RuntimeException ex) {
+            log.warn("[STREAM-MOD-PRESENCE] HTTP error url={}: {}", url, ex.getMessage());
+            throw ex;
+        }
+
+        long latency = System.currentTimeMillis() - t0;
+
+        if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
+            log.warn("[STREAM-MOD-PRESENCE] non-2xx status={} latency_ms={}",
+                    resp.getStatusCode(), latency);
+            throw new IllegalStateException("Sightengine HTTP " + resp.getStatusCode());
+        }
+
+        String rawBody = resp.getBody();
+        try {
+            PresenceCheckResult result = parsePresenceResponse(rawBody);
+            log.info("[STREAM-MOD-PRESENCE] faceDetected={} inScene={} outOfScene={} outOfSceneOverlay={} latency_ms={}",
+                    result.isFaceDetected(),
+                    String.format("%.2f", result.getInScene()),
+                    String.format("%.2f", result.getOutOfScene()),
+                    String.format("%.2f", result.getOutOfSceneOverlay()),
+                    latency);
+            return result;
+        } catch (Exception ex) {
+            log.warn("[STREAM-MOD-PRESENCE] parse error: {}", ex.getMessage());
+            throw new IllegalStateException("Sightengine presence response parse error", ex);
+        }
+    }
+
+    /**
+     * Parse del response de face-analysis + face-presence. Escoge la cara
+     * de mayor area (sujeto principal frente a webcam) y extrae los 4
+     * scores del sub-objeto {@code presence}. Si {@code faces} esta vacio,
+     * devuelve {@code faceDetected=false}.
+     */
+    PresenceCheckResult parsePresenceResponse(String rawBody) throws Exception {
+        JsonNode root = objectMapper.readTree(rawBody);
+        JsonNode faces = root.get("faces");
+        if (faces == null || !faces.isArray() || faces.size() == 0) {
+            return new PresenceCheckResult(false, 0.0, 0.0, 0.0, 0.0, rawBody);
+        }
+
+        JsonNode chosen = null;
+        double bestArea = -1.0;
+        for (JsonNode face : faces) {
+            double x1 = face.path("x1").asDouble(0.0);
+            double y1 = face.path("y1").asDouble(0.0);
+            double x2 = face.path("x2").asDouble(0.0);
+            double y2 = face.path("y2").asDouble(0.0);
+            double area = Math.max(0.0, x2 - x1) * Math.max(0.0, y2 - y1);
+            if (area > bestArea) {
+                bestArea = area;
+                chosen = face;
+            }
+        }
+        if (chosen == null) {
+            return new PresenceCheckResult(false, 0.0, 0.0, 0.0, 0.0, rawBody);
+        }
+
+        JsonNode presence = chosen.path("presence");
+        double inScene = presence.path("in-scene").asDouble(0.0);
+        double outOfScene = presence.path("out-of-scene").asDouble(0.0);
+        double outOfSceneNatural = presence.path("out-of-scene-natural").asDouble(0.0);
+        double outOfSceneOverlay = presence.path("out-of-scene-overlay").asDouble(0.0);
+
+        return new PresenceCheckResult(true, inScene, outOfScene,
+                outOfSceneNatural, outOfSceneOverlay, rawBody);
     }
 }

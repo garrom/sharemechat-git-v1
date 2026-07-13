@@ -1,8 +1,11 @@
 package com.sharemechat.streammoderation.service;
 
+import com.sharemechat.config.PresenceCheckProperties;
 import com.sharemechat.constants.Constants;
+import com.sharemechat.streammoderation.dto.ModerationCategoryVerdict;
 import com.sharemechat.streammoderation.dto.ModerationFrameSubmission;
 import com.sharemechat.streammoderation.dto.ModerationVerdictResult;
+import com.sharemechat.streammoderation.dto.PresenceCheckResult;
 import com.sharemechat.streammoderation.entity.StreamModerationSession;
 import com.sharemechat.streammoderation.repository.StreamModerationReviewRepository;
 import com.sharemechat.streammoderation.repository.StreamModerationSessionRepository;
@@ -41,18 +44,23 @@ public class StreamFrameIngestionService {
     private final StreamModerationActionService actionService;
     private final StreamModerationReviewRepository reviewRepository;
     private final ModerationEvidenceUploader evidenceUploader;
+    // ADR-050 Fase C: hook opcional de presencia continua. Solo se
+    // invoca si presenceProps.enabled=true y el adapter activo lo soporta.
+    private final PresenceCheckProperties presenceProps;
 
     public StreamFrameIngestionService(
             StreamModerationSessionRepository sessionRepository,
             StreamModerationSessionService sessionService,
             StreamModerationActionService actionService,
             StreamModerationReviewRepository reviewRepository,
-            ModerationEvidenceUploader evidenceUploader) {
+            ModerationEvidenceUploader evidenceUploader,
+            PresenceCheckProperties presenceProps) {
         this.sessionRepository = sessionRepository;
         this.sessionService = sessionService;
         this.actionService = actionService;
         this.reviewRepository = reviewRepository;
         this.evidenceUploader = evidenceUploader;
+        this.presenceProps = presenceProps;
     }
 
     /**
@@ -108,8 +116,25 @@ public class StreamFrameIngestionService {
             return;
         }
 
+        // ADR-050 Fase C: check de presencia. Fail-soft: si la llamada
+        // falla, no marca la sesion como DEGRADED (moderacion de
+        // contenido sigue vigente y su fallo si marcaria degraded).
+        // Solo se dispara si presence.enabled=true.
+        if (presenceProps != null && presenceProps.isEnabled()) {
+            try {
+                PresenceCheckResult pres = client.checkPresence(frameBytes);
+                if (pres != null) {
+                    fusePresenceIntoVerdict(verdict, pres);
+                }
+            } catch (Exception ex) {
+                log.warn("[STREAM-MOD-PRESENCE] check error sessionId={} provider={}: {}",
+                        session.getId(), session.getProvider(), ex.getMessage());
+            }
+        }
+
         actionService.applyVerdict(session, verdict);
 
+        // (severity ya puede haber sido elevada por presencia)
         String severity = verdict.getSeverityOverall();
         if (Constants.StreamModerationSeverity.AMBER.equals(severity)
                 || Constants.StreamModerationSeverity.RED.equals(severity)
@@ -120,5 +145,48 @@ public class StreamFrameIngestionService {
                         .ifPresent(r -> evidenceUploader.uploadAsync(r.getId(), frameBytes));
             }
         }
+    }
+
+    /**
+     * ADR-050 Fase C: fusiona el resultado de presencia con el verdict
+     * de contenido. Si {@code outOfScene >= umbralCritical}, anade una
+     * categoria OUT_OF_SCENE con severidad CRITICAL al verdict y eleva
+     * la severidad global si es menor.
+     *
+     * <p>Package-private para test.
+     */
+    void fusePresenceIntoVerdict(ModerationVerdictResult verdict, PresenceCheckResult pres) {
+        if (verdict == null || pres == null) return;
+
+        double threshold = presenceProps.getOutOfSceneCritical();
+        double outOfScene = pres.getOutOfScene();
+
+        // Si no hay cara detectada o el score no supera el umbral, no
+        // se toca el verdict (interpretacion neutra: la moderacion de
+        // contenido decide sola).
+        if (!pres.isFaceDetected() || outOfScene < threshold) {
+            return;
+        }
+
+        // Anadir categoria OUT_OF_SCENE con severidad CRITICAL.
+        ModerationCategoryVerdict cat = new ModerationCategoryVerdict(
+                Constants.StreamModerationCategory.OUT_OF_SCENE,
+                java.math.BigDecimal.valueOf(outOfScene),
+                Constants.StreamModerationSeverity.CRITICAL);
+        if (verdict.getCategoryVerdicts() != null) {
+            verdict.getCategoryVerdicts().put(
+                    Constants.StreamModerationCategory.OUT_OF_SCENE, cat);
+        }
+
+        // Elevar severidad global si la actual es menor que CRITICAL.
+        String current = verdict.getSeverityOverall();
+        if (!Constants.StreamModerationSeverity.CRITICAL.equals(current)) {
+            verdict.setSeverityOverall(Constants.StreamModerationSeverity.CRITICAL);
+        }
+
+        log.warn("[STREAM-MOD-PRESENCE] OUT_OF_SCENE detected outOfScene={} overlay={} threshold={}",
+                String.format("%.2f", outOfScene),
+                String.format("%.2f", pres.getOutOfSceneOverlay()),
+                threshold);
     }
 }

@@ -240,6 +240,10 @@ public class Constants {
         public static final String GAMBLING = "GAMBLING";
         public static final String OFFENSIVE_SYMBOLS = "OFFENSIVE_SYMBOLS";
         public static final String MINORS = "MINORS";
+        // ADR-050 Fase C (2026-07-13): presencia continua durante streaming.
+        // Se dispara cuando SightEngine face-presence.out-of-scene > umbral,
+        // detectando el ataque OBS con video pregrabado en pantalla.
+        public static final String OUT_OF_SCENE = "OUT_OF_SCENE";
         public static final String OTHER = "OTHER";
 
         private StreamModerationCategory() {}

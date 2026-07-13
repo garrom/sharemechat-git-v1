@@ -246,3 +246,94 @@ Este trade-off se acepta como coste aceptable de la fase actual. La cobertura co
 - Subpasada 3 (service + SightEngine adapter): el adapter SightEngine no cambia; solo cambia la regla en `evaluate()`. Los tests unitarios se actualizan con 5 casos PRESENCE (pass con micro-movement, fail con imagen fija, tolerancia a 1 frame sin cara, fail si mayoría de frames sin cara, tipo emitido en startChallenge).
 - Subpasada 5 (frontend modal): copy de i18n suavizado. UI del modal sin cambios estructurales.
 - Nueva subpasada 8 implícita: revisitar D4 con moderación humana cuando el operador tenga equipo 24/7 disponible post-launch. Puede reactivar BLINK/TURN/SMILE como gate opcional o pasarlos al panel del moderador humano.
+
+## Actualización 2026-07-13 — Fase C: presencia continua durante streaming
+
+El feedback del operador tras cerrar Fases A y B: las dos primeras cubren el momento **inicial** del streaming (al activar cámara y al hacer match), pero no protegen contra el ataque de la modelo que **abandona la sesión a mitad de streaming** y deja un vídeo pregrabado reproduciéndose. Este caso vacía completamente la promesa de "interacción real" al cliente pagador y genera cobro fraudulento (STREAM_EARNING a la modelo por servicio no prestado).
+
+La investigación con la doc de SightEngine reveló un modelo específico dedicado a este caso: **`face-presence`** distingue "in-scene" (persona físicamente presente) de "out-of-scene" (cara en pantalla/póster/foto/monitor). Es el modelo canónico del vendor para lo que buscamos.
+
+Se cierra el diseño con luz verde del operador el 2026-07-13, tras verificación técnica del modelo en su cuenta free trial (test manual con `POST /1.0/check.json?models=face-analysis,face-presence` desde EC2 TEST).
+
+### D5 — Modelo `face-presence` durante streaming
+
+**Se activa un check `face-analysis + face-presence` cada tick de moderación** durante toda la sesión de streaming. El vendor devuelve por cada cara detectada:
+
+```json
+"presence": {
+  "in-scene": 0.99,
+  "out-of-scene": 0.01,
+  "out-of-scene-natural": 0.01,  // pósters, fotos impresas
+  "out-of-scene-overlay": 0.01   // pantallas digitales, TVs, monitores
+}
+```
+
+El score `out-of-scene` es el agregado principal. `out-of-scene-overlay` es la señal específica para el ataque OBS-con-vídeo (proyección de un vídeo pregrabado que la cámara virtual entrega a `getUserMedia`).
+
+**Umbral D3 aplicado**: `out-of-scene >= 0.5` (property `moderation.presence.out-of-scene-critical`, calibrable via env var). Cuando se supera:
+
+- Se añade categoría `OUT_OF_SCENE` con severity `CRITICAL` al `ModerationVerdictResult` fusionado.
+- Se eleva `severityOverall` del verdict a `CRITICAL` si estaba por debajo.
+- El pipeline existente `StreamModerationActionService.applyVerdict` dispara auto-cut de la sesión (mismo path que nudez/menor detectado). No hay refactor de enforcement.
+
+### D6 — Cadencia global bajada a 60s
+
+Antes de esta fase, `moderation.sampling.cadence-seconds=15` (1 frame cada 15s por workflow de moderación de contenido). Con Fase C se añade una segunda llamada al vendor por tick (face-analysis+face-presence = 2 ops), lo que doblaría las ops/min si mantuviéramos 15s.
+
+**Se baja la cadencia global a 60s** para mantener el gasto por sesión. Balance total:
+
+- Antes: 4 ops/min (1 workflow × 4 ticks de 15s).
+- Después: 3 ops/min (1 workflow + 2 face-presence × 1 tick de 60s).
+
+Reduce coste real un 25 %. Trade-off: la ventana de detección de nudez/menores extremos pasa de 15s a 60s en pre-launch. Aceptable dado que en pre-launch no hay tráfico real y cuando el operador contrate plan de pago puede rebajar la cadencia otra vez a 15s manteniendo Fase C activa (el coste ya no será un problema).
+
+### D7 — Fail-soft para el check de presencia
+
+Si la llamada al vendor de presencia falla (5xx, timeout, plan sin crédito), **no se marca la sesión como DEGRADED**. Solo la moderación de contenido tiene el poder de marcar DEGRADED (patrón ADR-036 bloque 3 preservado). La presencia es defensa adicional, no core.
+
+Motivación: si la Fase C empieza a fallar por caída del vendor, no queremos expulsar sesiones legítimas. La cobertura de contenido sigue vigente y basta como red de seguridad.
+
+### D8 — Kill-switch por property
+
+`moderation.presence.enabled=false` en `application.properties` con override en `config.env` runtime. Cuando `false`, el `StreamFrameIngestionService` salta silencioso el check de presencia (solo moderación de contenido corre). En TEST arranca `false` para permitir despliegue sin gastar ops del vendor hasta que el operador active manualmente vía `MODERATION_PRESENCE_ENABLED=true`.
+
+### D9 — Ausencia de cara no dispara out-of-scene
+
+Cuando el vendor no detecta cara en el frame (`faces` array vacío), la fusión NO añade la categoría `OUT_OF_SCENE`. Interpretación neutra: la ausencia de cara puede ser un frame borroso, contraluz, o cara fuera del encuadre por un segundo. La moderación de contenido decide por su cuenta si aplica algo.
+
+**Falso positivo evitado**: modelo que gira momentáneamente + luz mala → sin cara detectada → no se corta el streaming.
+
+**Falso negativo aceptado**: si la modelo tapa la cámara con una etiqueta y no hay cara detectable, tampoco se dispara auto-cut por Fase C. La moderación de contenido tampoco lo detecta (no hay nudez). Este caso requiere un frente futuro (deuda `#D-33`: "detección de cámara tapada / ausencia sostenida de cara durante N segundos").
+
+### Coste operativo real
+
+Con free trial actual del operador (500 ops/día aprox., verificar con soporte):
+
+- Cadencia 60s × 3 ops/min × 5 min sesión típica = **15 ops/sesión**.
+- Trial permitiría ~33 sesiones/día. Suficiente para testing pre-launch.
+
+Cuando pase a plan Starter ($27/mes documentado en ADR-037): coste extra despreciable dentro del plan.
+
+### Retrocompat con esquema y adapters
+
+- **Ningún cambio de esquema BD**. La categoría `OUT_OF_SCENE` fluye por `ModerationVerdictResult.categoryVerdicts` (mapa dinámico) y por el `StreamModerationReview` existente sin migración.
+- **Interface `ModerationProviderClient`**: nuevo método `checkPresence(byte[])` con default `null`. Los adapters legacy (`MOCK`) y contingentes (`HIVE`, `REKOGNITION`) no lo implementan y devuelven null → el ingestor lo trata como "sin señal" y no fusiona.
+- **`SightengineModerationClient`** override el método con implementación real. Reutiliza credenciales, `RestTemplate`, timeouts.
+
+### Deuda `#D-33` — Detección de cámara tapada / ausencia sostenida de cara
+
+Fuera del alcance de esta fase. Si en N ticks consecutivos (por ejemplo 3 min sin cara detectada), disparar acción (alerta admin, degraded, auto-cut). Requiere estado en el `StreamModerationSession` (contador de ticks sin cara), no es un cambio puntual. Se abre cuando el operador lo priorice.
+
+### Subpasadas de Fase C ejecutadas
+
+1. **Test manual del modelo con free trial + credenciales TEST** — HECHO 2026-07-13 (`operations=2` confirmado, response con `presence` funcional).
+2. **`Constants.StreamModerationCategory.OUT_OF_SCENE`** — HECHO.
+3. **`PresenceCheckResult` DTO** + interface `ModerationProviderClient.checkPresence` con default null — HECHO.
+4. **`SightengineModerationClient.checkPresence` + `parsePresenceResponse`** — HECHO.
+5. **`PresenceCheckProperties` + entrada en `application.properties`** — HECHO.
+6. **Bajar `moderation.sampling.cadence-seconds` de 15 a 60** — HECHO.
+7. **`StreamFrameIngestionService.fusePresenceIntoVerdict`** — HECHO.
+8. **Actualizar test existente `StreamFrameIngestionServiceTest`** con el nuevo constructor arg — HECHO.
+9. **Deploy backend TEST + activación con `MODERATION_PRESENCE_ENABLED=true`** — pendiente.
+10. **Testing manual del operador** con OBS + vídeo pregrabado durante streaming → debería cortar automáticamente la sesión — pendiente.
+11. **Calibración empírica de umbral** si el 0.5 default genera falsos positivos → ajustable sin redeploy — pendiente.
