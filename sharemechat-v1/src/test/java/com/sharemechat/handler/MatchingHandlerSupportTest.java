@@ -57,6 +57,8 @@ class MatchingHandlerSupportTest {
                 null,               // UserLanguageService
                 null,               // AgeGatePolicyService
                 null,               // ProductAccessGuardService
+                null,               // LivenessChallengeService (ADR-050 Fase B)
+                null,               // LivenessProperties      (ADR-050 Fase B)
                 60                  // seenMaxScan
         );
     }

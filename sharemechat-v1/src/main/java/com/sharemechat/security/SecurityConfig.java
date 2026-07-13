@@ -87,6 +87,12 @@ public class SecurityConfig {
                         // ownership (stream.modelId == auth.userId).
                         .requestMatchers(HttpMethod.POST, "/api/streams/*/frames").hasRole("MODEL")
 
+                        // STREAMING: liveness challenge (ADR-050 Fase B). Cualquier
+                        // usuario autenticado (CLIENT o MODEL, incluye USER trial)
+                        // puede iniciar y verificar su propio challenge. El controller
+                        // valida ownership via auth.userId.
+                        .requestMatchers("/api/streaming/liveness/**").authenticated()
+
                         // Consent
                         .requestMatchers(HttpMethod.POST, "/api/consent/accept").authenticated()
                         .requestMatchers("/api/consent/**").permitAll()

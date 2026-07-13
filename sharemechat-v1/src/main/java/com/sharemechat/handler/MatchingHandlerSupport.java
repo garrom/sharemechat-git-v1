@@ -1,5 +1,6 @@
 package com.sharemechat.handler;
 
+import com.sharemechat.config.LivenessProperties;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.consent.ConsentState;
 import com.sharemechat.dto.MessageDTO;
@@ -11,6 +12,7 @@ import com.sharemechat.repository.StreamRecordRepository;
 import com.sharemechat.repository.UserRepository;
 import com.sharemechat.security.JwtUtil;
 import com.sharemechat.service.AgeGatePolicyService;
+import com.sharemechat.service.LivenessChallengeService;
 import com.sharemechat.service.*;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -40,6 +42,10 @@ public class MatchingHandlerSupport {
     // si aparecen mas codigos app-specific se extrae a Constants.WsCloseCodes.
     private static final int WS_CLOSE_CLIENT_KYC_REQUIRED = 4030;
     private static final String REASON_CLIENT_KYC_REQUIRED = "CLIENT_KYC_REQUIRED";
+    // ADR-050 Fase B: liveness challenge no pasado. Sirve para model y client.
+    // Frontend traduce 4031 a abrir modal de challenge y redirigir tras PASSED.
+    private static final int WS_CLOSE_LIVENESS_REQUIRED = 4031;
+    private static final String REASON_LIVENESS_REQUIRED = "LIVENESS_REQUIRED";
 
     private final MatchingRuntimeState state;
     private final JwtUtil jwtUtil;
@@ -61,6 +67,11 @@ public class MatchingHandlerSupport {
     private final UserLanguageService userLanguageService;
     private final AgeGatePolicyService ageGatePolicyService;
     private final ProductAccessGuardService productAccessGuardService;
+    // ADR-050 Fase B: guard liveness. Dependencias inyectadas; el guard
+    // salta silencioso cuando livenessProperties.enabled=false (kill-switch
+    // por entorno).
+    private final LivenessChallengeService livenessChallengeService;
+    private final LivenessProperties livenessProperties;
 
     public MatchingHandlerSupport(MatchingRuntimeState state,
                                   JwtUtil jwtUtil,
@@ -80,6 +91,8 @@ public class MatchingHandlerSupport {
                                   UserLanguageService userLanguageService,
                                   AgeGatePolicyService ageGatePolicyService,
                                   ProductAccessGuardService productAccessGuardService,
+                                  LivenessChallengeService livenessChallengeService,
+                                  LivenessProperties livenessProperties,
                                   @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.state = state;
         this.jwtUtil = jwtUtil;
@@ -100,6 +113,8 @@ public class MatchingHandlerSupport {
         this.userLanguageService = userLanguageService;
         this.ageGatePolicyService = ageGatePolicyService;
         this.productAccessGuardService = productAccessGuardService;
+        this.livenessChallengeService = livenessChallengeService;
+        this.livenessProperties = livenessProperties;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -318,6 +333,13 @@ public class MatchingHandlerSupport {
                         blockModelSession(session, userId, "KYC_NOT_APPROVED_OR_INACTIVE");
                         return;
                     }
+                    // ADR-050 Fase B: gate liveness. Silencioso cuando
+                    // livenessProperties.enabled=false (kill-switch por
+                    // entorno).
+                    if (!hasLivenessPassOrDisabled(userId)) {
+                        blockForLiveness(session, userId, mappedRole);
+                        return;
+                    }
                     moveToBucket(session, "model", state.getSessionBucketKey().get(session.getId()));
                     try {
                         statusService.setAvailable(userId);
@@ -331,6 +353,11 @@ public class MatchingHandlerSupport {
                     // / addBalance se mantiene como defensa en profundidad.
                     if (!isApprovedClient(userId)) {
                         blockClientSession(session, userId, REASON_CLIENT_KYC_REQUIRED);
+                        return;
+                    }
+                    // ADR-050 Fase B: gate liveness (mismo que para modelo).
+                    if (!hasLivenessPassOrDisabled(userId)) {
+                        blockForLiveness(session, userId, mappedRole);
                         return;
                     }
                     moveToBucket(session, "client", state.getSessionBucketKey().get(session.getId()));
@@ -351,8 +378,20 @@ public class MatchingHandlerSupport {
                         blockClientSession(session, userId, REASON_CLIENT_KYC_REQUIRED);
                         return;
                     }
+                    // ADR-050 Fase B: defensa en profundidad tambien para
+                    // liveness. Cubre revocacion / expiracion del pass entre
+                    // set-role y start-match.
+                    if (!hasLivenessPassOrDisabled(userId)) {
+                        blockForLiveness(session, userId, role);
+                        return;
+                    }
                     matchClient(session);
                 } else if ("model".equals(role)) {
+                    Long userId = state.getSessionUserIds().get(session.getId());
+                    if (!hasLivenessPassOrDisabled(userId)) {
+                        blockForLiveness(session, userId, role);
+                        return;
+                    }
                     matchModel(session);
                 }
                 return;
@@ -699,6 +738,66 @@ public class MatchingHandlerSupport {
 
         try {
             session.close(new CloseStatus(WS_CLOSE_CLIENT_KYC_REQUIRED, REASON_CLIENT_KYC_REQUIRED));
+        } catch (Exception ignore) {}
+    }
+
+    /**
+     * ADR-050 Fase B: query hot del gate liveness. Devuelve:
+     * <ul>
+     *   <li>{@code true} cuando {@code livenessProperties.enabled=false}
+     *       (kill-switch por entorno; permite salir sin frenar el flujo).</li>
+     *   <li>{@code true} cuando el user tiene una fila
+     *       {@code liveness_attempts} con {@code status=PASSED} y
+     *       {@code passed_until > now UTC}.</li>
+     *   <li>{@code false} en cualquier otro caso.</li>
+     * </ul>
+     *
+     * <p>Cualquier excepcion inesperada (BD caida, etc.) se traga y
+     * devuelve {@code true} fail-open. Motivacion: no expulsar usuarios
+     * legitimos por un fallo del propio guard.
+     */
+    private boolean hasLivenessPassOrDisabled(Long userId) {
+        try {
+            if (livenessProperties == null || !livenessProperties.isEnabled()) return true;
+            if (userId == null) return false;
+            return livenessChallengeService.hasCurrentPass(userId).isPresent();
+        } catch (Exception ex) {
+            log.warn("[WS][match][LIVENESS_GATE_ERROR] uid={} ex={} → fail-open",
+                    userId, ex.toString());
+            return true;
+        }
+    }
+
+    /**
+     * ADR-050 Fase B: cierra la sesion WebSocket con close code 4031
+     * cuando el user no tiene pass liveness vigente. Envia payload JSON
+     * {@code {"type":"liveness-required","reasonCode":"LIVENESS_REQUIRED",
+     * "role":"client"|"model"}} para que el frontend distinga y abra el
+     * modal de challenge.
+     */
+    private void blockForLiveness(WebSocketSession session, Long userId, String role) {
+        try {
+            String payload = new JSONObject()
+                    .put("type", "liveness-required")
+                    .put("reasonCode", REASON_LIVENESS_REQUIRED)
+                    .put("role", role == null ? "" : role)
+                    .toString();
+            safeSend(session, payload);
+        } catch (Exception ignore) {}
+
+        log.warn("[WS][match][LIVENESS_BLOCKED] sid={} userId={} role={}",
+                session.getId(), userId, role);
+
+        try {
+            if ("model".equals(role)) {
+                removeFromAllBuckets(session, "model");
+            } else {
+                removeFromAllBuckets(session, "client");
+            }
+        } catch (Exception ignore) {}
+
+        try {
+            session.close(new CloseStatus(WS_CLOSE_LIVENESS_REQUIRED, REASON_LIVENESS_REQUIRED));
         } catch (Exception ignore) {}
     }
 
