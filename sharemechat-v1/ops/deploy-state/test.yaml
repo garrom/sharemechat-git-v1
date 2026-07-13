@@ -6,21 +6,21 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I2ZDZZPNXA5UPTYXBMHMQP85ZT
+  cloudfront_invalidation_id: I7UE0TGSEHL9R3HCXS6GVRBB7W
   verification:
-    method: deploy-frontend.ps1-live-build_2026-07-13T18:12:02Z
+    method: deploy-frontend.ps1-live-build_2026-07-13T18:21:06Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-07-13T18:12:02Z
-  built_at: 2026-07-13T18:12:02Z
-  bundle_sha256: d08d432cc347a3d536e44df7e53631e5c497df58e3f104860a7a25f137c478fc
-  git_commit_short: 334d149
-  git_commit: 334d149b838fd9d2be9ba1ee7f2ac617d936099f
+  deployed_at: 2026-07-13T18:21:06Z
+  built_at: 2026-07-13T18:21:06Z
+  bundle_sha256: 3cfaa062d397b92cac252b660cce238362f46e5ed7dc17ae90f8958a74167030
+  git_commit_short: 1a1cd67
+  git_commit: 1a1cd67584f3b6a78e336a886ea1a12bb98098e4
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-test
-  bundle: main.0ccf6d89.js
+  bundle: main.cf393e14.js
 last_update_source: update-manifest-backend.ps1-fase1-paso2b
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
@@ -28,18 +28,18 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-13T18:12:50Z
-  jar_sha256: 1bcefbb6bc4606e82d51ade1f0f9332a73edaf3e04e6298feb549c5a0a1da72a
+  deployed_at: 2026-07-13T18:22:49Z
+  jar_sha256: 6e61ae4cb0fdc4f85672d499a5211efa8f9ebca5064199f6712db7e8f88c2973
   verification:
     method: manual_via_update-manifest-backend.ps1
-    verified_at: 2026-07-13T18:12:50Z
+    verified_at: 2026-07-13T18:22:49Z
     notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-07-13T18:12:50Z
+  built_at: 2026-07-13T18:22:49Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 334d149b838fd9d2be9ba1ee7f2ac617d936099f
-  git_commit_short: 334d149
-last_updated_at: 2026-07-13T18:12:50Z
+  git_commit: 1a1cd67584f3b6a78e336a886ea1a12bb98098e4
+  git_commit_short: 1a1cd67
+last_updated_at: 2026-07-13T18:22:49Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
   verification:
