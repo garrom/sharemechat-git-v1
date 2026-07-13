@@ -197,3 +197,52 @@ Aproximadamente 6 subpasadas efectivas (la 1 ya hecha). El detalle exacto de cad
 ---
 
 **Alcance de entorno**: la Fase B se implementa y activa primero en **TEST**. AUDIT y PROD se propagan tras calibración empírica de umbrales D4 y decisión de corte del operador. La property `moderation.liveness.enabled` gobierna la activación por entorno sin redeploy.
+
+## Actualización 2026-07-13 — Cambio de gesture challenge a presence check (D4 revisado)
+
+Al activar la Fase B en TEST y probar con webcam real (Logitech C270, iluminación de salón), el operador reportó tasa de falso negativo alta con los 4 gestures BLINK/TURN_LEFT/TURN_RIGHT/SMILE de SightEngine face-attributes: *"no me ha reconocido ninguna, UX pésima"*. Los umbrales del D4 original son sensibles a resolución de cámara y calidad de luz, y calibrarlos por cámara/entorno es un problema que hasta vendors dedicados de gesture liveness abordan con hardware+software especializado.
+
+Además, evidencia de industria del vertical (WebSearch 2026-07-13, DatingScout review de CooMeet) confirma que **ninguna plataforma comparable usa gesture challenges automáticos como gate inicial**. CooMeet solo pide activar cámara al inicio; los gestures los piden **moderadores humanos** que se meten dentro de sesiones activas y suspenden cuentas que fallan. Camsurf, Chatrandom y Stripchat directamente no verifican liveness al empezar.
+
+Se cierra el cambio con luz verde explícita del operador el 2026-07-13.
+
+### D4 revisado — Presence check simple, sin gestures
+
+**El challenge activo pasa a ser un único tipo `PRESENCE`.** El usuario ve el modal, pulsa "Empezar", mira a la cámara 3 segundos mientras se capturan los frames. Cero gesture forzado.
+
+**Regla de verify** (`LivenessChallengeService.evaluate(PRESENCE, frames)`):
+
+1. **Presencia de cara**: al menos `min-faces-detected` frames tienen cara detectada por el vendor. Umbral por defecto 2 de 3.
+2. **Micro-movement**: suma acumulada de `|smile[i] - smile[i-1]|` + `|eyesClosed[i] - eyesClosed[i-1]|` + `|yaw[i] - yaw[i-1]|/30` a lo largo de todos los frames ≥ `min-delta`. Umbral por defecto 0.05.
+
+Semántica del umbral: una imagen totalmente estática (JPEG cargado en OBS como source) da `totalDelta = 0.0`; cualquier persona real sentada ante la cámara supera ampliamente 0.05 por micro-movimientos naturales (respirar, ojos, cara).
+
+### Qué se cierra y qué se deja pasar con el nuevo D4
+
+**Cierra** (bloquea):
+- Foto fija JPEG cargada en OBS Virtual Camera.
+- Frame estático (screen sharing de imagen sin movimiento).
+- Cámara con lente tapado (sin cara).
+- Usuario que abandona antes de la captura (menos de 2 frames con cara).
+
+**No cierra** (deja pasar):
+- Vídeo pregrabado de una persona real moviéndose. **Mismo caso que CooMeet y el resto del vertical**.
+
+Este trade-off se acepta como coste aceptable de la fase actual. La cobertura completa contra vídeo pregrabado se difiere a evolución futura, cuando el operador tenga:
+- Moderadores humanos que puedan intervenir dentro de sesiones (modelo CooMeet).
+- Face-match contra selfie KYC (deuda `#D-25` original).
+- Vendor dedicado de active liveness (iProov / Onfido) cuando el volumen lo justifique.
+
+### Retrocompat y schema
+
+- Los tipos `BLINK/TURN_LEFT/TURN_RIGHT/SMILE` se conservan en `Constants.LivenessChallengeType` y en el CHECK constraint (deuda mínima) para compat con filas históricas ya persistidas en TEST. Las reglas de verify legacy siguen en `evaluate()` sin cambios.
+- La migración `V20__liveness_add_presence_challenge_type.sql` relaja el CHECK constraint para incluir `PRESENCE`. Sin cambio de columnas ni backfill.
+- El service `LivenessChallengeService` emite **solo** `PRESENCE` tras esta revisión.
+- `LivenessProperties.Thresholds` se extiende con la subclase `Presence` (`min-delta` + `min-faces-detected`). Los otros thresholds legacy se conservan.
+- El frontend i18n añade `PRESENCE_PROMPT` (ES + EN). Los prompts de gestures viejos se conservan por si aparece una fila con tipo antiguo. El copy de `status.capturing` y `status.failed` se ajusta para no mencionar "gesto".
+
+### Subpasadas afectadas del roadmap
+
+- Subpasada 3 (service + SightEngine adapter): el adapter SightEngine no cambia; solo cambia la regla en `evaluate()`. Los tests unitarios se actualizan con 5 casos PRESENCE (pass con micro-movement, fail con imagen fija, tolerancia a 1 frame sin cara, fail si mayoría de frames sin cara, tipo emitido en startChallenge).
+- Subpasada 5 (frontend modal): copy de i18n suavizado. UI del modal sin cambios estructurales.
+- Nueva subpasada 8 implícita: revisitar D4 con moderación humana cuando el operador tenga equipo 24/7 disponible post-launch. Puede reactivar BLINK/TURN/SMILE como gate opcional o pasarlos al panel del moderador humano.

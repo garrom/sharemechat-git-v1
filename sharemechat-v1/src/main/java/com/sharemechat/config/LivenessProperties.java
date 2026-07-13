@@ -82,10 +82,43 @@ public class LivenessProperties {
         private final Blink blink = new Blink();
         private final Turn turn = new Turn();
         private final Smile smile = new Smile();
+        private final Presence presence = new Presence();
 
         public Blink getBlink() { return blink; }
         public Turn getTurn() { return turn; }
         public Smile getSmile() { return smile; }
+        public Presence getPresence() { return presence; }
+
+        /**
+         * ADR-050 D4 revisado 2026-07-13: umbrales del presence check
+         * simple. Reemplaza los umbrales gesture-specific en el flujo
+         * activo del service (los otros quedan por compat/futuro).
+         */
+        public static class Presence {
+            /**
+             * Suma minima de deltas (|smile[i]-smile[i-1]| +
+             * |eyesClosed[i]-eyesClosed[i-1]| + |yaw[i]-yaw[i-1]|/30)
+             * a lo largo de todos los frames para considerar que hay
+             * micro-movement humano natural. Un umbral bajo por diseno:
+             * una foto totalmente fija da 0.0, cualquier user real supera
+             * facilmente el minimo. Calibrable via env var
+             * MODERATION_LIVENESS_THRESHOLDS_PRESENCE_MIN_DELTA.
+             */
+            private double minDelta = 0.05;
+            /**
+             * Numero minimo de frames en los que debe detectarse cara.
+             * Por defecto framesRequired - 1 (permite que uno falle sin
+             * bloquear). Con framesRequired=3 → minFacesDetected=2.
+             */
+            private int minFacesDetected = 2;
+
+            public double getMinDelta() { return minDelta; }
+            public void setMinDelta(double minDelta) { this.minDelta = minDelta; }
+            public int getMinFacesDetected() { return minFacesDetected; }
+            public void setMinFacesDetected(int minFacesDetected) {
+                this.minFacesDetected = minFacesDetected;
+            }
+        }
 
         public static class Blink {
             /** Score minimo de eyes_closed para considerar ojos cerrados. */

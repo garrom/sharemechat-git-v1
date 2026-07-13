@@ -1638,6 +1638,7 @@
     "title": "Verificación en vivo",
     "subtitle": "Antes de conectar, necesitamos comprobar que estás delante de la cámara ahora mismo.",
     "prompts": {
+      "PRESENCE_PROMPT": "Cuando estés listo, pulsa \"Empezar\" y mira a la cámara durante 3 segundos.",
       "BLINK_PROMPT": "Cuando estés listo, pulsa \"Empezar\" y parpadea dos veces mirando a la cámara.",
       "TURN_LEFT_PROMPT": "Cuando estés listo, pulsa \"Empezar\" y gira la cabeza a tu izquierda lentamente.",
       "TURN_RIGHT_PROMPT": "Cuando estés listo, pulsa \"Empezar\" y gira la cabeza a tu derecha lentamente.",
@@ -1646,10 +1647,10 @@
     "status": {
       "loading": "Preparando verificación…",
       "ready": "Mantén la cara centrada en el vídeo.",
-      "capturing": "Capturando… mantén el gesto.",
+      "capturing": "Capturando… sigue mirando a la cámara.",
       "verifying": "Verificando…",
       "passed": "¡Verificación superada!",
-      "failed": "No hemos podido verificar el gesto."
+      "failed": "No hemos podido verificarte. Prueba en un lugar con más luz."
     },
     "actions": {
       "start": "Empezar",

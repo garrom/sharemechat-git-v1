@@ -48,15 +48,13 @@ public class LivenessChallengeService {
     private static final Logger log = LoggerFactory.getLogger(LivenessChallengeService.class);
 
     /**
-     * ADR-050 D4: catalogo cerrado de challenge types. Cada uno lleva su
-     * codigo de prompt persistido en {@code liveness_attempts.prompt_lc}
-     * para trazabilidad; la traduccion humana vive en i18n del frontend.
+     * ADR-050 D4 revisado 2026-07-13: catalogo activo. Se emite solo
+     * {@code PRESENCE} tras el refactor de gesture challenge a presence
+     * check simple (testing empirico con Logitech C270 mostro tasa de
+     * falso negativo alta con los gestures).
      */
     private static final String[] CHALLENGE_TYPES = {
-            Constants.LivenessChallengeType.BLINK,
-            Constants.LivenessChallengeType.TURN_LEFT,
-            Constants.LivenessChallengeType.TURN_RIGHT,
-            Constants.LivenessChallengeType.SMILE
+            Constants.LivenessChallengeType.PRESENCE
     };
 
     private final LivenessAttemptRepository repository;
@@ -208,22 +206,29 @@ public class LivenessChallengeService {
                     props.getTtlVendorUnavailableSeconds());
         }
 
-        boolean allFacesDetected = true;
+        int facesDetected = 0;
         StringBuilder rawJoined = new StringBuilder("[");
         for (int i = 0; i < results.length; i++) {
-            if (!results[i].isFaceDetected()) allFacesDetected = false;
+            if (results[i].isFaceDetected()) facesDetected++;
             if (i > 0) rawJoined.append(',');
             rawJoined.append(results[i].getRawJson());
         }
         rawJoined.append(']');
 
-        if (!allFacesDetected) {
+        // Umbral de deteccion de cara: PRESENCE requiere N-1; legacy
+        // requeria N. Usamos la config de PRESENCE cuando aplique.
+        int minFacesRequired = Constants.LivenessChallengeType.PRESENCE.equals(row.getChallengeType())
+                ? props.getThresholds().getPresence().getMinFacesDetected()
+                : results.length;
+        if (facesDetected < minFacesRequired) {
             row.setStatus(Constants.LivenessChallengeStatus.FAILED);
             row.setResolvedAt(nowUtc);
-            row.setSightengineVerdict("{\"reason\":\"no_face_in_all_frames\",\"vendor_raw\":"
-                    + rawJoined + "}");
-            log.info("[LIVENESS] fail user={} attempt={} reason=no_face_in_all_frames",
-                    userId, challengeId);
+            row.setSightengineVerdict("{\"reason\":\"face_detected_below_threshold\","
+                    + "\"faces_detected\":" + facesDetected
+                    + ",\"min_required\":" + minFacesRequired
+                    + ",\"vendor_raw\":" + rawJoined + "}");
+            log.info("[LIVENESS] fail user={} attempt={} reason=face_below_threshold faces={} required={}",
+                    userId, challengeId, facesDetected, minFacesRequired);
             return repository.save(row);
         }
 
@@ -256,11 +261,29 @@ public class LivenessChallengeService {
 
     /**
      * ADR-050 D4: reglas de verify por challenge type. Umbrales
-     * inyectados desde {@link LivenessProperties.Thresholds}.
+     * inyectados desde {@link LivenessProperties.Thresholds}. Tras el
+     * refactor 2026-07-13, el service emite solo {@code PRESENCE}; las
+     * reglas legacy se conservan por si aparece una fila con tipo
+     * antiguo (retrocompat).
      */
     private boolean evaluate(String challengeType, FaceAttributesResult[] frames) {
         LivenessProperties.Thresholds th = props.getThresholds();
         switch (challengeType) {
+            case Constants.LivenessChallengeType.PRESENCE: {
+                // ADR-050 D4 revisado: presence check simple. Sumamos la
+                // magnitud del delta entre frames consecutivos de los
+                // scores (smile + eyesClosed + yaw normalizado). Una
+                // imagen fija da 0.0; un user real supera el umbral
+                // pequeno por micro-movimiento natural.
+                if (frames == null || frames.length < 2) return false;
+                double totalDelta = 0.0;
+                for (int i = 1; i < frames.length; i++) {
+                    totalDelta += Math.abs(frames[i].getSmile() - frames[i - 1].getSmile());
+                    totalDelta += Math.abs(frames[i].getEyesClosed() - frames[i - 1].getEyesClosed());
+                    totalDelta += Math.abs(frames[i].getYaw() - frames[i - 1].getYaw()) / 30.0;
+                }
+                return totalDelta >= th.getPresence().getMinDelta();
+            }
             case Constants.LivenessChallengeType.BLINK: {
                 double maxClosed = 0.0;
                 double minClosed = 1.0;

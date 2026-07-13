@@ -372,11 +372,22 @@ public class Constants {
     // ========================================================================
 
     /**
-     * ADR-050 D4: tipos de challenge disponibles. Se elige uno random por
-     * intento. Reglas de verify hardcoded en {@code LivenessChallengeService}
-     * con umbrales desde {@code moderation.liveness.thresholds.*}.
+     * ADR-050 D4 (revisado 2026-07-13): tipo de challenge activo.
+     *
+     * <p>Historia: el D4 original definia {@code BLINK/TURN_LEFT/TURN_RIGHT/
+     * SMILE} con verify basado en scores de face-attributes. El testing
+     * empirico con Logitech C270 mostro tasas de falso negativo altas por
+     * calibracion sensible del vendor + iluminacion de casa. Se cambio a
+     * {@link #PRESENCE} (mira 3s, backend valida face+micro-movement) que
+     * es el modelo pasivo de CooMeet y el resto del vertical.
+     *
+     * <p>Los constantes de los tipos viejos se conservan para retrocompat
+     * con filas historicas ya persistidas, pero {@code LivenessChallengeService}
+     * ya solo emite {@code PRESENCE}.
      */
     public static class LivenessChallengeType {
+        public static final String PRESENCE = "PRESENCE";
+        // Legacy (no emitidos por el service tras 2026-07-13):
         public static final String BLINK = "BLINK";
         public static final String TURN_LEFT = "TURN_LEFT";
         public static final String TURN_RIGHT = "TURN_RIGHT";

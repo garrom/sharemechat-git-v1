@@ -1638,6 +1638,7 @@
     "title": "Live verification",
     "subtitle": "Before connecting, we need to check that you are in front of the camera right now.",
     "prompts": {
+      "PRESENCE_PROMPT": "When you're ready, press \"Start\" and look at the camera for 3 seconds.",
       "BLINK_PROMPT": "When you're ready, press \"Start\" and blink twice looking at the camera.",
       "TURN_LEFT_PROMPT": "When you're ready, press \"Start\" and slowly turn your head to your left.",
       "TURN_RIGHT_PROMPT": "When you're ready, press \"Start\" and slowly turn your head to your right.",
@@ -1646,10 +1647,10 @@
     "status": {
       "loading": "Preparing verification…",
       "ready": "Keep your face centered in the video.",
-      "capturing": "Capturing… hold the gesture.",
+      "capturing": "Capturing… keep looking at the camera.",
       "verifying": "Verifying…",
       "passed": "Verification passed!",
-      "failed": "We couldn't verify the gesture."
+      "failed": "We couldn't verify you. Try in a place with more light."
     },
     "actions": {
       "start": "Start",

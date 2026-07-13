@@ -157,7 +157,7 @@ class LivenessChallengeServiceTest {
     }
 
     @Test
-    @DisplayName("startChallenge crea fila PENDING con challenge type del catalogo D4")
+    @DisplayName("startChallenge crea fila PENDING con userId y prompt derivado del tipo")
     void startChallenge_createsPending() {
         when(repository.findValidPassedByUserId(eq(USER_ID), any(LocalDateTime.class)))
                 .thenReturn(Optional.empty());
@@ -169,12 +169,6 @@ class LivenessChallengeServiceTest {
         LivenessAttempt result = service.startChallenge(USER_ID);
         assertEquals(USER_ID, result.getUserId());
         assertEquals(Constants.LivenessChallengeStatus.PENDING, result.getStatus());
-        assertTrue(List.of(
-                Constants.LivenessChallengeType.BLINK,
-                Constants.LivenessChallengeType.TURN_LEFT,
-                Constants.LivenessChallengeType.TURN_RIGHT,
-                Constants.LivenessChallengeType.SMILE
-        ).contains(result.getChallengeType()));
         assertEquals(result.getChallengeType() + "_PROMPT", result.getPromptLc());
     }
 
@@ -368,8 +362,8 @@ class LivenessChallengeServiceTest {
     }
 
     @Test
-    @DisplayName("cualquier frame sin cara detectada → FAILED con reason=no_face_in_all_frames")
-    void verify_noFace() {
+    @DisplayName("BLINK con 1 frame sin cara → FAILED (BLINK requiere todos los frames con cara)")
+    void verify_blinkNoFace() {
         LivenessAttempt row = pendingOfType(Constants.LivenessChallengeType.BLINK);
         when(repository.findById(1L)).thenReturn(Optional.of(row));
         when(provider.analyze(any()))
@@ -379,7 +373,85 @@ class LivenessChallengeServiceTest {
 
         LivenessAttempt result = service.verify(USER_ID, 1L, threeFrames());
         assertEquals(Constants.LivenessChallengeStatus.FAILED, result.getStatus());
-        assertTrue(result.getSightengineVerdict().contains("no_face_in_all_frames"));
+        assertTrue(result.getSightengineVerdict().contains("face_detected_below_threshold"));
+    }
+
+    // =====================================================
+    // verify - PRESENCE (post-refactor 2026-07-13)
+    // =====================================================
+
+    @Test
+    @DisplayName("PRESENCE con face detected + micro-movement → PASSED")
+    void verify_presencePass() {
+        LivenessAttempt row = pendingOfType(Constants.LivenessChallengeType.PRESENCE);
+        when(repository.findById(1L)).thenReturn(Optional.of(row));
+        // Micro-movimiento tipico: leves cambios en smile/eyesClosed/yaw
+        when(provider.analyze(any()))
+                .thenReturn(faceResult(0.1, 0.1, 0.5))
+                .thenReturn(faceResult(0.15, 0.12, 1.5))
+                .thenReturn(faceResult(0.12, 0.15, 2.5));
+
+        LivenessAttempt result = service.verify(USER_ID, 1L, threeFrames());
+        assertEquals(Constants.LivenessChallengeStatus.PASSED, result.getStatus());
+    }
+
+    @Test
+    @DisplayName("PRESENCE con imagen fija (deltas=0) → FAILED (no micro-movement)")
+    void verify_presenceStaticImageFails() {
+        LivenessAttempt row = pendingOfType(Constants.LivenessChallengeType.PRESENCE);
+        when(repository.findById(1L)).thenReturn(Optional.of(row));
+        // Todos los frames identicos: imagen fija/foto sin movimiento
+        when(provider.analyze(any()))
+                .thenReturn(faceResult(0.2, 0.1, 5.0))
+                .thenReturn(faceResult(0.2, 0.1, 5.0))
+                .thenReturn(faceResult(0.2, 0.1, 5.0));
+
+        LivenessAttempt result = service.verify(USER_ID, 1L, threeFrames());
+        assertEquals(Constants.LivenessChallengeStatus.FAILED, result.getStatus());
+    }
+
+    @Test
+    @DisplayName("PRESENCE tolera 1 frame sin cara (min-faces-detected=2)")
+    void verify_presenceTolerates1MissingFace() {
+        LivenessAttempt row = pendingOfType(Constants.LivenessChallengeType.PRESENCE);
+        when(repository.findById(1L)).thenReturn(Optional.of(row));
+        when(provider.analyze(any()))
+                .thenReturn(faceResult(0.1, 0.1, 0.5))
+                .thenReturn(new FaceAttributesResult(false, 0.0, 0.0, 0.0, "{}"))
+                .thenReturn(faceResult(0.15, 0.15, 1.5));
+
+        LivenessAttempt result = service.verify(USER_ID, 1L, threeFrames());
+        assertEquals(Constants.LivenessChallengeStatus.PASSED, result.getStatus());
+    }
+
+    @Test
+    @DisplayName("PRESENCE con 2 frames sin cara → FAILED (bajo min-faces-detected)")
+    void verify_presenceFailsWithMostlyNoFace() {
+        LivenessAttempt row = pendingOfType(Constants.LivenessChallengeType.PRESENCE);
+        when(repository.findById(1L)).thenReturn(Optional.of(row));
+        when(provider.analyze(any()))
+                .thenReturn(faceResult(0.1, 0.1, 0.5))
+                .thenReturn(new FaceAttributesResult(false, 0.0, 0.0, 0.0, "{}"))
+                .thenReturn(new FaceAttributesResult(false, 0.0, 0.0, 0.0, "{}"));
+
+        LivenessAttempt result = service.verify(USER_ID, 1L, threeFrames());
+        assertEquals(Constants.LivenessChallengeStatus.FAILED, result.getStatus());
+        assertTrue(result.getSightengineVerdict().contains("face_detected_below_threshold"));
+    }
+
+    @Test
+    @DisplayName("startChallenge tras refactor emite solo PRESENCE")
+    void startChallenge_emitsOnlyPresence() {
+        when(repository.findValidPassedByUserId(eq(USER_ID), any(LocalDateTime.class)))
+                .thenReturn(Optional.empty());
+        when(repository.countFailedByUserSince(eq(USER_ID), any(LocalDateTime.class)))
+                .thenReturn(0L);
+        when(repository.findByUserIdAndStatus(USER_ID, Constants.LivenessChallengeStatus.PENDING))
+                .thenReturn(Collections.emptyList());
+
+        LivenessAttempt result = service.startChallenge(USER_ID);
+        assertEquals(Constants.LivenessChallengeType.PRESENCE, result.getChallengeType());
+        assertEquals(Constants.LivenessChallengeType.PRESENCE + "_PROMPT", result.getPromptLc());
     }
 
     // =====================================================
