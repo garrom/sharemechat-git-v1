@@ -1650,7 +1650,7 @@
       "capturing": "Capturing… keep looking at the camera.",
       "verifying": "Verifying…",
       "passed": "Verification passed!",
-      "failed": "We couldn't verify you. Try in a place with more light."
+      "failed": "We couldn't complete the verification. Please try again."
     },
     "actions": {
       "start": "Start",

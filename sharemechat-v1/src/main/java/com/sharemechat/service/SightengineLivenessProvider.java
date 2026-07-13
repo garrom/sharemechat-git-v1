@@ -150,7 +150,8 @@ public class SightengineLivenessProvider implements LivenessFaceAttributesProvid
         JsonNode root = objectMapper.readTree(rawBody);
         JsonNode faces = root.get("faces");
         if (faces == null || !faces.isArray() || faces.size() == 0) {
-            return new FaceAttributesResult(false, 0.0, 0.0, 0.0, rawBody);
+            return new FaceAttributesResult(false, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rawBody);
         }
 
         // Escoger la cara de mayor area (sujeto principal frente a webcam).
@@ -168,18 +169,34 @@ public class SightengineLivenessProvider implements LivenessFaceAttributesProvid
             }
         }
         if (chosen == null) {
-            return new FaceAttributesResult(false, 0.0, 0.0, 0.0, rawBody);
+            return new FaceAttributesResult(false, 0.0, 0.0, 0.0,
+                    0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rawBody);
         }
 
+        // face-attributes API: los atributos disponibles varian por plan
+        // del vendor. En el plan actual solo se devuelven minor +
+        // sunglasses. Los legacy smile/eyes_open/pose son ausentes; se
+        // toman defaults. Los tests de gestures viejos siguen validos
+        // con MOCK; el PRESENCE nuevo usa landmarks que si vienen.
         JsonNode attrs = chosen.path("attributes");
         double smile = attrs.path("smile").asDouble(0.0);
-        // SightEngine devuelve eyes_open; invertimos a eyes_closed para
-        // el score del challenge BLINK (1 - eyes_open).
         double eyesOpen = attrs.path("eyes_open").asDouble(1.0);
         double eyesClosed = Math.max(0.0, Math.min(1.0, 1.0 - eyesOpen));
         double yaw = attrs.path("pose").path("yaw").asDouble(0.0);
 
-        return new FaceAttributesResult(true, smile, eyesClosed, yaw, rawBody);
+        // Landmarks del modelo face (SIEMPRE presentes cuando hay cara).
+        // Coordenadas normalizadas [0, 1] respecto al frame.
+        JsonNode features = chosen.path("features");
+        double leftEyeX = features.path("left_eye").path("x").asDouble(0.0);
+        double leftEyeY = features.path("left_eye").path("y").asDouble(0.0);
+        double rightEyeX = features.path("right_eye").path("x").asDouble(0.0);
+        double rightEyeY = features.path("right_eye").path("y").asDouble(0.0);
+        double noseTipX = features.path("nose_tip").path("x").asDouble(0.0);
+        double noseTipY = features.path("nose_tip").path("y").asDouble(0.0);
+
+        return new FaceAttributesResult(true, smile, eyesClosed, yaw,
+                leftEyeX, leftEyeY, rightEyeX, rightEyeY, noseTipX, noseTipY,
+                rawBody);
     }
 
     private static boolean isBlank(String s) {

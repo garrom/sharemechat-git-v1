@@ -23,23 +23,59 @@ public class FaceAttributesResult {
     private final double smile;
     private final double eyesClosed;
     private final double yaw;
+    private final double leftEyeX;
+    private final double leftEyeY;
+    private final double rightEyeX;
+    private final double rightEyeY;
+    private final double noseTipX;
+    private final double noseTipY;
     private final String rawJson;
 
     public FaceAttributesResult(boolean faceDetected,
                                  double smile,
                                  double eyesClosed,
                                  double yaw,
+                                 double leftEyeX,
+                                 double leftEyeY,
+                                 double rightEyeX,
+                                 double rightEyeY,
+                                 double noseTipX,
+                                 double noseTipY,
                                  String rawJson) {
         this.faceDetected = faceDetected;
         this.smile = smile;
         this.eyesClosed = eyesClosed;
         this.yaw = yaw;
+        this.leftEyeX = leftEyeX;
+        this.leftEyeY = leftEyeY;
+        this.rightEyeX = rightEyeX;
+        this.rightEyeY = rightEyeY;
+        this.noseTipX = noseTipX;
+        this.noseTipY = noseTipY;
         this.rawJson = rawJson;
+    }
+
+    /**
+     * Constructor legacy sin landmarks - usado por tests y por rutas
+     * antiguas. Los landmarks se quedan a 0.0.
+     */
+    public FaceAttributesResult(boolean faceDetected,
+                                 double smile,
+                                 double eyesClosed,
+                                 double yaw,
+                                 String rawJson) {
+        this(faceDetected, smile, eyesClosed, yaw, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, rawJson);
     }
 
     public boolean isFaceDetected() { return faceDetected; }
     public double getSmile() { return smile; }
     public double getEyesClosed() { return eyesClosed; }
     public double getYaw() { return yaw; }
+    public double getLeftEyeX() { return leftEyeX; }
+    public double getLeftEyeY() { return leftEyeY; }
+    public double getRightEyeX() { return rightEyeX; }
+    public double getRightEyeY() { return rightEyeY; }
+    public double getNoseTipX() { return noseTipX; }
+    public double getNoseTipY() { return noseTipY; }
     public String getRawJson() { return rawJson; }
 }

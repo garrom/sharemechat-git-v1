@@ -381,44 +381,46 @@ class LivenessChallengeServiceTest {
     // =====================================================
 
     @Test
-    @DisplayName("PRESENCE con face detected + micro-movement → PASSED")
+    @DisplayName("PRESENCE con landmarks moviendose → PASSED (fix 2026-07-13)")
     void verify_presencePass() {
         LivenessAttempt row = pendingOfType(Constants.LivenessChallengeType.PRESENCE);
         when(repository.findById(1L)).thenReturn(Optional.of(row));
-        // Micro-movimiento tipico: leves cambios en smile/eyesClosed/yaw
+        // Micro-movimiento tipico en landmarks: coordenadas en [0,1] con
+        // deltas del orden 0.01-0.03 por landmark (equivalente a los
+        // valores reales del operador con Logitech C270).
         when(provider.analyze(any()))
-                .thenReturn(faceResult(0.1, 0.1, 0.5))
-                .thenReturn(faceResult(0.15, 0.12, 1.5))
-                .thenReturn(faceResult(0.12, 0.15, 2.5));
+                .thenReturn(faceWithLandmarks(0.60, 0.42, 0.41, 0.42, 0.50, 0.55))
+                .thenReturn(faceWithLandmarks(0.59, 0.45, 0.42, 0.45, 0.50, 0.58))
+                .thenReturn(faceWithLandmarks(0.60, 0.44, 0.41, 0.44, 0.50, 0.56));
 
         LivenessAttempt result = service.verify(USER_ID, 1L, threeFrames());
         assertEquals(Constants.LivenessChallengeStatus.PASSED, result.getStatus());
     }
 
     @Test
-    @DisplayName("PRESENCE con imagen fija (deltas=0) → FAILED (no micro-movement)")
+    @DisplayName("PRESENCE con landmarks constantes (foto fija) → FAILED")
     void verify_presenceStaticImageFails() {
         LivenessAttempt row = pendingOfType(Constants.LivenessChallengeType.PRESENCE);
         when(repository.findById(1L)).thenReturn(Optional.of(row));
-        // Todos los frames identicos: imagen fija/foto sin movimiento
+        // Todos los landmarks identicos: foto fija sin movimiento
         when(provider.analyze(any()))
-                .thenReturn(faceResult(0.2, 0.1, 5.0))
-                .thenReturn(faceResult(0.2, 0.1, 5.0))
-                .thenReturn(faceResult(0.2, 0.1, 5.0));
+                .thenReturn(faceWithLandmarks(0.60, 0.42, 0.41, 0.42, 0.50, 0.55))
+                .thenReturn(faceWithLandmarks(0.60, 0.42, 0.41, 0.42, 0.50, 0.55))
+                .thenReturn(faceWithLandmarks(0.60, 0.42, 0.41, 0.42, 0.50, 0.55));
 
         LivenessAttempt result = service.verify(USER_ID, 1L, threeFrames());
         assertEquals(Constants.LivenessChallengeStatus.FAILED, result.getStatus());
     }
 
     @Test
-    @DisplayName("PRESENCE tolera 1 frame sin cara (min-faces-detected=2)")
+    @DisplayName("PRESENCE tolera 1 frame sin cara si los otros 2 tienen landmarks moviendose")
     void verify_presenceTolerates1MissingFace() {
         LivenessAttempt row = pendingOfType(Constants.LivenessChallengeType.PRESENCE);
         when(repository.findById(1L)).thenReturn(Optional.of(row));
         when(provider.analyze(any()))
-                .thenReturn(faceResult(0.1, 0.1, 0.5))
+                .thenReturn(faceWithLandmarks(0.60, 0.42, 0.41, 0.42, 0.50, 0.55))
                 .thenReturn(new FaceAttributesResult(false, 0.0, 0.0, 0.0, "{}"))
-                .thenReturn(faceResult(0.15, 0.15, 1.5));
+                .thenReturn(faceWithLandmarks(0.59, 0.45, 0.42, 0.45, 0.50, 0.58));
 
         LivenessAttempt result = service.verify(USER_ID, 1L, threeFrames());
         assertEquals(Constants.LivenessChallengeStatus.PASSED, result.getStatus());
@@ -484,6 +486,13 @@ class LivenessChallengeServiceTest {
 
     private static FaceAttributesResult faceResult(double smile, double eyesClosed, double yaw) {
         return new FaceAttributesResult(true, smile, eyesClosed, yaw, "{}");
+    }
+
+    private static FaceAttributesResult faceWithLandmarks(double leftEyeX, double leftEyeY,
+                                                           double rightEyeX, double rightEyeY,
+                                                           double noseTipX, double noseTipY) {
+        return new FaceAttributesResult(true, 0.0, 0.0, 0.0,
+                leftEyeX, leftEyeY, rightEyeX, rightEyeY, noseTipX, noseTipY, "{}");
     }
 
     private static List<byte[]> threeFrames() {

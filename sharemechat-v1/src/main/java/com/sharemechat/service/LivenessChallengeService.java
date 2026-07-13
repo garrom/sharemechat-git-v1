@@ -270,19 +270,28 @@ public class LivenessChallengeService {
         LivenessProperties.Thresholds th = props.getThresholds();
         switch (challengeType) {
             case Constants.LivenessChallengeType.PRESENCE: {
-                // ADR-050 D4 revisado: presence check simple. Sumamos la
-                // magnitud del delta entre frames consecutivos de los
-                // scores (smile + eyesClosed + yaw normalizado). Una
-                // imagen fija da 0.0; un user real supera el umbral
-                // pequeno por micro-movimiento natural.
+                // ADR-050 D4 revisado + fix 2026-07-13: presence check via
+                // landmarks. SightEngine face-attributes NO devuelve
+                // smile/eyes_open/pose en el plan actual, pero SI devuelve
+                // features (landmarks). Sumamos distancia euclidea entre
+                // frames consecutivos de left_eye, right_eye y nose_tip.
+                // Foto fija: todos los landmarks identicos → delta 0.
+                // User real: micro-movement natural del orden 0.01-0.05
+                // por landmark → supera el umbral 0.02 comodo.
                 if (frames == null || frames.length < 2) return false;
                 double totalDelta = 0.0;
                 for (int i = 1; i < frames.length; i++) {
-                    totalDelta += Math.abs(frames[i].getSmile() - frames[i - 1].getSmile());
-                    totalDelta += Math.abs(frames[i].getEyesClosed() - frames[i - 1].getEyesClosed());
-                    totalDelta += Math.abs(frames[i].getYaw() - frames[i - 1].getYaw()) / 30.0;
+                    totalDelta += euclidean(
+                            frames[i].getLeftEyeX() - frames[i - 1].getLeftEyeX(),
+                            frames[i].getLeftEyeY() - frames[i - 1].getLeftEyeY());
+                    totalDelta += euclidean(
+                            frames[i].getRightEyeX() - frames[i - 1].getRightEyeX(),
+                            frames[i].getRightEyeY() - frames[i - 1].getRightEyeY());
+                    totalDelta += euclidean(
+                            frames[i].getNoseTipX() - frames[i - 1].getNoseTipX(),
+                            frames[i].getNoseTipY() - frames[i - 1].getNoseTipY());
                 }
-                return totalDelta >= th.getPresence().getMinDelta();
+                return totalDelta >= th.getPresence().getMinLandmarkDelta();
             }
             case Constants.LivenessChallengeType.BLINK: {
                 double maxClosed = 0.0;
@@ -321,5 +330,9 @@ public class LivenessChallengeService {
     private static String escape(String s) {
         if (s == null) return "";
         return s.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private static double euclidean(double dx, double dy) {
+        return Math.sqrt(dx * dx + dy * dy);
     }
 }

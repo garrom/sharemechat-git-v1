@@ -1650,7 +1650,7 @@
       "capturing": "Capturando… sigue mirando a la cámara.",
       "verifying": "Verificando…",
       "passed": "¡Verificación superada!",
-      "failed": "No hemos podido verificarte. Prueba en un lugar con más luz."
+      "failed": "No hemos podido completar la verificación. Vuelve a intentarlo."
     },
     "actions": {
       "start": "Empezar",

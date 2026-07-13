@@ -96,22 +96,39 @@ public class LivenessProperties {
          */
         public static class Presence {
             /**
-             * Suma minima de deltas (|smile[i]-smile[i-1]| +
-             * |eyesClosed[i]-eyesClosed[i-1]| + |yaw[i]-yaw[i-1]|/30)
-             * a lo largo de todos los frames para considerar que hay
-             * micro-movement humano natural. Un umbral bajo por diseno:
-             * una foto totalmente fija da 0.0, cualquier user real supera
-             * facilmente el minimo. Calibrable via env var
-             * MODERATION_LIVENESS_THRESHOLDS_PRESENCE_MIN_DELTA.
+             * Suma minima de distancias euclideas entre landmarks
+             * consecutivos (left_eye, right_eye, nose_tip) para
+             * considerar que hay micro-movement humano.
+             *
+             * <p>SightEngine devuelve las coordenadas en [0, 1]
+             * normalizadas por frame; para user real sentado ante la
+             * webcam los deltas naturales entre frames espaciados 1.5s
+             * son del orden 0.01-0.05 por landmark. Un umbral acumulado
+             * de 0.02 sobre 3 landmarks × 2 pares de frames pasa
+             * facilmente con user real y falla con foto fija (delta 0).
+             *
+             * <p>Calibrable via env var
+             * MODERATION_LIVENESS_THRESHOLDS_PRESENCE_MIN_LANDMARK_DELTA.
+             */
+            private double minLandmarkDelta = 0.02;
+            /**
+             * Legacy: umbral de deltas de scores (smile+eyesClosed+yaw).
+             * No usado por PRESENCE tras el fix 2026-07-13 (SightEngine
+             * face-attributes NO devuelve smile/eyes_open/pose). Se
+             * conserva por retrocompat de tests y config.
              */
             private double minDelta = 0.05;
             /**
              * Numero minimo de frames en los que debe detectarse cara.
-             * Por defecto framesRequired - 1 (permite que uno falle sin
-             * bloquear). Con framesRequired=3 → minFacesDetected=2.
+             * Con framesRequired=3 → minFacesDetected=2 (permite que uno
+             * falle sin bloquear).
              */
             private int minFacesDetected = 2;
 
+            public double getMinLandmarkDelta() { return minLandmarkDelta; }
+            public void setMinLandmarkDelta(double minLandmarkDelta) {
+                this.minLandmarkDelta = minLandmarkDelta;
+            }
             public double getMinDelta() { return minDelta; }
             public void setMinDelta(double minDelta) { this.minDelta = minDelta; }
             public int getMinFacesDetected() { return minFacesDetected; }
