@@ -1,5 +1,6 @@
 package com.sharemechat.controller;
 
+import com.sharemechat.config.LivenessProperties;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.LivenessAttempt;
 import com.sharemechat.entity.User;
@@ -60,10 +61,14 @@ public class LivenessController {
 
     private final LivenessChallengeService service;
     private final UserService userService;
+    private final LivenessProperties livenessProperties;
 
-    public LivenessController(LivenessChallengeService service, UserService userService) {
+    public LivenessController(LivenessChallengeService service,
+                               UserService userService,
+                               LivenessProperties livenessProperties) {
         this.service = service;
         this.userService = userService;
+        this.livenessProperties = livenessProperties;
     }
 
     // =====================================================
@@ -75,9 +80,21 @@ public class LivenessController {
         User user = requireUser(auth);
         if (user == null) return unauthorized();
 
-        Optional<LivenessAttempt> current = service.hasCurrentPass(user.getId());
         Map<String, Object> body = new LinkedHashMap<>();
+        // ADR-050 Fase B kill-switch: cuando el gate esta desactivado por
+        // property, /status responde como si hubiera pass vigente para
+        // que el frontend no abra el modal (coherente con el guard WS
+        // que tambien salta silencioso). Devolvemos gateEnabled=false
+        // para trazabilidad; el frontend puede ignorarlo.
+        if (livenessProperties == null || !livenessProperties.isEnabled()) {
+            body.put("hasCurrentPass", true);
+            body.put("gateEnabled", false);
+            return ResponseEntity.ok(body);
+        }
+
+        Optional<LivenessAttempt> current = service.hasCurrentPass(user.getId());
         body.put("hasCurrentPass", current.isPresent());
+        body.put("gateEnabled", true);
         current.ifPresent(la -> {
             body.put("passedUntil", la.getPassedUntil() == null ? null : la.getPassedUntil().toString());
             body.put("challengeType", la.getChallengeType());
