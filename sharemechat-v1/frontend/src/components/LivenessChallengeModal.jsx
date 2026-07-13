@@ -114,7 +114,7 @@ const headerOverride = {
 
 const titleOverride = {
   color: '#1e3a8a',
-  fontSize: 18,
+  fontSize: 16,
   fontWeight: 800,
 };
 
@@ -125,7 +125,7 @@ const closeBtnOverride = {
 const bodyOverride = {
   background: 'transparent',
   color: '#1f2933',
-  fontSize: 15,
+  fontSize: 13,
 };
 
 const footerOverride = {
@@ -134,7 +134,7 @@ const footerOverride = {
 
 const overlayVideoStyle = {
   width: '100%',
-  maxWidth: 340,
+  maxWidth: 280,
   height: 'auto',
   borderRadius: 12,
   background: '#dde3ea',
@@ -145,52 +145,52 @@ const overlayVideoStyle = {
 };
 
 const promptBox = {
-  fontSize: 16,
+  fontSize: 14,
   fontWeight: 700,
   color: '#1e3a8a',
   textAlign: 'center',
-  margin: '14px 0 6px',
-  lineHeight: 1.4,
+  margin: '10px 0 4px',
+  lineHeight: 1.35,
 };
 
 const subtitleStyle = {
-  fontSize: 14,
+  fontSize: 13,
   color: '#4a5563',
   textAlign: 'center',
-  margin: '0 0 12px',
-  lineHeight: 1.45,
+  margin: '0 0 10px',
+  lineHeight: 1.4,
 };
 
 const countdownStyle = {
-  fontSize: 54,
+  fontSize: 44,
   fontWeight: 800,
   color: '#f97316',
   textAlign: 'center',
-  margin: '12px 0',
+  margin: '8px 0',
   lineHeight: 1,
 };
 
 const statusLine = {
-  fontSize: 15,
+  fontSize: 13,
   color: '#1f2933',
   textAlign: 'center',
-  margin: '10px 0 0',
-  lineHeight: 1.4,
+  margin: '6px 0 0',
+  lineHeight: 1.35,
 };
 
 const errorLine = {
-  fontSize: 14,
+  fontSize: 13,
   color: '#a1273a',
   textAlign: 'center',
-  marginTop: 8,
-  lineHeight: 1.4,
+  marginTop: 6,
+  lineHeight: 1.35,
 };
 
 const attemptCounter = {
-  fontSize: 13,
+  fontSize: 12,
   color: '#5b6470',
   textAlign: 'center',
-  marginTop: 6,
+  marginTop: 4,
 };
 
 export default function LivenessChallengeModal({
