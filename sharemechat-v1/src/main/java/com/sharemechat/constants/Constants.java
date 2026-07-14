@@ -244,6 +244,11 @@ public class Constants {
         // Se dispara cuando SightEngine face-presence.out-of-scene > umbral,
         // detectando el ataque OBS con video pregrabado en pantalla.
         public static final String OUT_OF_SCENE = "OUT_OF_SCENE";
+        // ADR-050 Fase D (2026-07-14): frame congelado (webcam mala,
+        // driver colgado, o intencional). Detectado server-side via hash
+        // SHA-256 comparado con frames anteriores. Sigue el mismo path
+        // de enforcement que OUT_OF_SCENE (severity CRITICAL -> auto-cut).
+        public static final String FROZEN_STREAM = "FROZEN_STREAM";
         public static final String OTHER = "OTHER";
 
         private StreamModerationCategory() {}

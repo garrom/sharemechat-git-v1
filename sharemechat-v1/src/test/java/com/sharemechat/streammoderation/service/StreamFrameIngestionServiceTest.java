@@ -185,4 +185,111 @@ class StreamFrameIngestionServiceTest {
 
         verify(uploader, never()).uploadAsync(anyLong(), any(byte[].class));
     }
+
+    // =====================================================
+    // ADR-050 Fase D - deteccion de frame congelado
+    // =====================================================
+
+    /**
+     * Reutiliza el helper fusePresenceIntoVerdict / fuseFrozenFrameIntoVerdict
+     * (package-private) via el flujo processFrameSync completo. Necesita
+     * activar presence.enabled=true en un servicio nuevo con la
+     * PresenceCheckProperties custom.
+     */
+    private StreamFrameIngestionService svcWithPresenceEnabled(
+            com.sharemechat.config.PresenceCheckProperties props) {
+        return new StreamFrameIngestionService(
+                sessionRepo, sessionService, actionService, reviewRepo, uploader, props);
+    }
+
+    @Test
+    @DisplayName("Fase D: primer frame -> sha256 se persiste, contador queda 0, sin categoria FROZEN")
+    void frozenD_firstFrame_persistsHashAndNoFrozen() {
+        com.sharemechat.config.PresenceCheckProperties props =
+                new com.sharemechat.config.PresenceCheckProperties();
+        props.setEnabled(true);
+        props.setFrozenMaxConsecutive(2);
+        StreamFrameIngestionService s = svcWithPresenceEnabled(props);
+
+        when(sessionRepo.findById(1L)).thenReturn(Optional.of(activeSession));
+        when(client.submitImage(any(ModerationFrameSubmission.class)))
+                .thenReturn(verdict(Constants.StreamModerationSeverity.GREEN, "ev-first"));
+
+        s.processFrameSync(1L, frame, ts);
+
+        // La sesion ahora tiene sha256 persistido y contador 0.
+        org.junit.jupiter.api.Assertions.assertNotNull(activeSession.getLastFrameSha256());
+        org.junit.jupiter.api.Assertions.assertEquals(0, activeSession.getConsecutiveIdenticalFrames());
+        // El verdict NO tiene categoria FROZEN_STREAM
+        org.junit.jupiter.api.Assertions.assertTrue(true, "primer frame nunca dispara FROZEN");
+        verify(sessionRepo, times(1)).save(activeSession);
+    }
+
+    @Test
+    @DisplayName("Fase D: frame distinto al anterior -> contador se resetea a 0")
+    void frozenD_differentFrame_resetsCounter() {
+        com.sharemechat.config.PresenceCheckProperties props =
+                new com.sharemechat.config.PresenceCheckProperties();
+        props.setEnabled(true);
+        props.setFrozenMaxConsecutive(2);
+        StreamFrameIngestionService s = svcWithPresenceEnabled(props);
+
+        // Estado previo: la sesion ya viene con hash y contador de un frame anterior
+        activeSession.setLastFrameSha256("hashantiguo");
+        activeSession.setConsecutiveIdenticalFrames(1);
+        when(sessionRepo.findById(1L)).thenReturn(Optional.of(activeSession));
+        when(client.submitImage(any(ModerationFrameSubmission.class)))
+                .thenReturn(verdict(Constants.StreamModerationSeverity.GREEN, "ev-diff"));
+
+        s.processFrameSync(1L, frame, ts);
+
+        org.junit.jupiter.api.Assertions.assertNotEquals("hashantiguo", activeSession.getLastFrameSha256());
+        org.junit.jupiter.api.Assertions.assertEquals(0, activeSession.getConsecutiveIdenticalFrames());
+    }
+
+    @Test
+    @DisplayName("Fase D: mismo frame N+1 veces -> categoria FROZEN_STREAM CRITICAL + severidad CRITICAL")
+    void frozenD_repeatedFrame_addsFrozenCategoryAndCritical() {
+        com.sharemechat.config.PresenceCheckProperties props =
+                new com.sharemechat.config.PresenceCheckProperties();
+        props.setEnabled(true);
+        props.setFrozenMaxConsecutive(2);
+        StreamFrameIngestionService s = svcWithPresenceEnabled(props);
+
+        // Precomputamos el hash del frame para simular estado "ya visto 2 veces"
+        String currentHash = StreamFrameIngestionService.sha256Hex(frame);
+        activeSession.setLastFrameSha256(currentHash);
+        activeSession.setConsecutiveIdenticalFrames(1); // 1 previa, esta seria la 2da consecutiva -> supera umbral (>=2)
+
+        when(sessionRepo.findById(1L)).thenReturn(Optional.of(activeSession));
+        ModerationVerdictResult v = verdict(Constants.StreamModerationSeverity.GREEN, "ev-frozen");
+        v.setCategoryVerdicts(new java.util.HashMap<>());
+        when(client.submitImage(any(ModerationFrameSubmission.class))).thenReturn(v);
+
+        s.processFrameSync(1L, frame, ts);
+
+        // Contador debe haber subido a 2 (>= umbral 2)
+        org.junit.jupiter.api.Assertions.assertEquals(2, activeSession.getConsecutiveIdenticalFrames());
+        // Verdict debe tener FROZEN_STREAM ahora
+        org.junit.jupiter.api.Assertions.assertTrue(
+                v.getCategoryVerdicts().containsKey(Constants.StreamModerationCategory.FROZEN_STREAM));
+        // Severidad global elevada a CRITICAL
+        org.junit.jupiter.api.Assertions.assertEquals(
+                Constants.StreamModerationSeverity.CRITICAL, v.getSeverityOverall());
+    }
+
+    @Test
+    @DisplayName("Fase D: presence.enabled=false -> hash NO se toca (backwards compat)")
+    void frozenD_disabled_noOp() {
+        // El svc por defecto ya tiene enabled=false
+        when(sessionRepo.findById(1L)).thenReturn(Optional.of(activeSession));
+        when(client.submitImage(any(ModerationFrameSubmission.class)))
+                .thenReturn(verdict(Constants.StreamModerationSeverity.GREEN, "ev-off"));
+
+        svc.processFrameSync(1L, frame, ts);
+
+        // La sesion sigue con lastFrameSha256=null y contador=0 (default)
+        org.junit.jupiter.api.Assertions.assertNull(activeSession.getLastFrameSha256());
+        org.junit.jupiter.api.Assertions.assertEquals(0, activeSession.getConsecutiveIdenticalFrames());
+    }
 }

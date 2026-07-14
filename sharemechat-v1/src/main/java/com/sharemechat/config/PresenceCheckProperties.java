@@ -32,11 +32,25 @@ public class PresenceCheckProperties {
      */
     private double outOfSceneCritical = 0.5;
 
+    /**
+     * ADR-050 Fase D: numero maximo de frames identicos consecutivos
+     * tolerados antes de considerar el stream congelado. Default 2:
+     * con cadencia 60s, tolera 1 frame identico normal (ligeras
+     * variaciones de compresion JPEG del video real) y dispara al 2do
+     * repetido consecutivo (~2 min de congelacion real).
+     */
+    private int frozenMaxConsecutive = 2;
+
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
     public double getOutOfSceneCritical() { return outOfSceneCritical; }
     public void setOutOfSceneCritical(double outOfSceneCritical) {
         this.outOfSceneCritical = outOfSceneCritical;
+    }
+
+    public int getFrozenMaxConsecutive() { return frozenMaxConsecutive; }
+    public void setFrozenMaxConsecutive(int frozenMaxConsecutive) {
+        this.frozenMaxConsecutive = frozenMaxConsecutive;
     }
 }

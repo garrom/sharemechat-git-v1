@@ -71,6 +71,24 @@ public class StreamModerationSession {
     @Column(name = "degraded_since")
     private LocalDateTime degradedSince;
 
+    /**
+     * ADR-050 Fase D: SHA-256 hex del ultimo frame recibido. Se compara
+     * con el hash del frame entrante para detectar congelacion. NULL
+     * antes del primer frame de la sesion.
+     */
+    @Column(name = "last_frame_sha256", length = 64)
+    private String lastFrameSha256;
+
+    /**
+     * ADR-050 Fase D: contador de frames identicos consecutivos
+     * detectados via hash. Se resetea a 0 al recibir un frame con hash
+     * distinto. Al superar el umbral
+     * {@code moderation.presence.frozen-max-consecutive} se dispara
+     * categoria FROZEN_STREAM con severity CRITICAL.
+     */
+    @Column(name = "consecutive_identical_frames", nullable = false)
+    private int consecutiveIdenticalFrames = 0;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -171,5 +189,21 @@ public class StreamModerationSession {
 
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
+    }
+
+    public String getLastFrameSha256() {
+        return lastFrameSha256;
+    }
+
+    public void setLastFrameSha256(String lastFrameSha256) {
+        this.lastFrameSha256 = lastFrameSha256;
+    }
+
+    public int getConsecutiveIdenticalFrames() {
+        return consecutiveIdenticalFrames;
+    }
+
+    public void setConsecutiveIdenticalFrames(int consecutiveIdenticalFrames) {
+        this.consecutiveIdenticalFrames = consecutiveIdenticalFrames;
     }
 }

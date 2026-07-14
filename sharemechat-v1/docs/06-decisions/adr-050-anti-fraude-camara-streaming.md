@@ -337,3 +337,63 @@ Fuera del alcance de esta fase. Si en N ticks consecutivos (por ejemplo 3 min si
 9. **Deploy backend TEST + activación con `MODERATION_PRESENCE_ENABLED=true`** — pendiente.
 10. **Testing manual del operador** con OBS + vídeo pregrabado durante streaming → debería cortar automáticamente la sesión — pendiente.
 11. **Calibración empírica de umbral** si el 0.5 default genera falsos positivos → ajustable sin redeploy — pendiente.
+
+## Actualización 2026-07-14 — Fase D: detección de frame congelado
+
+Al probar Fase C en real (streaming con cámara barata Logitech / NGS), el operador reportó que **la cámara se congeló durante la sesión** — se quedó mostrando el último frame indefinidamente. Análisis del pipeline reveló un hueco crítico:
+
+- El track `MediaStreamTrack` seguía vivo (`readyState=live`) — Chrome no lo declaró terminado.
+- `<video>.videoWidth/Height` seguían siendo válidos.
+- El `useFrameCapture` hook seguía enviando frames al backend cada 60s — pero **eran el mismo frame**.
+- SightEngine `face-presence` sobre frame congelado devolvía `in-scene` alto (imagen de persona real, no hay overlay ni póster). **NO disparaba `OUT_OF_SCENE`**.
+- Cliente seguía consumiendo saldo por streaming inexistente. Modelo tampoco se enteraba (nadie le avisaba).
+- Sin heartbeat de actividad real. Los únicos cortes automáticos hoy son: (a) WS cerrado, (b) `endIfBelowThreshold` por saldo, (c) stop manual. **Ninguno detecta congelación**.
+
+Se cierra la Fase D con luz verde explícita del operador el 2026-07-14.
+
+### D10 — Detección server-side de frame congelado vía SHA-256
+
+Se añade un check adicional en el mismo tick de moderación que Fase C:
+
+1. Backend calcula `SHA-256(frameBytes)` del frame recibido en `StreamFrameIngestionService`.
+2. Comparación con el hash del frame anterior de la misma sesión, guardado en la nueva columna `stream_moderation_sessions.last_frame_sha256`.
+3. **Distinto** → resetea `consecutive_identical_frames = 0` + actualiza hash. Persiste.
+4. **Idéntico** → incrementa `consecutive_identical_frames`. Persiste. Si supera `moderation.presence.frozen-max-consecutive` (default 2), añade categoría `FROZEN_STREAM` con severity `CRITICAL` al verdict → mismo path de enforcement que `OUT_OF_SCENE` (auto-cut existente).
+
+**Cero llamadas adicionales al vendor**. Coste operativo: nulo. Solo un hash local y una columna hex(64) por sesión.
+
+### D11 — Umbral inicial: 2 frames consecutivos
+
+Con cadencia 60s del pipeline, umbral 2 significa **~2 minutos de vídeo idéntico** antes de auto-cut. Ajustable via property `MODERATION_PRESENCE_FROZEN_MAX_CONSECUTIVE`.
+
+Justificación del valor 2:
+- **Falso positivo** con vídeo real: extremadamente improbable. Un frame JPEG de una webcam a 0.7 quality tiene siempre variaciones micro (ruido del sensor, compresión). El SHA-256 solo colisiona con imagen píxel-idéntica.
+- **Umbral 1** sería agresivo si por azar dos frames consecutivos fueran idénticos (aunque en la práctica esto no pasa con webcams reales).
+- **Umbral 3+** deja demasiado margen a fraude (3 min pagando por congelación).
+
+### D12 — Reutiliza el kill-switch de Fase C
+
+Fase D se activa cuando `moderation.presence.enabled=true` (mismo kill-switch que Fase C, ya que ambas son defensas complementarias del mismo frente). Cuando `false`, ni presencia ni frame congelado corren — coherencia operativa.
+
+### D13 — Coste operativo
+
+Cero coste vendor. La única operación es una consulta a la tabla `stream_moderation_sessions` para leer/escribir `last_frame_sha256` y contador (una consulta ya se hacía al arrancar el `processFrame`). El hash SHA-256 es <1ms sobre un frame de ~50KB.
+
+### D14 — La modelo tampoco se entera hoy
+
+**Deuda operativa asociada**: cuando se auto-cut por FROZEN_STREAM, la modelo no recibe ningún mensaje explícito. Su experiencia es "el streaming se cortó, no sé por qué". Esto se cubre parcialmente con el bloque 3 del roadmap (mejoras UX: modal en modelo al auto-cut). Documentado como deuda `#D-34`.
+
+### Subpasadas de Fase D
+
+1. **Análisis 1.1/1.2/1.3** — HECHO 2026-07-14 (cuadre económico + comportamiento frame congelado + auditoría triggers de corte).
+2. **Migración V21** + `StreamModerationSession` extendida con `last_frame_sha256` + `consecutive_identical_frames` — HECHO.
+3. **`Constants.StreamModerationCategory.FROZEN_STREAM`** + `PresenceCheckProperties.frozenMaxConsecutive` — HECHO.
+4. **`StreamFrameIngestionService.fuseFrozenFrameIntoVerdict` + helper `sha256Hex`** — HECHO.
+5. **Tests unitarios** cubriendo primer frame / frame distinto / frame repetido / kill-switch off — HECHO (4 casos, `mvn test 12/12` sobre el ingestor).
+6. **Deploy backend TEST + activación** — pendiente.
+7. **Testing manual** con cámara mala real o congelando frame en OBS — pendiente.
+8. **Calibración** del umbral si aparecen falsos positivos con webcams reales — pendiente.
+
+### Deuda #D-34 — Modal en modelo al auto-cut por moderación (FROZEN + OUT_OF_SCENE)
+
+Bloque de mejoras UX que la modelo reciba mensaje explícito. Frente aparte, cubierto en la sección "Correcciones y mejoras" del análisis 2026-07-14.

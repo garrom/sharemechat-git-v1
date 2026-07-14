@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -130,6 +132,16 @@ public class StreamFrameIngestionService {
                 log.warn("[STREAM-MOD-PRESENCE] check error sessionId={} provider={}: {}",
                         session.getId(), session.getProvider(), ex.getMessage());
             }
+
+            // ADR-050 Fase D: detección de frame congelado via hash. Se
+            // ejecuta solo si presence.enabled=true (mismo kill-switch
+            // que Fase C ya que es defensa complementaria). Coste cero.
+            try {
+                fuseFrozenFrameIntoVerdict(session, verdict, frameBytes);
+            } catch (Exception ex) {
+                log.warn("[STREAM-MOD-FROZEN] check error sessionId={}: {}",
+                        session.getId(), ex.getMessage());
+            }
         }
 
         actionService.applyVerdict(session, verdict);
@@ -188,5 +200,82 @@ public class StreamFrameIngestionService {
                 String.format("%.2f", outOfScene),
                 String.format("%.2f", pres.getOutOfSceneOverlay()),
                 threshold);
+    }
+
+    /**
+     * ADR-050 Fase D: detecta stream congelado comparando el hash SHA-256
+     * del frame entrante con el ultimo guardado en la sesion.
+     *
+     * <p>Comportamiento:
+     * <ul>
+     *   <li>Frame distinto al anterior: resetea contador a 0, actualiza
+     *       {@code lastFrameSha256}. Persiste.</li>
+     *   <li>Frame identico: incrementa contador. Persiste. Si supera
+     *       {@code frozen-max-consecutive}, anade categoria FROZEN_STREAM
+     *       con severity CRITICAL al verdict y eleva severidad global
+     *       (mismo path que OUT_OF_SCENE → auto-cut).</li>
+     * </ul>
+     *
+     * <p>Fail-soft: cualquier error se loguea y no afecta al verdict de
+     * contenido. Cero llamadas al vendor.
+     */
+    void fuseFrozenFrameIntoVerdict(StreamModerationSession session,
+                                     ModerationVerdictResult verdict,
+                                     byte[] frameBytes) {
+        if (session == null || verdict == null || frameBytes == null || frameBytes.length == 0) return;
+
+        String hash = sha256Hex(frameBytes);
+        if (hash == null) return;
+
+        String prev = session.getLastFrameSha256();
+        int counter = session.getConsecutiveIdenticalFrames();
+
+        if (prev != null && prev.equals(hash)) {
+            counter += 1;
+        } else {
+            counter = 0;
+        }
+
+        session.setLastFrameSha256(hash);
+        session.setConsecutiveIdenticalFrames(counter);
+        sessionRepository.save(session);
+
+        int threshold = presenceProps.getFrozenMaxConsecutive();
+        if (counter < threshold) return;
+
+        ModerationCategoryVerdict cat = new ModerationCategoryVerdict(
+                Constants.StreamModerationCategory.FROZEN_STREAM,
+                java.math.BigDecimal.valueOf(counter),
+                Constants.StreamModerationSeverity.CRITICAL);
+        if (verdict.getCategoryVerdicts() != null) {
+            verdict.getCategoryVerdicts().put(
+                    Constants.StreamModerationCategory.FROZEN_STREAM, cat);
+        }
+
+        String current = verdict.getSeverityOverall();
+        if (!Constants.StreamModerationSeverity.CRITICAL.equals(current)) {
+            verdict.setSeverityOverall(Constants.StreamModerationSeverity.CRITICAL);
+        }
+
+        log.warn("[STREAM-MOD-FROZEN] FROZEN_STREAM detected sessionId={} consecutive={} threshold={} hash={}",
+                session.getId(), counter, threshold, hash.substring(0, 8));
+    }
+
+    /**
+     * Hash SHA-256 hex del contenido del frame. Devuelve null si el
+     * algoritmo no esta disponible (imposible en JVM estandar).
+     */
+    static String sha256Hex(byte[] data) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(data);
+            StringBuilder sb = new StringBuilder(digest.length * 2);
+            for (byte b : digest) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (NoSuchAlgorithmException ex) {
+            return null;
+        }
     }
 }
