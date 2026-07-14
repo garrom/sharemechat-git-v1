@@ -75,8 +75,12 @@ public class StreamModerationSession {
      * ADR-050 Fase D: SHA-256 hex del ultimo frame recibido. Se compara
      * con el hash del frame entrante para detectar congelacion. NULL
      * antes del primer frame de la sesion.
+     *
+     * <p>columnDefinition explicito a CHAR(64) para alinear con la
+     * migracion V21 y evitar fallo schema-validator (Hibernate default
+     * es VARCHAR sino).
      */
-    @Column(name = "last_frame_sha256", length = 64)
+    @Column(name = "last_frame_sha256", columnDefinition = "CHAR(64)")
     private String lastFrameSha256;
 
     /**
