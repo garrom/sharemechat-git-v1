@@ -41,6 +41,14 @@ public class PresenceCheckProperties {
      */
     private int frozenMaxConsecutive = 2;
 
+    /**
+     * ADR-050 Fase E (deuda #D-33): numero maximo de ticks consecutivos
+     * SIN cara detectada por el vendor antes de auto-cortar la sesion.
+     * Default 3: con cadencia 60s = ~3 min sin cara.
+     * Calibrable via env MODERATION_PRESENCE_NO_FACE_MAX_CONSECUTIVE.
+     */
+    private int noFaceMaxConsecutive = 3;
+
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
@@ -52,5 +60,10 @@ public class PresenceCheckProperties {
     public int getFrozenMaxConsecutive() { return frozenMaxConsecutive; }
     public void setFrozenMaxConsecutive(int frozenMaxConsecutive) {
         this.frozenMaxConsecutive = frozenMaxConsecutive;
+    }
+
+    public int getNoFaceMaxConsecutive() { return noFaceMaxConsecutive; }
+    public void setNoFaceMaxConsecutive(int noFaceMaxConsecutive) {
+        this.noFaceMaxConsecutive = noFaceMaxConsecutive;
     }
 }

@@ -93,6 +93,15 @@ public class StreamModerationSession {
     @Column(name = "consecutive_identical_frames", nullable = false)
     private int consecutiveIdenticalFrames = 0;
 
+    /**
+     * ADR-050 Fase E (deuda #D-33): contador de ticks consecutivos SIN
+     * cara detectada por el vendor. Se resetea a 0 al detectar cara. Al
+     * superar el umbral {@code moderation.presence.no-face-max-consecutive}
+     * se dispara categoria NO_FACE_SUSTAINED con severity CRITICAL.
+     */
+    @Column(name = "consecutive_no_face_frames", nullable = false)
+    private int consecutiveNoFaceFrames = 0;
+
     @Column(name = "created_at", insertable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -209,5 +218,13 @@ public class StreamModerationSession {
 
     public void setConsecutiveIdenticalFrames(int consecutiveIdenticalFrames) {
         this.consecutiveIdenticalFrames = consecutiveIdenticalFrames;
+    }
+
+    public int getConsecutiveNoFaceFrames() {
+        return consecutiveNoFaceFrames;
+    }
+
+    public void setConsecutiveNoFaceFrames(int consecutiveNoFaceFrames) {
+        this.consecutiveNoFaceFrames = consecutiveNoFaceFrames;
     }
 }

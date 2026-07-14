@@ -122,9 +122,10 @@ public class StreamFrameIngestionService {
         // falla, no marca la sesion como DEGRADED (moderacion de
         // contenido sigue vigente y su fallo si marcaria degraded).
         // Solo se dispara si presence.enabled=true.
+        PresenceCheckResult pres = null;
         if (presenceProps != null && presenceProps.isEnabled()) {
             try {
-                PresenceCheckResult pres = client.checkPresence(frameBytes);
+                pres = client.checkPresence(frameBytes);
                 if (pres != null) {
                     fusePresenceIntoVerdict(verdict, pres);
                 }
@@ -140,6 +141,18 @@ public class StreamFrameIngestionService {
                 fuseFrozenFrameIntoVerdict(session, verdict, frameBytes);
             } catch (Exception ex) {
                 log.warn("[STREAM-MOD-FROZEN] check error sessionId={}: {}",
+                        session.getId(), ex.getMessage());
+            }
+
+            // ADR-050 Fase E (#D-33): detección de ausencia sostenida
+            // de cara. Solo cuenta si el presence check devolvio result;
+            // si SightEngine fallo (pres=null), no toca contador.
+            try {
+                if (pres != null) {
+                    fuseNoFaceIntoVerdict(session, verdict, pres);
+                }
+            } catch (Exception ex) {
+                log.warn("[STREAM-MOD-NOFACE] check error sessionId={}: {}",
                         session.getId(), ex.getMessage());
             }
         }
@@ -259,6 +272,53 @@ public class StreamFrameIngestionService {
 
         log.warn("[STREAM-MOD-FROZEN] FROZEN_STREAM detected sessionId={} consecutive={} threshold={} hash={}",
                 session.getId(), counter, threshold, hash.substring(0, 8));
+    }
+
+    /**
+     * ADR-050 Fase E (#D-33): detecta ausencia sostenida de cara. Si
+     * {@code faceDetected=false}, incrementa contador; si detecta cara
+     * lo resetea. Al superar {@code no-face-max-consecutive} anade
+     * categoria NO_FACE_SUSTAINED CRITICAL y eleva severidad global.
+     *
+     * <p>Cubre el hueco donde Fase C (OUT_OF_SCENE) no dispara porque
+     * no hay cara para evaluar, y Fase D (FROZEN_STREAM) no dispara
+     * porque el ruido natural varia los frames aunque no haya sujeto.
+     *
+     * <p>Package-private para test.
+     */
+    void fuseNoFaceIntoVerdict(StreamModerationSession session,
+                                ModerationVerdictResult verdict,
+                                PresenceCheckResult pres) {
+        if (session == null || verdict == null || pres == null) return;
+
+        int counter = session.getConsecutiveNoFaceFrames();
+        if (pres.isFaceDetected()) {
+            counter = 0;
+        } else {
+            counter += 1;
+        }
+        session.setConsecutiveNoFaceFrames(counter);
+        sessionRepository.save(session);
+
+        int threshold = presenceProps.getNoFaceMaxConsecutive();
+        if (counter < threshold) return;
+
+        ModerationCategoryVerdict cat = new ModerationCategoryVerdict(
+                Constants.StreamModerationCategory.NO_FACE_SUSTAINED,
+                java.math.BigDecimal.valueOf(counter),
+                Constants.StreamModerationSeverity.CRITICAL);
+        if (verdict.getCategoryVerdicts() != null) {
+            verdict.getCategoryVerdicts().put(
+                    Constants.StreamModerationCategory.NO_FACE_SUSTAINED, cat);
+        }
+
+        String current = verdict.getSeverityOverall();
+        if (!Constants.StreamModerationSeverity.CRITICAL.equals(current)) {
+            verdict.setSeverityOverall(Constants.StreamModerationSeverity.CRITICAL);
+        }
+
+        log.warn("[STREAM-MOD-NOFACE] NO_FACE_SUSTAINED detected sessionId={} consecutive={} threshold={}",
+                session.getId(), counter, threshold);
     }
 
     /**

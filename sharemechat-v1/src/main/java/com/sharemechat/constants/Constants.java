@@ -249,6 +249,11 @@ public class Constants {
         // SHA-256 comparado con frames anteriores. Sigue el mismo path
         // de enforcement que OUT_OF_SCENE (severity CRITICAL -> auto-cut).
         public static final String FROZEN_STREAM = "FROZEN_STREAM";
+        // ADR-050 Fase E (2026-07-15, deuda #D-33): N ticks consecutivos
+        // sin cara detectada (modelo ausente, camara tapada, contraluz
+        // extremo). Complementa OUT_OF_SCENE y FROZEN_STREAM cubriendo
+        // el hueco donde no hay cara y los frames varian por ruido natural.
+        public static final String NO_FACE_SUSTAINED = "NO_FACE_SUSTAINED";
         public static final String OTHER = "OTHER";
 
         private StreamModerationCategory() {}

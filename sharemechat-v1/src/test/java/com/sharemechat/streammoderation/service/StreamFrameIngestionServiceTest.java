@@ -292,4 +292,59 @@ class StreamFrameIngestionServiceTest {
         org.junit.jupiter.api.Assertions.assertNull(activeSession.getLastFrameSha256());
         org.junit.jupiter.api.Assertions.assertEquals(0, activeSession.getConsecutiveIdenticalFrames());
     }
+
+    // =====================================================
+    // ADR-050 Fase E (#D-33) - ausencia sostenida de cara
+    // =====================================================
+
+    @Test
+    @DisplayName("Fase E: presence con faceDetected=true -> contador se resetea")
+    void noFaceE_facePresent_resetsCounter() {
+        com.sharemechat.config.PresenceCheckProperties props =
+                new com.sharemechat.config.PresenceCheckProperties();
+        props.setEnabled(true);
+        props.setNoFaceMaxConsecutive(3);
+        StreamFrameIngestionService s = svcWithPresenceEnabled(props);
+
+        activeSession.setConsecutiveNoFaceFrames(2); // previa
+        when(sessionRepo.findById(1L)).thenReturn(Optional.of(activeSession));
+        when(client.submitImage(any(ModerationFrameSubmission.class)))
+                .thenReturn(verdict(Constants.StreamModerationSeverity.GREEN, "ev-face"));
+        com.sharemechat.streammoderation.dto.PresenceCheckResult pres =
+                new com.sharemechat.streammoderation.dto.PresenceCheckResult(
+                        true, 0.99, 0.01, 0.005, 0.005, "{}");
+        when(client.checkPresence(any())).thenReturn(pres);
+
+        s.processFrameSync(1L, frame, ts);
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, activeSession.getConsecutiveNoFaceFrames());
+    }
+
+    @Test
+    @DisplayName("Fase E: 3 ticks sin cara -> NO_FACE_SUSTAINED CRITICAL + severidad CRITICAL")
+    void noFaceE_thresholdReached_addsCategoryAndCritical() {
+        com.sharemechat.config.PresenceCheckProperties props =
+                new com.sharemechat.config.PresenceCheckProperties();
+        props.setEnabled(true);
+        props.setNoFaceMaxConsecutive(3);
+        StreamFrameIngestionService s = svcWithPresenceEnabled(props);
+
+        activeSession.setConsecutiveNoFaceFrames(2); // 2 previas, este seria el 3ero -> supera
+        when(sessionRepo.findById(1L)).thenReturn(Optional.of(activeSession));
+        ModerationVerdictResult v = verdict(Constants.StreamModerationSeverity.GREEN, "ev-noface");
+        v.setCategoryVerdicts(new java.util.HashMap<>());
+        when(client.submitImage(any(ModerationFrameSubmission.class))).thenReturn(v);
+        com.sharemechat.streammoderation.dto.PresenceCheckResult pres =
+                new com.sharemechat.streammoderation.dto.PresenceCheckResult(
+                        false, 0.0, 0.0, 0.0, 0.0, "{}");
+        when(client.checkPresence(any())).thenReturn(pres);
+
+        s.processFrameSync(1L, frame, ts);
+
+        org.junit.jupiter.api.Assertions.assertEquals(3, activeSession.getConsecutiveNoFaceFrames());
+        org.junit.jupiter.api.Assertions.assertTrue(
+                v.getCategoryVerdicts().containsKey(Constants.StreamModerationCategory.NO_FACE_SUSTAINED));
+        org.junit.jupiter.api.Assertions.assertEquals(
+                Constants.StreamModerationSeverity.CRITICAL, v.getSeverityOverall());
+    }
 }

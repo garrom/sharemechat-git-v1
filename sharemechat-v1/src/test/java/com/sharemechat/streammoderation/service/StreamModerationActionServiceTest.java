@@ -56,7 +56,15 @@ class StreamModerationActionServiceTest {
         reviewRepo = mock(StreamModerationReviewRepository.class);
         sessionRepo = mock(StreamModerationSessionRepository.class);
         streamService = mock(StreamService.class);
-        svc = new StreamModerationActionService(eventRepo, reviewRepo, sessionRepo, streamService);
+        // ADR-050 fix UX 2026-07-15: MatchingHandler + MessagesWsHandler mockeados.
+        // Los tests existentes no dependen del auto-cut WS; solo verifican
+        // persistencia y triggerAutoCut a nivel BD.
+        com.sharemechat.handler.MatchingHandler matchingHandler =
+                org.mockito.Mockito.mock(com.sharemechat.handler.MatchingHandler.class);
+        com.sharemechat.handler.MessagesWsHandler messagesWsHandler =
+                org.mockito.Mockito.mock(com.sharemechat.handler.MessagesWsHandler.class);
+        svc = new StreamModerationActionService(eventRepo, reviewRepo, sessionRepo,
+                streamService, matchingHandler, messagesWsHandler);
 
         // Default mock: save devuelve el objeto pasado (Mockito default es null).
         when(reviewRepo.save(any(StreamModerationReview.class))).thenAnswer(inv -> inv.getArgument(0));

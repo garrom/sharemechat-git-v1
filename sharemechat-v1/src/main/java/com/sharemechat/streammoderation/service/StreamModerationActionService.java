@@ -1,6 +1,9 @@
 package com.sharemechat.streammoderation.service;
 
 import com.sharemechat.constants.Constants;
+import com.sharemechat.entity.StreamRecord;
+import com.sharemechat.handler.MatchingHandler;
+import com.sharemechat.handler.MessagesWsHandler;
 import com.sharemechat.service.StreamService;
 import com.sharemechat.streammoderation.dto.ModerationCategoryVerdict;
 import com.sharemechat.streammoderation.dto.ModerationVerdictResult;
@@ -55,16 +58,26 @@ public class StreamModerationActionService {
     private final StreamModerationReviewRepository reviewRepository;
     private final StreamModerationSessionRepository sessionRepository;
     private final StreamService streamService;
+    // ADR-050 Fase C+D fix UX 2026-07-15: notificar WS a ambos peers en el
+    // auto-cut. Sin esto, killStreamAsAdmin solo cerraba BD pero el
+    // frontend seguia mostrando el streaming activo. Los handlers son
+    // Lazy para romper posibles ciclos con las dependencias del bean.
+    private final MatchingHandler matchingHandler;
+    private final MessagesWsHandler messagesWsHandler;
 
     public StreamModerationActionService(
             StreamModerationEventRepository eventRepository,
             StreamModerationReviewRepository reviewRepository,
             StreamModerationSessionRepository sessionRepository,
-            @Lazy StreamService streamService) {
+            @Lazy StreamService streamService,
+            @Lazy MatchingHandler matchingHandler,
+            @Lazy MessagesWsHandler messagesWsHandler) {
         this.eventRepository = eventRepository;
         this.reviewRepository = reviewRepository;
         this.sessionRepository = sessionRepository;
         this.streamService = streamService;
+        this.matchingHandler = matchingHandler;
+        this.messagesWsHandler = messagesWsHandler;
     }
 
     @Transactional
@@ -161,13 +174,38 @@ public class StreamModerationActionService {
 
     private void triggerAutoCut(StreamModerationSession session, StreamModerationReview r) {
         String reason = "MODERATION_AUTO_CUT:" + r.getCategory() + ":" + r.getScore().toPlainString();
+        StreamRecord sr = null;
         try {
-            streamService.killStreamAsAdmin(session.getStreamRecordId(), reason);
+            sr = streamService.killStreamAsAdmin(session.getStreamRecordId(), reason);
             log.warn("[STREAM-MOD] AUTO-CUT streamRecordId={} sessionId={} reason={}",
                     session.getStreamRecordId(), session.getId(), reason);
         } catch (Exception ex) {
             log.error("[STREAM-MOD] AUTO-CUT FAIL streamRecordId={} sessionId={}: {}",
                     session.getStreamRecordId(), session.getId(), ex.getMessage(), ex);
+        }
+
+        // ADR-050 Fase C+D fix UX 2026-07-15: notificar a los peers via WS.
+        // Sin esto el frontend seguia mostrando el streaming activo aunque
+        // BD estuviera cerrada. Distinguimos RANDOM vs CALLING (mismo patron
+        // que AdminController.killStream:265). Fail-soft: cualquier error
+        // en la notificacion se loguea pero no propaga (BD ya cerrada, no
+        // queremos romper el auto-cut).
+        if (sr == null || sr.getClient() == null || sr.getModel() == null
+                || sr.getStreamType() == null) {
+            return;
+        }
+        String wsReason = "moderation-auto-cut:" + r.getCategory();
+        try {
+            if (Constants.StreamTypes.RANDOM.equalsIgnoreCase(sr.getStreamType())) {
+                matchingHandler.adminKillPair(
+                        sr.getClient().getId(), sr.getModel().getId(), wsReason);
+            } else if (Constants.StreamTypes.CALLING.equalsIgnoreCase(sr.getStreamType())) {
+                messagesWsHandler.adminKillCallPair(
+                        sr.getClient().getId(), sr.getModel().getId(), wsReason);
+            }
+        } catch (Exception ex) {
+            log.warn("[STREAM-MOD] AUTO-CUT WS notify FAIL streamRecordId={} type={}: {}",
+                    session.getStreamRecordId(), sr.getStreamType(), ex.getMessage());
         }
     }
 
