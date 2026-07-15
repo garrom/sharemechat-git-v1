@@ -544,7 +544,7 @@ REACTIVAR cuando termine la auditoría PSP: poner `COUNTRY_ACCESS_ENABLED=true` 
 
 ### [NOTA OPERATIVA] Country access DESACTIVADO en TEST (las allowlists estaban vacías)
 
-Durante la verificación se descubrió que TEST tenía el country gate `enabled=true` con allowlists VACÍAS y sin bypass: el `.env` de TEST nunca definió ninguna clave `COUNTRY_ACCESS_*`, y el código arranca con `enabled=true` por defecto. Efecto: el gate bloqueaba TODA petición (cualquier país resuelto cae fuera de la allowlist vacía; cualquier país no resuelto cae por `block-when-missing=true` por defecto) → 403 → reescrito a HTML por la CustomErrorResponse de la distribución admin → overlay. Se añadió `COUNTRY_ACCESS_ENABLED=false` al `/opt/sharemechat/.env` de TEST (mirror de AUDIT) + restart (el backend de TEST corre como proceso de `ec2-user`, no systemd). Si en el futuro se quiere geo-gating real en TEST, hay que configurar las allowlists y bypass además de poner `enabled=true`.
+Durante la verificación se descubrió que TEST tenía el country gate `enabled=true` con allowlists VACÍAS y sin bypass: el `.env` de TEST nunca definió ninguna clave `COUNTRY_ACCESS_*`, y el código arranca con `enabled=true` por defecto. Efecto: el gate bloqueaba TODA petición (cualquier país resuelto cae fuera de la allowlist vacía; cualquier país no resuelto cae por `block-when-missing=true` por defecto) → 403 → reescrito a HTML por la CustomErrorResponse de la distribución admin → overlay. Se añadió `COUNTRY_ACCESS_ENABLED=false` al `/opt/sharemechat/.env` de TEST (mirror de AUDIT) + `sudo systemctl restart sharemechat-test.service`. Si en el futuro se quiere geo-gating real en TEST, hay que configurar las allowlists y bypass además de poner `enabled=true`.
 
 ### [NOTA CRÍTICA go-live PROD] ORP correcto + configurar country access explícitamente
 
@@ -869,22 +869,20 @@ O `grep -oE '^[A-Z_]+='` cuando solo se necesite la lista de keys sin valores.
 
 Descubiertas durante el refactor 2026-05-27 al inspeccionar TEST. **Ninguna se resolvió** porque excedían el scope del refactor (acordado con el operador: solo separación config/secrets en TEST, no renombrar keys ni instalar systemd unit). Quedan para revisión en frente de hardening pre-go-live cuando se decida si convergir TEST con el patrón AUDIT/PROD o aceptar la divergencia.
 
-**Estado**: ABIERTA en bloque. Prioridad media-baja, no bloquea ningún go-live. TEST es entorno desechable (se enciende/apaga manualmente), por lo que las asimetrías afectan a operación interna no a producción.
+**Estado**: PARCIALMENTE CERRADAS. Prioridad media-baja, no bloquean ningún go-live. TEST es entorno desechable (la EC2 se enciende/apaga manualmente).
 
-1. **`JWT_SECRET` y `CONSENT_SECRET` sin sufijo `_TEST`**.
+1. **`JWT_SECRET` y `CONSENT_SECRET` sin sufijo `_TEST`** — ABIERTA.
    AUDIT y PROD usan `JWT_SECRET_AUDIT`/`JWT_SECRET_PROD` y `CONSENT_SECRET_AUDIT`/`CONSENT_SECRET_PROD`. TEST sigue con `JWT_SECRET=` y `CONSENT_SECRET=` (sin sufijo). `application-test.properties` espera el naming sin sufijo. Renombrar implica coordinar properties + .env y verificar bootstrap. Trivial pero fuera del scope refactor secrets actual.
 
-2. **`WEBRTC_TURN_URL_TLS` no poblado en TEST**.
+2. **`WEBRTC_TURN_URL_TLS` no poblado en TEST** — ABIERTA.
    AUDIT y PROD tienen las 3 URLs TURN (UDP/TCP/TLS). TEST solo UDP+TCP. La línea TLS no existe en `/opt/sharemechat/.env` ni en `config.env` tras el refactor. Degradación silenciosa: WebRTC en TEST no usa TLS relay, lo que limita conectividad en NATs simétricos con egress filtrado. Activar TLS en TEST requiere coordinar coturn (cert válido) y `.env`. Documentación previa: deuda 2026-05-25 "Rename de keys WEBRTC_TURN_* en .env de TEST y AUDIT" (que se cerró el 25 sin poblar TLS en TEST porque no estaba inicialmente).
 
-3. **Backend TEST sin systemd unit** (deuda preexistente 2026-05-09, refrescada hoy).
-   TEST se arranca manualmente. Tras el refactor 2026-05-27 se creó `/home/ec2-user/sharemechat-v1/start-test.sh` como wrapper para que el comando manual cargue automáticamente `config.env` + `secrets.env` + active `profile=test`. El operador sigue arrancándolo con `nohup ./start-test.sh ...` o tmux/screen. La creación de unit systemd para TEST sigue siendo deuda independiente para la sesión de hardening.
+3. **Backend TEST sin systemd unit** — CERRADA 2026-07-14. TEST tiene `sharemechat-test.service` (systemd, `Restart=on-failure`, `EnvironmentFile=/opt/sharemechat/{config,secrets}.env`, `User=ec2-user`, arranque automático tras reboot). Mismo patrón que AUDIT/PROD.
 
-4. **`MAIL_PASSWORD` y `REDIS_PASSWORD` residuo histórico en TEST**.
+4. **`MAIL_PASSWORD` y `REDIS_PASSWORD` residuo histórico en TEST** — ABIERTA.
    `application.properties` base (líneas 45 y 88) declara `spring.mail.password=${MAIL_PASSWORD}` y `spring.redis.password=${REDIS_PASSWORD}` sin defaults. AUDIT y PROD no tienen esas keys en su `.env` y arrancan OK porque `JavaMailSender` está dentro de `SmtpEmailService` con `@ConditionalOnProperty(prefix="email", name="provider", havingValue="smtp")`, y los 3 entornos tienen `EMAIL_PROVIDER=graph` (Microsoft Graph). El bean SMTP nunca se instancia. Redis local no exige auth (`requirepass` comentado en `/etc/redis6/redis6.conf` de TEST y presumiblemente en AUDIT/PROD también). **TEST tenía ambas keys en `.env` por residuo histórico**; durante el refactor 2026-05-27 NO se migraron a `secrets.env`; quedan solo en el backup `.env.bak.pre-refactor-secrets-2026-05-26`. Acción opcional futura: eliminar las dos líneas `${MAIL_PASSWORD}` y `${REDIS_PASSWORD}` de `application.properties` base (o ponerles default `:`) para evitar confusión y permitir borrar las keys del backup TEST con seguridad.
 
-5. **Permisos asimétricos de `secrets.env` en TEST vs AUDIT/PROD**.
-   AUDIT/PROD: `root:root 0600` (systemd lee como root antes de hacer drop a `User=ec2-user`). TEST: `ec2-user:ec2-user 0600` (el wrapper `start-test.sh` corre como `ec2-user` sin sudo). Es decisión justificada por la diferencia de mecanismo de arranque (systemd vs manual), no se considera incidente. Si se instala systemd unit para TEST (deuda 3), revertir a `root:root 0600` para uniformidad.
+5. **Permisos asimétricos de `secrets.env` en TEST vs AUDIT/PROD** — CERRADA 2026-07-15. `/opt/sharemechat/secrets.env` de TEST convergido a `root:root 0600` (mismo patrón que AUDIT/PROD). SHA256 preservado. Backend rearrancó limpio en 32.73 s sin `Permission denied` (systemd lee `EnvironmentFile` como root en la fase pre-drop). Los tres entornos ya operan con la misma convención de ownership.
 
 ### Deudas residuales en AUDIT pipeline perimetral (textos "DRY-RUN" obsoletos)
 
@@ -1006,17 +1004,9 @@ Backups `.env.bak.pre-PRO-5.A` y `*.jar.bak.pre-PRO-5.A` conservados en ambos ho
 
 ## 2026-05-09 — Detectadas durante segundo inventariado de TEST
 
-### Backend de TEST sin gestión systemd
+### Backend de TEST sin gestión systemd — CERRADA 2026-07-14
 
-**Origen**: snapshot `state-test-2026-05-09-1014.yaml`, confirmado tras arranque manual. Documentado en `docs/03-environments/test.md` (sección "Topología real").
-
-**Hecho**: el JAR de backend en TEST corre como proceso de `ec2-user` sin unit systemd asociada. Tras un reboot de la EC2, el backend no se relanza automáticamente.
-
-**Impacto**: por diseño (TEST se levanta y apaga manualmente cada día). No es deuda técnica que rompa nada hoy. La documentación ya refleja esta peculiaridad.
-
-**Acción pendiente**: revisar si conviene introducir un campo `expected_to_be_running: <bool>` en el mapping local del entorno cuando se aborde la skill `state-inventory` v1.2, para que `state-diff` pueda distinguir "TEST apagado y se esperaba apagado" (no es noticia) de "AUDIT apagado pero debería estar levantado" (alarma real).
-
-**Prioridad**: baja. Es información, no problema.
+Deuda cerrada: TEST tiene `sharemechat-test.service` (systemd, `Restart=on-failure`, `EnvironmentFile=/opt/sharemechat/{config,secrets}.env`, arranque automático tras cada boot de la EC2). Detectado durante la auditoría del cuelgue del 2026-07-14 23:00 UTC: el servicio ya existía y estaba enabled, aunque la doc de referencia narraba el patrón previo de arranque manual con `start-test.sh`. Doc actualizada en la misma sesión (`test.md`, `access-and-tooling.md`, `runbooks.md`, `test-levelling-plan.md`).
 
 ## 2026-05-09 — Detectadas durante el cierre de la sesión maratón
 

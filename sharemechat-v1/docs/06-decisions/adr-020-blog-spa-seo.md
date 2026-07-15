@@ -262,7 +262,7 @@ Las siguientes deudas quedaron registradas durante la sub-pasada y no se abordar
 - Cero cambios en `ArticlePublicSummaryDTO` ni `ArticlePublicDetailDTO`.
 - Cero dependencias nuevas en `package.json` ni `pom.xml`.
 - El bundle JS crece muy ligeramente; el delta es despreciable frente al tamaño total (~159 KiB gzip).
-- El deploy de C5 requiere arrancar el backend de TEST y reemplazar el JAR (procedimiento manual habitual; TEST se opera manualmente, sin systemd).
+- El deploy de C5 requiere reemplazar el JAR del backend de TEST y hacer `sudo systemctl restart sharemechat-test.service`.
 
 ## Referencias
 

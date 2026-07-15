@@ -189,7 +189,7 @@ Tras la inyección, confirmar perms intactos:
 ```
 ssh <env>-backend 'sudo stat -c "%a %U:%G %n" /opt/sharemechat/secrets.env'
 ```
-Esperado: `600 root:root /opt/sharemechat/secrets.env` (en TEST puede ser `600 ec2-user:ec2-user` por su arranque manual sin systemd, asimetría consciente — project-log:1764).
+Esperado: `600 root:root /opt/sharemechat/secrets.env`.
 
 Notas comunes a ambos bloques:
 - Heredoc `<<'EOF'` con comillas simples: impide expansión `$VAR`/backticks/glob, preserva el valor literal.

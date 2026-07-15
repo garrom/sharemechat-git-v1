@@ -21,7 +21,6 @@ Nivel aplicación — sin delta real: mismo código, mismo comportamiento funcio
 
 Nivel operativo en TEST respecto a AUDIT:
 
-- backend no arranca de forma persistente tras reinicio de máquina
 - storage privado no activado como S3 de forma efectiva en operación (aun estando soportado por código)
 - no hay TURN propio operativo en el entorno
 - vhost publicado con endurecimiento menos alineado con AUDIT en log format y en política de bloqueo por IP
@@ -32,27 +31,9 @@ Nivel operativo en TEST respecto a AUDIT:
 
 El orden minimiza riesgo: primero lo que desbloquea validación funcional, después alineación de endurecimiento, después observabilidad, y finalmente limpieza.
 
-### Fase 1 — Arranque persistente del backend en TEST [NO APLICABLE]
+### Fase 1 — Arranque persistente del backend en TEST [CERRADA 2026-07-14]
 
-Objetivo original:
-
-- dejar el backend de TEST como servicio gestionado y reactivo a reinicios del host
-
-Estado real:
-
-- TEST es un entorno de uso intermitente, con EC2 encendida/apagada manualmente
-- el backend se arranca manualmente cuando se necesita
-- no existe requirement operativo de arranque automatico
-
-Decision:
-
-- el arranque persistente mediante systemd NO se aplica en TEST
-- este comportamiento se reserva para entornos always-on como AUDIT o PROD
-
-Conclusion:
-
-- esta fase no se considera pendiente ni incompleta
-- se marca como NO APLICABLE por diseno operativo del entorno
+El backend de TEST corre como `sharemechat-test.service` (systemd, `Restart=on-failure`, `EnvironmentFile=/opt/sharemechat/{config,secrets}.env`, `User=ec2-user`, arranque automático tras cada boot de la EC2). Mismo patrón que AUDIT/PROD. Deploy: `scp` del JAR + `sudo systemctl restart sharemechat-test.service`.
 
 ### Fase 2 — Storage privado efectivo sobre S3 en TEST
 

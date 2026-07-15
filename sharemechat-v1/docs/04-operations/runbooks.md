@@ -282,7 +282,7 @@ Cuando un usuario reporta que no puede entrar y la sospecha es que está bajo bl
    Sustituir `{env}` por el valor real configurado en `authrisk.env` para ese backend (`test`, `audit`, etc.). El escaneo devuelve cero o más claves; cada una representa un `emailHash` actualmente bloqueado. Comprobar TTL restante con `redis6-cli TTL <clave>` para estimar si el bloqueo se liberará por sí solo dentro de un margen tolerable.
 
 2. **Correlacionar con logs `[AUTH-RISK]`.**
-   En la fuente de logs disponible para ese backend (terminal activa si arranque manual; archivo o `journald` si se desplegó como servicio), filtrar por el prefijo `[AUTH-RISK]` y por la ventana temporal en la que el usuario afirma que empezó el problema. Las líneas relevantes son las de `event=LOGIN_FAILURE` con `level=CRITICAL` y, si la causa fue varios `emailHash` distintos desde la misma IP, también líneas previas con `reasons=ip_distinct_emails_5`.
+   En `journalctl -u sharemechat-<env>.service` filtrar por el prefijo `[AUTH-RISK]` y por la ventana temporal en la que el usuario afirma que empezó el problema. Las líneas relevantes son las de `event=LOGIN_FAILURE` con `level=CRITICAL` y, si la causa fue varios `emailHash` distintos desde la misma IP, también líneas previas con `reasons=ip_distinct_emails_5`.
 
 3. **Identificar el `emailHash` desde el log.**
    El `emailHash` aparece como campo dentro de cada línea `[AUTH-RISK]`. Es un fragmento hexadecimal corto y, por diseño, **no es reversible al email plano** sin la salt y el algoritmo HMAC; tampoco hay hoy una herramienta backend que calcule el `emailHash` a partir de un email real. Si para resolver una incidencia se necesitara esa correlación, debe crearse como tarea controlada con código versionado y revisión, **no improvisar scripts ad hoc con el salt**.
@@ -333,26 +333,6 @@ Si una salida temporal del pipeline necesitara conservarse como evidencia de una
 3. si la salida es sensible (IPs, identificadores reales), aplicar la regla de saneado de gobierno documental antes de archivar
 
 Esta limpieza ya se aplicó al repo y los artefactos `tmp-audit-access-*`, `tmp-audit-classifier-out` y `tmp-audit-reporter-*` que existían en raíz del módulo backend han sido eliminados.
-
-## Modo de arranque actual del backend en TEST
-
-A día de hoy el backend de TEST se arranca **manualmente** desde una sesión interactiva sobre la instancia, no como servicio gestionado. El comando lógico de arranque es:
-
-```
-set -a && source /opt/sharemechat/.env && set +a \
-  && java -jar sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
-```
-
-Consecuencias operativas relevantes:
-
-- los logs del backend (incluidos los `[AUTH-RISK]`) se emiten a `stdout` de la terminal activa
-- no se escriben en `journald` ni en archivo persistente
-- al cerrar la terminal o desconectar la sesión, esos logs dejan de ser accesibles
-- la trazabilidad forense de cualquier incidente de autenticación queda condicionada a mantener viva esa sesión interactiva
-
-En **AUDIT**, en cambio, el backend se ejecuta como servicio `sharemechat-audit.service` con `EnvironmentFile=/opt/sharemechat/.env` y los logs persisten en `journald`, lo que elimina esa limitación para ese entorno.
-
-Mientras el modo de arranque de TEST siga siendo manual, los procedimientos de diagnóstico que dependan de logs históricos deben asumir esta limitación. Esta deuda operativa está recogida también en `known-risks.md` como riesgo residual de logs no persistentes y debe consultarse desde allí. La mitigación natural —despliegue como servicio con redirección a archivo o `journald`— es objeto de iteración futura y no se improvisa caso a caso.
 
 ## Runbook de Product Operational Mode
 

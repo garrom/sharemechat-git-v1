@@ -56,7 +56,7 @@ Debe devolver `ok`. `BatchMode=yes` evita prompts interactivos (passphrase, host
 
 **Notas por entorno**:
 
-- **TEST**: la EC2 se enciende y apaga manualmente. Si el alias no responde, la EC2 puede estar parada — verificar en la consola AWS antes de asumir problema de configuración. El backend de TEST corre como proceso de `ec2-user` (no systemd); ver detalle en [test.md](../03-environments/test.md).
+- **TEST**: la EC2 se enciende y apaga manualmente. Si el alias no responde, la EC2 puede estar parada — verificar en la consola AWS antes de asumir problema de configuración. El backend corre bajo `sharemechat-test.service` (systemd, `Restart=on-failure`, arranca automáticamente tras cada boot de la EC2); ver detalle en [test.md](../03-environments/test.md).
 - **AUDIT**: la EC2 está siempre encendida y el backend corre como `sharemechat-audit.service`. El alias debería responder en todo momento.
 - **PROD**: el entorno aún no existe como producto (solo landing). El alias `prod-backend` se documentará cuando se monte la EC2 backend de PROD.
 
@@ -158,7 +158,7 @@ EnvironmentFile=/opt/sharemechat/secrets.env
 ExecStart=/usr/lib/jvm/.../java -Dspring.profiles.active=<env> -jar /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
 ```
 
-En TEST, mientras la deuda operativa de systemd no se cierre, el backend se arranca a mano vía `start-test.sh` haciendo `set -a && source /opt/sharemechat/.env && set +a && java -jar ...`. Hay un `.env` unificado en lugar de `config.env` + `secrets.env`, pero la semántica de origen de variables es equivalente.
+Los tres entornos (TEST/AUDIT/PROD) usan el mismo patrón: `EnvironmentFile=/opt/sharemechat/config.env` + `EnvironmentFile=/opt/sharemechat/secrets.env` cargados por el `sharemechat-<env>.service` de systemd.
 
 ### Precedencia Spring vs .env
 

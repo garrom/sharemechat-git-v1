@@ -53,14 +53,13 @@ Todos los buckets están en `eu-central-1`. `content_private` y `storage` no se 
 - `sharemechat-test-access-normalizer.service` — inactive
 - `sharemechat-test-daily-report.service` — inactive
 
-El JAR del backend (`sharemechat-v1-0.0.1-SNAPSHOT.jar`) está corriendo como proceso `java -jar` arrancado a mano (no como unidad systemd). El comando canónico de arranque tras un reboot o un reemplazo de JAR es `nohup java -jar /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar --spring.profiles.active=test > /home/ec2-user/sharemechat-v1/backend.log 2>&1 &`, ejecutado desde una sesión SSH con `/opt/sharemechat/.env` previamente sourceado (`set -a; . /opt/sharemechat/.env; set +a`) para que Spring resuelva `${DB_PASSWORD}` y demás. El perfil `test` se pasa como flag de línea de comando porque el `.env` no incluye `SPRING_PROFILES_ACTIVE`. nginx proxyea `/api/`, `/match`, `/messages`, `/sitemap.xml` y `/robots.txt` a `http://localhost:8080`; cualquier otra ruta retorna `404` directamente desde nginx. `client_max_body_size` configurado a `60M`.
+El JAR del backend (`sharemechat-v1-0.0.1-SNAPSHOT.jar`) corre bajo la unit `sharemechat-test.service` (systemd, `Restart=on-failure`, arranque automático tras reboot). La unit ejecuta directamente `java -Dspring.profiles.active=test -jar /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar` como usuario `ec2-user` con `EnvironmentFile=/opt/sharemechat/config.env` + `EnvironmentFile=/opt/sharemechat/secrets.env` (mismo patrón que AUDIT/PROD). Un deploy consiste en `scp` del JAR nuevo + `sudo systemctl restart sharemechat-test.service`. nginx proxyea `/api/`, `/match`, `/messages`, `/sitemap.xml` y `/robots.txt` a `http://localhost:8080`; cualquier otra ruta retorna `404` directamente desde nginx. `client_max_body_size` configurado a `60M`.
 
 ### Notas de topología
 
 - `assets_legacy` es una distribución fantasma: aparece como `Status=Deployed` pero `Enabled=false` en AWS, sin alias DNS, y comparte el bucket `assets` con `assets_canonical`. El esquema v2 del snapshot no expone el flag `enabled`, así que ese matiz solo queda registrado en el campo `notes` del propio snapshot.
 - El bucket `assets` está servido por dos distribuciones distintas (la canónica y la legacy fantasma); cualquier intervención sobre ese bucket debe contemplar el doble origen aunque solo una de las distribuciones esté operativa.
 - Las unidades systemd de la familia `sharemechat-test-access-*` están en estados no-active (failed / not-found / inactive); funcionalmente la cadena de access logging/normalización no está corriendo en TEST en este momento de captura.
-- El backend levantado a mano (sin systemd) implica que un reboot de la EC2 deja el servicio caído hasta intervención manual.
 
 > Datos derivados del snapshot `state-test-2026-05-09-1659.yaml`. La fuente de verdad fáctica es el snapshot; esta sección es derivada por conveniencia narrativa.
 
