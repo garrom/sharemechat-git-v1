@@ -29,17 +29,17 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-15T16:38:27Z
-  jar_sha256: a4d58b3028674a72a34008eec02050cc26351ca39f81de1101e97ee377c659c1
+  deployed_at: 2026-07-15T20:42:41Z
+  jar_sha256: f42d7b9645291e9471876d018be263c9bdb31e96818313db96c1d795fc0e7d0c
   verification:
     method: manual_edit_post_deploy
-    verified_at: 2026-07-15T16:41:00Z
-    notes: 'Editado a mano tras deploy del JAR del commit 4bd7d8f (fix asimetria favoritos AffiliateAttributionService + Flyway V24 backfill). scp+restart ejecutados 16:38:27 UTC con SHA local == SHA remoto verificado bit-a-bit (a4d58b3...). Backend arranco limpio en 33.472s. Flyway aplico V24 (backfill 4 filas reciprocas favorites_clients para pares AFFILIATE_INVITATION). Regla N=1 backup aplicada. Verificacion post-arranque en BD: asimetricos_restantes=0, 4 filas nuevas (id 42-45) creadas para model=97.'
-  built_at: 2026-07-15T16:38:00Z
+    verified_at: 2026-07-15T20:44:00Z
+    notes: 'Editado a mano tras deploy del JAR del commit a965a77 (fix REFERRAL->accepted en invited de referrals para desbloquear chat + Flyway V25 normalizacion). scp+restart ejecutados 20:42:41 UTC con SHA local == SHA remoto verificado bit-a-bit (f42d7b96...). Backend arranco limpio en 31.319s. Flyway aplico V25 en 55ms. Regla N=1 backup aplicada. Verificacion post-arranque en BD: REFERRAL restantes=0 en ambas tablas, 4 pares AFFILIATE_INVITATION en active/accepted mutuo. Chat/gifts/calls desbloqueados.'
+  built_at: 2026-07-15T20:42:00Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 4bd7d8fc65d91132d95855ee95798cb02571c3df
-  git_commit_short: 4bd7d8f
+  git_commit: a965a7774fac03deeac6a3e4c9cc7260f0070463
+  git_commit_short: a965a77
 last_updated_at: 2026-07-15T16:11:23Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
