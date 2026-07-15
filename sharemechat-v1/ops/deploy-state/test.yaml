@@ -1,45 +1,46 @@
 ﻿# Manifest de estado de despliegue - entorno TEST
-# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
-# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
-# deploy manual del backend (scp + restart). NO se hace commit
-# automatico: el operador commitea cuando le conviene (decision D2).
+# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
+# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
+# correspondiente al surface desplegado tras smoke OK. NO se
+# hace commit automatico: el operador commitea el manifest
+# cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I2AU8M1TY372RD3AM0JQ6CAY8L
+  cloudfront_invalidation_id: I8IA95WWYY7HAWTR5UX1FAU1NV
   verification:
-    method: deploy-frontend.ps1-live-build_2026-07-13T18:38:31Z
+    method: deploy-frontend.ps1-live-build_2026-07-15T15:53:13Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-07-13T18:38:31Z
-  built_at: 2026-07-13T18:38:31Z
-  bundle_sha256: bc977872c56f4b79db09299a6d634a90cdade6ba654539885987f54cb72570df
-  git_commit_short: ababcf9
-  git_commit: ababcf955494903c7743a79702a823e7f8d2994e
+  deployed_at: 2026-07-15T15:53:13Z
+  built_at: 2026-07-15T15:53:13Z
+  bundle_sha256: 15b219fed204e8c6904cad3326b5438503ea18b809aa3c227628ecc16a636cf3
+  git_commit_short: 4863ae8
+  git_commit: 4863ae8297134fafedb04383382b796d13b739c5
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-test
-  bundle: main.4d67e856.js
-last_update_source: update-manifest-backend.ps1-fase1-paso2b
+  bundle: main.58d470b8.js
+last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-14T22:55:20Z
-  jar_sha256: 3e50bcdb4ead723857bf58ac15868c939fa0ea665c17cf9746113bb606cb8732
+  deployed_at: 2026-07-15T15:49:29Z
+  jar_sha256: 546ae90fb1fc2e493029b29601ff64511b1e054c32a1ed4ab74c0165a0ab606f
   verification:
-    method: manual_edit_post_deploy_ec2_hang_recovery
-    verified_at: 2026-07-15T10:17:00Z
-    notes: 'Actualizado a mano el 2026-07-15 tras el cuelgue del 2026-07-14 23:00 UTC (project-log:2026-07-15). El deploy del JAR de Fase E (commit f52cab9, scp+restart a las 22:55:20 UTC) SI se completo con exito (Flyway V23 aplicada limpiamente y bytecode contains NO_FACE_SUSTAINED verificados por SSH bit-a-bit), pero update-manifest-backend.ps1 nunca se ejecuto porque la EC2 se colgo a las 23:00. HEAD del repo al escribir esta entrada (7902f5f, docs alignment) NO coincide con el commit del JAR (f52cab9): entre ambos hay 2 commits que solo tocan doc, sin cambios en src/. Se registra el commit real del JAR (f52cab9) por precision. Mismo patron aplicado en el manifest AUDIT el 2026-07-09 (project-log). Limitacion conocida general: sin endpoint /api/health/version (Fase 2 opcion A del backend-deploy-backlog) no hay verificacion viva del commit del backend.'
-  built_at: 2026-07-14T22:55:04Z
+    method: manual_edit_via_update-manifest-backend_dryrun
+    verified_at: 2026-07-15T15:52:29Z
+    notes: 'Editado a mano tras deploy del JAR del commit 4863ae8 (fix rematcheo adminKillPair + tipo admin-kicked + umbral NO_FACE 3->2). scp+restart ejecutados 15:49:29 UTC con SHA local == SHA remoto verificado bit-a-bit (546ae90...). Backend arranco limpio en 34.89s. Regla N=1 backup aplicada por primera vez (borrado bak-prev anterior, creado bak-prev nuevo). update-manifest-backend.ps1 -DryRun confirmo el diff exacto; se aplico a mano porque el pipe stdin de auto-confirmacion no funciona en el harness PowerShell no interactivo.'
+  built_at: 2026-07-15T15:48:55Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: f52cab984ad18600727af48a7b2331c2db1826b7
-  git_commit_short: f52cab9
-last_updated_at: 2026-07-15T10:17:00Z
+  git_commit: 4863ae8297134fafedb04383382b796d13b739c5
+  git_commit_short: 4863ae8
+last_updated_at: 2026-07-15T15:53:13Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
   verification:
