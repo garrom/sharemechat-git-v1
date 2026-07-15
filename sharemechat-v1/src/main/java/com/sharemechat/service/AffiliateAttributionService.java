@@ -2,10 +2,12 @@ package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.AffiliateClickEvent;
+import com.sharemechat.entity.FavoriteClient;
 import com.sharemechat.entity.FavoriteModel;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.IllegalReferralOverwriteException;
 import com.sharemechat.repository.AffiliateClickEventRepository;
+import com.sharemechat.repository.FavoriteClientRepository;
 import com.sharemechat.repository.FavoriteModelRepository;
 import com.sharemechat.repository.UserRepository;
 import org.slf4j.Logger;
@@ -50,6 +52,7 @@ public class AffiliateAttributionService {
 
     private final UserRepository userRepository;
     private final FavoriteModelRepository favoriteModelRepository;
+    private final FavoriteClientRepository favoriteClientRepository;
     private final AffiliateClickEventRepository clickEventRepository;
     private final AffiliateBonusService bonusService;
     private final EmailService emailService;
@@ -57,12 +60,14 @@ public class AffiliateAttributionService {
 
     public AffiliateAttributionService(UserRepository userRepository,
                                        FavoriteModelRepository favoriteModelRepository,
+                                       FavoriteClientRepository favoriteClientRepository,
                                        AffiliateClickEventRepository clickEventRepository,
                                        AffiliateBonusService bonusService,
                                        EmailService emailService,
                                        EmailCopyRenderer emailCopyRenderer) {
         this.userRepository = userRepository;
         this.favoriteModelRepository = favoriteModelRepository;
+        this.favoriteClientRepository = favoriteClientRepository;
         this.clickEventRepository = clickEventRepository;
         this.bonusService = bonusService;
         this.emailService = emailService;
@@ -134,6 +139,18 @@ public class AffiliateAttributionService {
         fav.setFavoriteSource("AFFILIATE_INVITATION");
         favoriteModelRepository.save(fav);
 
+        // Fix asimetria 2026-07-15: crear la fila reciproca en favorites_clients
+        // para que el MODELO tambien vea al cliente referido en su lista de
+        // favoritos. Sin este save, solo el cliente veia al modelo y el modelo
+        // no veia al cliente (bug detectado en 4/4 registros AFFILIATE_INVITATION
+        // desde el 11-jul cuando se abrio la subpasada 2B del ADR-049).
+        // favorites_clients no tiene columna favorite_source (asimetria de schema
+        // preexistente); status/invited replican la fila del cliente por consistencia.
+        FavoriteClient favReciprocal = new FavoriteClient(model.getId(), clientUserId);
+        favReciprocal.setStatus("active");
+        favReciprocal.setInvited("REFERRAL");
+        favoriteClientRepository.save(favReciprocal);
+
         AffiliateClickEvent evt = new AffiliateClickEvent();
         evt.setModelUserId(model.getId());
         evt.setEventType("REGISTERED");
@@ -145,8 +162,8 @@ public class AffiliateAttributionService {
         AttributionResult result = new AttributionResult(client, model);
         scheduleInvitationEmailAfterCommit(result);
 
-        log.info("[AFFILIATE-ATTR] attributed clientUserId={} modelUserId={} favoriteId={} eventId={}",
-                clientUserId, model.getId(), fav.getId(), evt.getId());
+        log.info("[AFFILIATE-ATTR] attributed clientUserId={} modelUserId={} favoriteId={} favReciprocalId={} eventId={}",
+                clientUserId, model.getId(), fav.getId(), favReciprocal.getId(), evt.getId());
         return Optional.of(result);
     }
 

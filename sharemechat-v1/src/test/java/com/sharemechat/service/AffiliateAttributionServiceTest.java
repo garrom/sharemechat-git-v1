@@ -2,10 +2,12 @@ package com.sharemechat.service;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.AffiliateClickEvent;
+import com.sharemechat.entity.FavoriteClient;
 import com.sharemechat.entity.FavoriteModel;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.IllegalReferralOverwriteException;
 import com.sharemechat.repository.AffiliateClickEventRepository;
+import com.sharemechat.repository.FavoriteClientRepository;
 import com.sharemechat.repository.FavoriteModelRepository;
 import com.sharemechat.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,6 +40,7 @@ class AffiliateAttributionServiceTest {
 
     private UserRepository userRepository;
     private FavoriteModelRepository favoriteModelRepository;
+    private FavoriteClientRepository favoriteClientRepository;
     private AffiliateClickEventRepository clickEventRepository;
     private AffiliateBonusService bonusService;
     private EmailService emailService;
@@ -48,13 +51,14 @@ class AffiliateAttributionServiceTest {
     void setUp() {
         userRepository = mock(UserRepository.class);
         favoriteModelRepository = mock(FavoriteModelRepository.class);
+        favoriteClientRepository = mock(FavoriteClientRepository.class);
         clickEventRepository = mock(AffiliateClickEventRepository.class);
         bonusService = mock(AffiliateBonusService.class);
         emailService = mock(EmailService.class);
         emailCopyRenderer = mock(EmailCopyRenderer.class);
         service = new AffiliateAttributionService(
-                userRepository, favoriteModelRepository, clickEventRepository,
-                bonusService, emailService, emailCopyRenderer);
+                userRepository, favoriteModelRepository, favoriteClientRepository,
+                clickEventRepository, bonusService, emailService, emailCopyRenderer);
     }
 
     private User makeUser(Long id, String role, String verification, String code) {
@@ -100,6 +104,17 @@ class AffiliateAttributionServiceTest {
         assertEquals("REFERRAL", favCap.getValue().getInvited());
         assertEquals("AFFILIATE_INVITATION", favCap.getValue().getFavoriteSource());
 
+        // Fix asimetria 2026-07-15: verificar tambien la fila reciproca en
+        // favorites_clients (perspectiva del modelo). Sin este save el modelo
+        // no veia al cliente aunque el cliente si veia al modelo (bug 4/4
+        // registros AFFILIATE_INVITATION detectado 2026-07-15 en TEST).
+        ArgumentCaptor<FavoriteClient> favReciprocalCap = ArgumentCaptor.forClass(FavoriteClient.class);
+        verify(favoriteClientRepository, times(1)).save(favReciprocalCap.capture());
+        assertEquals(97L, favReciprocalCap.getValue().getModelId());
+        assertEquals(200L, favReciprocalCap.getValue().getClientId());
+        assertEquals("active", favReciprocalCap.getValue().getStatus());
+        assertEquals("REFERRAL", favReciprocalCap.getValue().getInvited());
+
         ArgumentCaptor<AffiliateClickEvent> evtCap = ArgumentCaptor.forClass(AffiliateClickEvent.class);
         verify(clickEventRepository, times(1)).save(evtCap.capture());
         assertEquals(97L, evtCap.getValue().getModelUserId());
@@ -119,6 +134,7 @@ class AffiliateAttributionServiceTest {
         assertTrue(result.isEmpty());
 
         verify(favoriteModelRepository, never()).save(any());
+        verify(favoriteClientRepository, never()).save(any());
         verify(clickEventRepository, never()).save(any());
         verify(bonusService, never()).grantWelcomeBonusIfEligible(any(), any());
     }
@@ -134,6 +150,7 @@ class AffiliateAttributionServiceTest {
                 service.attributeOnRegister(200L, "ABCDEFGHJKMN");
         assertTrue(result.isEmpty());
         verify(favoriteModelRepository, never()).save(any());
+        verify(favoriteClientRepository, never()).save(any());
     }
 
     @Test
