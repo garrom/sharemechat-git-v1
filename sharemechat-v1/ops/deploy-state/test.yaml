@@ -29,17 +29,17 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-15T16:09:09Z
-  jar_sha256: d376d36ec69fd95004cf0975a324fc37147dfd41fbec86f4995fdb35751f42e1
+  deployed_at: 2026-07-15T16:38:27Z
+  jar_sha256: a4d58b3028674a72a34008eec02050cc26351ca39f81de1101e97ee377c659c1
   verification:
     method: manual_edit_post_deploy
-    verified_at: 2026-07-15T16:12:08Z
-    notes: 'Editado a mano tras deploy del JAR del commit e31ecbd (fix umbral literal application.properties 3->2 + silenciar mensaje admin-kicked al usuario). scp+restart ejecutados 16:09:09 UTC con SHA local == SHA remoto verificado bit-a-bit (d376d36...). Backend arranco limpio en 33.628s. Regla N=1 backup aplicada (borrado bak-prev de deploy anterior de las 15:49, creado nuevo bak-prev 20260715-160909).'
-  built_at: 2026-07-15T16:08:XXZ
+    verified_at: 2026-07-15T16:41:00Z
+    notes: 'Editado a mano tras deploy del JAR del commit 4bd7d8f (fix asimetria favoritos AffiliateAttributionService + Flyway V24 backfill). scp+restart ejecutados 16:38:27 UTC con SHA local == SHA remoto verificado bit-a-bit (a4d58b3...). Backend arranco limpio en 33.472s. Flyway aplico V24 (backfill 4 filas reciprocas favorites_clients para pares AFFILIATE_INVITATION). Regla N=1 backup aplicada. Verificacion post-arranque en BD: asimetricos_restantes=0, 4 filas nuevas (id 42-45) creadas para model=97.'
+  built_at: 2026-07-15T16:38:00Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: e31ecbd372cc3bf0358a7109b88f69a9d0f973e8
-  git_commit_short: e31ecbd
+  git_commit: 4bd7d8fc65d91132d95855ee95798cb02571c3df
+  git_commit_short: 4bd7d8f
 last_updated_at: 2026-07-15T16:11:23Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
