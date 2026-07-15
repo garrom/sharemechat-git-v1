@@ -664,9 +664,12 @@ const DashboardModel = () => {
 
       // ADR-050 fix rematcheo (2026-07-15): auto-cut por moderacion o admin kill.
       // Backend ya nos saco de las waiting queues y limpio nuestro role, asi que
-      // no reenviamos start-match. Desactivamos camara y mostramos aviso; el
-      // usuario debe pulsar el boton de camara de nuevo para volver a matching.
+      // no reenviamos start-match. Desactivamos camara silenciosamente: el
+      // usuario ve el estado "camara desactivada" (boton Activar visible) sin
+      // mensaje explicito del motivo (decision operador 2026-07-15: no acusar
+      // al usuario de nada, la propia desactivacion ya es senyal suficiente).
       onAdminKicked: (data) => {
+        try { console.log('[MODEL][WS] admin-kicked', data); } catch {}
         resetRandomTechMediaReadySignal();
         setCurrentClientId(null);
         setClientSaldo(null);
@@ -675,8 +678,7 @@ const DashboardModel = () => {
         setMessages([]);
         setSearching(false);
         setCameraActive(false);
-        const reason = data?.reason || '';
-        setError('La sesión se ha cerrado por moderación automática (motivo: ' + reason + '). Vuelve a activar la cámara para continuar.');
+        setError('');
         setStatus('');
       },
 
