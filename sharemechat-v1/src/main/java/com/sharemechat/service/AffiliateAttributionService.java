@@ -133,22 +133,28 @@ public class AffiliateAttributionService {
         client.setReferredAt(now);
         userRepository.save(client);
 
+        // 2026-07-15: invited='accepted' (no 'REFERRAL' como estaba originalmente):
+        // 'invited' es un enum funcional (pending/sent/accepted/rejected) usado por
+        // canUsersMessage y multiples filtros frontend para autorizar chat/gifts/
+        // llamadas. Poner 'REFERRAL' aqui bloqueaba silenciosamente el chat entre
+        // referrer y referido pese a que la relacion es efectivamente aceptada
+        // (el modelo compartio el link, el cliente se registro siguiendolo).
+        // La marca de origen se conserva en favorite_source='AFFILIATE_INVITATION'
+        // (columna canonica de trazabilidad economica en favorites_models).
         FavoriteModel fav = new FavoriteModel(clientUserId, model.getId());
         fav.setStatus("active");
-        fav.setInvited("REFERRAL");
+        fav.setInvited("accepted");
         fav.setFavoriteSource("AFFILIATE_INVITATION");
         favoriteModelRepository.save(fav);
 
-        // Fix asimetria 2026-07-15: crear la fila reciproca en favorites_clients
-        // para que el MODELO tambien vea al cliente referido en su lista de
-        // favoritos. Sin este save, solo el cliente veia al modelo y el modelo
-        // no veia al cliente (bug detectado en 4/4 registros AFFILIATE_INVITATION
-        // desde el 11-jul cuando se abrio la subpasada 2B del ADR-049).
-        // favorites_clients no tiene columna favorite_source (asimetria de schema
-        // preexistente); status/invited replican la fila del cliente por consistencia.
+        // Fila reciproca en favorites_clients: sin este save el modelo no veia
+        // al cliente aunque el cliente si veia al modelo (bug detectado
+        // 2026-07-15 en 4/4 registros AFFILIATE_INVITATION desde el 11-jul).
+        // favorites_clients no tiene columna favorite_source (asimetria de
+        // schema preexistente aceptada como legacy).
         FavoriteClient favReciprocal = new FavoriteClient(model.getId(), clientUserId);
         favReciprocal.setStatus("active");
-        favReciprocal.setInvited("REFERRAL");
+        favReciprocal.setInvited("accepted");
         favoriteClientRepository.save(favReciprocal);
 
         AffiliateClickEvent evt = new AffiliateClickEvent();

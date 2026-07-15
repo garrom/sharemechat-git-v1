@@ -101,19 +101,19 @@ class AffiliateAttributionServiceTest {
         assertEquals(200L, favCap.getValue().getClientId());
         assertEquals(97L, favCap.getValue().getModelId());
         assertEquals("active", favCap.getValue().getStatus());
-        assertEquals("REFERRAL", favCap.getValue().getInvited());
+        // 2026-07-15: invited='accepted' (no 'REFERRAL'): 'invited' es enum funcional
+        // usado por canUsersMessage y filtros frontend; REFERRAL bloqueaba silenciosamente
+        // el chat. La marca de origen se conserva en favorite_source='AFFILIATE_INVITATION'.
+        assertEquals("accepted", favCap.getValue().getInvited());
         assertEquals("AFFILIATE_INVITATION", favCap.getValue().getFavoriteSource());
 
-        // Fix asimetria 2026-07-15: verificar tambien la fila reciproca en
-        // favorites_clients (perspectiva del modelo). Sin este save el modelo
-        // no veia al cliente aunque el cliente si veia al modelo (bug 4/4
-        // registros AFFILIATE_INVITATION detectado 2026-07-15 en TEST).
+        // Fila reciproca en favorites_clients (perspectiva del modelo).
         ArgumentCaptor<FavoriteClient> favReciprocalCap = ArgumentCaptor.forClass(FavoriteClient.class);
         verify(favoriteClientRepository, times(1)).save(favReciprocalCap.capture());
         assertEquals(97L, favReciprocalCap.getValue().getModelId());
         assertEquals(200L, favReciprocalCap.getValue().getClientId());
         assertEquals("active", favReciprocalCap.getValue().getStatus());
-        assertEquals("REFERRAL", favReciprocalCap.getValue().getInvited());
+        assertEquals("accepted", favReciprocalCap.getValue().getInvited());
 
         ArgumentCaptor<AffiliateClickEvent> evtCap = ArgumentCaptor.forClass(AffiliateClickEvent.class);
         verify(clickEventRepository, times(1)).save(evtCap.capture());
