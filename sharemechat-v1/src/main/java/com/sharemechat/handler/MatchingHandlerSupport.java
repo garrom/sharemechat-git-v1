@@ -1999,6 +1999,10 @@ public class MatchingHandlerSupport {
         WebSocketSession clientSession = clientSid != null ? state.getSessionsById().get(clientSid) : null;
         WebSocketSession modelSession = modelSid != null ? state.getSessionsById().get(modelSid) : null;
 
+        // Snapshot de roles ANTES de limpiar, necesario para vaciar las waiting queues.
+        String clientRole = clientSid != null ? state.getRoles().get(clientSid) : null;
+        String modelRole = modelSid != null ? state.getRoles().get(modelSid) : null;
+
         if (clientSid != null) {
             state.getPairs().remove(clientSid);
         }
@@ -2007,8 +2011,23 @@ public class MatchingHandlerSupport {
         }
         clearTechMediaReadyMarkers(clientSid, modelSid);
 
-        String safeReason = (reason == null || reason.isBlank()) ? "admin-kill" : reason;
-        String payload = "{\"type\":\"peer-disconnected\",\"reason\":\"" + safeReason + "\"}";
+        // ADR-050 fix rematcheo automatico (2026-07-15): sin este bloque, admin-kill
+        // manual y auto-cut de moderacion eliminaban solo el pair, pero los usuarios
+        // seguian en las waiting queues con role activo. MatchingHandler los volvia
+        // a emparejar en el mismo segundo (evidencia: streamRecordId 4018 cortado
+        // 15:29:35.277 y streamRecordId 4019 emitido 15:29:35.417, delta 140ms).
+        // Sacarlos de las colas + limpiar rol fuerza al frontend a que el usuario
+        // pulse "Volver a activar camara" explicitamente antes de volver a matching.
+        if (clientSession != null) removeFromAllBuckets(clientSession, clientRole);
+        if (modelSession != null) removeFromAllBuckets(modelSession, modelRole);
+        if (clientSid != null) state.getRoles().remove(clientSid);
+        if (modelSid != null) state.getRoles().remove(modelSid);
+
+        String safeReason = (reason == null || reason.isBlank()) ? "admin-kick" : reason;
+        // Tipo dedicado 'admin-kicked' distinguible de 'peer-disconnected' (que
+        // dispara auto-restart en dashboards). requiresReactivation=true indica
+        // al frontend que debe cerrar peer + mostrar aviso + NO reabrir matching.
+        String payload = "{\"type\":\"admin-kicked\",\"reason\":\"" + safeReason + "\",\"requiresReactivation\":true}";
 
         safeSend(clientSession, payload);
         safeSend(modelSession, payload);

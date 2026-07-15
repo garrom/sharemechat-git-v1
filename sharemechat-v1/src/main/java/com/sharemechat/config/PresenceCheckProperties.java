@@ -44,10 +44,13 @@ public class PresenceCheckProperties {
     /**
      * ADR-050 Fase E (deuda #D-33): numero maximo de ticks consecutivos
      * SIN cara detectada por el vendor antes de auto-cortar la sesion.
-     * Default 3: con cadencia 60s = ~3 min sin cara.
+     * Default 2: con cadencia 60s = ~2 min sin cara. Bajado de 3 a 2 el
+     * 2026-07-15 tras feedback del operador (~3 min es UX inaceptable
+     * para cliente pagando pay-per-second; a los 2 min ya llevaba 2
+     * ciclos de facturacion sin persona real en la camara).
      * Calibrable via env MODERATION_PRESENCE_NO_FACE_MAX_CONSECUTIVE.
      */
-    private int noFaceMaxConsecutive = 3;
+    private int noFaceMaxConsecutive = 2;
 
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }

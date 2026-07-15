@@ -614,6 +614,22 @@ const DashboardClient = () => {
           }
         } catch {}
       },
+
+      // ADR-050 fix rematcheo (2026-07-15): auto-cut por moderacion o admin kill.
+      // Backend saco al usuario de las waiting queues y limpio su role. No
+      // reenviamos start-match; desactivamos camara y avisamos. El usuario
+      // debe reactivar camara manualmente para volver a matching.
+      onAdminKicked: (data) => {
+        resetRandomTechMediaReadySignal();
+        setCurrentModelId(null);
+        setRemoteStream(null);
+        setMessages([]);
+        setSearching(false);
+        setCameraActive(false);
+        const reason = data?.reason || '';
+        setError('La sesión se ha cerrado por moderación automática (motivo: ' + reason + '). Vuelve a activar la cámara para continuar.');
+        setStatus('');
+      },
     });
 
     // Msg engine (Client)

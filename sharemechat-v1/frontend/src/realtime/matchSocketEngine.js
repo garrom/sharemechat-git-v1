@@ -46,6 +46,12 @@ export function createMatchSocketEngine(adapter) {
     onNoPeerAvailable,
     onNoBalance,
     onPeerDisconnectedPost,
+    // ADR-050 fix rematcheo (2026-07-15): callback opcional que se invoca
+    // cuando el backend envia {type:"admin-kicked", requiresReactivation:true}
+    // (auto-cut por moderacion o kill manual desde panel admin). A diferencia
+    // de peer-disconnected, NO reactiva busqueda automatica; el dashboard
+    // debe mostrar aviso al usuario y forzar que reactive camara manualmente.
+    onAdminKicked,
     onMatchMeta, // (data) => void, para setCurrentModelId / setCurrentClientId / streamRecordId / clientBalance etc.
     onPeerStateChange,
 
@@ -422,6 +428,22 @@ export function createMatchSocketEngine(adapter) {
       // Hook específico por rol (auto-restart, reason low-balance, etc.)
       try { onPeerDisconnectedPost?.(data); } catch {}
 
+      return;
+    }
+
+    // ADR-050 fix rematcheo (2026-07-15): auto-cut moderacion o admin kill.
+    // El backend ya saco al usuario de las waiting queues y limpio su role,
+    // asi que aunque NO cerremos el WS aqui, el matching queda bloqueado
+    // hasta que el frontend reenvie set-role. Cortamos peer + notificamos
+    // al dashboard para que muestre aviso y desactive camara.
+    if (data.type === 'admin-kicked') {
+      setNexting(false);
+      setSearching(false);
+      try { cleanupPeerAndRemote(); } catch {}
+      setMessages([]);
+      // Hook opcional; si el dashboard no lo implementa cae a UX default
+      // (peer limpio + estado busqueda apagado, usuario queda "parado").
+      try { onAdminKicked?.(data); } catch {}
       return;
     }
 

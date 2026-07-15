@@ -743,6 +743,28 @@ const DashboardUserClient = () => {
 
         return;
       }
+
+      // ADR-050 fix rematcheo (2026-07-15): auto-cut por moderacion o admin kill.
+      // Backend saco al usuario de las waiting queues y limpio su role. Trial
+      // user tambien recibe este mensaje. No reactivamos matching automatico;
+      // el usuario debe volver a activar el flujo trial explicitamente.
+      if (data.type === 'admin-kicked') {
+        console.log('[USER][WS] admin-kicked', data);
+        const reason = data.reason || '';
+        try {
+          if (peerRef.current) peerRef.current.destroy();
+        } catch { /* noop */ }
+        peerRef.current = null;
+        try {
+          if (remoteStream) remoteStream.getTracks().forEach((t) => t.stop());
+        } catch { /* noop */ }
+        setRemoteStream(null);
+        setSearching(false);
+        setCurrentModelId(null);
+        setError('La sesión se ha cerrado por moderación automática (motivo: ' + reason + '). Vuelve a activar la cámara para continuar.');
+        setStatusText('');
+        return;
+      }
     };
   };
 
