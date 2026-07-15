@@ -7,21 +7,21 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I8IA95WWYY7HAWTR5UX1FAU1NV
+  cloudfront_invalidation_id: I47VRXYT9V1N8SJJIF2MNX4EI3
   verification:
-    method: deploy-frontend.ps1-live-build_2026-07-15T15:53:13Z
+    method: deploy-frontend.ps1-live-build_2026-07-15T16:11:23Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-07-15T15:53:13Z
-  built_at: 2026-07-15T15:53:13Z
-  bundle_sha256: 15b219fed204e8c6904cad3326b5438503ea18b809aa3c227628ecc16a636cf3
-  git_commit_short: 4863ae8
-  git_commit: 4863ae8297134fafedb04383382b796d13b739c5
+  deployed_at: 2026-07-15T16:11:23Z
+  built_at: 2026-07-15T16:11:23Z
+  bundle_sha256: b1b6c4e3b53c0b9426f7f33657591a9e7e2417889061a789af6fc4998774b9c6
+  git_commit_short: 35beec0
+  git_commit: 35beec0c3f969065d6d0027f904695325ed8720f
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
-  working_tree_clean: true
+  working_tree_clean: false
   bucket: sharemechat-frontend-test
-  bundle: main.58d470b8.js
+  bundle: main.152a35d5.js
 last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
@@ -29,18 +29,18 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-15T15:49:29Z
-  jar_sha256: 546ae90fb1fc2e493029b29601ff64511b1e054c32a1ed4ab74c0165a0ab606f
+  deployed_at: 2026-07-15T16:09:09Z
+  jar_sha256: d376d36ec69fd95004cf0975a324fc37147dfd41fbec86f4995fdb35751f42e1
   verification:
-    method: manual_edit_via_update-manifest-backend_dryrun
-    verified_at: 2026-07-15T15:52:29Z
-    notes: 'Editado a mano tras deploy del JAR del commit 4863ae8 (fix rematcheo adminKillPair + tipo admin-kicked + umbral NO_FACE 3->2). scp+restart ejecutados 15:49:29 UTC con SHA local == SHA remoto verificado bit-a-bit (546ae90...). Backend arranco limpio en 34.89s. Regla N=1 backup aplicada por primera vez (borrado bak-prev anterior, creado bak-prev nuevo). update-manifest-backend.ps1 -DryRun confirmo el diff exacto; se aplico a mano porque el pipe stdin de auto-confirmacion no funciona en el harness PowerShell no interactivo.'
-  built_at: 2026-07-15T15:48:55Z
+    method: manual_edit_post_deploy
+    verified_at: 2026-07-15T16:12:08Z
+    notes: 'Editado a mano tras deploy del JAR del commit e31ecbd (fix umbral literal application.properties 3->2 + silenciar mensaje admin-kicked al usuario). scp+restart ejecutados 16:09:09 UTC con SHA local == SHA remoto verificado bit-a-bit (d376d36...). Backend arranco limpio en 33.628s. Regla N=1 backup aplicada (borrado bak-prev de deploy anterior de las 15:49, creado nuevo bak-prev 20260715-160909).'
+  built_at: 2026-07-15T16:08:XXZ
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 4863ae8297134fafedb04383382b796d13b739c5
-  git_commit_short: 4863ae8
-last_updated_at: 2026-07-15T15:53:13Z
+  git_commit: e31ecbd372cc3bf0358a7109b88f69a9d0f973e8
+  git_commit_short: e31ecbd
+last_updated_at: 2026-07-15T16:11:23Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
   verification:
