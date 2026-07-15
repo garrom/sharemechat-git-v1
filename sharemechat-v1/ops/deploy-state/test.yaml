@@ -28,18 +28,18 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-14T21:26:38Z
-  jar_sha256: 837b924b21145f2b325246645fc3e94817c2c2685374b75f33044086dc97b4b8
+  deployed_at: 2026-07-14T22:55:20Z
+  jar_sha256: 3e50bcdb4ead723857bf58ac15868c939fa0ea665c17cf9746113bb606cb8732
   verification:
-    method: manual_via_update-manifest-backend.ps1
-    verified_at: 2026-07-14T21:26:38Z
-    notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-07-14T21:26:38Z
+    method: manual_edit_post_deploy_ec2_hang_recovery
+    verified_at: 2026-07-15T10:17:00Z
+    notes: 'Actualizado a mano el 2026-07-15 tras el cuelgue del 2026-07-14 23:00 UTC (project-log:2026-07-15). El deploy del JAR de Fase E (commit f52cab9, scp+restart a las 22:55:20 UTC) SI se completo con exito (Flyway V23 aplicada limpiamente y bytecode contains NO_FACE_SUSTAINED verificados por SSH bit-a-bit), pero update-manifest-backend.ps1 nunca se ejecuto porque la EC2 se colgo a las 23:00. HEAD del repo al escribir esta entrada (7902f5f, docs alignment) NO coincide con el commit del JAR (f52cab9): entre ambos hay 2 commits que solo tocan doc, sin cambios en src/. Se registra el commit real del JAR (f52cab9) por precision. Mismo patron aplicado en el manifest AUDIT el 2026-07-09 (project-log). Limitacion conocida general: sin endpoint /api/health/version (Fase 2 opcion A del backend-deploy-backlog) no hay verificacion viva del commit del backend.'
+  built_at: 2026-07-14T22:55:04Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 452156d3d61b8ee7801e5f006cf5e816b8b58185
-  git_commit_short: 452156d
-last_updated_at: 2026-07-14T21:26:38Z
+  git_commit: f52cab984ad18600727af48a7b2331c2db1826b7
+  git_commit_short: f52cab9
+last_updated_at: 2026-07-15T10:17:00Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
   verification:
