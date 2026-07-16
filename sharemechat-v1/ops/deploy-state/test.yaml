@@ -1,27 +1,28 @@
 ﻿# Manifest de estado de despliegue - entorno TEST
-# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
-# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
-# deploy manual del backend (scp + restart). NO se hace commit
-# automatico: el operador commitea cuando le conviene (decision D2).
+# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
+# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
+# correspondiente al surface desplegado tras smoke OK. NO se
+# hace commit automatico: el operador commitea el manifest
+# cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I86YTI847PWO0V27LD1VLGFA90
+  cloudfront_invalidation_id: I5FRHZJC3NCVO1BFW1R4K9MJKA
   verification:
-    method: manual_edit_post_deploy
-    git_commit_provenance: manual_reconcile_post_commit
-    notes: 'Reconciliado a mano tras commit f3b6876 (feat anti-fraud #D-34). El deploy-frontend.ps1 registro working_tree_clean=false apuntando al commit anterior 23a4386 porque el build se hizo con cambios sin commitear; el bundle main.9de3a641.js SI contiene los cambios D-34 y corresponde bit-a-bit al arbol de f3b6876 (que solo anyade estos cambios sobre 23a4386).'
-  deployed_at: 2026-07-16T18:47:22Z
-  built_at: 2026-07-16T18:47:22Z
-  bundle_sha256: e3e1f2bea0cd6f39d5eb54a0ce0ae521f09897d651ec80ce0139dd3f0207235c
-  git_commit_short: f3b6876
-  git_commit: f3b6876817112f863c47803545e89dd6b56f3388
+    method: deploy-frontend.ps1-live-build_2026-07-16T20:56:22Z
+    git_commit_provenance: recorded_by_deploy_script
+    notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
+  deployed_at: 2026-07-16T20:56:22Z
+  built_at: 2026-07-16T20:56:22Z
+  bundle_sha256: 1c60c565f96e4a179921d32bfc39b5cb974d1397d56630f15950893868b31f36
+  git_commit_short: bde38bd
+  git_commit: bde38bd23ac96d5fab03b80f83aa71f82490893e
   cloudfront_distribution: E2Q4VNDDWD5QBU
   deployed_by: alain@LAPTOP-8UEIKVUT
-  working_tree_clean: true
+  working_tree_clean: false
   bucket: sharemechat-frontend-test
-  bundle: main.9de3a641.js
-last_update_source: update-manifest-backend.ps1-fase1-paso2b
+  bundle: main.73cbde1d.js
+last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:
@@ -39,7 +40,7 @@ backend:
   systemd_unit: sharemechat-test.service
   git_commit: 03e394aba880e752a0e8cdbe9aa4e69f3fd34458
   git_commit_short: 03e394a
-last_updated_at: 2026-07-16T20:33:18Z
+last_updated_at: 2026-07-16T20:56:22Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
   verification:
