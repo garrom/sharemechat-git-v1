@@ -20,6 +20,17 @@ public class PaymentSession {
     @Column(name = "pack_id", nullable = false, length = 50)
     private String packId;
 
+    /**
+     * ADR-051 D1 (2026-07-16, V26): PSP emisor del pago. Añadido a un
+     * schema originalmente neutral (V1__baseline.sql:509) para soportar
+     * multi-vendor. Valores: {@code "nowpayments"} inicial, futuros
+     * {@code "vendo"}, {@code "commercegate"}, {@code "rocketgate"}.
+     * NOT NULL con default {@code "nowpayments"} en el schema
+     * (V26__payment_sessions_add_provider.sql).
+     */
+    @Column(name = "provider", nullable = false, length = 30)
+    private String provider;
+
     @Column(name = "amount", nullable = false, precision = 10, scale = 2)
     private BigDecimal amount;
 
@@ -64,6 +75,14 @@ public class PaymentSession {
 
     public void setPackId(String packId) {
         this.packId = packId;
+    }
+
+    public String getProvider() {
+        return provider;
+    }
+
+    public void setProvider(String provider) {
+        this.provider = provider;
     }
 
     public BigDecimal getAmount() {
