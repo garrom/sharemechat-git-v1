@@ -112,6 +112,27 @@ const DashboardModel = () => {
   const [randomIceConnectionState, setRandomIceConnectionState] = useState(null);
   const [error, setError] = useState('');
   const [messages, setMessages] = useState([]);
+  // ADR-050 #D-34 (2026-07-16): aviso previo al auto-cut de moderacion.
+  // Solo el MODELO lo recibe (cliente no). El backend lo emite cuando el
+  // contador llega a threshold-1 (con threshold=2 y cadencia 60s: 1 tick
+  // sin cara/frozen). El banner incluye countdown que decrementa cada seg.
+  // Se auto-cierra al recibir moderation-warning-cleared o admin-kicked.
+  const [modWarning, setModWarning] = useState(null); // {reason, secondsRemaining, startedAt}
+
+  // #D-34: countdown local del banner. Decrementa cada segundo hasta 0.
+  // Al llegar a 0 el banner queda "esperando corte" hasta que llegue el
+  // admin-kicked (que resetea el estado a null).
+  useEffect(() => {
+    if (!modWarning) return;
+    const iv = setInterval(() => {
+      setModWarning(prev => {
+        if (!prev) return null;
+        const nextSec = Math.max(0, prev.secondsRemaining - 1);
+        return { ...prev, secondsRemaining: nextSec };
+      });
+    }, 1000);
+    return () => clearInterval(iv);
+  }, [modWarning?.startedAt]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
   const [saldoModel, setSaldoModel] = useState(null);
@@ -680,6 +701,21 @@ const DashboardModel = () => {
         setCameraActive(false);
         setError('');
         setStatus('');
+        // #D-34: cerrar banner aunque el warning quedara colgado.
+        setModWarning(null);
+      },
+
+      // ADR-050 #D-34 (2026-07-16): aviso previo al auto-cut.
+      onModerationWarning: (data) => {
+        const secs = Number(data?.secondsUntilCut) || 60;
+        setModWarning({
+          reason: data?.reason || 'no-face',
+          secondsRemaining: secs,
+          startedAt: Date.now(),
+        });
+      },
+      onModerationWarningCleared: () => {
+        setModWarning(null);
       },
 
       // Model: cola
@@ -1650,7 +1686,27 @@ const DashboardModel = () => {
       if (data.type === 'call:ended') {
         console.log('[CALL][ended][Model] reason=', data.reason);
 
+        // #D-34: cerrar banner warning si quedaba activo al cortar la call.
+        setModWarning(null);
+
         cleanupCall('ended');
+        return;
+      }
+
+      // ADR-050 #D-34 (2026-07-16): aviso previo al auto-cut, canal CALLING.
+      // Backend envia por /messages cuando el streamType es CALLING. Solo la
+      // MODELO lo recibe. Reutiliza el mismo state modWarning que RANDOM.
+      if (data.type === 'moderation-warning') {
+        const secs = Number(data?.secondsUntilCut) || 60;
+        setModWarning({
+          reason: data?.reason || 'no-face',
+          secondsRemaining: secs,
+          startedAt: Date.now(),
+        });
+        return;
+      }
+      if (data.type === 'moderation-warning-cleared') {
+        setModWarning(null);
         return;
       }
 
@@ -3242,6 +3298,54 @@ const DashboardModel = () => {
         onLogout={handleLogout}
       />
       {/* ========= FIN NAVBAR  ======== */}
+
+      {/* ADR-050 #D-34 (2026-07-16): aviso pre-corte por moderacion. Solo modelo. */}
+      {modWarning && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          zIndex: 9999,
+          padding: '12px 20px',
+          background: modWarning.secondsRemaining <= 15
+            ? 'linear-gradient(90deg, #c0392b, #e74c3c)'
+            : 'linear-gradient(90deg, #d68910, #f39c12)',
+          color: '#fff',
+          fontSize: 14,
+          fontWeight: 600,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 12,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }}>
+          <span style={{ fontSize: 20 }}>⚠️</span>
+          <span>
+            {modWarning.reason === 'frozen'
+              ? i18n.t('dashboardModel.moderationWarning.frozen', {
+                  defaultValue: 'Tu cámara parece congelada. Refresca la página o vuelve a activar la cámara.',
+                })
+              : i18n.t('dashboardModel.moderationWarning.noFace', {
+                  defaultValue: 'Vuelve al encuadre. Tu cámara no detecta tu cara.',
+                })}
+          </span>
+          <span style={{
+            background: 'rgba(0,0,0,0.25)',
+            padding: '4px 12px',
+            borderRadius: 12,
+            minWidth: 50,
+            textAlign: 'center',
+          }}>
+            {modWarning.secondsRemaining > 0
+              ? `${modWarning.secondsRemaining}s`
+              : i18n.t('dashboardModel.moderationWarning.cutImminent', {
+                  defaultValue: 'cortando...',
+                })}
+          </span>
+        </div>
+      )}
 
       {/* ========= INICIO MAIN  ======== */}
       <StyledMainContent data-tab={activeTab}>

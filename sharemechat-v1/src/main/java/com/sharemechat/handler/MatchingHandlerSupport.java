@@ -1992,6 +1992,24 @@ public class MatchingHandlerSupport {
         return null;
     }
 
+    /**
+     * ADR-050 #D-34 (2026-07-16): entrega un payload arbitrario al WS
+     * /match de un user concreto (si esta conectado). Usado por
+     * {@code ModerationWarningService} para avisos previos al auto-cut
+     * (no-face / frozen) y por cualquier otro emisor server-side de
+     * mensajes dirigidos a un solo usuario.
+     *
+     * <p>No-op si el user no tiene sesion viva. Fail-safe: excepciones
+     * de red al enviar quedan absorbidas por safeSend, no propagan.
+     */
+    public void notifyUserById(Long userId, String payload) {
+        if (userId == null || payload == null) return;
+        String sid = findSessionIdByUserId(userId);
+        if (sid == null) return;
+        WebSocketSession session = state.getSessionsById().get(sid);
+        safeSend(session, payload);
+    }
+
     public void adminKillPair(Long clientUserId, Long modelUserId, String reason) {
         String clientSid = findSessionIdByUserId(clientUserId);
         String modelSid = findSessionIdByUserId(modelUserId);

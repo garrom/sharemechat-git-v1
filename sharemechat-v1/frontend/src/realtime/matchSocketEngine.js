@@ -52,6 +52,13 @@ export function createMatchSocketEngine(adapter) {
     // de peer-disconnected, NO reactiva busqueda automatica; el dashboard
     // debe mostrar aviso al usuario y forzar que reactive camara manualmente.
     onAdminKicked,
+    // ADR-050 #D-34 (2026-07-16): avisos WS previos al auto-cut por
+    // moderacion (no-face / frozen). Solo el MODELO los recibe; el CLIENTE
+    // no. Se disparan 1 tick antes del corte (~60s). Payload:
+    //   {type:"moderation-warning", reason:"no-face"|"frozen", secondsUntilCut:60}
+    //   {type:"moderation-warning-cleared", reason:"no-face"|"frozen"}
+    onModerationWarning,
+    onModerationWarningCleared,
     onMatchMeta, // (data) => void, para setCurrentModelId / setCurrentClientId / streamRecordId / clientBalance etc.
     onPeerStateChange,
 
@@ -428,6 +435,19 @@ export function createMatchSocketEngine(adapter) {
       // Hook específico por rol (auto-restart, reason low-balance, etc.)
       try { onPeerDisconnectedPost?.(data); } catch {}
 
+      return;
+    }
+
+    // ADR-050 #D-34 (2026-07-16): aviso previo al auto-cut. Solo modelo.
+    // No corta peer ni cambia searching; el dashboard muestra un banner
+    // con countdown. Si el usuario vuelve al encuadre, llega el
+    // moderation-warning-cleared que cierra el banner.
+    if (data.type === 'moderation-warning') {
+      try { onModerationWarning?.(data); } catch {}
+      return;
+    }
+    if (data.type === 'moderation-warning-cleared') {
+      try { onModerationWarningCleared?.(data); } catch {}
       return;
     }
 

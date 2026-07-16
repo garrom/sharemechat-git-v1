@@ -1040,6 +1040,11 @@
   },
   "dashboardModel": {
     "moderationNotice": "Your session is automatically supervised in accordance with our safety policies and terms of service",
+    "moderationWarning": {
+      "noFace": "Get back on camera. Your face is not detected.",
+      "frozen": "Your camera appears frozen. Refresh the page or re-activate the camera.",
+      "cutImminent": "cutting..."
+    },
     "nav": {
       "videochat": "Videochat",
       "favorites": "Favorites",

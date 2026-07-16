@@ -64,6 +64,9 @@ public class StreamModerationActionService {
     // Lazy para romper posibles ciclos con las dependencias del bean.
     private final MatchingHandler matchingHandler;
     private final MessagesWsHandler messagesWsHandler;
+    // ADR-050 #D-34 (2026-07-16): limpieza defensiva del estado de avisos
+    // pre-corte cuando el auto-cut se dispara sin haber pasado por reset.
+    private final ModerationWarningService warningService;
 
     public StreamModerationActionService(
             StreamModerationEventRepository eventRepository,
@@ -71,13 +74,15 @@ public class StreamModerationActionService {
             StreamModerationSessionRepository sessionRepository,
             @Lazy StreamService streamService,
             @Lazy MatchingHandler matchingHandler,
-            @Lazy MessagesWsHandler messagesWsHandler) {
+            @Lazy MessagesWsHandler messagesWsHandler,
+            ModerationWarningService warningService) {
         this.eventRepository = eventRepository;
         this.reviewRepository = reviewRepository;
         this.sessionRepository = sessionRepository;
         this.streamService = streamService;
         this.matchingHandler = matchingHandler;
         this.messagesWsHandler = messagesWsHandler;
+        this.warningService = warningService;
     }
 
     @Transactional
@@ -177,6 +182,10 @@ public class StreamModerationActionService {
         StreamRecord sr = null;
         try {
             sr = streamService.killStreamAsAdmin(session.getStreamRecordId(), reason);
+            // #D-34 (2026-07-16): limpieza defensiva del estado del warning service
+            // para esta session (evita leak en memoria si el aviso quedo activo
+            // sin ser cerrado por reset).
+            try { warningService.clearWarningsForSession(session.getId()); } catch (Exception ignore) {}
             log.warn("[STREAM-MOD] AUTO-CUT streamRecordId={} sessionId={} reason={}",
                     session.getStreamRecordId(), session.getId(), reason);
         } catch (Exception ex) {

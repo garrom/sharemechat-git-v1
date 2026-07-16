@@ -881,6 +881,17 @@ public class MessagesWsHandlerSupport {
         for (var s : set) safeSend(s, json);
     }
 
+    /**
+     * ADR-050 #D-34 (2026-07-16): entrega un payload arbitrario al WS
+     * /messages de un user concreto (broadcast a todas sus sesiones activas).
+     * Usado por {@code ModerationWarningService} para avisos previos al
+     * auto-cut (no-face / frozen) durante CALLING streams.
+     */
+    public void notifyUserById(Long userId, String payload) {
+        if (userId == null || payload == null) return;
+        broadcastToUser(userId, payload);
+    }
+
     public void broadcastNew(MessageDTO saved) {
         String json = new JSONObject()
                 .put("type", "msg:new")

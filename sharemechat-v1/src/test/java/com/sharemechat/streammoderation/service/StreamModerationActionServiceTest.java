@@ -63,8 +63,12 @@ class StreamModerationActionServiceTest {
                 org.mockito.Mockito.mock(com.sharemechat.handler.MatchingHandler.class);
         com.sharemechat.handler.MessagesWsHandler messagesWsHandler =
                 org.mockito.Mockito.mock(com.sharemechat.handler.MessagesWsHandler.class);
+        // #D-34 (2026-07-16): warningService inyectado, mockeado en tests
+        // que no dependen del auto-cut warning clear.
+        com.sharemechat.streammoderation.service.ModerationWarningService warningService =
+                org.mockito.Mockito.mock(com.sharemechat.streammoderation.service.ModerationWarningService.class);
         svc = new StreamModerationActionService(eventRepo, reviewRepo, sessionRepo,
-                streamService, matchingHandler, messagesWsHandler);
+                streamService, matchingHandler, messagesWsHandler, warningService);
 
         // Default mock: save devuelve el objeto pasado (Mockito default es null).
         when(reviewRepo.save(any(StreamModerationReview.class))).thenAnswer(inv -> inv.getArgument(0));

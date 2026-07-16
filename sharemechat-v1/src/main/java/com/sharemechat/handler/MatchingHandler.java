@@ -40,6 +40,11 @@ public class MatchingHandler extends TextWebSocketHandler {
         support.adminKillPair(clientUserId, modelUserId, reason);
     }
 
+    /** ADR-050 #D-34: entrega payload WS a un user concreto del /match. */
+    public void notifyUserById(Long userId, String payload) {
+        support.notifyUserById(userId, payload);
+    }
+
     public java.util.Map<String, Object> adminRuntimeSnapshot() {
         return support.adminRuntimeSnapshot();
     }

@@ -47,6 +47,11 @@ public class MessagesWsHandler extends TextWebSocketHandler {
         support.adminKillCallPair(clientId, modelId, reason);
     }
 
+    /** ADR-050 #D-34: entrega payload WS a un user concreto del /messages. */
+    public void notifyUserById(Long userId, String payload) {
+        support.notifyUserById(userId, payload);
+    }
+
     public java.util.Map<String, Object> adminRuntimeSnapshot() {
         return support.adminRuntimeSnapshot();
     }

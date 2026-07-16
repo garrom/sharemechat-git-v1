@@ -49,6 +49,9 @@ public class StreamFrameIngestionService {
     // ADR-050 Fase C: hook opcional de presencia continua. Solo se
     // invoca si presenceProps.enabled=true y el adapter activo lo soporta.
     private final PresenceCheckProperties presenceProps;
+    // ADR-050 #D-34 (2026-07-16): avisos WS previos al auto-cut. Emite
+    // warning cuando el contador alcanza threshold-1 y clear al reset.
+    private final ModerationWarningService warningService;
 
     public StreamFrameIngestionService(
             StreamModerationSessionRepository sessionRepository,
@@ -56,13 +59,15 @@ public class StreamFrameIngestionService {
             StreamModerationActionService actionService,
             StreamModerationReviewRepository reviewRepository,
             ModerationEvidenceUploader evidenceUploader,
-            PresenceCheckProperties presenceProps) {
+            PresenceCheckProperties presenceProps,
+            ModerationWarningService warningService) {
         this.sessionRepository = sessionRepository;
         this.sessionService = sessionService;
         this.actionService = actionService;
         this.reviewRepository = reviewRepository;
         this.evidenceUploader = evidenceUploader;
         this.presenceProps = presenceProps;
+        this.warningService = warningService;
     }
 
     /**
@@ -241,7 +246,8 @@ public class StreamFrameIngestionService {
         if (hash == null) return;
 
         String prev = session.getLastFrameSha256();
-        int counter = session.getConsecutiveIdenticalFrames();
+        int prevCounter = session.getConsecutiveIdenticalFrames();
+        int counter = prevCounter;
 
         if (prev != null && prev.equals(hash)) {
             counter += 1;
@@ -254,6 +260,15 @@ public class StreamFrameIngestionService {
         sessionRepository.save(session);
 
         int threshold = presenceProps.getFrozenMaxConsecutive();
+        // ADR-050 #D-34: aviso previo cuando quedan cadence seg para el corte.
+        // Warning al llegar a threshold-1 (>=1); clear al reset con prev>0.
+        int cadenceSec = session.getSamplingCadenceSeconds();
+        if (counter == 0 && prevCounter > 0) {
+            warningService.notifyWarningCleared(session, ModerationWarningService.REASON_FROZEN);
+        } else if (counter == threshold - 1 && counter >= 1) {
+            warningService.notifyImminentCut(session, ModerationWarningService.REASON_FROZEN, cadenceSec);
+        }
+
         if (counter < threshold) return;
 
         ModerationCategoryVerdict cat = new ModerationCategoryVerdict(
@@ -291,7 +306,8 @@ public class StreamFrameIngestionService {
                                 PresenceCheckResult pres) {
         if (session == null || verdict == null || pres == null) return;
 
-        int counter = session.getConsecutiveNoFaceFrames();
+        int prevCounter = session.getConsecutiveNoFaceFrames();
+        int counter = prevCounter;
         if (pres.isFaceDetected()) {
             counter = 0;
         } else {
@@ -301,6 +317,15 @@ public class StreamFrameIngestionService {
         sessionRepository.save(session);
 
         int threshold = presenceProps.getNoFaceMaxConsecutive();
+        // ADR-050 #D-34: aviso previo cuando quedan cadence seg para el corte.
+        // Warning al llegar a threshold-1 (>=1); clear al reset con prev>0.
+        int cadenceSec = session.getSamplingCadenceSeconds();
+        if (counter == 0 && prevCounter > 0) {
+            warningService.notifyWarningCleared(session, ModerationWarningService.REASON_NO_FACE);
+        } else if (counter == threshold - 1 && counter >= 1) {
+            warningService.notifyImminentCut(session, ModerationWarningService.REASON_NO_FACE, cadenceSec);
+        }
+
         if (counter < threshold) return;
 
         ModerationCategoryVerdict cat = new ModerationCategoryVerdict(

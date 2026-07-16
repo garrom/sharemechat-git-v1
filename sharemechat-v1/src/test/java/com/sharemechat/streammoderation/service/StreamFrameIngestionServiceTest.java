@@ -55,8 +55,12 @@ class StreamFrameIngestionServiceTest {
         // defecto - los tests existentes no dependen de presence.
         com.sharemechat.config.PresenceCheckProperties presenceProps =
                 new com.sharemechat.config.PresenceCheckProperties();
+        // #D-34 2026-07-16: mock del warning service para tests existentes.
+        // Tests especificos de warning triggers viven aparte.
+        com.sharemechat.streammoderation.service.ModerationWarningService warningService =
+                org.mockito.Mockito.mock(com.sharemechat.streammoderation.service.ModerationWarningService.class);
         svc = new StreamFrameIngestionService(
-                sessionRepo, sessionService, actionService, reviewRepo, uploader, presenceProps);
+                sessionRepo, sessionService, actionService, reviewRepo, uploader, presenceProps, warningService);
 
         activeSession = new StreamModerationSession();
         activeSession.setStreamRecordId(500L);
@@ -198,8 +202,10 @@ class StreamFrameIngestionServiceTest {
      */
     private StreamFrameIngestionService svcWithPresenceEnabled(
             com.sharemechat.config.PresenceCheckProperties props) {
+        com.sharemechat.streammoderation.service.ModerationWarningService warningService =
+                org.mockito.Mockito.mock(com.sharemechat.streammoderation.service.ModerationWarningService.class);
         return new StreamFrameIngestionService(
-                sessionRepo, sessionService, actionService, reviewRepo, uploader, props);
+                sessionRepo, sessionService, actionService, reviewRepo, uploader, props, warningService);
     }
 
     @Test

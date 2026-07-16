@@ -1040,6 +1040,11 @@
   },
   "dashboardModel": {
     "moderationNotice": "Tu sesión está supervisada automáticamente conforme a nuestras políticas de seguridad y términos de servicio",
+    "moderationWarning": {
+      "noFace": "Vuelve al encuadre. Tu cámara no detecta tu cara.",
+      "frozen": "Tu cámara parece congelada. Refresca la página o vuelve a activar la cámara.",
+      "cutImminent": "cortando..."
+    },
     "nav": {
       "videochat": "Videochat",
       "favorites": "Favoritos",
