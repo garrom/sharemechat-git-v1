@@ -29,18 +29,18 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-16T18:27:29Z
-  jar_sha256: edb9ee9e3296c91932a9f76f2267a1fad7fee2302d2826d224e06cc2f422891d
+  deployed_at: 2026-07-16T19:38:55Z
+  jar_sha256: ea848e8333a04a473a7cb37c4727d988587a7e0e22f675d891a22225ada1e642
   verification:
     method: manual_edit_post_deploy
-    verified_at: 2026-07-16T18:55:46Z
-    notes: 'Editado a mano tras deploy del JAR del commit f3b6876 (feat anti-fraud #D-34 aviso previo al auto-cut moderacion: nuevo ModerationWarningService + hooks en fuseNoFace/Frozen + notifyUserById en handlers RANDOM y CALLING). scp+restart ejecutados 18:27:29 UTC con SHA local == SHA remoto verificado bit-a-bit (edb9ee9e...). Backend arranco limpio en 33.53s. Regla N=1 backup aplicada. Validado por operador en TEST: banner + countdown + corte funcionando en RANDOM y CALLING.'
-  built_at: 2026-07-16T18:27:00Z
+    verified_at: 2026-07-16T19:41:43Z
+    notes: 'Editado a mano tras deploy del JAR del commit 2fbffc0 (feat psp ADR-051 Fase 1: schema + abstraccion vendor-agnostic). scp+restart ejecutados 19:38:55 UTC con SHA local == SHA remoto verificado bit-a-bit (ea848e83...). Backend arranco limpio en 32.2s. Regla N=1 backup aplicada. Flyway aplico V26 (payment_sessions.provider) + V27 (psp_webhook_events) + V28 (psp_provider_config + seed nowpayments/DISABLED) en 394ms. Kill-switch doble en OFF por diseno Fase 1: adapter HTTP real es Fase 2. Verificacion BD: provider column NOT NULL DEFAULT nowpayments, uk_payment_sessions_provider_psp compuesto creado, psp_webhook_events vacia, psp_provider_config con seed nowpayments/DISABLED enabled=1.'
+  built_at: 2026-07-16T19:38:00Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: f3b6876817112f863c47803545e89dd6b56f3388
-  git_commit_short: f3b6876
-last_updated_at: 2026-07-16T18:55:46Z
+  git_commit: 2fbffc01ce8e085ba3abb6eb5a26c1631681bcbb
+  git_commit_short: 2fbffc0
+last_updated_at: 2026-07-16T19:41:43Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
   verification:
