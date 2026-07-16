@@ -124,13 +124,18 @@ public class PspOrchestratorService {
         // 6. Llamar al vendor.
         String description = String.format("SharemeChat - Pack %s (%s)",
                 packKey, envHint());
+        // ADR-051 Fase 4g: NOWPayments no expande placeholders en success/
+        // cancel URL - hay que appendear el orderId manualmente aqui para
+        // que /checkout/success pueda leerlo de query y hacer polling.
+        String successUrl = appendOrderId(baseUrls.getSuccessUrl(), orderId);
+        String cancelUrl = appendOrderId(baseUrls.getCancelUrl(), orderId);
         CreateInvoiceRequest req = new CreateInvoiceRequest(
                 orderId, description,
                 session.getAmount(), "eur",
                 null, // pay_currency null -> cliente elige moneda en hosted checkout
                 baseUrls.getIpnCallbackUrl(),
-                baseUrls.getSuccessUrl(),
-                baseUrls.getCancelUrl()
+                successUrl,
+                cancelUrl
         );
         CreateInvoiceResult vendorResult;
         try {
@@ -149,6 +154,18 @@ public class PspOrchestratorService {
                 userId, providerKey, orderId, vendorResult.getProviderPaymentId(), packKey, price);
 
         return new CheckoutResult(orderId, vendorResult.getInvoiceUrl(), session.getId());
+    }
+
+    /**
+     * Appendea {@code ?orderId=<uuid>} a la URL respetando si ya tiene
+     * query string (usa {@code &} en ese caso). Si la URL viene vacia o
+     * null, devuelve string vacio (NOWPayments trata vacio como
+     * "sin redirect" y usa la pantalla default del hosted checkout).
+     */
+    private String appendOrderId(String baseUrl, String orderId) {
+        if (baseUrl == null || baseUrl.isBlank()) return "";
+        String sep = baseUrl.contains("?") ? "&" : "?";
+        return baseUrl + sep + "orderId=" + orderId;
     }
 
     /**
