@@ -1,9 +1,8 @@
 ﻿# Manifest de estado de despliegue - entorno TEST
-# Schema v1. Auto-gestionado por deploy-frontend.ps1 (Fase 1
-# paso 2a). El paso [5.5/N] de cada deploy escribe el bloque
-# correspondiente al surface desplegado tras smoke OK. NO se
-# hace commit automatico: el operador commitea el manifest
-# cuando le conviene (decision D2).
+# Schema v1. Seccion backend actualizada por update-manifest-backend.ps1
+# (Fase 1 paso 2b, opcion B). El script lo invoca el operador tras un
+# deploy manual del backend (scp + restart). NO se hace commit
+# automatico: el operador commitea cuando le conviene (decision D2).
 #
 schema_version: 1
 frontend_product:
@@ -22,25 +21,25 @@ frontend_product:
   working_tree_clean: true
   bucket: sharemechat-frontend-test
   bundle: main.9de3a641.js
-last_update_source: deploy-frontend.ps1-fase1-paso2a
+last_update_source: update-manifest-backend.ps1-fase1-paso2b
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: test
 backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-16T19:58:26Z
-  jar_sha256: 1ff85e32ad6dd581f84a77a86d9498a488e8e87d015e72f53c0aaebe5b568916
+  deployed_at: 2026-07-16T20:33:18Z
+  jar_sha256: c4152408d3219d95b7ab99b5eeb97ee757de79178f2f018ea59cd70fb63c265d
   verification:
-    method: manual_edit_post_deploy
-    verified_at: 2026-07-16T20:00:23Z
-    notes: 'Editado a mano tras deploy del JAR del commit 6f75ecc (feat psp ADR-051 Fase 2: adapter NOWPayments HTTP client + HMAC-SHA512 verifier + Provider + 35 tests). scp+restart ejecutados 19:58:26 UTC con SHA local == SHA remoto verificado bit-a-bit (1ff85e32...). Backend arranco en 33s active. Regla N=1 backup aplicada. Spring wire limpio de NowPaymentsHttpClient + NowPaymentsSignatureVerifier + NowPaymentsPaymentProvider. Kill-switch runtime sigue DISABLED + api-key vacia = adapter inactivo por diseno. Pendiente: metan credenciales sandbox en secrets.env (procedimiento higienico heredoc) + activar psp_provider_config runtime + Fase 3 orquestador+endpoints.'
-  built_at: 2026-07-16T19:58:00Z
+    method: manual_via_update-manifest-backend.ps1
+    verified_at: 2026-07-16T20:33:18Z
+    notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
+  built_at: 2026-07-16T20:33:18Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 6f75ecc445db71ab7bebdd22cee282977a3b178a
-  git_commit_short: 6f75ecc
-last_updated_at: 2026-07-16T20:00:23Z
+  git_commit: 03e394aba880e752a0e8cdbe9aa4e69f3fd34458
+  git_commit_short: 03e394a
+last_updated_at: 2026-07-16T20:33:18Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
   verification:
