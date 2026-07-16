@@ -29,18 +29,18 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-16T19:38:55Z
-  jar_sha256: ea848e8333a04a473a7cb37c4727d988587a7e0e22f675d891a22225ada1e642
+  deployed_at: 2026-07-16T19:58:26Z
+  jar_sha256: 1ff85e32ad6dd581f84a77a86d9498a488e8e87d015e72f53c0aaebe5b568916
   verification:
     method: manual_edit_post_deploy
-    verified_at: 2026-07-16T19:41:43Z
-    notes: 'Editado a mano tras deploy del JAR del commit 2fbffc0 (feat psp ADR-051 Fase 1: schema + abstraccion vendor-agnostic). scp+restart ejecutados 19:38:55 UTC con SHA local == SHA remoto verificado bit-a-bit (ea848e83...). Backend arranco limpio en 32.2s. Regla N=1 backup aplicada. Flyway aplico V26 (payment_sessions.provider) + V27 (psp_webhook_events) + V28 (psp_provider_config + seed nowpayments/DISABLED) en 394ms. Kill-switch doble en OFF por diseno Fase 1: adapter HTTP real es Fase 2. Verificacion BD: provider column NOT NULL DEFAULT nowpayments, uk_payment_sessions_provider_psp compuesto creado, psp_webhook_events vacia, psp_provider_config con seed nowpayments/DISABLED enabled=1.'
-  built_at: 2026-07-16T19:38:00Z
+    verified_at: 2026-07-16T20:00:23Z
+    notes: 'Editado a mano tras deploy del JAR del commit 6f75ecc (feat psp ADR-051 Fase 2: adapter NOWPayments HTTP client + HMAC-SHA512 verifier + Provider + 35 tests). scp+restart ejecutados 19:58:26 UTC con SHA local == SHA remoto verificado bit-a-bit (1ff85e32...). Backend arranco en 33s active. Regla N=1 backup aplicada. Spring wire limpio de NowPaymentsHttpClient + NowPaymentsSignatureVerifier + NowPaymentsPaymentProvider. Kill-switch runtime sigue DISABLED + api-key vacia = adapter inactivo por diseno. Pendiente: metan credenciales sandbox en secrets.env (procedimiento higienico heredoc) + activar psp_provider_config runtime + Fase 3 orquestador+endpoints.'
+  built_at: 2026-07-16T19:58:00Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 2fbffc01ce8e085ba3abb6eb5a26c1631681bcbb
-  git_commit_short: 2fbffc0
-last_updated_at: 2026-07-16T19:41:43Z
+  git_commit: 6f75ecc445db71ab7bebdd22cee282977a3b178a
+  git_commit_short: 6f75ecc
+last_updated_at: 2026-07-16T20:00:23Z
 frontend_admin:
   cloudfront_invalidation_id: IC1PK8O1AQF1ZLWZGCARU7I2C4
   verification:
