@@ -239,7 +239,8 @@ public class TransactionService {
                                     BigDecimal bonusEur,
                                     String orderId,
                                     String packId,
-                                    boolean firstPayment) {
+                                    boolean firstPayment,
+                                    String providerKey) {
         if (userId == null) {
             throw new IllegalArgumentException("userId requerido");
         }
@@ -284,10 +285,14 @@ public class TransactionService {
             }
         }
 
-        // Descripciones estructuradas para trazabilidad sin schema
+        // Descripciones estructuradas para trazabilidad sin schema.
+        // 2026-07-16 (ADR-051 D9): providerKey parametrizado (antes hardcoded 'CCBILL').
+        // Si no se pasa, fallback a 'UNKNOWN' para no ocultar el bug de un caller.
         String safePackId = packId == null ? "" : packId;
         String safeOrderId = orderId == null ? "" : orderId;
-        String descIngreso = "Recarga via CCBILL pack=" + safePackId + " order=" + safeOrderId;
+        String safeProvider = (providerKey == null || providerKey.isBlank())
+                ? "UNKNOWN" : providerKey.toUpperCase();
+        String descIngreso = "Recarga via " + safeProvider + " pack=" + safePackId + " order=" + safeOrderId;
         String descBonusGrant = "BFPM bonus_grant pack=" + safePackId + " order=" + safeOrderId;
         String descBonusFunding = "BFPM bonus_funding pack=" + safePackId + " order=" + safeOrderId;
 

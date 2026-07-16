@@ -211,6 +211,16 @@ public class SecurityConfig {
                         // identico a /api/kyc/{veriff,didit}/webhook.
                         .requestMatchers(HttpMethod.POST, "/api/webhooks/moderation/*").permitAll()
 
+                        // ADR-051 Fase 3: PSP NOWPayments. Webhook IPN publico con
+                        // firma HMAC-SHA512 validada en el controller. Checkout y
+                        // status requieren JWT del user autenticado (USER o CLIENT
+                        // pueden comprar; MODEL no compra packs pero no le bloqueamos
+                        // el endpoint - lo bloquea la logica de business de
+                        // PspOrchestratorService.createCheckout).
+                        .requestMatchers(HttpMethod.POST, "/api/webhooks/nowpayments/ipn").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/billing/nowpayments/checkout").hasAnyRole("USER", "CLIENT")
+                        .requestMatchers(HttpMethod.GET, "/api/billing/session/*/status").hasAnyRole("USER", "CLIENT")
+
                         // Transactions
                         .requestMatchers("/api/transactions/payout").hasRole("MODEL")
                         .requestMatchers("/api/transactions/add-balance").hasRole("CLIENT")
