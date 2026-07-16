@@ -28,6 +28,8 @@ import ForgotPassword from './public-pages/ForgotPassword';
 import AffiliateLandingPage from './public-pages/AffiliateLandingPage';
 import AdminEmailVerificationPage from './pages/admin/AdminEmailVerificationPage';
 import ProductEmailVerificationPage from './public-pages/ProductEmailVerificationPage';
+import CheckoutSuccessPage from './public-pages/CheckoutSuccessPage';
+import CheckoutCancelPage from './public-pages/CheckoutCancelPage';
 import Roles from './constants/Roles';
 import UserTypes from './constants/UserTypes';
 import { ModalProvider } from './components/ModalProvider';
@@ -185,6 +187,15 @@ function App() {
                     <Route path="/unauthorized" component={Unauthorized} />
                     <Route path="/reset-password" component={ResetPassword} />
                     <Route path="/verify-email" component={ProductEmailVerificationPage} />
+                    {/* ADR-051 Fase 4: retorno del hosted checkout NOWPayments.
+                        /checkout/success hace polling al backend hasta ver
+                        SUCCESS via webhook (o timeout). /checkout/cancel
+                        muestra mensaje simple. Ambas requieren sesion viva
+                        (RequireRole cliente para USER/CLIENT); si el usuario
+                        cerro sesion antes de volver, RequireRole redirige a
+                        /unauthorized. */}
+                    <Route path="/checkout/success" render={() => (<RequireRole roles={[Roles.USER, Roles.CLIENT]}><CheckoutSuccessPage /></RequireRole>)} />
+                    <Route path="/checkout/cancel" render={() => (<RequireRole roles={[Roles.USER, Roles.CLIENT]}><CheckoutCancelPage /></RequireRole>)} />
                     {/* ADR-049 Subpasada 2E: landing publica del programa de
                         afiliadas. /i?ref=<code> es el destino del QR y de la
                         URL directa que la modelo comparte. /register/client

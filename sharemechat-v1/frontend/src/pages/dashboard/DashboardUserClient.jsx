@@ -14,6 +14,7 @@ import TrialCooldownModal from '../../components/TrialCooldownModal';
 import OnboardingChecklist from '../../components/OnboardingChecklist';
 import LivenessChallengeModal from '../../components/LivenessChallengeModal';
 import { getLivenessStatus } from '../../api/livenessApi';
+import { createNowPaymentsCheckout } from '../../api/billingApi';
 import {
   StyledContainer,
   StyledMainContent,
@@ -493,33 +494,24 @@ const DashboardUserClient = () => {
     if (!result.confirmed || !result.pack) return;
 
     const { pack } = result;
-    const amount = Number(pack.price);
 
+    // ADR-051 Fase 4: crea checkout en NOWPayments y redirige al hosted
+    // page. El backend detecta firstPayment por rol USER y promueve
+    // USER->CLIENT en creditPackWithBonus cuando llegue el webhook.
+    // El usuario vuelve a /checkout/success y desde ahi vuelve al
+    // dashboard con rol ya CLIENT.
     setLoadingFirstPayment(true);
     try {
-      await apiFetch('/transactions/first', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          operationType: 'INGRESO',
-          description: `Primer pago (${pack.minutes} minutos) para activar cuenta premium`,
-        }),
-      });
-
-      await alert({
-        title: t('dashboardUserClient.firstPayment.success.title'),
-        message: t('dashboardUserClient.firstPayment.success.message', { minutes: pack.minutes }),
-        variant: 'success',
-        size: 'sm',
-      });
-
-      history.push('/client');
+      const { invoiceUrl } = await createNowPaymentsCheckout(pack.id);
+      if (!invoiceUrl) throw new Error('missing_invoice_url');
+      window.location.href = invoiceUrl;
     } catch (e) {
-      const msgErr = getApiErrorMessage(e, t('dashboardUserClient.errors.firstPayment'));
+      const code = e?.data?.code || '';
+      const msgErr = code === 'PSP_UNAVAILABLE'
+        ? t('checkout.errors.pspUnavailable')
+        : getApiErrorMessage(e, t('dashboardUserClient.errors.firstPayment'));
       setError(msgErr);
       await alert({ title: t('dashboardUserClient.common.errorTitle'), message: msgErr, variant: 'danger', size: 'sm' });
-    } finally {
       setLoadingFirstPayment(false);
     }
   };

@@ -451,6 +451,28 @@
       "RO": "Rumano"
     }
   },
+  "checkout": {
+    "success": {
+      "title": "Confirmando tu pago",
+      "verifying": "Estamos verificando el pago con la pasarela...",
+      "verifyingHint": "Esto suele tardar entre 10 y 30 segundos. No cierres esta ventana.",
+      "confirmed": "¡Pago confirmado! Tus {{minutes}} minutos ya están disponibles.",
+      "failed": "El pago no se ha completado. Puedes volver a intentarlo desde tu cuenta.",
+      "expired": "La sesión de pago ha caducado. Vuelve a iniciar una nueva compra.",
+      "timeout": "Estamos procesando tu pago. Si no ves el saldo en unos minutos, revisa el histórico o contáctanos.",
+      "notFound": "No encontramos esta sesión de pago. Si acabas de pagar, espera unos segundos y vuelve a intentarlo.",
+      "backToAccount": "Volver a mi cuenta"
+    },
+    "cancel": {
+      "title": "Pago cancelado",
+      "message": "No se ha realizado ningún cargo. Puedes reintentar cuando quieras desde tu cuenta.",
+      "retry": "Volver a mi cuenta"
+    },
+    "errors": {
+      "pspUnavailable": "El sistema de pagos no está disponible ahora mismo. Inténtalo de nuevo en unos minutos.",
+      "internal": "No hemos podido iniciar el pago. Inténtalo de nuevo."
+    }
+  },
   "modals": {
     "publicSignup": {
       "title": "Regístrate y prueba GRATIS",

@@ -11,6 +11,7 @@ import { ensureClientKycApproved } from '../../utils/clientKycGate';
 import { checkPhysicalCamera, stopAllTracks } from '../../utils/virtualCameraGuard';
 import LivenessChallengeModal from '../../components/LivenessChallengeModal';
 import { getLivenessStatus } from '../../api/livenessApi';
+import { createNowPaymentsCheckout } from '../../api/billingApi';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
@@ -1976,48 +1977,35 @@ const DashboardClient = () => {
   closeMsgSocketRef.current = closeMsgSocket;
 
 
+  // ADR-051 Fase 4: crea el checkout en NOWPayments y redirige al hosted
+  // page. El credit al saldo llega via webhook (asincrono); el usuario
+  // vuelve a /checkout/success que hace polling hasta ver SUCCESS.
+  const startCheckoutRedirect = async (pack) => {
+    try {
+      setLoadingSaldo(true);
+      const { invoiceUrl } = await createNowPaymentsCheckout(pack.id);
+      if (!invoiceUrl) throw new Error('missing_invoice_url');
+      window.location.href = invoiceUrl;
+    } catch (e) {
+      console.error('[PSP] checkout error', e);
+      const code = e?.data?.code || '';
+      const msgKey = code === 'PSP_UNAVAILABLE'
+        ? 'checkout.errors.pspUnavailable'
+        : 'checkout.errors.internal';
+      await alert({
+        title: 'Error',
+        message: i18n.t(msgKey),
+        variant: 'danger',
+      });
+      setLoadingSaldo(false);
+    }
+  };
+
   const handleAddBalance = async () => {
     if (!ensureClientKycApproved(sessionUser, history, '/client')) return;
     const result = await openPurchaseModal({ context: 'navbar-comprar' });
     if (!result.confirmed || !result.pack) return;
-
-    const { pack } = result;
-    const amount = Number(pack.price);
-
-    try {
-      setLoadingSaldo(true);
-
-      await apiFetch('/transactions/add-balance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          operationType: 'INGRESO',
-          description: `Recarga de saldo (${pack.minutes} minutos)`,
-        }),
-      });
-
-      await alert({
-        title: 'Saldo actualizado',
-        message: `Se ha añadido el pack de ${pack.minutes} minutos.`,
-        variant: 'success',
-      });
-
-      const data = await apiFetch('/clients/me');
-      setSaldo(data.saldoActual);
-      setSaldoError('');
-    } catch (e) {
-      console.error(e);
-      await alert({
-        title: 'Error',
-        message: e.message || 'Error al añadir saldo.',
-        variant: 'danger',
-      });
-      setSaldoError(e.message || 'Error al cargar saldo');
-      setSaldo(null);
-    } finally {
-      setLoadingSaldo(false);
-    }
+    await startCheckoutRedirect(result.pack);
   };
 
 
@@ -2025,43 +2013,7 @@ const DashboardClient = () => {
     if (!ensureClientKycApproved(sessionUser, history, '/client')) return;
     const result = await openPurchaseModal({ context: 'random' });
     if (!result.confirmed || !result.pack) return;
-
-    const { pack } = result;
-    const amount = Number(pack.price);
-
-    try {
-      setLoadingSaldo(true);
-
-      await apiFetch('/transactions/add-balance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          operationType: 'INGRESO',
-          description: `Recarga de saldo (random ${pack.minutes} minutos)`,
-        }),
-      });
-
-      const data = await apiFetch('/clients/me');
-      setSaldo(data.saldoActual);
-      setSaldoError('');
-
-      await alert({
-        title: 'Saldo actualizado',
-        message: `Se ha añadido el pack de ${pack.minutes} minutos. Vuelve a pulsar "Iniciar videochat" para empezar el streaming.`,
-        variant: 'success',
-      });
-    } catch (e) {
-      console.error(e);
-      setSaldoError(e.message || 'Error al cargar saldo');
-      await alert({
-        title: 'Error',
-        message: e.message || 'Error al añadir saldo.',
-        variant: 'danger',
-      });
-    } finally {
-      setLoadingSaldo(false);
-    }
+    await startCheckoutRedirect(result.pack);
   };
 
 
@@ -2069,43 +2021,7 @@ const DashboardClient = () => {
     if (!ensureClientKycApproved(sessionUser, history, '/client')) return;
     const result = await openPurchaseModal({ context: 'calling' });
     if (!result.confirmed || !result.pack) return;
-
-    const { pack } = result;
-    const amount = Number(pack.price);
-
-    try {
-      setLoadingSaldo(true);
-
-      await apiFetch('/transactions/add-balance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          operationType: 'INGRESO',
-          description: `Recarga de saldo (llamada 1 a 1, ${pack.minutes} minutos)`,
-        }),
-      });
-
-      const data = await apiFetch('/clients/me');
-      setSaldo(data.saldoActual);
-      setSaldoError('');
-
-      await alert({
-        title: 'Saldo actualizado',
-        message: `Se ha añadido el pack de ${pack.minutes} minutos. Vuelve a intentar la llamada.`,
-        variant: 'success',
-      });
-    } catch (e) {
-      console.error(e);
-      setSaldoError(e.message || 'Error al cargar saldo');
-      await alert({
-        title: 'Error',
-        message: e.message || 'Error al añadir saldo.',
-        variant: 'danger',
-      });
-    } finally {
-      setLoadingSaldo(false);
-    }
+    await startCheckoutRedirect(result.pack);
   };
 
 
@@ -2113,43 +2029,7 @@ const DashboardClient = () => {
     if (!ensureClientKycApproved(sessionUser, history, '/client')) return;
     const result = await openPurchaseModal({ context: 'gift' });
     if (!result.confirmed || !result.pack) return;
-
-    const { pack } = result;
-    const amount = Number(pack.price);
-
-    try {
-      setLoadingSaldo(true);
-
-      await apiFetch('/transactions/add-balance', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount,
-          operationType: 'INGRESO',
-          description: `Recarga de saldo (envío de regalos, ${pack.minutes} minutos)`,
-        }),
-      });
-
-      const data = await apiFetch('/clients/me');
-      setSaldo(data.saldoActual);
-      setSaldoError('');
-
-      await alert({
-        title: 'Saldo actualizado',
-        message: 'Se ha añadido saldo para que puedas enviar regalos.',
-        variant: 'success',
-      });
-    } catch (e) {
-      console.error(e);
-      setSaldoError(e.message || 'Error al cargar saldo');
-      await alert({
-        title: 'Error',
-        message: e.message || 'Error al añadir saldo.',
-        variant: 'danger',
-      });
-    } finally {
-      setLoadingSaldo(false);
-    }
+    await startCheckoutRedirect(result.pack);
   };
 
 

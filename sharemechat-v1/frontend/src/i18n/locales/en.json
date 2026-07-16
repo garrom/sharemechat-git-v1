@@ -451,6 +451,28 @@
       "RO": "Romanian"
     }
   },
+  "checkout": {
+    "success": {
+      "title": "Confirming your payment",
+      "verifying": "We're verifying your payment with the provider...",
+      "verifyingHint": "This usually takes between 10 and 30 seconds. Please don't close this window.",
+      "confirmed": "Payment confirmed! Your {{minutes}} minutes are now available.",
+      "failed": "The payment was not completed. You can try again from your account.",
+      "expired": "The payment session has expired. Please start a new purchase.",
+      "timeout": "We're still processing your payment. If your balance doesn't appear in a few minutes, check your history or contact us.",
+      "notFound": "We couldn't find this payment session. If you just paid, wait a few seconds and try again.",
+      "backToAccount": "Back to my account"
+    },
+    "cancel": {
+      "title": "Payment cancelled",
+      "message": "No charge was made. You can retry from your account whenever you like.",
+      "retry": "Back to my account"
+    },
+    "errors": {
+      "pspUnavailable": "The payment system is not available right now. Please try again in a few minutes.",
+      "internal": "We couldn't start the payment. Please try again."
+    }
+  },
   "modals": {
     "publicSignup": {
       "title": "Sign up and try it FREE",
