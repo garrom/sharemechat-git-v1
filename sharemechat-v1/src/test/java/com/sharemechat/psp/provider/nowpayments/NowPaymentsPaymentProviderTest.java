@@ -185,13 +185,17 @@ class NowPaymentsPaymentProviderTest {
     // ==================== parseWebhook ====================
 
     @Test
-    @DisplayName("parseWebhook extrae payment_id, order_id, mapStatus y deriva eventId sintético")
+    @DisplayName("parseWebhook extrae invoice_id (no payment_id), order_id, mapStatus y deriva eventId sintético")
     void parse_webhook_extracts_and_synthesizes_event_id() {
-        String rawBody = "{\"payment_id\":\"42\",\"order_id\":\"UUID-abc\",\"payment_status\":\"waiting\"}";
+        // Fase 4h: NOWPayments usa invoice_id como identificador estable
+        // del contenedor de pago. payment_id es el intento concreto
+        // dentro de esa invoice y no matchea con nuestro
+        // payment_sessions.psp_transaction_id.
+        String rawBody = "{\"invoice_id\":42,\"payment_id\":99,\"order_id\":\"UUID-abc\",\"payment_status\":\"waiting\"}";
         WebhookEvent evt = provider.parseWebhook(rawBody.getBytes(StandardCharsets.UTF_8));
 
         assertNotNull(evt);
-        assertEquals("42", evt.getProviderPaymentId());
+        assertEquals("42", evt.getProviderPaymentId()); // invoice_id, no payment_id
         assertEquals("UUID-abc", evt.getOrderId());
         assertEquals(PaymentStatus.PENDING, evt.getPaymentStatus());
         assertEquals("waiting", evt.getRawPaymentStatus());
@@ -204,7 +208,7 @@ class NowPaymentsPaymentProviderTest {
     @Test
     @DisplayName("parseWebhook: eventId sintético es determinista (mismo body → mismo id)")
     void parse_webhook_event_id_deterministic() {
-        String rawBody = "{\"payment_id\":\"1\",\"order_id\":\"o\",\"payment_status\":\"finished\"}";
+        String rawBody = "{\"invoice_id\":1,\"order_id\":\"o\",\"payment_status\":\"finished\"}";
         WebhookEvent e1 = provider.parseWebhook(rawBody.getBytes(StandardCharsets.UTF_8));
         WebhookEvent e2 = provider.parseWebhook(rawBody.getBytes(StandardCharsets.UTF_8));
         assertEquals(e1.getProviderEventId(), e2.getProviderEventId());
@@ -213,11 +217,12 @@ class NowPaymentsPaymentProviderTest {
     // ==================== verifyWebhookSignature (end-to-end con verifier real) ====================
 
     @Test
-    @DisplayName("verifyWebhookSignature OK con firma calculada y header lowercase")
+    @DisplayName("verifyWebhookSignature OK con firma calculada sobre rawBody y header lowercase")
     void verify_webhook_signature_valid() {
-        String rawBody = "{\"payment_status\":\"finished\",\"payment_id\":\"42\"}";
-        String canonical = signatureVerifier.canonicalize(rawBody.getBytes(StandardCharsets.UTF_8));
-        String sig = HmacSha512.hexHmacSha512(props.getIpnSecret(), canonical.getBytes(StandardCharsets.UTF_8));
+        // Fase 4h: firma se calcula sobre rawBody directamente, sin
+        // canonicalizar.
+        String rawBody = "{\"payment_status\":\"finished\",\"invoice_id\":42}";
+        String sig = HmacSha512.hexHmacSha512(props.getIpnSecret(), rawBody.getBytes(StandardCharsets.UTF_8));
 
         Map<String, String> headers = new HashMap<>();
         headers.put("x-nowpayments-sig", sig);

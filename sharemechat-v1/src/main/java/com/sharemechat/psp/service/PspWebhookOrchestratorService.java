@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -93,7 +94,12 @@ public class PspWebhookOrchestratorService {
         boolean signatureValid = provider.verifyWebhookSignature(safeBytes, headers);
         if (!signatureValid) {
             persistRejection(providerKey, rawBodyStr, "invalid_signature");
-            log.warn("[PSP-WEBHOOK] firma invalida provider={}", providerKey);
+            // Debug info sin exponer secretos: primeros chars del header
+            // recibido (para saber si llego o no) + SHA-256 del body
+            // (para poder reproducir la firma manualmente en debug).
+            String sigHeaderShort = firstHeaderChars(headers, 12);
+            log.warn("[PSP-WEBHOOK] firma invalida provider={} bodyLen={} sigHeaderPrefix='{}' bodySha256={}",
+                    providerKey, safeBytes.length, sigHeaderShort, shortSha256(safeBytes));
             return true; // el rechazo se persiste; controller responde 200 para no incentivar retries
         }
 
@@ -226,6 +232,40 @@ public class PspWebhookOrchestratorService {
             webhookEventRepository.save(ev);
         } catch (Exception ex) {
             log.error("[PSP-WEBHOOK] persist rejection FAIL provider={}: {}", providerKey, ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Busca en el mapa de headers (case-insensitive) alguna cabecera que
+     * empiece por "x-*-sig" y devuelve los primeros N chars del valor.
+     * Solo para logs de debug - nunca imprimir la firma completa.
+     */
+    private String firstHeaderChars(Map<String, String> headers, int n) {
+        if (headers == null) return "null";
+        for (Map.Entry<String, String> e : headers.entrySet()) {
+            String k = e.getKey();
+            if (k == null) continue;
+            String kl = k.toLowerCase(Locale.ROOT);
+            if (kl.startsWith("x-") && kl.contains("sig")) {
+                String v = e.getValue();
+                if (v == null) return "null-value";
+                return v.length() <= n ? v : v.substring(0, n) + "...";
+            }
+        }
+        return "missing";
+    }
+
+    private String shortSha256(byte[] bytes) {
+        try {
+            byte[] hash = java.security.MessageDigest.getInstance("SHA-256").digest(bytes);
+            StringBuilder sb = new StringBuilder(16);
+            for (int i = 0; i < 8 && i < hash.length; i++) {
+                sb.append(Character.forDigit((hash[i] >> 4) & 0xF, 16));
+                sb.append(Character.forDigit(hash[i] & 0xF, 16));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return "sha-err";
         }
     }
 

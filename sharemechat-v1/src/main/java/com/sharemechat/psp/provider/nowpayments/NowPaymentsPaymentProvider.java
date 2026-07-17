@@ -101,7 +101,13 @@ public class NowPaymentsPaymentProvider implements PaymentProvider {
         try {
             JsonNode root = MAPPER.readTree(rawBody);
 
-            String paymentId = textOrNull(root, "payment_id");
+            // NOWPayments usa invoice_id como identificador estable del
+            // contenedor de pago; payment_id es el intento concreto dentro
+            // de esa invoice (cambia si el cliente reintenta con otra red).
+            // Nuestro psp_transaction_id guarda el invoice_id que devolvio
+            // POST /v1/invoice al crear el checkout - por eso el webhook
+            // debe matchear por invoice_id.
+            String paymentId = textOrNull(root, "invoice_id");
             String orderId = textOrNull(root, "order_id");
             String rawStatus = textOrNull(root, "payment_status");
             String eventType = null; // NOWPayments no expone event_type distinto; usamos payment_status
