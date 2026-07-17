@@ -484,6 +484,246 @@ Estos puntos están **fuera del alcance validado** en esta iteración. Hasta que
 
 Reversión inmediata sin redeploy: setear `PRODUCT_ACCESS_MODE=OPEN`, ajustar las flags de registro según la operación requerida y mantener `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` salvo uso interno explícito en TEST; después reiniciar el backend.
 
+## Runbook de petición GDPR art. 15 (derecho de acceso del interesado)
+
+Cierra la deuda `#D-15` documentada en `07-roadmap/current-phase.md` como *"obligatorio pre-go-live PROD"*. Redactado 2026-07-17 como parte de la nivelación PROD ADR-050+ADR-051, sin haber recibido aún petición real. Aplica idéntico a TEST/AUDIT/PROD porque el schema BD es el mismo; las diferencias por entorno son el endpoint RDS y el prefijo `authrisk.env` de las peticiones ya respondidas.
+
+### Marco
+
+Cualquier interesado (usuario registrado o persona física identificable en la BD) puede ejercer el derecho de acceso reconocido por el art. 15 del Reglamento (UE) 2016/679 (GDPR). SharemeChat responde en plazo legal con un extracto completo de los datos personales que trata, propósito, retención, destinatarios y categorías.
+
+**Plazo legal**: 1 mes desde la recepción de la petición. Extensible a 3 meses cuando la petición sea compleja o múltiple, notificando la extensión al solicitante en el primer mes. La respuesta es **gratuita** salvo peticiones manifiestamente infundadas o excesivas (art. 12.5). Superado el plazo sin respuesta, riesgo de multa GDPR (hasta 20 M€ o 4% facturación anual global, art. 83.5).
+
+**Responsable**: DPO (Delegado de Protección de Datos) de Shareme Technologies OÜ. Rol pendiente de designación formal antes de la apertura pública de PROD (parte del bloqueante compliance-deliverables). Hasta la designación, el operador único cubre este rol de facto — la petición se responde bajo la firma corporativa.
+
+**Canal de recepción**: correo `contact@sharemechat.com`. Peticiones por otros canales (chat soporte, formulario web, WhatsApp) se redirigen a ese correo para tener trazabilidad escrita.
+
+### Flujo operativo
+
+#### Paso 1 — Recepción y acuse
+
+Al recibir la petición, responder en 72 h con acuse de recibo (aunque el fondo se responda más tarde):
+
+- confirmar recepción, plazo máximo (1 mes desde la fecha de recepción), canal por el que llegará la respuesta.
+- pedir verificación de identidad si aún no la ha aportado (siguiente paso).
+- no pedir información adicional innecesaria (principio de minimización art. 5.1.c).
+
+#### Paso 2 — Verificación de identidad del solicitante
+
+Nunca entregar datos sin certeza razonable de que quien pide es quien dice ser. **Comprobación mínima obligatoria**:
+
+- que el correo de la petición coincida con el `email` en `users` para la cuenta reclamada.
+- que el solicitante confirme un dato interno no público de su cuenta (ej. fecha aproximada del último pago, id de una transacción reciente, apodo elegido) que se pueda contrastar con la BD.
+
+Si hay duda razonable (dominios de correo similares, historial reciente de tickets de fraude asociado a esa cuenta, o discrepancias en el flow anti-riesgo), exigir **documento de identidad válido** (mismo tipo aceptado por el KYC del proyecto). Comparar contra `client_documents` / `model_documents` (KYC ya aprobado).
+
+**No exigir DNI si la verificación estándar es suficiente** — es petición gratuita y no queremos añadir fricción indebida.
+
+Registrar la verificación aplicada en el registro auditable (paso 8).
+
+#### Paso 3 — Localizar el `user_id`
+
+Una vez verificada la identidad, resolver el `user_id` interno:
+
+```sql
+SELECT id, email, role, verification_status, created_at
+FROM users
+WHERE email = :email_solicitante
+LIMIT 1;
+```
+
+Si `role = ADMIN` o el usuario está en `user_backoffice_roles`, tratar la petición con especial cuidado (empleado interno también tiene derecho de acceso, pero las categorías cambian).
+
+#### Paso 4 — Extracción de datos por categoría
+
+Ejecutar el bloque SQL correspondiente al `role` real del usuario. Todas las queries usan `:userId` como parámetro; el DPO reemplaza al ejecutar. Rutas de acceso a RDS documentadas en [access-and-tooling.md](access-and-tooling.md) sección "Túnel a RDS".
+
+##### 4.a Identidad y cuenta (todos los roles)
+
+```sql
+SELECT * FROM users               WHERE id = :userId;
+SELECT * FROM user_languages      WHERE user_id = :userId;
+SELECT * FROM consent_events      WHERE user_id = :userId ORDER BY created_at;
+SELECT * FROM email_verification_tokens WHERE user_id = :userId;
+SELECT * FROM password_reset_tokens     WHERE user_id = :userId;
+SELECT * FROM unsubscribe               WHERE user_id = :userId OR email = :email;
+```
+
+Nota: NO incluir en la exportación los hashes de tokens ni el hash de contraseña; el interesado tiene derecho a saber que existen pero no al valor bruto.
+
+##### 4.b Cliente (`role = CLIENT` o `USER` promocionable)
+
+```sql
+SELECT * FROM clients                WHERE user_id = :userId;
+SELECT * FROM balances               WHERE user_id = :userId ORDER BY created_at;
+SELECT * FROM transactions           WHERE user_id = :userId ORDER BY timestamp;
+SELECT * FROM payment_sessions       WHERE user_id = :userId ORDER BY created_at;
+SELECT * FROM psp_webhook_events     WHERE provider_payment_id IN (
+    SELECT psp_transaction_id FROM payment_sessions WHERE user_id = :userId
+);
+SELECT * FROM refund_requests        WHERE user_id = :userId;
+SELECT * FROM client_documents       WHERE user_id = :userId;    -- KYC subido
+SELECT * FROM kyc_sessions           WHERE user_id = :userId;
+SELECT * FROM kyc_webhook_events     WHERE session_id IN (SELECT id FROM kyc_sessions WHERE user_id = :userId);
+SELECT * FROM favorites_models       WHERE client_user_id = :userId;
+SELECT * FROM user_trial_streams     WHERE user_id = :userId;
+```
+
+##### 4.c Modelo (`role = MODEL`)
+
+```sql
+SELECT * FROM models                     WHERE user_id = :userId;
+SELECT * FROM model_documents            WHERE user_id = :userId;   -- KYC subido
+SELECT * FROM model_assets               WHERE user_id = :userId;
+SELECT * FROM model_asset_reviews        WHERE model_user_id = :userId;
+SELECT * FROM model_review_checklist     WHERE model_user_id = :userId;
+SELECT * FROM model_contract_acceptances WHERE user_id = :userId;
+SELECT * FROM model_earning_tiers        WHERE model_user_id = :userId;
+SELECT * FROM model_tier_daily_snapshots WHERE model_user_id = :userId;
+SELECT * FROM payout_requests            WHERE model_user_id = :userId;
+SELECT * FROM home_featured_models       WHERE model_user_id = :userId;
+SELECT * FROM affiliate_link_tokens      WHERE model_user_id = :userId;
+SELECT * FROM affiliate_commissions      WHERE affiliate_user_id = :userId;
+SELECT * FROM affiliate_click_events     WHERE affiliate_user_id = :userId;
+SELECT * FROM favorites_clients          WHERE model_user_id = :userId;
+```
+
+##### 4.d Actividad de streaming (ambos roles)
+
+```sql
+-- Sesiones donde participó (como client o model)
+SELECT * FROM stream_records
+WHERE client_user_id = :userId OR model_user_id = :userId
+ORDER BY start_time;
+
+-- Estados y eventos técnicos de esas sesiones
+SELECT sse.* FROM stream_status_events sse
+JOIN stream_records sr ON sr.id = sse.stream_record_id
+WHERE sr.client_user_id = :userId OR sr.model_user_id = :userId;
+
+-- Moderación (frames, decisiones, liveness challenges)
+SELECT sms.* FROM stream_moderation_sessions sms
+JOIN stream_records sr ON sr.id = sms.stream_record_id
+WHERE sr.client_user_id = :userId OR sr.model_user_id = :userId;
+
+SELECT smr.* FROM stream_moderation_reviews smr
+JOIN stream_records sr ON sr.id = smr.stream_record_id
+WHERE sr.client_user_id = :userId OR sr.model_user_id = :userId;
+
+SELECT * FROM liveness_attempts WHERE user_id = :userId;
+
+SELECT * FROM stream_moderation_events  WHERE user_id = :userId;
+SELECT * FROM stream_moderation_attendance WHERE user_id = :userId;
+```
+
+##### 4.e Comunicaciones (P2P + soporte)
+
+```sql
+-- Mensajes P2P donde participó (como emisor)
+SELECT * FROM messages WHERE sender_user_id = :userId ORDER BY sent_at;
+
+-- Mensajes P2P donde participó (como receptor) -- ver nota 4.g
+SELECT * FROM messages WHERE recipient_user_id = :userId ORDER BY sent_at;
+
+-- Regalos enviados / recibidos
+SELECT * FROM gifts WHERE sender_user_id = :userId OR recipient_user_id = :userId
+ORDER BY created_at;
+
+-- Chat con soporte humano (ADR-046)
+SELECT * FROM support_conversations WHERE user_id = :userId ORDER BY created_at;
+SELECT sm.* FROM support_messages sm
+JOIN support_conversations sc ON sc.id = sm.conversation_id
+WHERE sc.user_id = :userId ORDER BY sm.created_at;
+```
+
+##### 4.f Compliance y control (ambos roles)
+
+```sql
+SELECT * FROM complaints              WHERE user_id = :userId;
+SELECT * FROM complaint_audit_log     WHERE user_id = :userId;
+SELECT * FROM moderation_reports      WHERE reporter_user_id = :userId OR reported_user_id = :userId;
+SELECT * FROM user_blocks             WHERE blocker_user_id = :userId OR blocked_user_id = :userId;
+SELECT * FROM refresh_tokens          WHERE user_id = :userId;  -- sesiones activas, valor hasheado
+```
+
+##### 4.g Actividad backoffice (solo si aplica)
+
+Si el usuario tiene rol backoffice (fila en `user_backoffice_roles`):
+
+```sql
+SELECT * FROM user_backoffice_roles       WHERE user_id = :userId;
+SELECT * FROM user_permission_overrides   WHERE user_id = :userId;
+SELECT * FROM backoffice_user_access      WHERE user_id = :userId;
+SELECT * FROM backoffice_access_audit_log WHERE user_id = :userId;
+SELECT * FROM backoffice_agent_profile      WHERE created_by_user_id = :userId;
+SELECT * FROM backoffice_agent_profile_grant WHERE granted_user_id = :userId;
+```
+
+#### Paso 5 — Datos de terceros que aparecen relacionados
+
+Muchas filas de las tablas anteriores contienen `user_id` de terceros (el otro participante en un stream, el emisor del mensaje, el agente que atendió el soporte). Tratamiento:
+
+- **NO entregar** el email, nombre real, DNI ni datos identificativos personales del tercero.
+- **SÍ entregar** el id interno del tercero (`user_id`), un apodo público si existe, y la naturaleza de la relación (rol, tipo de evento). El interesado tiene derecho a saber CON QUIÉN interactuó, no QUIÉN es la otra persona.
+- **Agentes de soporte humano** (ADR-046): entregar como *"agente de soporte"* usando el `assigned_profile_id` (identidad de servicio pública desacoplada del user real) y NUNCA el `assigned_agent_id` (identidad real interna).
+- **Mensajes recibidos** (`messages.recipient_user_id = :userId`): entregar cuerpo del mensaje + emisor abreviado + fecha, salvo que el emisor haya ejercido art. 17 (derecho al olvido); en tal caso mensaje anonimizado.
+
+#### Paso 6 — Empaquetado y entrega
+
+**Formato**: JSON estructurado por categoría (una carpeta por bloque 4.a-g), acompañado de un PDF índice legible en español explicando:
+
+- qué datos incluye cada bloque.
+- propósito legal del tratamiento por categoría.
+- período de retención documentado.
+- destinatarios habituales (KYC provider, PSP, moderación externa) referenciados en la política de privacidad.
+- fuente cuando el dato no proviene del interesado.
+- derechos adicionales (art. 16 rectificación, art. 17 supresión, art. 21 oposición, art. 20 portabilidad).
+
+**Documentos KYC** (`client_documents`, `model_documents`): entregar las imágenes originales que subió el interesado. NO entregar los resultados brutos del análisis biométrico del vendor (Didit) si el interesado no los tiene ya (fuente Didit).
+
+**Canal de entrega**: correo cifrado con contraseña de un solo uso enviada por canal separado (SMS al número verificado si existe; si no, la respuesta se entrega en URL descargable con expiración corta y contraseña).
+
+#### Paso 7 — Datos que NO se entregan
+
+- **Contraseñas y secretos**: hashes de password, tokens de refresh en claro, salt del auth-risk.
+- **Datos de terceros identificativos** (paso 5).
+- **Información derivada por moderación anti-abuso interna** que pudiera revelar heurísticas defensivas (scoring auth-risk detallado, tabla `stream_moderation_reviews.raw_response` si contiene payload interno del vendor).
+- **Metadatos técnicos irrelevantes** para el interesado (uuid internos de eventos WS, ids de sesiones expiradas).
+- **Datos que ya no existen**: si el usuario fue eliminado en el pasado por art. 17, indicar que "los datos ya fueron suprimidos en fecha X, no hay copia" — hay obligación de mantener el registro de la supresión pero no el dato suprimido.
+
+#### Paso 8 — Registro auditable de la respuesta
+
+Cada petición atendida se registra internamente para trazabilidad y para justificar cumplimiento en caso de auditoría de la AEPD (o autoridad equivalente):
+
+- id interno de la petición (correlativo).
+- fecha de recepción, fecha de acuse, fecha de respuesta final.
+- método de verificación aplicado en el paso 2.
+- categorías de datos entregadas.
+- destinatario (email + canal cifrado usado).
+- si se aplicó extensión de plazo, la fecha y motivo.
+
+Este registro NO vive en la BD del producto; vive en el sistema de gestión del DPO (por ahora, un fichero controlado por el operador único; a medio plazo, un CRM DPO dedicado).
+
+### Casos particulares
+
+- **Cuenta ya suprimida por art. 17** (derecho al olvido): responder que los datos ya no existen, aportar fecha aproximada de supresión, no hay copia recuperable. Si la supresión aún no se ha ejecutado (deuda técnica), aplicar art. 15 sobre los datos que sí existen.
+- **Interesado menor de edad**: SharemeChat es 18+, cualquier `user` con edad inferior es incidente de gate; escalar a compliance antes de responder.
+- **Petición manifiestamente infundada o repetitiva**: art. 12.5 permite cobrar un canon razonable o negarse. Documentar por qué es infundada. No abusar de esta cláusula.
+- **Contexto adversarial** (petición usada como intento de social engineering para obtener datos de otra cuenta): reforzar paso 2 con DNI + video-verificación adicional antes de responder.
+
+### Pendientes documentales fuera del alcance de este runbook
+
+- **Designación formal del DPO** con dirección física declarada. Bloqueante pre-go-live PROD documentado en `pre-mortem-launch-2026-07.md` §B.
+- **Política de privacidad pública** con los períodos de retención por categoría cerrados (referencia obligatoria en el bloque 6). Vive fuera de este runbook.
+- **Registro de tratamientos (RAT)** conforme al art. 30 GDPR. Documento organizativo separado.
+- **Playbook art. 17 (derecho al olvido)** y art. 20 (portabilidad). Runbooks hermanos a redactar en el mismo frente cuando surja la primera petición de cada tipo.
+- **Endpoint admin `/api/admin/gdpr/export`** que automatice las consultas del paso 4. Deuda técnica: mientras no exista, la ejecución es manual vía `mysqlsh` sobre el túnel RDS del entorno correspondiente. Ejecución trazable en el registro del paso 8.
+
+### Aplicabilidad por entorno
+
+- **TEST y AUDIT**: mismos runbook y queries. Las peticiones sobre estos entornos serían atípicas (no hay usuarios finales reales), pero el flujo se ejecuta idéntico para preservar el procedimiento. Útil para simulacros previos al primer caso real en PROD.
+- **PROD**: aplicable desde el momento que abra a usuarios finales reales. Hoy PROD está en `PRODUCT_ACCESS_MODE=PRELAUNCH`; el primer caso real llega cuando pase a `OPEN` (Fase 5 del roadmap go-live).
+
 ## Regla de saneado
 
 Si un runbook necesita un dato sensible concreto para ejecución operativa, ese dato no debe fijarse en este corpus; debe resolverse desde la fuente operativa correspondiente.
