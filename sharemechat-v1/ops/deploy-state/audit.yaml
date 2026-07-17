@@ -7,21 +7,21 @@
 #
 schema_version: 1
 frontend_product:
-  cloudfront_invalidation_id: I929AZL9KLWG9SUY5PHAURO1T6
+  cloudfront_invalidation_id: IEB8K7VIMJO1221K8EYYMXME9U
   verification:
-    method: deploy-frontend.ps1-live-build_2026-07-09T20:42:35Z
+    method: deploy-frontend.ps1-live-build_2026-07-17T17:02:27Z
     git_commit_provenance: recorded_by_deploy_script
     notes: Actualizado automaticamente por deploy-frontend.ps1 (Fase 1 paso 2a) tras smoke OK del propio script.
-  deployed_at: 2026-07-09T20:42:35Z
-  built_at: 2026-07-09T20:42:35Z
-  bundle_sha256: 4e4974b81b9215aed7eb5e878c1328167d4375bdb3749304d28bedc3de367c78
-  git_commit_short: 3c36fcc
-  git_commit: 3c36fcc944858a30272707ac827197103a61635f
+  deployed_at: 2026-07-17T17:02:27Z
+  built_at: 2026-07-17T17:02:27Z
+  bundle_sha256: cb068c7ec4f08f1723c795496882f22d99b5573f5fe2b7af00e951fee5b1f1be
+  git_commit_short: c19f88a
+  git_commit: c19f88a3cc3e4ca2bb19826412da1c319b5f6ad9
   cloudfront_distribution: E1ILXV7P6ENUV8
   deployed_by: alain@LAPTOP-8UEIKVUT
   working_tree_clean: true
   bucket: sharemechat-frontend-audit
-  bundle: main.7ef36d6c.js
+  bundle: main.827f160d.js
 last_update_source: deploy-frontend.ps1-fase1-paso2a
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: audit
@@ -29,18 +29,18 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: audit-backend
-  deployed_at: 2026-07-09T20:10:00Z
-  jar_sha256: 05d52c29adadebdccc77ee4008b51da40edbe3bdaa3fcbdf23edebbf6ff270cf
+  deployed_at: 2026-07-17T17:01:52Z
+  jar_sha256: bfa57462f5bea5ca6d4d093cc1631eec322e99b0627d9458d49a5d653b57b0bd
   verification:
-    method: manual_scp+ssh_sha256_verified
-    verified_at: 2026-07-09T20:10:00Z
-    notes: 'Nivelacion AUDIT 2026-07-09: JAR construido a partir de commit c4f58ce (mismo build que TEST manifest test.yaml jar_sha256 05d52c29). Manifest editado a mano porque HEAD del repo al ejecutar la nivelacion es 3c36fcc (docs pivote posteriores, sin codigo funcional entre c4f58ce y HEAD). update-manifest-backend.ps1 asume HEAD=commit del JAR y no aplica en este caso. SHA verificado local vs remoto con sha256sum.'
-  built_at: 2026-07-09T00:43:00Z
+    method: manual_via_update-manifest-backend.ps1+remote-verify
+    verified_at: 2026-07-17T17:01:52Z
+    notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
+  built_at: 2026-07-17T17:01:52Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-audit.service
-  git_commit: c4f58cec7369ddbf660aa557328161f336349cc0
-  git_commit_short: c4f58ce
-last_updated_at: 2026-07-09T20:42:35Z
+  git_commit: c19f88a3cc3e4ca2bb19826412da1c319b5f6ad9
+  git_commit_short: c19f88a
+last_updated_at: 2026-07-17T17:02:27Z
 frontend_admin:
   cloudfront_invalidation_id: I8NY3KPNE8DF7ZZTC82B9LLHL1
   verification:
