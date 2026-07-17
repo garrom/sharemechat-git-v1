@@ -3,25 +3,66 @@
 // via webhook del vendor de forma asincrona; hacemos polling al backend
 // hasta ver status=SUCCESS o timeout. Ownership guardado por el backend
 // (solo el dueno de la sesion puede leerla).
+//
+// Fase 4h fix: estilos inline explicitos (fondo blanco garantizado)
+// tras detectar en test end-to-end que ForgotResetPassStyles renderizaba
+// invisible sobre el layout publico del checkout.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import i18n from '../i18n';
 import { useSession } from '../components/SessionProvider';
 import { getSessionStatus } from '../api/billingApi';
-import {
-  Container, Card, Title, Paragraph,
-  StatusOk, StatusErr, ButtonPrimary
-} from '../styles/public-styles/ForgotResetPassStyles';
 
 const POLL_INTERVAL_MS = 3000;
 const MAX_ATTEMPTS = 10; // 10 * 3s = 30s
+
+const wrapStyle = {
+  minHeight: '80vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: '32px 16px',
+  background: '#f5f6f8',
+};
+const cardStyle = {
+  width: '100%',
+  maxWidth: 480,
+  background: '#ffffff',
+  border: '1px solid #e1e4e8',
+  borderRadius: 12,
+  boxShadow: '0 4px 16px rgba(0,0,0,0.08)',
+  padding: 32,
+  color: '#1a1f2e',
+  textAlign: 'center',
+};
+const titleStyle = { margin: '0 0 16px', fontSize: 22, fontWeight: 600, color: '#1a1f2e' };
+const pStyle = { margin: '0 0 12px', color: '#3a4152', lineHeight: 1.5 };
+const hintStyle = { fontSize: 13, color: '#6b7280', margin: '0 0 20px' };
+const okBoxStyle = {
+  padding: '14px 16px', borderRadius: 8, background: '#e6f4ea',
+  color: '#137333', border: '1px solid #b7e0c1', marginBottom: 16, fontWeight: 500,
+};
+const errBoxStyle = {
+  padding: '14px 16px', borderRadius: 8, background: '#fde7e9',
+  color: '#b3261e', border: '1px solid #f5c2c7', marginBottom: 16, fontWeight: 500,
+};
+const btnStyle = {
+  width: '100%', padding: '12px 16px', borderRadius: 8, border: 'none',
+  background: '#2f81f7', color: '#ffffff', fontSize: 15, fontWeight: 600,
+  cursor: 'pointer', marginTop: 8,
+};
+const spinnerStyle = {
+  width: 40, height: 40, borderRadius: '50%',
+  border: '3px solid #e1e4e8', borderTopColor: '#2f81f7',
+  margin: '8px auto 20px', animation: 'checkout-spin 0.9s linear infinite',
+};
 
 const CheckoutSuccessPage = () => {
   const t = useCallback((key, options) => i18n.t(key, options), []);
   const history = useHistory();
   const location = useLocation();
-  const { user, refresh: refreshSession } = useSession();
+  const { user } = useSession();
 
   const orderId = useMemo(
     () => new URLSearchParams(location.search).get('orderId') || '',
@@ -41,50 +82,32 @@ const CheckoutSuccessPage = () => {
 
     stopRef.current = false;
     attemptsRef.current = 0;
+    let timerId = null;
 
     const tick = async () => {
       if (stopRef.current) return;
       attemptsRef.current += 1;
       try {
         const data = await getSessionStatus(orderId);
+        if (stopRef.current) return;
         setSession(data);
-        if (data.status === 'SUCCESS') {
-          stopRef.current = true;
-          setPhase('success');
-          try { await refreshSession?.(); } catch { /* noop */ }
-          return;
-        }
-        if (data.status === 'FAILED') {
-          stopRef.current = true;
-          setPhase('failed');
-          return;
-        }
-        if (data.status === 'EXPIRED') {
-          stopRef.current = true;
-          setPhase('expired');
-          return;
-        }
+        if (data.status === 'SUCCESS') { stopRef.current = true; setPhase('success'); return; }
+        if (data.status === 'FAILED')  { stopRef.current = true; setPhase('failed');  return; }
+        if (data.status === 'EXPIRED') { stopRef.current = true; setPhase('expired'); return; }
       } catch (e) {
-        if (e?.status === 404) {
-          stopRef.current = true;
-          setPhase('notFound');
-          return;
-        }
+        if (e?.status === 404) { stopRef.current = true; setPhase('notFound'); return; }
       }
-      if (attemptsRef.current >= MAX_ATTEMPTS) {
-        stopRef.current = true;
-        setPhase('timeout');
-        return;
-      }
-      setTimeout(tick, POLL_INTERVAL_MS);
+      if (attemptsRef.current >= MAX_ATTEMPTS) { stopRef.current = true; setPhase('timeout'); return; }
+      timerId = setTimeout(tick, POLL_INTERVAL_MS);
     };
 
     tick();
 
     return () => {
       stopRef.current = true;
+      if (timerId) clearTimeout(timerId);
     };
-  }, [orderId, refreshSession]);
+  }, [orderId]);
 
   const goToDashboard = useCallback(() => {
     const role = user?.role || '';
@@ -94,70 +117,72 @@ const CheckoutSuccessPage = () => {
     else history.push('/');
   }, [history, user?.role]);
 
+  const packMinutes = session?.packId === 'P10' ? 10
+    : session?.packId === 'P20' ? 22
+    : session?.packId === 'P40' ? 44 : '';
+
   return (
-    <Container>
-      <Card>
-        <Title>{t('checkout.success.title')}</Title>
+    <div style={wrapStyle}>
+      <style>{`@keyframes checkout-spin { to { transform: rotate(360deg); } }`}</style>
+      <div style={cardStyle}>
+        <h2 style={titleStyle}>{t('checkout.success.title')}</h2>
 
         {phase === 'verifying' && (
           <>
-            <Paragraph>{t('checkout.success.verifying')}</Paragraph>
-            <Paragraph style={{ fontSize: 13, opacity: 0.75 }}>
-              {t('checkout.success.verifyingHint')}
-            </Paragraph>
+            <div style={spinnerStyle} />
+            <p style={pStyle}>{t('checkout.success.verifying')}</p>
+            <p style={hintStyle}>{t('checkout.success.verifyingHint')}</p>
           </>
         )}
 
         {phase === 'success' && (
           <>
-            <StatusOk role="status">
-              {t('checkout.success.confirmed', {
-                minutes: session?.packId === 'P10' ? 10 : session?.packId === 'P20' ? 22 : session?.packId === 'P40' ? 44 : '',
-              })}
-            </StatusOk>
-            <ButtonPrimary type="button" onClick={goToDashboard}>
+            <div style={okBoxStyle} role="status">
+              {t('checkout.success.confirmed', { minutes: packMinutes })}
+            </div>
+            <button type="button" style={btnStyle} onClick={goToDashboard}>
               {t('checkout.success.backToAccount')}
-            </ButtonPrimary>
+            </button>
           </>
         )}
 
         {phase === 'failed' && (
           <>
-            <StatusErr role="alert">{t('checkout.success.failed')}</StatusErr>
-            <ButtonPrimary type="button" onClick={goToDashboard}>
+            <div style={errBoxStyle} role="alert">{t('checkout.success.failed')}</div>
+            <button type="button" style={btnStyle} onClick={goToDashboard}>
               {t('checkout.success.backToAccount')}
-            </ButtonPrimary>
+            </button>
           </>
         )}
 
         {phase === 'expired' && (
           <>
-            <StatusErr role="alert">{t('checkout.success.expired')}</StatusErr>
-            <ButtonPrimary type="button" onClick={goToDashboard}>
+            <div style={errBoxStyle} role="alert">{t('checkout.success.expired')}</div>
+            <button type="button" style={btnStyle} onClick={goToDashboard}>
               {t('checkout.success.backToAccount')}
-            </ButtonPrimary>
+            </button>
           </>
         )}
 
         {phase === 'timeout' && (
           <>
-            <Paragraph>{t('checkout.success.timeout')}</Paragraph>
-            <ButtonPrimary type="button" onClick={goToDashboard}>
+            <p style={pStyle}>{t('checkout.success.timeout')}</p>
+            <button type="button" style={btnStyle} onClick={goToDashboard}>
               {t('checkout.success.backToAccount')}
-            </ButtonPrimary>
+            </button>
           </>
         )}
 
         {phase === 'notFound' && (
           <>
-            <StatusErr role="alert">{t('checkout.success.notFound')}</StatusErr>
-            <ButtonPrimary type="button" onClick={goToDashboard}>
+            <div style={errBoxStyle} role="alert">{t('checkout.success.notFound')}</div>
+            <button type="button" style={btnStyle} onClick={goToDashboard}>
               {t('checkout.success.backToAccount')}
-            </ButtonPrimary>
+            </button>
           </>
         )}
-      </Card>
-    </Container>
+      </div>
+    </div>
   );
 };
 
