@@ -25,21 +25,21 @@ last_update_source: update-manifest-backend.ps1-fase1-paso2b
 last_update_by: alain@LAPTOP-8UEIKVUT
 environment: prod
 backend:
-  working_tree_clean: true
+  working_tree_clean: false
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: prod-backend
-  deployed_at: 2026-07-18T09:22:03Z
-  jar_sha256: dd86ee495f89e880b80e4226d2bbf975755a9b8ebd5da7cfab1416d35f17386c
+  deployed_at: 2026-07-18T09:42:24Z
+  jar_sha256: 4b89dd2f79182bd44962deb1d735a21acebd8802361b6950ad0340058dbfa431
   verification:
     method: manual_via_update-manifest-backend.ps1+remote-verify
-    verified_at: 2026-07-18T09:22:03Z
+    verified_at: 2026-07-18T09:42:24Z
     notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-07-18T09:22:03Z
+  built_at: 2026-07-18T09:42:24Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-prod.service
-  git_commit: a937bd0364b8611127af97105af567ba2ff87ede
-  git_commit_short: a937bd0
-last_updated_at: 2026-07-18T09:22:03Z
+  git_commit: 30cbf8e85f348d0a208dc3917021cdcff1edd10f
+  git_commit_short: 30cbf8e
+last_updated_at: 2026-07-18T09:42:24Z
 frontend_admin:
   cloudfront_invalidation_id: I74NX1C2FOAKY46P8LJDES1LUE
   verification:
