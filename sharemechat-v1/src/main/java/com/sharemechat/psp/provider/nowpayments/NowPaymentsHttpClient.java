@@ -73,10 +73,18 @@ public class NowPaymentsHttpClient {
         if (req.getPayCurrency() != null && !req.getPayCurrency().isBlank()) {
             body.put("pay_currency", req.getPayCurrency());
         }
-        if (req.getPayCurrencies() != null && !req.getPayCurrencies().isEmpty()) {
+        if (props.isPayCurrenciesEnabled()
+                && req.getPayCurrencies() != null
+                && !req.getPayCurrencies().isEmpty()) {
             // ADR-051 Fase 5: lista blanca de monedas para el hosted
             // checkout. Formato NOWPayments: array de strings (mismos
             // codigos usados en el panel: "btc", "usdttrc20", etc.).
+            // Gate por property porque el SANDBOX no acepta este
+            // parametro (400 INVALID_REQUEST_PARAMS "pay_currencies is
+            // not allowed") — solo PROD lo soporta. TEST/AUDIT dejan
+            // la property en false y el usuario ve todas las criptos
+            // activas del panel vendor (pack chico puede topar con
+            // minimos, pero es entorno de prueba).
             body.put("pay_currencies", req.getPayCurrencies());
         }
         body.put("order_id", req.getOrderId());

@@ -58,6 +58,21 @@ public class NowPaymentsProperties {
     /** Timeout de lectura de respuesta del vendor (ms). */
     private int readTimeoutMs = 10000;
 
+    /**
+     * Si el adapter debe mandar el parametro {@code pay_currencies} al
+     * crear invoice (whitelist de criptos por pack, ADR-051 Fase 5.1).
+     * <p>PROD real acepta el parametro y filtra correctamente. **El
+     * sandbox NOWPayments (2026-07-18) responde 400 INVALID_REQUEST_PARAMS
+     * "pay_currencies is not allowed"**. Default {@code false} para que
+     * TEST/AUDIT (sandbox) funcionen out-of-the-box; PROD lo activa en
+     * su application-prod.properties.
+     * <p>El orquestador sigue siempre calculando el filtro por pack y
+     * ponendolo en el DTO {@link com.sharemechat.psp.dto.CreateInvoiceRequest};
+     * es el adapter quien decide si mandarlo al vendor o no. Regla
+     * vendor-agnostic intacta.
+     */
+    private boolean payCurrenciesEnabled = false;
+
     public boolean isEnabled() { return enabled; }
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
@@ -84,4 +99,7 @@ public class NowPaymentsProperties {
 
     public int getReadTimeoutMs() { return readTimeoutMs; }
     public void setReadTimeoutMs(int readTimeoutMs) { this.readTimeoutMs = readTimeoutMs; }
+
+    public boolean isPayCurrenciesEnabled() { return payCurrenciesEnabled; }
+    public void setPayCurrenciesEnabled(boolean payCurrenciesEnabled) { this.payCurrenciesEnabled = payCurrenciesEnabled; }
 }
