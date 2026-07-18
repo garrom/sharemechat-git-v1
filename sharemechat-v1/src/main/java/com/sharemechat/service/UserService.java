@@ -44,6 +44,7 @@ public class UserService {
     private final BackofficeAccessService backofficeAccessService;
     private final com.sharemechat.config.PublicSiteProperties publicSiteProperties;
     private final AffiliateAttributionService affiliateAttributionService;
+    private final com.sharemechat.config.AdminNotificationProperties adminNotificationProperties;
     private static final Logger log = LoggerFactory.getLogger(UserService.class);
 
     @Autowired
@@ -61,7 +62,8 @@ public class UserService {
                        AgeGatePolicyService ageGatePolicyService,
                        BackofficeAccessService backofficeAccessService,
                        com.sharemechat.config.PublicSiteProperties publicSiteProperties,
-                       AffiliateAttributionService affiliateAttributionService) {
+                       AffiliateAttributionService affiliateAttributionService,
+                       com.sharemechat.config.AdminNotificationProperties adminNotificationProperties) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtUtil = jwtUtil;
@@ -77,6 +79,7 @@ public class UserService {
         this.backofficeAccessService = backofficeAccessService;
         this.publicSiteProperties = publicSiteProperties;
         this.affiliateAttributionService = affiliateAttributionService;
+        this.adminNotificationProperties = adminNotificationProperties;
     }
 
     @Transactional
@@ -218,6 +221,8 @@ public class UserService {
             );
         }
 
+        sendAdminNewRegistrationNoticeBestEffort(savedUser, /*isClient*/ true);
+
         // ADR-049 Subpasada 2B: si el registro llego con cookie de referral,
         // intentar atribuir al cliente a la modelo referidora. El flujo interno
         // (attribution + favorito + evento REGISTERED + bono) es transaccional;
@@ -350,6 +355,8 @@ public class UserService {
                     ex
             );
         }
+
+        sendAdminNewRegistrationNoticeBestEffort(savedUser, /*isClient*/ false);
 
         return mapToDTO(savedUser);
     }
@@ -682,6 +689,45 @@ public class UserService {
                 EmailMessage.Category.WELCOME,
                 EmailMessage.Priority.BEST_EFFORT
         ));
+    }
+
+    /**
+     * Notificacion INTERNA al buzon admin cuando alguien completa el
+     * formulario de registro (cliente o modelo). Best-effort: si el
+     * envio falla, se loguea WARN pero NO revierte el registro. Si la
+     * property destino esta vacia (default en TEST/AUDIT), se skipea
+     * sin ruido.
+     *
+     * <p>Introducido 2026-07-18 tras el primer registro real observado
+     * en PROD (usuario id 37).
+     */
+    private void sendAdminNewRegistrationNoticeBestEffort(User user, boolean isClient) {
+        String to = isClient
+                ? adminNotificationProperties.getNewClientEmail()
+                : adminNotificationProperties.getNewModelEmail();
+        if (to == null || to.isBlank()) {
+            // Property no configurada -> skip silencioso (comportamiento
+            // esperado en TEST/AUDIT donde no queremos spam del buzon).
+            return;
+        }
+        try {
+            String kindLabel = isClient ? "cliente" : "modelo";
+            String envHint = System.getenv("SPRING_PROFILES_ACTIVE");
+            EmailCopyRenderer.EmailContent content =
+                    emailCopyRenderer.renderAdminNewRegistration(user, kindLabel, envHint);
+            emailService.send(new EmailMessage(
+                    to,
+                    content.subject(),
+                    content.body(),
+                    isClient
+                            ? EmailMessage.Category.ADMIN_NEW_CLIENT_REGISTERED
+                            : EmailMessage.Category.ADMIN_NEW_MODEL_REGISTERED,
+                    EmailMessage.Priority.BEST_EFFORT
+            ));
+        } catch (Exception ex) {
+            log.warn("ADMIN_NEW_REGISTRATION_NOTICE failed userId={} isClient={} to={} err={}",
+                    user != null ? user.getId() : null, isClient, to, ex.getMessage(), ex);
+        }
     }
 
     //EMAIL

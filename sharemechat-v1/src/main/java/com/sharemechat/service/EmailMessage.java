@@ -66,7 +66,16 @@ public record EmailMessage(
         // BEST_EFFORT: fallo del envio NO revierte la atribucion en BD.
         // Copy en `renderReferralInvitation` (ES/EN), tambien pendiente de
         // revision editorial (mismo item de known-debt).
-        REFERRAL_INVITATION
+        REFERRAL_INVITATION,
+        // Notificacion INTERNA al equipo (admin+clientes@ o admin+modelos@)
+        // cuando alguien completa el formulario publico de registro. Copy
+        // en ES fijo (destinatario interno hispanohablante). Priority
+        // BEST_EFFORT: fallo del envio NO revierte el registro. Direccion
+        // destino configurable via notifications.admin.new-client-email /
+        // new-model-email; si la property viene vacia, el envio se skipea
+        // (comportamiento por defecto en TEST/AUDIT).
+        ADMIN_NEW_CLIENT_REGISTERED,
+        ADMIN_NEW_MODEL_REGISTERED
     }
 
     public enum Priority {

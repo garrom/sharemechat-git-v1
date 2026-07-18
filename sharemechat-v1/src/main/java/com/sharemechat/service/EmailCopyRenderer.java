@@ -669,6 +669,56 @@ public class EmailCopyRenderer {
         );
     }
 
+    /**
+     * Notificacion INTERNA al equipo cuando se completa un registro
+     * publico. El destinatario es un buzon admin (admin+clientes@ o
+     * admin+modelos@), no el usuario que se acaba de registrar. Copy en
+     * ES fijo (destinatario interno hispanohablante); no depende del
+     * ui_locale del usuario registrado.
+     *
+     * <p>Incluye los metadatos utiles para triage manual: nickname,
+     * email, pais detectado, IP de registro, ui_locale, tipo (cliente/
+     * modelo) y entorno actual (deducido del hint SPRING_PROFILES_ACTIVE).
+     * El nickname y email se escapan HTML (defensa en profundidad, misma
+     * politica que renderWelcome / renderAccountAlreadyExistsNotice).
+     *
+     * @param user            Usuario recien creado y ya persistido.
+     * @param kindLabel       "cliente" o "modelo" (para el asunto y el
+     *                        cuerpo). El caller decide segun user.userType.
+     * @param envHint         "test"/"audit"/"prod"/"?" (para saber de
+     *                        que entorno viene el aviso). Best-effort.
+     */
+    public EmailContent renderAdminNewRegistration(User user, String kindLabel, String envHint) {
+        String nickname   = htmlEscape(safeLabel(user));
+        String email      = htmlEscape(user != null && user.getEmail() != null ? user.getEmail() : "");
+        String country    = htmlEscape(user != null && user.getCountryDetected() != null ? user.getCountryDetected() : "-");
+        String ip         = htmlEscape(user != null && user.getRegistIp() != null ? user.getRegistIp() : "-");
+        String uiLocale   = htmlEscape(user != null && user.getUiLocale() != null ? user.getUiLocale() : "-");
+        String createdAt  = user != null && user.getCreatedAt() != null ? user.getCreatedAt().toString() : "-";
+        String userId     = user != null && user.getId() != null ? user.getId().toString() : "-";
+        String kind       = htmlEscape(kindLabel == null ? "-" : kindLabel);
+        String env        = htmlEscape(envHint == null || envHint.isBlank() ? "?" : envHint);
+
+        String subject = "[SharemeChat/" + envHint + "] Nuevo registro de " + kindLabel + " (" + safeLabel(user) + ")";
+
+        String body = wrapWithLogo("""
+                <p>Se ha completado un nuevo registro de <b>%s</b>.</p>
+                <table role="presentation" cellpadding="4" cellspacing="0" border="0" style="border-collapse:collapse; font-family: Arial, Helvetica, sans-serif; font-size: 13px;">
+                  <tr><td style="color:#64748b;">Entorno</td><td><b>%s</b></td></tr>
+                  <tr><td style="color:#64748b;">userId</td><td>%s</td></tr>
+                  <tr><td style="color:#64748b;">Nickname</td><td>%s</td></tr>
+                  <tr><td style="color:#64748b;">Email</td><td>%s</td></tr>
+                  <tr><td style="color:#64748b;">Pais detectado</td><td>%s</td></tr>
+                  <tr><td style="color:#64748b;">IP registro</td><td>%s</td></tr>
+                  <tr><td style="color:#64748b;">ui_locale</td><td>%s</td></tr>
+                  <tr><td style="color:#64748b;">created_at</td><td>%s</td></tr>
+                </table>
+                <p style="color:#64748b; font-size:12px;">Notificacion automatica del backend. No responder.</p>
+                """.formatted(kind, env, userId, nickname, email, country, ip, uiLocale, createdAt));
+
+        return new EmailContent(subject, body);
+    }
+
     private String safeLabel(User user) {
         if (user != null && user.getNickname() != null && !user.getNickname().isBlank()) {
             return user.getNickname().trim();
