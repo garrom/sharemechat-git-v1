@@ -297,6 +297,115 @@ public class AdminService {
         return s;
     }
 
+    /**
+     * Embudo agregado clientes + modelos para el panel admin "Clientes
+     * y Modelos" (2026-07-18). Devuelve conteos por segmento (FORM_
+     * vs promocionados) + un breakdown del formulario de modelo por
+     * verification_status + los 10 mas recientes de cada segmento
+     * "form-only" que aun no aparecen en el panel Modelos actual.
+     *
+     * <p>Solo lectura, sin cache: 6 count(*) + 2 SELECT de 10 filas.
+     * Con indice sobre users(role) + users(user_type) es sub-milisegundo.
+     *
+     * <p>NO duplica lo que ya muestra AdminModelsPanel (KYC pending/
+     * approved/rejected + checklist front/back/selfie): aqui solo
+     * agregados y los form_model SIN sesion KYC iniciada.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> usersSegmentsOverview() {
+        Map<String, Object> out = new LinkedHashMap<>();
+
+        // -------- Clientes --------
+        long formClient   = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE role='USER' AND user_type='FORM_CLIENT'",
+                new MapSqlParameterSource(), Long.class);
+        long activeClient = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE role='CLIENT'",
+                new MapSqlParameterSource(), Long.class);
+        long totalClients = formClient + activeClient;
+        Map<String, Object> clients = new LinkedHashMap<>();
+        clients.put("total", totalClients);
+        clients.put("formClient", formClient);
+        clients.put("active", activeClient);
+        clients.put("activePct", pct(activeClient, totalClients));
+        out.put("clients", clients);
+
+        // -------- Modelos --------
+        long formModel   = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE role='USER' AND user_type='FORM_MODEL'",
+                new MapSqlParameterSource(), Long.class);
+        long activeModel = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE role='MODEL'",
+                new MapSqlParameterSource(), Long.class);
+        long totalModels = formModel + activeModel;
+
+        // Breakdown de FORM_MODEL por estado de verification (para saber
+        // cuantos ni siquiera empezaron el KYC vs cuantos ya lo abrieron
+        // pero no cerraron).
+        long noKyc = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE role='USER' AND user_type='FORM_MODEL' AND verification_status IS NULL",
+                new MapSqlParameterSource(), Long.class);
+        long kycPending = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE role='USER' AND user_type='FORM_MODEL' AND verification_status='PENDING'",
+                new MapSqlParameterSource(), Long.class);
+        long kycRejected = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE role='USER' AND user_type='FORM_MODEL' AND verification_status='REJECTED'",
+                new MapSqlParameterSource(), Long.class);
+
+        Map<String, Object> formModelBreakdown = new LinkedHashMap<>();
+        formModelBreakdown.put("noKyc", noKyc);
+        formModelBreakdown.put("kycPending", kycPending);
+        formModelBreakdown.put("kycRejected", kycRejected);
+
+        Map<String, Object> models = new LinkedHashMap<>();
+        models.put("total", totalModels);
+        models.put("formModel", formModel);
+        models.put("active", activeModel);
+        models.put("activePct", pct(activeModel, totalModels));
+        models.put("formModelBreakdown", formModelBreakdown);
+        out.put("models", models);
+
+        // -------- Listados recientes (solo campos publicos utiles) --------
+        String recentFormClientsSql =
+                "SELECT id, nickname, email, country_detected, ui_locale, regist_ip, created_at " +
+                "FROM users WHERE role='USER' AND user_type='FORM_CLIENT' " +
+                "ORDER BY created_at DESC LIMIT 10";
+        out.put("recentFormClients",
+                jdbc.query(recentFormClientsSql, new MapSqlParameterSource(),
+                        (rs, i) -> userRow(rs)));
+
+        // Solo los FORM_MODEL SIN KYC (los que si empezaron KYC ya
+        // se ven en el panel Modelos existente; no los duplicamos).
+        String recentFormModelsSql =
+                "SELECT id, nickname, email, country_detected, ui_locale, regist_ip, created_at " +
+                "FROM users WHERE role='USER' AND user_type='FORM_MODEL' AND verification_status IS NULL " +
+                "ORDER BY created_at DESC LIMIT 10";
+        out.put("recentFormModelsNoKyc",
+                jdbc.query(recentFormModelsSql, new MapSqlParameterSource(),
+                        (rs, i) -> userRow(rs)));
+
+        return out;
+    }
+
+    private static Map<String, Object> userRow(java.sql.ResultSet rs) throws java.sql.SQLException {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("id", rs.getLong("id"));
+        m.put("nickname", rs.getString("nickname"));
+        m.put("email", rs.getString("email"));
+        m.put("countryDetected", rs.getString("country_detected"));
+        m.put("uiLocale", rs.getString("ui_locale"));
+        m.put("registIp", rs.getString("regist_ip"));
+        java.sql.Timestamp ts = rs.getTimestamp("created_at");
+        m.put("createdAt", ts != null ? ts.toInstant().toString() : null);
+        return m;
+    }
+
+    private static String pct(long numerator, long denominator) {
+        if (denominator <= 0) return "0.0%";
+        double p = (numerator * 100.0) / denominator;
+        return String.format(java.util.Locale.US, "%.1f%%", p);
+    }
+
     @Transactional(readOnly = true)
     public List<Map<String, Object>> viewTable(String table, int limit) {
         if (table == null) throw new IllegalArgumentException("Tabla no permitida");

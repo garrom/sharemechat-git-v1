@@ -94,6 +94,14 @@ public class AdminController {
         return ResponseEntity.ok(adminService.reviewModel(userId, action));
     }
 
+    // Panel "Clientes y Modelos" (2026-07-18): embudo agregado
+    // FORM_CLIENT/CLIENT + FORM_MODEL/MODEL + listados de los recientes
+    // que aun no han avanzado (form-only sin pago / sin KYC).
+    @GetMapping("/users/segments")
+    public ResponseEntity<Map<String, Object>> usersSegments() {
+        return ResponseEntity.ok(adminService.usersSegmentsOverview());
+    }
+
     // GET /api/admin/finance/top-models?limit=10
     @GetMapping("/finance/top-models")
     public ResponseEntity<List<Map<String, Object>>> topModels(@RequestParam(defaultValue = "10") int limit) {
