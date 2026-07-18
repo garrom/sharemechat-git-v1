@@ -49,9 +49,8 @@ const AdminUsersPanel = () => {
     setBusy(true);
     setError('');
     try {
-      const res = await apiFetch('/admin/users/segments');
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
+      // apiFetch devuelve el JSON parseado (o lanza en !ok / red / 5xx).
+      const json = await apiFetch('/admin/users/segments');
       setData(json);
       setLoadedAt(new Date());
     } catch (e) {
