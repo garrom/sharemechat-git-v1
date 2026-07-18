@@ -18,6 +18,12 @@ export const AdminShell = styled.div`
   --admin-success-soft: #f4f7f4;
   --admin-warning-soft: #faf8f2;
   --admin-danger-soft: #f8f4f4;
+  /* Acentos pastel del sidebar (2026-07-18): 3 tonos por seccion +
+     uno para badges "hot". Contraste sobre #1f2933 verificado. */
+  --admin-accent-primary: #93b5e1;
+  --admin-accent-business: #a3d4b3;
+  --admin-accent-control: #f4c99b;
+  --admin-accent-hot: #e5a4b9;
   display: grid;
   grid-template-columns: 280px minmax(0, 1fr);
   min-height: 100vh;
@@ -102,11 +108,16 @@ export const SidebarSection = styled.div`
 `;
 
 export const SidebarSectionLabel = styled.div`
-  padding: 0 10px 6px;
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  padding: 12px 10px 6px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--admin-sidebar-muted);
+  color: #e2e8f0;
+  border-left: 3px solid ${({ $accent }) =>
+    $accent === 'business' ? 'var(--admin-accent-business)' :
+    $accent === 'control'  ? 'var(--admin-accent-control)'  :
+                             'var(--admin-accent-primary)'};
 
   @media (max-width: 1100px) {
     display: none;
@@ -121,6 +132,7 @@ export const SidebarNavButton = styled.button`
   gap: 4px;
   text-align: left;
   border: 1px solid ${({ $active }) => ($active ? '#c7d4e2' : 'transparent')};
+  border-left: 3px solid ${({ $active }) => ($active ? 'var(--admin-accent-primary)' : 'transparent')};
   border-radius: 12px;
   background: ${({ $active }) => ($active ? '#eef4fb' : 'transparent')};
   color: ${({ $active }) => ($active ? 'var(--admin-text)' : 'var(--admin-sidebar-text)')};

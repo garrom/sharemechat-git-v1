@@ -46,7 +46,7 @@ const AdminLayout = ({
 
       {sections.map((section) => (
         <SidebarSection key={section.label}>
-          <SidebarSectionLabel>{section.label}</SidebarSectionLabel>
+          <SidebarSectionLabel $accent={section.accent}>{section.label}</SidebarSectionLabel>
           {section.items.map((item) => (
             <SidebarNavButton
               key={item.key}

@@ -6,6 +6,7 @@ import { useSession } from '../../components/SessionProvider';
 import AdminActiveStreamsPanel from './AdminActiveStreamsPanel';
 import AdminAdministrationPanel from './AdminAdministrationPanel';
 import AdminGdprPanel from './AdminGdprPanel';
+import AdminUsersPanel from './AdminUsersPanel';
 import AdminAuditPanel from './AdminAuditPanel';
 import AdminDataPanel from './AdminDataPanel';
 import AdminFinancePanel from './AdminFinancePanel';
@@ -61,6 +62,10 @@ const DashboardAdmin = () => {
     operations: {
       title: t('admin.shell.views.operations.title'),
       subtitle: t('admin.shell.views.operations.subtitle'),
+    },
+    users: {
+      title: t('admin.users.title', { defaultValue: 'Clientes y Modelos' }),
+      subtitle: t('admin.users.subtitle', { defaultValue: 'Embudo de registros y conversion.' }),
     },
     models: {
       title: t('admin.shell.views.models.title'),
@@ -182,6 +187,7 @@ const DashboardAdmin = () => {
     const allowedViews = [
       'overview',
       capabilities.canViewStats || capabilities.canViewStreams ? 'operations' : null,
+      capabilities.canViewModels ? 'users' : null,
       capabilities.canViewModels ? 'models' : null,
       capabilities.canViewAssetModeration ? 'asset-moderation' : null,
       capabilities.canViewStreamModeration ? 'stream-moderation' : null,
@@ -237,6 +243,7 @@ const DashboardAdmin = () => {
     const sections = [
       {
         label: t('admin.shell.sections.primary.label'),
+        accent: 'primary',
         items: [
           {
             key: 'overview',
@@ -252,7 +259,13 @@ const DashboardAdmin = () => {
       },
       {
         label: t('admin.shell.sections.business.label'),
+        accent: 'business',
         items: [
+          capabilities.canViewModels ? {
+            key: 'users',
+            label: t('admin.users.sidebarLabel', { defaultValue: 'Clientes y Modelos' }),
+            meta: t('admin.users.sidebarMeta', { defaultValue: 'Registros y conversion' }),
+          } : null,
           capabilities.canViewModels ? {
             key: 'models',
             label: t('admin.shell.sections.business.items.models.label'),
@@ -303,6 +316,7 @@ const DashboardAdmin = () => {
       },
       {
         label: t('admin.shell.sections.control.label'),
+        accent: 'control',
         items: [
           capabilities.canViewAudit ? {
             key: 'control',
@@ -493,6 +507,15 @@ const DashboardAdmin = () => {
                 />
               )}
             </>
+          )}
+
+          {activeView === 'users' && capabilities.canViewModels && (
+            <AdminPage
+              title={viewCopy.users.title}
+              subtitle={viewCopy.users.subtitle}
+            >
+              <AdminUsersPanel />
+            </AdminPage>
           )}
 
           {activeView === 'models' && capabilities.canViewModels && (
