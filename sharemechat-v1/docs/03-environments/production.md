@@ -46,3 +46,19 @@ La intención de configuración para PROD es:
 - `PRODUCT_SIMULATION_TRANSACTIONS_DIRECT_ENABLED=false` siempre.
 
 Cualquier acreditación de saldo en PROD debe pasar por PSP validado. Los webhooks CCBill requieren verificación de firma y contrato operativo cerrado antes de circular dinero real.
+
+## Estado real 2026-07-18 — modo `PRELAUNCH` con vendors reales activos
+
+PROD operando en modo `PRODUCT_ACCESS_MODE=PRELAUNCH` desde su despliegue (Fase 1 del roadmap). El gate `ProductOperationalModeFilter` deja abiertos solo `POST /api/users/register/{client,model}` y `POST /api/auth/{login,refresh}`; todo el resto devuelve 503 con `X-Product-Mode=PRELAUNCH` y la SPA muestra `<PreLaunchScreen/>`.
+
+**Vendors reales activos** (retiro del override belt-and-suspenders ADR-045 completado el 2026-07-18 tras validación funcional en TEST/AUDIT):
+
+- **Didit** (ADR-035 KYC edad + identidad): `KYC_DIDIT_ENABLED=true` en `config.env` PROD. Workspace del operador está en producción real (no sandbox), api-key + webhook creados específicamente para PROD. Retención de datos = 6 meses (default panel Didit). Overrides retirados del `application-prod.properties` en commit `30cbf8e`.
+- **SightEngine** (ADR-037 moderación visual): `MODERATION_SIGHTENGINE_ENABLED=true`. Cuenta única compartida TEST/AUDIT/PROD. Override retirado en commit `5437025`.
+- **NOWPayments** (ADR-051 PSP cripto): `PSP_NOWPAYMENTS_ENABLED=true` con base-url `api.nowpayments.io/v1/`. Primer flujo real end-to-end validado por operador. Filtro `pay_currencies` por pack activo (P10 sin BTC).
+
+Cuando `PRODUCT_ACCESS_MODE` pase a `OPEN` (Fase 5 del roadmap), los tres vendors entran vivos automáticamente sin cambios de config.
+
+## Primer registro real en PROD (2026-06-30)
+
+Hito de negocio: 2026-06-30 22:34 UTC se completó el primer signup público real en PROD desde IP `77.111.246.51` (país detectado US, ui_locale `es`). Nickname `Zzzz`, email `miorenrir@tokmail.net` (verificado 22:36:41). Estado: `role=USER`, `user_type=FORM_CLIENT`, sin actividad posterior (esperable dado PRELAUNCH). Detectado 18 días después durante inspección manual — motivación directa para implementar el 2026-07-18 la notificación automática al buzón admin (ver `docs/05-backoffice/admin-operations.md` sección *Notificación al buzón admin en nuevos registros*) y el panel *Clientes y Modelos* (embudo agregado sin bajar a BD).
