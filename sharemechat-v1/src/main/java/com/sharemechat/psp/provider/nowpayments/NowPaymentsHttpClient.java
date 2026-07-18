@@ -73,6 +73,12 @@ public class NowPaymentsHttpClient {
         if (req.getPayCurrency() != null && !req.getPayCurrency().isBlank()) {
             body.put("pay_currency", req.getPayCurrency());
         }
+        if (req.getPayCurrencies() != null && !req.getPayCurrencies().isEmpty()) {
+            // ADR-051 Fase 5: lista blanca de monedas para el hosted
+            // checkout. Formato NOWPayments: array de strings (mismos
+            // codigos usados en el panel: "btc", "usdttrc20", etc.).
+            body.put("pay_currencies", req.getPayCurrencies());
+        }
         body.put("order_id", req.getOrderId());
         body.put("order_description", req.getOrderDescription());
         body.put("ipn_callback_url", req.getIpnCallbackUrl());

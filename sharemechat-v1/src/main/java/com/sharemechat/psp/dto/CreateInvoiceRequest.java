@@ -1,6 +1,7 @@
 package com.sharemechat.psp.dto;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * ADR-051 D1: DTO vendor-agnostic para crear un checkout hosted en el
@@ -36,6 +37,20 @@ public class CreateInvoiceRequest {
      */
     private final String payCurrency;
 
+    /**
+     * ADR-051 Fase 5 (2026-07-18): lista blanca de criptomonedas
+     * permitidas para ESTE pago concreto. NOWPayments filtra el
+     * selector del hosted checkout a las monedas de esta lista
+     * (parametro {@code pay_currencies} de POST /v1/invoice). Se usa
+     * para evitar que el cliente elija una moneda cuyo minimo
+     * exceda el precio del pack (p.ej. BTC no cabe en P10 = 10 EUR
+     * porque BTC minimo ronda 12-30 EUR segun cambio del momento).
+     * <p>{@code null} o lista vacia significa "el vendor deja elegir
+     * cualquiera de las activas en el panel" (comportamiento
+     * previo, ahora reservado para packs grandes o testing).
+     */
+    private final List<String> payCurrencies;
+
     /** URL absoluta de nuestro webhook IPN. */
     private final String ipnCallbackUrl;
 
@@ -47,12 +62,14 @@ public class CreateInvoiceRequest {
 
     public CreateInvoiceRequest(String orderId, String orderDescription,
                                 BigDecimal priceAmount, String priceCurrency, String payCurrency,
+                                List<String> payCurrencies,
                                 String ipnCallbackUrl, String successUrl, String cancelUrl) {
         this.orderId = orderId;
         this.orderDescription = orderDescription;
         this.priceAmount = priceAmount;
         this.priceCurrency = priceCurrency;
         this.payCurrency = payCurrency;
+        this.payCurrencies = payCurrencies;
         this.ipnCallbackUrl = ipnCallbackUrl;
         this.successUrl = successUrl;
         this.cancelUrl = cancelUrl;
@@ -63,6 +80,7 @@ public class CreateInvoiceRequest {
     public BigDecimal getPriceAmount() { return priceAmount; }
     public String getPriceCurrency() { return priceCurrency; }
     public String getPayCurrency() { return payCurrency; }
+    public List<String> getPayCurrencies() { return payCurrencies; }
     public String getIpnCallbackUrl() { return ipnCallbackUrl; }
     public String getSuccessUrl() { return successUrl; }
     public String getCancelUrl() { return cancelUrl; }

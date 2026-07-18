@@ -129,10 +129,15 @@ public class PspOrchestratorService {
         // que /checkout/success pueda leerlo de query y hacer polling.
         String successUrl = appendOrderId(baseUrls.getSuccessUrl(), orderId);
         String cancelUrl = appendOrderId(baseUrls.getCancelUrl(), orderId);
+        // ADR-051 Fase 5: filtrar criptos permitidas segun el pack para
+        // que el hosted checkout no ofrezca al cliente monedas cuyo
+        // minimo del vendor excede el precio del pack.
+        java.util.List<String> allowedCurrencies = allowedPayCurrenciesForPack(packKey);
         CreateInvoiceRequest req = new CreateInvoiceRequest(
                 orderId, description,
                 session.getAmount(), "eur",
-                null, // pay_currency null -> cliente elige moneda en hosted checkout
+                null, // pay_currency null -> cliente elige entre las de pay_currencies
+                allowedCurrencies,
                 baseUrls.getIpnCallbackUrl(),
                 successUrl,
                 cancelUrl
@@ -154,6 +159,47 @@ public class PspOrchestratorService {
                 userId, providerKey, orderId, vendorResult.getProviderPaymentId(), packKey, price);
 
         return new CheckoutResult(orderId, vendorResult.getInvoiceUrl(), session.getId());
+    }
+
+    /**
+     * ADR-051 Fase 5: filtra las criptos ofrecidas al cliente en el
+     * hosted checkout de NOWPayments segun el pack elegido, para evitar
+     * que el cliente elija una moneda cuyo minimo del vendor excede el
+     * precio del pack (comportamiento observado en sandbox 2026-07-17:
+     * BTC en P10 = 10 EUR -> "Crypto amount 0.00017823 is less than
+     * minimal", el hosted checkout muestra error y bloquea Next step).
+     *
+     * <p>Tabla al 2026-07-18 (segun observacion sandbox y politica
+     * conservadora):
+     * <ul>
+     *   <li><b>P10 (10 EUR)</b>: USDT-TRC20 + USDT-ERC20 + USDC-ERC20.
+     *       BTC excluido por minimo tipico ~12-30 EUR.</li>
+     *   <li><b>P20 (20 EUR)</b>: las 4 activas (BTC + USDT-TRC20 +
+     *       USDT-ERC20 + USDC-ERC20). BTC cabe con margen.</li>
+     *   <li><b>P40 (40 EUR)</b>: las 4 activas. Todas caben con margen
+     *       amplio.</li>
+     * </ul>
+     *
+     * <p>Los codigos son los de NOWPayments (mismos que aparecen en el
+     * panel "Criptomonedas" del vendor). Si el operador anade o quita
+     * monedas en el panel, esta lista debe reflejarlo para mantener
+     * coherencia.
+     *
+     * @return lista con los codigos NOWPayments permitidos; {@code null}
+     *         para cualquier packId no reconocido (deja al vendor
+     *         mostrar todas las activas del panel, fallback defensivo).
+     */
+    private java.util.List<String> allowedPayCurrenciesForPack(String packKey) {
+        if (packKey == null) return null;
+        switch (packKey) {
+            case "P10":
+                return java.util.List.of("usdttrc20", "usdterc20", "usdcerc20");
+            case "P20":
+            case "P40":
+                return java.util.List.of("btc", "usdttrc20", "usdterc20", "usdcerc20");
+            default:
+                return null;
+        }
     }
 
     /**

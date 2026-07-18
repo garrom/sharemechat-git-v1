@@ -146,7 +146,7 @@ class NowPaymentsPaymentProviderTest {
 
         CreateInvoiceRequest req = new CreateInvoiceRequest(
                 "UUID-1", "SharemeChat - Pack P10 (test)",
-                new BigDecimal("10.00"), "eur", null,
+                new BigDecimal("10.00"), "eur", null, null,
                 "https://test.sharemechat.com/api/webhooks/nowpayments/ipn",
                 "https://test.sharemechat.com/checkout/success",
                 "https://test.sharemechat.com/checkout/cancel");
@@ -164,7 +164,7 @@ class NowPaymentsPaymentProviderTest {
         when(httpClient.createInvoice(any(CreateInvoiceRequest.class))).thenReturn(fakeResp);
 
         CreateInvoiceRequest req = new CreateInvoiceRequest(
-                "UUID-2", "desc", new BigDecimal("10.00"), "eur", null,
+                "UUID-2", "desc", new BigDecimal("10.00"), "eur", null, null,
                 "ipn", "success", "cancel");
 
         assertThrows(PspException.class, () -> provider.createInvoice(req));
