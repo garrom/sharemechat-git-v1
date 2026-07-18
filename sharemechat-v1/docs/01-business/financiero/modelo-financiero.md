@@ -13,7 +13,7 @@
 El modelo cruza los volúmenes proyectados de tráfico (sesiones GA4 → signups → verificaciones → primeras compras → repeats) con la estructura de costes real:
 
 - **Costes fijos**: AWS (~€120/mes) + Companio (~€110/mes) + Sightengine live moderation plan Starter (~€27/mes) = **€257/mes**.
-- **Costes variables**: pagos a modelos (tier 5-15 base), Segpay (10% + €0.30), Didit verificación, demo gratis absorbida.
+- **Costes variables**: pagos a modelos (tier 5-15 base), CardBilling / Verotel (10% + €0.30), Didit verificación, demo gratis absorbida.
 - **Sin capital inicial**: cada mes en pérdida se cubre con nómina externa de Alain (no hay runway tradicional).
 
 ### Resultados a 19 meses (jun 2026 → dic 2027)
@@ -45,7 +45,7 @@ Sesiones GA4
             → Revenue bruto = TX × pack medio
             → Costes variables:
                - Pago a modelo: TX × €1.40 (tier 5-15)
-               - Segpay: TX × (precio × 10% + €0.30)
+               - CardBilling / Verotel: TX × (precio × 10% + €0.30)
                - Chargebacks: TX × 1% × €25
                - Didit clientes: verificados × €0.13
                - Demo gratis absorbida: signups × €0.30
@@ -69,7 +69,7 @@ El Excel companion (`modelo-financiero.xlsx`) contiene el desglose completo mes 
 ### Costes variables
 - Pack medio asumido: €10 pesimista / €12 normal.
 - Modelo en tier 5-15 (€0.05 primer min + €0.15 siguientes = €1.40/pack a la modelo).
-- Segpay: 10% + €0.30/TX + 1% chargebacks × €25. Valores estándar del sector adulto (a confirmar con contrato Segpay).
+- CardBilling / Verotel: 10% + €0.30/TX + 1% chargebacks × €25. Valores estándar del sector adulto (a confirmar con contrato CardBilling / Verotel).
 - Didit cliente: €0.13 ponderado (95% Age Estimation directa + 5% fallback documental).
 - Didit modelo: €0 efectivo (500 gratis/mes cubren el horizonte de 18m con flujo de ~5 modelos nuevas/mes).
 - Demo gratis: €0.30/signup absorbido (~9 min máx primer día × tarifa modelo ponderada).
@@ -129,7 +129,7 @@ Este modelo debe revisarse cuando se cumpla cualquiera de:
 
 1. **Mes 3 (sep 2026)**: revisión obligatoria. Comparar impresiones GSC reales vs proyección pesimista. Si están más cerca del normal, mantener plan. Si están en pesimista o por debajo, evaluar palancas.
 2. **Mes 6 (dic 2026)**: si las primeras compras reales están por debajo del pesimista en 3 meses consecutivos, **incorporar paid traffic** o pivotar.
-3. **Cuando se confirmen fees Segpay**: actualizar el 10% asumido con el contractual real.
+3. **Cuando se confirmen fees CardBilling / Verotel**: actualizar el 10% asumido con el contractual real.
 4. **Cuando se decida soft launch**: actualizar fechas y rehacer proyecciones desde ese mes.
 5. **Si los costes fijos cambian**: AWS reorganización, cambio de Companio, salto de Sightengine Starter → Pro (~€90/mes adicionales), etc.
 6. **Cuando Sightengine cruce el umbral económico o técnico**: si las sesiones pagadas/mes superan ~250 con cadencia 15s, o si hay >10 sesiones concurrentes pico, revisar el salto a plan Pro $99/mes.
@@ -142,7 +142,7 @@ Este modelo debe revisarse cuando se cumpla cualquiera de:
 1. **Mantener cadencia operativa actual** (blog 1/semana, social pipeline, Reddit warmup) sin alterar nada — el plan SEO se ejecuta tal como está documentado.
 2. **Monitorizar el tracking mensual** (`seo/tracking-mensual.md`) cada domingo en la revisión semanal P7.
 3. **Decidir fecha tentativa de soft launch** en mes 3 (sep 2026), una vez tengamos 3 meses de datos reales para calibrar tráfico real vs proyectado.
-4. **Confirmar fees Segpay** cuando se cierre el contrato y actualizar este documento.
+4. **Confirmar fees CardBilling / Verotel** cuando se cierre el contrato y actualizar este documento.
 5. **Evaluar palanca de paid traffic adulto** en mes 6 si los KPIs siguen en pesimista o por debajo.
 6. **No tocar el plan SEO** mientras los KPIs estén alineados con el escenario pesimista o mejor — es el escenario que ya hemos aceptado financieramente.
 

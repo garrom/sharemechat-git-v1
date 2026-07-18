@@ -40,9 +40,9 @@ La clasificación condiciona:
 
 - la arquitectura de verificación de edad e identidad (modelos y clientes), definida en [ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md)
 - la arquitectura del pipeline de moderación, definida en [ADR-030](../06-decisions/adr-030-moderation-pipeline-build-vs-rent.md)
-- la estrategia de PSP (Segpay como vía activa, principio de redundancia), descrita en [psp-strategy.md](psp-strategy.md)
+- la estrategia de PSP (CardBilling / Verotel como vía activa, principio de redundancia), descrita en [psp-strategy.md](psp-strategy.md)
 - los mercados servidos y el orden de activación, descritos en [geographic-strategy.md](geographic-strategy.md)
 
 ## Entregables accionables
 
-El listado operativo de obligaciones derivadas de la clasificación adult/streaming y del onboarding con Segpay vive en [compliance-deliverables.md](compliance-deliverables.md). Incluye declaración 2257, Records Custodian, las cinco políticas formales que el PSP exige, resolución de quejas en 5 días hábiles, reporting mensual + nil report, valoración de membresía ASACP, y DPIA + base jurídica para procesamiento biométrico bajo GDPR.
+El listado operativo de obligaciones derivadas de la clasificación adult/streaming y del onboarding con CardBilling / Verotel vive en [compliance-deliverables.md](compliance-deliverables.md). Incluye declaración 2257, Records Custodian, las cinco políticas formales que el PSP exige, resolución de quejas en 5 días hábiles, reporting mensual + nil report, valoración de membresía ASACP, y DPIA + base jurídica para procesamiento biométrico bajo GDPR.

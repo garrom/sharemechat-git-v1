@@ -55,7 +55,7 @@ El mecanismo técnico de bloqueo está definido en [ADR-007](../06-decisions/adr
 
 ## Implicaciones operativas
 
-- **PSP**: el PSP adult-specialist seleccionado (Segpay como vía activa, ver [psp-strategy.md](psp-strategy.md)) debe cubrir los mercados servidos. Si la cobertura geográfica del PSP no incluye algún mercado objetivo, el orden de activación se ajusta.
+- **PSP**: el PSP adult-specialist seleccionado (CardBilling / Verotel como vía activa, ver [psp-strategy.md](psp-strategy.md)) debe cubrir los mercados servidos. Si la cobertura geográfica del PSP no incluye algún mercado objetivo, el orden de activación se ajusta.
 - **Verificación de edad e identidad**: el flujo Didit (vendor único KYC consolidado en [ADR-035](../06-decisions/adr-035-age-and-identity-verification-vendor-consolidation-on-didit.md), arquitectura original en [ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md)) cubre los mercados objetivo. Cuando se active la oleada 2, hay que verificar que la lista de documentos y la cobertura idiomática del flujo soporta los nuevos mercados.
 - **Localización**: el beachhead anglófono no requiere trabajo adicional de localización. La oleada 2 sí. El backlog de i18n del producto (ver `pending-hardening.md`) se prioriza para los idiomas de la oleada 2 cuando se active.
 - **Reporting al PSP**: se hace agregado, no por mercado.
@@ -67,7 +67,7 @@ El mecanismo técnico de bloqueo está definido en [ADR-007](../06-decisions/adr
 - Si algún mercado del beachhead queda fuera por incompatibilidad con la cobertura del PSP final.
 - Cómo se gestiona la rotación de la lista cuando la regulación de un estado/país cambia.
 
-La selección concreta del go-live se cerró en [ADR-031](../06-decisions/adr-031-country-gating-go-live-prod.md). Las decisiones pendientes restantes (oleada 2, granularidad estatal US, reincorporación de UA/VE si Segpay confirma payouts) se documentarán como revisiones del propio ADR-031 o como ADRs sucesivos.
+La selección concreta del go-live se cerró en [ADR-031](../06-decisions/adr-031-country-gating-go-live-prod.md). Las decisiones pendientes restantes (oleada 2, granularidad estatal US, reincorporación de UA/VE si CardBilling / Verotel confirma payouts) se documentarán como revisiones del propio ADR-031 o como ADRs sucesivos.
 
 ## Idea operativa de fondo
 

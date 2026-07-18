@@ -2,16 +2,16 @@
 
 > **Nota interna (actualizada 2026-06-27, post Fase 2 del refactor de lenguaje)**: el posicionamiento operativo real de SharemeChat es **adult dating intimate 1-a-1 entre adultos verificados, con nudity consensual permitida**, alineado con Mastercard AN 5196, Visa Rule ID 0003356 y con la práctica de comparables del vertical (CooMeet, LuckyCrush, Chatspin). Dentro del régimen MCC adult/streaming de ADR-028 (cerrado, no se reabre), el matiz "adult dating intimate" describe la experiencia de usuario y la modalidad técnica (1-a-1 privado con KYC obligatorio Didit y moderación visual real-time delegada al workflow Sightengine), no la clasificación regulatoria.
 >
-> Tras el refactor de Fase 2 (commit ver bitácora 2026-06-27), el lenguaje del producto está alineado en tres frentes: (a) `frontend/src/footer/Legal.jsx` (público vivo, 8 tabs); (b) `docs/01-business/business-model.md`, `compliance-scope.md`, `product-overview.md` (docs internos); (c) `ops/legal-pdfs/generate_legal_pdfs.py` (script generador de los 8 PDFs entregables a Segpay).
+> Tras el refactor de Fase 2 (commit ver bitácora 2026-06-27), el lenguaje del producto está alineado en tres frentes: (a) `frontend/src/footer/Legal.jsx` (público vivo, 8 tabs); (b) `docs/01-business/business-model.md`, `compliance-scope.md`, `product-overview.md` (docs internos); (c) `ops/legal-pdfs/generate_legal_pdfs.py` (script generador de los 8 PDFs entregables a CardBilling / Verotel).
 >
 > **Lo que sigue pendiente** y por tanto este documento aún NO se reescribe:
 > - El Model Collaboration Agreement vivo (PDF `v4_2026-03-23` firmado por 18 modelos en TEST + cuentas en PROD/AUDIT) sigue con lenguaje del régimen previo. Su refactor exige bump v5, re-aceptación forzada y coordinación legal (sub-paquete R5 con deuda registrada en `known-debt.md` entrada 2026-06-27 puntos R5 / G4).
-> - Las cinco políticas formales que el PSP exige (§2 abajo) siguen como "estado PLANIFICADO" en este documento porque ninguna está aún firmada legalmente; existen como textos en `Legal.jsx` y en los PDFs generables por el script, pero la firma legal definitiva exige revisión por asesoría externa. Bloqueante para cerrar onboarding Segpay y para go-live público.
+> - Las cinco políticas formales que el PSP exige (§2 abajo) siguen como "estado PLANIFICADO" en este documento porque ninguna está aún firmada legalmente; existen como textos en `Legal.jsx` y en los PDFs generables por el script, pero la firma legal definitiva exige revisión por asesoría externa. Bloqueante para cerrar onboarding CardBilling / Verotel y para go-live público.
 > - Tracking de aceptación versionada de policies públicas (deuda G3): cuando `Legal.jsx` se modifique en el futuro, no hay flag forzando re-aceptación de usuarios existentes. Gap regulatorio para go-live PROD.
 >
 > Las tres pendencias viven como deudas estratégicas en `docs/04-operations/known-debt.md` entrada 2026-06-27. Este documento se mantiene direccional (lista accionable de obligaciones de compliance), no se convierte en cuerpo de las policies formales.
 
-Documento accionable que recoge las obligaciones operativas concretas derivadas de la clasificación adult/streaming ([ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md)) y del onboarding con Segpay como PSP en curso (ver [psp-strategy.md](psp-strategy.md)).
+Documento accionable que recoge las obligaciones operativas concretas derivadas de la clasificación adult/streaming ([ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md)) y del onboarding con CardBilling / Verotel como PSP en curso (ver [psp-strategy.md](psp-strategy.md)).
 
 A diferencia de [compliance-scope.md](compliance-scope.md), que define el alcance funcional de compliance dentro del producto, este documento enumera **qué hay que producir, formalizar o desplegar** antes del go-live público y durante operación. Es una lista accionable, no un marco conceptual.
 
@@ -32,9 +32,11 @@ Ningún entregable está cerrado al cierre de este documento. Se listan como obl
 - Dirección física de custodia declarada.
 - Procedimiento interno de almacenamiento y acceso a los records de verificación de modelos definido por escrito.
 
-## 2. Políticas formales exigidas por Segpay (Sección 3 del checklist)
+## 2. Políticas formales exigidas por adquirente adult-specialist (Sección 3 del checklist)
 
-Cinco documentos a producir antes de cerrar el onboarding con Segpay. Aplican aunque el PSP final cambie: son obligaciones derivadas del régimen adult, no específicas de Segpay.
+> **Nota 2026-07-18**: la sección enumeraba originalmente el checklist de Segpay. Tras el descarte de Segpay 2026-07-18 (incompatibilidad residencia director), las mismas cinco políticas siguen siendo obligatorias porque son requisito **estándar** de cualquier adquirente adult-specialist (CardBilling, Verotel, RocketGate, Epoch). El checklist mantiene su valor operativo con o sin Segpay.
+
+Cinco documentos a producir antes de cerrar el onboarding con CardBilling / Verotel. Aplican aunque el PSP final cambie: son obligaciones derivadas del régimen adult, no específicas de CardBilling / Verotel.
 
 **Estado**: PLANIFICADO. Ninguna de las cinco está producida formalmente, aunque el contenido conceptual de varias se desprende de otras decisiones (ADR-029, ADR-030, ADR-011, ADR-012).
 
@@ -65,7 +67,7 @@ Base interna existente: ADR-029 (estimación facial + secundaria) consolidada en
 Qué cubre:
 
 - Cómo el público (no solo usuarios registrados) puede presentar quejas sobre contenido o sobre actuaciones de la plataforma.
-- Plazo de respuesta comprometido (5 días hábiles según el régimen Segpay).
+- Plazo de respuesta comprometido (5 días hábiles según el régimen CardBilling / Verotel).
 - Procedimiento de takedown de contenido por reclamación de tercero.
 - Procedimiento ante sospecha de contenido ilegal (CSAM, no consentido, suplantación).
 
@@ -81,7 +83,7 @@ Qué cubre:
 - Política de payouts, retenciones y bloqueos.
 - Procedimiento de baja y de retención de records post-baja.
 
-Base interna existente: `modelContractService` con versionado de contrato (`contractInfo.currentVersion` en `PerfilModel.jsx`). Falta alinear el contenido del contrato con el formato Segpay exige.
+Base interna existente: `modelContractService` con versionado de contrato (`contractInfo.currentVersion` en `PerfilModel.jsx`). Falta alinear el contenido del contrato con el formato CardBilling / Verotel exige.
 
 ### 2.5 Chargeback–Fraud Mitigation Policy
 

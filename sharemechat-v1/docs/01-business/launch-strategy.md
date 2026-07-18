@@ -11,7 +11,7 @@
 Al cierre de este documento, la percepción operativa del proyecto identifica dos bloqueos al arranque real:
 
 - **Tráfico cero**: la plataforma está en coming-soon con solo registros abiertos. El plan SEO (blog) y el plan de afiliación no están generando tráfico. La meta previa era acumular clientes y modelos registradas antes de lanzar.
-- **PSP tarjeta bloqueado**: la vía activa Segpay queda cerrada por requisito de director residente en Estonia inviable a corto plazo. Otras opciones adult (CCBill, Epoch, Verotel / CardBilling group) también descartadas por razones distintas. Cripto (NOWPayments) y Paxum son las dos únicas vías viables a corto plazo. Vendo y CommerceGate quedan como contactos abiertos.
+- **PSP tarjeta bloqueado**: la vía activa CardBilling / Verotel queda cerrada por requisito de director residente en Estonia inviable a corto plazo. Otras opciones adult (CCBill, Epoch, Verotel / CardBilling group) también descartadas por razones distintas. Cripto (NOWPayments) y Paxum son las dos únicas vías viables a corto plazo. Vendo y CommerceGate quedan como contactos abiertos.
 
 Ante esto, la tentación inicial es añadir una zona peer-to-peer gratis (tipo Omegle moderado, con registro + KYC) como canal de tráfico orgánico paralelo. Este documento registra por qué esa vía se descarta y qué estrategia se adopta en su lugar.
 
@@ -108,7 +108,7 @@ Ejecución operativa, no aspiracional:
 
 - [ADR-047 — Pivote de coming-soon a soft launch con PSP puente cripto + Paxum](../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md)
 - [ADR-048 — Página pública de modelo `/m/:slug` como palanca central](../06-decisions/adr-048-pagina-publica-modelo-slug.md)
-- [psp-strategy.md](psp-strategy.md) — estrategia de PSP (pendiente actualización en Fase B con el nuevo estado post-Segpay).
+- [psp-strategy.md](psp-strategy.md) — estrategia de PSP (pendiente actualización en Fase B con el nuevo estado post-CardBilling / Verotel).
 - [model-profile-strategy.md](model-profile-strategy.md) — detalle de la página pública de modelo.
 - [affiliate-program.md](affiliate-program.md) — programa de afiliados y sinergia con página de modelo.
 - [sistema-tiers-modelos.md](sistema-tiers-modelos.md) — freemium interno del producto y economía de modelos.

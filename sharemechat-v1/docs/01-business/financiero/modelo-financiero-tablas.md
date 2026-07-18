@@ -12,7 +12,7 @@ Este fichero es la migración a Markdown del antiguo Excel companion `modelo-fin
 
 Complementa a [`modelo-financiero.md`](modelo-financiero.md) con las tablas mes a mes (Pesimista y Normal) y la tabla completa de supuestos que solo vivían en el Excel. La prosa (resumen, hallazgos, triggers de revisión) sigue en [`modelo-financiero.md`](modelo-financiero.md).
 
-**Contenido pendiente de revisión (Fase B):** las tablas y supuestos siguen asumiendo Segpay como PSP activo y F1 Coming Soon mes 0-3 sin revenue. Estas premisas quedan invalidadas por [ADR-047](../../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md) (soft launch cripto + Paxum desde mes 1). La actualización numérica de estas tablas corresponde a la Fase B de la reescritura del modelo financiero. Se conserva el contenido tal como estaba en el Excel para no perder la traza histórica.
+**Contenido pendiente de revisión (Fase B):** las tablas y supuestos siguen asumiendo CardBilling / Verotel como PSP activo y F1 Coming Soon mes 0-3 sin revenue. Estas premisas quedan invalidadas por [ADR-047](../../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md) (soft launch cripto + Paxum desde mes 1). La actualización numérica de estas tablas corresponde a la Fase B de la reescritura del modelo financiero. Se conserva el contenido tal como estaba en el Excel para no perder la traza histórica.
 
 ## 1. Resumen ejecutivo
 
@@ -21,7 +21,7 @@ Números que salen del modelo cuando se cruza con el plan SEO. Sin capital inici
 | Concepto | Pesimista | Normal |
 |---|---:|---:|
 | Revenue acumulado 18 meses | 490 € | 7.823 € |
-| Coste variable acumulado (Segpay + modelos + Didit + demo) | 305 € | 2.914 € |
+| Coste variable acumulado (CardBilling / Verotel + modelos + Didit + demo) | 305 € | 2.914 € |
 | Coste fijo acumulado (AWS + Companio + Sightengine, 19 meses) | 4.883 € | 4.883 € |
 | **Margen neto acumulado 18 meses** | **−4.698 €** | **+25 €** |
 | Gasto personal medio (€/mes) que tiene que cubrir el operador | 247 € / mes | Positivo |
@@ -37,7 +37,7 @@ Números que salen del modelo cuando se cruza con el plan SEO. Sin capital inici
 
 ## 2. Escenario Pesimista — mes a mes
 
-**Supuestos de tabla**: pack medio €10 (todos al pack mínimo). Modelo asumida en tier 5-15 (€1.40/pack pagado a modelo). Segpay 10% + €0.30/TX. Didit cliente €0.13/verificado. Costes fijos €257/mes (AWS €120 + Companio €110 + Sightengine €27 plan Starter).
+**Supuestos de tabla**: pack medio €10 (todos al pack mínimo). Modelo asumida en tier 5-15 (€1.40/pack pagado a modelo). CardBilling / Verotel 10% + €0.30/TX. Didit cliente €0.13/verificado. Costes fijos €257/mes (AWS €120 + Companio €110 + Sightengine €27 plan Starter).
 
 | Mes | Fase | Sesiones | Signups | Verif. | 1ª compras | Repeats (€) | TX total | Revenue (€) | Coste var (€) | Coste fijo (€) | Margen neto (€) | Acumulado neto (€) | Gasto personal mes (€) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -64,7 +64,7 @@ Números que salen del modelo cuando se cruza con el plan SEO. Sin capital inici
 
 ## 3. Escenario Normal — mes a mes
 
-**Supuestos de tabla**: pack medio €12 (mix entre €10 y €20). Modelo asumida en tier 5-15 (€1.40/pack pagado a modelo). Segpay 10% + €0.30/TX. Didit cliente €0.13/verificado. Costes fijos €257/mes (AWS €120 + Companio €110 + Sightengine €27 plan Starter).
+**Supuestos de tabla**: pack medio €12 (mix entre €10 y €20). Modelo asumida en tier 5-15 (€1.40/pack pagado a modelo). CardBilling / Verotel 10% + €0.30/TX. Didit cliente €0.13/verificado. Costes fijos €257/mes (AWS €120 + Companio €110 + Sightengine €27 plan Starter).
 
 | Mes | Fase | Sesiones | Signups | Verif. | 1ª compras | Repeats (€) | TX total | Revenue (€) | Coste var (€) | Coste fijo (€) | Margen neto (€) | Acumulado neto (€) | Gasto personal mes (€) |
 |---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -108,8 +108,8 @@ Números que salen del modelo cuando se cruza con el plan SEO. Sin capital inici
 | Pack medio pesimista | €10 | Asume todos eligen el pack más barato. |
 | Pack medio normal | €12 | Mix entre €10/22min y €20/22min. |
 | Pago a la modelo (tier 5-15) | €1.40/pack | €0.05 primer min + 9 × €0.15 minutos siguientes. |
-| Segpay comisión % | 10% | Estándar sector adulto (riesgo alto). Confirmar con Segpay en contrato. |
-| Segpay fijo por TX | €0.30 | Estándar sector adulto. |
+| CardBilling / Verotel comisión % | 10% | Estándar sector adulto (riesgo alto). Confirmar con CardBilling / Verotel en contrato. |
+| CardBilling / Verotel fijo por TX | €0.30 | Estándar sector adulto. |
 | Tasa de chargebacks | 1% | Asumido conservador. Sector adulto puede ser 0.5-3%. |
 | Coste por chargeback | €25 | Estándar. |
 
@@ -136,7 +136,7 @@ Números que salen del modelo cuando se cruza con el plan SEO. Sin capital inici
 | Fase | Meses | Nota |
 |---|---|---|
 | F1 Coming Soon | Mes 0-3 (jun-sep 2026) | Producto NO operacional. Tráfico no convierte. |
-| F2 Soft Launch | Mes 4-6 (oct-dic 2026) | Producto operacional + Segpay activo. Primeras compras posibles. |
+| F2 Soft Launch | Mes 4-6 (oct-dic 2026) | Producto operacional + CardBilling / Verotel activo. Primeras compras posibles. |
 | F3 Live público | Mes 7-12 (ene-jun 2027) | Producto open, efectos compuestos del SEO empiezan. |
 | F4 Crecimiento | Mes 13-18 (jul-dic 2027) | Long-tail SEO funcionando si todo va bien. |
 
@@ -155,5 +155,5 @@ Números que salen del modelo cuando se cruza con el plan SEO. Sin capital inici
 | PR sector (XBIZ, YNOT, AVN) | Excluido | Coste tiempo principalmente. Sin impacto monetario directo. |
 | Programa affiliates / partnerships | Excluido | Si se incorpora, suma % revenue compartido (5-15%). |
 | Costes legales adicionales | Excluido | Se confía en Companio + ADRs internos. |
-| Stripe / pasarelas backup | Excluido | Solo Segpay como PSP único (asunción del modelo original — invalidada por ADR-047). |
+| Stripe / pasarelas backup | Excluido | Solo CardBilling / Verotel como PSP único (asunción del modelo original — invalidada por ADR-047). |
 | Crecimiento modelos exponencial | No modelado | Asume 5 modelos nuevas/mes constante. |

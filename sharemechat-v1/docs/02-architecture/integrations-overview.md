@@ -11,17 +11,25 @@ Es una de las integraciones mejor asentadas en el codigo actual.
 
 ## PSP
 
-Existe adaptacion hacia CCBill para iniciar sesiones y recibir notificaciones, pero la integracion no esta cerrada de extremo a extremo. **CCBill** quedo silente en onboarding y la via activa actual es **Segpay**, sin contrato firmado todavia. El principio operativo declarado es de redundancia (no depender de un unico PSP). Direccion y detalle en [psp-strategy.md](../01-business/psp-strategy.md). Riesgos abiertos por PSP no cerrado y por webhook sin validar en [known-risks.md](../04-operations/known-risks.md).
+**Estado actualizado 2026-07-18**. La via viva de pagos en PROD es **NOWPayments** (cripto puente custodial, BTC/USDT/USDC), activada 2026-07-17 tras cerrar el frente ADR-051. Cubre el requisito Gate 3 del pivote soft launch (ADR-047: al menos un flujo de pago real end-to-end operativo en PROD).
 
-## Verificacion de edad e identidad (Veriff)
+Los PSP de tarjeta quedan asi:
 
-Existe integracion con **Veriff** como proveedor unico para los tres flujos de verificacion (decision direccional en [ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md)):
+- **Segpay**: DESCARTADO 2026-07-18 por incompatibilidad estructural (Segpay exige que el director/beneficiario efectivo resida en el mismo pais donde esta constituida la sociedad; SharemeChat es OU estonia con operador residente fuera de Estonia, lo que Segpay clasifica como indicio de empresa pantalla y bloquea el onboarding).
+- **CardBilling (filial de Verotel)**: **primer PSP potencial de tarjeta** para sustituir a Segpay como via a explorar. Contacto formal pendiente.
+- **CCBill**: quedo silente en onboarding tras conversaciones iniciales; sigue como via reactivable pero no activa. Integracion tecnica dormida (`CcbillService`, `POST /api/billing/ccbill/session`, webhook `/api/billing/ccbill/notify`) sin usarse hoy.
+- **NOWPayments** (cripto): activa y operativa en PROD. Endpoints `/api/billing/nowpayments/checkout` + `/api/webhooks/nowpayments/ipn`, kill-switch triple (property + BD + credenciales).
 
-- **KYC de modelos**: activo-manual hoy. Endpoint `/api/kyc/veriff/start` operativo para onboarding del modelo. Automatizacion completa pendiente antes del go-live.
-- **Estimacion facial de edad de clientes**: planificada. Se activara en la primera recarga del monedero, con secundaria por tarjeta/open banking y documento como ultimo recurso.
-- **Validacion documental secundaria**: planificada.
+Principio operativo: redundancia de PSP. Detalle y roadmap en [psp-strategy.md](../01-business/psp-strategy.md) y en [ADR-051](../06-decisions/adr-051-psp-puente-cripto-nowpayments.md). La interface `PaymentProvider` permite anadir un adapter CardBilling o cualquier otro vendor como bean adicional sin tocar orquestador ni ledger.
 
-La configuracion del entorno de test mantiene `kyc.veriff.enabled=false`. La integracion debe documentarse como disponible pero no plenamente activa por defecto.
+## Verificacion de edad e identidad (Didit)
+
+**Estado actualizado 2026-07-18**. Vendor unico consolidado en **Didit** (decision direccional en [ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md), consolidacion en [ADR-035](../06-decisions/adr-035-age-and-identity-verification-vendor-consolidation-on-didit.md)):
+
+- **KYC de modelos**: activo con vendor real en TEST/AUDIT (workspace sandbox compartido) y en PROD (workspace producción real, destino webhook `shareme-prod-kyc`, activado 2026-07-18). Endpoints `/api/kyc/didit/webhook` operativos. Automatizacion completa; el admin solo interviene para promover el user a role=MODEL una vez APPROVED.
+- **Estimacion facial de edad de clientes**: activa. Workflow `shareme-client-age` (Adaptive Age Verification). Se activa en la primera recarga del monedero via el gate `ensureClientKycApproved` en el frontend.
+
+**Veriff dormido como Plan B**: la integracion Veriff (`VeriffClient`, `VeriffClientImpl`, `VeriffProperties`, endpoints `/api/kyc/veriff/*`, pagina `ModelKycVeriffPage.jsx`) queda **integrada en el codigo pero apagada** con `kyc.veriff.enabled=false` en los 3 entornos. **NO se usa hoy**. Se conserva como contingencia contractual: si Didit cae por fuerza mayor (cierre de servicio, cambio unilateral de precios inaceptable, retirada de plan Free) reactivar Veriff es toggle de flag + credenciales reales, no reintegracion. Documentado en [ADR-035](../06-decisions/adr-035-age-and-identity-verification-vendor-consolidation-on-didit.md) planes alternativos.
 
 ## Moderacion (vendors de IA)
 
@@ -40,8 +48,8 @@ Estado actualizado tras cierre del Paquete 1 y sub-paquetes P2.1 + P2.2 del fren
 **Estado por entorno**:
 
 - **TEST**: pipeline completo activo. Endpoint `POST /api/streams/{id}/frames` (rol MODEL, multipart JPEG/PNG, cap 5 MB), captura cliente-side en `DashboardModel.jsx` cadencia 15s, executor dedicado `moderationExecutor` (core=20, max=30), evidencia visual en bucket S3 `sharemechat-moderation-evidence-test` (SSE-S3, TTL 30d, IAM scoped, solo severity >= AMBER). `active_mode=SIGHTENGINE`. JAR `c10fa7bb...` desplegado.
-- **AUDIT**: backend del Paquete 1 (`e49a6a1`) con `active_mode=MOCK`. Activacion SIGHTENGINE diferida a sub-paquete posterior.
-- **PROD**: backend del Paquete 1 (`6cebf90`) con `active_mode=MOCK`, modo PRELAUNCH. Activacion SIGHTENGINE diferida a sub-paquete posterior pre-go-live.
+- **AUDIT**: `active_mode=MOCK`. No se activa SIGHTENGINE en AUDIT por decision de operacion (AUDIT sirve de espejo pre-PROD sin trafico real; el MOCK es suficiente para validaciones estructurales).
+- **PROD**: **`active_mode=SIGHTENGINE` desde 2026-07-18** (retirado el override belt-and-suspenders de `application-prod.properties`). Cuenta compartida con TEST segun ADR-037. Modo PRELAUNCH del producto sigue vigente; SightEngine se activa preventivamente para que cuando abra el modo OPEN los primeros streams ya se analicen con vendor real.
 
 **Posicionamiento operativo confirmado** tras P2.2 (alineado con AN 5196 / Visa Rule ID 0003356 / practica CooMeet/LuckyCrush): adult dating 1-a-1 con nudity consensual entre adultos verificados permitido. La politica granular vive en el workflow del dashboard del operador, no en codigo. Refactor de policies publicas (`docs/01-business/`) para alinear lenguaje declarado con la operacion real queda como deuda estrategica.
 

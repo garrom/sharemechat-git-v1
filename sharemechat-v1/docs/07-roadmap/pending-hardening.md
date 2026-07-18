@@ -416,13 +416,13 @@ Dirección estructural ya fijada:
 - Clasificación adult/streaming, descartada la ruta dating ([ADR-028](../06-decisions/adr-028-business-classification-adult-streaming.md)).
 - Arquitectura de verificación de edad e identidad (KYC modelos + estimación facial cliente + secundaria, vía Veriff) ([ADR-029](../06-decisions/adr-029-age-and-identity-verification-architecture.md)).
 - Pipeline de moderación: build control plane, rent clasificadores ([ADR-030](../06-decisions/adr-030-moderation-pipeline-build-vs-rent.md)).
-- Estrategia PSP: redundancia, Segpay vía activa no cerrada ([psp-strategy.md](../01-business/psp-strategy.md)).
+- Estrategia PSP: redundancia, CardBilling / Verotel vía activa no cerrada ([psp-strategy.md](../01-business/psp-strategy.md)).
 - Estrategia geográfica: beachhead anglófono + oleada UE continental ([geographic-strategy.md](../01-business/geographic-strategy.md)).
 
 Líneas de trabajo abiertas dentro del frente (sin orden impuesto aquí):
 
-- **PSP**: cerrar contrato con Segpay (o alternativa). Implementar integración técnica y validación de firma webhook. Mantener integración CCBill disponible por reactivación.
-- **Plan B de PSP**: mantener alineado un adquirente adult-specialist alternativo (candidatos identificados: Verotel/Vendo, RocketGate, Epoch) como contingencia ante la condicionalidad de Segpay sobre el método de verificación de cliente (ADR-029). No se hace onboarding paralelo hasta que sea necesario; lo que sí se mantiene actualizado es la información de cada candidato (cobertura, condiciones, postura sobre age assurance). Detalle en [psp-strategy.md](../01-business/psp-strategy.md).
+- **PSP**: cerrar contrato con CardBilling / Verotel (o alternativa). Implementar integración técnica y validación de firma webhook. Mantener integración CCBill disponible por reactivación.
+- **Plan B de PSP**: mantener alineado un adquirente adult-specialist alternativo (candidatos identificados: Verotel/Vendo, RocketGate, Epoch) como contingencia ante la condicionalidad de CardBilling / Verotel sobre el método de verificación de cliente (ADR-029). No se hace onboarding paralelo hasta que sea necesario; lo que sí se mantiene actualizado es la información de cada candidato (cobertura, condiciones, postura sobre age assurance). Detalle en [psp-strategy.md](../01-business/psp-strategy.md).
 - **Model Collaboration Agreement — residuales tras lote de endurecimiento (2026-06-04)**:
     - Despliegue de la v4.2 (fuera del alcance del lote de endurecimiento, ejecutado por el pipeline TEST → AUDIT → PROD). En el despliegue se materializa el archivado en `ops/legal-history/model_contract/` siguiendo el procedimiento del README de esa carpeta. El archivo en repo arranca limpio desde la v4.2 en adelante.
     - Notificación proactiva por email a las modelos cuando se publica una versión nueva del contrato (job que detecta cambio de `currentVersion` y dispara mail a `acceptedEver=true && acceptedCurrent=false`). Hoy el flujo es pasivo: la modelo solo se entera al cargar el SPA.

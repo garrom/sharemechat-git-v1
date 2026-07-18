@@ -135,7 +135,7 @@ El margen bruto de la plataforma por minuto baja del 85% al 60% según el tier d
 ### Margen NETO
 
 El margen neto por minuto necesita descontar adicionalmente:
-- Comisión de Segpay (fees % + fijo + chargebacks).
+- Comisión de CardBilling / Verotel (fees % + fijo + chargebacks).
 - Coste técnico variable (AWS por minuto streamed, infraestructura).
 - Asignación de costes fijos (Companio, dominios, herramientas).
 

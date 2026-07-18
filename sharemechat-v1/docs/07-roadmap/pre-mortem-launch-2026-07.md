@@ -8,6 +8,13 @@
 >
 > Fecha del ejercicio: 2026-06-29. Próxima revisión recomendada: 2026-09-16 (M3, primera revisión trimestral SEO).
 
+> **Actualización 2026-07-18 (no reescribe el análisis original).** Dos hechos posteriores al ejercicio cambian dos causas concretas del bloque TRÁFICO/PSP sin invalidar la estructura general:
+>
+> - **A1 (Segpay condicional / plan B no contactado)**: **Segpay ha quedado DESCARTADO** por incompatibilidad estructural (Segpay exige residencia del director/beneficiario efectivo en el mismo país donde está constituida la sociedad; SharemeChat es OÜ estonia con operador residente fuera, lo que Segpay clasifica como indicio de "empresa pantalla" y bloquea onboarding). El primer PSP potencial de tarjeta pasa a ser **CardBilling (filial de Verotel)**, todavía sin contacto formal. Ver [psp-strategy.md](../01-business/psp-strategy.md) actualizado.
+> - **PSP puente cripto en operación**: la Gate 3 del pivote soft launch (al menos un flujo de pago real end-to-end en PROD) queda cubierta desde 2026-07-17 con **NOWPayments activo en PROD** (cripto custodial: BTC + USDT-Tron + USDT-Ethereum + USDC-Ethereum). Ver [ADR-051](../06-decisions/adr-051-psp-puente-cripto-nowpayments.md). Esto altera la lectura del punto A2 (webhook CCBill sin firma) y de A3 (pack mínimo €10 frena el funnel) porque el circuito real de circulación de dinero ya no depende de tarjeta sino de un puente cripto validado end-to-end en sandbox y activado en producción.
+>
+> El resto del análisis del pre-mortem (TRÁFICO T1-T6, compliance B1-B4, modelos C1-C4, fraude D1-D3, tesorería G1-G2) sigue vigente al 2026-07-18 sin cambios materiales.
+
 ---
 
 ## 1. Escenario de fracaso — marzo 2027

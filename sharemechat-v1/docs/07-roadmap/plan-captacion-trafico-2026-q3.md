@@ -374,7 +374,7 @@ Listo como registro, no como acción inmediata. Si el plan funciona y hay revenu
 - **€200-500/mes en TrafficJunky o ExoClick** con landings dedicadas a cluster Omegle / "videochat verificado" / segmentos US tier-1.
 - **Sponsored post en XBIZ Newsletter** ($400-1500/mes según fuente). Tras tener pickup editorial orgánico que justifique el sponsored.
 - **Listing en CrakRevenue** como advertiser para acelerar reclutamiento de afiliados profesionales. Requiere comprometer presupuesto mensual fijo.
-- **Asesoría legal externa adult-experienced** para cerrar las 5 políticas Segpay + 2257 + Records Custodian (€1500-3000 one-shot). Crítico para go-live público según pre-mortem B1+B2.
+- **Asesoría legal externa adult-experienced** para cerrar las 5 políticas CardBilling / Verotel + 2257 + Records Custodian (€1500-3000 one-shot). Crítico para go-live público según pre-mortem B1+B2.
 
 ### Próxima revisión obligatoria
 

@@ -130,7 +130,7 @@ Pricing actual: 10€ (pack 10 min), 20€ (22 min), 40€ (44 min).
 | Fase | Meses | Significado operativo |
 |---|---|---|
 | **F1 Coming Soon** | 0-3 (jun-sep 2026) | Blog activo + sociales en warmup. Producto NO operacional. Tráfico no convierte. |
-| **F2 Soft Launch** | 4-6 (oct-dic 2026) | Producto operacional con primeras modelos verificadas + Segpay activo. Primeras compras posibles. |
+| **F2 Soft Launch** | 4-6 (oct-dic 2026) | Producto operacional con primeras modelos verificadas + CardBilling / Verotel activo. Primeras compras posibles. |
 | **F3 Live público** | 7-12 (ene-jun 2027) | Producto open, marketing orgánico continuo, primeros efectos compuestos del SEO. |
 | **F4 Crecimiento** | 13-18 (jul-dic 2027) | Long-tail SEO funcionando si todo va bien, base de retención formándose. |
 
@@ -256,8 +256,8 @@ Para generar el Excel con costes fijos + variables, break-even y evolución mens
 3. **Coste Companio mensual** (accounting + virtual office).
 4. **Otros gastos fijos**: dominio, SaaS (Didit KYC?, otros), herramientas, etc.
 5. **Capital inicial disponible**: cuánto runway tienes en cash para aguantar pérdidas hasta break-even.
-6. **Fechas estimadas de fases reales**: ¿cuándo crees que llegará el soft launch (Segpay firma + 1ª modelo + moderación operacional)? ¿Live público?
-7. **PSP**: ¿qué fees te ha confirmado Segpay (% + fijo por transacción + chargebacks)?
+6. **Fechas estimadas de fases reales**: ¿cuándo crees que llegará el soft launch (CardBilling / Verotel firma + 1ª modelo + moderación operacional)? ¿Live público?
+7. **PSP**: ¿qué fees te ha confirmado CardBilling / Verotel (% + fijo por transacción + chargebacks)?
 
 Con esos 7 datos genero la Parte 2 (Excel financiero) en el siguiente turno.
 
