@@ -691,7 +691,25 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>2. Information We Collect</h3>
+                <h3 style={SectionTitle}>2. Data Protection Officer (DPO)</h3>
+                <p style={Paragraph}>
+                  The Data Controller has appointed a Data Protection Officer
+                  (DPO) responsible for overseeing compliance with data
+                  protection law, acting as the point of contact for data
+                  subjects exercising their rights, and coordinating with
+                  supervisory authorities where required.
+                </p>
+                <p style={Paragraph}>
+                  Contact for data protection matters, including requests
+                  under Articles 15–22 of the GDPR (access, rectification,
+                  erasure, restriction, portability, objection):
+                  <br />
+                  <a href="mailto:contact+dpo@sharemechat.com" style={LinkLike}>contact+dpo@sharemechat.com</a>
+                </p>
+              </div>
+
+              <div style={Section}>
+                <h3 style={SectionTitle}>3. Information We Collect</h3>
                 <p style={Paragraph}>
                   We may collect account data, profile details, verification data for
                   models, consumer age-verification data, technical information such
@@ -702,7 +720,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>3. Why We Process Data</h3>
+                <h3 style={SectionTitle}>4. Why We Process Data</h3>
                 <p style={Paragraph}>
                   Personal data is processed to provide the service, authenticate
                   users, operate matching and video chat features, prevent abuse and
@@ -716,7 +734,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>4. Service Providers</h3>
+                <h3 style={SectionTitle}>5. Service Providers</h3>
                 <p style={Paragraph}>
                   We may share data with service providers acting on our behalf,
                   including infrastructure providers, payment processors, corporate
@@ -727,7 +745,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>5. Age Verification and Biometric Data</h3>
+                <h3 style={SectionTitle}>6. Age Verification and Biometric Data</h3>
                 <p style={Paragraph}>
                   To comply with applicable age-verification laws and card-network
                   requirements, the Platform verifies that all participants are
@@ -752,7 +770,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>6. International Transfers</h3>
+                <h3 style={SectionTitle}>7. International Transfers</h3>
                 <p style={Paragraph}>
                   If any provider processes personal data outside the European
                   Economic Area, such transfers will be carried out under appropriate
@@ -762,7 +780,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>7. Retention Periods</h3>
+                <h3 style={SectionTitle}>8. Retention Periods</h3>
                 <p style={Paragraph}>
                   Data is kept only for as long as necessary to operate the service,
                   meet legal obligations, respond to disputes or claims, maintain
@@ -771,16 +789,29 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>8. Your Rights</h3>
+                <h3 style={SectionTitle}>9. Your Rights</h3>
                 <p style={Paragraph}>
-                  You may request access, rectification, deletion, restriction,
-                  objection, or portability of your personal data, subject to
-                  applicable law. Requests may be sent to <a href="mailto:contact+gdpr@sharemechat.com" style={LinkLike}>contact@sharemechat.com</a>.
+                  Under the GDPR, you have the right to request access to your
+                  personal data (Article 15), rectification (Article 16),
+                  erasure (Article 17), restriction of processing (Article 18),
+                  data portability (Article 20), and to object to processing
+                  (Article 21), subject to applicable law. You also have the
+                  right to lodge a complaint with a supervisory authority in
+                  your country of residence.
+                </p>
+                <p style={Paragraph}>
+                  Requests should be sent to the Data Protection Officer at
+                  <a href="mailto:contact+dpo@sharemechat.com" style={LinkLike}> contact+dpo@sharemechat.com</a>.
+                  We will respond within one month of receipt (extendable by
+                  two additional months for complex requests, with notice).
+                  Before disclosing personal data, we will verify the
+                  requester's identity using reasonable means proportionate
+                  to the sensitivity of the request.
                 </p>
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>9. Security Measures</h3>
+                <h3 style={SectionTitle}>10. Security Measures</h3>
                 <p style={Paragraph}>
                   We use measures such as encrypted connections, secure cookie-based
                   authentication where applicable, anti-abuse systems, activity logs,
@@ -790,7 +821,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>10. Minors</h3>
+                <h3 style={SectionTitle}>11. Minors</h3>
                 <p style={Paragraph}>
                   SharemeChat is strictly intended for adults aged 18 or older. If we
                   detect that a minor has provided personal data, we may remove that
@@ -799,7 +830,7 @@ export default function Legal() {
               </div>
 
               <div style={Section}>
-                <h3 style={SectionTitle}>11. Policy Updates</h3>
+                <h3 style={SectionTitle}>12. Policy Updates</h3>
                 <p style={Paragraph}>
                   We may update this Privacy Policy from time to time to reflect
                   changes in the service, legal requirements, or operational needs.
