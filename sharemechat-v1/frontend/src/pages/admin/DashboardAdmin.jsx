@@ -5,6 +5,7 @@ import { apiFetch } from '../../config/http';
 import { useSession } from '../../components/SessionProvider';
 import AdminActiveStreamsPanel from './AdminActiveStreamsPanel';
 import AdminAdministrationPanel from './AdminAdministrationPanel';
+import AdminGdprPanel from './AdminGdprPanel';
 import AdminAuditPanel from './AdminAuditPanel';
 import AdminDataPanel from './AdminDataPanel';
 import AdminFinancePanel from './AdminFinancePanel';
@@ -97,6 +98,10 @@ const DashboardAdmin = () => {
       title: t('admin.shell.views.administration.title'),
       subtitle: t('admin.shell.views.administration.subtitle'),
     },
+    gdpr: {
+      title: t('admin.gdpr.title', { defaultValue: 'GDPR — Derecho de acceso (Art. 15)' }),
+      subtitle: t('admin.gdpr.subtitle', { defaultValue: 'Exporta los datos personales de un usuario para responder una petición del interesado.' }),
+    },
     content: {
       title: t('admin.dashboard.pageTitles.content'),
       subtitle: t('admin.dashboard.viewCopy.content.subtitle'),
@@ -149,6 +154,7 @@ const DashboardAdmin = () => {
     canViewAudit: adminView,
     canViewAdministration: adminView,
     canViewContent: adminView || hasBackofficePermission(user, 'CONTENT.VIEW'),
+    canExportGdpr: adminView,
     // Frente B.3.2 (ADR-046): Panel Soporte Humano.
     // canViewSupport habilita el item de sidebar + sub-tab Conversaciones.
     // canManageSupportProfiles habilita el sub-tab Profiles y sus CRUD.
@@ -189,6 +195,7 @@ const DashboardAdmin = () => {
       capabilities.canViewDb ? 'data' : null,
       capabilities.canViewAdministration ? 'administration' : null,
       capabilities.canViewContent ? 'content' : null,
+      capabilities.canExportGdpr ? 'gdpr' : null,
       'profile',
     ].filter(Boolean);
 
@@ -316,6 +323,11 @@ const DashboardAdmin = () => {
             key: 'content',
             label: t('admin.dashboard.sidebar.content.label'),
             meta: t('admin.dashboard.sidebar.content.meta'),
+          } : null,
+          capabilities.canExportGdpr ? {
+            key: 'gdpr',
+            label: t('admin.gdpr.sidebarLabel', { defaultValue: 'GDPR export' }),
+            meta: t('admin.gdpr.sidebarMeta', { defaultValue: 'Art. 15' }),
           } : null,
         ].filter(Boolean),
       },
@@ -599,6 +611,15 @@ const DashboardAdmin = () => {
               subtitle={t('admin.dashboard.pageSubtitles.administration')}
             >
               <AdminAdministrationPanel />
+            </AdminPage>
+          )}
+
+          {activeView === 'gdpr' && capabilities.canExportGdpr && (
+            <AdminPage
+              title={viewCopy.gdpr.title}
+              subtitle={viewCopy.gdpr.subtitle}
+            >
+              <AdminGdprPanel />
             </AdminPage>
           )}
 
