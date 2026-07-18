@@ -2425,6 +2425,14 @@ const DashboardModel = () => {
   };
 
 
+  const handleGoAffiliate = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+    stopAll();
+    history.push('/perfil-modelo/afiliada');
+  };
+
+
   const handleLogoClick = (e) => {
     // nos lleva a tab videochat
     e.preventDefault();
@@ -3292,7 +3300,7 @@ const DashboardModel = () => {
         onGoSupport={handleGoSupport}
         onGoBlog={handleGoBlog}
         onGoStats={handleGoStats}
-        onGoAffiliate={() => history.push('/perfil-modelo/afiliada')}
+        onGoAffiliate={handleGoAffiliate}
         onProfile={handleProfile}
         onWithdraw={handleRequestPayout}
         onLogout={handleLogout}

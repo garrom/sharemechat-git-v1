@@ -326,7 +326,6 @@ const AffiliatePanelModel = () => {
         onGoBlog={goDashboard}
         onGoStats={goDashboard}
         onGoAffiliate={() => {}}
-        affiliateDisabled={true}
         onProfile={goProfile}
         onWithdraw={goDashboard}
         onLogout={goDashboard}
