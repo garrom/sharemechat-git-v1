@@ -4,6 +4,8 @@
 // en 1 selector) + rango de fechas + columna tipo con color por signo.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faDownload } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
 import { buildApiUrl } from '../../config/api';
@@ -15,6 +17,17 @@ const btn = (variant = 'primary', disabled = false) => ({
   background: disabled ? '#4b5563' : variant === 'primary' ? '#2f81f7' : '#3f4a5a',
   color: '#ffffff',
   fontSize: 13, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
+});
+// Estilo ghost/outline para "Descargar CSV". Se diferencia visualmente
+// de los botones Limpiar/Aplicar (accion sobre datos ya cargados vs
+// acciones sobre filtros) sin competir con Aplicar por atencion.
+const btnGhost = (disabled = false) => ({
+  padding: '7px 14px', borderRadius: 8,
+  border: `1px solid ${disabled ? '#4b5563' : '#3b82f6'}`,
+  background: 'transparent',
+  color: disabled ? '#6b7280' : '#93c5fd',
+  fontSize: 13, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
+  display: 'inline-flex', alignItems: 'center', gap: 6,
 });
 const title = { fontSize: 20, fontWeight: 700, color: '#f8fafc', margin: 0 };
 const subtitle = { fontSize: 13, color: '#9ca3af', marginTop: 4 };
@@ -36,7 +49,17 @@ const input = {
   width: '100%', padding: '8px 10px', borderRadius: 6,
   border: '1px solid #d0d7de', fontSize: 13, boxSizing: 'border-box', background: '#fff', color: '#18212f',
 };
-const filterActions = { gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' };
+// Distribucion opuesta: Descargar CSV a la izquierda (accion sobre datos
+// ya cargados) + [Limpiar, Aplicar] a la derecha (acciones sobre los
+// filtros). Separacion espacial refleja la separacion semantica.
+const filterActions = { gridColumn: '1 / -1', display: 'flex', gap: 8, justifyContent: 'space-between', flexWrap: 'wrap', alignItems: 'center' };
+const filterActionsRight = { display: 'flex', gap: 8, flexWrap: 'wrap' };
+// Wrapper con scroll horizontal solo en la tabla. Evita que el body de
+// la pagina scrollee horizontalmente en moviles cuando el contenido de
+// las celdas (p.ej. "Cargo por streaming de 199 segundos") excede el
+// viewport. Patron estandar de fintechs (Revolut, Wise) para tablas
+// con muchas columnas.
+const tableWrap = { overflowX: 'auto', WebkitOverflowScrolling: 'touch' };
 
 const table = { width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', border: '1px solid #e1e4e8', borderRadius: 8, overflow: 'hidden' };
 const th = { textAlign: 'left', padding: '10px 12px', background: '#f4f6f9', color: '#3a4152', fontWeight: 600, borderBottom: '1px solid #e1e4e8' };
@@ -243,15 +266,18 @@ const ClientHistoryPanel = () => {
           <input type="date" style={input} value={draftTo} onChange={(e) => setDraftTo(e.target.value)} disabled={busy} />
         </div>
         <div style={filterActions}>
-          <button style={btn('secondary', busy)} onClick={downloadCsv} disabled={busy}>
-            {t('dashboardClient.history.filter.download', { defaultValue: 'Descargar CSV' })}
+          <button style={btnGhost(busy)} onClick={downloadCsv} disabled={busy}>
+            <FontAwesomeIcon icon={faDownload} />
+            <span>{t('dashboardClient.history.filter.download', { defaultValue: 'Descargar CSV' })}</span>
           </button>
-          <button style={btn('secondary', busy)} onClick={resetFilters} disabled={busy}>
-            {t('dashboardClient.history.filter.reset', { defaultValue: 'Limpiar' })}
-          </button>
-          <button style={btn('primary', busy)} onClick={applyFilters} disabled={busy}>
-            {t('dashboardClient.history.filter.apply', { defaultValue: 'Aplicar' })}
-          </button>
+          <div style={filterActionsRight}>
+            <button style={btn('secondary', busy)} onClick={resetFilters} disabled={busy}>
+              {t('dashboardClient.history.filter.reset', { defaultValue: 'Limpiar' })}
+            </button>
+            <button style={btn('primary', busy)} onClick={applyFilters} disabled={busy}>
+              {t('dashboardClient.history.filter.apply', { defaultValue: 'Aplicar' })}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -261,40 +287,42 @@ const ClientHistoryPanel = () => {
         {t('dashboardClient.history.activeFilter', { defaultValue: 'Filtro' })}: <span style={{ color: '#f8fafc', fontWeight: 600 }}>{activeFilterLabel}</span>
       </div>
 
-      <table style={table}>
-        <thead>
-          <tr>
-            <th style={th}>{t('dashboardClient.history.col.date', { defaultValue: 'Fecha' })}</th>
-            <th style={th}>{t('dashboardClient.history.col.type', { defaultValue: 'Tipo' })}</th>
-            <th style={th}>{t('dashboardClient.history.col.detail', { defaultValue: 'Detalle' })}</th>
-            <th style={{ ...th, textAlign: 'right' }}>{t('dashboardClient.history.col.amount', { defaultValue: 'Importe' })}</th>
-            <th style={th}>{t('dashboardClient.history.col.reference', { defaultValue: 'Referencia' })}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.length === 0 && !busy && (
-            <tr><td style={empty} colSpan={5}>
-              {t('dashboardClient.history.noRows', { defaultValue: 'No hay transacciones para los filtros aplicados.' })}
-            </td></tr>
-          )}
-          {items.map((it) => {
-            const meta = TYPE_META[it.operationType] || { label: it.operationType, pill: { bg: '#e5e7eb', fg: '#374151' }, sign: '' };
-            const parsed = parseDescription(it.description);
-            const amountColor = meta.sign === '+' ? '#166534' : meta.sign === '-' ? '#991b1b' : '#18212f';
-            return (
-              <tr key={it.id}>
-                <td style={td}>{fmtDate(it.timestamp)}</td>
-                <td style={td}><span style={pill(meta.pill.bg, meta.pill.fg)}>{meta.label}</span></td>
-                <td style={td}>{parsed.pack ? `Pack ${parsed.pack}` : (parsed.raw || '-')}</td>
-                <td style={{ ...tdAmount, color: amountColor }}>{fmtEUR(it.amount, meta.sign)}</td>
-                <td style={{ ...td, fontFamily: 'monospace', fontSize: 12, color: '#52607a' }}>
-                  {parsed.orderShort || '-'}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      <div style={tableWrap}>
+        <table style={table}>
+          <thead>
+            <tr>
+              <th style={th}>{t('dashboardClient.history.col.date', { defaultValue: 'Fecha' })}</th>
+              <th style={th}>{t('dashboardClient.history.col.type', { defaultValue: 'Tipo' })}</th>
+              <th style={th}>{t('dashboardClient.history.col.detail', { defaultValue: 'Detalle' })}</th>
+              <th style={{ ...th, textAlign: 'right' }}>{t('dashboardClient.history.col.amount', { defaultValue: 'Importe' })}</th>
+              <th style={th}>{t('dashboardClient.history.col.reference', { defaultValue: 'Referencia' })}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.length === 0 && !busy && (
+              <tr><td style={empty} colSpan={5}>
+                {t('dashboardClient.history.noRows', { defaultValue: 'No hay transacciones para los filtros aplicados.' })}
+              </td></tr>
+            )}
+            {items.map((it) => {
+              const meta = TYPE_META[it.operationType] || { label: it.operationType, pill: { bg: '#e5e7eb', fg: '#374151' }, sign: '' };
+              const parsed = parseDescription(it.description);
+              const amountColor = meta.sign === '+' ? '#166534' : meta.sign === '-' ? '#991b1b' : '#18212f';
+              return (
+                <tr key={it.id}>
+                  <td style={td}>{fmtDate(it.timestamp)}</td>
+                  <td style={td}><span style={pill(meta.pill.bg, meta.pill.fg)}>{meta.label}</span></td>
+                  <td style={td}>{parsed.pack ? `Pack ${parsed.pack}` : (parsed.raw || '-')}</td>
+                  <td style={{ ...tdAmount, color: amountColor }}>{fmtEUR(it.amount, meta.sign)}</td>
+                  <td style={{ ...td, fontFamily: 'monospace', fontSize: 12, color: '#52607a' }}>
+                    {parsed.orderShort || '-'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {totalPages > 1 && (
         <div style={pager}>
