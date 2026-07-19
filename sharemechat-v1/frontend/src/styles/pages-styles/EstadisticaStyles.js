@@ -1,13 +1,19 @@
 import styled from 'styled-components';
 
 // ============================================================
-// EstadisticaStyles — 2026-07-19 rediseño Fase 1
+// EstadisticaStyles — 2026-07-19 rediseño Fase 1 iter.2
 //
-// Tema oscuro coherente con el dashboard del modelo (fondo negro
-// GlobalBlack) usando la paleta pastel introducida en el sidebar
-// admin: primary #93b5e1, business #a3d4b3, control #f4c99b,
-// hot #e5a4b9, purple #c4b5fd. Base slate: #0f172a (bg), #1e293b
-// (cards), #334155 (borders).
+// Tema CLARO con acentos pastel para el panel de Estadísticas del
+// modelo. Contrasta con el navbar negro (GlobalBlack) del dashboard
+// creando una zona "documental" clara donde vive el contenido —
+// mismo patrón que las apps financieras (Revolut, Wise, Stripe
+// dashboard).
+//
+// Paleta pastel mantiene continuidad con sidebar admin: primary
+// #93b5e1, business #a3d4b3, control #f4c99b, hot #e5a4b9, purple
+// #c4b5fd. Sobre fondo claro se usan tanto las variantes pastel
+// (para fondos/bordes suaves) como versiones más saturadas para
+// texto/iconos que necesitan contraste sobre blanco.
 //
 // AffiliatePanelModel reutiliza este mismo lenguaje visual — ambos
 // paneles quedan alineados sin trabajo adicional.
@@ -15,26 +21,32 @@ import styled from 'styled-components';
 
 // -------- Paleta local (para reutilizar dentro del fichero) --------
 const c = {
-  bg:            '#0f172a',
-  card:          '#1e293b',
-  cardAlt:       '#243244',
-  border:        '#334155',
-  borderSoft:    'rgba(148,163,184,0.14)',
-  text:          '#e2e8f0',
-  textSoft:      '#cbd5e1',
-  textMuted:     '#94a3b8',
-  textDim:       '#64748b',
+  bg:            '#f1f5f9',   // slate 100 — fondo Wrap
+  bgAlt:         '#e2e8f0',   // slate 200 — accent zones
+  card:          '#ffffff',   // blanco puro — cards
+  cardAlt:       '#f8fafc',   // slate 50 — thead tabla
+  border:        '#e2e8f0',   // slate 200 — bordes card
+  borderSoft:    'rgba(15,23,42,0.06)',
+  text:          '#0f172a',   // slate 900 — texto principal
+  textSoft:      '#334155',   // slate 700 — texto secundario
+  textMuted:     '#64748b',   // slate 500 — labels, meta
+  textDim:       '#94a3b8',   // slate 400 — hints
 
-  primary:       '#93b5e1',   // azul pastel — current tier
-  business:      '#a3d4b3',   // verde pastel — minutos, ganancias
-  control:       '#f4c99b',   // ámbar pastel — tarifas
-  hot:           '#e5a4b9',   // rosa pastel — alertas, next tier
-  purple:        '#c4b5fd',   // púrpura pastel — extras
+  primary:       '#93b5e1',   // azul pastel — fondos/bordes
+  primaryText:   '#2563eb',   // azul saturado — texto/icono sobre blanco
+  business:      '#a3d4b3',   // verde pastel — fondos
+  businessText:  '#059669',   // verde saturado — texto
+  control:       '#f4c99b',   // ámbar pastel — fondos
+  controlText:   '#d97706',   // ámbar saturado — texto
+  hot:           '#e5a4b9',   // rosa pastel — fondos
+  hotText:       '#e11d48',   // rosa saturado — texto
+  purple:        '#c4b5fd',   // púrpura pastel — fondos
+  purpleText:    '#7c3aed',   // púrpura saturado — texto
 
-  successBg:     'rgba(163,212,179,0.14)',
-  successBorder: 'rgba(163,212,179,0.32)',
-  errorBg:       'rgba(229,164,185,0.14)',
-  errorBorder:   'rgba(229,164,185,0.38)',
+  successBg:     'rgba(163,212,179,0.20)',
+  successBorder: 'rgba(163,212,179,0.55)',
+  errorBg:       'rgba(229,164,185,0.16)',
+  errorBorder:   'rgba(229,164,185,0.55)',
 };
 
 // Utilidad: rgb() del hex para overlays translúcidos.
@@ -70,14 +82,15 @@ export const Wrap = styled.div`
   gap: 18px;
 
   background:
-    radial-gradient(1200px 400px at 10% -10%, ${rgba('#93b5e1', 0.08)}, transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, ${rgba('#c4b5fd', 0.06)}, transparent 55%),
+    radial-gradient(1000px 400px at 5% -10%, ${rgba('#93b5e1', 0.14)}, transparent 55%),
+    radial-gradient(800px 500px at 100% 0%, ${rgba('#c4b5fd', 0.12)}, transparent 50%),
     ${c.bg};
 
   color: ${c.text};
   overflow: auto;
   border-radius: 16px;
   border: 1px solid ${c.borderSoft};
+  box-shadow: 0 2px 20px rgba(15,23,42,0.06);
 
   @media (max-width: 768px) {
     padding: 14px 14px 28px;
@@ -111,16 +124,16 @@ export const TopIcon = styled.div`
   align-items: center;
   justify-content: center;
 
-  background: ${rgba('#93b5e1', 0.14)};
-  border: 1px solid ${rgba('#93b5e1', 0.32)};
-  color: ${c.primary};
+  background: ${rgba('#93b5e1', 0.20)};
+  border: 1px solid ${rgba('#93b5e1', 0.45)};
+  color: ${c.primaryText};
   font-size: 18px;
 `;
 
 export const Title = styled.div`
   font-size: 20px;
   font-weight: 700;
-  color: #f8fafc;
+  color: ${c.text};
   letter-spacing: 0.2px;
   line-height: 1.1;
 `;
@@ -222,9 +235,9 @@ export const AvailabilityPill = styled.div`
   font-size: 12px;
   font-weight: 600;
 
-  background: ${rgba('#a3d4b3', 0.14)};
-  color: ${c.business};
-  border: 1px solid ${rgba('#a3d4b3', 0.32)};
+  background: ${rgba('#a3d4b3', 0.22)};
+  color: ${c.businessText};
+  border: 1px solid ${rgba('#a3d4b3', 0.55)};
 `;
 
 // Aviso permanente (payout).
@@ -235,12 +248,12 @@ export const PayoutNotice = styled.div`
   line-height: 1.5;
   max-width: 360px;
 
-  background: ${rgba('#f4c99b', 0.1)};
+  background: ${rgba('#f4c99b', 0.18)};
   color: ${c.textSoft};
-  border: 1px solid ${rgba('#f4c99b', 0.28)};
+  border: 1px solid ${rgba('#f4c99b', 0.55)};
 
   b {
-    color: ${c.control};
+    color: ${c.controlText};
     font-weight: 700;
   }
 `;
@@ -255,6 +268,7 @@ export const TabsBar = styled.div`
   background: ${c.card};
   border: 1px solid ${c.border};
   border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
   align-self: flex-start;
   flex-wrap: wrap;
 `;
@@ -279,13 +293,13 @@ export const TabButton = styled.button`
 
   &:hover {
     color: ${c.textSoft};
-    background: ${rgba('#93b5e1', 0.06)};
+    background: ${rgba('#93b5e1', 0.12)};
   }
 
   &[data-active="true"] {
-    background: ${rgba('#93b5e1', 0.14)};
-    color: ${c.primary};
-    box-shadow: inset 0 0 0 1px ${rgba('#93b5e1', 0.32)};
+    background: ${rgba('#93b5e1', 0.22)};
+    color: ${c.primaryText};
+    box-shadow: inset 0 0 0 1px ${rgba('#93b5e1', 0.55)};
   }
 `;
 
@@ -305,7 +319,7 @@ export const ErrorLine = styled.div`
   padding: 14px 18px;
   border-radius: 10px;
   background: ${c.errorBg};
-  color: ${c.hot};
+  color: ${c.hotText};
   border: 1px solid ${c.errorBorder};
   font-size: 13px;
   font-weight: 500;
@@ -329,7 +343,7 @@ export const SectionHead = styled.div`
 export const SectionTitle = styled.div`
   font-size: 15px;
   font-weight: 700;
-  color: #f8fafc;
+  color: ${c.text};
   letter-spacing: 0.1px;
 `;
 
@@ -358,15 +372,17 @@ export const MiniCard = styled.div`
   background: ${c.card};
   border: 1px solid ${c.border};
   border-left: 3px solid ${({ $accent }) => accentColor($accent)};
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 
   &:hover {
-    border-color: ${({ $accent }) => rgba(accentColor($accent), 0.6)};
+    border-color: ${({ $accent }) => rgba(accentColor($accent), 0.7)};
     border-left-color: ${({ $accent }) => accentColor($accent)};
+    box-shadow: 0 2px 8px rgba(15,23,42,0.08);
   }
 `;
 
@@ -381,7 +397,7 @@ export const MiniLabel = styled.div`
 export const MiniValue = styled.div`
   font-size: 22px;
   font-weight: 700;
-  color: #f8fafc;
+  color: ${c.text};
   line-height: 1.15;
   font-variant-numeric: tabular-nums;
   word-break: break-word;
@@ -401,6 +417,7 @@ export const ProgressCard = styled.div`
   border-radius: 14px;
   background: ${c.card};
   border: 1px solid ${c.border};
+  box-shadow: 0 1px 3px rgba(15,23,42,0.05);
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -433,7 +450,7 @@ export const KpiLine = styled.div`
   line-height: 1.5;
 
   b {
-    color: #f8fafc;
+    color: ${c.text};
     font-weight: 700;
   }
 `;
@@ -450,7 +467,7 @@ export const BarTrack = styled.div`
   width: 100%;
   height: 12px;
   border-radius: 999px;
-  background: ${rgba('#334155', 0.6)};
+  background: ${c.bgAlt};
   overflow: hidden;
 `;
 
@@ -466,7 +483,7 @@ export const BarGlow = styled.div`
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 999px;
-  background: ${rgba('#93b5e1', 0.35)};
+  background: ${rgba('#93b5e1', 0.28)};
   filter: blur(6px);
   transition: width 0.35s ease;
   pointer-events: none;
@@ -487,7 +504,7 @@ export const SuccessPill = styled.div`
   font-size: 12px;
   font-weight: 600;
   background: ${c.successBg};
-  color: ${c.business};
+  color: ${c.businessText};
   border: 1px solid ${c.successBorder};
 `;
 
@@ -498,7 +515,9 @@ export const TableWrap = styled.div`
   border-radius: 12px;
   border: 1px solid ${c.border};
   background: ${c.card};
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
   overflow-x: auto;
+  overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
 `;
 
@@ -526,7 +545,7 @@ export const Table = styled.table`
 
   tbody td {
     padding: 12px 14px;
-    border-bottom: 1px solid ${rgba('#334155', 0.5)};
+    border-bottom: 1px solid ${c.border};
     color: ${c.text};
     vertical-align: middle;
   }
@@ -541,26 +560,26 @@ export const Table = styled.table`
   }
 
   tbody tr.is-expandable:hover {
-    background: ${rgba('#93b5e1', 0.06)};
+    background: ${rgba('#93b5e1', 0.10)};
   }
 
   tbody tr.is-expandable[aria-expanded="true"] {
-    background: ${rgba('#93b5e1', 0.09)};
+    background: ${rgba('#93b5e1', 0.16)};
   }
 
   tbody tr.tier-detail td {
-    background: ${rgba('#93b5e1', 0.04)};
+    background: ${rgba('#93b5e1', 0.06)};
     color: ${c.textSoft};
     padding: 12px 20px;
     font-size: 12px;
     line-height: 1.5;
-    border-top: 1px dashed ${rgba('#93b5e1', 0.25)};
+    border-top: 1px dashed ${rgba('#93b5e1', 0.45)};
   }
 
   td.name,
   td.hist-tier {
     font-weight: 600;
-    color: #f8fafc;
+    color: ${c.text};
   }
 
   td.hist-date {
@@ -576,18 +595,19 @@ export const Placeholder = styled.div`
   padding: 28px 22px;
   border-radius: 12px;
   background: ${c.card};
-  border: 1px dashed ${c.border};
+  border: 1px dashed ${c.borderSoft};
   display: flex;
   flex-direction: column;
   gap: 8px;
   text-align: center;
   align-items: center;
+  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
 `;
 
 export const PlaceholderTitle = styled.div`
   font-size: 15px;
   font-weight: 700;
-  color: #f8fafc;
+  color: ${c.text};
 `;
 
 export const PlaceholderText = styled.div`
