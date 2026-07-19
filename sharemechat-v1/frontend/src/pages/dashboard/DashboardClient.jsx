@@ -47,7 +47,6 @@ import VideoChatFavoritosCliente from './VideoChatFavoritosCliente';
 import SupportChat from '../support/SupportChat';
 import { apiFetch } from '../../config/http';
 import { useSession } from '../../components/SessionProvider';
-import useMobileKeyboardCompact from '../../hooks/useMobileKeyboardCompact';
 import { buildWsUrl, WS_PATHS } from '../../config/api';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
@@ -116,10 +115,6 @@ const DashboardClient = () => {
   const [messages, setMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
-  // Fase B chat mobile: marca body.kbd-open cuando iOS Safari abre
-  // el teclado en movil. CSS reacciona compactando el layout de
-  // Favoritos/chat. No hace nada en desktop.
-  useMobileKeyboardCompact();
   const [currentModelId, setCurrentModelId] = useState(null);
   const [saldo, setSaldo] = useState(null);
   const [loadingSaldo, setLoadingSaldo] = useState(false);

@@ -87,22 +87,6 @@ export const GlobalBlack = createGlobalStyle`
   body {
     overflow-x: hidden;
   }
-
-  /* Fase B chat mobile (2026-07-19): useMobileKeyboardCompact anade
-     body.kbd-open cuando iOS Safari abre el teclado en movil (via
-     visualViewport). El CSS reacciona escondiendo elementos marcados
-     como colapsables ("data-mobile-collapsible-on-kbd") para dar
-     altura al chat scroller.
-
-     Solo actua @media (max-width: 768px) — desktop nunca ve estas
-     reglas. Y solo cuando el hook activa la clase — cero impacto por
-     defecto. Los elementos que se ocultan son opt-in por atributo —
-     nada se esconde por sorpresa. */
-  @media (max-width: 768px) {
-    body.kbd-open [data-mobile-collapsible-on-kbd='true'] {
-      display: none;
-    }
-  }
 `;
 
 
@@ -1346,16 +1330,6 @@ export const StyledChatScroller = styled.div`
     scroll-padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
-  /* Fase B (2026-07-19): cuando el teclado esta abierto en movil, el
-     composer se vuelve position:fixed (ver StyledChatDockMessageComposer).
-     El scroller debe reservar espacio equivalente en su padding-bottom
-     para que los mensajes recientes no queden ocultos debajo del
-     composer flotante. 80px = min-height composer aproximado. */
-  @media (max-width: 768px) {
-    body.kbd-open & {
-      padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-    }
-  }
 
 
   /* fondo solo cuando se indique explícitamente */
@@ -1603,22 +1577,6 @@ export const StyledChatDockMessageComposer = styled(StyledChatDock)`
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Fase B (2026-07-19): cuando el teclado esta abierto en movil,
-     el composer se ancla al TOP del teclado via --kbd-inset (que el
-     hook useMobileKeyboardCompact setea desde visualViewport). Fixed
-     al viewport en vez de al flow permite que la barra de escritura
-     quede SIEMPRE visible por encima del teclado, y el scroller de
-     arriba respira con toda la altura que le quede. */
-  @media (max-width: 768px) {
-    body.kbd-open & {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: var(--kbd-inset, 0px);
-      z-index: 20;
-      padding-bottom: 8px;
-    }
-  }
 
   @media (min-width: 769px) {
     justify-content: center;

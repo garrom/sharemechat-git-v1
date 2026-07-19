@@ -143,7 +143,12 @@ export default function VideoChatFavoritosCliente(props){
   // Fase 1.1: SupportMessageBubble recibe peerNickname / userNickname
   // para renderizar avatar circular con inicial + timestamp bajo cada
   // burbuja, igual que las burbujas del chat de soporte.
-  const renderChatMessage = (m) => {
+  // renderChatMessage acepta opts.transparent para forzar burbujas
+  // transparentes (overlay del video). Se usa desde renderCallMessages
+  // — el chat normal de favoritos (fuera de llamada) mantiene burbujas
+  // opacas.
+  const renderChatMessage = (m, opts = {}) => {
+    const { transparent = false } = opts;
     const giftData = normalizeGiftMessage(m);
     const isMe = Number(m.senderId) === Number(user?.id);
     if (giftData) {
@@ -164,11 +169,12 @@ export default function VideoChatFavoritosCliente(props){
         }}
         peerNickname={centerChatPeerName || ''}
         userNickname={user?.nickname || ''}
+        transparent={transparent}
       />
     );
   };
 
-  const renderCallMessages = () => centerMessages.map(renderChatMessage);
+  const renderCallMessages = () => centerMessages.map((m) => renderChatMessage(m, { transparent: true }));
 
   return(<>
     {!isMobile &&(

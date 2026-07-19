@@ -80,6 +80,21 @@ const Bubble = styled.div`
     font-size: 0.85em;
   }
   a { color: #2563eb; text-decoration: underline; }
+
+  /* Prop $transparent: solo en movil, cuando la burbuja se muestra
+     sobre el video de streaming (chat de Favoritos-1a1 en llamada
+     activa). Feedback operador 2026-07-19: en pantalla pequena las
+     burbujas opacas tapan el video. Fondo transparente + texto blanco
+     con text-shadow doble para legibilidad sobre cualquier fondo. */
+  ${(p) => p.$transparent && `
+    @media (max-width: 768px) {
+      background: transparent !important;
+      border-color: transparent !important;
+      color: #ffffff !important;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.75), 0 1px 6px rgba(0,0,0,0.55);
+      padding: 4px 8px;
+    }
+  `}
 `;
 
 const MetaLine = styled.div`
@@ -180,6 +195,7 @@ const SupportMessageBubble = ({
   agentLabel = 'Agente IA',
   peerNickname = '',
   userNickname = '',
+  transparent = false,
 }) => {
   if (!message) return null;
   const sender = message.sender;
@@ -261,7 +277,7 @@ const SupportMessageBubble = ({
       <div>
         <Row $side="right">
           <ColumnWrap $side="right">
-            <Bubble $bg="#dcfce7" $fg="#14532d" $border="#86efac">
+            <Bubble $bg="#dcfce7" $fg="#14532d" $border="#86efac" $transparent={transparent}>
               {content}
             </Bubble>
             <MetaLine $side="right">
@@ -281,7 +297,7 @@ const SupportMessageBubble = ({
         <Row $side="left">
           <Avatar $bg="#e2e8f0" $fg="#475569">{initialOf(peerNickname || 'P')}</Avatar>
           <ColumnWrap $side="left">
-            <Bubble $bg="rgba(255,255,255,0.98)" $fg="#111827" $border="rgba(15,23,42,0.08)">
+            <Bubble $bg="rgba(255,255,255,0.98)" $fg="#111827" $border="rgba(15,23,42,0.08)" $transparent={transparent}>
               {content}
             </Bubble>
             <MetaLine $side="left">{ts}</MetaLine>

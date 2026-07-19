@@ -240,7 +240,11 @@ export default function VideoChatFavoritosModelo(props) {
   //     `isMe ? 'peer' : 'me'` para que los mensajes propios del modelo
   //     aparezcan a la izquierda. Preservamos esa peculiaridad
   //     historica sin unificarla (fuera de scope).
-  const buildBubble = (m, isMe, senderMe, senderPeer) => {
+  // buildBubble acepta opts.transparent para forzar burbujas transparentes
+  // sobre el video de streaming en Favoritos-Call. Se propaga desde los
+  // renderers de call (renderDesktopCallMessages y equivalente mobile).
+  const buildBubble = (m, isMe, senderMe, senderPeer, opts = {}) => {
+    const { transparent = false } = opts;
     const giftData = resolveGiftData(m);
     if (giftData) {
       return (
@@ -260,31 +264,34 @@ export default function VideoChatFavoritosModelo(props) {
         }}
         peerNickname={centerChatPeerName || ''}
         userNickname={user?.nickname || ''}
+        transparent={transparent}
       />
     );
   };
 
-  const renderChatMessage = (m) => {
+  const renderChatMessage = (m, opts) => {
     const isMe = Number(m.senderId) === Number(user?.id);
     return buildBubble(
       m,
       isMe,
       { sender: 'P2P_ME', side: 'me' },
       { sender: 'P2P_PEER', side: 'peer' },
+      opts,
     );
   };
 
-  const renderChatMessageInverted = (m) => {
+  const renderChatMessageInverted = (m, opts) => {
     const isMe = Number(m.senderId) === Number(user?.id);
     return buildBubble(
       m,
       isMe,
       { sender: 'P2P_PEER', side: 'peer' },
       { sender: 'P2P_ME', side: 'me' },
+      opts,
     );
   };
 
-  const renderDesktopCallMessages = () => centerMessages.map(renderChatMessageInverted);
+  const renderDesktopCallMessages = () => centerMessages.map((m) => renderChatMessageInverted(m, { transparent: true }));
 
   const renderCallClientBalance = () => (
     callClientSaldoLoading ? (
