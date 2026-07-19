@@ -457,9 +457,15 @@ export const ProgressPercentValue = styled.div`
   line-height: 1;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
-  /* Mismo gradiente que la barra (rojo brand -> rosa) para que el
-     numero grande "case" visualmente con la barra que representa. */
-  background: linear-gradient(90deg, #ea1d1d 0%, #ec4899 100%);
+  /* Mismo gradiente que la barra (rosa -> azul -> verde) para que el
+     numero grande "case" visualmente con la barra que representa.
+     Coherente con StyledTierBarFill del dashboard principal. */
+  background: linear-gradient(
+    90deg,
+    rgba(236,72,153,0.85) 0%,
+    rgba(59,130,246,0.85) 55%,
+    rgba(34,197,94,0.80) 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -470,13 +476,6 @@ export const ProgressPercentValue = styled.div`
   }
 `;
 
-export const ProgressPercentLabel = styled.div`
-  font-size: 11px;
-  font-weight: 700;
-  color: ${c.textMuted};
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-`;
 
 export const KpiTitle = styled.div`
   font-size: 11px;
@@ -518,9 +517,15 @@ export const BarFill = styled.div`
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 999px;
-  /* Rojo brand SharemeChat (#ea1d1d) -> rosa calido. Alineado con la
-     landing publica (HomeStyles usa #ea1d1d en HeroTitle span). */
-  background: linear-gradient(90deg, #ea1d1d 0%, #ec4899 100%);
+  /* Rosa -> azul -> verde. Mismo gradiente que StyledTierBarFill del
+     dashboard principal (VideochatStyles.js) — coherencia entre las
+     dos barras de progreso de tier que ve el modelo. */
+  background: linear-gradient(
+    90deg,
+    rgba(236,72,153,0.85) 0%,
+    rgba(59,130,246,0.85) 55%,
+    rgba(34,197,94,0.80) 100%
+  );
   transition: width 0.35s ease;
 `;
 
@@ -528,7 +533,7 @@ export const BarGlow = styled.div`
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 999px;
-  background: ${rgba('#ea1d1d', 0.24)};
+  background: ${rgba('#ec4899', 0.22)};
   filter: blur(6px);
   transition: width 0.35s ease;
   pointer-events: none;

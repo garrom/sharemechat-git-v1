@@ -53,6 +53,8 @@ import {
   StyledTierBarTrack,
   StyledTierBarFill,
   StyledTierBarLegend,
+  StyledTierPercentCol,
+  StyledTierPercentValue,
 } from '../../styles/pages-styles/VideochatStyles';
 
 import {
@@ -409,6 +411,15 @@ export default function VideoChatRandomModelo(props) {
                             </StyledTierKpiLine>
                           )}
                         </StyledTierKpiCol>
+
+                        {/* % avance hacia siguiente tier, en grande.
+                            Simetria con la tab Estadisticas: mismo tamaño,
+                            mismo gradiente. Solo si hay nextTier. */}
+                        {tierProgress.nextTier && (
+                          <StyledTierPercentCol>
+                            <StyledTierPercentValue>{Math.round(tierProgress.pct)}%</StyledTierPercentValue>
+                          </StyledTierPercentCol>
+                        )}
                       </StyledTierProgressRow>
 
                       <StyledTierBarWrap>

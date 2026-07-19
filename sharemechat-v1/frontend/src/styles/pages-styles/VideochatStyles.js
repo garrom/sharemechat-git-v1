@@ -1783,11 +1783,53 @@ export const StyledTierProgressCard = styled.div`
 
 export const StyledTierProgressRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* 2 cols de KPIs + col auto para el % grande (que solo aparece si
+     hay nextTier — cuando no existe, el track auto colapsa a 0). */
+  grid-template-columns: 1fr 1fr auto;
   gap: 14px;
+  align-items: center;
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+  }
+`;
+
+// Columna a la derecha del bloque "Siguiente objetivo" que muestra
+// el porcentaje de avance hacia el siguiente tier. Coherente con
+// ProgressPercentCol de EstadisticaStyles — mismo tamaño, mismo
+// gradiente, para que las 2 vistas del modelo (dashboard principal
+// y tab Estadisticas) hablen el mismo idioma visual.
+export const StyledTierPercentCol = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  padding-left: 8px;
+
+  @media (max-width: 768px) {
+    justify-content: flex-start;
+    padding-left: 0;
+  }
+`;
+
+export const StyledTierPercentValue = styled.div`
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(
+    90deg,
+    rgba(236,72,153,0.95) 0%,
+    rgba(59,130,246,0.95) 55%,
+    rgba(34,197,94,0.95) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+
+  @media (max-width: 768px) {
+    font-size: 44px;
   }
 `;
 
