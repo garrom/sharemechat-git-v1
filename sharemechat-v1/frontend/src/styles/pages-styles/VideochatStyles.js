@@ -689,7 +689,9 @@ export const StyledChatInput = styled.input`
   border-radius: 12px;
   min-height: 40px;
   padding: 0 12px;
-  font-size: 14px;
+  /* iOS Safari: font-size < 16px fuerza zoom automatico al focus.
+     16px lo evita — comportamiento estandar de apps iOS-friendly. */
+  font-size: 16px;
   line-height: 1.4;
   outline: none;
 
@@ -698,7 +700,13 @@ export const StyledChatInput = styled.input`
     box-shadow: 0 0 0 3px #0d6efd22;
   }
 
-
+  /* Cuando iOS Safari abre teclado por focus, hace scroll automatico
+     para llevar el input a la vista. scroll-margin-bottom fuerza que
+     ese scroll deje 30vh de aire debajo del input — asi el composer
+     queda por ENCIMA del teclado y no pegado al borde. Fix Fase A. */
+  @media (max-width: 768px) {
+    scroll-margin-bottom: 30vh;
+  }
 `;
 
 /* --------------------------------
@@ -1299,8 +1307,11 @@ export const StyledChatScroller = styled.div`
   @media (max-width: 768px) {
     padding-top: 4px;
     scroll-padding-top: 12px;
-    padding-bottom: 80px;
-    scroll-padding-bottom: 80px;
+    /* Fase A fix chat mobile: respetar safe-area del iPhone (barra
+       home) + reserva mayor para que los mensajes recientes no
+       queden pegados al composer cuando el teclado sube. */
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 
 
@@ -1503,6 +1514,12 @@ export const StyledCallComposer = styled.div`
   width: 100%;
   min-width: 0;
 
+  /* Fase A fix chat mobile: reserva safe-area del iPhone para que el
+     composer no quede debajo de la barra home. */
+  @media (max-width: 768px) {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   @media (min-width: 769px) {
     min-height: 64px;
     padding: 12px 14px 14px;
@@ -1537,6 +1554,11 @@ export const StyledChatDockMessageComposer = styled(StyledChatDock)`
   backdrop-filter: none;
   box-sizing: border-box;
   box-shadow: none;
+
+  /* Fase A fix chat mobile: safe-area iPhone (barra home). */
+  @media (max-width: 768px) {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
 
   @media (min-width: 769px) {
     justify-content: center;
