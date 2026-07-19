@@ -1268,6 +1268,7 @@
         "title": "Progreso hacia el siguiente tier",
         "hint": "Objetivo y minutos que te faltan para subir.",
         "goalReached": "Tier objetivo alcanzado",
+        "percentLabel": "Completado",
         "current": {
           "title": "Tu situación",
           "minutesLabel": "Minutos actuales:",

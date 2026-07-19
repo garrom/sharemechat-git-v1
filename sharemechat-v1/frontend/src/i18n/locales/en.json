@@ -1268,6 +1268,7 @@
         "title": "Progress toward the next tier",
         "hint": "Goal and minutes remaining to level up.",
         "goalReached": "Target tier reached",
+        "percentLabel": "Completed",
         "current": {
           "title": "Your situation",
           "minutesLabel": "Current minutes:",

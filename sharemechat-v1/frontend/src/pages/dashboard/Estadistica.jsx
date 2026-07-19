@@ -41,6 +41,9 @@ import {
   ProgressCol,
   KpiTitle,
   KpiLine,
+  ProgressPercentCol,
+  ProgressPercentValue,
+  ProgressPercentLabel,
   BarWrap,
   BarTrack,
   BarFill,
@@ -347,6 +350,18 @@ export default function Estadistica({
                         <KpiLine>{t('dashboardModel.statistics.progress.next.maxTier')}</KpiLine>
                       )}
                     </ProgressCol>
+
+                    {/* % de progreso en grande al lado de "Siguiente
+                        objetivo". Solo aparece si hay siguiente tier
+                        (en tier maximo no hay % que mostrar). */}
+                    {computed.nextTier && (
+                      <ProgressPercentCol>
+                        <ProgressPercentValue>{Math.round(computed.progressPct)}%</ProgressPercentValue>
+                        <ProgressPercentLabel>
+                          {t('dashboardModel.statistics.progress.percentLabel', { defaultValue: 'Completado' })}
+                        </ProgressPercentLabel>
+                      </ProgressPercentCol>
+                    )}
                   </ProgressRow>
 
                   <BarWrap>

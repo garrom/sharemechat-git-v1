@@ -435,6 +435,49 @@ export const ProgressCol = styled.div`
   gap: 6px;
 `;
 
+// Columna especial que muestra el porcentaje de progreso en grande,
+// alineada verticalmente a la derecha del bloque "Siguiente objetivo".
+// Se renderiza SOLO cuando existe nextTier (no aparece en tier maximo).
+export const ProgressPercentCol = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 4px;
+  min-width: 0;
+
+  @media (max-width: 640px) {
+    align-items: flex-start;
+  }
+`;
+
+export const ProgressPercentValue = styled.div`
+  font-size: 56px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  /* Mismo gradiente que la barra (rojo brand -> rosa) para que el
+     numero grande "case" visualmente con la barra que representa. */
+  background: linear-gradient(90deg, #ea1d1d 0%, #ec4899 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+
+  @media (max-width: 640px) {
+    font-size: 44px;
+  }
+`;
+
+export const ProgressPercentLabel = styled.div`
+  font-size: 11px;
+  font-weight: 700;
+  color: ${c.textMuted};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+`;
+
 export const KpiTitle = styled.div`
   font-size: 11px;
   font-weight: 600;
@@ -475,7 +518,9 @@ export const BarFill = styled.div`
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 999px;
-  background: linear-gradient(90deg, ${c.business} 0%, ${c.primary} 100%);
+  /* Rojo brand SharemeChat (#ea1d1d) -> rosa calido. Alineado con la
+     landing publica (HomeStyles usa #ea1d1d en HeroTitle span). */
+  background: linear-gradient(90deg, #ea1d1d 0%, #ec4899 100%);
   transition: width 0.35s ease;
 `;
 
@@ -483,7 +528,7 @@ export const BarGlow = styled.div`
   position: absolute;
   inset: 0 auto 0 0;
   border-radius: 999px;
-  background: ${rgba('#93b5e1', 0.28)};
+  background: ${rgba('#ea1d1d', 0.24)};
   filter: blur(6px);
   transition: width 0.35s ease;
   pointer-events: none;
