@@ -47,6 +47,7 @@ import { buildApiUrl, buildWsUrl, WS_PATHS } from '../../config/api';
 import { apiFetch } from '../../config/http';
 import useFrameCapture from '../../utils/useFrameCapture';
 import { useSession } from '../../components/SessionProvider';
+import useMobileKeyboardCompact from '../../hooks/useMobileKeyboardCompact';
 import { createMatchSocketEngine } from '../../realtime/matchSocketEngine';
 import { createMsgSocketEngine } from '../../realtime/msgSocketEngine';
 import {
@@ -134,6 +135,10 @@ const DashboardModel = () => {
     return () => clearInterval(iv);
   }, [modWarning?.startedAt]);
   const [chatInput, setChatInput] = useState('');
+  // Fase B chat mobile: marca body.kbd-open cuando iOS Safari abre
+  // el teclado en movil. CSS reacciona compactando el layout de
+  // Favoritos/chat. No hace nada en desktop.
+  useMobileKeyboardCompact();
   // Nav directa desde subpaneles externos (AffiliatePanelModel): cuando
   // el caller hace history.push('/model', { activeTab: 'stats' }), se
   // aterriza directo en esa tab en vez del videochat por defecto.

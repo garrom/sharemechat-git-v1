@@ -87,6 +87,22 @@ export const GlobalBlack = createGlobalStyle`
   body {
     overflow-x: hidden;
   }
+
+  /* Fase B chat mobile (2026-07-19): useMobileKeyboardCompact anade
+     body.kbd-open cuando iOS Safari abre el teclado en movil (via
+     visualViewport). El CSS reacciona escondiendo elementos marcados
+     como colapsables ("data-mobile-collapsible-on-kbd") para dar
+     altura al chat scroller.
+
+     Solo actua @media (max-width: 768px) — desktop nunca ve estas
+     reglas. Y solo cuando el hook activa la clase — cero impacto por
+     defecto. Los elementos que se ocultan son opt-in por atributo —
+     nada se esconde por sorpresa. */
+  @media (max-width: 768px) {
+    body.kbd-open [data-mobile-collapsible-on-kbd='true'] {
+      display: none;
+    }
+  }
 `;
 
 
@@ -669,6 +685,21 @@ export const StyledChatBubble = styled.span`
     font-size: 14.5px;
     margin-left: ${p => (p.$column && p.$variant === 'me' ? '28px' : '0')};
     margin-right: ${p => (p.$column && p.$variant === 'peer' ? '28px' : '0')};
+
+    /* Burbujas transparentes cuando el chat es overlay del video de
+       streaming (StyledChatContainer con inset:0 sobre el remote video).
+       Feedback operador 2026-07-19: en movil el video es pequeno y las
+       burbujas opacas tapan mucho. Solo texto flotando con text-shadow
+       para legibilidad sobre cualquier fondo. Chat de Favoritos y
+       Support (StyledChatWhatsApp) mantienen las burbujas normales. */
+    ${StyledChatContainer} & {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+      color: #ffffff;
+      text-shadow: 0 1px 3px rgba(0,0,0,0.75), 0 1px 6px rgba(0,0,0,0.55);
+      padding: 4px 8px;
+    }
   }
 `;
 
@@ -1307,11 +1338,23 @@ export const StyledChatScroller = styled.div`
   @media (max-width: 768px) {
     padding-top: 4px;
     scroll-padding-top: 12px;
-    /* Fase A fix chat mobile: respetar safe-area del iPhone (barra
-       home) + reserva mayor para que los mensajes recientes no
-       queden pegados al composer cuando el teclado sube. */
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
-    scroll-padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    /* Fase A atenuada (2026-07-19): el 80px hardcoded RESTABA altura
+       util al scroller y empeoraba el caso teclado abierto. Ahora
+       solo respetamos safe-area de la barra home; el composer aporta
+       su propio min-height por si mismo. */
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    scroll-padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Fase B (2026-07-19): cuando el teclado esta abierto en movil, el
+     composer se vuelve position:fixed (ver StyledChatDockMessageComposer).
+     El scroller debe reservar espacio equivalente en su padding-bottom
+     para que los mensajes recientes no queden ocultos debajo del
+     composer flotante. 80px = min-height composer aproximado. */
+  @media (max-width: 768px) {
+    body.kbd-open & {
+      padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+    }
   }
 
 
@@ -1558,6 +1601,23 @@ export const StyledChatDockMessageComposer = styled(StyledChatDock)`
   /* Fase A fix chat mobile: safe-area iPhone (barra home). */
   @media (max-width: 768px) {
     padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Fase B (2026-07-19): cuando el teclado esta abierto en movil,
+     el composer se ancla al TOP del teclado via --kbd-inset (que el
+     hook useMobileKeyboardCompact setea desde visualViewport). Fixed
+     al viewport en vez de al flow permite que la barra de escritura
+     quede SIEMPRE visible por encima del teclado, y el scroller de
+     arriba respira con toda la altura que le quede. */
+  @media (max-width: 768px) {
+    body.kbd-open & {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: var(--kbd-inset, 0px);
+      z-index: 20;
+      padding-bottom: 8px;
+    }
   }
 
   @media (min-width: 769px) {
