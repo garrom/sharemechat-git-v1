@@ -884,10 +884,61 @@
     },
     "actions": {
       "buy": "Buy",
+      "history": "History",
       "logout": "Log out",
       "logoutTitle": "Log out",
       "viewProfile": "View profile",
       "profile": "Profile"
+    },
+    "history": {
+      "title": "Transaction history",
+      "subtitle": "Top-ups, spending, bonuses and gifts. Keep this record if your bank asks for statements.",
+      "refresh": "Refresh",
+      "loading": "Loading...",
+      "errorLoad": "Could not load the history.",
+      "activeFilter": {
+        "label": "Filter",
+        "from": "from {{d}}",
+        "to": "to {{d}}"
+      },
+      "noRows": "No transactions match the applied filters.",
+      "pageInfo": "Page {{page}} of {{total}} · {{count}} transactions",
+      "prev": "Previous",
+      "next": "Next",
+      "filter": {
+        "category": "Category",
+        "from": "From",
+        "to": "To",
+        "download": "Download CSV",
+        "reset": "Clear",
+        "apply": "Apply"
+      },
+      "col": {
+        "date": "Date",
+        "type": "Type",
+        "detail": "Detail",
+        "amount": "Amount",
+        "reference": "Reference"
+      },
+      "categories": {
+        "all": "All",
+        "recargas": "Top-ups",
+        "bonos": "Bonuses",
+        "consumo": "Spending",
+        "regalos": "Gifts",
+        "reembolsos": "Refunds"
+      },
+      "typeLabel": {
+        "INGRESO": "Top-up",
+        "BONUS_GRANT": "Bonus",
+        "REFERRAL_WELCOME_GRANT": "Referral bonus",
+        "STREAM_CHARGE": "Streaming",
+        "GIFT_SEND": "Gift",
+        "MANUAL_REFUND": "Refund"
+      },
+      "detail": {
+        "pack": "Pack {{pack}}"
+      }
     },
     "favoriteAlerts": {
       "title": "Favorites",

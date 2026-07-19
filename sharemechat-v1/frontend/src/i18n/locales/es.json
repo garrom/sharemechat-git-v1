@@ -884,10 +884,61 @@
     },
     "actions": {
       "buy": "Comprar",
+      "history": "Historial",
       "logout": "Salir",
       "logoutTitle": "Cerrar sesión",
       "viewProfile": "Ver perfil",
       "profile": "Perfil"
+    },
+    "history": {
+      "title": "Historial de transacciones",
+      "subtitle": "Recargas, consumo, bonos y regalos. Guarda este historial si tu banco te pide justificantes.",
+      "refresh": "Refrescar",
+      "loading": "Cargando...",
+      "errorLoad": "No se pudo cargar el historial.",
+      "activeFilter": {
+        "label": "Filtro",
+        "from": "desde {{d}}",
+        "to": "hasta {{d}}"
+      },
+      "noRows": "No hay transacciones para los filtros aplicados.",
+      "pageInfo": "Página {{page}} de {{total}} · {{count}} transacciones",
+      "prev": "Anterior",
+      "next": "Siguiente",
+      "filter": {
+        "category": "Categoría",
+        "from": "Desde",
+        "to": "Hasta",
+        "download": "Descargar CSV",
+        "reset": "Limpiar",
+        "apply": "Aplicar"
+      },
+      "col": {
+        "date": "Fecha",
+        "type": "Tipo",
+        "detail": "Detalle",
+        "amount": "Importe",
+        "reference": "Referencia"
+      },
+      "categories": {
+        "all": "Todos",
+        "recargas": "Recargas",
+        "bonos": "Bonos",
+        "consumo": "Consumo",
+        "regalos": "Regalos",
+        "reembolsos": "Reembolsos"
+      },
+      "typeLabel": {
+        "INGRESO": "Recarga",
+        "BONUS_GRANT": "Bono",
+        "REFERRAL_WELCOME_GRANT": "Bono ref.",
+        "STREAM_CHARGE": "Streaming",
+        "GIFT_SEND": "Regalo",
+        "MANUAL_REFUND": "Reembolso"
+      },
+      "detail": {
+        "pack": "Pack {{pack}}"
+      }
     },
     "favoriteAlerts": {
       "title": "Favoritos",

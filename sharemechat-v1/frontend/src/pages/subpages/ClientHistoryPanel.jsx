@@ -73,24 +73,27 @@ const pill = (bg, fg) => ({ display: 'inline-block', padding: '2px 8px', borderR
 const PAGE_SIZE = 20;
 
 // Mapeo categoria UI -> lista de operation_type reales del backend.
-// null = "todos" (no filtra).
+// null = "todos" (no filtra). Los labels se resuelven via i18n a partir
+// de la key (dashboardClient.history.categories.<key en minusculas>).
 const CATEGORIES = [
-  { key: 'ALL',       label: 'Todos',      types: null },
-  { key: 'RECARGAS',  label: 'Recargas',   types: ['INGRESO'] },
-  { key: 'BONOS',     label: 'Bonos',      types: ['BONUS_GRANT', 'REFERRAL_WELCOME_GRANT'] },
-  { key: 'CONSUMO',   label: 'Consumo',    types: ['STREAM_CHARGE'] },
-  { key: 'REGALOS',   label: 'Regalos',    types: ['GIFT_SEND'] },
-  { key: 'REEMBOLSOS',label: 'Reembolsos', types: ['MANUAL_REFUND'] },
+  { key: 'ALL',       i18nKey: 'all',       types: null },
+  { key: 'RECARGAS',  i18nKey: 'recargas',  types: ['INGRESO'] },
+  { key: 'BONOS',     i18nKey: 'bonos',     types: ['BONUS_GRANT', 'REFERRAL_WELCOME_GRANT'] },
+  { key: 'CONSUMO',   i18nKey: 'consumo',   types: ['STREAM_CHARGE'] },
+  { key: 'REGALOS',   i18nKey: 'regalos',   types: ['GIFT_SEND'] },
+  { key: 'REEMBOLSOS',i18nKey: 'reembolsos',types: ['MANUAL_REFUND'] },
 ];
 
-// Metadatos por operation_type para la columna "Tipo" y el color del importe.
-const TYPE_META = {
-  INGRESO:                { label: 'Recarga',     pill: { bg: '#dcfce7', fg: '#166534' }, sign: '+' },
-  BONUS_GRANT:            { label: 'Bono',        pill: { bg: '#e0e7ff', fg: '#3730a3' }, sign: '+' },
-  REFERRAL_WELCOME_GRANT: { label: 'Bono ref.',   pill: { bg: '#e0e7ff', fg: '#3730a3' }, sign: '+' },
-  STREAM_CHARGE:          { label: 'Streaming',   pill: { bg: '#fee2e2', fg: '#991b1b' }, sign: '-' },
-  GIFT_SEND:              { label: 'Regalo',      pill: { bg: '#fef3c7', fg: '#92400e' }, sign: '-' },
-  MANUAL_REFUND:          { label: 'Reembolso',   pill: { bg: '#dbeafe', fg: '#1e40af' }, sign: '+' },
+// Metadatos por operation_type para la pill de la columna "Tipo".
+// Los labels (Recarga / Bono / etc.) vienen de i18n en runtime; aqui
+// solo guardamos colores y signo (que no cambian por idioma).
+const TYPE_STYLE = {
+  INGRESO:                { pill: { bg: '#dcfce7', fg: '#166534' }, sign: '+' },
+  BONUS_GRANT:            { pill: { bg: '#e0e7ff', fg: '#3730a3' }, sign: '+' },
+  REFERRAL_WELCOME_GRANT: { pill: { bg: '#e0e7ff', fg: '#3730a3' }, sign: '+' },
+  STREAM_CHARGE:          { pill: { bg: '#fee2e2', fg: '#991b1b' }, sign: '-' },
+  GIFT_SEND:              { pill: { bg: '#fef3c7', fg: '#92400e' }, sign: '-' },
+  MANUAL_REFUND:          { pill: { bg: '#dbeafe', fg: '#1e40af' }, sign: '+' },
 };
 
 const fmtDate = (iso) => {
@@ -226,11 +229,14 @@ const ClientHistoryPanel = () => {
 
   const activeFilterLabel = useMemo(() => {
     const cat = CATEGORIES.find(c => c.key === appliedCategory);
-    const parts = [cat ? cat.label : 'Todos'];
-    if (appliedFrom) parts.push(`desde ${appliedFrom}`);
-    if (appliedTo) parts.push(`hasta ${appliedTo}`);
+    const catLabel = cat
+      ? t(`dashboardClient.history.categories.${cat.i18nKey}`)
+      : t('dashboardClient.history.categories.all');
+    const parts = [catLabel];
+    if (appliedFrom) parts.push(t('dashboardClient.history.activeFilter.from', { defaultValue: 'desde {{d}}', d: appliedFrom }));
+    if (appliedTo) parts.push(t('dashboardClient.history.activeFilter.to', { defaultValue: 'hasta {{d}}', d: appliedTo }));
     return parts.join(' · ');
-  }, [appliedCategory, appliedFrom, appliedTo]);
+  }, [appliedCategory, appliedFrom, appliedTo, t]);
 
   return (
     <div style={wrap}>
@@ -253,7 +259,7 @@ const ClientHistoryPanel = () => {
           <label style={filterLabel}>{t('dashboardClient.history.filter.category', { defaultValue: 'Categoria' })}</label>
           <select style={input} value={draftCategory} onChange={(e) => setDraftCategory(e.target.value)} disabled={busy}>
             {CATEGORIES.map(c => (
-              <option key={c.key} value={c.key}>{c.label}</option>
+              <option key={c.key} value={c.key}>{t(`dashboardClient.history.categories.${c.i18nKey}`)}</option>
             ))}
           </select>
         </div>
@@ -284,7 +290,7 @@ const ClientHistoryPanel = () => {
       {error && <div style={errBox}>{error}</div>}
 
       <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8 }}>
-        {t('dashboardClient.history.activeFilter', { defaultValue: 'Filtro' })}: <span style={{ color: '#f8fafc', fontWeight: 600 }}>{activeFilterLabel}</span>
+        {t('dashboardClient.history.activeFilter.label', { defaultValue: 'Filtro' })}: <span style={{ color: '#f8fafc', fontWeight: 600 }}>{activeFilterLabel}</span>
       </div>
 
       <div style={tableWrap}>
@@ -305,15 +311,19 @@ const ClientHistoryPanel = () => {
               </td></tr>
             )}
             {items.map((it) => {
-              const meta = TYPE_META[it.operationType] || { label: it.operationType, pill: { bg: '#e5e7eb', fg: '#374151' }, sign: '' };
+              const style = TYPE_STYLE[it.operationType] || { pill: { bg: '#e5e7eb', fg: '#374151' }, sign: '' };
+              const typeLabel = t(`dashboardClient.history.typeLabel.${it.operationType}`, { defaultValue: it.operationType });
               const parsed = parseDescription(it.description);
-              const amountColor = meta.sign === '+' ? '#166534' : meta.sign === '-' ? '#991b1b' : '#18212f';
+              const amountColor = style.sign === '+' ? '#166534' : style.sign === '-' ? '#991b1b' : '#18212f';
+              const detailText = parsed.pack
+                ? t('dashboardClient.history.detail.pack', { defaultValue: 'Pack {{pack}}', pack: parsed.pack })
+                : (parsed.raw || '-');
               return (
                 <tr key={it.id}>
                   <td style={td}>{fmtDate(it.timestamp)}</td>
-                  <td style={td}><span style={pill(meta.pill.bg, meta.pill.fg)}>{meta.label}</span></td>
-                  <td style={td}>{parsed.pack ? `Pack ${parsed.pack}` : (parsed.raw || '-')}</td>
-                  <td style={{ ...tdAmount, color: amountColor }}>{fmtEUR(it.amount, meta.sign)}</td>
+                  <td style={td}><span style={pill(style.pill.bg, style.pill.fg)}>{typeLabel}</span></td>
+                  <td style={td}>{detailText}</td>
+                  <td style={{ ...tdAmount, color: amountColor }}>{fmtEUR(it.amount, style.sign)}</td>
                   <td style={{ ...td, fontFamily: 'monospace', fontSize: 12, color: '#52607a' }}>
                     {parsed.orderShort || '-'}
                   </td>

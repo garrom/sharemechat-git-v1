@@ -89,6 +89,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             + "AND (:types IS NULL OR t.operationType IN :types) "
             + "AND (:from IS NULL OR t.timestamp >= :from) "
             + "AND (:to IS NULL OR t.timestamp < :to) "
+            + "AND NOT (t.operationType = 'GIFT_SEND' AND t.amount = 0) "
             + "ORDER BY t.timestamp DESC")
     Page<Transaction> findClientTransactionsFiltered(
             @Param("userId") Long userId,
@@ -109,6 +110,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             + "AND (:types IS NULL OR t.operationType IN :types) "
             + "AND (:from IS NULL OR t.timestamp >= :from) "
             + "AND (:to IS NULL OR t.timestamp < :to) "
+            + "AND NOT (t.operationType = 'GIFT_SEND' AND t.amount = 0) "
             + "ORDER BY t.timestamp DESC")
     List<Transaction> findClientTransactionsForExport(
             @Param("userId") Long userId,
