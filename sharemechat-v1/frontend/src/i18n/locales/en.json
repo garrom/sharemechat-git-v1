@@ -1112,6 +1112,46 @@
     }
   },
   "dashboardModel": {
+    "billing": {
+      "title": "Billing",
+      "subtitle": "Streaming, gifts and withdrawals. Keep this record if you need statements.",
+      "errorLoad": "Could not load billing.",
+      "noRows": "No operations match the applied filters.",
+      "pageInfo": "Page {{page}} of {{total}} · {{count}} operations",
+      "prev": "Previous",
+      "next": "Next",
+      "activeFilter": {
+        "label": "Filter",
+        "from": "from {{d}}",
+        "to": "to {{d}}"
+      },
+      "filter": {
+        "category": "Category",
+        "from": "From",
+        "to": "To",
+        "download": "Download CSV",
+        "reset": "Clear",
+        "apply": "Apply"
+      },
+      "col": {
+        "date": "Date",
+        "type": "Type",
+        "detail": "Detail",
+        "amount": "Amount"
+      },
+      "categories": {
+        "all": "All",
+        "streaming": "Streaming",
+        "regalos": "Gifts",
+        "retiradas": "Withdrawals"
+      },
+      "typeLabel": {
+        "STREAM_EARNING": "Streaming",
+        "GIFT_EARNING": "Gift",
+        "PAYOUT_REQUEST": "Withdrawal",
+        "PAYOUT_REQUEST_REVERT": "Reverted"
+      }
+    },
     "moderationNotice": "Your session is automatically supervised in accordance with our safety policies and terms of service",
     "moderationWarning": {
       "noFace": "Get back on camera. Your face is not detected.",

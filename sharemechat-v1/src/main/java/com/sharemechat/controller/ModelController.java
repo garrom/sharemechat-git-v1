@@ -3,15 +3,20 @@ package com.sharemechat.controller;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.ModelDTO;
 import com.sharemechat.entity.ModelDocument;
+import com.sharemechat.entity.Transaction;
 import com.sharemechat.entity.User;
 import com.sharemechat.exception.EmailVerificationRequiredException;
 import com.sharemechat.repository.ModelDocumentRepository;
+import com.sharemechat.repository.TransactionRepository;
 import com.sharemechat.security.ModelContractGate;
 import com.sharemechat.service.EmailVerificationService;
 import com.sharemechat.service.ModelService;
 import com.sharemechat.service.ModelStatsService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.storage.StorageService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +25,18 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/models")
@@ -32,6 +49,7 @@ public class ModelController {
     private final ModelStatsService modelStatsService;
     private final ModelContractGate modelContractGate;
     private final EmailVerificationService emailVerificationService;
+    private final TransactionRepository transactionRepository;
     private static final Logger log = LoggerFactory.getLogger(ModelController.class);
 
     public ModelController(ModelService modelService,
@@ -40,7 +58,8 @@ public class ModelController {
                            StorageService storageService,
                            ModelStatsService modelStatsService,
                            ModelContractGate modelContractGate,
-                           EmailVerificationService emailVerificationService) {
+                           EmailVerificationService emailVerificationService,
+                           TransactionRepository transactionRepository) {
         this.modelService = modelService;
         this.userService = userService;
         this.modelDocumentRepository = modelDocumentRepository;
@@ -48,6 +67,7 @@ public class ModelController {
         this.modelStatsService = modelStatsService;
         this.modelContractGate = modelContractGate;
         this.emailVerificationService = emailVerificationService;
+        this.transactionRepository = transactionRepository;
     }
 
     // ==========================
@@ -121,6 +141,137 @@ public class ModelController {
         }
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
+    }
+
+    // ==========================
+    // Facturacion / Billing (2026-07-19 Fase 2 Estadistica)
+    // Reutiliza el mismo TransactionRepository que el historial cliente
+    // — la tabla `transactions` es user_id-based sin distincion de rol,
+    // basta filtrar por el userId autenticado.
+    // ==========================
+    @GetMapping("/me/transactions")
+    public ResponseEntity<?> getMyModelTransactions(Authentication authentication,
+                                                    @RequestParam(required = false) String type,
+                                                    @RequestParam(required = false) String types,
+                                                    @RequestParam(required = false) String from,
+                                                    @RequestParam(required = false) String to,
+                                                    @RequestParam(defaultValue = "0") int page,
+                                                    @RequestParam(defaultValue = "20") int size) {
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
+        if (!Constants.Roles.MODEL.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
+        }
+
+        int safeSize = Math.max(1, Math.min(size, 100));
+        int safePage = Math.max(0, page);
+
+        List<String> typeList = null;
+        if (types != null && !types.isBlank()) {
+            typeList = Arrays.stream(types.split(","))
+                    .map(s -> s.trim().toUpperCase(Locale.ROOT))
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            if (typeList.isEmpty()) typeList = null;
+        } else if (type != null && !type.isBlank()) {
+            typeList = List.of(type.trim().toUpperCase(Locale.ROOT));
+        }
+
+        LocalDateTime fromDt = null;
+        LocalDateTime toDt = null;
+        try {
+            if (from != null && !from.isBlank()) fromDt = LocalDate.parse(from.trim()).atStartOfDay();
+            if (to != null && !to.isBlank()) toDt = LocalDate.parse(to.trim()).plusDays(1).atStartOfDay();
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest().body("Formato de fecha invalido (esperado yyyy-MM-dd)");
+        }
+
+        Page<Transaction> pageResult = transactionRepository.findClientTransactionsFiltered(
+                user.getId(), typeList, fromDt, toDt, PageRequest.of(safePage, safeSize));
+
+        List<Map<String, Object>> items = pageResult.getContent().stream().map(t -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.getId());
+            m.put("operationType", t.getOperationType());
+            m.put("amount", t.getAmount());
+            m.put("description", t.getDescription());
+            m.put("timestamp", t.getTimestamp() != null ? t.getTimestamp().toString() : null);
+            return m;
+        }).toList();
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("items", items);
+        out.put("page", pageResult.getNumber());
+        out.put("size", pageResult.getSize());
+        out.put("totalPages", pageResult.getTotalPages());
+        out.put("totalElements", pageResult.getTotalElements());
+        return ResponseEntity.ok(out);
+    }
+
+    @GetMapping("/me/transactions/export")
+    public ResponseEntity<?> exportMyModelTransactionsCsv(Authentication authentication,
+                                                          @RequestParam(required = false) String types,
+                                                          @RequestParam(required = false) String from,
+                                                          @RequestParam(required = false) String to) {
+        User user = requireUser(authentication);
+        if (user == null) return unauth();
+        if (!Constants.Roles.MODEL.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
+        }
+
+        List<String> typeList = null;
+        if (types != null && !types.isBlank()) {
+            typeList = Arrays.stream(types.split(","))
+                    .map(s -> s.trim().toUpperCase(Locale.ROOT))
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            if (typeList.isEmpty()) typeList = null;
+        }
+
+        LocalDateTime fromDt = null;
+        LocalDateTime toDt = null;
+        try {
+            if (from != null && !from.isBlank()) fromDt = LocalDate.parse(from.trim()).atStartOfDay();
+            if (to != null && !to.isBlank()) toDt = LocalDate.parse(to.trim()).plusDays(1).atStartOfDay();
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest().body("Formato de fecha invalido (esperado yyyy-MM-dd)");
+        }
+
+        List<Transaction> rows = transactionRepository.findClientTransactionsForExport(
+                user.getId(), typeList, fromDt, toDt, PageRequest.of(0, 10_000));
+
+        StringBuilder sb = new StringBuilder(rows.size() * 128);
+        // BOM UTF-8 para compatibilidad Excel.
+        sb.append('﻿');
+        sb.append("id,timestamp,operation_type,amount_eur,description\r\n");
+        DateTimeFormatter dtFmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        for (Transaction t : rows) {
+            sb.append(t.getId()).append(',');
+            sb.append(t.getTimestamp() != null ? t.getTimestamp().format(dtFmt) : "").append(',');
+            sb.append(csvQuote(t.getOperationType())).append(',');
+            BigDecimal a = t.getAmount();
+            sb.append(a != null ? a.toPlainString() : "").append(',');
+            sb.append(csvQuote(t.getDescription())).append("\r\n");
+        }
+
+        String filename = String.format("sharemechat-facturacion-%s.csv",
+                LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDispositionFormData("attachment", filename);
+        headers.setCacheControl("no-cache, no-store");
+
+        return new ResponseEntity<>(sb.toString().getBytes(StandardCharsets.UTF_8),
+                headers, HttpStatus.OK);
+    }
+
+    private static String csvQuote(String s) {
+        if (s == null) return "";
+        boolean needsQuote = s.indexOf(',') >= 0 || s.indexOf('"') >= 0
+                || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0;
+        if (!needsQuote) return s;
+        return "\"" + s.replace("\"", "\"\"") + "\"";
     }
 
     // ==========================

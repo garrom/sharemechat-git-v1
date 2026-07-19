@@ -56,6 +56,7 @@ import {
   TierExpandIcon,
   TierDetailText,
 } from '../../styles/pages-styles/EstadisticaStyles';
+import ModelBillingPanel from './ModelBillingPanel';
 
 export default function Estadistica({
   modelStatsDays,
@@ -492,19 +493,10 @@ export default function Estadistica({
               </Section>
             </>
           ) : (
-            <Section>
-              <SectionHead>
-                <SectionTitle>{t('dashboardModel.statistics.billing.title')}</SectionTitle>
-                <SectionHint>{t('dashboardModel.statistics.billing.hint')}</SectionHint>
-              </SectionHead>
-
-              <Placeholder>
-                <PlaceholderTitle>{t('dashboardModel.statistics.billing.placeholderTitle')}</PlaceholderTitle>
-                <PlaceholderText>
-                  {t('dashboardModel.statistics.billing.placeholderText')}
-                </PlaceholderText>
-              </Placeholder>
-            </Section>
+            // Fase 2 (2026-07-19): tab Billing rellenada con el historial
+            // economico real del modelo (STREAM_EARNING, GIFT_EARNING,
+            // PAYOUT_REQUEST, PAYOUT_REQUEST_REVERT).
+            <ModelBillingPanel />
           )}
         </>
       )}
