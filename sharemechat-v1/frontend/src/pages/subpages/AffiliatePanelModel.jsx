@@ -55,6 +55,7 @@ import {
   PlaceholderTitle,
   PlaceholderText,
 } from '../../styles/pages-styles/EstadisticaStyles';
+import { StyledMainContent } from '../../styles/pages-styles/VideochatStyles';
 
 import {
   getAffiliateDashboard,
@@ -166,6 +167,13 @@ const AffiliatePanelModel = () => {
 
   const goDashboard = useCallback(() => history.push('/model'), [history]);
   const goProfile = useCallback(() => history.push('/perfil-model'), [history]);
+  // Nav directa a una tab concreta del DashboardModel via location.state.
+  // Evita el "primero home, luego pulsar la tab" que sufria el navbar del
+  // subpanel Afiliada (los onGo* iban todos a goDashboard sin especificar).
+  const goDashboardTab = useCallback(
+    (tab) => history.push('/model', { activeTab: tab }),
+    [history]
+  );
 
   const displayName = sessionUser?.nickname || sessionUser?.email || '';
 
@@ -321,16 +329,24 @@ const AffiliatePanelModel = () => {
         showBalance={false}
         showQueue={false}
         onBrandClick={goDashboard}
-        onGoVideochat={goDashboard}
-        onGoFavorites={goDashboard}
-        onGoBlog={goDashboard}
-        onGoStats={goDashboard}
+        onGoVideochat={() => goDashboardTab('videochat')}
+        onGoFavorites={() => goDashboardTab('favoritos')}
+        onGoBlog={() => goDashboardTab('blog')}
+        onGoStats={() => goDashboardTab('stats')}
         onGoAffiliate={() => {}}
         onProfile={goProfile}
         onWithdraw={goDashboard}
         onLogout={goDashboard}
       />
 
+      {/* StyledMainContent aporta el padding y gap (16px) que el
+          DashboardModel usa para separar el contenido del navbar y de
+          los bordes del viewport. Sin este envoltorio, el Wrap quedaba
+          pegado a los bordes y sin aire — asimetria visual con Stats
+          reportada por el operador (2026-07-19). data-tab="afiliada"
+          hace que overflow sea auto (regla de VideochatStyles) para que
+          el contenido pueda scrollear internamente en pantallas cortas. */}
+      <StyledMainContent data-tab="afiliada">
       <Wrap>
         <TopBar>
           <TopLeft>
@@ -494,6 +510,7 @@ const AffiliatePanelModel = () => {
           </>
         )}
       </Wrap>
+      </StyledMainContent>
     </StyledContainer>
   );
 };

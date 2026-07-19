@@ -134,7 +134,14 @@ const DashboardModel = () => {
     return () => clearInterval(iv);
   }, [modWarning?.startedAt]);
   const [chatInput, setChatInput] = useState('');
-  const [activeTab, setActiveTab] = useState('videochat');
+  // Nav directa desde subpaneles externos (AffiliatePanelModel): cuando
+  // el caller hace history.push('/model', { activeTab: 'stats' }), se
+  // aterriza directo en esa tab en vez del videochat por defecto.
+  // Patron paralelo al de pendingAutoSelectBot mas abajo.
+  const routerLocation = useLocation();
+  const [activeTab, setActiveTab] = useState(
+    () => routerLocation?.state?.activeTab || 'videochat'
+  );
   const [saldoModel, setSaldoModel] = useState(null);
   const [loadingSaldoModel, setLoadingSaldoModel] = useState(false);
   const [status, setStatus] = useState('');
@@ -226,11 +233,12 @@ const DashboardModel = () => {
   const activeTabRef = useRef(activeTab);
 
   const history = useHistory();
-  const location = useLocation();
+  // location ya declarada arriba como routerLocation (junto al activeTab
+  // initializer). Reutilizamos la misma referencia para autoSelectSupportBot.
   // Flag consumido por FavoritesModelList: cuando se llega al dashboard desde
   // el icono Soporte del navbar, se auto-selecciona el bot en la lista.
   const [pendingAutoSelectBot, setPendingAutoSelectBot] = useState(
-    () => !!location?.state?.autoSelectSupportBot
+    () => !!routerLocation?.state?.autoSelectSupportBot
   );
   const localVideoRef = useRef(null);
   const remoteVideoRef = useRef(null);
