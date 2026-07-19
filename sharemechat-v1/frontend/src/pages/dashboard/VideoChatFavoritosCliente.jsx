@@ -521,7 +521,7 @@ export default function VideoChatFavoritosCliente(props){
 
                   <StyledChatContainer data-wide="true" style={{display:'flex',flexDirection:'column',justifyContent:'flex-end',zIndex:5}}>
                     <StyledChatList ref={callListRef} style={{width:'100%'}}>
-                      {centerMessages.map(renderChatMessage)}
+                      {centerMessages.map((m) => renderChatMessage(m, { transparent: true }))}
                     </StyledChatList>
                   </StyledChatContainer>
                 </StyledVideoArea>
