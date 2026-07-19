@@ -1,71 +1,135 @@
 import styled from 'styled-components';
 
+// ============================================================
+// EstadisticaStyles — 2026-07-19 rediseño Fase 1
+//
+// Tema oscuro coherente con el dashboard del modelo (fondo negro
+// GlobalBlack) usando la paleta pastel introducida en el sidebar
+// admin: primary #93b5e1, business #a3d4b3, control #f4c99b,
+// hot #e5a4b9, purple #c4b5fd. Base slate: #0f172a (bg), #1e293b
+// (cards), #334155 (borders).
+//
+// AffiliatePanelModel reutiliza este mismo lenguaje visual — ambos
+// paneles quedan alineados sin trabajo adicional.
+// ============================================================
+
+// -------- Paleta local (para reutilizar dentro del fichero) --------
+const c = {
+  bg:            '#0f172a',
+  card:          '#1e293b',
+  cardAlt:       '#243244',
+  border:        '#334155',
+  borderSoft:    'rgba(148,163,184,0.14)',
+  text:          '#e2e8f0',
+  textSoft:      '#cbd5e1',
+  textMuted:     '#94a3b8',
+  textDim:       '#64748b',
+
+  primary:       '#93b5e1',   // azul pastel — current tier
+  business:      '#a3d4b3',   // verde pastel — minutos, ganancias
+  control:       '#f4c99b',   // ámbar pastel — tarifas
+  hot:           '#e5a4b9',   // rosa pastel — alertas, next tier
+  purple:        '#c4b5fd',   // púrpura pastel — extras
+
+  successBg:     'rgba(163,212,179,0.14)',
+  successBorder: 'rgba(163,212,179,0.32)',
+  errorBg:       'rgba(229,164,185,0.14)',
+  errorBorder:   'rgba(229,164,185,0.38)',
+};
+
+// Utilidad: rgb() del hex para overlays translúcidos.
+const rgba = (hex, a) => {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${a})`;
+};
+
+// Mapeo del prop $accent de MiniCard → color pastel.
+const accentColor = (name) => {
+  switch (name) {
+    case 'blue':   return c.primary;
+    case 'green':  return c.business;
+    case 'amber':  return c.control;
+    case 'purple': return c.purple;
+    case 'pink':   return c.hot;
+    default:       return c.textMuted;
+  }
+};
+
+// ============================================================
+// Wrap — contenedor raíz del panel
+// ============================================================
 export const Wrap = styled.div`
   flex: 1;
   min-width: 0;
   min-height: 0;
-  padding: 16px;
+  padding: 20px 22px 32px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 
-  background: linear-gradient(
-    180deg,
-    rgba(248,250,252,0.92) 0%,
-    rgba(241,245,249,0.92) 55%,
-    rgba(236,254,255,0.65) 100%
-  );
+  background:
+    radial-gradient(1200px 400px at 10% -10%, ${rgba('#93b5e1', 0.08)}, transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, ${rgba('#c4b5fd', 0.06)}, transparent 55%),
+    ${c.bg};
 
-  color: rgba(15,23,42,0.92);
+  color: ${c.text};
   overflow: auto;
-  border-radius: 6px;
-  border: 1px solid rgba(15,23,42,0.06);
+  border-radius: 16px;
+  border: 1px solid ${c.borderSoft};
 
   @media (max-width: 768px) {
-    padding: 12px;
-    border-radius: 14px;
+    padding: 14px 14px 28px;
+    border-radius: 12px;
   }
 `;
 
+// ============================================================
+// TopBar — cabecera con icono, título y controles a la derecha
+// ============================================================
 export const TopBar = styled.div`
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 14px;
+  gap: 16px;
   flex-wrap: wrap;
 `;
 
 export const TopLeft = styled.div`
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   min-width: 0;
 `;
 
 export const TopIcon = styled.div`
-  width: 40px;
-  height: 40px;
-  border-radius: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
-  background: rgba(34,197,94,0.14);
-  border: 1px solid rgba(34,197,94,0.22);
-  color: rgba(22,163,74,0.95);
+  background: ${rgba('#93b5e1', 0.14)};
+  border: 1px solid ${rgba('#93b5e1', 0.32)};
+  color: ${c.primary};
+  font-size: 18px;
 `;
 
 export const Title = styled.div`
-  font-size: 18px;
-  font-weight: 900;
-  color: rgba(2,6,23,0.92);
-  letter-spacing: .2px;
+  font-size: 20px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.2px;
+  line-height: 1.1;
 `;
 
 export const SubTitle = styled.div`
-  margin-top: 2px;
+  margin-top: 4px;
   font-size: 13px;
-  color: rgba(30,41,59,0.78);
+  color: ${c.textMuted};
+  line-height: 1.45;
 `;
 
 export const TopRight = styled.div`
@@ -76,514 +140,466 @@ export const TopRight = styled.div`
   flex-wrap: wrap;
 `;
 
+// ============================================================
+// Filtros de la cabecera
+// ============================================================
 export const Filters = styled.div`
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 `;
 
 export const FilterLabel = styled.span`
-  color: rgba(30,41,59,0.78);
-  font-weight: 800;
+  color: ${c.textSoft};
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 `;
 
 export const Select = styled.select`
-  height: 40px;
-  border-radius: 12px;
+  height: 38px;
+  border-radius: 10px;
   padding: 0 12px;
 
-  border: 1px solid rgba(15,23,42,0.14);
-  background: rgba(255,255,255,0.78);
-  color: rgba(2,6,23,0.88);
+  border: 1px solid ${c.border};
+  background: ${c.card};
+  color: ${c.text};
   outline: none;
+  font-size: 13px;
+  font-weight: 600;
 
   &:hover {
-    background: rgba(255,255,255,0.90);
+    border-color: ${rgba('#93b5e1', 0.6)};
   }
 
   &:focus {
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
-    border-color: rgba(59,130,246,0.40);
+    box-shadow: 0 0 0 3px ${rgba('#93b5e1', 0.22)};
+    border-color: ${c.primary};
   }
 
   option {
-    background: #ffffff;
-    color: #111;
+    background: ${c.card};
+    color: ${c.text};
   }
 
   &:disabled {
-    opacity: .65;
+    opacity: 0.5;
     cursor: not-allowed;
   }
 `;
 
 export const ReloadBtn = styled.button`
-  height: 40px;
-  border-radius: 12px;
-  padding: 0 14px;
+  height: 38px;
+  border-radius: 10px;
+  padding: 0 16px;
 
-  border: 1px solid rgba(15,23,42,0.14);
-  background: rgba(255,255,255,0.78);
-  color: rgba(2,6,23,0.88);
+  border: 1px solid ${rgba('#93b5e1', 0.4)};
+  background: transparent;
+  color: ${c.primary};
   cursor: pointer;
-  font-weight: 900;
+  font-weight: 600;
+  font-size: 13px;
+  transition: background 0.15s ease, border-color 0.15s ease;
 
-  &:hover:not(:disabled) {
-    background: rgba(255,255,255,0.94);
+  &:hover {
+    background: ${rgba('#93b5e1', 0.1)};
+    border-color: ${c.primary};
   }
 
   &:disabled {
-    opacity: .6;
+    opacity: 0.45;
     cursor: not-allowed;
   }
 `;
 
+// Pill informativa (nº de snapshots disponibles).
 export const AvailabilityPill = styled.div`
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
+  padding: 6px 12px;
   border-radius: 999px;
-
-  border: 1px solid rgba(59,130,246,0.22);
-  background: rgba(59,130,246,0.10);
-  color: rgba(30,64,175,0.92);
-
-  font-weight: 900;
   font-size: 12px;
+  font-weight: 600;
+
+  background: ${rgba('#a3d4b3', 0.14)};
+  color: ${c.business};
+  border: 1px solid ${rgba('#a3d4b3', 0.32)};
 `;
 
+// Aviso permanente (payout).
 export const PayoutNotice = styled.div`
-  max-width: min(680px, 100%);
-  padding: 9px 12px;
-  border-radius: 12px;
-  border: 1px solid rgba(2, 132, 199, 0.22);
-  background: rgba(2, 132, 199, 0.08);
-  color: rgba(15, 23, 42, 0.86);
+  padding: 10px 14px;
+  border-radius: 10px;
   font-size: 12px;
-  line-height: 1.4;
-  font-weight: 700;
+  line-height: 1.5;
+  max-width: 360px;
+
+  background: ${rgba('#f4c99b', 0.1)};
+  color: ${c.textSoft};
+  border: 1px solid ${rgba('#f4c99b', 0.28)};
 
   b {
-    color: rgba(12, 74, 110, 0.95);
-    font-weight: 900;
+    color: ${c.control};
+    font-weight: 700;
   }
 `;
 
+// ============================================================
+// Tabs — Progress / History / Billing
+// ============================================================
 export const TabsBar = styled.div`
   display: flex;
-  align-items: center;
-  gap: 0px;
+  gap: 4px;
+  padding: 4px;
+  background: ${c.card};
+  border: 1px solid ${c.border};
+  border-radius: 12px;
+  align-self: flex-start;
   flex-wrap: wrap;
-
-  width: 100%;
-  padding: 2px 2px 0 2px;
-  border-bottom: 1px solid rgba(236,72,153,0.22);
-
-  @media (max-width: 768px) {
-    flex-wrap: nowrap;
-  }
 `;
 
 export const TabButton = styled.button`
-  appearance: none;
-  -webkit-appearance: none;
-
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-
-  padding: 10px 14px;
-  border-radius: 2px 2px 0 0;
-
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: ${c.textMuted};
   cursor: pointer;
-  font-weight: 900;
-  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  transition: background 0.15s ease, color 0.15s ease;
 
-  background: rgba(255,255,255,0.82);
-  color: rgba(2,6,23,0.88);
-  border: 1px solid rgba(15,23,42,0.12);
-  border-bottom-color: transparent;
+  svg {
+    font-size: 12px;
+  }
 
   &:hover {
-    background: rgba(236,72,153,0.08);
-    border-color: rgba(236,72,153,0.22);
-    border-bottom-color: transparent;
+    color: ${c.textSoft};
+    background: ${rgba('#93b5e1', 0.06)};
   }
 
   &[data-active="true"] {
-    background: rgba(236,72,153,0.14);
-    border-color: rgba(236,72,153,0.28);
-    color: rgba(157,23,77,0.96);
-    border-bottom-color: rgba(248,250,252,0.92);
-  }
-
-  &:focus-visible {
-    outline: 2px solid rgba(236,72,153,0.32);
-    outline-offset: 2px;
-  }
-
-  @media (max-width: 768px) {
-    padding: 8px 10px;
-    font-size: 12px;
-    gap: 6px;
+    background: ${rgba('#93b5e1', 0.14)};
+    color: ${c.primary};
+    box-shadow: inset 0 0 0 1px ${rgba('#93b5e1', 0.32)};
   }
 `;
 
+// ============================================================
+// Estado / errores
+// ============================================================
 export const StateLine = styled.div`
-  color: rgba(30,41,59,0.80);
-  padding: 12px 2px;
-  font-weight: 800;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: ${c.card};
+  color: ${c.textMuted};
+  border: 1px solid ${c.border};
+  font-size: 13px;
 `;
 
 export const ErrorLine = styled.div`
-  color: rgba(185,28,28,0.92);
-  font-weight: 900;
-  padding: 12px 2px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  background: ${c.errorBg};
+  color: ${c.hot};
+  border: 1px solid ${c.errorBorder};
+  font-size: 13px;
+  font-weight: 500;
 `;
 
+// ============================================================
+// Sección + cabecera de sección
+// ============================================================
 export const Section = styled.section`
-  border-radius: 18px;
-  border: 1px solid rgba(15,23,42,0.10);
-  background: rgba(255,255,255,0.78);
-
-  padding: 14px;
-
-  box-shadow:
-    0 10px 30px rgba(15,23,42,0.06),
-    0 1px 0 rgba(255,255,255,0.65) inset;
-
-  @media (max-width: 768px) {
-    padding: 12px;
-  }
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 `;
 
 export const SectionHead = styled.div`
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  flex-direction: column;
+  gap: 2px;
 `;
 
 export const SectionTitle = styled.div`
-  font-size: 18px;
-  font-weight: 1000;
-  color: rgba(2,6,23,0.92);
-  letter-spacing: .2px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: 0.1px;
 `;
 
 export const SectionHint = styled.div`
-  font-size: 13px;
-  font-weight: 800;
-  color: rgba(30,41,59,0.70);
+  font-size: 12px;
+  color: ${c.textMuted};
+  line-height: 1.5;
 `;
 
+// ============================================================
+// Grid de mini-cards (KPIs)
+// ============================================================
 export const GridCards = styled.div`
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 
-  &[data-compact="true"] {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
-
-  @media (max-width: 1100px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-
-    &[data-compact="true"] {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 680px) {
-    grid-template-columns: 1fr;
+  @media (max-width: 480px) {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   }
 `;
 
 export const MiniCard = styled.div`
-  border-radius: 16px;
-  padding: 14px;
-
-  border: 1px solid rgba(15,23,42,0.10);
-  background: rgba(255,255,255,0.86);
-
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: ${c.card};
+  border: 1px solid ${c.border};
+  border-left: 3px solid ${({ $accent }) => accentColor($accent)};
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   min-width: 0;
-
-  transition: transform .10s ease, background-color .12s ease, border-color .12s ease, box-shadow .12s ease;
+  transition: border-color 0.15s ease, transform 0.15s ease;
 
   &:hover {
-    transform: translateY(-1px);
-    background: rgba(255,255,255,0.96);
-    border-color: rgba(15,23,42,0.14);
-    box-shadow: 0 12px 28px rgba(15,23,42,0.08);
+    border-color: ${({ $accent }) => rgba(accentColor($accent), 0.6)};
+    border-left-color: ${({ $accent }) => accentColor($accent)};
   }
-
-  ${({ $accent }) => {
-    if ($accent === 'green') {
-      return `
-        box-shadow: 0 0 0 3px rgba(34,197,94,0.10) inset;
-        border-color: rgba(34,197,94,0.22);
-      `;
-    }
-    if ($accent === 'blue') {
-      return `
-        box-shadow: 0 0 0 3px rgba(59,130,246,0.10) inset;
-        border-color: rgba(59,130,246,0.22);
-      `;
-    }
-    if ($accent === 'amber') {
-      return `
-        box-shadow: 0 0 0 3px rgba(245,158,11,0.10) inset;
-        border-color: rgba(245,158,11,0.20);
-      `;
-    }
-    if ($accent === 'purple') {
-      return `
-        box-shadow: 0 0 0 3px rgba(168,85,247,0.10) inset;
-        border-color: rgba(168,85,247,0.20);
-      `;
-    }
-    return '';
-  }}
 `;
 
 export const MiniLabel = styled.div`
-  font-size: 12px;
-  color: rgba(30,41,59,0.70);
-  font-weight: 900;
+  font-size: 11px;
+  font-weight: 600;
+  color: ${c.textMuted};
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 `;
 
 export const MiniValue = styled.div`
-  margin-top: 6px;
   font-size: 22px;
-  font-weight: 1000;
-  color: rgba(2,6,23,0.92);
-  letter-spacing: .2px;
-
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-weight: 700;
+  color: #f8fafc;
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
 `;
 
 export const MiniMeta = styled.div`
-  margin-top: 8px;
-  font-size: 13px;
-  color: rgba(30,41,59,0.72);
-
-  b {
-    color: rgba(2,6,23,0.92);
-  }
+  font-size: 11px;
+  color: ${c.textMuted};
+  line-height: 1.4;
 `;
 
+// ============================================================
+// Progress hacia siguiente tier
+// ============================================================
 export const ProgressCard = styled.div`
-  border-radius: 18px;
-  padding: 14px;
-
-  border: 1px solid rgba(15,23,42,0.10);
-  background: rgba(248,250,252,0.90);
-
-  box-shadow: 0 10px 28px rgba(15,23,42,0.06);
+  padding: 18px;
+  border-radius: 14px;
+  background: ${c.card};
+  border: 1px solid ${c.border};
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 `;
 
 export const ProgressRow = styled.div`
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 14px;
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-  }
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
 `;
 
 export const ProgressCol = styled.div`
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 `;
 
 export const KpiTitle = styled.div`
-  font-weight: 1000;
-  color: rgba(2,6,23,0.92);
-  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: ${c.textMuted};
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
 `;
 
 export const KpiLine = styled.div`
   font-size: 13px;
-  color: rgba(30,41,59,0.78);
-  line-height: 1.45;
+  color: ${c.textSoft};
+  line-height: 1.5;
 
   b {
-    color: rgba(2,6,23,0.92);
+    color: #f8fafc;
+    font-weight: 700;
   }
 `;
 
+// Barra de progreso.
 export const BarWrap = styled.div`
-  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 `;
 
 export const BarTrack = styled.div`
   position: relative;
+  width: 100%;
   height: 12px;
   border-radius: 999px;
-
-  background: rgba(15,23,42,0.08);
+  background: ${rgba('#334155', 0.6)};
   overflow: hidden;
-  border: 1px solid rgba(15,23,42,0.12);
 `;
 
 export const BarFill = styled.div`
   position: absolute;
   inset: 0 auto 0 0;
-  height: 100%;
   border-radius: 999px;
-
-  background: linear-gradient(
-    90deg,
-    rgba(34,197,94,0.95) 0%,
-    rgba(59,130,246,0.92) 60%,
-    rgba(168,85,247,0.90) 100%
-  );
+  background: linear-gradient(90deg, ${c.business} 0%, ${c.primary} 100%);
+  transition: width 0.35s ease;
 `;
 
 export const BarGlow = styled.div`
   position: absolute;
   inset: 0 auto 0 0;
-  height: 100%;
   border-radius: 999px;
-  box-shadow: 0 0 18px rgba(59,130,246,0.22);
-  opacity: .65;
+  background: ${rgba('#93b5e1', 0.35)};
+  filter: blur(6px);
+  transition: width 0.35s ease;
   pointer-events: none;
 `;
 
 export const BarLegend = styled.div`
   display: flex;
   justify-content: space-between;
-  margin-top: 8px;
-  font-size: 12px;
-  font-weight: 900;
-  color: rgba(30,41,59,0.72);
+  font-size: 11px;
+  color: ${c.textMuted};
+  font-weight: 500;
 `;
 
 export const SuccessPill = styled.div`
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 12px;
-  padding: 8px 12px;
+  align-self: flex-start;
+  padding: 6px 12px;
   border-radius: 999px;
-
-  background: rgba(34,197,94,0.12);
-  border: 1px solid rgba(34,197,94,0.22);
-  color: rgba(22,101,52,0.92);
-
-  font-weight: 1000;
+  font-size: 12px;
+  font-weight: 600;
+  background: ${c.successBg};
+  color: ${c.business};
+  border: 1px solid ${c.successBorder};
 `;
 
+// ============================================================
+// Tabla (tiers + snapshots history)
+// ============================================================
 export const TableWrap = styled.div`
-  width: 100%;
+  border-radius: 12px;
+  border: 1px solid ${c.border};
+  background: ${c.card};
   overflow-x: auto;
-  border-radius: 14px;
-
-  border: 1px solid rgba(15,23,42,0.10);
-  background: rgba(255,255,255,0.86);
-
-  box-shadow: 0 8px 24px rgba(15,23,42,0.06);
+  -webkit-overflow-scrolling: touch;
 `;
 
 export const Table = styled.table`
   width: 100%;
   border-collapse: collapse;
-  min-width: 760px;
+  font-size: 13px;
+  color: ${c.text};
+
+  thead {
+    background: ${c.cardAlt};
+  }
 
   thead th {
+    padding: 10px 14px;
     text-align: left;
-    padding: 12px 12px;
-    font-size: 13px;
-    font-weight: 900;
-    letter-spacing: .2px;
-
-    color: rgba(15,23,42,0.82);
-    border-bottom: 1px solid rgba(15,23,42,0.08);
-    background: rgba(248,250,252,0.92);
+    font-weight: 600;
+    color: ${c.textSoft};
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    border-bottom: 1px solid ${c.border};
+    white-space: nowrap;
   }
 
   tbody td {
-    padding: 12px 12px;
-    border-bottom: 1px solid rgba(15,23,42,0.06);
-    font-weight: 800;
-    color: rgba(2,6,23,0.88);
+    padding: 12px 14px;
+    border-bottom: 1px solid ${rgba('#334155', 0.5)};
+    color: ${c.text};
+    vertical-align: middle;
   }
 
-  tbody tr {
-    transition: background-color .12s ease;
+  tbody tr:last-child td {
+    border-bottom: none;
   }
 
   tbody tr.is-expandable {
     cursor: pointer;
+    transition: background 0.12s ease;
   }
 
   tbody tr.is-expandable:hover {
-    background: rgba(59,130,246,0.06);
+    background: ${rgba('#93b5e1', 0.06)};
   }
 
-  tbody tr.tier-detail {
-    background: rgba(59,130,246,0.05);
-  }
-
-  tbody tr.tier-detail:hover {
-    background: rgba(59,130,246,0.05);
+  tbody tr.is-expandable[aria-expanded="true"] {
+    background: ${rgba('#93b5e1', 0.09)};
   }
 
   tbody tr.tier-detail td {
-    padding: 10px 12px;
-    background: rgba(59,130,246,0.05);
-    border-top: 1px solid rgba(15,23,42,0.06);
-    border-bottom: 1px solid rgba(15,23,42,0.06);
-    font-weight: 700;
-    color: rgba(30,41,59,0.78);
-    line-height: 1.45;
+    background: ${rgba('#93b5e1', 0.04)};
+    color: ${c.textSoft};
+    padding: 12px 20px;
+    font-size: 12px;
+    line-height: 1.5;
+    border-top: 1px dashed ${rgba('#93b5e1', 0.25)};
   }
 
-  td.name {
-    color: rgba(2,6,23,0.92);
-    font-weight: 1000;
-  }
-
-  td.hist-date,
+  td.name,
   td.hist-tier {
-    font-size: 14px;
-    font-weight: 900;
-    color: rgba(2,6,23,0.92);
+    font-weight: 600;
+    color: #f8fafc;
   }
 
-  @media (max-width: 900px) {
-    min-width: 680px;
-
-    thead th {
-      font-size: 12px;
-    }
+  td.hist-date {
+    color: ${c.textMuted};
+    font-variant-numeric: tabular-nums;
   }
 `;
 
+// ============================================================
+// Placeholder (tab Billing "coming soon")
+// ============================================================
 export const Placeholder = styled.div`
-  border-radius: 14px;
-  border: 1px dashed rgba(15,23,42,0.18);
-  background: rgba(255,255,255,0.60);
-  padding: 16px;
+  padding: 28px 22px;
+  border-radius: 12px;
+  background: ${c.card};
+  border: 1px dashed ${c.border};
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  text-align: center;
+  align-items: center;
 `;
 
 export const PlaceholderTitle = styled.div`
-  font-weight: 1000;
-  color: rgba(2,6,23,0.90);
+  font-size: 15px;
+  font-weight: 700;
+  color: #f8fafc;
 `;
 
 export const PlaceholderText = styled.div`
-  margin-top: 6px;
-  color: rgba(30,41,59,0.74);
-  font-weight: 700;
-  line-height: 1.45;
+  font-size: 13px;
+  color: ${c.textMuted};
+  line-height: 1.55;
+  max-width: 480px;
 `;
 
+// ============================================================
+// Detalle expandido de tier
+// ============================================================
 export const TierNameCell = styled.div`
   display: inline-flex;
   align-items: center;
@@ -592,17 +608,14 @@ export const TierNameCell = styled.div`
 
 export const TierExpandIcon = styled.span`
   display: inline-flex;
+  width: 18px;
+  height: 18px;
   align-items: center;
   justify-content: center;
-  width: 14px;
-  min-width: 14px;
-  color: rgba(30,41,59,0.68);
-  font-size: 11px;
+  color: ${c.textMuted};
+  font-size: 10px;
 `;
 
 export const TierDetailText = styled.div`
-  font-size: 12px;
-  line-height: 1.45;
-  font-weight: 700;
-  color: rgba(30,41,59,0.78);
+  color: ${c.textSoft};
 `;
