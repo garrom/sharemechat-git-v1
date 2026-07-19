@@ -1,5 +1,5 @@
 import React from 'react';
-import { faGem, faUser, faClockRotateLeft } from '@fortawesome/free-solid-svg-icons';
+import { faGem, faUser, faChartLine } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import NavbarBase from './NavbarBase';
 import DesktopTabs from './DesktopTabs';
@@ -85,8 +85,8 @@ const NavbarClient = ({
         label: historyLabel,
         title: historyLabel,
         onClick: onGoHistory,
-        icon: faClockRotateLeft,
-        iconStyle: { color: '#64748b', fontSize: '1rem' },
+        icon: faChartLine,
+        iconStyle: { color: '#3b82f6', fontSize: '1rem' },
         disabled: historyDisabled,
         iconOnly: true,
       } : null}
@@ -129,8 +129,8 @@ const NavbarClient = ({
         },
         ...(onGoHistory ? [{
           key: 'history',
-          icon: faClockRotateLeft,
-          iconStyle: { color: '#64748b', fontSize: '1rem' },
+          icon: faChartLine,
+          iconStyle: { color: '#3b82f6', fontSize: '1rem' },
           label: historyLabel,
           title: historyLabel,
           onClick: onGoHistory,

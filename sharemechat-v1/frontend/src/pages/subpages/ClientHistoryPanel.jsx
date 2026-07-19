@@ -15,8 +15,10 @@ const btn = (variant = 'primary', disabled = false) => ({
   color: variant === 'primary' ? '#ffffff' : '#1a1f2e',
   fontSize: 13, fontWeight: 600, cursor: disabled ? 'not-allowed' : 'pointer',
 });
-const title = { fontSize: 20, fontWeight: 700, color: '#18212f', margin: 0 };
-const subtitle = { fontSize: 13, color: '#6b7280', marginTop: 4 };
+// Colores del header adaptados al fondo negro del dashboard cliente
+// (GlobalBlack). Antes eran #18212f / #6b7280 y quedaban invisibles.
+const title = { fontSize: 20, fontWeight: 700, color: '#f8fafc', margin: 0 };
+const subtitle = { fontSize: 13, color: '#9ca3af', marginTop: 4 };
 const table = { width: '100%', borderCollapse: 'collapse', fontSize: 13, background: '#fff', border: '1px solid #e1e4e8', borderRadius: 8, overflow: 'hidden' };
 const th = { textAlign: 'left', padding: '10px 12px', background: '#f4f6f9', color: '#3a4152', fontWeight: 600, borderBottom: '1px solid #e1e4e8' };
 const td = { padding: '10px 12px', borderBottom: '1px solid #eef1f4', color: '#18212f' };
