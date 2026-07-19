@@ -1,6 +1,8 @@
 package com.sharemechat.repository;
 
 import com.sharemechat.entity.Transaction;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -55,4 +57,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
                                                  @Param("operationType") String operationType,
                                                  @Param("startInclusive") LocalDateTime startInclusive,
                                                  @Param("endExclusive") LocalDateTime endExclusive);
+
+    /**
+     * Historial de transacciones del cliente (2026-07-19, Fase 1 vista
+     * "Historial" del dashboard cliente). Filtro opcional por
+     * {@code operationType}. Paginacion server-side ordenada por
+     * {@code timestamp DESC}.
+     * <p>Fase 1 llama SOLO con {@code operationType='INGRESO'} (recargas).
+     * Fase 2 pasara {@code null} para incluir todos los tipos o listado
+     * de tipos para el filtro multiple del panel.
+     */
+    Page<Transaction> findByUser_IdAndOperationTypeOrderByTimestampDesc(
+            Long userId, String operationType, Pageable pageable);
+
+    Page<Transaction> findByUser_IdOrderByTimestampDesc(Long userId, Pageable pageable);
 }

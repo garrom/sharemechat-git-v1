@@ -3,11 +3,15 @@ package com.sharemechat.controller;
 import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.ClientDTO;
 import com.sharemechat.entity.ClientDocument;
+import com.sharemechat.entity.Transaction;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.ClientDocumentRepository;
+import com.sharemechat.repository.TransactionRepository;
 import com.sharemechat.service.ClientService;
 import com.sharemechat.service.UserService;
 import com.sharemechat.storage.StorageService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +20,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/clients")
@@ -25,15 +33,18 @@ public class ClientController {
     private final UserService userService;
     private final ClientDocumentRepository clientDocumentRepository;
     private final StorageService storageService;
+    private final TransactionRepository transactionRepository;
 
     public ClientController(ClientService clientService,
                             UserService userService,
                             ClientDocumentRepository clientDocumentRepository,
-                            StorageService storageService) {
+                            StorageService storageService,
+                            TransactionRepository transactionRepository) {
         this.clientService = clientService;
         this.userService = userService;
         this.clientDocumentRepository = clientDocumentRepository;
         this.storageService = storageService;
+        this.transactionRepository = transactionRepository;
     }
 
     @GetMapping("/me")
@@ -55,6 +66,61 @@ public class ClientController {
 
         ClientDTO dto = clientService.getClientDTO(user);
         return ResponseEntity.ok(dto);
+    }
+
+    /**
+     * Historial de transacciones del cliente logueado (2026-07-19, Fase 1
+     * de la vista "Historial"). Devuelve pagina descendente por
+     * {@code timestamp}. Filtro por {@code operationType} opcional; Fase 1
+     * llama con {@code type=INGRESO} (recargas). Fase 2 podra pasar null
+     * para todo o un tipo especifico.
+     *
+     * <p>Restringido a role CLIENT (misma politica que {@code /me}) —
+     * los usuarios FORM_CLIENT sin pagos no tienen historial que ver.
+     */
+    @GetMapping("/me/transactions")
+    public ResponseEntity<?> getMyTransactions(Authentication authentication,
+                                               @RequestParam(required = false) String type,
+                                               @RequestParam(defaultValue = "0") int page,
+                                               @RequestParam(defaultValue = "20") int size) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
+        }
+        User user = userService.findByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
+        }
+        if (!Constants.Roles.CLIENT.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol CLIENT");
+        }
+
+        int safeSize = Math.max(1, Math.min(size, 100));
+        int safePage = Math.max(0, page);
+        String normalizedType = (type == null || type.isBlank()) ? null : type.trim().toUpperCase(Locale.ROOT);
+
+        Page<Transaction> pageResult = (normalizedType == null)
+                ? transactionRepository.findByUser_IdOrderByTimestampDesc(
+                        user.getId(), PageRequest.of(safePage, safeSize))
+                : transactionRepository.findByUser_IdAndOperationTypeOrderByTimestampDesc(
+                        user.getId(), normalizedType, PageRequest.of(safePage, safeSize));
+
+        List<Map<String, Object>> items = pageResult.getContent().stream().map(t -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.getId());
+            m.put("operationType", t.getOperationType());
+            m.put("amount", t.getAmount());
+            m.put("description", t.getDescription());
+            m.put("timestamp", t.getTimestamp() != null ? t.getTimestamp().toString() : null);
+            return m;
+        }).toList();
+
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("items", items);
+        out.put("page", pageResult.getNumber());
+        out.put("size", pageResult.getSize());
+        out.put("totalPages", pageResult.getTotalPages());
+        out.put("totalElements", pageResult.getTotalElements());
+        return ResponseEntity.ok(out);
     }
 
 

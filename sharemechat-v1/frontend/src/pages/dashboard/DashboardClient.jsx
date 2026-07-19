@@ -13,6 +13,7 @@ import LivenessChallengeModal from '../../components/LivenessChallengeModal';
 import { getLivenessStatus } from '../../api/livenessApi';
 import { createNowPaymentsCheckout } from '../../api/billingApi';
 import BlogContent from '../blog/BlogContent';
+import ClientHistoryPanel from '../subpages/ClientHistoryPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -2183,6 +2184,14 @@ const DashboardClient = () => {
   };
 
 
+  const handleGoHistory = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+    stopAll();
+    setActiveTab('historial');
+  };
+
+
   const handleLogoClick = (e) => {
     // nos lleva a tab videochat
     e.preventDefault();
@@ -3032,6 +3041,7 @@ const DashboardClient = () => {
         onGoBlog={handleGoBlog}
         onProfile={handleProfile}
         onBuy={handleAddBalance}
+        onGoHistory={handleGoHistory}
         onLogout={handleLogout}
       />
       {/* ========= FIN NAVBAR  ======== */}
@@ -3078,6 +3088,11 @@ const DashboardClient = () => {
           /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
           <div style={{flex:1,minWidth:0,minHeight:0}}>
             <BlogContent mode="private"/>
+          </div>
+        ):activeTab==='historial'?(
+          /* === HISTORIAL DE RECARGAS (2026-07-19 Fase 1) === */
+          <div style={{flex:1,minWidth:0,minHeight:0,overflowY:'auto'}}>
+            <ClientHistoryPanel/>
           </div>
         ):(
           /* === SOLO FAVORITOS USA EL LAYOUT 3 COLUMNAS === */

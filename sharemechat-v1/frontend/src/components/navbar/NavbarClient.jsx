@@ -1,5 +1,5 @@
 import React from 'react';
-import { faGem, faUser } from '@fortawesome/free-solid-svg-icons';
+import { faGem, faUser, faClockRotateLeft } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import NavbarBase from './NavbarBase';
 import DesktopTabs from './DesktopTabs';
@@ -21,6 +21,7 @@ const NavbarClient = ({
   onGoBlog,
   onProfile,
   onBuy,
+  onGoHistory,
   onLogout,
   buyLabel = null,
   showLocaleSwitcher = true,
@@ -32,6 +33,7 @@ const NavbarClient = ({
   supportDisabled = false,
   blogDisabled = false,
   buyDisabled = false,
+  historyDisabled = false,
 }) => {
   const videochatLabel = i18n.t('dashboardClient.nav.videochat');
   const favoritesLabel = i18n.t('dashboardClient.nav.favorites');
@@ -39,6 +41,7 @@ const NavbarClient = ({
   const blogLabel = i18n.t('dashboardClient.nav.blog');
 
   const effectiveBuyLabel = buyLabel || i18n.t('dashboardClient.actions.buy');
+  const historyLabel = i18n.t('dashboardClient.actions.history', { defaultValue: 'Historial' });
 
   const desktopLeft = (
     <DesktopTabs
@@ -76,6 +79,17 @@ const NavbarClient = ({
         disabled: buyDisabled,
         iconOnly: true,
       }}
+      // Historial de transacciones (2026-07-19 Fase 1). Simetria con
+      // secondaryAction Withdraw del NavbarModel (icon-only con tooltip).
+      secondaryAction={onGoHistory ? {
+        label: historyLabel,
+        title: historyLabel,
+        onClick: onGoHistory,
+        icon: faClockRotateLeft,
+        iconStyle: { color: '#64748b', fontSize: '1rem' },
+        disabled: historyDisabled,
+        iconOnly: true,
+      } : null}
       logoutLabel={i18n.t('dashboardClient.actions.logout')}
       logoutTitle={i18n.t('dashboardClient.actions.logoutTitle')}
       onLogout={onLogout}
@@ -113,6 +127,16 @@ const NavbarClient = ({
           useIconWrapper: false,
           disabled: buyDisabled,
         },
+        ...(onGoHistory ? [{
+          key: 'history',
+          icon: faClockRotateLeft,
+          iconStyle: { color: '#64748b', fontSize: '1rem' },
+          label: historyLabel,
+          title: historyLabel,
+          onClick: onGoHistory,
+          useIconWrapper: false,
+          disabled: historyDisabled,
+        }] : []),
         ...(onGoSupport
           ? [{
               key: 'support',
