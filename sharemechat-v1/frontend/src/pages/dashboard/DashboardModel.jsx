@@ -13,7 +13,7 @@ import { getLivenessStatus } from '../../api/livenessApi';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
-import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import { faHeart, faVideo, faFilm, faArrowLeft, faShieldHalved } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledContainer,StyledIconWrapper,StyledMainContent,
   StyledLeftColumn,StyledCenter,StyledRightColumn,
@@ -3498,23 +3498,38 @@ const DashboardModel = () => {
 
       {/* Aviso supervision moderacion IA (DEC-13 P2.1): no colapsable,
           visible solo cuando hay camara local activa en algun modo. */}
+      {/* Aviso de moderacion automatica (GDPR/DSA). Feedback operador
+          2026-07-19: el texto completo "asustaba" al streaming; ahora
+          icono escudo discreto en la esquina, con el texto legal
+          completo en title (hover desktop + long-press iOS) y
+          aria-label para lectores de pantalla. Cumple la obligacion
+          de informar sin invadir visualmente. */}
       {(cameraActive || callCameraActive) && (
         <div
-          aria-live="polite"
+          role="note"
+          aria-label={i18n.t('dashboardModel.moderationNotice')}
+          title={i18n.t('dashboardModel.moderationNotice')}
           style={{
             position: 'fixed',
-            bottom: 6,
-            left: 0,
-            right: 0,
-            textAlign: 'center',
-            fontSize: 11,
-            color: '#adb5bd',
-            pointerEvents: 'none',
+            bottom: 12,
+            right: 12,
+            width: 30,
+            height: 30,
+            borderRadius: 999,
+            background: 'rgba(0,0,0,0.42)',
+            color: 'rgba(255,255,255,0.72)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 13,
+            cursor: 'help',
             zIndex: 9000,
-            padding: '0 8px',
+            border: '1px solid rgba(255,255,255,0.16)',
+            backdropFilter: 'blur(6px)',
+            WebkitBackdropFilter: 'blur(6px)',
           }}
         >
-          {i18n.t('dashboardModel.moderationNotice')}
+          <FontAwesomeIcon icon={faShieldHalved} />
         </div>
       )}
 
