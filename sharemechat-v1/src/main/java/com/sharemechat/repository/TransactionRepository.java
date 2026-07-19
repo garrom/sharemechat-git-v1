@@ -64,11 +64,36 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
      * {@code operationType}. Paginacion server-side ordenada por
      * {@code timestamp DESC}.
      * <p>Fase 1 llama SOLO con {@code operationType='INGRESO'} (recargas).
-     * Fase 2 pasara {@code null} para incluir todos los tipos o listado
-     * de tipos para el filtro multiple del panel.
+     * Fase 2 usa {@link #findClientTransactionsFiltered} con lista de
+     * tipos + rango de fechas.
      */
     Page<Transaction> findByUser_IdAndOperationTypeOrderByTimestampDesc(
             Long userId, String operationType, Pageable pageable);
 
     Page<Transaction> findByUser_IdOrderByTimestampDesc(Long userId, Pageable pageable);
+
+    /**
+     * Fase 2 (2026-07-19): historial filtrado por lista de tipos +
+     * rango de fechas opcional. Todos los params son opcionales:
+     * <ul>
+     *   <li>{@code types = null} -> no filtra por tipo (todos).</li>
+     *   <li>{@code from = null}  -> sin cota inferior.</li>
+     *   <li>{@code to = null}    -> sin cota superior.</li>
+     * </ul>
+     * <p>Rango semi-abierto {@code [from, to)} para evitar dependencia
+     * de granularidad temporal (dia completo se pasa como
+     * {@code from=00:00:00, to=+1dia 00:00:00}).
+     */
+    @Query("SELECT t FROM Transaction t "
+            + "WHERE t.user.id = :userId "
+            + "AND (:types IS NULL OR t.operationType IN :types) "
+            + "AND (:from IS NULL OR t.timestamp >= :from) "
+            + "AND (:to IS NULL OR t.timestamp < :to) "
+            + "ORDER BY t.timestamp DESC")
+    Page<Transaction> findClientTransactionsFiltered(
+            @Param("userId") Long userId,
+            @Param("types") List<String> types,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
 }

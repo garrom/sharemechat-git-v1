@@ -20,6 +20,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
@@ -69,11 +73,12 @@ public class ClientController {
     }
 
     /**
-     * Historial de transacciones del cliente logueado (2026-07-19, Fase 1
-     * de la vista "Historial"). Devuelve pagina descendente por
-     * {@code timestamp}. Filtro por {@code operationType} opcional; Fase 1
-     * llama con {@code type=INGRESO} (recargas). Fase 2 podra pasar null
-     * para todo o un tipo especifico.
+     * Historial de transacciones del cliente logueado. Fase 1 (2026-07-19)
+     * solo aceptaba {@code type} single = INGRESO; Fase 2 (2026-07-19)
+     * anade filtro por lista de tipos ({@code types} CSV) + rango de
+     * fechas opcional ({@code from} y {@code to}, ISO {@code yyyy-MM-dd}).
+     * Retrocompatible: si viene {@code type} single (sin {@code types}),
+     * lo trata como lista de un elemento.
      *
      * <p>Restringido a role CLIENT (misma politica que {@code /me}) —
      * los usuarios FORM_CLIENT sin pagos no tienen historial que ver.
@@ -81,6 +86,9 @@ public class ClientController {
     @GetMapping("/me/transactions")
     public ResponseEntity<?> getMyTransactions(Authentication authentication,
                                                @RequestParam(required = false) String type,
+                                               @RequestParam(required = false) String types,
+                                               @RequestParam(required = false) String from,
+                                               @RequestParam(required = false) String to,
                                                @RequestParam(defaultValue = "0") int page,
                                                @RequestParam(defaultValue = "20") int size) {
         if (authentication == null || authentication.getName() == null) {
@@ -96,13 +104,38 @@ public class ClientController {
 
         int safeSize = Math.max(1, Math.min(size, 100));
         int safePage = Math.max(0, page);
-        String normalizedType = (type == null || type.isBlank()) ? null : type.trim().toUpperCase(Locale.ROOT);
 
-        Page<Transaction> pageResult = (normalizedType == null)
-                ? transactionRepository.findByUser_IdOrderByTimestampDesc(
-                        user.getId(), PageRequest.of(safePage, safeSize))
-                : transactionRepository.findByUser_IdAndOperationTypeOrderByTimestampDesc(
-                        user.getId(), normalizedType, PageRequest.of(safePage, safeSize));
+        // Normalizar types: primero CSV nuevo, si no viene fallback a
+        // single type (retrocompat Fase 1).
+        List<String> typeList = null;
+        if (types != null && !types.isBlank()) {
+            typeList = Arrays.stream(types.split(","))
+                    .map(s -> s.trim().toUpperCase(Locale.ROOT))
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            if (typeList.isEmpty()) typeList = null;
+        } else if (type != null && !type.isBlank()) {
+            typeList = List.of(type.trim().toUpperCase(Locale.ROOT));
+        }
+
+        // Parseo de fechas ISO yyyy-MM-dd. from inclusivo (00:00:00);
+        // to exclusivo (+1 dia 00:00:00) para incluir el dia completo.
+        LocalDateTime fromDt = null;
+        LocalDateTime toDt = null;
+        try {
+            if (from != null && !from.isBlank()) {
+                fromDt = LocalDate.parse(from.trim()).atStartOfDay();
+            }
+            if (to != null && !to.isBlank()) {
+                toDt = LocalDate.parse(to.trim()).plusDays(1).atStartOfDay();
+            }
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest().body("Formato de fecha invalido (esperado yyyy-MM-dd)");
+        }
+
+        Page<Transaction> pageResult = transactionRepository.findClientTransactionsFiltered(
+                user.getId(), typeList, fromDt, toDt,
+                PageRequest.of(safePage, safeSize));
 
         List<Map<String, Object>> items = pageResult.getContent().stream().map(t -> {
             Map<String, Object> m = new LinkedHashMap<>();
