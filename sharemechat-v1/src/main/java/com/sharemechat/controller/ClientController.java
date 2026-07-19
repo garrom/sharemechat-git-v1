@@ -12,6 +12,7 @@ import com.sharemechat.service.UserService;
 import com.sharemechat.storage.StorageService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -20,8 +21,10 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -154,6 +157,101 @@ public class ClientController {
         out.put("totalPages", pageResult.getTotalPages());
         out.put("totalElements", pageResult.getTotalElements());
         return ResponseEntity.ok(out);
+    }
+
+    /**
+     * Fase 3 (2026-07-19): descarga CSV del historial del cliente.
+     * Mismos filtros que {@link #getMyTransactions} ({@code types},
+     * {@code from}, {@code to}) sin paginacion — dump completo (LIMIT
+     * defensivo 10.000 filas para prevenir OOM). El navegador dispara
+     * la descarga por el header {@code Content-Disposition: attachment}.
+     *
+     * <p>CSV RFC 4180: separador coma, quoted strings, escape de comillas
+     * dobles duplicandolas. Codificado UTF-8 con BOM para que Excel
+     * abra correctamente los caracteres acentuados.
+     *
+     * <p>Restringido a role CLIENT (misma politica que /me).
+     */
+    @GetMapping("/me/transactions/export")
+    public ResponseEntity<?> exportMyTransactionsCsv(Authentication authentication,
+                                                     @RequestParam(required = false) String types,
+                                                     @RequestParam(required = false) String from,
+                                                     @RequestParam(required = false) String to) {
+        if (authentication == null || authentication.getName() == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("No autenticado");
+        }
+        User user = userService.findByEmail(authentication.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Usuario no encontrado");
+        }
+        if (!Constants.Roles.CLIENT.equals(user.getRole())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol CLIENT");
+        }
+
+        List<String> typeList = null;
+        if (types != null && !types.isBlank()) {
+            typeList = Arrays.stream(types.split(","))
+                    .map(s -> s.trim().toUpperCase(Locale.ROOT))
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            if (typeList.isEmpty()) typeList = null;
+        }
+
+        LocalDateTime fromDt = null;
+        LocalDateTime toDt = null;
+        try {
+            if (from != null && !from.isBlank()) {
+                fromDt = LocalDate.parse(from.trim()).atStartOfDay();
+            }
+            if (to != null && !to.isBlank()) {
+                toDt = LocalDate.parse(to.trim()).plusDays(1).atStartOfDay();
+            }
+        } catch (DateTimeParseException ex) {
+            return ResponseEntity.badRequest().body("Formato de fecha invalido (esperado yyyy-MM-dd)");
+        }
+
+        // Cap defensivo 10.000 filas. Usuario tipico tiene <500.
+        List<Transaction> rows = transactionRepository.findClientTransactionsForExport(
+                user.getId(), typeList, fromDt, toDt, PageRequest.of(0, 10_000));
+
+        StringBuilder sb = new StringBuilder(rows.size() * 128);
+        // BOM UTF-8 para que Excel abra los acentos correctamente.
+        sb.append('﻿');
+        // Cabecera RFC 4180.
+        sb.append("id,timestamp,operation_type,amount_eur,description\r\n");
+        DateTimeFormatter dtFmt = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        for (Transaction t : rows) {
+            sb.append(t.getId()).append(',');
+            sb.append(t.getTimestamp() != null ? t.getTimestamp().format(dtFmt) : "").append(',');
+            sb.append(csvQuote(t.getOperationType())).append(',');
+            BigDecimal a = t.getAmount();
+            sb.append(a != null ? a.toPlainString() : "").append(',');
+            sb.append(csvQuote(t.getDescription())).append("\r\n");
+        }
+
+        String filename = String.format("sharemechat-historial-%s.csv",
+                LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE));
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDispositionFormData("attachment", filename);
+        headers.setCacheControl("no-cache, no-store");
+
+        return new ResponseEntity<>(sb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8),
+                headers, HttpStatus.OK);
+    }
+
+    /**
+     * Escapa un valor CSV segun RFC 4180: si contiene coma, comillas o
+     * salto de linea, envuelve entre comillas dobles y duplica las
+     * comillas internas.
+     */
+    private static String csvQuote(String s) {
+        if (s == null) return "";
+        boolean needsQuote = s.indexOf(',') >= 0 || s.indexOf('"') >= 0
+                || s.indexOf('\n') >= 0 || s.indexOf('\r') >= 0;
+        if (!needsQuote) return s;
+        return "\"" + s.replace("\"", "\"\"") + "\"";
     }
 
 

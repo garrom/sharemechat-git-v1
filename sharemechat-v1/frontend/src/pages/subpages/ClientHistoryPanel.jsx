@@ -6,6 +6,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import i18n from '../../i18n';
 import { apiFetch } from '../../config/http';
+import { buildApiUrl } from '../../config/api';
 
 const wrap = { padding: '20px 24px', maxWidth: 1000 };
 const headerRow = { display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 12, flexWrap: 'wrap' };
@@ -162,6 +163,25 @@ const ClientHistoryPanel = () => {
     load(0, 'ALL', '', '');
   };
 
+  // Fase 3: descarga CSV. Reutiliza los filtros APLICADOS (no draft) para
+  // exportar lo que el usuario esta viendo. Simple GET con cookie de
+  // sesion; el backend responde text/csv + Content-Disposition attachment
+  // y el navegador dispara la descarga por si mismo. Sin blob ni fetch —
+  // usar directamente window.location es el patron mas robusto para
+  // descargas autenticadas cuando el response body es grande.
+  const downloadCsv = () => {
+    const params = new URLSearchParams();
+    const cat = CATEGORIES.find(c => c.key === appliedCategory);
+    if (cat && cat.types && cat.types.length > 0) {
+      params.set('types', cat.types.join(','));
+    }
+    if (appliedFrom) params.set('from', appliedFrom);
+    if (appliedTo) params.set('to', appliedTo);
+    const qs = params.toString();
+    const url = buildApiUrl(`/clients/me/transactions/export${qs ? '?' + qs : ''}`);
+    window.location.href = url;
+  };
+
   const items = data?.items || [];
   const totalPages = data?.totalPages ?? 0;
   const totalElements = data?.totalElements ?? 0;
@@ -223,6 +243,9 @@ const ClientHistoryPanel = () => {
           <input type="date" style={input} value={draftTo} onChange={(e) => setDraftTo(e.target.value)} disabled={busy} />
         </div>
         <div style={filterActions}>
+          <button style={btn('secondary', busy)} onClick={downloadCsv} disabled={busy}>
+            {t('dashboardClient.history.filter.download', { defaultValue: 'Descargar CSV' })}
+          </button>
           <button style={btn('secondary', busy)} onClick={resetFilters} disabled={busy}>
             {t('dashboardClient.history.filter.reset', { defaultValue: 'Limpiar' })}
           </button>

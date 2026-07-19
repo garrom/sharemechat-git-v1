@@ -96,4 +96,24 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
             @Param("from") LocalDateTime from,
             @Param("to") LocalDateTime to,
             Pageable pageable);
+
+    /**
+     * Fase 3 (2026-07-19): variante sin paginacion para el export CSV.
+     * Mismos filtros que {@link #findClientTransactionsFiltered}. El
+     * caller aplica un LIMIT alto (10k) via {@code Pageable} en el
+     * controller para prevenir OOM en cuentas con historial extremo;
+     * los usuarios normales tienen decenas o centenas de filas.
+     */
+    @Query("SELECT t FROM Transaction t "
+            + "WHERE t.user.id = :userId "
+            + "AND (:types IS NULL OR t.operationType IN :types) "
+            + "AND (:from IS NULL OR t.timestamp >= :from) "
+            + "AND (:to IS NULL OR t.timestamp < :to) "
+            + "ORDER BY t.timestamp DESC")
+    List<Transaction> findClientTransactionsForExport(
+            @Param("userId") Long userId,
+            @Param("types") List<String> types,
+            @Param("from") LocalDateTime from,
+            @Param("to") LocalDateTime to,
+            Pageable pageable);
 }
