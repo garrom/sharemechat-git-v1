@@ -147,6 +147,11 @@ const DashboardModel = () => {
   const [status, setStatus] = useState('');
   const [queuePosition, setQueuePosition] = useState(null);
   const [currentClientId, setCurrentClientId] = useState(null);
+  // ADR-037 Bloque 5 (frente trial SFW) Paso 1: indicador visual del tier del
+  // cliente actual. "TRIAL" cuando el cliente es un USER en franja trial (moderacion
+  // trial-only aplicara si muestra contenido explicito, aviso Bloque 2 pendiente),
+  // "PAID" cuando es un CLIENT pagador. null cuando no hay match activo.
+  const [currentClientAccessTier, setCurrentClientAccessTier] = useState(null);
   const [currentClientRole, setCurrentClientRole] = useState(null);
   const [favReload, setFavReload] = useState(0);
   const [selectedFav, setSelectedFav] = useState(null);
@@ -623,6 +628,18 @@ const DashboardModel = () => {
           setCurrentClientId(null);
         }
 
+        // ADR-037 Bloque 5 Paso 1: tier del cliente (TRIAL|PAID). Solo aplica
+        // cuando peerRole=client; en otros casos null.
+        try {
+          if (data.peerRole === 'client' && typeof data.peerAccessTier === 'string') {
+            setCurrentClientAccessTier(data.peerAccessTier);
+          } else {
+            setCurrentClientAccessTier(null);
+          }
+        } catch {
+          setCurrentClientAccessTier(null);
+        }
+
         // client balance
         try {
           setClientSaldoLoading(true);
@@ -674,6 +691,7 @@ const DashboardModel = () => {
       onPeerDisconnectedPost: (data) => {
         resetRandomTechMediaReadySignal();
         setCurrentClientId(null);
+        setCurrentClientAccessTier(null);
         setClientSaldo(null);
         setClientSaldoLoading(false);
 
@@ -701,6 +719,7 @@ const DashboardModel = () => {
         try { console.log('[MODEL][WS] admin-kicked', data); } catch {}
         resetRandomTechMediaReadySignal();
         setCurrentClientId(null);
+        setCurrentClientAccessTier(null);
         setClientSaldo(null);
         setClientSaldoLoading(false);
         setRemoteStream(null);
@@ -3381,6 +3400,7 @@ const DashboardModel = () => {
             searching={searching}
             handleNext={handleNext}
             currentClientId={currentClientId}
+            currentClientAccessTier={currentClientAccessTier}
             handleAddFavorite={handleAddFavorite}
             clientAvatar={clientAvatar}
             clientNickname={clientNickname}

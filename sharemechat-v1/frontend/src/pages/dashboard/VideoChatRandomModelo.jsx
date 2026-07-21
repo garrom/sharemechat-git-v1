@@ -104,7 +104,49 @@ export default function VideoChatRandomModelo(props) {
     clientSaldoLoading,
     handleNext,
     nextDisabled,
+    // ADR-037 Bloque 5 Paso 1: TRIAL | PAID | null (sin peer). Cuando es TRIAL
+    // pintamos badge FREE sobre el video del cliente para avisar que la
+    // moderacion trial-only aplicara si muestra contenido explicito.
+    currentClientAccessTier,
   } = props;
+
+  const showTrialBadge = currentClientAccessTier === 'TRIAL';
+
+  // ADR-037 Bloque 5 Paso 1: badge overlay sobre el video del cliente cuando
+  // el peer es TRIAL. Estilo elegante, no invasivo, esquina superior izquierda.
+  // z-index alto para superponer al video y al chat, pero por debajo del
+  // fullscreen boton (que suele ir en la esquina opuesta).
+  const TrialBadge = () => (
+    <div
+      role="note"
+      aria-label={t('videochat.trial.modelBadge.subtitle')}
+      style={{
+        position: 'absolute',
+        top: 10,
+        left: 10,
+        zIndex: 20,
+        padding: '6px 12px',
+        borderRadius: 999,
+        background: 'rgba(0,0,0,0.62)',
+        border: '1px solid #22c55e',
+        color: '#ffffff',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'flex-start',
+        lineHeight: 1.1,
+        userSelect: 'none',
+        pointerEvents: 'none',
+      }}
+    >
+      <span style={{ fontSize: '1.05rem', fontWeight: 800, letterSpacing: 0.5 }}>
+        {t('videochat.trial.modelBadge.title')}
+      </span>
+      <span style={{ fontSize: '0.72rem', opacity: 0.9, marginTop: 2 }}>
+        {t('videochat.trial.modelBadge.subtitle')}
+      </span>
+    </div>
+  );
 
   const [isDesktopRemoteVideoReady, setIsDesktopRemoteVideoReady] = React.useState(false);
 
@@ -489,6 +531,7 @@ export default function VideoChatRandomModelo(props) {
                       style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}
                     >
                       <StyledCallStage>
+                        {showTrialBadge && <TrialBadge />}
                         <StyledCallTopBar>
                           {renderCallTopMeta()}
                           <StyledCallTopActions>
@@ -593,6 +636,7 @@ export default function VideoChatRandomModelo(props) {
                     style={{position:'relative',width:'100%',overflow:'hidden',background:'#000'}}
                   >
                     <StyledCallStage>
+                      {showTrialBadge && <TrialBadge />}
                       <StyledCallTopBar>
                         {renderCallTopMeta()}
                       </StyledCallTopBar>

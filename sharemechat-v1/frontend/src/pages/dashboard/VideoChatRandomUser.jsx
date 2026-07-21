@@ -90,6 +90,11 @@ export default function VideoChatRandomUser(props) {
     modelAvatar,
     handleFavoriteGate,
     openPurchaseModal,
+    // ADR-037 Bloque 5 Paso 1: callback del boton "Go Premium" del banner.
+    // Debe orquestar el flow completo (KYC + email verified + modal pack +
+    // NOWPayments checkout + redirect), NO solo abrir el modal. En
+    // DashboardUserClient se cablea a handleFirstPayment.
+    onGoPremium,
     handleReportPeer,
   } = props;
 
@@ -230,8 +235,64 @@ export default function VideoChatRandomUser(props) {
 
   const showGlobalStatus = !(remoteStream && !isMobile);
 
+  // ADR-037 Bloque 5 Paso 1: banner permanente en la seccion videochat del USER
+  // ("modo Free · sin contenido adulto") + boton "Go Premium" que reutiliza
+  // openPurchaseModal (mismo flujo que el modal TrialCooldown existente).
+  // Siempre visible mientras el usuario esta en esta seccion; la propia
+  // logica de streaming impide navegar a otras secciones sin colgar antes,
+  // asi que no necesita ocultarse por estado.
+  const handleGoPremiumClick = () => {
+    try {
+      if (typeof onGoPremium === 'function') {
+        onGoPremium();
+      }
+    } catch { /* noop */ }
+  };
+
+  const TrialFreeBanner = () => (
+    <div
+      role="note"
+      aria-label={t('videochat.trial.userBanner.text')}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 12,
+        flexWrap: 'wrap',
+        padding: '8px 14px',
+        background: 'linear-gradient(90deg, rgba(30,58,138,0.92) 0%, rgba(59,130,246,0.92) 100%)',
+        color: '#ffffff',
+        fontSize: '0.85rem',
+        boxShadow: '0 2px 6px rgba(0,0,0,0.25)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 10,
+      }}
+    >
+      <span>{t('videochat.trial.userBanner.text')}</span>
+      <button
+        type="button"
+        onClick={handleGoPremiumClick}
+        style={{
+          background: '#ffffff',
+          color: '#1e3a8a',
+          border: 'none',
+          borderRadius: 999,
+          padding: '5px 14px',
+          fontWeight: 700,
+          fontSize: '0.82rem',
+          cursor: 'pointer',
+          letterSpacing: 0.3,
+        }}
+      >
+        {t('videochat.trial.userBanner.cta')}
+      </button>
+    </div>
+  );
+
   return (
     <StyledCenterVideochat>
+      <TrialFreeBanner />
       <StyledSplit2 data-mode={!isMobile && remoteStream ? 'full-remote' : 'split'}>
         <StyledPane data-side="left">
           {!isMobile && (

@@ -1461,6 +1461,26 @@ public class MatchingHandlerSupport {
                 clientBalance = getCurrentBalanceOrZero(peerUserId);
             }
 
+            // ADR-037 Bloque 5 (frente trial SFW) Paso 1: indicar al modelo si
+            // el peer es un cliente en trial (role=USER, sin haber recargado)
+            // o pagador (role=CLIENT). Solo tiene sentido cuando peerRole=client.
+            // El frontend modelo pinta un badge FREE sobre el video del cliente
+            // cuando peerAccessTier=TRIAL; sirve como aviso visual de que la
+            // moderacion trial-only aplicara si muestra contenido explicito.
+            String peerAccessTier = null;
+            if ("client".equals(peerRole) && peerUserId != null) {
+                try {
+                    String realRole = userRepository.findById(peerUserId)
+                            .map(com.sharemechat.entity.User::getRole)
+                            .orElse(null);
+                    if (Constants.Roles.USER.equals(realRole)) {
+                        peerAccessTier = "TRIAL";
+                    } else if (Constants.Roles.CLIENT.equals(realRole)) {
+                        peerAccessTier = "PAID";
+                    }
+                } catch (Exception ignore) {}
+            }
+
             String msg = String.format(
                     Locale.US,
                     "{"
@@ -1468,6 +1488,7 @@ public class MatchingHandlerSupport {
                             + "\"peerId\":\"%s\","
                             + "\"peerUserId\":%s,"
                             + "\"peerRole\":\"%s\","
+                            + "\"peerAccessTier\":%s,"
                             + "\"clientBalance\":%s,"
                             + "\"streamRecordId\":%s,"
                             + "\"reasonCode\":\"%s\""
@@ -1475,6 +1496,7 @@ public class MatchingHandlerSupport {
                     peerSessionId,
                     peerUserId != null ? peerUserId.toString() : "null",
                     peerRole != null ? peerRole : "",
+                    peerAccessTier != null ? ("\"" + peerAccessTier + "\"") : "null",
                     clientBalance != null ? ("\"" + clientBalance.toPlainString() + "\"") : "null",
                     streamRecordId != null ? streamRecordId.toString() : "null",
                     languageReasonCode

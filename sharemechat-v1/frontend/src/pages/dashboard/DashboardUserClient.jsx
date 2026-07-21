@@ -905,6 +905,7 @@ const DashboardUserClient = () => {
               statusText={statusText}
               error={error}
               openPurchaseModal={openPurchaseModal}
+              onGoPremium={handleFirstPayment}
               handleReportPeer={handleReportPeer}
               emailNoticeSlot={!user?.emailVerifiedAt ? (
                 <EmailVerificationBanner aria-live="polite" role="status">

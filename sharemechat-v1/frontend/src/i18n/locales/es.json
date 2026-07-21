@@ -1,4 +1,16 @@
 {
+  "videochat": {
+    "trial": {
+      "modelBadge": {
+        "title": "FREE",
+        "subtitle": "Trial client · No adult content"
+      },
+      "userBanner": {
+        "text": "Free mode",
+        "cta": "Go Premium"
+      }
+    }
+  },
   "ws": {
     "match": {
       "language": {
