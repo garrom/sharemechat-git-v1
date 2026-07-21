@@ -42,6 +42,14 @@ public class ModerationVerdictResult {
     private String severityOverall;
     private String suggestedAction;
     private String vendorMetadataJson;
+    /**
+     * Numero de operations que el vendor contabiliza contra el cupo del
+     * plan por esta llamada concreta. 0 para MOCK (no consume cuota) y
+     * 0 para adapters que no reporten operations. El ingestion service
+     * lo suma a {@code stream_moderation_sessions.operations_consumed}
+     * para alerta de consumo (ADR-037 Fase 5 Bloque 5).
+     */
+    private long operationsConsumed;
 
     public ModerationVerdictResult() {
     }
@@ -92,5 +100,13 @@ public class ModerationVerdictResult {
 
     public void setVendorMetadataJson(String vendorMetadataJson) {
         this.vendorMetadataJson = vendorMetadataJson;
+    }
+
+    public long getOperationsConsumed() {
+        return operationsConsumed;
+    }
+
+    public void setOperationsConsumed(long operationsConsumed) {
+        this.operationsConsumed = operationsConsumed;
     }
 }

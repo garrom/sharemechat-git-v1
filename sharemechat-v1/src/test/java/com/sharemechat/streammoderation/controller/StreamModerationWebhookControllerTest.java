@@ -2,7 +2,6 @@ package com.sharemechat.streammoderation.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sharemechat.config.SightengineProperties;
-import com.sharemechat.controller.StreamModerationWebhookController;
 import com.sharemechat.security.HmacSha256;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

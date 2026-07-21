@@ -61,6 +61,31 @@ Se adopta **Sightengine** como Plan A del vendor de clasificación visual, en pl
 
 El salto de plan es gestión de dashboard del vendor: no requiere cambios de código del adapter, no requiere rotación de credenciales salvo que el vendor lo imponga al cambiar de tier.
 
+#### Estado operativo (actualizado 2026-07-21)
+
+Datos observados en el dashboard del vendor y cruzados con el manifest del repo el 2026-07-21:
+
+- **Plan activo**: Free Tier. El salto a Starter no se produjo en las fechas originalmente previstas por este ADR (Segpay testing y go-live 1-jul-2026 no se materializaron en su ventana original — Segpay onboarding en pausa; PROD opera en `PRODUCT_ACCESS_MODE=PRELAUNCH`).
+- **Detalles del plan Free Tier** (Sightengine, pricing público 2026-07-21):
+  - 2 000 operations/mes.
+  - Tope diario 500 operations/día.
+  - 1 req/seg.
+  - Cobertura: Basic Content Moderation + AI Image & AI Video Detection.
+  - Sin Live-Stream Support (requiere Pro $99/mes), sin Age Estimation (Pro), sin Custom Video Frame rate (Starter+).
+- **Consumo observado**: 1 884 operations en los últimos 14 días (2026-07-08 → 2026-07-21). 94% del cupo mensual consumido en 14 días, sin actividad real de clientes finales aún (uso interno de testing en TEST + activación PROD 2026-07-18 con volumen mínimo por PRELAUNCH).
+- **Estado por entorno respecto a `active_mode`**:
+  - **TEST**: `SIGHTENGINE`. Entorno donde se ejerce el vendor real en día a día.
+  - **PROD**: `SIGHTENGINE` desde 2026-07-18 (retiro del override belt-and-suspenders de ADR-045 registrado en `project-log.md` entrada 2026-07-18). Consumo bajo por PRELAUNCH.
+  - **AUDIT**: `MOCK` por diseño. AUDIT es entorno de verificación puntual para externos (auditores, integraciones PSP); no se ejerce vendor real en su día a día. Sin sub-paquete de activación previsto salvo requisito externo concreto.
+- **Coste por frame observado**: ~7 operations/frame (el workflow consolidado actual contabiliza 5+2 operations por frame). Con cadencia default `moderation.sampling.cadence-seconds=60`, una sesión de 10 min ≈ 70 ops. Cabida estimada Free: ~28 sesiones de 10 min/mes.
+
+**Triggers de salto de plan revisados** (sustituyen operativamente a los originales del bloque 2, vinculados a hitos que no se han materializado):
+
+- **Free → Starter**: cuando el consumo mensual proyectado supere el 60% del cupo Free durante 3 días consecutivos, o al detectarse el primer día con actividad real de clientes de pago tras el flip de `PRODUCT_ACCESS_MODE` a `OPEN`. La señal se materializará mediante alerta en backoffice (bloque planificado dentro del frente "prueba gratis SFW" — planteamiento en curso 2026-07-21, ver `project-log.md`).
+- **Starter → Pro**: se mantienen los triggers del bloque 2 originales (>7 000-8 000 ops/mes sobre el límite Starter, aparición de HTTP 429 en logs del adapter, >10 sesiones concurrentes sostenidas en PROD).
+
+Estos triggers son operativos, no reabren la decisión de plan progresivo. La estrategia sigue siendo Free → Starter → Pro; solo se actualiza la señal de activación tras 5 semanas de operación.
+
 ### 3. Contingencia documentada según patrón ADR-035
 
 **Hive** y **AWS Rekognition** quedan como contingencias del Plan A **documentadas sin priorizar**, coherente con el patrón vendor consolidation formalizado en ADR-035 (Plan A vivo + Plan B/C/D documentados, código del vendor descartado mantenido integrado con flag a `false` cuando proceda).

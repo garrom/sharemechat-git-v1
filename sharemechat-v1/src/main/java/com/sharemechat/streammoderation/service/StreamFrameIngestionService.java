@@ -123,6 +123,21 @@ public class StreamFrameIngestionService {
             return;
         }
 
+        // ADR-037 Fase 5 Bloque 5: acumular operations consumidas contra
+        // el cupo del plan del vendor. UPDATE atomico para no colisionar
+        // con writes concurrentes que frozen/no-face hacen mas abajo
+        // sobre la misma instancia de session cargada al inicio del
+        // metodo. MOCK reporta 0 operations y no incrementa.
+        long ops = verdict.getOperationsConsumed();
+        if (ops > 0) {
+            try {
+                sessionRepository.incrementOperationsConsumed(session.getId(), ops);
+            } catch (Exception ex) {
+                log.warn("[STREAM-MOD] operations counter update failed sessionId={} ops={}: {}",
+                        session.getId(), ops, ex.getMessage());
+            }
+        }
+
         // ADR-050 Fase C: check de presencia. Fail-soft: si la llamada
         // falla, no marca la sesion como DEGRADED (moderacion de
         // contenido sigue vigente y su fallo si marcaria degraded).

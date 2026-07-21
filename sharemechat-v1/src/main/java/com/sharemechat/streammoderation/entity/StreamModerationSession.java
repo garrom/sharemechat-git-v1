@@ -68,6 +68,18 @@ public class StreamModerationSession {
     @Column(name = "verdicts_received", nullable = false)
     private int verdictsReceived = 0;
 
+    /**
+     * ADR-037 Fase 5 Bloque 5: contador acumulado de operations
+     * reportadas por el vendor en las respuestas de esta sesion
+     * (Sightengine {@code request.operations}). Se incrementa de forma
+     * atomica desde {@code StreamFrameIngestionService} via el metodo
+     * {@code incrementOperationsConsumed} del repositorio para no pisar
+     * writes concurrentes sobre la sesion (frozen/no-face). MOCK deja
+     * el default 0 (no consume cuota del plan).
+     */
+    @Column(name = "operations_consumed", nullable = false)
+    private long operationsConsumed = 0L;
+
     @Column(name = "degraded_since")
     private LocalDateTime degradedSince;
 
@@ -226,5 +238,13 @@ public class StreamModerationSession {
 
     public void setConsecutiveNoFaceFrames(int consecutiveNoFaceFrames) {
         this.consecutiveNoFaceFrames = consecutiveNoFaceFrames;
+    }
+
+    public long getOperationsConsumed() {
+        return operationsConsumed;
+    }
+
+    public void setOperationsConsumed(long operationsConsumed) {
+        this.operationsConsumed = operationsConsumed;
     }
 }

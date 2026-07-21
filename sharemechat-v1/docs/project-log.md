@@ -8,6 +8,31 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-21 — Revisión estado real Sightengine + actualización documental de planes (sin código)
+
+Sesión de análisis sin cambios de código, disparada por el planteamiento del frente **"prueba gratis SFW"** (inspirado en el modelo Coomeet: contenido adulto solo tras registro/pago con verificación de edad; franja trial libre de desnudos). Al revisar el estado real de la moderación IA se detectaron asunciones desactualizadas en la documentación viva del proyecto respecto al vendor Sightengine y su plan comercial.
+
+**Datos verificados** en dashboard del vendor y cruzados con el manifest del repo el 2026-07-21:
+
+- **Sightengine activo en PROD desde 2026-07-18** — registrado ese mismo día en `application-prod.properties` líneas 65-88 y en la entrada 2026-07-18 de esta bitácora. `known-risks.md` línea 36 seguía afirmando "AUDIT y PROD siguen con `active_mode=MOCK`", inconsistencia detectada y rectificada en esta sesión.
+- **Plan activo: Free Tier** (Sightengine): 2 000 ops/mes, tope diario 500, 1 req/seg. Consumo últimos 14 días (2026-07-08 → 2026-07-21): **1 884 ops (94% del cupo mensual)** en solo uso interno de testing en TEST + activación PROD 2026-07-18 con volumen mínimo por `PRODUCT_ACCESS_MODE=PRELAUNCH`. Failures observados el 2026-07-19 entre 18:03 y 18:36 UTC (10 requests con status `failure`, operations=0) compatibles con haber tocado el tope diario 500.
+- **Coste por frame observado**: ~7 operations/frame (workflow consolidado emite 5+2 operations por frame). Con cadencia default `moderation.sampling.cadence-seconds=60` una sesión de 10 min ≈ 70 ops. Cabida estimada Free ≈ 28 sesiones de 10 min/mes.
+- **AUDIT sigue `MOCK` por diseño** — no es olvido de sub-paquete: AUDIT es entorno de verificación externa puntual (auditores, integraciones PSP), sin ejercicio de vendor real en día a día. Confirmado por operador.
+- **Cadencia real vs documentada**: `application.properties` fija `moderation.sampling.cadence-seconds=60` sin override por entorno (TEST/AUDIT/PROD). Documentación en `production.md` sección Paquete 1 y `known-risks.md` mencionaban "cadencia 15s" como referencia histórica del diseño ADR-036 — la implantación quedó en 60s en el paso a Sightengine real. No tocado en esta sesión (fuera de scope), anotado para revisión posterior.
+
+**Actualización documental aplicada**:
+
+- **ADR-037** bloque 2: añadida subsección *Estado operativo (actualizado 2026-07-21)* con detalles del plan Free Tier (cifras, cobertura funcional, ausencia de Live-Stream Support y Age Estimation en Free/Starter), estado por entorno actualizado, coste por frame observado y **triggers de salto de plan revisados**. Los originales del ADR (Free→Starter "antes de Segpay testing significativo en AUDIT", Starter→Pro "antes del go-live PROD 1-jul-2026") estaban vinculados a hitos que no se han materializado en su ventana original — Segpay onboarding en pausa, PROD sigue PRELAUNCH. Nuevos triggers: Free → Starter cuando consumo mensual proyectado >60% del cupo Free durante 3 días consecutivos, o al detectarse primer día con actividad real de clientes de pago tras el flip a `OPEN`. Starter → Pro se mantienen los originales (>7 000-8 000 ops/mes sobre Starter, HTTP 429 en logs, >10 sesiones concurrentes sostenidas en PROD). La estrategia progresiva sigue vigente; solo se actualiza la señal de activación tras 5 semanas de operación.
+- **known-risks.md** línea 36: rectificada. TEST + PROD activos SIGHTENGINE, AUDIT MOCK por diseño. Añadida mención del cupo Free próximo al techo mensual y del riesgo operativo derivado (agotamiento → `markDegraded` → auto-cut a los pocos minutos por `cutDegradedSessions`), planificado como bloque del frente trial.
+
+**Planteamiento de "prueba gratis SFW" en curso** (sin arrancar código; alineación de decisiones con operador cerrada en esta sesión). Cinco bloques definidos: (1) badge "FREE" a la modelo + banner al cliente en modo Free + copy "Hazte Premium" cuando se agota la prueba; (2) umbral estricto Sightengine para sesiones Free con decisión en nuestro backend (opción B: un solo workspace Sightengine + lógica local por `is_trial`); (3) motor de bans automático progresivo (15 min → 30 min → 1 h → 6 h → 24 h + revisión humana) con reset del contador tras periodo limpio y contador separado del streaming Premium; (4) panel backoffice de modelos baneadas con motivo, frame que activó y tiempo restante; (5) alerta de consumo Sightengine en backoffice (umbrales 60/85/95%) — bloque añadido tras verificar el estado real del cupo Free. F5 (verificación edad cliente) descartada del scope: ya cubierta con Didit estimación IA + bloqueo <18 + revisión admin en zona gris 18-25 + fallback documento. Orden sugerido de arranque: bloque 5 (protege lo actual) → bloque 1 (rápido y visible) → bloques 2 y 3 juntos → bloque 4. Bloques 2 y 3 técnicamente agnósticos del plan Sightengine (la lógica de umbral vive en nuestro backend), sin dependencia bloqueante.
+
+**Aprendizaje operativo**. Primera respuesta del asistente al operador afirmó "Sightengine está en modo simulado en TEST/AUDIT/PROD" sin verificar; fue corregido al leer `application-prod.properties` líneas 65-88 y confirmar que PROD estaba activo desde 2026-07-18. Corrección explícita registrada en la conversación. Refuerza feedback ya existente sobre no dar por hecho estados de infraestructura sin cruzar código + repo antes de asesorar.
+
+Sin commits en esta sesión — solo edición documental sobre `docs/`.
+
+---
+
 ## 2026-07-18 — Activación vendors reales PROD (Didit + SightEngine + NOWPayments) + primer registro real observado + notificación admin de registros + panel "Clientes y Modelos" + ADR-051 Fase 5.1 filtro `pay_currencies` + sidebar admin con acentos pastel
 
 Sesión larga con 6 frentes cerrados y validados extremo a extremo en TEST → AUDIT → PROD.

@@ -207,4 +207,26 @@ class SightengineModerationClientTest {
         SightengineWorkflowResponse parsed = client.parseResponse(body);
         assertNull(parsed.getRawScoresByModel().get("minor"));
     }
+
+    @Test
+    @DisplayName("Fase 5 Bloque 5: parseResponse extrae request.operations y submitImage lo propaga al verdict")
+    void parseResponseExtractsOperationsAndVerdictCarriesIt() {
+        String body = "{\"status\":{\"code\":\"ok\"},\"request\":{\"id\":\"req-ops\",\"operations\":7},\"nudity\":{\"bikini\":0.1}}";
+        when(rest.exchange(anyString(), eq(HttpMethod.POST), any(), eq(String.class)))
+                .thenReturn(ResponseEntity.ok(body));
+
+        ModerationVerdictResult v = client.submitImage(jpegSubmission());
+        assertEquals(7L, v.getOperationsConsumed());
+    }
+
+    @Test
+    @DisplayName("Fase 5 Bloque 5: ausencia de request.operations -> operationsConsumed=0")
+    void verdictOperationsDefaultsToZeroWhenAbsent() {
+        String body = "{\"status\":{\"code\":\"ok\"},\"request\":{\"id\":\"req-noops\"},\"nudity\":{\"bikini\":0.1}}";
+        when(rest.exchange(anyString(), eq(HttpMethod.POST), any(), eq(String.class)))
+                .thenReturn(ResponseEntity.ok(body));
+
+        ModerationVerdictResult v = client.submitImage(jpegSubmission());
+        assertEquals(0L, v.getOperationsConsumed());
+    }
 }

@@ -33,6 +33,15 @@ public class SightengineWorkflowResponse {
 
     private Status status;
     private String requestId;
+    /**
+     * Numero de operations que Sightengine contabiliza contra el cupo del
+     * plan por esta llamada (top-level {@code request.operations} del
+     * payload). Con el workflow consolidado actual una llamada emite
+     * varias sub-operaciones que suman N; el vendor cobra por ese N. Se
+     * propaga al {@code ModerationVerdictResult} para agregacion en la
+     * sesion y alerta de consumo (ADR-037 Fase 5 Bloque 5).
+     */
+    private long operations;
     private Map<String, Object> rawScoresByModel = new HashMap<>();
     private Summary summary;
 
@@ -50,6 +59,14 @@ public class SightengineWorkflowResponse {
 
     public void setRequestId(String requestId) {
         this.requestId = requestId;
+    }
+
+    public long getOperations() {
+        return operations;
+    }
+
+    public void setOperations(long operations) {
+        this.operations = operations;
     }
 
     public Map<String, Object> getRawScoresByModel() {

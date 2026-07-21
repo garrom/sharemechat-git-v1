@@ -157,10 +157,12 @@ public class SightengineModerationClient implements ModerationProviderClient {
                 ? frame.getFrameTimestamp()
                 : Instant.now();
         ModerationVerdictResult verdict = mapper.buildVerdict(parsed, rawBody, frameTs);
+        verdict.setOperationsConsumed(parsed.getOperations());
 
-        log.info("[STREAM-MOD-SIGHTENGINE] verdict severity={} categories={} latency_ms={}",
+        log.info("[STREAM-MOD-SIGHTENGINE] verdict severity={} categories={} operations={} latency_ms={}",
                 verdict.getSeverityOverall(),
                 verdict.getCategoryVerdicts().size(),
+                parsed.getOperations(),
                 latency);
         return verdict;
     }
@@ -204,10 +206,13 @@ public class SightengineModerationClient implements ModerationProviderClient {
             r.setStatus(s);
         }
 
-        Object requestId = root.get("request");
-        if (requestId instanceof Map) {
-            Object id = ((Map<?, ?>) requestId).get("id");
+        Object requestObj = root.get("request");
+        if (requestObj instanceof Map) {
+            Map<?, ?> reqMap = (Map<?, ?>) requestObj;
+            Object id = reqMap.get("id");
             if (id != null) r.setRequestId(id.toString());
+            Object ops = reqMap.get("operations");
+            if (ops instanceof Number) r.setOperations(((Number) ops).longValue());
         }
 
         // Summary consolidado del workflow (P2.2 delegacion). Sightengine

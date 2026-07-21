@@ -1,4 +1,4 @@
-package com.sharemechat.controller;
+package com.sharemechat.streammoderation.controller;
 
 import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.StreamRecord;

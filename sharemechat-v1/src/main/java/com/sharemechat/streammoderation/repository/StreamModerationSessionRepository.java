@@ -2,6 +2,10 @@ package com.sharemechat.streammoderation.repository;
 
 import com.sharemechat.streammoderation.entity.StreamModerationSession;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -22,4 +26,17 @@ public interface StreamModerationSessionRepository
      */
     List<StreamModerationSession> findByStatusAndDegradedSinceBefore(
             String status, LocalDateTime cutoff);
+
+    /**
+     * ADR-037 Fase 5 Bloque 5: incremento atomico del contador de
+     * operations Sightengine consumidas por esta sesion. Se usa desde
+     * {@code StreamFrameIngestionService.processFrameSync} tras cada
+     * llamada al vendor. UPDATE en vez de save() para no pisar writes
+     * concurrentes que otros checks (frozen, no-face) hacen sobre la
+     * misma sesion en el mismo metodo.
+     */
+    @Modifying
+    @Transactional
+    @Query("UPDATE StreamModerationSession s SET s.operationsConsumed = s.operationsConsumed + :delta WHERE s.id = :id")
+    int incrementOperationsConsumed(@Param("id") Long id, @Param("delta") long delta);
 }
