@@ -727,6 +727,59 @@ public class EmailCopyRenderer {
     }
 
     /**
+     * ADR-037 Fase 5 Bloque 5 Paso 3: aviso interno al buzon admin
+     * cuando el consumo Sightengine cruza por primera vez un umbral
+     * configurado en un periodo (mes o dia). Buzon interno hispanohablante,
+     * copy ES fijo sin i18n.
+     *
+     * @param envHint        "test"/"audit"/"prod"/"?" segun SPRING_PROFILES_ACTIVE.
+     * @param periodTypeEs   "MES" o "DIA" (para el asunto y el cuerpo).
+     * @param periodStart    Inicio de la ventana (primer dia del mes o dia natural).
+     * @param planName       "FREE" / "STARTER" / "PRO" al momento del disparo.
+     * @param quota          Cupo del plan para la ventana (monthlyQuota o dailyQuota).
+     * @param operations     Ops consumidas al momento del disparo.
+     * @param pct            % consumido al momento del disparo (1 decimal).
+     * @param thresholdPct   Umbral concreto cruzado (60/85/95/80).
+     */
+    public EmailContent renderModerationQuotaAlert(String envHint,
+                                                   String periodTypeEs,
+                                                   String periodStart,
+                                                   String planName,
+                                                   long quota,
+                                                   long operations,
+                                                   String pct,
+                                                   int thresholdPct) {
+        String env = htmlEscape(envHint == null || envHint.isBlank() ? "?" : envHint);
+        String type = htmlEscape(periodTypeEs);
+        String period = htmlEscape(periodStart);
+        String plan = htmlEscape(planName == null ? "-" : planName);
+
+        String subject = "[SharemeChat/" + envHint + "] Consumo Sightengine "
+                + periodTypeEs + ": " + thresholdPct + "% cruzado";
+
+        String body = wrapWithLogo("""
+                <p>Aviso automatico del monitor de consumo Sightengine.</p>
+                <table role="presentation" cellpadding="4" cellspacing="0" border="0" style="border-collapse:collapse; font-family: Arial, Helvetica, sans-serif; font-size: 13px;">
+                  <tr><td style="color:#64748b;">Entorno</td><td><b>%s</b></td></tr>
+                  <tr><td style="color:#64748b;">Ventana</td><td>%s (desde %s)</td></tr>
+                  <tr><td style="color:#64748b;">Plan actual</td><td>%s</td></tr>
+                  <tr><td style="color:#64748b;">Cupo %s</td><td>%d ops</td></tr>
+                  <tr><td style="color:#64748b;">Consumo actual</td><td>%d ops</td></tr>
+                  <tr><td style="color:#64748b;">Porcentaje</td><td>%s%%</td></tr>
+                  <tr><td style="color:#64748b;">Umbral cruzado</td><td><b>%d%%</b></td></tr>
+                </table>
+                <p>Este aviso se envia UNA sola vez por umbral y periodo. No volveras a
+                recibir aviso del %d%% en este %s salvo cambio de periodo.</p>
+                <p>Si el consumo alcanza el 100%%, Sightengine devolvera error, las
+                sesiones de moderacion quedaran en DEGRADED y a los pocos minutos
+                seran cortadas por el fail-closed-soft (ADR-036 bloque 3).</p>
+                <p style="color:#64748b; font-size:12px;">Notificacion automatica del backend. No responder.</p>
+                """.formatted(env, type, period, plan, type, quota, operations, pct, thresholdPct, thresholdPct, type));
+
+        return new EmailContent(subject, body);
+    }
+
+    /**
      * Escapado HTML para fragmentos que se inyectan via .formatted() en
      * los cuerpos HTML de los emails (nickname, displayName, etc.).
      * H2 hardening Lote 1 (2026-06-08): aunque la validacion del

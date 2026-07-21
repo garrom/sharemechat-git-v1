@@ -75,7 +75,13 @@ public record EmailMessage(
         // new-model-email; si la property viene vacia, el envio se skipea
         // (comportamiento por defecto en TEST/AUDIT).
         ADMIN_NEW_CLIENT_REGISTERED,
-        ADMIN_NEW_MODEL_REGISTERED
+        ADMIN_NEW_MODEL_REGISTERED,
+        // ADR-037 Fase 5 Bloque 5 Paso 3: aviso automatico al buzon
+        // admin+moderacion@ cuando el consumo Sightengine cruza un umbral
+        // configurado (60/85/95% mes o 80% dia). Priority BEST_EFFORT:
+        // si falla el envio, el job hace rollback de la row en
+        // moderation_usage_alerts para reintentar en la proxima pasada.
+        ADMIN_MODERATION_QUOTA_ALERT
     }
 
     public enum Priority {
