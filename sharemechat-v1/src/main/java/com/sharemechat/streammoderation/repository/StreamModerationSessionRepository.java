@@ -39,4 +39,13 @@ public interface StreamModerationSessionRepository
     @Transactional
     @Query("UPDATE StreamModerationSession s SET s.operationsConsumed = s.operationsConsumed + :delta WHERE s.id = :id")
     int incrementOperationsConsumed(@Param("id") Long id, @Param("delta") long delta);
+
+    /**
+     * ADR-037 Fase 5 Bloque 5 - Paso 2: suma agregada de operations
+     * Sightengine consumidas desde un instante. Se usa desde
+     * {@code ModerationUsageService} para calcular consumo mensual y
+     * diario contra el cupo del plan del vendor.
+     */
+    @Query("SELECT COALESCE(SUM(s.operationsConsumed), 0) FROM StreamModerationSession s WHERE s.createdAt >= :since")
+    long sumOperationsConsumedSince(@Param("since") LocalDateTime since);
 }

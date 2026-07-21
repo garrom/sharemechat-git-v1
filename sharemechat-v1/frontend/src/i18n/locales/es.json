@@ -2996,6 +2996,13 @@
         "complaintsBySla": "Denuncias por SLA (30d)",
         "accountStatusSnapshot": "Estado de cuentas (snapshot actual)"
       },
+      "sightengineUsage": {
+        "title": "Sightengine — plan",
+        "month": "Mes en curso",
+        "day": "Hoy",
+        "monthSub": "Desde {{start}}",
+        "daySub": "Desde {{start}}"
+      },
       "timeline": {
         "title": "Línea temporal (últimos 7 días)",
         "empty": "(sin eventos)"

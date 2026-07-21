@@ -69,9 +69,38 @@ const STATUS_PALETTE = {
 
 const formatDate = (s) => s ? String(s).replace('T', ' ').replace(/:\d{2}\.\d+/, '') : '—';
 
+// Bloque 5 Paso 2: color por umbral cruzado para las barras de consumo Sightengine.
+// Verde por defecto; amarillo/naranja/rojo segun umbrales de mes; para dia solo verde/rojo.
+const usageColor = (pct, thresholds, kind) => {
+  const p = Number(pct) || 0;
+  if (kind === 'month') {
+    if (p >= (thresholds?.monthCriticalPct ?? 95)) return '#dc2626';
+    if (p >= (thresholds?.monthAlertPct ?? 85)) return '#ea580c';
+    if (p >= (thresholds?.monthWarnPct ?? 60)) return '#d97706';
+    return '#16a34a';
+  }
+  return p >= (thresholds?.dayWarnPct ?? 80) ? '#dc2626' : '#16a34a';
+};
+
+const UsageBar = ({ label, current, total, pct, color, sub }) => (
+  <div style={{ marginBottom: 10 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 4 }}>
+      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1e3a8a' }}>{label}</span>
+      <span style={{ fontSize: '0.85rem', color: '#475569' }}>
+        {current} / {total} ops <strong style={{ color }}>({Number(pct).toFixed(1)}%)</strong>
+      </span>
+    </div>
+    <div style={{ background: '#f1f5f9', borderRadius: 4, height: 12, position: 'relative', overflow: 'hidden' }}>
+      <div style={{ width: Math.min(100, pct) + '%', background: color, height: '100%', borderRadius: 4, transition: 'width 250ms' }} />
+    </div>
+    {sub && <div style={{ fontSize: '0.72rem', color: '#94a3b8', marginTop: 3 }}>{sub}</div>}
+  </div>
+);
+
 const AdminComplianceDashboardPanel = () => {
   const t = (key, opts) => i18n.t(key, opts);
   const [data, setData] = useState(null);
+  const [usage, setUsage] = useState(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState('');
   const [drillSessionId, setDrillSessionId] = useState(null);
@@ -80,9 +109,18 @@ const AdminComplianceDashboardPanel = () => {
     setLoading(true);
     setErr('');
     try {
-      const r = await fetch('/api/admin/compliance/dashboard', { credentials: 'include' });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      setData(await r.json());
+      const [rDash, rUsage] = await Promise.all([
+        fetch('/api/admin/compliance/dashboard', { credentials: 'include' }),
+        fetch('/api/admin/moderation/usage', { credentials: 'include' }),
+      ]);
+      if (!rDash.ok) throw new Error('HTTP ' + rDash.status);
+      setData(await rDash.json());
+      // usage se degrada silenciosamente si falla (widget no bloquea el dashboard)
+      if (rUsage.ok) {
+        setUsage(await rUsage.json());
+      } else {
+        setUsage(null);
+      }
     } catch (e) {
       setErr(e.message || 'Error');
       setData(null);
@@ -139,6 +177,36 @@ const AdminComplianceDashboardPanel = () => {
       </div>
 
       {err && <div style={{ background: '#fef2f2', padding: '8px 12px', borderRadius: 6, color: '#7f1d1d', marginBottom: 12 }}>{err}</div>}
+
+      {usage && (
+        <section style={section}>
+          <h3 style={h3}>
+            {t('admin.compliance.sightengineUsage.title', { defaultValue: 'Sightengine — plan' })} {usage.plan?.name || '—'}
+          </h3>
+          <UsageBar
+            label={t('admin.compliance.sightengineUsage.month', { defaultValue: 'Current month' })}
+            current={usage.usage?.monthOperations ?? 0}
+            total={usage.plan?.monthlyQuota ?? 0}
+            pct={usage.usage?.monthPct ?? 0}
+            color={usageColor(usage.usage?.monthPct, usage.thresholds, 'month')}
+            sub={t('admin.compliance.sightengineUsage.monthSub', {
+              defaultValue: 'Since {{start}}',
+              start: formatDate(usage.usage?.monthStartAt),
+            })}
+          />
+          <UsageBar
+            label={t('admin.compliance.sightengineUsage.day', { defaultValue: 'Today' })}
+            current={usage.usage?.dayOperations ?? 0}
+            total={usage.plan?.dailyQuota ?? 0}
+            pct={usage.usage?.dayPct ?? 0}
+            color={usageColor(usage.usage?.dayPct, usage.thresholds, 'day')}
+            sub={t('admin.compliance.sightengineUsage.daySub', {
+              defaultValue: 'Since {{start}}',
+              start: formatDate(usage.usage?.dayStartAt),
+            })}
+          />
+        </section>
+      )}
 
       {data && (
         <>
