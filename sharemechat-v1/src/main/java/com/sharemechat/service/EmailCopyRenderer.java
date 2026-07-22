@@ -4,6 +4,8 @@ import com.sharemechat.config.ProductOperationalProperties;
 import com.sharemechat.entity.User;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+
 @Component
 public class EmailCopyRenderer {
 
@@ -724,6 +726,86 @@ public class EmailCopyRenderer {
             return user.getNickname().trim();
         }
         return user != null && user.getEmail() != null ? user.getEmail().trim() : "user";
+    }
+
+    /**
+     * ADR-037 frente trial-sfw Bloque 3 Paso 2: aviso a la modelo cuando el
+     * motor emite un ban automatico por infraccion CRITICAL en un stream
+     * trial. Bilingue segun uiLocale. El copy explica motivo, duracion,
+     * fecha fin y recuerda que puede seguir usando el resto de la app
+     * (chat con soporte). Priority BEST_EFFORT en el caller: si falla el
+     * envio, el ban ya esta persistido y la modelo lo vera al intentar
+     * entrar al matching.
+     *
+     * @param model         Usuario modelo baneada.
+     * @param banEndsAt     Fin del ban (formato ISO local).
+     * @param minutes       Duracion total del ban en minutos.
+     * @param manualReview  true si el ban requiere revision humana (5o+ strike).
+     */
+    public EmailContent renderModelStreamingBan(User model,
+                                                LocalDateTime banEndsAt,
+                                                long minutes,
+                                                boolean manualReview) {
+        String locale = localeResolver.resolve(model);
+        String nickname = htmlEscape(safeLabel(model));
+        String endsAtStr = htmlEscape(banEndsAt != null ? banEndsAt.toString() : "-");
+        String durationStr = formatDuration(minutes, locale);
+
+        if ("es".equals(locale)) {
+            String reviewNote = manualReview
+                    ? "<p>Este ban se ha marcado para <b>revisión manual</b> por el equipo. Recibirás una respuesta en breve.</p>"
+                    : "";
+            String subject = "[SharemeChat] Suspensión temporal del streaming";
+            String body = wrapWithLogo("""
+                    <p>Hola %s,</p>
+                    <p>Nuestro sistema automático de moderación ha detectado contenido no permitido en un stream de prueba con un cliente Free. Por eso hemos suspendido temporalmente tu acceso al videochat.</p>
+                    <table role="presentation" cellpadding="4" cellspacing="0" border="0" style="border-collapse:collapse; font-family: Arial, Helvetica, sans-serif; font-size: 13px;">
+                      <tr><td style="color:#64748b;">Duración</td><td><b>%s</b></td></tr>
+                      <tr><td style="color:#64748b;">Fin de la suspensión</td><td>%s</td></tr>
+                    </table>
+                    %s
+                    <p>Durante la suspensión puedes seguir usando el resto de la aplicación (chat con soporte, ver tu perfil, historial, etc.). Solo el matching y las llamadas quedan bloqueados.</p>
+                    <p>Recuerda que en la franja de prueba <b>no se permite contenido adulto</b> aunque sí esté permitido en los clientes Premium. Es una restricción legal y contractual.</p>
+                    <p>Si crees que ha sido un error, contacta con soporte desde la app.</p>
+                    """.formatted(nickname, durationStr, endsAtStr, reviewNote));
+            return new EmailContent(subject, body);
+        }
+
+        String reviewNoteEn = manualReview
+                ? "<p>This ban has been flagged for <b>manual review</b> by our team. You'll hear back from us shortly.</p>"
+                : "";
+        String subjectEn = "[SharemeChat] Temporary streaming suspension";
+        String bodyEn = wrapWithLogo("""
+                <p>Hi %s,</p>
+                <p>Our automatic moderation system detected disallowed content during a trial session with a Free client. As a result, we have temporarily suspended your access to video chat.</p>
+                <table role="presentation" cellpadding="4" cellspacing="0" border="0" style="border-collapse:collapse; font-family: Arial, Helvetica, sans-serif; font-size: 13px;">
+                  <tr><td style="color:#64748b;">Duration</td><td><b>%s</b></td></tr>
+                  <tr><td style="color:#64748b;">Suspension ends</td><td>%s</td></tr>
+                </table>
+                %s
+                <p>During the suspension you can still use the rest of the app (support chat, profile, history, etc.). Only matching and calls are blocked.</p>
+                <p>Please note that adult content <b>is not allowed during trial sessions</b>, even though it is allowed with Premium clients. This is a legal and contractual restriction.</p>
+                <p>If you believe this was an error, contact support from within the app.</p>
+                """.formatted(nickname, durationStr, endsAtStr, reviewNoteEn));
+        return new EmailContent(subjectEn, bodyEn);
+    }
+
+    /**
+     * Formatea una duracion en minutos como texto humano segun locale.
+     * 15 -> "15 minutos" / "15 minutes"; 60 -> "1 hora" / "1 hour"; etc.
+     */
+    private String formatDuration(long minutes, String locale) {
+        boolean es = "es".equals(locale);
+        if (minutes < 60) {
+            return minutes + (es ? " minutos" : " minutes");
+        }
+        long hours = minutes / 60;
+        long rem = minutes % 60;
+        if (rem == 0) {
+            if (hours == 1) return es ? "1 hora" : "1 hour";
+            return hours + (es ? " horas" : " hours");
+        }
+        return hours + (es ? " h " : "h ") + rem + (es ? " min" : "min");
     }
 
     /**

@@ -1,7 +1,12 @@
 package com.sharemechat.streammoderation.service;
 
 import com.sharemechat.entity.Model;
+import com.sharemechat.entity.User;
 import com.sharemechat.repository.ModelRepository;
+import com.sharemechat.repository.UserRepository;
+import com.sharemechat.service.EmailCopyRenderer;
+import com.sharemechat.service.EmailMessage;
+import com.sharemechat.service.EmailService;
 import com.sharemechat.streammoderation.config.ModelBanProperties;
 import com.sharemechat.streammoderation.entity.ModelModerationBan;
 import com.sharemechat.streammoderation.entity.ModelModerationStrike;
@@ -39,15 +44,27 @@ public class ModelBanService {
     private final ModelModerationBanRepository banRepository;
     private final ModelRepository modelRepository;
     private final ModelBanProperties props;
+    // ADR-037 frente trial-sfw Bloque 3 Paso 2: notificacion email a la
+    // modelo tras emitir ban. Todos best-effort: si el envio falla, el
+    // ban ya esta persistido y la modelo lo vera in-app al matching.
+    private final UserRepository userRepository;
+    private final EmailCopyRenderer emailCopyRenderer;
+    private final EmailService emailService;
 
     public ModelBanService(ModelModerationStrikeRepository strikeRepository,
                            ModelModerationBanRepository banRepository,
                            ModelRepository modelRepository,
-                           ModelBanProperties props) {
+                           ModelBanProperties props,
+                           UserRepository userRepository,
+                           EmailCopyRenderer emailCopyRenderer,
+                           EmailService emailService) {
         this.strikeRepository = strikeRepository;
         this.banRepository = banRepository;
         this.modelRepository = modelRepository;
         this.props = props;
+        this.userRepository = userRepository;
+        this.emailCopyRenderer = emailCopyRenderer;
+        this.emailService = emailService;
     }
 
     /**
@@ -130,6 +147,38 @@ public class ModelBanService {
 
         log.warn("[MODEL-BAN] BAN emitido modelUserId={} strikeCount={} minutes={} endsAt={} manualReview={} category={}",
                 modelUserId, strikeCount, minutes, endsAt, manualReview, category);
+
+        // ADR-037 frente trial-sfw Bloque 3 Paso 2: aviso email best-effort
+        // a la modelo. Fuera del try/catch principal: si el envio falla, el
+        // ban ya esta persistido y no debe revertirse.
+        sendBanEmailBestEffort(modelUserId, endsAt, minutes, manualReview);
+    }
+
+    private void sendBanEmailBestEffort(Long modelUserId,
+                                        LocalDateTime endsAt,
+                                        long minutes,
+                                        boolean manualReview) {
+        try {
+            User user = userRepository.findById(modelUserId).orElse(null);
+            if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
+                log.info("[MODEL-BAN] email skip: user o email vacio modelUserId={}", modelUserId);
+                return;
+            }
+            EmailCopyRenderer.EmailContent content =
+                    emailCopyRenderer.renderModelStreamingBan(user, endsAt, minutes, manualReview);
+            emailService.send(new EmailMessage(
+                    user.getEmail(),
+                    content.subject(),
+                    content.body(),
+                    EmailMessage.Category.MODEL_STREAMING_BAN,
+                    EmailMessage.Priority.BEST_EFFORT
+            ));
+            log.info("[MODEL-BAN] email enviado modelUserId={} to={} manualReview={}",
+                    modelUserId, user.getEmail(), manualReview);
+        } catch (Exception ex) {
+            log.warn("[MODEL-BAN] email FAIL modelUserId={}: {}",
+                    modelUserId, ex.getMessage());
+        }
     }
 
     /**

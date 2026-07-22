@@ -118,6 +118,10 @@ const DashboardModel = () => {
   // sin cara/frozen). El banner incluye countdown que decrementa cada seg.
   // Se auto-cierra al recibir moderation-warning-cleared o admin-kicked.
   const [modWarning, setModWarning] = useState(null); // {reason, secondsRemaining, startedAt}
+  // ADR-037 frente trial-sfw Bloque 3 Paso 2: modal cuando la modelo intenta
+  // start-match estando baneada de streaming. streamingBanUntil = ISO local
+  // string devuelto por el WS; null cuando no hay ban activo mostrado.
+  const [streamingBanUntil, setStreamingBanUntil] = useState(null);
 
   // #D-34: countdown local del banner. Decrementa cada segundo hasta 0.
   // Al llegar a 0 el banner queda "esperando corte" hasta que llegue el
@@ -749,6 +753,15 @@ const DashboardModel = () => {
       onUnhandled: (data) => {
         if (data.type === 'queue-stats' && typeof data.position === 'number') {
           setQueuePosition(data.position);
+        }
+        // ADR-037 frente trial-sfw Bloque 3 Paso 2: aviso in-app cuando
+        // el backend rechaza start-match porque la modelo esta baneada
+        // de streaming. Mostramos modal explicativo; ella puede cerrarlo
+        // y seguir usando el resto de la app.
+        if (data.type === 'streaming-banned' && typeof data.bannedUntil === 'string') {
+          try { console.log('[MODEL][WS] streaming-banned', data); } catch {}
+          setSearching(false);
+          setStreamingBanUntil(data.bannedUntil);
         }
       },
     });
@@ -3564,6 +3577,62 @@ const DashboardModel = () => {
         }}
         onCancel={() => setLivenessModalOpen(false)}
       />
+
+      {/* ADR-037 frente trial-sfw Bloque 3 Paso 2: modal ban de streaming */}
+      {streamingBanUntil && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+            background: 'rgba(15,23,42,0.62)', zIndex: 9999,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 16,
+          }}
+        >
+          <div style={{
+            background: '#ffffff', borderRadius: 12, padding: 24,
+            maxWidth: 460, width: '100%',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.35)',
+            fontFamily: 'Arial, Helvetica, sans-serif',
+          }}>
+            <h3 style={{ margin: 0, marginBottom: 12, color: '#7f1d1d', fontSize: '1.1rem' }}>
+              {i18n.t('dashboardModel.streamingBan.title', { defaultValue: 'Streaming suspendido' })}
+            </h3>
+            <p style={{ margin: '0 0 10px', color: '#0f172a', fontSize: '0.92rem' }}>
+              {i18n.t('dashboardModel.streamingBan.body', {
+                defaultValue: 'Nuestro sistema automatico ha detectado contenido no permitido en un trial. Tu acceso al videochat esta temporalmente bloqueado.',
+              })}
+            </p>
+            <div style={{
+              background: '#fef2f2', border: '1px solid #fecaca',
+              borderRadius: 8, padding: '10px 12px', marginBottom: 14,
+              fontSize: '0.85rem', color: '#7f1d1d',
+            }}>
+              <strong>{i18n.t('dashboardModel.streamingBan.endsAtLabel', { defaultValue: 'Fin de la suspensión:' })}</strong>{' '}
+              {String(streamingBanUntil).replace('T', ' ').replace(/\.\d+$/, '')}
+            </div>
+            <p style={{ margin: '0 0 16px', color: '#475569', fontSize: '0.85rem' }}>
+              {i18n.t('dashboardModel.streamingBan.hint', {
+                defaultValue: 'Puedes seguir usando el resto de la app (soporte, historial, perfil). Recuerda que en trial no se permite contenido adulto.',
+              })}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => setStreamingBanUntil(null)}
+                style={{
+                  background: '#1e3a8a', color: '#ffffff',
+                  border: 'none', borderRadius: 8, padding: '8px 16px',
+                  cursor: 'pointer', fontWeight: 600, fontSize: '0.9rem',
+                }}
+              >
+                {i18n.t('common.close', { defaultValue: 'Cerrar' })}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </StyledContainer>
   );
 

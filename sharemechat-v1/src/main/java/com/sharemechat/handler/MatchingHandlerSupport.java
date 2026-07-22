@@ -398,6 +398,16 @@ public class MatchingHandlerSupport {
                         blockForLiveness(session, userId, role);
                         return;
                     }
+                    // ADR-037 frente trial-sfw Bloque 3 Paso 2: aviso
+                    // in-app cuando la modelo intenta entrar al matching
+                    // pool estando baneada. El gate hard vive en canMatch
+                    // (excluye del pool los peers en ban), pero aqui la
+                    // avisamos antes de meterla al pool para que sepa
+                    // que sus intentos no van a emparejar hasta que el
+                    // ban expire.
+                    if (notifyIfStreamingBanned(session, userId)) {
+                        return;
+                    }
                     matchModel(session);
                 }
                 return;
@@ -2004,6 +2014,36 @@ public class MatchingHandlerSupport {
                     .filter(until -> until.isAfter(java.time.LocalDateTime.now()))
                     .isPresent();
         } catch (Exception ex) {
+            return false;
+        }
+    }
+
+    /**
+     * ADR-037 frente trial-sfw Bloque 3 Paso 2: si la modelo esta baneada
+     * de streaming, en vez de meterla al pool le enviamos un WS
+     * {@code streaming-banned} con la fecha fin del ban. El frontend
+     * muestra modal explicativo y no reintenta start-match automatico.
+     * Devuelve true si notifico (caller debe abortar el flujo normal).
+     */
+    private boolean notifyIfStreamingBanned(WebSocketSession session, Long userId) {
+        if (userId == null) return false;
+        try {
+            java.time.LocalDateTime until = modelRepository.findById(userId)
+                    .map(com.sharemechat.entity.Model::getStreamingBannedUntil)
+                    .orElse(null);
+            if (until == null || !until.isAfter(java.time.LocalDateTime.now())) {
+                return false;
+            }
+            String msg = String.format(java.util.Locale.US,
+                    "{\"type\":\"streaming-banned\",\"bannedUntil\":\"%s\"}",
+                    until.toString());
+            safeSend(session, msg);
+            log.warn("[MODEL-BAN] start-match rechazado por ban userId={} until={}",
+                    userId, until);
+            return true;
+        } catch (Exception ex) {
+            log.warn("[MODEL-BAN] notifyIfStreamingBanned FAIL userId={}: {}",
+                    userId, ex.getMessage());
             return false;
         }
     }

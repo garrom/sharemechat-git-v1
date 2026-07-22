@@ -81,7 +81,12 @@ public record EmailMessage(
         // configurado (60/85/95% mes o 80% dia). Priority BEST_EFFORT:
         // si falla el envio, el job hace rollback de la row en
         // moderation_usage_alerts para reintentar en la proxima pasada.
-        ADMIN_MODERATION_QUOTA_ALERT
+        ADMIN_MODERATION_QUOTA_ALERT,
+        // ADR-037 frente trial-sfw Bloque 3 Paso 2: aviso a la modelo cuando
+        // el motor emite un ban automatico por infraccion CRITICAL en trial.
+        // Priority BEST_EFFORT: si falla el envio, el ban ya se persistio y
+        // la modelo lo vera igual in-app al intentar entrar al matching.
+        MODEL_STREAMING_BAN
     }
 
     public enum Priority {

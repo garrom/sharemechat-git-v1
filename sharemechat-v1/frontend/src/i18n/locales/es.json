@@ -1124,6 +1124,12 @@
     }
   },
   "dashboardModel": {
+    "streamingBan": {
+      "title": "Streaming suspendido",
+      "body": "Nuestro sistema automático ha detectado contenido no permitido en un stream de prueba con un cliente Free. Tu acceso al videochat está temporalmente bloqueado.",
+      "endsAtLabel": "Fin de la suspensión:",
+      "hint": "Puedes seguir usando el resto de la app (soporte, historial, perfil). Recuerda que en la franja de prueba no se permite contenido adulto. Si crees que ha sido un error, contacta con soporte."
+    },
     "billing": {
       "title": "Facturación",
       "subtitle": "Streaming, regalos y retiradas. Guarda este historial si necesitas justificantes.",

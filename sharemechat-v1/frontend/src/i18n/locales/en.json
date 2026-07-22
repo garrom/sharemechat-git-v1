@@ -1124,6 +1124,12 @@
     }
   },
   "dashboardModel": {
+    "streamingBan": {
+      "title": "Streaming suspended",
+      "body": "Our automatic moderation system detected disallowed content during a trial session with a Free client. Your access to video chat is temporarily blocked.",
+      "endsAtLabel": "Suspension ends:",
+      "hint": "You can still use the rest of the app (support, history, profile). Please note that adult content is not allowed during trial sessions. If you believe this was an error, contact support."
+    },
     "billing": {
       "title": "Billing",
       "subtitle": "Streaming, gifts and withdrawals. Keep this record if you need statements.",

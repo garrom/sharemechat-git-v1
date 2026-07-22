@@ -48,8 +48,18 @@ class ModelBanServiceTest {
         banRepo = mock(ModelModerationBanRepository.class);
         modelRepo = mock(ModelRepository.class);
         props = new ModelBanProperties();
+        // ADR-037 Bloque 3 Paso 2: constructor amplia con UserRepository +
+        // EmailCopyRenderer + EmailService para envio best-effort. Los
+        // tests de escalada no dependen del email; se mockean.
+        com.sharemechat.repository.UserRepository userRepo =
+                mock(com.sharemechat.repository.UserRepository.class);
+        com.sharemechat.service.EmailCopyRenderer emailCopyRenderer =
+                mock(com.sharemechat.service.EmailCopyRenderer.class);
+        com.sharemechat.service.EmailService emailService =
+                mock(com.sharemechat.service.EmailService.class);
         // Defaults: 15/30/60/360/1440 min, ventana 30 dias, manualReview desde 5
-        svc = new ModelBanService(strikeRepo, banRepo, modelRepo, props);
+        svc = new ModelBanService(strikeRepo, banRepo, modelRepo, props,
+                userRepo, emailCopyRenderer, emailService);
 
         model = new Model();
         model.setUserId(42L);
