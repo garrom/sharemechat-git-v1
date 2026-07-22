@@ -791,6 +791,34 @@ public class EmailCopyRenderer {
     }
 
     /**
+     * ADR-037 frente trial-sfw Bloque 4: aviso a la modelo cuando un admin
+     * levanta manualmente su ban tras revision (falso positivo o apelacion
+     * aceptada). Bilingue segun uiLocale, tono conciliador y explicito.
+     */
+    public EmailContent renderModelStreamingBanLifted(User model) {
+        String locale = localeResolver.resolve(model);
+        String nickname = htmlEscape(safeLabel(model));
+
+        if ("es".equals(locale)) {
+            String subject = "[SharemeChat] Suspensión levantada";
+            String body = wrapWithLogo("""
+                    <p>Hola %s,</p>
+                    <p>Hemos revisado la suspensión de streaming asociada a tu cuenta y la hemos <b>levantado</b>. Ya puedes volver a hacer videochat con normalidad.</p>
+                    <p>Si tienes alguna duda o crees que hay algo más que aclarar, contacta con soporte desde la app.</p>
+                    """.formatted(nickname));
+            return new EmailContent(subject, body);
+        }
+
+        String subjectEn = "[SharemeChat] Streaming suspension lifted";
+        String bodyEn = wrapWithLogo("""
+                <p>Hi %s,</p>
+                <p>We have reviewed the streaming suspension on your account and have <b>lifted</b> it. You can now resume video chatting normally.</p>
+                <p>If you have any questions or something else to clarify, please contact support from within the app.</p>
+                """.formatted(nickname));
+        return new EmailContent(subjectEn, bodyEn);
+    }
+
+    /**
      * Formatea una duracion en minutos como texto humano segun locale.
      * 15 -> "15 minutos" / "15 minutes"; 60 -> "1 hora" / "1 hour"; etc.
      */

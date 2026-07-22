@@ -90,6 +90,40 @@ public class ComplianceEvidenceService {
         if (presigner != null) presigner.close();
     }
 
+    /**
+     * ADR-037 frente trial-sfw Bloque 4: variante que genera signed URL
+     * a partir de un evidenceRef ya conocido (bucket key), sin necesidad
+     * de un StreamModerationEvent. Usado por el panel admin de bans para
+     * mostrar el frame que disparo el strike sin repetir el lookup por
+     * event->review->evidenceRef que ya hace el caller.
+     *
+     * <p>Sin audit log adicional: el caller (ModelBanAdminService) puede
+     * loguear el acceso segun su propio contexto.
+     *
+     * @param evidenceRef key del objeto en el bucket S3, o null.
+     * @return DTO con url y expiresAt; url=null con razon si el presigner
+     *         esta desactivado o si evidenceRef es blank.
+     */
+    public EvidenceSignedUrlDTO generateSignedUrlByRef(String evidenceRef) {
+        if (!StringUtils.hasText(evidenceRef)) {
+            return new EvidenceSignedUrlDTO(null, REASON_GREEN_VERDICT, null, ttlSeconds);
+        }
+        if (presigner == null) {
+            return new EvidenceSignedUrlDTO(null, REASON_BUCKET_UNAVAILABLE, null, ttlSeconds);
+        }
+        GetObjectRequest get = GetObjectRequest.builder()
+                .bucket(props.getBucket())
+                .key(evidenceRef)
+                .build();
+        GetObjectPresignRequest presign = GetObjectPresignRequest.builder()
+                .signatureDuration(Duration.ofSeconds(ttlSeconds))
+                .getObjectRequest(get)
+                .build();
+        PresignedGetObjectRequest result = presigner.presignGetObject(presign);
+        LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(ttlSeconds);
+        return new EvidenceSignedUrlDTO(result.url().toString(), null, expiresAt, ttlSeconds);
+    }
+
     public EvidenceSignedUrlDTO generateSignedUrl(Long eventId, Long actorUserId, String clientIp) {
         if (eventId == null) throw new IllegalArgumentException("eventId requerido");
 

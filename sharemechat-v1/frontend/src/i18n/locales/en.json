@@ -3036,6 +3036,59 @@
         "noReviews": "No reviews (all GREEN)."
       }
     },
+    "modelBans": {
+      "title": "Model bans",
+      "subtitle": "Manual review of automatic suspensions for trial infractions",
+      "sidebar": {
+        "label": "Model bans",
+        "meta": "Review automatic suspensions"
+      },
+      "reload": "Reload",
+      "back": "Back",
+      "empty": "(no results for this filter)",
+      "active": "Active",
+      "expired": "Expired",
+      "pendingReview": "Pending review",
+      "reviewed": "Reviewed",
+      "yes": "Yes",
+      "no": "No",
+      "detailBtn": "Detail",
+      "viewEvidence": "View evidence (image)",
+      "evidenceExpires": "Expires:",
+      "evidenceHint": "Temporary signed URL of the frame that triggered the source strike.",
+      "noEvidence": "No evidence available (bucket not configured or frame not captured).",
+      "noStrikes": "(no strikes in the window)",
+      "filter": {
+        "pendingReview": "Pending review",
+        "active": "Active",
+        "all": "All"
+      },
+      "col": {
+        "model": "Model",
+        "strike": "Strike",
+        "reason": "Reason",
+        "startedAt": "Started",
+        "endsAt": "Ends",
+        "status": "Status",
+        "manualReview": "Manual review",
+        "reviewedAt": "Reviewed at",
+        "reviewedBy": "Reviewed by"
+      },
+      "detail": {
+        "model": "Model",
+        "ban": "Current ban",
+        "evidence": "Evidence",
+        "strikes": "Recent strikes (30d window)"
+      },
+      "actions": {
+        "lift": "Lift ban",
+        "keep": "Keep ban"
+      },
+      "confirm": {
+        "lift": "Lift the ban and email the model?",
+        "keep": "Confirm (keep) the ban after review?"
+      }
+    },
     "streamModeration": {
       "title": "Stream moderation",
       "subtitle": "Human queue, active sessions and AI moderation pipeline configuration",

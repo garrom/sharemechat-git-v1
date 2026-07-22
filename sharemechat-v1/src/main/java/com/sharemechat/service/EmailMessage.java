@@ -86,7 +86,11 @@ public record EmailMessage(
         // el motor emite un ban automatico por infraccion CRITICAL en trial.
         // Priority BEST_EFFORT: si falla el envio, el ban ya se persistio y
         // la modelo lo vera igual in-app al intentar entrar al matching.
-        MODEL_STREAMING_BAN
+        MODEL_STREAMING_BAN,
+        // ADR-037 frente trial-sfw Bloque 4: notificacion a la modelo cuando
+        // un admin levanta su ban tras revision manual (falso positivo o
+        // apelacion aceptada). Priority BEST_EFFORT.
+        MODEL_STREAMING_BAN_LIFTED
     }
 
     public enum Priority {

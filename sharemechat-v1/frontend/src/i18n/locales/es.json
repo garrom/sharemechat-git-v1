@@ -3036,6 +3036,59 @@
         "noReviews": "Sin reviews (todos los frames GREEN)."
       }
     },
+    "modelBans": {
+      "title": "Bans de modelos",
+      "subtitle": "Revisión manual de suspensiones automáticas por infracciones en trial",
+      "sidebar": {
+        "label": "Bans de modelos",
+        "meta": "Revisión de suspensiones automáticas"
+      },
+      "reload": "Recargar",
+      "back": "Volver",
+      "empty": "(sin resultados para este filtro)",
+      "active": "Activo",
+      "expired": "Expirado",
+      "pendingReview": "Pendiente revisión",
+      "reviewed": "Revisado",
+      "yes": "Sí",
+      "no": "No",
+      "detailBtn": "Detalle",
+      "viewEvidence": "Ver evidencia (imagen)",
+      "evidenceExpires": "Expira:",
+      "evidenceHint": "URL firmada temporal del frame que disparó el strike origen.",
+      "noEvidence": "Sin evidencia disponible (bucket no configurado o frame no capturado).",
+      "noStrikes": "(sin strikes en la ventana)",
+      "filter": {
+        "pendingReview": "Pendientes revisión",
+        "active": "Activos",
+        "all": "Todos"
+      },
+      "col": {
+        "model": "Modelo",
+        "strike": "Strike",
+        "reason": "Motivo",
+        "startedAt": "Inicio",
+        "endsAt": "Fin",
+        "status": "Estado",
+        "manualReview": "Revisión manual",
+        "reviewedAt": "Revisado el",
+        "reviewedBy": "Revisado por"
+      },
+      "detail": {
+        "model": "Modelo",
+        "ban": "Ban actual",
+        "evidence": "Evidencia",
+        "strikes": "Strikes recientes (ventana 30d)"
+      },
+      "actions": {
+        "lift": "Levantar ban",
+        "keep": "Mantener ban"
+      },
+      "confirm": {
+        "lift": "¿Levantar el ban y notificar a la modelo por email?",
+        "keep": "¿Confirmar (mantener) el ban tras revisión?"
+      }
+    },
     "streamModeration": {
       "title": "Moderación del streaming",
       "subtitle": "Cola humana, sesiones activas y configuración del pipeline de moderación IA",

@@ -16,6 +16,7 @@ import AdminModerationPanel from './AdminModerationPanel';
 import AdminComplaintsPanel from './AdminComplaintsPanel';
 import AdminComplianceDashboardPanel from './AdminComplianceDashboardPanel';
 import AdminStreamModerationPanel from './AdminStreamModerationPanel';
+import AdminModelBansPanel from './AdminModelBansPanel';
 import AdminOverviewPanel from './AdminOverviewPanel';
 import AdminProfilePage from './AdminProfilePage';
 import AdminStatsPanel from './AdminStatsPanel';
@@ -79,6 +80,10 @@ const DashboardAdmin = () => {
       title: t('admin.streamModeration.title'),
       subtitle: t('admin.streamModeration.subtitle'),
     },
+    'model-bans': {
+      title: t('admin.modelBans.title', { defaultValue: 'Bans de modelos' }),
+      subtitle: t('admin.modelBans.subtitle', { defaultValue: 'Revisión manual de suspensiones automáticas por infracciones en trial' }),
+    },
     moderation: {
       title: t('admin.shell.views.moderation.title'),
       subtitle: t('admin.shell.views.moderation.subtitle'),
@@ -140,6 +145,10 @@ const DashboardAdmin = () => {
     canViewStreamModeration: adminView || supportView || auditView,
     canModerateStream: adminView || supportView,
     canChangeStreamModerationConfig: adminView,
+    // ADR-037 frente trial-sfw Bloque 4: panel de bans automaticos de
+    // modelos. Lectura ADMIN+SUPPORT+AUDIT; lift/keep ADMIN+SUPPORT.
+    canViewModelBans: adminView || supportView || auditView,
+    canModerateModelBans: adminView || supportView,
     canViewStats: adminView || hasBackofficePermission(user, 'stats.read_overview'),
     canViewFinance: adminView
       || (
@@ -191,6 +200,7 @@ const DashboardAdmin = () => {
       capabilities.canViewModels ? 'models' : null,
       capabilities.canViewAssetModeration ? 'asset-moderation' : null,
       capabilities.canViewStreamModeration ? 'stream-moderation' : null,
+      capabilities.canViewModelBans ? 'model-bans' : null,
       capabilities.canViewModeration ? 'moderation' : null,
       capabilities.canViewComplaints ? 'complaints' : null,
       capabilities.canViewCompliance ? 'compliance' : null,
@@ -280,6 +290,11 @@ const DashboardAdmin = () => {
             key: 'stream-moderation',
             label: t('admin.streamModeration.title'),
             meta: t('admin.streamModeration.subtitle'),
+          } : null,
+          capabilities.canViewModelBans ? {
+            key: 'model-bans',
+            label: t('admin.modelBans.sidebar.label', { defaultValue: 'Bans de modelos' }),
+            meta: t('admin.modelBans.sidebar.meta', { defaultValue: 'Revisión de suspensiones automáticas' }),
           } : null,
           capabilities.canViewModeration ? {
             key: 'moderation',
@@ -554,6 +569,15 @@ const DashboardAdmin = () => {
                 canModerate={capabilities.canModerateStream}
                 canChangeConfig={capabilities.canChangeStreamModerationConfig}
               />
+            </AdminPage>
+          )}
+
+          {activeView === 'model-bans' && capabilities.canViewModelBans && (
+            <AdminPage
+              title={t('admin.modelBans.title', { defaultValue: 'Bans de modelos' })}
+              subtitle={t('admin.modelBans.subtitle', { defaultValue: 'Revisión manual de suspensiones automáticas por infracciones en trial' })}
+            >
+              <AdminModelBansPanel canModerate={capabilities.canModerateModelBans} />
             </AdminPage>
           )}
 
