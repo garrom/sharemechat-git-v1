@@ -3,6 +3,7 @@ package com.sharemechat.entity;
 import jakarta.persistence.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "models")
@@ -26,6 +27,17 @@ public class Model {
 
     @Column(name = "total_ingresos")
     private BigDecimal totalIngresos  = BigDecimal.ZERO;
+
+    /**
+     * ADR-037 frente trial-sfw Bloque 3: fecha/hora fin de ban de
+     * streaming automatico. NULL o pasado = no baneada. Escrito por
+     * {@code ModelBanService.emitBan}; leido por
+     * {@code MatchingHandlerSupport.canMatch} como gate en caliente.
+     * Solo afecta a streaming (matching random, calls); la modelo puede
+     * seguir usando el resto de la app.
+     */
+    @Column(name = "streaming_banned_until")
+    private LocalDateTime streamingBannedUntil;
 
     // Relación uno a uno con User
     @OneToOne
@@ -95,5 +107,13 @@ public class Model {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public LocalDateTime getStreamingBannedUntil() {
+        return streamingBannedUntil;
+    }
+
+    public void setStreamingBannedUntil(LocalDateTime streamingBannedUntil) {
+        this.streamingBannedUntil = streamingBannedUntil;
     }
 }

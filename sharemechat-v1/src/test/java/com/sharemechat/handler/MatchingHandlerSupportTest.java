@@ -59,6 +59,7 @@ class MatchingHandlerSupportTest {
                 null,               // ProductAccessGuardService
                 null,               // LivenessChallengeService (ADR-050 Fase B)
                 null,               // LivenessProperties      (ADR-050 Fase B)
+                null,               // ModelRepository (ADR-037 Bloque 3 gate ban)
                 60                  // seenMaxScan
         );
     }

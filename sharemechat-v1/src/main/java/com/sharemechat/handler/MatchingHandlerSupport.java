@@ -72,6 +72,10 @@ public class MatchingHandlerSupport {
     // por entorno).
     private final LivenessChallengeService livenessChallengeService;
     private final LivenessProperties livenessProperties;
+    // ADR-037 frente trial-sfw Bloque 3: gate del ban de streaming.
+    // Se consulta models.streaming_banned_until en canMatch para excluir
+    // modelos actualmente baneadas del matching pool.
+    private final com.sharemechat.repository.ModelRepository modelRepository;
 
     public MatchingHandlerSupport(MatchingRuntimeState state,
                                   JwtUtil jwtUtil,
@@ -93,6 +97,7 @@ public class MatchingHandlerSupport {
                                   ProductAccessGuardService productAccessGuardService,
                                   LivenessChallengeService livenessChallengeService,
                                   LivenessProperties livenessProperties,
+                                  com.sharemechat.repository.ModelRepository modelRepository,
                                   @Value("${matching.seen.max-scan:60}") int seenMaxScan) {
         this.state = state;
         this.jwtUtil = jwtUtil;
@@ -115,6 +120,7 @@ public class MatchingHandlerSupport {
         this.productAccessGuardService = productAccessGuardService;
         this.livenessChallengeService = livenessChallengeService;
         this.livenessProperties = livenessProperties;
+        this.modelRepository = modelRepository;
     }
 
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
@@ -1979,7 +1985,24 @@ public class MatchingHandlerSupport {
     private boolean canMatch(Long userAId, Long userBId) {
         if (userAId == null || userBId == null) return false;
         try {
-            return !userBlockService.isBlockedBetween(userAId, userBId);
+            if (userBlockService.isBlockedBetween(userAId, userBId)) return false;
+        } catch (Exception ex) {
+            return false;
+        }
+        // ADR-037 frente trial-sfw Bloque 3: gate del ban de streaming
+        // sobre cualquiera de los dos peers. Best-effort: si el lookup
+        // falla, no filtramos (fail-open — mismo criterio que otros gates
+        // de este metodo). Aplica a paid Y trial: cualquier modelo con
+        // ban activo se excluye del matching pool.
+        return !isStreamingBanned(userAId) && !isStreamingBanned(userBId);
+    }
+
+    private boolean isStreamingBanned(Long userId) {
+        try {
+            return modelRepository.findById(userId)
+                    .map(com.sharemechat.entity.Model::getStreamingBannedUntil)
+                    .filter(until -> until.isAfter(java.time.LocalDateTime.now()))
+                    .isPresent();
         } catch (Exception ex) {
             return false;
         }

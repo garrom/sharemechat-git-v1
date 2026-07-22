@@ -67,8 +67,15 @@ class StreamModerationActionServiceTest {
         // que no dependen del auto-cut warning clear.
         com.sharemechat.streammoderation.service.ModerationWarningService warningService =
                 org.mockito.Mockito.mock(com.sharemechat.streammoderation.service.ModerationWarningService.class);
+        // ADR-037 Bloque 3: constructor amplia con ModelBanService +
+        // StreamRecordRepository para hook de strike en trials.
+        com.sharemechat.streammoderation.service.ModelBanService modelBanService =
+                org.mockito.Mockito.mock(com.sharemechat.streammoderation.service.ModelBanService.class);
+        com.sharemechat.repository.StreamRecordRepository streamRecordRepo =
+                org.mockito.Mockito.mock(com.sharemechat.repository.StreamRecordRepository.class);
         svc = new StreamModerationActionService(eventRepo, reviewRepo, sessionRepo,
-                streamService, matchingHandler, messagesWsHandler, warningService);
+                streamService, matchingHandler, messagesWsHandler, warningService,
+                modelBanService, streamRecordRepo);
 
         // Default mock: save devuelve el objeto pasado (Mockito default es null).
         when(reviewRepo.save(any(StreamModerationReview.class))).thenAnswer(inv -> inv.getArgument(0));

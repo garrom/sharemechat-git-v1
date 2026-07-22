@@ -67,6 +67,12 @@ public class StreamModerationActionService {
     // ADR-050 #D-34 (2026-07-16): limpieza defensiva del estado de avisos
     // pre-corte cuando el auto-cut se dispara sin haber pasado por reset.
     private final ModerationWarningService warningService;
+    // ADR-037 frente trial-sfw Bloque 3: motor de strikes/bans automatico.
+    // Se invoca solo en trials cuando el verdict es CRITICAL.
+    private final com.sharemechat.streammoderation.service.ModelBanService modelBanService;
+    // Para resolver el modelUserId desde el stream_records asociado a la
+    // session (session.streamRecordId).
+    private final com.sharemechat.repository.StreamRecordRepository streamRecordRepository;
 
     public StreamModerationActionService(
             StreamModerationEventRepository eventRepository,
@@ -75,7 +81,9 @@ public class StreamModerationActionService {
             @Lazy StreamService streamService,
             @Lazy MatchingHandler matchingHandler,
             @Lazy MessagesWsHandler messagesWsHandler,
-            ModerationWarningService warningService) {
+            ModerationWarningService warningService,
+            com.sharemechat.streammoderation.service.ModelBanService modelBanService,
+            com.sharemechat.repository.StreamRecordRepository streamRecordRepository) {
         this.eventRepository = eventRepository;
         this.reviewRepository = reviewRepository;
         this.sessionRepository = sessionRepository;
@@ -83,6 +91,8 @@ public class StreamModerationActionService {
         this.matchingHandler = matchingHandler;
         this.messagesWsHandler = messagesWsHandler;
         this.warningService = warningService;
+        this.modelBanService = modelBanService;
+        this.streamRecordRepository = streamRecordRepository;
     }
 
     @Transactional
@@ -142,6 +152,13 @@ public class StreamModerationActionService {
             case Constants.StreamModerationSeverity.CRITICAL:
                 StreamModerationReview r = createReview(session, verdict, 10);
                 triggerAutoCut(session, r);
+                // ADR-037 frente trial-sfw Bloque 3: strike + posible ban
+                // solo en trials. Best-effort tras auto-cut. Los verdicts
+                // CRITICAL en paid NO generan strike automatico (contador
+                // separado, decidido por operador).
+                if (session.isTrial()) {
+                    triggerTrialStrike(session, r);
+                }
                 return;
             default:
                 log.warn("[STREAM-MOD] severity desconocida '{}' sessionId={}, no-op",
@@ -175,6 +192,32 @@ public class StreamModerationActionService {
         log.info("[STREAM-MOD] review enqueued sessionId={} reviewId={} severity={} category={} priority={}",
                 session.getId(), saved.getId(), saved.getSeverity(), saved.getCategory(), saved.getPriority());
         return saved;
+    }
+
+    /**
+     * ADR-037 frente trial-sfw Bloque 3: registra strike sobre la modelo
+     * del stream para escalada de ban. Best-effort. Resuelve modelUserId
+     * desde el stream_records asociado al {@code streamRecordId} de la
+     * session (que aqui es un shadow record con is_trial=true).
+     */
+    private void triggerTrialStrike(StreamModerationSession session, StreamModerationReview r) {
+        try {
+            Long streamRecordId = session.getStreamRecordId();
+            if (streamRecordId == null) return;
+            Long modelUserId = streamRecordRepository.findById(streamRecordId)
+                    .map(sr -> sr.getModel() != null ? sr.getModel().getId() : null)
+                    .orElse(null);
+            if (modelUserId == null) {
+                log.warn("[STREAM-MOD] triggerTrialStrike: no se pudo resolver modelUserId desde streamRecordId={}",
+                        streamRecordId);
+                return;
+            }
+            modelBanService.recordStrike(modelUserId, session.getId(),
+                    r.getSeverity(), r.getCategory());
+        } catch (Exception ex) {
+            log.warn("[STREAM-MOD] triggerTrialStrike FAIL sessionId={}: {}",
+                    session.getId(), ex.getMessage(), ex);
+        }
     }
 
     private void triggerAutoCut(StreamModerationSession session, StreamModerationReview r) {
