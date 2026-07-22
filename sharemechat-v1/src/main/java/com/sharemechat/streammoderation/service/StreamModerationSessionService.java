@@ -66,6 +66,9 @@ public class StreamModerationSessionService {
     private final MockModerationClient mockClient;
     private final SightengineModerationClient sightengineClient;
     private final StreamService streamService;
+    // ADR-037 frente trial-sfw Bloque 2: para hidratar session.isTrial
+    // leyendo stream_records.is_trial al crear la sesion.
+    private final com.sharemechat.repository.StreamRecordRepository streamRecordRepository;
 
     public StreamModerationSessionService(
             StreamModerationSessionRepository sessionRepository,
@@ -74,7 +77,8 @@ public class StreamModerationSessionService {
             ModerationFailureProperties failureProperties,
             MockModerationClient mockClient,
             @Lazy SightengineModerationClient sightengineClient,
-            @Lazy StreamService streamService) {
+            @Lazy StreamService streamService,
+            com.sharemechat.repository.StreamRecordRepository streamRecordRepository) {
         this.sessionRepository = sessionRepository;
         this.providerConfigService = providerConfigService;
         this.samplingProperties = samplingProperties;
@@ -82,6 +86,7 @@ public class StreamModerationSessionService {
         this.mockClient = mockClient;
         this.sightengineClient = sightengineClient;
         this.streamService = streamService;
+        this.streamRecordRepository = streamRecordRepository;
     }
 
     /**
@@ -105,6 +110,14 @@ public class StreamModerationSessionService {
         s.setStatus(Constants.StreamModerationSessionStatus.ACTIVE);
         s.setSamplingCadenceSeconds(samplingProperties.getCadenceSeconds());
         s.setSamplingStrategy(Constants.StreamModerationSamplingStrategy.INTERVAL);
+        // ADR-037 frente trial-sfw Bloque 2: propagar flag is_trial desde
+        // stream_records al momento de crear la moderation session. Si el
+        // stream_record no existe o no es accesible, default a false
+        // (comportamiento paid como hoy).
+        try {
+            streamRecordRepository.findById(streamRecordId)
+                    .ifPresent(sr -> s.setTrial(sr.isTrial()));
+        } catch (Exception ignore) { /* default false */ }
         StreamModerationSession saved = sessionRepository.save(s);
         log.info("[STREAM-MOD] session started streamRecordId={} provider={} cadence={}s sessionId={}",
                 streamRecordId, saved.getProvider(), saved.getSamplingCadenceSeconds(), saved.getId());

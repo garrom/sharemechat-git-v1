@@ -123,9 +123,21 @@ public class ModerationCategoryMapper {
     }
 
     private final ModerationThresholdsProperties thresholds;
+    // ADR-037 frente trial-sfw Bloque 2 (Via 1): umbrales locales
+    // estrictos para trials. Opcional (constructor legacy sin este
+    // parametro lo deja a null, comportamiento paid-only como antes).
+    private final com.sharemechat.streammoderation.config.ModerationTrialThresholdsProperties trialThresholds;
 
+    // Constructor legacy (sin trial): compat para tests existentes.
     public ModerationCategoryMapper(ModerationThresholdsProperties thresholds) {
+        this(thresholds, null);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ModerationCategoryMapper(ModerationThresholdsProperties thresholds,
+                                    com.sharemechat.streammoderation.config.ModerationTrialThresholdsProperties trialThresholds) {
         this.thresholds = thresholds;
+        this.trialThresholds = trialThresholds;
     }
 
     /**
@@ -138,6 +150,25 @@ public class ModerationCategoryMapper {
             SightengineWorkflowResponse response,
             String rawBody,
             Instant frameTimestamp) {
+        return buildVerdict(response, rawBody, frameTimestamp, false);
+    }
+
+    /**
+     * ADR-037 frente trial-sfw Bloque 2 (Via 1): variante con {@code isTrial}.
+     * Cuando true, inserta un paso 1.5 entre el bypass CRITICAL de MINORS/GORE
+     * (paso 1) y la delegacion a summary.action (paso 2): evalua umbrales
+     * locales estrictos sobre nudity y, si alguno excede, devuelve verdict
+     * NUDITY con la severity mas alta cruzada sin consultar summary.action
+     * del vendor. Si ningun umbral trial se excede, cae al paso 2 (delegacion
+     * como paid).
+     *
+     * <p>El bypass CRITICAL de paso 1 sigue siendo innegociable.
+     */
+    public ModerationVerdictResult buildVerdict(
+            SightengineWorkflowResponse response,
+            String rawBody,
+            Instant frameTimestamp,
+            boolean isTrial) {
 
         ModerationVerdictResult result = new ModerationVerdictResult();
         result.setProviderEventId(response != null ? response.getRequestId() : null);
@@ -177,6 +208,18 @@ public class ModerationCategoryMapper {
             log.warn("[STREAM-MOD-SIGHTENGINE] CRITICAL bypass minorsCritical={} goreCritical={} (innegociable, no delegado a summary)",
                     minorsCritical, goreCritical);
             return result;
+        }
+
+        // Paso 1.5 (ADR-037 trial-sfw Bloque 2): umbrales locales
+        // estrictos para trials. Solo si isTrial=true y hay properties
+        // cableadas (comportamiento defensivo si el constructor legacy
+        // se usa desde tests). Si algun sub-score de nudity excede su
+        // umbral trial, corta aqui sin delegar a summary.action.
+        if (isTrial && trialThresholds != null && response != null) {
+            ModerationVerdictResult trialVerdict = applyTrialStrictNudity(response, result);
+            if (trialVerdict != null) {
+                return trialVerdict;
+            }
         }
 
         // Paso 2: delegacion a summary.action.
@@ -375,6 +418,82 @@ public class ModerationCategoryMapper {
         if (Constants.StreamModerationSeverity.RED.equals(severity)) return 2;
         if (Constants.StreamModerationSeverity.AMBER.equals(severity)) return 1;
         return 0;
+    }
+
+    /**
+     * ADR-037 frente trial-sfw Bloque 2 (Via 1): evalua umbrales locales
+     * estrictos sobre nudity para sesiones trial. Devuelve un
+     * {@link ModerationVerdictResult} completo si algun sub-score excede
+     * un umbral (CRITICAL sexual_activity > RED erotica > AMBER sexual_display,
+     * gana la severity mas alta cruzada). Devuelve null si ningun umbral
+     * se excede (el caller cae al paso 2 de delegacion a summary.action).
+     *
+     * <p>El {@code baseResult} recibido ya trae providerEventId,
+     * frameTimestamp y vendorMetadataJson seteados por el caller; se
+     * reutiliza para no perder esa metadata.
+     */
+    private ModerationVerdictResult applyTrialStrictNudity(
+            SightengineWorkflowResponse response,
+            ModerationVerdictResult baseResult) {
+
+        Object nudityObj = response.getRawScoresByModel() != null
+                ? response.getRawScoresByModel().get("nudity")
+                : null;
+        if (!(nudityObj instanceof Map)) return null;
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> nudity = (Map<String, Object>) nudityObj;
+
+        BigDecimal sexualActivity = toBigDecimal(nudity.get("sexual_activity"));
+        BigDecimal erotica        = toBigDecimal(nudity.get("erotica"));
+        BigDecimal sexualDisplay  = toBigDecimal(nudity.get("sexual_display"));
+
+        BigDecimal thCrit  = trialThresholds.getSexualActivityCritical();
+        BigDecimal thRed   = trialThresholds.getEroticaRed();
+        BigDecimal thAmber = trialThresholds.getSexualDisplayAmber();
+
+        boolean hitCritical = thCrit != null && thCrit.signum() > 0
+                && sexualActivity != null && sexualActivity.compareTo(thCrit) > 0;
+        boolean hitRed = thRed != null && thRed.signum() > 0
+                && erotica != null && erotica.compareTo(thRed) > 0;
+        boolean hitAmber = thAmber != null && thAmber.signum() > 0
+                && sexualDisplay != null && sexualDisplay.compareTo(thAmber) > 0;
+
+        if (!hitCritical && !hitRed && !hitAmber) {
+            return null;
+        }
+
+        String severity;
+        String suggestedAction;
+        BigDecimal representativeScore;
+        if (hitCritical) {
+            severity = Constants.StreamModerationSeverity.CRITICAL;
+            suggestedAction = "CUT";
+            representativeScore = sexualActivity;
+        } else if (hitRed) {
+            severity = Constants.StreamModerationSeverity.RED;
+            suggestedAction = "ENQUEUE";
+            representativeScore = erotica;
+        } else {
+            severity = Constants.StreamModerationSeverity.AMBER;
+            suggestedAction = "ENQUEUE";
+            representativeScore = sexualDisplay;
+        }
+
+        baseResult.getCategoryVerdicts().put(
+                Constants.StreamModerationCategory.NUDITY,
+                new ModerationCategoryVerdict(
+                        Constants.StreamModerationCategory.NUDITY,
+                        representativeScore,
+                        severity));
+        baseResult.setSeverityOverall(severity);
+        baseResult.setSuggestedAction(suggestedAction);
+
+        log.warn("[STREAM-MOD-SIGHTENGINE] trial-strict hit severity={} sexual_activity={} erotica={} sexual_display={} thresholds=(crit={}, red={}, amber={})",
+                severity,
+                sexualActivity, erotica, sexualDisplay,
+                thCrit, thRed, thAmber);
+        return baseResult;
     }
 
     private static BigDecimal toBigDecimal(Object v) {

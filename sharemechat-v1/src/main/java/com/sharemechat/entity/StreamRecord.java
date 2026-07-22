@@ -39,6 +39,15 @@ public class StreamRecord {
     @Column(name = "timestamp", insertable = false, updatable = false)
     private LocalDateTime timestamp;
 
+    /**
+     * ADR-037 frente trial-sfw Bloque 2: true si este stream_record es
+     * shadow creado por {@code UserTrialService.startTrialStream} para
+     * habilitar moderacion IA en trials. false para paid streams normales.
+     * Analytics/billing deberian filtrar WHERE is_trial=false.
+     */
+    @Column(name = "is_trial", nullable = false)
+    private boolean isTrial = false;
+
     public StreamRecord() {}
 
     // getters and setters
@@ -67,4 +76,7 @@ public class StreamRecord {
     public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
 
     public LocalDateTime getTimestamp() { return timestamp; }
+
+    public boolean isTrial() { return isTrial; }
+    public void setTrial(boolean trial) { this.isTrial = trial; }
 }

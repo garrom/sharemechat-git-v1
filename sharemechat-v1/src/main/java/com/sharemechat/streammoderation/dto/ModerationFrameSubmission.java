@@ -24,6 +24,13 @@ public class ModerationFrameSubmission {
     private Long streamModerationSessionId;
     private Instant frameTimestamp;
     private Map<String, String> metadata = new HashMap<>();
+    /**
+     * ADR-037 frente trial-sfw Bloque 2: se rellena desde
+     * {@code StreamModerationSession.isTrial} al despachar el frame.
+     * El adapter Sightengine lo propaga al mapper para elegir umbrales
+     * (trial estrictos locales vs delegacion a summary.action del vendor).
+     */
+    private boolean isTrial;
 
     public ModerationFrameSubmission() {
     }
@@ -66,5 +73,13 @@ public class ModerationFrameSubmission {
 
     public void setMetadata(Map<String, String> metadata) {
         this.metadata = metadata;
+    }
+
+    public boolean isTrial() {
+        return isTrial;
+    }
+
+    public void setTrial(boolean trial) {
+        this.isTrial = trial;
     }
 }

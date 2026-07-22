@@ -59,8 +59,13 @@ class StreamModerationSessionServiceTest {
         mockClient = new MockModerationClient();
         sightengineClient = mock(SightengineModerationClient.class);
         streamService = mock(StreamService.class);
+        // ADR-037 Bloque 2: constructor amplia con StreamRecordRepository
+        // para hidratar session.isTrial desde stream_records.
+        com.sharemechat.repository.StreamRecordRepository streamRecordRepo =
+                mock(com.sharemechat.repository.StreamRecordRepository.class);
         svc = new StreamModerationSessionService(
-                repo, configService, samplingProps, failureProps, mockClient, sightengineClient, streamService);
+                repo, configService, samplingProps, failureProps, mockClient, sightengineClient, streamService,
+                streamRecordRepo);
     }
 
     @Test

@@ -218,6 +218,104 @@ public class StreamService {
     }
 
     /**
+     * ADR-037 frente trial-sfw Bloque 2: crea un stream_record SHADOW
+     * marcado con is_trial=true para habilitar el pipeline de moderacion
+     * IA sobre streams trial. Diferencias vs {@link #startSession}:
+     * <ul>
+     *   <li>No valida rol CLIENT del viewer (aqui es USER en trial).</li>
+     *   <li>No valida saldo (los trials son gratuitos).</li>
+     *   <li>NO llama a {@code recordStreamEvent} (no queremos que
+     *       aparezcan como CREATED en el timeline economico).</li>
+     * </ul>
+     *
+     * <p>Registra en Redis con la misma key {@code active_session(clientId,modelId)}
+     * para que {@code MatchingHandler.sendMatchMessage} lo devuelva
+     * al modelo, quien empieza a emitir frames al mismo endpoint
+     * {@code POST /api/streams/{id}/frames}. El pipeline de
+     * moderacion trata el shadow como cualquier otro stream, con la
+     * diferencia de que {@code stream_moderation_sessions.is_trial}
+     * quedara a true por propagacion desde este record.
+     */
+    @Transactional
+    public StreamRecord startTrialShadowSession(Long clientId, Long modelId) {
+        // Reusar shadow activo si existe (idempotencia analoga a startSession)
+        Optional<StreamRecord> existing = streamRecordRepository
+                .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId);
+        if (existing.isPresent()) {
+            StreamRecord sr = existing.get();
+            if (sr.isTrial()) {
+                log.info("startTrialShadowSession: reuso shadow existente id={} (client={}, model={})",
+                        sr.getId(), clientId, modelId);
+                statusService.setBusy(modelId);
+                statusService.setActiveSession(clientId, modelId, sr.getId());
+                return sr;
+            }
+            // Colision inesperada: hay un stream_record no-trial activo para el mismo par.
+            // Preferimos loguear y devolver el existente antes que crear un shadow duplicado.
+            log.warn("startTrialShadowSession: existe stream_record activo NO-trial id={} para (client={}, model={}); reusando",
+                    sr.getId(), clientId, modelId);
+            return sr;
+        }
+
+        User client = userRepository.findById(clientId)
+                .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado: " + clientId));
+        User model = userRepository.findById(modelId)
+                .orElseThrow(() -> new EntityNotFoundException("Modelo no encontrado: " + modelId));
+
+        StreamRecord sr = new StreamRecord();
+        sr.setClient(client);
+        sr.setModel(model);
+        sr.setStartTime(LocalDateTime.now());
+        sr.setConfirmedAt(null);
+        sr.setBillableStart(null);
+        sr.setStreamType(Constants.StreamTypes.RANDOM);
+        sr.setEndTime(null);
+        sr.setTrial(true);
+
+        StreamRecord saved = streamRecordRepository.save(sr);
+        log.info("startTrialShadowSession: creado shadow id={} (client={}, model={})",
+                saved.getId(), clientId, modelId);
+
+        statusService.setBusy(modelId);
+        statusService.setActiveSession(clientId, modelId, saved.getId());
+        return saved;
+    }
+
+    /**
+     * ADR-037 frente trial-sfw Bloque 2: busca el stream_record shadow
+     * activo (endTime IS NULL AND is_trial=true) para un par (viewer, model).
+     * Usado por UserTrialService al cerrar un trial para localizar su
+     * shadow y su moderation session sin persistir referencia explicita.
+     */
+    @Transactional(readOnly = true)
+    public Optional<StreamRecord> findActiveShadowForPair(Long clientId, Long modelId) {
+        return streamRecordRepository
+                .findTopByClient_IdAndModel_IdAndEndTimeIsNullOrderByStartTimeDesc(clientId, modelId)
+                .filter(StreamRecord::isTrial);
+    }
+
+    /**
+     * ADR-037 frente trial-sfw Bloque 2: cierra el stream_record shadow
+     * de un trial (set endTime + limpia Redis). Idempotente.
+     */
+    @Transactional
+    public void endTrialShadowSession(Long shadowStreamRecordId, Long clientId, Long modelId) {
+        if (shadowStreamRecordId == null) return;
+        Optional<StreamRecord> opt = streamRecordRepository.findById(shadowStreamRecordId);
+        if (opt.isEmpty()) return;
+        StreamRecord sr = opt.get();
+        if (sr.getEndTime() == null) {
+            sr.setEndTime(LocalDateTime.now());
+            streamRecordRepository.save(sr);
+        }
+        try {
+            statusService.clearActiveSession(clientId, modelId);
+        } catch (Exception ignore) {}
+        log.info("endTrialShadowSession: cerrado shadow id={} (client={}, model={})",
+                shadowStreamRecordId, clientId, modelId);
+    }
+
+    /**
      * Marca la sesión activa del par como confirmada (confirmed_at = now) si aún no lo estaba.
      * Es idempotente.
      */

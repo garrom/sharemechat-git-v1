@@ -80,6 +80,16 @@ public class StreamModerationSession {
     @Column(name = "operations_consumed", nullable = false)
     private long operationsConsumed = 0L;
 
+    /**
+     * ADR-037 frente trial-sfw Bloque 2: se hidrata desde
+     * {@code stream_records.is_trial} al crear la sesion. Cuando true,
+     * el {@code ModerationCategoryMapper} aplica umbrales locales
+     * estrictos sobre los scores crudos ({@code moderation.thresholds.trial.*})
+     * ignorando {@code summary.action} del workflow.
+     */
+    @Column(name = "is_trial", nullable = false)
+    private boolean isTrial = false;
+
     @Column(name = "degraded_since")
     private LocalDateTime degradedSince;
 
@@ -246,5 +256,13 @@ public class StreamModerationSession {
 
     public void setOperationsConsumed(long operationsConsumed) {
         this.operationsConsumed = operationsConsumed;
+    }
+
+    public boolean isTrial() {
+        return isTrial;
+    }
+
+    public void setTrial(boolean trial) {
+        this.isTrial = trial;
     }
 }

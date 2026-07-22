@@ -51,6 +51,11 @@ public class UserTrialService {
     private final PlatformTransactionRepository platformTransactionRepository;
     private final PlatformBalanceRepository platformBalanceRepository;
     private final StatusService statusService;
+    // ADR-037 frente trial-sfw Bloque 2: dependencias para crear shadow
+    // stream_record + moderation session del trial. Best-effort en el
+    // arranque (si fallan, el trial sigue funcionando sin moderacion).
+    private final StreamService streamService;
+    private final com.sharemechat.streammoderation.service.StreamModerationSessionService streamModerationSessionService;
 
     public UserTrialService(UserTrialStreamRepository userTrialStreamRepository,
                             UserRepository userRepository,
@@ -60,7 +65,9 @@ public class UserTrialService {
                             BalanceRepository balanceRepository,
                             PlatformTransactionRepository platformTransactionRepository,
                             PlatformBalanceRepository platformBalanceRepository,
-                            StatusService statusService) {
+                            StatusService statusService,
+                            @org.springframework.context.annotation.Lazy StreamService streamService,
+                            @org.springframework.context.annotation.Lazy com.sharemechat.streammoderation.service.StreamModerationSessionService streamModerationSessionService) {
 
         this.userTrialStreamRepository = userTrialStreamRepository;
         this.userRepository = userRepository;
@@ -71,6 +78,8 @@ public class UserTrialService {
         this.platformTransactionRepository = platformTransactionRepository;
         this.platformBalanceRepository = platformBalanceRepository;
         this.statusService = statusService;
+        this.streamService = streamService;
+        this.streamModerationSessionService = streamModerationSessionService;
     }
 
     /**
@@ -218,6 +227,27 @@ public class UserTrialService {
         } catch (Exception e) {
             log.warn("startTrialStream: no se pudo marcar BUSY en Redis para modelId={}: {}",
                     modelId, e.getMessage());
+        }
+
+        // ADR-037 frente trial-sfw Bloque 2: shadow stream_record + moderation
+        // session sobre este trial. Best-effort: si falla, el trial sigue vivo
+        // sin moderacion IA (log warn). El shadow se registra en Redis con
+        // active_session(clientId, modelId) para que MatchingHandler lo
+        // devuelva al modelo y este empiece a emitir frames.
+        try {
+            com.sharemechat.entity.StreamRecord shadow =
+                    streamService.startTrialShadowSession(viewerId, modelId);
+            if (shadow != null && shadow.getId() != null) {
+                try {
+                    streamModerationSessionService.startForStream(shadow.getId());
+                } catch (Exception ex) {
+                    log.warn("startTrialStream: no se pudo crear moderation session para shadow id={}: {}",
+                            shadow.getId(), ex.getMessage());
+                }
+            }
+        } catch (Exception ex) {
+            log.warn("startTrialStream: shadow stream_record + moderation FAIL viewerId={} modelId={}: {}",
+                    viewerId, modelId, ex.getMessage());
         }
 
         return saved;
@@ -435,6 +465,29 @@ public class UserTrialService {
         } catch (Exception e) {
             log.warn("closeTrialStreamAndSettle: error al actualizar estado Redis para modelId={}: {}",
                     modelId, e.getMessage());
+        }
+
+        // ADR-037 frente trial-sfw Bloque 2: cerrar shadow stream_record y su
+        // moderation session. Best-effort: no revierte la contabilidad si algo
+        // falla. Cierra por par (viewer, model) buscando el shadow activo
+        // (no persistimos referencia explicita en user_trial_streams).
+        try {
+            java.util.Optional<com.sharemechat.entity.StreamRecord> shadowOpt =
+                    streamService.findActiveShadowForPair(viewerId, modelId);
+            if (shadowOpt.isPresent()) {
+                Long shadowId = shadowOpt.get().getId();
+                try {
+                    streamModerationSessionService.stopForStream(shadowId,
+                            "TRIAL_ENDED:" + (session.getCloseReason() != null ? session.getCloseReason() : "AUTO"));
+                } catch (Exception ex) {
+                    log.warn("closeTrialStreamAndSettle: no se pudo cerrar moderation session para shadow id={}: {}",
+                            shadowId, ex.getMessage());
+                }
+                streamService.endTrialShadowSession(shadowId, viewerId, modelId);
+            }
+        } catch (Exception ex) {
+            log.warn("closeTrialStreamAndSettle: cierre shadow FAIL viewerId={} modelId={}: {}",
+                    viewerId, modelId, ex.getMessage());
         }
 
     }

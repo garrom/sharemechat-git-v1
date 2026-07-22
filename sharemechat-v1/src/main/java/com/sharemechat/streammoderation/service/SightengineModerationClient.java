@@ -156,13 +156,16 @@ public class SightengineModerationClient implements ModerationProviderClient {
         Instant frameTs = frame.getFrameTimestamp() != null
                 ? frame.getFrameTimestamp()
                 : Instant.now();
-        ModerationVerdictResult verdict = mapper.buildVerdict(parsed, rawBody, frameTs);
+        // ADR-037 frente trial-sfw Bloque 2: pasa isTrial al mapper para
+        // activar umbrales locales estrictos en la variante trial (Via 1).
+        ModerationVerdictResult verdict = mapper.buildVerdict(parsed, rawBody, frameTs, frame.isTrial());
         verdict.setOperationsConsumed(parsed.getOperations());
 
-        log.info("[STREAM-MOD-SIGHTENGINE] verdict severity={} categories={} operations={} latency_ms={}",
+        log.info("[STREAM-MOD-SIGHTENGINE] verdict severity={} categories={} operations={} isTrial={} latency_ms={}",
                 verdict.getSeverityOverall(),
                 verdict.getCategoryVerdicts().size(),
                 parsed.getOperations(),
+                frame.isTrial(),
                 latency);
         return verdict;
     }

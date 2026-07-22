@@ -112,6 +112,9 @@ public class StreamFrameIngestionService {
         submission.setStreamRecordId(session.getStreamRecordId());
         submission.setStreamModerationSessionId(session.getId());
         submission.setFrameTimestamp(frameTimestamp);
+        // ADR-037 frente trial-sfw Bloque 2: propagar flag para que el
+        // adapter aplique umbrales estrictos locales cuando es trial.
+        submission.setTrial(session.isTrial());
 
         ModerationVerdictResult verdict;
         try {
