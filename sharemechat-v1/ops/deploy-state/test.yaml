@@ -28,18 +28,18 @@ backend:
   working_tree_clean: true
   remote_path: /home/ec2-user/sharemechat-v1/sharemechat-v1-0.0.1-SNAPSHOT.jar
   ec2_alias: test-backend
-  deployed_at: 2026-07-22T19:10:13Z
-  jar_sha256: f0969d50d719ce4ad087834dec534e15a14aa7df8568548a775da3481896cb09
+  deployed_at: 2026-07-22T22:12:59Z
+  jar_sha256: 045c6dbc9d711fa61de5b3fd23d4e809e0d87e945405b7f1c06a60e8b2aca776
   verification:
     method: manual_via_update-manifest-backend.ps1+remote-verify
-    verified_at: 2026-07-22T19:10:13Z
+    verified_at: 2026-07-22T22:12:59Z
     notes: 'Actualizado manualmente por update-manifest-backend.ps1 (Fase 1 paso 2b) tras deploy manual del backend (scp + restart). Limitacion conocida: HEAD asume = commit con el que se construyo el JAR; sin endpoint /api/health/version (Fase 2) no hay verificacion viva del commit del backend.'
-  built_at: 2026-07-22T19:10:13Z
+  built_at: 2026-07-22T22:12:59Z
   deployed_by: alain@LAPTOP-8UEIKVUT
   systemd_unit: sharemechat-test.service
-  git_commit: 98ee63a7a26925c9a4357bf34250205f2d63469b
-  git_commit_short: 98ee63a
-last_updated_at: 2026-07-22T19:10:13Z
+  git_commit: 9f3c6116c326103f640882881a6cf78eb939d3aa
+  git_commit_short: 9f3c611
+last_updated_at: 2026-07-22T22:12:59Z
 frontend_admin:
   cloudfront_invalidation_id: ICL0IM7GNT6JTAXO7BK1MSZRZN
   verification:
