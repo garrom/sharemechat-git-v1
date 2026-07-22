@@ -4,7 +4,6 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.AffiliateCommission;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.AffiliateCommissionRepository;
-import com.sharemechat.repository.TransactionRepository;
 import com.sharemechat.repository.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,16 +39,20 @@ public class AffiliateCommissionService {
     private static final int RATE_BPS = 3000;
     /** Divisor para conversion de basis points a fraccion. */
     private static final long RATE_DIVISOR = 10_000L;
+    /**
+     * ADR-049 D2 revisado (2026-07-23): ventana rodante del revshare.
+     * La comision se acumula solo mientras el cargo del cliente ocurre
+     * dentro de {@code user.first_stream_charge_at + 12 months}. Fuera
+     * de ventana, el hook devuelve sin crear fila.
+     */
+    private static final int REVSHARE_WINDOW_MONTHS = 12;
 
     private final AffiliateCommissionRepository commissionRepository;
-    private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
 
     public AffiliateCommissionService(AffiliateCommissionRepository commissionRepository,
-                                       TransactionRepository transactionRepository,
                                        UserRepository userRepository) {
         this.commissionRepository = commissionRepository;
-        this.transactionRepository = transactionRepository;
         this.userRepository = userRepository;
     }
 
@@ -57,15 +60,21 @@ public class AffiliateCommissionService {
      * Hook invocado desde {@link StreamService} tras persistir cada
      * {@code Transaction STREAM_CHARGE}.
      *
-     * <p>Comportamiento:
+     * <p>Comportamiento (ADR-049 D2/D4 revisados 2026-07-23):
      * <ul>
      *   <li>Si el cliente no tiene {@code referredByUserId}, no hace nada
      *       (mayoria de flujos organicos).</li>
+     *   <li>Sella {@code user.first_stream_charge_at} en la primera
+     *       ejecucion (primera compra del cliente). Inmutable despues.</li>
+     *   <li>Gate de ventana: si el cargo ocurre despues de
+     *       {@code first_stream_charge_at + 12 meses}, la relacion de
+     *       afiliacion ha expirado y el hook retorna sin acumular.</li>
      *   <li>Calcula {@code period_yyyymm} en UTC estricto (ADR-049
      *       convencion UTC) desde el instante actual.</li>
-     *   <li>Evalua umbral D4 (¿la modelo referidora tiene
-     *       {@code STREAM_EARNING} este mes UTC?). Si si →
-     *       {@code PAYABLE}; si no → {@code SKIPPED_NO_ACTIVITY}.</li>
+     *   <li>Status siempre {@code PAYABLE}: eliminada la salvaguarda
+     *       "modelo referidora debe tener STREAM_EARNING este mes"
+     *       (D4 revisado). La modelo cobra sin depender de su propia
+     *       facturacion mensual.</li>
      *   <li>Busca fila existente para
      *       {@code (STREAM_CHARGE, streamRecordId, status)}; si existe,
      *       acumula base y recalcula comision; si no, crea fila nueva.</li>
@@ -92,18 +101,38 @@ public class AffiliateCommissionService {
                 log.warn("[AFF-COMMISSION] Cliente no encontrado id={}, skip", clientUserId);
                 return;
             }
+
+            LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+
+            // ADR-049 D2 revisado: sellar first_stream_charge_at en el primer
+            // STREAM_CHARGE observado. Base de la ventana rodante de 12 meses.
+            // Se sella incluso para clientes SIN atribucion (util para futuras
+            // metricas y consistencia del dato "primera compra").
+            if (client.getFirstStreamChargeAt() == null) {
+                client.setFirstStreamChargeAt(nowUtc);
+                userRepository.save(client);
+            }
+
             Long referrerModelUserId = client.getReferredByUserId();
             if (referrerModelUserId == null) {
                 return; // cliente sin atribucion, mayoria de flujos
             }
 
-            LocalDateTime nowUtc = LocalDateTime.now(ZoneOffset.UTC);
+            // ADR-049 D2 revisado: gate de ventana 12 meses. Si el cargo
+            // esta fuera, la afiliacion ha expirado para este cliente.
+            LocalDateTime windowStart = client.getFirstStreamChargeAt();
+            if (windowStart != null
+                    && nowUtc.isAfter(windowStart.plusMonths(REVSHARE_WINDOW_MONTHS))) {
+                log.debug("[AFF-COMMISSION] fuera de ventana 12 meses clientId={} firstChargeAt={} nowUtc={}, skip",
+                        clientUserId, windowStart, nowUtc);
+                return;
+            }
+
             int periodYyyymm = nowUtc.getYear() * 100 + nowUtc.getMonthValue();
 
-            boolean hasActivity = hasOwnActivityThisMonth(referrerModelUserId, nowUtc);
-            String status = hasActivity
-                    ? Constants.AffiliateCommissionStatus.PAYABLE
-                    : Constants.AffiliateCommissionStatus.SKIPPED_NO_ACTIVITY;
+            // ADR-049 D4 revisado: sin salvaguarda de facturacion propia.
+            // Todas las comisiones acumulan como PAYABLE de forma inmediata.
+            String status = Constants.AffiliateCommissionStatus.PAYABLE;
 
             Optional<AffiliateCommission> existing = commissionRepository
                     .findBySourceTypeAndSourceIdAndStatus(
@@ -219,14 +248,9 @@ public class AffiliateCommissionService {
      * explicitamente en UTC (no {@code YEAR()/MONTH()} de SQL que
      * dependen de la zona horaria del servidor).
      */
-    private boolean hasOwnActivityThisMonth(Long referrerModelUserId, LocalDateTime nowUtc) {
-        LocalDateTime startOfMonth = LocalDateTime.of(
-                nowUtc.getYear(), nowUtc.getMonthValue(), 1, 0, 0, 0);
-        LocalDateTime startOfNextMonth = startOfMonth.plusMonths(1L);
-        return transactionRepository.existsByUserAndOperationTypeBetween(
-                referrerModelUserId,
-                Constants.OperationTypes.STREAM_EARNING,
-                startOfMonth,
-                startOfNextMonth);
-    }
+    // ADR-049 D4 revisado (2026-07-23): eliminado hasOwnActivityThisMonth.
+    // La salvaguarda "modelo referidora debe tener STREAM_EARNING el mismo
+    // mes que el cargo del cliente atribuido" queda retirada del programa
+    // de afiliacion. La higiene de cuenta se gestiona como politica
+    // separada (frente aparte, no requisito del revshare).
 }

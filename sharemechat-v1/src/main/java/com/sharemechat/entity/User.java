@@ -146,6 +146,18 @@ public class User {
     @Column(name = "referred_at")
     private LocalDateTime referredAt;
 
+    /**
+     * ADR-049 D2 revisado (2026-07-23): timestamp UTC del primer
+     * {@code Transaction STREAM_CHARGE} del cliente. Ancla la ventana
+     * rodante de 12 meses del revshare de afiliacion. Se rellena la
+     * primera vez que
+     * {@code AffiliateCommissionService.accrueForStreamCharge} observa
+     * un cargo del cliente; inmutable a partir de entonces. NULL para
+     * clientes que aun no han consumido.
+     */
+    @Column(name = "first_stream_charge_at")
+    private LocalDateTime firstStreamChargeAt;
+
     public User() {
         this.createdAt = LocalDateTime.now();
         // updatedAt NO se inicializa aqui: la columna esta con
@@ -256,4 +268,7 @@ public class User {
 
     public LocalDateTime getReferredAt() { return referredAt; }
     public void setReferredAt(LocalDateTime referredAt) { this.referredAt = referredAt; }
+
+    public LocalDateTime getFirstStreamChargeAt() { return firstStreamChargeAt; }
+    public void setFirstStreamChargeAt(LocalDateTime firstStreamChargeAt) { this.firstStreamChargeAt = firstStreamChargeAt; }
 }

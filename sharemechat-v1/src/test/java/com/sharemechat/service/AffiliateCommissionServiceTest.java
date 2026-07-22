@@ -4,7 +4,6 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.entity.AffiliateCommission;
 import com.sharemechat.entity.User;
 import com.sharemechat.repository.AffiliateCommissionRepository;
-import com.sharemechat.repository.TransactionRepository;
 import com.sharemechat.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,7 +44,6 @@ import static org.mockito.Mockito.when;
 class AffiliateCommissionServiceTest {
 
     private AffiliateCommissionRepository commissionRepository;
-    private TransactionRepository transactionRepository;
     private UserRepository userRepository;
     private AffiliateCommissionService service;
 
@@ -56,13 +54,14 @@ class AffiliateCommissionServiceTest {
     @BeforeEach
     void setUp() {
         commissionRepository = mock(AffiliateCommissionRepository.class);
-        transactionRepository = mock(TransactionRepository.class);
         userRepository = mock(UserRepository.class);
         service = new AffiliateCommissionService(
-                commissionRepository, transactionRepository, userRepository);
+                commissionRepository, userRepository);
         // save() devuelve el argumento tal cual (patron usado en
         // AffiliateBonusServiceTest y similares).
         when(commissionRepository.save(any(AffiliateCommission.class)))
+                .thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.save(any(User.class)))
                 .thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -121,24 +120,20 @@ class AffiliateCommissionServiceTest {
     // =====================================================
 
     @Test
-    @DisplayName("cliente con referrer + umbral D4 OK → PAYABLE nueva fila")
-    void accrue_referrerWithActivity_createsPayable() {
-        // client 101 → referrer 97; referrer tiene STREAM_EARNING este mes → PAYABLE
-        User client = clientOf(CLIENT_ID, REFERRER_ID);
+    @DisplayName("cliente con referrer dentro de ventana 12m -> PAYABLE (sin condicionar por facturacion propia)")
+    void accrue_referrerWithinWindow_createsPayable() {
+        // D4 revisado: la referidora NO necesita facturar en el mes. Se
+        // acumula siempre como PAYABLE.
+        User client = clientOfWithFirstCharge(CLIENT_ID, REFERRER_ID,
+                LocalDateTime.now().minusMonths(3)); // dentro de 12m
         when(userRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
-        when(transactionRepository.existsByUserAndOperationTypeBetween(
-                eq(REFERRER_ID),
-                eq(Constants.OperationTypes.STREAM_EARNING),
-                any(LocalDateTime.class),
-                any(LocalDateTime.class)))
-                .thenReturn(true);
         when(commissionRepository.findBySourceTypeAndSourceIdAndStatus(
                 Constants.AffiliateCommissionSourceType.STREAM_CHARGE,
                 STREAM_RECORD_ID,
                 Constants.AffiliateCommissionStatus.PAYABLE))
                 .thenReturn(Optional.empty());
 
-        // 300 cents de consumo → 30% = 90 cents comision
+        // 300 cents de consumo -> 30% = 90 cents comision
         service.accrueForStreamCharge(CLIENT_ID, 300L, STREAM_RECORD_ID);
 
         ArgumentCaptor<AffiliateCommission> captor =
@@ -159,44 +154,62 @@ class AffiliateCommissionServiceTest {
     }
 
     @Test
-    @DisplayName("cliente con referrer + umbral D4 KO → SKIPPED_NO_ACTIVITY")
-    void accrue_referrerWithoutActivity_createsSkipped() {
+    @DisplayName("primer STREAM_CHARGE de cliente sin firstStreamChargeAt -> sella el timestamp y crea PAYABLE")
+    void accrue_firstChargeSealsWindowAndCreatesPayable() {
+        // D2 revisado: primer STREAM_CHARGE sella first_stream_charge_at.
         User client = clientOf(CLIENT_ID, REFERRER_ID);
+        assertNull(client.getFirstStreamChargeAt(), "precondicion: null");
         when(userRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
-        when(transactionRepository.existsByUserAndOperationTypeBetween(
-                eq(REFERRER_ID),
-                eq(Constants.OperationTypes.STREAM_EARNING),
-                any(LocalDateTime.class),
-                any(LocalDateTime.class)))
-                .thenReturn(false);
         when(commissionRepository.findBySourceTypeAndSourceIdAndStatus(
                 Constants.AffiliateCommissionSourceType.STREAM_CHARGE,
                 STREAM_RECORD_ID,
-                Constants.AffiliateCommissionStatus.SKIPPED_NO_ACTIVITY))
+                Constants.AffiliateCommissionStatus.PAYABLE))
                 .thenReturn(Optional.empty());
 
-        service.accrueForStreamCharge(CLIENT_ID, 500L, STREAM_RECORD_ID);
+        service.accrueForStreamCharge(CLIENT_ID, 300L, STREAM_RECORD_ID);
 
-        ArgumentCaptor<AffiliateCommission> captor =
-                ArgumentCaptor.forClass(AffiliateCommission.class);
-        verify(commissionRepository, times(1)).save(captor.capture());
-        AffiliateCommission saved = captor.getValue();
-        assertEquals(Constants.AffiliateCommissionStatus.SKIPPED_NO_ACTIVITY, saved.getStatus());
-        assertEquals(500L, saved.getBaseAmountCents());
-        assertEquals(150L, saved.getCommissionAmountCents());
+        assertNotNull(client.getFirstStreamChargeAt(),
+                "se debe haber sellado el timestamp");
+        verify(userRepository, times(1)).save(client);
+        verify(commissionRepository, times(1)).save(any(AffiliateCommission.class));
     }
 
     @Test
-    @DisplayName("segundo tick del mismo stream → acumula base y recalcula commission")
-    void accrue_secondTickSameStream_accumulates() {
-        User client = clientOf(CLIENT_ID, REFERRER_ID);
+    @DisplayName("STREAM_CHARGE fuera de ventana 12m -> no acumula")
+    void accrue_outOfWindow_noAccrue() {
+        // firstStreamChargeAt hace 13 meses: fuera de ventana 12m.
+        User client = clientOfWithFirstCharge(CLIENT_ID, REFERRER_ID,
+                LocalDateTime.now().minusMonths(13));
         when(userRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
-        when(transactionRepository.existsByUserAndOperationTypeBetween(
-                eq(REFERRER_ID),
-                eq(Constants.OperationTypes.STREAM_EARNING),
-                any(LocalDateTime.class),
-                any(LocalDateTime.class)))
-                .thenReturn(true);
+
+        service.accrueForStreamCharge(CLIENT_ID, 300L, STREAM_RECORD_ID);
+
+        verify(commissionRepository, never()).save(any());
+        // Tampoco reescribe firstStreamChargeAt existente
+        verify(userRepository, never()).save(any(User.class));
+    }
+
+    @Test
+    @DisplayName("cliente sin referrer -> sella firstStreamChargeAt pero NO crea comision")
+    void accrue_noReferrerStillSealsFirstCharge() {
+        User client = clientOf(CLIENT_ID, null);
+        assertNull(client.getFirstStreamChargeAt());
+        when(userRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
+
+        service.accrueForStreamCharge(CLIENT_ID, 300L, STREAM_RECORD_ID);
+
+        assertNotNull(client.getFirstStreamChargeAt(),
+                "firstStreamChargeAt se sella incluso sin referrer");
+        verify(userRepository, times(1)).save(client);
+        verify(commissionRepository, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("segundo tick del mismo stream -> acumula base y recalcula commission (no re-sella firstStreamChargeAt)")
+    void accrue_secondTickSameStream_accumulates() {
+        LocalDateTime originalStamp = LocalDateTime.now().minusMonths(2);
+        User client = clientOfWithFirstCharge(CLIENT_ID, REFERRER_ID, originalStamp);
+        when(userRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
 
         // Simular fila existente con 300 cents base + 90 cents commission
         AffiliateCommission existing = new AffiliateCommission();
@@ -225,16 +238,17 @@ class AffiliateCommissionServiceTest {
         assertEquals(500L, saved.getBaseAmountCents());
         assertEquals(150L, saved.getCommissionAmountCents());
         assertEquals(Constants.AffiliateCommissionStatus.PAYABLE, saved.getStatus());
+        // firstStreamChargeAt NO se re-sella
+        assertEquals(originalStamp, client.getFirstStreamChargeAt());
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test
-    @DisplayName("excepcion en persistencia → NO propaga (fail-soft)")
+    @DisplayName("excepcion en persistencia -> NO propaga (fail-soft)")
     void accrue_saveThrows_swallowed() {
-        User client = clientOf(CLIENT_ID, REFERRER_ID);
+        User client = clientOfWithFirstCharge(CLIENT_ID, REFERRER_ID,
+                LocalDateTime.now().minusMonths(1));
         when(userRepository.findById(CLIENT_ID)).thenReturn(Optional.of(client));
-        when(transactionRepository.existsByUserAndOperationTypeBetween(
-                anyLong(), anyString(), any(LocalDateTime.class), any(LocalDateTime.class)))
-                .thenReturn(true);
         when(commissionRepository.findBySourceTypeAndSourceIdAndStatus(
                 anyString(), anyLong(), anyString()))
                 .thenReturn(Optional.empty());
@@ -315,6 +329,12 @@ class AffiliateCommissionServiceTest {
             throw new IllegalStateException("no puedo setear id via reflection", e);
         }
         u.setReferredByUserId(referredByUserId);
+        return u;
+    }
+
+    private static User clientOfWithFirstCharge(Long id, Long referredByUserId, LocalDateTime firstChargeAt) {
+        User u = clientOf(id, referredByUserId);
+        u.setFirstStreamChargeAt(firstChargeAt);
         return u;
     }
 }

@@ -1,10 +1,34 @@
-# ADR-049 — Programa de afiliadas de modelos: atribución cliente único, revshare lifetime 30% con umbral mensual de facturación, magic link temprano y bono de bienvenida al cliente
+# ADR-049 — Programa de afiliadas de modelos: atribución cliente único, revshare 30% durante 12 meses desde primera compra, magic link temprano y bono de bienvenida al cliente
 
 > Estado: VIGENTE
 > Fecha: 2026-07-11
+> Revisado: 2026-07-23 (D2 ventana rodante 12m desde primera compra en lugar de lifetime; D4 eliminada la salvaguarda "modelo referidora debe facturar ≥1 sesión propia en el mes")
 > Vigencia esperada: hasta que el volumen o el vertical justifiquen tiers de revshare, atribución multi-touch, o un rediseño del ciclo económico
 > Reemplaza: N/A (documento nuevo). Complementa y aterriza técnicamente [`../01-business/affiliate-program.md`](../01-business/affiliate-program.md).
 > Ver también: [ADR-011](adr-011-pricing-simplification-and-minimum-threshold.md), [ADR-012](adr-012-bfpm-platform-funded-bonus.md), [ADR-021](adr-021-email-tag-routing.md), [ADR-047](adr-047-pivote-soft-launch-cripto-paxum.md), [ADR-048](adr-048-pagina-publica-modelo-slug.md)
+
+## Revisión 2026-07-23 — Cambios sobre D2 y D4
+
+Dos decisiones estructurales del programa cambian con motivo del arranque real del outreach de reclutamiento y feedback comercial inicial:
+
+**D2 revisado — Ventana rodante 12 meses (no lifetime)**
+
+La comisión ya **no aplica lifetime**. Cada relación cliente↔modelo referidora tiene una ventana rodante de **12 meses desde el primer `STREAM_CHARGE` del cliente atribuido** (primera compra real, no registro). Cargos fuera de esa ventana no generan `AffiliateCommission`.
+
+- Impl: nueva columna `users.first_stream_charge_at` (V36). El hook `AffiliateCommissionService.accrueForStreamCharge` sella el timestamp la primera vez que ve un `STREAM_CHARGE` del cliente, y en cada tick posterior comprueba `now < first_stream_charge_at + 12 meses`.
+- Motivación: alinear con estándar del sector (12m es la ventana típica en programas de afiliación de plataformas cam), y evitar comisiones perpetuas sobre clientes de años anteriores.
+- Datos previos: no aplica (frente pre-lanzamiento, sin comisiones históricas).
+
+**D4 revisado — Eliminada la salvaguarda de facturación propia mensual**
+
+La modelo referidora **ya no necesita facturar ≥1 sesión propia en el mes calendario** para cobrar sus comisiones. Todas las comisiones acumuladas pasan directamente a `PAYABLE`.
+
+- Impl: retirada la lógica `hasOwnActivityThisMonth` en `accrueForStreamCharge`. Status siempre `PAYABLE` (`SKIPPED_NO_ACTIVITY` deja de generarse; el enum permanece por compat con filas históricas).
+- Motivación: la salvaguarda mezclaba "higiene de cuenta activa" con "programa de afiliación" y desincentivaba modelos con alta capacidad de reclutamiento pero baja actividad propia (agencias, streamers de nicho fuera de horario).
+- La higiene de cuenta pasa a ser **política separada** (frente aparte a diseñar): "cuenta debe registrar login o transacción cada N meses para permanecer activa", aplicable a todas las cuentas independientemente del programa de afiliación.
+- Datos previos: filas históricas en `SKIPPED_NO_ACTIVITY` (si las hubiera) se dejan tal cual (histórico auditable). No hay proceso de "rescate" retroactivo.
+
+El resto del ADR-049 permanece vigente sin cambios (D1, D3, D5-D11).
 
 ## Estado
 
