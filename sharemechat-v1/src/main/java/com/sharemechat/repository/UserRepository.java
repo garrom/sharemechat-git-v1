@@ -34,15 +34,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @Query("SELECT u FROM User u WHERE u.id = :id")
     Optional<User> findByIdForUpdate(@Param("id") Long id);
 
-    // ADR-049 Subpasada 1: consultas del sistema de afiliadas.
-    Optional<User> findByReferralCodeOwner(String referralCodeOwner);
-
-    boolean existsByReferralCodeOwner(String referralCodeOwner);
-
-    List<User> findByReferredByUserId(Long referredByUserId);
-
-    long countByReferredByUserId(Long referredByUserId);
-
     /**
      * Politica de cuentas dormidas (V37, 2026-07-23): candidatas a ser
      * marcadas dormant por el {@code AccountDormancyJob}. Criterios:

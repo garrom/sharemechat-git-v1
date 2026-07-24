@@ -31,8 +31,7 @@ import java.time.LocalDateTime;
  * en fail-closed-soft D5. Nunca contiene la imagen del frame.
  *
  * <p>Convencion UTC estricta en {@code passed_until}, {@code created_at}
- * y {@code resolved_at}. Coherente con {@code AffiliateCommission} y con
- * la nota UTC del ADR-050.
+ * y {@code resolved_at}. Coherente con la nota UTC del ADR-050.
  */
 @Entity
 @Table(name = "liveness_attempts")

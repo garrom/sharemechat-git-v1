@@ -13,8 +13,7 @@ import java.time.LocalDateTime;
                 @Index(name = "idx_fav_models_model",  columnList = "model_id"),
                 @Index(name = "idx_fav_models_created",columnList = "created_at"),
                 @Index(name = "idx_fav_models_status", columnList = "status"),
-                @Index(name = "idx_fav_models_invited",columnList = "invited"),
-                @Index(name = "idx_fav_models_source", columnList = "favorite_source")
+                @Index(name = "idx_fav_models_invited",columnList = "invited")
         }
 )
 public class FavoriteModel {
@@ -27,16 +26,8 @@ public class FavoriteModel {
     @Column(name="status",   nullable=false) private String status = "active";
     @Column(name="invited",  nullable=false) private String invited = "pending";
 
-    /**
-     * ADR-049 Subpasada 2B: origen del favorito. Valores permitidos por CHECK
-     * en V17: {@code MANUAL} (CTA del cliente en la UI) o
-     * {@code AFFILIATE_INVITATION} (primer favorito auto por afiliacion, D6).
-     * columnDefinition explicito para que Hibernate no rompa schema-validation
-     * (mismo motivo que las CHAR columns de subpasada 1).
-     */
-    @Column(name="favorite_source", nullable=false, length=30,
-            columnDefinition="VARCHAR(30) NOT NULL DEFAULT 'MANUAL'")
-    private String favoriteSource = "MANUAL";
+    // favoriteSource retirado el 2026-07-24 junto con el resto del
+    // programa de afiliadas ([ADR-052 §D11] + V38 drop columna).
 
     @Column(name="created_at", nullable=false,
             columnDefinition="DATETIME DEFAULT CURRENT_TIMESTAMP")
@@ -91,14 +82,6 @@ public class FavoriteModel {
 
     public void setInvited(String invited) {
         this.invited = invited;
-    }
-
-    public String getFavoriteSource() {
-        return favoriteSource;
-    }
-
-    public void setFavoriteSource(String favoriteSource) {
-        this.favoriteSource = favoriteSource;
     }
 
     public LocalDateTime getCreatedAt() {

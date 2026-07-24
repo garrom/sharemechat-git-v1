@@ -15,8 +15,7 @@ import styled from 'styled-components';
 // (para fondos/bordes suaves) como versiones más saturadas para
 // texto/iconos que necesitan contraste sobre blanco.
 //
-// AffiliatePanelModel reutiliza este mismo lenguaje visual — ambos
-// paneles quedan alineados sin trabajo adicional.
+// Lenguaje visual compartido con otros paneles del dashboard modelo.
 // ============================================================
 
 // -------- Paleta local (para reutilizar dentro del fichero) --------

@@ -84,11 +84,13 @@ public class Constants {
         // BONUS_FUNDING → plataforma asume contablemente el coste del bonus (importe negativo).
         public static final String BONUS_GRANT = "BONUS_GRANT";
         public static final String BONUS_FUNDING = "BONUS_FUNDING";
-        // ADR-049 Subpasada 2B: bono de bienvenida referral (D7). Mismo patron
-        // BFPM: REFERRAL_WELCOME_GRANT en el ledger cliente (+10 EUR) y
-        // REFERRAL_WELCOME_FUNDING en el ledger plataforma (-10 EUR). Invariante
-        // Sum(GRANT) + Sum(FUNDING) = 0. Idempotencia por cliente via query
-        // existsByUserIdAndOperationType(clientId, REFERRAL_WELCOME_GRANT).
+        // ADR-049 Subpasada 2B (RETIRADO por [ADR-052 §D11], 2026-07-24):
+        // bono de bienvenida referral. Los codigos permanecen aqui como
+        // LEGACY NO-EMISIBLES: hay filas historicas en el ledger de
+        // transactions y platform_transactions con estos operation_type
+        // que deben poder leerse tras el deploy sin crash de enum. El
+        // codigo que los emitia (AffiliateBonusService) esta eliminado;
+        // ningun caller vivo debe emitir nuevos.
         public static final String REFERRAL_WELCOME_GRANT = "REFERRAL_WELCOME_GRANT";
         public static final String REFERRAL_WELCOME_FUNDING = "REFERRAL_WELCOME_FUNDING";
 
@@ -346,39 +348,19 @@ public class Constants {
     }
 
     // ========================================================================
-    // Programa de afiliadas de modelos (ADR-049). D2 revisado 2026-07-12:
-    // la comision se acumula al STREAM_CHARGE (consumo per-second), no al
-    // SUCCESS de PaymentSession (recarga). El esquema soporta multiples
-    // fuentes via source_type/source_id.
+    // Programa de afiliadas de modelos (ADR-049) — RETIRADO por [ADR-052 §D11]
+    // el 2026-07-24. Las clases AffiliateCommissionSourceType y
+    // AffiliateCommissionStatus se eliminaron junto con la entidad
+    // AffiliateCommission y su tabla (V38 drop).
+    //
+    // Los operation_type REFERRAL_WELCOME_GRANT / REFERRAL_WELCOME_FUNDING de
+    // OperationTypes (arriba en este mismo Constants) SI se conservan como
+    // legacy no-emisibles: hay filas historicas en el ledger de transactions y
+    // platform_transactions con esos valores que deben poder leerse tras el
+    // deploy sin crash de enum. El codigo que los emitia (AffiliateBonusService)
+    // esta eliminado; los valores permanecen aqui para no romper la lectura del
+    // historico.
     // ========================================================================
-
-    /**
-     * Discriminador de fuente que dispara la comision de afiliada.
-     * Valores usados en fase actual: {@link #STREAM_CHARGE}. Reservados
-     * para futuros hooks: {@link #PAYMENT_SESSION}.
-     */
-    public static class AffiliateCommissionSourceType {
-        public static final String STREAM_CHARGE = "STREAM_CHARGE";
-        public static final String PAYMENT_SESSION = "PAYMENT_SESSION";
-
-        private AffiliateCommissionSourceType() {}
-    }
-
-    /**
-     * Estados posibles de la fila {@code affiliate_commissions}. El flujo
-     * actual (D2 revisado) usa {@link #PAYABLE} / {@link #SKIPPED_NO_ACTIVITY}
-     * directamente sin pasar por {@link #ACCRUED}; este ultimo queda
-     * reservado para futuros flujos con hold retention (PSP tarjeta).
-     */
-    public static class AffiliateCommissionStatus {
-        public static final String ACCRUED = "ACCRUED";
-        public static final String PAYABLE = "PAYABLE";
-        public static final String SKIPPED_NO_ACTIVITY = "SKIPPED_NO_ACTIVITY";
-        public static final String REVERSED_CHARGEBACK = "REVERSED_CHARGEBACK";
-        public static final String PAID = "PAID";
-
-        private AffiliateCommissionStatus() {}
-    }
 
     // ========================================================================
     // Anti-fraude camara Fase B (ADR-050): liveness challenge con SightEngine

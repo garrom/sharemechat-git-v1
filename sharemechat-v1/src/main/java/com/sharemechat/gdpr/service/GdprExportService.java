@@ -79,8 +79,7 @@ public class GdprExportService {
                 "date_of_birth, confir_adult, accept_term, term_version, regist_ip, biography, interests, " +
                 "is_active, unsubscribe, created_at, verification_status, updated_at, account_status, " +
                 "suspended_until, risk_reason, risk_updated_at, risk_updated_by, email_verified_at, " +
-                "client_kyc_status, client_kyc_decided_at, client_kyc_estimated_age, referral_code_owner, " +
-                "referred_by_user_id, referred_at " +
+                "client_kyc_status, client_kyc_decided_at, client_kyc_estimated_age " +
                 "FROM users WHERE id = :uid", targetUserId));
         resp.addToIdentity("user_languages", selectAsMaps("SELECT * FROM user_languages WHERE user_id = :uid", targetUserId));
         resp.addToIdentity("consent_events", selectAsMaps("SELECT * FROM consent_events WHERE user_id = :uid ORDER BY created_at", targetUserId));
@@ -139,9 +138,9 @@ public class GdprExportService {
         resp.addToModel("model_tier_daily_snapshots", selectAsMaps("SELECT * FROM model_tier_daily_snapshots WHERE model_id = :uid", targetUserId));
         resp.addToModel("payout_requests", selectAsMaps("SELECT * FROM payout_requests WHERE model_user_id = :uid", targetUserId));
         resp.addToModel("home_featured_models", selectAsMaps("SELECT * FROM home_featured_models WHERE model_id = :uid", targetUserId));
-        resp.addToModel("affiliate_link_tokens", selectAsMaps("SELECT * FROM affiliate_link_tokens WHERE model_user_id = :uid", targetUserId));
-        resp.addToModel("affiliate_commissions", selectAsMaps("SELECT * FROM affiliate_commissions WHERE referrer_model_user_id = :uid OR client_user_id = :uid", targetUserId));
-        resp.addToModel("affiliate_click_events", selectAsMaps("SELECT * FROM affiliate_click_events WHERE model_user_id = :uid OR client_user_id = :uid", targetUserId));
+        // affiliate_link_tokens, affiliate_commissions, affiliate_click_events
+        // retirados el 2026-07-24 junto con el resto del programa de afiliadas
+        // ([ADR-052 §D11]).
         resp.addToModel("favorites_clients", selectAsMaps("SELECT * FROM favorites_clients WHERE model_id = :uid", targetUserId));
 
         // 4.d Streaming

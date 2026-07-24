@@ -66,10 +66,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/email-verification/confirm").permitAll()
                         .requestMatchers("/api/public/home/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/content/**").permitAll()
-                        // ADR-049 Subpasada 2B: landing publica y magic link del programa de afiliadas.
-                        // POST /click, POST /magic-link, GET /link/consume. Sin auth (endpoints publicos
-                        // llamados desde landing SPA + email links).
-                        .requestMatchers("/api/public/affiliate/**").permitAll()
+                        // Endpoints publicos /api/public/affiliate/** retirados el 2026-07-24
+                        // junto con el resto del programa de afiliadas ([ADR-052 §D11]).
                         .requestMatchers(HttpMethod.GET, "/api/users/avatars/**").permitAll()
 
                         // SEO layer (Frente 2 sobre CMS Fase 4A): sitemap dinamico
@@ -133,18 +131,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/me/assets").hasAnyRole("USER", "MODEL")
                         .requestMatchers(HttpMethod.POST, "/api/me/assets").hasAnyRole("USER", "MODEL")
 
-                        // ============================================================
-                        // ADR-049 Subpasada 2A: sistema de afiliadas (endpoints del
-                        // panel de la modelo). Van ANTES del catch-all /api/models/**
-                        // porque son especificos del rol MODEL con guards internos
-                        // adicionales (KYC APPROVED, cuenta no suspendida) que aplica
-                        // AffiliateCodeService. El GET del panel y del QR estan
-                        // disponibles siempre para MODEL; POST activate lo restringe
-                        // el service.
-                        // ============================================================
-                        .requestMatchers(HttpMethod.POST, "/api/models/me/affiliate/activate").hasRole("MODEL")
-                        .requestMatchers(HttpMethod.GET, "/api/models/me/affiliate").hasRole("MODEL")
-                        .requestMatchers(HttpMethod.GET, "/api/models/me/affiliate/qr.svg").hasRole("MODEL")
+                        // Endpoints /api/models/me/affiliate/** retirados el 2026-07-24
+                        // junto con el resto del programa de afiliadas ([ADR-052 §D11]).
 
                         // CLIENTS: documentos
                         .requestMatchers(HttpMethod.GET, "/api/clients/documents/me").hasRole("CLIENT")

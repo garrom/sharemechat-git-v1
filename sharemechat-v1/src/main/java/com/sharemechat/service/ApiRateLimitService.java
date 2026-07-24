@@ -38,9 +38,6 @@ public class ApiRateLimitService {
     private final int complaintLimitPerWindow;
     private final Duration complaintWindow;
 
-    private final int affiliateMagicLinkLimitPerWindow;
-    private final Duration affiliateMagicLinkWindow;
-
     public ApiRateLimitService(
             StringRedisTemplate redis,
             @Value("${security.ratelimit.login.limit:10}") int loginLimitPerWindow,
@@ -65,10 +62,7 @@ public class ApiRateLimitService {
             @Value("${security.ratelimit.ws.ping.window-seconds:10}") int wsPingWindowSeconds,
 
             @Value("${security.ratelimit.complaint.limit:5}") int complaintLimitPerWindow,
-            @Value("${security.ratelimit.complaint.window-seconds:3600}") int complaintWindowSeconds,
-
-            @Value("${security.ratelimit.affiliate-magic-link.limit:5}") int affiliateMagicLinkLimitPerWindow,
-            @Value("${security.ratelimit.affiliate-magic-link.window-seconds:3600}") int affiliateMagicLinkWindowSeconds
+            @Value("${security.ratelimit.complaint.window-seconds:3600}") int complaintWindowSeconds
 
     ) {
         this.redis = redis;
@@ -97,9 +91,6 @@ public class ApiRateLimitService {
         this.complaintLimitPerWindow = complaintLimitPerWindow;
         this.complaintWindow = Duration.ofSeconds(complaintWindowSeconds);
 
-        this.affiliateMagicLinkLimitPerWindow = affiliateMagicLinkLimitPerWindow;
-        this.affiliateMagicLinkWindow = Duration.ofSeconds(affiliateMagicLinkWindowSeconds);
-
     }
 
     // =========================
@@ -112,16 +103,8 @@ public class ApiRateLimitService {
                 "Demasiadas denuncias desde esta IP. Intentalo mas tarde.");
     }
 
-    // =========================
-    // AFFILIATE MAGIC LINK (ADR-049 Subpasada 2B, D12)
-    // =========================
-
-    public void checkAffiliateMagicLinkIp(String ip) {
-        if (ip == null || ip.isBlank()) return;
-        consumeOrThrow(key("affiliate:magic-link:ip", ip),
-                affiliateMagicLinkLimitPerWindow, affiliateMagicLinkWindow,
-                "Demasiadas solicitudes de magic link. Intentalo mas tarde.");
-    }
+    // checkAffiliateMagicLinkIp retirado el 2026-07-24 junto con el resto
+    // del programa de afiliadas ([ADR-052 §D11]).
 
     // =========================
     // LOGIN

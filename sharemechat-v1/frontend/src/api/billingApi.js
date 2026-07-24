@@ -2,7 +2,7 @@
 // Endpoints backend definidos en PspController + PspWebhookController
 // (Fase 3, commit 03e394a).
 //
-// Todos los helpers usan apiFetch (misma convencion que affiliateApi.js)
+// Todos los helpers usan apiFetch (misma convencion que el resto de servicios API).
 // para heredar auth via cookie access_token, refresh transparente y
 // deteccion de mantenimiento.
 

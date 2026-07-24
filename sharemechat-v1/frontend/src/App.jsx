@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Switch, Route, Redirect, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Switch, Route, Redirect } from 'react-router-dom';
 import i18n from './i18n';
 import RequireRole from './components/RequireRole';
 import DashboardClient from './pages/dashboard/DashboardClient';
@@ -10,7 +10,6 @@ import DashboardAdmin from './pages/admin/DashboardAdmin';
 import AdminAccessPage from './pages/admin/AdminAccessPage';
 import PerfilClient from './pages/subpages/PerfilClient';
 import PerfilModel from './pages/subpages/PerfilModel';
-import AffiliatePanelModel from './pages/subpages/AffiliatePanelModel';
 import ModelKycVeriffPage from './pages/subpages/ModelKycVeriffPage';
 import ModelKycDiditPage from './pages/subpages/ModelKycDiditPage';
 import ModelKycDiditProcessingPage from './pages/subpages/ModelKycDiditProcessingPage';
@@ -25,7 +24,6 @@ import Home from './public-pages/Home';
 import Unauthorized from './public-pages/Unauthorized';
 import ResetPassword from './public-pages/ResetPassword';
 import ForgotPassword from './public-pages/ForgotPassword';
-import AffiliateLandingPage from './public-pages/AffiliateLandingPage';
 import AdminEmailVerificationPage from './pages/admin/AdminEmailVerificationPage';
 import ProductEmailVerificationPage from './public-pages/ProductEmailVerificationPage';
 import CheckoutSuccessPage from './public-pages/CheckoutSuccessPage';
@@ -52,24 +50,12 @@ const PublicWithGuestGate = ({ component: Component, ...rest }) => (
   <Route {...rest} render={(props) => (<GuestConsentGate><Component {...props} /></GuestConsentGate>)} />
 );
 
-// ADR-049 Subpasada 2E fix UX: en las rutas de captacion de la landing
-// publica del programa de afiliadas (/i y /register/client) ocultamos el
-// Footer global. El visitante ha llegado con intencion de registrarse y
-// conseguir el bono; los links del footer (FAQ, Safety, Rules, Legal)
-// son links reales de React Router que le sacan del contexto de
-// conversion. Patron estandar de industria en landings de captacion:
-// reducir superficies de escape al maximo hasta que el usuario complete
-// (o abandone conscientemente) la conversion. Los links legales
-// imprescindibles (T&C, Privacidad) siguen accesibles desde el modal de
-// registro que se abre al pulsar el CTA principal.
-const AFFILIATE_LANDING_PATHS = ['/i', '/register/client'];
+// ConditionalFooter simplificado el 2026-07-24 tras retirar el programa
+// de afiliadas ([ADR-052 §D11]): la logica de ocultar footer en las
+// rutas /i y /register/client desaparecio con el AffiliateLandingPage.
+// Se mantiene el componente por si se quiere reintroducir la ocultacion
+// condicional en el futuro para otra landing de captacion.
 const ConditionalFooter = () => {
-  const location = useLocation();
-  const path = location.pathname || '';
-  const isAffiliateLanding = AFFILIATE_LANDING_PATHS.some(
-    (p) => path === p || path.startsWith(`${p}/`)
-  );
-  if (isAffiliateLanding) return null;
   return <Footer />;
 };
 
@@ -196,22 +182,9 @@ function App() {
                         /unauthorized. */}
                     <Route path="/checkout/success" render={() => (<RequireRole roles={[Roles.USER, Roles.CLIENT]}><CheckoutSuccessPage /></RequireRole>)} />
                     <Route path="/checkout/cancel" render={() => (<RequireRole roles={[Roles.USER, Roles.CLIENT]}><CheckoutCancelPage /></RequireRole>)} />
-                    {/* ADR-049 Subpasada 2E: landing publica del programa de
-                        afiliadas. /i?ref=<code> es el destino del QR y de la
-                        URL directa que la modelo comparte. /register/client
-                        es el destino del redirect 302 del backend tras
-                        consumir un magic link (?ref=<code>&email_verified=true).
-                        Ambas rutas montan el mismo componente; el componente
-                        decide que renderizar segun query params y sesion.
-
-                        Envuelto en PublicWithGuestGate (mismo patron que
-                        Home/Blog/Login) para que el AgeGateModal se
-                        superponga si el visitante no ha confirmado edad
-                        18+ todavia. Sin este wrapper, openLoginModal hace
-                        return silencioso por el guard isLocalAgeOk y los
-                        botones CTA no responden. */}
-                    <PublicWithGuestGate path="/i" component={AffiliateLandingPage} />
-                    <PublicWithGuestGate path="/register/client" component={AffiliateLandingPage} />
+                    {/* Rutas /i y /register/client (landing publica del programa
+                        de afiliadas) retiradas el 2026-07-24 junto con el resto
+                        del programa ([ADR-052 §D11]). */}
                     <Route path="/legal" component={Legal} />
                     <Route path="/complaint" component={ComplaintForm} />
                     <Route path="/faq" component={Faq} />
@@ -243,10 +216,9 @@ function App() {
 
                     <Route path="/perfil-client" render={() => (<RequireRole role="CLIENT"><PerfilClient /></RequireRole>)} />
                     <Route path="/perfil-model" render={() => (<RequireRole role="MODEL"><PerfilModel /></RequireRole>)} />
-                    {/* ADR-049 Subpasada 2C: panel de Afiliadas de la modelo.
-                        Placeholder mientras no llegue la implementacion real
-                        (URL/QR/stats — subpasada 2D). */}
-                    <Route path="/perfil-modelo/afiliada" render={() => (<RequireRole role="MODEL"><AffiliatePanelModel /></RequireRole>)} />
+                    {/* Ruta /perfil-modelo/afiliada (panel Afiliadas de la
+                        modelo) retirada el 2026-07-24 junto con el resto del
+                        programa ([ADR-052 §D11]). */}
                     <Route path="/change-password" render={() => (<RequireRole roles={[Roles.CLIENT, Roles.MODEL, Roles.ADMIN]}><ChangePasswordPage /></RequireRole>)} />
                     {/* Fallback para bookmarks antiguos: el chat con el
                         Agente IA vive dentro de /client|/model (panel central

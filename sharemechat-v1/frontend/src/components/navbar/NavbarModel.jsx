@@ -2,7 +2,6 @@ import React from 'react';
 import {
   faChartLine,
   faGem,
-  faShareNodes,
   faUser,
 } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
@@ -27,7 +26,6 @@ const NavbarModel = ({
   onGoSupport,
   onGoBlog,
   onGoStats,
-  onGoAffiliate,
   onProfile,
   onWithdraw,
   onLogout,
@@ -42,13 +40,11 @@ const NavbarModel = ({
   blogDisabled = false,
   statsDisabled = false,
   withdrawDisabled = false,
-  affiliateDisabled = false,
 }) => {
   const videochatLabel = i18n.t('dashboardModel.nav.videochat');
   const favoritesLabel = i18n.t('dashboardModel.nav.favorites');
   const supportLabel = i18n.t('support.navbar.button');
   const blogLabel = i18n.t('dashboardModel.nav.blog');
-  const affiliateLabel = i18n.t('dashboardModel.nav.affiliate');
 
   const desktopLeft = (
     <DesktopTabs
@@ -74,22 +70,8 @@ const NavbarModel = ({
       queueText={showQueue ? queueText : null}
       balanceText={showBalance ? balanceTextDesktop : null}
       showLocaleSwitcher={showLocaleSwitcher}
-      // ADR-049 Subpasada 2C: tertiaryAction = pill de Afiliada, PRIMERO del
-      // grupo derecho, con texto visible. Solo se muestra si el caller
-      // provee onGoAffiliate (siempre en NavbarModel; NavbarClient lo omite).
-      tertiaryAction={onGoAffiliate ? {
-        label: affiliateLabel,
-        title: affiliateLabel,
-        onClick: onGoAffiliate,
-        icon: faShareNodes,
-        iconStyle: { color: '#0ea5e9', fontSize: '1rem' },
-        disabled: affiliateDisabled,
-        // ADR-049 Subpasada 2C fix: coherencia con Stats/Withdraw/Logout.
-        // En desktop el pill Afiliada tambien va icon-only (tooltip nativo +
-        // aria-label lo resuelve DesktopActions). El item mobile del
-        // hamburger conserva su texto (se define abajo).
-        iconOnly: true,
-      } : null}
+      // tertiaryAction (pill Afiliada) retirada el 2026-07-24 junto con el
+      // resto del programa de afiliadas ([ADR-052 §D11]).
       // Stats / Withdraw / Logout: icon-only con tooltip nativo + aria-label
       // para screen readers (aria-label lo pone DesktopActions cuando iconOnly).
       primaryAction={{
@@ -140,16 +122,6 @@ const NavbarModel = ({
           useIconWrapper: true,
           disabled: profileDisabled,
         },
-        ...(onGoAffiliate ? [{
-          key: 'affiliate',
-          icon: faShareNodes,
-          iconStyle: { color: '#0ea5e9', fontSize: '1rem' },
-          label: affiliateLabel,
-          title: affiliateLabel,
-          onClick: onGoAffiliate,
-          useIconWrapper: false,
-          disabled: affiliateDisabled,
-        }] : []),
         {
           key: 'stats',
           icon: faChartLine,

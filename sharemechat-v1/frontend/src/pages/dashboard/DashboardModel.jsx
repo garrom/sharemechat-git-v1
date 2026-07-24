@@ -138,10 +138,10 @@ const DashboardModel = () => {
     return () => clearInterval(iv);
   }, [modWarning?.startedAt]);
   const [chatInput, setChatInput] = useState('');
-  // Nav directa desde subpaneles externos (AffiliatePanelModel): cuando
-  // el caller hace history.push('/model', { activeTab: 'stats' }), se
-  // aterriza directo en esa tab en vez del videochat por defecto.
-  // Patron paralelo al de pendingAutoSelectBot mas abajo.
+  // Nav directa desde subpaneles externos: cuando el caller hace
+  // history.push('/model', { activeTab: 'stats' }), se aterriza directo
+  // en esa tab en vez del videochat por defecto. Patron paralelo al de
+  // pendingAutoSelectBot mas abajo.
   const routerLocation = useLocation();
   const [activeTab, setActiveTab] = useState(
     () => routerLocation?.state?.activeTab || 'videochat'
@@ -2465,13 +2465,8 @@ const DashboardModel = () => {
   };
 
 
-  const handleGoAffiliate = async () => {
-    const ok = await confirmarSalidaSesionActiva();
-    if (!ok) return;
-    stopAll();
-    history.push('/perfil-modelo/afiliada');
-  };
-
+  // handleGoAffiliate retirado el 2026-07-24 junto con el resto del
+  // programa de afiliadas ([ADR-052 §D11]).
 
   const handleLogoClick = (e) => {
     // nos lleva a tab videochat
@@ -3340,7 +3335,6 @@ const DashboardModel = () => {
         onGoSupport={handleGoSupport}
         onGoBlog={handleGoBlog}
         onGoStats={handleGoStats}
-        onGoAffiliate={handleGoAffiliate}
         onProfile={handleProfile}
         onWithdraw={handleRequestPayout}
         onLogout={handleLogout}
