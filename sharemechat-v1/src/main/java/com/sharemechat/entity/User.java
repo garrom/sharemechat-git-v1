@@ -158,6 +158,28 @@ public class User {
     @Column(name = "first_stream_charge_at")
     private LocalDateTime firstStreamChargeAt;
 
+    /**
+     * Politica de cuentas dormidas (V37, 2026-07-23): timestamp UTC del
+     * ultimo login o refresh exitoso. NULL para cuentas que aun no han
+     * logeado despues del rollout de la politica. El
+     * {@code AccountDormancyJob} usa este campo para decidir si marcar
+     * una cuenta como dormant.
+     */
+    @Column(name = "last_activity_at")
+    private LocalDateTime lastActivityAt;
+
+    /**
+     * Politica de cuentas dormidas (V37): cuando NOT NULL, la cuenta fue
+     * marcada dormant automaticamente por el job. Al login se auto-reactiva
+     * ({@code dormant_since=NULL, is_active=true, last_activity_at=NOW()})
+     * sin intervencion admin. Distingue del bloqueo por ban real
+     * ({@code is_active=false sin dormant_since} o
+     * {@code account_status=SUSPENDED/BANNED}), que sigue bloqueando el
+     * login.
+     */
+    @Column(name = "dormant_since")
+    private LocalDateTime dormantSince;
+
     public User() {
         this.createdAt = LocalDateTime.now();
         // updatedAt NO se inicializa aqui: la columna esta con
@@ -271,4 +293,10 @@ public class User {
 
     public LocalDateTime getFirstStreamChargeAt() { return firstStreamChargeAt; }
     public void setFirstStreamChargeAt(LocalDateTime firstStreamChargeAt) { this.firstStreamChargeAt = firstStreamChargeAt; }
+
+    public LocalDateTime getLastActivityAt() { return lastActivityAt; }
+    public void setLastActivityAt(LocalDateTime lastActivityAt) { this.lastActivityAt = lastActivityAt; }
+
+    public LocalDateTime getDormantSince() { return dormantSince; }
+    public void setDormantSince(LocalDateTime dormantSince) { this.dormantSince = dormantSince; }
 }

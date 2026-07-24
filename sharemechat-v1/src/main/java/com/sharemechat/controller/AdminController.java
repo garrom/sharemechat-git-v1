@@ -49,6 +49,8 @@ public class AdminController {
     // [NEW] payouts
     private final PayoutRequestRepository payoutRequestRepository;
     private final TransactionService transactionService;
+    // Politica cuentas dormidas (2026-07-23): endpoint reactivate.
+    private final com.sharemechat.service.AccountDormancyService dormancyService;
 
     public AdminController(
             AdminService adminService,
@@ -61,7 +63,8 @@ public class AdminController {
             MatchingHandler matchingHandler,
             MessagesWsHandler messagesWsHandler,
             PayoutRequestRepository payoutRequestRepository,
-            TransactionService transactionService
+            TransactionService transactionService,
+            com.sharemechat.service.AccountDormancyService dormancyService
     ) {
         this.adminService = adminService;
         this.backofficeAccessService = backofficeAccessService;
@@ -74,6 +77,25 @@ public class AdminController {
         this.messagesWsHandler = messagesWsHandler;
         this.payoutRequestRepository = payoutRequestRepository;
         this.transactionService = transactionService;
+        this.dormancyService = dormancyService;
+    }
+
+    /**
+     * Politica cuentas dormidas (2026-07-23): reactivacion manual desde
+     * el panel admin. Aplicable si el usuario no puede o no quiere loguear
+     * (email perdido, etc). Solo revierte el estado dormant: si la cuenta
+     * esta bloqueada por otro motivo (account_status SUSPENDED/BANNED),
+     * NO afecta a esas dimensiones.
+     */
+    @PostMapping("/users/{userId}/reactivate")
+    public ResponseEntity<?> reactivateAccount(@PathVariable Long userId) {
+        logger.info("POST /api/admin/users/{}/reactivate", userId);
+        try {
+            dormancyService.reactivate(userId);
+            return ResponseEntity.ok(Map.of("status", "ok"));
+        } catch (IllegalArgumentException ex) {
+            return ResponseEntity.badRequest().body(ex.getMessage());
+        }
     }
 
     // GET /api/admin/models?verification=PENDING|APPROVED|REJECTED (opcional)

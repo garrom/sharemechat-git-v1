@@ -6,6 +6,7 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.UserLoginDTO;
 import com.sharemechat.entity.RefreshToken;
 import com.sharemechat.entity.User;
+import com.sharemechat.service.AccountDormancyService;
 import com.sharemechat.exception.CountryBlockedException;
 import com.sharemechat.exception.InvalidCredentialsException;
 import com.sharemechat.repository.RefreshTokenRepository;
@@ -43,6 +44,9 @@ public class AuthController {
     private final ConsentService consentService;
     private final AuthRiskService authRiskService;
     private final BackofficeAccessService backofficeAccessService;
+    // Politica de cuentas dormidas (2026-07-23): hook al login/refresh
+    // exitoso para actualizar last_activity_at + auto-reactivar dormant.
+    private final AccountDormancyService dormancyService;
 
     @Value("${auth.cookieDomain}")
     private String cookieDomain;
@@ -58,7 +62,8 @@ public class AuthController {
             CountryAccessService countryAccessService,
             ConsentService consentService,
             AuthRiskService authRiskService,
-            BackofficeAccessService backofficeAccessService
+            BackofficeAccessService backofficeAccessService,
+            AccountDormancyService dormancyService
     ) {
         this.jwtUtil = jwtUtil;
         this.userService = userService;
@@ -68,6 +73,7 @@ public class AuthController {
         this.consentService = consentService;
         this.authRiskService = authRiskService;
         this.backofficeAccessService = backofficeAccessService;
+        this.dormancyService = dormancyService;
     }
 
     // =========================================================
@@ -163,6 +169,11 @@ public class AuthController {
         refreshRepo.save(rt);
 
         authRiskService.record(AuthRiskConstants.Events.LOGIN_SUCCESS, riskCtx.withUserId(u.getId()));
+
+        // Politica cuentas dormidas (2026-07-23): sella last_activity_at
+        // y auto-reactiva si la cuenta estaba marcada dormant. Best-effort:
+        // fallos no impiden el login.
+        dormancyService.recordActivity(u.getId());
 
         setAccessCookie(res, access, 15 * 60);
         setRefreshCookie(res, refreshRaw, 14 * 24 * 3600);
@@ -271,6 +282,9 @@ public class AuthController {
 
         setAccessCookie(res, newAccess, 15 * 60);
         setRefreshCookie(res, newRefreshRaw, 14 * 24 * 3600);
+
+        // Politica cuentas dormidas: refresh cuenta como actividad.
+        dormancyService.recordActivity(u.getId());
 
         return ResponseEntity.ok().build();
     }
