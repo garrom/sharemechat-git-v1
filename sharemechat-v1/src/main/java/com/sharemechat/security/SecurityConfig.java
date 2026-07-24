@@ -134,6 +134,18 @@ public class SecurityConfig {
                         // Endpoints /api/models/me/affiliate/** retirados el 2026-07-24
                         // junto con el resto del programa de afiliadas ([ADR-052 §D11]).
 
+                        // ============================================================
+                        // ADR-052 §D9 Frente 3 sub-frente 3.B: panel /model/economics
+                        // (dashboard reparto + tarifa autoservicio + Estatus Pro). Van
+                        // ANTES del catch-all /api/models/** porque son especificos del
+                        // rol MODEL con validaciones internas en PricingService (rango
+                        // del tramo vigente para PUT /pricing, elegibilidad Pro para
+                        // PUT /pro-status).
+                        // ============================================================
+                        .requestMatchers(HttpMethod.GET, "/api/models/me/economics").hasRole("MODEL")
+                        .requestMatchers(HttpMethod.PUT, "/api/models/me/pricing").hasRole("MODEL")
+                        .requestMatchers(HttpMethod.PUT, "/api/models/me/pro-status").hasRole("MODEL")
+
                         // CLIENTS: documentos
                         .requestMatchers(HttpMethod.GET, "/api/clients/documents/me").hasRole("CLIENT")
                         .requestMatchers(HttpMethod.POST, "/api/clients/documents").hasRole("CLIENT")
