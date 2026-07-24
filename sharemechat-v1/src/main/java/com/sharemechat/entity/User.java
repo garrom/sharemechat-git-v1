@@ -7,6 +7,10 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+// ADR-052 (V39): campos de reparto autoservicio y Estatus Pro se anaden
+// abajo tras las columnas de KYC cliente para respetar el orden logico
+// de secciones (identidad -> KYC -> economics de modelo -> dormancy).
+
 @Entity
 @Table(name = "users")
 public class User {
@@ -131,6 +135,27 @@ public class User {
     private BigDecimal clientKycEstimatedAge;
 
     /**
+     * ADR-052 §D2 (V39, 2026-07-25): tarifa por minuto elegida por la
+     * modelo dentro del rango de su tramo vigente. Default 1.00 (rango
+     * T0). Se recorta automaticamente al maximo del tramo destino cuando
+     * la modelo baja de tramo (por el snapshot diario). El motor de
+     * facturacion la lee al arranque de sesion.
+     */
+    @Column(name = "chosen_rate_eur_per_min", nullable = false, precision = 4, scale = 2)
+    private BigDecimal chosenRateEurPerMin = new BigDecimal("1.00");
+
+    /**
+     * ADR-052 §D3 (V39, 2026-07-25): toggle Estatus Pro. True si la modelo
+     * Pro acepta clientes trial en su tarjeta. Default true para no romper
+     * el flujo trial existente cuando Pro se active por primera vez para
+     * una modelo. Solo tiene efecto operativo cuando la modelo cumple el
+     * umbral de Pro (facturacion bruta rolling 30d >
+     * {@code billing.pro-status.min-billed-gross-eur-30d}, default 1500 EUR).
+     */
+    @Column(name = "pro_accepts_trial", nullable = false)
+    private Boolean proAcceptsTrial = Boolean.TRUE;
+
+    /**
      * Politica de cuentas dormidas (V37, 2026-07-23): timestamp UTC del
      * ultimo login o refresh exitoso. NULL para cuentas que aun no han
      * logeado despues del rollout de la politica. El
@@ -253,6 +278,12 @@ public class User {
 
     public BigDecimal getClientKycEstimatedAge() { return clientKycEstimatedAge; }
     public void setClientKycEstimatedAge(BigDecimal clientKycEstimatedAge) { this.clientKycEstimatedAge = clientKycEstimatedAge; }
+
+    public BigDecimal getChosenRateEurPerMin() { return chosenRateEurPerMin; }
+    public void setChosenRateEurPerMin(BigDecimal chosenRateEurPerMin) { this.chosenRateEurPerMin = chosenRateEurPerMin; }
+
+    public Boolean getProAcceptsTrial() { return proAcceptsTrial; }
+    public void setProAcceptsTrial(Boolean proAcceptsTrial) { this.proAcceptsTrial = proAcceptsTrial; }
 
     public LocalDateTime getLastActivityAt() { return lastActivityAt; }
     public void setLastActivityAt(LocalDateTime lastActivityAt) { this.lastActivityAt = lastActivityAt; }

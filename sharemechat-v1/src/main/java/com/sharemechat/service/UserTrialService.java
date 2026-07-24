@@ -45,7 +45,6 @@ public class UserTrialService {
     private final UserTrialStreamRepository userTrialStreamRepository;
     private final UserRepository userRepository;
     private final ModelRepository modelRepository;
-    private final ModelTierService modelTierService;
     private final TransactionRepository transactionRepository;
     private final BalanceRepository balanceRepository;
     private final PlatformTransactionRepository platformTransactionRepository;
@@ -57,27 +56,36 @@ public class UserTrialService {
     private final StreamService streamService;
     private final com.sharemechat.streammoderation.service.StreamModerationSessionService streamModerationSessionService;
 
+    // ADR-052 §D8 (V39, 2026-07-25): primer minuto trial se paga a la
+    // modelo a tarifa plana (default 0.07 EUR/min) independiente del
+    // tramo. La empresa absorbe el coste como parte del coste de
+    // adquisicion; el trial cuenta hacia la facturacion bruta rolling
+    // 30d de la modelo (ADR-052 §D6).
+    private final BigDecimal trialFirstMinuteEarningPerMin;
+
     public UserTrialService(UserTrialStreamRepository userTrialStreamRepository,
                             UserRepository userRepository,
                             ModelRepository modelRepository,
-                            ModelTierService modelTierService,
                             TransactionRepository transactionRepository,
                             BalanceRepository balanceRepository,
                             PlatformTransactionRepository platformTransactionRepository,
                             PlatformBalanceRepository platformBalanceRepository,
                             StatusService statusService,
                             @org.springframework.context.annotation.Lazy StreamService streamService,
-                            @org.springframework.context.annotation.Lazy com.sharemechat.streammoderation.service.StreamModerationSessionService streamModerationSessionService) {
+                            @org.springframework.context.annotation.Lazy com.sharemechat.streammoderation.service.StreamModerationSessionService streamModerationSessionService,
+                            @org.springframework.beans.factory.annotation.Value("${billing.trial.first-minute-earning-eur-per-min:0.07}") BigDecimal trialFirstMinuteEarningPerMin) {
 
         this.userTrialStreamRepository = userTrialStreamRepository;
         this.userRepository = userRepository;
         this.modelRepository = modelRepository;
-        this.modelTierService = modelTierService;
         this.transactionRepository = transactionRepository;
         this.balanceRepository = balanceRepository;
         this.platformTransactionRepository = platformTransactionRepository;
         this.platformBalanceRepository = platformBalanceRepository;
         this.statusService = statusService;
+        this.trialFirstMinuteEarningPerMin = trialFirstMinuteEarningPerMin != null
+                ? trialFirstMinuteEarningPerMin
+                : new BigDecimal("0.07");
         this.streamService = streamService;
         this.streamModerationSessionService = streamModerationSessionService;
     }
@@ -356,7 +364,7 @@ public class UserTrialService {
         session.setSeconds(seconds);
         userTrialStreamRepository.save(session);
 
-        // 2) Cargar MODELO y tier
+        // 2) Cargar MODELO
         User modelUser = userRepository.findById(modelId)
                 .orElseThrow(() -> new EntityNotFoundException("Modelo no encontrado: " + modelId));
 
@@ -367,22 +375,11 @@ public class UserTrialService {
             return m;
         });
 
-        ModelEarningTier tier = null;
-        try {
-            tier = modelTierService.resolveEffectiveTierForPayout(modelId);
-        } catch (Exception ex) {
-            log.warn("closeTrialStreamAndSettle: error resolviendo tier para modelId={} -> {}",
-                    modelId, ex.getMessage());
-        }
-
-        if (tier == null) {
-            throw new IllegalStateException(
-                    "No se pudo resolver tier para la modelo " + modelId + " en sesión trial");
-        }
-
-        // 3) Ganancia de la modelo usando first_minute_earning_per_min
-        BigDecimal perMin = tier.getFirstMinuteEarningPerMin();
-        BigDecimal rawModelEarning = perMin
+        // 3) Ganancia de la modelo con tarifa PLANA de trial (ADR-052 §D8).
+        // El primer minuto trial se paga a la modelo a
+        // `billing.trial.first-minute-earning-eur-per-min` (default 0.07)
+        // independiente del tramo. La empresa absorbe el coste.
+        BigDecimal rawModelEarning = trialFirstMinuteEarningPerMin
                 .multiply(BigDecimal.valueOf(seconds))
                 .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
 

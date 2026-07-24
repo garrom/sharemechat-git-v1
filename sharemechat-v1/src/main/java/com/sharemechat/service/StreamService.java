@@ -98,6 +98,24 @@ public class StreamService {
     }
 
     /**
+     * ADR-052 §D2 (V39, 2026-07-25): resuelve la tarifa por minuto que se
+     * cobra al cliente en la sesion con la modelo indicada. Lee
+     * {@code users.chosen_rate_eur_per_min} (tarifa autoservicio elegida
+     * por la modelo dentro del rango de su tramo vigente). Fallback a
+     * {@code billing.rate-per-minute} si el modelo no existe o no tiene
+     * tarifa elegida (defensivo, no deberia ocurrir tras V39 porque la
+     * columna es NOT NULL con default 1.00).
+     */
+    private BigDecimal resolveRatePerMinuteForModel(Long modelId) {
+        if (modelId == null) return billing.getRatePerMinute();
+        User modelUser = userRepository.findById(modelId).orElse(null);
+        if (modelUser != null && modelUser.getChosenRateEurPerMin() != null) {
+            return modelUser.getChosenRateEurPerMin();
+        }
+        return billing.getRatePerMinute();
+    }
+
+    /**
      * Inicia una sesión de streaming en el instante del match.
      * Crea StreamRecord(start_time=now, end_time=NULL) y marca a la modelo como BUSY.
      * Idempotente respecto al par (si ya hubiera una activa, devuelve esa).
@@ -167,10 +185,13 @@ public class StreamService {
                 .map(Balance::getBalance)
                 .orElse(BigDecimal.ZERO);
 
-        // Bloquear inicio si ledgerSaldo < tarifa por minuto
-        if (ledgerSaldo.compareTo(billing.getRatePerMinute()) < 0) {
+        // Bloquear inicio si ledgerSaldo < tarifa por minuto elegida por
+        // la modelo (ADR-052 §D2). Si la modelo T3 cobra 9 EUR/min, el
+        // cliente necesita 9 EUR de saldo minimo para poder iniciar.
+        BigDecimal ratePerMin = resolveRatePerMinuteForModel(modelId);
+        if (ledgerSaldo.compareTo(ratePerMin) < 0) {
             log.warn("startSession: saldo insuficiente para iniciar. clientId={}, saldo={}, requeridoPorMin={}",
-                    clientId, ledgerSaldo, billing.getRatePerMinute());
+                    clientId, ledgerSaldo, ratePerMin);
             throw new IllegalStateException("Saldo insuficiente para iniciar el streaming.");
         }
 
@@ -494,7 +515,9 @@ public class StreamService {
     @Transactional
     public void endSession(Long clientId, Long modelId, String endReason) {
 
-        final BigDecimal RATE_PER_MINUTE = billing.getRatePerMinute(); // p.ej. 1.00
+        // ADR-052 §D2 (V39): tarifa elegida por la modelo en su tramo vigente.
+        // Fallback defensivo a billing.rate-per-minute si null.
+        final BigDecimal RATE_PER_MINUTE = resolveRatePerMinuteForModel(modelId);
         long traceTs = System.currentTimeMillis();
 
         // 1) Buscar la sesión activa (pista en cache y fallback a DB)
@@ -691,8 +714,12 @@ public class StreamService {
                 return;
             }
 
-            // 8) Reparto modelo / plataforma
-            ModelEarningTier tier = null;
+            // 8) Reparto modelo / plataforma (ADR-052 §D1, V39):
+            // reparto plano por %reparto del tramo vigente. Sin distincion
+            // "primer minuto vs siguientes" (esa distincion vivia en el
+            // sistema previo 5-15/7-20/9-40, ADR-043 §4 SUPERSEDED). El
+            // trial tiene regimen propio en UserTrialService.
+            com.sharemechat.entity.ModelPricingTier tier = null;
             try {
                 tier = modelTierService.resolveEffectiveTierForPayout(modelId);
             } catch (Exception ex) {
@@ -700,28 +727,12 @@ public class StreamService {
             }
 
             BigDecimal modelEarning;
-
-            if (tier == null) {
+            if (tier == null || tier.getModelSharePct() == null) {
                 modelEarning = BigDecimal.ZERO;
             } else {
-                long secondsFirst = Math.min(seconds, 60L);
-                long secondsNext  = Math.max(0L, seconds - 60L);
-
-                BigDecimal earnFirst = BigDecimal.ZERO;
-                BigDecimal earnNext  = BigDecimal.ZERO;
-
-                if (secondsFirst > 0) {
-                    earnFirst = tier.getFirstMinuteEarningPerMin()
-                            .multiply(BigDecimal.valueOf(secondsFirst))
-                            .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
-                }
-                if (secondsNext > 0) {
-                    earnNext = tier.getNextMinutesEarningPerMin()
-                            .multiply(BigDecimal.valueOf(secondsNext))
-                            .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
-                }
-
-                modelEarning = earnFirst.add(earnNext)
+                // modelEarning = cost * modelSharePct / 100
+                modelEarning = cost.multiply(tier.getModelSharePct())
+                        .divide(new BigDecimal("100"), 6, java.math.RoundingMode.HALF_UP)
                         .setScale(2, java.math.RoundingMode.HALF_UP);
             }
 
@@ -941,7 +952,11 @@ public class StreamService {
                 .getSeconds();
         if (seconds < 0) seconds = 0;
 
-        BigDecimal costSoFar = billing.getRatePerMinute()
+        // ADR-052 §D2: usar la tarifa autoservicio de la modelo, no el
+        // billing plano legacy. Sin esto, el cutoff evaluaria erroneamente
+        // que el cliente tiene saldo cuando en realidad ya lo agoto a la
+        // tarifa efectiva de una modelo T3 (9 EUR/min).
+        BigDecimal costSoFar = resolveRatePerMinuteForModel(modelId)
                 .multiply(BigDecimal.valueOf(seconds))
                 .divide(BigDecimal.valueOf(60), 6, java.math.RoundingMode.HALF_UP);
 

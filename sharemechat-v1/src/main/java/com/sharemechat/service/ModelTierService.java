@@ -1,49 +1,67 @@
 package com.sharemechat.service;
 
-import com.sharemechat.entity.ModelEarningTier;
+import com.sharemechat.entity.ModelPricingTier;
 import com.sharemechat.entity.ModelTierDailySnapshot;
-import com.sharemechat.entity.StreamRecord;
-import com.sharemechat.repository.ModelEarningTierRepository;
+import com.sharemechat.entity.User;
+import com.sharemechat.repository.ModelPricingTierRepository;
 import com.sharemechat.repository.ModelTierDailySnapshotRepository;
-import com.sharemechat.repository.StreamRecordRepository;
-import com.sharemechat.repository.UserTrialStreamRepository;
+import com.sharemechat.repository.TransactionRepository;
+import com.sharemechat.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Duration;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * Resuelve el tramo de reparto y rango de precio de la modelo (ADR-052
+ * §D1, §D2, §D3, §D6). Rediseñado desde el sistema de tiers previo
+ * (5-15/7-20/9-40 sobre minutos facturados) al sistema de 4 tramos
+ * (T0/T1/T2/T3) por facturacion bruta rolling 30d.
+ *
+ * <p>Ventana rolling 30 dias, snapshot diario en
+ * {@code model_tier_daily_snapshots}. El tramo se resuelve buscando
+ * la fila vigente de {@code model_pricing_tiers} con el mayor
+ * {@code min_billed_gross_eur_30d} <= facturacion bruta acumulada.
+ *
+ * <p>Al bajar de tramo, si la {@code chosen_rate_eur_per_min} de la
+ * modelo excede el {@code rate_max} del tramo destino, se recorta
+ * automaticamente en el snapshot. Al subir de tramo la tarifa elegida
+ * NO se toca (la modelo puede subirla manualmente desde su panel).
+ */
 @Service
 public class ModelTierService {
 
-    private final ModelEarningTierRepository tierRepository;
-    private final StreamRecordRepository streamRecordRepository;
-    private final UserTrialStreamRepository userTrialStreamRepository;
+    private final ModelPricingTierRepository pricingTierRepository;
     private final ModelTierDailySnapshotRepository snapshotRepository;
+    private final TransactionRepository transactionRepository;
+    private final UserRepository userRepository;
     private final ModelTierService self;
+    private final BigDecimal proStatusMinBilledGross;
 
     private static final int WINDOW_DAYS = 30;
 
-    private static final String BASE_TIER_NAME = "BASE";
-    private static final int BASE_MIN_BILLED_MINUTES = 0;
-    private static final java.math.BigDecimal BASE_FIRST = new java.math.BigDecimal("0.0500");
-    private static final java.math.BigDecimal BASE_NEXT  = new java.math.BigDecimal("0.1500");
-
-    public ModelTierService(ModelEarningTierRepository tierRepository,
-                            StreamRecordRepository streamRecordRepository,
-                            UserTrialStreamRepository userTrialStreamRepository,
+    public ModelTierService(ModelPricingTierRepository pricingTierRepository,
                             ModelTierDailySnapshotRepository snapshotRepository,
-                            @Lazy ModelTierService self) {
-        this.tierRepository = tierRepository;
-        this.streamRecordRepository = streamRecordRepository;
-        this.userTrialStreamRepository = userTrialStreamRepository;
+                            TransactionRepository transactionRepository,
+                            UserRepository userRepository,
+                            @Lazy ModelTierService self,
+                            @Value("${billing.pro-status.min-billed-gross-eur-30d:1500}") BigDecimal proStatusMinBilledGross) {
+        this.pricingTierRepository = pricingTierRepository;
         this.snapshotRepository = snapshotRepository;
+        this.transactionRepository = transactionRepository;
+        this.userRepository = userRepository;
         this.self = self;
+        this.proStatusMinBilledGross = proStatusMinBilledGross != null
+                ? proStatusMinBilledGross
+                : new BigDecimal("1500");
     }
 
     public void ensureSnapshotsInRange(Long modelId, LocalDate fromDay, LocalDate toDay) {
@@ -69,56 +87,71 @@ public class ModelTierService {
     }
 
     /**
-     * Tier “efectivo” para PAGO hoy:
-     * - usamos snapshot de AYER (opción 2)
-     * - si no existe, lo calculamos y persistimos
+     * Tramo vigente para PAGO hoy: usa snapshot de AYER. Si no existe,
+     * lo calcula y persiste.
      */
     @Transactional
-    public ModelEarningTier resolveEffectiveTierForPayout(Long modelId) {
-        ensureBaseTierExists();
-
+    public ModelPricingTier resolveEffectiveTierForPayout(Long modelId) {
         LocalDate snapshotDate = LocalDate.now().minusDays(1);
         ModelTierDailySnapshot snap = snapshotRepository.findByModelIdAndSnapshotDate(modelId, snapshotDate).orElse(null);
         if (snap == null) {
             snap = computeAndUpsertSnapshot(modelId, snapshotDate);
         }
-
-        // Con el tierName del snapshot buscamos el tier en la lista activa
-        List<ModelEarningTier> tiers = tierRepository.findByActiveTrueOrderByMinBilledMinutesAsc();
-        if (tiers == null || tiers.isEmpty()) return null;
-
-        String tierName = snap.getTierName();
-        if (tierName != null) {
-            for (ModelEarningTier t : tiers) {
-                if (tierName.equals(t.getName())) return t;
-            }
+        if (snap == null || snap.getPricingTierId() == null) {
+            // Fallback: primer tramo vigente (T0)
+            List<ModelPricingTier> vigentes = pricingTierRepository.findAllCurrentAsc();
+            return vigentes.isEmpty() ? null : vigentes.get(0);
         }
-
-        // Fallback: resolver por billedMinutes si el name no matchea (robustez)
-        Integer billedMinutes = snap.getBilledMinutes() != null ? snap.getBilledMinutes() : 0;
-        return resolveTierForBilledMinutes(billedMinutes, tiers);
+        return pricingTierRepository.findById(snap.getPricingTierId()).orElse(null);
     }
 
     /**
-     * Calcula y guarda el snapshot de un día concreto (por ejemplo AYER).
-     * Contiene: billedMinutes (ventana 30d) + tierName + rates (first/next) para auditoría y UI.
+     * Calcula y guarda el snapshot de un dia concreto. Contiene:
+     * <ul>
+     *   <li>billedGrossEur30d: bruto acumulado en la ventana</li>
+     *   <li>pricingTierId + tierCode + share + rango: tramo resuelto</li>
+     *   <li>proStatusActive: bool derivado del umbral Pro</li>
+     * </ul>
+     *
+     * <p>Ademas, si la {@code chosen_rate_eur_per_min} de la modelo
+     * excede el {@code rate_max} del tramo destino, la recorta al max
+     * del tramo (evita que quede fuera de rango tras bajar de tramo).
      */
     @Transactional
     public ModelTierDailySnapshot computeAndUpsertSnapshot(Long modelId, LocalDate snapshotDate) {
-        ensureBaseTierExists();
+        // Ventana [snapshotDate-30, snapshotDate+1) UTC
+        LocalDateTime windowEnd = snapshotDate.plusDays(1).atStartOfDay();
+        LocalDateTime windowStart = windowEnd.minusDays(WINDOW_DAYS);
 
-        // Ventana del snapshot: últimos 30 días “cerrando” al inicio del día siguiente
-        LocalDateTime windowEnd = snapshotDate.plusDays(1).atStartOfDay();      // exclusivo
-        LocalDateTime windowStart = windowEnd.minusDays(WINDOW_DAYS);           // inclusivo
+        // Bruto rolling 30d = STREAM_CHARGE (bruto cliente) + TRIAL_EARNING (bruto trial).
+        // Llamada directa a los dos metodos + suma en Java (evita el default
+        // method del repository, que Mockito no delega en tests unitarios).
+        BigDecimal streamCharge = transactionRepository.sumStreamChargeGrossForModelWindow(
+                modelId, windowStart, windowEnd);
+        BigDecimal trialEarning = transactionRepository.sumTrialEarningsForModelWindow(
+                modelId, windowStart, windowEnd);
+        BigDecimal billedGross = (streamCharge != null ? streamCharge : BigDecimal.ZERO)
+                .add(trialEarning != null ? trialEarning : BigDecimal.ZERO);
 
-        long billedSeconds = computeBilledSecondsForModelWindow(modelId, windowStart, windowEnd);
-        int billedMinutes = (int) Math.min(Integer.MAX_VALUE, billedSeconds / 60L); // floor
+        ModelPricingTier tier = pricingTierRepository
+                .findCurrentByBilledGross(billedGross)
+                .orElseGet(() -> {
+                    List<ModelPricingTier> vigentes = pricingTierRepository.findAllCurrentAsc();
+                    return vigentes.isEmpty() ? null : vigentes.get(0);
+                });
+        if (tier == null) return null;
 
-        List<ModelEarningTier> tiers = tierRepository.findByActiveTrueOrderByMinBilledMinutesAsc();
-        if (tiers == null || tiers.isEmpty()) return null;
-
-        ModelEarningTier chosen = resolveTierForBilledMinutes(billedMinutes, tiers);
-        if (chosen == null) return null;
+        // Compat legacy: billed_seconds / billed_minutes se mantienen para
+        // el frontend legacy que aun lee esos campos del snapshot. Se
+        // calculan como el equivalente en minutos del bruto a la tarifa
+        // MINIMA del tramo (proxy conservador). No es exacto pero es
+        // suficiente para el panel legacy hasta que 3.C lo reemplace.
+        // Los nuevos consumidores usan billed_gross_eur_30d directamente.
+        long approxSeconds = billedGross.divide(
+                tier.getRateMinEurPerMin().max(new BigDecimal("0.01")), 2, RoundingMode.HALF_UP)
+                .multiply(new BigDecimal("60"))
+                .longValue();
+        int approxMinutes = (int) Math.min(Integer.MAX_VALUE, approxSeconds / 60L);
 
         ModelTierDailySnapshot snap = snapshotRepository.findByModelIdAndSnapshotDate(modelId, snapshotDate).orElse(null);
         if (snap == null) {
@@ -129,122 +162,32 @@ public class ModelTierService {
 
         snap.setWindowStart(windowStart);
         snap.setWindowEnd(windowEnd);
-        snap.setBilledSeconds(billedSeconds);
-        snap.setBilledMinutes(billedMinutes);
+        snap.setBilledSeconds(approxSeconds);
+        snap.setBilledMinutes(approxMinutes);
 
-        // NOT NULL en tu tabla
-        snap.setTierId(chosen.getId());
-        snap.setTierName(chosen.getName());
-        snap.setFirstMinuteEarningPerMin(chosen.getFirstMinuteEarningPerMin());
-        snap.setNextMinutesEarningPerMin(chosen.getNextMinutesEarningPerMin());
+        // Columnas legacy quedan NULL en snapshots nuevos (V39 las hizo nullable)
+        snap.setTierId(null);
+        snap.setTierName(null);
+        snap.setFirstMinuteEarningPerMin(null);
+        snap.setNextMinutesEarningPerMin(null);
+
+        // Columnas nuevas del regimen ADR-052
+        snap.setBilledGrossEur30d(billedGross.setScale(2, RoundingMode.HALF_UP));
+        snap.setPricingTierId(tier.getId());
+        snap.setPricingTierCode(tier.getTierCode());
+        snap.setModelSharePct(tier.getModelSharePct());
+        snap.setRateMinEurPerMin(tier.getRateMinEurPerMin());
+        snap.setRateMaxEurPerMin(tier.getRateMaxEurPerMin());
+        snap.setProStatusActive(billedGross.compareTo(proStatusMinBilledGross) >= 0);
+
+        // Recorte defensivo de chosen_rate al max del tramo destino
+        User user = userRepository.findById(modelId).orElse(null);
+        if (user != null && user.getChosenRateEurPerMin() != null
+                && user.getChosenRateEurPerMin().compareTo(tier.getRateMaxEurPerMin()) > 0) {
+            user.setChosenRateEurPerMin(tier.getRateMaxEurPerMin());
+            userRepository.save(user);
+        }
 
         return snapshotRepository.save(snap);
-    }
-
-    private long computeBilledSecondsForModelWindow(Long modelId, LocalDateTime windowStart, LocalDateTime windowEnd) {
-        long totalSeconds = 0L;
-
-        // 1) Pagadas (StreamRecord) - el repo trae desde windowStart hacia delante
-        List<StreamRecord> records =
-                streamRecordRepository.findByModel_IdAndEndTimeIsNotNullAndEndTimeAfter(modelId, windowStart);
-
-        for (StreamRecord r : records) {
-            if (r.getStartTime() == null || r.getEndTime() == null) continue;
-
-            // Recortar al rango [windowStart, windowEnd)
-            LocalDateTime start = r.getStartTime().isBefore(windowStart) ? windowStart : r.getStartTime();
-            LocalDateTime end = r.getEndTime().isAfter(windowEnd) ? windowEnd : r.getEndTime();
-
-            if (!end.isAfter(start)) continue;
-            long s = Duration.between(start, end).getSeconds();
-            if (s > 0) totalSeconds += s;
-        }
-
-        // 2) Trials (UserTrialStream)
-        List<com.sharemechat.entity.UserTrialStream> trials =
-                userTrialStreamRepository.findByModel_IdAndEndTimeIsNotNullAndEndTimeAfter(modelId, windowStart);
-
-        for (com.sharemechat.entity.UserTrialStream t : trials) {
-            if (t.getStartTime() == null || t.getEndTime() == null) continue;
-
-            LocalDateTime start = t.getStartTime().isBefore(windowStart) ? windowStart : t.getStartTime();
-            LocalDateTime end = t.getEndTime().isAfter(windowEnd) ? windowEnd : t.getEndTime();
-
-            if (!end.isAfter(start)) continue;
-            long s = Duration.between(start, end).getSeconds();
-            if (s > 0) totalSeconds += s;
-        }
-
-        return Math.max(0L, totalSeconds);
-    }
-
-
-    /**
-     * Resolver tier por minutos ya calculados, dado un listado ordenado asc.
-     */
-    private ModelEarningTier resolveTierForBilledMinutes(int billedMinutes, List<ModelEarningTier> tiersAsc) {
-        ModelEarningTier chosen = tiersAsc.get(0);
-        for (ModelEarningTier t : tiersAsc) {
-            Integer min = t.getMinBilledMinutes();
-            if (min != null && min <= billedMinutes) chosen = t;
-            else break;
-        }
-        return chosen;
-    }
-
-    /**
-     * Ventana móvil de WINDOW_DAYS:
-     * - toma como “now” el final del snapshotDate (o sea, snapshotDate 23:59:59 implícito)
-     * - suma segundos pagados (stream_records cerrados) + trials cerrados
-     * - convierte a minutos (floor)
-     */
-    private int computeBilledMinutesForModelWindow(Long modelId, LocalDate snapshotDate, int windowDays) {
-        LocalDateTime since = snapshotDate.plusDays(1).atStartOfDay().minusDays(windowDays); // inicio ventana
-        LocalDateTime until = snapshotDate.plusDays(1).atStartOfDay();                       // fin (exclusivo)
-
-        long totalSeconds = 0L;
-
-        // Pagadas
-        List<StreamRecord> records =
-                streamRecordRepository.findByModel_IdAndEndTimeIsNotNullAndEndTimeAfter(modelId, since);
-
-        for (StreamRecord r : records) {
-            if (r.getStartTime() == null || r.getEndTime() == null) continue;
-            // filtrar hasta "until" por si el repo trae más
-            LocalDateTime end = r.getEndTime().isAfter(until) ? until : r.getEndTime();
-            if (end.isBefore(since)) continue;
-            long s = Duration.between(r.getStartTime().isBefore(since) ? since : r.getStartTime(), end).getSeconds();
-            if (s > 0) totalSeconds += s;
-        }
-
-        // Trials
-        List<com.sharemechat.entity.UserTrialStream> trials =
-                userTrialStreamRepository.findByModel_IdAndEndTimeIsNotNullAndEndTimeAfter(modelId, since);
-
-        for (com.sharemechat.entity.UserTrialStream t : trials) {
-            if (t.getStartTime() == null || t.getEndTime() == null) continue;
-            LocalDateTime end = t.getEndTime().isAfter(until) ? until : t.getEndTime();
-            if (end.isBefore(since)) continue;
-            long s = Duration.between(t.getStartTime().isBefore(since) ? since : t.getStartTime(), end).getSeconds();
-            if (s > 0) totalSeconds += s;
-        }
-
-        long minutes = totalSeconds / 60L; // floor
-        if (minutes > Integer.MAX_VALUE) return Integer.MAX_VALUE;
-        return (int) minutes;
-    }
-
-    @Transactional
-    protected void ensureBaseTierExists() {
-        if (tierRepository.existsByMinBilledMinutes(BASE_MIN_BILLED_MINUTES)) return;
-
-        ModelEarningTier base = new ModelEarningTier();
-        base.setName(BASE_TIER_NAME);
-        base.setMinBilledMinutes(BASE_MIN_BILLED_MINUTES);
-        base.setFirstMinuteEarningPerMin(BASE_FIRST);
-        base.setNextMinutesEarningPerMin(BASE_NEXT);
-        base.setActive(true);
-
-        tierRepository.save(base);
     }
 }

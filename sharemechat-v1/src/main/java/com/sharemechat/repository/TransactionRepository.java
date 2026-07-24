@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -22,6 +23,61 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
         )
     """)
     List<Long> findTransactionIdsWithoutBalance();
+
+    /**
+     * ADR-052 §D6 (V39, 2026-07-25): suma la parte STREAM_CHARGE
+     * (facturacion bruta cliente por sesion de pago) atribuida a la
+     * modelo durante la ventana temporal indicada. STREAM_CHARGE se
+     * persiste con {@code amount<0} en el ledger del cliente; la query
+     * devuelve el valor positivo (bruto pagado por el cliente en esa
+     * sesion).
+     *
+     * <p>Base para el snapshot diario que decide el tramo de reparto
+     * (T0/T1/T2/T3) y el rango de precio elegible.
+     */
+    @Query("SELECT COALESCE(SUM(-t.amount), 0) FROM Transaction t " +
+           "WHERE t.operationType = 'STREAM_CHARGE' " +
+           "  AND t.streamRecord.model.id = :modelId " +
+           "  AND t.timestamp >= :windowStart " +
+           "  AND t.timestamp < :windowEnd")
+    BigDecimal sumStreamChargeGrossForModelWindow(
+            @Param("modelId") Long modelId,
+            @Param("windowStart") LocalDateTime windowStart,
+            @Param("windowEnd") LocalDateTime windowEnd);
+
+    /**
+     * ADR-052 §D6 + §D8 (V39, 2026-07-25): suma los TRIAL_EARNING de
+     * la modelo (primer minuto trial pagado por la plataforma, €0.07/min
+     * plano tras ADR-052). Cuenta hacia la facturacion bruta rolling 30d
+     * porque es actividad economica generada por la modelo (aunque el
+     * cliente no pague, la empresa lo absorbe como coste de adquisicion).
+     * TRIAL_EARNING se persiste con {@code amount>0} en el ledger de la
+     * modelo.
+     */
+    @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t " +
+           "WHERE t.operationType = 'TRIAL_EARNING' " +
+           "  AND t.user.id = :modelId " +
+           "  AND t.timestamp >= :windowStart " +
+           "  AND t.timestamp < :windowEnd")
+    BigDecimal sumTrialEarningsForModelWindow(
+            @Param("modelId") Long modelId,
+            @Param("windowStart") LocalDateTime windowStart,
+            @Param("windowEnd") LocalDateTime windowEnd);
+
+    /**
+     * ADR-052 §D6: bruto agregado para el snapshot diario del regimen
+     * nuevo. Suma STREAM_CHARGE (cliente paga por sesion) + TRIAL_EARNING
+     * (primer minuto trial absorbido por empresa). Devuelve el valor en
+     * EUR (positivo).
+     */
+    default BigDecimal sumGrossBillingForModelWindow(Long modelId,
+                                                      LocalDateTime windowStart,
+                                                      LocalDateTime windowEnd) {
+        BigDecimal streamCharge = sumStreamChargeGrossForModelWindow(modelId, windowStart, windowEnd);
+        BigDecimal trialEarning = sumTrialEarningsForModelWindow(modelId, windowStart, windowEnd);
+        return (streamCharge != null ? streamCharge : java.math.BigDecimal.ZERO)
+                .add(trialEarning != null ? trialEarning : java.math.BigDecimal.ZERO);
+    }
 
     /**
      * Historial de transacciones del cliente (2026-07-19, Fase 1 vista
