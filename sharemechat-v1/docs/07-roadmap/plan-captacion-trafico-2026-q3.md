@@ -8,6 +8,21 @@
 >
 > Próxima revisión obligatoria: 2026-09-30 (cierre de mes 3, junto con la revisión trimestral del tracking SEO).
 
+## Aviso 2026-07-24 — Palanca P3 (programa de afiliados) RETIRADA por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)
+
+El programa de afiliados propio (30% revshare) descrito en la palanca P3 de este plan queda **eliminado por completo**. El nuevo reparto escalonado 75-79% modelo introducido por ADR-052 §D11 sobre-incentiva a la modelo a traer clientes propios sin necesidad de programa adicional. Mantener afiliados junto al reparto nuevo diluye el mensaje comercial y añade complejidad estructural que en pre-launch no se justifica.
+
+**Consecuencias sobre este plan**:
+
+- La palanca P3 completa (setup técnico + operativo + horas semanales sostenidas + reclutamiento de afiliados) **queda cancelada**.
+- Las horas semanales liberadas de P3 (30-50 h de setup inicial + 4-6 h/semana sostenidas) se reasignan a **P4 (reclutamiento directo de modelos)**, que pasa a ser la palanca principal única en vez de compartir motor con P3.
+- El nuevo mensaje al reclutamiento de modelos (P4) es: **75% modelo desde el minuto 1, escalado a 79% al superar 6.500 €/mes, con rango de precio autoservicio hasta €9/min y Estatus Pro al superar 1.500 €/mes**. Detalle completo en [`../01-business/sistema-tiers-modelos.md`](../01-business/sistema-tiers-modelos.md).
+- La combinación óptima de la FASE 3 pasa de "3 palancas + 2 de soporte" (P1+P2+P3+P4+P5) a **"2 palancas + 2 de soporte"** (P1+P2+P4+P5). Total horas/semana: 15-32, con holgura frente a las 30-45 disponibles del operador.
+- Las secciones que hablan de "afiliados con cuenta creada", "afiliados con link generado", "reclutar afiliados", "tabla `affiliates`", "Post Affiliate Pro" y similares **quedan superseded**. Los umbrales de métricas y los hitos que dependían de esas cifras se recalculan implícitamente eliminando esa dimensión.
+- Este documento NO se reescribe completo. Las secciones P3-específicas se marcan como retiradas donde aparecen, pero el análisis de fondo (palancas P1/P2/P4/P5, restricciones, trigger de pivote a paid en mes 3, riesgos, hitos por mes) sigue siendo válido y aplicable.
+
+Revisión obligatoria del plan completo sigue prevista para **2026-09-30**. Se aprovechará esa revisión para reescribir estructuralmente si tras 2 meses de nueva propuesta el reclutamiento P4 muestra tracción o no.
+
 ---
 
 ## Hallazgo estructural que reescribe la premisa del plan
@@ -52,19 +67,14 @@ Cada palanca se cataloga con coste, tiempo del operador, curva de retorno, requi
 
 Sources: `xbiz.com/about`, `muckrack.com/media-outlet/xbiz`, `en.wikipedia.org/wiki/XBIZ`, `xbizmedia.com/contact-index.php`.
 
-### P3 — Programa de afiliados propio (revshare, no PPS)
+### P3 — Programa de afiliados propio (RETIRADO por ADR-052)
 
-| Campo | Valor |
-|---|---|
-| Descripción | Plataforma de afiliados propia con tracking de referrals + dashboard de comisiones. Permite que terceros (creators, webmasters, blogs adult-adjacent) traigan clientes a cambio de % de revenue de por vida. |
-| Coste | €0-50/mes. Implementación interna (operador es ingeniero) o usar Post Affiliate Pro (~50€/mes plan starter) si se prefiere no construir. CrakRevenue como red externa **NO es palanca para el operador**: es el aggregator donde se promocionan las plataformas establecidas (LiveJasmin, ImLive, Chaturbate, etc.); SharemeChat tendría que pagar por estar listado y eso implica volumen comprometido. |
-| Tiempo operador | 30-50 h de implementación inicial (1 sub-paquete técnico). Después: 2-3 h/semana en gestionar afiliados activos (validación, soporte, pagos). |
-| Curva de retorno | 2-4 meses desde despliegue hasta primer afiliado generando volumen. La curva depende del reclutamiento manual de afiliados, no del producto. |
-| Requisitos previos | (a) Decisión de tasa: el benchmark verificado es **30-40% revshare lifetime** (CrakRevenue paga 40.15% revshare en ImLive, 10.24% en LiveJasmin, 18% en MyFreeCams) (3-0). CooMeet paga 40% revshare CPS + 5% sub-affiliate (vote 2-1, caveat: dato puede tener 1-2 años). (b) LTV medido del cliente: hoy no existe (pre-launch). Sin LTV no se puede fijar PPS sin quemar margen — por eso revshare, no PPS. (c) Infraestructura técnica de tracking + pagos (Wise para payouts internacionales, mínimo $50). |
-| Ejemplos verificables | CrakRevenue aggrega 15+ programas cam major con 40+ advertisers (3-0). Tarifas publicadas (verificables en `crakrevenue.com/offers/cam/`): ImLive $175 PPS / 40.15% revshare lifetime; LiveJasmin $130 PPS + 10.24% revshare; Stripchat $168 PPS / 16.25% revshare; Jerkmate up to $20 PPL; MyFreeCams 18% revshare lifetime. |
-| Veredicto | **Go, en revshare puro 35-40% lifetime inicial.** No usar PPS hasta tener LTV medido (6-9 meses post-lanzamiento). |
+> ⚠️ PALANCA RETIRADA
+> Motivo: [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md). El reparto escalonado 75-79% modelo sobre-incentiva a la modelo a traer clientes propios sin programa adicional. Mantener afiliados junto al nuevo reparto diluye el mensaje comercial (30% revshare + 75-79% modelo supera el 100% del bruto empresa en algunos escenarios) y añade complejidad estructural que en pre-launch no se justifica.
+> Fecha retirada: 2026-07-24
+> Contenido histórico: ver [_deprecated/registro.md](../_deprecated/registro.md) para el fichero completo `affiliate-program.md` retirado.
 
-Sources: `crakrevenue.com/offers/cam/`, `crakrevenue.com/offers/cam/imlive-affiliate-program/`, `offervault.com/offer/...imlive-pps`, `affpaying.com/coomeet`.
+Las horas semanales previstas para P3 (30-50 h setup inicial + 4-6 h/semana sostenidas) se reasignan a **P4 (reclutamiento directo de modelos)** con el nuevo mensaje 75-79% + rango de precio autoservicio.
 
 ### P4 — Reclutamiento directo de modelos como vector de tráfico
 
@@ -180,9 +190,9 @@ Filtrado de las 13 palancas anteriores contra restricciones duras. Tabla compara
 | Palanca | C1 Prob tráfico 90d (0-10) | C2 Volumen 6m (visitas/mes) | C3 Curva aprendizaje | C4 h/sem | C5 Sinergia | C6 Riesgo | Total /60 | Go/No-go |
 |---|---:|---|---|---:|---|---|---:|---|
 | P1 SEO continuado | 2 | 200-800 | 1-2 sem (ya soltura) | 4-6 | Alta con P5/P2 | Bajo | 28 | **Go** (subordinado) |
-| P2 Trade PR XBIZ | 4 | 50-300 (B2B, no consumer) | 2-3 sem | 4-6 (1-2 posts/mes) | Alta con P3/P4 | Bajo | 34 | **Go** |
-| P3 Afiliados propio | 5 | 100-1000 si 5-10 afiliados activos | 1-2 meses (setup + reclutamiento) | 4-6 sostenido tras setup | Muy alta con P2/P4 | Medio | 36 | **Go** |
-| P4 Reclutamiento modelos | 6 (modelos atraen su audiencia) | 200-2000 (depende n modelos × audiencia/modelo) | 1-2 meses (validar canales) | 8-15 | Muy alta con P5 | Medio-alto (canales sin validar) | 38 | **Go (principal)** |
+| P2 Trade PR XBIZ | 4 | 50-300 (B2B, no consumer) | 2-3 sem | 4-6 (1-2 posts/mes) | Alta con P4 | Bajo | 34 | **Go** |
+| ~~P3 Afiliados propio~~ | — | — | — | — | — | — | — | **RETIRADA por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)** |
+| P4 Reclutamiento modelos | 6 (modelos atraen su audiencia) | 200-2000 (depende n modelos × audiencia/modelo) | 1-2 meses (validar canales) | 8-15 (subir a 15-25 tras absorber horas de P3) | Muy alta con P5 | Medio-alto (canales sin validar) | 38 | **Go (principal única)** |
 | P5 Comunidad propia | 1 | 50-500 | 1 sem | 3-5 | Alta con P4 | Bajo | 24 | **Go (complemento)** |
 | P6 r/CamGirlProblems | 0 (cero disclosure) | 0 directo | 1 sem | 1-2 | Baja | Bajo | 12 | **Mantener mínimo** |
 | P7 Quora answering | 3 | 50-300 | 1 sem | 2-4 | Media (sinergia con SEO) | Bajo | 24 | **Experimento 8 sem** |
@@ -202,20 +212,21 @@ Filtrado de las 13 palancas anteriores contra restricciones duras. Tabla compara
 
 ## FASE 3 — Plan operativo recomendado
 
-### A. Combinación óptima: 3 palancas + 2 de soporte
+### A. Combinación óptima: 2 palancas + 2 de soporte
+
+> **Cambio 2026-07-24**: la combinación previa incluía P3 (programa de afiliados propio) como palanca principal junto a P4 y P2. Tras la retirada de P3 por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md), P4 pasa a ser motor único y absorbe las horas liberadas.
 
 **Palancas principales (motor):**
 
-1. **P4 — Reclutamiento directo de modelos** (8-15 h/semana). Es la palanca con mayor potencial sistémico: modelos onboarded traen audiencia propia + sostienen matching + dan credibilidad.
-2. **P3 — Programa de afiliados propio** (30-50 h setup + 4-6 h/semana después). Multiplica el alcance del operador. Cada afiliado activo es un canal independiente que el operador no tiene que ejecutar.
-3. **P2 — Trade PR a XBIZ** (4-6 h/semana). Da credibilidad B2B + atrae afiliados y modelos (no consumers).
+1. **P4 — Reclutamiento directo de modelos** (15-25 h/semana; sube desde el rango 8-15 previo al absorber horas de P3). Es la palanca con mayor potencial sistémico: modelos onboarded traen audiencia propia + sostienen matching + dan credibilidad. Con el nuevo mensaje **75% modelo desde el minuto 1** el pitch es dramáticamente más competitivo vs sector (50-60% habitual).
+2. **P2 — Trade PR a XBIZ** (4-6 h/semana). Da credibilidad B2B + atrae modelos (ya no atrae afiliados porque no hay programa).
 
 **Palancas de soporte (no motores, pero suman):**
 
-4. **P1 — SEO continuado** (4-6 h/semana). Mantener cadencia. Asset defensivo + posicionamiento de marca.
-5. **P5 — Comunidad propia** (3-5 h/semana). Discord + r/SharemeChat para retención de modelos onboarded + clientes early.
+3. **P1 — SEO continuado** (4-6 h/semana). Mantener cadencia. Asset defensivo + posicionamiento de marca.
+4. **P5 — Comunidad propia** (3-5 h/semana). Discord + r/SharemeChat para retención de modelos onboarded + clientes early.
 
-**Total horas/semana:** 23-38 (sostenido tras setup). Cabe en las 30-45 disponibles.
+**Total horas/semana:** 26-42 (sostenido). Cabe en las 30-45 disponibles con menos holgura que la combinación previa (23-38), pero P4 concentrado es más apalancable que P4+P3 esparcidos.
 
 **Lo que se descarta o difiere:**
 
@@ -234,17 +245,19 @@ Filtrado de las 13 palancas anteriores contra restricciones duras. Tabla compara
 | Actividad | Tiempo | Output esperado |
 |---|---|---|
 | **P4-prep**: Mapear canales reales de captación de modelos | 6 h | Lista validada de 10-15 canales concretos (subs, Discord públicos, Telegrams, marketplaces tipo Modelhub, etc.) con política de cada uno respecto a operadores. **No usar las listas refutadas en el research**. Validar humanamente cada uno como se hizo en la investigación 2026-06-25. |
-| **P3-setup técnico**: Diseñar e implementar tracking de afiliados | 20-30 h | Sub-paquete técnico: tabla `affiliates` + tracking link (`?ref=xxx` + cookie 90 días) + dashboard básico para el afiliado + cálculo de revshare mensual. Stack: lo que ya hay. |
-| **P3-setup operativo**: Definir tasa, payout policy, terms | 4-6 h | Documento con: 35% revshare lifetime inicial, payout mensual via Wise a partir de $50 USD, terms vs fraud (refunds restados, chargebacks deducidos). Decisión registrada. |
-| **P2-prep**: Identificar contactos editoriales XBIZ + redactar 1er pitch | 6-8 h | Hoja con 3-5 nombres de editores XBIZ (de Muckrack + LinkedIn) + draft de press release "SharemeChat — Adult 1-to-1 Verified Platform with Real-Time AI Moderation". |
+| ~~**P3-setup técnico**~~ | ~~20-30 h~~ | **RETIRADO por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**. Horas liberadas → P4-outreach adicional. |
+| ~~**P3-setup operativo**~~ | ~~4-6 h~~ | **RETIRADO por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**. Horas liberadas → P4-outreach adicional. |
+| **P4-mensaje**: preparar pitch de outreach con nuevo reparto 75-79% | 3-4 h | Draft ES/EN del mensaje de outreach a modelos con propuesta 75% modelo desde min 1 + rango de precio autoservicio + Estatus Pro. Reemplaza el pitch previo basado en programa de afiliados. |
+| **P2-prep**: Identificar contactos editoriales XBIZ + redactar 1er pitch | 6-8 h | Hoja con 3-5 nombres de editores XBIZ (de Muckrack + LinkedIn) + draft de press release "SharemeChat — Adult 1-to-1 Verified Platform with 75-79% Revenue Share for Verified Models". |
 | **P5-setup**: Abrir Discord oficial + reactivar r/SharemeChat | 3-4 h | Discord con canales mínimos (general, models-onboarding-help, clients-feedback, devlog) + reglas. r/SharemeChat con 3-4 posts iniciales (descripción producto + screenshots si los hay). |
 | **Lectura/aprendizaje** del sector | 4-6 h | Leer: 5 últimos posts en XBIZ.com sobre lanzamientos cam recientes para calibrar tono. Documentación CrakRevenue (`crakrevenue.com/offers/cam/`) para entender economics de afiliados real. Cierre del sub-paquete Affiliates con ADR. |
 
 **Total tiempo semanas 1-2:** 60-80 h (cabe en 2 semanas × 30-45 h con holgura).
 
 **Métricas al cierre de semana 2:**
-- Sub-paquete técnico de afiliados desplegado en TEST (no PROD todavía).
-- 1 press release listo para enviar.
+- ~~Sub-paquete técnico de afiliados desplegado en TEST (no PROD todavía)~~ — **RETIRADO por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**.
+- Pitch de outreach P4 con nuevo mensaje 75-79% preparado en ES/EN.
+- 1 press release listo para enviar (adaptado al nuevo mensaje).
 - 10-15 canales de modelos validados con política.
 - Discord + r/SharemeChat operativos.
 
@@ -254,8 +267,8 @@ Filtrado de las 13 palancas anteriores contra restricciones duras. Tabla compara
 
 | Palanca | Actividad sostenida | Ritmo | Métrica de la palanca |
 |---|---|---|---|
-| **P4** | Outreach a modelos en los 10-15 canales validados. Mensajes manuales personalizados (no copy-paste). | 10-15 outreach/semana | Modelos onboarded con KYC superado al final de semana 6. |
-| **P3** | Reclutar primeros 5-10 afiliados manualmente. Email directo a webmasters identificables vía XBIZ + dueños de blogs sex-tech adyacentes. | 5-10 outreach/semana | Afiliados con cuenta creada al final de semana 6. |
+| **P4** | Outreach a modelos en los 10-15 canales validados. Mensajes manuales personalizados (no copy-paste) con nuevo mensaje 75-79% + rango de precio autoservicio. | 20-30 outreach/semana (subido desde 10-15 al absorber horas de P3) | Modelos onboarded con KYC superado al final de semana 6. |
+| ~~**P3**~~ | ~~Reclutar primeros 5-10 afiliados~~ | ~~5-10 outreach/semana~~ | **RETIRADO por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**. Esfuerzo redirigido a P4. |
 | **P2** | Enviar press release 1 (semana 3). Si hay pickup en semanas 4-5, preparar press release 2 (semana 6) sobre métrica concreta (p.ej. "primeras 10 modelos verificadas"). | 1 PR/mes | Menciones XBIZ + replies de editor. |
 | **P1** | Cadencia editorial 1 artículo/semana. Resolver bug crítico de internal linking del pre-mortem T2 al inicio de la fase. | 1/semana | Artículos indexados en GSC. |
 | **P5** | 3 posts/semana en Discord + 1 post/semana en r/SharemeChat. | 4 posts/semana | Miembros únicos activos. |
@@ -264,8 +277,8 @@ Filtrado de las 13 palancas anteriores contra restricciones duras. Tabla compara
 **Total tiempo semanas 3-6:** 25-38 h/semana sostenido.
 
 **Métricas al cierre de semana 6:**
-- P4: ≥10 modelos verificadas con `verification_status=APPROVED` y al menos 5 con login activo.
-- P3: ≥3 afiliados con cuenta creada, ≥1 con primer link de tracking generado.
+- P4: ≥15 modelos verificadas con `verification_status=APPROVED` y al menos 8 con login activo (subido desde ≥10/5 al absorber esfuerzo de P3 retirada).
+- ~~P3: ≥3 afiliados con cuenta creada, ≥1 con primer link~~ — **RETIRADO por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**.
 - P2: 1 mención editorial en XBIZ o 1 reply de editor pidiendo más info.
 - P1: 4 artículos publicados en el período, sitemap actualizado, al menos 50% indexados en GSC.
 - P5: Discord con ≥20 miembros únicos, r/SharemeChat con ≥10 miembros.
@@ -279,8 +292,8 @@ Decisión por palanca al inicio de semana 7:
 
 | Palanca | Criterio escalar | Criterio abandonar | Pivote alternativo |
 |---|---|---|---|
-| **P4** | ≥10 modelos verificadas en semanas 3-6 → escalar a 20-30 modelos en semanas 7-12 | <5 modelos verificadas en semanas 3-6 → reevaluar canales y outreach script | Probar partnership directo con 1-2 agencies cam latam (referral fee fijo en lugar de outreach manual) |
-| **P3** | ≥3 afiliados con cuenta + ≥1 link generado → escalar reclutamiento a 10-15 afiliados activos | <2 afiliados creados → diagnosticar fricción del proceso (terms? tasa? UX dashboard?) | Reducir esfuerzo en P3 y reinvertir horas en P4 |
+| **P4** | ≥15 modelos verificadas en semanas 3-6 → escalar a 30-40 modelos en semanas 7-12 | <8 modelos verificadas en semanas 3-6 → reevaluar canales, outreach script y ajuste del pitch 75-79% | Probar partnership directo con 1-2 agencies cam latam (acuerdo bilateral B2B fuera del régimen estándar) |
+| ~~**P3**~~ | ~~≥3 afiliados con cuenta + ≥1 link generado~~ | ~~<2 afiliados creados~~ | **RETIRADO por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**. Esfuerzo redirigido a P4. |
 | **P2** | ≥1 pickup XBIZ → preparar serie editorial (3 PR escalonadas mes 7-9) | 0 reply de editor en 6 semanas → reducir frecuencia PR a 1 cada 2 meses | Pivote a YNOT o AVN si XBIZ no responde |
 | **P1** | Impresiones GSC creciendo 20-30% mes a mes → mantener cadencia | Impresiones planas → revisar bug internal linking + reescribir 2-3 keywords objetivo | Reducir cadencia a 1/quincena si no compone |
 | **P7** | ≥5 clicks al sitio desde Quora en 8 semanas → mantener | <2 clicks → abandonar | n/a |
@@ -299,8 +312,10 @@ Revisión bisemanal el domingo, junto con la revisión semanal P7 del operador.
 
 | Métrica | Fuente | Umbral éxito (escalar) | Umbral fracaso (revisar palanca) |
 |---|---|---|---|
-| Modelos verificadas con login últimos 7d | BD: `users WHERE role=MODEL AND verification_status=APPROVED AND last_login > NOW()-7d` | Crecimiento +2/quincena sostenido | 0 nuevas en 2 quincenas seguidas |
-| Afiliados con cuenta + tracking link generado | BD: tabla `affiliates` | +1/quincena sostenido | 0 nuevas en 2 quincenas seguidas |
+| Modelos verificadas con login últimos 7d | BD: `users WHERE role=MODEL AND verification_status=APPROVED AND last_login > NOW()-7d` | Crecimiento +3/quincena sostenido (subido desde +2 al concentrar esfuerzo P3→P4) | 0 nuevas en 2 quincenas seguidas |
+| ~~Afiliados con cuenta + tracking link generado~~ | ~~BD: tabla `affiliates`~~ | ~~+1/quincena sostenido~~ | **RETIRADO por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)** |
+| Modelos con tarifa >€1/min elegida (T1+) | BD: `users WHERE role=MODEL AND chosen_rate_eur_per_min > 1.00` | +1/quincena sostenido | 0 en 4 quincenas (nadie escala más allá de T0) |
+| Modelos con Estatus Pro activo (>1.500 €/mes rolling 30d) | BD: `model_tier_daily_snapshots.pro_status_active=true` en snapshot más reciente | ≥1 al mes 3, ≥3 al mes 6 | 0 al mes 6 |
 | Sesiones GA4 desde tráfico **no-Direct** | GA4 Acquisition (excluir Direct) | +20% bisemanal | Planas o descendentes 4 quincenas seguidas |
 | Impresiones GSC | GSC | +15% bisemanal | Planas 4 quincenas seguidas |
 | Menciones XBIZ (búsqueda manual "sharemechat" en xbiz.com) | xbiz.com search | ≥1 nueva mes 2 / ≥3 mes 3 | 0 al mes 3 |
@@ -313,43 +328,46 @@ Revisión bisemanal el domingo, junto con la revisión semanal P7 del operador.
 
 **Lista honesta de qué puede salir mal y dónde están los puntos ciegos.**
 
-1. **El reclutamiento de modelos puede ser más lento de lo previsto.** El research adversarial refutó las listas obvias de canales (subreddits OF, X DMs). Significa que el operador tendrá que descubrir empíricamente qué canales funcionan. Es trabajo de validación con tasa de éxito incierta. **Asunción frágil**: que existen canales adult-friendly accesibles al operador que aún no se han identificado. Si no existen, P4 se queda sin combustible.
+1. **El reclutamiento de modelos puede ser más lento de lo previsto.** El research adversarial refutó las listas obvias de canales (subreddits OF, X DMs). Significa que el operador tendrá que descubrir empíricamente qué canales funcionan. Es trabajo de validación con tasa de éxito incierta. **Asunción frágil**: que existen canales adult-friendly accesibles al operador que aún no se han identificado. Si no existen, P4 se queda sin combustible. **Riesgo agravado tras retirada de P3 por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)**: al concentrar todo el motor en P4, un fallo estructural aquí ya no queda amortiguado por afiliados que traigan clientes por caminos alternativos. La mitigación es la calidad del pitch (75-79% modelo es mensaje muy competitivo vs sector).
 
-2. **El programa de afiliados puede no atraer afiliados sin LTV demostrado.** Los afiliados experimentados del sector eligen plataformas con métricas conocidas. SharemeChat pre-launch no tiene track record. **Asunción frágil**: que afiliados pequeños / nuevos / amigos del sector aceptarán probar SharemeChat por la tasa competitiva (35-40% revshare) a pesar de no tener métricas. Realidad: probablemente los primeros 5-10 afiliados serán contactos personales del operador + creators muy nichos, no afiliados profesionales.
+2. ~~**El programa de afiliados puede no atraer afiliados sin LTV demostrado.**~~ **RIESGO ELIMINADO** por retirada de P3 (2026-07-24).
 
 3. **XBIZ puede no responder a un operador desconocido.** El research confirmó que XBIZ no publica submission guidelines. Sin contacto editorial cultivado, el primer PR puede ir al spam. **Asunción frágil**: que un email frío bien redactado a un editor de Muckrack tendrá respuesta. Realidad: tasa de respuesta de cold email a editorial press está típicamente en 5-15%.
 
-4. **El operador puede saturarse con 25-30 h/semana sostenidas durante 12 semanas.** La estimación de "30-45 h/semana disponibles" es teórica; en la práctica hay enfermedades, urgencias del trabajo Ayesa, agotamiento, vida personal. **Asunción frágil**: cadencia operativa sostenida 12 semanas sin descansos. Realidad: planificar 1 semana de buffer cada 4-5 es necesario.
+4. **El operador puede saturarse con 25-30 h/semana sostenidas durante 12 semanas.** La estimación de "30-45 h/semana disponibles" es teórica; en la práctica hay enfermedades, urgencias del trabajo Ayesa, agotamiento, vida personal. **Asunción frágil**: cadencia operativa sostenida 12 semanas sin descansos. Realidad: planificar 1 semana de buffer cada 4-5 es necesario. Tras absorber horas de P3, P4 exige 15-25 h/semana concentradas: más carga cognitiva por palanca pero menos context-switching.
 
-5. **Las 3 palancas están correlacionadas en su éxito.** Si XBIZ no funciona, los afiliados profesionales no descubren la plataforma. Si los afiliados no se atraen, el reclutamiento de modelos no escala más allá del outreach manual del operador. Si las modelos no atraen su propia audiencia, no hay clientes. **El sistema es frágil porque cada palanca depende de la siguiente.** Punto ciego: no hay una palanca completamente independiente que dé resultado garantizado aunque las otras fallen.
+5. **Las palancas están correlacionadas en su éxito.** Si XBIZ no funciona, los canales de descubrimiento se limitan al outreach manual del operador. Si las modelos no atraen su propia audiencia, no hay clientes. **El sistema es más frágil aún tras la retirada de P3**: sin palanca de "cada afiliado activo es un canal independiente", el operador es cuello de botella único de la parte de captación. Punto ciego: no hay una palanca completamente independiente que dé resultado garantizado aunque las otras fallen.
 
 6. **El bug crítico de internal linking del pre-mortem T2 sigue sin resolver al inicio del plan.** Si no se cierra en semanas 1-3, el SEO sigue siendo invisible y la palanca P1 no compone. Riesgo de que se posponga "porque no es el frente activo".
 
-7. **La economía del programa de afiliados puede romperse sin LTV.** Si se promete 35-40% revshare lifetime y el LTV real es bajo, el operador puede acabar pagando comisiones que excedan el margen. **Mitigación**: limitar afiliados activos a 10-20 primeros meses; medir LTV a 3 meses post-lanzamiento; ajustar tasa para nuevos afiliados con clausula de revisión documentada en terms.
+7. ~~**La economía del programa de afiliados puede romperse sin LTV.**~~ **RIESGO ELIMINADO** por retirada de P3 (2026-07-24). Sustitución: **el margen unitario empresa es delgado en tarjeta (~8-12% neto según tramo)** tras aplicar el nuevo reparto 75-79%. Sensible a chargebacks. El negocio depende de mix cripto favorable + volumen para renegociar fees PSP. Detalle en [`../01-business/unit-economics.md`](../01-business/unit-economics.md).
 
 ### E. Hitos esperables si el plan funciona
 
 Realistas, no optimistas. Si la realidad es peor, releer este documento y la sección D.
 
 **Mes 1 (julio 2026):**
-- Setup técnico afiliados completado.
-- 5-10 modelos en pipeline KYC (no necesariamente APPROVED todavía).
-- 1 PR enviado a XBIZ. Pickup esperado: 0-1.
+- ~~Setup técnico afiliados completado~~ — retirado por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24). Horas redirigidas a P4-outreach adicional.
+- 8-15 modelos en pipeline KYC (subido desde 5-10 al concentrar esfuerzo P3→P4).
+- 1 PR enviado a XBIZ con nuevo mensaje 75-79%. Pickup esperado: 0-1.
 - Discord operativo con 10-15 miembros (incluyendo operador + 1-2 amigos invitados).
 - 4 artículos blog publicados, sitemap creciendo.
-- **Métricas críticas**: ≥3 modelos verificadas, ≥1 afiliado con cuenta, 0-2 menciones XBIZ.
+- **Métricas críticas**: ≥5 modelos verificadas (subido desde ≥3), 0-2 menciones XBIZ.
 
 **Mes 3 (septiembre 2026) — umbral "coming soon" → lanzamiento privado:**
-- 10-20 modelos verificadas activas (criterio: login en últimos 7d).
-- 3-5 afiliados con cuenta, 1-2 con link generado.
+- 15-25 modelos verificadas activas (subido desde 10-20; criterio: login en últimos 7d).
+- ~~3-5 afiliados con cuenta, 1-2 con link generado~~ — retirado por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md).
+- ≥1 modelo con tarifa elegida >€1/min (T1+): indica que el rango autoservicio se está usando.
 - 1-3 menciones XBIZ acumuladas.
 - 8-12 artículos blog publicados, GSC con impresiones crecientes.
-- 5-15 clientes registrados con email verificado (mayoría amigos + traídos por afiliados early).
-- **Decisión de fase**: si se cumplen ≥10 modelos + ≥5 clientes verificados, abrir a "lanzamiento privado limitado" (Fase 4 del roadmap go-live: PROD privado funcional). Si no, mantener PRELAUNCH.
+- 5-15 clientes registrados con email verificado (mayoría amigos + traídos por audiencia propia de modelos onboarded).
+- **Decisión de fase**: si se cumplen ≥15 modelos + ≥5 clientes verificados, abrir a "lanzamiento privado limitado" (Fase 4 del roadmap go-live: PROD privado funcional). Si no, mantener PRELAUNCH.
 
 **Mes 6 (diciembre 2026) — tracción medible:**
-- 30-50 modelos verificadas activas.
-- 8-15 afiliados, 3-5 generando referrals con actividad.
+- 40-60 modelos verificadas activas (subido desde 30-50).
+- ~~8-15 afiliados, 3-5 generando referrals con actividad~~ — retirado por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md).
+- ≥3 modelos con Estatus Pro activo (>1.500 €/mes facturación bruta rolling 30d).
+- ≥5 modelos con tarifa elegida >€1/min (dispersión en T1+, señal de que el rango autoservicio agrega valor).
 - Tráfico orgánico no-Direct: 500-2000 sesiones/mes.
 - 5-10 menciones XBIZ acumuladas + posiblemente 1 en YNOT o AVN.
 - 20-50 clientes activos (compraron al menos 1 pack).
@@ -373,16 +391,18 @@ Listo como registro, no como acción inmediata. Si el plan funciona y hay revenu
 
 - **€200-500/mes en TrafficJunky o ExoClick** con landings dedicadas a cluster Omegle / "videochat verificado" / segmentos US tier-1.
 - **Sponsored post en XBIZ Newsletter** ($400-1500/mes según fuente). Tras tener pickup editorial orgánico que justifique el sponsored.
-- **Listing en CrakRevenue** como advertiser para acelerar reclutamiento de afiliados profesionales. Requiere comprometer presupuesto mensual fijo.
+- ~~**Listing en CrakRevenue** como advertiser para acelerar reclutamiento de afiliados profesionales~~ — **RETIRADO por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**. Sin programa de afiliados propio, listar en CrakRevenue como advertiser deja de tener sentido.
 - **Asesoría legal externa adult-experienced** para cerrar las 5 políticas CardBilling / Verotel + 2257 + Records Custodian (€1500-3000 one-shot). Crítico para go-live público según pre-mortem B1+B2.
+- **Asesoría legal para T&C y contrato de modelo v5** ([ADR-052 §D7](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)) con política de descuentos por chargebacks/refunds, umbral suspensión ~5%, derecho a disputa. Bloqueante para exponer D9 (descuentos automáticos) sin exposición legal.
 
 ### Próxima revisión obligatoria
 
 **2026-09-30** (cierre de mes 3). Revisar este plan contra realidad observada:
-- ¿Cuántas modelos verificadas? Comparar con 10-20 esperadas.
-- ¿Cuántos afiliados? Comparar con 3-5 esperados.
+- ¿Cuántas modelos verificadas? Comparar con **15-25 esperadas** (subido tras retirada P3).
+- ~~¿Cuántos afiliados?~~ — retirado por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md).
 - ¿Cuántos clientes verificados? Comparar con 5-15 esperados.
 - ¿Pickup XBIZ? Comparar con 1-3 esperados.
+- ¿Cuántas modelos con tarifa >€1/min? Señal de que el rango autoservicio se está usando.
 - **Decisión binaria**: avanzar a Fase 4 (PROD privado funcional) si se cumplen umbrales, o disparar trigger de pivote estratégico si no.
 
 ---

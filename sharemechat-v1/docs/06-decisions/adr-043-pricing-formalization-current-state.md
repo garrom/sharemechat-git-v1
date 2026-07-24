@@ -4,6 +4,8 @@
 
 Aceptada.
 
+**Parcialmente superseded por [ADR-052](adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**: §1 (tarifa cliente `€1/min` plana) y §4 (sistema de 3 tiers `5-15 / 7-20 / 9-40` en `model_earning_tiers`) quedan superseded. §2 (umbral corte `€1,00`), §3 (packs `10 / 20 / 40`) y §5 (reparto de gifts 90/10) se mantienen vigentes.
+
 Decisión **declarativa**: no introduce cambios de código, schema ni configuración. Cierra formalmente el estado real vigente del pricing en SharemeChat tras un ciclo previo de auditoría que confirmó, mediante cuatro verificaciones independientes (grep del repo, `git log --all -S`, `INFORMATION_SCHEMA.TABLES` en BD TEST, listado del árbol de ficheros), que artefactos referenciados en sesiones anteriores como `platform_pricing`, `PricingBrackets`, `PricingHistory`, `AdminPricingController`, `AdminPricingService`, `AdminPricingPanel.jsx` y `AdminBillingPanel.jsx` **nunca existieron en el repo**. Ver entrada de bitácora del 2026-07-02 en `docs/project-log.md` para la trazabilidad del hilo de esa alucinación y su cierre.
 
 Esta ADR complementa (no sustituye) las decisiones previas de la línea económica: ADR-011 (catálogo `10 / 20 / 40` y umbral mínimo de recarga) y ADR-012 (BFPM / Bonus Financiado por la Plataforma en Minutos).

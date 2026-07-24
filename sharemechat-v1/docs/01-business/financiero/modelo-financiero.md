@@ -6,6 +6,29 @@
 >
 > **Decisión tomada**: Alain asume el escenario pesimista como referencia operativa y financiera. El plan sigue adelante con esta visibilidad.
 
+## ⚠️ Aviso 2026-07-24 — Modelo DESACTUALIZADO por ADR-052; recalibración pendiente
+
+Este modelo financiero y su xlsx companion (`modelo-financiero.xlsx`) están **desalineados con la línea económica vigente** tras la aprobación de [ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) el 2026-07-24. Los supuestos que este documento usa (reparto 15-40% modelo según tier `5-15/7-20/9-40`, tarifa plana €1/min al cliente, CardBilling / Verotel al 10% + €0,30/TX) quedaron superseded en tres dimensiones simultáneamente:
+
+- **Reparto ahora 75-79% modelo escalonado por facturación bruta rolling 30d** (T0: 75/25; T1: 77/23; T2: 78/22; T3: 79/21). Ver [ADR-052 §D1](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md).
+- **Precio por minuto ya no es plano**: rango autoservicio 1-9 €/min según tramo. La modelo T3 puede facturar €45 en 5 min donde el modelo previo calculaba €5. El pack medio efectivo se dispara para modelos de tramos altos.
+- **Fees PSP**: NOWPayments ~1% cripto (contrato cerrado, ADR-051), tarjeta ~10-15% aproximación conservadora hasta que el PSP tarjeta cierre contrato con nuevos candidatos post-Segpay.
+
+**Impacto previsible en la proyección**:
+
+- El **pago a modelo por transacción sube significativamente**: en el modelo previo con tier 5-15 la modelo cobraba €1,40 sobre un pack de €10 (14% del pack). Con el nuevo régimen y modelo T0 a €1/min plano, la modelo cobra 75% × €10 = €7,50 (75% del pack). El margen bruto empresa por transacción baja de ~86% a ~25%.
+- El **horizonte de break-even se aleja significativamente** respecto al modelo previo (margen unitario delgado); [ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) asume esta consecuencia como coste del reclutamiento agresivo.
+- La **sensibilidad principal del negocio se traslada** del %reparto (que queda fijo estructuralmente) al **mix cripto/tarjeta** y al **volumen** (para renegociar fees PSP a la baja).
+
+**Recalibración pendiente** (registrada como deuda #D-25 en [`../../04-operations/known-debt.md`](../../04-operations/known-debt.md)):
+
+- Este `.md` puede pre-cablearse con las nuevas fórmulas (reparto por tramo × precio por modelo × fees cripto/tarjeta) manteniendo los escenarios pesimista/normal con la nueva estructura.
+- El `.xlsx` es binario y requiere manipulación manual del operador con los datos actualizados; queda diferido a una pasada del operador cuando quiera cerrar la proyección revisada.
+
+**Uso del documento mientras la recalibración esté pendiente**: NO usar como base para decisiones estratégicas (fase de lanzamiento, activación de paid traffic, revisión mensual del tracking) hasta que el modelo se recalibre. Las cifras de horizonte break-even, coste personal y pack medio siguen siendo válidas como estimación conservadora del caso previo, no del caso actual. El caso actual es probablemente **peor en margen unitario** y **más dependiente del volumen** de lo que este documento describe.
+
+Referencia comercial vigente para decisiones intermedias: [`../unit-economics.md`](../unit-economics.md) (recalibrado por ADR-052 con márgenes netos por método de pago).
+
 ---
 
 ## 1. Resumen ejecutivo

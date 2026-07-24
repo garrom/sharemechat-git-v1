@@ -1,76 +1,107 @@
-# Sistema de tiers y economía de modelos — SharemeChat
+# Sistema de tramos y economía de modelos — SharemeChat
 
-> **Documento operativo.** Explica el sistema de retribución de modelos verificadas: cómo se calcula la tarifa por minuto, cómo se sube/baja de tier, cómo funciona el primer minuto gratis para el cliente, y las implicaciones económicas para la plataforma.
+> **Documento operativo.** Explica el sistema de retribución de modelos verificadas: reparto escalonado por facturación, rango de precio autoservicio, Estatus Pro y primer minuto trial.
 >
-> Versión 1.0 — 17 jun 2026
+> Versión 2.0 — 2026-07-24 (reescritura completa por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md); versión 1.0 del 17 jun 2026 con 3 tiers `5-15 / 7-20 / 9-40` archivada en git history).
 >
-> **Lectura clave**: el primer minuto de cada sesión es **gratis para el cliente** (lo paga la plataforma como demo), con un tope diario de minutos gratis por cliente. La modelo cobra el primer minuto a tarifa reducida; los minutos siguientes los paga el cliente a la tarifa normal del pack.
+> **Lectura clave**: la modelo cobra **75-79% del bruto** que paga el cliente, con progresión por facturación. Puede **elegir su tarifa por minuto** dentro del rango que su tramo le permite. El primer minuto de sesión trial es **para atraer al cliente**: se paga a la modelo a tarifa reducida (€0,07/min) y modelos con Estatus Pro pueden desactivarlo.
 
 ---
 
 ## 1. Resumen del sistema
 
-SharemeChat retribuye a las modelos verificadas mediante un **sistema de tiers escalonado**, donde la tarifa por minuto sube según la actividad reciente de cada modelo. Hay **3 tiers**, cada uno con dos tarifas internas: una para el primer minuto (más baja) y otra para los minutos siguientes (más alta). Los tiers se recalculan **una vez al día** mediante un snapshot que mira los minutos facturados en los **últimos 30 días** (ventana móvil).
+SharemeChat retribuye a las modelos verificadas mediante **cuatro tramos** determinados por la facturación bruta acumulada rolling 30 días. Cada tramo define dos cosas independientes:
 
-A nivel cliente, **el primer minuto de cada sesión es gratis** hasta un tope diario por cliente. La plataforma asume el coste de ese primer minuto pagándoselo a la modelo, para que el cliente pueda probar la conversación antes de comprometerse. A partir del segundo minuto el cliente paga la tarifa normal del pack contratado.
+- El **% de reparto** que la modelo se lleva del bruto que paga el cliente (75-79%).
+- El **rango de precio por minuto** dentro del que la modelo puede elegir su tarifa (1 €/min fijo en T0; 1-9 €/min en T3).
 
----
+Los tramos se recalculan **una vez al día** mediante un snapshot que mira la facturación bruta acumulada de los **últimos 30 días** (ventana móvil). El sistema es simétrico: al subir de tramo se desbloquea más margen de precio y mejora el %reparto; al bajar por debajo del umbral, se pierde el tramo en el siguiente snapshot.
 
-## 2. Los 3 tiers — tabla de referencia
-
-| Tier | Min. facturados (ventana 30d) | Tarifa 1er minuto (modelo gana) | Tarifa minutos siguientes (modelo gana) |
-|---|---|---|---|
-| **5-15** | 0 (tier inicial) | €0.05/min | €0.15/min |
-| **7-20** | ≥ 600 | €0.07/min | €0.20/min |
-| **9-40** | ≥ 1.200 | €0.09/min | €0.40/min |
-
-**Lectura del nombre del tier**: los dos números del nombre indican las dos tarifas en céntimos. Ejemplo: tier "9-40" significa "9 céntimos el primer minuto, 40 céntimos cada minuto siguiente".
+Adicionalmente, la modelo puede activar **Estatus Pro** al superar 1.500 €/mes: una feature opcional que le permite decidir si acepta clientes trial en su tarjeta o no.
 
 ---
 
-## 3. Mecánica de progresión entre tiers
+## 2. Los 4 tramos — tabla de referencia
 
-### Cómo se sube de tier
+| Tramo | Facturación bruta acumulada (rolling 30d) | % modelo | % empresa (bruto) | Rango precio / min |
+|---|---|---:|---:|---|
+| **T0** (entrada) | 0 – 3.500 € | **75%** | 25% | **1 €/min fijo** |
+| **T1** | > 3.500 € | **77%** | 23% | 1 – 3 €/min |
+| **T2** | > 5.000 € | **78%** | 22% | 1 – 6 €/min |
+| **T3** | > 6.500 € | **79%** | 21% | 1 – 9 €/min |
 
-1. **Toda modelo nueva empieza en el tier 5-15**, con 0 minutos facturados.
-2. Cuando los **minutos facturados en los últimos 30 días** superan el umbral siguiente, la modelo sube de tier al ejecutarse el siguiente snapshot diario:
-   - Al superar **600 min** → sube al tier **7-20**.
-   - Al superar **1.200 min** → sube al tier **9-40**.
-3. **El paso no es inmediato durante la sesión**: el sistema ejecuta un snapshot diario que recalcula el tier de cada modelo en base a su acumulado de los últimos 30 días.
+- **Umbral T3 es el más alto configurado hoy**. El techo de precio (€9/min) es una property configurable (`billing.pricing.rate-max-eur-per-min=9.00`); ampliaciones futuras a €15/min o superiores no requieren migration, solo cambio de property + fila de `model_pricing_tiers` para el rango.
+- **Los umbrales de reparto y de precio comparten los mismos escalones** (€3.500, €5.000, €6.500): cada desbloqueo de precio viene acompañado de mejora de reparto. Un solo gráfico comunica ambas dimensiones.
 
-### Cómo se baja de tier
+---
 
-El sistema es **simétrico**. La ventana de 30 días es **móvil**: cada día que pasa, los minutos facturados hace más de 30 días "salen" de la ventana de cálculo. Si la modelo deja de trabajar y su acumulado en los últimos 30 días cae por debajo del umbral del tier actual, baja de tier en el siguiente snapshot diario.
+## 3. Mecánica de progresión entre tramos
+
+### Cómo se sube de tramo
+
+1. **Toda modelo nueva empieza en T0**, con 0 € de facturación bruta acumulada.
+2. Cuando la **facturación bruta acumulada rolling 30d** supera el umbral siguiente, la modelo pasa al tramo superior en el siguiente snapshot diario:
+   - Al superar **3.500 €** → sube a **T1** (77% + rango 1-3 €/min).
+   - Al superar **5.000 €** → sube a **T2** (78% + rango 1-6 €/min).
+   - Al superar **6.500 €** → sube a **T3** (79% + rango 1-9 €/min).
+3. **El paso no es inmediato durante la sesión**: el sistema ejecuta un snapshot diario que recalcula el tramo de cada modelo. El resultado del snapshot es la fila del día en `model_tier_daily_snapshots`.
+
+### Cómo se baja de tramo
+
+El sistema es **simétrico**. La ventana de 30 días es **móvil**: cada día que pasa, la facturación de hace más de 30 días "sale" de la ventana de cálculo. Si la modelo deja de trabajar y su acumulado en los últimos 30 días cae por debajo del umbral del tramo actual, baja al siguiente snapshot diario.
+
+Al bajar de tramo, si la tarifa elegida por la modelo excede el máximo del tramo destino, se **recorta automáticamente** al máximo del tramo destino. Ejemplo: modelo en T3 con tarifa €7/min baja a T1 → su tarifa se ajusta a €3/min (el máximo permitido en T1). Sin bajada de tramo, la modelo mantiene su tarifa elegida indefinidamente.
 
 ### Implicación
 
-El tier **se mantiene trabajando**, no se gana de forma permanente. Esto crea un incentivo continuo de actividad para las modelos que quieren conservar tarifas altas.
+El tramo **se mantiene trabajando**, no se gana de forma permanente. Esto crea un incentivo continuo de actividad para las modelos que quieren conservar %reparto alto y capacidad de precio premium.
 
 ---
 
-## 4. Estructura de doble tarifa dentro de cada tier
+## 4. Rango de precio autoservicio
 
-Dentro de cada tier, **el primer minuto de la sesión cobra menos que los siguientes**. Razones:
+Dentro de cada tramo, la modelo **elige libremente su tarifa por minuto** dentro del rango permitido. La elección se persiste en `users.chosen_rate_eur_per_min` vía endpoint `PUT /api/models/me/pricing`. El cambio es **efectivo inmediatamente** (el cliente que inicia sesión después del cambio ve el precio nuevo, sin diferimiento al snapshot).
 
-1. **El primer minuto es gratis para el cliente** (ver §5). La plataforma asume ese coste y paga a la modelo una tarifa reducida.
-2. **Incentivo a sesiones largas**: si el cliente entra 30 segundos y se va, la modelo gana muy poco. Si el cliente se queda, la modelo cobra el primer minuto al tarifa baja + el resto a tarifa alta. Cuanto más larga la sesión, mayor el ingreso medio por minuto para la modelo.
-3. **Filtro implícito de demanda**: el coste del primer minuto incentiva a la plataforma a no ofrecer demos infinitas, y a la modelo a captar la atención del cliente desde el primer momento.
+### Comunicación al cliente
+
+Cada tarjeta de modelo en la home y en la vista de perfil (`/m/:slug`) muestra **claramente el precio por minuto** que ha elegido la modelo. Sin precio visible, el cliente entra a sesión sin saber el ritmo de consumo, lo que genera fricción de conversión y disputas.
+
+### Interacción con packs de recarga
+
+Los packs vigentes (10 / 20 / 40 €) están calibrados para tarifas cercanas a €1/min (T0). Una modelo T3 cobrando €9/min consume el pack de 10 € en poco más de un minuto: hay fricción de conversión con el catálogo actual. **El rediseño de packs premium queda como frente separado** (deuda declarada, ver [`../04-operations/known-debt.md`](../04-operations/known-debt.md)); no forma parte del scope inmediato.
 
 ---
 
-## 5. Primer minuto gratis para el cliente
+## 5. Estatus Pro: control opcional del trial
 
-### Cómo funciona
+Feature única desacoplada de %reparto y de rango de precio. Se activa **al superar 1.500 € de facturación bruta acumulada rolling 30d** (umbral configurable via `billing.pro-status.min-billed-gross-eur-30d`).
 
-- El cliente registrado **NO paga el primer minuto** de cada sesión.
-- Es la **plataforma quien paga** ese primer minuto a la modelo, a la tarifa correspondiente al tier de la modelo (€0.05 / €0.07 / €0.09 según tier).
-- A partir del **segundo minuto**, el cliente paga la tarifa normal según el pack contratado (~€1/min en el pack de 10€/10min).
+Su valor operativo es un solo toggle: **la modelo con Estatus Pro decide en su panel si acepta clientes trial o no**. Endpoint: `PUT /api/models/me/pro-status`. UI del toggle **solo visible cuando Pro está elegible**.
+
+### Cuando una modelo Pro desactiva trial
+
+El cliente trial que entra en su tarjeta desde la home ve un CTA **"recarga para chatear con ella"**, no la modelo invisible. La exclusividad estimula conversión: el cliente ve que la modelo existe pero requiere pack contratado.
+
+### Ampliaciones futuras del pack Pro
+
+Visibilidad prioritaria en home, dashboard analytics, herramientas de gestión avanzada quedan **diferidas** a decisiones posteriores. No forman parte del scope de este documento.
+
+---
+
+## 6. Primer minuto trial
+
+El primer minuto de sesión bajo el régimen trial (cliente entra a probar bajo el sistema de packs con cooldown existente) se **paga a la modelo a €0,07/min plano**, independientemente del tramo de la modelo o de su tarifa autoservicio elegida.
+
+### Mecánica del trial
+
+- El cliente registrado NO paga el primer minuto de cada sesión trial.
+- Es la **plataforma quien paga** ese primer minuto a la modelo, a €0,07/min.
+- A partir del **segundo minuto**, el cliente paga la tarifa elegida por la modelo (€1 – €9 según su tramo y elección).
+- Se avisa transparentemente a la modelo antes del arranque de la sesión trial (UI del panel: "sesión trial, primer minuto €0,07").
 
 ### Tope diario por cliente
 
-Para evitar abuso, existe un **máximo de minutos gratis al día por cliente**. Una vez superado el tope, los siguientes inicios de sesión del día ya no aplican el primer minuto gratis: el cliente paga desde el minuto 1.
-
-**Valor actual configurado**: el código **no implementa un tope diario hard en minutos**, sino un **sistema de packs con cooldown progresivo entre packs**:
+Para evitar abuso, existe un **máximo de minutos gratis al día por cliente**. Sistema de packs con cooldown progresivo entre packs:
 
 - Cada **pack** son **3 slots** con cap de **60 s/slot** (≈ 3 minutos por pack).
 - **Pack 1** (slots 1-3): sin cooldown, disponible inmediatamente.
@@ -80,154 +111,159 @@ Para evitar abuso, existe un **máximo de minutos gratis al día por cliente**. 
 
 **Tope efectivo en régimen estacionario**: **~3 minutos gratis cada 24 h por cliente** (un único pack/día tras el periodo de onboarding).
 
-**Pico durante las primeras horas de uso**: hasta **~9 minutos** acumulados (los 3 primeros packs encadenados en aproximadamente 5 horas: pack 1 + pack 2 tras 1 h + pack 3 tras 4 h adicionales).
+**Pico durante las primeras horas de uso**: hasta **~9 minutos** acumulados (los 3 primeros packs encadenados en aproximadamente 5 horas).
 
 Implementado en [`sharemechat-v1/src/main/java/com/sharemechat/service/UserTrialService.java`](../../src/main/java/com/sharemechat/service/UserTrialService.java):
 
-- `TRIAL_MAX_SLOTS_PER_USER = 3` (línea 42)
-- `TRIAL_MAX_SECONDS_PER_SESSION = 60L` (línea 26, cap contable del segundo pagado a la modelo)
-- `TRIAL_HARD_CUTOFF_SECONDS = 50L` (línea 35, corte duro de comunicación con colchón frente a retrasos de ping)
-- Lógica de cooldown entre packs: método `canStartTrial()` (líneas 91-163)
+- `TRIAL_MAX_SLOTS_PER_USER = 3`
+- `TRIAL_MAX_SECONDS_PER_SESSION = 60L`
+- `TRIAL_HARD_CUTOFF_SECONDS = 50L`
+- Lógica de cooldown entre packs: método `canStartTrial()`
 
-Las tres constantes son **hardcoded** (Java `private static final`); **no son parametrizables** por properties ni por entorno. Para modificarlas hay que tocar el código y redesplegar.
+Las tres constantes son hardcoded; no son parametrizables por properties. Para modificarlas hay que tocar el código y redesplegar.
+
+### Interacción con Estatus Pro
+
+Modelos con Estatus Pro pueden **desactivar el trial** en su panel. Es el mecanismo que resuelve la asimetría entre modelos T0 (aceptan trial de buen grado) y modelos T3 Pro (pueden preferir centrarse en clientes de pago).
+
+### El trial cuenta hacia los umbrales de tramo y Pro
+
+Aunque el cliente no pague, el primer minuto trial es **facturación real generada por la modelo** (la empresa la absorbe como coste). Los €0,07/min cuentan hacia el acumulado rolling 30d para efectos de subir de tramo o alcanzar Estatus Pro. Sin esto, una modelo con muchos trials pero pocas sesiones "quedaría anclada" en T0.
 
 ### Implicación económica
 
-El primer minuto gratis es un **coste de adquisición** asumido por la plataforma. Cada vez que un cliente prueba sin terminar comprando, la plataforma ha pagado el primer minuto a la modelo sin ingreso compensatorio. Es el equivalente a un "demo" del producto.
+El primer minuto gratis es un **coste de adquisición** asumido por la plataforma. Cada vez que un cliente prueba sin terminar comprando, la plataforma ha pagado €0,07 a la modelo sin ingreso compensatorio.
 
-Coste de un primer minuto gratis no convertido:
-- Cliente conectado con modelo en tier 5-15: la plataforma paga €0.05.
-- Modelo en tier 7-20: paga €0.07.
-- Modelo en tier 9-40: paga €0.09.
+Coste de un primer minuto trial no convertido:
+- 3 minutos de trial diarios (régimen estacionario) × €0,07 = **€0,21/día por cliente que consuma su cupo trial completo**.
+- Multiplicado por número de clientes activos con trial habilitado.
 
-Este coste hay que multiplicarlo por el ratio de "sesiones probadas que no continúan a minuto 2". Si la conversión del primer minuto al segundo minuto es del X%, el coste medio por demo es:
-
-```
-coste_medio_demo = tarifa_primer_minuto × (1 - tasa_conversion_min1_a_min2)
-```
-
-Métrica a monitorizar en producto: tasa de conversión "minuto 1 → minuto 2" por modelo y agregada.
+Métrica a monitorizar: **tasa de conversión "minuto 1 trial → minuto 2 pagado"** por modelo y agregada. Si la tasa cae por debajo de X%, el ratio coste-adquisición se rompe.
 
 ---
 
-## 6. Reparto plataforma / modelo — desglose
+## 7. Reparto plataforma / modelo — desglose por método de pago
 
-Asumiendo que el cliente paga aproximadamente €1/min según el pack contratado (10€/10min, 20€/22min ≈ €0.91/min, 40€/44min ≈ €0.91/min):
+El precio mostrado al cliente es el mismo pase cripto o tarjeta ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D4). La modelo cobra su %reparto pase lo que pase. La empresa absorbe el diferencial de fees PSP como margen operativo.
 
-### Primer minuto de la sesión
+### Ejemplo A: sesión de 10 min a €1/min con modelo T0
 
-| Tier | Cliente paga | Modelo gana | Plataforma absorbe |
-|---|---|---|---|
-| 5-15 | €0 (gratis) | €0.05 | **−€0.05** |
-| 7-20 | €0 (gratis) | €0.07 | **−€0.07** |
-| 9-40 | €0 (gratis) | €0.09 | **−€0.09** |
+- Cliente paga: **€1 × 10 = €10** (menos el primer minuto trial si aplica; asumamos ya no aplica).
+- Modelo (75%): **€7,50**.
+- Empresa bruto (25%): **€2,50**.
+- Empresa neto:
+  - Cripto (fees ~1%): €10 × 1% = €0,10 → **€2,40 neto** (24% neto sobre facturación).
+  - Tarjeta (fees ~13%): €10 × 13% = €1,30 → **€1,20 neto** (12% neto sobre facturación).
 
-### A partir del segundo minuto
+### Ejemplo B: sesión de 10 min a €3/min con modelo T1
 
-| Tier | Cliente paga | Modelo gana | Plataforma se queda (bruto) |
-|---|---|---|---|
-| 5-15 | €1.00 | €0.15 | **€0.85** (85%) |
-| 7-20 | €1.00 | €0.20 | **€0.80** (80%) |
-| 9-40 | €1.00 | €0.40 | **€0.60** (60%) |
+- Cliente paga: **€3 × 10 = €30**.
+- Modelo (77%): **€23,10**.
+- Empresa bruto (23%): **€6,90**.
+- Empresa neto:
+  - Cripto: €30 × 1% = €0,30 → **€6,60 neto** (22% neto).
+  - Tarjeta: €30 × 13% = €3,90 → **€3,00 neto** (10% neto).
 
-El margen bruto de la plataforma por minuto baja del 85% al 60% según el tier de la modelo. **Una modelo en tier alto cuesta más a la plataforma**, pero es señal de que la modelo retiene clientes (los minutos facturados son altos), por lo que el volumen compensa el porcentaje menor.
+### Ejemplo C: sesión de 5 min a €9/min con modelo T3
 
-### Margen NETO
+- Cliente paga: **€9 × 5 = €45**.
+- Modelo (79%): **€35,55**.
+- Empresa bruto (21%): **€9,45**.
+- Empresa neto:
+  - Cripto: €45 × 1% = €0,45 → **€9,00 neto** (20% neto).
+  - Tarjeta: €45 × 13% = €5,85 → **€3,60 neto** (8% neto).
 
-El margen neto por minuto necesita descontar adicionalmente:
-- Comisión de CardBilling / Verotel (fees % + fijo + chargebacks).
-- Coste técnico variable (AWS por minuto streamed, infraestructura).
-- Asignación de costes fijos (Companio, dominios, herramientas).
-
-Esta deducción se hace en el modelo financiero (ver `docs/01-business/seo/estrategia.md` para proyecciones de tráfico y futuro modelo de unit economics ampliado).
-
----
-
-## 7. Ejemplos de cálculo
-
-### Ejemplo A: sesión de 1 minuto (cliente prueba y se va)
-
-- Cliente sin tope diario alcanzado, modelo en tier 5-15.
-- Cliente paga: **€0**
-- Modelo gana: **€0.05**
-- Plataforma absorbe: **−€0.05**
-
-### Ejemplo B: sesión de 10 minutos en pack de €10
-
-- Cliente paga: **€10** (paga el pack entero por adelantado, aunque solo se le cobran 9 minutos del pack porque el primero es gratis).
-- Espera, matiz: el cliente paga €10 por el pack, y consume 10 minutos. El primer minuto es gratis, así que el pack "rinde" 9 minutos cobrables + 1 gratis = 10 minutos totales para el cliente.
-- Modelo en tier 5-15:
-  - Minuto 1: gana €0.05 (lo paga la plataforma).
-  - Minutos 2-10 (9 min): gana 9 × €0.15 = **€1.35**.
-  - Total modelo: **€1.40**.
-- Plataforma:
-  - Ingresa €10 del cliente.
-  - Paga €0.05 a la modelo por el minuto gratis.
-  - Paga €1.35 a la modelo por los minutos 2-10.
-  - **Margen bruto plataforma**: €10 − €1.40 = **€8.60** (86% margen bruto).
-
-### Ejemplo C: misma sesión con modelo en tier 9-40
-
-- Cliente paga: **€10**
-- Modelo:
-  - Minuto 1: €0.09 (plataforma).
-  - Minutos 2-10 (9 min): 9 × €0.40 = **€3.60**.
-  - Total modelo: **€3.69**.
-- Plataforma:
-  - Ingresa €10.
-  - Paga €3.69 a la modelo.
-  - **Margen bruto plataforma**: €10 − €3.69 = **€6.31** (63% margen bruto).
-
-### Ejemplo D: cliente prueba con 3 modelos distintas del tier 5-15 y no compra
-
-- 3 primeros minutos gratis (3 sesiones distintas, todos minuto 1):
-  - 3 × €0.05 = **−€0.15 de coste para la plataforma**.
-- Si esto pasa con un máximo diario alto (>3), el cliente puede "tirar" la plataforma probando sin convertir.
-- Por eso el tope diario por cliente existe.
+**Lectura**: el margen empresa neto en tarjeta es delgado (8-12% según tramo) y sensible a chargebacks. Cripto es donde el margen empresa se sostiene con holgura (20-24% según tramo). Ver [unit-economics.md](unit-economics.md) para el análisis completo y para la sensibilidad al mix cripto/tarjeta.
 
 ---
 
-## 8. Métricas operativas a monitorizar
+## 8. Responsabilidad económica de la modelo
+
+Se distinguen tres categorías con reparto de responsabilidad distinto ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D7):
+
+### Costes operativos estándar (absorbidos por el %empresa bruto)
+
+- Fees PSP (variable + fijo por transacción, tarjeta o cripto).
+- Reserve / rolling reserve del PSP (si aplica).
+- Coste técnico variable (bandwidth WebRTC, STUN/TURN, AWS por minuto streamed).
+- Coste de moderación proactiva sobre esa modelo (Sightengine mensual, monitoring).
+
+### Descuentos del payout siguiente de la modelo (por eventos específicos atribuibles)
+
+- **Chargeback** del cliente sobre una sesión específica con esa modelo.
+- **Refund** aprobado por queja específica del cliente sobre esa modelo (contenido no acordado, cancelación unilateral por la modelo, etc.).
+- **Sanciones PSP** por incumplimiento claro y documentado de la modelo.
+
+Se aplica sobre el **payout siguiente**, con el motivo, fecha, importe y evidencia asociada visibles en el panel de la modelo (§9). Saldo negativo del mes **se arrastra a meses futuros** hasta compensar. **Umbral de suspensión temporal**: si los chargebacks atribuidos a una modelo superan el **~5% de su facturación bruta mensual**, se suspende temporalmente pendiente de revisión. La cifra concreta (umbral exacto, ventana de cálculo, política de reactivación) vive en **T&C y contrato de modelo**.
+
+### Fuera de esta política (tratados por vía moderación, no descuento automático)
+
+- Errores técnicos (equipamiento defectuoso, conexión inestable, pérdidas de sesión no imputables a la modelo).
+- No-shows (modelo no aparece en sesión programada). Warnings escalados y, si reincidencia, suspensión temporal, pero **no descuento automático de payout**.
+- Sanciones administrativas (avisos, warnings) que no involucran evento económico atribuido.
+
+---
+
+## 9. Panel de la modelo: transparencia obligatoria
+
+El panel de la modelo (`/model/economics` frontend product) muestra:
+
+- **Tramo actual** con umbral vigente y siguiente.
+- **%reparto** aplicable.
+- **Rango de precio** permitido y **tarifa elegida** dentro del rango.
+- **Estatus Pro**: elegible / activo / no elegible, con toggle de aceptación de trial cuando Pro es elegible.
+- **Historial de descuentos** aplicados a payouts, con motivo, fecha, importe y **evidencia asociada** (link a la sesión, chargeback notification del PSP, decisión de moderación).
+- **Derecho a disputa**: cada descuento con botón "reclamar", que dispara un ticket interno gestionado por el equipo de soporte con SLA definido.
+
+La transparencia total es requisito de la política de descuentos (§8). Sin panel navegable, un descuento sin explicación destruye la confianza que el %reparto elevado pretende construir. Es requisito no solo comercial sino legal (GDPR / derecho de acceso a decisiones automatizadas del art. 22 GDPR si el descuento es automatizado).
+
+---
+
+## 10. Métricas operativas a monitorizar
 
 Para validar que el sistema funciona económicamente, hay que vigilar:
 
 | Métrica | Significa | Por qué importa |
 |---|---|---|
-| **Tasa min1→min2** | % de sesiones que pasan del minuto 1 al 2 | Si es baja, las demos cuestan mucho y no convierten. |
-| **Tiempo medio de sesión** | Duración media de las sesiones que pasan del minuto 1 | A mayor duración, más margen para la plataforma. |
-| **Distribución de tier** | Cuántas modelos en cada tier (5-15, 7-20, 9-40) | Indica madurez del marketplace; si todas están en 5-15 hay un problema de retención. |
-| **Tope diario consumido** | % de clientes que alcanzan el tope de minutos gratis al día | Si es muy alto, el tope está mal calibrado. |
-| **Modelos que suben de tier por mes** | Flujo upward | Salud del sistema de incentivos. |
-| **Modelos que bajan de tier por mes** | Flujo downward | Si es alto, churn de modelos activas. |
+| **Distribución de tramo** | Cuántas modelos en cada tramo (T0, T1, T2, T3) | Indica madurez del marketplace; si todas están en T0 hay problema de retención de modelos activas. |
+| **Modelos que suben de tramo por mes** | Flujo upward | Salud del sistema de incentivos. |
+| **Modelos que bajan de tramo por mes** | Flujo downward | Si es alto, churn de modelos activas. |
+| **Modelos con Estatus Pro** | Cuántas superan el umbral 1.500 € | Indicador de capacidad de la plataforma para generar volumen por modelo. |
+| **Modelos Pro que desactivan trial** | Cuántas Pro apagan el trial | Señal de saturación de la modelo con clientes pagados. |
+| **Tarifa media elegida por tramo** | Distribución de `chosen_rate_eur_per_min` dentro de cada tramo | Si en T1 todas eligen €3 (el máx), tal vez el rango se queda corto; si todas eligen €1 (el mín), el desbloqueo de rango no se está usando. |
+| **Tasa min1→min2 en trial** | % de sesiones trial que pasan al minuto 2 pagado | Si es baja, las demos cuestan mucho y no convierten. |
+| **Chargebacks/refunds por modelo** | Volumen y %sobre facturación por modelo | Para disparar suspensión temporal si supera el ~5% mensual. |
 
-Estas métricas no están todavía implementadas en GA4/dashboard — se deben definir cuando el producto entre en fase **Soft Launch** (ver `docs/01-business/seo/estrategia.md`).
-
----
-
-## 9. Decisiones y restricciones del diseño actual
-
-- **Tarifas en céntimos visibles en el nombre del tier**: decisión deliberada de transparencia hacia la modelo. La modelo entiende su tier sin necesitar abrir documentación.
-- **3 tiers, no más**: simplifica la comprensión y reduce fricción cognitiva en las modelos. Cada tier representa un salto significativo de tarifa.
-- **Umbrales de 600 y 1.200 minutos**: equivalen a aproximadamente 20 min/día durante 30 días para tier 7-20, y 40 min/día para tier 9-40. Niveles razonables para modelos activas.
-- **Snapshot diario, no en tiempo real**: simplifica la arquitectura y evita "saltos" durante sesiones. La modelo ve su tier de "hoy" al inicio de su jornada.
-- **Ventana móvil de 30 días**: equilibrio entre estabilidad (no se penaliza una semana mala) y dinamismo (modelos inactivas pierden tier en plazo razonable).
-- **Primer minuto gratis con tope diario**: balance entre conversión (cliente prueba sin fricción) y abuso (tope evita free-riders).
+Estas métricas no están todavía implementadas — se deben definir cuando el producto entre en fase **Soft Launch** operativa.
 
 ---
 
-## 10. Referencias
+## 11. Decisiones y restricciones del diseño actual
 
-- Pricing del producto: `docs/01-business/pricing.md`
-- Modelo de unit economics general: `docs/01-business/unit-economics.md`
-- Estrategia SEO y proyecciones de tráfico: `docs/01-business/seo/estrategia.md`
-- Modelo financiero (proyección mes a mes con tarifas de tier base 5-15 aplicadas al cálculo de pago a modelos): [`docs/01-business/financiero/modelo-financiero.md`](financiero/modelo-financiero.md) + Excel companion [`docs/01-business/financiero/modelo-financiero-sharemechat.xlsx`](financiero/modelo-financiero-sharemechat.xlsx).
-- Implementación técnica del sistema de tiers (backend Spring Boot):
-  - Catálogo de tiers: tabla `model_earning_tiers` en [`src/main/resources/db/migration/V1__baseline.sql`](../../src/main/resources/db/migration/V1__baseline.sql) (campos `name`, `min_billed_minutes`, `first_minute_earning_per_min`, `next_minutes_earning_per_min`, `active`).
-  - Snapshot diario por modelo: tabla `model_tier_daily_snapshots` en la misma migración (campos `model_id`, `snapshot_date`, `window_start`, `window_end`, `billed_seconds`, `billed_minutes`, `tier_id`, `tier_name`, las dos tarifas, con UNIQUE `(model_id, snapshot_date)`).
-  - Servicio de resolución y cálculo de tier: [`src/main/java/com/sharemechat/service/ModelTierService.java`](../../src/main/java/com/sharemechat/service/ModelTierService.java) (constante `WINDOW_DAYS = 30` que define la ventana móvil de 30 días).
-  - Job programado del snapshot diario: [`src/main/java/com/sharemechat/jobs/ModelTierSnapshotJob.java`](../../src/main/java/com/sharemechat/jobs/ModelTierSnapshotJob.java).
-- Implementación técnica del primer minuto gratis (sistema de packs y cooldown): [`src/main/java/com/sharemechat/service/UserTrialService.java`](../../src/main/java/com/sharemechat/service/UserTrialService.java) y entidad [`src/main/java/com/sharemechat/entity/UserTrialStream.java`](../../src/main/java/com/sharemechat/entity/UserTrialStream.java) (tabla `user_trial_streams`).
+- **4 tramos escalonados en %reparto y rango de precio** con umbrales compartidos: aprovecha el mismo gráfico mental para comunicar dos dimensiones a la modelo.
+- **75-79% modelo** como propuesta comercial agresiva frente al 50-60% habitual del sector adult cam. Palanca clave de reclutamiento en pre-launch.
+- **Rango autoservicio de precio**: da a la modelo con marca propia palanca de captura de valor sobre sus clientes; la modelo generalista mantiene €1/min sin fricción.
+- **Estatus Pro desacoplado** (una feature única: control del trial): evita complicar el pack Pro en el arranque. Ampliaciones futuras (visibilidad, analytics) van por decisiones separadas.
+- **Umbrales sobre facturación bruta rolling 30d** (no earnings modelo, no mes calendario, no snapshot puntual): reutiliza la infraestructura del snapshot diario existente y evita "cliff-edge" al final de mes.
+- **Ubicación de las condiciones económicas en BD** (tabla `model_pricing_tiers` con versionado `effective_from`/`effective_to`), no en properties: permite auditoría histórica de qué condiciones estuvieron vigentes en qué fecha (necesario cuando la modelo cita las condiciones comercialmente).
 
 ---
 
-*Documento creado 17 jun 2026. Próxima revisión: cuando se replanteen los tiers, los umbrales, o el tope diario.*
+## 12. Referencias
+
+- Decisión estructural: [ADR-052 — Rediseño estructural del reparto, rango de precio autoservicio y retirada del programa de afiliadas](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md).
+- Pricing del producto: [pricing.md](pricing.md).
+- Modelo de unit economics general: [unit-economics.md](unit-economics.md).
+- Modelo financiero (proyección mes a mes; pendiente recalibrar tras ADR-052): [`financiero/modelo-financiero.md`](financiero/modelo-financiero.md).
+- Estrategia SEO y proyecciones de tráfico: [seo/estrategia.md](seo/estrategia.md).
+- Deudas técnicas conocidas relacionadas (rediseño packs premium, cambios BD tras ADR-052): [`../04-operations/known-debt.md`](../04-operations/known-debt.md).
+- Implementación técnica pendiente (frente separado, materialización de ADR-052):
+  - Migration V38 (drop tablas afiliadas + drop `model_earning_tiers` previa) + V39 (nueva `model_pricing_tiers` + columnas snapshot).
+  - Refactor `ModelTierService` + `ModelTierSnapshotJob` a operar sobre facturación bruta rolling 30d.
+  - Nuevo `PricingService` y endpoints `PUT /api/models/me/pricing`, `PUT /api/models/me/pro-status`, `GET /api/models/me/economics`.
+  - Panel product `/model/economics`.
+- Implementación técnica del primer minuto trial (sistema de packs y cooldown): [`src/main/java/com/sharemechat/service/UserTrialService.java`](../../src/main/java/com/sharemechat/service/UserTrialService.java) y entidad [`src/main/java/com/sharemechat/entity/UserTrialStream.java`](../../src/main/java/com/sharemechat/entity/UserTrialStream.java) (tabla `user_trial_streams`).
+
+---
+
+*Documento reescrito 2026-07-24 por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md). Próxima revisión: cuando se replanteen los tramos, los umbrales, el techo de precio, la política de Estatus Pro o la mecánica del trial.*

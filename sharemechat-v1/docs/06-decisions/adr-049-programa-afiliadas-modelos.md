@@ -1,11 +1,11 @@
 # ADR-049 — Programa de afiliadas de modelos: atribución cliente único, revshare 30% durante 12 meses desde primera compra, magic link temprano y bono de bienvenida al cliente
 
-> Estado: VIGENTE
-> Fecha: 2026-07-11
-> Revisado: 2026-07-23 (D2 ventana rodante 12m desde primera compra en lugar de lifetime; D4 eliminada la salvaguarda "modelo referidora debe facturar ≥1 sesión propia en el mes")
-> Vigencia esperada: hasta que el volumen o el vertical justifiquen tiers de revshare, atribución multi-touch, o un rediseño del ciclo económico
+> Estado: **SUPERSEDED por [ADR-052](adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)**
+> Fecha original: 2026-07-11
+> Revisado: 2026-07-23 (D2 ventana rodante 12m desde primera compra en lugar de lifetime; D4 eliminada la salvaguarda "modelo referidora debe facturar ≥1 sesión propia en el mes"). **Superseded en su totalidad el 2026-07-24** por ADR-052 §D11: el rediseño estructural del reparto (75-79% modelo escalonado por facturación) sobre-incentiva a la modelo a traer clientes propios sin necesidad de programa adicional, y el programa de afiliadas se retira por completo (código, schema y documentación). Este fichero se mantiene con fines de trazabilidad histórica del hilo de diseño; no forma parte de la línea económica vigente.
+> Vigencia esperada: N/A (superseded).
 > Reemplaza: N/A (documento nuevo). Complementa y aterriza técnicamente [`../01-business/affiliate-program.md`](../01-business/affiliate-program.md).
-> Ver también: [ADR-011](adr-011-pricing-simplification-and-minimum-threshold.md), [ADR-012](adr-012-bfpm-platform-funded-bonus.md), [ADR-021](adr-021-email-tag-routing.md), [ADR-047](adr-047-pivote-soft-launch-cripto-paxum.md), [ADR-048](adr-048-pagina-publica-modelo-slug.md)
+> Ver también: [ADR-011](adr-011-pricing-simplification-and-minimum-threshold.md), [ADR-012](adr-012-bfpm-platform-funded-bonus.md), [ADR-021](adr-021-email-tag-routing.md), [ADR-047](adr-047-pivote-soft-launch-cripto-paxum.md), [ADR-048](adr-048-pagina-publica-modelo-slug.md), [ADR-052](adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md)
 
 ## Revisión 2026-07-23 — Cambios sobre D2 y D4
 

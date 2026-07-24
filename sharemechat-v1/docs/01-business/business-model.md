@@ -21,6 +21,19 @@ El repositorio refleja un modelo económico basado en:
 
 La trazabilidad económica se apoya en ledger interno y snapshots de balance, lo que permite auditar movimientos de usuario y de plataforma con bastante detalle.
 
+### Reparto y rango de precio (vigente por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md))
+
+- **Reparto escalonado por facturación bruta rolling 30d**: 75% modelo en el tramo de entrada (T0), 77% al superar 3.500 €/mes (T1), 78% al superar 5.000 €/mes (T2), 79% al superar 6.500 €/mes (T3).
+- **Rango de precio autoservicio por modelo**: €1/min fijo en T0; 1-3 €/min en T1; 1-6 €/min en T2; 1-9 €/min en T3. Cada modelo elige dentro del rango de su tramo; el precio se muestra en su tarjeta pública.
+- **Estatus Pro** al superar 1.500 €/mes: feature única que permite a la modelo decidir si acepta clientes trial o no.
+- **Precio único cripto/tarjeta**: el cliente paga el mismo precio pase lo que pase; la empresa absorbe el diferencial de fees como margen operativo.
+
+Detalle completo del sistema en [sistema-tiers-modelos.md](sistema-tiers-modelos.md); estructura de packs y rango de precio de cara al cliente en [pricing.md](pricing.md); margen neto por método de pago en [unit-economics.md](unit-economics.md).
+
+### Programa de afiliadas
+
+El programa de afiliadas internas (30% revshare por cliente atribuido) queda **retirado** por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11. El nuevo reparto 75-79% modelo sobre-incentiva a la modelo a traer clientes propios sin necesidad de programa adicional. La afiliación externa B2B (blogs, agencias, estudios) queda también descartada como programa estándar; acuerdos B2B se negocian caso por caso fuera del programa. Ver [affiliate-program.md](affiliate-program.md) (stub) para el estado formal del retiro.
+
 ## Actores principales
 
 - cliente: usuario que consume saldo y utiliza random, chat y llamadas

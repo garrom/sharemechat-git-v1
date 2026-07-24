@@ -15,7 +15,7 @@ Este documento es el panel corto de estado y prioridad viva.
 
 ## Frentes operativos activos
 
-Dos frentes en curso en paralelo. El Frente 1 (Chat Soporte LLM · Panel humano) es la sub-fase iniciada tras cerrar Fase 1.D del refactor Agente IA (ADR-044) y ejecutada durante las últimas sesiones operativas. El Frente 2 (Gobierno económico pre-PSP) sigue vivo con su siguiente paso identificado (BFPM Fase 4B-b) como prerrequisito de la integración PSP real; no está pausado.
+Tres frentes en curso en paralelo. El Frente 1 (Chat Soporte LLM · Panel humano) es la sub-fase iniciada tras cerrar Fase 1.D del refactor Agente IA (ADR-044) y ejecutada durante las últimas sesiones operativas. El Frente 2 (Gobierno económico pre-PSP) sigue vivo con su siguiente paso identificado (BFPM Fase 4B-b) como prerrequisito de la integración PSP real; no está pausado. El Frente 3 (Materialización ADR-052: rediseño estructural del reparto + retirada del programa de afiliadas) arranca tras cerrar la Fase B documental el 2026-07-24 y encadena en 3 sub-frentes técnicos (purga afiliadas → refactor sistema tramos + rango de precio + Estatus Pro → T&C legal).
 
 ---
 
@@ -143,6 +143,58 @@ Secuencia actual:
    - Pendiente de recibir manual oficial de integración de CCBill.
    - No implementar firma, contrato definitivo ni validación final por inferencia.
    - Cuando llegue el manual, se abrirá el frente PSP real.
+
+---
+
+## Frente 3: Materialización ADR-052 — rediseño reparto + retirada afiliadas
+
+Estado: **Fase B documental CERRADA el 2026-07-24**. Fases técnicas subsiguientes pendientes.
+
+Objetivo:
+materializar el rediseño estructural del reparto modelo/plataforma (75-79% escalonado por facturación) y del rango de precio autoservicio decidido en [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md), y retirar el programa de afiliadas (código + schema + docs) que quedó superseded por ese mismo ADR.
+
+Base estructural: [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md), aceptado 2026-07-24, con 12 decisiones (D1..D12) que reordenan el ciclo económico. Contexto operativo del pivote de reclutamiento en [ADR-047](../06-decisions/adr-047-pivote-soft-launch-cripto-paxum.md) (soft launch cripto). Retirada de [ADR-049](../06-decisions/adr-049-programa-afiliadas-modelos.md) programa de afiliadas ya marcada SUPERSEDED.
+
+Secuencia planificada (4 sub-frentes, orden 1→2→3, 4 en paralelo a 3):
+
+1. **Sub-frente 1: Fase B documental** — HECHO (2026-07-24)
+   - Reescritura completa de [`../01-business/sistema-tiers-modelos.md`](../01-business/sistema-tiers-modelos.md), [`../01-business/pricing.md`](../01-business/pricing.md), [`../01-business/unit-economics.md`](../01-business/unit-economics.md).
+   - Actualización parcial de [`../01-business/business-model.md`](../01-business/business-model.md), [`../01-business/launch-strategy.md`](../01-business/launch-strategy.md), [`../01-business/model-profile-strategy.md`](../01-business/model-profile-strategy.md).
+   - Actualización del plan de captación [`plan-captacion-trafico-2026-q3.md`](plan-captacion-trafico-2026-q3.md) marcando palanca P3 (programa de afiliados) como RETIRADA con re-cálculo de horas y métricas.
+   - `affiliate-program.md` movido a `_deprecated/registro.md` con stub de retirada en el fichero original.
+   - Cabeceras de ADRs anteriores actualizadas: ADR-049 SUPERSEDED por ADR-052, ADR-043 §1 y §4 parcialmente superseded por ADR-052.
+   - Actualización de deudas conocidas en [`../04-operations/known-debt.md`](../04-operations/known-debt.md) (cancelación de deudas #D-18/19/20/21/22/23 del ADR-049 + añadir deuda nueva de rediseño packs premium).
+   - Actualización de [`../04-operations/known-risks.md`](../04-operations/known-risks.md) con nuevo riesgo "margen tarjeta delgado sensible a chargebacks".
+   - Recalibración del [`../01-business/financiero/modelo-financiero.md`](../01-business/financiero/modelo-financiero.md) marcada como deuda declarada (xlsx binario no se toca en esta iteración).
+
+2. **Sub-frente 2: Purga técnica afiliadas** — PENDIENTE
+   - Migration `V38__drop_affiliate_program.sql`: drop tablas `affiliate_codes`, `affiliate_commissions`, `affiliate_click_events`, `affiliate_link_tokens`; drop columnas `clients.referrer_model_user_id`, `users.referral_code_owner`, `users.first_stream_charge_at`.
+   - Purga de código: `AffiliateCommissionService`, `AffiliateAttributionService`, `AffiliateBonusService`, `AffiliateCodeService`, `AffiliateHashService`, `AffiliateLinkTokenService`, entidades, controllers, endpoints REST, DTOs, tests unitarios.
+   - Frontend product: retirada de `/model/affiliate`, landing `/i/:token`, banner referral en registro cliente.
+   - Aislado y autoncontenido; no depende del sistema nuevo. Deja el repo limpio antes del refactor grande.
+
+3. **Sub-frente 3: Implementación técnica del reparto nuevo** — PENDIENTE
+   - Migration `V39__model_pricing_tiers_v1.sql`: crea `model_pricing_tiers` con 4 filas (T0/T1/T2/T3), añade columnas al snapshot diario, añade `users.chosen_rate_eur_per_min` y `users.pro_accepts_trial`.
+   - Refactor `ModelTierService` + `ModelTierSnapshotJob` a operar sobre facturación bruta rolling 30d y `model_pricing_tiers` en vez de sobre minutos facturados.
+   - Nuevo `PricingService` que expone tramo, %reparto, rango, tarifa vigente por modelo.
+   - Nuevos endpoints: `PUT /api/models/me/pricing`, `PUT /api/models/me/pro-status`, `GET /api/models/me/economics`.
+   - Refactor motor de facturación: leer `users.chosen_rate_eur_per_min` al arranque de sesión en vez de `billing.rate-per-minute`.
+   - Refactor `UserTrialService`: primer minuto trial paga €0,07 plano de property.
+   - Cambios properties: deprecar `billing.rate-per-minute`, añadir `billing.pricing.rate-max-eur-per-min=9.00`, `billing.pro-status.min-billed-gross-eur-30d=1500`, `billing.trial.first-minute-earning-eur-per-min=0.07`.
+   - Frontend product: nuevo panel `/model/economics` con dashboard de tramo, %reparto, rango, selector de tarifa, toggle Pro, historial descuentos con evidencia y reclamación.
+   - Frontend product: precio visible en tarjeta de modelo (home) y `/m/:slug`.
+   - Frontend admin: nuevo panel admin de descuentos con gestión de reclamaciones.
+
+4. **Sub-frente 4: T&C y contrato de modelo v5** — PENDIENTE (paralelo a Sub-frente 3)
+   - Materializar en T&C y contrato de modelo la política de descuentos de [ADR-052 §D7](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md): umbral chargebacks ~5%, descuentos automáticos con consentimiento, derecho a disputa, transparencia panel modelo.
+   - Coordinación con asesoría legal externa adult-experienced.
+   - **Bloqueante** para exponer D9 (descuentos automáticos) sin exposición legal.
+   - Alineado con la deuda residual R5 "Model Collaboration Agreement v5" ya declarada en [`../04-operations/known-debt.md`](../04-operations/known-debt.md).
+
+Deudas registradas del frente:
+- Rediseño packs premium (fricción rango 1-9 €/min con packs 10/20/40 €) — registrada en `known-debt.md`.
+- Recalibración `modelo-financiero.md` + xlsx tras nuevo reparto — registrada en `known-debt.md`.
+- Deudas ADR-049 (#D-18 a #D-23) canceladas por retirada del programa.
 
 ---
 
