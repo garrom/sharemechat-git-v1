@@ -8,6 +8,66 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-25 — Cierre deudas roadmap ADR-052: nivelación AUDIT+PROD, #D-26 cláusulas T&C, #D-24 pack P100
+
+Continuación de la sesión del mismo día. Tras cerrar el bloque HUD sesión + fixes PSP cripto en TEST y validar en vivo (ver entrada siguiente), se abordaron los tres frentes documentales/técnicos que quedaban del roadmap ADR-052.
+
+**Frente A — Nivelación completa TEST/AUDIT/PROD del bloque HUD + PSP**
+
+Deploy manual del JAR `c93f9bd` (HUD + fixes PSP) a AUDIT y PROD siguiendo el patrón sesión-anterior (rotar backup N=1 → scp → restart → verify arranque → update-manifest-backend). Flyway aplicó V29→V40 limpio en ambos entornos (12 migrations aplicadas en cada uno; los entornos venían del 2026-07-19 con `09a06bb`, 6 días atrás). Frontend product bundle `main.193ea99b.js` desplegado a los 3 CloudFront distributions con drift check OK tras sincronizar el manifest backend.
+
+PROD siguió en modo PRELAUNCH (sin tráfico real que afecte durante el restart). Pre-render blog 12 URLs OK (5 ES + 5 EN + 2 índices).
+
+**El drift check saltó CRITICAL en AUDIT al primer intento** — el manifest de AUDIT aún apuntaba al backend antiguo `09a06bb` que sí tenía diferencias en `UserController.java` respecto al candidato `d8ea796`. El script `Stop-Deploy` abortó en `Severity CRITICAL` como diseño (nunca se auto-confirma). Solución: ejecutar `update-manifest-backend.ps1 -Environment audit` primero para sincronizar el backend recién desplegado, y reintentar el `deploy-frontend`; a la segunda pasó a `Severity OK` y continuó. El comportamiento del check es correcto — protege contra el incidente del 2026-06-08 en AUDIT. Simplemente hay que respetar el orden: primero manifest backend, luego deploy frontend.
+
+**Frente B — #D-26 borrador cláusulas §D7 T&C v5**
+
+Decisión previa del operador explícita en sesión: no se contratará asesoría legal externa; Shareme Technologies OÜ asume responsabilidad del texto. El asistente redacta el borrador con la mejor calidad posible basado en el §D7 exacto del ADR-052, patrones del sector adult cam (Visa Rule 0003356, MCC 5967, prácticas LiveJasmin/Streamate), el v4 vigente firmado por 18 modelos, y el marco legal aplicable (Estonian Law of Obligations Act, GDPR UE, Directiva 2011/83/UE, Regulación Roma I).
+
+Doc nuevo `docs/01-business/model-contract-v5-clauses-d7-draft.md`. **7 cláusulas ES + EN** (X.1 a X.7):
+- X.1 categorías de costes (declarativa, sin código).
+- X.2 aplicación descuento al payout con notificación previa 7 días naturales + arrastre 90 días.
+- X.3 umbral 5% chargebacks/mes rolling 30d → suspensión temporal + reactivación 15 días + reincidencia **2 en 12 meses → cancelación definitiva** (operador más estricto que sugerencia inicial de 3).
+- X.4 disputa con SLA 10 días hábiles.
+- X.5 transparencia panel modelo (historial descuentos, ratio chargebacks, botón disputa).
+- X.6 consentimiento explícito al aceptar v5.
+- X.7 **reserva anti-chargeback 5% primeros 90 días aplicable cripto+tarjeta indistintamente** (decisión operador: preferible dejar infraestructura contractual lista aunque hoy con solo cripto los chargebacks sean raros).
+
+Descartada la sugerencia inicial de plantear la jurisdicción como decisión pendiente — el v4 vivo ya la contiene (asume Estonia + tribunales Tallinn); al bump v5 se mantiene tal cual. Fue falsa alarma del borrador original que se corrigió.
+
+**Revisión técnica del estado real de las cláusulas** documentada en el propio doc en sección "Estado de implementación técnica":
+
+- **Cláusulas con respaldo técnico hoy**: X.5 puntos 1-3 (panel ModelPricingPanel desde Sub-frente 3.C ya vivo) y X.6 (ModelContractManifestService con SHA256 + `acceptedCurrent=false` ya cableado a assets/KYC/payouts/handshake WS — al subir PDF v5 con manifest actualizado las 18 modelos vivas pasan automáticamente a re-aceptar).
+- **Cláusulas sin respaldo técnico**: X.2, X.3, X.4, X.5 puntos 4-6, X.7. Todas dependen del Sub-frente 3 técnico ADR-052 pendiente.
+- **4 deudas técnicas confirmadas expuestas por el borrador**: (A) `endSession` acepta `endReason` pero solo se usa con `"low-balance"` o null — no distingue causa MODEL_HUNG/CLIENT_HUNG/TECHNICAL_ERROR; (B) `PayoutRequest` necesita estado `UNDER_REVIEW`; (C) tabla `payout_deductions`; (D) tabla `payout_reserves`.
+
+Consecuencia práctica documentada: el operador puede publicar el v5 ya y forzar re-aceptación de las 18 modelos vivas. Desde ese momento las modelos consienten legalmente la política aunque la ejecución sea aún manual (SQL + email + ajuste manual de payout) hasta que se materialice el Sub-frente 3 técnico. El valor de publicar el v5 aunque la mecánica sea manual: legitimar cualquier descuento aplicado en el ínterin (sin v5 firmado un descuento hoy sería impugnable con base en el v4 que no contempla la política).
+
+**Frente C — #D-24 parcial: añade pack premium P100**
+
+Rediseño mínimo pedido por el operador: solo añadir un pack más de 100€, no P250/P500 (descartados por no encajar en el posicionamiento). Bonus siguiendo el patrón escalado del catálogo (P10 0%, P20/P40 10%, P100 **12%** = +12€). Modelos T4 con tarifa €9/min pasan de necesitar 6 recargas P40 para 30 minutos a poder cubrirlo con 3 P100.
+
+Cambios en los 3 sitios canónicos del catálogo (identificados por grep antes de tocar):
+- Backend precios: `PspOrchestratorService.PACK_PRICES` + `allowedPayCurrenciesForPack` (P100 acepta btc + stablecoins como P20/P40, con picker en el hosted checkout, sin `defaultPayCurrencyForPack` a diferencia de P10 que va directo a USDT-ERC20).
+- Backend bonus: `PspWebhookOrchestratorService.PACK_BONUS`.
+- Frontend catálogo: `useAppModals.js` DEFAULT_PACKS + `CheckoutSuccessPage.jsx` traducción packId→minutos.
+
+Deploy manual TEST + AUDIT + PROD (idéntico patrón backend + frontend) con drift check OK en los 3 (esta vez la nivelación del bloque anterior ya había alineado los manifests backend, evitó CRITICAL). Todos los entornos quedan en `8410a28` + bundle `main.a97bc63c.js`.
+
+**Residual documentado en #D-24**: (a) cálculo dinámico de la duración del pack en el picker según `chosenRateEurPerMin` de la modelo actual (hoy hardcoded a €1/min, mostrando "100 min" para P100 cuando la modelo T4 real cobra 11 min); (b) `recommended: true` contextual (hoy fijo en P20 - con P100 activo tiene más sentido rotar según tarifa); (c) posible agrupación UX del picker (4 packs empiezan a ser ruidosos). Prioridad media a baja hasta que aparezca volumen T3/T4 real.
+
+**Aprendizaje operativo**: el `known-debt.md` es fuente de verdad para lo que queda pendiente pero **no basta con marcarlo cerrado**; hay que documentar en el propio código o en el propio artifact (contrato v5, catálogo packs) qué queda a mano en cuál sitio. Por ejemplo #D-24 se cierra parcialmente aquí — el hecho de que el catálogo esté "duplicado explícito" en 3 sitios (backend PACK_PRICES + backend PACK_BONUS + frontend useAppModals + CheckoutSuccessPage) genera fricción cada vez que se toca. La deuda de consolidación (mover a un servicio dedicado que sirva el catálogo desde backend al frontend) aparece mencionada en el comentario de `PspOrchestratorService:52-54` desde hace tiempo. Con P100 añadido se toca por 4ª vez sin consolidar. Cuando se toque por 5ª (dinámica de minutos según chosenRate), la consolidación se vuelve casi obligatoria. Anotado como consideración implícita en el residual de #D-24.
+
+**Estado de deudas del roadmap ADR-052** tras esta sesión:
+- **#D-25** (recalibración modelo-financiero): MD hecho v2.0 en la sesión previa del día; xlsx queda pendiente para el operador cuando disponga de tiempo (no bloqueante).
+- **Superficie 2** (precio visible cliente): completada en las dos fases el mismo día 2026-07-25.
+- **#D-26** (T&C v5 con política descuentos): borrador cláusulas ES+EN finalizado con decisiones operador confirmadas + estado técnico documentado. Publicable en v5 vía flujo R5+G4 cuando el operador quiera; el Sub-frente 3 técnico automático es post-v5.
+- **#D-24** (packs premium T3/T4): P100 añadido y desplegado en los 3 entornos. Residual UX/dinámica diferido hasta que el volumen T3/T4 lo justifique.
+
+Deploy: TEST + AUDIT + PROD alineados en backend `8410a28` y bundle `main.a97bc63c.js`. Sin migraciones nuevas en esta parte (solo cambios de código y datos in-memory).
+
+---
+
 ## 2026-07-25 — HUD sesión tiempo real + fixes PSP cripto (Superficie 2 fase 2 ADR-052)
 
 Sesión larga con dos frentes cerrados y desplegados a TEST.
