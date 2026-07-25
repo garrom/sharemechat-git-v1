@@ -90,7 +90,18 @@ Esta transparencia es requisito operativo de la política de descuentos. En ause
 
 ### Cláusula X.6 — Consentimiento explícito
 
-La Modelo, al aceptar la versión v5 del presente Model Collaboration Agreement, **presta consentimiento expreso** a la aplicación automática de los descuentos regulados en las Cláusulas X.1 a X.5, en los términos descritos, con las garantías de notificación previa, derecho de disputa y transparencia establecidas.
+La Modelo, al aceptar la versión v5 del presente Model Collaboration Agreement, **presta consentimiento expreso** a la aplicación automática de los descuentos regulados en las Cláusulas X.1 a X.5 y de la reserva anti-chargeback de la Cláusula X.7, en los términos descritos, con las garantías de notificación previa, derecho de disputa y transparencia establecidas.
+
+### Cláusula X.7 — Reserva anti-chargeback en el periodo inicial
+
+Con el objetivo de disponer de un colchón económico frente a posibles chargebacks o refunds tempranos y de proteger tanto a Shareme Technologies OÜ como a la Modelo frente a saldos negativos disruptivos en su primer ciclo de actividad:
+
+1. Durante los **primeros 90 días naturales** desde la fecha de aceptación del presente contrato v5, Shareme Technologies OÜ retendrá el **5% de cada payout** de la Modelo en una reserva interna vinculada a su cuenta. Esta retención se aplica **con independencia del método de pago del cliente** (tarjeta o cripto), unificando el tratamiento operativo.
+2. La reserva es plenamente visible para la Modelo en su panel de gestión, con importe acumulado, fecha de cada retención y fecha estimada de liberación.
+3. Los importes retenidos se utilizan **exclusivamente** para compensar descuentos originados por las Cláusulas X.1 a X.2 antes de tocar el payout activo. El uso de la reserva se registra en el historial de descuentos (Cláusula X.5) con la misma transparencia.
+4. Transcurridos los 90 días naturales, el importe acumulado que **no haya sido consumido** por descuentos se libera a favor de la Modelo en su siguiente payout, con notificación explícita del importe liberado.
+5. Si la Modelo cesa su actividad en la plataforma antes de que finalicen los 90 días (baja voluntaria, cancelación del acuerdo), la reserva se liquida siguiendo el mismo criterio: importe no consumido se transfiere a la Modelo junto con el saldo final; importe consumido por descuentos ya aplicados no se devuelve.
+6. La reserva **no aplica** a Modelos que reactivan una cuenta ya existente en la plataforma con historial previo verificable de baja voluntaria (no de suspensión disciplinaria). En estos casos la cuenta reanuda con el porcentaje pleno del payout desde el primer día.
 
 ---
 
@@ -166,76 +177,146 @@ This transparency is an operational requirement of the deduction policy. In the 
 
 ### Clause X.6 — Explicit Consent
 
-The Model, upon accepting version v5 of this Model Collaboration Agreement, **grants express consent** to the automatic application of the deductions regulated in Clauses X.1 to X.5, on the terms described, with the guarantees of prior notice, right to dispute and transparency established.
+The Model, upon accepting version v5 of this Model Collaboration Agreement, **grants express consent** to the automatic application of the deductions regulated in Clauses X.1 to X.5 and of the anti-chargeback reserve set forth in Clause X.7, on the terms described, with the guarantees of prior notice, right to dispute and transparency established.
+
+### Clause X.7 — Anti-chargeback Reserve during the Initial Period
+
+In order to provide an economic buffer against potential early chargebacks or refunds and to protect both Shareme Technologies OÜ and the Model from disruptive negative balances during her first activity cycle:
+
+1. For the **first 90 calendar days** from the date of acceptance of this v5 contract, Shareme Technologies OÜ shall withhold **5% of each Model's payout** in an internal reserve linked to her account. This withholding applies **regardless of the customer's payment method** (card or crypto), unifying operational treatment.
+2. The reserve is fully visible to the Model in her management dashboard, with accumulated amount, date of each withholding, and estimated release date.
+3. The withheld amounts are used **exclusively** to offset deductions arising from Clauses X.1 to X.2 before touching the active payout. Use of the reserve is recorded in the deduction history (Clause X.5) with the same transparency.
+4. After the 90 calendar days, the accumulated amount **not consumed** by deductions is released in favor of the Model on her next payout, with explicit notification of the released amount.
+5. If the Model ceases activity on the platform before the 90 days end (voluntary termination, agreement cancellation), the reserve is settled following the same criterion: unused amount is transferred to the Model together with the final balance; amount consumed by already-applied deductions is not refunded.
+6. The reserve **does not apply** to Models reactivating an existing account on the platform with verifiable prior history of voluntary termination (not disciplinary suspension). In these cases the account resumes with full payout percentage from day one.
 
 ---
 
-## Advertencias y decisiones pendientes del operador
+## Decisiones del operador — valores confirmados
 
-El texto anterior contiene decisiones de negocio que el asistente ha calibrado según patrones típicos del sector adult cam. Antes de integrar en el Model Contract v5 vigente, el operador debe **confirmar o ajustar** los siguientes valores:
+Los siguientes valores concretos han sido confirmados por el operador el 2026-07-25 y quedan integrados en el texto anterior. Se preserva el histórico completo (contexto, alternativas evaluadas, riesgos) para trazabilidad de por qué se eligió cada uno.
 
-### 1. Umbral chargebacks 5% mensual — CALIBRAR
+### 1. Umbral chargebacks — 5% mensual con ventana rolling 30 días — CONFIRMADO
 
-El §D7 del ADR-052 dice "~5%" sin fijar cifra exacta. El borrador usa **5% estrictos** con ventana rolling 30 días.
+El §D7 del ADR-052 dice "~5%" sin fijar cifra exacta. El operador confirma **5% estrictos** con ventana rolling 30 días.
 
-- **Referencia sector**: Visa Rule ID 0003356 obliga a que la plataforma agregada mantenga el chargeback ratio por debajo del **1% mensual** para MCC 5967 (adult content) y por debajo del 0.9% para tarjetas no-cripto. Si supera esos límites, la plataforma pasa a categoría "high-risk" con reservas mayores y comisiones más altas del PSP.
-- **Consecuencia**: 5% individual por modelo puede ser demasiado permisivo si tienes 10 modelos activas. Si 2 modelos generan 5% cada una, arrastran el agregado hacia el límite Visa.
-- **Sugerencia alternativa**: bajar a **3% individual** con la ventana rolling 30 días. Es más estricto pero deja margen para que el agregado se mantenga bajo 1%.
-- **Decisión del operador**: [ ] 5% [ ] 3% [ ] otro __%
+- Referencia sector: Visa Rule ID 0003356 obliga a que la plataforma agregada mantenga el chargeback ratio por debajo del **1% mensual** para MCC 5967 (adult content) y por debajo del 0.9% para tarjetas no-cripto. Si supera esos límites, la plataforma pasa a categoría "high-risk" con reservas mayores y comisiones más altas del PSP.
+- Alternativa evaluada y descartada: 3% individual (más estricto). No se elige porque en la fase actual sólo cripto (NOWPayments) los chargebacks son prácticamente inexistentes; 5% da margen operativo sin arrastrar al agregado.
+- **Revisar** cuando se integre PSP tarjeta: probable bajada a 3% para proteger el agregado bajo el 1% Visa.
 
-### 2. Ventana de notificación previa 7 días — CALIBRAR
+### 2. Ventana de notificación previa — 7 días naturales — CONFIRMADO
 
-El borrador fija 7 días naturales entre notificación del descuento y aplicación al payout.
+7 días naturales entre notificación del descuento y aplicación al payout.
 
-- **Consideración práctica**: los payouts en Sharemechat operan bajo la política de PayoutRequest existente (mensual o bajo demanda según lo que decidas). Si un payout se solicita cada 15 días, 7 días de aviso es razonable. Si se ejecutan diariamente, 7 días es demasiado.
-- **Consideración legal**: en jurisdicciones UE la Directiva 2011/83/UE sobre derechos consumidor exige plazos de reflexión (aunque aquí la modelo es contraparte profesional, no consumidor). Estonia no tiene requisito específico en Law of Obligations Act para descuentos B2B.
-- **Sugerencia alternativa**: mantener 7 días si los payouts son mensuales; bajar a **3 días hábiles** si son diarios/semanales.
-- **Decisión del operador**: [ ] 7 días naturales [ ] 3 días hábiles [ ] otro
+- Alineado con la cadencia típica del PayoutRequest (bajo demanda, no automático). La modelo típicamente pide el payout cada 1-4 semanas, 7 días es cómodo.
+- Alternativa evaluada y descartada: 3 días hábiles. Más rápido pero puede leerse como poca ventana en un juzgado si la modelo alega ausencia.
+- Cumple con lo razonable para un juzgado UE, no colisiona con normas imperativas (la Modelo es contraparte profesional, no consumidor).
 
-### 3. SLA resolución disputa 10 días hábiles — CALIBRAR
+### 3. SLA resolución disputa — 10 días hábiles — CONFIRMADO
 
-El borrador fija 10 días hábiles desde apertura de disputa hasta resolución escrita.
+10 días hábiles desde apertura de disputa hasta resolución escrita.
 
-- Es un plazo estándar del sector para gestión de queries operacionales.
-- Si tu equipo de operaciones es pequeño (tú + 1-2 personas), 10 días hábiles es factible.
-- Si el volumen de disputas crece (esperable con >50 modelos activas), puede requerir automatización o extensión a 15 días.
-- **Decisión del operador**: [ ] 10 días hábiles [ ] 15 días hábiles [ ] otro
+- Plazo estándar del sector para gestión de queries operacionales.
+- Riesgo asumido: si el volumen de disputas crece con muchas modelos activas y no se puede cumplir, la modelo tiene argumento legal directo. Mitigar con dotación de operaciones proporcional al volumen.
 
-### 4. Límite de arrastre 90 días naturales — CALIBRAR
+### 4. Arrastre máximo saldo pendiente — 90 días naturales — CONFIRMADO
 
-El borrador establece que si un descuento excede el payout, se arrastra a posteriores con **máximo 90 días** de arrastre; pasado ese plazo, el saldo no compensado lo absorbe la plataforma.
+Si un descuento excede el payout se arrastra a posteriores con **máximo 90 días**. Pasado ese plazo el saldo no compensado lo absorbe Shareme Technologies OÜ.
 
-- Sin límite temporal el descuento podría arrastrarse indefinidamente contra futuras ganancias — un juzgado europeo típicamente tumba cláusulas de saldo negativo indefinido en contratos con contraparte débil.
-- 90 días es equivalente al plazo típico de chargeback tarjeta (60-120 días). Alinea plazos.
-- **Alternativa más agresiva**: 180 días de arrastre. Da más margen a la plataforma pero incrementa riesgo de disputa por acumulación.
-- **Decisión del operador**: [ ] 90 días [ ] 180 días [ ] otro
+- Alineado con la ventana operacional del PSP (60-120 días típicos de chargeback tarjeta).
+- Alternativa evaluada y descartada: 180 días. Se acerca a "cláusula perpetua" que un juzgado europeo puede tumbar.
 
-### 5. Reincidencia 3 suspensiones/12 meses → cancelación definitiva — VALIDAR
+### 5. Reincidencia — 2 suspensiones en 12 meses → cancelación definitiva — CONFIRMADO
 
-El borrador establece que 3 suspensiones temporales en 12 meses habilitan la cancelación definitiva.
+2 suspensiones temporales en 12 meses habilitan la cancelación definitiva del acuerdo con liquidación del saldo pendiente según reglas generales.
 
-- Es una cláusula proporcional que protege a la plataforma sin ser draconiana.
-- **Riesgo si se relaja**: una modelo con comportamiento crónico problemático puede acumular suspensiones sin salida.
-- **Riesgo si se endurece** (por ejemplo 2 suspensiones): puede leerse como injusto en la primera reincidencia.
-- **Decisión del operador**: [ ] 3 en 12m [ ] 2 en 12m [ ] otro
+- Más estricto que la sugerencia inicial de 3 en 12m. Se aplica criterio del operador: no dar más de una segunda oportunidad tras una primera suspensión, porque en el sector adult la reincidencia por comportamiento problemático suele confirmar patrón, no incidente aislado.
+- Consideración residual: en un juicio, una modelo puede argumentar que la primera suspensión fue disputable. Mitigación cubierta por Cláusula X.4 (la modelo puede disputar la primera suspensión antes de que se ejecute; si gana, no computa para reincidencia).
 
-### 6. Zonas grises detectadas
+### 6. Reserva anti-chargeback 5% primeros 90 días — CONFIRMADO E INCLUIDO (Cláusula X.7)
 
-**a) "Contenido no acordado" en la Cláusula X.1 (b)**. La expresión es intencionalmente amplia para cubrir casos que no se pueden pre-catalogar (peticiones específicas del cliente que la modelo ignora, comportamiento fuera del brief de la sesión, etc.). En una disputa un juez puede requerir mayor concreción. **Mitigación**: mantener la práctica actual de que cada queja de refund tenga un texto libre del cliente explicando el motivo, y usar ese texto como evidencia atribuible.
+Cláusula nueva X.7 añadida al borrador (ES + EN). Retención del 5% de cada payout durante los primeros 90 días naturales desde aceptación del v5. Aplica independientemente del método de pago del cliente (cripto o tarjeta).
 
-**b) "Cancelación unilateral por la Modelo"**. Cubre casos donde la modelo cuelga la sesión sin causa técnica. En la práctica requiere que el sistema distinga entre cortes técnicos y cortes voluntarios — hoy no hay tal distinción explícita en `endSession` (todos los cierres se tratan igual). **Antes de aplicar esta parte de la cláusula**, el sistema tiene que poder registrar la causa del cierre (cliente colgó / modelo colgó / corte técnico / kill switch moderación). Deuda técnica implícita que este borrador expone.
+- Criterio del operador: preferible dejar la infraestructura contractual lista aunque hoy con solo cripto los chargebacks sean raros, para no depender de "acordarse de añadirla" cuando llegue la tarjeta. La retención no perjudica a la Modelo (se libera íntegra tras 90 días si no hay descuentos); solo protege a la plataforma en el escenario adverso.
+- Redacción de la cláusula neutral respecto a método de pago (evita relanzar la discusión cuando se integre tarjeta).
+- Alcance: aplica solo a modelos nuevas o reactivadas tras suspensión disciplinaria. No aplica a modelos que reactivan una cuenta con historial previo verificable de baja voluntaria.
 
-**c) "Sanciones económicas del proveedor de pagos"**. Aplicable sobre todo con Visa/Mastercard cuando integres tarjeta (hoy solo cripto). Con NOWPayments cripto las sanciones son extremadamente raras. La cláusula queda preparada para cuando integres tarjeta. **Nota**: cuando integres PSP tarjeta, revisar si el propio contrato del PSP obliga a repasar esta cláusula.
+### 7. Jurisdicción aplicable — NO ES DECISIÓN NUEVA
 
-**d) "Estado de suspensión temporal"**. El borrador dice que "se pausa el matching de sesiones y se paraliza la ejecución de payouts pendientes". Técnicamente hoy la suspensión de matching se puede hacer vía `account_status` (SUSPENDED), pero la paralización de payouts pendientes hasta revisión no está automatizada. **Deuda técnica implícita**: cuando implementes la mecánica automática §D9 tendrás que cablear el flag de "payout paralizado por review" en la entidad PayoutRequest.
+El Model Contract v4 vigente ya contiene la cláusula de jurisdicción y ley aplicable (asume Estonia, tribunales de Tallinn, alineado con la sede de Shareme Technologies OÜ). Al hacer bump a v5 esa cláusula se mantiene tal cual. **No se lista como decisión pendiente** — era falsa alarma del borrador original.
 
-**e) Cláusula sobre reserva del 5% en primeros 90 días — NO INCLUIDA**. Muchas plataformas del sector adult retienen el 5% de los payouts iniciales de una modelo como buffer anti-chargeback (rolling reserve interno). Este borrador **NO incluye esa cláusula** porque el operador no ha pedido introducirla y añade complejidad operativa. Si en el futuro los chargebacks reales lo justifican, se puede incorporar como cláusula X.7. **Decisión del operador**: [ ] no incluir por ahora [ ] incluir con % ___ y ventana ___ días
+### Zonas grises operativas — mitigación documentada
 
-### 7. Jurisdicción aplicable
+**a) "Contenido no acordado" en la Cláusula X.1 (b)**. Expresión intencionalmente amplia para cubrir casos que no se pueden pre-catalogar. En una disputa un juez puede requerir mayor concreción. Mitigación: mantener la práctica de que cada queja de refund tenga un texto libre del cliente explicando el motivo, y usar ese texto como evidencia atribuible.
 
-El borrador presume que el Model Contract se rige por la ley de Estonia (Estonian Law of Obligations Act) al ser Shareme Technologies OÜ una sociedad estonia. Esta cláusula de jurisdicción **debe estar explícita** en el Model Contract v5 completo (probablemente ya lo esté en v4, verificar al rescatar la fuente). Este borrador **no la añade** porque asume que la trae el contrato base.
+**b) "Sanciones económicas del proveedor de pagos"**. Aplicable sobre todo con Visa/Mastercard cuando se integre tarjeta. Con NOWPayments cripto las sanciones son extremadamente raras. La cláusula queda preparada. Cuando se integre PSP tarjeta, revisar si el propio contrato del PSP obliga a repasar esta cláusula.
 
-Recordatorio: en la UE existe la Regulación Roma I sobre ley aplicable a obligaciones contractuales, que permite pactar la ley aplicable pero con límite de las normas imperativas del país de la parte más débil. Si una modelo española demanda en España, un juzgado español puede aplicar normas imperativas españolas aunque el contrato diga "ley de Estonia".
+---
+
+## Estado de implementación técnica de las cláusulas
+
+Este bloque documenta qué respaldo técnico tiene hoy cada cláusula del borrador, para que el operador sepa qué es publicable con seguridad y qué requiere desarrollo del **Sub-frente 3 técnico de ADR-052** antes de aplicarse en la práctica. Verificado por recorrido del código el 2026-07-25.
+
+### Cláusulas con infraestructura técnica lista
+
+**Cláusula X.5 puntos 1-3 (transparencia panel: tramo, %, rango precio, tarifa elegida, estatus Pro, toggle trial)** — **LISTO**. Todo esto vive en `/model/economics` desde ADR-052 Sub-frente 3.C. `ModelPricingPanel.jsx` lo pinta al día. Ninguna cláusula del borrador toca aquí funcionalidad que no exista.
+
+**Cláusula X.6 (consentimiento explícito al aceptar v5)** — **INFRAESTRUCTURA LISTA**. `ModelContractManifestService` con verificación SHA256 y estado `acceptedCurrent=false` ya está cableado a los flujos sensibles (assets, KYC docs, payouts, handshake WS de matching/messages tanto para role=MODEL como para FORM_MODEL). Al publicar el PDF v5 con manifest actualizado, las 18 modelos vivas pasan automáticamente a estado "necesitan re-aceptar" y no pueden operar hasta firmar. Migración V7 protege la evidencia con FK ON DELETE RESTRICT.
+
+**Cláusula X.1 (categorías de costes)** — **DECLARATIVA**. No requiere código. Es marco contractual.
+
+### Cláusulas con implementación pendiente (Sub-frente 3 técnico ADR-052)
+
+**Cláusula X.2 (notificación previa 7 días + arrastre 90 días)** — **NO IMPLEMENTADA**.
+- No existe entidad `DeductionEvent` ni tabla `payout_deductions`.
+- No existe sistema de notificación email 7 días antes de aplicar descuento.
+- No existe lógica de arrastre entre payouts sucesivos con corte a 90 días.
+- Implementación estimada: entidad + repositorio + servicio + integración con `PayoutRequestService` existente + template de email + job diario para procesar arrastres.
+
+**Cláusula X.3 (umbral 5% suspensión temporal + reactivación en 15 días)** — **NO IMPLEMENTADA**.
+- No existe cálculo automático del ratio individual rolling 30d por modelo.
+- No existe suspensión automática al superar umbral.
+- **Falta estado nuevo en `PayoutRequest`**: hoy `REQUESTED / APPROVED / REJECTED / PAID / CANCELED`. Necesita añadir `UNDER_REVIEW` (o similar) para paralizar payouts pendientes cuando la modelo entra en suspensión.
+- No existe flujo de reactivación tras revisión.
+- No existe conteo de reincidencia 2/12m para escalar a cancelación definitiva.
+
+**Cláusula X.4 (disputa con SLA 10 días hábiles)** — **NO IMPLEMENTADA**.
+- No existe botón de disputa en panel modelo (`ModelPricingPanel.jsx` no tiene sección de descuentos).
+- No existe sistema de tickets internos con SLA.
+- No existe endpoint para abrir disputa ni para gestionarla desde admin.
+
+**Cláusula X.5 puntos 4-6 (historial descuentos, ratio chargebacks, botón disputa)** — **NO IMPLEMENTADA**.
+- Falta la lectura y renderizado en el panel de la modelo.
+- Depende de que la Cláusula X.2 (entidad DeductionEvent) esté implementada primero.
+
+**Cláusula X.7 (reserva 5% primeros 90 días)** — **NO IMPLEMENTADA**.
+- No existe campo `reserve_balance` ni tabla de tracking de reservas.
+- No existe lógica de retención en el momento del payout.
+- No existe job de liberación tras 90 días.
+- No existe visualización en panel modelo.
+
+### Deudas técnicas confirmadas expuestas por el borrador
+
+**A. Registro de causa del cierre de sesión**. La Cláusula X.1(b) menciona "cancelación unilateral por la Modelo" como causal de refund atribuible. Verificado: `StreamService.endSession(clientId, modelId, endReason)` acepta el parámetro `endReason`, pero los únicos valores usados en el código son `"low-balance"` (2 sitios: `MatchingHandlerSupport:1725` y `MessagesWsHandlerSupport:635`) o `null` (mayoría de callers). No existen valores como `MODEL_HUNG`, `CLIENT_HUNG`, `TECHNICAL_ERROR`. **Para que la atribución sea legítima cuando se implemente §D9**, el sistema debe distinguir la causa del cierre y persistirla en `stream_records`. Sin esta información no se puede aplicar la parte de "cancelación unilateral por la Modelo" con evidencia auditable.
+
+**B. Estado UNDER_REVIEW en PayoutRequest**. Ver Cláusula X.3 arriba.
+
+**C. Tabla payout_deductions o similar**. Necesaria para materializar las Cláusulas X.2, X.4, X.5 puntos 4-6. Debe incluir: `id`, `model_user_id`, `stream_record_id` (opcional, para eventos vinculados a sesión concreta), `reason` (CHARGEBACK / REFUND / PSP_PENALTY), `amount_eur`, `status` (NOTIFIED / IN_DISPUTE / APPLIED / VOIDED / EXPIRED), `notified_at`, `apply_after` (notified_at + 7 días), `applied_at`, `voided_at`, `evidence_json`, timestamps.
+
+**D. Tabla payout_reserves o similar**. Necesaria para materializar la Cláusula X.7. Debe incluir: `id`, `model_user_id`, `contract_accepted_at` (baseline del cálculo de 90 días), `balance_eur` (acumulado retenido), `released_at`, `released_amount_eur`, timestamps.
+
+### Consecuencia práctica para publicar el v5
+
+El operador puede publicar el Model Contract v5 con las 7 cláusulas ya redactadas y hacer re-aceptación forzada de las 18 modelos vivas. Desde ese momento las modelos consienten legalmente la política. **Pero la ejecución automática seguirá siendo manual** hasta que se materialice el Sub-frente 3 técnico:
+
+1. Chargeback real → operador lo detecta en dashboard NOWPayments (o en el futuro Visa) → SQL manual para registrar la deducción → email manual a la modelo con la notificación → ajuste manual del PayoutRequest cuando toque procesar.
+2. Umbral 5% superado → cálculo SQL manual mensual → suspensión manual vía admin → email manual.
+3. Disputa → email de la modelo a soporte → gestión manual → resolución manual con SLA.
+4. Reserva 5% → retención manual al procesar cada payout hasta que se automatice.
+
+El **valor de publicar el v5 ya** aunque la implementación técnica venga después: legitimar legalmente cualquier descuento manual que se aplique en el ínterin. Sin v5 firmado, un descuento manual hoy sería impugnable con base en el v4 que no contempla la política. Con v5 firmado, la modelo ha consentido la política aunque la ejecución sea aún artesanal.
+
+**Prioridad del Sub-frente 3 técnico**: dependerá del volumen real de chargebacks/refunds una vez PROD arranque con tráfico. Con solo cripto y volumen bajo, el manual es sostenible. Cuando aparezcan los primeros 5-10 chargebacks reales o cuando se integre PSP tarjeta, la automatización se vuelve urgente.
 
 ---
 
