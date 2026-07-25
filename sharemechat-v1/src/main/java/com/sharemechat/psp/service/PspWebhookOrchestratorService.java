@@ -1,12 +1,16 @@
 package com.sharemechat.psp.service;
 
+import com.sharemechat.entity.Client;
 import com.sharemechat.entity.PaymentSession;
+import com.sharemechat.handler.MessagesWsHandlerSupport;
 import com.sharemechat.psp.dto.PaymentStatus;
 import com.sharemechat.psp.dto.WebhookEvent;
 import com.sharemechat.psp.entity.PspWebhookEvent;
 import com.sharemechat.psp.repository.PspWebhookEventRepository;
+import com.sharemechat.repository.ClientRepository;
 import com.sharemechat.repository.PaymentSessionRepository;
 import com.sharemechat.service.TransactionService;
+import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -66,15 +70,21 @@ public class PspWebhookOrchestratorService {
     private final PspWebhookEventRepository webhookEventRepository;
     private final PaymentSessionRepository paymentSessionRepository;
     private final TransactionService transactionService;
+    private final ClientRepository clientRepository;
+    private final MessagesWsHandlerSupport wsSupport;
 
     public PspWebhookOrchestratorService(PaymentProviderRegistry providerRegistry,
                                          PspWebhookEventRepository webhookEventRepository,
                                          PaymentSessionRepository paymentSessionRepository,
-                                         TransactionService transactionService) {
+                                         TransactionService transactionService,
+                                         ClientRepository clientRepository,
+                                         MessagesWsHandlerSupport wsSupport) {
         this.providerRegistry = providerRegistry;
         this.webhookEventRepository = webhookEventRepository;
         this.paymentSessionRepository = paymentSessionRepository;
         this.transactionService = transactionService;
+        this.clientRepository = clientRepository;
+        this.wsSupport = wsSupport;
     }
 
     @Transactional
@@ -181,8 +191,9 @@ public class PspWebhookOrchestratorService {
                 }
                 BigDecimal price = session.getAmount();
                 BigDecimal bonus = PACK_BONUS.getOrDefault(session.getPackId(), BigDecimal.ZERO);
+                Long creditedUserId = session.getUser().getId();
                 transactionService.creditPackWithBonus(
-                        session.getUser().getId(),
+                        creditedUserId,
                         price, bonus,
                         session.getOrderId(),
                         session.getPackId(),
@@ -192,6 +203,34 @@ public class PspWebhookOrchestratorService {
                 paymentSessionRepository.save(session);
                 log.info("[PSP-WEBHOOK] credited provider={} pspTx={} orderId={} pack={} price={} bonus={}",
                         providerKey, pspTxId, session.getOrderId(), session.getPackId(), price, bonus);
+                // Fix 2026-07-25: notificar al frontend en vivo que el saldo
+                // se ha actualizado tras el webhook cripto. Sin esto la
+                // pestana original (que sigue viva porque abrimos el hosted
+                // page en popup) no se enteraba del nuevo saldo hasta
+                // recargar o enviar un regalo (WS newBalance solo llegaba
+                // por giftDone). Ahora emitimos wallet:credited con el
+                // nuevo balance leido de clients.saldo_actual.
+                try {
+                    clientRepository.findById(creditedUserId).ifPresent(client -> {
+                        BigDecimal newBalance = client.getSaldoActual();
+                        if (newBalance != null) {
+                            String payload = new JSONObject()
+                                    .put("type", "wallet:credited")
+                                    .put("newBalance", newBalance.toPlainString())
+                                    .put("orderId", session.getOrderId())
+                                    .put("packId", session.getPackId())
+                                    .toString();
+                            wsSupport.notifyUserById(creditedUserId, payload);
+                            log.info("[PSP-WEBHOOK] wallet:credited emitted userId={} newBalance={}",
+                                    creditedUserId, newBalance);
+                        }
+                    });
+                } catch (Exception wsEx) {
+                    // Si falla la notificacion WS no debe romper el credito
+                    // ya persistido; solo log.
+                    log.warn("[PSP-WEBHOOK] wallet:credited notify FAIL userId={}: {}",
+                            creditedUserId, wsEx.getMessage());
+                }
                 break;
             case FAILED:
                 session.setStatus("FAILED");

@@ -133,10 +133,17 @@ public class PspOrchestratorService {
         // que el hosted checkout no ofrezca al cliente monedas cuyo
         // minimo del vendor excede el precio del pack.
         java.util.List<String> allowedCurrencies = allowedPayCurrenciesForPack(packKey);
+        // Fix 2026-07-25: para P10 (10 EUR) el hosted checkout mostraba las 3
+        // stablecoins con USDT-TRC20 preseleccionada, pero los minimos
+        // efectivos del vendor descartan varias combinaciones. Se fuerza
+        // USDT-ERC20 (usdterc20) por defecto para evitar friccion. Para
+        // P20/P40 se deja null -> el cliente sigue eligiendo entre las
+        // opciones (btc + stablecoins).
+        String defaultPayCurrency = defaultPayCurrencyForPack(packKey);
         CreateInvoiceRequest req = new CreateInvoiceRequest(
                 orderId, description,
                 session.getAmount(), "eur",
-                null, // pay_currency null -> cliente elige entre las de pay_currencies
+                defaultPayCurrency,
                 allowedCurrencies,
                 baseUrls.getIpnCallbackUrl(),
                 successUrl,
@@ -200,6 +207,22 @@ public class PspOrchestratorService {
             default:
                 return null;
         }
+    }
+
+    /**
+     * Moneda cripto preseleccionada en el hosted checkout. NOWPayments
+     * usa el {@code pay_currency} para saltarse el picker y llevar al
+     * cliente directamente al pago en esa moneda. Solo se fija para P10
+     * porque los minimos operativos del vendor descartan alternativas
+     * en ese tramo; para P20/P40 se devuelve {@code null} y el cliente
+     * sigue eligiendo entre las de {@link #allowedPayCurrenciesForPack}.
+     */
+    private String defaultPayCurrencyForPack(String packKey) {
+        if (packKey == null) return null;
+        if ("P10".equals(packKey)) {
+            return "usdterc20";
+        }
+        return null;
     }
 
     /**

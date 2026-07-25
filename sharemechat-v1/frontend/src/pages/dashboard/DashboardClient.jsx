@@ -1503,6 +1503,21 @@ const DashboardClient = () => {
     try {
       const data = JSON.parse(ev.data);
 
+      // ====== WALLET UPDATED (webhook cripto) ======
+      // Fix 2026-07-25: cuando el cliente recarga durante sesion, el
+      // hosted checkout se abre en pestana nueva y la sesion no se
+      // corta. Aqui capturamos el WS emitido por PspWebhookOrchestrator
+      // al confirmar el pago para refrescar el saldo del navbar en vivo
+      // sin necesidad de recargar la pagina.
+      if (data.type === 'wallet:credited' && data.newBalance != null) {
+        const nb = Number.parseFloat(String(data.newBalance));
+        if (Number.isFinite(nb)) {
+          console.log('[WALLET][credited]', { orderId: data.orderId, packId: data.packId, newBalance: nb });
+          setSaldo(nb);
+        }
+        return;
+      }
+
       // ====== MENSAJES / REGALOS ======
       if (data.type === 'msg:gift' && data.gift) {
         const me = Number(meIdRef.current);
