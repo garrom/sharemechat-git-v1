@@ -8,6 +8,51 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-25 — HUD sesión tiempo real + fixes PSP cripto (Superficie 2 fase 2 ADR-052)
+
+Sesión larga con dos frentes cerrados y desplegados a TEST.
+
+**Frente 1 — HUD de sesión en tiempo real (ADR-052 Superficie 2 fase 2)**
+
+Motivación operador: durante la sesión activa el cliente no veía el saldo actualizarse en vivo y no había cronómetro; la modelo tampoco sabía cuánto llevaba ganado. Estudios del sector (LiveJasmin/Streamate) confirman que mostrar contador tiempo + saldo/ganado durante la sesión es estándar del segmento pay-per-minute.
+
+Descubrimiento clave verificando `StreamService.endSession`: **el backend NO factura por minuto en tiempo real** — aplica el cargo total (duración × tarifa) UNA sola vez al colgar. Consecuencia: la implementación del HUD es 100% frontend simulado, cero backend nuevo, cero migración. `consumido_estimado = elapsedSec × ratePerMin / 60`; al recibir WS `newBalance` (regalo) se re-snapshotea la base. Fuente única de verdad sigue siendo el backend al cierre.
+
+Componente nuevo `SessionHUD.jsx` con dos variantes (cliente/modelo) e iteración UX en 3 rondas por feedback en TEST:
+- Iter.1: overlay flotante top-left → tapado por `StyledCallTopBar` (z-index 9 vs 5) y solapado con el nickname del peer.
+- Iter.2: subido a z-index 25 + top:60 (bajo la topbar) → resuelto solape pero el operador pidió inline en desktop.
+- Iter.3 (definitivo): prop `inline` opcional. Desktop → HUD dentro de `StyledCallTopMeta` al lado del nickname. Mobile → mantiene overlay flotante (no cabe en línea). Botón "Pantalla completa" con texto sustituido por icono compacto `faExpand` (36×36 circular) para liberar espacio horizontal.
+
+**Bug de reparto de regalos detectado y corregido**: mi HUD del modelo usaba `modelSharePct` del tramo (75-79%) para calcular ganancia por regalo, pero backend usa `gift.model-share=0.90` (fijo, independiente del tramo). El HUD subestimaba (2 regalos × 2€ mostraban 3.00€ en vez de 3.60€ reales acreditados). Añadido campo `giftModelSharePct` a `ModelEconomicsDTO`, servido por `PricingService` con la property inyectada. Frontend consume el nuevo campo con fallback a 90.
+
+**TrialBadge inline**: en sesión con cliente TRIAL el badge FREE del modelo era overlay `top:10 left:10 z-index:20` y se solapaba con la topbar ampliada por el HUD. Reescrito como pill compacto (solo título FREE; subtítulo pasa a tooltip) y montado dentro de `StyledCallTopMeta` a la izquierda del avatar.
+
+Consumo: precio por minuto expuesto al cliente vía `chosenRateEurPerMin` en `ModelPublicProfileDTO` (Superficie 2 fase 1, sesión previa) — el HUD lo carga con fetch on-match al cambiar `currentModelId` o `callPeerId`.
+
+**Frente 2 — Fixes PSP cripto**
+
+Bug reportado por el operador: en TEST, iniciar recarga durante sesión activa cerraba la sesión aunque el pago fuese exitoso. Root cause: `window.location.href = invoiceUrl` navegaba fuera de la app → WebSocket + WebRTC morían → backend detectaba peer-disconnect y cerraba la sesión de streaming.
+
+Fix: `window.open(invoiceUrl, '_blank')` en `startCheckoutRedirect`. Iter.2 necesaria: el primer intento pasaba `noopener,noreferrer` como features, Firefox (y a veces Chrome/Safari) devuelven null como valor de retorno pese a abrir la ventana correctamente; el check `if (!popup)` interpretaba el null como bloqueado y caía al fallback `window.location.href`, reproduciendo el bug original. Eliminado noopener,noreferrer; eliminado el fallback (rompe la sesión) — si el navegador bloquea el popup, se muestra un diálogo pidiendo permitir emergentes.
+
+Bug adicional detectado durante testing: `2 × regalos de 2€ = 3.00€` en HUD modelo (documentado arriba, fix aplicado). Y otro: cliente no podía enviar más regalos tras los 2 primeros — pendiente de reproducir con logs de consola, no bloqueante.
+
+Segundo frente PSP tras validar el popup: `pay_currency` por defecto en `usdterc20` (USDT-ERC20/ETH) **solo para P10** (10€) porque los mínimos operativos del vendor descartaban alternativas del picker. P20/P40 mantienen el picker con btc + stablecoins. Backend fix en `PspOrchestratorService.defaultPayCurrencyForPack(packKey)`.
+
+Tercer frente PSP: refresh saldo en vivo tras webhook cripto. Con el popup arreglado, la pestaña original queda viva pero el navbar no se enteraba del crédito hasta recargar. Añadido WS `wallet:credited` emitido desde `PspWebhookOrchestratorService` tras `creditPackWithBonus`, leyendo `newBalance` de `clients.saldo_actual`. Frontend captura en `handleMsgSocketMessageClient` y actualiza `setSaldo`. Fallo del envío WS no rompe el crédito (ya persistido); solo log.
+
+**Estado deudas técnicas** (`known-debt.md`):
+- **#D-25** (recalibrar modelo-financiero.md): MD hecho v2.0 con supuestos ADR-052 (75% T1, mix fees 50/50, break-even ~170 TX/mes, sensitivity table cripto vs tarjeta). XLSX pendiente.
+- **Superficie 2** completada: fase 1 (precio en tarjetas cliente teaser + modal ver perfil) + fase 2 (HUD sesión tiempo real).
+- **#D-26** borrador T&C v5 con política descuentos ADR-052 §D7 — pendiente próxima sesión.
+- **#D-24** packs premium — diferido al final por el operador.
+
+Deploy: solo TEST en esta sesión. Backend `c93f9bd` + bundle product `main.193ea99b.js` (último desplegado tras las 3 iteraciones UX y los 3 fixes PSP). Manifests test.yaml actualizados y committeados por cada iteración. AUDIT/PROD pendientes de nivelar.
+
+**Aprendizaje operativo**: al levantar un feature UI que se monta como overlay absolute sobre componentes existentes (topbar del videochat), primero verificar z-index de los styled-components alrededor (el TrialBadge del modelo llevaba meses con overlay overlap con la topbar oculto porque la topbar tenía menos contenido). Al ampliar la topbar con nuevos elementos (HUD), el conflicto emergió. Preferible integrar inline cuando el layout lo permite; overlay solo cuando el layout no cabe.
+
+---
+
 ## 2026-07-21 — Revisión estado real Sightengine + actualización documental de planes (sin código)
 
 Sesión de análisis sin cambios de código, disparada por el planteamiento del frente **"prueba gratis SFW"** (inspirado en el modelo Coomeet: contenido adulto solo tras registro/pago con verificación de edad; franja trial libre de desnudos). Al revisar el estado real de la moderación IA se detectaron asunciones desactualizadas en la documentación viva del proyecto respecto al vendor Sightengine y su plan comercial.
