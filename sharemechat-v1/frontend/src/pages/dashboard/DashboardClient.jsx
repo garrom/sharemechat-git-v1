@@ -2005,15 +2005,28 @@ const DashboardClient = () => {
   closeMsgSocketRef.current = closeMsgSocket;
 
 
-  // ADR-051 Fase 4: crea el checkout en NOWPayments y redirige al hosted
-  // page. El credit al saldo llega via webhook (asincrono); el usuario
-  // vuelve a /checkout/success que hace polling hasta ver SUCCESS.
+  // ADR-051 Fase 4 + fix 2026-07-25: crea el checkout en NOWPayments y
+  // abre el hosted page en NUEVA PESTANA (window.open), no en la actual.
+  // Motivo: si el cliente recarga durante una sesion de streaming activa,
+  // `window.location.href` cerraba la pestana -> WS se desconectaba ->
+  // WebRTC peer moria -> backend detectaba peer-disconnect y cerraba la
+  // sesion aunque el pago fuera exitoso. Con window.open la pestana
+  // original queda viva (WS + peer intactos) y el credit al saldo llega
+  // via WS newBalance cuando el webhook cripto se procesa. El usuario
+  // vuelve a /checkout/success EN LA NUEVA PESTANA, que hace polling.
+  // Si el navegador bloquea el popup (raro con user gesture), avisamos.
   const startCheckoutRedirect = async (pack) => {
     try {
       setLoadingSaldo(true);
       const { invoiceUrl } = await createNowPaymentsCheckout(pack.id);
       if (!invoiceUrl) throw new Error('missing_invoice_url');
-      window.location.href = invoiceUrl;
+      const popup = window.open(invoiceUrl, '_blank', 'noopener,noreferrer');
+      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        console.warn('[PSP] popup blocked; falling back to same-tab redirect');
+        window.location.href = invoiceUrl;
+        return;
+      }
+      setLoadingSaldo(false);
     } catch (e) {
       console.error('[PSP] checkout error', e);
       const code = e?.data?.code || '';
