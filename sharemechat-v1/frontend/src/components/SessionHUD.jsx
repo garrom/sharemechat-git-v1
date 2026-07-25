@@ -87,25 +87,29 @@ export default function SessionHUD({
     ? ((elapsedSec - snapshot.atSec) * rate) / 60
     : 0;
 
+  // Posicion: overlay bajo el topbar (StyledCallTopMeta ocupa la esquina
+  // superior izquierda con el nickname del peer + avatar; el HUD se
+  // coloca justo debajo para no solaparse). z-index alto para pisar el
+  // video y competir con TrialBadge del modelo (z-index 20).
   const containerStyle = {
     position: 'absolute',
-    top: 12,
+    top: 60,
     left: 12,
-    zIndex: 5,
+    zIndex: 25,
     display: 'inline-flex',
     alignItems: 'center',
     gap: 12,
     padding: '6px 12px',
     borderRadius: 999,
-    background: 'rgba(0, 0, 0, 0.62)',
+    background: 'rgba(0, 0, 0, 0.72)',
     color: '#f9fafb',
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-    fontSize: '0.9rem',
+    fontSize: '0.92rem',
     fontWeight: 600,
     letterSpacing: '0.02em',
     pointerEvents: 'none',
     userSelect: 'none',
-    backdropFilter: 'blur(4px)',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
   };
 
   const dotStyle = {
