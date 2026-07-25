@@ -12,7 +12,8 @@ import {
   faChevronLeft,
   faChevronRight,
   faBan,
-  faFlag
+  faFlag,
+  faExpand
 } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat,
@@ -590,19 +591,20 @@ export default function VideoChatRandomCliente(props) {
                       style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '18px 18px 0 0', overflow: 'hidden', background: '#000' }}
                     >
                       <StyledCallStage>
-                        <SessionHUD
-                          variant="client"
-                          active={!!remoteStream}
-                          ratePerMin={currentModelRate}
-                          baseBalance={baseBalanceAtCallStart}
-                          externalBalance={currentSaldo}
-                        />
                         <StyledCallTopBar>
                           <StyledCallTopMeta>
                             <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
                             <StyledCallTopMetaText>
                               {modelNickname || t('dashboardUserClient.report.displayName')}
                             </StyledCallTopMetaText>
+                            <SessionHUD
+                              variant="client"
+                              active={!!remoteStream}
+                              ratePerMin={currentModelRate}
+                              baseBalance={baseBalanceAtCallStart}
+                              externalBalance={currentSaldo}
+                              inline
+                            />
                           </StyledCallTopMeta>
                           <StyledCallTopActions>
                             <BtnCallGhost
@@ -610,8 +612,9 @@ export default function VideoChatRandomCliente(props) {
                               onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                               title={t('dashboardClient.videoChatRandomCliente.actions.fullscreen')}
                               aria-label={t('dashboardClient.videoChatRandomCliente.actions.fullscreen')}
+                              style={{ width: 36, height: 36, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}
                             >
-                              {t('dashboardClient.videoChatRandomCliente.actions.fullscreen')}
+                              <FontAwesomeIcon icon={faExpand} />
                             </BtnCallGhost>
                           </StyledCallTopActions>
                         </StyledCallTopBar>

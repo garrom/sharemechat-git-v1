@@ -2,7 +2,7 @@ import React from 'react';
 import i18n from '../../i18n';
 import SessionHUD from '../../components/SessionHUD';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag } from '@fortawesome/free-solid-svg-icons';
+import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag, faExpand } from '@fortawesome/free-solid-svg-icons';
 import {
   StyledCenterVideochat,
   StyledSplit2,
@@ -375,7 +375,7 @@ export default function VideoChatRandomModelo(props) {
     </StyledCallBottomBar>
   );
 
-  const renderCallTopMeta = () => (
+  const renderCallTopMeta = (hud = null) => (
     <StyledCallTopMeta>
       <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
       <div style={{display:'flex',flexDirection:'column',minWidth:0,lineHeight:1.15}}>
@@ -386,6 +386,7 @@ export default function VideoChatRandomModelo(props) {
           {renderClientBalance()}
         </div>
       </div>
+      {hud}
     </StyledCallTopMeta>
   );
 
@@ -563,23 +564,26 @@ export default function VideoChatRandomModelo(props) {
                     >
                       <StyledCallStage>
                         {showTrialBadge && <TrialBadge />}
-                        <SessionHUD
-                          variant="model"
-                          active={!!remoteStream}
-                          ratePerMin={Number(modelEconomics?.chosenRateEurPerMin)}
-                          modelSharePct={Number(modelEconomics?.modelSharePct)}
-                          giftsSum={giftsSumEur}
-                        />
                         <StyledCallTopBar>
-                          {renderCallTopMeta()}
+                          {renderCallTopMeta(
+                            <SessionHUD
+                              variant="model"
+                              active={!!remoteStream}
+                              ratePerMin={Number(modelEconomics?.chosenRateEurPerMin)}
+                              modelSharePct={Number(modelEconomics?.modelSharePct)}
+                              giftsSum={giftsSumEur}
+                              inline
+                            />
+                          )}
                           <StyledCallTopActions>
                             <BtnCallGhost
                               type="button"
                               onClick={() => toggleFullscreen(remoteVideoWrapRef.current)}
                               title={t('common.fullscreen')}
                               aria-label={t('common.fullscreen')}
+                              style={{ width: 36, height: 36, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}
                             >
-                              {t('common.fullscreen')}
+                              <FontAwesomeIcon icon={faExpand} />
                             </BtnCallGhost>
                           </StyledCallTopActions>
                         </StyledCallTopBar>

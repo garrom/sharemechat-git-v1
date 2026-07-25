@@ -32,6 +32,7 @@ export default function SessionHUD({
   externalBalance,
   modelSharePct,
   giftsSum,
+  inline = false,
 }) {
   const [elapsedSec, setElapsedSec] = useState(0);
   const [snapshot, setSnapshot] = useState(null); // { balance, atSec }
@@ -87,30 +88,48 @@ export default function SessionHUD({
     ? ((elapsedSec - snapshot.atSec) * rate) / 60
     : 0;
 
-  // Posicion: overlay bajo el topbar (StyledCallTopMeta ocupa la esquina
-  // superior izquierda con el nickname del peer + avatar; el HUD se
-  // coloca justo debajo para no solaparse). z-index alto para pisar el
-  // video y competir con TrialBadge del modelo (z-index 20).
-  const containerStyle = {
-    position: 'absolute',
-    top: 60,
-    left: 12,
-    zIndex: 25,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: 12,
-    padding: '6px 12px',
-    borderRadius: 999,
-    background: 'rgba(0, 0, 0, 0.72)',
-    color: '#f9fafb',
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
-    fontSize: '0.92rem',
-    fontWeight: 600,
-    letterSpacing: '0.02em',
-    pointerEvents: 'none',
-    userSelect: 'none',
-    boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
-  };
+  // Dos modos de layout:
+  //  - inline=true (desktop): render como componente en linea dentro del
+  //    StyledCallTopBar, a la derecha del nickname. Sin position absolute.
+  //  - inline=false (mobile o fallback): overlay flotante bajo el topbar.
+  //    z-index alto para ganar al topbar (z-index 9) y al TrialBadge (20).
+  const containerStyle = inline
+    ? {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '4px 10px',
+        borderRadius: 999,
+        background: 'rgba(0, 0, 0, 0.55)',
+        color: '#f9fafb',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        fontSize: '0.86rem',
+        fontWeight: 600,
+        letterSpacing: '0.02em',
+        pointerEvents: 'none',
+        userSelect: 'none',
+        whiteSpace: 'nowrap',
+      }
+    : {
+        position: 'absolute',
+        top: 60,
+        left: 12,
+        zIndex: 25,
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 12,
+        padding: '6px 12px',
+        borderRadius: 999,
+        background: 'rgba(0, 0, 0, 0.72)',
+        color: '#f9fafb',
+        fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+        fontSize: '0.92rem',
+        fontWeight: 600,
+        letterSpacing: '0.02em',
+        pointerEvents: 'none',
+        userSelect: 'none',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.35)',
+      };
 
   const dotStyle = {
     width: 8,

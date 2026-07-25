@@ -2,7 +2,7 @@
 import React,{useEffect,useRef} from 'react';
 import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
+import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift, faExpand } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
 import SessionHUD from '../../components/SessionHUD';
@@ -273,19 +273,20 @@ export default function VideoChatFavoritosCliente(props){
                           <StyledCallVideoArea>
                             <StyledRemoteVideo ref={callRemoteWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}>
                               <StyledCallStage>
-                                <SessionHUD
-                                  variant="client"
-                                  active={callStatus==='in-call'}
-                                  ratePerMin={currentModelRate}
-                                  baseBalance={baseBalanceRef.current}
-                                  externalBalance={currentSaldo}
-                                />
                                 <StyledCallTopBar>
                                   <StyledCallTopMeta>
                                     <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChica.png'} alt=""/>
                                     <StyledCallTopMetaText>
                                       {callPeerName||t('dashboardClient.videoChatFavoritosCliente.labels.remote')}
                                     </StyledCallTopMetaText>
+                                    <SessionHUD
+                                      variant="client"
+                                      active={callStatus==='in-call'}
+                                      ratePerMin={currentModelRate}
+                                      baseBalance={baseBalanceRef.current}
+                                      externalBalance={currentSaldo}
+                                      inline
+                                    />
                                   </StyledCallTopMeta>
                                   <StyledCallTopActions>
                                     <BtnCallGhost
@@ -293,8 +294,9 @@ export default function VideoChatFavoritosCliente(props){
                                       onClick={()=>toggleFullscreen(callRemoteWrapRef.current)}
                                       title={t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}
                                       aria-label={t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}
+                                      style={{ width: 36, height: 36, padding: 0, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%' }}
                                     >
-                                      {t('dashboardClient.videoChatFavoritosCliente.actions.fullscreen')}
+                                      <FontAwesomeIcon icon={faExpand} />
                                     </BtnCallGhost>
                                   </StyledCallTopActions>
                                 </StyledCallTopBar>
