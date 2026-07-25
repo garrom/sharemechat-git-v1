@@ -2005,26 +2005,38 @@ const DashboardClient = () => {
   closeMsgSocketRef.current = closeMsgSocket;
 
 
-  // ADR-051 Fase 4 + fix 2026-07-25: crea el checkout en NOWPayments y
-  // abre el hosted page en NUEVA PESTANA (window.open), no en la actual.
-  // Motivo: si el cliente recarga durante una sesion de streaming activa,
-  // `window.location.href` cerraba la pestana -> WS se desconectaba ->
-  // WebRTC peer moria -> backend detectaba peer-disconnect y cerraba la
-  // sesion aunque el pago fuera exitoso. Con window.open la pestana
-  // original queda viva (WS + peer intactos) y el credit al saldo llega
-  // via WS newBalance cuando el webhook cripto se procesa. El usuario
-  // vuelve a /checkout/success EN LA NUEVA PESTANA, que hace polling.
-  // Si el navegador bloquea el popup (raro con user gesture), avisamos.
+  // ADR-051 Fase 4 + fix 2026-07-25 (iter 2): crea el checkout en
+  // NOWPayments y abre el hosted page en NUEVA PESTANA (window.open),
+  // no en la actual. Motivo: si el cliente recarga durante una sesion
+  // de streaming activa, `window.location.href` cerraba la pestana ->
+  // WS se desconectaba -> WebRTC peer moria -> backend detectaba
+  // peer-disconnect y cerraba la sesion. Con window.open la pestana
+  // original queda viva (WS + peer intactos) y el credit al saldo
+  // llega al colgar la sesion (loadSaldo al remontar). El usuario
+  // vuelve a /checkout/success EN LA NUEVA PESTANA.
+  //
+  // NO usamos `noopener,noreferrer` porque en Firefox (y a veces
+  // Chrome/Safari) hace que window.open devuelva null aunque la ventana
+  // se haya abierto bien; el check `if (!popup)` interpretaba ese null
+  // como bloqueo y caia al mismo-tab redirect, rompiendo la sesion.
+  //
+  // Si el popup viene realmente bloqueado, NO redirigimos en la misma
+  // pestana (eso justamente es lo que queremos evitar) - mostramos un
+  // dialogo con enlace manual para que el usuario abra el checkout
+  // desde una accion propia (gesto que suele desbloquear popups).
   const startCheckoutRedirect = async (pack) => {
     try {
       setLoadingSaldo(true);
       const { invoiceUrl } = await createNowPaymentsCheckout(pack.id);
       if (!invoiceUrl) throw new Error('missing_invoice_url');
-      const popup = window.open(invoiceUrl, '_blank', 'noopener,noreferrer');
-      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-        console.warn('[PSP] popup blocked; falling back to same-tab redirect');
-        window.location.href = invoiceUrl;
-        return;
+      const popup = window.open(invoiceUrl, '_blank');
+      if (!popup) {
+        console.warn('[PSP] popup blocked by browser; showing manual link');
+        await alert({
+          title: 'Permite ventanas emergentes',
+          message: 'Tu navegador ha bloqueado la ventana de pago. Permite ventanas emergentes en test.sharemechat.com y vuelve a pulsar Comprar.',
+          variant: 'warning',
+        });
       }
       setLoadingSaldo(false);
     } catch (e) {
