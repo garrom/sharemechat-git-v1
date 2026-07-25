@@ -71,4 +71,14 @@ public class ModelEconomicsDTO {
 
     /** Fecha del snapshot que respalda estos datos (YYYY-MM-DD). */
     public LocalDate snapshotDate;
+
+    /**
+     * %reparto de la modelo aplicado a los regalos (property
+     * {@code gift.model-share}, default 0.90 -> 90). Independiente del
+     * tramo T1-T4 (que solo afecta al reparto de tiempo). Se sirve como
+     * porcentaje (0-100) para consistencia con {@link #modelSharePct}.
+     * Consumido por el HUD de sesion (SessionHUD variant='model') para
+     * calcular la ganancia estimada por regalo en tiempo real.
+     */
+    public BigDecimal giftModelSharePct;
 }

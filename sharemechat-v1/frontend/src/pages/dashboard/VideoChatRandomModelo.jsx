@@ -175,8 +175,14 @@ export default function VideoChatRandomModelo(props) {
 
   React.useEffect(() => {
     if (!remoteStream) return;
-    const pct = Number(modelEconomics?.modelSharePct);
-    if (!Number.isFinite(pct) || pct <= 0) return;
+    // Los regalos se reparten con `gift.model-share` (property backend,
+    // default 0.90 = 90%), NO con el %reparto del tramo T1-T4. El backend
+    // lo expone en modelEconomics.giftModelSharePct para no duplicar la
+    // constante en frontend. Si no viene (compat rara), fallback a 90.
+    const pctRaw = modelEconomics?.giftModelSharePct;
+    const pct = Number.isFinite(Number(pctRaw)) && Number(pctRaw) > 0
+      ? Number(pctRaw)
+      : 90;
     if (!Array.isArray(messages)) return;
     let addedThisPass = 0;
     messages.forEach((m, idx) => {
@@ -193,7 +199,7 @@ export default function VideoChatRandomModelo(props) {
     if (addedThisPass > 0) {
       setGiftsSumEur((prev) => prev + addedThisPass);
     }
-  }, [messages, remoteStream, modelEconomics?.modelSharePct]);
+  }, [messages, remoteStream, modelEconomics?.giftModelSharePct]);
 
   React.useEffect(() => {
     if (!remoteStream || isMobile || !cameraActive) {

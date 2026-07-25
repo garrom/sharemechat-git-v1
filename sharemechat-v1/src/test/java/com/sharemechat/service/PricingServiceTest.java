@@ -54,7 +54,7 @@ class PricingServiceTest {
         modelTierService = mock(ModelTierService.class);
 
         service = new PricingService(userRepository, pricingTierRepository,
-                snapshotRepository, modelTierService, new BigDecimal("1500"));
+                snapshotRepository, modelTierService, new BigDecimal("1500"), new BigDecimal("0.90"));
 
         T0 = tier(1L, "T0", "0", "75.00", "1.00", "1.00");
         T1 = tier(2L, "T1", "3500", "77.00", "1.00", "3.00");

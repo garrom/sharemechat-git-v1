@@ -42,12 +42,14 @@ public class PricingService {
     private final ModelTierDailySnapshotRepository snapshotRepository;
     private final ModelTierService modelTierService;
     private final BigDecimal proStatusMinBilledGross;
+    private final BigDecimal giftModelSharePct;
 
     public PricingService(UserRepository userRepository,
                           ModelPricingTierRepository pricingTierRepository,
                           ModelTierDailySnapshotRepository snapshotRepository,
                           ModelTierService modelTierService,
-                          @Value("${billing.pro-status.min-billed-gross-eur-30d:1500}") BigDecimal proStatusMinBilledGross) {
+                          @Value("${billing.pro-status.min-billed-gross-eur-30d:1500}") BigDecimal proStatusMinBilledGross,
+                          @Value("${gift.model-share:0.90}") BigDecimal giftModelShare) {
         this.userRepository = userRepository;
         this.pricingTierRepository = pricingTierRepository;
         this.snapshotRepository = snapshotRepository;
@@ -55,6 +57,11 @@ public class PricingService {
         this.proStatusMinBilledGross = proStatusMinBilledGross != null
                 ? proStatusMinBilledGross
                 : new BigDecimal("1500");
+        // gift.model-share viene como fraccion (0.90) y se sirve al frontend
+        // como porcentaje (90.00) para consistencia con modelSharePct.
+        BigDecimal share = giftModelShare != null ? giftModelShare : new BigDecimal("0.90");
+        this.giftModelSharePct = share.multiply(new BigDecimal("100"))
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
@@ -83,6 +90,7 @@ public class PricingService {
         dto.chosenRateEurPerMin = user.getChosenRateEurPerMin();
         dto.proAcceptsTrial = Boolean.TRUE.equals(user.getProAcceptsTrial());
         dto.proStatusMinBilledGrossEur30d = proStatusMinBilledGross;
+        dto.giftModelSharePct = giftModelSharePct;
 
         // Resolver tramo desde el snapshot (o fallback si no hay snapshot).
         ModelPricingTier tier = null;
