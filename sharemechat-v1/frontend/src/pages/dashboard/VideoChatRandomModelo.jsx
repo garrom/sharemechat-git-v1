@@ -1,5 +1,6 @@
 import React from 'react';
 import i18n from '../../i18n';
+import SessionHUD from '../../components/SessionHUD';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faUserPlus, faVideo, faPhoneSlash, faForward, faPaperPlane, faBan, faFlag } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -148,6 +149,51 @@ export default function VideoChatRandomModelo(props) {
   );
 
   const [isDesktopRemoteVideoReady, setIsDesktopRemoteVideoReady] = React.useState(false);
+
+  // ADR-052 Superficie 2 (2026-07-25): acumulador local de ganancia por
+  // regalos en la sesion activa. El WS trae el `cost` bruto del regalo;
+  // aplicamos el %reparto vigente del tramo (modelEconomics.modelSharePct)
+  // para reflejar lo que efectivamente ganara la modelo. Se resetea al
+  // arrancar cada nueva llamada (remoteStream vira null -> stream).
+  const [giftsSumEur, setGiftsSumEur] = React.useState(0);
+  const seenGiftKeysRef = React.useRef(new Set());
+  const sessionStartRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (remoteStream) {
+      if (sessionStartRef.current == null) {
+        sessionStartRef.current = Date.now();
+        seenGiftKeysRef.current = new Set();
+        setGiftsSumEur(0);
+      }
+    } else {
+      sessionStartRef.current = null;
+      seenGiftKeysRef.current = new Set();
+      setGiftsSumEur(0);
+    }
+  }, [remoteStream]);
+
+  React.useEffect(() => {
+    if (!remoteStream) return;
+    const pct = Number(modelEconomics?.modelSharePct);
+    if (!Number.isFinite(pct) || pct <= 0) return;
+    if (!Array.isArray(messages)) return;
+    let addedThisPass = 0;
+    messages.forEach((m, idx) => {
+      const g = m?.gift;
+      if (!g) return;
+      if (m.from !== 'peer') return;
+      const cost = Number(g.cost);
+      if (!Number.isFinite(cost) || cost <= 0) return;
+      const key = `${idx}:${g.giftId ?? g.code ?? cost}`;
+      if (seenGiftKeysRef.current.has(key)) return;
+      seenGiftKeysRef.current.add(key);
+      addedThisPass += (cost * pct) / 100;
+    });
+    if (addedThisPass > 0) {
+      setGiftsSumEur((prev) => prev + addedThisPass);
+    }
+  }, [messages, remoteStream, modelEconomics?.modelSharePct]);
 
   React.useEffect(() => {
     if (!remoteStream || isMobile || !cameraActive) {
@@ -511,6 +557,13 @@ export default function VideoChatRandomModelo(props) {
                     >
                       <StyledCallStage>
                         {showTrialBadge && <TrialBadge />}
+                        <SessionHUD
+                          variant="model"
+                          active={!!remoteStream}
+                          ratePerMin={Number(modelEconomics?.chosenRateEurPerMin)}
+                          modelSharePct={Number(modelEconomics?.modelSharePct)}
+                          giftsSum={giftsSumEur}
+                        />
                         <StyledCallTopBar>
                           {renderCallTopMeta()}
                           <StyledCallTopActions>
@@ -616,6 +669,13 @@ export default function VideoChatRandomModelo(props) {
                   >
                     <StyledCallStage>
                       {showTrialBadge && <TrialBadge />}
+                      <SessionHUD
+                        variant="model"
+                        active={!!remoteStream}
+                        ratePerMin={Number(modelEconomics?.chosenRateEurPerMin)}
+                        modelSharePct={Number(modelEconomics?.modelSharePct)}
+                        giftsSum={giftsSumEur}
+                      />
                       <StyledCallTopBar>
                         {renderCallTopMeta()}
                       </StyledCallTopBar>

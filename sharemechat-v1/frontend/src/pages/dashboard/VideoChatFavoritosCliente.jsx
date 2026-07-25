@@ -5,6 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowLeft, faPhoneSlash, faVideo, faPaperPlane, faGift } from '@fortawesome/free-solid-svg-icons';
 import FavoritesClientList from '../favorites/FavoritesClientList';
 import SupportMessageBubble from '../../components/support/SupportMessageBubble';
+import SessionHUD from '../../components/SessionHUD';
 import { StyledCenter,StyledFavoritesShell,StyledFavoritesColumns,StyledCenterPanel,StyledCenterBody,
     StyledChatScroller,StyledChatDock,StyledChatInput,StyledVideoArea,StyledRemoteVideo,StyledVideoTitle,
     StyledTitleAvatar,StyledLocalVideo,StyledTopActions,StyledChatWhatsApp,StyledChatContainer,
@@ -29,7 +30,19 @@ export default function VideoChatFavoritosCliente(props){
       fmtEUR,showCenterGifts,setShowCenterGifts,sendGiftMsg,contactMode,enterCallMode,callStatus,callCameraActive,
       callPeerId,callPeerName,callPeerAvatar,callRemoteVideoRef,callLocalVideoRef,callRemoteWrapRef,callListRef,
       handleCallActivateCamera,handleCallInvite,handleCallAccept,handleCallReject,handleCallEnd,toggleFullscreen,
-      callError,backToList,user} = props;
+      callError,backToList,user,
+      currentModelRate,currentSaldo} = props;
+
+  const baseBalanceRef = useRef(null);
+  useEffect(() => {
+    if (callStatus === 'in-call') {
+      if (baseBalanceRef.current == null && Number.isFinite(Number(currentSaldo))) {
+        baseBalanceRef.current = Number(currentSaldo);
+      }
+    } else {
+      baseBalanceRef.current = null;
+    }
+  }, [callStatus, currentSaldo]);
 
   const normalizeGiftTier = (gift) =>
     String(gift?.tier || 'QUICK').toUpperCase() === 'PREMIUM' ? 'PREMIUM' : 'QUICK';
@@ -260,6 +273,13 @@ export default function VideoChatFavoritosCliente(props){
                           <StyledCallVideoArea>
                             <StyledRemoteVideo ref={callRemoteWrapRef} style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}>
                               <StyledCallStage>
+                                <SessionHUD
+                                  variant="client"
+                                  active={callStatus==='in-call'}
+                                  ratePerMin={currentModelRate}
+                                  baseBalance={baseBalanceRef.current}
+                                  externalBalance={currentSaldo}
+                                />
                                 <StyledCallTopBar>
                                   <StyledCallTopMeta>
                                     <StyledTitleAvatar src={callPeerAvatar||'/img/avatarChica.png'} alt=""/>

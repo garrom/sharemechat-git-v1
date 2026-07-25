@@ -1,4 +1,15 @@
 {
+  "sessionHUD": {
+    "client": {
+      "rateTitle": "Model rate per minute",
+      "balanceTitle": "Estimated remaining balance in real time"
+    },
+    "model": {
+      "earningsTitle": "Estimated earnings in this session (time + gifts)",
+      "giftsTitle": "Gifts received in this session (net)",
+      "giftsLabel": "🎁 +€{{amount}}"
+    }
+  },
   "videochat": {
     "trial": {
       "modelBadge": {

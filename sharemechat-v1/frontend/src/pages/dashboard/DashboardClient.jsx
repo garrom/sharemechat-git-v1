@@ -116,6 +116,7 @@ const DashboardClient = () => {
   const [chatInput, setChatInput] = useState('');
   const [activeTab, setActiveTab] = useState('videochat');
   const [currentModelId, setCurrentModelId] = useState(null);
+  const [currentModelRate, setCurrentModelRate] = useState(null);
   const [saldo, setSaldo] = useState(null);
   const [loadingSaldo, setLoadingSaldo] = useState(false);
   const [saldoError, setSaldoError] = useState('');
@@ -726,6 +727,32 @@ const DashboardClient = () => {
       } catch {/* noop */}
     })();
   }, [sessionUser?.id, currentModelId]);
+
+  // ADR-052 Superficie 2 (2026-07-25): al matchear (random) o al establecer
+  // llamada dirigida a un favorito cargamos su chosenRateEurPerMin para
+  // alimentar el HUD de sesion activa (SessionHUD variant='client'). Backend
+  // no factura por minuto en tiempo real, asi que el HUD simula el consumo
+  // local con rate * elapsed. El fetch cubre ambos flujos (random via
+  // currentModelId; call favorito via callPeerId).
+  useEffect(() => {
+    const peerId = currentModelId || callPeerId;
+    if (!sessionUser?.id || !peerId) {
+      setCurrentModelRate(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const d = await apiFetch(`/models/${peerId}/public-profile`);
+        if (cancelled) return;
+        const r = d?.chosenRateEurPerMin;
+        setCurrentModelRate(r != null ? Number(r) : null);
+      } catch {
+        if (!cancelled) setCurrentModelRate(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sessionUser?.id, currentModelId, callPeerId]);
 
   // [CALL][Client] Solo aseguramos UI (nombre) y socket. El peer “verdadero”
   useEffect(() => {
@@ -3083,6 +3110,8 @@ const DashboardClient = () => {
             handleReportPeer={handleReportPeer}
             matchGraceRef={matchGraceRef}
             nextDisabled={nexting}
+            currentModelRate={currentModelRate}
+            currentSaldo={saldo}
           />
         ):activeTab==='blog'?(
           /* === BLOG PRIVADO A PANTALLA COMPLETA (SIN COLUMNAS) === */
@@ -3162,6 +3191,8 @@ const DashboardClient = () => {
                 toggleFullscreen={toggleFullscreen}
                 backToList={backToList}
                 user={sessionUser}
+                currentModelRate={currentModelRate}
+                currentSaldo={saldo}
               />
               )}
             </StyledCenter>

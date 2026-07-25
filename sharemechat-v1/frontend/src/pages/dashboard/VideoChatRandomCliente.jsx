@@ -81,6 +81,7 @@ import {
   BtnTeaserNext
 } from '../../styles/ButtonStyles';
 import PromoVideoLightbox from '../../components/PromoVideoLightbox';
+import SessionHUD from '../../components/SessionHUD';
 import { useSession } from '../../components/SessionProvider';
 import { apiFetch } from '../../config/http';
 
@@ -120,8 +121,22 @@ export default function VideoChatRandomCliente(props) {
     matchGraceRef,
     sendRandomMediaReady,
     nextDisabled,
-    handleReportPeer
+    handleReportPeer,
+    currentModelRate,
+    currentSaldo,
   } = props;
+
+  const [baseBalanceAtCallStart, setBaseBalanceAtCallStart] = useState(null);
+
+  useEffect(() => {
+    if (remoteStream) {
+      if (baseBalanceAtCallStart == null && Number.isFinite(Number(currentSaldo))) {
+        setBaseBalanceAtCallStart(Number(currentSaldo));
+      }
+    } else {
+      setBaseBalanceAtCallStart(null);
+    }
+  }, [remoteStream, currentSaldo, baseBalanceAtCallStart]);
 
   const { user: sessionUser, loading: sessionLoading } = useSession();
 
@@ -575,6 +590,13 @@ export default function VideoChatRandomCliente(props) {
                       style={{ position: 'relative', width: '100%', height: '100%', borderRadius: '18px 18px 0 0', overflow: 'hidden', background: '#000' }}
                     >
                       <StyledCallStage>
+                        <SessionHUD
+                          variant="client"
+                          active={!!remoteStream}
+                          ratePerMin={currentModelRate}
+                          baseBalance={baseBalanceAtCallStart}
+                          externalBalance={currentSaldo}
+                        />
                         <StyledCallTopBar>
                           <StyledCallTopMeta>
                             <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
@@ -699,6 +721,13 @@ export default function VideoChatRandomCliente(props) {
                     style={{ position: 'relative', width: '100%', overflow: 'hidden', background: '#000' }}
                   >
                     <StyledCallStage>
+                      <SessionHUD
+                        variant="client"
+                        active={!!remoteStream}
+                        ratePerMin={currentModelRate}
+                        baseBalance={baseBalanceAtCallStart}
+                        externalBalance={currentSaldo}
+                      />
                       <StyledCallTopBar>
                         <StyledCallTopMeta>
                           <StyledTitleAvatar src={modelAvatar || '/img/avatarChica.png'} alt="" />
