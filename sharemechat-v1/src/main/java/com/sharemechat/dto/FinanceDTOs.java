@@ -1,7 +1,5 @@
 package com.sharemechat.dto;
 
-import java.math.BigDecimal;
-
 public class FinanceDTOs {
 
     public static class TopModel {
@@ -21,19 +19,12 @@ public class FinanceDTOs {
         public String netProfitEUR;    // margen plataforma
     }
 
-    public static class ModelTierSnapshotSummary {
-        public String snapshotDate;          // YYYY-MM-DD (ayer)
-        public Integer billedMinutes30d;     // minutos en ventana 30d
-        public String billedHours30d;        // "12.50"
-        public String tierName;              // "BASE" / "7 - 20"
-        public String firstMinuteEURPerMin;  // "0.0500"
-        public String nextMinutesEURPerMin;  // "0.1500"
-    }
-
+    // ADR-052 (2026-07-25 limpieza): DTO del tab Historico del panel
+    // Estadisticas del modelo. Retirados ModelTierSnapshotSummary y
+    // TierRow tras la iter.2: el snapshot actual y el catalogo de tramos
+    // se sirven ahora desde PricingService (/model/economics), no aqui.
     public static class ModelTierStats {
-        public ModelTierSnapshotSummary current;       // snapshot efectivo (ayer)
         public java.util.List<ModelTierHistoryRow> history; // últimos N snapshots
-        public java.util.List<TierRow> tiers;          // tiers activos (o todos)
     }
 
     public static class ModelTierHistoryRow {
@@ -41,15 +32,4 @@ public class FinanceDTOs {
         public Integer billedMinutes30d;
         public String tierName;
     }
-
-    public static class TierRow {
-        public Long tierId;
-        public String name;
-        public Integer minBilledMinutes;
-        public String firstMinuteEURPerMin;
-        public String nextMinutesEURPerMin;
-        public Boolean active;
-    }
-
-
 }

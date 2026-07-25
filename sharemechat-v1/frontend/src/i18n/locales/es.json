@@ -1253,70 +1253,6 @@
         "loading": "Cargando estadísticas…",
         "error": "Error: {{error}}"
       },
-      "currentSnapshot": {
-        "title": "Snapshot actual (ayer)",
-        "hint": "Vista rápida para que sepas en qué punto estás."
-      },
-      "cards": {
-        "date": {
-          "label": "Fecha",
-          "meta": "Último snapshot disponible"
-        },
-        "currentTier": {
-          "label": "Tier actual",
-          "meta": "Según ventana móvil de 30 días"
-        },
-        "minutes30d": {
-          "label": "Minutos últimos 30 días",
-          "hours": "Horas: {{hours}}"
-        },
-        "firstMinuteRate": {
-          "label": "Tarifa primer minuto",
-          "value": "€{{amount}}/min",
-          "meta": "Se aplica al primer minuto completo de la sesión."
-        },
-        "nextMinutesRate": {
-          "label": "Tarifa minutos siguientes",
-          "value": "€{{amount}}/min",
-          "meta": "Se aplica a partir del segundo minuto de la sesión."
-        }
-      },
-      "progress": {
-        "title": "Progreso hacia el siguiente tier",
-        "hint": "Objetivo y minutos que te faltan para subir.",
-        "goalReached": "Tier objetivo alcanzado",
-        "percentLabel": "Completado",
-        "current": {
-          "title": "Tu situación",
-          "minutesLabel": "Minutos actuales:",
-          "tierLabel": "Tier detectado:"
-        },
-        "next": {
-          "title": "Siguiente objetivo",
-          "tierLabel": "Siguiente tier:",
-          "requirementLabel": "Requisito:",
-          "remainingLabel": "Te faltan:",
-          "maxTier": "Ya estás en el tier máximo (o no hay siguiente tier configurado)."
-        },
-        "legend": {
-          "current": "{{count}} {{unit}}",
-          "next": "{{count}} {{unit}}"
-        }
-      },
-      "units": {
-        "minutesShort": "min"
-      },
-      "tiers": {
-        "title": "Tiers activos",
-        "hint": "Tabla de referencia (configuración actual).",
-        "empty": "No hay tiers configurados.",
-        "table": {
-          "name": "Nombre",
-          "minBilled": "Min. facturados",
-          "firstMinute": "1º min (€/min)",
-          "nextMinutes": "Sig. (€/min)"
-        }
-      },
       "history": {
         "title": "Historial",
         "hint": "Evolución por fecha.",
@@ -1332,9 +1268,6 @@
         "hint": "En construcción",
         "placeholderTitle": "En construcción",
         "placeholderText": "Esta sección se habilitará en próximas versiones para mostrar desglose, periodos y liquidaciones."
-      },
-      "tooltips": {
-        "tier": "Tier \"{{name}}\". Requisito: {{minReq}} minutos facturados en ventana móvil de 30 días. Tarifa del primer minuto: €{{first}}/min. Tarifa a partir del segundo minuto: €{{next}}/min."
       }
     },
     "pricing": {

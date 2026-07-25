@@ -202,11 +202,13 @@ const DashboardModel = () => {
   const [callPeerAvatar, setCallPeerAvatar] = useState('');
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 768);
   const [mobileFavMode, setMobileFavMode] = useState('list');
-  // ====== STATS (Model tier snapshot summary) ======
-  const [modelStatsSummary, setModelStatsSummary] = useState(null);
-  const [modelStatsLoading, setModelStatsLoading] = useState(false);
-  const [modelStatsError, setModelStatsError] = useState('');
-  const [modelStats, setModelStats] = useState(null); // { current, history, tiers }
+  // ====== STATS (Model tier snapshot detail para tab Histórico) ======
+  // Tras la limpieza post-ADR-052 (2026-07-25) el estado se reduce a lo
+  // que consume el tab Historico: modelStats.history. Los estados
+  // modelStatsSummary + modelStatsLoading + modelStatsError se retiraron
+  // porque VideoChatRandomModelo ya no consume /stats/summary (usa
+  // modelEconomics via pricingApi.getEconomics).
+  const [modelStats, setModelStats] = useState(null); // { history }
   const [modelStatsDays, setModelStatsDays] = useState(30);
   const [modelStatsDetailLoading, setModelStatsDetailLoading] = useState(false);
   const [modelStatsDetailError, setModelStatsDetailError] = useState('');
@@ -265,7 +267,6 @@ const DashboardModel = () => {
   const meIdRef = useRef(null);
   const peerIdRef = useRef(null);
   const nextGuardRef = useRef(false);
-  const statsSummaryLoadedRef = useRef(false);
   const activePeerRef = useRef({ id: null, name: '' });
   const [activeStreamRecordId, setActiveStreamRecordId] = useState(null);
   const activeStreamRecordIdRef = useRef(null);
@@ -1388,62 +1389,11 @@ const DashboardModel = () => {
   }, [remoteStream, callStatus, setInCall]);
 
 
-  // UseEffect Stats
-  // 1) Summary: se carga al entrar en Videochat (una vez)
-  useEffect(() => {
-    if (activeTab !== 'videochat') return;
-    if (statsSummaryLoadedRef.current) return;
-
-    if (!sessionUser?.id) return;
-
-    statsSummaryLoadedRef.current = true;
-
-    const loadSummary = async () => {
-      try {
-        setModelStatsLoading(true);
-        setModelStatsError('');
-        const data = await apiFetch('/models/stats/summary');
-        setModelStatsSummary(data || null);
-      } catch (e) {
-        console.warn('[MODEL][stats/summary] error:', e?.message);
-        setModelStatsError(e?.message || 'Error cargando estadísticas');
-        setModelStatsSummary(null);
-      } finally {
-        setModelStatsLoading(false);
-      }
-    };
-
-    loadSummary();
-  }, [activeTab]);
-
-
-  // 2) Tiers para Videochat: si estamos en Videochat y NO tenemos tiers todavía,
-  useEffect(() => {
-    if (activeTab !== 'videochat') return;
-
-    if (!sessionUser?.id) return;
-
-    const tiersCount = Array.isArray(modelStats?.tiers) ? modelStats.tiers.length : 0;
-    if (tiersCount > 0) return;
-
-    const loadTiersForVideochat = async () => {
-      try {
-        setModelStatsDetailLoading(true);
-        setModelStatsDetailError('');
-        const data = await apiFetch(`/models/stats?days=${encodeURIComponent(30)}`);
-        setModelStats(data || null);
-      } catch (e) {
-        console.warn('[MODEL][stats tiers for videochat] error:', e?.message);
-        setModelStatsDetailError(e?.message || 'Error cargando tiers');
-        //setModelStats(null);
-      } finally {
-        setModelStatsDetailLoading(false);
-      }
-    };
-
-    loadTiersForVideochat();
-  }, [activeTab, modelStats?.tiers]);
-
+  // useEffects loadSummary + loadTiersForVideochat retirados
+  // el 2026-07-25 (limpieza post-ADR-052). El endpoint /stats/summary
+  // ya no existe (retirado en ModelController) y el precall card del
+  // videochat consume modelEconomics via pricingApi.getEconomics().
+  // El unico fetch vivo es fetchModelStats para el tab Historico.
 
   const fetchModelStats = useCallback(async (days) => {
     const safeDays = Number.isFinite(Number(days)) ? Number(days) : 30;

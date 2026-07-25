@@ -454,17 +454,13 @@ public class ModelController {
         return ResponseEntity.ok(teasers);
     }
 
-    // Stats (solo MODEL real)
-    @GetMapping("/stats/summary")
-    public ResponseEntity<?> getMyStatsSummary(Authentication authentication) {
-        User user = requireUser(authentication);
-        if (user == null) return unauth();
-        if (!Constants.Roles.MODEL.equals(user.getRole())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Requiere rol MODEL");
-        }
-        return ResponseEntity.ok(modelStatsService.getMySummary(user.getId()));
-    }
+    // GET /stats/summary retirado el 2026-07-25 (limpieza post-ADR-052):
+    // ningun consumidor tras el refactor de VideoChatRandomModelo a
+    // pricingApi.getEconomics (iter.2 del panel Tarifa).
 
+    // Stats detalle (histórico snapshots): sigue vivo para tab Historico
+    // del panel Estadistica. Devuelve solo `history` en ModelTierStats
+    // (tras purga de TierRow que ya no se pinta en frontend).
     @GetMapping("/stats")
     public ResponseEntity<?> getMyStats(Authentication authentication,
                                         @RequestParam(name = "days", defaultValue = "30") int days) {

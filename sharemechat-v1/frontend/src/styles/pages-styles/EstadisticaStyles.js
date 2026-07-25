@@ -562,16 +562,8 @@ export const BarLegend = styled.div`
   font-weight: 500;
 `;
 
-export const SuccessPill = styled.div`
-  align-self: flex-start;
-  padding: 6px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  background: ${c.successBg};
-  color: ${c.businessText};
-  border: 1px solid ${c.successBorder};
-`;
+// SuccessPill retirado el 2026-07-25 (limpieza post-ADR-052): solo lo
+// usaba el tab Progreso retirado del panel Estadisticas.
 
 // ============================================================
 // Tabla (tiers + snapshots history)
@@ -653,54 +645,12 @@ export const Table = styled.table`
   }
 `;
 
-// ============================================================
-// Placeholder (tab Billing "coming soon")
-// ============================================================
-export const Placeholder = styled.div`
-  padding: 28px 22px;
-  border-radius: 12px;
-  background: ${c.card};
-  border: 1px dashed ${c.borderSoft};
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  text-align: center;
-  align-items: center;
-  box-shadow: 0 1px 2px rgba(15,23,42,0.04);
-`;
-
-export const PlaceholderTitle = styled.div`
-  font-size: 15px;
-  font-weight: 700;
-  color: ${c.text};
-`;
-
-export const PlaceholderText = styled.div`
-  font-size: 13px;
-  color: ${c.textMuted};
-  line-height: 1.55;
-  max-width: 480px;
-`;
-
-// ============================================================
-// Detalle expandido de tier
-// ============================================================
-export const TierNameCell = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-`;
-
-export const TierExpandIcon = styled.span`
-  display: inline-flex;
-  width: 18px;
-  height: 18px;
-  align-items: center;
-  justify-content: center;
-  color: ${c.textMuted};
-  font-size: 10px;
-`;
-
-export const TierDetailText = styled.div`
-  color: ${c.textSoft};
-`;
+// Estilos retirados el 2026-07-25 (limpieza post-ADR-052 iter.2):
+//   - Placeholder / PlaceholderTitle / PlaceholderText: eran del tab
+//     Billing "coming soon", ya no usados desde que Facturacion tiene
+//     su propio panel ModelBillingPanel con contenido real.
+//   - TierNameCell / TierExpandIcon / TierDetailText: eran de la tabla
+//     expandible de tiers del tab Progreso retirado. La nueva tabla de
+//     referencia T0-T3 vive en ModelPricingPanel con estilos propios.
+// Ver git blame de este fichero para el codigo original si vuelven a
+// hacer falta.
