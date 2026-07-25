@@ -112,40 +112,35 @@ export default function VideoChatRandomModelo(props) {
 
   const showTrialBadge = currentClientAccessTier === 'TRIAL';
 
-  // ADR-037 Bloque 5 Paso 1: badge overlay sobre el video del cliente cuando
-  // el peer es TRIAL. Estilo elegante, no invasivo, esquina superior izquierda.
-  // z-index alto para superponer al video y al chat, pero por debajo del
-  // fullscreen boton (que suele ir en la esquina opuesta).
+  // ADR-037 Bloque 5 Paso 1 + ADR-052 Superficie 2 fase 2 (2026-07-25):
+  // TrialBadge se integra INLINE dentro del StyledCallTopBar (a la
+  // izquierda del avatar), no como overlay flotante, para no solaparse
+  // con el HUD de sesion + saldo cliente + nickname que ya ocupan la
+  // topbar. Formato compacto pill con el titulo unicamente; el subtitulo
+  // pasa a tooltip (title) para no crecer verticalmente.
   const TrialBadge = () => (
-    <div
+    <span
       role="note"
+      title={t('videochat.trial.modelBadge.subtitle')}
       aria-label={t('videochat.trial.modelBadge.subtitle')}
       style={{
-        position: 'absolute',
-        top: 10,
-        left: 10,
-        zIndex: 20,
-        padding: '6px 12px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '3px 10px',
         borderRadius: 999,
-        background: 'rgba(0,0,0,0.62)',
+        background: 'rgba(0,0,0,0.55)',
         border: '1px solid #22c55e',
         color: '#ffffff',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.35)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'flex-start',
-        lineHeight: 1.1,
+        fontSize: '0.78rem',
+        fontWeight: 800,
+        letterSpacing: 0.4,
         userSelect: 'none',
         pointerEvents: 'none',
+        whiteSpace: 'nowrap',
       }}
     >
-      <span style={{ fontSize: '1.05rem', fontWeight: 800, letterSpacing: 0.5 }}>
-        {t('videochat.trial.modelBadge.title')}
-      </span>
-      <span style={{ fontSize: '0.72rem', opacity: 0.9, marginTop: 2 }}>
-        {t('videochat.trial.modelBadge.subtitle')}
-      </span>
-    </div>
+      {t('videochat.trial.modelBadge.title')}
+    </span>
   );
 
   const [isDesktopRemoteVideoReady, setIsDesktopRemoteVideoReady] = React.useState(false);
@@ -377,6 +372,7 @@ export default function VideoChatRandomModelo(props) {
 
   const renderCallTopMeta = (hud = null) => (
     <StyledCallTopMeta>
+      {showTrialBadge && <TrialBadge />}
       <StyledTitleAvatar src={clientAvatar || '/img/avatarChico.png'} alt="" />
       <div style={{display:'flex',flexDirection:'column',minWidth:0,lineHeight:1.15}}>
         <StyledCallTopMetaText>
@@ -563,7 +559,6 @@ export default function VideoChatRandomModelo(props) {
                       style={{position:'relative',width:'100%',height:'100%',borderRadius:'18px 18px 0 0',overflow:'hidden',background:'#000'}}
                     >
                       <StyledCallStage>
-                        {showTrialBadge && <TrialBadge />}
                         <StyledCallTopBar>
                           {renderCallTopMeta(
                             <SessionHUD
@@ -678,7 +673,6 @@ export default function VideoChatRandomModelo(props) {
                     style={{position:'relative',width:'100%',overflow:'hidden',background:'#000'}}
                   >
                     <StyledCallStage>
-                      {showTrialBadge && <TrialBadge />}
                       <SessionHUD
                         variant="model"
                         active={!!remoteStream}
