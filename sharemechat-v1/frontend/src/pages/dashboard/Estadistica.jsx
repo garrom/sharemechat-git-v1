@@ -8,6 +8,7 @@ import {
   faArrowUpRightDots,
   faChevronDown,
   faChevronRight,
+  faTags,
 } from '@fortawesome/free-solid-svg-icons';
 import {
   Wrap,
@@ -59,6 +60,17 @@ import {
   TierDetailText,
 } from '../../styles/pages-styles/EstadisticaStyles';
 import ModelBillingPanel from './ModelBillingPanel';
+import ModelPricingPanel from './ModelPricingPanel';
+
+// Colores por tab (ADR-052 §D9 request UX 2026-07-25): contorno de
+// color siempre visible + fondo lleno al activar. Coherente con la
+// paleta pastel del panel (misma familia que MiniCard).
+const TAB_COLORS = {
+  progress:  '#3b82f6', // azul
+  detail:    '#8b5cf6', // violeta
+  billing:   '#22c55e', // verde
+  pricing:   '#f97316', // naranja
+};
 
 export default function Estadistica({
   modelStatsDays,
@@ -225,6 +237,7 @@ export default function Estadistica({
           type="button"
           data-active={tab === 'progress'}
           onClick={() => setTab('progress')}
+          $color={TAB_COLORS.progress}
         >
           <FontAwesomeIcon icon={faBullseye} />
           {t('dashboardModel.statistics.tabs.progress')}
@@ -234,6 +247,7 @@ export default function Estadistica({
           type="button"
           data-active={tab === 'detail'}
           onClick={() => setTab('detail')}
+          $color={TAB_COLORS.detail}
         >
           <FontAwesomeIcon icon={faClockRotateLeft} />
           {t('dashboardModel.statistics.tabs.history')}
@@ -243,9 +257,20 @@ export default function Estadistica({
           type="button"
           data-active={tab === 'billing'}
           onClick={() => setTab('billing')}
+          $color={TAB_COLORS.billing}
         >
           <FontAwesomeIcon icon={faChartLine} />
           {t('dashboardModel.statistics.tabs.billing')}
+        </TabButton>
+
+        <TabButton
+          type="button"
+          data-active={tab === 'pricing'}
+          onClick={() => setTab('pricing')}
+          $color={TAB_COLORS.pricing}
+        >
+          <FontAwesomeIcon icon={faTags} />
+          {t('dashboardModel.statistics.tabs.pricing')}
         </TabButton>
       </TabsBar>
 
@@ -504,11 +529,15 @@ export default function Estadistica({
                 </TableWrap>
               </Section>
             </>
-          ) : (
+          ) : tab === 'billing' ? (
             // Fase 2 (2026-07-19): tab Billing rellenada con el historial
             // economico real del modelo (STREAM_EARNING, GIFT_EARNING,
             // PAYOUT_REQUEST, PAYOUT_REQUEST_REVERT).
             <ModelBillingPanel />
+          ) : (
+            // ADR-052 sub-frente 3.C (2026-07-25): tab Tarifa con dashboard
+            // de reparto + selector de tarifa autoservicio + toggle Pro.
+            <ModelPricingPanel />
           )}
         </>
       )}

@@ -1247,7 +1247,8 @@
       "tabs": {
         "progress": "Progreso",
         "history": "Histórico",
-        "billing": "Facturación"
+        "billing": "Facturación",
+        "pricing": "Tarifa"
       },
       "status": {
         "loading": "Cargando estadísticas…",
@@ -1336,6 +1337,60 @@
       "tooltips": {
         "tier": "Tier \"{{name}}\". Requisito: {{minReq}} minutos facturados en ventana móvil de 30 días. Tarifa del primer minuto: €{{first}}/min. Tarifa a partir del segundo minuto: €{{next}}/min."
       }
+    },
+    "pricing": {
+      "status": {
+        "loading": "Cargando panel de tarifa…",
+        "error": "Error: {{error}}"
+      },
+      "tier": {
+        "title": "Tu tramo actual",
+        "hint": "Resumen del reparto que recibes hoy y qué te falta para el siguiente escalón."
+      },
+      "cards": {
+        "tierCode": {
+          "label": "Tramo",
+          "meta": "Escalón vigente según tu facturación bruta rolling 30d."
+        },
+        "share": {
+          "label": "Reparto",
+          "meta": "Porcentaje del bruto que te llevas por minuto facturado."
+        },
+        "billed": {
+          "label": "Facturación 30d",
+          "meta": "Bruto acumulado en los últimos 30 días (sesiones + trials)."
+        },
+        "next": {
+          "label": "Siguiente objetivo",
+          "value": "{{tier}} · faltan {{remaining}} €",
+          "meta": "Al superar {{threshold}} € cambias de tramo automáticamente.",
+          "maxTier": "Tramo máximo",
+          "metaMax": "Estás en el tramo superior. No hay siguiente escalón."
+        }
+      },
+      "rate": {
+        "title": "Tu tarifa por minuto",
+        "hint": "Elige tu precio dentro del rango permitido por tu tramo actual: {{min}} – {{max}} €/min.",
+        "label": "Precio",
+        "saveButton": "Guardar",
+        "fixedHint": "En el tramo {{tier}} la tarifa es fija; no puedes modificarla hasta subir de tramo.",
+        "outOfRange": "El precio debe estar entre {{min}} y {{max}} €/min."
+      },
+      "pro": {
+        "title": "Estatus Pro",
+        "hintActive": "Cumples el umbral: puedes decidir si aceptas clientes trial en tu tarjeta.",
+        "hintInactive": "Necesitas facturar {{threshold}} € (30d) para desbloquear el toggle. Te faltan {{remaining}} €.",
+        "acceptTrialLabel": "Aceptar clientes trial",
+        "explainer": "Cuando desactivas trial, los clientes trial que abran tu tarjeta ven un CTA \"recarga para chatear con ella\" en vez de una sesión gratuita."
+      },
+      "flash": {
+        "rateOk": "Tarifa actualizada correctamente.",
+        "rateError": "No se pudo guardar la tarifa. Inténtalo de nuevo.",
+        "proOn": "Ahora aceptas clientes trial.",
+        "proOff": "Ya no aceptas clientes trial.",
+        "proError": "No se pudo actualizar el toggle. Inténtalo de nuevo."
+      },
+      "reloadButton": "Actualizar datos"
     },
     "payout": {
       "sessionExpiredTitle": "Sesión",

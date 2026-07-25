@@ -272,33 +272,49 @@ export const TabsBar = styled.div`
   flex-wrap: wrap;
 `;
 
+// Tabs con color propio por seccion (2026-07-25, ADR-052 §D9 request UX).
+// Cada tab acepta $color (hex) para definir su identidad visual:
+// - Inactivo: fondo blanco, borde del color con opacidad media, texto del color.
+// - Hover inactivo: fondo con opacidad ligera del color.
+// - Activo: fondo del color al 100%, borde saturado, texto blanco.
+// Colores propuestos por tab (definidos en el JSX del caller):
+//   Progreso → azul  #3b82f6
+//   Historial → violeta #8b5cf6
+//   Facturacion → verde #22c55e
+//   Tarifa → naranja #f97316
 export const TabButton = styled.button`
   display: inline-flex;
   align-items: center;
   gap: 8px;
   padding: 8px 14px;
   border-radius: 8px;
-  border: none;
-  background: transparent;
-  color: ${c.textMuted};
+  border: 1.5px solid ${(props) => rgba(props.$color || '#3b82f6', 0.4)};
+  background: #ffffff;
+  color: ${(props) => props.$color || '#3b82f6'};
   cursor: pointer;
   font-size: 13px;
-  font-weight: 600;
-  transition: background 0.15s ease, color 0.15s ease;
+  font-weight: 700;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 
   svg {
     font-size: 12px;
   }
 
   &:hover {
-    color: ${c.textSoft};
-    background: ${rgba('#93b5e1', 0.12)};
+    background: ${(props) => rgba(props.$color || '#3b82f6', 0.12)};
+    border-color: ${(props) => rgba(props.$color || '#3b82f6', 0.7)};
   }
 
   &[data-active="true"] {
-    background: ${rgba('#93b5e1', 0.22)};
-    color: ${c.primaryText};
-    box-shadow: inset 0 0 0 1px ${rgba('#93b5e1', 0.55)};
+    background: ${(props) => props.$color || '#3b82f6'};
+    color: #ffffff;
+    border-color: ${(props) => props.$color || '#3b82f6'};
+    box-shadow: 0 2px 6px ${(props) => rgba(props.$color || '#3b82f6', 0.35)};
+  }
+
+  &[data-active="true"]:hover {
+    background: ${(props) => props.$color || '#3b82f6'};
+    filter: brightness(1.05);
   }
 `;
 

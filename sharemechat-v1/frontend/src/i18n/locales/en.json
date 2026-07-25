@@ -1247,7 +1247,8 @@
       "tabs": {
         "progress": "Progress",
         "history": "History",
-        "billing": "Billing"
+        "billing": "Billing",
+        "pricing": "Rate"
       },
       "status": {
         "loading": "Loading statistics…",
@@ -1336,6 +1337,60 @@
       "tooltips": {
         "tier": "Tier \"{{name}}\". Requirement: {{minReq}} billed minutes in a rolling 30-day window. First-minute rate: €{{first}}/min. Rate from the second minute onward: €{{next}}/min."
       }
+    },
+    "pricing": {
+      "status": {
+        "loading": "Loading rate panel…",
+        "error": "Error: {{error}}"
+      },
+      "tier": {
+        "title": "Your current bracket",
+        "hint": "Summary of the split you receive today and how much you need to reach the next tier."
+      },
+      "cards": {
+        "tierCode": {
+          "label": "Bracket",
+          "meta": "Current tier based on your rolling 30-day gross billings."
+        },
+        "share": {
+          "label": "Your split",
+          "meta": "Percentage of gross you keep per billed minute."
+        },
+        "billed": {
+          "label": "30-day billings",
+          "meta": "Gross billed in the last 30 days (paid sessions + trials)."
+        },
+        "next": {
+          "label": "Next milestone",
+          "value": "{{tier}} · {{remaining}} € to go",
+          "meta": "Once you cross {{threshold}} € you move up automatically.",
+          "maxTier": "Top bracket",
+          "metaMax": "You are on the top tier. There is no higher step."
+        }
+      },
+      "rate": {
+        "title": "Your rate per minute",
+        "hint": "Pick your price within the range allowed by your current tier: {{min}} – {{max}} €/min.",
+        "label": "Price",
+        "saveButton": "Save",
+        "fixedHint": "In bracket {{tier}} the rate is fixed; you cannot change it until you move up.",
+        "outOfRange": "Price must be between {{min}} and {{max}} €/min."
+      },
+      "pro": {
+        "title": "Pro Status",
+        "hintActive": "You meet the threshold: you can decide whether trial clients see your card.",
+        "hintInactive": "You need {{threshold}} € (30d) to unlock the toggle. {{remaining}} € to go.",
+        "acceptTrialLabel": "Accept trial clients",
+        "explainer": "When trials are off, trial clients who land on your card see a \"top up to chat with her\" CTA instead of a free session."
+      },
+      "flash": {
+        "rateOk": "Rate updated successfully.",
+        "rateError": "Could not save the rate. Please try again.",
+        "proOn": "You now accept trial clients.",
+        "proOff": "You no longer accept trial clients.",
+        "proError": "Could not update the toggle. Please try again."
+      },
+      "reloadButton": "Refresh data"
     },
     "payout": {
       "sessionExpiredTitle": "Session",
