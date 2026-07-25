@@ -1,5 +1,6 @@
 package com.sharemechat.dto;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 /**
@@ -19,15 +20,21 @@ import java.util.List;
  * </ul>
  *
  * <p>El payload se compone con datos del entity {@code User} (nickname,
- * biography, interests) más los idiomas declarados en
- * {@code user_languages}. Los assets gráficos (fotos + vídeos aprobados)
+ * biography, interests, chosenRateEurPerMin) más los idiomas declarados
+ * en {@code user_languages}. Los assets gráficos (fotos + vídeos aprobados)
  * se obtienen aparte vía {@code GET /api/models/{userId}/assets}.
+ *
+ * <p>ADR-052 Superficie 2 (2026-07-25): {@code chosenRateEurPerMin} se
+ * añade para que el cliente vea el precio por minuto elegido por la
+ * modelo antes de iniciar sesión (ADR-052 §D10). Rango 1-9 EUR/min según
+ * tramo vigente de la modelo.
  */
 public record ModelPublicProfileDTO(
         Long id,
         String nickname,
         String biography,
         String interests,
+        BigDecimal chosenRateEurPerMin,
         List<LanguageEntry> languages
 ) {
 

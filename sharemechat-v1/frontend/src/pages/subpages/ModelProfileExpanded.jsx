@@ -33,6 +33,7 @@ import {
   HeaderEmptyPhoto,
   HeaderInfo,
   Nickname,
+  RateBadge,
   Biography,
   InterestsLine,
   InterestsLabel,
@@ -143,6 +144,14 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, onClose }) => {
 
   const languages = Array.isArray(profile?.languages) ? profile.languages : [];
 
+  // ADR-052 Superficie 2: precio autoservicio elegido por la modelo.
+  // La modelo antigua sin recalcular puede venir con null: en ese caso
+  // no renderizamos el badge (evita "€0.00/min" engañoso).
+  const rateNum = profile?.chosenRateEurPerMin != null ? Number(profile.chosenRateEurPerMin) : null;
+  const rateLabel = rateNum != null && !Number.isNaN(rateNum)
+    ? tk('common.ratePerMin', { rate: rateNum.toFixed(2) })
+    : null;
+
   // ----- Render -----
   const renderHeader = () => (
     <ProfileHeaderRow>
@@ -166,6 +175,10 @@ const ModelProfileExpanded = ({ open, userId, fallbackNickname, onClose }) => {
 
       <HeaderInfo>
         <Nickname>{displayedNickname}</Nickname>
+
+        {rateLabel && (
+          <RateBadge>{rateLabel}</RateBadge>
+        )}
 
         {profile?.biography && (
           <Biography>{profile.biography}</Biography>

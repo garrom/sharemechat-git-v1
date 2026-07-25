@@ -77,7 +77,8 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
                u.id,
                COALESCE(u.nickname, u.name, u.email),
                pic.url,
-               video.url
+               video.url,
+               u.chosenRateEurPerMin
            )
            from User u, ModelAsset pic, ModelAsset video
            where pic.userId = u.id
@@ -108,7 +109,8 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
                u.id,
                COALESCE(u.nickname, u.name, u.email),
                pic.url,
-               video.url
+               video.url,
+               u.chosenRateEurPerMin
            )
            from User u, Model m, ModelAsset pic, ModelAsset video
            where m.userId = u.id
@@ -140,7 +142,8 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
                u.id,
                COALESCE(u.nickname, u.name, u.email),
                pic.url,
-               video.url
+               video.url,
+               u.chosenRateEurPerMin
            )
            from User u, ModelAsset pic, ModelAsset video
            where pic.userId = u.id
@@ -171,7 +174,8 @@ public interface ModelDocumentRepository extends JpaRepository<ModelDocument, Lo
                u.id,
                COALESCE(u.nickname, u.name, u.email),
                pic.url,
-               video.url
+               video.url,
+               u.chosenRateEurPerMin
            )
            from User u, ModelAsset pic, ModelAsset video
            where pic.userId = u.id

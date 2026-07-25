@@ -119,7 +119,10 @@ export default function VideoChatRandomUser(props) {
         modelName: item.modelName,
         thumb: item.avatarUrl || '/img/avatarChica.png',
         src: item.videoUrl,
-        durationSec: null
+        durationSec: null,
+        // ADR-052 Superficie 2 (2026-07-25): precio autoservicio de la
+        // modelo, mostrado en el lightbox como "X EUR/min".
+        chosenRateEurPerMin: item.chosenRateEurPerMin,
       }));
 
       setPromoVideos(mapped);

@@ -154,6 +154,9 @@ export default function VideoChatRandomCliente(props) {
         thumb: item.avatarUrl || '/img/avatarChica.png',
         src: item.videoUrl,
         durationSec: null,
+        // ADR-052 Superficie 2 (2026-07-25): precio por minuto elegido
+        // por la modelo dentro del rango de su tramo. Rango 1-9 EUR/min.
+        chosenRateEurPerMin: item.chosenRateEurPerMin,
       }));
 
       setPromoVideos(mapped);

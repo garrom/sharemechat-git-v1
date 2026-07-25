@@ -12,6 +12,13 @@ export default function PromoVideoLightbox({ videos, activeIndex, onClose, onPre
   const video = videos[activeIndex];
   const avatarSrc = video.thumb || '/img/avatarChica.png';
   const modelName = video.modelName || 'Modelo';
+  // ADR-052 Superficie 2: precio por minuto elegido por la modelo dentro
+  // de su tramo. Se muestra "X €/min" bajo el nombre; si el DTO no trae
+  // valor (modelo antigua sin recalcular), no renderizamos la línea.
+  const rateNum = video.chosenRateEurPerMin != null ? Number(video.chosenRateEurPerMin) : null;
+  const rateLabel = rateNum != null && !Number.isNaN(rateNum)
+    ? i18n.t('common.ratePerMin', { rate: rateNum.toFixed(2) })
+    : null;
 
   const handleBackdropClick = () => { onClose && onClose(); };
   const stopPropagation = e => e.stopPropagation();
@@ -45,6 +52,11 @@ export default function PromoVideoLightbox({ videos, activeIndex, onClose, onPre
                     {i18n.t('modals.promoVideo.featuredModel')}
                   </span>
                   <span style={{fontSize:'1.1rem',fontWeight:700,color:'#f9fafb'}}>{modelName}</span>
+                  {rateLabel && (
+                    <span style={{fontSize:'0.9rem',fontWeight:600,color:'#fbbf24',marginTop:2}}>
+                      {rateLabel}
+                    </span>
+                  )}
                 </div>
               </div>
               <CloseBtn onClick={onClose} aria-label={i18n.t('modals.promoVideo.close')} title={i18n.t('modals.promoVideo.close')}>

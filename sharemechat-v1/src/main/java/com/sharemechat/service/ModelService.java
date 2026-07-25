@@ -93,6 +93,7 @@ public class ModelService {
                 user.getNickname(),
                 user.getBiography(),
                 user.getInterests(),
+                user.getChosenRateEurPerMin(),
                 languageEntries
         );
     }

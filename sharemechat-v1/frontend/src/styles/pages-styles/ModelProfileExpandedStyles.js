@@ -85,6 +85,23 @@ export const Nickname = styled.h2`
   word-break: break-word;
 `;
 
+// ADR-052 Superficie 2: tarifa "X.XX EUR/min" bajo el nickname en el
+// header del modal "Ver perfil completo".
+export const RateBadge = styled.span`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #fff7e6;
+  border: 1px solid #f0c274;
+  color: #7a4b00;
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  width: fit-content;
+`;
+
 export const Biography = styled.p`
   margin: 0;
   font-size: 0.96rem;

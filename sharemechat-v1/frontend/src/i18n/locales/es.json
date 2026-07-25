@@ -122,6 +122,7 @@
     "fullscreen": "Pantalla completa",
     "sendMessage": "Enviar mensaje",
     "networkError": "Error de red",
+    "ratePerMin": "{{rate}} €/min",
     "actions": {
       "addToFavorites": "Añadir a favoritos",
       "search": "Buscar"

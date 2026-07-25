@@ -2,55 +2,43 @@
 
 > **Documento estratégico.** Conecta la proyección de tráfico orgánico (ver `seo/estrategia.md`) con la estructura real de costes para calcular margen neto mes a mes y horizonte de break-even.
 >
-> Versión 1.0 — 17 jun 2026
+> Versión 2.0 — 2026-07-25 (recalibración post-[ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md); versión 1.0 del 17 jun 2026 con reparto 15-40% modelo archivada en git history).
 >
-> **Decisión tomada**: Alain asume el escenario pesimista como referencia operativa y financiera. El plan sigue adelante con esta visibilidad.
-
-## ⚠️ Aviso 2026-07-24 — Modelo DESACTUALIZADO por ADR-052; recalibración pendiente
-
-Este modelo financiero y su xlsx companion (`modelo-financiero.xlsx`) están **desalineados con la línea económica vigente** tras la aprobación de [ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) el 2026-07-24. Los supuestos que este documento usa (reparto 15-40% modelo según tier `5-15/7-20/9-40`, tarifa plana €1/min al cliente, CardBilling / Verotel al 10% + €0,30/TX) quedaron superseded en tres dimensiones simultáneamente:
-
-- **Reparto ahora 75-79% modelo escalonado por facturación bruta rolling 30d** (T0: 75/25; T1: 77/23; T2: 78/22; T3: 79/21). Ver [ADR-052 §D1](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md).
-- **Precio por minuto ya no es plano**: rango autoservicio 1-9 €/min según tramo. La modelo T3 puede facturar €45 en 5 min donde el modelo previo calculaba €5. El pack medio efectivo se dispara para modelos de tramos altos.
-- **Fees PSP**: NOWPayments ~1% cripto (contrato cerrado, ADR-051), tarjeta ~10-15% aproximación conservadora hasta que el PSP tarjeta cierre contrato con nuevos candidatos post-Segpay.
-
-**Impacto previsible en la proyección**:
-
-- El **pago a modelo por transacción sube significativamente**: en el modelo previo con tier 5-15 la modelo cobraba €1,40 sobre un pack de €10 (14% del pack). Con el nuevo régimen y modelo T0 a €1/min plano, la modelo cobra 75% × €10 = €7,50 (75% del pack). El margen bruto empresa por transacción baja de ~86% a ~25%.
-- El **horizonte de break-even se aleja significativamente** respecto al modelo previo (margen unitario delgado); [ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) asume esta consecuencia como coste del reclutamiento agresivo.
-- La **sensibilidad principal del negocio se traslada** del %reparto (que queda fijo estructuralmente) al **mix cripto/tarjeta** y al **volumen** (para renegociar fees PSP a la baja).
-
-**Recalibración pendiente** (registrada como deuda #D-25 en [`../../04-operations/known-debt.md`](../../04-operations/known-debt.md)):
-
-- Este `.md` puede pre-cablearse con las nuevas fórmulas (reparto por tramo × precio por modelo × fees cripto/tarjeta) manteniendo los escenarios pesimista/normal con la nueva estructura.
-- El `.xlsx` es binario y requiere manipulación manual del operador con los datos actualizados; queda diferido a una pasada del operador cuando quiera cerrar la proyección revisada.
-
-**Uso del documento mientras la recalibración esté pendiente**: NO usar como base para decisiones estratégicas (fase de lanzamiento, activación de paid traffic, revisión mensual del tracking) hasta que el modelo se recalibre. Las cifras de horizonte break-even, coste personal y pack medio siguen siendo válidas como estimación conservadora del caso previo, no del caso actual. El caso actual es probablemente **peor en margen unitario** y **más dependiente del volumen** de lo que este documento describe.
-
-Referencia comercial vigente para decisiones intermedias: [`../unit-economics.md`](../unit-economics.md) (recalibrado por ADR-052 con márgenes netos por método de pago).
+> **Decisión tomada**: Alain asume el escenario pesimista como referencia operativa y financiera. Tras el rediseño estructural del reparto (ADR-052), el escenario pesimista es sustancialmente más costoso que la versión previa; se acepta explícitamente como consecuencia del cambio de propuesta comercial a la modelo (75-79% desde el minuto 1).
 
 ---
 
 ## 1. Resumen ejecutivo
 
-El modelo cruza los volúmenes proyectados de tráfico (sesiones GA4 → signups → verificaciones → primeras compras → repeats) con la estructura de costes real:
+El modelo cruza los volúmenes proyectados de tráfico (sesiones GA4 → signups → verificaciones → primeras compras → repeats) con la estructura de costes real.
 
-- **Costes fijos**: AWS (~€120/mes) + Companio (~€110/mes) + Sightengine live moderation plan Starter (~€27/mes) = **€257/mes**.
-- **Costes variables**: pagos a modelos (tier 5-15 base), CardBilling / Verotel (10% + €0.30), Didit verificación, demo gratis absorbida.
-- **Sin capital inicial**: cada mes en pérdida se cubre con nómina externa de Alain (no hay runway tradicional).
+**Cambio estructural principal (2026-07-25)**: el reparto modelo pasa de **15-40%** (sistema de tiers previo) a **75-79%** (nuevo régimen escalonado, ADR-052). Consecuencia directa: el margen bruto empresa por transacción baja de **~73%** a **~15-18%** (según mix cripto/tarjeta). El horizonte de break-even se aleja significativamente.
 
-### Resultados a 19 meses (jun 2026 → dic 2027)
+### Estructura de costes vigente
+
+- **Costes fijos**: AWS (~€120/mes) + Companio (~€110/mes) + Sightengine Starter (~€27/mes) = **€257/mes** (sin cambio).
+- **Costes variables por transacción** (pack €10 modelo T1 a €1/min, mix 50/50 cripto/tarjeta):
+  - Pago a modelo: 75% × €10 = **€7,50**
+  - Fees PSP: 50% × 1% (cripto) + 50% × 13% (tarjeta) × €10 = **€0,70**
+  - Chargebacks tarjeta: 1% × €25 (prorrateados) = **€0,25**
+  - Didit cliente (prorrateado): ~**€0,05**
+  - **Margen bruto por TX ≈ €1,50** (15% del pack).
+- **Sin capital inicial**: cada mes en pérdida se cubre con nómina externa de Alain.
+
+### Resultados aproximados a 19 meses (jun 2026 → dic 2027)
+
+Estimación revisada con el nuevo régimen. Cifras exactas dependen del recálculo del xlsx (deuda pendiente #D-25 del operador; ver §7).
 
 | Métrica | Pesimista (referencia) | Normal |
 |---|---|---|
-| Revenue acumulado | ~€500 | ~€7.000 |
-| Margen neto acumulado | **−€4.698** | **+€25** (equilibrio) |
-| Gasto personal medio | **€247/mes** | **€1/mes** promedio |
-| Break-even mensual | No alcanzado en 19m | Mes 15-16 |
+| Break-even mensual TX/mes | ~170 TX/mes | ~170 TX/mes |
+| Margen neto acumulado 19m | **~−€4.700 a −€5.500** (peor que v1) | **negativo o marginalmente equilibrado** |
+| Gasto personal medio | **€250-290/mes** | **€10-100/mes** |
+| Break-even mensual (sostenido) | No alcanzado en 19m | Mes 20-24 (antes mes 15-16) |
 
 ### Decisión
 
-Alain asume el escenario pesimista como realista y se compromete a sostener ~€247/mes de gasto personal durante el horizonte de 18-24 meses si el SEO no acelera más de lo proyectado.
+Alain asume el escenario pesimista con el nuevo régimen como realista y se compromete a sostener **~€250-290/mes de gasto personal** durante el horizonte de 24 meses. La apuesta es que el reclutamiento agresivo (75% modelo desde el minuto 1) genera más volumen a medio plazo que el diferencial de margen unitario perdido.
 
 ---
 
@@ -67,20 +55,21 @@ Sesiones GA4
           → Transacciones totales del mes (primeras + repeats)
             → Revenue bruto = TX × pack medio
             → Costes variables:
-               - Pago a modelo: TX × €1.40 (tier 5-15)
-               - CardBilling / Verotel: TX × (precio × 10% + €0.30)
-               - Chargebacks: TX × 1% × €25
+               - Pago a modelo: TX × pack × %reparto_tramo
+                 (T1: 75%, T2: 77%, T3: 78%, T4: 79%)
+               - Fees PSP: TX × pack × (mix_cripto × 1% + mix_tarjeta × 13%)
+               - Chargebacks: TX × 1% × €25 (solo aplica al share tarjeta)
                - Didit clientes: verificados × €0.13
-               - Demo gratis absorbida: signups × €0.30
+               - Trial absorbido: signups × €0.20 (primer minuto @ €0.07/min × ~3 min)
             → Margen bruto = Revenue − Variables
             → Margen neto = Margen bruto − €257 fijos
 ```
 
-El Excel companion (`modelo-financiero.xlsx`) contiene el desglose completo mes a mes en dos pestañas (Pesimista, Normal) más una pestaña de supuestos transparentes.
+El Excel companion (`modelo-financiero.xlsx`) contiene el desglose completo mes a mes en dos pestañas (Pesimista, Normal) más una pestaña de supuestos transparentes. **Estado del xlsx**: recalibración pendiente por el operador (ver §7).
 
 ---
 
-## 3. Supuestos clave (resumen — detalle completo en el Excel)
+## 3. Supuestos clave
 
 ### Costes fijos
 - AWS: €120/mes (aproximado, varía por uso de entornos TEST/AUDIT/PROD).
@@ -89,60 +78,84 @@ El Excel companion (`modelo-financiero.xlsx`) contiene el desglose completo mes 
 - Otros gastos (dominio, SaaS, herramientas): excluidos por decisión operativa.
 - **TOTAL FIJOS: €257/mes**.
 
-### Costes variables
-- Pack medio asumido: €10 pesimista / €12 normal.
-- Modelo en tier 5-15 (€0.05 primer min + €0.15 siguientes = €1.40/pack a la modelo).
-- CardBilling / Verotel: 10% + €0.30/TX + 1% chargebacks × €25. Valores estándar del sector adulto (a confirmar con contrato CardBilling / Verotel).
-- Didit cliente: €0.13 ponderado (95% Age Estimation directa + 5% fallback documental).
-- Didit modelo: €0 efectivo (500 gratis/mes cubren el horizonte de 18m con flujo de ~5 modelos nuevas/mes).
-- Demo gratis: €0.30/signup absorbido (~9 min máx primer día × tarifa modelo ponderada).
+### Costes variables (nuevos supuestos ADR-052)
 
-### Funnel SEO (del documento de estrategia)
+- **Pack medio asumido**: €10 pesimista / €12 normal (sin cambio respecto v1).
+- **Reparto a modelo**: **75% en T1** (tramo de entrada, donde estarán la mayoría de modelos nuevas al principio). Progresión a 77/78/79% al superar €3.500/€5.000/€6.500 mensuales de facturación bruta. Cálculo pesimista: asumir 100% modelos en T1 durante los primeros 12 meses.
+- **Precio por minuto**: **€1/min plano en T1** (todas las modelos nuevas). Modelos T2/T3/T4 con tarifa autoservicio hasta €9/min no se modelan aún; su aparición esperada es post-mes 12 con volumen sostenido.
+- **Fees PSP (mix 50/50 cripto/tarjeta como asunción de arranque)**:
+  - Cripto (NOWPayments, ADR-051): **~1% del importe**, sin fijo por transacción relevante.
+  - Tarjeta (PSP tarjeta en negociación post-Segpay): **~13% aproximación conservadora** (10-15% típico sector adult + reserve + chargeback fees). Sustituir por cifra real cuando cierre contrato.
+  - **Coste medio PSP mix 50/50**: 7% del pack.
+- **Chargebacks**: 1% × €25 sobre el 50% que va por tarjeta (cripto ~0% chargebacks). Prorrateado ≈ €0,125/TX.
+- **Didit cliente**: €0.13 ponderado (95% Age Estimation directa + 5% fallback documental).
+- **Didit modelo**: €0 efectivo (500 gratis/mes cubren el horizonte de 18m con flujo de ~5 modelos nuevas/mes).
+- **Trial absorbido**: €0.07/min primer minuto (ADR-052 §D8) × ~3 min/día por cliente en régimen estacionario × probabilidad de uso. Aproximación: **€0,20 absorbido por signup** (baja respecto al pack medio, pero suma cuando el volumen de signups es alto y la conversión a compra es baja).
+
+### Funnel SEO (sin cambio respecto v1)
 - Conversion sesión→signup: 1% pesimista / 3% normal.
 - Conversion signup→verificado: 30% / 50%.
 - Conversion verificado→1ª compra: 10% / 18%.
 - LTV en 12m: 1.2 compras pesimista / 2.5 compras normal.
 
+### Sensibilidad al mix cripto/tarjeta
+
+Bloque nuevo tras ADR-052. El mix real determina el margen unitario:
+
+| Mix cripto/tarjeta | Fee PSP medio | Margen bruto TX pack €10 T1 | Break-even TX/mes |
+|---|---:|---:|---:|
+| 90% cripto / 10% tarjeta | 2,2% | €2,03 (20%) | 127 TX/mes |
+| 70/30 | 4,6% | €1,79 (18%) | 144 TX/mes |
+| 50/50 (asunción base) | 7,0% | €1,55 (15%) | 166 TX/mes |
+| 30/70 | 9,4% | €1,31 (13%) | 196 TX/mes |
+| 10/90 | 11,8% | €1,07 (11%) | 240 TX/mes |
+
+Lectura: **cada 20pp de shift hacia cripto ahorra ~40 TX/mes de break-even**. La estrategia soft launch cripto de ADR-047 no es solo pragmática (único PSP viable pre-tarjeta): es económicamente óptima.
+
 ### Lo que NO está modelado
+
 - Paid traffic (TrafficJunky, ExoClick) — si se incorpora, suma €200-500/mes pero acelera curva.
 - PR sector (XBIZ, YNOT, AVN) — coste tiempo principalmente, sin impacto monetario directo.
-- Programa affiliates / partnerships con modelos.
+- ~~Programa affiliates / partnerships con modelos~~ (retirado por [ADR-052 §D11](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md); ya no aplica al modelo).
+- Modelos T2-T4 con tarifas €2-9/min: se modelará cuando haya evidencia empírica de que alguna modelo cruza los umbrales (post-mes 12).
+- Rediseño packs premium para modelos T3/T4 (#D-24 en `known-debt.md`): no scope ADR-052.
 - Crecimiento exponencial de modelos (se asume flujo constante de 5/mes).
+- Chargebacks del cliente descontados de payout de modelo (ADR-052 §D7): efecto neutral en margen empresa (la modelo absorbe), no cambia el margen bruto por TX.
 
 ---
 
-## 4. Hallazgos y conclusiones
+## 4. Hallazgos y conclusiones (recalibradas)
 
-### Por qué el pesimista cuesta exactamente los costes fijos
+### El margen unitario ya no es el driver principal
 
-Los **costes fijos (€257/mes) dominan** el modelo durante toda la fase Coming Soon y Soft Launch (mes 0-9), porque el revenue es minúsculo (€0-15/mes). Los costes variables son proporcionales al volumen y, con volumen casi cero, son despreciables. Por eso el coste personal de Alain en pesimista es prácticamente igual a los costes fijos: **AWS, Companio y Sightengine mandan**.
+Antes del ADR-052 el margen bruto empresa por TX era ~73% del pack. Ahora es 11-20% según mix. **Pequeñas mejoras de mix (empujar más cripto) valen tanto como mejoras de conversion rate del funnel SEO**. Concretamente: pasar del mix 50/50 al 70/30 (cripto/tarjeta) ahorra ~22 TX/mes de break-even, equivalente a un ~15% de mejora de conversion signup→verificado.
 
-**Implicación**: cualquier negociación a la baja en AWS (consolidar entornos, reducir instancias en idle), Companio (cambiar a una alternativa más barata) o Sightengine (mantenerse en Starter el máximo tiempo posible, no saltar a Pro hasta que compense) impacta directo en el horizonte de break-even. **€20/mes ahorrados = €380 menos en 19 meses de bolsillo**.
+**Implicación**: el marketing y la propuesta al cliente deben reforzar cripto (privacidad, sin cargo bancario visible, discreto) sin decir "el diferencial de fee me beneficia a mí". Es honesto: el diferencial es margen operativo empresa, pero el beneficio narrativo va al cliente.
 
-### El gap entre escenarios es enorme
+### Los costes fijos siguen dominando en pesimista
 
-Pesimista −€4.698 vs Normal +€25 = diferencia de **~€4.700 acumulados a 19 meses**. La diferencia se debe principalmente a:
+Los **costes fijos (€257/mes) dominan** el modelo durante toda la fase Coming Soon y Soft Launch (mes 0-9), porque el revenue es minúsculo (€0-50/mes). Los costes variables son proporcionales al volumen y, con volumen casi cero, son despreciables. El coste personal de Alain en pesimista es prácticamente igual a los costes fijos + la absorción del trial: **AWS, Companio, Sightengine y trial mandan**.
 
-1. **3x más sesiones** en normal (mejor SEO).
-2. **Ticket medio €12 vs €10** en normal (clientes eligen packs más altos cuando confían en el producto).
-3. **Conversion rates mejores** en cada paso del funnel (3% vs 1% sesión→signup; 50% vs 30% signup→verificado; 18% vs 10% verificado→compra).
+**Implicación**: cualquier negociación a la baja en costes fijos (consolidar entornos AWS, alternativa a Companio, mantenerse en Sightengine Starter) impacta directo. **€20/mes ahorrados = €380 menos en 19 meses de bolsillo**.
 
-Eso significa que **mover la curva del pesimista al normal vale €4.700 acumulados**. Cualquier inversión que mueva consistentemente la curva (paid traffic dirigido, mejoras de conversión en el funnel KYC, ticket medio más alto) puede tener ROI alto si cuesta menos que eso en el mismo horizonte.
+Añadido tras ADR-052: **el coste del trial también impacta**. Con 100 signups/mes en pesimista, la absorción del trial suma €20/mes (100 × €0.20). En normal con 300 signups/mes son €60/mes. Es la primera partida variable que dispara con volumen. Si el ratio "min1 trial → min2 pagado" cae por debajo del 30%, el trial se vuelve costoso.
 
-**Nota importante**: el normal queda en equilibrio (+€25) a 19 meses. Eso es muy ajustado, no es un colchón. Cualquier desviación negativa lo lleva a pérdida. Por tanto el escenario normal no es "rentable" en 19 meses — es "no costoso".
+### El break-even se aleja significativamente
 
-### El break-even ESTABLE llega tarde
+**Antes**: break-even mensual en escenario normal al mes 15-16 (35 TX/mes eran suficientes).
+**Ahora**: break-even mensual en escenario normal al mes 20-24 (166 TX/mes en mix 50/50). Es un cambio grande: la modelo captura 5x más margen por TX que antes, pero necesita ~5x más volumen para que la empresa cubra costes fijos.
 
-En el escenario normal, el break-even mensual (un mes con margen positivo sostenido) llega hacia el mes 15-16. Eso requiere:
+Si el mix real se estabiliza en 70% cripto / 30% tarjeta (mejor de lo asumido), el break-even baja a **~145 TX/mes** y la fecha se acerca a **mes 18-20**. La estrategia de cripto no es solo lanzamiento técnico: es la **variable financiera más sensible del modelo**.
 
-- (a) Que el SEO funcione **bien** (escenario normal, no pesimista).
-- (b) Que Alain pueda cubrir 12-15 meses de pérdida personal antes de equilibrio.
+### El coste de NO lanzar sigue vigente
 
-Si solo se cumple (a) pero no (b), el negocio se queda sin runway antes de llegar al break-even. Si se cumple (b) pero no (a), el negocio sigue costando dinero indefinidamente.
+Cada mes que el soft launch se retrasa, los **€257 fijos siguen corriendo**. Sin revenue compensador. Lanzar antes (aunque sea con producto imperfecto, con pocas modelos, con feedback limitado) sigue siendo financieramente mejor que esperar perfección. El cambio del régimen no cambia esta lógica; sí subraya que **cada mes de retraso tiene un coste de oportunidad de reclutamiento** (una modelo con 3 meses en la plataforma acumula más facturación bruta y puede llegar antes a T2, mejorando ambos su percepción y el mix cripto que arrastra su audiencia).
 
-### El coste de NO lanzar
+### El punto de fragilidad principal es el volumen, no el margen
 
-Cada mes que el soft launch se retrasa, los **€257 fijos siguen corriendo**. Sin revenue compensador. Lanzar antes (aunque sea con producto imperfecto, con pocas modelos, con feedback limitado) es financieramente mejor que esperar perfección. Calibrar este trade-off entre "no lanzar imperfecto" y "no quemar dinero esperando" será una decisión clave entre mes 4-6.
+Antes el negocio era frágil por dependencia del SEO (funnel top). Ahora es frágil por **dependencia del volumen sostenido**: 170 TX/mes es un umbral realista solo con reclutamiento activo de modelos con audiencia propia, no con SEO orgánico puro. Si el reclutamiento se atasca (P4 del plan de captación Q3), el break-even no llega y el gasto personal se sostiene indefinidamente.
+
+**Mitigación**: el programa de afiliadas fue retirado por ADR-052 §D11 porque el reparto elevado ya sobre-incentiva a la modelo a traer clientes. Ese incentivo tiene que traducirse en volumen real; si no, el modelo financiero no cierra. **Métrica canónica a vigilar**: modelos con >€1.500 facturación bruta rolling 30d (elegibles para Estatus Pro, ADR-052 §D3). Es un indicador anticipado de conversión de reclutamiento en volumen sostenido.
 
 ---
 
@@ -152,11 +165,13 @@ Este modelo debe revisarse cuando se cumpla cualquiera de:
 
 1. **Mes 3 (sep 2026)**: revisión obligatoria. Comparar impresiones GSC reales vs proyección pesimista. Si están más cerca del normal, mantener plan. Si están en pesimista o por debajo, evaluar palancas.
 2. **Mes 6 (dic 2026)**: si las primeras compras reales están por debajo del pesimista en 3 meses consecutivos, **incorporar paid traffic** o pivotar.
-3. **Cuando se confirmen fees CardBilling / Verotel**: actualizar el 10% asumido con el contractual real.
-4. **Cuando se decida soft launch**: actualizar fechas y rehacer proyecciones desde ese mes.
-5. **Si los costes fijos cambian**: AWS reorganización, cambio de Companio, salto de Sightengine Starter → Pro (~€90/mes adicionales), etc.
-6. **Cuando Sightengine cruce el umbral económico o técnico**: si las sesiones pagadas/mes superan ~250 con cadencia 15s, o si hay >10 sesiones concurrentes pico, revisar el salto a plan Pro $99/mes.
-7. **Cuando se incorpore una palanca nueva**: paid traffic, PR, affiliates, partnerships. Cada palanca requiere re-modelar.
+3. **Cuando se cierre PSP tarjeta**: actualizar el 13% asumido con las tarifas contractuales reales (fee variable + fijo + reserve + chargeback fees).
+4. **Cuando aparezca la primera modelo en T2 (>€3.500 facturación bruta rolling 30d)**: recalibrar el modelo con reparto ponderado por distribución de tramos.
+5. **Cuando el mix real cripto/tarjeta se estabilice** (tras primeros 500 pagos reales): recalcular break-even con el mix observado.
+6. **Cuando se decida soft launch**: actualizar fechas y rehacer proyecciones desde ese mes.
+7. **Si los costes fijos cambian**: AWS reorganización, cambio de Companio, salto de Sightengine Starter → Pro (~€90/mes adicionales), etc.
+8. **Cuando Sightengine cruce el umbral económico o técnico**: si las sesiones pagadas/mes superan ~250 con cadencia 15s, o si hay >10 sesiones concurrentes pico, revisar el salto a plan Pro $99/mes.
+9. **Cuando se incorpore una palanca nueva**: paid traffic, PR, partnerships. Cada palanca requiere re-modelar.
 
 ---
 
@@ -164,23 +179,38 @@ Este modelo debe revisarse cuando se cumpla cualquiera de:
 
 1. **Mantener cadencia operativa actual** (blog 1/semana, social pipeline, Reddit warmup) sin alterar nada — el plan SEO se ejecuta tal como está documentado.
 2. **Monitorizar el tracking mensual** (`seo/tracking-mensual.md`) cada domingo en la revisión semanal P7.
-3. **Decidir fecha tentativa de soft launch** en mes 3 (sep 2026), una vez tengamos 3 meses de datos reales para calibrar tráfico real vs proyectado.
-4. **Confirmar fees CardBilling / Verotel** cuando se cierre el contrato y actualizar este documento.
-5. **Evaluar palanca de paid traffic adulto** en mes 6 si los KPIs siguen en pesimista o por debajo.
-6. **No tocar el plan SEO** mientras los KPIs estén alineados con el escenario pesimista o mejor — es el escenario que ya hemos aceptado financieramente.
+3. **Empujar cripto como propuesta al cliente** desde el primer mes: es la variable financiera más sensible del modelo. Ratio objetivo mínimo: 60% de pagos en cripto durante los primeros 6 meses.
+4. **Decidir fecha tentativa de soft launch** en mes 3 (sep 2026), una vez tengamos 3 meses de datos reales para calibrar tráfico real vs proyectado.
+5. **Confirmar fees PSP tarjeta** cuando se cierre el contrato con el nuevo candidato post-Segpay y actualizar este documento.
+6. **Evaluar palanca de paid traffic adulto** en mes 6 si los KPIs siguen en pesimista o por debajo.
+7. **No tocar el plan SEO** mientras los KPIs estén alineados con el escenario pesimista o mejor — es el escenario que ya hemos aceptado financieramente.
 
 ---
 
-## 7. Referencias
+## 7. Estado del xlsx companion (deuda declarada)
+
+El fichero `modelo-financiero.xlsx` sigue con la estructura v1 (reparto 15-40%, tarifa plana €1/min, fees CardBilling / Verotel). El operador lo recalibrará manualmente cuando disponga de tiempo, con los supuestos revisados que este `.md` ya recoge:
+
+- Reparto 75% pesimista (todas las modelos en T1 durante los primeros 12 meses).
+- Fees mix 50/50 cripto/tarjeta como asunción base (con pestaña de sensibilidad al mix).
+- Coste trial €0.20/signup absorbido.
+- Break-even TX/mes ~170 en mix 50/50; ver §3 tabla de sensibilidad para otros mix.
+
+Mientras el xlsx no esté actualizado, este `.md` es la fuente de verdad estratégica.
+
+---
+
+## 8. Referencias
 
 - Estrategia de tráfico orgánico y proyecciones de funnel: `docs/01-business/seo/estrategia.md`
 - Tracking mensual de KPIs reales vs plan: `docs/01-business/seo/tracking-mensual.md`
-- Sistema de tiers y economía de modelos: `docs/01-business/sistema-tiers-modelos.md`
+- Sistema de tramos y economía de modelos: `docs/01-business/sistema-tiers-modelos.md`
 - Pricing del producto al cliente: `docs/01-business/pricing.md`
 - Unit economics marco general: `docs/01-business/unit-economics.md`
 - Estado contable y costes operativos detallados: `docs/01-business/accounting-status.md`
-- Excel companion con cálculo mes a mes: `modelo-financiero.xlsx` (junto a este documento)
+- [ADR-052](../../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) — rediseño estructural del reparto (fuente del cambio v1 → v2 de este modelo).
+- Excel companion con cálculo mes a mes: `modelo-financiero.xlsx` (junto a este documento; recalibración manual pendiente).
 
 ---
 
-*Documento creado 17 jun 2026. Próxima revisión obligatoria: 16 sep 2026 (mes 3).*
+*Documento reescrito 2026-07-25 (v2.0) tras ADR-052. Próxima revisión obligatoria: 16 sep 2026 (mes 3).*
