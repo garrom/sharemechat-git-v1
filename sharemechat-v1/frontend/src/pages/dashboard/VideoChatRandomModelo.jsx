@@ -98,8 +98,7 @@ export default function VideoChatRandomModelo(props) {
     handleBlockPeer,
     handleReportPeer,
     error,
-    modelStatsSummary,
-    modelStatsTiers,
+    modelEconomics,
     clientSaldo,
     clientSaldoLoading,
     handleNext,
@@ -159,37 +158,42 @@ export default function VideoChatRandomModelo(props) {
     setIsDesktopRemoteVideoReady(false);
   }, [cameraActive, isMobile, remoteStream]);
 
+  // ADR-052 sub-frente 3.C iter.2 (2026-07-25): tierProgress reescrito
+  // para hablar del nuevo regimen (T0-T3 + facturacion bruta EUR + %reparto)
+  // en vez del sistema tier viejo por minutos. Consume `modelEconomics`
+  // (ModelEconomicsDTO servido por PricingService.getEconomics).
   const tierProgress = React.useMemo(() => {
-    const billed = Number(modelStatsSummary?.billedMinutes30d || 0);
-
-    const tiers = Array.isArray(modelStatsTiers) ? modelStatsTiers : [];
-    const ordered = [...tiers]
-      .filter((tier) => tier && (tier.active === true || tier.active === false))
-      .sort((a, b) => Number(a?.minBilledMinutes || 0) - Number(b?.minBilledMinutes || 0));
-
-    if (!ordered.length) {
-      return { billed, hasTiers: false, currentTier: null, nextTier: null, remaining: 0, pct: 0 };
+    if (!modelEconomics) {
+      return {
+        hasData: false,
+        tierCode: null,
+        modelSharePct: 0,
+        billedGrossEur30d: 0,
+        nextTierCode: null,
+        nextTierMinBilledGrossEur30d: 0,
+        remainingEur: 0,
+        pct: 0,
+      };
     }
-
-    const byName = ordered.find((tier) => String(tier?.name || '') === String(modelStatsSummary?.tierName || ''));
-
-    let byMinutes = null;
-    for (const tier of ordered) {
-      if (Number(tier?.minBilledMinutes || 0) <= billed) byMinutes = tier;
-    }
-
-    const currentTier = byName || byMinutes || ordered[0] || null;
-    const currentMin = Number(currentTier?.minBilledMinutes || 0);
-    const nextTier = ordered.find((tier) => Number(tier?.minBilledMinutes || 0) > currentMin) || null;
-    const nextMin = Number(nextTier?.minBilledMinutes || 0);
-    const remaining = nextTier ? Math.max(0, nextMin - billed) : 0;
-
+    const billedGross = Number(modelEconomics.billedGrossEur30d || 0);
+    const nextMin = Number(modelEconomics.nextTierMinBilledGrossEur30d || 0);
+    const nextTier = modelEconomics.nextTierCode;
+    const remainingEur = nextTier ? Math.max(0, nextMin - billedGross) : 0;
     const pct = nextTier
-      ? Math.max(0, Math.min(100, (billed / Math.max(1, nextMin)) * 100))
+      ? Math.max(0, Math.min(100, (billedGross / Math.max(1, nextMin)) * 100))
       : 100;
 
-    return { billed, hasTiers: true, currentTier, nextTier, remaining, pct };
-  }, [modelStatsSummary, modelStatsTiers]);
+    return {
+      hasData: true,
+      tierCode: modelEconomics.tierCode || null,
+      modelSharePct: Number(modelEconomics.modelSharePct || 0),
+      billedGrossEur30d: billedGross,
+      nextTierCode: nextTier,
+      nextTierMinBilledGrossEur30d: nextMin,
+      remainingEur,
+      pct,
+    };
+  }, [modelEconomics]);
 
   const normalizeGift = (gift) => {
     if (!gift) return null;
@@ -413,12 +417,9 @@ export default function VideoChatRandomModelo(props) {
                 </div>
 
                 <StyledTierProgressCard>
-                  {!tierProgress.hasTiers ? (
+                  {!tierProgress.hasData ? (
                     <StyledStatsInline>
                       <div>{t('dashboardModel.videoChatRandomModelo.stats.noTierData')}</div>
-                      <div>
-                        {t('dashboardModel.videoChatRandomModelo.stats.currentMinutes30d')} <b>{Number(modelStatsSummary?.billedMinutes30d || 0)}</b>
-                      </div>
                     </StyledStatsInline>
                   ) : (
                     <>
@@ -426,25 +427,28 @@ export default function VideoChatRandomModelo(props) {
                         <StyledTierKpiCol>
                           <StyledTierKpiTitle>{t('dashboardModel.videoChatRandomModelo.stats.yourSituation')}</StyledTierKpiTitle>
                           <StyledTierKpiLine>
-                            {t('dashboardModel.videoChatRandomModelo.stats.currentMinutes')} <b>{tierProgress.billed}</b>
+                            {t('dashboardModel.videoChatRandomModelo.stats.currentTramo')} <b>{tierProgress.tierCode || '—'}</b>
                           </StyledTierKpiLine>
                           <StyledTierKpiLine>
-                            {t('dashboardModel.videoChatRandomModelo.stats.detectedTier')} <b>{tierProgress.currentTier?.name || modelStatsSummary?.tierName || '-'}</b>
+                            {t('dashboardModel.videoChatRandomModelo.stats.currentShare')} <b>{Math.round(tierProgress.modelSharePct)}%</b>
+                          </StyledTierKpiLine>
+                          <StyledTierKpiLine>
+                            {t('dashboardModel.videoChatRandomModelo.stats.currentBilled')} <b>{tierProgress.billedGrossEur30d.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} €</b>
                           </StyledTierKpiLine>
                         </StyledTierKpiCol>
 
                         <StyledTierKpiCol>
                           <StyledTierKpiTitle>{t('dashboardModel.videoChatRandomModelo.stats.nextGoal')}</StyledTierKpiTitle>
-                          {tierProgress.nextTier ? (
+                          {tierProgress.nextTierCode ? (
                             <>
                               <StyledTierKpiLine>
-                                {t('dashboardModel.videoChatRandomModelo.stats.nextTier')} <b>{tierProgress.nextTier?.name || '-'}</b>
+                                {t('dashboardModel.videoChatRandomModelo.stats.nextTramo')} <b>{tierProgress.nextTierCode}</b>
                               </StyledTierKpiLine>
                               <StyledTierKpiLine>
-                                {t('dashboardModel.videoChatRandomModelo.stats.requirement')} <b>{Number(tierProgress.nextTier?.minBilledMinutes || 0)}</b> {t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}
+                                {t('dashboardModel.videoChatRandomModelo.stats.requirement')} <b>{tierProgress.nextTierMinBilledGrossEur30d.toLocaleString(undefined,{maximumFractionDigits:0})} €</b>
                               </StyledTierKpiLine>
                               <StyledTierKpiLine>
-                                {t('dashboardModel.videoChatRandomModelo.stats.remaining')} <b>{tierProgress.remaining}</b> {t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}
+                                {t('dashboardModel.videoChatRandomModelo.stats.remaining')} <b>{tierProgress.remainingEur.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} €</b>
                               </StyledTierKpiLine>
                             </>
                           ) : (
@@ -454,10 +458,7 @@ export default function VideoChatRandomModelo(props) {
                           )}
                         </StyledTierKpiCol>
 
-                        {/* % avance hacia siguiente tier, en grande.
-                            Simetria con la tab Estadisticas: mismo tamaño,
-                            mismo gradiente. Solo si hay nextTier. */}
-                        {tierProgress.nextTier && (
+                        {tierProgress.nextTierCode && (
                           <StyledTierPercentCol>
                             <StyledTierPercentValue>{Math.round(tierProgress.pct)}%</StyledTierPercentValue>
                           </StyledTierPercentCol>
@@ -470,9 +471,11 @@ export default function VideoChatRandomModelo(props) {
                         </StyledTierBarTrack>
 
                         <StyledTierBarLegend>
-                          <span>{tierProgress.billed} {t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}</span>
+                          <span>{tierProgress.billedGrossEur30d.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} €</span>
                           <span>
-                            {tierProgress.nextTier ? `${Number(tierProgress.nextTier?.minBilledMinutes || 0)} ${t('dashboardModel.videoChatRandomModelo.stats.minutesShort')}` : '-'}
+                            {tierProgress.nextTierCode
+                              ? `${tierProgress.nextTierMinBilledGrossEur30d.toLocaleString(undefined,{maximumFractionDigits:0})} €`
+                              : '—'}
                           </span>
                         </StyledTierBarLegend>
                       </StyledTierBarWrap>

@@ -2,14 +2,13 @@
 // Consume los endpoints del sub-frente 3.B (ModelPricingController):
 // GET /economics, PUT /pricing, PUT /pro-status.
 //
-// UX:
-//  - Card tramo actual con codigo, %reparto, facturacion bruta rolling
-//    30d y siguiente objetivo (o "tramo maximo" si esta en T3).
-//  - Card rango de precio con selector de tarifa (input dentro del rango
-//    con validacion cliente + boton Guardar).
-//  - Card Estatus Pro cuando la modelo cumple el umbral (default 1500 EUR
-//    facturacion bruta 30d). Toggle "aceptar clientes trial" persistido
-//    aunque Pro no sea elegible (preserva preferencia futura).
+// Iteracion 2 (2026-07-25): tras feedback UX del operador,
+//  - selector tarifa pasa a <select> con enteros permitidos por tramo
+//    (imposible enviar valores fuera del listado).
+//  - cards muestran enteros / EUR limpios sin decimales innecesarios.
+//  - se fusiona el tab Progreso: barra de progreso hacia siguiente
+//    tramo + tabla referencia T0-T3 se integran aqui abajo.
+//  - boton refresh compacto.
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import i18n from '../../i18n';
@@ -20,6 +19,9 @@ import {
   faCircleCheck,
   faCircleExclamation,
   faSpinner,
+  faArrowUpRightDots,
+  faBullseye,
+  faTable,
 } from '@fortawesome/free-solid-svg-icons';
 import { pricingApi } from '../../api/pricingApi';
 import {
@@ -34,6 +36,20 @@ import {
   MiniMeta,
   StateLine,
   ErrorLine,
+  BarWrap,
+  BarTrack,
+  BarFill,
+  BarGlow,
+  BarLegend,
+  ProgressCard,
+  ProgressRow,
+  ProgressCol,
+  ProgressPercentCol,
+  ProgressPercentValue,
+  KpiTitle,
+  KpiLine,
+  TableWrap,
+  Table,
 } from '../../styles/pages-styles/EstadisticaStyles';
 import styled from 'styled-components';
 
@@ -45,16 +61,15 @@ const InlineRow = styled.div`
   flex-wrap: wrap;
 `;
 
-const RateInput = styled.input`
-  width: 120px;
-  padding: 8px 10px;
+const RateSelect = styled.select`
+  padding: 8px 12px;
   border-radius: 8px;
   border: 1.5px solid #f4c99b;
   background: #ffffff;
   color: #0f172a;
   font-size: 15px;
-  font-weight: 600;
-  text-align: right;
+  font-weight: 700;
+  cursor: pointer;
 
   &:focus {
     outline: none;
@@ -92,18 +107,20 @@ const PrimaryButton = styled.button`
   }
 `;
 
-const SecondaryButton = styled.button`
+const SmallButton = styled.button`
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: 8px;
+  align-self: flex-start;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
   border: 1.5px solid #94a3b8;
   background: #ffffff;
   color: #334155;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  width: auto;
 
   &:hover:not(:disabled) {
     background: #f1f5f9;
@@ -172,6 +189,55 @@ const HintText = styled.div`
   line-height: 1.5;
 `;
 
+const CurrentTierRowInTable = styled.tr`
+  background: rgba(249, 115, 22, 0.08);
+  font-weight: 700;
+`;
+
+// -------- Config de tramos: valores enteros permitidos por rango --------
+// Los rangos vienen del backend (min/max), aqui solo generamos los enteros
+// intermedios inclusive: [min..max] paso 1.
+const buildAllowedRates = (min, max) => {
+  const mi = Math.round(Number(min));
+  const ma = Math.round(Number(max));
+  if (!Number.isFinite(mi) || !Number.isFinite(ma) || ma < mi) return [mi].filter(Number.isFinite);
+  const out = [];
+  for (let v = mi; v <= ma; v++) out.push(v);
+  return out;
+};
+
+const formatEur0 = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '0';
+  return n.toLocaleString(undefined, { maximumFractionDigits: 0 });
+};
+
+const formatEur2 = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '0.00';
+  return n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const formatRate = (v) => {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return '0';
+  // Si es entero, sin decimales; si no, dos decimales.
+  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+};
+
+// -------- Referencia estatica de los tramos (para la tabla) --------
+// Fuente de verdad: backend model_pricing_tiers. Se muestran las 4 filas
+// estatica aqui como REFERENCIA visual (misma info que sirve el backend
+// via /economics.tierMinBilledGrossEur30d + rateMin/Max + share). Si en
+// el futuro cambian los tramos, el DTO seguira siendo la fuente para
+// la resolucion; esta tabla es solo educativa.
+const TIER_REFERENCE = [
+  { code: 'T0', minGross: 0,    share: 75, rateMin: 1, rateMax: 1 },
+  { code: 'T1', minGross: 3500, share: 77, rateMin: 1, rateMax: 3 },
+  { code: 'T2', minGross: 5000, share: 78, rateMin: 1, rateMax: 6 },
+  { code: 'T3', minGross: 6500, share: 79, rateMin: 1, rateMax: 9 },
+];
+
 // ---------- Componente ----------
 
 export default function ModelPricingPanel() {
@@ -180,7 +246,7 @@ export default function ModelPricingPanel() {
   const [economics, setEconomics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [rateInput, setRateInput] = useState('');
+  const [rateSelected, setRateSelected] = useState('');
   const [savingRate, setSavingRate] = useState(false);
   const [savingPro, setSavingPro] = useState(false);
   const [flash, setFlash] = useState(null); // { type: 'ok'|'error', message: string }
@@ -192,7 +258,9 @@ export default function ModelPricingPanel() {
       const data = await pricingApi.getEconomics();
       setEconomics(data);
       if (data?.chosenRateEurPerMin != null) {
-        setRateInput(Number(data.chosenRateEurPerMin).toFixed(2));
+        // Redondeamos al entero mas cercano para casar con las opciones
+        // del select (enteros unicamente).
+        setRateSelected(String(Math.round(Number(data.chosenRateEurPerMin))));
       }
     } catch (ex) {
       setError(ex?.message || 'Error');
@@ -205,19 +273,12 @@ export default function ModelPricingPanel() {
     loadEconomics();
   }, [loadEconomics]);
 
-  const rateNum = useMemo(() => {
-    const n = Number(String(rateInput).replace(',', '.'));
-    return Number.isFinite(n) ? n : NaN;
-  }, [rateInput]);
-
   const rateMin = Number(economics?.rateMinEurPerMin || 0);
   const rateMax = Number(economics?.rateMaxEurPerMin || 0);
+  const allowedRates = useMemo(() => buildAllowedRates(rateMin, rateMax), [rateMin, rateMax]);
+  const isFixedRate = allowedRates.length <= 1;
 
-  const rateInRange = useMemo(() => {
-    if (!Number.isFinite(rateNum)) return false;
-    return rateNum >= rateMin && rateNum <= rateMax;
-  }, [rateNum, rateMin, rateMax]);
-
+  const rateNum = Number(rateSelected);
   const rateUnchanged = useMemo(() => {
     if (!economics?.chosenRateEurPerMin) return false;
     const current = Number(economics.chosenRateEurPerMin);
@@ -225,13 +286,14 @@ export default function ModelPricingPanel() {
   }, [economics, rateNum]);
 
   const handleSaveRate = async () => {
-    if (!rateInRange || rateUnchanged || savingRate) return;
+    if (rateUnchanged || savingRate || isFixedRate) return;
+    if (!Number.isFinite(rateNum) || !allowedRates.includes(rateNum)) return;
     setSavingRate(true);
     setFlash(null);
     try {
       const updated = await pricingApi.updatePricing(rateNum);
       setEconomics(updated);
-      setRateInput(Number(updated.chosenRateEurPerMin).toFixed(2));
+      setRateSelected(String(Math.round(Number(updated.chosenRateEurPerMin))));
       setFlash({ type: 'ok', message: t('dashboardModel.pricing.flash.rateOk') });
     } catch (ex) {
       setFlash({ type: 'error', message: ex?.message || t('dashboardModel.pricing.flash.rateError') });
@@ -277,6 +339,9 @@ export default function ModelPricingPanel() {
   const nextTier = economics.nextTierCode;
   const nextMin = Number(economics.nextTierMinBilledGrossEur30d || 0);
   const remainingToNext = nextTier ? Math.max(0, nextMin - billedGross) : 0;
+  const progressPct = nextTier
+    ? Math.max(0, Math.min(100, (billedGross / Math.max(1, nextMin)) * 100))
+    : 100;
 
   return (
     <>
@@ -287,6 +352,7 @@ export default function ModelPricingPanel() {
         </FlashLine>
       )}
 
+      {/* SECCIÓN 1 · SNAPSHOT ACTUAL (4 cards limpias sin decimales innecesarios) */}
       <Section>
         <SectionHead>
           <SectionTitle>
@@ -305,15 +371,13 @@ export default function ModelPricingPanel() {
 
           <MiniCard $accent="green">
             <MiniLabel>{t('dashboardModel.pricing.cards.share.label')}</MiniLabel>
-            <MiniValue>
-              {Number(economics.modelSharePct || 0).toFixed(0)}%
-            </MiniValue>
+            <MiniValue>{formatEur0(economics.modelSharePct)}%</MiniValue>
             <MiniMeta>{t('dashboardModel.pricing.cards.share.meta')}</MiniMeta>
           </MiniCard>
 
           <MiniCard $accent="amber">
             <MiniLabel>{t('dashboardModel.pricing.cards.billed.label')}</MiniLabel>
-            <MiniValue>{billedGross.toFixed(2)} €</MiniValue>
+            <MiniValue>{formatEur2(billedGross)} €</MiniValue>
             <MiniMeta>{t('dashboardModel.pricing.cards.billed.meta')}</MiniMeta>
           </MiniCard>
 
@@ -323,19 +387,82 @@ export default function ModelPricingPanel() {
               {nextTier
                 ? t('dashboardModel.pricing.cards.next.value', {
                     tier: nextTier,
-                    remaining: remainingToNext.toFixed(2),
+                    remaining: formatEur2(remainingToNext),
                   })
                 : t('dashboardModel.pricing.cards.next.maxTier')}
             </MiniValue>
             <MiniMeta>
               {nextTier
-                ? t('dashboardModel.pricing.cards.next.meta', { threshold: nextMin.toFixed(0) })
+                ? t('dashboardModel.pricing.cards.next.meta', { threshold: formatEur0(nextMin) })
                 : t('dashboardModel.pricing.cards.next.metaMax')}
             </MiniMeta>
           </MiniCard>
         </GridCards>
       </Section>
 
+      {/* SECCIÓN 2 · BARRA DE PROGRESO (fusion del tab Progreso retirado) */}
+      <Section>
+        <SectionHead>
+          <SectionTitle>
+            <FontAwesomeIcon icon={faArrowUpRightDots} style={{ marginRight: 8 }} />
+            {t('dashboardModel.pricing.progress.title')}
+          </SectionTitle>
+          <SectionHint>{t('dashboardModel.pricing.progress.hint')}</SectionHint>
+        </SectionHead>
+
+        <ProgressCard>
+          <ProgressRow>
+            <ProgressCol>
+              <KpiTitle>{t('dashboardModel.pricing.progress.currentCol.title')}</KpiTitle>
+              <KpiLine>
+                {t('dashboardModel.pricing.progress.currentCol.tramoLabel')} <b>{economics.tierCode || '—'}</b>
+              </KpiLine>
+              <KpiLine>
+                {t('dashboardModel.pricing.progress.currentCol.billedLabel')} <b>{formatEur2(billedGross)} €</b>
+              </KpiLine>
+            </ProgressCol>
+
+            <ProgressCol>
+              <KpiTitle>{t('dashboardModel.pricing.progress.nextCol.title')}</KpiTitle>
+              {nextTier ? (
+                <>
+                  <KpiLine>
+                    {t('dashboardModel.pricing.progress.nextCol.tramoLabel')} <b>{nextTier}</b>
+                  </KpiLine>
+                  <KpiLine>
+                    {t('dashboardModel.pricing.progress.nextCol.requirementLabel')} <b>{formatEur0(nextMin)} €</b>
+                  </KpiLine>
+                  <KpiLine>
+                    {t('dashboardModel.pricing.progress.nextCol.remainingLabel')} <b>{formatEur2(remainingToNext)} €</b>
+                  </KpiLine>
+                </>
+              ) : (
+                <KpiLine>{t('dashboardModel.pricing.progress.nextCol.maxTier')}</KpiLine>
+              )}
+            </ProgressCol>
+
+            {nextTier && (
+              <ProgressPercentCol>
+                <ProgressPercentValue>{Math.round(progressPct)}%</ProgressPercentValue>
+              </ProgressPercentCol>
+            )}
+          </ProgressRow>
+
+          <BarWrap>
+            <BarTrack>
+              <BarFill style={{ width: `${progressPct}%` }} />
+              <BarGlow style={{ width: `${progressPct}%` }} />
+            </BarTrack>
+
+            <BarLegend>
+              <span>{formatEur2(billedGross)} €</span>
+              <span>{nextTier ? `${formatEur0(nextMin)} €` : '—'}</span>
+            </BarLegend>
+          </BarWrap>
+        </ProgressCard>
+      </Section>
+
+      {/* SECCIÓN 3 · SELECTOR DE TARIFA */}
       <Section>
         <SectionHead>
           <SectionTitle>
@@ -343,10 +470,12 @@ export default function ModelPricingPanel() {
             {t('dashboardModel.pricing.rate.title')}
           </SectionTitle>
           <SectionHint>
-            {t('dashboardModel.pricing.rate.hint', {
-              min: rateMin.toFixed(2),
-              max: rateMax.toFixed(2),
-            })}
+            {isFixedRate
+              ? t('dashboardModel.pricing.rate.fixedHint', { tier: economics.tierCode })
+              : t('dashboardModel.pricing.rate.hint', {
+                  min: formatRate(rateMin),
+                  max: formatRate(rateMax),
+                })}
           </SectionHint>
         </SectionHead>
 
@@ -354,41 +483,29 @@ export default function ModelPricingPanel() {
           <span style={{ fontWeight: 700, color: '#334155' }}>
             {t('dashboardModel.pricing.rate.label')}:
           </span>
-          <RateInput
-            type="number"
-            step="0.01"
-            min={rateMin}
-            max={rateMax}
-            value={rateInput}
-            onChange={(e) => setRateInput(e.target.value)}
-            disabled={savingRate || rateMin === rateMax}
-          />
-          <span style={{ color: '#64748b' }}>€/min</span>
+          <RateSelect
+            value={rateSelected}
+            onChange={(e) => setRateSelected(e.target.value)}
+            disabled={savingRate || isFixedRate}
+          >
+            {allowedRates.map((v) => (
+              <option key={v} value={String(v)}>
+                {v} €/min
+              </option>
+            ))}
+          </RateSelect>
           <PrimaryButton
             type="button"
             onClick={handleSaveRate}
-            disabled={!rateInRange || rateUnchanged || savingRate || rateMin === rateMax}
+            disabled={rateUnchanged || savingRate || isFixedRate}
           >
             {savingRate && <FontAwesomeIcon icon={faSpinner} spin />}
             {t('dashboardModel.pricing.rate.saveButton')}
           </PrimaryButton>
         </InlineRow>
-
-        {rateMin === rateMax && (
-          <HintText style={{ marginTop: 8 }}>
-            {t('dashboardModel.pricing.rate.fixedHint', { tier: economics.tierCode })}
-          </HintText>
-        )}
-        {rateMin !== rateMax && !rateInRange && rateInput !== '' && (
-          <HintText style={{ marginTop: 8, color: '#b91c1c' }}>
-            {t('dashboardModel.pricing.rate.outOfRange', {
-              min: rateMin.toFixed(2),
-              max: rateMax.toFixed(2),
-            })}
-          </HintText>
-        )}
       </Section>
 
+      {/* SECCIÓN 4 · ESTATUS PRO */}
       <Section>
         <SectionHead>
           <SectionTitle>
@@ -399,8 +516,8 @@ export default function ModelPricingPanel() {
             {proEligible
               ? t('dashboardModel.pricing.pro.hintActive')
               : t('dashboardModel.pricing.pro.hintInactive', {
-                  threshold: proMin.toFixed(0),
-                  remaining: Math.max(0, proMin - billedGross).toFixed(2),
+                  threshold: formatEur0(proMin),
+                  remaining: formatEur2(Math.max(0, proMin - billedGross)),
                 })}
           </SectionHint>
         </SectionHead>
@@ -423,9 +540,65 @@ export default function ModelPricingPanel() {
         </HintText>
       </Section>
 
-      <SecondaryButton type="button" onClick={loadEconomics} disabled={loading}>
+      {/* SECCIÓN 5 · TABLA REFERENCIA T0-T3 */}
+      <Section>
+        <SectionHead>
+          <SectionTitle>
+            <FontAwesomeIcon icon={faTable} style={{ marginRight: 8 }} />
+            {t('dashboardModel.pricing.reference.title')}
+          </SectionTitle>
+          <SectionHint>{t('dashboardModel.pricing.reference.hint')}</SectionHint>
+        </SectionHead>
+
+        <TableWrap>
+          <Table>
+            <thead>
+              <tr>
+                <th>{t('dashboardModel.pricing.reference.headers.tier')}</th>
+                <th style={{ textAlign: 'right' }}>
+                  {t('dashboardModel.pricing.reference.headers.threshold')}
+                </th>
+                <th style={{ textAlign: 'right' }}>
+                  {t('dashboardModel.pricing.reference.headers.share')}
+                </th>
+                <th style={{ textAlign: 'right' }}>
+                  {t('dashboardModel.pricing.reference.headers.rateRange')}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {TIER_REFERENCE.map((tier) => {
+                const isCurrent = tier.code === economics.tierCode;
+                const RowComp = isCurrent ? CurrentTierRowInTable : 'tr';
+                const rangeText = tier.rateMin === tier.rateMax
+                  ? `${tier.rateMin} €/min`
+                  : `${tier.rateMin} – ${tier.rateMax} €/min`;
+                return (
+                  <RowComp key={tier.code}>
+                    <td className="name">
+                      {tier.code}
+                      {isCurrent && (
+                        <span style={{ marginLeft: 8, color: '#f97316', fontWeight: 700 }}>
+                          {t('dashboardModel.pricing.reference.youAreHere')}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      {tier.minGross === 0 ? '—' : `${formatEur0(tier.minGross)} €`}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>{tier.share}%</td>
+                    <td style={{ textAlign: 'right' }}>{rangeText}</td>
+                  </RowComp>
+                );
+              })}
+            </tbody>
+          </Table>
+        </TableWrap>
+      </Section>
+
+      <SmallButton type="button" onClick={loadEconomics} disabled={loading}>
         {t('dashboardModel.pricing.reloadButton')}
-      </SecondaryButton>
+      </SmallButton>
     </>
   );
 }

@@ -1245,7 +1245,6 @@
         "many": "History available: {{count}} days."
       },
       "tabs": {
-        "progress": "Progress",
         "history": "History",
         "billing": "Billing",
         "pricing": "Rate"
@@ -1390,7 +1389,34 @@
         "proOff": "You no longer accept trial clients.",
         "proError": "Could not update the toggle. Please try again."
       },
-      "reloadButton": "Refresh data"
+      "reloadButton": "Refresh",
+      "progress": {
+        "title": "Progress to the next bracket",
+        "hint": "Visual of your path to the next step.",
+        "currentCol": {
+          "title": "You are here",
+          "tramoLabel": "Current bracket:",
+          "billedLabel": "Billed 30d:"
+        },
+        "nextCol": {
+          "title": "Next milestone",
+          "tramoLabel": "Next bracket:",
+          "requirementLabel": "Requirement:",
+          "remainingLabel": "You need:",
+          "maxTier": "You are on the top bracket. No higher step."
+        }
+      },
+      "reference": {
+        "title": "Program brackets",
+        "hint": "Full table. Your current bracket is highlighted.",
+        "youAreHere": "· you are here",
+        "headers": {
+          "tier": "Bracket",
+          "threshold": "Threshold",
+          "share": "Your %",
+          "rateRange": "Price"
+        }
+      }
     },
     "payout": {
       "sessionExpiredTitle": "Session",
@@ -1473,19 +1499,18 @@
         "message": "Type a message…"
       },
       "stats": {
-        "progressTitle": "Progress toward the next tier",
-        "progressSubtitle": "Based on your billed minutes (30 days).",
-        "noTierData": "No tier data is available to calculate progress.",
-        "currentMinutes30d": "Current minutes (30d):",
-        "yourSituation": "Your situation",
-        "currentMinutes": "Current minutes:",
-        "detectedTier": "Detected tier:",
-        "nextGoal": "Next goal",
-        "nextTier": "Next tier:",
+        "progressTitle": "Progress to the next bracket",
+        "progressSubtitle": "Based on your gross billings (30 days).",
+        "noTierData": "Not enough data yet to compute your progress.",
+        "yourSituation": "You are here",
+        "currentTramo": "Current bracket:",
+        "currentShare": "Your %:",
+        "currentBilled": "Billed 30d:",
+        "nextGoal": "Next milestone",
+        "nextTramo": "Next bracket:",
         "requirement": "Requirement:",
-        "remaining": "Remaining:",
-        "maxTier": "You are already at the highest tier (or no next tier is configured).",
-        "minutesShort": "min"
+        "remaining": "You need:",
+        "maxTier": "You are on the top bracket."
       }
     }
   },

@@ -10,6 +10,7 @@ import { useCallUi } from '../../components/CallUiContext';
 import { checkPhysicalCamera, stopAllTracks } from '../../utils/virtualCameraGuard';
 import LivenessChallengeModal from '../../components/LivenessChallengeModal';
 import { getLivenessStatus } from '../../api/livenessApi';
+import { pricingApi } from '../../api/pricingApi';
 import BlogContent from '../blog/BlogContent';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faChartLine } from '@fortawesome/free-solid-svg-icons';
@@ -209,6 +210,12 @@ const DashboardModel = () => {
   const [modelStatsDays, setModelStatsDays] = useState(30);
   const [modelStatsDetailLoading, setModelStatsDetailLoading] = useState(false);
   const [modelStatsDetailError, setModelStatsDetailError] = useState('');
+  // ====== PRICING ECONOMICS (ADR-052 sub-frente 3.C iter.2, 2026-07-25) ======
+  // ModelEconomicsDTO servido por PricingService.getEconomics. Consumido
+  // por VideoChatRandomModelo (precall card) y ModelPricingPanel (tab
+  // Tarifa via propio fetch). Aqui se hace fetch canonico para el card
+  // precall del video chat.
+  const [modelEconomics, setModelEconomics] = useState(null);
   // ====== SALDO CLIENTE RANDOM ======
   const [clientSaldo, setClientSaldo] = useState(null);
   const [clientSaldoLoading, setClientSaldoLoading] = useState(false);
@@ -1460,6 +1467,27 @@ const DashboardModel = () => {
     if (!sessionUser?.id) return;
     fetchModelStats(modelStatsDays);
   }, [activeTab, modelStatsDays, sessionUser?.id, fetchModelStats]);
+
+  // 4) ADR-052 sub-frente 3.C iter.2 (2026-07-25): fetch canonico del
+  // dashboard economico del modelo (tramo + reparto + rango + Pro).
+  // Se pasa a VideoChatRandomModelo (precall card) via prop. El propio
+  // ModelPricingPanel dentro del tab Tarifa hace su fetch independiente
+  // para evitar acoplamiento (permite reload local sin tocar el estado
+  // del dashboard entero).
+  useEffect(() => {
+    if (!sessionUser?.id) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await pricingApi.getEconomics();
+        if (!cancelled) setModelEconomics(data);
+      } catch (e) {
+        console.warn('[MODEL][economics] error:', e?.message);
+        if (!cancelled) setModelEconomics(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [sessionUser?.id]);
 
 
   const clearMsgTimers = useCallback(() => {
@@ -3421,8 +3449,7 @@ const DashboardModel = () => {
             handleBlockPeer={handleBlockPeer}
             handleReportPeer={handleReportPeer}
             error={error}
-            modelStatsSummary={modelStatsSummary}
-            modelStatsTiers={modelStats?.tiers}
+            modelEconomics={modelEconomics}
             clientSaldo={clientSaldo}
             clientSaldoLoading={clientSaldoLoading}
             nextDisabled={nexting}

@@ -3,11 +3,7 @@ import i18n from '../../i18n';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faChartLine,
-  faBullseye,
   faClockRotateLeft,
-  faArrowUpRightDots,
-  faChevronDown,
-  faChevronRight,
   faTags,
 } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -32,32 +28,8 @@ import {
   SectionHead,
   SectionTitle,
   SectionHint,
-  GridCards,
-  MiniCard,
-  MiniLabel,
-  MiniValue,
-  MiniMeta,
-  ProgressCard,
-  ProgressRow,
-  ProgressCol,
-  KpiTitle,
-  KpiLine,
-  ProgressPercentCol,
-  ProgressPercentValue,
-  BarWrap,
-  BarTrack,
-  BarFill,
-  BarGlow,
-  BarLegend,
-  SuccessPill,
   TableWrap,
   Table,
-  Placeholder,
-  PlaceholderTitle,
-  PlaceholderText,
-  TierNameCell,
-  TierExpandIcon,
-  TierDetailText,
 } from '../../styles/pages-styles/EstadisticaStyles';
 import ModelBillingPanel from './ModelBillingPanel';
 import ModelPricingPanel from './ModelPricingPanel';
@@ -65,11 +37,15 @@ import ModelPricingPanel from './ModelPricingPanel';
 // Colores por tab (ADR-052 §D9 request UX 2026-07-25): contorno de
 // color siempre visible + fondo lleno al activar. Coherente con la
 // paleta pastel del panel (misma familia que MiniCard).
+//
+// Iteracion 2 (2026-07-25): tab 'Progreso' retirado (fusionado en Tarifa).
+// El tab por defecto pasa a ser 'pricing' porque es lo mas operativo para
+// la modelo. Quedan 3 tabs: Tarifa (naranja), Historico (violeta),
+// Facturacion (verde).
 const TAB_COLORS = {
-  progress:  '#3b82f6', // azul
-  detail:    '#8b5cf6', // violeta
-  billing:   '#22c55e', // verde
-  pricing:   '#f97316', // naranja
+  pricing: '#f97316', // naranja
+  detail:  '#8b5cf6', // violeta
+  billing: '#22c55e', // verde
 };
 
 export default function Estadistica({
@@ -81,11 +57,8 @@ export default function Estadistica({
   modelStats,
 }) {
   const t = (key, options) => i18n.t(key, options);
-  const [tab, setTab] = useState('progress');
-  const [expandedTier, setExpandedTier] = useState(null);
+  const [tab, setTab] = useState('pricing');
 
-  const current = modelStats?.current || null;
-  const tiers = Array.isArray(modelStats?.tiers) ? modelStats.tiers : [];
   const history = Array.isArray(modelStats?.history) ? modelStats.history : [];
 
   const forcedDaysRef = useRef(false);
@@ -107,74 +80,15 @@ export default function Estadistica({
     setModelStatsDays(Number.isFinite(v) ? v : 30);
   };
 
-  const formatEurPerMin = (v) => {
-    const n = Number(v);
-    if (!Number.isFinite(n)) return '0.0000';
-    return n.toFixed(4);
-  };
-
-  const buildTierTooltip = (tier) => {
-    if (!tier) return '';
-    const first = formatEurPerMin(tier.firstMinuteEURPerMin);
-    const next = formatEurPerMin(tier.nextMinutesEURPerMin);
-    const minReq = Number(tier.minBilledMinutes || 0);
-
-    return t('dashboardModel.statistics.tooltips.tier', {
-      name: tier.name || '',
-      minReq,
-      first,
-      next,
-    });
-  };
-
-  const computed = useMemo(() => {
-    const billed = Number(current?.billedMinutes30d || 0);
-
-    const ordered = [...tiers]
-      .filter((tier) => tier && (tier.active === true || tier.active === false))
-      .sort((a, b) => Number(a?.minBilledMinutes || 0) - Number(b?.minBilledMinutes || 0));
-
-    const byName = ordered.find(
-      (tier) => String(tier?.name || '') === String(current?.tierName || '')
-    );
-
-    let byMinutes = null;
-    for (const tier of ordered) {
-      if (Number(tier?.minBilledMinutes || 0) <= billed) byMinutes = tier;
-    }
-
-    const currentTier = byName || byMinutes || ordered[0] || null;
-    const currentMin = Number(currentTier?.minBilledMinutes || 0);
-
-    const pivot = currentTier ? currentMin : billed;
-    const nextTier = ordered.find((tier) => Number(tier?.minBilledMinutes || 0) > pivot) || null;
-
-    const nextMin = Number(nextTier?.minBilledMinutes || 0);
-    const remaining = nextTier ? Math.max(0, nextMin - billed) : 0;
-
-    const progressPct = nextTier
-      ? Math.max(0, Math.min(100, (billed / Math.max(1, nextMin)) * 100))
-      : 100;
-
-    const reached = nextTier ? billed >= nextMin : true;
-
-    return {
-      billed,
-      ordered,
-      currentTier,
-      nextTier,
-      remaining,
-      progressPct,
-      reached,
-    };
-  }, [current, tiers]);
-
   const availabilityText = useMemo(() => {
     if (loading) return '';
     if (snapshotsCount === 0) return t('dashboardModel.statistics.availability.zero');
     if (snapshotsCount === 1) return t('dashboardModel.statistics.availability.one');
     return t('dashboardModel.statistics.availability.many', { count: snapshotsCount });
   }, [loading, snapshotsCount, t]);
+
+  // Los filtros de historico + reload solo aplican al tab Historico.
+  const showHistoryFilters = tab === 'detail';
 
   return (
     <Wrap>
@@ -196,35 +110,37 @@ export default function Estadistica({
             {t('dashboardModel.statistics.payoutNotice.message')}
           </PayoutNotice>
 
-          <Filters>
-            <FilterLabel>{t('dashboardModel.statistics.filters.history')}</FilterLabel>
+          {showHistoryFilters && (
+            <Filters>
+              <FilterLabel>{t('dashboardModel.statistics.filters.history')}</FilterLabel>
 
-            <Select
-              value={modelStatsDays}
-              onChange={handleChangeDays}
-              aria-label={t('dashboardModel.statistics.filters.rangeAriaLabel')}
-            >
-              <option value={7}>{t('dashboardModel.statistics.filters.days7')}</option>
-              <option value={30} disabled={disableLongRanges}>
-                {t('dashboardModel.statistics.filters.days30')}
-              </option>
-              <option value={60} disabled={disableLongRanges}>
-                {t('dashboardModel.statistics.filters.days60')}
-              </option>
-              <option value={90} disabled={disableLongRanges}>
-                {t('dashboardModel.statistics.filters.days90')}
-              </option>
-              <option value={120} disabled={disableLongRanges}>
-                {t('dashboardModel.statistics.filters.days120')}
-              </option>
-            </Select>
+              <Select
+                value={modelStatsDays}
+                onChange={handleChangeDays}
+                aria-label={t('dashboardModel.statistics.filters.rangeAriaLabel')}
+              >
+                <option value={7}>{t('dashboardModel.statistics.filters.days7')}</option>
+                <option value={30} disabled={disableLongRanges}>
+                  {t('dashboardModel.statistics.filters.days30')}
+                </option>
+                <option value={60} disabled={disableLongRanges}>
+                  {t('dashboardModel.statistics.filters.days60')}
+                </option>
+                <option value={90} disabled={disableLongRanges}>
+                  {t('dashboardModel.statistics.filters.days90')}
+                </option>
+                <option value={120} disabled={disableLongRanges}>
+                  {t('dashboardModel.statistics.filters.days120')}
+                </option>
+              </Select>
 
-            <ReloadBtn type="button" onClick={onReload} disabled={loading}>
-              {t('dashboardModel.statistics.filters.reload')}
-            </ReloadBtn>
-          </Filters>
+              <ReloadBtn type="button" onClick={onReload} disabled={loading}>
+                {t('dashboardModel.statistics.filters.reload')}
+              </ReloadBtn>
+            </Filters>
+          )}
 
-          {availabilityText && (
+          {showHistoryFilters && availabilityText && (
             <AvailabilityPill title={t('dashboardModel.statistics.availability.title')}>
               {availabilityText}
             </AvailabilityPill>
@@ -235,12 +151,12 @@ export default function Estadistica({
       <TabsBar>
         <TabButton
           type="button"
-          data-active={tab === 'progress'}
-          onClick={() => setTab('progress')}
-          $color={TAB_COLORS.progress}
+          data-active={tab === 'pricing'}
+          onClick={() => setTab('pricing')}
+          $color={TAB_COLORS.pricing}
         >
-          <FontAwesomeIcon icon={faBullseye} />
-          {t('dashboardModel.statistics.tabs.progress')}
+          <FontAwesomeIcon icon={faTags} />
+          {t('dashboardModel.statistics.tabs.pricing')}
         </TabButton>
 
         <TabButton
@@ -262,284 +178,67 @@ export default function Estadistica({
           <FontAwesomeIcon icon={faChartLine} />
           {t('dashboardModel.statistics.tabs.billing')}
         </TabButton>
-
-        <TabButton
-          type="button"
-          data-active={tab === 'pricing'}
-          onClick={() => setTab('pricing')}
-          $color={TAB_COLORS.pricing}
-        >
-          <FontAwesomeIcon icon={faTags} />
-          {t('dashboardModel.statistics.tabs.pricing')}
-        </TabButton>
       </TabsBar>
 
-      {loading && <StateLine>{t('dashboardModel.statistics.status.loading')}</StateLine>}
-
-      {!loading && error && (
-        <ErrorLine>{t('dashboardModel.statistics.status.error', { error })}</ErrorLine>
-      )}
-
-      {!loading && !error && (
+      {tab === 'pricing' ? (
+        // ADR-052 sub-frente 3.C (2026-07-25): tab Tarifa con dashboard
+        // de reparto + selector de tarifa autoservicio + toggle Pro +
+        // barra de progreso + tabla referencia T0-T3.
+        <ModelPricingPanel />
+      ) : tab === 'detail' ? (
         <>
-          {tab === 'progress' ? (
-            <>
-              <Section>
-                <SectionHead>
-                  <SectionTitle>{t('dashboardModel.statistics.currentSnapshot.title')}</SectionTitle>
-                  <SectionHint>{t('dashboardModel.statistics.currentSnapshot.hint')}</SectionHint>
-                </SectionHead>
+          {loading && <StateLine>{t('dashboardModel.statistics.status.loading')}</StateLine>}
 
-                <GridCards>
-                  <MiniCard>
-                    <MiniLabel>{t('dashboardModel.statistics.cards.date.label')}</MiniLabel>
-                    <MiniValue>{current?.snapshotDate || '—'}</MiniValue>
-                    <MiniMeta>{t('dashboardModel.statistics.cards.date.meta')}</MiniMeta>
-                  </MiniCard>
+          {!loading && error && (
+            <ErrorLine>{t('dashboardModel.statistics.status.error', { error })}</ErrorLine>
+          )}
 
-                  <MiniCard $accent="blue">
-                    <MiniLabel>{t('dashboardModel.statistics.cards.currentTier.label')}</MiniLabel>
-                    <MiniValue>{current?.tierName || '—'}</MiniValue>
-                    <MiniMeta>{t('dashboardModel.statistics.cards.currentTier.meta')}</MiniMeta>
-                  </MiniCard>
+          {!loading && !error && (
+            <Section>
+              <SectionHead>
+                <SectionTitle>{t('dashboardModel.statistics.history.title')}</SectionTitle>
+                <SectionHint>{t('dashboardModel.statistics.history.hint')}</SectionHint>
+              </SectionHead>
 
-                  <MiniCard $accent="green">
-                    <MiniLabel>{t('dashboardModel.statistics.cards.minutes30d.label')}</MiniLabel>
-                    <MiniValue>{Number(current?.billedMinutes30d || 0)}</MiniValue>
-                    <MiniMeta>
-                      {t('dashboardModel.statistics.cards.minutes30d.hours', {
-                        hours: current?.billedHours30d || '—',
-                      })}
-                    </MiniMeta>
-                  </MiniCard>
+              <TableWrap>
+                <Table>
+                  <thead>
+                    <tr>
+                      <th>{t('dashboardModel.statistics.history.table.date')}</th>
+                      <th>{t('dashboardModel.statistics.history.table.tier')}</th>
+                      <th style={{ textAlign: 'right' }}>
+                        {t('dashboardModel.statistics.history.table.minutes30d')}
+                      </th>
+                    </tr>
+                  </thead>
 
-                  <MiniCard $accent="amber">
-                    <MiniLabel>{t('dashboardModel.statistics.cards.firstMinuteRate.label')}</MiniLabel>
-                    <MiniValue>
-                      {t('dashboardModel.statistics.cards.firstMinuteRate.value', {
-                        amount: current?.firstMinuteEURPerMin || '0.0000',
-                      })}
-                    </MiniValue>
-                    <MiniMeta>{t('dashboardModel.statistics.cards.firstMinuteRate.meta')}</MiniMeta>
-                  </MiniCard>
+                  <tbody>
+                    {history.map((row, idx) => (
+                      <tr key={`${row?.snapshotDate || idx}`}>
+                        <td className="hist-date">{row?.snapshotDate || '—'}</td>
+                        <td className="name hist-tier">{row?.tierName || '—'}</td>
+                        <td style={{ textAlign: 'right' }}>{Number(row?.billedMinutes30d || 0)}</td>
+                      </tr>
+                    ))}
 
-                  <MiniCard $accent="purple">
-                    <MiniLabel>{t('dashboardModel.statistics.cards.nextMinutesRate.label')}</MiniLabel>
-                    <MiniValue>
-                      {t('dashboardModel.statistics.cards.nextMinutesRate.value', {
-                        amount: current?.nextMinutesEURPerMin || '0.0000',
-                      })}
-                    </MiniValue>
-                    <MiniMeta>{t('dashboardModel.statistics.cards.nextMinutesRate.meta')}</MiniMeta>
-                  </MiniCard>
-                </GridCards>
-              </Section>
-
-              <Section>
-                <SectionHead>
-                  <SectionTitle>
-                    <FontAwesomeIcon icon={faArrowUpRightDots} style={{marginRight:8}} />
-                    {t('dashboardModel.statistics.progress.title')}
-                  </SectionTitle>
-                  <SectionHint>{t('dashboardModel.statistics.progress.hint')}</SectionHint>
-                </SectionHead>
-
-                <ProgressCard>
-                  <ProgressRow>
-                    <ProgressCol>
-                      <KpiTitle>{t('dashboardModel.statistics.progress.current.title')}</KpiTitle>
-                      <KpiLine>
-                        {t('dashboardModel.statistics.progress.current.minutesLabel')} <b>{computed.billed}</b>
-                      </KpiLine>
-                      <KpiLine>
-                        {t('dashboardModel.statistics.progress.current.tierLabel')} <b>{computed.currentTier?.name || current?.tierName || '—'}</b>
-                      </KpiLine>
-                    </ProgressCol>
-
-                    <ProgressCol>
-                      <KpiTitle>{t('dashboardModel.statistics.progress.next.title')}</KpiTitle>
-                      {computed.nextTier ? (
-                        <>
-                          <KpiLine>
-                            {t('dashboardModel.statistics.progress.next.tierLabel')} <b>{computed.nextTier?.name || '—'}</b>
-                          </KpiLine>
-                          <KpiLine>
-                            {t('dashboardModel.statistics.progress.next.requirementLabel')} <b>{Number(computed.nextTier?.minBilledMinutes || 0)}</b> {t('dashboardModel.statistics.units.minutesShort')}
-                          </KpiLine>
-                          <KpiLine>
-                            {t('dashboardModel.statistics.progress.next.remainingLabel')} <b>{computed.remaining}</b> {t('dashboardModel.statistics.units.minutesShort')}
-                          </KpiLine>
-                        </>
-                      ) : (
-                        <KpiLine>{t('dashboardModel.statistics.progress.next.maxTier')}</KpiLine>
-                      )}
-                    </ProgressCol>
-
-                    {/* % de progreso en grande al lado de "Siguiente
-                        objetivo". Solo aparece si hay siguiente tier
-                        (en tier maximo no hay % que mostrar). Sin
-                        label — el simbolo % ya autoexplica. */}
-                    {computed.nextTier && (
-                      <ProgressPercentCol>
-                        <ProgressPercentValue>{Math.round(computed.progressPct)}%</ProgressPercentValue>
-                      </ProgressPercentCol>
+                    {history.length === 0 && (
+                      <tr>
+                        <td colSpan={3} style={{ padding: '14px', opacity: 0.85 }}>
+                          {t('dashboardModel.statistics.history.empty')}
+                        </td>
+                      </tr>
                     )}
-                  </ProgressRow>
-
-                  <BarWrap>
-                    <BarTrack>
-                      <BarFill style={{width:`${computed.progressPct}%`}} />
-                      <BarGlow style={{width:`${computed.progressPct}%`}} />
-                    </BarTrack>
-
-                    <BarLegend>
-                      <span>
-                        {t('dashboardModel.statistics.progress.legend.current', {
-                          count: computed.billed,
-                          unit: t('dashboardModel.statistics.units.minutesShort'),
-                        })}
-                      </span>
-                      <span>
-                        {computed.nextTier
-                          ? t('dashboardModel.statistics.progress.legend.next', {
-                              count: Number(computed.nextTier?.minBilledMinutes || 0),
-                              unit: t('dashboardModel.statistics.units.minutesShort'),
-                            })
-                          : '—'}
-                      </span>
-                    </BarLegend>
-                  </BarWrap>
-
-                  {computed.nextTier && computed.remaining === 0 && (
-                    <SuccessPill>{t('dashboardModel.statistics.progress.goalReached')}</SuccessPill>
-                  )}
-                </ProgressCard>
-              </Section>
-
-              <Section>
-                <SectionHead>
-                  <SectionTitle>{t('dashboardModel.statistics.tiers.title')}</SectionTitle>
-                  <SectionHint>{t('dashboardModel.statistics.tiers.hint')}</SectionHint>
-                </SectionHead>
-
-                <TableWrap>
-                  <Table>
-                    <thead>
-                      <tr>
-                        <th>{t('dashboardModel.statistics.tiers.table.name')}</th>
-                        <th style={{textAlign:'right'}}>
-                          {t('dashboardModel.statistics.tiers.table.minBilled')}
-                        </th>
-                        <th style={{textAlign:'right'}}>
-                          {t('dashboardModel.statistics.tiers.table.firstMinute')}
-                        </th>
-                        <th style={{textAlign:'right'}}>
-                          {t('dashboardModel.statistics.tiers.table.nextMinutes')}
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {tiers.map((tier) => {
-                        const tierId = tier?.tierId ?? tier?.name;
-
-                        return (
-                          <React.Fragment key={tierId}>
-                            <tr
-                              className="is-expandable"
-                              onClick={() => setExpandedTier(expandedTier === tierId ? null : tierId)}
-                              aria-expanded={expandedTier === tierId}
-                            >
-                              <td className="name">
-                                <TierNameCell>
-                                  <TierExpandIcon aria-hidden="true">
-                                    <FontAwesomeIcon
-                                      icon={expandedTier === tierId ? faChevronDown : faChevronRight}
-                                    />
-                                  </TierExpandIcon>
-                                  <span>{tier?.name || '—'}</span>
-                                </TierNameCell>
-                              </td>
-                              <td style={{textAlign:'right'}}>{Number(tier?.minBilledMinutes || 0)}</td>
-                              <td style={{textAlign:'right'}}>€{tier?.firstMinuteEURPerMin || '0.0000'}</td>
-                              <td style={{textAlign:'right'}}>€{tier?.nextMinutesEURPerMin || '0.0000'}</td>
-                            </tr>
-
-                            {expandedTier === tierId && (
-                              <tr className="tier-detail">
-                                <td colSpan={4}>
-                                  <TierDetailText>{buildTierTooltip(tier)}</TierDetailText>
-                                </td>
-                              </tr>
-                            )}
-                          </React.Fragment>
-                        );
-                      })}
-
-                      {tiers.length === 0 && (
-                        <tr>
-                          <td colSpan={4} style={{padding:'14px',opacity:0.85}}>
-                            {t('dashboardModel.statistics.tiers.empty')}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </Table>
-                </TableWrap>
-              </Section>
-            </>
-          ) : tab === 'detail' ? (
-            <>
-              <Section>
-                <SectionHead>
-                  <SectionTitle>{t('dashboardModel.statistics.history.title')}</SectionTitle>
-                  <SectionHint>{t('dashboardModel.statistics.history.hint')}</SectionHint>
-                </SectionHead>
-
-                <TableWrap>
-                  <Table>
-                    <thead>
-                      <tr>
-                        <th>{t('dashboardModel.statistics.history.table.date')}</th>
-                        <th>{t('dashboardModel.statistics.history.table.tier')}</th>
-                        <th style={{textAlign:'right'}}>
-                          {t('dashboardModel.statistics.history.table.minutes30d')}
-                        </th>
-                      </tr>
-                    </thead>
-
-                    <tbody>
-                      {history.map((row, idx) => (
-                        <tr key={`${row?.snapshotDate || idx}`}>
-                          <td className="hist-date">{row?.snapshotDate || '—'}</td>
-                          <td className="name hist-tier">{row?.tierName || '—'}</td>
-                          <td style={{textAlign:'right'}}>{Number(row?.billedMinutes30d || 0)}</td>
-                        </tr>
-                      ))}
-
-                      {history.length === 0 && (
-                        <tr>
-                          <td colSpan={3} style={{padding:'14px',opacity:0.85}}>
-                            {t('dashboardModel.statistics.history.empty')}
-                          </td>
-                        </tr>
-                      )}
-                    </tbody>
-                  </Table>
-                </TableWrap>
-              </Section>
-            </>
-          ) : tab === 'billing' ? (
-            // Fase 2 (2026-07-19): tab Billing rellenada con el historial
-            // economico real del modelo (STREAM_EARNING, GIFT_EARNING,
-            // PAYOUT_REQUEST, PAYOUT_REQUEST_REVERT).
-            <ModelBillingPanel />
-          ) : (
-            // ADR-052 sub-frente 3.C (2026-07-25): tab Tarifa con dashboard
-            // de reparto + selector de tarifa autoservicio + toggle Pro.
-            <ModelPricingPanel />
+                  </tbody>
+                </Table>
+              </TableWrap>
+            </Section>
           )}
         </>
+      ) : (
+        // Fase 2 (2026-07-19): tab Billing rellenada con el historial
+        // economico real del modelo (STREAM_EARNING, GIFT_EARNING,
+        // PAYOUT_REQUEST, PAYOUT_REQUEST_REVERT).
+        <ModelBillingPanel />
       )}
     </Wrap>
   );

@@ -1245,7 +1245,6 @@
         "many": "Histórico disponible: {{count}} días."
       },
       "tabs": {
-        "progress": "Progreso",
         "history": "Histórico",
         "billing": "Facturación",
         "pricing": "Tarifa"
@@ -1390,7 +1389,34 @@
         "proOff": "Ya no aceptas clientes trial.",
         "proError": "No se pudo actualizar el toggle. Inténtalo de nuevo."
       },
-      "reloadButton": "Actualizar datos"
+      "reloadButton": "Actualizar",
+      "progress": {
+        "title": "Progreso hacia el siguiente tramo",
+        "hint": "Visual del recorrido hasta el próximo escalón.",
+        "currentCol": {
+          "title": "Tu situación",
+          "tramoLabel": "Tramo actual:",
+          "billedLabel": "Facturado 30 d:"
+        },
+        "nextCol": {
+          "title": "Siguiente objetivo",
+          "tramoLabel": "Próximo tramo:",
+          "requirementLabel": "Requisito:",
+          "remainingLabel": "Te faltan:",
+          "maxTier": "Estás en el tramo máximo. No hay siguiente escalón."
+        }
+      },
+      "reference": {
+        "title": "Tramos del programa",
+        "hint": "Tabla completa. Tu tramo actual está resaltado.",
+        "youAreHere": "· tu tramo",
+        "headers": {
+          "tier": "Tramo",
+          "threshold": "Umbral",
+          "share": "% modelo",
+          "rateRange": "Precio"
+        }
+      }
     },
     "payout": {
       "sessionExpiredTitle": "Sesión",
@@ -1473,19 +1499,18 @@
         "message": "Escribe un mensaje…"
       },
       "stats": {
-        "progressTitle": "Progreso hacia el siguiente tier",
-        "progressSubtitle": "Basado en tus minutos facturados (30 días).",
-        "noTierData": "No hay datos de tiers disponibles para calcular el progreso.",
-        "currentMinutes30d": "Minutos actuales (30d):",
+        "progressTitle": "Progreso hacia el siguiente tramo",
+        "progressSubtitle": "Basado en tu facturación bruta (30 días).",
+        "noTierData": "Aún no hay datos suficientes para calcular tu progreso.",
         "yourSituation": "Tu situación",
-        "currentMinutes": "Minutos actuales:",
-        "detectedTier": "Tier detectado:",
+        "currentTramo": "Tramo actual:",
+        "currentShare": "Tu %:",
+        "currentBilled": "Facturado 30 d:",
         "nextGoal": "Siguiente objetivo",
-        "nextTier": "Siguiente tier:",
+        "nextTramo": "Próximo tramo:",
         "requirement": "Requisito:",
         "remaining": "Te faltan:",
-        "maxTier": "Ya estás en el tier máximo (o no hay siguiente tier configurado).",
-        "minutesShort": "min"
+        "maxTier": "Estás en el tramo máximo."
       }
     }
   },
