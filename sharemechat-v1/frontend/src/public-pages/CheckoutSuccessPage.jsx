@@ -119,7 +119,8 @@ const CheckoutSuccessPage = () => {
 
   const packMinutes = session?.packId === 'P10' ? 10
     : session?.packId === 'P20' ? 22
-    : session?.packId === 'P40' ? 44 : '';
+    : session?.packId === 'P40' ? 44
+    : session?.packId === 'P100' ? 112 : '';
 
   return (
     <div style={wrapStyle}>

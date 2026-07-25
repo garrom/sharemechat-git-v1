@@ -56,7 +56,11 @@ public class PspOrchestratorService {
     private static final java.util.Map<String, BigDecimal> PACK_PRICES = java.util.Map.of(
             "P10", new BigDecimal("10.00"),
             "P20", new BigDecimal("20.00"),
-            "P40", new BigDecimal("40.00")
+            "P40", new BigDecimal("40.00"),
+            // #D-24 parcial (2026-07-25): pack premium P100 anadido para
+            // reducir friccion de recarga en modelos T2-T4 (rango 3-9 EUR/min).
+            // Con P100 el cliente cubre 11-33 min segun la tarifa de la modelo.
+            "P100", new BigDecimal("100.00")
     );
 
     private final PaymentSessionRepository paymentSessionRepository;
@@ -203,6 +207,7 @@ public class PspOrchestratorService {
                 return java.util.List.of("usdttrc20", "usdterc20", "usdcerc20");
             case "P20":
             case "P40":
+            case "P100":
                 return java.util.List.of("btc", "usdttrc20", "usdterc20", "usdcerc20");
             default:
                 return null;

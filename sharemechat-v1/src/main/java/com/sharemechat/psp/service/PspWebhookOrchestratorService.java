@@ -63,7 +63,11 @@ public class PspWebhookOrchestratorService {
     private static final java.util.Map<String, BigDecimal> PACK_BONUS = java.util.Map.of(
             "P10", new BigDecimal("0.00"),
             "P20", new BigDecimal("2.00"),
-            "P40", new BigDecimal("4.00")
+            "P40", new BigDecimal("4.00"),
+            // #D-24 parcial (2026-07-25): pack premium P100 con bonus 12%
+            // (12 EUR sobre 100). Incremento de 2 puntos respecto al 10% de
+            // P20/P40 siguiendo la escala pedida por el operador.
+            "P100", new BigDecimal("12.00")
     );
 
     private final PaymentProviderRegistry providerRegistry;

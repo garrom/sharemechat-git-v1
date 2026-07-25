@@ -15,13 +15,16 @@ import { TERMS_VERSION, isLocalAgeOk } from '../consent/consentClient';
  *  - 'manual'               → botones de "añadir saldo/minutos"
  */
 
-// === Catálogo vigente (ADR-011 + ADR-012 / BFPM Fase 4A). Centralización formal pendiente de fase posterior. ===
+// === Catálogo vigente (ADR-011 + ADR-012 / BFPM Fase 4A + D-24 parcial 2026-07-25). Centralización formal pendiente de fase posterior. ===
 // minutesGranted refleja minutos de servicio reales que recibe el cliente (incluye bonus BFPM si aplica).
 // minutes se mantiene igual a minutesGranted por compatibilidad con el modal existente.
+// P100 añadido en #D-24 parcial: reduce fricción de recarga en modelos T2-T4 (rango 3-9 €/min); bonus 12% incrementa 2 puntos sobre P20/P40.
+// Los minutos siguen calculados a 1 €/min (tarifa por defecto T1); rediseño dinámico según chosenRate queda como fase 2 de #D-24.
 const DEFAULT_PACKS = [
   { id: 'P10', minutes: 10, minutesGranted: 10, price: 10, currency: 'EUR' },
   { id: 'P20', minutes: 22, minutesGranted: 22, price: 20, currency: 'EUR', recommended: true },
   { id: 'P40', minutes: 44, minutesGranted: 44, price: 40, currency: 'EUR' },
+  { id: 'P100', minutes: 112, minutesGranted: 112, price: 100, currency: 'EUR' },
 ];
 
 // === Estilos específicos para el modal de compra ===
