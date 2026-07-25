@@ -411,9 +411,6 @@ export default function VideoChatRandomModelo(props) {
                   <div style={{fontWeight:900,fontSize:16,color:'#fff',letterSpacing:'.2px'}}>
                     {t('dashboardModel.videoChatRandomModelo.stats.progressTitle')}
                   </div>
-                  <div style={{fontSize:14,color:'rgba(255,255,255,.85)'}}>
-                    {t('dashboardModel.videoChatRandomModelo.stats.progressSubtitle')}
-                  </div>
                 </div>
 
                 <StyledTierProgressCard>
@@ -429,28 +426,14 @@ export default function VideoChatRandomModelo(props) {
                           <StyledTierKpiLine>
                             {t('dashboardModel.videoChatRandomModelo.stats.currentTramo')} <b>{tierProgress.tierCode || '—'}</b>
                           </StyledTierKpiLine>
-                          <StyledTierKpiLine>
-                            {t('dashboardModel.videoChatRandomModelo.stats.currentShare')} <b>{Math.round(tierProgress.modelSharePct)}%</b>
-                          </StyledTierKpiLine>
-                          <StyledTierKpiLine>
-                            {t('dashboardModel.videoChatRandomModelo.stats.currentBilled')} <b>{tierProgress.billedGrossEur30d.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} €</b>
-                          </StyledTierKpiLine>
                         </StyledTierKpiCol>
 
                         <StyledTierKpiCol>
                           <StyledTierKpiTitle>{t('dashboardModel.videoChatRandomModelo.stats.nextGoal')}</StyledTierKpiTitle>
                           {tierProgress.nextTierCode ? (
-                            <>
-                              <StyledTierKpiLine>
-                                {t('dashboardModel.videoChatRandomModelo.stats.nextTramo')} <b>{tierProgress.nextTierCode}</b>
-                              </StyledTierKpiLine>
-                              <StyledTierKpiLine>
-                                {t('dashboardModel.videoChatRandomModelo.stats.requirement')} <b>{tierProgress.nextTierMinBilledGrossEur30d.toLocaleString(undefined,{maximumFractionDigits:0})} €</b>
-                              </StyledTierKpiLine>
-                              <StyledTierKpiLine>
-                                {t('dashboardModel.videoChatRandomModelo.stats.remaining')} <b>{tierProgress.remainingEur.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} €</b>
-                              </StyledTierKpiLine>
-                            </>
+                            <StyledTierKpiLine>
+                              {t('dashboardModel.videoChatRandomModelo.stats.nextTramo')} <b>{tierProgress.nextTierCode}</b>
+                            </StyledTierKpiLine>
                           ) : (
                             <StyledTierKpiLine>
                               {t('dashboardModel.videoChatRandomModelo.stats.maxTier')}
@@ -460,7 +443,9 @@ export default function VideoChatRandomModelo(props) {
 
                         {tierProgress.nextTierCode && (
                           <StyledTierPercentCol>
-                            <StyledTierPercentValue>{Math.round(tierProgress.pct)}%</StyledTierPercentValue>
+                            <StyledTierPercentValue>
+                              {tierProgress.pct.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1})}%
+                            </StyledTierPercentValue>
                           </StyledTierPercentCol>
                         )}
                       </StyledTierProgressRow>
@@ -469,15 +454,6 @@ export default function VideoChatRandomModelo(props) {
                         <StyledTierBarTrack>
                           <StyledTierBarFill style={{width:`${tierProgress.pct}%`}} />
                         </StyledTierBarTrack>
-
-                        <StyledTierBarLegend>
-                          <span>{tierProgress.billedGrossEur30d.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})} €</span>
-                          <span>
-                            {tierProgress.nextTierCode
-                              ? `${tierProgress.nextTierMinBilledGrossEur30d.toLocaleString(undefined,{maximumFractionDigits:0})} €`
-                              : '—'}
-                          </span>
-                        </StyledTierBarLegend>
                       </StyledTierBarWrap>
                     </>
                   )}

@@ -174,7 +174,7 @@ Secuencia planificada (4 sub-frentes, orden 1→2→3, 4 en paralelo a 3):
    - Aislado y autoncontenido; no depende del sistema nuevo. Deja el repo limpio antes del refactor grande.
 
 3. **Sub-frente 3: Implementación técnica del reparto nuevo** — PENDIENTE
-   - Migration `V39__model_pricing_tiers_v1.sql`: crea `model_pricing_tiers` con 4 filas (T0/T1/T2/T3), añade columnas al snapshot diario, añade `users.chosen_rate_eur_per_min` y `users.pro_accepts_trial`.
+   - Migration `V39__model_pricing_tiers_v1.sql`: crea `model_pricing_tiers` con 4 filas (T1/T2/T3/T4), añade columnas al snapshot diario, añade `users.chosen_rate_eur_per_min` y `users.pro_accepts_trial`.
    - Refactor `ModelTierService` + `ModelTierSnapshotJob` a operar sobre facturación bruta rolling 30d y `model_pricing_tiers` en vez de sobre minutos facturados.
    - Nuevo `PricingService` que expone tramo, %reparto, rango, tarifa vigente por modelo.
    - Nuevos endpoints: `PUT /api/models/me/pricing`, `PUT /api/models/me/pro-status`, `GET /api/models/me/economics`.

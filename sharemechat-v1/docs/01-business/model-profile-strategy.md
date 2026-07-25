@@ -24,7 +24,7 @@ Cada página `/m/:slug` sirve una vista pública con:
 
 - **Fotos y vídeos KYC-aprobados de la modelo**, servidos desde el multi-asset Layer 2 backend ya existente. Solo assets aprobados por moderación pasan al front público.
 - **Presentación editorial corta**: bio de la modelo, idiomas hablados, horarios habituales de disponibilidad.
-- **Precio por minuto elegido por la modelo**: visible claramente en la tarjeta y en la vista de perfil. El valor está dentro del rango de su tramo (€1 T0; €1-3 T1; €1-6 T2; €1-9 T3) según [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D10.
+- **Precio por minuto elegido por la modelo**: visible claramente en la tarjeta y en la vista de perfil. El valor está dentro del rango de su tramo (€1 T1; €1-3 T2; €1-6 T3; €1-9 T4) según [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D10.
 - **Estado online / offline** en tiempo real. Si offline, se ofrece la modelo alternativa online más cercana al perfil visitado.
 - **CTA dual**:
   - "Iniciar sesión privada" → flujo de pago normal, tarifa por minuto elegida por la modelo dentro del rango de su tramo. Ver [sistema-tiers-modelos.md](sistema-tiers-modelos.md).
@@ -80,7 +80,7 @@ Instrumentación mínima al lanzar la superficie:
 - **Sesiones GA4 desde landing `/m/:slug`**: crecimiento y proporción del tráfico total.
 - **Conversión perfil → click en CTA "sesión privada"** por perfil (para detectar qué perfiles convierten y qué perfiles solo son SEO).
 - **Conversión perfil → primera compra** por perfil.
-- **Tarifa media elegida por perfil** por tramo: indica si el rango de precio se está usando o si las modelos T2/T3 se quedan en el mínimo del rango.
+- **Tarifa media elegida por perfil** por tramo: indica si el rango de precio se está usando o si las modelos T3/T4 se quedan en el mínimo del rango.
 
 Estas métricas no están todavía implementadas. Se abren como deuda de instrumentación al desplegar la superficie.
 

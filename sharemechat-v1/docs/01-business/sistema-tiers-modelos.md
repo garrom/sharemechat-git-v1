@@ -13,7 +13,7 @@
 SharemeChat retribuye a las modelos verificadas mediante **cuatro tramos** determinados por la facturación bruta acumulada rolling 30 días. Cada tramo define dos cosas independientes:
 
 - El **% de reparto** que la modelo se lleva del bruto que paga el cliente (75-79%).
-- El **rango de precio por minuto** dentro del que la modelo puede elegir su tarifa (1 €/min fijo en T0; 1-9 €/min en T3).
+- El **rango de precio por minuto** dentro del que la modelo puede elegir su tarifa (1 €/min fijo en T1; 1-9 €/min en T4).
 
 Los tramos se recalculan **una vez al día** mediante un snapshot que mira la facturación bruta acumulada de los **últimos 30 días** (ventana móvil). El sistema es simétrico: al subir de tramo se desbloquea más margen de precio y mejora el %reparto; al bajar por debajo del umbral, se pierde el tramo en el siguiente snapshot.
 
@@ -25,12 +25,12 @@ Adicionalmente, la modelo puede activar **Estatus Pro** al superar 1.500 €/mes
 
 | Tramo | Facturación bruta acumulada (rolling 30d) | % modelo | % empresa (bruto) | Rango precio / min |
 |---|---|---:|---:|---|
-| **T0** (entrada) | 0 – 3.500 € | **75%** | 25% | **1 €/min fijo** |
-| **T1** | > 3.500 € | **77%** | 23% | 1 – 3 €/min |
-| **T2** | > 5.000 € | **78%** | 22% | 1 – 6 €/min |
-| **T3** | > 6.500 € | **79%** | 21% | 1 – 9 €/min |
+| **T1** (entrada) | 0 – 3.500 € | **75%** | 25% | **1 €/min fijo** |
+| **T2** | > 3.500 € | **77%** | 23% | 1 – 3 €/min |
+| **T3** | > 5.000 € | **78%** | 22% | 1 – 6 €/min |
+| **T4** | > 6.500 € | **79%** | 21% | 1 – 9 €/min |
 
-- **Umbral T3 es el más alto configurado hoy**. El techo de precio (€9/min) es una property configurable (`billing.pricing.rate-max-eur-per-min=9.00`); ampliaciones futuras a €15/min o superiores no requieren migration, solo cambio de property + fila de `model_pricing_tiers` para el rango.
+- **Umbral T4 es el más alto configurado hoy**. El techo de precio (€9/min) es una property configurable (`billing.pricing.rate-max-eur-per-min=9.00`); ampliaciones futuras a €15/min o superiores no requieren migration, solo cambio de property + fila de `model_pricing_tiers` para el rango.
 - **Los umbrales de reparto y de precio comparten los mismos escalones** (€3.500, €5.000, €6.500): cada desbloqueo de precio viene acompañado de mejora de reparto. Un solo gráfico comunica ambas dimensiones.
 
 ---
@@ -39,18 +39,18 @@ Adicionalmente, la modelo puede activar **Estatus Pro** al superar 1.500 €/mes
 
 ### Cómo se sube de tramo
 
-1. **Toda modelo nueva empieza en T0**, con 0 € de facturación bruta acumulada.
+1. **Toda modelo nueva empieza en T1**, con 0 € de facturación bruta acumulada.
 2. Cuando la **facturación bruta acumulada rolling 30d** supera el umbral siguiente, la modelo pasa al tramo superior en el siguiente snapshot diario:
-   - Al superar **3.500 €** → sube a **T1** (77% + rango 1-3 €/min).
-   - Al superar **5.000 €** → sube a **T2** (78% + rango 1-6 €/min).
-   - Al superar **6.500 €** → sube a **T3** (79% + rango 1-9 €/min).
+   - Al superar **3.500 €** → sube a **T2** (77% + rango 1-3 €/min).
+   - Al superar **5.000 €** → sube a **T3** (78% + rango 1-6 €/min).
+   - Al superar **6.500 €** → sube a **T4** (79% + rango 1-9 €/min).
 3. **El paso no es inmediato durante la sesión**: el sistema ejecuta un snapshot diario que recalcula el tramo de cada modelo. El resultado del snapshot es la fila del día en `model_tier_daily_snapshots`.
 
 ### Cómo se baja de tramo
 
 El sistema es **simétrico**. La ventana de 30 días es **móvil**: cada día que pasa, la facturación de hace más de 30 días "sale" de la ventana de cálculo. Si la modelo deja de trabajar y su acumulado en los últimos 30 días cae por debajo del umbral del tramo actual, baja al siguiente snapshot diario.
 
-Al bajar de tramo, si la tarifa elegida por la modelo excede el máximo del tramo destino, se **recorta automáticamente** al máximo del tramo destino. Ejemplo: modelo en T3 con tarifa €7/min baja a T1 → su tarifa se ajusta a €3/min (el máximo permitido en T1). Sin bajada de tramo, la modelo mantiene su tarifa elegida indefinidamente.
+Al bajar de tramo, si la tarifa elegida por la modelo excede el máximo del tramo destino, se **recorta automáticamente** al máximo del tramo destino. Ejemplo: modelo en T4 con tarifa €7/min baja a T2 → su tarifa se ajusta a €3/min (el máximo permitido en T2). Sin bajada de tramo, la modelo mantiene su tarifa elegida indefinidamente.
 
 ### Implicación
 
@@ -68,7 +68,7 @@ Cada tarjeta de modelo en la home y en la vista de perfil (`/m/:slug`) muestra *
 
 ### Interacción con packs de recarga
 
-Los packs vigentes (10 / 20 / 40 €) están calibrados para tarifas cercanas a €1/min (T0). Una modelo T3 cobrando €9/min consume el pack de 10 € en poco más de un minuto: hay fricción de conversión con el catálogo actual. **El rediseño de packs premium queda como frente separado** (deuda declarada, ver [`../04-operations/known-debt.md`](../04-operations/known-debt.md)); no forma parte del scope inmediato.
+Los packs vigentes (10 / 20 / 40 €) están calibrados para tarifas cercanas a €1/min (T1). Una modelo T4 cobrando €9/min consume el pack de 10 € en poco más de un minuto: hay fricción de conversión con el catálogo actual. **El rediseño de packs premium queda como frente separado** (deuda declarada, ver [`../04-operations/known-debt.md`](../04-operations/known-debt.md)); no forma parte del scope inmediato.
 
 ---
 
@@ -124,11 +124,11 @@ Las tres constantes son hardcoded; no son parametrizables por properties. Para m
 
 ### Interacción con Estatus Pro
 
-Modelos con Estatus Pro pueden **desactivar el trial** en su panel. Es el mecanismo que resuelve la asimetría entre modelos T0 (aceptan trial de buen grado) y modelos T3 Pro (pueden preferir centrarse en clientes de pago).
+Modelos con Estatus Pro pueden **desactivar el trial** en su panel. Es el mecanismo que resuelve la asimetría entre modelos T1 (aceptan trial de buen grado) y modelos T4 Pro (pueden preferir centrarse en clientes de pago).
 
 ### El trial cuenta hacia los umbrales de tramo y Pro
 
-Aunque el cliente no pague, el primer minuto trial es **facturación real generada por la modelo** (la empresa la absorbe como coste). Los €0,07/min cuentan hacia el acumulado rolling 30d para efectos de subir de tramo o alcanzar Estatus Pro. Sin esto, una modelo con muchos trials pero pocas sesiones "quedaría anclada" en T0.
+Aunque el cliente no pague, el primer minuto trial es **facturación real generada por la modelo** (la empresa la absorbe como coste). Los €0,07/min cuentan hacia el acumulado rolling 30d para efectos de subir de tramo o alcanzar Estatus Pro. Sin esto, una modelo con muchos trials pero pocas sesiones "quedaría anclada" en T1.
 
 ### Implicación económica
 
@@ -146,7 +146,7 @@ Métrica a monitorizar: **tasa de conversión "minuto 1 trial → minuto 2 pagad
 
 El precio mostrado al cliente es el mismo pase cripto o tarjeta ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D4). La modelo cobra su %reparto pase lo que pase. La empresa absorbe el diferencial de fees PSP como margen operativo.
 
-### Ejemplo A: sesión de 10 min a €1/min con modelo T0
+### Ejemplo A: sesión de 10 min a €1/min con modelo T1
 
 - Cliente paga: **€1 × 10 = €10** (menos el primer minuto trial si aplica; asumamos ya no aplica).
 - Modelo (75%): **€7,50**.
@@ -155,7 +155,7 @@ El precio mostrado al cliente es el mismo pase cripto o tarjeta ([ADR-052](../06
   - Cripto (fees ~1%): €10 × 1% = €0,10 → **€2,40 neto** (24% neto sobre facturación).
   - Tarjeta (fees ~13%): €10 × 13% = €1,30 → **€1,20 neto** (12% neto sobre facturación).
 
-### Ejemplo B: sesión de 10 min a €3/min con modelo T1
+### Ejemplo B: sesión de 10 min a €3/min con modelo T2
 
 - Cliente paga: **€3 × 10 = €30**.
 - Modelo (77%): **€23,10**.
@@ -164,7 +164,7 @@ El precio mostrado al cliente es el mismo pase cripto o tarjeta ([ADR-052](../06
   - Cripto: €30 × 1% = €0,30 → **€6,60 neto** (22% neto).
   - Tarjeta: €30 × 13% = €3,90 → **€3,00 neto** (10% neto).
 
-### Ejemplo C: sesión de 5 min a €9/min con modelo T3
+### Ejemplo C: sesión de 5 min a €9/min con modelo T4
 
 - Cliente paga: **€9 × 5 = €45**.
 - Modelo (79%): **€35,55**.
@@ -225,12 +225,12 @@ Para validar que el sistema funciona económicamente, hay que vigilar:
 
 | Métrica | Significa | Por qué importa |
 |---|---|---|
-| **Distribución de tramo** | Cuántas modelos en cada tramo (T0, T1, T2, T3) | Indica madurez del marketplace; si todas están en T0 hay problema de retención de modelos activas. |
+| **Distribución de tramo** | Cuántas modelos en cada tramo (T1, T2, T3, T4) | Indica madurez del marketplace; si todas están en T1 hay problema de retención de modelos activas. |
 | **Modelos que suben de tramo por mes** | Flujo upward | Salud del sistema de incentivos. |
 | **Modelos que bajan de tramo por mes** | Flujo downward | Si es alto, churn de modelos activas. |
 | **Modelos con Estatus Pro** | Cuántas superan el umbral 1.500 € | Indicador de capacidad de la plataforma para generar volumen por modelo. |
 | **Modelos Pro que desactivan trial** | Cuántas Pro apagan el trial | Señal de saturación de la modelo con clientes pagados. |
-| **Tarifa media elegida por tramo** | Distribución de `chosen_rate_eur_per_min` dentro de cada tramo | Si en T1 todas eligen €3 (el máx), tal vez el rango se queda corto; si todas eligen €1 (el mín), el desbloqueo de rango no se está usando. |
+| **Tarifa media elegida por tramo** | Distribución de `chosen_rate_eur_per_min` dentro de cada tramo | Si en T2 todas eligen €3 (el máx), tal vez el rango se queda corto; si todas eligen €1 (el mín), el desbloqueo de rango no se está usando. |
 | **Tasa min1→min2 en trial** | % de sesiones trial que pasan al minuto 2 pagado | Si es baja, las demos cuestan mucho y no convierten. |
 | **Chargebacks/refunds por modelo** | Volumen y %sobre facturación por modelo | Para disparar suspensión temporal si supera el ~5% mensual. |
 

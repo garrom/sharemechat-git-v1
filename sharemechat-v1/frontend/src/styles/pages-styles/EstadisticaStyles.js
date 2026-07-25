@@ -245,7 +245,7 @@ export const PayoutNotice = styled.div`
   border-radius: 10px;
   font-size: 12px;
   line-height: 1.5;
-  max-width: 360px;
+  max-width: 560px;
 
   background: ${rgba('#f4c99b', 0.18)};
   color: ${c.textSoft};
@@ -285,8 +285,10 @@ export const TabsBar = styled.div`
 export const TabButton = styled.button`
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   padding: 8px 14px;
+  min-width: 140px;
   border-radius: 8px;
   border: 1.5px solid ${(props) => rgba(props.$color || '#3b82f6', 0.4)};
   background: #ffffff;

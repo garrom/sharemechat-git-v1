@@ -23,14 +23,14 @@ Cerrado por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada
 
 | Tramo | Facturación bruta acumulada (rolling 30d) | % modelo | % empresa (bruto) |
 |---|---|---:|---:|
-| T0 | 0 – 3.500 € | **75%** | 25% |
-| T1 | > 3.500 € | **77%** | 23% |
-| T2 | > 5.000 € | **78%** | 22% |
-| T3 | > 6.500 € | **79%** | 21% |
+| T1 | 0 – 3.500 € | **75%** | 25% |
+| T2 | > 3.500 € | **77%** | 23% |
+| T3 | > 5.000 € | **78%** | 22% |
+| T4 | > 6.500 € | **79%** | 21% |
 
 - Los tramos se recalculan diariamente por snapshot sobre la ventana rolling 30d de facturación bruta ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D6).
 - El reparto se aplica al **minuto 2 en adelante** de cada sesión. El **primer minuto trial** tiene régimen propio: la plataforma paga €0,07/min plano a la modelo, el cliente no paga.
-- El precio por minuto NO es plano: la modelo elige dentro del rango que su tramo le permite (€1 T0; €1-3 T1; €1-6 T2; €1-9 T3). Ver [pricing.md](pricing.md).
+- El precio por minuto NO es plano: la modelo elige dentro del rango que su tramo le permite (€1 T1; €1-3 T2; €1-6 T3; €1-9 T4). Ver [pricing.md](pricing.md).
 - La **política de payouts** a la modelo mantiene el canal Wise ya cableado en `PayoutRequest`; la cadencia concreta (semanal / mensual) sigue pendiente de definición operativa, no bloqueante para este marco.
 
 ## Costes que absorbe el %empresa bruto
@@ -81,7 +81,7 @@ Donde:
 
 Asumiendo consumo de un pack tipo con reparto aplicado al minuto 2 en adelante:
 
-### Ejemplo A: pack 10 € consumido en modelo T0 (tarifa €1/min)
+### Ejemplo A: pack 10 € consumido en modelo T1 (tarifa €1/min)
 
 - Modelo (75%): **€7,50**
 - Empresa bruto (25%): **€2,50**
@@ -89,7 +89,7 @@ Asumiendo consumo de un pack tipo con reparto aplicado al minuto 2 en adelante:
   - **Cripto** (fees ~1%): 2,50 − 0,10 = **€2,40 neto** (24% neto sobre facturación).
   - **Tarjeta** (fees ~13%): 2,50 − 1,30 = **€1,20 neto** (12% neto sobre facturación).
 
-### Ejemplo B: pack 20 € consumido en modelo T1 (tarifa €1/min)
+### Ejemplo B: pack 20 € consumido en modelo T2 (tarifa €1/min)
 
 - Modelo (77%): **€15,40**
 - Empresa bruto (23%): **€4,60**
@@ -97,7 +97,7 @@ Asumiendo consumo de un pack tipo con reparto aplicado al minuto 2 en adelante:
   - **Cripto**: 4,60 − 0,20 = **€4,40 neto** (22% neto).
   - **Tarjeta**: 4,60 − 2,60 = **€2,00 neto** (10% neto).
 
-### Ejemplo C: sesión 5 min en modelo T3 (tarifa €9/min = 45 €)
+### Ejemplo C: sesión 5 min en modelo T4 (tarifa €9/min = 45 €)
 
 - Modelo (79%): **€35,55**
 - Empresa bruto (21%): **€9,45**

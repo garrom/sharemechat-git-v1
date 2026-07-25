@@ -1282,19 +1282,19 @@
       "cards": {
         "tierCode": {
           "label": "Bracket",
-          "meta": "Current tier based on your rolling 30-day gross billings."
+          "meta": "Current bracket based on your billings."
         },
         "share": {
           "label": "Your split",
-          "meta": "Percentage of gross you keep per billed minute."
+          "meta": "For the model."
         },
         "billed": {
-          "label": "30-day billings",
-          "meta": "Gross billed in the last 30 days (paid sessions + trials)."
+          "label": "Billings",
+          "meta": "Accumulated amount."
         },
         "next": {
           "label": "Next milestone",
-          "value": "{{tier}} · {{remaining}} € to go",
+          "value": "{{tier}}",
           "meta": "Once you cross {{threshold}} € you move up automatically.",
           "maxTier": "Top bracket",
           "metaMax": "You are on the top tier. There is no higher step."
@@ -1346,7 +1346,7 @@
         "headers": {
           "tier": "Bracket",
           "threshold": "Threshold",
-          "share": "Your %",
+          "share": "% model earning",
           "rateRange": "Price"
         }
       }
@@ -1433,16 +1433,11 @@
       },
       "stats": {
         "progressTitle": "Progress to the next bracket",
-        "progressSubtitle": "Based on your gross billings (30 days).",
         "noTierData": "Not enough data yet to compute your progress.",
         "yourSituation": "You are here",
         "currentTramo": "Current bracket:",
-        "currentShare": "Your %:",
-        "currentBilled": "Billed 30d:",
         "nextGoal": "Next milestone",
         "nextTramo": "Next bracket:",
-        "requirement": "Requirement:",
-        "remaining": "You need:",
         "maxTier": "You are on the top bracket."
       }
     }

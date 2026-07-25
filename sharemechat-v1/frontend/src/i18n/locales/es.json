@@ -1282,19 +1282,19 @@
       "cards": {
         "tierCode": {
           "label": "Tramo",
-          "meta": "Escalón vigente según tu facturación bruta rolling 30d."
+          "meta": "Tramo actual que te corresponde según tu facturación."
         },
         "share": {
           "label": "Reparto",
-          "meta": "Porcentaje del bruto que te llevas por minuto facturado."
+          "meta": "Para la modelo."
         },
         "billed": {
-          "label": "Facturación 30d",
-          "meta": "Bruto acumulado en los últimos 30 días (sesiones + trials)."
+          "label": "Facturación",
+          "meta": "Cantidad acumulada."
         },
         "next": {
           "label": "Siguiente objetivo",
-          "value": "{{tier}} · faltan {{remaining}} €",
+          "value": "{{tier}}",
           "meta": "Al superar {{threshold}} € cambias de tramo automáticamente.",
           "maxTier": "Tramo máximo",
           "metaMax": "Estás en el tramo superior. No hay siguiente escalón."
@@ -1346,7 +1346,7 @@
         "headers": {
           "tier": "Tramo",
           "threshold": "Umbral",
-          "share": "% modelo",
+          "share": "% ganancia modelo",
           "rateRange": "Precio"
         }
       }
@@ -1433,16 +1433,11 @@
       },
       "stats": {
         "progressTitle": "Progreso hacia el siguiente tramo",
-        "progressSubtitle": "Basado en tu facturación bruta (30 días).",
         "noTierData": "Aún no hay datos suficientes para calcular tu progreso.",
         "yourSituation": "Tu situación",
         "currentTramo": "Tramo actual:",
-        "currentShare": "Tu %:",
-        "currentBilled": "Facturado 30 d:",
         "nextGoal": "Siguiente objetivo",
         "nextTramo": "Próximo tramo:",
-        "requirement": "Requisito:",
-        "remaining": "Te faltan:",
         "maxTier": "Estás en el tramo máximo."
       }
     }

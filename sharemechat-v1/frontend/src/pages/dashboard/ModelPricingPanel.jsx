@@ -232,10 +232,10 @@ const formatRate = (v) => {
 // el futuro cambian los tramos, el DTO seguira siendo la fuente para
 // la resolucion; esta tabla es solo educativa.
 const TIER_REFERENCE = [
-  { code: 'T0', minGross: 0,    share: 75, rateMin: 1, rateMax: 1 },
-  { code: 'T1', minGross: 3500, share: 77, rateMin: 1, rateMax: 3 },
-  { code: 'T2', minGross: 5000, share: 78, rateMin: 1, rateMax: 6 },
-  { code: 'T3', minGross: 6500, share: 79, rateMin: 1, rateMax: 9 },
+  { code: 'T1', minGross: 0,    share: 75, rateMin: 1, rateMax: 1 },
+  { code: 'T2', minGross: 3500, share: 77, rateMin: 1, rateMax: 3 },
+  { code: 'T3', minGross: 5000, share: 78, rateMin: 1, rateMax: 6 },
+  { code: 'T4', minGross: 6500, share: 79, rateMin: 1, rateMax: 9 },
 ];
 
 // ---------- Componente ----------
@@ -342,6 +342,11 @@ export default function ModelPricingPanel() {
   const progressPct = nextTier
     ? Math.max(0, Math.min(100, (billedGross / Math.max(1, nextMin)) * 100))
     : 100;
+  // Formato % con 1 decimal (iter.3): evita el "0%" frustrante cuando
+  // ya hay algo facturado. Ej: 2,53€ sobre 3500€ = 0,1%.
+  const progressPctText = nextTier
+    ? progressPct.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    : '100';
 
   return (
     <>
@@ -384,12 +389,7 @@ export default function ModelPricingPanel() {
           <MiniCard $accent="purple">
             <MiniLabel>{t('dashboardModel.pricing.cards.next.label')}</MiniLabel>
             <MiniValue>
-              {nextTier
-                ? t('dashboardModel.pricing.cards.next.value', {
-                    tier: nextTier,
-                    remaining: formatEur2(remainingToNext),
-                  })
-                : t('dashboardModel.pricing.cards.next.maxTier')}
+              {nextTier || t('dashboardModel.pricing.cards.next.maxTier')}
             </MiniValue>
             <MiniMeta>
               {nextTier
@@ -443,7 +443,7 @@ export default function ModelPricingPanel() {
 
             {nextTier && (
               <ProgressPercentCol>
-                <ProgressPercentValue>{Math.round(progressPct)}%</ProgressPercentValue>
+                <ProgressPercentValue>{progressPctText}%</ProgressPercentValue>
               </ProgressPercentCol>
             )}
           </ProgressRow>

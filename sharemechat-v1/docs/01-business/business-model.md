@@ -23,8 +23,8 @@ La trazabilidad económica se apoya en ledger interno y snapshots de balance, lo
 
 ### Reparto y rango de precio (vigente por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md))
 
-- **Reparto escalonado por facturación bruta rolling 30d**: 75% modelo en el tramo de entrada (T0), 77% al superar 3.500 €/mes (T1), 78% al superar 5.000 €/mes (T2), 79% al superar 6.500 €/mes (T3).
-- **Rango de precio autoservicio por modelo**: €1/min fijo en T0; 1-3 €/min en T1; 1-6 €/min en T2; 1-9 €/min en T3. Cada modelo elige dentro del rango de su tramo; el precio se muestra en su tarjeta pública.
+- **Reparto escalonado por facturación bruta rolling 30d**: 75% modelo en el tramo de entrada (T1), 77% al superar 3.500 €/mes (T2), 78% al superar 5.000 €/mes (T3), 79% al superar 6.500 €/mes (T4).
+- **Rango de precio autoservicio por modelo**: €1/min fijo en T1; 1-3 €/min en T2; 1-6 €/min en T3; 1-9 €/min en T4. Cada modelo elige dentro del rango de su tramo; el precio se muestra en su tarjeta pública.
 - **Estatus Pro** al superar 1.500 €/mes: feature única que permite a la modelo decidir si acepta clientes trial o no.
 - **Precio único cripto/tarjeta**: el cliente paga el mismo precio pase lo que pase; la empresa absorbe el diferencial de fees como margen operativo.
 

@@ -59,10 +59,10 @@ Se sustituye el sistema de tiers `5-15 / 7-20 / 9-40` (retribución absoluta por
 
 | Tramo | Facturación bruta acumulada (rolling 30d) | % modelo | % empresa (bruto) |
 |---|---|---:|---:|
-| T0 (entrada) | 0 – 3.500 € | **75%** | 25% |
-| T1 | > 3.500 € | **77%** | 23% |
-| T2 | > 5.000 € | **78%** | 22% |
-| T3 | > 6.500 € | **79%** | 21% |
+| T1 (entrada) | 0 – 3.500 € | **75%** | 25% |
+| T2 | > 3.500 € | **77%** | 23% |
+| T3 | > 5.000 € | **78%** | 22% |
+| T4 | > 6.500 € | **79%** | 21% |
 
 - El tramo se recalcula en el **snapshot diario existente** (`ModelTierSnapshotJob`), sobre la **facturación bruta rolling 30d** (lo que paga el cliente en `STREAM_CHARGE`, no lo que gana la modelo). Reutiliza la infraestructura de snapshot y ventana móvil vigentes.
 - El tramo **se mantiene trabajando**, se pierde al caer bajo el umbral. Simétrico como el sistema previo.
@@ -75,10 +75,10 @@ La modelo elige su tarifa por minuto dentro de un **rango permitido por su tramo
 
 | Tramo | Rango de precio / min | Nota |
 |---|---|---|
-| T0 | **1 €/min fijo** | Sin capacidad de modulación al arrancar. |
-| T1 (> 3.500 €) | 1 – 3 €/min | La modelo elige dentro del rango. |
-| T2 (> 5.000 €) | 1 – 6 €/min | |
-| T3 (> 6.500 €) | 1 – 9 €/min | Techo actual €9/min. |
+| T1 | **1 €/min fijo** | Sin capacidad de modulación al arrancar. |
+| T2 (> 3.500 €) | 1 – 3 €/min | La modelo elige dentro del rango. |
+| T3 (> 5.000 €) | 1 – 6 €/min | |
+| T4 (> 6.500 €) | 1 – 9 €/min | Techo actual €9/min. |
 
 - El techo (€9/min hoy) queda **configurable** desde `application.properties` (`billing.pricing.rate-max-eur-per-min=9.00`) para permitir ampliaciones futuras (15 €/min o más) sin migration.
 - La modelo elige su tarifa con endpoint `PUT /api/models/me/pricing` y se persiste en `users.chosen_rate_eur_per_min`. Al bajar de tramo, si su tarifa elegida excede el máximo del tramo nuevo, se recorta automáticamente al máximo del tramo destino en el próximo snapshot.
@@ -121,7 +121,7 @@ Los umbrales de tramo (0/3.500/5.000/6.500), los %reparto por tramo (75/77/78/79
 Todos los umbrales de tramo (D1) y de Estatus Pro (D3) se calculan sobre la **facturación bruta que paga el cliente** por minutos consumidos con la modelo (columna equivalente a la suma de `STREAM_CHARGE` en `Transaction` del cliente atribuida a la modelo), no sobre lo que gana la modelo tras reparto.
 
 - **Ventana rolling 30d con snapshot diario**: mismo mecanismo que el sistema vigente. `ModelTierSnapshotJob` calcula el acumulado y lo escribe en `model_tier_daily_snapshots.billed_gross_eur_30d`.
-- **Primer minuto trial cuenta hacia el umbral** aunque el cliente no pague (lo asume la empresa). Es facturación real generada por la modelo, aunque la empresa absorba el coste. Sin esto, una modelo con muchos trials pero pocas sesiones "queda anclada" en T0.
+- **Primer minuto trial cuenta hacia el umbral** aunque el cliente no pague (lo asume la empresa). Es facturación real generada por la modelo, aunque la empresa absorba el coste. Sin esto, una modelo con muchos trials pero pocas sesiones "queda anclada" en T1.
 - Los gifts **NO cuentan** hacia los umbrales de este ADR: los gifts tienen su propio reparto (ADR-043 §5, 90/10) que no se toca en este rediseño.
 
 ### D7 — Responsabilidad económica de la modelo
@@ -153,7 +153,7 @@ El primer minuto trial (cliente entra a probar bajo el sistema de packs con cool
 - Valor alineado con el `first_minute_earning_per_min` del tier medio actual (`7-20`), no un cambio de expectativas para la modelo.
 - **Se avisa transparentemente a la modelo antes del arranque de la sesión** (UI de trial explícita en su panel: "sesión trial, primer minuto €0,07").
 - Vive como property configurable: `billing.trial.first-minute-earning-eur-per-min=0.07`.
-- **Modelos con Estatus Pro pueden desactivar el trial** (D3) si prefieren no aceptar clientes trial a ese precio bajo. Es el mecanismo que resuelve la asimetría entre modelos T0 (aceptan trial de buen grado) y modelos T3 Pro (pueden preferir centrarse en clientes de pago).
+- **Modelos con Estatus Pro pueden desactivar el trial** (D3) si prefieren no aceptar clientes trial a ese precio bajo. Es el mecanismo que resuelve la asimetría entre modelos T1 (aceptan trial de buen grado) y modelos T4 Pro (pueden preferir centrarse en clientes de pago).
 
 ### D9 — Transparencia en el panel de la modelo
 
@@ -210,7 +210,7 @@ El sistema de tiers previo (ADR-043 §4) queda superseded por D1+D2 de este ADR.
 
 - **Margen empresa delgado**, especialmente en tarjeta (5-15% neto según tramo). Sensible a chargebacks y refunds. El negocio depende de **volumen y mix cripto favorable** para acumular resultado positivo. El ADR asume esta apuesta explícitamente: el volumen se prioriza sobre el margen unitario.
 - **Rango 1-9 €/min genera fricción con packs de recarga vigentes (10/20/40 €)**: un pack de 10 € dura ~1 minuto con modelo top a €9/min, lo que puede desincentivar la compra. Rediseño de packs premium queda como **frente separado** (deuda declarada, no scope de este ADR).
-- **Riesgo reputacional del rango de precio visible**: un cliente que entra a una modelo T3 a €9/min sin leer el precio puede sentirse "engañado". Compensado por D10 (precio visible en tarjeta y perfil) pero requiere UX cuidadosa.
+- **Riesgo reputacional del rango de precio visible**: un cliente que entra a una modelo T4 a €9/min sin leer el precio puede sentirse "engañado". Compensado por D10 (precio visible en tarjeta y perfil) pero requiere UX cuidadosa.
 - **Retirada del programa de afiliadas es visible en el outreach**: modelos ya contactadas a las que se mencionó el programa reciben ahora una propuesta distinta. Comunicación explícita del cambio requerida (asumida en el outreach post-ADR, no scope técnico).
 - **Chargeback threshold en T&C**: la política de descuento por chargebacks/refunds es sensible legalmente. T&C y contrato de modelo deben materializarse cuidadosamente (frente legal/compliance separado).
 
@@ -229,7 +229,7 @@ El sistema de tiers previo (ADR-043 §4) queda superseded por D1+D2 de este ADR.
 Propuesta inicial del operador. Ventaja: mensaje simplísimo ("80% siempre, sin condiciones"). Desventajas acumulativas que la hicieron perder frente al escalado 75-79:
 
 1. **Elimina el gancho de progresión**: la modelo no ve premio por escalar su facturación, solo por trabajar más horas al mismo ritmo. El sistema de tiers previo (aunque con ratios peores) sí tenía ese gancho psicológico.
-2. **Margen empresa insuficiente en tramo inicial** (20% bruto - 13% fees tarjeta = 7% neto): un chargeback dispara pérdida operativa. En el tramo escalado, T0 con 25% bruto - 13% fees = 12% neto, con colchón razonable.
+2. **Margen empresa insuficiente en tramo inicial** (20% bruto - 13% fees tarjeta = 7% neto): un chargeback dispara pérdida operativa. En el tramo escalado, T1 con 25% bruto - 13% fees = 12% neto, con colchón razonable.
 3. **Desperdicia el andamio mental de los 3 tiers**: la comunicación al cliente y a la modelo ya asume que "hay progresión". Un plano 80/20 borra un elemento ya establecido y trabajado.
 
 Se recupera lo bueno del plano 80/20 (mensaje simple hacia arriba) manteniendo un **top de 79%** que en la práctica es "80% redondo" desde el punto de vista de la modelo top.
@@ -288,7 +288,7 @@ Cambios técnicos (fuera del scope de este ADR pero enumerados como consecuencia
 
 **Backend**:
 - Migration `V38__drop_affiliate_program.sql`: drop tablas y columnas afiliadas.
-- Migration `V39__model_pricing_tiers_v1.sql`: crea `model_pricing_tiers` con las 4 filas (T0/T1/T2/T3), añade columnas al snapshot diario, añade `users.chosen_rate_eur_per_min` y `users.pro_accepts_trial`.
+- Migration `V39__model_pricing_tiers_v1.sql`: crea `model_pricing_tiers` con las 4 filas (T1/T2/T3/T4), añade columnas al snapshot diario, añade `users.chosen_rate_eur_per_min` y `users.pro_accepts_trial`.
 - Purga: `AffiliateCommissionService`, `AffiliateAttributionService`, `AffiliateBonusService`, `AffiliateCodeService`, `AffiliateHashService`, `AffiliateLinkTokenService`, entities correspondientes, controllers, tests, DTOs.
 - Refactor: `ModelTierService` y `ModelTierSnapshotJob` a operar sobre facturación bruta rolling 30d y sobre `model_pricing_tiers`.
 - Nuevo `PricingService`: expone tramo, %reparto, rango, tarifa vigente por modelo.
@@ -323,7 +323,7 @@ Cambios técnicos (fuera del scope de este ADR pero enumerados como consecuencia
 ### Impacto en riesgo operacional
 
 - **Nuevo riesgo alto**: margen tarjeta delgado, sensible a chargebacks. Mitigación: mix cripto favorable + renegociación PSP a volumen.
-- **Nuevo riesgo medio**: modelo T3 con tarifa €9/min y pack cliente de €10 genera fricción de conversión. Mitigación: rediseño de packs premium (frente separado).
+- **Nuevo riesgo medio**: modelo T4 con tarifa €9/min y pack cliente de €10 genera fricción de conversión. Mitigación: rediseño de packs premium (frente separado).
 - **Riesgo eliminado**: complejidad y auditoría del programa de afiliadas (tracking, atribución, reversos, cierres mensuales).
 - **Riesgo eliminado**: disputas de afiliadas sobre atribución y comisiones no cobradas.
 

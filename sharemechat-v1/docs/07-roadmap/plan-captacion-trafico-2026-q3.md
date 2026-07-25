@@ -314,7 +314,7 @@ Revisión bisemanal el domingo, junto con la revisión semanal P7 del operador.
 |---|---|---|---|
 | Modelos verificadas con login últimos 7d | BD: `users WHERE role=MODEL AND verification_status=APPROVED AND last_login > NOW()-7d` | Crecimiento +3/quincena sostenido (subido desde +2 al concentrar esfuerzo P3→P4) | 0 nuevas en 2 quincenas seguidas |
 | ~~Afiliados con cuenta + tracking link generado~~ | ~~BD: tabla `affiliates`~~ | ~~+1/quincena sostenido~~ | **RETIRADO por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) (2026-07-24)** |
-| Modelos con tarifa >€1/min elegida (T1+) | BD: `users WHERE role=MODEL AND chosen_rate_eur_per_min > 1.00` | +1/quincena sostenido | 0 en 4 quincenas (nadie escala más allá de T0) |
+| Modelos con tarifa >€1/min elegida (T2+) | BD: `users WHERE role=MODEL AND chosen_rate_eur_per_min > 1.00` | +1/quincena sostenido | 0 en 4 quincenas (nadie escala más allá de T1) |
 | Modelos con Estatus Pro activo (>1.500 €/mes rolling 30d) | BD: `model_tier_daily_snapshots.pro_status_active=true` en snapshot más reciente | ≥1 al mes 3, ≥3 al mes 6 | 0 al mes 6 |
 | Sesiones GA4 desde tráfico **no-Direct** | GA4 Acquisition (excluir Direct) | +20% bisemanal | Planas o descendentes 4 quincenas seguidas |
 | Impresiones GSC | GSC | +15% bisemanal | Planas 4 quincenas seguidas |
@@ -357,7 +357,7 @@ Realistas, no optimistas. Si la realidad es peor, releer este documento y la sec
 **Mes 3 (septiembre 2026) — umbral "coming soon" → lanzamiento privado:**
 - 15-25 modelos verificadas activas (subido desde 10-20; criterio: login en últimos 7d).
 - ~~3-5 afiliados con cuenta, 1-2 con link generado~~ — retirado por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md).
-- ≥1 modelo con tarifa elegida >€1/min (T1+): indica que el rango autoservicio se está usando.
+- ≥1 modelo con tarifa elegida >€1/min (T2+): indica que el rango autoservicio se está usando.
 - 1-3 menciones XBIZ acumuladas.
 - 8-12 artículos blog publicados, GSC con impresiones crecientes.
 - 5-15 clientes registrados con email verificado (mayoría amigos + traídos por audiencia propia de modelos onboarded).
@@ -367,7 +367,7 @@ Realistas, no optimistas. Si la realidad es peor, releer este documento y la sec
 - 40-60 modelos verificadas activas (subido desde 30-50).
 - ~~8-15 afiliados, 3-5 generando referrals con actividad~~ — retirado por [ADR-052 §D11](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md).
 - ≥3 modelos con Estatus Pro activo (>1.500 €/mes facturación bruta rolling 30d).
-- ≥5 modelos con tarifa elegida >€1/min (dispersión en T1+, señal de que el rango autoservicio agrega valor).
+- ≥5 modelos con tarifa elegida >€1/min (dispersión en T2+, señal de que el rango autoservicio agrega valor).
 - Tráfico orgánico no-Direct: 500-2000 sesiones/mes.
 - 5-10 menciones XBIZ acumuladas + posiblemente 1 en YNOT o AVN.
 - 20-50 clientes activos (compraron al menos 1 pack).

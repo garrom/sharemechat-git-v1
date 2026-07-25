@@ -27,7 +27,7 @@ La propuesta al outreach de reclutamiento de modelos deja de ser "30% revshare l
 
 - **75% del bruto** desde el minuto 1 sin condiciones (vs 50-60% competencia).
 - **77% al superar 3.500 €/mes**, **78% al superar 5.000 €/mes**, **79% al superar 6.500 €/mes** (facturación bruta rolling 30d).
-- **Rango de precio autoservicio**: 1 €/min en T0; 1-3 €/min al superar 3.500 €; 1-6 €/min al superar 5.000 €; 1-9 €/min al superar 6.500 €.
+- **Rango de precio autoservicio**: 1 €/min en T1; 1-3 €/min al superar 3.500 €; 1-6 €/min al superar 5.000 €; 1-9 €/min al superar 6.500 €.
 - **Estatus Pro** al superar 1.500 €/mes: control opcional del trial (la modelo decide si acepta clientes trial o no).
 
 Detalle completo en [sistema-tiers-modelos.md](sistema-tiers-modelos.md) tras su reescritura por ADR-052.

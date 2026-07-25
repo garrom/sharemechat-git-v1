@@ -6,7 +6,7 @@ SharemeChat monetiza con un modelo **pay-per-use, sin suscripción**. El cliente
 
 La oferta se compone de tres packs cerrados, sin compra libre de minutos sueltos:
 
-- **10 €** — aproximadamente 10 minutos a €1/min (tarifa base T0).
+- **10 €** — aproximadamente 10 minutos a €1/min (tarifa base T1).
 - **20 €** — aproximadamente 22 minutos a €1/min (2 min de bonus BFPM).
 - **40 €** — aproximadamente 44 minutos a €1/min (4 min de bonus BFPM).
 
@@ -18,10 +18,10 @@ El pack mínimo es de 10 €. La fuente de verdad es el **saldo comprado en EUR*
 
 | Tramo de la modelo | Rango de precio / min |
 |---|---|
-| T0 (entrada, 0 – 3.500 €/mes) | **1 €/min fijo** |
-| T1 (> 3.500 €/mes) | 1 – 3 €/min |
-| T2 (> 5.000 €/mes) | 1 – 6 €/min |
-| T3 (> 6.500 €/mes) | 1 – 9 €/min |
+| T1 (entrada, 0 – 3.500 €/mes) | **1 €/min fijo** |
+| T2 (> 3.500 €/mes) | 1 – 3 €/min |
+| T3 (> 5.000 €/mes) | 1 – 6 €/min |
+| T4 (> 6.500 €/mes) | 1 – 9 €/min |
 
 - El techo actual es **€9/min** (property configurable). Ampliaciones futuras (€15/min o superior) no requieren migration.
 - La tarifa elegida por cada modelo se **muestra claramente en su tarjeta de home y en la vista de perfil `/m/:slug`**. Sin precio visible, hay fricción de conversión y disputas.
@@ -32,9 +32,9 @@ Detalle completo del sistema (mecánica de tramos, rangos, snapshot diario, pane
 
 ## Fricción conocida entre rango de precio y packs vigentes
 
-Los packs 10 / 20 / 40 € están calibrados para tarifas cercanas a €1/min. Una modelo T3 con tarifa €9/min consume el pack de 10 € en poco más de un minuto. Rediseño de **packs premium** (importes más altos aptos para modelos T2/T3) queda como **deuda declarada** (ver [`../04-operations/known-debt.md`](../04-operations/known-debt.md)); no forma parte del scope inmediato de ADR-052.
+Los packs 10 / 20 / 40 € están calibrados para tarifas cercanas a €1/min. Una modelo T4 con tarifa €9/min consume el pack de 10 € en poco más de un minuto. Rediseño de **packs premium** (importes más altos aptos para modelos T3/T4) queda como **deuda declarada** (ver [`../04-operations/known-debt.md`](../04-operations/known-debt.md)); no forma parte del scope inmediato de ADR-052.
 
-Mientras esa deuda no se cierre, el cliente que quiera consumir varios minutos con una modelo T3 debe comprar varios packs consecutivos o el pack de 40 € que dura ~4,5 min a €9/min. El sistema funciona, pero la UX no está optimizada para el extremo alto del rango.
+Mientras esa deuda no se cierre, el cliente que quiera consumir varios minutos con una modelo T4 debe comprar varios packs consecutivos o el pack de 40 € que dura ~4,5 min a €9/min. El sistema funciona, pero la UX no está optimizada para el extremo alto del rango.
 
 ## Primer minuto trial
 
@@ -54,7 +54,7 @@ Existe un mecanismo anti-abuso por cliente basado en **packs de slots gratis con
 
 La oferta inicial contemplaba un pack de 5 € que se **eliminó**: un ticket tan bajo dejaba un margen prácticamente nulo o negativo una vez considerados los costes fijos del procesador de pago, y generaba más operaciones pequeñas sin valor estratégico claro antes de tener datos reales de conversión. El detalle de la decisión y de las alternativas descartadas está en [ADR-011](../06-decisions/adr-011-pricing-simplification-and-minimum-threshold.md).
 
-El precio único **€1/min plano** vigente hasta el 2026-07-24 fue superseded por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md), que introduce el rango autoservicio por modelo. Motivación: dar a modelos con audiencia propia palanca de captura de valor sobre sus clientes, sin canibalizar la propuesta base para modelos T0.
+El precio único **€1/min plano** vigente hasta el 2026-07-24 fue superseded por [ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md), que introduce el rango autoservicio por modelo. Motivación: dar a modelos con audiencia propia palanca de captura de valor sobre sus clientes, sin canibalizar la propuesta base para modelos T1.
 
 ## Alcance de este documento
 

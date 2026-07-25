@@ -63,7 +63,7 @@ Este movimiento no requiere trabajo nuevo salvo mantener la mecánica actual. El
 En vez de reclutar 30 modelos una a una, negociar con 2-3 estudios pequeños (candidatos: Colombia, Rumanía) que ya operan 10-15 modelos cada uno con audiencia propia. La plataforma ofrece:
 
 - **Reparto 75-79% modelo escalonado** por facturación bruta rolling 30d aplicable a cada modelo del estudio (mismo régimen que cualquier modelo independiente, ver [sistema-tiers-modelos.md](sistema-tiers-modelos.md)). Sin programa de afiliación adicional: el %reparto elevado ya sobre-incentiva la captación de clientes propios ([ADR-052](../06-decisions/adr-052-rediseno-reparto-precio-y-retirada-afiliadas.md) §D11).
-- **Rango de precio autoservicio** por modelo dentro del tramo de facturación alcanzado (1 €/min T0 → hasta 9 €/min T3). Permite al estudio capturar willingness-to-pay superior de los clientes propios de cada modelo.
+- **Rango de precio autoservicio** por modelo dentro del tramo de facturación alcanzado (1 €/min T1 → hasta 9 €/min T4). Permite al estudio capturar willingness-to-pay superior de los clientes propios de cada modelo.
 - Página SEO por modelo con dominio de autoridad creciente como material de venta para el estudio.
 - Onboarding coordinado (los estudios manejan la mayor parte del soporte al talento).
 
