@@ -195,6 +195,17 @@ public class PspOrchestratorService {
      * monedas en el panel, esta lista debe reflejarlo para mantener
      * coherencia.
      *
+     * <p><b>NO-OP OPERATIVO desde 2026-07-26</b>: la property
+     * {@code psp.nowpayments.pay-currencies-enabled} esta {@code false}
+     * en los 3 entornos porque el sandbox NOWPayments rechaza el
+     * parametro {@code pay_currencies} con 400. Esta lista se sigue
+     * calculando y pasando al {@link CreateInvoiceRequest} para no
+     * romper el DTO, pero el {@code NowPaymentsHttpClient} NO la envia
+     * al vendor mientras el flag este false. La responsabilidad del
+     * catalogo por moneda vive hoy 100% en el panel del vendor. Se
+     * preserva este metodo para reactivarlo trivialmente si el vendor
+     * arregla el bug del sandbox en el futuro.
+     *
      * @return lista con los codigos NOWPayments permitidos; {@code null}
      *         para cualquier packId no reconocido (deja al vendor
      *         mostrar todas las activas del panel, fallback defensivo).
