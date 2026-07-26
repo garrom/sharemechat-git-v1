@@ -137,12 +137,11 @@ public class PspOrchestratorService {
         // que el hosted checkout no ofrezca al cliente monedas cuyo
         // minimo del vendor excede el precio del pack.
         java.util.List<String> allowedCurrencies = allowedPayCurrenciesForPack(packKey);
-        // Fix 2026-07-25: para P10 (10 EUR) el hosted checkout mostraba las 3
-        // stablecoins con USDT-TRC20 preseleccionada, pero los minimos
-        // efectivos del vendor descartan varias combinaciones. Se fuerza
-        // USDT-ERC20 (usdterc20) por defecto para evitar friccion. Para
-        // P20/P40 se deja null -> el cliente sigue eligiendo entre las
-        // opciones (btc + stablecoins).
+        // Rediseno 2026-07-26: siempre null para que el hosted checkout
+        // muestre el picker con la whitelist allowedCurrencies (el
+        // cliente elige entre las 4 monedas activas del panel operador
+        // antes de confirmar). El fix del 2026-07-25 que forzaba
+        // USDT-ERC20 en P10 se retiro por fee red inviable (5-30 EUR).
         String defaultPayCurrency = defaultPayCurrencyForPack(packKey);
         CreateInvoiceRequest req = new CreateInvoiceRequest(
                 orderId, description,
@@ -202,31 +201,53 @@ public class PspOrchestratorService {
      */
     private java.util.List<String> allowedPayCurrenciesForPack(String packKey) {
         if (packKey == null) return null;
+        // Rediseno 2026-07-26: catalogo ajustado a las 4 monedas
+        // activadas como receiving currencies en el panel NOWPayments del
+        // operador (verificado en captura del panel):
+        //   - USDT TRC20 (Tron), fee cliente ~1 EUR
+        //   - USDT Polygon,      fee cliente <0.01 EUR
+        //   - USDC Solana,       fee cliente <0.01 EUR
+        //   - BTC nativo,        fee cliente 1-5 EUR
+        //
+        // Se RETIRAN del catalogo: usdterc20 (fee ETH 5-30 EUR sobre P10
+        // era 25-67% perdida; inviable), usdcerc20 (codigo ademas invalido
+        // en el catalogo NOWPayments actual, no existe: es 'usdc' sin
+        // sufijo el que representa USDC Ethereum).
+        //
+        // Orden: primer elemento = default sugerido al hosted checkout
+        // (NOWPayments no documenta si respeta el orden como
+        // pre-seleccion, pero al menos garantiza que el picker se pinta
+        // con la whitelist). Tron primero por ser la moneda dominante
+        // del sector adult cam (>60% payments en algunas plataformas).
+        //
+        // BTC excluido de P10: NOWPayments impone minimo ~15-20 EUR por
+        // el peso del fee red BTC, incompatible con pack de 10 EUR.
         switch (packKey) {
             case "P10":
-                return java.util.List.of("usdttrc20", "usdterc20", "usdcerc20");
+                return java.util.List.of("usdttrc20", "usdtmatic", "usdcsol");
             case "P20":
             case "P40":
             case "P100":
-                return java.util.List.of("btc", "usdttrc20", "usdterc20", "usdcerc20");
+                return java.util.List.of("usdttrc20", "usdtmatic", "usdcsol", "btc");
             default:
                 return null;
         }
     }
 
     /**
-     * Moneda cripto preseleccionada en el hosted checkout. NOWPayments
-     * usa el {@code pay_currency} para saltarse el picker y llevar al
-     * cliente directamente al pago en esa moneda. Solo se fija para P10
-     * porque los minimos operativos del vendor descartan alternativas
-     * en ese tramo; para P20/P40 se devuelve {@code null} y el cliente
-     * sigue eligiendo entre las de {@link #allowedPayCurrenciesForPack}.
+     * Moneda cripto preseleccionada en el hosted checkout via
+     * {@code pay_currency}. Cuando se fija, NOWPayments SALTA el picker
+     * y lleva al cliente directamente al pago en esa moneda (sin
+     * posibilidad de cambiar).
+     *
+     * <p>Rediseno 2026-07-26: siempre devuelve {@code null} para que el
+     * hosted checkout muestre el picker con la whitelist de
+     * {@link #allowedPayCurrenciesForPack} y el cliente pueda elegir
+     * (o mantener el default sugerido) antes de confirmar el pago.
+     * Requisito explicito del operador tras detectar que forzar
+     * USDT-ERC20 en P10 era economicamente inviable (fee ETH 5-30 EUR).
      */
     private String defaultPayCurrencyForPack(String packKey) {
-        if (packKey == null) return null;
-        if ("P10".equals(packKey)) {
-            return "usdterc20";
-        }
         return null;
     }
 
