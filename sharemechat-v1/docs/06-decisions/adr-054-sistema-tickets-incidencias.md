@@ -288,6 +288,11 @@ Ejecutable en 2-3 sesiones dedicadas. Cada fase es un commit desplegable por sí
 - **#D-48**: reporting admin de tickets por categoría / estado / tasa de compensación / coste mensual acumulado. Extensión del dashboard admin financiero.
 - **#D-49**: integración con futuro frente PSP tarjeta cuando aterrice — anticipar chargebacks preventivos (cliente amenaza chargeback → abrir ticket automáticamente y ofrecer compensación antes que perder el pago vía PSP con fee de chargeback).
 - **#D-50**: playbook operativo agente humano para tickets (`docs/04-operations/runbooks.md`): flujo, criterios de decisión, ejemplos por categoría. Se redacta tras las primeras 20-30 gestiones reales para capturar patrones reales.
+- **#D-51 (2026-07-27)**: extensión del sistema de tickets a **modelos** (ADR-055 futuro). Levantada en conversación tras cerrar T4. NO es copy-paste del actual:
+  - Categorías distintas: `PAYOUT_ISSUE`, `MODEL_MODERATION_APPEAL`, `TIER_CALCULATION_DISPUTE` (relevante con ADR-052 aterrizando tramos T1-T4), `HARASSMENT_FROM_CLIENT`. Las 4 actuales no aplican tal cual.
+  - Compensación distinta: el modelo no tiene "saldo cliente" que acreditar. Sería nota manual en próximo payout, sobre-transferencia one-off, o simplemente resolución sin comp económica (probablemente 80% de casos). Zero reuso del endpoint `manualRefundToClient` — necesita mecánica propia.
+  - Solapamiento con lo existente: `complaints` (quejas P2P) y apelaciones de `moderation`. Riesgo de 3 canales confundiendo modelo y agente. Requiere decisión previa sobre unificar/coexistir/reemplazar.
+  - **Timing**: abrir tras 2-4 semanas de rodaje real del sistema clientes (T5+T6) para capturar lecciones antes de rediseñar. No arrancar en paralelo.
 
 ## Referencias
 
