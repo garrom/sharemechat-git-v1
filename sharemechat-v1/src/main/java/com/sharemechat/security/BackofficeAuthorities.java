@@ -52,6 +52,13 @@ public final class BackofficeAuthorities {
     public static final String PERM_SUPPORT_CHAT_HANDLE = "support.chat_handle";
     public static final String PERM_SUPPORT_PROFILE_MANAGE = "support.profile_manage";
 
+    // Frente 4 - Sistema de Tickets de Incidencias (ADR-054, 2026-07-27).
+    // TICKETS_HANDLE: leer listado + detalle + verify + transicionar estado
+    //                 (no incluye compensar; la compensacion sigue por
+    //                 PERM_FINANCE_* + endpoint refund existente).
+    //                 Se otorga por defecto a ROLE_SUPPORT (como chat_handle).
+    public static final String PERM_SUPPORT_TICKETS_HANDLE = "support.tickets_handle";
+
     public static final Set<String> SUPPORT_PHASE1_PERMISSIONS = Set.of(
             PERM_MODELS_READ_LIST,
             PERM_MODELS_READ_KYC_MODE,
@@ -68,7 +75,10 @@ public final class BackofficeAuthorities {
             PERM_FINANCE_READ_TOP_CLIENTS,
             // B.3.1 (ADR-046): ROLE_SUPPORT hereda chat_handle por defecto.
             // profile_manage NO viene aqui: se otorga explicitamente.
-            PERM_SUPPORT_CHAT_HANDLE
+            PERM_SUPPORT_CHAT_HANDLE,
+            // ADR-054: ROLE_SUPPORT hereda tickets_handle por defecto
+            // (mismo tratamiento que chat_handle).
+            PERM_SUPPORT_TICKETS_HANDLE
     );
 
     public static final List<String> OFFICIAL_BACKOFFICE_PERMISSION_CATALOG = List.of(
@@ -92,7 +102,8 @@ public final class BackofficeAuthorities {
             PERM_CONTENT_PUBLISH,
             PERM_COMPLIANCE_DASHBOARD_VIEW,
             PERM_SUPPORT_CHAT_HANDLE,
-            PERM_SUPPORT_PROFILE_MANAGE
+            PERM_SUPPORT_PROFILE_MANAGE,
+            PERM_SUPPORT_TICKETS_HANDLE
     );
 
     private BackofficeAuthorities() {

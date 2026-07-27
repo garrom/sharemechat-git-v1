@@ -397,6 +397,22 @@ public class SecurityConfig {
                                 BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_SUPPORT),
                                 BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_SUPPORT_CHAT_HANDLE))
 
+                        // ============================================================
+                        // Frente 4 - Sistema de Tickets de Incidencias (ADR-054).
+                        // Admin tickets: ROLE_ADMIN o PERM_SUPPORT_TICKETS_HANDLE
+                        // (heredado por defecto por ROLE_SUPPORT).
+                        // Cliente tickets: cualquier CLIENT autenticado; ownership
+                        // (userId del path == userId del cookie) se enforcea en el
+                        // controller.
+                        // ============================================================
+                        .requestMatchers("/api/admin/tickets/**")
+                        .hasAnyAuthority(
+                                "ROLE_ADMIN",
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_ADMIN),
+                                BackofficeAuthorities.roleAuthority(BackofficeAuthorities.ROLE_SUPPORT),
+                                BackofficeAuthorities.permissionAuthority(BackofficeAuthorities.PERM_SUPPORT_TICKETS_HANDLE))
+                        .requestMatchers("/api/tickets/**").hasRole("CLIENT")
+
                         // ROLE-SCOPED APIs (AL FINAL, para no pisar endpoints específicos)
                         .requestMatchers("/api/models/**").hasRole("MODEL")
                         .requestMatchers("/api/clients/**").hasRole("CLIENT")
