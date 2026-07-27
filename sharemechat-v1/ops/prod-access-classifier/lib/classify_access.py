@@ -826,6 +826,12 @@ VERDICT_KNOWN_PUBLIC_ROUTES = (
 # el 2026-06-13 tras un falso positivo AMARILLO del 13-jun (la IP
 # 154.159.237.224 obtuvo 204 en /api/consent/age-gate y /api/consent/terms,
 # rutas legitimas del consent banner + age gate de visitantes anonimos).
+# Ampliado el 2026-07-26 con /api/webhooks/ tras falso positivo AMARILLO
+# del propio dia: prueba de pago real en PROD con usuario allowlisted
+# genero 3 IPNs legitimos de NOWPayments (OVH 51.75.77.69) sobre
+# /api/webhooks/nowpayments/ipn (permitAll SecurityConfig:220, ADR-051).
+# El prefijo cubre tambien /api/webhooks/moderation/* (permitAll
+# SecurityConfig:212, ADR-037 Sightengine).
 VERDICT_KNOWN_PUBLIC_API_PREFIXES: Tuple[str, ...] = (
     "/api/public/",                 # CMS publico (home, content, ...)
     "/api/consent/",                # consent banner + age gate (visitantes anonimos)
@@ -835,6 +841,7 @@ VERDICT_KNOWN_PUBLIC_API_PREFIXES: Tuple[str, ...] = (
     "/api/auth/password/",          # forgot + reset
     "/api/kyc/veriff/",             # webhook Veriff (POST)
     "/api/kyc/didit/",              # webhook Didit (POST)
+    "/api/webhooks/",               # webhooks PSP (nowpayments, ADR-051) + moderation (ADR-037)
 )
 
 
