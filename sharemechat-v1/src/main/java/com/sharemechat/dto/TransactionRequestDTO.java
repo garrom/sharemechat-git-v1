@@ -19,6 +19,11 @@ public class TransactionRequestDTO {
     private Long streamRecordId; // opcional
     private Long giftId;         // opcional
 
+    // ADR-054 D4: si presente, la Transaction resultante queda linkada al
+    // ticket y el ticket se cierra en RESOLVED_COMPENSATED. Solo aplica
+    // desde el flujo admin de tickets; el refund manual libre lo deja null.
+    private Long ticketId;
+
     public BigDecimal getAmount() { return amount; }
     public void setAmount(BigDecimal amount) { this.amount = amount; }
 
@@ -33,4 +38,7 @@ public class TransactionRequestDTO {
 
     public Long getGiftId() { return giftId; }
     public void setGiftId(Long giftId) { this.giftId = giftId; }
+
+    public Long getTicketId() { return ticketId; }
+    public void setTicketId(Long ticketId) { this.ticketId = ticketId; }
 }

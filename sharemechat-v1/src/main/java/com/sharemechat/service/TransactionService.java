@@ -6,6 +6,9 @@ import com.sharemechat.constants.Constants;
 import com.sharemechat.dto.TransactionRequestDTO;
 import com.sharemechat.entity.*;
 import com.sharemechat.repository.*;
+import com.sharemechat.support.entity.SupportTicket;
+import com.sharemechat.support.repository.SupportTicketRepository;
+import com.sharemechat.support.service.TicketService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,6 +40,10 @@ public class TransactionService {
     // [NEW] payout_requests
     private final PayoutRequestRepository payoutRequestRepository;
 
+    // ADR-054: solo se usa desde manualRefundToClient cuando el DTO trae
+    // ticketId; sin ticketId el flujo es identico al pre-ADR-054.
+    private final SupportTicketRepository supportTicketRepository;
+
     private final BillingProperties billing;
     private final GiftProperties giftProperties;
     private final EmailVerificationService emailVerificationService;
@@ -53,6 +60,7 @@ public class TransactionService {
             PlatformTransactionRepository platformTransactionRepository,
             PlatformBalanceRepository platformBalanceRepository,
             PayoutRequestRepository payoutRequestRepository,
+            SupportTicketRepository supportTicketRepository,
             BillingProperties billing,
             GiftProperties giftProperties,
             EmailVerificationService emailVerificationService,
@@ -68,6 +76,7 @@ public class TransactionService {
         this.platformTransactionRepository = platformTransactionRepository;
         this.platformBalanceRepository = platformBalanceRepository;
         this.payoutRequestRepository = payoutRequestRepository;
+        this.supportTicketRepository = supportTicketRepository;
         this.billing = billing;
         this.giftProperties = giftProperties;
         this.emailVerificationService = emailVerificationService;
@@ -1002,17 +1011,43 @@ public class TransactionService {
             );
         }
 
-        String cleanDescription = request.getDescription().trim();
-        String finalDescription = "Manual refund by adminId=" + adminId + " | " + cleanDescription;
+        // ADR-054 D4: validacion bidireccional cuando el refund viene del
+        // flujo admin de tickets. Si el DTO trae ticketId, verificamos
+        // (a) que el ticket existe, (b) que pertenece al mismo user, (c)
+        // que esta en el estado transitorio previo a la compensacion. Si
+        // alguna condicion falla, la transaction NO se ejecuta (400).
+        SupportTicket ticketToClose = null;
+        Long ticketIdReq = request.getTicketId();
+        if (ticketIdReq != null) {
+            ticketToClose = supportTicketRepository.findById(ticketIdReq)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "Ticket no encontrado id=" + ticketIdReq));
+            if (!clientUserId.equals(ticketToClose.getUserId())) {
+                throw new IllegalArgumentException(
+                        "El ticket id=" + ticketIdReq + " no pertenece al userId=" + clientUserId);
+            }
+            if (!"RESOLVED_COMPENSATED_PENDING_CREDIT".equals(ticketToClose.getStatus())) {
+                throw new IllegalStateException(
+                        "El ticket id=" + ticketIdReq + " no esta en estado " +
+                        "RESOLVED_COMPENSATED_PENDING_CREDIT (actual=" +
+                        ticketToClose.getStatus() + ")");
+            }
+        }
 
-        log.info("manualRefundToClient: start adminId={} clientUserId={} amount={} previousBalance={}",
-                adminId, clientUserId, refundAmount, previousBalance);
+        String cleanDescription = request.getDescription().trim();
+        String finalDescription = ticketIdReq != null
+                ? "Manual refund by adminId=" + adminId + " (ticketId=" + ticketIdReq + ") | " + cleanDescription
+                : "Manual refund by adminId=" + adminId + " | " + cleanDescription;
+
+        log.info("manualRefundToClient: start adminId={} clientUserId={} amount={} previousBalance={} ticketId={}",
+                adminId, clientUserId, refundAmount, previousBalance, ticketIdReq);
 
         Transaction tx = new Transaction();
         tx.setUser(user);
         tx.setAmount(refundAmount);
         tx.setOperationType(Constants.OperationTypes.MANUAL_REFUND);
         tx.setDescription(finalDescription);
+        tx.setTicketId(ticketIdReq);
         Transaction savedTx = transactionRepository.save(tx);
 
         BigDecimal newBalance = previousBalance.add(refundAmount);
@@ -1043,6 +1078,30 @@ public class TransactionService {
 
         log.info("manualRefundToClient: success adminId={} clientUserId={} txId={} platformTxId={} refundAmount={} newBalance={} newPlatformBalance={}",
                 adminId, clientUserId, savedTx.getId(), savedPtx.getId(), refundAmount, newBalance, newPlatformBalance);
+
+        // ADR-054 D4: cierre del ticket asociado tras acreditar. El ticket
+        // pasa de RESOLVED_COMPENSATED_PENDING_CREDIT (validado arriba) a
+        // RESOLVED_COMPENSATED, con link a la Transaction creada + monto +
+        // timestamp + adminId. Esto sucede dentro de la misma transaccion
+        // que la acreditacion, garantizando atomicidad ticket<->transaction.
+        if (ticketToClose != null) {
+            if (!TicketService.isValidTransition(ticketToClose.getStatus(), "RESOLVED_COMPENSATED")) {
+                // Defensa en profundidad — nunca deberia dispararse dado que ya
+                // validamos el estado arriba, pero si el enum cambia y este
+                // punto no se sincroniza, salta aqui en vez de dejar el
+                // ticket en estado inconsistente.
+                throw new IllegalStateException(
+                        "Transicion invalida " + ticketToClose.getStatus() + " -> RESOLVED_COMPENSATED");
+            }
+            ticketToClose.setStatus("RESOLVED_COMPENSATED");
+            ticketToClose.setCompensatedTransactionId(savedTx.getId());
+            ticketToClose.setCompensatedAmountEur(refundAmount);
+            ticketToClose.setResolvedAt(LocalDateTime.now());
+            ticketToClose.setResolvedByAdminId(adminId);
+            supportTicketRepository.save(ticketToClose);
+            log.info("[TICKET] closed via refund id={} txId={} amount={} adminId={}",
+                    ticketToClose.getId(), savedTx.getId(), refundAmount, adminId);
+        }
 
         return newBalance;
     }

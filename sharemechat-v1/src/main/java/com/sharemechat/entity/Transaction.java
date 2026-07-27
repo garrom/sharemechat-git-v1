@@ -38,6 +38,15 @@ public class Transaction {
     @Column(name = "description")
     private String description;
 
+    // ADR-054: FK opcional al ticket de incidencia que origino esta
+    // transaction (solo aplica en compensaciones tipo MANUAL_REFUND
+    // disparadas desde el flujo de tickets). Sin ManyToOne para evitar
+    // dependencia ciclica de entities entre entity/ y support/entity/;
+    // se persiste como Long y se resuelve via SupportTicketRepository
+    // cuando hace falta.
+    @Column(name = "ticket_id")
+    private Long ticketId;
+
     public Transaction() {}
 
     public Long getId() { return id; }
@@ -61,4 +70,7 @@ public class Transaction {
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
+
+    public Long getTicketId() { return ticketId; }
+    public void setTicketId(Long ticketId) { this.ticketId = ticketId; }
 }
