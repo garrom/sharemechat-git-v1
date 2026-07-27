@@ -8,6 +8,35 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-27 — ADR-053: tolerancia parciales cripto tras validación real PROD
+
+Sesión disparada por la primera prueba real de pago cripto en PROD el 2026-07-26 (order `2a3b8735-642c-4f22-a196-1f7143793aaf`, 20€ Kraken → USDC-Solana → NOWPayments PROD). Todo el flujo técnico funcionó (kill-switch nivel 1 y 2 OK, verificación HMAC OK, checkout OK, wallet:credited emitido cuando toca), pero el pago llegó marcado como `partially_paid` por el vendor y nuestro backend lo rechazó por diseño (`NowPaymentsPaymentProvider.mapStatus: partially_paid → FAILED` desde ADR-051). Tuvimos que acreditar manualmente vía SQL en BD PROD (INSERT transactions + INSERT balances + INSERT clients + UPDATE users SET role='CLIENT' + UPDATE payment_sessions SET status='SUCCESS' — todo en una transacción, verificado con SELECTs post-commit).
+
+**Causa raíz del `partially_paid`**: fluctuación EUR/USDC durante las 2h30m que el operador tardó entre crear la invoice (20:07) y ejecutar el withdraw en Kraken (~22:32). En USDC llegó al 99,999999% (11,371482 vs 11,37148291 pedidos — diferencia 0,00000091 USDC ridícula), pero NOWPayments compara importes recalculando la equivalencia en EUR al momento de confirmación: rate USDC/EUR pasó de 0,88 a 0,8778 → 11,37 USDC × 0,8778 = 9,977€ = 99,77% de los 10€ requeridos. Como no llega al 100% en EUR, `partially_paid`. Sin tolerancia en backend, requiere acreditación manual.
+
+**Debate calibración del umbral**: propuesta inicial 5% (peor caso 5€ absorbidos en P100) — rechazada por el operador como excesiva. Contrapropuesta: umbral doble ratio ≥99% AND diff ≤1€. Cubre fluctuaciones típicas hasta 1%, tope pérdida 1€ por evento máximo. Casos con ratio <99% o diff >1€ siguen como FAILED (posible fraude o error grande — merecen revisión manual). Aceptada por operador.
+
+**Análisis técnico previo**: verificado con `curl` al endpoint `/v1/payment/{id}` de NOWPayments desde el server PROD que el vendor devuelve `pay_amount` y `actually_paid` en el payload del webhook. Nuestro DTO `WebhookEvent` vendor-agnostic NO los tenía. Y `NowPaymentsPaymentProvider.parseWebhook` NO los extraía. Extensión necesaria en dos capas.
+
+**Cambios de código**:
+- `WebhookEvent.java` — 2 campos nuevos `payAmountCrypto` + `actuallyPaidCrypto` (nullable BigDecimal). Constructor legacy preservado por compat.
+- `NowPaymentsPaymentProvider.parseWebhook` — extrae `pay_amount` + `actually_paid` del JSON con helper `decimalOrNull` nuevo.
+- `PspWebhookOrchestratorService.handleStatus` — refactor extrayendo `creditAndNotify` (reutilizable) + método nuevo `isPartialWithinTolerance`. Constantes `PARTIAL_MIN_RATIO=0.99` y `PARTIAL_MAX_ABS_DIFF_EUR=1.00`. Log WARN en cada análisis (aceptado o rechazado) con ratio + diff + decisión para observabilidad.
+- `PaymentStatus.java` — comentario actualizado con referencia al nuevo ADR.
+- 2 tests unitarios nuevos en `NowPaymentsPaymentProviderTest`: extracción con y sin campos cripto.
+
+**ADR-053** completo documentando decisión, alternativas evaluadas (100% tolerancia rechazada, 95% rechazado, solo absoluta rechazado, redondeo entero rechazado, cambio vendor rechazado), coste operativo asumido, y plan de evolución (calibrar umbral a 6 meses según patrón real).
+
+**Descubrimiento colateral operativo**: la fricción del flujo cripto para cliente retail es muy alta (curva primera vez: registrar Kraken + KYC + depositar SEPA + hold 72h + conversión EUR→USDC + añadir dirección con verificación email + retirar con red correcta + timer). Reafirma que **cripto es método complementario nicho, no principal**. La solución arquitectural real para captación masiva requiere integrar PSP tarjeta (Segpay o equivalente adult-friendly) como frente separado. Cripto sirve para el 5-15% de clientes que valoran la privacidad o vienen de mercados sin acceso tarjeta.
+
+**Deploy**: solo PROD backend (`fd6ee75`, JAR sha256 `4ff8e9e4…`). TEST no nivelado porque la instancia EC2 TEST estaba caída al momento del deploy (SSH timeout) — pendiente cuando el operador arranque la instancia. AUDIT sigue caída desde 2026-07-25.
+
+**Prueba manual PROD post-deploy**: pendiente. El operador tiene ~9 USDC restantes en Kraken tras la prueba de ayer + los 10€ acreditados manualmente. Con esa liquidez ya puede repetir la prueba (P10 con ~11 USDC) y verificar que la mecánica tolerancia funciona automáticamente: sin gestión SQL manual el saldo se acredita solo aunque llegue como partial dentro de rango.
+
+**Aprendizaje operativo del día**: cuando un caso teórico (fluctuación EUR/cripto en 3% de casos) se convierte en el primer caso real de PROD, la solución no es "cambiar vendor" ni "retirar cripto" — es calibrar la política del backend para absorber la fricción del sector con un coste operativo pequeño y trazable. La telemetría (log WARN con ratio + diff + decisión) permite verificar en 6 meses si el umbral 99% es adecuado o si hay que reajustar.
+
+---
+
 ## 2026-07-25 — Cierre deudas roadmap ADR-052: nivelación AUDIT+PROD, #D-26 cláusulas T&C, #D-24 pack P100
 
 Continuación de la sesión del mismo día. Tras cerrar el bloque HUD sesión + fixes PSP cripto en TEST y validar en vivo (ver entrada siguiente), se abordaron los tres frentes documentales/técnicos que quedaban del roadmap ADR-052.
