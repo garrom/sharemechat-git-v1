@@ -70,6 +70,23 @@ public class PspWebhookOrchestratorService {
             "P100", new BigDecimal("12.00")
     );
 
+    /**
+     * ADR-053 (2026-07-27): tolerancia para partially_paid cripto.
+     * Ratio minimo actually_paid/pay_amount en la moneda cripto del pago.
+     * 0.99 = admitimos hasta 1% de diferencia en la moneda cripto por
+     * fluctuacion EUR/cripto durante la ventana invoice-confirmacion.
+     */
+    private static final BigDecimal PARTIAL_MIN_RATIO = new BigDecimal("0.99");
+
+    /**
+     * ADR-053: tope absoluto de la diferencia en EUR para aceptar un
+     * parcial. 1 EUR. Evita que packs grandes (P100) absorban pérdidas
+     * mayores aunque el ratio se cumpla. Peor caso: P100 con ratio 99%
+     * → diff 1 EUR → SÍ acredita. P100 con ratio 98.5% → diff 1.5 EUR
+     * → NO acredita (aunque ratio<99% ya bloquea antes).
+     */
+    private static final BigDecimal PARTIAL_MAX_ABS_DIFF_EUR = new BigDecimal("1.00");
+
     private final PaymentProviderRegistry providerRegistry;
     private final PspWebhookEventRepository webhookEventRepository;
     private final PaymentSessionRepository paymentSessionRepository;
@@ -187,56 +204,22 @@ public class PspWebhookOrchestratorService {
         PaymentStatus status = event.getPaymentStatus();
         switch (status) {
             case SUCCESS:
-                // Idempotencia extra: si la session ya está SUCCESS, no re-creditar.
-                if ("SUCCESS".equals(session.getStatus())) {
-                    log.info("[PSP-WEBHOOK] session ya SUCCESS, skip credit provider={} pspTx={}",
-                            providerKey, pspTxId);
-                    return;
-                }
-                BigDecimal price = session.getAmount();
-                BigDecimal bonus = PACK_BONUS.getOrDefault(session.getPackId(), BigDecimal.ZERO);
-                Long creditedUserId = session.getUser().getId();
-                transactionService.creditPackWithBonus(
-                        creditedUserId,
-                        price, bonus,
-                        session.getOrderId(),
-                        session.getPackId(),
-                        session.isFirstPayment(),
-                        providerKey);
-                session.setStatus("SUCCESS");
-                paymentSessionRepository.save(session);
-                log.info("[PSP-WEBHOOK] credited provider={} pspTx={} orderId={} pack={} price={} bonus={}",
-                        providerKey, pspTxId, session.getOrderId(), session.getPackId(), price, bonus);
-                // Fix 2026-07-25: notificar al frontend en vivo que el saldo
-                // se ha actualizado tras el webhook cripto. Sin esto la
-                // pestana original (que sigue viva porque abrimos el hosted
-                // page en popup) no se enteraba del nuevo saldo hasta
-                // recargar o enviar un regalo (WS newBalance solo llegaba
-                // por giftDone). Ahora emitimos wallet:credited con el
-                // nuevo balance leido de clients.saldo_actual.
-                try {
-                    clientRepository.findById(creditedUserId).ifPresent(client -> {
-                        BigDecimal newBalance = client.getSaldoActual();
-                        if (newBalance != null) {
-                            String payload = new JSONObject()
-                                    .put("type", "wallet:credited")
-                                    .put("newBalance", newBalance.toPlainString())
-                                    .put("orderId", session.getOrderId())
-                                    .put("packId", session.getPackId())
-                                    .toString();
-                            wsSupport.notifyUserById(creditedUserId, payload);
-                            log.info("[PSP-WEBHOOK] wallet:credited emitted userId={} newBalance={}",
-                                    creditedUserId, newBalance);
-                        }
-                    });
-                } catch (Exception wsEx) {
-                    // Si falla la notificacion WS no debe romper el credito
-                    // ya persistido; solo log.
-                    log.warn("[PSP-WEBHOOK] wallet:credited notify FAIL userId={}: {}",
-                            creditedUserId, wsEx.getMessage());
-                }
+                creditAndNotify(session, providerKey, pspTxId, "finished");
                 break;
             case FAILED:
+                // ADR-053 (2026-07-27): tolerancia para pagos parciales
+                // cripto por fluctuacion de tipo de cambio entre creacion
+                // de invoice y confirmacion del pago. Si el vendor marca
+                // "partially_paid" pero llego >= PARTIAL_MIN_RATIO del
+                // importe cripto pedido Y la diferencia en EUR es <=
+                // PARTIAL_MAX_ABS_DIFF_EUR, tratamos como SUCCESS y
+                // acreditamos el pack completo. La plataforma absorbe la
+                // pequenya diferencia como coste de volatilidad cripto.
+                if ("partially_paid".equalsIgnoreCase(event.getRawPaymentStatus())
+                        && isPartialWithinTolerance(session, event, providerKey, pspTxId)) {
+                    creditAndNotify(session, providerKey, pspTxId, "partial_within_tolerance");
+                    break;
+                }
                 session.setStatus("FAILED");
                 paymentSessionRepository.save(session);
                 break;
@@ -335,5 +318,104 @@ public class PspWebhookOrchestratorService {
     private String safeMsg(Throwable t) {
         String m = t.getMessage();
         return m == null ? t.getClass().getSimpleName() : m;
+    }
+
+    /**
+     * ADR-053: acredita el pack completo (price + bonus) al usuario
+     * asociado a la session y emite WS wallet:credited al frontend.
+     * Reutilizable desde el flujo estandar SUCCESS y desde el flujo
+     * "partial dentro de tolerancia". El parametro {@code creditReason}
+     * queda en el log para trazabilidad ("finished" vs
+     * "partial_within_tolerance").
+     */
+    private void creditAndNotify(PaymentSession session, String providerKey,
+                                 String pspTxId, String creditReason) {
+        // Idempotencia extra: si la session ya está SUCCESS, no re-creditar.
+        if ("SUCCESS".equals(session.getStatus())) {
+            log.info("[PSP-WEBHOOK] session ya SUCCESS, skip credit provider={} pspTx={}",
+                    providerKey, pspTxId);
+            return;
+        }
+        BigDecimal price = session.getAmount();
+        BigDecimal bonus = PACK_BONUS.getOrDefault(session.getPackId(), BigDecimal.ZERO);
+        Long creditedUserId = session.getUser().getId();
+        transactionService.creditPackWithBonus(
+                creditedUserId,
+                price, bonus,
+                session.getOrderId(),
+                session.getPackId(),
+                session.isFirstPayment(),
+                providerKey);
+        session.setStatus("SUCCESS");
+        paymentSessionRepository.save(session);
+        log.info("[PSP-WEBHOOK] credited provider={} pspTx={} orderId={} pack={} price={} bonus={} reason={}",
+                providerKey, pspTxId, session.getOrderId(), session.getPackId(),
+                price, bonus, creditReason);
+        // Notificar al frontend en vivo (patron introducido 2026-07-25).
+        try {
+            clientRepository.findById(creditedUserId).ifPresent(client -> {
+                BigDecimal newBalance = client.getSaldoActual();
+                if (newBalance != null) {
+                    String payload = new JSONObject()
+                            .put("type", "wallet:credited")
+                            .put("newBalance", newBalance.toPlainString())
+                            .put("orderId", session.getOrderId())
+                            .put("packId", session.getPackId())
+                            .toString();
+                    wsSupport.notifyUserById(creditedUserId, payload);
+                    log.info("[PSP-WEBHOOK] wallet:credited emitted userId={} newBalance={}",
+                            creditedUserId, newBalance);
+                }
+            });
+        } catch (Exception wsEx) {
+            log.warn("[PSP-WEBHOOK] wallet:credited notify FAIL userId={}: {}",
+                    creditedUserId, wsEx.getMessage());
+        }
+    }
+
+    /**
+     * ADR-053: decide si un pago con status "partially_paid" del vendor
+     * cumple los criterios de tolerancia para acreditar el pack completo.
+     * Dos condiciones AND:
+     *  1) Ratio actually_paid / pay_amount >= {@link #PARTIAL_MIN_RATIO}
+     *     (ambos en la moneda cripto del pago, sin conversion a EUR).
+     *  2) Diferencia EUR aproximada (price_amount_eur * (1 - ratio)) <=
+     *     {@link #PARTIAL_MAX_ABS_DIFF_EUR}.
+     *
+     * <p>Si faltan los campos {@code payAmountCrypto} o
+     * {@code actuallyPaidCrypto} en el evento (nulls), NO aplicamos
+     * tolerancia por precaucion → el pago sigue como FAILED y requiere
+     * intervencion manual.
+     *
+     * <p>Log siempre a WARN con el ratio y la decision, para tener
+     * visibilidad operativa de cuanto se activa esta tolerancia.
+     */
+    private boolean isPartialWithinTolerance(PaymentSession session, WebhookEvent event,
+                                              String providerKey, String pspTxId) {
+        BigDecimal payCrypto = event.getPayAmountCrypto();
+        BigDecimal actuallyCrypto = event.getActuallyPaidCrypto();
+        if (payCrypto == null || actuallyCrypto == null
+                || payCrypto.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("[PSP-WEBHOOK] partial_paid SIN campos cripto, NO se aplica tolerancia " +
+                            "provider={} pspTx={} orderId={} pack={} payCrypto={} actuallyCrypto={}",
+                    providerKey, pspTxId, session.getOrderId(), session.getPackId(),
+                    payCrypto, actuallyCrypto);
+            return false;
+        }
+        BigDecimal ratio = actuallyCrypto.divide(payCrypto, 6, java.math.RoundingMode.HALF_UP);
+        BigDecimal priceEur = session.getAmount();
+        BigDecimal diffEur = priceEur
+                .multiply(BigDecimal.ONE.subtract(ratio))
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+        boolean ratioOk = ratio.compareTo(PARTIAL_MIN_RATIO) >= 0;
+        boolean diffOk = diffEur.compareTo(PARTIAL_MAX_ABS_DIFF_EUR) <= 0;
+        boolean accept = ratioOk && diffOk;
+        log.warn("[PSP-WEBHOOK] partial_paid analisis tolerancia provider={} pspTx={} orderId={} " +
+                        "pack={} payCrypto={} actuallyCrypto={} ratio={} diffEur={} " +
+                        "ratioOk={} diffOk={} decision={}",
+                providerKey, pspTxId, session.getOrderId(), session.getPackId(),
+                payCrypto, actuallyCrypto, ratio, diffEur,
+                ratioOk, diffOk, accept ? "ACCEPT_AS_SUCCESS" : "STAY_FAILED");
+        return accept;
     }
 }

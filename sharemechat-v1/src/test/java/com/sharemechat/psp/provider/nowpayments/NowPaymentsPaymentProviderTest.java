@@ -214,6 +214,37 @@ class NowPaymentsPaymentProviderTest {
         assertEquals(e1.getProviderEventId(), e2.getProviderEventId());
     }
 
+    @Test
+    @DisplayName("parseWebhook: ADR-053 extrae pay_amount y actually_paid como BigDecimal para tolerancia parcial")
+    void parse_webhook_extracts_pay_amount_and_actually_paid_adr053() {
+        // Payload real observado en el caso 2026-07-26 order 2a3b8735...
+        // partially_paid con actually_paid muy cercano a pay_amount por
+        // fluctuacion USDC/EUR durante las 2h30m que tardo el cliente
+        // en completar el pago desde Kraken.
+        String rawBody = "{\"invoice_id\":4464719831,\"order_id\":\"2a3b8735\","
+                + "\"payment_status\":\"partially_paid\","
+                + "\"pay_amount\":11.37148291,\"actually_paid\":11.371482}";
+        WebhookEvent evt = provider.parseWebhook(rawBody.getBytes(StandardCharsets.UTF_8));
+
+        assertNotNull(evt);
+        assertEquals(PaymentStatus.FAILED, evt.getPaymentStatus());
+        assertEquals("partially_paid", evt.getRawPaymentStatus());
+        assertNotNull(evt.getPayAmountCrypto());
+        assertNotNull(evt.getActuallyPaidCrypto());
+        // El orquestador computara ratio y decidira aceptar (99.99999% > 99%).
+        assertEquals(new BigDecimal("11.37148291"), evt.getPayAmountCrypto());
+        assertEquals(new BigDecimal("11.371482"), evt.getActuallyPaidCrypto());
+    }
+
+    @Test
+    @DisplayName("parseWebhook: sin campos cripto -> WebhookEvent con nulls (compat con providers que no los emiten)")
+    void parse_webhook_missing_crypto_fields_null() {
+        String rawBody = "{\"invoice_id\":1,\"order_id\":\"o\",\"payment_status\":\"finished\"}";
+        WebhookEvent evt = provider.parseWebhook(rawBody.getBytes(StandardCharsets.UTF_8));
+        assertNull(evt.getPayAmountCrypto());
+        assertNull(evt.getActuallyPaidCrypto());
+    }
+
     // ==================== verifyWebhookSignature (end-to-end con verifier real) ====================
 
     @Test

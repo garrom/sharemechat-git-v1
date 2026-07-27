@@ -11,7 +11,9 @@ package com.sharemechat.psp.dto;
  *   <li>{@code confirming} → {@link #PENDING}</li>
  *   <li>{@code confirmed} → {@link #PENDING} (aún no released, esperando conversión)</li>
  *   <li>{@code sending} → {@link #PENDING}</li>
- *   <li>{@code partially_paid} → {@link #FAILED} (no acreditamos parcial)</li>
+ *   <li>{@code partially_paid} → {@link #FAILED} (rechazamos parciales POR DEFECTO;
+ *       ADR-053 2026-07-27 anade tolerancia: el orquestador rescata parciales
+ *       dentro de rango ratio>=99% AND diff<=1 EUR y los acredita como SUCCESS)</li>
  *   <li>{@code finished} → {@link #SUCCESS} (payment_sessions.status=SUCCESS + creditPackWithBonus)</li>
  *   <li>{@code failed} → {@link #FAILED}</li>
  *   <li>{@code refunded} → {@link #REFUNDED} (BFPM 4B-b + reversal en frente propio)</li>

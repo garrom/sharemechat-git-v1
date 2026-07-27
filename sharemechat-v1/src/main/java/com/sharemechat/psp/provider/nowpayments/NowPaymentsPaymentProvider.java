@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.math.BigDecimal;
 import java.security.MessageDigest;
 import java.util.Locale;
 import java.util.Map;
@@ -112,13 +113,21 @@ public class NowPaymentsPaymentProvider implements PaymentProvider {
             String rawStatus = textOrNull(root, "payment_status");
             String eventType = null; // NOWPayments no expone event_type distinto; usamos payment_status
 
+            // ADR-053: campos para tolerancia de parciales. Vienen en la
+            // moneda cripto del pago (usdcsol, usdttrc20, etc.), no en EUR.
+            // El orquestador calcula ratio actually_paid/pay_amount solo
+            // cuando rawStatus="partially_paid".
+            BigDecimal payAmount = decimalOrNull(root, "pay_amount");
+            BigDecimal actuallyPaid = decimalOrNull(root, "actually_paid");
+
             // NOWPayments no envía event_id explícito → derivamos SHA-256(rawBody)
             // como sintético (patrón KycSessionService.processDiditWebhook:481-490).
             String eventId = sha256Hex(rawBody);
 
             PaymentStatus status = mapStatus(rawStatus);
 
-            return new WebhookEvent(eventId, paymentId, eventType, orderId, status, rawStatus);
+            return new WebhookEvent(eventId, paymentId, eventType, orderId, status,
+                    rawStatus, payAmount, actuallyPaid);
         } catch (Exception ex) {
             throw new PspException("NOWPayments parseWebhook error: " + ex.getMessage(), ex);
         }
@@ -172,6 +181,29 @@ public class NowPaymentsPaymentProvider implements PaymentProvider {
         if (f == null || f.isNull()) return null;
         // Aceptar numérico (algunos vendors devuelven id como int).
         return f.isTextual() ? f.asText() : f.asText();
+    }
+
+    /**
+     * ADR-053: extrae un campo decimal (pay_amount, actually_paid) del
+     * JSON preservando precisión. NOWPayments los envia como numeros
+     * JSON con hasta 8 decimales. Devuelve null si el campo no existe o
+     * no es parseable.
+     */
+    private BigDecimal decimalOrNull(JsonNode node, String field) {
+        if (node == null) return null;
+        JsonNode f = node.get(field);
+        if (f == null || f.isNull()) return null;
+        try {
+            if (f.isNumber()) {
+                return f.decimalValue();
+            }
+            String txt = f.asText();
+            if (txt == null || txt.isBlank()) return null;
+            return new BigDecimal(txt);
+        } catch (Exception ex) {
+            log.warn("[PSP-NOWPAYMENTS] decimalOrNull parse fail field={} value={}", field, f, ex);
+            return null;
+        }
     }
 
     /**
