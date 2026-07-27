@@ -15,7 +15,7 @@ Este documento es el panel corto de estado y prioridad viva.
 
 ## Frentes operativos activos
 
-Tres frentes en curso en paralelo. El Frente 1 (Chat Soporte LLM · Panel humano) es la sub-fase iniciada tras cerrar Fase 1.D del refactor Agente IA (ADR-044) y ejecutada durante las últimas sesiones operativas. El Frente 2 (Gobierno económico pre-PSP) sigue vivo con su siguiente paso identificado (BFPM Fase 4B-b) como prerrequisito de la integración PSP real; no está pausado. El Frente 3 (Materialización ADR-052: rediseño estructural del reparto + retirada del programa de afiliadas) arranca tras cerrar la Fase B documental el 2026-07-24 y encadena en 3 sub-frentes técnicos (purga afiliadas → refactor sistema tramos + rango de precio + Estatus Pro → T&C legal).
+Cuatro frentes en curso en paralelo. El Frente 1 (Chat Soporte LLM · Panel humano) es la sub-fase iniciada tras cerrar Fase 1.D del refactor Agente IA (ADR-044) y ejecutada durante las últimas sesiones operativas. El Frente 2 (Gobierno económico pre-PSP) sigue vivo con su siguiente paso identificado (BFPM Fase 4B-b) como prerrequisito de la integración PSP real; no está pausado. El Frente 3 (Materialización ADR-052: rediseño estructural del reparto + retirada del programa de afiliadas) arranca tras cerrar la Fase B documental el 2026-07-24 y encadena en 3 sub-frentes técnicos (purga afiliadas → refactor sistema tramos + rango de precio + Estatus Pro → T&C legal). El Frente 4 (Sistema de tickets de incidencias, ADR-054) es el más reciente: aterriza tras cerrar ADR-053 el 2026-07-27 y el cambio de estrategia hacia PSP tarjeta como método principal, que hace estructural tener sistema de trazabilidad de incidencias y compensaciones antes de captación masiva.
 
 ---
 
@@ -195,6 +195,63 @@ Deudas registradas del frente:
 - Rediseño packs premium (fricción rango 1-9 €/min con packs 10/20/40 €) — registrada en `known-debt.md`.
 - Recalibración `modelo-financiero.md` + xlsx tras nuevo reparto — registrada en `known-debt.md`.
 - Deudas ADR-049 (#D-18 a #D-23) canceladas por retirada del programa.
+
+---
+
+## Frente 4: Sistema de Tickets de Incidencias (ADR-054)
+
+Estado: **ADR-054 aceptado el 2026-07-27**. Cero implementación técnica todavía.
+
+Objetivo:
+separar la gestión de **incidencias** (problemas reales con posible compensación económica) de las **consultas** (dudas resueltas por el bot LLM), y construir el sistema de trazabilidad + verificación + compensación antes de que el frente PSP tarjeta traiga reclamaciones masivas inevitables.
+
+Base estructural: [ADR-054](../06-decisions/adr-054-sistema-tickets-incidencias.md), 8 decisiones (D1..D8) que definen ticket como dominio propio con conversación linkada, apertura por formulario explícito + detección heurística con confirmación, verificación automática por categoría contra fuentes internas (`stream_sessions`, `payment_sessions`, `moderation_evidence`, etc), compensación via reuso completo de `manualRefundToClient` con nueva columna `transactions.ticket_id`, y flujo admin extendiendo `AdminSupportPanel` con sub-tab Incidencias.
+
+Reutilización estructural del ADR-046 (chat soporte + panel humano) para el canal de comunicación agente ↔ cliente sobre el ticket, y reutilización estructural del panel financiero admin actual (`AdminFinancePanel.jsx` + `TransactionService.manualRefundToClient`, verificados como **real y funcional, NO mock**) para la compensación económica. Zero refactor del ledger contable.
+
+Secuencia técnica planificada (6 fases, cada una desplegable):
+
+1. **Fase T1 — backend base** — PENDIENTE
+   - Migration V41 con tabla `support_tickets` + columna `transactions.ticket_id` FK + FKs a `support_conversations`, `stream_sessions`, `payment_sessions`.
+   - Entity `SupportTicket` + `SupportTicketRepository`.
+   - `TicketService` (CRUD + gestión estados + antifraude D7).
+   - `TicketVerificationService` con checks para al menos 2 categorías iniciales (`STREAM_INTERRUPTED` + `PAYMENT_NOT_CREDITED`); las otras 2 (`MODERATION_FALSE_POSITIVE` + `ACCOUNT_ISSUE`) siguen la misma pauta y se completan en fase iterativa.
+   - Extensión `TransactionRequestDTO` con campo `ticketId` opcional + validación bidireccional en `manualRefundToClient` (si `ticketId` presente, verificar ticket existe + estado `RESOLVED_COMPENSATED_PENDING_CREDIT` + pertenece al `userId`).
+   - Tests unitarios de cada servicio (patrón `SupportBotServiceTest`).
+
+2. **Fase T2 — controllers y endpoints** — PENDIENTE
+   - `TicketController` cliente bajo `/api/tickets/`: POST crear ticket, GET listado propio, GET detalle, POST añadir mensaje al hilo.
+   - `AdminTicketController` (o extensión `SupportAdminController`) bajo `/api/admin/tickets/`: GET listado con filtros por categoría/estado/edad, GET detalle, POST verify (D3), PATCH status, POST resolve (que valida transición + orquesta compensación si aplica).
+   - Tests MockMvc.
+
+3. **Fase T3 — detección heurística del bot** — PENDIENTE
+   - Extensión `SupportBotService` con pre-clasificación por keywords/patrones por categoría; si señal fuerte, respuesta del bot con oferta "¿Abrir ticket?" + botón de confirmación en `SupportChat.jsx`.
+   - Cero apertura automática sin confirmación explícita (D2 b2).
+
+4. **Fase T4 — frontend cliente** — PENDIENTE
+   - Sección "Mis incidencias" en dashboard cliente (ruta propia o extensión de la sección Soporte).
+   - Formulario apertura con selector de categoría + descripción + timestamp aproximado.
+   - Listado con estado y filtros.
+   - Drill-down con `SupportChat.jsx` reutilizado + badge de contexto ticket.
+   - i18n `support.tickets.*` ES+EN.
+
+5. **Fase T5 — frontend admin** — PENDIENTE
+   - Nueva sub-tab "Incidencias" en `AdminSupportPanel.jsx` (junto a Conversaciones + Profiles).
+   - Listado maestro con filtros por categoría/estado/edad + badge `high_history_flag`.
+   - Detalle drill-down con panel de verificación automática (JSON formateado + señal global) + botón "Compensar X€" (llama al endpoint refund existente con `ticketId`) + botón "Rechazar con motivo" + hilo de mensajes.
+   - Nuevo permiso `PERM_SUPPORT_TICKETS_HANDLE` con baseline `ROLE_SUPPORT` (patrón ADR-046).
+   - i18n `admin.tickets.*` ES+EN.
+
+6. **Fase T6 — nivelación TEST + AUDIT + PROD** — PENDIENTE
+   - Sigue el patrón del paso 7 del Frente 1 (ADR-046): V41 aplicada por Flyway al arranque de cada entorno, JAR único desplegado con `deploy-frontend.ps1` + `update-manifest-backend.ps1`.
+
+Deudas registradas del frente (todas en `docs/04-operations/known-debt.md` cuando se abra la fase T1):
+- #D-45 auto-approve/auto-reject con umbrales por categoría (evolución futura tras 3 meses de datos).
+- #D-46 tabla de compensación máxima recomendada por categoría (informativa, no bloqueante).
+- #D-47 notificación WS + email al cliente cuando agente responde/cambia estado.
+- #D-48 reporting admin de tickets (categoría/estado/tasa compensación/coste mensual).
+- #D-49 anticipar chargebacks preventivos cuando aterrice PSP tarjeta (auto-abrir ticket + compensación pre-chargeback).
+- #D-50 playbook operativo agente humano para tickets (redacción tras 20-30 gestiones reales).
 
 ---
 

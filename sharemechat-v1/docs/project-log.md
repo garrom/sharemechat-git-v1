@@ -8,6 +8,65 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-27 — ADR-054: sistema de tickets de incidencias + pivote estrategia PSP tarjeta
+
+Segunda sesión del mismo día, disparada por el cierre de ADR-053 y el cambio explícito de estrategia del operador: **cripto se queda como método de pago secundario, el PSP tarjeta será el método principal en cuanto se cierre onboarding con un nuevo adquirente**. La instancia PROD de cripto queda "teóricamente arreglada" (ADR-053 desplegado, prueba manual E2E diferida por saldo limitado en Kraken), y el proyecto pivota hacia el frente PSP tarjeta como estructural.
+
+Con ese cambio de estrategia, el operador levantó **4 mejoras** que estaban solo en memoria conversacional, no en bitácora:
+
+1. **Cripto PROD punto a punto** — hecho con la salvedad conocida (ADR-053 desplegado sin validación E2E real).
+2. **Sistema de tickets de incidencias** en soporte — separar consultas (bot LLM) de incidencias (problemas con posible compensación económica).
+3. **Login con Google** (OAuth2) — reducir fricción registro.
+4. **Traductor automático en chat P2P** — expandir mercado direccionable cross-language.
+
+Feedback explícito del operador: **analizar primero conmigo, después registrar donde proceda (ADR o backlog)**. Cada mejora se analizó en detalle con dimensiones de diseño, trade-offs y preguntas clave antes de codificar cualquier línea.
+
+**Sesión focalizada en la #2 (tickets)**, que era la más grande y la primera en orden por impacto operativo (necesaria antes del frente PSP tarjeta para gestionar reclamaciones masivas inevitables). #3 y #4 quedan analizadas conceptualmente y registradas en `pending-hardening.md` Parte 5 para abordar tras cerrar #2.
+
+**Análisis conjunto del sistema de tickets, 7 dimensiones (a-g) con decisiones del operador**:
+
+- **2.a Modelo de datos** → Opción C: ticket como entidad NUEVA (`support_tickets`) con FK opcional a `support_conversations` para el canal de comunicación. Dominios separados: conversación efímera vs ticket con evidencia y compensación.
+- **2.b Apertura del ticket** → b1 formulario explícito (botón "Reportar incidencia" con categorías cerradas `STREAM_INTERRUPTED`, `PAYMENT_NOT_CREDITED`, `MODERATION_FALSE_POSITIVE`, `ACCOUNT_ISSUE`, `OTHER`) + b2 detección heurística del bot LLM con confirmación explícita obligatoria del usuario. Cero apertura automática sin consentimiento.
+- **2.c Verificación** → automatización de los checks contra fuentes internas (`stream_sessions` + `stream_events` para cortes de streaming, `payment_sessions` + `psp_webhook_events` + `transactions` para pagos no acreditados, `moderation_evidence` + `moderation_decisions` para falsos positivos moderación), endpoint `POST /api/admin/tickets/{id}/verify` devuelve JSON estructurado con señales por evidencia (`STRONG_POSITIVE`/`WEAK_POSITIVE`/`NEUTRAL`/`NEGATIVE`) y `signalStrength` global, **decisión humana obligatoria**. Recomendación siempre `MANUAL_REVIEW` en esta versión. Reservado auto-approve/auto-reject para evolución futura tras 3 meses datos históricos (deuda #D-45).
+- **2.d Compensación económica** → **hallazgo importante**: el operador recordaba que `manualRefundToClient` era mock. **NO es mock**, es implementación real y correcta en [`TransactionService.java:965`](../../src/main/java/com/sharemechat/service/TransactionService.java) + [`AdminFinancePanel.jsx:88`](../../frontend/src/pages/admin/AdminFinancePanel.jsx) — hace las 4 operaciones atómicas correctas (Transaction cliente + Balance cliente + saldo_actual + PlatformTransaction expense + platform_balance) con validación de invariante, lock user, cap 1000€, adminId + description obligatorios. Decisión final: **reuso completo del endpoint refund existente + extensión mínima** — nueva columna `transactions.ticket_id` FK a `support_tickets`, campo opcional `ticketId` en `TransactionRequestDTO`, validación bidireccional (si ticketId presente, verificar ticket existe + estado `RESOLVED_COMPENSATED_PENDING_CREDIT` + pertenece al userId). Zero refactor del ledger contable. Semántica `MANUAL_REFUND` encaja bien con "compensamos por incidencia real verificada". Compensación siempre en EUR en ledger (invariante del sistema); UX admin muestra referencia informativa "5€ ≈ 5 min al ratio actual" o al ratio de la modelo del stream reportado cuando el ticket tiene stream asociado. Alternativa BFPM (`BONUS_GRANT` + `BONUS_FUNDING`) descartada por complejidad sin beneficio operativo en el volumen del primer año.
+- **2.e Anti-fraude** → rate limit (máx 2 abiertos + máx 5/30d rolling) + flag informativo `high_history_flag` cuando ≥3 compensados en 90d (no bloquea, alerta al agente) + resaltado rojo en admin cuando `signalStrength=NEGATIVE` (no auto-rechaza, decisión humana).
+- **2.f UX cliente** → sección "Mis incidencias" en dashboard cliente + formulario apertura + listado con estado + drill-down con hilo mensajes usando `SupportChat.jsx` reutilizado.
+- **2.g UX admin** → nueva sub-tab "Incidencias" en `AdminSupportPanel.jsx` (junto a Conversaciones + Profiles), listado maestro con filtros + drill-down con panel de verificación automática + botón "Compensar X€" con confirmación reutilizando `AdminFinancePanel` endpoint con `ticketId` en body.
+
+**Estados del ticket (D6)**: `OPEN → INVESTIGATING → RESOLVED_COMPENSATED_PENDING_CREDIT → RESOLVED_COMPENSATED` (happy path con compensación) + `RESOLVED_NO_COMPENSATION` + `REJECTED_INVALID` + `ABANDONED`. Transiciones válidas enum-checked, cualquier otra → 400.
+
+**Estructura del hilo (D8)**: cada ticket tiene una `support_conversations` asociada creada automáticamente en `HUMAN_HANDLING` con `linked_conversation_id` FK. Cliente y agente humano ven la misma UI de chat que en soporte humano actual, con badge de contexto "Ticket #42 - STREAM_INTERRUPTED - INVESTIGATING" arriba.
+
+**Entregables documentales de esta sesión**:
+
+- **ADR-054 completo** con las 8 decisiones D1-D8, mapeo del código actual afectado, componentes nuevos a crear, modelo de datos con migration V41 (tabla `support_tickets` + columna `transactions.ticket_id` FK + FKs a `support_conversations`, `stream_sessions`, `payment_sessions`), 6 alternativas descartadas explicadas (A-F), 6 deudas registradas para evolución futura (#D-45 a #D-50), plan de implementación en 6 fases (T1-T6).
+- **Frente 4 nuevo** añadido a [`current-phase.md`](docs/07-roadmap/current-phase.md) con la secuencia técnica planificada.
+- **Parte 5 nueva** en [`pending-hardening.md`](docs/07-roadmap/pending-hardening.md) recogiendo las 3 mejoras alistadas del pivote (tickets ADR-054, Google login OAuth2 con bloqueante TOS Google adult a verificar previo, traductor P2P con evaluación proveedor DeepL vs Google Translate).
+
+**Fases de implementación planificadas** (ejecutables en 2-3 sesiones dedicadas cada una desplegable):
+
+1. Fase T1 — backend base: migration V41 + entities + `TicketService` + `TicketVerificationService` con checks de 2 categorías iniciales + extensión `TransactionRequestDTO` + validación bidireccional en `manualRefundToClient` + tests unitarios.
+2. Fase T2 — controllers y endpoints: `TicketController` cliente + `AdminTicketController` admin + tests MockMvc.
+3. Fase T3 — detección heurística del bot con oferta de apertura y confirmación explícita.
+4. Fase T4 — frontend cliente: sección "Mis incidencias" + formulario + listado + drill-down con hilo.
+5. Fase T5 — frontend admin: sub-tab Incidencias + listado con filtros + drill-down con verificación + botón compensar + permiso `PERM_SUPPORT_TICKETS_HANDLE`.
+6. Fase T6 — nivelación TEST + AUDIT + PROD siguiendo el patrón del paso 7 del Frente 1 (ADR-046).
+
+**Deudas y evoluciones futuras registradas en ADR-054**:
+
+- #D-45 auto-approve/auto-reject con umbrales por categoría tras 3 meses de datos históricos.
+- #D-46 tabla de compensación máxima recomendada por categoría (informativa, no bloqueante).
+- #D-47 notificación WS + email al cliente cuando agente responde/cambia estado.
+- #D-48 reporting admin de tickets (categoría/estado/tasa compensación/coste mensual).
+- #D-49 anticipar chargebacks preventivos cuando aterrice PSP tarjeta (auto-abrir ticket + compensación pre-chargeback).
+- #D-50 playbook operativo agente humano para tickets (redacción tras 20-30 gestiones reales).
+
+**Aprendizaje operativo**: el patrón de la sesión — analizar cada mejora con dimensiones estructuradas antes de escribir una línea de código, y descubrir en el análisis que un componente que se recordaba como "mock" era en realidad "real y funcional" — reafirma la regla de **verificar código antes de asumir**. Sin la verificación de `manualRefundToClient` (línea 965 real, no stub), la Opción B para 2.d habría sido descartada innecesariamente y se habría construido un método hermano BFPM desde cero, doblando trabajo. La verificación tardó 3 tool calls; el ahorro real fue evitar 1-2 sesiones de refactor innecesario.
+
+**Deploy**: cero deploy en esta sesión. Solo documentación (ADR-054, `current-phase.md`, `pending-hardening.md`, bitácora). La implementación técnica de T1 arranca en próxima sesión dedicada según cadencia del operador.
+
+---
+
 ## 2026-07-27 — ADR-053: tolerancia parciales cripto tras validación real PROD
 
 Sesión disparada por la primera prueba real de pago cripto en PROD el 2026-07-26 (order `2a3b8735-642c-4f22-a196-1f7143793aaf`, 20€ Kraken → USDC-Solana → NOWPayments PROD). Todo el flujo técnico funcionó (kill-switch nivel 1 y 2 OK, verificación HMAC OK, checkout OK, wallet:credited emitido cuando toca), pero el pago llegó marcado como `partially_paid` por el vendor y nuestro backend lo rechazó por diseño (`NowPaymentsPaymentProvider.mapStatus: partially_paid → FAILED` desde ADR-051). Tuvimos que acreditar manualmente vía SQL en BD PROD (INSERT transactions + INSERT balances + INSERT clients + UPDATE users SET role='CLIENT' + UPDATE payment_sessions SET status='SUCCESS' — todo en una transacción, verificado con SELECTs post-commit).

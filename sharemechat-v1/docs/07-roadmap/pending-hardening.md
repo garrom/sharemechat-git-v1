@@ -436,3 +436,63 @@ Líneas de trabajo abiertas dentro del frente (sin orden impuesto aquí):
 Naturaleza del frente: cada línea avanza a su ritmo y bloquea distintos puntos del roadmap. Algunas son bloqueantes para el go-live público (estimación facial cliente, declaración 2257, políticas formales), otras son endurecimiento continuado post-go-live (capa IA completa, attendance log, equipo trust & safety).
 
 No duplicar aquí el contenido de los ADRs ni de los docs business. Cualquier matiz de fondo se discute allí.
+
+---
+
+## Parte 5 - Experiencia de usuario y captación (post pivote 2026-07-27)
+
+Tres líneas de trabajo alistadas tras el pivote de estrategia del 2026-07-27 (cripto como método secundario, PSP tarjeta como método principal en cuanto se cierre onboarding). Ninguna es bloqueante para arrancar PSP tarjeta, pero las tres reducen fricción o riesgo operativo en el escenario de captación masiva que ese frente traerá.
+
+### 5.1 Sistema de tickets de incidencias (ADR-054)
+
+Estado: **ADR-054 aceptado el 2026-07-27**, cero implementación técnica. Detalle completo del alcance y las 6 fases planificadas en el Frente 4 de [`current-phase.md`](current-phase.md).
+
+Objetivo:
+separar la gestión de **incidencias** (problemas reales con posible compensación económica) de las **consultas** (dudas resueltas por el bot LLM), y construir el sistema de trazabilidad + verificación automática + compensación antes de que el frente PSP tarjeta traiga reclamaciones masivas inevitables (chargebacks preventivos, cortes técnicos, moderación auto-cut percibida como injusta, saldo no acreditado).
+
+Reutilización estructural del ADR-046 (chat soporte + panel humano) para el canal de comunicación y del panel financiero admin actual (`AdminFinancePanel` + `TransactionService.manualRefundToClient`) para la compensación económica — zero refactor del ledger contable.
+
+### 5.2 Login con Google (OAuth2)
+
+Estado: **pendiente de análisis previo bloqueante**, cero implementación técnica.
+
+Objetivo:
+reducir fricción en el registro de clientes ofreciendo "Continuar con Google" como alternativa al registro tradicional email + password. Alineado con la estrategia de captación masiva del futuro frente PSP tarjeta.
+
+**Bloqueante previo obligatorio**: revisar los TOS de Google OAuth2 respecto a aplicaciones adult-oriented antes de invertir tiempo técnico. Google puede restringir o prohibir el uso de OAuth para plataformas del sector. Si TOS bloquea, la línea entera se retira. Si permite con condiciones (revisión OAuth explícita, disclaimers), evaluar coste operativo.
+
+Decisiones de dominio a tomar antes de tocar código (si TOS permite):
+- Mapping user existente: si email Google coincide con `users.email` registrado con password, ¿ligamos automáticamente o rechazamos?
+- Alcance de rol: primera versión solo para `CLIENT`; `MODEL` mantiene registro tradicional (más control anti-fraude en onboarding modelo).
+- KYC Didit sigue siendo obligatorio pre-primer-pago; Google OAuth NO reemplaza verificación de identidad.
+- `users.password_hash` puede quedar NULL en users Google-only; `/forgot-password` responde con mensaje específico.
+- Al primer login Google forzar pantalla de aceptación T&C + privacidad (auditable, equivalente al checkbox del registro tradicional).
+
+Estimación técnica (si TOS permite y decisiones cerradas): 1 sesión + tests + deploy. Solo cliente en primera versión. Stack `Spring Security oauth2Login()` estándar, callback `/login/oauth2/code/google`, mapper custom user Google → user interno, emisión del cookie JWT propio como siempre (no propagamos el `id_token` de Google).
+
+### 5.3 Traductor automático en chat P2P favoritos
+
+Estado: **pendiente**, cero implementación técnica.
+
+Objetivo:
+traducir automáticamente los mensajes del chat P2P (`CLIENT ↔ MODEL` en `messages`) cuando cliente y modelo tienen idiomas preferidos distintos. Expande el mercado direccionable: cliente español chatea con modelo latina no-hispanohablante o europea EN sin fricción.
+
+Decisiones de dominio a tomar antes de tocar código:
+- **Proveedor**: DeepL (~$25/M chars, calidad muy alta en EU) o Google Translate (~$20/M chars, calidad alta) preferidos sobre Claude (más lento en latencia P2P). Azure Translator alternativa comparable a Google.
+- **Idioma preferido del user**: (a) del i18n de UI, (b) detección automática por primer mensaje, (c) selector explícito en preferencias user. Recomendado (c) explícito + fallback (a).
+- **Qué se traduce**: mensajes RECIBIDOS en idioma distinto al del user; opcionalmente traducción bidireccional visible ("original + traducción abajo").
+- **Cache**: guardar traducción en `messages.translated_text` + `messages.translation_target_lang` (o tabla side `message_translations`) — mismo mensaje aparece en historial infinitas veces al scrollear, no re-traducir.
+- **Gifts/emojis**: no traducir.
+- **Toggle on/off por conversación**: por defecto ON si idiomas difieren, con posibilidad de desactivar.
+
+Coste operativo: despreciable en fase soft launch (bajo volumen), €50-200/mes en volumen sostenido según churn de conversaciones cross-language.
+
+Estimación técnica (con decisiones cerradas): 1-2 sesiones. Backend adapter del proveedor + cache en messages + i18n mínimo + UI toggle.
+
+### Naturaleza y prioridad de la Parte 5
+
+Las tres líneas comparten haber sido levantadas conversacionalmente durante la sesión del 2026-07-27 al cambiar la estrategia hacia PSP tarjeta como método principal. Ninguna tiene fecha impuesta. Orden sugerido según impacto en fricción vs riesgo técnico:
+
+1. **5.1 Sistema de tickets** — impacto operativo alto, ya con ADR aceptado.
+2. **5.2 Google login** — impacto alto en fricción registro, pero bloqueado hasta verificar TOS Google para adult.
+3. **5.3 Traductor** — impacto medio en expansión mercado, sensato pero no urgente. Mejor con volumen real cross-language que justifique coste.
