@@ -3416,6 +3416,70 @@
     "errors": {
       "connectionLost": "Se ha perdido la conexión. Intenta de nuevo.",
       "generic": "Ha ocurrido un error. Contacta con soporte si persiste."
+    },
+    "tickets": {
+      "navbar": "Mis incidencias",
+      "title": "Mis incidencias",
+      "subtitle": "Reporta un problema con trazabilidad y posible compensación.",
+      "newButton": "Nueva incidencia",
+      "empty": "Aún no has reportado ninguna incidencia.",
+      "refresh": "Refrescar",
+      "loading": "Cargando...",
+      "listHeaders": {
+        "id": "#",
+        "category": "Categoría",
+        "status": "Estado",
+        "description": "Descripción",
+        "createdAt": "Creado",
+        "compensated": "Compensado"
+      },
+      "categories": {
+        "STREAM_INTERRUPTED": "Corte de streaming",
+        "PAYMENT_NOT_CREDITED": "Pago no acreditado",
+        "MODERATION_FALSE_POSITIVE": "Moderación incorrecta",
+        "ACCOUNT_ISSUE": "Problema con cuenta",
+        "OTHER": "Otro"
+      },
+      "statuses": {
+        "OPEN": "Abierto",
+        "INVESTIGATING": "En investigación",
+        "RESOLVED_COMPENSATED_PENDING_CREDIT": "Compensación pendiente",
+        "RESOLVED_COMPENSATED": "Resuelto (compensado)",
+        "RESOLVED_NO_COMPENSATION": "Resuelto (sin compensación)",
+        "REJECTED_INVALID": "Rechazado",
+        "ABANDONED": "Abandonado"
+      },
+      "form": {
+        "title": "Reportar incidencia",
+        "categoryLabel": "Categoría",
+        "categoryPlaceholder": "Selecciona...",
+        "descriptionLabel": "Descripción",
+        "descriptionPlaceholder": "Cuenta qué pasó, cuándo y cualquier dato relevante...",
+        "reportedIncidentAtLabel": "¿Cuándo pasó? (opcional)",
+        "linkedStreamRecordIdLabel": "ID del stream afectado (opcional)",
+        "linkedPaymentSessionIdLabel": "ID del pago afectado (opcional)",
+        "submit": "Abrir ticket",
+        "cancel": "Cancelar",
+        "successToast": "Incidencia abierta correctamente."
+      },
+      "detail": {
+        "title": "Incidencia #{{id}}",
+        "back": "Volver al listado",
+        "categoryLabel": "Categoría",
+        "statusLabel": "Estado",
+        "createdAtLabel": "Creado",
+        "compensationLabel": "Compensación",
+        "resolutionNotesLabel": "Notas del equipo",
+        "conversationTitle": "Conversación con el equipo",
+        "conversationEmpty": "Aún no hay mensajes en esta incidencia."
+      },
+      "errors": {
+        "loadFailed": "No se han podido cargar tus incidencias.",
+        "createFailed": "No se ha podido abrir la incidencia.",
+        "rateLimited": "Has alcanzado el límite de incidencias abiertas o creadas recientemente.",
+        "descriptionRequired": "La descripción es obligatoria.",
+        "categoryRequired": "Selecciona una categoría."
+      }
     }
   },
   "onboardingChecklist": {

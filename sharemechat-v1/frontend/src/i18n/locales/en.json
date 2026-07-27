@@ -3416,6 +3416,70 @@
     "errors": {
       "connectionLost": "Connection lost. Please try again.",
       "generic": "An error occurred. Contact support if it persists."
+    },
+    "tickets": {
+      "navbar": "My tickets",
+      "title": "My tickets",
+      "subtitle": "Report an issue with traceability and potential compensation.",
+      "newButton": "New ticket",
+      "empty": "You haven't reported any tickets yet.",
+      "refresh": "Refresh",
+      "loading": "Loading...",
+      "listHeaders": {
+        "id": "#",
+        "category": "Category",
+        "status": "Status",
+        "description": "Description",
+        "createdAt": "Created",
+        "compensated": "Compensated"
+      },
+      "categories": {
+        "STREAM_INTERRUPTED": "Stream interrupted",
+        "PAYMENT_NOT_CREDITED": "Payment not credited",
+        "MODERATION_FALSE_POSITIVE": "Wrong moderation",
+        "ACCOUNT_ISSUE": "Account issue",
+        "OTHER": "Other"
+      },
+      "statuses": {
+        "OPEN": "Open",
+        "INVESTIGATING": "Investigating",
+        "RESOLVED_COMPENSATED_PENDING_CREDIT": "Compensation pending",
+        "RESOLVED_COMPENSATED": "Resolved (compensated)",
+        "RESOLVED_NO_COMPENSATION": "Resolved (no compensation)",
+        "REJECTED_INVALID": "Rejected",
+        "ABANDONED": "Abandoned"
+      },
+      "form": {
+        "title": "Report an issue",
+        "categoryLabel": "Category",
+        "categoryPlaceholder": "Select...",
+        "descriptionLabel": "Description",
+        "descriptionPlaceholder": "Tell us what happened, when, and any relevant details...",
+        "reportedIncidentAtLabel": "When did it happen? (optional)",
+        "linkedStreamRecordIdLabel": "Affected stream ID (optional)",
+        "linkedPaymentSessionIdLabel": "Affected payment ID (optional)",
+        "submit": "Open ticket",
+        "cancel": "Cancel",
+        "successToast": "Ticket opened successfully."
+      },
+      "detail": {
+        "title": "Ticket #{{id}}",
+        "back": "Back to list",
+        "categoryLabel": "Category",
+        "statusLabel": "Status",
+        "createdAtLabel": "Created",
+        "compensationLabel": "Compensation",
+        "resolutionNotesLabel": "Team notes",
+        "conversationTitle": "Conversation with the team",
+        "conversationEmpty": "No messages in this ticket yet."
+      },
+      "errors": {
+        "loadFailed": "Could not load your tickets.",
+        "createFailed": "Could not open the ticket.",
+        "rateLimited": "You reached the limit of open or recently created tickets.",
+        "descriptionRequired": "Description is required.",
+        "categoryRequired": "Select a category."
+      }
     }
   },
   "onboardingChecklist": {

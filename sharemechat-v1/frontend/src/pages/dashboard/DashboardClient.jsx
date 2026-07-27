@@ -14,6 +14,7 @@ import { getLivenessStatus } from '../../api/livenessApi';
 import { createNowPaymentsCheckout } from '../../api/billingApi';
 import BlogContent from '../blog/BlogContent';
 import ClientHistoryPanel from '../subpages/ClientHistoryPanel';
+import ClientTicketsPanel from '../subpages/ClientTicketsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faHeart, faVideo, faFilm, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
 import {
@@ -2258,6 +2259,14 @@ const DashboardClient = () => {
     setActiveTab('historial');
   };
 
+  // ADR-054 T4: navegar a la sección "Mis incidencias".
+  const handleGoTickets = async () => {
+    const ok = await confirmarSalidaSesionActiva();
+    if (!ok) return;
+    stopAll();
+    setActiveTab('tickets');
+  };
+
 
   const handleLogoClick = (e) => {
     // nos lleva a tab videochat
@@ -3109,6 +3118,7 @@ const DashboardClient = () => {
         onProfile={handleProfile}
         onBuy={handleAddBalance}
         onGoHistory={handleGoHistory}
+        onGoTickets={handleGoTickets}
         onLogout={handleLogout}
       />
       {/* ========= FIN NAVBAR  ======== */}
@@ -3162,6 +3172,11 @@ const DashboardClient = () => {
           /* === HISTORIAL DE RECARGAS (2026-07-19 Fase 1) === */
           <div style={{flex:1,minWidth:0,minHeight:0,overflowY:'auto'}}>
             <ClientHistoryPanel/>
+          </div>
+        ):activeTab==='tickets'?(
+          /* === MIS INCIDENCIAS (ADR-054 Fase T4) === */
+          <div style={{flex:1,minWidth:0,minHeight:0,overflowY:'auto'}}>
+            <ClientTicketsPanel/>
           </div>
         ):(
           /* === SOLO FAVORITOS USA EL LAYOUT 3 COLUMNAS === */

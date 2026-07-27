@@ -1,5 +1,5 @@
 import React from 'react';
-import { faGem, faUser, faChartLine } from '@fortawesome/free-solid-svg-icons';
+import { faGem, faUser, faChartLine, faTicket } from '@fortawesome/free-solid-svg-icons';
 import i18n from '../../i18n';
 import NavbarBase from './NavbarBase';
 import DesktopTabs from './DesktopTabs';
@@ -22,6 +22,7 @@ const NavbarClient = ({
   onProfile,
   onBuy,
   onGoHistory,
+  onGoTickets,
   onLogout,
   buyLabel = null,
   showLocaleSwitcher = true,
@@ -34,6 +35,7 @@ const NavbarClient = ({
   blogDisabled = false,
   buyDisabled = false,
   historyDisabled = false,
+  ticketsDisabled = false,
 }) => {
   const videochatLabel = i18n.t('dashboardClient.nav.videochat');
   const favoritesLabel = i18n.t('dashboardClient.nav.favorites');
@@ -42,6 +44,7 @@ const NavbarClient = ({
 
   const effectiveBuyLabel = buyLabel || i18n.t('dashboardClient.actions.buy');
   const historyLabel = i18n.t('dashboardClient.actions.history', { defaultValue: 'Historial' });
+  const ticketsLabel = i18n.t('support.tickets.navbar', { defaultValue: 'Mis incidencias' });
 
   const desktopLeft = (
     <DesktopTabs
@@ -90,6 +93,16 @@ const NavbarClient = ({
         disabled: historyDisabled,
         iconOnly: true,
       } : null}
+      // ADR-054 T4: Mis incidencias (icon-only con tooltip).
+      tertiaryAction={onGoTickets ? {
+        label: ticketsLabel,
+        title: ticketsLabel,
+        onClick: onGoTickets,
+        icon: faTicket,
+        iconStyle: { color: '#a78bfa', fontSize: '1rem' },
+        disabled: ticketsDisabled,
+        iconOnly: true,
+      } : null}
       logoutLabel={i18n.t('dashboardClient.actions.logout')}
       logoutTitle={i18n.t('dashboardClient.actions.logoutTitle')}
       onLogout={onLogout}
@@ -136,6 +149,16 @@ const NavbarClient = ({
           onClick: onGoHistory,
           useIconWrapper: false,
           disabled: historyDisabled,
+        }] : []),
+        ...(onGoTickets ? [{
+          key: 'tickets',
+          icon: faTicket,
+          iconStyle: { color: '#a78bfa', fontSize: '1rem' },
+          label: ticketsLabel,
+          title: ticketsLabel,
+          onClick: onGoTickets,
+          useIconWrapper: false,
+          disabled: ticketsDisabled,
         }] : []),
         ...(onGoSupport
           ? [{
