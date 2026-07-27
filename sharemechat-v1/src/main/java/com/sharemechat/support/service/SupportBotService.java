@@ -86,6 +86,14 @@ public class SupportBotService {
     private final ClaudeApiProperties props;
     private final UserRepository userRepository;
 
+    // ADR-054 T3: deteccion heuristica + oferta de apertura de ticket con
+    // confirmacion explicita. Opcionales — si el bean no esta cargado (p.ej.
+    // tests unitarios legacy que instancian SupportBotService a mano sin
+    // T3), el hook queda desactivado y el flujo funciona como antes de T3.
+    private final TicketOfferHeuristicService offerHeuristic;
+    private final TicketOfferPendingCache offerCache;
+    private final TicketService ticketService;
+
     public SupportBotService(SupportConversationRepository conversationRepo,
                               SupportMessageRepository messageRepo,
                               SupportRateLimitService rateLimitService,
@@ -93,11 +101,17 @@ public class SupportBotService {
                               SupportBotRouterService router,
                               ClaudeApiClient claudeClient,
                               ClaudeApiProperties props,
-                              UserRepository userRepository) {
+                              UserRepository userRepository,
+                              TicketOfferHeuristicService offerHeuristic,
+                              TicketOfferPendingCache offerCache,
+                              TicketService ticketService) {
         this.conversationRepo = conversationRepo;
         this.messageRepo = messageRepo;
         this.rateLimitService = rateLimitService;
         this.kbService = kbService;
+        this.offerHeuristic = offerHeuristic;
+        this.offerCache = offerCache;
+        this.ticketService = ticketService;
         this.router = router;
         this.claudeClient = claudeClient;
         this.props = props;
@@ -133,6 +147,19 @@ public class SupportBotService {
             out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
             out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
             return out;
+        }
+
+        // ADR-054 T3 (D2 b2): hook de oferta de ticket. Antes del rate limit
+        // + LLM para que la oferta y su confirmacion no gasten tokens ni
+        // cuenten en la cuota. 3 caminos:
+        //   (a) hay pending offer + user acepta -> abrir ticket + reply
+        //   (b) hay pending offer + user rechaza -> limpiar + continuar LLM
+        //   (c) sin pending + heuristica detecta -> guardar + ofrecer + terminar
+        // Requiere que los beans T3 esten cargados (test-safe: si null, skip).
+        if (offerHeuristic != null && offerCache != null && ticketService != null) {
+            SupportMessageResponseDTO ticketHookOut = handleTicketOfferHook(
+                    userId, conv, message, out);
+            if (ticketHookOut != null) return ticketHookOut;
         }
 
         // 3) rate limit check
@@ -393,5 +420,106 @@ public class SupportBotService {
     private static String safeTrim(String s, int max) {
         if (s == null) return null;
         return s.length() > max ? s.substring(0, max) : s;
+    }
+
+    // ============================================================
+    // ADR-054 T3: hook oferta de ticket
+    // ============================================================
+
+    /**
+     * Devuelve {@code SupportMessageResponseDTO} si el hook manejo el mensaje
+     * (oferta emitida, o confirmacion aceptada/rechazada), o {@code null} si
+     * el flujo debe continuar al rate limit + LLM normal.
+     *
+     * <p>El mensaje del user ya esta persistido antes de este hook, ver
+     * {@link #handleUserMessage}. El reply generado aqui se persiste como
+     * SYSTEM message para que aparezca en el historial de conversacion.
+     */
+    private SupportMessageResponseDTO handleTicketOfferHook(Long userId,
+                                                             SupportConversation conv,
+                                                             String message,
+                                                             SupportMessageResponseDTO out) {
+        Optional<TicketOfferPendingCache.PendingOffer> pending = offerCache.get(conv.getId());
+        if (pending.isPresent()) {
+            TicketOfferHeuristicService.ConfirmationDecision decision =
+                    offerHeuristic.interpretConfirmation(message);
+            if (decision == TicketOfferHeuristicService.ConfirmationDecision.ACCEPT) {
+                offerCache.clear(conv.getId());
+                try {
+                    var ticket = ticketService.openTicket(
+                            userId,
+                            pending.get().category,
+                            pending.get().originalMessage,
+                            null, null, null,
+                            conv.getId());
+                    String reply = "He abierto el ticket #" + ticket.getId() +
+                            " (" + pending.get().category + "). Un miembro del equipo lo revisara pronto.";
+                    persistSystemReply(userId, conv.getId(), reply, out);
+                    // openTicket ya puso la conv en HUMAN_HANDLING (D8).
+                    out.setResolutionStatus(Constants.SupportResolutionStatuses.HUMAN_HANDLING);
+                    out.setHumanHandling(true);
+                    log.info("[TICKET-OFFER] user accepted convId={} ticketId={} category={}",
+                            conv.getId(), ticket.getId(), pending.get().category);
+                    return out;
+                } catch (TicketService.RateLimitExceededException ex) {
+                    String reply = "No puedo abrir el ticket ahora: " + ex.getMessage();
+                    persistSystemReply(userId, conv.getId(), reply, out);
+                    out.setResolutionStatus(conv.getResolutionStatus());
+                    return out;
+                } catch (Exception ex) {
+                    log.warn("[TICKET-OFFER] openTicket FAIL convId={}: {}", conv.getId(), ex.getMessage());
+                    String reply = "No he podido abrir el ticket ahora, intentalo mas tarde o " +
+                            "usa el formulario 'Reportar incidencia' desde tu dashboard.";
+                    persistSystemReply(userId, conv.getId(), reply, out);
+                    out.setResolutionStatus(conv.getResolutionStatus());
+                    return out;
+                }
+            } else if (decision == TicketOfferHeuristicService.ConfirmationDecision.REJECT) {
+                offerCache.clear(conv.getId());
+                String reply = "Entendido, sigo como consulta normal. Cuentame en que te ayudo.";
+                persistSystemReply(userId, conv.getId(), reply, out);
+                out.setResolutionStatus(conv.getResolutionStatus());
+                log.info("[TICKET-OFFER] user rejected convId={}", conv.getId());
+                return out;
+            } else {
+                String reply = "Responde 'si' para abrir un ticket de incidencia, o 'no' para seguir como consulta.";
+                persistSystemReply(userId, conv.getId(), reply, out);
+                out.setResolutionStatus(conv.getResolutionStatus());
+                return out;
+            }
+        }
+
+        Optional<String> detected = offerHeuristic.detectCategory(message);
+        if (detected.isPresent()) {
+            offerCache.put(conv.getId(), detected.get(), message);
+            String categoryLabel = humanCategoryLabel(detected.get());
+            String reply = "Parece que estas reportando un problema de " + categoryLabel + ". " +
+                    "Quieres que abra un ticket para investigarlo? Responde 'si' o 'no'.";
+            persistSystemReply(userId, conv.getId(), reply, out);
+            out.setResolutionStatus(conv.getResolutionStatus());
+            log.info("[TICKET-OFFER] offered convId={} category={}", conv.getId(), detected.get());
+            return out;
+        }
+        return null;
+    }
+
+    private void persistSystemReply(Long userId, Long conversationId, String reply,
+                                     SupportMessageResponseDTO out) {
+        SupportMessage msg = persistMessage(conversationId, Constants.SupportSenderTypes.SYSTEM,
+                reply, null, null, null, null, null);
+        out.setReply(reply);
+        out.setMessageId(msg.getId());
+        out.setMessagesRemainingToday(rateLimitService.remainingMessages(userId));
+        out.setTokensRemainingToday(rateLimitService.remainingTokens(userId));
+    }
+
+    private static String humanCategoryLabel(String category) {
+        switch (category) {
+            case "STREAM_INTERRUPTED":    return "corte de streaming";
+            case "PAYMENT_NOT_CREDITED":  return "pago no acreditado";
+            case "MODERATION_FALSE_POSITIVE": return "moderacion incorrecta";
+            case "ACCOUNT_ISSUE":         return "cuenta";
+            default:                       return "servicio";
+        }
     }
 }

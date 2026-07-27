@@ -75,6 +75,28 @@ public class TicketService {
                                     LocalDateTime reportedIncidentAt,
                                     Long linkedStreamRecordId,
                                     Long linkedPaymentSessionId) {
+        return openTicket(userId, category, description, reportedIncidentAt,
+                linkedStreamRecordId, linkedPaymentSessionId, null);
+    }
+
+    /**
+     * ADR-054 Fase T3: overload que acepta {@code existingConversationId}
+     * opcional. Cuando el ticket nace desde el chat bot (D2 b2, oferta con
+     * confirmacion del usuario) reutilizamos la SupportConversation en la
+     * que ya estabamos hablando en vez de crear una nueva — evita
+     * conversaciones huerfanas y el user ve el ticket con el hilo continuo
+     * en la misma UI de chat. Si {@code existingConversationId} es null,
+     * comportamiento identico a {@link #openTicket(Long, String, String,
+     * LocalDateTime, Long, Long)}.
+     */
+    @Transactional
+    public SupportTicket openTicket(Long userId,
+                                    String category,
+                                    String description,
+                                    LocalDateTime reportedIncidentAt,
+                                    Long linkedStreamRecordId,
+                                    Long linkedPaymentSessionId,
+                                    Long existingConversationId) {
         if (userId == null || userId <= 0) {
             throw new IllegalArgumentException("userId invalido");
         }
@@ -105,12 +127,29 @@ public class TicketService {
                 userId, "RESOLVED_COMPENSATED", since90d);
         boolean highHistory = compensatedCount >= HIGH_HISTORY_COMPENSATED_THRESHOLD;
 
-        // D8: crear conversacion asociada como canal de comunicacion.
-        SupportConversation conv = new SupportConversation();
-        conv.setUserId(userId);
-        conv.setResolutionStatus("HUMAN_HANDLING");
-        conv.setEscalationReason("TICKET auto-created channel (category=" + category + ")");
-        conv = conversationRepo.save(conv);
+        // D8: conversacion asociada. Si nos pasan una existente (chat bot ->
+        // ticket via oferta confirmada), la reutilizamos cambiando su status
+        // a HUMAN_HANDLING; si no, creamos una nueva.
+        SupportConversation conv;
+        if (existingConversationId != null) {
+            conv = conversationRepo.findById(existingConversationId)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "existingConversationId no encontrada=" + existingConversationId));
+            if (!userId.equals(conv.getUserId())) {
+                throw new IllegalArgumentException(
+                        "existingConversation " + existingConversationId +
+                        " no pertenece al userId=" + userId);
+            }
+            conv.setResolutionStatus("HUMAN_HANDLING");
+            conv.setUpdatedAt(LocalDateTime.now());
+            conv = conversationRepo.save(conv);
+        } else {
+            conv = new SupportConversation();
+            conv.setUserId(userId);
+            conv.setResolutionStatus("HUMAN_HANDLING");
+            conv.setEscalationReason("TICKET auto-created channel (category=" + category + ")");
+            conv = conversationRepo.save(conv);
+        }
 
         SupportTicket ticket = new SupportTicket();
         ticket.setUserId(userId);
@@ -124,8 +163,8 @@ public class TicketService {
         ticket.setHighHistoryFlag(highHistory);
         SupportTicket saved = ticketRepo.save(ticket);
 
-        log.info("[TICKET] opened id={} userId={} category={} convId={} highHistory={}",
-                saved.getId(), userId, category, conv.getId(), highHistory);
+        log.info("[TICKET] opened id={} userId={} category={} convId={} reused={} highHistory={}",
+                saved.getId(), userId, category, conv.getId(), existingConversationId != null, highHistory);
         return saved;
     }
 

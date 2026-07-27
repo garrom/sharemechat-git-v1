@@ -84,8 +84,11 @@ class SupportBotServiceTest {
         when(rateLimit.remainingTokens(anyLong())).thenReturn(49500L);
         when(claudeClient.estimateCostMicros(anyInt(), anyInt())).thenReturn(35L);
 
+        // ADR-054 T3: nuevos beans nullables — pasamos null aqui para
+        // preservar el flujo legacy sin cambios. Los tests especificos del
+        // hook viven en SupportBotServiceTicketOfferTest.
         svc = new SupportBotService(convRepo, msgRepo, rateLimit, kbService, router,
-                claudeClient, props, userRepo);
+                claudeClient, props, userRepo, null, null, null);
     }
 
     @Test
