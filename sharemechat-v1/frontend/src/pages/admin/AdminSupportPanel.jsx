@@ -5,11 +5,16 @@ import { TabsBar, TabButton } from '../../styles/AdminStyles';
 import SupportConversationsListView from './support/SupportConversationsListView';
 import SupportConversationDetailView from './support/SupportConversationDetailView';
 import AdminSupportProfilesView from './support/AdminSupportProfilesView';
+import AdminTicketsView from './support/AdminTicketsView';
+import AdminTicketDetail from './support/AdminTicketDetail';
 
-// Frente B.3.2 (ADR-046). Contenedor del panel humano. Sub-tabs:
+// Frente B.3.2 (ADR-046) + Frente 4 (ADR-054). Contenedor del panel humano.
+// Sub-tabs:
 // - conversations: chat_handle requerido.
 // - profiles: profile_manage requerido.
-// El gating fino se hace por prop desde DashboardAdmin (canHandle, canManage).
+// - tickets: tickets_handle requerido (ADR-054 T5).
+// El gating fino se hace por prop desde DashboardAdmin (canHandle,
+// canManage, canHandleTickets).
 
 const Wrap = styled.div`
   padding: 4px 0 8px;
@@ -18,13 +23,17 @@ const Wrap = styled.div`
 const AdminSupportPanel = ({
   canHandle = false,
   canManage = false,
+  canHandleTickets = false,
   currentUserEmail = '',
   onRefreshBadge,
 }) => {
   const t = (key, opts) => i18n.t(key, opts);
-  const defaultTab = canHandle ? 'conversations' : (canManage ? 'profiles' : 'conversations');
+  const defaultTab = canHandle
+    ? 'conversations'
+    : (canHandleTickets ? 'tickets' : (canManage ? 'profiles' : 'conversations'));
   const [subTab, setSubTab] = useState(defaultTab);
   const [detailId, setDetailId] = useState(null);
+  const [ticketDetailId, setTicketDetailId] = useState(null);
 
   const handleActionRefresh = () => {
     if (typeof onRefreshBadge === 'function') onRefreshBadge();
@@ -41,10 +50,18 @@ const AdminSupportPanel = ({
             {t('admin.support.tabs.conversations')}
           </TabButton>
         ) : null}
+        {canHandleTickets ? (
+          <TabButton
+            active={subTab === 'tickets'}
+            onClick={() => { setSubTab('tickets'); setDetailId(null); setTicketDetailId(null); }}
+          >
+            {t('admin.support.tabs.tickets')}
+          </TabButton>
+        ) : null}
         {canManage ? (
           <TabButton
             active={subTab === 'profiles'}
-            onClick={() => { setSubTab('profiles'); setDetailId(null); }}
+            onClick={() => { setSubTab('profiles'); setDetailId(null); setTicketDetailId(null); }}
           >
             {t('admin.support.tabs.profiles')}
           </TabButton>
@@ -61,6 +78,20 @@ const AdminSupportPanel = ({
         ) : (
           <SupportConversationsListView
             onOpenDetail={(id) => setDetailId(id)}
+          />
+        )
+      ) : null}
+
+      {subTab === 'tickets' && canHandleTickets ? (
+        ticketDetailId ? (
+          <AdminTicketDetail
+            ticketId={ticketDetailId}
+            onBack={() => setTicketDetailId(null)}
+            onChanged={handleActionRefresh}
+          />
+        ) : (
+          <AdminTicketsView
+            onOpenDetail={(id) => setTicketDetailId(id)}
           />
         )
       ) : null}

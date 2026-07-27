@@ -174,6 +174,11 @@ const DashboardAdmin = () => {
     // canManageSupportProfiles habilita el sub-tab Profiles y sus CRUD.
     canViewSupport: adminView || supportView || hasBackofficePermission(user, 'support.chat_handle'),
     canManageSupportProfiles: adminView || hasBackofficePermission(user, 'support.profile_manage'),
+    // ADR-054 T5: sub-tab Incidencias. Baseline ROLE_SUPPORT (hereda
+    // PERM_SUPPORT_TICKETS_HANDLE) o ROLE_ADMIN. Independiente de
+    // canViewSupport para permitir en el futuro roles solo-tickets sin
+    // acceso al chat humano.
+    canHandleTickets: adminView || supportView || hasBackofficePermission(user, 'support.tickets_handle'),
   }), [adminView, auditView, supportView, user]);
 
   // Polling del contador de escaladas para el badge del sidebar (B.3.2).
@@ -687,6 +692,7 @@ const DashboardAdmin = () => {
               <AdminSupportPanel
                 canHandle={capabilities.canViewSupport}
                 canManage={capabilities.canManageSupportProfiles}
+                canHandleTickets={capabilities.canHandleTickets}
                 currentUserEmail={user?.email || ''}
                 onRefreshBadge={refreshSupportBadge}
               />

@@ -3185,7 +3185,8 @@
       },
       "tabs": {
         "conversations": "Conversations",
-        "profiles": "Identities"
+        "profiles": "Identities",
+        "tickets": "Tickets"
       },
       "common": {
         "loading": "Loading…"
@@ -3355,7 +3356,90 @@
           "submitting": "Granting…"
         }
       },
-      "notifications": {}
+      "notifications": {},
+      "tickets": {
+        "title": "Tickets",
+        "subtitle": "Client-reported incidents with potential financial compensation.",
+        "refresh": "Refresh",
+        "loading": "Loading…",
+        "empty": "No tickets to show.",
+        "filters": {
+          "category": "Category",
+          "status": "Status",
+          "all": "All"
+        },
+        "listHeaders": {
+          "id": "#",
+          "user": "User",
+          "category": "Category",
+          "status": "Status",
+          "signal": "Signal",
+          "createdAt": "Created",
+          "compensated": "Compensated"
+        },
+        "detail": {
+          "title": "Ticket #{{id}}",
+          "back": "Back to list",
+          "user": "User",
+          "createdAt": "Created",
+          "description": "Client description",
+          "linkedStream": "Linked stream",
+          "linkedPayment": "Linked payment",
+          "verifyButton": "Run verification",
+          "verifyRunning": "Verifying…",
+          "verificationTitle": "Verification result",
+          "verificationNever": "Verification not run yet.",
+          "actionsTitle": "Actions",
+          "actionInvestigate": "Mark as investigating",
+          "actionCompensate": "Compensate…",
+          "actionResolveNoComp": "Resolve without compensation",
+          "actionReject": "Reject as invalid",
+          "actionAbandon": "Mark as abandoned",
+          "resolutionNotes": "Team notes",
+          "notesPlaceholder": "Reason for the resolution (visible to the client)",
+          "notesRequired": "Reason is required.",
+          "compensationLabel": "Compensation",
+          "compensationLinked": "Transaction #{{txId}} — {{amount}} €"
+        },
+        "compensate": {
+          "modalTitle": "Compensate ticket #{{id}}",
+          "amountLabel": "Amount (EUR)",
+          "amountHint": "≈ {{minutes}} min at current 1 €/min rate",
+          "reasonLabel": "Reason (visible to the client)",
+          "confirm": "Compensate",
+          "cancel": "Cancel",
+          "success": "Compensation applied. Ticket closed."
+        },
+        "signals": {
+          "STRONG_POSITIVE": "Strong positive",
+          "WEAK_POSITIVE": "Weak positive",
+          "NEUTRAL": "Neutral",
+          "NEGATIVE": "Negative",
+          "unknown": "Not run"
+        },
+        "categories": {
+          "STREAM_INTERRUPTED": "Stream interrupted",
+          "PAYMENT_NOT_CREDITED": "Payment not credited",
+          "MODERATION_FALSE_POSITIVE": "Wrong moderation",
+          "ACCOUNT_ISSUE": "Account issue",
+          "OTHER": "Other"
+        },
+        "statuses": {
+          "OPEN": "Open",
+          "INVESTIGATING": "Investigating",
+          "RESOLVED_COMPENSATED_PENDING_CREDIT": "Compensation pending",
+          "RESOLVED_COMPENSATED": "Resolved (compensated)",
+          "RESOLVED_NO_COMPENSATION": "Resolved (no compensation)",
+          "REJECTED_INVALID": "Rejected",
+          "ABANDONED": "Abandoned"
+        },
+        "errors": {
+          "loadFailed": "Could not load tickets.",
+          "verifyFailed": "Could not run verification.",
+          "transitionFailed": "Could not change status.",
+          "compensateFailed": "Could not apply compensation."
+        }
+      }
     }
   },
   "seo": {

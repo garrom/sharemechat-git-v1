@@ -3185,7 +3185,8 @@
       },
       "tabs": {
         "conversations": "Conversaciones",
-        "profiles": "Identidades"
+        "profiles": "Identidades",
+        "tickets": "Incidencias"
       },
       "common": {
         "loading": "Cargando…"
@@ -3355,7 +3356,90 @@
           "submitting": "Otorgando…"
         }
       },
-      "notifications": {}
+      "notifications": {},
+      "tickets": {
+        "title": "Incidencias",
+        "subtitle": "Tickets abiertos por clientes con posible compensación económica.",
+        "refresh": "Refrescar",
+        "loading": "Cargando…",
+        "empty": "No hay incidencias que mostrar.",
+        "filters": {
+          "category": "Categoría",
+          "status": "Estado",
+          "all": "Todas"
+        },
+        "listHeaders": {
+          "id": "#",
+          "user": "Usuario",
+          "category": "Categoría",
+          "status": "Estado",
+          "signal": "Señal",
+          "createdAt": "Creado",
+          "compensated": "Compensado"
+        },
+        "detail": {
+          "title": "Incidencia #{{id}}",
+          "back": "Volver al listado",
+          "user": "Usuario",
+          "createdAt": "Creado",
+          "description": "Descripción del cliente",
+          "linkedStream": "Stream vinculado",
+          "linkedPayment": "Pago vinculado",
+          "verifyButton": "Ejecutar verificación",
+          "verifyRunning": "Verificando…",
+          "verificationTitle": "Resultado verificación",
+          "verificationNever": "Aún no se ha ejecutado verificación.",
+          "actionsTitle": "Acciones",
+          "actionInvestigate": "Marcar en investigación",
+          "actionCompensate": "Compensar…",
+          "actionResolveNoComp": "Cerrar sin compensación",
+          "actionReject": "Rechazar como inválido",
+          "actionAbandon": "Marcar abandonado",
+          "resolutionNotes": "Notas del equipo",
+          "notesPlaceholder": "Motivo de la resolución (visible para el cliente)",
+          "notesRequired": "El motivo es obligatorio.",
+          "compensationLabel": "Compensación",
+          "compensationLinked": "Transaction #{{txId}} — {{amount}} €"
+        },
+        "compensate": {
+          "modalTitle": "Compensar incidencia #{{id}}",
+          "amountLabel": "Importe (EUR)",
+          "amountHint": "≈ {{minutes}} min al ratio 1 €/min actual",
+          "reasonLabel": "Motivo (visible para el cliente)",
+          "confirm": "Compensar",
+          "cancel": "Cancelar",
+          "success": "Compensación aplicada. Ticket cerrado."
+        },
+        "signals": {
+          "STRONG_POSITIVE": "Fuerte positiva",
+          "WEAK_POSITIVE": "Débil positiva",
+          "NEUTRAL": "Neutra",
+          "NEGATIVE": "Negativa",
+          "unknown": "Sin ejecutar"
+        },
+        "categories": {
+          "STREAM_INTERRUPTED": "Corte de streaming",
+          "PAYMENT_NOT_CREDITED": "Pago no acreditado",
+          "MODERATION_FALSE_POSITIVE": "Moderación incorrecta",
+          "ACCOUNT_ISSUE": "Problema con cuenta",
+          "OTHER": "Otro"
+        },
+        "statuses": {
+          "OPEN": "Abierto",
+          "INVESTIGATING": "En investigación",
+          "RESOLVED_COMPENSATED_PENDING_CREDIT": "Compensación pendiente",
+          "RESOLVED_COMPENSATED": "Resuelto (compensado)",
+          "RESOLVED_NO_COMPENSATION": "Resuelto (sin compensación)",
+          "REJECTED_INVALID": "Rechazado",
+          "ABANDONED": "Abandonado"
+        },
+        "errors": {
+          "loadFailed": "No se han podido cargar las incidencias.",
+          "verifyFailed": "No se ha podido ejecutar la verificación.",
+          "transitionFailed": "No se ha podido cambiar el estado.",
+          "compensateFailed": "No se ha podido aplicar la compensación."
+        }
+      }
     }
   },
   "seo": {
