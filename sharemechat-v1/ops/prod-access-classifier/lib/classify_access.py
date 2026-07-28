@@ -832,12 +832,22 @@ VERDICT_KNOWN_PUBLIC_ROUTES = (
 # /api/webhooks/nowpayments/ipn (permitAll SecurityConfig:220, ADR-051).
 # El prefijo cubre tambien /api/webhooks/moderation/* (permitAll
 # SecurityConfig:212, ADR-037 Sightengine).
+# Ampliado el 2026-07-28 con /api/users/me/ tras falso positivo AMARILLO
+# del 2026-07-27: cliente real logueado desde IP residencial espanyola
+# (185.51.160.14, Movistar) obtuvo 200 en /api/users/me/ui-locale
+# (endpoint self-service para cambiar idioma de UI, UserController:214,
+# autenticado via SecurityConfig:99 /api/users/** + guard explicito en
+# el controller). Cualquier 200 bajo /api/users/me/* presupone cookie
+# JWT valida por diseno, luego no puede haber acceso no autorizado.
+# Prefijo quirurgico "me/" (no todo /api/users/): deja fuera rutas
+# admin sensibles como /api/users/{id} que si queremos seguir viendo.
 VERDICT_KNOWN_PUBLIC_API_PREFIXES: Tuple[str, ...] = (
     "/api/public/",                 # CMS publico (home, content, ...)
     "/api/consent/",                # consent banner + age gate (visitantes anonimos)
     "/api/email-verification/",     # confirm, resend
     "/api/users/avatars/",          # avatares publicos
     "/api/users/register/",         # registro client/model y variantes
+    "/api/users/me/",               # self-service usuario autenticado (ui-locale, preferred-locale, change-password, ...)
     "/api/auth/password/",          # forgot + reset
     "/api/kyc/veriff/",             # webhook Veriff (POST)
     "/api/kyc/didit/",              # webhook Didit (POST)
