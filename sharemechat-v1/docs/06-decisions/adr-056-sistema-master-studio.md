@@ -8,7 +8,32 @@
 
 ## Estado
 
-Aceptada. Cero implementación en esta iteración. La materialización técnica (migration V42 + entities + servicios + endpoints + frontend + rails payout) se planifica en 8 fases S1-S8 detalladas al final del ADR, ejecutables en 4-6 sesiones dedicadas.
+Aceptada, con **revisión parcial 2026-07-30** sobre D4 (ver bloque *"Revisión 2026-07-30: D4 escalado agregado descartado"* justo debajo). La materialización técnica de S1-S4 backend y S5.b captación pública quedó en TEST el 2026-07-29. Al pulir textos de la landing surgió la duda de si el escalado agregado del Master estaba alineado con el sector; el research web posterior demostró que **no** — LiveJasmin, Stripchat y BongaCams calculan tramo per modelo, no por estudio agregado. Se revierte el motor a cálculo INDIVIDUAL per modelo (S3.rev, commit `6934666`, V43 aplicada TEST 2026-07-30). El resto del ADR (roles, KYC, contrato, GDPR D9, suspensión D11, payouts) se mantiene.
+
+### Revisión 2026-07-30: D4 escalado agregado descartado
+
+**Origen**: al pulir los textos de la landing pública `/for-studios` (fase S5.b.7-8), el operador cuestionó si la mecánica de "sumar la facturación de todas las modelos en un único tramo" era estándar del sector. Se lanzó research web dirigido a LiveJasmin (Studio Center), Stripchat, BongaCams y Chaturbate.
+
+**Hallazgo**: los tres portales grandes con programa formal de estudios calculan el tramo de revenue share **individualmente por cada modelo** (fuentes: `livejasminwiki.com/level-dependent-payment-system/`, `arunatalent.com/blog/stripchat-management-agency/`, `cammingwebmasters.com/bongacams-model-referral-program/`). El estudio recibe la suma de los payouts individuales; no hay bonus estructural por agrupar. El margen del Master sale exclusivamente del spread privado con sus modelos.
+
+**Consecuencia económica de mantener D4 tal como estaba definido**: con la agregación, un Master top con 5 modelos facturando 4.000 €/30d cada una (20.000 € agregados) caía en T4 MASTER (70 %). Sin agregación, las mismas modelos individuales caen cada una en T3 INDIVIDUAL (57 %). Delta: SharemeChat regalaba **~20 pp de margen bruto al Master** en el escenario top (2.600 €/mes por Master) sin que el sector lo hiciera. Además los umbrales L1/L3/L5/L7 tomados de LiveJasmin son **per modelo**, no agregados — al aplicarlos como umbrales agregados los cruzábamos mucho más rápido.
+
+**Decisión**: motor a cálculo INDIVIDUAL per modelo. El Master sigue recibiendo el importe (atribución `attributed_model_user_id` en `Transaction`), pero al % del tramo INDIVIDUAL de la modelo, no a un tramo agregado. La palanca comercial residual del programa Master queda en:
+- Spread privado Master ↔ modelo (mismo que sector).
+- SharemeChat ya paga mejor % que LiveJasmin en tramo entrada-medio (T1 50 % vs L1-L3 30-40 %, T2 54 % vs L4-L5 45-50 %), donde está el 80 % del mercado colombiano target.
+- Cero fees de plataforma al Master, KYC Didit fluido, payouts multi-rail, sin exclusividad ni permanencia.
+
+**Cambios materializados** (S3.rev, commit `6934666` en TEST 2026-07-30):
+- Migration `V43__retire_master_pricing_tiers.sql`: cierra vigencia (`effective_to=now`) de las 4 filas MASTER T1-T4 seed'd por V42. Columnas `target_type` + constraints se mantienen por si vuelve el régimen dual en el futuro.
+- `ModelTierService.resolveEffectiveTierForPayout` simplificado a INDIVIDUAL per modelo.
+- `resolveEffectiveTierForMasterPayout` y `computeAndUpsertMasterSnapshot` **eliminados**.
+- `TransactionRepository.sumStreamChargeGrossForMasterWindow` y `sumTrialEarningsForMasterWindow` **mantenidas** (útiles para dashboard consolidado S5.a — display de bruto agregado del estudio, no para determinar tramo).
+- `StreamService.endSession` + `UserTrialService.closeTrialStreamAndSettle`: sin cambios funcionales (siguen atribuyendo al Master), el % que aplican ahora es el INDIVIDUAL per modelo por efecto del cambio en `ModelTierService`.
+- Tests `ModelTierServiceMasterTest` reescritos con guards de no-consulta a métodos de agregación.
+- Contrato Master v1 §5.1 y §5.4 alineados: cálculo individual per modelo; Master recibe la suma.
+- Landing pública `/for-studios` (S5.b.7): retirada tabla, umbrales y comparativa nominal contra LiveJasmin. Textos pendientes de pulir en S5.b.8.
+
+El resto del texto original de D4 abajo se conserva por trazabilidad histórica, pero **queda superseded por este bloque de revisión**.
 
 ## Contexto
 
