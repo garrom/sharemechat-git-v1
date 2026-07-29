@@ -4,6 +4,7 @@ import i18n from '../i18n';
 import { apiFetch } from '../config/http';
 import RegisterClientModalContent from './RegisterClientModalContent';
 import RegisterModelModalContent from './RegisterModelModalContent';
+import RegisterMasterModalContent from './RegisterMasterModalContent';
 import { useSession } from '../components/SessionProvider';
 import {
   StyledForm, StyledInput, StyledButton, StyledLinkButton,
@@ -257,6 +258,13 @@ const LoginModalContent = ({ onClose, onLoginSuccess, initialView = 'login' }) =
         <RegisterModelModalContent
           onClose={onClose}
           onBack={() => setView('register-gender')}
+        />
+      )}
+
+      {view === 'register-master' && (
+        <RegisterMasterModalContent
+          onClose={onClose}
+          onBack={() => setView('login')}
         />
       )}
     </StyledForm>

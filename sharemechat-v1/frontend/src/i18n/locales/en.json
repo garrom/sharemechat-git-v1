@@ -891,6 +891,93 @@
         "title": "Check your inbox",
         "message": "We've sent you an email to confirm your account. Please check it, and the spam folder if you don't see it."
       }
+    },
+    "registerMaster": {
+      "title": "Master (Studio) sign-up",
+      "intro": "You are signing up as a Master (studio manager). You will be able to onboard models under your umbrella and receive a share of their streams. Masters do not stream themselves. Before operating you must accept the Master Contract and complete natural-person KYC.",
+      "sections": {
+        "personal": "Personal data (required)",
+        "company": "Company data (optional)"
+      },
+      "placeholders": {
+        "email": "Contact email",
+        "password": "Password (min 10 characters, no spaces)",
+        "nickname": "Nickname (3-30 characters, letters/digits/._-)",
+        "dateOfBirth": "Date of birth",
+        "companyName": "Company legal name",
+        "companyRegistrationNumber": "Registration number",
+        "companyCountry": "Country (ISO alpha-2, e.g. CO, ES, EE)"
+      },
+      "labels": {
+        "email": "Email",
+        "password": "Password",
+        "nickname": "Nickname",
+        "dateOfBirth": "Date of birth",
+        "companyName": "Company legal name (optional)",
+        "companyRegistrationNumber": "Registration number (optional)",
+        "companyCountry": "Company country (optional)"
+      },
+      "checks": {
+        "over18": "I am over 18",
+        "acceptPrefix": "I accept the",
+        "terms": "Terms and Conditions",
+        "and": "and the",
+        "privacy": "Privacy Policy",
+        "contractPending": "I understand that after sign-up I must accept the Master Contract and complete KYC before I can operate."
+      },
+      "actions": {
+        "submit": "Sign up as Master",
+        "loading": "Registering…"
+      },
+      "validation": {
+        "emailRequired": "Email is required.",
+        "emailInvalid": "Invalid email format.",
+        "passwordMin": "Password must be at least 10 characters long.",
+        "passwordNoSpaces": "Password cannot contain spaces.",
+        "nicknameRequired": "Nickname is required.",
+        "nicknamePattern": "Nickname may contain letters, digits and . _ -",
+        "dateOfBirthRequired": "Date of birth is required.",
+        "dateOfBirthPast": "Date of birth must be in the past.",
+        "confirmAdult": "You must confirm you are over 18.",
+        "acceptTerms": "You must accept the Terms and the Privacy Policy.",
+        "companyCountryFormat": "Country must be ISO alpha-2 (two letters)."
+      },
+      "success": {
+        "title": "Master account created",
+        "message": "We have sent you a verification email. Once verified you can sign the Master Contract and complete KYC."
+      }
+    },
+    "masterActivation": {
+      "title": "Activate your model account",
+      "intro": "A studio Master has invited you to operate under their umbrella on SharemeChat. Choose your personal password. Only you will know it.",
+      "note": "You choose the password yourself and can change it any time. Next, you will sign the Model Contract and complete KYC to start streaming.",
+      "labels": {
+        "password": "New password",
+        "confirmPassword": "Repeat password"
+      },
+      "placeholders": {
+        "password": "Minimum 10 characters, no spaces",
+        "confirmPassword": "Type it again"
+      },
+      "actions": {
+        "submit": "Activate account",
+        "loading": "Activating…",
+        "goLogin": "Go to Login"
+      },
+      "validation": {
+        "passwordMin": "Password must be at least 10 characters long.",
+        "passwordNoSpaces": "Password cannot contain spaces.",
+        "passwordMismatch": "Passwords do not match."
+      },
+      "status": {
+        "success": "Account activated. You can now sign in.",
+        "tokenMissing": "Token not found in the link.",
+        "tokenInvalid": "The link has expired or was already used. Ask your Master to resend the invitation."
+      },
+      "errors": {
+        "connection": "Connection error. Please try again.",
+        "generic": "Could not activate the account."
+      }
     }
   },
   "dashboardClient": {
@@ -3466,6 +3553,10 @@
     "cookies": {
       "title": "Cookie settings | SharemeChat",
       "description": "Configure the cookies SharemeChat uses in your browser. Essential, performance and marketing."
+    },
+    "forStudios": {
+      "title": "SharemeChat for studios · Master Program",
+      "description": "SharemeChat Master Program: onboard your models under your umbrella, unlock higher tiers on aggregated volume, cash out via Paxum, Yoursafe or crypto."
     }
   },
   "support": {
@@ -3587,5 +3678,128 @@
         "blockedHint": "Complete age verification first."
       }
     }
+  },
+  "forStudios": {
+    "seo": {
+      "title": "SharemeChat for studios · Master Program",
+      "description": "SharemeChat Master Program: onboard your models under your umbrella, unlock higher tiers on aggregated volume, cash out via Paxum, Yoursafe or crypto."
+    },
+    "hero": {
+      "eyebrow": "Master Program · For webcam studios",
+      "title": "Bring your models. Scale faster.",
+      "subtitle": "Our Master Program is built for professional studios. You onboard your models, their revenue aggregates, and together you unlock better tiers. No entry barriers.",
+      "ctaPrimary": "Sign up as Master",
+      "ctaSecondary": "See tiers"
+    },
+    "howItWorks": {
+      "title": "How it works",
+      "step1": {
+        "title": "1. Sign up as Master",
+        "text": "As a natural person. Sign the Master Contract, pass KYC (same provider as models) and log into your dashboard."
+      },
+      "step2": {
+        "title": "2. Invite your models",
+        "text": "Provide email and nickname. Your model receives an email to set her own password (you never see it). She signs her contract and passes KYC under her sole control."
+      },
+      "step3": {
+        "title": "3. Get paid",
+        "text": "SharemeChat pays you the full amount earned by your models. You split with them as agreed. Payouts via Paxum, Yoursafe or crypto from 100 EUR."
+      }
+    },
+    "tiers": {
+      "title": "Master vs Individual tiers",
+      "subtitle": "Same thresholds as the big portals (LiveJasmin reference), applied to the aggregated gross revenue of all your models.",
+      "colVolume": "Gross volume 30d (EUR)",
+      "colIndividual": "% individual model",
+      "colMaster": "% Master",
+      "rows": {
+        "t1": {
+          "range": "0 – 999",
+          "individual": "50%",
+          "master": "50%"
+        },
+        "t2": {
+          "range": "1,000 – 3,999",
+          "individual": "54%",
+          "master": "60%"
+        },
+        "t3": {
+          "range": "4,000 – 14,999",
+          "individual": "57%",
+          "master": "65%"
+        },
+        "t4": {
+          "range": "≥ 15,000",
+          "individual": "60%",
+          "master": "70%"
+        }
+      },
+      "note": "The Master % applies to the aggregated gross of all your active models in the 30-day window. Example: 5 models billing 4,000 EUR each = 20,000 EUR aggregated → tier T4 (70%)."
+    },
+    "compare": {
+      "title": "Quick comparison",
+      "colFeature": "Aspect",
+      "colSharemechat": "SharemeChat",
+      "colLivejasmin": "LiveJasmin (reference)",
+      "rows": {
+        "fees": {
+          "feature": "Master fee",
+          "sharemechat": "0 EUR",
+          "livejasmin": "0 EUR"
+        },
+        "tiers": {
+          "feature": "Volume-based scaling",
+          "sharemechat": "Yes, studio-aggregated",
+          "livejasmin": "Yes, studio-aggregated"
+        },
+        "kyc": {
+          "feature": "Master KYC",
+          "sharemechat": "Natural person (Didit)",
+          "livejasmin": "Natural person"
+        },
+        "payouts": {
+          "feature": "Payout rails",
+          "sharemechat": "Paxum · Yoursafe · Crypto",
+          "livejasmin": "Paxum · Wire · Crypto"
+        },
+        "min": {
+          "feature": "Minimum payout",
+          "sharemechat": "EUR 100",
+          "livejasmin": "USD 100"
+        }
+      }
+    },
+    "faq": {
+      "title": "Frequently asked",
+      "items": {
+        "q1": {
+          "q": "Do I need to register a company?",
+          "a": "No. The Master signs up as a natural person. You sign the Master Contract and pass KYC (same Didit provider as models)."
+        },
+        "q2": {
+          "q": "Do I see my models' personal data?",
+          "a": "No. You only see operational data (nickname, KYC status, activity, earnings under your umbrella). We do not expose email or ID, aligned with LiveJasmin and our GDPR policy."
+        },
+        "q3": {
+          "q": "What if a model leaves the studio?",
+          "a": "The model keeps her account as an individual. She earns her individual tier directly. No blocks, no penalties."
+        },
+        "q4": {
+          "q": "When do I get paid?",
+          "a": "Bi-weekly. You can request a payout when your balance reaches 100 EUR. Rail priority: Paxum → Yoursafe → crypto."
+        },
+        "q5": {
+          "q": "What if SharemeChat suspends me as Master?",
+          "a": "Your models are released and keep operating as individuals. You stop earning their share. Full detail in the Master Contract."
+        }
+      }
+    },
+    "ctaFinal": {
+      "title": "Ready to scale your studio with SharemeChat?",
+      "subtitle": "Sign-up is free. Within 24h we confirm your Master Contract acceptance and you can invite your first models.",
+      "ctaPrimary": "Sign up as Master",
+      "ctaSecondary": "Back to home"
+    },
+    "footerLink": "For studios"
   }
 }

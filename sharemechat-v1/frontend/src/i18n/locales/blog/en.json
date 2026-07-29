@@ -22,7 +22,8 @@
     "title": "Explore the platform while the editorial section keeps growing.",
     "text": "If you want a more direct understanding of how the experience works, you can sign up as a user or set up your profile as a model while new articles are being published.",
     "registerClient": "Create a user account",
-    "registerModel": "Sign up as a model"
+    "registerModel": "Sign up as a model",
+    "registerMaster": "I bring a studio"
   },
   "detail": {
     "backToBlog": "← Back to blog",

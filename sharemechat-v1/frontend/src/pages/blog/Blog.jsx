@@ -67,6 +67,7 @@ export default function Blog() {
         locale={locale}
         onGoRegisterClient={goLogin}
         onGoRegisterModel={goLogin}
+        onGoRegisterMaster={() => go('/for-studios')}
       />
     </BlogLocaleContext.Provider>
   );

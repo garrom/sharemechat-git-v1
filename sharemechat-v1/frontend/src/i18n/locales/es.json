@@ -891,6 +891,93 @@
         "title": "Revisa tu bandeja de entrada",
         "message": "Te hemos enviado un email para confirmar tu cuenta. Revísalo y, si no lo ves, mira en la carpeta de spam."
       }
+    },
+    "registerMaster": {
+      "title": "Registro Master (Estudio)",
+      "intro": "Vas a registrarte como Master (responsable de estudio). Podrás dar de alta modelos bajo tu umbrella y percibir un porcentaje de sus emisiones. No emites tú. Antes de operar deberás aceptar el Contrato de Master y superar KYC de persona física.",
+      "sections": {
+        "personal": "Datos personales (obligatorio)",
+        "company": "Datos de empresa (opcional)"
+      },
+      "placeholders": {
+        "email": "Email de contacto",
+        "password": "Contraseña (mínimo 10 caracteres, sin espacios)",
+        "nickname": "Nickname (3-30 caracteres, letras/números/._-)",
+        "dateOfBirth": "Fecha de nacimiento",
+        "companyName": "Razón social",
+        "companyRegistrationNumber": "Nº de registro mercantil",
+        "companyCountry": "País (código ISO alpha-2, ej: CO, ES, EE)"
+      },
+      "labels": {
+        "email": "Email",
+        "password": "Contraseña",
+        "nickname": "Nickname",
+        "dateOfBirth": "Fecha de nacimiento",
+        "companyName": "Razón social (opcional)",
+        "companyRegistrationNumber": "Nº de registro (opcional)",
+        "companyCountry": "País empresa (opcional)"
+      },
+      "checks": {
+        "over18": "Soy mayor de 18 años",
+        "acceptPrefix": "Acepto los",
+        "terms": "Términos y Condiciones",
+        "and": "y la",
+        "privacy": "Política de Privacidad",
+        "contractPending": "Entiendo que, tras registrarme, deberé aceptar el Contrato de Master y superar KYC para poder operar."
+      },
+      "actions": {
+        "submit": "Registrarme como Master",
+        "loading": "Registrando…"
+      },
+      "validation": {
+        "emailRequired": "El email es obligatorio.",
+        "emailInvalid": "Formato de email no válido.",
+        "passwordMin": "La contraseña debe tener al menos 10 caracteres.",
+        "passwordNoSpaces": "La contraseña no puede contener espacios.",
+        "nicknameRequired": "El nickname es obligatorio.",
+        "nicknamePattern": "El nickname solo puede tener letras, números y . _ -",
+        "dateOfBirthRequired": "La fecha de nacimiento es obligatoria.",
+        "dateOfBirthPast": "La fecha de nacimiento debe ser una fecha pasada.",
+        "confirmAdult": "Debes confirmar que eres mayor de 18 años.",
+        "acceptTerms": "Debes aceptar los Términos y la Política de Privacidad.",
+        "companyCountryFormat": "El país debe ser código ISO alpha-2 (dos letras)."
+      },
+      "success": {
+        "title": "Cuenta Master creada",
+        "message": "Te hemos enviado un email para verificar la cuenta. Después podrás firmar el Contrato de Master y completar KYC."
+      }
+    },
+    "masterActivation": {
+      "title": "Activa tu cuenta de modelo",
+      "intro": "Un Master de estudio te ha invitado a operar bajo su umbrella en SharemeChat. Elige tu contraseña personal. Solo tú la conocerás.",
+      "note": "La contraseña la eliges tú y podrás cambiarla en cualquier momento. Después firmarás el Contrato de Modelo y pasarás KYC para poder emitir.",
+      "labels": {
+        "password": "Nueva contraseña",
+        "confirmPassword": "Repite la contraseña"
+      },
+      "placeholders": {
+        "password": "Mínimo 10 caracteres, sin espacios",
+        "confirmPassword": "Vuelve a escribirla"
+      },
+      "actions": {
+        "submit": "Activar cuenta",
+        "loading": "Activando…",
+        "goLogin": "Ir a Iniciar sesión"
+      },
+      "validation": {
+        "passwordMin": "La contraseña debe tener al menos 10 caracteres.",
+        "passwordNoSpaces": "La contraseña no puede contener espacios.",
+        "passwordMismatch": "Las contraseñas no coinciden."
+      },
+      "status": {
+        "success": "Cuenta activada correctamente. Ya puedes iniciar sesión.",
+        "tokenMissing": "Token no encontrado en el enlace.",
+        "tokenInvalid": "El enlace ha caducado o ya se ha usado. Pide al Master que te reenvíe la invitación."
+      },
+      "errors": {
+        "connection": "Error de conexión. Inténtalo de nuevo.",
+        "generic": "No se pudo activar la cuenta."
+      }
     }
   },
   "dashboardClient": {
@@ -3466,6 +3553,10 @@
     "cookies": {
       "title": "Ajustes de cookies | SharemeChat",
       "description": "Configura las cookies que SharemeChat utiliza en tu navegador. Esenciales, de rendimiento y de marketing."
+    },
+    "forStudios": {
+      "title": "SharemeChat para estudios · Programa Master",
+      "description": "Programa Master de SharemeChat: da de alta modelos bajo tu umbrella, escala tramos por volumen agregado y cobra vía Paxum, Yoursafe o cripto."
     }
   },
   "support": {
@@ -3587,5 +3678,128 @@
         "blockedHint": "Primero completa la verificación de edad."
       }
     }
+  },
+  "forStudios": {
+    "seo": {
+      "title": "SharemeChat para estudios · Programa Master",
+      "description": "Programa Master de SharemeChat: da de alta modelos bajo tu umbrella, escala tramos por volumen agregado y cobra vía Paxum, Yoursafe o cripto."
+    },
+    "hero": {
+      "eyebrow": "Programa Master · Para estudios webcam",
+      "title": "Trae tus modelos. Escala más rápido.",
+      "subtitle": "Nuestro programa Master está diseñado para estudios profesionales. Das de alta a tus modelos, se agregan sus ingresos y desbloqueáis juntos tramos económicos superiores. Sin barreras de entrada.",
+      "ctaPrimary": "Registrarme como Master",
+      "ctaSecondary": "Ver tramos económicos"
+    },
+    "howItWorks": {
+      "title": "Cómo funciona",
+      "step1": {
+        "title": "1. Te registras como Master",
+        "text": "Como persona física. Firmas Contrato de Master, superas KYC (mismo proveedor que las modelos) y accedes a tu panel."
+      },
+      "step2": {
+        "title": "2. Invitas a tus modelos",
+        "text": "Introduces su email y nickname. La modelo recibe un email para crear su propia contraseña (tú nunca la conoces). Firma su contrato y pasa KYC bajo su control."
+      },
+      "step3": {
+        "title": "3. Cobras tu porcentaje",
+        "text": "SharemeChat te paga a ti todo lo devengado por tus modelos. Tú les repartes según lo pactado. Payouts a Paxum, Yoursafe o cripto desde 100 EUR."
+      }
+    },
+    "tiers": {
+      "title": "Tramos económicos Master vs Individual",
+      "subtitle": "Los mismos umbrales que en los grandes portales (referencia LiveJasmin), aplicados sobre la facturación bruta agregada de todas tus modelos.",
+      "colVolume": "Volumen bruto 30d (EUR)",
+      "colIndividual": "% modelo individual",
+      "colMaster": "% Master",
+      "rows": {
+        "t1": {
+          "range": "0 – 999",
+          "individual": "50%",
+          "master": "50%"
+        },
+        "t2": {
+          "range": "1.000 – 3.999",
+          "individual": "54%",
+          "master": "60%"
+        },
+        "t3": {
+          "range": "4.000 – 14.999",
+          "individual": "57%",
+          "master": "65%"
+        },
+        "t4": {
+          "range": "≥ 15.000",
+          "individual": "60%",
+          "master": "70%"
+        }
+      },
+      "note": "El % Master aplica sobre el bruto agregado de todas tus modelos activas en la ventana de 30 días. Ejemplo: 5 modelos facturando 4.000 EUR cada una = 20.000 EUR agregados → tramo T4 (70%)."
+    },
+    "compare": {
+      "title": "Comparativa rápida",
+      "colFeature": "Aspecto",
+      "colSharemechat": "SharemeChat",
+      "colLivejasmin": "LiveJasmin (referencia)",
+      "rows": {
+        "fees": {
+          "feature": "Comisión al Master",
+          "sharemechat": "0 EUR",
+          "livejasmin": "0 EUR"
+        },
+        "tiers": {
+          "feature": "Escalado por volumen",
+          "sharemechat": "Sí, agregado del estudio",
+          "livejasmin": "Sí, agregado del estudio"
+        },
+        "kyc": {
+          "feature": "KYC Master",
+          "sharemechat": "Persona física (Didit)",
+          "livejasmin": "Persona física"
+        },
+        "payouts": {
+          "feature": "Rails de pago",
+          "sharemechat": "Paxum · Yoursafe · Cripto",
+          "livejasmin": "Paxum · Transferencia · Cripto"
+        },
+        "min": {
+          "feature": "Mínimo payout",
+          "sharemechat": "100 EUR",
+          "livejasmin": "100 USD"
+        }
+      }
+    },
+    "faq": {
+      "title": "Preguntas frecuentes",
+      "items": {
+        "q1": {
+          "q": "¿Necesito registrar una empresa?",
+          "a": "No. El Master se registra como persona física. Firma el Contrato de Master y supera KYC (mismo proveedor Didit que las modelos)."
+        },
+        "q2": {
+          "q": "¿Veo los datos personales de mis modelos?",
+          "a": "No. Solo ves datos operativos (nickname, estado KYC, actividad, ganancias bajo tu umbrella). No exponemos email ni documento de la modelo, alineado con LiveJasmin y con nuestra política GDPR."
+        },
+        "q3": {
+          "q": "¿Qué pasa si una modelo se va del estudio?",
+          "a": "La modelo mantiene su cuenta como modelo individual. Cobra directamente en su tramo individual. No hay bloqueos ni penalizaciones."
+        },
+        "q4": {
+          "q": "¿Cuándo cobro?",
+          "a": "Quincenal. Puedes retirar cuando acumules 100 EUR en tu balance. Prioridad de rails: Paxum → Yoursafe → cripto."
+        },
+        "q5": {
+          "q": "¿Y si SharemeChat me suspende como Master?",
+          "a": "Tus modelos quedan liberadas como individuales y siguen operando en la plataforma. Tú dejas de percibir su cuota. Lo detallamos en el Contrato de Master."
+        }
+      }
+    },
+    "ctaFinal": {
+      "title": "¿Listo para escalar tu estudio con SharemeChat?",
+      "subtitle": "El registro es gratuito. En 24 h te confirmamos la aceptación del Contrato de Master y podrás invitar a tus primeras modelos.",
+      "ctaPrimary": "Registrarme como Master",
+      "ctaSecondary": "Volver al inicio"
+    },
+    "footerLink": "Para estudios"
   }
 }

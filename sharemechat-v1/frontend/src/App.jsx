@@ -21,6 +21,8 @@ import BlogNotFound from './pages/blog/BlogNotFound';
 import ChangePasswordPage from './pages/subpages/ChangePasswordPage';
 import ModelDocuments from './pages/subpages/ModelDocuments';
 import Home from './public-pages/Home';
+import MasterLanding from './public-pages/MasterLanding';
+import MasterModelActivationPage from './public-pages/MasterModelActivationPage';
 import Unauthorized from './public-pages/Unauthorized';
 import ResetPassword from './public-pages/ResetPassword';
 import ForgotPassword from './public-pages/ForgotPassword';
@@ -191,6 +193,10 @@ function App() {
                     <Route path="/safety" component={Safety} />
                     <Route path="/community-guidelines" component={Rules} />
                     <Route path="/cookies-settings" component={Config} />
+
+                    {/* ADR-056 S5.b: captacion publica Master (Opcion A). */}
+                    <Route path="/for-studios" component={MasterLanding} />
+                    <Route path="/master/invite/activate/:token" component={MasterModelActivationPage} />
 
                     <Route path="/client" render={() => (<RequireRole role="CLIENT"><DashboardClient /></RequireRole>)} />
                     <Route path="/model" render={() => (<RequireRole role="MODEL"><DashboardModel /></RequireRole>)} />

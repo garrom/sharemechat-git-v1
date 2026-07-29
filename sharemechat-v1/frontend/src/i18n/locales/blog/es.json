@@ -22,7 +22,8 @@
     "title": "Explora la plataforma mientras la sección editorial sigue creciendo.",
     "text": "Si quieres entender de forma más directa cómo funciona la experiencia, puedes entrar como usuario o preparar tu perfil como modelo mientras se publican nuevos artículos.",
     "registerClient": "Crear cuenta de usuario",
-    "registerModel": "Registrarme como modelo"
+    "registerModel": "Registrarme como modelo",
+    "registerMaster": "Traigo un estudio"
   },
   "detail": {
     "backToBlog": "← Volver al blog",

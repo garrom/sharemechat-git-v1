@@ -81,10 +81,12 @@ const BlogContent = ({
   locale = 'es',
   onGoRegisterClient,
   onGoRegisterModel,
+  onGoRegisterMaster,
 }) => {
   const isPublic = mode === 'public';
   const handleRegisterClient = () => { if (onGoRegisterClient) onGoRegisterClient(); };
   const handleRegisterModel = () => { if (onGoRegisterModel) onGoRegisterModel(); };
+  const handleRegisterMaster = () => { if (onGoRegisterMaster) onGoRegisterMaster(); };
 
   // Chrome del blog internacionalizado via namespace 'blog'.
   // Paquete 5 (ADR-025): el locale del listado viene del path
@@ -410,6 +412,7 @@ const BlogContent = ({
                 <CTAActions>
                   <NavButton type="button" onClick={handleRegisterClient}>{t('blog:cta.registerClient')}</NavButton>
                   <NavButton type="button" onClick={handleRegisterModel}>{t('blog:cta.registerModel')}</NavButton>
+                  <NavButton type="button" onClick={handleRegisterMaster}>{t('blog:cta.registerMaster')}</NavButton>
                 </CTAActions>
               </CTABox>
             )}
