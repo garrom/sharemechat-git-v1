@@ -489,10 +489,22 @@ Coste operativo: despreciable en fase soft launch (bajo volumen), €50-200/mes 
 
 Estimación técnica (con decisiones cerradas): 1-2 sesiones. Backend adapter del proveedor + cache en messages + i18n mínimo + UI toggle.
 
+### 5.4 Sistema Master/Studio (ADR-056)
+
+Estado: **ADR-056 aceptado el 2026-07-29**, cero implementación técnica. Detalle completo del alcance y las 8 fases planificadas (S1-S8) en el Frente 5 de [`current-phase.md`](current-phase.md).
+
+Objetivo:
+introducir rol MASTER (estudios de webcam) tras pivote estratégico de captación — 6 meses de captación fallida de modelos individuales por barrera de acceso, no por régimen económico (SharemeChat ya ofrece 2× lo que da LiveJasmin al broadcaster individual). Los estudios colombianos aportan 5-15 modelos entrenadas por captación, resolviendo el problema.
+
+Cambios estructurales al régimen económico ADR-052: reparto dual INDIVIDUAL (50-60% T1-T4) vs MASTER (50-70%), umbrales absolutos sacados de LiveJasmin oficial (L1/L3/L5/L7 equivalente EUR: 0/1.000/4.000/15.000 €), motor unificado con detección Master en `StreamService.endSession`, escalado agregado por Master, payouts multi-rail (Paxum → Yoursafe → cripto).
+
+Sin grandfathering — modelos individuales existentes pasan al nuevo régimen desde momento de aplicación (coste real ≈ 0 dado que hoy hay 0 modelos facturando en T2+).
+
 ### Naturaleza y prioridad de la Parte 5
 
-Las tres líneas comparten haber sido levantadas conversacionalmente durante la sesión del 2026-07-27 al cambiar la estrategia hacia PSP tarjeta como método principal. Ninguna tiene fecha impuesta. Orden sugerido según impacto en fricción vs riesgo técnico:
+Las cuatro líneas comparten haber sido levantadas conversacionalmente durante las sesiones del 2026-07-27 (5.1-5.3, pivote hacia PSP tarjeta) y 2026-07-29 (5.4, pivote hacia captación estudios). Ninguna tiene fecha impuesta. Orden sugerido según impacto en fricción vs riesgo técnico:
 
-1. **5.1 Sistema de tickets** — impacto operativo alto, ya con ADR aceptado.
-2. **5.2 Google login** — impacto alto en fricción registro, pero bloqueado hasta verificar TOS Google para adult.
-3. **5.3 Traductor** — impacto medio en expansión mercado, sensato pero no urgente. Mejor con volumen real cross-language que justifique coste.
+1. **5.1 Sistema de tickets** — HECHO (T1-T6 completadas 2026-07-27).
+2. **5.4 Sistema Master/Studio** — impacto estratégico alto (posibilita captación), ADR aceptado, 8 fases planificadas. Bloquea siguiente ciclo comercial.
+3. **5.2 Google login** — impacto alto en fricción registro cliente, bloqueado hasta verificar TOS Google para adult.
+4. **5.3 Traductor** — impacto medio en expansión mercado, sensato pero no urgente.

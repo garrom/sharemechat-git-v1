@@ -8,6 +8,65 @@ La política operativa completa (categorías que disparan entrada, formato fijo,
 
 ---
 
+## 2026-07-29 — ADR-056: sistema Master/Studio + pivote captación estudios colombianos
+
+Sesión disparada por 6 meses de captación fallida de modelos individuales. Análisis del operador: **el problema NO es económico** (SharemeChat ofrece 75-79% desde ADR-052, 2× lo que da LiveJasmin al broadcaster individual top). El problema es **de acceso** — llegar a modelos independientes vía canales adult adyacentes (Coomeet, r/adultwork, agregadores talent) genera desconfianza sistemática ("¿es moderador de otra plataforma haciendo trampa? ¿scam?"). Prueba directa: registro como cliente en Coomeet + oferta a modelos → 0 conversiones.
+
+Pivote estratégico: **captar estudios de webcam en lugar de modelos individuales**. Mercado colombiano (según investigación ICIJ 2024) mueve ~$1B/año con ~400.000 modelos activas en Colombia, ecosistema profesionalizado con canales B2B ya establecidos. Cada estudio captado aporta 5-15 modelos entrenadas — el problema de acceso a la modelo individual se convierte en acceso a un decisor B2B único.
+
+**Análisis conjunto extenso con el operador** (5 iteraciones sobre el punto de reparto económico solo). Fases del análisis:
+
+1. **Mapeo interno**: agent Explore devolvió informe detallado del sistema económico ADR-052 vigente (tramos T1-T4 75-79%, umbrales 3.500/5.000/6.500€, motor reparto en `StreamService.endSession:717-840`, KYC Didit, contrato modelo v4 con manifest S3 versionado, payouts min 50€ sin multi-rail). Hallazgo crítico: **cero primitivas técnicas de Master/Studio en el código actual** (grep exhaustivo, cero ocurrencias STUDIO/MASTER/AGENCY/UMBRELLA). Diseño desde cero, ventaja no despreciable.
+
+2. **Benchmark competitivo**: LiveJasmin usa 9 niveles L1-L9 (30-80%) con reset quincenal, umbrales oficiales L1=$0-250, L3=$500-1000, L5=$2000-4000, L7=$8000-15000, L9=$30000+. Stripchat 50% flat + feature Account Holder para group accounts (2024). Chaturbate sin cuenta studio formal. Realidad Colombia: modelo neto ~10-15% tras corte estudio (~40-50%) y plataforma (~50%). **LiveJasmin oculta PII de modelos al Master post-registro** (fuente wiki oficial) — dato clave para D9 GDPR.
+
+3. **Iteración reparto económico**: 5 rondas de propuesta. Punto de fricción del operador: rechazó mi propuesta inicial "SharemeChat mantiene 21-25%" — quería revisar el %. Contrapropuesta operador: SharemeChat 30-50%. Resultado final: modelo individual 50/54/57/60% (T1-T4), Master 50/60/65/70% (T1-T4), SharemeChat retiene 30-50%. Umbrales sacados de LiveJasmin oficial L1/L3/L5/L7 equivalente EUR mensual (0/1.000/4.000/15.000 €) — sector-referenced, no inventados. Sin grandfathering (0 modelos activas en T2+ actualmente, coste real ≈ 0).
+
+4. **Cierre 12 decisiones D1-D12**:
+   - D1 Rol MASTER entidad de dominio propia (tabla `masters` 1-a-1 con `users`).
+   - D2 Régimen dual `target_type ENUM('INDIVIDUAL','MASTER')` en `model_pricing_tiers`.
+   - D3 Tabla tramos post-ADR-056 con 8 filas seed (4 INDIVIDUAL + 4 MASTER).
+   - D4 Motor unificado con escalado agregado para Master (Opción C: mismos umbrales absolutos, resolución por bruto agregado del equipo Master).
+   - D5 Sin grandfathering.
+   - D6 Onboarding Master: KYC persona física + contrato Master, sin KYB empresarial.
+   - D7 Modelo bajo Master **crea su propia password** vía email activación — Master NO gestiona passwords (elimina riesgo GDPR consentimiento viciado).
+   - D8 Cláusula AML en contrato modelo v6 autorizando abono a Master.
+   - D9 Master ve datos operativos pero **NO PII** de sus modelos (nombre real, DoB, DNI, foto documento, teléfono, dirección, email personal) — alineado con LiveJasmin + GDPR minimización.
+   - D10 Modelo bajo Master ve dashboard reducido, NO su ledger crudo (opacidad interna sector-estándar).
+   - D11 Suspensión Master → modelos liberadas automáticamente como individuales (`master_user_id=NULL`), mantienen histórico y saldo, auto-recalificación régimen INDIVIDUAL.
+   - D12 Payouts multi-rail: **Paxum → Yoursafe → cripto** (Paxum prioritario por target Colombia), min 100 € para todos, on-demand con "próximo cierre quincenal" como referencia comercial.
+
+**Correcciones importantes al análisis inicial que hizo el operador**:
+
+- Yo di por sentado el 21-25% SharemeChat actual como intocable. El operador exigió replantearlo. Correcto — sesgo mío. Rehecho con rango 30-50%.
+- Yo saqué umbrales (3.500/5.000/6.500) sin justificar de dónde. El operador exigió referencia sectorial. Rehecho con L1/L3/L5/L7 de LiveJasmin oficial (0/1.000/4.000/15.000 €).
+- Yo propuse que Master ve PII de sus modelos. El operador pidió investigar. Investigación arrojó que LiveJasmin oculta PII al Master post-registro. Recomendación revertida (Master NO ve PII).
+- Yo propuso abogado externo para contrato Master. El operador rechaza — contrato lo redactamos tú y yo mismo patrón versionado que modelo v4.
+
+**Riesgos jurídicos identificados y resueltos**:
+
+- **GDPR consentimiento viciado si Master gestiona password modelo** → resuelto D7 (modelo crea su propia password via email activation).
+- **AML pago a tercero (Master) sin justificación auditable** → resuelto D8 (cláusula específica contrato modelo v6 autoriza abono a Master `[nombre + id]`).
+- **GDPR minimización si Master ve PII innecesaria** → resuelto D9 (Master NO ve PII, alineado con LiveJasmin).
+
+**Entregables documentales de esta sesión**:
+
+- **ADR-056 completo** ([adr-056-sistema-master-studio.md](docs/06-decisions/adr-056-sistema-master-studio.md)) con 12 decisiones D1-D12, mapeo código actual afectado, referencias sectoriales que informan decisiones, modelo de datos completo (migration V42 con 10 bloques SQL: rol MASTER + tabla masters + master_user_id FK + master_model_splits + master_contract_acceptances + refactor model_pricing_tiers con target_type + seed 8 filas + extensión snapshots + atribución STREAM_EARNING + password_temporary + payout_methods), ~12 endpoints REST nuevos, 11 alternativas descartadas explicadas (A-K), plan de implementación en 8 fases S1-S8, 9 deudas registradas para evolución futura (#D-52 a #D-60).
+
+- **Frente 5 nuevo** añadido a [`current-phase.md`](docs/07-roadmap/current-phase.md) con secuencia técnica planificada S1-S8.
+
+- **Parte 5 sección 5.4 nueva** en [`pending-hardening.md`](docs/07-roadmap/pending-hardening.md) recogiendo ADR-056 en el backlog + reordenamiento prioridad (5.4 Master pasa a segundo lugar tras 5.1 tickets ya HECHO).
+
+**Reemplaza parcialmente ADR-052 §D1 y §D5**: los umbrales y porcentajes ADR-052 se sobrescriben por los ADR-056. Resto ADR-052 (motor unificado, chosen_rate, primer minuto trial plano, snapshot diario, retirada afiliadas) queda vigente.
+
+**Deploy**: cero deploy en esta sesión. Solo documentación (ADR-056, current-phase, pending-hardening, bitácora). Implementación técnica de S1 arranca en próxima sesión dedicada.
+
+**Contexto operativo relevante**: 4 clientes registrados al momento del ADR con incorporaciones semanales lentas. Cliente NO interactúa con Master en ningún punto — modelo bajo Master aparece con su alias público estándar, indistinguible. Los cambios en frontend cliente en las 8 fases son cero.
+
+**Aprendizaje operativo**: el patrón de análisis iterativo con investigación web dirigida (5 rondas hasta cerrar solo el reparto económico) es valioso — evitó implementar propuesta inicial mía basada en supuestos (21-25% SharemeChat, umbrales inventados) que el operador habría tenido que corregir en producción. El coste de las 5 rondas conversacionales es despreciable comparado con el coste de rehacer motor de reparto en TEST y PROD tras un despliegue mal calibrado.
+
+---
+
 ## 2026-07-27 — ADR-054: sistema de tickets de incidencias + pivote estrategia PSP tarjeta
 
 Segunda sesión del mismo día, disparada por el cierre de ADR-053 y el cambio explícito de estrategia del operador: **cripto se queda como método de pago secundario, el PSP tarjeta será el método principal en cuanto se cierre onboarding con un nuevo adquirente**. La instancia PROD de cripto queda "teóricamente arreglada" (ADR-053 desplegado, prueba manual E2E diferida por saldo limitado en Kraken), y el proyecto pivota hacia el frente PSP tarjeta como estructural.

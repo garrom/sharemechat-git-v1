@@ -15,7 +15,7 @@ Este documento es el panel corto de estado y prioridad viva.
 
 ## Frentes operativos activos
 
-Cuatro frentes en curso en paralelo. El Frente 1 (Chat Soporte LLM · Panel humano) es la sub-fase iniciada tras cerrar Fase 1.D del refactor Agente IA (ADR-044) y ejecutada durante las últimas sesiones operativas. El Frente 2 (Gobierno económico pre-PSP) sigue vivo con su siguiente paso identificado (BFPM Fase 4B-b) como prerrequisito de la integración PSP real; no está pausado. El Frente 3 (Materialización ADR-052: rediseño estructural del reparto + retirada del programa de afiliadas) arranca tras cerrar la Fase B documental el 2026-07-24 y encadena en 3 sub-frentes técnicos (purga afiliadas → refactor sistema tramos + rango de precio + Estatus Pro → T&C legal). El Frente 4 (Sistema de tickets de incidencias, ADR-054) es el más reciente: aterriza tras cerrar ADR-053 el 2026-07-27 y el cambio de estrategia hacia PSP tarjeta como método principal, que hace estructural tener sistema de trazabilidad de incidencias y compensaciones antes de captación masiva.
+Cinco frentes en curso en paralelo. El Frente 1 (Chat Soporte LLM · Panel humano) es la sub-fase iniciada tras cerrar Fase 1.D del refactor Agente IA (ADR-044) y ejecutada durante las últimas sesiones operativas. El Frente 2 (Gobierno económico pre-PSP) sigue vivo con su siguiente paso identificado (BFPM Fase 4B-b) como prerrequisito de la integración PSP real; no está pausado. El Frente 3 (Materialización ADR-052: rediseño estructural del reparto + retirada del programa de afiliadas) arranca tras cerrar la Fase B documental el 2026-07-24 y encadena en 3 sub-frentes técnicos (purga afiliadas → refactor sistema tramos + rango de precio + Estatus Pro → T&C legal). El Frente 4 (Sistema de tickets de incidencias, ADR-054) aterriza tras cerrar ADR-053 el 2026-07-27 y el cambio de estrategia hacia PSP tarjeta como método principal, que hace estructural tener sistema de trazabilidad de incidencias y compensaciones antes de captación masiva. El Frente 5 (Sistema Master/Studio, ADR-056) es el más reciente: aterriza tras 6 meses de captación fallida de modelos individuales y pivote estratégico hacia captación de estudios de webcam (especialmente colombianos), aportando rol MASTER con reparto económico dual y multi-rail payouts.
 
 ---
 
@@ -252,6 +252,72 @@ Deudas registradas del frente (todas en `docs/04-operations/known-debt.md` cuand
 - #D-48 reporting admin de tickets (categoría/estado/tasa compensación/coste mensual).
 - #D-49 anticipar chargebacks preventivos cuando aterrice PSP tarjeta (auto-abrir ticket + compensación pre-chargeback).
 - #D-50 playbook operativo agente humano para tickets (redacción tras 20-30 gestiones reales).
+
+---
+
+## Frente 5: Sistema Master/Studio (ADR-056)
+
+Estado: **ADR-056 aceptado el 2026-07-29**. Cero implementación técnica todavía.
+
+Objetivo:
+introducir rol MASTER (estudios de webcam) como entidad de dominio propia, con reparto económico dual (INDIVIDUAL vs MASTER) y payouts multi-rail (Paxum → Yoursafe → cripto). Pivote estratégico tras 6 meses de captación fallida de modelos individuales — el problema no es económico (SharemeChat ofrece 2× lo que da LiveJasmin al broadcaster individual) sino de acceso (llegar a modelos independientes genera desconfianza). Los estudios colombianos aportan 5-15 modelos ya entrenadas por captación, resolviendo el problema.
+
+Base estructural: [ADR-056](../06-decisions/adr-056-sistema-master-studio.md), 12 decisiones D1-D12 sobre reparto (motor unificado con detección Master, umbrales L1/L3/L5/L7 LiveJasmin equivalente EUR, régimen dual INDIVIDUAL 50-60% / MASTER 50-70%), roles y KYC (Master persona física + contrato dedicado + cláusula AML modelo v6), visibilidad (Master NO ve PII de sus modelos alineado con LJ + GDPR), opacidad interna (modelo bajo Master no ve ledger crudo), suspensión Master (liberación como individuales), payouts multi-rail (Paxum prioritario).
+
+Reemplaza parcialmente ADR-052 §D1 (%reparto) y §D5 (umbrales tramos). Resto ADR-052 vigente.
+
+Secuencia técnica planificada (8 fases, cada una desplegable):
+
+1. **Fase S1 — backend base** — PENDIENTE
+   - Migration V42 completa (10 bloques SQL: rol MASTER, tabla masters, master_user_id FK, master_model_splits, master_contract_acceptances, refactor model_pricing_tiers con target_type + seed 8 filas post-ADR, extensión snapshots, atribución STREAM_EARNING, password_temporary, payout_methods).
+   - Entities + repositorios + `Constants.Roles.MASTER` + `UserTypes.FORM_MASTER` + `KycSessionTypes.MASTER`.
+   - Refactor `ModelPricingTierRepository.findCurrentByBilledGross` con parámetro `targetType`.
+
+2. **Fase S2 — KYC + contrato Master** — PENDIENTE
+   - `MasterContractService` + `MasterContractManifestService` (patrón simétrico modelo).
+   - Generación PDF `master_contract_v1_2026-XX-XX.pdf` + manifest S3.
+   - Extensión `KycSessionService.startDiditMasterSession` + workflow ID Didit dedicado.
+   - Endpoints `POST /api/masters/register` + `POST /api/masters/me/contract/accept` + `POST /api/masters/me/kyc/didit`.
+
+3. **Fase S3 — motor reparto extendido** — PENDIENTE
+   - Refactor `ModelTierService.resolveEffectiveTierForPayout` con contexto Master (agregación bruto).
+   - Refactor `StreamService.endSession` para detectar `master_user_id`, resolver tier apropiado, atribuir `STREAM_EARNING` al Master con `attributed_model_user_id` set.
+   - Tests exhaustivos de reparto en 4 escenarios (individual T1/T4, Master T1/T4).
+
+4. **Fase S4 — endpoints Master gestión modelos** — PENDIENTE
+   - `POST /api/masters/me/models` (crear + email activación con token).
+   - `GET /api/masters/me/models` + `PATCH /{id}/active|pricing|internal-share`.
+   - Flujo activación email modelo (`AuthActivationController` extensión).
+   - Tests MockMvc.
+
+5. **Fase S5 — frontend Master** — PENDIENTE
+   - Nuevo dashboard `/master` con: overview económico consolidado, listado modelos, gestión CRUD, formulario nueva modelo, botón payout, historial.
+   - Nuevo login flow modelo activation via email.
+   - i18n `master.*` ES+EN.
+
+6. **Fase S6 — payouts multi-rail** — PENDIENTE
+   - Nueva tabla `payout_methods` + endpoints CRUD.
+   - Adapter `PaxumPayoutAdapter` primero (con credenciales sandbox).
+   - Refactor `TransactionService.requestPayout` + `adminReviewPayoutRequest` para aceptar `payout_method_id`.
+   - Yoursafe + cripto payouts diferidos (deudas #D-52, #D-53).
+
+7. **Fase S7 — frontend admin Masters + suspensión** — PENDIENTE
+   - Nueva sub-sección admin para Masters (listado + drill-down + suspensión D11).
+   - Extensión `AdminSupportPanel` o nuevo `AdminMastersPanel`.
+
+8. **Fase S8 — nivelación TEST → AUDIT → PROD** — PENDIENTE
+   - Patrón habitual (JAR + V42 aplicada Flyway + bundles frontend).
+
+Deudas registradas del frente (todas en `docs/04-operations/known-debt.md` cuando se abra la fase S1):
+- #D-52 adapter `YoursafePayoutAdapter` (S6 diferido).
+- #D-53 adapter `NowPaymentsPayoutAdapter` cripto payouts (S6 diferido).
+- #D-54 retropoblar `target_type='INDIVIDUAL'` en snapshots pre-V42.
+- #D-55 extensión Master a modelos internacionales fuera de Colombia.
+- #D-56 sistema tickets extendido a Masters (aliada #D-51 del ADR-054).
+- #D-57 recomendación de tarifa del Master a sus modelos.
+- #D-58 onboarding Master con vídeo tutorial + checklist guiado.
+- #D-59 reporting fiscal por Master.
+- #D-60 rate limit creación modelos por Master (antifraude).
 
 ---
 
