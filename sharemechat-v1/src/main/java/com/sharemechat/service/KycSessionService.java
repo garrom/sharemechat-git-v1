@@ -9,6 +9,7 @@ import com.sharemechat.dto.VeriffCreateSessionResult;
 import com.sharemechat.entity.KycWebhookEvent;
 import com.sharemechat.entity.KycSession;
 import com.sharemechat.entity.User;
+import com.sharemechat.master.service.MasterContractService;
 import com.sharemechat.repository.KycWebhookEventRepository;
 import com.sharemechat.repository.KycSessionRepository;
 import com.sharemechat.repository.UserRepository;
@@ -51,6 +52,8 @@ public class KycSessionService {
     private final VeriffProperties veriffProperties;
     private final DiditClient diditClient;
     private final DiditProperties diditProperties;
+    // ADR-056 S2: gate contrato Master antes del KYC Master.
+    private final MasterContractService masterContractService;
 
     public KycSessionService(UserRepository userRepository,
                                   KycSessionRepository kycSessionRepository,
@@ -60,7 +63,8 @@ public class KycSessionService {
                                   EmailVerificationService emailVerificationService,
                                   VeriffProperties veriffProperties,
                                   DiditClient diditClient,
-                                  DiditProperties diditProperties) {
+                                  DiditProperties diditProperties,
+                                  MasterContractService masterContractService) {
         this.userRepository = userRepository;
         this.kycSessionRepository = kycSessionRepository;
         this.kycWebhookEventRepository = kycWebhookEventRepository;
@@ -70,6 +74,7 @@ public class KycSessionService {
         this.veriffProperties = veriffProperties;
         this.diditClient = diditClient;
         this.diditProperties = diditProperties;
+        this.masterContractService = masterContractService;
     }
 
     @Transactional
@@ -293,6 +298,64 @@ public class KycSessionService {
         // ("Not Started"). Case-sensitive — se persiste tal cual para que la
         // comparacion con futuros webhooks (que mandan "In Progress" / "In
         // Review" / "Approved" / ...) sea consistente.
+        row.setProviderStatus("Not Started");
+        row.setKycStatus(Constants.VerificationStatuses.PENDING);
+        row.setHostedUrl(result.getVerificationUrl());
+
+        kycSessionRepository.save(row);
+
+        KycStartSessionResponseDTO dto = new KycStartSessionResponseDTO();
+        dto.setUserId(userId);
+        dto.setProvider(PROVIDER_DIDIT);
+        dto.setProviderSessionId(result.getSessionId());
+        dto.setVerificationUrl(result.getVerificationUrl());
+        dto.setProviderStatus("Not Started");
+        dto.setMappedStatus(Constants.VerificationStatuses.PENDING);
+
+        return dto;
+    }
+
+    /**
+     * ADR-056 D6: inicia una sesion Didit para el MASTER (persona fisica,
+     * mismo flujo Document+Selfie+Liveness que MODEL pero con workflow_id
+     * dedicado — fallback al workflow modelo si el operador aun no ha
+     * creado uno propio en Didit).
+     *
+     * <p>Pre-requisitos:
+     * <ul>
+     *   <li>Usuario existe con role=USER + user_type=FORM_MASTER.</li>
+     *   <li>Email verificado (via EmailVerifiedFilter global).</li>
+     *   <li>Contrato Master aceptado en su version vigente.</li>
+     * </ul>
+     */
+    @Transactional
+    public KycStartSessionResponseDTO startDiditMasterSession(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Usuario no encontrado"));
+
+        boolean isOnboardingMaster =
+                Constants.Roles.USER.equals(user.getRole())
+                        && Constants.UserTypes.FORM_MASTER.equals(user.getUserType());
+
+        if (!isOnboardingMaster) {
+            throw new IllegalArgumentException("Solo USER + FORM_MASTER puede iniciar KYC Master");
+        }
+
+        if (!masterContractService.isAcceptedCurrent(userId)) {
+            throw new IllegalArgumentException("Debes aceptar el contrato Master antes del KYC");
+        }
+
+        DiditCreateSessionResult result = diditClient.createSession(
+                userId, user.getEmail(), user.getName(), user.getSurname(),
+                diditProperties.getEffectiveMasterWorkflowId(),
+                diditProperties.getEffectiveMasterCallbackUrl());
+
+        KycSession row = new KycSession();
+        row.setUserId(userId);
+        row.setSessionType(Constants.SessionTypes.MASTER);
+        row.setProvider(PROVIDER_DIDIT);
+        row.setProviderSessionId(result.getSessionId());
+        row.setProviderVendorRef(result.getVendorData());
         row.setProviderStatus("Not Started");
         row.setKycStatus(Constants.VerificationStatuses.PENDING);
         row.setHostedUrl(result.getVerificationUrl());

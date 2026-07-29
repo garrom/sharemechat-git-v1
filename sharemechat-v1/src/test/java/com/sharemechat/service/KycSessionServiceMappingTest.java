@@ -30,7 +30,8 @@ class KycSessionServiceMappingTest {
         // helpers de extracción/mapeo, que no tocan repositorios ni externos.
         // Las dos ultimas posiciones (DiditClient + DiditProperties) se anadieron
         // en el frente Didit (ADR-035, 2026-06-13).
-        return new KycSessionService(null, null, null, null, null, null, null, null, null);
+        // ADR-056 S2: arg extra masterContractService (null en tests legacy).
+        return new KycSessionService(null, null, null, null, null, null, null, null, null, null);
     }
 
     private static JSONObject decisionPayload(Integer code, String verificationStatus) {

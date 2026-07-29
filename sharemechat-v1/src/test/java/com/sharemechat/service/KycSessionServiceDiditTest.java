@@ -30,7 +30,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class KycSessionServiceDiditTest {
 
     private static KycSessionService svc() {
-        return new KycSessionService(null, null, null, null, null, null, null, null, null);
+        // ADR-056 S2: arg extra masterContractService (null en tests legacy).
+        return new KycSessionService(null, null, null, null, null, null, null, null, null, null);
     }
 
     // -------------------- V9 assertWorkflowIdMatchesSessionType --------------
@@ -39,7 +40,7 @@ class KycSessionServiceDiditTest {
         com.sharemechat.config.DiditProperties props = new com.sharemechat.config.DiditProperties();
         props.setModelWorkflowId(modelWf);
         props.setClientWorkflowId(clientWf);
-        return new KycSessionService(null, null, null, null, null, null, null, null, props);
+        return new KycSessionService(null, null, null, null, null, null, null, null, props, null);
     }
 
     @Test

@@ -63,6 +63,10 @@ public class SecurityConfig {
                         // PUBLIC
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/users/register/**", "/api/auth/login", "/api/auth/refresh", "/api/auth/logout", "/api/admin/auth/login").permitAll()
+                        // ADR-056 S2: registro Master (persona fisica) publico,
+                        // simetrico a /api/users/register/model. El resto de
+                        // /api/masters/me/** exige autenticacion (matcher abajo).
+                        .requestMatchers(HttpMethod.POST, "/api/masters/register").permitAll()
                         .requestMatchers("/api/email-verification/confirm").permitAll()
                         .requestMatchers("/api/public/home/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/content/**").permitAll()
@@ -97,6 +101,12 @@ public class SecurityConfig {
 
                         // USERS
                         .requestMatchers("/api/users/**").authenticated()
+
+                        // ADR-056 S2: MASTERS — self endpoints autenticados.
+                        // Un USER + FORM_MASTER puede firmar contrato + arrancar
+                        // KYC. Post-promocion a role MASTER siguen accesibles.
+                        // /register es publico (matcher arriba).
+                        .requestMatchers("/api/masters/me/**").authenticated()
 
                         // ==========================
                         // MODELS - KYC (onboarding)

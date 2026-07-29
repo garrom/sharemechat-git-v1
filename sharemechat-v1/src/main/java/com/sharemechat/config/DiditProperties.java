@@ -43,6 +43,12 @@ public class DiditProperties {
     private String clientCallbackUrl;
     private String modelWorkflowId;
     private String clientWorkflowId;
+    // ADR-056 S2: workflow ID Didit del flujo KYC MASTER persona fisica.
+    // Si esta blank, el service hace fallback al workflow modelo — deuda
+    // aceptable en desarrollo hasta que el operador cree un workflow
+    // dedicado "shareme-master-kyc" en Didit dashboard.
+    private String masterWorkflowId;
+    private String masterCallbackUrl;
     private String vendorDataPrefix = "smc";
 
     public boolean isEnabled() {
@@ -139,6 +145,45 @@ public class DiditProperties {
 
     public void setClientWorkflowId(String clientWorkflowId) {
         this.clientWorkflowId = clientWorkflowId;
+    }
+
+    public String getMasterWorkflowId() {
+        return masterWorkflowId;
+    }
+
+    public void setMasterWorkflowId(String masterWorkflowId) {
+        this.masterWorkflowId = masterWorkflowId;
+    }
+
+    public String getMasterCallbackUrl() {
+        return masterCallbackUrl;
+    }
+
+    public void setMasterCallbackUrl(String masterCallbackUrl) {
+        this.masterCallbackUrl = masterCallbackUrl;
+    }
+
+    /**
+     * ADR-056 S2: workflow effectivo para MASTER. Si masterWorkflowId
+     * esta poblado, se usa; si no, fallback al modelWorkflowId (deuda
+     * aceptable hasta que se cree workflow dedicado en Didit dashboard).
+     */
+    public String getEffectiveMasterWorkflowId() {
+        if (masterWorkflowId != null && !masterWorkflowId.isBlank()) {
+            return masterWorkflowId;
+        }
+        return modelWorkflowId;
+    }
+
+    /**
+     * ADR-056 S2: callback effectivo para MASTER. Fallback modelo si
+     * blank, y si tambien blank fallback al callbackUrl legacy.
+     */
+    public String getEffectiveMasterCallbackUrl() {
+        if (masterCallbackUrl != null && !masterCallbackUrl.isBlank()) {
+            return masterCallbackUrl;
+        }
+        return getEffectiveModelCallbackUrl();
     }
 
     public String getVendorDataPrefix() {

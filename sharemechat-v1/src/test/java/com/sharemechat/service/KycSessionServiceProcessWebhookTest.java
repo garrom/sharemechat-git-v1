@@ -69,7 +69,8 @@ class KycSessionServiceProcessWebhookTest {
             KycSessionRepository sessionRepo,
             KycWebhookEventRepository eventRepo,
             DiditProperties props) {
-        return new KycSessionService(userRepo, sessionRepo, eventRepo, null, null, null, null, null, props);
+        // ADR-056 S2: arg extra masterContractService (null en tests legacy).
+        return new KycSessionService(userRepo, sessionRepo, eventRepo, null, null, null, null, null, props, null);
     }
 
     private static String currentTimestamp() {
