@@ -67,6 +67,11 @@ public class SecurityConfig {
                         // simetrico a /api/users/register/model. El resto de
                         // /api/masters/me/** exige autenticacion (matcher abajo).
                         .requestMatchers(HttpMethod.POST, "/api/masters/register").permitAll()
+                        // ADR-056 S4 D7: activacion cuenta modelo invitada
+                        // por Master. Publico porque la modelo aun no tiene
+                        // credenciales — el token del email es la unica
+                        // autenticacion. Consume el token + set password.
+                        .requestMatchers(HttpMethod.POST, "/api/masters/models/activate/**").permitAll()
                         .requestMatchers("/api/email-verification/confirm").permitAll()
                         .requestMatchers("/api/public/home/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/public/content/**").permitAll()
