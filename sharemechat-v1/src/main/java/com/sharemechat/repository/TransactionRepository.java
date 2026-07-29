@@ -80,12 +80,15 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     }
 
     // ============================================================
-    // ADR-056 S3: agregacion bruto por MASTER
+    // ADR-056: agregacion bruto por MASTER (display consolidado)
     // ============================================================
     // Suma sobre TODAS las modelos bajo umbrella del Master
-    // (models.master_user_id = :masterId). Se usa para calcular el
-    // tramo MASTER en model_tier_daily_snapshots + para el dashboard
-    // consolidado economico del Master.
+    // (models.master_user_id = :masterId). Uso: dashboard consolidado
+    // economico del Master (S5.a). NO se usa para determinar tramo:
+    // tras la revision de D4 (2026-07-30) el motor calcula el % INDIVIDUAL
+    // per modelo (alineado con sector LiveJasmin/Stripchat/BongaCams);
+    // el Master recibe la suma de los pagos individuales sin bonus
+    // por agregacion.
 
     /**
      * ADR-056 S3: STREAM_CHARGE bruto agregado del equipo de un Master.

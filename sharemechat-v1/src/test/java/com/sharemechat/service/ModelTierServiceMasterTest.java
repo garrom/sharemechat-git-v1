@@ -10,26 +10,28 @@ import com.sharemechat.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.ArgumentCaptor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
- * ADR-056 Fase S3.5: tests del régimen MASTER en ModelTierService.
- * Cubre: resolveEffectiveTierForPayout con y sin Master + escalado
- * agregado por Master (bruto sumado del equipo) + snapshot MASTER.
+ * ADR-056 D4 (revision 2026-07-30): tras confirmar que el sector no agrega
+ * por estudio (LiveJasmin/Stripchat/BongaCams calculan tramo per modelo),
+ * SharemeChat revierte la agregacion MASTER. Estos tests verifican que
+ * {@link ModelTierService#resolveEffectiveTierForPayout(Long)} devuelve
+ * SIEMPRE el tramo INDIVIDUAL de la modelo, con o sin master_user_id.
+ * El pago se atribuye al Master en StreamService pero al % INDIVIDUAL
+ * per modelo (sin bonus por agregacion).
  */
 class ModelTierServiceMasterTest {
 
@@ -40,14 +42,8 @@ class ModelTierServiceMasterTest {
     private ModelRepository modelRepository;
     private ModelTierService service;
 
-    // Tiers post-ADR-056 régimen MASTER
-    private ModelPricingTier M_T1;
-    private ModelPricingTier M_T2;
-    private ModelPricingTier M_T3;
-    private ModelPricingTier M_T4;
-
-    // Tiers post-ADR-056 régimen INDIVIDUAL (para el resolveEffective sin Master)
     private ModelPricingTier I_T1;
+    private ModelPricingTier I_T4;
 
     @BeforeEach
     void setUp() {
@@ -61,12 +57,8 @@ class ModelTierServiceMasterTest {
                 pricingTierRepository, snapshotRepository, transactionRepository, userRepository,
                 modelRepository, null, new BigDecimal("1500"));
 
-        M_T1 = tier(11L, "T1", "MASTER", "0",     "50.00", "1.00", "1.00");
-        M_T2 = tier(12L, "T2", "MASTER", "1000",  "60.00", "1.00", "3.00");
-        M_T3 = tier(13L, "T3", "MASTER", "4000",  "65.00", "1.00", "6.00");
-        M_T4 = tier(14L, "T4", "MASTER", "15000", "70.00", "1.00", "9.00");
-
-        I_T1 = tier(1L, "T1", "INDIVIDUAL", "0", "50.00", "1.00", "1.00");
+        I_T1 = tier(1L, "T1", "INDIVIDUAL", "0",     "50.00", "1.00", "1.00");
+        I_T4 = tier(4L, "T4", "INDIVIDUAL", "15000", "60.00", "1.00", "9.00");
     }
 
     private ModelPricingTier tier(Long id, String code, String target, String minGross,
@@ -86,17 +78,11 @@ class ModelTierServiceMasterTest {
         return t;
     }
 
-    // ============================================================
-    // resolveEffectiveTierForPayout: detección Master vs Individual
-    // ============================================================
-
     @Test
     @DisplayName("Modelo sin Master -> resuelve tier INDIVIDUAL sobre bruto propio")
     void resolve_individual_when_no_master() {
-        when(modelRepository.findMasterUserIdByModelUserId(50L)).thenReturn(Optional.empty());
         LocalDate yesterday = LocalDate.now().minusDays(1);
 
-        // Snapshot INDIVIDUAL existente
         ModelTierDailySnapshot snap = new ModelTierDailySnapshot();
         snap.setModelId(50L);
         snap.setSnapshotDate(yesterday);
@@ -112,90 +98,58 @@ class ModelTierServiceMasterTest {
     }
 
     @Test
-    @DisplayName("Modelo bajo Master -> delega en resolveEffectiveTierForMasterPayout con masterId")
-    void resolve_master_when_has_master() {
-        // Modelo 100 bajo Master 500.
-        when(modelRepository.findMasterUserIdByModelUserId(100L)).thenReturn(Optional.of(500L));
+    @DisplayName("Modelo BAJO Master -> tambien resuelve tier INDIVIDUAL (no agrega, sector-aligned)")
+    void resolve_individual_when_HAS_master() {
+        // La modelo esta bajo Master, pero el motor NO consulta master_user_id
+        // desde aqui — el tramo lo determina la facturacion propia de la modelo.
+        // Verificamos que:
+        //   (a) NO se consulta findMasterUserIdByModelUserId
+        //   (b) NO se consultan queries agregadas del Master
+        //   (c) El tier devuelto es INDIVIDUAL del snapshot propio de la modelo
         LocalDate yesterday = LocalDate.now().minusDays(1);
 
-        ModelTierDailySnapshot masterSnap = new ModelTierDailySnapshot();
-        masterSnap.setModelId(500L);
-        masterSnap.setSnapshotDate(yesterday);
-        masterSnap.setPricingTierId(14L);
-        masterSnap.setTargetType("MASTER");
-        masterSnap.setMasterUserId(500L);
-        when(snapshotRepository.findByModelIdAndSnapshotDate(500L, yesterday)).thenReturn(Optional.of(masterSnap));
-        when(pricingTierRepository.findById(14L)).thenReturn(Optional.of(M_T4));
+        ModelTierDailySnapshot snap = new ModelTierDailySnapshot();
+        snap.setModelId(100L);
+        snap.setSnapshotDate(yesterday);
+        snap.setPricingTierId(4L);
+        snap.setTargetType("INDIVIDUAL");
+        when(snapshotRepository.findByModelIdAndSnapshotDate(100L, yesterday)).thenReturn(Optional.of(snap));
+        when(pricingTierRepository.findById(4L)).thenReturn(Optional.of(I_T4));
 
         ModelPricingTier res = service.resolveEffectiveTierForPayout(100L);
         assertNotNull(res);
-        assertEquals("MASTER", res.getTargetType());
+        assertEquals("INDIVIDUAL", res.getTargetType());
         assertEquals("T4", res.getTierCode());
-        assertEquals(new BigDecimal("70.00"), res.getModelSharePct());
+        assertEquals(new BigDecimal("60.00"), res.getModelSharePct());
+
+        // Guards:
+        verify(modelRepository, never()).findMasterUserIdByModelUserId(any());
+        verify(transactionRepository, never())
+                .sumStreamChargeGrossForMasterWindow(any(), any(), any());
+        verify(transactionRepository, never())
+                .sumTrialEarningsForMasterWindow(any(), any(), any());
     }
 
-    // ============================================================
-    // computeAndUpsertMasterSnapshot: bruto agregado + tier MASTER
-    // ============================================================
-
     @Test
-    @DisplayName("Master pequeño: bruto agregado 500 EUR -> T1 (50%)")
-    void master_snapshot_T1() {
+    @DisplayName("Fallback sin snapshot ni tier resuelto -> primera fila INDIVIDUAL vigente")
+    void resolve_individual_fallback_when_no_snapshot() {
         LocalDate yesterday = LocalDate.now().minusDays(1);
-        // El Master tiene 3 modelos que suman 500 EUR/30d en total.
-        when(transactionRepository.sumStreamChargeGrossForMasterWindow(eq(500L), any(), any()))
-                .thenReturn(new BigDecimal("500.00"));
-        when(transactionRepository.sumTrialEarningsForMasterWindow(eq(500L), any(), any()))
+        when(snapshotRepository.findByModelIdAndSnapshotDate(eq(77L), eq(yesterday)))
+                .thenReturn(Optional.empty());
+        // computeAndUpsertSnapshot fallback: sin transacciones -> 0 EUR bruto
+        when(transactionRepository.sumStreamChargeGrossForModelWindow(eq(77L), any(), any()))
                 .thenReturn(BigDecimal.ZERO);
-        when(pricingTierRepository.findCurrentByBilledGross(any(), eq("MASTER"))).thenReturn(Optional.of(M_T1));
-        when(snapshotRepository.findByModelIdAndSnapshotDate(500L, yesterday)).thenReturn(Optional.empty());
-        when(snapshotRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        ModelTierDailySnapshot snap = service.computeAndUpsertMasterSnapshot(500L, yesterday);
-        assertNotNull(snap);
-        assertEquals("MASTER", snap.getTargetType());
-        assertEquals(500L, snap.getMasterUserId());
-        assertEquals("T1", snap.getPricingTierCode());
-        assertEquals(new BigDecimal("50.00"), snap.getModelSharePct());
-        assertEquals(new BigDecimal("500.00"), snap.getBilledGrossEur30d());
-    }
-
-    @Test
-    @DisplayName("Master grande: 5 modelos suman 20000 EUR agregado -> T4 (70%)")
-    void master_snapshot_T4() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
-        when(transactionRepository.sumStreamChargeGrossForMasterWindow(eq(500L), any(), any()))
-                .thenReturn(new BigDecimal("18000.00"));
-        when(transactionRepository.sumTrialEarningsForMasterWindow(eq(500L), any(), any()))
-                .thenReturn(new BigDecimal("2000.00"));
-        // 20000 total >= 15000 (umbral T4).
-        when(pricingTierRepository.findCurrentByBilledGross(any(), eq("MASTER"))).thenReturn(Optional.of(M_T4));
-        when(snapshotRepository.findByModelIdAndSnapshotDate(500L, yesterday)).thenReturn(Optional.empty());
-        when(snapshotRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
-
-        ModelTierDailySnapshot snap = service.computeAndUpsertMasterSnapshot(500L, yesterday);
-        assertNotNull(snap);
-        assertEquals("MASTER", snap.getTargetType());
-        assertEquals("T4", snap.getPricingTierCode());
-        assertEquals(new BigDecimal("70.00"), snap.getModelSharePct());
-        assertEquals(new BigDecimal("20000.00"), snap.getBilledGrossEur30d());
-    }
-
-    @Test
-    @DisplayName("Master snapshot NO recorta chosen_rate del Master (Master no tiene tarifa autoservicio)")
-    void master_snapshot_no_chosen_rate_recorte() {
-        LocalDate yesterday = LocalDate.now().minusDays(1);
-        when(transactionRepository.sumStreamChargeGrossForMasterWindow(eq(500L), any(), any()))
-                .thenReturn(new BigDecimal("2000.00"));
-        when(transactionRepository.sumTrialEarningsForMasterWindow(eq(500L), any(), any()))
+        when(transactionRepository.sumTrialEarningsForModelWindow(eq(77L), any(), any()))
                 .thenReturn(BigDecimal.ZERO);
-        when(pricingTierRepository.findCurrentByBilledGross(any(), eq("MASTER"))).thenReturn(Optional.of(M_T2));
-        when(snapshotRepository.findByModelIdAndSnapshotDate(500L, yesterday)).thenReturn(Optional.empty());
+        when(pricingTierRepository.findCurrentByBilledGross(any()))
+                .thenReturn(Optional.of(I_T1));
         when(snapshotRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findById(77L)).thenReturn(Optional.empty());
+        when(pricingTierRepository.findById(1L)).thenReturn(Optional.of(I_T1));
 
-        service.computeAndUpsertMasterSnapshot(500L, yesterday);
-
-        // No debe consultarse userRepository.findById para el Master (no tiene chosen_rate a recortar).
-        verify(userRepository, times(0)).save(any());
+        ModelPricingTier res = service.resolveEffectiveTierForPayout(77L);
+        assertNotNull(res);
+        assertEquals("INDIVIDUAL", res.getTargetType());
+        assertEquals("T1", res.getTierCode());
     }
 }

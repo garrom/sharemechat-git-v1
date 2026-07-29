@@ -93,58 +93,25 @@ public class ModelTierService {
     }
 
     /**
-     * ADR-056 S3: tramo vigente para PAGO hoy segun regimen aplicable.
-     * <ul>
-     *   <li>Si la modelo tiene master_user_id != NULL → resuelve tier
-     *       MASTER sobre bruto agregado del equipo.</li>
-     *   <li>Si es individual → resuelve tier INDIVIDUAL sobre bruto propio
-     *       (comportamiento pre-ADR-056, sin cambio).</li>
-     * </ul>
-     * Ambos usan snapshot de AYER. Si no existe se calcula y persiste.
+     * ADR-056 D4 (revision 2026-07-30): tramo vigente para PAGO hoy.
+     * Cálculo INDIVIDUAL per modelo — alineado con el sector (LiveJasmin,
+     * Stripchat, BongaCams no agregan por estudio). Si la modelo tiene
+     * master_user_id, el Master recibe el importe pero calculado al
+     * tramo INDIVIDUAL de la modelo, no a un tramo agregado. La agregacion
+     * inicialmente planteada (V42 seeds regimen MASTER) fue descartada
+     * porque regalaba ~20pp de margen bruto al Master en el escenario top,
+     * inconsistente con el sector.
      */
     @Transactional
     public ModelPricingTier resolveEffectiveTierForPayout(Long modelId) {
-        // Detectar si la modelo esta bajo Master (D4 del ADR-056).
-        Long masterId = modelRepository.findMasterUserIdByModelUserId(modelId).orElse(null);
-        if (masterId != null) {
-            return resolveEffectiveTierForMasterPayout(masterId);
-        }
-        // Regimen INDIVIDUAL (comportamiento pre-ADR-056).
         LocalDate snapshotDate = LocalDate.now().minusDays(1);
         ModelTierDailySnapshot snap = snapshotRepository.findByModelIdAndSnapshotDate(modelId, snapshotDate).orElse(null);
         if (snap == null) {
             snap = computeAndUpsertSnapshot(modelId, snapshotDate);
         }
         if (snap == null || snap.getPricingTierId() == null) {
-            // Fallback: primer tramo vigente INDIVIDUAL.
             List<ModelPricingTier> vigentes = pricingTierRepository
                     .findAllCurrentByTargetTypeAsc("INDIVIDUAL");
-            return vigentes.isEmpty() ? null : vigentes.get(0);
-        }
-        return pricingTierRepository.findById(snap.getPricingTierId()).orElse(null);
-    }
-
-    /**
-     * ADR-056 S3: tramo MASTER para pago hoy. Usa snapshot de AYER del
-     * Master (target_type=MASTER, master_user_id set). Si no existe se
-     * calcula agregando bruto de todo el equipo.
-     *
-     * <p>Uso interno desde {@link #resolveEffectiveTierForPayout} + uso
-     * externo desde el dashboard economico Master (S5).
-     */
-    @Transactional
-    public ModelPricingTier resolveEffectiveTierForMasterPayout(Long masterUserId) {
-        LocalDate snapshotDate = LocalDate.now().minusDays(1);
-        ModelTierDailySnapshot snap = snapshotRepository
-                .findByModelIdAndSnapshotDate(masterUserId, snapshotDate)
-                .filter(s -> "MASTER".equals(s.getTargetType()))
-                .orElse(null);
-        if (snap == null) {
-            snap = computeAndUpsertMasterSnapshot(masterUserId, snapshotDate);
-        }
-        if (snap == null || snap.getPricingTierId() == null) {
-            List<ModelPricingTier> vigentes = pricingTierRepository
-                    .findAllCurrentByTargetTypeAsc("MASTER");
             return vigentes.isEmpty() ? null : vigentes.get(0);
         }
         return pricingTierRepository.findById(snap.getPricingTierId()).orElse(null);
@@ -243,80 +210,4 @@ public class ModelTierService {
         return snapshotRepository.save(snap);
     }
 
-    /**
-     * ADR-056 S3: calcula y persiste snapshot MASTER (agregado del equipo).
-     * Analogo a {@link #computeAndUpsertSnapshot} pero:
-     * <ul>
-     *   <li>{@code modelId} en el snapshot = userId del Master (reutilizamos
-     *       la columna sin renombrar; {@code targetType='MASTER'} discrimina).</li>
-     *   <li>Bruto = suma agregada STREAM_CHARGE + TRIAL_EARNING de todas
-     *       las modelos con {@code models.master_user_id = masterUserId}.</li>
-     *   <li>Tier resuelto sobre {@code target_type='MASTER'} (50/60/65/70%).</li>
-     *   <li>{@code master_user_id} set para trazabilidad.</li>
-     *   <li>NO se recorta {@code chosen_rate} de nadie (el Master no tiene
-     *       tarifa autoservicio; cada modelo bajo umbrella conserva la suya).</li>
-     * </ul>
-     */
-    @Transactional
-    public ModelTierDailySnapshot computeAndUpsertMasterSnapshot(Long masterUserId, LocalDate snapshotDate) {
-        LocalDateTime windowEnd = snapshotDate.plusDays(1).atStartOfDay();
-        LocalDateTime windowStart = windowEnd.minusDays(WINDOW_DAYS);
-
-        BigDecimal streamCharge = transactionRepository.sumStreamChargeGrossForMasterWindow(
-                masterUserId, windowStart, windowEnd);
-        BigDecimal trialEarning = transactionRepository.sumTrialEarningsForMasterWindow(
-                masterUserId, windowStart, windowEnd);
-        BigDecimal billedGross = (streamCharge != null ? streamCharge : BigDecimal.ZERO)
-                .add(trialEarning != null ? trialEarning : BigDecimal.ZERO);
-
-        ModelPricingTier tier = pricingTierRepository
-                .findCurrentByBilledGross(billedGross, "MASTER")
-                .orElseGet(() -> {
-                    List<ModelPricingTier> vigentes = pricingTierRepository
-                            .findAllCurrentByTargetTypeAsc("MASTER");
-                    return vigentes.isEmpty() ? null : vigentes.get(0);
-                });
-        if (tier == null) return null;
-
-        // Compat billed_seconds/billed_minutes (proxy conservador).
-        long approxSeconds = billedGross.divide(
-                tier.getRateMinEurPerMin().max(new BigDecimal("0.01")), 2, RoundingMode.HALF_UP)
-                .multiply(new BigDecimal("60"))
-                .longValue();
-        int approxMinutes = (int) Math.min(Integer.MAX_VALUE, approxSeconds / 60L);
-
-        // Buscar snapshot existente del Master por (modelId=masterUserId, snapshotDate).
-        // Nota: la constraint UNIQUE en BD es sobre (model_id, snapshot_date), asi
-        // que como modelId=masterUserId, no hay colision con snapshots de modelos
-        // individuales (los userIds son distintos porque son roles distintos).
-        ModelTierDailySnapshot snap = snapshotRepository
-                .findByModelIdAndSnapshotDate(masterUserId, snapshotDate)
-                .filter(s -> "MASTER".equals(s.getTargetType()))
-                .orElse(null);
-        if (snap == null) {
-            snap = new ModelTierDailySnapshot();
-            snap.setModelId(masterUserId);
-            snap.setSnapshotDate(snapshotDate);
-        }
-
-        snap.setWindowStart(windowStart);
-        snap.setWindowEnd(windowEnd);
-        snap.setBilledSeconds(approxSeconds);
-        snap.setBilledMinutes(approxMinutes);
-        snap.setTierId(null);
-        snap.setTierName(null);
-        snap.setFirstMinuteEarningPerMin(null);
-        snap.setNextMinutesEarningPerMin(null);
-        snap.setBilledGrossEur30d(billedGross.setScale(2, RoundingMode.HALF_UP));
-        snap.setPricingTierId(tier.getId());
-        snap.setPricingTierCode(tier.getTierCode());
-        snap.setModelSharePct(tier.getModelSharePct());
-        snap.setRateMinEurPerMin(tier.getRateMinEurPerMin());
-        snap.setRateMaxEurPerMin(tier.getRateMaxEurPerMin());
-        snap.setProStatusActive(billedGross.compareTo(proStatusMinBilledGross) >= 0);
-        snap.setTargetType("MASTER");
-        snap.setMasterUserId(masterUserId);
-
-        return snapshotRepository.save(snap);
-    }
 }
